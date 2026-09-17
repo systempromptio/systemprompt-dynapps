@@ -20,11 +20,75 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
-`next` builds against core `next` again: the `[patch.crates-io]` blocks are active in both
-workspaces, the pins stay at 0.54.0 (core's workspace version) and `bridge/CORE_REF` names the
-core commit the tree is built with.
+## 0.55.0 — 2026-09-17
+
+Built against the published core 0.55.0 (`bridge/CORE_REF` = `v0.55.0`): the
+`[patch.crates-io]` blocks are commented out in both workspaces and the pins name the
+published crates. Core 0.55.0 ingests every tool result as one artifact per MCP call, claims
+the gateway intent for an in-process execution atomically, purges users with their rows, and
+runs the services refresh in-process (`ServicesRefresh::run(actor)`).
+
+### Breaking
+
+- **Console access is marketplace participation.** Only `admin` and `platform_admin` see the
+  instance unscoped; `project_manager` is an entitlement role with no console tier (it lands on
+  `/admin/profile` like `developer` and `knowledge_worker`). Everyone else reaches the console
+  through a group or project allow rule on a marketplace in `rules.yaml` and sees Analysis
+  (Conversations, Versions) and Platform (Code sync) narrowed to what that participation names;
+  the header id lookup lands on detail pages, which 404 an owner outside the caller's view.
+  The admin HTTP contract baseline is re-recorded accordingly.
+- The candidate editor and revision comparison (`/admin/analysis/revisions/{id}/edit`,
+  `…/compare/{candidate}`) are gone with core's experiment engine; a revision page shows the
+  verified bytes and provenance and offers the bundle and file downloads.
 
 ### Added
+
+- **Platform**: `/admin/configuration` lists every kind of configuration the instance loads with
+  its source, hash, mode and sync state; `/admin/sync` (Code sync) keeps the sources and adds
+  the zip export, the staged import preview (`POST /api/public/admin/sync/import`, a preview
+  page, an apply per plane, a discard) and a history read back from `user_activity`; the
+  sync-plane card renders as `?tab=sync` on the access-control, groups, gateway-policies,
+  gateway-routes and governance pages. Every plane — access control, groups, gateway policies,
+  gateway routes, governance chain — has drift, apply (insert-only / overwrite / scoped) and
+  export; a participant applies the access-control plane narrowed to their own marketplaces.
+- Gateway routes are database-backed (`gateway_routes`, migration 080): the `/admin/gateway`
+  editor writes the table and regenerates `services/ai/gateway.yaml`; `/admin/gateway/policies`
+  edits the live policy table (quota windows, safety scanners) with a quotas page and the
+  calendar-month window job; `/admin/system/observability` shows and tests the OTLP export.
+- Artifacts are a first-class entity: every tool result from Claude Code, Cowork, OpenCode or
+  the gateway is one linked artifact, listed at `/admin/artifacts`, counted on the session page
+  beside tool calls, and joined to the MCP execution and the governance decision through
+  `tool_use_id`, `trace_id` and `mcp_execution_id` columns on `plugin_usage_events`
+  (migration 075). An oversized MCP passthrough result is stored whole and the model receives
+  a pointer to it instead of a truncated table.
+- Analysis: `/admin/analysis/conversations` (the `conversation_classifier` job: purpose, outcome,
+  summary, tags and skills per quiet conversation), the session evaluation engine
+  (LLM-as-judge per criterion, async, host-agnostic; `/admin/analysis/evaluation` with
+  **Evaluate now** / **Re-evaluate**, per-criterion **Re-run**, queued closed sessions, and
+  `evaluation.automatic` in the profile), the evaluation report, marketplace versions keyed
+  on their content hash (`marketplace_versions`, migration 071) with a compare and
+  distribution tab, and per-skill pages under `/admin/analysis/skills/{skill}`.
+- Every AI request is stamped with its group/project scope at request time
+  (`ai_request_scopes`, migration 078) so spend and usage read the scope that applied rather
+  than current membership; `organization` and `role` quota subjects are registered and
+  `quota_fault_mode` is closed.
+- Connectors: `/admin/connectors` and `/admin/connect` replace the settings panels;
+  `google_drive` (Agent Search over Drive, Gmail, Calendar and People) replaces `google_rag`.
+- `deploy/salesforce/`: the Salesforce side of the connector as source. One External Client
+  App (`Systemprompt`) is created in the source org (Astound US), retrieved into an SFDX
+  project and built into a 2GP managed package that every other org installs; subscriber orgs
+  resolve to the source org's consumer key, so the gateway holds one
+  `salesforce_mcp_client_id` / `salesforce_mcp_client_secret` pair for all of them. The README
+  is the runbook, proven first on the Developer Edition org (`salesforce-dev`).
+- Session evaluation can be started from the console: **Evaluate now** / **Re-evaluate** on a
+  session page (`POST /admin/sessions/{id}/evaluate`, with a per-criterion **Re-run** on each
+  score card), and **Queue closed sessions** / **Run pending now** on `/admin/analysis/evaluation`.
+  A click runs the judge inline and answers when the runs are recorded; the rows carry
+  `trigger = manual` and `requested_by = <admin>` (migration 077), while the judge call itself
+  is still made as the job actor so it never counts against the person who clicked.
+- `evaluation.automatic` in the profile decides whether closed sessions are queued without a
+  click (production: `true`; default `false`). With it off the `session_evaluation` job only
+  drains what a click queued, so a run that died mid-way still completes.
 
 - `deploy/salesforce/`: the Salesforce side of the connector as source. One External Client
   App (`Systemprompt`) is created in the source org (Astound US), retrieved into an SFDX
@@ -61,6 +125,18 @@ core commit the tree is built with.
 
 ### Fixed
 
+- Every user-keyed extension table references `users(id) ON DELETE CASCADE` (migration 082);
+  migration 083 deletes the rows earlier deletes had orphaned, validates each constraint so an
+  upgraded database matches a fresh install, and drops `idx_mcp_artifacts_mcp_execution_id`,
+  which core 0.55.0 removed from its schema without a migration.
+- A Claude Code session is one trace: hook rows fold into the gateway session; MCP execution
+  ids and session-less requests resolve on the request and trace pages.
+- An uploaded sync archive that names an absolute path is refused on the raw name (`zip`
+  relativises the leading slash); a zip the reader rejects is a typed 422
+  (`AdminError::Archive`). A governance chain hashes its params without the id and switches,
+  so an export that spells out an inherited mode round-trips to the same declared hash.
+- A gateway-routes extra_headers column that does not decode is a decode error, not a route
+  with no headers; the policies export header names the `governance_bootstrap` loader.
 - The Salesforce org registry moved from `services/salesforce/orgs.yaml` to
   `services/config/salesforce-orgs.yaml`. Core's services bundle copies only its allow-listed
   directories into the composed tree the server actually reads, and `salesforce/` was not one of

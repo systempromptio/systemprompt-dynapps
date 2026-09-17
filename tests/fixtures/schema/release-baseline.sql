@@ -1,4 +1,4 @@
--- systemprompt-astound release-baseline: 0.54.0 (core v0.54.0)
+-- systemprompt-astound release-baseline: 0.55.0 (core v0.55.0)
 -- Recorded by 'just schema-baseline' from a fresh install; the upgrade test
 -- restores it and migrates forward. Re-record after every version bump.
 --
@@ -421,6 +421,23 @@ $$;
 
 
 --
+-- Name: capture_feedback_artifact(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.capture_feedback_artifact() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+DECLARE data JSONB;
+BEGIN
+    IF TG_OP='DELETE' AND current_setting('astound.feedback_retention',true)='expiry' THEN RETURN OLD; END IF;
+    data := CASE WHEN TG_OP='DELETE' THEN to_jsonb(OLD) ELSE to_jsonb(NEW) END;
+    IF data->>'user_id' IS NULL THEN RETURN COALESCE(NEW,OLD); END IF;
+    PERFORM enqueue_feedback_artifact(data->>'artifact_id',data->>'user_id',data->>'session_id',(data->>'created_at')::timestamptz);
+    RETURN COALESCE(NEW,OLD);
+END $$;
+
+
+--
 -- Name: capture_feedback_grant(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -530,6 +547,7 @@ WITH scoped AS (
            COUNT(*) OVER (PARTITION BY ar.context_id, ar.gateway_conversation_id) AS thread_size
     FROM ai_requests ar
     WHERE ar.context_id <> '00000000-0000-0000-0000-4c4547414359'
+      AND ar.actor_kind <> 'job'
       AND (context_ids IS NULL OR ar.context_id IN (SELECT unnest(context_ids)))
 ), requests AS MATERIALIZED (
     SELECT r.*, conversation_request_kind(r.request_kind, p.offered_tools IS NOT NULL, r.thread_size, r.client_session_id IS NOT NULL) AS effective_kind
@@ -545,6 +563,7 @@ WITH scoped AS (
         COALESCE(SUM(cost_microdollars), 0)::bigint AS total_cost_microdollars,
         MIN(created_at) AS first_at, MAX(created_at) AS last_request_at,
         (ARRAY_AGG(user_id ORDER BY created_at DESC, id DESC))[1] AS user_id,
+        (ARRAY_AGG(id ORDER BY created_at DESC, id DESC))[1] AS last_request_id,
         (ARRAY_AGG(session_id ORDER BY created_at DESC, id DESC)
             FILTER (WHERE session_id IS NOT NULL))[1] AS session_id,
         (ARRAY_AGG(client_session_id ORDER BY created_at DESC, id DESC)
@@ -569,9 +588,9 @@ LEFT JOIN tools t ON t.context_id = a.context_id
 LEFT JOIN user_contexts c ON c.context_id = a.context_id
 LEFT JOIN plugin_session_summaries s ON s.session_id = a.client_session_id
 LEFT JOIN users u ON u.id = a.user_id
-LEFT JOIN user_scope_defaults d ON d.user_id = a.user_id
-LEFT JOIN groups g ON g.id = d.primary_group_id
-LEFT JOIN projects p ON p.id = d.primary_project_id
+LEFT JOIN ai_request_scopes rs ON rs.request_id = a.last_request_id
+LEFT JOIN groups g ON g.id = rs.group_id
+LEFT JOIN projects p ON p.id = rs.project_id
 $$;
 
 
@@ -715,6 +734,32 @@ END $$;
 
 
 --
+-- Name: enqueue_feedback_artifact(text, text, text, timestamp with time zone); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.enqueue_feedback_artifact(artifact_key text, consumer_key text, session_key text, event_time timestamp with time zone DEFAULT NULL::timestamp with time zone) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+DECLARE key TEXT; was_pending BOOLEAN; original_time TIMESTAMPTZ;
+BEGIN
+    IF artifact_key IS NULL OR consumer_key IS NULL THEN RETURN; END IF;
+    PERFORM 1 FROM analytics_ingestion_producers WHERE producer='astound.feedback' FOR UPDATE;
+    key := md5(jsonb_build_array('artifact',artifact_key,NULL,consumer_key)::text);
+    original_time := COALESCE(event_time,(SELECT created_at FROM mcp_artifacts WHERE artifact_id=artifact_key));
+    SELECT pending INTO was_pending FROM feedback_ingestion_outbox WHERE id=key FOR UPDATE;
+    INSERT INTO feedback_ingestion_outbox(id,kind,artifact_id,user_id,native_session_id,occurred_at)
+    VALUES(key,'artifact',artifact_key,consumer_key,session_key,COALESCE(original_time,clock_timestamp()))
+    ON CONFLICT(id) DO UPDATE SET revision=feedback_ingestion_outbox.revision+1,pending=true,
+        lease_token=NULL,lease_until=NULL,next_attempt=clock_timestamp(),updated_at=clock_timestamp(),native_session_id=EXCLUDED.native_session_id;
+    IF was_pending IS DISTINCT FROM true THEN
+        UPDATE analytics_ingestion_producers SET pending_count=pending_count+1,
+            oldest_pending_at=COALESCE(oldest_pending_at,clock_timestamp()),updated_at=clock_timestamp()
+        WHERE producer='astound.feedback';
+    END IF;
+END $$;
+
+
+--
 -- Name: enqueue_feedback_fact(text, text, text, text, text, timestamp with time zone); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -750,8 +795,12 @@ DECLARE row RECORD;
 BEGIN
     IF session_key IS NULL THEN RETURN; END IF;
     PERFORM 1 FROM analytics_ingestion_producers WHERE producer='astound.feedback' FOR UPDATE;
-    FOR row IN SELECT kind,event_id,request_id FROM feedback_ingestion_outbox WHERE user_id=consumer_key AND native_session_id=session_key LOOP
-        PERFORM enqueue_feedback_fact(row.kind,row.event_id,row.request_id,consumer_key,session_key);
+    FOR row IN SELECT kind,event_id,request_id,artifact_id FROM feedback_ingestion_outbox WHERE user_id=consumer_key AND native_session_id=session_key LOOP
+        IF row.kind='artifact' THEN
+            PERFORM enqueue_feedback_artifact(row.artifact_id,consumer_key,session_key);
+        ELSE
+            PERFORM enqueue_feedback_fact(row.kind,row.event_id,row.request_id,consumer_key,session_key);
+        END IF;
     END LOOP;
     FOR row IN SELECT id FROM analysis_skill_events WHERE user_id=consumer_key AND session_id=session_key LOOP
         PERFORM enqueue_feedback_fact('invocation',row.id,NULL,consumer_key,session_key);
@@ -765,6 +814,9 @@ BEGIN
             SELECT 1 FROM ai_request_tool_calls t WHERE t.request_id=r.id AND t.ai_tool_call_id=e.tool_use_id)))
         WHERE e.user_id=consumer_key AND e.session_id=session_key LOOP
         PERFORM enqueue_feedback_fact('resource_association',row.event_id,row.request_id,consumer_key,session_key);
+    END LOOP;
+    FOR row IN SELECT artifact_id FROM mcp_artifacts WHERE user_id=consumer_key AND session_id=session_key LOOP
+        PERFORM enqueue_feedback_artifact(row.artifact_id,consumer_key,session_key);
     END LOOP;
 END $$;
 
@@ -819,7 +871,8 @@ BEGIN
     DELETE FROM plugin_usage_events WHERE created_at<cutoff;
     GET DIAGNOSTICS deleted = ROW_COUNT;
     DELETE FROM ai_requests WHERE created_at<cutoff;
-    DELETE FROM session_analyses WHERE created_at<cutoff;
+    DELETE FROM evaluation_runs WHERE created_at<cutoff;
+    DELETE FROM evaluation_queue WHERE created_at<cutoff;
     DELETE FROM session_transcripts WHERE captured_at<cutoff;
     DELETE FROM session_cost_snapshots WHERE updated_at<cutoff;
     DELETE FROM plugin_session_summaries WHERE COALESCE(ended_at,updated_at,created_at)<cutoff;
@@ -868,6 +921,50 @@ BEGIN
     GET DIAGNOSTICS removed = ROW_COUNT;
     RETURN removed;
 END
+$$;
+
+
+--
+-- Name: feedback_artifact_invocation(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.feedback_artifact_invocation(artifact_key text) RETURNS text
+    LANGUAGE sql STABLE
+    AS $$
+SELECT e.id FROM mcp_artifacts a
+JOIN plugin_usage_events e ON e.tool_use_id=a.ai_tool_call_id AND e.user_id=a.user_id
+ AND e.event_type IN ('PostToolUse','PostToolUseFailure')
+WHERE a.artifact_id=artifact_key AND a.ai_tool_call_id IS NOT NULL
+ORDER BY e.created_at DESC LIMIT 1
+$$;
+
+
+--
+-- Name: feedback_artifact_request(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.feedback_artifact_request(artifact_key text) RETURNS text
+    LANGUAGE sql STABLE
+    AS $$
+SELECT t.request_id FROM mcp_artifacts a
+JOIN ai_request_tool_calls t ON t.ai_tool_call_id=a.ai_tool_call_id
+JOIN ai_requests r ON r.id=t.request_id AND r.user_id=a.user_id AND NOT r.synthetic AND r.request_kind='turn'
+WHERE a.artifact_id=artifact_key AND a.ai_tool_call_id IS NOT NULL
+ORDER BY t.created_at DESC LIMIT 1
+$$;
+
+
+--
+-- Name: feedback_artifact_skill(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.feedback_artifact_skill(artifact_key text) RETURNS jsonb
+    LANGUAGE sql STABLE
+    AS $$
+SELECT feedback_event_skill(s.id) FROM mcp_artifacts a
+JOIN analysis_skill_events s ON s.user_id=a.user_id AND s.session_id=a.session_id AND s.invoked_at<=a.created_at
+WHERE a.artifact_id=artifact_key
+ORDER BY s.invoked_at DESC LIMIT 1
 $$;
 
 
@@ -939,10 +1036,12 @@ CREATE FUNCTION public.feedback_event_skill(event_key text) RETURNS jsonb
     AS $$
 SELECT CASE WHEN e.plugin_id IS NULL OR e.skill IS NULL OR e.skill='' THEN NULL
  ELSE jsonb_strip_nulls(jsonb_build_object('plugin_id',e.plugin_id,'skill',e.skill,
-  'marketplace_id',o.marketplace_id,'source',o.source,'source_hash',s.content_hash)) END
+  'marketplace_id',o.marketplace_id,'source',o.source,'source_hash',s.content_hash,
+  'marketplace_hash',v.content_hash)) END
 FROM analysis_skill_events e
 LEFT JOIN service_owned_ids o ON o.kind='plugin' AND o.id=e.plugin_id
 LEFT JOIN service_sources s ON s.name=o.source
+LEFT JOIN marketplace_versions v ON v.marketplace_id=o.marketplace_id AND v.effective_until IS NULL
 WHERE e.id=event_key
 $$;
 
@@ -956,9 +1055,46 @@ CREATE FUNCTION public.feedback_fact_key(kind text, event_key text, request_key 
     AS $$
 SELECT jsonb_build_object('kind',kind,'source',CASE kind
  WHEN 'invocation' THEN 'astound.plugin_usage_events' WHEN 'request' THEN 'astound.gateway_requests'
- WHEN 'assessment' THEN 'astound.session_assessments' ELSE 'astound.resource_associations' END,
+ WHEN 'assessment' THEN 'astound.session_assessments' WHEN 'artifact' THEN 'astound.tool_artifacts'
+ ELSE 'astound.resource_associations' END,
  'id',md5(jsonb_build_array(kind,event_key,request_key,consumer_key)::text))
 $$;
+
+
+--
+-- Name: feedback_normalized_artifact(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.feedback_normalized_artifact(queue_id text) RETURNS jsonb
+    LANGUAGE plpgsql STABLE
+    AS $$
+DECLARE q feedback_ingestion_outbox; a mcp_artifacts; key JSONB; invocation_key TEXT; request_key TEXT;
+BEGIN
+    SELECT * INTO q FROM feedback_ingestion_outbox WHERE id=queue_id;
+    SELECT * INTO a FROM mcp_artifacts WHERE artifact_id=q.artifact_id AND user_id=q.user_id;
+    IF NOT FOUND THEN RETURN NULL; END IF;
+    key := feedback_fact_key('artifact',q.artifact_id,NULL,q.user_id);
+    invocation_key := feedback_artifact_invocation(a.artifact_id);
+    request_key := feedback_artifact_request(a.artifact_id);
+    RETURN jsonb_build_object('kind','artifact','value',jsonb_strip_nulls(jsonb_build_object(
+        'artifact_key',key,
+        'execution_id',a.mcp_execution_id,
+        'invocation_key',CASE WHEN invocation_key IS NULL THEN NULL ELSE feedback_fact_key('invocation',invocation_key,NULL,q.user_id) END,
+        'request_key',CASE WHEN request_key IS NULL THEN NULL ELSE feedback_fact_key('request',NULL,request_key,q.user_id) END,
+        'occurred_at',a.created_at,
+        'consumer',CASE WHEN invocation_key IS NULL THEN jsonb_build_object('status','historical_unknown') ELSE feedback_event_identity(invocation_key) END,
+        'skill',feedback_artifact_skill(a.artifact_id),
+        'tool_name',COALESCE(a.tool_name,'unknown'),
+        'server_name',a.server_name,
+        'artifact_type',a.artifact_type,
+        'source',a.source,
+        'correlation',(SELECT correlation FROM mcp_tool_executions x WHERE x.mcp_execution_id=a.mcp_execution_id),
+        'is_structured',a.is_structured,
+        'has_ui_resource',a.has_ui_resource,
+        'succeeded',NOT a.is_error,
+        'payload_bytes',a.payload_bytes,
+        'findings',(SELECT count(*) FROM mcp_artifact_findings f WHERE f.artifact_id=a.artifact_id))));
+END $$;
 
 
 --
@@ -966,6 +1102,21 @@ $$;
 --
 
 CREATE FUNCTION public.feedback_normalized_fact(queue_id text) RETURNS jsonb
+    LANGUAGE plpgsql STABLE
+    AS $$
+DECLARE fact_kind TEXT;
+BEGIN
+    SELECT kind INTO fact_kind FROM feedback_ingestion_outbox WHERE id=queue_id;
+    IF fact_kind='artifact' THEN RETURN feedback_normalized_artifact(queue_id); END IF;
+    RETURN feedback_normalized_fact_base(queue_id);
+END $$;
+
+
+--
+-- Name: feedback_normalized_fact_base(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.feedback_normalized_fact_base(queue_id text) RETURNS jsonb
     LANGUAGE plpgsql STABLE
     AS $$
 DECLARE q feedback_ingestion_outbox; e RECORD; r RECORD; a RECORD; key JSONB; value JSONB;
@@ -998,12 +1149,12 @@ BEGIN
         value := jsonb_build_object('association_key',key,'invocation_key',feedback_fact_key('invocation',e.id,NULL,e.user_id),
             'request_key',feedback_fact_key('request',NULL,r.id,r.user_id),'occurred_at',e.invoked_at,'attribution',feedback_event_attribution(e.id));
     ELSE
-        SELECT * INTO a FROM session_analyses WHERE user_id=e.user_id AND session_id=e.session_id;
+        SELECT * INTO a FROM evaluation_runs WHERE user_id=e.user_id AND session_id=e.session_id AND criterion='quality' AND status='succeeded'
+            ORDER BY created_at DESC LIMIT 1;
         IF NOT FOUND THEN RETURN NULL; END IF;
         value := jsonb_build_object('assessment_key',key,'invocation_key',feedback_fact_key('invocation',e.id,NULL,e.user_id),
             'conversation_key',jsonb_build_object('source','astound.conversations','id',md5(jsonb_build_array(e.user_id,e.session_id)::text)),
-            'occurred_at',a.created_at,'outcome',CASE WHEN a.outcome IN ('failed','failure') THEN jsonb_build_object('status','failed')
-             WHEN a.quality_score BETWEEN 1 AND 100 THEN jsonb_build_object('status','scored','score_millionths',a.quality_score::bigint*10000)
+            'occurred_at',a.created_at,'outcome',CASE WHEN a.score BETWEEN 0 AND 100 THEN jsonb_build_object('status','scored','score_millionths',a.score::bigint*10000)
              ELSE jsonb_build_object('status','unavailable') END);
     END IF;
     RETURN jsonb_build_object('kind',q.kind,'value',value);
@@ -1248,6 +1399,20 @@ $$;
 
 
 --
+-- Name: marketplace_version_at(text, timestamp with time zone); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.marketplace_version_at(mid text, at timestamp with time zone) RETURNS text
+    LANGUAGE sql STABLE
+    AS $$
+SELECT content_hash FROM marketplace_versions
+WHERE marketplace_id = mid AND first_seen_at <= at
+ORDER BY (effective_until IS NULL OR at < effective_until) DESC, first_seen_at DESC
+LIMIT 1
+$$;
+
+
+--
 -- Name: prepare_reporting_privacy(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -1445,6 +1610,37 @@ $$;
 
 
 --
+-- Name: request_scope_stamp_ai_requests(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.request_scope_stamp_ai_requests() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    primary_group TEXT;
+    primary_project TEXT;
+BEGIN
+    BEGIN
+        IF NEW.actor_kind = 'user' THEN
+            SELECT d.primary_group_id, d.primary_project_id
+              INTO primary_group, primary_project
+              FROM user_scope_defaults d
+             WHERE d.user_id = NEW.user_id;
+        END IF;
+
+        INSERT INTO ai_request_scopes (request_id, user_id, group_id, project_id, source)
+        VALUES (NEW.id, NEW.user_id, primary_group, primary_project, 'primary')
+        ON CONFLICT (request_id) DO NOTHING;
+    EXCEPTION WHEN OTHERS THEN
+        RAISE WARNING 'request_scope_stamp_ai_requests failed: % (id=%, user=%)',
+            SQLERRM, NEW.id, NEW.user_id;
+    END;
+    RETURN NEW;
+END;
+$$;
+
+
+--
 -- Name: sp_capture_reporting_change(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -1634,6 +1830,18 @@ CREATE TABLE public.access_control_entities (
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     CONSTRAINT access_control_entities_entity_type_check CHECK ((entity_type = ANY (ARRAY['plugin'::text, 'agent'::text, 'mcp_server'::text, 'marketplace'::text, 'gateway_route'::text, 'skill'::text, 'hook'::text, 'slack_workspace'::text, 'teams_tenant'::text])))
+);
+
+
+--
+-- Name: access_control_rule_validity; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.access_control_rule_validity (
+    rule_id text NOT NULL,
+    valid_until timestamp with time zone NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 
@@ -1832,9 +2040,25 @@ CREATE TABLE public.ai_request_payloads (
     response_bytes integer,
     request_body_sha256 text,
     prepared_body_sha256 text,
+    prepared_tools jsonb,
     response_body_sha256 text,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
+-- Name: ai_request_scopes; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.ai_request_scopes (
+    request_id text NOT NULL,
+    user_id text NOT NULL,
+    group_id text,
+    project_id text,
+    source text DEFAULT 'primary'::text NOT NULL,
+    resolved_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT ai_request_scopes_source_check CHECK ((source = ANY (ARRAY['primary'::text, 'header'::text])))
 );
 
 
@@ -1873,6 +2097,7 @@ CREATE TABLE public.ai_requests (
     trace_id character varying(255),
     mcp_execution_id character varying(255),
     provider text,
+    served_provider text,
     model text,
     requested_model text,
     system_prompt_override text,
@@ -1887,6 +2112,7 @@ CREATE TABLE public.ai_requests (
     cost_microdollars bigint DEFAULT 0 NOT NULL,
     latency_ms integer,
     upstream_latency_ms integer,
+    finish_reason text,
     cache_hit boolean DEFAULT false NOT NULL,
     cache_read_tokens integer,
     cache_creation_tokens integer,
@@ -1952,6 +2178,9 @@ CREATE TABLE public.plugin_usage_events (
     cwd text,
     content_input_bytes bigint DEFAULT 0,
     content_output_bytes bigint DEFAULT 0,
+    tool_use_id text,
+    trace_id text,
+    mcp_execution_id text,
     created_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
@@ -1977,7 +2206,7 @@ UNION ALL
     e.session_id,
     e.plugin_id,
     replace(((e.metadata -> 'tool_input'::text) ->> 'skill'::text), '_'::text, '-'::text) AS skill,
-    (e.metadata ->> 'tool_use_id'::text) AS tool_use_id,
+    e.tool_use_id,
     'tool'::text AS source,
     e.created_at AS invoked_at
    FROM public.plugin_usage_events e
@@ -1988,7 +2217,7 @@ UNION ALL
     e.session_id,
     e.plugin_id,
     COALESCE((e.metadata ->> 'skill_ref'::text), ('opencode:'::text || replace(((e.metadata -> 'tool_input'::text) ->> 'name'::text), '_'::text, '-'::text))) AS skill,
-    (e.metadata ->> 'tool_use_id'::text) AS tool_use_id,
+    e.tool_use_id,
     'tool'::text AS source,
     e.created_at AS invoked_at
    FROM public.plugin_usage_events e
@@ -2100,7 +2329,7 @@ CREATE TABLE public.analytics_fact_changes (
     next_attempt_at timestamp with time zone DEFAULT now() NOT NULL,
     last_error text,
     applied_at timestamp with time zone,
-    CONSTRAINT analytics_fact_changes_fact_kind_check CHECK ((fact_kind = ANY (ARRAY['invocation'::text, 'request'::text, 'assessment'::text, 'resource_association'::text]))),
+    CONSTRAINT analytics_fact_changes_fact_kind_check CHECK ((fact_kind = ANY (ARRAY['invocation'::text, 'request'::text, 'assessment'::text, 'resource_association'::text, 'artifact'::text]))),
     CONSTRAINT analytics_fact_changes_revision_check CHECK ((revision > 0)),
     CONSTRAINT analytics_fact_changes_source_check CHECK (((length(source) >= 1) AND (length(source) <= 128))),
     CONSTRAINT analytics_fact_changes_state_check CHECK ((state = ANY (ARRAY['pending'::text, 'leased'::text, 'applied'::text, 'superseded'::text])))
@@ -3073,6 +3302,20 @@ ALTER SEQUENCE public.artifact_parts_id_seq OWNED BY public.artifact_parts.id;
 
 
 --
+-- Name: artifact_payloads; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.artifact_payloads (
+    sha256 character(64) NOT NULL,
+    byte_len integer NOT NULL,
+    body jsonb NOT NULL,
+    ref_count integer DEFAULT 0 NOT NULL,
+    first_seen_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    last_seen_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
 -- Name: banned_ips; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -3303,6 +3546,96 @@ ALTER SEQUENCE public.context_notifications_id_seq OWNED BY public.context_notif
 
 
 --
+-- Name: conversation_analyses; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.conversation_analyses (
+    context_id text NOT NULL,
+    user_id text NOT NULL,
+    status text DEFAULT 'pending'::text NOT NULL,
+    category text,
+    summary text,
+    tags text[] DEFAULT '{}'::text[] NOT NULL,
+    skills_used text[] DEFAULT '{}'::text[] NOT NULL,
+    outcome text,
+    confidence real,
+    provider text,
+    model text,
+    ai_request_id text,
+    source_request_count bigint DEFAULT 0 NOT NULL,
+    source_last_at timestamp with time zone,
+    classified_at timestamp with time zone,
+    attempts integer DEFAULT 0 NOT NULL,
+    next_attempt timestamp with time zone DEFAULT clock_timestamp() NOT NULL,
+    lease_token text,
+    lease_until timestamp with time zone,
+    last_error text,
+    created_at timestamp with time zone DEFAULT clock_timestamp() NOT NULL,
+    updated_at timestamp with time zone DEFAULT clock_timestamp() NOT NULL,
+    CONSTRAINT conversation_analyses_category_check CHECK ((category = ANY (ARRAY['development'::text, 'business-analysis'::text, 'operations'::text, 'admin-config'::text, 'writing-comms'::text, 'research-learning'::text, 'other'::text]))),
+    CONSTRAINT conversation_analyses_confidence_check CHECK (((confidence >= (0)::double precision) AND (confidence <= (1)::double precision))),
+    CONSTRAINT conversation_analyses_outcome_check CHECK ((outcome = ANY (ARRAY['achieved'::text, 'partial'::text, 'abandoned'::text, 'unclear'::text]))),
+    CONSTRAINT conversation_analyses_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'classified'::text, 'failed'::text])))
+);
+
+
+--
+-- Name: conversation_skill_uses; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.conversation_skill_uses AS
+ SELECT session_id AS client_session_id,
+    skill,
+    count(*) AS invocations,
+    min(invoked_at) AS first_at
+   FROM public.analysis_skill_events e
+  WHERE (skill IS NOT NULL)
+  GROUP BY session_id, skill;
+
+
+--
+-- Name: conversation_analysis_rows; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.conversation_analysis_rows AS
+ SELECT r.context_id,
+    r.user_id,
+    r.display_name,
+    r.session_id,
+    r.client_session_id,
+    r.group_name,
+    r.project_name,
+    r.model,
+    r.client_kind,
+    r.client_attestation,
+    r.turn_count,
+    r.side_call_count,
+    r.side_call_cost_microdollars,
+    r.tool_call_count,
+    r.error_count,
+    r.total_input_tokens,
+    r.total_output_tokens,
+    r.total_cost_microdollars,
+    r.first_at,
+    r.last_at,
+    r.status,
+    a.status AS analysis_status,
+    a.category,
+    a.summary,
+    a.tags,
+    a.outcome,
+    a.confidence,
+    a.skills_used,
+    a.classified_at,
+    a.model AS judge_model,
+    COALESCE(( SELECT array_agg(s.skill ORDER BY s.first_at) AS array_agg
+           FROM public.conversation_skill_uses s
+          WHERE (s.client_session_id = r.client_session_id)), '{}'::text[]) AS skills_hooked
+   FROM (public.conversation_metrics_for(NULL::text[]) r(context_id, user_id, display_name, session_id, client_session_id, group_name, project_name, model, client_kind, client_attestation, turn_count, side_call_count, side_call_cost_microdollars, tool_call_count, error_count, total_input_tokens, total_output_tokens, total_cost_microdollars, first_at, last_at, status)
+     LEFT JOIN public.conversation_analyses a ON ((a.context_id = r.context_id)));
+
+
+--
 -- Name: conversation_requests; Type: VIEW; Schema: public; Owner: -
 --
 
@@ -3337,7 +3670,7 @@ CREATE VIEW public.conversation_requests AS
    FROM ((public.ai_requests r
      LEFT JOIN public.ai_request_payloads p ON ((p.ai_request_id = r.id)))
      JOIN threads t ON ((((t.context_id)::text = (r.context_id)::text) AND (NOT ((t.gateway_conversation_id)::text IS DISTINCT FROM (r.gateway_conversation_id)::text)))))
-  WHERE ((r.context_id)::text <> '00000000-0000-0000-0000-4c4547414359'::text);
+  WHERE (((r.context_id)::text <> '00000000-0000-0000-0000-4c4547414359'::text) AND (r.actor_kind <> 'job'::text));
 
 
 --
@@ -3488,6 +3821,205 @@ CREATE TABLE public.engagement_events (
 
 
 --
+-- Name: evaluation_queue; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.evaluation_queue (
+    session_id text NOT NULL,
+    criterion text NOT NULL,
+    user_id text NOT NULL,
+    host text DEFAULT 'unknown'::text NOT NULL,
+    closed_at timestamp with time zone NOT NULL,
+    closed_reason text NOT NULL,
+    pending boolean DEFAULT true NOT NULL,
+    attempts integer DEFAULT 0 NOT NULL,
+    next_attempt timestamp with time zone DEFAULT clock_timestamp() NOT NULL,
+    lease_token text,
+    lease_until timestamp with time zone,
+    last_error text,
+    created_at timestamp with time zone DEFAULT clock_timestamp() NOT NULL,
+    updated_at timestamp with time zone DEFAULT clock_timestamp() NOT NULL,
+    CONSTRAINT evaluation_queue_closed_reason_check CHECK ((closed_reason = ANY (ARRAY['session_end'::text, 'quiet'::text, 'manual'::text]))),
+    CONSTRAINT evaluation_queue_criterion_check CHECK ((criterion = ANY (ARRAY['intent'::text, 'quality'::text, 'speed'::text, 'cost'::text])))
+);
+
+
+--
+-- Name: evaluation_reports; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.evaluation_reports (
+    id text DEFAULT (gen_random_uuid())::text NOT NULL,
+    scope_kind text NOT NULL,
+    scope_id text DEFAULT ''::text NOT NULL,
+    window_start timestamp with time zone NOT NULL,
+    window_end timestamp with time zone NOT NULL,
+    marketplace_hash text,
+    status text DEFAULT 'pending'::text NOT NULL,
+    trigger text DEFAULT 'automatic'::text NOT NULL,
+    requested_by text,
+    source_run_count bigint DEFAULT 0 NOT NULL,
+    source_last_run_at timestamp with time zone,
+    provider text,
+    model text,
+    ai_request_id text,
+    input_tokens bigint,
+    output_tokens bigint,
+    cost_microdollars bigint,
+    latency_ms integer,
+    inputs jsonb DEFAULT '{}'::jsonb NOT NULL,
+    findings jsonb,
+    attempts integer DEFAULT 0 NOT NULL,
+    next_attempt timestamp with time zone DEFAULT clock_timestamp() NOT NULL,
+    lease_token text,
+    lease_until timestamp with time zone,
+    last_error text,
+    generated_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT clock_timestamp() NOT NULL,
+    updated_at timestamp with time zone DEFAULT clock_timestamp() NOT NULL,
+    CONSTRAINT evaluation_reports_scope_kind_check CHECK ((scope_kind = ANY (ARRAY['global'::text, 'marketplace'::text]))),
+    CONSTRAINT evaluation_reports_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'generated'::text, 'failed'::text]))),
+    CONSTRAINT evaluation_reports_trigger_check CHECK ((trigger = ANY (ARRAY['automatic'::text, 'manual'::text])))
+);
+
+
+--
+-- Name: evaluation_runs; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.evaluation_runs (
+    id text DEFAULT (gen_random_uuid())::text NOT NULL,
+    session_id text NOT NULL,
+    user_id text NOT NULL,
+    host text NOT NULL,
+    criterion text NOT NULL,
+    attempt integer NOT NULL,
+    status text NOT NULL,
+    score_source text NOT NULL,
+    score smallint,
+    rationale text,
+    evidence jsonb DEFAULT '[]'::jsonb NOT NULL,
+    metrics jsonb DEFAULT '{}'::jsonb NOT NULL,
+    provider text NOT NULL,
+    model text NOT NULL,
+    ai_request_id text,
+    input_tokens bigint,
+    output_tokens bigint,
+    cost_microdollars bigint,
+    latency_ms integer,
+    system_prompt text NOT NULL,
+    user_prompt text NOT NULL,
+    response text,
+    error text,
+    config_hash text NOT NULL,
+    trigger text DEFAULT 'automatic'::text NOT NULL,
+    requested_by text,
+    created_at timestamp with time zone DEFAULT clock_timestamp() NOT NULL,
+    CONSTRAINT evaluation_runs_criterion_check CHECK ((criterion = ANY (ARRAY['intent'::text, 'quality'::text, 'speed'::text, 'cost'::text]))),
+    CONSTRAINT evaluation_runs_score_check CHECK (((score >= 0) AND (score <= 100))),
+    CONSTRAINT evaluation_runs_score_source_check CHECK ((score_source = ANY (ARRAY['judge'::text, 'metric'::text]))),
+    CONSTRAINT evaluation_runs_status_check CHECK ((status = ANY (ARRAY['succeeded'::text, 'failed'::text]))),
+    CONSTRAINT evaluation_runs_trigger_check CHECK ((trigger = ANY (ARRAY['automatic'::text, 'manual'::text])))
+);
+
+
+--
+-- Name: evaluation_session_scores; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.evaluation_session_scores AS
+ SELECT DISTINCT ON (session_id, criterion) session_id,
+    user_id,
+    host,
+    criterion,
+    id AS run_id,
+    status,
+    score_source,
+    score,
+    rationale,
+    model,
+    error,
+    created_at AS scored_at
+   FROM public.evaluation_runs r
+  ORDER BY session_id, criterion, (status = 'succeeded'::text) DESC, created_at DESC;
+
+
+--
+-- Name: evaluation_session_scorecard; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.evaluation_session_scorecard AS
+ SELECT session_id,
+    user_id,
+    max(score) FILTER (WHERE ((criterion = 'intent'::text) AND (status = 'succeeded'::text))) AS intent,
+    max(score) FILTER (WHERE ((criterion = 'quality'::text) AND (status = 'succeeded'::text))) AS quality,
+    max(score) FILTER (WHERE ((criterion = 'speed'::text) AND (status = 'succeeded'::text))) AS speed,
+    max(score) FILTER (WHERE ((criterion = 'cost'::text) AND (status = 'succeeded'::text))) AS cost,
+    (count(*) FILTER (WHERE (status = 'succeeded'::text)))::integer AS scored_criteria,
+    (count(*) FILTER (WHERE (status = 'failed'::text)))::integer AS failed_criteria,
+    max(scored_at) AS last_scored_at
+   FROM public.evaluation_session_scores
+  GROUP BY session_id, user_id;
+
+
+--
+-- Name: service_owned_ids; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.service_owned_ids (
+    kind text NOT NULL,
+    id text NOT NULL,
+    source text NOT NULL,
+    marketplace_id text,
+    recorded_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT service_owned_ids_kind_check CHECK ((kind = ANY (ARRAY['marketplace'::text, 'plugin'::text, 'skill'::text])))
+);
+
+
+--
+-- Name: evaluation_session_skills; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.evaluation_session_skills AS
+ SELECT e.session_id,
+    e.user_id,
+    e.plugin_id,
+    e.skill,
+    o.marketplace_id,
+    public.marketplace_version_at(o.marketplace_id, min(e.invoked_at)) AS marketplace_hash,
+    count(*) AS invocations,
+    min(e.invoked_at) AS first_invoked_at
+   FROM (public.analysis_skill_events e
+     LEFT JOIN public.service_owned_ids o ON (((o.kind = 'plugin'::text) AND (o.id = e.plugin_id))))
+  WHERE ((e.skill IS NOT NULL) AND (e.session_id IS NOT NULL))
+  GROUP BY e.session_id, e.user_id, e.plugin_id, e.skill, o.marketplace_id;
+
+
+--
+-- Name: evaluation_version_scores; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.evaluation_version_scores AS
+ SELECT s.marketplace_id,
+    s.marketplace_hash,
+    count(DISTINCT s.session_id) AS sessions,
+    count(DISTINCT s.session_id) FILTER (WHERE (c.scored_criteria > 0)) AS scored_sessions,
+    (avg(c.intent))::double precision AS intent,
+    (avg(c.quality))::double precision AS quality,
+    (avg(c.speed))::double precision AS speed,
+    (avg(c.cost))::double precision AS cost,
+    min(c.last_scored_at) AS first_scored_at,
+    max(c.last_scored_at) AS last_scored_at
+   FROM (( SELECT DISTINCT evaluation_session_skills.marketplace_id,
+            evaluation_session_skills.marketplace_hash,
+            evaluation_session_skills.session_id
+           FROM public.evaluation_session_skills
+          WHERE (evaluation_session_skills.marketplace_id IS NOT NULL)) s
+     LEFT JOIN public.evaluation_session_scorecard c ON ((c.session_id = s.session_id)))
+  GROUP BY s.marketplace_id, s.marketplace_hash;
+
+
+--
 -- Name: event_outbox; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -3594,6 +4126,7 @@ CREATE TABLE public.feedback_ingestion_outbox (
     kind text NOT NULL,
     event_id text,
     request_id text,
+    artifact_id text,
     user_id text NOT NULL,
     native_session_id text,
     revision bigint DEFAULT 1 NOT NULL,
@@ -3606,7 +4139,7 @@ CREATE TABLE public.feedback_ingestion_outbox (
     updated_at timestamp with time zone DEFAULT clock_timestamp() NOT NULL,
     occurred_at timestamp with time zone DEFAULT clock_timestamp() NOT NULL,
     last_error text,
-    CONSTRAINT feedback_ingestion_outbox_kind_check CHECK ((kind = ANY (ARRAY['invocation'::text, 'request'::text, 'assessment'::text, 'resource_association'::text])))
+    CONSTRAINT feedback_ingestion_outbox_kind_check CHECK ((kind = ANY (ARRAY['invocation'::text, 'request'::text, 'assessment'::text, 'resource_association'::text, 'artifact'::text])))
 );
 
 
@@ -3704,6 +4237,62 @@ CREATE TABLE public.funnels (
 
 
 --
+-- Name: gateway_routes; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.gateway_routes (
+    id text NOT NULL,
+    "position" integer NOT NULL,
+    model_pattern text NOT NULL,
+    provider text NOT NULL,
+    upstream_model text,
+    extra_headers jsonb DEFAULT '{}'::jsonb NOT NULL,
+    pricing jsonb,
+    when_match jsonb,
+    requires jsonb,
+    fallback_provider text,
+    fallback_upstream_model text,
+    explicit_id boolean DEFAULT false NOT NULL,
+    source text DEFAULT 'code'::text NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT gateway_routes_source_check CHECK ((source = ANY (ARRAY['code'::text, 'dashboard'::text])))
+);
+
+
+--
+-- Name: governance_chain; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.governance_chain (
+    policy_id text NOT NULL,
+    "position" integer NOT NULL,
+    enabled boolean DEFAULT true NOT NULL,
+    mode text NOT NULL,
+    entry jsonb NOT NULL,
+    source text DEFAULT 'code'::text NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT governance_chain_mode_check CHECK ((mode = ANY (ARRAY['enforce'::text, 'warn'::text]))),
+    CONSTRAINT governance_chain_source_check CHECK ((source = ANY (ARRAY['code'::text, 'dashboard'::text])))
+);
+
+
+--
+-- Name: governance_chain_settings; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.governance_chain_settings (
+    singleton boolean DEFAULT true NOT NULL,
+    enabled boolean DEFAULT true NOT NULL,
+    mode text NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT governance_chain_settings_mode_check CHECK ((mode = ANY (ARRAY['enforce'::text, 'warn'::text]))),
+    CONSTRAINT governance_chain_settings_singleton_check CHECK (singleton)
+);
+
+
+--
 -- Name: governance_decisions; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -3726,6 +4315,7 @@ CREATE TABLE public.governance_decisions (
     task_id text,
     trace_id text,
     client_id text,
+    tool_use_id text,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     CONSTRAINT governance_decisions_actor_id_check CHECK ((length(actor_id) > 0)),
     CONSTRAINT governance_decisions_actor_kind_check CHECK ((actor_kind = ANY (ARRAY['user'::text, 'anonymous'::text, 'system'::text, 'job'::text, 'mcp'::text, 'agent'::text]))),
@@ -3757,6 +4347,9 @@ CREATE TABLE public.group_members (
     source_ad_group text,
     granted_by text,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    valid_from timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    valid_until timestamp with time zone,
+    revoked_at timestamp with time zone,
     CONSTRAINT group_members_source_check CHECK ((source = ANY (ARRAY['adfs'::text, 'manual'::text])))
 );
 
@@ -4553,6 +5146,44 @@ CREATE TABLE public.markdown_fts (
 
 
 --
+-- Name: marketplace_versions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.marketplace_versions (
+    marketplace_id text NOT NULL,
+    content_hash text NOT NULL,
+    source text NOT NULL,
+    source_hash text,
+    manifest jsonb,
+    plugin_count integer DEFAULT 0 NOT NULL,
+    skill_count integer DEFAULT 0 NOT NULL,
+    first_seen_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    last_seen_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    effective_until timestamp with time zone,
+    origin text DEFAULT 'manifest'::text NOT NULL,
+    CONSTRAINT marketplace_versions_origin_check CHECK ((origin = ANY (ARRAY['manifest'::text, 'legacy_source_hash'::text])))
+);
+
+
+--
+-- Name: mcp_artifact_findings; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.mcp_artifact_findings (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    artifact_id character varying(255) NOT NULL,
+    phase character varying(32) NOT NULL,
+    severity character varying(16) NOT NULL,
+    category character varying(64) NOT NULL,
+    scanner character varying(64) NOT NULL,
+    path text,
+    excerpt text,
+    redacted boolean DEFAULT false NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
 -- Name: mcp_artifacts; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -4562,13 +5193,26 @@ CREATE TABLE public.mcp_artifacts (
     mcp_execution_id character varying(255) NOT NULL,
     context_id character varying(255),
     user_id character varying(255),
+    session_id character varying(255),
+    trace_id character varying(255),
+    ai_tool_call_id character varying(255),
     server_name character varying(255) NOT NULL,
+    tool_name character varying(255),
     artifact_type character varying(100) NOT NULL,
     title character varying(500),
+    source character varying(32) DEFAULT 'in_process'::character varying NOT NULL,
+    last_seen_source character varying(32),
     data jsonb NOT NULL,
     metadata jsonb,
+    payload_sha256 character(64),
+    payload_bytes integer,
+    is_structured boolean DEFAULT false NOT NULL,
+    has_ui_resource boolean DEFAULT false NOT NULL,
+    is_error boolean DEFAULT false NOT NULL,
+    secret_redactions integer DEFAULT 0 NOT NULL,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    expires_at timestamp with time zone
+    expires_at timestamp with time zone,
+    CONSTRAINT mcp_artifacts_source_check CHECK (((source)::text = ANY ((ARRAY['in_process'::character varying, 'proxy'::character varying, 'gateway'::character varying, 'hook_claude_code'::character varying, 'hook_opencode'::character varying])::text[])))
 );
 
 
@@ -4709,7 +5353,12 @@ CREATE TABLE public.mcp_tool_executions (
     actor_kind text,
     actor_id text,
     ai_tool_call_id character varying(255),
+    source character varying(32) DEFAULT 'in_process'::character varying NOT NULL,
+    correlation character varying(16) DEFAULT 'exact'::character varying NOT NULL,
+    payload_sha256 character(64),
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT mcp_tool_executions_correlation_check CHECK (((correlation)::text = ANY ((ARRAY['exact'::character varying, 'inferred'::character varying])::text[]))),
+    CONSTRAINT mcp_tool_executions_source_check CHECK (((source)::text = ANY ((ARRAY['in_process'::character varying, 'proxy'::character varying, 'gateway'::character varying, 'hook_claude_code'::character varying, 'hook_opencode'::character varying])::text[]))),
     CONSTRAINT mcp_tool_executions_status_check CHECK (((status)::text = ANY ((ARRAY['pending'::character varying, 'success'::character varying, 'failed'::character varying, 'timeout'::character varying])::text[])))
 );
 
@@ -4912,6 +5561,26 @@ CREATE TABLE public.oauth_state_bindings (
 
 
 --
+-- Name: otlp_export_state; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.otlp_export_state (
+    signal text NOT NULL,
+    watermark timestamp with time zone DEFAULT now() NOT NULL,
+    watermark_id text DEFAULT ''::text NOT NULL,
+    last_attempt_at timestamp with time zone,
+    last_success_at timestamp with time zone,
+    last_error text,
+    last_error_at timestamp with time zone,
+    batches_total bigint DEFAULT 0 NOT NULL,
+    failures_total bigint DEFAULT 0 NOT NULL,
+    rows_total bigint DEFAULT 0 NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT otlp_export_state_signal_check CHECK ((signal = ANY (ARRAY['traces'::text, 'logs'::text])))
+);
+
+
+--
 -- Name: plugin_env_vars; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -4956,9 +5625,6 @@ CREATE TABLE public.plugin_session_summaries (
     ai_summary text,
     ai_tags text,
     ai_description text,
-    apm real,
-    eapm real,
-    peak_concurrent integer,
     permission_mode text,
     client_source text,
     subagent_spawns bigint DEFAULT 0 NOT NULL,
@@ -5016,6 +5682,9 @@ CREATE TABLE public.project_members (
     source_ad_group text,
     granted_by text,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    valid_from timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    valid_until timestamp with time zone,
+    revoked_at timestamp with time zone,
     CONSTRAINT project_members_source_check CHECK ((source = ANY (ARRAY['adfs'::text, 'manual'::text])))
 );
 
@@ -5501,20 +6170,6 @@ CREATE TABLE public.secret_resolution_tokens (
 
 
 --
--- Name: service_owned_ids; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.service_owned_ids (
-    kind text NOT NULL,
-    id text NOT NULL,
-    source text NOT NULL,
-    marketplace_id text,
-    recorded_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    CONSTRAINT service_owned_ids_kind_check CHECK ((kind = ANY (ARRAY['marketplace'::text, 'plugin'::text, 'skill'::text])))
-);
-
-
---
 -- Name: service_sources; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -5546,40 +6201,6 @@ CREATE TABLE public.services (
     heartbeat_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
-);
-
-
---
--- Name: session_analyses; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.session_analyses (
-    session_id text NOT NULL,
-    user_id text NOT NULL,
-    title text DEFAULT ''::text NOT NULL,
-    description text DEFAULT ''::text NOT NULL,
-    summary text DEFAULT ''::text NOT NULL,
-    tags text DEFAULT ''::text NOT NULL,
-    goal_achieved text DEFAULT ''::text NOT NULL,
-    quality_score smallint DEFAULT 0 NOT NULL,
-    outcome text DEFAULT ''::text NOT NULL,
-    error_analysis text,
-    skill_assessment text,
-    recommendations text,
-    skill_scores jsonb,
-    category text DEFAULT 'other'::text NOT NULL,
-    goal_outcome_map jsonb,
-    efficiency_metrics jsonb,
-    best_practices_checklist jsonb,
-    improvement_hints text,
-    corrections_count integer DEFAULT 0 NOT NULL,
-    session_duration_minutes integer,
-    total_turns integer,
-    automation_ratio real,
-    plan_mode_used boolean DEFAULT false NOT NULL,
-    client_surface text DEFAULT ''::text NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
 
@@ -5674,13 +6295,13 @@ CREATE VIEW public.skill_invocation_events AS
             e.session_id,
             e.plugin_id,
             ((e.metadata -> 'tool_input'::text) ->> 'skill'::text) AS skill,
-            (e.metadata ->> 'tool_use_id'::text) AS tool_use_id,
+            e.tool_use_id,
             'tool'::text AS source,
             e.created_at AS invoked_at
            FROM public.plugin_usage_events e
           WHERE ((e.event_type = ANY (ARRAY['PostToolUse'::text, 'PostToolUseFailure'::text])) AND (e.tool_name = 'Skill'::text) AND (((e.metadata -> 'tool_input'::text) ->> 'skill'::text) IS NOT NULL) AND (EXISTS ( SELECT 1
                    FROM public.governance_decisions g
-                  WHERE ((g.session_id = e.session_id) AND (g.tool_name = 'Skill'::text) AND ((g.created_at >= (e.created_at - '00:00:05'::interval)) AND (g.created_at <= (e.created_at + '00:00:05'::interval)))))))
+                  WHERE ((g.session_id = e.session_id) AND (g.tool_name = 'Skill'::text) AND (((e.tool_use_id IS NOT NULL) AND (g.tool_use_id = e.tool_use_id)) OR ((g.tool_use_id IS NULL) AND ((g.created_at >= (e.created_at - '00:00:05'::interval)) AND (g.created_at <= (e.created_at + '00:00:05'::interval)))))))))
         )
  SELECT user_id,
     session_id,
@@ -5855,6 +6476,50 @@ ALTER SEQUENCE public.tenant_activity_id_seq OWNED BY public.tenant_activity.id;
 
 
 --
+-- Name: tool_call_ledger; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.tool_call_ledger AS
+ SELECT COALESCE(i.ai_tool_call_id, e.ai_tool_call_id) AS ai_tool_call_id,
+    i.id AS intent_id,
+    i.request_id,
+    e.mcp_execution_id,
+    a.artifact_id,
+    COALESCE(r.user_id, e.user_id, a.user_id) AS user_id,
+    COALESCE(r.session_id, e.session_id, a.session_id) AS session_id,
+    COALESCE(r.context_id, e.context_id, a.context_id) AS context_id,
+    COALESCE(r.trace_id, e.trace_id, a.trace_id) AS trace_id,
+    r.client_kind,
+    COALESCE(i.tool_name, e.tool_name, a.tool_name) AS tool_name,
+    COALESCE(e.server_name, a.server_name) AS server_name,
+    i.created_at AS intended_at,
+    e.started_at AS executed_at,
+    e.completed_at,
+    e.execution_time_ms,
+    e.status AS execution_status,
+    e.error_message,
+    e.source,
+    e.correlation,
+    a.artifact_type,
+    a.title AS artifact_title,
+    COALESCE(a.is_structured, false) AS is_structured,
+    COALESCE(a.has_ui_resource, false) AS has_ui_resource,
+    COALESCE(a.is_error, false) AS is_error,
+    a.payload_bytes,
+    a.secret_redactions,
+        CASE
+            WHEN (i.id IS NULL) THEN 'unattested'::text
+            WHEN (e.mcp_execution_id IS NULL) THEN 'intended'::text
+            ELSE 'executed'::text
+        END AS state,
+    COALESCE(e.started_at, i.created_at) AS occurred_at
+   FROM (((public.ai_request_tool_calls i
+     FULL JOIN public.mcp_tool_executions e ON (((e.ai_tool_call_id)::text = (i.ai_tool_call_id)::text)))
+     LEFT JOIN public.mcp_artifacts a ON (((a.mcp_execution_id)::text = e.mcp_execution_id)))
+     LEFT JOIN public.ai_requests r ON ((r.id = (i.request_id)::text)));
+
+
+--
 -- Name: usage_anomalies; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -5904,6 +6569,18 @@ CREATE TABLE public.user_api_keys (
 
 
 --
+-- Name: user_device_cert_validity; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.user_device_cert_validity (
+    device_id text NOT NULL,
+    valid_until timestamp with time zone NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
 -- Name: user_device_certs; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -5940,13 +6617,14 @@ CREATE VIEW public.user_groups AS
  SELECT DISTINCT gm.user_id,
     gm.group_id
    FROM public.group_members gm
+  WHERE ((gm.revoked_at IS NULL) AND (gm.valid_from <= CURRENT_TIMESTAMP) AND ((gm.valid_until IS NULL) OR (gm.valid_until > CURRENT_TIMESTAMP)))
 UNION ALL
  SELECT u.id AS user_id,
     'unassigned'::text AS group_id
    FROM public.users u
   WHERE ((NOT ('anonymous'::text = ANY (u.roles))) AND (NOT (EXISTS ( SELECT 1
            FROM public.group_members gm
-          WHERE (gm.user_id = u.id)))));
+          WHERE ((gm.user_id = u.id) AND (gm.revoked_at IS NULL) AND (gm.valid_from <= CURRENT_TIMESTAMP) AND ((gm.valid_until IS NULL) OR (gm.valid_until > CURRENT_TIMESTAMP)))))));
 
 
 --
@@ -5958,6 +6636,8 @@ CREATE TABLE public.user_manual_roles (
     role text NOT NULL,
     granted_by text,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    valid_from timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    valid_until timestamp with time zone,
     CONSTRAINT user_manual_roles_role_check CHECK ((role = ANY (ARRAY['platform_admin'::text, 'admin'::text, 'developer'::text, 'user'::text, 'project_manager'::text, 'knowledge_worker'::text, 'super_admin'::text])))
 );
 
@@ -5994,6 +6674,17 @@ CREATE TABLE public.user_profile_reports (
     generated_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL
 );
+
+
+--
+-- Name: user_projects; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.user_projects AS
+ SELECT DISTINCT user_id,
+    project_id
+   FROM public.project_members pm
+  WHERE ((revoked_at IS NULL) AND (valid_from <= CURRENT_TIMESTAMP) AND ((valid_until IS NULL) OR (valid_until > CURRENT_TIMESTAMP)));
 
 
 --
@@ -6065,16 +6756,14 @@ UNION ALL
     'session'::text AS entity_type,
     s.session_id AS entity_name,
         CASE
-            WHEN ((s.ended_at IS NOT NULL) AND (sa.title IS NOT NULL) AND (sa.title <> ''::text)) THEN sa.title
             WHEN ((s.ended_at IS NOT NULL) AND (s.ai_title IS NOT NULL) AND (s.ai_title <> ''::text)) THEN s.ai_title
             WHEN (s.ended_at IS NOT NULL) THEN concat('Completed AI session (', s.prompts, ' prompts, ', s.tool_uses, ' tool calls)')
             ELSE 'Started AI session'::text
         END AS description,
     COALESCE(s.ended_at, s.started_at, s.created_at) AS created_at,
     ((NOT ('anonymous'::text = ANY (u2.roles))) AND ((u2.email)::text !~~ '%@anonymous.local'::text)) AS is_real_user
-   FROM ((public.plugin_session_summaries s
+   FROM (public.plugin_session_summaries s
      JOIN public.users u2 ON ((u2.id = s.user_id)))
-     LEFT JOIN public.session_analyses sa ON ((sa.session_id = s.session_id)))
 UNION ALL
  SELECT r.id,
     r.user_id,
@@ -6478,6 +7167,14 @@ ALTER TABLE ONLY public.access_control_entities
 
 
 --
+-- Name: access_control_rule_validity access_control_rule_validity_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.access_control_rule_validity
+    ADD CONSTRAINT access_control_rule_validity_pkey PRIMARY KEY (rule_id);
+
+
+--
 -- Name: access_control_rules access_control_rules_entity_type_entity_id_rule_type_rule_v_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -6595,6 +7292,14 @@ ALTER TABLE ONLY public.ai_request_messages
 
 ALTER TABLE ONLY public.ai_request_payloads
     ADD CONSTRAINT ai_request_payloads_pkey PRIMARY KEY (ai_request_id);
+
+
+--
+-- Name: ai_request_scopes ai_request_scopes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_request_scopes
+    ADD CONSTRAINT ai_request_scopes_pkey PRIMARY KEY (request_id);
 
 
 --
@@ -6910,6 +7615,14 @@ ALTER TABLE ONLY public.artifact_parts
 
 
 --
+-- Name: artifact_payloads artifact_payloads_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.artifact_payloads
+    ADD CONSTRAINT artifact_payloads_pkey PRIMARY KEY (sha256);
+
+
+--
 -- Name: banned_ips banned_ips_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7022,6 +7735,14 @@ ALTER TABLE ONLY public.context_notifications
 
 
 --
+-- Name: conversation_analyses conversation_analyses_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.conversation_analyses
+    ADD CONSTRAINT conversation_analyses_pkey PRIMARY KEY (context_id);
+
+
+--
 -- Name: daily_summaries daily_summaries_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7051,6 +7772,30 @@ ALTER TABLE ONLY public.device_app_links
 
 ALTER TABLE ONLY public.engagement_events
     ADD CONSTRAINT engagement_events_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: evaluation_queue evaluation_queue_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.evaluation_queue
+    ADD CONSTRAINT evaluation_queue_pkey PRIMARY KEY (session_id, criterion);
+
+
+--
+-- Name: evaluation_reports evaluation_reports_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.evaluation_reports
+    ADD CONSTRAINT evaluation_reports_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: evaluation_runs evaluation_runs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.evaluation_runs
+    ADD CONSTRAINT evaluation_runs_pkey PRIMARY KEY (id);
 
 
 --
@@ -7171,6 +7916,30 @@ ALTER TABLE ONLY public.funnels
 
 ALTER TABLE ONLY public.funnels
     ADD CONSTRAINT funnels_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: gateway_routes gateway_routes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.gateway_routes
+    ADD CONSTRAINT gateway_routes_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: governance_chain governance_chain_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.governance_chain
+    ADD CONSTRAINT governance_chain_pkey PRIMARY KEY (policy_id);
+
+
+--
+-- Name: governance_chain_settings governance_chain_settings_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.governance_chain_settings
+    ADD CONSTRAINT governance_chain_settings_pkey PRIMARY KEY (singleton);
 
 
 --
@@ -7830,6 +8599,22 @@ ALTER TABLE ONLY public.markdown_fts
 
 
 --
+-- Name: marketplace_versions marketplace_versions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.marketplace_versions
+    ADD CONSTRAINT marketplace_versions_pkey PRIMARY KEY (marketplace_id, content_hash);
+
+
+--
+-- Name: mcp_artifact_findings mcp_artifact_findings_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.mcp_artifact_findings
+    ADD CONSTRAINT mcp_artifact_findings_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: mcp_artifacts mcp_artifacts_artifact_id_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -8006,6 +8791,14 @@ ALTER TABLE ONLY public.oauth_state_bindings
 
 
 --
+-- Name: otlp_export_state otlp_export_state_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.otlp_export_state
+    ADD CONSTRAINT otlp_export_state_pkey PRIMARY KEY (signal);
+
+
+--
 -- Name: plugin_env_vars plugin_env_vars_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -8155,14 +8948,6 @@ ALTER TABLE ONLY public.service_sources
 
 ALTER TABLE ONLY public.services
     ADD CONSTRAINT services_pkey PRIMARY KEY (instance_id, name);
-
-
---
--- Name: session_analyses session_analyses_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.session_analyses
-    ADD CONSTRAINT session_analyses_pkey PRIMARY KEY (session_id);
 
 
 --
@@ -8355,6 +9140,14 @@ ALTER TABLE ONLY public.user_api_keys
 
 ALTER TABLE ONLY public.user_contexts
     ADD CONSTRAINT user_contexts_pkey PRIMARY KEY (context_id);
+
+
+--
+-- Name: user_device_cert_validity user_device_cert_validity_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_device_cert_validity
+    ADD CONSTRAINT user_device_cert_validity_pkey PRIMARY KEY (device_id);
 
 
 --
@@ -8607,6 +9400,13 @@ CREATE INDEX analytics_snapshot_shadow_time ON public.analytics_snapshot_shadow 
 
 
 --
+-- Name: feedback_ingestion_artifact; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX feedback_ingestion_artifact ON public.feedback_ingestion_outbox USING btree (artifact_id) WHERE (artifact_id IS NOT NULL);
+
+
+--
 -- Name: feedback_ingestion_pending; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8625,6 +9425,13 @@ CREATE INDEX feedback_ingestion_session ON public.feedback_ingestion_outbox USIN
 --
 
 CREATE INDEX idx_access_control_entities_default ON public.access_control_entities USING btree (default_included) WHERE (default_included = true);
+
+
+--
+-- Name: idx_access_control_rule_validity_until; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_access_control_rule_validity_until ON public.access_control_rule_validity USING btree (valid_until);
 
 
 --
@@ -8835,6 +9642,27 @@ CREATE INDEX idx_ai_request_messages_sequence ON public.ai_request_messages USIN
 --
 
 CREATE INDEX idx_ai_request_payloads_created_at ON public.ai_request_payloads USING btree (created_at);
+
+
+--
+-- Name: idx_ai_request_scopes_group; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_ai_request_scopes_group ON public.ai_request_scopes USING btree (group_id);
+
+
+--
+-- Name: idx_ai_request_scopes_project; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_ai_request_scopes_project ON public.ai_request_scopes USING btree (project_id);
+
+
+--
+-- Name: idx_ai_request_scopes_user; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_ai_request_scopes_user ON public.ai_request_scopes USING btree (user_id);
 
 
 --
@@ -9419,6 +10247,13 @@ CREATE INDEX idx_artifact_parts_sequence ON public.artifact_parts USING btree (a
 
 
 --
+-- Name: idx_artifact_payloads_last_seen; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_artifact_payloads_last_seen ON public.artifact_payloads USING btree (last_seen_at DESC);
+
+
+--
 -- Name: idx_atr_date; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -9636,6 +10471,34 @@ CREATE INDEX idx_context_agents_context ON public.context_agents USING btree (co
 
 
 --
+-- Name: idx_conversation_analyses_category; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_conversation_analyses_category ON public.conversation_analyses USING btree (category, classified_at DESC);
+
+
+--
+-- Name: idx_conversation_analyses_pending; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_conversation_analyses_pending ON public.conversation_analyses USING btree (next_attempt) WHERE (status <> 'classified'::text);
+
+
+--
+-- Name: idx_conversation_analyses_skills; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_conversation_analyses_skills ON public.conversation_analyses USING gin (skills_used);
+
+
+--
+-- Name: idx_conversation_analyses_user; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_conversation_analyses_user ON public.conversation_analyses USING btree (user_id, classified_at DESC);
+
+
+--
 -- Name: idx_daily_summaries_date; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -9717,6 +10580,55 @@ CREATE INDEX idx_engagement_events_time_on_page ON public.engagement_events USIN
 --
 
 CREATE INDEX idx_engagement_events_user ON public.engagement_events USING btree (user_id);
+
+
+--
+-- Name: idx_evaluation_queue_pending; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_evaluation_queue_pending ON public.evaluation_queue USING btree (next_attempt) WHERE pending;
+
+
+--
+-- Name: idx_evaluation_reports_latest; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_evaluation_reports_latest ON public.evaluation_reports USING btree (scope_kind, scope_id, generated_at DESC) WHERE (status = 'generated'::text);
+
+
+--
+-- Name: idx_evaluation_reports_one_pending; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_evaluation_reports_one_pending ON public.evaluation_reports USING btree (scope_kind, scope_id) WHERE (status = 'pending'::text);
+
+
+--
+-- Name: idx_evaluation_reports_pending; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_evaluation_reports_pending ON public.evaluation_reports USING btree (next_attempt) WHERE (status = 'pending'::text);
+
+
+--
+-- Name: idx_evaluation_runs_created; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_evaluation_runs_created ON public.evaluation_runs USING btree (created_at DESC);
+
+
+--
+-- Name: idx_evaluation_runs_session; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_evaluation_runs_session ON public.evaluation_runs USING btree (session_id, criterion, created_at DESC);
+
+
+--
+-- Name: idx_evaluation_runs_user; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_evaluation_runs_user ON public.evaluation_runs USING btree (user_id, created_at DESC);
 
 
 --
@@ -9881,6 +10793,13 @@ CREATE INDEX idx_funnels_active ON public.funnels USING btree (is_active) WHERE 
 
 
 --
+-- Name: idx_gateway_routes_position; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_gateway_routes_position ON public.gateway_routes USING btree ("position");
+
+
+--
 -- Name: idx_governance_decisions_act_chain; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -9951,6 +10870,13 @@ CREATE INDEX idx_governance_decisions_tool_name ON public.governance_decisions U
 
 
 --
+-- Name: idx_governance_decisions_tool_use_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_governance_decisions_tool_use_id ON public.governance_decisions USING btree (tool_use_id) WHERE (tool_use_id IS NOT NULL);
+
+
+--
 -- Name: idx_governance_decisions_trace; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -9969,6 +10895,13 @@ CREATE INDEX idx_governance_decisions_user ON public.governance_decisions USING 
 --
 
 CREATE INDEX idx_group_members_user ON public.group_members USING btree (user_id);
+
+
+--
+-- Name: idx_group_members_valid_until; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_group_members_valid_until ON public.group_members USING btree (valid_until) WHERE ((valid_until IS NOT NULL) AND (revoked_at IS NULL));
 
 
 --
@@ -10203,6 +11136,20 @@ CREATE INDEX idx_markdown_fts_search ON public.markdown_fts USING gin (search_ve
 
 
 --
+-- Name: idx_marketplace_versions_current; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_marketplace_versions_current ON public.marketplace_versions USING btree (marketplace_id) WHERE (effective_until IS NULL);
+
+
+--
+-- Name: idx_marketplace_versions_interval; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_marketplace_versions_interval ON public.marketplace_versions USING btree (marketplace_id, first_seen_at, effective_until);
+
+
+--
 -- Name: idx_mce_after_reading_this; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -10238,6 +11185,27 @@ CREATE INDEX idx_mce_related_playbooks ON public.markdown_content_enrichment USI
 
 
 --
+-- Name: idx_mcp_artifact_findings_artifact; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_mcp_artifact_findings_artifact ON public.mcp_artifact_findings USING btree (artifact_id);
+
+
+--
+-- Name: idx_mcp_artifact_findings_category; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_mcp_artifact_findings_category ON public.mcp_artifact_findings USING btree (category, created_at DESC);
+
+
+--
+-- Name: idx_mcp_artifacts_ai_tool_call; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_mcp_artifacts_ai_tool_call ON public.mcp_artifacts USING btree (ai_tool_call_id) WHERE (ai_tool_call_id IS NOT NULL);
+
+
+--
 -- Name: idx_mcp_artifacts_artifact_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -10266,6 +11234,13 @@ CREATE INDEX idx_mcp_artifacts_created_at ON public.mcp_artifacts USING btree (c
 
 
 --
+-- Name: idx_mcp_artifacts_execution; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_mcp_artifacts_execution ON public.mcp_artifacts USING btree (mcp_execution_id);
+
+
+--
 -- Name: idx_mcp_artifacts_expires_at; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -10273,10 +11248,10 @@ CREATE INDEX idx_mcp_artifacts_expires_at ON public.mcp_artifacts USING btree (e
 
 
 --
--- Name: idx_mcp_artifacts_mcp_execution_id; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_mcp_artifacts_payload; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_mcp_artifacts_mcp_execution_id ON public.mcp_artifacts USING btree (mcp_execution_id);
+CREATE INDEX idx_mcp_artifacts_payload ON public.mcp_artifacts USING btree (payload_sha256) WHERE (payload_sha256 IS NOT NULL);
 
 
 --
@@ -10291,6 +11266,27 @@ CREATE INDEX idx_mcp_artifacts_server_created ON public.mcp_artifacts USING btre
 --
 
 CREATE INDEX idx_mcp_artifacts_server_name ON public.mcp_artifacts USING btree (server_name);
+
+
+--
+-- Name: idx_mcp_artifacts_session_created; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_mcp_artifacts_session_created ON public.mcp_artifacts USING btree (session_id, created_at DESC) WHERE (session_id IS NOT NULL);
+
+
+--
+-- Name: idx_mcp_artifacts_structured; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_mcp_artifacts_structured ON public.mcp_artifacts USING btree (created_at DESC) WHERE is_structured;
+
+
+--
+-- Name: idx_mcp_artifacts_trace; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_mcp_artifacts_trace ON public.mcp_artifacts USING btree (trace_id) WHERE (trace_id IS NOT NULL);
 
 
 --
@@ -10441,10 +11437,24 @@ CREATE INDEX idx_mcp_tool_executions_session_id ON public.mcp_tool_executions US
 
 
 --
+-- Name: idx_mcp_tool_executions_session_started; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_mcp_tool_executions_session_started ON public.mcp_tool_executions USING btree (session_id, started_at DESC) WHERE (session_id IS NOT NULL);
+
+
+--
 -- Name: idx_mcp_tool_executions_session_tool; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_mcp_tool_executions_session_tool ON public.mcp_tool_executions USING btree (session_id, tool_name);
+
+
+--
+-- Name: idx_mcp_tool_executions_source; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_mcp_tool_executions_source ON public.mcp_tool_executions USING btree (source, started_at DESC);
 
 
 --
@@ -10686,6 +11696,13 @@ CREATE INDEX idx_plugin_usage_event_type ON public.plugin_usage_events USING btr
 
 
 --
+-- Name: idx_plugin_usage_execution; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_plugin_usage_execution ON public.plugin_usage_events USING btree (mcp_execution_id) WHERE (mcp_execution_id IS NOT NULL);
+
+
+--
 -- Name: idx_plugin_usage_session_created; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -10700,6 +11717,13 @@ CREATE INDEX idx_plugin_usage_tool_name ON public.plugin_usage_events USING btre
 
 
 --
+-- Name: idx_plugin_usage_tool_use_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_plugin_usage_tool_use_id ON public.plugin_usage_events USING btree (tool_use_id) WHERE (tool_use_id IS NOT NULL);
+
+
+--
 -- Name: idx_plugin_usage_user; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -10711,6 +11735,13 @@ CREATE INDEX idx_plugin_usage_user ON public.plugin_usage_events USING btree (us
 --
 
 CREATE INDEX idx_project_members_user ON public.project_members USING btree (user_id);
+
+
+--
+-- Name: idx_project_members_valid_until; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_project_members_valid_until ON public.project_members USING btree (valid_until) WHERE ((valid_until IS NOT NULL) AND (revoked_at IS NULL));
 
 
 --
@@ -10816,13 +11847,6 @@ CREATE INDEX idx_services_module ON public.services USING btree (module_name);
 --
 
 CREATE INDEX idx_services_status ON public.services USING btree (status);
-
-
---
--- Name: idx_session_analyses_user; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_session_analyses_user ON public.session_analyses USING btree (user_id, created_at DESC);
 
 
 --
@@ -11302,6 +12326,13 @@ CREATE INDEX idx_user_contexts_user_updated ON public.user_contexts USING btree 
 
 
 --
+-- Name: idx_user_device_cert_validity_until; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_user_device_cert_validity_until ON public.user_device_cert_validity USING btree (valid_until);
+
+
+--
 -- Name: idx_user_device_certs_fingerprint_active; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -11320,6 +12351,13 @@ CREATE INDEX idx_user_device_certs_user ON public.user_device_certs USING btree 
 --
 
 CREATE INDEX idx_user_encryption_keys_user_id ON public.user_encryption_keys USING btree (user_id);
+
+
+--
+-- Name: idx_user_manual_roles_valid_until; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_user_manual_roles_valid_until ON public.user_manual_roles USING btree (valid_until) WHERE (valid_until IS NOT NULL);
 
 
 --
@@ -11701,6 +12739,13 @@ CREATE TRIGGER feedback_capture AFTER INSERT OR DELETE OR UPDATE ON public.ai_re
 
 
 --
+-- Name: evaluation_runs feedback_capture; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER feedback_capture AFTER INSERT OR DELETE OR UPDATE ON public.evaluation_runs FOR EACH ROW EXECUTE FUNCTION public.capture_feedback_source();
+
+
+--
 -- Name: plugin_usage_events feedback_capture; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -11708,10 +12753,10 @@ CREATE TRIGGER feedback_capture AFTER INSERT OR DELETE OR UPDATE ON public.plugi
 
 
 --
--- Name: session_analyses feedback_capture; Type: TRIGGER; Schema: public; Owner: -
+-- Name: mcp_artifacts feedback_capture_artifact; Type: TRIGGER; Schema: public; Owner: -
 --
 
-CREATE TRIGGER feedback_capture AFTER INSERT OR DELETE OR UPDATE ON public.session_analyses FOR EACH ROW EXECUTE FUNCTION public.capture_feedback_source();
+CREATE TRIGGER feedback_capture_artifact AFTER INSERT OR DELETE OR UPDATE ON public.mcp_artifacts FOR EACH ROW EXECUTE FUNCTION public.capture_feedback_artifact();
 
 
 --
@@ -11785,6 +12830,13 @@ CREATE TRIGGER ingestion_enqueue AFTER INSERT ON public.plugin_usage_events FOR 
 
 
 --
+-- Name: evaluation_runs ingestion_owner; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER ingestion_owner BEFORE INSERT OR UPDATE ON public.evaluation_runs FOR EACH ROW EXECUTE FUNCTION public.enforce_ingestion_owner();
+
+
+--
 -- Name: plugin_session_summaries ingestion_owner; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -11796,13 +12848,6 @@ CREATE TRIGGER ingestion_owner BEFORE INSERT OR UPDATE ON public.plugin_session_
 --
 
 CREATE TRIGGER ingestion_owner BEFORE INSERT OR UPDATE ON public.plugin_usage_events FOR EACH ROW EXECUTE FUNCTION public.enforce_ingestion_owner();
-
-
---
--- Name: session_analyses ingestion_owner; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER ingestion_owner BEFORE INSERT OR UPDATE ON public.session_analyses FOR EACH ROW EXECUTE FUNCTION public.enforce_ingestion_owner();
 
 
 --
@@ -12009,6 +13054,13 @@ CREATE TRIGGER reporting_capture AFTER INSERT OR DELETE OR UPDATE ON public.user
 
 
 --
+-- Name: ai_requests request_scope_stamp_ai_requests_trg; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER request_scope_stamp_ai_requests_trg AFTER INSERT ON public.ai_requests FOR EACH ROW EXECUTE FUNCTION public.request_scope_stamp_ai_requests();
+
+
+--
 -- Name: groups trg_groups_protect_system; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -12035,6 +13087,14 @@ CREATE TRIGGER update_user_contexts_updated_at BEFORE UPDATE ON public.user_cont
 
 ALTER TABLE ONLY marketplace.subscriptions
     ADD CONSTRAINT subscriptions_plan_id_fkey FOREIGN KEY (plan_id) REFERENCES marketplace.plans(id);
+
+
+--
+-- Name: access_control_rule_validity access_control_rule_validity_rule_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.access_control_rule_validity
+    ADD CONSTRAINT access_control_rule_validity_rule_id_fkey FOREIGN KEY (rule_id) REFERENCES public.access_control_rules(id) ON DELETE CASCADE;
 
 
 --
@@ -12083,6 +13143,30 @@ ALTER TABLE ONLY public.ai_request_messages
 
 ALTER TABLE ONLY public.ai_request_payloads
     ADD CONSTRAINT ai_request_payloads_ai_request_id_fkey FOREIGN KEY (ai_request_id) REFERENCES public.ai_requests(id) ON DELETE CASCADE;
+
+
+--
+-- Name: ai_request_scopes ai_request_scopes_group_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_request_scopes
+    ADD CONSTRAINT ai_request_scopes_group_id_fkey FOREIGN KEY (group_id) REFERENCES public.groups(id) ON DELETE SET NULL;
+
+
+--
+-- Name: ai_request_scopes ai_request_scopes_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_request_scopes
+    ADD CONSTRAINT ai_request_scopes_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE SET NULL;
+
+
+--
+-- Name: ai_request_scopes ai_request_scopes_request_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_request_scopes
+    ADD CONSTRAINT ai_request_scopes_request_id_fkey FOREIGN KEY (request_id) REFERENCES public.ai_requests(id) ON DELETE CASCADE;
 
 
 --
@@ -12323,6 +13407,22 @@ ALTER TABLE ONLY public.dev_login_codes
 
 ALTER TABLE ONLY public.device_app_links
     ADD CONSTRAINT device_app_links_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: evaluation_queue evaluation_queue_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.evaluation_queue
+    ADD CONSTRAINT evaluation_queue_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: evaluation_runs evaluation_runs_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.evaluation_runs
+    ADD CONSTRAINT evaluation_runs_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 
 
 --
@@ -13062,6 +14162,30 @@ ALTER TABLE ONLY public.markdown_fts
 
 
 --
+-- Name: mcp_artifact_findings mcp_artifact_findings_artifact_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.mcp_artifact_findings
+    ADD CONSTRAINT mcp_artifact_findings_artifact_id_fkey FOREIGN KEY (artifact_id) REFERENCES public.mcp_artifacts(artifact_id) ON DELETE CASCADE;
+
+
+--
+-- Name: mcp_artifacts mcp_artifacts_mcp_execution_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.mcp_artifacts
+    ADD CONSTRAINT mcp_artifacts_mcp_execution_id_fkey FOREIGN KEY (mcp_execution_id) REFERENCES public.mcp_tool_executions(mcp_execution_id) ON DELETE CASCADE;
+
+
+--
+-- Name: mcp_artifacts mcp_artifacts_payload_sha256_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.mcp_artifacts
+    ADD CONSTRAINT mcp_artifacts_payload_sha256_fkey FOREIGN KEY (payload_sha256) REFERENCES public.artifact_payloads(sha256) ON DELETE SET NULL;
+
+
+--
 -- Name: mcp_connector_accounts mcp_connector_accounts_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -13090,7 +14214,7 @@ ALTER TABLE ONLY public.mcp_connector_oauth_states
 --
 
 ALTER TABLE ONLY public.mcp_sessions
-    ADD CONSTRAINT mcp_sessions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE SET NULL;
+    ADD CONSTRAINT mcp_sessions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 
 
 --
@@ -13190,6 +14314,38 @@ ALTER TABLE ONLY public.oauth_refresh_tokens
 
 
 --
+-- Name: plugin_env_vars plugin_env_vars_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.plugin_env_vars
+    ADD CONSTRAINT plugin_env_vars_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: plugin_session_summaries plugin_session_summaries_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.plugin_session_summaries
+    ADD CONSTRAINT plugin_session_summaries_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: plugin_usage_daily plugin_usage_daily_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.plugin_usage_daily
+    ADD CONSTRAINT plugin_usage_daily_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: plugin_usage_events plugin_usage_events_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.plugin_usage_events
+    ADD CONSTRAINT plugin_usage_events_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
 -- Name: project_ad_mappings project_ad_mappings_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -13230,11 +14386,67 @@ ALTER TABLE ONLY public.salesforce_user_identities
 
 
 --
+-- Name: secret_audit_log secret_audit_log_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.secret_audit_log
+    ADD CONSTRAINT secret_audit_log_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: secret_resolution_tokens secret_resolution_tokens_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.secret_resolution_tokens
+    ADD CONSTRAINT secret_resolution_tokens_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
 -- Name: service_owned_ids service_owned_ids_source_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.service_owned_ids
     ADD CONSTRAINT service_owned_ids_source_fkey FOREIGN KEY (source) REFERENCES public.service_sources(name) ON DELETE CASCADE;
+
+
+--
+-- Name: session_cost_snapshots session_cost_snapshots_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.session_cost_snapshots
+    ADD CONSTRAINT session_cost_snapshots_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: session_entity_links session_entity_links_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.session_entity_links
+    ADD CONSTRAINT session_entity_links_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: session_ratings session_ratings_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.session_ratings
+    ADD CONSTRAINT session_ratings_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: session_transcripts session_transcripts_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.session_transcripts
+    ADD CONSTRAINT session_transcripts_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: skill_ratings skill_ratings_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.skill_ratings
+    ADD CONSTRAINT skill_ratings_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 
 
 --
@@ -13278,11 +14490,27 @@ ALTER TABLE ONLY public.user_api_keys
 
 
 --
+-- Name: user_device_cert_validity user_device_cert_validity_device_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_device_cert_validity
+    ADD CONSTRAINT user_device_cert_validity_device_id_fkey FOREIGN KEY (device_id) REFERENCES public.user_device_certs(id) ON DELETE CASCADE;
+
+
+--
 -- Name: user_device_certs user_device_certs_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.user_device_certs
     ADD CONSTRAINT user_device_certs_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: user_encryption_keys user_encryption_keys_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_encryption_keys
+    ADD CONSTRAINT user_encryption_keys_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 
 
 --
@@ -13307,6 +14535,14 @@ ALTER TABLE ONLY public.user_manual_roles
 
 ALTER TABLE ONLY public.user_profile_ext
     ADD CONSTRAINT user_profile_ext_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: user_profile_reports user_profile_reports_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_profile_reports
+    ADD CONSTRAINT user_profile_reports_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 
 
 --
@@ -13338,7 +14574,15 @@ ALTER TABLE ONLY public.user_scope_defaults
 --
 
 ALTER TABLE ONLY public.user_sessions
-    ADD CONSTRAINT user_sessions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE SET NULL;
+    ADD CONSTRAINT user_sessions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: user_settings user_settings_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_settings
+    ADD CONSTRAINT user_settings_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 
 
 --
@@ -13393,176 +14637,200 @@ SET row_security = off;
 -- Data for Name: extension_migrations; Type: TABLE DATA; Schema: public; Owner: -
 --
 
-INSERT INTO public.extension_migrations VALUES ('events_001', 'events', 1, 'actor_attribution', '5e14861e8d6b9497', '2026-09-16 18:20:05.516583+00');
-INSERT INTO public.extension_migrations VALUES ('events_002', 'events', 2, 'actor_attribution_lock', 'ae405cd923565550', '2026-09-16 18:20:05.516583+00');
-INSERT INTO public.extension_migrations VALUES ('events_003', 'events', 3, 'outbox_origin_instance', '268b8ff895ad72f9', '2026-09-16 18:20:05.516583+00');
-INSERT INTO public.extension_migrations VALUES ('events_004', 'events', 4, 'durable_consumption', '820ef124b2170e06', '2026-09-16 18:20:05.516583+00');
-INSERT INTO public.extension_migrations VALUES ('events_005', 'events', 5, 'reporting_privacy', '3a3bdbce6d55a827', '2026-09-16 18:20:05.516583+00');
-INSERT INTO public.extension_migrations VALUES ('events_006', 'events', 6, 'user_privacy_delivery', '69e5571b4674e381', '2026-09-16 18:20:05.516583+00');
-INSERT INTO public.extension_migrations VALUES ('users_001', 'users', 1, 'add_user_sessions_utm_content_term', '4c584594fd20d672', '2026-09-16 18:20:05.529749+00');
-INSERT INTO public.extension_migrations VALUES ('users_002', 'users', 2, 'add_user_sessions_is_ai_crawler', '2fd7329ef96d7544', '2026-09-16 18:20:05.529749+00');
-INSERT INTO public.extension_migrations VALUES ('users_003', 'users', 3, 'rebuild_clean_traffic_index', '31b675f52bf6642c', '2026-09-16 18:20:05.529749+00');
-INSERT INTO public.extension_migrations VALUES ('users_004', 'users', 4, 'user_sessions_revoked_at', 'd8450941ffa1159c', '2026-09-16 18:20:05.529749+00');
-INSERT INTO public.extension_migrations VALUES ('users_005', 'users', 5, 'federated_identities', '68ff85fac4197d59', '2026-09-16 18:20:05.529749+00');
-INSERT INTO public.extension_migrations VALUES ('users_006', 'users', 6, 'user_sessions_source_bridge_mcp', '61c647f86c67b2c7', '2026-09-16 18:20:05.529749+00');
-INSERT INTO public.extension_migrations VALUES ('users_007', 'users', 7, 'drop_session_throttle', '12033d6a8facbe08', '2026-09-16 18:20:05.529749+00');
-INSERT INTO public.extension_migrations VALUES ('users_008', 'users', 8, 'canonical_traffic_views', 'cc8abe54b9257f80', '2026-09-16 18:20:05.529749+00');
-INSERT INTO public.extension_migrations VALUES ('users_009', 'users', 9, 'normalise_user_emails', 'c15d7e14f647c941', '2026-09-16 18:20:05.529749+00');
-INSERT INTO public.extension_migrations VALUES ('users_010', 'users', 10, 'drop_users_name_unique', '619cec5c7f0b6648', '2026-09-16 18:20:05.529749+00');
-INSERT INTO public.extension_migrations VALUES ('users_011', 'users', 11, 'user_rate_limit_buckets', '504384d07e8cf48d', '2026-09-16 18:20:05.529749+00');
-INSERT INTO public.extension_migrations VALUES ('users_012', 'users', 12, 'device_eligibility_interface', '52272c6000339053', '2026-09-16 18:20:05.529749+00');
-INSERT INTO public.extension_migrations VALUES ('users_013', 'users', 13, 'user_retention_barrier', '76e6d55c2749d617', '2026-09-16 18:20:05.529749+00');
-INSERT INTO public.extension_migrations VALUES ('users_014', 'users', 14, 'reporting_privacy', '8adff81817225598', '2026-09-16 18:20:05.529749+00');
-INSERT INTO public.extension_migrations VALUES ('users_015', 'users', 15, 'user_privacy_delivery', '24488db167f9f4b5', '2026-09-16 18:20:05.529749+00');
-INSERT INTO public.extension_migrations VALUES ('mcp_001', 'mcp', 1, 'session_initialize_params', 'c95c06aab309a732', '2026-09-16 18:20:05.562811+00');
-INSERT INTO public.extension_migrations VALUES ('mcp_002', 'mcp', 2, 'artifact_server_name_repair', '6085aba80a5e0cf7', '2026-09-16 18:20:05.562811+00');
-INSERT INTO public.extension_migrations VALUES ('mcp_003', 'mcp', 3, 'tool_execution_actor', 'd99c19dfe5556653', '2026-09-16 18:20:05.562811+00');
-INSERT INTO public.extension_migrations VALUES ('mcp_004', 'mcp', 4, 'mcp_proxy_identities', 'fe504c84ba6e4289', '2026-09-16 18:20:05.562811+00');
-INSERT INTO public.extension_migrations VALUES ('mcp_005', 'mcp', 5, 'mcp_external_sessions', 'cac12aa04e6e168e', '2026-09-16 18:20:05.562811+00');
-INSERT INTO public.extension_migrations VALUES ('mcp_006', 'mcp', 6, 'reporting_privacy', 'a062992389a880c5', '2026-09-16 18:20:05.562811+00');
-INSERT INTO public.extension_migrations VALUES ('mcp_007', 'mcp', 7, 'mcp_proxy_identity_roles', 'ad374034ba30fa76', '2026-09-16 18:20:05.562811+00');
-INSERT INTO public.extension_migrations VALUES ('ai_001', 'ai', 1, 'gateway_governance', '5e9fa59d853246fc', '2026-09-16 18:20:05.583032+00');
-INSERT INTO public.extension_migrations VALUES ('ai_002', 'ai', 2, 'split_context_id', 'be2b1b232789908c', '2026-09-16 18:20:05.583032+00');
-INSERT INTO public.extension_migrations VALUES ('ai_003', 'ai', 3, 'drop_runtime_tenancy', '78d22d6fbf237b08', '2026-09-16 18:20:05.583032+00');
-INSERT INTO public.extension_migrations VALUES ('ai_004', 'ai', 4, 'actor_attribution', '7ed4218b3778b19b', '2026-09-16 18:20:05.583032+00');
-INSERT INTO public.extension_migrations VALUES ('ai_005', 'ai', 5, 'actor_attribution_lock', '8539122f633d828a', '2026-09-16 18:20:05.583032+00');
-INSERT INTO public.extension_migrations VALUES ('ai_006', 'ai', 6, 'requested_model', '42c8ccec74f973b1', '2026-09-16 18:20:05.583032+00');
-INSERT INTO public.extension_migrations VALUES ('ai_007', 'ai', 7, 'system_prompt_override', '648a0ae118302719', '2026-09-16 18:20:05.583032+00');
-INSERT INTO public.extension_migrations VALUES ('ai_008', 'ai', 8, 'route_match', '2f959e35df8af04f', '2026-09-16 18:20:05.583032+00');
-INSERT INTO public.extension_migrations VALUES ('ai_009', 'ai', 9, 'ai_requests_session_fk', '1cdbb014e4ef592d', '2026-09-16 18:20:05.583032+00');
-INSERT INTO public.extension_migrations VALUES ('ai_010', 'ai', 10, 'nullable_rejection_routing', 'f6c07dd155d0d20e', '2026-09-16 18:20:05.583032+00');
-INSERT INTO public.extension_migrations VALUES ('ai_011', 'ai', 11, 'subject_quota_buckets', '9607680136af51f6', '2026-09-16 18:20:05.583032+00');
-INSERT INTO public.extension_migrations VALUES ('ai_012', 'ai', 12, 'payload_digests', '7a30f9d904f464ea', '2026-09-16 18:20:05.583032+00');
-INSERT INTO public.extension_migrations VALUES ('ai_013', 'ai', 13, 'offered_tools', 'a2163d4d538ab632', '2026-09-16 18:20:05.583032+00');
-INSERT INTO public.extension_migrations VALUES ('ai_014', 'ai', 14, 'ai_requests_context_not_null', '7eb1fb85f247f1c9', '2026-09-16 18:20:05.583032+00');
-INSERT INTO public.extension_migrations VALUES ('ai_015', 'ai', 15, 'ai_requests_synthetic', 'd48d51cf1a2bbabc', '2026-09-16 18:20:05.583032+00');
-INSERT INTO public.extension_migrations VALUES ('ai_016', 'ai', 16, 'gateway_policy_priority', 'f60d4b2cddfe7916', '2026-09-16 18:20:05.583032+00');
-INSERT INTO public.extension_migrations VALUES ('ai_017', 'ai', 17, 'gateway_thought_signatures', '1889d2fc1ff08604', '2026-09-16 18:20:05.583032+00');
-INSERT INTO public.extension_migrations VALUES ('ai_018', 'ai', 18, 'ai_requests_instance_id', '589699534dfad8b8', '2026-09-16 18:20:05.583032+00');
-INSERT INTO public.extension_migrations VALUES ('ai_019', 'ai', 19, 'ai_safety_findings_blocked', 'a2f3985a0215e8ff', '2026-09-16 18:20:05.583032+00');
-INSERT INTO public.extension_migrations VALUES ('ai_020', 'ai', 20, 'ai_requests_reasoning_tokens', '5d81e67e024dcc33', '2026-09-16 18:20:05.583032+00');
-INSERT INTO public.extension_migrations VALUES ('ai_021', 'ai', 21, 'ai_requests_client_session_kind', '072a3fc6d0e1be38', '2026-09-16 18:20:05.583032+00');
-INSERT INTO public.extension_migrations VALUES ('ai_022', 'ai', 22, 'ai_requests_upstream_latency', '895995d35b0b1851', '2026-09-16 18:20:05.583032+00');
-INSERT INTO public.extension_migrations VALUES ('ai_023', 'ai', 23, 'thought_signature_owner', '01624b951824e1ab', '2026-09-16 18:20:05.583032+00');
-INSERT INTO public.extension_migrations VALUES ('ai_024', 'ai', 24, 'ai_request_accounting_failure', 'efc5bfd58d565960', '2026-09-16 18:20:05.583032+00');
-INSERT INTO public.extension_migrations VALUES ('ai_025', 'ai', 25, 'reporting_privacy', '3d0d3a8577b0c9f4', '2026-09-16 18:20:05.583032+00');
-INSERT INTO public.extension_migrations VALUES ('ai_026', 'ai', 26, 'ai_requests_client_origin', '75c76a8cf077ff7b', '2026-09-16 18:20:05.583032+00');
-INSERT INTO public.extension_migrations VALUES ('ai_027', 'ai', 27, 'ai_request_client_attestation', '2598ddd2895b2723', '2026-09-16 18:20:05.583032+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_001', 'oauth', 1, 'add_rfc8707_resource_column', '494da2b59158d9f7', '2026-09-16 18:20:05.633872+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_002', 'oauth', 2, 'rename_cowork_to_bridge', '251290add3ada5fc', '2026-09-16 18:20:05.633872+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_003', 'oauth', 3, 'drop_bridge_session_tenant', '43ca55d5add0b178', '2026-09-16 18:20:05.633872+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_004', 'oauth', 4, 'oauth_client_owner', 'be4ae04b220a213e', '2026-09-16 18:20:05.633872+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_005', 'oauth', 5, 'auth_code_family', '9710a939665978b4', '2026-09-16 18:20:05.633872+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_006', 'oauth', 6, 'at_rest_pepper_hash', 'bf9839b89d43c11b', '2026-09-16 18:20:05.633872+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_007', 'oauth', 7, 'oauth_state_bindings', 'ea71cf93a0490c6d', '2026-09-16 18:20:05.633872+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_008', 'oauth', 8, 'oauth_jti_revocations', '6a8865943936cb66', '2026-09-16 18:20:05.633872+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_009', 'oauth', 9, 'refresh_token_consumed_at', 'b0af15521a52b286', '2026-09-16 18:20:05.633872+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_010', 'oauth', 10, 'backfill_oauth_client_owner_fk', '5577d06bb8692d22', '2026-09-16 18:20:05.633872+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_011', 'oauth', 11, 'add_application_type', '2efc21180c0aac45', '2026-09-16 18:20:05.633872+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_012', 'oauth', 12, 'bridge_host_model_prefs', '42199296a92ae69b', '2026-09-16 18:20:05.633872+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_013', 'oauth', 13, 'id_jag_replay', '73e439a5dd598d0f', '2026-09-16 18:20:05.633872+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_014', 'oauth', 14, 'webauthn_challenges_state_store', '4ed05b736e1c9236', '2026-09-16 18:20:05.633872+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_015', 'oauth', 15, 'webauthn_challenges_user_fk', 'bacb4641e0b50924', '2026-09-16 18:20:05.633872+00');
-INSERT INTO public.extension_migrations VALUES ('oauth_016', 'oauth', 16, 'oauth_client_registration_token', '9fe7272a6aeba3a3', '2026-09-16 18:20:05.633872+00');
-INSERT INTO public.extension_migrations VALUES ('agent_001', 'agent', 1, 'drop_playbooks', '2fe3674396079f31', '2026-09-16 18:20:05.687285+00');
-INSERT INTO public.extension_migrations VALUES ('agent_002', 'agent', 2, 'add_server_type', 'a32dc3019b6818b0', '2026-09-16 18:20:05.687285+00');
-INSERT INTO public.extension_migrations VALUES ('agent_003', 'agent', 3, 'a2a_v1_task_states', '2f3387804ae0319b', '2026-09-16 18:20:05.687285+00');
-INSERT INTO public.extension_migrations VALUES ('agent_004', 'agent', 4, 'ai_requests_task_fk', '923ec035712b93e3', '2026-09-16 18:20:05.687285+00');
-INSERT INTO public.extension_migrations VALUES ('agent_005', 'agent', 5, 'add_task_version', '60590892c4ccd2e6', '2026-09-16 18:20:05.687285+00');
-INSERT INTO public.extension_migrations VALUES ('agent_006', 'agent', 6, 'drop_agent_skills', '19b3ac09309e7d35', '2026-09-16 18:20:05.687285+00');
-INSERT INTO public.extension_migrations VALUES ('agent_007', 'agent', 7, 'drop_agents', '6f0f35bb3892ebf9', '2026-09-16 18:20:05.687285+00');
-INSERT INTO public.extension_migrations VALUES ('agent_008', 'agent', 8, 'add_user_contexts_kind', '9b62a2fc269c2fba', '2026-09-16 18:20:05.687285+00');
-INSERT INTO public.extension_migrations VALUES ('agent_009', 'agent', 9, 'drop_session_analytics_views', '754d9b78e2758951', '2026-09-16 18:20:05.687285+00');
-INSERT INTO public.extension_migrations VALUES ('agent_010', 'agent', 10, 'services_instance_scope', 'f0f9e3195f30dd6f', '2026-09-16 18:20:05.687285+00');
-INSERT INTO public.extension_migrations VALUES ('agent_011', 'agent', 11, 'drop_task_push_notification_configs', 'aaeea339959a412f', '2026-09-16 18:20:05.687285+00');
-INSERT INTO public.extension_migrations VALUES ('agent_012', 'agent', 12, 'reporting_privacy', '0b46a511dd2d182f', '2026-09-16 18:20:05.687285+00');
-INSERT INTO public.extension_migrations VALUES ('analytics_001', 'analytics', 1, 'add_engagement_event_type', 'd322ff86aa134d2a', '2026-09-16 18:20:05.724384+00');
-INSERT INTO public.extension_migrations VALUES ('analytics_002', 'analytics', 2, 'add_engagement_event_data', '2156106c6c94d2ff', '2026-09-16 18:20:05.724384+00');
-INSERT INTO public.extension_migrations VALUES ('analytics_003', 'analytics', 3, 'seed_anomaly_thresholds', '46d8e70b7ce49ea9', '2026-09-16 18:20:05.724384+00');
-INSERT INTO public.extension_migrations VALUES ('analytics_004', 'analytics', 4, 'drop_high_risk_fingerprints_view', '78a931cf97094d4e', '2026-09-16 18:20:05.724384+00');
-INSERT INTO public.extension_migrations VALUES ('analytics_005', 'analytics', 5, 'feedback_facts', '799cd1cfa68fb59c', '2026-09-16 18:20:05.724384+00');
-INSERT INTO public.extension_migrations VALUES ('analytics_006', 'analytics', 6, 'ingestion_producers', 'd154a6fd89acada7', '2026-09-16 18:20:05.724384+00');
-INSERT INTO public.extension_migrations VALUES ('analytics_007', 'analytics', 7, 'feedback_snapshots', 'b83c88688892dfdc', '2026-09-16 18:20:05.724384+00');
-INSERT INTO public.extension_migrations VALUES ('analytics_008', 'analytics', 8, 'reporting_privacy', '097461bca582a9a6', '2026-09-16 18:20:05.724384+00');
-INSERT INTO public.extension_migrations VALUES ('analytics_009', 'analytics', 9, 'reporting_privacy_initialization', '40999d63c7d5ce7a', '2026-09-16 18:20:05.724384+00');
-INSERT INTO public.extension_migrations VALUES ('analytics_010', 'analytics', 10, 'user_privacy_delivery', 'bc38125d82dc96c1', '2026-09-16 18:20:05.724384+00');
-INSERT INTO public.extension_migrations VALUES ('authz_001', 'authz', 1, 'access_control_rules_evolution', '46f992c79ec0745c', '2026-09-16 18:20:05.813753+00');
-INSERT INTO public.extension_migrations VALUES ('authz_002', 'authz', 2, 'actor_attribution', '4bb62e10ee4e261e', '2026-09-16 18:20:05.813753+00');
-INSERT INTO public.extension_migrations VALUES ('authz_003', 'authz', 3, 'actor_attribution_lock', 'e94806d1d72ddf08', '2026-09-16 18:20:05.813753+00');
-INSERT INTO public.extension_migrations VALUES ('authz_004', 'authz', 4, 'act_chain', 'db5ec60fe7bd133d', '2026-09-16 18:20:05.813753+00');
-INSERT INTO public.extension_migrations VALUES ('authz_005', 'authz', 5, 'actor_kind_extend', 'e19ceb4e8e0bdbd6', '2026-09-16 18:20:05.813753+00');
-INSERT INTO public.extension_migrations VALUES ('authz_007', 'authz', 7, 'split_acl_entities', '95f9291c73f52e90', '2026-09-16 18:20:05.813753+00');
-INSERT INTO public.extension_migrations VALUES ('authz_008', 'authz', 8, 'drop_department_acl', 'e87c60bd3f0e2e6f', '2026-09-16 18:20:05.813753+00');
-INSERT INTO public.extension_migrations VALUES ('authz_009', 'authz', 9, 'messaging_acl_entity_types', 'f939735dcd876537', '2026-09-16 18:20:05.813753+00');
-INSERT INTO public.extension_migrations VALUES ('authz_010', 'authz', 10, 'governance_context_task', '58f8cb475372e638', '2026-09-16 18:20:05.813753+00');
-INSERT INTO public.extension_migrations VALUES ('authz_011', 'authz', 11, 'open_rule_type_vocabulary', '3ad469ab6af692ca', '2026-09-16 18:20:05.813753+00');
-INSERT INTO public.extension_migrations VALUES ('authz_012', 'authz', 12, 'governance_decisions_context_not_null', 'd206fdaf609a1eda', '2026-09-16 18:20:05.813753+00');
-INSERT INTO public.extension_migrations VALUES ('authz_013', 'authz', 13, 'governance_decisions_trace_id', 'b7823ebf44dfe8b7', '2026-09-16 18:20:05.813753+00');
-INSERT INTO public.extension_migrations VALUES ('authz_014', 'authz', 14, 'tool_approval_requests', '985c9656d1111428', '2026-09-16 18:20:05.813753+00');
-INSERT INTO public.extension_migrations VALUES ('authz_015', 'authz', 15, 'governance_decisions_client_id', '6fe3fa7445d5354b', '2026-09-16 18:20:05.813753+00');
-INSERT INTO public.extension_migrations VALUES ('authz_016', 'authz', 16, 'governance_decisions_warn', '34656346b10dff69', '2026-09-16 18:20:05.813753+00');
-INSERT INTO public.extension_migrations VALUES ('authz_017', 'authz', 17, 'access_control_rules_source', 'd9185a002adf5048', '2026-09-16 18:20:05.813753+00');
-INSERT INTO public.extension_migrations VALUES ('authz_018', 'authz', 18, 'governance_decisions_append_only', 'a1d728415f309370', '2026-09-16 18:20:05.813753+00');
-INSERT INTO public.extension_migrations VALUES ('content_001', 'content', 1, 'markdown_content_locale_unique', '1d5d5978cbf29a46', '2026-09-16 18:20:05.840273+00');
-INSERT INTO public.extension_migrations VALUES ('content_002', 'content', 2, 'drop_link_analytics_views', '1fc92a6fbbe2b211', '2026-09-16 18:20:05.840273+00');
-INSERT INTO public.extension_migrations VALUES ('content_003', 'content', 3, 'reporting_privacy', '1cf422e471e2d37d', '2026-09-16 18:20:05.840273+00');
-INSERT INTO public.extension_migrations VALUES ('files_001', 'files', 1, 'drop_ai_image_stats_view', '2559297865e35d23', '2026-09-16 18:20:05.859746+00');
-INSERT INTO public.extension_migrations VALUES ('logging_001', 'logging', 1, 'split_context_id', '13c45db59ea66544', '2026-09-16 18:20:05.868701+00');
-INSERT INTO public.extension_migrations VALUES ('logging_002', 'logging', 2, 'analytics_event_data', 'a36c0cad23329eea', '2026-09-16 18:20:05.868701+00');
-INSERT INTO public.extension_migrations VALUES ('logging_003', 'logging', 3, 'prune_redundant_log_indexes', '80ad435eacd2fd1e', '2026-09-16 18:20:05.868701+00');
-INSERT INTO public.extension_migrations VALUES ('logging_004', 'logging', 4, 'drop_client_log_views', '76ae397f539d7fc6', '2026-09-16 18:20:05.868701+00');
-INSERT INTO public.extension_migrations VALUES ('logging_005', 'logging', 5, 'logs_instance_id', '830d265f0c451b1c', '2026-09-16 18:20:05.868701+00');
-INSERT INTO public.extension_migrations VALUES ('logging_006', 'logging', 6, 'reporting_privacy', 'd413012b2405adcf', '2026-09-16 18:20:05.868701+00');
-INSERT INTO public.extension_migrations VALUES ('managed_resources_001', 'managed_resources', 1, 'revision_listing_indexes', 'd00dbf6413b9ef80', '2026-09-16 18:20:05.880053+00');
-INSERT INTO public.extension_migrations VALUES ('managed_resources_002', 'managed_resources', 2, 'managed_resolution', 'a3c3c4b330d81b0f', '2026-09-16 18:20:05.880053+00');
-INSERT INTO public.extension_migrations VALUES ('managed_resources_003', 'managed_resources', 3, 'evaluation_attestations', 'dd9fe5d9bfd846af', '2026-09-16 18:20:05.880053+00');
-INSERT INTO public.extension_migrations VALUES ('managed_resources_004', 'managed_resources', 4, 'consumer_evidence', '8be01a0228e9f90b', '2026-09-16 18:20:05.880053+00');
-INSERT INTO public.extension_migrations VALUES ('managed_resources_005', 'managed_resources', 5, 'dependency_verification', '7a3a55d7ee0b176c', '2026-09-16 18:20:05.880053+00');
-INSERT INTO public.extension_migrations VALUES ('managed_resources_006', 'managed_resources', 6, 'inventory', '4c8deef71e356bf3', '2026-09-16 18:20:05.880053+00');
-INSERT INTO public.extension_migrations VALUES ('managed_resources_007', 'managed_resources', 7, 'installation_coverage', '6b4c3e847d4f04d7', '2026-09-16 18:20:05.880053+00');
-INSERT INTO public.extension_migrations VALUES ('managed_resources_008', 'managed_resources', 8, 'api_operations', '1ee81b04b36d62af', '2026-09-16 18:20:05.880053+00');
-INSERT INTO public.extension_migrations VALUES ('managed_resources_009', 'managed_resources', 9, 'publication_review_experiment', 'b93a1ad63dc56c94', '2026-09-16 18:20:05.880053+00');
-INSERT INTO public.extension_migrations VALUES ('managed_resources_010', 'managed_resources', 10, 'inventory_sources', '605ff52b7fcc0abe', '2026-09-16 18:20:05.880053+00');
-INSERT INTO public.extension_migrations VALUES ('managed_resources_011', 'managed_resources', 11, 'drop_evaluation', '15bd5db5940e2130', '2026-09-16 18:20:05.880053+00');
-INSERT INTO public.extension_migrations VALUES ('scheduler_001', 'scheduler', 1, 'scheduled_jobs_last_instance', '049f54408f4f5ccc', '2026-09-16 18:20:05.98605+00');
-INSERT INTO public.extension_migrations VALUES ('web_029', 'web', 29, 'analytics_indexes', '64eabb2523f52e93', '2026-09-16 18:20:05.992715+00');
-INSERT INTO public.extension_migrations VALUES ('web_030', 'web', 30, 'usage_loc_columns', 'b2cf29e47e74f2f9', '2026-09-16 18:20:05.992715+00');
-INSERT INTO public.extension_migrations VALUES ('web_032', 'web', 32, 'usage_anomalies', '8595f6983d702dca', '2026-09-16 18:20:05.992715+00');
-INSERT INTO public.extension_migrations VALUES ('web_033', 'web', 33, 'transcript_fts', '5b8a7724bccab402', '2026-09-16 18:20:05.992715+00');
-INSERT INTO public.extension_migrations VALUES ('web_036', 'web', 36, 'atlassian_credentials', 'a248d954dbd9b53e', '2026-09-16 18:20:05.992715+00');
-INSERT INTO public.extension_migrations VALUES ('web_037', 'web', 37, 'salesforce_identity', '34958868fdd7b757', '2026-09-16 18:20:05.992715+00');
-INSERT INTO public.extension_migrations VALUES ('web_039', 'web', 39, 'dev_login_codes', '01adfd0a1fc6593a', '2026-09-16 18:20:05.992715+00');
-INSERT INTO public.extension_migrations VALUES ('web_040', 'web', 40, 'skill_invocation_view', 'c519a389bcdcab80', '2026-09-16 18:20:05.992715+00');
-INSERT INTO public.extension_migrations VALUES ('web_041', 'web', 41, 'groups_projects', 'ca5bde120fde3d3b', '2026-09-16 18:20:05.992715+00');
-INSERT INTO public.extension_migrations VALUES ('web_042', 'web', 42, 'scope_defaults', 'facc918ed7de0833', '2026-09-16 18:20:05.992715+00');
-INSERT INTO public.extension_migrations VALUES ('web_043', 'web', 43, 'knowledge_worker_role', 'cf980afd4f508268', '2026-09-16 18:20:05.992715+00');
-INSERT INTO public.extension_migrations VALUES ('web_044', 'web', 44, 'connector_credentials', 'f1c78ec20b7047af', '2026-09-16 18:20:05.992715+00');
-INSERT INTO public.extension_migrations VALUES ('web_045', 'web', 45, 'connector_accounts', '953b157b33b76fd2', '2026-09-16 18:20:05.992715+00');
-INSERT INTO public.extension_migrations VALUES ('web_046', 'web', 46, 'legacy_organization_cleanup', 'a2afcf25b999ef76', '2026-09-16 18:20:05.992715+00');
-INSERT INTO public.extension_migrations VALUES ('web_047', 'web', 47, 'admin_marketplace_access', 'cb4d6c5d2251957c', '2026-09-16 18:20:05.992715+00');
-INSERT INTO public.extension_migrations VALUES ('web_048', 'web', 48, 'drop_atlassian_user_credentials', 'f9fc07d2ca4db298', '2026-09-16 18:20:05.992715+00');
-INSERT INTO public.extension_migrations VALUES ('web_049', 'web', 49, 'conversation_requests', 'a1e20d925884d803', '2026-09-16 18:20:05.992715+00');
-INSERT INTO public.extension_migrations VALUES ('web_050', 'web', 50, 'dashboard_query_scaling', 'e3cb7eb51ac4116d', '2026-09-16 18:20:05.992715+00');
-INSERT INTO public.extension_migrations VALUES ('web_051', 'web', 51, 'configured_connectors', 'ea7fd71fa8423e89', '2026-09-16 18:20:05.992715+00');
-INSERT INTO public.extension_migrations VALUES ('web_052', 'web', 52, 'executive_access_project_name', '0c77ec33c7432b2c', '2026-09-16 18:20:05.992715+00');
-INSERT INTO public.extension_migrations VALUES ('web_053', 'web', 53, 'salesforce_identity_provider', 'c562fc1bc2c0c7a5', '2026-09-16 18:20:05.992715+00');
-INSERT INTO public.extension_migrations VALUES ('web_054', 'web', 54, 'ingestion_integrity', '999efd17f8e3dc8e', '2026-09-16 18:20:05.992715+00');
-INSERT INTO public.extension_migrations VALUES ('web_055', 'web', 55, 'recover_native_sessions', 'd5003f7536c0c83b', '2026-09-16 18:20:05.992715+00');
-INSERT INTO public.extension_migrations VALUES ('web_056', 'web', 56, 'skill_version_impact', '0074df6a5357e84e', '2026-09-16 18:20:05.992715+00');
-INSERT INTO public.extension_migrations VALUES ('web_057', 'web', 57, 'version_impact_owner_constraints', '2de4f5d64f9526e8', '2026-09-16 18:20:05.992715+00');
-INSERT INTO public.extension_migrations VALUES ('web_058', 'web', 58, 'drop_independently_metered_tool_charges', '5b2b4a2f554fcc9d', '2026-09-16 18:20:05.992715+00');
-INSERT INTO public.extension_migrations VALUES ('web_059', 'web', 59, 'feedback_ingestion', '6287024a34f58f36', '2026-09-16 18:20:05.992715+00');
-INSERT INTO public.extension_migrations VALUES ('web_060', 'web', 60, 'reporting_privacy_retention', '3375a096bc81e39e', '2026-09-16 18:20:05.992715+00');
-INSERT INTO public.extension_migrations VALUES ('web_061', 'web', 61, 'opencode_skill_events', 'c6d8a06e43ebf262', '2026-09-16 18:20:05.992715+00');
-INSERT INTO public.extension_migrations VALUES ('web_062', 'web', 62, 'session_owner_cascade', '616f22763f13007d', '2026-09-16 18:20:05.992715+00');
-INSERT INTO public.extension_migrations VALUES ('web_063', 'web', 63, 'conversation_kind_by_client', '673e4a0fb924d72b', '2026-09-16 18:20:05.992715+00');
-INSERT INTO public.extension_migrations VALUES ('web_064', 'web', 64, 'drop_code_impact_metrics', '73c34ee95f2763d8', '2026-09-16 18:20:05.992715+00');
-INSERT INTO public.extension_migrations VALUES ('web_065', 'web', 65, 'sync_state', '7002c9c6ebd8fa05', '2026-09-16 18:20:05.992715+00');
-INSERT INTO public.extension_migrations VALUES ('web_066', 'web', 66, 'service_sources', '0c9c645937b72dcc', '2026-09-16 18:20:05.992715+00');
-INSERT INTO public.extension_migrations VALUES ('web_067', 'web', 67, 'client_attestation', 'c88f29d90396be89', '2026-09-16 18:20:05.992715+00');
-INSERT INTO public.extension_migrations VALUES ('web_068', 'web', 68, 'skill_version_receipt_once', 'd484063d94aaa892', '2026-09-16 18:20:05.992715+00');
-INSERT INTO public.extension_migrations VALUES ('web_069', 'web', 69, 'drop_reviewed_production_failures', '33f83be22e8d4b3e', '2026-09-16 18:20:05.992715+00');
-INSERT INTO public.extension_migrations VALUES ('web_070', 'web', 70, 'drop_eval_session_binding_hooks', 'a735ddcbdf2c9f3a', '2026-09-16 18:20:05.992715+00');
+INSERT INTO public.extension_migrations VALUES ('events_001', 'events', 1, 'actor_attribution', '5e14861e8d6b9497', '2026-09-17 21:34:05.489127+00');
+INSERT INTO public.extension_migrations VALUES ('events_002', 'events', 2, 'actor_attribution_lock', 'ae405cd923565550', '2026-09-17 21:34:05.489127+00');
+INSERT INTO public.extension_migrations VALUES ('events_003', 'events', 3, 'outbox_origin_instance', '268b8ff895ad72f9', '2026-09-17 21:34:05.489127+00');
+INSERT INTO public.extension_migrations VALUES ('events_004', 'events', 4, 'durable_consumption', '820ef124b2170e06', '2026-09-17 21:34:05.489127+00');
+INSERT INTO public.extension_migrations VALUES ('events_005', 'events', 5, 'reporting_privacy', '3a3bdbce6d55a827', '2026-09-17 21:34:05.489127+00');
+INSERT INTO public.extension_migrations VALUES ('events_006', 'events', 6, 'user_privacy_delivery', '69e5571b4674e381', '2026-09-17 21:34:05.489127+00');
+INSERT INTO public.extension_migrations VALUES ('users_001', 'users', 1, 'add_user_sessions_utm_content_term', '4c584594fd20d672', '2026-09-17 21:34:05.49936+00');
+INSERT INTO public.extension_migrations VALUES ('users_002', 'users', 2, 'add_user_sessions_is_ai_crawler', '2fd7329ef96d7544', '2026-09-17 21:34:05.49936+00');
+INSERT INTO public.extension_migrations VALUES ('users_003', 'users', 3, 'rebuild_clean_traffic_index', '31b675f52bf6642c', '2026-09-17 21:34:05.49936+00');
+INSERT INTO public.extension_migrations VALUES ('users_004', 'users', 4, 'user_sessions_revoked_at', 'd8450941ffa1159c', '2026-09-17 21:34:05.49936+00');
+INSERT INTO public.extension_migrations VALUES ('users_005', 'users', 5, 'federated_identities', '68ff85fac4197d59', '2026-09-17 21:34:05.49936+00');
+INSERT INTO public.extension_migrations VALUES ('users_006', 'users', 6, 'user_sessions_source_bridge_mcp', '61c647f86c67b2c7', '2026-09-17 21:34:05.49936+00');
+INSERT INTO public.extension_migrations VALUES ('users_007', 'users', 7, 'drop_session_throttle', '12033d6a8facbe08', '2026-09-17 21:34:05.49936+00');
+INSERT INTO public.extension_migrations VALUES ('users_008', 'users', 8, 'canonical_traffic_views', 'cc8abe54b9257f80', '2026-09-17 21:34:05.49936+00');
+INSERT INTO public.extension_migrations VALUES ('users_009', 'users', 9, 'normalise_user_emails', 'c15d7e14f647c941', '2026-09-17 21:34:05.49936+00');
+INSERT INTO public.extension_migrations VALUES ('users_010', 'users', 10, 'drop_users_name_unique', '619cec5c7f0b6648', '2026-09-17 21:34:05.49936+00');
+INSERT INTO public.extension_migrations VALUES ('users_011', 'users', 11, 'user_rate_limit_buckets', '504384d07e8cf48d', '2026-09-17 21:34:05.49936+00');
+INSERT INTO public.extension_migrations VALUES ('users_012', 'users', 12, 'device_eligibility_interface', '52272c6000339053', '2026-09-17 21:34:05.49936+00');
+INSERT INTO public.extension_migrations VALUES ('users_013', 'users', 13, 'user_retention_barrier', '76e6d55c2749d617', '2026-09-17 21:34:05.49936+00');
+INSERT INTO public.extension_migrations VALUES ('users_014', 'users', 14, 'reporting_privacy', '8adff81817225598', '2026-09-17 21:34:05.49936+00');
+INSERT INTO public.extension_migrations VALUES ('users_015', 'users', 15, 'user_privacy_delivery', '24488db167f9f4b5', '2026-09-17 21:34:05.49936+00');
+INSERT INTO public.extension_migrations VALUES ('users_016', 'users', 16, 'user_sessions_cascade', '001f70a7b635854c', '2026-09-17 21:34:05.49936+00');
+INSERT INTO public.extension_migrations VALUES ('mcp_001', 'mcp', 1, 'session_initialize_params', 'c95c06aab309a732', '2026-09-17 21:34:05.530609+00');
+INSERT INTO public.extension_migrations VALUES ('mcp_002', 'mcp', 2, 'artifact_server_name_repair', '6085aba80a5e0cf7', '2026-09-17 21:34:05.530609+00');
+INSERT INTO public.extension_migrations VALUES ('mcp_003', 'mcp', 3, 'tool_execution_actor', 'd99c19dfe5556653', '2026-09-17 21:34:05.530609+00');
+INSERT INTO public.extension_migrations VALUES ('mcp_004', 'mcp', 4, 'mcp_proxy_identities', 'fe504c84ba6e4289', '2026-09-17 21:34:05.530609+00');
+INSERT INTO public.extension_migrations VALUES ('mcp_005', 'mcp', 5, 'mcp_external_sessions', 'cac12aa04e6e168e', '2026-09-17 21:34:05.530609+00');
+INSERT INTO public.extension_migrations VALUES ('mcp_006', 'mcp', 6, 'reporting_privacy', 'a062992389a880c5', '2026-09-17 21:34:05.530609+00');
+INSERT INTO public.extension_migrations VALUES ('mcp_007', 'mcp', 7, 'mcp_proxy_identity_roles', 'ad374034ba30fa76', '2026-09-17 21:34:05.530609+00');
+INSERT INTO public.extension_migrations VALUES ('mcp_008', 'mcp', 8, 'artifact_narrow_waist', '5c3aeda8ce9903ae', '2026-09-17 21:34:05.530609+00');
+INSERT INTO public.extension_migrations VALUES ('mcp_009', 'mcp', 9, 'mcp_sessions_cascade', '5bf8e6be9a75feb1', '2026-09-17 21:34:05.530609+00');
+INSERT INTO public.extension_migrations VALUES ('mcp_010', 'mcp', 10, 'reporting_capture_contract', '8e2ecb86d0de0952', '2026-09-17 21:34:05.530609+00');
+INSERT INTO public.extension_migrations VALUES ('mcp_011', 'mcp', 11, 'artifact_constraints', '182833e1ae999fb3', '2026-09-17 21:34:05.530609+00');
+INSERT INTO public.extension_migrations VALUES ('ai_001', 'ai', 1, 'gateway_governance', '5e9fa59d853246fc', '2026-09-17 21:34:05.556207+00');
+INSERT INTO public.extension_migrations VALUES ('ai_002', 'ai', 2, 'split_context_id', 'be2b1b232789908c', '2026-09-17 21:34:05.556207+00');
+INSERT INTO public.extension_migrations VALUES ('ai_003', 'ai', 3, 'drop_runtime_tenancy', '78d22d6fbf237b08', '2026-09-17 21:34:05.556207+00');
+INSERT INTO public.extension_migrations VALUES ('ai_004', 'ai', 4, 'actor_attribution', '7ed4218b3778b19b', '2026-09-17 21:34:05.556207+00');
+INSERT INTO public.extension_migrations VALUES ('ai_005', 'ai', 5, 'actor_attribution_lock', '8539122f633d828a', '2026-09-17 21:34:05.556207+00');
+INSERT INTO public.extension_migrations VALUES ('ai_006', 'ai', 6, 'requested_model', '42c8ccec74f973b1', '2026-09-17 21:34:05.556207+00');
+INSERT INTO public.extension_migrations VALUES ('ai_007', 'ai', 7, 'system_prompt_override', '648a0ae118302719', '2026-09-17 21:34:05.556207+00');
+INSERT INTO public.extension_migrations VALUES ('ai_008', 'ai', 8, 'route_match', '2f959e35df8af04f', '2026-09-17 21:34:05.556207+00');
+INSERT INTO public.extension_migrations VALUES ('ai_009', 'ai', 9, 'ai_requests_session_fk', '1cdbb014e4ef592d', '2026-09-17 21:34:05.556207+00');
+INSERT INTO public.extension_migrations VALUES ('ai_010', 'ai', 10, 'nullable_rejection_routing', 'f6c07dd155d0d20e', '2026-09-17 21:34:05.556207+00');
+INSERT INTO public.extension_migrations VALUES ('ai_011', 'ai', 11, 'subject_quota_buckets', '9607680136af51f6', '2026-09-17 21:34:05.556207+00');
+INSERT INTO public.extension_migrations VALUES ('ai_012', 'ai', 12, 'payload_digests', '7a30f9d904f464ea', '2026-09-17 21:34:05.556207+00');
+INSERT INTO public.extension_migrations VALUES ('ai_013', 'ai', 13, 'offered_tools', 'a2163d4d538ab632', '2026-09-17 21:34:05.556207+00');
+INSERT INTO public.extension_migrations VALUES ('ai_014', 'ai', 14, 'ai_requests_context_not_null', '7eb1fb85f247f1c9', '2026-09-17 21:34:05.556207+00');
+INSERT INTO public.extension_migrations VALUES ('ai_015', 'ai', 15, 'ai_requests_synthetic', 'd48d51cf1a2bbabc', '2026-09-17 21:34:05.556207+00');
+INSERT INTO public.extension_migrations VALUES ('ai_016', 'ai', 16, 'gateway_policy_priority', 'f60d4b2cddfe7916', '2026-09-17 21:34:05.556207+00');
+INSERT INTO public.extension_migrations VALUES ('ai_017', 'ai', 17, 'gateway_thought_signatures', '1889d2fc1ff08604', '2026-09-17 21:34:05.556207+00');
+INSERT INTO public.extension_migrations VALUES ('ai_018', 'ai', 18, 'ai_requests_instance_id', '589699534dfad8b8', '2026-09-17 21:34:05.556207+00');
+INSERT INTO public.extension_migrations VALUES ('ai_019', 'ai', 19, 'ai_safety_findings_blocked', 'a2f3985a0215e8ff', '2026-09-17 21:34:05.556207+00');
+INSERT INTO public.extension_migrations VALUES ('ai_020', 'ai', 20, 'ai_requests_reasoning_tokens', '5d81e67e024dcc33', '2026-09-17 21:34:05.556207+00');
+INSERT INTO public.extension_migrations VALUES ('ai_021', 'ai', 21, 'ai_requests_client_session_kind', '072a3fc6d0e1be38', '2026-09-17 21:34:05.556207+00');
+INSERT INTO public.extension_migrations VALUES ('ai_022', 'ai', 22, 'ai_requests_upstream_latency', '895995d35b0b1851', '2026-09-17 21:34:05.556207+00');
+INSERT INTO public.extension_migrations VALUES ('ai_023', 'ai', 23, 'thought_signature_owner', '01624b951824e1ab', '2026-09-17 21:34:05.556207+00');
+INSERT INTO public.extension_migrations VALUES ('ai_024', 'ai', 24, 'ai_request_accounting_failure', 'efc5bfd58d565960', '2026-09-17 21:34:05.556207+00');
+INSERT INTO public.extension_migrations VALUES ('ai_025', 'ai', 25, 'reporting_privacy', '3d0d3a8577b0c9f4', '2026-09-17 21:34:05.556207+00');
+INSERT INTO public.extension_migrations VALUES ('ai_026', 'ai', 26, 'ai_requests_client_origin', '75c76a8cf077ff7b', '2026-09-17 21:34:05.556207+00');
+INSERT INTO public.extension_migrations VALUES ('ai_027', 'ai', 27, 'ai_request_client_attestation', '2598ddd2895b2723', '2026-09-17 21:34:05.556207+00');
+INSERT INTO public.extension_migrations VALUES ('ai_028', 'ai', 28, 'ai_requests_finish_reason', '2aba8e8504e8ade7', '2026-09-17 21:34:05.556207+00');
+INSERT INTO public.extension_migrations VALUES ('ai_029', 'ai', 29, 'ai_requests_served_provider', '8951702c85e02f20', '2026-09-17 21:34:05.556207+00');
+INSERT INTO public.extension_migrations VALUES ('ai_030', 'ai', 30, 'prepared_tools', '482cc4d7fa4c07bc', '2026-09-17 21:34:05.556207+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_001', 'oauth', 1, 'add_rfc8707_resource_column', '494da2b59158d9f7', '2026-09-17 21:34:05.602368+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_002', 'oauth', 2, 'rename_cowork_to_bridge', '251290add3ada5fc', '2026-09-17 21:34:05.602368+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_003', 'oauth', 3, 'drop_bridge_session_tenant', '43ca55d5add0b178', '2026-09-17 21:34:05.602368+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_004', 'oauth', 4, 'oauth_client_owner', 'be4ae04b220a213e', '2026-09-17 21:34:05.602368+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_005', 'oauth', 5, 'auth_code_family', '9710a939665978b4', '2026-09-17 21:34:05.602368+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_006', 'oauth', 6, 'at_rest_pepper_hash', 'bf9839b89d43c11b', '2026-09-17 21:34:05.602368+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_007', 'oauth', 7, 'oauth_state_bindings', 'ea71cf93a0490c6d', '2026-09-17 21:34:05.602368+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_008', 'oauth', 8, 'oauth_jti_revocations', '6a8865943936cb66', '2026-09-17 21:34:05.602368+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_009', 'oauth', 9, 'refresh_token_consumed_at', 'b0af15521a52b286', '2026-09-17 21:34:05.602368+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_010', 'oauth', 10, 'backfill_oauth_client_owner_fk', '5577d06bb8692d22', '2026-09-17 21:34:05.602368+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_011', 'oauth', 11, 'add_application_type', '2efc21180c0aac45', '2026-09-17 21:34:05.602368+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_012', 'oauth', 12, 'bridge_host_model_prefs', '42199296a92ae69b', '2026-09-17 21:34:05.602368+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_013', 'oauth', 13, 'id_jag_replay', '73e439a5dd598d0f', '2026-09-17 21:34:05.602368+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_014', 'oauth', 14, 'webauthn_challenges_state_store', '4ed05b736e1c9236', '2026-09-17 21:34:05.602368+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_015', 'oauth', 15, 'webauthn_challenges_user_fk', 'bacb4641e0b50924', '2026-09-17 21:34:05.602368+00');
+INSERT INTO public.extension_migrations VALUES ('oauth_016', 'oauth', 16, 'oauth_client_registration_token', '9fe7272a6aeba3a3', '2026-09-17 21:34:05.602368+00');
+INSERT INTO public.extension_migrations VALUES ('agent_001', 'agent', 1, 'drop_playbooks', '2fe3674396079f31', '2026-09-17 21:34:05.649974+00');
+INSERT INTO public.extension_migrations VALUES ('agent_002', 'agent', 2, 'add_server_type', 'a32dc3019b6818b0', '2026-09-17 21:34:05.649974+00');
+INSERT INTO public.extension_migrations VALUES ('agent_003', 'agent', 3, 'a2a_v1_task_states', '2f3387804ae0319b', '2026-09-17 21:34:05.649974+00');
+INSERT INTO public.extension_migrations VALUES ('agent_004', 'agent', 4, 'ai_requests_task_fk', '923ec035712b93e3', '2026-09-17 21:34:05.649974+00');
+INSERT INTO public.extension_migrations VALUES ('agent_005', 'agent', 5, 'add_task_version', '60590892c4ccd2e6', '2026-09-17 21:34:05.649974+00');
+INSERT INTO public.extension_migrations VALUES ('agent_006', 'agent', 6, 'drop_agent_skills', '19b3ac09309e7d35', '2026-09-17 21:34:05.649974+00');
+INSERT INTO public.extension_migrations VALUES ('agent_007', 'agent', 7, 'drop_agents', '6f0f35bb3892ebf9', '2026-09-17 21:34:05.649974+00');
+INSERT INTO public.extension_migrations VALUES ('agent_008', 'agent', 8, 'add_user_contexts_kind', '9b62a2fc269c2fba', '2026-09-17 21:34:05.649974+00');
+INSERT INTO public.extension_migrations VALUES ('agent_009', 'agent', 9, 'drop_session_analytics_views', '754d9b78e2758951', '2026-09-17 21:34:05.649974+00');
+INSERT INTO public.extension_migrations VALUES ('agent_010', 'agent', 10, 'services_instance_scope', 'f0f9e3195f30dd6f', '2026-09-17 21:34:05.649974+00');
+INSERT INTO public.extension_migrations VALUES ('agent_011', 'agent', 11, 'drop_task_push_notification_configs', 'aaeea339959a412f', '2026-09-17 21:34:05.649974+00');
+INSERT INTO public.extension_migrations VALUES ('agent_012', 'agent', 12, 'reporting_privacy', '0b46a511dd2d182f', '2026-09-17 21:34:05.649974+00');
+INSERT INTO public.extension_migrations VALUES ('analytics_001', 'analytics', 1, 'add_engagement_event_type', 'd322ff86aa134d2a', '2026-09-17 21:34:05.683195+00');
+INSERT INTO public.extension_migrations VALUES ('analytics_002', 'analytics', 2, 'add_engagement_event_data', '2156106c6c94d2ff', '2026-09-17 21:34:05.683195+00');
+INSERT INTO public.extension_migrations VALUES ('analytics_003', 'analytics', 3, 'seed_anomaly_thresholds', '46d8e70b7ce49ea9', '2026-09-17 21:34:05.683195+00');
+INSERT INTO public.extension_migrations VALUES ('analytics_004', 'analytics', 4, 'drop_high_risk_fingerprints_view', '78a931cf97094d4e', '2026-09-17 21:34:05.683195+00');
+INSERT INTO public.extension_migrations VALUES ('analytics_005', 'analytics', 5, 'feedback_facts', '799cd1cfa68fb59c', '2026-09-17 21:34:05.683195+00');
+INSERT INTO public.extension_migrations VALUES ('analytics_006', 'analytics', 6, 'ingestion_producers', 'd154a6fd89acada7', '2026-09-17 21:34:05.683195+00');
+INSERT INTO public.extension_migrations VALUES ('analytics_007', 'analytics', 7, 'feedback_snapshots', 'b83c88688892dfdc', '2026-09-17 21:34:05.683195+00');
+INSERT INTO public.extension_migrations VALUES ('analytics_008', 'analytics', 8, 'reporting_privacy', '097461bca582a9a6', '2026-09-17 21:34:05.683195+00');
+INSERT INTO public.extension_migrations VALUES ('analytics_009', 'analytics', 9, 'reporting_privacy_initialization', '40999d63c7d5ce7a', '2026-09-17 21:34:05.683195+00');
+INSERT INTO public.extension_migrations VALUES ('analytics_010', 'analytics', 10, 'user_privacy_delivery', 'bc38125d82dc96c1', '2026-09-17 21:34:05.683195+00');
+INSERT INTO public.extension_migrations VALUES ('analytics_011', 'analytics', 11, 'artifact_fact_kind', 'd374cb1ab8f7ad6f', '2026-09-17 21:34:05.683195+00');
+INSERT INTO public.extension_migrations VALUES ('authz_001', 'authz', 1, 'access_control_rules_evolution', '46f992c79ec0745c', '2026-09-17 21:34:05.760171+00');
+INSERT INTO public.extension_migrations VALUES ('authz_002', 'authz', 2, 'actor_attribution', '4bb62e10ee4e261e', '2026-09-17 21:34:05.760171+00');
+INSERT INTO public.extension_migrations VALUES ('authz_003', 'authz', 3, 'actor_attribution_lock', 'e94806d1d72ddf08', '2026-09-17 21:34:05.760171+00');
+INSERT INTO public.extension_migrations VALUES ('authz_004', 'authz', 4, 'act_chain', 'db5ec60fe7bd133d', '2026-09-17 21:34:05.760171+00');
+INSERT INTO public.extension_migrations VALUES ('authz_005', 'authz', 5, 'actor_kind_extend', 'e19ceb4e8e0bdbd6', '2026-09-17 21:34:05.760171+00');
+INSERT INTO public.extension_migrations VALUES ('authz_007', 'authz', 7, 'split_acl_entities', '95f9291c73f52e90', '2026-09-17 21:34:05.760171+00');
+INSERT INTO public.extension_migrations VALUES ('authz_008', 'authz', 8, 'drop_department_acl', 'e87c60bd3f0e2e6f', '2026-09-17 21:34:05.760171+00');
+INSERT INTO public.extension_migrations VALUES ('authz_009', 'authz', 9, 'messaging_acl_entity_types', 'f939735dcd876537', '2026-09-17 21:34:05.760171+00');
+INSERT INTO public.extension_migrations VALUES ('authz_010', 'authz', 10, 'governance_context_task', '58f8cb475372e638', '2026-09-17 21:34:05.760171+00');
+INSERT INTO public.extension_migrations VALUES ('authz_011', 'authz', 11, 'open_rule_type_vocabulary', '3ad469ab6af692ca', '2026-09-17 21:34:05.760171+00');
+INSERT INTO public.extension_migrations VALUES ('authz_012', 'authz', 12, 'governance_decisions_context_not_null', 'd206fdaf609a1eda', '2026-09-17 21:34:05.760171+00');
+INSERT INTO public.extension_migrations VALUES ('authz_013', 'authz', 13, 'governance_decisions_trace_id', 'b7823ebf44dfe8b7', '2026-09-17 21:34:05.760171+00');
+INSERT INTO public.extension_migrations VALUES ('authz_014', 'authz', 14, 'tool_approval_requests', '985c9656d1111428', '2026-09-17 21:34:05.760171+00');
+INSERT INTO public.extension_migrations VALUES ('authz_015', 'authz', 15, 'governance_decisions_client_id', '6fe3fa7445d5354b', '2026-09-17 21:34:05.760171+00');
+INSERT INTO public.extension_migrations VALUES ('authz_016', 'authz', 16, 'governance_decisions_warn', '34656346b10dff69', '2026-09-17 21:34:05.760171+00');
+INSERT INTO public.extension_migrations VALUES ('authz_017', 'authz', 17, 'access_control_rules_source', 'd9185a002adf5048', '2026-09-17 21:34:05.760171+00');
+INSERT INTO public.extension_migrations VALUES ('authz_018', 'authz', 18, 'governance_decisions_append_only', 'a1d728415f309370', '2026-09-17 21:34:05.760171+00');
+INSERT INTO public.extension_migrations VALUES ('authz_019', 'authz', 19, 'governance_decisions_tool_use_id', '1808427c71778556', '2026-09-17 21:34:05.760171+00');
+INSERT INTO public.extension_migrations VALUES ('content_001', 'content', 1, 'markdown_content_locale_unique', '1d5d5978cbf29a46', '2026-09-17 21:34:05.786532+00');
+INSERT INTO public.extension_migrations VALUES ('content_002', 'content', 2, 'drop_link_analytics_views', '1fc92a6fbbe2b211', '2026-09-17 21:34:05.786532+00');
+INSERT INTO public.extension_migrations VALUES ('content_003', 'content', 3, 'reporting_privacy', '1cf422e471e2d37d', '2026-09-17 21:34:05.786532+00');
+INSERT INTO public.extension_migrations VALUES ('files_001', 'files', 1, 'drop_ai_image_stats_view', '2559297865e35d23', '2026-09-17 21:34:05.804663+00');
+INSERT INTO public.extension_migrations VALUES ('logging_001', 'logging', 1, 'split_context_id', '13c45db59ea66544', '2026-09-17 21:34:05.813899+00');
+INSERT INTO public.extension_migrations VALUES ('logging_002', 'logging', 2, 'analytics_event_data', 'a36c0cad23329eea', '2026-09-17 21:34:05.813899+00');
+INSERT INTO public.extension_migrations VALUES ('logging_003', 'logging', 3, 'prune_redundant_log_indexes', '80ad435eacd2fd1e', '2026-09-17 21:34:05.813899+00');
+INSERT INTO public.extension_migrations VALUES ('logging_004', 'logging', 4, 'drop_client_log_views', '76ae397f539d7fc6', '2026-09-17 21:34:05.813899+00');
+INSERT INTO public.extension_migrations VALUES ('logging_005', 'logging', 5, 'logs_instance_id', '830d265f0c451b1c', '2026-09-17 21:34:05.813899+00');
+INSERT INTO public.extension_migrations VALUES ('logging_006', 'logging', 6, 'reporting_privacy', 'd413012b2405adcf', '2026-09-17 21:34:05.813899+00');
+INSERT INTO public.extension_migrations VALUES ('managed_resources_001', 'managed_resources', 1, 'revision_listing_indexes', 'd00dbf6413b9ef80', '2026-09-17 21:34:05.826641+00');
+INSERT INTO public.extension_migrations VALUES ('managed_resources_002', 'managed_resources', 2, 'managed_resolution', 'a3c3c4b330d81b0f', '2026-09-17 21:34:05.826641+00');
+INSERT INTO public.extension_migrations VALUES ('managed_resources_003', 'managed_resources', 3, 'evaluation_attestations', 'dd9fe5d9bfd846af', '2026-09-17 21:34:05.826641+00');
+INSERT INTO public.extension_migrations VALUES ('managed_resources_004', 'managed_resources', 4, 'consumer_evidence', '8be01a0228e9f90b', '2026-09-17 21:34:05.826641+00');
+INSERT INTO public.extension_migrations VALUES ('managed_resources_005', 'managed_resources', 5, 'dependency_verification', '7a3a55d7ee0b176c', '2026-09-17 21:34:05.826641+00');
+INSERT INTO public.extension_migrations VALUES ('managed_resources_006', 'managed_resources', 6, 'inventory', '4c8deef71e356bf3', '2026-09-17 21:34:05.826641+00');
+INSERT INTO public.extension_migrations VALUES ('managed_resources_007', 'managed_resources', 7, 'installation_coverage', '6b4c3e847d4f04d7', '2026-09-17 21:34:05.826641+00');
+INSERT INTO public.extension_migrations VALUES ('managed_resources_008', 'managed_resources', 8, 'api_operations', '1ee81b04b36d62af', '2026-09-17 21:34:05.826641+00');
+INSERT INTO public.extension_migrations VALUES ('managed_resources_009', 'managed_resources', 9, 'publication_review_experiment', 'b93a1ad63dc56c94', '2026-09-17 21:34:05.826641+00');
+INSERT INTO public.extension_migrations VALUES ('managed_resources_010', 'managed_resources', 10, 'inventory_sources', '605ff52b7fcc0abe', '2026-09-17 21:34:05.826641+00');
+INSERT INTO public.extension_migrations VALUES ('managed_resources_011', 'managed_resources', 11, 'drop_evaluation', '15bd5db5940e2130', '2026-09-17 21:34:05.826641+00');
+INSERT INTO public.extension_migrations VALUES ('managed_resources_012', 'managed_resources', 12, 'local_tree_roots_follow_current', 'b679263d26fe6d34', '2026-09-17 21:34:05.826641+00');
+INSERT INTO public.extension_migrations VALUES ('scheduler_001', 'scheduler', 1, 'scheduled_jobs_last_instance', '049f54408f4f5ccc', '2026-09-17 21:34:05.922825+00');
+INSERT INTO public.extension_migrations VALUES ('web_029', 'web', 29, 'analytics_indexes', '64eabb2523f52e93', '2026-09-17 21:34:05.931308+00');
+INSERT INTO public.extension_migrations VALUES ('web_030', 'web', 30, 'usage_loc_columns', 'b2cf29e47e74f2f9', '2026-09-17 21:34:05.931308+00');
+INSERT INTO public.extension_migrations VALUES ('web_032', 'web', 32, 'usage_anomalies', '8595f6983d702dca', '2026-09-17 21:34:05.931308+00');
+INSERT INTO public.extension_migrations VALUES ('web_033', 'web', 33, 'transcript_fts', '5b8a7724bccab402', '2026-09-17 21:34:05.931308+00');
+INSERT INTO public.extension_migrations VALUES ('web_036', 'web', 36, 'atlassian_credentials', 'a248d954dbd9b53e', '2026-09-17 21:34:05.931308+00');
+INSERT INTO public.extension_migrations VALUES ('web_037', 'web', 37, 'salesforce_identity', '34958868fdd7b757', '2026-09-17 21:34:05.931308+00');
+INSERT INTO public.extension_migrations VALUES ('web_039', 'web', 39, 'dev_login_codes', '01adfd0a1fc6593a', '2026-09-17 21:34:05.931308+00');
+INSERT INTO public.extension_migrations VALUES ('web_040', 'web', 40, 'skill_invocation_view', 'c519a389bcdcab80', '2026-09-17 21:34:05.931308+00');
+INSERT INTO public.extension_migrations VALUES ('web_041', 'web', 41, 'groups_projects', 'ca5bde120fde3d3b', '2026-09-17 21:34:05.931308+00');
+INSERT INTO public.extension_migrations VALUES ('web_042', 'web', 42, 'scope_defaults', 'facc918ed7de0833', '2026-09-17 21:34:05.931308+00');
+INSERT INTO public.extension_migrations VALUES ('web_043', 'web', 43, 'knowledge_worker_role', 'cf980afd4f508268', '2026-09-17 21:34:05.931308+00');
+INSERT INTO public.extension_migrations VALUES ('web_044', 'web', 44, 'connector_credentials', 'f1c78ec20b7047af', '2026-09-17 21:34:05.931308+00');
+INSERT INTO public.extension_migrations VALUES ('web_045', 'web', 45, 'connector_accounts', '953b157b33b76fd2', '2026-09-17 21:34:05.931308+00');
+INSERT INTO public.extension_migrations VALUES ('web_046', 'web', 46, 'legacy_organization_cleanup', 'a2afcf25b999ef76', '2026-09-17 21:34:05.931308+00');
+INSERT INTO public.extension_migrations VALUES ('web_047', 'web', 47, 'admin_marketplace_access', 'cb4d6c5d2251957c', '2026-09-17 21:34:05.931308+00');
+INSERT INTO public.extension_migrations VALUES ('web_048', 'web', 48, 'drop_atlassian_user_credentials', 'f9fc07d2ca4db298', '2026-09-17 21:34:05.931308+00');
+INSERT INTO public.extension_migrations VALUES ('web_049', 'web', 49, 'conversation_requests', 'a1e20d925884d803', '2026-09-17 21:34:05.931308+00');
+INSERT INTO public.extension_migrations VALUES ('web_050', 'web', 50, 'dashboard_query_scaling', 'e3cb7eb51ac4116d', '2026-09-17 21:34:05.931308+00');
+INSERT INTO public.extension_migrations VALUES ('web_051', 'web', 51, 'configured_connectors', 'ea7fd71fa8423e89', '2026-09-17 21:34:05.931308+00');
+INSERT INTO public.extension_migrations VALUES ('web_052', 'web', 52, 'executive_access_project_name', '0c77ec33c7432b2c', '2026-09-17 21:34:05.931308+00');
+INSERT INTO public.extension_migrations VALUES ('web_053', 'web', 53, 'salesforce_identity_provider', 'c562fc1bc2c0c7a5', '2026-09-17 21:34:05.931308+00');
+INSERT INTO public.extension_migrations VALUES ('web_054', 'web', 54, 'ingestion_integrity', '999efd17f8e3dc8e', '2026-09-17 21:34:05.931308+00');
+INSERT INTO public.extension_migrations VALUES ('web_055', 'web', 55, 'recover_native_sessions', 'd5003f7536c0c83b', '2026-09-17 21:34:05.931308+00');
+INSERT INTO public.extension_migrations VALUES ('web_056', 'web', 56, 'skill_version_impact', '0074df6a5357e84e', '2026-09-17 21:34:05.931308+00');
+INSERT INTO public.extension_migrations VALUES ('web_057', 'web', 57, 'version_impact_owner_constraints', '2de4f5d64f9526e8', '2026-09-17 21:34:05.931308+00');
+INSERT INTO public.extension_migrations VALUES ('web_058', 'web', 58, 'drop_independently_metered_tool_charges', '5b2b4a2f554fcc9d', '2026-09-17 21:34:05.931308+00');
+INSERT INTO public.extension_migrations VALUES ('web_059', 'web', 59, 'feedback_ingestion', '6287024a34f58f36', '2026-09-17 21:34:05.931308+00');
+INSERT INTO public.extension_migrations VALUES ('web_060', 'web', 60, 'reporting_privacy_retention', '3375a096bc81e39e', '2026-09-17 21:34:05.931308+00');
+INSERT INTO public.extension_migrations VALUES ('web_061', 'web', 61, 'opencode_skill_events', 'c6d8a06e43ebf262', '2026-09-17 21:34:05.931308+00');
+INSERT INTO public.extension_migrations VALUES ('web_062', 'web', 62, 'session_owner_cascade', '616f22763f13007d', '2026-09-17 21:34:05.931308+00');
+INSERT INTO public.extension_migrations VALUES ('web_063', 'web', 63, 'conversation_kind_by_client', '673e4a0fb924d72b', '2026-09-17 21:34:05.931308+00');
+INSERT INTO public.extension_migrations VALUES ('web_064', 'web', 64, 'drop_code_impact_metrics', '73c34ee95f2763d8', '2026-09-17 21:34:05.931308+00');
+INSERT INTO public.extension_migrations VALUES ('web_065', 'web', 65, 'sync_state', '7002c9c6ebd8fa05', '2026-09-17 21:34:05.931308+00');
+INSERT INTO public.extension_migrations VALUES ('web_066', 'web', 66, 'service_sources', '0c9c645937b72dcc', '2026-09-17 21:34:05.931308+00');
+INSERT INTO public.extension_migrations VALUES ('web_067', 'web', 67, 'client_attestation', 'c88f29d90396be89', '2026-09-17 21:34:05.931308+00');
+INSERT INTO public.extension_migrations VALUES ('web_068', 'web', 68, 'skill_version_receipt_once', 'd484063d94aaa892', '2026-09-17 21:34:05.931308+00');
+INSERT INTO public.extension_migrations VALUES ('web_069', 'web', 69, 'drop_reviewed_production_failures', '33f83be22e8d4b3e', '2026-09-17 21:34:05.931308+00');
+INSERT INTO public.extension_migrations VALUES ('web_070', 'web', 70, 'drop_eval_session_binding_hooks', 'a735ddcbdf2c9f3a', '2026-09-17 21:34:05.931308+00');
+INSERT INTO public.extension_migrations VALUES ('web_071', 'web', 71, 'marketplace_versions', 'de4316aac4782896', '2026-09-17 21:34:05.931308+00');
+INSERT INTO public.extension_migrations VALUES ('web_072', 'web', 72, 'drop_session_apm', '43885e2b1dffc97e', '2026-09-17 21:34:05.931308+00');
+INSERT INTO public.extension_migrations VALUES ('web_073', 'web', 73, 'conversation_analyses', '346a119b388a20f4', '2026-09-17 21:34:05.931308+00');
+INSERT INTO public.extension_migrations VALUES ('web_074', 'web', 74, 'session_evaluation', '9c7fad92bb020d35', '2026-09-17 21:34:05.931308+00');
+INSERT INTO public.extension_migrations VALUES ('web_075', 'web', 75, 'plugin_usage_tool_correlation', '630eb2fb5d76acc4', '2026-09-17 21:34:05.931308+00');
+INSERT INTO public.extension_migrations VALUES ('web_076', 'web', 76, 'artifact_facts', '4d569b3b1f8c7dad', '2026-09-17 21:34:05.931308+00');
+INSERT INTO public.extension_migrations VALUES ('web_077', 'web', 77, 'evaluation_manual', '7c0b5b4aded469b3', '2026-09-17 21:34:05.931308+00');
+INSERT INTO public.extension_migrations VALUES ('web_078', 'web', 78, 'request_scopes_backfill', 'cce4ca9f6663817f', '2026-09-17 21:34:05.931308+00');
+INSERT INTO public.extension_migrations VALUES ('web_079', 'web', 79, 'time_bound_access', '252c18ccd1932831', '2026-09-17 21:34:05.931308+00');
+INSERT INTO public.extension_migrations VALUES ('web_080', 'web', 80, 'gateway_routes', '5516be1a1df76401', '2026-09-17 21:34:05.931308+00');
+INSERT INTO public.extension_migrations VALUES ('web_081', 'web', 81, 'evaluation_attribution', 'baf5795d403f1a88', '2026-09-17 21:34:05.931308+00');
+INSERT INTO public.extension_migrations VALUES ('web_082', 'web', 82, 'user_keyed_tables_cascade', '6456da16f66d1c8d', '2026-09-17 21:34:05.931308+00');
+INSERT INTO public.extension_migrations VALUES ('web_083', 'web', 83, 'validate_user_cascades', '47b0591aae4ad1db', '2026-09-17 21:34:05.931308+00');
 
 
 --
