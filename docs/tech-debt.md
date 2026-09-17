@@ -6,6 +6,32 @@ Claude Code flows through the gateway and read them back on the console.
 Everything below was observed, not inferred. Items are ordered by how much
 they undermine the end-to-end story the console is meant to tell.
 
+## Status (2026-09-17, later the same day)
+
+Fixed on `next` — core `f70d6d3fe`, astound `f495e4fd` — and proven on the
+local instance: §1 (one artifact per MCP call, `executed`/`exact`, linked to
+its request), §2 (typed `structuredContent`; the systemprompt outputs declare
+`report` / `paged_table`), §3 (glob expands over the live catalog; empty
+expansion is an error; one apply materialises routes), §5/§6 (user purge
+registry + `admin users delete --dry-run`; CASCADE on sessions; FKs on the
+extension's user-keyed tables), §7 (estimate label + `--exact`, raw-type
+rendering, `bridge-build` warns, bootstrap survives no-systemd, skill-id
+helper, docker shim disabled on this host). §4 (a reset recipe) is still open
+— the runbook below stands in for it.
+
+Found on the way and fixed in the same core commit: the `mcp_tool_executions`
+reporting capture emitted `source`, `correlation`, `payload_sha256` (narrow
+waist, core 263180151) which the reporting contract does not list, so
+**every** `begin_user_privacy()` — user delete, anonymous cleanup — raised
+"Reporting row violates versioned contract" on any instance that had run an
+MCP tool. Core migration `mcp/010` restores the contract and repairs the
+queued facts.
+
+Deliberately not done: rewriting the `system` / `reporting-source` sentinels
+out of `logs.user_id` and `event_outbox.user_id` (§5). They are labels, not
+users; the purge deletes by id so they never block a delete, and no foreign
+key is placed on those columns. Re-typing them is a separate change.
+
 ## 1. In-process MCP tool calls never join the ledger
 
 Every tool an internal MCP server executes for a Claude Code session lands as
