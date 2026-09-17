@@ -110,10 +110,10 @@ fn export_preset(params: &ConversationAnalysisQuery) -> &'static str {
     }
 }
 
-fn options<'a>(
-    selected: Option<&str>,
-    items: impl Iterator<Item = (&'a str, String)>,
-) -> Vec<SelectOptionView> {
+fn options<'a, I>(selected: Option<&str>, items: I) -> Vec<SelectOptionView>
+where
+    I: Iterator<Item = (&'a str, String)>,
+{
     items
         .map(|(value, label)| SelectOptionView {
             selected: selected == Some(value),

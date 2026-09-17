@@ -44,11 +44,11 @@ fn a_small_table_passes_through_untouched() {
 #[test]
 fn an_oversized_table_keeps_a_prefix_of_rows_and_names_the_cut() {
     let big = "x".repeat(1024);
-    let bounded = bound_artifact(table(200, &big), "infra logs request list -n 200");
+    let bounded = bound_artifact(table(2000, &big), "infra logs request list -n 2000");
     assert!(bounded.truncated);
     let (kept, received) = bounded.rows.expect("row accounting");
-    assert_eq!(received, 200);
-    assert!(kept > 0 && kept < 200, "kept {kept}");
+    assert_eq!(received, 2000);
+    assert!(kept > 0 && kept < 2000, "kept {kept}");
     let CliArtifact::Table { artifact } = bounded.artifact else {
         panic!("a table stays a table");
     };
@@ -59,7 +59,7 @@ fn an_oversized_table_keeps_a_prefix_of_rows_and_names_the_cut() {
         "the newest rows survive"
     );
     let title = artifact.title.unwrap_or_default();
-    assert!(title.contains(&format!("{kept} of 200 rows")), "{title}");
+    assert!(title.contains(&format!("{kept} of 2000 rows")), "{title}");
     assert!(title.contains("--before"), "{title}");
     assert!(title.contains("conversation_audit"), "{title}");
 }

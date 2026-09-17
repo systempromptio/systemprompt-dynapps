@@ -44,7 +44,7 @@ pub(crate) async fn refresh_sources_handler(
     Extension(user_ctx): Extension<UserContext>,
     Extension(refresh): Extension<ServicesRefresh>,
 ) -> AdminResult<Response> {
-    let result = refresh.run(&user_ctx.user_id, false).await.map_err(|e| {
+    let result = refresh.run(&user_ctx.user_id).await.map_err(|e| {
         let err = e.into_inner();
         match err.code.status_code() {
             StatusCode::CONFLICT => AdminError::Conflict(err.message),
