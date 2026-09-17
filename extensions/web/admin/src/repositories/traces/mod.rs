@@ -5,6 +5,12 @@
 //! one exists. [`list_traces`] returns one summary row per session in the
 //! window; [`list_trace_spans`] returns the union of per-table rows for a
 //! single session, normalised into a [`Span`] shape and ordered by start time.
+//!
+//! A Claude Code session carries two ids: the bridge session (`sess_…`) on the
+//! gateway rows and Claude Code's own uuid on the hook and governance rows.
+//! `ai_requests.client_session_id` holds the uuid beside the bridge session,
+//! so every query here folds uuid-keyed rows into the bridge session; a
+//! hook-only session with no gateway row keeps the uuid as its key.
 
 use chrono::{DateTime, Utc};
 use serde::Serialize;

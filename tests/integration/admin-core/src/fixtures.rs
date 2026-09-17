@@ -264,6 +264,9 @@ pub struct RequestSpec<'a> {
     pub id: String,
     pub user_id: &'a UserId,
     pub session_id: Option<&'a str>,
+    // The client's own session id (Claude Code's uuid) that a gateway row
+    // carries beside the bridge session; the trace queries fold on it.
+    pub client_session_id: Option<&'a str>,
     pub trace_id: Option<&'a str>,
     pub context_id: Option<&'a str>,
     pub provider: &'a str,
@@ -294,6 +297,7 @@ impl<'a> RequestSpec<'a> {
             id: id.to_owned(),
             user_id,
             session_id: None,
+            client_session_id: None,
             trace_id: None,
             // ai_requests.context_id is NOT NULL; this is core's own sentinel
             // for a row that belongs to no known context.
@@ -333,9 +337,9 @@ pub async fn insert_request(pool: &PgPool, spec: &RequestSpec<'_>) {
              provider, model, input_tokens, output_tokens, tokens_used,
              reasoning_tokens, cache_read_tokens, cache_creation_tokens,
              cost_microdollars, latency_ms, status, actor_kind, actor_id,
-             created_at, updated_at)
+             created_at, updated_at, client_session_id)
          VALUES ($1, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
-                 $14, $15, $16, 'user', $2, $17, $17)",
+                 $14, $15, $16, 'user', $2, $17, $17, $18)",
     )
     .bind(&spec.id)
     .bind(spec.user_id.as_str())
@@ -354,6 +358,7 @@ pub async fn insert_request(pool: &PgPool, spec: &RequestSpec<'_>) {
     .bind(spec.latency_ms)
     .bind(spec.status)
     .bind(spec.created_at)
+    .bind(spec.client_session_id)
     .execute(pool)
     .await
     .expect("insert ai_request");

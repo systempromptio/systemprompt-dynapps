@@ -52,6 +52,37 @@ async fn resolve_trace_session_maps_a_trace_id_to_its_session() {
     db.cleanup().await;
 }
 
+// A pasted Claude Code session uuid is the `client_session_id` of the gateway
+// rows; it lands on the bridge session those rows are keyed on, which is the
+// row the list shows.
+#[tokio::test]
+async fn resolve_trace_session_maps_a_client_session_id_to_the_gateway_session() {
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("byclient")).await;
+    let session = unique("sess");
+    insert_session(&db.pool, &session, &user).await;
+    let client_session = unique("cc-uuid");
+    let mut spec = RequestSpec::completed(&unique("req"), &user);
+    spec.session_id = Some(&session);
+    spec.client_session_id = Some(&client_session);
+    insert_request(&db.pool, &spec).await;
+    insert_event(
+        &db.pool,
+        &EventSpec::tool_use(&unique("evt"), &user, &client_session),
+    )
+    .await;
+
+    let resolved = resolve_trace_session(&db.pool, &client_session)
+        .await
+        .expect("resolve")
+        .expect("session found");
+
+    assert_eq!(resolved.as_str(), session);
+    db.cleanup().await;
+}
+
 #[tokio::test]
 async fn resolve_trace_session_accepts_a_session_known_only_to_governance() {
     let Some(db) = TempDb::create().await else {

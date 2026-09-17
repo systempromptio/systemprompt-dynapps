@@ -4,16 +4,30 @@ WITH trace_to_session AS (
     WHERE created_at >= $1 AND created_at < $2
       AND trace_id IS NOT NULL AND session_id IS NOT NULL
 ),
+-- Hook rows carry Claude Code's uuid, gateway rows the bridge session; the
+-- gateway row holds both, so the uuid folds into the session (see list.sql).
+client_to_session AS (
+    SELECT
+        client_session_id,
+        (ARRAY_AGG(session_id ORDER BY created_at DESC))[1] AS session_id
+    FROM ai_requests
+    WHERE created_at >= $1 AND created_at < $2
+      AND client_session_id IS NOT NULL AND session_id IS NOT NULL
+    GROUP BY client_session_id
+),
 all_sessions AS (
-    SELECT session_id, created_at, NULL::text AS decision, NULL::text AS status
-    FROM plugin_usage_events
-    WHERE created_at >= $1 AND created_at < $2 AND session_id IS NOT NULL
-      AND ($3::TEXT[] IS NULL OR plugin_usage_events.user_id = ANY($3))
+    SELECT COALESCE(c.session_id, e.session_id) AS session_id,
+           e.created_at, NULL::text AS decision, NULL::text AS status
+    FROM plugin_usage_events e
+    LEFT JOIN client_to_session c ON c.client_session_id = e.session_id
+    WHERE e.created_at >= $1 AND e.created_at < $2 AND e.session_id IS NOT NULL
+      AND ($3::TEXT[] IS NULL OR e.user_id = ANY($3))
     UNION ALL
-    SELECT COALESCE(t.session_id, NULLIF(g.session_id, ''), g.trace_id) AS session_id,
+    SELECT COALESCE(t.session_id, c.session_id, NULLIF(g.session_id, ''), g.trace_id) AS session_id,
            g.created_at, g.decision, NULL::text
     FROM governance_decisions g
     LEFT JOIN trace_to_session t ON t.trace_id = g.trace_id
+    LEFT JOIN client_to_session c ON c.client_session_id = NULLIF(g.session_id, '')
     WHERE g.created_at >= $1 AND g.created_at < $2
       AND (NULLIF(g.session_id, '') IS NOT NULL OR g.trace_id IS NOT NULL)
       AND ($3::TEXT[] IS NULL OR g.user_id = ANY($3))

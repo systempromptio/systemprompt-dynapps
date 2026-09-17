@@ -4,13 +4,28 @@ WITH trace_to_session AS (
     WHERE created_at >= $1 AND created_at < $2
       AND trace_id IS NOT NULL AND session_id IS NOT NULL
 ),
+-- One Claude Code session is two ids: the bridge session (`sess_…`) on the
+-- gateway rows and Claude Code's own uuid on the hook rows. The gateway row
+-- carries both (`client_session_id` is parsed from `metadata.user_id`), so
+-- hook and governance rows keyed on the uuid fold into the gateway session.
+-- A uuid that outlived a bridge login maps to its most recent session.
+client_to_session AS (
+    SELECT
+        client_session_id,
+        (ARRAY_AGG(session_id ORDER BY created_at DESC))[1] AS session_id
+    FROM ai_requests
+    WHERE created_at >= $1 AND created_at < $2
+      AND client_session_id IS NOT NULL AND session_id IS NOT NULL
+    GROUP BY client_session_id
+),
 all_sessions AS (
     SELECT
-        COALESCE(t.session_id, NULLIF(g.session_id, ''), g.trace_id) AS session_id,
+        COALESCE(t.session_id, c.session_id, NULLIF(g.session_id, ''), g.trace_id) AS session_id,
         g.user_id, g.agent_id, g.agent_scope,
         g.created_at, g.decision, 'gov'::text AS source
     FROM governance_decisions g
     LEFT JOIN trace_to_session t ON t.trace_id = g.trace_id
+    LEFT JOIN client_to_session c ON c.client_session_id = NULLIF(g.session_id, '')
     WHERE g.created_at >= $1 AND g.created_at < $2
       AND (NULLIF(g.session_id, '') IS NOT NULL OR g.trace_id IS NOT NULL)
     UNION ALL
@@ -20,11 +35,13 @@ all_sessions AS (
     WHERE created_at >= $1 AND created_at < $2
       AND session_id IS NOT NULL
     UNION ALL
-    SELECT session_id, user_id, NULL::text AS agent_id, NULL::text AS agent_scope,
-           created_at, NULL::text AS decision, 'evt'::text AS source
-    FROM plugin_usage_events
-    WHERE created_at >= $1 AND created_at < $2
-      AND session_id IS NOT NULL
+    SELECT COALESCE(c.session_id, e.session_id) AS session_id,
+           e.user_id, NULL::text AS agent_id, NULL::text AS agent_scope,
+           e.created_at, NULL::text AS decision, 'evt'::text AS source
+    FROM plugin_usage_events e
+    LEFT JOIN client_to_session c ON c.client_session_id = e.session_id
+    WHERE e.created_at >= $1 AND e.created_at < $2
+      AND e.session_id IS NOT NULL
 ),
 per_session AS (
     SELECT
@@ -101,12 +118,14 @@ filtered AS (
       AND ($5::text  IS NULL OR j.agent_scope = $5)
       AND ($6::text  IS NULL OR EXISTS (
             SELECT 1 FROM governance_decisions g
-            WHERE g.session_id = j.session_id
+            LEFT JOIN client_to_session c ON c.client_session_id = NULLIF(g.session_id, '')
+            WHERE COALESCE(c.session_id, g.session_id) = j.session_id
               AND g.created_at >= $1 AND g.created_at < $2
               AND g.policy = $6))
       AND ($7::text  IS NULL OR EXISTS (
             SELECT 1 FROM governance_decisions g
-            WHERE g.session_id = j.session_id
+            LEFT JOIN client_to_session c ON c.client_session_id = NULLIF(g.session_id, '')
+            WHERE COALESCE(c.session_id, g.session_id) = j.session_id
               AND g.created_at >= $1 AND g.created_at < $2
               AND g.decision = $7))
       AND (NOT $8 OR j.has_error = true)
@@ -149,14 +168,15 @@ ai_picks AS (
 ),
 tool_meta AS (
     SELECT
-        session_id,
+        COALESCE(c.session_id, e.session_id)                AS session_id,
         COUNT(*)::bigint                                    AS tool_call_count,
-        MODE() WITHIN GROUP (ORDER BY tool_name)            AS top_tool
-    FROM plugin_usage_events
-    WHERE created_at >= $1 AND created_at < $2
-      AND session_id IN (SELECT session_id FROM page)
-      AND tool_name IS NOT NULL
-    GROUP BY session_id
+        MODE() WITHIN GROUP (ORDER BY e.tool_name)          AS top_tool
+    FROM plugin_usage_events e
+    LEFT JOIN client_to_session c ON c.client_session_id = e.session_id
+    WHERE e.created_at >= $1 AND e.created_at < $2
+      AND COALESCE(c.session_id, e.session_id) IN (SELECT session_id FROM page)
+      AND e.tool_name IS NOT NULL
+    GROUP BY COALESCE(c.session_id, e.session_id)
 )
 SELECT
     pg.session_id           AS "session_id!: SessionId",

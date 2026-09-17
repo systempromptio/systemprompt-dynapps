@@ -63,6 +63,43 @@ async fn list_trace_spans_unions_the_three_sources_in_start_order() {
     db.cleanup().await;
 }
 
+// The detail page is keyed on the bridge session; the hook and governance
+// rows of the same Claude Code session are keyed on its uuid, which the
+// gateway row carries as `client_session_id`, so they belong to the page.
+#[tokio::test]
+async fn list_trace_spans_includes_rows_keyed_on_the_client_session_id() {
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("fold")).await;
+    let session = unique("sess");
+    insert_session(&db.pool, &session, &user).await;
+    let client_session = unique("cc-uuid");
+    let now = Utc::now();
+
+    let mut decision = DecisionSpec::allow(&unique("dec"), &user, &client_session);
+    decision.created_at = now - Duration::seconds(30);
+    insert_decision(&db.pool, &decision).await;
+
+    let mut request = RequestSpec::completed(&unique("req"), &user);
+    request.session_id = Some(&session);
+    request.client_session_id = Some(&client_session);
+    request.created_at = now - Duration::seconds(20);
+    insert_request(&db.pool, &request).await;
+
+    let mut event = EventSpec::tool_use(&unique("event"), &user, &client_session);
+    event.created_at = now - Duration::seconds(10);
+    insert_event(&db.pool, &event).await;
+
+    let spans = list_trace_spans(&db.pool, &SessionId::new(session))
+        .await
+        .expect("list spans");
+
+    let kinds: Vec<&str> = spans.iter().map(|s| s.kind.as_str()).collect();
+    assert_eq!(kinds, ["governance", "model", "tool"]);
+    db.cleanup().await;
+}
+
 #[tokio::test]
 async fn list_trace_spans_names_a_governance_span_by_its_tool() {
     let Some(db) = TempDb::create().await else {

@@ -22,6 +22,23 @@ pub async fn resolve_trace_session(
         return Ok(Some(row.session_id));
     }
 
+    // Why: a pasted Claude Code session uuid is the `client_session_id` of
+    // the gateway rows; it lands on the bridge session those rows and the
+    // hook rows are folded into on the list.
+    if let Some(row) = sqlx::query!(
+        r#"SELECT session_id AS "session_id!: SessionId"
+           FROM ai_requests
+           WHERE client_session_id = $1 AND session_id IS NOT NULL
+           ORDER BY created_at DESC
+           LIMIT 1"#,
+        id,
+    )
+    .fetch_optional(pool)
+    .await?
+    {
+        return Ok(Some(row.session_id));
+    }
+
     if let Some(row) = sqlx::query!(
         r#"SELECT session_id AS "session_id!: SessionId"
            FROM governance_decisions

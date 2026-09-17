@@ -1,0 +1,107 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT\n            e.id              AS \"id!\",\n            e.event_type      AS \"event_type!\",\n            e.tool_name,\n            e.description,\n            e.user_id         AS \"user_id!: UserId\",\n            COALESCE(u.display_name, u.full_name, u.name, u.email, e.user_id) AS \"user_label!\",\n            a.artifact_id     AS \"artifact_id?: ArtifactId\",\n            e.created_at      AS \"created_at!\"\n        FROM plugin_usage_events e\n        LEFT JOIN users u ON u.id = e.user_id\n        LEFT JOIN mcp_artifacts a ON a.mcp_execution_id = e.mcp_execution_id\n        WHERE e.session_id = $1\n           OR e.session_id IN (\n               SELECT DISTINCT client_session_id FROM ai_requests\n               WHERE session_id = $1 AND client_session_id IS NOT NULL)\n        ORDER BY e.created_at ASC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "plugin_usage_events",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "event_type!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "plugin_usage_events",
+            "name": "event_type"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "tool_name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "plugin_usage_events",
+            "name": "tool_name"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "description",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "plugin_usage_events",
+            "name": "description"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "user_id!: UserId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "plugin_usage_events",
+            "name": "user_id"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "user_label!",
+        "type_info": "Varchar",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 6,
+        "name": "artifact_id?: ArtifactId",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "mcp_artifacts",
+            "name": "artifact_id"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "created_at!",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "plugin_usage_events",
+            "name": "created_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      false,
+      null,
+      false,
+      false
+    ]
+  },
+  "hash": "d1fad4bf31777a699c123eee17a1bbf2a48881d26676eb1d2bc437df33c97c14"
+}

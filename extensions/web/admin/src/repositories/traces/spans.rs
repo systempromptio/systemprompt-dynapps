@@ -56,6 +56,9 @@ async fn list_governance_spans(
            OR d.session_id IN (
                SELECT DISTINCT trace_id FROM ai_requests
                WHERE session_id = $1 AND trace_id IS NOT NULL)
+           OR d.session_id IN (
+               SELECT DISTINCT client_session_id FROM ai_requests
+               WHERE session_id = $1 AND client_session_id IS NOT NULL)
         ORDER BY d.created_at ASC"#,
         session_id.as_str(),
     )
@@ -131,7 +134,7 @@ async fn list_request_spans(
             COALESCE(u.display_name, u.full_name, u.name, u.email, r.user_id) AS "user_label!"
         FROM ai_requests r
         LEFT JOIN users u ON u.id = r.user_id
-        WHERE r.session_id = $1
+        WHERE r.session_id = $1 OR r.client_session_id = $1
         ORDER BY r.created_at ASC"#,
         session_id.as_str(),
     )
@@ -196,6 +199,9 @@ async fn list_event_spans(pool: &PgPool, session_id: &SessionId) -> Result<Vec<S
         LEFT JOIN users u ON u.id = e.user_id
         LEFT JOIN mcp_artifacts a ON a.mcp_execution_id = e.mcp_execution_id
         WHERE e.session_id = $1
+           OR e.session_id IN (
+               SELECT DISTINCT client_session_id FROM ai_requests
+               WHERE session_id = $1 AND client_session_id IS NOT NULL)
         ORDER BY e.created_at ASC"#,
         session_id.as_str(),
     )

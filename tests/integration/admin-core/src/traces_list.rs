@@ -78,6 +78,78 @@ async fn list_traces_summarises_a_session_across_all_three_sources() {
     db.cleanup().await;
 }
 
+// One Claude Code session writes its gateway rows under the bridge session
+// and its hook rows under Claude Code's own uuid. The gateway row carries
+// both, so the list shows one trace — the bridge session — with the model
+// spans and the tool spans together, and the uuid never surfaces as a row.
+#[tokio::test]
+async fn list_traces_folds_hook_rows_keyed_on_the_client_session_into_the_gateway_session() {
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("fold")).await;
+    let session = unique("sess");
+    insert_session(&db.pool, &session, &user).await;
+    let client_session = unique("cc-uuid");
+    let mut request = RequestSpec::completed(&unique("req"), &user);
+    request.session_id = Some(&session);
+    request.client_session_id = Some(&client_session);
+    insert_request(&db.pool, &request).await;
+    insert_event(
+        &db.pool,
+        &EventSpec::tool_use(&unique("evt"), &user, &client_session),
+    )
+    .await;
+    insert_decision(
+        &db.pool,
+        &DecisionSpec::allow(&unique("dec"), &user, &client_session),
+    )
+    .await;
+
+    let (traces, total) = list_traces(&db.pool, TraceFilter::default(), narrow_window(), page())
+        .await
+        .expect("query succeeds");
+
+    assert_eq!(
+        total, 1,
+        "the uuid folds into the bridge session: {traces:?}"
+    );
+    let trace = &traces[0];
+    assert_eq!(trace.session_id.as_str(), session);
+    assert_eq!(trace.span_count, 3);
+    assert_eq!(trace.request_count, 1);
+    assert_eq!(trace.governance_count, 1);
+    assert_eq!(trace.tool_call_count, 1);
+    assert_eq!(trace.model.as_deref(), Some("claude-test-model"));
+    assert_eq!(trace.total_tokens, 120);
+    db.cleanup().await;
+}
+
+// A hook-only session — no gateway row names its uuid — keeps the uuid as
+// its own key rather than vanishing.
+#[tokio::test]
+async fn list_traces_keeps_a_hook_only_session_under_its_own_id() {
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("hookonly")).await;
+    let client_session = unique("cc-uuid");
+    insert_event(
+        &db.pool,
+        &EventSpec::tool_use(&unique("evt"), &user, &client_session),
+    )
+    .await;
+
+    let (traces, total) = list_traces(&db.pool, TraceFilter::default(), narrow_window(), page())
+        .await
+        .expect("query succeeds");
+
+    assert_eq!(total, 1);
+    assert_eq!(traces[0].session_id.as_str(), client_session);
+    assert_eq!(traces[0].request_count, 0);
+    db.cleanup().await;
+}
+
 #[tokio::test]
 async fn list_traces_keeps_active_and_window_clocks_apart() {
     let Some(db) = TempDb::create().await else {
