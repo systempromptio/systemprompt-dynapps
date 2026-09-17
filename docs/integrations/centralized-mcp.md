@@ -34,9 +34,9 @@ replace the encryption key used to recover provider tokens.
 | `encryption_master_key` | Persistent 32-byte encryption key encoded as 64 hexadecimal characters; required to store OAuth grants, preserve it across restarts |
 | `mcp_credential_broker_secret` | Random server-only secret of at least 32 bytes; shared by core and the account accessor in the same instance |
 | `github_mcp_client_id`, `github_mcp_client_secret` | Registered GitHub App OAuth credentials, with expiring user tokens enabled |
-| `salesforce_mcp_client_id`, `salesforce_mcp_client_secret` | External Client App credentials for the default `salesforce` org; other orgs name their own secrets in `services/salesforce/orgs.yaml` |
-| `google_rag_mcp_client_id`, `google_rag_mcp_client_secret` | OAuth web-client credentials from the GCP project that owns the RAG corpus (`docs/CONFIGURED-CONNECTORS.md`) |
-| `salesforce_private_key` | JWT-bearer signing key for the default org when using admin pre-authorization (`private_key_secret` per org) |
+| `salesforce_mcp_client_id`, `salesforce_mcp_client_secret` | Consumer key and secret of the packaged `Systemprompt` External Client App (source org Astound US); shared by every org that installs the package. An org running its own app names its own secrets in `services/config/salesforce-orgs.yaml` |
+| `google_drive_mcp_client_id`, `google_drive_mcp_client_secret`, `google_rag_mcp_client_id`, `google_rag_mcp_client_secret` | OAuth web-client credentials from the GCP project that owns the Agent Search engine and the RAG corpus; one client, stored under both names (`docs/CONFIGURED-CONNECTORS.md`) |
+| `salesforce_private_key` | JWT-bearer signing key when an org uses admin pre-authorization (`private_key_secret` per org) |
 
 Set `server.api_external_url` to the HTTPS origin of the deployment and provision
 its credentials independently. Local user grants are not copied into production.
@@ -44,32 +44,34 @@ Register callbacks under that origin:
 
 - `https://YOUR-SERVER/api/public/connectors/atlassian/callback`
 - `https://YOUR-SERVER/api/public/connectors/github/callback`
+- `https://YOUR-SERVER/api/public/connectors/google_drive/callback`
 - `https://YOUR-SERVER/api/public/connectors/google_rag/callback`
-- `https://YOUR-SERVER/api/public/connectors/salesforce/callback` (and
-  `/connectors/salesforce-<slug>/callback` for every additional org)
+- `https://YOUR-SERVER/api/public/connectors/salesforce/callback` — one callback for
+  every Salesforce org; the org rides in the OAuth `state`
 
 Atlassian uses its hosted MCP authorization-server metadata and dynamic client
 registration. Its organization must allow the server callback domain and,
 where IP allowlisting is enabled, the server's outbound IP.
 
-Salesforce's first test uses browser OAuth. An org administrator activates
-`sobject-all` in Setup → MCP Servers → Salesforce
-Servers, then creates an **External Client App** with the callback URLs above,
-PKCE, `mcp_api` and `refresh_token` scopes, and JWT-based access tokens for named
-users. This integration also requests `openid` to verify account identity.
-Declare the org in `services/salesforce/orgs.yaml` (My Domain, environment,
-secret names, entitled groups), store `salesforce_mcp_client_id` and
-`salesforce_mcp_client_secret` on the server, and authorize a test user with the
-required object and field access. No signing certificate or private key is needed
-for browser OAuth. New app settings can take up to 30 minutes to become available.
-See [Salesforce's app setup guide](https://developer.salesforce.com/docs/platform/hosted-mcp-servers/guide/create-external-client-app.html).
+Salesforce uses browser OAuth against one packaged **External Client App**. The
+app is created once in the source org (Astound US) with the callback above,
+PKCE, `mcp_api`, `refresh_token` and `openid` scopes, and JWT-based access
+tokens for named users; `deploy/salesforce/` holds it as an SFDX project and
+builds the managed package every other org installs (the README there is the
+runbook). Each org's administrator installs the package, assigns the
+`Systemprompt_MCP_Access` permission set and activates `sobject-all` in
+Setup → API Catalog → MCP Servers. Store `salesforce_mcp_client_id` and
+`salesforce_mcp_client_secret` once on the server. No signing certificate or
+private key is needed for browser OAuth. New app settings can take up to 30
+minutes to become available.
 
-Every Salesforce org is its own MCP server: `salesforce` for the default
-production org, `salesforce-<slug>` for the rest, each with a registry entry and
-a `services/mcp/<id>.yaml` whose endpoint matches the org's environment
-(`/platform/mcp/v1/sandbox/platform/sobject-all` for sandboxes). The gateway
-validates that pairing at boot and shows an org whose secrets are missing as
-"Not provisioned" rather than failing. After a sandbox refresh, `POST
+Every Salesforce org is its own MCP server (`salesforce-us`, `salesforce-uk`,
+`salesforce-dev`, …), each with a registry entry in
+`services/config/salesforce-orgs.yaml` (My Domain, environment, optional entitled
+groups) and a `services/mcp/<id>.yaml` whose endpoint matches the org's
+environment (`/platform/mcp/v1/sandbox/platform/sobject-all` for sandboxes).
+The gateway validates that pairing at boot and shows an org whose secrets are
+missing as "Not provisioned" rather than failing. After a sandbox refresh, `POST
 /api/public/admin/connectors/<id>/reprovision` resets every user on that org. See
 [Salesforce's endpoint documentation](https://developer.salesforce.com/docs/platform/hosted-mcp-servers/guide/postman.html).
 The `sobject-all` connector covers record operations and queries, not every

@@ -44,7 +44,7 @@ pub(super) async fn start(
     let mut tx = pool.begin().await?;
     let account = accounts::get_locked_account(&mut tx, &user.user_id, provider.slug()).await?;
     tx.commit().await?;
-    let state = URL_SAFE_NO_PAD.encode(rand::rng().random::<[u8; 32]>());
+    let state = consent_state(&provider);
     let verifier = URL_SAFE_NO_PAD.encode(rand::rng().random::<[u8; 32]>());
     let (url, mut grant) = oauth::authorize(
         Consent {
@@ -69,6 +69,19 @@ pub(super) async fn start(
     Ok(([(CACHE_CONTROL, "no-store")], Redirect::to(&url)).into_response())
 }
 
+// Why: Salesforce orgs share one callback URL, so their state carries the
+// server id as a prefix (`salesforce-uk.<random>`): the provider echoes it
+// verbatim and the shared callback reads the org back from it. The random part
+// is what binds the row; the prefix only selects which row to look for.
+fn consent_state(provider: &Provider) -> String {
+    let random = URL_SAFE_NO_PAD.encode(rand::rng().random::<[u8; 32]>());
+    if provider.is_salesforce() {
+        format!("{}.{random}", provider.slug())
+    } else {
+        random
+    }
+}
+
 #[derive(Deserialize)]
 pub(super) struct Callback {
     state: String,
@@ -82,9 +95,33 @@ pub(super) async fn callback(
     headers: HeaderMap,
     Query(params): Query<Callback>,
 ) -> AdminResult<Response> {
-    let user = live_user(&pool, &headers, false).await?;
-    service::require_entitlement(&pool, &user.user_id, provider.clone()).await?;
-    let row = credentials::consume_state(&pool, &user.user_id, provider.slug(), &params.state)
+    complete(&pool, provider, &headers, params).await
+}
+
+pub(super) async fn salesforce_callback(
+    State(pool): State<Arc<PgPool>>,
+    headers: HeaderMap,
+    Query(params): Query<Callback>,
+) -> AdminResult<Response> {
+    let provider = params
+        .state
+        .split_once('.')
+        .map(|(slug, _)| slug.to_owned())
+        .and_then(|slug| Provider::try_from(slug).ok())
+        .filter(Provider::is_salesforce)
+        .ok_or_else(|| AdminError::BadRequest("Consent state names no Salesforce org".into()))?;
+    complete(&pool, provider, &headers, params).await
+}
+
+async fn complete(
+    pool: &PgPool,
+    provider: Provider,
+    headers: &HeaderMap,
+    params: Callback,
+) -> AdminResult<Response> {
+    let user = live_user(pool, headers, false).await?;
+    service::require_entitlement(pool, &user.user_id, provider.clone()).await?;
+    let row = credentials::consume_state(pool, &user.user_id, provider.slug(), &params.state)
         .await?
         .ok_or_else(|| {
             AdminError::Unauthorized("Connector consent expired or already consumed".into())
@@ -104,15 +141,15 @@ pub(super) async fn callback(
     oauth::exchange(&mut grant, &code).await?;
     if let Err(error) = oauth::verify::verify(&mut grant).await {
         if !matches!(error, AdminError::Unauthorized(_)) {
-            live_user(&pool, &headers, false).await?;
-            super::store_pending_verification(&pool, &user.user_id, &grant).await?;
+            live_user(pool, headers, false).await?;
+            super::store_pending_verification(pool, &user.user_id, &grant).await?;
         }
         return Err(error);
     }
     // Why: Recheck revocation after the network exchange, before persisting a
     // grant.
-    live_user(&pool, &headers, false).await?;
-    super::store_verified(&pool, &user.user_id, &grant).await?;
+    live_user(pool, headers, false).await?;
+    super::store_verified(pool, &user.user_id, &grant).await?;
     tracing::info!(user_id = %user.user_id, provider = provider.slug(), "connector_connected");
     Ok((
         [(CACHE_CONTROL, "no-store")],

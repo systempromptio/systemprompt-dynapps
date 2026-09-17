@@ -20,7 +20,7 @@ use crate::support::repo_root;
 // accessor as `api_external_url + token_endpoint`, so a disagreement here is a
 // 404 at tool-call time and nowhere earlier.
 const ATLASSIAN_ACCESSOR: &str = "/api/public/connectors/atlassian/token";
-const SALESFORCE_ACCESSOR: &str = "/api/public/connectors/salesforce/token";
+const SALESFORCE_SERVERS: [&str; 3] = ["salesforce-us", "salesforce-uk", "salesforce-dev"];
 
 fn web_config(name: &str) -> PathBuf {
     repo_root().join("services/web/config").join(name)
@@ -59,10 +59,13 @@ fn the_salesforce_config_parses_as_the_loader_reads_it() {
 fn the_salesforce_app_ships_disabled_and_its_server_enabled() {
     // Why: the app needs a credential that does not exist in any environment
     // yet; the server is visible only to linked users, so it can stay on.
-    assert_eq!(
-        server("salesforce.yaml", "salesforce")["enabled"].as_bool(),
-        Some(true)
-    );
+    for name in SALESFORCE_SERVERS {
+        assert_eq!(
+            server(&format!("{name}.yaml"), name)["enabled"].as_bool(),
+            Some(true),
+            "{name} must ship enabled"
+        );
+    }
     let yaml = std::fs::read_to_string(web_config("salesforce.yaml")).expect("readable");
     let value: serde_yaml::Value = serde_yaml::from_str(&yaml).expect("parses");
     assert_eq!(
@@ -74,11 +77,21 @@ fn the_salesforce_app_ships_disabled_and_its_server_enabled() {
 
 #[test]
 fn every_external_server_points_at_the_accessor_that_serves_it() {
-    for (file, name, accessor) in [
-        ("atlassian.yaml", "atlassian", ATLASSIAN_ACCESSOR),
-        ("salesforce.yaml", "salesforce", SALESFORCE_ACCESSOR),
-    ] {
-        let entry = server(file, name);
+    let salesforce = SALESFORCE_SERVERS.map(|name| {
+        (
+            format!("{name}.yaml"),
+            name,
+            format!("/api/public/connectors/{name}/token"),
+        )
+    });
+    let mut servers = vec![(
+        "atlassian.yaml".to_owned(),
+        "atlassian",
+        ATLASSIAN_ACCESSOR.to_owned(),
+    )];
+    servers.extend(salesforce);
+    for (file, name, accessor) in servers {
+        let entry = server(&file, name);
         let external_auth = entry
             .get("external_auth")
             .unwrap_or_else(|| panic!("{file}: {name} must declare external_auth"));
@@ -87,7 +100,7 @@ fn every_external_server_points_at_the_accessor_that_serves_it() {
             external_auth
                 .get("token_endpoint")
                 .and_then(serde_yaml::Value::as_str),
-            Some(accessor),
+            Some(accessor.as_str()),
             "{file}: token_endpoint must name the route that actually serves it"
         );
 
@@ -111,54 +124,92 @@ fn every_external_server_points_at_the_accessor_that_serves_it() {
     }
 }
 
+const GOOGLE_SERVERS: [(&str, &str); 2] = [
+    ("google_rag.yaml", "google_rag"),
+    ("google_drive.yaml", "google_drive"),
+];
+
 #[test]
-fn the_google_rag_server_leaves_its_accessor_to_the_generic_connector() {
+fn the_google_servers_leave_their_accessor_to_the_generic_connector() {
     // Why: with a `connector:` block and no `external_auth`, core synthesises
     // the accessor route itself; declaring both would name the route twice and
-    // let them drift apart.
-    let entry = server("google_rag.yaml", "google_rag");
-    assert!(
-        entry.get("external_auth").is_none(),
-        "google_rag.yaml: the generic connector owns the accessor"
+    // let them drift apart. Both Google servers share one OAuth client and one
+    // shape, so one drifting from the other is the bug this loop catches.
+    for (file, name) in GOOGLE_SERVERS {
+        let entry = server(file, name);
+        assert!(
+            entry.get("external_auth").is_none(),
+            "{file}: the generic connector owns the accessor"
+        );
+        let connector = entry
+            .get("connector")
+            .unwrap_or_else(|| panic!("{file}: {name} must declare a connector block"));
+        assert_eq!(
+            connector.get("adapter").and_then(serde_yaml::Value::as_str),
+            Some("generic"),
+            "{file}: adapter"
+        );
+        // Why: Google issues a refresh token only when offline access is
+        // requested; without it the connection expires with the hour-long
+        // access token.
+        assert_eq!(
+            connector
+                .get("authorization_params")
+                .and_then(|p| p.get("access_type"))
+                .and_then(serde_yaml::Value::as_str),
+            Some("offline"),
+            "{file}: access_type=offline is what keeps the grant alive"
+        );
+        assert_eq!(
+            connector
+                .get("identity")
+                .and_then(serde_yaml::Value::as_str),
+            Some("userinfo"),
+            "{file}: identity"
+        );
+        assert_eq!(
+            entry
+                .get("oauth")
+                .and_then(|o| o.get("required"))
+                .and_then(serde_yaml::Value::as_bool),
+            Some(false),
+            "{file}: oauth.required"
+        );
+        assert_eq!(
+            entry.get("type").and_then(serde_yaml::Value::as_str),
+            Some("external"),
+            "{file}: type"
+        );
+        assert_eq!(
+            entry.get("tool_policy").and_then(serde_yaml::Value::as_str),
+            Some("allow"),
+            "{file}: a server without tool_policy is withheld from the bridge"
+        );
+    }
+}
+
+#[test]
+fn the_google_drive_server_targets_agent_search_with_its_scope() {
+    // Why: Agent Search's protected-resource metadata names exactly this scope;
+    // a token minted without it is accepted by Google's OAuth server and then
+    // rejected by the MCP endpoint, which surfaces as a failed Test on the
+    // Connectors page and nowhere earlier.
+    let entry = server("google_drive.yaml", "google_drive");
+    assert_eq!(
+        entry.get("endpoint").and_then(serde_yaml::Value::as_str),
+        Some("https://discoveryengine.googleapis.com/mcp")
     );
-    let connector = entry
+    let scopes: Vec<&str> = entry
         .get("connector")
-        .expect("google_rag.yaml: google_rag must declare a connector block");
-    assert_eq!(
-        connector.get("adapter").and_then(serde_yaml::Value::as_str),
-        Some("generic")
-    );
-    // Why: Google issues a refresh token only when offline access is requested;
-    // without it the connection expires with the hour-long access token.
-    assert_eq!(
-        connector
-            .get("authorization_params")
-            .and_then(|p| p.get("access_type"))
-            .and_then(serde_yaml::Value::as_str),
-        Some("offline"),
-        "google_rag.yaml: access_type=offline is what keeps the grant alive"
-    );
-    assert_eq!(
-        connector
-            .get("identity")
-            .and_then(serde_yaml::Value::as_str),
-        Some("userinfo")
-    );
-    assert_eq!(
-        entry
-            .get("oauth")
-            .and_then(|o| o.get("required"))
-            .and_then(serde_yaml::Value::as_bool),
-        Some(false)
-    );
-    assert_eq!(
-        entry.get("type").and_then(serde_yaml::Value::as_str),
-        Some("external")
-    );
-    assert_eq!(
-        entry.get("tool_policy").and_then(serde_yaml::Value::as_str),
-        Some("allow"),
-        "google_rag.yaml: a server without tool_policy is withheld from the bridge"
+        .and_then(|c| c.get("scopes"))
+        .and_then(serde_yaml::Value::as_sequence)
+        .expect("google_drive.yaml: connector.scopes is a list")
+        .iter()
+        .filter_map(serde_yaml::Value::as_str)
+        .collect();
+    assert!(
+        scopes.contains(&"https://www.googleapis.com/auth/discoveryengine.readwrite"),
+        "google_drive.yaml: scopes must carry discoveryengine.readwrite, got {scopes:?}"
     );
 }
 
@@ -202,7 +253,7 @@ fn the_external_mcp_servers_are_listed_in_the_aggregator() {
     // nothing reports it — the server simply does not exist.
     let aggregator = std::fs::read_to_string(repo_root().join("services/config/config.yaml"))
         .expect("services/config/config.yaml is readable");
-    for name in ["atlassian", "salesforce"] {
+    for name in ["atlassian"].into_iter().chain(SALESFORCE_SERVERS) {
         assert!(
             aggregator.contains(&format!("../mcp/{name}.yaml")),
             "services/config/config.yaml must include ../mcp/{name}.yaml"

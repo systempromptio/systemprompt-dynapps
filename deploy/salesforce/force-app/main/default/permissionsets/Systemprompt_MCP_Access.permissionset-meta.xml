@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Optional marker set: grants API access to users whose profile lacks it. App
+  access itself is the policy's AllSelfAuthorized; if an org switches to
+  AdminApprovedPreAuthorized, link this set to the app in Setup (External
+  Client App Manager → Systemprompt → Policies → Manage Permission Sets) — that
+  link has no metadata representation.
+-->
+<PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
+    <label>Systemprompt MCP Access</label>
+    <description>API access for the Systemprompt gateway connector. Object and field access is not granted here: the hosted MCP server enforces the user's own permissions.</description>
+    <hasActivationRequired>false</hasActivationRequired>
+    <userPermissions>
+        <enabled>true</enabled>
+        <name>ApiEnabled</name>
+    </userPermissions>
+</PermissionSet>

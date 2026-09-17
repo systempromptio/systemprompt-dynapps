@@ -7,12 +7,13 @@ use crate::services::salesforce_orgs::{
 use serde::{Deserialize, Serialize};
 use systemprompt::identifiers::McpServerId;
 
+pub const SALESFORCE_CALLBACK_SEGMENT: &str = "salesforce";
+
 /// A configured MCP connector.
 ///
 /// `Salesforce` carries its server id because each Salesforce org is its own
-/// server (`salesforce`, `salesforce-<slug>`), and every org-specific value —
-/// domain, app credentials, endpoint — is read from the org registry under
-/// that id.
+/// server (`salesforce-<slug>`), and every org-specific value — domain, app
+/// credentials, endpoint — is read from the org registry under that id.
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(try_from = "String", into = "String")]
 pub enum Provider {
@@ -82,10 +83,17 @@ impl Provider {
     }
     pub fn callback(&self) -> AdminResult<String> {
         let cfg = systemprompt::models::Config::get().map_err(AdminError::internal)?;
-        Ok(format!(
-            "{}/api/public/connectors/{}/callback",
-            cfg.api_external_url.trim_end_matches('/'),
+        // Why: Every Salesforce org shares one callback because they share one
+        // External Client App whose callback list is fixed in the source org;
+        // the org comes back in the `state` prefix instead (`consent::start`).
+        let segment = if self.is_salesforce() {
+            SALESFORCE_CALLBACK_SEGMENT
+        } else {
             self.slug()
+        };
+        Ok(format!(
+            "{}/api/public/connectors/{segment}/callback",
+            cfg.api_external_url.trim_end_matches('/'),
         ))
     }
     pub fn configured(&self) -> bool {

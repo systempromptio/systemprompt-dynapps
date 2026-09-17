@@ -29,6 +29,10 @@ pub fn router(pool: Arc<PgPool>) -> Router {
             post(account::manual),
         )
         .route("/connectors/{provider}/start", get(consent::start))
+        .route(
+            "/connectors/salesforce/callback",
+            get(consent::salesforce_callback),
+        )
         .route("/connectors/{provider}/callback", get(consent::callback))
         .route("/connectors/{provider}/token", get(consent::token))
         .layer(axum::extract::DefaultBodyLimit::max(32768))

@@ -22,7 +22,7 @@ marketplace:
     source: explicit
     include:
       - atlassian
-      - salesforce
+      - salesforce-us
       - github
     exclude: []
   # No agents. This workspace ships skills through its plugins and nothing else.

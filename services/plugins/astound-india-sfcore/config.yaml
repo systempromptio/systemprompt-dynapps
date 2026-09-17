@@ -43,6 +43,6 @@ plugin:
     source: explicit
     include:
     - atlassian
-    - salesforce
+    - salesforce-us
     - github
   content_sources: {}

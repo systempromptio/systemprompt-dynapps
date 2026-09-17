@@ -181,8 +181,8 @@ fn configured_provider_ids_preserve_legacy_wire_names() {
     for id in [
         "atlassian",
         "github",
-        "salesforce",
-        "salesforce-uat",
+        "salesforce-us",
+        "salesforce-uk",
         "fourth-mcp",
     ] {
         let provider: Provider = serde_json::from_value(serde_json::json!(id)).unwrap();

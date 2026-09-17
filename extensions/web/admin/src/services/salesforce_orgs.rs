@@ -1,14 +1,20 @@
-//! Salesforce org registry: `services/salesforce/orgs.yaml`, one record per
-//! hosted-MCP server id.
+//! Salesforce org registry: `services/config/salesforce-orgs.yaml`, one record
+//! per hosted-MCP server id.
 //!
 //! Salesforce has no central authorization server. Every org is its own
-//! issuer with its own External Client App, its own user records and — for
-//! sandboxes — a different hosted MCP endpoint, so "which org" has to be
-//! decided before consent and remembered per grant. The registry is that
-//! decision: each org is declared against the MCP server that fronts it
-//! (`salesforce` for the default production org, `salesforce-<slug>` for the
-//! rest), and every Salesforce branch of the connector reads its domain,
-//! credentials and endpoint from here rather than from global secrets.
+//! issuer with its own user records and — for sandboxes — a different hosted
+//! MCP endpoint, so "which org" has to be decided before consent and
+//! remembered per grant. The registry is that decision: each org is declared
+//! against the MCP server that fronts it (`salesforce-<slug>`), and every
+//! Salesforce branch of the connector reads its domain, credentials and
+//! endpoint from here.
+//!
+//! One External Client App serves every org: it is built in the source org
+//! (Astound US) and installed elsewhere as a managed package
+//! (`deploy/salesforce/`), so subscriber orgs resolve to the source org's
+//! consumer key. An org therefore names no secrets of its own unless it
+//! deliberately runs an independent app (`client_id_secret` /
+//! `client_secret` override the shared pair).
 //!
 //! Boot rules: a malformed file, an org whose server is missing, disabled,
 //! internal, or pointed at the wrong environment endpoint all fail boot. A
@@ -27,7 +33,9 @@ use systemprompt::models::mcp::{Deployment, McpServerType};
 use crate::error::{AdminError, AdminResult};
 use crate::services::connector_oauth::config::{secret, validate_my_domain};
 
-pub const ORGS_FILE: &str = "salesforce/orgs.yaml";
+pub const ORGS_FILE: &str = "config/salesforce-orgs.yaml";
+pub const SHARED_CLIENT_ID_SECRET: &str = "salesforce_mcp_client_id";
+pub const SHARED_CLIENT_SECRET: &str = "salesforce_mcp_client_secret";
 const PRODUCTION_ENDPOINT: &str = "https://api.salesforce.com/platform/mcp/v1/platform/sobject-all";
 const SANDBOX_ENDPOINT: &str =
     "https://api.salesforce.com/platform/mcp/v1/sandbox/platform/sobject-all";
@@ -45,7 +53,8 @@ pub enum SalesforceEnvironment {
 /// One org: its login, its app, and who may connect to it.
 ///
 /// `client_id_secret`, `client_secret` and `private_key_secret` are the
-/// *names* of entries in the secret store, never values.
+/// *names* of entries in the secret store, never values. The first two
+/// default to the shared packaged-app pair.
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub struct SalesforceOrg {
@@ -54,8 +63,10 @@ pub struct SalesforceOrg {
     pub environment: SalesforceEnvironment,
     #[serde(default)]
     pub org_id: Option<String>,
-    pub client_id_secret: String,
-    pub client_secret: String,
+    #[serde(default)]
+    pub client_id_secret: Option<String>,
+    #[serde(default)]
+    pub client_secret: Option<String>,
     #[serde(default)]
     pub private_key_secret: Option<String>,
     #[serde(default)]
@@ -93,12 +104,24 @@ impl SalesforceOrg {
         validate_my_domain(&self.my_domain)
     }
 
+    pub fn client_id_secret_name(&self) -> &str {
+        self.client_id_secret
+            .as_deref()
+            .unwrap_or(SHARED_CLIENT_ID_SECRET)
+    }
+
+    pub fn client_secret_name(&self) -> &str {
+        self.client_secret
+            .as_deref()
+            .unwrap_or(SHARED_CLIENT_SECRET)
+    }
+
     pub fn client_id(&self) -> AdminResult<String> {
-        secret(&self.client_id_secret)
+        secret(self.client_id_secret_name())
     }
 
     pub fn client_secret_value(&self) -> AdminResult<String> {
-        secret(&self.client_secret)
+        secret(self.client_secret_name())
     }
 
     pub fn private_key(&self) -> AdminResult<String> {

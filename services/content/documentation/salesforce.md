@@ -58,12 +58,12 @@ The retained India test matrix excludes live Salesforce execution. Local artifac
 | Required input or capability | Who provides it | Blocked until provided and verified |
 |---|---|---|
 | Org My Domain, org ID, and environment type: production/developer org or sandbox/scratch org | Salesforce administrator | Selecting the correct authorization domain and hosted endpoint |
-| External Client App, consumer key/client ID, consumer secret, and registered callback | Salesforce administrator | Hosted browser authorization |
+| The packaged `Systemprompt` External Client App installed in the org, with its permission set assigned | Salesforce administrator | Hosted browser authorization |
 | Activated hosted MCP server and appropriate user/app permissions | Salesforce administrator | Tool discovery and Salesforce operations |
 | Application settings in the correct gateway secret store | Gateway operator | Completing the dashboard connection flow |
 | Individual Salesforce login and consent, or separately configured administrative pre-authorization | Each user, with administrator support | That user's hosted Salesforce access |
 | Salesforce CLI, compatible Node/npm runtime, DX MCP, project checkout, and local org authorization | Developer | Local DX development operations |
-| An entry in the org registry (`services/salesforce/orgs.yaml`) and a matching `services/mcp/salesforce-<slug>.yaml` server for every org, sandbox included | Gateway operator | That org appearing on the profile page at all |
+| An entry in the org registry (`services/config/salesforce-orgs.yaml`), a matching `services/mcp/salesforce-<slug>.yaml` server and an access rule for every org, sandbox included | Gateway operator | That org appearing on the profile page at all |
 | Bridge execution, readiness reporting, and policy/audit integration for DX | Systemprompt maintainer | Dashboard-managed, governed local DX |
 | Reachable remote service with an isolated development workspace, or an authenticated relay to the execution machine | Systemprompt maintainer | Cowork invoking DX remotely |
 
@@ -73,13 +73,15 @@ Credentials can unblock hosted authorization and local DX authorization. They ca
 
 Use browser OAuth for the first connection. No private signing key or signing certificate is required for this path.
 
-1. Identify the target Salesforce org, its HTTPS My Domain origin, org ID, and environment type. Use the My Domain origin, such as `https://example.my.salesforce.com`, without a Lightning page path.
-2. In Salesforce Setup, find **MCP Servers** under API Catalog and activate **SObject All** for the org. Confirm the intended user can access the required objects, fields, and records.
-3. Create an **External Client App** in External Client App Manager and enable OAuth. Salesforce's hosted MCP documentation requires an External Client App, rather than a legacy Connected App.
-4. Register the callback for the gateway the users will actually connect to, using the URLs below. If both gateways are used, configure their callbacks and provision each deployment separately.
-5. Include `mcp_api` and `refresh_token` scopes. This Astound implementation also requests `openid` to verify the connected user's identity. Enable named-user JWT-based access tokens and PKCE. Configure the app's web-server flow to accept the server-held client secret used by Astound.
-6. Apply your org's app access policy and assign the intended users the required permissions. Allow for Salesforce's documented propagation delay of up to 30 minutes after creating the app.
-7. Retrieve the app's consumer key and consumer secret and deliver them using the secure process below.
+One **External Client App**, `Systemprompt`, serves every org. It is created once in the source org (Astound US) and delivered to every other org as a managed package built from `deploy/salesforce/` in the gateway repository, whose README is the operator runbook. An org administrator therefore never creates an app or handles a consumer secret:
+
+1. Identify the target Salesforce org, its HTTPS My Domain origin, org ID, and environment type. Use the My Domain origin, such as `https://example.my.salesforce.com`, without a Lightning page path, and send them to the gateway operator.
+2. Install the `Systemprompt` package from the install link the operator provides (for a sandbox, sign in via `test.salesforce.com`). The installed app references the source org's OAuth settings — callback, PKCE, `mcp_api`, `refresh_token` and `openid` scopes, named-user JWT access tokens — so nothing is configured by hand.
+3. Assign the packaged **Systemprompt MCP Access** permission set to the people who may connect. That assignment is the entitlement: a user without it, or without a login in this org, is refused by Salesforce at consent.
+4. In Salesforce Setup, find **MCP Servers** under API Catalog and activate **SObject All** for the org. Confirm the intended users can access the required objects, fields, and records; the hosted server enforces their own permissions.
+5. Allow for Salesforce's documented propagation delay of up to 30 minutes after the app first appears in the org.
+
+Only the source org's administrator handles credentials: the app's consumer key and consumer secret are delivered once, using the secure process below, and stored on the gateway as `salesforce_mcp_client_id` and `salesforce_mcp_client_secret`.
 
 Test environment (`https://astound.systemprompt.io`) callback:
 
@@ -99,7 +101,7 @@ Follow Salesforce's [External Client App setup](https://developer.salesforce.com
 
 ### One entry per org: the org registry
 
-Salesforce has no central authorization server. Every org is its own login, holds its own user records, needs its own External Client App, and a sandbox is served by a different hosted MCP endpoint. Astound therefore declares each org in `services/salesforce/orgs.yaml`, keyed by the id of the MCP server that fronts it: `salesforce` for the default production org, `salesforce-<slug>` for every other org. A user picks the org on the profile page before signing in; the grant, the verification and every tool call are bound to that org.
+Salesforce has no central authorization server. Every org is its own login, holds its own user records, and a sandbox is served by a different hosted MCP endpoint. Astound therefore declares each org in `services/config/salesforce-orgs.yaml`, keyed by the id of the MCP server that fronts it (`salesforce-us`, `salesforce-uk`, `salesforce-<slug>`). A user picks the org on the profile page before signing in; the grant, the verification and every tool call are bound to that org. Every org shares one callback, `/api/public/connectors/salesforce/callback` — the org travels in the OAuth `state` — so adding an org never touches the app.
 
 ```yaml
 orgs:
@@ -108,9 +110,8 @@ orgs:
     my_domain: https://client-a--uat.sandbox.my.salesforce.com
     environment: sandbox                      # production | sandbox
     org_id: 00DXXXXXXXXXXXXXXX                # optional; a consent in another org is refused
-    client_id_secret: salesforce_client_a_uat_client_id     # secret NAMES, never values
-    client_secret: salesforce_client_a_uat_client_secret
     groups: [Systemprompt-Commerce]           # empty = every active user
+    # client_id_secret / client_secret: only for an org running its own app
 ```
 
 Each entry needs a matching `services/mcp/salesforce-<slug>.yaml` (type `external`, listed in `services/config/config.yaml`) whose endpoint matches the environment:
@@ -120,13 +121,13 @@ production:  https://api.salesforce.com/platform/mcp/v1/platform/sobject-all
 sandbox:     https://api.salesforce.com/platform/mcp/v1/sandbox/platform/sobject-all
 ```
 
-The gateway refuses to start if an org names a server that is missing, disabled, internal, or on the wrong endpoint, or if `my_domain` does not match `environment`. It does **not** refuse to start when the org's secrets are absent: that org is shown as **Not provisioned** on every entitled user's profile page until the Salesforce administrator has created the app and the operator has stored its key and secret. `groups` controls who sees the row; a user outside those groups sees the org as not entitled and cannot connect, even by URL.
+The gateway refuses to start if an org names a server that is missing, disabled, internal, or on the wrong endpoint, or if `my_domain` does not match `environment`. It does **not** refuse to start when the shared secrets are absent: every org is shown as **Not provisioned** on the profile page until the operator has stored the packaged app's key and secret. `groups` controls who sees the row; a user outside those groups sees the org as not entitled and cannot connect, even by URL.
 
 Because every org is its own MCP server, governance sees the org: an audit row for a SOQL query names `salesforce-client-a-uat`, and a blocklist rule on production writes does not touch UAT.
 
 ### After a sandbox refresh
 
-A sandbox refresh deletes the External Client App and with it every user's consent. Once the administrator has re-created the app and the operator has stored the new key and secret, reset the org in one step:
+A sandbox refresh recreates the org without the installed package and with it every user's consent. Once the administrator has reinstalled the package and reactivated the MCP server, reset the org in one step:
 
 ```text
 POST /api/public/admin/connectors/salesforce-client-a-uat/reprovision
@@ -156,7 +157,7 @@ Do not provide Salesforce passwords, MFA codes, browser session cookies, persona
 
 ### Gateway operator: provision the target deployment
 
-Add or update the org's entry in `services/salesforce/orgs.yaml` with its My Domain and environment, then store the two credentials in the active server profile's secret store under the names that entry declares (or as the equivalent upper-cased environment variables, e.g. `SALESFORCE_MCP_CLIENT_ID`).
+Add or update the org's entry in `services/config/salesforce-orgs.yaml` with its My Domain and environment, then store the two credentials in the active server profile's secret store under the names that entry declares (or as the equivalent upper-cased environment variables, e.g. `SALESFORCE_MCP_CLIENT_ID`).
 
 Enter values using the secret manager's protected value fields, not literal secrets in shell history. Environment variables must reach the running server service; setting them in an unrelated terminal is insufficient. Keep credentials out of service YAML, client MCP configuration, marketplace bundles, and rendered web content.
 

@@ -24,7 +24,39 @@ Conventions (strict — hold every entry to them):
 workspaces, the pins stay at 0.54.0 (core's workspace version) and `bridge/CORE_REF` names the
 core commit the tree is built with.
 
+### Added
+
+- `deploy/salesforce/`: the Salesforce side of the connector as source. One External Client
+  App (`Systemprompt`) is created in the source org (Astound US), retrieved into an SFDX
+  project and built into a 2GP managed package that every other org installs; subscriber orgs
+  resolve to the source org's consumer key, so the gateway holds one
+  `salesforce_mcp_client_id` / `salesforce_mcp_client_secret` pair for all of them. The README
+  is the runbook, proven first on the Developer Edition org (`salesforce-dev`).
+
 ### Changed
+
+- Salesforce orgs share one OAuth callback, `/api/public/connectors/salesforce/callback`. The
+  packaged app's callback list is fixed in the source org, so per-org callbacks would need a
+  source-org edit for every new org; instead the consent `state` carries the server id as a
+  prefix (`salesforce-uk.<random>`) and the shared callback recovers the org from it before
+  consuming the same user-bound state row as before. `client_id_secret` / `client_secret` in
+  `services/config/salesforce-orgs.yaml` are now optional and default to the shared pair. The stored
+  `resource_name` of a Salesforce grant is the instance URL Salesforce reports at consent
+  (`urls.custom_domain`), the key a one-to-many client connector will use later.
+- The single `salesforce` MCP server is replaced by one server per org: `salesforce-us`,
+  `salesforce-uk` and `salesforce-dev` (`services/mcp/`, `services/config/salesforce-orgs.yaml`,
+  `services/access-control/rules.yaml`, the plugins, marketplaces and kit manifests that
+  named it). The US and UK My Domains are `REPLACE-…` placeholders until the orgs are wired up.
+  Every external server's nominal `port` is now distinct: the loader checks uniqueness across
+  external servers too, so three orgs on `5042` refused to boot.
+
+### Fixed
+
+- The Salesforce org registry moved from `services/salesforce/orgs.yaml` to
+  `services/config/salesforce-orgs.yaml`. Core's services bundle copies only its allow-listed
+  directories into the composed tree the server actually reads, and `salesforce/` was not one of
+  them, so the registry had loaded empty (`salesforce_orgs_loaded orgs=0`) on every boot since
+  bundles arrived — every org showed as not configured.
 
 - Every `// lint-ok:` gate exemption and every `#[expect(clippy::…)]` in production code is
   gone, by fixing what each one excused. `AdminError` gains `UpstreamFailure`, `Invalid` and
@@ -485,7 +517,7 @@ Built against core 0.51.0. Everything since the 0.50.0 section is recorded here.
 
 - Salesforce orgs are declared in a registry, one hosted MCP server per org. Every org is its
   own issuer with its own External Client App, so the connector no longer assumes a single org
-  held in three global secrets: `services/salesforce/orgs.yaml` names each org's My Domain,
+  held in three global secrets: `services/config/salesforce-orgs.yaml` names each org's My Domain,
   environment, secret names, optional org id and entitled groups, and each becomes a distinct
   MCP server (`salesforce`, `salesforce-<slug>`). `Provider::Salesforce` carries the server id;
   entitlement is group-scoped per org and enforced on the profile listing and the start, callback
@@ -554,7 +586,7 @@ Built against core 0.51.0. Everything since the 0.50.0 section is recorded here.
   resolves `systemprompt-{models,extension,identifiers,traits,provider-contracts}` once from the
   registry and once from `../systemprompt-core`. Both are 0.51.0 and nothing mixes them today; a
   test crate that takes a type from both will fail to compile, not misbehave.
-- **`services/salesforce/orgs.yaml`** is new and required for the Salesforce connector; each
+- **`services/config/salesforce-orgs.yaml`** is new and required for the Salesforce connector; each
   declared org needs its own secrets provisioned before the org shows as anything other than
   `not_provisioned`.
 - **`vertex_discovery`** runs daily and needs the Vertex service-account secret; a published,

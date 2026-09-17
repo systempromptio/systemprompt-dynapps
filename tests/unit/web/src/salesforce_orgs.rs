@@ -5,7 +5,8 @@ use systemprompt::identifiers::McpServerId;
 use systemprompt::models::mcp::{Deployment, McpServerType};
 use systemprompt_web_admin::connector_oauth::Provider;
 use systemprompt_web_admin::salesforce_orgs::{
-    SalesforceEnvironment, SalesforceOrgRegistry, is_salesforce_server_id,
+    SHARED_CLIENT_ID_SECRET, SHARED_CLIENT_SECRET, SalesforceEnvironment, SalesforceOrgRegistry,
+    is_salesforce_server_id,
 };
 
 const PROD: &str = "https://api.salesforce.com/platform/mcp/v1/platform/sobject-all";
@@ -19,8 +20,6 @@ orgs:
     label: "Astound (production)"
     my_domain: https://astound.my.salesforce.com
     environment: production
-    client_id_secret: sf_prod_id
-    client_secret: sf_prod_secret
   salesforce-uat:
     label: "Client A UAT"
     my_domain: https://client-a--uat.sandbox.my.salesforce.com
@@ -156,4 +155,22 @@ fn entitlement_is_open_without_groups_and_group_scoped_with_them() {
     assert!(!uat.is_entitled(&["core".to_owned()]));
     assert!(uat.is_entitled(&["core".to_owned(), "commerce".to_owned()]));
     assert!(!uat.provisioned());
+}
+
+#[test]
+fn orgs_share_the_packaged_app_secrets_unless_they_name_their_own() {
+    // Why: one External Client App is installed into every org as a managed
+    // package, so an org that names no secrets must resolve to the shared pair
+    // while an org running its own app can still point at its own names.
+    let registry = registry();
+    let prod = registry
+        .find(&McpServerId::try_new("salesforce").expect("valid fixture identifier"))
+        .unwrap();
+    let uat = registry
+        .find(&McpServerId::try_new("salesforce-uat").expect("valid fixture identifier"))
+        .unwrap();
+    assert_eq!(prod.client_id_secret_name(), SHARED_CLIENT_ID_SECRET);
+    assert_eq!(prod.client_secret_name(), SHARED_CLIENT_SECRET);
+    assert_eq!(uat.client_id_secret_name(), "sf_uat_id");
+    assert_eq!(uat.client_secret_name(), "sf_uat_secret");
 }

@@ -209,35 +209,13 @@ async fn identity(
         .unwrap_or(&grant.account_id)
         .clone_into(&mut grant.account_name);
     if grant.provider.is_salesforce() {
-        bind_salesforce_org(grant, &info)?;
+        super::salesforce::bind_org(grant, &info)?;
     }
     if grant.provider == Provider::Atlassian {
         let sites = super::payload::atlassian_sites(&rpc(http, grant, session, json!({"jsonrpc":"2.0", "id":4,
             "method":"tools/call", "params":{"name":"getAccessibleAtlassianResources", "arguments":{}}})).await?)?;
         super::site::select(grant, &sites).await?;
     }
-    Ok(())
-}
-
-fn bind_salesforce_org(grant: &mut Grant, info: &Value) -> AdminResult<()> {
-    let org = grant.provider.salesforce_org()?;
-    let organization_id = info
-        .get("organization_id")
-        .and_then(Value::as_str)
-        .ok_or_else(|| AdminError::Upstream("Salesforce returned no organization ID".into()))?;
-    // Why: Unauthorized, not Forbidden — a grant minted against the wrong org
-    // must be discarded and reconnected, not retried later.
-    if org
-        .org_id
-        .as_deref()
-        .is_some_and(|expected| expected != organization_id)
-    {
-        return Err(AdminError::Unauthorized(
-            "Signed in to a different Salesforce org than this connector expects".into(),
-        ));
-    }
-    grant.resource_id = organization_id.into();
-    grant.resource_name = org.domain()?;
     Ok(())
 }
 

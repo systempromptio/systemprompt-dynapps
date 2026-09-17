@@ -1,0 +1,74 @@
+# Salesforce org registry — one entry per hosted-MCP server that fronts an org.
+#
+# Salesforce has no central authorization server: every org is its own login,
+# holds its own user records, and a sandbox is served by a different hosted
+# MCP endpoint. So an org is chosen BEFORE consent, and this file is where the
+# choice is declared. Each key is the id of a `services/mcp/<id>.yaml` server
+# (`salesforce-<slug>`); the connector reads the org's domain and endpoint from
+# here.
+#
+# One External Client App serves every org. It is created once in the source
+# org (Astound US) and installed into the others as the managed package under
+# deploy/salesforce/, so subscriber orgs resolve to the source org's consumer
+# key. Every org therefore uses the shared secret pair
+# `salesforce_mcp_client_id` / `salesforce_mcp_client_secret` unless it names
+# its own.
+#
+# Loaded directly by the admin extension at boot (not via config.yaml
+# includes). It lives beside the aggregator because the services bundle only
+# carries core's allow-listed directories (`config`, `mcp`, …) into the
+# composed tree the server reads; a top-level `services/salesforce/` never
+# reached the running server. Boot fails on a malformed entry, a missing/disabled/internal
+# server, or an endpoint that does not match `environment`. Boot does NOT fail
+# on a missing secret — the org shows as "not provisioned" on the profile page
+# until the operator has stored the app's key and secret.
+#
+# Entitlement is Salesforce's: a person with no user in the org, or without
+# the packaged permission set, is rejected at consent. `groups` narrows who is
+# offered the Connect row at all; leave it empty for internal orgs.
+#
+# Fields:
+#   label              shown on the profile page and bridge account card
+#   my_domain          HTTPS My Domain origin; sandboxes end .sandbox.my.salesforce.com
+#   environment        production | sandbox — selects the hosted MCP endpoint the
+#                      server file must declare
+#   org_id             optional 15/18-char org id; when set, a consent that lands
+#                      in a different org is rejected and must be redone
+#   client_id_secret   optional NAME of the secret holding an org-specific consumer key
+#   client_secret      optional NAME of the secret holding its consumer secret
+#   private_key_secret optional NAME of the PEM secret for JWT-bearer pre-authorization
+#   groups             group ids entitled to connect; empty = every active user
+#
+# Sandbox refresh deletes the installed package and every user's grant. After
+# the admin reinstalls it: POST /api/public/admin/connectors/<id>/reprovision.
+#
+# Adding an org: install the package there (deploy/salesforce/README.md), add
+# an entry here, a matching services/mcp/salesforce-<slug>.yaml listed in
+# services/config/config.yaml includes, and an mcp_server/salesforce-<slug>
+# block in services/access-control/rules.yaml.
+
+orgs:
+  # Source org: owns the External Client App. Swap the placeholder domain for
+  # the real My Domain before the first deploy.
+  salesforce-us:
+    label: "Astound US"
+    my_domain: https://REPLACE-astound-us.my.salesforce.com
+    environment: production
+    groups: []
+
+  # Subscriber org: installs the package from Astound US.
+  salesforce-uk:
+    label: "Astound UK"
+    my_domain: https://REPLACE-astound-uk.my.salesforce.com
+    environment: production
+    groups: []
+
+  # Developer Edition org used to prove the package and the consent flow before
+  # the two production orgs are wired up. Developer Edition orgs are not
+  # sandboxes, so they use the production hosted-MCP endpoint. Offered to
+  # super_admin only (services/access-control/rules.yaml).
+  salesforce-dev:
+    label: "Astound dev (testing)"
+    my_domain: https://orgfarm-141013b2b4-dev-ed.develop.my.salesforce.com
+    environment: production
+    groups: []

@@ -2,8 +2,27 @@
 use super::transport::client;
 use super::{Grant, Provider};
 use crate::error::{AdminError, AdminResult};
+use base64::Engine;
+use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use chrono::Utc;
 use serde::Deserialize;
+
+const SALESFORCE_OPAQUE_TOKEN_SECONDS: i64 = 900;
+
+#[derive(Deserialize)]
+struct JwtExpiry {
+    exp: i64,
+}
+
+// Why: the payload is read for its expiry only; the signature is Salesforce's
+// business and the token is never trusted for anything on this side.
+fn jwt_exp(token: &str) -> Option<i64> {
+    let payload = token.split('.').nth(1)?;
+    let bytes = URL_SAFE_NO_PAD.decode(payload).ok()?;
+    serde_json::from_slice::<JwtExpiry>(&bytes)
+        .ok()
+        .map(|claims| claims.exp)
+}
 #[derive(Deserialize)]
 struct Tokens {
     access_token: Option<String>,
@@ -87,17 +106,24 @@ fn apply_tokens(grant: &mut Grant, tokens: Tokens) -> AdminResult<()> {
     if let Some(refresh) = tokens.refresh_token {
         grant.refresh_token = Some(refresh);
     }
-    // Why: Salesforce may omit expires_in. In that case refresh on the next use
-    // instead of guessing how long the upstream session will stay valid.
+    // Why: Salesforce omits expires_in. Its named-user access tokens are JWTs
+    // that carry `exp`, so read that; an opaque one gets a short fixed life.
+    // Treating it as already expired would refresh on every broker call, and
+    // with refresh-token rotation each call would carry a different bearer —
+    // which breaks the proxy's session binding after `initialize`.
     let seconds = tokens
         .expires_in
         .filter(|n| *n > 0 && *n <= 31_536_000)
-        .or_else(|| {
-            matches!(
-                grant.provider,
-                Provider::Salesforce(_) | Provider::Generic(_)
-            )
-            .then_some(0)
+        .or_else(|| match grant.provider {
+            Provider::Salesforce(_) => Some(
+                jwt_exp(&grant.access_token)
+                    .map_or(SALESFORCE_OPAQUE_TOKEN_SECONDS, |exp| {
+                        exp - Utc::now().timestamp()
+                    })
+                    .clamp(60, 31_536_000),
+            ),
+            Provider::Generic(_) => Some(0),
+            Provider::Atlassian | Provider::Github => None,
         })
         .ok_or_else(|| AdminError::Upstream("Connector returned no valid token expiry".into()))?;
     grant.expires_at = if seconds == 0 && matches!(grant.provider, Provider::Generic(_)) {

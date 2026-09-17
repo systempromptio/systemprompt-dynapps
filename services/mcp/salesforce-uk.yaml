@@ -1,0 +1,29 @@
+# Salesforce hosted MCP for Astound UK. The org itself — My Domain, entitled groups —
+# is declared under the same id in services/config/salesforce-orgs.yaml; every org
+# authorises through the one packaged External Client App (deploy/salesforce/)
+# and the shared callback /api/public/connectors/salesforce/callback.
+# Sandboxes use the /sandbox/ endpoint.
+mcp_servers:
+  salesforce-uk:
+    type: external
+    binary: ""
+    package: null
+    # Why: nominal only — an external server never binds it — but the field is
+    # required and must be unique across every server, external ones included.
+    port: 5046
+    endpoint: "https://api.salesforce.com/platform/mcp/v1/platform/sobject-all"
+    enabled: true
+    tool_policy: allow
+    display_in_web: false
+    removable: true
+    description: Salesforce Hosted MCP (Astound UK) — SObject CRUD/SOQL, as the signed-in user
+    external_auth:
+      token_endpoint: "/api/public/connectors/salesforce-uk/token"
+      header: "Authorization"
+      scheme: ""
+    oauth:
+      required: false
+      scopes:
+      - user
+      audience: mcp
+      client_id: null

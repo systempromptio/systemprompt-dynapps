@@ -21,6 +21,8 @@ plugin:
     - uk_sales_client_prep
     - uk_sales_client_report
     - uk_sales_client_research
+    - google_drive_search
+    - google_rag_search
   agents:
     source: explicit
     include: []
@@ -31,7 +33,9 @@ plugin:
   mcp_servers:
     source: explicit
     include:
-    - salesforce
+    - salesforce-uk
+    - salesforce-us
     - atlassian
     - google_rag
+    - google_drive
   content_sources: {}

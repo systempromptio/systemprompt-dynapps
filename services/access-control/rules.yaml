@@ -174,24 +174,56 @@ entities:
       group: [india-devs, europe-devs]
       project: [storefront]
 
-  - entity: mcp_server/salesforce
+  - entity: mcp_server/salesforce-us
     default: closed
     why: >-
-      Salesforce for the delivery groups, the storefront project and
+      Astound US org for the delivery groups, the storefront project and
       super_admin. The salesforce band adds anyone who has linked that org, so
       a linked person in no group still sees the server.
     allow:
       role: [super_admin]
       group: [india-devs, europe-devs, uk]
       project: [storefront]
-      salesforce: [salesforce]
+      salesforce: [salesforce-us]
+
+  - entity: mcp_server/salesforce-uk
+    default: closed
+    why: >-
+      Astound UK org for the UK sales group, the delivery groups and
+      super_admin; the salesforce band adds anyone who has linked that org.
+    allow:
+      role: [super_admin]
+      group: [india-devs, europe-devs, uk]
+      project: [storefront]
+      salesforce: [salesforce-uk]
+
+  - entity: mcp_server/salesforce-dev
+    default: closed
+    why: >-
+      Developer Edition org that proves the packaged app and the consent flow;
+      operators only.
+    allow:
+      role: [super_admin]
+      salesforce: [salesforce-dev]
 
   - entity: mcp_server/google_rag
     default: closed
     why: >-
-      UK sales Drive corpus in Google Cloud RAG Engine; each user connects
-      their own Google account. The corpus is a copy of the shared folders and
-      IAM is project-level, so one corpus is one readership: the uk group.
+      Imported corpus of the UK sales Drive folders in Google Cloud RAG Engine;
+      each user connects their own Google account. The corpus is a copy and
+      access is project IAM, not Drive ACLs, so one corpus is one readership:
+      the uk group.
+    allow:
+      group: [uk]
+      role: [super_admin]
+
+  - entity: mcp_server/google_drive
+    default: closed
+    why: >-
+      Org-wide Drive search through Google Agent Search; Google enforces each
+      user's own Drive permissions at query time, so the band only decides who
+      sees the connector. Starts on the UK pilot band; widening is a one-line
+      change here.
     allow:
       group: [uk]
       role: [super_admin]
@@ -229,6 +261,20 @@ entities:
   - entity: skill/uk_sales_client_research
     default: closed
     why: UK sales skill; follows the astound-sales-uk plugin.
+    allow:
+      group: [uk]
+      role: [super_admin]
+
+  - entity: skill/google_drive_search
+    default: closed
+    why: UK sales skill; follows the astound-sales-uk plugin and google_drive.
+    allow:
+      group: [uk]
+      role: [super_admin]
+
+  - entity: skill/google_rag_search
+    default: closed
+    why: UK sales skill; follows the astound-sales-uk plugin and google_rag.
     allow:
       group: [uk]
       role: [super_admin]
