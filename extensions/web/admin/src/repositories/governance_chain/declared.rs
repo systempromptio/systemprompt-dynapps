@@ -79,6 +79,18 @@ impl DeclaredChain {
     }
 }
 
+// Why: core keeps the whole entry as `params`, id and switches included; the
+// switches are hashed as fields, so an inherited mode that an export spells
+// out must not read as a different declaration.
+fn params_only(mut entry: serde_yaml::Value) -> serde_yaml::Value {
+    if let Some(map) = entry.as_mapping_mut() {
+        for key in ["id", "enabled", "mode"] {
+            map.remove(serde_yaml::Value::from(key));
+        }
+    }
+    entry
+}
+
 pub fn parse_declared_chain(yaml: &str) -> Result<DeclaredChain, String> {
     let cfg = GovernanceConfig::parse(yaml).map_err(|e| e.to_string())?;
     let mut policies = Vec::with_capacity(cfg.policies.len());
@@ -90,7 +102,7 @@ pub fn parse_declared_chain(yaml: &str) -> Result<DeclaredChain, String> {
             id: p.id,
             enabled: p.enabled,
             mode: p.mode.as_str().to_owned(),
-            entry: p.params,
+            entry: params_only(p.params),
         });
     }
     Ok(DeclaredChain {

@@ -4,6 +4,10 @@
    provider's. The two full arrays are one block each; the side-by-side tab is
    one collapsible per tool, with the schemas in two columns so a sanitizer
    rewrite is read as a diff rather than hunted for across two scrolls. */
+.sp-p-request-schemas {
+    min-width: 0;
+}
+
 .sp-p-request-schemas__digests {
     margin-block-end: var(--sp-space-4);
 }

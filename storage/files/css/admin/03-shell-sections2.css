@@ -28,8 +28,7 @@
     .sp-topbar__actions.is-open .sp-topbar__actions-menu {
         display: flex;
     }
-    .sp-topbar__actions-menu .sp-topbar__help,
-    .sp-topbar__actions-menu .sp-topbar__export {
+    .sp-topbar__actions-menu .sp-topbar__help {
         width: 100%;
         height: auto;
         border-radius: var(--sp-radius-sm);
@@ -39,11 +38,6 @@
     }
     .sp-topbar__actions-menu .sp-topbar__help::after {
         content: 'Help';
-        font-size: var(--sp-text-sm);
-        color: var(--sp-text-secondary);
-    }
-    .sp-topbar__actions-menu .sp-topbar__export::after {
-        content: 'Export JSON';
         font-size: var(--sp-text-sm);
         color: var(--sp-text-secondary);
     }

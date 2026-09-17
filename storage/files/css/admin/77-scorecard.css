@@ -8,7 +8,7 @@
 .sp-score {
     display: inline-flex;
     flex-wrap: nowrap;
-    gap: 2px;
+    gap: var(--sp-space-05);
     align-items: stretch;
     vertical-align: middle;
     text-decoration: none;

@@ -80,6 +80,9 @@
     gap: var(--sp-space-4);
     margin-bottom: var(--sp-space-4);
 }
+.sp-versions-side {
+    min-width: 0;
+}
 .sp-versions-side__title {
     display: flex;
     flex-wrap: wrap;

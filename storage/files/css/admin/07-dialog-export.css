@@ -35,6 +35,15 @@
     margin-bottom: var(--sp-space-2);
 }
 
+.sp-export__columns {
+    margin-top: var(--sp-space-2);
+}
+
+.sp-export__column-tools {
+    display: inline-flex;
+    gap: var(--sp-space-1);
+}
+
 .sp-export__presets {
     display: inline-flex;
     flex-wrap: wrap;

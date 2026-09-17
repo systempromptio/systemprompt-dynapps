@@ -32,7 +32,9 @@ fn refuse(path: &str, why: &str) -> AdminError {
 }
 
 fn check_path(name: &str, enclosed: Option<&std::path::Path>) -> AdminResult<()> {
-    if enclosed.is_none() {
+    // Why: `enclosed_name` relativises a leading `/` rather than rejecting
+    // it, so the raw name is checked as well.
+    if enclosed.is_none() || name.starts_with('/') {
         return Err(refuse(name, "absolute or parent path"));
     }
     if name.contains('\\') || name.contains('\0') {

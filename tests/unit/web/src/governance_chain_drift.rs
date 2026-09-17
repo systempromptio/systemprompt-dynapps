@@ -114,10 +114,7 @@ governance:
     assert_eq!(drift.only_in_db, vec!["secret_scan".to_owned()]);
     assert_eq!(drift.changed.len(), 1);
     assert_eq!(drift.changed[0].id, "tool_blocklist");
-    assert_eq!(
-        drift.changed[0].fields,
-        vec!["mode".to_owned(), "params".to_owned()]
-    );
+    assert_eq!(drift.changed[0].fields, vec!["mode".to_owned()]);
     let (code, db) = drift.reordered.clone().expect("order differs");
     assert_eq!(
         code,

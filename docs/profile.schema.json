@@ -83,6 +83,12 @@
       ],
       "default": null
     },
+    "evaluation": {
+      "$ref": "#/$defs/EvaluationProfile",
+      "default": {
+        "automatic": false
+      }
+    },
     "services": {
       "$ref": "#/$defs/ServicesProfileConfig",
       "default": {
@@ -97,6 +103,12 @@
       "default": {
         "backend": "local",
         "shared": false
+      }
+    },
+    "observability": {
+      "$ref": "#/$defs/ObservabilityConfig",
+      "default": {
+        "otlp": null
       }
     }
   },
@@ -934,6 +946,12 @@
             }
           ],
           "default": null
+        },
+        "audit": {
+          "$ref": "#/$defs/AuditConfig",
+          "default": {
+            "payload_cap_bytes": 1048576
+          }
         }
       },
       "additionalProperties": false
@@ -990,6 +1008,29 @@
         "disabled",
         "unrestricted"
       ]
+    },
+    "AuditConfig": {
+      "description": "Retention bounds for the gateway audit trail.",
+      "type": "object",
+      "properties": {
+        "payload_cap_bytes": {
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0,
+          "default": 1048576
+        }
+      },
+      "additionalProperties": false
+    },
+    "EvaluationProfile": {
+      "type": "object",
+      "properties": {
+        "automatic": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "additionalProperties": false
     },
     "ServicesProfileConfig": {
       "type": "object",
@@ -1153,6 +1194,77 @@
       "type": "string",
       "enum": [
         "local"
+      ]
+    },
+    "ObservabilityConfig": {
+      "type": "object",
+      "properties": {
+        "otlp": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OtlpExportConfig"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "additionalProperties": false
+    },
+    "OtlpExportConfig": {
+      "description": "An OTLP collector to export traces and logs to.",
+      "type": "object",
+      "properties": {
+        "endpoint": {
+          "type": "string"
+        },
+        "protocol": {
+          "$ref": "#/$defs/OtlpProtocol",
+          "default": "http"
+        },
+        "headers": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "default": {}
+        },
+        "signals": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/OtlpSignal"
+          },
+          "default": [
+            "traces",
+            "logs"
+          ]
+        },
+        "batch_seconds": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0,
+          "default": 15
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "endpoint"
+      ]
+    },
+    "OtlpProtocol": {
+      "type": "string",
+      "enum": [
+        "http",
+        "grpc"
+      ]
+    },
+    "OtlpSignal": {
+      "type": "string",
+      "enum": [
+        "traces",
+        "logs"
       ]
     }
   }

@@ -14,7 +14,7 @@
 .sp-aconv-table th:nth-child(3) { width: 8%; }
 .sp-aconv-table th:nth-child(4) { width: 20%; }
 .sp-aconv-table th:nth-child(5) { width: 7%; }
-.sp-aconv-table th.sp-aconv-col-eval { width: 11%; }
+.sp-aconv-table th:nth-child(6) { width: 11%; }
 .sp-aconv-table th:nth-child(7) { width: 12%; }
 .sp-aconv-table td {
     vertical-align: top;

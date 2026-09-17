@@ -51,8 +51,7 @@ const runRefresh = async (button) => {
 };
 
 // Why: the archive goes up as the raw body — no multipart — and the reply
-// carries the preview URL; the page navigates there rather than rendering
-// anything itself.
+// carries the preview URL; the page navigates there instead of rendering.
 const stageImport = async (button, event) => {
   event.preventDefault();
   const file = field('import-file')?.files?.[0];

@@ -108,6 +108,26 @@ pub const CONFIG_KINDS: &[ConfigKind] = &[
         "gateway_policies",
         "/admin/gateway/policies",
     ),
+    projected(
+        file(
+            "gateway_routes",
+            "Gateway routes",
+            "which model names dispatch to which provider",
+            "ai/gateway.yaml",
+        ),
+        "gateway_routes",
+        "/admin/gateway",
+    ),
+    projected(
+        file(
+            "governance",
+            "Governance chain",
+            "the four request-time stages every tool call passes through",
+            "governance/config.yaml",
+        ),
+        "governance",
+        "/admin/governance",
+    ),
     file(
         "config",
         "Root aggregator",
@@ -156,15 +176,6 @@ pub const CONFIG_KINDS: &[ConfigKind] = &[
         "dashboards rendered from a skill's output",
         "artifacts",
     ),
-    paged(
-        file(
-            "gateway_routes",
-            "Gateway routes",
-            "which model names dispatch to which provider",
-            "ai/gateway.yaml",
-        ),
-        "/admin/gateway",
-    ),
     file(
         "providers",
         "Provider catalog",
@@ -176,15 +187,6 @@ pub const CONFIG_KINDS: &[ConfigKind] = &[
         "AI defaults",
         "the default provider and the inference settings behind it",
         "ai/config.yaml",
-    ),
-    paged(
-        file(
-            "governance",
-            "Governance chain",
-            "the four request-time stages every tool call passes through",
-            "governance/config.yaml",
-        ),
-        "/admin/governance",
     ),
     paged(
         dir(

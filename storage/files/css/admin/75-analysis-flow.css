@@ -30,12 +30,6 @@
     gap: var(--sp-space-2);
 }
 
-/* The cohort listing is many per-skill cards, so its pager cannot live inside
-   any one of them; it gets the card treatment on its own instead. */
-.sp-aflow-pager {
-    padding: 0;
-}
-
 /* These two pages are judged on how many table rows clear the fold, so the
    band above the first row is tightened for them alone. The shared rhythm is
    right everywhere else and is left untouched. */
@@ -54,19 +48,5 @@
     margin-bottom: var(--sp-space-3);
 }
 
-.sp-aflow-help {
-    display: block;
-    font-size: var(--sp-text-xs);
-    line-height: 1.5;
-    color: var(--sp-text-secondary);
-}
-
-.sp-aflow-code {
-    font-family: var(--sp-font-mono);
-    font-size: var(--sp-text-xs);
-    line-height: 1.6;
-    white-space: pre;
-    tab-size: 4;
-}
 
 }
