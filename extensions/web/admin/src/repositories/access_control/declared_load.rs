@@ -68,9 +68,7 @@ pub async fn build_declared_from_doc(
 // bundle is active, without a restart. The loader's cache is keyed by root,
 // so this is a read of the composition, not a parse per request.
 pub fn marketplace_ids_from_services() -> Result<Vec<String>, MarketplaceError> {
-    let services = ConfigLoader::load().map_err(|e| {
-        MarketplaceError::Internal(format!("services tree could not be composed: {e}"))
-    })?;
+    let services = ConfigLoader::load()?;
     Ok(services
         .marketplaces
         .keys()

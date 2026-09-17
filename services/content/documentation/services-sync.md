@@ -8,12 +8,14 @@ kind: "guide"
 public: true
 tags: ["enterprise", "admin", "operations"]
 published_at: "2026-09-16"
-updated_at: "2026-09-16"
+updated_at: "2026-09-17"
 after_reading_this:
-  - "Read the Sync page and say, for every source, whether the instance is serving what the profile pins"
+  - "Read the Configuration page and say, for every kind of configuration, where it comes from and whether the database agrees with the code"
+  - "Read Code sync and say, for every source, whether the instance is serving what the profile pins"
   - "Tell the four hashes apart and know which one a pin, an import and an apply each change"
   - "Ship a kit from its own GitHub repository to the instance: publish, pin, refresh, verify"
-  - "Reconcile a plane in either direction and read back who applied what, when, from which declaration"
+  - "Reconcile a plane in either direction from its own page's Sync tab and read back who applied what, when, from which declaration"
+  - "Move the whole projected configuration as one zip: export it for a commit, or stage an import and preview every plane before applying"
 related_docs:
   - title: "Access Control: Who Reaches What, and Why"
     url: "/documentation/access-control"
@@ -23,7 +25,7 @@ related_docs:
 
 # Code ↔ Instance: Sources, Planes and Sync
 
-**TL;DR:** Everything this instance serves is *declared* somewhere in code and *enforced* from what the process loaded and what the database holds. `/admin/sync` is the one page that compares the two. A **source** is where declarations come from — `base` is this repository's `services/` tree, `bundle:<name>` is each external kit the profile pins by digest — and every source has a content hash. A **plane** is what a source's declarations project into the database — access control, groups and projects, gateway policies — and every plane records the declared hash it last applied, when, by whom and in which mode. Nothing writes on its own after the first seed: the page shows the difference and offers a direction.
+**TL;DR:** Everything this instance serves is *declared* somewhere in code and *enforced* from what the process loaded and what the database holds. Three places in the console show that: **Configuration** (`/admin/configuration`, the Platform home) lists every kind of configuration the instance loads with its source, hash and — where the database holds a projection — its state; **Code sync** (`/admin/sync`) is where declarations come from and the archive that moves them; and each projected plane has a **Sync tab on the page that owns it** (Access control, Groups, Gateway → Policies) with its drift and the three directions. A **source** is where declarations come from — `base` is this repository's `services/` tree, `bundle:<name>` is each external kit the profile pins by digest — and every source has a content hash. A **plane** is what a source's declarations project into the database — access control, groups and projects, gateway policies — and every plane records the declared hash it last applied, when, by whom and in which mode. Nothing writes on its own after the first seed: the page shows the difference and offers a direction.
 
 ## The model
 
@@ -79,9 +81,18 @@ A row on the Sources table is **in step** when the active digest is what the pro
 
 **Import sources** (`POST /api/v1/admin/services/refresh`) re-fetches every source, verifies it and recomposes. If the composition changed, core then — in the same request, in the running process — loads the new tree, projects its entitlements into the authz tables (`last_reconciled_hash` catches up to `composed_hash`) and refreshes the skill inventory. Nothing restarts: every route that hands marketplaces, plugins and skills to a client reads the services tree through the `current` link the recompose just swapped, so a marketplace-only kit is live when the call returns. The reply carries `changed`, `reconciled` and `restart_recommended`; the last is true only for a kit that ships governance hooks, which the process reads once at boot — the one case an in-place import cannot fully serve. `?restart=true` remains an explicit opt-in for that case.
 
+## The configuration page
+
+`/admin/configuration` is one row per kind of configuration under `services/` — the root aggregator, marketplaces, plugins, skills, MCP servers, gateway routes, providers, governance, evaluation, scheduler, the web and content files, and the three projected declarations. Each row says where the kind comes from (`base`, `bundle:<name>`, or both for a directory that holds the base's skills and a kit's), the content hash it declares, and its **mode**:
+
+- **projected** — a sync plane owns it; the database is what is enforced. The row shows *in step*, *drift · n*, *never applied* or *unreadable*, who last applied which hash, and links to the owner page's Sync tab.
+- **served from code** — the composed tree is read at boot or per request and the database never holds a copy. Its state is the hash; the row links to the catalog page that shows it. Marketplaces, plugins and skills are always this: a marketplace's content hash is its version, and version control lives in the repository.
+
+The distinction is the honest one. Only the projected kinds have a database to disagree with; for everything else "what is running" is the tree, and the sources on Code sync say which tree.
+
 ## The three directions
 
-Each plane card offers the same three actions, confirmed in words that name what will move:
+Each projected plane's Sync tab — `/admin/access-control?tab=sync`, `/admin/groups?tab=sync`, `/admin/gateway/policies?tab=sync` — offers the same three actions, confirmed in words that name what will move:
 
 | action | writes | leaves alone |
 |---|---|---|
@@ -90,6 +101,14 @@ Each plane card offers the same three actions, confirmed in words that name what
 | **Export** | nothing — renders the database as the declaration file to commit | — |
 
 Every apply runs in one transaction that re-reads the tables first, writes an activity row (who, plane, mode, counts), and updates `sync_state` with the declared hash it applied. The card then reads *declared `ab12…` · last applied `ab12…` by Ed 2 minutes ago (overwrite)*; if the file changes afterwards the card says *declaration changed since last apply*. The boot seed — the one write nobody presses — is recorded the same way with actor `boot` and mode `seed`.
+
+## The archive: export and import as one zip
+
+Code sync's **Export & import** tab moves every projected plane at once.
+
+**Export** (`GET /api/public/admin/sync/export.zip`) renders each plane's database as its file, laid out as `services/<file>`, plus a `MANIFEST.yaml` naming the release, the tree and composition hashes, and per plane the declared and applied hashes at the moment of export. Extract at the repository root, review the diff, commit: the code is back in step with what the console decided.
+
+**Import** (`POST /api/public/admin/sync/import`, the zip as the request body) **writes nothing on upload.** The archive is unpacked under strict rules — no absolute or parent paths, no symlinks, nothing outside `services/<a directory the instance loads>/` but the manifest, every size checked as bytes are read — and staged in memory for thirty minutes. The preview at `/admin/sync/import/{stage}` shows each plane the archive carries as the same component the owner page renders, with its drift computed from the uploaded file rather than the one on disk; entries the instance serves from code are listed as things to commit or to publish as a bundle; projected planes the archive did not carry are named. An apply from the preview is per plane and per direction, or every plane at once, and is recorded in `sync_state` with the uploaded declaration's hash — so the next page load, which reads the file on disk, honestly says *declaration changed since last apply* until that file is committed too.
 
 ## Kits: content from another repository
 
@@ -146,8 +165,10 @@ receive.
 
 | what | where |
 |---|---|
-| the page | `/admin/sync` (Platform → Sync); reads for the console tier, actions for administrators |
-| the API | `/api/public/admin/sync/status`, `…/planes/{id}/drift`, `…/planes/{id}/apply`, `…/planes/{id}/export`, `…/sources/refresh` |
+| the pages | `/admin/configuration` (Platform home), `/admin/sync` (Code sync: sources, export & import), `/admin/sync/import/{stage}` (preview), and each owner page's `?tab=sync`; reads for the console tier, actions for administrators |
+| the API | `/api/public/admin/sync/status`, `…/planes/{id}/drift`, `…/planes/{id}/apply`, `…/planes/{id}/export`, `…/sources/refresh`, `…/export.zip`, `…/import`, `…/import/{stage}/apply`, `DELETE …/import/{stage}` |
+| the component | `partials/components/sync-plane.hbs` + `js/components/sp-sync-plane.js`, built by `handlers/ssr/sync_plane/` for any plane from disk or from uploaded text |
+| the inventory | `repositories/sync/inventory.rs` — every kind the configuration page lists |
 | the planes | `extensions/web/admin/src/repositories/sync/` — one `impl SyncPlane` and one registry line per plane |
 | the state | table `sync_state`, one row per plane |
 | the kit template and registry | `deploy/kit/` — runbook, publish workflow, sidecars, `known-kits.json` |
