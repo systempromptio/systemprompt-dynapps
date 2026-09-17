@@ -66,7 +66,7 @@ The role is granted by Active Directory. Any group matching `Systemprompt-Projec
 
 ## Time-bound sharing
 
-Share tokens and access grants carry expiry: share tokens honour an expiry timestamp, and grants respect a `valid_until` boundary. Invites, setup tokens, and JWTs are already time-bound, so no standing credential lives forever by default. There is currently no forced maximum PAT lifetime policy — for contractors, lean on account-level disable plus PAT revocation (see the [roadmap](/documentation/enterprise-roadmap)).
+Share tokens honour an expiry timestamp, and time-bound group membership and access rules are being added in this release as `valid_from`/`valid_until` columns. Invites, setup tokens, and JWTs are already time-bound, so no standing credential lives forever by default. There is currently no forced maximum PAT lifetime policy — for contractors, lean on account-level disable plus PAT revocation (see the [roadmap](/documentation/enterprise-roadmap)).
 
 ## Context-aware access control
 

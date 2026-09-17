@@ -112,8 +112,16 @@ rules is closed to everyone they do not name. Every grant — marketplaces
 included — is declared in `services/access-control/rules.yaml`; see
 [Access Control](/documentation/access-control).
 
-Group changes take effect at the next sign-in; mid-session revocation is
-bounded by the session TTL.
+A directory change is observed at the **next sign-in**, and until then an
+existing session keeps what it was given, bounded by the session TTL
+(`security.jwt_access_token_expiration`; 30 days on the production profile).
+The exceptions are the ones that revoke: losing the group that grants `admin`
+and a refused sign-in both tear down the person's credentials, and disabling
+the account from the console is enforced on every JWT-bearing request within
+about 30 seconds. The full table is in
+[How a directory change propagates](/documentation/adfs-sso-setup#how-a-directory-change-propagates).
+There is no SCIM endpoint — AD FS does not push one, so nothing observes a
+change between sign-ins.
 
 Linking a desktop bridge is not a second login: the device-link approval runs
 inside an SSO session and mints a *device* credential from it.
@@ -156,8 +164,9 @@ passkey challenge** — nothing in the browser consumes one. Treat passkeys as
 dormant infrastructure, not as a live sign-in path.
 
 Roles are **not** carried in the session token. They are read from the user
-record on every request, so promoting or demoting an operator takes effect on
-their next request — no sign-out, no waiting for a token to refresh. The OAuth
+record on every request through a 30-second cache, so promoting or demoting an
+operator takes effect within half a minute — no sign-out, no waiting for a
+token to refresh. The OAuth
 *scope* minted into the JWT is fixed at issue time, so a change that widens the
 scope itself still needs a fresh sign-in.
 
@@ -212,9 +221,15 @@ cut, close the account.
 |----------|-------|
 | **Cookie name** | `access_token` |
 | **Token format** | JWT |
-| **Default expiry** | 3600 seconds (1 hour) |
+| **Expiry** | `security.jwt_access_token_expiration` in the profile, also the cookie's `Max-Age`; there is no default — the profile must set it. Production: 2,592,000 seconds (30 days) |
 | **Cookie flags** | `path=/`, `HttpOnly`, `SameSite=Lax`, `Secure` on HTTPS |
 | **Required scopes** | `user` or `admin` |
+
+That expiry is the outer bound on a session, not the only thing that ends
+one. Every request also confirms the session row is still active and the user
+record is still active (the latter through a 30-second cache), so revocation
+and account disablement cut a session short well before the token expires. A
+bridge token minted from a PAT is separate and lives one hour.
 
 Every admin request passes through two middleware layers. **User context
 middleware** extracts and validates the JWT, then loads the user's roles and

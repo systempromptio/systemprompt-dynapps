@@ -266,8 +266,12 @@ both `Systemprompt-Admins` and `Systemprompt-ProjectManagers-UK` holds every
 role both grants. A group matched only by a pattern still counts as mapped, so
 it is recorded against the account like any other.
 
-Roles are read from the user record on every request, so a change takes effect
-immediately for an existing session — no sign-out required.
+Roles are read from the user record on every request, through a cache that
+holds an entry for 30 seconds, so a role changed in the console reaches an
+existing session within half a minute — no sign-out required. A role changed
+in the directory waits for the next sign-in; the table under
+[How a directory change propagates](#how-a-directory-change-propagates) sets
+the two side by side.
 
 ### The group decides the workspace and the project
 
@@ -367,7 +371,36 @@ A user in `Systemprompt-Admins` signing in:
    sessions and API keys minted while they held it, and the membership that
    group created is gone.
 
-Directory changes are observed at the **next sign-in**. A refused sign-in or loss of the admin role triggers credential revocation; administrators can also revoke access explicitly before then.
+### How a directory change propagates
+
+The directory is only consulted at sign-in, so "the group changed" and "the
+platform noticed" are different moments. What decides the gap is which of
+three mechanisms carries the change: the next assertion, the per-request user
+lookup, or explicit credential revocation.
+
+| Change | Takes effect | Carried by |
+|---|---|---|
+| Added to, or moved between, `Systemprompt-*` groups | Next sign-in | The assertion re-projects the directory roles and memberships; nothing is pushed between sign-ins |
+| Removed from a mapped group (non-admin role lost) | Next sign-in | Same re-projection; the existing session keeps its roles until then |
+| Removed from the group that grants `admin` | Next sign-in, then immediately | The re-projection drops `admin` and the platform revokes every session, bridge PAT, device certificate and unredeemed link code the person holds |
+| Removed from every group, or moved off an allow-listed domain | Next sign-in attempt, then immediately | The refused sign-in triggers the same revocation, keyed on the email the assertion carried |
+| `admin` removed from the console (manual role) | Immediately | The role change runs the same revocation without waiting for a sign-in |
+| Account disabled from the console | Within about 30 seconds | Every request that presents a JWT re-reads the user record through a 30-second cache; a disabled account is refused once its entry expires |
+| Nothing changes | Until the session expires | A browser session lives for `security.jwt_access_token_expiration` seconds — 2,592,000 (30 days) on the production profile; a bridge token minted from a PAT lives one hour |
+
+Two consequences follow. First, a plain role change made in Active Directory
+is not enforced until the person signs in again, and a session on the
+production profile can be a month old; if the change cannot wait, disable the
+account or remove the role from the console, both of which reach the live
+session. Second, revocation is what makes admin demotion real: a token minted
+while someone was an admin carries that permission until it expires, so the
+platform tears the credentials down rather than trusting the expiry.
+
+**SCIM provisioning is not available.** AD FS does not push standards-based
+SCIM, so there is no endpoint on this platform for a directory to call and
+nothing that would observe a change before the next sign-in. Joiner, mover
+and leaver events reach the platform only through the assertion and the
+revocation paths above.
 
 ## Step 5 — Pin the identity provider's signing certificate
 
