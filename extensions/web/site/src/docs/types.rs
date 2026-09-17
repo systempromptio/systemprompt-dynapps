@@ -45,16 +45,11 @@ pub(crate) struct DocsLearningTemplateData {
     related_playbooks: Vec<RelatedLink>,
     #[serde(rename = "RELATED_CODE", skip_serializing_if = "Vec::is_empty")]
     related_code: Vec<RelatedLink>,
-    #[serde(rename = "HAS_LEARNING_CONTENT", skip_serializing_if = "is_false")]
+    #[serde(
+        rename = "HAS_LEARNING_CONTENT",
+        skip_serializing_if = "std::ops::Not::not"
+    )]
     has_learning_content: bool,
-}
-
-#[expect(
-    clippy::trivially_copy_pass_by_ref,
-    reason = "serde skip_serializing_if requires a &T predicate signature"
-)]
-const fn is_false(value: &bool) -> bool {
-    !*value
 }
 
 impl DocsLearningContent {

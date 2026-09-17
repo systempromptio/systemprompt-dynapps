@@ -11,4 +11,4 @@ pub mod traffic;
 pub mod usage_aggregations;
 pub mod usage_rollups;
 
-pub use overview::{get_dashboard_data, list_events};
+pub use overview::{get_dashboard_data, get_events_page};

@@ -89,7 +89,7 @@ pub(super) async fn callback(
         .ok_or_else(|| {
             AdminError::Unauthorized("Connector consent expired or already consumed".into())
         })?;
-    let mut grant = oauth::open(&row, &user.user_id, provider.clone())?;
+    let mut grant = oauth::open(&row, &user.user_id, &provider)?;
     if grant.session != user.session_id.as_ref().map(ToString::to_string) {
         return Err(AdminError::Unauthorized(
             "Login changed during connector consent".into(),

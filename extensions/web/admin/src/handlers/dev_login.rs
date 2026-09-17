@@ -59,18 +59,17 @@ pub(crate) async fn dev_login_redeem(
     Extension(deps): Extension<AdfsDeps>,
     headers: HeaderMap,
     params: Result<Query<DevLoginParams>, QueryRejection>,
-) -> Response {
-    // Why: lint-ok: http-error — a redirect, not an error envelope.
+) -> Result<Response, DevLoginRejected> {
     let Ok(Query(DevLoginParams { code: Some(code) })) = params else {
-        return invalid();
+        return Err(DevLoginRejected);
     };
 
     let user = match consume_dev_login_code(&deps.write_pool, &code).await {
         Ok(Some(user)) => user,
-        Ok(None) => return invalid(),
+        Ok(None) => return Err(DevLoginRejected),
         Err(e) => {
             tracing::error!(error = %e, "dev login code lookup failed");
-            return invalid();
+            return Err(DevLoginRejected);
         },
     };
 
@@ -81,7 +80,7 @@ pub(crate) async fn dev_login_redeem(
             Ok(minted) => minted,
             Err(e) => {
                 tracing::error!(error = %e, user_id = %user_id, "dev login session mint failed");
-                return invalid();
+                return Err(DevLoginRejected);
             },
         };
 
@@ -91,10 +90,17 @@ pub(crate) async fn dev_login_redeem(
     if let Ok(val) = session_cookie(&jwt, max_age).parse() {
         out.append(SET_COOKIE, val);
     }
-    (out, Redirect::to("/admin")).into_response()
+    Ok((out, Redirect::to("/admin")).into_response())
 }
 
-// Why: lint-ok: http-error — the failure channel is the login page itself.
-fn invalid() -> Response {
-    Redirect::to(INVALID_REDIRECT).into_response()
+// Why: The failure channel of a dev-login redemption: back to the login page
+// with `?dev=invalid`, whichever step refused. The reason stays in the log;
+// a code that could be probed for why it failed would be a weaker one.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct DevLoginRejected;
+
+impl IntoResponse for DevLoginRejected {
+    fn into_response(self) -> Response {
+        Redirect::to(INVALID_REDIRECT).into_response()
+    }
 }

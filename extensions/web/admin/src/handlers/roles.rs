@@ -59,9 +59,7 @@ pub(crate) async fn set_user_roles_handler(
         &directory_roles,
         platform_admin_count,
     )
-    // Why: every refusal is a rule about who may hold what, so the whole set
-    // is a 403 carrying the rule's own words. lint-ok: error-adapt
-    .map_err(|refusal| AdminError::Forbidden(refusal.to_string()))?;
+    .map_err(AdminError::Refused)?;
 
     // Why: the manual half is the difference. Storing the whole requested set
     // would turn a directory-held role into a manual grant, and it would then

@@ -24,7 +24,7 @@ use super::identity::{AssertionClaims, resolve_identity};
 use super::provider::{idp_descriptor, service_provider};
 use super::session::{SessionSubject, mint_session, session_cookie};
 use super::{
-    AdfsDeps, AdfsError, FlowState, clear_state_cookie, login_error, read_state_cookie,
+    AdfsDeps, AdfsError, FlowState, LoginRedirect, clear_state_cookie, read_state_cookie,
     sanitize_redirect, use_https,
 };
 
@@ -51,26 +51,22 @@ pub(crate) async fn adfs_callback(
     Extension(deps): Extension<AdfsDeps>,
     headers: HeaderMap,
     form: Result<Form<CallbackForm>, FormRejection>,
-) -> Response {
-    // Why: lint-ok: http-error — every outcome here is a redirect: success sets the
-    // session cookie and returns to the app, failure returns to login.
+) -> Result<Response, LoginRedirect> {
     if !deps.config.is_usable() {
-        return login_error("unavailable");
+        return Err(LoginRedirect("unavailable"));
     }
     let Ok(Form(form)) = form else {
-        return login_error("error");
+        return Err(LoginRedirect("error"));
     };
-    match run_callback(&deps, &headers, form).await {
-        Ok(login) => success_response(&login),
-        Err(reason) => login_error(reason),
-    }
+    let login = run_callback(&deps, &headers, form).await?;
+    Ok(success_response(&login))
 }
 
 async fn run_callback(
     deps: &AdfsDeps,
     headers: &HeaderMap,
     form: CallbackForm,
-) -> Result<SuccessfulLogin, &'static str> {
+) -> Result<SuccessfulLogin, LoginRedirect> {
     let cfg = &deps.config;
     let flow = correlate(
         cfg.allow_idp_initiated,
@@ -83,16 +79,20 @@ async fn run_callback(
             tracing::warn!(error = %e, "ADFS assertion rejected");
             match e {
                 AdfsError::Assertion(saml::Error::XmlParse(m)) if m.contains("NameID") => {
-                    "no_subject"
+                    LoginRedirect("no_subject")
                 },
                 // Why: the farm answered an AuthnRequest we started, but we
                 // reached the verifier with no tracker — the state cookie did
                 // not come back — so the SP had to treat a solicited response
                 // as unsolicited. That is a cookie fault, not a bad assertion,
                 // and it gets its own reason so it never again reads as one.
-                AdfsError::Assertion(saml::Error::UnsolicitedNotAllowed) => "correlation_lost",
-                AdfsError::Metadata(_) | AdfsError::ServiceProvider(_) => "unavailable",
-                _ => "invalid_assertion",
+                AdfsError::Assertion(saml::Error::UnsolicitedNotAllowed) => {
+                    LoginRedirect("correlation_lost")
+                },
+                AdfsError::Metadata(_) | AdfsError::ServiceProvider(_) => {
+                    LoginRedirect("unavailable")
+                },
+                _ => LoginRedirect("invalid_assertion"),
             }
         })?;
 
@@ -107,7 +107,7 @@ async fn run_callback(
     .await
     .map_err(|e| {
         tracing::error!(error = %e, "Failed to mint session for ADFS user");
-        "error"
+        LoginRedirect("error")
     })?;
 
     tracing::info!(
@@ -133,12 +133,12 @@ fn correlate(
     allow_idp_initiated: bool,
     headers: &HeaderMap,
     relay_state: Option<&str>,
-) -> Result<Option<FlowState>, &'static str> {
+) -> Result<Option<FlowState>, LoginRedirect> {
     match read_state_cookie(headers) {
         Some(flow) => {
             if relay_state != Some(flow.state.as_str()) {
                 tracing::warn!("ADFS RelayState does not match the state cookie");
-                return Err("error");
+                return Err(LoginRedirect("error"));
             }
             Ok(Some(flow))
         },
@@ -147,7 +147,7 @@ fn correlate(
             tracing::warn!(
                 "ADFS response arrived with no state cookie and IdP-initiated sign-in is off"
             );
-            Err("error")
+            Err(LoginRedirect("error"))
         },
     }
 }
@@ -192,9 +192,6 @@ async fn verify_response(
     Ok((idp.entity_id.clone(), identity))
 }
 
-/// Build the cookie-setting redirect for a successful login: clear the spent
-/// state cookie and set the session `access_token`.
-// Why: lint-ok: http-error — builds the success redirect, not an error.
 fn success_response(login: &SuccessfulLogin) -> Response {
     let mut out = HeaderMap::new();
     if let Ok(val) = clear_state_cookie(use_https()).parse() {

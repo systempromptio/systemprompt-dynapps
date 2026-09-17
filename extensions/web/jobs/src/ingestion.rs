@@ -11,6 +11,7 @@ use systemprompt::traits::{Job, JobContext, JobResult};
 use crate::error::JobError;
 use systemprompt_web_content::services::IngestionService;
 use systemprompt_web_shared::config::BlogConfigValidated;
+use systemprompt_web_shared::config_errors::ExtensionConfigErrors;
 use systemprompt_web_shared::error::MarketplaceError;
 use systemprompt_web_shared::models::IngestionOptions;
 
@@ -99,13 +100,13 @@ impl Job for ContentIngestionJob {
     }
 }
 
-fn load_blog_config(path: &std::path::Path) -> Result<Option<Arc<BlogConfigValidated>>, String> {
+fn load_blog_config(
+    path: &std::path::Path,
+) -> Result<Option<Arc<BlogConfigValidated>>, ExtensionConfigErrors> {
     if !path.exists() {
         return Ok(None);
     }
-    BlogConfigValidated::load_from_file(path)
-        .map(|c| Some(Arc::new(c)))
-        .map_err(|e| e.to_string())
+    BlogConfigValidated::load_from_file(path).map(|c| Some(Arc::new(c)))
 }
 
 async fn execute_inner(ctx: &JobContext) -> Result<JobResult, JobError> {
@@ -126,10 +127,7 @@ async fn execute_inner(ctx: &JobContext) -> Result<JobResult, JobError> {
         .services()
         .join("config/blog.yaml");
 
-    let Some(config) = load_blog_config(&config_path)
-        // Why: lint-ok: error-adapt — the loader hands back a String, no source to keep
-        .map_err(|e| MarketplaceError::Internal(format!("Failed to load blog config: {e}")))?
-    else {
+    let Some(config) = load_blog_config(&config_path)? else {
         tracing::debug!(
             "Blog content ingestion skipped: no blog config configured for this profile"
         );

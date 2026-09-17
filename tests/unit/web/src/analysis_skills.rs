@@ -65,14 +65,14 @@ fn the_default_window_covers_the_last_30_days_up_to_the_next_midnight() {
 #[test]
 fn an_inverted_or_oversized_window_is_rejected() {
     let inverted = AnalysisQuery {
-        start: Some(at(2026, 9, 10, 0, 0)),
-        end: Some(at(2026, 9, 1, 0, 0)),
+        start: at(2026, 9, 10, 0, 0).into(),
+        end: at(2026, 9, 1, 0, 0).into(),
         ..AnalysisQuery::default()
     };
     assert!(inverted.window(at(2026, 9, 15, 0, 0)).is_err());
     let oversized = AnalysisQuery {
-        start: Some(at(2025, 1, 1, 0, 0)),
-        end: Some(at(2026, 9, 1, 0, 0)),
+        start: at(2025, 1, 1, 0, 0).into(),
+        end: at(2026, 9, 1, 0, 0).into(),
         ..AnalysisQuery::default()
     };
     assert!(oversized.window(at(2026, 9, 15, 0, 0)).is_err());
@@ -110,8 +110,8 @@ fn the_resource_filter_is_trimmed_and_validated() {
 #[test]
 fn urls_carry_the_window_the_resource_and_only_a_non_first_page() {
     let query = AnalysisQuery {
-        start: Some(at(2026, 8, 16, 0, 0)),
-        end: Some(at(2026, 9, 16, 0, 0)),
+        start: at(2026, 8, 16, 0, 0).into(),
+        end: at(2026, 9, 16, 0, 0).into(),
         resource: None,
         plugin: None,
         skill: None,
@@ -225,8 +225,8 @@ fn a_skill_view_resolves_its_plugin_marketplaces_source_and_inventory_link() {
 fn a_skill_drilldown_url_carries_plugin_and_skill() {
     use systemprompt_web_admin::repositories::analysis::retained::RetainedSkillRef;
     let query = AnalysisQuery {
-        start: Some(at(2026, 8, 16, 0, 0)),
-        end: Some(at(2026, 9, 16, 0, 0)),
+        start: at(2026, 8, 16, 0, 0).into(),
+        end: at(2026, 9, 16, 0, 0).into(),
         ..AnalysisQuery::default()
     };
     let target = Drilldown::Skill(RetainedSkillRef {

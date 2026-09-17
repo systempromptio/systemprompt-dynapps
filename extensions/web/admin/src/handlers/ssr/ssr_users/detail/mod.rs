@@ -16,7 +16,7 @@ mod view;
 
 use std::sync::Arc;
 
-use axum::extract::{Extension, Path, Query, State};
+use axum::extract::{Path, Query, State};
 use axum::response::Response;
 use serde::Deserialize;
 use sqlx::PgPool;
@@ -25,12 +25,12 @@ use systemprompt::identifiers::UserId;
 use crate::error::{AdminError, AdminHtmlResult};
 use crate::handlers::ssr::types::BreadcrumbView;
 use crate::repositories;
-use crate::templates::AdminTemplateEngine;
-use crate::types::{MarketplaceContext, UserContext};
+use crate::types::UserContext;
 
 use context::{DetailKpiView, DetailTabView, UserDetailContext, UserHeaderView};
 
 use super::BASE_URL;
+use crate::handlers::ssr::page::Page;
 
 // Why: Conversations sits second, directly after Identity. What this person
 // has actually been asking the models is the question an operator opens an
@@ -51,14 +51,8 @@ pub(crate) struct DetailQuery {
     pub page: Option<i64>,
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "axum extractor list; the router decides the arity, not this signature"
-)]
 pub(crate) async fn user_detail_page(
-    Extension(user_ctx): Extension<UserContext>,
-    Extension(mkt_ctx): Extension<MarketplaceContext>,
-    Extension(engine): Extension<AdminTemplateEngine>,
+    shell: Page,
     State(pool): State<Arc<PgPool>>,
     Path(user_id_raw): Path<String>,
     Query(query): Query<DetailQuery>,
@@ -66,7 +60,7 @@ pub(crate) async fn user_detail_page(
     // Why: a non-console caller may open their own page and nobody else's.
     // Refusing by identity rather than by role keeps the profile link working
     // for a plain user without opening the roster to them.
-    if !user_ctx.is_console && user_ctx.user_id.as_str() != user_id_raw {
+    if !shell.user.is_console && shell.user.user_id.as_str() != user_id_raw {
         return Err(AdminError::Forbidden("You can only view your own profile.".to_owned()).into());
     }
 
@@ -116,8 +110,8 @@ pub(crate) async fn user_detail_page(
             projects: project_ids.len(),
             membership_url: tab_href(&user_id, "membership"),
         },
-        can_write: user_ctx.is_admin,
-        is_self: user_ctx.user_id.as_str() == user_id.as_str(),
+        can_write: shell.user.is_admin,
+        is_self: shell.user.user_id.as_str() == user_id.as_str(),
         identity: None,
         conversations: None,
         membership: None,
@@ -134,18 +128,18 @@ pub(crate) async fn user_detail_page(
             detail: &detail,
             tab,
             page,
-            viewer: &user_ctx,
+            viewer: &shell.user,
         },
         data,
     ))
     .await;
 
     Ok(super::super::render_typed_page(
-        &engine,
+        &shell.engine,
         "user-detail",
         &data,
-        &user_ctx,
-        &mkt_ctx,
+        &shell.user,
+        &shell.marketplace,
     ))
 }
 

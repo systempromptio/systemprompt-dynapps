@@ -21,6 +21,7 @@ use paging::RevisionPagination;
 
 #[path = "versions_generations.rs"]
 mod generations;
+use crate::handlers::ssr::page::Page;
 pub(crate) use compare::compare_page;
 use generations::{GenerationRow, SourceCard};
 
@@ -40,19 +41,13 @@ struct VersionPage<T> {
     sync_href: &'static str,
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "axum extractor list; the router decides the arity, not this signature"
-)]
 pub(crate) async fn resources_page(
-    Extension(user): Extension<UserContext>,
-    Extension(marketplace): Extension<MarketplaceContext>,
-    Extension(engine): Extension<AdminTemplateEngine>,
+    shell: Page,
     Extension(state): Extension<Arc<ManagedState>>,
     State(pool): State<Arc<PgPool>>,
     Query(mut query): Query<RevisionPagination>,
 ) -> AdminHtmlResult<Response> {
-    require_console(&user)?;
+    require_console(&shell.user)?;
     query.normalize();
     let offset = query.offset()?;
     let (timeline, cards) =
@@ -73,7 +68,7 @@ pub(crate) async fn resources_page(
             .collect(),
         previous: (offset > 0).then(|| query.page_href(offset / 50)),
         next,
-        can_manage: user.is_admin,
+        can_manage: shell.user.is_admin,
         no_hash_match: query.hash.is_some() && timeline.is_empty(),
         hash_short: query.hash.as_deref().map(generations::short),
         sources: cards,
@@ -82,11 +77,11 @@ pub(crate) async fn resources_page(
         sync_href: "/admin/sync",
     };
     Ok(super::super::render_typed_page(
-        &engine,
+        &shell.engine,
         "analysis-versions",
         &rendered,
-        &user,
-        &marketplace,
+        &shell.user,
+        &shell.marketplace,
     ))
 }
 

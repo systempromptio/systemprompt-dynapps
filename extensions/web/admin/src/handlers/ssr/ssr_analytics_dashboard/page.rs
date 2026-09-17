@@ -12,8 +12,8 @@ use crate::repositories::scope::Attribution;
 use crate::util::time_range::TimeRange;
 
 use super::context::{
-    AnalyticsDashboardContext, CostTabView, Crumb, DashboardTab, FiltersView, ModelsTabView,
-    SessionsTabView, SkillsTabView, ToolsTabView,
+    ActiveDashboardTab, AnalyticsDashboardContext, CostTabView, Crumb, DashboardTab, FiltersView,
+    ModelsTabView, SessionsTabView, SkillsTabView, ToolsTabView,
 };
 use super::data::AnalyticsDashboardData;
 use super::{
@@ -135,12 +135,7 @@ pub(super) fn page_context(input: PageInput<'_>) -> AnalyticsDashboardContext {
             fetched.kpis.active_users
         ),
         breadcrumbs: breadcrumbs(tab),
-        is_overview: tab == DashboardTab::Overview,
-        is_models: tab == DashboardTab::Models,
-        is_skills: tab == DashboardTab::Skills,
-        is_tools: tab == DashboardTab::Tools,
-        is_sessions: tab == DashboardTab::Sessions,
-        is_cost: tab == DashboardTab::Cost,
+        active: ActiveDashboardTab(tab),
         is_member_view: query.attribution() == Attribution::Member,
         attribution_links: urls::attribution_links(
             query,

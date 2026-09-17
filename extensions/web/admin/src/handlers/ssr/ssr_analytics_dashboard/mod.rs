@@ -23,7 +23,7 @@ use super::ssr_helpers::Viewer;
 use std::sync::Arc;
 use systemprompt_web_shared::{GroupId, ProjectId};
 
-use axum::extract::{Extension, Query, State};
+use axum::extract::{Query, State};
 use axum::response::Response;
 use serde::Deserialize;
 use sqlx::PgPool;
@@ -34,8 +34,6 @@ use crate::repositories::analytics::site::leaderboards::LeaderboardSort;
 use crate::repositories::analytics::site::resolve_site_scope;
 use crate::repositories::analytics::site::series::SeriesBucket;
 use crate::repositories::scope::{Attribution, Scope, ScopeRequest};
-use crate::templates::AdminTemplateEngine;
-use crate::types::{MarketplaceContext, UserContext};
 use crate::util::time_range::{
     TimeRange, TimeRangePreset, TimeRangeQuery, parse_time_range, preset_to_range,
 };
@@ -63,6 +61,7 @@ mod view_models;
 mod view_spend;
 mod view_tables;
 
+use crate::handlers::ssr::page::Page;
 use context::DashboardTab;
 use page::{PageInput, page_context};
 
@@ -129,19 +128,13 @@ impl AnalyticsDashboardQuery {
     }
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "axum extractor list; the router decides the arity, not this signature"
-)]
 pub(crate) async fn analytics_dashboard_page(
-    Extension(user_ctx): Extension<UserContext>,
-    Extension(mkt_ctx): Extension<MarketplaceContext>,
-    Extension(engine): Extension<AdminTemplateEngine>,
+    shell: Page,
     State(pool): State<Arc<PgPool>>,
     Query(query): Query<AnalyticsDashboardQuery>,
     view: super::export::ViewMode,
 ) -> AdminHtmlResult<Response> {
-    if !user_ctx.is_console {
+    if !shell.user.is_console {
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
     }
 
@@ -151,8 +144,11 @@ pub(crate) async fn analytics_dashboard_page(
     let range = resolve_range(&query);
     let page = query.page.unwrap_or(0).max(0);
 
-    let request =
-        ScopeRequest::from_query(&user_ctx, query.group.as_deref(), query.project.as_deref());
+    let request = ScopeRequest::from_query(
+        &shell.user,
+        query.group.as_deref(),
+        query.project.as_deref(),
+    );
     let scope = resolve_site_scope(&pool, &query.scope(), query.attribution()).await?;
     let slo_ms = crate::repositories::analytics::site::latency::resolve_slo_ms(query.slo_ms);
 
@@ -171,7 +167,7 @@ pub(crate) async fn analytics_dashboard_page(
         },
     )
     .await;
-    let filters = filters::build_filters(&pool, &user_ctx, &query, &request, bucket).await;
+    let filters = filters::build_filters(&pool, &shell.user, &query, &request, bucket).await;
     let ctx = page_context(PageInput {
         query: &query,
         tab,
@@ -184,10 +180,10 @@ pub(crate) async fn analytics_dashboard_page(
     });
 
     Ok(view.respond(
-        &engine,
+        &shell.engine,
         "analytics-dashboard",
         &ctx,
-        Viewer::new(&user_ctx, &mkt_ctx),
+        Viewer::new(&shell.user, &shell.marketplace),
     ))
 }
 

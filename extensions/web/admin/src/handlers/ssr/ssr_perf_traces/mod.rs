@@ -8,7 +8,7 @@ use super::ssr_helpers::Viewer;
 use crate::error::AdminError;
 use std::sync::Arc;
 
-use axum::extract::{Extension, Query, State};
+use axum::extract::{Query, State};
 use axum::response::Response;
 use serde::Deserialize;
 use sqlx::PgPool;
@@ -22,8 +22,7 @@ use crate::repositories::traces::{
     TraceFilter, TracePage, TraceSort, TraceSortColumn, TraceSortDir, TraceStats, TraceSummary,
     get_trace_stats, list_traces,
 };
-use crate::templates::AdminTemplateEngine;
-use crate::types::{MarketplaceContext, UserContext};
+use crate::types::UserContext;
 use crate::util::time_range::{TimeRange, TimeRangePreset, TimeRangeQuery, parse_time_range};
 
 
@@ -32,6 +31,7 @@ mod rows;
 mod summary;
 mod view;
 
+use crate::handlers::ssr::page::Page;
 use context::PerfTracesPageContext;
 
 const BASE_URL: &str = "/admin/traces";
@@ -56,19 +56,13 @@ pub(crate) struct TraceListQuery {
     pub project: Option<String>,
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "axum handler: every argument is an extractor"
-)]
 pub(crate) async fn perf_traces_page(
-    Extension(user_ctx): Extension<UserContext>,
-    Extension(mkt_ctx): Extension<MarketplaceContext>,
-    Extension(engine): Extension<AdminTemplateEngine>,
+    shell: Page,
     State(pool): State<Arc<PgPool>>,
     Query(query): Query<TraceListQuery>,
     view: super::export::ViewMode,
 ) -> AdminHtmlResult<Response> {
-    if !user_ctx.is_console {
+    if !shell.user.is_console {
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
     }
 
@@ -77,32 +71,38 @@ pub(crate) async fn perf_traces_page(
         to: query.to.clone(),
         preset: query.preset.clone(),
     });
-    let page = query.page.unwrap_or(0).max(0);
+    let window = TraceWindow {
+        range,
+        page: query.page.unwrap_or(0).max(0),
+    };
 
-    let request =
-        ScopeRequest::from_query(&user_ctx, query.group.as_deref(), query.project.as_deref());
+    let request = ScopeRequest::from_query(
+        &shell.user,
+        query.group.as_deref(),
+        query.project.as_deref(),
+    );
     let scope = crate::repositories::scope::membership::get_subject_scope(&pool, &request).await?;
     let ctx = load_traces_data(
         &pool,
-        &user_ctx,
+        &shell.user,
         TraceScope {
             request: &request,
             subjects: scope,
         },
         &query,
-        TraceWindow { range, page },
+        window,
     )
     .await;
     Ok(view.respond(
-        &engine,
+        &shell.engine,
         "perf-traces",
         &ctx,
-        Viewer::new(&user_ctx, &mkt_ctx),
+        Viewer::new(&shell.user, &shell.marketplace),
     ))
 }
 
-// Why: the resolved window and page travel together — clippy's argument cap
-// is the only reason they are not two parameters.
+// Why: which slice of the timeline the reader asked for: the time range and
+// the page within it. Zero pages are a whole-range query.
 struct TraceWindow {
     range: TimeRange,
     page: i64,

@@ -32,16 +32,23 @@ use systemprompt_security::authz::{GovernanceDecisionRecord, insert_governance_d
 
 const POLICY_NAME: &str = "authz";
 
-// Why: HTTP failures can bypass this hook; return a deny. lint-ok: http-error
-fn unavailable() -> Response {
-    Json(AuthzDecision::Deny {
-        reason: DenyReason::PolicyViolation {
-            policy: "authorization_unavailable".into(),
-            detail: Cow::Borrowed("Authorization temporarily unavailable; retry later"),
-        },
-        policy: POLICY_NAME.into(),
-    })
-    .into_response()
+// Why: The hook's failure channel. A hook answers 200 with a decision: an error
+// status reads as "hook unavailable" to the caller and lets the call
+// through, so every failure on this path is a deny body, not an error.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct Unavailable;
+
+impl IntoResponse for Unavailable {
+    fn into_response(self) -> Response {
+        Json(AuthzDecision::Deny {
+            reason: DenyReason::PolicyViolation {
+                policy: "authorization_unavailable".into(),
+                detail: Cow::Borrowed("Authorization temporarily unavailable; retry later"),
+            },
+            policy: POLICY_NAME.into(),
+        })
+        .into_response()
+    }
 }
 
 async fn audit_unavailable(pool: &PgPool, req: &AuthzRequest) {
@@ -55,23 +62,23 @@ async fn audit_unavailable(pool: &PgPool, req: &AuthzRequest) {
     audit_decision(pool, req, &[], None, &decision).await;
 }
 
-async fn parent_index(repo: &AccessControlRepository) -> Result<ParentChainIndex, Response> {
+async fn parent_index(repo: &AccessControlRepository) -> Result<ParentChainIndex, Unavailable> {
     let services = systemprompt::loader::ServicesBootstrap::get().map_err(|error| {
         tracing::error!(%error, "authorization_unavailable: services");
-        unavailable()
+        Unavailable
     })?;
     ParentChainIndex::load(repo, Arc::new(ChainSources::from_services(services)))
         .await
         .map_err(|error| {
             tracing::error!(%error, "authorization_unavailable: parent policies");
-            unavailable()
+            Unavailable
         })
 }
 
 async fn load_rules(
     repo: &AccessControlRepository,
     req: &AuthzRequest,
-) -> Result<(Vec<AccessRule>, Option<EntityRow>), Response> {
+) -> Result<(Vec<AccessRule>, Option<EntityRow>), Unavailable> {
     let kind = req.entity.kind();
     let id = req.entity.id_str();
     let rules = repo
@@ -79,11 +86,11 @@ async fn load_rules(
         .await
         .map_err(|error| {
             tracing::error!(%error, %id, "authorization_unavailable: entity rules");
-            unavailable()
+            Unavailable
         })?;
     let entity = repo.get_entity(kind, id).await.map_err(|error| {
         tracing::error!(%error, %id, "authorization_unavailable: entity");
-        unavailable()
+        Unavailable
     })?;
     Ok((rules, entity))
 }
@@ -178,24 +185,22 @@ async fn audit_decision(
 pub(crate) async fn govern_authz(
     State(pool): State<Arc<PgPool>>,
     Json(mut req): Json<AuthzRequest>,
-) -> Response {
-    // Why: lint-ok: http-error — a hook answers 200 with a decision; an error
-    // status reads as "hook unavailable" and lets the call through
+) -> Result<Response, Unavailable> {
     let repo = AccessControlRepository::from_pool(Arc::clone(&pool));
 
     let (rules, entity) = match load_rules(&repo, &req).await {
         Ok(v) => v,
-        Err(resp) => {
+        Err(unavailable) => {
             audit_unavailable(&pool, &req).await;
-            return resp;
+            return Err(unavailable);
         },
     };
 
     let chains = match parent_index(&repo).await {
         Ok(chains) => chains,
-        Err(response) => {
+        Err(unavailable) => {
             audit_unavailable(&pool, &req).await;
-            return response;
+            return Err(unavailable);
         },
     };
 
@@ -207,7 +212,7 @@ pub(crate) async fn govern_authz(
         Err(error) => {
             tracing::error!(%error, user_id = %req.user_id, trace_id = %req.trace_id, "authorization_unavailable: attributes");
             audit_unavailable(&pool, &req).await;
-            return unavailable();
+            return Err(Unavailable);
         },
     };
     let identity = match crate::repositories::users::queries::find_identity_envelope(
@@ -219,7 +224,7 @@ pub(crate) async fn govern_authz(
         Ok(Some(identity)) if identity.status == "active" => identity,
         _ => {
             audit_unavailable(&pool, &req).await;
-            return unavailable();
+            return Err(Unavailable);
         },
     };
 
@@ -261,5 +266,5 @@ pub(crate) async fn govern_authz(
             policy: POLICY_NAME.to_owned(),
         },
     };
-    (StatusCode::OK, Json(resp)).into_response()
+    Ok((StatusCode::OK, Json(resp)).into_response())
 }

@@ -33,6 +33,7 @@ use crate::types::{ENTITY_MCP_SERVER, MarketplaceContext, UserContext};
 use super::super::ssr::ssr_helpers::render_typed_page;
 use super::sorting::{direction, matches, preserved_search, sort_headers};
 use super::view::assignment_counts_by_type;
+use crate::handlers::ssr::page::Page;
 use rows::{BASE_URL, RowInputs, Runtime, WINDOW_HOURS};
 use view::{McpDetailData, McpPageData};
 
@@ -164,22 +165,16 @@ pub(crate) async fn mcp_servers_page(
     ))
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "axum extractor list; the router decides the arity, not this signature"
-)]
 pub(crate) async fn mcp_detail_page(
-    Extension(user_ctx): Extension<UserContext>,
-    Extension(mkt_ctx): Extension<MarketplaceContext>,
-    Extension(engine): Extension<AdminTemplateEngine>,
+    shell: Page,
     State(pool): State<Arc<PgPool>>,
     Path(mcp_id): Path<McpServerId>,
     Query(query): Query<McpDetailQuery>,
 ) -> AdminHtmlResult<Response> {
-    console_only(&user_ctx)?;
+    console_only(&shell.user)?;
     let path = shared::get_services_path()?;
 
-    let catalog = super::data::load_catalog(&path, &user_ctx.roles);
+    let catalog = super::data::load_catalog(&path, &shell.user.roles);
     let server = catalog.mcp.iter().find(|s| s.id == mcp_id);
     let rt = load_runtime(&pool).await;
     let known_at_runtime = rt.heartbeat.contains_key(mcp_id.as_str())
@@ -247,10 +242,10 @@ pub(crate) async fn mcp_detail_page(
         id: mcp_id,
     };
     Ok(render_typed_page(
-        &engine,
+        &shell.engine,
         "catalog-mcp-detail",
         &page,
-        &user_ctx,
-        &mkt_ctx,
+        &shell.user,
+        &shell.marketplace,
     ))
 }

@@ -16,8 +16,7 @@ pub(crate) const fn branding_context(engine: &AdminTemplateEngine) -> BrandingSh
 }
 
 // Why: who is looking — the two per-request contexts every shell render
-// reads, carried as one value so the render helpers stay inside the
-// argument cap.
+// reads, one value because they are never meaningful apart.
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct Viewer<'a> {
     pub(crate) user: &'a UserContext,
@@ -37,7 +36,6 @@ pub(crate) fn render_typed_page<T: Serialize>(
     user_ctx: &UserContext,
     mkt_ctx: &MarketplaceContext,
 ) -> Response {
-    // Why: lint-ok: http-error — a thin wrapper over render_shell, same contract.
     render_shell(engine, template, data, Viewer::new(user_ctx, mkt_ctx), None)
 }
 
@@ -50,8 +48,6 @@ pub(crate) fn render_shell<T: Serialize>(
     viewer: Viewer<'_>,
     view: Option<&ViewMode>,
 ) -> Response {
-    // Why: lint-ok: http-error — renders the page directly; the failure arm is
-    // already the typed AdminHtmlError response.
     let started = std::time::Instant::now();
     // JSON: the shell reads the page's own `page` key to pick its help text,
     // which needs the page context as data rather than as a type. This is the

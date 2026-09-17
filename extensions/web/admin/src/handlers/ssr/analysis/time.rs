@@ -25,25 +25,47 @@ pub fn render(value: DateTime<Utc>) -> String {
     }
 }
 
-pub(super) fn deserialize<'de, D: Deserializer<'de>>(
-    d: D,
-) -> Result<Option<DateTime<Utc>>, D::Error> {
-    let raw = Option::<String>::deserialize(d)?;
-    raw.filter(|value| !value.is_empty())
-        .map(|value| {
-            parse(&value)
-                .ok_or_else(|| serde::de::Error::custom("Expected a UTC date or date and time"))
-        })
-        .transpose()
+/// One edge of the analysis window as the query carries it: absent, or a UTC
+/// instant that serialises back as a bare date whenever it sits on midnight so
+/// an HTML date control round-trips it unchanged.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct WindowBound(pub Option<DateTime<Utc>>);
+
+impl From<Option<DateTime<Utc>>> for WindowBound {
+    fn from(value: Option<DateTime<Utc>>) -> Self {
+        Self(value)
+    }
 }
 
-#[expect(
-    clippy::ref_option,
-    reason = "Serde serialize_with requires a reference to the field type"
-)]
-pub(super) fn serialize<S: Serializer>(
-    value: &Option<DateTime<Utc>>,
-    s: S,
-) -> Result<S::Ok, S::Error> {
-    value.map(render).serialize(s)
+impl From<DateTime<Utc>> for WindowBound {
+    fn from(value: DateTime<Utc>) -> Self {
+        Self(Some(value))
+    }
+}
+
+impl std::ops::Deref for WindowBound {
+    type Target = Option<DateTime<Utc>>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<'de> Deserialize<'de> for WindowBound {
+    fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let raw = Option::<String>::deserialize(d)?;
+        raw.filter(|value| !value.is_empty())
+            .map(|value| {
+                parse(&value)
+                    .ok_or_else(|| serde::de::Error::custom("Expected a UTC date or date and time"))
+            })
+            .transpose()
+            .map(Self)
+    }
+}
+
+impl Serialize for WindowBound {
+    fn serialize<S: Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        self.0.map(render).serialize(s)
+    }
 }

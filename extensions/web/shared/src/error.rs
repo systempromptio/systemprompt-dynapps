@@ -71,7 +71,14 @@ pub enum MarketplaceError {
     Conflict(String),
 
     #[error("Crypto error: {0}")]
-    Crypto(String),
+    Crypto(#[source] Box<dyn std::error::Error + Send + Sync>),
+
+    #[error("Secret envelope for {var_name} is malformed: {source}")]
+    SecretEnvelope {
+        var_name: String,
+        #[source]
+        source: Box<dyn std::error::Error + Send + Sync>,
+    },
 
     #[error("{path}: {source}")]
     ConfigFile {
@@ -91,6 +98,20 @@ pub enum MarketplaceError {
 }
 
 impl MarketplaceError {
+    pub fn crypto(source: impl Into<Box<dyn std::error::Error + Send + Sync>>) -> Self {
+        Self::Crypto(source.into())
+    }
+
+    pub fn secret_envelope(
+        var_name: impl Into<String>,
+        source: impl Into<Box<dyn std::error::Error + Send + Sync>>,
+    ) -> Self {
+        Self::SecretEnvelope {
+            var_name: var_name.into(),
+            source: source.into(),
+        }
+    }
+
     pub fn config_file(
         path: impl Into<String>,
         source: impl Into<Box<dyn std::error::Error + Send + Sync>>,
@@ -111,7 +132,7 @@ impl ExtensionError for MarketplaceError {
             Self::BadRequest(_) => "BAD_REQUEST",
             Self::NotFound(_) => "NOT_FOUND",
             Self::Conflict(_) => "CONFLICT",
-            Self::Crypto(_) => "CRYPTO_ERROR",
+            Self::Crypto(_) | Self::SecretEnvelope { .. } => "CRYPTO_ERROR",
             Self::ConfigFile { .. } => "CONFIG_FILE_ERROR",
             Self::Profile(_) => "PROFILE_ERROR",
             Self::Services(_) => "SERVICES_CONFIG_ERROR",
@@ -126,6 +147,7 @@ impl ExtensionError for MarketplaceError {
             Self::Conflict(_) => StatusCode::CONFLICT,
             Self::Internal(_)
             | Self::Crypto(_)
+            | Self::SecretEnvelope { .. }
             | Self::ConfigFile { .. }
             | Self::Profile(_)
             | Self::Services(_)

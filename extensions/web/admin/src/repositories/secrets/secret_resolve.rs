@@ -71,7 +71,7 @@ pub async fn resolve_secrets_for_plugin(
 ) -> Result<HashMap<String, String>, MarketplaceError> {
     let dek = secret_keys::get_or_create_user_dek(pool, user_id, master_key)
         .await
-        .map_err(|e| MarketplaceError::Crypto(e.to_string()))?;
+        .map_err(MarketplaceError::crypto)?;
 
     let rows = sqlx::query!(
         "SELECT var_name, encrypted_value, value_nonce, key_version \
@@ -88,21 +88,16 @@ pub async fn resolve_secrets_for_plugin(
     for row in &rows {
         let encrypted_value = row.encrypted_value.as_deref().unwrap_or(&[]);
         let value_nonce = row.value_nonce.as_deref().unwrap_or(&[]);
-        let nonce: [u8; 12] = value_nonce
-            .try_into()
-            // Why: lint-ok: error-adapt — TryFromSliceError is variant-less
-            .map_err(|e: std::array::TryFromSliceError| {
-                MarketplaceError::Internal(format!(
-                    "Invalid nonce length for var {}: {e}",
-                    row.var_name
-                ))
-            })?;
+        let nonce: [u8; 12] =
+            value_nonce
+                .try_into()
+                .map_err(|source: std::array::TryFromSliceError| {
+                    MarketplaceError::secret_envelope(&row.var_name, source)
+                })?;
         let plaintext = secret_crypto::decrypt(&dek, &nonce, encrypted_value)
-            .map_err(|e| MarketplaceError::Crypto(e.to_string()))?;
-        // Why: lint-ok: error-adapt — FromUtf8Error is variant-less
-        let value = String::from_utf8(plaintext).map_err(|e| {
-            MarketplaceError::Internal(format!("Decrypted value is not valid UTF-8: {e}"))
-        })?;
+            .map_err(MarketplaceError::crypto)?;
+        let value = String::from_utf8(plaintext)
+            .map_err(|source| MarketplaceError::secret_envelope(&row.var_name, source))?;
         secrets.insert(row.var_name.clone(), value);
     }
 

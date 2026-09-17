@@ -192,8 +192,8 @@ fn validate_loopback_redirect(redirect: &str) -> Option<String> {
 }
 
 fn bad_redirect_response(redirect: &str) -> Response {
-    // Why: lint-ok: http-error — names the accepted redirect forms, which the
-    // generic page cannot
+    // Why: names the accepted redirect forms, which the generic error page
+    // cannot.
     tracing::warn!(
         redirect,
         "Rejected bridge device-link redirect (non-loopback)"

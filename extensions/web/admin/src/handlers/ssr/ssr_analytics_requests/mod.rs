@@ -21,8 +21,7 @@ use crate::error::{AdminHtmlResult, AdminResult};
 use crate::handlers::ssr::csv::{CsvBuilder, usd};
 use crate::handlers::ssr::types as charts;
 use crate::handlers::ssr::types::BreadcrumbView;
-use crate::templates::AdminTemplateEngine;
-use crate::types::{MarketplaceContext, UserContext};
+use crate::types::UserContext;
 use crate::util::time_range::TimeRange;
 
 mod context;
@@ -31,7 +30,8 @@ mod summary;
 mod urls;
 mod view;
 
-use context::{AnalyticsRequestsPageContext, RequestsTab};
+use crate::handlers::ssr::page::Page;
+use context::{ActiveRequestsTab, AnalyticsRequestsPageContext, RequestsTab};
 
 const BASE_URL: &str = "/admin/requests";
 const PAGE_SIZE: i64 = 50;
@@ -88,26 +88,20 @@ impl RequestsQuery {
     }
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "axum handler: every argument is an extractor"
-)]
 pub(crate) async fn analytics_requests_page(
-    Extension(user_ctx): Extension<UserContext>,
-    Extension(mkt_ctx): Extension<MarketplaceContext>,
-    Extension(engine): Extension<AdminTemplateEngine>,
+    shell: Page,
     State(pool): State<Arc<PgPool>>,
     Query(mut query): Query<RequestsQuery>,
     view: super::export::ViewMode,
 ) -> AdminHtmlResult<Response> {
-    if !user_ctx.is_console {
+    if !shell.user.is_console {
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
     }
     query.normalize();
 
     let tab = RequestsTab::from_query(query.tab.as_deref());
     let request = crate::repositories::scope::ScopeRequest::from_query(
-        &user_ctx,
+        &shell.user,
         query.group.as_deref(),
         query.project.as_deref(),
     );
@@ -132,7 +126,7 @@ pub(crate) async fn analytics_requests_page(
     )
     .await;
 
-    let scope_filter = view::scope_filter(&pool, &user_ctx, &request, &query).await;
+    let scope_filter = view::scope_filter(&pool, &shell.user, &request, &query).await;
     let ctx = page_context(PageInput {
         scope_filter,
         query: &query,
@@ -145,10 +139,10 @@ pub(crate) async fn analytics_requests_page(
     });
 
     Ok(view.respond(
-        &engine,
+        &shell.engine,
         "analytics-requests",
         &ctx,
-        Viewer::new(&user_ctx, &mkt_ctx),
+        Viewer::new(&shell.user, &shell.marketplace),
     ))
 }
 
@@ -275,12 +269,7 @@ fn page_context(input: PageInput<'_>) -> AnalyticsRequestsPageContext {
         ],
         time_range: view::time_range_context(query, &range, auto_widened),
         tabs: urls::tab_links(tab, query, fetched.total_count),
-        is_overview: tab == RequestsTab::Overview,
-        is_breakdown: matches!(
-            tab,
-            RequestsTab::Models | RequestsTab::Providers | RequestsTab::Status
-        ),
-        is_log: tab == RequestsTab::Log,
+        active: ActiveRequestsTab(tab),
         kpis: summary::kpi_view(&fetched.kpis, query),
         stats: summary::stats_to_json(&fetched.stats),
         histogram: charts::histogram_view(&fetched.hist, &fetched.stats),

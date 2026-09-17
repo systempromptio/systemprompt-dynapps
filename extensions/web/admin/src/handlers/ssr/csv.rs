@@ -31,9 +31,6 @@ impl CsvBuilder {
         self.out.push_str("\r\n");
     }
 
-    // Why: genuinely renders the finished download, never an error — the
-    // callers are AdminResult handlers and their error variants pick statuses.
-    // Why: lint-ok: http-error
     pub(crate) fn into_response(self, filename: &str) -> Response {
         Response::builder()
             .header(header::CONTENT_TYPE, "text/csv; charset=utf-8")

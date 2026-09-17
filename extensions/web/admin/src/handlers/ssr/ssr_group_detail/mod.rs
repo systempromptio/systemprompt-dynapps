@@ -9,7 +9,7 @@
 
 use std::sync::Arc;
 
-use axum::extract::{Extension, Path, Query, State};
+use axum::extract::{Path, Query, State};
 use axum::response::Response;
 use serde::Deserialize;
 use sqlx::PgPool;
@@ -17,8 +17,7 @@ use systemprompt_web_shared::GroupId;
 
 use crate::error::{AdminError, AdminHtmlResult};
 use crate::repositories;
-use crate::templates::AdminTemplateEngine;
-use crate::types::{MarketplaceContext, UserContext};
+use crate::types::UserContext;
 
 use super::people_chart::daily_requests_chart;
 use super::people_view;
@@ -27,6 +26,7 @@ use super::types::{
     BreadcrumbView, GroupDetailPageData, GroupOverviewView, MarketplaceAssignmentView,
     MemberSetChipView, MembersTabView, UsageLeaderRowView,
 };
+use crate::handlers::ssr::page::Page;
 
 mod data;
 mod tabs;
@@ -37,19 +37,13 @@ pub(crate) struct TabQuery {
     tab: Option<String>,
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "axum extractor list; the router decides the arity, not this signature"
-)]
 pub(crate) async fn group_detail_page(
-    Extension(user_ctx): Extension<UserContext>,
-    Extension(mkt_ctx): Extension<MarketplaceContext>,
-    Extension(engine): Extension<AdminTemplateEngine>,
+    shell: Page,
     State(pool): State<Arc<PgPool>>,
     Path(group_id): Path<GroupId>,
     Query(query): Query<TabQuery>,
 ) -> AdminHtmlResult<Response> {
-    if !user_ctx.is_console {
+    if !shell.user.is_console {
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
     }
 
@@ -80,27 +74,27 @@ pub(crate) async fn group_detail_page(
             people_view::stat_tiles(&usage, counts.members)
         },
         overview: load_overview(&pool, &group_id, active).await,
-        members: load_members(&pool, &group_id, active, &user_ctx).await,
+        members: load_members(&pool, &group_id, active, &shell.user).await,
         marketplaces: load_marketplaces(&pool, &group_id, active).await,
         access: load_access(&pool, &group_id, active).await,
         projects: load_projects(&pool, &group_id, active).await,
-        mappings: load_mappings(&pool, &group_id, active, &user_ctx).await,
+        mappings: load_mappings(&pool, &group_id, active, &shell.user).await,
         active_tab: active.to_owned(),
         group_name: group.name,
         description: group.description,
         is_unassigned,
         not_found: false,
-        can_manage: user_ctx.is_admin,
-        can_map: user_ctx.is_platform_admin,
+        can_manage: shell.user.is_admin,
+        can_map: shell.user.is_platform_admin,
         group_id,
     };
 
     Ok(super::render_typed_page(
-        &engine,
+        &shell.engine,
         "group-detail",
         &data,
-        &user_ctx,
-        &mkt_ctx,
+        &shell.user,
+        &shell.marketplace,
     ))
 }
 

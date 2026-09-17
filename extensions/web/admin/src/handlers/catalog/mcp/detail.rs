@@ -8,6 +8,7 @@
 //! wrong.
 
 use crate::handlers::ssr::format::{format_duration_ms, local_time, short_id};
+use crate::numeric::{percentage, round_to_i64};
 use crate::repositories::mcp::runtime::{McpExecutionRow, McpSessionRow, McpToolStat};
 use crate::repositories::overview::liveness::{HEARTBEAT_INTERVAL_SECS, liveness_state};
 use crate::types::McpServerDetail;
@@ -16,25 +17,6 @@ use crate::types::access_control::AccessControlRule;
 use super::view::{
     ConfigFactView, McpExecutionRowView, McpGrantRow, McpSessionRowView, McpToolRow,
 };
-
-#[expect(
-    clippy::cast_precision_loss,
-    reason = "call counts are far below the f64 mantissa; this value is only displayed"
-)]
-fn percentage(part: i64, whole: i64) -> f64 {
-    if whole == 0 {
-        return 0.0;
-    }
-    (part as f64 / whole as f64) * 100.0
-}
-
-#[expect(
-    clippy::cast_possible_truncation,
-    reason = "an averaged millisecond figure is rendered to whole milliseconds"
-)]
-const fn whole_ms(value: f64) -> i64 {
-    value.round() as i64
-}
 
 fn error_rate(calls: i64, failures: i64) -> (String, &'static str) {
     if calls == 0 {
@@ -54,7 +36,7 @@ fn error_rate(calls: i64, failures: i64) -> (String, &'static str) {
 fn ms(value: Option<f64>) -> String {
     value.map_or_else(
         || "\u{2014}".to_owned(),
-        |v| format_duration_ms(whole_ms(v)),
+        |v| format_duration_ms(round_to_i64(v)),
     )
 }
 

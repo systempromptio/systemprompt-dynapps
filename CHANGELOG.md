@@ -20,6 +20,40 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+`next` builds against core `next` again: the `[patch.crates-io]` blocks are active in both
+workspaces, the pins stay at 0.54.0 (core's workspace version) and `bridge/CORE_REF` names the
+core commit the tree is built with.
+
+### Changed
+
+- Every `// lint-ok:` gate exemption and every `#[expect(clippy::…)]` in production code is
+  gone, by fixing what each one excused. `AdminError` gains `UpstreamFailure`, `Invalid` and
+  `Refused` variants (and `upstream` / `invalid` constructors) that carry the typed cause
+  instead of a `format!`-flattened message; `MarketplaceError::Crypto` carries its source and a
+  `SecretEnvelope` variant names the variable whose stored nonce or plaintext is malformed;
+  `ExtensionConfigErrors` entries can carry a source, so a blog config that fails to read or
+  parse is reported with the underlying error rather than a stringified copy; the MCP server's
+  CLI runner has a typed `CliError` projected onto rmcp's wire error once.
+- SSR handlers take one `Page` extractor for the template engine, user and marketplace
+  contexts instead of three `Extension`s; the hook handlers take `TrackDeps` / `GovernDeps`
+  the same way. SSO start and callback, dev-login redemption and both governance hooks return
+  `Result<_, E>` where `E: IntoResponse` is the flow's own failure channel (`LoginRedirect`,
+  `DevLoginRejected`, `Unavailable`, `HookVerdict`) instead of a bare `Response`.
+- The active analytics tab is serialised from the tab enum (`ActiveTab`) rather than stored as
+  one bool per tab; the analysis window bounds are a `WindowBound` newtype that owns its date
+  round-tripping; `SourceCard` is assembled by constructors rather than an eight-argument
+  function; the numeric casts scattered across display code all go through `numeric`.
+- `check-http-errors.sh` no longer honours `lint-ok:` markers, and its untyped-response rule
+  applies to `async fn` route handlers only — a synchronous `-> Response` is a renderer with
+  nothing to type.
+
+### Removed
+
+- The never-called repository functions kept "for the internal fork" (`compute_effective_permissions`,
+  `list_user_marketplace_overrides`, `list_user_management_aggregates`,
+  `list_user_runtime_aggregates`), the no-op `authz::{group,project,salesforce}::invalidate`
+  and `AdfsConfig::mapped_groups`. `dashboard::list_events` is `get_events_page`.
+
 ## 0.54.0 — 2026-09-16
 
 Built against the published core 0.54.0 (`bridge/CORE_REF` = `v0.54.0`). Core

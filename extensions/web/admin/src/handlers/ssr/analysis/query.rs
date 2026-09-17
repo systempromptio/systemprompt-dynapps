@@ -6,25 +6,17 @@ use chrono::{DateTime, Duration, NaiveTime, Utc};
 use serde::{Deserialize, Serialize};
 use systemprompt::identifiers::{ManagedResourceId, PluginId};
 
-use super::time;
+use super::time::{self, WindowBound};
 use crate::error::AdminError;
 use crate::repositories::analysis::retained::{RetainedSkillRef, RetainedWindow};
 
 #[derive(Debug, Default, Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct AnalysisQuery {
-    #[serde(
-        default,
-        deserialize_with = "time::deserialize",
-        serialize_with = "time::serialize"
-    )]
-    pub start: Option<DateTime<Utc>>,
-    #[serde(
-        default,
-        deserialize_with = "time::deserialize",
-        serialize_with = "time::serialize"
-    )]
-    pub end: Option<DateTime<Utc>>,
+    #[serde(default)]
+    pub start: WindowBound,
+    #[serde(default)]
+    pub end: WindowBound,
     pub resource: Option<String>,
     pub plugin: Option<String>,
     pub skill: Option<String>,

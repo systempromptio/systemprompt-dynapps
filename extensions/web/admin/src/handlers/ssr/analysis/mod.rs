@@ -4,13 +4,12 @@
 //! pipeline's retained tables through `repositories::analysis::retained`.
 use crate::error::{AdminError, AdminHtmlResult, AdminResult};
 use crate::handlers::ssr::list_view::Pagination;
+use crate::handlers::ssr::page::Page;
 use crate::repositories::analysis::inventory_index::InventoryIndex;
 use crate::repositories::analysis::retained::{
     self, PAGE_SIZE, RetainedResourceRef, RetainedSkillRef, RetainedTotals,
 };
 use crate::routes::managed_state::ManagedState;
-use crate::templates::AdminTemplateEngine;
-use crate::types::{MarketplaceContext, UserContext};
 use axum::extract::{Extension, Query, State};
 use axum::response::Response;
 use chrono::Utc;
@@ -83,8 +82,8 @@ async fn load(
     mut query: AnalysisQuery,
 ) -> AdminResult<AnalysisPage> {
     let window = query.window(Utc::now())?;
-    query.start = Some(window.start);
-    query.end = Some(window.end);
+    query.start = window.start.into();
+    query.end = window.end.into();
     let resource = query.resource()?;
     query.resource = resource.as_ref().map(|r| r.as_str().to_owned());
     let skill = query.skill()?;
@@ -146,27 +145,21 @@ async fn load(
     })
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "axum extractor list; the router decides the arity, not this signature"
-)]
 pub(crate) async fn skills_page(
-    Extension(user): Extension<UserContext>,
-    Extension(marketplace): Extension<MarketplaceContext>,
-    Extension(engine): Extension<AdminTemplateEngine>,
+    shell: Page,
     Extension(managed): Extension<Arc<ManagedState>>,
     State(pool): State<Arc<PgPool>>,
     Query(query): Query<AnalysisQuery>,
 ) -> AdminHtmlResult<Response> {
-    if !user.is_console {
+    if !shell.user.is_console {
         return Err(AdminError::Forbidden("Console access required".into()).into());
     }
     let context = load(&managed, &pool, query).await?;
     Ok(super::render_typed_page(
-        &engine,
+        &shell.engine,
         "analysis-skills",
         &context,
-        &user,
-        &marketplace,
+        &shell.user,
+        &shell.marketplace,
     ))
 }

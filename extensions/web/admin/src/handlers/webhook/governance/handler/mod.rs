@@ -5,13 +5,14 @@ mod authn;
 mod denial;
 mod governed;
 mod response;
-use response::build_response;
+use response::HookVerdict;
 
 use std::sync::Arc;
 
-use axum::extract::{Query, State};
+use axum::extract::rejection::ExtensionRejection;
+use axum::extract::{FromRequestParts, Query, State};
 use axum::http::HeaderMap;
-use axum::response::{IntoResponse, Response};
+use axum::http::request::Parts;
 use axum::{Extension, Json};
 use sqlx::PgPool;
 use systemprompt::identifiers::{CallId, ClientId, PluginId, SessionId, UserId};
@@ -136,30 +137,46 @@ async fn evaluate_and_record(
     Ok(evaluation.decision)
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "axum extractor list; the router decides the arity, not this signature"
-)]
+// Why: The gateway's own governance engine and session service, injected by
+// core onto every extension router. Taking the engine from the request rather
+// than building one means this hook charges the same rate-limiter budget as
+// the gateway instead of a second chain's.
+#[derive(Debug, Clone)]
+pub(crate) struct GovernDeps {
+    engine: Arc<GovernanceEngine>,
+    session_service: Arc<SessionCreationService>,
+}
+
+impl<S: Send + Sync> FromRequestParts<S> for GovernDeps {
+    type Rejection = ExtensionRejection;
+
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        let Extension(engine) = Extension::from_request_parts(parts, state).await?;
+        let Extension(session_service) = Extension::from_request_parts(parts, state).await?;
+        Ok(Self {
+            engine,
+            session_service,
+        })
+    }
+}
+
 pub(crate) async fn govern_tool_use(
     State(pool): State<Arc<PgPool>>,
-    // Why: the engine is the gateway's, injected by core onto every extension
-    // router, so this hook charges the same rate-limiter budget as the gateway
-    // instead of a second chain's.
-    Extension(engine): Extension<Arc<GovernanceEngine>>,
-    Extension(session_service): Extension<Arc<SessionCreationService>>,
+    GovernDeps {
+        engine,
+        session_service,
+    }: GovernDeps,
     headers: HeaderMap,
     Query(query): Query<GovernQuery>,
     // JSON: protocol boundary — the third-party hook envelope, parsed into typed
     // events by `HookEventPayload::from_value` after the raw copy is retained
     Json(raw): Json<serde_json::Value>,
-) -> Response {
-    // Why: lint-ok: http-error — a hook answers 200 with a decision; an error
-    // status reads as "hook unavailable" and lets the call through
+) -> HookVerdict {
     let (payload, _warnings) = HookEventPayload::from_value(raw);
 
     let Ok(target) = governed_target(&payload) else {
-        return build_response(
-            &deny_for_auth_failure("Invalid tool identifier"),
+        return HookVerdict::new(
+            deny_for_auth_failure("Invalid tool identifier"),
             response_event(&payload),
         );
     };
@@ -180,24 +197,24 @@ pub(crate) async fn govern_tool_use(
     };
 
     let principal = match authenticate_request(&headers, &denial_params) {
-        Ok(p) => p,
-        Err(e) => return e.into_response(),
+        Ok(principal) => principal,
+        Err(verdict) => return *verdict,
     };
     if let Err(reason) = payload.validate_ingestion() {
-        return build_response(&deny_for_auth_failure(&reason), response_event);
+        return HookVerdict::new(deny_for_auth_failure(&reason), response_event);
     }
     if let Err(error) =
         ingestion::assert_ingestion_owner(&pool, &session_id, &principal.user_id).await
     {
         tracing::error!(%error, "Hook identity binding failed");
-        return build_response(
-            &deny_for_auth_failure("Session binding unavailable"),
+        return HookVerdict::new(
+            deny_for_auth_failure("Session binding unavailable"),
             response_event,
         );
     }
     let access_scope = match resolve_access_scope(&pool, &principal.user_id, &denial_params).await {
         Ok(scope) => scope,
-        Err(reason) => return build_response(&deny_for_auth_failure(reason), response_event),
+        Err(reason) => return HookVerdict::new(deny_for_auth_failure(reason), response_event),
     };
 
     let governed = Governed {
@@ -209,8 +226,8 @@ pub(crate) async fn govern_tool_use(
         access_scope,
         plugin_id,
     };
-    match evaluate_and_record(&pool, &engine, governed).await {
-        Ok(decision) => build_response(&decision, response_event),
-        Err(reason) => build_response(&deny_for_auth_failure(reason), response_event),
-    }
+    let decision = evaluate_and_record(&pool, &engine, governed)
+        .await
+        .unwrap_or_else(deny_for_auth_failure);
+    HookVerdict::new(decision, response_event)
 }

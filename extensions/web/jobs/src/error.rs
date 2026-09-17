@@ -14,6 +14,9 @@ pub enum JobError {
     #[error("Configuration error: {0}")]
     Config(String),
 
+    #[error(transparent)]
+    ExtensionConfig(#[from] systemprompt_web_shared::config_errors::ExtensionConfigErrors),
+
     #[error("Configuration error: {0}")]
     CoreConfig(#[from] systemprompt::models::errors::ConfigError),
 

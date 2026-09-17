@@ -6,8 +6,41 @@
 use crate::tools::CliOutput;
 use rmcp::ErrorData as McpError;
 use std::path::PathBuf;
-use systemprompt::config::ProfileBootstrap;
+use systemprompt::config::{ProfileBootstrap, ProfileBootstrapError};
 use tokio::process::Command;
+
+/// Why a CLI invocation could not produce output.
+///
+/// rmcp's `ErrorData` is a variant-less wire type, so the typed cause lives
+/// here and is projected onto the wire exactly once, in `From`.
+#[derive(Debug, thiserror::Error)]
+pub enum CliError {
+    #[error("profile is not initialised")]
+    Profile(#[from] ProfileBootstrapError),
+    #[error("command arguments do not parse")]
+    Arguments(#[from] shell_words::ParseError),
+    #[error("CLI command did not finish within {}s; narrow the query", CLI_TIMEOUT.as_secs())]
+    Timeout,
+    #[error("CLI command could not be executed")]
+    Spawn(#[from] std::io::Error),
+}
+
+impl From<CliError> for McpError {
+    fn from(error: CliError) -> Self {
+        let message = match &error {
+            CliError::Profile(source) => format!("{error}: {source}"),
+            CliError::Arguments(source) => format!("{error}: {source}"),
+            CliError::Spawn(source) => format!("{error}: {source}"),
+            CliError::Timeout => error.to_string(),
+        };
+        match error {
+            CliError::Arguments(_) => Self::invalid_params(message, None),
+            CliError::Profile(_) | CliError::Timeout | CliError::Spawn(_) => {
+                Self::internal_error(message, None)
+            },
+        }
+    }
+}
 
 /// Where the CLI lives and what directory it runs in.
 ///
@@ -22,10 +55,8 @@ pub struct CliLocation {
 }
 
 impl CliLocation {
-    pub fn from_profile() -> Result<Self, McpError> {
-        let profile = ProfileBootstrap::get()
-            // Why: lint-ok: error-adapt — rmcp's ErrorData is a variant-less wire type
-            .map_err(|e| McpError::internal_error(format!("Failed to get profile: {e}"), None))?;
+    pub fn from_profile() -> Result<Self, CliError> {
+        let profile = ProfileBootstrap::get()?;
 
         Ok(Self {
             bin: PathBuf::from(&profile.paths.bin).join("systemprompt"),
@@ -80,14 +111,11 @@ pub(crate) async fn execute(
     location: &CliLocation,
     command: &str,
     auth_token: &str,
-) -> Result<CliOutput, McpError> {
+) -> Result<CliOutput, CliError> {
     let cli_path = &location.bin;
     let workdir = &location.workdir;
 
-    // Why: lint-ok: error-adapt — rmcp's ErrorData is a variant-less wire type
-    let args = shell_words::split(command).map_err(|e| {
-        McpError::invalid_params(format!("Failed to parse command arguments: {e}"), None)
-    })?;
+    let args = shell_words::split(command)?;
 
     let args = filter_hallucinated_args(args);
 
@@ -108,20 +136,7 @@ pub(crate) async fn execute(
         .output();
     let output = tokio::time::timeout(CLI_TIMEOUT, spawned)
         .await
-        // Why: lint-ok: error-adapt — rmcp's ErrorData is a variant-less wire type
-        .map_err(|_elapsed| {
-            McpError::internal_error(
-                format!(
-                    "CLI command did not finish within {}s; narrow the query",
-                    CLI_TIMEOUT.as_secs()
-                ),
-                None,
-            )
-        })?
-        // Why: lint-ok: error-adapt — rmcp's ErrorData is a variant-less wire type
-        .map_err(|e| {
-            McpError::internal_error(format!("Failed to execute CLI command: {e}"), None)
-        })?;
+        .map_err(|_elapsed| CliError::Timeout)??;
 
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
     let stderr = String::from_utf8_lossy(&output.stderr).to_string();

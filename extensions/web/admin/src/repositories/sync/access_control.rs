@@ -50,9 +50,7 @@ pub async fn declared_now(pool: &PgPool) -> AdminResult<DeclaredSet> {
         &registered,
     )
     .await
-    // Why: 400-boundary classification — an unparsable declaration is the
-    // operator's input, not a server fault. lint-ok: error-adapt
-    .map_err(|e| AdminError::BadRequest(format!("rules.yaml could not be loaded: {e}")))
+    .map_err(|source| AdminError::invalid("rules.yaml could not be loaded", source))
 }
 
 pub async fn drift_now(pool: &PgPool, declared: &DeclaredSet) -> AdminResult<DriftReport> {

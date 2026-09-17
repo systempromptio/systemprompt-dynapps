@@ -4,8 +4,8 @@
 
 use saml::{Identity, NameIdFormat};
 
-use super::AdfsDeps;
 use super::config::AdfsConfig;
+use super::{AdfsDeps, LoginRedirect};
 use crate::repositories::users::{federated, revocation};
 use crate::repositories::{groups, projects};
 
@@ -101,25 +101,29 @@ pub(super) struct GatedIdentity {
 pub(super) fn gate_claims(
     cfg: &AdfsConfig,
     claims: &AssertionClaims,
-) -> Result<GatedIdentity, &'static str> {
-    let email = claims.login_email(cfg).ok_or("no_email")?;
+) -> Result<GatedIdentity, LoginRedirect> {
+    let email = claims.login_email(cfg).ok_or(LoginRedirect("no_email"))?;
     if !cfg.email_allowed(&email) {
         tracing::warn!(email, "ADFS login rejected: domain not allow-listed");
-        return Err("forbidden");
+        return Err(LoginRedirect("forbidden"));
     }
-    let all_groups = claims.values(&cfg.groups_attribute);
+    // Why: every group the assertion carried, in assertion order. Which DB
+    // group or project a name resolves to is decided by `group_ad_mappings`,
+    // and a name that resolves to none leaves the member in the derived
+    // `unassigned` group. Filtering here would hide memberships the database
+    // is able to place.
+    let groups = claims.values(&cfg.groups_attribute);
     // Why: the refusal is "the directory vouched for nobody" — an assertion
     // with no group claim at all. A group the role map does not name is not a
     // refusal: which group a person is in is decided by the DB mapping in
     // services/web/config/groups.yaml, and the role map only says what that
     // membership additionally mints. Denying on an unmapped group would refuse
     // every member of a group IT added before we did.
-    if all_groups.is_empty() && cfg.deny_without_group {
+    if groups.is_empty() && cfg.deny_without_group {
         tracing::warn!(email, "ADFS login rejected: assertion carried no AD group");
-        return Err("no_group");
+        return Err(LoginRedirect("no_group"));
     }
-    let groups = cfg.mapped_groups(&all_groups);
-    let mut roles = cfg.roles_for_groups(&all_groups);
+    let mut roles = cfg.roles_for_groups(&groups);
     if roles.is_empty() {
         roles.push("user".to_owned());
     }
@@ -139,12 +143,12 @@ pub(super) async fn resolve_identity(
     deps: &AdfsDeps,
     idp_entity_id: &str,
     claims: &AssertionClaims,
-) -> Result<federated::ResolvedFederatedUser, &'static str> {
+) -> Result<federated::ResolvedFederatedUser, LoginRedirect> {
     let cfg = &deps.config;
     let gated = match gate_claims(cfg, claims) {
         Ok(gated) => gated,
         Err(reason) => {
-            revoke_on_denial(deps, cfg, claims, reason).await;
+            revoke_on_denial(deps, cfg, claims, reason.0).await;
             return Err(reason);
         },
     };
@@ -161,14 +165,14 @@ pub(super) async fn resolve_identity(
             .await
             .map_err(|e| {
                 tracing::error!(error = %e, "Failed to resolve federated ADFS user");
-                "error"
+                LoginRedirect("error")
             })?
             .ok_or_else(|| {
                 tracing::warn!(
                     email = %gated.email,
                     "ADFS login rejected: auto-provisioning disabled and no existing account"
                 );
-                "not_provisioned"
+                LoginRedirect("not_provisioned")
             })?;
 
     // Why: the assertion's groups are replayed onto both memberships as the
@@ -193,8 +197,6 @@ pub(super) async fn resolve_identity(
     {
         tracing::warn!(error = %e, user_id = %resolved.user_id, "Failed to persist ADFS project memberships");
     }
-    crate::authz::group::invalidate(&resolved.user_id).await;
-    crate::authz::project::invalidate(&resolved.user_id).await;
 
     // Why: `permissions_for_roles` baked `Permission::Admin` into every token
     // minted while the user was still in the admins group, and those tokens

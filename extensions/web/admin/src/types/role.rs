@@ -118,6 +118,8 @@ pub enum RoleChangeRefusal {
     DirectoryRole(String),
 }
 
+impl std::error::Error for RoleChangeRefusal {}
+
 impl fmt::Display for RoleChangeRefusal {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {

@@ -19,6 +19,7 @@ use crate::types::{MarketplaceContext, UserContext};
 
 use super::list_view::Pagination;
 use super::types::BreadcrumbView;
+use crate::handlers::ssr::page::Page;
 
 mod detail;
 mod detail_view;
@@ -52,19 +53,13 @@ pub(crate) async fn projects_page(
     ))
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "page query plumbing; splitting the parameters is tracked in docs/tech-debt.md"
-)]
 pub(crate) async fn project_detail_page(
-    Extension(user_ctx): Extension<UserContext>,
-    Extension(mkt_ctx): Extension<MarketplaceContext>,
-    Extension(engine): Extension<AdminTemplateEngine>,
+    shell: Page,
     State(pool): State<Arc<PgPool>>,
     Path(project_id): Path<ProjectId>,
     Query(query): Query<ProjectTabQuery>,
 ) -> AdminHtmlResult<Response> {
-    if !user_ctx.is_console {
+    if !shell.user.is_console {
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
     }
 
@@ -74,7 +69,7 @@ pub(crate) async fn project_detail_page(
     };
 
     let tab = active_tab(query.tab.as_deref());
-    let loaded = detail::load(&pool, &project_id, &user_ctx).await;
+    let loaded = detail::load(&pool, &project_id, &shell.user).await;
     let usage = if tab == "usage" {
         Some(detail::load_usage(&pool, &project_id).await)
     } else {
@@ -89,7 +84,7 @@ pub(crate) async fn project_detail_page(
     let data = detail::page_data(
         &project,
         &loaded,
-        &user_ctx,
+        &shell.user,
         detail::TabReads {
             tab,
             usage: usage.as_ref(),
@@ -98,11 +93,11 @@ pub(crate) async fn project_detail_page(
         },
     );
     Ok(super::render_typed_page(
-        &engine,
+        &shell.engine,
         "project-detail",
         &data,
-        &user_ctx,
-        &mkt_ctx,
+        &shell.user,
+        &shell.marketplace,
     ))
 }
 

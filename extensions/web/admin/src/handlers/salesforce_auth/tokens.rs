@@ -86,8 +86,7 @@ pub(crate) async fn salesforce_token_handler(
     })?;
     let fresh = salesforce_jwt_bearer::get_token(&deps.config, &username, &private_key)
         .await
-        // Why: lint-ok: error-adapt — deliberate 502 re-classification, see above
-        .map_err(|e| AdminError::Upstream(format!("Salesforce token mint failed: {e}")))?;
+        .map_err(|source| AdminError::upstream("Salesforce token mint failed", source))?;
 
     Ok(Json(TokenResponse {
         access_token: fresh.access_token,

@@ -30,13 +30,12 @@ use crate::repositories::scope::ScopeRequest;
 use crate::repositories::users::roster::{
     DEFAULT_PAGE_SIZE, RosterFilter, RosterQuery, RosterSort,
 };
-use crate::templates::AdminTemplateEngine;
-use crate::types::{MarketplaceContext, UserContext};
 
 use context::{CreateUserChoiceView, CreateUserPanelView, RosterContext};
 use form::{preserved_hidden, role_options};
 
 use super::BASE_URL;
+use crate::handlers::ssr::page::Page;
 
 // Why: one value so every link builder asks the same question — "the current
 // URL, minus these parameters" — instead of each one re-deriving the url it
@@ -146,19 +145,13 @@ async fn load_roster(
     })
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "axum extractors: every argument is one request-scoped dependency"
-)]
 pub(crate) async fn users_page(
-    Extension(user_ctx): Extension<UserContext>,
-    Extension(mkt_ctx): Extension<MarketplaceContext>,
+    shell: Page,
     Extension(sso): Extension<crate::handlers::adfs_auth::AdfsDeps>,
-    Extension(engine): Extension<AdminTemplateEngine>,
     State(pool): State<Arc<PgPool>>,
     Query(params): Query<RosterQueryParams>,
 ) -> AdminHtmlResult<Response> {
-    if !user_ctx.is_console {
+    if !shell.user.is_console {
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
     }
 
@@ -172,7 +165,8 @@ pub(crate) async fn users_page(
         page: params.page.unwrap_or(0).max(0),
     };
 
-    let request = ScopeRequest::from_query(&user_ctx, url.group.as_deref(), url.project.as_deref());
+    let request =
+        ScopeRequest::from_query(&shell.user, url.group.as_deref(), url.project.as_deref());
     let scope = repositories::scope::membership::get_subject_scope(&pool, &request).await?;
     let read = load_roster(&pool, &scope, &url).await?;
 
@@ -193,7 +187,7 @@ pub(crate) async fn users_page(
         role_options: role_options(&read.roles, url.role.as_deref()),
         search: url.search.clone().unwrap_or_default(),
         scope_filter: super::super::list_view::scope_filter_from_names(
-            &user_ctx,
+            &shell.user,
             &request,
             BASE_URL,
             preserved_hidden(&url),
@@ -207,13 +201,17 @@ pub(crate) async fn users_page(
         row_count: rows.len(),
         rows,
         pagination: view::build_pagination(&url, window),
-        can_write: user_ctx.is_admin,
+        can_write: shell.user.is_admin,
         role_choices: read.roles,
-        create_user: create_user_panel(&pool, &sso.config, user_ctx.is_admin).await,
+        create_user: create_user_panel(&pool, &sso.config, shell.user.is_admin).await,
     };
 
     Ok(super::super::render_typed_page(
-        &engine, "users", &data, &user_ctx, &mkt_ctx,
+        &shell.engine,
+        "users",
+        &data,
+        &shell.user,
+        &shell.marketplace,
     ))
 }
 

@@ -18,8 +18,7 @@ use crate::error::{AdminError, AdminHtmlResult, AdminResult};
 use crate::repositories::analysis::inventory_index::MarketplaceRef;
 use crate::repositories::analysis::snapshot_figures::SnapshotFigures;
 use crate::routes::managed_state::ManagedState;
-use crate::templates::AdminTemplateEngine;
-use crate::types::{MarketplaceContext, UserContext};
+use crate::types::UserContext;
 use axum::extract::{Query, State};
 use axum::response::Response;
 use axum::{Extension, Json};
@@ -38,6 +37,7 @@ pub(crate) mod groups;
 mod plan;
 mod range;
 pub(crate) mod rows;
+use crate::handlers::ssr::page::Page;
 use collisions::Collision;
 use derived::{Derived, InventoryMarketplaceOption, Onboarding, SelectedMarketplace};
 use evidence::{Evidence, expand_rows};
@@ -96,25 +96,19 @@ pub(crate) struct PortfolioPage {
     onboarding: Option<Onboarding>,
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "axum extractor list; the router decides the arity, not this signature"
-)]
 pub(crate) async fn page(
-    Extension(user): Extension<UserContext>,
-    Extension(marketplace): Extension<MarketplaceContext>,
-    Extension(engine): Extension<AdminTemplateEngine>,
+    shell: Page,
     Extension(managed): Extension<Arc<ManagedState>>,
     State(pool): State<Arc<PgPool>>,
     Query(query): Query<PortfolioQuery>,
 ) -> AdminHtmlResult<Response> {
-    let data = load(&managed, &pool, &user, query).await?;
+    let data = load(&managed, &pool, &shell.user, query).await?;
     Ok(super::super::render_typed_page(
-        &engine,
+        &shell.engine,
         "analysis-portfolio",
         &data,
-        &user,
-        &marketplace,
+        &shell.user,
+        &shell.marketplace,
     ))
 }
 

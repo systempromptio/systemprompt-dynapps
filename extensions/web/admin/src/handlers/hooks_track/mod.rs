@@ -21,7 +21,9 @@ use crate::repositories::marketplace::webhook;
 use crate::types::webhook::HookEventPayload;
 use auth::extract_and_validate_jwt;
 use axum::Json;
-use axum::extract::{Extension, State};
+use axum::extract::rejection::ExtensionRejection;
+use axum::extract::{Extension, FromRequestParts, State};
+use axum::http::request::Parts;
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
 use sha2::Digest;
@@ -30,14 +32,36 @@ use std::sync::Arc;
 use systemprompt::ai::AiService;
 use systemprompt::identifiers::{PluginId, SessionId, UserId};
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "axum extractors: each argument is one injected dependency or one part of the request"
-)]
+// Why: The three services a tracked hook event is handed to, taken as one
+// extractor so the handler's arguments are the request's own parts.
+#[derive(Debug, Clone)]
+pub(crate) struct TrackDeps {
+    managed: systemprompt::marketplace::managed::ManagedRepository,
+    event_hub: EventHub,
+    ai_service: Option<Arc<AiService>>,
+}
+
+impl<S: Send + Sync> FromRequestParts<S> for TrackDeps {
+    type Rejection = ExtensionRejection;
+
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        let Extension(managed) = Extension::from_request_parts(parts, state).await?;
+        let Extension(event_hub) = Extension::from_request_parts(parts, state).await?;
+        let Extension(ai_service) = Extension::from_request_parts(parts, state).await?;
+        Ok(Self {
+            managed,
+            event_hub,
+            ai_service,
+        })
+    }
+}
+
 pub(crate) async fn handle_hook_track(
-    Extension(managed): Extension<systemprompt::marketplace::managed::ManagedRepository>,
-    Extension(event_hub): Extension<EventHub>,
-    Extension(ai_service): Extension<Option<Arc<AiService>>>,
+    TrackDeps {
+        managed,
+        event_hub,
+        ai_service,
+    }: TrackDeps,
     State(pool): State<Arc<PgPool>>,
     headers: HeaderMap,
     // JSON: protocol boundary — the third-party hook envelope, parsed into typed

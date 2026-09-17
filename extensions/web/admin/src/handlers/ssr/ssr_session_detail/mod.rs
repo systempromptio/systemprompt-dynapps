@@ -11,7 +11,7 @@ use super::ssr_helpers::Viewer;
 use crate::error::AdminError;
 use std::sync::Arc;
 
-use axum::extract::{Extension, Path, State};
+use axum::extract::{Path, State};
 use axum::response::Response;
 use sqlx::PgPool;
 use systemprompt::identifiers::SessionId;
@@ -21,6 +21,7 @@ use crate::handlers::ssr::entity_urls::{context_detail_url, request_detail_url, 
 use crate::handlers::ssr::format::{
     format_cost, format_duration_ms, format_token_total, local_time, short_id,
 };
+use crate::handlers::ssr::page::Page;
 use crate::repositories::analytics::session_detail::{
     SessionContextRow, SessionHeader, SessionKpis, SessionRequestRow, SessionTraceRow,
     find_session_header, get_session_kpis, list_session_contexts, list_session_requests,
@@ -29,8 +30,6 @@ use crate::repositories::analytics::session_detail::{
 use crate::repositories::analytics::session_quality::{
     SessionAnalysisSummary, SessionRatingRow, find_session_analysis, list_session_ratings,
 };
-use crate::templates::AdminTemplateEngine;
-use crate::types::{MarketplaceContext, UserContext};
 
 use context::{
     BreadcrumbView, SessionContextRowView, SessionDetailPageContext, SessionHeaderView,
@@ -80,19 +79,13 @@ async fn load_session(pool: &PgPool, session_id: &SessionId) -> SessionRead {
     }
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "axum handler: every argument is an extractor"
-)]
 pub(crate) async fn session_detail_page(
-    Extension(user_ctx): Extension<UserContext>,
-    Extension(mkt_ctx): Extension<MarketplaceContext>,
-    Extension(engine): Extension<AdminTemplateEngine>,
+    shell: Page,
     State(pool): State<Arc<PgPool>>,
     Path(session_id): Path<String>,
     view: super::export::ViewMode,
 ) -> AdminHtmlResult<Response> {
-    if !user_ctx.is_console {
+    if !shell.user.is_console {
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
     }
 
@@ -134,10 +127,10 @@ pub(crate) async fn session_detail_page(
     };
 
     Ok(view.respond(
-        &engine,
+        &shell.engine,
         "session-detail",
         &data,
-        Viewer::new(&user_ctx, &mkt_ctx),
+        Viewer::new(&shell.user, &shell.marketplace),
     ))
 }
 

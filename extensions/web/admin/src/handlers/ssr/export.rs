@@ -86,17 +86,12 @@ impl ViewMode {
         data: &T,
         viewer: Viewer<'_>,
     ) -> Response {
-        // Why: lint-ok: http-error — renders the page or its download; the
-        // callers are AdminResult handlers whose error variants pick statuses.
         if self.export {
             return self.download(template, data);
         }
         super::ssr_helpers::render_shell(engine, template, data, viewer, Some(self))
     }
 
-    // Why: genuinely renders the finished download, never an error — the
-    // callers are AdminResult handlers and their error variants pick statuses.
-    // Why: lint-ok: http-error
     fn download<T: Serialize>(&self, page: &str, data: &T) -> Response {
         let exported_at = chrono::Utc::now();
         let envelope = Envelope {

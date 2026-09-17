@@ -133,11 +133,7 @@ fn delta(current: i64, previous: i64, rising: Rising) -> (Option<String>, Option
     if previous <= 0 {
         return (None, None);
     }
-    #[expect(
-        clippy::cast_precision_loss,
-        reason = "a display percentage; the magnitudes here are far below f64's exact range"
-    )]
-    let pct = ((current - previous) as f64 / previous as f64) * 100.0;
+    let pct = crate::numeric::percentage(current - previous, previous);
     let rounded = pct.round();
     if rounded == 0.0 {
         return (Some("0%".to_owned()), None);

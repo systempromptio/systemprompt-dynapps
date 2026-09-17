@@ -65,9 +65,7 @@ pub(crate) async fn refresh_sources_handler(
         .bearer_auth(token)
         .send()
         .await
-        // Why: reqwest has no variant of its own; an unreachable local
-        // listener is a 502 by design. lint-ok: error-adapt
-        .map_err(|e| AdminError::Upstream(format!("services refresh unreachable: {e}")))?;
+        .map_err(|source| AdminError::upstream("services refresh unreachable", source))?;
     let status = resp.status();
     // Why: the body only decorates the error message; one that cannot be read
     // still reports the status it came with.
@@ -83,9 +81,7 @@ pub(crate) async fn refresh_sources_handler(
         });
     }
     let parsed: CoreRefreshResponse = serde_json::from_str(&body)
-        // Why: a reply core produced that does not parse is an upstream fault
-        // by design. lint-ok: error-adapt
-        .map_err(|e| AdminError::Upstream(format!("services refresh reply unreadable: {e}")))?;
+        .map_err(|source| AdminError::upstream("services refresh reply unreadable", source))?;
     activity::record(
         &pool,
         NewActivity::sources_refreshed(&user_ctx.user_id, parsed.changed, parsed.reconciled),

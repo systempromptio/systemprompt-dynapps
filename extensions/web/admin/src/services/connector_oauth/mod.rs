@@ -78,11 +78,7 @@ pub fn seal(grant: &Grant) -> AdminResult<EncryptedGrant> {
     })
 }
 
-#[expect(
-    clippy::needless_pass_by_value,
-    reason = "Preserves the public provider API for embedded callers"
-)]
-pub fn open(row: &EncryptedGrant, user: &UserId, provider: Provider) -> AdminResult<Grant> {
+pub fn open(row: &EncryptedGrant, user: &UserId, provider: &Provider) -> AdminResult<Grant> {
     let key = secret_crypto::load_master_key()?;
     let nonce = row
         .nonce
@@ -143,7 +139,7 @@ async fn open_or_flag(
     row: &EncryptedGrant,
     account: &mut crate::repositories::users::connector_accounts::ProviderConnection,
 ) -> AdminResult<Grant> {
-    match open(row, user, provider.clone()) {
+    match open(row, user, provider) {
         Ok(grant) => Ok(grant),
         Err(error) => {
             if matches!(error, AdminError::Unauthorized(_)) {

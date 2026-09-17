@@ -199,6 +199,6 @@ pub(crate) async fn list_events_handler(
     State(pool): State<Arc<PgPool>>,
     Query(query): Query<EventsQuery>,
 ) -> AdminResult<Response> {
-    let response = repositories::dashboard::list_events(&pool, &query).await?;
+    let response = repositories::dashboard::get_events_page(&pool, &query).await?;
     Ok(Json(response).into_response())
 }

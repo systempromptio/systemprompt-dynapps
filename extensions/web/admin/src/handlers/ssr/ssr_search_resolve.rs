@@ -72,7 +72,6 @@ pub(crate) async fn search_resolve(
 }
 
 fn unresolved() -> Response {
-    // Why: lint-ok: http-error — a successful "no match", not a failure
     Json(SearchResponse {
         kind: "none",
         url: None,

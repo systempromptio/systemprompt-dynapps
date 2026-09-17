@@ -130,56 +130,61 @@ fn source_cards(
             }
         }
     }
-    let mut cards = vec![card(
+    let base = SourceCard::identity(
         "base".to_owned(),
         "base".to_owned(),
         sources.base.tree_hash.clone(),
-        None,
-        None,
         Some(sources.base.version.to_owned()),
-        &first,
-        hash,
-    )];
-    cards.extend(sources.bundles.iter().map(|bundle| {
-        card(
-            bundle.name.clone(),
-            bundle.owner_key.clone(),
-            bundle.content_hash.clone(),
-            bundle.pinned_digest.clone(),
-            bundle.active_digest.clone(),
-            bundle.version.clone(),
-            &first,
-            hash,
-        )
-    }));
-    cards
+    );
+    std::iter::once(base)
+        .chain(sources.bundles.iter().map(|bundle| {
+            SourceCard::identity(
+                bundle.name.clone(),
+                bundle.owner_key.clone(),
+                bundle.content_hash.clone(),
+                bundle.version.clone(),
+            )
+            .pinned(bundle.pinned_digest.clone(), bundle.active_digest.clone())
+        }))
+        .map(|card| card.observed(&first, hash))
+        .collect()
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "one card is assembled from two unrelated sources; a builder here would be ceremony"
-)]
-fn card(
-    name: String,
-    owner_key: String,
-    content_hash: Option<String>,
-    pinned_digest: Option<String>,
-    active_digest: Option<String>,
-    version: Option<String>,
-    first: &BTreeMap<String, (i64, String)>,
-    hash: Option<&str>,
-) -> SourceCard {
-    let seen = content_hash.as_ref().and_then(|value| first.get(value));
-    SourceCard {
-        content_hash_short: content_hash.as_deref().map(short),
-        highlighted: hash.is_some() && hash == content_hash.as_deref(),
-        first_generation: seen.map(|(generation, _)| *generation),
-        last_changed: seen.map(|(_, at)| at.clone()),
-        name,
-        owner_key,
-        content_hash,
-        pinned_digest,
-        active_digest,
-        version,
+impl SourceCard {
+    fn identity(
+        name: String,
+        owner_key: String,
+        content_hash: Option<String>,
+        version: Option<String>,
+    ) -> Self {
+        Self {
+            content_hash_short: content_hash.as_deref().map(short),
+            name,
+            owner_key,
+            content_hash,
+            pinned_digest: None,
+            active_digest: None,
+            version,
+            first_generation: None,
+            last_changed: None,
+            highlighted: false,
+        }
+    }
+
+    fn pinned(mut self, pinned_digest: Option<String>, active_digest: Option<String>) -> Self {
+        self.pinned_digest = pinned_digest;
+        self.active_digest = active_digest;
+        self
+    }
+
+    fn observed(mut self, first: &BTreeMap<String, (i64, String)>, hash: Option<&str>) -> Self {
+        let seen = self
+            .content_hash
+            .as_ref()
+            .and_then(|value| first.get(value));
+        self.first_generation = seen.map(|(generation, _)| *generation);
+        self.last_changed = seen.map(|(_, at)| at.clone());
+        self.highlighted = hash.is_some() && hash == self.content_hash.as_deref();
+        self
     }
 }

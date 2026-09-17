@@ -4,6 +4,7 @@
 //! `storage/files/admin/templates/analytics-dashboard.hbs`.
 
 use serde::Serialize;
+use serde::ser::SerializeMap;
 
 use crate::handlers::ssr::types::{PieView, SvgLineChartView, SvgStackedChartView};
 
@@ -53,14 +54,32 @@ impl DashboardTab {
             Self::Cost => "cost",
         }
     }
+
+    const ALL: [Self; 6] = [
+        Self::Overview,
+        Self::Models,
+        Self::Skills,
+        Self::Tools,
+        Self::Sessions,
+        Self::Cost,
+    ];
 }
 
-#[expect(
-    clippy::struct_excessive_bools,
-    reason = "one is_* flag per tab plus the template's has_* guards; handlebars branches on \
-              flat booleans, so folding them into an enum would just move the bools into the \
-              serializer"
-)]
+// Why: The active tab, projected onto the `is_<tab>` flags the template
+// branches on: one `true` and the rest `false`, flattened into the page.
+#[derive(Debug, Clone, Copy)]
+pub(super) struct ActiveDashboardTab(pub(super) DashboardTab);
+
+impl Serialize for ActiveDashboardTab {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut map = serializer.serialize_map(Some(DashboardTab::ALL.len()))?;
+        for tab in DashboardTab::ALL {
+            map.serialize_entry(&format!("is_{}", tab.as_str()), &(tab == self.0))?;
+        }
+        map.end()
+    }
+}
+
 #[derive(Debug, Serialize)]
 pub(super) struct AnalyticsDashboardContext {
     pub page: &'static str,
@@ -72,12 +91,8 @@ pub(super) struct AnalyticsDashboardContext {
     // which cost a row of vertical space the tables needed.
     pub toolbar_count: String,
     pub breadcrumbs: Vec<Crumb>,
-    pub is_overview: bool,
-    pub is_models: bool,
-    pub is_skills: bool,
-    pub is_tools: bool,
-    pub is_sessions: bool,
-    pub is_cost: bool,
+    #[serde(flatten)]
+    pub active: ActiveDashboardTab,
     // Why: the one thing a reader must be told before summing a column. Member
     // attribution counts a person in every container they belong to, so the
     // rows deliberately overlap and the page says so rather than letting the

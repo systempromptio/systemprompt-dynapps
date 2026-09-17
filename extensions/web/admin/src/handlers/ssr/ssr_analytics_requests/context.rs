@@ -3,6 +3,7 @@
 //! `storage/files/admin/templates/analytics-requests.hbs` and its tab partials.
 
 use serde::Serialize;
+use serde::ser::SerializeMap;
 use systemprompt::identifiers::{AiRequestId, SessionId, TraceId, UserId};
 use systemprompt_web_shared::{GroupId, ProjectId};
 
@@ -43,12 +44,29 @@ impl RequestsTab {
             Self::Status => "status",
         }
     }
+
+    // Why: the three rollup tabs share one template branch; the log and the
+    // overview each have their own.
+    const fn is_breakdown(self) -> bool {
+        matches!(self, Self::Models | Self::Providers | Self::Status)
+    }
 }
 
-#[expect(
-    clippy::struct_excessive_bools,
-    reason = "one flag per tab is what the template branches on"
-)]
+// Why: The active tab, projected onto the `is_overview` / `is_breakdown` /
+// `is_log` flags the template branches on and flattened into the page.
+#[derive(Debug, Clone, Copy)]
+pub(super) struct ActiveRequestsTab(pub(super) RequestsTab);
+
+impl Serialize for ActiveRequestsTab {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut map = serializer.serialize_map(Some(3))?;
+        map.serialize_entry("is_overview", &(self.0 == RequestsTab::Overview))?;
+        map.serialize_entry("is_breakdown", &self.0.is_breakdown())?;
+        map.serialize_entry("is_log", &(self.0 == RequestsTab::Log))?;
+        map.end()
+    }
+}
+
 #[derive(Debug, Serialize)]
 pub(super) struct AnalyticsRequestsPageContext {
     pub page: &'static str,
@@ -56,9 +74,8 @@ pub(super) struct AnalyticsRequestsPageContext {
     pub breadcrumbs: Vec<BreadcrumbView>,
     pub time_range: TimeRangeView,
     pub tabs: Vec<TabLinkView>,
-    pub is_overview: bool,
-    pub is_breakdown: bool,
-    pub is_log: bool,
+    #[serde(flatten)]
+    pub active: ActiveRequestsTab,
     pub kpis: RequestKpiView,
     pub stats: RequestStatsView,
     pub histogram: HistogramView,

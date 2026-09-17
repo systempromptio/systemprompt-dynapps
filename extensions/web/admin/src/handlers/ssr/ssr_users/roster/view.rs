@@ -82,11 +82,7 @@ fn delta(current: i64, prior: i64) -> (String, &'static str) {
     if prior == 0 {
         return (String::new(), "flat");
     }
-    #[expect(
-        clippy::cast_precision_loss,
-        reason = "a display percentage; the magnitudes here are far below f64's exact range"
-    )]
-    let pct = ((current - prior) as f64 / prior as f64) * 100.0;
+    let pct = crate::numeric::percentage(current - prior, prior);
     let dir = if pct > 1.0 {
         "up"
     } else if pct < -1.0 {

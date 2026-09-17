@@ -17,7 +17,7 @@
 use super::ssr_helpers::Viewer;
 use std::sync::Arc;
 
-use axum::extract::{Extension, Query, State};
+use axum::extract::{Query, State};
 use axum::response::Response;
 use serde::Deserialize;
 use sqlx::PgPool;
@@ -34,8 +34,7 @@ use crate::repositories::analytics::conversation_rows::{
 };
 use crate::repositories::governance::filter_options::{FilterOptions, get_filter_options};
 use crate::repositories::scope::{ScopeRequest, SubjectScope};
-use crate::templates::AdminTemplateEngine;
-use crate::types::{MarketplaceContext, UserContext};
+use crate::types::UserContext;
 use crate::util::time_range::{TimeRange, TimeRangePreset, TimeRangeQuery, parse_time_range};
 
 mod context;
@@ -43,6 +42,7 @@ mod rows;
 mod summary;
 mod view;
 
+use crate::handlers::ssr::page::Page;
 use context::{CurrentSessionView, FilterRibbon, SessionsListPageContext};
 
 const BASE_URL: &str = "/admin/sessions";
@@ -63,19 +63,13 @@ pub(crate) struct SessionListQuery {
     pub project: Option<String>,
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "axum handler: every argument is an extractor"
-)]
 pub(crate) async fn sessions_list_page(
-    Extension(user_ctx): Extension<UserContext>,
-    Extension(mkt_ctx): Extension<MarketplaceContext>,
-    Extension(engine): Extension<AdminTemplateEngine>,
+    shell: Page,
     State(pool): State<Arc<PgPool>>,
     Query(query): Query<SessionListQuery>,
     view: super::export::ViewMode,
 ) -> AdminHtmlResult<Response> {
-    if !user_ctx.is_console {
+    if !shell.user.is_console {
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
     }
 
@@ -86,14 +80,17 @@ pub(crate) async fn sessions_list_page(
     });
     let page = query.page.unwrap_or(0).max(0);
 
-    let request =
-        ScopeRequest::from_query(&user_ctx, query.group.as_deref(), query.project.as_deref());
+    let request = ScopeRequest::from_query(
+        &shell.user,
+        query.group.as_deref(),
+        query.project.as_deref(),
+    );
     let subjects =
         crate::repositories::scope::membership::get_subject_scope(&pool, &request).await?;
 
     let ctx = load_sessions_data(
         &pool,
-        &user_ctx,
+        &shell.user,
         SessionScope {
             request: &request,
             subjects,
@@ -102,7 +99,12 @@ pub(crate) async fn sessions_list_page(
         SessionWindow { range, page },
     )
     .await;
-    Ok(view.respond(&engine, "sessions", &ctx, Viewer::new(&user_ctx, &mkt_ctx)))
+    Ok(view.respond(
+        &shell.engine,
+        "sessions",
+        &ctx,
+        Viewer::new(&shell.user, &shell.marketplace),
+    ))
 }
 
 // Why: the resolved window and page travel together.

@@ -7,10 +7,9 @@ use serde::Serialize;
 
 use super::generations::short;
 use crate::error::{AdminError, AdminHtmlResult};
+use crate::handlers::ssr::page::Page;
 use crate::repositories::analysis::source_generations::{self, GenerationEntry, SourceGeneration};
 use crate::routes::managed_state::ManagedState;
-use crate::templates::AdminTemplateEngine;
-use crate::types::{MarketplaceContext, UserContext};
 use axum::Extension;
 use axum::extract::{Path, State};
 use axum::response::Response;
@@ -48,19 +47,13 @@ struct ComparePage {
     revisions_count: usize,
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "axum extractor list; the router decides the arity, not this signature"
-)]
 pub(crate) async fn compare_page(
-    Extension(user): Extension<UserContext>,
-    Extension(marketplace): Extension<MarketplaceContext>,
-    Extension(engine): Extension<AdminTemplateEngine>,
+    shell: Page,
     Extension(state): Extension<Arc<ManagedState>>,
     State(pool): State<Arc<PgPool>>,
     Path((baseline, candidate)): Path<(String, String)>,
 ) -> AdminHtmlResult<Response> {
-    super::require_console(&user)?;
+    super::require_console(&shell.user)?;
     let owner = &state.owner;
     let missing = || AdminError::NotFound("Unknown inventory generation".to_owned());
     let (baseline, candidate): (i64, i64) = match (baseline.parse(), candidate.parse()) {
@@ -102,11 +95,11 @@ pub(crate) async fn compare_page(
         candidate,
     };
     Ok(crate::handlers::ssr::render_typed_page(
-        &engine,
+        &shell.engine,
         "analysis-generation-compare",
         &data,
-        &user,
-        &marketplace,
+        &shell.user,
+        &shell.marketplace,
     ))
 }
 

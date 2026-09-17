@@ -13,7 +13,7 @@
 use super::super::ssr_helpers::Viewer;
 use std::sync::Arc;
 
-use axum::extract::{Extension, Path, State};
+use axum::extract::{Path, State};
 use axum::response::Response;
 use serde::Serialize;
 use sqlx::PgPool;
@@ -25,6 +25,7 @@ use crate::handlers::ssr::conversation_header::{
     timeline_display,
 };
 use crate::handlers::ssr::entity_urls::context_detail_url;
+use crate::handlers::ssr::page::Page;
 use crate::handlers::ssr::transcript_view::{
     ConversationView, TranscriptOptions, build_conversation, transcript_request_ids,
 };
@@ -33,8 +34,6 @@ use crate::repositories::analytics::context_detail::{
     list_tool_calls_for_requests,
 };
 use crate::repositories::analytics::conversations::history_scope_for;
-use crate::templates::AdminTemplateEngine;
-use crate::types::{MarketplaceContext, UserContext};
 
 #[derive(Debug, Serialize)]
 struct ConversationPageContext {
@@ -53,14 +52,8 @@ fn not_found() -> AdminError {
     AdminError::NotFound("No conversation matches that id.".to_owned())
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "axum handler: every argument is an extractor"
-)]
 pub(crate) async fn history_conversation_page(
-    Extension(user_ctx): Extension<UserContext>,
-    Extension(mkt_ctx): Extension<MarketplaceContext>,
-    Extension(engine): Extension<AdminTemplateEngine>,
+    shell: Page,
     State(pool): State<Arc<PgPool>>,
     Path(context_id): Path<String>,
     view: super::super::export::ViewMode,
@@ -79,7 +72,7 @@ pub(crate) async fn history_conversation_page(
     // confirm that a context with this id exists and say whose it is not,
     // which turns the URL into an oracle for enumerating other people's
     // conversation ids.
-    let scope = history_scope_for(&user_ctx);
+    let scope = history_scope_for(&shell.user);
     let owned = header
         .user_id
         .as_ref()
@@ -124,13 +117,13 @@ pub(crate) async fn history_conversation_page(
         status_badge: status_badge(header.hook_status.as_deref(), kpis.error_count),
         timeline: timeline_display(kpis.first_request_at, kpis.last_request_at),
         conversation,
-        admin_url: user_ctx.is_admin.then(|| context_detail_url(&context_id)),
+        admin_url: shell.user.is_admin.then(|| context_detail_url(&context_id)),
     };
 
     Ok(view.respond(
-        &engine,
+        &shell.engine,
         "history-conversation",
         &data,
-        Viewer::new(&user_ctx, &mkt_ctx),
+        Viewer::new(&shell.user, &shell.marketplace),
     ))
 }

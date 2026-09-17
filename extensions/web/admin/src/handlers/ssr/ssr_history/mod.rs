@@ -28,7 +28,6 @@ pub(crate) use kind::HistoryView;
 pub use view::command_name;
 pub(crate) use view::row_view;
 
-use super::ssr_helpers::Viewer;
 use std::sync::Arc;
 
 use axum::Json;
@@ -43,9 +42,9 @@ use crate::handlers::ssr::list_view::PageWindow;
 use crate::repositories::analytics::conversations::{
     HistoryFilter, HistoryItem, HistoryScope, list_history_items, redact_text,
 };
-use crate::templates::AdminTemplateEngine;
-use crate::types::{MarketplaceContext, UserContext};
+use crate::types::UserContext;
 
+use crate::handlers::ssr::page::Page;
 use context::HistoryPageContext;
 use view::{build_pagination, detail_url, scope_label, side_toggle_url};
 
@@ -183,80 +182,32 @@ pub(crate) async fn history_search(
     .into_response())
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "axum handler: every argument is an extractor"
-)]
 pub(crate) async fn history_page(
-    Extension(user_ctx): Extension<UserContext>,
-    Extension(mkt_ctx): Extension<MarketplaceContext>,
-    Extension(engine): Extension<AdminTemplateEngine>,
+    shell: Page,
     State(pool): State<Arc<PgPool>>,
     Query(query): Query<HistoryQuery>,
     mode: super::export::ViewMode,
 ) -> AdminHtmlResult<Response> {
-    render_listing(
-        &ListingRequest {
-            user_ctx: &user_ctx,
-            mkt_ctx: &mkt_ctx,
-            engine: &engine,
-            pool: &pool,
-            mode: &mode,
-        },
-        &query,
-        HistoryView::Own,
-    )
-    .await
+    render_listing(&shell, &pool, &mode, &query, HistoryView::Own).await
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "axum handler: every argument is an extractor"
-)]
 pub(crate) async fn conversations_page(
-    Extension(user_ctx): Extension<UserContext>,
-    Extension(mkt_ctx): Extension<MarketplaceContext>,
-    Extension(engine): Extension<AdminTemplateEngine>,
+    shell: Page,
     State(pool): State<Arc<PgPool>>,
     Query(query): Query<HistoryQuery>,
     mode: super::export::ViewMode,
 ) -> AdminHtmlResult<Response> {
-    render_listing(
-        &ListingRequest {
-            user_ctx: &user_ctx,
-            mkt_ctx: &mkt_ctx,
-            engine: &engine,
-            pool: &pool,
-            mode: &mode,
-        },
-        &query,
-        HistoryView::Org,
-    )
-    .await
-}
-
-// Why: the extensions every SSR handler is handed, gathered so the two
-// listing entry points can share one renderer inside clippy's argument cap.
-struct ListingRequest<'a> {
-    user_ctx: &'a UserContext,
-    mkt_ctx: &'a MarketplaceContext,
-    engine: &'a AdminTemplateEngine,
-    pool: &'a PgPool,
-    mode: &'a super::export::ViewMode,
+    render_listing(&shell, &pool, &mode, &query, HistoryView::Org).await
 }
 
 async fn render_listing(
-    req: &ListingRequest<'_>,
+    shell: &Page,
+    pool: &PgPool,
+    mode: &super::export::ViewMode,
     query: &HistoryQuery,
     view: HistoryView,
 ) -> AdminHtmlResult<Response> {
-    let ListingRequest {
-        user_ctx,
-        mkt_ctx,
-        engine,
-        pool,
-        mode,
-    } = *req;
+    let user_ctx = &shell.user;
     let slice = fetch_history_slice(pool, user_ctx, query, view).await?;
 
     let rows: Vec<HistoryRowView> = slice
@@ -287,10 +238,5 @@ async fn render_listing(
         pagination: build_pagination(query, window, base),
         breadcrumbs: view.breadcrumbs(),
     };
-    Ok(mode.respond(
-        engine,
-        view.template(),
-        &data,
-        Viewer::new(user_ctx, mkt_ctx),
-    ))
+    Ok(mode.respond(&shell.engine, view.template(), &data, shell.viewer()))
 }

@@ -19,7 +19,7 @@ mod view;
 use super::ssr_helpers::Viewer;
 use std::sync::Arc;
 
-use axum::extract::{Extension, Query, State};
+use axum::extract::{Query, State};
 use axum::response::Response;
 use chrono::{DateTime, Duration, Utc};
 use serde::Deserialize;
@@ -35,9 +35,9 @@ use crate::repositories::analytics::conversation_rows::{
     ConversationFilter, ConversationSort, ConversationTotals,
 };
 use crate::repositories::scope::{ScopeRequest, SubjectScope};
-use crate::templates::AdminTemplateEngine;
-use crate::types::{MarketplaceContext, UserContext};
+use crate::types::UserContext;
 
+use crate::handlers::ssr::page::Page;
 use context::{ContextsPageContext, PageKpisView};
 use load::{ContextsPageData, load_page_data};
 
@@ -203,23 +203,17 @@ async fn build_page_context(build: PageBuild<'_>) -> ContextsPageContext {
     }
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "axum handler: every argument is an extractor"
-)]
 pub(crate) async fn skills_contexts_page(
-    Extension(user_ctx): Extension<UserContext>,
-    Extension(mkt_ctx): Extension<MarketplaceContext>,
-    Extension(engine): Extension<AdminTemplateEngine>,
+    shell: Page,
     State(pool): State<Arc<PgPool>>,
     Query(params): Query<ContextsListQuery>,
     view: super::export::ViewMode,
 ) -> AdminHtmlResult<Response> {
-    if !user_ctx.is_console {
+    if !shell.user.is_console {
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
     }
     let request = ScopeRequest::from_query(
-        &user_ctx,
+        &shell.user,
         params.group.as_deref(),
         params.project.as_deref(),
     );
@@ -228,7 +222,7 @@ pub(crate) async fn skills_contexts_page(
     let data = load_page_data(&pool, &inputs, &scope).await?;
     let payload = build_page_context(PageBuild {
         pool: &pool,
-        user_ctx: &user_ctx,
+        user_ctx: &shell.user,
         request: &request,
         inputs: &inputs,
         data: &data,
@@ -236,10 +230,10 @@ pub(crate) async fn skills_contexts_page(
     })
     .await;
     Ok(view.respond(
-        &engine,
+        &shell.engine,
         "skills-contexts",
         &payload,
-        Viewer::new(&user_ctx, &mkt_ctx),
+        Viewer::new(&shell.user, &shell.marketplace),
     ))
 }
 

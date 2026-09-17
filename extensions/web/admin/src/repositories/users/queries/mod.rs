@@ -14,6 +14,4 @@ pub use events::list_user_usage;
 pub use identity::{IdentityEnvelope, find_identity_envelope};
 pub use listing::{list_distinct_roles, list_users};
 pub use role::{UserAccessProfile, find_user_access_profile};
-pub use runtime::{
-    UserRuntimeAggregate, UserRuntimeDetail, get_user_runtime_detail, list_user_runtime_aggregates,
-};
+pub use runtime::{UserRuntimeDetail, get_user_runtime_detail};

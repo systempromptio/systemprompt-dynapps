@@ -220,11 +220,7 @@ fn span_of(row: &DecisionCallRow) -> String {
     if ms < 1000 {
         return String::new();
     }
-    #[expect(
-        clippy::cast_precision_loss,
-        reason = "a display duration; a span this side of f64's exact range"
-    )]
-    let seconds = ms as f64 / 1000.0;
+    let seconds = crate::numeric::to_f64(ms) / 1000.0;
     format!("+{seconds:.1}s")
 }
 

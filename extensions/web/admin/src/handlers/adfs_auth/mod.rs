@@ -106,10 +106,16 @@ pub(super) fn sanitize_redirect(raw: Option<String>) -> String {
     }
 }
 
-// Why: lint-ok: http-error — this *is* the SSO failure channel: a redirect back
-// to the login page carrying the reason, not an HTTP error.
-pub(super) fn login_error(reason: &str) -> Response {
-    Redirect::to(&format!("/admin/login?sso={reason}")).into_response()
+// Why: The failure channel of an SSO flow: a redirect back to the login page
+// carrying the reason. An error status here would strand the browser on a
+// dead end instead of returning the person to a usable page.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct LoginRedirect(pub(super) &'static str);
+
+impl IntoResponse for LoginRedirect {
+    fn into_response(self) -> Response {
+        Redirect::to(&format!("/admin/login?sso={}", self.0)).into_response()
+    }
 }
 
 // Why: 32 random bytes as base64url-no-pad (43 chars) — a fine CSRF nonce for

@@ -4,13 +4,15 @@
 //! status code, so handlers propagate with a bare `?` rather than mapping at
 //! each call site. Logging happens once, in `into_response`.
 
+mod html;
 mod managed;
 mod orchestration;
 
+pub use html::{AdminHtmlError, AdminHtmlResult};
+
 use axum::Json;
 use axum::http::StatusCode;
-use axum::response::{Html, IntoResponse, Response};
-use systemprompt_web_shared::html_escape;
+use axum::response::{IntoResponse, Response};
 use thiserror::Error;
 
 use crate::handlers::shared::ErrorBody;
@@ -58,6 +60,26 @@ pub enum AdminError {
     #[error("Upstream error: {0}")]
     Upstream(String),
 
+    #[error("Upstream error: {context}: {source}")]
+    UpstreamFailure {
+        context: &'static str,
+        #[source]
+        source: Box<dyn std::error::Error + Send + Sync>,
+    },
+
+    // Why: A 400 whose cause is a typed validation error. The source's own
+    // words are the client-facing detail, so the cause is kept rather than
+    // flattened into the message.
+    #[error("Invalid input: {context}: {source}")]
+    Invalid {
+        context: &'static str,
+        #[source]
+        source: Box<dyn std::error::Error + Send + Sync>,
+    },
+
+    #[error("Forbidden: {0}")]
+    Refused(#[source] crate::types::role::RoleChangeRefusal),
+
     #[error("Database error: {0}")]
     Database(#[from] sqlx::Error),
 
@@ -96,23 +118,46 @@ impl AdminError {
     }
 
     #[must_use]
+    pub fn upstream<E>(context: &'static str, source: E) -> Self
+    where
+        E: Into<Box<dyn std::error::Error + Send + Sync>>,
+    {
+        Self::UpstreamFailure {
+            context,
+            source: source.into(),
+        }
+    }
+
+    #[must_use]
+    pub fn invalid<E>(context: &'static str, source: E) -> Self
+    where
+        E: Into<Box<dyn std::error::Error + Send + Sync>>,
+    {
+        Self::Invalid {
+            context,
+            source: source.into(),
+        }
+    }
+
+    #[must_use]
     pub const fn status(&self) -> StatusCode {
         match self {
             Self::NotFound(_) | Self::Marketplace(MarketplaceError::NotFound(_)) => {
                 StatusCode::NOT_FOUND
             },
             Self::BadRequest(_)
+            | Self::Invalid { .. }
             | Self::BridgeRepo(BridgeRepoError::Validation(_))
             | Self::Marketplace(MarketplaceError::BadRequest(_)) => StatusCode::BAD_REQUEST,
             Self::Unprocessable(_) => StatusCode::UNPROCESSABLE_ENTITY,
             Self::Unauthorized(_) | Self::Unauthenticated(_) => StatusCode::UNAUTHORIZED,
-            Self::Forbidden(_) => StatusCode::FORBIDDEN,
+            Self::Forbidden(_) | Self::Refused(_) => StatusCode::FORBIDDEN,
             Self::Conflict(_) | Self::Marketplace(MarketplaceError::Conflict(_)) => {
                 StatusCode::CONFLICT
             },
             Self::RateLimited(_) => StatusCode::TOO_MANY_REQUESTS,
             Self::Unavailable(_) => StatusCode::SERVICE_UNAVAILABLE,
-            Self::Upstream(_) => StatusCode::BAD_GATEWAY,
+            Self::Upstream(_) | Self::UpstreamFailure { .. } => StatusCode::BAD_GATEWAY,
             Self::NotImplemented(_) => StatusCode::NOT_IMPLEMENTED,
             Self::Database(_)
             | Self::BridgeRepo(_)
@@ -122,7 +167,7 @@ impl AdminError {
         }
     }
 
-    fn public_message(&self) -> String {
+    pub(super) fn public_message(&self) -> String {
         match self {
             Self::NotFound(msg)
             | Self::Unprocessable(msg)
@@ -139,7 +184,9 @@ impl AdminError {
                 | MarketplaceError::NotFound(msg)
                 | MarketplaceError::Conflict(msg),
             ) => msg.clone(),
-            Self::Upstream(_) => "Upstream service error".to_owned(),
+            Self::Invalid { context, source } => format!("{context}: {source}"),
+            Self::Refused(refusal) => refusal.to_string(),
+            Self::Upstream(_) | Self::UpstreamFailure { .. } => "Upstream service error".to_owned(),
             Self::Unauthenticated(_) => "Unauthorized".to_owned(),
             Self::Crypto(_) => "Internal configuration error".to_owned(),
             Self::Database(_) | Self::BridgeRepo(_) | Self::Marketplace(_) | Self::Internal(_) => {
@@ -208,7 +255,7 @@ impl AdminError {
     // Why: Record the failure once, at the boundary, at the severity its class
     // deserves. Both response faces call this, so a page failure and an API
     // failure leave the same trail.
-    fn log(&self, status: StatusCode) {
+    pub(super) fn log(&self, status: StatusCode) {
         if status.is_server_error() {
             tracing::error!(error = %self, "Admin handler returned server error");
         } else {
@@ -228,66 +275,8 @@ impl IntoResponse for AdminError {
     }
 }
 
-/// The HTML face of [`AdminError`], for the server-rendered admin pages.
-///
-/// A browser navigating to a page needs a page, not a JSON body — but the
-/// status and the client-visible text come from the same classification either
-/// way, so an SSR handler cannot accidentally disagree with an API handler
-/// about what a given failure means. Unlike the hand-rolled error pages this
-/// replaces, it renders the error's public message, so an internal cause
-/// is logged rather than interpolated into the page.
-#[derive(Debug, Error)]
-#[error(transparent)]
-pub struct AdminHtmlError(pub AdminError);
-
-impl IntoResponse for AdminHtmlError {
-    fn into_response(self) -> Response {
-        let status = self.0.status();
-        self.0.log(status);
-        let body = Html(format!(
-            r#"<!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{reason}</title>
-<link rel="stylesheet" href="/css/core/fonts.css">
-<link rel="stylesheet" href="/css/admin-bundle.css">
-</head><body style="display:grid;place-items:center;min-height:100vh;margin:0;background:var(--sp-bg-canvas)">
-<main style="max-width:28rem;padding:2rem 2.5rem;background:var(--sp-bg-surface);border:1px solid var(--sp-border-subtle);border-radius:0 0.375rem 1.125rem 0;text-align:center">
-<p style="font-size:2.5rem;margin:0" aria-hidden="true">{status_code}</p>
-<h1 style="font-size:1.25rem;margin:0.5rem 0">{reason}</h1>
-<p style="color:var(--sp-text-secondary)">{message}</p>
-<p><a href="/admin/profile" style="color:var(--sp-accent-text)">&larr; Back to the dashboard</a></p>
-</main></body></html>"#,
-            status_code = status.as_u16(),
-            reason = status.canonical_reason().unwrap_or("Error"),
-            message = html_escape(&self.0.public_message())
-        ));
-        (status, body).into_response()
-    }
-}
-
-impl AdminHtmlError {
-    #[must_use]
-    pub fn internal<E>(err: E) -> Self
-    where
-        E: Into<Box<dyn std::error::Error + Send + Sync>>,
-    {
-        Self(AdminError::Internal(err.into()))
-    }
-}
-
-// Why: `?` in an SSR handler goes through whatever `AdminError` already knows
-// how to absorb, so the two faces stay in step by construction.
-impl<E: Into<AdminError>> From<E> for AdminHtmlError {
-    fn from(value: E) -> Self {
-        Self(value.into())
-    }
-}
-
 pub type AdminResult<T> = Result<T, AdminError>;
 
-/// The SSR counterpart to [`AdminResult`].
-pub type AdminHtmlResult<T> = Result<T, AdminHtmlError>;
 
 impl From<systemprompt::analytics::AnalyticsError> for AdminError {
     fn from(error: systemprompt::analytics::AnalyticsError) -> Self {

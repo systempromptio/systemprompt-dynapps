@@ -10,7 +10,7 @@
 use super::ssr_helpers::Viewer;
 use std::sync::Arc;
 
-use axum::extract::{Extension, Path, State};
+use axum::extract::{Path, State};
 use axum::response::Response;
 use serde::Serialize;
 use sqlx::PgPool;
@@ -25,12 +25,11 @@ use crate::handlers::ssr::types::BreadcrumbView;
 use crate::repositories::traces::{
     Span, SpanKind, SpanStatus, list_trace_spans, resolve_trace_session,
 };
-use crate::templates::AdminTemplateEngine;
-use crate::types::{MarketplaceContext, UserContext};
 
 mod timeline;
 mod turns;
 
+use crate::handlers::ssr::page::Page;
 use timeline::{TimelineView, build_timeline};
 use turns::{TraceTurnView, build_turns};
 
@@ -72,19 +71,13 @@ struct Summary {
     events_note: String,
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "axum handler: every argument is an extractor"
-)]
 pub(crate) async fn perf_trace_detail_page(
-    Extension(user_ctx): Extension<UserContext>,
-    Extension(mkt_ctx): Extension<MarketplaceContext>,
-    Extension(engine): Extension<AdminTemplateEngine>,
+    shell: Page,
     State(pool): State<Arc<PgPool>>,
     Path(id): Path<String>,
     view: super::export::ViewMode,
 ) -> AdminHtmlResult<Response> {
-    if !user_ctx.is_console {
+    if !shell.user.is_console {
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
     }
 
@@ -125,10 +118,10 @@ pub(crate) async fn perf_trace_detail_page(
     };
 
     Ok(view.respond(
-        &engine,
+        &shell.engine,
         "perf-trace-detail",
         &ctx,
-        Viewer::new(&user_ctx, &mkt_ctx),
+        Viewer::new(&shell.user, &shell.marketplace),
     ))
 }
 

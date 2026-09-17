@@ -4,7 +4,6 @@
 //! failures to a denied [`Decision`] plus a recorded auth-denial audit row.
 
 use axum::http::HeaderMap;
-use axum::response::Response;
 use systemprompt::identifiers::{ClientId, UserId};
 use systemprompt::models::auth::JwtAudience;
 use systemprompt::oauth::OauthError;
@@ -13,7 +12,8 @@ use systemprompt_security::authz::{Decision, DenyReason};
 use crate::handlers::webhook::helpers::{extract_bearer_token, get_jwt_issuer};
 
 use super::super::types::AuthDenialParams;
-use super::{build_response, spawn_auth_denial};
+use super::response::HookVerdict;
+use super::spawn_auth_denial;
 
 pub(super) struct Principal {
     pub user_id: UserId,
@@ -44,12 +44,12 @@ pub(super) fn deny_for_auth_failure(reason: &str) -> Decision {
 pub(super) fn authenticate_request(
     headers: &HeaderMap,
     denial_params: &AuthDenialParams<'_>,
-) -> Result<Principal, Box<Response>> {
+) -> Result<Principal, Box<HookVerdict>> {
     let Some(token) = extract_bearer_token(headers) else {
         let reason = "Missing Authorization header — tool call blocked";
         spawn_auth_denial(denial_params, reason);
-        return Err(Box::new(build_response(
-            &deny_for_auth_failure(reason),
+        return Err(Box::new(HookVerdict::new(
+            deny_for_auth_failure(reason),
             denial_params.hook_event_name,
         )));
     };
@@ -60,8 +60,8 @@ pub(super) fn authenticate_request(
             tracing::error!(error = %e, "Failed to load JWT config");
             let reason = "Internal configuration error — tool call blocked";
             spawn_auth_denial(denial_params, reason);
-            return Err(Box::new(build_response(
-                &deny_for_auth_failure(reason),
+            return Err(Box::new(HookVerdict::new(
+                deny_for_auth_failure(reason),
                 denial_params.hook_event_name,
             )));
         },
@@ -81,8 +81,8 @@ pub(super) fn authenticate_request(
         log_jwt_failure(&e, expected_aud, &jwt_issuer);
         let reason = "Invalid or expired token — tool call blocked";
         spawn_auth_denial(denial_params, reason);
-        Box::new(build_response(
-            &deny_for_auth_failure(reason),
+        Box::new(HookVerdict::new(
+            deny_for_auth_failure(reason),
             denial_params.hook_event_name,
         ))
     })?;

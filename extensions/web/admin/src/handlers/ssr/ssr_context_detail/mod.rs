@@ -11,7 +11,7 @@ use super::ssr_helpers::Viewer;
 use crate::error::AdminError;
 use std::sync::Arc;
 
-use axum::extract::{Extension, Path, Query, State};
+use axum::extract::{Path, Query, State};
 use axum::response::Response;
 use serde::Deserialize;
 use sqlx::PgPool;
@@ -23,9 +23,8 @@ use crate::repositories::analytics::context_detail::{
     find_context_header, get_context_kpis, list_context_requests, list_messages_for_requests,
     list_tool_calls_for_requests,
 };
-use crate::templates::AdminTemplateEngine;
-use crate::types::{MarketplaceContext, UserContext};
 
+use crate::handlers::ssr::page::Page;
 use data::{DetailInputs, build_detail_data, default_kpis, resolve_tab};
 
 #[derive(Debug, Deserialize)]
@@ -33,20 +32,14 @@ pub(crate) struct ContextTabQuery {
     tab: Option<String>,
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "axum handler: every argument is an extractor"
-)]
 pub(crate) async fn context_detail_page(
-    Extension(user_ctx): Extension<UserContext>,
-    Extension(mkt_ctx): Extension<MarketplaceContext>,
-    Extension(engine): Extension<AdminTemplateEngine>,
+    shell: Page,
     State(pool): State<Arc<PgPool>>,
     Path(context_id): Path<String>,
     Query(query): Query<ContextTabQuery>,
     view: super::export::ViewMode,
 ) -> AdminHtmlResult<Response> {
-    if !user_ctx.is_console {
+    if !shell.user.is_console {
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
     }
 
@@ -130,9 +123,9 @@ pub(crate) async fn context_detail_page(
     );
 
     Ok(view.respond(
-        &engine,
+        &shell.engine,
         "context-detail",
         &data,
-        Viewer::new(&user_ctx, &mkt_ctx),
+        Viewer::new(&shell.user, &shell.marketplace),
     ))
 }

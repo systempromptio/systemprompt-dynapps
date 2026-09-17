@@ -203,19 +203,4 @@ impl AdfsConfig {
         roles.dedup();
         roles
     }
-
-    // Why: every group the assertion carried, in assertion order. Which DB
-    // group or project a name resolves to is decided by `group_ad_mappings`,
-    // and a name that resolves to none leaves the member in the derived
-    // `unassigned` group. Filtering here would hide memberships the database
-    // is able to place.
-    #[must_use]
-    #[expect(
-        clippy::unused_self,
-        reason = "the receiver is the seam: which groups survive is a config \
-                  decision, and every call site already holds the config"
-    )]
-    pub fn mapped_groups(&self, groups: &[String]) -> Vec<String> {
-        groups.to_vec()
-    }
 }

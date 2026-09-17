@@ -3,6 +3,7 @@
 use std::sync::Arc;
 
 use systemprompt::ai::{AiMessage, AiRequest, AiService, StructuredOutputOptions};
+use systemprompt::identifiers::error::IdValidationError;
 use systemprompt::identifiers::{AgentName, ContextId, SessionId, TraceId, UserId};
 use systemprompt::models::auth::{AuthenticatedUser, UserType};
 use systemprompt::models::execution::context::RequestContext;
@@ -121,20 +122,16 @@ RULES:
 - recommendations must be null or genuinely useful. Never say \"add tests\" or \"improve documentation\"
 - improvement_hints must be specific to THIS session, referencing actual prompts or patterns. Never give generic advice. null if quality_score is 5";
 
-#[expect(
-    clippy::expect_used,
-    reason = "the hook agent name is a fixed valid identifier"
-)]
 pub fn build_request_context(
     user_id: &UserId,
     session_id: &SessionId,
     jwt_token: &str,
-) -> RequestContext {
-    RequestContext::new(
+) -> Result<RequestContext, IdValidationError> {
+    let context = RequestContext::new(
         SessionId::new(session_id.as_str()),
         TraceId::new(uuid::Uuid::new_v4().to_string()),
         ContextId::derived_from_session(session_id),
-        AgentName::try_new("hook-summary").expect("fixed hook agent name is valid"),
+        AgentName::try_new("hook-summary")?,
     )
     .with_user(AuthenticatedUser::new(
         user_id
@@ -146,7 +143,8 @@ pub fn build_request_context(
         Vec::new(),
     ))
     .with_auth_token(jwt_token)
-    .with_user_type(UserType::User)
+    .with_user_type(UserType::User);
+    Ok(context)
 }
 
 pub(crate) async fn generate_session_analysis(
@@ -209,7 +207,13 @@ pub(crate) async fn run_analysis_for_session(
     let jwt_token = params.jwt_token;
     let direct_message = params.direct_message;
 
-    let ctx = build_request_context(user_id, session_id, jwt_token);
+    let ctx = match build_request_context(user_id, session_id, jwt_token) {
+        Ok(ctx) => ctx,
+        Err(error) => {
+            tracing::error!(%error, "Hook summary request context could not be built");
+            return None;
+        },
+    };
     let analysis_context = ai_context::gather_analysis_context(pool, user_id, session_id).await;
     let events_ctx = session_summary::generate_session_summary(pool, user_id, session_id).await;
 

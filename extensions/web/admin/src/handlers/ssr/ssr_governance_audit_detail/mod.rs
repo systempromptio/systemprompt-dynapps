@@ -12,19 +12,18 @@ use std::sync::Arc;
 
 use systemprompt::identifiers::{AgentId, AiRequestId, SessionId, TraceId, UserId};
 
-use axum::extract::{Extension, Path, State};
+use axum::extract::{Path, State};
 use axum::response::Response;
 use serde::Serialize;
 use sqlx::PgPool;
 
 use crate::error::AdminHtmlResult;
 use crate::handlers::ssr::entity_urls::{session_detail_url, trace_detail_url};
+use crate::handlers::ssr::page::Page;
 use crate::handlers::ssr::types::BreadcrumbView;
 use crate::repositories::governance::chain::{
     AiRequestSummary, ChainEnvelope, DecisionStage, TranscriptEnvelope, find_decision_chain,
 };
-use crate::templates::AdminTemplateEngine;
-use crate::types::{MarketplaceContext, UserContext};
 
 mod evidence;
 mod rows;
@@ -103,19 +102,13 @@ struct Denial {
     evaluated_rules: serde_json::Value,
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "axum handler: every argument is an extractor"
-)]
 pub(crate) async fn governance_audit_detail_page(
-    Extension(user_ctx): Extension<UserContext>,
-    Extension(mkt_ctx): Extension<MarketplaceContext>,
-    Extension(engine): Extension<AdminTemplateEngine>,
+    shell: Page,
     State(pool): State<Arc<PgPool>>,
     Path(id): Path<String>,
     view: super::export::ViewMode,
 ) -> AdminHtmlResult<Response> {
-    if !user_ctx.is_console {
+    if !shell.user.is_console {
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
     }
 
@@ -163,10 +156,10 @@ pub(crate) async fn governance_audit_detail_page(
     };
 
     Ok(view.respond(
-        &engine,
+        &shell.engine,
         "governance-audit-detail",
         &ctx,
-        Viewer::new(&user_ctx, &mkt_ctx),
+        Viewer::new(&shell.user, &shell.marketplace),
     ))
 }
 

@@ -279,7 +279,8 @@ fn the_request_context_carries_the_session_and_the_hook_summary_agent() {
         &UserId::new("11111111-1111-4111-8111-111111111111"),
         &SessionId::new("sess-1"),
         "jwt-token",
-    );
+    )
+    .expect("fixed hook agent name is valid");
     assert_eq!(ctx.request.session_id.as_str(), "sess-1");
     assert_eq!(ctx.execution.agent_name.as_str(), "hook-summary");
     assert!(!ctx.execution.trace_id.as_str().is_empty());
@@ -298,6 +299,7 @@ fn every_summary_of_one_session_shares_a_context_and_two_sessions_never_collide(
             &SessionId::new(s),
             "jwt",
         )
+        .expect("fixed hook agent name is valid")
         .execution
         .context_id
         .as_str()

@@ -7,6 +7,7 @@
 //! `access_control_rules.entity_type`.
 
 mod support;
+mod template;
 mod types;
 
 use std::sync::Arc;
@@ -25,6 +26,7 @@ use crate::error::{AdminError, AdminResult};
 use crate::repositories::config::gateway::registered_routes_from_services;
 
 use support::{collect_entity_ids, parse_access, parse_subject, repo, validate_entity_type};
+use template::{Tally, TemplateSubject, clear_subject_rules, upsert_subject_rule};
 use types::{
     AllAccessQuery, ApplyTemplateBody, ApplyTemplateResponse, DefaultIncludedBody,
     EntityAccessEntry, EntityAccessResponse, EntityDefaultResponse, ListAllEntityAccessResponse,
@@ -179,10 +181,6 @@ pub(crate) async fn list_all_entity_access_handler(
     .into_response())
 }
 
-#[expect(
-    clippy::too_many_lines,
-    reason = "one transaction: validate, expand the template, write, record — split would hide the order"
-)]
 pub(crate) async fn apply_template_handler(
     State(pool): State<Arc<PgPool>>,
     Json(body): Json<ApplyTemplateBody>,
@@ -212,55 +210,30 @@ pub(crate) async fn apply_template_handler(
 
     let entity_ids = collect_entity_ids(&body.entity_type)?;
     let r = repo(&pool);
-    let mut applied = 0usize;
-    let mut failed = 0usize;
+    let subject = TemplateSubject {
+        kind,
+        rule_type: &rule_type,
+        rule_value: &rule_value,
+        justification,
+    };
+    let mut tally = Tally::default();
 
     for eid in &entity_ids {
         if body.action == "clear" {
-            let existing = r
-                .list_rules_for_entity(kind, eid)
-                .await
-                .inspect_err(|e| tracing::warn!(error = %e, "entity access: rule listing failed"))
-                .unwrap_or_default();
-            for rule in existing {
-                if rule.rule_type == rule_type && rule.rule_value == rule_value {
-                    if r.delete_rule(&rule.id).await.is_ok() {
-                        applied += 1;
-                    } else {
-                        failed += 1;
-                    }
-                }
-            }
+            tally += clear_subject_rules(&r, &subject, eid).await;
         } else {
             let access = if body.action == "deny" {
                 Access::Deny
             } else {
                 Access::Allow
             };
-            match r
-                .upsert_rule(UpsertRuleParams {
-                    entity_type: kind,
-                    entity_id: eid,
-                    rule_type: rule_type.clone(),
-                    rule_value: &rule_value,
-                    access,
-                    justification,
-                    source: DASHBOARD_SOURCE,
-                })
-                .await
-            {
-                Ok(_) => applied += 1,
-                Err(e) => {
-                    tracing::warn!(error = %e, entity_id = %eid, "apply_template upsert failed");
-                    failed += 1;
-                },
-            }
+            tally += upsert_subject_rule(&r, &subject, eid, access).await;
         }
     }
 
     Ok(Json(ApplyTemplateResponse {
-        applied,
-        failed,
+        applied: tally.applied,
+        failed: tally.failed,
         entity_count: entity_ids.len(),
     })
     .into_response())

@@ -122,9 +122,7 @@ async fn get_traffic_section(
     )
 }
 
-// Why: lint-ok: repository-naming — EventsResponse is a page of rows plus its
-// total.
-pub async fn list_events(
+pub async fn get_events_page(
     pool: &PgPool,
     query: &EventsQuery,
 ) -> Result<EventsResponse, sqlx::Error> {
