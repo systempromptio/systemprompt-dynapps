@@ -139,7 +139,7 @@ fn drift_reports_order_once_not_per_route() {
     rows.swap(0, 2);
     let drift = compute_route_drift(&declared, &rows);
     assert!(drift.changed.is_empty());
-    let (code, db) = drift.reordered.expect("order differs");
+    let (code, db) = drift.reordered.clone().expect("order differs");
     assert_eq!(code[0], "claude-star");
     assert_eq!(db[0], "gpt");
 }

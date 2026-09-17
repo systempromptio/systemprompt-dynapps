@@ -116,7 +116,7 @@ governance:
         drift.changed[0].fields,
         vec!["mode".to_owned(), "params".to_owned()]
     );
-    let (code, db) = drift.reordered.expect("order differs");
+    let (code, db) = drift.reordered.clone().expect("order differs");
     assert_eq!(
         code,
         vec!["scope_check".to_owned(), "tool_blocklist".to_owned()]
