@@ -57,6 +57,8 @@ pub fn route(id: &str, pattern: &str, provider_name: &str) -> GatewayRoute {
         pricing: None,
         when: None,
         requires: None,
+        fallback_provider: None,
+        fallback_upstream_model: None,
     }
 }
 

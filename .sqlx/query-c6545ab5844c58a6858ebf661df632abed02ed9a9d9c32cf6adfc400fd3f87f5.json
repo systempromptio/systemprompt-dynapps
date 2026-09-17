@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        WITH stamped AS (\n            SELECT DISTINCT ON (t.user_id, t.day) t.user_id, t.day, t.group_id, t.project_id\n            FROM (\n                SELECT a.user_id,\n                       (a.created_at AT TIME ZONE 'UTC')::DATE AS day,\n                       s.group_id, s.project_id, COUNT(*) AS requests\n                FROM ai_requests a\n                JOIN ai_request_scopes s ON s.request_id = a.id\n                WHERE NOT COALESCE(a.synthetic, FALSE)\n                  AND (a.created_at AT TIME ZONE 'UTC')::DATE >= (NOW() AT TIME ZONE 'UTC')::DATE - ($1::INT)\n                GROUP BY 1, 2, 3, 4\n            ) t\n            ORDER BY t.user_id, t.day, t.requests DESC, t.group_id, t.project_id\n        ), resolved AS (\n            SELECT r.user_id, r.date,\n                   CASE WHEN st.user_id IS NOT NULL THEN st.group_id ELSE d.primary_group_id END AS group_id,\n                   CASE WHEN st.user_id IS NOT NULL THEN st.project_id ELSE d.primary_project_id END AS project_id\n            FROM admin_usage_daily_rollups r\n            LEFT JOIN stamped st ON st.user_id = r.user_id AND st.day = r.date\n            LEFT JOIN user_scope_defaults d ON d.user_id = r.user_id\n            WHERE r.date >= (NOW() AT TIME ZONE 'UTC')::DATE - ($1::INT)\n        )\n        UPDATE admin_usage_daily_rollups r\n        SET group_id = x.group_id,\n            project_id = x.project_id,\n            updated_at = NOW()\n        FROM resolved x\n        WHERE x.user_id = r.user_id\n          AND x.date = r.date\n          AND (r.group_id IS DISTINCT FROM x.group_id\n               OR r.project_id IS DISTINCT FROM x.project_id)\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c6545ab5844c58a6858ebf661df632abed02ed9a9d9c32cf6adfc400fd3f87f5"
+}

@@ -46,7 +46,7 @@ fn marketplace_error_codes_distinguish_conflict_from_bad_request() {
         "CONFLICT"
     );
     assert_eq!(
-        MarketplaceError::Crypto("key".to_owned()).code(),
+        MarketplaceError::Crypto("key".into()).code(),
         "CRYPTO_ERROR"
     );
     // The infra code passes through rather than collapsing to INTERNAL_ERROR.
@@ -74,7 +74,7 @@ fn marketplace_error_statuses_match_their_meaning() {
         409
     );
     assert_eq!(
-        MarketplaceError::Crypto("key".to_owned()).status().as_u16(),
+        MarketplaceError::Crypto("key".into()).status().as_u16(),
         500
     );
     assert_eq!(MarketplaceError::from(io_error()).status().as_u16(), 500);

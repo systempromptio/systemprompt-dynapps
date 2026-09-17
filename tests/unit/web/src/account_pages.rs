@@ -178,7 +178,11 @@ fn the_profile_holds_usage_and_settings_only() {
     ] {
         assert!(body.contains(needle), "profile lost {needle}");
     }
-    for stray in ["data-connect-field", "data-connected-accounts", "data-tabs="] {
+    for stray in [
+        "data-connect-field",
+        "data-connected-accounts",
+        "data-tabs=",
+    ] {
         assert!(!body.contains(stray), "profile still carries {stray}");
     }
     let tables = body.matches("{{#> components/table").count();

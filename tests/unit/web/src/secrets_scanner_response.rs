@@ -38,6 +38,7 @@ async fn credential_in_a_tool_use_argument_is_flagged() {
         name: "post_webhook".to_owned(),
         input: serde_json::json!({ "headers": { "authorization": TOKEN } }),
         signature: None,
+        cache_control: None,
     }]);
 
     let findings = configured_scanner().scan_response_final(&resp).await;
@@ -51,10 +52,11 @@ async fn credential_in_a_tool_use_argument_is_flagged() {
 async fn credential_in_a_tool_result_is_flagged() {
     let resp = response(vec![CanonicalContent::ToolResult {
         tool_use_id: "t1".to_owned(),
-        content: vec![CanonicalContent::Text(format!("token={TOKEN}"))],
+        content: vec![CanonicalContent::text(format!("token={TOKEN}"))],
         is_error: false,
         structured_content: None,
         meta: None,
+        cache_control: None,
     }]);
 
     let findings = configured_scanner().scan_response_final(&resp).await;
@@ -65,7 +67,7 @@ async fn credential_in_a_tool_result_is_flagged() {
 
 #[tokio::test]
 async fn credential_only_in_the_received_surface_is_flagged() {
-    let mut resp = response(vec![CanonicalContent::Text("all done".to_owned())]);
+    let mut resp = response(vec![CanonicalContent::text("all done".to_owned())]);
     resp.received_surface = string_leaves(
         format!(r#"{{"content":[{{"type":"unmodelled","blob":"{TOKEN}"}}]}}"#).as_bytes(),
         SurfaceBudget::default(),
@@ -87,7 +89,7 @@ async fn a_credential_in_a_request_is_left_to_the_governance_chain() {
         ModelId::new("test-model"),
         vec![CanonicalMessage {
             role: Role::User,
-            content: vec![CanonicalContent::Text(format!("my token is {TOKEN}"))],
+            content: vec![CanonicalContent::text(format!("my token is {TOKEN}"))],
         }],
         256,
     );
@@ -97,7 +99,7 @@ async fn a_credential_in_a_request_is_left_to_the_governance_chain() {
 
 #[tokio::test]
 async fn a_clean_response_yields_nothing() {
-    let resp = response(vec![CanonicalContent::Text(
+    let resp = response(vec![CanonicalContent::text(
         "here is the summary you asked for".to_owned(),
     )]);
 
@@ -111,7 +113,7 @@ async fn a_clean_response_yields_nothing() {
 
 #[tokio::test]
 async fn an_aws_shaped_response_yields_nothing() {
-    let resp = response(vec![CanonicalContent::Text(AWS_SHAPED.to_owned())]);
+    let resp = response(vec![CanonicalContent::text(AWS_SHAPED.to_owned())]);
 
     assert!(
         configured_scanner()

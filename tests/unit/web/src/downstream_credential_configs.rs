@@ -186,9 +186,9 @@ fn the_google_drive_server_leaves_its_accessor_to_the_generic_connector() {
 #[test]
 fn the_google_drive_server_targets_agent_search_with_its_scope() {
     // Why: the MCP endpoint is regional — the global host refuses an `eu`
-    // engine outright — and its protected-resource metadata names exactly this scope;
-    // a token minted without it is accepted by Google's OAuth server and then
-    // rejected by the MCP endpoint, which surfaces as a failed Test on the
+    // engine outright — and its protected-resource metadata names exactly this
+    // scope; a token minted without it is accepted by Google's OAuth server and
+    // then rejected by the MCP endpoint, which surfaces as a failed Test on the
     // Connectors page and nowhere earlier.
     let entry = server("google_drive.yaml", "google_drive");
     assert_eq!(

@@ -220,6 +220,8 @@ mod asset_manifest;
 #[cfg(test)]
 mod authz_marketplace_pure;
 #[cfg(test)]
+mod authz_quota_subjects;
+#[cfg(test)]
 #[cfg(test)]
 mod config_gateway_pure;
 #[cfg(test)]
@@ -304,3 +306,5 @@ mod managed_bundle;
 mod marketplace_hash;
 #[cfg(test)]
 mod marketplace_version_diff;
+#[cfg(test)]
+mod traces_spans_resolve;

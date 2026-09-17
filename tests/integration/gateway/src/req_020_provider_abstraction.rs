@@ -21,7 +21,7 @@ fn request_for(model_name: &str) -> CanonicalRequest {
         ModelId::new(model_name),
         vec![CanonicalMessage {
             role: Role::User,
-            content: vec![CanonicalContent::Text("Summarize the report".to_owned())],
+            content: vec![CanonicalContent::text("Summarize the report".to_owned())],
         }],
         256,
     )

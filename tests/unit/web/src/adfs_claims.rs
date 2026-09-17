@@ -85,30 +85,13 @@ fn roles_are_the_deduplicated_union_over_mapped_groups() {
 }
 
 #[test]
-fn mapped_groups_passes_every_claim_group_through() {
-    let cfg = config();
-    let kept = cfg.mapped_groups(&["Other".to_owned(), "Systemprompt-Admins".to_owned()]);
-    assert_eq!(
-        kept,
-        vec!["Other".to_owned(), "Systemprompt-Admins".to_owned()],
-        "filtering here would hide memberships the database is able to place"
-    );
-}
-
-#[test]
-fn an_unmapped_group_still_reaches_the_membership_layer() {
+fn an_unmapped_group_mints_no_role() {
     let mut cfg = config();
     cfg.group_roles.remove("Systemprompt-Core");
     assert!(
         cfg.roles_for_groups(&["Systemprompt-Core".to_owned()])
             .is_empty(),
-        "it mints no role"
-    );
-    assert_eq!(
-        cfg.mapped_groups(&["Systemprompt-Core".to_owned()]),
-        vec!["Systemprompt-Core".to_owned()],
-        "but it is still recorded, so the DB mapping can place the member and \
-         the login proceeds as a plain user"
+        "the DB mapping decides membership; the login proceeds as a plain user"
     );
 }
 
