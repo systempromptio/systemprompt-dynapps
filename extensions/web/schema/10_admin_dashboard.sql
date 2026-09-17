@@ -82,37 +82,6 @@ CREATE TABLE IF NOT EXISTS daily_summaries (
 CREATE INDEX IF NOT EXISTS idx_daily_summaries_user ON daily_summaries(user_id, summary_date DESC);
 CREATE INDEX IF NOT EXISTS idx_daily_summaries_date ON daily_summaries(summary_date DESC);
 
--- session_analyses - use 047 version (session_id as PK)
-CREATE TABLE IF NOT EXISTS session_analyses (
-    session_id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL,
-    title TEXT NOT NULL DEFAULT '',
-    description TEXT NOT NULL DEFAULT '',
-    summary TEXT NOT NULL DEFAULT '',
-    tags TEXT NOT NULL DEFAULT '',
-    goal_achieved TEXT NOT NULL DEFAULT '',
-    quality_score SMALLINT NOT NULL DEFAULT 0,
-    outcome TEXT NOT NULL DEFAULT '',
-    error_analysis TEXT,
-    skill_assessment TEXT,
-    recommendations TEXT,
-    skill_scores JSONB,
-    category TEXT NOT NULL DEFAULT 'other',
-    goal_outcome_map JSONB,
-    efficiency_metrics JSONB,
-    best_practices_checklist JSONB,
-    improvement_hints TEXT,
-    corrections_count INT NOT NULL DEFAULT 0,
-    session_duration_minutes INT,
-    total_turns INT,
-    automation_ratio REAL,
-    plan_mode_used BOOLEAN NOT NULL DEFAULT false,
-    client_surface TEXT NOT NULL DEFAULT '',
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-CREATE INDEX IF NOT EXISTS idx_session_analyses_user ON session_analyses(user_id, created_at DESC);
-
 -- session_entity_links
 CREATE TABLE IF NOT EXISTS session_entity_links (
     id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
@@ -271,7 +240,6 @@ CREATE OR REPLACE VIEW v_all_activity AS
         CASE WHEN s.ended_at IS NOT NULL THEN 'completed' ELSE 'started' END AS action,
         'session' AS entity_type, s.session_id AS entity_name,
         CASE
-            WHEN s.ended_at IS NOT NULL AND sa.title IS NOT NULL AND sa.title != '' THEN sa.title
             WHEN s.ended_at IS NOT NULL AND s.ai_title IS NOT NULL AND s.ai_title != '' THEN s.ai_title
             WHEN s.ended_at IS NOT NULL THEN
                 CONCAT('Completed AI session (', s.prompts, ' prompts, ', s.tool_uses, ' tool calls)')
@@ -280,8 +248,7 @@ CREATE OR REPLACE VIEW v_all_activity AS
         COALESCE(s.ended_at, s.started_at, s.created_at) AS created_at,
         NOT ('anonymous' = ANY(u2.roles)) AND u2.email NOT LIKE '%@anonymous.local' AS is_real_user
     FROM plugin_session_summaries s
-    JOIN users u2 ON u2.id = s.user_id
-    LEFT JOIN session_analyses sa ON sa.session_id = s.session_id)
+    JOIN users u2 ON u2.id = s.user_id)
     UNION ALL
     (SELECT r.id, r.user_id,
         COALESCE(u3.display_name, u3.full_name, u3.name, u3.email, r.user_id) AS display_name,

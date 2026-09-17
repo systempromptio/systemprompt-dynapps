@@ -1,19 +1,55 @@
 @layer components {
 
-/* The verdict strip is a wrap of badges, not a grid: the number of facts the
-   analysis produced varies per session, and a fixed grid would leave holes. */
-.sp-p-session-detail__verdict {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--sp-space-2);
+/* One card per criterion. Four is the fixed set, so a grid that wraps to two
+   columns on narrow screens never leaves a hole. */
+.sp-p-session-detail__scores {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+    gap: var(--sp-space-3);
     margin-bottom: var(--sp-space-3);
 }
 
-.sp-p-session-detail__summary {
+.sp-p-session-detail__score {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-space-2);
+    padding: var(--sp-space-3);
+    background: var(--sp-bg-surface);
+    border: 1px solid var(--sp-border-subtle);
+    border-radius: var(--sp-radius-md);
+}
+
+.sp-p-session-detail__score-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-space-2);
+}
+
+.sp-p-session-detail__score-name {
+    font-weight: var(--sp-font-semibold);
+    text-transform: capitalize;
+}
+
+.sp-p-session-detail__score-rationale,
+.sp-p-session-detail__score-error {
     color: var(--sp-text-secondary);
+    font-size: var(--sp-text-sm);
     line-height: 1.5;
-    max-width: 68ch;
-    margin-bottom: var(--sp-space-3);
+    margin: 0;
+}
+
+.sp-p-session-detail__score-error {
+    color: var(--sp-danger-strong);
+}
+
+.sp-p-session-detail__score-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--sp-space-2);
+    font-size: var(--sp-text-xs);
+    color: var(--sp-text-tertiary);
+    margin-top: auto;
 }
 
 .sp-p-session-detail__analysis {

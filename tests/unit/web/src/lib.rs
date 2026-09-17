@@ -221,6 +221,12 @@ mod authz_marketplace_pure;
 #[cfg(test)]
 mod config_gateway_pure;
 #[cfg(test)]
+mod evaluation_config;
+#[cfg(test)]
+mod evaluation_prompt;
+#[cfg(test)]
+mod evaluation_scoring;
+#[cfg(test)]
 mod frontend_standards;
 #[cfg(test)]
 mod gateway_catalog_pure;
@@ -232,8 +238,6 @@ mod governance_gateway;
 mod governance_pages;
 #[cfg(test)]
 mod governance_warnings_rollup;
-#[cfg(test)]
-mod hooks_track_ai_pure;
 #[cfg(test)]
 mod marketplace_catalog_pure;
 #[cfg(test)]

@@ -1,4 +1,5 @@
-//! Builds the human-readable summary text and tags for a finished session.
+//! Counts a session's recorded events into the one-line activity summary and
+//! tags the judge sees under `activity`.
 
 use sqlx::PgPool;
 use systemprompt::identifiers::{SessionId, UserId};
@@ -11,7 +12,7 @@ pub struct GeneratedSessionSummary {
     pub tags: String,
 }
 
-pub(crate) async fn generate_session_summary(
+pub async fn generate_session_summary(
     pool: &PgPool,
     user_id: &UserId,
     session_id: &SessionId,

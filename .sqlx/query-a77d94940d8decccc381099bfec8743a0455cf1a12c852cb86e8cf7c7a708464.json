@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE evaluation_queue SET pending = false, lease_token = NULL, lease_until = NULL,\n                last_error = NULL, updated_at = clock_timestamp()\n          WHERE session_id = $1 AND criterion = $2 AND lease_token = $3",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "a77d94940d8decccc381099bfec8743a0455cf1a12c852cb86e8cf7c7a708464"
+}

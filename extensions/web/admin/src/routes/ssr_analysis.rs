@@ -63,6 +63,7 @@ pub(super) fn routes() -> Router<Arc<PgPool>> {
             "/analysis/impact",
             get(handlers::ssr::analysis::impact::page),
         )
+        .merge(evaluation_routes())
         .route(
             "/analysis/publications",
             get(handlers::ssr::analysis::lifecycle::page),
@@ -74,5 +75,23 @@ pub(super) fn routes() -> Router<Arc<PgPool>> {
         .route(
             "/analysis/publications/withdrawals",
             post(handlers::ssr::analysis::lifecycle::decide_withdrawal),
+        )
+}
+
+// Why: the judge's pages are one feature; keeping them together also keeps
+// `routes` inside the line budget the lint enforces.
+fn evaluation_routes() -> Router<Arc<PgPool>> {
+    Router::new()
+        .route(
+            "/analysis/evaluation",
+            get(handlers::ssr::analysis::evaluation::page),
+        )
+        .route(
+            "/analysis/evaluation/runs",
+            get(handlers::ssr::analysis::evaluation::runs_page),
+        )
+        .route(
+            "/analysis/evaluation/runs/{id}",
+            get(handlers::ssr::analysis::evaluation::run_page),
         )
 }

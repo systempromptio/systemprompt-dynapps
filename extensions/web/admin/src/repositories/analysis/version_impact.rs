@@ -65,14 +65,16 @@ pub async fn list_version_impact_paged(
                e.user_id,e.session_id,r.id AS request_id,r.status,r.cost_microdollars,r.input_tokens,r.output_tokens,r.cache_read_tokens,r.cache_creation_tokens,r.latency_ms,
                a.outcome,a.quality_score
           FROM events e JOIN ai_requests r ON r.user_id=e.user_id AND r.client_session_id=e.session_id
-          LEFT JOIN session_analyses a ON a.user_id=e.user_id AND a.session_id=e.session_id
+          LEFT JOIN LATERAL (SELECT q.score AS quality_score,'scored' AS outcome FROM evaluation_runs q
+               WHERE q.user_id=e.user_id AND q.session_id=e.session_id AND q.criterion='quality' AND q.status='succeeded'
+               ORDER BY q.created_at DESC LIMIT 1) a ON true
          WHERE r.created_at >= $1 AND r.created_at < $2
     ), request_totals AS (
         SELECT cohort_day,skill,revision_id,publication_generation,traffic_class,count(request_id) AS requests,
                count(request_id) FILTER(WHERE input_tokens IS NOT NULL AND output_tokens IS NOT NULL AND status='completed') AS accounted_requests,
                count(request_id) FILTER(WHERE status='failed') AS failures,
                count(DISTINCT (user_id,session_id)) FILTER(WHERE outcome IS NOT NULL) AS assessed_sessions,
-               count(DISTINCT (user_id,session_id)) FILTER(WHERE outcome IN ('success','successful','completed')) AS successful_sessions,
+               count(DISTINCT (user_id,session_id)) FILTER(WHERE quality_score>=70) AS successful_sessions,
                avg(quality_score)::FLOAT8 AS average_quality_score,
                COALESCE(sum(COALESCE(input_tokens,0)+COALESCE(output_tokens,0)+COALESCE(cache_read_tokens,0)+COALESCE(cache_creation_tokens,0)),0)::BIGINT AS tokens,
                COALESCE(sum(cost_microdollars),0)::BIGINT AS related_conversation_cost_microdollars,avg(latency_ms)::FLOAT8 AS average_latency_ms

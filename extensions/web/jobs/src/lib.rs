@@ -31,6 +31,7 @@ mod publish;
 mod robots;
 mod scope_defaults;
 mod secret_migration;
+mod session_evaluation;
 mod sitemap;
 mod usage_anomaly;
 mod usage_retention;
@@ -50,6 +51,7 @@ pub use publish::PublishPipelineJob;
 pub use robots::RobotsTxtGenerationJob;
 pub use scope_defaults::ScopeDefaultsJob;
 pub use secret_migration::SecretMigrationJob;
+pub use session_evaluation::SessionEvaluationJob;
 pub use sitemap::SitemapGenerationJob;
 pub use usage_retention::PluginUsageRetentionJob;
 pub use usage_rollup::UsageDailyRollupJob;
@@ -62,7 +64,9 @@ pub use usage_rollup::UsageDailyRollupJob;
 pub mod internals {
     pub use crate::bundle_admin_css::{collect_css_files, concatenate_css_files};
     pub use crate::copy_assets::{copy_all_assets, copy_asset};
-    pub use crate::governance_bootstrap::{GovernanceStatus, check_governance_config};
+    pub use crate::governance_bootstrap::{
+        GovernanceStatus, check_evaluation_config, check_governance_config,
+    };
     pub use crate::llms_txt::{sort_entries_in_place, write_header, write_section};
     pub use crate::publish::PipelineStats;
     pub use crate::robots::build_robots_txt_content;

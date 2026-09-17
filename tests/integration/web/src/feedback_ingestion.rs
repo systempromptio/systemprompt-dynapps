@@ -10,7 +10,7 @@ pub(super) async fn seed(pool: &PgPool) {
     sqlx::query("INSERT INTO users(id,name,email) VALUES('publisher','publisher','publisher@example.invalid'),('consumer','consumer','consumer@example.invalid')").execute(pool).await.unwrap();
     sqlx::query("INSERT INTO plugin_usage_events(id,user_id,session_id,event_type,prompt_preview,dedup_key) VALUES('event1','consumer','native-session','UserPromptSubmit','/plugin:skill','dedup1'),('event2','consumer','native-session','UserPromptSubmit','/plugin:other','dedup2')").execute(pool).await.unwrap();
     sqlx::query("INSERT INTO ai_requests(id,request_id,user_id,context_id,client_session_id,provider,model,status,cost_microdollars,input_tokens,output_tokens,latency_ms,actor_kind,actor_id) VALUES('request1','request1','consumer','00000000-0000-4000-8000-000000000001','native-session','anthropic','model','failed',125,12,3,9,'user','consumer'),('request2','request2','consumer','00000000-0000-4000-8000-000000000001','native-session','anthropic','model','completed',0,NULL,NULL,5,'user','consumer')").execute(pool).await.unwrap();
-    sqlx::query("INSERT INTO session_analyses(session_id,user_id,quality_score,outcome) VALUES('native-session','consumer',85,'completed')").execute(pool).await.unwrap();
+    sqlx::query("INSERT INTO evaluation_runs(session_id,user_id,host,criterion,attempt,status,score_source,score,provider,model,system_prompt,user_prompt,config_hash) VALUES('native-session','consumer','claude-code','quality',1,'succeeded','judge',85,'e2e-mock','e2e-mock-sonnet','system','user','seed')").execute(pool).await.unwrap();
 }
 
 pub(super) async fn drain(pool: &PgPool) {

@@ -30,3 +30,4 @@ pub mod traces;
 pub mod users;
 
 pub mod analysis;
+pub mod evaluation;

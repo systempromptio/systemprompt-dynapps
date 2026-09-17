@@ -115,8 +115,6 @@ DROP TRIGGER IF EXISTS feedback_capture ON plugin_usage_events;
 CREATE TRIGGER feedback_capture AFTER INSERT OR UPDATE OR DELETE ON plugin_usage_events FOR EACH ROW EXECUTE FUNCTION capture_feedback_source();
 DROP TRIGGER IF EXISTS feedback_capture ON ai_requests;
 CREATE TRIGGER feedback_capture AFTER INSERT OR UPDATE OR DELETE ON ai_requests FOR EACH ROW EXECUTE FUNCTION capture_feedback_source();
-DROP TRIGGER IF EXISTS feedback_capture ON session_analyses;
-CREATE TRIGGER feedback_capture AFTER INSERT OR UPDATE OR DELETE ON session_analyses FOR EACH ROW EXECUTE FUNCTION capture_feedback_source();
 
 CREATE OR REPLACE FUNCTION capture_feedback_identity()
 RETURNS trigger LANGUAGE plpgsql AS $$

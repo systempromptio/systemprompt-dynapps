@@ -42,7 +42,6 @@ mod dashboard_counters;
 #[cfg(test)]
 mod dashboard_entity_links;
 #[cfg(test)]
-mod dashboard_session_analyses;
 #[cfg(test)]
 mod dashboard_session_summary;
 #[cfg(test)]

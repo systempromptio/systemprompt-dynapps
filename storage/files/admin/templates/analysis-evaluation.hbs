@@ -1,0 +1,36 @@
+{{#> layout title=title page=page}}{{#*inline "content"}}
+{{#> components/page-header title=title subtitle="How every closed session is scored: four criteria, the model that judges each, and the exact instructions it receives. Scores appear on each session and roll up into Impact."}}
+{{#*inline "header_actions"}}<a class="sp-btn sp-btn--sm sp-btn--primary" href="{{runs_url}}">Judge runs &rarr;</a>{{/inline}}
+{{/components/page-header}}
+{{> analysis-subnav}}
+{{#if configured}}
+{{#unless enabled}}
+{{> components/notice tone="warn" title="Scoring is off" message="services/evaluation/config.yaml is present but scoring is not running: either it sets enabled: false or no enabled plugin sets hooks.evaluation: true."}}
+{{/unless}}
+<div class="sp-kpi-grid sp-kpi-grid--compact">
+{{> components/kpi label="Judge runs" value=summary.runs note=(concat summary.failed " failed · " summary.queued " queued")}}
+{{> components/kpi label="Judge spend" value=judge_spend note=(concat "last " summary_days " days, excluded from user figures")}}
+{{> components/kpi label="Intent" value=intent_avg note=(concat "mean over " summary.intent.sessions " sessions")}}
+{{> components/kpi label="Quality" value=quality_avg note=(concat "mean over " summary.quality.sessions " sessions")}}
+{{> components/kpi label="Speed" value=speed_avg note=(concat "mean over " summary.speed.sessions " sessions")}}
+{{> components/kpi label="Cost" value=cost_avg note=(concat "mean over " summary.cost.sessions " sessions")}}
+</div>
+<details class="sp-analysis-definitions"><summary>When a session is scored</summary>
+<p>A session closes on <code>SessionEnd</code> from its host. Hosts whose adapter has no end-of-session event close after {{quiet_minutes}} minutes of silence. Sessions with fewer than {{min_user_prompts}} user prompt(s) or older than {{lookback_hours}} hours are never queued. The <code>session_evaluation</code> job runs every minute, leases one (session, criterion) pair at a time and records a run whatever the outcome; a failed run is retried with backoff and then left visible. Judge calls go through the gateway as the job actor and never count against the person judged.{{#if owner_plugin}} Owner plugin: <code>{{owner_plugin}}</code>.{{/if}} Configuration hash <code>{{config_hash_short}}</code> is stamped on every run.</p>
+</details>
+{{#each criteria}}
+<section class="sp-section sp-eval-criterion" id="criterion-{{name}}">
+{{> components/section title=name note=(concat scoring " · " provider " / " model " · " max_output_tokens " output tokens")}}
+<div class="sp-eval-criterion__facts">
+<div><span class="sp-eval-criterion__label">Inputs</span><span class="sp-eval-criterion__values">{{#each inputs}}{{> components/badge tone="muted" text=this}}{{/each}}</span></div>
+{{#if is_metric}}<div><span class="sp-eval-criterion__label">Thresholds</span><span class="sp-eval-criterion__values">{{#each thresholds}}{{> components/badge tone="info" text=(concat label ": " value)}}{{/each}}</span></div>{{/if}}
+<div><span class="sp-eval-criterion__label">Instructions file</span><code>{{instructions_path}}</code></div>
+</div>
+<details class="sp-eval-criterion__prompt" open><summary>System prompt as the judge receives it</summary><pre class="sp-analysis-file-preview"><code>{{system_prompt}}</code></pre></details>
+<details class="sp-eval-criterion__prompt"><summary>Required output schema</summary><pre class="sp-analysis-file-preview"><code>{{schema_json}}</code></pre></details>
+</section>
+{{/each}}
+{{else}}
+{{> components/empty-state title="Evaluation is not configured" message="Add services/evaluation/config.yaml with four criteria and set hooks.evaluation: true on the governance-owning plugin. The boot validates the file against the provider catalog."}}
+{{/if}}
+{{/inline}}{{/layout}}

@@ -16,7 +16,6 @@ mod plugins_config;
 mod plugins_requests;
 pub mod projects;
 pub mod role;
-pub mod session_analysis;
 mod traffic;
 mod user_context;
 mod users;

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id,user_id,session_id FROM (SELECT id,user_id,session_id FROM plugin_usage_events WHERE $1='plugin_usage_events' UNION ALL SELECT id,user_id,client_session_id AS session_id FROM ai_requests WHERE $1='ai_requests' UNION ALL SELECT session_id AS id,user_id,session_id FROM session_analyses WHERE $1='session_analyses') rows WHERE id>$2 ORDER BY id LIMIT $3",
+  "query": "SELECT id,user_id,session_id FROM (SELECT id,user_id,session_id FROM plugin_usage_events WHERE $1='plugin_usage_events' UNION ALL SELECT id,user_id,client_session_id AS session_id FROM ai_requests WHERE $1='ai_requests' UNION ALL SELECT id,user_id,session_id FROM evaluation_runs WHERE $1='evaluation_runs') rows WHERE id>$2 ORDER BY id LIMIT $3",
   "describe": {
     "columns": [
       {
@@ -35,5 +35,5 @@
       null
     ]
   },
-  "hash": "b6de97cd9edca284707a11ae806734d68cf36a4c34bb086fa9f779cc9600f4f2"
+  "hash": "a1f2ad92df7f839879c3826cbe451c0f608be3c120c26a952d0889767cfbd0d6"
 }

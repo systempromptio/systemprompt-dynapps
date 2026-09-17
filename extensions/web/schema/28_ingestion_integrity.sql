@@ -51,9 +51,6 @@ FOR EACH ROW EXECUTE FUNCTION enforce_ingestion_owner();
 DROP TRIGGER IF EXISTS ingestion_owner ON session_transcripts;
 CREATE TRIGGER ingestion_owner BEFORE INSERT OR UPDATE ON session_transcripts
 FOR EACH ROW EXECUTE FUNCTION enforce_ingestion_owner();
-DROP TRIGGER IF EXISTS ingestion_owner ON session_analyses;
-CREATE TRIGGER ingestion_owner BEFORE INSERT OR UPDATE ON session_analyses
-FOR EACH ROW EXECUTE FUNCTION enforce_ingestion_owner();
 
 CREATE TABLE IF NOT EXISTS ingestion_repairs (
     request_id TEXT PRIMARY KEY,
@@ -86,14 +83,14 @@ WHERE e.event_type = 'UserPromptSubmit'
 UNION ALL
 SELECT e.id, e.user_id, e.session_id, e.plugin_id,
        replace(e.metadata->'tool_input'->>'skill', '_', '-') AS skill,
-       e.metadata->>'tool_use_id' AS tool_use_id, 'tool'::text AS source, e.created_at AS invoked_at
+       e.tool_use_id, 'tool'::text AS source, e.created_at AS invoked_at
 FROM plugin_usage_events e
 WHERE e.event_type IN ('PostToolUse', 'PostToolUseFailure') AND e.tool_name = 'Skill'
   AND e.metadata->'tool_input'->>'skill' IS NOT NULL
 UNION ALL
 SELECT e.id, e.user_id, e.session_id, e.plugin_id,
        COALESCE(e.metadata->>'skill_ref', 'opencode:' || replace(e.metadata->'tool_input'->>'name', '_', '-')) AS skill,
-       e.metadata->>'tool_use_id' AS tool_use_id, 'tool'::text AS source, e.created_at AS invoked_at
+       e.tool_use_id, 'tool'::text AS source, e.created_at AS invoked_at
 FROM plugin_usage_events e
 WHERE e.event_type IN ('PostToolUse', 'PostToolUseFailure') AND e.tool_name = 'skill'
   AND e.metadata->'tool_input'->>'name' IS NOT NULL;

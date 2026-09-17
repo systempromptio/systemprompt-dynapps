@@ -1,35 +1,29 @@
 //! View-model builders for the two judgement panels on the session detail
-//! page: the stored AI analysis, and the human ratings people left.
+//! page: the judge's per-criterion scores, and the human ratings people left.
 
+use crate::handlers::ssr::analysis::evaluation::views::score_tone;
 use crate::handlers::ssr::format::{local_time, short_id};
-use crate::repositories::analytics::session_quality::{SessionAnalysisSummary, SessionRatingRow};
+use crate::repositories::analytics::session_quality::SessionRatingRow;
+use crate::repositories::evaluation::runs::SessionCriterionScore;
 
-use super::context::{AnalysisView, RatingView};
+use super::context::{EvaluationScoreView, RatingView};
 
-pub(super) fn analysis_view(a: &SessionAnalysisSummary) -> AnalysisView {
-    let tags = a.tags.clone();
-    AnalysisView {
-        title: a.title.clone(),
-        summary: a.summary.clone(),
-        category: a.category.clone(),
-        outcome: a.outcome.clone(),
-        goal_achieved: a.goal_achieved.clone(),
-        quality_score: a.quality_score,
-        quality_tone: score_tone(a.quality_score),
-        goal_tone: goal_tone(&a.goal_achieved),
-        has_tags: !tags.is_empty(),
-        tags,
-        recommendations: non_empty(a.recommendations.as_deref()),
-        improvement_hints: non_empty(a.improvement_hints.as_deref()),
-        error_analysis: non_empty(a.error_analysis.as_deref()),
-        corrections_count: a.corrections_count,
-        duration_display: a
-            .session_duration_minutes
-            .map_or_else(|| "—".to_owned(), |m| format!("{m} min")),
-        turns_display: a
-            .total_turns
-            .map_or_else(|| "—".to_owned(), |t| t.to_string()),
-        updated_at_local: local_time(a.updated_at),
+pub(super) fn score_view(s: &SessionCriterionScore) -> EvaluationScoreView {
+    EvaluationScoreView {
+        criterion: s.criterion.clone(),
+        score_display: s
+            .score
+            .map_or_else(|| "—".to_owned(), |v| format!("{v}/100")),
+        tone: s.score.map_or("muted", score_tone),
+        score_source: s.score_source.clone(),
+        model: s.model.clone(),
+        run_url: format!(
+            "/admin/analysis/evaluation/runs/{}",
+            urlencoding::encode(&s.run_id)
+        ),
+        evaluated_at_local: local_time(s.created_at),
+        rationale: non_empty(s.rationale.as_deref()),
+        error: non_empty(s.error.as_deref()),
     }
 }
 
@@ -68,24 +62,6 @@ pub(super) fn rating_average(ratings: &[SessionRatingRow]) -> Option<String> {
     let sum: i64 = ratings.iter().map(|r| i64::from(r.rating)).sum();
     let mean = sum as f64 / ratings.len() as f64;
     Some(format!("{mean:.1}"))
-}
-
-// Why: the analysis writer scores 0-100 and a human rates 1-5; both are mapped
-// onto the same three tones so the two panels read on one scale.
-const fn score_tone(score: i16) -> &'static str {
-    match score {
-        s if s >= 80 => "ok",
-        s if s >= 50 => "warn",
-        _ => "err",
-    }
-}
-
-fn goal_tone(goal: &str) -> &'static str {
-    match goal.to_lowercase().as_str() {
-        "yes" | "true" | "achieved" | "complete" => "ok",
-        "partial" | "partially" => "warn",
-        _ => "err",
-    }
 }
 
 fn stars(rating: i16) -> String {

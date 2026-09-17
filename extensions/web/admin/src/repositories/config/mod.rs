@@ -17,6 +17,7 @@
 pub mod acl_bootstrap;
 pub mod acl_detect;
 pub mod agents;
+pub mod evaluation;
 pub mod gateway;
 pub mod gateway_acl;
 pub mod groups_yaml_loader;

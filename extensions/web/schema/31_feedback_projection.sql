@@ -47,6 +47,8 @@ SELECT CASE WHEN value IS NULL THEN jsonb_build_object('status','unknown')
 FROM (SELECT feedback_event_receipt(event_key) AS value) receipt
 $$;
 
+-- Redefined by 36_marketplace_versions.sql once `marketplace_versions` exists,
+-- adding the marketplace hash; this is the body without it.
 CREATE OR REPLACE FUNCTION feedback_event_skill(event_key TEXT)
 RETURNS JSONB LANGUAGE sql STABLE AS $$
 SELECT CASE WHEN e.plugin_id IS NULL OR e.skill IS NULL OR e.skill='' THEN NULL
@@ -90,12 +92,12 @@ BEGIN
         value := jsonb_build_object('association_key',key,'invocation_key',feedback_fact_key('invocation',e.id,NULL,e.user_id),
             'request_key',feedback_fact_key('request',NULL,r.id,r.user_id),'occurred_at',e.invoked_at,'attribution',feedback_event_attribution(e.id));
     ELSE
-        SELECT * INTO a FROM session_analyses WHERE user_id=e.user_id AND session_id=e.session_id;
+        SELECT * INTO a FROM evaluation_runs WHERE user_id=e.user_id AND session_id=e.session_id AND criterion='quality' AND status='succeeded'
+            ORDER BY created_at DESC LIMIT 1;
         IF NOT FOUND THEN RETURN NULL; END IF;
         value := jsonb_build_object('assessment_key',key,'invocation_key',feedback_fact_key('invocation',e.id,NULL,e.user_id),
             'conversation_key',jsonb_build_object('source','astound.conversations','id',md5(jsonb_build_array(e.user_id,e.session_id)::text)),
-            'occurred_at',a.created_at,'outcome',CASE WHEN a.outcome IN ('failed','failure') THEN jsonb_build_object('status','failed')
-             WHEN a.quality_score BETWEEN 1 AND 100 THEN jsonb_build_object('status','scored','score_millionths',a.quality_score::bigint*10000)
+            'occurred_at',a.created_at,'outcome',CASE WHEN a.score BETWEEN 0 AND 100 THEN jsonb_build_object('status','scored','score_millionths',a.score::bigint*10000)
              ELSE jsonb_build_object('status','unavailable') END);
     END IF;
     RETURN jsonb_build_object('kind',q.kind,'value',value);

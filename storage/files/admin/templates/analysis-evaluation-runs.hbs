@@ -1,0 +1,25 @@
+{{#> layout title=title page=page}}{{#*inline "content"}}
+{{#> components/page-header title=title subtitle="Every judge call, newest first: the session it scored, the criterion, the model, what it cost, and whether it succeeded. Open a run to read the prompt and the response."}}
+{{#*inline "header_actions"}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/analysis/evaluation">Criteria</a>{{/inline}}
+{{/components/page-header}}
+{{> analysis-subnav}}
+{{#> components/toolbar}}
+{{#*inline "toolbar_filters"}}
+<form class="sp-toolbar__filter sp-aflow-filter" method="get" action="/admin/analysis/evaluation/runs">
+<div class="sp-toolbar__field"><label class="sp-toolbar__field-label" for="ev-criterion">Criterion</label><select class="sp-search-input" id="ev-criterion" name="criterion"><option value="">All</option>{{#each criteria}}<option value="{{this}}"{{#if (eq ../query.criterion this)}} selected{{/if}}>{{this}}</option>{{/each}}</select></div>
+<div class="sp-toolbar__field"><label class="sp-toolbar__field-label" for="ev-status">Status</label><select class="sp-search-input" id="ev-status" name="status"><option value="">All</option>{{#each statuses}}<option value="{{this}}"{{#if (eq ../query.status this)}} selected{{/if}}>{{this}}</option>{{/each}}</select></div>
+<div class="sp-toolbar__field"><label class="sp-toolbar__field-label" for="ev-host">Host</label><input class="sp-search-input" type="text" id="ev-host" name="host" value="{{query.host}}" maxlength="64" placeholder="claude-code, opencode…"></div>
+<div class="sp-toolbar__field"><label class="sp-toolbar__field-label" for="ev-session">Session</label><input class="sp-search-input" type="text" id="ev-session" name="session" value="{{query.session}}" maxlength="255"></div>
+<button class="sp-btn sp-btn--sm sp-btn--primary" type="submit">Apply</button>
+</form>
+{{/inline}}
+{{/components/toolbar}}
+{{> components/section title="Judge runs" count=pagination.total_rows note="One row per attempt. A session has up to four succeeded runs, one per criterion; failed attempts stay so the error is on record."}}
+{{#> components/table caption="Judge runs" pagination=pagination}}
+<thead><tr><th scope="col">Run</th><th scope="col">Session</th><th scope="col">Host</th><th scope="col">Criterion</th><th scope="col" class="sp-table__cell--num">Score</th><th scope="col">Model</th><th scope="col" class="sp-table__cell--num" title="Input / output tokens">Tokens</th><th scope="col" class="sp-table__cell--num">Cost</th><th scope="col" class="sp-table__cell--num">Latency</th><th scope="col">Status</th><th scope="col" class="sp-table__cell--date">When</th></tr></thead>
+<tbody>
+{{#each runs}}<tr><td class="sp-table__cell--primary"><a class="sp-table__link sp-u-mono" href="{{url}}" title="{{id}}">{{id_short}}</a></td><td><a class="sp-table__link sp-u-mono" href="{{session_url}}" title="{{session_id}}">{{session_short}}</a></td><td>{{> components/badge tone="muted" text=host}}</td><td>{{criterion}} <span class="sp-u-text-tertiary">{{score_source}}</span></td><td class="sp-table__cell--num">{{> components/badge tone=score_tone text=score_display}}</td><td class="sp-u-mono" title="{{provider}}">{{model}}</td><td class="sp-table__cell--num sp-u-num">{{tokens}}</td><td class="sp-table__cell--num sp-u-num">{{cost}}</td><td class="sp-table__cell--num sp-u-num">{{latency}}</td><td>{{> components/badge tone=status_tone text=status}}{{#if error}} <span class="sp-u-text-tertiary" title="{{error}}">attempt {{attempt}}</span>{{/if}}</td><td class="sp-table__cell--date">{{created_at_local}}</td></tr>
+{{else}}<tr class="sp-table__empty"><td colspan="11">{{> components/empty-state title="No judge runs" message="Runs appear once a session closes and the session_evaluation job has scored it. Check the criteria page if scoring is off."}}</td></tr>{{/each}}
+</tbody>
+{{/components/table}}
+{{/inline}}{{/layout}}

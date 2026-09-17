@@ -1,19 +1,15 @@
 //! `/hooks/track` ingestion: the endpoint Claude Code hooks post events to.
 //!
-//! Insertion is deliberately fire-and-forget past the initial row write —
-//! downstream tracking, entity detection and AI analysis are dispatched after
-//! the event is persisted so a slow analysis never stalls the caller's hook.
+//! The handler records the event and updates the session's rollups; nothing
+//! here calls a model. Session scoring is the `session_evaluation` job, which
+//! reads these rows once the session has closed.
 
-pub(crate) mod ai_context;
-pub(crate) mod ai_summary;
-pub(crate) mod ai_summary_types;
 mod auth;
 mod dedup;
 mod description;
 mod entity;
 mod helpers;
 mod processing;
-pub(crate) mod session_summary;
 
 use crate::error::{AdminError, AdminResult};
 use crate::event_hub::EventHub;
@@ -29,16 +25,14 @@ use axum::response::{IntoResponse, Response};
 use sha2::Digest;
 use sqlx::PgPool;
 use std::sync::Arc;
-use systemprompt::ai::AiService;
 use systemprompt::identifiers::{PluginId, SessionId, UserId};
 
-// Why: The three services a tracked hook event is handed to, taken as one
+// Why: The two services a tracked hook event is handed to, taken as one
 // extractor so the handler's arguments are the request's own parts.
 #[derive(Debug, Clone)]
 pub(crate) struct TrackDeps {
     managed: systemprompt::marketplace::managed::ManagedRepository,
     event_hub: EventHub,
-    ai_service: Option<Arc<AiService>>,
 }
 
 impl<S: Send + Sync> FromRequestParts<S> for TrackDeps {
@@ -47,28 +41,19 @@ impl<S: Send + Sync> FromRequestParts<S> for TrackDeps {
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         let Extension(managed) = Extension::from_request_parts(parts, state).await?;
         let Extension(event_hub) = Extension::from_request_parts(parts, state).await?;
-        let Extension(ai_service) = Extension::from_request_parts(parts, state).await?;
-        Ok(Self {
-            managed,
-            event_hub,
-            ai_service,
-        })
+        Ok(Self { managed, event_hub })
     }
 }
 
 pub(crate) async fn handle_hook_track(
-    TrackDeps {
-        managed,
-        event_hub,
-        ai_service,
-    }: TrackDeps,
+    TrackDeps { managed, event_hub }: TrackDeps,
     State(pool): State<Arc<PgPool>>,
     headers: HeaderMap,
     // JSON: protocol boundary — the third-party hook envelope, parsed into typed
     // events by `HookEventPayload::from_value` after the raw copy is retained
     Json(mut raw): Json<serde_json::Value>,
 ) -> AdminResult<Response> {
-    let (user_id, plugin_id, jwt_token) = extract_and_validate_jwt(&headers)?;
+    let (user_id, plugin_id) = extract_and_validate_jwt(&headers)?;
     tracing::trace!(payload = %helpers::sanitize_metadata(&raw), "Hook track received payload");
     if let Some(event_id) = headers
         .get("x-ingestion-event-id")
@@ -103,8 +88,6 @@ pub(crate) async fn handle_hook_track(
         user_id: &user_id,
         payload: &payload,
         event_hub: &event_hub,
-        ai_service: ai_service.as_ref(),
-        jwt_token: &jwt_token,
     })
     .await;
     crate::repositories::dashboard::usage_aggregations::ingestion::drain_ingestion_outbox(&pool)
@@ -127,8 +110,6 @@ struct DispatchContext<'a> {
     user_id: &'a UserId,
     payload: &'a HookEventPayload,
     event_hub: &'a EventHub,
-    ai_service: Option<&'a Arc<AiService>>,
-    jwt_token: &'a str,
 }
 
 async fn dispatch_inserted_event(ctx: &DispatchContext<'_>) {
@@ -143,8 +124,6 @@ async fn dispatch_inserted_event(ctx: &DispatchContext<'_>) {
         content_output_bytes: content_bytes.output,
         payload: ctx.payload,
         event_hub: ctx.event_hub,
-        ai_service: ctx.ai_service,
-        jwt_token: ctx.jwt_token,
     })
     .await;
 }

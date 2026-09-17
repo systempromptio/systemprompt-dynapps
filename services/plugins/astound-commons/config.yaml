@@ -34,5 +34,10 @@ plugin:
   # call per tool, and an owner only some users receive leaves every other
   # session ungoverned and unrecorded — no plugin_usage_events, so no skill
   # invocations on the dashboard.
+  # `evaluation` is the switch for the session-evaluation engine (the
+  # LLM-as-judge in services/evaluation/). It installs nothing on the client:
+  # the engine reads the sessions this plugin's track hook already reports, so
+  # it rides on the governance owner and only that plugin may set it.
   hooks:
     governance: true
+    evaluation: true

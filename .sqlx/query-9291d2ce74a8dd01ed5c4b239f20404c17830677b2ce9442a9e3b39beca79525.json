@@ -1,0 +1,87 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT count(*) AS \"requests!\",\n                  count(*) FILTER (WHERE status = 'completed') AS \"completed!\",\n                  count(*) FILTER (WHERE status = 'failed') AS \"failed!\",\n                  COALESCE(sum(input_tokens), 0)::BIGINT AS \"input_tokens!\",\n                  COALESCE(sum(output_tokens), 0)::BIGINT AS \"output_tokens!\",\n                  COALESCE(sum(cache_read_tokens), 0)::BIGINT AS \"cache_read_tokens!\",\n                  COALESCE(sum(cache_creation_tokens), 0)::BIGINT AS \"cache_creation_tokens!\",\n                  COALESCE(sum(cost_microdollars), 0)::BIGINT AS \"cost_microdollars!\",\n                  avg(latency_ms)::FLOAT8 AS avg_latency_ms,\n                  max(latency_ms) AS max_latency_ms\n             FROM ai_requests\n            WHERE user_id = $1 AND client_session_id = $2\n              AND actor_kind = 'user' AND request_kind = 'turn'",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "requests!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "completed!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "failed!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "input_tokens!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "output_tokens!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "cache_read_tokens!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 6,
+        "name": "cache_creation_tokens!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 7,
+        "name": "cost_microdollars!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 8,
+        "name": "avg_latency_ms",
+        "type_info": "Float8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 9,
+        "name": "max_latency_ms",
+        "type_info": "Int4",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "9291d2ce74a8dd01ed5c4b239f20404c17830677b2ce9442a9e3b39beca79525"
+}

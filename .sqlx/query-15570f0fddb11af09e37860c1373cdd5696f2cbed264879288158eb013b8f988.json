@@ -1,0 +1,112 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT DISTINCT ON (criterion) id, criterion, score_source, score, rationale, model, error, created_at\n             FROM evaluation_runs\n            WHERE session_id = $1\n            ORDER BY criterion, (status = 'succeeded') DESC, created_at DESC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "evaluation_runs",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "criterion",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "evaluation_runs",
+            "name": "criterion"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "score_source",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "evaluation_runs",
+            "name": "score_source"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "score",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "evaluation_runs",
+            "name": "score"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "rationale",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "evaluation_runs",
+            "name": "rationale"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "model",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "evaluation_runs",
+            "name": "model"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "error",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "evaluation_runs",
+            "name": "error"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "evaluation_runs",
+            "name": "created_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "15570f0fddb11af09e37860c1373cdd5696f2cbed264879288158eb013b8f988"
+}

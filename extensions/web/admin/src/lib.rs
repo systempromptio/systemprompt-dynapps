@@ -55,7 +55,7 @@ pub use handlers::salesforce_auth::{SalesforceConfig, SalesforceDeps, Salesforce
 pub use routes::managed_state::StateError;
 pub use routes::{admin_ssr_router, bridge_auth_ssr_router};
 pub use services::salesforce_orgs::salesforce_orgs_boot_check;
-pub use services::{connector_oauth, salesforce_orgs};
+pub use services::{connector_oauth, evaluation, salesforce_orgs};
 pub use types::{
     CreateUserRequest, MarketplaceContext, UserContext, UserSummary, UserUsageEvent,
     roles_grant_console,
@@ -66,12 +66,6 @@ pub mod test_support {
     pub use crate::handlers::catalog::sorting::{
         SortColumn, direction, matches, preserved_search, sort_headers,
     };
-    pub use crate::handlers::hooks_track::ai_context::build_full_context;
-    pub use crate::handlers::hooks_track::ai_summary::build_request_context;
-    pub use crate::handlers::hooks_track::ai_summary_types::{
-        SessionAnalysis, session_analysis_schema, validate_analysis,
-    };
-    pub use crate::handlers::hooks_track::session_summary::GeneratedSessionSummary;
     pub use crate::handlers::resolve_principal;
     pub use crate::handlers::ssr::analysis::portfolio::collisions::{Collision, collisions};
     pub use crate::handlers::ssr::analysis::portfolio::groups::{
@@ -113,7 +107,6 @@ pub fn hooks_webhook_router(
         .route("/hooks/statusline", post(handlers::track_statusline_event))
         .route("/hooks/transcript", post(handlers::track_transcript_event))
         .layer(Extension(event_hub::EventHub::default()))
-        .layer(Extension(None::<Arc<systemprompt::ai::AiService>>))
         .layer(Extension(session_service))
         .layer(Extension(managed))
         .with_state(pool))

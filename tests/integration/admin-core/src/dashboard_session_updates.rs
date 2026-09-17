@@ -1,6 +1,6 @@
 //! `repositories::dashboard::usage_aggregations::session_updates` and
-//! `::ai_summaries` — the in-place edits a session row receives as its events
-//! and its AI analysis arrive.
+//! `::session_titles` — the in-place edits a session row receives as its
+//! events arrive and once the judge has named it.
 //!
 //! `update_session_metadata` treats the empty string as "no opinion" and keeps
 //! whatever is already stored, which is what lets a later event with partial
@@ -9,38 +9,12 @@
 
 use systemprompt::identifiers::SessionId;
 use systemprompt_web_admin::repositories::dashboard::usage_aggregations::{
-    update_session_ai_summary_structured, update_session_metadata, update_session_permission_mode,
+    update_session_metadata, update_session_permission_mode, update_session_title,
     update_session_title_if_empty,
 };
-use systemprompt_web_admin::test_support::SessionAnalysis;
 
 use crate::fixtures::{SummarySpec, insert_summary, insert_user, unclaimed_email, unique};
 use crate::tempdb::TempDb;
-
-fn analysis() -> SessionAnalysis {
-    SessionAnalysis {
-        title: "Fixed the parser".to_owned(),
-        description: "A short description".to_owned(),
-        goal_summary: "Make the parser accept trailing commas".to_owned(),
-        outcomes: vec!["Parser updated".to_owned(), "Tests added".to_owned()],
-        tags: vec!["rust".to_owned(), "parser".to_owned()],
-        goal_achieved: "yes".to_owned(),
-        quality_score: 82,
-        outcome: "success".to_owned(),
-        error_analysis: None,
-        skill_assessment: None,
-        recommendations: None,
-        skill_scores: None,
-        category: None,
-        goal_outcome_map: None,
-        efficiency_metrics: None,
-        best_practices_checklist: None,
-        improvement_hints: None,
-        automation_ratio: None,
-        plan_mode_used: None,
-        client_surface: None,
-    }
-}
 
 struct MetadataRow {
     client_source: Option<String>,
@@ -213,49 +187,45 @@ async fn update_session_title_if_empty_replaces_a_blank_string_title() {
 }
 
 #[tokio::test]
-async fn update_session_ai_summary_structured_writes_the_composed_summary_and_tags() {
+async fn update_session_title_writes_title_and_summary() {
     let Some(db) = TempDb::create().await else {
         return;
     };
-    let session = seeded_session(&db.pool, "aisummary").await;
+    let session = seeded_session(&db.pool, "judgetitle").await;
 
-    update_session_ai_summary_structured(&db.pool, &SessionId::new(session.clone()), &analysis())
-        .await;
+    update_session_title(
+        &db.pool,
+        &SessionId::new(session.clone()),
+        "Fixed the parser",
+        "The person wanted trailing commas accepted; the assistant did that and added tests.",
+    )
+    .await
+    .expect("title written");
 
-    let row: (
-        Option<String>,
-        Option<String>,
-        Option<String>,
-        Option<String>,
-    ) = sqlx::query_as(
-        "SELECT ai_title, ai_description, ai_summary, ai_tags
-         FROM plugin_session_summaries WHERE session_id = $1",
+    let row: (Option<String>, Option<String>) = sqlx::query_as(
+        "SELECT ai_title, ai_summary FROM plugin_session_summaries WHERE session_id = $1",
     )
     .bind(&session)
     .fetch_one(&*db.pool)
     .await
-    .expect("read ai summary columns");
-
+    .expect("read title columns");
     assert_eq!(row.0.as_deref(), Some("Fixed the parser"));
-    assert_eq!(row.1.as_deref(), Some("A short description"));
-    assert_eq!(row.3.as_deref(), Some("rust,parser"));
-    let summary = row.2.expect("summary written");
-    assert!(summary.starts_with("Make the parser accept trailing commas"));
-    assert!(summary.contains("- Parser updated"));
-    assert!(summary.contains("- Tests added"));
+    assert!(row.1.expect("summary written").contains("trailing commas"));
     db.cleanup().await;
 }
 
 #[tokio::test]
-async fn update_session_ai_summary_structured_overwrites_an_existing_title() {
+async fn update_session_title_overwrites_an_existing_title() {
     let Some(db) = TempDb::create().await else {
         return;
     };
-    let session = seeded_session(&db.pool, "aioverwrite").await;
+    let session = seeded_session(&db.pool, "judgeoverwrite").await;
     let id = SessionId::new(session.clone());
     update_session_title_if_empty(&db.pool, &id, "Placeholder").await;
 
-    update_session_ai_summary_structured(&db.pool, &id, &analysis()).await;
+    update_session_title(&db.pool, &id, "Fixed the parser", "summary")
+        .await
+        .expect("title written");
 
     assert_eq!(
         read_metadata(&db.pool, &session).await.ai_title.as_deref(),
@@ -265,13 +235,14 @@ async fn update_session_ai_summary_structured_overwrites_an_existing_title() {
 }
 
 #[tokio::test]
-async fn update_session_ai_summary_structured_is_a_no_op_for_an_unknown_session() {
+async fn update_session_title_is_a_no_op_for_an_unknown_session() {
     let Some(db) = TempDb::create().await else {
         return;
     };
 
-    update_session_ai_summary_structured(&db.pool, &SessionId::new(unique("session")), &analysis())
-        .await;
+    update_session_title(&db.pool, &SessionId::new(unique("session")), "t", "s")
+        .await
+        .expect("no-op update");
 
     let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM plugin_session_summaries")
         .fetch_one(&*db.pool)

@@ -1,19 +1,15 @@
 //! Post-insert processing dispatched once a hook event is persisted.
 
-use std::sync::Arc;
-
 use sqlx::PgPool;
-use systemprompt::ai::AiService;
 use systemprompt::identifiers::{SessionId, UserId};
 
 use crate::event_hub::EventHub;
-use crate::numeric;
 use crate::repositories::dashboard::{conversation_analytics, hooks_track, usage_aggregations};
 
 use crate::types::webhook::{HookEvent, HookEventPayload};
-use crate::types::{ENTITY_SKILL, EVENT_SESSION_END, EVENT_SESSION_START, EVENT_STOP};
+use crate::types::{ENTITY_SKILL, EVENT_SESSION_END, EVENT_SESSION_START};
 
-use super::{ai_summary, entity, helpers};
+use super::{entity, helpers};
 
 #[derive(Debug, Clone, Copy)]
 pub(super) struct ProcessInsertedEventParams<'a> {
@@ -26,8 +22,6 @@ pub(super) struct ProcessInsertedEventParams<'a> {
     pub content_output_bytes: i64,
     pub payload: &'a HookEventPayload,
     pub event_hub: &'a EventHub,
-    pub ai_service: Option<&'a Arc<AiService>>,
-    pub jwt_token: &'a str,
 }
 
 pub(super) async fn process_inserted_event(params: &ProcessInsertedEventParams<'_>) {
@@ -58,11 +52,6 @@ pub(super) async fn process_inserted_event(params: &ProcessInsertedEventParams<'
     }
 
     handle_prompt_title(pool, event_type, session_id, payload).await;
-
-    if event_type == EVENT_STOP && has_session {
-        handle_session_analysis(params).await;
-        handle_apm_and_concurrent(params).await;
-    }
 
     if event_type == EVENT_SESSION_END && has_session {
         handle_session_end(params).await;
@@ -156,62 +145,8 @@ async fn handle_prompt_title(
     }
 }
 
-async fn handle_session_analysis(params: &ProcessInsertedEventParams<'_>) {
-    run_ai_analysis(params).await;
-}
-
 async fn handle_session_end(params: &ProcessInsertedEventParams<'_>) {
     if let Err(e) = hooks_track::mark_session_ended(params.pool, params.session_id).await {
         tracing::warn!(error = %e, session_id = %params.session_id.as_str(), "mark_session_ended failed");
     }
-}
-
-async fn run_ai_analysis(params: &ProcessInsertedEventParams<'_>) {
-    if let Some(ai) = params.ai_service {
-        let direct_msg = if let HookEvent::Stop(ref d) = params.payload.event {
-            d.last_assistant_message
-                .as_deref()
-                .filter(|m| !m.is_empty())
-        } else {
-            None
-        };
-        ai_summary::run_analysis_for_session(ai_summary::RunAnalysisParams {
-            pool: params.pool,
-            ai_service: ai,
-            user_id: params.user_id,
-            session_id: params.session_id,
-            jwt_token: params.jwt_token,
-            direct_message: direct_msg,
-        })
-        .await;
-    }
-}
-
-async fn handle_apm_and_concurrent(params: &ProcessInsertedEventParams<'_>) {
-    let pool = params.pool;
-    let user_id = params.user_id;
-    let session_id = params.session_id;
-
-    let (apm, eapm) =
-        crate::repositories::dashboard::apm_metrics::calculate_session_apm(pool, session_id).await;
-
-    let concurrent_raw =
-        match hooks_track::count_concurrent_sessions(pool, user_id, session_id).await {
-            Ok(v) => v,
-            Err(e) => {
-                tracing::error!(
-                    error = %e,
-                    session_id = %session_id.as_str(),
-                    "Failed to count concurrent sessions for APM"
-                );
-                return;
-            },
-        };
-
-    let concurrent = numeric::saturating_i32(concurrent_raw) + 1;
-
-    crate::repositories::dashboard::apm_metrics::update_session_apm(
-        pool, session_id, apm, eapm, concurrent,
-    )
-    .await;
 }

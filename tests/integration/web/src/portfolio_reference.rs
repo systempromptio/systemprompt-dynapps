@@ -26,7 +26,9 @@ pub(super) async fn list_portfolio_facts(
         FROM analysis_skill_version_events e
         LEFT JOIN ai_requests r ON r.user_id=e.user_id AND r.client_session_id=e.session_id
             AND r.created_at >= $1 AND r.created_at < $2 AND NOT r.synthetic
-        LEFT JOIN session_analyses a ON a.user_id=e.user_id AND a.session_id=e.session_id
+        LEFT JOIN LATERAL (SELECT q.score AS quality_score,'scored' AS outcome FROM evaluation_runs q
+            WHERE q.user_id=e.user_id AND q.session_id=e.session_id AND q.criterion='quality' AND q.status='succeeded'
+            ORDER BY q.created_at DESC LIMIT 1) a ON true
         WHERE e.invoked_at >= $1 AND e.invoked_at < $2 AND e.traffic_class='production'
         ORDER BY e.invoked_at DESC,e.invocation_id,r.id LIMIT 100001"#, start, end).fetch_all(pool).await?;
     Ok(rows

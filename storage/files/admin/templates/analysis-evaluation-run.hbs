@@ -1,0 +1,43 @@
+{{#> layout title=title page=page}}{{#*inline "content"}}
+{{#> components/page-header title=title subtitle="One judge call, in full: what the model was told, what it was shown, and what it answered."}}
+{{#*inline "header_actions"}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="{{runs_url}}">All runs</a>{{/inline}}
+{{/components/page-header}}
+{{> analysis-subnav}}
+<div class="sp-eval-run__verdict">
+{{> components/badge tone=detail.run.score_tone text=(concat detail.run.criterion " " detail.run.score_display)}}
+{{> components/badge tone=detail.run.status_tone text=detail.run.status}}
+{{> components/badge tone="muted" text=detail.run.score_source}}
+{{> components/badge tone="muted" text=detail.run.host}}
+{{> components/badge tone="muted" text=(concat "attempt " detail.run.attempt)}}
+</div>
+<dl class="sp-eval-run__facts">
+<div><dt>Session</dt><dd><a class="sp-table__link sp-u-mono" href="{{detail.run.session_url}}">{{detail.run.session_id}}</a></dd></div>
+<div><dt>Model</dt><dd class="sp-u-mono">{{detail.run.provider}} / {{detail.run.model}}</dd></div>
+<div><dt>Tokens in / out</dt><dd>{{detail.run.tokens}}</dd></div>
+<div><dt>Cost</dt><dd>{{detail.run.cost}}</dd></div>
+<div><dt>Latency</dt><dd>{{detail.run.latency}}</dd></div>
+<div><dt>When</dt><dd>{{detail.run.created_at_local}}</dd></div>
+<div><dt>Gateway request</dt><dd>{{#if detail.request_url}}<a class="sp-table__link" href="{{detail.request_url}}">Open request</a>{{else}}<span class="sp-u-text-tertiary">none recorded</span>{{/if}}</dd></div>
+<div><dt>Configuration</dt><dd><code title="{{detail.config_hash}}">{{detail.config_hash_short}}</code> · <a class="sp-table__link" href="/admin/analysis/evaluation#criterion-{{detail.run.criterion}}">criterion</a></dd></div>
+</dl>
+{{#if detail.run.error}}
+{{> components/notice tone="err" title="This attempt failed" message=detail.run.error}}
+{{/if}}
+{{#if detail.rationale}}
+<section class="sp-section">
+{{> components/section title="Rationale" note="The judge's explanation of the score."}}
+<p class="sp-eval-run__rationale">{{detail.rationale}}</p>
+{{#if detail.has_evidence}}
+<ul class="sp-eval-run__evidence">
+{{#each detail.evidence}}<li><blockquote>{{quote}}</blockquote><p>{{note}}</p></li>{{/each}}
+</ul>
+{{/if}}
+</section>
+{{/if}}
+{{#if detail.has_metrics}}
+<details class="sp-eval-criterion__prompt"><summary>Session metrics the judge was given</summary><pre class="sp-analysis-file-preview"><code>{{detail.metrics_json}}</code></pre></details>
+{{/if}}
+<details class="sp-eval-criterion__prompt"><summary>System prompt</summary><pre class="sp-analysis-file-preview"><code>{{detail.system_prompt}}</code></pre></details>
+<details class="sp-eval-criterion__prompt" open><summary>User prompt (the session excerpts)</summary><pre class="sp-analysis-file-preview"><code>{{detail.user_prompt}}</code></pre></details>
+<details class="sp-eval-criterion__prompt"><summary>Raw response</summary><pre class="sp-analysis-file-preview"><code>{{#if detail.response}}{{detail.response}}{{else}}(no response){{/if}}</code></pre></details>
+{{/inline}}{{/layout}}

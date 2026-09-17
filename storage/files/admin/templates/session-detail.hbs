@@ -39,36 +39,35 @@
       {{/if}}
     </section>
 
-    {{#if analysis}}
     <section class="sp-p-session-detail__analysis" aria-labelledby="analysis-title">
-      {{#> components/section title="Assessed outcome" note="Written by the hooks pipeline when the run ended."}}
-        {{#*inline "section_actions"}}<span class="sp-table__cell--muted">Updated {{analysis.updated_at_local}}</span>{{/inline}}
+      {{#> components/section title="Evaluation" note="Scored per criterion by the judge once the session closed."}}
+        {{#*inline "section_actions"}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/analysis/evaluation">How scoring works</a>{{/inline}}
       {{/components/section}}
-      <div class="sp-p-session-detail__verdict">
-        {{> components/badge tone=analysis.quality_tone text=(concat "Quality " analysis.quality_score "/100")}}
-        {{> components/badge tone=analysis.goal_tone text=(concat "Goal: " analysis.goal_achieved)}}
-        {{> components/badge tone="info" text=analysis.category}}
-        {{> components/badge tone="muted" text=analysis.outcome}}
-        {{> components/badge tone="muted" text=(concat analysis.corrections_count " correction(s)")}}
-        {{> components/badge tone="muted" text=(concat analysis.turns_display " turn(s)")}}
-        {{> components/badge tone="muted" text=analysis.duration_display}}
-        {{#each analysis.tags}}{{> components/badge tone="muted" text=this}}{{/each}}
+      {{#if has_scores}}
+      <div class="sp-p-session-detail__scores">
+        {{#each scores}}
+        <article class="sp-p-session-detail__score sp-p-session-detail__score--{{tone}}">
+          <header class="sp-p-session-detail__score-head">
+            <span class="sp-p-session-detail__score-name">{{criterion}}</span>
+            {{> components/badge tone=tone text=score_display}}
+          </header>
+          {{#if error}}
+            <p class="sp-p-session-detail__score-error">{{error}}</p>
+          {{else}}
+            <p class="sp-p-session-detail__score-rationale">{{rationale}}</p>
+          {{/if}}
+          <footer class="sp-p-session-detail__score-meta">
+            <span>{{score_source}} · {{model}}</span>
+            <a class="sp-table__link" href="{{run_url}}">Run · {{evaluated_at_local}}</a>
+          </footer>
+        </article>
+        {{/each}}
       </div>
-      <p class="sp-p-session-detail__summary">{{analysis.summary}}</p>
-      {{#if analysis.error_analysis}}
-        {{> components/notice tone="err" title="What went wrong" message=analysis.error_analysis}}
-      {{/if}}
-      {{#if analysis.recommendations}}
-        {{> components/notice tone="info" title="Recommendations" message=analysis.recommendations}}
-      {{/if}}
-      {{#if analysis.improvement_hints}}
-        {{> components/notice tone="warn" title="Improvement hints" message=analysis.improvement_hints}}
+      {{else}}
+        {{> components/notice tone="muted" title="No evaluation yet"
+            message="A session is scored once it closes: on SessionEnd, or after the quiet period for hosts that send none. A session still in flight has no scores."}}
       {{/if}}
     </section>
-    {{else}}
-      {{> components/notice tone="muted" title="No assessment yet"
-          message="The hooks pipeline writes one analysis per session when the run ends. A session still in flight has none."}}
-    {{/if}}
 
     <section aria-labelledby="ratings-title">
       {{> components/section title="Ratings" count=rating_count note="What the people on this session said about it."}}

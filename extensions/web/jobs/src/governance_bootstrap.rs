@@ -4,7 +4,8 @@
 //! Four steps, in dependency order:
 //! 0. Validate `services/governance/config.yaml`, failing the boot rather than
 //!    letting an unparseable file degrade to the built-in defaults unnoticed,
-//!    and warn when the resulting chain enforces nothing.
+//!    and warn when the resulting chain enforces nothing. Then validate
+//!    `services/evaluation/config.yaml` against the provider catalog.
 //! 1. Reconcile the services gateway-route entities into
 //!    `access_control_entities` (so the FK on `access_control_rules` is
 //!    satisfied and a `gateway_route` `entity_match` glob has routes to expand
@@ -83,6 +84,7 @@ async fn execute_inner(ctx: &JobContext) -> Result<JobResult, JobError> {
     let services_path = paths.system().services().to_path_buf();
 
     let governance = check_governance_config(&services_path)?;
+    check_evaluation_config(&services_path)?;
 
     systemprompt_web_admin::salesforce_orgs_boot_check(&services_path)
         .await
@@ -190,6 +192,46 @@ pub fn check_governance_config(
         );
     }
     Ok(GovernanceStatus { active, warning })
+}
+
+// Why: the plugin flag and the config file are two halves of one switch. A
+// flag with no file is an operator who thinks sessions are being scored when
+// nothing will run, so that fails the boot; a file with no flag is merely
+// idle and is only reported.
+#[doc(hidden)]
+pub fn check_evaluation_config(services_path: &std::path::Path) -> Result<(), JobError> {
+    use systemprompt_web_admin::repositories::config::evaluation::load_evaluation;
+
+    let services = systemprompt::loader::ServicesBootstrap::get()?;
+    let owner = services
+        .plugins
+        .values()
+        .find(|p| p.enabled && p.hooks.evaluation)
+        .map(|p| p.id.as_str());
+    let loaded = load_evaluation(services_path, &services.providers, &services.ai)?;
+    match (owner, loaded) {
+        (Some(owner), None) => Err(JobError::Config(format!(
+            "plugin '{owner}' sets hooks.evaluation but services/evaluation/config.yaml is missing"
+        ))),
+        (Some(owner), Some(config)) => {
+            tracing::info!(
+                owner,
+                enabled = config.enabled,
+                criteria = config.criteria.len(),
+                config_hash = %config.config_hash,
+                "session evaluation configured"
+            );
+            Ok(())
+        },
+        (None, Some(_)) => {
+            tracing::warn!(
+                "services/evaluation/config.yaml is present but no enabled plugin sets \
+                 hooks.evaluation: true — sessions will not be scored"
+            );
+            Ok(())
+        },
+        (None, None) => Ok(()),
+    }
 }
 
 struct GatewayCatalog {

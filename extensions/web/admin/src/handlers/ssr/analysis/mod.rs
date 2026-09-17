@@ -17,6 +17,7 @@ use serde::Serialize;
 use sqlx::PgPool;
 use std::sync::Arc;
 pub(crate) mod candidates;
+pub(crate) mod evaluation;
 pub(crate) mod impact;
 pub(crate) mod impact_cohorts;
 pub(crate) mod impact_paging;

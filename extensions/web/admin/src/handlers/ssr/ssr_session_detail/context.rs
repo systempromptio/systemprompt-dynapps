@@ -20,10 +20,11 @@ pub(super) struct SessionDetailPageContext {
     pub(super) has_traces: bool,
     pub(super) has_requests: bool,
     pub(super) back_url: &'static str,
-    // Why: absent until the hooks pipeline has summarised the run, which is
-    // the normal state for a session still in flight — the page says so rather
-    // than rendering an empty verdict panel.
-    pub(super) analysis: Option<AnalysisView>,
+    // Why: empty until the session has closed and the evaluation job has run,
+    // which is the normal state for a session still in flight — the page says
+    // so rather than rendering an empty verdict panel.
+    pub(super) scores: Vec<EvaluationScoreView>,
+    pub(super) has_scores: bool,
     pub(super) ratings: Vec<RatingView>,
     pub(super) has_ratings: bool,
     pub(super) rating_count: usize,
@@ -31,27 +32,18 @@ pub(super) struct SessionDetailPageContext {
 }
 
 #[derive(Debug, Serialize)]
-pub(super) struct AnalysisView {
-    pub(super) title: String,
-    pub(super) summary: String,
-    pub(super) category: String,
-    pub(super) outcome: String,
-    pub(super) goal_achieved: String,
-    pub(super) quality_score: i16,
-    pub(super) quality_tone: &'static str,
-    pub(super) goal_tone: &'static str,
-    pub(super) tags: Vec<String>,
-    pub(super) has_tags: bool,
+pub(super) struct EvaluationScoreView {
+    pub(super) criterion: String,
+    pub(super) score_display: String,
+    pub(super) tone: &'static str,
+    pub(super) score_source: String,
+    pub(super) model: String,
+    pub(super) run_url: String,
+    pub(super) evaluated_at_local: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub(super) recommendations: Option<String>,
+    pub(super) rationale: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub(super) improvement_hints: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub(super) error_analysis: Option<String>,
-    pub(super) corrections_count: i32,
-    pub(super) duration_display: String,
-    pub(super) turns_display: String,
-    pub(super) updated_at_local: String,
+    pub(super) error: Option<String>,
 }
 
 #[derive(Debug, Serialize)]

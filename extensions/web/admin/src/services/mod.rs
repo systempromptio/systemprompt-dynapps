@@ -9,6 +9,7 @@ pub(crate) mod salesforce_jwt_bearer;
 pub(crate) mod secret_service;
 
 pub mod connector_oauth;
+pub mod evaluation;
 pub mod salesforce_orgs;
 
 pub(crate) mod connector_accounts;

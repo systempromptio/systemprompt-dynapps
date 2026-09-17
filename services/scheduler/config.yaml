@@ -154,6 +154,37 @@ scheduler:
       owner: admin
       enabled: true
 
+    # LLM-as-judge session scoring (web extension). Enqueues sessions that
+    # closed, leases one (session, criterion) row at a time and writes
+    # evaluation_runs; judge calls go out as this job's actor. Gated by
+    # `hooks.evaluation` on the governance-owning plugin and by
+    # services/evaluation/config.yaml.
+    - name: session_evaluation
+      extension: web
+      owner: admin
+      enabled: true
+
+    # Purpose classification of gateway conversations (web extension). Every
+    # five minutes: queue conversations quiet for `quiet_minutes` with at
+    # least one turn, lease `batch_size`, read each transcript and ask the
+    # model below for a category / summary / outcome / skills, with the
+    # response schema enforced by the provider API. Feeds
+    # /admin/analysis/conversations. Judge calls are audited as this job's
+    # actor and excluded from every conversation view; `daily_cost_cap_microdollars`
+    # stops a run once the day's judge spend reaches it. Re-classify one:
+    # `systemprompt infra jobs run conversation_classifier -p context_id=<id>`.
+    - name: conversation_classifier
+      extension: web
+      owner: admin
+      schedule: "0 */5 * * * *"
+      enabled: true
+      parameters:
+        provider: vertex
+        model: vertex-gemini-3.8-flash
+        batch_size: "20"
+        daily_cost_cap_microdollars: "2000000"
+        quiet_minutes: "30"
+
     # publish_pipeline sub-steps. The composite above runs each of these every
     # 15 minutes in dependency order; scheduling them independently would
     # double-run them, so they are disabled here (an explicit entry also

@@ -27,9 +27,8 @@ use crate::repositories::analytics::session_detail::{
     find_session_header, get_session_kpis, list_session_contexts, list_session_requests,
     list_session_traces,
 };
-use crate::repositories::analytics::session_quality::{
-    SessionAnalysisSummary, SessionRatingRow, find_session_analysis, list_session_ratings,
-};
+use crate::repositories::analytics::session_quality::{SessionRatingRow, list_session_ratings};
+use crate::repositories::evaluation::runs::{SessionCriterionScore, list_session_scores};
 
 use context::{
     BreadcrumbView, SessionContextRowView, SessionDetailPageContext, SessionHeaderView,
@@ -42,19 +41,19 @@ struct SessionRead {
     contexts: Vec<SessionContextRow>,
     traces: Vec<SessionTraceRow>,
     requests: Vec<SessionRequestRow>,
-    analysis: Option<SessionAnalysisSummary>,
+    scores: Vec<SessionCriterionScore>,
     ratings: Vec<SessionRatingRow>,
 }
 
 // Why: every section is best-effort once the header has resolved — a panel
 // that cannot load renders empty rather than taking the page down.
 async fn load_session(pool: &PgPool, session_id: &SessionId) -> SessionRead {
-    let (kpis, contexts, traces, requests, analysis, ratings) = tokio::join!(
+    let (kpis, contexts, traces, requests, scores, ratings) = tokio::join!(
         get_session_kpis(pool, session_id),
         list_session_contexts(pool, session_id),
         list_session_traces(pool, session_id),
         list_session_requests(pool, session_id),
-        find_session_analysis(pool, session_id),
+        list_session_scores(pool, session_id),
         list_session_ratings(pool, session_id),
     );
     SessionRead {
@@ -70,8 +69,8 @@ async fn load_session(pool: &PgPool, session_id: &SessionId) -> SessionRead {
         requests: requests
             .inspect_err(|e| tracing::warn!(error = %e, "list_session_requests failed"))
             .unwrap_or_default(),
-        analysis: analysis
-            .inspect_err(|e| tracing::warn!(error = %e, "find_session_analysis failed"))
+        scores: scores
+            .inspect_err(|e| tracing::warn!(error = %e, "list_session_scores failed"))
             .unwrap_or_default(),
         ratings: ratings
             .inspect_err(|e| tracing::warn!(error = %e, "list_session_ratings failed"))
@@ -119,7 +118,8 @@ pub(crate) async fn session_detail_page(
         has_requests: !read.requests.is_empty(),
         requests: read.requests.iter().map(request_view).collect(),
         back_url: "/admin/sessions",
-        analysis: read.analysis.as_ref().map(quality::analysis_view),
+        has_scores: !read.scores.is_empty(),
+        scores: read.scores.iter().map(quality::score_view).collect(),
         has_ratings: !rating_views.is_empty(),
         rating_count: rating_views.len(),
         rating_average,

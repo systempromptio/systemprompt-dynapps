@@ -1,0 +1,78 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH pending AS (\n             SELECT session_id, criterion FROM evaluation_queue\n              WHERE pending AND next_attempt <= clock_timestamp()\n                AND (lease_until IS NULL OR lease_until <= clock_timestamp())\n              ORDER BY next_attempt, session_id, criterion\n              LIMIT $1 FOR UPDATE SKIP LOCKED)\n           UPDATE evaluation_queue q\n              SET lease_token = $2,\n                  lease_until = clock_timestamp() + make_interval(secs => $3),\n                  attempts = q.attempts + 1,\n                  updated_at = clock_timestamp()\n             FROM pending\n            WHERE q.session_id = pending.session_id AND q.criterion = pending.criterion\n           RETURNING q.session_id, q.criterion, q.user_id, q.host, q.attempts",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "session_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "evaluation_queue",
+            "name": "session_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "criterion",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "evaluation_queue",
+            "name": "criterion"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "user_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "evaluation_queue",
+            "name": "user_id"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "host",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "evaluation_queue",
+            "name": "host"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "attempts",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "evaluation_queue",
+            "name": "attempts"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Text",
+        "Float8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "74184a81a61d4027ecd471579826c529ac2f1c6246316adfb449d702e962f5d1"
+}
