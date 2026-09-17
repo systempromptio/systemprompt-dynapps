@@ -1,11 +1,14 @@
 //! The projects listing's rollup: one row per project, read in one pass.
 //!
-//! Every statement here is built on the shared membership CTE, so a project's
+//! Every statement here is built on the shared scope CTEs, so a project's
 //! numbers are attributed by the same rule the rest of the console counts by
-//! and the page never restates what membership means. Totals are read under
-//! [`Attribution::Exclusive`](crate::repositories::scope::Attribution) so the
-//! projects partition the instance; the per-member breakdown is the one place
-//! the pages ask for member attribution, and it says so on the screen.
+//! and the page never restates what membership means. Spend joins
+//! `request_scope` — the project stamped on each request when it landed —
+//! under [`Attribution::Exclusive`](crate::repositories::scope::Attribution)
+//! so the projects partition the instance; tool calls and skills are
+//! hook-plane events with no request to stamp and still read membership. The
+//! per-member breakdown is the one place the pages ask for member
+//! attribution, and it says so on the screen.
 
 use serde::Serialize;
 use sqlx::PgPool;
@@ -61,13 +64,13 @@ pub async fn list_project_rollups(
                   COALESCE(s.skills, 0)::BIGINT AS "skills_used!"
            FROM projects p
            LEFT JOIN (
-               SELECT m.scope_id, COUNT(x.id) AS requests,
+               SELECT rs.scope_id, COUNT(x.id) AS requests,
                       COUNT(DISTINCT x.user_id) AS active_members,
                       COALESCE(SUM(x.cost_microdollars), 0) AS cost_microdollars
-               FROM membership m
-               JOIN ai_requests x ON x.user_id = m.user_id
+               FROM request_scope rs
+               JOIN ai_requests x ON x.id = rs.request_id
                 AND x.created_at >= NOW() - make_interval(days => $3)
-               GROUP BY m.scope_id
+               GROUP BY rs.scope_id
            ) r ON r.scope_id = p.id
            LEFT JOIN (
                SELECT m.scope_id, COUNT(*) AS calls,

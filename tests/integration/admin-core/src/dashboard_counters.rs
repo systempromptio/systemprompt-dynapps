@@ -11,7 +11,7 @@ use systemprompt_web_admin::repositories::dashboard::queries::{
     list_hourly_activity, list_popular_skills, list_recent_mcp_errors, list_tool_success_rates,
     list_top_users,
 };
-use systemprompt_web_admin::repositories::dashboard::{get_dashboard_data, list_events};
+use systemprompt_web_admin::repositories::dashboard::{get_dashboard_data, get_events_page};
 use systemprompt_web_admin::types::EventsQuery;
 
 use crate::dashboard_sessions::insert_mcp_execution;
@@ -282,7 +282,7 @@ async fn list_tool_success_rates_needs_three_calls_before_reporting() {
 }
 
 #[tokio::test]
-async fn list_events_pages_the_feed_and_reports_the_total() {
+async fn get_events_page_pages_the_feed_and_reports_the_total() {
     let Some(db) = TempDb::create().await else {
         return;
     };
@@ -302,7 +302,9 @@ async fn list_events_pages_the_feed_and_reports_the_total() {
         offset: 0,
     };
 
-    let response = list_events(&db.pool, &query).await.expect("query succeeds");
+    let response = get_events_page(&db.pool, &query)
+        .await
+        .expect("query succeeds");
 
     assert_eq!(response.total, 3, "the total ignores the page window");
     assert_eq!(response.events.len(), 2);
@@ -311,7 +313,7 @@ async fn list_events_pages_the_feed_and_reports_the_total() {
 }
 
 #[tokio::test]
-async fn list_events_filters_by_event_type() {
+async fn get_events_page_filters_by_event_type() {
     let Some(db) = TempDb::create().await else {
         return;
     };
@@ -334,7 +336,9 @@ async fn list_events_filters_by_event_type() {
         offset: 0,
     };
 
-    let response = list_events(&db.pool, &query).await.expect("query succeeds");
+    let response = get_events_page(&db.pool, &query)
+        .await
+        .expect("query succeeds");
 
     assert_eq!(response.total, 1);
     assert_eq!(response.events[0].event_type, wanted);

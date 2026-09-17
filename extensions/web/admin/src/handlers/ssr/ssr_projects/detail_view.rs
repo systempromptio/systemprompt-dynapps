@@ -12,7 +12,7 @@ use crate::types::access_control::{AccessControlRule, AccessDecision};
 use systemprompt_web_shared::ProjectId;
 
 use super::super::format::short_num;
-use super::super::people_view::{format_usd, model_rows};
+use super::super::people_view::{attribution_rows, format_usd, model_rows};
 use super::super::types::{
     AccessRowView, LineChartSpec, ProjectKpiView, ProjectSessionRowView, ProjectSkillRowView,
     ProjectToolRowView, ProjectUsageTabView, SvgLineChartView, SvgSeriesInput, TabLinkView,
@@ -56,7 +56,7 @@ pub(super) fn kpis(data: &DetailData, member_count: i64) -> Vec<ProjectKpiView> 
         tile(
             "Requests",
             short_num(usage.requests),
-            "attributed to this project alone",
+            "attributed at request time",
             "accent",
         ),
         tile(
@@ -113,6 +113,7 @@ pub(super) fn usage_tab(
     skills: &[SkillEffectivenessRow],
 ) -> ProjectUsageTabView {
     ProjectUsageTabView {
+        attribution: attribution_rows(&u.attribution),
         daily: daily_chart(&u.daily),
         daily_cost: daily_cost_chart(&u.daily),
         model_count: u.models.len() as i64,

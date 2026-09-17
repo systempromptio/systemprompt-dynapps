@@ -1,9 +1,10 @@
 //! Top containers by spend, under exclusive attribution.
 //!
 //! Exclusive is not a default that happened: it is what makes these two tables
-//! readable side by side. Each person's traffic lands in exactly one group and
-//! one project, so the rows partition the instance and the leaderboard cannot
-//! show a total larger than the KPI strip above it.
+//! readable side by side. Each request lands in exactly one group and one
+//! project — the ones stamped on it when it was made — so the rows partition
+//! the instance and the leaderboard cannot show a total larger than the KPI
+//! strip above it.
 //!
 //! Traffic that matches no container is reported as its own row rather than
 //! dropped — a rejected request with no user, a job or MCP actor, or a person
@@ -42,15 +43,14 @@ pub async fn list_top_scopes_by_cost(
     // is named once, in code, rather than buried in a macro argument list.
     let exclusive = Attribution::Exclusive.is_exclusive();
     let rows = crate::scoped_query!(
-        r#"SELECT COALESCE(m.scope_id, $3) AS "scope_id!",
-                  COALESCE(g.name, p.name, m.scope_id, $3) AS "label!",
+        r#"SELECT COALESCE(rs.scope_id, $3) AS "scope_id!",
+                  COALESCE(g.name, p.name, rs.scope_id, $3) AS "label!",
                   COUNT(*)::BIGINT AS "requests!",
                   COALESCE(SUM(r.cost_microdollars), 0)::BIGINT AS "cost_microdollars!"
            FROM ai_requests r
-           LEFT JOIN membership m
-             ON m.user_id = r.user_id AND r.actor_kind = 'user'
-           LEFT JOIN groups g ON g.id = m.scope_id AND $1 = 'group'
-           LEFT JOIN projects p ON p.id = m.scope_id AND $1 = 'project'
+           LEFT JOIN request_scope rs ON rs.request_id = r.id
+           LEFT JOIN groups g ON g.id = rs.scope_id AND $1 = 'group'
+           LEFT JOIN projects p ON p.id = rs.scope_id AND $1 = 'project'
            WHERE NOT r.synthetic
              AND r.created_at >= $4
              AND r.created_at < $5

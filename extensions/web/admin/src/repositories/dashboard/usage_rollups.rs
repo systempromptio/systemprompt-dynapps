@@ -7,10 +7,13 @@
 //! predicates mirror `increment_session_summary`'s classification, so the
 //! rollup and the session summaries cannot disagree about what an event is.
 //!
-//! A fourth pass stamps each row with the person's primary group and project.
-//! That is exclusive attribution: one container each, so a container's history
-//! sums back to the instance total instead of double-counting anyone who
-//! belongs to two.
+//! A fourth pass stamps each row with a group and project. That is exclusive
+//! attribution: one container each, so a container's history sums back to the
+//! instance total instead of double-counting anyone who belongs to two. The
+//! answer is read from `ai_request_scopes` — the scope pinned to each request
+//! when it landed — so re-running the rollup after someone moves never rewrites
+//! the days they spent elsewhere. A day with hook activity but no gateway
+//! request has nothing pinned and takes the person's current primary instead.
 
 use sqlx::PgPool;
 use systemprompt_web_shared::error::MarketplaceError;
@@ -110,18 +113,43 @@ async fn rollup_gateway_requests(pool: &PgPool, days_back: i32) -> Result<u64, M
     .rows_affected())
 }
 
+// Why: a person's requests on one day can carry two scopes if they moved that
+// day; the row takes the scope most of them carry, ties broken by id so the
+// answer is stable across runs.
 async fn rollup_attribution(pool: &PgPool, days_back: i32) -> Result<u64, MarketplaceError> {
     Ok(sqlx::query!(
         r"
+        WITH stamped AS (
+            SELECT DISTINCT ON (t.user_id, t.day) t.user_id, t.day, t.group_id, t.project_id
+            FROM (
+                SELECT a.user_id,
+                       (a.created_at AT TIME ZONE 'UTC')::DATE AS day,
+                       s.group_id, s.project_id, COUNT(*) AS requests
+                FROM ai_requests a
+                JOIN ai_request_scopes s ON s.request_id = a.id
+                WHERE NOT COALESCE(a.synthetic, FALSE)
+                  AND (a.created_at AT TIME ZONE 'UTC')::DATE >= (NOW() AT TIME ZONE 'UTC')::DATE - ($1::INT)
+                GROUP BY 1, 2, 3, 4
+            ) t
+            ORDER BY t.user_id, t.day, t.requests DESC, t.group_id, t.project_id
+        ), resolved AS (
+            SELECT r.user_id, r.date,
+                   CASE WHEN st.user_id IS NOT NULL THEN st.group_id ELSE d.primary_group_id END AS group_id,
+                   CASE WHEN st.user_id IS NOT NULL THEN st.project_id ELSE d.primary_project_id END AS project_id
+            FROM admin_usage_daily_rollups r
+            LEFT JOIN stamped st ON st.user_id = r.user_id AND st.day = r.date
+            LEFT JOIN user_scope_defaults d ON d.user_id = r.user_id
+            WHERE r.date >= (NOW() AT TIME ZONE 'UTC')::DATE - ($1::INT)
+        )
         UPDATE admin_usage_daily_rollups r
-        SET group_id = d.primary_group_id,
-            project_id = d.primary_project_id,
+        SET group_id = x.group_id,
+            project_id = x.project_id,
             updated_at = NOW()
-        FROM user_scope_defaults d
-        WHERE d.user_id = r.user_id
-          AND r.date >= (NOW() AT TIME ZONE 'UTC')::DATE - ($1::INT)
-          AND (r.group_id IS DISTINCT FROM d.primary_group_id
-               OR r.project_id IS DISTINCT FROM d.primary_project_id)
+        FROM resolved x
+        WHERE x.user_id = r.user_id
+          AND x.date = r.date
+          AND (r.group_id IS DISTINCT FROM x.group_id
+               OR r.project_id IS DISTINCT FROM x.project_id)
         ",
         days_back,
     )

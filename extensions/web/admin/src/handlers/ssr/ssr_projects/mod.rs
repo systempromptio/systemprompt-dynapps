@@ -28,7 +28,7 @@ mod sort;
 
 pub(super) const BASE_URL: &str = "/admin/projects";
 pub(super) const PAGE_SIZE: i64 = 50;
-pub(super) const WINDOW_LABEL: &str = "Last 30 days · exclusive attribution";
+pub(super) const WINDOW_LABEL: &str = "Last 30 days · attributed at request time";
 
 // Why: which tab of the detail page a request asked for.
 #[derive(Debug, Default, serde::Deserialize)]

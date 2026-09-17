@@ -25,6 +25,7 @@ use systemprompt::identifiers::UserId;
 use crate::error::{AdminError, AdminHtmlResult};
 use crate::handlers::ssr::types::BreadcrumbView;
 use crate::repositories;
+use crate::repositories::scope::membership::UNATTRIBUTED;
 use crate::types::UserContext;
 
 use context::{DetailKpiView, DetailTabView, UserDetailContext, UserHeaderView};
@@ -99,7 +100,7 @@ pub(crate) async fn user_detail_page(
         ],
         tabs: tab_links(&user_id, tab),
         tab,
-        header: header_view(&detail, &group_ids, &project_ids, defaults.as_ref()),
+        header: header_view(&detail, defaults.as_ref()),
         kpis: DetailKpiView {
             requests_display: crate::handlers::ssr::format::format_token_total(summary.requests),
             cost_display: crate::handlers::ssr::format::format_cost(summary.cost_microdollars),
@@ -245,8 +246,6 @@ fn display_name(detail: &crate::types::UserDetail) -> String {
 
 fn header_view(
     detail: &crate::types::UserDetail,
-    group_ids: &[String],
-    project_ids: &[String],
     defaults: Option<&repositories::scope::defaults::ScopeDefaults>,
 ) -> UserHeaderView {
     let name = display_name(detail);
@@ -274,17 +273,15 @@ fn header_view(
         is_active: detail.is_active,
         created_at: view::stamp(Some(detail.created_at)),
         last_active: view::stamp(detail.last_active),
+        // Why: this is what the next request will be stamped with. A person
+        // with no primary is stamped unattributed however many groups they
+        // are in, so the tile says so rather than naming one of them.
         primary_group: defaults
             .and_then(|d| d.primary_group_id.as_ref().map(ToString::to_string))
-            .unwrap_or_else(|| group_ids.first().cloned().unwrap_or_else(|| "—".to_owned())),
+            .unwrap_or_else(|| UNATTRIBUTED.to_owned()),
         primary_project: defaults
             .and_then(|d| d.primary_project_id.as_ref().map(ToString::to_string))
-            .unwrap_or_else(|| {
-                project_ids
-                    .first()
-                    .cloned()
-                    .unwrap_or_else(|| "—".to_owned())
-            }),
+            .unwrap_or_else(|| UNATTRIBUTED.to_owned()),
         name,
         user_id: detail.user_id.clone(),
     }

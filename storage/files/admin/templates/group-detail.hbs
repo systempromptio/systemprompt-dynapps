@@ -19,7 +19,7 @@
     {{else}}
     <section class="sp-kpi-grid" aria-label="Group totals">
         {{#each stats}}
-        {{> components/kpi label=label value=value note="exclusive attribution"}}
+        {{> components/kpi label=label value=value note="attributed at request time"}}
         {{/each}}
     </section>
     {{/if}}
@@ -27,6 +27,32 @@
     {{> components/tabs tabs=tabs nav_label="Group views"}}
 
     {{#if overview}}
+    <section class="sp-group-panel" aria-label="Attribution">
+        <h2 class="sp-section__title">Spend attributed at request time <span class="sp-group-panel__label">each request is filed under the group stamped on it when it was made &mdash; moving a person never rewrites their history</span></h2>
+        {{#> components/table caption="How the window's requests were attributed"}}
+            <thead><tr>
+                <th>Source</th>
+                <th>Meaning</th>
+                <th>Share</th>
+                <th class="sp-table__cell--num">Requests</th>
+                <th class="sp-table__cell--num">Cost</th>
+            </tr></thead>
+            <tbody>
+            {{#each overview.attribution}}
+            <tr>
+                <td><span class="sp-badge sp-badge--muted">{{source}}</span></td>
+                <td>{{label}}</td>
+                <td>{{> components/share-bar share_pct=share_pct label=(concat share_pct "% of requests")}}</td>
+                <td class="sp-table__cell--num sp-u-num">{{formatNumber requests}}</td>
+                <td class="sp-table__cell--num sp-u-num sp-u-mono">{{formatUsd cost_microdollars}}</td>
+            </tr>
+            {{else}}
+            <tr class="sp-table__empty"><td colspan="5">{{> components/empty-state message="No request was attributed to this group in the last 30 days."}}</td></tr>
+            {{/each}}
+            </tbody>
+        {{/components/table}}
+    </section>
+
     <section class="sp-group-panel" aria-label="Spend by member">
         <h2 class="sp-section__title">Spend by member <span class="sp-group-panel__label">member view &mdash; overlaps</span></h2>
         {{#if overview.leaderboard}}

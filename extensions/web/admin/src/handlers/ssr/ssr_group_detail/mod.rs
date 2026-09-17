@@ -112,6 +112,7 @@ async fn load_overview(
         .first()
         .map_or(0, |r| r.cost_microdollars);
     Some(GroupOverviewView {
+        attribution: people_view::attribution_rows(&loaded.attribution),
         models: people_view::model_rows(&loaded.models),
         daily_requests: daily_requests_chart(&loaded.daily),
         skills: people_view::name_count_rows(&loaded.skills),

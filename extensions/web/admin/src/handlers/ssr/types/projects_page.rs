@@ -13,8 +13,8 @@ use systemprompt_web_shared::ProjectId;
 
 use super::super::list_view::Pagination;
 use super::{
-    AccessRowView, BreadcrumbView, MappingRowView, MemberRowView, MemberSetChipView,
-    ModelMixRowView, SvgLineChartView, TabLinkView, UserOptionView,
+    AccessRowView, AttributionSourceRowView, BreadcrumbView, MappingRowView, MemberRowView,
+    MemberSetChipView, ModelMixRowView, SvgLineChartView, TabLinkView, UserOptionView,
 };
 
 // Why: one KPI tile: a number, its unit, and the sentence under it.
@@ -129,6 +129,7 @@ pub(crate) struct ProjectSessionRowView {
 // Why: the Usage tab's body.
 #[derive(Debug, Serialize)]
 pub(crate) struct ProjectUsageTabView {
+    pub attribution: Vec<AttributionSourceRowView>,
     pub daily: SvgLineChartView,
     pub daily_cost: SvgLineChartView,
     pub model_count: i64,

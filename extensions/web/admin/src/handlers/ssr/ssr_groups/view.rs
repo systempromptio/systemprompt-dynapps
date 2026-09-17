@@ -55,7 +55,7 @@ pub(super) fn kpis(
         GroupKpiView {
             label: "Cost",
             value: format_usd(cost),
-            note: "exclusive attribution".to_owned(),
+            note: "attributed at request time".to_owned(),
             tone: "accent",
         },
         GroupKpiView {

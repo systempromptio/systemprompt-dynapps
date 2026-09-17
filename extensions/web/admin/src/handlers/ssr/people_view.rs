@@ -11,9 +11,10 @@ use systemprompt::identifiers::UserId;
 
 use super::format::short_num;
 use super::types::{
-    MappingRowView, MemberRowView, MemberSetChipView, ModelMixRowView, NameCountRowView,
-    ProjectRowView, SourceBadgeView, StatTileView,
+    AttributionSourceRowView, MappingRowView, MemberRowView, MemberSetChipView, ModelMixRowView,
+    NameCountRowView, ProjectRowView, SourceBadgeView, StatTileView,
 };
+use crate::repositories::people_usage::attribution::AttributionSourceRow;
 use crate::repositories::people_usage::breakdown::{LinkedScopeRow, ModelUsageRow};
 use crate::repositories::people_usage::{MemberUsageRow, ScopeUsageRow};
 
@@ -88,6 +89,25 @@ pub(crate) fn stat_tiles(usage: &ScopeUsageRow, member_count: i64) -> Vec<StatTi
             value: format_usd(usage.cost_microdollars),
         },
     ]
+}
+
+// Why: the source column is the stamp's own vocabulary; the label says what
+// each value meant for the request it was written on.
+pub(crate) fn attribution_rows(rows: &[AttributionSourceRow]) -> Vec<AttributionSourceRowView> {
+    let total: i64 = rows.iter().map(|r| r.requests).sum();
+    rows.iter()
+        .map(|r| AttributionSourceRowView {
+            label: match r.source.as_str() {
+                "primary" => "Person's primary at the time",
+                "header" => "Named by the request",
+                _ => "Current membership",
+            },
+            source: r.source.clone(),
+            requests: r.requests,
+            cost_microdollars: r.cost_microdollars,
+            share_pct: share(r.requests, total),
+        })
+        .collect()
 }
 
 pub(crate) fn model_rows(models: &[ModelUsageRow]) -> Vec<ModelMixRowView> {

@@ -51,6 +51,17 @@ pub(crate) struct ModelMixRowView {
     pub share_pct: i64,
 }
 
+// Why: One row of the attribution table: who decided where a request was
+// filed, and how much of the window that source accounts for.
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct AttributionSourceRowView {
+    pub source: String,
+    pub label: &'static str,
+    pub requests: i64,
+    pub cost_microdollars: i64,
+    pub share_pct: i64,
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct NameCountRowView {
     pub name: String,
@@ -73,6 +84,7 @@ pub(crate) struct UsageLeaderRowView {
 
 #[derive(Debug, Serialize)]
 pub(crate) struct GroupOverviewView {
+    pub attribution: Vec<AttributionSourceRowView>,
     pub models: Vec<ModelMixRowView>,
     pub daily_requests: SvgLineChartView,
     pub skills: Vec<NameCountRowView>,

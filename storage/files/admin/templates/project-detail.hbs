@@ -69,6 +69,30 @@
 
     {{#if usage}}
     <section class="sp-p-project__usage" aria-label="Usage">
+        {{> components/section title="Spend attributed at request time" note="Each request is filed under the project stamped on it when it was made. Moving a person changes where their next request goes and nothing else."}}
+        {{#> components/table caption="How the window's requests were attributed"}}
+            <thead><tr>
+                <th>Source</th>
+                <th>Meaning</th>
+                <th>Share</th>
+                <th class="sp-table__cell--num">Requests</th>
+                <th class="sp-table__cell--num">Cost</th>
+            </tr></thead>
+            <tbody>
+            {{#each usage.attribution}}
+            <tr>
+                <td><span class="sp-badge sp-badge--muted">{{source}}</span></td>
+                <td>{{label}}</td>
+                <td>{{> components/share-bar share_pct=share_pct label=(concat share_pct "% of requests")}}</td>
+                <td class="sp-table__cell--num sp-u-num">{{formatNumber requests}}</td>
+                <td class="sp-table__cell--num sp-u-num sp-u-mono">{{formatUsd cost_microdollars}}</td>
+            </tr>
+            {{else}}
+            <tr class="sp-table__empty"><td colspan="5">{{> components/empty-state message="No request was attributed to this project in the window."}}</td></tr>
+            {{/each}}
+            </tbody>
+        {{/components/table}}
+
         <div class="sp-p-project__split">
             {{> components/svg-line-chart usage.daily}}
             {{> components/svg-line-chart usage.daily_cost}}

@@ -11,6 +11,9 @@ use crate::repositories;
 use crate::services::marketplaces::load_marketplaces;
 use crate::types::groups::{GroupAdMappingRow, GroupMemberRow};
 
+use crate::repositories::people_usage::attribution::{
+    AttributionSourceRow, list_scope_attribution_sources,
+};
 use crate::repositories::people_usage::breakdown::{
     LinkedScopeRow, ModelUsageRow, list_linked_scopes, list_scope_top_models,
     list_scope_top_skills, list_scope_top_tools,
@@ -35,6 +38,7 @@ pub(super) struct MembersData {
 }
 
 pub(super) struct UsageTabData {
+    pub attribution: Vec<AttributionSourceRow>,
     pub models: Vec<ModelUsageRow>,
     pub daily: Vec<i64>,
     pub skills: Vec<(String, i64)>,
@@ -122,7 +126,9 @@ pub(super) async fn load_marketplace_options(
 
 pub(super) async fn load_usage_tab(pool: &PgPool, group_id: &GroupId) -> UsageTabData {
     let q = member_query(group_id);
-    let (models, daily, skills, tools, members) = tokio::join!(
+    let exclusive = exclusive_query(group_id);
+    let (attribution, models, daily, skills, tools, members) = tokio::join!(
+        list_scope_attribution_sources(pool, &exclusive),
         list_scope_top_models(pool, &q, LEADERBOARD_LIMIT),
         list_daily_requests(pool, &q),
         list_scope_top_skills(pool, &q, LEADERBOARD_LIMIT),
@@ -157,6 +163,7 @@ pub(super) async fn load_usage_tab(pool: &PgPool, group_id: &GroupId) -> UsageTa
         })
         .collect();
     UsageTabData {
+        attribution: or_default("group attribution", attribution),
         models,
         daily,
         skills,

@@ -8,7 +8,7 @@
 use std::sync::Arc;
 
 use systemprompt_security::authz::SubjectAttributeProvider;
-use systemprompt_web_admin::authz::group::{GroupAttributeProvider, group_rule_type, invalidate};
+use systemprompt_web_admin::authz::group::{GroupAttributeProvider, group_rule_type};
 
 use crate::fixtures::{
     insert_group, insert_group_member, insert_user, unclaimed_email, unique, unique_group,
@@ -25,7 +25,6 @@ async fn the_provider_resolves_a_users_groups() {
     insert_group(&db.pool, &group, "Commerce").await;
     insert_group_member(&db.pool, &group, &user, "manual").await;
     let provider = GroupAttributeProvider::new(Arc::new((*db.pool).clone()));
-    invalidate(&user).await;
 
     let values = provider
         .values_for(&user)
@@ -43,7 +42,6 @@ async fn a_user_in_no_group_resolves_to_unassigned_here_too() {
     };
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("gunassigned")).await;
     let provider = GroupAttributeProvider::new(Arc::new((*db.pool).clone()));
-    invalidate(&user).await;
 
     let values = provider
         .values_for(&user)
@@ -74,13 +72,12 @@ async fn the_group_band_sits_between_user_and_role() {
 }
 
 #[tokio::test]
-async fn invalidating_makes_a_membership_change_bind_on_the_next_read() {
+async fn a_membership_change_binds_on_the_next_read() {
     let Some(db) = TempDb::create().await else {
         return;
     };
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("ginval")).await;
     let provider = GroupAttributeProvider::new(Arc::new((*db.pool).clone()));
-    invalidate(&user).await;
     assert_eq!(
         provider
             .values_for(&user)
@@ -92,7 +89,6 @@ async fn invalidating_makes_a_membership_change_bind_on_the_next_read() {
     let group = unique_group("grp");
     insert_group(&db.pool, &group, "Commerce").await;
     insert_group_member(&db.pool, &group, &user, "adfs").await;
-    invalidate(&user).await;
 
     assert_eq!(
         provider
@@ -100,7 +96,7 @@ async fn invalidating_makes_a_membership_change_bind_on_the_next_read() {
             .await
             .expect("group membership lookup"),
         vec![group.as_str().to_owned()],
-        "sign-in invalidates rather than waiting out the TTL"
+        "the provider reads live, so nothing waits out a TTL"
     );
     db.cleanup().await;
 }

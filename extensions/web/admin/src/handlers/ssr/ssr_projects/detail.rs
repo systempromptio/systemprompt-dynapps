@@ -11,6 +11,9 @@ use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 
 use crate::repositories;
+use crate::repositories::people_usage::attribution::{
+    AttributionSourceRow, list_scope_attribution_sources,
+};
 use crate::repositories::people_usage::breakdown::{
     LinkedScopeRow, ModelUsageRow, list_linked_scopes, list_scope_top_models,
 };
@@ -55,6 +58,7 @@ pub(super) struct DetailData {
 
 // Why: the Usage tab's reads, taken only when that tab is the one being drawn.
 pub(super) struct ProjectUsageData {
+    pub(super) attribution: Vec<AttributionSourceRow>,
     pub(super) daily: Vec<DailyRequests>,
     pub(super) models: Vec<ModelUsageRow>,
     pub(super) tools: Vec<ToolHealthRow>,
@@ -117,13 +121,15 @@ pub(super) async fn load(
 
 pub(super) async fn load_usage(pool: &PgPool, project_id: &ProjectId) -> ProjectUsageData {
     let q = exclusive(project_id);
-    let (daily, models, tools, sessions) = tokio::join!(
+    let (attribution, daily, models, tools, sessions) = tokio::join!(
+        list_scope_attribution_sources(pool, &q),
         list_daily_requests(pool, &q),
         list_scope_top_models(pool, &q, LEADERBOARD_LIMIT),
         list_project_tool_health(pool, &q, SECTION_LIMIT),
         list_project_sessions(pool, &q, SECTION_LIMIT),
     );
     ProjectUsageData {
+        attribution: or_default("project attribution", attribution),
         daily: or_default("project daily requests", daily),
         models: or_default("project model mix", models),
         tools: or_default("project tool health", tools),

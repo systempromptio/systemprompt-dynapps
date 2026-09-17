@@ -1,6 +1,11 @@
 //! Exclusive attribution against the database: a person in two groups counts
 //! once, the group totals partition the instance, and manual choices survive
 //! recomputation.
+//!
+//! A request is stamped with its scope when it lands (`ai_request_scopes`),
+//! so every test computes the defaults before inserting traffic — a request
+//! that arrives before the person has a primary is unattributed for good,
+//! which `request_scopes` covers on its own.
 
 use systemprompt_web_admin::repositories::groups::members::replace_directory_group_memberships;
 use systemprompt_web_admin::repositories::people_usage::get_scope_usage;
@@ -32,10 +37,10 @@ async fn a_member_of_two_groups_counts_once_exclusively_and_twice_as_a_member() 
     let person = insert_user(&db.pool, &unique("user"), &unclaimed_email("both")).await;
     insert_group_member(&db.pool, &first, &person, "adfs").await;
     insert_group_member(&db.pool, &second, &person, "adfs").await;
-    insert_request(&db.pool, &RequestSpec::completed(&unique("req"), &person)).await;
     recompute_scope_defaults(&db.pool)
         .await
         .expect("recompute defaults");
+    insert_request(&db.pool, &RequestSpec::completed(&unique("req"), &person)).await;
 
     let mut member_total = 0i64;
     for id in [&first, &second] {
@@ -80,11 +85,11 @@ async fn exclusive_group_totals_sum_to_the_instance_total() {
     let member = insert_user(&db.pool, &unique("user"), &unclaimed_email("member")).await;
     let unplaced = insert_user(&db.pool, &unique("user"), &unclaimed_email("unplaced")).await;
     insert_group_member(&db.pool, &group, &member, "adfs").await;
-    insert_request(&db.pool, &RequestSpec::completed(&unique("req"), &member)).await;
-    insert_request(&db.pool, &RequestSpec::completed(&unique("req"), &unplaced)).await;
     recompute_scope_defaults(&db.pool)
         .await
         .expect("recompute defaults");
+    insert_request(&db.pool, &RequestSpec::completed(&unique("req"), &member)).await;
+    insert_request(&db.pool, &RequestSpec::completed(&unique("req"), &unplaced)).await;
 
     let rows = list_scope_totals(&db.pool, ScopeKind::Group, Attribution::Exclusive, WINDOW)
         .await

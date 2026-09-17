@@ -117,6 +117,7 @@ impl<'a> Call<'a> {
             target: AuditTarget {
                 tool_name: self.target.as_str().to_owned(),
                 plugin_id: None,
+                tool_use_id: None,
             },
             chain: evaluation.chain,
             approver: None,

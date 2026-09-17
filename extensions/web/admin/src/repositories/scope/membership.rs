@@ -1,18 +1,27 @@
-//! The one membership CTE every scoped query is built on.
+//! The two CTEs every scoped query is built on: `membership` and
+//! `request_scope`.
 //!
-//! Two bound parameters decide it: `$1` is the container kind (`'group'` or
+//! Two bound parameters decide them: `$1` is the container kind (`'group'` or
 //! `'project'`) and `$2` is whether attribution is exclusive. Nothing is
 //! interpolated, so every statement built through `scoped_query` and
 //! `scoped_query_as` is a static string the `sqlx` macros verify against the
 //! live schema, and a caller's tail starts its own placeholders at `$3`.
 //!
-//! Member attribution reads full membership: a person in two groups appears
-//! under both, so the group totals overlap and deliberately do not sum to the
-//! instance total. Exclusive attribution reads `user_scope_defaults` instead,
-//! where each person holds one primary group and one primary project, so the
-//! totals partition the instance. A person with no default row is in neither
-//! and belongs to the unattributed bucket, which every instance-wide
-//! breakdown reports rather than drops.
+//! `membership` answers "who is in this container". Member attribution reads
+//! full membership: a person in two groups appears under both, so the group
+//! totals overlap and deliberately do not sum to the instance total.
+//! Exclusive attribution reads `user_scope_defaults` instead, where each
+//! person holds one primary group and one primary project, so the totals
+//! partition the instance.
+//!
+//! `request_scope` answers "which container does this request belong to",
+//! and is what every spend figure joins on. Under exclusive attribution it
+//! reads `ai_request_scopes`, the scope stamped by trigger when the request
+//! landed — so moving a person never rewrites their history, and a request
+//! no primary covered at the time keeps a NULL scope and belongs to the
+//! unattributed bucket, which every instance-wide breakdown reports rather
+//! than drops. Under member attribution it is the request joined to full
+//! membership, the overlapping view, and its `source` is `'member'`.
 
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
@@ -46,6 +55,18 @@ macro_rules! scoped_query {
                    FROM user_scope_defaults d
                   WHERE $1::TEXT = 'project' AND $2::BOOLEAN
                     AND d.primary_project_id IS NOT NULL
+             ), request_scope AS (
+                 SELECT s.request_id, s.user_id,
+                        CASE WHEN $1::TEXT = 'group' THEN s.group_id
+                             ELSE s.project_id END AS scope_id,
+                        s.source
+                   FROM ai_request_scopes s
+                  WHERE $2::BOOLEAN
+                 UNION ALL
+                 SELECT r.id AS request_id, r.user_id, m.scope_id, 'member' AS source
+                   FROM ai_requests r
+                   JOIN membership m ON m.user_id = r.user_id
+                  WHERE NOT $2::BOOLEAN AND r.actor_kind = 'user'
              ) " + $tail,
             $($args)*
         )
@@ -90,17 +111,31 @@ async fn resolve_subject_scope(
         return Ok(super::SubjectScope::All);
     }
 
+    // Why: an explicit `?group=` / `?project=` filter is a question about the
+    // container's spend, so it also admits anyone with a request stamped to
+    // it — a person who has since moved keeps showing under the container
+    // their history was attributed to. The visibility narrowing a non-console
+    // caller gets without asking stays on current membership, so leaving a
+    // group ends what its lead can see of you.
+    let explicit_group = request.group.is_some();
     let ids = sqlx::query_scalar!(
         r#"SELECT u.id AS "id!"
            FROM users u
            WHERE ($1::TEXT[] IS NULL OR EXISTS (
                      SELECT 1 FROM user_groups ug
-                     WHERE ug.user_id = u.id AND ug.group_id = ANY($1)))
+                     WHERE ug.user_id = u.id AND ug.group_id = ANY($1))
+                  OR ($3::BOOLEAN AND EXISTS (
+                     SELECT 1 FROM ai_request_scopes s
+                     WHERE s.user_id = u.id AND s.group_id = ANY($1))))
              AND ($2::TEXT IS NULL OR EXISTS (
                      SELECT 1 FROM project_members pm
-                     WHERE pm.user_id = u.id AND pm.project_id = $2))"#,
+                     WHERE pm.user_id = u.id AND pm.project_id = $2)
+                  OR EXISTS (
+                     SELECT 1 FROM ai_request_scopes s
+                     WHERE s.user_id = u.id AND s.project_id = $2))"#,
         groups.as_deref(),
-        request.project.as_deref()
+        request.project.as_deref(),
+        explicit_group
     )
     .fetch_all(pool)
     .await?;

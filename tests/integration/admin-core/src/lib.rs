@@ -77,6 +77,8 @@ mod req_026_audit_completeness;
 #[cfg(test)]
 mod req_044_access_matrix;
 #[cfg(test)]
+mod request_scopes;
+#[cfg(test)]
 mod scope_attribution;
 #[cfg(test)]
 mod tempdb;

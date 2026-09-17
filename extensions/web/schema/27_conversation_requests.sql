@@ -45,6 +45,9 @@ WHERE r.context_id <> '00000000-0000-0000-0000-4c4547414359'
 -- Numeric summaries have no prompt/message dependency. An explicit context set
 -- lets detail and scoped list callers aggregate complete conversations without
 -- walking unrelated history. NULL means all contexts; an empty array means none.
+-- The group and project are the ones stamped on the latest request
+-- (ai_request_scopes, 40_), not the person's current primaries, so a
+-- conversation stays filed where it was made.
 CREATE OR REPLACE FUNCTION conversation_metrics_for(context_ids text[])
 RETURNS TABLE (
     context_id text, user_id text, display_name text, session_id text,
@@ -79,6 +82,7 @@ WITH scoped AS (
         COALESCE(SUM(cost_microdollars), 0)::bigint AS total_cost_microdollars,
         MIN(created_at) AS first_at, MAX(created_at) AS last_request_at,
         (ARRAY_AGG(user_id ORDER BY created_at DESC, id DESC))[1] AS user_id,
+        (ARRAY_AGG(id ORDER BY created_at DESC, id DESC))[1] AS last_request_id,
         (ARRAY_AGG(session_id ORDER BY created_at DESC, id DESC)
             FILTER (WHERE session_id IS NOT NULL))[1] AS session_id,
         (ARRAY_AGG(client_session_id ORDER BY created_at DESC, id DESC)
@@ -103,9 +107,9 @@ LEFT JOIN tools t ON t.context_id = a.context_id
 LEFT JOIN user_contexts c ON c.context_id = a.context_id
 LEFT JOIN plugin_session_summaries s ON s.session_id = a.client_session_id
 LEFT JOIN users u ON u.id = a.user_id
-LEFT JOIN user_scope_defaults d ON d.user_id = a.user_id
-LEFT JOIN groups g ON g.id = d.primary_group_id
-LEFT JOIN projects p ON p.id = d.primary_project_id
+LEFT JOIN ai_request_scopes rs ON rs.request_id = a.last_request_id
+LEFT JOIN groups g ON g.id = rs.group_id
+LEFT JOIN projects p ON p.id = rs.project_id
 $function$;
 
 -- Parse only the first matching message, never every prompt in history.
