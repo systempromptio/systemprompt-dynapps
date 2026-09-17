@@ -1,8 +1,8 @@
 plugin:
   id: astound-india-sfcore
   name: Astound India — Salesforce Core
-  description: All 18 upstream Salesforce Core skills, with authenticated Atlassian,
-    Salesforce and GitHub connectors.
+  description: All 18 upstream Salesforce Core skills, with authenticated Atlassian
+    and Salesforce connectors.
   version: 2.0.0
   enabled: true
   author:
@@ -44,5 +44,4 @@ plugin:
     include:
     - atlassian
     - salesforce-us
-    - github
   content_sources: {}
