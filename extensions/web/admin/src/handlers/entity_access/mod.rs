@@ -98,7 +98,25 @@ pub(crate) async fn upsert_entity_rule_handler(
         })
         .await
         .map_err(AdminError::internal)?;
-    Ok(Json(UpsertRuleResponse { rule }).into_response())
+    if body
+        .valid_until
+        .is_some_and(|until| until <= chrono::Utc::now())
+    {
+        return Err(AdminError::BadRequest(
+            "valid_until must be in the future".to_owned(),
+        ));
+    }
+    crate::repositories::access_control::validity::set_rule_validity(
+        pool.as_ref(),
+        rule.id.as_str(),
+        body.valid_until,
+    )
+    .await?;
+    Ok(Json(UpsertRuleResponse {
+        rule,
+        valid_until: body.valid_until,
+    })
+    .into_response())
 }
 
 pub(crate) async fn delete_entity_rule_handler(

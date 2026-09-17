@@ -54,6 +54,7 @@ pub fn schema_definitions() -> Vec<SchemaDefinition> {
         SchemaDefinition::new("", include_str!("../schema/38_session_evaluation.sql")),
         SchemaDefinition::new("", include_str!("../schema/39_artifact_facts.sql")),
         SchemaDefinition::new("", include_str!("../schema/40_request_scopes.sql")),
+        SchemaDefinition::new("", include_str!("../schema/41_time_bound_access.sql")),
     ]
 }
 

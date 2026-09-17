@@ -59,7 +59,7 @@ async fn a_group_filter_narrows_to_that_groups_members() {
     let member = insert_user(&db.pool, &unique("user"), &unclaimed_email("in")).await;
     let outsider = insert_user(&db.pool, &unique("user"), &unclaimed_email("out")).await;
     let admin = insert_user(&db.pool, &unique("admin"), &unclaimed_email("admin")).await;
-    insert_group_member(&db.pool, &group, &member, &admin)
+    insert_group_member(&db.pool, &group, &member, &admin, None)
         .await
         .expect("add member");
 
@@ -113,9 +113,15 @@ async fn the_effective_roles_are_the_union_of_both_writers() {
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("roles")).await;
     let admin = insert_user(&db.pool, &unique("admin"), &unclaimed_email("granter")).await;
 
-    set_manual_roles(&db.pool, &user, &["project_manager".to_owned()], &admin)
-        .await
-        .expect("grant by hand");
+    set_manual_roles(
+        &db.pool,
+        &user,
+        &["project_manager".to_owned()],
+        &admin,
+        None,
+    )
+    .await
+    .expect("grant by hand");
     let roles = recompute_roles(&db.pool, &user, Some(&["user".to_owned()]))
         .await
         .expect("sign-in recompute");
@@ -145,14 +151,14 @@ async fn dropping_a_manual_role_leaves_the_directory_half_standing() {
     };
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("demote")).await;
     let admin = insert_user(&db.pool, &unique("admin"), &unclaimed_email("granter")).await;
-    set_manual_roles(&db.pool, &user, &["admin".to_owned()], &admin)
+    set_manual_roles(&db.pool, &user, &["admin".to_owned()], &admin, None)
         .await
         .expect("grant");
     recompute_roles(&db.pool, &user, Some(&["user".to_owned()]))
         .await
         .expect("recompute");
 
-    set_manual_roles(&db.pool, &user, &[], &admin)
+    set_manual_roles(&db.pool, &user, &[], &admin, None)
         .await
         .expect("revoke");
     let roles = recompute_roles(&db.pool, &user, None)
@@ -171,9 +177,15 @@ async fn platform_admins_are_counted_from_the_effective_role_set() {
     let before = count_platform_admins(&db.pool).await.expect("count");
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("platform")).await;
     let admin = insert_user(&db.pool, &unique("admin"), &unclaimed_email("granter")).await;
-    set_manual_roles(&db.pool, &user, &["platform_admin".to_owned()], &admin)
-        .await
-        .expect("grant");
+    set_manual_roles(
+        &db.pool,
+        &user,
+        &["platform_admin".to_owned()],
+        &admin,
+        None,
+    )
+    .await
+    .expect("grant");
     recompute_roles(&db.pool, &user, None)
         .await
         .expect("recompute");

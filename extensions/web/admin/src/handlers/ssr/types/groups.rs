@@ -123,6 +123,10 @@ pub(crate) struct MemberRowView {
     // Why: a member the directory put here cannot be removed by hand — the
     // next sign-in would write the row straight back.
     pub can_remove: bool,
+    // Why: the manual membership's expiry, RFC 3339, or None for open-ended;
+    // `expires_soon` is the one-week warning the row badges.
+    pub expires_at: Option<String>,
+    pub expires_soon: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]

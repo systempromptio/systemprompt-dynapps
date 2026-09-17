@@ -43,7 +43,7 @@ macro_rules! scoped_query {
                   WHERE $1::TEXT = 'group' AND NOT $2::BOOLEAN
                  UNION
                  SELECT pm.user_id, pm.project_id AS scope_id
-                   FROM project_members pm
+                   FROM user_projects pm
                   WHERE $1::TEXT = 'project' AND NOT $2::BOOLEAN
                  UNION
                  SELECT d.user_id, d.primary_group_id AS scope_id
@@ -128,7 +128,7 @@ async fn resolve_subject_scope(
                      SELECT 1 FROM ai_request_scopes s
                      WHERE s.user_id = u.id AND s.group_id = ANY($1))))
              AND ($2::TEXT IS NULL OR EXISTS (
-                     SELECT 1 FROM project_members pm
+                     SELECT 1 FROM user_projects pm
                      WHERE pm.user_id = u.id AND pm.project_id = $2)
                   OR EXISTS (
                      SELECT 1 FROM ai_request_scopes s

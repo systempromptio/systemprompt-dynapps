@@ -31,9 +31,18 @@
                     <input type="search" name="q" id="admin-header-search-input" class="sp-topbar__search-input"
                            placeholder="Paste a session, context, trace, or request ID…"
                            autocomplete="off" spellcheck="false"
+                           role="combobox" aria-autocomplete="list" aria-expanded="false"
+                           aria-controls="admin-header-search-list"
                            aria-label="Jump to a trace or request by ID" />
                     <kbd class="sp-topbar__search-hint" aria-hidden="true">↵</kbd>
                     <span class="sp-topbar__search-status" id="admin-header-search-status" role="status" aria-live="polite"></span>
+                    <ul class="sp-topbar__search-list" id="admin-header-search-list" role="listbox" aria-label="Matching ids" hidden></ul>
+                    <template id="admin-header-search-item">
+                        <li class="sp-topbar__search-item" role="option" aria-selected="false" data-action="header-search-pick">
+                            <span class="sp-topbar__search-kind"></span>
+                            <span class="sp-topbar__search-id sp-u-mono"></span>
+                        </li>
+                    </template>
                 </form>
                 <div class="sp-topbar__spacer"></div>
                 <div class="sp-topbar__actions" id="header-actions">

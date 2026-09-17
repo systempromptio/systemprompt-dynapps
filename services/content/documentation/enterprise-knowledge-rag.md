@@ -55,7 +55,7 @@ Salesforce is the hardest of the four to index, and the reason is structural. It
 
 ### GitHub — not indexed
 
-The platform has a GitHub MCP integration. A GitHub knowledge-bank ingestion source is separate and is not provided by that integration.
+There is no GitHub connector on this instance; a GitHub knowledge-bank ingestion source is not provided.
 
 ### A per-organisation file folder — proposed, decision pending
 

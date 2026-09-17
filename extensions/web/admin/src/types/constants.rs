@@ -74,4 +74,3 @@ pub const GIT_HEAD: &str = "HEAD";
 
 pub const DIR_PYCACHE: &str = "__pycache__";
 pub const SCRIPT_SOURCE_TRACKING: &str = "generated:tracking";
-pub const LOG_CONTEXT_GITHUB: &str = "github";

@@ -173,7 +173,7 @@ async fn executive_manual_role_can_be_saved_and_survives_directory_recomputation
     };
     let user = UserId::new(unique("executive-role"));
     insert_user_with_roles(&db.pool, user.as_str(), &["user".into()]).await;
-    roles::set_manual_roles(&db.pool, &user, &["super_admin".into()], &user)
+    roles::set_manual_roles(&db.pool, &user, &["super_admin".into()], &user, None)
         .await
         .expect("manual role database constraint admits super_admin");
     let effective = roles::recompute_roles(&db.pool, &user, Some(&["user".into()]))

@@ -5,6 +5,7 @@
 
 import { apiFetch } from '../services/api.js';
 import { showToast } from '../services/toast.js';
+import { validUntilFrom } from '../services/validity.js';
 
 const RULE_TYPE = 'user';
 
@@ -15,6 +16,7 @@ const rulesPath = (entityType, entityId) =>
 
 const reasonBox = (select) => select.closest('[data-user-rule]')?.querySelector('[data-user-reason]');
 const reasonInput = (select) => reasonBox(select)?.querySelector('[data-user-reason-input]');
+const untilInput = (select) => reasonBox(select)?.querySelector('[data-user-until-input]');
 
 const restore = (select) => {
   select.value = select.dataset.previous ?? 'inherit';
@@ -41,7 +43,13 @@ const save = async (select) => {
   try {
     await apiFetch(rulesPath(entityType, entityId), {
       method: 'POST',
-      body: JSON.stringify({ rule_type: RULE_TYPE, rule_value: user, access: select.value, justification }),
+      body: JSON.stringify({
+        rule_type: RULE_TYPE,
+        rule_value: user,
+        access: select.value,
+        justification,
+        valid_until: validUntilFrom(untilInput(select)),
+      }),
     });
     select.dataset.previous = select.value;
     showToast('Rule saved', 'success');

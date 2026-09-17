@@ -23,18 +23,26 @@ related_docs:
 
 # Code ↔ Instance: Sources, Planes and Sync
 
-**TL;DR:** Everything this instance serves is *declared* somewhere in code and *enforced* from what the process loaded and what the database holds. `/admin/sync` is the one page that compares the two. A **source** is where declarations come from — `base` is this repository's `services/` tree, `bundle:<name>` is each external kit the profile pins by digest — and every source has a content hash. A **plane** is what a source's declarations project into the database — access control today — and every plane records the declared hash it last applied, when, by whom and in which mode. Nothing writes on its own after the first seed: the page shows the difference and offers a direction.
+**TL;DR:** Everything this instance serves is *declared* somewhere in code and *enforced* from what the process loaded and what the database holds. `/admin/sync` is the one page that compares the two. A **source** is where declarations come from — `base` is this repository's `services/` tree, `bundle:<name>` is each external kit the profile pins by digest — and every source has a content hash. A **plane** is what a source's declarations project into the database — access control, groups and projects, gateway policies — and every plane records the declared hash it last applied, when, by whom and in which mode. Nothing writes on its own after the first seed: the page shows the difference and offers a direction.
 
 ## The model
 
 | word | meaning | today |
 |---|---|---|
 | **source** | a tree of declarations with a content hash | `base` (this repository), `bundle:sfnext` (the Europe development kit), any further kit |
-| **plane** | a projection of declarations into database tables, with drift and three directions | `access_control` (`rules.yaml` → `access_control_rules`, `access_control_entities`) |
+| **plane** | a projection of declarations into database tables, with drift and three directions | `access_control` (`rules.yaml` → `access_control_rules`, `access_control_entities`); `groups` (`web/config/groups.yaml` → `groups`, `projects`, `group_ad_mappings`, `project_ad_mappings`); `gateway_policies` (`gateway/policies.yaml` → `ai_gateway_policies`) |
 | **ownership** | decided by id at composition | a bundle owns its marketplaces, plugins and skills; the base owns everything else, every entitlement included |
 | **hash control** | every source reports what it declares; every plane records what it applied | the table below |
 
-Planes are a contract, not a list: `groups` (groups.yaml → groups, projects, directory mappings) and `gateway_policies` are shaped for and not built. When they are, the page grows a card each; nothing else changes.
+Planes are a contract, not a list: one `impl SyncPlane` and one registry line each, and the page grows a card. The three differ in what their loaders were built to do, and the drift table says so on every row:
+
+| plane | insert only | overwrite from code | export | the other writer |
+|---|---|---|---|---|
+| `access_control` | missing rules and entity defaults | corrects what differs; deletes undeclared rules on declared entities | `rules.yaml` | the access-control console (rows stamped `dashboard`) |
+| `groups` | missing groups, projects and AD mappings | the boot loader: upserts every set, reconciles `yaml`-sourced mappings. **Never deletes a group or project** — those own members, usage and rules, and are deleted from their own page. A console-written mapping is kept. | `groups.yaml`, every dashboard-created set and mapping included | the Groups and Projects pages |
+| `gateway_policies` | missing policies | the boot load: upserts every declared policy, deletes undeclared rows | `policies.yaml`, with calendar-month windows declared as `2678400` | `/admin/gateway/policies` — live within a minute, because core reads the table per request |
+
+`gateway_policies` is the one plane the console edits in place: a save at `/admin/gateway/policies` is enforced on the next request, and shows here as drift until it is exported and committed or overwritten from code. `/admin/governance/quotas` reads the same table's windows against `ai_quota_buckets` to show usage per subject against each ceiling.
 
 ## The four hashes
 
@@ -44,7 +52,7 @@ Planes are a contract, not a list: `groups` (groups.yaml → groups, projects, d
 | bundle **content hash** | `bundle.json`: SHA-256 over sorted `path\0sha256` | the kit's files change | *which tree* — the same tree pushed twice has one content hash |
 | base **tree hash** | computed on the page over `services/` with the same algorithm | this repository deploys | equals the base bundle's `content_hash` published at this release |
 | **composed hash** | SHA-256 over ordered `name\0content_hash` of every active source | any source changes | *which composition* the process is serving; **reconcile pending** when it differs from `last_reconciled_hash` |
-| plane **declared hash** | SHA-256 over the canonical declaration (for access control: every `(entity, band, subject, access, why)` plus defaults and awaiting entities) | the file's meaning changes (not its whitespace) | what the database was last made equal to; recorded per apply in `sync_state` |
+| plane **declared hash** | SHA-256 over the canonical declaration (access control: every `(entity, band, subject, access, why)` plus defaults and awaiting entities; groups: every set and mapping; gateway policies: every policy's name, switch, priority and normalised spec) | the file's meaning changes (not its whitespace) | what the database was last made equal to; recorded per apply in `sync_state` |
 
 A row on the Sources table is **in step** when the active digest is what the profile resolves to and the composition is reconciled. It is **pinned ≠ active** when the profile was re-pinned but the instance has not imported, **reconcile pending** when a composition was swapped in but not yet projected into the authz tables (Import finishes it), and **fallback: last_good / bundled** with the error when a fetch failed and the instance booted on a cached or baked tree instead. **channel** is information, not a warning: the profile follows a tag the kit's CI moves on every release, so a release is one Import away and the active digest on the row is what is actually served.
 

@@ -7,6 +7,8 @@
 
 use std::collections::{HashMap, HashSet};
 
+use chrono::{DateTime, Duration, Utc};
+
 use systemprompt::identifiers::UserId;
 
 use super::format::short_num;
@@ -37,6 +39,18 @@ pub(crate) struct MemberInput<'a> {
     pub email: Option<&'a str>,
     pub sources: &'a [String],
     pub source_ad_groups: &'a [String],
+    pub valid_until: Option<DateTime<Utc>>,
+}
+
+// Why: the window inside which a membership counts as "expiring soon" on the
+// member tables and the access-control ledger — one working week, long enough
+// to renew before the sweep acts.
+pub(crate) const EXPIRING_SOON_DAYS: i64 = 7;
+
+#[must_use]
+pub(crate) fn expires_soon(valid_until: Option<DateTime<Utc>>, now: DateTime<Utc>) -> bool {
+    valid_until
+        .is_some_and(|until| until > now && until <= now + Duration::days(EXPIRING_SOON_DAYS))
 }
 
 pub(crate) struct MemberContext<'a> {
@@ -172,6 +186,7 @@ pub(crate) fn member_rows(
     members: &[MemberInput<'_>],
     ctx: &MemberContext<'_>,
 ) -> Vec<MemberRowView> {
+    let now = Utc::now();
     members
         .iter()
         .map(|m| {
@@ -189,6 +204,8 @@ pub(crate) fn member_rows(
                 sources: m.sources.iter().map(|s| source_badge(s)).collect(),
                 source_ad_groups: m.source_ad_groups.to_vec(),
                 can_remove: ctx.can_manage && manual,
+                expires_at: m.valid_until.map(|t| t.to_rfc3339()),
+                expires_soon: expires_soon(m.valid_until, now),
                 user_id: UserId::new(m.user_id.to_owned()),
             }
         })

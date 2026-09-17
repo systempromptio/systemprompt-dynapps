@@ -1,0 +1,88 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT offered_tools, prepared_tools,\n                  request_body_sha256, prepared_body_sha256,\n                  request_bytes, request_truncated AS \"request_truncated!\"\n           FROM ai_request_payloads\n           WHERE ai_request_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "offered_tools",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "ai_request_payloads",
+            "name": "offered_tools"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "prepared_tools",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "ai_request_payloads",
+            "name": "prepared_tools"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "request_body_sha256",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ai_request_payloads",
+            "name": "request_body_sha256"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "prepared_body_sha256",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ai_request_payloads",
+            "name": "prepared_body_sha256"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "request_bytes",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "ai_request_payloads",
+            "name": "request_bytes"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "request_truncated!",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "ai_request_payloads",
+            "name": "request_truncated"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "72f94836c2d43c803e60d870cb69e21843f37df09a9122bc5c822e006d36a105"
+}

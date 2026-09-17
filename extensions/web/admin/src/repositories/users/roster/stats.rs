@@ -41,7 +41,7 @@ pub async fn get_roster_stats(
            ), marked AS (
                SELECT b.id, b.is_active,
                       cardinality(array_remove(array_remove(b.roles, 'user'), 'anonymous')) = 0 AS no_role,
-                      NOT EXISTS (SELECT 1 FROM group_members gm WHERE gm.user_id = b.id) AS unassigned,
+                      EXISTS (SELECT 1 FROM user_groups ug WHERE ug.user_id = b.id AND ug.group_id = 'unassigned') AS unassigned,
                       GREATEST(
                         (SELECT MAX(ar.created_at) FROM ai_requests ar WHERE ar.user_id = b.id),
                         (SELECT MAX(us.last_activity_at) FROM user_sessions us WHERE us.user_id = b.id),
@@ -111,8 +111,7 @@ pub(super) async fn count_filtered_users(
           AND ($3::text IS NULL OR position(lower($3) in lower(
               COALESCE(u.display_name, u.full_name, u.name, '') || ' ' || COALESCE(u.email, '') || ' ' || u.id)) > 0)
           AND CASE $4::text
-            WHEN 'unassigned' THEN NOT EXISTS (SELECT 1 FROM group_members gm WHERE gm.user_id = u.id)
-                OR EXISTS (SELECT 1 FROM group_members gm WHERE gm.user_id = u.id AND gm.group_id = 'unassigned')
+            WHEN 'unassigned' THEN EXISTS (SELECT 1 FROM user_groups ug WHERE ug.user_id = u.id AND ug.group_id = 'unassigned')
             WHEN 'no-role' THEN cardinality(array_remove(array_remove(u.roles, 'user'), 'anonymous')) = 0
             WHEN 'inactive-30d' THEN
                 NOT EXISTS (SELECT 1 FROM ai_requests ar WHERE ar.user_id = u.id AND ar.created_at >= NOW() - INTERVAL '30 days')

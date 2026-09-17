@@ -8,7 +8,8 @@
 //! - the admin reporting tools' report and project-catalog shapes
 //! - the typed analytics tools' inputs: defaults, clamps, and the exact CLI
 //!   argv each builds
-//! - `bound_artifact`, the byte bound on passthrough results
+//! - the passthrough result bound: the overflow decision, the pointer sent in
+//!   place of a stored oversize result, and the trimming fallback
 //! - Gemini declarability of every listed tool's input schema
 
 #[cfg(test)]

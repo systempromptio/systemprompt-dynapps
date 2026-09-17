@@ -3,13 +3,18 @@ import { showConfirmDialog } from '/js/services/confirm.js';
 // Account state comes only from the server. Credentials are submitted once and
 // never kept in browser storage, URL parameters, or rendered response payloads.
 const root = document.querySelector('[data-connectors]');
-const labels = { verification_required: 'Verification required', no_auth_required: 'No authorization required', not_configured: 'Not configured', not_connected: 'Not connected', not_provisioned: 'Not provisioned', connected: 'Connected', reconnect_required: 'Reconnect required', temporarily_unavailable: 'Temporarily unavailable' };
+const labels = { verification_required: 'Verification required', no_auth_required: 'Built in', not_configured: 'Not configured', not_connected: 'Not connected', not_provisioned: 'Not provisioned', connected: 'Connected', reconnect_required: 'Reconnect required', temporarily_unavailable: 'Temporarily unavailable' };
 const tones = { connected: 'ok', reconnect_required: 'warn', verification_required: 'warn', temporarily_unavailable: 'err' };
-const names = { atlassian: 'Atlassian', github: 'GitHub', salesforce: 'Salesforce' };
+const names = { atlassian: 'Atlassian', salesforce: 'Salesforce' };
 const actionLabels = { connect: 'Connect', reconnect: 'Reconnect', disconnect: 'Disconnect', test: 'Test connection', manual_token: 'Use personal token' };
 const notes = { sandbox_refreshed: 'This org was refreshed by an administrator — reconnect to continue', verification_failed: 'Authorization saved, but the last verification failed', grant_rejected: 'The provider rejected the saved grant', configuration_changed: 'The connector configuration changed — reconnect to authorize again', provider_unavailable: 'The provider did not answer the last check', provider_permission_denied: 'The provider refused the permissions this connector needs' };
 const attention = ['reconnect_required', 'verification_required', 'temporarily_unavailable'];
-const rank = { not_connected: 1, connected: 2 };
+const groups = [
+    { key: 'attention', title: 'Needs your attention', note: 'Broken or unverified — fix these first.' },
+    { key: 'ready', title: 'Ready to connect', note: 'Authorize once; every client you connect uses the same account.' },
+    { key: 'connected', title: 'Connected', note: 'Verified and available to every client.' },
+    { key: 'quiet', title: 'Nothing to do', note: 'Built in, not provisioned yet, or not open to your account.' }
+];
 const steps = [
     { id: 'token', title: 'Credential', pending: 'Checking the saved grant' },
     { id: 'initialize', title: 'MCP session', pending: 'Opening a session with the provider' },
@@ -27,21 +32,38 @@ function message(text, tone = '') {
 }
 function relative(iso) {
     const minutes = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
-    if (minutes < 1) return 'verified just now';
-    if (minutes < 60) return `verified ${minutes} min ago`;
-    if (minutes < 60 * 24) return `verified ${Math.round(minutes / 60)} h ago`;
-    return `verified ${new Date(iso).toLocaleDateString()}`;
+    if (minutes < 1) return 'just now';
+    if (minutes < 60) return `${minutes} min ago`;
+    if (minutes < 60 * 24) return `${Math.round(minutes / 60)} h ago`;
+    return new Date(iso).toLocaleDateString();
 }
 function host(value) { try { return new URL(value).host; } catch (_) { return value; } }
 function displayName(account) { return account.display_name || names[account.provider] || account.provider; }
-function order(account) { return attention.includes(account.status) ? 0 : (rank[account.status] ?? 3); }
-function meta(account) {
-    const line = element('div', '', 'sp-connector__meta');
-    if (account.account_name) { const id = element('span', account.account_name, 'sp-u-mono'); id.title = account.account_name; line.append(id); }
-    if (account.resource_name) { const site = element('span', host(account.resource_name)); site.title = account.resource_name; line.append(site); }
-    if (account.verified_at) { const when = element('span', relative(account.verified_at)); when.title = new Date(account.verified_at).toLocaleString(); line.append(when); }
-    if (!line.childElementCount) line.append(element('span', account.configured ? 'Authorize once for every connected client' : 'Provider setup required'));
-    return line;
+function groupOf(account) {
+    if (attention.includes(account.status) && account.entitled) return 'attention';
+    if (account.status === 'not_connected' && account.entitled) return 'ready';
+    if (account.status === 'connected') return 'connected';
+    return 'quiet';
+}
+function glyph(provider) {
+    if (provider === 'atlassian') return 'atlassian';
+    if (provider === 'google_drive') return 'google';
+    if (provider === 'systemprompt') return 'systemprompt';
+    return provider.startsWith('salesforce') ? 'salesforce' : 'generic';
+}
+function monogram(family, name) { return { atlassian: 'At', google: 'G', systemprompt: 'Sp', salesforce: 'Sf' }[family] || name.slice(0, 2); }
+function kind(family) { return { atlassian: 'Atlassian Cloud', google: 'Google Workspace', systemprompt: 'Control plane', salesforce: 'Salesforce org' }[family] || 'MCP server'; }
+function fact(list, label, value, mono) {
+    const row = element('div', '', 'sp-connector__fact'); const dd = element('dd', value, mono ? 'sp-u-mono' : ''); dd.title = value;
+    row.append(element('dt', label), dd); list.append(row);
+}
+function facts(account) {
+    const list = element('dl', '', 'sp-connector__facts');
+    if (account.account_name) fact(list, 'Account', account.account_name, true);
+    if (account.resource_name) fact(list, 'Site', host(account.resource_name), false);
+    if (account.verified_at) fact(list, 'Verified', relative(account.verified_at), false);
+    list.hidden = !list.childElementCount;
+    return list;
 }
 function note(account) {
     if (!account.entitled) return account.provider.startsWith('salesforce') ? 'Your account is not entitled to this Salesforce org' : 'An active account is required to connect providers';
@@ -49,58 +71,90 @@ function note(account) {
     return notes[account.error_code] || '';
 }
 function variant(action, status) {
-    if (['connect', 'reconnect'].includes(action)) return status === 'connected' ? 'sp-btn--outline' : 'sp-btn--primary';
+    if (action === 'connect') return 'sp-btn--primary';
+    if (action === 'reconnect') return status === 'connected' ? 'sp-btn--outline' : 'sp-btn--primary';
     if (action === 'disconnect') return 'sp-btn--outline-danger';
     if (action === 'test') return status === 'connected' ? 'sp-btn--primary' : 'sp-btn--outline';
     return 'sp-btn--ghost';
 }
-function actionsFor(account, user) {
+function actionsFor(account) {
     const actions = element('div', '', 'sp-connector__actions');
     const order = ['test', 'connect', 'reconnect', 'disconnect', 'manual_token'];
     for (const action of order.filter(name => account.actions.includes(name))) {
-        const button = element('button', actionLabels[action], `sp-btn sp-btn--sm ${variant(action, account.status)}`); button.type = 'button';
-        button.addEventListener('click', () => perform(account.provider, action, user)); actions.append(button);
+        const button = element('button', actionLabels[action], `sp-btn sp-btn--sm ${variant(action, account.status)}`); button.type = 'button'; button.dataset.action = action;
+        actions.append(button);
     }
     return actions;
 }
-function card(account, user, previous) {
-    const row = element('li', '', 'sp-connector'); row.id = `connector-${account.provider}`; row.dataset.status = account.status; row.dataset.provider = account.provider;
+// Why: the "about" block (what the provider unlocks, which plugins carry it)
+// is server-rendered from the services tree and not part of the snapshot, so
+// a re-render carries the previous card's block instead of rebuilding it.
+function about(account, previous) {
+    const kept = previous?.querySelector('.sp-connector__about');
+    if (kept) return kept;
+    const block = element('div', '', 'sp-connector__about');
+    block.append(element('p', account.configured ? 'Authorize once; every client you connect uses the same account.' : 'Provider setup required.', 'sp-connector__blurb'));
+    return block;
+}
+function card(account, previous) {
+    const family = glyph(account.provider);
+    const row = element('li', '', 'sp-connector'); row.id = `connector-${account.provider}`; row.dataset.status = account.status; row.dataset.provider = account.provider; row.dataset.glyph = family;
     const head = element('div', '', 'sp-connector__head');
-    const mark = element('span', displayName(account).slice(0, 1), 'sp-connector__mark'); mark.setAttribute('aria-hidden', 'true');
-    const body = element('div', '', 'sp-connector__body');
-    body.append(element('h3', displayName(account), 'sp-connector__name'), meta(account));
+    const mark = element('span', monogram(family, displayName(account)), 'sp-connector__mark'); mark.setAttribute('aria-hidden', 'true');
+    const title = element('div', '', 'sp-connector__title');
+    title.append(element('h3', displayName(account), 'sp-connector__name'), element('span', kind(family), 'sp-connector__kind'));
     const badge = element('span', labels[account.status] || 'Unavailable', `sp-badge sp-connector__status sp-badge--${tones[account.status] || 'muted'}`);
-    head.append(mark, body, badge); row.append(head);
+    head.append(mark, title, badge); row.append(head, about(account, previous), facts(account));
     const text = note(account); if (text) row.append(element('p', text, 'sp-connector__note'));
-    row.append(actionsFor(account, user));
+    row.append(actionsFor(account));
     // Why: a check panel that is open survives the 15 s re-render, otherwise a
     // result would vanish while the person is still reading it.
     const check = previous?.querySelector('.sp-connector__check');
     if (check) row.append(check);
     return row;
 }
+function section(group, cards) {
+    const node = element('section', '', 'sp-connector-group'); node.dataset.group = group.key; node.setAttribute('aria-label', group.title);
+    const head = element('div', '', 'sp-section__head');
+    const count = element('span', String(cards.length), 'sp-section__count'); count.dataset.groupCount = '';
+    head.append(element('h2', group.title, 'sp-section__title'), count, element('p', group.note, 'sp-section__sub'));
+    const list = element('ul', '', 'sp-connector-grid'); list.dataset.groupList = ''; list.append(...cards);
+    node.append(head, list);
+    return node;
+}
 function summarise(accounts) {
     const counts = { configured: accounts.length, connected: 0, needs_attention: 0, not_connected: 0 };
+    let broken = null; let ready = null;
     for (const account of accounts) {
         if (account.status === 'connected') counts.connected += 1;
-        else if (attention.includes(account.status)) counts.needs_attention += 1;
-        else if (account.status === 'not_connected') counts.not_connected += 1;
+        else if (attention.includes(account.status)) { counts.needs_attention += 1; broken ??= displayName(account); }
+        else if (account.status === 'not_connected') { counts.not_connected += 1; if (account.entitled) ready ??= displayName(account); }
     }
     for (const [key, value] of Object.entries(counts)) {
-        const tile = root.querySelector(`[data-summary="${key}"] .sp-kpi__value`); if (tile) tile.textContent = String(value);
+        const tile = root.querySelector(`[data-summary="${key}"] [data-value]`); if (tile) tile.textContent = String(value);
     }
-    root.querySelector('[data-connection-count]').textContent = `${counts.connected} of ${counts.configured} connected`;
+    const pct = n => counts.configured ? `${Math.round(n * 100 / counts.configured)}%` : '0%';
+    root.querySelector('[data-summary-bar="connected"]')?.style.setProperty('--sp-fill', pct(counts.connected));
+    root.querySelector('[data-summary-bar="needs_attention"]')?.style.setProperty('--sp-fill', pct(counts.needs_attention));
+    const headline = counts.configured === 0 ? 'No connectors on this gateway' : counts.configured === counts.connected ? 'Everything is connected' : `${counts.connected} of ${counts.configured} connected`;
+    root.querySelector('[data-summary-headline]').textContent = headline;
+    const next = root.querySelector('[data-summary-next]');
+    next.textContent = broken ? `Reconnect ${broken} to get it working again.` : ready ? `Connect ${ready} to unlock it in every client.` : '';
+    next.hidden = !next.textContent;
 }
 function render(data) {
     const expected = new URLSearchParams(window.location.search).get('expected_user');
-    if (expected && expected !== data.user_id) { root.querySelector('[data-connector-grid]')?.replaceChildren(); message('Sign in to the same Systemprompt account as your bridge.', 'err'); return; }
+    if (expected && expected !== data.user_id) { root.querySelector('[data-connector-groups]')?.replaceChildren(); message('Sign in to the same Systemprompt account as your bridge.', 'err'); return; }
     if (data.version !== 1) { message('Update the server and bridge to manage connected accounts.', 'err'); return; }
     if (data.revision < revision) return;
     revision = data.revision;
     summarise(data.connections.filter(account => account.configured && account.requires_auth !== false));
-    const list = root.querySelector('[data-connector-grid]'); if (!list) return;
-    const cards = [...data.connections].sort((a, b) => order(a) - order(b)).map(account => card(account, data.user_id, list.querySelector(`#connector-${account.provider}`)));
-    list.replaceChildren(...cards);
+    const container = root.querySelector('[data-connector-groups]'); if (!container) return;
+    const sections = groups.map(group => {
+        const cards = data.connections.filter(account => groupOf(account) === group.key).map(account => card(account, container.querySelector(`#connector-${account.provider}`)));
+        return cards.length ? section(group, cards) : null;
+    }).filter(Boolean);
+    container.replaceChildren(...sections);
 }
 async function refresh() {
     if (!root || pending || root.querySelector('form')) return;
@@ -227,6 +281,12 @@ async function perform(provider, action, user) {
     await mutate(provider, action);
 }
 if (root) {
+    // Why: buttons are server-rendered on first paint and rebuilt on every
+    // refresh, so one delegated listener on the page root serves both.
+    root.addEventListener('click', (event) => {
+        const button = event.target.closest('.sp-connector > .sp-connector__actions > [data-action]');
+        if (button) perform(button.closest('.sp-connector').dataset.provider, button.dataset.action, root.dataset.userId);
+    });
     refresh();
     window.setInterval(() => { if (!document.hidden) refresh(); }, 15000);
     window.addEventListener('focus', refresh);

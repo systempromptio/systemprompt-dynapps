@@ -96,6 +96,7 @@ async fn run_tool(
 ) -> Result<rmcp::model::CallToolResult, rmcp::ErrorData> {
     let db_pool = db_pool(&db.pool);
     let executor = executor(&db_pool);
+    let ingest = Arc::new(ArtifactIngest::from_db(&db_pool, None).expect("artifact ingest"));
     let profile = client();
     let tool_name = request.name.to_string();
     systemprompt_mcp_agent::server::tool::dispatch_tool(
@@ -107,6 +108,7 @@ async fn run_tool(
             request_context: &request_context(),
             client: &profile,
             cli,
+            ingest: &ingest,
         },
         &tool_name,
         "test-bearer-token",

@@ -63,6 +63,30 @@ impl NewActivity {
         }
     }
 
+    // Why: a console edit to `ai_gateway_policies` is a write to the
+    // gateway_policies plane by another door; it is filed under the plane so
+    // the sync page's history and this row read as one story.
+    #[must_use]
+    pub fn gateway_policy_saved(user_id: &UserId, policy: &str, deleted: bool) -> Self {
+        Self {
+            user_id: user_id.clone(),
+            category: ActivityCategory::UserManagement,
+            action: if deleted {
+                ActivityAction::Deleted
+            } else {
+                ActivityAction::Updated
+            },
+            entity: Some(plane_ref("gateway_policies", "Gateway policies")),
+            description: if deleted {
+                format!("Deleted gateway policy '{policy}' from the console")
+            } else {
+                format!("Saved gateway policy '{policy}' from the console; live within a minute")
+            },
+            // JSON: JSONB column — which policy row moved
+            metadata: serde_json::json!({ "plane": "gateway_policies", "policy": policy }),
+        }
+    }
+
     #[must_use]
     pub fn sources_refreshed(user_id: &UserId, changed: bool, reconciled: bool) -> Self {
         Self {

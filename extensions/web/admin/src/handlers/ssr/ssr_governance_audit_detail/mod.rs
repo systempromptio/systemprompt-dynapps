@@ -4,7 +4,8 @@
 //! `id` may be an `ai_requests.id`, `request_id`, or `governance_decisions.id`.
 //! Renders the full chain (identity, policy evaluations, prompt/response
 //! preview, cost, latency, linked trace) using the existing
-//! `find_decision_chain` envelope.
+//! `find_decision_chain` envelope, the client and provider tool schemas the
+//! request carried, and the session's stored artifacts.
 
 use super::ssr_helpers::Viewer;
 use crate::error::AdminError;
@@ -27,7 +28,7 @@ use crate::repositories::governance::chain::{
 
 mod evidence;
 mod rows;
-
+mod schemas;
 
 #[derive(Debug, Serialize)]
 struct AuditDetailContext<'a> {
@@ -35,6 +36,8 @@ struct AuditDetailContext<'a> {
     title: String,
     breadcrumbs: Vec<BreadcrumbView>,
     evidence: evidence::EvidenceView,
+    schemas: schemas::SchemaView,
+    artifacts: schemas::ArtifactsView,
     summary: Summary,
     primary: Option<PrimaryRequest>,
     banner: Option<Banner>,
@@ -123,7 +126,15 @@ pub(crate) async fn governance_audit_detail_page(
     );
 
     let request_ids: Vec<String> = envelope.requests.iter().map(|r| r.id.clone()).collect();
-    let evidence = evidence::load(&pool, &request_ids).await;
+    let primary_id = primary.map(|r| r.id.as_str());
+    let primary_provider = primary
+        .and_then(|r| r.provider.as_deref())
+        .unwrap_or_default();
+    let (evidence, schemas, artifacts) = tokio::join!(
+        evidence::load(&pool, &request_ids),
+        schemas::load_schemas(&pool, primary_id.unwrap_or_default(), primary_provider),
+        schemas::load_artifacts(&pool, &envelope.session_id, primary_id),
+    );
 
     let summary = build_summary(&envelope);
     let primary_json = primary.map(build_primary_json);
@@ -137,6 +148,8 @@ pub(crate) async fn governance_audit_detail_page(
         ],
         title,
         evidence,
+        schemas,
+        artifacts,
         summary,
         primary: primary_json,
         banner,

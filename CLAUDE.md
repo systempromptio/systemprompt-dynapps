@@ -589,8 +589,9 @@ reason. Model and procedure: `/documentation/access-control`.
 **Sources, planes, sync.** `/admin/sync` ("Code ↔ Instance") is the one sync system. A
 *source* is where declarations come from, each with a content hash: `base` is this tree and
 `bundle:<name>` is each remote kit the profile pins (`services.sources[]`, by digest). A *plane*
-is what those declarations project into the database — `access_control` today; `groups` and
-`gateway_policies` are shaped for, not built (`repositories/sync/registry.rs`). Every apply
+is what those declarations project into the database — `access_control`, `groups` and
+`gateway_policies` (`repositories/sync/registry.rs`; `gateway_policies` is also edited live at
+`/admin/gateway/policies`, since core reads `ai_gateway_policies` per request). Every apply
 records the declared hash, actor and mode in `sync_state`. Kits own content, this repo owns
 access: a kit ships no `access:` block; `rules.yaml` declares `marketplace/<id>` with
 `owner: bundle:<name>`, reported as *awaiting its bundle* until the source is active. Kit

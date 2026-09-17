@@ -21,6 +21,8 @@ pub struct FleetCertRow {
     pub fingerprint: String,
     pub enrolled_at: DateTime<Utc>,
     pub revoked_at: Option<DateTime<Utc>>,
+    // Why: the window from `user_device_cert_validity`; None is open-ended.
+    pub valid_until: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Clone)]
@@ -86,8 +88,10 @@ pub async fn list_device_certs_for_users(
         FleetCertRow,
         r#"SELECT c.id AS "id!", c.user_id AS "user_id!: UserId", c.label AS "label!",
                   c.fingerprint AS "fingerprint!", c.enrolled_at AS "enrolled_at!",
-                  c.revoked_at
+                  c.revoked_at,
+                  v.valid_until AS "valid_until?"
              FROM user_device_certs c
+             LEFT JOIN user_device_cert_validity v ON v.device_id = c.id
             WHERE c.user_id = ANY($1::TEXT[])
               AND (($2::TEXT = 'all')
                    OR ($2::TEXT = 'active' AND c.revoked_at IS NULL)
@@ -110,4 +114,59 @@ pub async fn revoke_any_device_cert(pool: &PgPool, id: &str) -> Result<bool, sql
     .execute(pool)
     .await?;
     Ok(result.rows_affected() > 0)
+}
+
+// Why: the window is a side row because `user_device_certs` is core's table.
+// It binds through the hourly sweep (`revoke_expired_device_certs`), which
+// stamps `revoked_at` — the column core's device gate actually reads. Only a
+// live certificate takes a window; a revoked one has nothing left to bound.
+pub async fn set_device_cert_validity(
+    pool: &PgPool,
+    id: &str,
+    valid_until: Option<DateTime<Utc>>,
+) -> Result<bool, sqlx::Error> {
+    let live = sqlx::query_scalar!(
+        r#"SELECT EXISTS(SELECT 1 FROM user_device_certs WHERE id = $1 AND revoked_at IS NULL) AS "live!""#,
+        id
+    )
+    .fetch_one(pool)
+    .await?;
+    if !live {
+        return Ok(false);
+    }
+    match valid_until {
+        Some(until) => {
+            sqlx::query!(
+                "INSERT INTO user_device_cert_validity (device_id, valid_until) VALUES ($1, $2)
+                 ON CONFLICT (device_id) DO UPDATE
+                    SET valid_until = EXCLUDED.valid_until, updated_at = NOW()",
+                id,
+                until
+            )
+            .execute(pool)
+            .await?;
+        },
+        None => {
+            sqlx::query!(
+                "DELETE FROM user_device_cert_validity WHERE device_id = $1",
+                id
+            )
+            .execute(pool)
+            .await?;
+        },
+    }
+    Ok(true)
+}
+
+pub async fn revoke_expired_device_certs(pool: &PgPool) -> Result<u64, sqlx::Error> {
+    let result = sqlx::query!(
+        "UPDATE user_device_certs c
+            SET revoked_at = CURRENT_TIMESTAMP
+           FROM user_device_cert_validity v
+          WHERE v.device_id = c.id AND c.revoked_at IS NULL
+            AND v.valid_until <= CURRENT_TIMESTAMP"
+    )
+    .execute(pool)
+    .await?;
+    Ok(result.rows_affected())
 }

@@ -1,6 +1,12 @@
 @layer components {
 
+/* Why: a download is an action, not a table row. Each platform gets its own
+   card with a visible Download button, so the call to action reads as a
+   link rather than a filename in body text. */
 .sp-p-connect__downloads {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+    gap: var(--sp-space-3);
     margin: 0;
     padding: 0;
     list-style: none;
@@ -8,21 +14,31 @@
 
 .sp-p-connect__downloads li {
     display: grid;
-    grid-template-columns: 8rem minmax(0, 1fr) auto;
-    gap: var(--sp-space-3);
-    align-items: baseline;
-    padding: var(--sp-space-3) var(--sp-space-4);
-    border-top: 1px solid var(--sp-border-subtle);
+    gap: var(--sp-space-2);
+    padding: var(--sp-space-4);
     font-size: var(--sp-text-sm);
 }
 
-.sp-p-connect__downloads li:first-child { border-top: 0; }
-.sp-p-connect__downloads li > span { color: var(--sp-text-secondary); font-weight: 600; }
-.sp-p-connect__downloads li > a + a { color: var(--sp-text-tertiary); font-size: var(--sp-text-xs); }
+.sp-p-connect__downloads strong { font-size: var(--sp-text-base); }
+
+.sp-p-connect__downloads code {
+    color: var(--sp-text-secondary);
+    font-family: var(--sp-font-mono);
+    font-size: var(--sp-text-xs);
+    overflow-wrap: anywhere;
+}
+
+.sp-p-connect__download-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sp-space-2);
+    margin-block-start: var(--sp-space-2);
+}
 
 .sp-p-connect__guides {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
     gap: var(--sp-space-3);
     margin: 0;
     padding: 0;
@@ -33,6 +49,7 @@
     display: flex;
     flex-direction: column;
     gap: var(--sp-space-1);
+    block-size: 100%;
     padding: var(--sp-space-4);
     color: inherit;
     text-decoration: none;
@@ -42,11 +59,13 @@
 .sp-p-connect__guide-link span { color: var(--sp-text-secondary); font-size: var(--sp-text-xs); }
 .sp-p-connect__guide-link:hover strong { color: var(--sp-accent-text); }
 
+.sp-p-connect__guide-link::after {
+    content: "Read the guide →";
+    margin-block-start: auto;
+    padding-block-start: var(--sp-space-2);
+    color: var(--sp-accent-text);
+    font-size: var(--sp-text-xs);
+    font-weight: 600;
 }
 
-@layer responsive {
-@media (max-width: 40rem) {
-    .sp-p-connect__downloads li { grid-template-columns: minmax(0, 1fr) auto; }
-    .sp-p-connect__downloads li > span { grid-column: 1 / -1; }
-}
 }

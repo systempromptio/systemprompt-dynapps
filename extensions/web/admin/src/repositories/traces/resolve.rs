@@ -86,10 +86,14 @@ pub async fn resolve_trace_session(
         return Ok(Some(row.session_id));
     }
 
-    // Why: an in-process or proxied tool call lands only in
-    // `mcp_tool_executions`; its `trace_id` and `mcp_execution_id` are both
-    // linked from the MCP server page, so both must resolve here.
-    if let Some(row) = sqlx::query!(
+    find_execution_key(pool, id).await
+}
+
+// Why: an in-process or proxied tool call lands only in
+// `mcp_tool_executions`; its `trace_id` and `mcp_execution_id` are both
+// linked from the MCP server page, so both must resolve here.
+async fn find_execution_key(pool: &PgPool, id: &str) -> Result<Option<SessionId>, sqlx::Error> {
+    let row = sqlx::query!(
         r#"SELECT
             mcp_execution_id AS "mcp_execution_id!: McpExecutionId",
             session_id       AS "session_id: SessionId",
@@ -101,16 +105,8 @@ pub async fn resolve_trace_session(
         id,
     )
     .fetch_optional(pool)
-    .await?
-    {
-        return Ok(Some(execution_trace_key(
-            row.session_id,
-            row.trace_id.as_ref(),
-            &row.mcp_execution_id,
-        )));
-    }
-
-    Ok(None)
+    .await?;
+    Ok(row.map(|r| execution_trace_key(r.session_id, r.trace_id.as_ref(), &r.mcp_execution_id)))
 }
 
 // Why: the key an execution's spans are queried by — its session when it has

@@ -86,6 +86,28 @@ The proxy tap stamps the execution id into the response `_meta` before it
 leaves the gateway, so a hook that later reports the same result carries the
 exact server key.
 
+## What is kept, and how much
+
+Nothing that reaches the platform is dropped without a digest, and every
+ceiling is stated so a reader knows what a missing body means.
+
+| What | Where | Ceiling | Over the ceiling |
+|---|---|---|---|
+| Raw request and response bodies | `ai_request_payloads.request_body`, `response_body` | `governance.audit.payload_cap_bytes` in the profile (default 1 MiB, floor 64 KiB) | SHA-256 of the full bytes plus an 8 KiB head-and-tail excerpt |
+| The client's `tools` array | `ai_request_payloads.offered_tools` | none | — |
+| The provider-transformed body | `ai_request_payloads.prepared_body_sha256`, `prepared_tools` | none | the digest covers the whole body; the `tools` array it carried is kept verbatim |
+| Tool result bodies | `artifact_payloads` by digest | 8 MiB | the artifact row keeps the digest, size and shape; no body |
+| A CLI result from the `systemprompt` MCP server | the tool result the model receives | 1 MiB on the wire | the result is stored whole as its own artifact and the model receives a short pointer to `/admin/artifacts/{id}` |
+
+The last row is what "point at artifacts" means. A `systemprompt` tool call
+whose output is larger than a host will hand a model is not trimmed at the
+server: the full result goes through the ingest above — scanned,
+content-addressed, linked to the same session and trace, recorded as its own
+execution whose input names the command and the execution it overflowed
+from — and the tool result on the wire says how big it was, how many rows it
+has, and where to read it. Trimming (a table losing trailing rows, text cut at
+the bound) only happens if that store fails, and the result then says so.
+
 ## Reading the pages
 
 - **Artifacts** (`/admin/artifacts`) lists structured results by default —
@@ -96,7 +118,14 @@ exact server key.
   strip (source, join quality, client, `tool_use_id`, execution, intent
   request, governance decision, session, trace), every scanner finding, and a
   sandboxed preview for typed artifacts.
-- **Request detail** lists each tool call's state and links its artifact.
+- **Request detail** lists each tool call's state and links its artifact,
+  shows every artifact of the session (an overflowed CLI result included),
+  and carries a **Tool schemas** section: the client's tools beside the ones
+  the gateway sent upstream, paired by name, with each rewrite flagged. On a
+  Gemini or Vertex request the Gemini declaration rules are re-run over the
+  client schema, so a tool shows the exact shapes the provider would have
+  refused as sent. The hits are computed on read from the stored arrays, not
+  recorded at request time.
 - **Conversations** link each tool step to its stored result.
 - **Traces** link hook tool events to the artifact they produced.
 - **Analysis › Skills / Conversations** count artifacts per skill and per

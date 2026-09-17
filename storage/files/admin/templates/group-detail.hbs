@@ -175,6 +175,7 @@
                 <th class="sp-u-numeric sp-table__cell--num">Tokens 30d</th>
                 <th class="sp-u-numeric sp-table__cell--num">Cost 30d</th>
                 <th class="sp-col-date">Last active</th>
+                <th class="sp-col-date">Expires</th>
                 <th class="sp-table__cell--actions"></th>
             </tr></thead>
             <tbody>
@@ -198,6 +199,7 @@
                 <td class="sp-u-numeric">{{formatNumber tokens_30d}}</td>
                 <td class="sp-u-numeric">{{formatUsd cost_30d_microdollars}}</td>
                 <td class="sp-col-date">{{#if last_active}}<span title="{{formatDate last_active}}">{{relativeTime last_active}}</span>{{else}}<span class="sp-u-text-tertiary">Never</span>{{/if}}</td>
+                <td class="sp-col-date">{{#if expires_at}}<span title="{{formatDate expires_at}}">{{relativeTime expires_at}}</span>{{#if expires_soon}} {{> components/badge tone="warn" text="soon"}}{{/if}}{{else}}<span class="sp-u-text-tertiary">Never</span>{{/if}}</td>
                 <td class="sp-table__cell--actions sp-member-actions">
                     {{#if @root.can_manage}}
                     {{#if @root.is_unassigned}}
@@ -235,6 +237,9 @@
                 <option value="{{user_id}}">{{label}}</option>
                 {{/each}}
             </select>
+            <label for="add-member-until">Expires</label>
+            <input type="date" id="add-member-until" class="sp-search-input" data-field="add-member-until" aria-describedby="add-member-until-note">
+            <p id="add-member-until-note" class="sp-u-text-tertiary sp-u-text-xs">Leave blank for an open-ended membership. An expired membership is revoked by the hourly sweep.</p>
             <menu>
                 <button type="button" class="sp-btn sp-btn--outline" data-action="close-add-member">Cancel</button>
                 <button type="button" class="sp-btn sp-btn--primary" data-action="confirm-add-member">Add</button>
@@ -316,6 +321,7 @@
                         </select>
                         <span class="sp-group-rule__reason" data-group-reason hidden>
                             <input type="text" class="sp-search-input" data-group-reason-input maxlength="240" placeholder="Why? (required)" aria-label="Reason for the rule on {{entity_name}}">
+                            <input type="date" class="sp-search-input" data-group-until-input aria-label="Expiry of the rule on {{entity_name}}" title="Expires (blank = open-ended)">
                             <button type="button" class="sp-btn sp-btn--sm sp-btn--secondary" data-action="save-group-rule">Save</button>
                         </span>
                     </div>

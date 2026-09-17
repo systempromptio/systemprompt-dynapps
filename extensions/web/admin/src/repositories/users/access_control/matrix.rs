@@ -209,7 +209,7 @@ async fn find_user_for_matrix(
                   u.roles AS "roles!: Vec<String>",
                   ARRAY(SELECT ug.group_id FROM user_groups ug
                         WHERE ug.user_id = u.id) AS "group_ids!: Vec<String>",
-                  ARRAY(SELECT DISTINCT pm.project_id FROM project_members pm
+                  ARRAY(SELECT pm.project_id FROM user_projects pm
                         WHERE pm.user_id = u.id) AS "project_ids!: Vec<String>"
            FROM users u
            WHERE u.id = $1"#,

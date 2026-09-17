@@ -80,15 +80,11 @@ async fn identity(
             )
             .await?,
         )?,
-        Provider::Github | Provider::Salesforce(_) => {
-            let url = if grant.provider == Provider::Github {
-                "https://api.github.com/user".into()
-            } else {
-                format!(
-                    "{}/services/oauth2/userinfo",
-                    grant.provider.salesforce_org()?.domain()?
-                )
-            };
+        Provider::Salesforce(_) => {
+            let url = format!(
+                "{}/services/oauth2/userinfo",
+                grant.provider.salesforce_org()?.domain()?
+            );
             let response = http
                 .get(url)
                 .bearer_auth(&grant.access_token)
@@ -103,7 +99,6 @@ async fn identity(
     };
     let id = match &grant.provider {
         Provider::Atlassian => info.get("account_id").or_else(|| info.get("accountId")),
-        Provider::Github => info.get("id"),
         Provider::Salesforce(_) => info.get("user_id"),
         Provider::Generic(_) => None,
     };

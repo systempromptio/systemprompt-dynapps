@@ -4,9 +4,10 @@
 //! Two vocabularies. A **source** is where declarations come from and carries
 //! a content hash — `base` is this repository's `services/` tree, and
 //! `bundle:<name>` is each remote kit the profile pins. A **plane** is what a
-//! source's declarations project into the database — today `access_control`
-//! (`rules.yaml` → `access_control_rules`); `groups` and `gateway_policies`
-//! are designed for and not built. Ownership is by id and decided at
+//! source's declarations project into the database — `access_control`
+//! (`rules.yaml` → `access_control_rules`), `groups` (`groups.yaml` →
+//! groups, projects and their AD mappings) and `gateway_policies`
+//! (`policies.yaml` → `ai_gateway_policies`). Ownership is by id and decided at
 //! composition: a bundle owns its marketplaces, plugins and skills; the base
 //! owns everything else, every entitlement included.
 //!
@@ -17,6 +18,10 @@
 
 pub mod access_control;
 pub mod access_control_rows;
+pub mod gateway_policies;
+pub mod groups;
+pub mod groups_db;
+pub mod groups_drift;
 pub mod marketplace_hash;
 pub mod marketplace_versions_db;
 pub mod plane;

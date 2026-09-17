@@ -45,7 +45,7 @@ Anthropic documents that local servers configured through `claude_desktop_config
 
 ## How the India skills use Salesforce
 
-The India marketplace import includes 18 Salesforce Core skills and 16 business-analysis skills. Salesforce instructions cover Apex tests, Flow patterns, permissions, integration, deployment, and project context. The Salesforce plugin currently declares the hosted Salesforce, Atlassian, and GitHub connectors; it does not install DX MCP.
+The India marketplace import includes 18 Salesforce Core skills and 16 business-analysis skills. Salesforce instructions cover Apex tests, Flow patterns, permissions, integration, deployment, and project context. The Salesforce plugin currently declares the hosted Salesforce and Atlassian connectors; it does not install DX MCP.
 
 The client loads a skill's instructions, discovers its available tools, and invokes those tools when needed. Skills do not install runtimes, start DX servers, or authorize orgs. Local source review and artifact generation can proceed without a Salesforce connection. Org queries, retrieval, tests, and deployments need the appropriate authenticated tools.
 

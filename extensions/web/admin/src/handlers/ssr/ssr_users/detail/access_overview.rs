@@ -279,7 +279,6 @@ fn connection_view(c: &connector_accounts::Connection) -> ConnectionView {
         name: match c.provider.as_str() {
             "atlassian" => "Atlassian",
             "salesforce" => "Salesforce",
-            "github" => "GitHub",
             other => other,
         }
         .to_owned(),

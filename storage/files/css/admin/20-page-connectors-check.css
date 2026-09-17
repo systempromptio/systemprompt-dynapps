@@ -91,6 +91,28 @@
 .sp-connector__summary.is-ok { color: var(--sp-success-strong); }
 .sp-connector__summary.is-fail { color: var(--sp-danger-strong); }
 
+/* The personal-token and site forms open inside the card, under the actions,
+   so a person types where they clicked and cancels back to the same card. */
+
+.sp-connector__form {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    gap: var(--sp-space-3);
+    align-items: end;
+    padding: var(--sp-space-3);
+    border-radius: var(--sp-corners-sm);
+    background: var(--sp-bg-base);
+}
+
+.sp-connector__form label {
+    display: grid;
+    gap: var(--sp-space-1);
+    font-size: var(--sp-text-xs);
+    color: var(--sp-text-secondary);
+}
+
+.sp-connector__form .sp-connector__actions { grid-column: 1 / -1; margin-top: 0; }
+
 }
 
 @layer responsive {

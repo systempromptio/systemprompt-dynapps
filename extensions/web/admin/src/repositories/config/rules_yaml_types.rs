@@ -14,6 +14,7 @@
 use std::fmt;
 use std::str::FromStr;
 
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use systemprompt_security::authz::{Access, EntityKind};
 
@@ -31,6 +32,11 @@ pub struct RulesDoc {
 /// rather than this tree: access is still declared here — a kit never widens
 /// its own audience — but the id may be absent until that bundle is active,
 /// and is reported as *awaiting its bundle*.
+///
+/// `valid_until` is an RFC 3339 instant after which every rule of the entity
+/// stops applying. It lands on each rule row's validity record; the hourly
+/// expiry sweep deletes the rows once it passes, and the loader treats a
+/// declaration already past it as not declared.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct EntityDecl {
@@ -40,6 +46,8 @@ pub struct EntityDecl {
     pub why: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub owner: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub valid_until: Option<DateTime<Utc>>,
     #[serde(default, skip_serializing_if = "BandMap::is_empty")]
     pub allow: BandMap,
     #[serde(default, skip_serializing_if = "BandMap::is_empty")]

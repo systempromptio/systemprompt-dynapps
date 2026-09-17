@@ -19,6 +19,7 @@ use systemprompt_security::authz::YAML_SOURCE;
 use super::declared::{DeclaredEntity, DeclaredRule, DeclaredSet};
 use super::drift::{DriftReport, compute_drift};
 use super::rules::{list_band_rules, list_entity_defaults};
+use super::validity::set_rule_validity;
 pub use crate::repositories::sync::plane::SyncMode;
 
 // Why: the `source` stamped on entity rows this module writes.
@@ -96,15 +97,16 @@ async fn insert_rule(
 ) -> Result<(), sqlx::Error> {
     let id = uuid::Uuid::new_v4().to_string();
     let access = rule.access.to_string();
-    sqlx::query!(
-        r"INSERT INTO access_control_rules
+    let written = sqlx::query_scalar!(
+        r#"INSERT INTO access_control_rules
               (id, entity_type, entity_id, rule_type, rule_value, access, justification, source)
           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
           ON CONFLICT (entity_type, entity_id, rule_type, rule_value) DO UPDATE
              SET access = EXCLUDED.access,
                  justification = EXCLUDED.justification,
                  source = EXCLUDED.source,
-                 updated_at = NOW()",
+                 updated_at = NOW()
+          RETURNING id AS "id!""#,
         id,
         rule.key.entity_type,
         rule.key.entity_id,
@@ -114,9 +116,9 @@ async fn insert_rule(
         rule.justification,
         YAML_SOURCE,
     )
-    .execute(&mut **tx)
+    .fetch_one(&mut **tx)
     .await?;
-    Ok(())
+    set_rule_validity(&mut **tx, &written, rule.valid_until).await
 }
 
 // Why: `updated_at` is set explicitly — core's parent-chain cache keys on
@@ -139,6 +141,7 @@ async fn update_changed(
         )
         .execute(&mut **tx)
         .await?;
+        set_rule_validity(&mut **tx, &changed.db_id, changed.declared_valid_until).await?;
     }
     Ok(drift.changed.len())
 }

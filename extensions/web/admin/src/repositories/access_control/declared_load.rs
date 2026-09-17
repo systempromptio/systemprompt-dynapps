@@ -32,7 +32,7 @@ pub async fn load_declared_set(
         .filter(|e| e.entity_type == "gateway_route")
         .map(|e| e.entity_id)
         .collect();
-    build_declared_set(
+    let mut set = build_declared_set(
         &doc,
         &DeclaredInputs {
             gateway_routes: &gateway_routes,
@@ -40,7 +40,9 @@ pub async fn load_declared_set(
             registered,
         },
     )
-    .map_err(|e| MarketplaceError::config_file("access-control/rules.yaml", e))
+    .map_err(|e| MarketplaceError::config_file("access-control/rules.yaml", e))?;
+    set.drop_expired(chrono::Utc::now());
+    Ok(set)
 }
 
 // Why: the marketplace ids the active services tree defines, or none when the

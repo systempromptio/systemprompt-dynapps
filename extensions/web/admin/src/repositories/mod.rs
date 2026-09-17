@@ -13,6 +13,7 @@ pub(crate) mod dashboard_read;
 pub mod dev_login;
 pub mod devices;
 pub mod external_agents;
+pub mod gateway_policies;
 pub mod governance;
 pub mod groups;
 pub mod jobs;

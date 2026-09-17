@@ -41,6 +41,10 @@ pub(super) struct DevicesPageContext {
     // do carry content. The header and the cells are drawn from this together,
     // so they cannot disagree about how many columns the row has.
     pub(super) has_row_actions: bool,
+    // Why: the issue-token dialog's ceiling, from `security.max_pat_lifetime_days`.
+    // The picker refuses a later day and the note states the policy, so the
+    // 400 the API would answer with is never the first anyone hears of it.
+    pub(super) max_pat_lifetime_days: u32,
 }
 
 #[derive(Debug, Serialize)]
@@ -130,6 +134,8 @@ pub(super) struct CertRowView {
     pub(super) label: String,
     pub(super) fingerprint: String,
     pub(super) enrolled_display: String,
+    pub(super) expires_display: String,
+    pub(super) expires_day: String,
     pub(super) status_label: &'static str,
     pub(super) status_tone: &'static str,
     pub(super) can_revoke: bool,

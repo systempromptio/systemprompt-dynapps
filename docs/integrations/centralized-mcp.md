@@ -1,6 +1,6 @@
 # Centralized MCP connections
 
-The India Development marketplace exposes Atlassian, GitHub and Salesforce
+The India Development marketplace exposes Atlassian and Salesforce
 through the Systemprompt MCP gateway. Each employee links their own account on
 `/admin/connectors`. The bridge displays the same server-owned
 connection model in its Profile view; **Manage on server** opens that page.
@@ -17,8 +17,8 @@ account UI overlay.
 ## Provisioning
 
 Connector enablement uses `mcp_servers.<provider>.enabled` in
-`services/mcp/atlassian.yaml`, `services/mcp/github.yaml`, and
-`services/mcp/salesforce.yaml`. All three are `true` and included by
+`services/mcp/atlassian.yaml` and the per-org `services/mcp/salesforce-*.yaml`
+files. All are `true` and included by
 `services/config/config.yaml`. The Account page, bridge manifest, and credential
 accessor read the same loaded services configuration. Restart after changes.
 There is no separate enablement flag in secrets or environment variables.
@@ -33,7 +33,6 @@ replace the encryption key used to recover provider tokens.
 | --- | --- |
 | `encryption_master_key` | Persistent 32-byte encryption key encoded as 64 hexadecimal characters; required to store OAuth grants, preserve it across restarts |
 | `mcp_credential_broker_secret` | Random server-only secret of at least 32 bytes; shared by core and the account accessor in the same instance |
-| `github_mcp_client_id`, `github_mcp_client_secret` | Registered GitHub App OAuth credentials, with expiring user tokens enabled |
 | `salesforce_mcp_client_id`, `salesforce_mcp_client_secret` | Consumer key and secret of the packaged `Systemprompt` External Client App (source org Astound US); shared by every org that installs the package. An org running its own app names its own secrets in `services/config/salesforce-orgs.yaml` |
 | `google_drive_mcp_client_id`, `google_drive_mcp_client_secret` | OAuth web-client credentials from the GCP project that owns the Agent Search engine (`docs/CONFIGURED-CONNECTORS.md`) |
 | `salesforce_private_key` | JWT-bearer signing key when an org uses admin pre-authorization (`private_key_secret` per org) |
@@ -43,7 +42,6 @@ its credentials independently. Local user grants are not copied into production.
 Register callbacks under that origin:
 
 - `https://YOUR-SERVER/api/public/connectors/atlassian/callback`
-- `https://YOUR-SERVER/api/public/connectors/github/callback`
 - `https://YOUR-SERVER/api/public/connectors/google_drive/callback`
 - `https://YOUR-SERVER/api/public/connectors/salesforce/callback` — one callback for
   every Salesforce org; the org rides in the OAuth `state`
@@ -126,7 +124,7 @@ to connect an existing employee account.
 7. Check manifests and local config for absence of provider tokens. Check audit
    identity and trace IDs for tool calls and governance denials.
 
-GitHub PAT and Atlassian personal API tokens can be submitted through the Account
+Atlassian personal API tokens can be submitted through the Account
 page as explicit fallbacks. They are verified and encrypted on the server. There
 is no automatic switch to shared application identity or direct desktop access.
 

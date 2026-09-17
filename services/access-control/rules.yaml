@@ -30,6 +30,9 @@
 #                                 reported on /admin/sync as "awaiting its bundle"
 #       default: open | closed   what an unmatched person gets (default: closed)
 #       why: "..."               REQUIRED — lands on every rule row as its justification
+#       valid_until: <RFC 3339>  OPTIONAL — every rule of the entity lapses at this
+#                                 instant; a past value means "not declared", and the
+#                                 hourly access_expiry sweep deletes the rows
 #       allow:                   band → subjects; a band may also be
 #         role: [...]              { values: [...], why: "..." } to override the why
 #         group: [...]
@@ -165,13 +168,6 @@ entities:
     allow:
       role: [platform_admin, admin, super_admin]
       group: [india-devs, europe-devs, uk]
-      project: [storefront]
-
-  - entity: mcp_server/github
-    default: closed
-    why: GitHub for the developer groups and the storefront project.
-    allow:
-      group: [india-devs, europe-devs]
       project: [storefront]
 
   - entity: mcp_server/salesforce-us

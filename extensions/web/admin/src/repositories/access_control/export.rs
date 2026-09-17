@@ -6,14 +6,16 @@
 //! (sorted maps, fixed header) so the export diffs cleanly against the file
 //! in the repository.
 //!
-//! Two things cannot round-trip and are said so in the output: a band whose
+//! Three things cannot round-trip and are said so in the output: a band whose
 //! rows carry more than one justification collapses to the entity's `why`,
-//! and gateway routes whose rule sets differ from one another collapse to the
+//! an entity whose rows disagree on `valid_until` is written open-ended, and
+//! gateway routes whose rule sets differ from one another collapse to the
 //! glob with the exceptions named in a comment, because a literal route id is
 //! never a valid declaration.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
+use chrono::{DateTime, Utc};
 use systemprompt_security::authz::{Access, EntityKind};
 
 use super::drift::{BandRuleRow, EntityDefaultRow};
@@ -34,6 +36,7 @@ type Bands = BTreeMap<(String, Access), Vec<(String, Option<String>)>>;
 struct EntityRows {
     default_included: bool,
     bands: Bands,
+    windows: BTreeSet<Option<DateTime<Utc>>>,
 }
 
 /// `entity → bundle:<name>` for every entity the declaration marks `owner:`.
@@ -58,6 +61,7 @@ pub fn render_export(
             .entry((row.rule_type.clone(), row.access))
             .or_default()
             .push((row.rule_value.clone(), row.justification.clone()));
+        entry.windows.insert(row.valid_until);
     }
     for entity in entities {
         if let Some(entry) =
@@ -128,8 +132,29 @@ fn decl_for(entity: &str, rows: &EntityRows, notes: &mut Vec<String>) -> EntityD
         default: EntityDefault::from_included(rows.default_included),
         why,
         owner: None,
+        valid_until: valid_until_for(entity, rows, notes),
         allow,
         deny,
+    }
+}
+
+// Why: the declaration has one window per entity, so rows that disagree
+// have no single truthful value — the export writes none and says so, and
+// the sync then reports those rows as changed until they are brought into
+// line by hand.
+fn valid_until_for(
+    entity: &str,
+    rows: &EntityRows,
+    notes: &mut Vec<String>,
+) -> Option<DateTime<Utc>> {
+    match rows.windows.len() {
+        0 | 1 => rows.windows.iter().next().copied().flatten(),
+        n => {
+            notes.push(format!(
+                "{entity}: rows carried {n} different valid_until windows; written open-ended"
+            ));
+            None
+        },
     }
 }
 
@@ -228,5 +253,15 @@ fn shape_key(rows: &EntityRows) -> String {
         })
         .collect();
     parts.sort();
-    format!("{}|{}", rows.default_included, parts.join(";"))
+    let windows: Vec<String> = rows
+        .windows
+        .iter()
+        .map(|w| w.map(|t| t.to_rfc3339()).unwrap_or_default())
+        .collect();
+    format!(
+        "{}|{}|{}",
+        rows.default_included,
+        parts.join(";"),
+        windows.join(",")
+    )
 }

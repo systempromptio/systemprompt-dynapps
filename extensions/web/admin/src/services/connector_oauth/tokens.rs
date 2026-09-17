@@ -123,7 +123,7 @@ fn apply_tokens(grant: &mut Grant, tokens: Tokens) -> AdminResult<()> {
                     .clamp(60, 31_536_000),
             ),
             Provider::Generic(_) => Some(0),
-            Provider::Atlassian | Provider::Github => None,
+            Provider::Atlassian => None,
         })
         .ok_or_else(|| AdminError::Upstream("Connector returned no valid token expiry".into()))?;
     grant.expires_at = if seconds == 0 && matches!(grant.provider, Provider::Generic(_)) {

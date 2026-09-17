@@ -18,7 +18,6 @@ pub const SALESFORCE_CALLBACK_SEGMENT: &str = "salesforce";
 #[serde(try_from = "String", into = "String")]
 pub enum Provider {
     Atlassian,
-    Github,
     Salesforce(McpServerId),
     Generic(String),
 }
@@ -36,7 +35,6 @@ impl TryFrom<String> for Provider {
         }
         Ok(match id.as_str() {
             "atlassian" => Self::Atlassian,
-            "github" => Self::Github,
             _ if is_salesforce_server_id(&id) => {
                 Self::Salesforce(McpServerId::try_new(id).map_err(|error| error.to_string())?)
             },
@@ -53,7 +51,6 @@ impl Provider {
     pub fn slug(&self) -> &str {
         match self {
             Self::Atlassian => "atlassian",
-            Self::Github => "github",
             Self::Salesforce(id) => id.as_str(),
             Self::Generic(id) => id,
         }
@@ -72,7 +69,6 @@ impl Provider {
     pub fn endpoint(&self) -> String {
         match self {
             Self::Atlassian => return "https://mcp.atlassian.com/v2/mcp".into(),
-            Self::Github => return "https://api.githubcopilot.com/mcp/".into(),
             Self::Salesforce(_) | Self::Generic(_) => {},
         }
         systemprompt::loader::ServicesBootstrap::get()
@@ -125,7 +121,6 @@ impl Provider {
     pub fn display_name(&self) -> String {
         match self {
             Self::Atlassian => "Atlassian".into(),
-            Self::Github => "GitHub".into(),
             Self::Salesforce(id) => self
                 .salesforce_org()
                 .map_or_else(|_| id.as_str().to_owned(), |org| org.label.clone()),

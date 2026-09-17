@@ -151,14 +151,14 @@ async fn get_latency_split_buckets_on_the_fixed_threshold() {
     };
 
     let mut fast = RequestSpec::completed(&unique("req"), &user);
-    fast.latency_ms = i32::try_from(FAST_THRESHOLD_MS - 1).expect("threshold fits i32");
+    fast.latency_ms = FAST_THRESHOLD_MS - 1;
     insert_request(&db.pool, &fast).await;
 
     let mut slow = RequestSpec::completed(&unique("req"), &user);
-    slow.latency_ms = i32::try_from(FAST_THRESHOLD_MS).expect("threshold fits i32");
+    slow.latency_ms = FAST_THRESHOLD_MS;
     insert_request(&db.pool, &slow).await;
 
-    let default_ms = i32::try_from(FAST_THRESHOLD_MS).expect("threshold fits i32");
+    let default_ms = FAST_THRESHOLD_MS;
     let split = get_latency_split(&db.pool, window(24), &scope, default_ms)
         .await
         .expect("latency split succeeds");

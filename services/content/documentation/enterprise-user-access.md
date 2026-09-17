@@ -62,11 +62,28 @@ The role is granted by Active Directory. Any group matching `Systemprompt-Projec
 
 ## Personal access tokens and devices
 
-`/admin/devices/pats` lists every personal access token on the instance: owner, prefix (so a leaked token can be identified without exposing it), optional expiry, and creation time. Any token can be revoked immediately, and revocation takes effect on the next request.
+`/admin/devices` lists every personal access token on the instance: owner, prefix (so a leaked token can be identified without exposing it), expiry, and creation time. Any token can be revoked immediately, and revocation takes effect on the next request. **Issue a token** on the same page mints one for the signed-in account and shows the secret exactly once.
+
+Every token has an expiry. `security.max_pat_lifetime_days` in `services/web/config/security.yaml` (default **90**) is the longest a token may live from issuance, enforced on every path that mints one — the console form, `POST /admin/devices/pats`, and device enrolment. A request with no expiry gets the maximum; one asking for more is refused with a 400 rather than silently clamped. Tokens issued before the policy changed keep the expiry they were issued with.
+
+Device certificates can be given an expiry from the certificates tab (**Set expiry**). The window is recorded beside the certificate and the hourly sweep revokes the certificate once it passes.
 
 ## Time-bound sharing
 
-Share tokens honour an expiry timestamp, and time-bound group membership and access rules are being added in this release as `valid_from`/`valid_until` columns. Invites, setup tokens, and JWTs are already time-bound, so no standing credential lives forever by default. There is currently no forced maximum PAT lifetime policy — for contractors, lean on account-level disable plus PAT revocation (see the [roadmap](/documentation/enterprise-roadmap)).
+Share tokens honour an expiry timestamp, and invites, setup tokens, JWTs and personal access tokens are all time-bound, so no standing credential lives forever by default.
+
+Access itself is time-bound too. A group membership, a project membership, a manual role grant and an access-control rule each carry an optional expiry, set from the console with a date picker — the **Add member** dialog on a group or project, the **Roles** section of a person's page (one window for every role granted by hand), and the rule editor's reason box on a group's or person's Access tab. Membership tables and the `/admin/access-control` ledger show an **Expires** column, badge anything that lapses inside seven days, and the ledger's *Expiring in 7 days* filter lists what needs renewing. Directory-sourced membership and directory-projected roles never carry a window: Active Directory decides when those end.
+
+How an expiry binds differs by what it is on, because two of the four are decided by code this extension does not own:
+
+| What expires | Takes effect | How |
+|---|---|---|
+| Group or project membership | Immediately | Every membership read, including the `group`/`project` authorization dimensions and the `user_groups` view, hides a row outside its window. The hourly `access_expiry` sweep then stamps the row `revoked_at` so it remains as the audit trail, and recomputes the person's primary scope. |
+| Manual role | Within the hour | Roles are enforced from the effective set on the user record, which the sweep rewrites without the expired grant. If that removes a manage role, the sweep revokes the person's live sessions, tokens and certificates — the same teardown a demotion in the role editor performs. |
+| Access-control rule | Within the hour | Core's resolver reads the rule table directly, so the sweep deletes the expired rule. The window round-trips through `rules.yaml` as `valid_until:` on the entity (an RFC 3339 instant): the loader treats a declaration already past it as not declared, the export writes it back, and a window that differs between code and database is reported as drift on the Sync page. |
+| Device certificate | Within the hour | The sweep stamps the certificate revoked, which is what the device gate reads. |
+
+Re-adding a member whose earlier membership expired revives the row with the new window. For contractors, combine a membership expiry with the PAT lifetime cap above; account-level disable and revocation remain available for the immediate case.
 
 ## Context-aware access control
 

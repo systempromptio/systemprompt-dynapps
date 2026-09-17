@@ -123,17 +123,6 @@
 
 .sp-nav-group:has(.is-active, .is-ancestor) .sp-nav-group__chevron { display: none; }
 
-/* A search hit is drawn as a highlighted row so the eye lands on the match
-   rather than re-reading every group. */
-.sp-nav-group.is-search-hit .sp-nav-group__toggle { color: var(--sp-sidebar-text-hover); }
-
-.sp-admin-sidebar nav a.is-search-hit {
-    background: var(--sp-sidebar-active-bg);
-    color: var(--sp-sidebar-text-hover);
-}
-
-.sp-admin-sidebar nav a.is-search-hit .sp-icon { opacity: 1; }
-
 @media (prefers-reduced-motion: reduce) {
     .sp-nav-group__items,
     .sp-nav-group__inner,

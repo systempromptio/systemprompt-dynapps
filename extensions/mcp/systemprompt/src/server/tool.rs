@@ -9,10 +9,11 @@ use crate::tools::CliInput;
 use rmcp::ErrorData as McpError;
 use rmcp::model::{CallToolRequestParams, CallToolResult};
 use rmcp::service::{RequestContext, RoleServer};
+use std::sync::Arc;
 use systemprompt::database::DbPool;
 use systemprompt::identifiers::McpExecutionId;
 use systemprompt::mcp::middleware::enforce_rbac_from_registry;
-use systemprompt::mcp::{ClientProfile, McpToolExecutor, McpToolHandler};
+use systemprompt::mcp::{ArtifactIngest, ClientProfile, McpToolExecutor, McpToolHandler};
 use systemprompt::models::artifacts::{CliArtifact, TextArtifact};
 use systemprompt::models::execution::context::RequestContext as SysRequestContext;
 use systemprompt::security::authz::SharedAuthzHook;
@@ -21,6 +22,8 @@ use systemprompt_mcp_shared::{record_mcp_access, record_mcp_access_rejected};
 pub(super) struct SystempromptToolHandler<'a> {
     pub(super) auth_token: String,
     pub(super) cli: &'a cli::CliLocation,
+    pub(super) ingest: &'a ArtifactIngest,
+    pub(super) server_name: &'a str,
 }
 
 impl McpToolHandler for SystempromptToolHandler<'_> {
@@ -38,8 +41,8 @@ impl McpToolHandler for SystempromptToolHandler<'_> {
     async fn handle(
         &self,
         input: Self::Input,
-        _ctx: &SysRequestContext,
-        _exec_id: &McpExecutionId,
+        ctx: &SysRequestContext,
+        exec_id: &McpExecutionId,
     ) -> Result<(Self::Output, String), McpError> {
         let output = cli::execute(self.cli, &input.command, &self.auth_token).await?;
 
@@ -63,7 +66,37 @@ impl McpToolHandler for SystempromptToolHandler<'_> {
         // Why: the response builder pairs the summary with the artifact's text
         // body on the wire, so echoing stdout as the summary would print the
         // whole output twice for structured clients — and an unbounded body
-        // is what a host spills to a file the model cannot read back.
+        // is what a host spills to a file the model cannot read back. An
+        // oversize result is kept whole as its own artifact and the model gets
+        // a pointer; trimming is only what happens when that store fails.
+        if let Some(bytes) = crate::bounds::oversize_bytes(&artifact) {
+            let store = super::overflow::OverflowStore {
+                ingest: self.ingest,
+                server_name: self.server_name,
+                ctx,
+                command: &input.command,
+                exec_id,
+            };
+            match store.store(&artifact, bytes).await {
+                Ok(stored) => {
+                    let summary = format!(
+                        "Ran `{}` — {bytes} bytes stored as artifact {}",
+                        input.command, stored.artifact_id
+                    );
+                    return Ok((
+                        crate::bounds::overflow_pointer(&input.command, &stored),
+                        summary,
+                    ));
+                },
+                Err(error) => {
+                    tracing::warn!(
+                        error = %error,
+                        bytes,
+                        "oversize CLI result could not be stored as an artifact; trimming"
+                    );
+                },
+            }
+        }
         let bounded = crate::bounds::bound_artifact(artifact, &input.command);
         let mut summary = format!("Ran `{}`", input.command);
         match bounded.rows {
@@ -129,6 +162,7 @@ pub struct Dispatch<'a> {
     pub request_context: &'a SysRequestContext,
     pub client: &'a ClientProfile,
     pub cli: &'a cli::CliLocation,
+    pub ingest: &'a Arc<ArtifactIngest>,
 }
 
 async fn run_typed<H: McpToolHandler>(
@@ -186,6 +220,8 @@ pub async fn dispatch_tool(
             let handler = SystempromptToolHandler {
                 auth_token: auth_token.to_owned(),
                 cli: ctx.cli,
+                ingest: ctx.ingest,
+                server_name: ctx.service_id,
             };
             run_typed(ctx, &handler).await
         },

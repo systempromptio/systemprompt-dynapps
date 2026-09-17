@@ -76,6 +76,7 @@ async fn grant_memberships(
             group_id,
             &body.user_id,
             granted_by,
+            None,
         )
         .await;
         already_held_is_fine(res)?;
@@ -86,6 +87,7 @@ async fn grant_memberships(
             project_id,
             &body.user_id,
             granted_by,
+            None,
         )
         .await;
         already_held_is_fine(res)?;

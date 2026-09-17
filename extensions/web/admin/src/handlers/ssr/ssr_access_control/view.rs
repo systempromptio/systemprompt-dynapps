@@ -52,6 +52,8 @@ pub(crate) struct AcRuleView {
     pub source: String,
     pub source_tone: &'static str,
     pub justification: String,
+    pub expires_at: Option<String>,
+    pub expires_soon: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -72,6 +74,7 @@ pub(crate) struct AcEntityView {
     pub rules: Vec<AcRuleView>,
     pub rule_count: usize,
     pub resolution: String,
+    pub expiring_soon: bool,
 }
 
 #[derive(Debug, Default, Serialize)]
@@ -82,6 +85,7 @@ pub(crate) struct AcEntitiesView {
     pub entity_options: Vec<AcOptionView>,
     pub band_options: Vec<AcOptionView>,
     pub state_options: Vec<AcOptionView>,
+    pub expiring_only: bool,
     pub search: String,
     pub filters_applied: bool,
     pub clear_url: &'static str,

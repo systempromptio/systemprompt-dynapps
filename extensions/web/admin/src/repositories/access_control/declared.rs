@@ -11,6 +11,7 @@
 use std::collections::BTreeMap;
 use std::fmt;
 
+use chrono::{DateTime, Utc};
 use serde::Serialize;
 use sha2::{Digest, Sha256};
 use systemprompt_security::authz::ingestion::glob::glob_matches;
@@ -34,6 +35,7 @@ pub struct DeclaredRule {
     pub key: DeclaredKey,
     pub access: Access,
     pub justification: String,
+    pub valid_until: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -83,9 +85,10 @@ impl DeclaredSet {
             );
         }
         for r in self.rules.values() {
+            let until = r.valid_until.map(|t| t.to_rfc3339()).unwrap_or_default();
             hasher.update(
                 format!(
-                    "rule\t{}/{}\t{}\t{}\t{}\t{}\n",
+                    "rule\t{}/{}\t{}\t{}\t{}\t{}\t{until}\n",
                     r.key.entity_type,
                     r.key.entity_id,
                     r.key.rule_type,
@@ -117,6 +120,15 @@ impl DeclaredSet {
     #[must_use]
     pub fn rule_count(&self) -> usize {
         self.rules.len()
+    }
+
+    // Why: a declaration whose window has closed is not a declaration. Kept
+    // out of the pure projection so a test can pin what the file says; the
+    // loader applies it once with the clock it has, and the entity stays
+    // governed so the rows the sweep removes are never reported as drift.
+    pub fn drop_expired(&mut self, now: DateTime<Utc>) {
+        self.rules
+            .retain(|_, rule| rule.valid_until.is_none_or(|until| until > now));
     }
 }
 
@@ -230,13 +242,7 @@ fn project_entity(set: &mut DeclaredSet, kind: &EntityKind, id: &str, decl: &Ent
     );
     for (is_allow, bands) in [(true, &decl.allow), (false, &decl.deny)] {
         for band in bands.bands() {
-            project_band(
-                set,
-                (&entity_type, id),
-                band,
-                access_of(is_allow),
-                &decl.why,
-            );
+            project_band(set, (&entity_type, id), band, access_of(is_allow), decl);
         }
     }
 }
@@ -246,9 +252,9 @@ fn project_band(
     (entity_type, entity_id): (&str, &str),
     (rule_type, spec): (&str, &BandSpec),
     access: Access,
-    entity_why: &str,
+    decl: &EntityDecl,
 ) {
-    let why = spec.why().unwrap_or(entity_why).trim().to_owned();
+    let why = spec.why().unwrap_or(&decl.why).trim().to_owned();
     for value in spec.values() {
         let key = DeclaredKey {
             entity_type: entity_type.to_owned(),
@@ -262,6 +268,7 @@ fn project_band(
                 key,
                 access,
                 justification: why.clone(),
+                valid_until: decl.valid_until,
             },
         );
     }

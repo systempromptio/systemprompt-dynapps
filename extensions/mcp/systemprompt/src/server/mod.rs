@@ -4,6 +4,7 @@
 //! Per-call logic (RBAC, auditing, CLI-to-artifact conversion) lives in
 //! the `tool` submodule.
 
+mod overflow;
 #[doc(hidden)]
 pub mod tool;
 
@@ -40,6 +41,7 @@ pub struct SystempromptServer {
     db_pool: DbPool,
     executor: McpToolExecutor,
     authz_hook: SharedAuthzHook,
+    artifact_ingest: Arc<ArtifactIngest>,
 }
 
 impl SystempromptServer {
@@ -53,13 +55,18 @@ impl SystempromptServer {
             ToolUsageRepository::new(&db_pool)
                 .map_err(|e| SystempromptToolError::Internal(e.to_string()))?,
         );
-        let executor = McpToolExecutor::new(tool_usage_repo, artifact_ingest, service_id.as_str());
+        let executor = McpToolExecutor::new(
+            tool_usage_repo,
+            Arc::clone(&artifact_ingest),
+            service_id.as_str(),
+        );
 
         Ok(Self {
             service_id,
             db_pool,
             executor,
             authz_hook,
+            artifact_ingest,
         })
     }
 }
@@ -170,6 +177,7 @@ impl ServerHandler for SystempromptServer {
                 request_context: &request_context,
                 client: &client,
                 cli: &cli,
+                ingest: &self.artifact_ingest,
             },
             &tool_name,
             &auth_token,

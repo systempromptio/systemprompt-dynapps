@@ -9,7 +9,7 @@ fn grant() -> Grant {
         authorization_issuer: String::new(),
         token_auth_method: String::new(),
         user: "fixture-user".into(),
-        provider: Provider::Github,
+        provider: Provider::Atlassian,
         client: "fixture-app".into(),
         client_secret: "fixture-secret".into(),
         verifier: String::new(),
@@ -178,13 +178,7 @@ fn atlassian_site_lookup_cannot_target_arbitrary_hosts() {
 
 #[test]
 fn configured_provider_ids_preserve_legacy_wire_names() {
-    for id in [
-        "atlassian",
-        "github",
-        "salesforce-us",
-        "salesforce-uk",
-        "fourth-mcp",
-    ] {
+    for id in ["atlassian", "salesforce-us", "salesforce-uk", "fourth-mcp"] {
         let provider: Provider = serde_json::from_value(serde_json::json!(id)).unwrap();
         assert_eq!(provider.slug(), id);
         assert_eq!(
@@ -192,7 +186,13 @@ fn configured_provider_ids_preserve_legacy_wire_names() {
             serde_json::json!(id)
         );
     }
-    for invalid in ["", "../github", "https://evil.test", "provider?x=1", "a/b"] {
+    for invalid in [
+        "",
+        "../atlassian",
+        "https://evil.test",
+        "provider?x=1",
+        "a/b",
+    ] {
         assert!(serde_json::from_value::<Provider>(serde_json::json!(invalid)).is_err());
     }
 }

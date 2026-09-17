@@ -25,6 +25,7 @@ use sqlx::PgPool;
 use crate::error::{AdminError, AdminHtmlResult};
 use crate::handlers::ssr::list_view::PageWindow;
 use crate::handlers::ssr::types::{BreadcrumbView, FilterChipView};
+use crate::repositories::config::security_policy::SecurityPolicy;
 use crate::repositories::devices::pats::CredentialQuery;
 use crate::repositories::devices::sessions::SessionQuery;
 use crate::repositories::devices::stats::FleetStats;
@@ -294,6 +295,7 @@ pub(crate) async fn devices_page(
         pagination: view::build_pagination(&query, window),
         can_manage: listing.can_manage,
         has_row_actions: listing.can_manage && matches!(tab, Tab::Pats | Tab::Certs),
+        max_pat_lifetime_days: SecurityPolicy::get().max_pat_lifetime_days,
     };
 
     Ok(super::render_typed_page(

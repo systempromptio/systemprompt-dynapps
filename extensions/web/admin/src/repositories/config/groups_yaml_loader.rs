@@ -20,7 +20,7 @@ use systemprompt_web_shared::error::MarketplaceError;
 
 use super::groups_yaml_types::{GroupsDoc, GroupsLoadReport, MemberSetDef};
 
-const GROUPS_FILE: &str = "web/config/groups.yaml";
+pub const GROUPS_FILE: &str = "web/config/groups.yaml";
 
 pub async fn load_groups_from_yaml(
     pool: &PgPool,

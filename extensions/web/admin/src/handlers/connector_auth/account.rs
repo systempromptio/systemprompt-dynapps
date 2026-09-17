@@ -90,7 +90,7 @@ pub(super) async fn manual(
 ) -> AdminResult<Response> {
     let user = live_user(&pool, &headers, true).await?;
     service::require_entitlement(&pool, &user.user_id, provider.clone()).await?;
-    if !provider.configured() || !matches!(provider, Provider::Atlassian | Provider::Github) {
+    if !provider.configured() || provider != Provider::Atlassian {
         return Err(AdminError::BadRequest(
             "Use browser authorization for this connector".into(),
         ));

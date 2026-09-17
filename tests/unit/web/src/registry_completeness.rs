@@ -11,6 +11,7 @@ use systemprompt_web_extension::shared::registry;
 fn all_jobs_registered() {
     let names: BTreeSet<&'static str> = extension_jobs().iter().map(|j| j.name()).collect();
     let expected: BTreeSet<&'static str> = [
+        "access_expiry",
         "blog_content_ingestion",
         "bundle_admin_css",
         "content_analytics_aggregation",
@@ -21,6 +22,7 @@ fn all_jobs_registered() {
         "llms_txt_generation",
         "plugin_usage_retention",
         "publish_pipeline",
+        "quota_month_window",
         "robots_txt_generation",
         "secret_migration",
         "scope_defaults_recompute",

@@ -1,6 +1,6 @@
 //! Bounded OAuth exchanges; provider bodies and credentials never enter logs.
 
-use super::{Consent, Grant, Provider, config};
+use super::{Consent, Grant, Provider};
 use crate::error::{AdminError, AdminResult};
 use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
@@ -62,14 +62,6 @@ async fn registration(
     match provider {
         Provider::Generic(_) => Err(AdminError::Unavailable(
             "Use generic OAuth registration".into(),
-        )),
-        Provider::Github => Ok((
-            Registration {
-                client_id: ClientId::new(config::secret("github_mcp_client_id")?),
-                client_secret: config::secret("github_mcp_client_secret")?,
-            },
-            "https://github.com/login/oauth/authorize".into(),
-            "https://github.com/login/oauth/access_token".into(),
         )),
         Provider::Salesforce(_) => {
             let org = provider.salesforce_org()?;

@@ -24,3 +24,4 @@ pub mod groups_yaml_loader;
 pub mod groups_yaml_types;
 pub mod rules_yaml_loader;
 pub mod rules_yaml_types;
+pub mod security_policy;

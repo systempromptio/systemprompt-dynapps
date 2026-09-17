@@ -20,4 +20,8 @@
     inline-size: 16rem;
 }
 
+.sp-group-rule__reason input[type="date"] {
+    inline-size: 10rem;
+}
+
 }

@@ -22,7 +22,7 @@ use systemprompt_security::authz::{
 use crate::repositories::users::roles::{list_directory_roles, list_manual_roles};
 
 #[must_use]
-pub fn role_dimension() -> SubjectDimension {
+pub const fn role_dimension() -> SubjectDimension {
     SubjectDimension {
         rule_type: RuleType::ROLE,
         label: "Role",

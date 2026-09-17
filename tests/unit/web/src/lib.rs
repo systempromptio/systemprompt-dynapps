@@ -94,9 +94,17 @@ mod role;
 #[cfg(test)]
 mod conversation_sort;
 #[cfg(test)]
+mod gateway_policies_drift;
+#[cfg(test)]
+mod gateway_policies_form;
+#[cfg(test)]
+mod gateway_policies_month_window;
+#[cfg(test)]
 mod gateway_policy_config;
 #[cfg(test)]
 mod gateway_text_markers;
+#[cfg(test)]
+mod groups_sync_drift;
 #[cfg(test)]
 mod history_scope;
 #[cfg(test)]
@@ -306,5 +314,9 @@ mod managed_bundle;
 mod marketplace_hash;
 #[cfg(test)]
 mod marketplace_version_diff;
+#[cfg(test)]
+mod time_bound_access;
+#[cfg(test)]
+mod tool_schema_diff;
 #[cfg(test)]
 mod traces_spans_resolve;

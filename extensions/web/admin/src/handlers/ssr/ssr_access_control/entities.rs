@@ -7,12 +7,14 @@
 //! English resolution under each row is derived from the same bands the
 //! resolver reads, in the resolver's own order.
 
+use chrono::Utc;
 use serde::Deserialize;
 use systemprompt_security::authz::DASHBOARD_SOURCE;
 
 use super::bands::{band_label, band_rank, chips, resolution};
 use super::summary::{self, options};
 use super::view::{AcEntitiesView, AcEntityView, AcRuleView};
+use crate::handlers::ssr::people_view::expires_soon;
 use crate::repositories::access_control::drift::DriftReport;
 use crate::repositories::access_control::rules::LedgerRuleRow;
 use crate::types::access_control::AccessDecision;
@@ -29,6 +31,9 @@ pub(crate) struct AcQuery {
     pub entity_kind: Option<String>,
     pub band: Option<String>,
     pub state: Option<String>,
+    // Why: `expiring` narrows to entities with a rule that lapses inside the
+    // next week — the list an operator renews from.
+    pub expiring: Option<String>,
     pub q: Option<String>,
 }
 
@@ -41,6 +46,7 @@ impl AcQuery {
         Self::pick(self.entity_kind.as_ref()).is_some()
             || Self::pick(self.band.as_ref()).is_some()
             || Self::pick(self.state.as_ref()).is_some()
+            || Self::pick(self.expiring.as_ref()).is_some()
             || Self::pick(self.q.as_ref()).is_some()
     }
 }
@@ -63,6 +69,8 @@ fn rule_view(row: &LedgerRuleRow) -> AcRuleView {
         },
         source_tone: if dashboard { "warn" } else { "muted" },
         justification: row.justification.clone().unwrap_or_default(),
+        expires_at: row.valid_until.map(|t| t.to_rfc3339()),
+        expires_soon: expires_soon(row.valid_until, Utc::now()),
     }
 }
 
@@ -116,6 +124,7 @@ fn entity_view(rows: &[&LedgerRuleRow], drift: Option<&DriftReport>) -> AcEntity
             urlencoding::encode(&format!("{}/{}", first.entity_type, first.entity_id))
         ),
         rule_count: rules.len(),
+        expiring_soon: rules.iter().any(|r| r.expires_soon),
         rules,
     }
 }
@@ -136,6 +145,9 @@ fn matches(view: &AcEntityView, query: &AcQuery) -> bool {
         if view.in_sync != want_sync {
             return false;
         }
+    }
+    if AcQuery::pick(query.expiring.as_ref()).is_some() && !view.expiring_soon {
+        return false;
     }
     if let Some(needle) = AcQuery::pick(query.q.as_ref()) {
         let needle = needle.to_lowercase();
@@ -219,6 +231,7 @@ pub(super) fn build(input: &EntitiesInput<'_>, query: &AcQuery) -> AcEntitiesVie
             "Any state",
             AcQuery::pick(query.state.as_ref()),
         ),
+        expiring_only: AcQuery::pick(query.expiring.as_ref()).is_some(),
         search: AcQuery::pick(query.q.as_ref())
             .unwrap_or_default()
             .to_owned(),

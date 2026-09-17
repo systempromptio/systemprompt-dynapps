@@ -137,7 +137,7 @@ pub(crate) async fn get_connections(
             if row.is_some_and(|r| r.auth_method.is_some()) || provider.is_salesforce() {
                 actions.push("test".into());
             }
-            if matches!(provider, Provider::Atlassian | Provider::Github) {
+            if provider == Provider::Atlassian {
                 actions.push("manual_token".into());
             }
         }

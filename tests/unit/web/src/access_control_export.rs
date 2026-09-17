@@ -27,6 +27,7 @@ fn row(
         access,
         justification: why.map(str::to_owned),
         source: "yaml".to_owned(),
+        valid_until: None,
     }
 }
 

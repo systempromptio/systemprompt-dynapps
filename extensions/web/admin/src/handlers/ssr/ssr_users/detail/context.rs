@@ -86,6 +86,9 @@ pub(crate) struct IdentityTabView {
     pub is_active: bool,
     pub created_at: String,
     pub role_choices: Vec<RoleChoiceView>,
+    // Why: the calendar day the manual grants expire (`YYYY-MM-DD`, for the
+    // date picker), empty for open-ended.
+    pub roles_valid_until_day: String,
     pub adfs_groups: Vec<String>,
     pub has_adfs_groups: bool,
     pub idp_issuer: String,

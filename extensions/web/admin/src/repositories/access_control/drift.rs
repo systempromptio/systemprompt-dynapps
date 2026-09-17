@@ -10,6 +10,7 @@
 //! The `user` band is invisible here by construction: per-person overrides
 //! are the dashboard's alone and the file has no shape for them.
 
+use chrono::{DateTime, Utc};
 use serde::Serialize;
 use systemprompt_security::authz::{Access, DASHBOARD_SOURCE};
 
@@ -26,6 +27,7 @@ pub struct BandRuleRow {
     pub access: Access,
     pub justification: Option<String>,
     pub source: String,
+    pub valid_until: Option<DateTime<Utc>>,
 }
 
 impl BandRuleRow {
@@ -79,6 +81,8 @@ pub struct ChangedRule {
     pub declared_why: String,
     pub db_why: Option<String>,
     pub db_source: String,
+    pub declared_valid_until: Option<DateTime<Utc>>,
+    pub db_valid_until: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -193,7 +197,8 @@ pub fn compute_drift(
             }),
             Some(want) => {
                 let why_differs = row.justification.as_deref() != Some(want.justification.as_str());
-                if want.access != row.access || why_differs {
+                let window_differs = row.valid_until != want.valid_until;
+                if want.access != row.access || why_differs || window_differs {
                     report.changed.push(ChangedRule {
                         key: want.key.clone(),
                         db_id: row.id.clone(),
@@ -202,6 +207,8 @@ pub fn compute_drift(
                         declared_why: want.justification.clone(),
                         db_why: row.justification.clone(),
                         db_source: row.source.clone(),
+                        declared_valid_until: want.valid_until,
+                        db_valid_until: row.valid_until,
                     });
                 }
             },

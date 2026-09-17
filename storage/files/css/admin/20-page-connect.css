@@ -1,8 +1,53 @@
 @layer components {
 
-.sp-p-connect__wizard { margin-block: var(--sp-space-5); }
-.sp-p-connect__wizard > .sp-card { max-inline-size: 76rem; }
-.sp-p-connect__wizard .sp-card__body { padding: var(--sp-space-6); }
+.sp-p-connect__wizard,
+.sp-p-connect__section { margin-block: var(--sp-space-5) var(--sp-space-8); }
+.sp-p-connect__wizard .sp-card__body { padding: 0 var(--sp-space-6); }
+
+/* Why: each step is a two-column row — the number, title and one-line
+   explanation on the left, the control on the right — so the wizard uses the
+   full console width instead of stacking narrow blocks under one another. */
+.sp-p-connect__step {
+    display: grid;
+    grid-template-columns: minmax(14rem, 20rem) minmax(0, 1fr);
+    gap: var(--sp-space-6) var(--sp-space-8);
+    padding-block: var(--sp-space-6);
+    border-block-start: 1px solid var(--sp-border-subtle);
+}
+
+.sp-p-connect__step:first-child { border-block-start: 0; }
+
+.sp-p-connect__step-heading {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    column-gap: var(--sp-space-3);
+    align-items: center;
+    align-content: start;
+}
+
+.sp-p-connect__step-heading h3 { margin: 0; font-size: var(--sp-text-base); }
+
+.sp-p-connect__step-heading p {
+    grid-column: 2;
+    margin: var(--sp-space-1) 0 0;
+    color: var(--sp-text-secondary);
+    font-size: var(--sp-text-sm);
+    line-height: 1.6;
+}
+
+.sp-p-connect__step-num {
+    display: grid;
+    place-items: center;
+    inline-size: 1.75rem;
+    block-size: 1.75rem;
+    border-radius: var(--sp-radius-full);
+    background: var(--sp-accent-fill);
+    color: var(--sp-text-on-accent);
+    font-size: var(--sp-text-xs);
+    font-weight: 700;
+}
+
+.sp-p-connect__step-body { min-inline-size: 0; }
 
 .sp-p-connect__lede {
     margin-block: 0 var(--sp-space-3);
@@ -10,6 +55,13 @@
     color: var(--sp-text-secondary);
     font-size: var(--sp-text-sm);
     line-height: 1.6;
+}
+
+.sp-p-connect__lede a {
+    color: var(--sp-accent-text);
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
 }
 
 .sp-p-connect__label {
@@ -22,26 +74,7 @@
     letter-spacing: 0.06em;
 }
 
-.sp-p-connect__step-heading {
-    display: flex;
-    align-items: center;
-    gap: var(--sp-space-3);
-    margin-block-end: var(--sp-space-4);
-}
-
-.sp-p-connect__step-heading > span {
-    display: grid;
-    place-items: center;
-    inline-size: 1.75rem;
-    block-size: 1.75rem;
-    border-radius: var(--sp-radius-full);
-    background: var(--sp-bg-tertiary);
-    color: var(--sp-text-secondary);
-    font-size: var(--sp-text-xs);
-    font-weight: 600;
-}
-
-.sp-p-connect__step-heading h3 { margin: 0; font-size: var(--sp-text-base); }
+.sp-p-connect__ready > .sp-p-connect__label:first-child { margin-block-start: 0; }
 
 .sp-p-connect__wizard .sp-tabs {
     display: grid;
@@ -49,60 +82,36 @@
     gap: var(--sp-space-3);
     border: 0;
     overflow: visible;
-    margin-block-end: var(--sp-space-6);
+    margin: 0;
 }
 
 .sp-p-connect__wizard .sp-tab {
+    display: grid;
+    gap: var(--sp-space-1);
+    justify-items: start;
+    text-align: start;
     padding: var(--sp-space-4);
     border: 1px solid var(--sp-border-default);
     border-radius: var(--sp-corners-sm);
+    background: var(--sp-bg-surface);
+    color: var(--sp-text-primary);
     white-space: normal;
+    top: 0;
 }
 
-.sp-p-connect__wizard .sp-tab--active {
+.sp-p-connect__wizard .sp-tab strong { font-size: var(--sp-text-sm); font-weight: 600; }
+.sp-p-connect__wizard .sp-tab span { color: var(--sp-text-secondary); font-size: var(--sp-text-xs); font-weight: 400; }
+
+.sp-p-connect__wizard .sp-tab:hover { border-color: var(--sp-border-strong); }
+
+.sp-p-connect__wizard .sp-tab--active,
+.sp-p-connect__wizard .sp-tab[aria-selected="true"] {
     border-color: var(--sp-accent-text);
     background: var(--sp-accent-surface);
-    color: var(--sp-accent-text);
+    box-shadow: inset 0 0 0 1px var(--sp-accent-text);
 }
 
-.sp-p-connect__authorization {
-    padding-block: var(--sp-space-5);
-    margin-block-end: var(--sp-space-5);
-    border-block: 1px solid var(--sp-border-subtle);
-}
-
-.sp-p-connect__issue {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--sp-space-3);
-    margin-block-start: var(--sp-space-2);
-}
-
-.sp-p-connect__status {
-    margin: 0;
-    color: var(--sp-text-secondary);
-    font-size: var(--sp-text-sm);
-}
-
-.sp-p-connect__status code {
-    padding: 0 var(--sp-space-1);
-    border: 1px solid var(--sp-border-subtle);
-    border-radius: var(--sp-radius-sm);
-    background: var(--sp-bg-surface-alt);
-    font-family: var(--sp-font-mono);
-    user-select: all;
-}
-
-.sp-p-connect__pending {
-    margin-block: 0 var(--sp-space-3);
-    padding: var(--sp-space-5);
-    border: 1px dashed var(--sp-border-default);
-    border-radius: var(--sp-corners-sm);
-    background: var(--sp-bg-surface-alt);
-    color: var(--sp-text-tertiary);
-    font-size: var(--sp-text-sm);
-}
+.sp-p-connect__wizard .sp-tab--active strong { color: var(--sp-accent-text); }
 
 .sp-p-connect__guide {
     display: flex;
@@ -110,7 +119,7 @@
     align-items: start;
     justify-content: space-between;
     gap: var(--sp-space-3);
-    margin-block: var(--sp-space-2) var(--sp-space-3);
+    margin-block: 0 var(--sp-space-4);
 }
 
 .sp-p-connect__guide .sp-p-connect__lede { margin: 0; max-inline-size: 65ch; }
@@ -124,11 +133,6 @@
     overflow-wrap: anywhere;
     line-height: 1.7;
 }
-
-/* Why: a command block with nothing in it is a grey box that says nothing;
-   the pending notice above it already explains what will appear. */
-.sp-p-connect__wizard .sp-connect__cmd:has(code:empty),
-.sp-p-connect__wizard .sp-copy:has(code:empty) { display: none; }
 
 .sp-p-connect__advanced {
     padding: var(--sp-space-3) 0;
@@ -147,9 +151,12 @@
 }
 
 @layer responsive {
+@media (max-width: 72rem) {
+    .sp-p-connect__step { grid-template-columns: minmax(0, 1fr); gap: var(--sp-space-4); }
+}
 @media (max-width: 40rem) {
-    .sp-p-connect__wizard .sp-card__body { padding: var(--sp-space-4); }
-    .sp-p-connect__wizard .sp-tabs { gap: var(--sp-space-1); }
-    .sp-p-connect__wizard .sp-tab { padding: var(--sp-space-3) var(--sp-space-1); }
+    .sp-p-connect__wizard .sp-card__body { padding: 0 var(--sp-space-4); }
+    .sp-p-connect__step { padding-block: var(--sp-space-4); }
+    .sp-p-connect__wizard .sp-tabs { grid-template-columns: minmax(0, 1fr); gap: var(--sp-space-2); }
 }
 }

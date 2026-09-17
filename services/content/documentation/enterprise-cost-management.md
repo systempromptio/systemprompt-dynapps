@@ -51,7 +51,16 @@ Spend thresholds are the gateway's **quota windows** (`services/gateway/policies
 
 Switching a window back to enforcement (`quota_mode: enforce`, HTTP 429 with `retry-after` once a window is spent) is a review-visible change: a unit test pins the mode and the thresholds.
 
-Per-project budgets are not yet available — see the [roadmap](/documentation/enterprise-roadmap).
+### Subjects, periods and the two pages
+
+A window names a **subject** — whose usage it counts — and a **period**. The subjects this instance resolves are `user` (core's own), `group`, `project`, `role`, `salesforce` (the linked account) and `organization` (the whole installation, subject id `default`); each is a `SubjectAttributeProvider` in `extensions/web/admin/src/authz/`, and a person on several groups or projects is counted against the primary one from their scope defaults, the same one their cost is attributed to. `quota_fault_mode: closed` means a window whose subject cannot be resolved refuses the request rather than passing it uncounted.
+
+Periods are an hour, a day, a week, any number of seconds, or a **calendar month**. Core's windows are fixed-length and aligned to the Unix epoch, so a calendar month is an interim the admin extension provides: the window is declared as `window_seconds: 2678400` (31 days), and the daily `quota_month_window` job rewrites the live row to run out at the month's end and carries yesterday's bucket into today's, so the bucket the gateway reserves against holds month-to-date usage and the first of the month starts from zero. The one gap is the first minute after UTC midnight, while core's policy cache is stale.
+
+Two console pages read and write the same table, `ai_gateway_policies`:
+
+- **`/admin/gateway/policies`** edits the windows, the safety scanners and block lists, and the warn/enforce switch of each plane. Core re-reads the table on every request (a sixty-second cache), so a save is live without a restart or a file edit. `/admin/sync` then shows the edit as drift on the `gateway_policies` plane until it is exported to `services/gateway/policies.yaml` and committed, or overwritten from code.
+- **`/admin/governance/quotas`** shows usage against ceiling per subject for every window in force — the one bucket per subject the gateway reserves against in the current period, with a meter for the ceiling closest to being spent. Under warn mode a subject past 100% was warned about, never refused.
 
 ## Self-service reporting
 

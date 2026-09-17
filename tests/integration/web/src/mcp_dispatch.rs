@@ -66,6 +66,7 @@ async fn an_unknown_systemprompt_tool_points_the_caller_at_the_cli_skill() {
     };
     let db_pool = db_pool(&db.pool);
     let executor = executor(&db_pool, "systemprompt");
+    let ingest = Arc::new(ArtifactIngest::from_db(&db_pool, None).expect("artifact ingest"));
 
     let request = call("not_a_tool", serde_json::json!({}));
     let profile = client();
@@ -77,6 +78,7 @@ async fn an_unknown_systemprompt_tool_points_the_caller_at_the_cli_skill() {
             request: &request,
             request_context: &request_context(),
             client: &profile,
+            ingest: &ingest,
             // Why: these dispatch paths return before any handler is built, so
             // the location is never read.
             cli: &systemprompt_mcp_agent::CliLocation {

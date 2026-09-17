@@ -205,6 +205,12 @@ fn build_management_write_routes() -> Router<Arc<PgPool>> {
             "/devices/{kind}/{id}",
             delete(handlers::devices::admin_revoke_credential),
         )
+        // Why: a certificate's expiry is a side row this extension owns; the
+        // hourly sweep turns it into the revocation core's gate reads.
+        .route(
+            "/devices/certs/{id}/expiry",
+            put(handlers::devices::admin_set_cert_expiry),
+        )
 }
 
 // Why: two routes rather than one taking a verdict in the body. The verb is the
