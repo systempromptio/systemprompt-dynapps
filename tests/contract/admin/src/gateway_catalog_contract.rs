@@ -181,7 +181,7 @@ async fn the_catalog_and_the_detector_are_both_behind_the_admin_gate() {
         assert_eq!(status, StatusCode::FORBIDDEN, "non-admin {path}: {body}");
         assert_eq!(
             parse(&body)["error"],
-            "Role required: platform_admin, admin, project_manager",
+            "Role required: platform_admin, admin",
             "the console tier names the roles it accepts"
         );
     }

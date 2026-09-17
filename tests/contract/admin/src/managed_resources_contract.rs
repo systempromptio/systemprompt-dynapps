@@ -56,69 +56,24 @@ async fn baseline_capture_requires_origin_and_organizational_revisions_are_share
     );
     let (status, _) = app.call(request("get", &path, Principal::Admin)).await;
     assert_eq!(status, StatusCode::OK);
-    let path = format!("/admin/analysis/revisions/{id}/edit");
+    let path = format!("/admin/analysis/revisions/{id}");
     let (status, body) = app.call(request("get", &path, Principal::Admin)).await;
     assert_eq!(status, StatusCode::OK, "{body}");
-    assert!(
-        body.contains("---\nname: admin-daily-brief\ndescription:"),
-        "layout must not indent editable source text"
-    );
     let (status, _) = app
         .call(request("get", &path, Principal::PlatformAdmin))
         .await;
     assert_eq!(status, StatusCode::OK);
-    assert_form_bytes(&app, &path, &origin).await;
     assert_bundle(&app, &id).await;
     db.cleanup().await;
 }
 
-async fn assert_form_bytes(app: &App, path: &str, origin: &str) {
-    let baseline_text = std::fs::read_to_string(
-        globals::repo_root().join("services/skills/admin_daily_brief/SKILL.md"),
-    )
-    .unwrap();
-    let expected = format!("{baseline_text}\nReport missing evidence explicitly.\n");
-    let transmitted = expected.replace('\n', "\r\n");
-    let encoded = url::form_urlencoded::Serializer::new(String::new())
-        .append_pair("path", "SKILL.md")
-        .append_pair("content", &transmitted)
-        .append_pair("rationale", "Verify browser form transport")
-        .finish();
-    let (status, location) = app
-        .redirect_with_headers(
-            Call {
-                method: "post",
-                path,
-                principal: Principal::Admin,
-                content_type: Some("application/x-www-form-urlencoded"),
-                body: Some(&encoded),
-            },
-            &[("origin", origin)],
-        )
-        .await;
-    assert_eq!(status, StatusCode::SEE_OTHER);
-    assert!(location.contains("/compare/"));
-    let candidate = location.rsplit('/').next().unwrap();
-    let path = format!("/api/public/admin/managed/revisions/{candidate}/files");
-    let (status, body) = app.call(request("get", &path, Principal::Admin)).await;
-    assert_eq!(status, StatusCode::OK, "{body}");
-    let value: serde_json::Value = serde_json::from_str(&body).unwrap();
-    let bytes: Vec<u8> = serde_json::from_value(value["SKILL.md"]["bytes"].clone()).unwrap();
-    assert_eq!(bytes, expected.as_bytes());
-}
-
 async fn assert_bundle(app: &App, id: &str) {
     use systemprompt::marketplace::managed::RevisionBundle;
-    for path in [
-        format!("/admin/analysis/revisions/{id}"),
-        format!("/admin/analysis/revisions/{id}/edit"),
-        format!("/admin/analysis/revisions/{id}/compare/{id}"),
-    ] {
-        let (status, _) = app
-            .call(request("get", &path, Principal::ProjectManager))
-            .await;
-        assert_eq!(status, StatusCode::FORBIDDEN, "{path}");
-    }
+    let path = format!("/admin/analysis/revisions/{id}");
+    let (status, _) = app
+        .call(request("get", &path, Principal::ProjectManager))
+        .await;
+    assert_eq!(status, StatusCode::SEE_OTHER, "{path}");
     let path = format!("/api/public/admin/managed/revisions/{id}/bundle");
     let (status, body) = app.call(request("get", &path, Principal::Admin)).await;
     assert_eq!(status, StatusCode::OK);

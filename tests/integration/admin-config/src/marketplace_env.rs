@@ -95,6 +95,7 @@ async fn list_plugin_env_vars_falls_back_to_the_admin_defaults() {
     };
     let user = unique("u");
     insert_user(&db.pool, &user).await;
+    insert_user(&db.pool, "admin").await;
     insert_env_var(
         &db.pool,
         "admin",
@@ -122,6 +123,7 @@ async fn list_plugin_env_vars_prefers_the_users_own_values() {
     };
     let user = unique("u");
     insert_user(&db.pool, &user).await;
+    insert_user(&db.pool, "admin").await;
     insert_env_var(
         &db.pool,
         "admin",

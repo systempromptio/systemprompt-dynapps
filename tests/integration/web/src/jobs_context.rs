@@ -242,6 +242,14 @@ impl Harness {
 
     async fn seed_plaintext_secret(&self, id: &str, user_id: &str, name: &str, value: &str) {
         sqlx::query(
+            "INSERT INTO users (id, name, email) VALUES ($1, $1, $1 || '@example.invalid') \
+             ON CONFLICT (id) DO NOTHING",
+        )
+        .bind(user_id)
+        .execute(&*self.db.pool)
+        .await
+        .expect("seed the secret's owner");
+        sqlx::query(
             "INSERT INTO plugin_env_vars (id, user_id, plugin_id, var_name, var_value, is_secret) \
              VALUES ($1, $2, 'test-plugin', $3, $4, true)",
         )
@@ -927,7 +935,7 @@ async fn content_ingestion_fails_when_the_blog_config_does_not_validate() {
         .expect_err("an enabled source pointing at nothing is a configuration error");
 
     assert!(
-        error.to_string().contains("Failed to load blog config"),
+        error.to_string().contains("configuration errors"),
         "unexpected error: {error}"
     );
 

@@ -26,11 +26,7 @@ async fn login_redirects_existing_sessions_to_their_landing_page() {
     let (anonymous_status, _) = app.call(Call::get(LOGIN, Principal::Anonymous)).await;
     assert_eq!(anonymous_status, StatusCode::OK);
 
-    for principal in [
-        Principal::Admin,
-        Principal::PlatformAdmin,
-        Principal::ProjectManager,
-    ] {
+    for principal in [Principal::Admin, Principal::PlatformAdmin] {
         let (status, target) = app.redirect_of(Call::get(LOGIN, principal)).await;
         assert_eq!(status, StatusCode::SEE_OTHER, "{principal:?}");
         assert_eq!(target, "/admin/", "{principal:?}");
@@ -40,6 +36,7 @@ async fn login_redirects_existing_sessions_to_their_landing_page() {
         Principal::NonAdmin,
         Principal::Developer,
         Principal::KnowledgeWorker,
+        Principal::ProjectManager,
     ] {
         let (status, target) = app.redirect_of(Call::get(LOGIN, principal)).await;
         assert_eq!(status, StatusCode::SEE_OTHER, "{principal:?}");

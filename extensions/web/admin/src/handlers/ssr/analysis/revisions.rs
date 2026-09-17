@@ -82,7 +82,6 @@ pub(crate) async fn revision_page(
         id,
         manifest,
         files,
-        can_manage: user.is_admin,
     };
     Ok(super::super::render_typed_page(
         &engine,
@@ -110,5 +109,4 @@ struct RevisionEvidenceContext {
     id: ResourceRevisionId,
     manifest: systemprompt::marketplace::managed::RevisionManifest,
     files: Vec<FilePreview>,
-    can_manage: bool,
 }

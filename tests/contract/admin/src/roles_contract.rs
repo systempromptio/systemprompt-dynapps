@@ -158,10 +158,10 @@ async fn an_unknown_role_is_refused() {
     db.cleanup().await;
 }
 
-// Why: reading roles is a console act and writing them is not. A project
-// manager runs a project, not the role model.
+// Why: project_manager is an entitlement role, not a console tier — it
+// reaches neither verb of the role model.
 #[tokio::test]
-async fn a_project_manager_may_read_roles_but_not_set_them() {
+async fn a_project_manager_reaches_neither_role_verb() {
     if !globals::init() {
         return;
     }
@@ -183,7 +183,7 @@ async fn a_project_manager_may_read_roles_but_not_set_them() {
         ))
         .await;
 
-    assert_eq!(read, StatusCode::OK);
+    assert_eq!(read, StatusCode::FORBIDDEN);
     assert_eq!(write, StatusCode::FORBIDDEN, "body: {body}");
     db.cleanup().await;
 }

@@ -181,7 +181,7 @@ async fn only_the_platform_tier_moves_an_ad_mapping() {
 }
 
 #[tokio::test]
-async fn a_project_manager_reads_groups_and_writes_none() {
+async fn a_project_manager_reaches_no_group_route() {
     if !globals::init() {
         return;
     }
@@ -197,7 +197,7 @@ async fn a_project_manager_reads_groups_and_writes_none() {
             Principal::ProjectManager,
         ))
         .await;
-    assert_eq!(list, StatusCode::OK, "body: {body}");
+    assert_eq!(list, StatusCode::FORBIDDEN, "body: {body}");
 
     let (create, _) = app
         .call(Call::json(

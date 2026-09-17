@@ -270,7 +270,7 @@ async fn a_cli_path_that_does_not_exist_is_reported_as_a_spawn_failure() {
         .expect_err("a missing binary cannot be executed");
 
     assert!(
-        error.message.contains("Failed to execute CLI command"),
+        error.message.contains("CLI command could not be executed"),
         "the failure distinguishes a spawn failure from a CLI error: {}",
         error.message
     );
@@ -291,7 +291,7 @@ async fn an_unbalanced_quote_is_refused_before_anything_is_spawned() {
         .expect_err("a command that does not tokenise is refused");
 
     assert!(
-        error.message.contains("Failed to parse command arguments"),
+        error.message.contains("command arguments do not parse"),
         "the argument parse failure is reported as such: {}",
         error.message
     );
@@ -587,12 +587,12 @@ async fn conversation_audit_folds_the_card_and_reports_the_next_offset() {
 }
 
 #[tokio::test]
-async fn an_oversized_passthrough_result_is_bounded_and_says_so() {
+async fn an_oversized_passthrough_result_is_stored_whole_and_pointed_at() {
     let Some(db) = TempDb::create().await else {
         return;
     };
     let dir = tempfile::tempdir().expect("tempdir");
-    let filler = "x".repeat(2048);
+    let filler = "x".repeat(16 * 1024);
     let rows: Vec<serde_json::Value> = (0..100)
         .map(|i| serde_json::json!({"request_id": format!("req_{i}"), "cursor": filler}))
         .collect();
@@ -605,28 +605,16 @@ async fn an_oversized_passthrough_result_is_bounded_and_says_so() {
         .await
         .expect("a zero-exit CLI call succeeds");
 
-    let items = result
-        .structured_content
-        .as_ref()
-        .and_then(|v| v.pointer("/items"))
-        .and_then(|v| v.as_array())
-        .unwrap_or_else(|| {
-            panic!(
-                "the bounded table is still a table: {}",
-                serde_json::to_string(&result.structured_content)
-                    .unwrap_or_default()
-                    .chars()
-                    .take(600)
-                    .collect::<String>()
-            )
-        });
-    assert!(items.len() < 100, "kept {}", items.len());
     let summary = summary_of(&result);
-    assert!(summary.contains("kept"), "{summary}");
-    assert!(summary.contains("of 100 rows"), "{summary}");
+    assert!(summary.contains("(100 rows)"), "{summary}");
+    assert!(summary.contains("over the"), "{summary}");
+    assert!(summary.contains("stored whole as artifact"), "{summary}");
+    assert!(summary.contains("/admin/artifacts/"), "{summary}");
+    let out = structured(&result);
+    assert_eq!(out["artifact_type"], "text", "the pointer is a text card");
     assert!(
         serde_json::to_vec(&result).expect("serialises").len()
-            < 2 * systemprompt_mcp_agent::bounds::MAX_RESULT_BYTES,
+            < systemprompt_mcp_agent::bounds::MAX_RESULT_BYTES,
         "the wire result is bounded"
     );
 

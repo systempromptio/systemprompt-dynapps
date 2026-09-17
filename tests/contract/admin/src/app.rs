@@ -138,9 +138,16 @@ impl App {
             )
             .expect("build the default governance chain"),
         );
+        // Core also layers the process's artifact ingest onto every extension
+        // router (`extension_mount.rs`); hook track hands each tool result to it.
+        let artifact_ingest = Arc::new(
+            systemprompt::mcp::ArtifactIngest::from_db(&database, None)
+                .expect("build the artifact ingest"),
+        );
         let hooks = admin::hooks_webhook_router(&database, Arc::clone(pool), session_service(pool))
             .expect("build the hooks router")
-            .layer(axum::Extension(governance));
+            .layer(axum::Extension(governance))
+            .layer(axum::Extension(artifact_ingest));
 
         // `secrets_router` and `share_manifest_router` are merged at the root
         // by `extensions/web/src/router/api.rs`, not nested under either route

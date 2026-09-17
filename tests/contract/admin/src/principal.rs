@@ -29,8 +29,8 @@ pub enum Principal {
     // reaches the directory-shaped controls (AD mappings, granting
     // platform_admin itself).
     PlatformAdmin,
-    // A valid session for a user holding the semi-admin `project_manager`
-    // role: the read-only admin dashboard, no write route, no admin MCP.
+    // A valid session for a user holding `project_manager`, an entitlement
+    // role: no console tier, no write route, no admin MCP.
     ProjectManager,
     // A valid session for a user holding `knowledge_worker`, the Cowork
     // entitlement role. Like `developer` it names what someone reaches in a

@@ -235,10 +235,10 @@ async fn an_opencode_skill_tool_call_counts_as_an_invocation_under_its_plugin_id
     .await
     .unwrap();
     sqlx::query(
-        "INSERT INTO plugin_usage_events(id,user_id,session_id,event_type,tool_name,metadata,dedup_key) VALUES \
-         ('oc1','consumer','ses_abc','PostToolUse','skill','{\"tool_input\":{\"name\":\"code-review\"},\"tool_use_id\":\"call_1\",\"skill_ref\":\"astound-dev:code-review\",\"native_host\":\"opencode\"}','oc-dedup1'), \
-         ('oc2','consumer','ses_abc','PostToolUse','skill','{\"tool_input\":{\"name\":\"local_only\"},\"tool_use_id\":\"call_2\"}','oc-dedup2'), \
-         ('oc3','consumer','ses_abc','PostToolUse','read','{\"tool_input\":{\"name\":\"ignored\"},\"tool_use_id\":\"call_3\"}','oc-dedup3')",
+        "INSERT INTO plugin_usage_events(id,user_id,session_id,event_type,tool_name,tool_use_id,metadata,dedup_key) VALUES \
+         ('oc1','consumer','ses_abc','PostToolUse','skill','call_1','{\"tool_input\":{\"name\":\"code-review\"},\"tool_use_id\":\"call_1\",\"skill_ref\":\"astound-dev:code-review\",\"native_host\":\"opencode\"}','oc-dedup1'), \
+         ('oc2','consumer','ses_abc','PostToolUse','skill','call_2','{\"tool_input\":{\"name\":\"local_only\"},\"tool_use_id\":\"call_2\"}','oc-dedup2'), \
+         ('oc3','consumer','ses_abc','PostToolUse','read','call_3','{\"tool_input\":{\"name\":\"ignored\"},\"tool_use_id\":\"call_3\"}','oc-dedup3')",
     )
     .execute(pool)
     .await
