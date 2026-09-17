@@ -232,7 +232,7 @@ To sign out, clear the `access_token` cookie.
 |-------|--------|
 | `/admin/login` | Public |
 | `/admin/auth/adfs/*` | Public — the SSO start and callback |
-| `/admin/profile`, `/admin/settings`, `/admin/setup` | Any valid session, including a plain `user` |
+| `/admin/profile`, `/admin/connect`, `/admin/connectors`, `/admin/setup` | Any valid session, including a plain `user` |
 | `/admin/*` (everything else) | Requires a valid session **and** the `admin` role |
 | `/admin/enterprises*`, `/admin/reports/internal` | Requires platform admin |
 | `/bridge-auth/*` | Requires a valid session — the desktop link runs through SSO |

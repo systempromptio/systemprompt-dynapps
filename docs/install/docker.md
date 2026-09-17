@@ -83,7 +83,7 @@ systemprompt admin config secret set bedrock_api_key <bedrock long-term api key>
 ```
 
 There is no service account and no ingest command: users link their Atlassian
-account once on `/admin/profile#connected-accounts`, connect from Claude Code
+account once on `/admin/connectors`, connect from Claude Code
 with only their systemprompt credential, and run `sync_knowledge`, which reads
 what their account can read through the hosted Atlassian MCP and grants it to
 them. Without a linked account the files categories still sync and the reply

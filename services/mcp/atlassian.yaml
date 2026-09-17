@@ -5,9 +5,6 @@
 mcp_servers:
   atlassian:
     type: external
-    binary: ''
-    package: null
-    port: 5043
     endpoint: https://mcp.atlassian.com/v2/mcp?tools=all
     enabled: true
     tool_policy: allow

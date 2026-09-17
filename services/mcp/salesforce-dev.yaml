@@ -6,11 +6,8 @@
 mcp_servers:
   salesforce-dev:
     type: external
-    binary: ""
-    package: null
     # Why: nominal only — an external server never binds it — but the field is
     # required and must be unique across every server, external ones included.
-    port: 5047
     endpoint: "https://api.salesforce.com/platform/mcp/v1/platform/sobject-all"
     enabled: true
     tool_policy: allow

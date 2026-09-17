@@ -1,6 +1,6 @@
 //! One public connection model for browser accounts and every enrolled bridge.
 
-use super::connector_oauth::Provider;
+use super::connector_oauth::{Provider, VerificationReport};
 use crate::error::{AdminError, AdminResult};
 use crate::repositories::groups::members;
 use crate::repositories::users::{connector_accounts as repo, queries};
@@ -32,6 +32,10 @@ pub(crate) struct ConnectionSnapshot {
     pub user_id: UserId,
     pub revision: i64,
     pub connections: Vec<Connection>,
+    // Why: only a probe response carries a report; the bridge reads the same
+    // snapshot and ignores the field.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub verification: Option<VerificationReport>,
 }
 
 struct Entitlement {
@@ -162,5 +166,6 @@ pub(crate) async fn get_connections(
         user_id: user.clone(),
         revision: rows.iter().map(|r| r.revision).max().unwrap_or(0),
         connections,
+        verification: None,
     })
 }

@@ -17,9 +17,8 @@ export class SpProfile extends SpElement {
     this.error = "";
     this.registerAction("manage-connection", () => {
       if (!this.profile) return;
-      const url = new URL("/admin/profile", this.profile.gateway);
+      const url = new URL("/admin/connectors", this.profile.gateway);
       url.searchParams.set("expected_user", this.profile.identity.user_id);
-      url.hash = "connected-accounts";
       bridge.openExternalUrl(url.toString()).catch((e) => notifyErr(e, url.toString()));
     });
     this.registerAction("refresh", () => this._fetch());

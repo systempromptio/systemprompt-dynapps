@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "WITH cur AS (\n SELECT marketplace_id,content_hash,source,source_hash,first_seen_at,plugin_count,skill_count,manifest->>'name' AS name\n FROM marketplace_versions WHERE effective_until IS NULL\n), hist AS (\n SELECT marketplace_id,count(*) AS versions,min(first_seen_at) AS first_seen_at,max(first_seen_at) AS last_changed_at\n FROM marketplace_versions GROUP BY 1\n), inv AS (\n SELECT f.source,f.fact_id,f.consumer_id,f.succeeded,f.fact->'value'->'skill'->>'marketplace_id' AS marketplace_id\n FROM analytics_normalized_facts f\n WHERE f.owner_id=$1 AND NOT f.deleted AND f.fact_kind='invocation' AND f.occurred_at>=$2 AND f.occurred_at<$3\n  AND f.fact->'value'->'skill'->>'marketplace_id' IS NOT NULL\n), keyed AS (\n SELECT marketplace_id,count(*) AS invocations,count(*) FILTER (WHERE succeeded IS FALSE) AS failed_invocations,\n  count(DISTINCT consumer_id) FILTER (WHERE consumer_id IS NOT NULL) AS users\n FROM inv GROUP BY 1\n), req AS (\n SELECT DISTINCT i.marketplace_id,r.source,r.fact_id,r.succeeded,r.amount_micros,r.currency\n FROM inv i\n JOIN analytics_normalized_facts a ON a.owner_id=$1 AND NOT a.deleted AND a.fact_kind='resource_association'\n  AND a.invocation_source=i.source AND a.invocation_id=i.fact_id\n JOIN analytics_normalized_facts r ON r.owner_id=$1 AND NOT r.deleted AND r.fact_kind='request'\n  AND r.source=a.request_source AND r.fact_id=a.request_id AND r.occurred_at>=$2 AND r.occurred_at<$3\n), spend AS (\n SELECT marketplace_id,count(*) AS requests,count(*) FILTER (WHERE NOT succeeded) AS failed,\n  coalesce(sum(amount_micros) FILTER (WHERE currency='USD'),0)::bigint AS cost\n FROM req GROUP BY 1\n)\nSELECT h.marketplace_id AS \"marketplace_id: MarketplaceId\",c.name,c.content_hash,c.source,c.source_hash,c.plugin_count,c.skill_count,\n h.versions::bigint AS \"versions!\",h.first_seen_at AS \"first_seen_at!\",h.last_changed_at AS \"last_changed_at!\",\n coalesce(k.invocations,0)::bigint AS \"invocations!\",coalesce(k.failed_invocations,0)::bigint AS \"failed_invocations!\",\n coalesce(k.users,0)::bigint AS \"users!\",coalesce(s.requests,0)::bigint AS \"requests!\",coalesce(s.failed,0)::bigint AS \"failed!\",\n coalesce(s.cost,0)::bigint AS \"cost!\"\nFROM hist h\nLEFT JOIN cur c ON c.marketplace_id=h.marketplace_id\nLEFT JOIN keyed k ON k.marketplace_id=h.marketplace_id\nLEFT JOIN spend s ON s.marketplace_id=h.marketplace_id\nORDER BY (c.content_hash IS NULL),k.invocations DESC NULLS LAST,h.marketplace_id\n",
+  "query": "WITH cur AS (\n SELECT marketplace_id,content_hash,source,source_hash,first_seen_at,plugin_count,skill_count,manifest->>'name' AS name\n FROM marketplace_versions WHERE effective_until IS NULL\n), hist AS (\n SELECT marketplace_id,count(*) AS versions,min(first_seen_at) AS first_seen_at,max(first_seen_at) AS last_changed_at\n FROM marketplace_versions GROUP BY 1\n), inv AS (\n SELECT f.source,f.fact_id,f.consumer_id,f.succeeded,f.fact->'value'->'skill'->>'marketplace_id' AS marketplace_id\n FROM analytics_normalized_facts f\n WHERE f.owner_id=$1 AND NOT f.deleted AND f.fact_kind='invocation' AND f.occurred_at>=$2 AND f.occurred_at<$3\n  AND f.fact->'value'->'skill'->>'marketplace_id' IS NOT NULL\n), keyed AS (\n SELECT marketplace_id,count(*) AS invocations,count(*) FILTER (WHERE succeeded IS FALSE) AS failed_invocations,\n  count(DISTINCT consumer_id) FILTER (WHERE consumer_id IS NOT NULL) AS users\n FROM inv GROUP BY 1\n), req AS (\n SELECT DISTINCT i.marketplace_id,r.source,r.fact_id,r.succeeded,r.amount_micros,r.currency\n FROM inv i\n JOIN analytics_normalized_facts a ON a.owner_id=$1 AND NOT a.deleted AND a.fact_kind='resource_association'\n  AND a.invocation_source=i.source AND a.invocation_id=i.fact_id\n JOIN analytics_normalized_facts r ON r.owner_id=$1 AND NOT r.deleted AND r.fact_kind='request'\n  AND r.source=a.request_source AND r.fact_id=a.request_id AND r.occurred_at>=$2 AND r.occurred_at<$3\n), spend AS (\n SELECT marketplace_id,count(*) AS requests,count(*) FILTER (WHERE NOT succeeded) AS failed,\n  coalesce(sum(amount_micros) FILTER (WHERE currency='USD'),0)::bigint AS cost\n FROM req GROUP BY 1\n)\nSELECT h.marketplace_id AS \"marketplace_id: MarketplaceId\",c.name AS \"name?\",c.content_hash AS \"content_hash?\",c.source AS \"source?\",\n c.source_hash AS \"source_hash?\",c.plugin_count AS \"plugin_count?\",c.skill_count AS \"skill_count?\",\n h.versions::bigint AS \"versions!\",h.first_seen_at AS \"first_seen_at!\",h.last_changed_at AS \"last_changed_at!\",\n coalesce(k.invocations,0)::bigint AS \"invocations!\",coalesce(k.failed_invocations,0)::bigint AS \"failed_invocations!\",\n coalesce(k.users,0)::bigint AS \"users!\",coalesce(s.requests,0)::bigint AS \"requests!\",coalesce(s.failed,0)::bigint AS \"failed!\",\n coalesce(s.cost,0)::bigint AS \"cost!\"\nFROM hist h\nLEFT JOIN cur c ON c.marketplace_id=h.marketplace_id\nLEFT JOIN keyed k ON k.marketplace_id=h.marketplace_id\nLEFT JOIN spend s ON s.marketplace_id=h.marketplace_id\nORDER BY (c.content_hash IS NULL),k.invocations DESC NULLS LAST,h.marketplace_id\n",
   "describe": {
     "columns": [
       {
@@ -16,13 +16,13 @@
       },
       {
         "ordinal": 1,
-        "name": "name",
+        "name": "name?",
         "type_info": "Text",
         "origin": "Expression"
       },
       {
         "ordinal": 2,
-        "name": "content_hash",
+        "name": "content_hash?",
         "type_info": "Text",
         "origin": {
           "Table": {
@@ -33,7 +33,7 @@
       },
       {
         "ordinal": 3,
-        "name": "source",
+        "name": "source?",
         "type_info": "Text",
         "origin": {
           "Table": {
@@ -44,7 +44,7 @@
       },
       {
         "ordinal": 4,
-        "name": "source_hash",
+        "name": "source_hash?",
         "type_info": "Text",
         "origin": {
           "Table": {
@@ -55,7 +55,7 @@
       },
       {
         "ordinal": 5,
-        "name": "plugin_count",
+        "name": "plugin_count?",
         "type_info": "Int4",
         "origin": {
           "Table": {
@@ -66,7 +66,7 @@
       },
       {
         "ordinal": 6,
-        "name": "skill_count",
+        "name": "skill_count?",
         "type_info": "Int4",
         "origin": {
           "Table": {
@@ -156,5 +156,5 @@
       null
     ]
   },
-  "hash": "8bcf2cf7ed5974ab84c3f630e0e679198e700a48a5f67e8efee05cf233b9f2fb"
+  "hash": "8c7c07c19d7148425fd28ce72d12e5a7b658affcdf567fc1874997b8eb32620f"
 }

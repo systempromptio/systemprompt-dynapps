@@ -17,9 +17,6 @@
 mcp_servers:
   google_drive:
     type: external
-    binary: ''
-    package: null
-    port: 5048
     endpoint: https://eu-discoveryengine.googleapis.com/mcp
     enabled: true
     tool_policy: allow

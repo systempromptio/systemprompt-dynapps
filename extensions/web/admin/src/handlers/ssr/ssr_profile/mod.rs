@@ -13,6 +13,7 @@ use crate::error::{AdminError, AdminHtmlResult, AdminResult};
 use crate::handlers::ssr::format::{format_cost, relative_time};
 use crate::handlers::ssr::ssr_helpers::render_typed_page;
 use crate::handlers::ssr::types::BreadcrumbView;
+use crate::repositories;
 use crate::repositories::users::usage::{ConversationSummary, RecentConversation};
 use crate::services::bridge_profile::{self, BridgeProfilePageData};
 use crate::templates::AdminTemplateEngine;
@@ -35,6 +36,15 @@ struct ProfilePageView {
     has_recent: bool,
     // Why: side calls stay out of the table; one muted line says they exist.
     side_call_note: Option<String>,
+    settings: SettingsView,
+    username: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct SettingsView {
+    display_name: Option<String>,
+    avatar_url: Option<String>,
+    timezone: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -80,6 +90,23 @@ pub(crate) async fn profile_page(
     Extension(engine): Extension<AdminTemplateEngine>,
     State(pool): State<Arc<PgPool>>,
 ) -> AdminHtmlResult<Response> {
+    // Why: the settings row propagates rather than degrading: the form is
+    // bound to these values and the save PUTs the whole object back, so
+    // rendering defaults would invite the user to overwrite the real row.
+    let settings = repositories::users::user_settings::find_user_settings(&pool, &user_ctx.user_id)
+        .await?
+        .map_or_else(
+            || SettingsView {
+                display_name: None,
+                avatar_url: None,
+                timezone: "UTC".to_owned(),
+            },
+            |s| SettingsView {
+                display_name: s.display_name,
+                avatar_url: s.avatar_url,
+                timezone: s.timezone,
+            },
+        );
     let data = bridge_profile::build_bridge_profile_data(pool, &user_ctx).await?;
     let conversations = &data.usage.conversations;
     let recent_conversations: Vec<_> = conversations.recent.iter().map(conversation_view).collect();
@@ -91,6 +118,8 @@ pub(crate) async fn profile_page(
         side_call_note: side_call_note(conversations),
         recent_conversations,
         data,
+        settings,
+        username: user_ctx.username.clone(),
         breadcrumbs: vec![
             BreadcrumbView::link("Account", "/admin/profile"),
             BreadcrumbView::current("Profile"),

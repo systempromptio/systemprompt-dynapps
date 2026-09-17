@@ -153,7 +153,7 @@ async fn complete(
     tracing::info!(user_id = %user.user_id, provider = provider.slug(), "connector_connected");
     Ok((
         [(CACHE_CONTROL, "no-store")],
-        Redirect::to("/admin/profile#connected-accounts"),
+        Redirect::to(&format!("/admin/connectors#connector-{}", provider.slug())),
     )
         .into_response())
 }

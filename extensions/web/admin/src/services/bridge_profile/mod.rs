@@ -114,7 +114,6 @@ fn install_command(gateway: &str, code: &str, host: &str) -> String {
 
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct BridgeProfilePageData {
-    pub connections: Option<super::connector_accounts::ConnectionSnapshot>,
     pub page: &'static str,
     pub title: &'static str,
     pub identity: ProfileIdentity,
@@ -236,9 +235,7 @@ pub(crate) async fn build_bridge_profile_data(
     agents.enabled = agents.total;
     let marketplaces = build_marketplaces(&pool, &user_id, user_ctx.roles.clone()).await?;
 
-    let connections = Some(super::connector_accounts::get_connections(&pool, &user_id).await?);
     Ok(BridgeProfilePageData {
-        connections,
         marketplaces_count: marketplaces.len(),
         marketplaces,
         page: "profile",

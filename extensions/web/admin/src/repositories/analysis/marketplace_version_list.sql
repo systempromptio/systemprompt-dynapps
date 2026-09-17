@@ -25,7 +25,8 @@ WITH cur AS (
   coalesce(sum(amount_micros) FILTER (WHERE currency='USD'),0)::bigint AS cost
  FROM req GROUP BY 1
 )
-SELECT h.marketplace_id AS "marketplace_id: MarketplaceId",c.name,c.content_hash,c.source,c.source_hash,c.plugin_count,c.skill_count,
+SELECT h.marketplace_id AS "marketplace_id: MarketplaceId",c.name AS "name?",c.content_hash AS "content_hash?",c.source AS "source?",
+ c.source_hash AS "source_hash?",c.plugin_count AS "plugin_count?",c.skill_count AS "skill_count?",
  h.versions::bigint AS "versions!",h.first_seen_at AS "first_seen_at!",h.last_changed_at AS "last_changed_at!",
  coalesce(k.invocations,0)::bigint AS "invocations!",coalesce(k.failed_invocations,0)::bigint AS "failed_invocations!",
  coalesce(k.users,0)::bigint AS "users!",coalesce(s.requests,0)::bigint AS "requests!",coalesce(s.failed,0)::bigint AS "failed!",

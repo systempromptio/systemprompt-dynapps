@@ -1,9 +1,6 @@
 mcp_servers:
   github:
     type: external
-    binary: ''
-    package: null
-    port: 5044
     endpoint: https://api.githubcopilot.com/mcp/
     enabled: true
     tool_policy: allow

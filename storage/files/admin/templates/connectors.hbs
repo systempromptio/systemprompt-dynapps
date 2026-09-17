@@ -1,0 +1,59 @@
+{{#> layout title=title page=page}}
+    {{#*inline "content"}}
+    {{> components/breadcrumbs crumbs=breadcrumbs}}
+
+    {{#> components/page-header title=title subtitle="Authorize each provider once; every client you connect uses the same account. Test a connector to see each step of the handshake."}}
+        {{#*inline "header_meta"}}
+            <span class="sp-u-mono">{{user_email}}</span>
+        {{/inline}}
+        {{#*inline "header_actions"}}
+            <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/connect">Connect a client</a>
+        {{/inline}}
+    {{/components/page-header}}
+
+    <div data-connectors data-user-id="{{user_id}}">
+    <section class="sp-kpi-grid" aria-label="Connector summary">
+        <div class="sp-p-connectors__kpi" data-summary="connected">{{> components/kpi label="Connected" value=summary.connected tone="ok" note="verified and ready to use"}}</div>
+        <div class="sp-p-connectors__kpi" data-summary="needs_attention">{{> components/kpi label="Needs attention" value=summary.needs_attention tone="warn" note="reconnect or verify"}}</div>
+        <div class="sp-p-connectors__kpi" data-summary="not_connected">{{> components/kpi label="Not connected" value=summary.not_connected note="never authorized"}}</div>
+        <div class="sp-p-connectors__kpi" data-summary="configured">{{> components/kpi label="Configured" value=summary.configured note="providers on this gateway"}}</div>
+    </section>
+
+    <section aria-label="Connectors">
+        {{#> components/section title="Your connectors" note="Broken connections first, then the ones you have not authorized yet."}}
+            {{#*inline "section_actions"}}<span class="sp-section__count" data-connection-count>{{summary.connected}} of {{summary.configured}} connected</span>{{/inline}}
+        {{/components/section}}
+        <p class="sp-notice sp-p-connectors__message" data-connection-message role="status" hidden></p>
+        {{#if has_connectors}}
+        <ul class="sp-connector-grid" data-connector-grid>
+            {{#each connectors}}
+            <li class="sp-connector" id="connector-{{provider}}" data-status="{{status}}" data-provider="{{provider}}">
+                <div class="sp-connector__head">
+                    <span class="sp-connector__mark" aria-hidden="true">{{initial}}</span>
+                    <div class="sp-connector__body">
+                        <h3 class="sp-connector__name">{{display_name}}</h3>
+                        <div class="sp-connector__meta">
+                            {{#if account_name}}<span class="sp-u-mono" title="{{account_name}}">{{account_name}}</span>{{/if}}
+                            {{#if resource_host}}<span>{{resource_host}}</span>{{/if}}
+                            {{#if verified_relative}}<span>verified {{verified_relative}}</span>{{/if}}
+                        </div>
+                    </div>
+                    <span class="sp-badge sp-badge--{{tone}} sp-connector__status">{{status_label}}</span>
+                </div>
+                {{#if note}}<p class="sp-connector__note">{{note}}</p>{{/if}}
+                <div class="sp-connector__actions"></div>
+                {{#if can_test}}<div class="sp-connector__check" hidden></div>{{/if}}
+            </li>
+            {{/each}}
+        </ul>
+        {{else}}
+        {{> components/empty-state title="No connectors on this gateway" message="Connectors appear here once an administrator enables an MCP server that needs your authorization."}}
+        {{/if}}
+        <noscript><p class="sp-p-connectors__message sp-notice sp-notice--warn">Enable JavaScript to connect, test or disconnect a provider.</p></noscript>
+    </section>
+    </div>
+    {{/inline}}
+    {{#*inline "scripts"}}
+    <script src="/js/pages/connectors.js?v={{css_version}}" type="module"></script>
+    {{/inline}}
+{{/layout}}

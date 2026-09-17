@@ -1,0 +1,145 @@
+@layer components {
+
+/* One card per provider. The head is a fixed grid so every badge sits in the
+   same column and a reader learns the state of every account in one scan;
+   the check panel opens beneath the actions and lists the handshake one
+   step per row so a failure names the stage, not just the provider. */
+
+.sp-p-connectors__kpi { display: contents; }
+
+.sp-p-connectors__message { margin-block: 0 var(--sp-space-3); }
+.sp-p-connectors__message[hidden] { display: none; }
+
+.sp-connector-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(22rem, 1fr));
+    gap: var(--sp-space-3);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.sp-connector {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-space-3);
+    padding: var(--sp-space-4);
+    background: var(--sp-bg-surface);
+    border-radius: var(--sp-corners-sm);
+    box-shadow: var(--sp-shadow-card);
+    border-inline-start: 2px solid transparent;
+}
+
+.sp-connector[data-status="connected"] { border-inline-start-color: var(--sp-success); }
+.sp-connector[data-status="reconnect_required"],
+.sp-connector[data-status="verification_required"] { border-inline-start-color: var(--sp-warning); }
+.sp-connector[data-status="temporarily_unavailable"] { border-inline-start-color: var(--sp-danger); }
+
+.sp-connector__head {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: var(--sp-space-3);
+}
+
+.sp-connector__mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: var(--sp-corners-sm);
+    background: var(--sp-bg-tertiary);
+    color: var(--sp-text-secondary);
+    font-size: var(--sp-text-sm);
+    font-weight: var(--sp-font-semibold);
+    text-transform: uppercase;
+}
+
+.sp-connector[data-status="connected"] .sp-connector__mark {
+    background: var(--sp-success-dim);
+    color: var(--sp-success-strong);
+}
+
+.sp-connector__body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-space-1);
+    min-width: 0;
+}
+
+.sp-connector__name {
+    margin: 0;
+    font-size: var(--sp-text-sm);
+    font-weight: var(--sp-font-semibold);
+    line-height: var(--sp-leading-snug);
+    color: var(--sp-text-primary);
+}
+
+.sp-connector__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--sp-space-1) var(--sp-space-2);
+    min-width: 0;
+    font-size: var(--sp-text-xs);
+    color: var(--sp-text-tertiary);
+}
+
+.sp-connector__meta > span + span::before {
+    content: "·";
+    margin-right: var(--sp-space-2);
+}
+
+.sp-connector__meta .sp-u-mono {
+    max-width: 22ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sp-connector__status { justify-self: end; }
+
+.sp-connector__note {
+    margin: 0;
+    padding: var(--sp-space-2) var(--sp-space-3);
+    border-radius: var(--sp-corners-sm);
+    background: var(--sp-bg-surface-alt);
+    color: var(--sp-text-secondary);
+    font-size: var(--sp-text-xs);
+}
+
+.sp-connector__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-space-2);
+}
+
+.sp-connector__actions:empty { display: none; }
+
+.sp-connector__form {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    gap: var(--sp-space-3);
+    align-items: end;
+    padding: var(--sp-space-3);
+    border-radius: var(--sp-corners-sm);
+    background: var(--sp-bg-base);
+}
+
+.sp-connector__form label {
+    display: grid;
+    gap: var(--sp-space-1);
+    font-size: var(--sp-text-xs);
+    color: var(--sp-text-secondary);
+}
+
+.sp-connector__form .sp-connector__actions { grid-column: 1 / -1; }
+
+}
+
+@layer responsive {
+@media (max-width: 40rem) {
+    .sp-connector-grid { grid-template-columns: minmax(0, 1fr); }
+}
+}

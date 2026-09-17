@@ -2,7 +2,7 @@
 
 The India Development marketplace exposes Atlassian, GitHub and Salesforce
 through the Systemprompt MCP gateway. Each employee links their own account on
-`/admin/profile#connected-accounts`. The bridge displays the same server-owned
+`/admin/connectors`. The bridge displays the same server-owned
 connection model in its Profile view; **Manage on server** opens that page.
 Provider credentials are never placed in a marketplace bundle or desktop config.
 
@@ -99,7 +99,7 @@ and approve the site in Atlassian's consent screen. The
 server checks that it belongs to the authorized resource list. Then use
 **Test connection** and sync the bridge.
 
-For the local profile, use `http://localhost:8080/admin/profile#connected-accounts`.
+For the local profile, use `http://localhost:8080/admin/connectors`.
 The callback is `http://localhost:8080/api/public/connectors/atlassian/callback`.
 Use `localhost` consistently for login and consent so the session cookie is
 available when Atlassian redirects back. If the server runs on a remote development

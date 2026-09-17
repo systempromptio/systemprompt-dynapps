@@ -233,7 +233,7 @@ The roles the platform itself understands:
 
 | Role | Reaches |
 |---|---|
-| `user` | `/admin/profile`, `/admin/settings`, `/admin/setup`, the desktop bridge, the gateway |
+| `user` | `/admin/profile`, `/admin/connect`, `/admin/connectors`, `/admin/setup`, the desktop bridge, the gateway |
 | `developer` | Everything `user` reaches; names the person as an engineer in listings and reports |
 | `knowledge_worker` | Everything `user` reaches, plus the Cowork workspace and the Salesforce MCP server |
 | `project_manager` | Every page of the admin console, read-only, plus everything `user` reaches |

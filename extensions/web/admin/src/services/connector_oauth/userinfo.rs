@@ -4,7 +4,7 @@
 use super::Grant;
 use crate::error::{AdminError, AdminResult};
 // JSON: OIDC userinfo is an open claim set; only `sub`, `email` and `name`
-// are read, and the body was already verified as JSON by `verify::body`.
+// are read, and the body was already verified as JSON by `response::body`.
 use serde_json::Value;
 use systemprompt::models::mcp::deployment::ConnectorIdentity;
 
@@ -27,7 +27,7 @@ pub(super) async fn generic_identity(http: &reqwest::Client, grant: &mut Grant) 
         .send()
         .await
         .map_err(|_redacted_error| AdminError::Upstream("Provider identity unavailable".into()))?;
-    let info = super::verify::body(response).await?;
+    let info = super::response::body(response).await?;
     info.get("sub")
         .and_then(Value::as_str)
         .filter(|s| !s.is_empty())
