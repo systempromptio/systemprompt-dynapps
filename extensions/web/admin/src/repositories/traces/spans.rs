@@ -1,5 +1,6 @@
 //! Per-session spans, unioned and normalised across the governance,
-//! gateway-request, and tool-event tables.
+//! gateway-request, and tool-event tables; the tool-call-ledger source is
+//! the sibling `ledger_spans` module.
 //!
 //! Every span names the person behind it by display label, not by id, and a
 //! model span carries the tokens, cache reads and error it reported; the
@@ -259,6 +260,7 @@ pub async fn list_trace_spans(
     let mut spans = list_governance_spans(pool, session_id).await?;
     spans.extend(list_request_spans(pool, session_id).await?);
     spans.extend(list_event_spans(pool, session_id).await?);
+    spans.extend(super::ledger_spans::list_ledger_spans(pool, session_id).await?);
     spans.sort_by_key(|s| s.started_at);
     Ok(spans)
 }
@@ -290,7 +292,7 @@ fn request_status(status: &str) -> SpanStatus {
     }
 }
 
-fn format_identity(user: &str, agent: Option<&str>, scope: Option<&str>) -> String {
+pub(super) fn format_identity(user: &str, agent: Option<&str>, scope: Option<&str>) -> String {
     match (agent, scope) {
         (Some(a), Some(s)) => format!("{user} · {a} ({s})"),
         (Some(a), None) => format!("{user} · {a}"),

@@ -13,6 +13,7 @@ use crate::repositories::mcp::runtime::{McpExecutionRow, McpSessionRow, McpToolS
 use crate::repositories::overview::liveness::{HEARTBEAT_INTERVAL_SECS, liveness_state};
 use crate::types::McpServerDetail;
 use crate::types::access_control::AccessControlRule;
+use systemprompt::identifiers::McpExecutionId;
 
 use super::view::{
     ConfigFactView, McpExecutionRowView, McpGrantRow, McpSessionRowView, McpToolRow,
@@ -74,6 +75,16 @@ fn execution_tone(status: &str) -> &'static str {
     }
 }
 
+// Why: the trace page resolves an execution by its trace id or by its own
+// id, so a call with no gateway trace still links — by execution id — rather
+// than emitting a trace link that answers 404 or none at all.
+fn execution_trace_url(trace_id: Option<&str>, execution: &McpExecutionId) -> String {
+    format!(
+        "/admin/traces/{}",
+        urlencoding::encode(trace_id.unwrap_or(execution.as_str()))
+    )
+}
+
 pub(super) fn execution_rows(rows: Vec<McpExecutionRow>) -> Vec<McpExecutionRowView> {
     rows.into_iter()
         .map(|r| {
@@ -92,7 +103,7 @@ pub(super) fn execution_rows(rows: Vec<McpExecutionRow>) -> Vec<McpExecutionRowV
                 ),
                 user_url: format!("/admin/users/{}", r.user_id),
                 session_url: (!session.is_empty()).then(|| format!("/admin/sessions/{session}")),
-                trace_url: r.trace_id.as_ref().map(|t| format!("/admin/traces/{t}")),
+                trace_url: Some(execution_trace_url(r.trace_id.as_deref(), &r.execution_id)),
                 session,
                 caller: r.user_id.as_str().to_owned(),
                 error_message: r.error_message.unwrap_or_default(),

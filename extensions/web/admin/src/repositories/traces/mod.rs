@@ -16,14 +16,16 @@ use chrono::{DateTime, Utc};
 use serde::Serialize;
 use systemprompt::identifiers::{AgentId, ArtifactId, ContextId, SessionId, TraceId, UserId};
 
+mod ledger_spans;
 mod list;
 mod list_row;
 mod resolve;
 mod spans;
 mod stats;
 
+pub use ledger_spans::{execution_label, execution_status};
 pub use list::{TracePage, list_traces};
-pub use resolve::resolve_trace_session;
+pub use resolve::{execution_trace_key, resolve_trace_session};
 pub use spans::list_trace_spans;
 pub use stats::get_trace_stats;
 
@@ -174,8 +176,8 @@ pub struct Span {
     pub decision: Option<String>,
     pub reason: Option<String>,
     pub stages: Vec<PolicyStage>,
-    // Why: a hook event that reported a tool result links to the artifact the
-    // ingest stored for it; every other span has none.
+    // Why: a hook event or ledger execution that produced a tool result links
+    // to the artifact the ingest stored for it; every other span has none.
     pub artifact_id: Option<ArtifactId>,
 }
 
