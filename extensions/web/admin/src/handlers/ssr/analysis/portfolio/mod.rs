@@ -31,6 +31,7 @@ use systemprompt::marketplace::inventory::{InstallationCoverageStatus, Inventory
 
 pub(crate) mod actions;
 pub(crate) mod cells;
+mod collect;
 pub(crate) mod collisions;
 mod derived;
 mod evidence;
@@ -40,12 +41,12 @@ mod plan;
 mod range;
 pub(crate) mod rows;
 use crate::handlers::ssr::page::Page;
-use crate::handlers::ssr::scorecard::{ScorecardView, Scores};
+use collect::{Collected, collect_rows};
 use collisions::Collision;
 use derived::{Derived, InventoryMarketplaceOption, Onboarding, SelectedMarketplace};
-use evidence::{Evidence, expand_rows};
+use evidence::Evidence;
 use groups::{Kpis, MarketplaceGroup, MarketplaceTally};
-use plan::{Plan, list_inventory, plan};
+use plan::{Plan, plan};
 use rows::InventoryRow;
 
 #[derive(Debug, Default, Deserialize)]
@@ -124,47 +125,6 @@ pub(crate) async fn json(
     Query(query): Query<PortfolioQuery>,
 ) -> AdminResult<Json<PortfolioPage>> {
     Ok(Json(load(&managed, &pool, &user, query).await?))
-}
-
-pub(super) struct Collected {
-    pub(super) rows: Vec<InventoryRow>,
-    pub(super) pending_jobs: usize,
-    pub(super) range_jobs: Vec<SnapshotRangeJob>,
-}
-
-pub(super) async fn collect_rows(
-    managed: &ManagedState,
-    plan: &Plan,
-    evidence: &Evidence<'_>,
-    now: chrono::DateTime<Utc>,
-) -> AdminResult<Collected> {
-    let items = list_inventory(managed, plan).await?;
-    let needle = plan.search.to_lowercase();
-    let window = (plan.range.from.to_string(), plan.range.to.to_string());
-    let mut collected = Collected {
-        rows: Vec::new(),
-        pending_jobs: 0,
-        range_jobs: Vec::new(),
-    };
-    for mut item in items {
-        if !needle.is_empty() && !item.entry.resource_key.to_lowercase().contains(&needle) {
-            continue;
-        }
-        if plan.range.custom
-            && let Some(resource) = item.entry.resource_id.as_ref()
-        {
-            let job = range::custom_job(managed, Some(resource), &plan.range, now).await?;
-            item.snapshot.clone_from(&job.result);
-            if matches!(job.state.as_str(), "pending" | "leased") {
-                collected.pending_jobs += 1;
-            }
-            collected.range_jobs.push(job);
-        }
-        collected
-            .rows
-            .extend(expand_rows(item, evidence, (&window.0, &window.1))?);
-    }
-    Ok(collected)
 }
 
 pub(super) struct Retained {
@@ -251,24 +211,7 @@ async fn load(
         audience: evidence.audience_of(&plan, &selected),
     };
     let mut derived = Derived::build(&collected, &plan, marketplace, &retained);
-    derived.kpis.scored_sessions = evidence.score_means.scored_sessions;
-    derived.kpis.scorecard = ScorecardView::with_prior(
-        Scores {
-            intent: evidence.score_means.intent,
-            quality: evidence.score_means.quality,
-            speed: evidence.score_means.speed,
-            cost: evidence.score_means.cost,
-        },
-        Scores {
-            quality: evidence.score_means.quality_prior,
-            ..Scores::default()
-        },
-        None,
-        format!(
-            "Mean judge scores over the {} judged sessions that invoked a skill in this window",
-            evidence.score_means.scored_sessions
-        ),
-    );
+    (derived.kpis.scored_sessions, derived.kpis.scorecard) = evidence.score_kpis();
     let groups = groups::group_rows(
         collected.rows,
         |id| evidence.audience.users_reaching_marketplace(id),

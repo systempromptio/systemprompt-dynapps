@@ -75,7 +75,7 @@
       <legend>Columns <span class="sp-export__column-tools"><button type="button" class="sp-btn sp-btn--xs sp-btn--ghost" data-action="export-columns-all">All</button> <button type="button" class="sp-btn sp-btn--xs sp-btn--ghost" data-action="export-columns-default">Default</button></span></legend>
       <div class="sp-export__column-grid">
         {{#each columns}}
-        <label class="sp-export__column"><input type="checkbox" name="columns" value="{{key}}" data-default="{{default}}"{{#if default}} checked{{/if}}>{{label}}</label>
+        <label class="sp-export__column"><input type="checkbox" name="columns" value="{{key}}" data-default="{{this.default}}"{{#if this.default}} checked{{/if}}>{{label}}</label>
         {{/each}}
       </div>
     </fieldset>

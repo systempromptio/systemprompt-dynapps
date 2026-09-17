@@ -7,10 +7,11 @@ use crate::error::AdminResult;
 use crate::routes::managed_state::ManagedState;
 use crate::types::UserContext;
 
+use super::collect::collect_rows;
 use super::evidence::Evidence;
 use super::plan::{Plan, plan};
 use super::rows::InventoryRow;
-use super::{PortfolioQuery, collect_rows, narrow_to_marketplace};
+use super::{PortfolioQuery, narrow_to_marketplace};
 use crate::error::AdminError;
 use crate::export::ExportView;
 

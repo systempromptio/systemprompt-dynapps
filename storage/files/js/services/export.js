@@ -76,12 +76,37 @@ const setColumns = (dialog, predicate) => {
   refresh(dialog);
 };
 
+// The dialog opens on the window the page is showing, so "Export" with no
+// further clicks is the table on screen.
+const syncFromPage = (dialog) => {
+  const params = new URLSearchParams(dialog.dataset.exportQuery);
+  const check = (name, value) => {
+    const input = dialog.querySelector(`input[name="${name}"][value="${value}"]`);
+    if (input) input.checked = true;
+  };
+  const preset = params.get('preset');
+  if (preset) check('live_preset', preset);
+  if (params.get('from') && params.get('to')) {
+    check('live_preset', 'custom');
+    for (const edge of ['from', 'to']) {
+      dialog.querySelector(`input[name="live_${edge}"]`).value = params.get(edge).slice(0, 16);
+    }
+  }
+  const days = params.get('days');
+  if (days) {
+    check('retained_days', days);
+    check('days', days);
+  }
+  if (params.get('start') || params.get('end')) check('retained_days', 'custom');
+};
+
 let opener = null;
 
 const open = (trigger) => {
   const dialog = dialogEl();
   if (!dialog) return false;
   opener = trigger;
+  syncFromPage(dialog);
   showWindow(dialog);
   dialog.showModal();
   refresh(dialog);
