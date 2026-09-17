@@ -25,7 +25,7 @@ related_docs:
 
 # Measure which skills are used
 
-**TL;DR:** Open `/admin/analysis/resources`, pick a marketplace, press **Sync inventory now**, clear any collisions, wait a minute for the first snapshot, then read the table. Figures are per marketplace and per time window.
+**TL;DR:** Open `/admin/analysis/skills`, pick a marketplace, press **Sync inventory now**, clear any collisions, wait a minute for the first snapshot, then read the table. Figures are per marketplace and per time window.
 
 ## Prerequisites
 
@@ -34,7 +34,7 @@ related_docs:
 
 ## Step 1: Open Skills and pick a marketplace
 
-Go to `/admin/analysis/resources`. The page opens on the marketplace with the most attributed use.
+Go to `/admin/analysis/skills`. The page opens on the marketplace with the most attributed use.
 
 **Marketplace** is the first field of the toolbar filter above the table. Each option carries its skill count in brackets. Choose **All marketplaces** to group every marketplace at once and name the plugin beside each skill, then press **Apply**.
 
@@ -82,7 +82,7 @@ The tiles are organisation-wide for the window and include traffic not yet attri
 
 ## Step 6: Read the columns
 
-The page opens on every marketplace, each under its own caption with the version chip it serves. Use the **Marketplace** field to narrow to one, **Window** for 7, 30, 90 or 365 days, and **Skill** to search. **All columns** reveals three extra columns; **Fewer columns** hides them again. **JSON** returns the same data at `/admin/analysis/resources.json`.
+The page opens on every marketplace, each under its own caption with the version chip it serves. Use the **Marketplace** field to narrow to one, **Window** for 7, 30, 90 or 365 days, and **Skill** to search. **All columns** reveals three extra columns; **Fewer columns** hides them again. **Export** opens the export dialog: pick the window, the format (CSV, JSON, JSON Lines or Markdown) and the columns, and the dialog counts the rows and cells before you download. Every table page in the console carries the same button.
 
 | Column | Definition |
 |---|---|

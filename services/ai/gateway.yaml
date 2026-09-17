@@ -5,9 +5,21 @@
 gateway:
   enabled: true
   routes:
+  # Failover: when Anthropic exhausts its transient-retry budget (429/503),
+  # answers any other 5xx, or the connection itself fails, the same governed
+  # request is re-bound to Vertex and served as Gemini 3.8 Flash. The audit
+  # row records `served_provider: vertex`, the request is repriced at the
+  # Vertex catalog rate, and `gateway_upstream_failovers_total{from,to,reason}`
+  # counts it. A per-provider circuit breaker skips a primary that keeps
+  # failing. `fallback_upstream_model` is the Vertex catalog id: boot
+  # validation resolves pricing and governance through it (vertex carries
+  # the same no_retain flag as anthropic, and this route declares no
+  # `requires:`). See /documentation/enterprise-model-routing.
   - id: claude-star-4203d1
     model_pattern: claude-*
     provider: anthropic
+    fallback_provider: vertex
+    fallback_upstream_model: vertex-gemini-3.8-flash
   # Vertex routes and the core Vertex rate card are one change, not two.
   # At boot, every model Vertex publishes that the rate card prices is added
   # to its provider's catalog — so a rate-card id that matches none of the

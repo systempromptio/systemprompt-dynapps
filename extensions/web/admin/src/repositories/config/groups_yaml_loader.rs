@@ -1,9 +1,12 @@
-//! Bootstrap loader: `services/web/config/groups.yaml` → DB.
+//! The *overwrite from code* projection of `services/web/config/groups.yaml`.
 //!
 //! Upserts the groups and projects the installation ships with, and the AD
 //! group mappings that place a signing-in user in them. Rows written here
 //! carry `source = 'yaml'`; dashboard-created rows carry `source =
-//! 'dashboard'` and are never touched.
+//! 'dashboard'` and are never touched. It runs when the groups plane seeds
+//! an empty database at boot and when an administrator chooses *Overwrite
+//! from code* on `/admin/sync` — never on an ordinary restart, which only
+//! compares. Members are not in the file and are never written here.
 //!
 //! Reconciliation is deliberately asymmetric. Mappings are fully reconciled —
 //! a mapping dropped from the file is dropped from the DB, or a group removed
@@ -26,10 +29,19 @@ pub async fn load_groups_from_yaml(
     pool: &PgPool,
     services_path: &Path,
 ) -> Result<GroupsLoadReport, MarketplaceError> {
-    let mut report = GroupsLoadReport::default();
     let Some(doc) = read_doc(services_path).await? else {
-        return Ok(report);
+        return Ok(GroupsLoadReport::default());
     };
+    apply_groups_doc(pool, &doc).await
+}
+
+// Why: the projection on its own, so an uploaded `groups.yaml` (an import
+// preview's overwrite) lands exactly as the file on disk would.
+pub async fn apply_groups_doc(
+    pool: &PgPool,
+    doc: &GroupsDoc,
+) -> Result<GroupsLoadReport, MarketplaceError> {
+    let mut report = GroupsLoadReport::default();
     doc.validate()
         .map_err(|e| MarketplaceError::config_file(GROUPS_FILE, e))?;
 

@@ -74,14 +74,20 @@ pub(super) async fn list_decisions(
     Ok((stages, slots))
 }
 
+pub(super) struct RequestSlots {
+    pub trace_id: Option<TraceId>,
+    pub user_id: Option<UserId>,
+}
+
 pub(super) async fn list_requests(
     pool: &PgPool,
     session_id: &SessionId,
-) -> Result<(Vec<AiRequestSummary>, Option<TraceId>), sqlx::Error> {
+) -> Result<(Vec<AiRequestSummary>, RequestSlots), sqlx::Error> {
     let rows = sqlx::query!(
         r#"SELECT id as "id!",
                   request_id as "request_id!: AiRequestId",
                   trace_id as "trace_id: TraceId",
+                  user_id as "user_id!: UserId",
                   provider,
                   model,
                   status as "status!",
@@ -99,7 +105,13 @@ pub(super) async fn list_requests(
     .fetch_all(pool)
     .await?;
 
-    let trace_id = rows.iter().find_map(|r| r.trace_id.clone());
+    let slots = RequestSlots {
+        trace_id: rows.iter().find_map(|r| r.trace_id.clone()),
+        user_id: rows
+            .iter()
+            .find(|r| !r.user_id.as_str().is_empty())
+            .map(|r| r.user_id.clone()),
+    };
 
     let requests = rows
         .into_iter()
@@ -119,7 +131,7 @@ pub(super) async fn list_requests(
         })
         .collect();
 
-    Ok((requests, trace_id))
+    Ok((requests, slots))
 }
 
 pub(super) async fn list_events(

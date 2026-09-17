@@ -3,6 +3,8 @@
 //! Distribution view; separate from measured run outcomes.
 
 use crate::error::{AdminError, AdminHtmlResult};
+use crate::handlers::ssr::analysis_urls::ANALYSIS_VERSIONS_URL;
+use crate::handlers::ssr::types::BreadcrumbView;
 use crate::routes::managed_state::ManagedState;
 use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, UserContext};
@@ -70,6 +72,13 @@ pub(crate) async fn revision_page(
     let rendered = RevisionEvidenceContext {
         page: "analysis-revision",
         title: "Revision evidence",
+        breadcrumbs: vec![
+            BreadcrumbView::link("Versions", ANALYSIS_VERSIONS_URL),
+            BreadcrumbView::current(format!(
+                "Revision {}",
+                &id.as_str()[..id.as_str().len().min(8)]
+            )),
+        ],
         id,
         manifest,
         files,
@@ -97,6 +106,7 @@ fn require_console(user: &UserContext) -> Result<(), AdminError> {
 struct RevisionEvidenceContext {
     page: &'static str,
     title: &'static str,
+    breadcrumbs: Vec<BreadcrumbView>,
     id: ResourceRevisionId,
     manifest: systemprompt::marketplace::managed::RevisionManifest,
     files: Vec<FilePreview>,

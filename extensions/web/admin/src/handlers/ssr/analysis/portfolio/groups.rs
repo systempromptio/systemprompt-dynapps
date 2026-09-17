@@ -8,6 +8,7 @@
 
 use super::rows::{Health, InventoryRow, RowVersion};
 use crate::handlers::ssr::format::{format_cost, format_duration_ms};
+use crate::handlers::ssr::scorecard::ScorecardView;
 use crate::repositories::analysis::snapshot_figures::SnapshotFigures;
 use crate::repositories::sync::marketplace_versions_db::MarketplaceVersionRow;
 use serde::Serialize;
@@ -170,6 +171,8 @@ pub struct Kpis {
     pub failed_requests: i64,
     pub cost: String,
     pub p95: String,
+    pub scored_sessions: i64,
+    pub scorecard: ScorecardView,
 }
 
 // Why: the organisation-wide snapshot carries the totals; the rows contribute

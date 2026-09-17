@@ -15,9 +15,9 @@ use super::rows::PolicyRow;
 
 fn header(exported_at: DateTime<Utc>) -> String {
     format!(
-        "# Gateway policy baseline. Ingested into `ai_gateway_policies` at boot by the\n\
-         # governance_bootstrap job (core's load_gateway_policies_from_yaml) and edited\n\
-         # live at /admin/gateway/policies; the sync page compares the two.\n\
+        "# Gateway policy baseline. Seeds `ai_gateway_policies` when the table is empty\n\
+         # at boot; otherwise the table is edited live at /admin/gateway/policies and\n\
+         # /admin/sync compares the two and applies a direction on request.\n\
          #\n\
          # Exported from the database on {} by the console. A quota window with\n\
          # `window_seconds: {MONTH_WINDOW_SECONDS}` is a calendar month: the daily\n\

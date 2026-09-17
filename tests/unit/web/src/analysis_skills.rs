@@ -1,20 +1,13 @@
-//! The pure halves of the retained skill drill-down: window-bound parsing and
-//! rendering, query URL building, the portfolio drill-down link, and the
-//! skill and conversation view shaping.
+//! The pure halves of the skill page: window-bound parsing and rendering,
+//! query URL building on the `plugin:skill` path, the skill-key parser, the
+//! drill-down link other pages use, and the conversation view shaping.
 
 use chrono::{DateTime, TimeZone, Utc};
-use std::collections::HashMap;
-use std::sync::Arc;
-use systemprompt::identifiers::{ManagedResourceId, NativeSessionId, PluginId, UserId};
-use systemprompt_web_admin::repositories::analysis::inventory_index::{
-    InventoryIndex, MarketplaceRef,
-};
-use systemprompt_web_admin::repositories::analysis::retained::{
-    RetainedConversationRow, RetainedSkillRow,
-};
+use systemprompt::identifiers::{ManagedResourceId, NativeSessionId, UserId};
+use systemprompt_web_admin::repositories::analysis::retained::RetainedConversationRow;
 use systemprompt_web_admin::test_support::{
-    AnalysisQuery, Drilldown, RetainedConversationView, RetainedSkillView, drilldown_url,
-    parse_window_bound, render_window_bound,
+    AnalysisQuery, RetainedConversationView, drilldown_url, parse_skill_key, parse_window_bound,
+    render_window_bound,
 };
 
 fn at(y: i32, m: u32, d: u32, h: u32, min: u32) -> DateTime<Utc> {
@@ -113,132 +106,47 @@ fn urls_carry_the_window_the_resource_and_only_a_non_first_page() {
         start: at(2026, 8, 16, 0, 0).into(),
         end: at(2026, 9, 16, 0, 0).into(),
         resource: None,
-        plugin: None,
-        skill: None,
         page: Some(3),
     };
     assert_eq!(
-        query.url(1, None),
-        "/admin/analysis/skills?start=2026-08-16&end=2026-09-16"
+        query.url(1, "a:who-am-i"),
+        "/admin/analysis/skills/a%3Awho-am-i?start=2026-08-16&end=2026-09-16"
+    );
+    let narrowed = AnalysisQuery {
+        resource: Some("res/1".to_owned()),
+        ..query
+    };
+    assert_eq!(
+        narrowed.url(2, "a:who-am-i"),
+        "/admin/analysis/skills/a%3Awho-am-i?start=2026-08-16&end=2026-09-16&resource=res%2F1&page=2"
     );
     assert_eq!(
-        query.url(2, Some(&Drilldown::Resource("res/1".to_owned()))),
-        "/admin/analysis/skills?start=2026-08-16&end=2026-09-16&resource=res%2F1&page=2"
+        AnalysisQuery::default().url(1, "a:b"),
+        "/admin/analysis/skills/a%3Ab"
     );
     assert_eq!(
-        AnalysisQuery::default().url(1, None),
-        "/admin/analysis/skills"
+        drilldown_url("a:who-am-i", None, ("2026-08-16", "2026-09-16")),
+        "/admin/analysis/skills/a%3Awho-am-i?start=2026-08-16&end=2026-09-16"
     );
     assert_eq!(
         drilldown_url(
-            &ManagedResourceId::new("res-1"),
+            "a:who-am-i",
+            Some(&ManagedResourceId::new("res-1")),
             ("2026-08-16", "2026-09-16")
         ),
-        "/admin/analysis/skills?resource=res-1&start=2026-08-16&end=2026-09-16"
+        "/admin/analysis/skills/a%3Awho-am-i?start=2026-08-16&end=2026-09-16&resource=res-1"
     );
-}
-
-fn skill_row(plugin: &str, key: &str, managed: bool) -> RetainedSkillRow {
-    RetainedSkillRow {
-        plugin_id: PluginId::new(plugin),
-        skill: format!("{plugin}:{}", key.replace('_', "-")),
-        marketplace_id: Some(systemprompt::identifiers::MarketplaceId::new("india")),
-        source: Some("bundle:india".to_owned()),
-        source_hash: Some("abcdef0123456789".to_owned()),
-        resource_id: managed.then(|| ManagedResourceId::new(format!("res-{key}"))),
-        resource_key: managed.then(|| key.to_owned()),
-        kind: managed.then(|| "skill".to_owned()),
-        invocations: 4,
-        revision_verified: if managed { 3 } else { 0 },
-        conversations: 2,
-        requests: 3,
-        failed: 1,
-        tokens: 1_200,
-        cost: 2_500_000,
-        artifacts: 5,
-        structured_artifacts: 2,
-        total_rows: 1,
-    }
-}
-
-fn index() -> InventoryIndex {
-    let mut plugins_by_skill = HashMap::new();
-    plugins_by_skill.insert(
-        "who_am_i".to_owned(),
-        vec![Arc::new((
-            "astound-commons".to_owned(),
-            "Astound Commons".to_owned(),
-        ))],
-    );
-    let mut marketplaces_by_plugin = HashMap::new();
-    marketplaces_by_plugin.insert(
-        "astound-commons".to_owned(),
-        vec![
-            MarketplaceRef {
-                id: "commons".to_owned(),
-                name: "Commons".to_owned(),
-            },
-            MarketplaceRef {
-                id: "india".to_owned(),
-                name: "India".to_owned(),
-            },
-        ],
-    );
-    InventoryIndex {
-        marketplaces: Vec::new(),
-        plugins_by_skill,
-        marketplaces_by_plugin,
-    }
 }
 
 #[test]
-fn a_skill_view_resolves_its_plugin_marketplaces_source_and_inventory_link() {
-    let view = RetainedSkillView::new(
-        skill_row("astound-commons", "who_am_i", true),
-        "/x".to_owned(),
-        &index(),
-    );
-    assert_eq!(view.skill_name, "who-am-i");
-    assert_eq!(view.plugin_name, "Astound Commons");
-    assert_eq!(view.marketplaces, ["Commons", "India"]);
-    assert_eq!(view.source_label, "bundle:india");
-    assert_eq!(view.source_hash_short.as_deref(), Some("abcdef012345"));
-    assert_eq!(
-        view.inventory_href,
-        "/admin/analysis/resources?search=who-am-i"
-    );
-    assert_eq!(view.cost, "$2.50");
-    assert_eq!(view.href, "/x");
-
-    // Why: a kit's plugin this tree does not know still names its plugin id
-    // and the marketplace the fact carried — nothing about it is blank.
-    let bundled = RetainedSkillView::new(
-        skill_row("astound-india-ba", "ba_bug_logging", false),
-        "/y".to_owned(),
-        &index(),
-    );
-    assert_eq!(bundled.plugin_name, "astound-india-ba");
-    assert_eq!(bundled.marketplaces, ["india"]);
-    assert!(bundled.row.resource_id.is_none());
-    assert_eq!(bundled.row.revision_verified, 0);
-}
-
-#[test]
-fn a_skill_drilldown_url_carries_plugin_and_skill() {
-    use systemprompt_web_admin::repositories::analysis::retained::RetainedSkillRef;
-    let query = AnalysisQuery {
-        start: at(2026, 8, 16, 0, 0).into(),
-        end: at(2026, 9, 16, 0, 0).into(),
-        ..AnalysisQuery::default()
-    };
-    let target = Drilldown::Skill(RetainedSkillRef {
-        plugin_id: PluginId::new("astound-india-ba"),
-        skill: "astound-india-ba:ba-bug-logging".to_owned(),
-    });
-    assert_eq!(
-        query.url(1, Some(&target)),
-        "/admin/analysis/skills?start=2026-08-16&end=2026-09-16&plugin=astound-india-ba&skill=astound-india-ba%3Aba-bug-logging"
-    );
+fn a_skill_key_is_plugin_colon_skill_and_nothing_else() {
+    let key = parse_skill_key("astound-india-ba:ba-bug-logging").unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(key.plugin_id.as_str(), "astound-india-ba");
+    assert_eq!(key.skill, "astound-india-ba:ba-bug-logging");
+    assert!(parse_skill_key("who-am-i").is_err(), "no plugin prefix");
+    assert!(parse_skill_key(":who-am-i").is_err(), "empty plugin");
+    assert!(parse_skill_key("a:").is_err(), "empty skill");
+    assert!(parse_skill_key("a:b c").is_err(), "whitespace");
 }
 
 fn conversation_row(status: Option<&str>, score: Option<i64>) -> RetainedConversationRow {

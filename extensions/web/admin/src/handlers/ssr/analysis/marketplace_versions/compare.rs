@@ -15,6 +15,7 @@ use crate::repositories::analysis::marketplace_versions::{
     MarketplaceVersionMetricsRow, MarketplaceVersionSkillRow, list_marketplace_version_skills,
 };
 use crate::repositories::analysis::retained::RetainedWindow;
+use crate::repositories::evaluation::version_scores::VersionScoreRow;
 
 #[derive(Debug, Clone, Default, Serialize)]
 pub(crate) struct SkillFigures {
@@ -149,6 +150,7 @@ pub(crate) async fn build(
     owner: &UserId,
     window: RetainedWindow,
     rows: &[MarketplaceVersionMetricsRow],
+    scores: &[VersionScoreRow],
     hashes: (Option<String>, Option<String>),
 ) -> AdminResult<CompareView> {
     let (a, b) = pick(rows, hashes)?;
@@ -179,7 +181,7 @@ pub(crate) async fn build(
     let skills = skill_rows_for(manifest_diff.as_ref(), &skill_rows, &by_key, (a, b));
 
     let pair = [a.clone(), b.clone()];
-    let mut both = views(&pair);
+    let mut both = views(&pair, scores);
     let b_view = both
         .pop()
         .ok_or_else(|| AdminError::internal("compare view"))?;

@@ -39,6 +39,8 @@
 //! - the two front-end gates that used to be shell scripts and then in-crate
 //!   tests: admin template/CSS agreement and the textual front-end standards,
 //!   plus the asset-manifest check, all sharing `support`
+//! - the observability page's pure mapping of the profile's OTLP block and the
+//!   `otlp_export_state` rows into its view
 
 #[cfg(test)]
 mod analysis_inventory;
@@ -102,7 +104,11 @@ mod gateway_policies_month_window;
 #[cfg(test)]
 mod gateway_policy_config;
 #[cfg(test)]
+mod gateway_routes_drift;
+#[cfg(test)]
 mod gateway_text_markers;
+#[cfg(test)]
+mod governance_chain_drift;
 #[cfg(test)]
 mod groups_sync_drift;
 #[cfg(test)]
@@ -136,6 +142,8 @@ mod jobs_robots_llms;
 mod link_models;
 #[cfg(test)]
 mod month_range;
+#[cfg(test)]
+mod observability_view;
 #[cfg(test)]
 mod overview;
 #[cfg(test)]
@@ -265,9 +273,13 @@ mod projects_page;
 #[cfg(test)]
 mod secrets_crypto_pure;
 #[cfg(test)]
+mod services_tree_declarations;
+#[cfg(test)]
 mod statusline_ingest_pure;
 #[cfg(test)]
 mod support;
+#[cfg(test)]
+mod sync_boot_contract;
 #[cfg(test)]
 mod template_engine;
 #[cfg(test)]

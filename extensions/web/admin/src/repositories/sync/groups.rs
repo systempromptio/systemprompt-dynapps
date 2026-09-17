@@ -1,42 +1,42 @@
 //! The `groups` plane: `services/web/config/groups.yaml` projected into
 //! `groups`, `projects` and their AD-group mappings.
 //!
-//! *Overwrite from code* runs the boot loader — upsert every declared set,
+//! *Overwrite from code* runs the loader — upsert every declared set,
 //! reconcile the `yaml`-sourced mappings — and *Insert only* adds what the
-//! file declares and the tables lack. Neither deletes a group or project:
-//! the loader never does, and the drift table says so on every orphan.
+//! file declares and the tables lack. Boot runs the overwrite once, on an
+//! empty database, and otherwise only compares. Neither deletes a group or
+//! project: the loader never does, and the drift table says so on every orphan.
 //! *Export* renders every dashboard-created set and mapping back into the
 //! file's shape, which is how a group made in the console reaches git.
 
 use async_trait::async_trait;
 use sqlx::PgPool;
-use systemprompt::identifiers::UserId;
 
 use super::access_control::applied_from;
+use super::declaration::read_or_text;
 use super::groups_db::{
     count_member_sets, insert_missing, list_mappings, list_member_sets, parse_groups_doc,
     render_groups_export,
 };
 use super::groups_drift::{GroupsDrift, compute_groups_drift, declared_count, declared_hash};
-use super::plane::{ActionCounts, ApplyOutcome, DriftKpi, Export, PlaneDrift, SyncMode, SyncPlane};
+use super::plane::{
+    ActionCounts, Actor, ApplyOutcome, DeclarationSource, DriftKpi, Export, PlaneDrift, SyncMode,
+    SyncPlane,
+};
 use super::state::{Applied, record_applied, record_declared};
 use crate::error::{AdminError, AdminResult};
-use crate::repositories::config::groups_yaml_loader::{GROUPS_FILE, load_groups_from_yaml};
+use crate::repositories::config::groups_yaml_loader::{GROUPS_FILE, apply_groups_doc};
 use crate::repositories::config::groups_yaml_types::GroupsDoc;
-use crate::repositories::gateway_policies::declared::services_root;
 
 pub const PLANE_ID: &str = "groups";
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct GroupsPlane;
 
-fn declared_groups_now() -> AdminResult<GroupsDoc> {
-    let path = services_root()?.join(GROUPS_FILE);
-    let yaml = match std::fs::read_to_string(&path) {
-        Ok(s) => s,
-        // Why: no file declares nothing — the loader treats it the same way.
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(GroupsDoc::default()),
-        Err(e) => return Err(AdminError::invalid("groups.yaml could not be read", e)),
+fn declared_groups_from(from: DeclarationSource<'_>) -> AdminResult<GroupsDoc> {
+    // Why: no file declares nothing — the loader treats it the same way.
+    let Some(yaml) = read_or_text(from, GROUPS_FILE)? else {
+        return Ok(GroupsDoc::default());
     };
     parse_groups_doc(&yaml).map_err(|e| AdminError::invalid("groups.yaml could not be parsed", e))
 }
@@ -65,9 +65,21 @@ impl SyncPlane for GroupsPlane {
         "groups · projects · group_ad_mappings · project_ad_mappings"
     }
 
+    fn owner_url(&self) -> &'static str {
+        "/admin/groups"
+    }
+
     async fn drift(&self, pool: &PgPool) -> AdminResult<PlaneDrift> {
+        self.drift_from(pool, DeclarationSource::Disk).await
+    }
+
+    async fn drift_from(
+        &self,
+        pool: &PgPool,
+        from: DeclarationSource<'_>,
+    ) -> AdminResult<PlaneDrift> {
         let in_db = usize::try_from(count_member_sets(pool).await?).unwrap_or(0);
-        let doc = match declared_groups_now() {
+        let doc = match declared_groups_from(from) {
             Ok(d) => d,
             Err(e) => {
                 return Ok(PlaneDrift {
@@ -78,7 +90,9 @@ impl SyncPlane for GroupsPlane {
             },
         };
         let hash = declared_hash(&doc);
-        record_declared(pool, PLANE_ID, &hash).await?;
+        if from.is_disk() {
+            record_declared(pool, PLANE_ID, &hash).await?;
+        }
         let drift = drift_now(pool, &doc).await?;
         Ok(PlaneDrift {
             declared_hash: hash,
@@ -127,9 +141,20 @@ impl SyncPlane for GroupsPlane {
         &self,
         pool: &PgPool,
         mode: SyncMode,
-        actor: &UserId,
+        actor: Actor<'_>,
     ) -> AdminResult<ApplyOutcome> {
-        let doc = declared_groups_now()?;
+        self.apply_from(pool, mode, actor, DeclarationSource::Disk)
+            .await
+    }
+
+    async fn apply_from(
+        &self,
+        pool: &PgPool,
+        mode: SyncMode,
+        actor: Actor<'_>,
+        from: DeclarationSource<'_>,
+    ) -> AdminResult<ApplyOutcome> {
+        let doc = declared_groups_from(from)?;
         let before = drift_now(pool, &doc).await?;
         let outcome = match mode {
             SyncMode::InsertOnly => {
@@ -140,7 +165,7 @@ impl SyncPlane for GroupsPlane {
                 }
             },
             SyncMode::Overwrite => {
-                load_groups_from_yaml(pool, &services_root()?).await?;
+                apply_groups_doc(pool, &doc).await?;
                 ApplyOutcome {
                     inserted: before.missing_sets + before.missing_mappings,
                     updated: before.changed_sets,
@@ -154,7 +179,7 @@ impl SyncPlane for GroupsPlane {
             &Applied {
                 plane: PLANE_ID,
                 declared_hash: &declared_hash(&doc),
-                mode: Some(mode),
+                mode: actor.recorded_mode(mode),
                 actor: actor.as_str(),
                 from: applied_from(),
             },

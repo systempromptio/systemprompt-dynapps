@@ -1,0 +1,182 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, position, model_pattern, provider, upstream_model, extra_headers,\n                 pricing, when_match, requires, fallback_provider, fallback_upstream_model,\n                 explicit_id, source, updated_at\n            FROM gateway_routes\n           ORDER BY position ASC, id ASC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "gateway_routes",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "position",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "gateway_routes",
+            "name": "position"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "model_pattern",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "gateway_routes",
+            "name": "model_pattern"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "provider",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "gateway_routes",
+            "name": "provider"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "upstream_model",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "gateway_routes",
+            "name": "upstream_model"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "extra_headers",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "gateway_routes",
+            "name": "extra_headers"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "pricing",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "gateway_routes",
+            "name": "pricing"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "when_match",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "gateway_routes",
+            "name": "when_match"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "requires",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "gateway_routes",
+            "name": "requires"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "fallback_provider",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "gateway_routes",
+            "name": "fallback_provider"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "fallback_upstream_model",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "gateway_routes",
+            "name": "fallback_upstream_model"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "explicit_id",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "gateway_routes",
+            "name": "explicit_id"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "source",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "gateway_routes",
+            "name": "source"
+          }
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "updated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "gateway_routes",
+            "name": "updated_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "7a4a21eb9ebca06fc9a7352530f412d02a71297d70532fe79e3320f14b40723c"
+}

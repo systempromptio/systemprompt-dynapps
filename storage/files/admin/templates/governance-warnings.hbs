@@ -7,7 +7,7 @@
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/governance/approvals">Approvals</a>
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/governance/secrets">Secrets audit</a>
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/governance/quotas">Quotas</a>
-        <a class="sp-btn sp-btn--sm sp-btn--primary" href="{{csv_url}}">Export CSV</a>
+        {{> components/export-button export}}
       {{/inline}}
     {{/components/page-header}}
 
@@ -94,7 +94,6 @@
       <div class="sp-toolbar__actions">
         {{#if has_filters}}<a class="sp-btn sp-btn--sm sp-btn--ghost" href="{{clear_url}}">Clear</a>{{/if}}
         <button type="submit" class="sp-btn sp-btn--sm sp-btn--outline">Apply</button>
-        <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{csv_url}}">CSV</a>
       </div>
     </form>
 
@@ -116,7 +115,7 @@
       {{/each}}
       {{#unless has_rows}}
         <tr class="sp-table__empty"><td colspan="6">
-          {{> components/empty-state title="No hook events"
+          {{> components/empty-state heading="No hook events"
               message="Nothing has fired a governance hook yet. The counts above cover the last 24 hours."}}
         </td></tr>
       {{/unless}}
@@ -193,7 +192,7 @@
       {{/each}}
       {{#unless has_rows}}
         <tr class="sp-table__empty"><td colspan="7">
-          {{> components/empty-state title="No decisions in this window"
+          {{> components/empty-state heading="No decisions in this window"
               message="Either nothing called a governed tool, or the filters above exclude everything that did."}}
         </td></tr>
       {{/unless}}
@@ -224,7 +223,7 @@
       {{/each}}
       {{#unless has_rows}}
         <tr class="sp-table__empty"><td colspan="9">
-          {{> components/empty-state title="No safety findings"
+          {{> components/empty-state heading="No safety findings"
               message="No scanner matched anything in this window. A scanner earning nothing is worth reviewing too."}}
         </td></tr>
       {{/unless}}

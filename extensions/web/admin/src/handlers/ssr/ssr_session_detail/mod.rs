@@ -11,7 +11,6 @@ mod rows;
 
 pub(crate) use evaluate::evaluate_session;
 
-use super::ssr_helpers::Viewer;
 use crate::error::AdminError;
 use std::sync::Arc;
 
@@ -35,6 +34,7 @@ use crate::repositories::analytics::session_detail::{
 };
 use crate::repositories::analytics::session_quality::{SessionRatingRow, list_session_ratings};
 use crate::repositories::evaluation::runs::{SessionCriterionScore, list_session_scores};
+use crate::repositories::scope::may_view;
 
 use rows::{context_view, request_view, trace_view};
 
@@ -91,19 +91,20 @@ pub(crate) async fn session_detail_page(
     Extension(ai): Extension<Option<Arc<AiService>>>,
     State(pool): State<Arc<PgPool>>,
     Path(session_id): Path<String>,
-    view: super::export::ViewMode,
 ) -> AdminHtmlResult<Response> {
-    if !shell.user.is_console {
-        return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
-    }
-
     let session_id = SessionId::new(session_id.trim());
     let header = if session_id.as_str().is_empty() {
         None
     } else {
         find_session_header(&pool, &session_id).await?
     };
-    let Some(header) = header else {
+    // Why: 404, not 403, for an owner outside the caller's view — the same
+    // answer as a missing id, so the URL is no oracle for other people's ids.
+    let visible = match &header {
+        Some(h) => may_view(&pool, &shell.user, h.user_id.as_ref()).await?,
+        None => false,
+    };
+    let Some(header) = header.filter(|_| visible) else {
         return Err(AdminError::NotFound(
             "No AI requests, contexts, or transcript rows match that session id.".to_owned(),
         )
@@ -139,11 +140,12 @@ pub(crate) async fn session_detail_page(
         },
     };
 
-    Ok(view.respond(
+    Ok(crate::handlers::ssr::render_typed_page(
         &shell.engine,
         "session-detail",
         &data,
-        Viewer::new(&shell.user, &shell.marketplace),
+        &shell.user,
+        &shell.marketplace,
     ))
 }
 

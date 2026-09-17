@@ -153,8 +153,8 @@ fn export_sets<'a>(
 const EXPORT_HEADER: &str = "# The groups and projects this installation ships with, and the AD groups\n\
 # the directory maps into them. Exported from the database by the console:\n\
 # every group and project the dashboard holds, system groups excepted, with\n\
-# every mapping whatever wrote it. Loaded at boot by\n\
-# extensions/web/admin/src/repositories/config/groups_yaml_loader.rs.\n\n";
+# every mapping whatever wrote it. Seeds an empty database at boot and is\n\
+# otherwise compared on /admin/sync (groups plane).\n\n";
 
 // Why: The database as `groups.yaml`, in the shape the loader reads.
 #[must_use]

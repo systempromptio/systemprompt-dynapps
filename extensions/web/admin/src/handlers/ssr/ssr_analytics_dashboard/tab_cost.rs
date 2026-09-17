@@ -58,7 +58,6 @@ pub(super) fn cost_tab(
         container_count: input.containers.len(),
         audience_links: urls::audience_links(query, input.is_internal),
         is_internal: input.is_internal,
-        csv_url: urls::cost_csv_url(query, input.is_internal),
         day_chart: input.is_internal.then(|| day_chart(input.days, range)),
         has_providers: !input.providers.is_empty(),
         providers: input

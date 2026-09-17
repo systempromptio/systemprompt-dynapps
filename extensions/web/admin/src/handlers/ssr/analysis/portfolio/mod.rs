@@ -14,7 +14,7 @@
 //! resource and a snapshot exists for that scope. Unbound and pending rows
 //! say so instead of showing a zero they cannot substantiate.
 
-use crate::error::{AdminError, AdminHtmlResult, AdminResult};
+use crate::error::{AdminHtmlResult, AdminResult};
 use crate::repositories::analysis::inventory_index::MarketplaceRef;
 use crate::repositories::analysis::snapshot_figures::SnapshotFigures;
 use crate::routes::managed_state::ManagedState;
@@ -34,11 +34,13 @@ pub(crate) mod cells;
 pub(crate) mod collisions;
 mod derived;
 mod evidence;
+pub(crate) mod export;
 pub(crate) mod groups;
 mod plan;
 mod range;
 pub(crate) mod rows;
 use crate::handlers::ssr::page::Page;
+use crate::handlers::ssr::scorecard::{ScorecardView, Scores};
 use collisions::Collision;
 use derived::{Derived, InventoryMarketplaceOption, Onboarding, SelectedMarketplace};
 use evidence::{Evidence, expand_rows};
@@ -96,6 +98,7 @@ pub(crate) struct PortfolioPage {
     synced_at: Option<String>,
     snapshot_state: &'static str,
     onboarding: Option<Onboarding>,
+    export: crate::export::ExportView,
 }
 
 pub(crate) async fn page(
@@ -107,7 +110,7 @@ pub(crate) async fn page(
     let data = load(&managed, &pool, &shell.user, query).await?;
     Ok(super::super::render_typed_page(
         &shell.engine,
-        "analysis-portfolio",
+        "analysis-skills",
         &data,
         &shell.user,
         &shell.marketplace,
@@ -129,7 +132,7 @@ pub(super) struct Collected {
     pub(super) range_jobs: Vec<SnapshotRangeJob>,
 }
 
-async fn collect_rows(
+pub(super) async fn collect_rows(
     managed: &ManagedState,
     plan: &Plan,
     evidence: &Evidence<'_>,
@@ -191,7 +194,7 @@ impl Retained {
 
 // Why: the picker must offer every marketplace the inventory reaches, so the
 // tally is taken before the view narrows to one of them.
-fn narrow_to_marketplace(
+pub(super) fn narrow_to_marketplace(
     collected: &mut Collected,
     plan: &Plan,
 ) -> (Vec<MarketplaceTally>, String) {
@@ -234,11 +237,7 @@ async fn load(
     user: &UserContext,
     query: PortfolioQuery,
 ) -> AdminResult<PortfolioPage> {
-    if !user.is_admin {
-        return Err(AdminError::Forbidden(
-            "Administrator access required for organizational resource analysis".to_owned(),
-        ));
-    }
+    export::require_admin(user)?;
     let now = Utc::now();
     let plan = plan(query, now)?;
     let evidence = Evidence::gather(managed, pool, &plan.index, plan.range.retained()).await?;
@@ -251,14 +250,33 @@ async fn load(
         id: &selected,
         audience: evidence.audience_of(&plan, &selected),
     };
-    let derived = Derived::build(&collected, &plan, marketplace, &retained);
+    let mut derived = Derived::build(&collected, &plan, marketplace, &retained);
+    derived.kpis.scored_sessions = evidence.score_means.scored_sessions;
+    derived.kpis.scorecard = ScorecardView::with_prior(
+        Scores {
+            intent: evidence.score_means.intent,
+            quality: evidence.score_means.quality,
+            speed: evidence.score_means.speed,
+            cost: evidence.score_means.cost,
+        },
+        Scores {
+            quality: evidence.score_means.quality_prior,
+            ..Scores::default()
+        },
+        None,
+        format!(
+            "Mean judge scores over the {} judged sessions that invoked a skill in this window",
+            evidence.score_means.scored_sessions
+        ),
+    );
     let groups = groups::group_rows(
         collected.rows,
         |id| evidence.audience.users_reaching_marketplace(id),
         &evidence.versions,
     );
+    let export = export::export_view(&plan);
     Ok(PortfolioPage {
-        page: "analysis-portfolio",
+        page: "analysis-skills",
         title: "Skills",
         kind: plan.kind,
         groups,
@@ -295,5 +313,6 @@ async fn load(
         synced_at: derived.synced_at,
         snapshot_state: derived.snapshot_state,
         onboarding: derived.onboarding,
+        export,
     })
 }

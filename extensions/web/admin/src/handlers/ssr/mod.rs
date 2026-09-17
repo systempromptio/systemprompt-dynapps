@@ -11,17 +11,17 @@ use axum::extract::Query;
 use axum::response::{Html, IntoResponse, Redirect, Response};
 
 
+pub(crate) mod analysis_urls;
 mod approvals;
+mod configuration;
 mod context;
 pub(crate) mod conversation_header;
-pub(crate) mod csv;
 mod devices;
 pub(crate) mod entity_urls;
-pub(crate) mod export;
 pub(crate) mod format;
 mod gateway;
 mod gateway_policies;
-mod governance;
+pub(crate) mod governance;
 mod governance_quotas;
 pub(crate) mod list_view;
 mod overview;
@@ -29,11 +29,12 @@ pub(crate) mod page;
 pub(crate) mod people_chart;
 pub(crate) mod people_view;
 mod roles;
-mod secrets_audit;
+pub(crate) mod scorecard;
+pub(crate) mod secrets_audit;
 mod ssr_access_control;
-mod ssr_analytics_dashboard;
+pub(crate) mod ssr_analytics_dashboard;
 pub(crate) mod ssr_analytics_requests;
-mod ssr_artifacts;
+pub(crate) mod ssr_artifacts;
 mod ssr_bridge_device_link;
 mod ssr_bridge_setup;
 mod ssr_chain;
@@ -48,37 +49,38 @@ mod ssr_group_detail;
 mod ssr_groups;
 pub(crate) mod ssr_helpers;
 pub(crate) mod ssr_history;
+mod ssr_observability;
 mod ssr_perf_trace_detail;
-mod ssr_perf_traces;
+pub(crate) mod ssr_perf_traces;
 mod ssr_profile;
 mod ssr_projects;
-mod ssr_report_customer;
-mod ssr_report_internal;
 mod ssr_search_resolve;
 mod ssr_session_detail;
-mod ssr_sessions_list;
+pub(crate) mod ssr_sessions_list;
 mod ssr_setup;
-mod ssr_skills_contexts;
+pub(crate) mod ssr_skills_contexts;
 mod ssr_sync;
+mod ssr_sync_import;
 mod ssr_users;
+pub(crate) mod sync_plane;
 pub(crate) mod transcript_view;
 pub(crate) mod types;
 
 pub(crate) use approvals::approvals_page;
+pub(crate) use configuration::configuration_page;
 pub(crate) use devices::devices_page;
 pub(crate) use gateway::gateway_page;
 pub(crate) use gateway_policies::{
     delete_gateway_policy, gateway_policies_page, save_gateway_policy,
 };
-pub(crate) use governance::{governance_csv, governance_page};
+pub(crate) use governance::governance_page;
 pub(crate) use governance_quotas::governance_quotas_page;
 pub(crate) use overview::overview_page;
 pub(crate) use roles::roles_page;
-pub(crate) use secrets_audit::{secrets_audit_csv, secrets_audit_page};
+pub(crate) use secrets_audit::secrets_audit_page;
 pub(crate) use ssr_access_control::access_control_page;
 pub(crate) use ssr_analytics_dashboard::analytics_dashboard_page;
-pub(crate) use ssr_analytics_dashboard::csv::cost_csv;
-pub(crate) use ssr_analytics_requests::{analytics_requests_csv, analytics_requests_page};
+pub(crate) use ssr_analytics_requests::analytics_requests_page;
 pub(crate) use ssr_artifacts::{artifact_detail_page, artifact_preview, artifacts_page};
 pub(crate) use ssr_bridge_device_link::{device_link_approve, device_link_deny, device_link_page};
 pub(crate) use ssr_bridge_setup::bridge_setup_page;
@@ -94,18 +96,21 @@ pub(crate) use ssr_helpers::{branding_context, render_typed_page};
 pub(crate) use ssr_history::{
     conversations_page, history_conversation_page, history_page, history_search,
 };
+pub(crate) use ssr_observability::{
+    export_now as observability_export_now, observability_page,
+    test_connection as observability_test_connection,
+};
 pub(crate) use ssr_perf_trace_detail::perf_trace_detail_page;
 pub(crate) use ssr_perf_traces::perf_traces_page;
 pub(crate) use ssr_profile::{issue_bridge_code, profile_page};
 pub(crate) use ssr_projects::{project_detail_page, projects_page};
-pub(crate) use ssr_report_customer::csv::report_customer_csv;
-pub(crate) use ssr_report_internal::csv::report_internal_csv;
 pub(crate) use ssr_search_resolve::search_resolve;
 pub(crate) use ssr_session_detail::{evaluate_session, session_detail_page};
 pub(crate) use ssr_sessions_list::sessions_list_page;
 pub(crate) use ssr_setup::setup_page;
 pub(crate) use ssr_skills_contexts::skills_contexts_page;
 pub(crate) use ssr_sync::sync_page;
+pub(crate) use ssr_sync_import::import_preview_page;
 pub(crate) use ssr_users::{user_detail_by_id_page, user_detail_page, users_page};
 
 #[derive(serde::Deserialize)]

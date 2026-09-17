@@ -1,0 +1,59 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT date_trunc('day', c.last_scored_at) AS \"day!\",\n                  COUNT(*)::bigint AS \"scored_sessions!\",\n                  AVG(c.intent)::float8 AS intent, AVG(c.quality)::float8 AS quality,\n                  AVG(c.speed)::float8 AS speed, AVG(c.cost)::float8 AS cost\n             FROM evaluation_session_scorecard c\n            WHERE c.scored_criteria > 0\n              AND c.last_scored_at > clock_timestamp() - make_interval(days => $2)\n              AND ($1::text IS NULL OR EXISTS (\n                    SELECT 1 FROM evaluation_session_skills s\n                     WHERE s.session_id = c.session_id AND s.marketplace_id = $1))\n            GROUP BY 1 ORDER BY 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "day!",
+        "type_info": "Timestamptz",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "scored_sessions!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "intent",
+        "type_info": "Float8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "quality",
+        "type_info": "Float8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "speed",
+        "type_info": "Float8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "cost",
+        "type_info": "Float8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "6ad590ef1f1212d4b85733dbfb05b75eac9508e3e2d775a0da2539b47b9fe559"
+}

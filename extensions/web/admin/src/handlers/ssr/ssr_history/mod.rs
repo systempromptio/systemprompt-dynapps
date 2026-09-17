@@ -144,6 +144,46 @@ async fn fetch_history_slice(
     })
 }
 
+// Why: the export is the listing the reader sees — their own scope, the same
+// search — through the page's own query type.
+pub(crate) async fn export_rows(
+    pool: &PgPool,
+    user_ctx: &UserContext,
+    query: HistoryQuery,
+    view: HistoryView,
+    limit: i64,
+) -> Result<(Vec<HistoryItem>, i64), AdminError> {
+    let query = HistoryQuery {
+        page: None,
+        ..query
+    };
+    let scope = view.scope(user_ctx);
+    let target = query
+        .user_id
+        .as_ref()
+        .filter(|u| !u.as_str().trim().is_empty());
+    let scope_ids = match target {
+        Some(target_id) if scope.may_view(target_id) => Some(vec![target_id.as_str().to_owned()]),
+        Some(_) => {
+            return Err(AdminError::Forbidden(
+                "You may only export conversation history within your own scope.".to_owned(),
+            ));
+        },
+        None => scope.user_ids(),
+    };
+    Ok(list_history_items(
+        pool,
+        HistoryFilter {
+            scope_user_ids: scope_ids.as_deref(),
+            search: query.q.as_deref(),
+            include_side_calls: query.show_side(),
+        },
+        limit,
+        0,
+    )
+    .await?)
+}
+
 pub(crate) async fn history_search(
     Extension(user_ctx): Extension<UserContext>,
     State(pool): State<Arc<PgPool>>,
@@ -186,24 +226,21 @@ pub(crate) async fn history_page(
     shell: Page,
     State(pool): State<Arc<PgPool>>,
     Query(query): Query<HistoryQuery>,
-    mode: super::export::ViewMode,
 ) -> AdminHtmlResult<Response> {
-    render_listing(&shell, &pool, &mode, &query, HistoryView::Own).await
+    render_listing(&shell, &pool, &query, HistoryView::Own).await
 }
 
 pub(crate) async fn conversations_page(
     shell: Page,
     State(pool): State<Arc<PgPool>>,
     Query(query): Query<HistoryQuery>,
-    mode: super::export::ViewMode,
 ) -> AdminHtmlResult<Response> {
-    render_listing(&shell, &pool, &mode, &query, HistoryView::Org).await
+    render_listing(&shell, &pool, &query, HistoryView::Org).await
 }
 
 async fn render_listing(
     shell: &Page,
     pool: &PgPool,
-    mode: &super::export::ViewMode,
     query: &HistoryQuery,
     view: HistoryView,
 ) -> AdminHtmlResult<Response> {
@@ -237,6 +274,20 @@ async fn render_listing(
         base_url: base,
         pagination: build_pagination(query, window, base),
         breadcrumbs: view.breadcrumbs(),
+        export: crate::export::ExportView::single(
+            view.dataset(),
+            &crate::export::view::query_string(&[
+                ("q", query.q.as_deref()),
+                ("user_id", query.user_id.as_ref().map(UserId::as_str)),
+                ("side", query.side.as_deref()),
+            ]),
+        ),
     };
-    Ok(mode.respond(&shell.engine, view.template(), &data, shell.viewer()))
+    Ok(crate::handlers::ssr::render_typed_page(
+        &shell.engine,
+        view.template(),
+        &data,
+        &shell.user,
+        &shell.marketplace,
+    ))
 }

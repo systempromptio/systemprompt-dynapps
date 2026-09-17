@@ -1,143 +1,26 @@
-//! Template rows for `/admin/analysis/conversations`: repository rows shaped
-//! for Handlebars, with every number pre-formatted.
+//! Template rows for `/admin/analysis/conversations`: one classified
+//! conversation shaped for Handlebars, with every number pre-formatted, and
+//! the page context that carries them.
 
-use crate::handlers::ssr::entity_urls::session_evaluate_url;
+use crate::handlers::ssr::analysis_urls::analysis_skill_url;
+use crate::handlers::ssr::entity_urls::{session_detail_url, session_evaluate_url};
+use crate::handlers::ssr::scorecard::{ScorecardView, Scores};
 use serde::Serialize;
+use systemprompt::identifiers::SessionId;
 
+use super::summary::{
+    ConversationAnalysisFilterView, ConversationBucketView, KpisView, category_label,
+    outcome_label, outcome_tone,
+};
 use crate::handlers::ssr::format::{format_cost, format_token_total};
 use crate::handlers::ssr::list_view::{Pagination, ScopeFilterView, SelectOptionView};
 use crate::handlers::ssr::types::{SortHeaderView, TabLinkView};
-use crate::repositories::analysis::conversations::{
-    ConversationAnalysisRow, ConversationAnalysisTotals, ConversationBucketRow,
-};
-
-pub(super) const CATEGORIES: [(&str, &str); 7] = [
-    ("development", "Development"),
-    ("business-analysis", "Business analysis"),
-    ("operations", "Operations"),
-    ("admin-config", "Admin & config"),
-    ("writing-comms", "Writing & comms"),
-    ("research-learning", "Research & learning"),
-    ("other", "Other"),
-];
-
-pub(super) const OUTCOMES: [(&str, &str); 4] = [
-    ("achieved", "Achieved"),
-    ("partial", "Partial"),
-    ("abandoned", "Abandoned"),
-    ("unclear", "Unclear"),
-];
-
-#[must_use]
-pub(super) fn category_label(value: &str) -> &'static str {
-    CATEGORIES
-        .iter()
-        .find(|(v, _)| *v == value)
-        .map_or("Other", |(_, label)| label)
-}
-
-fn outcome_label(value: &str) -> &'static str {
-    OUTCOMES
-        .iter()
-        .find(|(v, _)| *v == value)
-        .map_or("Unclear", |(_, label)| label)
-}
-
-// Why: the badge tones the console already defines; an outcome reads at a
-// glance without a legend.
-fn outcome_tone(value: &str) -> &'static str {
-    match value {
-        "achieved" => "ok",
-        "partial" => "warn",
-        "abandoned" => "err",
-        _ => "muted",
-    }
-}
-
-fn percent(part: i64, whole: i64) -> String {
-    if whole == 0 {
-        "—".to_owned()
-    } else {
-        format!("{}%", (part * 100) / whole)
-    }
-}
-
-#[derive(Debug, Serialize)]
-pub(super) struct KpisView {
-    pub conversations: i64,
-    pub unclassified: i64,
-    pub users: i64,
-    pub turns: i64,
-    pub tool_calls: i64,
-    pub tokens_display: String,
-    pub cost_display: String,
-    pub achieved_display: String,
-}
-
-impl KpisView {
-    pub(super) fn new(t: &ConversationAnalysisTotals) -> Self {
-        Self {
-            conversations: t.conversations,
-            unclassified: t.unclassified,
-            users: t.users,
-            turns: t.turns,
-            tool_calls: t.tool_calls,
-            tokens_display: format_token_total(t.total_tokens),
-            cost_display: format_cost(t.total_cost_microdollars),
-            achieved_display: percent(t.achieved, t.conversations),
-        }
-    }
-}
-
-#[derive(Debug, Serialize)]
-pub(super) struct ConversationAnalysisFilterView {
-    pub since: &'static str,
-    pub q: String,
-    pub category: String,
-    pub outcome: String,
-    pub skill: String,
-    pub user_key: String,
-    pub group: String,
-    pub project: String,
-    pub by: &'static str,
-    pub sort: &'static str,
-    pub dir: &'static str,
-}
-
-#[derive(Debug, Serialize)]
-pub(super) struct ConversationBucketView {
-    pub label: String,
-    pub href: Option<String>,
-    pub conversations: i64,
-    pub users: i64,
-    pub turns: i64,
-    pub cost_display: String,
-    pub achieved_display: String,
-    pub top_category: &'static str,
-}
-
-impl ConversationBucketView {
-    pub(super) fn new(
-        row: &ConversationBucketRow,
-        href: Option<String>,
-        label: Option<&str>,
-    ) -> Self {
-        Self {
-            label: label.map_or_else(|| row.label.clone(), str::to_owned),
-            href,
-            conversations: row.conversations,
-            users: row.users,
-            turns: row.turns,
-            cost_display: format_cost(row.total_cost_microdollars),
-            achieved_display: percent(row.achieved, row.conversations),
-            top_category: row.top_category.as_deref().map_or("—", category_label),
-        }
-    }
-}
+use crate::repositories::analysis::conversations::ConversationAnalysisRow;
 
 #[derive(Debug, Serialize)]
 pub(super) struct SkillChipView {
     pub name: String,
+    pub href: String,
     // Why: a skill the harness hook reported is evidence; one the judge
     // inferred from the transcript alone is a reading.
     pub hooked: bool,
@@ -164,6 +47,7 @@ pub(super) struct ConversationRowView {
     pub outcome: &'static str,
     pub outcome_tone: &'static str,
     pub skills: Vec<SkillChipView>,
+    pub scorecard: ScorecardView,
     pub confidence_display: String,
     pub turns: i64,
     pub tool_calls: i64,
@@ -180,6 +64,7 @@ impl ConversationRowView {
             .skills_hooked
             .iter()
             .map(|s| SkillChipView {
+                href: analysis_skill_url(s),
                 name: s.clone(),
                 hooked: true,
             })
@@ -187,12 +72,37 @@ impl ConversationRowView {
         for s in &row.skills_used {
             if !skills.iter().any(|k| k.name.eq_ignore_ascii_case(s)) {
                 skills.push(SkillChipView {
+                    href: analysis_skill_url(s),
                     name: s.clone(),
                     hooked: false,
                 });
             }
         }
         let user_id = row.user_id.as_ref().map(|u| u.as_str().to_owned());
+        // Why: the judge scores the Claude Code session, keyed by the client
+        // session id; the gateway `sess_…` id has no summary row to evaluate.
+        let client_session = row.client_session_id.as_deref().map(SessionId::new);
+        let scorecard = ScorecardView::new(
+            Scores::from_points(
+                row.intent_score,
+                row.quality_score,
+                row.speed_score,
+                row.cost_score,
+            ),
+            client_session
+                .as_ref()
+                .map(|s| format!("{}#evaluation", session_detail_url(s))),
+            if row.scored_criteria > 0 {
+                format!(
+                    "Judge scores: {} of 4 criteria scored — open the session for the rationale",
+                    row.scored_criteria
+                )
+            } else if client_session.is_some() {
+                "Not judged yet".to_owned()
+            } else {
+                "No hook session behind this conversation, so nothing to judge".to_owned()
+            },
+        );
         Self {
             context_key: row.context_id.as_str().to_owned(),
             href: format!("/admin/contexts/{}", row.context_id.as_str()),
@@ -200,7 +110,8 @@ impl ConversationRowView {
                 .session_id
                 .as_ref()
                 .map(|s| format!("/admin/sessions/{}", s.as_str())),
-            evaluate_url: row.session_id.as_ref().map(session_evaluate_url),
+            evaluate_url: client_session.as_ref().map(session_evaluate_url),
+            scorecard,
             user_href: user_id.as_ref().map(|u| format!("/admin/users/{u}")),
             display_name: row
                 .display_name
@@ -244,6 +155,7 @@ pub(super) struct SortHeaders {
     pub turns: SortHeaderView,
     pub tokens: SortHeaderView,
     pub cost: SortHeaderView,
+    pub quality: SortHeaderView,
 }
 
 #[derive(Debug, Serialize)]
@@ -254,6 +166,7 @@ pub(super) struct PageContext {
     pub filter: ConversationAnalysisFilterView,
     pub categories: Vec<SelectOptionView>,
     pub outcomes: Vec<SelectOptionView>,
+    pub scored_options: Vec<SelectOptionView>,
     pub skills: Vec<SelectOptionView>,
     pub users: Vec<SelectOptionView>,
     pub scope_filter: ScopeFilterView,
@@ -267,4 +180,5 @@ pub(super) struct PageContext {
     pub count_label: String,
     pub pagination: Pagination,
     pub sort_headers: SortHeaders,
+    pub export: crate::export::ExportView,
 }

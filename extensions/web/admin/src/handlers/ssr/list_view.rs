@@ -56,21 +56,26 @@ pub(crate) async fn scope_filter_view(
     base_url: &str,
     hidden: Vec<(String, String)>,
 ) -> ScopeFilterView {
-    if !user_ctx.is_console {
+    if !user_ctx.has_scoped_console() {
         return ScopeFilterView::default();
     }
     let (group_rows, project_rows) = tokio::join!(
         groups::crud::list_groups(pool),
         projects::crud::list_projects(pool)
     );
+    // Why: a scoped caller is offered only the containers their participation
+    // names; the full list would advertise groups they cannot see into.
+    let visible = |ids: &[String], id: &str| user_ctx.is_console || ids.iter().any(|v| v == id);
     let groups = group_rows
         .unwrap_or_default()
         .into_iter()
+        .filter(|g| visible(&user_ctx.participation.group_ids, g.id.as_str()))
         .map(|g| (g.id.as_str().to_owned(), g.name))
         .collect();
     let projects = project_rows
         .unwrap_or_default()
         .into_iter()
+        .filter(|p| visible(&user_ctx.participation.project_ids, p.id.as_str()))
         .map(|p| (p.id.as_str().to_owned(), p.name))
         .collect();
     scope_filter_from_names(
@@ -101,7 +106,7 @@ pub(crate) fn scope_filter_from_names(
 ) -> ScopeFilterView {
     let ScopeNames { groups, projects } = names;
     ScopeFilterView {
-        show: user_ctx.is_console,
+        show: user_ctx.has_scoped_console(),
         base_url: base_url.to_owned(),
         groups: options(
             "All groups",

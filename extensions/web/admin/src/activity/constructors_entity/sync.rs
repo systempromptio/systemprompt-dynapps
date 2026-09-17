@@ -88,6 +88,56 @@ impl NewActivity {
     }
 
     #[must_use]
+    pub fn configuration_exported(user_id: &UserId, planes: usize, rows: usize) -> Self {
+        Self {
+            user_id: user_id.clone(),
+            category: ActivityCategory::UserManagement,
+            action: ActivityAction::Uploaded,
+            entity: Some(plane_ref("archive", "configuration archive")),
+            description: format!(
+                "Exported the configuration archive: {planes} plane(s), {rows} rows"
+            ),
+            // JSON: JSONB column — how much the archive carried
+            metadata: serde_json::json!({ "planes": planes, "rows": rows }),
+        }
+    }
+
+    // Why: an apply from an uploaded archive is filed under the plane like a
+    // disk apply, with the stage id so the trail says which upload it was.
+    #[must_use]
+    pub fn configuration_imported(
+        user_id: &UserId,
+        stage_id: &str,
+        plane: &str,
+        label: &str,
+        mode: SyncMode,
+        outcome: &ApplyOutcome,
+    ) -> Self {
+        Self {
+            user_id: user_id.clone(),
+            category: ActivityCategory::UserManagement,
+            action: ActivityAction::Imported,
+            entity: Some(plane_ref(plane, label)),
+            description: format!(
+                "Imported {label} from an uploaded archive ({}): +{} ~{} -{}",
+                mode.human(),
+                outcome.inserted,
+                outcome.updated,
+                outcome.deleted
+            ),
+            // JSON: JSONB column — the stage, plane, mode and counts
+            metadata: serde_json::json!({
+                "stage_id": stage_id,
+                "plane": plane,
+                "mode": mode.label(),
+                "inserted": outcome.inserted,
+                "updated": outcome.updated,
+                "deleted": outcome.deleted,
+            }),
+        }
+    }
+
+    #[must_use]
     pub fn sources_refreshed(user_id: &UserId, changed: bool, reconciled: bool) -> Self {
         Self {
             user_id: user_id.clone(),

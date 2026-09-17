@@ -13,10 +13,19 @@
 use crate::types::UserContext;
 
 /// What a caller may see before any query filter is applied.
+///
+/// `Scoped` is a non-console caller: the groups and projects their marketplace
+/// participation names, plus themselves. Empty containers still carry the
+/// caller, so a person no marketplace reaches sees their own rows and nothing
+/// else — never the instance.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Visibility {
     All,
-    Groups(Vec<String>),
+    Scoped {
+        groups: Vec<String>,
+        projects: Vec<String>,
+        self_id: String,
+    },
 }
 
 impl Visibility {
@@ -25,7 +34,11 @@ impl Visibility {
         if user_ctx.is_console {
             Self::All
         } else {
-            Self::Groups(user_ctx.group_ids.clone())
+            Self::Scoped {
+                groups: user_ctx.participation.group_ids.clone(),
+                projects: user_ctx.participation.project_ids.clone(),
+                self_id: user_ctx.user_id.as_str().to_owned(),
+            }
         }
     }
 }
@@ -39,23 +52,32 @@ pub struct ScopeRequest {
     pub project: Option<String>,
 }
 
+// Why: a requested container the caller may not see is ignored rather than
+// refused. The query string is not an authorisation surface, so a scoped
+// caller asking for someone else's group or project gets their own view
+// back, never an error that would tell them the container exists.
+fn narrow(visible: Option<&[String]>, asked: Option<&str>) -> Option<String> {
+    match (visible, asked) {
+        (_, None) => None,
+        (None, Some(v)) => Some(v.to_owned()),
+        (Some(own), Some(v)) => own.iter().find(|o| o.as_str() == v).cloned(),
+    }
+}
+
 impl ScopeRequest {
-    // Why: Why: a requested group the caller is not in is ignored rather than
-    // refused. The query string is not an authorisation surface, so a
-    // non-console caller asking for someone else's group gets their own view
-    // back, never an error that would tell them the group exists.
     #[must_use]
     pub fn from_query(user_ctx: &UserContext, group: Option<&str>, project: Option<&str>) -> Self {
         let visibility = Visibility::for_user(user_ctx);
-        let group = match (&visibility, group) {
-            (_, None) => None,
-            (Visibility::All, Some(g)) => Some(g.to_owned()),
-            (Visibility::Groups(own), Some(g)) => own.iter().find(|o| o.as_str() == g).cloned(),
+        let (group, project) = match &visibility {
+            Visibility::All => (narrow(None, group), narrow(None, project)),
+            Visibility::Scoped {
+                groups, projects, ..
+            } => (narrow(Some(groups), group), narrow(Some(projects), project)),
         };
         Self {
             visibility,
             group,
-            project: project.map(ToOwned::to_owned),
+            project,
         }
     }
 
@@ -65,11 +87,39 @@ impl ScopeRequest {
         match (&self.visibility, self.group.as_ref()) {
             (Visibility::All, None) => None,
             (Visibility::All, Some(group)) => Some(vec![group.clone()]),
-            (Visibility::Groups(own), None) => Some(own.clone()),
-            (Visibility::Groups(own), Some(group)) => {
-                Some(own.iter().filter(|o| *o == group).cloned().collect())
+            (Visibility::Scoped { groups, .. }, None) => Some(groups.clone()),
+            (Visibility::Scoped { groups, .. }, Some(group)) => {
+                Some(groups.iter().filter(|o| *o == group).cloned().collect())
             },
         }
+    }
+
+    // Why: The project ids a query must narrow to, or `None` for every project.
+    #[must_use]
+    pub fn project_filter(&self) -> Option<Vec<String>> {
+        match (&self.visibility, self.project.as_ref()) {
+            (Visibility::All, None) => None,
+            (Visibility::All, Some(project)) => Some(vec![project.clone()]),
+            (Visibility::Scoped { projects, .. }, None) => Some(projects.clone()),
+            (Visibility::Scoped { projects, .. }, Some(project)) => {
+                Some(projects.iter().filter(|o| *o == project).cloned().collect())
+            },
+        }
+    }
+
+    // Why: the caller's own id when their view is scoped, so their own rows
+    // are always inside it; `None` for a console caller who sees everyone.
+    #[must_use]
+    pub fn self_id(&self) -> Option<&str> {
+        match &self.visibility {
+            Visibility::All => None,
+            Visibility::Scoped { self_id, .. } => Some(self_id.as_str()),
+        }
+    }
+
+    #[must_use]
+    pub const fn is_scoped(&self) -> bool {
+        matches!(self.visibility, Visibility::Scoped { .. })
     }
 }
 
@@ -92,4 +142,28 @@ impl SubjectScope {
             Self::Users(ids) => Some(ids.as_slice()),
         }
     }
+}
+
+// Why: whether one owner's rows are inside the caller's view — the question a
+// detail page asks before rendering a session, context, trace or request the
+// header lookup landed on. A console caller sees every owner; a scoped caller
+// resolves their unfiltered view once and checks membership. An unknown owner
+// is outside every scoped view.
+pub async fn may_view(
+    pool: &sqlx::PgPool,
+    user_ctx: &UserContext,
+    owner: Option<&systemprompt::identifiers::UserId>,
+) -> Result<bool, sqlx::Error> {
+    if user_ctx.is_console {
+        return Ok(true);
+    }
+    let Some(owner) = owner else {
+        return Ok(false);
+    };
+    let request = ScopeRequest::from_query(user_ctx, None, None);
+    let scope = super::membership::get_subject_scope(pool, &request).await?;
+    Ok(match scope {
+        SubjectScope::All => true,
+        SubjectScope::Users(ids) => ids.iter().any(|id| id == owner.as_str()),
+    })
 }

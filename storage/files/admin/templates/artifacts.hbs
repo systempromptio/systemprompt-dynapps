@@ -10,6 +10,7 @@
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/requests">Requests</a>
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/sessions">Sessions</a>
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/analysis">Analysis</a>
+        {{> components/export-button export}}
       {{/inline}}
     {{/components/page-header}}
 
@@ -97,7 +98,7 @@
       {{/components/table}}
     {{else}}
       {{> components/empty-state
-          title="No artifacts in this window"
+          heading="No artifacts in this window"
           message="No tool result was ingested under the selected scope and time range. Widen the range, clear the filters, or show all results to include builtin tool output."}}
     {{/if}}
     {{/inline}}

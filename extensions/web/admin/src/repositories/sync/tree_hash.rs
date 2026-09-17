@@ -10,8 +10,11 @@ use std::path::Path;
 use std::sync::{Mutex, OnceLock};
 use std::time::SystemTime;
 
+use sha2::{Digest, Sha256};
 use systemprompt::loader::bundle::pack::collect_files;
-use systemprompt::models::services::bundle::{BUNDLE_ALLOWED_DIRS, ServicesBundleManifest};
+use systemprompt::models::services::bundle::{
+    BUNDLE_ALLOWED_DIRS, FileEntry, ServicesBundleManifest,
+};
 
 // Why: hashing the tree reads every file, so the result is cached per
 // process and recomputed only when the tree's newest mtime or file count
@@ -35,6 +38,34 @@ pub fn base_tree_hash(root: &Path) -> Option<String> {
         *guard = Some((fingerprint, hash.clone()));
     }
     Some(hash)
+}
+
+/// One kind's hash: the same digest over just its file or directory.
+#[derive(Debug, Clone)]
+pub struct SubtreeHash {
+    pub hash: String,
+    pub files: usize,
+}
+
+// Why: the same walk and digest as the whole tree, narrowed to one path, so
+// a kind's hash on the configuration page is comparable with the hash a
+// bundle carrying only that kind would declare.
+#[must_use]
+pub fn subtree_hash(root: &Path, rel: &str, is_dir: bool) -> Option<SubtreeHash> {
+    let files = if is_dir {
+        collect_files(root, &[rel]).ok()?
+    } else {
+        let content = std::fs::read(root.join(rel)).ok()?;
+        vec![FileEntry {
+            path: rel.to_owned(),
+            sha256: hex::encode(Sha256::digest(&content)),
+            size: content.len() as u64,
+        }]
+    };
+    (!files.is_empty()).then(|| SubtreeHash {
+        hash: ServicesBundleManifest::compute_content_hash(&files),
+        files: files.len(),
+    })
 }
 
 pub(super) fn tree_fingerprint(root: &Path, dirs: &[&str]) -> Option<Fingerprint> {

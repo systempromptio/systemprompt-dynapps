@@ -9,7 +9,8 @@
 use serde::Serialize;
 
 use super::super::list_view::Pagination;
-use super::{BreadcrumbView, MemberSetChipView, SortHeaderView};
+use super::{BreadcrumbView, MemberSetChipView, SortHeaderView, TabLinkView};
+use crate::handlers::ssr::sync_plane::PlaneCardView;
 
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct GroupRowView {
@@ -107,6 +108,9 @@ pub(crate) struct GroupsPageData {
     pub page: &'static str,
     pub title: &'static str,
     pub breadcrumbs: Vec<BreadcrumbView>,
+    pub tabs: Vec<TabLinkView>,
+    // Why: set on the Sync tab — `groups.yaml` against this database.
+    pub sync: Option<PlaneCardView>,
     pub kpis: Vec<GroupKpiView>,
     pub sort_headers: GroupSortHeaders,
     pub ranges: Vec<FilterLinkView>,

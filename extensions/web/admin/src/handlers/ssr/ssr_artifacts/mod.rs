@@ -29,13 +29,13 @@ use systemprompt::identifiers::{SessionId, UserId};
 use crate::error::{AdminError, AdminHtmlResult};
 use crate::handlers::ssr::list_view::PageWindow;
 use crate::handlers::ssr::page::Page;
-use crate::handlers::ssr::ssr_helpers::Viewer;
 use crate::handlers::ssr::types::BreadcrumbView;
 use crate::repositories::analytics::artifacts::{
     ArtifactFilter, ArtifactStats, get_artifact_stats, list_artifacts,
 };
 use crate::repositories::governance::filter_options::{FilterOptions, get_filter_options};
 use crate::repositories::scope::ScopeRequest;
+use crate::types::UserContext;
 use crate::util::time_range::{TimeRange, TimeRangePreset, TimeRangeQuery, parse_time_range};
 
 pub(crate) use detail::artifact_detail_page;
@@ -65,7 +65,6 @@ pub(crate) async fn artifacts_page(
     shell: Page,
     State(pool): State<Arc<PgPool>>,
     Query(query): Query<ArtifactListQuery>,
-    view: crate::handlers::ssr::export::ViewMode,
 ) -> AdminHtmlResult<Response> {
     if !shell.user.is_console {
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
@@ -109,11 +108,12 @@ pub(crate) async fn artifacts_page(
             scope_filter,
         },
     );
-    Ok(view.respond(
+    Ok(crate::handlers::ssr::render_typed_page(
         &shell.engine,
         "artifacts",
         &ctx,
-        Viewer::new(&shell.user, &shell.marketplace),
+        &shell.user,
+        &shell.marketplace,
     ))
 }
 
@@ -230,7 +230,44 @@ fn build_context(
         all_toggle_url: view::all_toggle_url(query, !filter.structured_only),
         errors_only: filter.errors_only,
         errors_toggle_url: view::errors_toggle_url(query, filter.errors_only),
+        export: crate::export::ExportView::single(
+            "artifacts",
+            &crate::export::view::query_string(&[
+                ("preset", Some(preset)),
+                ("from", Some(&range.from.to_rfc3339())),
+                ("to", Some(&range.to.to_rfc3339())),
+                ("user_id", query.user_id.as_ref().map(UserId::as_str)),
+                ("session", query.session.as_ref().map(SessionId::as_str)),
+                ("tool", query.tool.as_deref()),
+                ("source", query.source.as_deref()),
+                ("skill", query.skill.as_deref()),
+                ("errors", query.errors.as_deref()),
+                ("all", query.all.as_deref()),
+                ("group", query.group.as_deref()),
+                ("project", query.project.as_deref()),
+            ]),
+        ),
     }
+}
+
+// Why: the export reads the rows the list shows — same scope and filter —
+// through the page's own query type.
+pub(crate) async fn export_rows(
+    pool: &PgPool,
+    user_ctx: &UserContext,
+    query: ArtifactListQuery,
+    range: TimeRange,
+    limit: i64,
+) -> crate::error::AdminResult<(
+    Vec<crate::repositories::analytics::artifacts::ArtifactRow>,
+    i64,
+)> {
+    let request =
+        ScopeRequest::from_query(user_ctx, query.group.as_deref(), query.project.as_deref());
+    let subjects =
+        crate::repositories::scope::membership::get_subject_scope(pool, &request).await?;
+    let filter = build_filter(&query, range, subjects.as_sql());
+    Ok(list_artifacts(pool, &filter, limit, 0).await?)
 }
 
 fn non_empty(value: Option<&str>) -> Option<String> {

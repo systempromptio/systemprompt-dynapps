@@ -7,7 +7,6 @@
 mod context;
 mod data;
 
-use super::ssr_helpers::Viewer;
 use crate::error::AdminError;
 use std::sync::Arc;
 
@@ -23,6 +22,7 @@ use crate::repositories::analytics::context_detail::{
     find_context_header, get_context_kpis, list_context_requests, list_messages_for_requests,
 };
 use crate::repositories::analytics::context_tool_calls::list_tool_calls_for_requests;
+use crate::repositories::scope::may_view;
 
 use crate::handlers::ssr::page::Page;
 use data::{DetailInputs, build_detail_data, default_kpis, resolve_tab};
@@ -37,12 +37,7 @@ pub(crate) async fn context_detail_page(
     State(pool): State<Arc<PgPool>>,
     Path(context_id): Path<String>,
     Query(query): Query<ContextTabQuery>,
-    view: super::export::ViewMode,
 ) -> AdminHtmlResult<Response> {
-    if !shell.user.is_console {
-        return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
-    }
-
     // Why: `ContextId::new` panics on anything that is not a UUID, and this
     // segment comes straight off the URL.
     let Ok(context_id) = ContextId::try_new(context_id.trim()) else {
@@ -52,7 +47,14 @@ pub(crate) async fn context_detail_page(
         .into());
     };
 
-    let Some(header) = find_context_header(&pool, &context_id).await? else {
+    let header = find_context_header(&pool, &context_id).await?;
+    // Why: 404, not 403, for an owner outside the caller's view — the same
+    // answer as a missing id, so the URL is no oracle for other people's ids.
+    let visible = match &header {
+        Some(h) => may_view(&pool, &shell.user, h.user_id.as_ref()).await?,
+        None => false,
+    };
+    let Some(header) = header.filter(|_| visible) else {
         return Err(AdminError::NotFound(
             "No conversation, AI request, or message rows match that context id.".to_owned(),
         )
@@ -122,10 +124,11 @@ pub(crate) async fn context_detail_page(
         },
     );
 
-    Ok(view.respond(
+    Ok(crate::handlers::ssr::render_typed_page(
         &shell.engine,
         "context-detail",
         &data,
-        Viewer::new(&shell.user, &shell.marketplace),
+        &shell.user,
+        &shell.marketplace,
     ))
 }

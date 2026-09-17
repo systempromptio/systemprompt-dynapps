@@ -11,12 +11,12 @@
 //! calls alone, which are hidden by default.
 
 mod context;
+pub(crate) mod export;
 mod listing;
 mod load;
 mod rows;
 mod view;
 
-use super::ssr_helpers::Viewer;
 use std::sync::Arc;
 
 use axum::extract::{Query, State};
@@ -89,7 +89,7 @@ pub(super) struct ContextsPageInputs {
     pub(super) page: i64,
 }
 
-fn parse_inputs(params: &ContextsListQuery, scope: &SubjectScope) -> ContextsPageInputs {
+pub(super) fn parse_inputs(params: &ContextsListQuery, scope: &SubjectScope) -> ContextsPageInputs {
     let trim_opt = |s: Option<String>| -> Option<String> {
         s.map(|v| v.trim().to_owned()).filter(|v| !v.is_empty())
     };
@@ -200,14 +200,31 @@ async fn build_page_context(build: PageBuild<'_>) -> ContextsPageContext {
         count_label: format!("{count} {noun}"),
         show_side: inputs.show_side,
         side_toggle_url: view::side_toggle_url(params, inputs.show_side),
+        export: crate::export::ExportView::new(
+            &["contexts", "people"],
+            &crate::export::view::query_string(&[
+                (
+                    "preset",
+                    Some(export::export_preset(inputs.since_label.as_deref())),
+                ),
+                ("user_id", inputs.user_id.as_ref().map(UserId::as_str)),
+                ("model", inputs.model.as_deref()),
+                ("q", inputs.q.as_deref()),
+                ("side", params.side.as_deref()),
+                ("sort", params.sort.as_deref()),
+                ("dir", params.dir.as_deref()),
+                ("group", params.group.as_deref()),
+                ("project", params.project.as_deref()),
+            ]),
+        ),
     }
 }
+
 
 pub(crate) async fn skills_contexts_page(
     shell: Page,
     State(pool): State<Arc<PgPool>>,
     Query(params): Query<ContextsListQuery>,
-    view: super::export::ViewMode,
 ) -> AdminHtmlResult<Response> {
     if !shell.user.is_console {
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
@@ -229,11 +246,12 @@ pub(crate) async fn skills_contexts_page(
         params: &params,
     })
     .await;
-    Ok(view.respond(
+    Ok(crate::handlers::ssr::render_typed_page(
         &shell.engine,
         "skills-contexts",
         &payload,
-        Viewer::new(&shell.user, &shell.marketplace),
+        &shell.user,
+        &shell.marketplace,
     ))
 }
 

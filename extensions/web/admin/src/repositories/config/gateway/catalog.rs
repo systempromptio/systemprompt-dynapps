@@ -56,6 +56,8 @@ pub fn dispatchable_routes(
                 pricing: None,
                 when: None,
                 requires: None,
+                fallback_provider: route.fallback_provider.map(|p| p.as_str().to_owned()),
+                fallback_upstream_model: route.fallback_upstream_model,
             }
         })
         .collect())

@@ -141,11 +141,18 @@ fn people_routes() -> Router<Arc<PgPool>> {
 fn ai_activity_routes() -> Router<Arc<PgPool>> {
     Router::new()
         .route("/analytics", get(handlers::ssr::analytics_dashboard_page))
-        // Why: the Cost tab's export. Same handler contract as the tab, so the
-        // file always matches the view the operator was looking at.
-        .route("/analytics/cost.csv", get(handlers::ssr::cost_csv))
+        // Why: one export surface for every table the console renders — the
+        // file in any format and column selection, and the preview the
+        // dialog counts from. Which tables exist is `export::registry`.
+        .route(
+            "/export/{dataset}",
+            get(crate::export::handler::export_file),
+        )
+        .route(
+            "/export/{dataset}/preview",
+            get(crate::export::handler::export_preview),
+        )
         .route("/requests", get(handlers::ssr::analytics_requests_page))
-        .route("/requests.csv", get(handlers::ssr::analytics_requests_csv))
         .route(
             "/requests/{request_id}",
             get(handlers::ssr::governance_audit_detail_page),
@@ -226,20 +233,31 @@ fn platform_routes() -> Router<Arc<PgPool>> {
             "/gateway/policies/delete",
             post(handlers::ssr::delete_gateway_policy),
         )
-        // Why: Code ↔ Instance is instance-wide — every source and every
-        // plane on one page — so it sits with the platform, not under the
-        // one plane it happens to have today.
+        // Why: the Platform group's home — every kind of configuration the
+        // instance loads, where it comes from and whether the database
+        // agrees — and Code sync, the sources and the archive that move
+        // declarations between the repository and this instance.
+        .route("/configuration", get(handlers::ssr::configuration_page))
         .route("/sync", get(handlers::ssr::sync_page))
-        // Why: the month-end pack's *pages* are gone — the cost tab of the
-        // analytics dashboard replaced them — but the CSV exports are a data
-        // endpoint the finance hand-off still fetches, so they stay mounted.
         .route(
-            "/reports/customer.csv",
-            get(handlers::ssr::report_customer_csv),
+            "/sync/import/{stage_id}",
+            get(handlers::ssr::import_preview_page),
+        )
+        // Why: the exporter is core's `otlp_export` job and its config is a
+        // profile block; this page shows both and triggers the job out of
+        // turn. It lives beside Sync because that is where the declared
+        // config is read from.
+        .route(
+            "/system/observability",
+            get(handlers::ssr::observability_page),
         )
         .route(
-            "/reports/internal.csv",
-            get(handlers::ssr::report_internal_csv),
+            "/system/observability/export",
+            post(handlers::ssr::observability_export_now),
+        )
+        .route(
+            "/system/observability/test",
+            post(handlers::ssr::observability_test_connection),
         )
 }
 

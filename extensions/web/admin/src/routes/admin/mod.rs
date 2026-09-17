@@ -14,6 +14,7 @@
 
 use std::sync::Arc;
 
+use axum::extract::DefaultBodyLimit;
 use axum::routing::{delete, get, patch, post, put};
 use axum::{Router, middleware as axum_middleware};
 use sqlx::PgPool;
@@ -22,6 +23,7 @@ use super::super::types::{ROLES_CONSOLE, ROLES_MANAGE, ROLES_PLATFORM};
 use super::super::{handlers, middleware};
 use super::admin_groups;
 use super::managed_state::StateError;
+use crate::repositories::sync::archive::MAX_UPLOAD_BYTES;
 use systemprompt::database::DbPool;
 
 mod read;
@@ -103,6 +105,21 @@ fn build_sync_write_routes() -> Router<Arc<PgPool>> {
         .route(
             "/sync/sources/refresh",
             post(handlers::sync::refresh_sources_handler),
+        )
+        // Why: the upload is the raw zip as the body; the limit is the
+        // archive cap, not the router's default.
+        .route(
+            "/sync/import",
+            post(handlers::sync::stage_import_handler)
+                .layer(DefaultBodyLimit::max(MAX_UPLOAD_BYTES)),
+        )
+        .route(
+            "/sync/import/{stage_id}/apply",
+            post(handlers::sync::apply_import_handler),
+        )
+        .route(
+            "/sync/import/{stage_id}",
+            delete(handlers::sync::discard_import_handler),
         )
 }
 

@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE evaluation_reports r\n              SET cost_microdollars = a.cost_microdollars\n             FROM ai_requests a\n            WHERE a.id = r.ai_request_id AND r.cost_microdollars IS NULL\n              AND a.cost_microdollars IS NOT NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "ecbf3783e4e9d708111f56f1f82617ffe89e58a48475e9be75b63aad008acb11"
+}

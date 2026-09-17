@@ -9,12 +9,11 @@
 //! Most of this is not Postgres at all. The gateway routes live in the
 //! profile YAML, agent definitions in `services/agents/`, and access-control
 //! rules are declared in `services/access-control/rules.yaml` — read here,
-//! seeded once by [`acl_bootstrap`], and otherwise only compared against the
-//! database. The exception is [`acl_detect`], which is DB-backed but belongs
-//! to this domain: it re-runs the configured ACL over traffic that already
-//! went through.
+//! seeded once at boot by `repositories::sync::boot`, and otherwise only
+//! compared against the database. The exception is [`acl_detect`], which is
+//! DB-backed but belongs to this domain: it re-runs the configured ACL over
+//! traffic that already went through.
 
-pub mod acl_bootstrap;
 pub mod acl_detect;
 pub mod agents;
 pub mod evaluation;

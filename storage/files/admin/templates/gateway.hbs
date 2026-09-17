@@ -10,6 +10,7 @@
             <button type="button" class="sp-btn sp-btn--sm sp-btn--primary" data-action="route-new">New route</button>
             <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/access-control?entity_kind=gateway_route">Route access</a>
             <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/gateway/policies">Policies</a>
+            <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{sync_url}}">Sync</a>
         {{/inline}}
     {{/components/page-header}}
 
@@ -19,6 +20,7 @@
     {{#if catalog_error}}
     {{> components/notice tone="warn" title="The resolved route set is unavailable" message=catalog_error}}
     {{/if}}
+    {{> components/notice tone="info" title="Saved routes are dispatched at the next restart" message=runtime_note}}
 
     <section class="sp-kpi-grid" aria-label="Gateway totals">
         {{#each kpis}}
@@ -71,7 +73,7 @@
         </tbody>
     {{/components/table}}
     {{else}}
-    {{> components/empty-state title="No routes" message="The gateway declares no routes, so every model falls through to the catch-all."}}
+    {{> components/empty-state heading="No routes" message="The gateway declares no routes, so every model falls through to the catch-all."}}
     {{/if}}
     </section>
     {{else}}

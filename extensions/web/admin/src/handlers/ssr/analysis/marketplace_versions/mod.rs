@@ -24,12 +24,17 @@ use sqlx::PgPool;
 use systemprompt::identifiers::MarketplaceId;
 
 use crate::error::{AdminError, AdminHtmlResult, AdminResult};
+use crate::handlers::ssr::analysis_urls::ANALYSIS_VERSIONS_URL;
 use crate::handlers::ssr::page::Page;
 use crate::handlers::ssr::render_typed_page;
+use crate::handlers::ssr::types::BreadcrumbView;
 use crate::repositories::analysis::marketplace_versions::{
     list_marketplace_rollups, list_marketplace_version_metrics,
 };
 use crate::repositories::analysis::retained::RetainedWindow;
+use crate::repositories::evaluation::version_scores::{
+    list_marketplace_score_rollups, list_version_scores,
+};
 use crate::routes::managed_state::ManagedState;
 use crate::types::UserContext;
 
@@ -83,13 +88,23 @@ fn window(days: Option<u32>) -> AdminResult<(u32, RetainedWindow)> {
     ))
 }
 
-fn require_admin(user: &UserContext) -> AdminResult<()> {
-    if !user.is_admin {
+// Why: an admin sees every marketplace's history; a participant sees the
+// marketplaces their participation names and nothing else. A caller with
+// neither has no version history to look at.
+pub(crate) fn require_versions_reader(user: &UserContext) -> AdminResult<()> {
+    if !user.has_scoped_console() {
         return Err(AdminError::Forbidden(
-            "Administrator access required for marketplace version history".to_owned(),
+            "Marketplace participation required for version history".to_owned(),
         ));
     }
     Ok(())
+}
+
+// Why: a participant asking for a marketplace outside their participation
+// gets the same answer as for one that was never recorded, so the URL says
+// nothing about which marketplaces exist.
+pub(crate) fn may_read_marketplace(user: &UserContext, marketplace_id: &str) -> bool {
+    user.is_console || user.participation.includes_marketplace(marketplace_id)
 }
 
 fn clean_hash(value: Option<String>) -> AdminResult<Option<String>> {
@@ -110,6 +125,7 @@ struct LandingPage {
     current: usize,
     retired: usize,
     versions: i64,
+    export: crate::export::ExportView,
 }
 
 pub(crate) async fn landing_page(
@@ -118,9 +134,14 @@ pub(crate) async fn landing_page(
     State(pool): State<Arc<PgPool>>,
     Query(query): Query<VersionsQuery>,
 ) -> AdminHtmlResult<Response> {
-    require_admin(&shell.user)?;
+    require_versions_reader(&shell.user)?;
     let (days, window) = window(query.days)?;
-    let rows = list_marketplace_rollups(&pool, &managed.owner, window).await?;
+    let rows: Vec<_> = list_marketplace_rollups(&pool, &managed.owner, window)
+        .await?
+        .into_iter()
+        .filter(|r| may_read_marketplace(&shell.user, r.marketplace_id.as_str()))
+        .collect();
+    let scores = list_marketplace_score_rollups(&pool).await?;
     let current = rows.iter().filter(|r| r.content_hash.is_some()).count();
     let data = LandingPage {
         page: "analysis-versions",
@@ -129,7 +150,16 @@ pub(crate) async fn landing_page(
         retired: rows.len() - current,
         current,
         versions: rows.iter().map(|r| r.versions).sum(),
-        marketplaces: rows.into_iter().map(landing::card).collect(),
+        marketplaces: rows
+            .into_iter()
+            .map(|row| {
+                let rollup = scores
+                    .iter()
+                    .find(|s| s.marketplace_id == row.marketplace_id);
+                landing::card(row, rollup)
+            })
+            .collect(),
+        export: crate::export::ExportView::single("analysis-marketplaces", &format!("days={days}")),
     };
     Ok(render_typed_page(
         &shell.engine,
@@ -166,6 +196,7 @@ fn tab_links(base: &str, active: Tab) -> Vec<TabLink> {
 struct DetailPage {
     page: &'static str,
     title: String,
+    breadcrumbs: Vec<BreadcrumbView>,
     marketplace_id: MarketplaceId,
     name: String,
     days: u32,
@@ -178,6 +209,7 @@ struct DetailPage {
     compare: Option<compare::CompareView>,
     distribution: Option<distribution::DistributionPage>,
     can_manage: bool,
+    export: crate::export::ExportView,
 }
 
 pub(crate) async fn detail_page(
@@ -187,22 +219,26 @@ pub(crate) async fn detail_page(
     Path(marketplace_id): Path<String>,
     Query(query): Query<VersionsQuery>,
 ) -> AdminHtmlResult<Response> {
-    require_admin(&shell.user)?;
+    require_versions_reader(&shell.user)?;
     if marketplace_id.len() > 128 || marketplace_id.chars().any(char::is_control) {
         return Err(AdminError::BadRequest("Invalid marketplace id".to_owned()).into());
     }
     let marketplace_id = MarketplaceId::new(marketplace_id);
     let (days, window) = window(query.days)?;
     let tab = Tab::parse(query.tab.as_deref())?;
-    let rows =
-        list_marketplace_version_metrics(&pool, &managed.owner, window, &marketplace_id).await?;
+    let rows = if may_read_marketplace(&shell.user, marketplace_id.as_str()) {
+        list_marketplace_version_metrics(&pool, &managed.owner, window, &marketplace_id).await?
+    } else {
+        Vec::new()
+    };
     if rows.is_empty() {
         return Err(AdminError::NotFound(format!(
             "No version of marketplace '{marketplace_id}' has been recorded"
         ))
         .into());
     }
-    let history = history::views(&rows);
+    let scores = list_version_scores(&pool, &marketplace_id).await?;
+    let history = history::views(&rows, &scores);
     let name = history
         .iter()
         .find_map(|v| v.name.clone())
@@ -214,6 +250,7 @@ pub(crate) async fn detail_page(
                 &managed.owner,
                 window,
                 &rows,
+                &scores,
                 (clean_hash(query.a)?, clean_hash(query.b)?),
             )
             .await?,
@@ -228,9 +265,21 @@ pub(crate) async fn detail_page(
         "/admin/analysis/versions/{}?days={days}",
         urlencoding::encode(marketplace_id.as_str())
     );
+    let export = crate::export::ExportView::single(
+        "analysis-versions",
+        &format!(
+            "days={days}&marketplace={}",
+            urlencoding::encode(marketplace_id.as_str())
+        ),
+    );
     let data = DetailPage {
-        page: "analysis-versions",
+        export,
+        page: "analysis-marketplace-versions",
         title: format!("{name} — versions"),
+        breadcrumbs: vec![
+            BreadcrumbView::link("Versions", ANALYSIS_VERSIONS_URL),
+            BreadcrumbView::current(name.clone()),
+        ],
         tabs: tab_links(&base_href, tab),
         base_href,
         marketplace_id,

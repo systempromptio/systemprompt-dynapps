@@ -1,0 +1,88 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT c.session_id AS \"session_id!: SessionId\", c.intent, c.quality, c.speed, c.cost,\n                  c.scored_criteria AS \"scored_criteria!\"\n             FROM evaluation_session_scorecard c\n            WHERE c.session_id = ANY($1)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "session_id!: SessionId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "evaluation_session_scorecard",
+            "name": "session_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "intent",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "evaluation_session_scorecard",
+            "name": "intent"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "quality",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "evaluation_session_scorecard",
+            "name": "quality"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "speed",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "evaluation_session_scorecard",
+            "name": "speed"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "cost",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "evaluation_session_scorecard",
+            "name": "cost"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "scored_criteria!",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "evaluation_session_scorecard",
+            "name": "scored_criteria"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "TextArray"
+      ]
+    },
+    "nullable": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "d3ab043c7fd1b4d356720c018691318578b475457d0c309f2e9fcb40a493f059"
+}

@@ -3,8 +3,11 @@
 #
 # Catches at commit time what otherwise only fails (or silently stops
 # matching) at boot: access-control rules pointing at ids that no resource
-# defines, and MCP port declarations drifting between services/mcp/ and the
-# extension manifest.
+# defines, plugins and marketplaces including members no file declares (the
+# composition rule ServicesConfig::validate() enforces — a dangling include
+# stops the tree composing, which once surfaced on the access-control page as
+# "rules.yaml names a marketplace that does not exist"), and MCP port
+# declarations drifting between services/mcp/ and the extension manifest.
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
@@ -49,6 +52,47 @@ for p in root.glob("services/plugins/*/config.yaml"):
     single = (doc.get("plugin") or {}).get("id")
     if single:
         plugins.add(single)
+
+# Cross-file includes. A plugin lists skills, agents and mcp servers by id; a
+# marketplace lists plugins by id. Composition refuses an id nothing declares.
+def includes(block):
+    block = block or {}
+    if block.get("source", "explicit") != "explicit":
+        return []
+    return block.get("include") or []
+
+
+for p in root.glob("services/plugins/*/config.yaml"):
+    doc = load(p)
+    blocks = list((doc.get("plugins") or {}).values())
+    if doc.get("plugin"):
+        blocks.append(doc["plugin"])
+    for block in blocks:
+        pid = block.get("id", p.parent.name)
+        for key, pool in (("skills", skills), ("agents", agents), ("mcp_servers", mcp_servers)):
+            for member in includes(block.get(key)):
+                if member not in pool:
+                    errors.append(
+                        f"{p}: plugin '{pid}': {key}.include references unknown "
+                        f"{key[:-1]} '{member}'"
+                    )
+
+for p in root.glob("services/marketplaces/*/config.yaml"):
+    mp = load(p).get("marketplace") or {}
+    if not mp.get("id"):
+        errors.append(f"{p}: marketplace declares no id")
+    for member in includes(mp.get("plugins")):
+        if member not in plugins:
+            errors.append(
+                f"{p}: marketplace '{mp.get('id')}': plugins.include references "
+                f"unknown plugin '{member}'"
+            )
+    for member in includes(mp.get("mcp_servers")):
+        if member not in mcp_servers:
+            errors.append(
+                f"{p}: marketplace '{mp.get('id')}': mcp_servers.include references "
+                f"unknown mcp_server '{member}'"
+            )
 
 known = {
     "skill": skills,

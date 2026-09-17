@@ -1,89 +1,19 @@
-// The Code ↔ Instance page's actions. Everything is server-rendered; this
-// file confirms a write in words that name what will move, posts it, and
-// reloads so the tables are re-derived by the server rather than patched here.
+// The Code sync page and the import preview. Sources are imported in place
+// through core's refresh; an archive is staged through the upload endpoint
+// and previewed on its own page, where the sync-plane component does the
+// applying. Nothing here patches the DOM: every outcome is a reload or a
+// navigation so the server re-derives the tables.
 
-import { apiFetch, rawResponse, API_BASE, errorMessage } from '../services/api.js';
+import { apiFetch, rawFetch } from '../services/api.js';
 import { showToast } from '../services/toast.js';
 import { on, initDelegation } from '../services/events.js';
+import { initSyncPlane } from '../components/sp-sync-plane.js';
 
 const dialog = (name) => document.querySelector(`dialog[data-dialog="${name}"]`);
 const field = (name) => document.querySelector(`[data-sync="${name}"]`);
 
 const closeDialogs = () => {
   for (const el of document.querySelectorAll('dialog[data-dialog]')) el.close();
-};
-
-let pending = null;
-
-const CONFIRM = {
-  insert_only: (button) => ({
-    title: 'Insert only',
-    body: `Add ${button.dataset.count} row(s) the file declares and this database lacks. Nothing existing is changed or removed.`,
-  }),
-  overwrite: (button) => ({
-    title: 'Overwrite from code',
-    body:
-      `Make the database equal the file for every entity the file names. ` +
-      `${button.dataset.count} row(s) only this database holds will be deleted — ` +
-      `${button.dataset.dashboard} of them were written from the console. ` +
-      `Per-person overrides and entities the file does not mention are untouched.`,
-  }),
-};
-
-const askSync = (button) => {
-  const words = CONFIRM[button.dataset.mode]?.(button);
-  if (!words) return;
-  pending = { plane: button.dataset.plane, mode: button.dataset.mode };
-  field('confirm-title').textContent = words.title;
-  field('confirm-body').textContent = words.body;
-  dialog('confirm')?.showModal();
-};
-
-const runSync = async () => {
-  if (!pending) return;
-  const { plane, mode } = pending;
-  pending = null;
-  closeDialogs();
-  try {
-    const result = await apiFetch(`/sync/planes/${plane}/apply`, {
-      method: 'POST',
-      body: JSON.stringify({ mode }),
-    });
-    const o = result?.outcome ?? {};
-    showToast(`Synced: +${o.inserted ?? 0} ~${o.updated ?? 0} −${o.deleted ?? 0}`, 'success');
-    window.location.reload();
-  } catch (err) {
-    showToast(err?.message ?? 'Sync failed', 'error');
-  }
-};
-
-// Why: the export is the plane's file (YAML), not JSON, so it is read as
-// text through the raw response rather than the JSON helper.
-const showExport = async (button) => {
-  const url = `${API_BASE}/sync/planes/${button.dataset.plane}/export`;
-  const link = field('export-download');
-  link.href = url;
-  link.setAttribute('download', button.dataset.file?.split('/').pop() ?? 'export.yaml');
-  field('export-title').textContent = `This database as ${button.dataset.file}`;
-  dialog('export')?.showModal();
-  const target = field('export-content');
-  target.textContent = 'Loading…';
-  try {
-    const resp = await rawResponse(url);
-    if (!resp.ok) throw new Error(await errorMessage(resp));
-    target.textContent = await resp.text();
-  } catch (err) {
-    target.textContent = err?.message ?? 'Failed to render the export.';
-  }
-};
-
-const copyExport = async (button) => {
-  try {
-    await navigator.clipboard.writeText(field('export-content').textContent);
-    button.textContent = 'Copied';
-  } catch {
-    showToast('Copy failed — select the text manually', 'error');
-  }
 };
 
 const askRefresh = () => {
@@ -120,21 +50,56 @@ const runRefresh = async (button) => {
   }
 };
 
+// Why: the archive goes up as the raw body — no multipart — and the reply
+// carries the preview URL; the page navigates there rather than rendering
+// anything itself.
+const stageImport = async (button, event) => {
+  event.preventDefault();
+  const file = field('import-file')?.files?.[0];
+  if (!file) {
+    showToast('Choose a .zip archive first', 'error');
+    return;
+  }
+  button.disabled = true;
+  try {
+    const result = await rawFetch(button.dataset.importUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/zip' },
+      body: file,
+    });
+    showToast(`Staged ${result?.planes?.length ?? 0} plane(s) for preview`, 'success');
+    window.location.assign(result.preview_url);
+  } catch (err) {
+    showToast(err?.message ?? 'Upload failed', 'error');
+  } finally {
+    button.disabled = false;
+  }
+};
+
+const discardImport = async (button) => {
+  try {
+    await rawFetch(button.dataset.discardUrl, { method: 'DELETE' });
+    showToast('Staged import discarded', 'success');
+    window.location.assign('/admin/sync?tab=archive');
+  } catch (err) {
+    showToast(err?.message ?? 'Discard failed', 'error');
+  }
+};
+
 const ACTIONS = {
-  sync: askSync,
-  'confirm-sync': runSync,
-  export: showExport,
-  'copy-export': copyExport,
   'refresh-sources': askRefresh,
   'confirm-refresh': runRefresh,
+  'stage-import': stageImport,
+  'discard-import': discardImport,
   'close-dialog': closeDialogs,
 };
 
 const init = () => {
   initDelegation();
+  initSyncPlane();
   on('click', '[data-action]', (event, target) => {
     const handler = ACTIONS[target.dataset.action];
-    if (handler) handler(target);
+    if (handler) handler(target, event);
   });
 };
 

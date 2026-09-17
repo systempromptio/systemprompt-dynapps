@@ -7,6 +7,7 @@ use systemprompt::identifiers::MarketplaceId;
 
 use crate::handlers::ssr::format::format_duration_ms;
 use crate::repositories::analysis::marketplace_versions::SkillLiveRow;
+use crate::repositories::evaluation::skill_scores::SkillScoreFigures;
 use crate::repositories::sync::marketplace_hash::skill_key;
 use crate::repositories::sync::marketplace_versions_db::MarketplaceVersionRow;
 
@@ -57,6 +58,20 @@ pub fn live_for<'a>(
     let plugin = plugin?;
     let key = skill_key(plugin, resource_key);
     live.iter()
+        .find(|row| row.plugin_id.as_str() == plugin && row.skill == key)
+}
+
+// Why: the judge attribution keys a skill exactly as the facts do.
+#[must_use]
+pub fn scores_for<'a>(
+    scores: &'a [SkillScoreFigures],
+    plugin: Option<&str>,
+    resource_key: &str,
+) -> Option<&'a SkillScoreFigures> {
+    let plugin = plugin?;
+    let key = skill_key(plugin, resource_key);
+    scores
+        .iter()
         .find(|row| row.plugin_id.as_str() == plugin && row.skill == key)
 }
 

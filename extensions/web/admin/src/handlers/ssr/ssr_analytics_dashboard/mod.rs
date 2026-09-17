@@ -19,7 +19,6 @@
 //! Console roles only. Every row drills into `/admin/requests` carrying the
 //! dimension it names alongside the scope and window already on screen.
 
-use super::ssr_helpers::Viewer;
 use std::sync::Arc;
 use systemprompt_web_shared::{GroupId, ProjectId};
 
@@ -41,7 +40,6 @@ use crate::util::time_range::{
 mod context;
 mod context_overview;
 mod context_tabs;
-pub(crate) mod csv;
 mod data;
 mod data_tabs;
 mod filters;
@@ -132,7 +130,6 @@ pub(crate) async fn analytics_dashboard_page(
     shell: Page,
     State(pool): State<Arc<PgPool>>,
     Query(query): Query<AnalyticsDashboardQuery>,
-    view: super::export::ViewMode,
 ) -> AdminHtmlResult<Response> {
     if !shell.user.is_console {
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
@@ -179,11 +176,12 @@ pub(crate) async fn analytics_dashboard_page(
         slo_ms,
     });
 
-    Ok(view.respond(
+    Ok(crate::handlers::ssr::render_typed_page(
         &shell.engine,
         "analytics-dashboard",
         &ctx,
-        Viewer::new(&shell.user, &shell.marketplace),
+        &shell.user,
+        &shell.marketplace,
     ))
 }
 

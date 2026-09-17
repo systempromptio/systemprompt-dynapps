@@ -8,7 +8,9 @@
 //! to the KPI tiles. Filters: window, category, outcome, skill, person, free
 //! text and the shared `?group=&project=` scope.
 
-mod query;
+pub(crate) mod export;
+pub(crate) mod query;
+mod summary;
 mod view;
 
 use crate::handlers::ssr::analysis::evaluation::trigger::evaluation_enabled;
@@ -24,24 +26,31 @@ use crate::handlers::ssr::page::Page;
 use crate::repositories;
 use crate::repositories::analysis::conversations::{
     BreakdownBy, ConversationAnalysisFilter, ConversationAnalysisPage, ConversationAnalysisResult,
-    load_conversation_analysis_page,
+    ScoredFilter, load_conversation_analysis_page,
 };
 use crate::repositories::analytics::conversation_rows::ConversationSort;
 use crate::repositories::scope::ScopeRequest;
 use systemprompt::identifiers::UserId;
 
 use query::{BASE_URL, ConversationAnalysisQuery, PAGE_SIZE};
-use view::{
-    CATEGORIES, ConversationAnalysisFilterView, ConversationBucketView, ConversationRowView,
-    KpisView, OUTCOMES, PageContext, SortHeaders,
+
+const SCORED_OPTIONS: [(&str, &str); 3] = [
+    ("scored", "Judged"),
+    ("unscored", "Not judged yet"),
+    ("low", "Low quality (< 50)"),
+];
+use summary::{
+    CATEGORIES, ConversationAnalysisFilterView, ConversationBucketView, KpisView, OUTCOMES,
+    category_label,
 };
+use view::{ConversationRowView, PageContext, SortHeaders};
 
 pub(crate) async fn page(
     shell: Page,
     State(pool): State<Arc<PgPool>>,
     Query(params): Query<ConversationAnalysisQuery>,
 ) -> AdminHtmlResult<Response> {
-    if !shell.user.is_console {
+    if !shell.user.has_scoped_console() {
         return Err(AdminError::Forbidden("Console access required".into()).into());
     }
     let request = ScopeRequest::from_query(
@@ -59,6 +68,7 @@ pub(crate) async fn page(
         free_text: params.free_text(),
         since: params.since_datetime(),
         until: None,
+        scored: params.scored(),
     };
     let data = load_conversation_analysis_page(
         &pool,
@@ -88,6 +98,16 @@ pub(crate) async fn page(
         &shell.user,
         &shell.marketplace,
     ))
+}
+
+// Why: this page's `since` labels reach past the live window contract (90d,
+// all); the export offers the nearest window it can serve.
+fn export_preset(params: &ConversationAnalysisQuery) -> &'static str {
+    match params.since_label() {
+        "24h" => "24h",
+        "7d" => "7d",
+        _ => "30d",
+    }
 }
 
 fn options<'a>(
@@ -121,7 +141,7 @@ fn breakdown_rows(
                 BreakdownBy::Group | BreakdownBy::Project => None,
             };
             let label = if by == BreakdownBy::Category {
-                Some(view::category_label(&row.label))
+                Some(category_label(&row.label))
             } else {
                 None
             };
@@ -140,6 +160,11 @@ fn filter_view(
         category: params.category().unwrap_or_default(),
         outcome: params.outcome().unwrap_or_default(),
         skill: params.skill().unwrap_or_default(),
+        scored: params
+            .scored()
+            .map(ScoredFilter::as_str)
+            .unwrap_or_default()
+            .to_owned(),
         user_key: params
             .user_id()
             .map(|u| u.as_str().to_owned())
@@ -178,6 +203,12 @@ fn sort_headers(params: &ConversationAnalysisQuery) -> SortHeaders {
             "sp-table__cell--num",
             "Priced spend on the conversation",
         ),
+        quality: params.sort_header(
+            ConversationSort::Quality,
+            "Evaluation",
+            "sp-aconv-col-eval",
+            "The judge's intent, quality, speed and cost scores for the session behind the conversation",
+        ),
     }
 }
 
@@ -209,6 +240,10 @@ fn build_context(
         outcomes: options(
             params.outcome().as_deref(),
             OUTCOMES.iter().map(|(v, l)| (*v, (*l).to_owned())),
+        ),
+        scored_options: options(
+            params.scored().map(ScoredFilter::as_str),
+            SCORED_OPTIONS.iter().map(|(v, l)| (*v, (*l).to_owned())),
         ),
         skills: options(
             params.skill().as_deref(),
@@ -244,5 +279,15 @@ fn build_context(
         rows,
         pagination: params.pagination(window),
         sort_headers: sort_headers(params),
+        export: crate::export::ExportView::new(
+            &["analysis-conversations", "analysis-conversation-breakdown"],
+            &params
+                .preserved(&["page", "since", "preset"])
+                .iter()
+                .map(|(k, v)| format!("{k}={}", urlencoding::encode(v)))
+                .chain(std::iter::once(format!("preset={}", export_preset(params))))
+                .collect::<Vec<_>>()
+                .join("&"),
+        ),
     }
 }

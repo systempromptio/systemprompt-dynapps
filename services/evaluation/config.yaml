@@ -44,6 +44,21 @@ evaluation:
     provider: anthropic
     model: claude-sonnet-5
     max_output_tokens: 2048
+  # The zoomed-out report on /admin/analysis/evaluation. The `evaluation_report`
+  # job reads the judge's aggregate figures for a scope — the whole instance, or
+  # one marketplace — with its worst and best sessions' rationales, and asks the
+  # model for themes and concrete actions against the instructions below. A
+  # scope is re-read once `min_new_runs` judge runs have landed since its last
+  # report, or after `max_age_hours` with at least one new run; Regenerate on the
+  # page forces it. Provider and model default to judge_defaults.
+  report:
+    model: claude-opus-5
+    max_output_tokens: 4096
+    instructions: report.md
+    window_days: 7
+    min_new_runs: 20
+    max_age_hours: 24
+    input_token_budget: 20000
   criteria:
     - name: intent
       scoring: judge

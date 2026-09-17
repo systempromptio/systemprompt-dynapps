@@ -11,6 +11,7 @@ mod data;
 mod kpis;
 mod view;
 
+use std::collections::HashMap;
 use std::sync::Arc;
 use systemprompt::identifiers::MarketplaceId;
 
@@ -30,7 +31,11 @@ use self::view::{
 };
 use super::super::ssr::ssr_helpers::render_typed_page;
 use super::view::{mcp_url, plugin_url, skill_url};
+use crate::handlers::ssr::sync_plane::HashView;
 use crate::handlers::ssr::types::BreadcrumbView;
+use crate::repositories::sync::marketplace_versions_db::list_current_marketplace_versions;
+use crate::repositories::sync::provenance::{OwnedKind, Provenance, owned_by};
+use crate::repositories::sync::sources::build_sources;
 
 // Why: the two views the listing offers. Links, not script, so a matrix an
 // operator wants to send someone is a URL.
@@ -80,9 +85,21 @@ pub(crate) async fn marketplaces_page(
         .inspect_err(|e| tracing::warn!(error = %e, "marketplaces: plugin catalog failed"))
         .unwrap_or_default();
 
+    // Why: discard-ok: an unreadable profile or a missing versions table
+    // leaves every card as base with no hash
+    let sources = build_sources().ok();
+    let versions: HashMap<String, String> = list_current_marketplace_versions(&pool)
+        .await
+        .unwrap_or_default()
+        .into_iter()
+        .map(|v| (v.marketplace_id.as_str().to_owned(), v.content_hash))
+        .collect();
     let marketplaces: Vec<MarketplaceCardView> = manifests
         .iter()
         .map(|m| {
+            let provenance = sources.as_ref().map_or_else(Provenance::base, |s| {
+                owned_by(s, OwnedKind::Marketplace, m.id.as_str())
+            });
             let assigned_groups = grants.get(&m.id).cloned().unwrap_or_default();
             // Why: the resolved count, not the declared one. A group listed in
             // the manifest that a deny rule closes is not an audience, and the
@@ -114,6 +131,9 @@ pub(crate) async fn marketplaces_page(
                 assigned_group_count: assigned_groups.len(),
                 assigned_groups,
                 allowed_subjects,
+                source: provenance.source,
+                source_tone: provenance.tone,
+                content_hash: versions.get(m.id.as_str()).and_then(|h| HashView::of(h)),
             }
         })
         .collect();

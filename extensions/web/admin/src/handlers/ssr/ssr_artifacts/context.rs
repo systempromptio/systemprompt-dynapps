@@ -29,6 +29,7 @@ pub(super) struct ArtifactsPageContext {
     pub(super) all_toggle_url: String,
     pub(super) errors_only: bool,
     pub(super) errors_toggle_url: String,
+    pub(super) export: crate::export::ExportView,
 }
 
 #[derive(Debug, Serialize)]

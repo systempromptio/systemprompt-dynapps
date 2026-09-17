@@ -124,6 +124,7 @@ async fn analysis_versions() -> Redirect {
     moved("/admin/analysis/versions")
 }
 
+
 async fn access_users(RawQuery(q): RawQuery) -> Redirect {
     with_query("/admin/users", q)
 }
@@ -158,10 +159,14 @@ async fn access_control(RawQuery(q): RawQuery) -> Redirect {
     with_query("/admin/access-control", q)
 }
 
-// Why: the access-control sync page became one plane of the instance-wide
-// Code ↔ Instance page; its `?entity=` filter still applies there.
+// Why: the access-control sync view is the Sync tab of the access-control
+// page; its `?entity=` filter still applies there.
 async fn access_control_sync(RawQuery(q): RawQuery) -> Redirect {
-    with_query("/admin/sync", q)
+    let q = Some(match q {
+        Some(q) if !q.is_empty() => format!("tab=sync&{q}"),
+        _ => "tab=sync".to_owned(),
+    });
+    with_query("/admin/access-control", q)
 }
 
 async fn catalog() -> Redirect {

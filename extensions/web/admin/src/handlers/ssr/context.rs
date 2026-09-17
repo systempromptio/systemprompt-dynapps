@@ -17,10 +17,13 @@ pub(crate) struct CurrentUser<'a> {
     username: &'a str,
     roles: &'a [String],
     is_admin: bool,
-    // Why: the sidebar gates read sections on `is_console` and write controls
-    // on `is_admin`, so a project manager sees the People pages without
-    // seeing the buttons that change them.
+    // Why: the sidebar gates the full console on `is_console` and the scoped
+    // one — Analysis's Conversations and Versions, Platform's Code sync — on
+    // `is_participant`, so a marketplace participant sees their own slice of
+    // the estate and nothing of the rest.
     is_console: bool,
+    is_participant: bool,
+    has_console: bool,
     is_platform_admin: bool,
 }
 
@@ -32,6 +35,8 @@ impl<'a> From<&'a UserContext> for CurrentUser<'a> {
             roles: &ctx.roles,
             is_admin: ctx.is_admin,
             is_console: ctx.is_console,
+            is_participant: !ctx.is_console && !ctx.participation.is_empty(),
+            has_console: ctx.has_scoped_console(),
             is_platform_admin: ctx.is_platform_admin,
         }
     }
@@ -101,11 +106,6 @@ pub(crate) struct PageShell<'a, T> {
     // one scope contract, and a page author who forgot the flag would silently
     // lose the control — so it is derived from the page id in one place.
     scope_selector: bool,
-    // Why: `?format=json` on the page the viewer is looking at, filters
-    // included — the AI-activity pages serve their own context as a download
-    // (`handlers/ssr/export.rs`); a page that does not is exported nowhere.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    export_url: Option<&'a str>,
     // Why: the sidebar states which release is serving the page. The workspace
     // version is inherited by every crate from the release pin, so this crate's
     // own is the release version and cannot drift from it.
@@ -115,12 +115,10 @@ pub(crate) struct PageShell<'a, T> {
 }
 
 // Why: what the shell knows about the page beyond its data — the id its
-// help text and scope bar key on, and the export link when the page offers
-// one.
+// help text and scope bar key on.
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct PageChrome<'a> {
     pub(crate) page_id: Option<&'a str>,
-    pub(crate) export_url: Option<&'a str>,
 }
 
 impl<'a, T: Serialize> PageShell<'a, T> {
@@ -130,10 +128,7 @@ impl<'a, T: Serialize> PageShell<'a, T> {
         chrome: PageChrome<'a>,
         page: &'a T,
     ) -> Self {
-        let PageChrome {
-            page_id,
-            export_url,
-        } = chrome;
+        let PageChrome { page_id } = chrome;
         let help = page_id.map(demo_help_text);
         Self {
             branding,
@@ -148,7 +143,6 @@ impl<'a, T: Serialize> PageShell<'a, T> {
             demo_help_url: help
                 .and_then(|(_, topic)| crate::types::doc_links::documentation_url(topic)),
             scope_selector: takes_scope_selector(page_id),
-            export_url,
             app_version: env!("CARGO_PKG_VERSION"),
             page,
         }

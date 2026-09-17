@@ -1,23 +1,26 @@
 # The groups and projects this installation ships with, and the AD groups the
 # directory maps into them.
 #
-# This file declares membership SHAPE, not entitlement. What a member reaches
-# is authored elsewhere: marketplace grants live in each marketplace's own
-# `access.rules` block (services/marketplaces/*/config.yaml), and anything else
-# in services/access-control/{groups,projects}.yaml.
+# This file declares membership SHAPE, not entitlement and not people. What a
+# group or project reaches is declared in services/access-control/rules.yaml
+# (the one source of entitlement, keyed by group/project id); who is IN a
+# group or project comes from the directory at sign-in and from the console,
+# and is never written to code.
 #
 # GROUPS carry people and marketplace entitlement. PROJECTS carry work
 # attribution — the dimension every dashboard, listing and report is split by.
 # The two are independent: a person is in exactly one group in the ordinary
 # case and on any number of projects.
 #
-# On startup the loader
-# (extensions/web/admin/src/repositories/config/groups_yaml_loader.rs) upserts
-# each row with `source: yaml` and fully reconciles the AD mappings — a mapping
-# dropped here is dropped from the database, or a group IT retired would keep
-# enrolling people. The groups and projects themselves are only ever upserted:
-# they own membership, usage history and access rules, and deleting one is a
-# deliberate dashboard act, not a side effect of editing a file.
+# The database is what is enforced; this file is what it is expected to
+# contain. Boot seeds an EMPTY database from it and otherwise only compares
+# the two: /admin/sync reports the drift and offers Insert only, Overwrite
+# from code, or Export from the console. Overwrite upserts every set here and
+# fully reconciles the AD mappings marked `source: yaml` — a mapping dropped
+# from this file is dropped from the database, or a group IT retired would
+# keep enrolling people. Groups and projects themselves are only ever
+# upserted: they own membership, usage history and access rules, and deleting
+# one is a deliberate console act, never a side effect of editing a file.
 #
 # A user who signs in carrying no AD group that maps to a group here is placed
 # in the derived `unassigned` group — a real row, membership computed as "has

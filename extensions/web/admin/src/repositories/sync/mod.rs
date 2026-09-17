@@ -6,8 +6,12 @@
 //! `bundle:<name>` is each remote kit the profile pins. A **plane** is what a
 //! source's declarations project into the database — `access_control`
 //! (`rules.yaml` → `access_control_rules`), `groups` (`groups.yaml` →
-//! groups, projects and their AD mappings) and `gateway_policies`
-//! (`policies.yaml` → `ai_gateway_policies`). Ownership is by id and decided at
+//! groups, projects and their AD mappings), `gateway_policies`
+//! (`policies.yaml` → `ai_gateway_policies`), `gateway_routes`
+//! (`ai/gateway.yaml` → `gateway_routes`) and `governance`
+//! (`governance/config.yaml` → `governance_chain`). The last two project a
+//! file core reads at boot, so they take effect after a restart and say so
+//! on their card. Ownership is by id and decided at
 //! composition: a bundle owns its marketplaces, plugins and skills; the base
 //! owns everything else, every entitlement included.
 //!
@@ -18,13 +22,20 @@
 
 pub mod access_control;
 pub mod access_control_rows;
+pub mod archive;
+pub mod boot;
+pub mod declaration;
 pub mod gateway_policies;
+pub mod gateway_routes;
+pub mod governance;
 pub mod groups;
 pub mod groups_db;
 pub mod groups_drift;
+pub mod inventory;
 pub mod marketplace_hash;
 pub mod marketplace_versions_db;
 pub mod plane;
+pub mod provenance;
 pub mod registry;
 pub mod source_badges;
 pub mod sources;

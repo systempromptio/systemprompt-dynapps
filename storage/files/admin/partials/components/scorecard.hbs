@@ -1,0 +1,12 @@
+{{!--
+  The judge's four criterion scores as one component.
+
+    {{> components/scorecard card=row.scorecard}}            row variant
+    {{> components/scorecard card=kpis.scorecard tile=true}}  tile variant
+
+  `card` is a ScorecardView (handlers/ssr/scorecard.rs): four pills toned by
+  band, a muted dash where a criterion is unscored, an optional href that opens
+  the evidence behind the scores, and a title read as the tooltip. Pills carry
+  a delta against the prior window when the view was built with one.
+--}}
+{{#if card.href}}<a class="sp-score{{#if tile}} sp-score--tile{{/if}}{{#unless card.scored}} sp-score--unscored{{/unless}}" href="{{card.href}}" title="{{card.title}}">{{else}}<span class="sp-score{{#if tile}} sp-score--tile{{/if}}{{#unless card.scored}} sp-score--unscored{{/unless}}" title="{{card.title}}">{{/if}}{{#each card.pills}}<span class="sp-score__pill sp-score__pill--{{tone}}" data-criterion="{{key}}"><span class="sp-score__letter" aria-hidden="true">{{letter}}</span><span class="sp-u-sr-only">{{label}} </span><span class="sp-score__value">{{value}}</span>{{#if delta}}<span class="sp-score__delta sp-score__delta--{{delta_tone}}">{{delta}}</span>{{/if}}</span>{{/each}}{{#if card.href}}</a>{{else}}</span>{{/if}}

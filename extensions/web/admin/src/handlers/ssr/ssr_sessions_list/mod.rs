@@ -14,7 +14,6 @@
 //! scope every one of them shares and `?side=1` to include conversations made
 //! of side calls alone.
 
-use super::ssr_helpers::Viewer;
 use std::sync::Arc;
 
 use axum::extract::{Query, State};
@@ -38,6 +37,7 @@ use crate::types::UserContext;
 use crate::util::time_range::{TimeRange, TimeRangePreset, TimeRangeQuery, parse_time_range};
 
 mod context;
+pub(crate) mod export;
 mod rows;
 mod summary;
 mod view;
@@ -67,7 +67,6 @@ pub(crate) async fn sessions_list_page(
     shell: Page,
     State(pool): State<Arc<PgPool>>,
     Query(query): Query<SessionListQuery>,
-    view: super::export::ViewMode,
 ) -> AdminHtmlResult<Response> {
     if !shell.user.is_console {
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
@@ -99,11 +98,12 @@ pub(crate) async fn sessions_list_page(
         SessionWindow { range, page },
     )
     .await;
-    Ok(view.respond(
+    Ok(crate::handlers::ssr::render_typed_page(
         &shell.engine,
         "sessions",
         &ctx,
-        Viewer::new(&shell.user, &shell.marketplace),
+        &shell.user,
+        &shell.marketplace,
     ))
 }
 
@@ -247,6 +247,21 @@ async fn load_sessions_data(
         error_toggle_url: view::error_toggle_url(query, error_only),
         show_side,
         side_toggle_url: view::side_toggle_url(query, show_side),
+        export: crate::export::ExportView::single(
+            "sessions",
+            &crate::export::view::query_string(&[
+                ("preset", Some(preset.as_str())),
+                ("from", Some(&range.from.to_rfc3339())),
+                ("to", Some(&range.to.to_rfc3339())),
+                ("user_id", query.user_id.as_ref().map(UserId::as_str)),
+                ("error_only", query.error_only.as_deref()),
+                ("side", query.side.as_deref()),
+                ("sort", query.sort.as_deref()),
+                ("dir", query.dir.as_deref()),
+                ("group", query.group.as_deref()),
+                ("project", query.project.as_deref()),
+            ]),
+        ),
     }
 }
 

@@ -20,10 +20,6 @@ pub(super) fn routes() -> Router<Arc<PgPool>> {
     Router::new()
         .route("/governance", get(handlers::ssr::governance_page))
         .route(
-            "/governance/warnings.csv",
-            get(handlers::ssr::governance_csv),
-        )
-        .route(
             "/governance/decisions/{decision_id}",
             get(handlers::ssr::governance_audit_detail_page),
         )
@@ -31,10 +27,6 @@ pub(super) fn routes() -> Router<Arc<PgPool>> {
         .route(
             "/governance/secrets",
             get(handlers::ssr::secrets_audit_page),
-        )
-        .route(
-            "/governance/secrets.csv",
-            get(handlers::ssr::secrets_audit_csv),
         )
         // Why: usage against ceiling per subject — the read side of the quota
         // windows the gateway policy editor writes.

@@ -10,16 +10,18 @@
 use async_trait::async_trait;
 use sqlx::PgPool;
 use systemprompt::config::ProfileBootstrap;
-use systemprompt::identifiers::UserId;
 use systemprompt::loader::services_root::ServicesRootBootstrap;
 
 use super::access_control_rows::{awaiting_rows, rows};
-use super::plane::{ActionCounts, ApplyOutcome, DriftKpi, Export, PlaneDrift, SyncMode, SyncPlane};
+use super::plane::{
+    ActionCounts, Actor, ApplyOutcome, DeclarationSource, DriftKpi, Export, PlaneDrift, SyncMode,
+    SyncPlane,
+};
 use super::state::{Applied, AppliedFrom, record_applied, record_declared};
 use crate::error::{AdminError, AdminResult};
 use crate::repositories::access_control::declared::DeclaredSet;
 use crate::repositories::access_control::declared_load::{
-    load_declared_set, marketplace_ids_from_services,
+    build_declared_from_doc, load_declared_set, marketplace_ids_from_services,
 };
 use crate::repositories::access_control::drift::{DriftReport, compute_drift};
 use crate::repositories::access_control::export::render_export;
@@ -28,7 +30,7 @@ use crate::repositories::access_control::rules::{
 };
 use crate::repositories::access_control::sync::apply_sync;
 use crate::repositories::config::gateway::registered_routes_from_services;
-use crate::repositories::config::rules_yaml_loader::RULES_FILE;
+use crate::repositories::config::rules_yaml_loader::{RULES_FILE, parse_rules_doc};
 
 pub const PLANE_ID: &str = "access_control";
 
@@ -40,17 +42,30 @@ pub struct AccessControlPlane;
 // — from the composed root, so a kit's marketplace validates once its
 // bundle is active.
 pub async fn declared_now(pool: &PgPool) -> AdminResult<DeclaredSet> {
-    let profile = ProfileBootstrap::get()?;
-    let services_path = ServicesRootBootstrap::active_root_or(&profile.paths.services);
+    declared_from(pool, DeclarationSource::Disk).await
+}
+
+// Why: uploaded text is projected by the same code as the file — same route
+// catalog, same marketplace ids — so a preview's drift is the drift the
+// file would show once committed.
+pub async fn declared_from(pool: &PgPool, from: DeclarationSource<'_>) -> AdminResult<DeclaredSet> {
     let registered = registered_routes_from_services()?;
-    load_declared_set(
-        pool,
-        &services_path,
-        &marketplace_ids_from_services(),
-        &registered,
-    )
-    .await
-    .map_err(|source| AdminError::invalid("rules.yaml could not be loaded", source))
+    // Why: the catalog failing is not the file failing; the two get different
+    // headlines so an operator fixes the tree, not the declaration.
+    let marketplace_ids = marketplace_ids_from_services()
+        .map_err(|source| AdminError::invalid("services tree unavailable", source))?;
+    let loaded = match from {
+        DeclarationSource::Disk => {
+            let profile = ProfileBootstrap::get()?;
+            let services_path = ServicesRootBootstrap::active_root_or(&profile.paths.services);
+            load_declared_set(pool, &services_path, &marketplace_ids, &registered).await
+        },
+        DeclarationSource::Text(text) => match parse_rules_doc(text) {
+            Ok(doc) => build_declared_from_doc(pool, &doc, &marketplace_ids, &registered).await,
+            Err(e) => Err(e),
+        },
+    };
+    loaded.map_err(|source| AdminError::invalid("rules.yaml could not be loaded", source))
 }
 
 pub async fn drift_now(pool: &PgPool, declared: &DeclaredSet) -> AdminResult<DriftReport> {
@@ -89,12 +104,24 @@ impl SyncPlane for AccessControlPlane {
         "access_control_rules · access_control_entities"
     }
 
+    fn owner_url(&self) -> &'static str {
+        "/admin/access-control"
+    }
+
     async fn drift(&self, pool: &PgPool) -> AdminResult<PlaneDrift> {
+        self.drift_from(pool, DeclarationSource::Disk).await
+    }
+
+    async fn drift_from(
+        &self,
+        pool: &PgPool,
+        from: DeclarationSource<'_>,
+    ) -> AdminResult<PlaneDrift> {
         let in_db = usize::try_from(count_band_rules(pool).await?).unwrap_or(0);
         // Why: an unreadable file is the card's headline, not a 500 — the
         // operator came to see the state of the declaration, and "it does
         // not parse" is that state.
-        let declared = match declared_now(pool).await {
+        let declared = match declared_from(pool, from).await {
             Ok(d) => d,
             Err(e) => {
                 return Ok(PlaneDrift {
@@ -105,7 +132,9 @@ impl SyncPlane for AccessControlPlane {
             },
         };
         let declared_hash = declared.declared_hash();
-        record_declared(pool, PLANE_ID, &declared_hash).await?;
+        if from.is_disk() {
+            record_declared(pool, PLANE_ID, &declared_hash).await?;
+        }
         let report = drift_now(pool, &declared).await?;
         let counts = report.counts();
         let mut rows = rows(&report);
@@ -164,16 +193,27 @@ impl SyncPlane for AccessControlPlane {
         &self,
         pool: &PgPool,
         mode: SyncMode,
-        actor: &UserId,
+        actor: Actor<'_>,
     ) -> AdminResult<ApplyOutcome> {
-        let declared = declared_now(pool).await?;
+        self.apply_from(pool, mode, actor, DeclarationSource::Disk)
+            .await
+    }
+
+    async fn apply_from(
+        &self,
+        pool: &PgPool,
+        mode: SyncMode,
+        actor: Actor<'_>,
+        from: DeclarationSource<'_>,
+    ) -> AdminResult<ApplyOutcome> {
+        let declared = declared_from(pool, from).await?;
         let outcome = apply_sync(pool, &declared, mode).await?;
         record_applied(
             pool,
             &Applied {
                 plane: PLANE_ID,
                 declared_hash: &declared.declared_hash(),
-                mode: Some(mode),
+                mode: actor.recorded_mode(mode),
                 actor: actor.as_str(),
                 from: applied_from(),
             },

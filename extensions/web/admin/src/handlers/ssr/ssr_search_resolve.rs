@@ -54,8 +54,10 @@ pub(crate) async fn search_resolve(
     State(pool): State<Arc<PgPool>>,
     Query(query): Query<SearchQuery>,
 ) -> AdminResult<Response> {
-    if !user_ctx.is_console {
-        return Err(AdminError::Forbidden("Admin access required".to_owned()));
+    // Why: a signed-in caller without any console — no admin role, no
+    // marketplace participation — has nowhere the lookup could land.
+    if !user_ctx.has_scoped_console() {
+        return Err(AdminError::Forbidden("Console access required".to_owned()));
     }
 
     let raw = query.q.unwrap_or_default();
@@ -72,6 +74,13 @@ pub(crate) async fn search_resolve(
             matches: vec![hit],
         })
         .into_response());
+    }
+
+    // Why: prefix suggestion enumerates ids across the instance. A scoped
+    // caller gets exact resolution only; the detail page they land on then
+    // decides whether the owner is inside their view.
+    if !user_ctx.is_console {
+        return Ok(unresolved());
     }
 
     let matches = list_id_matches(&pool, trimmed, MAX_MATCHES)

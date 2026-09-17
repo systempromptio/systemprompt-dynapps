@@ -34,6 +34,7 @@ pub(super) struct ContextsPageContext {
     pub(super) has_user_summaries: bool,
     pub(super) show_side: bool,
     pub(super) side_toggle_url: String,
+    pub(super) export: crate::export::ExportView,
 }
 
 #[derive(Debug, Serialize)]

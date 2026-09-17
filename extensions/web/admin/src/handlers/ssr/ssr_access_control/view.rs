@@ -8,7 +8,8 @@
 
 use serde::Serialize;
 
-use crate::handlers::ssr::types::BreadcrumbView;
+use crate::handlers::ssr::sync_plane::PlaneCardView;
+use crate::handlers::ssr::types::{BreadcrumbView, TabLinkView};
 use crate::repositories::access_control::drift::DriftCounts;
 
 #[derive(Debug, Clone, Serialize)]
@@ -137,6 +138,9 @@ pub(crate) struct AccessControlPageData {
     pub can_write: bool,
     pub stats: AcStatsView,
     pub breadcrumbs: Vec<BreadcrumbView>,
+    pub tabs: Vec<TabLinkView>,
+    // Why: set on the Sync tab; the ledger and audience are then left empty.
+    pub sync: Option<PlaneCardView>,
     pub docs_url: &'static str,
     pub sync_url: &'static str,
     pub drift: Option<DriftBannerView>,

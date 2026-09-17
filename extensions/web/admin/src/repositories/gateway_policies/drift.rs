@@ -5,7 +5,7 @@
 //! sentinel), so the daily rewrite is invisible here; a console edit to a
 //! ceiling or a scanner list is not. A row the file does not name is an
 //! orphan whatever wrote it — the console is the only other writer, and
-//! *Overwrite from code* deletes it exactly as the boot load does.
+//! *Overwrite from code* deletes it exactly as the boot seed would.
 
 use serde::Serialize;
 use systemprompt::ai::{GatewayPolicyEntry, GatewayPolicySpec};

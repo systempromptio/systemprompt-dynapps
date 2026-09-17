@@ -1,4 +1,5 @@
 import { showConfirmDialog } from '../services/confirm.js';
+import { initSyncPlane } from '../components/sp-sync-plane.js';
 
 // The editor is a plain form and works without this file. Two enhancements:
 // a delete asks first instead of going on the click, and a window's custom
@@ -28,3 +29,7 @@ document.querySelectorAll('form[data-confirm]').forEach((form) => {
     });
   });
 });
+
+// Why: the Sync tab renders the shared sync-plane component; its buttons
+// are bound here so the tab works without a second page script.
+initSyncPlane();

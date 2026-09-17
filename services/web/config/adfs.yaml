@@ -88,10 +88,9 @@ clock_skew_seconds: 120
 # (Systemprompt-Commerce = Commerce Cloud / Storefront Next, the Europe team;
 # Systemprompt-Core = Salesforce Core + BA, the India team) — see
 # groups.yaml for the placement. Both get `developer`. Systemprompt-Business
-# gets `knowledge_worker`, the role that opens the Cowork workspace
-# (services/marketplaces/astound-cowork) and the Salesforce MCP server; it is
-# a role rather than a group grant because Cowork is reached by what someone
-# does, not by which team they sit in.
+# gets `knowledge_worker`, an entitlement role: whatever
+# services/access-control/rules.yaml allows to `role: [knowledge_worker]` is
+# reached by what someone does, not by which team they sit in.
 group_roles:
   Systemprompt-Admins: [platform_admin, admin, user]
   Systemprompt-Commerce: [developer, user]

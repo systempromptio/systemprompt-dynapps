@@ -185,6 +185,7 @@ fn row(
         users_with_access: 4,
         managed: &[],
         live: None,
+        scores: None,
         window: ("2026-08-16", "2026-09-16"),
     })
     .unwrap_or_else(|error| panic!("row build failed: {error}"))
@@ -222,8 +223,8 @@ fn an_unbound_entry_is_unmeasured_not_zero() {
     assert_eq!(unmeasured.health, Health::Warn);
     assert_eq!(
         unmeasured.drilldown_href,
-        "/admin/analysis/skills?skill=silent&start=2026-08-16&end=2026-09-16",
-        "an unbound entry still links to its conversations, by skill identity"
+        "/admin/analysis/skills/a%3Asilent?start=2026-08-16&end=2026-09-16",
+        "an unbound entry still links to its page, by the facts' plugin:skill key"
     );
 }
 
@@ -236,8 +237,8 @@ fn a_bound_entry_reads_its_own_snapshot() {
     assert_eq!(measured.health, Health::Ok);
     assert_eq!(
         measured.drilldown_href,
-        "/admin/analysis/skills?resource=res-busy&start=2026-08-16&end=2026-09-16",
-        "a bound entry links by its revision-keyed managed resource"
+        "/admin/analysis/skills/a%3Abusy?start=2026-08-16&end=2026-09-16&resource=res-busy",
+        "a bound entry also narrows its page to the revision-keyed managed resource"
     );
 }
 
@@ -449,6 +450,7 @@ fn a_row_prefers_the_live_user_count_and_falls_back_to_the_snapshot() {
         users_with_access: 4,
         managed: &[],
         live: Some(&live("a", "a:busy", 7, None)),
+        scores: None,
         window: ("2026-08-16", "2026-09-16"),
     })
     .unwrap_or_else(|error| panic!("{error}"));

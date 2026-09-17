@@ -1,0 +1,160 @@
+//! `/admin/analysis/conversations` — classified conversations and the
+//! breakdown buckets over the same filtered set.
+
+use async_trait::async_trait;
+
+use super::requests::time_range;
+use crate::error::AdminResult;
+use crate::export::model::{Cell, CellKind, Column, DataSet, ExportContext, Table, Window};
+use crate::handlers::ssr::analysis::conversations::export::export_rows;
+use crate::repositories::analysis::conversations::{
+    ConversationAnalysisRow, ConversationBucketRow,
+};
+use crate::types::UserContext;
+
+pub(crate) struct ClassifiedConversations;
+pub(crate) struct Breakdown;
+
+const COLUMNS: &[Column] = &[
+    Column::new("first_at", "Started", CellKind::Timestamp),
+    Column::new("last_at", "Last activity", CellKind::Timestamp),
+    Column::new("context_id", "Context", CellKind::Text),
+    Column::new("session_id", "Session", CellKind::Text).optional(),
+    Column::new("title", "Title", CellKind::Text),
+    Column::new("user_id", "User", CellKind::Text),
+    Column::new("display_name", "Name", CellKind::Text),
+    Column::new("group_name", "Group", CellKind::Text),
+    Column::new("project_name", "Project", CellKind::Text),
+    Column::new("model", "Model", CellKind::Text),
+    Column::new("client", "Client", CellKind::Text).optional(),
+    Column::new("category", "Category", CellKind::Text),
+    Column::new("outcome", "Outcome", CellKind::Text),
+    Column::new("confidence", "Confidence", CellKind::Decimal).optional(),
+    Column::new("summary", "Summary", CellKind::Text),
+    Column::new("tags", "Tags", CellKind::Text).optional(),
+    Column::new("skills_used", "Skills used", CellKind::Text),
+    Column::new("skills_hooked", "Skills hooked", CellKind::Text).optional(),
+    Column::new("turns", "Turns", CellKind::Integer),
+    Column::new("tool_calls", "Tool calls", CellKind::Integer),
+    Column::new("errors", "Errors", CellKind::Integer),
+    Column::new("tokens", "Tokens", CellKind::Integer),
+    Column::new("cost_usd", "Cost (USD)", CellKind::Money),
+    Column::new("classified_at", "Classified", CellKind::Timestamp).optional(),
+    Column::new("judge_model", "Judge model", CellKind::Text).optional(),
+];
+
+fn row(r: &ConversationAnalysisRow) -> Vec<Cell> {
+    vec![
+        Cell::opt_time(r.first_at),
+        Cell::opt_time(r.last_at),
+        r.context_id.as_str().into(),
+        Cell::opt_text(r.session_id.as_ref().map(|s| s.as_str())),
+        r.title.as_str().into(),
+        Cell::opt_text(r.user_id.as_ref().map(|u| u.as_str())),
+        Cell::opt_text(r.display_name.as_deref()),
+        Cell::opt_text(r.group_name.as_deref()),
+        Cell::opt_text(r.project_name.as_deref()),
+        Cell::opt_text(r.model.as_deref()),
+        r.client_kind.as_str().into(),
+        r.category.as_str().into(),
+        Cell::opt_text(r.outcome.as_deref()),
+        Cell::opt_decimal(r.confidence.map(f64::from)),
+        Cell::opt_text(r.summary.as_deref()),
+        Cell::list(&r.tags),
+        Cell::list(&r.skills_used),
+        Cell::list(&r.skills_hooked),
+        r.turn_count.into(),
+        r.tool_call_count.into(),
+        r.error_count.into(),
+        r.total_tokens.into(),
+        Cell::Money(r.total_cost_microdollars),
+        Cell::opt_time(r.classified_at),
+        Cell::opt_text(r.judge_model.as_deref()),
+    ]
+}
+
+const BUCKET_COLUMNS: &[Column] = &[
+    Column::new("bucket", "Bucket", CellKind::Text),
+    Column::new("user_id", "User", CellKind::Text).optional(),
+    Column::new("conversations", "Conversations", CellKind::Integer),
+    Column::new("users", "Users", CellKind::Integer),
+    Column::new("turns", "Turns", CellKind::Integer),
+    Column::new("cost_usd", "Cost (USD)", CellKind::Money),
+    Column::new("achieved", "Achieved", CellKind::Integer),
+    Column::new("top_category", "Top category", CellKind::Text),
+];
+
+fn bucket_row(r: &ConversationBucketRow) -> Vec<Cell> {
+    vec![
+        r.label.as_str().into(),
+        Cell::opt_text(r.user_id.as_ref().map(|u| u.as_str())),
+        r.conversations.into(),
+        r.users.into(),
+        r.turns.into(),
+        Cell::Money(r.total_cost_microdollars),
+        r.achieved.into(),
+        Cell::opt_text(r.top_category.as_deref()),
+    ]
+}
+
+#[async_trait]
+impl DataSet for ClassifiedConversations {
+    fn id(&self) -> &'static str {
+        "analysis-conversations"
+    }
+    fn title(&self) -> &'static str {
+        "Classified conversations"
+    }
+    fn columns(&self) -> &'static [Column] {
+        COLUMNS
+    }
+    fn window(&self) -> Window {
+        Window::Live
+    }
+    // Why: the loader narrows to the caller's scope, so a participant exports
+    // exactly the rows the page shows them.
+    fn allows(&self, user: &UserContext) -> bool {
+        user.has_scoped_console()
+    }
+    async fn load(&self, ctx: &ExportContext<'_>) -> AdminResult<Table> {
+        let data = export_rows(
+            ctx.pool,
+            ctx.user,
+            ctx.query()?,
+            time_range(ctx)?,
+            ctx.limit,
+        )
+        .await?;
+        Ok(Table {
+            rows: data.rows.iter().map(row).collect(),
+            total: data.totals.conversations,
+        })
+    }
+}
+
+#[async_trait]
+impl DataSet for Breakdown {
+    fn id(&self) -> &'static str {
+        "analysis-conversation-breakdown"
+    }
+    fn title(&self) -> &'static str {
+        "Conversation breakdown"
+    }
+    fn columns(&self) -> &'static [Column] {
+        BUCKET_COLUMNS
+    }
+    fn window(&self) -> Window {
+        Window::Live
+    }
+    // Why: the loader narrows to the caller's scope, so a participant exports
+    // exactly the rows the page shows them.
+    fn allows(&self, user: &UserContext) -> bool {
+        user.has_scoped_console()
+    }
+    async fn load(&self, ctx: &ExportContext<'_>) -> AdminResult<Table> {
+        let data = export_rows(ctx.pool, ctx.user, ctx.query()?, time_range(ctx)?, 1).await?;
+        Ok(Table::complete(
+            data.breakdown.iter().map(bucket_row).collect(),
+        ))
+    }
+}

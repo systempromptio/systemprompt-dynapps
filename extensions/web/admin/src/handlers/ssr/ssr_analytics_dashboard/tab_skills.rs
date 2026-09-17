@@ -7,6 +7,7 @@
 //! overlap. Each row links to the Analysis section for the conversation-level
 //! detail so both screens tell one story.
 
+use crate::handlers::ssr::analysis_urls::analysis_skill_url;
 use crate::handlers::ssr::format::format_cost;
 use crate::handlers::ssr::list_view::PageWindow;
 use crate::repositories::analytics::site::skills::{SkillStatsRow, SkillTotals};
@@ -76,15 +77,17 @@ fn row_view(r: &SkillStatsRow, max: i64) -> SkillRowView {
             "—".to_owned()
         },
         attributed_display: format!("{:.0}%", pct(r.attributed_invocations, r.invocations)),
-        // Why: the Analysis page for the same resource lists the conversations
-        // behind this row; the catalog page is the fallback for a skill no
-        // verified installation has resolved to a managed resource yet.
-        analysis_url: r.resource_id.as_deref().map(|id| {
-            format!(
-                "/admin/analysis/skills?resource={}",
-                urlencoding::encode(id)
-            )
-        }),
+        // Why: the skill's Analysis page lists the conversations behind this
+        // row and the judge's scores; a resolved managed resource narrows it
+        // to revision-verified evidence.
+        analysis_url: Some(format!(
+            "{}{}",
+            analysis_skill_url(&r.skill),
+            r.resource_id
+                .as_deref()
+                .map(|id| format!("?resource={}", urlencoding::encode(id)))
+                .unwrap_or_default()
+        )),
         catalog_url,
     }
 }

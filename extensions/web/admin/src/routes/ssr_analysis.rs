@@ -1,5 +1,8 @@
-//! Analysis routes: skills, conversations, marketplace versions, evaluation
+//! Analysis routes: conversations, skills, evaluation, marketplace versions
 //! and the publication decisions taken from a marketplace's Distribution view.
+//!
+//! Every page is `/analysis/<noun>` with the entity's identity as the next
+//! segment — the Platform section's `/<noun>/{id}` shape, one level in.
 
 use crate::handlers;
 use axum::Router;
@@ -14,15 +17,19 @@ pub(super) fn routes() -> Router<Arc<PgPool>> {
             post(handlers::ssr::analysis::portfolio::actions::sync_inventory),
         )
         .route(
-            "/analysis/resources",
+            "/analysis/skills",
             get(handlers::ssr::analysis::portfolio::page),
         )
         .route(
-            "/analysis/resources.json",
+            "/analysis/skills.json",
             get(handlers::ssr::analysis::portfolio::json),
         )
         .route(
-            "/analysis/resources/{entry_id}/bind",
+            "/analysis/skills/{skill}",
+            get(handlers::ssr::analysis::skill_page),
+        )
+        .route(
+            "/analysis/inventory/{entry_id}/bind",
             post(handlers::ssr::analysis::portfolio::actions::bind),
         )
         .route(
@@ -37,14 +44,9 @@ pub(super) fn routes() -> Router<Arc<PgPool>> {
             "/analysis/revisions/{id}",
             get(handlers::ssr::analysis::revisions::revision_page),
         )
-        .route("/analysis", get(handlers::ssr::analysis::skills_page))
         .route(
             "/analysis/conversations",
             get(handlers::ssr::analysis::conversations::page),
-        )
-        .route(
-            "/analysis/skills",
-            get(handlers::ssr::analysis::skills_page),
         )
         .merge(evaluation_routes())
         .route(

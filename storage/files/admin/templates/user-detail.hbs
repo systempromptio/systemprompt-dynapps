@@ -165,7 +165,7 @@
             </tbody>
         {{/components/table}}
         {{else}}
-        {{> components/empty-state title="No conversations"
+        {{> components/empty-state heading="No conversations"
             message="This account has no recorded Claude Code sessions or gateway conversations."}}
         {{/if}}
     </section>
@@ -273,7 +273,7 @@
             </tbody>
         {{/components/table}}
         {{else}}
-        {{> components/empty-state title="No devices" message="This account has no bridge session, device certificate or access token."}}
+        {{> components/empty-state heading="No devices" message="This account has no bridge session, device certificate or access token."}}
         {{/if}}
     </section>
     {{/if}}
@@ -309,7 +309,7 @@
             </tbody>
         {{/components/table}}
         {{else}}
-        {{> components/empty-state title="No sessions" message="This account has never signed in."}}
+        {{> components/empty-state heading="No sessions" message="This account has never signed in."}}
         {{/if}}
     </section>
     {{/if}}

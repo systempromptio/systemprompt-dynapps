@@ -17,10 +17,14 @@ WITH picked AS MATERIALIZED (
     SELECT r.*, p.category, p.summary, p.tags, p.skills_used, p.outcome, p.confidence,
            p.classified_at, p.judge_model,
            r.total_input_tokens + r.total_output_tokens AS total_tokens,
+           sc.intent AS intent_score, sc.quality AS quality_score,
+           sc.speed AS speed_score, sc.cost AS cost_score,
+           COALESCE(sc.scored_criteria, 0)::int AS scored_criteria,
            COALESCE((SELECT array_agg(s.skill ORDER BY s.first_at) FROM conversation_skill_uses s
                      WHERE s.client_session_id = r.client_session_id), ARRAY[]::text[]) AS skills_hooked
     FROM ids CROSS JOIN LATERAL conversation_metrics_for(ids.ids) r
     JOIN picked p ON p.context_id = r.context_id
+    LEFT JOIN evaluation_session_scorecard sc ON sc.session_id = r.client_session_id
     WHERE ($1::text[] IS NULL OR r.user_id = ANY($1))
       AND ($2::text IS NULL OR r.user_id = $2)
       AND ($5::text IS NULL OR $5 = ANY(p.skills_used)
@@ -31,6 +35,10 @@ WITH picked AS MATERIALIZED (
            OR conversation_title(r.context_id, r.client_session_id) ILIKE $6)
       AND ($7::timestamptz IS NULL OR r.last_at >= $7)
       AND ($8::timestamptz IS NULL OR r.last_at < $8)
+      AND ($14::text IS NULL
+           OR ($14 = 'scored' AND sc.scored_criteria > 0)
+           OR ($14 = 'unscored' AND sc.scored_criteria IS NULL)
+           OR ($14 = 'low' AND sc.quality < 50))
 ), totals AS (
     SELECT COUNT(*)::bigint AS conversations, COUNT(DISTINCT user_id)::bigint AS users,
            COALESCE(SUM(turn_count), 0)::bigint AS turns,
@@ -38,6 +46,11 @@ WITH picked AS MATERIALIZED (
            COALESCE(SUM(total_tokens), 0)::bigint AS total_tokens,
            COALESCE(SUM(total_cost_microdollars), 0)::bigint AS total_cost_microdollars,
            COUNT(*) FILTER (WHERE outcome = 'achieved')::bigint AS achieved,
+           COUNT(*) FILTER (WHERE scored_criteria > 0)::bigint AS scored,
+           AVG(quality_score)::float8 AS quality_avg,
+           AVG(intent_score)::float8 AS intent_avg,
+           AVG(speed_score)::float8 AS speed_avg,
+           AVG(cost_score)::float8 AS cost_avg,
            (SELECT COUNT(*)::bigint FROM conversation_analyses u
              WHERE u.status <> 'classified'
                AND ($1::text[] IS NULL OR u.user_id = ANY($1))
@@ -45,6 +58,7 @@ WITH picked AS MATERIALIZED (
     FROM f
 ), keyed AS (
     SELECT f.category, f.outcome, f.user_id, f.turn_count, f.total_cost_microdollars,
+           f.quality_score, f.scored_criteria,
            CASE $13::text
                WHEN 'group' THEN COALESCE(f.group_name, 'Unattributed')
                WHEN 'project' THEN COALESCE(f.project_name, 'Unattributed')
@@ -59,6 +73,8 @@ WITH picked AS MATERIALIZED (
            COALESCE(SUM(k.turn_count), 0)::bigint AS turns,
            COALESCE(SUM(k.total_cost_microdollars), 0)::bigint AS total_cost_microdollars,
            COUNT(*) FILTER (WHERE k.outcome = 'achieved')::bigint AS achieved,
+           COUNT(*) FILTER (WHERE k.scored_criteria > 0)::bigint AS scored,
+           AVG(k.quality_score)::float8 AS quality_avg,
            mode() WITHIN GROUP (ORDER BY k.category) AS top_category
     FROM keyed k
     GROUP BY k.bucket, k.bucket_user
@@ -75,6 +91,8 @@ WITH picked AS MATERIALIZED (
              CASE WHEN $9 = 'tokens' AND NOT $10::boolean THEN f.total_tokens END ASC,
              CASE WHEN $9 = 'cost' AND $10::boolean THEN f.total_cost_microdollars END DESC,
              CASE WHEN $9 = 'cost' AND NOT $10::boolean THEN f.total_cost_microdollars END ASC,
+             CASE WHEN $9 = 'quality' AND $10::boolean THEN f.quality_score END DESC NULLS LAST,
+             CASE WHEN $9 = 'quality' AND NOT $10::boolean THEN f.quality_score END ASC NULLS LAST,
              f.context_id) AS position
     FROM f
     ORDER BY position

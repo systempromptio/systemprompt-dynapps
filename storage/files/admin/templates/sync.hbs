@@ -2,10 +2,11 @@
     {{#*inline "head_extra"}}{{/inline}}
     {{#*inline "content"}}
     {{> components/breadcrumbs crumbs=breadcrumbs}}
-    {{#> components/page-header title=title subtitle="Where declarations come from, what they project into, and the difference. Code is what the instance is expected to hold; the database is what is enforced. Nothing here happens on its own — choose a direction."}}
+    {{#> components/page-header title=title subtitle="Where declarations come from and how they move. Sources are the internal base tree this repository ships and each external bundle the profile pins — one mechanism, some local, some remote. The archive carries every projected plane between the database and the repository. What each plane's database says against its file is on the plane's own page, under Sync."}}
         {{#*inline "header_actions"}}
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{docs_url}}" target="_blank" rel="noopener noreferrer">How sync works</a>
-        <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{access_control_url}}">Access control</a>
+        <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{configuration_url}}">Configuration</a>
+        <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{observability_url}}" title="The profile's observability.otlp block and the otlp_export job's ledger">Observability</a>
         {{/inline}}
         {{#*inline "header_meta"}}
         <span>Release <strong>v{{sources.base.version}}</strong></span>
@@ -15,17 +16,21 @@
         {{/inline}}
     {{/components/page-header}}
 
+    {{> components/tabs tabs=tabs nav_label="Code sync views"}}
+
     {{#if sources_unreadable}}
     {{> components/notice tone="err" title="Sources could not be read" message=sources_unreadable}}
     {{/if}}
+
+    {{#if show_sources}}
     {{#if sources.base.provenance_error}}
     {{> components/notice tone="warn" title="Serving a fallback tree" message=sources.base.provenance_error}}
     {{/if}}
     {{#if sources.restart_pending}}
-    {{> components/notice tone="warn" title="Reconcile pending" message="The composition was recomposed but has not been projected into the authz tables. Press Import to reconcile it in place — no restart is involved."}}
+    {{> components/notice tone="warn" title="Reconcile pending" message="The composition was recomposed but has not been projected into the authz tables. Press Import sources to reconcile it in place — no restart is involved."}}
     {{/if}}
 
-    {{#> components/section title="Sources" note="Every place a declaration comes from, with the hash it declares. A digest is code: the instance never rewrites its own profile."}}
+    {{#> components/section title="Sources" note="Every place a declaration comes from, internal and external, with the hash it declares. A digest is code: the instance never rewrites its own profile."}}
         {{#*inline "section_actions"}}
         {{#if can_write}}<button type="button" class="sp-btn sp-btn--sm sp-btn--secondary" data-action="refresh-sources">Import sources</button>{{/if}}
         {{/inline}}
@@ -34,6 +39,7 @@
     {{#> components/table caption="Sources and their hashes" modifier="sp-sync-sources"}}
         <thead><tr>
             <th>Source</th>
+            <th>Kind</th>
             <th>Pinned</th>
             <th>Active</th>
             <th>Version</th>
@@ -44,7 +50,8 @@
         </tr></thead>
         <tbody>
         <tr data-source="base">
-            <td><strong>base</strong> <span class="sp-u-text-tertiary">this repository</span><br><span class="sp-u-mono sp-u-text-tertiary">{{sources.base.tree_path}}</span></td>
+            <td><strong>base</strong><br><span class="sp-u-mono sp-u-text-tertiary">{{sources.base.tree_path}}</span></td>
+            <td>internal<br><span class="sp-u-text-tertiary">this repository</span></td>
             <td class="sp-u-text-tertiary">release v{{sources.base.version}}</td>
             <td class="sp-u-text-tertiary">{{sources.base.provenance}}</td>
             <td class="sp-u-mono">{{sources.base.version}}</td>
@@ -55,7 +62,8 @@
         </tr>
         {{#each sources.bundles}}
         <tr data-source="{{name}}">
-            <td><strong>{{name}}</strong> <span class="sp-u-text-tertiary">{{transport}}</span><br><span class="sp-u-mono sp-u-text-tertiary">{{reference}}</span></td>
+            <td><strong>{{name}}</strong><br><span class="sp-u-mono sp-u-text-tertiary">{{reference}}</span></td>
+            <td>external<br><span class="sp-u-text-tertiary">{{transport}} bundle</span></td>
             <td>{{#if pinned_digest}}<span class="sp-sync-hash" title="{{pinned_digest}}">{{truncate pinned_digest 19}}</span>{{else}}<span class="sp-u-text-tertiary">tag</span>{{/if}}</td>
             <td>{{#if active_digest}}<span class="sp-sync-hash" title="{{active_digest}}">{{truncate active_digest 19}}</span>{{else}}<span class="sp-u-text-tertiary">—</span>{{/if}}</td>
             <td class="sp-u-mono">{{default version "—"}}</td>
@@ -86,132 +94,35 @@ owner key for rules.yaml: {{owner_key}}</pre>
     </details>
     {{/if}}
 
-    {{#each planes}}
-    <section class="sp-sync-plane" data-plane="{{id}}" aria-labelledby="plane-{{id}}">
-        <div class="sp-sync-plane__head">
-            <h2 id="plane-{{id}}">{{label}}</h2>
-            <div class="sp-sync-plane__meta">
-                <span><code class="sp-code-inline">services/{{source_file}}</code> → <code class="sp-code-inline">{{projection}}</code></span>
-                <span><strong>{{declared_count}}</strong> declared · <strong>{{in_db}}</strong> in this database</span>
-                {{#if declared_hash}}<span>declared <span class="sp-sync-hash" title="{{declared_hash.full}}">{{declared_hash.short}}</span></span>{{/if}}
-                {{#if applied}}
-                <span>last applied <span class="sp-sync-hash" title="{{applied.hash.full}}">{{applied.hash.short}}</span> by <strong>{{applied.by}}</strong> {{relativeTime applied.at}} ({{applied.mode}})</span>
-                {{#if applied.declared_changed}}{{> components/badge tone="warn" text="declaration changed since last apply"}}{{/if}}
-                {{else}}
-                <span class="sp-u-text-tertiary">never applied from code on this database</span>
-                {{/if}}
-            </div>
-        </div>
+    {{else}}
 
-        {{#if unreadable}}
-        {{> components/notice tone="err" title="The declaration could not be read" message=unreadable}}
-        {{/if}}
-
-        <div class="sp-kpi-grid" aria-label="{{label}} drift totals">
-            {{#each kpis}}
-            {{> components/kpi label=label value=value note=note tone=tone}}
-            {{/each}}
-        </div>
-
-        {{#if is_clean}}
-        {{> components/notice tone="ok" title="In step" message="The declaration and this database hold the same rows. Export if you want the file regenerated from the database anyway."}}
-        {{/if}}
-
-        <div class="sp-sync-actions" aria-label="Synchronise {{label}}">
-            <article class="sp-sync-card">
-                <h3>Insert only</h3>
-                <p>Add every row the file declares that the database lacks. Touch nothing else — rows that differ or exist only here stay as they are.</p>
-                <p class="sp-sync-card__count">{{actions.insert}} rows, {{actions.insert_entities}} entities</p>
-                {{#if ../can_write}}<button type="button" class="sp-btn sp-btn--secondary" data-action="sync" data-plane="{{id}}" data-mode="insert_only" data-count="{{actions.insert}}">Insert only</button>{{/if}}
-            </article>
-            <article class="sp-sync-card sp-sync-card--danger">
-                <h3>Overwrite from code</h3>
-                <p>Make the database equal the file for every entity the file names: insert what is missing, correct what differs, and <strong>delete</strong> rows on those entities that the file does not declare. Entities the file does not mention, and every per-person override, are left alone.</p>
-                <p class="sp-sync-card__count">+{{actions.insert}} · ~{{actions.update}} · −{{actions.delete}} ({{actions.delete_console}} written from the console)</p>
-                {{#if ../can_write}}<button type="button" class="sp-btn sp-btn--primary" data-action="sync" data-plane="{{id}}" data-mode="overwrite" data-count="{{actions.delete}}" data-dashboard="{{actions.delete_console}}">Overwrite from code</button>{{/if}}
-            </article>
-            <article class="sp-sync-card">
-                <h3>Export from dashboard</h3>
-                <p>Render this database as <code class="sp-code-inline">{{source_file}}</code>. Commit it in the source repository and the code is back in step with what the console decided.</p>
-                <p class="sp-sync-card__count">{{in_db}} rows</p>
-                <button type="button" class="sp-btn sp-btn--outline" data-action="export" data-plane="{{id}}" data-file="{{source_file}}">Export</button>
-            </article>
-        </div>
-
-        {{#> components/section title="Differences" count=row_count note="Each line is one disagreement between the file and this database, and which action would resolve it."}}
-            {{#*inline "section_actions"}}
-            {{#if entity_filter}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/sync">Show all entities</a>{{/if}}
-            {{/inline}}
-        {{/components/section}}
-
-        {{#if rows}}
-        {{#> components/table caption="Differences between the declaration and the database" modifier="sp-p-ac__diff"}}
-            <thead><tr>
-                <th>Difference</th>
-                <th>Entity</th>
-                <th>Band · subject</th>
-                <th>In code</th>
-                <th>In this database</th>
-                <th>Written by</th>
-                <th>Insert only</th>
-                <th>Overwrite</th>
-            </tr></thead>
-            <tbody>
-            {{#each rows}}
-            <tr data-diff="{{kind}}" data-entity-type="{{entity_type}}" data-entity-id="{{entity_id}}">
-                <td>{{> components/badge tone=kind_tone text=kind_label}}</td>
-                <td><span class="sp-ac-entity__kind">{{entity_type_label}}</span> <span class="sp-u-mono">{{entity_id}}</span></td>
-                <td><span class="sp-ac-layer-tag">{{band_label}}</span> <span class="sp-u-mono">{{subject}}</span></td>
-                <td class="sp-u-text-secondary">{{in_code}}</td>
-                <td class="sp-u-text-secondary">{{in_db}}</td>
-                <td>{{#if origin}}{{> components/badge tone=origin_tone text=origin}}{{else}}<span class="sp-u-text-tertiary">—</span>{{/if}}</td>
-                <td>{{#if insert_applies}}inserted{{else}}<span class="sp-u-text-tertiary">no change</span>{{/if}}</td>
-                <td>{{#if overwrite_applies}}{{overwrite_effect}}{{else}}<span class="sp-u-text-tertiary">{{overwrite_effect}}</span>{{/if}}</td>
-            </tr>
-            {{/each}}
-            </tbody>
-        {{/components/table}}
-        {{else}}
-        {{#unless is_clean}}
-        {{> components/empty-state title="Nothing to show" message="No difference matches this entity."}}
-        {{/unless}}
-        {{/if}}
-    </section>
-    {{/each}}
-
-    <dialog class="sp-dialog sp-ac-dialog" data-dialog="confirm" aria-labelledby="sync-confirm-title">
-        <div class="sp-ac-dialog__header">
-            <h2 id="sync-confirm-title" data-sync="confirm-title">Confirm</h2>
-            <button type="button" class="sp-ac-dialog__close" data-action="close-dialog" aria-label="Close">&times;</button>
-        </div>
-        <div class="sp-ac-dialog__body">
-            <p data-sync="confirm-body"></p>
-            <p class="sp-ac-modal-hint">The change is recorded in the activity log with your name, the plane and the counts, and the sync state records the declared hash you applied.</p>
-        </div>
-        <div class="sp-ac-dialog__actions">
-            <button type="button" class="sp-btn sp-btn--primary" data-action="confirm-sync">Apply</button>
-            <button type="button" class="sp-btn sp-btn--outline" data-action="close-dialog">Cancel</button>
-        </div>
-    </dialog>
-
-    <dialog class="sp-dialog sp-ac-dialog" data-dialog="export" aria-labelledby="sync-export-title">
-        <div class="sp-ac-dialog__header">
-            <h2 id="sync-export-title" data-sync="export-title">This database as its declaration</h2>
-            <button type="button" class="sp-ac-dialog__close" data-action="close-dialog" aria-label="Close">&times;</button>
-        </div>
-        <div class="sp-ac-dialog__body">
-            <p class="sp-ac-modal-hint">
-                Replace the file in the source repository with this, commit, and redeploy.
-                Lines starting <code class="sp-code-inline"># NOTE</code> name what could not be expressed and must be resolved by hand.
-            </p>
-            <pre class="sp-ac-yaml-pre" data-sync="export-content"><span class="sp-loading">Loading…</span></pre>
-        </div>
-        <div class="sp-ac-dialog__actions">
-            <button type="button" class="sp-btn sp-btn--secondary" data-action="copy-export">Copy</button>
-            <a class="sp-btn sp-btn--secondary" data-sync="export-download" href="#" download>Download</a>
-            <button type="button" class="sp-btn sp-btn--outline" data-action="close-dialog">Close</button>
-        </div>
-    </dialog>
+    <div class="sp-sync-actions sp-sync-archive" aria-label="Export and import the configuration">
+        <article class="sp-sync-card">
+            <h3>Export configuration</h3>
+            <p>Every projected plane's database rendered back to its file, laid out as <code class="sp-code-inline">services/</code>, with a <code class="sp-code-inline">MANIFEST.yaml</code> naming the release and the hashes. Extract at the repository root, review the diff, commit.</p>
+            <ul class="sp-sync-archive__files">
+                {{#each export_planes}}
+                <li><code class="sp-code-inline">services/{{source_file}}</code> <span class="sp-u-text-tertiary">— {{label}}</span></li>
+                {{/each}}
+            </ul>
+            <a class="sp-btn sp-btn--primary" href="{{export_zip_url}}" download>Download zip</a>
+            <p class="sp-u-text-tertiary">Also as a <a href="{{kit_patch_url}}" download>tar.gz kit patch</a>.</p>
+        </article>
+        <article class="sp-sync-card">
+            <h3>Import configuration</h3>
+            <p>Upload an archive in the same layout — one you exported, or the repository's <code class="sp-code-inline">services/</code> zipped. <strong>Nothing is written on upload.</strong> You get a preview of every plane against this database and choose Insert only or Overwrite per plane. Files the instance serves from code are listed, not applied.</p>
+            <p class="sp-u-text-tertiary">A staged upload is kept for {{stage_ttl_minutes}} minutes.</p>
+            {{#if can_write}}
+            <form class="sp-sync-archive__upload" data-sync="import-form">
+                <input class="sp-field-input" type="file" name="archive" accept=".zip,application/zip" data-sync="import-file" required>
+                <button type="submit" class="sp-btn sp-btn--secondary" data-action="stage-import" data-import-url="{{import_url}}">Stage for preview</button>
+            </form>
+            {{else}}
+            <p class="sp-u-text-tertiary">Importing needs an administrator.</p>
+            {{/if}}
+        </article>
+    </div>
+    {{/if}}
 
     <dialog class="sp-dialog sp-ac-dialog" data-dialog="refresh" aria-labelledby="sync-refresh-title">
         <div class="sp-ac-dialog__header">

@@ -75,14 +75,16 @@ impl fmt::Display for Role {
     }
 }
 
-// Why: the three tiers the admin router layers. `developer` and
-// `knowledge_worker` and `super_admin` are entitlement roles — they decide
-// which marketplace and MCP servers a person reaches — and sit in none of them.
-// Reads open to anyone who may
-// see the console; writes to the two admin roles; the platform tier to
-// `platform_admin` alone, which is what holds the directory-shaped controls
-// (AD mappings, granting `platform_admin` itself).
-pub const ROLES_CONSOLE: &[Role] = &[Role::PlatformAdmin, Role::Admin, Role::ProjectManager];
+// Why: the three tiers the admin router layers. `developer`,
+// `knowledge_worker`, `super_admin` and `project_manager` are entitlement
+// roles — they decide which marketplace and MCP servers a person reaches —
+// and sit in none of them. The console tier is the two admin roles: they alone
+// see the instance unscoped. Everyone else reaches the console only through
+// marketplace participation (`repositories::scope::participation`), which
+// scopes what they see. Writes go to the same two roles; the platform tier is
+// `platform_admin` alone, which holds the directory-shaped controls (AD
+// mappings, granting `platform_admin` itself).
+pub const ROLES_CONSOLE: &[Role] = &[Role::PlatformAdmin, Role::Admin];
 pub const ROLES_MANAGE: &[Role] = &[Role::PlatformAdmin, Role::Admin];
 pub const ROLES_PLATFORM: &[Role] = &[Role::PlatformAdmin];
 

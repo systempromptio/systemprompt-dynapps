@@ -1,12 +1,12 @@
 //! `/admin/access-control` — every governed entity, who reaches it and why,
 //! and whether the code agrees with the database.
 //!
-//! Three views stacked: a short account of how a decision is made (the
+//! Two tabs. *Rules*: a short account of how a decision is made (the
 //! ladder), the entities table, and the audience grid resolved by the real
-//! resolver. Editing lives with the subject — a group's band on its Access
-//! tab, a person's overrides on theirs — and reconciling code with database
-//! lives on `/admin/sync`, the instance-wide Code ↔ Instance page. Reading here
-//! is the CONSOLE tier so a project manager can audit.
+//! resolver. *Sync*: the `access_control` plane — `rules.yaml` against this
+//! database, with the three directions. Editing lives with the subject — a
+//! group's band on its Access tab, a person's overrides on theirs. Reading
+//! here is the CONSOLE tier so a project manager can audit.
 
 mod audience;
 mod bands;
@@ -24,7 +24,8 @@ use sqlx::PgPool;
 use crate::error::{AdminError, AdminHtmlResult};
 use crate::handlers::access_control::build_matrix_sections;
 use crate::handlers::shared;
-use crate::handlers::ssr::types::BreadcrumbView;
+use crate::handlers::ssr::sync_plane::{is_sync_tab, plane_card_by_id, sync_tab};
+use crate::handlers::ssr::types::{BreadcrumbView, TabLinkView};
 use crate::repositories::access_control::rules::{
     RULE_CAP, count_open_entities, list_ledger_rules,
 };
@@ -32,8 +33,21 @@ use crate::repositories::sync::access_control::{declared_now, drift_now};
 use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, UserContext};
 
-use entities::{AcQuery, DOCS_URL, EntitiesInput, SYNC_URL};
-use view::{AccessControlPageData, DriftBannerView};
+use entities::{AcQuery, BASE_URL, DOCS_URL, EntitiesInput, SYNC_URL};
+use view::{AccessControlPageData, AudienceGridView, DriftBannerView};
+
+fn tabs(on_sync: bool) -> Vec<TabLinkView> {
+    vec![
+        TabLinkView {
+            slug: "rules",
+            label: "Rules",
+            href: BASE_URL.to_owned(),
+            is_active: !on_sync,
+            count: None,
+        },
+        sync_tab(BASE_URL, on_sync),
+    ]
+}
 
 pub(crate) async fn access_control_page(
     Extension(user_ctx): Extension<UserContext>,
@@ -50,6 +64,7 @@ pub(crate) async fn access_control_page(
         return Ok(Redirect::permanent(&target).into_response());
     }
     let services_path = shared::get_services_path()?;
+    let on_sync = is_sync_tab(query.tab.as_deref());
 
     let stats = data::load_stats(&pool).await;
     let ledger_rows = list_ledger_rules(&pool)
@@ -69,10 +84,28 @@ pub(crate) async fn access_control_page(
         Err(e) => (None, 0, Some(e.to_string())),
     };
 
-    let audience = audience::audience(&pool).await;
-    let audiences = audience.columns.len();
-    let sections = build_matrix_sections(&services_path);
-    let grid = audience::grid(&pool, audience, &sections).await;
+    // Why: the Sync tab reads the plane, not the ledger — the audience grid
+    // runs the real resolver per entity and is not paid for a tab that
+    // never shows it.
+    let (grid, audiences, sync) = if on_sync {
+        let filter = query.entity.clone().unwrap_or_default();
+        let card = plane_card_by_id(
+            &pool,
+            crate::repositories::sync::access_control::PLANE_ID,
+            &filter,
+        )
+        .await?;
+        (AudienceGridView::default(), 0, card)
+    } else {
+        let audience = audience::audience(&pool).await;
+        let audiences = audience.columns.len();
+        let sections = build_matrix_sections(&services_path);
+        (
+            audience::grid(&pool, audience, &sections).await,
+            audiences,
+            None,
+        )
+    };
 
     let capped = i64::try_from(ledger_rows.len()).unwrap_or(i64::MAX) >= RULE_CAP;
     let entities = entities::build(
@@ -105,6 +138,8 @@ pub(crate) async fn access_control_page(
             BreadcrumbView::link("People & access", "/admin/users"),
             BreadcrumbView::current("Access control"),
         ],
+        tabs: tabs(on_sync),
+        sync,
         docs_url: DOCS_URL,
         sync_url: SYNC_URL,
         drift: banner,

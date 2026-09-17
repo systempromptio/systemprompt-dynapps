@@ -107,7 +107,12 @@
         </div>
         </div>
         </section>
+        {{/if}}
 
+        {{!-- ANALYSIS — open to admins and to marketplace participants. A
+             participant sees the two tabs that carry a per-person dimension,
+             scoped inside each page to the people their marketplaces reach. --}}
+        {{#if current_user.has_console}}
         <section class="sp-nav-group sp-nav-group--analysis" data-nav-group="analysis">
         <h2 class="sp-nav-label">
             <button class="sp-nav-group__toggle" type="button" data-action="nav-group-toggle" aria-expanded="false" aria-controls="sp-nav-group-analysis">
@@ -118,29 +123,30 @@
         </h2>
         <div class="sp-nav-group__items" id="sp-nav-group-analysis">
         <div class="sp-nav-group__inner">
-        <a href="/admin/analysis/resources"{{navActive page "analysis-portfolio"}}>
-            <svg class="sp-icon" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="1.5"/><path d="M2 6h12M2 10h12M6 6v8"/></svg>
-            Skills
-        </a>
         <a href="/admin/analysis/conversations"{{navActive page "analysis-conversations"}}>
             <svg class="sp-icon" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 13h12M4 10V6M8 10V2M12 10V4"/></svg>
             Conversations
         </a>
-        <a href="/admin/analysis/versions"{{navActive page "analysis-versions"}}>
-            <svg class="sp-icon" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 2v8a3 3 0 0 0 3 3h5M4 5h5a3 3 0 0 0 3-3"/><circle cx="4" cy="2" r="1"/><circle cx="12" cy="2" r="1"/><circle cx="12" cy="13" r="1"/></svg>
-            Versions
-        </a>
-        <a href="/admin/analysis/evaluation"{{navActive page "analysis-evaluation"}}>
-            <svg class="sp-icon" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 8l3 3 7-7"/><path d="M2 13h12"/></svg>
-            Evaluation
-        </a>
+        {{#if current_user.is_console}}
+        {{#> nav-item href="/admin/analysis/skills" text="Skills" leaf="analysis-skills" child="analysis-skill" page=page}}
+            {{#*inline "nav_icon"}}<svg class="sp-icon" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="1.5"/><path d="M2 6h12M2 10h12M6 6v8"/></svg>{{/inline}}
+        {{/nav-item}}
+        {{#> nav-item href="/admin/analysis/evaluation" text="Evaluation" leaf="analysis-evaluation" child="analysis-evaluation-marketplace" child2="analysis-evaluation-report" page=page}}
+            {{#*inline "nav_icon"}}<svg class="sp-icon" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 8l3 3 7-7"/><path d="M2 13h12"/></svg>{{/inline}}
+        {{/nav-item}}
+        {{/if}}
+        {{#> nav-item href="/admin/analysis/versions" text="Versions" leaf="analysis-versions" child="analysis-marketplace-versions" child2="analysis-revision" page=page}}
+            {{#*inline "nav_icon"}}<svg class="sp-icon" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 2v8a3 3 0 0 0 3 3h5M4 5h5a3 3 0 0 0-3-3"/><circle cx="4" cy="2" r="1"/><circle cx="12" cy="2" r="1"/><circle cx="12" cy="13" r="1"/></svg>{{/inline}}
+        {{/nav-item}}
 
         </div>
         </div>
         </section>
+        {{/if}}
 
         {{!-- GOVERNANCE — what the policy chain decided, and what it is still
              waiting on a human for. --}}
+        {{#if current_user.is_console}}
 
         <section class="sp-nav-group sp-nav-group--governance" data-nav-group="governance">
         <h2 class="sp-nav-label">
@@ -171,10 +177,12 @@
         </div>
         </div>
         </section>
+        {{/if}}
 
         {{!-- PLATFORM — the installable units declared in services/*.yaml, and
-             the gateway that routes to them. --}}
-
+             the gateway that routes to them. A participant sees Code sync
+             alone: the versions and sync of their own marketplaces. --}}
+        {{#if current_user.has_console}}
         <section class="sp-nav-group sp-nav-group--platform" data-nav-group="platform">
         <h2 class="sp-nav-label">
             <button class="sp-nav-group__toggle" type="button" data-action="nav-group-toggle" aria-expanded="false" aria-controls="sp-nav-group-platform">
@@ -185,9 +193,17 @@
         </h2>
         <div class="sp-nav-group__items" id="sp-nav-group-platform">
         <div class="sp-nav-group__inner">
-        {{#> nav-item href="/admin/mcp" text="MCP servers" leaf="mcp" child="mcp-detail" page=page}}
-            {{#*inline "nav_icon"}}<svg class="sp-icon" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="4" rx="1"/><rect x="2" y="9" width="12" height="4" rx="1"/><path d="M5 5h.01M5 11h.01" stroke-linecap="round"/></svg>{{/inline}}
-        {{/nav-item}}
+        {{#if current_user.is_console}}
+        <a href="/admin/configuration"{{navActive page "configuration"}}>
+            <svg class="sp-icon" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="1.5"/><path d="M5 6h6M5 8.5h6M5 11h4" stroke-linecap="round"/></svg>
+            Configuration
+        </a>
+        {{/if}}
+        <a href="/admin/sync"{{navActive page "sync"}}>
+            <svg class="sp-icon" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13 6.5A5.5 5.5 0 003.6 4.6M3 9.5a5.5 5.5 0 009.4 1.9" stroke-linecap="round"/><path d="M2.5 2.5v3h3M13.5 13.5v-3h-3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Code sync
+        </a>
+        {{#if current_user.is_console}}
         {{#> nav-item href="/admin/marketplaces" text="Marketplaces" leaf="marketplaces" child="marketplace-detail" page=page}}
             {{#*inline "nav_icon"}}<svg class="sp-icon" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 5.5h12L13 13H3z" stroke-linejoin="round"/><path d="M5.5 5.5V4a2.5 2.5 0 015 0v1.5" stroke-linecap="round"/></svg>{{/inline}}
         {{/nav-item}}
@@ -197,13 +213,13 @@
         {{#> nav-item href="/admin/skills" text="Skills" leaf="skills" child="skill-detail" page=page}}
             {{#*inline "nav_icon"}}<svg class="sp-icon" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1.5l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11.3 4.2 13.3l.7-4.3-3.1-3 4.3-.6z" stroke-linejoin="round"/></svg>{{/inline}}
         {{/nav-item}}
+        {{#> nav-item href="/admin/mcp" text="MCP servers" leaf="mcp" child="mcp-detail" page=page}}
+            {{#*inline "nav_icon"}}<svg class="sp-icon" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="4" rx="1"/><rect x="2" y="9" width="12" height="4" rx="1"/><path d="M5 5h.01M5 11h.01" stroke-linecap="round"/></svg>{{/inline}}
+        {{/nav-item}}
         {{#> nav-item href="/admin/gateway" text="Gateway" leaf="gateway" child="gateway-policies" page=page}}
             {{#*inline "nav_icon"}}<svg class="sp-icon" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 8h12" stroke-linecap="round"/><circle cx="5" cy="8" r="2"/><circle cx="11" cy="8" r="2"/></svg>{{/inline}}
         {{/nav-item}}
-        <a href="/admin/sync"{{navActive page "sync"}}>
-            <svg class="sp-icon" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13 6.5A5.5 5.5 0 003.6 4.6M3 9.5a5.5 5.5 0 009.4 1.9" stroke-linecap="round"/><path d="M2.5 2.5v3h3M13.5 13.5v-3h-3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            Sync
-        </a>
+        {{/if}}
         </div>
         </div>
         </section>

@@ -41,13 +41,20 @@ pub async fn find_decision_chain(
     };
 
     let (decisions, slots) = list_decisions(pool, &session_id).await?;
-    let (requests, trace_id) = list_requests(pool, &session_id).await?;
+    let (requests, request_slots) = list_requests(pool, &session_id).await?;
+    let trace_id = request_slots.trace_id;
     let events = list_events(pool, &session_id).await?;
     let transcript = find_transcript(pool, &session_id).await?;
     let summary = find_summary(pool, &session_id).await?;
 
+    // Why: a gateway-only session has no governance decision to name its user,
+    // so the identity falls back to the row the request itself was audited under.
     let identity = ChainIdentity {
-        user_id: slots.user_id,
+        user_id: if slots.user_id.as_str().is_empty() {
+            request_slots.user_id.unwrap_or(slots.user_id)
+        } else {
+            slots.user_id
+        },
         agent_id: slots.agent_id,
         agent_scope: slots.agent_scope,
     };

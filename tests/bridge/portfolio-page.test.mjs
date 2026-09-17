@@ -36,7 +36,7 @@ test('removing the portfolio DOM disposes its live transport and observer', asyn
   const h = await page();
   assert.equal(h.watches.length, 1);
   assert.equal(h.watches[0].generation, '4.5.6');
-  assert.equal(h.watches[0].url, '/admin/analysis/resources.json?start=2026-01-01&end=2026-02-01');
+  assert.equal(h.watches[0].url, '/admin/analysis/skills.json?start=2026-01-01&end=2026-02-01');
   assert.equal(h.observers[0].target, h.body);
   h.observers[0].callback(); assert.equal(h.disposed(), 0);
   h.root.isConnected = false; h.observers[0].callback();

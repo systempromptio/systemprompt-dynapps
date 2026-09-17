@@ -22,6 +22,7 @@ pub mod audit_event_bus;
 pub mod authz;
 pub mod error;
 pub mod event_hub;
+pub(crate) mod export;
 pub mod gateway_entitlement;
 pub mod gateway_safety;
 pub(crate) mod handlers;
@@ -77,13 +78,13 @@ pub mod test_support {
     };
     pub use crate::handlers::ssr::analysis::portfolio::rows::{
         Health, HealthInputs, InventoryRow, InventoryRowInputs, RowVersion, health_of, live_for,
-        p95_cell, short_hash, version_href,
+        p95_cell, scores_for, short_hash, version_href,
     };
     pub use crate::handlers::ssr::analysis::time::{
         parse as parse_window_bound, render as render_window_bound,
     };
     pub use crate::handlers::ssr::analysis::{
-        AnalysisQuery, Drilldown, RetainedConversationView, RetainedSkillView, drilldown_url,
+        AnalysisQuery, RetainedConversationView, drilldown_url, parse_skill_key,
     };
     pub use crate::handlers::ssr::ssr_history::command_name as history_command_name;
     pub use crate::handlers::ssr::transcript_view::{

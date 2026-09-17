@@ -1,0 +1,54 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT r.entity_id AS \"entity_id!\", r.rule_type AS \"rule_type!\",\n                  r.rule_value AS \"rule_value!\"\n           FROM access_control_rules r\n           WHERE r.entity_type = $1\n             AND r.access = 'allow'\n             AND r.rule_type IN ('group', 'project')\n             AND r.entity_id IN (\n                 SELECT m.entity_id FROM access_control_rules m\n                 WHERE m.entity_type = $1\n                   AND m.access = 'allow'\n                   AND ((m.rule_type = 'group' AND m.rule_value = ANY($2))\n                     OR (m.rule_type = 'project' AND m.rule_value = ANY($3))))\n           ORDER BY r.entity_id, r.rule_type, r.rule_value",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "entity_id!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "access_control_rules",
+            "name": "entity_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "rule_type!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "access_control_rules",
+            "name": "rule_type"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "rule_value!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "access_control_rules",
+            "name": "rule_value"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "TextArray",
+        "TextArray"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "6d6e1888bf128a965fdb355aaee9d62e10e63a09835dca0b628b184851b4f7d3"
+}

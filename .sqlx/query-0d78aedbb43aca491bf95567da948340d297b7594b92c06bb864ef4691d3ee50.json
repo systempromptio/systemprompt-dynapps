@@ -1,0 +1,125 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "-- The worst and best judged sessions in a scope and window: the sessions the\n-- report quotes. Scope is the whole instance ($1 NULL) or one marketplace\n-- (sessions that invoked one of its skills). Each side is capped at $4 rows.\nWITH scoped AS (\n    SELECT c.session_id, c.user_id, c.intent, c.quality, c.speed, c.cost, c.last_scored_at\n      FROM evaluation_session_scorecard c\n     WHERE c.scored_criteria > 0 AND c.quality IS NOT NULL\n       AND c.last_scored_at >= $2 AND c.last_scored_at < $3\n       AND ($1::text IS NULL OR EXISTS (\n             SELECT 1 FROM evaluation_session_skills k\n              WHERE k.session_id = c.session_id AND k.marketplace_id = $1))\n), worst AS (\n    SELECT s.*, true AS is_worst FROM scoped s\n     ORDER BY s.quality ASC, s.intent ASC NULLS LAST, s.last_scored_at DESC LIMIT $4\n), best AS (\n    SELECT s.*, false AS is_worst FROM scoped s\n     WHERE s.session_id NOT IN (SELECT session_id FROM worst)\n     ORDER BY s.quality DESC, s.intent DESC NULLS LAST, s.last_scored_at DESC LIMIT $4\n), picked AS (\n    SELECT * FROM worst UNION ALL SELECT * FROM best\n)\nSELECT p.session_id AS \"session_id!: SessionId\", p.is_worst AS \"is_worst!\",\n       p.intent, p.quality, p.speed, p.cost,\n       (SELECT ar.context_id FROM ai_requests ar\n         WHERE ar.client_session_id = p.session_id AND ar.actor_kind <> 'job'\n         ORDER BY ar.created_at DESC LIMIT 1) AS \"context_id: ContextId\",\n       ps.ai_title AS title,\n       (SELECT a.category FROM conversation_analyses a\n         JOIN ai_requests ar ON ar.context_id = a.context_id\n        WHERE ar.client_session_id = p.session_id LIMIT 1) AS category,\n       COALESCE((SELECT array_agg(DISTINCT k.skill) FROM evaluation_session_skills k\n                  WHERE k.session_id = p.session_id), ARRAY[]::text[]) AS \"skills!\",\n       q.rationale AS quality_rationale,\n       (SELECT e->>'quote' FROM jsonb_array_elements(qr.evidence) e LIMIT 1) AS evidence_quote,\n       i.rationale AS intent_rationale\n  FROM picked p\n  LEFT JOIN plugin_session_summaries ps ON ps.session_id = p.session_id\n  LEFT JOIN evaluation_session_scores q ON q.session_id = p.session_id AND q.criterion = 'quality' AND q.status = 'succeeded'\n  LEFT JOIN evaluation_runs qr ON qr.id = q.run_id\n  LEFT JOIN evaluation_session_scores i ON i.session_id = p.session_id AND i.criterion = 'intent' AND i.status = 'succeeded'\n ORDER BY p.is_worst DESC, p.quality\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "session_id!: SessionId",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "is_worst!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "intent",
+        "type_info": "Int2",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "quality",
+        "type_info": "Int2",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "speed",
+        "type_info": "Int2",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "cost",
+        "type_info": "Int2",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 6,
+        "name": "context_id: ContextId",
+        "type_info": "Varchar",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 7,
+        "name": "title",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "plugin_session_summaries",
+            "name": "ai_title"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "category",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 9,
+        "name": "skills!",
+        "type_info": "TextArray",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 10,
+        "name": "quality_rationale",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "evaluation_session_scores",
+            "name": "rationale"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "evidence_quote",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 12,
+        "name": "intent_rationale",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "evaluation_session_scores",
+            "name": "rationale"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Timestamptz",
+        "Timestamptz",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      true,
+      null,
+      null,
+      true,
+      null,
+      true
+    ]
+  },
+  "hash": "0d78aedbb43aca491bf95567da948340d297b7594b92c06bb864ef4691d3ee50"
+}

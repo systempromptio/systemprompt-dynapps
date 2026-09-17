@@ -31,7 +31,7 @@ if (root) {
     set('freshness', `${data.generated_at} · pending facts ${data.health.pending_changes} · producer changes ${data.health.pending_producer_changes} ${data.health.last_error || ''} ${data.inventory.last_error || ''}`);
     set('unknown-usage', data.unknown_usage === null ? 'Unknown resource attribution coverage is unavailable.' : `${data.unknown_usage} invocations have unknown resource attribution.`);
   };
-  const dispose = watchPortfolio({ url: '/admin/analysis/resources.json' + location.search, generation: root.dataset.generation, onData: render, onStatus: text => { if (text !== 'Live snapshots') set('live-status', text); } });
+  const dispose = watchPortfolio({ url: '/admin/analysis/skills.json' + location.search, generation: root.dataset.generation, onData: render, onStatus: text => { if (text !== 'Live snapshots') set('live-status', text); } });
   const stop = () => { dispose(); observer.disconnect(); window.removeEventListener('pagehide', stop); };
   const observer = new MutationObserver(() => { if (!root.isConnected) stop(); });
   observer.observe(document.body, { childList: true, subtree: true });

@@ -414,11 +414,11 @@ async fn analytics_pages_aggregate_the_seeded_trail() {
         ("the outcome mix", "/admin/requests?tab=status".to_owned()),
         (
             "the internal cost export",
-            "/admin/reports/internal.csv".to_owned(),
+            "/admin/export/report-internal-providers?format=csv".to_owned(),
         ),
         (
             "the customer usage export over the current month",
-            "/admin/reports/customer.csv".to_owned(),
+            "/admin/export/report-customer-users?format=csv".to_owned(),
         ),
     ];
     for (label, path) in paths {

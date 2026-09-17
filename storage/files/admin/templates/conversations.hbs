@@ -17,6 +17,7 @@
             <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/sessions" title="The ledger: one row per conversation in a window with turns, tool calls, cost and errors">Sessions</a>
             <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/contexts" title="Activity by person: who is talking, through which clients and models">By person</a>
             {{#if filter_user_id}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="{{base_url}}">Clear user filter</a>{{/if}}
+            {{> components/export-button export}}
         {{/inline}}
     {{/components/page-header}}
 
@@ -73,7 +74,7 @@
             </tbody>
         {{/components/table}}
         {{else}}
-        {{> components/empty-state title="No conversations match"
+        {{> components/empty-state heading="No conversations match"
             message="Clear the search or the user filter, or show side calls, to widen the listing."}}
         {{/if}}
     </section>

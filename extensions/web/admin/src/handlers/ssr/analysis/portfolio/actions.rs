@@ -40,25 +40,16 @@ pub(crate) async fn bind(
     systemprompt::marketplace::inventory::InventoryService::new(state.repository.clone())
         .refresh(&state.owner, &root, &services)
         .await?;
-    Ok(Redirect::to("/admin/analysis/resources"))
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub(crate) struct SyncForm {
-    #[serde(default)]
-    back: Option<String>,
+    Ok(Redirect::to(SKILLS_PAGE))
 }
 
 // Why: the same pass the scheduler runs each minute, on demand — refresh the
-// inventory, then publish the latest configured revision of every skill. The
-// form says where it came from; anything but the Skills page is ignored.
+// inventory, then publish the latest configured revision of every skill.
 pub(crate) async fn sync_inventory(
     Extension(user): Extension<UserContext>,
     Extension(state): Extension<Arc<ManagedState>>,
     State(pool): State<Arc<PgPool>>,
     headers: HeaderMap,
-    Form(form): Form<SyncForm>,
 ) -> AdminHtmlResult<Redirect> {
     if !user.is_admin {
         return Err(AdminError::Forbidden("Administrator access required".to_owned()).into());
@@ -85,10 +76,7 @@ pub(crate) async fn sync_inventory(
     crate::repositories::sync::sources_db::record_service_sources(&pool)
         .await
         .map_err(AdminError::internal)?;
-    Ok(Redirect::to(match form.back.as_deref() {
-        Some(SKILLS_PAGE) => SKILLS_PAGE,
-        _ => "/admin/analysis/resources",
-    }))
+    Ok(Redirect::to(SKILLS_PAGE))
 }
 
-const SKILLS_PAGE: &str = "/admin/analysis/skills";
+const SKILLS_PAGE: &str = crate::handlers::ssr::analysis_urls::ANALYSIS_SKILLS_URL;

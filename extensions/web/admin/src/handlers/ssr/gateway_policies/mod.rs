@@ -6,7 +6,7 @@
 //! cache), so a save here is live without a restart. A plain form, no
 //! JavaScript in the path: every field posts as `(name, value)` pairs and
 //! [`parse_policy_form`] turns them into the spec the file would declare.
-//! The sync page shows what this editor changed as drift on the
+//! The Sync tab shows what this editor changed as drift on the
 //! `gateway_policies` plane until it is exported or overwritten.
 
 mod view;
@@ -24,7 +24,8 @@ use crate::activity::{self, NewActivity};
 use crate::error::{AdminError, AdminHtmlResult};
 use crate::handlers::shared::require_write_origin;
 use crate::handlers::ssr::page::Page;
-use crate::handlers::ssr::types::BreadcrumbView;
+use crate::handlers::ssr::sync_plane::{is_sync_tab, plane_card_by_id, sync_tab};
+use crate::handlers::ssr::types::{BreadcrumbView, TabLinkView};
 use crate::repositories::gateway_policies::form::parse_policy_form;
 use crate::repositories::gateway_policies::month_window_db::refresh_month_windows;
 use crate::repositories::gateway_policies::rows::{
@@ -37,6 +38,20 @@ pub(crate) const BASE_URL: &str = "/admin/gateway/policies";
 pub(crate) struct PoliciesQuery {
     pub saved: Option<String>,
     pub error: Option<String>,
+    pub tab: Option<String>,
+}
+
+fn tabs(on_sync: bool) -> Vec<TabLinkView> {
+    vec![
+        TabLinkView {
+            slug: "policies",
+            label: "Policies",
+            href: BASE_URL.to_owned(),
+            is_active: !on_sync,
+            count: None,
+        },
+        sync_tab(BASE_URL, on_sync),
+    ]
 }
 
 fn require_console(page: &Page) -> Result<(), AdminError> {
@@ -85,6 +100,17 @@ pub(crate) async fn gateway_policies_page(
     Query(query): Query<PoliciesQuery>,
 ) -> AdminHtmlResult<Response> {
     require_console(&page)?;
+    let on_sync = is_sync_tab(query.tab.as_deref());
+    let sync = if on_sync {
+        plane_card_by_id(
+            &pool,
+            crate::repositories::sync::gateway_policies::PLANE_ID,
+            "",
+        )
+        .await?
+    } else {
+        None
+    };
     let rows = list_policies(&pool).await.map_err(AdminError::Database)?;
     let today = chrono::Utc::now().date_naive();
     let (win_w, win_s) = winners(&rows);
@@ -104,6 +130,8 @@ pub(crate) async fn gateway_policies_page(
     let data = GatewayPoliciesPageData {
         page: "gateway-policies",
         title: "Gateway policies",
+        tabs: tabs(on_sync),
+        sync,
         breadcrumbs: vec![
             BreadcrumbView::link("Admin", "/admin"),
             BreadcrumbView::link("Gateway", "/admin/gateway"),
@@ -116,7 +144,7 @@ pub(crate) async fn gateway_policies_page(
         error: query.error,
         month_sentinel: GatewayPoliciesPageData::month_sentinel(),
         quotas_url: "/admin/governance/quotas",
-        sync_url: "/admin/sync",
+        sync_url: "/admin/gateway/policies?tab=sync",
         docs_url: "/documentation/enterprise-cost-management",
     };
     Ok(crate::handlers::ssr::render_typed_page(

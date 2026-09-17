@@ -5,7 +5,8 @@ use serde::Serialize;
 use systemprompt::ai::{QuotaWindow, SafetyHistoryMode};
 
 use crate::handlers::ssr::list_view::SelectOptionView;
-use crate::handlers::ssr::types::BreadcrumbView;
+use crate::handlers::ssr::sync_plane::PlaneCardView;
+use crate::handlers::ssr::types::{BreadcrumbView, TabLinkView};
 use crate::repositories::gateway_policies::form::{CATEGORIES, MAX_WINDOWS, SCANNERS, SUBJECTS};
 use crate::repositories::gateway_policies::month_window::{
     MONTH_WINDOW_SECONDS, is_month_window, window_label,
@@ -214,6 +215,9 @@ pub(crate) fn new_policy_view() -> PolicyView {
 pub(crate) struct GatewayPoliciesPageData {
     pub page: &'static str,
     pub title: &'static str,
+    pub tabs: Vec<TabLinkView>,
+    // Why: set on the Sync tab — `policies.yaml` against `ai_gateway_policies`.
+    pub sync: Option<PlaneCardView>,
     pub breadcrumbs: Vec<BreadcrumbView>,
     pub can_write: bool,
     pub policies: Vec<PolicyView>,

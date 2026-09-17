@@ -5,7 +5,7 @@ use systemprompt_web_admin::repositories::access_control::declared::{
     DeclaredInputs, DeclaredSet, build_declared_set,
 };
 use systemprompt_web_admin::repositories::access_control::drift::{
-    BandRuleRow, EntityDefaultRow, OrphanOrigin, compute_drift,
+    BandRuleRow, EntityDefaultRow, EntityState, OrphanOrigin, compute_drift,
 };
 use systemprompt_web_admin::repositories::config::rules_yaml_loader::parse_rules_doc;
 
@@ -177,4 +177,41 @@ fn an_uncatalogued_declared_entity_is_reported() {
     let drift = compute_drift(&declared(), &[], &[]);
     assert_eq!(drift.counts().entities_missing, 1);
     assert_eq!(drift.counts().missing_in_db, 2);
+}
+
+// Why: "Unknown" is the page's word for "could not compare", and only that.
+// A readable file against an empty database is drift, so an operator is
+// never shown Unknown for a database that simply has nothing in it yet.
+#[test]
+fn unknown_means_the_declaration_could_not_be_compared_and_nothing_else() {
+    let empty_db = compute_drift(&declared(), &[], &[]);
+    assert_eq!(
+        EntityState::of(Some(&empty_db), "mcp_server", "atlassian"),
+        EntityState::Drift
+    );
+    assert_eq!(
+        EntityState::of(None, "mcp_server", "atlassian"),
+        EntityState::Unknown
+    );
+    let in_step = compute_drift(
+        &declared(),
+        &[
+            row("atlassian", "role", "admin", Access::Allow, "pilot", "yaml"),
+            row(
+                "atlassian",
+                "group",
+                "india-devs",
+                Access::Allow,
+                "pilot",
+                "yaml",
+            ),
+        ],
+        &[entity("atlassian", false)],
+    );
+    assert_eq!(
+        EntityState::of(Some(&in_step), "mcp_server", "atlassian"),
+        EntityState::InSync
+    );
+    assert_eq!(EntityState::Unknown.label(), "Unknown");
+    assert_eq!(EntityState::Drift.tone(), "warn");
 }

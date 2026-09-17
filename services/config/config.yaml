@@ -38,7 +38,7 @@ settings:
   # Why: more than one marketplace is enabled, so the instance has to say which
   # one is the default. astound-commons is the baseline workspace every
   # signed-in user reaches; the group- and role-scoped ones are additive and are
-  # gated by `access.rules` in their own files.
+  # gated in services/access-control/rules.yaml, the one source of entitlement.
   default_marketplace_id: astound-commons
   agent_port_range: [9000, 9999]
   mcp_port_range: [5000, 5999]

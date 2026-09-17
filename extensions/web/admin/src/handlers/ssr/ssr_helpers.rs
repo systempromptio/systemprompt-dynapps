@@ -7,7 +7,6 @@ use axum::response::{Html, IntoResponse, Response};
 use serde::Serialize;
 
 use super::context::{BrandingShell, PageChrome, PageShell};
-use super::export::ViewMode;
 
 pub(crate) const fn branding_context(engine: &AdminTemplateEngine) -> BrandingShell<'_> {
     BrandingShell {
@@ -36,17 +35,14 @@ pub(crate) fn render_typed_page<T: Serialize>(
     user_ctx: &UserContext,
     mkt_ctx: &MarketplaceContext,
 ) -> Response {
-    render_shell(engine, template, data, Viewer::new(user_ctx, mkt_ctx), None)
+    render_shell(engine, template, data, Viewer::new(user_ctx, mkt_ctx))
 }
 
-// Why: the exportable pages hand their `ViewMode` through so the shell can
-// draw the download control; every other page renders with no such control.
 pub(crate) fn render_shell<T: Serialize>(
     engine: &AdminTemplateEngine,
     template: &str,
     data: &T,
     viewer: Viewer<'_>,
-    view: Option<&ViewMode>,
 ) -> Response {
     let started = std::time::Instant::now();
     // JSON: the shell reads the page's own `page` key to pick its help text,
@@ -57,15 +53,7 @@ pub(crate) fn render_shell<T: Serialize>(
         serde_json::Value::Object(serde_json::Map::new())
     });
     let page_id = value.get("page").and_then(serde_json::Value::as_str);
-    let shell = PageShell::new(
-        engine.branding(),
-        viewer,
-        PageChrome {
-            page_id,
-            export_url: view.map(ViewMode::export_url),
-        },
-        &value,
-    );
+    let shell = PageShell::new(engine.branding(), viewer, PageChrome { page_id }, &value);
 
     let response = match engine.render(template, &shell) {
         Ok(html) => Html(html).into_response(),

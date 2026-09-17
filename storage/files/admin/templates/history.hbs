@@ -5,6 +5,7 @@
     {{#> components/page-header title=title subtitle="Your own Claude Code sessions and gateway conversations, newest first — models, turns, tokens and cost. Full-text search runs over the redacted transcript."}}
         {{#*inline "header_actions"}}
             <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/profile">Profile</a>
+            {{> components/export-button export}}
         {{/inline}}
     {{/components/page-header}}
 
@@ -58,7 +59,7 @@
             </tbody>
         {{/components/table}}
         {{else}}
-        {{> components/empty-state title="No conversations match"
+        {{> components/empty-state heading="No conversations match"
             message="Clear the search, show side calls, or start a Claude Code session or a gateway conversation to populate history."}}
         {{/if}}
     </section>

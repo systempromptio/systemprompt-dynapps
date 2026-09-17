@@ -6,7 +6,6 @@
         {{#*inline "header_actions"}}
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{docs_url}}" target="_blank" rel="noopener noreferrer">How it works</a>
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/groups">Group rules</a>
-        <a class="sp-btn sp-btn--sm sp-btn--secondary" href="{{sync_url}}">Sync &amp; export</a>
         {{#if can_write}}
         <button type="button" class="sp-btn sp-btn--sm sp-btn--primary" data-action="new-group">+ New group</button>
         {{/if}}
@@ -19,8 +18,15 @@
         {{/inline}}
     {{/components/page-header}}
 
+    {{> components/tabs tabs=tabs nav_label="Access control views"}}
+
+    {{#if sync}}
+    {{> components/sync-plane plane=sync can_write=can_write}}
+    {{> components/sync-plane-dialogs}}
+    {{else}}
+
     {{#if declared_unreadable}}
-    {{> components/notice tone="err" title="rules.yaml could not be read" message=declared_unreadable}}
+    {{> components/notice tone="err" title="The declaration could not be compared" message=declared_unreadable}}
     {{/if}}
 
     {{#if drift}}
@@ -162,7 +168,8 @@
         </tbody>
     {{/components/table}}
     {{else}}
-    {{> components/empty-state title="No entity matches" message="No governed entity matches these filters. Clear them to see every entity."}}
+    {{> components/empty-state heading="No entity matches" message="No governed entity matches these filters. Clear them to see every entity."}}
+    {{/if}}
     {{/if}}
 
     {{#if entities.capped}}

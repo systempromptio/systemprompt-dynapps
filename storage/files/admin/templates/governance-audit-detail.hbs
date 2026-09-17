@@ -53,7 +53,7 @@
     <section class="sp-trace-detail__summary" aria-label="Request summary">
       <div class="sp-trace-detail__field">
         <span class="sp-trace-detail__label">User</span>
-        <code class="sp-code-inline" title="{{summary.user_id}}">{{summary.user_id}}</code>
+        {{#if summary.user_id}}<a href="{{summary.user_url}}"><code class="sp-code-inline" title="{{summary.user_id}}">{{summary.user_id}}</code></a>{{else}}<span class="sp-table__cell--muted" title="No identity was recorded for this request">&mdash;</span>{{/if}}
       </div>
       {{#if summary.tenant_id}}
         <div class="sp-trace-detail__field">
@@ -74,7 +74,7 @@
       {{#if summary.trace_url}}
         <div class="sp-trace-detail__field">
           <span class="sp-trace-detail__label">Trace</span>
-          <a href="{{summary.trace_url}}">Open trace Open waterfall &rarr;rarr;</a>
+          <a href="{{summary.trace_url}}">Open trace &rarr;</a>
         </div>
       {{/if}}
       <div class="sp-trace-detail__field">
@@ -131,7 +131,7 @@
           </tbody>
         {{/components/table}}
       {{else}}
-        <p class="sp-empty">No policy decisions recorded for this session.</p>
+        {{> components/empty-state compact=true message="No policy decisions recorded for this session."}}
       {{/if}}
     </section>
 
@@ -172,7 +172,7 @@
           </tbody>
         {{/components/table}}
       {{else}}
-        <p class="sp-empty">No model traffic recorded for this session.</p>
+        {{> components/empty-state compact=true message="No model traffic recorded for this session."}}
       {{/if}}
     </section>
 
@@ -233,7 +233,7 @@
           </tbody>
         {{/components/table}}
       {{else}}
-        {{> components/empty-state message="No scanner findings recorded for this request."}}
+        {{> components/empty-state compact=true message="No scanner findings recorded for this request."}}
       {{/if}}
     </section>
 
@@ -264,7 +264,7 @@
           </tbody>
         {{/components/table}}
       {{else}}
-        {{> components/empty-state message="This request issued no tool calls."}}
+        {{> components/empty-state compact=true message="This request issued no tool calls."}}
       {{/if}}
     </section>
 
@@ -333,11 +333,11 @@
             {{/each}}
           </ul>
           {{else}}
-            {{> components/empty-state message="No tools on either side of this request."}}
+            {{> components/empty-state compact=true message="No tools on either side of this request."}}
           {{/if}}
         </div>
       {{else}}
-        {{> components/empty-state message="No tool schemas were stored for this request."}}
+        {{> components/empty-state compact=true message="No tool schemas were stored for this request."}}
       {{/if}}
     </section>
 
@@ -370,7 +370,7 @@
           </tbody>
         {{/components/table}}
       {{else}}
-        {{> components/empty-state message="No artifacts stored for this session."}}
+        {{> components/empty-state compact=true message="No artifacts stored for this session."}}
       {{/if}}
     </section>
 

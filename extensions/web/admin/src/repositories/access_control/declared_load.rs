@@ -2,9 +2,14 @@
 //!
 //! The I/O half of [`super::declared`]: reads `rules.yaml`, lists the live
 //! gateway routes, and hands both to the pure projection. Marketplace ids
-//! arrive as a parameter — the boot path takes them from the process-wide
-//! services cache, a test from a fixture tree — so the same function serves
-//! both without the cache leaking into tests.
+//! arrive as a parameter — the boot path and the page take them from the
+//! composed services tree, a test from a fixture tree — so the same function
+//! serves both without the process-wide cache leaking into tests.
+//!
+//! A tree that does not compose is its own error. Turning it into an empty
+//! catalog once made a dangling plugin reference read as "rules.yaml names a
+//! marketplace that does not exist" — the wrong file blamed for the wrong
+//! reason, on every entity of the page.
 
 use std::path::Path;
 
@@ -16,6 +21,7 @@ use systemprompt_web_shared::error::MarketplaceError;
 use super::declared::{DeclaredInputs, DeclaredSet, build_declared_set};
 use super::rules::list_entity_defaults;
 use crate::repositories::config::rules_yaml_loader::read_rules_doc;
+use crate::repositories::config::rules_yaml_types::RulesDoc;
 
 pub async fn load_declared_set(
     pool: &PgPool,
@@ -26,6 +32,18 @@ pub async fn load_declared_set(
     let Some(doc) = read_rules_doc(services_path).await? else {
         return Ok(DeclaredSet::default());
     };
+    build_declared_from_doc(pool, &doc, marketplace_ids, registered).await
+}
+
+// Why: the projection half on its own, so an uploaded `rules.yaml` (an
+// import preview) is declared exactly as the file on disk would be — same
+// route catalog, same marketplace ids, same expiry pass.
+pub async fn build_declared_from_doc(
+    pool: &PgPool,
+    doc: &RulesDoc,
+    marketplace_ids: &[String],
+    registered: &RegisteredEntities,
+) -> Result<DeclaredSet, MarketplaceError> {
     let gateway_routes: Vec<String> = list_entity_defaults(pool)
         .await?
         .into_iter()
@@ -33,7 +51,7 @@ pub async fn load_declared_set(
         .map(|e| e.entity_id)
         .collect();
     let mut set = build_declared_set(
-        &doc,
+        doc,
         &DeclaredInputs {
             gateway_routes: &gateway_routes,
             marketplace_ids,
@@ -45,20 +63,17 @@ pub async fn load_declared_set(
     Ok(set)
 }
 
-// Why: the marketplace ids the active services tree defines, or none when the
-// tree is unreadable — the server does not start without one, so an error
-// here is someone else's to report, not this loader's.
-#[must_use]
-pub fn marketplace_ids_from_services() -> Vec<String> {
-    match ConfigLoader::load() {
-        Ok(services) => services
-            .marketplaces
-            .keys()
-            .map(|id| id.as_str().to_owned())
-            .collect(),
-        Err(e) => {
-            tracing::error!(error = %e, "access-control: services config unreadable");
-            Vec::new()
-        },
-    }
+// Why: the marketplace ids the composed tree defines — the same root
+// `rules.yaml` is read from, so a kit's marketplace validates the moment its
+// bundle is active, without a restart. The loader's cache is keyed by root,
+// so this is a read of the composition, not a parse per request.
+pub fn marketplace_ids_from_services() -> Result<Vec<String>, MarketplaceError> {
+    let services = ConfigLoader::load().map_err(|e| {
+        MarketplaceError::Internal(format!("services tree could not be composed: {e}"))
+    })?;
+    Ok(services
+        .marketplaces
+        .keys()
+        .map(|id| id.as_str().to_owned())
+        .collect())
 }

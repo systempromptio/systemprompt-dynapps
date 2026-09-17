@@ -7,9 +7,12 @@
 //! is how a rewrite ends up pointing at the wrong provider.
 //!
 //! Every mutation goes through the existing JSON API (`PATCH /gateway`,
-//! `POST|PATCH|DELETE /gateway/routes`), which round-trips the file safely:
-//! comments survive, and `pricing`/`when`/`requires` blocks the form does not
-//! render are carried through untouched. The page never writes YAML itself.
+//! `POST|PATCH|DELETE /gateway/routes`). Routes are read from the
+//! `gateway_routes` table, which every write lands in before the file's
+//! `routes:` sequence is regenerated from it; core boots from that file, so
+//! a saved route is dispatched at the next restart and the page says so.
+//! `pricing`/`when`/`requires` blocks the form does not render are carried
+//! through untouched. The page never writes YAML itself.
 
 mod rows;
 mod view;
@@ -21,7 +24,6 @@ use axum::response::Response;
 use sqlx::PgPool;
 
 use crate::error::AdminHtmlResult;
-use crate::handlers::shared;
 use crate::handlers::ssr::ssr_helpers::render_typed_page;
 use crate::handlers::ssr::types::BreadcrumbView;
 use crate::repositories;
@@ -56,6 +58,15 @@ fn view_tabs(show_resolved: bool) -> Vec<crate::handlers::ssr::types::TabLinkVie
             label: "Resolved only",
             href: "/admin/gateway?tab=resolved".to_owned(),
             is_active: show_resolved,
+            count: None,
+        },
+        // Why: the policies live on their own page; the tab is a link there
+        // so the gateway reads as one thing with three views.
+        crate::handlers::ssr::types::TabLinkView {
+            slug: "policies",
+            label: "Policies",
+            href: "/admin/gateway/policies".to_owned(),
+            is_active: false,
             count: None,
         },
     ]
@@ -101,13 +112,11 @@ pub(crate) async fn gateway_page(
     Query(query): Query<GatewayQuery>,
 ) -> AdminHtmlResult<Response> {
     console_only(&user_ctx)?;
-    let gateway_path = shared::get_gateway_file_path()?;
 
-    let (config, load_error) =
-        match repositories::config::gateway::get_gateway_config(&gateway_path) {
-            Ok(config) => (config, String::new()),
-            Err(e) => (GatewayConfigView::default(), e.to_string()),
-        };
+    let (config, load_error) = match super::super::gateway_config_view(&pool).await {
+        Ok(config) => (config, String::new()),
+        Err(e) => (GatewayConfigView::default(), e.to_string()),
+    };
     let (resolved, catalog_error) =
         match repositories::config::gateway::dispatchable_routes_from_services() {
             Ok(routes) => (routes, String::new()),
@@ -147,6 +156,8 @@ pub(crate) async fn gateway_page(
         probe_users: probe_users(&pool).await,
         load_error,
         catalog_error,
+        runtime_note: repositories::sync::gateway_routes::RUNTIME_NOTE,
+        sync_url: "/admin/sync?entity=gateway_route",
         tabs: view_tabs(show_resolved),
         show_resolved,
     };

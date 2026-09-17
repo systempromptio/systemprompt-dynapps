@@ -6,6 +6,7 @@
 //! Every write and every export leaves an activity row, awaited inline so
 //! the audit trail exists by the time the response does.
 
+mod archive;
 mod refresh;
 
 use std::sync::Arc;
@@ -17,11 +18,14 @@ use axum::response::{IntoResponse, Response};
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 
+pub(crate) use archive::{
+    apply_import_handler, discard_import_handler, export_zip_handler, stage_import_handler,
+};
 pub(crate) use refresh::refresh_sources_handler;
 
 use crate::activity::{self, NewActivity};
 use crate::error::{AdminError, AdminResult};
-use crate::repositories::sync::plane::{ApplyOutcome, PlaneDrift, SyncMode, SyncPlane};
+use crate::repositories::sync::plane::{Actor, ApplyOutcome, PlaneDrift, SyncMode, SyncPlane};
 use crate::repositories::sync::registry::{find_plane, planes};
 use crate::repositories::sync::sources::{SourcesView, build_sources};
 use crate::repositories::sync::state::{SyncStateRow, find_sync_state};
@@ -46,6 +50,7 @@ pub(crate) struct PlaneStatus {
     pub label: &'static str,
     pub source_file: &'static str,
     pub projection: &'static str,
+    pub runtime_note: Option<&'static str>,
     pub drift: PlaneDrift,
     pub state: Option<SyncStateRow>,
 }
@@ -68,6 +73,7 @@ pub(crate) async fn plane_status(pool: &PgPool, plane: &dyn SyncPlane) -> AdminR
         label: plane.label(),
         source_file: plane.source_file(),
         projection: plane.projection(),
+        runtime_note: plane.runtime_note(),
         drift,
         state,
     })
@@ -101,7 +107,9 @@ pub(crate) async fn apply_handler(
     Json(body): Json<ApplyRequest>,
 ) -> AdminResult<Response> {
     let plane = plane_or_404(&plane)?;
-    let outcome = plane.apply(&pool, body.mode, &user_ctx.user_id).await?;
+    let outcome = plane
+        .apply(&pool, body.mode, Actor::User(&user_ctx.user_id))
+        .await?;
     activity::record(
         &pool,
         NewActivity::sync_applied(

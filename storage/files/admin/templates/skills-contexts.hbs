@@ -9,6 +9,7 @@
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/conversations" title="Read conversations: one row per conversation from every client, searchable across transcripts">Conversations</a>
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/sessions" title="The ledger: one row per conversation in a window with turns, tool calls, cost and errors">Sessions</a>
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/requests" title="Every individual gateway request">Requests</a>
+        {{> components/export-button export}}
       {{/inline}}
     {{/components/page-header}}
 
@@ -159,7 +160,7 @@
             </tbody>
         {{/components/table}}
         {{else}}
-        {{> components/empty-state title="No users in scope" message="Nobody under the selected group, project and time range has a conversation. Widen the scope, show side calls, or clear the filters."}}
+        {{> components/empty-state heading="No users in scope" message="Nobody under the selected group, project and time range has a conversation. Widen the scope, show side calls, or clear the filters."}}
         {{/if}}
     </section>
     {{/if}}
@@ -200,7 +201,7 @@
             </tbody>
         {{/components/table}}
         {{else}}
-        {{> components/empty-state title="No conversations" message="No conversation matches the selected scope and filters. Widen the scope, clear the search, show side calls, or pick a longer time range."}}
+        {{> components/empty-state heading="No conversations" message="No conversation matches the selected scope and filters. Widen the scope, clear the search, show side calls, or pick a longer time range."}}
         {{/if}}
     </section>
     {{/if}}

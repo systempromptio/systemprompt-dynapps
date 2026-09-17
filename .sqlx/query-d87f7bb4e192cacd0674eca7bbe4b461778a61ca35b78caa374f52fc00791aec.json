@@ -1,0 +1,110 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH runs AS (\n               SELECT r.session_id, r.status, r.created_at\n                 FROM evaluation_runs r\n                WHERE r.created_at >= $2 AND r.created_at < $3\n                  AND ($1::text IS NULL OR EXISTS (\n                        SELECT 1 FROM evaluation_session_skills k\n                         WHERE k.session_id = r.session_id AND k.marketplace_id = $1))\n           ), cards AS (\n               SELECT c.*\n                 FROM evaluation_session_scorecard c\n                WHERE c.scored_criteria > 0 AND c.last_scored_at >= $4 AND c.last_scored_at < $3\n                  AND ($1::text IS NULL OR EXISTS (\n                        SELECT 1 FROM evaluation_session_skills k\n                         WHERE k.session_id = c.session_id AND k.marketplace_id = $1))\n           )\n           SELECT (SELECT COUNT(*) FROM runs)::bigint AS \"runs!\",\n                  (SELECT COUNT(*) FROM runs WHERE status = 'failed')::bigint AS \"failed_runs!\",\n                  (SELECT MAX(created_at) FROM runs WHERE status = 'succeeded') AS last_run_at,\n                  COUNT(*) FILTER (WHERE last_scored_at >= $2)::bigint AS \"scored_sessions!\",\n                  AVG(intent) FILTER (WHERE last_scored_at >= $2)::float8 AS intent,\n                  AVG(quality) FILTER (WHERE last_scored_at >= $2)::float8 AS quality,\n                  AVG(speed) FILTER (WHERE last_scored_at >= $2)::float8 AS speed,\n                  AVG(cost) FILTER (WHERE last_scored_at >= $2)::float8 AS cost,\n                  COUNT(*) FILTER (WHERE last_scored_at < $2)::bigint AS \"prior_scored_sessions!\",\n                  AVG(intent) FILTER (WHERE last_scored_at < $2)::float8 AS prior_intent,\n                  AVG(quality) FILTER (WHERE last_scored_at < $2)::float8 AS prior_quality,\n                  AVG(speed) FILTER (WHERE last_scored_at < $2)::float8 AS prior_speed,\n                  AVG(cost) FILTER (WHERE last_scored_at < $2)::float8 AS prior_cost\n             FROM cards",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "runs!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "failed_runs!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "last_run_at",
+        "type_info": "Timestamptz",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "scored_sessions!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "intent",
+        "type_info": "Float8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "quality",
+        "type_info": "Float8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 6,
+        "name": "speed",
+        "type_info": "Float8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 7,
+        "name": "cost",
+        "type_info": "Float8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 8,
+        "name": "prior_scored_sessions!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 9,
+        "name": "prior_intent",
+        "type_info": "Float8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 10,
+        "name": "prior_quality",
+        "type_info": "Float8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 11,
+        "name": "prior_speed",
+        "type_info": "Float8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 12,
+        "name": "prior_cost",
+        "type_info": "Float8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Timestamptz",
+        "Timestamptz",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "d87f7bb4e192cacd0674eca7bbe4b461778a61ca35b78caa374f52fc00791aec"
+}

@@ -177,13 +177,13 @@
 </div>
 {{else}}
 {{#if (eq empty_reason "no_requests")}}
-{{> components/empty-state title="Nothing to show"
+{{> components/empty-state heading="Nothing to show"
     message="No AI requests were recorded against this conversation."}}
 {{else}}
 {{!-- Why: the requests exist and the KPI numbers above are real; what is
       missing is the stored message bodies. Saying "no turns were recorded"
       here reads as "nothing happened", which contradicts the tiles. --}}
-{{> components/empty-state title="Transcript unavailable"
+{{> components/empty-state heading="Transcript unavailable"
     message="This conversation has recorded requests, but none of them retained a message body — so there is no transcript to render. The per-request detail still holds the timing, tokens and cost."}}
 {{/if}}
 {{/if}}

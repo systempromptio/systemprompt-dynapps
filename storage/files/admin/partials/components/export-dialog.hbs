@@ -1,0 +1,91 @@
+{{!--
+  The export dialog. Rendered once by the layout when the page context
+  carries `export`; `services/export.js` fills the counts and builds the URL.
+
+  Root context is the page's `export` view: `datasets` (id, title, window,
+  columns), `formats` (value, label) and `query` (the page's filters).
+--}}
+<dialog class="sp-dialog sp-export" data-export-dialog data-export-query="{{query}}" aria-label="Export">
+  <form class="sp-dialog-form" method="dialog" data-export-form>
+    <h3 class="sp-section__title">Export</h3>
+
+    <label class="sp-export__field"{{#unless multiple}} hidden{{/unless}}>
+      <span>Data</span>
+      <select class="sp-search-input" name="dataset" data-export-dataset>
+        {{#each datasets}}<option value="{{id}}" data-window="{{window}}">{{title}}</option>{{/each}}
+      </select>
+    </label>
+
+    <fieldset class="sp-export__field" data-export-window="live" hidden>
+      <legend>Window</legend>
+      <div class="sp-export__presets" role="group" aria-label="Window presets">
+        <label class="sp-export__preset"><input type="radio" name="live_preset" value="15m">15m</label>
+        <label class="sp-export__preset"><input type="radio" name="live_preset" value="1h">1h</label>
+        <label class="sp-export__preset"><input type="radio" name="live_preset" value="24h">24h</label>
+        <label class="sp-export__preset"><input type="radio" name="live_preset" value="7d" checked>7d</label>
+        <label class="sp-export__preset"><input type="radio" name="live_preset" value="30d">30d</label>
+        <label class="sp-export__preset"><input type="radio" name="live_preset" value="custom">Custom</label>
+      </div>
+      <div class="sp-export__custom" data-export-custom hidden>
+        <label><span>From</span><input type="datetime-local" class="sp-search-input" name="live_from"></label>
+        <label><span>To</span><input type="datetime-local" class="sp-search-input" name="live_to"></label>
+        <p class="sp-u-text-tertiary sp-u-text-xs">Up to 30 days.</p>
+      </div>
+    </fieldset>
+
+    <fieldset class="sp-export__field" data-export-window="retained" hidden>
+      <legend>Window</legend>
+      <div class="sp-export__presets" role="group" aria-label="Window presets">
+        <label class="sp-export__preset"><input type="radio" name="retained_days" value="1">1d</label>
+        <label class="sp-export__preset"><input type="radio" name="retained_days" value="7">7d</label>
+        <label class="sp-export__preset"><input type="radio" name="retained_days" value="30" checked>30d</label>
+        <label class="sp-export__preset"><input type="radio" name="retained_days" value="90">90d</label>
+        <label class="sp-export__preset"><input type="radio" name="retained_days" value="365">1y</label>
+        <label class="sp-export__preset"><input type="radio" name="retained_days" value="custom">Custom</label>
+      </div>
+      <div class="sp-export__custom" data-export-custom hidden>
+        <label><span>From</span><input type="date" class="sp-search-input" name="retained_start"></label>
+        <label><span>To</span><input type="date" class="sp-search-input" name="retained_end"></label>
+        <p class="sp-u-text-tertiary sp-u-text-xs">UTC days, up to a year.</p>
+      </div>
+    </fieldset>
+
+    <fieldset class="sp-export__field" data-export-window="days" hidden>
+      <legend>Window</legend>
+      <div class="sp-export__presets" role="group" aria-label="Window presets">
+        <label class="sp-export__preset"><input type="radio" name="days" value="1">1d</label>
+        <label class="sp-export__preset"><input type="radio" name="days" value="7">7d</label>
+        <label class="sp-export__preset"><input type="radio" name="days" value="30" checked>30d</label>
+        <label class="sp-export__preset"><input type="radio" name="days" value="90">90d</label>
+        <label class="sp-export__preset"><input type="radio" name="days" value="365">1y</label>
+      </div>
+    </fieldset>
+
+    <fieldset class="sp-export__field">
+      <legend>Format</legend>
+      <div class="sp-export__presets" role="group" aria-label="Format">
+        {{#each formats}}
+        <label class="sp-export__preset"><input type="radio" name="format" value="{{value}}"{{#if (eq value "csv")}} checked{{/if}}>{{label}}</label>
+        {{/each}}
+      </div>
+    </fieldset>
+
+    {{#each datasets}}
+    <fieldset class="sp-export__field sp-export__columns" data-export-columns="{{id}}" hidden>
+      <legend>Columns <span class="sp-export__column-tools"><button type="button" class="sp-btn sp-btn--xs sp-btn--ghost" data-action="export-columns-all">All</button> <button type="button" class="sp-btn sp-btn--xs sp-btn--ghost" data-action="export-columns-default">Default</button></span></legend>
+      <div class="sp-export__column-grid">
+        {{#each columns}}
+        <label class="sp-export__column"><input type="checkbox" name="columns" value="{{key}}" data-default="{{default}}"{{#if default}} checked{{/if}}>{{label}}</label>
+        {{/each}}
+      </div>
+    </fieldset>
+    {{/each}}
+
+    <p class="sp-export__preview" data-export-preview aria-live="polite">Counting…</p>
+
+    <menu>
+      <button type="button" class="sp-btn sp-btn--outline" data-action="export-close">Cancel</button>
+      <a class="sp-btn sp-btn--primary" href="{{href}}" data-export-download>Download</a>
+    </menu>
+  </form>
+</dialog>

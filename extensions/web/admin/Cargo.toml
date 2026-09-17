@@ -55,6 +55,7 @@ handlebars = { workspace = true }
 
 # Archive
 tempfile = { workspace = true }
+zip = { workspace = true }
 
 # HTTP client
 reqwest = { workspace = true }

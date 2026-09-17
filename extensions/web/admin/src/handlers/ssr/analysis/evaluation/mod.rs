@@ -187,6 +187,7 @@ struct RunsContext {
     pagination: Pagination,
     criteria: [&'static str; 4],
     statuses: [&'static str; 2],
+    export: crate::export::ExportView,
 }
 
 pub(crate) async fn runs_page(
@@ -227,10 +228,20 @@ pub(crate) async fn runs_page(
         prev_url: (page > 1).then(|| query.url(page - 1)),
         next_url: (page < total_pages).then(|| query.url(page + 1)),
     };
+    let export = crate::export::ExportView::single(
+        "evaluation-runs",
+        &crate::export::view::query_string(&[
+            ("criterion", query.criterion.as_deref()),
+            ("status", query.status.as_deref()),
+            ("host", query.host.as_deref()),
+            ("session", query.session.as_deref()),
+        ]),
+    );
     let context = RunsContext {
         page: "analysis-evaluation-runs",
         title: "Judge runs",
         query,
+        export,
         has_runs: !rows.is_empty(),
         runs: rows.iter().map(RunView::of).collect(),
         pagination,

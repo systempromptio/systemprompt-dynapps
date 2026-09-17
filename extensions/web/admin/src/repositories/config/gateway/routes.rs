@@ -1,4 +1,5 @@
-//! Route CRUD against the profile YAML's `gateway.routes` sequence.
+//! Route CRUD against the services YAML's `gateway.routes` sequence, and the
+//! whole-sequence replace the `gateway_routes` table uses to regenerate it.
 
 use std::collections::BTreeMap;
 use std::path::Path;
@@ -139,4 +140,25 @@ pub fn reorder_routes(gateway_path: &Path, order: &[usize]) -> Result<(), Market
     }
     write_gateway_file(gateway_path, &doc)?;
     Ok(())
+}
+
+// Why: the database → file direction. Every other function here edits one
+// route of the file in place; this one makes the file's `routes:` sequence
+// equal the given list, which is what the `gateway_routes` table does after
+// each console write so the next restart dispatches what the table says.
+// The settings above the sequence and the header comment are untouched.
+pub fn replace_routes(
+    gateway_path: &Path,
+    routes: &[GatewayRouteView],
+) -> Result<(), MarketplaceError> {
+    for route in routes {
+        validate_route(route)?;
+    }
+    let mut doc = read_gateway_file(gateway_path)?;
+    {
+        let seq = routes_seq_mut(&mut doc)?;
+        seq.clear();
+        seq.extend(routes.iter().map(route_to_yaml));
+    }
+    write_gateway_file(gateway_path, &doc)
 }

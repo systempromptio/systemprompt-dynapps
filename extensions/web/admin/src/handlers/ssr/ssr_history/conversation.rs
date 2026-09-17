@@ -10,7 +10,6 @@
 //! are deliberately absent; an admin follows the link to the full context view
 //! for those.
 
-use super::super::ssr_helpers::Viewer;
 use std::sync::Arc;
 
 use axum::extract::{Path, State};
@@ -56,7 +55,6 @@ pub(crate) async fn history_conversation_page(
     shell: Page,
     State(pool): State<Arc<PgPool>>,
     Path(context_id): Path<String>,
-    view: super::super::export::ViewMode,
 ) -> AdminHtmlResult<Response> {
     // Why: `ContextId::new` panics on anything that is not a UUID, and this
     // segment comes straight off the URL.
@@ -120,10 +118,11 @@ pub(crate) async fn history_conversation_page(
         admin_url: shell.user.is_admin.then(|| context_detail_url(&context_id)),
     };
 
-    Ok(view.respond(
+    Ok(crate::handlers::ssr::render_typed_page(
         &shell.engine,
         "history-conversation",
         &data,
-        Viewer::new(&shell.user, &shell.marketplace),
+        &shell.user,
+        &shell.marketplace,
     ))
 }

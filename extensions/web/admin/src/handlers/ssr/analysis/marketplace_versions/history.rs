@@ -5,7 +5,9 @@ use serde::Serialize;
 
 use super::diff::{ManifestDiff, diff};
 use crate::handlers::ssr::format::{format_cost, format_duration_ms};
+use crate::handlers::ssr::scorecard::{ScorecardView, Scores};
 use crate::repositories::analysis::marketplace_versions::MarketplaceVersionMetricsRow;
+use crate::repositories::evaluation::version_scores::VersionScoreRow;
 
 pub(crate) fn short(value: &str) -> String {
     value.chars().take(12).collect()
@@ -55,17 +57,51 @@ pub(crate) struct VersionView {
     pub cost: String,
     pub p50: String,
     pub p95: String,
+    pub scorecard: ScorecardView,
+    pub scored_sessions: i64,
     pub compare_href: Option<String>,
+}
+
+// Why: the judge's means for a version, or an unscored card when no judged
+// session invoked a skill served by that hash.
+fn scorecard_for(scores: &[VersionScoreRow], hash: &str) -> (ScorecardView, i64) {
+    let row = scores.iter().find(|s| s.content_hash == hash);
+    let scored = row.map_or(0, |r| r.scored_sessions);
+    (
+        ScorecardView::new(
+            row.map_or_else(Scores::default, |r| Scores {
+                intent: r.intent,
+                quality: r.quality,
+                speed: r.speed,
+                cost: r.cost,
+            }),
+            None,
+            row.map_or_else(
+                || "No judged session invoked a skill served by this version".to_owned(),
+                |r| {
+                    format!(
+                        "Mean judge scores over {} judged sessions served this version",
+                        r.scored_sessions
+                    )
+                },
+            ),
+        ),
+        scored,
+    )
 }
 
 // Why: rows arrive newest first; the diff for a row is against the row
 // *after* it in that order, which is the version it replaced. The oldest
 // row diffs against nothing and reads as the first version.
-pub(crate) fn views(rows: &[MarketplaceVersionMetricsRow]) -> Vec<VersionView> {
+pub(crate) fn views(
+    rows: &[MarketplaceVersionMetricsRow],
+    scores: &[VersionScoreRow],
+) -> Vec<VersionView> {
     rows.iter()
         .enumerate()
         .map(|(i, row)| {
             let previous = rows.get(i + 1);
+            let (scorecard, scored_sessions) = scorecard_for(scores, &row.content_hash);
             let diff = row.manifest.as_ref().map(|m| {
                 diff(
                     previous.and_then(|p| p.manifest.as_ref()).map(|m| &m.0),
@@ -99,6 +135,8 @@ pub(crate) fn views(rows: &[MarketplaceVersionMetricsRow]) -> Vec<VersionView> {
                 cost: cost(row.cost),
                 p50: latency(row.p50_micros, row.latency_measured),
                 p95: latency(row.p95_micros, row.latency_measured),
+                scorecard,
+                scored_sessions,
                 compare_href: previous.map(|p| {
                     format!(
                         "?tab=compare&a={}&b={}",

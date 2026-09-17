@@ -4,7 +4,6 @@
 //! shared time-range + identity-filter-ribbon URL contract. Each row links to
 //! the per-trace waterfall at `/admin/traces/{session_id}`.
 
-use super::ssr_helpers::Viewer;
 use crate::error::AdminError;
 use std::sync::Arc;
 
@@ -27,6 +26,7 @@ use crate::util::time_range::{TimeRange, TimeRangePreset, TimeRangeQuery, parse_
 
 
 mod context;
+pub(crate) mod export;
 mod rows;
 mod summary;
 mod view;
@@ -60,7 +60,6 @@ pub(crate) async fn perf_traces_page(
     shell: Page,
     State(pool): State<Arc<PgPool>>,
     Query(query): Query<TraceListQuery>,
-    view: super::export::ViewMode,
 ) -> AdminHtmlResult<Response> {
     if !shell.user.is_console {
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
@@ -93,11 +92,12 @@ pub(crate) async fn perf_traces_page(
         window,
     )
     .await;
-    Ok(view.respond(
+    Ok(crate::handlers::ssr::render_typed_page(
         &shell.engine,
         "perf-traces",
         &ctx,
-        Viewer::new(&shell.user, &shell.marketplace),
+        &shell.user,
+        &shell.marketplace,
     ))
 }
 
@@ -220,12 +220,31 @@ async fn load_traces_data(
         error_only: filter.error_only,
         deny_only: filter.deny_only,
         scope_filter,
+        export: crate::export::ExportView::single(
+            "traces",
+            &crate::export::view::query_string(&[
+                ("preset", Some(preset.as_str())),
+                ("from", Some(&range.from.to_rfc3339())),
+                ("to", Some(&range.to.to_rfc3339())),
+                ("user_id", query.user_id.as_ref().map(UserId::as_str)),
+                ("agent_id", query.agent_id.as_ref().map(AgentId::as_str)),
+                ("agent_scope", query.agent_scope.as_deref()),
+                ("policy", query.policy.as_deref()),
+                ("decision", query.decision.as_deref()),
+                ("error_only", query.error_only.as_deref()),
+                ("deny_only", query.deny_only.as_deref()),
+                ("sort", query.sort.as_deref()),
+                ("dir", query.dir.as_deref()),
+                ("group", query.group.as_deref()),
+                ("project", query.project.as_deref()),
+            ]),
+        ),
     }
 }
 
 // Why: the query string is the only source of every filter column, so the
 // mapping lives in one place rather than inline in the page assembly.
-fn build_filter<'a>(
+pub(super) fn build_filter<'a>(
     query: &'a TraceListQuery,
     subject_ids: Option<&'a [String]>,
 ) -> TraceFilter<'a> {
@@ -265,7 +284,7 @@ fn preset_str(query: &TraceListQuery, range: TimeRange) -> String {
     .to_owned()
 }
 
-fn sort_from_query(query: &TraceListQuery) -> TraceSort {
+pub(super) fn sort_from_query(query: &TraceListQuery) -> TraceSort {
     let column = match query.sort.as_deref() {
         Some("duration") => TraceSortColumn::Duration,
         Some("spans") => TraceSortColumn::SpanCount,

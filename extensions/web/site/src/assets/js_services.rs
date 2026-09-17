@@ -58,6 +58,8 @@ fn service_core_js(p: &Path) -> Vec<AssetDefinition> {
         svc_js!(p, "confirm.js"),
         svc_js!(p, "dropdown.js"),
         svc_js!(p, "events.js"),
+        svc_js!(p, "export-url.js"),
+        svc_js!(p, "export.js"),
         svc_js!(p, "filter-ribbon.js"),
         svc_js!(p, "header-actions.js"),
         svc_js!(p, "header-search-list.js"),

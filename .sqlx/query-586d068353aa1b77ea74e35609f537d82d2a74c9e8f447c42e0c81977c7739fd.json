@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH scopes AS (\n               SELECT 'global'::text AS scope_kind, ''::text AS scope_id\n               UNION\n               SELECT 'marketplace', marketplace_id FROM marketplace_versions\n           ), latest AS (\n               SELECT DISTINCT ON (scope_kind, scope_id) scope_kind, scope_id, generated_at, source_last_run_at\n                 FROM evaluation_reports WHERE status = 'generated'\n                ORDER BY scope_kind, scope_id, generated_at DESC\n           ), fresh AS (\n               SELECT s.scope_kind, s.scope_id,\n                      (SELECT COUNT(*) FROM evaluation_runs r\n                        WHERE r.status = 'succeeded'\n                          AND r.created_at > COALESCE(l.source_last_run_at, '-infinity'::timestamptz)\n                          AND (s.scope_kind = 'global' OR EXISTS (\n                                SELECT 1 FROM evaluation_session_skills k\n                                 WHERE k.session_id = r.session_id AND k.marketplace_id = s.scope_id))\n                      ) AS new_runs,\n                      l.generated_at\n                 FROM scopes s LEFT JOIN latest l USING (scope_kind, scope_id)\n           )\n           INSERT INTO evaluation_reports (scope_kind, scope_id, window_start, window_end, marketplace_hash)\n           SELECT f.scope_kind, f.scope_id,\n                  clock_timestamp() - make_interval(days => $1), clock_timestamp(),\n                  CASE WHEN f.scope_kind = 'marketplace'\n                       THEN marketplace_version_at(f.scope_id, clock_timestamp()) END\n             FROM fresh f\n            WHERE f.new_runs > 0\n              AND (f.generated_at IS NULL OR f.new_runs >= $2\n                   OR f.generated_at < clock_timestamp() - make_interval(hours => $3))\n           ON CONFLICT (scope_kind, scope_id) WHERE status = 'pending' DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int8",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "586d068353aa1b77ea74e35609f537d82d2a74c9e8f447c42e0c81977c7739fd"
+}

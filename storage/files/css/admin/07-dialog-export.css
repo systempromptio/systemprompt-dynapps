@@ -1,0 +1,147 @@
+@layer components {
+
+.sp-export {
+    max-width: min(640px, 92vw);
+}
+
+.sp-export .sp-dialog-form {
+    max-height: 88vh;
+    overflow: auto;
+}
+
+.sp-export__field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-space-2);
+    margin: 0;
+    padding: 0;
+    border: 0;
+    min-width: 0;
+}
+
+.sp-export__field > legend,
+.sp-export__field > span {
+    padding: 0;
+    font-size: var(--sp-text-sm);
+    font-weight: 600;
+    color: var(--sp-text-secondary);
+}
+
+.sp-export__field > legend {
+    display: flex;
+    width: 100%;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--sp-space-2);
+}
+
+.sp-export__presets {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sp-space-1);
+    padding: var(--sp-space-05);
+    background: var(--sp-bg-surface-raised);
+    border: 1px solid var(--sp-border-subtle);
+    border-radius: var(--sp-radius-full);
+    align-self: flex-start;
+}
+
+.sp-export__preset {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--sp-space-1) var(--sp-space-3);
+    border-radius: var(--sp-radius-full);
+    font-size: var(--sp-text-sm);
+    font-weight: 400;
+    color: var(--sp-text-secondary);
+    cursor: pointer;
+    user-select: none;
+    transition: background var(--sp-duration-fast), color var(--sp-duration-fast);
+}
+
+/* The pill is the control; the radio inside it is kept in the accessibility
+   tree and the tab order, not drawn a second time. */
+.sp-export__preset input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+
+.sp-export__preset:hover {
+    color: var(--sp-text-primary);
+    background: color-mix(in oklch, var(--sp-accent) 6%, transparent);
+}
+
+.sp-export__preset:has(input:checked) {
+    color: var(--sp-accent-text);
+    background: var(--sp-accent-dim);
+    font-weight: var(--sp-font-semibold);
+    box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--sp-accent) 40%, transparent);
+}
+
+.sp-export__preset:has(input:focus-visible) {
+    outline: 2px solid var(--sp-accent);
+    outline-offset: 2px;
+}
+
+.sp-export__custom {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: var(--sp-space-3);
+}
+
+.sp-export__custom p {
+    grid-column: 1 / -1;
+    margin: 0;
+}
+
+.sp-export__column-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: var(--sp-space-1) var(--sp-space-3);
+}
+
+.sp-export__column {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: var(--sp-space-2);
+    font-size: var(--sp-text-sm);
+    font-weight: 400;
+    color: var(--sp-text-primary);
+    cursor: pointer;
+}
+
+.sp-export__column input {
+    margin: 0;
+    accent-color: var(--sp-accent);
+}
+
+.sp-export__preview {
+    margin: 0;
+    padding: var(--sp-space-2) var(--sp-space-3);
+    border-radius: var(--sp-corners-sm);
+    background: var(--sp-bg-surface-raised);
+    font-size: var(--sp-text-sm);
+    color: var(--sp-text-secondary);
+}
+
+.sp-export__preview strong {
+    color: var(--sp-text-primary);
+    font-variant-numeric: tabular-nums;
+}
+
+.sp-export__preview[data-tone="warn"] {
+    color: var(--sp-warning-strong);
+}
+
+.sp-export__preview[data-tone="error"] {
+    color: var(--sp-danger-strong);
+}
+
+}

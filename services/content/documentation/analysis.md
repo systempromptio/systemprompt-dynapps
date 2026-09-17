@@ -27,7 +27,7 @@ related_docs:
 
 # Analysis: measure, compare and publish a skill
 
-**TL;DR:** Analysis is the part of the admin console that answers one question in stages: is a skill worth its cost, and did the marketplace version you shipped help? It starts at `/admin/analysis/resources`. A marketplace version is its content hash — the sha256 of everything it delivers — and every figure is keyed on that hash. Figures are read from retained reporting data, never computed live from raw events, and a skill only carries figures once its inventory entry is bound and attribution evidence exists. Analysis observes and compares; it does not run experiments.
+**TL;DR:** Analysis is the part of the admin console that answers one question in stages: is a skill worth its cost, and did the marketplace version you shipped help? It starts at `/admin/analysis/skills`. A marketplace version is its content hash — the sha256 of everything it delivers — and every figure is keyed on that hash. Figures are read from retained reporting data, never computed live from raw events, and a skill only carries figures once its inventory entry is bound and attribution evidence exists. Analysis observes and compares; it does not run experiments.
 
 ## What the section is for
 
@@ -44,7 +44,7 @@ They sit in workflow order on every Analysis page.
 
 | Tab | Route | What it answers |
 |---|---|---|
-| **Skills** | `/admin/analysis/resources` | Cost, use and health for every skill, grouped by marketplace, each group stamped with the version hash it serves. |
+| **Skills** | `/admin/analysis/skills` | Cost, use and health for every skill, grouped by marketplace, each group stamped with the version hash it serves. |
 | **Conversations** | `/admin/analysis/skills` | Which skills carry attributed use, and the sessions behind the one you select. |
 | **Versions** | `/admin/analysis/versions` | Every marketplace by content hash: its history, what changed between versions, how each performed, and what devices received. |
 

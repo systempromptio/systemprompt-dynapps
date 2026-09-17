@@ -173,6 +173,48 @@ impl DriftReport {
     }
 }
 
+/// The CODE ↔ DB word the page prints for one entity.
+///
+/// Three words and nothing else: `Unknown` means the declaration could not
+/// be compared at all (the file or the tree it validates against did not
+/// load) — never "no rules", never "not yet synced". A readable file against
+/// an empty database is `Drift`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EntityState {
+    Unknown,
+    Drift,
+    InSync,
+}
+
+impl EntityState {
+    #[must_use]
+    pub fn of(drift: Option<&DriftReport>, entity_type: &str, entity_id: &str) -> Self {
+        match drift {
+            None => Self::Unknown,
+            Some(d) if d.touches(entity_type, entity_id) => Self::Drift,
+            Some(_) => Self::InSync,
+        }
+    }
+
+    #[must_use]
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::Unknown => "Unknown",
+            Self::Drift => "Drift",
+            Self::InSync => "In sync",
+        }
+    }
+
+    #[must_use]
+    pub const fn tone(self) -> &'static str {
+        match self {
+            Self::Unknown => "muted",
+            Self::Drift => "warn",
+            Self::InSync => "ok",
+        }
+    }
+}
+
 #[must_use]
 pub fn compute_drift(
     declared: &DeclaredSet,

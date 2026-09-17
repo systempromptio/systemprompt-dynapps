@@ -1,6 +1,6 @@
 {{#> layout title=title page=page}}{{#*inline "content"}}
 {{#> components/page-header title=title subtitle="Every judge call, newest first: the session it scored, the criterion, the model, what it cost, and whether it succeeded. Open a run to read the prompt and the response."}}
-{{#*inline "header_actions"}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/analysis/evaluation">Criteria</a>{{/inline}}
+{{#*inline "header_actions"}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/analysis/evaluation">Criteria</a> {{> components/export-button export}}{{/inline}}
 {{/components/page-header}}
 {{> analysis-subnav}}
 {{#> components/toolbar}}
@@ -19,7 +19,7 @@
 <thead><tr><th scope="col">Run</th><th scope="col">Session</th><th scope="col">Host</th><th scope="col">Criterion</th><th scope="col" class="sp-table__cell--num">Score</th><th scope="col">Model</th><th scope="col" class="sp-table__cell--num" title="Input / output tokens">Tokens</th><th scope="col" class="sp-table__cell--num">Cost</th><th scope="col" class="sp-table__cell--num">Latency</th><th scope="col">Status</th><th scope="col" title="automatic: queued by the scheduler · manual: a console click, with who asked">Trigger</th><th scope="col" class="sp-table__cell--date">When</th></tr></thead>
 <tbody>
 {{#each runs}}<tr><td class="sp-table__cell--primary"><a class="sp-table__link sp-u-mono" href="{{url}}" title="{{id}}">{{id_short}}</a></td><td><a class="sp-table__link sp-u-mono" href="{{session_url}}" title="{{session_id}}">{{session_short}}</a></td><td>{{> components/badge tone="muted" text=host}}</td><td>{{criterion}} <span class="sp-u-text-tertiary">{{score_source}}</span></td><td class="sp-table__cell--num">{{> components/badge tone=score_tone text=score_display}}</td><td class="sp-u-mono" title="{{provider}}">{{model}}</td><td class="sp-table__cell--num sp-u-num">{{tokens}}</td><td class="sp-table__cell--num sp-u-num">{{cost}}</td><td class="sp-table__cell--num sp-u-num">{{latency}}</td><td>{{> components/badge tone=status_tone text=status}}{{#if error}} <span class="sp-u-text-tertiary" title="{{error}}">attempt {{attempt}}</span>{{/if}}</td><td>{{#if is_manual}}{{> components/badge tone="info" text=trigger}}{{#if requested_by_url}} <a class="sp-table__link" href="{{requested_by_url}}" title="{{requested_by}}">by admin</a>{{/if}}{{else}}{{> components/badge tone="muted" text=trigger}}{{/if}}</td><td class="sp-table__cell--date">{{created_at_local}}</td></tr>
-{{else}}<tr class="sp-table__empty"><td colspan="11">{{> components/empty-state title="No judge runs" message="Runs appear once a session closes and the session_evaluation job has scored it. Check the criteria page if scoring is off."}}</td></tr>{{/each}}
+{{else}}<tr class="sp-table__empty"><td colspan="11">{{> components/empty-state heading="No judge runs" message="Runs appear once a session closes and the session_evaluation job has scored it. Check the criteria page if scoring is off."}}</td></tr>{{/each}}
 </tbody>
 {{/components/table}}
 {{/inline}}{{/layout}}

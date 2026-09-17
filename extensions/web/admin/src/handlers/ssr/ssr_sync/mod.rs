@@ -1,11 +1,14 @@
-//! `/admin/sync` — Code ↔ Instance: every source a declaration comes from,
-//! every plane it projects into, and the difference between the two.
+//! `/admin/sync` — Code sync: where declarations come from and how they
+//! move between the repository and this instance.
 //!
-//! Sources first (the base tree and each pinned bundle, with hashes and
-//! provenance), then one card per registered plane: declared hash, what was
-//! last applied and by whom, the drift totals, the three directions, and the
-//! drift table filterable by entity. The actions are the JSON API in
-//! [`crate::handlers::sync`]; this page only reads.
+//! Two tabs. *Sources* lists every place a declaration comes from in one
+//! table — the internal base tree this repository ships and each external
+//! bundle the profile pins — with the hash each declares and what it owns,
+//! and offers the in-place import that recomposes them. *Export & import*
+//! moves the projected planes as one archive: the database rendered back
+//! to its files for a commit, or an uploaded archive staged for a preview
+//! on `/admin/sync/import/{stage}`. What each plane's database says
+//! against its file lives on the plane's owner page, under its Sync tab.
 
 mod view;
 
@@ -16,94 +19,89 @@ use axum::response::Response;
 use serde::Deserialize;
 use sqlx::PgPool;
 
-use self::view::{AppliedView, HashView, PlaneCardView, SyncPageData};
+use self::view::{ExportPlaneView, SyncPageData};
 use crate::error::{AdminError, AdminHtmlResult};
-use crate::handlers::ssr::types::BreadcrumbView;
-use crate::handlers::sync::plane_status;
+use crate::handlers::ssr::sync_plane::HashView;
+use crate::handlers::ssr::types::{BreadcrumbView, TabLinkView};
+use crate::repositories::sync::archive::staging::STAGE_TTL_MINUTES;
 use crate::repositories::sync::registry::planes;
 use crate::repositories::sync::sources::{SourcesView, build_sources};
-use crate::repositories::sync::state::SyncStateRow;
 use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, UserContext};
 
 pub(crate) const DOCS_URL: &str = "/documentation/services-sync";
+pub(crate) const BASE_URL: &str = "/admin/sync";
+pub(crate) const EXPORT_ZIP_URL: &str = "/api/public/admin/sync/export.zip";
+pub(crate) const IMPORT_URL: &str = "/api/public/admin/sync/import";
 
 #[derive(Debug, Default, Deserialize)]
 pub(crate) struct SyncQuery {
-    // Why: `<kind>/<id>` narrows every plane's table to one entity — the
-    // access-control ledger's deep link.
-    pub entity: Option<String>,
+    pub tab: Option<String>,
 }
 
-fn applied_view(state: Option<&SyncStateRow>, declared_hash: &str) -> Option<AppliedView> {
-    let s = state?;
-    let hash = s.applied_hash.as_deref()?;
-    Some(AppliedView {
-        hash: HashView::of(hash),
-        mode: s.applied_mode.clone().unwrap_or_default().replace('_', " "),
-        at: s.applied_at.map(|t| t.to_rfc3339()).unwrap_or_default(),
-        by: s.applied_by.clone().unwrap_or_default(),
-        base_tree_hash: s.base_tree_hash.as_deref().and_then(HashView::of),
-        composed_hash: s.composed_hash.as_deref().and_then(HashView::of),
-        declared_changed: !declared_hash.is_empty() && declared_hash != hash,
-    })
+fn tabs(show_sources: bool) -> Vec<TabLinkView> {
+    vec![
+        TabLinkView {
+            slug: "sources",
+            label: "Sources",
+            href: BASE_URL.to_owned(),
+            is_active: show_sources,
+            count: None,
+        },
+        TabLinkView {
+            slug: "archive",
+            label: "Export & import",
+            href: format!("{BASE_URL}?tab=archive"),
+            is_active: !show_sources,
+            count: None,
+        },
+    ]
 }
 
 pub(crate) async fn sync_page(
     Extension(user_ctx): Extension<UserContext>,
     Extension(mkt_ctx): Extension<MarketplaceContext>,
     Extension(engine): Extension<AdminTemplateEngine>,
-    State(pool): State<Arc<PgPool>>,
+    State(_pool): State<Arc<PgPool>>,
     Query(query): Query<SyncQuery>,
 ) -> AdminHtmlResult<Response> {
     if !user_ctx.is_console {
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
     }
     // Why: an unreadable profile or cache is the panel's headline, not a
-    // 500 — the planes below still render.
+    // 500 — the rest of the page still renders.
     let (sources, sources_unreadable) = match build_sources() {
         Ok(s) => (s, None),
         Err(e) => (empty_sources(), Some(e.to_string())),
     };
-    let filter = query.entity.unwrap_or_default();
-
-    let mut cards = Vec::new();
-    for plane in planes() {
-        let status = plane_status(&pool, plane.as_ref()).await?;
-        let mut rows = status.drift.rows;
-        if let Some((kind, id)) = filter.split_once('/') {
-            rows.retain(|r| r.entity_type == kind && r.entity_id == id);
-        }
-        cards.push(PlaneCardView {
-            id: status.id,
-            label: status.label,
-            source_file: status.source_file,
-            projection: status.projection,
-            declared_hash: HashView::of(&status.drift.declared_hash),
-            declared_count: status.drift.declared_count,
-            in_db: status.drift.in_db,
-            kpis: status.drift.kpis,
-            actions: status.drift.actions,
-            row_count: rows.len(),
-            rows,
-            is_clean: status.drift.is_clean && status.drift.unreadable.is_none(),
-            unreadable: status.drift.unreadable,
-            applied: applied_view(status.state.as_ref(), &status.drift.declared_hash),
-            export_url: format!("/api/public/admin/sync/planes/{}/export", status.id),
-            entity_filter: filter.clone(),
-        });
-    }
+    let show_sources = query.tab.as_deref() != Some("archive");
+    let export_planes = planes()
+        .iter()
+        .map(|p| ExportPlaneView {
+            id: p.id(),
+            label: p.label(),
+            source_file: p.source_file(),
+            owner_url: p.owner_url(),
+        })
+        .collect();
 
     let page = SyncPageData {
         page: "sync",
-        title: "Code ↔ Instance",
+        title: "Code sync",
         can_write: user_ctx.is_admin,
         breadcrumbs: vec![
             BreadcrumbView::link("Admin", "/admin"),
-            BreadcrumbView::current("Sync"),
+            BreadcrumbView::link("Platform", "/admin/configuration"),
+            BreadcrumbView::current("Code sync"),
         ],
+        tabs: tabs(show_sources),
+        show_sources,
         docs_url: DOCS_URL,
-        access_control_url: "/admin/access-control",
+        configuration_url: "/admin/configuration",
+        observability_url: crate::handlers::ssr::ssr_observability::PAGE_URL,
+        export_zip_url: EXPORT_ZIP_URL,
+        kit_patch_url: "/api/public/admin/sync/export/kit",
+        import_url: IMPORT_URL,
         composed_hash: sources.composed_hash.as_deref().and_then(HashView::of),
         last_reconciled_hash: sources
             .last_reconciled_hash
@@ -111,16 +109,16 @@ pub(crate) async fn sync_page(
             .and_then(HashView::of),
         base_tree_hash: sources.base.tree_hash.as_deref().and_then(HashView::of),
         sources,
-        planes: cards,
-        entity_filter: filter,
         sources_unreadable,
+        export_planes,
+        stage_ttl_minutes: STAGE_TTL_MINUTES,
     };
     Ok(super::render_typed_page(
         &engine, "sync", &page, &user_ctx, &mkt_ctx,
     ))
 }
 
-const fn empty_sources() -> SourcesView {
+pub(crate) const fn empty_sources() -> SourcesView {
     SourcesView {
         base: crate::repositories::sync::sources::BaseSourceView {
             version: env!("CARGO_PKG_VERSION"),

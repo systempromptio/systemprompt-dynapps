@@ -1,7 +1,7 @@
 //! Governance bootstrap: project the committed access-control baseline into the
 //! authz tables.
 //!
-//! Four steps, in dependency order:
+//! Three steps, in dependency order:
 //! 0. Validate `services/governance/config.yaml`, failing the boot rather than
 //!    letting an unparseable file degrade to the built-in defaults unnoticed,
 //!    and warn when the resulting chain enforces nothing. Then validate
@@ -10,13 +10,13 @@
 //!    `access_control_entities` (so the FK on `access_control_rules` is
 //!    satisfied and a `gateway_route` `entity_match` glob has routes to expand
 //!    over), deleting catalog rows no configured route claims.
-//! 2. Seed the authz tables from `services/access-control/rules.yaml` when they
-//!    are empty; otherwise compare the file against the tables and log the
-//!    drift without writing. Step 1's route ids are handed over as the
-//!    authoritative `gateway_route` catalog, which is what expands the
-//!    `gateway_route/*` glob and rejects a hand-written route id. Step 1 must
-//!    therefore run first.
-//! 3. Load the gateway model allow-list into `ai_gateway_policies`.
+//! 2. Run every sync plane through the one boot contract
+//!    (`repositories::sync::boot`): groups, then access control, then gateway
+//!    policies. A plane whose projection is empty is seeded from its file;
+//!    every other plane is compared and the drift logged, nothing written.
+//!    Reconciling code and database is an administrator's act on `/admin/sync`,
+//!    never a side effect of a restart. Step 1 must run first because the
+//!    `gateway_route/*` glob expands over its catalog.
 //!
 //! Runs once at boot as a `scheduler.bootstrap_jobs` entry so authorization is
 //! correct at app start; it is not cron-scheduled (`schedule()` is empty). The
@@ -24,9 +24,6 @@
 //! gateway/provider edit, so no recurring cadence is needed. The catalog ids
 //! are deterministic, so re-runs are idempotent.
 
-use std::sync::Arc;
-
-use systemprompt::config::AppPaths;
 use systemprompt::database::DbPool;
 use systemprompt::traits::{Job, JobContext, JobResult};
 
@@ -36,7 +33,7 @@ use crate::error::JobError;
 use systemprompt_web_admin::repositories::config::gateway::{
     dispatchable_route_ids, registered_routes,
 };
-use systemprompt_web_admin::repositories::config::{acl_bootstrap, groups_yaml_loader};
+use systemprompt_web_admin::repositories::sync::boot::reconcile_all;
 use systemprompt_web_admin::repositories::sync::sources_db::record_service_sources;
 use systemprompt_web_shared::error::MarketplaceError;
 
@@ -76,12 +73,13 @@ async fn execute_inner(ctx: &JobContext) -> Result<JobResult, JobError> {
     let db_pool = ctx.db_pool::<DbPool>().ok_or(MarketplaceError::Internal(
         "Database not available in job context".to_owned(),
     ))?;
-    let paths = ctx
-        .app_paths::<Arc<AppPaths>>()
-        .ok_or(MarketplaceError::Internal(
-            "AppPaths not available in job context".to_owned(),
-        ))?;
-    let services_path = paths.system().services().to_path_buf();
+    // Why: the composed root — the same tree the sync page reads — so a kit's
+    // marketplace validates once its bundle is active, and boot and page can
+    // never disagree about what the declaration says.
+    let profile = systemprompt::config::ProfileBootstrap::get()?;
+    let services_path = systemprompt::loader::services_root::ServicesRootBootstrap::active_root_or(
+        &profile.paths.services,
+    );
 
     let governance = check_governance_config(&services_path)?;
     check_evaluation_config(&services_path)?;
@@ -93,19 +91,9 @@ async fn execute_inner(ctx: &JobContext) -> Result<JobResult, JobError> {
     let catalog = bootstrap_gateway_entities(db_pool).await?;
 
     let pool = db_pool.write_pool();
-    // Why: before the ACL pass. rules.yaml writes rows whose `rule_value` is a
-    // group or project id, so those rows must exist first or a fresh install
-    // would seed a gate naming a group nothing can ever be a member of.
-    groups_yaml_loader::load_groups_from_yaml(&pool, &services_path)
+    let planes = reconcile_all(&pool)
         .await
-        .map_err(JobError::from)?;
-
-    // Why: seeds an empty table from rules.yaml and otherwise only reports
-    // drift. Reconciling code and database is an administrator's act on the
-    // sync page, never a side effect of a restart.
-    let acl = acl_bootstrap::run(&pool, &services_path, &catalog.registered)
-        .await
-        .map_err(JobError::from)?;
+        .map_err(|e| JobError::from(MarketplaceError::Internal(e.to_string())))?;
 
     // Why: the feedback projection stamps every invocation with the source
     // that shipped its skill, that source's content hash and the hash of the
@@ -115,20 +103,19 @@ async fn execute_inner(ctx: &JobContext) -> Result<JobResult, JobError> {
         .await
         .map_err(JobError::from)?;
 
-    let policy_repo = systemprompt::ai::repository::AiGatewayPolicyRepository::new(db_pool)
-        .map_err(|e| JobError::from(MarketplaceError::Internal(e.to_string())))?;
-    let policy = systemprompt::ai::load_gateway_policies_from_yaml(&policy_repo, &services_path)
-        .await
-        .map_err(|e| JobError::from(MarketplaceError::Internal(e.to_string())))?;
-
     let duration_ms = u64::try_from(start.elapsed().as_millis()).unwrap_or(u64::MAX);
     tracing::info!(
         gateway_entities = catalog.registered.known_ids(EntityKind::GatewayRoute).len(),
         gateway_entities_pruned = catalog.pruned,
-        gateway_policies = policy.inserted + policy.updated,
-        access_rules_declared = acl.declared,
-        access_rules_seeded = acl.seeded,
-        access_drift = acl.drift.total,
+        groups_declared = planes.groups.declared,
+        groups_seeded = planes.groups.seeded,
+        groups_drift = planes.groups.drift_rows,
+        access_rules_declared = planes.access_control.declared,
+        access_rules_seeded = planes.access_control.seeded,
+        access_drift = planes.access_control.drift_rows,
+        gateway_policies_declared = planes.gateway_policies.declared,
+        gateway_policies_seeded = planes.gateway_policies.seeded,
+        gateway_policies_drift = planes.gateway_policies.drift_rows,
         service_sources = sources.sources,
         service_owned_ids = sources.owned_ids,
         marketplace_versions = sources.versions.marketplaces,

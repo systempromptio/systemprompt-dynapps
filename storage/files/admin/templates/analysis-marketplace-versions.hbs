@@ -1,7 +1,7 @@
 {{#> layout title=title page=page}}{{#*inline "content"}}
 <section class="sp-p-versions">
 {{#> components/page-header title=name subtitle="Every version of this marketplace by content hash — what changed between them, how each performed, and what devices received."}}
-{{#*inline "header_actions"}}<form method="get" action="/admin/analysis/versions/{{marketplace_id}}" class="sp-inventory-inline"><input type="hidden" name="tab" value="{{tab}}"><label class="sp-u-sr-only" for="mv-days">Window</label><select class="sp-select" id="mv-days" name="days"><option value="7"{{#if (eq days 7)}} selected{{/if}}>7 days</option><option value="30"{{#if (eq days 30)}} selected{{/if}}>30 days</option><option value="90"{{#if (eq days 90)}} selected{{/if}}>90 days</option><option value="365"{{#if (eq days 365)}} selected{{/if}}>365 days</option></select><button class="sp-btn sp-btn--sm sp-btn--outline" type="submit">Apply</button></form> <a class="sp-btn sp-btn--sm sp-btn--primary" href="/admin/analysis/resources?marketplace={{marketplace_id}}&amp;days={{days}}">Skills</a>{{/inline}}
+{{#*inline "header_actions"}}<form method="get" action="/admin/analysis/versions/{{marketplace_id}}" class="sp-inventory-inline"><input type="hidden" name="tab" value="{{tab}}"><label class="sp-u-sr-only" for="mv-days">Window</label><select class="sp-select" id="mv-days" name="days"><option value="7"{{#if (eq days 7)}} selected{{/if}}>7 days</option><option value="30"{{#if (eq days 30)}} selected{{/if}}>30 days</option><option value="90"{{#if (eq days 90)}} selected{{/if}}>90 days</option><option value="365"{{#if (eq days 365)}} selected{{/if}}>365 days</option></select><button class="sp-btn sp-btn--sm sp-btn--outline" type="submit">Apply</button></form> <a class="sp-btn sp-btn--sm sp-btn--primary" href="/admin/analysis/skills?marketplace={{marketplace_id}}&amp;days={{days}}">Skills</a> {{> components/export-button export}}{{/inline}}
 {{/components/page-header}}
 {{> analysis-subnav}}
 
@@ -17,6 +17,7 @@
 <th scope="col" class="sp-table__cell--num">Plugins</th>
 <th scope="col" class="sp-table__cell--num">Skills</th>
 <th scope="col" title="Skills added, removed and changed against the version before it">Change</th>
+<th scope="col" title="The judge's mean intent, quality, speed and cost over the sessions served by this version">Evaluation</th>
 <th scope="col" class="sp-table__cell--num">Invocations</th>
 <th scope="col" class="sp-table__cell--num">Users</th>
 <th scope="col" class="sp-table__cell--num">Requests</th>
@@ -32,6 +33,7 @@
 <td class="sp-table__cell--num sp-u-num">{{#if has_manifest}}{{plugin_count}}{{else}}<span class="sp-u-text-tertiary">—</span>{{/if}}</td>
 <td class="sp-table__cell--num sp-u-num">{{#if has_manifest}}{{skill_count}}{{else}}<span class="sp-u-text-tertiary">—</span>{{/if}}</td>
 <td>{{#if diff}}<span class="sp-generation-delta"><span class="sp-generation-delta__add">+{{diff.added}}</span> <span class="sp-generation-delta__remove">−{{diff.removed}}</span> <span class="sp-generation-delta__change">~{{diff.changed}}</span></span>{{#if diff.skills}}<details class="sp-versions-diff"><summary class="sp-versions-diff__summary">{{#if compare_href}}what changed{{else}}first version{{/if}}</summary><ul class="sp-versions-diff__list">{{#each diff.plugins}}{{#unless (eq change "unchanged")}}<li class="sp-versions-diff__item">{{> components/badge tone=change_tone text=change_label}} <span class="sp-u-mono">plugin {{plugin_id}}</span></li>{{/unless}}{{/each}}{{#each diff.skills}}{{#unless (eq change "unchanged")}}<li class="sp-versions-diff__item">{{> components/badge tone=change_tone text=change_label}} <span class="sp-u-mono">{{plugin_id}}:{{skill_id}}</span>{{#if before}} <span class="sp-hash" title="{{before}}">{{truncate before 8}}</span>{{/if}}{{#if after}} <span class="sp-hash" title="{{after}}">→ {{truncate after 8}}</span>{{/if}}</li>{{/unless}}{{/each}}</ul></details>{{/if}}{{else}}<span class="sp-u-text-tertiary" title="Recorded from the source hash before manifests were kept; nothing to diff">no manifest</span>{{/if}}</td>
+<td class="sp-inventory-cell-eval">{{> components/scorecard card=scorecard}}{{#if scored_sessions}}<span class="sp-inventory-eval-n" title="judged sessions">{{scored_sessions}}</span>{{/if}}</td>
 <td class="sp-table__cell--num sp-u-num">{{invocations}}{{#if failed_invocations}} <span class="sp-u-text-danger">{{failed_invocations}} failed</span>{{/if}}</td>
 <td class="sp-table__cell--num sp-u-num">{{users}}</td>
 <td class="sp-table__cell--num sp-u-num">{{requests}}{{#if failed}} <span class="sp-u-text-danger">{{failed}} failed</span>{{/if}}</td>
@@ -63,6 +65,7 @@
 {{> components/kpi label="Cost" value=cost note="related, overlaps"}}
 {{> components/kpi label="p95" value=p95 note=(concat "p50 " p50)}}
 </div>
+<div class="sp-versions-side__eval">{{> components/scorecard card=scorecard tile=true}}<p class="sp-u-text-tertiary sp-versions-side__eval-note">judge means over {{scored_sessions}} judged sessions served by this version</p></div>
 </section>
 {{/each}}
 </div>
@@ -93,7 +96,7 @@
 <td class="sp-table__cell--num sp-u-num">{{a.p95}}</td><td class="sp-table__cell--num sp-u-num">{{b.p95}}</td>
 </tr>
 {{else}}
-<tr class="sp-table__empty"><td colspan="15">{{> components/empty-state title="Nothing to compare" message="Neither version has a manifest or any attributed use in this window."}}</td></tr>
+<tr class="sp-table__empty"><td colspan="15">{{> components/empty-state heading="Nothing to compare" message="Neither version has a manifest or any attributed use in this window."}}</td></tr>
 {{/each}}
 </tbody>
 {{/components/table}}
@@ -116,7 +119,7 @@
 <thead><tr><th scope="col">Skill</th><th scope="col" class="sp-table__cell--num">Entitled devices</th><th scope="col" class="sp-table__cell--num">Acknowledged</th><th scope="col" class="sp-table__cell--num">Verified</th><th scope="col" class="sp-table__cell--num">Coverage</th></tr></thead>
 <tbody>{{#each distribution.coverage}}<tr><td class="sp-table__cell--primary">{{resource_key}}</td><td class="sp-table__cell--num sp-u-num">{{eligible_devices}}</td><td class="sp-table__cell--num sp-u-num">{{acknowledged_devices}}</td><td class="sp-table__cell--num sp-u-num">{{verified_devices}}</td><td class="sp-table__cell--num sp-u-num">{{#if pct}}{{pct}}%{{else}}<span class="sp-u-text-tertiary">—</span>{{/if}}</td></tr>{{/each}}</tbody>
 {{/components/table}}
-{{else}}{{> components/empty-state title="No coverage observed" message="Coverage appears once a device with a grant for one of these skills reports an installation."}}{{/if}}
+{{else}}{{> components/empty-state heading="No coverage observed" message="Coverage appears once a device with a grant for one of these skills reports an installation."}}{{/if}}
 </section>
 
 <section class="sp-pub-section">
@@ -139,7 +142,7 @@
 {{/each}}
 </tbody>
 {{/components/table}}
-{{else}}{{> components/empty-state title="No reviewed publications" message="A skill appears here once the inventory sync captures a revision and it is adopted."}}{{/if}}
+{{else}}{{> components/empty-state heading="No reviewed publications" message="A skill appears here once the inventory sync captures a revision and it is adopted."}}{{/if}}
 </section>
 
 <section class="sp-pub-section">
@@ -159,7 +162,7 @@
 {{/each}}
 </tbody>
 {{/components/table}}
-{{else}}{{> components/empty-state title="No withdrawal proposals" message="One appears when an inventory sync finds a published skill missing from its upstream source."}}{{/if}}
+{{else}}{{> components/empty-state heading="No withdrawal proposals" message="One appears when an inventory sync finds a published skill missing from its upstream source."}}{{/if}}
 </section>
 
 <section class="sp-pub-section">
@@ -169,7 +172,7 @@
 <thead><tr><th scope="col">Publication</th><th scope="col">Status</th><th scope="col">Claimed</th><th scope="col">Error</th></tr></thead>
 <tbody>{{#each distribution.deliveries}}<tr><td><span class="sp-u-mono" title="{{publication_full}}">{{publication_short}}</span></td><td>{{> components/badge tone=status_tone text=status}}</td><td>{{formatDate claimed_at}}</td><td>{{#if error}}{{error}}{{else}}&mdash;{{/if}}</td></tr>{{/each}}</tbody>
 {{/components/table}}
-{{else}}{{> components/empty-state title="No delivery claims" message="A row appears when a bridge claims a published skill from the distribution outbox."}}{{/if}}
+{{else}}{{> components/empty-state heading="No delivery claims" message="A row appears when a bridge claims a published skill from the distribution outbox."}}{{/if}}
 </section>
 
 <section class="sp-pub-section">
@@ -191,7 +194,7 @@
 {{/each}}
 </tbody>
 {{/components/table}}
-{{else}}{{> components/empty-state title="No installation receipts" message="A receipt is written when a device installs a distributed skill and reports the files it wrote back."}}{{/if}}
+{{else}}{{> components/empty-state heading="No installation receipts" message="A receipt is written when a device installs a distributed skill and reports the files it wrote back."}}{{/if}}
 </section>
 
 {{#if can_manage}}

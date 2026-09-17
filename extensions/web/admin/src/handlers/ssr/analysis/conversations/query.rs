@@ -8,7 +8,7 @@ use urlencoding::encode as urlencode;
 
 use crate::handlers::ssr::list_view::{PageWindow, Pagination};
 use crate::handlers::ssr::types::{SortHeaderView, TabLinkView};
-use crate::repositories::analysis::conversations::BreakdownBy;
+use crate::repositories::analysis::conversations::{BreakdownBy, ScoredFilter};
 use crate::repositories::analytics::conversation_rows::ConversationSort;
 
 pub(crate) const BASE_URL: &str = "/admin/analysis/conversations";
@@ -22,6 +22,7 @@ pub(crate) struct ConversationAnalysisQuery {
     pub category: Option<String>,
     pub outcome: Option<String>,
     pub skill: Option<String>,
+    pub scored: Option<String>,
     pub q: Option<String>,
     pub since: Option<String>,
     // Why: the shell's scope bar emits `?preset=`; read as a fallback so it
@@ -79,6 +80,10 @@ impl ConversationAnalysisQuery {
         Self::trimmed(self.skill.as_deref()).map(str::to_owned)
     }
 
+    pub(super) fn scored(&self) -> Option<ScoredFilter> {
+        ScoredFilter::parse(Self::trimmed(self.scored.as_deref()))
+    }
+
     pub(super) fn free_text(&self) -> Option<String> {
         Self::trimmed(self.q.as_deref()).map(str::to_owned)
     }
@@ -99,7 +104,7 @@ impl ConversationAnalysisQuery {
         self.page.unwrap_or(0).max(0)
     }
 
-    fn pairs(&self) -> [(&'static str, Option<&str>); 12] {
+    fn pairs(&self) -> [(&'static str, Option<&str>); 13] {
         [
             ("group", self.group.as_deref()),
             ("project", self.project.as_deref()),
@@ -107,6 +112,7 @@ impl ConversationAnalysisQuery {
             ("category", self.category.as_deref()),
             ("outcome", self.outcome.as_deref()),
             ("skill", self.skill.as_deref()),
+            ("scored", self.scored.as_deref()),
             ("q", self.q.as_deref()),
             ("since", self.since.as_deref()),
             ("preset", self.preset.as_deref()),

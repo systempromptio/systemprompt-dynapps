@@ -6,13 +6,17 @@
 //! verified evidence, and an entry that is not bound to a managed resource has
 //! no scope a snapshot could be retained under.
 
-pub use super::cells::{RowVersion, live_for, p95_cell, short_hash, version_href};
+pub use super::cells::{RowVersion, live_for, p95_cell, scores_for, short_hash, version_href};
 use crate::error::AdminResult;
+use crate::handlers::ssr::analysis_urls::ANALYSIS_SKILLS_URL;
 use crate::handlers::ssr::format::{format_cost, short_num};
+use crate::handlers::ssr::scorecard::{ScorecardView, Scores};
 use crate::repositories::analysis::inventory_index::MarketplaceRef;
 use crate::repositories::analysis::marketplace_versions::SkillLiveRow;
 use crate::repositories::analysis::portfolio_snapshots::PortfolioEntry;
 use crate::repositories::analysis::snapshot_figures::SnapshotFigures;
+use crate::repositories::evaluation::skill_scores::SkillScoreFigures;
+use crate::repositories::sync::marketplace_hash::skill_key;
 use serde::Serialize;
 use systemprompt::marketplace::inventory::InventoryEntry;
 use systemprompt::marketplace::managed::ResourceSummary;
@@ -88,6 +92,11 @@ pub struct InventoryRow {
     pub marketplaces: Vec<MarketplaceRef>,
     pub catalog_href: Option<String>,
     pub drilldown_href: String,
+    // Why: the `plugin:skill` key the facts and the judge attribution use;
+    // `None` for an entry no plugin carries.
+    pub skill_key: Option<String>,
+    pub scorecard: ScorecardView,
+    pub scored_sessions: i64,
     pub figures: SnapshotFigures,
     pub users_with_access: usize,
     pub users: Option<i64>,
@@ -112,6 +121,7 @@ pub struct InventoryRowInputs<'a> {
     pub users_with_access: usize,
     pub managed: &'a [ResourceSummary],
     pub live: Option<&'a SkillLiveRow>,
+    pub scores: Option<&'a SkillScoreFigures>,
     pub window: (&'a str, &'a str),
 }
 
@@ -134,22 +144,25 @@ fn binding(entry: &InventoryEntry, managed: &[ResourceSummary]) -> Binding {
     }
 }
 
-// Why: the name always links to the conversations that used the skill, even
-// with nothing attributed yet — the reader learns more from that page's empty
-// state than from a name that does not respond. A bound entry links by its
-// managed resource, which is revision-keyed; an unbound one has only its skill
-// identity to go on.
-fn conversations_href(entry: &InventoryEntry, window: (&str, &str)) -> String {
-    entry.resource_id.as_ref().map_or_else(
+// Why: the name always links to the skill's own page, even with nothing
+// attributed yet — the reader learns more from that page's empty state than
+// from a name that does not respond. The page is keyed the way the facts
+// are (`plugin:skill`); a bound entry also narrows it to the revision-keyed
+// managed resource. Without a plugin there is no fact key, so the link
+// falls back to the list searched for the name.
+fn conversations_href(
+    entry: &InventoryEntry,
+    skill_key: Option<&str>,
+    window: (&str, &str),
+) -> String {
+    skill_key.map_or_else(
         || {
             format!(
-                "/admin/analysis/skills?skill={}&start={}&end={}",
-                urlencoding::encode(&entry.resource_key),
-                urlencoding::encode(window.0),
-                urlencoding::encode(window.1)
+                "{ANALYSIS_SKILLS_URL}?search={}",
+                urlencoding::encode(&entry.resource_key)
             )
         },
-        |resource| super::super::drilldown_url(resource, window),
+        |key| super::super::drilldown_url(key, entry.resource_id.as_ref(), window),
     )
 }
 
@@ -177,6 +190,7 @@ impl InventoryRow {
             users_with_access,
             managed,
             live,
+            scores,
             window,
         } = input;
         let figures = item
@@ -200,7 +214,30 @@ impl InventoryRow {
             failed_requests: figures.failed_requests,
             users_with_access,
         });
-        let drilldown_href = conversations_href(&entry, window);
+        let skill_key = plugin.map(|p| skill_key(p.0, &entry.resource_key));
+        let drilldown_href = conversations_href(&entry, skill_key.as_deref(), window);
+        let scorecard = ScorecardView::with_prior(
+            scores.map_or_else(Scores::default, |f| Scores {
+                intent: f.intent,
+                quality: f.quality,
+                speed: f.speed,
+                cost: f.cost,
+            }),
+            Scores {
+                quality: scores.and_then(|f| f.quality_prior),
+                ..Scores::default()
+            },
+            Some(drilldown_href.clone()),
+            scores.map_or_else(
+                || "No judged session invoked this skill in the window".to_owned(),
+                |f| {
+                    format!(
+                        "Mean judge scores over {} judged sessions that invoked this skill; opens the skill's page",
+                        f.scored_sessions
+                    )
+                },
+            ),
+        );
         let catalog_href = match entry.kind.as_str() {
             "skill" | "plugin" => Some(format!(
                 "/admin/catalog/{}s/{}",
@@ -215,6 +252,9 @@ impl InventoryRow {
             plugin_name: plugin.map(|p| p.1.to_owned()),
             catalog_href,
             drilldown_href,
+            skill_key,
+            scorecard,
+            scored_sessions: scores.map_or(0, |f| f.scored_sessions),
             users_with_access,
             users: live.map(|l| l.users).or(figures.distinct_users),
             cost: if figures.priced_requests > 0 {

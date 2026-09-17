@@ -172,3 +172,14 @@
     font-size: var(--sp-text-xs);
 }
 }
+
+@layer components {
+/* The judge's means beside a version's figures on the Compare tab. */
+.sp-versions-side__eval {
+    margin-block-start: var(--sp-space-3);
+}
+.sp-versions-side__eval-note {
+    margin: var(--sp-space-1) 0 0;
+    font-size: var(--sp-text-2xs);
+}
+}

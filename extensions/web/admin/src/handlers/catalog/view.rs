@@ -45,6 +45,10 @@ pub(super) struct PluginListRow {
     pub(super) detail_url: String,
     pub(super) matrix_url: String,
     pub(super) visibility: super::visibility::VisibilityView,
+    // Why: which source ships it — `base` or `bundle:<name>` — decided at
+    // composition and filled after the rows are built.
+    pub(super) source: String,
+    pub(super) source_tone: &'static str,
 }
 
 // Why: A headline figure on a catalog list page.
@@ -82,6 +86,8 @@ pub(super) struct SkillListRow {
     pub(super) detail_url: String,
     pub(super) matrix_url: String,
     pub(super) visibility: super::visibility::VisibilityView,
+    pub(super) source: String,
+    pub(super) source_tone: &'static str,
 }
 
 #[derive(Debug, Serialize)]

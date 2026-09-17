@@ -23,7 +23,7 @@ async function harness() {
   const source = await readFile(new URL('../../storage/files/js/services/portfolio-live.js', import.meta.url), 'utf8');
   const module = new vm.SourceTextModule(source, { context });
   await module.link(() => { throw new Error('unexpected dependency'); }); await module.evaluate();
-  const dispose = module.namespace.watchPortfolio({ url: '/admin/analysis/resources.json?days=30', generation: '1.2.3', onData: data => values.push(data), onStatus: value => statuses.push(value) });
+  const dispose = module.namespace.watchPortfolio({ url: '/admin/analysis/skills.json?days=30', generation: '1.2.3', onData: data => values.push(data), onStatus: value => statuses.push(value) });
   const timer = delay => { const entry = [...timers].find(([,value]) => value.delay === delay); assert.ok(entry, `timer ${delay}`); timers.delete(entry[0]); entry[1].fn(); };
   return { timers, documentListeners, windowListeners, sources, requests, values, statuses, dispose, timer,
     visibility: hidden => { document.hidden = hidden; documentListeners.get('visibilitychange')?.(); } };

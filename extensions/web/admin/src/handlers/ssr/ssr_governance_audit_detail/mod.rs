@@ -7,7 +7,6 @@
 //! `find_decision_chain` envelope, the client and provider tool schemas the
 //! request carried, and the session's stored artifacts.
 
-use super::ssr_helpers::Viewer;
 use crate::error::AdminError;
 use std::sync::Arc;
 
@@ -25,6 +24,7 @@ use crate::handlers::ssr::types::BreadcrumbView;
 use crate::repositories::governance::chain::{
     AiRequestSummary, ChainEnvelope, DecisionStage, TranscriptEnvelope, find_decision_chain,
 };
+use crate::repositories::scope::may_view;
 
 mod evidence;
 mod rows;
@@ -57,6 +57,7 @@ struct Summary {
     trace_url: Option<String>,
     session_url: String,
     user_id: UserId,
+    user_url: String,
     agent_id: Option<AgentId>,
     agent_scope: Option<String>,
     decision_count: i64,
@@ -109,15 +110,15 @@ pub(crate) async fn governance_audit_detail_page(
     shell: Page,
     State(pool): State<Arc<PgPool>>,
     Path(id): Path<String>,
-    view: super::export::ViewMode,
 ) -> AdminHtmlResult<Response> {
-    if !shell.user.is_console {
-        return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
-    }
-
     let Some(envelope) = find_decision_chain(&pool, &id).await? else {
         return Err(AdminError::NotFound("No audit chain found for that id.".to_owned()).into());
     };
+    // Why: 404, not 403, for an owner outside the caller's view — the same
+    // answer as a missing id, so the URL is no oracle for other people's ids.
+    if !may_view(&pool, &shell.user, Some(&envelope.identity.user_id)).await? {
+        return Err(AdminError::NotFound("No audit chain found for that id.".to_owned()).into());
+    }
 
     let primary = pick_primary(&envelope, &id);
     let title = primary.map_or_else(
@@ -168,11 +169,12 @@ pub(crate) async fn governance_audit_detail_page(
         back_url: "/admin/requests",
     };
 
-    Ok(view.respond(
+    Ok(crate::handlers::ssr::render_typed_page(
         &shell.engine,
         "governance-audit-detail",
         &ctx,
-        Viewer::new(&shell.user, &shell.marketplace),
+        &shell.user,
+        &shell.marketplace,
     ))
 }
 
@@ -198,6 +200,10 @@ fn build_summary(env: &ChainEnvelope) -> Summary {
         trace_url: env.trace_id.as_ref().map(trace_detail_url),
         session_url: session_detail_url(&env.session_id),
         user_id: env.identity.user_id.clone(),
+        user_url: format!(
+            "/admin/users/{}",
+            urlencoding::encode(env.identity.user_id.as_str())
+        ),
         agent_id: env.identity.agent_id.clone(),
         agent_scope: env.identity.agent_scope.clone(),
         decision_count: env.totals.decision_count,

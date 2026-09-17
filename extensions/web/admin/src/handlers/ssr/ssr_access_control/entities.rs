@@ -15,12 +15,12 @@ use super::bands::{band_label, band_rank, chips, resolution};
 use super::summary::{self, options};
 use super::view::{AcEntitiesView, AcEntityView, AcRuleView};
 use crate::handlers::ssr::people_view::expires_soon;
-use crate::repositories::access_control::drift::DriftReport;
+use crate::repositories::access_control::drift::{DriftReport, EntityState};
 use crate::repositories::access_control::rules::LedgerRuleRow;
 use crate::types::access_control::AccessDecision;
 
 pub(super) const BASE_URL: &str = "/admin/access-control";
-pub(super) const SYNC_URL: &str = "/admin/sync";
+pub(super) const SYNC_URL: &str = "/admin/access-control?tab=sync";
 pub(super) const DOCS_URL: &str = "/documentation/access-control";
 
 #[derive(Debug, Default, Deserialize)]
@@ -35,6 +35,10 @@ pub(crate) struct AcQuery {
     // next week — the list an operator renews from.
     pub expiring: Option<String>,
     pub q: Option<String>,
+    // Why: `tab=sync` renders the plane's Sync tab instead of the ledger;
+    // `entity=<kind>/<id>` narrows its diff table — the ledger's deep link.
+    pub tab: Option<String>,
+    pub entity: Option<String>,
 }
 
 impl AcQuery {
@@ -79,7 +83,7 @@ fn entity_view(rows: &[&LedgerRuleRow], drift: Option<&DriftReport>) -> AcEntity
     let allow = chips(rows, AccessDecision::Allow);
     let deny = chips(rows, AccessDecision::Deny);
     let open = first.default_included;
-    let drifted = drift.is_some_and(|d| d.touches(&first.entity_type, &first.entity_id));
+    let state = EntityState::of(drift, &first.entity_type, &first.entity_id);
     let mut why: Vec<&str> = rows
         .iter()
         .filter_map(|r| r.justification.as_deref())
@@ -104,23 +108,11 @@ fn entity_view(rows: &[&LedgerRuleRow], drift: Option<&DriftReport>) -> AcEntity
         deny,
         has_why: !why.is_empty(),
         why: why.join(" · "),
-        state: if drift.is_none() {
-            "Unknown"
-        } else if drifted {
-            "Drift"
-        } else {
-            "In sync"
-        },
-        state_tone: if drift.is_none() {
-            "muted"
-        } else if drifted {
-            "warn"
-        } else {
-            "ok"
-        },
-        in_sync: drift.is_some() && !drifted,
+        state: state.label(),
+        state_tone: state.tone(),
+        in_sync: state == EntityState::InSync,
         sync_url: format!(
-            "{SYNC_URL}?entity={}",
+            "{SYNC_URL}&entity={}",
             urlencoding::encode(&format!("{}/{}", first.entity_type, first.entity_id))
         ),
         rule_count: rules.len(),

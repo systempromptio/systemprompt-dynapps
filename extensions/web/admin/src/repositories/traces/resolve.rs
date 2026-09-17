@@ -9,7 +9,7 @@
 //! [`execution_trace_key`] states which of its ids stands in as the key.
 
 use sqlx::PgPool;
-use systemprompt::identifiers::{McpExecutionId, SessionId, TraceId};
+use systemprompt::identifiers::{McpExecutionId, SessionId, TraceId, UserId};
 
 pub async fn resolve_trace_session(
     pool: &PgPool,
@@ -92,6 +92,32 @@ pub async fn resolve_trace_session(
     }
 
     find_execution_key(pool, id).await
+}
+
+// Why: the person a trace belongs to, read from whichever span source holds
+// the key — the request rows first, then the hook and decision rows a
+// hook-only trace lives in. The scoped detail page asks this before rendering.
+pub async fn find_trace_owner(
+    pool: &PgPool,
+    key: &SessionId,
+) -> Result<Option<UserId>, sqlx::Error> {
+    sqlx::query_scalar!(
+        r#"SELECT owner AS "owner!: UserId" FROM (
+               SELECT user_id AS owner, 0 AS rank FROM ai_requests
+               WHERE (session_id = $1 OR trace_id = $1) AND user_id IS NOT NULL
+               UNION ALL
+               SELECT user_id, 1 FROM plugin_usage_events
+               WHERE session_id = $1 AND user_id IS NOT NULL
+               UNION ALL
+               SELECT user_id, 2 FROM governance_decisions
+               WHERE session_id = $1 AND user_id IS NOT NULL
+           ) owners
+           ORDER BY rank
+           LIMIT 1"#,
+        key.as_str(),
+    )
+    .fetch_optional(pool)
+    .await
 }
 
 // Why: an in-process or proxied tool call lands only in

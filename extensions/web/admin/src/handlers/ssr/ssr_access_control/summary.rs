@@ -43,7 +43,7 @@ pub(super) fn kpis(input: &EntitiesInput<'_>, entities: usize) -> Vec<AcKpiView>
             note: if input.drift.is_some() {
                 "differences between rules.yaml and this database".to_owned()
             } else {
-                "rules.yaml could not be read".to_owned()
+                "the declaration could not be compared; see the notice above".to_owned()
             },
             tone: if drift_total > 0 || input.drift.is_none() {
                 "warn"

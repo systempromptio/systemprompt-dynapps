@@ -40,7 +40,7 @@
         {{#each skills}}
         <tr data-skill-id="{{id}}">
             <td class="sp-table__cell--primary"><a class="sp-table__link" href="{{detail_url}}" title="{{description}}">{{name}}</a></td>
-            <td>{{#if enabled}}{{> components/badge tone="ok" text="enabled"}}{{else}}{{> components/badge tone="muted" text="disabled"}}{{/if}}</td>
+            <td>{{#if enabled}}{{> components/badge tone="ok" text="enabled"}}{{else}}{{> components/badge tone="muted" text="disabled"}}{{/if}} {{> components/badge tone=source_tone text=source}}</td>
             <td class="sp-table__cell--num sp-u-num">{{plugin_count}}</td>
             <td>{{> components/visibility-badge visibility}}</td>
             <td class="sp-table__cell--num sp-u-num">{{#if assignment_count}}<a class="sp-table__link" href="{{matrix_url}}">{{assignment_count}}</a>{{else}}<span class="sp-u-text-tertiary">0</span>{{/if}}</td>
@@ -51,9 +51,9 @@
         {{else}}
         <tr class="sp-table__empty"><td colspan="6">
             {{#if search}}
-            {{> components/empty-state title="Nothing matches" message="No skill matches that filter."}}
+            {{> components/empty-state heading="Nothing matches" message="No skill matches that filter."}}
             {{else}}
-            {{> components/empty-state title="No skills" message="Add a services/skills/<id>/config.yaml and restart."}}
+            {{> components/empty-state heading="No skills" message="Add a services/skills/<id>/config.yaml and restart."}}
             {{/if}}
         </td></tr>
         {{/each}}

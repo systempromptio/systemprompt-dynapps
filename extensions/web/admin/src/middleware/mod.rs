@@ -27,6 +27,7 @@ use sqlx::PgPool;
 use systemprompt::identifiers::{Email, UserId};
 
 use super::handlers::extract_user_from_cookie;
+use super::repositories::scope::Participation;
 use super::types::{
     UserContext, roles_grant_console, roles_grant_developer, roles_grant_manage,
     roles_grant_platform,
@@ -67,17 +68,27 @@ pub(crate) async fn user_context_middleware(
         |p| (p.roles, p.group_ids, p.project_ids),
     );
 
+    // Why: only a non-console caller pays for participation; an admin sees the
+    // instance unscoped and never reads it.
+    let is_console = roles_grant_console(&roles);
+    let participation = if is_console {
+        Participation::default()
+    } else {
+        find_participation(&pool, &session.user_id, &group_ids, &project_ids).await
+    };
+
     let ctx = UserContext {
         user_id: session.user_id,
         username: session.username,
         email: session.email,
         is_admin: roles_grant_manage(&roles),
-        is_console: roles_grant_console(&roles),
+        is_console,
         is_platform_admin: roles_grant_platform(&roles),
         is_developer: roles_grant_developer(&roles),
         roles,
         group_ids,
         project_ids,
+        participation,
         email_verified: false,
         session_id: session.session_id,
     };
@@ -97,6 +108,24 @@ async fn find_access_profile(
         )
         .ok()
         .flatten()
+}
+
+// Why: a failed lookup yields no participation rather than an error — the
+// caller lands on their Account pages, never on someone else's data.
+async fn find_participation(
+    pool: &PgPool,
+    user_id: &UserId,
+    group_ids: &[String],
+    project_ids: &[String],
+) -> Participation {
+    super::repositories::scope::participation::get_participation(
+        pool, user_id, group_ids, project_ids,
+    )
+    .await
+    .inspect_err(|e| {
+        tracing::warn!(error = %e, user_id = %user_id, "Failed to resolve marketplace participation");
+    })
+    .unwrap_or_default()
 }
 
 pub(crate) async fn auth_me_handler(Extension(user_ctx): Extension<UserContext>) -> Response {

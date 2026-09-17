@@ -1,5 +1,7 @@
-//! `rules.yaml` against a live database: the boot seed, the report-only
-//! restart, and the three sync directions.
+//! `rules.yaml` against a live database: the three sync directions and the
+//! state row every apply leaves. The boot contract itself (seed when empty,
+//! otherwise compare) is pinned plane-independently in the unit workspace
+//! (`sync_boot_contract`).
 //!
 //! Every test writes its own `access-control/rules.yaml` into a temp services
 //! tree and runs against its own throwaway database, so the shipped file and
@@ -19,7 +21,6 @@ use systemprompt_web_admin::repositories::access_control::rules::{
     list_band_rules, list_entity_defaults,
 };
 use systemprompt_web_admin::repositories::access_control::sync::{SyncMode, apply_sync};
-use systemprompt_web_admin::repositories::config::acl_bootstrap;
 use systemprompt_web_admin::repositories::config::rules_yaml_loader::parse_rules_doc;
 
 use crate::fixtures::{insert_acl_entity, unique, write_services_file};
@@ -68,43 +69,6 @@ async fn insert_rule(pool: &PgPool, server: &str, rule_type: &str, value: &str, 
     .execute(pool)
     .await
     .expect("insert rule");
-}
-
-#[tokio::test]
-async fn boot_seeds_an_empty_table_and_afterwards_only_reports() {
-    let Some(db) = TempDb::create().await else {
-        return;
-    };
-    let dir = tempfile::tempdir().expect("temp services dir");
-    let server = unique("srv");
-    write_services_file(dir.path(), RULES, &rules_yaml(&server, "india-devs"));
-
-    // Why: the throwaway database carries the seeded schema, which may already
-    // hold band rules of its own; the seed path is exercised only when it does
-    // not, and the report-only path is asserted either way.
-    let first = acl_bootstrap::run(&db.pool, dir.path(), &RegisteredEntities::default())
-        .await
-        .expect("first boot");
-    assert_eq!(first.declared, 2);
-    if first.seeded {
-        assert_eq!(first.inserted, 2);
-        assert_eq!(rule_rows(&db.pool, &server).await.len(), 2);
-    }
-
-    write_services_file(dir.path(), RULES, &rules_yaml(&server, "india-devs, uk"));
-    let before = rule_rows(&db.pool, &server).await;
-    let second = acl_bootstrap::run(&db.pool, dir.path(), &RegisteredEntities::default())
-        .await
-        .expect("second boot");
-    assert!(!second.seeded, "a populated table is never re-seeded");
-    assert!(second.drift.missing_in_db >= 1, "the new group is reported");
-    assert_eq!(
-        rule_rows(&db.pool, &server).await,
-        before,
-        "and nothing was written"
-    );
-
-    db.cleanup().await;
 }
 
 #[tokio::test]

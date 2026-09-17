@@ -60,13 +60,13 @@
             </tbody>
         {{/components/table}}
         {{else}}
-        {{> components/empty-state title="No usage in this period" message="No subject has made a request in the current window."}}
+        {{> components/empty-state heading="No usage in this period" message="No subject has made a request in the current window."}}
         {{/if}}
     </section>
     {{/each}}
 
     {{#unless has_windows}}
-    {{> components/empty-state title="No quota windows" message="No enabled gateway policy declares a quota window, so nothing is being counted. Add one in the policy editor."}}
+    {{> components/empty-state heading="No quota windows" message="No enabled gateway policy declares a quota window, so nothing is being counted. Add one in the policy editor."}}
     {{/unless}}
     {{/inline}}
 {{/layout}}

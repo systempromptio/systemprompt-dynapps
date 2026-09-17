@@ -1,0 +1,112 @@
+/* The judge's four criterion scores as one component: intent, quality,
+   speed, cost — each a pill toned by band so a row reads at a glance, a muted
+   dash where a criterion has not been judged, and a tile variant for KPI
+   rows. The letters carry the criterion; the tooltip on the whole card names
+   them in full. */
+@layer components {
+
+.sp-score {
+    display: inline-flex;
+    flex-wrap: nowrap;
+    gap: 2px;
+    align-items: stretch;
+    vertical-align: middle;
+    text-decoration: none;
+    color: inherit;
+    border-radius: var(--sp-corners-sm);
+}
+a.sp-score:hover .sp-score__pill,
+a.sp-score:focus-visible .sp-score__pill {
+    filter: brightness(1.08);
+}
+a.sp-score:focus-visible {
+    outline: 2px solid var(--sp-accent);
+    outline-offset: 2px;
+}
+
+.sp-score__pill {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.2em;
+    min-width: 2.6em;
+    padding: 0 var(--sp-space-1);
+    border-radius: var(--sp-corners-sm);
+    font-family: var(--sp-font-mono);
+    font-size: var(--sp-text-2xs);
+    font-weight: var(--sp-font-medium);
+    line-height: 1.7;
+    white-space: nowrap;
+    border: 1px solid color-mix(in oklch, currentColor 18%, transparent);
+}
+.sp-score__letter {
+    opacity: 0.7;
+    font-weight: var(--sp-font-semibold);
+}
+.sp-score__value {
+    font-variant-numeric: tabular-nums;
+}
+.sp-score__delta {
+    font-size: 0.85em;
+    opacity: 0.85;
+}
+.sp-score__delta--ok  { color: var(--sp-success-strong); }
+.sp-score__delta--err { color: var(--sp-danger-strong); }
+
+.sp-score__pill--ok    { color: var(--sp-success-strong); background: var(--sp-success-dim); }
+.sp-score__pill--warn  { color: var(--sp-warning-strong); background: var(--sp-warning-dim); }
+.sp-score__pill--err   { color: var(--sp-danger-strong);  background: var(--sp-danger-dim); }
+.sp-score__pill--muted {
+    color: var(--sp-text-tertiary);
+    background: var(--sp-bg-tertiary);
+    border-color: var(--sp-border-subtle);
+}
+.sp-score--unscored .sp-score__pill { border-style: dashed; }
+
+/* Tile variant: sits in a KPI grid, one big pill per criterion. */
+.sp-score--tile {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--sp-space-2);
+    width: 100%;
+}
+.sp-score--tile .sp-score__pill {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+    min-width: 0;
+    padding: var(--sp-space-2) var(--sp-space-3);
+    border-radius: var(--sp-corners-md);
+    line-height: var(--sp-leading-tight);
+}
+.sp-score--tile .sp-score__letter {
+    font-family: var(--sp-font-sans);
+    font-size: var(--sp-text-2xs);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+.sp-score--tile .sp-score__value {
+    font-size: var(--sp-text-xl);
+    font-weight: var(--sp-font-semibold);
+}
+.sp-score--tile .sp-score__delta {
+    font-size: var(--sp-text-xs);
+}
+
+/* Inline legend under a tile so the letters are never a riddle. */
+.sp-score-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-space-3);
+    margin: var(--sp-space-1) 0 0;
+    padding: 0;
+    list-style: none;
+    color: var(--sp-text-tertiary);
+    font-size: var(--sp-text-2xs);
+}
+.sp-score-legend b {
+    font-family: var(--sp-font-mono);
+    font-weight: var(--sp-font-semibold);
+    color: var(--sp-text-secondary);
+}
+
+}

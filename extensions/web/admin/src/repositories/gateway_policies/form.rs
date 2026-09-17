@@ -260,7 +260,7 @@ pub fn parse_policy_form(fields: &[(String, String)]) -> Result<ParsedPolicy, Fo
         priority,
         spec,
     };
-    // Why: the same validation the boot loader runs, so a save never writes a
+    // Why: the same validation the sync apply runs, so a save never writes a
     // row the file form would have refused.
     GatewayPolicyConfig {
         policies: vec![GatewayPolicyEntry {

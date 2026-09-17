@@ -6,6 +6,7 @@
 //! whether it is tried again.
 
 pub mod prompt;
+pub mod report;
 pub mod schema;
 pub mod worker;
 

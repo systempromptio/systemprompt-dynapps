@@ -1,0 +1,46 @@
+{{#> layout title=title page=page}}
+{{#*inline "content"}}
+{{#> components/page-header title=title subtitle=(concat "Skill " skill_key " from plugin " plugin_name " — the judge's scores inherited from every session that invoked it, and the conversations behind them.")}}
+{{#*inline "header_actions"}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="{{catalog_href}}" title="Open this skill in the Platform catalog, where its contents and entitlement live">Catalog</a> <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/analysis/conversations?skill={{skill_key}}">Conversations</a> <a class="sp-btn sp-btn--sm sp-btn--primary" href="{{skills_href}}">All skills &rarr;</a>{{/inline}}
+{{/components/page-header}}
+{{> analysis-subnav}}
+<div class="sp-kpi-grid sp-kpi-grid--compact">
+{{> components/kpi label="Conversations" value=conversation_count note=(concat "with an invocation in the last " window_days " days")}}
+{{> components/kpi label="Judged" value=coverage note=(concat scored_sessions " of " sessions " sessions scored by the judge")}}
+{{> components/kpi label="Spend" value=cost note="USD on priced requests in the conversations shown"}}
+{{#if marketplaces_display}}{{> components/kpi label="Marketplaces" value=marketplace_count note=marketplaces_display}}{{/if}}
+</div>
+<section class="sp-section sp-aconv-scores" aria-label="Judge scores">
+<div class="sp-aconv-scores__head"><span class="sp-aconv-scores__title">Judge scores</span><span class="sp-aconv-scores__sub">mean over the {{scored_sessions}} judged sessions that invoked this skill · delta against the {{window_days}} days before · <a class="sp-table__link" href="/admin/analysis/evaluation">what each criterion measures</a></span></div>
+{{> components/scorecard card=scorecard tile=true}}
+<ul class="sp-score-legend"><li><b>I</b> intent — did the person get what they asked for</li><li><b>Q</b> quality — correctness, completeness, craft; did the assistant follow this playbook</li><li><b>S</b> speed — minutes per prompt against target</li><li><b>C</b> cost — spend per prompt against budget</li></ul>
+</section>
+<section class="sp-section sp-aflow-block">
+{{> components/svg-line-chart trend}}
+</section>
+{{#> components/toolbar toolbar_count=(concat pagination.total_rows " " pagination.noun)}}
+{{#*inline "toolbar_filters"}}
+<form class="sp-toolbar__filter sp-aflow-filter" method="get" action="{{all_href}}">
+{{#if filter.resource}}<input type="hidden" name="resource" value="{{filter.resource}}">{{/if}}
+<div class="sp-toolbar__field"><label class="sp-toolbar__field-label" for="sk-start">From (UTC)</label><input class="sp-search-input" type="date" id="sk-start" name="start" value="{{filter.start}}" required></div>
+<div class="sp-toolbar__field"><label class="sp-toolbar__field-label" for="sk-end">Until (UTC, exclusive)</label><input class="sp-search-input" type="date" id="sk-end" name="end" value="{{filter.end}}" required></div>
+<button class="sp-btn sp-btn--sm sp-btn--primary" type="submit">Apply</button>
+</form>
+{{/inline}}
+{{#*inline "toolbar_actions"}}{{#if selected}}<a class="sp-btn sp-btn--xs sp-btn--ghost" href="{{all_href}}" title="Every conversation whose hook reported this skill, not only the revision-verified ones">All evidence</a>{{/if}}{{/inline}}
+{{/components/toolbar}}
+<section class="sp-section sp-aflow-block">
+{{#if selected}}{{> components/section title="Revision-verified conversations" note=(concat "Conversations with an invocation proven against the managed " selected.kind " " selected.resource_key ", the stricter cohort the Versions page counts on.")}}{{else}}{{> components/section title="Conversations that invoked this skill" note="Every conversation whose harness hook reported the skill, with the requests retained for each and the judge's scores for its session."}}{{/if}}
+{{#> components/table caption="Conversations attributed to this skill" pagination=pagination}}
+<thead><tr><th scope="col">Session</th><th scope="col">Person</th><th scope="col" title="The judge's scores for the session; opens the rationale">Evaluation</th><th scope="col" class="sp-table__cell--date">First seen</th><th scope="col" class="sp-table__cell--date">Last seen</th><th scope="col" class="sp-table__cell--num">Invocations</th><th scope="col" class="sp-table__cell--num">Requests</th><th scope="col" class="sp-table__cell--num">Tokens</th><th scope="col" class="sp-table__cell--num">Cost</th><th scope="col" class="sp-table__cell--num" title="Tool results ingested as artifacts in the conversation">Artifacts</th></tr></thead>
+<tbody>
+{{#each conversations}}<tr><td class="sp-table__cell--primary sp-aflow-cell-id"><a class="sp-table__link sp-u-mono" href="{{href}}" title="{{row.session_id}} on {{host}}">{{shortId row.session_id 8}}</a></td><td class="sp-aflow-cell-id" title="{{row.user_id}}">{{row.user_id}}</td><td>{{> components/scorecard card=scorecard}}</td><td class="sp-table__cell--date">{{first}}</td><td class="sp-table__cell--date">{{last}}</td><td class="sp-table__cell--num sp-u-num">{{row.invocations}}</td><td class="sp-table__cell--num sp-u-num">{{row.requests}}{{#if row.failed}} <span class="sp-u-text-danger">({{row.failed}} failed)</span>{{/if}}</td><td class="sp-table__cell--num sp-u-num">{{#if row.requests}}{{formatNumber row.tokens}}{{else}}<span class="sp-u-text-tertiary">—</span>{{/if}}</td><td class="sp-table__cell--num sp-u-num">{{#if row.requests}}{{cost}}{{else}}<span class="sp-u-text-tertiary">—</span>{{/if}}</td><td class="sp-table__cell--num sp-u-num">{{#if row.artifacts}}<a href="/admin/artifacts?session={{row.session_id}}&all=1">{{row.artifacts}}</a>{{else}}<span class="sp-u-text-tertiary">0</span>{{/if}}</td></tr>
+{{else}}<tr class="sp-table__empty"><td colspan="10">{{> components/empty-state heading="No retained conversations" message="No authenticated session invoked this skill in the window, or its facts have not been drained into a snapshot yet."}}</td></tr>{{/each}}
+</tbody>
+{{/components/table}}
+</section>
+<details class="sp-analysis-definitions"><summary>Where these numbers come from</summary>
+<p>Conversations are read from retained snapshot data: the normalized invocation, association and request facts for the window. An invocation is attributed when its fact carries the skill the hook reported — plugin, skill and the marketplace version that served it. <em>Revision-verified</em> narrows that to invocations proven against a published managed resource this device verifiably installed.</p>
+<p>Scores come from the <code>session_evaluation</code> judge. It scores a Claude Code session, not a skill: once the session closes, intent and quality are judged by a model reading the transcript against the rubric in <code>services/evaluation/criteria/</code> — including whether the assistant followed this playbook when it invoked it — and speed and cost are computed from the session's metrics. A skill's score is the mean over the judged sessions that invoked it; the delta compares it with the equal window before. Days without a judged session carry the previous mean on the chart.</p>
+</details>
+{{/inline}}{{/layout}}

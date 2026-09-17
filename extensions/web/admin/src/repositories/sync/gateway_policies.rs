@@ -1,9 +1,10 @@
 //! The `gateway_policies` plane: `services/gateway/policies.yaml` projected
 //! into `ai_gateway_policies`.
 //!
-//! *Overwrite from code* is the boot load — every declared policy upserted,
-//! every undeclared row deleted — and *Insert only* adds the declared
-//! policies the table lacks. Both finish by running the month-window
+//! *Overwrite from code* upserts every declared policy and deletes every
+//! undeclared row; *Insert only* adds the declared policies the table lacks.
+//! Boot runs the overwrite once, on an empty table, and otherwise only
+//! compares. Both finish by running the month-window
 //! rewrite, so a calendar-month window declared with its sentinel is live
 //! on today's value before the response returns. The console editor at
 //! `/admin/gateway/policies` is the other writer; what it changes shows
@@ -11,15 +12,18 @@
 
 use async_trait::async_trait;
 use sqlx::PgPool;
-use systemprompt::identifiers::UserId;
 
 use super::access_control::applied_from;
+use super::declaration::read_or_text;
 use super::plane::{
-    ActionCounts, ApplyOutcome, DriftKpi, DriftRow, Export, PlaneDrift, SyncMode, SyncPlane,
+    ActionCounts, Actor, ApplyOutcome, DeclarationSource, DriftKpi, DriftRow, Export, PlaneDrift,
+    SyncMode, SyncPlane,
 };
 use super::state::{Applied, record_applied, record_declared};
-use crate::error::AdminResult;
-use crate::repositories::gateway_policies::declared::{POLICIES_FILE, declared_policies_now};
+use crate::error::{AdminError, AdminResult};
+use crate::repositories::gateway_policies::declared::{
+    DeclaredPolicies, POLICIES_FILE, parse_declared,
+};
 use crate::repositories::gateway_policies::drift::{PolicyDrift, compute_policy_drift};
 use crate::repositories::gateway_policies::export::render_policies_export;
 use crate::repositories::gateway_policies::month_window_db::refresh_month_windows;
@@ -31,6 +35,15 @@ pub const PLANE_ID: &str = "gateway_policies";
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct GatewayPoliciesPlane;
+
+// Why: no file is a legitimate declaration of "no policies" — core boots
+// permissive on it — so it is an empty set, not an error.
+fn declared_policies_from(from: DeclarationSource<'_>) -> AdminResult<DeclaredPolicies> {
+    let Some(yaml) = read_or_text(from, POLICIES_FILE)? else {
+        return Ok(DeclaredPolicies::default());
+    };
+    parse_declared(&yaml).map_err(|e| AdminError::invalid("policies.yaml could not be parsed", e))
+}
 
 fn row(kind: &'static str, name: &str, in_code: String, in_db: String) -> DriftRow {
     let (kind_label, kind_tone, insert_applies, overwrite_effect) = match kind {
@@ -99,9 +112,21 @@ impl SyncPlane for GatewayPoliciesPlane {
         "ai_gateway_policies"
     }
 
+    fn owner_url(&self) -> &'static str {
+        "/admin/gateway/policies"
+    }
+
     async fn drift(&self, pool: &PgPool) -> AdminResult<PlaneDrift> {
+        self.drift_from(pool, DeclarationSource::Disk).await
+    }
+
+    async fn drift_from(
+        &self,
+        pool: &PgPool,
+        from: DeclarationSource<'_>,
+    ) -> AdminResult<PlaneDrift> {
         let in_db = usize::try_from(count_policies(pool).await?).unwrap_or(0);
-        let declared = match declared_policies_now() {
+        let declared = match declared_policies_from(from) {
             Ok(d) => d,
             Err(e) => {
                 return Ok(PlaneDrift {
@@ -112,7 +137,9 @@ impl SyncPlane for GatewayPoliciesPlane {
             },
         };
         let declared_hash = declared.declared_hash();
-        record_declared(pool, PLANE_ID, &declared_hash).await?;
+        if from.is_disk() {
+            record_declared(pool, PLANE_ID, &declared_hash).await?;
+        }
         let drift = compute_policy_drift(&declared, &list_policies(pool).await?);
         Ok(PlaneDrift {
             declared_hash,
@@ -155,9 +182,20 @@ impl SyncPlane for GatewayPoliciesPlane {
         &self,
         pool: &PgPool,
         mode: SyncMode,
-        actor: &UserId,
+        actor: Actor<'_>,
     ) -> AdminResult<ApplyOutcome> {
-        let declared = declared_policies_now()?;
+        self.apply_from(pool, mode, actor, DeclarationSource::Disk)
+            .await
+    }
+
+    async fn apply_from(
+        &self,
+        pool: &PgPool,
+        mode: SyncMode,
+        actor: Actor<'_>,
+        from: DeclarationSource<'_>,
+    ) -> AdminResult<ApplyOutcome> {
+        let declared = declared_policies_from(from)?;
         let existing = list_policies(pool).await?;
         let mut outcome = ApplyOutcome::default();
         for entry in &declared.entries {
@@ -195,7 +233,7 @@ impl SyncPlane for GatewayPoliciesPlane {
             &Applied {
                 plane: PLANE_ID,
                 declared_hash: &declared.declared_hash(),
-                mode: Some(mode),
+                mode: actor.recorded_mode(mode),
                 actor: actor.as_str(),
                 from: applied_from(),
             },

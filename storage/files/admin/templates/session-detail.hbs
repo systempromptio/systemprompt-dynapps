@@ -95,7 +95,7 @@
           </tbody>
         {{/components/table}}
       {{else}}
-        {{> components/empty-state title="Not rated"
+        {{> components/empty-state heading="Not rated"
             message="Nobody has rated this session. Ratings are left by the person who ran it."}}
       {{/if}}
     </section>
@@ -126,7 +126,7 @@
         </tbody>
       {{/components/table}}
       {{else}}
-      {{> components/empty-state title="No contexts" message="This session recorded no conversation contexts."}}
+      {{> components/empty-state heading="No contexts" message="This session recorded no conversation contexts."}}
       {{/if}}
     </section>
 
@@ -152,7 +152,7 @@
         </tbody>
       {{/components/table}}
       {{else}}
-      {{> components/empty-state title="No traces" message="This session produced no governance, tool, or gateway spans."}}
+      {{> components/empty-state heading="No traces" message="This session produced no governance, tool, or gateway spans."}}
       {{/if}}
     </section>
 
@@ -185,7 +185,7 @@
         </tbody>
       {{/components/table}}
       {{else}}
-      {{> components/empty-state title="No requests" message="This session issued no gateway calls."}}
+      {{> components/empty-state heading="No requests" message="This session issued no gateway calls."}}
       {{/if}}
     </section>
     {{/inline}}

@@ -10,6 +10,8 @@
 //! inside it. Filtering, paging and sorting are bound parameters chosen by
 //! `CASE` arms, never interpolated text.
 
+mod filter;
+
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
@@ -17,6 +19,8 @@ use sqlx::types::Json;
 use systemprompt::identifiers::{ContextId, SessionId, UserId};
 
 use crate::repositories::analytics::conversation_rows::ConversationSort;
+
+pub use filter::{BreakdownBy, ScoredFilter};
 
 /// Narrowing applied to the rows, totals and breakdown alike.
 #[derive(Debug, Clone, Default)]
@@ -30,6 +34,7 @@ pub struct ConversationAnalysisFilter {
     pub free_text: Option<String>,
     pub since: Option<DateTime<Utc>>,
     pub until: Option<DateTime<Utc>>,
+    pub scored: Option<ScoredFilter>,
 }
 
 impl ConversationAnalysisFilter {
@@ -38,60 +43,6 @@ impl ConversationAnalysisFilter {
             .as_ref()
             .filter(|s| !s.is_empty())
             .map(|s| format!("%{}%", s.replace('\\', "\\\\").replace('%', "\\%")))
-    }
-}
-
-/// The dimension the breakdown table groups the filtered set by.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum BreakdownBy {
-    #[default]
-    Category,
-    Group,
-    Project,
-    User,
-    Outcome,
-}
-
-impl BreakdownBy {
-    pub const ALL: [Self; 5] = [
-        Self::Category,
-        Self::Group,
-        Self::Project,
-        Self::User,
-        Self::Outcome,
-    ];
-
-    #[must_use]
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Self::Category => "category",
-            Self::Group => "group",
-            Self::Project => "project",
-            Self::User => "user",
-            Self::Outcome => "outcome",
-        }
-    }
-
-    #[must_use]
-    pub const fn label(self) -> &'static str {
-        match self {
-            Self::Category => "By category",
-            Self::Group => "By group",
-            Self::Project => "By project",
-            Self::User => "By person",
-            Self::Outcome => "By outcome",
-        }
-    }
-
-    #[must_use]
-    pub fn from_breakdown_param(value: Option<&str>) -> Self {
-        match value {
-            Some("group") => Self::Group,
-            Some("project") => Self::Project,
-            Some("user") => Self::User,
-            Some("outcome") => Self::Outcome,
-            _ => Self::Category,
-        }
     }
 }
 
@@ -133,6 +84,11 @@ pub struct ConversationAnalysisRow<Id = ContextId> {
     pub confidence: Option<f32>,
     pub classified_at: Option<DateTime<Utc>>,
     pub judge_model: Option<String>,
+    pub intent_score: Option<i16>,
+    pub quality_score: Option<i16>,
+    pub speed_score: Option<i16>,
+    pub cost_score: Option<i16>,
+    pub scored_criteria: i32,
 }
 
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
@@ -144,6 +100,11 @@ pub struct ConversationAnalysisTotals {
     pub total_tokens: i64,
     pub total_cost_microdollars: i64,
     pub achieved: i64,
+    pub scored: i64,
+    pub quality_avg: Option<f64>,
+    pub intent_avg: Option<f64>,
+    pub speed_avg: Option<f64>,
+    pub cost_avg: Option<f64>,
     // Why: pending or failed rows in scope — what the page has not yet seen.
     pub unclassified: i64,
 }
@@ -158,6 +119,8 @@ pub struct ConversationBucketRow {
     pub turns: i64,
     pub total_cost_microdollars: i64,
     pub achieved: i64,
+    pub scored: i64,
+    pub quality_avg: Option<f64>,
     pub top_category: Option<String>,
 }
 
@@ -217,6 +180,7 @@ pub async fn load_conversation_analysis_page(
         page.limit,
         page.offset,
         page.breakdown.as_str(),
+        filter.scored.map(ScoredFilter::as_str),
     )
     .fetch_one(&mut *connection)
     .await?;
@@ -271,5 +235,10 @@ fn decode_row(
         confidence: r.confidence,
         classified_at: r.classified_at,
         judge_model: r.judge_model,
+        intent_score: r.intent_score,
+        quality_score: r.quality_score,
+        speed_score: r.speed_score,
+        cost_score: r.cost_score,
+        scored_criteria: r.scored_criteria,
     })
 }

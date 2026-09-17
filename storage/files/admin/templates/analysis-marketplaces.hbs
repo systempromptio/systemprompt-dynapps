@@ -1,7 +1,7 @@
 {{#> layout title=title page=page}}{{#*inline "content"}}
 <section class="sp-p-versions">
 {{#> components/page-header title=title subtitle="Every marketplace by the content hash of what it serves. A version is its hash; open one to see its history, compare two, or check what devices received."}}
-{{#*inline "header_actions"}}<form method="get" action="/admin/analysis/versions" class="sp-inventory-inline"><label class="sp-u-sr-only" for="mv-days">Window</label><select class="sp-select" id="mv-days" name="days"><option value="7"{{#if (eq days 7)}} selected{{/if}}>7 days</option><option value="30"{{#if (eq days 30)}} selected{{/if}}>30 days</option><option value="90"{{#if (eq days 90)}} selected{{/if}}>90 days</option><option value="365"{{#if (eq days 365)}} selected{{/if}}>365 days</option></select><button class="sp-btn sp-btn--sm sp-btn--outline" type="submit">Apply</button></form>{{/inline}}
+{{#*inline "header_actions"}}<form method="get" action="/admin/analysis/versions" class="sp-inventory-inline"><label class="sp-u-sr-only" for="mv-days">Window</label><select class="sp-select" id="mv-days" name="days"><option value="7"{{#if (eq days 7)}} selected{{/if}}>7 days</option><option value="30"{{#if (eq days 30)}} selected{{/if}}>30 days</option><option value="90"{{#if (eq days 90)}} selected{{/if}}>90 days</option><option value="365"{{#if (eq days 365)}} selected{{/if}}>365 days</option></select><button class="sp-btn sp-btn--sm sp-btn--outline" type="submit">Apply</button></form> {{> components/export-button export}}{{/inline}}
 {{/components/page-header}}
 {{> analysis-subnav}}
 
@@ -19,6 +19,7 @@
 <th scope="col" class="sp-table__cell--num">Skills</th>
 <th scope="col" class="sp-table__cell--num" title="Distinct versions recorded for this marketplace">Versions</th>
 <th scope="col" title="When the current version was first observed">Since</th>
+<th scope="col" title="The judge's mean scores for the current version; the delta is against every earlier version">Evaluation</th>
 <th scope="col" class="sp-table__cell--num">Invocations</th>
 <th scope="col" class="sp-table__cell--num">Users</th>
 <th scope="col" class="sp-table__cell--num">Requests</th>
@@ -35,14 +36,15 @@
 <td class="sp-table__cell--num sp-u-num">{{#if skill_count}}{{skill_count}}{{else}}—{{/if}}</td>
 <td class="sp-table__cell--num sp-u-num">{{versions}}</td>
 <td title="{{last_changed_at}}">{{relativeTime last_changed_at}}</td>
+<td class="sp-inventory-cell-eval">{{> components/scorecard card=scorecard}}</td>
 <td class="sp-table__cell--num sp-u-num">{{invocations}}{{#if failed_invocations}} <span class="sp-u-text-danger">{{failed_invocations}} failed</span>{{/if}}</td>
 <td class="sp-table__cell--num sp-u-num">{{users}}</td>
 <td class="sp-table__cell--num sp-u-num">{{requests}}{{#if failed}} <span class="sp-u-text-danger">{{failed}} failed</span>{{/if}}</td>
 <td class="sp-table__cell--num sp-u-num">{{cost}}</td>
-<td class="sp-table__cell--actions"><a class="sp-table__link" href="{{href}}">History</a> <a class="sp-table__link" href="{{href}}&amp;tab=compare">Compare</a></td>
+<td class="sp-table__cell--actions"><a class="sp-table__link" href="{{href}}">History</a> <a class="sp-table__link" href="{{href}}&amp;tab=compare">Compare</a> <a class="sp-table__link" href="{{evaluation_href}}">Evaluation</a></td>
 </tr>
 {{else}}
-<tr class="sp-table__empty"><td colspan="12">{{> components/empty-state title="No marketplace versions recorded" message="Versions are recorded at boot and on every inventory sync. Press Sync inventory now on Skills, or restart the server after importing a marketplace."}}</td></tr>
+<tr class="sp-table__empty"><td colspan="13">{{> components/empty-state heading="No marketplace versions recorded" message="Versions are recorded at boot and on every inventory sync. Press Sync inventory now on Skills, or restart the server after importing a marketplace."}}</td></tr>
 {{/each}}
 </tbody>
 {{/components/table}}

@@ -62,6 +62,11 @@ fn tree_with(yaml: &str) -> tempfile::TempDir {
         )
         .expect("copy criterion");
     }
+    std::fs::copy(
+        repo_root().join("services/evaluation/report.md"),
+        root.join("report.md"),
+    )
+    .expect("copy report instructions");
     std::fs::write(root.join("config.yaml"), yaml).expect("write yaml");
     dir
 }
@@ -97,6 +102,15 @@ fn shipped_config_resolves_against_the_shipped_catalog() {
         assert_eq!(criterion.metric.is_some(), expected == Scoring::Metric);
     }
     assert_eq!(loaded.config_hash.len(), 64);
+    assert!(!loaded.report.instructions_markdown.trim().is_empty());
+    assert!(loaded.report.window_days >= 1);
+}
+
+#[test]
+fn report_thresholds_are_validated() {
+    let yaml = SHIPPED.replace("    min_new_runs: 20\n", "    min_new_runs: 0\n");
+    let err = load(&yaml).expect_err("zero threshold refused");
+    assert!(err.contains("report.min_new_runs"), "{err}");
 }
 
 #[test]

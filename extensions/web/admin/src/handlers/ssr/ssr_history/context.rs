@@ -21,6 +21,7 @@ pub(super) struct HistoryPageContext {
     pub base_url: &'static str,
     pub pagination: Pagination,
     pub breadcrumbs: Vec<BreadcrumbView>,
+    pub export: crate::export::ExportView,
 }
 
 #[derive(Debug, Serialize)]

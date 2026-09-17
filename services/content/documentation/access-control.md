@@ -143,13 +143,13 @@ The database — `access_control_rules` and `access_control_entities` — is wha
 - **A person's Access tab** (`/admin/users/<id>` → Access) sets a person-band override. The reason is optional there.
 - Every console write is stamped `source = dashboard`, so the Sync page can tell a console decision from a stale row.
 
-The Access control page shows this database, one row per entity: the bands as chips, the reason in full, and a **Code ↔ DB** column saying whether the file agrees. Expand a row for the individual rules and the resolver's outcome in a sentence.
+The Access control page shows this database, one row per entity: the bands as chips, the reason in full, and a **Code ↔ DB** column saying whether the file agrees. The column has three words. **In sync** — the file and the database agree on this entity. **Drift** — they differ; the link opens the Sync page filtered to it. **Unknown** — the declaration could not be compared at all, and the notice at the top of the page says why: either `rules.yaml` did not parse, or the services tree it validates against did not compose (a plugin including an MCP server no file declares, for instance). *Unknown* never means "no rules" or "not yet synced" — a readable file against an empty database is *Drift*. Expand a row for the individual rules and the resolver's outcome in a sentence.
 
 ## The sync loop
 
 Code and database are two copies of the same intent. Either may be edited; neither is silently overwritten.
 
-**On boot** the server reads `rules.yaml` and, if the database holds **no** band rules at all (a fresh install), seeds it from the file in one transaction. Otherwise it computes the differences, logs them (`access_control_drift` in the server log), and **writes nothing**. A deploy that adds a rule to the file therefore does not land that rule until an administrator chooses to.
+**On boot** the server reads `rules.yaml` and, if the database holds **no** band rules at all (a fresh install), seeds it from the file in one transaction. Otherwise it computes the differences, logs them (`sync_drift` in the server log), and **writes nothing**. A deploy that adds a rule to the file therefore does not land that rule until an administrator chooses to. The same contract governs the groups and gateway-policy planes: no plane rewrites its tables on a restart. People are outside the loop entirely — membership, manual roles and person-band overrides are never declared in code, never reported as drift and never exported.
 
 **`/admin/sync`** lists every difference as a line — what the code declares, what the database holds, where the database row came from (`console` or `stale`), and which action would resolve it — and offers three directions:
 

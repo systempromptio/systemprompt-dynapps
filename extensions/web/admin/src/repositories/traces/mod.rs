@@ -19,7 +19,7 @@ use systemprompt::identifiers::{AgentId, ArtifactId, ContextId, SessionId, Trace
 mod ledger_spans;
 mod list;
 mod list_row;
-mod resolve;
+pub mod resolve;
 mod spans;
 mod stats;
 

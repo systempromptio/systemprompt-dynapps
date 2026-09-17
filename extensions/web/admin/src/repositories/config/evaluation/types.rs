@@ -27,7 +27,29 @@ pub struct EvaluationConfig {
     pub session_close: SessionCloseConfig,
     pub worker: WorkerConfig,
     pub judge_defaults: JudgeRef,
+    pub report: ReportConfig,
     pub criteria: Vec<CriterionConfig>,
+}
+
+/// The zoomed-out report: a model reads the judge's aggregate figures and
+/// worst and best sessions for a scope and writes themes and actions.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ReportConfig {
+    #[serde(default)]
+    pub provider: Option<String>,
+    #[serde(default)]
+    pub model: Option<String>,
+    #[serde(default)]
+    pub max_output_tokens: Option<u32>,
+    pub instructions: PathBuf,
+    // Why: the window the report reads; the staleness rule decides when a
+    // scope is re-read — after this many new judge runs, or this many hours
+    // with at least one new run.
+    pub window_days: u32,
+    pub min_new_runs: u32,
+    pub max_age_hours: u32,
+    pub input_token_budget: u32,
 }
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize)]
@@ -214,10 +236,24 @@ pub struct LoadedCriterion {
 }
 
 #[derive(Debug, Clone, Serialize)]
+pub struct LoadedReport {
+    pub provider: String,
+    pub model: String,
+    pub max_output_tokens: u32,
+    pub instructions_path: String,
+    pub instructions_markdown: String,
+    pub window_days: u32,
+    pub min_new_runs: u32,
+    pub max_age_hours: u32,
+    pub input_token_budget: u32,
+}
+
+#[derive(Debug, Clone, Serialize)]
 pub struct LoadedEvaluation {
     pub enabled: bool,
     pub session_close: SessionCloseConfig,
     pub worker: WorkerConfig,
+    pub report: LoadedReport,
     pub criteria: Vec<LoadedCriterion>,
     // Why: sha256 over the YAML and every instruction file, stamped on each run
     // so a score is always traceable to the instructions that produced it.

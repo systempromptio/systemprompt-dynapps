@@ -4,7 +4,7 @@
 //! marketplace is serving, and the window's live per-skill figures.
 
 use super::plan::Plan;
-use super::rows::{InventoryRow, InventoryRowInputs, live_for};
+use super::rows::{InventoryRow, InventoryRowInputs, live_for, scores_for};
 use crate::error::AdminResult;
 use crate::repositories::analysis::inventory_index::{
     InventoryIndex, MarketplaceAudience, get_marketplace_audience,
@@ -12,6 +12,9 @@ use crate::repositories::analysis::inventory_index::{
 use crate::repositories::analysis::marketplace_versions::{SkillLiveRow, list_skill_live_figures};
 use crate::repositories::analysis::portfolio_snapshots::PortfolioEntry;
 use crate::repositories::analysis::retained::RetainedWindow;
+use crate::repositories::evaluation::skill_scores::{
+    SkillScoreFigures, WindowScoreMeans, get_window_score_means, list_skill_score_figures,
+};
 use crate::repositories::sync::marketplace_versions_db::{
     MarketplaceVersionRow, list_current_marketplace_versions,
 };
@@ -26,6 +29,8 @@ pub(super) struct Evidence<'a> {
     pub(super) managed: Vec<ResourceSummary>,
     pub(super) versions: Vec<MarketplaceVersionRow>,
     pub(super) live: Vec<SkillLiveRow>,
+    pub(super) scores: Vec<SkillScoreFigures>,
+    pub(super) score_means: WindowScoreMeans,
 }
 
 impl<'a> Evidence<'a> {
@@ -41,6 +46,8 @@ impl<'a> Evidence<'a> {
             managed: list_all_resources(managed).await?,
             versions: list_current_marketplace_versions(pool).await?,
             live: list_skill_live_figures(pool, &managed.owner, window).await?,
+            scores: list_skill_score_figures(pool, window).await?,
+            score_means: get_window_score_means(pool, window).await?,
             index,
         })
     }
@@ -97,6 +104,7 @@ pub(super) fn expand_rows(
             users_with_access,
             managed: &evidence.managed,
             live: None,
+            scores: None,
             window,
         })?]);
     }
@@ -119,6 +127,7 @@ pub(super) fn expand_rows(
                 users_with_access,
                 managed: &evidence.managed,
                 live: live_for(&evidence.live, Some(plugin_id), &key),
+                scores: scores_for(&evidence.scores, Some(plugin_id), &key),
                 window,
             })
         })

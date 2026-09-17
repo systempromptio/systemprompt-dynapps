@@ -70,7 +70,7 @@ pub async fn count_policies(pool: &PgPool) -> Result<i64, sqlx::Error> {
 }
 
 /// One policy to write: the same upsert core's loader performs, keyed on
-/// the name, so an edit and a boot load land on the same row.
+/// the name, so an edit and a sync apply land on the same row.
 #[derive(Debug, Clone)]
 pub struct PolicyWrite<'a> {
     pub name: &'a str,

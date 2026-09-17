@@ -86,6 +86,7 @@ pub enum ConversationSort {
     Turns,
     Tokens,
     Cost,
+    Quality,
 }
 
 impl ConversationSort {
@@ -96,6 +97,7 @@ impl ConversationSort {
             Self::Turns => "turns",
             Self::Tokens => "tokens",
             Self::Cost => "cost",
+            Self::Quality => "quality",
         }
     }
 
@@ -105,6 +107,7 @@ impl ConversationSort {
             Some("turns") => Self::Turns,
             Some("tokens") => Self::Tokens,
             Some("cost") => Self::Cost,
+            Some("quality") => Self::Quality,
             _ => Self::Activity,
         }
     }

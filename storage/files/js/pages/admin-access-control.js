@@ -3,6 +3,7 @@
 // the "how a decision is made" strip is collapsed and creates a group.
 
 import { apiFetch } from '../services/api.js';
+import { initSyncPlane } from '../components/sp-sync-plane.js';
 
 const EXPLAIN_KEY = 'sp-ac-explain-collapsed';
 
@@ -90,3 +91,7 @@ const init = () => {
 };
 
 init();
+
+// Why: the Sync tab renders the shared sync-plane component; its buttons
+// are bound here so the tab works without a second page script.
+initSyncPlane();

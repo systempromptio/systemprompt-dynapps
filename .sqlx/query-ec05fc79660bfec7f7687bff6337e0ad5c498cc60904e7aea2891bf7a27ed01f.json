@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT owner AS \"owner!: UserId\" FROM (\n               SELECT user_id AS owner, 0 AS rank FROM ai_requests\n               WHERE (session_id = $1 OR trace_id = $1) AND user_id IS NOT NULL\n               UNION ALL\n               SELECT user_id, 1 FROM plugin_usage_events\n               WHERE session_id = $1 AND user_id IS NOT NULL\n               UNION ALL\n               SELECT user_id, 2 FROM governance_decisions\n               WHERE session_id = $1 AND user_id IS NOT NULL\n           ) owners\n           ORDER BY rank\n           LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "owner!: UserId",
+        "type_info": "Varchar",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "ec05fc79660bfec7f7687bff6337e0ad5c498cc60904e7aea2891bf7a27ed01f"
+}

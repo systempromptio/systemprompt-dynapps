@@ -148,6 +148,17 @@ scheduler:
       owner: admin
       enabled: true
 
+    # Ships the audit trail to the OTLP collector the profile names under
+    # `observability.otlp` (core job, every 15 s by its own schedule). Tails
+    # ai_requests / tool_call_ledger / governance_decisions as spans and the
+    # logs table as log records, by watermark in otlp_export_state; a batch
+    # is acknowledged before its cursor moves. No-op on a profile without
+    # the block. Ledger and manual run: /admin/system/observability.
+    - name: otlp_export
+      extension: core
+      owner: admin
+      enabled: true
+
     # Hourly validity sweep (web extension): revokes expired group/project
     # membership, manual roles, access rules and device certificates, and
     # pulls live credentials when an expiry removes a manage role.
@@ -204,6 +215,23 @@ scheduler:
         batch_size: "20"
         daily_cost_cap_microdollars: "2000000"
         quiet_minutes: "30"
+
+    # The evaluation report (web extension): the zoomed-out view on
+    # /admin/analysis/evaluation. Every hour: queue every scope — the instance
+    # and each marketplace — that the staleness rule in
+    # services/evaluation/config.yaml (`report:`) says is due, lease what is
+    # pending and ask the report model for themes and actions from the
+    # judge's aggregate figures. Gated like session_evaluation and by the
+    # profile's `evaluation.automatic`; Regenerate on the page, or
+    # `systemprompt infra jobs run evaluation_report -p scope=global`, queues
+    # a scope regardless. `daily_cost_cap_microdollars` stops a run once the
+    # day's report spend reaches it.
+    - name: evaluation_report
+      extension: web
+      owner: admin
+      enabled: true
+      parameters:
+        daily_cost_cap_microdollars: "1000000"
 
     # publish_pipeline sub-steps. The composite above runs each of these every
     # 15 minutes in dependency order; scheduling them independently would

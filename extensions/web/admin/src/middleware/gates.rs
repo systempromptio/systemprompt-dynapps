@@ -97,8 +97,8 @@ pub(crate) async fn require_roles_middleware(
 // Why: anonymous users are deliberately not handled here —
 // `require_user_middleware` runs after this layer and owns that case. The path
 // must come from `OriginalUri`: this layer sits inside a
-// `nest_service("/admin", …)`, which strips the prefix, and every arm of
-// `is_non_admin_allowed_path` matches on the full path.
+// `nest_service("/admin", …)`, which strips the prefix, and every arm of the
+// allowlist matches on the full path.
 pub(crate) async fn non_admin_gate_middleware(request: Request, next: Next) -> Response {
     let path = original_path(&request);
     let path = path.as_str();
@@ -111,24 +111,72 @@ pub(crate) async fn non_admin_gate_middleware(request: Request, next: Next) -> R
         return next.run(request).await;
     }
 
-    if is_non_admin_allowed_path(path) {
+    if is_non_admin_allowed_path(path, !ctx.participation.is_empty()) {
         next.run(request).await
     } else {
         axum::response::Redirect::to("/admin/profile").into_response()
     }
 }
 
-fn is_non_admin_allowed_path(path: &str) -> bool {
-    path.starts_with("/admin/profile")
-        || path.starts_with("/admin/history")
-        || path == "/admin/connect"
-        || path == "/admin/connectors"
-        || path.starts_with("/admin/requirements/")
-        || path.starts_with("/admin/auth/")
-        || path.starts_with("/admin/api/")
-        || path == "/admin/logout"
-        || path == "/admin/login"
-        || path == "/admin/setup"
-        || path == "/admin/"
-        || path == "/admin"
+/// How one allowlist entry matches a path.
+#[derive(Clone, Copy)]
+enum PathMatch {
+    Exact,
+    Prefix,
+    // Why: the detail page under a listing, never the listing itself —
+    // `/admin/sessions/<id>` opens for a scoped caller (the page decides
+    // whether the owner is inside their view), `/admin/sessions` does not.
+    Child,
+}
+
+// Why: the console a signed-in non-admin may reach. Account pages are theirs
+// by identity; the rest is the scoped console, open only to a marketplace
+// participant and narrowed by that participation inside each handler.
+const ACCOUNT_PATHS: &[(PathMatch, &str)] = &[
+    (PathMatch::Prefix, "/admin/profile"),
+    (PathMatch::Prefix, "/admin/history"),
+    // Why: the export of "My conversations" is identity-scoped like the page;
+    // every other dataset refuses a caller itself (`export::model::DataSet::allows`).
+    (PathMatch::Prefix, "/admin/export/history"),
+    (PathMatch::Exact, "/admin/connect"),
+    (PathMatch::Exact, "/admin/connectors"),
+    (PathMatch::Prefix, "/admin/requirements/"),
+    (PathMatch::Prefix, "/admin/auth/"),
+    (PathMatch::Prefix, "/admin/api/"),
+    (PathMatch::Exact, "/admin/logout"),
+    (PathMatch::Exact, "/admin/login"),
+    (PathMatch::Exact, "/admin/setup"),
+    (PathMatch::Exact, "/admin/"),
+    (PathMatch::Exact, "/admin"),
+];
+
+const PARTICIPANT_PATHS: &[(PathMatch, &str)] = &[
+    // Analysis: the two tabs that carry a per-person dimension. Skills/Usage,
+    // Evaluation and Portfolio read instance-wide facts and stay admin-only.
+    (PathMatch::Exact, "/admin/analysis/conversations"),
+    (PathMatch::Prefix, "/admin/analysis/versions"),
+    (PathMatch::Prefix, "/admin/export/analysis-conversation"),
+    (PathMatch::Prefix, "/admin/export/analysis-marketplaces"),
+    (PathMatch::Prefix, "/admin/export/analysis-versions"),
+    // Platform: the code sync of their own marketplaces, nothing else.
+    (PathMatch::Exact, "/admin/sync"),
+    // The header id lookup lands on these; each 404s an owner outside scope.
+    (PathMatch::Child, "/admin/sessions/"),
+    (PathMatch::Child, "/admin/contexts/"),
+    (PathMatch::Child, "/admin/traces/"),
+    (PathMatch::Child, "/admin/requests/"),
+];
+
+fn matches(entries: &[(PathMatch, &str)], path: &str) -> bool {
+    entries.iter().any(|(how, pattern)| match how {
+        PathMatch::Exact => path == *pattern,
+        PathMatch::Prefix => path.starts_with(pattern),
+        PathMatch::Child => path
+            .strip_prefix(pattern)
+            .is_some_and(|tail| !tail.is_empty() && !tail.contains('/')),
+    })
+}
+
+fn is_non_admin_allowed_path(path: &str, participant: bool) -> bool {
+    matches(ACCOUNT_PATHS, path) || (participant && matches(PARTICIPANT_PATHS, path))
 }

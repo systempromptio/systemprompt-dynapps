@@ -31,7 +31,7 @@ related_docs:
 
 - A user account on this instance, and its email or user id.
 - The gateway's HTTPS address, or `http://localhost:8080` for a local instance.
-- At least one skill you can name, visible on `/admin/analysis/resources`. Pick one with a distinctive name.
+- At least one skill you can name, visible on `/admin/analysis/skills`. Pick one with a distinctive name.
 
 ## Step 1: Connect a client
 
@@ -58,7 +58,7 @@ A successful sign-in does not prove routing. This step does.
 
 ## Step 3: Invoke one skill on purpose
 
-Model access and skill access are separate. Pick a skill by name from `/admin/analysis/resources` and invoke it explicitly rather than hoping the model reaches for it. In Claude Code, ask for the skill by name, or use the slash command your client exposes for it. Let the run finish.
+Model access and skill access are separate. Pick a skill by name from `/admin/analysis/skills` and invoke it explicitly rather than hoping the model reaches for it. In Claude Code, ask for the skill by name, or use the slash command your client exposes for it. Let the run finish.
 
 The client's hooks report the invocation to this gateway as it happens: the plugin, the skill, the marketplace, and the services source that shipped it with that source's content hash.
 
@@ -70,7 +70,7 @@ The feedback fact and snapshot passes run every five seconds, and the inventory 
 
 ## Step 5: Find the conversation
 
-1. Open `/admin/analysis/resources`.
+1. Open `/admin/analysis/skills`.
 2. Click the skill's name. Conversations opens filtered to that skill.
 3. Set **From (UTC)** and **Until (UTC, exclusive)** so the window covers today, then press **Apply**. The end date is exclusive, so a run from today needs tomorrow's date in **Until**.
 
@@ -78,7 +78,7 @@ Your session should be listed with its consumer, first and last seen times, invo
 
 ## Step 6: Open the transcript
 
-Click the short session id in the first column. That opens the session detail page with the conversation itself. The same session is reachable from `/admin/conversations` and from the skill's row on [Skills](/admin/analysis/resources).
+Click the short session id in the first column. That opens the session detail page with the conversation itself. The same session is reachable from `/admin/conversations` and from the skill's row on [Skills](/admin/analysis/skills).
 
 ## When it does not appear
 

@@ -8,13 +8,14 @@ kind: "guide"
 public: true
 tags: ["enterprise", "gateway", "admin"]
 published_at: "2026-08-25"
-updated_at: "2026-09-11"
+updated_at: "2026-09-17"
 after_reading_this:
   - "Route any Anthropic- or OpenAI-compatible client through the provider-neutral gateway"
   - "Grant and revoke model access per role or AD group via gateway_route ACLs"
   - "Enforce data-residency and no-retain requirements declaratively on routes"
   - "Set quota windows and latency SLO thresholds and read the breach reporting"
   - "Add a private or self-hosted endpoint as a configuration entry"
+  - "Name a fallback provider on a route and read a failover back off the audit row"
 related_docs:
   - title: "Cost Management, Budgets & FinOps"
     url: "/documentation/enterprise-cost-management"
@@ -77,6 +78,55 @@ A **configurable latency SLO threshold** is tracked per the reporting views: bre
 ## Quota windows
 
 Quota windows are configured per user and instance-wide in `services/gateway/policies.yaml`. The shipped `quota_mode: warn` records breaches without refusing requests; it does not impose a hard spend cap. See [Cost Management](/documentation/enterprise-cost-management) for the active thresholds and enforcement option.
+
+## Provider failover
+
+A route may name a **`fallback_provider`**, optionally with a
+**`fallback_upstream_model`** when the fallback's model id differs from the
+requested one. The shipped `claude-*` route fails over from Anthropic to
+Vertex AI:
+
+```yaml
+gateway:
+  routes:
+  - id: claude-star-4203d1
+    model_pattern: claude-*
+    provider: anthropic
+    fallback_provider: vertex
+    fallback_upstream_model: vertex-gemini-3.8-flash
+```
+
+**When it triggers.** The primary keeps its bounded retry budget for
+transient answers (429, 503). Once that budget is spent, or the primary
+answers any other **5xx**, or the **connection itself fails** (DNS, TLS,
+timeout), the same governed request is re-bound to the fallback provider and
+sent once more under the same retry policy. A 4xx other than 429 — a
+malformed request, a refused key — never fails over: it is the request that
+is wrong, not the provider. A per-provider **circuit breaker** records the
+outcomes, so a primary that keeps failing is skipped outright and the
+fallback tried first, without spending the retry budget on a dead upstream.
+
+**What is re-sent.** The canonical request that governance and the safety
+scanners already judged is rebuilt for the fallback's wire protocol; neither
+runs again, because the content they judged is unchanged. The raw passthrough
+lane is never re-sent — it is bound to the wire the client spoke.
+
+**What the audit shows.** The `ai_requests` row keeps `provider` as the
+route's primary and records the provider that actually answered in
+**`served_provider`**, with the request repriced at the serving provider's
+catalog rate. The route-match descriptor gains a `failover:anthropic->vertex`
+segment. `systemprompt infra logs audit <request-id>` prints both; the
+Prometheus counter **`gateway_upstream_failovers_total{from,to,reason}`**
+(`reason` is `status_<code>`, `transport` or `circuit_open`) is on
+`/metrics` for alerting.
+
+**What is validated at boot.** The fallback is validated as the route the
+fallback provider will actually serve: it must exist in the registry, differ
+from the primary, reach a priced model (with a declared cache rate), and
+satisfy the route's `requires:` block. A fallback that cannot be bound at
+request time — credential, adapter, governance, pricing — never makes a
+request worse off: the client sees the primary's own error, exactly as it
+would without a fallback.
 
 ## Private and self-hosted endpoints
 

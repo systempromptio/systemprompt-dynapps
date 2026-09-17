@@ -1,7 +1,7 @@
 {{#> layout title=title page=page}}
 {{#*inline "content"}}
-{{#> components/page-header title=title subtitle="What people are doing with the gateway: purpose, outcome, skills and cost per conversation, as the classifier judged them."}}
-{{#*inline "header_actions"}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/analysis/skills">Skill usage</a> <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/contexts">By person</a> <a class="sp-btn sp-btn--sm sp-btn--primary" href="/admin/conversations">Read conversations &rarr;</a>{{/inline}}
+{{#> components/page-header title=title subtitle="What people are doing with the gateway and how well it went: purpose and outcome from the classifier, the judge's scores for the session behind each conversation, the skills used and the cost."}}
+{{#*inline "header_actions"}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/analysis/evaluation">Evaluation report</a> <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/contexts">By person</a> <a class="sp-btn sp-btn--sm sp-btn--primary" href="/admin/conversations">Read conversations &rarr;</a> {{> components/export-button export}}{{/inline}}
 {{/components/page-header}}
 {{> analysis-subnav}}
 <div class="sp-kpi-grid sp-kpi-grid--compact">
@@ -10,8 +10,14 @@
 {{> components/kpi label="Turns" value=(formatNumber kpis.turns) note="human prompts answered"}}
 {{> components/kpi label="Tool calls" value=(formatNumber kpis.tool_calls) note="on those turns"}}
 {{> components/kpi label="Cost" value=kpis.cost_display note=(concat kpis.tokens_display " tokens")}}
-{{> components/kpi label="Achieved" value=kpis.achieved_display note="conversations the judge read as achieved" tone="ok"}}
+{{> components/kpi label="Achieved" value=kpis.achieved_display note="conversations the classifier read as achieved" tone="ok"}}
+{{> components/kpi label="Judged" value=kpis.scored_display note=(concat kpis.scored " conversations scored by the judge") href="/admin/analysis/evaluation" hint="Open the evaluation report"}}
 </div>
+<section class="sp-section sp-aconv-scores" aria-label="Judge scores">
+<div class="sp-aconv-scores__head"><span class="sp-aconv-scores__title">Judge scores</span><span class="sp-aconv-scores__sub">mean over the {{kpis.scored}} judged conversations in this set · <a class="sp-table__link" href="/admin/analysis/evaluation">what each criterion measures</a></span></div>
+{{> components/scorecard card=kpis.scorecard tile=true}}
+<ul class="sp-score-legend"><li><b>I</b> intent — did the person get what they asked for</li><li><b>Q</b> quality — correctness, completeness, craft</li><li><b>S</b> speed — minutes per prompt against target</li><li><b>C</b> cost — spend per prompt against budget</li></ul>
+</section>
 {{#> components/toolbar toolbar_count=count_label}}
 {{#*inline "toolbar_filters"}}
 <form class="sp-toolbar__filter" method="get" action="/admin/analysis/conversations" role="search" id="aconv-filter-form">
@@ -38,6 +44,11 @@
 <option value="">All outcomes</option>
 {{#each outcomes}}<option value="{{this.value}}"{{#if this.selected}} selected{{/if}}>{{this.label}}</option>{{/each}}
 </select>
+<label class="sp-u-sr-only" for="aconv-scored">Judged</label>
+<select id="aconv-scored" name="scored" class="sp-search-input">
+<option value="">Judged or not</option>
+{{#each scored_options}}<option value="{{this.value}}"{{#if this.selected}} selected{{/if}}>{{this.label}}</option>{{/each}}
+</select>
 <label class="sp-u-sr-only" for="aconv-skill">Skill</label>
 <select id="aconv-skill" name="skill" class="sp-search-input">
 <option value="">All skills</option>
@@ -58,37 +69,39 @@
 <section class="sp-section sp-aconv-block" aria-label="Breakdown">
 {{> components/tabs tabs=breakdown_tabs nav_label="Breakdown"}}
 {{#> components/table caption=(concat "Conversations " breakdown_label)}}
-<thead><tr><th scope="col">{{breakdown_label}}</th><th scope="col" class="sp-table__cell--num">Conversations</th><th scope="col" class="sp-table__cell--num">People</th><th scope="col" class="sp-table__cell--num">Turns</th><th scope="col" class="sp-table__cell--num">Cost</th><th scope="col" class="sp-table__cell--num">Achieved</th><th scope="col">Top category</th></tr></thead>
+<thead><tr><th scope="col">{{breakdown_label}}</th><th scope="col" class="sp-table__cell--num">Conversations</th><th scope="col" class="sp-table__cell--num">People</th><th scope="col" class="sp-table__cell--num">Turns</th><th scope="col" class="sp-table__cell--num">Cost</th><th scope="col" class="sp-table__cell--num">Achieved</th><th scope="col" class="sp-table__cell--num" title="Mean judge quality score over the judged conversations in the bucket">Quality</th><th scope="col">Top category</th></tr></thead>
 <tbody>
-{{#each breakdown}}<tr><td class="sp-table__cell--primary">{{#if href}}<a class="sp-table__link" href="{{href}}">{{label}}</a>{{else}}{{label}}{{/if}}</td><td class="sp-table__cell--num sp-u-num">{{formatNumber conversations}}</td><td class="sp-table__cell--num sp-u-num">{{formatNumber users}}</td><td class="sp-table__cell--num sp-u-num">{{formatNumber turns}}</td><td class="sp-table__cell--num sp-u-num">{{cost_display}}</td><td class="sp-table__cell--num sp-u-num">{{achieved_display}}</td><td>{{top_category}}</td></tr>
-{{else}}<tr class="sp-table__empty"><td colspan="7">{{> components/empty-state title="Nothing classified in this window" message="The classifier runs every five minutes and reads a conversation once it has been quiet for thirty minutes. Widen the window, or check that the conversation_classifier job is enabled."}}</td></tr>{{/each}}
+{{#each breakdown}}<tr><td class="sp-table__cell--primary">{{#if href}}<a class="sp-table__link" href="{{href}}">{{label}}</a>{{else}}{{label}}{{/if}}</td><td class="sp-table__cell--num sp-u-num">{{formatNumber conversations}}</td><td class="sp-table__cell--num sp-u-num">{{formatNumber users}}</td><td class="sp-table__cell--num sp-u-num">{{formatNumber turns}}</td><td class="sp-table__cell--num sp-u-num">{{cost_display}}</td><td class="sp-table__cell--num sp-u-num">{{achieved_display}}</td><td class="sp-table__cell--num"><span class="sp-score__pill sp-score__pill--{{quality_tone}}"><span class="sp-score__value">{{quality_display}}</span></span></td><td>{{top_category}}</td></tr>
+{{else}}<tr class="sp-table__empty"><td colspan="8">{{> components/empty-state heading="Nothing classified in this window" message="The classifier runs every five minutes and reads a conversation once it has been quiet for thirty minutes. Widen the window, or check that the conversation_classifier job is enabled."}}</td></tr>{{/each}}
 </tbody>
 {{/components/table}}
 </section>
 <section class="sp-section sp-aconv-block" aria-label="Conversations">
 {{#> components/table caption="Classified conversations" pagination=pagination modifier="sp-aconv-table"}}
-<thead><tr><th scope="col">Conversation</th><th scope="col">Person</th><th scope="col">Category</th><th scope="col">Summary</th><th scope="col">Outcome</th><th scope="col">Skills</th>{{> components/sort-header sort_headers.turns}}<th scope="col" class="sp-table__cell--num">Tools</th>{{> components/sort-header sort_headers.cost}}{{> components/sort-header sort_headers.activity}}{{#if can_evaluate}}<th scope="col">Actions</th>{{/if}}</tr></thead>
+<thead><tr><th scope="col">Conversation</th><th scope="col">Person</th><th scope="col">Category</th><th scope="col">Summary</th><th scope="col">Outcome</th>{{> components/sort-header sort_headers.quality}}<th scope="col">Skills</th>{{> components/sort-header sort_headers.turns}}<th scope="col" class="sp-table__cell--num">Tools</th>{{> components/sort-header sort_headers.cost}}{{> components/sort-header sort_headers.activity}}{{#if can_evaluate}}<th scope="col">Actions</th>{{/if}}</tr></thead>
 <tbody>
 {{#each rows}}<tr data-context-id="{{context_key}}" data-category="{{category}}">
 <td class="sp-table__cell--primary sp-aconv-cell-title"><a class="sp-table__link" href="{{href}}" title="{{context_key}}">{{title}}</a><div class="sp-aconv-meta">{{client_kind}}{{#if model}} · {{model}}{{/if}}{{#if session_href}} · <a href="{{session_href}}">session</a>{{/if}}</div></td>
 <td class="sp-aconv-cell-person">{{#if user_href}}<a class="sp-table__link" href="{{user_href}}" title="{{user_key}}">{{display_name}}</a>{{else}}{{display_name}}{{/if}}{{#if group_name}}<div class="sp-aconv-meta">{{group_name}}{{#if project_name}} · {{project_name}}{{/if}}</div>{{else}}{{#if project_name}}<div class="sp-aconv-meta">{{project_name}}</div>{{/if}}{{/if}}</td>
 <td>{{> components/badge tone="info" text=category_label}}</td>
 <td class="sp-aconv-cell-summary"><span class="sp-aconv-summary" title="{{summary}}">{{summary}}</span>{{#if tags}}<div class="sp-aconv-tags">{{#each tags}}<span class="sp-aconv-tag">{{this}}</span>{{/each}}</div>{{/if}}</td>
-<td>{{> components/badge tone=outcome_tone text=outcome}}<div class="sp-aconv-meta" title="Judge confidence">{{confidence_display}}</div></td>
-<td class="sp-aconv-cell-skills">{{#each skills}}<span class="sp-aconv-skill{{#if hooked}} sp-aconv-skill--hooked{{/if}}" title="{{#if hooked}}Reported by the harness hook{{else}}Read from the transcript by the judge{{/if}}">{{name}}</span>{{else}}<span class="sp-u-text-tertiary">—</span>{{/each}}</td>
+<td>{{> components/badge tone=outcome_tone text=outcome}}<div class="sp-aconv-meta" title="Classifier confidence">{{confidence_display}}</div></td>
+<td class="sp-aconv-cell-eval">{{> components/scorecard card=scorecard}}</td>
+<td class="sp-aconv-cell-skills"><div class="sp-aconv-skills">{{#each skills}}<a class="sp-aconv-skill{{#if hooked}} sp-aconv-skill--hooked{{/if}}" href="{{href}}" title="{{name}} — {{#if hooked}}reported by the harness hook{{else}}read from the transcript by the classifier{{/if}}; opens the skill's analysis">{{name}}</a>{{else}}<span class="sp-u-text-tertiary">—</span>{{/each}}</div></td>
 <td class="sp-table__cell--num sp-u-num">{{turns}}</td>
 <td class="sp-table__cell--num sp-u-num">{{tool_calls}}{{#if errors}} <span class="sp-u-text-danger">({{errors}} failed)</span>{{/if}}</td>
 <td class="sp-table__cell--num sp-u-num" title="{{tokens_display}} tokens">{{cost_display}}</td>
 <td class="sp-col-date"><time datetime="{{last_full}}" title="{{last_full}}">{{last_display}}</time></td>
-{{#if ../can_evaluate}}<td>{{#if evaluate_url}}<form method="post" action="{{evaluate_url}}" class="sp-inventory-inline"><input type="hidden" name="back" value="{{../back_url}}"><button class="sp-btn sp-btn--xs sp-btn--outline" type="submit" title="Score this session on every criterion now and come back here">Evaluate</button></form>{{else}}<span class="sp-u-text-tertiary">—</span>{{/if}}</td>{{/if}}
+{{#if ../can_evaluate}}<td>{{#if evaluate_url}}<form method="post" action="{{evaluate_url}}" class="sp-inventory-inline"><input type="hidden" name="back" value="{{../back_url}}"><button class="sp-btn sp-btn--xs sp-btn--outline" type="submit" title="{{#if scorecard.scored}}Re-score this session on every criterion now and come back here{{else}}Score this session on every criterion now and come back here{{/if}}">{{#if scorecard.scored}}Re-judge{{else}}Judge{{/if}}</button></form>{{else}}<span class="sp-u-text-tertiary" title="No hook session behind this conversation, so there is nothing to judge">—</span>{{/if}}</td>{{/if}}
 </tr>
-{{else}}<tr class="sp-table__empty"><td colspan="11">{{> components/empty-state title="No classified conversations match" message="Clear a filter, or wait for the classifier: it runs every five minutes over conversations that have been quiet for thirty minutes and have at least one turn."}}</td></tr>{{/each}}
+{{else}}<tr class="sp-table__empty"><td colspan="12">{{> components/empty-state heading="No classified conversations match" message="Clear a filter, or wait for the classifier: it runs every five minutes over conversations that have been quiet for thirty minutes and have at least one turn."}}</td></tr>{{/each}}
 </tbody>
 {{/components/table}}
 </section>
 <details class="sp-analysis-definitions"><summary>Where these numbers come from</summary>
 <p>Every conversation is a gateway context: its turns, tool calls, tokens and cost are rolled up from the same request records the Sessions and By-person pages read. Group and project are the person's primary containers.</p>
 <p>The <em>category</em>, <em>summary</em>, <em>outcome</em> and judge-read skills come from the <code>conversation_classifier</code> job. It reads a conversation once it has been quiet for thirty minutes, sends the transcript (credentials redacted) to the configured model with the response schema enforced by the provider API, and records one verdict per conversation. A conversation that keeps growing is read again. Categories are fixed: development, business analysis, operations, admin &amp; config, writing &amp; comms, research &amp; learning, other.</p>
-<p>Skills marked solid were reported by the harness hook and are evidence; outlined ones are what the judge read from the transcript. The judge's own gateway calls are audited under the job's identity and never counted as conversations.</p>
+<p>The <em>Evaluation</em> column is the <code>session_evaluation</code> judge: once the Claude Code session behind a conversation closes, four criteria are scored 0–100 — intent and quality by a model reading the transcript against the rubric in <code>services/evaluation/criteria/</code>, speed and cost deterministically from the session's metrics. Each pill opens the session with the rationale and quoted evidence; a dashed card means the session has not been judged yet, and <em>Judge</em> scores it now. Conversations without a hook session (plain gateway clients) have nothing to judge.</p>
+<p>Skills marked solid were reported by the harness hook and are evidence; outlined ones are what the classifier read from the transcript. Each opens the skill's own analysis. The judges' own gateway calls are audited under the job's identity and never counted as conversations.</p>
 </details>
 {{/inline}}{{/layout}}

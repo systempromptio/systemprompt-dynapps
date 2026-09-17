@@ -7,7 +7,6 @@
 //! standalone decision, and a gap marker wherever the person paused. Every
 //! row links to the request or decision audit page.
 
-use super::ssr_helpers::Viewer;
 use std::sync::Arc;
 
 use axum::extract::{Path, State};
@@ -22,6 +21,8 @@ use crate::handlers::ssr::format::{
     client_label, format_cost, format_duration_ms, local_time, short_id, short_num,
 };
 use crate::handlers::ssr::types::BreadcrumbView;
+use crate::repositories::scope::may_view;
+use crate::repositories::traces::resolve::find_trace_owner;
 use crate::repositories::traces::{
     Span, SpanKind, SpanStatus, list_trace_spans, resolve_trace_session,
 };
@@ -75,18 +76,23 @@ pub(crate) async fn perf_trace_detail_page(
     shell: Page,
     State(pool): State<Arc<PgPool>>,
     Path(id): Path<String>,
-    view: super::export::ViewMode,
 ) -> AdminHtmlResult<Response> {
-    if !shell.user.is_console {
-        return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
-    }
-
     let Some(session_id) = resolve_trace_session(&pool, &id).await? else {
         return Err(AdminError::NotFound(
             "No spans found for that session or trace id.".to_owned(),
         )
         .into());
     };
+
+    // Why: 404, not 403, for an owner outside the caller's view — the same
+    // answer as a missing id, so the URL is no oracle for other people's ids.
+    let owner = find_trace_owner(&pool, &session_id).await?;
+    if !may_view(&pool, &shell.user, owner.as_ref()).await? {
+        return Err(AdminError::NotFound(
+            "No spans found for that session or trace id.".to_owned(),
+        )
+        .into());
+    }
 
     // Why: `resolve_trace_session` just succeeded, which proves rows exist for
     // this id. Degrading a failed span fetch to an empty vec would fall into
@@ -117,11 +123,12 @@ pub(crate) async fn perf_trace_detail_page(
         back_url: "/admin/traces",
     };
 
-    Ok(view.respond(
+    Ok(crate::handlers::ssr::render_typed_page(
         &shell.engine,
         "perf-trace-detail",
         &ctx,
-        Viewer::new(&shell.user, &shell.marketplace),
+        &shell.user,
+        &shell.marketplace,
     ))
 }
 

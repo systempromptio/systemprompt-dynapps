@@ -1,6 +1,9 @@
-//! The skills page's query: the UTC window, the optional drill-down (a
-//! managed resource by id, or a skill by the hook's plugin and skill), and
-//! the page — with the URL builder that renders them back.
+//! The skill page's query: the UTC window, the optional narrowing to the
+//! revision-verified evidence of one managed resource, and the page — with
+//! the URL builder that renders them back onto `/admin/analysis/skills/{key}`.
+//!
+//! The skill itself is never a query parameter: its `plugin:skill` key is
+//! the path, the same identity the invocation facts carry.
 
 use chrono::{DateTime, Duration, NaiveTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -8,6 +11,7 @@ use systemprompt::identifiers::{ManagedResourceId, PluginId};
 
 use super::time::{self, WindowBound};
 use crate::error::AdminError;
+use crate::handlers::ssr::analysis_urls::analysis_skill_url;
 use crate::repositories::analysis::retained::{RetainedSkillRef, RetainedWindow};
 
 #[derive(Debug, Default, Clone, Deserialize, Serialize)]
@@ -18,8 +22,6 @@ pub struct AnalysisQuery {
     #[serde(default)]
     pub end: WindowBound,
     pub resource: Option<String>,
-    pub plugin: Option<String>,
-    pub skill: Option<String>,
     pub page: Option<u32>,
 }
 
@@ -55,50 +57,18 @@ impl AnalysisQuery {
         Ok(Some(ManagedResourceId::new(raw)))
     }
 
-    // Why: the skill drill-down is keyed the way the facts are — the hook's
-    // plugin id plus its `<plugin>:<skill>` string — so a configured or
-    // bundled skill with no managed resource still has a page.
-    pub fn skill(&self) -> Result<Option<RetainedSkillRef>, AdminError> {
-        let plugin = self.plugin.as_deref().map(str::trim).unwrap_or_default();
-        let skill = self.skill.as_deref().map(str::trim).unwrap_or_default();
-        if plugin.is_empty() && skill.is_empty() {
-            return Ok(None);
-        }
-        let bad = |s: &str| {
-            s.is_empty() || s.len() > 200 || s.chars().any(|c| c.is_control() || c.is_whitespace())
-        };
-        if bad(plugin) || bad(skill) {
-            return Err(AdminError::BadRequest("Invalid skill reference".into()));
-        }
-        Ok(Some(RetainedSkillRef {
-            plugin_id: PluginId::new(plugin),
-            skill: skill.to_owned(),
-        }))
-    }
-
     #[must_use]
     pub fn page(&self) -> u32 {
         self.page.unwrap_or(1).max(1)
     }
 
     #[must_use]
-    pub fn url(&self, page: u32, target: Option<&Drilldown>) -> String {
+    pub fn url(&self, page: u32, skill_key: &str) -> String {
         let mut pairs = Vec::new();
-        let (resource, plugin, skill) = match target {
-            Some(Drilldown::Resource(id)) => (Some(id.clone()), None, None),
-            Some(Drilldown::Skill(s)) => (
-                None,
-                Some(s.plugin_id.as_str().to_owned()),
-                Some(s.skill.clone()),
-            ),
-            None => (None, None, None),
-        };
         for (key, value) in [
             ("start", self.start.map(time::render)),
             ("end", self.end.map(time::render)),
-            ("resource", resource),
-            ("plugin", plugin),
-            ("skill", skill),
+            ("resource", self.resource.clone()),
         ] {
             if let Some(value) = value {
                 pairs.push((key, value));
@@ -112,28 +82,54 @@ impl AnalysisQuery {
             .map(|(k, v)| format!("{k}={}", urlencoding::encode(&v)))
             .collect::<Vec<_>>()
             .join("&");
+        let base = analysis_skill_url(skill_key);
         if query.is_empty() {
-            "/admin/analysis/skills".to_owned()
+            base
         } else {
-            format!("/admin/analysis/skills?{query}")
+            format!("{base}?{query}")
         }
     }
 }
 
-#[must_use]
-pub fn drilldown_url(resource: &ManagedResourceId, window: (&str, &str)) -> String {
-    format!(
-        "/admin/analysis/skills?resource={}&start={}&end={}",
-        urlencoding::encode(resource.as_str()),
-        urlencoding::encode(window.0),
-        urlencoding::encode(window.1)
-    )
+/// The skill identity the facts key on, parsed from a `plugin:skill` path
+/// segment: the plugin is the prefix, the key is kept whole.
+pub fn parse_skill_key(raw: &str) -> Result<RetainedSkillRef, AdminError> {
+    let key = raw.trim();
+    let bad = key.is_empty()
+        || key.len() > 200
+        || key.chars().any(|c| c.is_control() || c.is_whitespace());
+    let Some((plugin, skill)) = key.split_once(':') else {
+        return Err(AdminError::BadRequest(
+            "A skill is addressed as plugin:skill".into(),
+        ));
+    };
+    if bad || plugin.is_empty() || skill.is_empty() {
+        return Err(AdminError::BadRequest("Invalid skill reference".into()));
+    }
+    Ok(RetainedSkillRef {
+        plugin_id: PluginId::new(plugin),
+        skill: key.to_owned(),
+    })
 }
 
-/// What a page is narrowed to: a managed resource (the revision-keyed link
-/// other pages use) or a skill identity (this page's own rows).
-#[derive(Debug, Clone)]
-pub enum Drilldown {
-    Resource(String),
-    Skill(RetainedSkillRef),
+/// The link every other page uses to reach a skill's analysis: the skill's
+/// key in the path, the window and, for a bound entry, the managed resource
+/// that narrows the page to revision-verified evidence.
+#[must_use]
+pub fn drilldown_url(
+    skill_key: &str,
+    resource: Option<&ManagedResourceId>,
+    window: (&str, &str),
+) -> String {
+    let mut url = format!(
+        "{}?start={}&end={}",
+        analysis_skill_url(skill_key),
+        urlencoding::encode(window.0),
+        urlencoding::encode(window.1)
+    );
+    if let Some(resource) = resource {
+        url.push_str("&resource=");
+        url.push_str(&urlencoding::encode(resource.as_str()));
+    }
+    url
 }

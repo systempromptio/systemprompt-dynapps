@@ -202,3 +202,16 @@
     margin-inline-start: var(--sp-space-1);
 }
 }
+
+@layer components {
+/* A scorecard in a table cell, with the judged-session count beside it. */
+.sp-table__el td.sp-inventory-cell-eval {
+    white-space: nowrap;
+}
+.sp-inventory-eval-n {
+    margin-inline-start: var(--sp-space-1);
+    color: var(--sp-text-tertiary);
+    font-size: var(--sp-text-2xs);
+    font-variant-numeric: tabular-nums;
+}
+}

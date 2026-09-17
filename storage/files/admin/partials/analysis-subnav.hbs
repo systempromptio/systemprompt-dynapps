@@ -1,19 +1,25 @@
 {{!--
-  The analysis section strip. Reads `page` from the rendering context, so a
-  page includes it with no parameters: {{> analysis-subnav}}
+  The analysis section's breadcrumb and guide link. Reads `page` from the
+  rendering context, so a page includes it with no parameters:
+  {{> analysis-subnav}}. Navigation between the section's pages is the
+  sidebar's job; this strip only says where the reader is.
 --}}
-<nav class="sp-breadcrumbs" aria-label="Breadcrumb">
-    <a href="/admin/analysis/resources">Analysis</a>
-    <span class="sp-breadcrumbs__sep" aria-hidden="true">›</span>
-    <span aria-current="page">{{#if (eq page "analysis-portfolio")}}Skills{{else}}{{#if (eq page "analysis-conversations")}}Conversations{{else}}{{#if (eq page "analysis-skills")}}Usage{{else}}{{#if (eq page "analysis-versions")}}{{#if marketplace_id}}<a href="/admin/analysis/versions">Versions</a> <span class="sp-breadcrumbs__sep" aria-hidden="true">›</span> {{name}}{{else}}Versions{{/if}}{{else}}{{#if (eq page "analysis-revision")}}Revision{{else}}{{#if (eq page "analysis-evaluation")}}Evaluation{{else}}{{#if (eq page "analysis-evaluation-runs")}}Judge runs{{else}}{{#if (eq page "analysis-evaluation-run")}}Judge run{{else}}Analysis{{/if}}{{/if}}{{/if}}{{/if}}{{/if}}{{/if}}{{/if}}{{/if}}</span>
-</nav>
 <div class="sp-analysis-strip">
-<nav class="sp-tabs" role="tablist" aria-label="Analysis views">
-    <a class="sp-tab{{#if (eq page "analysis-portfolio")}} sp-tab--active{{/if}}" role="tab" aria-selected="{{#if (eq page "analysis-portfolio")}}true{{else}}false{{/if}}"{{#if (eq page "analysis-portfolio")}} aria-current="page"{{/if}} href="/admin/analysis/resources">Skills</a>
-    <a class="sp-tab{{#if (eq page "analysis-conversations")}} sp-tab--active{{/if}}" role="tab" aria-selected="{{#if (eq page "analysis-conversations")}}true{{else}}false{{/if}}"{{#if (eq page "analysis-conversations")}} aria-current="page"{{/if}} href="/admin/analysis/conversations">Conversations</a>
-    <a class="sp-tab{{#if (eq page "analysis-versions")}} sp-tab--active{{else}}{{#if (eq page "analysis-revision")}} sp-tab--active{{/if}}{{/if}}" role="tab" aria-selected="{{#if (eq page "analysis-versions")}}true{{else}}{{#if (eq page "analysis-revision")}}true{{else}}false{{/if}}{{/if}}"{{#if (eq page "analysis-versions")}} aria-current="page"{{/if}} href="/admin/analysis/versions">Versions</a>
-    <a class="sp-tab{{#if (eq page "analysis-evaluation")}} sp-tab--active{{else}}{{#if (eq page "analysis-evaluation-runs")}} sp-tab--active{{else}}{{#if (eq page "analysis-evaluation-run")}} sp-tab--active{{/if}}{{/if}}{{/if}}" role="tab" aria-selected="{{#if (eq page "analysis-evaluation")}}true{{else}}{{#if (eq page "analysis-evaluation-runs")}}true{{else}}{{#if (eq page "analysis-evaluation-run")}}true{{else}}false{{/if}}{{/if}}{{/if}}"{{#if (eq page "analysis-evaluation")}} aria-current="page"{{/if}} href="/admin/analysis/evaluation">Evaluation</a>
-    <a class="sp-tab{{#if (eq page "analysis-skills")}} sp-tab--active{{/if}}" role="tab" aria-selected="{{#if (eq page "analysis-skills")}}true{{else}}false{{/if}}"{{#if (eq page "analysis-skills")}} aria-current="page"{{/if}} href="/admin/analysis/skills">Usage</a>
+<nav class="sp-breadcrumbs" aria-label="Breadcrumb">
+    <a href="/admin/analysis/conversations">Analysis</a>
+    <span class="sp-breadcrumbs__sep" aria-hidden="true">›</span>
+    {{#if (eq page "analysis-skills")}}<span aria-current="page">Skills</span>
+    {{else}}{{#if (eq page "analysis-skill")}}<a href="/admin/analysis/skills">Skills</a> <span class="sp-breadcrumbs__sep" aria-hidden="true">›</span> <span aria-current="page">{{skill_name}}</span>
+    {{else}}{{#if (eq page "analysis-conversations")}}<span aria-current="page">Conversations</span>
+    {{else}}{{#if (eq page "analysis-versions")}}<span aria-current="page">Versions</span>
+    {{else}}{{#if (eq page "analysis-marketplace-versions")}}<a href="/admin/analysis/versions">Versions</a> <span class="sp-breadcrumbs__sep" aria-hidden="true">›</span> <span aria-current="page">{{name}}</span>
+    {{else}}{{#if (eq page "analysis-revision")}}<a href="/admin/analysis/versions">Versions</a> <span class="sp-breadcrumbs__sep" aria-hidden="true">›</span> <span aria-current="page">Revision</span>
+    {{else}}{{#if (eq page "analysis-evaluation")}}<span aria-current="page">Evaluation</span>
+    {{else}}{{#if (eq page "analysis-evaluation-marketplace")}}<a href="/admin/analysis/evaluation">Evaluation</a> <span class="sp-breadcrumbs__sep" aria-hidden="true">›</span> <span aria-current="page">{{marketplace_name}}</span>
+    {{else}}{{#if (eq page "analysis-evaluation-report")}}<a href="/admin/analysis/evaluation">Evaluation</a> <span class="sp-breadcrumbs__sep" aria-hidden="true">›</span> <span aria-current="page">Report</span>
+    {{else}}{{#if (eq page "analysis-evaluation-runs")}}<a href="/admin/analysis/evaluation">Evaluation</a> <span class="sp-breadcrumbs__sep" aria-hidden="true">›</span> <span aria-current="page">Judge runs</span>
+    {{else}}{{#if (eq page "analysis-evaluation-run")}}<a href="/admin/analysis/evaluation">Evaluation</a> <span class="sp-breadcrumbs__sep" aria-hidden="true">›</span> <a href="/admin/analysis/evaluation/runs">Judge runs</a> <span class="sp-breadcrumbs__sep" aria-hidden="true">›</span> <span aria-current="page">Run</span>
+    {{else}}<span aria-current="page">Analysis</span>{{/if}}{{/if}}{{/if}}{{/if}}{{/if}}{{/if}}{{/if}}{{/if}}{{/if}}{{/if}}{{/if}}
 </nav>
 <a class="sp-btn sp-btn--xs sp-btn--outline sp-analysis-strip__guide" href="/documentation/analysis" target="_blank" rel="noopener" title="Open the Analysis guide in a new tab">Guide</a>
 </div>
