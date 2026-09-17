@@ -119,7 +119,7 @@ pub(crate) async fn session_detail_page(
         title: format!("Session · {}", short_id(header.session_id.as_str())),
         breadcrumbs: breadcrumbs(&header),
         header: header_view(&header),
-        kpis: kpis_view(&read.kpis),
+        kpis: kpis_view(&read.kpis, &session_id),
         has_contexts: !read.contexts.is_empty(),
         contexts: read.contexts.iter().map(context_view).collect(),
         has_traces: !read.traces.is_empty(),
@@ -177,7 +177,7 @@ fn header_view(h: &SessionHeader) -> SessionHeaderView {
     }
 }
 
-fn kpis_view(k: &SessionKpis) -> SessionKpisView {
+fn kpis_view(k: &SessionKpis, session_id: &SessionId) -> SessionKpisView {
     let wire_input =
         k.total_input_tokens + k.total_cache_read_tokens + k.total_cache_creation_tokens;
     let total = wire_input + k.total_output_tokens;
@@ -195,6 +195,13 @@ fn kpis_view(k: &SessionKpis) -> SessionKpisView {
         tokens_note: tokens_note(wire_input, k.total_cache_read_tokens, k.total_output_tokens),
         total_cost_microdollars: k.total_cost_microdollars,
         total_cost_display: format_cost(k.total_cost_microdollars),
+        tool_call_count: k.tool_call_count,
+        executed_count: k.executed_count,
+        artifact_count: k.artifact_count,
+        artifacts_url: format!(
+            "/admin/artifacts?session={}&all=1&preset=30d",
+            urlencoding::encode(session_id.as_str())
+        ),
     }
 }
 

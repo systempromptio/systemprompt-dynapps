@@ -113,6 +113,10 @@ pub(super) struct SessionKpisView {
     pub(super) tokens_note: String,
     pub(super) total_cost_microdollars: i64,
     pub(super) total_cost_display: String,
+    pub(super) tool_call_count: i64,
+    pub(super) executed_count: i64,
+    pub(super) artifact_count: i64,
+    pub(super) artifacts_url: String,
 }
 
 #[derive(Debug, Serialize)]

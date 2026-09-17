@@ -1,0 +1,37 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT\n            COUNT(*) FILTER (WHERE intent_id IS NOT NULL)::bigint          AS \"tool_call_count!\",\n            COUNT(*) FILTER (WHERE mcp_execution_id IS NOT NULL)::bigint   AS \"executed_count!\",\n            COUNT(*) FILTER (WHERE artifact_id IS NOT NULL)::bigint        AS \"artifact_count!\"\n        FROM tool_call_ledger\n        WHERE session_id = $1\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "tool_call_count!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "executed_count!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "artifact_count!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "77be56f3167415805389473035ca84ff6f5894a2af3c843badf1aab8a4f03f8f"
+}

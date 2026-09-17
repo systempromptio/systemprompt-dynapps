@@ -41,6 +41,12 @@ pub struct SessionKpis {
     pub total_cache_creation_tokens: i64,
     pub total_output_tokens: i64,
     pub total_cost_microdollars: i64,
+    // Why: the tool-call vocabulary — calls the model asked for, calls a
+    // vantage point saw run, results stored as artifacts — read from the
+    // ledger so this page agrees with Requests, Artifacts and Analysis.
+    pub tool_call_count: i64,
+    pub executed_count: i64,
+    pub artifact_count: i64,
 }
 
 #[derive(Debug, Clone)]
@@ -156,7 +162,23 @@ pub async fn get_session_kpis(
     )
     .fetch_one(pool)
     .await?;
+    let tools = sqlx::query!(
+        r#"
+        SELECT
+            COUNT(*) FILTER (WHERE intent_id IS NOT NULL)::bigint          AS "tool_call_count!",
+            COUNT(*) FILTER (WHERE mcp_execution_id IS NOT NULL)::bigint   AS "executed_count!",
+            COUNT(*) FILTER (WHERE artifact_id IS NOT NULL)::bigint        AS "artifact_count!"
+        FROM tool_call_ledger
+        WHERE session_id = $1
+        "#,
+        session_id.as_str()
+    )
+    .fetch_one(pool)
+    .await?;
     Ok(SessionKpis {
+        tool_call_count: tools.tool_call_count,
+        executed_count: tools.executed_count,
+        artifact_count: tools.artifact_count,
         request_count: row.request_count,
         context_count: row.context_count,
         trace_count: row.trace_count,

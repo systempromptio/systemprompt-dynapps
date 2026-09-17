@@ -25,6 +25,8 @@
       {{> components/kpi label="Contexts" value=kpis.context_count note="conversations"}}
       {{> components/kpi label="Traces" value=kpis.trace_count note="spans grouped"}}
       {{> components/kpi label="Errors" value=kpis.error_count tone="err" note="failed requests"}}
+      {{> components/kpi label="Tool calls" value=kpis.tool_call_count note=(concat kpis.executed_count " executed") hint="Calls the model asked for; executed is how many a hook, the proxy or an in-process server saw run"}}
+      {{> components/kpi label="Artifacts" value=kpis.artifact_count href=kpis.artifacts_url note="stored results" hint="Tool results ingested as artifacts for this session"}}
       {{> components/kpi label="Tokens" value=kpis.tokens_display note=kpis.tokens_note}}
       {{> components/kpi label="Cost" value=kpis.total_cost_display note="billed"}}
       {{#if header.started_at_local}}
