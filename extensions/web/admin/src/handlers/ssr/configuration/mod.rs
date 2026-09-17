@@ -86,7 +86,7 @@ pub(crate) async fn configuration_page(
         .iter()
         .filter(|r| r.is_projected && r.state != "in step")
         .count();
-    let bundled = all
+    let kit_shipped = all
         .iter()
         .filter(|r| !r.is_projected && r.source != "base")
         .count();
@@ -111,7 +111,7 @@ pub(crate) async fn configuration_page(
         },
         ConfigKpiView {
             label: "Shipped by a bundle",
-            value: bundled,
+            value: kit_shipped,
             note: "owned by a pinned kit, in part or whole",
             tone: "info",
         },

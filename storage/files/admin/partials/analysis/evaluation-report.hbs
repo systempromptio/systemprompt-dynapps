@@ -1,0 +1,58 @@
+{{!--
+  The AI-written evaluation report for a scope: headline and assessment,
+  themes with their evidence links, recommendations grouped by priority.
+
+    {{> analysis/evaluation-report report=report pending=pending scope="global" can_trigger=can_trigger}}
+
+  `report` is a ReportView (or absent), `pending` a PendingView when a report
+  is queued or failed, `scope` the form value Regenerate posts.
+--}}
+<section class="sp-section sp-eval-report{{#if report}} sp-eval-report--{{report.assessment_tone}}{{/if}}" aria-label="Evaluation report">
+{{#if report}}
+<header class="sp-eval-report__head">
+<div class="sp-eval-report__lead">{{> components/badge tone=report.assessment_tone text=report.assessment}}<h2 class="sp-eval-report__headline">{{report.headline}}</h2></div>
+<p class="sp-eval-report__meta">{{report.scope_label}} · {{report.window_display}}{{#if report.version_short}} · version <span class="sp-hash">{{report.version_short}}</span>{{/if}} · written <time title="{{report.generated_display}}">{{report.generated_relative}}</time> by {{report.model}} from {{report.source_run_count}} judge runs · {{report.trigger}} · {{report.cost}} · <a class="sp-table__link" href="{{report.href}}">what it read</a></p>
+{{#if can_trigger}}<form method="post" action="/admin/analysis/evaluation/report" class="sp-inventory-inline sp-eval-report__action"><input type="hidden" name="scope" value="{{scope}}"><button class="sp-btn sp-btn--sm sp-btn--outline" type="submit" title="Read the judge's figures again now and write a fresh report">Regenerate</button></form>{{/if}}
+</header>
+{{#if pending}}{{> components/notice tone=pending.tone title=(concat "A newer report is " pending.status) message=(concat pending.trigger " · attempt " pending.attempts " · queued " pending.created_relative " " pending.last_error)}}{{/if}}
+{{#if report.themes}}
+<div class="sp-eval-report__grid">
+<div class="sp-eval-report__col">
+<h3 class="sp-eval-report__title">What the judge is seeing</h3>
+<ol class="sp-eval-themes">
+{{#each report.themes}}
+<li class="sp-eval-theme sp-eval-theme--{{severity_tone}}" id="theme-{{index}}">
+<div class="sp-eval-theme__head">{{> components/badge tone=severity_tone text=kind_label}}<span class="sp-eval-theme__title">{{title}}</span></div>
+<p class="sp-eval-theme__detail">{{detail}}</p>
+{{#if metric_display}}<p class="sp-eval-theme__metric">{{metric_display}}</p>{{/if}}
+{{#if evidence}}<ul class="sp-eval-links">{{#each evidence}}<li><a class="sp-eval-link sp-eval-link--{{kind}}" href="{{href}}" title="{{note}}"><span class="sp-eval-link__kind">{{kind}}</span> {{label}}</a>{{#if note}}<span class="sp-eval-link__note">{{note}}</span>{{/if}}</li>{{/each}}</ul>{{/if}}
+</li>
+{{/each}}
+</ol>
+</div>
+<div class="sp-eval-report__col">
+<h3 class="sp-eval-report__title">What to do</h3>
+{{#if report.recommendations}}
+<ol class="sp-eval-actions">
+{{#each report.recommendations}}
+<li class="sp-eval-action sp-eval-action--{{priority}}">
+<div class="sp-eval-action__head">{{> components/badge tone=priority_tone text=priority_label}}<span class="sp-eval-action__text">{{action}}</span></div>
+<p class="sp-eval-action__why">{{rationale}}{{#if theme_title}} <span class="sp-u-text-tertiary">— {{theme_title}}</span>{{/if}}</p>
+{{#if targets}}<ul class="sp-eval-links">{{#each targets}}<li><a class="sp-eval-link sp-eval-link--{{kind}}" href="{{href}}"><span class="sp-eval-link__kind">{{kind}}</span> {{label}}</a></li>{{/each}}</ul>{{/if}}
+</li>
+{{/each}}
+</ol>
+{{else}}<p class="sp-u-text-tertiary">Nothing to do: the report found no theme worth an action.</p>{{/if}}
+</div>
+</div>
+{{else}}
+<p class="sp-eval-report__quiet">The report found nothing worth a theme in this window.</p>
+{{/if}}
+{{else}}
+<div class="sp-eval-report__empty">
+<p class="sp-empty__title">No report yet{{#if pending}} — {{pending.status}}{{/if}}</p>
+{{#if pending}}<p>{{pending.trigger}} · attempt {{pending.attempts}} · queued {{pending.created_relative}}{{#if pending.last_error}} · {{pending.last_error}}{{/if}}. The <code>evaluation_report</code> job writes pending reports every hour.</p>{{else}}<p>The <code>evaluation_report</code> job writes one once enough sessions have been judged{{#if can_trigger}}; Regenerate asks for it now{{/if}}.</p>{{/if}}
+{{#if can_trigger}}<form method="post" action="/admin/analysis/evaluation/report" class="sp-inventory-inline"><input type="hidden" name="scope" value="{{scope}}"><button class="sp-btn sp-btn--sm sp-btn--primary" type="submit">Write the report now</button></form>{{/if}}
+</div>
+{{/if}}
+</section>

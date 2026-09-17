@@ -46,7 +46,11 @@ struct VersionRowView {
     scorecard: ScorecardView,
 }
 
-fn version_row(marketplace: &MarketplaceId, v: &VersionScoreRow, previous: Option<&VersionScoreRow>) -> VersionRowView {
+fn version_row(
+    marketplace: &MarketplaceId,
+    v: &VersionScoreRow,
+    previous: Option<&VersionScoreRow>,
+) -> VersionRowView {
     VersionRowView {
         hash_short: v.content_hash.chars().take(12).collect(),
         href: analysis_version_url(marketplace, Some(&v.content_hash)),
@@ -104,7 +108,10 @@ fn skill_row(f: &ReportSkillFigure) -> SkillRowView {
                 ..Scores::default()
             },
             Some(analysis_skill_url(&f.skill)),
-            format!("Mean over {} judged sessions; opens the skill", f.scored_sessions),
+            format!(
+                "Mean over {} judged sessions; opens the skill",
+                f.scored_sessions
+            ),
         ),
     }
 }
@@ -175,7 +182,10 @@ pub(crate) async fn page(
         ],
         marketplace_name: marketplace_id.clone(),
         can_trigger: config.as_ref().is_some_and(|c| c.enabled) && ai.is_some(),
-        catalog_href: format!("/admin/marketplaces/{}", urlencoding::encode(&marketplace_id)),
+        catalog_href: format!(
+            "/admin/marketplaces/{}",
+            urlencoding::encode(&marketplace_id)
+        ),
         versions_href: analysis_version_url(&marketplace, None),
         evaluation_href: ANALYSIS_EVALUATION_URL,
         report: report.as_ref().map(ReportView::of),

@@ -130,6 +130,7 @@ impl Reporter {
         };
         // Why: discard-ok: an in-memory struct always serialises
         let inputs = serde_json::to_value(&assembled.digest).unwrap_or_default();
+        // Why: discard-ok: an in-memory struct always serialises
         let findings = serde_json::to_value(&findings).unwrap_or_default();
         update_report_generated(
             pool,
@@ -152,7 +153,7 @@ impl Reporter {
     }
 }
 
-/// Write every leased scope; a lease that fails is retried with backoff.
+// Why: writes every leased scope; a lease that fails is retried with backoff.
 pub async fn generate_pending(
     pool: &PgPool,
     reporter: &Reporter,

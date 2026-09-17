@@ -65,7 +65,20 @@ fn evaluation_routes() -> Router<Arc<PgPool>> {
     Router::new()
         .route(
             "/analysis/evaluation",
-            get(handlers::ssr::analysis::evaluation::page),
+            get(handlers::ssr::analysis::evaluation::overview::page),
+        )
+        .route(
+            "/analysis/evaluation/report",
+            get(handlers::ssr::analysis::evaluation::reports::list_page)
+                .post(handlers::ssr::analysis::evaluation::reports::regenerate),
+        )
+        .route(
+            "/analysis/evaluation/report/{id}",
+            get(handlers::ssr::analysis::evaluation::reports::detail_page),
+        )
+        .route(
+            "/analysis/evaluation/{marketplace_id}",
+            get(handlers::ssr::analysis::evaluation::marketplace::page),
         )
         .route(
             "/analysis/evaluation/runs",

@@ -43,6 +43,15 @@ pub struct ExportedPlane<'a> {
     pub row_count: usize,
 }
 
+impl std::fmt::Debug for ExportedPlane<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ExportedPlane")
+            .field("plane", &self.plane.id())
+            .field("row_count", &self.row_count)
+            .finish()
+    }
+}
+
 pub async fn build_manifest(
     pool: &PgPool,
     actor: &str,

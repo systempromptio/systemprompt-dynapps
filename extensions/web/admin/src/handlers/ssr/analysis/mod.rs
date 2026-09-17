@@ -16,4 +16,3 @@ pub(crate) mod views;
 pub use query::{AnalysisQuery, drilldown_url, parse_skill_key};
 pub(crate) use skill_detail::skill_page;
 pub use views::RetainedConversationView;
-pub(crate) use views::dollars;

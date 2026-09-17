@@ -170,7 +170,6 @@
     {{else}}
     {{> components/empty-state heading="No entity matches" message="No governed entity matches these filters. Clear them to see every entity."}}
     {{/if}}
-    {{/if}}
 
     {{#if entities.capped}}
     {{> components/notice tone="warn" title="Listing is capped" message="Only the first 1000 rules were read. Narrow the filters to see the rest."}}
@@ -212,6 +211,7 @@
     </div>
     {{else}}
     {{> components/empty-state message="The grid could not be resolved. Check the server log for the access-control resolver."}}
+    {{/if}}
     {{/if}}
 
     {{#if can_write}}

@@ -20,7 +20,7 @@ impl ScoredFilter {
     }
 
     #[must_use]
-    pub fn parse(value: Option<&str>) -> Option<Self> {
+    pub fn parse_scored_filter(value: Option<&str>) -> Option<Self> {
         match value {
             Some("scored") => Some(Self::Scored),
             Some("unscored") => Some(Self::Unscored),

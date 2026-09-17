@@ -19,7 +19,7 @@ pub(crate) const CRITERIA: [(&str, &str, &str); 4] = [
 ];
 
 #[derive(Debug, Clone, Serialize)]
-pub(crate) struct ScorePillView {
+pub struct ScorePillView {
     pub key: &'static str,
     pub letter: &'static str,
     pub label: &'static str,
@@ -32,7 +32,7 @@ pub(crate) struct ScorePillView {
 }
 
 #[derive(Debug, Clone, Serialize)]
-pub(crate) struct ScorecardView {
+pub struct ScorecardView {
     pub pills: [ScorePillView; 4],
     pub scored: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -40,9 +40,9 @@ pub(crate) struct ScorecardView {
     pub title: String,
 }
 
-/// The four means (or single scores) one scorecard renders.
+// Why: the four means (or single scores) one scorecard renders.
 #[derive(Debug, Clone, Copy, Default)]
-pub(crate) struct Scores {
+pub struct Scores {
     pub intent: Option<f64>,
     pub quality: Option<f64>,
     pub speed: Option<f64>,
@@ -132,9 +132,8 @@ impl ScorecardView {
     }
 }
 
-/// A day-by-day score line over a window. Days with no judged session carry
-/// the previous day's mean forward so the line reads as a level, not a
-/// collapse to zero; the subtitle should say so.
+// Why: days with no judged session carry the previous day's mean forward so
+// the line reads as a level, not a collapse to zero; the subtitle says so.
 pub(crate) fn score_trend_chart(
     title: &'static str,
     subtitle: String,

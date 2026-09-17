@@ -104,5 +104,9 @@ fn service_utils_js(storage_js: &Path) -> Vec<AssetDefinition> {
             storage_js.join("components/sp-transcript.js"),
             "js/components/sp-transcript.js",
         ),
+        AssetDefinition::js(
+            storage_js.join("components/sp-sync-plane.js"),
+            "js/components/sp-sync-plane.js",
+        ),
     ]
 }

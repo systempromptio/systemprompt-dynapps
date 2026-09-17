@@ -27,26 +27,29 @@ related_docs:
 
 # Analysis: measure, compare and publish a skill
 
-**TL;DR:** Analysis is the part of the admin console that answers one question in stages: is a skill worth its cost, and did the marketplace version you shipped help? It starts at `/admin/analysis/skills`. A marketplace version is its content hash — the sha256 of everything it delivers — and every figure is keyed on that hash. Figures are read from retained reporting data, never computed live from raw events, and a skill only carries figures once its inventory entry is bound and attribution evidence exists. Analysis observes and compares; it does not run experiments.
+**TL;DR:** Analysis is the part of the admin console that answers one question in stages: what did people do with the gateway, how well did it go, is a skill worth its cost, and did the marketplace version you shipped help? It starts at `/admin/analysis/conversations`; the zoomed-out answer is `/admin/analysis/evaluation`. A marketplace version is its content hash — the sha256 of everything it delivers — and every figure is keyed on that hash. Figures are read from retained reporting data, never computed live from raw events, and a skill only carries figures once its inventory entry is bound and attribution evidence exists. Analysis observes and compares; it does not run experiments.
 
 ## What the section is for
 
 Four questions, in the order you normally ask them:
 
-1. Which skills are actually used, by how many people, at what cost and failure rate?
-2. What did those people do with them? Which conversations, which requests?
-3. What did a new version of a marketplace do to real traffic, compared with the one before it?
-4. What is the instance serving right now, and which devices received it?
+1. What did people do with the gateway, and how well did it go — as the classifier and the judge read each conversation?
+2. Which skills are actually used, by how many people, at what cost, and how does the judge score the sessions that used them?
+3. Across everything: what is going wrong, and what should the owners of these skills and marketplaces change?
+4. What did a new version of a marketplace do, compared with the one before it, and which devices received it?
 
-## The tabs
+## The pages
 
-They sit in workflow order on every Analysis page.
+Every Analysis page lives at `/admin/analysis/<noun>`, the same noun and identity the Platform section uses at `/admin/<noun>` — Platform says what is configured, Analysis says how it performs. The sidebar lists them in workflow order.
 
-| Tab | Route | What it answers |
+| Page | Route | What it answers |
 |---|---|---|
-| **Skills** | `/admin/analysis/skills` | Cost, use and health for every skill, grouped by marketplace, each group stamped with the version hash it serves. |
-| **Conversations** | `/admin/analysis/skills` | Which skills carry attributed use, and the sessions behind the one you select. |
-| **Versions** | `/admin/analysis/versions` | Every marketplace by content hash: its history, what changed between versions, how each performed, and what devices received. |
+| **Conversations** | `/admin/analysis/conversations` | Every gateway conversation with its purpose and outcome (classifier), the judge's four scores for the session behind it, the skills used and the cost. |
+| **Skills** | `/admin/analysis/skills`, `/admin/analysis/skills/{plugin:skill}` | Every skill with the judge's scores inherited from the sessions that invoked it, cost, use and health, grouped by marketplace and stamped with the version hash it serves; a skill's own page has its trend and the conversations behind it. |
+| **Evaluation** | `/admin/analysis/evaluation`, `/admin/analysis/evaluation/{marketplace_id}` | The zoomed-out report: an AI-written account of what the judge is seeing and what to do, every marketplace's current version against its history, the trend, and the judge's configuration. |
+| **Versions** | `/admin/analysis/versions`, `/admin/analysis/versions/{marketplace_id}` | Every marketplace by content hash: its history with the judge's scores per version, what changed between versions, how each performed, and what devices received. |
+
+Two AI judges feed these pages. The `conversation_classifier` job reads each quiet conversation and records its category, summary and outcome. The `session_evaluation` job scores each closed Claude Code session on four criteria — intent, quality, speed, cost — 0–100 with rationale and quoted evidence (`services/evaluation/`). A skill inherits the scores of every judged session that invoked it; a marketplace version inherits those of every session served while it was current. The `evaluation_report` job then writes the report on the Evaluation page from those figures.
 
 Versions has three views per marketplace — **History**, **Compare** and **Distribution** — described in [Versions: Marketplace Hashes, History and Compare](/documentation/analysis-versions). The old Impact and Publication pages redirect there.
 

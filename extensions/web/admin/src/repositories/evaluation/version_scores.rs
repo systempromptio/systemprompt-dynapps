@@ -141,7 +141,7 @@ fn merge_means(acc: CriterionMeans, next: CriterionMeans) -> CriterionMeans {
 }
 
 /// Mean scores for one day, for the trend chart.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Copy, Serialize)]
 pub struct ScoreTrendPoint {
     pub day: DateTime<Utc>,
     pub scored_sessions: i64,

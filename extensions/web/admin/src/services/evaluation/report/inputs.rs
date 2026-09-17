@@ -8,6 +8,7 @@
 
 use serde::Serialize;
 use sqlx::PgPool;
+use systemprompt::identifiers::{MarketplaceId, SessionId};
 
 use super::schema::KnownIds;
 use crate::repositories::evaluation::report_inputs::{
@@ -44,7 +45,7 @@ pub struct ReportDigest {
 
 #[derive(Debug, Serialize)]
 pub struct VersionDigest {
-    pub marketplace_id: String,
+    pub marketplace_id: MarketplaceId,
     pub version: String,
     pub is_current: bool,
     pub sessions: i64,
@@ -57,7 +58,7 @@ pub struct VersionDigest {
 
 #[derive(Debug, Serialize)]
 pub struct SessionDigest {
-    pub session_id: String,
+    pub session_id: SessionId,
     pub conversation_id: Option<String>,
     pub side: &'static str,
     pub title: Option<String>,
@@ -72,6 +73,7 @@ pub struct SessionDigest {
     pub intent_rationale: Option<String>,
 }
 
+#[derive(Debug)]
 pub struct Assembled {
     pub digest: ReportDigest,
     pub known: KnownIds,
@@ -84,7 +86,7 @@ fn clip(value: Option<String>, max: usize) -> Option<String> {
 
 fn session_digest(s: ReportOutlierSession) -> SessionDigest {
     SessionDigest {
-        session_id: s.session_id.as_str().to_owned(),
+        session_id: s.session_id,
         conversation_id: s.context_id.map(|c| c.as_str().to_owned()),
         side: if s.is_worst { "worst" } else { "best" },
         title: clip(s.title, 120),
@@ -105,9 +107,7 @@ async fn list_versions(
     scope: &ReportScope,
 ) -> Result<Vec<VersionDigest>, sqlx::Error> {
     let rows: Vec<VersionScoreRow> = match scope {
-        ReportScope::Marketplace(id) => {
-            list_version_scores(pool, &systemprompt::identifiers::MarketplaceId::new(id)).await?
-        },
+        ReportScope::Marketplace(id) => list_version_scores(pool, &MarketplaceId::new(id)).await?,
         ReportScope::Global => {
             let mut all = Vec::new();
             for rollup in list_marketplace_score_rollups(pool).await? {
@@ -119,7 +119,7 @@ async fn list_versions(
     Ok(rows
         .into_iter()
         .map(|v| VersionDigest {
-            marketplace_id: v.marketplace_id.as_str().to_owned(),
+            marketplace_id: v.marketplace_id,
             version: v.content_hash,
             is_current: v.is_current,
             sessions: v.sessions,
@@ -171,7 +171,7 @@ pub async fn assemble_digest(
     let sessions: Vec<SessionDigest> = outliers.into_iter().map(session_digest).collect();
     known
         .sessions
-        .extend(sessions.iter().map(|s| s.session_id.clone()));
+        .extend(sessions.iter().map(|s| s.session_id.as_str().to_owned()));
     known
         .conversations
         .extend(sessions.iter().filter_map(|s| s.conversation_id.clone()));

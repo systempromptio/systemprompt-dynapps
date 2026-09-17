@@ -25,6 +25,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = { workspace = true }
 chrono = { workspace = true }
 tempfile = { workspace = true }
+zip = { workspace = true }
 serde_yaml = { workspace = true }
 async-trait = { workspace = true }
 

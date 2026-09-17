@@ -1,37 +1,64 @@
 {{#> layout title=title page=page}}{{#*inline "content"}}
-{{#> components/page-header title=title subtitle="How every closed session is scored: four criteria, the model that judges each, and the exact instructions it receives. Scores appear on each session and roll up into Impact."}}
-{{#*inline "header_actions"}}{{#if can_trigger}}<form method="post" action="/admin/analysis/evaluation/queue" class="sp-inventory-inline"><button class="sp-btn sp-btn--sm sp-btn--outline" type="submit" title="Queue every session that has closed within the lookback window and is not yet scored">Queue closed sessions</button></form> <form method="post" action="/admin/analysis/evaluation/run" class="sp-inventory-inline"><button class="sp-btn sp-btn--sm sp-btn--outline" type="submit" title="Judge the next batch of queued rows now and show the runs"{{#unless summary.queued}} disabled{{/unless}}>Run pending now ({{summary.queued}})</button></form> {{/if}}<a class="sp-btn sp-btn--sm sp-btn--primary" href="{{runs_url}}">Judge runs &rarr;</a>{{/inline}}
+{{#> components/page-header title=title subtitle="What the judge makes of the instance: an AI-written report of what is going wrong and what to do about it, every marketplace's current version against its history, and the trend — all from the four criteria scored on every closed session."}}
+{{#*inline "header_actions"}}{{#if can_trigger}}<form method="post" action="/admin/analysis/evaluation/queue" class="sp-inventory-inline"><button class="sp-btn sp-btn--sm sp-btn--outline" type="submit" title="Queue every session that has closed within the lookback window and is not yet scored">Queue closed sessions</button></form> <form method="post" action="/admin/analysis/evaluation/run" class="sp-inventory-inline"><button class="sp-btn sp-btn--sm sp-btn--outline" type="submit" title="Judge the next batch of queued rows now and show the runs"{{#unless summary.queued}} disabled{{/unless}}>Run pending now ({{summary.queued}})</button></form> {{/if}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="{{reports_url}}">Report history</a> <a class="sp-btn sp-btn--sm sp-btn--primary" href="{{runs_url}}">Judge runs &rarr;</a>{{/inline}}
 {{/components/page-header}}
 {{> analysis-subnav}}
 {{#if configured}}
 {{#unless enabled}}
 {{> components/notice tone="warn" title="Scoring is off" message="services/evaluation/config.yaml is present but scoring is not running: either it sets enabled: false or no enabled plugin sets hooks.evaluation: true."}}
 {{/unless}}
-<p class="sp-eval-mode">{{#if automatic}}{{> components/badge tone="ok" text="Automatic"}} Closed sessions are queued by the scheduler (<code>evaluation.automatic: true</code> in the profile); the buttons run the same engine on demand.{{else}}{{> components/badge tone="info" text="Manual"}} Sessions are scored only from the buttons — here, on a session page, or in the Conversations list. Set <code>evaluation.automatic: true</code> in the profile to score every closed session without a click.{{/if}}{{#unless inference_available}} {{> components/badge tone="warn" text="No judge"}} This instance carries no inference client, so nothing can score until a provider is configured.{{/unless}}</p>
+<p class="sp-eval-mode">{{#if automatic}}{{> components/badge tone="ok" text="Automatic"}} Closed sessions are queued by the scheduler and the report is rewritten as new runs land (<code>evaluation.automatic: true</code> in the profile); the buttons run the same engines on demand.{{else}}{{> components/badge tone="info" text="Manual"}} Sessions are scored and reports written only from the buttons — here, on a session page, or in the Conversations list. Set <code>evaluation.automatic: true</code> in the profile to run both without a click.{{/if}}{{#unless inference_available}} {{> components/badge tone="warn" text="No judge"}} This instance carries no inference client, so nothing can score until a provider is configured.{{/unless}}</p>
+{{> analysis/evaluation-report report=report pending=pending scope="global" can_trigger=can_trigger}}
 <div class="sp-kpi-grid sp-kpi-grid--compact">
-{{> components/kpi label="Judge runs" value=summary.runs note=(concat summary.failed " failed · " summary.queued " queued")}}
+{{> components/kpi label="Judge runs" value=summary.runs note=(concat summary.failed " failed · " summary.queued " queued") href=runs_url}}
+{{> components/kpi label="Judged sessions" value=summary.quality.sessions note=(concat "last " summary_days " days")}}
 {{> components/kpi label="Judge spend" value=judge_spend note=(concat "last " summary_days " days, excluded from user figures")}}
-{{> components/kpi label="Intent" value=intent_avg note=(concat "mean over " summary.intent.sessions " sessions")}}
-{{> components/kpi label="Quality" value=quality_avg note=(concat "mean over " summary.quality.sessions " sessions")}}
-{{> components/kpi label="Speed" value=speed_avg note=(concat "mean over " summary.speed.sessions " sessions")}}
-{{> components/kpi label="Cost" value=cost_avg note=(concat "mean over " summary.cost.sessions " sessions")}}
 </div>
-<details class="sp-analysis-definitions"><summary>When a session is scored</summary>
-<p>A session closes on <code>SessionEnd</code> from its host. Hosts whose adapter has no end-of-session event close after {{quiet_minutes}} minutes of silence. Sessions with fewer than {{min_user_prompts}} user prompt(s) or older than {{lookback_hours}} hours are never queued. {{#if automatic}}The <code>session_evaluation</code> job runs every minute: it queues what closed, then{{else}}Nothing is queued on its own; <em>Queue closed sessions</em> queues what closed, <em>Evaluate now</em> on a session queues that one, and the <code>session_evaluation</code> job (every minute) or <em>Run pending now</em>{{/if}} leases one (session, criterion) pair at a time and records a run whatever the outcome; a failed run is retried with backoff and then left visible. A click runs the judge inline and answers when its runs are recorded, marked <code>manual</code> with the admin who asked. Judge calls go through the gateway as the job actor and never count against the person judged or the person who clicked.{{#if owner_plugin}} Owner plugin: <code>{{owner_plugin}}</code>.{{/if}} Configuration hash <code>{{config_hash_short}}</code> is stamped on every run.</p>
+<section class="sp-section sp-aconv-scores" aria-label="Judge scores">
+<div class="sp-aconv-scores__head"><span class="sp-aconv-scores__title">Judge scores</span><span class="sp-aconv-scores__sub">mean over every session judged in the last {{summary_days}} days</span></div>
+{{> components/scorecard card=scorecard tile=true}}
+<ul class="sp-score-legend"><li><b>I</b> intent — did the person get what they asked for</li><li><b>Q</b> quality — correctness, completeness, craft</li><li><b>S</b> speed — minutes per prompt against target</li><li><b>C</b> cost — spend per prompt against budget</li></ul>
+</section>
+<section class="sp-section sp-aflow-block">
+{{> components/svg-line-chart trend}}
+</section>
+<section class="sp-section sp-aflow-block" aria-label="Marketplaces">
+{{> components/section title="Marketplaces" note="Each marketplace's current version against every version before it. Open one for its own report, its versions and the skills the judge rated worst."}}
+{{#> components/table caption="Marketplaces with the judge's scores for their current version" modifier="sp-analysis-table"}}
+<thead><tr><th scope="col">Marketplace</th><th scope="col" title="Content hash of the version being served">Version</th><th scope="col" class="sp-table__cell--num">Versions</th><th scope="col" title="Judge means for the current version; the delta is against every earlier version">Current version</th><th scope="col" class="sp-table__cell--num" title="Judged sessions served by the current version · by every earlier version">Judged</th><th scope="col" class="sp-table__cell--actions"><span class="sp-u-sr-only">Actions</span></th></tr></thead>
+<tbody>
+{{#each marketplaces}}
+<tr>
+<td class="sp-table__cell--primary"><a class="sp-table__link" href="{{href}}">{{marketplace_id}}</a></td>
+<td>{{#if version_short}}<a class="sp-hash sp-hash--chip" href="{{versions_href}}">{{version_short}}</a>{{else}}{{> components/badge tone="muted" text="retired"}}{{/if}}</td>
+<td class="sp-table__cell--num sp-u-num">{{versions}}</td>
+<td class="sp-inventory-cell-eval">{{> components/scorecard card=scorecard}}</td>
+<td class="sp-table__cell--num sp-u-num">{{scored_sessions}} <span class="sp-u-text-tertiary">· {{history_scored_sessions}}</span></td>
+<td class="sp-table__cell--actions"><a class="sp-table__link" href="{{href}}">Report</a> <a class="sp-table__link" href="{{versions_href}}">Versions</a> <a class="sp-table__link" href="{{catalog_href}}">Catalog</a></td>
+</tr>
+{{else}}<tr class="sp-table__empty"><td colspan="6">{{> components/empty-state heading="No marketplace versions recorded" message="Versions are recorded at boot and on every inventory sync."}}</td></tr>{{/each}}
+</tbody>
+{{/components/table}}
+</section>
+<details class="sp-analysis-definitions"><summary>How the judge works</summary>
+<p>A session closes on <code>SessionEnd</code> from its host. Hosts whose adapter has no end-of-session event close after {{quiet_minutes}} minutes of silence. Sessions with fewer than {{min_user_prompts}} user prompt(s) or older than {{lookback_hours}} hours are never queued. {{#if automatic}}The <code>session_evaluation</code> job runs every minute: it queues what closed, then{{else}}Nothing is queued on its own; <em>Queue closed sessions</em> queues what closed, <em>Judge</em> on a session or conversation queues that one, and the <code>session_evaluation</code> job (every minute) or <em>Run pending now</em>{{/if}} leases one (session, criterion) pair at a time and records a run whatever the outcome; a failed run is retried with backoff and then left visible. Judge calls go through the gateway as the job actor and never count against the person judged or the person who clicked.{{#if owner_plugin}} Owner plugin: <code>{{owner_plugin}}</code>.{{/if}} Configuration hash <code>{{config_hash_short}}</code> is stamped on every run.</p>
+<p>A skill inherits the scores of every session that invoked it; a marketplace version inherits those of every session served while it was current, resolved at the moment the session first invoked one of its skills. The report is written by <code>{{report_model}}</code> from those figures over a {{report_window_days}}-day window — the means, every skill, every version, conversation categories with their token load, and the worst and best sessions with the judge's own rationale — and may cite only ids it was shown.</p>
 </details>
 {{#each criteria}}
-<section class="sp-section sp-eval-criterion" id="criterion-{{name}}">
-{{> components/section title=name note=(concat scoring " · " provider " / " model " · " max_output_tokens " output tokens")}}
+<details class="sp-analysis-definitions sp-eval-criterion" id="criterion-{{name}}"><summary>Criterion: {{name}} — {{scoring}} · {{provider}} / {{model}}</summary>
 <div class="sp-eval-criterion__facts">
 <div><span class="sp-eval-criterion__label">Inputs</span><span class="sp-eval-criterion__values">{{#each inputs}}{{> components/badge tone="muted" text=this}}{{/each}}</span></div>
 {{#if is_metric}}<div><span class="sp-eval-criterion__label">Thresholds</span><span class="sp-eval-criterion__values">{{#each thresholds}}{{> components/badge tone="info" text=(concat label ": " value)}}{{/each}}</span></div>{{/if}}
-<div><span class="sp-eval-criterion__label">Instructions file</span><code>{{instructions_path}}</code></div>
+<div><span class="sp-eval-criterion__label">Instructions file</span><code>{{instructions_path}}</code> · {{max_output_tokens}} output tokens</div>
 </div>
-<details class="sp-eval-criterion__prompt" open><summary>System prompt as the judge receives it</summary><pre class="sp-analysis-file-preview"><code>{{system_prompt}}</code></pre></details>
+<details class="sp-eval-criterion__prompt"><summary>System prompt as the judge receives it</summary><pre class="sp-analysis-file-preview"><code>{{system_prompt}}</code></pre></details>
 <details class="sp-eval-criterion__prompt"><summary>Required output schema</summary><pre class="sp-analysis-file-preview"><code>{{schema_json}}</code></pre></details>
-</section>
+</details>
 {{/each}}
+<details class="sp-analysis-definitions sp-eval-criterion" id="criterion-report"><summary>Report instructions — {{report_model}}</summary>
+<pre class="sp-analysis-file-preview"><code>{{report_instructions}}</code></pre>
+</details>
 {{else}}
-{{> components/empty-state heading="Evaluation is not configured" message="Add services/evaluation/config.yaml with four criteria and set hooks.evaluation: true on the governance-owning plugin. The boot validates the file against the provider catalog."}}
+{{> components/empty-state heading="Evaluation is not configured" message="Add services/evaluation/config.yaml with four criteria and a report block, and set hooks.evaluation: true on the governance-owning plugin. The boot validates the file against the provider catalog."}}
 {{/if}}
 {{/inline}}{{/layout}}

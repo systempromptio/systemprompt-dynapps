@@ -54,7 +54,10 @@ pub(super) fn marketplace_row(r: &MarketplaceScoreRollup) -> MarketplaceRowView 
             "/admin/marketplaces/{}",
             urlencoding::encode(r.marketplace_id.as_str())
         ),
-        version_short: r.current_hash.as_deref().map(|h| h.chars().take(12).collect()),
+        version_short: r
+            .current_hash
+            .as_deref()
+            .map(|h| h.chars().take(12).collect()),
         versions: r.versions,
         scorecard: ScorecardView::with_prior(
             Scores {
@@ -96,7 +99,10 @@ pub(super) fn trend_chart(
         subtitle,
         window,
         &[
-            ("Quality", points.iter().map(|p| (p.day, p.quality)).collect()),
+            (
+                "Quality",
+                points.iter().map(|p| (p.day, p.quality)).collect(),
+            ),
             ("Intent", points.iter().map(|p| (p.day, p.intent)).collect()),
             ("Speed", points.iter().map(|p| (p.day, p.speed)).collect()),
             ("Cost", points.iter().map(|p| (p.day, p.cost)).collect()),

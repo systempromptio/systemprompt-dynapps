@@ -32,7 +32,7 @@ pub async fn list_skill_score_figures(
     let prior_start = window.start - (window.end - window.start);
     sqlx::query_as!(
         SkillScoreFigures,
-        r#"SELECT s.plugin_id AS "plugin_id: PluginId", s.skill,
+        r#"SELECT s.plugin_id AS "plugin_id!: PluginId", s.skill AS "skill!",
                   COUNT(DISTINCT s.session_id) FILTER (WHERE s.first_invoked_at >= $1)::bigint AS "sessions!",
                   COUNT(DISTINCT s.session_id) FILTER (WHERE s.first_invoked_at >= $1 AND c.scored_criteria > 0)::bigint AS "scored_sessions!",
                   AVG(c.intent) FILTER (WHERE s.first_invoked_at >= $1)::float8 AS intent,
@@ -53,7 +53,7 @@ pub async fn list_skill_score_figures(
 }
 
 /// Scores per day for one skill, for the sparkline on its page.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Copy, Serialize)]
 pub struct SkillScoreDay {
     pub day: chrono::DateTime<chrono::Utc>,
     pub scored_sessions: i64,

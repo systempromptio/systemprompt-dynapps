@@ -17,6 +17,7 @@ use systemprompt::ai::AiService;
 use super::load_config;
 use crate::error::AdminError;
 use crate::evaluation::Judge;
+use crate::evaluation::report::Reporter;
 use crate::handlers::shared::require_write_origin;
 use crate::routes::managed_state::ManagedState;
 use crate::types::UserContext;
@@ -63,6 +64,22 @@ impl JudgeRequest {
             AdminError::BadRequest("Inference is not configured on this instance.".to_owned())
         })?;
         Ok(Judge::from_parts(
+            ai,
+            Arc::new(config),
+            self.managed.owner.clone(),
+        ))
+    }
+}
+
+impl JudgeRequest {
+    pub(crate) fn reporter(&self) -> Result<Reporter, AdminError> {
+        let config = load_config()?
+            .filter(|c| c.enabled)
+            .ok_or_else(|| AdminError::BadRequest("Evaluation is not configured.".to_owned()))?;
+        let ai = self.ai.clone().ok_or_else(|| {
+            AdminError::BadRequest("Inference is not configured on this instance.".to_owned())
+        })?;
+        Ok(Reporter::from_parts(
             ai,
             Arc::new(config),
             self.managed.owner.clone(),

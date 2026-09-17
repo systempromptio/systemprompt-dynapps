@@ -71,8 +71,7 @@ const fn paged(kind: ConfigKind, page_url: &'static str) -> ConfigKind {
 const fn projected(kind: ConfigKind, plane: &'static str, page_url: &'static str) -> ConfigKind {
     ConfigKind {
         plane: Some(plane),
-        page_url: Some(page_url),
-        ..kind
+        ..paged(kind, page_url)
     }
 }
 
@@ -285,12 +284,6 @@ pub const CONFIG_KINDS: &[ConfigKind] = &[
         "Web templates",
         "the public site's page shells",
         "web/templates",
-    ),
-    dir(
-        "web_assets",
-        "Web assets",
-        "favicon and logos",
-        "web/assets",
     ),
 ];
 

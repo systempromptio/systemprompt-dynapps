@@ -184,6 +184,9 @@ pub async fn claim_report_leases(
         .collect())
 }
 
+// JSON: `inputs` is the digest the model was shown and `findings` its
+// answer, both stored as the model saw and wrote them; the typed shapes live
+// in services::evaluation::report::schema and are re-parsed on read.
 /// Everything the generator learned, written onto the leased row.
 #[derive(Debug)]
 pub struct GeneratedReport<'a> {

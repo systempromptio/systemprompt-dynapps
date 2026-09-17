@@ -10,9 +10,9 @@ use axum::response::{Redirect, Response};
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 
+use super::PendingView;
 use super::report_view::ReportView;
 use super::trigger::JudgeRequest;
-use super::{PendingView, load_config};
 use crate::error::{AdminError, AdminHtmlResult};
 use crate::handlers::ssr::analysis_urls::{ANALYSIS_EVALUATION_URL, analysis_evaluation_url};
 use crate::handlers::ssr::list_view::Pagination;
@@ -128,7 +128,11 @@ pub(crate) async fn list_page(
         pagination: Pagination {
             current_page: page.min(total_pages),
             total_pages,
-            first_row: if shown == 0 { 0 } else { (page - 1) * PAGE_SIZE + 1 },
+            first_row: if shown == 0 {
+                0
+            } else {
+                (page - 1) * PAGE_SIZE + 1
+            },
             last_row: (page - 1) * PAGE_SIZE + shown,
             total_rows: total,
             noun: "reports",
@@ -226,10 +230,4 @@ pub(crate) async fn regenerate(
         ReportScope::Global => ANALYSIS_EVALUATION_URL.to_owned(),
         ReportScope::Marketplace(m) => analysis_evaluation_url(&MarketplaceId::new(m)),
     }))
-}
-
-// Why: the config is loaded once per request; the pages only need to know
-// whether a report can be asked for, which `load_config` answers.
-pub(crate) fn report_window_days() -> Result<u32, AdminError> {
-    Ok(load_config()?.map_or(7, |c| c.report.window_days))
 }

@@ -91,8 +91,8 @@ impl AnalysisQuery {
     }
 }
 
-/// The skill identity the facts key on, parsed from a `plugin:skill` path
-/// segment: the plugin is the prefix, the key is kept whole.
+// Why: the skill identity the facts key on, parsed from a `plugin:skill`
+// path segment: the plugin is the prefix, the key is kept whole.
 pub fn parse_skill_key(raw: &str) -> Result<RetainedSkillRef, AdminError> {
     let key = raw.trim();
     let bad = key.is_empty()
@@ -112,9 +112,9 @@ pub fn parse_skill_key(raw: &str) -> Result<RetainedSkillRef, AdminError> {
     })
 }
 
-/// The link every other page uses to reach a skill's analysis: the skill's
-/// key in the path, the window and, for a bound entry, the managed resource
-/// that narrows the page to revision-verified evidence.
+// Why: the link every other page uses to reach a skill's analysis: the
+// skill's key in the path, the window and, for a bound entry, the managed
+// resource that narrows the page to revision-verified evidence.
 #[must_use]
 pub fn drilldown_url(
     skill_key: &str,

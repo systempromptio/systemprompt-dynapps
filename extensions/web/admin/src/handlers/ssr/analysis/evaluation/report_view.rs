@@ -6,8 +6,7 @@ use serde::Serialize;
 use systemprompt::identifiers::{ContextId, MarketplaceId, SessionId};
 
 use crate::handlers::ssr::analysis_urls::{
-    ANALYSIS_CONVERSATIONS_URL, ANALYSIS_EVALUATION_URL, analysis_skill_url,
-    analysis_version_url,
+    ANALYSIS_CONVERSATIONS_URL, ANALYSIS_EVALUATION_URL, analysis_skill_url, analysis_version_url,
 };
 use crate::handlers::ssr::entity_urls::{context_detail_url, session_detail_url};
 use crate::handlers::ssr::format::{format_cost, local_time, relative_time};
@@ -17,7 +16,7 @@ use crate::services::evaluation::report::schema::{
 };
 
 #[derive(Debug, Serialize)]
-pub(crate) struct EntityLinkView {
+pub(crate) struct ReportLinkView {
     pub kind: &'static str,
     pub label: String,
     pub href: String,
@@ -33,7 +32,7 @@ pub(crate) struct ThemeView {
     pub title: String,
     pub detail: String,
     pub metric_display: Option<String>,
-    pub evidence: Vec<EntityLinkView>,
+    pub evidence: Vec<ReportLinkView>,
 }
 
 #[derive(Debug, Serialize)]
@@ -44,7 +43,7 @@ pub(crate) struct RecommendationView {
     pub priority_label: &'static str,
     pub priority_tone: &'static str,
     pub theme_title: Option<String>,
-    pub targets: Vec<EntityLinkView>,
+    pub targets: Vec<ReportLinkView>,
 }
 
 #[derive(Debug, Serialize)]
@@ -133,18 +132,24 @@ fn version_marketplace(row: &EvaluationReportRow, hash: &str) -> Option<Marketpl
         .map(MarketplaceId::new)
 }
 
-fn link(row: &EvaluationReportRow, entity: &ReportEntity) -> EntityLinkView {
+fn link(row: &EvaluationReportRow, entity: &ReportEntity) -> ReportLinkView {
     let (kind, label, href) = match entity.kind.as_str() {
         "skill" => ("skill", entity.id.clone(), analysis_skill_url(&entity.id)),
         "conversation" => (
             "conversation",
             entity.id.chars().take(8).collect(),
-            context_detail_url(&ContextId::new(&entity.id)),
+            ContextId::try_new(&entity.id).map_or_else(
+                |_| ANALYSIS_CONVERSATIONS_URL.to_owned(),
+                |c| context_detail_url(&c),
+            ),
         ),
         "session" => (
             "session",
             entity.id.chars().take(8).collect(),
-            format!("{}#evaluation", session_detail_url(&SessionId::new(&entity.id))),
+            format!(
+                "{}#evaluation",
+                session_detail_url(&SessionId::new(&entity.id))
+            ),
         ),
         "version" => (
             "version",
@@ -163,7 +168,7 @@ fn link(row: &EvaluationReportRow, entity: &ReportEntity) -> EntityLinkView {
             ),
         ),
     };
-    EntityLinkView {
+    ReportLinkView {
         kind,
         label,
         href,
@@ -255,7 +260,9 @@ impl ReportView {
                 .unwrap_or_default(),
             trigger: row.trigger.clone(),
             source_run_count: row.source_run_count,
-            cost: row.cost_microdollars.map_or_else(|| "—".to_owned(), format_cost),
+            cost: row
+                .cost_microdollars
+                .map_or_else(|| "—".to_owned(), format_cost),
             version_short: row
                 .marketplace_hash
                 .as_deref()

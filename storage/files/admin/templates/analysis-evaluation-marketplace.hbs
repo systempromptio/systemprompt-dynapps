@@ -1,0 +1,42 @@
+{{#> layout title=title page=page}}{{#*inline "content"}}
+{{#> components/page-header title=marketplace_name subtitle="The judge's view of one marketplace: its report, every version's scores newest first, the trend, and the skills rated worst and best."}}
+{{#*inline "header_actions"}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="{{catalog_href}}" title="Open this marketplace in the Platform catalog">Catalog</a> <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{versions_href}}">Versions</a> <a class="sp-btn sp-btn--sm sp-btn--primary" href="{{evaluation_href}}">All marketplaces &rarr;</a>{{/inline}}
+{{/components/page-header}}
+{{> analysis-subnav}}
+{{> analysis/evaluation-report report=report pending=pending scope=(concat "marketplace:" marketplace_id) can_trigger=can_trigger}}
+<section class="sp-section sp-aflow-block">
+{{> components/svg-line-chart trend}}
+</section>
+<section class="sp-section sp-aflow-block" aria-label="Versions">
+{{> components/section title="Versions" note="Every version of this marketplace by content hash, newest first, with the judge's means over the sessions it served; the delta is against the version before."}}
+{{#> components/table caption="Versions with the judge's scores" modifier="sp-analysis-table"}}
+<thead><tr><th scope="col">Version</th><th scope="col">Served</th><th scope="col">Evaluation</th><th scope="col" class="sp-table__cell--num" title="Sessions that invoked one of its skills · of those, judged">Sessions</th></tr></thead>
+<tbody>
+{{#each versions}}
+<tr>
+<td class="sp-table__cell--primary"><a class="sp-hash sp-hash--chip" href="{{href}}">{{hash_short}}</a>{{#if is_current}} {{> components/badge tone="ok" text="current"}}{{/if}}</td>
+<td title="{{since}}{{#if until}} → {{until}}{{/if}}">{{relativeTime since}}{{#if until}} <span class="sp-u-text-tertiary">→ {{relativeTime until}}</span>{{/if}}</td>
+<td class="sp-inventory-cell-eval">{{> components/scorecard card=scorecard}}</td>
+<td class="sp-table__cell--num sp-u-num">{{sessions}} <span class="sp-u-text-tertiary">· {{scored_sessions}}</span></td>
+</tr>
+{{/each}}
+</tbody>
+{{/components/table}}
+</section>
+<section class="sp-section sp-aflow-block" aria-label="Skills">
+{{> components/section title="Skills, worst first" note=(concat "Skills of this marketplace invoked in the last " trend_days " days, ordered by the judge's quality mean; the delta is against the " trend_days " days before.")}}
+{{#> components/table caption="Skills rated by the judge" modifier="sp-analysis-table"}}
+<thead><tr><th scope="col">Skill</th><th scope="col">Evaluation</th><th scope="col" class="sp-table__cell--num">Judged sessions</th><th scope="col" class="sp-table__cell--num">Invocations</th></tr></thead>
+<tbody>
+{{#each skills}}
+<tr>
+<td class="sp-table__cell--primary"><a class="sp-table__link sp-u-mono" href="{{href}}">{{skill}}</a></td>
+<td class="sp-inventory-cell-eval">{{> components/scorecard card=scorecard}}</td>
+<td class="sp-table__cell--num sp-u-num">{{scored_sessions}}</td>
+<td class="sp-table__cell--num sp-u-num">{{invocations}}</td>
+</tr>
+{{else}}<tr class="sp-table__empty"><td colspan="4">{{> components/empty-state heading="No judged session yet" message="No session that invoked one of this marketplace's skills has been judged in the window."}}</td></tr>{{/each}}
+</tbody>
+{{/components/table}}
+</section>
+{{/inline}}{{/layout}}

@@ -6,6 +6,7 @@
 use super::plan::Plan;
 use super::rows::{InventoryRow, InventoryRowInputs, live_for, scores_for};
 use crate::error::AdminResult;
+use crate::handlers::ssr::scorecard::{ScorecardView, Scores};
 use crate::repositories::analysis::inventory_index::{
     InventoryIndex, MarketplaceAudience, get_marketplace_audience,
 };
@@ -54,6 +55,32 @@ impl<'a> Evidence<'a> {
 }
 
 impl Evidence<'_> {
+    // Why: the headline scorecard counts each judged session once, however
+    // many skills it invoked, with the window before for direction.
+    pub(super) fn score_kpis(&self) -> (i64, ScorecardView) {
+        let m = self.score_means;
+        (
+            m.scored_sessions,
+            ScorecardView::with_prior(
+                Scores {
+                    intent: m.intent,
+                    quality: m.quality,
+                    speed: m.speed,
+                    cost: m.cost,
+                },
+                Scores {
+                    quality: m.quality_prior,
+                    ..Scores::default()
+                },
+                None,
+                format!(
+                    "Mean judge scores over the {} judged sessions that invoked a skill in this window",
+                    m.scored_sessions
+                ),
+            ),
+        )
+    }
+
     // Why: the grouped view counts people entitled to any marketplace; a
     // narrowed view counts only the one selected.
     pub(super) fn audience_of(&self, plan: &Plan, selected: &str) -> usize {

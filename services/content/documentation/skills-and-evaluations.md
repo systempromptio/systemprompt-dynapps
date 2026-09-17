@@ -190,7 +190,10 @@ disk skill everywhere.
 
 The maintainer UI for this work is under `/admin/analysis`:
 
-- `/admin/analysis/skills` shows observed skill use.
+- `/admin/analysis/skills` shows every skill with the judge's scores inherited from the
+  sessions that invoked it; `/admin/analysis/skills/{plugin:skill}` is one skill's page.
+- `/admin/analysis/evaluation` is the zoomed-out report: what the judge is seeing across
+  skills, conversations and marketplace versions, and what to change.
 - `/admin/analysis/versions` captures and inspects the four-skill Super Admin baseline.
 - A revision page can create a text candidate without modifying the baseline.
 - The comparison page shows file and provenance changes; it does not prove an outcome

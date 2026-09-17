@@ -8,6 +8,8 @@ use systemprompt::identifiers::UserId;
 
 use super::ReportScope;
 
+// JSON: `inputs` and `findings` are stored as the model saw and wrote them;
+// the typed shapes live in services::evaluation::report::schema.
 /// One report as the pages read it.
 #[derive(Debug, Clone, Serialize)]
 pub struct EvaluationReportRow {
@@ -35,6 +37,7 @@ pub struct EvaluationReportRow {
     pub created_at: DateTime<Utc>,
 }
 
+// JSON: the raw row; `inputs`/`findings` as above.
 struct ReportRecord {
     id: String,
     scope_kind: String,
@@ -129,8 +132,8 @@ pub async fn find_report(
     Ok(row.and_then(ReportRecord::into_row))
 }
 
-/// The pending or failed row for a scope, so the page can say a report is
-/// on its way or why the last attempt failed.
+// Why: the pending or failed row for a scope, so the page can say a report
+// is on its way or why the last attempt failed.
 pub async fn find_pending_report(
     pool: &PgPool,
     scope: &ReportScope,

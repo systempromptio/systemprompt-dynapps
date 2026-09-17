@@ -81,7 +81,7 @@ impl ConversationAnalysisQuery {
     }
 
     pub(super) fn scored(&self) -> Option<ScoredFilter> {
-        ScoredFilter::parse(Self::trimmed(self.scored.as_deref()))
+        ScoredFilter::parse_scored_filter(Self::trimmed(self.scored.as_deref()))
     }
 
     pub(super) fn free_text(&self) -> Option<String> {
