@@ -6,13 +6,18 @@
 //! the precedence ladder, and a [`SubjectAttributeProvider`][p] that looks up
 //! the values a user holds for it.
 //!
-//! We declare three: [`project`], [`group`], and [`salesforce`]. They form a
-//! ladder with core's — user (0), `project` (140), `group` (150),
-//! `salesforce` (170), role (200) — where a lower number is
-//! the narrower, higher-priority scope. Groups carry people and marketplace
-//! entitlement; projects are work attribution. Both are DB rows an operator
-//! edits, and the directory's AD groups map into them rather than being a
-//! dimension of their own. Adding another — cost centre, clearance,
+//! We declare four: [`project`], [`group`], [`salesforce`] and
+//! [`organization`]. They form a ladder with core's — user (0), `project`
+//! (140), `group` (150), `salesforce` (170), role (200), `organization` (300)
+//! — where a lower number is the narrower, higher-priority scope. Groups
+//! carry people and marketplace entitlement; projects are work attribution.
+//! Both are DB rows an operator edits, and the directory's AD groups map into
+//! them rather than being a dimension of their own. A fifth provider,
+//! [`role`], re-exposes core's own `role` dimension: the resolver ignores it,
+//! but the gateway's quota resolver finds subjects only through this registry,
+//! so without it a `subject: role` window has nothing to key on. The same
+//! goes for `organization`, which is why it exists as a dimension at all.
+//! Adding another — cost centre, clearance,
 //! jurisdiction — means writing a provider beside them and one
 //! `register_subject_attribute_provider!` call; no core change, and no edit to
 //! the resolve call sites, because they all read the registry through
@@ -24,7 +29,10 @@ mod account;
 pub use account::account_scope;
 pub(crate) mod catalog;
 pub mod group;
+pub mod organization;
+pub mod primary;
 pub mod project;
+pub mod role;
 pub mod salesforce;
 
 use std::collections::HashMap;
@@ -38,7 +46,9 @@ use systemprompt_security::authz::{
 };
 
 use crate::authz::group::GroupAttributeProvider;
+use crate::authz::organization::OrganizationAttributeProvider;
 use crate::authz::project::ProjectAttributeProvider;
+use crate::authz::role::RoleAttributeProvider;
 use crate::authz::salesforce::SalesforceAttributeProvider;
 
 systemprompt_security::register_subject_attribute_provider!(|ctx| {
@@ -56,6 +66,17 @@ systemprompt_security::register_subject_attribute_provider!(|ctx| {
 systemprompt_security::register_subject_attribute_provider!(|ctx| {
     let provider: SharedSubjectAttributeProvider =
         Arc::new(SalesforceAttributeProvider::new(Arc::clone(&ctx.pool)));
+    provider
+});
+
+systemprompt_security::register_subject_attribute_provider!(|_ctx| {
+    let provider: SharedSubjectAttributeProvider = Arc::new(OrganizationAttributeProvider);
+    provider
+});
+
+systemprompt_security::register_subject_attribute_provider!(|ctx| {
+    let provider: SharedSubjectAttributeProvider =
+        Arc::new(RoleAttributeProvider::new(Arc::clone(&ctx.pool)));
     provider
 });
 
