@@ -25,7 +25,6 @@ marketplace:
     - atlassian
     - salesforce-uk
     - salesforce-us
-    - google_rag
     - google_drive
   agents:
     source: explicit

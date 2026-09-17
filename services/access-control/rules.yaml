@@ -206,23 +206,12 @@ entities:
       role: [super_admin]
       salesforce: [salesforce-dev]
 
-  - entity: mcp_server/google_rag
-    default: closed
-    why: >-
-      Imported corpus of the UK sales Drive folders in Google Cloud RAG Engine;
-      each user connects their own Google account. The corpus is a copy and
-      access is project IAM, not Drive ACLs, so one corpus is one readership:
-      the uk group.
-    allow:
-      group: [uk]
-      role: [super_admin]
-
   - entity: mcp_server/google_drive
     default: closed
     why: >-
-      Org-wide Drive search through Google Agent Search; Google enforces each
-      user's own Drive permissions at query time, so the band only decides who
-      sees the connector. Starts on the UK pilot band; widening is a one-line
+      Org-wide Drive, Gmail, Calendar and directory search through Agent Search; Google
+      filters every result to what the user can already open, so the band only
+      decides who sees the connector. Starts on the UK pilot band; widening is a one-line
       change here.
     allow:
       group: [uk]
@@ -268,13 +257,6 @@ entities:
   - entity: skill/google_drive_search
     default: closed
     why: UK sales skill; follows the astound-sales-uk plugin and google_drive.
-    allow:
-      group: [uk]
-      role: [super_admin]
-
-  - entity: skill/google_rag_search
-    default: closed
-    why: UK sales skill; follows the astound-sales-uk plugin and google_rag.
     allow:
       group: [uk]
       role: [super_admin]

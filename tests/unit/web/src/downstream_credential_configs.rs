@@ -124,18 +124,13 @@ fn every_external_server_points_at_the_accessor_that_serves_it() {
     }
 }
 
-const GOOGLE_SERVERS: [(&str, &str); 2] = [
-    ("google_rag.yaml", "google_rag"),
-    ("google_drive.yaml", "google_drive"),
-];
-
 #[test]
-fn the_google_servers_leave_their_accessor_to_the_generic_connector() {
+fn the_google_drive_server_leaves_its_accessor_to_the_generic_connector() {
     // Why: with a `connector:` block and no `external_auth`, core synthesises
     // the accessor route itself; declaring both would name the route twice and
-    // let them drift apart. Both Google servers share one OAuth client and one
-    // shape, so one drifting from the other is the bug this loop catches.
-    for (file, name) in GOOGLE_SERVERS {
+    // let them drift apart.
+    {
+        let (file, name) = ("google_drive.yaml", "google_drive");
         let entry = server(file, name);
         assert!(
             entry.get("external_auth").is_none(),

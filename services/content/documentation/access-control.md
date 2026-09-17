@@ -38,7 +38,7 @@ Access control answers one question: *may this person reach this entity?* The en
 | `marketplace` | `astound-commons`, `astound-india-dev` | The workspace appears in Claude Code / Cowork and its plugins can be installed |
 | `plugin` | `astound-super-admin`, `astound-sales-uk` | The plugin is offered |
 | `skill` | `admin_daily_brief`, `uk_sales_client_prep` | The skill is offered and may run |
-| `mcp_server` | `atlassian`, `github`, `google_rag`, `salesforce`, `systemprompt` | The server is listed and its tools may be called |
+| `mcp_server` | `atlassian`, `github`, `google_drive`, `salesforce`, `systemprompt` | The server is listed and its tools may be called |
 | `gateway_route` | `claude-star-4203d1`, … | Requests may be routed to that model |
 
 It does **not** decide whether a person can sign in (that is [authentication](/documentation/authentication) and [SSO](/documentation/adfs-sso-setup)), whether a tool call is allowed to proceed once the person is entitled (the [governance chain](/documentation/enterprise-tool-governance)), or what may be said (the [safety scanners](/documentation/enterprise-safety-guardrails)). Those run after entitlement, on every request.

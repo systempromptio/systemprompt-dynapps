@@ -1,0 +1,12 @@
+id: google_drive_search
+name: Google Workspace Search
+description: Search Google Drive, the user's own Gmail and Calendar, and the company directory live
+  through Google Agent Search — filtered to what the signed-in user can already open — citing every item.
+enabled: true
+file: SKILL.md
+tags:
+- astound
+- sales
+- google
+category: business
+display_category: Sales UK

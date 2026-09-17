@@ -35,7 +35,7 @@ replace the encryption key used to recover provider tokens.
 | `mcp_credential_broker_secret` | Random server-only secret of at least 32 bytes; shared by core and the account accessor in the same instance |
 | `github_mcp_client_id`, `github_mcp_client_secret` | Registered GitHub App OAuth credentials, with expiring user tokens enabled |
 | `salesforce_mcp_client_id`, `salesforce_mcp_client_secret` | Consumer key and secret of the packaged `Systemprompt` External Client App (source org Astound US); shared by every org that installs the package. An org running its own app names its own secrets in `services/config/salesforce-orgs.yaml` |
-| `google_drive_mcp_client_id`, `google_drive_mcp_client_secret`, `google_rag_mcp_client_id`, `google_rag_mcp_client_secret` | OAuth web-client credentials from the GCP project that owns the Agent Search engine and the RAG corpus; one client, stored under both names (`docs/CONFIGURED-CONNECTORS.md`) |
+| `google_drive_mcp_client_id`, `google_drive_mcp_client_secret` | OAuth web-client credentials from the GCP project that owns the Agent Search engine (`docs/CONFIGURED-CONNECTORS.md`) |
 | `salesforce_private_key` | JWT-bearer signing key when an org uses admin pre-authorization (`private_key_secret` per org) |
 
 Set `server.api_external_url` to the HTTPS origin of the deployment and provision
@@ -45,7 +45,6 @@ Register callbacks under that origin:
 - `https://YOUR-SERVER/api/public/connectors/atlassian/callback`
 - `https://YOUR-SERVER/api/public/connectors/github/callback`
 - `https://YOUR-SERVER/api/public/connectors/google_drive/callback`
-- `https://YOUR-SERVER/api/public/connectors/google_rag/callback`
 - `https://YOUR-SERVER/api/public/connectors/salesforce/callback` — one callback for
   every Salesforce org; the org rides in the OAuth `state`
 

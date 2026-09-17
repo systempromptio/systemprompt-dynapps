@@ -1,32 +1,14 @@
-Hi Kateryna — ahead of tomorrow's Google meeting, here's where I've landed on Drive search for Claude Code, so we can plug into whatever Astound decides.
+*Correction on the Google Drive connector — no seats needed*
 
-*What I'm trying to achieve*
-One connector for the whole organisation. A person signs in once with their Astound Google account in Systemprompt; when they search from Claude Code, Google returns only the Drive documents that person can already open. Every call is governed and audited on our side. No copies of documents, no per-team indexes, no service accounts, nothing for us to curate or re-sync.
+Yesterday's list assumed Gemini Enterprise licences were a prerequisite. They are not, and I've now proven it: in a GCP project of my own with nothing but the Discovery Engine API enabled, I created the federated Google Drive data store and an Enterprise-tier search app, and its MCP server (`https://discoveryengine.googleapis.com/mcp`) answers `search` for my signed-in account. The product is *Agent Search* (Discovery Engine, ex-Vertex AI Search). Gemini Enterprise is the licensed end-user app that sits on the same engine — it is not part of this connector, and nobody needs a seat to search from Claude Code. Usage-billed, 10k queries/month free.
 
-*What I found (and proved this morning)*
-There are two Google products in play, and they are not interchangeable:
+The connector and its skill are on `next` today: `google_drive` (Agent Search over Drive, Gmail, Calendar and the directory, live, filtered to what each user can already open — their Drive permissions, their own mailbox and calendar). I've dropped the RAG Engine connector — with per-user Drive ACLs available live there is no reason to hold a corpus copy; Vladimir's corpora remain usable from the console for the project that built them.
 
-• *RAG Engine* (Vertex AI / Agent Platform) — you import folders into a corpus, it stores a copy, access is by GCP project IAM. Anyone who can query the corpus sees everything in it; Drive sharing is not consulted. I tested this end to end with my own Drive folder — retrieval, citations and the MCP tools all work — but it forces one corpus per readership and someone has to own re-imports. This is what Vladimir's team built for Victor's project.
+*What changes in the ask*
+• *Drop:* A1 (licences + seats), A2 (Gemini Enterprise identity-provider settings), A7's "with seats". The per-seat price question for Terry goes away.
+• *Keep:* A3 — now four federated data stores (Drive, Gmail, Calendar, People) with one search app over all of them (an app created on one store can't gain a second later; I can script all of it against the API if you give my account `roles/discoveryengine.admin` on the project), A4 the engine name, A6 IAM for the pilot group — `roles/discoveryengine.viewer` (or a custom role with `discoveryengine.servingConfigs.search`) + `roles/mcp.toolUser`, audit logs on.
+• *Add:* enable `discoveryengine.googleapis.com` on the project, and in Workspace Admin → API controls → Manage app access mark the Google-owned Agent Search client as Trusted — without it Drive search returns zero results (Google says up to 24 h to propagate). Users need both smart-features toggles on in Gmail → Settings → General ("Smart features and personalization", both toggles).
+• *A5 is now exact:* the scope is `https://www.googleapis.com/auth/discoveryengine.readwrite` (from the endpoint's own protected-resource metadata), not `cloud-platform`.
+• B and C are unchanged, except that the acceptance test (two users, one file) can be done by any two Workspace users — no seats.
 
-• *Gemini Enterprise — Google Drive data store* — federated (nothing copied), covers the whole Workspace Drive, and searches *as the signed-in user*, filtered by that person's own Drive permissions. GA MCP server. This is the "organisation-level product" your Google account manager described, and it's the one that gives us the target above.
-
-*The catch, which Vladimir rightly flagged*
-Gemini Enterprise is licensed: a subscription on the billing account, licenses distributed to one GCP project + location, and a seat assigned to every person who searches. Neither of the existing projects has licenses today. So the ask is one dedicated project (e.g. `astound-drive-search`), licenses distributed there, and seats for the pilot group — the per-seat price is the number Terry needs.
-
-*UK vs USA — one solution or two?*
-For permissions, one. Google filters per user, so a single app serves everyone. The only reasons we'd end up with two:
-1. *Data residency* — a data store lives in one multi-region (`eu` or `us`). If US content must stay in the US, that's one per region.
-2. *Separate Workspace domains* — federated Drive search only returns documents owned by the searcher's own domain. If UK and US staff are on different Google Workspace domains, a UK user never sees US-owned files regardless of sharing.
-Could you confirm which of those applies? That decides whether it's one app or two.
-
-*What I need from whichever solution is chosen*
-Same four things either way — the connector on our side is already built and handles both products:
-1. The MCP endpoint and region
-2. The engine (or corpus) resource name
-3. The OAuth scope the endpoint requires
-4. An internal-audience OAuth client with our callback: `https://astound.systemprompt.io/api/public/connectors/google_drive/callback`
-Plus `roles/mcp.toolUser` and search access for my account so I can run the acceptance test: two users, one file only one of them can open, the other must not see it.
-
-Full setup guide with the exact steps for both products: https://claude.ai/artifact/HtCCb9VT7HquiSW7cHFpot
-
-Happy to join tomorrow's call if useful.
+I've updated the guide accordingly: https://claude.ai/artifact/HtCCb9VT7HquiSW7cHFpot

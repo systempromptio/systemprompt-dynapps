@@ -70,39 +70,73 @@ Issuer identifiers are compared as URLs, with a single trailing slash ignored,
 so an issuer advertised as `https://idp.example/` in protected-resource metadata
 matches `https://idp.example` in its own metadata.
 
-## Google Cloud RAG Engine (`google_rag`)
+## Google Workspace (Agent Search, `google_drive`)
 
-`services/mcp/google_rag.yaml` connects Google's hosted Agent Platform MCP
-retrieval server for one RAG corpus. Google publishes protected-resource
-metadata for the regional endpoint and OpenID metadata at
-`accounts.google.com`, so the generic adapter applies, with two Google
-specifics carried by the keys above: `authorization_params: {access_type:
+`services/mcp/google_drive.yaml` connects Google Agent Search's hosted MCP
+server (Discovery Engine, ex-Vertex AI Search) over **federated** Google
+Drive, Gmail, Calendar and People data stores: nothing is copied, all are
+searched live, and Google filters every result to what the signed-in user can
+already open — their Drive permissions, their own mailbox and calendar, the
+directory. Tools: `search`,
+`conversational_search`, `list_engines`. Scope:
+`https://www.googleapis.com/auth/discoveryengine.readwrite`.
+
+**No licence.** Discovery Engine is usage-billed (10k queries/month free);
+Gemini Enterprise is the licensed end-user app on the same engine and is not
+needed. Proven 17 Sep 2026 in a project with nothing but the API enabled. The
+OAuth scope is Discovery Engine only — no `gmail.*` scope; Google reads the
+mailbox server-side under the user's Workspace identity. (RAG Engine, the
+corpus-copy alternative, was dropped the same day: with per-user Drive ACLs
+available live there is no reason to hold a copy.)
+
+The row uses the generic adapter: Google publishes protected-resource metadata
+for the endpoint and OpenID metadata at `accounts.google.com`. Two Google
+specifics are carried by the keys above: `authorization_params: {access_type:
 offline, prompt: consent}` — Google issues a refresh token only when offline
 access is requested, and without one the connection expires with the hour-long
 access token — and `identity: userinfo` so the row shows the Google address.
 
-On the Google side, in the GCP project that owns the corpus:
+The engine's serving config is a **tool argument**, and nothing model-visible
+in a server config reaches the model, so the `google_drive_search` skill's
+`## Instance` block holds that one resource name. **On handover** two things
+change and nothing else: the `servingConfig` in
+`services/skills/google_drive_search/SKILL.md` and the OAuth client id/secret.
 
-1. Enable `aiplatform.googleapis.com`; create the RAG corpus in `europe-west3`
-   and import the agreed Drive folders (shared with the project's RAG Data
-   Service Agent). Drive sharing is not re-checked at query time — the corpus is
-   a copy, so one project holds one corpus for one readership.
-2. Create an OAuth **Web application** client with an **Internal** consent
-   screen and the redirect
-   `https://YOUR-SERVER/api/public/connectors/google_rag/callback`. Store the
-   pair as `google_rag_mcp_client_id` / `google_rag_mcp_client_secret`.
-3. Grant the readership group `mcp.tools.call` and
-   `aiplatform.ragCorpora.query` on the project (Google documents
-   `roles/mcp.toolUser` + `roles/aiplatform.user`; a custom role with just the
-   two permissions is narrower). Every member needs a Google Workspace
-   identity; the Astound rule for `mcp_server/google_rag` decides who sees the
-   row, Google IAM decides whose sign-in can query.
-4. Turn on Data Access audit logs for `aiplatform.googleapis.com`.
+On the Google side, in one GCP project:
+
+1. Enable `discoveryengine.googleapis.com`; attach billing and a budget alert.
+2. AI Applications → Settings → Identity provider → Google Identity (before
+   the data store; the wizard refuses otherwise).
+3. Create federated data stores for Drive, Gmail, Calendar and People
+   (location `eu`) and one Enterprise-tier search app over **all of them** — an app
+   created with a single store can never gain a second (`Engines with a
+   single data store cannot add or remove data stores`); the app's
+   `…/servingConfigs/default_search` is the `servingConfig`. All of this is
+   scriptable against the Discovery Engine REST API (`dataStores.create` with
+   `workspaceConfig.type` `GOOGLE_DRIVE` / `GOOGLE_MAIL` / `GOOGLE_CALENDAR`
+   / `GOOGLE_PEOPLE`, `engines.create` with every `dataStoreId`) with an
+   `x-goog-user-project` header. Chat, Groups, Sites and Keep are available
+   the same way and were left out deliberately.
+4. Create an OAuth **Web application** client with an **Internal** consent
+   screen, the scope above and the redirect
+   `https://YOUR-SERVER/api/public/connectors/google_drive/callback`. Store
+   the pair as `google_drive_mcp_client_id` / `google_drive_mcp_client_secret`.
+5. Grant the readership group `roles/mcp.toolUser` and
+   `roles/discoveryengine.viewer` on the project. IAM decides who may call;
+   Drive decides what they see. The Astound rule for `mcp_server/google_drive`
+   decides who sees the row.
+6. Workspace Admin → Security → API controls → Manage third-party app access:
+   mark Google's Agent Search client as **Trusted**, and turn on "Smart
+   features and personalization in other Google products" (Gmail user
+   settings, org-wide or per user). Without both, searches succeed and return
+   nothing; propagation can take up to 24 h.
+7. Turn on Data Access audit logs for Discovery Engine.
 
 Acceptance: connect with an account inside the group — the row reads
-"Google Drive knowledge · Connected" with the address, Test lists
-`retrieve_contexts`, and a call an hour later still succeeds (refresh path);
-an account outside the group is refused by Google, not answered.
+"Google Workspace · Connected" with the address, Test lists `search`, and a call
+an hour later still succeeds (refresh path). Two users with different Drive
+access to one file get different results for the same query; an account
+outside the group is refused by Google, not answered.
 
 ## Migration and failures
 
