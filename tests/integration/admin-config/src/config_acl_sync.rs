@@ -38,7 +38,7 @@ async fn declared(
     pool: &PgPool,
     dir: &Path,
 ) -> systemprompt_web_admin::repositories::access_control::declared::DeclaredSet {
-    load_declared_set(pool, dir, &[], &RegisteredEntities::default())
+    load_declared_set(dir, &[], &RegisteredEntities::default())
         .await
         .expect("declared set")
 }

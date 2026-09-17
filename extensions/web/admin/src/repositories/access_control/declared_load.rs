@@ -1,7 +1,11 @@
 //! Assembles the declared set from disk and the catalog.
 //!
-//! The I/O half of [`super::declared`]: reads `rules.yaml`, lists the live
-//! gateway routes, and hands both to the pure projection. Marketplace ids
+//! The I/O half of [`super::declared`]: reads `rules.yaml` and hands it, with
+//! the live gateway routes the caller registered, to the pure projection.
+//! The route catalog is the services configuration, not the
+//! `access_control_entities` rows: those rows are what the apply writes, so
+//! reading them back to decide what to declare made an empty catalog declare
+//! nothing and report no drift. Marketplace ids
 //! arrive as a parameter — the boot path and the page take them from the
 //! composed services tree, a test from a fixture tree — so the same function
 //! serves both without the process-wide cache leaking into tests.
@@ -13,18 +17,15 @@
 
 use std::path::Path;
 
-use sqlx::PgPool;
 use systemprompt::loader::ConfigLoader;
-use systemprompt_security::authz::RegisteredEntities;
+use systemprompt_security::authz::{EntityKind, RegisteredEntities};
 use systemprompt_web_shared::error::MarketplaceError;
 
 use super::declared::{DeclaredInputs, DeclaredSet, build_declared_set};
-use super::rules::list_entity_defaults;
 use crate::repositories::config::rules_yaml_loader::read_rules_doc;
 use crate::repositories::config::rules_yaml_types::RulesDoc;
 
 pub async fn load_declared_set(
-    pool: &PgPool,
     services_path: &Path,
     marketplace_ids: &[String],
     registered: &RegisteredEntities,
@@ -32,23 +33,21 @@ pub async fn load_declared_set(
     let Some(doc) = read_rules_doc(services_path).await? else {
         return Ok(DeclaredSet::default());
     };
-    build_declared_from_doc(pool, &doc, marketplace_ids, registered).await
+    build_declared_from_doc(&doc, marketplace_ids, registered)
 }
 
 // Why: the projection half on its own, so an uploaded `rules.yaml` (an
 // import preview) is declared exactly as the file on disk would be — same
 // route catalog, same marketplace ids, same expiry pass.
-pub async fn build_declared_from_doc(
-    pool: &PgPool,
+pub fn build_declared_from_doc(
     doc: &RulesDoc,
     marketplace_ids: &[String],
     registered: &RegisteredEntities,
 ) -> Result<DeclaredSet, MarketplaceError> {
-    let gateway_routes: Vec<String> = list_entity_defaults(pool)
-        .await?
+    let gateway_routes: Vec<String> = registered
+        .known_ids(EntityKind::GatewayRoute)
         .into_iter()
-        .filter(|e| e.entity_type == "gateway_route")
-        .map(|e| e.entity_id)
+        .map(str::to_owned)
         .collect();
     let mut set = build_declared_set(
         doc,

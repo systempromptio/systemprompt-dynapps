@@ -105,8 +105,10 @@ impl PagedOutput {
 }
 
 impl McpOutputSchema for PagedOutput {
+    // Why: rows of pre-rendered cells plus a cursor is not the core `table`
+    // model (`items` + typed `columns`); see `ReportOutput::artifact_type`.
     fn artifact_type() -> &'static str {
-        "table"
+        "paged_table"
     }
     fn artifact_title(&self) -> Option<String> {
         Some(self.command.clone())

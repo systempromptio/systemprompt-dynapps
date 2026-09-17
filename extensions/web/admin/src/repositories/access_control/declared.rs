@@ -136,6 +136,10 @@ impl DeclaredSet {
 pub enum DeclaredError {
     UnknownMarketplace(String),
     UnregisteredEntity(String),
+    // Why: a glob that names no entity declares nothing — applied, it would
+    // write no rule and report no drift, and the routes it meant to open stay
+    // closed behind a clean sync card.
+    EmptyGlob(String),
     Invalid(String),
 }
 
@@ -146,6 +150,12 @@ impl fmt::Display for DeclaredError {
                 f,
                 "rules.yaml names marketplace/{id}, which services/marketplaces/ does not define"
             ),
+            Self::EmptyGlob(entity) => write!(
+                f,
+                "rules.yaml declares {entity}, but the live catalog holds no entity of that kind \
+                 for the glob to expand over — the gateway has no dispatchable routes, or the \
+                 services tree did not compose"
+            ),
             Self::UnregisteredEntity(msg) | Self::Invalid(msg) => f.write_str(msg),
         }
     }
@@ -155,9 +165,11 @@ impl std::error::Error for DeclaredError {}
 
 /// Catalogs the projection consults.
 ///
-/// All data, so tests need no database: every `gateway_route` id the catalog
-/// holds, every marketplace id the composed services tree defines, and the
-/// registered entities whose literal ids must already exist.
+/// All data, so tests need no database: every `gateway_route` id the live
+/// gateway configuration dispatches (never the database — a truncated or
+/// not-yet-bootstrapped `access_control_entities` must not shrink what the
+/// file declares), every marketplace id the composed services tree defines,
+/// and the registered entities whose literal ids must already exist.
 #[derive(Debug)]
 pub struct DeclaredInputs<'a> {
     pub gateway_routes: &'a [String],
@@ -215,7 +227,7 @@ fn expand_ids(
             _ => Vec::new(),
         };
         if ids.is_empty() {
-            tracing::warn!(entity = %entity, "access-control: glob matches no catalogued entity");
+            return Err(DeclaredError::EmptyGlob(entity.to_string()));
         }
         return Ok(ids);
     }

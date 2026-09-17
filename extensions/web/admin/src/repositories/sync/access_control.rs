@@ -41,14 +41,14 @@ pub struct AccessControlPlane;
 // the page, the drift API and the apply all read the same file the same way
 // — from the composed root, so a kit's marketplace validates once its
 // bundle is active.
-pub async fn declared_now(pool: &PgPool) -> AdminResult<DeclaredSet> {
-    declared_from(pool, DeclarationSource::Disk).await
+pub async fn declared_now() -> AdminResult<DeclaredSet> {
+    declared_from(DeclarationSource::Disk).await
 }
 
 // Why: uploaded text is projected by the same code as the file — same route
 // catalog, same marketplace ids — so a preview's drift is the drift the
 // file would show once committed.
-pub async fn declared_from(pool: &PgPool, from: DeclarationSource<'_>) -> AdminResult<DeclaredSet> {
+pub async fn declared_from(from: DeclarationSource<'_>) -> AdminResult<DeclaredSet> {
     let registered = registered_routes_from_services()?;
     // Why: the catalog failing is not the file failing; the two get different
     // headlines so an operator fixes the tree, not the declaration.
@@ -58,10 +58,10 @@ pub async fn declared_from(pool: &PgPool, from: DeclarationSource<'_>) -> AdminR
         DeclarationSource::Disk => {
             let profile = ProfileBootstrap::get()?;
             let services_path = ServicesRootBootstrap::active_root_or(&profile.paths.services);
-            load_declared_set(pool, &services_path, &marketplace_ids, &registered).await
+            load_declared_set(&services_path, &marketplace_ids, &registered).await
         },
         DeclarationSource::Text(text) => match parse_rules_doc(text) {
-            Ok(doc) => build_declared_from_doc(pool, &doc, &marketplace_ids, &registered).await,
+            Ok(doc) => build_declared_from_doc(&doc, &marketplace_ids, &registered),
             Err(e) => Err(e),
         },
     };
@@ -156,7 +156,7 @@ impl SyncPlane for AccessControlPlane {
         // Why: an unreadable file is the card's headline, not a 500 — the
         // operator came to see the state of the declaration, and "it does
         // not parse" is that state.
-        let declared = match declared_from(pool, from).await {
+        let declared = match declared_from(from).await {
             Ok(d) => d,
             Err(e) => {
                 return Ok(PlaneDrift {
@@ -245,7 +245,7 @@ impl SyncPlane for AccessControlPlane {
         actor: Actor<'_>,
         scope: EntityScope<'_>,
     ) -> AdminResult<ApplyOutcome> {
-        let declared = declared_now(pool).await?;
+        let declared = declared_now().await?;
         let outcome = apply_sync_scoped(pool, &declared, mode, scope).await?;
         self.record(pool, &declared, mode, actor).await?;
         Ok(outcome.into())
@@ -258,7 +258,7 @@ impl SyncPlane for AccessControlPlane {
         actor: Actor<'_>,
         from: DeclarationSource<'_>,
     ) -> AdminResult<ApplyOutcome> {
-        let declared = declared_from(pool, from).await?;
+        let declared = declared_from(from).await?;
         let outcome = apply_sync(pool, &declared, mode).await?;
         self.record(pool, &declared, mode, actor).await?;
         Ok(outcome.into())
@@ -272,10 +272,7 @@ impl SyncPlane for AccessControlPlane {
         let entities = list_entity_defaults(pool).await?;
         // Why: the owners come from the file, not the database — an
         // unreadable file exports without them rather than not at all.
-        let owners = declared_now(pool)
-            .await
-            .map(|d| d.owners)
-            .unwrap_or_default();
+        let owners = declared_now().await.map(|d| d.owners).unwrap_or_default();
         Ok(Some(Export {
             filename: "rules.yaml",
             content_type: "application/yaml; charset=utf-8",

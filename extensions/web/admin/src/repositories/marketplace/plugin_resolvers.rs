@@ -52,8 +52,10 @@ pub(crate) fn resolve_plugin_skills(
             let skill_dir = skills_path.join(&skill_id);
             let (name, description, required_secrets) =
                 read_skill_config(&skill_dir, &SkillId::from(skill_id.as_str()));
-            let kebab_name = skill_id.replace('_', "-");
-            let command = format!("/{}:{}", plugin.id, kebab_name);
+            let command = format!(
+                "/{}",
+                crate::util::skill_ref::skill_ref(plugin.id.as_str(), &skill_id)
+            );
             SkillInfo {
                 id: skill_id.into(),
                 name,

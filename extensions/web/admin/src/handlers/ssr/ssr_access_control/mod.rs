@@ -76,7 +76,7 @@ pub(crate) async fn access_control_page(
     // Why: the file failing to load is reported on the page, not as a 500.
     // The rules that ARE enforced are still worth showing while the operator
     // fixes the declaration.
-    let (drift, declared_count, declared_unreadable) = match declared_now(&pool).await {
+    let (drift, declared_count, declared_unreadable) = match declared_now().await {
         Ok(declared) => match drift_now(&pool, &declared).await {
             Ok(drift) => (Some(drift), declared.rule_count(), None),
             Err(e) => (None, declared.rule_count(), Some(e.to_string())),

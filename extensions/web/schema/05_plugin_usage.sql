@@ -2,7 +2,7 @@
 
 CREATE TABLE IF NOT EXISTS plugin_usage_events (
     id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     session_id TEXT NOT NULL,
     event_type TEXT NOT NULL,
     tool_name TEXT,

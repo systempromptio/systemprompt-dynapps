@@ -86,6 +86,18 @@ fn the_gateway_glob_expands_over_the_catalog_only() {
 }
 
 #[test]
+fn a_glob_over_an_empty_catalog_is_an_error_not_an_empty_declaration() {
+    let err = project(
+        "entities:\n  - entity: gateway_route/*\n    default: open\n    why: routes\n    allow:\n      role: [user]\n",
+        &[],
+        &[],
+    )
+    .expect_err("an empty expansion declares nothing and must not read as clean");
+    assert!(err.contains("gateway_route/*"), "{err}");
+    assert!(err.contains("no entity of that kind"), "{err}");
+}
+
+#[test]
 fn a_literal_gateway_route_id_is_rejected() {
     let err = parse_rules_doc(
         "entities:\n  - entity: gateway_route/claude-star-4203d1\n    why: x\n    allow:\n      role: [user]\n",

@@ -2,7 +2,7 @@
 
 CREATE TABLE IF NOT EXISTS plugin_env_vars (
     id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     plugin_id TEXT NOT NULL,
     var_name TEXT NOT NULL,
     var_value TEXT NOT NULL DEFAULT '',
@@ -18,7 +18,7 @@ CREATE INDEX IF NOT EXISTS idx_plugin_env_user_plugin ON plugin_env_vars(user_id
 
 CREATE TABLE IF NOT EXISTS user_encryption_keys (
     id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL UNIQUE,
+    user_id TEXT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
     encrypted_dek BYTEA NOT NULL,
     dek_nonce BYTEA NOT NULL,
     key_version INTEGER NOT NULL DEFAULT 1,
@@ -29,7 +29,7 @@ CREATE INDEX IF NOT EXISTS idx_user_encryption_keys_user_id ON user_encryption_k
 
 CREATE TABLE IF NOT EXISTS secret_audit_log (
     id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     plugin_id TEXT NOT NULL,
     var_name TEXT NOT NULL,
     action TEXT NOT NULL CHECK (action IN ('created', 'updated', 'accessed', 'rotated', 'deleted')),
@@ -42,7 +42,7 @@ CREATE INDEX IF NOT EXISTS idx_secret_audit_log_user_plugin ON secret_audit_log(
 
 CREATE TABLE IF NOT EXISTS secret_resolution_tokens (
     id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     plugin_id TEXT NOT NULL,
     token_hash TEXT NOT NULL UNIQUE,
     expires_at TIMESTAMPTZ NOT NULL,

@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS plugin_usage_daily (
     plugin_id TEXT,
     event_type TEXT NOT NULL,
     tool_name TEXT,
-    user_id TEXT NOT NULL,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     event_count BIGINT NOT NULL DEFAULT 0,
     total_duration_ms BIGINT DEFAULT 0,
     total_input_tokens BIGINT DEFAULT 0,
@@ -42,7 +42,7 @@ CREATE INDEX IF NOT EXISTS idx_usage_daily_user ON plugin_usage_daily(user_id, d
 CREATE TABLE IF NOT EXISTS plugin_session_summaries (
     id TEXT PRIMARY KEY,
     session_id TEXT NOT NULL UNIQUE,
-    user_id TEXT NOT NULL,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     plugin_id TEXT,
     started_at TIMESTAMPTZ,
     ended_at TIMESTAMPTZ,
@@ -76,7 +76,7 @@ CREATE INDEX IF NOT EXISTS idx_session_summary_mode ON plugin_session_summaries(
 
 CREATE TABLE IF NOT EXISTS session_transcripts (
     id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     session_id TEXT NOT NULL,
     plugin_id TEXT,
     transcript JSONB NOT NULL DEFAULT '[]',

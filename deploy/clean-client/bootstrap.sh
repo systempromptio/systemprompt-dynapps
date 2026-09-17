@@ -90,7 +90,12 @@ fi
 
 # ── 2. Policy + plugins ───────────────────────────────────────────────────────
 step "installing integration"
-astound-bridge install --apply --apply-schedule
+# Two calls on purpose: the policy install must succeed, while the scheduler
+# step degrades here — no `systemd --user` in a container — and a degraded
+# schedule is a warning, never a reason to stop before the proxy and sync.
+astound-bridge install --apply
+astound-bridge install --apply --apply-schedule \
+    || warn "scheduler units not activated (no systemd --user here); the proxy is started by hand below"
 
 step "starting the loopback proxy"
 # No systemd in this container, which is why --apply-schedule warned above.

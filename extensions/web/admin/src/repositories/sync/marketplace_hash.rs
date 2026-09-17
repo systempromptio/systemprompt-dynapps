@@ -230,7 +230,7 @@ fn digest_of(files: &[FileEntry], missing_path: &str) -> String {
 }
 
 pub fn skill_key(plugin: &str, skill: &str) -> String {
-    format!("{plugin}:{}", skill.replace('_', "-"))
+    crate::util::skill_ref::skill_ref(plugin, skill)
 }
 
 fn source_lookup(sources: &SourcesView) -> impl Fn(&str) -> SourceOf + '_ {

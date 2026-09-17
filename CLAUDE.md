@@ -578,6 +578,8 @@ Every id listed must resolve to a real top-level resource in `services/`. `Servi
 
 Skills follow the same nested shape: `services/skills/<id>/config.yaml`, with the instruction body beside it. So do marketplaces (`services/marketplaces/<id>/config.yaml`) and artifacts (`services/artifacts/<id>/config.yaml`).
 
+**Skill ids are `snake_case` in `services/` and dashed everywhere else.** Core renders a skill for every host as `<id>` with `_` → `-` (`/astound-commons:who-am-i` for `services/skills/who_am_i/`), the hooks report the dashed name, and every analytics key is the dashed `plugin:skill`. Code that starts from a services id and needs the host or analytics form goes through `extensions/web/admin/src/util/skill_ref.rs`; never compare the two spellings directly.
+
 **Every entitlement is declared in `services/access-control/rules.yaml`** — one block per
 entity (`marketplace/<id>`, `plugin/<id>`, `skill/<id>`, `mcp_server/<id>`, `gateway_route/*`),
 each with a required `why`. Marketplace configs carry **no** `access:` block; the services gate

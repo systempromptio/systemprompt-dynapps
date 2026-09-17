@@ -9,7 +9,7 @@
 -- running totals, so each upsert replaces the previous snapshot.
 CREATE TABLE IF NOT EXISTS session_cost_snapshots (
     session_id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     model TEXT,
     total_cost_microdollars BIGINT,
     context_window_size BIGINT,

@@ -6,12 +6,14 @@ use std::sync::Arc;
 use systemprompt::identifiers::UserId;
 use systemprompt::loader::ConfigLoader;
 use systemprompt_security::authz::{
-    AccessControlRepository, BulkKeepQuery, ChainSources, EntityKind, ParentChainIndex,
-    RegisteredEntities, allowed_ids,
+    AccessControlRepository, BulkKeepQuery, ChainSources, EntityKind, ParentChainIndex, allowed_ids,
 };
 use systemprompt_web_admin::authz::{dimensions, subject_attributes_for};
 use systemprompt_web_admin::repositories::access_control::declared_load::load_declared_set;
 use systemprompt_web_admin::repositories::access_control::sync::{SyncMode, apply_sync};
+use systemprompt_web_admin::repositories::config::gateway::{
+    dispatchable_route_ids, registered_routes,
+};
 use systemprompt_web_admin::repositories::config::groups_yaml_loader;
 
 use crate::fixtures::{insert_user_with_roles, set_project, unique};
@@ -65,14 +67,12 @@ async fn executive_and_uk_membership_grant_only_the_intended_resources() {
         .keys()
         .map(|id| id.as_str().to_owned())
         .collect();
-    let declared = load_declared_set(
-        &db.pool,
-        &path,
-        &marketplace_ids,
-        &RegisteredEntities::default(),
-    )
-    .await
-    .expect("rules.yaml");
+    // Why: the file declares `gateway_route/*`, which expands over the live
+    // route catalog — the same one boot registers — never the database.
+    let registered = registered_routes(&dispatchable_route_ids(&services));
+    let declared = load_declared_set(&path, &marketplace_ids, &registered)
+        .await
+        .expect("rules.yaml");
     apply_sync(&db.pool, &declared, SyncMode::Overwrite)
         .await
         .expect("seed");

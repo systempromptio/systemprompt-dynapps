@@ -104,8 +104,12 @@ impl ReportOutput {
 }
 
 impl McpOutputSchema for ReportOutput {
+    // Why: a report is its own shape (`metrics` + `tables`), not the core
+    // `dashboard` model with `sections`; declaring the built-in type made the
+    // ingest wrap it in a `tool_result` envelope that failed the schema the
+    // tool advertises.
     fn artifact_type() -> &'static str {
-        "dashboard"
+        "report"
     }
     fn artifact_title(&self) -> Option<String> {
         Some(self.title.clone())

@@ -68,3 +68,17 @@ impl WebExtension {
 }
 
 register_extension!(WebExtension);
+
+// Why: the tables whose user_id may also carry the `system` principal cannot
+// reference users(id), so a deleted user's rows leave through the purge; the
+// rest cascade from the constraints in schema/.
+user_purge_tables!(
+    "systemprompt-web",
+    [
+        ("ai_request_scopes", "user_id"),
+        ("conversation_analyses", "user_id"),
+        ("admin_usage_daily_rollups", "user_id"),
+        ("daily_summaries", "user_id"),
+        ("tenant_activity", "user_id"),
+    ]
+);

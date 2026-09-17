@@ -85,7 +85,7 @@ CREATE INDEX IF NOT EXISTS idx_daily_summaries_date ON daily_summaries(summary_d
 -- session_entity_links
 CREATE TABLE IF NOT EXISTS session_entity_links (
     id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
-    user_id TEXT NOT NULL,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     session_id TEXT NOT NULL,
     entity_type TEXT NOT NULL,
     entity_name TEXT NOT NULL,
@@ -103,7 +103,7 @@ CREATE INDEX IF NOT EXISTS idx_sel_entity ON session_entity_links(entity_type, e
 -- session_ratings
 CREATE TABLE IF NOT EXISTS session_ratings (
     id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
-    user_id TEXT NOT NULL,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     session_id TEXT NOT NULL,
     rating SMALLINT NOT NULL,
     outcome TEXT NOT NULL DEFAULT '',
@@ -118,7 +118,7 @@ CREATE INDEX IF NOT EXISTS idx_sr_session ON session_ratings(session_id);
 -- skill_ratings
 CREATE TABLE IF NOT EXISTS skill_ratings (
     id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
-    user_id TEXT NOT NULL,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     skill_name TEXT NOT NULL,
     rating SMALLINT NOT NULL,
     notes TEXT NOT NULL DEFAULT '',
@@ -130,7 +130,7 @@ CREATE INDEX IF NOT EXISTS idx_skr_user ON skill_ratings(user_id);
 
 -- user_settings
 CREATE TABLE IF NOT EXISTS user_settings (
-    user_id TEXT PRIMARY KEY,
+    user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
     display_name TEXT,
     avatar_url TEXT,
     timezone TEXT NOT NULL DEFAULT 'UTC',
@@ -206,7 +206,7 @@ CREATE INDEX IF NOT EXISTS idx_mpwe_type ON marketplace.paddle_webhook_events(ev
 
 -- user_profile_reports from 049
 CREATE TABLE IF NOT EXISTS user_profile_reports (
-    user_id TEXT PRIMARY KEY,
+    user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
     archetype TEXT NOT NULL DEFAULT '',
     archetype_description TEXT NOT NULL DEFAULT '',
     archetype_confidence SMALLINT NOT NULL DEFAULT 0,

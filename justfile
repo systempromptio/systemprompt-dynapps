@@ -1544,15 +1544,19 @@ compose-up:
 
 # Build the branded bridge. Its own standalone workspace, NOT the server
 # workspace — `just build` does not touch it, and a bare `cargo build` from the
-# repo root silently builds the server instead.
-bridge-build *ARGS: core-checkout
+# repo root silently builds the server instead. A local build follows the
+# sibling core wherever it is (on `next` the sibling is routinely ahead of
+# bridge/CORE_REF between pins); only the package recipes, which produce what
+# ships, insist on the pin.
+bridge-build *ARGS: (core-checkout "warn")
     cd {{justfile_directory()}}/bridge && cargo build --release {{ARGS}}
 
 # The client depends on systemprompt-bridge by relative path, and that crate is
 # not published — so unlike the server, building the client needs the core
-# repository checked out beside this one. Clones it when absent, fast-forwards
-# it when present, and leaves local work alone.
-core-checkout:
+# repository checked out beside this one. Clones it when absent, leaves local
+# work alone, and compares a clean checkout with bridge/CORE_REF: a mismatch
+# is fatal by default and a warning with MISMATCH=warn.
+core-checkout MISMATCH="fail":
     #!/usr/bin/env bash
     set -euo pipefail
     CORE="{{justfile_directory()}}/../systemprompt-core"
@@ -1563,10 +1567,17 @@ core-checkout:
             echo "Using existing core checkout at $(git -C "$CORE" rev-parse --short HEAD)"
             # Updating here can mix a server built from one core with a bridge from another.
             expected="$(tr -d '\r\n' < "{{justfile_directory()}}/bridge/CORE_REF")"
-            [ "$(git -C "$CORE" rev-parse HEAD)" = "$(git -C "$CORE" rev-parse "$expected^{commit}")" ] || {
-                echo "core checkout differs from bridge/CORE_REF; pin core (just core-pin) before building." >&2
-                exit 1
-            }
+            head="$(git -C "$CORE" rev-parse HEAD)"
+            pinned="$(git -C "$CORE" rev-parse "$expected^{commit}")"
+            if [ "$head" != "$pinned" ]; then
+                if [ "{{MISMATCH}}" = "warn" ]; then
+                    echo "warn: core checkout ${head:0:9} differs from bridge/CORE_REF ${pinned:0:9};" >&2
+                    echo "      building against the checkout. Pin before packaging: just core-pin" >&2
+                else
+                    echo "core checkout differs from bridge/CORE_REF; pin core (just core-pin) before building." >&2
+                    exit 1
+                fi
+            fi
         fi
     else
         echo "Cloning systemprompt-core beside this repo (the client needs it)."

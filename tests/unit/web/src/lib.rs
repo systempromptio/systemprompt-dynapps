@@ -33,9 +33,8 @@
 //!   alive from its session heartbeat, and the polarity of a window-over-window
 //!   delta
 //! - the developer login link's gate, code hash, and printed URL
-//! - the console tier: which role sets reach the admin dashboard unscoped,
-//!   the AD group glob that grants roles, and the history scope that widens
-//!   for it
+//! - the console tier: which role sets reach the admin dashboard unscoped, the
+//!   AD group glob that grants roles, and the history scope that widens for it
 //! - the two front-end gates that used to be shell scripts and then in-crate
 //!   tests: admin template/CSS agreement and the textual front-end standards,
 //!   plus the asset-manifest check, all sharing `support`
@@ -88,6 +87,8 @@ mod downstream_credential_configs;
 mod format_display;
 #[cfg(test)]
 mod groups_yaml_types;
+#[cfg(test)]
+mod mcp_tool_name;
 #[cfg(test)]
 mod release_version_substitution;
 #[cfg(test)]
