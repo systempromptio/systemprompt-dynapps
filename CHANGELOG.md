@@ -98,6 +98,14 @@ Conventions (strict — hold every entry to them):
 
 ### Changed
 
+- The bridge builds against core `next` `d7964e842` (`bridge/CORE_REF`):
+  every GUI request answered (the `mount` regression since 0.53.0), the
+  wizard stays closed on an upgraded machine, the Windows Claude Desktop
+  profile carries the whole policy, the Cowork tick no longer re-syncs every
+  30 s on a warning it cannot read, installation evidence is captured for all
+  hosts together within a budget, and the MCP probe sends `tools/list` with
+  `params: {}` (Google's MCP refused `null`).
+
 - One judge. `conversation_classifier` is now `conversation_judge`: a single
   structured call per conversation records a title, summary, intent, outcome
   and one 0–100 `completion` score (did the assistant deliver what was
