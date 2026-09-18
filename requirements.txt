@@ -1,4 +1,4 @@
-Kit rollout — what Astound must provide (updated 2026-09-18)
+Kit rollout — what Astound must provide (updated 2026-09-18, after the first releases)
 =============================================================
 
 Scope: publish Astound-Digital/sfnext-claude-dev-kit and Astound-Digital/sfscore-claude-india-kit
@@ -20,15 +20,15 @@ A. GitHub Actions secrets on Astound-Digital/sfnext-claude-dev-kit
                                  (`systemprompt admin users api-key issue --user <admin uuid>`).
 
 B. GitHub Actions secrets on Astound-Digital/sfscore-claude-india-kit (same page, repo admin)
-   [ ] BUNDLE_SIGNING_SEED       NEW. Generated 2026-09-18 with `systemprompt core services keygen`;
-                                 the seed is handed over once out of band, never committed. Public key:
-                                 <filled in when keygen runs>
-   [ ] ASTOUND_RELEASE_TOKEN     same PAT as A.
+   [x] BUNDLE_SIGNING_SEED       set 2026-09-18 (generated with `systemprompt core services keygen`; the
+                                 seed exists only as this repo secret). Public key pinned by the instance:
+                                 a8Xa0VL5BFVauW8NsUmVktmzj8G+9+qt6//UBZH4X0o=
+   [x] ASTOUND_RELEASE_TOKEN     set 2026-09-18, same PAT as A.
    [ ] SYSTEMPROMPT_API_URL / SYSTEMPROMPT_ADMIN_TOKEN   optional, as A.
 
-C. GHCR packages (created automatically by the first CI run; org admin only if visibility changes)
-   ghcr.io/astound-digital/sfnext-claude-dev-kit   — keep PRIVATE
-   ghcr.io/astound-digital/sfscore-claude-india-kit — keep PRIVATE
+C. GHCR packages — both exist and are PRIVATE (created by the first CI runs on 2026-09-18)
+   ghcr.io/astound-digital/sfnext-claude-dev-kit    :v2.2.1 = :stable  sha256:5f95d5d2…
+   ghcr.io/astound-digital/sfscore-claude-india-kit :v3.2.1 = :stable  sha256:9a649846…
    Nothing to do unless the package is not linked to its repository (then: Package settings →
    Manage Actions access → add the kit repository with write).
 
@@ -36,11 +36,13 @@ D. Instance pull token (one per instance that composes the kits)
    [ ] GitHub PAT (classic) with scope `read:packages` ONLY, on an account that can read the
        Astound-Digital org packages. Stored as secret `ghcr_pull_token` with the value
        `<github-user>:<PAT>` (e.g. `Ejb503:ghp_...`).
-       - local profile      .systemprompt/profiles/local/secrets.json        (replace REPLACE_ placeholder)
-       - astound.systemprompt.io (profile `production`) secrets.json          (pushed by `just deploy`)
+       - local profile      .systemprompt/profiles/local/secrets.json        [x] 2026-09-18 (operator's own
+                            token; proven: all three kits fetched, verified and composed locally)
+       - astound.systemprompt.io (profile `production`) secrets.json          [ ] NEEDED before `just deploy`:
+                            production has no ghcr_pull_token yet; the profile already pins sfnext + india
        - sp-dev.astound.digital  that deployment's secrets (its operator)
 
-E. What sp-dev.astound.digital's operator must do (Astound side), after the first releases exist
+E. What sp-dev.astound.digital's operator must do (Astound side) — runbook: docs/kits-on-another-instance.md
    [ ] set `ghcr_pull_token` (D)
    [ ] add the services.sources[] block from docs/kits-on-another-instance.md to that instance's
        profile (astound-ba public; sfnext + india with auth_secret: ghcr_pull_token), then Import on

@@ -20,6 +20,15 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+- The India marketplace (`astound-india-dev`, 34 skills) is a kit:
+  `Astound-Digital/sfscore-claude-india-kit`, seeded with `just kit-export` and
+  published to GHCR by its CI; the ids left `services/` and `rules.yaml` owns the
+  entitlement as `owner: bundle:india`. `sfnext-claude-dev-kit` was brought to
+  the same contract (no access block, instance MCP ids, channel-publishing CI,
+  rotated signing key). Both profiles follow the kits' `stable` channels;
+  `docs/kits-on-another-instance.md` is the runbook for a separate deployment
+  and `requirements.txt` lists the tokens and secrets the Astound team provides.
+
 ## 0.55.1 — 2026-09-18
 
 Built against the published core 0.55.1 (`bridge/CORE_REF` = `v0.55.1`). 0.55.0 was released but

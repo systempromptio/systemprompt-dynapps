@@ -8,7 +8,7 @@ in Claude Code marketplace format, published by that repository's CI as a
 signed services bundle on GHCR (private package), and composed by this instance
 — the profiles follow the kit's `stable` channel, so a release is one
 **Import** on `/admin/sync` away. Kit contract and runbook:
-`deploy/kit/README-INTEGRATION.md`; registry: `deploy/kit/known-kits.json`
+`deploy/kit/README-INTEGRATION.md`; another instance: `docs/kits-on-another-instance.md`; registry: `deploy/kit/known-kits.json`
 (kit `india`); model: `/documentation/services-sync`.
 
 ## What stays here
