@@ -20,6 +20,41 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+### Added
+
+- Analysis leads with the deterministic record. A `conversation_facts` rollup
+  (schema `45_conversation_facts.sql`, migration 085) holds one row per gateway
+  conversation — client and attestation, models, turns, tokens by kind, cost,
+  latency percentiles, tool calls by ledger state, artifacts, safety findings,
+  governance decisions, hook prompts and skill invocations — kept current by
+  the new `conversation_rollup` job. `/admin/analysis/conversations` reads it
+  with KPI sparklines, three charts on one axis and an eight-way breakdown;
+  the new `/admin/analysis/conversations/{context_id}` shows every plane of
+  one conversation (turn ledger, tool ledger, governance, safety, skills with
+  the marketplace version served). `/admin/analysis/skills` adds marketplace
+  adoption (entitled → installed → active, by host) and a per-skill record;
+  the skill page splits invocations by model, client, group, project, person,
+  version and outcome. `sp-chart.js` adds hover crosshairs and legend toggles
+  to the server-rendered charts.
+
+### Changed
+
+- One judge. `conversation_classifier` is now `conversation_judge`: a single
+  structured call per conversation records a title, summary, intent, outcome
+  and one 0–100 `completion` score (did the assistant deliver what was
+  originally asked) on `conversation_analyses`. **Judge now** on a conversation
+  queues a manual verdict that runs even with `evaluation.automatic` off. The
+  feedback assessment fact reads that score.
+
+### Removed
+
+- The four-criteria session judge (`evaluation_queue`, `evaluation_runs`),
+  its attribution views, the hourly AI evaluation report, the scorecard, the
+  `/admin/analysis/evaluation/*` pages, `services/evaluation/`, the session
+  page's Evaluation panel and `POST /admin/sessions/{id}/evaluate`, and the
+  snapshot-based Skills portfolio (`/admin/analysis/skills.json`,
+  `portfolio-live.js`). Migration 085 drops the tables.
+
 - The India marketplace (`astound-india-dev`, 34 skills) is a kit:
   `Astound-Digital/sfscore-claude-india-kit`, seeded with `just kit-export` and
   published to GHCR by its CI; the ids left `services/` and `rules.yaml` owns the
