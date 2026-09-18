@@ -115,6 +115,10 @@
     opacity: 0.35;
 }
 
+.sp-adopt__fill--active {
+    opacity: 1;
+}
+
 .sp-adopt__facts {
     grid-area: facts;
     display: grid;

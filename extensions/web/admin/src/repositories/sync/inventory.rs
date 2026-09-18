@@ -188,15 +188,6 @@ pub const CONFIG_KINDS: &[ConfigKind] = &[
         "the default provider and the inference settings behind it",
         "ai/config.yaml",
     ),
-    paged(
-        dir(
-            "evaluation",
-            "Evaluation",
-            "the criteria a session is judged against",
-            "evaluation",
-        ),
-        "/admin/analysis/evaluation",
-    ),
     file(
         "scheduler",
         "Scheduler",

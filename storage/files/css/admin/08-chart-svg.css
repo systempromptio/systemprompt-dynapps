@@ -137,8 +137,8 @@
         stroke-linecap: round;
     }
 
-    /* The hover layer sp-chart.js drives: a crosshair on the plot and a
-       tooltip that follows the bucket under the pointer. */
+    /* The server plot's crosshair; the live layer sp-chart.js draws carries
+       its own cursor and tooltip (08-chart-live.css). */
     .sp-timeseries__plot {
         position: relative;
     }
@@ -150,43 +150,6 @@
     }
     .sp-svgchart__cursor[hidden] {
         display: none;
-    }
-    .sp-svgchart__tip {
-        position: absolute;
-        top: var(--sp-space-2);
-        transform: translateX(-50%);
-        display: grid;
-        gap: 2px;
-        padding: var(--sp-space-1) var(--sp-space-2);
-        border: 1px solid var(--sp-border-default);
-        border-radius: var(--sp-corners-sm);
-        background: var(--sp-bg-surface);
-        box-shadow: var(--sp-shadow-md);
-        font-size: var(--sp-text-xs);
-        pointer-events: none;
-        z-index: 2;
-        white-space: nowrap;
-    }
-    .sp-svgchart__tip[hidden] {
-        display: none;
-    }
-    .sp-svgchart__tip-label {
-        color: var(--sp-text-tertiary);
-    }
-    .sp-svgchart__tip-row {
-        display: flex;
-        align-items: center;
-        gap: 0.4em;
-    }
-    .sp-svgchart__tip-row i {
-        width: 0.6em;
-        height: 0.6em;
-        border-radius: 50%;
-    }
-    .sp-svgchart__tip-row b {
-        margin-inline-start: auto;
-        padding-inline-start: var(--sp-space-2);
-        font-variant-numeric: tabular-nums;
     }
     .sp-svgchart--live .sp-svgchart__plot:focus-visible {
         outline: 2px solid var(--sp-accent);

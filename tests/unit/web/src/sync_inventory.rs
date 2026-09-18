@@ -78,10 +78,7 @@ fn paths_resolve_to_the_exact_file_before_the_containing_directory() {
         kind_for_path("skills/who_am_i/SKILL.md").map(|k| k.id),
         Some("skills")
     );
-    assert_eq!(
-        kind_for_path("evaluation/criteria/cost.md").map(|k| k.id),
-        Some("evaluation")
-    );
+    assert!(kind_for_path("evaluation/criteria/cost.md").is_none());
     assert!(kind_for_path("skillsx/config.yaml").is_none());
     assert!(kind_for_path("nowhere.yaml").is_none());
 }

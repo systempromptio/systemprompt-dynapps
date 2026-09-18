@@ -109,6 +109,13 @@
     gap: var(--sp-space-6);
 }
 
+.sp-p-report__summary,
+.sp-p-report__section {
+    display: grid;
+    gap: var(--sp-space-3);
+    break-inside: avoid;
+}
+
 .sp-p-report__facts {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));

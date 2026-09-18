@@ -15,18 +15,4 @@
     height: 0.75em;
 }
 
-.sp-icon--lg {
-    width: 1.5em;
-    height: 1.5em;
-}
-
-.sp-icon--muted {
-    color: var(--sp-text-tertiary);
-}
-
-.sp-icon--ok { color: var(--sp-success-strong); }
-.sp-icon--warn { color: var(--sp-warning-strong); }
-.sp-icon--err { color: var(--sp-danger-strong); }
-.sp-icon--accent { color: var(--sp-accent-text); }
-
 }

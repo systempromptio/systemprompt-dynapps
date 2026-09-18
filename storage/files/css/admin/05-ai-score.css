@@ -19,6 +19,7 @@
 .sp-ai-dot--ok { border-color: var(--sp-success-strong); background: var(--sp-success-strong); }
 .sp-ai-dot--warn { border-color: var(--sp-warning-strong); background: var(--sp-warning-strong); }
 .sp-ai-dot--err { border-color: var(--sp-danger-strong); background: var(--sp-danger-strong); }
+.sp-ai-dot--muted { border-color: var(--sp-border-strong); background: transparent; }
 
 a.sp-ai-dot {
     cursor: pointer;
