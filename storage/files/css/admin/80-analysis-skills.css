@@ -26,17 +26,25 @@
 .sp-askill-table {
     table-layout: fixed;
 }
-.sp-askill-table th.sp-askill-col-skill { width: 16%; }
-.sp-askill-table th.sp-askill-col-spark { width: 7%; }
-.sp-askill-table th.sp-askill-col-models { width: 13%; min-width: 9rem; }
+.sp-askill-table th.sp-askill-col-skill { width: 13%; }
+.sp-askill-table th.sp-askill-col-spark { width: 5%; }
+.sp-askill-table th.sp-askill-col-models { width: 11%; min-width: 9rem; }
 .sp-askill-table th.sp-aconv-col-select { width: 1.6rem; }
 .sp-askill-models .sp-aconv-tag {
-    overflow: visible;
-    max-width: none;
+    max-width: 100%;
 }
-.sp-askill-table th.sp-col-date { width: 7%; }
-.sp-askill-table th.sp-table__cell--num { width: 4.5%; }
-.sp-askill-table th.sp-askill-col-done { width: 4rem; }
+.sp-askill-models {
+    overflow: hidden;
+}
+.sp-askill-table th.sp-col-date { width: 6%; }
+.sp-askill-table th.sp-table__cell--num { width: 5%; }
+.sp-askill-table th.sp-askill-col-done { width: 4.5rem; }
+.sp-askill-table td.sp-table__cell--num,
+.sp-askill-table td.sp-col-date {
+    max-width: none;
+    white-space: nowrap;
+    overflow: visible;
+}
 .sp-askill-table td {
     vertical-align: top;
     max-width: 0;

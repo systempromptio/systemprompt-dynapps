@@ -3,8 +3,7 @@
 /* The rows. Fixed layout keeps eleven columns from fighting; the input and
    title columns take what the fixed ones leave. The header sticks so a page
    of fifty calls keeps its column names in view. */
-.sp-tools-table,
-.sp-tools-breakdown {
+.sp-tools-table {
     table-layout: fixed;
 }
 

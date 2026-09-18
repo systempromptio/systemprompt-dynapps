@@ -217,7 +217,7 @@ pub(super) fn tiles(t: &DigestTotals) -> Vec<ReportTileView> {
             "Failed requests, denied tool calls and safety findings",
         ),
         tile(
-            ("Completed", "judge"),
+            ("AI score", "sparkle"),
             score_display(t.completion_avg),
             format!("{} judged · {} achieved", t.judged, t.achieved),
             completion_tone(t.completion_avg),

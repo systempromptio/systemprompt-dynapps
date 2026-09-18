@@ -3,11 +3,25 @@
 /* The live chart draws at pixel size inside a host that takes every pixel
    its panel gives it; the server's stretched SVG stays underneath for the
    no-script case and is hidden once this takes over. */
+/* Once the live layer is up the server plot, its gutters and its legend
+   step aside; `[hidden]` alone loses to the component rules that give them
+   a display, so the live modifier hides them here at equal weight. */
+.sp-svgchart--live .sp-timeseries__plot,
+.sp-svgchart--live .sp-timeseries__x-axis,
+.sp-svgchart--live .sp-svgchart__legend,
+.sp-svgchart--live .sp-svgchart__refs {
+    display: none;
+}
+
 .sp-chart {
     position: relative;
     flex: 1 1 auto;
     min-height: 12rem;
     min-width: 0;
+}
+
+.sp-chart[hidden] {
+    display: none;
 }
 
 .sp-chart__svg {

@@ -7,14 +7,20 @@
 /* Sixteen columns; the widths sum to 95% + the select gutter, so nothing is
    squeezed below its header. */
 .sp-aconv-table th.sp-aconv-col-select { width: 1.6rem; }
-.sp-aconv-table th.sp-aconv-col-title { width: 17%; }
+.sp-aconv-table th.sp-aconv-col-title { width: 15%; }
 .sp-aconv-table th.sp-aconv-col-person { width: 8%; }
 .sp-aconv-table th.sp-aconv-col-client { width: 8%; }
-.sp-aconv-table th.sp-aconv-col-spark { width: 5%; }
-.sp-aconv-table th.sp-aconv-col-skills { width: 10%; }
-.sp-aconv-table th.sp-aconv-col-judge { width: 3.5%; }
-.sp-aconv-table th.sp-col-date { width: 6.5%; }
-.sp-aconv-table th.sp-table__cell--num { width: 4.5%; }
+.sp-aconv-table th.sp-aconv-col-spark { width: 4.5%; }
+.sp-aconv-table th.sp-aconv-col-skills { width: 9%; }
+.sp-aconv-table th.sp-aconv-col-judge { width: 3%; }
+.sp-aconv-table th.sp-col-date { width: 7.5%; }
+.sp-aconv-table th.sp-table__cell--num { width: 5%; }
+.sp-aconv-table td.sp-table__cell--num,
+.sp-aconv-table td.sp-col-date {
+    max-width: none;
+    white-space: nowrap;
+    overflow: visible;
+}
 .sp-aconv-table th,
 .sp-aconv-breakdown th,
 .sp-askill-table th,
@@ -24,16 +30,16 @@
     overflow-wrap: normal;
     hyphens: none;
 }
+/* Breakdown tables lay out by content: with a fixed layout their ten
+   equal columns clipped every header to three letters. */
 .sp-aconv-breakdown,
 .sp-tools-breakdown {
-    table-layout: fixed;
+    table-layout: auto;
 }
 .sp-aconv-breakdown th:first-child,
-.sp-tools-breakdown th:first-child { width: 24%; }
-.sp-aconv-breakdown th.sp-table__cell--num,
-.sp-tools-breakdown th.sp-table__cell--num { min-width: 5rem; }
+.sp-tools-breakdown th:first-child { min-width: 12rem; }
 .sp-aconv-breakdown th.sp-aconv-col-share,
-.sp-tools-breakdown th.sp-tools-col-share { width: 8.5rem; }
+.sp-tools-breakdown th.sp-tools-col-share { min-width: 8.5rem; }
 .sp-aconv-table td {
     vertical-align: top;
     max-width: 0;

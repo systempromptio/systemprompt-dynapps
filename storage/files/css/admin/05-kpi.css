@@ -38,26 +38,20 @@
     flex: 1 1 auto;
 }
 
-/* The trend is a reserved column, never an overlay: a sparkline drawn over
-   the value made the number unreadable on every dense tile. Its baseline is
-   the value's, so the eye reads "figure, then its shape" in one sweep. */
-.sp-kpi--trend {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 5.5rem;
-    column-gap: var(--sp-space-2);
-    align-items: end;
-}
-
+/* The trend is a reserved row under the value, never an overlay: a
+   sparkline drawn over the value made the number unreadable, and one beside
+   it squeezed eight-tile rows until every label truncated. */
 .sp-kpi__trend {
     display: flex;
     align-items: flex-end;
-    height: 100%;
+    width: 100%;
     min-width: 0;
+    margin-block: var(--sp-space-1);
 }
 
 .sp-kpi__trend .sp-spark {
     width: 100%;
-    height: 2.4rem;
+    height: 1.6rem;
 }
 
 .sp-kpi__label .sp-icon {

@@ -122,8 +122,8 @@ fn health_kpis(f: &SkillFactRow) -> Vec<SkillKpiView> {
             "95th percentile of turn latency",
         ),
         kpi(
-            "Completed",
-            "judge",
+            "AI score",
+            "sparkle",
             score_display(f.completion_avg),
             format!(
                 "{} judged · {} achieved",

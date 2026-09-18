@@ -160,7 +160,7 @@ fn spend_tiles(rows: &[SkillFactRow], g: &Figures) -> Vec<SkillsKpiView> {
             "Failed requests and governance denials inside skill conversations",
         ),
         tile(
-            ("Completed", "judge"),
+            ("AI score", "sparkle"),
             score_display(completion),
             format!("{judged_total} conversations judged"),
             completion_tone(completion),

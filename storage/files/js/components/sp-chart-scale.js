@@ -14,9 +14,9 @@ export const niceStep = (max, ticks) => {
   return unit * power;
 };
 
-export const yTicks = (max, count = 4) => {
+export const yTicks = (max, count = 4, integer = true) => {
   if (max <= 0) return { top: 1, ticks: [0, 1] };
-  const step = niceStep(max, count);
+  const step = Math.max(niceStep(max, count), integer ? 1 : 0);
   const top = Math.ceil(max / step) * step;
   const ticks = [];
   for (let v = 0; v <= top + step / 2; v += step) ticks.push(Number(v.toFixed(6)));
@@ -48,7 +48,11 @@ export const thinLabels = (labels, width, minGap = 56) => {
   if (n === 0) return [];
   const slot = width / n;
   const every = Math.max(1, Math.ceil(minGap / slot));
-  return labels.map((label, i) => (i % every === 0 || i === n - 1 ? label : ''));
+  return labels.map((label, i) => {
+    if (i === n - 1) return label;
+    const keep = i % every === 0 && (n - 1 - i) * slot >= minGap;
+    return keep ? label : '';
+  });
 };
 
 export const sum = (values) => values.reduce((acc, v) => acc + v, 0);

@@ -169,8 +169,8 @@ fn health_tiles(
         }
         .with_spark(&column(series, |p| p.users)),
         Tile {
-            label: "Completed",
-            icon: "judge",
+            label: "AI score",
+            icon: "sparkle",
             value: score_display(t.completion_avg),
             note: format!(
                 "{} judged · {} achieved",
