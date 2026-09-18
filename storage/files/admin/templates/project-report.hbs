@@ -89,7 +89,7 @@
 
         <div class="sp-p-project__split">
             <section class="sp-p-report__section" aria-label="Models">
-                {{> components/section title="Models" count=models.length}}
+                {{> components/section title="Models" count=(len models)}}
                 {{#> components/table caption="Model mix over the window"}}
                     <thead><tr><th>Model</th><th>Share</th><th class="sp-table__cell--num">Requests</th><th class="sp-table__cell--num">Cost</th></tr></thead>
                     <tbody>
@@ -105,7 +105,7 @@
                 {{/components/table}}
             </section>
             <section class="sp-p-report__section" aria-label="Agents">
-                {{> components/section title="Agents" count=agents.length note="The coding agents that made the requests."}}
+                {{> components/section title="Agents" count=(len agents) note="The coding agents that made the requests."}}
                 {{#> components/table caption="Requests by coding agent"}}
                     <thead><tr><th>Agent</th><th>Share</th><th class="sp-table__cell--num">Requests</th><th class="sp-table__cell--num">People</th><th class="sp-table__cell--num">Tokens</th><th class="sp-table__cell--num">Cost</th></tr></thead>
                     <tbody>
@@ -125,7 +125,7 @@
         </div>
 
         <section class="sp-p-report__section" aria-label="Skills">
-            {{> components/section title="Skills" count=skills.length note="Invocations, and what the people using them rated them."}}
+            {{> components/section title="Skills" count=(len skills) note="Invocations, and what the people using them rated them."}}
             {{#> components/table caption="Skills used, with their ratings"}}
                 <thead><tr><th>Skill</th><th class="sp-table__cell--num">Calls</th><th class="sp-table__cell--num">People</th><th class="sp-table__cell--num">Rating</th><th class="sp-table__cell--num">Ratings</th></tr></thead>
                 <tbody>
@@ -143,7 +143,7 @@
         </section>
 
         <section class="sp-p-report__section" aria-label="Tools">
-            {{> components/section title="Tools" count=tools.length note="MCP calls by server and tool, with the share that did not return success."}}
+            {{> components/section title="Tools" count=(len tools) note="MCP calls by server and tool, with the share that did not return success."}}
             {{#> components/table caption="MCP tool health"}}
                 <thead><tr><th>Server</th><th>Tool</th><th class="sp-table__cell--num">Calls</th><th class="sp-table__cell--num">Failures</th><th class="sp-table__cell--num">Error rate</th><th class="sp-table__cell--num">p95</th><th class="sp-table__cell--num">People</th></tr></thead>
                 <tbody>
@@ -182,14 +182,14 @@
         </section>
 
         <section class="sp-p-report__section" aria-label="Sessions">
-            {{> components/section title="Sessions" count=sessions.length note="The most recent working sessions this project's people ran."}}
+            {{> components/section title="Sessions" count=(len sessions) note="The most recent working sessions this project's people ran."}}
             {{#> components/table caption="Recent sessions"}}
                 <thead><tr><th>Session</th><th>Person</th><th class="sp-table__cell--num">Requests</th><th class="sp-table__cell--num">Models</th><th class="sp-table__cell--num">Cost</th><th class="sp-table__cell--date">Last activity</th></tr></thead>
                 <tbody>
                 {{#each sessions}}
                 <tr>
                     <td class="sp-u-mono" title="{{session_id}}">{{session_short}}</td>
-                    <td>{{user_id}}</td>
+                    <td title="{{user_id}}">{{person}}</td>
                     <td class="sp-table__cell--num sp-u-num">{{formatNumber requests}}</td>
                     <td class="sp-table__cell--num sp-u-num">{{models}}</td>
                     <td class="sp-table__cell--num sp-u-num sp-u-mono">{{cost_display}}</td>

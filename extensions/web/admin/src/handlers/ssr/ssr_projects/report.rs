@@ -6,6 +6,8 @@
 //! to the browser's print engine. Every read is the same repository call the
 //! console makes, so the PDF a manager keeps says what the screen said.
 
+use std::collections::HashMap;
+
 use chrono::Utc;
 use sqlx::PgPool;
 use systemprompt_web_shared::ProjectId;
@@ -72,6 +74,21 @@ pub(super) fn page_data(inputs: ReportInputs<'_>, user_ctx: &UserContext) -> Pro
     } = inputs;
     let members = member_views(detail, user_ctx);
     let member_count = members.len() as i64;
+    let names: HashMap<&str, &str> = members
+        .iter()
+        .map(|m| (m.user_id.as_str(), m.display_name.as_str()))
+        .collect();
+    let sessions = usage
+        .sessions
+        .iter()
+        .map(|s| {
+            let mut row = session_row(s);
+            if let Some(name) = names.get(s.user_id.as_str()) {
+                (*name).clone_into(&mut row.person);
+            }
+            row
+        })
+        .collect();
     let (daily, daily_cost) = daily_charts(&usage.daily);
     let artifact_total = report.artifacts.iter().map(|a| a.artifacts).sum();
 
@@ -103,7 +120,7 @@ pub(super) fn page_data(inputs: ReportInputs<'_>, user_ctx: &UserContext) -> Pro
         tools: tool_rows(&usage.tools),
         artifacts: report.artifacts.iter().map(artifact_row).collect(),
         artifact_total,
-        sessions: usage.sessions.iter().map(session_row).collect(),
+        sessions,
         project_id: project.id.clone(),
         project_name: project.name.clone(),
         description: project.description.clone(),

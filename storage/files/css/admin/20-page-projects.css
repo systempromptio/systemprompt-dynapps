@@ -1,35 +1,38 @@
 @layer components {
 
 .sp-p-projects__col-name {
-    display: flex;
-    align-items: baseline;
-    gap: var(--sp-space-2);
-    min-inline-size: 14rem;
+    min-inline-size: 12rem;
 }
 
+/* The description trails the name on the same line, clipped to the room the
+   row has left. A flex td was the earlier form and cost the column its
+   table-cell layout; an inline-block with a ceiling keeps the row a row. */
 .sp-p-projects__sub {
-    min-inline-size: 0;
+    display: inline-block;
+    max-inline-size: 7rem;
     margin-inline-start: var(--sp-space-2);
     overflow: hidden;
     color: var(--sp-text-tertiary);
     font-size: var(--sp-text-xs);
     text-overflow: ellipsis;
     white-space: nowrap;
+    vertical-align: bottom;
 }
 
-/* The listing is twelve columns wide. The name column takes the slack and
-   every other column sizes to its content, so a header is never asked to wrap
-   and a count never drifts away from its heading; "Tool success" used to break
-   onto two lines because the numeric column's 7ch ceiling was narrower than
-   the words. */
+/* The listing is twelve columns wide. The name column takes the slack (the
+   table's own first-column rule) and every other column sizes to its content,
+   so a header is never asked to wrap and a count never drifts away from its
+   heading; "Tool success" used to break onto two lines because the numeric
+   column's 7ch ceiling was narrower than the words. */
 .sp-t-projects th,
 .sp-t-projects td {
+    padding-inline: var(--sp-space-2);
     white-space: nowrap;
 }
 
-.sp-t-projects th:first-child,
-.sp-t-projects td:first-child {
-    inline-size: 26%;
+.sp-t-projects .sp-table__sort {
+    margin-inline: calc(-1 * var(--sp-space-2));
+    padding-inline: var(--sp-space-2);
 }
 
 .sp-t-projects .sp-table__cell--num,
@@ -38,9 +41,7 @@
 }
 
 .sp-t-projects .sp-p-projects__col-mix {
-    max-inline-size: 14rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    max-inline-size: none;
 }
 
 /* The secondary figure sits on the same line as its number — "1 · 1 active",
@@ -55,12 +56,6 @@
 
 .sp-p-projects__meta::before {
     content: "· ";
-}
-
-.sp-p-projects__report {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--sp-space-1);
 }
 
 .sp-p-project {
@@ -140,8 +135,12 @@
     overflow-wrap: anywhere;
 }
 
-.sp-p-report__section {
-    break-inside: avoid;
+
+/* A report is read, not scanned: a timestamp is printed whole. */
+.sp-p-report .sp-table__cell--date {
+    inline-size: auto;
+    max-inline-size: none;
+    white-space: nowrap;
 }
 
 .sp-p-report__foot {
@@ -164,19 +163,14 @@
         gap: 6mm;
     }
 
-    .sp-p-report__facts,
-    .sp-p-report .sp-table {
+    .sp-p-report__facts {
         box-shadow: none;
         border: 1px solid #ccc;
     }
 
-    .sp-p-report .sp-table__scroll {
-        overflow: visible;
-        background-image: none;
-    }
-
+    /* A4 is too narrow for two tables side by side at a readable size. */
     .sp-p-report .sp-p-project__split {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: minmax(0, 1fr);
     }
 
     .sp-p-report .sp-section__head {

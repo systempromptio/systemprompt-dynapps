@@ -229,6 +229,7 @@ pub(super) fn session_row(s: &ProjectSessionRow) -> ProjectSessionRowView {
         session_short: short(s.session_id.as_str()),
         href: format!("/admin/sessions/{}", s.session_id.as_str()),
         session_id: s.session_id.clone(),
+        person: s.user_id.to_string(),
         user_id: s.user_id.clone(),
         requests: s.requests,
         models: s.models,

@@ -51,7 +51,7 @@
             <tr data-project-id="{{id}}">
                 <td class="sp-p-projects__col-name">
                     <a href="{{href}}" class="sp-table__cell--primary">{{name}}</a>
-                    <span class="sp-p-projects__sub"{{#if description}} title="{{description}}"{{/if}}>{{#if description}}{{truncate description 40}}{{else}}{{id}}{{/if}}</span>
+                    <span class="sp-p-projects__sub"{{#if description}} title="{{description}}"{{/if}}>{{#if description}}{{truncate description 32}}{{else}}{{id}}{{/if}}</span>
                 </td>
                 <td class="sp-table__cell--num sp-u-num" title="{{active_members}} of {{member_count}} active in the window">{{formatNumber member_count}}<span class="sp-p-projects__meta">{{active_members}} active</span></td>
                 <td class="sp-table__cell--num sp-u-num">{{formatNumber group_count}}</td>
@@ -60,7 +60,7 @@
                 <td class="sp-table__cell--num sp-u-num sp-u-mono">{{cost_display}}</td>
                 <td class="sp-p-projects__col-mix">
                     {{#if top_model}}
-                    <code class="sp-u-mono" title="{{top_model}} led {{models_used}} distinct models">{{top_model_short}}</code>{{#if (gt models_used 1)}}<span class="sp-p-projects__meta">+{{sub models_used 1}}</span>{{/if}}
+                    <code class="sp-table__cell--mono" title="{{top_model}} led {{models_used}} distinct models">{{top_model_short}}</code>{{#if (gt models_used 1)}}<span class="sp-p-projects__meta">+{{sub models_used 1}}</span>{{/if}}
                     {{else}}
                     <span class="sp-u-text-tertiary">&mdash;</span>
                     {{/if}}
@@ -76,7 +76,7 @@
                 <td class="sp-table__cell--num sp-u-num">{{formatNumber skills_used}}</td>
                 <td class="sp-table__cell--num sp-u-num">{{formatNumber artifacts}}</td>
                 <td class="sp-table__cell--actions">
-                    <a class="sp-btn sp-btn--sm sp-btn--outline sp-p-projects__report" href="{{report_href}}" title="Open the printable report for {{name}}" aria-label="Report for {{name}}">{{> components/icon name="report" class="sp-icon--sm"}}<span>Report</span></a>
+                    <a class="sp-btn sp-btn--sm sp-btn--outline sp-btn--icon" href="{{report_href}}" title="Report for {{name}} — members, spend, models, agents, tools, skills and artifacts on one printable page" aria-label="Report for {{name}}">{{> components/icon name="report" class="sp-icon--sm"}}</a>
                 </td>
             </tr>
             {{else}}
