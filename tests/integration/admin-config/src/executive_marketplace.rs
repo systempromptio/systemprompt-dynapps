@@ -105,6 +105,11 @@ async fn executive_and_uk_membership_grant_only_the_intended_resources() {
     ] {
         let user = UserId::new(unique("executive-access"));
         let roles = vec!["user".to_owned(), role.to_owned()];
+        // Why: the two search building blocks sit behind the `connector`
+        // band — a live grant from the Connections page — plus super_admin's
+        // role; nobody in this table has connected a server, so only the
+        // operator role reaches them.
+        let operator = role == "super_admin";
         insert_user_with_roles(&db.pool, user.as_str(), &roles).await;
         if uk {
             sqlx::query(
@@ -135,9 +140,14 @@ async fn executive_and_uk_membership_grant_only_the_intended_resources() {
             (EntityKind::Skill, "admin_daily_brief", control_plane),
             (EntityKind::Skill, "uk_sales_client_discovery", sales),
             (EntityKind::Skill, "uk_sales_client_prep", sales),
-            (EntityKind::Skill, "uk_sales_client_report", sales),
             (EntityKind::Skill, "uk_sales_client_research", sales),
-            (EntityKind::Skill, "google_drive_search", sales),
+            (EntityKind::Skill, "client_360_report", sales),
+            (EntityKind::Skill, "account_status_report", sales),
+            (EntityKind::Skill, "account_suggestions", sales),
+            (EntityKind::Skill, "pipeline_renewals_review", sales),
+            (EntityKind::Skill, "install_sales_artifacts", sales),
+            (EntityKind::Skill, "google_workspace_search", operator),
+            (EntityKind::Skill, "salesforce_account_search", operator),
             (EntityKind::McpServer, "google_drive", sales),
         ] {
             let ids = vec![id.to_owned()];
