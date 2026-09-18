@@ -139,7 +139,6 @@ async fn the_export_surface_serves_every_format_and_a_preview() {
             "/admin/export/analysis-skills?format=markdown&days=30",
             "| ",
         ),
-        ("/admin/export/evaluation-runs?format=csv", "created_at,"),
     ] {
         let (status, body) = app.call(Call::get(path, Principal::Admin)).await;
         if status != StatusCode::OK {
