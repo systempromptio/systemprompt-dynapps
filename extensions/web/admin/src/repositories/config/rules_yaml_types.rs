@@ -86,6 +86,8 @@ pub struct BandMap {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub project: Option<BandSpec>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub connector: Option<BandSpec>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub salesforce: Option<BandSpec>,
 }
 
@@ -95,6 +97,7 @@ impl BandMap {
         self.role.is_none()
             && self.group.is_none()
             && self.project.is_none()
+            && self.connector.is_none()
             && self.salesforce.is_none()
     }
 
@@ -104,6 +107,7 @@ impl BandMap {
         [
             ("project", &self.project),
             ("group", &self.group),
+            ("connector", &self.connector),
             ("salesforce", &self.salesforce),
             ("role", &self.role),
         ]
@@ -117,6 +121,7 @@ impl BandMap {
             "role" => self.role = Some(spec),
             "group" => self.group = Some(spec),
             "project" => self.project = Some(spec),
+            "connector" => self.connector = Some(spec),
             "salesforce" => self.salesforce = Some(spec),
             _ => {},
         }
@@ -198,7 +203,7 @@ impl EntityDecl {
     }
 }
 
-pub const BAND_NAMES: [&str; 4] = ["role", "group", "project", "salesforce"];
+pub const BAND_NAMES: [&str; 5] = ["role", "group", "project", "connector", "salesforce"];
 
 // Why: the kinds whose ids are generated rather than authored. A literal id of
 // one of these names a row that cannot exist, so only the glob is accepted.

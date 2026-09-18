@@ -1,0 +1,14 @@
+id: client_360_report
+name: Client 360 Report
+description: The whole relationship with one named client on one page — account facts, people,
+  commercials, delivery, communications, a 90-day timeline and the risks and opportunities — built
+  from Salesforce, Google Workspace and Atlassian evidence and rendered in the UK Client Report artifact.
+enabled: true
+file: SKILL.md
+tags:
+- astound
+- sales
+- reporting
+- report
+category: business
+display_category: Sales UK

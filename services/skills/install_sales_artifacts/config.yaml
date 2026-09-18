@@ -1,0 +1,13 @@
+id: install_sales_artifacts
+name: Install Sales Artifacts
+description: Put the UK Client Report dashboard into this Cowork library from the bundle the bridge
+  has already staged in the Astound workspace — idempotent, one artifact at a time, nothing invented.
+enabled: true
+file: SKILL.md
+tags:
+- astound
+- sales
+- setup
+- cowork
+category: business
+display_category: Sales UK

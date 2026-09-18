@@ -24,6 +24,9 @@
 --
 -- The judge's columns on conversation_analyses are declared in 37_; migration
 -- 085 adds them to an existing table. Declarative twin of migration 085.
+-- `artifact_count`, `artifact_files` and `artifact_cards` count by the one
+-- artifact definition in 46_tool_artifacts.sql (`tool_activity.artifact_kind`);
+-- 087 adds the two split columns to an established table.
 
 CREATE INDEX IF NOT EXISTS idx_conversation_analyses_completion
     ON conversation_analyses(completion) WHERE completion IS NOT NULL;
@@ -64,6 +67,8 @@ CREATE TABLE IF NOT EXISTS conversation_facts (
     tool_calls_executed BIGINT NOT NULL DEFAULT 0,
     tool_calls_failed BIGINT NOT NULL DEFAULT 0,
     artifact_count BIGINT NOT NULL DEFAULT 0,
+    artifact_files BIGINT NOT NULL DEFAULT 0,
+    artifact_cards BIGINT NOT NULL DEFAULT 0,
     safety_findings BIGINT NOT NULL DEFAULT 0,
     safety_blocked BIGINT NOT NULL DEFAULT 0,
     gov_allow BIGINT NOT NULL DEFAULT 0,
@@ -161,13 +166,15 @@ BEGIN
         GROUP BY r.context_id
     ), executions AS (
         SELECT a.context_id,
-               COUNT(e.mcp_execution_id)::bigint AS executed,
-               COUNT(e.mcp_execution_id) FILTER (WHERE e.status IN ('failed', 'timeout'))::bigint AS failed,
-               COUNT(DISTINCT m.id)::bigint AS artifacts
+               COUNT(t.mcp_execution_id)::bigint AS executed,
+               COUNT(t.mcp_execution_id) FILTER (WHERE t.execution_status IN ('failed', 'timeout'))::bigint AS failed,
+               COUNT(t.mcp_execution_id) FILTER (WHERE t.artifact_kind IS NOT NULL)::bigint AS artifacts,
+               COUNT(t.mcp_execution_id) FILTER (WHERE t.artifact_kind = 'file')::bigint AS artifact_files,
+               COUNT(t.mcp_execution_id) FILTER (WHERE t.artifact_kind IN ('ui', 'card', 'body'))::bigint AS artifact_cards
         FROM agg a
-        LEFT JOIN mcp_tool_executions e ON e.context_id = a.context_id
-            OR (a.client_session_id IS NOT NULL AND e.trace_id = a.client_session_id)
-        LEFT JOIN mcp_artifacts m ON m.mcp_execution_id = e.mcp_execution_id
+        LEFT JOIN tool_activity t ON t.mcp_execution_id IS NOT NULL
+            AND (t.execution_context_id = a.context_id
+                 OR (a.client_session_id IS NOT NULL AND t.execution_trace_id = a.client_session_id))
         GROUP BY a.context_id
     ), governance AS (
         SELECT a.context_id,
@@ -203,6 +210,7 @@ BEGIN
             input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens, reasoning_tokens,
             cost_microdollars, p50_latency_ms, p95_latency_ms, max_latency_ms,
             tool_calls_intended, tool_calls_executed, tool_calls_failed, artifact_count,
+            artifact_files, artifact_cards,
             safety_findings, safety_blocked, gov_allow, gov_warn, gov_deny,
             prompt_count, hook_event_count, hook_status, skill_invocations, skills,
             first_at, last_at, duration_seconds, refreshed_at)
@@ -215,6 +223,7 @@ BEGIN
                a.input_tokens, a.output_tokens, a.cache_read_tokens, a.cache_creation_tokens, a.reasoning_tokens,
                a.cost_microdollars, a.p50::int, a.p95::int, a.max_latency_ms,
                COALESCE(i.tool_calls_intended, 0), COALESCE(x.executed, 0), COALESCE(x.failed, 0), COALESCE(x.artifacts, 0),
+               COALESCE(x.artifact_files, 0), COALESCE(x.artifact_cards, 0),
                COALESCE(s.findings, 0), COALESCE(s.blocked, 0),
                COALESCE(g.allow, 0), COALESCE(g.warn, 0), COALESCE(g.deny, 0),
                COALESCE(h.prompts, 0), COALESCE(h.hook_events, 0), ps.status,
@@ -254,6 +263,7 @@ BEGIN
             tool_calls_intended = EXCLUDED.tool_calls_intended,
             tool_calls_executed = EXCLUDED.tool_calls_executed,
             tool_calls_failed = EXCLUDED.tool_calls_failed, artifact_count = EXCLUDED.artifact_count,
+            artifact_files = EXCLUDED.artifact_files, artifact_cards = EXCLUDED.artifact_cards,
             safety_findings = EXCLUDED.safety_findings, safety_blocked = EXCLUDED.safety_blocked,
             gov_allow = EXCLUDED.gov_allow, gov_warn = EXCLUDED.gov_warn, gov_deny = EXCLUDED.gov_deny,
             prompt_count = EXCLUDED.prompt_count, hook_event_count = EXCLUDED.hook_event_count,

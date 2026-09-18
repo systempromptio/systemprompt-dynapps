@@ -1,9 +1,10 @@
 marketplace:
   id: astound-sales-uk
   name: Astound — Sales UK
-  description: Basic CRM for the UK group — client discovery, meeting prep, account reporting
-    and external research over Salesforce and the Jira/Confluence delivery record.
-  version: 2.0.0
+  description: Key-account intelligence for the UK group — Client 360, account status, suggestions
+    and the pipeline and renewals review over Salesforce, Google Workspace and the Jira/Confluence
+    delivery record, with the UK Client Report dashboard.
+  version: 3.0.0
   visibility: private
   author:
     name: Astound Digital
@@ -25,6 +26,7 @@ marketplace:
     - atlassian
     - salesforce-uk
     - salesforce-us
+    - salesforce-dev
     - google_drive
   agents:
     source: explicit

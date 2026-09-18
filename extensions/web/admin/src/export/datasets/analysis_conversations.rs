@@ -15,60 +15,109 @@ pub(crate) struct ClassifiedConversations;
 pub(crate) struct Breakdown;
 
 const COLUMNS: &[Column] = &[
-    Column::new("first_at", "Started", CellKind::Timestamp),
-    Column::new("last_at", "Last activity", CellKind::Timestamp),
-    Column::new("context_id", "Context", CellKind::Text),
-    Column::new("session_id", "Session", CellKind::Text).optional(),
-    Column::new("client_session_id", "Harness session", CellKind::Text).optional(),
-    Column::new("title", "Title", CellKind::Text),
-    Column::new("user_id", "User", CellKind::Text),
-    Column::new("display_name", "Name", CellKind::Text),
-    Column::new("group_name", "Group", CellKind::Text),
-    Column::new("project_name", "Project", CellKind::Text),
-    Column::new("client", "Client", CellKind::Text),
-    Column::new("attestation", "Attestation", CellKind::Text).optional(),
-    Column::new("wire_protocol", "Wire", CellKind::Text).optional(),
-    Column::new("model", "Model", CellKind::Text),
-    Column::new("models", "Models", CellKind::Text).optional(),
-    Column::new("provider", "Provider", CellKind::Text).optional(),
-    Column::new("requests", "Requests", CellKind::Integer),
-    Column::new("turns", "Turns", CellKind::Integer),
-    Column::new("side_calls", "Side calls", CellKind::Integer).optional(),
-    Column::new("errors", "Failed requests", CellKind::Integer),
-    Column::new("rejected", "Rejected", CellKind::Integer).optional(),
-    Column::new("input_tokens", "Input tokens", CellKind::Integer),
-    Column::new("output_tokens", "Output tokens", CellKind::Integer),
-    Column::new("cache_read_tokens", "Cache read tokens", CellKind::Integer).optional(),
+    Column::new("first_at", "Started", CellKind::Timestamp).group("Identity"),
+    Column::new("last_at", "Last activity", CellKind::Timestamp).group("Identity"),
+    Column::new("context_id", "Context", CellKind::Text).group("Identity"),
+    Column::new("session_id", "Session", CellKind::Text)
+        .optional()
+        .group("Identity"),
+    Column::new("client_session_id", "Harness session", CellKind::Text)
+        .optional()
+        .group("Identity"),
+    Column::new("title", "Title", CellKind::Text).group("Identity"),
+    Column::new("user_id", "User", CellKind::Text).group("Identity"),
+    Column::new("display_name", "Name", CellKind::Text).group("Identity"),
+    Column::new("group_name", "Group", CellKind::Text).group("Identity"),
+    Column::new("project_name", "Project", CellKind::Text).group("Identity"),
+    Column::new("client", "Client", CellKind::Text).group("Identity"),
+    Column::new("attestation", "Attestation", CellKind::Text)
+        .optional()
+        .group("Identity"),
+    Column::new("wire_protocol", "Wire", CellKind::Text)
+        .optional()
+        .group("Identity"),
+    Column::new("model", "Model", CellKind::Text).group("Identity"),
+    Column::new("models", "Models", CellKind::Text)
+        .optional()
+        .group("Identity"),
+    Column::new("provider", "Provider", CellKind::Text)
+        .optional()
+        .group("Identity"),
+    Column::new("requests", "Requests", CellKind::Integer).group("Volume"),
+    Column::new("turns", "Turns", CellKind::Integer).group("Volume"),
+    Column::new("side_calls", "Side calls", CellKind::Integer)
+        .optional()
+        .group("Volume"),
+    Column::new("errors", "Failed requests", CellKind::Integer).group("Volume"),
+    Column::new("rejected", "Rejected", CellKind::Integer)
+        .optional()
+        .group("Volume"),
+    Column::new("input_tokens", "Input tokens", CellKind::Integer).group("Tokens"),
+    Column::new("output_tokens", "Output tokens", CellKind::Integer).group("Tokens"),
+    Column::new("cache_read_tokens", "Cache read tokens", CellKind::Integer)
+        .optional()
+        .group("Tokens"),
     Column::new(
         "cache_creation_tokens",
         "Cache write tokens",
         CellKind::Integer,
     )
-    .optional(),
-    Column::new("reasoning_tokens", "Reasoning tokens", CellKind::Integer).optional(),
-    Column::new("cost_usd", "Cost (USD)", CellKind::Money),
-    Column::new("p50_latency_ms", "p50 latency (ms)", CellKind::Integer).optional(),
-    Column::new("p95_latency_ms", "p95 latency (ms)", CellKind::Integer).optional(),
-    Column::new("tool_calls", "Tool calls", CellKind::Integer),
-    Column::new("tool_calls_executed", "Tools executed", CellKind::Integer).optional(),
-    Column::new("tool_calls_failed", "Tools failed", CellKind::Integer).optional(),
-    Column::new("artifacts", "Artifacts", CellKind::Integer).optional(),
-    Column::new("gov_allow", "Allowed", CellKind::Integer).optional(),
-    Column::new("gov_warn", "Warned", CellKind::Integer).optional(),
-    Column::new("gov_deny", "Denied", CellKind::Integer),
-    Column::new("safety_findings", "Safety findings", CellKind::Integer).optional(),
-    Column::new("safety_blocked", "Safety blocked", CellKind::Integer).optional(),
-    Column::new("prompts", "Hook prompts", CellKind::Integer).optional(),
-    Column::new("skill_invocations", "Skill invocations", CellKind::Integer).optional(),
-    Column::new("skills", "Skills", CellKind::Text),
-    Column::new("duration_seconds", "Duration (s)", CellKind::Integer),
-    Column::new("category", "Intent", CellKind::Text),
-    Column::new("outcome", "Outcome", CellKind::Text),
-    Column::new("completion", "Completion", CellKind::Integer),
-    Column::new("summary", "Summary", CellKind::Text),
-    Column::new("tags", "Tags", CellKind::Text).optional(),
-    Column::new("classified_at", "Judged", CellKind::Timestamp).optional(),
-    Column::new("judge_model", "Judge model", CellKind::Text).optional(),
+    .optional()
+    .group("Tokens"),
+    Column::new("reasoning_tokens", "Reasoning tokens", CellKind::Integer)
+        .optional()
+        .group("Tokens"),
+    Column::new("cost_usd", "Cost (USD)", CellKind::Money).group("Cost"),
+    Column::new("p50_latency_ms", "p50 latency (ms)", CellKind::Integer)
+        .optional()
+        .group("Volume"),
+    Column::new("p95_latency_ms", "p95 latency (ms)", CellKind::Integer)
+        .optional()
+        .group("Volume"),
+    Column::new("tool_calls", "Tool calls", CellKind::Integer).group("Tools & artifacts"),
+    Column::new("tool_calls_executed", "Tools executed", CellKind::Integer)
+        .optional()
+        .group("Tools & artifacts"),
+    Column::new("tool_calls_failed", "Tools failed", CellKind::Integer)
+        .optional()
+        .group("Tools & artifacts"),
+    Column::new("artifacts", "Artifacts", CellKind::Integer)
+        .optional()
+        .group("Tools & artifacts"),
+    Column::new("gov_allow", "Allowed", CellKind::Integer)
+        .optional()
+        .group("Governance"),
+    Column::new("gov_warn", "Warned", CellKind::Integer)
+        .optional()
+        .group("Governance"),
+    Column::new("gov_deny", "Denied", CellKind::Integer).group("Governance"),
+    Column::new("safety_findings", "Safety findings", CellKind::Integer)
+        .optional()
+        .group("Governance"),
+    Column::new("safety_blocked", "Safety blocked", CellKind::Integer)
+        .optional()
+        .group("Governance"),
+    Column::new("prompts", "Hook prompts", CellKind::Integer)
+        .optional()
+        .group("Tools & artifacts"),
+    Column::new("skill_invocations", "Skill invocations", CellKind::Integer)
+        .optional()
+        .group("Tools & artifacts"),
+    Column::new("skills", "Skills", CellKind::Text).group("Tools & artifacts"),
+    Column::new("duration_seconds", "Duration (s)", CellKind::Integer).group("Volume"),
+    Column::new("category", "Intent", CellKind::Text).group("Judge"),
+    Column::new("outcome", "Outcome", CellKind::Text).group("Judge"),
+    Column::new("completion", "Completion", CellKind::Integer).group("Judge"),
+    Column::new("summary", "Summary", CellKind::Text).group("Judge"),
+    Column::new("tags", "Tags", CellKind::Text)
+        .optional()
+        .group("Judge"),
+    Column::new("classified_at", "Judged", CellKind::Timestamp)
+        .optional()
+        .group("Judge"),
+    Column::new("judge_model", "Judge model", CellKind::Text)
+        .optional()
+        .group("Judge"),
 ];
 
 fn row(r: &ConversationFactRow) -> Vec<Cell> {
@@ -126,20 +175,24 @@ fn row(r: &ConversationFactRow) -> Vec<Cell> {
 }
 
 const BUCKET_COLUMNS: &[Column] = &[
-    Column::new("bucket", "Bucket", CellKind::Text),
-    Column::new("user_id", "User", CellKind::Text).optional(),
-    Column::new("conversations", "Conversations", CellKind::Integer),
-    Column::new("users", "Users", CellKind::Integer),
-    Column::new("turns", "Turns", CellKind::Integer),
-    Column::new("tool_calls", "Tool calls", CellKind::Integer),
-    Column::new("tokens", "Tokens", CellKind::Integer),
-    Column::new("cost_usd", "Cost (USD)", CellKind::Money),
-    Column::new("errors", "Failed requests", CellKind::Integer),
-    Column::new("denied", "Denied", CellKind::Integer),
-    Column::new("achieved", "Achieved", CellKind::Integer),
-    Column::new("judged", "Judged", CellKind::Integer),
-    Column::new("completion_avg", "Mean completion", CellKind::Decimal).optional(),
-    Column::new("top_category", "Top intent", CellKind::Text),
+    Column::new("bucket", "Bucket", CellKind::Text).group("Identity"),
+    Column::new("user_id", "User", CellKind::Text)
+        .optional()
+        .group("Identity"),
+    Column::new("conversations", "Conversations", CellKind::Integer).group("Volume"),
+    Column::new("users", "Users", CellKind::Integer).group("Volume"),
+    Column::new("turns", "Turns", CellKind::Integer).group("Volume"),
+    Column::new("tool_calls", "Tool calls", CellKind::Integer).group("Tools & artifacts"),
+    Column::new("tokens", "Tokens", CellKind::Integer).group("Tokens"),
+    Column::new("cost_usd", "Cost (USD)", CellKind::Money).group("Cost"),
+    Column::new("errors", "Failed requests", CellKind::Integer).group("Volume"),
+    Column::new("denied", "Denied", CellKind::Integer).group("Governance"),
+    Column::new("achieved", "Achieved", CellKind::Integer).group("Judge"),
+    Column::new("judged", "Judged", CellKind::Integer).group("Judge"),
+    Column::new("completion_avg", "Mean completion", CellKind::Decimal)
+        .optional()
+        .group("Judge"),
+    Column::new("top_category", "Top intent", CellKind::Text).group("Judge"),
 ];
 
 fn bucket_row(r: &ConversationBucketRow) -> Vec<Cell> {
@@ -168,6 +221,9 @@ impl DataSet for ClassifiedConversations {
     }
     fn title(&self) -> &'static str {
         "Conversations"
+    }
+    fn description(&self) -> &'static str {
+        "One row per gateway conversation: its record and the judge's label."
     }
     fn columns(&self) -> &'static [Column] {
         COLUMNS
@@ -203,6 +259,9 @@ impl DataSet for Breakdown {
     }
     fn title(&self) -> &'static str {
         "Conversation breakdown"
+    }
+    fn description(&self) -> &'static str {
+        "One row per bucket of the breakdown the page is showing."
     }
     fn columns(&self) -> &'static [Column] {
         BUCKET_COLUMNS

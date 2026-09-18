@@ -133,4 +133,5 @@ pub(crate) struct GroupsPageData {
     // nowhere to file their spend, so the page says how many there are and
     // offers the recompute rather than quietly reporting a smaller instance.
     pub unkeyed_people: i64,
+    pub export: crate::export::ExportView,
 }

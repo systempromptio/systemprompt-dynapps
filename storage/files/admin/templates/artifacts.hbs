@@ -1,105 +1,49 @@
 {{#> layout title=title page=page}}
-    {{#*inline "content"}}
-    {{> components/breadcrumbs crumbs=breadcrumbs}}
-
-    {{#> components/page-header
-        title="Artifacts"
-        subtitle="Every tool result the platform ingested, from any client, as one entity: the typed body, where it was seen, how it was joined to the call that produced it, and what the scanners found. Structured results — the ones an MCP server declared as data — are shown by default."}}
-      {{#*inline "header_actions"}}
-        <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/traces">Traces</a>
-        <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/requests">Requests</a>
-        <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/sessions">Sessions</a>
-        <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/analysis/skills">Skill analysis</a>
-        {{> components/export-button export}}
-      {{/inline}}
-    {{/components/page-header}}
-
-    <section class="sp-kpi-grid" aria-label="Artifact summary">
-      {{> components/kpi label="Artifacts" value=(formatNumber stats.artifacts) note="in window"}}
-      {{> components/kpi label="Structured" value=(formatNumber stats.structured)
-          note="declared as data by a server" hint="Results with structuredContent, an artifact type, or a systemprompt execution key"}}
-      {{> components/kpi label="Failed" value=(formatNumber stats.errors) tone="err"
-          href=errors_toggle_url active=errors_only note="isError results"}}
-      {{> components/kpi label="With findings" value=(formatNumber stats.with_findings) tone="warn"
-          note="scanner hits" hint="Secret redactions or safety findings recorded at ingestion"}}
-      {{> components/kpi label="Inferred joins" value=(formatNumber stats.inferred) tone="warn"
-          note="no exact key" hint="Joined to their execution by session, tool, digest and time rather than by a key"}}
-      {{> components/kpi label="Stored" value=stats.bytes_display note="content-addressed bytes"}}
-    </section>
-
-    {{#> components/toolbar toolbar_count=count_label}}
-      {{#*inline "toolbar_filters"}}
-        <form method="get" action="{{filter_ribbon.base_url}}" class="sp-toolbar__filter">
-          {{#each filter_ribbon.preserved}}<input type="hidden" name="{{this.name}}" value="{{this.value}}">{{/each}}
-          <label class="sp-u-sr-only" for="artifacts-user">User</label>
-          <select id="artifacts-user" name="user_id" class="sp-search-input">
-            <option value="">All users</option>
-            {{#each filter_ribbon.options.users}}
-              <option value="{{this.id}}"{{#if this.selected}} selected{{/if}}>{{this.label}}</option>
-            {{/each}}
-          </select>
-          <button type="submit" class="sp-btn sp-btn--sm sp-btn--primary">Apply</button>
-        </form>
-        {{#if filter_ribbon.chips}}
-          <div class="sp-chip-row">
-            {{#each filter_ribbon.chips}}
-              <span class="sp-chip">{{this.group_label}}: <code class="sp-code-inline">{{this.label}}</code> <a href="{{this.remove_url}}" aria-label="Remove {{this.group_label}} filter">&times;</a></span>
-            {{/each}}
-          </div>
-        {{/if}}
-      {{/inline}}
-      {{#*inline "toolbar_actions"}}
-        {{#if structured_only}}
-          <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{all_toggle_url}}" title="Include every result, builtin tool output included">Show all results</a>
-        {{else}}
-          <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{all_toggle_url}}">Structured only</a>
-        {{/if}}
-        {{#if errors_only}}
-          <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{errors_toggle_url}}">Clear failed filter</a>
-        {{else}}
-          <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{errors_toggle_url}}">Failed only</a>
-        {{/if}}
-      {{/inline}}
-    {{/components/toolbar}}
-
-    {{#if has_artifacts}}
-      {{#> components/table caption="Artifacts in the selected window" pagination=pagination modifier="sp-p-artifacts__table"}}
-        <thead><tr>
-          <th class="sp-col-date">When</th>
-          <th class="sp-col-conversation">Artifact</th>
-          <th>Type</th>
-          <th title="The skill most recently invoked in the same session before this result">Skill</th>
-          <th class="sp-col-owner">User</th>
-          <th title="Where the platform saw the result">Source</th>
-          <th title="Exact: joined by the client tool_use_id or the server execution id. Inferred: joined by session, tool, digest and time.">Join</th>
-          <th class="sp-table__cell--num" title="Scanner findings recorded at ingestion">Findings</th>
-          <th class="sp-table__cell--num">Size</th>
-          <th class="sp-col-status">State</th>
-        </tr></thead>
-        <tbody>
-        {{#each artifacts}}
-        <tr>
-          <td class="sp-col-date sp-table__cell--date" title="{{this.created_at}}">{{this.created_relative}}</td>
-          <td class="sp-col-conversation sp-table__cell--stacked" title="{{this.artifact_id}}">
-            <a href="{{this.detail_url}}" class="sp-u-link-strong">{{this.artifact_title}}</a>
-            <span class="sp-table__cell--muted"><code class="sp-code-inline">{{this.tool_name}}</code> · {{this.server_name}}{{#if this.session_url}} · <a href="{{this.session_url}}" title="{{this.session_id}}">session</a>{{/if}}{{#if this.request_url}} · <a href="{{this.request_url}}">request</a>{{/if}}</span>
-          </td>
-          <td><span class="sp-badge sp-badge--nodot {{#if this.is_structured}}sp-badge--info{{else}}sp-badge--muted{{/if}}">{{this.artifact_type}}</span>{{#if this.has_ui_resource}} <span class="sp-badge sp-badge--nodot sp-badge--ok" title="Carries an MCP Apps ui:// resource">ui</span>{{/if}}</td>
-          <td class="sp-table__cell--muted">{{#if this.skill}}<a href="{{this.skill_url}}"><code class="sp-code-inline">{{this.skill}}</code></a>{{else}}&mdash;{{/if}}</td>
-          <td class="sp-col-owner sp-table__cell--muted" title="{{this.user_id}}">{{this.user_label}}</td>
-          <td class="sp-table__cell--muted" title="{{this.source}}">{{this.source_label}}{{#if this.client_label}} <span class="sp-table__cell--muted">· {{this.client_label}}</span>{{/if}}</td>
-          <td><span class="sp-badge sp-badge--{{this.correlation_tone}}">{{this.correlation}}</span></td>
-          <td class="sp-table__cell--num">{{#if this.finding_count}}<span class="sp-u-text-warning">{{formatNumber this.finding_count}}</span>{{else}}&mdash;{{/if}}{{#if this.secret_redactions}} <span class="sp-badge sp-badge--err sp-badge--nodot" title="{{this.secret_redactions}} secret span(s) redacted before storage">redacted</span>{{/if}}</td>
-          <td class="sp-table__cell--num sp-u-mono">{{this.bytes_display}}</td>
-          <td class="sp-col-status"><span class="sp-badge sp-badge--{{this.state_tone}}">{{this.state_label}}</span></td>
-        </tr>
-        {{/each}}
-        </tbody>
-      {{/components/table}}
-    {{else}}
-      {{> components/empty-state
-          heading="No artifacts in this window"
-          message="No tool result was ingested under the selected scope and time range. Widen the range, clear the filters, or show all results to include builtin tool output."}}
-    {{/if}}
-    {{/inline}}
-{{/layout}}
+{{#*inline "content"}}
+{{> components/breadcrumbs crumbs=breadcrumbs}}
+{{#> components/page-header title=title help=help subtitle="Every tool result a person can view or retrieve afterwards — files edited, written or read, typed cards, UI resources, retained bodies — from any client, with the call that produced it."}}
+{{#*inline "header_actions"}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/tools">{{> components/icon name="wrench"}} Tools</a> <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/analysis/skills">{{> components/icon name="skill"}} Skills</a> {{> components/export-button export}}{{/inline}}
+{{/components/page-header}}
+{{#if range_rejected}}{{> components/notice tone="warn" message="That range could not be read, so this page is showing the default window."}}{{/if}}
+<div class="sp-aconv-range">{{> components/tabs tabs=range_links nav_label="Window"}}{{> components/scope-filter scope_filter}}</div>
+<div class="sp-kpi-grid sp-kpi-grid--compact sp-tools-kpis">
+{{#each kpis}}{{> components/kpi label=label icon=icon value=value note=note tone=tone hint=hint spark=spark}}{{/each}}
+</div>
+<section class="sp-aconv-charts" aria-label="Over time">
+{{#each charts}}<div class="sp-aconv-chart">{{> components/svg-line-chart this}}</div>{{/each}}
+</section>
+{{> components/filter-ribbon ribbon}}
+<section class="sp-section sp-aconv-block" aria-label="Breakdown">
+<header class="sp-tools-block__head">{{> components/icon name="layers"}}<h2 class="sp-tools-block__title">Breakdown</h2>{{> components/tabs tabs=breakdown_tabs nav_label="Breakdown"}}</header>
+{{#> components/table caption=(concat "Artifacts " breakdown_label) modifier="sp-tools-breakdown"}}
+<thead><tr><th scope="col">{{breakdown_label}}</th><th scope="col" class="sp-table__cell--num">Artifacts</th><th scope="col" class="sp-tools-col-share" title="Share of the filtered set">Share</th><th scope="col" class="sp-table__cell--num">Failed</th><th scope="col" class="sp-table__cell--num">People</th><th scope="col" class="sp-table__cell--num" title="Payload bytes stored">Stored</th><th scope="col" class="sp-table__cell--num" title="95th percentile execution time of the producing call">p95</th><th scope="col" class="sp-tools-col-export"><span class="sp-u-sr-only">Export</span></th></tr></thead>
+<tbody>
+{{#each breakdown}}<tr><td class="sp-table__cell--primary"><span class="sp-tools-tool">{{> components/icon name=icon}}{{#if href}}<a class="sp-table__link" href="{{href}}">{{label}}</a>{{else}}{{label}}{{/if}}</span></td><td class="sp-table__cell--num sp-u-num">{{formatNumber calls}}</td><td class="sp-tools-col-share"><span class="sp-aconv-bar" style="--sp-fill: {{share_pct}}%"><i></i></span><span class="sp-aconv-bar__label">{{share_pct}}%</span></td><td class="sp-table__cell--num sp-u-num"><span class="sp-aconv-num sp-aconv-num--{{failed_tone}}">{{failed}}</span></td><td class="sp-table__cell--num sp-u-num">{{users}}</td><td class="sp-table__cell--num sp-u-num">{{bytes_display}}</td><td class="sp-table__cell--num sp-u-num"><span class="sp-aconv-num sp-aconv-num--{{duration_tone}}">{{duration_display}}</span></td><td class="sp-tools-col-export">{{#if export_href}}<a class="sp-tools-export" href="{{export_href}}" title="Download the artifacts in this bucket as CSV" aria-label="Export {{label}}">{{> components/icon name="download"}}</a>{{/if}}</td></tr>
+{{else}}<tr class="sp-table__empty"><td colspan="8">{{> components/empty-state heading="Nothing in this window" message="No tool call produced a viewable result inside the window with these filters. Widen the window or clear a filter."}}</td></tr>{{/each}}
+</tbody>
+{{/components/table}}
+</section>
+<section class="sp-section sp-aconv-block" aria-label="Artifacts">
+<header class="sp-tools-block__head">{{> components/icon name="file"}}<h2 class="sp-tools-block__title">{{count_label}}</h2></header>
+{{#> components/table caption="Artifacts" pagination=pagination modifier="sp-tools-table sp-tools-table--artifacts"}}
+<thead><tr><th scope="col" class="sp-tools-col-select">{{> components/table-select header=true label="artifacts"}}</th>{{> components/sort-header sort_headers.time}}<th scope="col" class="sp-tools-col-kind">Kind</th><th scope="col" class="sp-tools-col-title">Title · path</th><th scope="col" class="sp-tools-col-open">Open</th>{{> components/sort-header sort_headers.tool}}<th scope="col" class="sp-tools-col-person">Person</th><th scope="col" class="sp-tools-col-links">Links</th><th scope="col">State</th>{{> components/sort-header sort_headers.size}}<th scope="col" class="sp-table__cell--num" title="Secret spans redacted before storage">Redacted</th></tr></thead>
+<tbody>
+{{#each rows}}<tr data-row-key="{{row_key}}">
+<td class="sp-tools-col-select">{{> components/table-select id=row_key label=artifact_title}}</td>
+<td class="sp-col-date"><time datetime="{{at_full}}" title="{{at_full}}">{{at}}</time></td>
+<td class="sp-tools-col-kind"><span class="sp-tools-kind sp-tools-kind--{{artifact_kind}}">{{> components/icon name=artifact_icon}}{{artifact_label}}</span></td>
+<td class="sp-table__cell--primary sp-tools-col-title"><span class="sp-tools-input{{#if is_path}} sp-u-mono{{/if}}" title="{{artifact_title}}">{{#if artifact_href}}<a class="sp-table__link" href="{{artifact_href}}">{{artifact_title}}</a>{{else}}{{artifact_title}}{{/if}}</span>{{#if error_message}}<div class="sp-aconv-meta sp-u-text-danger" title="{{error_message}}">{{truncate error_message 60}}</div>{{/if}}</td>
+<td class="sp-tools-col-open">{{#if preview_href}}<a class="sp-btn sp-btn--xs sp-btn--outline" href="{{preview_href}}" target="_blank" rel="noopener">{{> components/icon name="search"}} Preview</a>{{else}}{{#if is_path}}<span class="sp-tools-path" title="{{input_full}}">{{> components/icon name="file"}}{{input_summary}}</span>{{else}}{{#if artifact_href}}<a class="sp-btn sp-btn--xs sp-btn--ghost" href="{{artifact_href}}">Open</a>{{else}}<span class="sp-u-text-tertiary">—</span>{{/if}}{{/if}}{{/if}}</td>
+<td class="sp-tools-col-tool"><span class="sp-tools-tool" title="{{#if is_builtin}}builtin harness tool{{else}}MCP server tool{{/if}} · {{server_name}}">{{> components/icon name=tool_icon}}<code class="sp-u-mono">{{tool_name}}</code></span>{{#if skill}}<div class="sp-aconv-meta"><a class="sp-aconv-skill sp-aconv-skill--hooked" href="{{skill_href}}">{{skill}}</a></div>{{/if}}</td>
+<td class="sp-tools-col-person">{{#if user_href}}<a class="sp-table__link" href="{{user_href}}" title="{{user_key}}">{{user_label}}</a>{{else}}{{user_label}}{{/if}}{{#if client_kind}}<div class="sp-aconv-meta">{{client_kind}}</div>{{/if}}</td>
+<td class="sp-tools-col-links"><div class="sp-tools-links">{{#if conversation_href}}<a class="sp-tools-link" href="{{conversation_href}}" title="Conversation">{{> components/icon name="chat"}}</a>{{/if}}{{#if session_href}}<a class="sp-tools-link" href="{{session_href}}" title="Session">{{> components/icon name="clock"}}</a>{{/if}}{{#if request_href}}<a class="sp-tools-link" href="{{request_href}}" title="Request">{{> components/icon name="bolt"}}</a>{{/if}}</div></td>
+<td>{{> components/badge tone=state_tone text=state}}{{#if decision_href}}<div class="sp-aconv-meta"><a href="{{decision_href}}">{{decision}}</a></div>{{/if}}</td>
+<td class="sp-table__cell--num sp-u-num">{{bytes_display}}</td>
+<td class="sp-table__cell--num sp-u-num">{{#if redactions}}<span class="sp-aconv-num sp-aconv-num--warn">{{redactions}}</span>{{else}}<span class="sp-u-text-tertiary">—</span>{{/if}}</td>
+</tr>
+{{else}}<tr class="sp-table__empty"><td colspan="11">{{> components/empty-state heading="No artifacts match" message="Clear a filter or widen the window. A result becomes an artifact when a person could view or retrieve it — a file, a card, a UI resource or a retained body."}}</td></tr>{{/each}}
+</tbody>
+{{/components/table}}
+{{> components/bulk-bar noun="artifacts" export_dataset="artifacts"}}
+</section>
+{{/inline}}{{#*inline "scripts"}}<script type="module" src="/js/components/sp-chart.js?v={{css_version}}"></script>{{/inline}}{{/layout}}

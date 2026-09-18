@@ -13,11 +13,36 @@ pub(crate) struct ExportFormatView {
 }
 
 #[derive(Debug, Serialize)]
+pub(crate) struct ExportColumnGroupView {
+    name: &'static str,
+    columns: Vec<Column>,
+}
+
+#[derive(Debug, Serialize)]
 pub(crate) struct ExportDatasetView {
     id: &'static str,
     title: &'static str,
+    description: &'static str,
     window: Window,
     columns: &'static [Column],
+    groups: Vec<ExportColumnGroupView>,
+}
+
+// Why: groups keep the dataset's own column order inside each heading and
+// appear in the order their first column does, so the checklist reads like
+// the table it exports.
+fn group_columns(columns: &'static [Column]) -> Vec<ExportColumnGroupView> {
+    let mut groups: Vec<ExportColumnGroupView> = Vec::new();
+    for column in columns {
+        match groups.iter_mut().find(|g| g.name == column.group) {
+            Some(group) => group.columns.push(*column),
+            None => groups.push(ExportColumnGroupView {
+                name: column.group,
+                columns: vec![*column],
+            }),
+        }
+    }
+    groups
 }
 
 // Why: the button is a plain link that works without JavaScript — default
@@ -40,8 +65,10 @@ impl ExportView {
             .map(|d| ExportDatasetView {
                 id: d.id(),
                 title: d.title(),
+                description: d.description(),
                 window: d.window(),
                 columns: d.columns(),
+                groups: group_columns(d.columns()),
             })
             .collect();
         let first = datasets.first().map_or("", |d| d.id);

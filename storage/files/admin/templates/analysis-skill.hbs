@@ -1,13 +1,13 @@
 {{#> layout title=title page=page}}
 {{#*inline "content"}}
-{{#> components/page-header title=skill_name subtitle=(concat "Skill " skill_key " from plugin " plugin_name " in " marketplaces_display " — its record over the last " days " days.")}}
+{{#> components/page-header title=skill_name help=help subtitle=(concat "Skill " skill_key " from plugin " plugin_name " in " marketplaces_display " — its record over the last " days " days.")}}
 {{#*inline "header_actions"}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="{{catalog_href}}" title="Open this skill in the Platform catalog, where its contents and entitlement live">Catalog</a> <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/analysis/conversations?skill={{skill_key}}">Conversations</a> <a class="sp-btn sp-btn--sm sp-btn--primary" href="{{skills_href}}">All skills &rarr;</a> {{> components/export-button export}}{{/inline}}
 {{/components/page-header}}
 {{> analysis-subnav}}
 <div class="sp-aconv-range">{{> components/tabs tabs=range_links nav_label="Window"}}</div>
 {{#if used}}
 <div class="sp-kpi-grid sp-kpi-grid--compact">
-{{#each kpis}}{{> components/kpi label=label value=value note=note tone=tone hint=hint}}{{/each}}
+{{#each kpis}}{{> components/kpi label=label icon=icon value=value note=note tone=tone hint=hint}}{{/each}}
 </div>
 <section class="sp-aconv-charts sp-aconv-charts--four" aria-label="Over time">
 {{#each charts}}<div class="sp-aconv-chart">{{> components/svg-line-chart this}}</div>{{/each}}
@@ -27,24 +27,25 @@
 {{/if}}
 <section class="sp-section sp-aconv-block" aria-label="Conversations">
 {{#> components/table caption=(concat conversation_count " conversations invoked this skill") pagination=pagination modifier="sp-aconv-table"}}
-<thead><tr><th scope="col" class="sp-aconv-col-title">Conversation</th><th scope="col" class="sp-aconv-col-person">Person</th><th scope="col" class="sp-aconv-col-client">Client · model</th><th scope="col" class="sp-table__cell--num">Turns</th><th scope="col" class="sp-table__cell--num">Tools</th><th scope="col" class="sp-table__cell--num">Err</th><th scope="col" class="sp-table__cell--num">Tokens</th><th scope="col" class="sp-table__cell--num">Cost</th><th scope="col" class="sp-table__cell--num">p95</th><th scope="col" class="sp-table__cell--num">Length</th><th scope="col" class="sp-aconv-col-skills">Skills</th><th scope="col" class="sp-aconv-col-judge">Done</th><th scope="col" class="sp-col-date">Last</th></tr></thead>
+<thead><tr><th scope="col" class="sp-aconv-col-title">Conversation</th><th scope="col" class="sp-aconv-col-person">Person</th><th scope="col" class="sp-aconv-col-client">Client · model</th><th scope="col" class="sp-table__cell--num">Turns</th><th scope="col" class="sp-table__cell--num" title="Tool calls">{{> components/icon name="wrench"}}</th><th scope="col" class="sp-table__cell--num" title="Artifacts">{{> components/icon name="file"}}</th><th scope="col" class="sp-table__cell--num">Err</th><th scope="col" class="sp-table__cell--num">Tokens</th><th scope="col" class="sp-table__cell--num">Cost</th><th scope="col" class="sp-table__cell--num">p95</th><th scope="col" class="sp-table__cell--num">Length</th><th scope="col" class="sp-aconv-col-skills">Skills</th><th scope="col" class="sp-aconv-col-judge">Done</th><th scope="col" class="sp-col-date">Last</th></tr></thead>
 <tbody>
 {{#each conversations}}<tr data-context-id="{{context_key}}">
 <td class="sp-table__cell--primary sp-aconv-cell-title"><a class="sp-table__link" href="{{href}}" title="{{context_key}}">{{title}}</a>{{#if judge.judged}}<div class="sp-aconv-meta"><span class="sp-aconv-intent">{{judge.category_label}}</span> · <span class="sp-aconv-outcome sp-aconv-outcome--{{judge.outcome_tone}}">{{judge.outcome}}</span>{{#if judge.summary}} · <span class="sp-aconv-summary">{{judge.summary}}</span>{{/if}}</div>{{else}}<div class="sp-aconv-meta">not judged yet</div>{{/if}}</td>
 <td class="sp-aconv-cell-person"><a class="sp-table__link" href="{{user_href}}" title="{{user_key}}">{{display_name}}</a>{{#if group_name}}<div class="sp-aconv-meta">{{group_name}}{{#if project_name}} · {{project_name}}{{/if}}</div>{{/if}}</td>
 <td class="sp-aconv-cell-client"><span class="sp-badge sp-badge--{{client.tone}}">{{client.label}}</span><div class="sp-aconv-meta sp-aconv-model">{{model}}</div></td>
 <td class="sp-table__cell--num sp-u-num">{{turns}}</td>
-<td class="sp-table__cell--num sp-u-num"><span class="sp-aconv-num sp-aconv-num--{{tools_tone}}" title="{{tools_title}}">{{tools_display}}</span></td>
+<td class="sp-table__cell--num sp-u-num"><a class="sp-aconv-num sp-aconv-num--{{tools_tone}} sp-aconv-cell-link" href="{{tools_href}}" title="{{tools_title}}">{{tools_display}}</a></td>
+<td class="sp-table__cell--num sp-u-num">{{#if artifacts}}<a class="sp-aconv-num sp-aconv-num--accent sp-aconv-cell-link" href="{{artifacts_href}}">{{artifacts}}</a>{{else}}<span class="sp-aconv-num sp-aconv-num--muted">0</span>{{/if}}</td>
 <td class="sp-table__cell--num sp-u-num"><span class="sp-aconv-num sp-aconv-num--{{errors_tone}}">{{errors}}</span>{{#if denied}} <span class="sp-aconv-num sp-aconv-num--{{denied_tone}}" title="Denied tool calls">⛔{{denied}}</span>{{/if}}</td>
 <td class="sp-table__cell--num sp-u-num sp-aconv-cell-tokens" title="{{tokens_title}}">{{tokens_display}}<span class="sp-aconv-cache sp-aconv-cache--{{cache_tone}}" style="--sp-fill: {{cache_pct}}%"><i></i></span></td>
 <td class="sp-table__cell--num sp-u-num">{{cost_display}}</td>
 <td class="sp-table__cell--num sp-u-num"><span class="sp-aconv-num sp-aconv-num--{{latency_tone}}">{{latency_display}}</span></td>
 <td class="sp-table__cell--num sp-u-num">{{duration_display}}</td>
 <td class="sp-aconv-cell-skills"><div class="sp-aconv-skills">{{#each skills}}<a class="sp-aconv-skill sp-aconv-skill--hooked" href="{{href}}">{{name}}</a>{{/each}}</div></td>
-<td class="sp-aconv-col-judge"><a class="sp-aconv-score sp-aconv-score--{{judge.tone}}" href="{{href}}#judge">{{judge.completion_display}}</a></td>
+<td class="sp-aconv-col-judge">{{#if judge.judged}}<a class="sp-aconv-score sp-aconv-score--{{judge.tone}}" href="{{href}}#judge" title="{{judge.rationale}}">{{judge.completion_display}}</a>{{else}}{{#if judge.pending}}<span class="sp-aconv-score sp-aconv-score--muted sp-aconv-score--pending" title="Queued for the judge"><i></i></span>{{else}}{{#if judge.can_judge}}<form method="post" action="{{judge.judge_url}}" class="sp-inventory-inline"><input type="hidden" name="back" value="{{back_url}}"><button class="sp-judge-btn" type="submit" title="Judge this conversation now">{{> components/icon name="judge"}}<span class="sp-u-sr-only">Judge now</span></button></form>{{else}}<span class="sp-aconv-score sp-aconv-score--muted">—</span>{{/if}}{{/if}}{{/if}}</td>
 <td class="sp-col-date"><time datetime="{{last_full}}" title="{{last_full}}">{{last_display}}</time></td>
 </tr>
-{{else}}<tr class="sp-table__empty"><td colspan="13">{{> components/empty-state heading="No conversations" message="No gateway conversation's session invoked this skill in the window."}}</td></tr>{{/each}}
+{{else}}<tr class="sp-table__empty"><td colspan="14">{{> components/empty-state heading="No conversations" message="No gateway conversation's session invoked this skill in the window."}}</td></tr>{{/each}}
 </tbody>
 {{/components/table}}
 </section>

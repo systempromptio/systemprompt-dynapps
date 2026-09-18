@@ -60,6 +60,15 @@ pub(crate) struct MemberContext<'a> {
 }
 
 #[must_use]
+// Why: the listings have ten columns at 1440px and the model name is the
+// widest thing that is not a sentence. The vendor prefix is the same on every
+// row of an Anthropic estate, so it carries no information there; the cell
+// keeps the full id on its title.
+pub(crate) fn short_model(model: &str) -> String {
+    let tail = model.rsplit('/').next().unwrap_or(model);
+    tail.strip_prefix("claude-").unwrap_or(tail).to_owned()
+}
+
 pub(crate) fn format_usd(microdollars: i64) -> String {
     format!("${:.2}", microdollars as f64 / 1_000_000.0)
 }

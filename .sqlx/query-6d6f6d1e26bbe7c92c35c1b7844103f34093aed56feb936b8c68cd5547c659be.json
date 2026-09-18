@@ -1,0 +1,282 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH pending AS (\n               SELECT id FROM analysis_reports\n               WHERE status = 'pending' AND next_attempt <= clock_timestamp()\n                 AND (lease_until IS NULL OR lease_until <= clock_timestamp())\n               ORDER BY next_attempt, created_at LIMIT $1 FOR UPDATE SKIP LOCKED)\n           UPDATE analysis_reports r\n           SET lease_token = $2, lease_until = clock_timestamp() + $3::bigint * interval '1 second',\n               attempts = r.attempts + 1, updated_at = clock_timestamp()\n           FROM pending WHERE r.id = pending.id\n           RETURNING r.id, r.scope_kind, r.scope_id, r.scope_label, r.window_start, r.window_end,\n                     r.status, r.requested_by, r.provider, r.model, r.ai_request_id,\n                     r.input_tokens, r.output_tokens, r.cost_microdollars,\n                     r.inputs AS \"inputs: Json<ReportInputs>\",\n                     r.findings AS \"findings?: Json<ReportFindings>\", r.attempts, r.lease_token,\n                     r.last_error, r.generated_at, r.created_at, r.updated_at",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "analysis_reports",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "scope_kind",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "analysis_reports",
+            "name": "scope_kind"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "scope_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "analysis_reports",
+            "name": "scope_id"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "scope_label",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "analysis_reports",
+            "name": "scope_label"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "window_start",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "analysis_reports",
+            "name": "window_start"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "window_end",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "analysis_reports",
+            "name": "window_end"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "status",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "analysis_reports",
+            "name": "status"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "requested_by",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "analysis_reports",
+            "name": "requested_by"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "provider",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "analysis_reports",
+            "name": "provider"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "model",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "analysis_reports",
+            "name": "model"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "ai_request_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "analysis_reports",
+            "name": "ai_request_id"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "input_tokens",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "analysis_reports",
+            "name": "input_tokens"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "output_tokens",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "analysis_reports",
+            "name": "output_tokens"
+          }
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "cost_microdollars",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "analysis_reports",
+            "name": "cost_microdollars"
+          }
+        }
+      },
+      {
+        "ordinal": 14,
+        "name": "inputs: Json<ReportInputs>",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "analysis_reports",
+            "name": "inputs"
+          }
+        }
+      },
+      {
+        "ordinal": 15,
+        "name": "findings?: Json<ReportFindings>",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "analysis_reports",
+            "name": "findings"
+          }
+        }
+      },
+      {
+        "ordinal": 16,
+        "name": "attempts",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "analysis_reports",
+            "name": "attempts"
+          }
+        }
+      },
+      {
+        "ordinal": 17,
+        "name": "lease_token",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "analysis_reports",
+            "name": "lease_token"
+          }
+        }
+      },
+      {
+        "ordinal": 18,
+        "name": "last_error",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "analysis_reports",
+            "name": "last_error"
+          }
+        }
+      },
+      {
+        "ordinal": 19,
+        "name": "generated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "analysis_reports",
+            "name": "generated_at"
+          }
+        }
+      },
+      {
+        "ordinal": 20,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "analysis_reports",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 21,
+        "name": "updated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "analysis_reports",
+            "name": "updated_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      true,
+      false,
+      true,
+      true,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "6d6f6d1e26bbe7c92c35c1b7844103f34093aed56feb936b8c68cd5547c659be"
+}

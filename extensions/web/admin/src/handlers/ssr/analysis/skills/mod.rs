@@ -36,7 +36,7 @@ use crate::repositories::analysis::skills::{
 use crate::repositories::scope::ScopeRequest;
 use crate::types::Role;
 
-use context::{SkillsRead, build_context};
+use context::{PageInputs, SkillsRead, build_context};
 pub(crate) use rows::skill_row_view;
 pub(crate) use views::SkillFactView;
 
@@ -74,6 +74,29 @@ impl SkillsQuery {
 
     pub(super) fn sort(&self) -> SkillSort {
         SkillSort::parse_skill_sort(self.sort.as_deref())
+    }
+
+    // Why: the page minus the named filters — a chip's remove link and the
+    // ribbon's Clear.
+    pub(super) fn link_without(&self, drop: &[&str]) -> String {
+        let cleared = Self {
+            days: self.days,
+            marketplace: (!drop.contains(&"marketplace"))
+                .then(|| self.marketplace.clone())
+                .flatten(),
+            client: (!drop.contains(&"client"))
+                .then(|| self.client.clone())
+                .flatten(),
+            search: (!drop.contains(&"search"))
+                .then(|| self.search.clone())
+                .flatten(),
+            sort: (!drop.contains(&"sort"))
+                .then(|| self.sort.clone())
+                .flatten(),
+            group: self.group.clone(),
+            project: self.project.clone(),
+        };
+        cleared.link(None, None)
     }
 
     pub(super) fn link(&self, days: Option<i64>, sort: Option<SkillSort>) -> String {
@@ -137,6 +160,7 @@ pub(crate) async fn page(
         sort: query.sort(),
         limit: ROW_LIMIT,
         offset: 0,
+        skills: None,
     };
     let index = InventoryIndex::build(&crate::handlers::shared::get_services_path()?);
     let roles: Vec<String> = Role::ALL.iter().map(|r| r.as_str().to_owned()).collect();
@@ -146,6 +170,17 @@ pub(crate) async fn page(
         get_marketplace_audience(&pool, &index.marketplaces, &roles),
     );
     let (rows, adoption, audience) = (rows?, adoption?, audience?);
+    let report_banner = crate::handlers::ssr::analysis::reports::banner::report_banner(
+        &pool,
+        "global",
+        None,
+        query
+            .link(None, None)
+            .split_once('?')
+            .map_or("", |(_, q)| q),
+        "Skills in view",
+    )
+    .await;
     let context = build_context(
         &query,
         &SkillsRead {
@@ -154,7 +189,10 @@ pub(crate) async fn page(
             audience: &audience,
             index: &index,
         },
-        shell.user.is_admin,
+        PageInputs {
+            is_admin: shell.user.is_admin,
+            report_banner,
+        },
     );
     Ok(crate::handlers::ssr::render_typed_page(
         &shell.engine,

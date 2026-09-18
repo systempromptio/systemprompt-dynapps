@@ -9,8 +9,9 @@ use crate::handlers::ssr::types::{Plot, SvgLineChartView, SvgSeriesInput, chart_
 use crate::repositories::analysis::skills::{SkillDayRow, SkillFactRow};
 
 fn usage_kpis(f: &SkillFactRow, entitled: usize) -> Vec<SkillKpiView> {
-    let kpi = |label, value, note, tone, hint| SkillKpiView {
+    let kpi = |label, icon, value, note, tone, hint| SkillKpiView {
         label,
+        icon,
         value,
         note,
         tone,
@@ -20,6 +21,7 @@ fn usage_kpis(f: &SkillFactRow, entitled: usize) -> Vec<SkillKpiView> {
     vec![
         kpi(
             "Invocations",
+            "bolt",
             f.invocations.to_string(),
             format!(
                 "{} slash · {} tool · {} attributed",
@@ -32,6 +34,7 @@ fn usage_kpis(f: &SkillFactRow, entitled: usize) -> Vec<SkillKpiView> {
         ),
         kpi(
             "People",
+            "people",
             f.users.to_string(),
             format!("of {entitled} entitled · {} installed", f.installs),
             "accent",
@@ -39,6 +42,7 @@ fn usage_kpis(f: &SkillFactRow, entitled: usize) -> Vec<SkillKpiView> {
         ),
         kpi(
             "Conversations",
+            "chat",
             f.conversations.to_string(),
             format!("{} turns · {} sessions", f.turns, f.sessions),
             "accent",
@@ -46,6 +50,7 @@ fn usage_kpis(f: &SkillFactRow, entitled: usize) -> Vec<SkillKpiView> {
         ),
         kpi(
             "Tokens",
+            "token",
             format_token_total(tokens),
             format!(
                 "{} in · {} out · {} cached",
@@ -58,6 +63,7 @@ fn usage_kpis(f: &SkillFactRow, entitled: usize) -> Vec<SkillKpiView> {
         ),
         kpi(
             "Cost",
+            "coins",
             format_cost(f.cost_microdollars),
             format!(
                 "{} per invocation · {} per conversation",
@@ -71,8 +77,9 @@ fn usage_kpis(f: &SkillFactRow, entitled: usize) -> Vec<SkillKpiView> {
 }
 
 fn health_kpis(f: &SkillFactRow) -> Vec<SkillKpiView> {
-    let kpi = |label, value, note, tone, hint| SkillKpiView {
+    let kpi = |label, icon, value, note, tone, hint| SkillKpiView {
         label,
+        icon,
         value,
         note,
         tone,
@@ -81,6 +88,7 @@ fn health_kpis(f: &SkillFactRow) -> Vec<SkillKpiView> {
     vec![
         kpi(
             "Tools",
+            "wrench",
             f.tool_calls.to_string(),
             format!("{} failed · {} artifacts", f.tool_calls_failed, f.artifacts),
             if f.tool_calls_failed > 0 {
@@ -92,6 +100,7 @@ fn health_kpis(f: &SkillFactRow) -> Vec<SkillKpiView> {
         ),
         kpi(
             "Errors",
+            "alert",
             f.errors.to_string(),
             format!("failed requests · {} denied", f.denied),
             if f.denied > 0 {
@@ -103,6 +112,7 @@ fn health_kpis(f: &SkillFactRow) -> Vec<SkillKpiView> {
         ),
         kpi(
             "p95 latency",
+            "gauge",
             f.p95_latency_ms.map_or_else(
                 || "—".to_owned(),
                 |ms| format_duration_ms(ms.round() as i64),
@@ -113,6 +123,7 @@ fn health_kpis(f: &SkillFactRow) -> Vec<SkillKpiView> {
         ),
         kpi(
             "Completed",
+            "judge",
             score_display(f.completion_avg),
             format!(
                 "{} judged · {} achieved",

@@ -6,12 +6,8 @@
 
 use serde::Serialize;
 
-use super::kpis::KpisView;
 use super::row_facts::RowFacts;
-use super::summary::{
-    ConversationAnalysisFilterView, ConversationBucketView, category_label, outcome_label,
-    outcome_tone,
-};
+use super::summary::{category_label, outcome_label, outcome_tone};
 use crate::handlers::ssr::analysis::tone::{
     cache_tone, deny_tone, error_rate_tone, latency_tone, safety_tone, score_tone,
 };
@@ -19,10 +15,7 @@ use crate::handlers::ssr::analysis_urls::{analysis_conversation_url, analysis_sk
 use crate::handlers::ssr::format::{
     ClientChipView, client_chip, format_cost, format_duration_ms, format_token_total,
 };
-use crate::handlers::ssr::list_view::{Pagination, ScopeFilterView, SelectOptionView};
-use crate::handlers::ssr::types::{
-    SortHeaderView, SparklineView, SvgLineChartView, TabLinkView, sparkline_toned,
-};
+use crate::handlers::ssr::types::{SparklineView, sparkline_toned};
 
 #[derive(Debug, Serialize)]
 pub(crate) struct SkillChipView {
@@ -48,6 +41,12 @@ pub(crate) struct JudgeCellView {
     pub summary: String,
     pub rationale: String,
     pub title: String,
+    // Why: the POST that queues this one conversation for the judge; the
+    // row's button posts it with `back=` the page it was pressed on.
+    pub judge_url: String,
+    // Why: whether the reader may press it; set by the page once it knows
+    // the viewer, since the row itself is built from facts alone.
+    pub can_judge: bool,
 }
 
 #[derive(Debug, Serialize)]
@@ -64,10 +63,14 @@ pub(crate) struct ConversationRowView {
     pub client: ClientChipView,
     pub model: String,
     pub extra_models: Vec<String>,
+    pub extra_models_count: usize,
     pub turns: i64,
     pub tools_display: String,
     pub tools_tone: &'static str,
     pub tools_title: String,
+    pub tools_href: String,
+    pub artifacts: i64,
+    pub artifacts_href: String,
     pub errors: i64,
     pub errors_tone: &'static str,
     pub denied: i64,
@@ -88,6 +91,9 @@ pub(crate) struct ConversationRowView {
     pub first_display: String,
     pub last_display: String,
     pub last_full: String,
+    // Why: where a row's Judge POST returns to — the page as the reader
+    // has it, filled in by the page.
+    pub back_url: String,
 }
 
 fn skill_chips(hooked: &[String], inferred: &[String]) -> Vec<SkillChipView> {
@@ -167,13 +173,39 @@ pub(crate) fn judge_cell(f: &RowFacts<'_>) -> JudgeCellView {
         summary: f.summary.unwrap_or_default().to_owned(),
         rationale: f.rationale.unwrap_or_default().to_owned(),
         title: f.judge_title.unwrap_or_default().to_owned(),
+        judge_url: format!("{}/judge", analysis_conversation_url(f.context_id)),
+        can_judge: false,
     }
 }
 
+// Why: a one-turn conversation still deserves a flat line rather than an
+// empty cell — the reader's eye expects the slot to be filled.
+fn turn_spark(turn_tokens: &[i64]) -> SparklineView {
+    let title = format!("Tokens per turn, last {} turns", turn_tokens.len());
+    if turn_tokens.len() == 1 {
+        return sparkline_toned(&[turn_tokens[0], turn_tokens[0]], "accent", title);
+    }
+    sparkline_toned(turn_tokens, "accent", title)
+}
+
 impl ConversationRowView {
+    // Why: the viewer-dependent parts of a row, set once the page knows who
+    // is reading and where they are.
+    pub(crate) fn with_viewer(mut self, can_judge: bool, back_url: &str) -> Self {
+        self.judge.can_judge = can_judge;
+        self.back_url = back_url.to_owned();
+        self
+    }
+
     pub(crate) fn new(f: &RowFacts<'_>) -> Self {
         let tools = tools_cell(f);
         let tokens = tokens_cell(f);
+        let extra_models: Vec<String> = f
+            .models
+            .iter()
+            .filter(|m| Some(m.as_str()) != f.model)
+            .cloned()
+            .collect();
         Self {
             context_key: f.context_id.as_str().to_owned(),
             href: analysis_conversation_url(f.context_id),
@@ -196,16 +228,21 @@ impl ConversationRowView {
             project_name: f.project_name.map(str::to_owned),
             client: client_chip(f.client_kind, f.client_attestation),
             model: f.model.unwrap_or("—").to_owned(),
-            extra_models: f
-                .models
-                .iter()
-                .filter(|m| Some(m.as_str()) != f.model)
-                .cloned()
-                .collect(),
+            extra_models_count: extra_models.len(),
+            extra_models,
             turns: f.turn_count,
             tools_display: tools.0,
             tools_tone: tools.1,
             tools_title: tools.2,
+            tools_href: format!(
+                "/admin/tools?context={}",
+                urlencoding::encode(f.context_id.as_str())
+            ),
+            artifacts: f.artifacts,
+            artifacts_href: format!(
+                "/admin/artifacts?context={}",
+                urlencoding::encode(f.context_id.as_str())
+            ),
             errors: f.error_count,
             errors_tone: error_rate_tone(f.error_count, f.request_count),
             denied: f.gov_deny,
@@ -223,66 +260,12 @@ impl ConversationRowView {
             latency_tone: latency_tone(f.p95_latency_ms.map(f64::from)),
             duration_display: format_duration_ms(f.duration_seconds * 1000),
             skills: skill_chips(f.skills, f.skills_used),
-            spark: sparkline_toned(
-                f.turn_tokens,
-                "accent",
-                format!("Tokens per turn, last {} turns", f.turn_tokens.len()),
-            ),
+            spark: turn_spark(f.turn_tokens),
             judge: judge_cell(f),
             first_display: f.first_at.format("%b %-d, %H:%M").to_string(),
             last_display: f.last_at.format("%b %-d, %H:%M").to_string(),
             last_full: f.last_at.to_rfc3339(),
+            back_url: String::new(),
         }
     }
-}
-
-#[derive(Debug, Serialize)]
-pub(crate) struct SortHeaders {
-    pub activity: SortHeaderView,
-    pub turns: SortHeaderView,
-    pub tools: SortHeaderView,
-    pub errors: SortHeaderView,
-    pub tokens: SortHeaderView,
-    pub cost: SortHeaderView,
-    pub latency: SortHeaderView,
-    pub duration: SortHeaderView,
-    pub completion: SortHeaderView,
-}
-
-#[derive(Debug, Serialize)]
-pub(crate) struct FacetLinkView {
-    pub label: String,
-    pub href: String,
-    pub count: i64,
-    pub is_active: bool,
-}
-
-#[derive(Debug, Serialize)]
-pub(crate) struct ConversationsPageContext {
-    pub page: &'static str,
-    pub title: &'static str,
-    pub kpis: KpisView,
-    pub charts: Vec<SvgLineChartView>,
-    pub range_links: Vec<TabLinkView>,
-    pub filter: ConversationAnalysisFilterView,
-    pub categories: Vec<SelectOptionView>,
-    pub outcomes: Vec<SelectOptionView>,
-    pub judged_options: Vec<SelectOptionView>,
-    pub flag_options: Vec<SelectOptionView>,
-    pub skills: Vec<SelectOptionView>,
-    pub users: Vec<SelectOptionView>,
-    pub models: Vec<SelectOptionView>,
-    pub clients: Vec<SelectOptionView>,
-    pub model_facets: Vec<FacetLinkView>,
-    pub client_facets: Vec<FacetLinkView>,
-    pub scope_filter: ScopeFilterView,
-    pub breakdown_tabs: Vec<TabLinkView>,
-    pub breakdown_label: &'static str,
-    pub breakdown: Vec<ConversationBucketView>,
-    pub rows: Vec<ConversationRowView>,
-    pub has_rows: bool,
-    pub count_label: String,
-    pub pagination: Pagination,
-    pub sort_headers: SortHeaders,
-    pub export: crate::export::ExportView,
 }

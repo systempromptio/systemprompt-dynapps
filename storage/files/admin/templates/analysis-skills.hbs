@@ -1,12 +1,13 @@
 {{#> layout title=title page=page}}
 {{#*inline "content"}}
-{{#> components/page-header title=title subtitle="Every skill as the record shows it: who invoked it and how often, the conversations behind that, their tokens, cost, tools, errors and denials, installs against entitlement — and the judge's one completion score."}}
-{{#*inline "header_actions"}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/analysis/conversations?flag=skills">Conversations with skills</a> <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/analysis/versions">Versions</a> <a class="sp-btn sp-btn--sm sp-btn--primary" href="/admin/skills">Catalog &rarr;</a> {{> components/export-button export}}{{/inline}}
+{{#> components/page-header title=title help=help subtitle="Every skill as the record shows it: who invoked it and how often, the conversations behind that, their tokens, cost, tools and artifacts, errors and denials, installs against entitlement — and the judge's one completion score."}}
+{{#*inline "header_actions"}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/analysis/conversations?flag=skills">{{> components/icon name="chat"}} Conversations with skills</a> <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/analysis/versions">{{> components/icon name="calendar"}} Versions</a> <a class="sp-btn sp-btn--sm sp-btn--primary" href="/admin/skills">Catalog &rarr;</a> {{> components/export-button export}}{{/inline}}
 {{/components/page-header}}
 {{> analysis-subnav}}
+{{> analysis/report-banner report_banner}}
 <div class="sp-aconv-range">{{> components/tabs tabs=range_links nav_label="Window"}}</div>
 <div class="sp-kpi-grid sp-kpi-grid--compact sp-aconv-kpis">
-{{#each kpis}}<div class="sp-kpi sp-kpi--{{tone}} sp-kpi--spark" title="{{hint}}"><span class="sp-kpi__label">{{label}}</span><span class="sp-kpi__value">{{value}}</span><span class="sp-kpi__sub">{{note}}</span>{{> components/sparkline spark}}</div>{{/each}}
+{{#each kpis}}{{> components/kpi label=label icon=icon value=value note=note tone=tone hint=hint spark=spark}}{{/each}}
 </div>
 <div class="sp-askill-top">
 <section class="sp-aconv-chart sp-askill-top__chart" aria-label="Invocations per day">{{> components/svg-line-chart chart}}</section>
@@ -29,33 +30,21 @@
 {{else}}<p class="sp-empty">No marketplace is declared on this instance.</p>{{/each}}
 </section>
 </div>
+{{> components/filter-ribbon ribbon}}
 {{#> components/toolbar toolbar_count=(concat row_count " skills used")}}
-{{#*inline "toolbar_filters"}}
-<form class="sp-toolbar__filter" method="get" action="/admin/analysis/skills" role="search">
-<input type="hidden" name="days" value="{{days}}">
-<label class="sp-u-sr-only" for="askill-marketplace">Marketplace</label>
-<select id="askill-marketplace" name="marketplace" class="sp-search-input"><option value="">All marketplaces</option>{{#each marketplace_options}}<option value="{{this.value}}"{{#if this.selected}} selected{{/if}}>{{this.label}}</option>{{/each}}</select>
-<label class="sp-u-sr-only" for="askill-client">Client</label>
-<select id="askill-client" name="client" class="sp-search-input"><option value="">All clients</option>{{#each client_options}}<option value="{{this.value}}"{{#if this.selected}} selected{{/if}}>{{this.label}}</option>{{/each}}</select>
-<label class="sp-u-sr-only" for="askill-sort">Sort</label>
-<select id="askill-sort" name="sort" class="sp-search-input">{{#each sort_options}}<option value="{{this.value}}"{{#if this.selected}} selected{{/if}}>{{this.label}}</option>{{/each}}</select>
-<label class="sp-u-sr-only" for="askill-search">Search</label>
-<input type="search" id="askill-search" class="sp-search-input" name="search" placeholder="skill or plugin" value="{{search}}">
-<button class="sp-btn sp-btn--sm sp-btn--primary" type="submit">Apply</button>
-</form>
-{{/inline}}
 {{#*inline "toolbar_actions"}}{{#if is_admin}}<form method="post" action="/admin/analysis/inventory/sync" class="sp-inventory-inline"><button class="sp-btn sp-btn--xs sp-btn--outline" type="submit" title="Publish every configured skill into the managed inventory now">Sync inventory</button></form>{{/if}}{{/inline}}
 {{/components/toolbar}}
 {{#each groups}}
 <section class="sp-section sp-askill-group" aria-label="{{marketplace_name}}">
 <header class="sp-askill-group__head"><h2 class="sp-askill-group__title"><a class="sp-table__link" href="{{versions_href}}">{{marketplace_name}}</a></h2><span class="sp-aconv-meta">{{skills}} skills · {{formatNumber invocations}} invocations · up to {{users}} people on one skill</span></header>
 {{#> components/table caption=(concat "Skills in " marketplace_name) modifier="sp-askill-table"}}
-<thead><tr><th scope="col" class="sp-askill-col-skill">Skill</th><th scope="col" class="sp-table__cell--num" title="Hook-reported invocations (slash · tool)">Invocations</th><th scope="col" class="sp-askill-col-spark" title="Invocations per day, last 14 days">14 days</th><th scope="col" class="sp-table__cell--num" title="Distinct people who invoked it, over those entitled">People</th><th scope="col" class="sp-table__cell--num" title="Consumers holding a verified installation receipt">Installs</th><th scope="col" class="sp-table__cell--num" title="Gateway conversations whose session invoked it">Conv.</th><th scope="col" class="sp-table__cell--num">Tokens</th><th scope="col" class="sp-table__cell--num">Cost</th><th scope="col" class="sp-table__cell--num" title="Cost per invocation">/inv</th><th scope="col" class="sp-table__cell--num" title="Tool calls in those conversations (failed)">Tools</th><th scope="col" class="sp-table__cell--num" title="Failed requests · denied tool calls">Err</th><th scope="col" class="sp-table__cell--num" title="95th percentile turn latency">p95</th><th scope="col" title="Models and clients seen">Models</th><th scope="col" class="sp-table__cell--num" title="Mean judge completion over the judged conversations">Done</th><th scope="col" class="sp-col-date">Last</th></tr></thead>
+<thead><tr><th scope="col" class="sp-aconv-col-select">{{> components/table-select header=true label="skills"}}</th><th scope="col" class="sp-askill-col-skill">Skill</th><th scope="col" class="sp-table__cell--num" title="Hook-reported invocations (slash · tool)">Invocations</th><th scope="col" class="sp-askill-col-spark" title="Invocations per day, last 14 days">14 days</th><th scope="col" class="sp-table__cell--num" title="Distinct people who invoked it, over those entitled">People</th><th scope="col" class="sp-table__cell--num" title="Consumers holding a verified installation receipt">Installs</th><th scope="col" class="sp-table__cell--num" title="Gateway conversations whose session invoked it">Conv.</th><th scope="col" class="sp-table__cell--num">Tokens</th><th scope="col" class="sp-table__cell--num">Cost</th><th scope="col" class="sp-table__cell--num" title="Cost per invocation">/inv</th><th scope="col" class="sp-table__cell--num" title="Tool calls in those conversations (failed)">{{> components/icon name="wrench"}} Tools</th><th scope="col" class="sp-table__cell--num" title="Tool calls that produced something viewable — files, cards, UI, retained bodies">{{> components/icon name="file"}} Artifacts</th><th scope="col" class="sp-table__cell--num" title="Failed requests · denied tool calls">Err</th><th scope="col" class="sp-table__cell--num" title="95th percentile turn latency">p95</th><th scope="col" title="Models and clients seen">Models</th><th scope="col" class="sp-table__cell--num" title="Mean judge completion over the judged conversations">Done</th><th scope="col" class="sp-col-date">Last</th></tr></thead>
 <tbody>
 {{#each plugins}}
-<tr class="sp-askill-plugin"><th scope="rowgroup" colspan="15"><span class="sp-askill-plugin__name">{{plugin}}</span> <span class="sp-aconv-meta">{{formatNumber invocations}} invocations</span></th></tr>
+<tr class="sp-askill-plugin"><th scope="rowgroup" colspan="17"><span class="sp-askill-plugin__name">{{plugin}}</span> <span class="sp-aconv-meta">{{formatNumber invocations}} invocations</span></th></tr>
 {{#each rows}}
 <tr>
+<td class="sp-aconv-col-select">{{> components/table-select id=skill label=skill_name}}</td>
 <td class="sp-table__cell--primary sp-askill-col-skill"><a class="sp-table__link sp-u-mono" href="{{href}}">{{skill_name}}</a><div class="sp-aconv-meta">{{attributed_pct}} attributed · since {{first_used}}</div></td>
 <td class="sp-table__cell--num sp-u-num" title="{{invocations_note}}">{{formatNumber invocations}}</td>
 <td class="sp-askill-col-spark">{{> components/sparkline spark}}</td>
@@ -65,11 +54,12 @@
 <td class="sp-table__cell--num sp-u-num" title="{{tokens_title}}">{{tokens_display}}</td>
 <td class="sp-table__cell--num sp-u-num">{{cost_display}}</td>
 <td class="sp-table__cell--num sp-u-num">{{cost_per_invocation}}</td>
-<td class="sp-table__cell--num sp-u-num">{{tool_calls}}{{#if tool_calls_failed}} <span class="sp-u-text-danger">({{tool_calls_failed}})</span>{{/if}}</td>
+<td class="sp-table__cell--num sp-u-num"><a class="sp-aconv-cell-link sp-aconv-num sp-aconv-num--accent" href="{{tools_href}}" title="Tool calls in this skill's conversations — opens them">{{tool_calls}}</a>{{#if tool_calls_failed}} <span class="sp-u-text-danger">({{tool_calls_failed}})</span>{{/if}}</td>
+<td class="sp-table__cell--num sp-u-num">{{#if artifacts}}<a class="sp-aconv-cell-link sp-aconv-num sp-aconv-num--accent" href="{{artifacts_href}}" title="Artifacts produced in this skill's conversations — opens them">{{artifacts}}</a>{{else}}<span class="sp-aconv-num sp-aconv-num--muted">0</span>{{/if}}</td>
 <td class="sp-table__cell--num sp-u-num"><span class="sp-aconv-num sp-aconv-num--{{errors_tone}}">{{errors}}</span>{{#if denied}} <span class="sp-aconv-num sp-aconv-num--{{denied_tone}}" title="Denied tool calls">⛔{{denied}}</span>{{/if}}</td>
 <td class="sp-table__cell--num sp-u-num"><span class="sp-aconv-num sp-aconv-num--{{latency_tone}}">{{latency_display}}</span></td>
 <td class="sp-askill-col-models"><div class="sp-aconv-skills">{{#each models}}<span class="sp-aconv-tag">{{this}}</span>{{/each}}{{#each clients}}<span class="sp-aconv-tag sp-aconv-tag--client">{{this}}</span>{{/each}}</div></td>
-<td class="sp-table__cell--num"><a class="sp-aconv-score sp-aconv-score--{{completion_tone}}" href="{{href}}" title="{{judged}} judged conversations">{{completion_display}}</a></td>
+<td class="sp-table__cell--num sp-askill-col-done"><a class="sp-aconv-score sp-aconv-score--{{completion_tone}}" href="{{href}}" title="{{judged}} judged conversations">{{completion_display}}</a> <span class="sp-aconv-meta sp-askill-judged" title="judged / conversations">{{completion_note}}</span></td>
 <td class="sp-col-date">{{last_used}}</td>
 </tr>
 {{/each}}
@@ -80,13 +70,10 @@
 {{else}}
 <section class="sp-section">{{> components/empty-state heading="No skill was invoked in this window" message="Invocations arrive through the harness hooks (UserPromptSubmit and the Skill tool). Widen the window, or check that the plugin carrying the governance hooks is installed."}}</section>
 {{/each}}
+{{> components/bulk-bar noun="skills" export_dataset="analysis-skills"}}
 {{#if unused_count}}
 <details class="sp-analysis-definitions sp-askill-unused"><summary>{{unused_count}} configured skills with no invocation in the window</summary>
 <ul class="sp-askill-unused__list">{{#each unused}}<li><code>{{skill}}</code> <span class="sp-aconv-meta">{{marketplace}} · {{entitled}} entitled</span></li>{{/each}}</ul>
 </details>
 {{/if}}
-<details class="sp-analysis-definitions"><summary>Where these numbers come from</summary>
-<p>An invocation is a harness hook event — a slash command or the Skill tool — keyed <code>plugin:skill</code>. Everything else on a row is read from the conversations whose Claude Code session invoked the skill: their requests, tokens, cost, tool calls, failed requests and governance denials come from the same per-conversation record the Conversations page shows, so a number here is the same number there.</p>
-<p><em>People / entitled</em> is distinct invokers over the people the access-control rules reach for the marketplaces that carry the skill. <em>Installs</em> counts distinct consumers holding a verified installation receipt for the skill resource, on any host. <em>Done</em> is the mean of the judge's single completion score over the judged conversations that used the skill.</p>
-</details>
 {{/inline}}{{#*inline "scripts"}}<script type="module" src="/js/components/sp-chart.js?v={{css_version}}"></script>{{/inline}}{{/layout}}

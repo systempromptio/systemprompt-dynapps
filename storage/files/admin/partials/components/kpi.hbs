@@ -1,7 +1,10 @@
 {{!--
   One KPI tile. Pass `href` to make the tile the filter its number describes;
   `active` marks that filter as applied. `tone` is ok | warn | err | accent and
-  paints the inline-start bar only.
+  paints the inline-start bar only. `icon` names a components/icon glyph drawn
+  before the label; `spark` is a SparklineView drawn in a reserved trend slot
+  beside the value — the slot is part of the grid, so the trend can never sit
+  over the number.
 
   The supporting line is `note`, not `sub` and not `subtitle`: `sub` is a
   registered helper, so a bare `sub` mustache called it with no arguments and
@@ -9,17 +12,20 @@
   A field genuinely named `sub` must be read as `this.sub`, which is a path and
   cannot be mistaken for a helper.
 
-    {{> components/kpi label="Denied" value=denied tone="err"
-        unit="calls" note="of 1,204 in window" href=denied_url}}
+    {{> components/kpi label="Denied" value=denied tone="err" icon="shield"
+        unit="calls" note="of 1,204 in window" href=denied_url spark=denied_spark}}
 --}}
 {{#if href}}
-<a class="sp-kpi sp-kpi--link{{#if tone}} sp-kpi--{{tone}}{{/if}}{{#if active}} is-active{{/if}}"
+<a class="sp-kpi sp-kpi--link{{#if tone}} sp-kpi--{{tone}}{{/if}}{{#if spark}} sp-kpi--trend{{/if}}{{#if active}} is-active{{/if}}"
    href="{{href}}"{{#if hint}} title="{{hint}}"{{/if}}>
 {{else}}
-<div class="sp-kpi{{#if tone}} sp-kpi--{{tone}}{{/if}}"{{#if hint}} title="{{hint}}"{{/if}}>
+<div class="sp-kpi{{#if tone}} sp-kpi--{{tone}}{{/if}}{{#if spark}} sp-kpi--trend{{/if}}"{{#if hint}} title="{{hint}}"{{/if}}>
 {{/if}}
-    <span class="sp-kpi__label">{{label}}</span>
+    <div class="sp-kpi__body">
+    <span class="sp-kpi__label">{{#if icon}}{{> components/icon name=icon}}{{/if}}{{label}}</span>
     <span class="sp-kpi__value">{{value}}{{#if unit}}<span class="sp-kpi__unit">{{unit}}</span>{{/if}}</span>
     {{#if note}}<span class="sp-kpi__sub">{{note}}</span>{{/if}}
     {{#if delta}}<span class="sp-delta{{#if delta_dir}} sp-delta--{{delta_dir}}{{/if}}">{{delta}}</span>{{/if}}
+    </div>
+    {{#if spark}}<div class="sp-kpi__trend">{{> components/sparkline spark}}</div>{{/if}}
 {{#if href}}</a>{{else}}</div>{{/if}}

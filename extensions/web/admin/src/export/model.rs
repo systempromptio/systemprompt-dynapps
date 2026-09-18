@@ -40,7 +40,13 @@ pub(crate) struct Column {
     pub label: &'static str,
     pub kind: CellKind,
     pub default: bool,
+    // Why: the heading the dialog files the column under (Identity, Tokens,
+    // Judge …) so a fifty-column table reads as seven short lists; a dataset
+    // that declares no groups lands everything under "Other".
+    pub group: &'static str,
 }
+
+pub(crate) const UNGROUPED: &str = "Other";
 
 impl Column {
     pub(crate) const fn new(key: &'static str, label: &'static str, kind: CellKind) -> Self {
@@ -49,6 +55,14 @@ impl Column {
             label,
             kind,
             default: true,
+            group: UNGROUPED,
+        }
+    }
+
+    pub(crate) const fn group(self, name: &'static str) -> Self {
+        Self {
+            group: name,
+            ..self
         }
     }
 
@@ -221,6 +235,11 @@ impl<'a> ExportContext<'a> {
 pub(crate) trait DataSet: Send + Sync {
     fn id(&self) -> &'static str;
     fn title(&self) -> &'static str;
+    // Why: one line under the Data select saying what a row of this table
+    // is; the default keeps datasets that never wrote one compiling.
+    fn description(&self) -> &'static str {
+        ""
+    }
     fn columns(&self) -> &'static [Column];
     fn window(&self) -> Window;
     fn allows(&self, user: &UserContext) -> bool {

@@ -1,0 +1,65 @@
+@layer components {
+
+.sp-select__box {
+    width: 1rem;
+    height: 1rem;
+    margin: 0;
+    accent-color: var(--sp-accent);
+    cursor: pointer;
+    vertical-align: middle;
+}
+
+.sp-table__el tr.is-selected > td {
+    background: var(--sp-accent-dim);
+}
+
+/* Sticks to the viewport foot so a selection made three screens down still
+   has its actions in reach; hidden entirely until the first tick so an
+   unselected table looks exactly as it did. */
+.sp-bulk-bar {
+    position: sticky;
+    inset-block-end: var(--sp-space-3);
+    z-index: var(--sp-z-sticky);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-space-3);
+    margin-block: var(--sp-space-3);
+    padding: var(--sp-space-2) var(--sp-space-4);
+    border: 1px solid var(--sp-border-default);
+    border-radius: var(--sp-corners-md);
+    background: var(--sp-bg-surface-overlay);
+    box-shadow: var(--sp-shadow-float);
+}
+
+.sp-bulk-bar[hidden] {
+    display: none;
+}
+
+.sp-bulk-bar__count {
+    font-size: var(--sp-text-sm);
+    color: var(--sp-text-secondary);
+}
+
+.sp-bulk-bar__count b {
+    color: var(--sp-text-primary);
+    font-variant-numeric: tabular-nums;
+}
+
+.sp-bulk-bar__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sp-space-2);
+}
+
+.sp-bulk-bar__form {
+    display: contents;
+}
+
+.sp-bulk-bar .sp-btn .sp-icon {
+    margin-inline-end: var(--sp-space-1);
+}
+
+}

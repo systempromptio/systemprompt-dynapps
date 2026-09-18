@@ -1,0 +1,103 @@
+@layer components {
+/* The rows. Fixed layout keeps fourteen columns from fighting; the title
+   column takes what the numbers leave. */
+.sp-aconv-table {
+    table-layout: fixed;
+}
+.sp-aconv-table th.sp-aconv-col-select { width: 1.6rem; }
+.sp-aconv-table th.sp-aconv-col-title { width: 19%; }
+.sp-aconv-table th.sp-aconv-col-person { width: 9%; }
+.sp-aconv-table th.sp-aconv-col-client { width: 9%; }
+.sp-aconv-table th.sp-aconv-col-spark { width: 6%; }
+.sp-aconv-table th.sp-aconv-col-skills { width: 11%; }
+.sp-aconv-table th.sp-aconv-col-judge { width: 4.5%; }
+.sp-aconv-table th.sp-col-date { width: 7%; }
+.sp-aconv-table th.sp-table__cell--num { width: 5%; }
+.sp-aconv-table td {
+    vertical-align: top;
+    max-width: 0;
+    font-size: var(--sp-text-sm);
+    font-variant-numeric: tabular-nums;
+}
+.sp-aconv-table thead th,
+.sp-aconv-breakdown thead th {
+    position: sticky;
+    top: 0;
+    z-index: var(--sp-z-sticky);
+    background: var(--sp-bg-surface);
+}
+.sp-aconv-table tbody tr:hover > td,
+.sp-aconv-breakdown tbody tr:hover > td {
+    background: var(--sp-bg-surface-alt);
+}
+.sp-aconv-table th .sp-icon,
+.sp-aconv-breakdown th .sp-icon {
+    color: var(--sp-text-tertiary);
+    vertical-align: -0.15em;
+}
+.sp-aconv-cell-link {
+    text-decoration: none;
+}
+.sp-aconv-cell-link:hover,
+.sp-aconv-cell-link:focus-visible {
+    text-decoration: underline;
+}
+.sp-aconv-col-export {
+    width: 1.8rem;
+    text-align: end;
+}
+.sp-aconv-export {
+    display: inline-flex;
+    color: var(--sp-text-tertiary);
+}
+.sp-aconv-export:hover,
+.sp-aconv-export:focus-visible {
+    color: var(--sp-accent-text);
+}
+/* The row's Judge button: a quiet glyph the size of the score pill, so an
+   unjudged row reads as an action slot rather than a missing number. */
+.sp-judge-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.4em;
+    height: 1.7em;
+    padding: 0;
+    border: 1px dashed var(--sp-border-subtle);
+    border-radius: var(--sp-radius-sm);
+    background: transparent;
+    color: var(--sp-text-tertiary);
+    cursor: pointer;
+}
+.sp-judge-btn:hover,
+.sp-judge-btn:focus-visible {
+    color: var(--sp-accent-text);
+    border-color: var(--sp-accent);
+    border-style: solid;
+}
+/* Why: a td may never carry a display other than table-cell (06-table-cell.css);
+   the flex box that wraps the chips is the inner div, so the cell keeps its
+   column width and the chips wrap inside it instead of collapsing. */
+.sp-aconv-table td.sp-aconv-cell-skills,
+.sp-aconv-table td.sp-aconv-cell-spark,
+.sp-aconv-table td.sp-aconv-col-judge,
+.sp-aconv-table td.sp-aconv-cell-title {
+    display: table-cell;
+    max-width: none;
+    overflow: visible;
+}
+.sp-aconv-table td.sp-aconv-cell-title {
+    max-width: 0;
+}
+.sp-aconv-cell-person,
+.sp-aconv-cell-client {
+    overflow: hidden;
+}
+.sp-aconv-cell-title .sp-table__link,
+.sp-aconv-cell-person .sp-table__link {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+}

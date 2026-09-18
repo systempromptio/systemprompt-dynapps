@@ -2,6 +2,8 @@
 
 use serde::Serialize;
 
+use crate::handlers::ssr::analysis::help::HelpView;
+
 use crate::handlers::ssr::analysis::conversations::view::SkillChipView;
 use crate::handlers::ssr::format::ClientChipView;
 use crate::handlers::ssr::types::{BreadcrumbView, SvgLineChartView};
@@ -9,6 +11,7 @@ use crate::handlers::ssr::types::{BreadcrumbView, SvgLineChartView};
 #[derive(Debug, Serialize)]
 pub(super) struct ConversationKpiView {
     pub(super) label: &'static str,
+    pub(super) icon: &'static str,
     pub(super) value: String,
     pub(super) note: String,
     pub(super) tone: &'static str,
@@ -66,15 +69,24 @@ pub(super) struct LedgerTurnView {
 #[derive(Debug, Serialize)]
 pub(super) struct LedgerCallView {
     pub(super) tool_name: String,
+    pub(super) tool_icon: &'static str,
+    pub(super) is_builtin: bool,
     pub(super) server_name: String,
+    pub(super) input_summary: String,
     pub(super) state: String,
     pub(super) state_tone: &'static str,
     pub(super) source: String,
     pub(super) status: String,
     pub(super) duration_display: String,
     pub(super) at: String,
+    pub(super) artifact_kind: Option<String>,
+    pub(super) artifact_icon: &'static str,
+    pub(super) artifact_label: &'static str,
     pub(super) artifact_title: Option<String>,
     pub(super) artifact_href: Option<String>,
+    pub(super) preview_href: Option<String>,
+    pub(super) is_path: bool,
+    pub(super) bytes_display: String,
     pub(super) error_message: Option<String>,
 }
 
@@ -142,7 +154,12 @@ pub(super) struct ConversationDetailContext {
     pub(super) turns: Vec<LedgerTurnView>,
     pub(super) turn_count: usize,
     pub(super) tool_calls: Vec<LedgerCallView>,
+    pub(super) tool_count: usize,
+    pub(super) artifacts: Vec<LedgerCallView>,
+    pub(super) artifact_count: usize,
     pub(super) decisions: Vec<DecisionView>,
     pub(super) skills: Vec<ConversationSkillView>,
     pub(super) safety: Vec<SafetyView>,
+    pub(super) help: HelpView,
+    pub(super) export: crate::export::ExportView,
 }

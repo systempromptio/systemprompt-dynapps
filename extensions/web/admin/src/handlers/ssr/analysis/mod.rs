@@ -7,10 +7,13 @@
 //! the path as the Platform page for the same noun (`analysis_urls`).
 pub(crate) mod conversation_detail;
 pub(crate) mod conversations;
+pub(crate) mod help;
 pub(crate) mod inventory_actions;
 pub(crate) mod lifecycle;
 pub(crate) mod marketplace_versions;
+pub(crate) mod reports;
 pub(crate) mod revisions;
+pub(crate) mod ribbon;
 pub(crate) mod skill_detail;
 pub(crate) mod skills;
 pub(crate) mod time;

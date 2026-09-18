@@ -33,6 +33,7 @@ pub(crate) struct RosterContext {
     pub can_write: bool,
     pub role_choices: Vec<String>,
     pub create_user: CreateUserPanelView,
+    pub export: crate::export::ExportView,
 }
 
 // Why: what the Add User drawer offers. With `auto_provision` on, Astound SSO

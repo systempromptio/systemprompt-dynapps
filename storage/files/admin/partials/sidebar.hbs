@@ -58,8 +58,9 @@
         {{#> nav-item href="/admin/traces" text="Traces" leaf="traces" child="trace-detail" page=page scope_nav=true}}
             {{#*inline "nav_icon"}}<svg class="sp-icon" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4h6M2 8h10M2 12h4" stroke-linecap="round"/><circle cx="13" cy="4" r="1.5" fill="currentColor"/><circle cx="13" cy="12" r="1.5" fill="currentColor"/></svg>{{/inline}}
         {{/nav-item}}
-        {{#> nav-item href="/admin/artifacts" text="Artifacts" leaf="artifacts" child="artifact-detail" page=page scope_nav=true}}
-            {{#*inline "nav_icon"}}<svg class="sp-icon" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 2.5h7l3 3v8H3z" stroke-linejoin="round"/><path d="M10 2.5v3h3M5.5 8.5h5M5.5 11h3" stroke-linecap="round"/></svg>{{/inline}}
+        {{#> nav-item href="/admin/tools" text="Tools & artifacts" leaf="tools" child="artifacts" child2="artifact-detail" page=page scope_nav=true}}
+            {{#*inline "nav_text"}}Tools &amp; artifacts{{/inline}}
+            {{#*inline "nav_icon"}}<svg class="sp-icon" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 2a3.5 3.5 0 0 0-3.2 4.9L2 12.2 3.8 14l5.3-5.3A3.5 3.5 0 0 0 14 5.5l-2.2 1.2-1.5-1.5L11.5 3z"/></svg>{{/inline}}
         {{/nav-item}}
         {{!-- Why: no `child` — the conversation reader is owned by Conversations
              above; a second owner drew the open record under both links. --}}
@@ -130,6 +131,11 @@
         {{#if current_user.is_console}}
         {{#> nav-item href="/admin/analysis/skills" text="Skills" leaf="analysis-skills" child="analysis-skill" page=page}}
             {{#*inline "nav_icon"}}<svg class="sp-icon" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="1.5"/><path d="M2 6h12M2 10h12M6 6v8"/></svg>{{/inline}}
+        {{/nav-item}}
+        {{/if}}
+        {{#if current_user.is_console}}
+        {{#> nav-item href="/admin/analysis/reports" text="Reports" leaf="analysis-reports" child="analysis-report" page=page}}
+            {{#*inline "nav_icon"}}<svg class="sp-icon" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 2.5h10v11H3z" stroke-linejoin="round"/><path d="M5.5 10.5v-2M8 10.5v-4M10.5 10.5v-6" stroke-linecap="round"/></svg>{{/inline}}
         {{/nav-item}}
         {{/if}}
         {{#> nav-item href="/admin/analysis/versions" text="Versions" leaf="analysis-versions" child="analysis-marketplace-versions" child2="analysis-revision" page=page}}

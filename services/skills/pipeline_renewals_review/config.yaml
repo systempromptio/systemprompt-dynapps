@@ -1,0 +1,14 @@
+id: pipeline_renewals_review
+name: Pipeline and Renewals Review
+description: The weekly book-level review for the UK accounts — a prioritised table of accounts
+  needing attention, stalled and slipped opportunities, renewals inside 90 days and coverage gaps —
+  from Salesforce evidence across an approved account list or owner.
+enabled: true
+file: SKILL.md
+tags:
+- astound
+- sales
+- reporting
+- report
+category: business
+display_category: Sales UK

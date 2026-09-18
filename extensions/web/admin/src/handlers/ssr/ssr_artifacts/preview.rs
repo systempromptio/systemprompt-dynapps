@@ -38,16 +38,15 @@ pub(crate) async fn artifact_preview(
     };
 
     let context_id = detail
-        .row
         .context_id
         .clone()
         .unwrap_or_else(ContextId::generate);
     let target = RenderTarget {
         artifact_id: &artifact_id,
-        artifact_type: &detail.row.artifact_type,
+        artifact_type: &detail.artifact_type,
         payload: body,
         context_id,
-        title: detail.row.title.clone(),
+        title: detail.artifact_title.clone(),
     };
     let html = match artifact_ui_resource(&target) {
         Ok(resource) => resource.html,

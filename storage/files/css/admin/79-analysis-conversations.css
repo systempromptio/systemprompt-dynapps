@@ -1,7 +1,9 @@
 @layer components {
-/* Analysis › Conversations and its detail: dense rows of the deterministic
-   record, every figure coloured by the same four tones the badges use, a
-   sparkline per row and per tile, and one judge score per conversation. */
+/* Analysis › Conversations: dense rows of the deterministic record, every
+   figure coloured by the same four tones the badges use, a trend slot per
+   tile, a sparkline per row and one judge score per conversation. The row
+   and cell rules are in 79-analysis-conversations2.css, the detail page in
+   79-analysis-conversation-detail.css. */
 .sp-aconv-range {
     display: flex;
     flex-wrap: wrap;
@@ -14,21 +16,6 @@
     margin: 0;
 }
 
-/* Tiles carry their trend along the bottom edge. */
-.sp-kpi--spark {
-    position: relative;
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: var(--sp-space-1);
-    padding-block-end: calc(var(--sp-space-2) + 1.6rem);
-}
-.sp-kpi--spark .sp-spark {
-    position: absolute;
-    inset-inline: var(--sp-space-3);
-    inset-block-end: var(--sp-space-2);
-    height: 1.5rem;
-    width: auto;
-}
 .sp-aconv-kpis {
     grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
 }
@@ -52,47 +39,37 @@
     grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
 }
 
-.sp-aconv-filter {
-    flex-wrap: wrap;
-}
-.sp-aconv-facets {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--sp-space-1);
-}
-.sp-aconv-facet {
-    display: inline-flex;
-    gap: 0.35em;
-    align-items: baseline;
-    padding: 0 var(--sp-space-2);
-    border: 1px solid var(--sp-border-subtle);
-    border-radius: var(--sp-radius-sm);
-    font-size: var(--sp-text-xs);
-    font-family: var(--sp-font-mono);
-    color: var(--sp-text-secondary);
-    text-decoration: none;
-    line-height: 1.7;
-}
-.sp-aconv-facet b {
-    font-weight: var(--sp-font-semibold);
-    color: var(--sp-text-primary);
-}
-.sp-aconv-facet--client {
-    font-family: inherit;
-}
-.sp-aconv-facet.is-active {
-    color: var(--sp-accent-text);
-    background: var(--sp-accent-dim);
-    border-color: transparent;
-}
-.sp-aconv-facet:hover,
-.sp-aconv-facet:focus-visible {
-    border-color: var(--sp-border-strong);
-}
-
 .sp-aconv-block {
     min-width: 0;
     margin-block: var(--sp-space-3) var(--sp-space-5);
+}
+.sp-aconv-block__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sp-space-2) var(--sp-space-3);
+    margin-block-end: var(--sp-space-2);
+}
+.sp-aconv-block__head > .sp-icon {
+    color: var(--sp-text-tertiary);
+}
+.sp-aconv-block__head .sp-tabs {
+    margin: 0 0 0 auto;
+}
+.sp-aconv-block__title {
+    margin: 0;
+    font-size: var(--sp-text-sm);
+    font-weight: var(--sp-font-semibold);
+    color: var(--sp-text-secondary);
+}
+/* A pending verdict is three quiet dots, not a dash: the row is spoken for. */
+.sp-aconv-score--pending i {
+    display: inline-block;
+    width: 1.4em;
+    height: 0.35em;
+    border-radius: var(--sp-radius-full);
+    background: repeating-linear-gradient(90deg, currentColor 0 0.35em, transparent 0.35em 0.55em);
+    opacity: 0.6;
 }
 .sp-aconv-block > .sp-table {
     max-width: 100%;
@@ -140,7 +117,7 @@ a.sp-aconv-score:focus-visible {
 .sp-aconv-cache {
     display: inline-block;
     vertical-align: middle;
-    width: 4.5rem;
+    width: 6rem;
     height: 0.45rem;
     border-radius: 2px;
     background: var(--sp-bg-surface-alt);
@@ -175,246 +152,4 @@ a.sp-aconv-score:focus-visible {
 .sp-aconv-cache--warn i { background: var(--sp-warning-strong); }
 .sp-aconv-cache--err i { background: var(--sp-danger-strong); }
 .sp-aconv-cache--muted i { background: var(--sp-border-strong); }
-
-/* The rows. Fixed layout keeps fourteen columns from fighting; the title
-   column takes what the numbers leave. */
-.sp-aconv-table {
-    table-layout: fixed;
-}
-.sp-aconv-table th.sp-aconv-col-title { width: 20%; }
-.sp-aconv-table th.sp-aconv-col-person { width: 9%; }
-.sp-aconv-table th.sp-aconv-col-client { width: 9%; }
-.sp-aconv-table th.sp-aconv-col-spark { width: 6%; }
-.sp-aconv-table th.sp-aconv-col-skills { width: 11%; }
-.sp-aconv-table th.sp-aconv-col-judge { width: 4.5%; }
-.sp-aconv-table th.sp-col-date { width: 7%; }
-.sp-aconv-table th.sp-table__cell--num { width: 5%; }
-.sp-aconv-table td {
-    vertical-align: top;
-    max-width: 0;
-    font-size: var(--sp-text-sm);
-}
-/* Why: a td may never carry a display other than table-cell (06-table-cell.css);
-   the flex box that wraps the chips is the inner div, so the cell keeps its
-   column width and the chips wrap inside it instead of collapsing. */
-.sp-aconv-table td.sp-aconv-cell-skills,
-.sp-aconv-table td.sp-aconv-cell-spark,
-.sp-aconv-table td.sp-aconv-col-judge {
-    display: table-cell;
-    max-width: none;
-    overflow: visible;
-}
-.sp-aconv-cell-title,
-.sp-aconv-cell-person,
-.sp-aconv-cell-client {
-    overflow: hidden;
-}
-.sp-aconv-cell-title .sp-table__link,
-.sp-aconv-cell-person .sp-table__link {
-    display: block;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-.sp-aconv-cell-spark .sp-spark {
-    width: 100%;
-    height: 1.4rem;
-}
-.sp-aconv-meta {
-    color: var(--sp-text-tertiary);
-    font-size: var(--sp-text-xs);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-.sp-aconv-intent {
-    color: var(--sp-text-secondary);
-}
-.sp-aconv-outcome {
-    font-weight: var(--sp-font-medium);
-}
-.sp-aconv-outcome--ok { color: var(--sp-success-strong); }
-.sp-aconv-outcome--warn { color: var(--sp-warning-strong); }
-.sp-aconv-outcome--err { color: var(--sp-danger-strong); }
-.sp-aconv-outcome--muted { color: var(--sp-text-tertiary); }
-.sp-aconv-model {
-    font-family: var(--sp-font-mono);
-}
-.sp-aconv-more {
-    color: var(--sp-accent-text);
-}
-.sp-aconv-model-chip {
-    display: inline-block;
-    margin-inline-end: var(--sp-space-1);
-    padding: 0 var(--sp-space-1);
-    border: 1px solid var(--sp-border-subtle);
-    border-radius: var(--sp-radius-sm);
-    font-family: var(--sp-font-mono);
-    font-size: var(--sp-text-xs);
-}
-.sp-aconv-summary {
-    color: var(--sp-text-secondary);
-}
-.sp-aconv-tags,
-.sp-aconv-skills {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--sp-space-1);
-}
-.sp-aconv-tags {
-    margin-block-start: var(--sp-space-1);
-}
-.sp-aconv-tag,
-.sp-aconv-skill {
-    display: inline-block;
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    text-decoration: none;
-    padding: 0 var(--sp-space-2);
-    border-radius: var(--sp-radius-sm);
-    font-size: var(--sp-text-xs);
-    line-height: 1.6;
-}
-.sp-aconv-tag {
-    color: var(--sp-text-secondary);
-    background: var(--sp-bg-surface-alt);
-    font-family: var(--sp-font-mono);
-}
-.sp-aconv-tag--client {
-    font-family: inherit;
-}
-.sp-aconv-skill {
-    color: var(--sp-text-secondary);
-    border: 1px solid var(--sp-border-subtle);
-    font-family: var(--sp-font-mono);
-}
-.sp-aconv-skill--hooked {
-    color: var(--sp-accent-text);
-    background: var(--sp-accent-dim);
-    border-color: transparent;
-}
-a.sp-aconv-skill:hover,
-a.sp-aconv-skill:focus-visible {
-    text-decoration: underline;
-}
-
-/* Detail: the record's facts on the left, the judge's card on the right. */
-.sp-aconvd-head {
-    display: grid;
-    grid-template-columns: minmax(0, 1.4fr) minmax(18rem, 1fr);
-    gap: var(--sp-space-3);
-    margin-block: var(--sp-space-2) var(--sp-space-3);
-}
-@media (max-width: 60rem) {
-    .sp-aconvd-head {
-        grid-template-columns: 1fr;
-    }
-}
-.sp-aconvd-facts {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
-    gap: var(--sp-space-2) var(--sp-space-3);
-    margin: 0;
-    padding: var(--sp-space-3);
-    border: 1px solid var(--sp-border-subtle);
-    border-radius: var(--sp-corners-md);
-    background: var(--sp-bg-surface);
-}
-.sp-aconvd-facts dt {
-    font-size: var(--sp-text-xs);
-    color: var(--sp-text-tertiary);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-}
-.sp-aconvd-facts dd {
-    margin: 0;
-    font-size: var(--sp-text-sm);
-    overflow-wrap: anywhere;
-}
-.sp-aconvd-id {
-    font-size: var(--sp-text-xs);
-}
-.sp-aconvd-judge {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    gap: var(--sp-space-3);
-    padding: var(--sp-space-3);
-    border: 1px solid var(--sp-border-subtle);
-    border-inline-start: 4px solid var(--sp-border-strong);
-    border-radius: var(--sp-corners-md);
-    background: var(--sp-bg-surface);
-}
-.sp-aconvd-judge--ok { border-inline-start-color: var(--sp-success-strong); }
-.sp-aconvd-judge--warn { border-inline-start-color: var(--sp-warning-strong); }
-.sp-aconvd-judge--err { border-inline-start-color: var(--sp-danger-strong); }
-.sp-aconvd-judge__score {
-    display: flex;
-    align-items: baseline;
-    font-family: var(--sp-font-mono);
-}
-.sp-aconvd-judge__num {
-    font-size: var(--sp-text-3xl);
-    font-weight: var(--sp-font-bold);
-    line-height: 1;
-}
-.sp-aconvd-judge--ok .sp-aconvd-judge__num { color: var(--sp-success-strong); }
-.sp-aconvd-judge--warn .sp-aconvd-judge__num { color: var(--sp-warning-strong); }
-.sp-aconvd-judge--err .sp-aconvd-judge__num { color: var(--sp-danger-strong); }
-.sp-aconvd-judge--muted .sp-aconvd-judge__num { color: var(--sp-text-tertiary); }
-.sp-aconvd-judge__of {
-    color: var(--sp-text-tertiary);
-    font-size: var(--sp-text-sm);
-}
-.sp-aconvd-judge__body {
-    display: grid;
-    gap: var(--sp-space-2);
-    min-width: 0;
-}
-.sp-aconvd-judge__head {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--sp-space-1);
-}
-.sp-aconvd-judge__label {
-    font-size: var(--sp-text-sm);
-    font-weight: var(--sp-font-semibold);
-    margin-inline-end: var(--sp-space-1);
-}
-.sp-aconvd-judge__summary,
-.sp-aconvd-judge__rationale {
-    margin: 0;
-    font-size: var(--sp-text-sm);
-}
-.sp-aconvd-judge__rationale {
-    color: var(--sp-text-secondary);
-}
-.sp-aconvd-judge__meta {
-    margin: 0;
-    font-size: var(--sp-text-xs);
-    color: var(--sp-text-tertiary);
-}
-.sp-aconvd-turn--side td {
-    color: var(--sp-text-tertiary);
-}
-.sp-aconvd-model {
-    font-family: var(--sp-font-mono);
-    font-size: var(--sp-text-xs);
-}
-.sp-aconvd-reason {
-    max-width: 24rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-.sp-aconvd-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(28rem, 1fr));
-    gap: var(--sp-space-3);
-}
-.sp-aconvd-grid > .sp-section {
-    min-width: 0;
-}
 }

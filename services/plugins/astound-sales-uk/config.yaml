@@ -1,9 +1,10 @@
 plugin:
   id: astound-sales-uk
   name: Astound — Sales UK
-  description: Basic CRM for the UK business — client discovery, meeting prep, account reporting and
-    external research, over Salesforce and the Jira/Confluence delivery record.
-  version: 2.0.0
+  description: Key-account intelligence for the UK business — Client 360, account status, suggestions
+    and the pipeline and renewals review, plus discovery, meeting prep and research — over Salesforce,
+    Google Workspace and the Jira/Confluence delivery record, with the UK Client Report dashboard.
+  version: 3.0.0
   enabled: true
   author:
     name: Astound Digital
@@ -14,14 +15,23 @@ plugin:
   - reporting
   license: proprietary
   category: business
+  # Two building blocks (the connector searches, gated in rules.yaml to people
+  # who have actually connected the server), four report skills that call them
+  # by recipe name, the three older single-purpose skills, and the library
+  # installer for the dashboard below.
   skills:
     source: explicit
     include:
+    - google_workspace_search
+    - salesforce_account_search
+    - client_360_report
+    - account_status_report
+    - account_suggestions
+    - pipeline_renewals_review
     - uk_sales_client_discovery
     - uk_sales_client_prep
-    - uk_sales_client_report
     - uk_sales_client_research
-    - google_drive_search
+    - install_sales_artifacts
   agents:
     source: explicit
     include: []
@@ -34,6 +44,14 @@ plugin:
     include:
     - salesforce-uk
     - salesforce-us
+    - salesforce-dev
     - atlassian
     - google_drive
   content_sources: {}
+  # The Cowork library dashboard. Selection is plugin-driven (core's
+  # selected_artifact_ids): the bridge stages it for everyone who receives this
+  # plugin and `install_sales_artifacts` puts it in the library.
+  artifacts:
+    source: explicit
+    include:
+    - uk-client-report

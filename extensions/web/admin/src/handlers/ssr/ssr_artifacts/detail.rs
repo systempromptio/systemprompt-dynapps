@@ -10,15 +10,28 @@ use sqlx::PgPool;
 use systemprompt::identifiers::{ArtifactId, SessionId, UserId};
 
 use crate::error::{AdminError, AdminHtmlResult};
+use crate::handlers::ssr::analysis::help::HelpView;
 use crate::handlers::ssr::entity_urls::{request_detail_url, session_detail_url};
 use crate::handlers::ssr::format::{client_label, format_duration_ms, local_time, short_id};
 use crate::handlers::ssr::page::Page;
 use crate::handlers::ssr::ssr_helpers::render_typed_page;
+use crate::handlers::ssr::ssr_tools::help::artifacts_help;
+use crate::handlers::ssr::ssr_tools::rows::{format_bytes, kind_icon, kind_label};
 use crate::handlers::ssr::types::BreadcrumbView;
-use crate::repositories::analytics::artifacts::{ArtifactDetail, find_artifact};
+use crate::repositories::analytics::artifacts::{
+    ArtifactDetail, ArtifactFindingRow, find_artifact,
+};
 
-use super::context::format_bytes;
-use super::rows::source_label;
+fn source_label(source: &str) -> String {
+    match source {
+        "in_process" => "In-process".to_owned(),
+        "proxy" => "Proxy tap".to_owned(),
+        "gateway" => "Gateway history".to_owned(),
+        "hook_claude_code" => "Claude Code hook".to_owned(),
+        "hook_opencode" => "OpenCode hook".to_owned(),
+        other => other.to_owned(),
+    }
+}
 
 #[derive(Debug, Serialize)]
 struct ArtifactDetailContext {
@@ -34,6 +47,7 @@ struct ArtifactDetailContext {
     body_missing: bool,
     preview_url: Option<String>,
     back_url: &'static str,
+    help: HelpView,
 }
 
 #[derive(Debug, Serialize)]
@@ -44,6 +58,10 @@ struct ArtifactView {
     tool_name: String,
     server_name: String,
     artifact_type: String,
+    kind_label: &'static str,
+    kind_icon: &'static str,
+    input_summary: Option<String>,
+    is_builtin: bool,
     is_structured: bool,
     has_ui_resource: bool,
     is_error: bool,
@@ -124,7 +142,7 @@ pub(crate) async fn artifact_detail_page(
 }
 
 fn build_context(detail: &ArtifactDetail) -> ArtifactDetailContext {
-    let row = &detail.row;
+    let row = detail;
     let body_pretty = detail
         .body
         .as_ref()
@@ -137,6 +155,7 @@ fn build_context(detail: &ArtifactDetail) -> ArtifactDetailContext {
         title: format!("Artifact {}", short_id(row.artifact_id.as_str())),
         breadcrumbs: vec![
             BreadcrumbView::link("AI activity", "/admin/analytics"),
+            BreadcrumbView::link("Tools & artifacts", "/admin/tools"),
             BreadcrumbView::link("Artifacts", "/admin/artifacts"),
             BreadcrumbView::current(short_id(row.artifact_id.as_str())),
         ],
@@ -149,11 +168,12 @@ fn build_context(detail: &ArtifactDetail) -> ArtifactDetailContext {
         body_pretty,
         preview_url,
         back_url: "/admin/artifacts",
+        help: artifacts_help(),
     }
 }
 
 fn artifact_view(detail: &ArtifactDetail) -> ArtifactView {
-    let row = &detail.row;
+    let row = detail;
     let tool_name = row
         .tool_name
         .clone()
@@ -161,10 +181,18 @@ fn artifact_view(detail: &ArtifactDetail) -> ArtifactView {
     ArtifactView {
         artifact_id: row.artifact_id.clone(),
         artifact_id_short: short_id(row.artifact_id.as_str()),
-        artifact_title: row.title.clone().unwrap_or_else(|| tool_name.clone()),
+        artifact_title: row
+            .artifact_title
+            .clone()
+            .or_else(|| row.input_summary.clone())
+            .unwrap_or_else(|| tool_name.clone()),
         tool_name,
         server_name: row.server_name.clone(),
         artifact_type: row.artifact_type.clone(),
+        kind_label: kind_label(row.artifact_kind.as_deref()),
+        kind_icon: kind_icon(row.artifact_kind.as_deref()),
+        input_summary: row.input_summary.clone(),
+        is_builtin: row.is_builtin,
         is_structured: row.is_structured,
         has_ui_resource: row.has_ui_resource,
         is_error: row.is_error,
@@ -181,7 +209,7 @@ fn artifact_view(detail: &ArtifactDetail) -> ArtifactView {
 }
 
 fn provenance_view(detail: &ArtifactDetail) -> ProvenanceView {
-    let row = &detail.row;
+    let row = detail;
     let correlation = row
         .correlation
         .clone()
@@ -238,7 +266,7 @@ fn provenance_view(detail: &ArtifactDetail) -> ProvenanceView {
     }
 }
 
-fn finding_view(f: &crate::repositories::analytics::artifacts::ArtifactFindingRow) -> FindingView {
+fn finding_view(f: &ArtifactFindingRow) -> FindingView {
     FindingView {
         phase: f.phase.clone(),
         severity_tone: match f.severity.as_str() {

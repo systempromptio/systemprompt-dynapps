@@ -1,5 +1,6 @@
 //! The KPI tiles above the conversations table: eight figures from the
-//! filtered set's totals, each toned and carrying a sparkline of the window.
+//! filtered set's totals, each toned, icon-led and carrying a sparkline of
+//! the window in the tile's trend slot.
 
 use serde::Serialize;
 
@@ -17,6 +18,7 @@ use crate::repositories::analysis::conversations::{
 #[derive(Debug, Serialize)]
 pub(crate) struct ConversationTileView {
     pub label: &'static str,
+    pub icon: &'static str,
     pub value: String,
     pub note: String,
     pub tone: &'static str,
@@ -27,6 +29,7 @@ pub(crate) struct ConversationTileView {
 // Why: the words of a tile before its sparkline is drawn.
 struct Tile {
     label: &'static str,
+    icon: &'static str,
     value: String,
     note: String,
     tone: &'static str,
@@ -42,6 +45,7 @@ impl Tile {
                 format!("{} per bucket over the window", self.label),
             ),
             label: self.label,
+            icon: self.icon,
             value: self.value,
             note: self.note,
             tone: self.tone,
@@ -80,6 +84,7 @@ fn volume_tiles(
     vec![
         Tile {
             label: "Conversations",
+            icon: "chat",
             value: t.conversations.to_string(),
             note: format!("{} people · {} requests", t.users, t.requests),
             tone: "accent",
@@ -88,14 +93,19 @@ fn volume_tiles(
         .with_spark(&column(series, |p| p.conversations)),
         Tile {
             label: "Turns",
+            icon: "bolt",
             value: t.turns.to_string(),
-            note: format!("{} tool calls · {} artifacts", t.tool_calls, t.artifacts),
+            note: format!(
+                "{} tool calls · {} artifacts ({} files)",
+                t.tool_calls, t.artifacts, t.artifact_files
+            ),
             tone: "accent",
             hint: "Human prompts answered; side calls the harness made are excluded",
         }
         .with_spark(&column(series, |p| p.turns)),
         Tile {
             label: "Tokens",
+            icon: "token",
             value: format_token_total(tokens),
             note: cache_share,
             tone: cache_tone(t.cache_tokens, t.input_tokens),
@@ -104,6 +114,7 @@ fn volume_tiles(
         .with_spark(&column(series, |p| p.tokens)),
         Tile {
             label: "Cost",
+            icon: "coins",
             value: format_cost(t.total_cost_microdollars),
             note: format!(
                 "{} per conversation",
@@ -123,6 +134,7 @@ fn health_tiles(
     vec![
         Tile {
             label: "Errors",
+            icon: "alert",
             value: percent(t.errors, t.requests),
             note: format!("{} failed · {} rejected", t.errors, t.rejected),
             tone: error_rate_tone(t.errors, t.requests),
@@ -131,14 +143,16 @@ fn health_tiles(
         .with_spark(&column(series, |p| p.errors)),
         Tile {
             label: "Denied",
+            icon: "shield",
             value: t.denied.to_string(),
             note: format!("{} warned · {} skills invoked", t.warned, t.skill_invocations),
             tone: deny_tone(t.denied),
             hint: "Tool calls the governance chain denied",
         }
-        .with_spark(&column(series, |p| p.tool_calls)),
+        .with_spark(&column(series, |p| p.denied)),
         Tile {
             label: "p95 latency",
+            icon: "gauge",
             value: t
                 .p95_latency_ms
                 .map_or_else(|| "—".to_owned(), |ms| format!("{:.1}s", ms / 1000.0)),
@@ -156,6 +170,7 @@ fn health_tiles(
         .with_spark(&column(series, |p| p.users)),
         Tile {
             label: "Completed",
+            icon: "judge",
             value: score_display(t.completion_avg),
             note: format!(
                 "{} judged · {} achieved",

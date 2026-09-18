@@ -170,12 +170,14 @@ entities:
     default: closed
     why: >-
       Astound US org for the delivery groups, the storefront project and
-      super_admin. The salesforce band adds anyone who has linked that org, so
-      a linked person in no group still sees the server.
+      super_admin. The salesforce band adds anyone who has linked that org, and
+      the connector band anyone who has connected it, so a person in no group
+      still sees the server their own credential works against.
     allow:
       role: [super_admin]
       group: [india-devs, europe-devs, uk]
       project: [storefront]
+      connector: [salesforce-us]
       salesforce: [salesforce-us]
 
   - entity: mcp_server/salesforce-uk
@@ -187,6 +189,7 @@ entities:
       role: [super_admin]
       group: [india-devs, europe-devs, uk]
       project: [storefront]
+      connector: [salesforce-uk]
       salesforce: [salesforce-uk]
 
   - entity: mcp_server/salesforce-dev
@@ -196,6 +199,7 @@ entities:
       operators only.
     allow:
       role: [super_admin]
+      connector: [salesforce-dev]
       salesforce: [salesforce-dev]
 
   - entity: mcp_server/google_drive
@@ -204,9 +208,12 @@ entities:
       Org-wide Drive, Gmail and Calendar search through Agent Search; Google
       filters every result to what the user can already open, so the band only
       decides who sees the connector. Starts on the UK pilot band; widening is a one-line
-      change here.
+      change here. The connector band keeps the server for anyone who has
+      already connected it, which is what lets the connection-gated search
+      skills stay usable if the person's group changes.
     allow:
       group: [uk]
+      connector: [google_drive]
       role: [super_admin]
 
   # ─── UK sales bundle ──────────────────────────────────────────────────────
@@ -232,13 +239,6 @@ entities:
       group: [uk]
       role: [super_admin]
 
-  - entity: skill/uk_sales_client_report
-    default: closed
-    why: UK sales skill; follows the astound-sales-uk plugin.
-    allow:
-      group: [uk]
-      role: [super_admin]
-
   - entity: skill/uk_sales_client_research
     default: closed
     why: UK sales skill; follows the astound-sales-uk plugin.
@@ -246,9 +246,57 @@ entities:
       group: [uk]
       role: [super_admin]
 
-  - entity: skill/google_drive_search
+  # The two search building blocks open to the people whose calls will work:
+  # the `connector` band is a live, verified grant on the Connections page, so
+  # a UK member who has not connected Google or Salesforce does not see a
+  # skill that can only fail. super_admin keeps them for operating the flow.
+  - entity: skill/google_workspace_search
     default: closed
-    why: UK sales skill; follows the astound-sales-uk plugin and google_drive.
+    why: Google Workspace search recipes; only useful once google_drive is connected.
+    allow:
+      connector: [google_drive]
+      role: [super_admin]
+
+  - entity: skill/salesforce_account_search
+    default: closed
+    why: Salesforce account recipes; only useful once a Salesforce org is connected.
+    allow:
+      connector: [salesforce-uk, salesforce-us, salesforce-dev]
+      role: [super_admin]
+
+  # The report skills follow the plugin: each one says which source it could
+  # not reach rather than hiding, so a half-connected user still gets a report.
+  - entity: skill/client_360_report
+    default: closed
+    why: UK sales report skill; follows the astound-sales-uk plugin.
+    allow:
+      group: [uk]
+      role: [super_admin]
+
+  - entity: skill/account_status_report
+    default: closed
+    why: UK sales report skill; follows the astound-sales-uk plugin.
+    allow:
+      group: [uk]
+      role: [super_admin]
+
+  - entity: skill/account_suggestions
+    default: closed
+    why: UK sales report skill; follows the astound-sales-uk plugin.
+    allow:
+      group: [uk]
+      role: [super_admin]
+
+  - entity: skill/pipeline_renewals_review
+    default: closed
+    why: UK sales report skill; follows the astound-sales-uk plugin.
+    allow:
+      group: [uk]
+      role: [super_admin]
+
+  - entity: skill/install_sales_artifacts
+    default: closed
+    why: Puts the UK Client Report into the Cowork library; follows the astound-sales-uk plugin.
     allow:
       group: [uk]
       role: [super_admin]

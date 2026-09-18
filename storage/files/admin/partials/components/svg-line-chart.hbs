@@ -16,7 +16,8 @@
     chart_title / subtitle       heading and one-line summary
     has_data                     false when every bucket is zero
     aria_label                   the plot's accessible summary
-    series                       [{path_d, area_d?, color_token, label}]
+    series                       [{path_d, area_d?, color_token, label, points[{x,y}]}]
+                                 (points are set only for ≤ 12 buckets)
     ref_lines                    [{y, label, tone}] cap/warn dashes
     legend                       [{label, color_index, value_display}] (multi only)
     y_max/y_mid_display          gridline labels
@@ -50,6 +51,7 @@
             {{/if}}
             <path d="{{this.path_d}}" fill="none" stroke="var({{this.color_token}})"
                   vector-effect="non-scaling-stroke" class="sp-svgchart__line"></path>
+            {{#each this.points}}<path class="sp-svgchart__dot" d="M{{this.x}},{{this.y}} h0" stroke="var({{../this.color_token}})" vector-effect="non-scaling-stroke"></path>{{/each}}
             </g>
             {{/each}}
             <line class="sp-svgchart__cursor" x1="0" x2="0" y1="0" y2="40" vector-effect="non-scaling-stroke" data-chart-cursor hidden></line>

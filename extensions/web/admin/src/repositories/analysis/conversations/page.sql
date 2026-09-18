@@ -3,7 +3,9 @@
 -- breakdown dimension, the facet lists and one page of rows. Every row is a
 -- conversation whether or not the judge has seen it; the judge's row is a
 -- LEFT JOIN. Filtering, paging and sorting are bound parameters chosen by
--- CASE arms, never interpolated text.
+-- CASE arms, never interpolated text. The series is joined onto a
+-- generate_series of buckets so a thirty-day window always yields thirty
+-- points, zeros included — two busy days must not draw as one slope.
 WITH f AS MATERIALIZED (
     SELECT f.*, u.display_name, g.name AS group_name, p.name AS project_name,
            f.input_tokens + f.output_tokens AS total_tokens,
@@ -40,6 +42,7 @@ WITH f AS MATERIALIZED (
            OR ($19 = 'tools' AND f.tool_calls_intended + f.tool_calls_executed > 0)
            OR ($19 = 'skills' AND cardinality(f.skills) > 0)
            OR ($19 = 'safety' AND f.safety_findings > 0))
+      AND ($21::text[] IS NULL OR f.context_id = ANY($21))
       AND ($6::text IS NULL OR u.display_name ILIKE $6 OR f.user_id ILIKE $6 OR a.summary ILIKE $6
            OR a.title ILIKE $6 OR array_to_string(a.tags, ' ') ILIKE $6
            OR array_to_string(f.skills, ' ') ILIKE $6 OR array_to_string(f.models, ' ') ILIKE $6
@@ -63,6 +66,8 @@ WITH f AS MATERIALIZED (
            COALESCE(SUM(safety_findings), 0)::bigint AS safety_findings,
            COALESCE(SUM(safety_blocked), 0)::bigint AS safety_blocked,
            COALESCE(SUM(artifact_count), 0)::bigint AS artifacts,
+           COALESCE(SUM(artifact_files), 0)::bigint AS artifact_files,
+           COALESCE(SUM(artifact_cards), 0)::bigint AS artifact_cards,
            COALESCE(SUM(skill_invocations), 0)::bigint AS skill_invocations,
            COUNT(*) FILTER (WHERE cardinality(skills) > 0)::bigint AS with_skills,
            COUNT(*) FILTER (WHERE outcome = 'achieved')::bigint AS achieved,
@@ -74,18 +79,36 @@ WITH f AS MATERIALIZED (
                AND ($1::text[] IS NULL OR q.user_id = ANY($1))
                AND ($2::text IS NULL OR q.user_id = $2)) AS pending_judgement
     FROM f
-), series AS (
+), buckets AS (
+    SELECT generate_series(
+        date_trunc($20::text, COALESCE($7::timestamptz,
+            GREATEST((SELECT MIN(first_at) FROM f), now() - interval '1 year'), now())),
+        date_trunc($20::text, COALESCE($8::timestamptz, now())),
+        CASE $20::text WHEN 'hour' THEN interval '1 hour' ELSE interval '1 day' END) AS bucket
+), binned AS (
     SELECT date_trunc($20::text, f.first_at) AS bucket,
            COUNT(*)::bigint AS conversations, COALESCE(SUM(f.turn_count), 0)::bigint AS turns,
            COALESCE(SUM(f.total_tokens), 0)::bigint AS tokens,
            COALESCE(SUM(f.cost_microdollars), 0)::bigint AS cost_microdollars,
            COALESCE(SUM(f.error_count), 0)::bigint AS errors,
            COALESCE(SUM(f.tool_calls_intended), 0)::bigint AS tool_calls,
+           COALESCE(SUM(f.artifact_count), 0)::bigint AS artifacts,
+           COALESCE(SUM(f.gov_deny), 0)::bigint AS denied,
            COUNT(DISTINCT f.user_id)::bigint AS users
-    FROM f GROUP BY 1 ORDER BY 1
+    FROM f GROUP BY 1
+), series AS (
+    SELECT b.bucket, COALESCE(x.conversations, 0)::bigint AS conversations,
+           COALESCE(x.turns, 0)::bigint AS turns, COALESCE(x.tokens, 0)::bigint AS tokens,
+           COALESCE(x.cost_microdollars, 0)::bigint AS cost_microdollars,
+           COALESCE(x.errors, 0)::bigint AS errors, COALESCE(x.tool_calls, 0)::bigint AS tool_calls,
+           COALESCE(x.artifacts, 0)::bigint AS artifacts, COALESCE(x.denied, 0)::bigint AS denied,
+           COALESCE(x.users, 0)::bigint AS users
+    FROM buckets b LEFT JOIN binned x ON x.bucket = b.bucket
+    WHERE b.bucket <= now()
+    ORDER BY b.bucket
 ), keyed AS (
     SELECT f.category, f.outcome, f.user_id, f.turn_count, f.total_tokens, f.cost_microdollars,
-           f.error_count, f.gov_deny, f.tool_calls_intended, f.completion,
+           f.error_count, f.gov_deny, f.tool_calls_intended, f.artifact_count, f.completion,
            CASE $13::text
                WHEN 'group' THEN COALESCE(f.group_name, 'Unattributed')
                WHEN 'project' THEN COALESCE(f.project_name, 'Unattributed')
@@ -98,7 +121,7 @@ WITH f AS MATERIALIZED (
     FROM f WHERE $13::text <> 'skill'
     UNION ALL
     SELECT f.category, f.outcome, f.user_id, f.turn_count, f.total_tokens, f.cost_microdollars,
-           f.error_count, f.gov_deny, f.tool_calls_intended, f.completion, s.skill, NULL
+           f.error_count, f.gov_deny, f.tool_calls_intended, f.artifact_count, f.completion, s.skill, NULL
     FROM f CROSS JOIN LATERAL unnest(f.skills) AS s(skill) WHERE $13::text = 'skill'
 ), breakdown AS (
     SELECT k.bucket AS label, k.bucket_user AS user_id,
@@ -109,6 +132,7 @@ WITH f AS MATERIALIZED (
            COALESCE(SUM(k.error_count), 0)::bigint AS errors,
            COALESCE(SUM(k.gov_deny), 0)::bigint AS denied,
            COALESCE(SUM(k.tool_calls_intended), 0)::bigint AS tool_calls,
+           COALESCE(SUM(k.artifact_count), 0)::bigint AS artifacts,
            COUNT(*) FILTER (WHERE k.outcome = 'achieved')::bigint AS achieved,
            COUNT(*) FILTER (WHERE k.completion IS NOT NULL)::bigint AS judged,
            AVG(k.completion)::float8 AS completion_avg,
@@ -148,7 +172,7 @@ WITH f AS MATERIALIZED (
                  FROM (SELECT cr.input_tokens, cr.output_tokens, cr.created_at, cr.id
                        FROM conversation_requests cr
                        WHERE cr.context_id = s.context_id AND cr.effective_kind = 'turn'
-                       ORDER BY cr.created_at DESC, cr.id DESC LIMIT 32) r
+                       ORDER BY cr.created_at DESC, cr.id DESC LIMIT 24) r
                  ORDER BY r.created_at, r.id) AS turn_tokens
     FROM selected s
 ), skills AS (

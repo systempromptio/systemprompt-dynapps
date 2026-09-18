@@ -34,7 +34,8 @@ use super::super::people_view::{
     MemberContext, MemberInput, chips, mapping_rows, member_rows, or_default,
 };
 use super::super::types::{
-    ProjectDetailPageData, ProjectMembersTabView, ProjectSettingsTabView, UserOptionView,
+    MemberRowView, ProjectDetailPageData, ProjectMembersTabView, ProjectSettingsTabView,
+    UserOptionView,
 };
 use super::WINDOW_LABEL;
 use super::detail_view::{gated_rows, kpis, tabs, usage_tab};
@@ -158,15 +159,7 @@ pub(super) fn page_data(
         mappings,
         rules,
     } = reads;
-    let inputs: Vec<MemberInput<'_>> = data.members.iter().map(as_member_input).collect();
-    let rows = member_rows(
-        &inputs,
-        &MemberContext {
-            usage: &data.member_usage,
-            active: &data.active,
-            can_manage: user_ctx.is_admin,
-        },
-    );
+    let rows = member_views(data, user_ctx);
 
     ProjectDetailPageData {
         page: "project-detail",
@@ -203,6 +196,18 @@ pub(super) fn page_data(
         description: project.description.clone(),
         can_manage: user_ctx.is_admin,
     }
+}
+
+pub(super) fn member_views(data: &DetailData, user_ctx: &UserContext) -> Vec<MemberRowView> {
+    let inputs: Vec<MemberInput<'_>> = data.members.iter().map(as_member_input).collect();
+    member_rows(
+        &inputs,
+        &MemberContext {
+            usage: &data.member_usage,
+            active: &data.active,
+            can_manage: user_ctx.is_admin,
+        },
+    )
 }
 
 fn as_member_input(row: &ProjectMemberRow) -> MemberInput<'_> {

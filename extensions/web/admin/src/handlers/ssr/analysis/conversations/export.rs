@@ -34,14 +34,17 @@ pub(crate) async fn export_rows(
         outcome: params.outcome(),
         skill: params.skill(),
         free_text: params.free_text(),
-        since: Some(range.from),
-        until: Some(range.to),
+        // Why: a ticked selection is the whole answer; the window only
+        // applies when no ids were given.
+        since: params.context_ids().is_none().then_some(range.from),
+        until: params.context_ids().is_none().then_some(range.to),
         judged: params.judged(),
         model: params.model(),
         client_kind: params.client(),
         group_id: request.group.as_deref().map(GroupId::new),
         project_id: request.project.as_deref().map(ProjectId::new),
         flag: params.flag(),
+        context_ids: params.context_ids(),
     };
     Ok(load_conversation_analysis_page(
         pool,

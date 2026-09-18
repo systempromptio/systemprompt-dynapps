@@ -204,6 +204,21 @@ pub(crate) async fn users_page(
         can_write: shell.user.is_admin,
         role_choices: read.roles,
         create_user: create_user_panel(&pool, &sso.config, shell.user.is_admin).await,
+        export: crate::export::ExportView::single(
+            "users",
+            &crate::export::view::query_string(&[
+                ("filter", Some(url.filter.as_str())),
+                ("role", url.role.as_deref()),
+                ("q", url.search.as_deref()),
+                ("group", url.group.as_deref()),
+                ("project", url.project.as_deref()),
+                ("sort", Some(url.sort.column)),
+                (
+                    "dir",
+                    Some(if url.sort.descending { "desc" } else { "asc" }),
+                ),
+            ]),
+        ),
     };
 
     Ok(super::super::render_typed_page(

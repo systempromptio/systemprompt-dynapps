@@ -1,7 +1,8 @@
 //! The other planes of one conversation, read beside its fact row.
 //!
 //! For `/admin/analysis/conversations/{id}`: the turn ledger from the request
-//! log, tool calls from the ledger (intent → execution → artifact),
+//! log, tool calls from `tool_activity` (intent → execution → result, with
+//! the artifact rule applied),
 //! governance decisions, the skills invoked with the marketplace version
 //! served at the time, and the safety scanner's findings.
 
@@ -99,7 +100,8 @@ pub async fn list_conversation_turns(
         .collect())
 }
 
-/// One tool call from the ledger — intent, execution and artifact folded.
+/// One tool call from `tool_activity` — intent, execution and result
+/// folded, with the one artifact rule's verdict on it.
 #[derive(Debug, Clone)]
 pub struct ConversationToolCallRow {
     pub tool_name: Option<String>,
@@ -112,6 +114,11 @@ pub struct ConversationToolCallRow {
     pub artifact_id: Option<ArtifactId>,
     pub artifact_type: Option<String>,
     pub artifact_title: Option<String>,
+    pub artifact_kind: Option<String>,
+    pub input_summary: Option<String>,
+    pub is_builtin: bool,
+    pub is_structured: bool,
+    pub payload_bytes: Option<i32>,
     pub is_error: Option<bool>,
     pub error_message: Option<String>,
     pub request_id: Option<String>,
@@ -123,13 +130,16 @@ pub async fn list_conversation_tool_calls(
     client_session_id: Option<&str>,
 ) -> Result<Vec<ConversationToolCallRow>, sqlx::Error> {
     let rows = sqlx::query!(
-        r#"SELECT l.tool_name, l.server_name, l.state AS "state!", l.source, l.execution_status,
-                  l.execution_time_ms::bigint AS execution_time_ms, l.occurred_at, l.artifact_id AS "artifact_id?: ArtifactId",
-                  l.artifact_type, l.artifact_title, l.is_error, l.error_message, l.request_id
-           FROM tool_call_ledger l
-           WHERE l.context_id = $1
-              OR ($2::text IS NOT NULL AND (l.trace_id = $2 OR l.session_id = $2))
-           ORDER BY l.occurred_at NULLS LAST
+        r#"SELECT t.tool_name, t.server_name, t.state AS "state!", t.source, t.execution_status,
+                  t.execution_time_ms::bigint AS execution_time_ms, t.occurred_at,
+                  t.artifact_id AS "artifact_id?: ArtifactId", t.artifact_type, t.artifact_title,
+                  t.artifact_kind, t.input_summary, COALESCE(t.is_builtin, false) AS "is_builtin!",
+                  COALESCE(t.is_structured, false) AS "is_structured!", t.payload_bytes,
+                  t.is_error, t.error_message, t.request_id
+           FROM tool_activity t
+           WHERE t.context_id = $1 OR t.execution_context_id = $1
+              OR ($2::text IS NOT NULL AND (t.execution_trace_id = $2 OR t.session_id = $2))
+           ORDER BY t.occurred_at NULLS LAST
            LIMIT 500"#,
         context_id.as_str(),
         client_session_id
@@ -149,6 +159,11 @@ pub async fn list_conversation_tool_calls(
             artifact_id: r.artifact_id,
             artifact_type: r.artifact_type,
             artifact_title: r.artifact_title,
+            artifact_kind: r.artifact_kind,
+            input_summary: r.input_summary,
+            is_builtin: r.is_builtin,
+            is_structured: r.is_structured,
+            payload_bytes: r.payload_bytes,
             is_error: r.is_error,
             error_message: r.error_message,
             request_id: r.request_id,

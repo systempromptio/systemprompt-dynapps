@@ -22,6 +22,65 @@ Conventions (strict — hold every entry to them):
 
 ### Added
 
+- Tools and artifacts are distinct. `artifact_kind` (schema
+  `46_tool_artifacts.sql`, migration 087) is the one rule: a tool call is an
+  *artifact* only when a person can view or retrieve what it produced — a
+  file edited, written or read (`file`), an MCP Apps UI resource (`ui`), a
+  typed card such as a table, chart or report (`card`), or a retained
+  structured body with a preview (`body`); a Bash, Grep, search or untyped
+  result is a plain tool call. The `tool_activity` view applies it to every
+  ledger row and `conversation_facts` counts by it (`artifact_count`, plus
+  new `artifact_files` / `artifact_cards`), so the Conversations and Skills
+  rows, the conversation record and both new pages agree. The sidebar entry
+  **Tools & artifacts** opens `/admin/tools` (every tool call: kind, server,
+  input summary, state, duration, governance decision, person, links to the
+  session, conversation and artifact; KPIs, charts, breakdowns, ribbon
+  filters) and a re-scoped `/admin/artifacts` (only rows with a kind,
+  filterable by kind, with a preview or path affordance); the old
+  "structured only / show all results" toggles are gone. The conversation
+  page splits its tool table into **Tools** and **Artifacts**.
+- AI reports on demand. `/admin/analysis/reports` lists and requests
+  reports over a scope (global, marketplace, skill, or the current page's
+  filters via **Report on this view** / **Generate** in the banner under the
+  Conversations and Skills headers). A request stores a pure-SQL digest of
+  the record (`analysis_reports.inputs`: totals, top skills, models, people,
+  worst and best judged conversations, cost outliers, denial clusters,
+  intent and client mix — never a transcript); the manual-only
+  `analysis_report` job (`systemprompt infra jobs run analysis_report`; no
+  schedule) sends it once to the judge model with a JSON schema and records
+  a headline, an `ok | watch | degraded` assessment, themes with evidence
+  links into Conversations, Skills and Tools, and recommendations. The
+  latest global report's headline sits in the banner.
+- Judging from the list. Every unjudged conversation row carries a **Judge**
+  button (`POST …/{context_id}/judge` with `back=`), the header offers
+  **Judge N unjudged** over the current filters and the bulk bar **Judge
+  selected** (`POST /admin/analysis/conversations/judge`, up to 200 per
+  click, console-only). A judged row shows the verdict — intent, outcome,
+  summary and rationale — in a hover/focus card instead of a truncated
+  title attribute.
+- Export from a selection or a bucket. Conversations, Skills, Tools and
+  Artifacts rows have checkboxes (`components/table-select`, shift-click
+  ranges) that enable a sticky bulk bar with **Export selected**; every
+  breakdown row and every active filter chip carries a download glyph for
+  exactly the rows it selects. The datasets accept `ids=` and ignore the
+  window when it is present. The export dialog is rebuilt: one window
+  control at a time (the three fieldsets used to render together), two
+  panes, a grouped multi-column column checklist with a filter box and
+  All / Default / None, a dataset description, a selection or bucket strip,
+  and the last format and columns remembered per dataset.
+- Presentation. KPI tiles take an `icon` and a `spark` in a reserved trend
+  column (`components/kpi`, `05-kpi.css`) so a sparkline can no longer sit
+  over the value; a shared inline icon set (`components/icon`) heads tiles,
+  columns, ribbon pills and help entries; the nine stacked selects became a
+  filter ribbon (`components/filter-ribbon`, `analysis::ribbon`) whose pills
+  list only the values the filtered set contains, with counts and chips;
+  charts are padded to the whole window (`generate_series` buckets, zeros
+  included) and draw a dot per bucket when there are twelve or fewer; the
+  row sparkline covers the last 24 turns and a one-turn conversation draws
+  a flat line. Every Analysis page, Tools and Artifacts explain their
+  columns in a `?` help modal (`components/help-dialog`, `sp-help.js`)
+  instead of a paragraph at the page foot.
+
 - Analysis leads with the deterministic record. A `conversation_facts` rollup
   (schema `45_conversation_facts.sql`, migration 085) holds one row per gateway
   conversation — client and attestation, models, turns, tokens by kind, cost,
@@ -47,6 +106,12 @@ Conventions (strict — hold every entry to them):
   feedback assessment fact reads that score.
 
 ### Fixed
+
+- The Versions page's **Compare** link is `?days=…&tab=compare…` again; it
+  was emitted as `?days=30?tab=compare` and landed on the History tab.
+- The export dialog showed all three window fieldsets at once: the
+  component-layer `.sp-export__field { display: flex }` outranked the base
+  `[hidden]` rule. The hidden state is now declared in the same layer.
 
 - A connector refresh the provider refuses is a reconnect, not an outage.
   Atlassian retires a rotating refresh token with `403 unauthorized_client`

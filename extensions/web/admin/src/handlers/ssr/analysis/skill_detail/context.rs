@@ -48,6 +48,8 @@ pub(super) struct SkillRead<'a> {
     pub(super) breakdown: &'a [SkillBucketRow],
     pub(super) conversations: &'a [SkillConversationRow],
     pub(super) total: i64,
+    // Why: whether the viewer may press a row's Judge button.
+    pub(super) can_judge: bool,
 }
 
 fn range_links(query: &SkillDetailQuery, key: &str) -> Vec<TabLinkView> {
@@ -115,6 +117,7 @@ pub(super) fn build_context(
     let entitled = read.row.as_ref().map_or(0, |r| r.entitled);
     let invocations_total: i64 = read.breakdown.iter().map(|b| b.invocations).sum();
     let key = skill.skill.as_str();
+    let back_url = query.link(key, None, None, None);
     SkillDetailContext {
         page: "analysis-skill",
         title: format!("{skill_name} · Skill"),
@@ -153,7 +156,7 @@ pub(super) fn build_context(
         conversations: read
             .conversations
             .iter()
-            .map(ConversationRowView::from_skill_row)
+            .map(|r| ConversationRowView::from_skill_row(r).with_viewer(read.can_judge, &back_url))
             .collect(),
         conversation_count: read.total,
         pagination: pagination(query, key, read.total, read.conversations.len()),
@@ -161,6 +164,7 @@ pub(super) fn build_context(
             &["analysis-skill-conversations"],
             &format!("skill={}&days={}", urlencoding::encode(key), query.days()),
         ),
+        help: crate::handlers::ssr::analysis::help::skill_detail_help(),
     }
 }
 

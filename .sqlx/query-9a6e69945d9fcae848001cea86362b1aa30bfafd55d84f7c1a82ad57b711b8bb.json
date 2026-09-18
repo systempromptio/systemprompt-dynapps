@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE analysis_reports\n           SET status = CASE WHEN attempts >= 3 THEN 'failed' ELSE 'pending' END,\n               lease_token = NULL, lease_until = NULL,\n               next_attempt = clock_timestamp() + attempts * interval '2 minutes',\n               last_error = LEFT($3, 500), updated_at = clock_timestamp()\n           WHERE id = $1 AND lease_token = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "9a6e69945d9fcae848001cea86362b1aa30bfafd55d84f7c1a82ad57b711b8bb"
+}

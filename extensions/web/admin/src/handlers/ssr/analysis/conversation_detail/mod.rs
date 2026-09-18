@@ -12,7 +12,7 @@ mod views;
 
 use std::sync::Arc;
 
-use axum::extract::{Path, State};
+use axum::extract::{Form, Path, State};
 use axum::http::HeaderMap;
 use axum::response::{Redirect, Response};
 use sqlx::PgPool;
@@ -104,6 +104,13 @@ pub(crate) async fn page(
     ))
 }
 
+// Why: where the Judge button returns to — the list it was pressed on when
+// the form says so, else this conversation's own page.
+#[derive(Debug, Default, serde::Deserialize)]
+pub(crate) struct JudgeNowForm {
+    pub back: Option<String>,
+}
+
 // Why: `POST …/{context_id}/judge` — ask the judge for this conversation now.
 // The row is queued as a manual request and the next `conversation_judge`
 // tick (within five minutes) reads it, whatever the profile's automatic switch.
@@ -112,6 +119,7 @@ pub(crate) async fn judge_now(
     State(pool): State<Arc<PgPool>>,
     Path(context_id): Path<String>,
     headers: HeaderMap,
+    Form(form): Form<JudgeNowForm>,
 ) -> AdminHtmlResult<Redirect> {
     if !shell.user.is_console {
         return Err(AdminError::Forbidden("Console access required".into()).into());
@@ -125,5 +133,9 @@ pub(crate) async fn judge_now(
         requested_by = %shell.user.user_id,
         "conversation queued for the judge from the console"
     );
-    Ok(Redirect::to(&analysis_conversation_url(&context_id)))
+    let back = form
+        .back
+        .filter(|b| b.starts_with("/admin/analysis/"))
+        .unwrap_or_else(|| analysis_conversation_url(&context_id));
+    Ok(Redirect::to(&back))
 }

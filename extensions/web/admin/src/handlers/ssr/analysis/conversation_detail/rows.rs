@@ -13,6 +13,7 @@ use crate::handlers::ssr::analysis_urls::{analysis_skill_url, analysis_version_u
 use crate::handlers::ssr::format::{
     format_cost, format_duration_ms, format_token_total, local_time,
 };
+use crate::handlers::ssr::ssr_tools::rows::{format_bytes, kind_icon, kind_label};
 use crate::repositories::analysis::conversations::ConversationFactRow;
 use crate::repositories::analysis::conversations::planes::{
     ConversationDecisionRow, ConversationSafetyRow, ConversationSkillRow, ConversationToolCallRow,
@@ -64,28 +65,63 @@ pub(super) fn turn_view((index, t): (usize, &ConversationTurnRow)) -> LedgerTurn
 }
 
 pub(super) fn tool_view(t: &ConversationToolCallRow) -> LedgerCallView {
+    let tool_name = t.tool_name.clone().unwrap_or_else(|| "—".to_owned());
+    let input = t.input_summary.clone().unwrap_or_default();
+    let failed = t.is_error == Some(true)
+        || matches!(t.execution_status.as_deref(), Some("failed" | "timeout"));
+    let previewable = matches!(t.artifact_kind.as_deref(), Some("card" | "ui" | "body"))
+        && t.is_structured
+        && !failed;
+    let artifact_href = t
+        .artifact_id
+        .as_ref()
+        .filter(|_| t.artifact_kind.is_some())
+        .map(|id| format!("/admin/artifacts/{}", urlencoding::encode(id.as_str())));
     LedgerCallView {
-        tool_name: t.tool_name.clone().unwrap_or_else(|| "—".to_owned()),
+        tool_icon: if t.is_builtin { "terminal" } else { "plug" },
+        is_builtin: t.is_builtin,
         server_name: t.server_name.clone().unwrap_or_default(),
-        state_tone: match (t.state.as_str(), t.execution_status.as_deref()) {
-            (_, Some("failed" | "timeout")) => "err",
-            ("executed", _) => "ok",
-            ("intended", _) => "warn",
-            _ => "muted",
+        is_path: t.artifact_kind.as_deref() == Some("file") || input.starts_with('/'),
+        state_tone: if failed {
+            "err"
+        } else {
+            match t.state.as_str() {
+                "executed" => "ok",
+                "intended" => "warn",
+                _ => "muted",
+            }
         },
-        state: t.state.clone(),
+        state: if failed {
+            "failed".to_owned()
+        } else {
+            t.state.clone()
+        },
         source: t.source.clone().unwrap_or_default(),
         status: t.execution_status.clone().unwrap_or_default(),
         duration_display: t
             .execution_time_ms
             .map_or_else(|| "—".to_owned(), format_duration_ms),
         at: t.occurred_at.map(local_time).unwrap_or_default(),
-        artifact_title: t.artifact_title.clone().or_else(|| t.artifact_type.clone()),
-        artifact_href: t
-            .artifact_id
-            .as_ref()
-            .map(|id| format!("/admin/artifacts/{}", urlencoding::encode(id.as_str()))),
+        artifact_icon: kind_icon(t.artifact_kind.as_deref()),
+        artifact_label: kind_label(t.artifact_kind.as_deref()),
+        artifact_title: t
+            .artifact_title
+            .clone()
+            .filter(|title| !title.is_empty() && title != &tool_name)
+            .or_else(|| (!input.is_empty()).then(|| input.clone()))
+            .or_else(|| t.artifact_type.clone()),
+        preview_href: t.artifact_id.as_ref().filter(|_| previewable).map(|id| {
+            format!(
+                "/admin/artifacts/{}/preview",
+                urlencoding::encode(id.as_str())
+            )
+        }),
+        artifact_href,
+        artifact_kind: t.artifact_kind.clone(),
+        bytes_display: format_bytes(i64::from(t.payload_bytes.unwrap_or(0))),
         error_message: t.error_message.clone().filter(|m| !m.is_empty()),
+        input_summary: input,
+        tool_name,
     }
 }
 

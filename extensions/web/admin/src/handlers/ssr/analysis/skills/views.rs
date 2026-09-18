@@ -2,7 +2,9 @@
 
 use serde::Serialize;
 
-use crate::handlers::ssr::list_view::SelectOptionView;
+use crate::handlers::ssr::analysis::help::HelpView;
+use crate::handlers::ssr::analysis::reports::banner::ReportBannerView;
+use crate::handlers::ssr::analysis::ribbon::RibbonView;
 use crate::handlers::ssr::types::{SparklineView, SvgLineChartView, TabLinkView};
 
 // Why: one skill row, every number pre-formatted and toned.
@@ -31,6 +33,9 @@ pub(crate) struct SkillFactView {
     pub denied_tone: &'static str,
     pub tool_calls: i64,
     pub tool_calls_failed: i64,
+    pub tools_href: String,
+    pub artifacts: i64,
+    pub artifacts_href: String,
     pub latency_display: String,
     pub latency_tone: &'static str,
     pub models: Vec<String>,
@@ -38,6 +43,9 @@ pub(crate) struct SkillFactView {
     pub judged: i64,
     pub completion_display: String,
     pub completion_tone: &'static str,
+    // Why: "82 · 12/40" — the mean beside how many of the skill's
+    // conversations it rests on.
+    pub completion_note: String,
     pub attributed_pct: String,
     pub spark: SparklineView,
     pub first_used: String,
@@ -93,6 +101,7 @@ pub(super) struct AdoptionView {
 #[derive(Debug, Serialize)]
 pub(super) struct SkillsKpiView {
     pub(super) label: &'static str,
+    pub(super) icon: &'static str,
     pub(super) value: String,
     pub(super) note: String,
     pub(super) tone: &'static str,
@@ -106,10 +115,7 @@ pub(super) struct SkillsPageContext {
     pub(super) title: &'static str,
     pub(super) days: i64,
     pub(super) range_links: Vec<TabLinkView>,
-    pub(super) sort_options: Vec<SelectOptionView>,
-    pub(super) marketplace_options: Vec<SelectOptionView>,
-    pub(super) client_options: Vec<SelectOptionView>,
-    pub(super) search: String,
+    pub(super) ribbon: RibbonView,
     pub(super) kpis: Vec<SkillsKpiView>,
     pub(super) chart: SvgLineChartView,
     pub(super) adoption: Vec<AdoptionView>,
@@ -119,6 +125,9 @@ pub(super) struct SkillsPageContext {
     pub(super) unused_count: usize,
     pub(super) export: crate::export::ExportView,
     pub(super) is_admin: bool,
+    pub(super) help: HelpView,
+    pub(super) report_banner: ReportBannerView,
+    pub(super) current_url: String,
 }
 
 #[derive(Debug, Serialize)]

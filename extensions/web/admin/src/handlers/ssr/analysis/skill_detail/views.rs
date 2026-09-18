@@ -3,6 +3,7 @@
 use serde::Serialize;
 
 use crate::handlers::ssr::analysis::conversations::view::ConversationRowView;
+use crate::handlers::ssr::analysis::help::HelpView;
 use crate::handlers::ssr::analysis::skills::SkillFactView;
 use crate::handlers::ssr::list_view::Pagination;
 use crate::handlers::ssr::types::{BreadcrumbView, SvgLineChartView, TabLinkView};
@@ -10,6 +11,7 @@ use crate::handlers::ssr::types::{BreadcrumbView, SvgLineChartView, TabLinkView}
 #[derive(Debug, Serialize)]
 pub(super) struct SkillKpiView {
     pub(super) label: &'static str,
+    pub(super) icon: &'static str,
     pub(super) value: String,
     pub(super) note: String,
     pub(super) tone: &'static str,
@@ -60,4 +62,5 @@ pub(super) struct SkillDetailContext {
     pub(super) conversation_count: i64,
     pub(super) pagination: Pagination,
     pub(super) export: crate::export::ExportView,
+    pub(super) help: HelpView,
 }

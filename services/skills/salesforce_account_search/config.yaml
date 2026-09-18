@@ -1,0 +1,14 @@
+id: salesforce_account_search
+name: Salesforce Account Search
+description: Resolve a named client to its Salesforce Account and read the bounded set of records the
+  UK sales reports need — people, pipeline, cases, activities, contracts — through the signed-in
+  user's Salesforce hosted MCP, returning dated evidence with currency on every amount.
+enabled: true
+file: SKILL.md
+tags:
+- astound
+- sales
+- salesforce
+- evidence
+category: business
+display_category: Sales UK

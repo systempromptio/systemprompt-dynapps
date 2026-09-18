@@ -67,6 +67,7 @@ impl Figures {
 
 fn tile(
     label: &'static str,
+    icon: &'static str,
     value: String,
     note: String,
     tone: &'static str,
@@ -74,6 +75,7 @@ fn tile(
 ) -> SkillsKpiView {
     SkillsKpiView {
         label,
+        icon,
         value,
         note,
         tone,
@@ -90,6 +92,7 @@ fn adoption_tiles(rows: &[SkillFactRow], g: &Figures) -> Vec<SkillsKpiView> {
     let mut tiles = vec![
         tile(
             "Skills used",
+            "skill",
             rows.len().to_string(),
             format!("{} invocations in the window", invocations),
             "accent",
@@ -97,6 +100,7 @@ fn adoption_tiles(rows: &[SkillFactRow], g: &Figures) -> Vec<SkillsKpiView> {
         ),
         tile(
             "People",
+            "people",
             active.to_string(),
             format!("of {entitled} entitled · {installed} installed"),
             "accent",
@@ -104,6 +108,7 @@ fn adoption_tiles(rows: &[SkillFactRow], g: &Figures) -> Vec<SkillsKpiView> {
         ),
         tile(
             "Install rate",
+            "download",
             percent(installed, entitled_i),
             format!("{installed} consumers hold a verified receipt"),
             if entitled_i > 0 && installed * 2 >= entitled_i {
@@ -115,11 +120,13 @@ fn adoption_tiles(rows: &[SkillFactRow], g: &Figures) -> Vec<SkillsKpiView> {
         ),
         tile(
             "Conversations",
+            "chat",
             sum(|r| r.conversations).to_string(),
             format!(
-                "{} turns · {} tool calls",
+                "{} turns · {} tools · {} artifacts",
                 sum(|r| r.turns),
-                sum(|r| r.tool_calls)
+                sum(|r| r.tool_calls),
+                sum(|r| r.artifacts)
             ),
             "accent",
             "Gateway conversations whose harness session invoked a skill",
@@ -138,6 +145,7 @@ fn spend_tiles(rows: &[SkillFactRow], g: &Figures) -> Vec<SkillsKpiView> {
     vec![
         tile(
             "Tokens",
+            "token",
             format_token_total(sum(|r| r.input_tokens + r.output_tokens)),
             format!("{} from cache", format_token_total(sum(|r| r.cache_tokens))),
             "accent",
@@ -145,6 +153,7 @@ fn spend_tiles(rows: &[SkillFactRow], g: &Figures) -> Vec<SkillsKpiView> {
         ),
         tile(
             "Cost",
+            "coins",
             format_cost(cost),
             format!("{} per invocation", format_cost(cost / invocations.max(1))),
             "accent",
@@ -152,6 +161,7 @@ fn spend_tiles(rows: &[SkillFactRow], g: &Figures) -> Vec<SkillsKpiView> {
         ),
         tile(
             "Errors",
+            "alert",
             (sum(|r| r.errors)).to_string(),
             format!("failed requests · {} denied tool calls", sum(|r| r.denied)),
             error_rate_tone(sum(|r| r.errors), sum(|r| r.requests)),
@@ -159,6 +169,7 @@ fn spend_tiles(rows: &[SkillFactRow], g: &Figures) -> Vec<SkillsKpiView> {
         ),
         tile(
             "Completed",
+            "judge",
             score_display(completion),
             format!("{judged_total} conversations judged"),
             completion_tone(completion),

@@ -87,9 +87,21 @@ pub(super) fn build_context(
         charts: charts(turns),
         turns: turns.iter().enumerate().map(turn_view).collect(),
         turn_count: turns.len(),
+        tool_count: tools.len(),
+        artifact_count: tools.iter().filter(|t| t.artifact_kind.is_some()).count(),
+        artifacts: tools
+            .iter()
+            .filter(|t| t.artifact_kind.is_some())
+            .map(tool_view)
+            .collect(),
         tool_calls: tools.iter().map(tool_view).collect(),
         decisions: decisions.iter().map(decision_view).collect(),
         skills: skills.iter().map(skill_view).collect(),
         safety: safety.iter().map(safety_view).collect(),
+        help: crate::handlers::ssr::analysis::help::conversation_detail_help(),
+        export: crate::export::ExportView::single(
+            "analysis-conversation-turns",
+            &format!("context_id={}", urlencoding::encode(f.context_id.as_str())),
+        ),
     }
 }

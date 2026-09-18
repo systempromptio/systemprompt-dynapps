@@ -15,7 +15,9 @@
     {{else}}{{#if (eq page "analysis-versions")}}<span aria-current="page">Versions</span>
     {{else}}{{#if (eq page "analysis-marketplace-versions")}}<a href="/admin/analysis/versions">Versions</a> <span class="sp-breadcrumbs__sep" aria-hidden="true">›</span> <span aria-current="page">{{name}}</span>
     {{else}}{{#if (eq page "analysis-revision")}}<a href="/admin/analysis/versions">Versions</a> <span class="sp-breadcrumbs__sep" aria-hidden="true">›</span> <span aria-current="page">Revision</span>
-    {{else}}<span aria-current="page">Analysis</span>{{/if}}{{/if}}{{/if}}{{/if}}{{/if}}{{/if}}{{/if}}
+    {{else}}{{#if (eq page "analysis-reports")}}<span aria-current="page">Reports</span>
+    {{else}}{{#if (eq page "analysis-report")}}<a href="/admin/analysis/reports">Reports</a> <span class="sp-breadcrumbs__sep" aria-hidden="true">›</span> <span aria-current="page">Report</span>
+    {{else}}<span aria-current="page">Analysis</span>{{/if}}{{/if}}{{/if}}{{/if}}{{/if}}{{/if}}{{/if}}{{/if}}{{/if}}
 </nav>
 <a class="sp-btn sp-btn--xs sp-btn--outline sp-analysis-strip__guide" href="/documentation/analysis" target="_blank" rel="noopener" title="Open the Analysis guide in a new tab">Guide</a>
 </div>

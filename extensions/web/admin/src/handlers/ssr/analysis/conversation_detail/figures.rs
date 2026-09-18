@@ -11,6 +11,7 @@ use crate::repositories::analysis::conversations::planes::ConversationTurnRow;
 
 const fn kpi(
     label: &'static str,
+    icon: &'static str,
     value: String,
     note: String,
     tone: &'static str,
@@ -18,6 +19,7 @@ const fn kpi(
 ) -> ConversationKpiView {
     ConversationKpiView {
         label,
+        icon,
         value,
         note,
         tone,
@@ -30,6 +32,7 @@ fn usage_kpis(f: &ConversationFactRow) -> Vec<ConversationKpiView> {
     vec![
         kpi(
             "Turns",
+            "bolt",
             f.turn_count.to_string(),
             format!(
                 "{} side calls · {} hook prompts",
@@ -40,6 +43,7 @@ fn usage_kpis(f: &ConversationFactRow) -> Vec<ConversationKpiView> {
         ),
         kpi(
             "Tokens",
+            "token",
             format_token_total(f.total_tokens),
             format!(
                 "{} in · {} out · {} reasoning",
@@ -52,6 +56,7 @@ fn usage_kpis(f: &ConversationFactRow) -> Vec<ConversationKpiView> {
         ),
         kpi(
             "Cache",
+            "cache",
             percent(f.cache_read_tokens, f.cache_read_tokens + f.input_tokens),
             format!(
                 "{} read · {} written",
@@ -63,6 +68,7 @@ fn usage_kpis(f: &ConversationFactRow) -> Vec<ConversationKpiView> {
         ),
         kpi(
             "Cost",
+            "coins",
             format_cost(f.cost_microdollars),
             format!(
                 "{} on side calls · {} per turn",
@@ -74,6 +80,7 @@ fn usage_kpis(f: &ConversationFactRow) -> Vec<ConversationKpiView> {
         ),
         kpi(
             "Latency",
+            "gauge",
             f.p95_latency_ms
                 .map_or_else(|| "—".to_owned(), |ms| format_duration_ms(i64::from(ms))),
             format!(
@@ -93,24 +100,38 @@ fn health_kpis(f: &ConversationFactRow) -> Vec<ConversationKpiView> {
     vec![
         kpi(
             "Tools",
+            "wrench",
             format!(
                 "{}/{}",
                 f.tool_calls_executed,
                 f.tool_calls_intended.max(f.tool_calls_executed)
             ),
-            format!(
-                "{} failed · {} artifacts",
-                f.tool_calls_failed, f.artifact_count
-            ),
+            format!("executed / asked · {} failed", f.tool_calls_failed),
             if f.tool_calls_failed > 0 {
                 "err"
             } else {
                 "accent"
             },
-            "Executed over requested tool calls; the ledger joins the model's intent to the execution and its artifact",
+            "Executed over requested tool calls; the ledger joins the model's intent to the execution and its result",
+        ),
+        kpi(
+            "Artifacts",
+            "file",
+            f.artifact_count.to_string(),
+            format!(
+                "{} files · {} cards, UI, bodies",
+                f.artifact_files, f.artifact_cards
+            ),
+            if f.artifact_count > 0 {
+                "accent"
+            } else {
+                "muted"
+            },
+            "Tool calls that produced something viewable — a file edited, written or read, a typed card, a UI resource or a retained body",
         ),
         kpi(
             "Errors",
+            "alert",
             f.error_count.to_string(),
             format!(
                 "{} rejected · {} streaming",
@@ -121,6 +142,7 @@ fn health_kpis(f: &ConversationFactRow) -> Vec<ConversationKpiView> {
         ),
         kpi(
             "Governance",
+            "shield",
             f.gov_deny.to_string(),
             format!("denied · {} warned · {} allowed", f.gov_warn, f.gov_allow),
             deny_tone(f.gov_deny),
@@ -128,6 +150,7 @@ fn health_kpis(f: &ConversationFactRow) -> Vec<ConversationKpiView> {
         ),
         kpi(
             "Safety",
+            "alert",
             f.safety_findings.to_string(),
             format!("findings · {} blocked", f.safety_blocked),
             safety_tone(f.safety_findings, f.safety_blocked),
@@ -135,6 +158,7 @@ fn health_kpis(f: &ConversationFactRow) -> Vec<ConversationKpiView> {
         ),
         kpi(
             "Skills",
+            "skill",
             f.skill_invocations.to_string(),
             format!("invocations · {} distinct", f.skills.len()),
             if f.skill_invocations > 0 {

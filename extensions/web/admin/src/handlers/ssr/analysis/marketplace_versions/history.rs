@@ -125,9 +125,11 @@ pub(crate) fn views(
                 completion_display,
                 completion_tone,
                 scored_sessions,
+                // Why: appended to `base_href`, which already carries
+                // `?days=`, so this must continue the query, not start one.
                 compare_href: previous.map(|p| {
                     format!(
-                        "?tab=compare&a={}&b={}",
+                        "&tab=compare&a={}&b={}",
                         urlencoding::encode(&p.content_hash),
                         urlencoding::encode(&row.content_hash)
                     )

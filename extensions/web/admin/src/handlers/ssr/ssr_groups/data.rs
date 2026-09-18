@@ -14,7 +14,7 @@ use crate::repositories;
 use crate::repositories::groups::usage::{GroupUsageRow, UNATTRIBUTED_ROW, list_groups_with_usage};
 use crate::services::marketplaces::load_marketplaces;
 
-use super::super::people_view::share;
+use super::super::people_view::{share, short_model};
 use super::super::types::{GroupRowView, MemberSetChipView, UnattributedRowView};
 use super::UNASSIGNED_GROUP;
 
@@ -86,15 +86,6 @@ pub(super) async fn load_listing(pool: &PgPool, window_days: i32) -> Listing {
         unkeyed_people,
         rows,
     }
-}
-
-// Why: the listing has ten columns at 1440px and the model name is the widest
-// thing that is not a sentence. The vendor prefix is the same on every row of
-// an Anthropic estate, so it carries no information here; the cell keeps the
-// full id on its title.
-fn short_model(model: &str) -> String {
-    let tail = model.rsplit('/').next().unwrap_or(model);
-    tail.strip_prefix("claude-").unwrap_or(tail).to_owned()
 }
 
 // Why: the cell shows the whole word and the title says what it means for

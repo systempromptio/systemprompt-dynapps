@@ -28,6 +28,26 @@ struct Drilldown {
     skill: Option<String>,
 }
 
+// Why: the ticked rows' keys, comma-joined by the export dialog.
+#[derive(Debug, Default, serde::Deserialize)]
+struct SkillIdsQuery {
+    ids: Option<String>,
+}
+
+impl SkillIdsQuery {
+    fn skills(&self) -> Option<Vec<String>> {
+        let keys: Vec<String> = self
+            .ids
+            .as_deref()?
+            .split(',')
+            .map(str::trim)
+            .filter(|k| !k.is_empty())
+            .map(str::to_owned)
+            .collect();
+        (!keys.is_empty()).then_some(keys)
+    }
+}
+
 async fn window(ctx: &ExportContext<'_>) -> AdminResult<SkillWindow> {
     let w = ctx.window()?;
     let request = ScopeRequest::from_query(ctx.user, None, None);
@@ -40,36 +60,60 @@ async fn window(ctx: &ExportContext<'_>) -> AdminResult<SkillWindow> {
 }
 
 const SKILL_COLUMNS: &[Column] = &[
-    Column::new("skill", "Skill", CellKind::Text),
-    Column::new("plugin_id", "Plugin", CellKind::Text),
-    Column::new("marketplace_id", "Marketplace", CellKind::Text),
-    Column::new("invocations", "Invocations", CellKind::Integer),
-    Column::new("slash", "Slash", CellKind::Integer).optional(),
-    Column::new("tool", "Tool", CellKind::Integer).optional(),
-    Column::new("attributed", "Attributed", CellKind::Integer).optional(),
-    Column::new("users", "People", CellKind::Integer),
-    Column::new("sessions", "Sessions", CellKind::Integer).optional(),
-    Column::new("installs", "Installs", CellKind::Integer),
-    Column::new("conversations", "Conversations", CellKind::Integer),
-    Column::new("requests", "Requests", CellKind::Integer),
-    Column::new("turns", "Turns", CellKind::Integer).optional(),
-    Column::new("input_tokens", "Input tokens", CellKind::Integer),
-    Column::new("output_tokens", "Output tokens", CellKind::Integer),
-    Column::new("cache_tokens", "Cache tokens", CellKind::Integer).optional(),
-    Column::new("cost_usd", "Cost (USD)", CellKind::Money),
-    Column::new("errors", "Failed requests", CellKind::Integer),
-    Column::new("denied", "Denied", CellKind::Integer),
-    Column::new("tool_calls", "Tool calls", CellKind::Integer),
-    Column::new("tool_calls_failed", "Tools failed", CellKind::Integer).optional(),
-    Column::new("artifacts", "Artifacts", CellKind::Integer).optional(),
-    Column::new("p95_latency_ms", "p95 latency (ms)", CellKind::Decimal).optional(),
-    Column::new("models", "Models", CellKind::Text).optional(),
-    Column::new("clients", "Clients", CellKind::Text).optional(),
-    Column::new("judged", "Judged", CellKind::Integer),
-    Column::new("completion_avg", "Mean completion", CellKind::Decimal),
-    Column::new("achieved", "Achieved", CellKind::Integer).optional(),
-    Column::new("first_used", "First used", CellKind::Timestamp),
-    Column::new("last_used", "Last used", CellKind::Timestamp),
+    Column::new("skill", "Skill", CellKind::Text).group("Identity"),
+    Column::new("plugin_id", "Plugin", CellKind::Text).group("Identity"),
+    Column::new("marketplace_id", "Marketplace", CellKind::Text).group("Identity"),
+    Column::new("invocations", "Invocations", CellKind::Integer).group("Volume"),
+    Column::new("slash", "Slash", CellKind::Integer)
+        .optional()
+        .group("Volume"),
+    Column::new("tool", "Tool", CellKind::Integer)
+        .optional()
+        .group("Volume"),
+    Column::new("attributed", "Attributed", CellKind::Integer)
+        .optional()
+        .group("Volume"),
+    Column::new("users", "People", CellKind::Integer).group("Volume"),
+    Column::new("sessions", "Sessions", CellKind::Integer)
+        .optional()
+        .group("Volume"),
+    Column::new("installs", "Installs", CellKind::Integer).group("Volume"),
+    Column::new("conversations", "Conversations", CellKind::Integer).group("Volume"),
+    Column::new("requests", "Requests", CellKind::Integer).group("Volume"),
+    Column::new("turns", "Turns", CellKind::Integer)
+        .optional()
+        .group("Volume"),
+    Column::new("input_tokens", "Input tokens", CellKind::Integer).group("Tokens"),
+    Column::new("output_tokens", "Output tokens", CellKind::Integer).group("Tokens"),
+    Column::new("cache_tokens", "Cache tokens", CellKind::Integer)
+        .optional()
+        .group("Tokens"),
+    Column::new("cost_usd", "Cost (USD)", CellKind::Money).group("Cost"),
+    Column::new("errors", "Failed requests", CellKind::Integer).group("Volume"),
+    Column::new("denied", "Denied", CellKind::Integer).group("Governance"),
+    Column::new("tool_calls", "Tool calls", CellKind::Integer).group("Tools & artifacts"),
+    Column::new("tool_calls_failed", "Tools failed", CellKind::Integer)
+        .optional()
+        .group("Tools & artifacts"),
+    Column::new("artifacts", "Artifacts", CellKind::Integer)
+        .optional()
+        .group("Tools & artifacts"),
+    Column::new("p95_latency_ms", "p95 latency (ms)", CellKind::Decimal)
+        .optional()
+        .group("Volume"),
+    Column::new("models", "Models", CellKind::Text)
+        .optional()
+        .group("Identity"),
+    Column::new("clients", "Clients", CellKind::Text)
+        .optional()
+        .group("Identity"),
+    Column::new("judged", "Judged", CellKind::Integer).group("Judge"),
+    Column::new("completion_avg", "Mean completion", CellKind::Decimal).group("Judge"),
+    Column::new("achieved", "Achieved", CellKind::Integer)
+        .optional()
+        .group("Judge"),
+    Column::new("first_used", "First used", CellKind::Timestamp).group("Identity"),
+    Column::new("last_used", "Last used", CellKind::Timestamp).group("Identity"),
 ];
 
 fn skill_row(r: &SkillFactRow) -> Vec<Cell> {
@@ -108,30 +152,36 @@ fn skill_row(r: &SkillFactRow) -> Vec<Cell> {
 }
 
 const CONVERSATION_COLUMNS: &[Column] = &[
-    Column::new("context_id", "Context", CellKind::Text),
-    Column::new("client_session_id", "Harness session", CellKind::Text).optional(),
-    Column::new("title", "Title", CellKind::Text),
-    Column::new("user_id", "User", CellKind::Text),
-    Column::new("display_name", "Name", CellKind::Text),
-    Column::new("group_name", "Group", CellKind::Text),
-    Column::new("project_name", "Project", CellKind::Text),
-    Column::new("client", "Client", CellKind::Text),
-    Column::new("model", "Model", CellKind::Text),
-    Column::new("invocations", "Invocations", CellKind::Integer),
-    Column::new("turns", "Turns", CellKind::Integer),
-    Column::new("tool_calls", "Tool calls", CellKind::Integer),
-    Column::new("errors", "Failed requests", CellKind::Integer),
-    Column::new("denied", "Denied", CellKind::Integer),
-    Column::new("tokens", "Tokens", CellKind::Integer),
-    Column::new("cost_usd", "Cost (USD)", CellKind::Money),
-    Column::new("p95_latency_ms", "p95 latency (ms)", CellKind::Integer).optional(),
-    Column::new("duration_seconds", "Duration (s)", CellKind::Integer),
-    Column::new("skills", "Skills", CellKind::Text).optional(),
-    Column::new("category", "Intent", CellKind::Text),
-    Column::new("outcome", "Outcome", CellKind::Text),
-    Column::new("completion", "Completion", CellKind::Integer),
-    Column::new("first_at", "Started", CellKind::Timestamp),
-    Column::new("last_at", "Last activity", CellKind::Timestamp),
+    Column::new("context_id", "Context", CellKind::Text).group("Identity"),
+    Column::new("client_session_id", "Harness session", CellKind::Text)
+        .optional()
+        .group("Identity"),
+    Column::new("title", "Title", CellKind::Text).group("Identity"),
+    Column::new("user_id", "User", CellKind::Text).group("Identity"),
+    Column::new("display_name", "Name", CellKind::Text).group("Identity"),
+    Column::new("group_name", "Group", CellKind::Text).group("Identity"),
+    Column::new("project_name", "Project", CellKind::Text).group("Identity"),
+    Column::new("client", "Client", CellKind::Text).group("Identity"),
+    Column::new("model", "Model", CellKind::Text).group("Identity"),
+    Column::new("invocations", "Invocations", CellKind::Integer).group("Volume"),
+    Column::new("turns", "Turns", CellKind::Integer).group("Volume"),
+    Column::new("tool_calls", "Tool calls", CellKind::Integer).group("Tools & artifacts"),
+    Column::new("errors", "Failed requests", CellKind::Integer).group("Volume"),
+    Column::new("denied", "Denied", CellKind::Integer).group("Governance"),
+    Column::new("tokens", "Tokens", CellKind::Integer).group("Tokens"),
+    Column::new("cost_usd", "Cost (USD)", CellKind::Money).group("Cost"),
+    Column::new("p95_latency_ms", "p95 latency (ms)", CellKind::Integer)
+        .optional()
+        .group("Volume"),
+    Column::new("duration_seconds", "Duration (s)", CellKind::Integer).group("Volume"),
+    Column::new("skills", "Skills", CellKind::Text)
+        .optional()
+        .group("Tools & artifacts"),
+    Column::new("category", "Intent", CellKind::Text).group("Judge"),
+    Column::new("outcome", "Outcome", CellKind::Text).group("Judge"),
+    Column::new("completion", "Completion", CellKind::Integer).group("Judge"),
+    Column::new("first_at", "Started", CellKind::Timestamp).group("Identity"),
+    Column::new("last_at", "Last activity", CellKind::Timestamp).group("Identity"),
 ];
 
 fn conversation_row(r: &SkillConversationRow) -> Vec<Cell> {
@@ -171,6 +221,9 @@ impl DataSet for Skills {
     fn title(&self) -> &'static str {
         "Skills"
     }
+    fn description(&self) -> &'static str {
+        "One row per skill invoked in the window, with its conversations' figures."
+    }
     fn columns(&self) -> &'static [Column] {
         SKILL_COLUMNS
     }
@@ -181,11 +234,13 @@ impl DataSet for Skills {
         user.is_console
     }
     async fn load(&self, ctx: &ExportContext<'_>) -> AdminResult<Table> {
+        let picked: SkillIdsQuery = ctx.query()?;
         let rows = list_skill_facts(
             ctx.pool,
             &window(ctx).await?,
             &SkillListFilter {
                 limit: ctx.limit,
+                skills: picked.skills(),
                 ..SkillListFilter::default()
             },
         )
@@ -205,6 +260,9 @@ impl DataSet for SkillConversations {
     }
     fn title(&self) -> &'static str {
         "Skill conversations"
+    }
+    fn description(&self) -> &'static str {
+        "One row per conversation that invoked the skill."
     }
     fn columns(&self) -> &'static [Column] {
         CONVERSATION_COLUMNS

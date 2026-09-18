@@ -21,6 +21,7 @@ pub mod feedback_ingestion;
 mod registry;
 
 mod access_expiry;
+mod analysis_report;
 mod bundle_admin_css;
 mod content_analytics;
 mod conversation_judge;
@@ -44,6 +45,7 @@ pub use error::JobError;
 pub use registry::{JOB_TAG, extension_jobs};
 
 pub use access_expiry::{AccessExpiryJob, ExpirySweep, lost_manage_role};
+pub use analysis_report::AnalysisReportJob;
 pub use bundle_admin_css::BundleAdminCssJob;
 pub use content_analytics::ContentAnalyticsAggregationJob;
 pub use conversation_judge::ConversationJudgeJob;
@@ -68,6 +70,7 @@ pub use usage_rollup::UsageDailyRollupJob;
 /// API — the job structs are.
 #[doc(hidden)]
 pub mod internals {
+    pub use crate::analysis_report::{findings_schema, parse_findings};
     pub use crate::bundle_admin_css::{collect_css_files, concatenate_css_files};
     pub use crate::conversation_judge::{
         Category, Classification, Outcome, TranscriptMeta, classification_schema,

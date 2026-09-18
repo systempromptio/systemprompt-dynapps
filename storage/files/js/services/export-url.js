@@ -1,8 +1,10 @@
 // Turning the export dialog's picks into the query the server reads: the
 // page's own filters, with the dialog's window, format and columns in place
-// of whatever the page had.
+// of whatever the page had. A selection replaces the window: when `ids` are
+// present the datasets read those rows and ignore the window entirely, so
+// the window keys are dropped rather than sent alongside.
 
-const WINDOW_KEYS = ['preset', 'from', 'to', 'days', 'start', 'end', 'format', 'columns'];
+const WINDOW_KEYS = ['preset', 'from', 'to', 'days', 'start', 'end', 'format', 'columns', 'ids'];
 
 const windowParams = (form, kind) => {
   const data = new FormData(form);
@@ -26,20 +28,23 @@ export const selection = (dialog) => {
   const dataset = option.value;
   const columns = [...dialog.querySelectorAll(`[data-export-columns="${dataset}"] input:checked`)]
     .map((input) => input.value);
+  const ids = (dialog.dataset.exportIds ?? '').split(',').filter(Boolean);
   return {
     dataset,
     format: new FormData(form).get('format'),
     columns,
-    window: windowParams(form, option.dataset.window),
+    ids,
+    window: ids.length ? {} : windowParams(form, option.dataset.window),
   };
 };
 
-export const buildUrl = (dialog, { dataset, format, columns, window }, preview) => {
+export const buildUrl = (dialog, { dataset, format, columns, ids, window }, preview) => {
   const params = new URLSearchParams(dialog.dataset.exportQuery);
   for (const key of WINDOW_KEYS) params.delete(key);
   for (const [key, value] of Object.entries(window)) {
     if (value) params.set(key, value);
   }
+  if (ids.length) params.set('ids', ids.join(','));
   params.set('format', format);
   if (columns.length) params.set('columns', columns.join(','));
   const suffix = preview ? '/preview' : '';

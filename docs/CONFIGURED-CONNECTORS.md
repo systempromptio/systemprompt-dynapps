@@ -159,6 +159,17 @@ Governance hooks return an explicit deny envelope. Look for
 `authorization_unavailable` in logs; the next request evaluates fresh policy
 after database access is restored.
 
+## Gating skills on a connection
+
+A live connection is an authorization subject. `services/access-control/rules.yaml`
+accepts a `connector:` band (precedence 160, between `group` and the Salesforce
+`salesforce` link band) whose values are server ids; a person matches while
+`mcp_connector_accounts` holds a `connected` row for that server
+(`extensions/web/admin/src/authz/connector.rs`). The UK sales building-block
+skills use it — `skill/google_workspace_search` allows `connector: [google_drive]`
+— so a skill that can only fail without its connector is not offered to a
+person who has not connected it, and appears the moment they do.
+
 ## Tool permissions in the clients
 
 Every tool on a managed server is allowed by default in Claude Code and

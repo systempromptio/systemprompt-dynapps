@@ -1,0 +1,14 @@
+id: account_suggestions
+name: Account Suggestions
+description: What to do next on a named account — an evidenced health score, upsell and cross-sell
+  candidates, contact-coverage gaps, and a last-action / next-action ledger per contact and
+  opportunity with overdue flags — from Salesforce and Google Workspace evidence.
+enabled: true
+file: SKILL.md
+tags:
+- astound
+- sales
+- reporting
+- report
+category: business
+display_category: Sales UK

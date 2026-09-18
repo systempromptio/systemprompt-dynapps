@@ -4,18 +4,25 @@
 //! skills invoked — with the judge's one label (title, intent, outcome,
 //! completion) joined on top when it exists.
 //!
-//! KPI tiles carry a sparkline of the window; three charts share one x axis;
-//! one breakdown at a time (intent, model, client, group, project, person,
-//! skill, outcome) over the same filtered set the table pages through, so
-//! the buckets add up to the tiles. Filters: window, intent, outcome,
-//! judged band, model, client, a record flag, skill, person, free text and
-//! the shared `?group=&project=` scope.
+//! KPI tiles carry a sparkline of the window in a reserved trend slot; three
+//! charts share one x axis padded to the whole window; one breakdown at a
+//! time (intent, model, client, group, project, person, skill, outcome) over
+//! the same filtered set the table pages through, so the buckets add up to
+//! the tiles, each bucket linking into the list and downloadable on its own.
+//! Filters live in the ribbon: window, intent, outcome, judged band, model,
+//! client, a record flag, skill, person, free text and the shared
+//! `?group=&project=` scope. Rows can be ticked for export or a bulk judge
+//! request; every unjudged row offers a Judge button; the latest global AI
+//! report sits in a banner under the header.
 
 pub(crate) mod charts;
 mod context;
 pub(crate) mod export;
 mod filters;
+pub(crate) mod judge_all;
 pub(crate) mod kpis;
+mod links;
+mod page_context;
 pub(crate) mod query;
 mod row_facts;
 pub(crate) mod summary;
@@ -37,7 +44,8 @@ use crate::repositories::analysis::conversations::{
 };
 use crate::repositories::scope::ScopeRequest;
 
-use context::build_context;
+use context::{PageInputs, build_context};
+pub(crate) use judge_all::judge_all;
 use query::{BASE_URL, ConversationAnalysisQuery, PAGE_SIZE};
 
 pub(crate) async fn page(
@@ -69,6 +77,7 @@ pub(crate) async fn page(
         group_id: request.group.as_deref().map(GroupId::new),
         project_id: request.project.as_deref().map(ProjectId::new),
         flag: params.flag(),
+        context_ids: params.context_ids(),
     };
     let data = load_conversation_analysis_page(
         &pool,
@@ -90,7 +99,24 @@ pub(crate) async fn page(
         params.preserved(&["group", "project", "page"]),
     )
     .await;
-    let context = build_context(&params, &request, &data, scope_filter);
+    let report_banner = crate::handlers::ssr::analysis::reports::banner::report_banner(
+        &pool,
+        "global",
+        None,
+        &params.query_string(),
+        "Conversations in view",
+    )
+    .await;
+    let context = build_context(
+        &params,
+        &request,
+        &data,
+        PageInputs {
+            scope_filter,
+            report_banner,
+            can_judge: shell.user.is_console,
+        },
+    );
     Ok(crate::handlers::ssr::render_typed_page(
         &shell.engine,
         "analysis-conversations",

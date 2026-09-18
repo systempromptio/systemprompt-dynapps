@@ -118,6 +118,10 @@ fn people_routes() -> Router<Arc<PgPool>> {
             "/projects/{project_id}",
             get(handlers::ssr::project_detail_page),
         )
+        .route(
+            "/projects/{project_id}/report",
+            get(handlers::ssr::project_report_page),
+        )
         .route("/roles", get(handlers::ssr::roles_page))
         .route("/devices", get(handlers::ssr::devices_page))
         .route("/access-control", get(handlers::ssr::access_control_page))
@@ -169,6 +173,7 @@ fn ai_activity_routes() -> Router<Arc<PgPool>> {
         )
         // Why: every tool result, from every client, as one linked entity;
         // the preview is the artifact rendered for the detail page's frame.
+        .route("/tools", get(handlers::ssr::tools_page))
         .route("/artifacts", get(handlers::ssr::artifacts_page))
         .route(
             "/artifacts/{artifact_id}",

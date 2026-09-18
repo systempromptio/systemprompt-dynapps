@@ -1,9 +1,9 @@
 //! The filter state echoed back into the form and the sortable column
 //! headers, both derived from the page query.
 
+use super::page_context::SortHeaders;
 use super::query::ConversationAnalysisQuery;
 use super::summary::ConversationAnalysisFilterView;
-use super::view::SortHeaders;
 use crate::repositories::analysis::conversations::{FactSort, FlagFilter, JudgedFilter};
 use crate::repositories::scope::ScopeRequest;
 
@@ -38,6 +38,7 @@ pub(super) fn filter_view(
         by: params.breakdown().as_str(),
         sort: params.sort().as_str(),
         dir: if params.descending() { "desc" } else { "asc" },
+        query: params.query_string(),
     }
 }
 

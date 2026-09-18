@@ -3,6 +3,7 @@
     {{> components/breadcrumbs crumbs=breadcrumbs}}
     {{#> components/page-header title=title}}
         {{#*inline "header_actions"}}
+        {{> components/export-button export}}
         {{#if can_write}}
         {{#if create_user.sso_provisions}}
         <button type="button" class="sp-btn sp-btn--sm sp-btn--primary" data-action="create-user" disabled

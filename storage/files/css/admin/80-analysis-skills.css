@@ -164,4 +164,25 @@
     padding-inline-start: 1.2em;
     font-size: var(--sp-text-xs);
 }
+
+.sp-askill-col-done {
+    white-space: nowrap;
+}
+.sp-askill-judged {
+    display: inline;
+    font-variant-numeric: tabular-nums;
+}
+.sp-askill-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: var(--sp-z-sticky);
+    background: var(--sp-bg-surface);
+}
+.sp-askill-table th .sp-icon {
+    color: var(--sp-text-tertiary);
+    vertical-align: -0.15em;
+}
+.sp-askill-table tbody tr:hover > td {
+    background: var(--sp-bg-surface-alt);
+}
 }

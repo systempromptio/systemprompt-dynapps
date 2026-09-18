@@ -3,7 +3,8 @@
 //! A project is work attribution and an ACL subject; a group is people and
 //! entitlement. The listing answers "where is the spend and is the tooling
 //! working"; the detail page answers it for one project across three tabs —
-//! who is on it, what it did, and how it is configured.
+//! who is on it, what it did, and how it is configured. The report route
+//! lays all of it out on one printable page.
 
 use std::sync::Arc;
 use systemprompt_web_shared::ProjectId;
@@ -24,6 +25,7 @@ use crate::handlers::ssr::page::Page;
 mod detail;
 mod detail_view;
 mod list;
+mod report;
 mod sort;
 
 pub(super) const BASE_URL: &str = "/admin/projects";
@@ -34,6 +36,13 @@ pub(super) const WINDOW_LABEL: &str = "Last 30 days · attributed at request tim
 #[derive(Debug, Default, serde::Deserialize)]
 pub(crate) struct ProjectTabQuery {
     tab: Option<String>,
+}
+
+// Why: `?print=1` opens the browser's print dialog as soon as the report has
+// rendered, which is what the listing's Report action links to.
+#[derive(Debug, Default, serde::Deserialize)]
+pub(crate) struct ProjectReportQuery {
+    print: Option<String>,
 }
 
 pub(crate) async fn projects_page(
@@ -95,6 +104,45 @@ pub(crate) async fn project_detail_page(
     Ok(super::render_typed_page(
         &shell.engine,
         "project-detail",
+        &data,
+        &shell.user,
+        &shell.marketplace,
+    ))
+}
+
+pub(crate) async fn project_report_page(
+    shell: Page,
+    State(pool): State<Arc<PgPool>>,
+    Path(project_id): Path<ProjectId>,
+    Query(query): Query<ProjectReportQuery>,
+) -> AdminHtmlResult<Response> {
+    if !shell.user.is_console {
+        return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
+    }
+
+    let Some(project) = repositories::projects::crud::find_project(&pool, &project_id).await?
+    else {
+        return Err(AdminError::NotFound("No such project.".to_owned()).into());
+    };
+
+    let (detail, usage, extra) = tokio::join!(
+        detail::load(&pool, &project_id, &shell.user),
+        detail::load_usage(&pool, &project_id),
+        report::load(&pool, &project_id),
+    );
+    let data = report::page_data(
+        report::ReportInputs {
+            project: &project,
+            detail: &detail,
+            usage: &usage,
+            report: &extra,
+            print_on_load: query.print.as_deref() == Some("1"),
+        },
+        &shell.user,
+    );
+    Ok(super::render_typed_page(
+        &shell.engine,
+        "project-report",
         &data,
         &shell.user,
         &shell.marketplace,

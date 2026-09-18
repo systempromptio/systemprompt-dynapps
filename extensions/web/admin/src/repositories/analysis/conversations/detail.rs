@@ -65,6 +65,8 @@ struct FactRecord {
     tool_calls_executed: i64,
     tool_calls_failed: i64,
     artifact_count: i64,
+    artifact_files: i64,
+    artifact_cards: i64,
     safety_findings: i64,
     safety_blocked: i64,
     gov_allow: i64,
@@ -137,6 +139,8 @@ impl From<FactRecord> for ConversationFactRow {
             tool_calls_executed: r.tool_calls_executed,
             tool_calls_failed: r.tool_calls_failed,
             artifact_count: r.artifact_count,
+            artifact_files: r.artifact_files,
+            artifact_cards: r.artifact_cards,
             safety_findings: r.safety_findings,
             safety_blocked: r.safety_blocked,
             gov_allow: r.gov_allow,
@@ -186,7 +190,8 @@ pub async fn find_conversation_facts(
                   f.input_tokens, f.output_tokens, f.cache_read_tokens, f.cache_creation_tokens,
                   f.reasoning_tokens, f.cost_microdollars, f.p50_latency_ms, f.p95_latency_ms,
                   f.max_latency_ms, f.tool_calls_intended, f.tool_calls_executed, f.tool_calls_failed,
-                  f.artifact_count, f.safety_findings, f.safety_blocked, f.gov_allow, f.gov_warn,
+                  f.artifact_count, f.artifact_files, f.artifact_cards,
+                  f.safety_findings, f.safety_blocked, f.gov_allow, f.gov_warn,
                   f.gov_deny, f.prompt_count, f.hook_event_count, f.hook_status, f.skill_invocations,
                   f.skills, f.first_at, f.last_at, f.duration_seconds,
                   a.status AS "judge_status?", a.title AS "judge_title?", a.category AS "category?",
@@ -241,4 +246,34 @@ pub async fn insert_manual_judgement(
     .execute(pool)
     .await?;
     Ok(true)
+}
+
+// Why: queues many conversations at once for the judge — the bulk bar's
+// "Judge selected" and the toolbar's "Judge all unjudged in view". Returns
+// how many rows were queued; contexts without a fact row are skipped.
+pub async fn insert_manual_judgements(
+    pool: &PgPool,
+    context_ids: &[String],
+    requested_by: &UserId,
+) -> Result<i64, sqlx::Error> {
+    if context_ids.is_empty() {
+        return Ok(0);
+    }
+    let queued = sqlx::query_scalar!(
+        r#"WITH queued AS (
+               INSERT INTO conversation_analyses (context_id, user_id, status, trigger, requested_by)
+               SELECT f.context_id, f.user_id, 'pending', 'manual', $2
+               FROM conversation_facts f WHERE f.context_id = ANY($1)
+               ON CONFLICT (context_id) DO UPDATE
+                   SET status = 'pending', attempts = 0, next_attempt = clock_timestamp(),
+                       lease_token = NULL, lease_until = NULL, trigger = 'manual',
+                       requested_by = EXCLUDED.requested_by, updated_at = clock_timestamp()
+               RETURNING 1)
+           SELECT COUNT(*)::bigint AS "queued!" FROM queued"#,
+        context_ids,
+        requested_by.as_str()
+    )
+    .fetch_one(pool)
+    .await?;
+    Ok(queued)
 }

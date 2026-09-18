@@ -58,7 +58,21 @@ pub(crate) struct SvgSeriesView {
     // Why: the raw values behind the path, comma-separated, so the hover
     // tooltip prints numbers and never re-derives them from geometry.
     pub values: String,
+    // Why: one dot per bucket when the window holds few buckets — two days
+    // of data drawn as a bare line reads as a slope, not two readings.
+    pub points: Vec<SvgPointView>,
 }
+
+#[derive(Debug, Serialize)]
+pub(crate) struct SvgPointView {
+    pub x: String,
+    pub y: String,
+}
+
+// Why: a dot per bucket stops being legible past this many buckets; an
+// area fill needs three points to read as a shape rather than a triangle.
+const POINT_DOTS_MAX_BUCKETS: usize = 12;
+const AREA_MIN_BUCKETS: usize = 3;
 
 #[derive(Debug, Serialize)]
 pub(crate) struct SvgRefLineView {
@@ -123,9 +137,22 @@ pub(crate) fn line_chart(spec: LineChartSpec) -> SvgLineChartView {
         .enumerate()
         .map(|(i, s)| {
             let points = svg::scale_points(&s.values, y_max);
+            let dots = if points.len() <= POINT_DOTS_MAX_BUCKETS {
+                points
+                    .iter()
+                    .map(|(x, y)| SvgPointView {
+                        x: format!("{x:.2}"),
+                        y: format!("{y:.2}"),
+                    })
+                    .collect()
+            } else {
+                Vec::new()
+            };
             SvgSeriesView {
                 path_d: svg::line_path(&points),
-                area_d: (spec.show_area && !multi).then(|| svg::area_path(&points)),
+                area_d: (spec.show_area && !multi && points.len() >= AREA_MIN_BUCKETS)
+                    .then(|| svg::area_path(&points)),
+                points: dots,
                 color_token: CHART_COLOR_TOKENS[i.min(CHART_COLOR_TOKENS.len() - 1)],
                 label: s.label.clone(),
                 values: s

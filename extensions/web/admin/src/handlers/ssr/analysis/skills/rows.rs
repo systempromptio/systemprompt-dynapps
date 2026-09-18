@@ -90,6 +90,9 @@ pub(crate) fn skill_row_view(
         denied_tone: deny_tone(row.denied),
         tool_calls: row.tool_calls,
         tool_calls_failed: row.tool_calls_failed,
+        tools_href: format!("/admin/tools?skill={}", urlencoding::encode(&row.skill)),
+        artifacts: row.artifacts,
+        artifacts_href: format!("/admin/artifacts?skill={}", urlencoding::encode(&row.skill)),
         latency_display: row.p95_latency_ms.map_or_else(
             || "—".to_owned(),
             |ms| format_duration_ms(ms.round() as i64),
@@ -100,6 +103,7 @@ pub(crate) fn skill_row_view(
         judged: row.judged,
         completion_display: score_display(row.completion_avg),
         completion_tone: completion_tone(row.completion_avg),
+        completion_note: format!("{}/{}", row.judged, row.conversations),
         attributed_pct: percent(row.attributed, row.invocations),
         spark: sparkline_toned(
             &spark_values(row, today),

@@ -51,6 +51,10 @@ pub struct ConversationFactRow<Id = ContextId> {
     pub tool_calls_executed: i64,
     pub tool_calls_failed: i64,
     pub artifact_count: i64,
+    #[serde(default)]
+    pub artifact_files: i64,
+    #[serde(default)]
+    pub artifact_cards: i64,
     pub safety_findings: i64,
     pub safety_blocked: i64,
     pub gov_allow: i64,
@@ -130,6 +134,8 @@ pub(super) fn decode_row(
         tool_calls_executed: r.tool_calls_executed,
         tool_calls_failed: r.tool_calls_failed,
         artifact_count: r.artifact_count,
+        artifact_files: r.artifact_files,
+        artifact_cards: r.artifact_cards,
         safety_findings: r.safety_findings,
         safety_blocked: r.safety_blocked,
         gov_allow: r.gov_allow,

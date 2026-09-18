@@ -4,9 +4,10 @@
     <a href="{{back_url}}" class="sp-back-link">&larr; Back to artifacts</a>
 
     {{#> components/page-header
-        title=artifact.artifact_title
+        title=artifact.artifact_title help=help
         subtitle="One tool result as the platform stored it: the typed body, its provenance, and the rows of the same call it is joined to."}}
       {{#*inline "header_meta"}}
+        <span class="sp-tools-kind sp-tools-kind--{{artifact.kind_icon}}">{{> components/icon name=artifact.kind_icon}}{{artifact.kind_label}}</span>
         <span class="sp-badge sp-badge--nodot {{#if artifact.is_structured}}sp-badge--info{{else}}sp-badge--muted{{/if}}">{{artifact.artifact_type}}</span>
         {{#if artifact.has_ui_resource}}<span class="sp-badge sp-badge--nodot sp-badge--ok">ui resource</span>{{/if}}
         <span class="sp-badge sp-badge--{{provenance.state_tone}}">{{provenance.state_label}}</span>
@@ -27,7 +28,8 @@
 
     <section class="sp-trace-detail__summary" aria-label="Artifact">
       <div class="sp-trace-detail__field"><span class="sp-trace-detail__label">Artifact</span><code class="sp-code-inline" title="{{artifact.artifact_id}}">{{artifact.artifact_id_short}}</code></div>
-      <div class="sp-trace-detail__field"><span class="sp-trace-detail__label">Tool</span><code class="sp-code-inline">{{artifact.tool_name}}</code> <span class="sp-table__cell--muted">on {{artifact.server_name}}</span></div>
+      <div class="sp-trace-detail__field"><span class="sp-trace-detail__label">Tool</span><span class="sp-tools-tool">{{#if artifact.is_builtin}}{{> components/icon name="terminal"}}{{else}}{{> components/icon name="plug"}}{{/if}}<code class="sp-code-inline">{{artifact.tool_name}}</code></span> <span class="sp-table__cell--muted">on {{artifact.server_name}}</span></div>
+      <div class="sp-trace-detail__field"><span class="sp-trace-detail__label">Input</span>{{#if artifact.input_summary}}<code class="sp-code-inline sp-u-mono" title="{{artifact.input_summary}}">{{artifact.input_summary}}</code>{{else}}<span class="sp-table__cell--muted">&mdash;</span>{{/if}}</div>
       <div class="sp-trace-detail__field"><span class="sp-trace-detail__label">Skill</span>{{#if artifact.skill}}<a href="{{artifact.skill_url}}"><code class="sp-code-inline">{{artifact.skill}}</code></a>{{else}}<span class="sp-table__cell--muted">none in session</span>{{/if}}</div>
       <div class="sp-trace-detail__field"><span class="sp-trace-detail__label">User</span><span title="{{provenance.user_id}}">{{provenance.user_label}}</span></div>
       <div class="sp-trace-detail__field"><span class="sp-trace-detail__label">Stored</span><span>{{artifact.created_at}} · {{artifact.bytes_display}}</span></div>
@@ -79,5 +81,5 @@
     {{else}}
       <pre class="sp-p-artifact-detail__body"><code>{{body_pretty}}</code></pre>
     {{/if}}
-    {{/inline}}
+    {{/inline}}{{#*inline "scripts"}}{{/inline}}
 {{/layout}}

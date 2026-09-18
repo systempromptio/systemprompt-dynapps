@@ -6,14 +6,22 @@ use serde::Deserialize;
 use systemprompt::identifiers::UserId;
 use urlencoding::encode as urlencode;
 
-use crate::handlers::ssr::list_view::{PageWindow, Pagination};
-use crate::handlers::ssr::types::{SortHeaderView, TabLinkView};
 use crate::repositories::analysis::conversations::{
     BreakdownBy, FactSort, FlagFilter, JudgedFilter,
 };
 
 pub(crate) const BASE_URL: &str = "/admin/analysis/conversations";
 pub(crate) const PAGE_SIZE: i64 = 50;
+
+// Why: this page's `since` labels reach past the live window contract (90d,
+// all); the export offers the nearest window it can serve.
+pub(crate) fn export_preset(params: &ConversationAnalysisQuery) -> &'static str {
+    match params.since_label() {
+        "24h" => "24h",
+        "7d" => "7d",
+        _ => "30d",
+    }
+}
 
 #[derive(Debug, Deserialize, Default)]
 pub(crate) struct ConversationAnalysisQuery {
@@ -36,6 +44,9 @@ pub(crate) struct ConversationAnalysisQuery {
     pub sort: Option<String>,
     pub dir: Option<String>,
     pub page: Option<i64>,
+    // Why: a comma-joined selection of context ids from the bulk bar; the
+    // export dialog appends it so a download holds exactly the ticked rows.
+    pub ids: Option<String>,
 }
 
 impl ConversationAnalysisQuery {
@@ -104,6 +115,18 @@ impl ConversationAnalysisQuery {
         Self::trimmed(self.q.as_deref()).map(str::to_owned)
     }
 
+    pub(crate) fn context_ids(&self) -> Option<Vec<String>> {
+        let ids: Vec<String> = self
+            .ids
+            .as_deref()?
+            .split(',')
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(str::to_owned)
+            .collect();
+        (!ids.is_empty()).then_some(ids)
+    }
+
     pub(crate) fn breakdown(&self) -> BreakdownBy {
         BreakdownBy::from_breakdown_param(self.by.as_deref())
     }
@@ -120,7 +143,7 @@ impl ConversationAnalysisQuery {
         self.page.unwrap_or(0).max(0)
     }
 
-    fn pairs(&self) -> [(&'static str, Option<&str>); 16] {
+    fn pairs(&self) -> [(&'static str, Option<&str>); 17] {
         [
             ("group", self.group.as_deref()),
             ("project", self.project.as_deref()),
@@ -138,7 +161,52 @@ impl ConversationAnalysisQuery {
             ("by", self.by.as_deref()),
             ("sort", self.sort.as_deref()),
             ("dir", self.dir.as_deref()),
+            ("ids", self.ids.as_deref()),
         ]
+    }
+
+    // Why: the filters alone as a query string — what a judge-all or a
+    // report request carries so the server re-reads the same set.
+    pub(crate) fn query_string(&self) -> String {
+        self.link_prefix(&["page", "ids"])
+            .split_once('?')
+            .map(|(_, q)| q.trim_end_matches('&').to_owned())
+            .unwrap_or_default()
+    }
+
+    // Why: the page as the reader has it, page number included, for the
+    // `back=` a judge POST returns to.
+    pub(crate) fn current_url(&self) -> String {
+        let mut url = self
+            .link_prefix(&["ids"])
+            .trim_end_matches(['?', '&'])
+            .to_owned();
+        if self.page() > 0 {
+            url.push(if url.contains('?') { '&' } else { '?' });
+            url.push_str(&format!("page={}", self.page()));
+        }
+        url
+    }
+
+    // Why: the CSV of one breakdown bucket or one facet: the page's filters
+    // narrowed by that value, on the dataset the page exports.
+    pub(crate) fn export_href(&self, dataset: &str, name: &str, value: &str) -> String {
+        let narrowed = self.narrowed(name, value);
+        let query = narrowed.split_once('?').map_or("", |(_, q)| q);
+        format!(
+            "/admin/export/{dataset}?{query}&preset={}&format=csv",
+            export_preset(self)
+        )
+    }
+
+    // Why: the raw query value behind one filter name, for the chip that
+    // removes it and the export that keeps only it.
+    pub(crate) fn pair_value(&self, name: &str) -> Option<String> {
+        self.pairs()
+            .iter()
+            .find(|(n, _)| *n == name)
+            .and_then(|(_, v)| Self::trimmed(*v))
+            .map(str::to_owned)
     }
 
     pub(crate) fn preserved(&self, drop: &[&str]) -> Vec<(String, String)> {
@@ -175,92 +243,5 @@ impl ConversationAnalysisQuery {
             self.link_prefix(&[name, "page"]),
             urlencode(value)
         )
-    }
-
-    pub(crate) fn range_links(&self) -> Vec<TabLinkView> {
-        let prefix = self.link_prefix(&["since", "preset", "page"]);
-        let active = self.since_label();
-        [
-            ("24h", "24h"),
-            ("7d", "7 days"),
-            ("30d", "30 days"),
-            ("90d", "90 days"),
-            ("all", "All"),
-        ]
-        .iter()
-        .map(|(slug, label)| TabLinkView {
-            slug,
-            label,
-            href: format!("{prefix}since={slug}"),
-            is_active: *slug == active,
-            count: None,
-        })
-        .collect()
-    }
-
-    pub(crate) fn breakdown_tabs(&self) -> Vec<TabLinkView> {
-        let prefix = self.link_prefix(&["by", "page"]);
-        let active = self.breakdown();
-        BreakdownBy::ALL
-            .iter()
-            .map(|by| TabLinkView {
-                slug: by.as_str(),
-                label: by.label(),
-                href: format!("{prefix}by={}", by.as_str()),
-                is_active: *by == active,
-                count: None,
-            })
-            .collect()
-    }
-
-    pub(crate) fn pagination(&self, window: PageWindow) -> Pagination {
-        let page = window.index;
-        let prefix = self.link_prefix(&["page"]);
-        let prev_url = (page > 0).then(|| format!("{prefix}page={}", page.saturating_sub(1)));
-        let next_url =
-            (page + 1 < window.total_pages).then(|| format!("{prefix}page={}", page + 1));
-        let (first_row, last_row) = window.bounds();
-        Pagination {
-            current_page: page + 1,
-            total_pages: window.total_pages,
-            first_row,
-            last_row,
-            total_rows: window.total_rows,
-            noun: window.noun,
-            has_prev: prev_url.is_some(),
-            has_next: next_url.is_some(),
-            prev_url,
-            next_url,
-        }
-    }
-
-    pub(crate) fn sort_header(
-        &self,
-        col: FactSort,
-        label: &'static str,
-        class: &'static str,
-        hint: &'static str,
-    ) -> SortHeaderView {
-        let prefix = self.link_prefix(&["sort", "dir", "page"]);
-        let active = col == self.sort();
-        let is_desc = self.descending();
-        let next_dir = if active && is_desc { "asc" } else { "desc" };
-        SortHeaderView {
-            label,
-            class,
-            hint,
-            url: format!("{prefix}sort={}&dir={next_dir}", col.as_str()),
-            active,
-            aria_sort: if active {
-                if is_desc { "descending" } else { "ascending" }
-            } else {
-                "none"
-            },
-            indicator: if active {
-                if is_desc { "▼" } else { "▲" }
-            } else {
-                "↕"
-            },
-        }
     }
 }

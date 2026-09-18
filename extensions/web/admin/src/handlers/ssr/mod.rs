@@ -62,6 +62,7 @@ mod ssr_setup;
 pub(crate) mod ssr_skills_contexts;
 mod ssr_sync;
 mod ssr_sync_import;
+pub(crate) mod ssr_tools;
 mod ssr_users;
 pub(crate) mod sync_plane;
 pub(crate) mod transcript_view;
@@ -104,7 +105,7 @@ pub(crate) use ssr_observability::{
 pub(crate) use ssr_perf_trace_detail::perf_trace_detail_page;
 pub(crate) use ssr_perf_traces::perf_traces_page;
 pub(crate) use ssr_profile::{issue_bridge_code, profile_page};
-pub(crate) use ssr_projects::{project_detail_page, projects_page};
+pub(crate) use ssr_projects::{project_detail_page, project_report_page, projects_page};
 pub(crate) use ssr_search_resolve::search_resolve;
 pub(crate) use ssr_session_detail::session_detail_page;
 pub(crate) use ssr_sessions_list::sessions_list_page;
@@ -112,6 +113,7 @@ pub(crate) use ssr_setup::setup_page;
 pub(crate) use ssr_skills_contexts::skills_contexts_page;
 pub(crate) use ssr_sync::sync_page;
 pub(crate) use ssr_sync_import::import_preview_page;
+pub(crate) use ssr_tools::tools_page;
 pub(crate) use ssr_users::{user_detail_by_id_page, user_detail_page, users_page};
 
 #[derive(serde::Deserialize)]

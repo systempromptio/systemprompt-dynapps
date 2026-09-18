@@ -43,6 +43,9 @@ pub struct SkillListFilter {
     pub sort: SkillSort,
     pub limit: i64,
     pub offset: i64,
+    // Why: an explicit row selection (`plugin:skill` keys) from the bulk bar;
+    // the export of ticked rows reads exactly these.
+    pub skills: Option<Vec<String>>,
 }
 
 impl SkillListFilter {
@@ -162,6 +165,7 @@ pub async fn list_skill_facts(
         filter.sort.as_str(),
         filter.limit.clamp(1, 1000),
         filter.offset.max(0),
+        filter.skills.as_deref(),
     )
     .fetch_all(&mut *connection)
     .await?;

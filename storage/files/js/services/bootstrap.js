@@ -10,6 +10,7 @@ import { initFilterRibbon } from './filter-ribbon.js';
 import { initScope } from './scope.js';
 import { initExport } from './export.js';
 import { showToast } from './toast.js';
+import { initHelp } from '../components/sp-help.js';
 
 const run = (init) => {
   try {
@@ -35,6 +36,7 @@ for (const init of [
   initFilterRibbon,
   initScope,
   initExport,
+  initHelp,
   initLogout,
   initUserDisplay,
   getUserContext

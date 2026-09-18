@@ -1,12 +1,78 @@
 @layer components {
 
 .sp-export {
-    max-width: min(640px, 92vw);
+    max-width: min(1040px, 94vw);
 }
 
-.sp-export .sp-dialog-form {
+.sp-export__form {
+    display: flex;
+    flex-direction: column;
     max-height: 88vh;
+}
+
+.sp-export__head {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-space-3);
+    padding: var(--sp-space-4) var(--sp-space-5);
+    border-bottom: 1px solid var(--sp-border-subtle);
+}
+
+.sp-export__title {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-space-2);
+    margin: 0;
+    font-size: var(--sp-text-lg);
+    font-weight: var(--sp-font-semibold);
+    color: var(--sp-text-primary);
+}
+
+.sp-export__title .sp-icon {
+    color: var(--sp-accent-text);
+}
+
+/* The scope strip says when the download is a selection or one breakdown
+   bucket rather than the window, because the window controls are disabled
+   in that state and a reader must see why. */
+.sp-export__scope {
+    flex: 1;
+    margin: 0;
+    padding: var(--sp-space-1) var(--sp-space-3);
+    border-radius: var(--sp-radius-full);
+    background: var(--sp-accent-dim);
+    color: var(--sp-accent-text);
+    font-size: var(--sp-text-sm);
+    font-weight: var(--sp-font-medium);
+}
+
+.sp-export__close {
+    margin-inline-start: auto;
+}
+
+.sp-export__panes {
+    display: grid;
+    grid-template-columns: 20rem minmax(0, 1fr);
+    min-height: 0;
+    flex: 1;
+}
+
+.sp-export__pane {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-space-4);
+    min-width: 0;
+    padding: var(--sp-space-5);
     overflow: auto;
+}
+
+.sp-export__pane--what {
+    border-inline-end: 1px solid var(--sp-border-subtle);
+    background: var(--sp-bg-surface-raised);
+}
+
+.sp-export__pane--columns {
+    gap: var(--sp-space-3);
 }
 
 .sp-export__field {
@@ -19,29 +85,49 @@
     min-width: 0;
 }
 
+/* `[hidden]` in the base layer loses to `display: flex` here, which is how
+   all three window fieldsets showed at once; the hidden state has to be
+   declared at this layer's own specificity. `.is-hidden` is the script's
+   belt-and-braces toggle for the same state. */
+.sp-export__field[hidden],
+.sp-export__custom[hidden],
+.sp-export__columns[hidden],
+.sp-export__column[hidden],
+.sp-export__group[hidden],
+.sp-export__scope[hidden],
+.sp-export .is-hidden {
+    display: none;
+}
+
 .sp-export__field > legend,
 .sp-export__field > span {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-space-1);
     padding: 0;
     font-size: var(--sp-text-sm);
-    font-weight: 600;
+    font-weight: var(--sp-font-semibold);
     color: var(--sp-text-secondary);
 }
 
-.sp-export__field > legend {
-    display: flex;
-    width: 100%;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: var(--sp-space-2);
+.sp-export__field > legend .sp-icon {
+    color: var(--sp-text-tertiary);
 }
 
-.sp-export__columns {
-    margin-top: var(--sp-space-2);
+.sp-export__description,
+.sp-export__hint {
+    margin: 0;
+    font-size: var(--sp-text-xs);
+    color: var(--sp-text-tertiary);
+    line-height: var(--sp-leading-relaxed);
 }
 
-.sp-export__column-tools {
-    display: inline-flex;
-    gap: var(--sp-space-1);
+.sp-export__description {
+    margin-top: calc(-1 * var(--sp-space-2));
+}
+
+.sp-export__dataset[hidden] + .sp-export__description {
+    margin-top: 0;
 }
 
 .sp-export__presets {
@@ -50,7 +136,7 @@
     align-items: center;
     gap: var(--sp-space-1);
     padding: var(--sp-space-05);
-    background: var(--sp-bg-surface-raised);
+    background: var(--sp-bg-surface);
     border: 1px solid var(--sp-border-subtle);
     border-radius: var(--sp-radius-full);
     align-self: flex-start;
@@ -62,7 +148,7 @@
     padding: var(--sp-space-1) var(--sp-space-3);
     border-radius: var(--sp-radius-full);
     font-size: var(--sp-text-sm);
-    font-weight: 400;
+    font-weight: var(--sp-font-normal);
     color: var(--sp-text-secondary);
     cursor: pointer;
     user-select: none;
@@ -96,61 +182,6 @@
 .sp-export__preset:has(input:focus-visible) {
     outline: 2px solid var(--sp-accent);
     outline-offset: 2px;
-}
-
-.sp-export__custom {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: var(--sp-space-3);
-}
-
-.sp-export__custom p {
-    grid-column: 1 / -1;
-    margin: 0;
-}
-
-.sp-export__column-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: var(--sp-space-1) var(--sp-space-3);
-}
-
-.sp-export__column {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: var(--sp-space-2);
-    font-size: var(--sp-text-sm);
-    font-weight: 400;
-    color: var(--sp-text-primary);
-    cursor: pointer;
-}
-
-.sp-export__column input {
-    margin: 0;
-    accent-color: var(--sp-accent);
-}
-
-.sp-export__preview {
-    margin: 0;
-    padding: var(--sp-space-2) var(--sp-space-3);
-    border-radius: var(--sp-corners-sm);
-    background: var(--sp-bg-surface-raised);
-    font-size: var(--sp-text-sm);
-    color: var(--sp-text-secondary);
-}
-
-.sp-export__preview strong {
-    color: var(--sp-text-primary);
-    font-variant-numeric: tabular-nums;
-}
-
-.sp-export__preview[data-tone="warn"] {
-    color: var(--sp-warning-strong);
-}
-
-.sp-export__preview[data-tone="error"] {
-    color: var(--sp-danger-strong);
 }
 
 }

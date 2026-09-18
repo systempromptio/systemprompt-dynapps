@@ -70,16 +70,20 @@ pub(crate) struct ConversationAnalysisFilterView {
     pub by: &'static str,
     pub sort: &'static str,
     pub dir: &'static str,
+    // Why: the whole query string, for the judge-all form to carry back.
+    pub query: String,
 }
 
 #[derive(Debug, Serialize)]
 pub(crate) struct ConversationBucketView {
     pub label: String,
     pub href: Option<String>,
+    pub export_href: Option<String>,
     pub conversations: i64,
     pub users: i64,
     pub turns: i64,
     pub tool_calls: i64,
+    pub artifacts: i64,
     pub tokens_display: String,
     pub cost_display: String,
     pub cost_share_pct: i64,
@@ -98,16 +102,19 @@ impl ConversationBucketView {
     pub(crate) fn new(
         row: &ConversationBucketRow,
         href: Option<String>,
+        export_href: Option<String>,
         label: Option<&str>,
         total_cost: i64,
     ) -> Self {
         Self {
             label: label.map_or_else(|| row.label.clone(), str::to_owned),
             href,
+            export_href,
             conversations: row.conversations,
             users: row.users,
             turns: row.turns,
             tool_calls: row.tool_calls,
+            artifacts: row.artifacts,
             tokens_display: format_token_total(row.total_tokens),
             cost_display: format_cost(row.total_cost_microdollars),
             cost_share_pct: if total_cost > 0 {

@@ -28,12 +28,24 @@
       {
         "ordinal": 2,
         "name": "name",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "gateway_routes",
+            "name": "name"
+          }
+        }
       },
       {
         "ordinal": 3,
         "name": "description",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "gateway_routes",
+            "name": "description"
+          }
+        }
       },
       {
         "ordinal": 4,

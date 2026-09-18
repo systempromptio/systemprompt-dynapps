@@ -1,7 +1,11 @@
 //! Assembling the conversations page context from the query, the scope and
-//! the repository result: options, facets, breakdown rows, sort headers.
+//! the repository result: the filter ribbon, breakdown rows with their
+//! export links, sort headers, selection and the help modal.
 
-use crate::handlers::ssr::list_view::{PageWindow, ScopeFilterView, SelectOptionView};
+use crate::handlers::ssr::analysis::help::conversations_help;
+use crate::handlers::ssr::analysis::reports::banner::ReportBannerView;
+use crate::handlers::ssr::analysis::ribbon::{RibbonGroupView, RibbonView};
+use crate::handlers::ssr::list_view::{PageWindow, ScopeFilterView};
 use crate::repositories::analysis::conversations::{
     BreakdownBy, ConversationAnalysisResult, FlagFilter, JudgedFilter,
 };
@@ -11,31 +15,26 @@ use systemprompt::identifiers::UserId;
 use super::charts::series_charts;
 use super::filters::{filter_view, sort_headers};
 use super::kpis::KpisView;
-use super::query::{ConversationAnalysisQuery, PAGE_SIZE};
+use super::page_context::ConversationsPageContext;
+use super::query::{BASE_URL, ConversationAnalysisQuery, PAGE_SIZE, export_preset};
 use super::summary::{CATEGORIES, ConversationBucketView, OUTCOMES, category_label};
-use super::view::{ConversationRowView, ConversationsPageContext, FacetLinkView};
+use super::view::ConversationRowView;
 
-// Why: this page's `since` labels reach past the live window contract (90d,
-// all); the export offers the nearest window it can serve.
-fn export_preset(params: &ConversationAnalysisQuery) -> &'static str {
-    match params.since_label() {
-        "24h" => "24h",
-        "7d" => "7d",
-        _ => "30d",
+const DATASET: &str = "analysis-conversations";
+
+// Why: the breakdown dimension's query parameter — the key a bucket row's
+// link and export narrow by; groups and projects narrow through the scope
+// bar instead.
+fn bucket_param(by: BreakdownBy) -> Option<&'static str> {
+    match by {
+        BreakdownBy::Category => Some("category"),
+        BreakdownBy::Outcome => Some("outcome"),
+        BreakdownBy::Model => Some("model"),
+        BreakdownBy::Client => Some("client"),
+        BreakdownBy::Skill => Some("skill"),
+        BreakdownBy::User => Some("user_id"),
+        BreakdownBy::Group | BreakdownBy::Project => None,
     }
-}
-
-fn options<'a, I>(selected: Option<&str>, items: I) -> Vec<SelectOptionView>
-where
-    I: Iterator<Item = (&'a str, String)>,
-{
-    items
-        .map(|(value, label)| SelectOptionView {
-            selected: selected == Some(value),
-            value: value.to_owned(),
-            label,
-        })
-        .collect()
 }
 
 fn breakdown_rows(
@@ -46,98 +45,113 @@ fn breakdown_rows(
     data.breakdown
         .iter()
         .map(|row| {
-            let href = match by {
-                BreakdownBy::Category => Some(params.narrowed("category", &row.label)),
-                BreakdownBy::Outcome => Some(params.narrowed("outcome", &row.label)),
-                BreakdownBy::Model => Some(params.narrowed("model", &row.label)),
-                BreakdownBy::Client => Some(params.narrowed("client", &row.label)),
-                BreakdownBy::Skill => Some(params.narrowed("skill", &row.label)),
-                BreakdownBy::User => row
-                    .user_id
-                    .as_ref()
-                    .map(|u| params.narrowed("user_id", u.as_str())),
-                BreakdownBy::Group | BreakdownBy::Project => None,
-            };
-            let label = if by == BreakdownBy::Category {
-                Some(category_label(&row.label))
+            let value = if by == BreakdownBy::User {
+                row.user_id.as_ref().map(|u| u.as_str().to_owned())
             } else {
-                None
+                Some(row.label.clone())
             };
-            ConversationBucketView::new(row, href, label, data.totals.total_cost_microdollars)
+            let key = bucket_param(by).zip(value);
+            let href = key
+                .as_ref()
+                .map(|(name, value)| params.narrowed(name, value));
+            let export_href = key
+                .as_ref()
+                .map(|(name, value)| params.export_href(DATASET, name, value));
+            let label = (by == BreakdownBy::Category).then(|| category_label(&row.label));
+            ConversationBucketView::new(
+                row,
+                href,
+                export_href,
+                label,
+                data.totals.total_cost_microdollars,
+            )
         })
         .collect()
 }
 
-fn facets<'a>(
-    params: &ConversationAnalysisQuery,
-    name: &str,
-    active: Option<&str>,
-    items: impl Iterator<Item = (&'a str, i64)>,
-) -> Vec<FacetLinkView> {
-    items
-        .take(8)
-        .map(|(value, count)| FacetLinkView {
-            label: value.to_owned(),
-            href: if active == Some(value) {
-                params
-                    .link_prefix(&[name, "page"])
-                    .trim_end_matches(['?', '&'])
-                    .to_owned()
-            } else {
-                params.narrowed(name, value)
-            },
-            count,
-            is_active: active == Some(value),
-        })
-        .collect()
+// Why: a chip per active filter, each removable and each downloadable as
+// exactly the rows it selects.
+fn chips(params: &ConversationAnalysisQuery, mut ribbon: RibbonView) -> RibbonView {
+    let active: [(&'static str, &'static str, Option<String>); 9] = [
+        ("Model", "model", params.model()),
+        ("Client", "client", params.client()),
+        (
+            "Record",
+            "flag",
+            params.flag().map(|f| f.as_str().to_owned()),
+        ),
+        ("Skill", "skill", params.skill()),
+        (
+            "Person",
+            "user_id",
+            params.user_id().map(|u| u.as_str().to_owned()),
+        ),
+        (
+            "Intent",
+            "category",
+            params.category().map(|c| category_label(&c).to_owned()),
+        ),
+        ("Outcome", "outcome", params.outcome()),
+        (
+            "Judged",
+            "judged",
+            params.judged().map(|j| j.as_str().to_owned()),
+        ),
+        ("Search", "q", params.free_text()),
+    ];
+    for (group, name, value) in active {
+        let Some(value) = value else { continue };
+        let remove = params
+            .link_prefix(&[name, "page"])
+            .trim_end_matches(['?', '&'])
+            .to_owned();
+        let raw = params.pair_value(name).unwrap_or_default();
+        let export = (name != "q").then(|| params.export_href(DATASET, name, &raw));
+        ribbon = ribbon.chip(group, value, remove, export);
+    }
+    ribbon
 }
 
-// Why: the select controls: fixed vocabularies plus the facets the filtered
-// set actually contains, each with the current choice marked.
-struct Selects {
-    categories: Vec<SelectOptionView>,
-    outcomes: Vec<SelectOptionView>,
-    judged: Vec<SelectOptionView>,
-    flags: Vec<SelectOptionView>,
-    skills: Vec<SelectOptionView>,
-    users: Vec<SelectOptionView>,
-    models: Vec<SelectOptionView>,
-    clients: Vec<SelectOptionView>,
-}
-
-fn selects(params: &ConversationAnalysisQuery, data: &ConversationAnalysisResult) -> Selects {
+fn ribbon(params: &ConversationAnalysisQuery, data: &ConversationAnalysisResult) -> RibbonView {
     let user_id = params.user_id();
-    Selects {
-        categories: options(
-            params.category().as_deref(),
-            CATEGORIES.iter().map(|(v, l)| (*v, (*l).to_owned())),
-        ),
-        outcomes: options(
-            params.outcome().as_deref(),
-            OUTCOMES.iter().map(|(v, l)| (*v, (*l).to_owned())),
-        ),
-        judged: options(
-            params.judged().map(JudgedFilter::as_str),
-            JudgedFilter::ALL
+    let clear = params
+        .link_prefix(&[
+            "model", "client", "flag", "skill", "user_id", "category", "outcome", "judged", "q",
+            "page",
+        ])
+        .trim_end_matches(['?', '&'])
+        .to_owned();
+    let ribbon = RibbonView::new(BASE_URL, clear)
+        .preserve(&params.preserved(&[
+            "model", "client", "flag", "skill", "user_id", "category", "outcome", "judged", "q",
+            "page",
+        ]))
+        .group(RibbonGroupView::single(
+            "model",
+            "Model",
+            "model",
+            params.model().as_deref(),
+            data.models
                 .iter()
-                .map(|(v, l)| (v.as_str(), (*l).to_owned())),
-        ),
-        flags: options(
-            params.flag().map(FlagFilter::as_str),
-            FlagFilter::ALL
-                .iter()
-                .map(|(v, l)| (v.as_str(), (*l).to_owned())),
-        ),
-        skills: options(
-            params.skill().as_deref(),
-            data.skills.iter().map(|s| {
+                .map(|m| (m.model.as_str(), m.model.clone(), m.conversations)),
+        ))
+        .group(RibbonGroupView::single(
+            "client",
+            "Client",
+            "plug",
+            params.client().as_deref(),
+            data.clients.iter().map(|c| {
                 (
-                    s.skill.as_str(),
-                    format!("{} ({})", s.skill, s.conversations),
+                    c.client_kind.as_str(),
+                    c.client_kind.clone(),
+                    c.conversations,
                 )
             }),
-        ),
-        users: options(
+        ))
+        .group(RibbonGroupView::single(
+            "user_id",
+            "Person",
+            "user",
             user_id.as_ref().map(UserId::as_str),
             data.users.iter().map(|u| {
                 (
@@ -145,33 +159,58 @@ fn selects(params: &ConversationAnalysisQuery, data: &ConversationAnalysisResult
                     u.display_name
                         .clone()
                         .unwrap_or_else(|| u.user_id.as_str().to_owned()),
+                    u.conversations,
                 )
             }),
-        ),
-        models: options(
-            params.model().as_deref(),
-            data.models.iter().map(|m| {
-                (
-                    m.model.as_str(),
-                    format!("{} ({})", m.model, m.conversations),
-                )
-            }),
-        ),
-        clients: options(
-            params.client().as_deref(),
-            data.clients.iter().map(|c| {
-                (
-                    c.client_kind.as_str(),
-                    format!("{} ({})", c.client_kind, c.conversations),
-                )
-            }),
-        ),
-    }
+        ))
+        .group(RibbonGroupView::single(
+            "skill",
+            "Skill",
+            "skill",
+            params.skill().as_deref(),
+            data.skills
+                .iter()
+                .map(|s| (s.skill.as_str(), s.skill.clone(), s.conversations)),
+        ))
+        .group(RibbonGroupView::fixed(
+            "flag",
+            "Record",
+            "layers",
+            params.flag().map(FlagFilter::as_str),
+            &FlagFilter::ALL.map(|(v, l)| (v.as_str(), l)),
+        ))
+        .group(RibbonGroupView::fixed(
+            "category",
+            "Intent",
+            "sparkle",
+            params.category().as_deref(),
+            &CATEGORIES,
+        ))
+        .group(RibbonGroupView::fixed(
+            "outcome",
+            "Outcome",
+            "check",
+            params.outcome().as_deref(),
+            &OUTCOMES,
+        ))
+        .group(RibbonGroupView::fixed(
+            "judged",
+            "Judged",
+            "judge",
+            params.judged().map(JudgedFilter::as_str),
+            &JudgedFilter::ALL.map(|(v, l)| (v.as_str(), l)),
+        ))
+        .search(
+            "q",
+            params.free_text().as_deref(),
+            "title, summary, tag, model, skill or person",
+        );
+    chips(params, ribbon)
 }
 
 fn export_view(params: &ConversationAnalysisQuery) -> crate::export::ExportView {
     crate::export::ExportView::new(
-        &["analysis-conversations", "analysis-conversation-breakdown"],
+        &[DATASET, "analysis-conversation-breakdown"],
         &params
             .preserved(&["page", "since", "preset"])
             .iter()
@@ -182,16 +221,24 @@ fn export_view(params: &ConversationAnalysisQuery) -> crate::export::ExportView 
     )
 }
 
+// Why: what the handler read besides the repository result.
+pub(super) struct PageInputs {
+    pub(super) scope_filter: ScopeFilterView,
+    pub(super) report_banner: ReportBannerView,
+    pub(super) can_judge: bool,
+}
+
 pub(super) fn build_context(
     params: &ConversationAnalysisQuery,
     request: &ScopeRequest,
     data: &ConversationAnalysisResult,
-    scope_filter: ScopeFilterView,
+    inputs: PageInputs,
 ) -> ConversationsPageContext {
+    let current_url = params.current_url();
     let rows: Vec<ConversationRowView> = data
         .rows
         .iter()
-        .map(ConversationRowView::from_fact)
+        .map(|r| ConversationRowView::from_fact(r).with_viewer(inputs.can_judge, &current_url))
         .collect();
     let shown = i64::try_from(rows.len()).unwrap_or(0);
     let window = PageWindow::new(
@@ -202,7 +249,6 @@ pub(super) fn build_context(
         "conversations",
     );
     let hourly = params.since_label() == "24h";
-    let selects = selects(params, data);
     ConversationsPageContext {
         page: "analysis-conversations",
         title: "Conversations",
@@ -210,31 +256,8 @@ pub(super) fn build_context(
         charts: series_charts(&data.series, hourly),
         range_links: params.range_links(),
         filter: filter_view(params, request),
-        categories: selects.categories,
-        outcomes: selects.outcomes,
-        judged_options: selects.judged,
-        flag_options: selects.flags,
-        skills: selects.skills,
-        users: selects.users,
-        models: selects.models,
-        clients: selects.clients,
-        model_facets: facets(
-            params,
-            "model",
-            params.model().as_deref(),
-            data.models
-                .iter()
-                .map(|m| (m.model.as_str(), m.conversations)),
-        ),
-        client_facets: facets(
-            params,
-            "client",
-            params.client().as_deref(),
-            data.clients
-                .iter()
-                .map(|c| (c.client_kind.as_str(), c.conversations)),
-        ),
-        scope_filter,
+        ribbon: ribbon(params, data),
+        scope_filter: inputs.scope_filter,
         breakdown_tabs: params.breakdown_tabs(),
         breakdown_label: params.breakdown().label(),
         breakdown: breakdown_rows(params, data),
@@ -244,5 +267,11 @@ pub(super) fn build_context(
         pagination: params.pagination(window),
         sort_headers: sort_headers(params),
         export: export_view(params),
+        help: conversations_help(),
+        report_banner: inputs.report_banner,
+        current_url,
+        judge_all_url: super::judge_all::JUDGE_ALL_URL,
+        can_judge: inputs.can_judge,
+        unjudged_in_view: data.totals.conversations - data.totals.judged,
     }
 }

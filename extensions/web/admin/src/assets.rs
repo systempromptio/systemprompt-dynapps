@@ -56,6 +56,7 @@ fn page_js_assets(storage_js: &Path) -> Vec<AssetDefinition> {
         page_js!(&pages, "admin-login.js"),
         page_js!(&pages, "admin-marketplace-groups.js"),
         page_js!(&pages, "admin-project-detail.js"),
+        page_js!(&pages, "admin-project-report.js"),
         page_js!(&pages, "admin-projects.js"),
         page_js!(&pages, "admin-requests.js"),
         page_js!(&pages, "admin-roles.js"),

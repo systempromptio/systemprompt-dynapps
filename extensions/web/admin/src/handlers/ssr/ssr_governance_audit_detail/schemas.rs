@@ -11,9 +11,11 @@
 
 use serde::Serialize;
 use sqlx::PgPool;
-use systemprompt::identifiers::{ArtifactId, SessionId};
+use systemprompt::identifiers::SessionId;
 
-use crate::repositories::analytics::artifacts::{ArtifactFilter, ArtifactRow, list_artifacts};
+use crate::repositories::analysis::tools::{
+    ToolActivityFilter, ToolActivityPage, ToolActivityRow, load_tool_activity_page,
+};
 use crate::repositories::analytics::requests::{RequestSchemaRow, find_request_schemas};
 use crate::types::tool_schema_diff::{
     ToolSchemaPair, WireTool, gemini_rules_apply, pair_tools, wire_tools,
@@ -66,7 +68,7 @@ pub(super) struct ArtifactsView {
 
 #[derive(Debug, Serialize)]
 pub(super) struct ArtifactLinkView {
-    pub artifact_id: ArtifactId,
+    pub artifact_key: String,
     pub url: String,
     pub tool_name: String,
     pub server_name: String,
@@ -98,20 +100,28 @@ pub(super) async fn load_artifacts(
     session_id: &SessionId,
     primary_request_id: Option<&str>,
 ) -> ArtifactsView {
-    let filter = ArtifactFilter {
-        session_id: Some(session_id.clone()),
-        ..ArtifactFilter::default()
+    let filter = ToolActivityFilter {
+        session: Some(session_id.as_str().to_owned()),
+        artifacts_only: true,
+        ..ToolActivityFilter::default()
     };
-    let rows = match list_artifacts(pool, &filter, ARTIFACT_LIMIT, 0).await {
-        Ok((rows, _)) => rows,
+    let page = ToolActivityPage {
+        sort: Default::default(),
+        descending: true,
+        limit: ARTIFACT_LIMIT,
+        offset: 0,
+        breakdown: Default::default(),
+    };
+    let rows = match load_tool_activity_page(pool, &filter, page).await {
+        Ok(result) => result.rows,
         Err(e) => {
-            tracing::warn!(error = %e, "list_artifacts for the request page failed");
+            tracing::warn!(error = %e, "artifact list for the request page failed");
             Vec::new()
         },
     };
     let rows: Vec<ArtifactLinkView> = rows
         .iter()
-        .map(|r| artifact_link(r, primary_request_id))
+        .filter_map(|r| artifact_link(r, primary_request_id))
         .collect();
     ArtifactsView {
         count: rows.len(),
@@ -195,14 +205,18 @@ fn pretty(value: &serde_json::Value) -> String {
     serde_json::to_string_pretty(value).unwrap_or_else(|e| format!("<unserializable: {e}>"))
 }
 
-fn artifact_link(r: &ArtifactRow, primary_request_id: Option<&str>) -> ArtifactLinkView {
-    ArtifactLinkView {
-        artifact_id: r.artifact_id.clone(),
-        url: format!("/admin/artifacts/{}", r.artifact_id),
+fn artifact_link(
+    r: &ToolActivityRow,
+    primary_request_id: Option<&str>,
+) -> Option<ArtifactLinkView> {
+    let artifact_key = r.artifact_key.clone()?;
+    Some(ArtifactLinkView {
+        url: format!("/admin/artifacts/{}", urlencoding::encode(&artifact_key)),
+        artifact_key,
         tool_name: r.tool_name.clone().unwrap_or_else(|| "—".to_owned()),
-        server_name: r.server_name.clone(),
-        artifact_type: r.artifact_type.clone(),
-        title: r.title.clone().unwrap_or_default(),
+        server_name: r.server_name.clone().unwrap_or_default(),
+        artifact_type: r.artifact_type.clone().unwrap_or_default(),
+        title: r.artifact_title.clone().unwrap_or_default(),
         bytes: r
             .payload_bytes
             .map_or_else(|| "—".to_owned(), |b| b.to_string()),
@@ -211,9 +225,12 @@ fn artifact_link(r: &ArtifactRow, primary_request_id: Option<&str>) -> ArtifactL
         is_error: r.is_error,
         is_structured: r.is_structured,
         created_at: r
-            .created_at
-            .with_timezone(&chrono::Local)
-            .format("%Y-%m-%d %H:%M:%S")
-            .to_string(),
-    }
+            .occurred_at
+            .map(|t| {
+                t.with_timezone(&chrono::Local)
+                    .format("%Y-%m-%d %H:%M:%S")
+                    .to_string()
+            })
+            .unwrap_or_default(),
+    })
 }

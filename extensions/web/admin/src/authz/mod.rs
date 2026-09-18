@@ -6,9 +6,10 @@
 //! the precedence ladder, and a [`SubjectAttributeProvider`][p] that looks up
 //! the values a user holds for it.
 //!
-//! We declare four: [`project`], [`group`], [`salesforce`] and
+//! We declare five: [`project`], [`group`], [`connector`], [`salesforce`] and
 //! [`organization`]. They form a ladder with core's — user (0), `project`
-//! (140), `group` (150), `salesforce` (170), role (200), `organization` (300)
+//! (140), `group` (150), `connector` (160), `salesforce` (170), role (200),
+//! `organization` (300)
 //! — where a lower number is the narrower, higher-priority scope. Groups
 //! carry people and marketplace entitlement; projects are work attribution.
 //! Both are DB rows an operator edits, and the directory's AD groups map into
@@ -28,6 +29,7 @@
 mod account;
 pub use account::account_scope;
 pub(crate) mod catalog;
+pub mod connector;
 pub mod group;
 pub mod organization;
 pub mod primary;
@@ -45,6 +47,7 @@ use systemprompt_security::authz::{
     SubjectDimension, dimensions_of, discover_subject_providers, gather_subject_attributes,
 };
 
+use crate::authz::connector::ConnectorAttributeProvider;
 use crate::authz::group::GroupAttributeProvider;
 use crate::authz::organization::OrganizationAttributeProvider;
 use crate::authz::project::ProjectAttributeProvider;
@@ -60,6 +63,12 @@ systemprompt_security::register_subject_attribute_provider!(|ctx| {
 systemprompt_security::register_subject_attribute_provider!(|ctx| {
     let provider: SharedSubjectAttributeProvider =
         Arc::new(ProjectAttributeProvider::new(Arc::clone(&ctx.pool)));
+    provider
+});
+
+systemprompt_security::register_subject_attribute_provider!(|ctx| {
+    let provider: SharedSubjectAttributeProvider =
+        Arc::new(ConnectorAttributeProvider::new(Arc::clone(&ctx.pool)));
     provider
 });
 

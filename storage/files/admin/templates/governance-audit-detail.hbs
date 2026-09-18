@@ -358,7 +358,7 @@
           <tbody>
           {{#each artifacts.rows}}
             <tr{{#if this.is_this_request}} aria-current="true"{{/if}}>
-              <td><a href="{{this.url}}"><code class="sp-code-inline">{{shortId this.artifact_id}}</code></a>{{#if this.is_error}} <span class="sp-badge sp-badge--err">error</span>{{/if}}</td>
+              <td><a href="{{this.url}}"><code class="sp-code-inline">{{shortId this.artifact_key}}</code></a>{{#if this.is_error}} <span class="sp-badge sp-badge--err">error</span>{{/if}}</td>
               <td><code class="sp-code-inline">{{this.tool_name}}</code> <span class="sp-table__cell--muted">{{this.server_name}}</span></td>
               <td>{{this.artifact_type}}{{#if this.is_structured}} <span class="sp-badge sp-badge--muted">structured</span>{{/if}}</td>
               <td class="sp-table__cell--muted">{{this.title}}</td>

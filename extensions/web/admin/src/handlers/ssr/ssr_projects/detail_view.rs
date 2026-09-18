@@ -112,10 +112,11 @@ pub(super) fn usage_tab(
     u: &ProjectUsageData,
     skills: &[SkillEffectivenessRow],
 ) -> ProjectUsageTabView {
+    let (daily, daily_cost) = daily_charts(&u.daily);
     ProjectUsageTabView {
         attribution: attribution_rows(&u.attribution),
-        daily: daily_chart(&u.daily),
-        daily_cost: daily_cost_chart(&u.daily),
+        daily,
+        daily_cost,
         model_count: u.models.len() as i64,
         skill_count: skills.len() as i64,
         tool_count: u.tools.len() as i64,
@@ -125,6 +126,10 @@ pub(super) fn usage_tab(
         tools: tool_rows(&u.tools),
         sessions: u.sessions.iter().map(session_row).collect(),
     }
+}
+
+pub(super) fn daily_charts(daily: &[DailyRequests]) -> (SvgLineChartView, SvgLineChartView) {
+    (daily_chart(daily), daily_cost_chart(daily))
 }
 
 fn daily_chart(daily: &[DailyRequests]) -> SvgLineChartView {

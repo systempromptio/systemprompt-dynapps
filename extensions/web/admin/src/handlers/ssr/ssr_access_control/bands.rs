@@ -11,6 +11,7 @@ pub(super) fn band_label(rule_type: &str) -> &'static str {
         "user" => "person",
         "project" => "project",
         "group" => "group",
+        "connector" => "connected server",
         "salesforce" => "linked account",
         "role" => "role",
         _ => "band",
@@ -23,9 +24,10 @@ pub(super) fn band_rank(rule_type: &str) -> u8 {
         "user" => 0,
         "project" => 1,
         "group" => 2,
-        "salesforce" => 3,
-        "role" => 4,
-        _ => 5,
+        "connector" => 3,
+        "salesforce" => 4,
+        "role" => 5,
+        _ => 6,
     }
 }
 
@@ -54,6 +56,7 @@ fn phrase(band: &BandChipsView) -> String {
         "user" => format!("is {list}"),
         "project" => format!("is on project {list}"),
         "group" => format!("is in group {list}"),
+        "connector" => format!("has connected {list}"),
         "salesforce" => format!("has linked {list}"),
         "role" => format!("holds role {list}"),
         _ => format!("matches {} {list}", band.band),

@@ -45,6 +45,9 @@ pub struct ConversationAnalysisFilter {
     pub group_id: Option<GroupId>,
     pub project_id: Option<ProjectId>,
     pub flag: Option<FlagFilter>,
+    // Why: an explicit row selection — the export of ticked rows and the
+    // judge-selected action read exactly these contexts, window aside.
+    pub context_ids: Option<Vec<String>>,
 }
 
 impl ConversationAnalysisFilter {
@@ -95,6 +98,10 @@ pub struct ConversationAnalysisTotals {
     pub safety_findings: i64,
     pub safety_blocked: i64,
     pub artifacts: i64,
+    #[serde(default)]
+    pub artifact_files: i64,
+    #[serde(default)]
+    pub artifact_cards: i64,
     pub skill_invocations: i64,
     pub with_skills: i64,
     pub achieved: i64,
@@ -116,6 +123,10 @@ pub struct ConversationSeriesPoint {
     pub cost_microdollars: i64,
     pub errors: i64,
     pub tool_calls: i64,
+    #[serde(default)]
+    pub artifacts: i64,
+    #[serde(default)]
+    pub denied: i64,
     pub users: i64,
 }
 
@@ -132,6 +143,8 @@ pub struct ConversationBucketRow {
     pub errors: i64,
     pub denied: i64,
     pub tool_calls: i64,
+    #[serde(default)]
+    pub artifacts: i64,
     pub achieved: i64,
     pub judged: i64,
     pub completion_avg: Option<f64>,
@@ -219,6 +232,7 @@ pub async fn load_conversation_analysis_page(
         filter.project_id.as_ref().map(ProjectId::as_str),
         filter.flag.map(FlagFilter::as_str),
         filter.bucket(),
+        filter.context_ids.as_deref(),
     )
     .fetch_one(&mut *connection)
     .await?;

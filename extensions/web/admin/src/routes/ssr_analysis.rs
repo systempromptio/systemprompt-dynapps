@@ -45,6 +45,23 @@ pub(super) fn routes() -> Router<Arc<PgPool>> {
             get(handlers::ssr::analysis::conversations::page),
         )
         .route(
+            "/analysis/reports",
+            get(handlers::ssr::analysis::reports::page)
+                .post(handlers::ssr::analysis::reports::create),
+        )
+        .route(
+            "/analysis/reports/{id}",
+            get(handlers::ssr::analysis::reports::report_page),
+        )
+        .route(
+            "/analysis/reports/{id}/regenerate",
+            post(handlers::ssr::analysis::reports::regenerate),
+        )
+        .route(
+            "/analysis/conversations/judge",
+            post(handlers::ssr::analysis::conversations::judge_all),
+        )
+        .route(
             "/analysis/conversations/{context_id}",
             get(handlers::ssr::analysis::conversation_detail::page),
         )

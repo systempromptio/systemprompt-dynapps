@@ -107,7 +107,7 @@ known = {
 # carry an `access:` block of its own — that second truth is exactly what this
 # file replaced.
 RULES = root / "services/access-control/rules.yaml"
-BANDS = {"role", "group", "project", "salesforce"}
+BANDS = {"role", "group", "project", "connector", "salesforce"}
 # Nothing registers a `hook` entity and gateway_route ids are generated, so a
 # literal id of either kind would be minted rather than validated. Only the
 # glob is accepted for them, and only for them.

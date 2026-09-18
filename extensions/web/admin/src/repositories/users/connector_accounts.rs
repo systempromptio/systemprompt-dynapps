@@ -34,6 +34,21 @@ pub async fn list_accounts(
     .await
 }
 
+// Why: the `connector` authorization band. Only a verified, live grant counts;
+// a pending or errored row would open an entity to someone whose calls fail.
+pub async fn list_connected_providers(
+    pool: &PgPool,
+    user: &UserId,
+) -> Result<Vec<String>, sqlx::Error> {
+    sqlx::query_scalar!(
+        "SELECT provider FROM mcp_connector_accounts \
+         WHERE user_id = $1 AND status = 'connected' ORDER BY provider",
+        user.as_str()
+    )
+    .fetch_all(pool)
+    .await
+}
+
 // Why: All mutations take this lock before touching credentials, including
 // disconnect and callbacks. A callback cannot resurrect a connection
 // disconnected in flight.

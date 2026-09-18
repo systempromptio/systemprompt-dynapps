@@ -14,6 +14,7 @@ WITH events AS MATERIALIZED (
       AND ($4::text IS NULL OR EXISTS (SELECT 1 FROM service_owned_ids o
                                        WHERE o.kind = 'plugin' AND o.id = e.plugin_id AND o.marketplace_id = $4))
       AND ($5::text IS NULL OR e.skill ILIKE $5 OR e.plugin_id ILIKE $5)
+      AND ($10::text[] IS NULL OR e.skill = ANY($10))
 ), sessions AS (
     SELECT DISTINCT skill, plugin_id, user_id, session_id FROM events
 ), facts AS (

@@ -53,11 +53,22 @@ pub(crate) struct ProjectListRowView {
     pub active_members: i64,
     pub group_count: i64,
     pub requests: i64,
+    pub tokens: i64,
+    pub tokens_display: String,
     pub cost_display: String,
+    pub models_used: i64,
+    // Why: the vendor prefix repeats on every row of a single-vendor estate,
+    // so the cell shows the tail and keeps the full id on its title.
+    pub top_model: Option<String>,
+    pub top_model_short: Option<String>,
+    pub clients_used: i64,
+    pub top_client: Option<String>,
     pub tool_calls: i64,
     pub tool_success_pct: i64,
     pub tool_tone: &'static str,
     pub skills_used: i64,
+    pub artifacts: i64,
+    pub report_href: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -75,6 +86,7 @@ pub(crate) struct ProjectsPageData {
     pub query: String,
     pub truncated: bool,
     pub can_manage: bool,
+    pub export: crate::export::ExportView,
 }
 
 // Why: named fields rather than a Vec so the template addresses each header by
@@ -85,9 +97,13 @@ pub(crate) struct ProjectSortHeaders {
     pub members: ProjectSortHeaderView,
     pub groups: ProjectSortHeaderView,
     pub requests: ProjectSortHeaderView,
+    pub tokens: ProjectSortHeaderView,
     pub cost: ProjectSortHeaderView,
+    pub models: ProjectSortHeaderView,
+    pub clients: ProjectSortHeaderView,
     pub tools: ProjectSortHeaderView,
     pub skills: ProjectSortHeaderView,
+    pub artifacts: ProjectSortHeaderView,
 }
 
 // Why: one tool the project ran, with the share that did not succeed.

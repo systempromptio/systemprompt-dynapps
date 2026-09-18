@@ -20,11 +20,12 @@ pub const MAX_WINDOWS: usize = 8;
 
 // Why: The subject kinds a window may name: core's `user` plus every dimension
 // this extension registers a quota subject provider for.
-pub const SUBJECTS: [&str; 6] = [
+pub const SUBJECTS: [&str; 7] = [
     "user",
     "group",
     "project",
     "role",
+    "connector",
     "salesforce",
     "organization",
 ];
