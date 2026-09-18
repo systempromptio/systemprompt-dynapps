@@ -33,9 +33,9 @@ repository owns everything else, every entitlement included.
 ## Seeding a kit from `services/`
 
 ```bash
-just kit-export astound-india-dev ../sfnext-claude-india-kit
-cp -r deploy/kit/.github ../sfnext-claude-india-kit/
-cp deploy/kit/README-INTEGRATION.md ../sfnext-claude-india-kit/
+just kit-export astound-india-dev ../sfscore-claude-india-kit
+cp -r deploy/kit/.github ../sfscore-claude-india-kit/
+cp deploy/kit/README-INTEGRATION.md ../sfscore-claude-india-kit/
 ```
 
 The exporter writes the marketplace, its plugins and their skills in kit
@@ -53,12 +53,14 @@ served from `services/` and `known-kits.json` lists the kit as `planned`.
 | kit repository | `ASTOUND_RELEASE_TOKEN` | fine-grained PAT, Contents: read on this repository — the kit CI downloads the server binary (and packs the base from `services/`) from here while it is private |
 | kit repository (optional) | `SYSTEMPROMPT_ADMIN_TOKEN`, `SYSTEMPROMPT_API_URL` | an instance admin PAT and the gateway URL, so a release imports itself |
 | this repository | `deploy/kit/known-kits.json` `public_key`, `pull`, `channel` | the public half of the kit's seed; `public` when the GHCR package is public (no pull secret anywhere); the channel tag the CI moves |
-| instance profile secrets | `ghcr_pull_token` | `<github-user>:<read:packages PAT>` — only for a kit whose package is private |
+| instance profile secrets | `ghcr_pull_token` | `<github-user>:<read:packages PAT>` — only for a kit whose package is private (`pull: private` in `known-kits.json`; `services-pin` then writes `auth_secret: ghcr_pull_token`) |
+| this repository (Actions) | `ASTOUND_BUNDLE_SIGNING_SEED` | signs the **base** bundle `release.yml` publishes as `ghcr.io/astound-digital/systemprompt-astound-base:<version>` |
 
 The image is pushed with the workflow's own `GITHUB_TOKEN` to
 `ghcr.io/<owner>/<repo>`; no packages PAT is needed. Make the package public
-after the first push if the kit is public.
-| this repository (Actions) | `ASTOUND_BUNDLE_SIGNING_SEED` | signs the **base** bundle `release.yml` publishes as `ghcr.io/astound-digital/systemprompt-astound-base:<version>` |
+after the first push if the kit is public; the Astound kits stay private, so
+every instance that composes them carries `ghcr_pull_token`. Another instance
+(e.g. `sp-dev.astound.digital`) follows `docs/kits-on-another-instance.md`.
 
 ## Release flow
 

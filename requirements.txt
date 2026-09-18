@@ -1,0 +1,53 @@
+Kit rollout — what Astound must provide (updated 2026-09-18)
+=============================================================
+
+Scope: publish Astound-Digital/sfnext-claude-dev-kit and Astound-Digital/sfscore-claude-india-kit
+as signed services bundles (private GHCR packages) and let each systemprompt instance import them.
+Every item says who can do it and what it unlocks. Tick with the date when done.
+
+A. GitHub Actions secrets on Astound-Digital/sfnext-claude-dev-kit
+   (Settings → Secrets and variables → Actions; needs repo admin)
+   [x] BUNDLE_SIGNING_SEED       already set 2026-09-15. Public key pinned by the instance:
+                                 gWpeIfEjh9LKU8RlHyLnaTmQqnHN2W8lrLlqmPuASLg=
+                                 Verified on first CI release; rotate only if the signer differs.
+   [ ] ASTOUND_RELEASE_TOKEN     GitHub PAT (classic) with scope `repo`, on an account that can read
+                                 Astound-Digital/systemprompt-astound (private). Unlocks: CI downloads
+                                 systemprompt-astound-server-0.55.1-linux-amd64.tar.gz and
+                                 systemprompt-astound-base-0.55.1.tar.gz from the private release.
+                                 Same value as `astound_release_token` in the operator's local secrets.json.
+   [ ] SYSTEMPROMPT_API_URL      optional: https://astound.systemprompt.io — CI imports the release itself.
+   [ ] SYSTEMPROMPT_ADMIN_TOKEN  optional: admin PAT on that instance
+                                 (`systemprompt admin users api-key issue --user <admin uuid>`).
+
+B. GitHub Actions secrets on Astound-Digital/sfscore-claude-india-kit (same page, repo admin)
+   [ ] BUNDLE_SIGNING_SEED       NEW. Generated 2026-09-18 with `systemprompt core services keygen`;
+                                 the seed is handed over once out of band, never committed. Public key:
+                                 <filled in when keygen runs>
+   [ ] ASTOUND_RELEASE_TOKEN     same PAT as A.
+   [ ] SYSTEMPROMPT_API_URL / SYSTEMPROMPT_ADMIN_TOKEN   optional, as A.
+
+C. GHCR packages (created automatically by the first CI run; org admin only if visibility changes)
+   ghcr.io/astound-digital/sfnext-claude-dev-kit   — keep PRIVATE
+   ghcr.io/astound-digital/sfscore-claude-india-kit — keep PRIVATE
+   Nothing to do unless the package is not linked to its repository (then: Package settings →
+   Manage Actions access → add the kit repository with write).
+
+D. Instance pull token (one per instance that composes the kits)
+   [ ] GitHub PAT (classic) with scope `read:packages` ONLY, on an account that can read the
+       Astound-Digital org packages. Stored as secret `ghcr_pull_token` with the value
+       `<github-user>:<PAT>` (e.g. `Ejb503:ghp_...`).
+       - local profile      .systemprompt/profiles/local/secrets.json        (replace REPLACE_ placeholder)
+       - astound.systemprompt.io (profile `production`) secrets.json          (pushed by `just deploy`)
+       - sp-dev.astound.digital  that deployment's secrets (its operator)
+
+E. What sp-dev.astound.digital's operator must do (Astound side), after the first releases exist
+   [ ] set `ghcr_pull_token` (D)
+   [ ] add the services.sources[] block from docs/kits-on-another-instance.md to that instance's
+       profile (astound-ba public; sfnext + india with auth_secret: ghcr_pull_token), then Import on
+       /admin/sync after every kit release (the CI self-imports one URL only).
+   [ ] keep services/access-control/rules.yaml + ADFS group mapping (india-devs, europe-devs) in step.
+
+F. People
+   - Kit maintainers need write on their kit repository and the ability to create a GitHub Release
+     (tag vX.Y.Z → Release → CI publishes). Collaborators on the India kit today: Ejb503,
+     jdave-astounddigital, nbohra-astound, mruia-astound, priyam-astound.

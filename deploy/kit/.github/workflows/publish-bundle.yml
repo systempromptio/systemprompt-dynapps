@@ -23,7 +23,7 @@ on:
 env:
   # The systemprompt-astound release whose server binary (and, once released,
   # base bundle) this kit validates against. Bump deliberately.
-  ASTOUND_RELEASE: v0.54.0
+  ASTOUND_RELEASE: v0.55.1
   ASTOUND_REPO: Astound-Digital/systemprompt-astound
   # While the pinned release carries no base-bundle asset, the base is packed
   # here from the Astound repository's services/ tree at this ref — the branch

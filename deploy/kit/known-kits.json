@@ -42,9 +42,11 @@
     },
     {
       "name": "sfnext",
-      "status": "pinned",
+      "status": "planned",
       "repo": "Astound-Digital/sfnext-claude-dev-kit",
       "image": "ghcr.io/astound-digital/sfnext-claude-dev-kit",
+      "pull": "private",
+      "channel": "stable",
       "public_key": "gWpeIfEjh9LKU8RlHyLnaTmQqnHN2W8lrLlqmPuASLg=",
       "marketplaces": {
         "astound-europe-dev": {
@@ -53,12 +55,9 @@
             "astound-europe-delivery"
           ],
           "mcp_servers": [
-            "knowledge-bank",
             "atlassian",
-            "github",
             "salesforce-us",
-            "salesforce-uk",
-            "requirements-workflow"
+            "salesforce-uk"
           ]
         }
       },
@@ -74,9 +73,7 @@
             "sfnext_prove_with_playwright"
           ],
           "mcp_servers": [
-            "knowledge-bank",
-            "atlassian",
-            "requirements-workflow"
+            "atlassian"
           ]
         },
         "astound-europe-delivery": {
@@ -85,19 +82,20 @@
             "b2c_deploy_runbook",
             "residency_review"
           ],
-          "mcp_servers": [
-            "knowledge-bank"
-          ]
+          "mcp_servers": []
         }
-      }
+      },
+      "_note": "Private package: the profile entry carries auth_secret: ghcr_pull_token. planned until the first release is pinned."
     },
     {
       "name": "india",
       "status": "planned",
-      "repo": "Astound-Digital/sfnext-claude-india-kit",
-      "image": "ghcr.io/astound-digital/sfnext-claude-india-kit",
-      "public_key": null,
-      "_seed": "just kit-export astound-india-dev ../sfnext-claude-india-kit — then remove marketplaces/astound-india-dev, plugins/astound-india-ba, plugins/astound-india-sfcore and their skills from services/ once the kit is published and pinned; composition refuses an id in both places.",
+      "repo": "Astound-Digital/sfscore-claude-india-kit",
+      "image": "ghcr.io/astound-digital/sfscore-claude-india-kit",
+      "pull": "private",
+      "channel": "stable",
+      "public_key": "a8Xa0VL5BFVauW8NsUmVktmzj8G+9+qt6//UBZH4X0o=",
+      "_seed": "just kit-export astound-india-dev ../sfscore-claude-india-kit — then remove marketplaces/astound-india-dev, plugins/astound-india-ba, plugins/astound-india-sfcore and their skills from services/ once the kit is published and pinned; composition refuses an id in both places.",
       "marketplaces": {
         "astound-india-dev": {
           "plugins": [
@@ -106,12 +104,62 @@
           ],
           "mcp_servers": [
             "atlassian",
-            "salesforce-us",
-            "github"
+            "salesforce-us"
           ]
         }
       },
-      "plugins": {}
+      "plugins": {
+        "astound-india-ba": {
+          "skills": [
+            "ba_bug_logging",
+            "ba_change_request",
+            "ba_confluence_management",
+            "ba_dor_dod_validation",
+            "ba_epic_creation",
+            "ba_impact_analysis",
+            "ba_jira_management",
+            "ba_notification_sending",
+            "ba_release_management",
+            "ba_requirement_tracing",
+            "ba_scheduled_reporting",
+            "ba_session_memory",
+            "ba_sprint_planning",
+            "ba_story_drafting",
+            "ba_tracker_management",
+            "ba_transcript_management"
+          ],
+          "mcp_servers": [
+            "atlassian",
+            "salesforce-us"
+          ]
+        },
+        "astound-india-sfcore": {
+          "skills": [
+            "sf_apex_test_strategy",
+            "sf_app_utilitybar_pattern",
+            "sf_assignment_rule_reexecution",
+            "sf_bypass_patterns",
+            "sf_core_logic",
+            "sf_custom_metadata_driven_config",
+            "sf_deployment_troubleshooting",
+            "sf_devops",
+            "sf_dynamic_forms_field_visibility",
+            "sf_email_notification_pattern",
+            "sf_flow_deployment_strategy",
+            "sf_integration",
+            "sf_lead_conversion",
+            "sf_profile_permissionset_patterns",
+            "sf_quick_action_flow_pattern",
+            "sf_salesforce_project_context",
+            "sf_ui_framework",
+            "sf_validation_rule_patterns"
+          ],
+          "mcp_servers": [
+            "atlassian",
+            "salesforce-us"
+          ]
+        }
+      }
     }
   ]
 }
