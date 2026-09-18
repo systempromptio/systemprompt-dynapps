@@ -74,10 +74,9 @@ matches `https://idp.example` in its own metadata.
 
 `services/mcp/google_drive.yaml` connects Google Agent Search's hosted MCP
 server (Discovery Engine, ex-Vertex AI Search) over **federated** Google
-Drive, Gmail, Calendar and People data stores: nothing is copied, all are
-searched live, and Google filters every result to what the signed-in user can
-already open — their Drive permissions, their own mailbox and calendar, the
-directory. Tools: `search`,
+Drive, Gmail and Calendar data stores: nothing is copied, all are searched
+live, and Google filters every result to what the signed-in user can already
+open — their Drive permissions, their own mailbox and calendar. Tools: `search`,
 `conversational_search`, `list_engines`. Scope:
 `https://www.googleapis.com/auth/discoveryengine.readwrite`. The endpoint is
 **regional** — `eu-discoveryengine.googleapis.com/mcp` for an `eu` engine; the
@@ -109,16 +108,23 @@ On the Google side, in one GCP project:
 1. Enable `discoveryengine.googleapis.com`; attach billing and a budget alert.
 2. AI Applications → Settings → Identity provider → Google Identity (before
    the data store; the wizard refuses otherwise).
-3. Create federated data stores for Drive, Gmail, Calendar and People
-   (location `eu`) and one Enterprise-tier search app over **all of them** — an app
+3. Create federated data stores for Drive, Gmail and Calendar (location
+   `eu`) and one Enterprise-tier search app over **all of them** — an app
    created with a single store can never gain a second (`Engines with a
    single data store cannot add or remove data stores`); the app's
-   `…/servingConfigs/default_search` is the `servingConfig`. All of this is
-   scriptable against the Discovery Engine REST API (`dataStores.create` with
-   `workspaceConfig.type` `GOOGLE_DRIVE` / `GOOGLE_MAIL` / `GOOGLE_CALENDAR`
-   / `GOOGLE_PEOPLE`, `engines.create` with every `dataStoreId`) with an
-   `x-goog-user-project` header. Chat, Groups, Sites and Keep are available
-   the same way and were left out deliberately.
+   `…/servingConfigs/default_search` is the `servingConfig`. Scriptable against
+   the Discovery Engine REST API with an `x-goog-user-project` header:
+   `dataStores.create` (v1alpha) with **all three** of `contentConfig:
+   GOOGLE_WORKSPACE`, `aclEnabled: true` and `workspaceConfig: {type:
+   GOOGLE_DRIVE | GOOGLE_MAIL | GOOGLE_CALENDAR, dasherCustomerId: <Workspace
+   customer id, e.g. C01hjjuoz from `gcloud organizations list`>}`, then
+   `engines.create` with every `dataStoreId`. A store created without those
+   three fields is accepted, silently unbound from the Workspace, and returns
+   nothing forever — `workspaceConfig` is immutable, so delete and recreate.
+   `GOOGLE_PEOPLE` (directory) is not servable by the search backend in `eu`
+   (`No mapping of workspace config type found`); Chat, Groups, Sites and Keep
+   were left out deliberately. The console wizard sets all of this for you;
+   the API does not.
 4. Create an OAuth **Web application** client with an **Internal** consent
    screen, the scope above and the redirect
    `https://YOUR-SERVER/api/public/connectors/google_drive/callback`. Store

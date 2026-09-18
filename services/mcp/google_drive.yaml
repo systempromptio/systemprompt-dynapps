@@ -1,8 +1,8 @@
 # Google Agent Search's hosted MCP server (Discovery Engine, ex-Vertex AI
-# Search) over federated Google Drive, Gmail, Calendar and People (directory)
-# data stores: nothing is copied, all are searched live and every result is
-# filtered to what the signed-in user can already open — their Drive
-# permissions, their own mailbox and calendar. Each user connects their own Google account on the
+# Search) over federated Google Drive, Gmail and Calendar data stores: nothing
+# is copied, all are searched live and every result is filtered to what the
+# signed-in user can already open — their Drive permissions, their own mailbox
+# and calendar. (A People/directory store is not servable in `eu`.) Each user connects their own Google account on the
 # Connectors page; core synthesises the token accessor from the `connector:`
 # block, so no `external_auth:` is declared here.
 #
@@ -22,7 +22,7 @@ mcp_servers:
     tool_policy: allow
     display_in_web: false
     removable: true
-    description: Google Agent Search over Drive, Gmail, Calendar and the directory, live and filtered to what the signed-in user can already open
+    description: Google Agent Search over Drive, Gmail and Calendar, live and filtered to what the signed-in user can already open
     connector:
       adapter: generic
       display_name: Google Workspace

@@ -90,7 +90,9 @@ impl FeedbackIngestionRepository {
             .await
             .map_err(|error| JobError::other(error.to_string()))?;
         sqlx::query!("UPDATE feedback_ingestion_outbox SET pending=false,lease_token=NULL,lease_until=NULL,last_error=NULL WHERE id=$1",lease.id).execute(&mut *tx).await?;
-        sqlx::query!("UPDATE analytics_ingestion_producers SET pending_count=pending_count-1,oldest_pending_at=CASE WHEN pending_count=1 THEN NULL ELSE oldest_pending_at END,checkpoint=checkpoint+1,last_drained_at=clock_timestamp(),updated_at=clock_timestamp() WHERE producer='astound.feedback'").execute(&mut *tx).await?;
+        sqlx::query!("SELECT feedback_producer_recount(true)")
+            .fetch_one(&mut *tx)
+            .await?;
         tx.commit().await?;
         Ok(true)
     }

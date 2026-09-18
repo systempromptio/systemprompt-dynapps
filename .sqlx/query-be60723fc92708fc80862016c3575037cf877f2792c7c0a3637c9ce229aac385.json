@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT feedback_producer_recount(false)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "feedback_producer_recount",
+        "type_info": "Void",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "be60723fc92708fc80862016c3575037cf877f2792c7c0a3637c9ce229aac385"
+}

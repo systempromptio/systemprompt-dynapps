@@ -53,7 +53,9 @@ impl FeedbackIngestionRepository {
             )
             .execute(&mut *tx)
             .await?;
-            sqlx::query!("UPDATE analytics_ingestion_producers SET pending_count=pending_count-1,oldest_pending_at=CASE WHEN pending_count=1 THEN NULL ELSE oldest_pending_at END,updated_at=clock_timestamp() WHERE producer='astound.feedback'").execute(&mut *tx).await?;
+            sqlx::query!("SELECT feedback_producer_recount(false)")
+                .fetch_one(&mut *tx)
+                .await?;
         }
         tx.commit().await?;
         Ok(rows.len() as u64)

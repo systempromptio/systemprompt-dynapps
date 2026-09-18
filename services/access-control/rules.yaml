@@ -205,7 +205,7 @@ entities:
   - entity: mcp_server/google_drive
     default: closed
     why: >-
-      Org-wide Drive, Gmail, Calendar and directory search through Agent Search; Google
+      Org-wide Drive, Gmail and Calendar search through Agent Search; Google
       filters every result to what the user can already open, so the band only
       decides who sees the connector. Starts on the UK pilot band; widening is a one-line
       change here.

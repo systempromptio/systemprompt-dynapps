@@ -61,6 +61,26 @@ scheduler:
       schedule: "0 0 4 * * *"
       enabled: true
 
+    - name: oauth_cleanup
+      extension: core
+      owner: admin
+      schedule: "0 5 3 * * *"
+      enabled: true
+
+    - name: user_rate_limit_prune
+      extension: core
+      owner: admin
+      schedule: "0 0 * * * *"
+      enabled: true
+
+    # Primary group/project recompute for the membership changes nothing
+    # announces (directory sign-ins rewriting AD membership).
+    - name: scope_defaults_recompute
+      extension: web
+      owner: admin
+      schedule: "0 15 * * * *"
+      enabled: true
+
     # Web extension jobs (publishing pipeline)
     - name: publish_pipeline
       extension: web

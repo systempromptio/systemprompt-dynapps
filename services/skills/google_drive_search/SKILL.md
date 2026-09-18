@@ -6,16 +6,14 @@
      new GCP project replace this one resource name; nothing else in the skill
      or the `google_drive` server config carries it. -->
 
-- `servingConfig`: `projects/402649471530/locations/eu/collections/default_collection/engines/astound-workspace-search/servingConfigs/default_search`
+- `servingConfig`: `projects/402649471530/locations/eu/collections/default_collection/engines/workspace-search/servingConfigs/default_search`
 
 ## What this is
 
-You search Google Drive, the user's own Gmail and Calendar, and the company
-directory live, through the signed-in user's `google_drive` MCP connection
-(Google Agent Search over federated Drive, Gmail, Calendar and People data
-stores). Nothing is copied: Google runs the query and returns only what the
+You search Google Drive and the user's own Gmail and Calendar live, through the signed-in user's `google_drive` MCP connection
+(Google Agent Search over federated Drive, Gmail and Calendar data stores). Nothing is copied: Google runs the query and returns only what the
 signed-in user can already open — documents shared with them, mail and events
-in their own account, colleagues in the directory. A colleague running the same query sees a different
+in their own account. A colleague running the same query sees a different
 set — that is the design, not a fault.
 
 ## Use when
@@ -24,7 +22,7 @@ set — that is the design, not a fault.
 - "What do we have on Larkspur's Q3 renewal?"
 - "Is there a proposal template for retail clients?"
 - "What did Larkspur email us about the go-live date?"
-- "When is my next meeting with Larkspur, and who is their account lead?"
+- "When is my next meeting with Larkspur?"
 - A `uk_sales_*` skill needs a document from Drive to ground its output.
 
 ## Workflow
@@ -38,7 +36,7 @@ set — that is the design, not a fault.
    - `query`: the user's question in natural language, not keywords.
    - `pageSize`: 10 at most. Narrow the query before paging further.
 3. **Read what came back.** Each result carries a title, a snippet and a link
-   — a Drive document, a Gmail message, a Calendar event or a directory entry. Open the link only through the tool results; do not invent content the
+   — a Drive document, a Gmail message or a Calendar event. Open the link only through the tool results; do not invent content the
    snippet does not show. Use `conversational_search` only when the user is
    asking a question that wants a synthesised answer across documents rather
    than the documents themselves — and still cite each source it names.
