@@ -439,17 +439,15 @@ BEGIN
     RETURN deleted;
 END $$;
 
--- conversation_analysis_rows (37_) carrying the judge title and completion.
+-- conversation_analysis_rows (37_), re-created so its definition matches the
+-- declarative file byte for byte; the judge's columns live on the pages'
+-- own queries, never on this ad-hoc view.
 DROP VIEW IF EXISTS conversation_analysis_rows;
 CREATE OR REPLACE VIEW conversation_analysis_rows AS
 SELECT r.*, a.status AS analysis_status, a.category, a.summary, a.tags, a.outcome, a.confidence,
        a.skills_used, a.classified_at, a.model AS judge_model,
        COALESCE((SELECT array_agg(s.skill ORDER BY s.first_at) FROM conversation_skill_uses s
-                 WHERE s.client_session_id = r.client_session_id), '{}'::text[]) AS skills_hooked,
-       -- Why: the judge's columns are appended, never inserted — CREATE OR REPLACE
-       -- VIEW on an existing view may only add trailing columns, and this file
-       -- runs on every boot against whatever shape the database already has.
-       a.title AS judge_title, a.completion
+                 WHERE s.client_session_id = r.client_session_id), '{}'::text[]) AS skills_hooked
 FROM conversation_metrics_for(NULL) r
 LEFT JOIN conversation_analyses a ON a.context_id = r.context_id;
 
