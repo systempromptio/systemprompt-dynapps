@@ -75,6 +75,9 @@ pub mod test_support {
         parse as parse_window_bound, render as render_window_bound,
     };
     pub use crate::handlers::ssr::analysis::{SkillRef, parse_skill_key};
+    pub use crate::handlers::ssr::ssr_connectors_cards::{
+        ConnectorCardView, card as connector_card,
+    };
     pub use crate::handlers::ssr::ssr_history::command_name as history_command_name;
     pub use crate::handlers::ssr::transcript_view::{
         ConversationView, EmptyReason, ParsedAssistant, SideCallRowView, SideCallsView, StepView,
@@ -82,6 +85,10 @@ pub mod test_support {
         TranscriptRequestIds, TurnView, build_conversation, meta_view, parse_assistant, preview,
         short_id, strip_system_reminders, tidy_lines, transcript_request_ids,
     };
+    pub use crate::services::connector_accounts::{
+        Connection, ConnectionSnapshot, get_connections,
+    };
+    pub use crate::services::connector_readiness::NotReady;
 }
 
 pub fn hooks_webhook_router(

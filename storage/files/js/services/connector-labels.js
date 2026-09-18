@@ -43,7 +43,7 @@ export function glyph(provider) {
 export function monogram(family, name) { return { atlassian: 'At', google: 'G', systemprompt: 'Sp', salesforce: 'Sf' }[family] || name.slice(0, 2); }
 export function kind(family) { return { atlassian: 'Atlassian Cloud', google: 'Google Workspace', systemprompt: 'Control plane', salesforce: 'Salesforce org' }[family] || 'MCP server'; }
 export function note(account) {
-    if (!account.entitled) return account.provider.startsWith('salesforce') ? 'Your account is not entitled to this Salesforce org' : 'An active account is required to connect providers';
+    if (!account.entitled) return account.provider.startsWith('salesforce') ? 'Your account is not entitled to this Salesforce org' : account.session_attested ? 'Not open to your account' : 'An active account is required to connect providers';
     if (account.status === 'not_provisioned') return 'Waiting for a Salesforce administrator to provision this org';
     return notes[account.error_code] || '';
 }

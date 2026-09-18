@@ -41,7 +41,7 @@ mod ssr_bridge_setup;
 mod ssr_chain;
 mod ssr_connect;
 mod ssr_connectors;
-mod ssr_connectors_cards;
+pub(crate) mod ssr_connectors_cards;
 mod ssr_context_detail;
 mod ssr_conversations_raw;
 mod ssr_demo_help;

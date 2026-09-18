@@ -17,15 +17,15 @@ pub(super) const ATTENTION: [&str; 3] = [
     "temporarily_unavailable",
 ];
 
-#[derive(Debug, Serialize)]
-pub(super) struct ActionView {
+#[derive(Debug, Clone, Copy, Serialize)]
+pub struct ActionView {
     action: &'static str,
     label: &'static str,
     variant: &'static str,
 }
 
 #[derive(Debug, Serialize)]
-pub(super) struct ConnectorCardView {
+pub struct ConnectorCardView {
     pub provider: String,
     pub display_name: String,
     pub glyph: &'static str,
@@ -106,7 +106,7 @@ fn blurb(glyph: &str, c: &Connection) -> String {
             "Search across Drive, Gmail and Calendar — only what you can already open.".into()
         },
         "systemprompt" => {
-            "The Astound control plane. Signed in with your account, automatically.".into()
+            "The Astound control plane: governed tools, catalogue and deployments, as the admin you are signed in as.".into()
         },
         "salesforce" => format!(
             "Records, SOQL and metadata in {}, as the Salesforce user you sign in as.",
@@ -145,6 +145,8 @@ pub(super) fn note(c: &Connection) -> Option<String> {
     if !c.entitled {
         return Some(if c.provider.starts_with("salesforce") {
             "Your account is not entitled to this Salesforce org".to_owned()
+        } else if c.session_attested {
+            "Not open to your account".to_owned()
         } else {
             "An active account is required to connect providers".to_owned()
         });
@@ -211,7 +213,7 @@ fn actions(c: &Connection) -> Vec<ActionView> {
         .collect()
 }
 
-pub(super) fn card(c: &Connection) -> ConnectorCardView {
+pub fn card(c: &Connection) -> ConnectorCardView {
     let glyph = family(&c.provider);
     let verified_relative = c
         .verified_at

@@ -298,6 +298,8 @@ mod util_ranges;
 mod util_svg_pure;
 
 #[cfg(test)]
+mod connector_cards;
+#[cfg(test)]
 mod connector_oauth;
 #[cfg(test)]
 #[cfg(test)]

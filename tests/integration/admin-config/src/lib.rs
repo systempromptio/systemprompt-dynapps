@@ -55,6 +55,9 @@ mod tempdb;
 mod connector_credentials;
 
 #[cfg(test)]
+mod connector_readiness;
+
+#[cfg(test)]
 mod connector_reprovision;
 
 #[cfg(test)]
