@@ -176,7 +176,6 @@ jobs:
           workspaces: |
             .
             tests
-      - run: python3 -m unittest discover -s tests/unit/india_harness
       - run: just test
 
   # One stable context for the `main` ruleset: it fails unless every gate

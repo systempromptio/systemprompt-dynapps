@@ -25,10 +25,11 @@ env:
   # base bundle) this kit validates against. Bump deliberately.
   ASTOUND_RELEASE: v0.55.1
   ASTOUND_REPO: Astound-Digital/systemprompt-astound
-  # While the pinned release carries no base-bundle asset, the base is packed
-  # here from the Astound repository's services/ tree at this ref — the branch
-  # the instance is deployed from.
-  ASTOUND_BASE_REF: next
+  # Empty: validate against the base-bundle asset of ASTOUND_RELEASE. A git
+  # ref (e.g. `next`): pack the base from the Astound repository's services/
+  # tree at that ref instead — for a kit whose ids the released base still
+  # carries, until the next Astound release drops them.
+  ASTOUND_BASE_REF: ""
   CHANNEL: stable
 
 permissions:
@@ -61,11 +62,12 @@ jobs:
             --pattern 'systemprompt-astound-server-*-linux-amd64.tar.gz' --dir ./release
           tar -xzf release/systemprompt-astound-server-*-linux-amd64.tar.gz -C release
           echo "$PWD/$(ls -d release/systemprompt-astound-server-*-linux-amd64)/bin" >> "$GITHUB_PATH"
-          if gh release download "$ASTOUND_RELEASE" --repo "$ASTOUND_REPO" \
-               --pattern 'systemprompt-astound-base-*.tar.gz' --dir ./release 2>/dev/null; then
+          if [ -z "$ASTOUND_BASE_REF" ]; then
+            gh release download "$ASTOUND_RELEASE" --repo "$ASTOUND_REPO" \
+              --pattern 'systemprompt-astound-base-*.tar.gz' --dir ./release
             mv release/systemprompt-astound-base-*.tar.gz ./base.tar.gz
           else
-            echo "::notice::$ASTOUND_RELEASE carries no base bundle; packing one from $ASTOUND_REPO@$ASTOUND_BASE_REF services/"
+            echo "::notice::packing the base from $ASTOUND_REPO@$ASTOUND_BASE_REF services/ (ASTOUND_BASE_REF is set)"
             git clone --depth 1 --branch "$ASTOUND_BASE_REF" \
               "https://x-access-token:${GH_TOKEN}@github.com/${ASTOUND_REPO}.git" ./release/astound
             "$PWD/$(ls -d release/systemprompt-astound-server-*-linux-amd64)/bin/systemprompt" \

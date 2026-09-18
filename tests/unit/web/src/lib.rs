@@ -307,7 +307,6 @@ mod util_svg_pure;
 #[cfg(test)]
 mod connector_oauth;
 #[cfg(test)]
-mod india_skills;
 #[cfg(test)]
 mod salesforce_orgs;
 

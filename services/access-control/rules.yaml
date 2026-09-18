@@ -54,9 +54,15 @@ entities:
     allow:
       role: [user]
 
+  # Arrives as a signed bundle from Astound-Digital/sfscore-claude-india-kit;
+  # the kit owns the content, this file owns who reaches it
+  # (docs/india-marketplace.md).
   - entity: marketplace/astound-india-dev
+    owner: bundle:india
     default: closed
-    why: Salesforce Core and business-analysis workspace for the india-devs group.
+    why: >-
+      Salesforce Core and business-analysis workspace for the india-devs
+      group, published by the india kit.
     allow:
       group: [india-devs]
 

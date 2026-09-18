@@ -46,7 +46,8 @@ groups:
     name: India developers
     description: >-
       Salesforce Core developers and the business-analysis team. Reaches the
-      India development workspace (services/marketplaces/astound-india-dev).
+      India development workspace (astound-india-dev, published by the
+      sfscore-claude-india-kit bundle).
     ad_groups: [Systemprompt-Core]
   - id: business-users
     name: Business users

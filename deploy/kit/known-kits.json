@@ -42,12 +42,12 @@
     },
     {
       "name": "sfnext",
-      "status": "planned",
+      "status": "pinned",
       "repo": "Astound-Digital/sfnext-claude-dev-kit",
       "image": "ghcr.io/astound-digital/sfnext-claude-dev-kit",
       "pull": "private",
       "channel": "stable",
-      "public_key": "gWpeIfEjh9LKU8RlHyLnaTmQqnHN2W8lrLlqmPuASLg=",
+      "public_key": "CyTVcLiluJ5zeCfmTt0QlOxJvZf+f1+UkubOjZP8K2Q=",
       "marketplaces": {
         "astound-europe-dev": {
           "plugins": [
@@ -89,13 +89,12 @@
     },
     {
       "name": "india",
-      "status": "planned",
+      "status": "pinned",
       "repo": "Astound-Digital/sfscore-claude-india-kit",
       "image": "ghcr.io/astound-digital/sfscore-claude-india-kit",
       "pull": "private",
       "channel": "stable",
       "public_key": "a8Xa0VL5BFVauW8NsUmVktmzj8G+9+qt6//UBZH4X0o=",
-      "_seed": "just kit-export astound-india-dev ../sfscore-claude-india-kit — then remove marketplaces/astound-india-dev, plugins/astound-india-ba, plugins/astound-india-sfcore and their skills from services/ once the kit is published and pinned; composition refuses an id in both places.",
       "marketplaces": {
         "astound-india-dev": {
           "plugins": [
@@ -159,7 +158,8 @@
             "salesforce-us"
           ]
         }
-      }
+      },
+      "_note": "Private package (auth_secret: ghcr_pull_token). Seeded from services/ with `just kit-export` on 2026-09-18; the ids now live only in the kit."
     }
   ]
 }

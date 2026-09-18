@@ -7,10 +7,10 @@ Every item says who can do it and what it unlocks. Tick with the date when done.
 
 A. GitHub Actions secrets on Astound-Digital/sfnext-claude-dev-kit
    (Settings → Secrets and variables → Actions; needs repo admin)
-   [x] BUNDLE_SIGNING_SEED       already set 2026-09-15. Public key pinned by the instance:
-                                 gWpeIfEjh9LKU8RlHyLnaTmQqnHN2W8lrLlqmPuASLg=
-                                 Verified on first CI release; rotate only if the signer differs.
-   [ ] ASTOUND_RELEASE_TOKEN     GitHub PAT (classic) with scope `repo`, on an account that can read
+   [x] BUNDLE_SIGNING_SEED       ROTATED 2026-09-18 (the 2026-09-15 value was not valid base64). Public key:
+                                 CyTVcLiluJ5zeCfmTt0QlOxJvZf+f1+UkubOjZP8K2Q=
+                                 Set by the operator on 2026-09-18.
+   [x] ASTOUND_RELEASE_TOKEN     (set 2026-09-18 from the operator's copy) GitHub PAT (classic) with scope `repo`, on an account that can read
                                  Astound-Digital/systemprompt-astound (private). Unlocks: CI downloads
                                  systemprompt-astound-server-0.55.1-linux-amd64.tar.gz and
                                  systemprompt-astound-base-0.55.1.tar.gz from the private release.
