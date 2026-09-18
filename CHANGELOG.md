@@ -98,6 +98,32 @@ Conventions (strict — hold every entry to them):
 
 ### Changed
 
+- The core pin moves on to `next` `297bd3126` (`bridge/CORE_REF`),
+  which carries the two halves of the internal-MCP 503 fix that pair with
+  this release: the proxy reconciles a `services` row whose port was written
+  under a different `services.port_offset` to the port this instance
+  actually spawned, and the scheduler treats a sidecar whose process is
+  alive but whose port stays dead past a 45 s startup grace as crashed and
+  restarts it instead of holding it in `starting` forever.
+- The `systemprompt` control plane is a first-class connector for admins.
+  A generic provider whose service declares `oauth.required` with scopes and
+  no `connector:` block is *session-attested*: its authentication is the
+  caller's own attested session, not a separate OAuth grant.
+  `Entitlement.permits` checks the service's `oauth.scopes` against the
+  caller's roles, so an admin sees it **Connected** (`auth_method`
+  `session`, **Test connection** probes the session scope, MCP reachability
+  and the tool list) and a plain user sees it under "Nothing to do" with
+  "Not open to your account" — it no longer reads "Signed in with your
+  account, automatically" (`services/connector_accounts.rs`,
+  `services/connector_oauth/config.rs`, `handlers/ssr/ssr_connectors_cards.rs`,
+  `storage/files/js/services/connector-labels.js`).
+- "Ready to publish" has one definition. `services/connector_readiness.rs`
+  holds the single predicate (`Connection::readiness()` →
+  `NotReady::{NotConfigured, NotEntitled, Status, Unverified}`); the bridge
+  manifest's readiness gate and the `connector` access-control band both use
+  it, so access control can no longer admit an MCP server the manifest then
+  drops (the old `status = 'connected'` query in
+  `repositories/users/connector_accounts.rs` is gone).
 - The bridge builds against core `next` `d7964e842` (`bridge/CORE_REF`):
   every GUI request answered (the `mount` regression since 0.53.0), the
   wizard stays closed on an upgraded machine, the Windows Claude Desktop
@@ -127,6 +153,21 @@ Conventions (strict — hold every entry to them):
 
 ### Fixed
 
+- A connector-backed MCP server dropped from the bridge manifest by the
+  readiness gate used to vanish without a trace, which is why a Salesforce
+  server that access control had admitted was missing from Cowork with
+  nothing in the logs to say so. The drop now emits a structured warning and
+  a manifest-trace diagnostic naming the server and the failing condition,
+  e.g. `mcp server 'salesforce-dev' was admitted by access control but
+  dropped because the connection is not ready (verified_at_null; …)`
+  (`marketplace_filter/mod.rs`).
+- The `systemprompt-mcp-agent` sidecar could stay alive with no listener on
+  any port: it bound `$MCP_PORT` only after profile, secrets, config and
+  `AppContext` init, so a hang there was invisible to the supervisor and
+  every proxied request failed with 502/503. The listener is now bound
+  before that init (a port clash fails at once) and the init runs under
+  `MCP_STARTUP_TIMEOUT_SECS` (default 60), exiting non-zero on expiry
+  (`extensions/mcp/systemprompt/src/main.rs`).
 - The Versions page's **Compare** link is `?days=…&tab=compare…` again; it
   was emitted as `?days=30?tab=compare` and landed on the History tab.
 - The export dialog showed all three window fieldsets at once: the
