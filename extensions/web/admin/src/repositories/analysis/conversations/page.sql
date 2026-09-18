@@ -8,8 +8,9 @@ WITH f AS MATERIALIZED (
     SELECT f.*, u.display_name, g.name AS group_name, p.name AS project_name,
            f.input_tokens + f.output_tokens AS total_tokens,
            f.cache_read_tokens + f.cache_creation_tokens AS cache_tokens,
-           a.status AS judge_status, a.title AS judge_title, a.category, a.summary, a.tags,
-           a.skills_used, a.outcome, a.completion, a.completion_rationale, a.confidence,
+           a.status AS judge_status, a.title AS judge_title, a.category, a.summary,
+           COALESCE(a.tags, '{}'::text[]) AS tags, COALESCE(a.skills_used, '{}'::text[]) AS skills_used,
+           a.outcome, a.completion, a.completion_rationale, a.confidence,
            a.classified_at, a.model AS judge_model, a.cost_microdollars AS judge_cost_microdollars,
            COALESCE(a.input_tokens, 0) + COALESCE(a.output_tokens, 0) AS judge_tokens, a.trigger AS judge_trigger
     FROM conversation_facts f
