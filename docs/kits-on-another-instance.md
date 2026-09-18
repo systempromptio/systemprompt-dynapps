@@ -10,16 +10,14 @@ follow the same kits as `astound.systemprompt.io`. The model is
 
 ## 1. A pull token for the private packages
 
-The two Astound kits are private GHCR packages. The instance pulls them with
-one secret:
+Both kits are private GHCR packages. The instance pulls them with one secret:
 
 | secret | value |
 |---|---|
 | `ghcr_pull_token` | `<github-user>:<PAT>` — a GitHub personal access token (classic) with the single scope `read:packages`, on an account that can read the `Astound-Digital` organisation's packages |
 
 Put it in the profile's `secrets.json` (or the equivalent secret store the
-deployment uses; `secrets.source` in the profile says which). The public
-`astound-ba` kit needs no token.
+deployment uses; `secrets.source` in the profile says which).
 
 ## 2. The sources block
 
@@ -28,11 +26,6 @@ Add to the instance's profile (`.systemprompt/profiles/<name>/profile.yaml`):
 ```yaml
 services:
   sources:
-    - name: astound-ba
-      oci:
-        reference: ghcr.io/systempromptio/astound-ba-skills:stable
-        verify:
-          ed25519_public_keys: ["otpJ3aM8qDX1P60cOMRURDCxzwB94PO+uMnh5rUJ/b0="]
     - name: sfnext
       oci:
         reference: ghcr.io/astound-digital/sfnext-claude-dev-kit:stable

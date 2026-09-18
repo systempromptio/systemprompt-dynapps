@@ -45,7 +45,7 @@ D. Instance pull token (one per instance that composes the kits)
 E. What sp-dev.astound.digital's operator must do (Astound side) — runbook: docs/kits-on-another-instance.md
    [ ] set `ghcr_pull_token` (D)
    [ ] add the services.sources[] block from docs/kits-on-another-instance.md to that instance's
-       profile (astound-ba public; sfnext + india with auth_secret: ghcr_pull_token), then Import on
+       profile (sfnext + india, both with auth_secret: ghcr_pull_token), then Import on
        /admin/sync after every kit release (the CI self-imports one URL only).
    [ ] keep services/access-control/rules.yaml + ADFS group mapping (india-devs, europe-devs) in step.
 

@@ -123,7 +123,7 @@ A **kit** is a GitHub repository in Anthropic marketplace format — `.claude-pl
 3. **Import**: the CI's call, or **Import sources** on `/admin/sync`. The reply says `changed`, `reconciled` and `restart_recommended`.
 4. **Green**: the kit's row reads *in step* with the new active digest; Marketplaces lists the kit's marketplace; the access-control card shows the `owner:` entity as governed; Analysis → Versions minted a generation carrying the new hash. The process never restarted.
 
-The first live kit is `astound-ba` (`systempromptio/astound-ba-skills`, public): two dummy plugins that also prove Claude Code's plugin Node install (`package.json` + lockfile) and `plugin.json` dependencies, including a cross-marketplace one on Salesforce's `b2c-developer-tooling`.
+The live kits are `sfnext` (`Astound-Digital/sfnext-claude-dev-kit`, the Europe development marketplace) and `india` (`Astound-Digital/sfscore-claude-india-kit`, the India development marketplace), both private packages the instance pulls with `ghcr_pull_token`. A plugin may also carry `package.json` + lockfile (Claude Code runs `npm ci` on the client) and `plugin.json` dependencies, including cross-marketplace ones.
 
 ### Rollback
 

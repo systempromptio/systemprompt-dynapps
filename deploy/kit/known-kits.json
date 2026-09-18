@@ -8,39 +8,6 @@
   ],
   "kits": [
     {
-      "name": "astound-ba",
-      "status": "pinned",
-      "repo": "systempromptio/astound-ba-skills",
-      "image": "ghcr.io/systempromptio/astound-ba-skills",
-      "pull": "public",
-      "channel": "stable",
-      "public_key": "otpJ3aM8qDX1P60cOMRURDCxzwB94PO+uMnh5rUJ/b0=",
-      "_purpose": "The public dummy kit that proves publish → Import on /admin/sync with no restart, and the two Claude Code plugin features (Node install from package.json + lockfile; plugin.json dependencies incl. cross-marketplace on b2c-developer-tooling). Admins only; reaches no other user.",
-      "marketplaces": {
-        "astound-ba": {
-          "plugins": [
-            "astound-ba-kit-base",
-            "astound-ba-kit-smoke"
-          ],
-          "mcp_servers": []
-        }
-      },
-      "plugins": {
-        "astound-ba-kit-base": {
-          "skills": [
-            "ba_kit_hello"
-          ],
-          "mcp_servers": []
-        },
-        "astound-ba-kit-smoke": {
-          "skills": [
-            "ba_kit_node_smoke"
-          ],
-          "mcp_servers": []
-        }
-      }
-    },
-    {
       "name": "sfnext",
       "status": "pinned",
       "repo": "Astound-Digital/sfnext-claude-dev-kit",

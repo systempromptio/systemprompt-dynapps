@@ -10,12 +10,13 @@ ship a kit: **Import** recomposes, reconciles entitlement and refreshes the
 inventory in the running process.
 
 Every kit is seeded from this directory so all kits have the same shape by
-construction. The kits are listed in `known-kits.json`; the first live one is
-`astound-ba` (`systempromptio/astound-ba-skills`, public), a dummy kit that also
-proves Claude Code's plugin Node install (`package.json` + lockfile, declared
-`scripts`) and `plugin.json` `dependencies`, including a cross-marketplace one
-(`allowCrossMarketplaceDependenciesOn` in marketplace.json plus
-`external_marketplaces` in the marketplace sidecar).
+construction. The kits are listed in `known-kits.json`: `sfnext`
+(`Astound-Digital/sfnext-claude-dev-kit`) and `india`
+(`Astound-Digital/sfscore-claude-india-kit`), both private packages. A plugin
+may additionally carry `package.json` + lockfile (Claude Code runs `npm ci` on
+the client), declared `scripts`, and `plugin.json` `dependencies`, including
+cross-marketplace ones (`allowCrossMarketplaceDependenciesOn` in
+marketplace.json plus `external_marketplaces` in the marketplace sidecar).
 
 ## What a kit may and may not contain
 

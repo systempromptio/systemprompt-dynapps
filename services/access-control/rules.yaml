@@ -11,7 +11,8 @@
 # dashboard). Full explanation: /documentation/access-control.
 #
 # How a decision is made (core resolver, narrowest band wins):
-#   person (0) → project (140) → group (150) → linked account (170) → role (200)
+#   person (0) → project (140) → group (150) → connected server (160)
+#   → linked account (170) → role (200)
 # The narrowest band in which the person matches ANY rule decides; inside that
 # band a deny beats an allow. An entity that declares any rule is CLOSED to
 # everyone its rules do not name unless `default: open`. An entity with no
@@ -37,6 +38,8 @@
 #         role: [...]              { values: [...], why: "..." } to override the why
 #         group: [...]
 #         project: [...]
+#         connector: [...]       value = the server id; matches people whose Connections
+#                                 page shows that server as connected (a live OAuth grant)
 #         salesforce: [...]      value = the server id; matches people who linked that org
 #       deny: {}                 same bands
 #
@@ -85,19 +88,6 @@ entities:
     allow:
       group: [europe-devs]
       project: [storefront]
-
-  # Arrives as a signed bundle from systempromptio/astound-ba-skills, the public
-  # dummy kit that proves publish → Import with no restart and the Claude Code
-  # plugin features (Node install, plugin dependencies). Admins only while it
-  # is a proof; no other user's plugin set changes.
-  - entity: marketplace/astound-ba
-    owner: bundle:astound-ba
-    default: closed
-    why: >-
-      Kit-integration proof marketplace published by the astound-ba-skills
-      repository; reaches administrators only.
-    allow:
-      role: [admin]
 
   - entity: marketplace/astound-super-admin
     default: closed
