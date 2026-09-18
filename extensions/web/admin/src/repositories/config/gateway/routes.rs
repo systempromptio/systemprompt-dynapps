@@ -26,12 +26,27 @@ pub fn validate_route(route: &GatewayRouteView) -> Result<(), MarketplaceError> 
     Ok(())
 }
 
+// Why: the form posts every field, so a cleared name arrives as `""`; the
+// file and the mirror should carry an absent name, not an empty one.
+pub fn normalise_metadata(route: &mut GatewayRouteView) {
+    let clean = |v: &mut Option<String>| {
+        *v = v
+            .as_deref()
+            .map(str::trim)
+            .filter(|t| !t.is_empty())
+            .map(str::to_owned);
+    };
+    clean(&mut route.name);
+    clean(&mut route.description);
+}
+
 pub fn create_route(
     gateway_path: &Path,
     route: &GatewayRouteView,
 ) -> Result<usize, MarketplaceError> {
     validate_route(route)?;
     let mut to_insert = route.clone();
+    normalise_metadata(&mut to_insert);
     if to_insert.id.trim().is_empty() {
         to_insert.id = synthesize_route_id(&to_insert.model_pattern, &to_insert.provider);
     }
@@ -69,6 +84,7 @@ pub fn update_route(
             return Ok(false);
         }
         let mut merged = route.clone();
+        normalise_metadata(&mut merged);
         let had_explicit_id = routes[index]
             .as_mapping()
             .is_some_and(|m| m.contains_key(Value::from("id")));
@@ -84,6 +100,18 @@ pub fn update_route(
             merged.requires = merged
                 .requires
                 .or_else(|| existing.get(Value::from("requires")).cloned());
+            let text = |key: &str| {
+                existing
+                    .get(Value::from(key))
+                    .and_then(Value::as_str)
+                    .map(str::to_owned)
+            };
+            merged.fallback_provider = merged
+                .fallback_provider
+                .or_else(|| text("fallback_provider"));
+            merged.fallback_upstream_model = merged
+                .fallback_upstream_model
+                .or_else(|| text("fallback_upstream_model"));
         }
         routes[index] = route_to_yaml(&merged);
         // Why: an edit adds no field the operator did not write. A route that

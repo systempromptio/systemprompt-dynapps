@@ -54,7 +54,7 @@ pub(super) fn kpis(input: &EntitiesInput<'_>, entities: usize) -> Vec<AcKpiView>
         AcKpiView {
             label: "Audiences",
             value: input.audiences.to_string(),
-            note: "roles, groups and projects in the grid below".to_owned(),
+            note: "roles, groups and projects on the Audience grid tab".to_owned(),
             tone: "accent",
         },
     ]

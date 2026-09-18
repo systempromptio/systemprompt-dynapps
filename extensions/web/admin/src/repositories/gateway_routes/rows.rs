@@ -36,9 +36,9 @@ fn json_of(value: Option<&serde_yaml::Value>) -> Option<serde_json::Value> {
 
 pub async fn list_gateway_routes(pool: &PgPool) -> Result<Vec<RouteRow>, sqlx::Error> {
     let rows = sqlx::query!(
-        r"SELECT id, position, model_pattern, provider, upstream_model, extra_headers,
-                 pricing, when_match, requires, fallback_provider, fallback_upstream_model,
-                 explicit_id, source, updated_at
+        r"SELECT id, position, name, description, model_pattern, provider, upstream_model,
+                 extra_headers, pricing, when_match, requires, fallback_provider,
+                 fallback_upstream_model, explicit_id, source, updated_at
             FROM gateway_routes
            ORDER BY position ASC, id ASC"
     )
@@ -56,6 +56,8 @@ pub async fn list_gateway_routes(pool: &PgPool) -> Result<Vec<RouteRow>, sqlx::E
             Ok(RouteRow {
                 route: GatewayRouteView {
                     id: r.id,
+                    name: r.name,
+                    description: r.description,
                     model_pattern: r.model_pattern,
                     provider: r.provider,
                     upstream_model: r.upstream_model,
@@ -102,10 +104,12 @@ pub async fn upsert_gateway_route(
         r"INSERT INTO gateway_routes
               (id, position, model_pattern, provider, upstream_model, extra_headers, pricing,
                when_match, requires, fallback_provider, fallback_upstream_model, explicit_id,
-               source, updated_at)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW())
+               source, name, description, updated_at)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NOW())
           ON CONFLICT (id) DO UPDATE
              SET position = EXCLUDED.position,
+                 name = EXCLUDED.name,
+                 description = EXCLUDED.description,
                  model_pattern = EXCLUDED.model_pattern,
                  provider = EXCLUDED.provider,
                  upstream_model = EXCLUDED.upstream_model,
@@ -131,6 +135,8 @@ pub async fn upsert_gateway_route(
         r.fallback_upstream_model,
         write.explicit_id,
         write.source,
+        r.name,
+        r.description,
     )
     .execute(pool)
     .await?;

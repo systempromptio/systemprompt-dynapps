@@ -1,13 +1,16 @@
 //! Template contexts for `/admin/access-control` and its sync page.
 //!
-//! The main page is entity-centric: one row per governed entity, its bands
-//! as chips, its why in full, and whether code and database agree about it.
-//! Below that sits the audience grid — every role, group and project against
-//! every entity, each cell the resolver's own answer. `can_write` is the
-//! MANAGE tier; a project manager reads both pages and changes nothing.
+//! The Rules tab is entity-centric: one row per governed entity under a
+//! heading per kind, its bands as chips, its why in full, and whether code
+//! and database agree about it. The audience grid — every role, group and
+//! project against every entity, each cell the resolver's own answer — and
+//! the one-person check are their own tabs. `can_write` is the MANAGE tier;
+//! a project manager reads every tab and changes nothing.
 
 use serde::Serialize;
 
+use super::person::PersonCheckView;
+use crate::handlers::ssr::ssr_users::detail::AccessTabView;
 use crate::handlers::ssr::sync_plane::PlaneCardView;
 use crate::handlers::ssr::types::{BreadcrumbView, TabLinkView};
 use crate::repositories::access_control::drift::DriftCounts;
@@ -60,8 +63,14 @@ pub(crate) struct AcRuleView {
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct AcEntityView {
     pub entity_type: String,
-    pub entity_type_label: String,
+    pub entity_type_label: &'static str,
     pub entity_id: String,
+    // Why: what the row is called — a route's declared name, a plugin's
+    // title — with the id demoted to a subtitle. `entity_sub` is the one
+    // line of context a generated id cannot give (pattern → provider).
+    pub entity_label: String,
+    pub entity_sub: Option<String>,
+    pub labelled: bool,
     pub default_open: bool,
     pub default_label: &'static str,
     pub allow: Vec<BandChipsView>,
@@ -78,9 +87,19 @@ pub(crate) struct AcEntityView {
     pub expiring_soon: bool,
 }
 
+// Why: one heading per entity kind, in a fixed order, so the table reads
+// as a catalogue rather than a ledger dump.
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct AcEntityGroupView {
+    pub kind: String,
+    pub kind_label: &'static str,
+    pub count: usize,
+    pub rows: Vec<AcEntityView>,
+}
+
 #[derive(Debug, Default, Serialize)]
 pub(crate) struct AcEntitiesView {
-    pub rows: Vec<AcEntityView>,
+    pub groups: Vec<AcEntityGroupView>,
     pub total: usize,
     pub kpis: Vec<AcKpiView>,
     pub entity_options: Vec<AcOptionView>,
@@ -118,9 +137,10 @@ pub(crate) struct AcAudienceCellView {
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct AcAudienceRowView {
     pub entity_type: String,
-    pub entity_type_label: String,
+    pub entity_type_label: &'static str,
     pub entity_id: String,
     pub entity_name: String,
+    pub entity_sub: Option<String>,
     pub cells: Vec<AcAudienceCellView>,
 }
 
@@ -139,7 +159,10 @@ pub(crate) struct AccessControlPageData {
     pub stats: AcStatsView,
     pub breadcrumbs: Vec<BreadcrumbView>,
     pub tabs: Vec<TabLinkView>,
-    // Why: set on the Sync tab; the ledger and audience are then left empty.
+    pub on_rules: bool,
+    pub on_audience: bool,
+    pub on_person: bool,
+    // Why: each tab's body is set only for that tab; the others stay empty.
     pub sync: Option<PlaneCardView>,
     pub docs_url: &'static str,
     pub sync_url: &'static str,
@@ -147,4 +170,8 @@ pub(crate) struct AccessControlPageData {
     pub declared_unreadable: Option<String>,
     pub entities: AcEntitiesView,
     pub audience: AudienceGridView,
+    pub person: Option<PersonCheckView>,
+    // Why: named `access` at the page root because the shared
+    // `components/user-access` partial reads `@root.access`.
+    pub access: Option<AccessTabView>,
 }

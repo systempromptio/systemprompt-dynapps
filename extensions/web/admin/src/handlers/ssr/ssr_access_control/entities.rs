@@ -13,10 +13,12 @@ use systemprompt_security::authz::DASHBOARD_SOURCE;
 
 use super::bands::{band_label, band_rank, chips, resolution};
 use super::summary::{self, options};
-use super::view::{AcEntitiesView, AcEntityView, AcRuleView};
+use super::view::{AcEntitiesView, AcEntityGroupView, AcEntityView, AcRuleView};
+use crate::handlers::ssr::entity_kind::{entity_kind_label, entity_kind_plural, entity_kind_rank};
 use crate::handlers::ssr::people_view::expires_soon;
 use crate::repositories::access_control::drift::{DriftReport, EntityState};
 use crate::repositories::access_control::rules::LedgerRuleRow;
+use crate::repositories::config::gateway::RouteLabels;
 use crate::types::access_control::AccessDecision;
 
 pub(super) const BASE_URL: &str = "/admin/access-control";
@@ -78,8 +80,26 @@ fn rule_view(row: &LedgerRuleRow) -> AcRuleView {
     }
 }
 
-fn entity_view(rows: &[&LedgerRuleRow], drift: Option<&DriftReport>) -> AcEntityView {
+// Why: a model route is the one kind whose id says nothing; every other
+// kind is addressed by a name an operator chose.
+fn label_of(kind: &str, id: &str, labels: &RouteLabels) -> (String, Option<String>, bool) {
+    if kind != "gateway_route" {
+        return (id.to_owned(), None, false);
+    }
+    labels.find(id).map_or_else(
+        || (id.to_owned(), None, false),
+        |l| (l.label.clone(), Some(l.subtitle()), true),
+    )
+}
+
+fn entity_view(
+    rows: &[&LedgerRuleRow],
+    drift: Option<&DriftReport>,
+    labels: &RouteLabels,
+) -> AcEntityView {
     let first = rows[0];
+    let (entity_label, entity_sub, labelled) =
+        label_of(&first.entity_type, &first.entity_id, labels);
     let allow = chips(rows, AccessDecision::Allow);
     let deny = chips(rows, AccessDecision::Deny);
     let open = first.default_included;
@@ -98,9 +118,12 @@ fn entity_view(rows: &[&LedgerRuleRow], drift: Option<&DriftReport>) -> AcEntity
             .then(a.subject.cmp(&b.subject))
     });
     AcEntityView {
-        entity_type_label: first.entity_type.replace('_', " "),
+        entity_type_label: entity_kind_label(&first.entity_type),
         entity_type: first.entity_type.clone(),
         entity_id: first.entity_id.clone(),
+        entity_label,
+        entity_sub,
+        labelled,
         default_open: open,
         default_label: if open { "open" } else { "closed" },
         resolution: resolution(&allow, &deny, open),
@@ -144,8 +167,10 @@ fn matches(view: &AcEntityView, query: &AcQuery) -> bool {
     if let Some(needle) = AcQuery::pick(query.q.as_ref()) {
         let needle = needle.to_lowercase();
         let hay = format!(
-            "{} {} {}",
+            "{} {} {} {} {}",
             view.entity_id,
+            view.entity_label,
+            view.entity_sub.as_deref().unwrap_or_default(),
             view.why,
             view.rules
                 .iter()
@@ -167,6 +192,32 @@ pub(super) struct EntitiesInput<'a> {
     pub open_entities: i64,
     pub audiences: usize,
     pub capped: bool,
+    pub labels: &'a RouteLabels,
+}
+
+fn group_by_kind(rows: Vec<AcEntityView>) -> Vec<AcEntityGroupView> {
+    let mut groups: Vec<AcEntityGroupView> = Vec::new();
+    for row in rows {
+        match groups.iter_mut().find(|g| g.kind == row.entity_type) {
+            Some(g) => g.rows.push(row),
+            None => groups.push(AcEntityGroupView {
+                kind_label: entity_kind_plural(&row.entity_type),
+                kind: row.entity_type.clone(),
+                count: 0,
+                rows: vec![row],
+            }),
+        }
+    }
+    groups.sort_by_key(|g| entity_kind_rank(&g.kind));
+    for g in &mut groups {
+        g.rows.sort_by(|a, b| {
+            a.entity_label
+                .to_lowercase()
+                .cmp(&b.entity_label.to_lowercase())
+        });
+        g.count = g.rows.len();
+    }
+    groups
 }
 
 pub(super) fn build(input: &EntitiesInput<'_>, query: &AcQuery) -> AcEntitiesView {
@@ -182,7 +233,7 @@ pub(super) fn build(input: &EntitiesInput<'_>, query: &AcQuery) -> AcEntitiesVie
     }
     let all: Vec<AcEntityView> = grouped
         .iter()
-        .map(|g| entity_view(g, input.drift))
+        .map(|g| entity_view(g, input.drift, input.labels))
         .collect();
 
     let kpis = summary::kpis(input, all.len());
@@ -197,12 +248,12 @@ pub(super) fn build(input: &EntitiesInput<'_>, query: &AcQuery) -> AcEntitiesVie
     let rows: Vec<AcEntityView> = all.into_iter().filter(|e| matches(e, query)).collect();
     AcEntitiesView {
         total: rows.len(),
-        rows,
+        groups: group_by_kind(rows),
         kpis,
         entity_options: options(
             kinds
                 .into_iter()
-                .map(|k| (k.clone(), k.replace('_', " ")))
+                .map(|k| (k.clone(), entity_kind_plural(&k).to_owned()))
                 .collect(),
             "All entity kinds",
             AcQuery::pick(query.entity_kind.as_ref()),

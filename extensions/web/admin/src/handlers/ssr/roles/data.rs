@@ -31,6 +31,7 @@ pub(crate) struct RolesQuery {
     pub page: Option<i64>,
     pub sort: Option<String>,
     pub dir: Option<String>,
+    pub tab: Option<String>,
 }
 
 impl RolesQuery {
@@ -58,6 +59,10 @@ impl RolesQuery {
         }
     }
 
+    pub(super) fn on_entitlements(&self) -> bool {
+        self.tab.as_deref() == Some("entitlements")
+    }
+
     pub(super) fn descending(&self) -> bool {
         self.dir.as_deref() == Some("desc")
     }
@@ -66,6 +71,9 @@ impl RolesQuery {
     // nothing else, so a link never resurrects a filter the operator cleared.
     pub(super) fn url_with(&self, overrides: &[(&str, &str)]) -> String {
         let mut parts: Vec<(String, String)> = Vec::new();
+        if self.on_entitlements() {
+            parts.push(("tab".to_owned(), "entitlements".to_owned()));
+        }
         for name in ["role", "source", "status", "q", "sort", "dir"] {
             let overridden = overrides.iter().find(|(k, _)| *k == name);
             let value = match overridden {

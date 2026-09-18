@@ -12,6 +12,7 @@ use std::collections::HashMap;
 use sqlx::PgPool;
 
 use super::view::{AcAudienceCellView, AcAudienceColumnView, AcAudienceRowView, AudienceGridView};
+use crate::handlers::ssr::entity_kind::entity_kind_label;
 use crate::repositories;
 use crate::repositories::users::access_control::{
     MatrixSubject, SectionInput, group_subject, project_subject, resolve_subject_matrices,
@@ -110,15 +111,23 @@ pub(super) async fn grid(
 
     let mut rows = Vec::new();
     for (entity_type, _, entities) in sections {
-        for (entity_id, name, _) in entities {
+        for (entity_id, name, description) in entities {
             let Some(cells) = cells.remove(&(entity_type.clone(), entity_id.clone())) else {
                 continue;
             };
             rows.push(AcAudienceRowView {
-                entity_type_label: entity_type.replace('_', " "),
+                entity_type_label: entity_kind_label(entity_type),
                 entity_type: entity_type.clone(),
                 entity_id: entity_id.clone(),
                 entity_name: name.clone(),
+                // Why: the matrix section carries a route's "pattern →
+                // provider" line as its description; other kinds' prose
+                // descriptions are too long for a grid row.
+                entity_sub: if entity_type == "gateway_route" {
+                    description.clone()
+                } else {
+                    None
+                },
                 cells,
             });
         }

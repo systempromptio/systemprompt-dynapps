@@ -4,7 +4,10 @@
 //! `services/ai/gateway.yaml`, which the editor addresses by index, and the
 //! resolved route set the dispatcher will actually match. A page that rendered
 //! one while claiming to show the other would let an operator reorder a list
-//! that is not the list being dispatched, so both halves are asserted here.
+//! that is not the list being dispatched, so both halves are asserted here —
+//! the Routes tab for the file, the Resolved tab for the dispatcher — along
+//! with the Models tab the page opens on, which groups the same routes by
+//! provider.
 
 use axum::http::StatusCode;
 
@@ -38,13 +41,26 @@ async fn the_gateway_page_renders_the_routing_table() {
         ));
     }
 
-    // Why: these are the page's whole claim. The dispatch-order note is what
-    // makes the ordinal column mean something, and the settings form is the
-    // only place the enabled flag can be changed from.
-    for marker in ["the order the dispatcher tries them", "gateway-settings"] {
+    // Why: the default view is the picture by provider, and the settings
+    // form is the only place the enabled flag can be changed from.
+    for marker in ["sp-p-gateway__provider", "gateway-settings"] {
         if !body.contains(marker) {
             failures.push(format!("  /admin/gateway rendered without {marker:?}"));
         }
+    }
+
+    // Why: the dispatch-order note is what makes the ordinal column mean
+    // something; it lives on the Routes tab with the reorder controls.
+    let (routes_status, routes_body) = app
+        .call(Call::get("/admin/gateway?tab=routes", Principal::Admin))
+        .await;
+    if routes_status != StatusCode::OK
+        || !routes_body.contains("the order the dispatcher tries them")
+    {
+        failures.push(format!(
+            "  /admin/gateway?tab=routes -> {} without the dispatch-order table",
+            routes_status.as_u16()
+        ));
     }
 
     // Why: the resolved-only section is the half an operator cannot see in
@@ -62,9 +78,10 @@ async fn the_gateway_page_renders_the_routing_table() {
 
     // Why: the editor addresses routes by their index in the YAML sequence, so
     // a row without one is a row whose edit and delete buttons point nowhere.
-    if body.contains("data-route-index=\"0\"") == body.contains("No routes") {
+    if routes_body.contains("data-route-index=\"0\"") == routes_body.contains("No routes") {
         failures.push(
-            "  /admin/gateway showed neither an indexed route row nor the empty state".to_owned(),
+            "  /admin/gateway?tab=routes showed neither an indexed route row nor the empty state"
+                .to_owned(),
         );
     }
 

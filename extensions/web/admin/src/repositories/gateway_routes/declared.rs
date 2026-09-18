@@ -46,8 +46,10 @@ pub fn route_fingerprint(route: &GatewayRouteView) -> String {
         .collect::<Vec<_>>()
         .join(",");
     format!(
-        "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
+        "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
         route.id,
+        route.name.as_deref().unwrap_or_default(),
+        route.description.as_deref().unwrap_or_default(),
         route.model_pattern,
         route.provider,
         route.upstream_model.as_deref().unwrap_or_default(),

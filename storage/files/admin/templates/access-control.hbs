@@ -2,7 +2,7 @@
     {{#*inline "head_extra"}}{{/inline}}
     {{#*inline "content"}}
     {{> components/breadcrumbs crumbs=breadcrumbs}}
-    {{#> components/page-header title=title subtitle="Who reaches what on this instance, and why. The database is what is enforced; services/access-control/rules.yaml is what it is expected to contain. Edit a group's band on its Access tab, a person's overrides on theirs."}}
+    {{#> components/page-header title=title subtitle="Who reaches what on this instance, and why. Rules is the ledger by entity; Audience grid is every role, group and project at once; Check a person is one account resolved live; Sync is this database against services/access-control/rules.yaml."}}
         {{#*inline "header_actions"}}
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{docs_url}}" target="_blank" rel="noopener noreferrer">How it works</a>
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/groups">Group rules</a>
@@ -21,9 +21,57 @@
     {{> components/tabs tabs=tabs nav_label="Access control views"}}
 
     {{#if sync}}
+    {{#if drift}}
+    {{> components/notice tone="warn" title="Code and database differ" message="Review the diff below; nothing is changed automatically."}}
+    {{/if}}
     {{> components/sync-plane plane=sync can_write=can_write}}
     {{> components/sync-plane-dialogs}}
+    {{/if}}
+
+    {{#if on_audience}}
+    {{> components/section title="Audience grid" note="Every role, group and project against every entity, decided by the same resolver the enforcement point calls. The word in each cell is the band that decided; hover a cell for the rule."}}
+    {{> components/audience-grid audience=audience}}
+    {{/if}}
+
+    {{#if on_person}}
+    {{> components/section title="Check a person" note="Pick one account to see exactly what the resolver gives them: workspaces, connections and every individual rule, as on their own Access tab."}}
+    <form class="sp-toolbar sp-toolbar--fields sp-ac-person__picker" method="get" action="/admin/access-control" aria-label="Choose a person">
+        <input type="hidden" name="tab" value="person">
+        <div class="sp-toolbar__field sp-ac-person__field">
+            <label class="sp-toolbar__field-label" for="ac-person-user">Person</label>
+            <select class="sp-select" id="ac-person-user" name="user">
+                <option value="">Choose an account…</option>
+                {{#each person.people}}<option value="{{id}}"{{#if selected}} selected{{/if}}>{{label}}</option>{{/each}}
+            </select>
+        </div>
+        <div class="sp-toolbar__actions">
+            <button type="submit" class="sp-btn sp-btn--sm sp-btn--primary">Check</button>
+        </div>
+    </form>
+    {{#if person.capped}}
+    {{> components/notice tone="info" title="Listing is capped" message="Only the first 200 accounts are offered here. Open the person from the Users page to check anyone else."}}
+    {{/if}}
+    {{#if person.not_found}}
+    {{> components/notice tone="err" title="No such account" message="Nothing matches the id in the address bar. Choose a person from the list."}}
+    {{/if}}
+    {{#if person.header}}
+    <div class="sp-ac-person__who">
+        <span class="sp-avatar sp-avatar--sm sp-avatar--tone-{{avatar_tone person.header.name}}" aria-hidden="true">{{initials person.header.name}}</span>
+        <span class="sp-user-cell-text">
+            <span class="sp-user-cell-name">{{person.header.name}}</span>
+            <span class="sp-user-cell-email">{{#if person.header.email}}{{person.header.email}}{{else}}{{person.header.user_id}}{{/if}}</span>
+        </span>
+        <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{person.header.href}}">Open their profile →</a>
+    </div>
+    {{#if access}}{{> components/user-access header=person.header}}{{/if}}
     {{else}}
+    {{#unless person.not_found}}
+    {{> components/empty-state heading="No one chosen yet" message="Choose an account above. The answer is resolved live through the same rules the enforcement point reads."}}
+    {{/unless}}
+    {{/if}}
+    {{/if}}
+
+    {{#if on_rules}}
 
     {{#if declared_unreadable}}
     {{> components/notice tone="err" title="The declaration could not be compared" message=declared_unreadable}}
@@ -70,7 +118,7 @@
         {{/each}}
     </section>
 
-    {{#> components/section title="Entities" count=entities.total note="One row per governed entity. Chips are the subjects each band names; expand a row for the individual rules and the resolver's outcome in plain words."}}
+    {{#> components/section title="Entities" count=entities.total note="One row per governed entity, grouped by kind. Chips are the subjects each band names; expand a row for the individual rules and the resolver's outcome in plain words."}}
         {{#*inline "section_actions"}}
         {{#if entities.filters_applied}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="{{entities.clear_url}}">Clear filters</a>{{/if}}
         {{/inline}}
@@ -111,7 +159,7 @@
         </div>
     </form>
 
-    {{#if entities.rows}}
+    {{#if entities.groups}}
     {{#> components/table caption="Governed entities" modifier="sp-p-ac__entities"}}
         <thead><tr>
             <th class="sp-col-entity">Entity</th>
@@ -121,14 +169,17 @@
             <th class="sp-col-why">Why</th>
             <th class="sp-col-state">Code ↔ DB</th>
         </tr></thead>
-        <tbody>
-        {{#each entities.rows}}
+        {{#each entities.groups}}
+        <tbody class="sp-ac-group" data-entity-kind="{{kind}}">
+        <tr class="sp-ac-group__row"><th scope="rowgroup" colspan="6"><span class="sp-ac-group__label">{{kind_label}}</span> <span class="sp-count-pill">{{count}}</span></th></tr>
+        {{#each rows}}
         <tr class="sp-ac-entity" data-entity-type="{{entity_type}}" data-entity-id="{{entity_id}}">
             <td>
                 <details class="sp-ac-entity__details">
                     <summary class="sp-ac-entity__summary">
-                        <span class="sp-ac-entity__kind">{{entity_type_label}}</span>
-                        <span class="sp-u-mono sp-ac-entity__id">{{entity_id}}</span>
+                        <span class="sp-ac-entity__label">{{entity_label}}</span>
+                        {{#if labelled}}<span class="sp-ac-entity__sub">{{entity_sub}}</span>{{/if}}
+                        <span class="sp-u-mono sp-ac-entity__id" title="{{entity_type_label}} id">{{#if labelled}}{{entity_id}}{{else}}{{entity_type_label}}{{/if}}</span>
                     </summary>
                     <div class="sp-ac-entity__expanded">
                         <p class="sp-ac-entity__resolution">{{resolution}}</p>
@@ -166,6 +217,7 @@
         </tr>
         {{/each}}
         </tbody>
+        {{/each}}
     {{/components/table}}
     {{else}}
     {{> components/empty-state heading="No entity matches" message="No governed entity matches these filters. Clear them to see every entity."}}
@@ -175,43 +227,6 @@
     {{> components/notice tone="warn" title="Listing is capped" message="Only the first 1000 rules were read. Narrow the filters to see the rest."}}
     {{/if}}
 
-    {{#> components/section title="Audience grid" note="Every role, group and project against every entity, decided by the same resolver the enforcement point calls. The word in each cell is the band that decided."}}
-        {{#*inline "section_actions"}}
-        <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/users">Check one person →</a>
-        {{/inline}}
-    {{/components/section}}
-
-    {{#if audience.has_rows}}
-    <div class="sp-audience-matrix-wrap sp-ac-grid" tabindex="0" role="region" aria-label="Audience grid">
-        <table class="sp-audience-matrix sp-table__el">
-            <thead>
-                <tr>
-                    <th scope="col">Entity</th>
-                    {{#each audience.columns}}
-                    <th scope="col" class="sp-audience-matrix__col"><span class="sp-audience-matrix__label">{{label}}</span> <span class="sp-audience-matrix__kind">{{kind}}</span></th>
-                    {{/each}}
-                </tr>
-            </thead>
-            <tbody>
-                {{#each audience.rows}}
-                <tr class="sp-audience-matrix__row" data-entity-type="{{entity_type}}" data-entity-id="{{entity_id}}">
-                    <th scope="row" class="sp-audience-matrix__subject">
-                        <span class="sp-audience-matrix__label">{{entity_name}}</span>
-                        <span class="sp-audience-matrix__kind">{{entity_type_label}}</span>
-                    </th>
-                    {{#each cells}}
-                    <td class="sp-audience-matrix__cell {{#if allow}}is-allow{{else}}is-deny{{/if}}" title="{{effective}}: {{detail}}">
-                        <span class="sp-audience-matrix__layer">{{layer}}</span>
-                    </td>
-                    {{/each}}
-                </tr>
-                {{/each}}
-            </tbody>
-        </table>
-    </div>
-    {{else}}
-    {{> components/empty-state message="The grid could not be resolved. Check the server log for the access-control resolver."}}
-    {{/if}}
     {{/if}}
 
     {{#if can_write}}
@@ -249,5 +264,6 @@
     {{/inline}}
     {{#*inline "scripts"}}
     <script data-cfasync="false" type="module" src="/js/pages/admin-access-control.js?v={{css_version}}"></script>
+    {{#if access}}<script data-cfasync="false" type="module" src="/js/pages/admin-user-access.js?v={{css_version}}"></script>{{/if}}
     {{/inline}}
 {{/layout}}

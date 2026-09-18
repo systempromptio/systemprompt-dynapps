@@ -4,7 +4,7 @@
 //! parameter, so any view an operator is looking at is a link they can send to
 //! someone else.
 
-mod detail;
+pub(crate) mod detail;
 mod roster;
 mod scope_data;
 

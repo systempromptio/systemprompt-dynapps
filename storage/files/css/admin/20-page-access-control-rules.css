@@ -55,6 +55,25 @@
     color: var(--sp-danger-strong);
 }
 
+/* Why: one heading row per entity kind turns the ledger into a catalogue;
+   it is a table row so the columns above still line up with the rows below. */
+.sp-ac-group + .sp-ac-group .sp-ac-group__row th { border-top: 1px solid var(--sp-border-subtle); }
+
+.sp-ac-group__row th {
+    padding: var(--sp-space-3) var(--sp-space-2) var(--sp-space-1);
+    border-bottom: 1px solid var(--sp-border-subtle);
+    background: var(--sp-bg-surface-raised);
+    text-align: left;
+}
+
+.sp-ac-group__label {
+    font-size: var(--sp-text-xs);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--sp-text-secondary);
+}
+
 .sp-ac-grid { margin-top: var(--sp-space-3); }
 
 .sp-ac-grid .sp-audience-matrix__col {

@@ -63,6 +63,8 @@ silently forwarded.
 
 Access to models is a **`gateway_route` ACL matrix**, administered in the admin UI and granted per role or per AD group (which is how a project is named). A request for a route the caller is not entitled to is refused with **HTTP 403**, the denial is audited, and grants are revocable with immediate effect.
 
+Route ids are generated (`slug + fnv1a6`), so every console surface names a route by the optional `name:` its declaration carries — `name: Claude (Anthropic)` beside `model_pattern` in `services/ai/gateway.yaml`, with a `description:` for the longer story — and derives "Claude models · Anthropic" from the pattern and provider when none is declared. A provider carries `display_name:` and `description:` in `services/ai/providers.yaml` the same way (`name` stays the id). The `/admin/gateway` **Models** tab is the picture by provider: endpoint, surface, wire, the models it serves and the routes that reach it; the route editor there writes `name` and `description` back to the file.
+
 ## Credentials
 
 Personal access tokens carry an optional **expiry**, a **prefix** (identify a leaked token without exposing it), and immediate **revocation** from `/admin/devices/pats`. Note that a key is not its own governance subject — budgets and quotas bind to the owning user and the instance, not to the individual key (see the [roadmap](/documentation/enterprise-roadmap)).

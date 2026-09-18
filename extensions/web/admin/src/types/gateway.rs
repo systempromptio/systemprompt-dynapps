@@ -8,6 +8,10 @@ use serde::{Deserialize, Serialize};
 pub struct GatewayRouteView {
     #[serde(default)]
     pub id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
     pub model_pattern: String,
     pub provider: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]

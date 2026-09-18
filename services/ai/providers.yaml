@@ -6,6 +6,9 @@
 # Edit by hand or with: systemprompt admin config catalog ...
 providers:
 - name: anthropic
+  display_name: Anthropic
+  description: >-
+    Claude models on Anthropic's own API, authenticated with the anthropic key. The default provider: anything no other route claims lands here.
   wire: anthropic
   surface: anthropic
   endpoint: https://api.anthropic.com/v1
@@ -257,6 +260,9 @@ providers:
   # entry below: that host refuses API-key auth as a class and wants an OAuth
   # token, so the two differ in credential and endpoint while sharing a wire.
   # See docs/install/vertex.md.
+  display_name: Google Gemini (API key)
+  description: >-
+    Gemini via the public generativelanguage endpoint, authenticated with an API key. The classifier job and the gemini-* route use it; the Vertex copies of the same models are a separate provider.
   wire: gemini
   surface: gemini
   endpoint: https://generativelanguage.googleapis.com/v1beta
@@ -399,6 +405,9 @@ providers:
   # and then stops on its own. 3.8/3.7/3.6 Flash are on introductory pricing
   # to 2026-12-31 (then 1.50/7.50); the core rate card carries `price_until`
   # and the scheduler warns 60 days ahead.
+  display_name: Google Vertex AI (Gemini)
+  description: >-
+    The Gemini models served from Vertex AI under a Google OAuth token minted from the vertex service-account secret. Also the failover target for Claude traffic.
   wire: gemini
   surface: gemini
   endpoint: https://aiplatform.googleapis.com/v1/projects/{project}/locations/global/publishers/google
@@ -495,6 +504,9 @@ providers:
   # answer. Measured 2026-09-05 at max_tokens:128 -- qwen3-next-thinking spent
   # all 128 tokens thinking and returned no text; kimi-k2-thinking, glm-5 and
   # gpt-oss burn 50-100 tokens of reasoning on a one-word reply.
+  display_name: Vertex AI Model-as-a-Service
+  description: >-
+    Third-party open models (Qwen, GLM, GPT-OSS) hosted by Vertex AI on an OpenAI-compatible surface, under the same Google OAuth credential as vertex.
   wire: openai-chat
   surface: openai
   endpoint: https://aiplatform.googleapis.com/v1beta1/projects/{project}/locations/global/endpoints/openapi
@@ -610,6 +622,9 @@ providers:
   # reach were unreachable. Model ids must not collide with the openai-responses
   # entry below -- ProviderRegistry::validate hoists its seen_models set outside
   # the provider loop, so a shared id is a DuplicateModel boot failure.
+  display_name: OpenAI (chat completions)
+  description: >-
+    OpenAI on its native chat-completions surface; GPT-4.1 family.
   wire: openai-chat
   surface: openai
   endpoint: https://api.openai.com/v1
@@ -664,6 +679,9 @@ providers:
   # entry because wire is a per-provider field, and its own model so the shared
   # seen_models set stays unique. o4-mini is the cheapest reasoning model that
   # exercises the adapter's full surface -- reasoning items plus tool calls.
+  display_name: OpenAI (Responses API)
+  description: >-
+    The same OpenAI upstream on the /responses wire, the only outbound adapter carrying native reasoning state; serves o4-mini.
   wire: openai-responses
   surface: openai
   endpoint: https://api.openai.com/v1
@@ -698,6 +716,9 @@ providers:
   # wire has a provider with a credential that actually resolves: vertex-maas is
   # the only other one and its api_key_secret has never been configured, so every
   # model behind it 502s and the wire itself was untestable end to end.
+  display_name: Cerebras
+  description: >-
+    OpenAI-compatible inference on Cerebras hardware; serves GPT-OSS 120B at low latency.
   wire: openai-chat
   surface: openai
   endpoint: https://api.cerebras.ai/v1
@@ -742,6 +763,9 @@ providers:
 # route fails upstream and is audited as such. Priced so the quota plane has
 # something to add up.
 - name: e2e-mock
+  display_name: E2E mock (loopback)
+  description: >-
+    Loopback Anthropic-wire mock for the Playwright suite on 127.0.0.1; never advertised to clients and unreachable on hosts without the mock running.
   wire: anthropic
   surface: backend
   endpoint: http://127.0.0.1:18091/v1

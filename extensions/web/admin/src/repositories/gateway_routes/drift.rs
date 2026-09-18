@@ -50,6 +50,9 @@ impl RouteDrift {
 #[must_use]
 pub fn summarise_route(route: &GatewayRouteView) -> String {
     let mut s = format!("{} → {}", route.model_pattern, route.provider);
+    if let Some(name) = route.name.as_deref().filter(|n| !n.is_empty()) {
+        s = format!("{name}: {s}");
+    }
     if let Some(m) = &route.upstream_model {
         s.push_str(&format!(" as {m}"));
     }
@@ -81,6 +84,8 @@ fn changed_fields(code: &GatewayRouteView, db: &GatewayRouteView) -> Vec<String>
             out.push(name.to_owned());
         }
     };
+    check("name", code.name != db.name);
+    check("description", code.description != db.description);
     check("model_pattern", code.model_pattern != db.model_pattern);
     check("provider", code.provider != db.provider);
     check("upstream_model", code.upstream_model != db.upstream_model);

@@ -82,6 +82,8 @@ pub fn route_from_yaml(val: &Value) -> Option<GatewayRouteView> {
     };
     Some(GatewayRouteView {
         id,
+        name: text("name"),
+        description: text("description"),
         model_pattern,
         provider,
         upstream_model,
@@ -104,6 +106,11 @@ pub fn route_to_yaml(route: &GatewayRouteView) -> Value {
     let id = route.id.trim();
     if !id.is_empty() && id != derived {
         map.insert(Value::from("id"), Value::from(id.to_owned()));
+    }
+    for (key, value) in [("name", &route.name), ("description", &route.description)] {
+        if let Some(value) = value.as_deref().map(str::trim).filter(|v| !v.is_empty()) {
+            map.insert(Value::from(key), Value::from(value.to_owned()));
+        }
     }
     map.insert(
         Value::from("model_pattern"),

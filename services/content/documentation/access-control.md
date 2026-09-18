@@ -89,7 +89,7 @@ Two consequences worth holding onto:
 | role `user`, no group, **linked** | linked account matches allow | **allowed** (decided by linked account) |
 | role `admin`, no group, not linked | no band names them (`admin` is not in the role list) | **refused** |
 
-The **audience grid** at the bottom of `/admin/access-control` runs exactly these walks, for every role, group and project, against every entity; the word in each cell is the band that decided. To check one real person, open their user page and choose **Access**: the same resolver, with their actual roles, groups, projects and links.
+The **Audience grid** tab of `/admin/access-control` runs exactly these walks, for every role, group and project, against every entity; the word in each cell is the band that decided. To check one real person, use the **Check a person** tab (or open their user page and choose **Access** — the same view): the same resolver, with their actual roles, groups, projects and links. The **Rules** tab is the ledger by entity, grouped by kind, and model routes there carry the name and "pattern → provider" line their gateway declaration gives them rather than the generated id alone.
 
 ## The file: `services/access-control/rules.yaml`
 
@@ -190,7 +190,7 @@ A marketplace can arrive as a signed **services bundle** published by another Gi
 
 **Make an entity admin-only.** Declare it with `default: closed` and `allow: { role: [platform_admin, admin, super_admin] }`. Name `platform_admin` beside `admin` always — it is the strictly stronger role, and an entity open to `admin` but closed to `platform_admin` is a hole. Declaring any rule opts the entity out of the marketplace cascade, which is what makes the list restrictive rather than additive.
 
-**Explain one person's access.** User page → Access. Each row says *allow*/*deny* and the band that decided. Compare with the audience grid to see what would change if they joined a group or gained a role.
+**Explain one person's access.** Access control → Check a person, or User page → Access. Each row says *allow*/*deny* and the band that decided. Compare with the Audience grid tab to see what would change if they joined a group or gained a role.
 
 **Retire a rule cleanly.** Remove it from `rules.yaml`, deploy, Sync → Overwrite. Insert only would leave the old row in place; the Sync page would keep listing it as *stale*.
 

@@ -45,6 +45,8 @@ pub fn dispatchable_routes(
             let route = route.into_owned();
             GatewayRouteView {
                 id: route.id.as_str().to_owned(),
+                name: route.name,
+                description: route.description,
                 model_pattern: route.model_pattern,
                 provider: route.provider.as_str().to_owned(),
                 upstream_model: route.upstream_model,

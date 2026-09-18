@@ -14,6 +14,8 @@ mod load;
 mod usage;
 mod view;
 
+pub(crate) use context::AccessTabView;
+
 use std::sync::Arc;
 
 use axum::extract::{Path, Query, State};
@@ -50,6 +52,13 @@ const TABS: [(&str, &str); 7] = [
 pub(crate) struct DetailQuery {
     pub tab: Option<String>,
     pub page: Option<i64>,
+}
+
+// Why: the access-control "Check a person" tab shows the same resolved
+// picture as this page's Access tab, built by the same code, so the two can
+// never disagree about what one person reaches.
+pub(crate) async fn load_access_tab(pool: &PgPool, user_id: &UserId) -> AccessTabView {
+    view::access_tab(load::load_access(pool, user_id).await, user_id)
 }
 
 pub(crate) async fn user_detail_page(

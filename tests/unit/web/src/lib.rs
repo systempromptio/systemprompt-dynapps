@@ -272,6 +272,8 @@ mod profile_schema;
 #[cfg(test)]
 mod projects_page;
 #[cfg(test)]
+mod route_labels_pure;
+#[cfg(test)]
 mod secrets_crypto_pure;
 #[cfg(test)]
 mod services_tree_declarations;

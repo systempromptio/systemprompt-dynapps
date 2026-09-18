@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, position, model_pattern, provider, upstream_model, extra_headers,\n                 pricing, when_match, requires, fallback_provider, fallback_upstream_model,\n                 explicit_id, source, updated_at\n            FROM gateway_routes\n           ORDER BY position ASC, id ASC",
+  "query": "SELECT id, position, name, description, model_pattern, provider, upstream_model,\n                 extra_headers, pricing, when_match, requires, fallback_provider,\n                 fallback_upstream_model, explicit_id, source, updated_at\n            FROM gateway_routes\n           ORDER BY position ASC, id ASC",
   "describe": {
     "columns": [
       {
@@ -27,6 +27,16 @@
       },
       {
         "ordinal": 2,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
         "name": "model_pattern",
         "type_info": "Text",
         "origin": {
@@ -37,7 +47,7 @@
         }
       },
       {
-        "ordinal": 3,
+        "ordinal": 5,
         "name": "provider",
         "type_info": "Text",
         "origin": {
@@ -48,7 +58,7 @@
         }
       },
       {
-        "ordinal": 4,
+        "ordinal": 6,
         "name": "upstream_model",
         "type_info": "Text",
         "origin": {
@@ -59,7 +69,7 @@
         }
       },
       {
-        "ordinal": 5,
+        "ordinal": 7,
         "name": "extra_headers",
         "type_info": "Jsonb",
         "origin": {
@@ -70,7 +80,7 @@
         }
       },
       {
-        "ordinal": 6,
+        "ordinal": 8,
         "name": "pricing",
         "type_info": "Jsonb",
         "origin": {
@@ -81,7 +91,7 @@
         }
       },
       {
-        "ordinal": 7,
+        "ordinal": 9,
         "name": "when_match",
         "type_info": "Jsonb",
         "origin": {
@@ -92,7 +102,7 @@
         }
       },
       {
-        "ordinal": 8,
+        "ordinal": 10,
         "name": "requires",
         "type_info": "Jsonb",
         "origin": {
@@ -103,7 +113,7 @@
         }
       },
       {
-        "ordinal": 9,
+        "ordinal": 11,
         "name": "fallback_provider",
         "type_info": "Text",
         "origin": {
@@ -114,7 +124,7 @@
         }
       },
       {
-        "ordinal": 10,
+        "ordinal": 12,
         "name": "fallback_upstream_model",
         "type_info": "Text",
         "origin": {
@@ -125,7 +135,7 @@
         }
       },
       {
-        "ordinal": 11,
+        "ordinal": 13,
         "name": "explicit_id",
         "type_info": "Bool",
         "origin": {
@@ -136,7 +146,7 @@
         }
       },
       {
-        "ordinal": 12,
+        "ordinal": 14,
         "name": "source",
         "type_info": "Text",
         "origin": {
@@ -147,7 +157,7 @@
         }
       },
       {
-        "ordinal": 13,
+        "ordinal": 15,
         "name": "updated_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -164,6 +174,8 @@
     "nullable": [
       false,
       false,
+      true,
+      true,
       false,
       false,
       true,
@@ -178,5 +190,5 @@
       false
     ]
   },
-  "hash": "7a4a21eb9ebca06fc9a7352530f412d02a71297d70532fe79e3320f14b40723c"
+  "hash": "6dbf4bc553c0a1be8e42d85e0d2cb855ac78d1b6484c407161e36d43c3522b42"
 }

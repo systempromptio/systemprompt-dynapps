@@ -20,6 +20,8 @@
 CREATE TABLE IF NOT EXISTS gateway_routes (
     id TEXT PRIMARY KEY,
     position INTEGER NOT NULL,
+    name TEXT,
+    description TEXT,
     model_pattern TEXT NOT NULL,
     provider TEXT NOT NULL,
     upstream_model TEXT,

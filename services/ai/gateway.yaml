@@ -16,6 +16,9 @@ gateway:
   # the same no_retain flag as anthropic, and this route declares no
   # `requires:`). See /documentation/enterprise-model-routing.
   - id: claude-star-4203d1
+    name: Claude (Anthropic)
+    description: >-
+      Every claude-* request goes to Anthropic. If Anthropic is unreachable or exhausts its retry budget the same request is served as Gemini 3.8 Flash on Vertex AI.
     model_pattern: claude-*
     provider: anthropic
     fallback_provider: vertex
@@ -27,31 +30,58 @@ gateway:
   # so. Adding a rate-card entry means adding or widening a route here in the
   # same change; `systemprompt admin config catalog discovery` shows what the
   # last discovery pass actually found.
-  - model_pattern: vertex-gemini-*
+  - name: Gemini on Vertex AI
+    description: >-
+      Google-hosted Gemini under the vertex OAuth credential; every model the Vertex rate card prices.
+    model_pattern: vertex-gemini-*
     provider: vertex
-  - model_pattern: gemini-*
+  - name: Gemini (public API)
+    description: >-
+      Gemini via the API-key endpoint; the classifier job dispatches here.
+    model_pattern: gemini-*
     provider: gemini
   - id: vertex-qwen
+    name: Qwen3 Coder (Vertex MaaS)
+    description: >-
+      Qwen open models on Vertex AI Model-as-a-Service.
     model_pattern: qwen.*
     provider: vertex-maas
   - id: vertex-glm
+    name: GLM-5 (Vertex MaaS)
+    description: >-
+      Z.ai GLM open models on Vertex AI Model-as-a-Service.
     model_pattern: zai.*
     provider: vertex-maas
   # No moonshotai.* or deepseek.* route: their only rate-card entries retire
   # on 2026-10-21 and are no longer declared above, and the gateway refuses
   # to boot a route that reaches no priced model.
   - id: vertex-gpt-oss
+    name: GPT-OSS (Vertex MaaS)
+    description: >-
+      OpenAI GPT-OSS open-weight models on Vertex AI Model-as-a-Service.
     model_pattern: openai.gpt-oss-*
     provider: vertex-maas
-  - model_pattern: gpt-oss-120b
+  - name: GPT-OSS 120B (Cerebras)
+    description: >-
+      The bare gpt-oss-120b id served by Cerebras at low latency.
+    model_pattern: gpt-oss-120b
     provider: cerebras
   - id: openai-gpt-41
+    name: GPT-4.1 (OpenAI)
+    description: >-
+      The GPT-4.1 family on OpenAI chat completions.
     model_pattern: gpt-4.1*
     provider: openai
   - id: openai-o4-mini
+    name: o4-mini (OpenAI Responses)
+    description: >-
+      Reasoning model on the OpenAI /responses wire.
     model_pattern: o4-mini
     provider: openai-responses
   - id: e2e-mock-route
+    name: E2E mock
+    description: >-
+      Loopback Anthropic-wire mock for the Playwright suite; never advertised and fails upstream on any host without the mock.
     model_pattern: e2e-mock-*
     provider: e2e-mock
   default_provider: anthropic

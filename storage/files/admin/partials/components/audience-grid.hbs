@@ -1,0 +1,34 @@
+{{!-- Every role, group and project across the top, every governed entity down
+     the side; each cell is the resolver's own answer and the band that
+     decided it. Context: `audience` (AudienceGridView). --}}
+{{#if audience.has_rows}}
+<div class="sp-audience-matrix-wrap sp-ac-grid" tabindex="0" role="region" aria-label="Audience grid">
+    <table class="sp-audience-matrix sp-table__el">
+        <thead>
+            <tr>
+                <th scope="col">Entity</th>
+                {{#each audience.columns}}
+                <th scope="col" class="sp-audience-matrix__col"><span class="sp-audience-matrix__label">{{label}}</span> <span class="sp-audience-matrix__kind">{{kind}}</span></th>
+                {{/each}}
+            </tr>
+        </thead>
+        <tbody>
+            {{#each audience.rows}}
+            <tr class="sp-audience-matrix__row" data-entity-type="{{entity_type}}" data-entity-id="{{entity_id}}">
+                <th scope="row" class="sp-audience-matrix__subject">
+                    <span class="sp-audience-matrix__label">{{entity_name}}</span>
+                    <span class="sp-audience-matrix__kind">{{entity_type_label}}{{#if entity_sub}} · {{entity_sub}}{{/if}}</span>
+                </th>
+                {{#each cells}}
+                <td class="sp-audience-matrix__cell {{#if allow}}is-allow{{else}}is-deny{{/if}}" title="{{effective}}: {{detail}}">
+                    <span class="sp-audience-matrix__layer">{{layer}}</span>
+                </td>
+                {{/each}}
+            </tr>
+            {{/each}}
+        </tbody>
+    </table>
+</div>
+{{else}}
+{{> components/empty-state message="The grid could not be resolved. Check the server log for the access-control resolver."}}
+{{/if}}

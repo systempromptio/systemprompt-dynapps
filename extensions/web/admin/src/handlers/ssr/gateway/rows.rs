@@ -1,9 +1,9 @@
 //! Shapes the gateway route table: provider surfaces, declared and
 //! resolved-only rows, and the KPI strip above them.
 
-use systemprompt::loader::ServicesBootstrap;
-
+use super::models::matrix_url;
 use super::view::{GatewayKpiView, GatewayRouteRow, ProviderOptionView, ResolvedOnlyRow};
+use crate::repositories::config::gateway::{RouteLabels, derive_route_label};
 use crate::types::{GatewayConfigView, GatewayRouteView};
 
 fn yaml_summary(value: Option<&serde_yaml::Value>) -> String {
@@ -34,23 +34,18 @@ impl Surfaces {
     }
 }
 
-pub(super) fn load_surfaces() -> Surfaces {
-    let providers = ServicesBootstrap::get().map_or_else(
-        |_| Vec::new(),
-        |services| {
-            services
-                .providers
-                .providers
-                .iter()
-                .map(|p| ProviderOptionView {
-                    name: p.name.as_str().to_owned(),
-                    surface: p.surface.as_tag().to_owned(),
-                    model_count: p.models.len(),
-                    advertised: p.surface.is_advertised(),
-                })
-                .collect()
-        },
-    );
+pub(super) fn load_surfaces(labels: &RouteLabels) -> Surfaces {
+    let providers = labels
+        .providers
+        .iter()
+        .map(|p| ProviderOptionView {
+            name: p.id.clone(),
+            label: p.label.clone(),
+            surface: p.surface.clone(),
+            model_count: p.model_count,
+            advertised: p.advertised,
+        })
+        .collect();
     Surfaces { providers }
 }
 
@@ -59,6 +54,7 @@ pub(super) fn route_rows(
     surfaces: &Surfaces,
     grants: &std::collections::HashMap<String, i64>,
     dispatchable: &[String],
+    labels: &RouteLabels,
 ) -> Vec<GatewayRouteRow> {
     let last = config.routes.len().saturating_sub(1);
     config
@@ -67,10 +63,29 @@ pub(super) fn route_rows(
         .enumerate()
         .map(|(index, route)| {
             let (surface, surface_tone) = surfaces.surface_of(&route.provider);
+            // Why: the table reads the DB rows, which a console save updates
+            // at once; the label resolver reads the booted services and lags
+            // a restart behind. A name on the row wins so an edit shows.
+            let provider_label = labels
+                .find_provider(&route.provider)
+                .map_or_else(|| route.provider.clone(), |p| p.label.clone());
+            let label = route
+                .name
+                .as_deref()
+                .map(str::trim)
+                .filter(|n| !n.is_empty())
+                .map_or_else(
+                    || derive_route_label(&route.model_pattern, &provider_label),
+                    str::to_owned,
+                );
             GatewayRouteRow {
                 index,
                 surface,
                 surface_tone,
+                name: route.name.clone().unwrap_or_default(),
+                description: route.description.clone().unwrap_or_default(),
+                label,
+                provider_label,
                 upstream_model: route.upstream_model.clone().unwrap_or_default(),
                 requires: yaml_summary(route.requires.as_ref()),
                 when: yaml_summary(route.when.as_ref()),
@@ -80,10 +95,7 @@ pub(super) fn route_rows(
                 dispatchable: dispatchable.contains(&route.id),
                 is_first: index == 0,
                 is_last: index == last,
-                matrix_url: format!(
-                    "/admin/access-control?entity_type=gateway_route&entity_id={}",
-                    route.id
-                ),
+                matrix_url: matrix_url(&route.id),
                 id: route.id.clone(),
                 model_pattern: route.model_pattern.clone(),
                 provider: route.provider.clone(),
@@ -95,15 +107,14 @@ pub(super) fn route_rows(
 pub(super) fn resolved_only(
     declared: &[GatewayRouteRow],
     resolved: &[GatewayRouteView],
+    labels: &RouteLabels,
 ) -> Vec<ResolvedOnlyRow> {
     resolved
         .iter()
         .filter(|r| !declared.iter().any(|d| d.id == r.id))
         .map(|r| ResolvedOnlyRow {
-            matrix_url: format!(
-                "/admin/access-control?entity_type=gateway_route&entity_id={}",
-                r.id
-            ),
+            matrix_url: matrix_url(&r.id),
+            label: labels.label_of(&r.id),
             id: r.id.clone(),
             model_pattern: r.model_pattern.clone(),
             provider: r.provider.clone(),

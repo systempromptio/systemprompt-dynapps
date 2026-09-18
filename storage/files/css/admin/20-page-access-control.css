@@ -104,9 +104,24 @@
     color: var(--sp-text-tertiary);
 }
 
-.sp-ac-entity__id { color: var(--sp-text-primary); }
+/* Why: the label is what the row is called; the generated id is kept as a
+   quiet subtitle so a rule written against it can still be matched by eye. */
+.sp-ac-entity__label {
+    color: var(--sp-text-primary);
+    font-weight: 500;
+}
 
-.sp-ac-entity__details[open] .sp-ac-entity__id { text-decoration: underline dotted; }
+.sp-ac-entity__sub {
+    font-size: var(--sp-text-xs);
+    color: var(--sp-text-secondary);
+}
+
+.sp-ac-entity__id {
+    font-size: var(--sp-text-xs);
+    color: var(--sp-text-tertiary);
+}
+
+.sp-ac-entity__details[open] .sp-ac-entity__label { text-decoration: underline dotted; }
 
 .sp-ac-entity__expanded {
     margin-top: var(--sp-space-3);

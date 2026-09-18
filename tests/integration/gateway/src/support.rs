@@ -33,6 +33,8 @@ pub fn provider(
 ) -> ProviderEntry {
     ProviderEntry {
         name: ProviderId::new(name),
+        display_name: None,
+        description: None,
         wire,
         surface: ApiSurface::Backend,
         endpoint: "https://api.example.com/v1".to_owned(),
@@ -50,6 +52,8 @@ pub fn registry(providers: Vec<ProviderEntry>) -> ProviderRegistry {
 pub fn route(id: &str, pattern: &str, provider_name: &str) -> GatewayRoute {
     GatewayRoute {
         id: RouteId::new(id),
+        name: None,
+        description: None,
         model_pattern: pattern.to_owned(),
         provider: ProviderId::new(provider_name),
         upstream_model: None,

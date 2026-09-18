@@ -5,7 +5,9 @@
 //! survive and deciding what they look like. Everything here reads a
 //! [`RolesQuery`] and writes a view type; nothing here filters.
 
+use crate::handlers::ssr::entity_kind::entity_kind_label;
 use crate::handlers::ssr::types::SortHeaderView;
+use crate::repositories::config::gateway::RouteLabels;
 use crate::repositories::roles::entitlements::RoleEntitlementRow;
 use crate::repositories::roles::members::RoleHolderRow;
 use crate::types::Role;
@@ -118,29 +120,41 @@ pub(super) fn member_views(rows: &[RoleHolderRow], query: &RolesQuery) -> Vec<Ro
         .collect()
 }
 
-pub(super) fn entitlement_views(rows: &[RoleEntitlementRow]) -> Vec<RoleEntitlementView> {
+pub(super) fn entitlement_views(
+    rows: &[RoleEntitlementRow],
+    labels: &RouteLabels,
+) -> Vec<RoleEntitlementView> {
     rows.iter()
-        .map(|row| RoleEntitlementView {
-            role_label: label_for(&row.role),
-            role: row.role.clone(),
-            entity_type_label: row.entity_type.replace('_', " "),
-            entity_type: row.entity_type.clone(),
-            entity_id: row.entity_id.clone(),
-            access: row.access.to_string(),
-            access_tone: match row.access {
-                AccessDecision::Allow => "ok",
-                AccessDecision::Deny => "err",
-            },
-            default_included: row.default_included,
-            default_label: if row.default_included {
-                "Open by default"
-            } else {
-                "Closed by default"
-            },
-            href: format!(
-                "/admin/access-control?entity_kind={}&subject_kind=role",
-                row.entity_type
-            ),
+        .map(|row| {
+            let route = (row.entity_type == "gateway_route")
+                .then(|| labels.find(&row.entity_id))
+                .flatten();
+            RoleEntitlementView {
+                role_label: label_for(&row.role),
+                role: row.role.clone(),
+                entity_type_label: entity_kind_label(&row.entity_type),
+                entity_type: row.entity_type.clone(),
+                entity_label: route.map_or_else(|| row.entity_id.clone(), |l| l.label.clone()),
+                entity_sub: route.map(crate::repositories::config::gateway::RouteLabel::subtitle),
+                labelled: route.is_some(),
+                entity_id: row.entity_id.clone(),
+                access: row.access.to_string(),
+                access_tone: match row.access {
+                    AccessDecision::Allow => "ok",
+                    AccessDecision::Deny => "err",
+                },
+                default_included: row.default_included,
+                default_label: if row.default_included {
+                    "Open by default"
+                } else {
+                    "Closed by default"
+                },
+                href: format!(
+                    "/admin/access-control?entity_kind={}&q={}",
+                    row.entity_type,
+                    urlencoding::encode(&row.entity_id)
+                ),
+            }
         })
         .collect()
 }

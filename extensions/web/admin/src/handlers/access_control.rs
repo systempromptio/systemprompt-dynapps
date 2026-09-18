@@ -186,26 +186,23 @@ pub(crate) fn build_matrix_sections(
         ));
     }
 
-    match repositories::config::gateway::dispatchable_routes_from_services() {
+    match repositories::config::gateway::get_route_labels_from_services() {
         Err(e) => {
             // Why: skipping the section keeps the rest of the matrix rendering,
             // but a dropped gateway section is indistinguishable from a
             // deployment with no routes, so it may not go unrecorded.
             tracing::error!(error = %e, "gateway routes unavailable for the access-control matrix");
         },
-        Ok(routes) => {
-            let rows = routes
-                .into_iter()
-                .map(|r| {
-                    let label = r.model_pattern.clone();
-                    (r.id, label, None)
-                })
+        Ok(labels) => {
+            // Why: the row's name is the route's label and its description
+            // the one-line "pattern → provider", so every matrix reader
+            // shows a route the way the gateway page does.
+            let rows = labels
+                .routes
+                .iter()
+                .map(|r| (r.id.clone(), r.label.clone(), Some(r.subtitle())))
                 .collect();
-            sections.push((
-                "gateway_route".to_owned(),
-                "Gateway routes".to_owned(),
-                rows,
-            ));
+            sections.push(("gateway_route".to_owned(), "Model routes".to_owned(), rows));
         },
     }
 
