@@ -38,6 +38,15 @@ pub(super) async fn record_grant_failure(
         repo::store(tx, user, provider.slug(), &seal(grant)?).await?;
     }
     update_account(tx, user, account).await?;
+    tracing::warn!(
+        target: "connector_oauth",
+        provider = provider.slug(),
+        status = %account.status,
+        error_code = account.error_code.as_deref().unwrap_or(""),
+        generation = account.generation,
+        error = %error,
+        "connector grant failure recorded"
+    );
     Ok(())
 }
 
@@ -61,6 +70,23 @@ pub(super) async fn open_or_flag(
             Err(error)
         },
     }
+}
+
+// Why: every accessor call retries the provider, and during a provider
+// outage that is one refresh per MCP request. The failure store bumps the
+// credential row, so its timestamp is the last attempt; a fresh failure holds
+// the account without a provider call. A probe (Test connection) always goes
+// through — it is the user asking.
+pub(super) const OUTAGE_HOLD_SECONDS: i64 = 30;
+
+pub(super) fn in_outage_hold(
+    account: &ProviderConnection,
+    last_attempt: Option<chrono::DateTime<Utc>>,
+) -> bool {
+    account.status == "temporarily_unavailable"
+        && last_attempt.is_some_and(|at| {
+            Utc::now().signed_duration_since(at).num_seconds() < OUTAGE_HOLD_SECONDS
+        })
 }
 
 pub(super) fn token_state(grant: &Grant, remint: bool) -> String {

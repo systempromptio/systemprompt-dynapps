@@ -148,6 +148,12 @@ async fn resolve_token(
     let row = repo::lock(&mut tx, user, provider.slug()).await?;
     let preauthorize = row.is_none() && provider.is_salesforce() && account.generation == 0;
     require_connection(&account.status, preauthorize)?;
+    if !probe && account_state::in_outage_hold(&account, row.as_ref().map(|r| r.updated_at)) {
+        return Err(AdminError::Unavailable(
+            "Connector provider recently unavailable; retry shortly".into(),
+        ));
+    }
+    let row = row.map(|r| r.grant);
     // Why: a saved OAuth grant is not usable until the MCP verification has
     // succeeded.
     if !probe && !preauthorize && account.verified_at.is_none() {
@@ -175,23 +181,8 @@ async fn resolve_token(
         grant = salesforce::mint(pool, user, &provider, account.generation).await?;
     }
     let refresh = grant.auth_method == "oauth" && grant.expires_at <= Utc::now().timestamp() + 120;
-    let result = async {
-        let started = std::time::Instant::now();
-        let outcome = if refresh {
-            transport::refresh(&mut grant)
-                .await
-                .map(|()| "Access token refreshed".to_owned())
-        } else {
-            Ok(token_state(&grant, remint))
-        };
-        report.record("token", started, &outcome);
-        outcome?;
-        if probe || preauthorize || remint {
-            verify::verify_reporting(&mut grant, &transport::client()?, report).await?;
-        }
-        Ok::<(), AdminError>(())
-    }
-    .await;
+    let verify = probe || preauthorize || remint;
+    let result = refresh_and_verify(&mut grant, refresh, verify, remint, report).await;
     if let Err(error) = result {
         record_grant_failure(&mut tx, user, &mut account, &grant, &error).await?;
         tx.commit().await?;
@@ -209,6 +200,29 @@ async fn resolve_token(
         "{} {}",
         grant.authorization_scheme, grant.access_token
     ))
+}
+
+async fn refresh_and_verify(
+    grant: &mut Grant,
+    refresh: bool,
+    verify: bool,
+    remint: bool,
+    report: &mut VerificationReport,
+) -> AdminResult<()> {
+    let started = std::time::Instant::now();
+    let outcome = if refresh {
+        transport::refresh(grant)
+            .await
+            .map(|()| "Access token refreshed".to_owned())
+    } else {
+        Ok(token_state(grant, remint))
+    };
+    report.record("token", started, &outcome);
+    outcome?;
+    if verify {
+        verify::verify_reporting(grant, &transport::client()?, report).await?;
+    }
+    Ok(())
 }
 
 // Why: Token-refresh transport seam used by the external integration tests.

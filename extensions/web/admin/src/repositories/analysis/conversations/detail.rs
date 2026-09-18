@@ -205,7 +205,6 @@ pub async fn find_conversation_facts(
            LEFT JOIN projects p ON p.id = f.project_id
            WHERE f.context_id = $1"#,
         context_id.as_str()
-    
     )
     .fetch_optional(pool)
     .await?;

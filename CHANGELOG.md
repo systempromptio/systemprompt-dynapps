@@ -46,6 +46,26 @@ Conventions (strict — hold every entry to them):
   queues a manual verdict that runs even with `evaluation.automatic` off. The
   feedback assessment fact reads that score.
 
+### Fixed
+
+- A connector refresh the provider refuses is a reconnect, not an outage.
+  Atlassian retires a rotating refresh token with `403 unauthorized_client`
+  ("refresh_token is invalid"); `connector_oauth::tokens` treated only
+  `invalid_grant`/401 as a rejected grant and everything else as
+  `provider_unavailable`, so the account sat in `temporarily_unavailable`,
+  every MCP call and every bridge sync retried the same refresh (one revision
+  per attempt), the gateway answered `/api/v1/mcp/atlassian` with
+  `503 … token accessor returned status 502` and nothing was logged. Every
+  4xx token response, and any `error` body, now retires the grant
+  (`reconnect_required`, the OAuth error code in the message); only a 5xx, a
+  429 or a transport failure is an outage. The token request and every
+  recorded grant failure log under `target = "connector_oauth"` (provider,
+  status, OAuth error code and description — never a token or body), and an
+  account in `temporarily_unavailable` is held for 30 s after its last
+  attempt before the provider is called again; **Test connection** always
+  goes through. `connector_credentials::lock` returns `LockedGrant` with the
+  row's `updated_at`.
+
 ### Removed
 
 - The four-criteria session judge (`evaluation_queue`, `evaluation_runs`),

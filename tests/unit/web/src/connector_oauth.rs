@@ -29,6 +29,14 @@ fn grant() -> Grant {
 }
 
 async fn endpoint(body: &'static str) -> (String, tokio::task::JoinHandle<String>) {
+    endpoint_with_status(200, "OK", body).await
+}
+
+async fn endpoint_with_status(
+    status: u16,
+    reason: &'static str,
+    body: &'static str,
+) -> (String, tokio::task::JoinHandle<String>) {
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let address = listener.local_addr().unwrap();
     let task = tokio::spawn(async move {
@@ -55,7 +63,7 @@ async fn endpoint(body: &'static str) -> (String, tokio::task::JoinHandle<String
             }
         }
         let response = format!(
-            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+            "HTTP/1.1 {status} {reason}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
             body.len()
         );
         socket.write_all(response.as_bytes()).await.unwrap();
@@ -95,6 +103,53 @@ async fn revoked_grants_are_authentication_failures() {
     let error = refresh_at(&mut grant(), &url).await.unwrap_err();
     assert_eq!(error.status(), axum::http::StatusCode::UNAUTHORIZED);
     mock.await.unwrap();
+}
+
+// Atlassian retires a refresh token with `403 unauthorized_client`; a
+// retired grant is a reconnect, never an outage to retry on every call.
+#[tokio::test]
+async fn a_retired_refresh_token_is_an_authentication_failure_not_an_outage() {
+    let (url, mock) = endpoint_with_status(
+        403,
+        "Forbidden",
+        r#"{"error":"unauthorized_client","error_description":"refresh_token is invalid"}"#,
+    )
+    .await;
+    let error = refresh_at(&mut grant(), &url).await.unwrap_err();
+    assert_eq!(error.status(), axum::http::StatusCode::UNAUTHORIZED);
+    assert!(
+        error.to_string().contains("unauthorized_client"),
+        "the OAuth error code names the cause: {error}"
+    );
+    mock.await.unwrap();
+}
+
+#[tokio::test]
+async fn a_4xx_without_an_oauth_error_body_still_retires_the_grant() {
+    let (url, mock) = endpoint_with_status(400, "Bad Request", r#"{}"#).await;
+    let error = refresh_at(&mut grant(), &url).await.unwrap_err();
+    assert_eq!(error.status(), axum::http::StatusCode::UNAUTHORIZED);
+    mock.await.unwrap();
+}
+
+#[tokio::test]
+async fn token_endpoint_outages_stay_upstream_errors() {
+    for (status, reason) in [(503, "Service Unavailable"), (429, "Too Many Requests")] {
+        let (url, mock) = endpoint_with_status(status, reason, r#"{"error":"server_error"}"#).await;
+        let mut credential = grant();
+        let error = refresh_at(&mut credential, &url).await.unwrap_err();
+        assert_eq!(
+            error.status(),
+            axum::http::StatusCode::BAD_GATEWAY,
+            "{status} is an outage"
+        );
+        assert_eq!(
+            credential.refresh_token.as_deref(),
+            Some("fixture-refresh"),
+            "an outage keeps the grant for the retry"
+        );
+        mock.await.unwrap();
+    }
 }
 
 #[tokio::test]
