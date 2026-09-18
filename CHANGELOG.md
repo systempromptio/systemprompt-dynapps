@@ -20,6 +20,21 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+## 0.55.1 — 2026-09-18
+
+Built against the published core 0.55.1 (`bridge/CORE_REF` = `v0.55.1`). 0.55.0 was released but
+never served: its image crash-looped on production because core 0.55.0 had rewritten the text
+of migration 008 (`artifact_narrow_waist`) after the 2026-09-17 11:16 UTC preview deploy from
+`next` had already applied the original, and the migration runner refused the checksum
+mismatch (fail-closed, as designed); the machine was rolled back to the 0.54.0 image
+(≈ 23:48–00:03 UTC). Core 0.55.1 restores 008 to its applied text and carries the corrections
+as migration 012 (`artifact_source_repair`); `InvocationSkillIdentity` gains
+`marketplace_hash`, which this repository's projection already emitted.
+
+### Fixed
+
+- Production runs 0.55.1 (the 0.55.0 image was never healthy) — see the release note above.
+
 ## 0.55.0 — 2026-09-17
 
 Built against the published core 0.55.0 (`bridge/CORE_REF` = `v0.55.0`): the
