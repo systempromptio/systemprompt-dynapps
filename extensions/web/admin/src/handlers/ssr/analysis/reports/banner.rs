@@ -74,7 +74,7 @@ pub(crate) async fn report_banner(
     view.pending = row.status == "pending";
     if let Some(findings) = row.findings.as_ref() {
         view.exists = true;
-        view.headline = findings.headline.clone();
+        view.headline.clone_from(&findings.headline);
         view.assessment = findings.assessment.tone();
         view.assessment_label = findings.assessment.label();
         view.assessment_icon = super::view::assessment_icon(findings.assessment.as_str());

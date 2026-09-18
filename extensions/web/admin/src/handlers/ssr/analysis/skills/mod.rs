@@ -36,7 +36,7 @@ use crate::repositories::analysis::skills::{
 use crate::repositories::scope::ScopeRequest;
 use crate::types::Role;
 
-use context::{PageInputs, SkillsRead, build_context};
+use context::{SkillsPageInputs, SkillsRead, build_context};
 pub(crate) use rows::skill_row_view;
 pub(crate) use views::SkillFactView;
 
@@ -189,7 +189,7 @@ pub(crate) async fn page(
             audience: &audience,
             index: &index,
         },
-        PageInputs {
+        SkillsPageInputs {
             is_admin: shell.user.is_admin,
             report_banner,
         },

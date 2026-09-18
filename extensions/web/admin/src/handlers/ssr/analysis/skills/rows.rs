@@ -36,6 +36,36 @@ pub(super) fn spark_values(row: &SkillFactRow, end: NaiveDate) -> Vec<i64> {
         .collect()
 }
 
+// Why: the Tools / Artifacts pages default to the last 24 hours; a link from
+// a skill row spans the skill's own use in this window.
+fn activity_href(base: &str, skill: &str, first_used: chrono::DateTime<chrono::Utc>) -> String {
+    let from = first_used - Duration::hours(1);
+    format!(
+        "{base}?skill={}&from={}&to={}",
+        urlencoding::encode(skill),
+        urlencoding::encode(&from.to_rfc3339()),
+        urlencoding::encode(&chrono::Utc::now().to_rfc3339())
+    )
+}
+
+fn reach_display(users: i64, entitled: usize) -> String {
+    if entitled == 0 {
+        return "—".to_owned();
+    }
+    format!(
+        "{}%",
+        users * 100 / i64::try_from(entitled).unwrap_or(1).max(1)
+    )
+}
+
+fn models_title(row: &SkillFactRow) -> String {
+    format!(
+        "Models: {} · Clients: {}",
+        row.models.join(", "),
+        row.clients.join(", ")
+    )
+}
+
 pub(crate) fn skill_row_view(
     row: &SkillFactRow,
     audience: &MarketplaceAudience,
@@ -66,14 +96,7 @@ pub(crate) fn skill_row_view(
         invocations_note: format!("{} slash · {} tool", row.slash, row.tool),
         users: row.users,
         entitled,
-        reach_display: if entitled == 0 {
-            "—".to_owned()
-        } else {
-            format!(
-                "{}%",
-                row.users * 100 / i64::try_from(entitled).unwrap_or(1).max(1)
-            )
-        },
+        reach_display: reach_display(row.users, entitled),
         installs: row.installs,
         conversations: row.conversations,
         turns: row.turns,
@@ -90,14 +113,16 @@ pub(crate) fn skill_row_view(
         denied_tone: deny_tone(row.denied),
         tool_calls: row.tool_calls,
         tool_calls_failed: row.tool_calls_failed,
-        tools_href: format!("/admin/tools?skill={}", urlencoding::encode(&row.skill)),
+        tools_href: activity_href("/admin/tools", &row.skill, row.first_used),
         artifacts: row.artifacts,
-        artifacts_href: format!("/admin/artifacts?skill={}", urlencoding::encode(&row.skill)),
+        artifacts_href: activity_href("/admin/artifacts", &row.skill, row.first_used),
         latency_display: row.p95_latency_ms.map_or_else(
             || "—".to_owned(),
             |ms| format_duration_ms(ms.round() as i64),
         ),
         latency_tone: latency_tone(row.p95_latency_ms),
+        models_more: row.models.len().saturating_sub(2),
+        models_title: models_title(row),
         models: row.models.clone(),
         clients: row.clients.clone(),
         judged: row.judged,

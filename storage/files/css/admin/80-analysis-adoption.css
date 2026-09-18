@@ -1,0 +1,157 @@
+@layer components {
+
+/* Marketplace adoption as a stepped funnel: three figures in text tokens
+   with the conversion between them, and one proportional track beneath —
+   the fills never carry text, which is what made the old bars unreadable. */
+.sp-adopt {
+    margin-block: var(--sp-space-3) var(--sp-space-4);
+}
+
+.sp-adopt__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(30rem, 1fr));
+    gap: var(--sp-space-3);
+}
+
+.sp-adopt__row {
+    display: grid;
+    grid-template-columns: minmax(12rem, 1fr) auto;
+    grid-template-areas:
+        "name steps"
+        "track track"
+        "facts facts";
+    gap: var(--sp-space-2) var(--sp-space-4);
+    padding: var(--sp-space-3) var(--sp-space-4);
+    border: 1px solid var(--sp-border-subtle);
+    border-radius: var(--sp-corners-md);
+    background: var(--sp-bg-surface);
+    min-width: 0;
+}
+
+.sp-adopt__name {
+    grid-area: name;
+    display: grid;
+    gap: var(--sp-space-05);
+    min-width: 0;
+}
+
+.sp-adopt__name .sp-table__link {
+    font-size: var(--sp-text-base);
+}
+
+.sp-adopt__steps {
+    grid-area: steps;
+    display: flex;
+    align-items: center;
+    gap: var(--sp-space-2);
+}
+
+.sp-adopt__step {
+    display: grid;
+    justify-items: center;
+    min-width: 4.5rem;
+    padding: var(--sp-space-1) var(--sp-space-2);
+    border-radius: var(--sp-corners-sm);
+    text-decoration: none;
+    color: inherit;
+}
+
+.sp-adopt__step:hover,
+.sp-adopt__step:focus-visible {
+    background: var(--sp-bg-surface-alt);
+    outline: none;
+}
+
+.sp-adopt__step b {
+    font-size: var(--sp-text-xl);
+    font-weight: var(--sp-font-semibold);
+    line-height: var(--sp-leading-tight);
+    color: var(--sp-text-primary);
+}
+
+.sp-adopt__step span {
+    font-size: var(--sp-text-2xs);
+    text-transform: uppercase;
+    letter-spacing: var(--sp-tracking-wide);
+    color: var(--sp-text-tertiary);
+}
+
+.sp-adopt__arrow {
+    font-size: var(--sp-text-xs);
+    color: var(--sp-text-secondary);
+    font-variant-numeric: tabular-nums;
+}
+
+.sp-adopt__arrow::before {
+    content: "→ ";
+    color: var(--sp-text-tertiary);
+}
+
+/* One track, two overlaid fills from the same hue: installed as a wash,
+   active solid, both as shares of entitled. */
+.sp-adopt__track {
+    grid-area: track;
+    position: relative;
+    height: 0.4rem;
+    border-radius: var(--sp-radius-full);
+    background: var(--sp-bg-surface-alt);
+    overflow: hidden;
+}
+
+.sp-adopt__fill {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: 0;
+    width: var(--sp-fill, 0%);
+    min-width: 2px;
+    border-radius: var(--sp-radius-full);
+    background: var(--sp-chart-blue);
+    transition: width var(--sp-duration-normal) var(--sp-ease-out);
+}
+
+.sp-adopt__fill--installed {
+    opacity: 0.35;
+}
+
+.sp-adopt__facts {
+    grid-area: facts;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+    gap: var(--sp-space-1) var(--sp-space-3);
+    margin: 0;
+}
+
+.sp-adopt__facts dt {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-space-1);
+    font-size: var(--sp-text-2xs);
+    text-transform: uppercase;
+    letter-spacing: var(--sp-tracking-wide);
+    color: var(--sp-text-tertiary);
+}
+
+.sp-adopt__facts dd {
+    margin: 0;
+    font-size: var(--sp-text-xs);
+    color: var(--sp-text-secondary);
+}
+
+@media (max-width: 48rem) {
+    .sp-adopt__row {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+            "name"
+            "steps"
+            "track"
+            "facts";
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sp-adopt__fill {
+        transition: none;
+    }
+}
+
+}

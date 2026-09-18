@@ -105,9 +105,9 @@ pub(crate) fn record_items() -> Vec<HelpItem> {
 pub(crate) fn judge_items() -> Vec<HelpItem> {
     vec![
         item(
-            "judge",
-            "Done",
-            "The judge's one 0–100 completion score: did the assistant deliver what the person originally asked for. Green from 80, amber from 50, red below.",
+            "sparkle",
+            "AI",
+            "The last column: one circle for the judge's 0–100 completion score — did the assistant deliver what the person originally asked for. Green from 80, amber from 50, red below; a hollow ring means no verdict yet, a pulsing one that a verdict is on its way. Hover or focus it for the summary and rationale.",
         ),
         item(
             "sparkle",
@@ -117,7 +117,7 @@ pub(crate) fn judge_items() -> Vec<HelpItem> {
         item(
             "clock",
             "When it runs",
-            "The conversation_judge job reads a conversation once it has been quiet or its session has ended, sends the transcript (credentials redacted) to the configured model with the schema enforced by the provider, and records one verdict. Judge now / Judge selected queue it for the next tick.",
+            "In production the judge runs by itself: the conversation_judge job reads a conversation once it has been quiet or its session has ended, sends the transcript (credentials redacted) to the configured model with the schema enforced by the provider, and records one verdict. Where the profile keeps it manual (development), the hollow circle is the button that asks, and Judge N unjudged / Judge selected ask for many at once.",
         ),
         item(
             "shield",
@@ -177,7 +177,8 @@ pub(crate) fn skills_help() -> HelpView {
             item("download", "Installs", "Distinct consumers holding a verified installation receipt for the skill resource, on any host."),
             item("chat", "Conv.", "Gateway conversations whose harness session invoked the skill; the tokens, cost, tools, artifacts and errors beside it are theirs."),
             item("wrench", "Tools · Artifacts", "Tool calls in those conversations, and the subset that produced something viewable (files, cards, UI, bodies)."),
-            item("judge", "Done", "Mean judge completion over the judged conversations, shown as score · judged/total."),
+            item("sparkle", "AI", "The last column: mean judge completion over the judged conversations as one coloured circle with the score, then judged/total."),
+            item("skill", "N unused", "The toolbar pill lists configured skills nobody invoked in the window, with the people entitled to each — the gap between what is shipped and what is used."),
         ],
     )
     .section(

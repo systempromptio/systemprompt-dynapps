@@ -44,7 +44,7 @@ use crate::repositories::analysis::conversations::{
 };
 use crate::repositories::scope::ScopeRequest;
 
-use context::{PageInputs, build_context};
+use context::{ConversationsPageInputs, build_context};
 pub(crate) use judge_all::judge_all;
 use query::{BASE_URL, ConversationAnalysisQuery, PAGE_SIZE};
 
@@ -111,10 +111,11 @@ pub(crate) async fn page(
         &params,
         &request,
         &data,
-        PageInputs {
+        ConversationsPageInputs {
             scope_filter,
             report_banner,
             can_judge: shell.user.is_console,
+            manual_judge: !crate::handlers::ssr::analysis::judge_mode::automatic(),
         },
     );
     Ok(crate::handlers::ssr::render_typed_page(

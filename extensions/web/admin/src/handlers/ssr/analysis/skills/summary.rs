@@ -66,16 +66,15 @@ impl Figures {
 }
 
 fn tile(
-    label: &'static str,
-    icon: &'static str,
+    head: (&'static str, &'static str),
     value: String,
     note: String,
     tone: &'static str,
     hint: &'static str,
 ) -> SkillsKpiView {
     SkillsKpiView {
-        label,
-        icon,
+        label: head.0,
+        icon: head.1,
         value,
         note,
         tone,
@@ -91,24 +90,21 @@ fn adoption_tiles(rows: &[SkillFactRow], g: &Figures) -> Vec<SkillsKpiView> {
     let entitled_i = entitled;
     let mut tiles = vec![
         tile(
-            "Skills used",
-            "skill",
+            ("Skills used", "skill"),
             rows.len().to_string(),
             format!("{} invocations in the window", invocations),
             "accent",
             "Distinct plugin:skill keys with at least one hook-reported invocation",
         ),
         tile(
-            "People",
-            "people",
+            ("People", "people"),
             active.to_string(),
             format!("of {entitled} entitled · {installed} installed"),
             "accent",
             "Most people any one skill reached; entitlement is resolved from the access-control rules",
         ),
         tile(
-            "Install rate",
-            "download",
+            ("Install rate", "download"),
             percent(installed, entitled_i),
             format!("{installed} consumers hold a verified receipt"),
             if entitled_i > 0 && installed * 2 >= entitled_i {
@@ -119,8 +115,7 @@ fn adoption_tiles(rows: &[SkillFactRow], g: &Figures) -> Vec<SkillsKpiView> {
             "Distinct consumers with a verified installation receipt over the people entitled to any marketplace",
         ),
         tile(
-            "Conversations",
-            "chat",
+            ("Conversations", "chat"),
             sum(|r| r.conversations).to_string(),
             format!(
                 "{} turns · {} tools · {} artifacts",
@@ -144,32 +139,28 @@ fn spend_tiles(rows: &[SkillFactRow], g: &Figures) -> Vec<SkillsKpiView> {
     let judged_total = g.judged;
     vec![
         tile(
-            "Tokens",
-            "token",
+            ("Tokens", "token"),
             format_token_total(sum(|r| r.input_tokens + r.output_tokens)),
             format!("{} from cache", format_token_total(sum(|r| r.cache_tokens))),
             "accent",
             "Tokens the skill conversations ran up",
         ),
         tile(
-            "Cost",
-            "coins",
+            ("Cost", "coins"),
             format_cost(cost),
             format!("{} per invocation", format_cost(cost / invocations.max(1))),
             "accent",
             "Priced spend of the skill conversations",
         ),
         tile(
-            "Errors",
-            "alert",
+            ("Errors", "alert"),
             (sum(|r| r.errors)).to_string(),
             format!("failed requests · {} denied tool calls", sum(|r| r.denied)),
             error_rate_tone(sum(|r| r.errors), sum(|r| r.requests)),
             "Failed requests and governance denials inside skill conversations",
         ),
         tile(
-            "Completed",
-            "judge",
+            ("Completed", "judge"),
             score_display(completion),
             format!("{judged_total} conversations judged"),
             completion_tone(completion),
@@ -236,6 +227,7 @@ pub(super) fn chart(rows: &[SkillFactRow], today: NaiveDate) -> SvgLineChartView
         x_labels: labels,
         y_unit: "",
     })
+    .into_columns()
 }
 
 pub(super) fn unused(
@@ -252,6 +244,7 @@ pub(super) fn unused(
             plugins.iter().filter_map(move |p| {
                 let key = format!("{}:{}", p.0, skill.replace('_', "-"));
                 (!used.contains(key.as_str())).then(|| UnusedSkillView {
+                    catalog_href: format!("/admin/skills/{}", urlencoding::encode(skill)),
                     entitled: audience.users_reaching_skill(index, skill),
                     marketplace: index
                         .marketplaces_by_plugin

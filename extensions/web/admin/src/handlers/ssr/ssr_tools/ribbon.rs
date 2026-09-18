@@ -11,7 +11,7 @@ use crate::repositories::analysis::tools::{
     ArtifactKind, ToolActivityResult, ToolFacet, ToolState,
 };
 
-fn facet<'a>(items: &'a [ToolFacet]) -> impl Iterator<Item = (&'a str, String, i64)> {
+fn facet(items: &[ToolFacet]) -> impl Iterator<Item = (&str, String, i64)> {
     items.iter().map(|f| {
         (
             f.value.as_str(),
@@ -21,6 +21,48 @@ fn facet<'a>(items: &'a [ToolFacet]) -> impl Iterator<Item = (&'a str, String, i
     })
 }
 
+// Why: the artifact-kind pill, drawn on both lenses under different labels.
+fn kind_group(label: &'static str, q: &ToolsQuery, data: &ToolActivityResult) -> RibbonGroupView {
+    RibbonGroupView::single(
+        "artifact",
+        label,
+        "file",
+        q.artifact.as_deref(),
+        data.kinds.iter().map(|k| {
+            let kind = ArtifactKind::parse_artifact_kind(Some(k.value.as_str()));
+            (
+                k.value.as_str(),
+                kind.map_or_else(|| k.value.clone(), |k| k.label().to_owned()),
+                k.calls,
+            )
+        }),
+    )
+}
+
+// Why: state and decision only mean something for every call; the
+// Artifacts lens is already the executed, successful subset.
+fn tools_only_groups(q: &ToolsQuery, data: &ToolActivityResult) -> Vec<RibbonGroupView> {
+    vec![
+        RibbonGroupView::single(
+            "state",
+            "State",
+            "check",
+            q.state.as_deref(),
+            ToolState::ALL
+                .iter()
+                .map(|(s, l)| (s.as_str(), (*l).to_owned(), 0)),
+        ),
+        RibbonGroupView::single(
+            "decision",
+            "Decision",
+            "shield",
+            q.decision.as_deref(),
+            facet(&data.decisions),
+        ),
+        kind_group("Artifact", q, data),
+    ]
+}
+
 pub(crate) fn ribbon(lens: Lens, q: &ToolsQuery, data: &ToolActivityResult) -> RibbonView {
     let user_id = q.user_id();
     let mut view = RibbonView::new(lens.base_url(), lens.base_url()).preserve(&q.preserved(&[
@@ -28,20 +70,7 @@ pub(crate) fn ribbon(lens: Lens, q: &ToolsQuery, data: &ToolActivityResult) -> R
         "q", "page", "ids",
     ]));
     if lens == Lens::Artifacts {
-        view = view.group(RibbonGroupView::single(
-            "artifact",
-            "Kind",
-            "file",
-            q.artifact.as_deref(),
-            data.kinds.iter().map(|k| {
-                let kind = ArtifactKind::parse_artifact_kind(Some(k.value.as_str()));
-                (
-                    k.value.as_str(),
-                    kind.map_or_else(|| k.value.clone(), |k| k.label().to_owned()),
-                    k.calls,
-                )
-            }),
-        ));
+        view = view.group(kind_group("Kind", q, data));
     }
     view = view
         .group(RibbonGroupView::single(
@@ -69,37 +98,9 @@ pub(crate) fn ribbon(lens: Lens, q: &ToolsQuery, data: &ToolActivityResult) -> R
             ],
         ));
     if lens == Lens::Tools {
-        view = view
-            .group(RibbonGroupView::single(
-                "state",
-                "State",
-                "check",
-                q.state.as_deref(),
-                ToolState::ALL
-                    .iter()
-                    .map(|(s, l)| (s.as_str(), (*l).to_owned(), 0)),
-            ))
-            .group(RibbonGroupView::single(
-                "decision",
-                "Decision",
-                "shield",
-                q.decision.as_deref(),
-                facet(&data.decisions),
-            ))
-            .group(RibbonGroupView::single(
-                "artifact",
-                "Artifact",
-                "file",
-                q.artifact.as_deref(),
-                data.kinds.iter().map(|k| {
-                    let kind = ArtifactKind::parse_artifact_kind(Some(k.value.as_str()));
-                    (
-                        k.value.as_str(),
-                        kind.map_or_else(|| k.value.clone(), |k| k.label().to_owned()),
-                        k.calls,
-                    )
-                }),
-            ));
+        for group in tools_only_groups(q, data) {
+            view = view.group(group);
+        }
     }
     view = view
         .group(RibbonGroupView::single(

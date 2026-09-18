@@ -96,4 +96,31 @@
     font-size: var(--sp-text-sm);
 }
 
+/* The pinned-window chip beside the presets, when a row link set the range. */
+.sp-tools-pinned {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-space-2);
+    padding: 0 var(--sp-space-3);
+    border: 1px solid var(--sp-border-subtle);
+    border-radius: var(--sp-radius-full);
+    font-size: var(--sp-text-xs);
+    color: var(--sp-text-secondary);
+    font-variant-numeric: tabular-nums;
+    line-height: 1.9;
+}
+
+.sp-tools-pinned .sp-icon {
+    color: var(--sp-text-tertiary);
+}
+
+.sp-tools-pinned__widen {
+    color: var(--sp-accent-text);
+    text-decoration: none;
+}
+
+.sp-tools-pinned__widen:hover,
+.sp-tools-pinned__widen:focus-visible {
+    text-decoration: underline;
+}
 }

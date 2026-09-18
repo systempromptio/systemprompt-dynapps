@@ -14,16 +14,18 @@ pub struct DigestScope {
     pub window_start: DateTime<Utc>,
     pub window_end: DateTime<Utc>,
     pub subject_ids: Option<Vec<String>>,
-    pub marketplace_id: Option<String>,
+    // Why: raw text, not typed ids — a filter query's values are bound
+    // straight into the digest SQL and echoed into the stored inputs.
+    pub marketplace_key: Option<String>,
     pub skill: Option<String>,
-    pub user_id: Option<String>,
+    pub user_key: Option<String>,
     pub model: Option<String>,
     pub client_kind: Option<String>,
     pub category: Option<String>,
     pub outcome: Option<String>,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
 pub struct DigestTotals {
     pub conversations: i64,
     pub people: i64,
@@ -65,7 +67,8 @@ pub struct DigestModel {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DigestPerson {
-    pub user_id: String,
+    #[serde(rename = "user_id")]
+    pub user_key: String,
     pub display_name: Option<String>,
     pub conversations: i64,
     pub cost_microdollars: i64,
@@ -75,7 +78,8 @@ pub struct DigestPerson {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DigestJudged {
-    pub context_id: String,
+    #[serde(rename = "context_id")]
+    pub context_key: String,
     pub title: String,
     pub judge_title: Option<String>,
     pub completion: Option<i16>,
@@ -88,7 +92,8 @@ pub struct DigestJudged {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DigestOutlier {
-    pub context_id: String,
+    #[serde(rename = "context_id")]
+    pub context_key: String,
     pub title: String,
     pub cost_microdollars: i64,
     pub turns: i64,
@@ -154,9 +159,9 @@ pub async fn get_report_digest(
         scope.window_start,
         scope.window_end,
         scope.subject_ids.as_deref(),
-        scope.marketplace_id,
+        scope.marketplace_key,
         scope.skill,
-        scope.user_id,
+        scope.user_key,
         scope.model,
         scope.client_kind,
         scope.category,
@@ -217,7 +222,7 @@ pub fn render_digest_text(d: &ReportDigest) -> String {
     for p in &d.people {
         out.push_str(&format!(
             "person {} | {} | {} | {} | {} | {}\n",
-            p.user_id,
+            p.user_key,
             p.display_name.as_deref().unwrap_or("-"),
             p.conversations,
             usd(p.cost_microdollars),
@@ -227,11 +232,38 @@ pub fn render_digest_text(d: &ReportDigest) -> String {
     }
     push_judged(&mut out, "WORST JUDGED", &d.worst);
     push_judged(&mut out, "BEST JUDGED", &d.best);
+    push_mix(&mut out, d);
+    out
+}
+
+fn push_judged(out: &mut String, heading: &str, rows: &[DigestJudged]) {
+    out.push_str(&format!(
+        "\n{heading} (id | title | completion | outcome | intent | cost | turns | summary)\n"
+    ));
+    for j in rows {
+        out.push_str(&format!(
+            "conversation {} | {} | {} | {} | {} | {} | {} | {}\n",
+            j.context_key,
+            j.judge_title.as_deref().unwrap_or(&j.title),
+            j.completion
+                .map_or_else(|| "n/a".to_owned(), |c| c.to_string()),
+            j.outcome.as_deref().unwrap_or("-"),
+            j.category.as_deref().unwrap_or("-"),
+            usd(j.cost_microdollars),
+            j.turns,
+            j.summary.as_deref().unwrap_or("")
+        ));
+    }
+}
+
+// Why: the second half of the digest text — outliers, denials and the two
+// mixes — kept beside the first so the format reads as one document.
+fn push_mix(out: &mut String, d: &ReportDigest) {
     out.push_str("\nCOST OUTLIERS (id | title | cost | turns | tokens | completion | model)\n");
     for o in &d.outliers {
         out.push_str(&format!(
             "conversation {} | {} | {} | {} | {} | {} | {}\n",
-            o.context_id,
+            o.context_key,
             o.title,
             usd(o.cost_microdollars),
             o.turns,
@@ -264,27 +296,6 @@ pub fn render_digest_text(d: &ReportDigest) -> String {
             c.client_kind,
             c.conversations,
             usd(c.cost_microdollars)
-        ));
-    }
-    out
-}
-
-fn push_judged(out: &mut String, heading: &str, rows: &[DigestJudged]) {
-    out.push_str(&format!(
-        "\n{heading} (id | title | completion | outcome | intent | cost | turns | summary)\n"
-    ));
-    for j in rows {
-        out.push_str(&format!(
-            "conversation {} | {} | {} | {} | {} | {} | {} | {}\n",
-            j.context_id,
-            j.judge_title.as_deref().unwrap_or(&j.title),
-            j.completion
-                .map_or_else(|| "n/a".to_owned(), |c| c.to_string()),
-            j.outcome.as_deref().unwrap_or("-"),
-            j.category.as_deref().unwrap_or("-"),
-            usd(j.cost_microdollars),
-            j.turns,
-            j.summary.as_deref().unwrap_or("")
         ));
     }
 }

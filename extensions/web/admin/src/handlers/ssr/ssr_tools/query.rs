@@ -89,7 +89,7 @@ impl ToolsQuery {
         })
     }
 
-    pub(crate) fn preset_label(&self, range: TimeRange) -> &'static str {
+    pub(crate) const fn preset_label(&self, range: TimeRange) -> &'static str {
         if self.from.is_some() && self.to.is_some() {
             return "custom";
         }

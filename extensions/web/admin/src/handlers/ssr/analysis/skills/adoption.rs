@@ -35,6 +35,16 @@ pub(super) fn adoption_view(
         } else {
             0
         },
+        active_pct: if entitled_i > 0 {
+            (a.active_users * 100 / entitled_i).min(100)
+        } else {
+            0
+        },
+        skills_href: format!(
+            "{}?marketplace={}",
+            crate::handlers::ssr::analysis_urls::ANALYSIS_SKILLS_URL,
+            urlencoding::encode(a.marketplace_id.as_str())
+        ),
         installed_claude_code: a.installed_claude_code,
         installed_opencode: a.installed_opencode,
         installed_other: a.installed_other,

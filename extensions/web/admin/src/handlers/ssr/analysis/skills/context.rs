@@ -119,7 +119,7 @@ fn ribbon(query: &SkillsQuery, rows: &[SkillFactRow], index: &InventoryIndex) ->
 }
 
 // Why: what the handler read besides the rows.
-pub(super) struct PageInputs {
+pub(super) struct SkillsPageInputs {
     pub(super) is_admin: bool,
     pub(super) report_banner: ReportBannerView,
 }
@@ -127,7 +127,7 @@ pub(super) struct PageInputs {
 pub(super) fn build_context(
     query: &SkillsQuery,
     read: &SkillsRead<'_>,
-    inputs: PageInputs,
+    inputs: SkillsPageInputs,
 ) -> SkillsPageContext {
     let SkillsRead {
         rows,

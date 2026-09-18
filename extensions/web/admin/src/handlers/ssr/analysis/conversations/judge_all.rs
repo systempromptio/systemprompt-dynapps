@@ -64,7 +64,7 @@ fn params_from(form: &JudgeAllForm) -> Result<ConversationAnalysisQuery, AdminEr
         .map_err(|e| AdminError::BadRequest(e.body_text()))?;
     params.judged = Some(JudgedFilter::Unjudged.as_str().to_owned());
     params.page = None;
-    params.ids = form.ids.clone();
+    params.ids.clone_from(&form.ids);
     Ok(params)
 }
 

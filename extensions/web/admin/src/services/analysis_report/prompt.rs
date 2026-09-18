@@ -3,10 +3,10 @@
 //! The model is given only the deterministic digest and asked for ids, never
 //! URLs; every evidence link is rebuilt here from those ids.
 
-use serde::Deserialize;
-use systemprompt_web_admin::repositories::analysis::reports::{
+use crate::repositories::analysis::reports::{
     Assessment, Evidence, Priority, Recommendation, ReportFindings, Severity, Theme, evidence_href,
 };
+use serde::Deserialize;
 
 pub(super) const SYSTEM_PROMPT: &str = "\
 You are an enterprise AI-governance analyst writing for the operator of one AI gateway \
@@ -39,7 +39,7 @@ tool to allow or block — each with a one-sentence rationale and a priority (hi
 // JSON: the response schema handed to the provider API — an OpenAPI subset
 // (Gemini's responseSchema), so enums and `required` are all it carries.
 #[must_use]
-pub fn findings_schema() -> serde_json::Value {
+pub(crate) fn findings_schema() -> serde_json::Value {
     let evidence = serde_json::json!({
         "type": "object",
         "properties": {
@@ -121,7 +121,7 @@ fn clip(value: &str, max_chars: usize) -> String {
 // Why: clamps every list and text into the bounds the page expects and drops
 // evidence whose id maps to no console page, so a hallucinated id becomes a
 // missing chip rather than a dead link.
-pub fn parse_findings(content: &str) -> Result<ReportFindings, serde_json::Error> {
+pub(crate) fn parse_findings(content: &str) -> Result<ReportFindings, serde_json::Error> {
     let raw: RawFindings = serde_json::from_str(content)?;
     let themes = raw
         .themes

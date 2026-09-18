@@ -1,102 +1,119 @@
-// Hover narration for the server-rendered SVG line charts. Any `[data-chart]`
-// figure keeps its plot exactly as the server drew it; this adds a crosshair
-// that snaps to the nearest bucket, a tooltip that prints every series' value
-// for that bucket (values come from `data-values`, never from geometry), and
-// legend items that toggle a series. Without this module the chart stays
-// complete and static, only without the hover layer.
+// Live charts. The server renders every `[data-chart]` figure complete — a
+// stretched unit-space SVG with three-label gutters — so the page reads
+// without scripts. This module replaces that plot with one drawn at real
+// pixel size (proper axes, hairline grid, round dots, columns) and keeps it
+// in step with the panel through a ResizeObserver; hover, keyboard, legend
+// toggles and a table view come from the sibling modules. Series values are
+// read from the server's `data-values`, never re-derived from geometry.
 
-const PLOT_WIDTH = 100;
+import { render } from './sp-chart-draw.js';
+import { formatValue, sum } from './sp-chart-scale.js';
+import { attachHover, buildLegend, buildTable } from './sp-chart-tooltip.js';
 
-const parseValues = (text) => text.split(',').map((v) => Number.parseInt(v, 10) || 0);
+const parseValues = (raw) => raw.split(',').map((v) => Number.parseInt(v, 10) || 0);
 
-const parseLabels = (text) => {
-  try { const labels = JSON.parse(text || '[]'); return Array.isArray(labels) ? labels : []; } catch { return []; }
+const parseLabels = (raw) => {
+  try {
+    const labels = JSON.parse(raw || '[]');
+    return Array.isArray(labels) ? labels.map(String) : [];
+  } catch {
+    return [];
+  }
 };
 
-const formatValue = (value, unit) => {
-  if (unit === 'µ$') return `$${(value / 1_000_000).toFixed(value >= 1_000_000 ? 2 : 4)}`;
-  if (unit === 'ms') return value >= 1000 ? `${(value / 1000).toFixed(1)}s` : `${value}ms`;
-  const text = value.toLocaleString();
-  return unit ? `${text} ${unit}` : text;
+const readModel = (figure) => {
+  const unit = figure.dataset.unit ?? '';
+  const series = [...figure.querySelectorAll('[data-series]')].map((group, index) => {
+    const values = parseValues(group.dataset.values ?? '');
+    return {
+      index,
+      label: group.dataset.label ?? `Series ${index + 1}`,
+      color: group.dataset.color ?? '--sp-chart-purple',
+      values,
+      total: formatValue(sum(values), unit, true),
+      hidden: false,
+    };
+  });
+  if (series.length === 0) return null;
+  return {
+    kind: figure.dataset.kind ?? 'line',
+    unit,
+    labels: parseLabels(figure.dataset.labels),
+    series,
+    get visible() {
+      return this.series.filter((s) => !s.hidden);
+    },
+    width: 0,
+    height: 0,
+  };
+};
+
+const button = (label, pressed) => {
+  const el = document.createElement('button');
+  el.type = 'button';
+  el.className = 'sp-btn sp-btn--xs sp-btn--ghost sp-chart__tool';
+  el.textContent = label;
+  el.setAttribute('aria-pressed', pressed ? 'true' : 'false');
+  return el;
 };
 
 export const initChart = (figure) => {
-  const plot = figure.querySelector('[data-chart-plot]');
-  const cursor = figure.querySelector('[data-chart-cursor]');
-  const tip = figure.querySelector('[data-chart-tip]');
-  if (!plot || !cursor || !tip) return null;
-  const labels = parseLabels(figure.dataset.labels);
-  const unit = figure.dataset.unit ?? '';
-  const series = [...plot.querySelectorAll('[data-series]')].map((group) => ({
-    group,
-    label: group.dataset.label ?? '',
-    color: group.dataset.color ?? '--sp-chart-purple',
-    values: parseValues(group.dataset.values ?? ''),
-    hidden: false,
-  }));
-  const buckets = Math.max(...series.map((s) => s.values.length), labels.length, 0);
-  if (buckets === 0) return null;
-
-  // The x axis places bucket i at (i + 0.5) / n of the plot width, so the
-  // pointer's fraction of the width maps straight back to a bucket index.
-  const bucketAt = (event) => {
-    const box = plot.getBoundingClientRect();
-    const fraction = Math.min(Math.max((event.clientX - box.left) / box.width, 0), 0.9999);
-    return Math.floor(fraction * buckets);
-  };
-
-  const show = (index) => {
-    const x = ((index + 0.5) / buckets) * PLOT_WIDTH;
-    cursor.setAttribute('x1', x);
-    cursor.setAttribute('x2', x);
-    cursor.hidden = false;
-    const rows = series
-      .filter((s) => !s.hidden)
-      .map((s) => `<span class="sp-svgchart__tip-row"><i style="background: var(${s.color})"></i>${s.label}<b>${formatValue(s.values[index] ?? 0, unit)}</b></span>`)
-      .join('');
-    tip.innerHTML = `<span class="sp-svgchart__tip-label">${labels[index] ?? `#${index + 1}`}</span>${rows}`;
-    tip.hidden = false;
-    const box = plot.getBoundingClientRect();
-    const left = ((index + 0.5) / buckets) * box.width;
-    tip.style.left = `${Math.min(Math.max(left, tip.offsetWidth / 2), box.width - tip.offsetWidth / 2)}px`;
-  };
-
-  const hide = () => { cursor.hidden = true; tip.hidden = true; };
-
-  plot.addEventListener('pointermove', (event) => show(bucketAt(event)));
-  plot.addEventListener('pointerleave', hide);
-  plot.tabIndex = 0;
-  let focused = buckets - 1;
-  plot.addEventListener('keydown', (event) => {
-    const step = { ArrowLeft: -1, ArrowRight: 1, Home: -buckets, End: buckets }[event.key];
-    if (step === undefined) return;
-    event.preventDefault();
-    focused = Math.min(Math.max(focused + step, 0), buckets - 1);
-    show(focused);
-  });
-  plot.addEventListener('blur', hide);
-
-  for (const item of figure.querySelectorAll('[data-chart-toggle]')) {
-    const index = Number.parseInt(item.dataset.chartToggle, 10);
-    const target = series[index];
-    if (!target) continue;
-    item.setAttribute('role', 'button');
-    item.tabIndex = 0;
-    const toggle = () => {
-      target.hidden = !target.hidden;
-      target.group.classList.toggle('is-hidden', target.hidden);
-      item.classList.toggle('is-hidden', target.hidden);
-      item.setAttribute('aria-pressed', target.hidden ? 'false' : 'true');
-    };
-    item.addEventListener('click', toggle);
-    item.addEventListener('keydown', (event) => {
-      if (event.key !== 'Enter' && event.key !== ' ') return;
-      event.preventDefault();
-      toggle();
-    });
+  const model = readModel(figure);
+  if (!model) return null;
+  for (const stale of figure.querySelectorAll('.sp-timeseries__plot, .sp-timeseries__x-axis, .sp-svgchart__legend, .sp-svgchart__refs')) {
+    stale.hidden = true;
   }
+  const host = document.createElement('div');
+  host.className = 'sp-chart';
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('class', 'sp-chart__svg');
+  svg.setAttribute('role', 'img');
+  svg.setAttribute('aria-label', figure.querySelector('[data-chart-plot]')?.getAttribute('aria-label') ?? '');
+  const tip = document.createElement('div');
+  tip.className = 'sp-chart__tip';
+  tip.hidden = true;
+  host.append(svg, tip);
+  figure.append(host);
+
+  let geo = null;
+  const draw = () => {
+    model.width = Math.max(host.clientWidth, 120);
+    model.height = Math.max(host.clientHeight, 120);
+    geo = model.visible.length ? render(svg, model) : null;
+    if (!geo) svg.replaceChildren();
+  };
+  const legend = buildLegend(model, draw);
+  if (legend) figure.append(legend);
+
+  const table = buildTable(model);
+  table.hidden = true;
+  figure.append(table);
+  const head = figure.querySelector('.sp-timeseries__head');
+  if (head) {
+    const tools = document.createElement('span');
+    tools.className = 'sp-chart__tools';
+    const toggle = button('Table', false);
+    toggle.addEventListener('click', () => {
+      const showing = table.hidden;
+      table.hidden = !showing;
+      host.hidden = showing;
+      if (legend) legend.hidden = showing;
+      toggle.setAttribute('aria-pressed', showing ? 'true' : 'false');
+      if (!showing) draw();
+    });
+    tools.append(toggle);
+    head.append(tools);
+  }
+
+  attachHover({ host, svg, tip, model, geo: () => geo });
+  if (typeof ResizeObserver === 'function') {
+    new ResizeObserver(() => {
+      if (!host.hidden) draw();
+    }).observe(host);
+  }
+  draw();
   figure.classList.add('sp-svgchart--live');
-  return { show, hide, series };
+  return { draw, model };
 };
 
 export const initAllCharts = (scope = document) =>

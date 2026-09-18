@@ -25,7 +25,7 @@ const DATASET: &str = "analysis-conversations";
 // Why: the breakdown dimension's query parameter — the key a bucket row's
 // link and export narrow by; groups and projects narrow through the scope
 // bar instead.
-fn bucket_param(by: BreakdownBy) -> Option<&'static str> {
+const fn bucket_param(by: BreakdownBy) -> Option<&'static str> {
     match by {
         BreakdownBy::Category => Some("category"),
         BreakdownBy::Outcome => Some("outcome"),
@@ -112,21 +112,19 @@ fn chips(params: &ConversationAnalysisQuery, mut ribbon: RibbonView) -> RibbonVi
     ribbon
 }
 
-fn ribbon(params: &ConversationAnalysisQuery, data: &ConversationAnalysisResult) -> RibbonView {
+const RIBBON_PARAMS: [&str; 10] = [
+    "model", "client", "flag", "skill", "user_id", "category", "outcome", "judged", "q", "page",
+];
+
+// Why: the pills fed by the filtered set's own facets, each listing only the
+// values present, with counts.
+fn facet_groups(
+    params: &ConversationAnalysisQuery,
+    data: &ConversationAnalysisResult,
+) -> Vec<RibbonGroupView> {
     let user_id = params.user_id();
-    let clear = params
-        .link_prefix(&[
-            "model", "client", "flag", "skill", "user_id", "category", "outcome", "judged", "q",
-            "page",
-        ])
-        .trim_end_matches(['?', '&'])
-        .to_owned();
-    let ribbon = RibbonView::new(BASE_URL, clear)
-        .preserve(&params.preserved(&[
-            "model", "client", "flag", "skill", "user_id", "category", "outcome", "judged", "q",
-            "page",
-        ]))
-        .group(RibbonGroupView::single(
+    vec![
+        RibbonGroupView::single(
             "model",
             "Model",
             "model",
@@ -134,8 +132,8 @@ fn ribbon(params: &ConversationAnalysisQuery, data: &ConversationAnalysisResult)
             data.models
                 .iter()
                 .map(|m| (m.model.as_str(), m.model.clone(), m.conversations)),
-        ))
-        .group(RibbonGroupView::single(
+        ),
+        RibbonGroupView::single(
             "client",
             "Client",
             "plug",
@@ -147,8 +145,8 @@ fn ribbon(params: &ConversationAnalysisQuery, data: &ConversationAnalysisResult)
                     c.conversations,
                 )
             }),
-        ))
-        .group(RibbonGroupView::single(
+        ),
+        RibbonGroupView::single(
             "user_id",
             "Person",
             "user",
@@ -162,8 +160,8 @@ fn ribbon(params: &ConversationAnalysisQuery, data: &ConversationAnalysisResult)
                     u.conversations,
                 )
             }),
-        ))
-        .group(RibbonGroupView::single(
+        ),
+        RibbonGroupView::single(
             "skill",
             "Skill",
             "skill",
@@ -171,40 +169,62 @@ fn ribbon(params: &ConversationAnalysisQuery, data: &ConversationAnalysisResult)
             data.skills
                 .iter()
                 .map(|s| (s.skill.as_str(), s.skill.clone(), s.conversations)),
-        ))
-        .group(RibbonGroupView::fixed(
+        ),
+    ]
+}
+
+// Why: the pills over closed vocabularies — the record flags and the
+// judge's own words.
+fn fixed_groups(params: &ConversationAnalysisQuery) -> Vec<RibbonGroupView> {
+    vec![
+        RibbonGroupView::fixed(
             "flag",
             "Record",
             "layers",
             params.flag().map(FlagFilter::as_str),
             &FlagFilter::ALL.map(|(v, l)| (v.as_str(), l)),
-        ))
-        .group(RibbonGroupView::fixed(
+        ),
+        RibbonGroupView::fixed(
             "category",
             "Intent",
             "sparkle",
             params.category().as_deref(),
             &CATEGORIES,
-        ))
-        .group(RibbonGroupView::fixed(
+        ),
+        RibbonGroupView::fixed(
             "outcome",
             "Outcome",
             "check",
             params.outcome().as_deref(),
             &OUTCOMES,
-        ))
-        .group(RibbonGroupView::fixed(
+        ),
+        RibbonGroupView::fixed(
             "judged",
             "Judged",
             "judge",
             params.judged().map(JudgedFilter::as_str),
             &JudgedFilter::ALL.map(|(v, l)| (v.as_str(), l)),
-        ))
-        .search(
-            "q",
-            params.free_text().as_deref(),
-            "title, summary, tag, model, skill or person",
-        );
+        ),
+    ]
+}
+
+fn ribbon(params: &ConversationAnalysisQuery, data: &ConversationAnalysisResult) -> RibbonView {
+    let clear = params
+        .link_prefix(&RIBBON_PARAMS)
+        .trim_end_matches(['?', '&'])
+        .to_owned();
+    let mut ribbon = RibbonView::new(BASE_URL, clear).preserve(&params.preserved(&RIBBON_PARAMS));
+    for group in facet_groups(params, data)
+        .into_iter()
+        .chain(fixed_groups(params))
+    {
+        ribbon = ribbon.group(group);
+    }
+    let ribbon = ribbon.search(
+        "q",
+        params.free_text().as_deref(),
+        "title, summary, tag, model, skill or person",
+    );
     chips(params, ribbon)
 }
 
@@ -222,23 +242,27 @@ fn export_view(params: &ConversationAnalysisQuery) -> crate::export::ExportView 
 }
 
 // Why: what the handler read besides the repository result.
-pub(super) struct PageInputs {
+pub(super) struct ConversationsPageInputs {
     pub(super) scope_filter: ScopeFilterView,
     pub(super) report_banner: ReportBannerView,
     pub(super) can_judge: bool,
+    pub(super) manual_judge: bool,
 }
 
 pub(super) fn build_context(
     params: &ConversationAnalysisQuery,
     request: &ScopeRequest,
     data: &ConversationAnalysisResult,
-    inputs: PageInputs,
+    inputs: ConversationsPageInputs,
 ) -> ConversationsPageContext {
     let current_url = params.current_url();
     let rows: Vec<ConversationRowView> = data
         .rows
         .iter()
-        .map(|r| ConversationRowView::from_fact(r).with_viewer(inputs.can_judge, &current_url))
+        .map(|r| {
+            ConversationRowView::from_fact(r)
+                .with_viewer(inputs.can_judge && inputs.manual_judge, &current_url)
+        })
         .collect();
     let shown = i64::try_from(rows.len()).unwrap_or(0);
     let window = PageWindow::new(
@@ -272,6 +296,7 @@ pub(super) fn build_context(
         current_url,
         judge_all_url: super::judge_all::JUDGE_ALL_URL,
         can_judge: inputs.can_judge,
+        manual_judge: inputs.can_judge && inputs.manual_judge,
         unjudged_in_view: data.totals.conversations - data.totals.judged,
     }
 }

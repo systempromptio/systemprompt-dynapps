@@ -7,7 +7,7 @@ use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 use sqlx::types::Json;
 
-use super::{AnalysisReportRow, ReportFindings, ReportInputs};
+use super::{AnalysisReportRow, ReportDigestInputs, ReportFindings};
 
 // Why: the table row as SQLx decodes it; folded into `AnalysisReportRow` so
 // the jsonb columns are typed once, here.
@@ -26,7 +26,7 @@ pub(super) struct ReportRecord {
     pub(super) input_tokens: Option<i32>,
     pub(super) output_tokens: Option<i32>,
     pub(super) cost_microdollars: Option<i64>,
-    pub(super) inputs: Json<ReportInputs>,
+    pub(super) inputs: Json<ReportDigestInputs>,
     pub(super) findings: Option<Json<ReportFindings>>,
     pub(super) attempts: i32,
     pub(super) lease_token: Option<String>,
@@ -73,7 +73,7 @@ pub async fn list_reports(
         ReportRecord,
         r#"SELECT id, scope_kind, scope_id, scope_label, window_start, window_end, status,
                   requested_by, provider, model, ai_request_id, input_tokens, output_tokens,
-                  cost_microdollars, inputs AS "inputs: Json<ReportInputs>",
+                  cost_microdollars, inputs AS "inputs: Json<ReportDigestInputs>",
                   findings AS "findings?: Json<ReportFindings>", attempts, lease_token,
                   last_error, generated_at, created_at, updated_at
            FROM analysis_reports
@@ -94,7 +94,7 @@ pub async fn find_report(
         ReportRecord,
         r#"SELECT id, scope_kind, scope_id, scope_label, window_start, window_end, status,
                   requested_by, provider, model, ai_request_id, input_tokens, output_tokens,
-                  cost_microdollars, inputs AS "inputs: Json<ReportInputs>",
+                  cost_microdollars, inputs AS "inputs: Json<ReportDigestInputs>",
                   findings AS "findings?: Json<ReportFindings>", attempts, lease_token,
                   last_error, generated_at, created_at, updated_at
            FROM analysis_reports
@@ -118,7 +118,7 @@ pub async fn find_latest_generated_report(
         ReportRecord,
         r#"SELECT id, scope_kind, scope_id, scope_label, window_start, window_end, status,
                   requested_by, provider, model, ai_request_id, input_tokens, output_tokens,
-                  cost_microdollars, inputs AS "inputs: Json<ReportInputs>",
+                  cost_microdollars, inputs AS "inputs: Json<ReportDigestInputs>",
                   findings AS "findings?: Json<ReportFindings>", attempts, lease_token,
                   last_error, generated_at, created_at, updated_at
            FROM analysis_reports

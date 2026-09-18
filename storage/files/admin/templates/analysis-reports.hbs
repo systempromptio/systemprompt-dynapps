@@ -1,12 +1,9 @@
 {{#> layout title=title page=page}}
 {{#*inline "content"}}
-{{#> components/page-header title=title help=help subtitle="On-demand AI readings of the deterministic record: one structured call over the figures for a scope and a window, grounded in the ids it cites. Nothing is scheduled — a report exists because someone asked for it."}}
+{{#> components/page-header title=title help=help subtitle="On-demand AI readings of the deterministic record: one structured call over the figures for a scope and a window, grounded in the ids it cites. Nothing is scheduled — a report is written the moment someone asks for it."}}
 {{#*inline "header_actions"}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/analysis/conversations">{{> components/icon name="chat"}} Conversations</a> <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/analysis/skills">{{> components/icon name="skill"}} Skills</a>{{/inline}}
 {{/components/page-header}}
 {{> analysis-subnav}}
-{{#if queued_id}}
-{{> components/notice tone="info" title="" message="Report queued. The analysis_report job generates it on its next manual run — `systemprompt infra jobs run analysis_report` — and the row below turns from pending to generated."}}
-{{/if}}
 <section class="sp-report-request" aria-label="Generate a report">
 <form method="post" action="/admin/analysis/reports" class="sp-report-request__form">
 <label class="sp-report-request__field"><span>Scope</span>
@@ -35,7 +32,7 @@
 <td class="sp-col-date" title="{{created_display}}"><a class="sp-table__link" href="{{href}}">{{created_relative}}</a></td>
 <td class="sp-table__cell--primary"><a class="sp-table__link" href="{{href}}">{{scope_label}}</a><div class="sp-aconv-meta">{{scope_kind}}</div></td>
 <td>{{window_display}}</td>
-<td>{{> components/badge tone=status_tone text=status}}{{#if error}}<div class="sp-aconv-meta sp-u-text-danger" title="{{error}}">{{truncate error 60}}</div>{{/if}}</td>
+<td>{{#if (eq status "pending")}}{{> components/ai-score tone="muted" score="—" pending=true}} <span class="sp-aconv-meta">writing…</span>{{else}}{{> components/badge tone=status_tone text=status}}{{/if}}{{#if error}}<div class="sp-aconv-meta sp-u-text-danger" title="{{error}}">{{truncate error 60}}</div>{{/if}}</td>
 <td>{{#if assessment}}{{> components/badge tone=assessment_tone text=assessment_label}}{{else}}<span class="sp-u-text-tertiary">—</span>{{/if}}</td>
 <td class="sp-report-col-headline"><a class="sp-table__link" href="{{href}}">{{headline}}</a></td>
 <td class="sp-aconvd-model">{{model}}</td>

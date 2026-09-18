@@ -30,6 +30,7 @@
 .sp-aconv-chart {
     display: flex;
     min-width: 0;
+    min-height: 19rem;
     padding: var(--sp-space-3);
     border: 1px solid var(--sp-border-subtle);
     border-radius: var(--sp-corners-md);
@@ -61,15 +62,6 @@
     font-size: var(--sp-text-sm);
     font-weight: var(--sp-font-semibold);
     color: var(--sp-text-secondary);
-}
-/* A pending verdict is three quiet dots, not a dash: the row is spoken for. */
-.sp-aconv-score--pending i {
-    display: inline-block;
-    width: 1.4em;
-    height: 0.35em;
-    border-radius: var(--sp-radius-full);
-    background: repeating-linear-gradient(90deg, currentColor 0 0.35em, transparent 0.35em 0.55em);
-    opacity: 0.6;
 }
 .sp-aconv-block > .sp-table {
     max-width: 100%;

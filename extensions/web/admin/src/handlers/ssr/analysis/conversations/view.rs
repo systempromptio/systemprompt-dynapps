@@ -178,6 +178,20 @@ pub(crate) fn judge_cell(f: &RowFacts<'_>) -> JudgeCellView {
     }
 }
 
+// Why: the Tools / Artifacts pages default to the last 24 hours; a link from
+// a row carries the conversation's own span (an hour either side) so it
+// lands on the calls it counted, however old the conversation is.
+fn activity_href(base: &str, f: &RowFacts<'_>) -> String {
+    let from = f.first_at - chrono::Duration::hours(1);
+    let to = f.last_at + chrono::Duration::hours(1);
+    format!(
+        "{base}?context={}&from={}&to={}",
+        urlencoding::encode(f.context_id.as_str()),
+        urlencoding::encode(&from.to_rfc3339()),
+        urlencoding::encode(&to.to_rfc3339())
+    )
+}
+
 // Why: a one-turn conversation still deserves a flat line rather than an
 // empty cell — the reader's eye expects the slot to be filled.
 fn turn_spark(turn_tokens: &[i64]) -> SparklineView {
@@ -193,7 +207,7 @@ impl ConversationRowView {
     // is reading and where they are.
     pub(crate) fn with_viewer(mut self, can_judge: bool, back_url: &str) -> Self {
         self.judge.can_judge = can_judge;
-        self.back_url = back_url.to_owned();
+        back_url.clone_into(&mut self.back_url);
         self
     }
 
@@ -234,15 +248,9 @@ impl ConversationRowView {
             tools_display: tools.0,
             tools_tone: tools.1,
             tools_title: tools.2,
-            tools_href: format!(
-                "/admin/tools?context={}",
-                urlencoding::encode(f.context_id.as_str())
-            ),
+            tools_href: activity_href("/admin/tools", f),
             artifacts: f.artifacts,
-            artifacts_href: format!(
-                "/admin/artifacts?context={}",
-                urlencoding::encode(f.context_id.as_str())
-            ),
+            artifacts_href: activity_href("/admin/artifacts", f),
             errors: f.error_count,
             errors_tone: error_rate_tone(f.error_count, f.request_count),
             denied: f.gov_deny,

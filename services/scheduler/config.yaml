@@ -240,12 +240,6 @@ scheduler:
       owner: admin
       enabled: true
 
-    # analysis_report (manual-only, `schedulable() = false`) is deliberately
-    # NOT listed: reports are generated with
-    # `systemprompt infra jobs run analysis_report` after a request from
-    # /admin/analysis/reports, and a listed name has to exist in every binary
-    # that loads this file, which a rebuild-in-progress binary does not.
-
     # publish_pipeline sub-steps. The composite above runs each of these every
     # 15 minutes in dependency order; scheduling them independently would
     # double-run them, so they are disabled here (an explicit entry also

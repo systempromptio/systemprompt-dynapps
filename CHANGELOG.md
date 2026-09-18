@@ -45,12 +45,12 @@ Conventions (strict — hold every entry to them):
   Conversations and Skills headers). A request stores a pure-SQL digest of
   the record (`analysis_reports.inputs`: totals, top skills, models, people,
   worst and best judged conversations, cost outliers, denial clusters,
-  intent and client mix — never a transcript); the manual-only
-  `analysis_report` job (`systemprompt infra jobs run analysis_report`; no
-  schedule) sends it once to the judge model with a JSON schema and records
-  a headline, an `ok | watch | degraded` assessment, themes with evidence
-  links into Conversations, Skills and Tools, and recommendations. The
-  latest global report's headline sits in the banner.
+  intent and client mix — never a transcript) and starts the one call to the
+  judge model on a background task; the report page shows a loading widget,
+  polls `…/status` and refreshes itself when the headline, the
+  `ok | watch | degraded` assessment, themes with evidence links into
+  Conversations, Skills and Tools, and recommendations are in. There is no
+  queue and no job. The latest global report's headline sits in the banner.
 - Judging from the list. Every unjudged conversation row carries a **Judge**
   button (`POST …/{context_id}/judge` with `back=`), the header offers
   **Judge N unjudged** over the current filters and the bulk bar **Judge
@@ -105,6 +105,18 @@ Conventions (strict — hold every entry to them):
   30 s on a warning it cannot read, installation evidence is captured for all
   hosts together within a budget, and the MCP probe sends `tools/list` with
   `params: {}` (Google's MCP refused `null`).
+
+- `just build` (and every coordinated recipe) always compiles the current tree.
+  `scripts/build-coordinator.sh` lost its "already green for this source
+  tree" cache: on 2026-09-18 a bare `cargo build` from another checkout
+  overwrote `target/debug/systemprompt` after a coordinated build had passed,
+  and every later `just build` returned without compiling while the binary
+  on disk was stale — `just publish` then shipped an old asset manifest and
+  `just start` served old code against new templates. The one rule now is
+  one build in flight at a time, always of the latest source: a concurrent
+  caller is told a build is in progress and either attaches (identical
+  source) or waits and then runs. Cargo's own incremental cache is what makes
+  an unchanged tree cheap. `BUILD_FORCE` is accepted and ignored.
 
 - One judge. `conversation_classifier` is now `conversation_judge`: a single
   structured call per conversation records a title, summary, intent, outcome

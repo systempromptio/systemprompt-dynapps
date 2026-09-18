@@ -126,8 +126,7 @@ pub(crate) async fn export_rows(
     user: &UserContext,
     lens: Lens,
     q: ToolsQuery,
-    range: TimeRange,
-    limit: i64,
+    (range, limit): (TimeRange, i64),
 ) -> AdminResult<ToolActivityResult> {
     let request = ScopeRequest::from_query(user, q.group.as_deref(), q.project.as_deref());
     let scope = repositories::scope::membership::get_subject_scope(pool, &request).await?;

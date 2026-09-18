@@ -10,7 +10,7 @@ use crate::repositories::analysis::tools::ToolActivityRow;
 const INPUT_CLIP: usize = 72;
 
 #[derive(Debug, Serialize)]
-pub(crate) struct ToolRowView {
+pub(crate) struct ToolActivityRowView {
     pub row_key: String,
     pub at: String,
     pub at_full: String,
@@ -112,7 +112,63 @@ fn decision_tone(decision: Option<&str>) -> &'static str {
     }
 }
 
-pub(crate) fn tool_row(r: &ToolActivityRow) -> ToolRowView {
+// Why: the four places a call links out to — person, harness session,
+// conversation and request — resolved together so the row stays readable.
+fn entity_links(
+    r: &ToolActivityRow,
+    context_key: Option<&str>,
+) -> (
+    Option<String>,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+) {
+    (
+        r.user_id
+            .as_ref()
+            .map(|u| format!("/admin/users/{}", urlencoding::encode(u.as_str()))),
+        r.execution_trace_id
+            .as_ref()
+            .or(r.session_key.as_ref())
+            .map(|s| format!("/admin/sessions/{}", urlencoding::encode(s))),
+        context_key.map(|c| format!("/admin/analysis/conversations/{}", urlencoding::encode(c))),
+        r.request_id
+            .as_ref()
+            .map(|id| format!("/admin/requests/{}", urlencoding::encode(id))),
+    )
+}
+
+// Why: the artifact's own title when it has one, else what the call was
+// about, else the tool — never an empty cell.
+fn artifact_title(r: &ToolActivityRow, tool_name: &str, input: String) -> String {
+    r.artifact_title
+        .clone()
+        .filter(|t| !t.is_empty() && t != tool_name)
+        .unwrap_or_else(|| {
+            if input.is_empty() {
+                tool_name.to_owned()
+            } else {
+                input
+            }
+        })
+}
+
+fn state_label(r: &ToolActivityRow) -> String {
+    if r.failed {
+        "failed".to_owned()
+    } else {
+        r.state.clone()
+    }
+}
+
+fn duration_display(ms: Option<i32>) -> String {
+    ms.map_or_else(
+        || "\u{2014}".to_owned(),
+        |ms| format_duration_ms(i64::from(ms)),
+    )
+}
+
+pub(crate) fn tool_row(r: &ToolActivityRow) -> ToolActivityRowView {
     let tool_name = r.tool_name.clone().unwrap_or_else(|| "unknown".to_owned());
     let input = r.input_summary.clone().unwrap_or_default();
     let is_path = r.artifact_kind.as_deref() == Some("file") || input.starts_with('/');
@@ -128,7 +184,8 @@ pub(crate) fn tool_row(r: &ToolActivityRow) -> ToolRowView {
         .as_ref()
         .filter(|_| r.artifact_kind.is_some())
         .map(|id| format!("/admin/artifacts/{}", urlencoding::encode(id)));
-    ToolRowView {
+    let links = entity_links(r, context_key.as_deref());
+    ToolActivityRowView {
         row_key: r.row_key.clone(),
         at: r.occurred_at.map(relative_time).unwrap_or_default(),
         at_full: r.occurred_at.map(local_time).unwrap_or_default(),
@@ -139,16 +196,9 @@ pub(crate) fn tool_row(r: &ToolActivityRow) -> ToolRowView {
         input_full: input.clone(),
         is_path,
         state_tone: state_tone(r),
-        state: if r.failed {
-            "failed".to_owned()
-        } else {
-            r.state.clone()
-        },
+        state: state_label(r),
         status: r.execution_status.clone().unwrap_or_default(),
-        duration_display: r.execution_time_ms.map_or_else(
-            || "\u{2014}".to_owned(),
-            |ms| format_duration_ms(i64::from(ms)),
-        ),
+        duration_display: duration_display(r.execution_time_ms),
         decision_tone: decision_tone(r.decision.as_deref()),
         decision: r.decision.clone().unwrap_or_else(|| "\u{2014}".to_owned()),
         decision_href: r
@@ -165,22 +215,10 @@ pub(crate) fn tool_row(r: &ToolActivityRow) -> ToolRowView {
             .clone()
             .or_else(|| r.user_id.as_ref().map(|u| u.as_str().to_owned()))
             .unwrap_or_else(|| "\u{2014}".to_owned()),
-        user_href: r
-            .user_id
-            .as_ref()
-            .map(|u| format!("/admin/users/{}", urlencoding::encode(u.as_str()))),
-        session_href: r
-            .execution_trace_id
-            .as_ref()
-            .or(r.session_key.as_ref())
-            .map(|s| format!("/admin/sessions/{}", urlencoding::encode(s))),
-        conversation_href: context_key
-            .as_ref()
-            .map(|c| format!("/admin/analysis/conversations/{}", urlencoding::encode(c))),
-        request_href: r
-            .request_id
-            .as_ref()
-            .map(|id| format!("/admin/requests/{}", urlencoding::encode(id))),
+        user_href: links.0,
+        session_href: links.1,
+        conversation_href: links.2,
+        request_href: links.3,
         client_kind: r.client_kind.clone().unwrap_or_default(),
         source: r.source.clone().unwrap_or_default(),
         artifact_icon: kind_icon(r.artifact_kind.as_deref()),
@@ -191,17 +229,7 @@ pub(crate) fn tool_row(r: &ToolActivityRow) -> ToolRowView {
             .filter(|_| previewable)
             .map(|id| format!("/admin/artifacts/{}/preview", urlencoding::encode(id))),
         artifact_href,
-        artifact_title: r
-            .artifact_title
-            .clone()
-            .filter(|t| !t.is_empty() && t != &tool_name)
-            .unwrap_or_else(|| {
-                if input.is_empty() {
-                    tool_name.clone()
-                } else {
-                    input
-                }
-            }),
+        artifact_title: artifact_title(r, &tool_name, input),
         artifact_kind: r.artifact_kind.clone(),
         bytes_display: format_bytes(i64::from(r.payload_bytes.unwrap_or(0))),
         redactions: r.secret_redactions.unwrap_or(0),

@@ -8,14 +8,20 @@
         gap: var(--sp-space-2);
         flex: 1;
         min-height: 0;
+        min-width: 0;
         margin: 0;
+    }
+    .sp-svgchart .sp-timeseries__head {
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: var(--sp-space-2);
     }
 
     .sp-svgchart__plot {
         width: 100%;
         height: 100%;
         min-height: 10rem;
-        max-height: 14rem;
         display: block;
         border-bottom: 1px solid var(--sp-border-default);
         background: linear-gradient(var(--sp-border-subtle), var(--sp-border-subtle))
@@ -118,7 +124,17 @@
         opacity: 0.1;
     }
     .sp-spark__dot {
-        fill: currentColor;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 6px;
+        stroke-linecap: round;
+        paint-order: stroke;
+    }
+    .sp-spark__dot-ring {
+        fill: none;
+        stroke: var(--sp-bg-surface);
+        stroke-width: 9px;
+        stroke-linecap: round;
     }
 
     /* The hover layer sp-chart.js drives: a crosshair on the plot and a

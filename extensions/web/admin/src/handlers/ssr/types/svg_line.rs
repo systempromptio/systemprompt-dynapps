@@ -46,6 +46,18 @@ pub(crate) struct SvgLineChartView {
     // narrates it on hover.
     pub x_labels_json: String,
     pub y_unit: &'static str,
+    // Why: how the live layer draws the buckets — `line` (area for one
+    // series) or `stacked` columns; the no-script SVG is always the line.
+    pub kind: &'static str,
+}
+
+impl SvgLineChartView {
+    // Why: per-bucket magnitude is a column's job; stacking keeps one axis
+    // when several series share the buckets.
+    pub(crate) const fn into_columns(mut self) -> Self {
+        self.kind = "stacked";
+        self
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -67,6 +79,9 @@ pub(crate) struct SvgSeriesView {
 pub(crate) struct SvgPointView {
     pub x: String,
     pub y: String,
+    // Why: the series' colour repeated on the dot, so the partial never
+    // reaches back up a context level (strict mode rejects `../this`).
+    pub color_token: &'static str,
 }
 
 // Why: a dot per bucket stops being legible past this many buckets; an
@@ -118,6 +133,20 @@ pub(crate) struct LineChartSpec {
     pub y_unit: &'static str,
 }
 
+fn point_dots(points: &[(f64, f64)], color_token: &'static str) -> Vec<SvgPointView> {
+    if points.len() > POINT_DOTS_MAX_BUCKETS {
+        return Vec::new();
+    }
+    points
+        .iter()
+        .map(|(x, y)| SvgPointView {
+            x: format!("{x:.2}"),
+            y: format!("{y:.2}"),
+            color_token,
+        })
+        .collect()
+}
+
 pub(crate) fn line_chart(spec: LineChartSpec) -> SvgLineChartView {
     let data_max = spec
         .series
@@ -137,23 +166,14 @@ pub(crate) fn line_chart(spec: LineChartSpec) -> SvgLineChartView {
         .enumerate()
         .map(|(i, s)| {
             let points = svg::scale_points(&s.values, y_max);
-            let dots = if points.len() <= POINT_DOTS_MAX_BUCKETS {
-                points
-                    .iter()
-                    .map(|(x, y)| SvgPointView {
-                        x: format!("{x:.2}"),
-                        y: format!("{y:.2}"),
-                    })
-                    .collect()
-            } else {
-                Vec::new()
-            };
+            let color_token = CHART_COLOR_TOKENS[i.min(CHART_COLOR_TOKENS.len() - 1)];
+            let dots = point_dots(&points, color_token);
             SvgSeriesView {
                 path_d: svg::line_path(&points),
                 area_d: (spec.show_area && !multi && points.len() >= AREA_MIN_BUCKETS)
                     .then(|| svg::area_path(&points)),
                 points: dots,
-                color_token: CHART_COLOR_TOKENS[i.min(CHART_COLOR_TOKENS.len() - 1)],
+                color_token,
                 label: s.label.clone(),
                 values: s
                     .values
@@ -196,6 +216,7 @@ pub(crate) fn line_chart(spec: LineChartSpec) -> SvgLineChartView {
         x_end_display: spec.x_end_display,
         x_labels_json: serde_json::to_string(&spec.x_labels).unwrap_or_else(|_| "[]".to_owned()),
         y_unit: spec.y_unit,
+        kind: "line",
     }
 }
 

@@ -9,6 +9,7 @@ pub(crate) mod conversation_detail;
 pub(crate) mod conversations;
 pub(crate) mod help;
 pub(crate) mod inventory_actions;
+pub(crate) mod judge_mode;
 pub(crate) mod lifecycle;
 pub(crate) mod marketplace_versions;
 pub(crate) mod reports;

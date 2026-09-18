@@ -95,7 +95,8 @@ _db-url:
 build *FLAGS:
     $env:SQLX_OFFLINE="true"; cargo build --workspace {{FLAGS}}
 
-# Build (Unix) - single-flight: dedupes concurrent identical builds across agents
+# Build (Unix) - one build in flight at a time, always of the latest source;
+# cargo's own incremental cache decides how much recompiles
 [unix]
 build *FLAGS:
     @scripts/build-coordinator.sh run build "{{FLAGS}}" -- {{just_executable()}} _build-uncoordinated {{FLAGS}}
@@ -105,10 +106,11 @@ build *FLAGS:
 build-status *RECIPE:
     @scripts/build-coordinator.sh status {{RECIPE}}
 
-# Re-run even if the coordinator considers this source tree already green
+# Kept for muscle memory: `just build` always compiles the current tree, so
+# this is the same recipe.
 [unix]
 build-force *FLAGS:
-    @BUILD_FORCE=1 scripts/build-coordinator.sh run build "{{FLAGS}}" -- {{just_executable()}} _build-uncoordinated {{FLAGS}}
+    @scripts/build-coordinator.sh run build "{{FLAGS}}" -- {{just_executable()}} _build-uncoordinated {{FLAGS}}
 
 # The real build. Call `just build` instead - this one skips coordination.
 [unix]
@@ -203,7 +205,7 @@ _build-uncoordinated *FLAGS:
 clippy *FLAGS: lint-no-synthesis lint-no-untyped-admin lint-gates
     $env:SQLX_OFFLINE="true"; cargo clippy --workspace {{FLAGS}} -- -D warnings
 
-# Clippy (Unix) - single-flight, same coordinator as `just build`
+# Clippy (Unix) - one in flight at a time, same coordinator as `just build`
 [unix]
 clippy *FLAGS:
     @scripts/build-coordinator.sh run clippy "{{FLAGS}}" -- {{just_executable()}} _clippy-uncoordinated {{FLAGS}}
@@ -1478,9 +1480,8 @@ serve PROFILE="local":
 # MCP & BUILD ALL
 # ══════════════════════════════════════════════════════════════════════════════
 
-# Build all MCP servers (reads from manifest.yaml files) — single-flight and
-# fingerprint-skipped, so a tree whose MCP servers already built returns
-# immediately instead of re-paying the per-package rebuild.
+# Build all MCP servers (reads from manifest.yaml files) — single-flight;
+# cargo skips packages whose source did not change.
 build-mcp:
     @scripts/build-coordinator.sh run build-mcp "" -- {{just_executable()}} _build-mcp-uncoordinated
 
@@ -1585,8 +1586,8 @@ core-checkout MISMATCH="fail":
     fi
 
 # Package the branded bridge as a Linux release tarball into dist/
-# Coordinated: bridge/ and the core sibling are both in the fingerprint, so a
-# failed deploy retried on the same tree skips straight past this step.
+# Coordinated so two agents never package at once; every call rebuilds (cargo
+# makes an unchanged tree cheap).
 bridge-package-linux:
     @scripts/build-coordinator.sh run bridge-package "" -- scripts/package-bridge-linux.sh
 

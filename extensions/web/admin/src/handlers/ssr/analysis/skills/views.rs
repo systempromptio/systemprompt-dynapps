@@ -40,6 +40,10 @@ pub(crate) struct SkillFactView {
     pub latency_tone: &'static str,
     pub models: Vec<String>,
     pub clients: Vec<String>,
+    // Why: the cell shows two model chips; the rest are counted and listed
+    // in the cell's title.
+    pub models_more: usize,
+    pub models_title: String,
     pub judged: i64,
     pub completion_display: String,
     pub completion_tone: &'static str,
@@ -82,6 +86,10 @@ pub(super) struct AdoptionView {
     pub(super) install_rate_pct: i64,
     pub(super) activation_rate: String,
     pub(super) activation_rate_pct: i64,
+    // Why: active over entitled — the solid fill on the one track whose
+    // full width is the entitled population.
+    pub(super) active_pct: i64,
+    pub(super) skills_href: String,
     pub(super) installed_claude_code: i64,
     pub(super) installed_opencode: i64,
     pub(super) installed_other: i64,
@@ -136,4 +144,5 @@ pub(super) struct UnusedSkillView {
     pub(super) plugin: String,
     pub(super) marketplace: String,
     pub(super) entitled: usize,
+    pub(super) catalog_href: String,
 }

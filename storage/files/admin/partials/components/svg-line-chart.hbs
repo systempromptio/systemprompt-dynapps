@@ -1,8 +1,9 @@
 {{!--
   Server-rendered SVG line chart (single or multi series). Works without
-  client JS; `sp-chart.js` enhances it with a hover crosshair and tooltip
-  from the `data-values` each series carries and the `data-labels` on the
-  figure, and lets the legend toggle a series.
+  client JS; `sp-chart.js` replaces the plot with one drawn at pixel size
+  (real axes, gridlines, dots or stacked columns per `data-kind`, crosshair,
+  tooltip, legend toggles, a table view) from the `data-values` each series
+  carries and the `data-labels` on the figure.
 
   Invoke as: {{> components/svg-line-chart volume_chart}}
   The partial's root context is an SvgLineChartView.
@@ -25,7 +26,7 @@
     x_labels_json / y_unit       per-bucket labels and unit for the tooltip
     empty_message                shown instead of the plot when empty
 --}}
-<figure class="sp-svgchart" data-chart data-labels="{{x_labels_json}}" data-unit="{{y_unit}}">
+<figure class="sp-svgchart" data-chart data-kind="{{kind}}" data-labels="{{x_labels_json}}" data-unit="{{y_unit}}">
     <figcaption class="sp-timeseries__head">
         <span class="sp-timeseries__title">{{chart_title}}</span>
         <span class="sp-timeseries__subtitle">{{subtitle}}</span>
@@ -51,7 +52,7 @@
             {{/if}}
             <path d="{{this.path_d}}" fill="none" stroke="var({{this.color_token}})"
                   vector-effect="non-scaling-stroke" class="sp-svgchart__line"></path>
-            {{#each this.points}}<path class="sp-svgchart__dot" d="M{{this.x}},{{this.y}} h0" stroke="var({{../this.color_token}})" vector-effect="non-scaling-stroke"></path>{{/each}}
+            {{#each this.points}}<path class="sp-svgchart__dot" d="M{{this.x}},{{this.y}} h0" stroke="var({{this.color_token}})" vector-effect="non-scaling-stroke"></path>{{/each}}
             </g>
             {{/each}}
             <line class="sp-svgchart__cursor" x1="0" x2="0" y1="0" y2="40" vector-effect="non-scaling-stroke" data-chart-cursor hidden></line>

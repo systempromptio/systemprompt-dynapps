@@ -3,8 +3,9 @@
 //! headline and assessment and the form that queues a new one; a report page
 //! shows the model's headline, assessment, grounded themes with evidence
 //! links into Conversations, Skills and Tools, its recommendations, and the
-//! digest it was written from. Nothing here runs a model: a request is a
-//! queued row the manual-only `analysis_report` job generates.
+//! digest it was written from. A request writes the row and starts the one
+//! model call on a background task (`services::analysis_report`); the page
+//! shows a loading widget that polls `/status` until the verdict is there.
 
 pub(crate) mod banner;
 mod form;
@@ -12,21 +13,26 @@ mod view;
 
 use std::sync::Arc;
 
-use axum::extract::{Form, Path, Query, State};
+use axum::Json;
+use axum::extract::{Extension, Form, Path, State};
 use axum::http::HeaderMap;
 use axum::response::{Redirect, Response};
-use serde::Deserialize;
+use serde::Serialize;
 use sqlx::PgPool;
+use systemprompt::ai::AiService;
 
-use crate::error::{AdminError, AdminHtmlResult};
+use crate::error::{AdminError, AdminHtmlResult, AdminResult};
 use crate::handlers::ssr::analysis::help::{HelpView, item};
+use crate::handlers::ssr::analysis_urls::ANALYSIS_CONVERSATIONS_URL;
 use crate::handlers::ssr::format::{format_cost, format_token_total, local_time};
 use crate::handlers::ssr::list_view::SelectOptionView;
 use crate::handlers::ssr::page::Page;
+use crate::handlers::ssr::types::BreadcrumbView;
 use crate::repositories::analysis::inventory_index::InventoryIndex;
 use crate::repositories::analysis::reports::{
     AnalysisReportRow, find_report, list_reports, render_digest_text,
 };
+use crate::services::analysis_report::generate_report;
 
 use form::{ReportRequestForm, queue, regenerate_form, resolve};
 use view::{
@@ -36,11 +42,6 @@ use view::{
 
 pub(crate) const REPORTS_URL: &str = "/admin/analysis/reports";
 const HISTORY_LIMIT: i64 = 100;
-
-#[derive(Debug, Default, Deserialize)]
-pub(crate) struct ReportsQuery {
-    pub queued: Option<String>,
-}
 
 fn reports_help() -> HelpView {
     HelpView::new(
@@ -77,7 +78,6 @@ fn require_console(shell: &Page) -> Result<(), AdminError> {
 pub(crate) async fn page(
     shell: Page,
     State(pool): State<Arc<PgPool>>,
-    Query(query): Query<ReportsQuery>,
 ) -> AdminHtmlResult<Response> {
     require_console(&shell)?;
     let rows = list_reports(&pool, HISTORY_LIMIT).await?;
@@ -87,7 +87,6 @@ pub(crate) async fn page(
         title: "Reports",
         has_rows: !rows.is_empty(),
         rows: rows.iter().map(report_row).collect(),
-        queued_id: query.queued.filter(|q| !q.is_empty()),
         marketplace_options: index
             .marketplaces
             .iter()
@@ -108,13 +107,51 @@ pub(crate) async fn page(
     ))
 }
 
+fn digest_summary(row: &AnalysisReportRow) -> String {
+    let totals = &row.inputs.digest.totals;
+    format!(
+        "Reading {} conversations by {} people — {} skills, {} models, the best and worst judged, cost outliers and denials",
+        totals.conversations,
+        totals.people,
+        row.inputs.digest.skills.len(),
+        row.inputs.digest.models.len()
+    )
+}
+
+fn theme_views(
+    findings: Option<&crate::repositories::analysis::reports::ReportFindings>,
+) -> Vec<ThemeView> {
+    findings
+        .map(|f| {
+            f.themes
+                .iter()
+                .map(|t| ThemeView {
+                    kind: t.kind.clone(),
+                    severity: t.severity.as_str(),
+                    icon: severity_icon(t.severity.as_str()),
+                    theme_title: t.title.clone(),
+                    detail: t.detail.clone(),
+                    evidence: t.evidence.clone(),
+                })
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
 fn report_context(row: &AnalysisReportRow) -> ReportPageContext {
     let findings = row.findings.as_ref();
     let assessment = findings.map_or("", |f| f.assessment.as_str());
     ReportPageContext {
         page: "analysis-report",
         title: findings.map_or_else(|| scope_label(row), |f| f.headline.clone()),
+        breadcrumbs: vec![
+            BreadcrumbView::link("Analysis", ANALYSIS_CONVERSATIONS_URL),
+            BreadcrumbView::link("Reports", REPORTS_URL),
+            BreadcrumbView::current(scope_label(row)),
+        ],
         report_id: row.id.clone(),
+        digest_summary: digest_summary(row),
+        status_url: format!("{REPORTS_URL}/{}/status", urlencoding::encode(&row.id)),
         scope_label: scope_label(row),
         scope_kind: row.scope_kind.clone(),
         window_display: format!(
@@ -141,21 +178,7 @@ fn report_context(row: &AnalysisReportRow) -> ReportPageContext {
         error: row.last_error.clone().unwrap_or_default(),
         filter_query: row.inputs.filter_query.clone(),
         tiles: tiles(&row.inputs.digest.totals),
-        themes: findings
-            .map(|f| {
-                f.themes
-                    .iter()
-                    .map(|t| ThemeView {
-                        kind: t.kind.clone(),
-                        severity: t.severity.as_str(),
-                        icon: severity_icon(t.severity.as_str()),
-                        theme_title: t.title.clone(),
-                        detail: t.detail.clone(),
-                        evidence: t.evidence.clone(),
-                    })
-                    .collect()
-            })
-            .unwrap_or_default(),
+        themes: theme_views(findings),
         recommendations: findings
             .map(|f| {
                 f.recommendations
@@ -205,38 +228,81 @@ pub(crate) async fn report_page(
     ))
 }
 
-// Why: `POST /admin/analysis/reports` — queue one report. The digest is
-// computed now, so the report answers the record as it stood when asked.
+// Why: the row is written with its digest and a lease, generation starts on
+// its own task, and the reader is sent to the report page, whose loading
+// widget polls `/status` until the model has answered.
+async fn start(
+    pool: &Arc<PgPool>,
+    ai: Option<Arc<AiService>>,
+    shell: &Page,
+    form: &ReportRequestForm,
+) -> AdminResult<String> {
+    let resolved = resolve(pool, &shell.user, form).await?;
+    let queued = queue(pool, &shell.user, resolved).await?;
+    let row = load_report(pool, &queued.id).await?;
+    tokio::spawn(generate_report(
+        Arc::clone(pool),
+        ai,
+        shell.user.user_id.clone(),
+        row,
+        queued.lease_token,
+    ));
+    tracing::info!(report_id = %queued.id, requested_by = %shell.user.user_id, "analysis report generation started from the console");
+    Ok(queued.id)
+}
+
+fn report_redirect(id: &str) -> Redirect {
+    Redirect::to(&format!("{REPORTS_URL}/{}", urlencoding::encode(id)))
+}
+
+// Why: `POST /admin/analysis/reports` — write one report now. The digest is
+// computed at this moment, so the report answers the record as it stood.
 pub(crate) async fn create(
     shell: Page,
     State(pool): State<Arc<PgPool>>,
+    Extension(ai): Extension<Option<Arc<AiService>>>,
     headers: HeaderMap,
     Form(form): Form<ReportRequestForm>,
 ) -> AdminHtmlResult<Redirect> {
     require_console(&shell)?;
     crate::handlers::shared::require_write_origin(&headers)?;
-    let resolved = resolve(&pool, &shell.user, &form).await?;
-    let id = queue(&pool, &shell.user, resolved).await?;
-    tracing::info!(report_id = %id, requested_by = %shell.user.user_id, "analysis report queued from the console");
-    Ok(Redirect::to(&format!(
-        "{REPORTS_URL}?queued={}",
-        urlencoding::encode(&id)
-    )))
+    let id = start(&pool, ai, &shell, &form).await?;
+    Ok(report_redirect(&id))
 }
 
 pub(crate) async fn regenerate(
     shell: Page,
     State(pool): State<Arc<PgPool>>,
+    Extension(ai): Extension<Option<Arc<AiService>>>,
     Path(id): Path<String>,
     headers: HeaderMap,
 ) -> AdminHtmlResult<Redirect> {
     require_console(&shell)?;
     crate::handlers::shared::require_write_origin(&headers)?;
     let row = load_report(&pool, &id).await?;
-    let resolved = resolve(&pool, &shell.user, &regenerate_form(&row)).await?;
-    let new_id = queue(&pool, &shell.user, resolved).await?;
-    Ok(Redirect::to(&format!(
-        "{REPORTS_URL}?queued={}",
-        urlencoding::encode(&new_id)
-    )))
+    let new_id = start(&pool, ai, &shell, &regenerate_form(&row)).await?;
+    Ok(report_redirect(&new_id))
+}
+
+// Why: what the loading widget polls: the row's state and, when it failed,
+// why — as JSON, so the page reloads itself once the verdict exists.
+#[derive(Debug, Serialize)]
+pub(crate) struct ReportStatus {
+    status: String,
+    error: Option<String>,
+    elapsed_ms: i64,
+}
+
+pub(crate) async fn status(
+    shell: Page,
+    State(pool): State<Arc<PgPool>>,
+    Path(id): Path<String>,
+) -> AdminResult<Json<ReportStatus>> {
+    require_console(&shell)?;
+    let row = load_report(&pool, &id).await?;
+    Ok(Json(ReportStatus {
+        status: row.status.clone(),
+        error: row.last_error.clone(),
+        elapsed_ms: (chrono::Utc::now() - row.created_at).num_milliseconds(),
+    }))
 }

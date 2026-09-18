@@ -119,8 +119,7 @@ async fn rows(ctx: &ExportContext<'_>, lens: Lens) -> AdminResult<Table> {
         ctx.user,
         lens,
         ctx.query()?,
-        time_range(ctx)?,
-        ctx.limit,
+        (time_range(ctx)?, ctx.limit),
     )
     .await?;
     let total = match lens {
@@ -134,7 +133,14 @@ async fn rows(ctx: &ExportContext<'_>, lens: Lens) -> AdminResult<Table> {
 }
 
 async fn buckets(ctx: &ExportContext<'_>, lens: Lens) -> AdminResult<Table> {
-    let data = export_rows(ctx.pool, ctx.user, lens, ctx.query()?, time_range(ctx)?, 1).await?;
+    let data = export_rows(
+        ctx.pool,
+        ctx.user,
+        lens,
+        ctx.query()?,
+        (time_range(ctx)?, 1),
+    )
+    .await?;
     Ok(Table::complete(
         data.breakdown.iter().map(bucket_row).collect(),
     ))

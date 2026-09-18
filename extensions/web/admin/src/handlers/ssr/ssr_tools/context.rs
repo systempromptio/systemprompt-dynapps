@@ -6,7 +6,7 @@ use serde::Serialize;
 use super::figures::{ToolTileView, charts, tiles};
 use super::query::{Lens, PAGE_SIZE, ToolsQuery};
 use super::ribbon::ribbon;
-use super::rows::{ToolRowView, format_bytes, kind_icon, kind_label, tool_row};
+use super::rows::{ToolActivityRowView, format_bytes, kind_icon, kind_label, tool_row};
 use crate::handlers::ssr::analysis::help::HelpView;
 use crate::handlers::ssr::analysis::ribbon::RibbonView;
 use crate::handlers::ssr::analysis::tone::{deny_tone, error_rate_tone, latency_tone, percent};
@@ -54,6 +54,11 @@ pub(crate) struct ToolsPageContext {
     pub breadcrumbs: Vec<BreadcrumbView>,
     pub range_links: Vec<TabLinkView>,
     pub range_rejected: bool,
+    // Why: a link from a conversation or skill row pins the window to that
+    // row's span; the page says so and offers the way out.
+    pub window_pinned: bool,
+    pub window_display: String,
+    pub widen_href: String,
     pub scope_filter: ScopeFilterView,
     pub kpis: Vec<ToolTileView>,
     pub charts: Vec<SvgLineChartView>,
@@ -61,7 +66,7 @@ pub(crate) struct ToolsPageContext {
     pub breakdown_tabs: Vec<TabLinkView>,
     pub breakdown_label: &'static str,
     pub breakdown: Vec<ToolBucketView>,
-    pub rows: Vec<ToolRowView>,
+    pub rows: Vec<ToolActivityRowView>,
     pub has_rows: bool,
     pub count_label: String,
     pub pagination: Pagination,
@@ -126,30 +131,26 @@ fn sort_headers(lens: Lens, q: &ToolsQuery) -> ToolSortHeaders {
         time: q.sort_header(
             lens,
             ToolSort::Time,
-            "When",
-            "sp-col-date",
-            "When the call happened",
+            ("When", "sp-col-date", "When the call happened"),
         ),
         tool: q.sort_header(
             lens,
             ToolSort::Tool,
-            "Tool",
-            "sp-tools-col-tool",
-            "Tool name",
+            ("Tool", "sp-tools-col-tool", "Tool name"),
         ),
         duration: q.sort_header(
             lens,
             ToolSort::Duration,
-            "Duration",
-            "sp-table__cell--num",
-            "Execution time",
+            ("Duration", "sp-table__cell--num", "Execution time"),
         ),
         size: q.sort_header(
             lens,
             ToolSort::Size,
-            "Size",
-            "sp-table__cell--num",
-            "Payload bytes of the artifact",
+            (
+                "Size",
+                "sp-table__cell--num",
+                "Payload bytes of the artifact",
+            ),
         ),
     }
 }
@@ -169,7 +170,7 @@ pub(crate) fn build_context(
     data: &ToolActivityResult,
     frame: Frame<'_>,
 ) -> ToolsPageContext {
-    let rows: Vec<ToolRowView> = data.rows.iter().map(tool_row).collect();
+    let rows: Vec<ToolActivityRowView> = data.rows.iter().map(tool_row).collect();
     let total = if lens == Lens::Artifacts {
         data.totals.artifacts
     } else {
@@ -191,6 +192,16 @@ pub(crate) fn build_context(
         breadcrumbs: frame.breadcrumbs,
         range_links: q.range_links(lens, frame.range),
         range_rejected: frame.range.rejected_bounds,
+        window_pinned: q.from.is_some() && q.to.is_some(),
+        window_display: format!(
+            "{} → {}",
+            frame.range.from.format("%b %-d, %H:%M"),
+            frame.range.to.format("%b %-d, %H:%M")
+        ),
+        widen_href: format!(
+            "{}preset=30d",
+            q.link_prefix(lens, &["preset", "from", "to", "page"])
+        ),
         scope_filter: frame.scope_filter,
         kpis: tiles(lens, &data.totals, &data.series),
         charts: charts(lens, &data.series, hourly),

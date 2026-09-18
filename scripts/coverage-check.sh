@@ -84,7 +84,7 @@ if update:
                 f"refusing to record {total:.2f}% as the baseline: that is less than half "
                 f"the recorded {previous.get('total', 0.0):.2f}%, which means the run lost "
                 f"its coverage data rather than the code losing its tests.\n"
-                f"Re-run with BUILD_FORCE=1 (the coordinator caches a failed run as a pass), "
+                f"Re-run `just coverage`, "
                 f"check nothing else is running coverage at the same time, and if the drop "
                 f"is genuine edit {os.path.relpath(baseline_path, root)} by hand.",
                 file=sys.stderr,

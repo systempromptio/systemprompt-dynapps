@@ -8,7 +8,7 @@ use sqlx::PgPool;
 
 use crate::error::{AdminError, AdminResult};
 use crate::repositories::analysis::reports::{
-    AnalysisReportRow, DigestScope, NewReport, ReportInputs, get_report_digest,
+    AnalysisReportRow, DigestScope, NewReport, ReportDigestInputs, get_report_digest,
 };
 use crate::repositories::scope::ScopeRequest;
 use crate::types::UserContext;
@@ -112,7 +112,7 @@ pub(super) async fn resolve(
         window_start,
         window_end,
         subject_ids: subjects.as_sql().map(<[String]>::to_vec),
-        marketplace_id: (scope_kind == "marketplace")
+        marketplace_key: (scope_kind == "marketplace")
             .then(|| scope_id.clone())
             .flatten(),
         skill: if scope_kind == "skill" {
@@ -120,7 +120,7 @@ pub(super) async fn resolve(
         } else {
             lookup(&pairs, "skill").map(str::to_owned)
         },
-        user_id: lookup(&pairs, "user_id").map(str::to_owned),
+        user_key: lookup(&pairs, "user_id").map(str::to_owned),
         model: lookup(&pairs, "model").map(str::to_owned),
         client_kind: lookup(&pairs, "client").map(str::to_owned),
         category: lookup(&pairs, "category").map(str::to_owned),
@@ -137,22 +137,30 @@ pub(super) async fn resolve(
     })
 }
 
+// Why: the row's id and the lease the generation task must present.
+pub(super) struct Queued {
+    pub(super) id: String,
+    pub(super) lease_token: String,
+}
+
 pub(super) async fn queue(
     pool: &PgPool,
     user: &UserContext,
     resolved: ResolvedRequest,
-) -> AdminResult<String> {
+) -> AdminResult<Queued> {
     let digest = get_report_digest(pool, &resolved.digest_scope).await?;
+    let lease_token = uuid::Uuid::new_v4().to_string();
     let id = crate::repositories::analysis::reports::insert_report_request(
         pool,
         NewReport {
+            lease_token: lease_token.clone(),
             scope_kind: resolved.scope_kind,
             scope_id: resolved.scope_id,
             scope_label: resolved.scope_label.clone(),
             window_start: resolved.window_start,
             window_end: resolved.window_end,
             requested_by: user.user_id.as_str().to_owned(),
-            inputs: ReportInputs {
+            inputs: ReportDigestInputs {
                 digest,
                 filter_query: resolved.filter_query,
                 filter_label: resolved.scope_label,
@@ -160,7 +168,7 @@ pub(super) async fn queue(
         },
     )
     .await?;
-    Ok(id)
+    Ok(Queued { id, lease_token })
 }
 
 // Why: a regenerate is a fresh request over the same scope; the window is

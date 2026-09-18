@@ -175,10 +175,9 @@ codesign "${DMG_FLAGS[@]}" --sign "$CODESIGN_IDENTITY" "$DMG"
 
 # ── Notarize + staple ─────────────────────────────────────────────────────────
 if [ "${SKIP_NOTARIZE:-0}" = "1" ]; then
-    # Deliberately NOT staged: the coordinator records success per source
-    # fingerprint (env vars excluded), so staging here would let a later
-    # `just deploy` on the same tree skip packaging and ship a DMG that
-    # Gatekeeper blocks on every other Mac.
+    # Deliberately NOT staged: a DMG built with notarization skipped must
+    # never be the one `just deploy` picks up and ships, since Gatekeeper
+    # blocks it on every other Mac.
     echo "==> SKIP_NOTARIZE=1 — built and signed, but NOT staged for deploy:" >&2
     echo "    $DMG" >&2
     # A nonzero result prevents the coordinator caching this as shippable.

@@ -5,7 +5,7 @@
 {{#*inline "header_actions"}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/artifacts">{{> components/icon name="file"}} Artifacts</a> <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/traces">{{> components/icon name="layers"}} Traces</a> {{> components/export-button export}}{{/inline}}
 {{/components/page-header}}
 {{#if range_rejected}}{{> components/notice tone="warn" message="That range could not be read, so this page is showing the default window."}}{{/if}}
-<div class="sp-aconv-range">{{> components/tabs tabs=range_links nav_label="Window"}}{{> components/scope-filter scope_filter}}</div>
+<div class="sp-aconv-range">{{> components/tabs tabs=range_links nav_label="Window"}}{{#if window_pinned}}<span class="sp-tools-pinned" title="This window was set by the link you followed">{{> components/icon name="calendar"}} {{window_display}} <a class="sp-tools-pinned__widen" href="{{widen_href}}">Widen to 30 days</a></span>{{/if}}{{> components/scope-filter scope_filter}}</div>
 <div class="sp-kpi-grid sp-kpi-grid--compact sp-tools-kpis">
 {{#each kpis}}{{> components/kpi label=label icon=icon value=value note=note tone=tone hint=hint spark=spark}}{{/each}}
 </div>

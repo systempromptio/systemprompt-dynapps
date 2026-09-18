@@ -3,6 +3,8 @@
 
 use serde::Serialize;
 
+use crate::handlers::ssr::types::BreadcrumbView;
+
 use crate::handlers::ssr::analysis::help::HelpView;
 use crate::handlers::ssr::analysis::tone::{completion_tone, score_display};
 use crate::handlers::ssr::format::{format_cost, format_token_total, local_time, relative_time};
@@ -65,7 +67,6 @@ pub(super) struct ReportsPageContext {
     pub title: &'static str,
     pub rows: Vec<ReportRowView>,
     pub has_rows: bool,
-    pub queued_id: Option<String>,
     pub marketplace_options: Vec<SelectOptionView>,
     pub help: HelpView,
 }
@@ -74,7 +75,11 @@ pub(super) struct ReportsPageContext {
 pub(super) struct ReportPageContext {
     pub page: &'static str,
     pub title: String,
+    pub breadcrumbs: Vec<BreadcrumbView>,
     pub report_id: String,
+    // Why: what the loading widget says while the model reads the digest.
+    pub digest_summary: String,
+    pub status_url: String,
     pub scope_label: String,
     pub scope_kind: String,
     pub window_display: String,
@@ -160,17 +165,16 @@ pub(super) fn report_row(row: &AnalysisReportRow) -> ReportRowView {
     }
 }
 
-fn tile(
-    label: &'static str,
-    icon: &'static str,
+const fn tile(
+    head: (&'static str, &'static str),
     value: String,
     note: String,
     tone: &'static str,
     hint: &'static str,
 ) -> ReportTileView {
     ReportTileView {
-        label,
-        icon,
+        label: head.0,
+        icon: head.1,
         value,
         note,
         tone,
@@ -181,32 +185,28 @@ fn tile(
 pub(super) fn tiles(t: &DigestTotals) -> Vec<ReportTileView> {
     vec![
         tile(
-            "Conversations",
-            "chat",
+            ("Conversations", "chat"),
             t.conversations.to_string(),
             format!("{} people · {} turns", t.people, t.turns),
             "accent",
             "Conversations whose last activity fell in the window",
         ),
         tile(
-            "Cost",
-            "coins",
+            ("Cost", "coins"),
             format_cost(t.cost_microdollars),
             format!("{} tokens", format_token_total(t.tokens)),
             "accent",
             "Priced spend on every request in these conversations",
         ),
         tile(
-            "Tools",
-            "wrench",
+            ("Tools", "wrench"),
             t.tool_calls.to_string(),
             format!("{} artifacts", t.artifacts),
             "accent",
             "Tool calls, and the subset that produced something viewable",
         ),
         tile(
-            "Errors",
-            "alert",
+            ("Errors", "alert"),
             t.errors.to_string(),
             format!("{} denied · {} safety", t.denied, t.safety_findings),
             if t.errors + t.denied > 0 {
@@ -217,16 +217,14 @@ pub(super) fn tiles(t: &DigestTotals) -> Vec<ReportTileView> {
             "Failed requests, denied tool calls and safety findings",
         ),
         tile(
-            "Completed",
-            "judge",
+            ("Completed", "judge"),
             score_display(t.completion_avg),
             format!("{} judged · {} achieved", t.judged, t.achieved),
             completion_tone(t.completion_avg),
             "Mean of the judge's completion score over the judged conversations",
         ),
         tile(
-            "Outcomes",
-            "check",
+            ("Outcomes", "check"),
             format!("{}/{}/{}", t.achieved, t.partial, t.abandoned),
             "achieved / partial / abandoned".to_owned(),
             "muted",

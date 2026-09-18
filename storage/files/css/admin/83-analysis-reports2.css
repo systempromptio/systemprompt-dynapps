@@ -105,4 +105,59 @@
     overflow-wrap: anywhere;
 }
 
+/* The loading widget stands where the headline will be: what is being read,
+   an indeterminate bar, and how long it has taken — so the wait is honest. */
+.sp-report-loading {
+    display: grid;
+    gap: var(--sp-space-2);
+}
+
+.sp-report-loading__detail,
+.sp-report-loading__hint {
+    margin: 0;
+    font-size: var(--sp-text-sm);
+    color: var(--sp-text-secondary);
+}
+
+.sp-report-loading__hint {
+    font-size: var(--sp-text-xs);
+    color: var(--sp-text-tertiary);
+}
+
+.sp-report-loading__bar {
+    position: relative;
+    height: 0.35rem;
+    max-width: 24rem;
+    border-radius: var(--sp-radius-full);
+    background: var(--sp-accent-dim);
+    overflow: hidden;
+}
+
+.sp-report-loading__bar i {
+    position: absolute;
+    inset-block: 0;
+    width: 35%;
+    border-radius: var(--sp-radius-full);
+    background: var(--sp-accent);
+    animation: sp-report-sweep 1.4s ease-in-out infinite;
+}
+
+.sp-report-loading.is-failed .sp-report-loading__bar i {
+    animation: none;
+    width: 100%;
+    background: var(--sp-danger-strong);
+}
+
+@keyframes sp-report-sweep {
+    0% { inset-inline-start: -35%; }
+    100% { inset-inline-start: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sp-report-loading__bar i {
+        animation: none;
+        width: 100%;
+    }
+}
+
 }

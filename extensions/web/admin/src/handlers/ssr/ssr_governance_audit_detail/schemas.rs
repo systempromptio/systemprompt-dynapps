@@ -14,7 +14,8 @@ use sqlx::PgPool;
 use systemprompt::identifiers::SessionId;
 
 use crate::repositories::analysis::tools::{
-    ToolActivityFilter, ToolActivityPage, ToolActivityRow, load_tool_activity_page,
+    ToolActivityFilter, ToolActivityPage, ToolActivityRow, ToolBreakdownBy, ToolSort,
+    load_tool_activity_page,
 };
 use crate::repositories::analytics::requests::{RequestSchemaRow, find_request_schemas};
 use crate::types::tool_schema_diff::{
@@ -106,11 +107,11 @@ pub(super) async fn load_artifacts(
         ..ToolActivityFilter::default()
     };
     let page = ToolActivityPage {
-        sort: Default::default(),
+        sort: ToolSort::default(),
         descending: true,
         limit: ARTIFACT_LIMIT,
         offset: 0,
-        breakdown: Default::default(),
+        breakdown: ToolBreakdownBy::default(),
     };
     let rows = match load_tool_activity_page(pool, &filter, page).await {
         Ok(result) => result.rows,

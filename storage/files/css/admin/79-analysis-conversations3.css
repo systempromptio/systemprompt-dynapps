@@ -1,8 +1,8 @@
 @layer components {
-/* The verdict card opens on hover or keyboard focus of the title cell — a
+/* The verdict card opens on hover or keyboard focus of the AI cell — a
    title attribute truncated the summary and could not be read with a
-   keyboard at all. It floats over the rows beneath, so the cell itself must
-   not clip. */
+   keyboard at all. It floats over the rows beneath, anchored to the row's
+   right edge because the AI column is the last one. */
 .sp-verdict {
     position: relative;
     min-width: 0;
@@ -10,8 +10,9 @@
 .sp-verdict__card {
     display: none;
     position: absolute;
-    inset-inline-start: 0;
+    inset-inline-end: 0;
     top: calc(100% + var(--sp-space-1));
+    text-align: start;
     z-index: var(--sp-z-dropdown);
     width: min(28rem, 80vw);
     padding: var(--sp-space-3);

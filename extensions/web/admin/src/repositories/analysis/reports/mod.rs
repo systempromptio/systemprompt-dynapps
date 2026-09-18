@@ -18,8 +18,7 @@ mod reads;
 pub use digest::{DigestScope, DigestTotals, ReportDigest, get_report_digest, render_digest_text};
 pub use links::evidence_href;
 pub use queue::{
-    NewReport, ReportCompletion, claim_pending_reports, fail_report, insert_report_request,
-    update_report_completion,
+    NewReport, ReportCompletion, fail_report, insert_report_request, update_report_completion,
 };
 pub use reads::{find_latest_generated_report, find_report, list_reports};
 
@@ -153,7 +152,7 @@ pub struct ReportFindings {
 
 /// What the model was given; stored as `analysis_reports.inputs`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ReportInputs {
+pub struct ReportDigestInputs {
     pub digest: ReportDigest,
     #[serde(default)]
     pub filter_query: Option<String>,
@@ -178,7 +177,7 @@ pub struct AnalysisReportRow {
     pub input_tokens: Option<i32>,
     pub output_tokens: Option<i32>,
     pub cost_microdollars: Option<i64>,
-    pub inputs: ReportInputs,
+    pub inputs: ReportDigestInputs,
     pub findings: Option<ReportFindings>,
     pub attempts: i32,
     pub lease_token: Option<String>,

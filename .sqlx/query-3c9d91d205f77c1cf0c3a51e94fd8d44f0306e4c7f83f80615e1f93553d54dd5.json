@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "WITH pending AS (\n               SELECT id FROM analysis_reports\n               WHERE status = 'pending' AND next_attempt <= clock_timestamp()\n                 AND (lease_until IS NULL OR lease_until <= clock_timestamp())\n               ORDER BY next_attempt, created_at LIMIT $1 FOR UPDATE SKIP LOCKED)\n           UPDATE analysis_reports r\n           SET lease_token = $2, lease_until = clock_timestamp() + $3::bigint * interval '1 second',\n               attempts = r.attempts + 1, updated_at = clock_timestamp()\n           FROM pending WHERE r.id = pending.id\n           RETURNING r.id, r.scope_kind, r.scope_id, r.scope_label, r.window_start, r.window_end,\n                     r.status, r.requested_by, r.provider, r.model, r.ai_request_id,\n                     r.input_tokens, r.output_tokens, r.cost_microdollars,\n                     r.inputs AS \"inputs: Json<ReportInputs>\",\n                     r.findings AS \"findings?: Json<ReportFindings>\", r.attempts, r.lease_token,\n                     r.last_error, r.generated_at, r.created_at, r.updated_at",
+  "query": "SELECT id, scope_kind, scope_id, scope_label, window_start, window_end, status,\n                  requested_by, provider, model, ai_request_id, input_tokens, output_tokens,\n                  cost_microdollars, inputs AS \"inputs: Json<ReportDigestInputs>\",\n                  findings AS \"findings?: Json<ReportFindings>\", attempts, lease_token,\n                  last_error, generated_at, created_at, updated_at\n           FROM analysis_reports\n           WHERE scope_kind = $1 AND scope_id IS NOT DISTINCT FROM $2\n             AND status IN ('generated', 'pending')\n           ORDER BY (status = 'generated') DESC, created_at DESC\n           LIMIT 1",
   "describe": {
     "columns": [
       {
@@ -159,7 +159,7 @@
       },
       {
         "ordinal": 14,
-        "name": "inputs: Json<ReportInputs>",
+        "name": "inputs: Json<ReportDigestInputs>",
         "type_info": "Jsonb",
         "origin": {
           "Table": {
@@ -248,9 +248,8 @@
     ],
     "parameters": {
       "Left": [
-        "Int8",
         "Text",
-        "Int8"
+        "Text"
       ]
     },
     "nullable": [
@@ -278,5 +277,5 @@
       false
     ]
   },
-  "hash": "6d6f6d1e26bbe7c92c35c1b7844103f34093aed56feb936b8c68cd5547c659be"
+  "hash": "3c9d91d205f77c1cf0c3a51e94fd8d44f0306e4c7f83f80615e1f93553d54dd5"
 }

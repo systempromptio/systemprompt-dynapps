@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, scope_kind, scope_id, scope_label, window_start, window_end, status,\n                  requested_by, provider, model, ai_request_id, input_tokens, output_tokens,\n                  cost_microdollars, inputs AS \"inputs: Json<ReportInputs>\",\n                  findings AS \"findings?: Json<ReportFindings>\", attempts, lease_token,\n                  last_error, generated_at, created_at, updated_at\n           FROM analysis_reports\n           ORDER BY created_at DESC\n           LIMIT $1",
+  "query": "SELECT id, scope_kind, scope_id, scope_label, window_start, window_end, status,\n                  requested_by, provider, model, ai_request_id, input_tokens, output_tokens,\n                  cost_microdollars, inputs AS \"inputs: Json<ReportDigestInputs>\",\n                  findings AS \"findings?: Json<ReportFindings>\", attempts, lease_token,\n                  last_error, generated_at, created_at, updated_at\n           FROM analysis_reports\n           WHERE id = $1",
   "describe": {
     "columns": [
       {
@@ -159,7 +159,7 @@
       },
       {
         "ordinal": 14,
-        "name": "inputs: Json<ReportInputs>",
+        "name": "inputs: Json<ReportDigestInputs>",
         "type_info": "Jsonb",
         "origin": {
           "Table": {
@@ -248,7 +248,7 @@
     ],
     "parameters": {
       "Left": [
-        "Int8"
+        "Text"
       ]
     },
     "nullable": [
@@ -276,5 +276,5 @@
       false
     ]
   },
-  "hash": "5aa73544e75e9048ad92a4258996fdd3ab190ff2cbbc3da4b3d1b49cc2593119"
+  "hash": "160a13fa094f43e5f38ef97a322177f37d9f3953088752148e7b63501a98cac3"
 }

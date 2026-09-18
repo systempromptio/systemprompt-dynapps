@@ -58,6 +58,10 @@ pub(super) fn routes() -> Router<Arc<PgPool>> {
             post(handlers::ssr::analysis::reports::regenerate),
         )
         .route(
+            "/analysis/reports/{id}/status",
+            get(handlers::ssr::analysis::reports::status),
+        )
+        .route(
             "/analysis/conversations/judge",
             post(handlers::ssr::analysis::conversations::judge_all),
         )

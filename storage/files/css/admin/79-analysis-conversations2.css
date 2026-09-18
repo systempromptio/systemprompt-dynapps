@@ -4,15 +4,36 @@
 .sp-aconv-table {
     table-layout: fixed;
 }
+/* Sixteen columns; the widths sum to 95% + the select gutter, so nothing is
+   squeezed below its header. */
 .sp-aconv-table th.sp-aconv-col-select { width: 1.6rem; }
-.sp-aconv-table th.sp-aconv-col-title { width: 19%; }
-.sp-aconv-table th.sp-aconv-col-person { width: 9%; }
-.sp-aconv-table th.sp-aconv-col-client { width: 9%; }
-.sp-aconv-table th.sp-aconv-col-spark { width: 6%; }
-.sp-aconv-table th.sp-aconv-col-skills { width: 11%; }
-.sp-aconv-table th.sp-aconv-col-judge { width: 4.5%; }
-.sp-aconv-table th.sp-col-date { width: 7%; }
-.sp-aconv-table th.sp-table__cell--num { width: 5%; }
+.sp-aconv-table th.sp-aconv-col-title { width: 17%; }
+.sp-aconv-table th.sp-aconv-col-person { width: 8%; }
+.sp-aconv-table th.sp-aconv-col-client { width: 8%; }
+.sp-aconv-table th.sp-aconv-col-spark { width: 5%; }
+.sp-aconv-table th.sp-aconv-col-skills { width: 10%; }
+.sp-aconv-table th.sp-aconv-col-judge { width: 3.5%; }
+.sp-aconv-table th.sp-col-date { width: 6.5%; }
+.sp-aconv-table th.sp-table__cell--num { width: 4.5%; }
+.sp-aconv-table th,
+.sp-aconv-breakdown th,
+.sp-askill-table th,
+.sp-tools-table th,
+.sp-tools-breakdown th {
+    white-space: nowrap;
+    overflow-wrap: normal;
+    hyphens: none;
+}
+.sp-aconv-breakdown,
+.sp-tools-breakdown {
+    table-layout: fixed;
+}
+.sp-aconv-breakdown th:first-child,
+.sp-tools-breakdown th:first-child { width: 24%; }
+.sp-aconv-breakdown th.sp-table__cell--num,
+.sp-tools-breakdown th.sp-table__cell--num { min-width: 5rem; }
+.sp-aconv-breakdown th.sp-aconv-col-share,
+.sp-tools-breakdown th.sp-tools-col-share { width: 8.5rem; }
 .sp-aconv-table td {
     vertical-align: top;
     max-width: 0;
@@ -53,27 +74,6 @@
 .sp-aconv-export:hover,
 .sp-aconv-export:focus-visible {
     color: var(--sp-accent-text);
-}
-/* The row's Judge button: a quiet glyph the size of the score pill, so an
-   unjudged row reads as an action slot rather than a missing number. */
-.sp-judge-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 2.4em;
-    height: 1.7em;
-    padding: 0;
-    border: 1px dashed var(--sp-border-subtle);
-    border-radius: var(--sp-radius-sm);
-    background: transparent;
-    color: var(--sp-text-tertiary);
-    cursor: pointer;
-}
-.sp-judge-btn:hover,
-.sp-judge-btn:focus-visible {
-    color: var(--sp-accent-text);
-    border-color: var(--sp-accent);
-    border-style: solid;
 }
 /* Why: a td may never carry a display other than table-cell (06-table-cell.css);
    the flex box that wraps the chips is the inner div, so the cell keeps its

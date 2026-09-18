@@ -10,16 +10,15 @@ use crate::repositories::analysis::conversations::ConversationFactRow;
 use crate::repositories::analysis::conversations::planes::ConversationTurnRow;
 
 const fn kpi(
-    label: &'static str,
-    icon: &'static str,
+    head: (&'static str, &'static str),
     value: String,
     note: String,
     tone: &'static str,
     hint: &'static str,
 ) -> ConversationKpiView {
     ConversationKpiView {
-        label,
-        icon,
+        label: head.0,
+        icon: head.1,
         value,
         note,
         tone,
@@ -31,8 +30,7 @@ fn usage_kpis(f: &ConversationFactRow) -> Vec<ConversationKpiView> {
     let cache = f.cache_read_tokens + f.cache_creation_tokens;
     vec![
         kpi(
-            "Turns",
-            "bolt",
+            ("Turns", "bolt"),
             f.turn_count.to_string(),
             format!(
                 "{} side calls · {} hook prompts",
@@ -42,8 +40,7 @@ fn usage_kpis(f: &ConversationFactRow) -> Vec<ConversationKpiView> {
             "Human prompts answered; side calls are the harness's own title and summary requests",
         ),
         kpi(
-            "Tokens",
-            "token",
+            ("Tokens", "token"),
             format_token_total(f.total_tokens),
             format!(
                 "{} in · {} out · {} reasoning",
@@ -55,8 +52,7 @@ fn usage_kpis(f: &ConversationFactRow) -> Vec<ConversationKpiView> {
             "Input plus output tokens across every request",
         ),
         kpi(
-            "Cache",
-            "cache",
+            ("Cache", "cache"),
             percent(f.cache_read_tokens, f.cache_read_tokens + f.input_tokens),
             format!(
                 "{} read · {} written",
@@ -67,8 +63,7 @@ fn usage_kpis(f: &ConversationFactRow) -> Vec<ConversationKpiView> {
             "Share of everything the models read that came from prompt cache",
         ),
         kpi(
-            "Cost",
-            "coins",
+            ("Cost", "coins"),
             format_cost(f.cost_microdollars),
             format!(
                 "{} on side calls · {} per turn",
@@ -79,8 +74,7 @@ fn usage_kpis(f: &ConversationFactRow) -> Vec<ConversationKpiView> {
             "Priced spend on every request",
         ),
         kpi(
-            "Latency",
-            "gauge",
+            ("Latency", "gauge"),
             f.p95_latency_ms
                 .map_or_else(|| "—".to_owned(), |ms| format_duration_ms(i64::from(ms))),
             format!(
@@ -99,8 +93,7 @@ fn usage_kpis(f: &ConversationFactRow) -> Vec<ConversationKpiView> {
 fn health_kpis(f: &ConversationFactRow) -> Vec<ConversationKpiView> {
     vec![
         kpi(
-            "Tools",
-            "wrench",
+            ("Tools", "wrench"),
             format!(
                 "{}/{}",
                 f.tool_calls_executed,
@@ -115,8 +108,7 @@ fn health_kpis(f: &ConversationFactRow) -> Vec<ConversationKpiView> {
             "Executed over requested tool calls; the ledger joins the model's intent to the execution and its result",
         ),
         kpi(
-            "Artifacts",
-            "file",
+            ("Artifacts", "file"),
             f.artifact_count.to_string(),
             format!(
                 "{} files · {} cards, UI, bodies",
@@ -130,8 +122,7 @@ fn health_kpis(f: &ConversationFactRow) -> Vec<ConversationKpiView> {
             "Tool calls that produced something viewable — a file edited, written or read, a typed card, a UI resource or a retained body",
         ),
         kpi(
-            "Errors",
-            "alert",
+            ("Errors", "alert"),
             f.error_count.to_string(),
             format!(
                 "{} rejected · {} streaming",
@@ -141,24 +132,21 @@ fn health_kpis(f: &ConversationFactRow) -> Vec<ConversationKpiView> {
             "Failed requests; rejected ones never reached a model",
         ),
         kpi(
-            "Governance",
-            "shield",
+            ("Governance", "shield"),
             f.gov_deny.to_string(),
             format!("denied · {} warned · {} allowed", f.gov_warn, f.gov_allow),
             deny_tone(f.gov_deny),
             "Decisions the governance chain took on this conversation's tool calls",
         ),
         kpi(
-            "Safety",
-            "alert",
+            ("Safety", "alert"),
             f.safety_findings.to_string(),
             format!("findings · {} blocked", f.safety_blocked),
             safety_tone(f.safety_findings, f.safety_blocked),
             "Gateway safety scanner findings on requests and responses",
         ),
         kpi(
-            "Skills",
-            "skill",
+            ("Skills", "skill"),
             f.skill_invocations.to_string(),
             format!("invocations · {} distinct", f.skills.len()),
             if f.skill_invocations > 0 {
@@ -243,6 +231,7 @@ fn tokens_chart(axis: &TurnAxis<'_>) -> SvgLineChartView {
             ],
         )
     })
+    .into_columns()
 }
 
 fn cost_chart(axis: &TurnAxis<'_>) -> SvgLineChartView {
@@ -256,6 +245,7 @@ fn cost_chart(axis: &TurnAxis<'_>) -> SvgLineChartView {
             vec![axis.series("Cost", |t| t.cost_microdollars, total)],
         )
     })
+    .into_columns()
 }
 
 fn latency_chart(axis: &TurnAxis<'_>) -> SvgLineChartView {

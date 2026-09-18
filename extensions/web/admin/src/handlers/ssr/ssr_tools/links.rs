@@ -68,9 +68,7 @@ impl ToolsQuery {
         &self,
         lens: Lens,
         col: ToolSort,
-        label: &'static str,
-        class: &'static str,
-        hint: &'static str,
+        (label, class, hint): (&'static str, &'static str, &'static str),
     ) -> SortHeaderView {
         let prefix = self.link_prefix(lens, &["sort", "dir", "page"]);
         let active = col == self.sort();

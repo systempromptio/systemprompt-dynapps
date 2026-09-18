@@ -9,36 +9,39 @@
 <div class="sp-kpi-grid sp-kpi-grid--compact sp-aconv-kpis">
 {{#each kpis}}{{> components/kpi label=label icon=icon value=value note=note tone=tone hint=hint spark=spark}}{{/each}}
 </div>
-<div class="sp-askill-top">
-<section class="sp-aconv-chart sp-askill-top__chart" aria-label="Invocations per day">{{> components/svg-line-chart chart}}</section>
-<section class="sp-askill-adoption" aria-label="Marketplace adoption">
-<h2 class="sp-askill-adoption__title">Marketplace adoption <span class="sp-u-text-tertiary">entitled → installed → active</span></h2>
+<section class="sp-aconv-chart sp-askill-chart" aria-label="Invocations per day">{{> components/svg-line-chart chart}}</section>
+<section class="sp-adopt" aria-label="Marketplace adoption">
+<header class="sp-aconv-block__head">{{> components/icon name="layers"}}<h2 class="sp-aconv-block__title">Marketplace adoption</h2><span class="sp-aconv-meta">entitled → installed → active, by marketplace</span></header>
+<div class="sp-adopt__grid">
 {{#each adoption}}
-<article class="sp-askill-adopt">
-<header class="sp-askill-adopt__head"><a class="sp-table__link" href="{{versions_href}}"><b>{{marketplace_name}}</b></a><span class="sp-aconv-meta">{{plugins}} plugins · {{skills}} skills · v <code>{{version_short}}</code> ({{versions}} versions)</span></header>
-<div class="sp-askill-funnel" role="img" aria-label="{{entitled}} entitled, {{installed}} installed, {{active}} active">
-<span class="sp-askill-funnel__bar sp-askill-funnel__bar--entitled" style="--sp-fill: 100%"><i></i><em>{{entitled}} entitled</em></span>
-<span class="sp-askill-funnel__bar sp-askill-funnel__bar--installed" style="--sp-fill: {{install_rate_pct}}%"><i></i><em>{{installed}} installed · {{install_rate}}</em></span>
-<span class="sp-askill-funnel__bar sp-askill-funnel__bar--active" style="--sp-fill: {{activation_rate_pct}}%"><i></i><em>{{active}} active · {{activation_rate}} of installed</em></span>
+<article class="sp-adopt__row">
+<div class="sp-adopt__name"><a class="sp-table__link" href="{{versions_href}}"><b>{{marketplace_name}}</b></a><span class="sp-aconv-meta">{{plugins}} plugins · {{skills}} skills · <code>{{version_short}}</code> · {{versions}} versions</span></div>
+<div class="sp-adopt__steps">
+<a class="sp-adopt__step" href="{{skills_href}}" title="People the access-control rules reach for this marketplace"><b>{{entitled}}</b><span>entitled</span></a>
+<span class="sp-adopt__arrow" title="Installed over entitled">{{install_rate}}</span>
+<a class="sp-adopt__step" href="{{versions_href}}?tab=distribution" title="Consumers holding a verified installation receipt for one of its skills"><b>{{installed}}</b><span>installed</span></a>
+<span class="sp-adopt__arrow" title="Active over installed">{{activation_rate}}</span>
+<a class="sp-adopt__step" href="{{skills_href}}" title="Distinct people who invoked one of its skills in the window"><b>{{active}}</b><span>active</span></a>
 </div>
-<dl class="sp-askill-adopt__facts">
-<div><dt>Hosts</dt><dd title="Distinct consumers holding a verified receipt, by host">{{installed_claude_code}} claude-code · {{installed_opencode}} opencode{{#if installed_other}} · {{installed_other}} other{{/if}}</dd></div>
-<div><dt>Window</dt><dd>{{invocations}} invocations · {{skills_used}} of {{skills}} skills used · {{conversations}} conversations · {{cost_display}}</dd></div>
-<div><dt>Done</dt><dd><span class="sp-aconv-score sp-aconv-score--{{completion_tone}}">{{completion_display}}</span> <span class="sp-aconv-meta">last install {{last_install}}</span></dd></div>
+<div class="sp-adopt__track" role="img" aria-label="{{entitled}} entitled, {{installed}} installed, {{active}} active"><i class="sp-adopt__fill sp-adopt__fill--installed" style="--sp-fill: {{install_rate_pct}}%"></i><i class="sp-adopt__fill sp-adopt__fill--active" style="--sp-fill: {{active_pct}}%"></i></div>
+<dl class="sp-adopt__facts">
+<div><dt>{{> components/icon name="terminal"}} Hosts</dt><dd title="Distinct consumers holding a verified receipt, by host">{{installed_claude_code}} claude-code · {{installed_opencode}} opencode{{#if installed_other}} · {{installed_other}} other{{/if}}</dd></div>
+<div><dt>{{> components/icon name="calendar"}} Window</dt><dd>{{invocations}} invocations · {{skills_used}} of {{skills}} skills · {{conversations}} conversations · {{cost_display}}</dd></div>
+<div><dt>{{> components/icon name="sparkle"}} AI</dt><dd>{{> components/ai-score score=completion_display tone=completion_tone label="mean completion"}} <span class="sp-aconv-meta">last install {{last_install}}</span></dd></div>
 </dl>
 </article>
 {{else}}<p class="sp-empty">No marketplace is declared on this instance.</p>{{/each}}
-</section>
 </div>
+</section>
 {{> components/filter-ribbon ribbon}}
 {{#> components/toolbar toolbar_count=(concat row_count " skills used")}}
-{{#*inline "toolbar_actions"}}{{#if is_admin}}<form method="post" action="/admin/analysis/inventory/sync" class="sp-inventory-inline"><button class="sp-btn sp-btn--xs sp-btn--outline" type="submit" title="Publish every configured skill into the managed inventory now">Sync inventory</button></form>{{/if}}{{/inline}}
+{{#*inline "toolbar_actions"}}{{#if unused_count}}<details class="sp-askill-unused"><summary class="sp-btn sp-btn--xs sp-btn--outline sp-askill-unused__summary" title="Configured skills nobody invoked in this window">{{> components/icon name="skill"}} {{unused_count}} unused</summary><div class="sp-askill-unused__panel"><ul class="sp-askill-unused__list">{{#each unused}}<li><a class="sp-table__link sp-u-mono" href="{{catalog_href}}">{{skill}}</a> <span class="sp-aconv-meta">{{marketplace}} · {{entitled}} entitled</span></li>{{/each}}</ul></div></details>{{/if}}{{#if is_admin}}<form method="post" action="/admin/analysis/inventory/sync" class="sp-inventory-inline"><button class="sp-btn sp-btn--xs sp-btn--outline" type="submit" title="Publish every configured skill into the managed inventory now">Sync inventory</button></form>{{/if}}{{/inline}}
 {{/components/toolbar}}
 {{#each groups}}
 <section class="sp-section sp-askill-group" aria-label="{{marketplace_name}}">
 <header class="sp-askill-group__head"><h2 class="sp-askill-group__title"><a class="sp-table__link" href="{{versions_href}}">{{marketplace_name}}</a></h2><span class="sp-aconv-meta">{{skills}} skills · {{formatNumber invocations}} invocations · up to {{users}} people on one skill</span></header>
 {{#> components/table caption=(concat "Skills in " marketplace_name) modifier="sp-askill-table"}}
-<thead><tr><th scope="col" class="sp-aconv-col-select">{{> components/table-select header=true label="skills"}}</th><th scope="col" class="sp-askill-col-skill">Skill</th><th scope="col" class="sp-table__cell--num" title="Hook-reported invocations (slash · tool)">Invocations</th><th scope="col" class="sp-askill-col-spark" title="Invocations per day, last 14 days">14 days</th><th scope="col" class="sp-table__cell--num" title="Distinct people who invoked it, over those entitled">People</th><th scope="col" class="sp-table__cell--num" title="Consumers holding a verified installation receipt">Installs</th><th scope="col" class="sp-table__cell--num" title="Gateway conversations whose session invoked it">Conv.</th><th scope="col" class="sp-table__cell--num">Tokens</th><th scope="col" class="sp-table__cell--num">Cost</th><th scope="col" class="sp-table__cell--num" title="Cost per invocation">/inv</th><th scope="col" class="sp-table__cell--num" title="Tool calls in those conversations (failed)">{{> components/icon name="wrench"}} Tools</th><th scope="col" class="sp-table__cell--num" title="Tool calls that produced something viewable — files, cards, UI, retained bodies">{{> components/icon name="file"}} Artifacts</th><th scope="col" class="sp-table__cell--num" title="Failed requests · denied tool calls">Err</th><th scope="col" class="sp-table__cell--num" title="95th percentile turn latency">p95</th><th scope="col" title="Models and clients seen">Models</th><th scope="col" class="sp-table__cell--num" title="Mean judge completion over the judged conversations">Done</th><th scope="col" class="sp-col-date">Last</th></tr></thead>
+<thead><tr><th scope="col" class="sp-aconv-col-select">{{> components/table-select header=true label="skills"}}</th><th scope="col" class="sp-askill-col-skill">Skill</th><th scope="col" class="sp-table__cell--num" title="Hook-reported invocations (slash · tool)">Invocations</th><th scope="col" class="sp-askill-col-spark" title="Invocations per day, last 14 days">14 days</th><th scope="col" class="sp-table__cell--num" title="Distinct people who invoked it, over those entitled">People</th><th scope="col" class="sp-table__cell--num" title="Consumers holding a verified installation receipt">Installs</th><th scope="col" class="sp-table__cell--num" title="Gateway conversations whose session invoked it">Conv.</th><th scope="col" class="sp-table__cell--num">Tokens</th><th scope="col" class="sp-table__cell--num">Cost</th><th scope="col" class="sp-table__cell--num" title="Cost per invocation">/inv</th><th scope="col" class="sp-table__cell--num" title="Tool calls in those conversations (failed)">{{> components/icon name="wrench"}} Tools</th><th scope="col" class="sp-table__cell--num" title="Tool calls that produced something viewable — files, cards, UI, retained bodies">{{> components/icon name="file"}} Artifacts</th><th scope="col" class="sp-table__cell--num" title="Failed requests · denied tool calls">Err</th><th scope="col" class="sp-table__cell--num" title="95th percentile turn latency">p95</th><th scope="col" class="sp-askill-col-models" title="Models and clients seen">Models</th><th scope="col" class="sp-col-date">Last</th><th scope="col" class="sp-table__cell--num sp-askill-col-done" title="AI judge: mean completion over the judged conversations (score · judged/total)">{{> components/icon name="sparkle"}} AI</th></tr></thead>
 <tbody>
 {{#each plugins}}
 <tr class="sp-askill-plugin"><th scope="rowgroup" colspan="17"><span class="sp-askill-plugin__name">{{plugin}}</span> <span class="sp-aconv-meta">{{formatNumber invocations}} invocations</span></th></tr>
@@ -58,9 +61,9 @@
 <td class="sp-table__cell--num sp-u-num">{{#if artifacts}}<a class="sp-aconv-cell-link sp-aconv-num sp-aconv-num--accent" href="{{artifacts_href}}" title="Artifacts produced in this skill's conversations — opens them">{{artifacts}}</a>{{else}}<span class="sp-aconv-num sp-aconv-num--muted">0</span>{{/if}}</td>
 <td class="sp-table__cell--num sp-u-num"><span class="sp-aconv-num sp-aconv-num--{{errors_tone}}">{{errors}}</span>{{#if denied}} <span class="sp-aconv-num sp-aconv-num--{{denied_tone}}" title="Denied tool calls">⛔{{denied}}</span>{{/if}}</td>
 <td class="sp-table__cell--num sp-u-num"><span class="sp-aconv-num sp-aconv-num--{{latency_tone}}">{{latency_display}}</span></td>
-<td class="sp-askill-col-models"><div class="sp-aconv-skills">{{#each models}}<span class="sp-aconv-tag">{{this}}</span>{{/each}}{{#each clients}}<span class="sp-aconv-tag sp-aconv-tag--client">{{this}}</span>{{/each}}</div></td>
-<td class="sp-table__cell--num sp-askill-col-done"><a class="sp-aconv-score sp-aconv-score--{{completion_tone}}" href="{{href}}" title="{{judged}} judged conversations">{{completion_display}}</a> <span class="sp-aconv-meta sp-askill-judged" title="judged / conversations">{{completion_note}}</span></td>
+<td class="sp-askill-col-models" title="{{models_title}}"><div class="sp-aconv-skills sp-askill-models">{{#each models}}{{#unless (gt @index 1)}}<span class="sp-aconv-tag">{{this}}</span>{{/unless}}{{/each}}{{#if models_more}}<span class="sp-aconv-tag sp-aconv-more">+{{models_more}}</span>{{/if}}{{#each clients}}{{#unless (gt @index 0)}}<span class="sp-aconv-tag sp-aconv-tag--client">{{this}}</span>{{/unless}}{{/each}}</div></td>
 <td class="sp-col-date">{{last_used}}</td>
+<td class="sp-table__cell--num sp-askill-col-done">{{> components/ai-score tone=completion_tone score=completion_display href=href show_value=true}} <span class="sp-aconv-meta sp-askill-judged" title="judged / conversations">{{completion_note}}</span></td>
 </tr>
 {{/each}}
 {{/each}}
@@ -71,9 +74,4 @@
 <section class="sp-section">{{> components/empty-state heading="No skill was invoked in this window" message="Invocations arrive through the harness hooks (UserPromptSubmit and the Skill tool). Widen the window, or check that the plugin carrying the governance hooks is installed."}}</section>
 {{/each}}
 {{> components/bulk-bar noun="skills" export_dataset="analysis-skills"}}
-{{#if unused_count}}
-<details class="sp-analysis-definitions sp-askill-unused"><summary>{{unused_count}} configured skills with no invocation in the window</summary>
-<ul class="sp-askill-unused__list">{{#each unused}}<li><code>{{skill}}</code> <span class="sp-aconv-meta">{{marketplace}} · {{entitled}} entitled</span></li>{{/each}}</ul>
-</details>
-{{/if}}
 {{/inline}}{{#*inline "scripts"}}<script type="module" src="/js/components/sp-chart.js?v={{css_version}}"></script>{{/inline}}{{/layout}}

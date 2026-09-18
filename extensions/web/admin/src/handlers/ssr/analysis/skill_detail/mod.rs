@@ -193,7 +193,7 @@ pub(crate) async fn skill_page(
             breakdown: &breakdown,
             conversations: &conversations,
             total,
-            can_judge: shell.user.is_console,
+            can_judge: shell.user.is_console && !super::judge_mode::automatic(),
         },
     );
     Ok(crate::handlers::ssr::render_typed_page(

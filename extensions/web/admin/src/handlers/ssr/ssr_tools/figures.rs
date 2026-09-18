@@ -194,7 +194,8 @@ pub(crate) fn charts(
             input(series, "UI", |p| p.ui),
             input(series, "Bodies", |p| p.bodies),
         ],
-    ));
+    ))
+    .into_columns();
     match lens {
         Lens::Tools => vec![
             chart(Plot::new(

@@ -107,19 +107,23 @@ run the gate a single time.
 (these are pre-compile checks, not things to run on arrival):
 
 ```bash
-just build-status     # in-flight run + last result per recipe + is it still fresh?
+just build-status     # in-flight run + last result per recipe (a record, never a reason to skip)
 just server-status    # running server, its binary, and whether that binary is stale
 ```
 
 `just build`, `just clippy`, `just test-*`, and `just lint-gates` are
-single-flight (`scripts/build-coordinator.sh`). They key on a content
-fingerprint of the source tree, so:
+single-flight (`scripts/build-coordinator.sh`). One rule: **one build in
+flight at a time, always of the latest source.** Every call compiles the tree
+as it is (cargo is incremental, so an unchanged tree costs seconds); there is
+no "already built, skip" cache — one existed until 2026-09-18 and returned
+"already green" while a bare `cargo build` from another tree had overwritten
+`target/debug/systemprompt` with stale code.
 
 | situation | what happens |
 |-----------|--------------|
-| this tree already passed this recipe | returns immediately, no compile |
-| identical run already in flight | attaches to its log, exits with its status |
-| someone else's run in flight | queues, then runs |
+| a run of this exact source is in flight | you are told so, attach to its log, exit with its status |
+| a run of different source is in flight | you are told so, wait for it, then run over the latest tree |
+| nothing in flight | you lead |
 
 Results land in `.build/` (gitignored): `runs.jsonl`, `latest/<recipe>.json`,
 `logs/`, `binaries.jsonl`. Read them instead of re-running.
@@ -143,7 +147,7 @@ hand. `just stop` shuts services down cleanly and avoids the orphaning entirely.
 
 Always go through the justfile. A bare `cargo build` bypasses coordination and
 re-creates the contention. Escape hatches when you truly need them:
-`BUILD_FORCE=1`, `START_FORCE=1`, `BUILD_NO_COORD=1`.
+`START_FORCE=1`, `BUILD_NO_COORD=1`.
 
 ---
 

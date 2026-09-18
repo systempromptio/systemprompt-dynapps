@@ -95,9 +95,9 @@ pub(super) fn sort_headers(params: &ConversationAnalysisQuery) -> SortHeaders {
         ),
         completion: h(
             FactSort::Completion,
-            "Done",
+            "AI",
             "sp-aconv-col-judge",
-            "The judge's one score: did the assistant deliver what was originally asked (0–100)",
+            "The AI judge's one score: did the assistant deliver what was originally asked (0–100). Green from 80, amber from 50, red below.",
         ),
     }
 }

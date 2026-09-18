@@ -4,7 +4,7 @@
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use systemprompt::identifiers::ContextId;
+use systemprompt::identifiers::{ArtifactId, ContextId};
 
 use crate::error::{AdminError, AdminResult};
 use crate::export::model::{Cell, CellKind, Column, DataSet, ExportContext, Table, Window};
@@ -48,7 +48,8 @@ const COLUMNS: &[Column] = &[
 
 #[derive(Debug, Default, serde::Deserialize)]
 struct ConversationQuery {
-    context_id: Option<String>,
+    #[serde(rename = "context_id")]
+    context: Option<String>,
 }
 
 fn turn_row(context: &str, r: &ConversationTurnRow) -> (DateTime<Utc>, Vec<Cell>) {
@@ -99,7 +100,7 @@ fn tool_row(context: &str, r: &ConversationToolCallRow) -> (DateTime<Utc>, Vec<C
         Cell::opt_text(
             r.artifact_title
                 .as_deref()
-                .or_else(|| r.artifact_id.as_ref().map(|a| a.as_str())),
+                .or_else(|| r.artifact_id.as_ref().map(ArtifactId::as_str)),
         ),
         Cell::opt_text(r.error_message.as_deref()),
     ];
@@ -131,7 +132,7 @@ impl DataSet for ConversationTurns {
     async fn load(&self, ctx: &ExportContext<'_>) -> AdminResult<Table> {
         let query: ConversationQuery = ctx.query()?;
         let raw = query
-            .context_id
+            .context
             .ok_or_else(|| AdminError::BadRequest("A context_id is required.".to_owned()))?;
         let context_id = ContextId::try_new(raw.trim())
             .map_err(|_bad| AdminError::BadRequest("That is not a conversation id.".to_owned()))?;

@@ -2,7 +2,7 @@
 
 use super::figures::{charts, kpis};
 use super::rows::{decision_view, judge_view, safety_view, skill_view, tool_view, turn_view};
-use super::views::ConversationDetailContext;
+use super::views::{ConversationDetailContext, LedgerCallView};
 use crate::handlers::ssr::analysis_urls::{ANALYSIS_CONVERSATIONS_URL, analysis_conversation_url};
 use crate::handlers::ssr::format::{client_chip, format_duration_ms, local_time};
 use crate::handlers::ssr::types::BreadcrumbView;
@@ -19,6 +19,21 @@ pub(super) struct Planes<'a> {
     pub(super) decisions: &'a [ConversationDecisionRow],
     pub(super) skills: &'a [ConversationSkillRow],
     pub(super) safety: &'a [ConversationSafetyRow],
+}
+
+fn artifact_views(tools: &[ConversationToolCallRow]) -> Vec<LedgerCallView> {
+    tools
+        .iter()
+        .filter(|t| t.artifact_kind.is_some())
+        .map(tool_view)
+        .collect()
+}
+
+fn display_name(f: &ConversationFactRow) -> String {
+    f.display_name
+        .clone()
+        .filter(|n| !n.is_empty())
+        .unwrap_or_else(|| f.user_id.as_str().to_owned())
 }
 
 pub(super) fn build_context(
@@ -51,11 +66,7 @@ pub(super) fn build_context(
         context_key: f.context_id.as_str().to_owned(),
         heading,
         user_href: format!("/admin/users/{}", urlencoding::encode(f.user_id.as_str())),
-        display_name: f
-            .display_name
-            .clone()
-            .filter(|n| !n.is_empty())
-            .unwrap_or_else(|| f.user_id.as_str().to_owned()),
+        display_name: display_name(f),
         group_name: f.group_name.clone(),
         project_name: f.project_name.clone(),
         client: client_chip(&f.client_kind, &f.client_attestation),
@@ -78,6 +89,11 @@ pub(super) fn build_context(
             urlencoding::encode(f.context_id.as_str())
         ),
         back_url: ANALYSIS_CONVERSATIONS_URL,
+        help: crate::handlers::ssr::analysis::help::conversation_detail_help(),
+        export: crate::export::ExportView::single(
+            "analysis-conversation-turns",
+            &format!("context_id={}", urlencoding::encode(f.context_id.as_str())),
+        ),
         judge: judge_view(
             f,
             format!("{}/judge", analysis_conversation_url(&f.context_id)),
@@ -89,19 +105,10 @@ pub(super) fn build_context(
         turn_count: turns.len(),
         tool_count: tools.len(),
         artifact_count: tools.iter().filter(|t| t.artifact_kind.is_some()).count(),
-        artifacts: tools
-            .iter()
-            .filter(|t| t.artifact_kind.is_some())
-            .map(tool_view)
-            .collect(),
+        artifacts: artifact_views(tools),
         tool_calls: tools.iter().map(tool_view).collect(),
         decisions: decisions.iter().map(decision_view).collect(),
         skills: skills.iter().map(skill_view).collect(),
         safety: safety.iter().map(safety_view).collect(),
-        help: crate::handlers::ssr::analysis::help::conversation_detail_help(),
-        export: crate::export::ExportView::single(
-            "analysis-conversation-turns",
-            &format!("context_id={}", urlencoding::encode(f.context_id.as_str())),
-        ),
     }
 }

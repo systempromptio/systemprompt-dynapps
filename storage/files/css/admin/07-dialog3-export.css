@@ -1,7 +1,10 @@
 @layer components {
 
-.sp-export {
+/* Named 07-dialog3-* so it bundles after 07-dialog2.css: the base
+   .sp-dialog caps at 480px and, at equal specificity, the later rule wins. */
+.sp-dialog.sp-export {
     max-width: min(1040px, 94vw);
+    width: min(1040px, 94vw);
 }
 
 .sp-export__form {
