@@ -8,8 +8,9 @@ use urlencoding::encode as urlencode;
 
 use crate::handlers::ssr::list_view::{PageWindow, Pagination};
 use crate::handlers::ssr::types::{SortHeaderView, TabLinkView};
-use crate::repositories::analysis::conversations::{BreakdownBy, ScoredFilter};
-use crate::repositories::analytics::conversation_rows::ConversationSort;
+use crate::repositories::analysis::conversations::{
+    BreakdownBy, FactSort, FlagFilter, JudgedFilter,
+};
 
 pub(crate) const BASE_URL: &str = "/admin/analysis/conversations";
 pub(crate) const PAGE_SIZE: i64 = 50;
@@ -22,7 +23,10 @@ pub(crate) struct ConversationAnalysisQuery {
     pub category: Option<String>,
     pub outcome: Option<String>,
     pub skill: Option<String>,
-    pub scored: Option<String>,
+    pub judged: Option<String>,
+    pub model: Option<String>,
+    pub client: Option<String>,
+    pub flag: Option<String>,
     pub q: Option<String>,
     pub since: Option<String>,
     // Why: the shell's scope bar emits `?preset=`; read as a fallback so it
@@ -39,7 +43,7 @@ impl ConversationAnalysisQuery {
         value.map(str::trim).filter(|v| !v.is_empty())
     }
 
-    pub(super) fn since_label(&self) -> &'static str {
+    pub(crate) fn since_label(&self) -> &'static str {
         let raw =
             Self::trimmed(self.since.as_deref()).or_else(|| Self::trimmed(self.preset.as_deref()));
         match raw {
@@ -51,7 +55,7 @@ impl ConversationAnalysisQuery {
         }
     }
 
-    pub(super) fn since_datetime(&self) -> Option<DateTime<Utc>> {
+    pub(crate) fn since_datetime(&self) -> Option<DateTime<Utc>> {
         let dur = match self.since_label() {
             "24h" => Duration::hours(24),
             "7d" => Duration::days(7),
@@ -62,49 +66,61 @@ impl ConversationAnalysisQuery {
         Some(Utc::now() - dur)
     }
 
-    pub(super) fn user_id(&self) -> Option<UserId> {
+    pub(crate) fn user_id(&self) -> Option<UserId> {
         self.user_id
             .clone()
             .filter(|u| !u.as_str().trim().is_empty())
     }
 
-    pub(super) fn category(&self) -> Option<String> {
+    pub(crate) fn category(&self) -> Option<String> {
         Self::trimmed(self.category.as_deref()).map(str::to_owned)
     }
 
-    pub(super) fn outcome(&self) -> Option<String> {
+    pub(crate) fn outcome(&self) -> Option<String> {
         Self::trimmed(self.outcome.as_deref()).map(str::to_owned)
     }
 
-    pub(super) fn skill(&self) -> Option<String> {
+    pub(crate) fn skill(&self) -> Option<String> {
         Self::trimmed(self.skill.as_deref()).map(str::to_owned)
     }
 
-    pub(super) fn scored(&self) -> Option<ScoredFilter> {
-        ScoredFilter::parse_scored_filter(Self::trimmed(self.scored.as_deref()))
+    pub(crate) fn model(&self) -> Option<String> {
+        Self::trimmed(self.model.as_deref()).map(str::to_owned)
     }
 
-    pub(super) fn free_text(&self) -> Option<String> {
+    pub(crate) fn client(&self) -> Option<String> {
+        Self::trimmed(self.client.as_deref()).map(str::to_owned)
+    }
+
+    pub(crate) fn judged(&self) -> Option<JudgedFilter> {
+        JudgedFilter::parse_judged_filter(Self::trimmed(self.judged.as_deref()))
+    }
+
+    pub(crate) fn flag(&self) -> Option<FlagFilter> {
+        FlagFilter::parse_flag_filter(Self::trimmed(self.flag.as_deref()))
+    }
+
+    pub(crate) fn free_text(&self) -> Option<String> {
         Self::trimmed(self.q.as_deref()).map(str::to_owned)
     }
 
-    pub(super) fn breakdown(&self) -> BreakdownBy {
+    pub(crate) fn breakdown(&self) -> BreakdownBy {
         BreakdownBy::from_breakdown_param(self.by.as_deref())
     }
 
-    pub(super) fn sort(&self) -> ConversationSort {
-        ConversationSort::parse_conversation_sort(self.sort.as_deref())
+    pub(crate) fn sort(&self) -> FactSort {
+        FactSort::parse_fact_sort(self.sort.as_deref())
     }
 
-    pub(super) fn descending(&self) -> bool {
+    pub(crate) fn descending(&self) -> bool {
         self.dir.as_deref() != Some("asc")
     }
 
-    pub(super) fn page(&self) -> i64 {
+    pub(crate) fn page(&self) -> i64 {
         self.page.unwrap_or(0).max(0)
     }
 
-    fn pairs(&self) -> [(&'static str, Option<&str>); 13] {
+    fn pairs(&self) -> [(&'static str, Option<&str>); 16] {
         [
             ("group", self.group.as_deref()),
             ("project", self.project.as_deref()),
@@ -112,7 +128,10 @@ impl ConversationAnalysisQuery {
             ("category", self.category.as_deref()),
             ("outcome", self.outcome.as_deref()),
             ("skill", self.skill.as_deref()),
-            ("scored", self.scored.as_deref()),
+            ("judged", self.judged.as_deref()),
+            ("model", self.model.as_deref()),
+            ("client", self.client.as_deref()),
+            ("flag", self.flag.as_deref()),
             ("q", self.q.as_deref()),
             ("since", self.since.as_deref()),
             ("preset", self.preset.as_deref()),
@@ -122,7 +141,7 @@ impl ConversationAnalysisQuery {
         ]
     }
 
-    pub(super) fn preserved(&self, drop: &[&str]) -> Vec<(String, String)> {
+    pub(crate) fn preserved(&self, drop: &[&str]) -> Vec<(String, String)> {
         self.pairs()
             .iter()
             .filter(|(name, _)| !drop.contains(name))
@@ -134,7 +153,7 @@ impl ConversationAnalysisQuery {
             .collect()
     }
 
-    pub(super) fn link_prefix(&self, drop: &[&str]) -> String {
+    pub(crate) fn link_prefix(&self, drop: &[&str]) -> String {
         let qs = self
             .preserved(drop)
             .iter()
@@ -148,9 +167,9 @@ impl ConversationAnalysisQuery {
         }
     }
 
-    // Why: the link a breakdown row offers — the current filters narrowed by
-    // one more `name=value`, back on page one.
-    pub(super) fn narrowed(&self, name: &str, value: &str) -> String {
+    // Why: the link a breakdown row or a facet offers — the current filters
+    // narrowed by one more `name=value`, back on page one.
+    pub(crate) fn narrowed(&self, name: &str, value: &str) -> String {
         format!(
             "{}{name}={}",
             self.link_prefix(&[name, "page"]),
@@ -158,7 +177,28 @@ impl ConversationAnalysisQuery {
         )
     }
 
-    pub(super) fn breakdown_tabs(&self) -> Vec<TabLinkView> {
+    pub(crate) fn range_links(&self) -> Vec<TabLinkView> {
+        let prefix = self.link_prefix(&["since", "preset", "page"]);
+        let active = self.since_label();
+        [
+            ("24h", "24h"),
+            ("7d", "7 days"),
+            ("30d", "30 days"),
+            ("90d", "90 days"),
+            ("all", "All"),
+        ]
+        .iter()
+        .map(|(slug, label)| TabLinkView {
+            slug,
+            label,
+            href: format!("{prefix}since={slug}"),
+            is_active: *slug == active,
+            count: None,
+        })
+        .collect()
+    }
+
+    pub(crate) fn breakdown_tabs(&self) -> Vec<TabLinkView> {
         let prefix = self.link_prefix(&["by", "page"]);
         let active = self.breakdown();
         BreakdownBy::ALL
@@ -173,7 +213,7 @@ impl ConversationAnalysisQuery {
             .collect()
     }
 
-    pub(super) fn pagination(&self, window: PageWindow) -> Pagination {
+    pub(crate) fn pagination(&self, window: PageWindow) -> Pagination {
         let page = window.index;
         let prefix = self.link_prefix(&["page"]);
         let prev_url = (page > 0).then(|| format!("{prefix}page={}", page.saturating_sub(1)));
@@ -194,9 +234,9 @@ impl ConversationAnalysisQuery {
         }
     }
 
-    pub(super) fn sort_header(
+    pub(crate) fn sort_header(
         &self,
-        col: ConversationSort,
+        col: FactSort,
         label: &'static str,
         class: &'static str,
         hint: &'static str,

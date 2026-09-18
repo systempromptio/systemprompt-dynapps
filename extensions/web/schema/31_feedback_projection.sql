@@ -92,13 +92,14 @@ BEGIN
         value := jsonb_build_object('association_key',key,'invocation_key',feedback_fact_key('invocation',e.id,NULL,e.user_id),
             'request_key',feedback_fact_key('request',NULL,r.id,r.user_id),'occurred_at',e.invoked_at,'attribution',feedback_event_attribution(e.id));
     ELSE
-        SELECT * INTO a FROM evaluation_runs WHERE user_id=e.user_id AND session_id=e.session_id AND criterion='quality' AND status='succeeded'
-            ORDER BY created_at DESC LIMIT 1;
+        SELECT j.* INTO a FROM conversation_analyses j
+            WHERE j.user_id=e.user_id AND j.status='classified' AND j.completion IS NOT NULL
+              AND EXISTS(SELECT 1 FROM ai_requests cr WHERE cr.context_id=j.context_id AND cr.client_session_id=e.session_id)
+            ORDER BY j.classified_at DESC LIMIT 1;
         IF NOT FOUND THEN RETURN NULL; END IF;
         value := jsonb_build_object('assessment_key',key,'invocation_key',feedback_fact_key('invocation',e.id,NULL,e.user_id),
             'conversation_key',jsonb_build_object('source','astound.conversations','id',md5(jsonb_build_array(e.user_id,e.session_id)::text)),
-            'occurred_at',a.created_at,'outcome',CASE WHEN a.score BETWEEN 0 AND 100 THEN jsonb_build_object('status','scored','score_millionths',a.score::bigint*10000)
-             ELSE jsonb_build_object('status','unavailable') END);
+            'occurred_at',a.classified_at,'outcome',jsonb_build_object('status','scored','score_millionths',a.completion::bigint*10000));
     END IF;
     RETURN jsonb_build_object('kind',q.kind,'value',value);
 END $$;

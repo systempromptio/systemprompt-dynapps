@@ -15,7 +15,7 @@ impl FeedbackIngestionRepository {
             return Ok(0);
         };
         let limit = i64::from(limit);
-        let rows = sqlx::query!("SELECT id,user_id,session_id FROM (SELECT id,user_id,session_id FROM plugin_usage_events WHERE $1='plugin_usage_events' UNION ALL SELECT id,user_id,client_session_id AS session_id FROM ai_requests WHERE $1='ai_requests' UNION ALL SELECT id,user_id,session_id FROM evaluation_runs WHERE $1='evaluation_runs') rows WHERE id>$2 ORDER BY id LIMIT $3",progress.source,progress.after_id,limit).fetch_all(&mut *tx).await?;
+        let rows = sqlx::query!("SELECT id,user_id,session_id FROM (SELECT id,user_id,session_id FROM plugin_usage_events WHERE $1='plugin_usage_events' UNION ALL SELECT id,user_id,client_session_id AS session_id FROM ai_requests WHERE $1='ai_requests') rows WHERE id>$2 ORDER BY id LIMIT $3",progress.source,progress.after_id,limit).fetch_all(&mut *tx).await?;
         for row in &rows {
             if progress.source == "plugin_usage_events" {
                 sqlx::query!("INSERT INTO feedback_ingestion_evidence(event_id,evidence) SELECT id,to_jsonb(e) FROM plugin_usage_events e WHERE id=$1 ON CONFLICT DO NOTHING",row.id).execute(&mut *tx).await?;

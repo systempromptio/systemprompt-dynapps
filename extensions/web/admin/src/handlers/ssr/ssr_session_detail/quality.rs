@@ -1,31 +1,11 @@
-//! View-model builders for the two judgement panels on the session detail
-//! page: the judge's per-criterion scores, and the human ratings people left.
+//! View-model builders for the ratings panel on the session detail page:
+//! the human ratings people left.
 
-use crate::handlers::ssr::analysis::evaluation::views::score_tone;
+use crate::handlers::ssr::analysis::tone::score_tone;
 use crate::handlers::ssr::format::{local_time, short_id};
 use crate::repositories::analytics::session_quality::SessionRatingRow;
-use crate::repositories::evaluation::runs::SessionCriterionScore;
 
-use super::context::{EvaluationScoreView, RatingView};
-
-pub(super) fn score_view(s: &SessionCriterionScore) -> EvaluationScoreView {
-    EvaluationScoreView {
-        criterion: s.criterion.clone(),
-        score_display: s
-            .score
-            .map_or_else(|| "—".to_owned(), |v| format!("{v}/100")),
-        tone: s.score.map_or("muted", score_tone),
-        score_source: s.score_source.clone(),
-        model: s.model.clone(),
-        run_url: format!(
-            "/admin/analysis/evaluation/runs/{}",
-            urlencoding::encode(&s.run_id)
-        ),
-        evaluated_at_local: local_time(s.created_at),
-        rationale: non_empty(s.rationale.as_deref()),
-        error: non_empty(s.error.as_deref()),
-    }
-}
+use super::context::RatingView;
 
 pub(super) fn rating_view(r: &SessionRatingRow) -> RatingView {
     let user_label = r
@@ -68,8 +48,4 @@ fn stars(rating: i16) -> String {
     let filled = rating.clamp(0, 5);
     let empty = 5 - filled;
     "★".repeat(filled as usize) + &"☆".repeat(empty as usize)
-}
-
-fn non_empty(value: Option<&str>) -> Option<String> {
-    value.filter(|v| !v.trim().is_empty()).map(str::to_owned)
 }

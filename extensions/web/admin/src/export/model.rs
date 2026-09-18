@@ -172,7 +172,6 @@ pub(crate) enum Window {
 pub(crate) struct ExportWindow {
     pub from: DateTime<Utc>,
     pub to: DateTime<Utc>,
-    pub days: u32,
 }
 
 pub(crate) struct ExportContext<'a> {

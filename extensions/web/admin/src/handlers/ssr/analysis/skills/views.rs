@@ -1,0 +1,130 @@
+//! The Handlebars shapes of the Skills page.
+
+use serde::Serialize;
+
+use crate::handlers::ssr::list_view::SelectOptionView;
+use crate::handlers::ssr::types::{SparklineView, SvgLineChartView, TabLinkView};
+
+// Why: one skill row, every number pre-formatted and toned.
+#[derive(Debug, Serialize)]
+pub(crate) struct SkillFactView {
+    pub skill: String,
+    pub skill_name: String,
+    pub href: String,
+    pub plugin: String,
+    pub marketplace: String,
+    pub invocations: i64,
+    pub invocations_note: String,
+    pub users: i64,
+    pub entitled: usize,
+    pub reach_display: String,
+    pub installs: i64,
+    pub conversations: i64,
+    pub turns: i64,
+    pub tokens_display: String,
+    pub tokens_title: String,
+    pub cost_display: String,
+    pub cost_per_invocation: String,
+    pub errors: i64,
+    pub errors_tone: &'static str,
+    pub denied: i64,
+    pub denied_tone: &'static str,
+    pub tool_calls: i64,
+    pub tool_calls_failed: i64,
+    pub latency_display: String,
+    pub latency_tone: &'static str,
+    pub models: Vec<String>,
+    pub clients: Vec<String>,
+    pub judged: i64,
+    pub completion_display: String,
+    pub completion_tone: &'static str,
+    pub attributed_pct: String,
+    pub spark: SparklineView,
+    pub first_used: String,
+    pub last_used: String,
+}
+
+#[derive(Debug, Serialize)]
+pub(super) struct PluginGroupView {
+    pub(super) plugin: String,
+    pub(super) rows: Vec<SkillFactView>,
+    pub(super) invocations: i64,
+}
+
+#[derive(Debug, Serialize)]
+pub(super) struct MarketplaceGroupView {
+    pub(super) marketplace: String,
+    pub(super) marketplace_name: String,
+    pub(super) versions_href: String,
+    pub(super) plugins: Vec<PluginGroupView>,
+    pub(super) skills: usize,
+    pub(super) invocations: i64,
+    pub(super) users: i64,
+}
+
+#[derive(Debug, Serialize)]
+pub(super) struct AdoptionView {
+    pub(super) marketplace: String,
+    pub(super) marketplace_name: String,
+    pub(super) versions_href: String,
+    pub(super) entitled: usize,
+    pub(super) installed: i64,
+    pub(super) active: i64,
+    pub(super) install_rate: String,
+    pub(super) install_rate_pct: i64,
+    pub(super) activation_rate: String,
+    pub(super) activation_rate_pct: i64,
+    pub(super) installed_claude_code: i64,
+    pub(super) installed_opencode: i64,
+    pub(super) installed_other: i64,
+    pub(super) skills: i64,
+    pub(super) skills_used: i64,
+    pub(super) plugins: i64,
+    pub(super) invocations: i64,
+    pub(super) conversations: i64,
+    pub(super) cost_display: String,
+    pub(super) completion_display: String,
+    pub(super) completion_tone: &'static str,
+    pub(super) version_short: String,
+    pub(super) versions: i64,
+    pub(super) last_install: String,
+}
+
+#[derive(Debug, Serialize)]
+pub(super) struct SkillsKpiView {
+    pub(super) label: &'static str,
+    pub(super) value: String,
+    pub(super) note: String,
+    pub(super) tone: &'static str,
+    pub(super) hint: &'static str,
+    pub(super) spark: SparklineView,
+}
+
+#[derive(Debug, Serialize)]
+pub(super) struct SkillsPageContext {
+    pub(super) page: &'static str,
+    pub(super) title: &'static str,
+    pub(super) days: i64,
+    pub(super) range_links: Vec<TabLinkView>,
+    pub(super) sort_options: Vec<SelectOptionView>,
+    pub(super) marketplace_options: Vec<SelectOptionView>,
+    pub(super) client_options: Vec<SelectOptionView>,
+    pub(super) search: String,
+    pub(super) kpis: Vec<SkillsKpiView>,
+    pub(super) chart: SvgLineChartView,
+    pub(super) adoption: Vec<AdoptionView>,
+    pub(super) groups: Vec<MarketplaceGroupView>,
+    pub(super) row_count: usize,
+    pub(super) unused: Vec<UnusedSkillView>,
+    pub(super) unused_count: usize,
+    pub(super) export: crate::export::ExportView,
+    pub(super) is_admin: bool,
+}
+
+#[derive(Debug, Serialize)]
+pub(super) struct UnusedSkillView {
+    pub(super) skill: String,
+    pub(super) plugin: String,
+    pub(super) marketplace: String,
+    pub(super) entitled: usize,
+}

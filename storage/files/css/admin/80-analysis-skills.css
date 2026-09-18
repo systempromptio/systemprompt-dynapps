@@ -1,0 +1,167 @@
+@layer components {
+/* Analysis › Skills: the invocations chart beside the marketplace adoption
+   funnels, then one table per marketplace with a plugin band per group. */
+.sp-askill-top {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(20rem, 1fr);
+    gap: var(--sp-space-3);
+    margin-block: var(--sp-space-3) var(--sp-space-4);
+}
+@media (max-width: 64rem) {
+    .sp-askill-top {
+        grid-template-columns: 1fr;
+    }
+}
+.sp-askill-top__chart {
+    min-height: 16rem;
+}
+.sp-askill-adoption {
+    display: grid;
+    gap: var(--sp-space-2);
+    align-content: start;
+    min-width: 0;
+}
+.sp-askill-adoption__title {
+    margin: 0;
+    font-size: var(--sp-text-sm);
+    font-weight: var(--sp-font-semibold);
+}
+.sp-askill-adoption__title span {
+    font-weight: var(--sp-font-normal);
+    margin-inline-start: var(--sp-space-1);
+}
+.sp-askill-adopt {
+    display: grid;
+    gap: var(--sp-space-2);
+    padding: var(--sp-space-2) var(--sp-space-3);
+    border: 1px solid var(--sp-border-subtle);
+    border-radius: var(--sp-corners-md);
+    background: var(--sp-bg-surface);
+}
+.sp-askill-adopt__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--sp-space-2);
+    font-size: var(--sp-text-sm);
+}
+/* Three stacked bars: entitled is the full width, installed and active are
+   their share of it, so the funnel narrows visibly. */
+.sp-askill-funnel {
+    display: grid;
+    gap: 3px;
+}
+.sp-askill-funnel__bar {
+    position: relative;
+    display: block;
+    height: 1.25rem;
+    border-radius: 2px;
+    background: var(--sp-bg-surface-alt);
+    overflow: hidden;
+}
+.sp-askill-funnel__bar i {
+    display: block;
+    height: 100%;
+    width: var(--sp-fill, 0%);
+    min-width: 2px;
+    background: var(--sp-border-strong);
+}
+.sp-askill-funnel__bar--entitled i { background: var(--sp-border-strong); }
+.sp-askill-funnel__bar--installed i { background: var(--sp-chart-blue); }
+.sp-askill-funnel__bar--active i { background: var(--sp-chart-green); }
+.sp-askill-funnel__bar em {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    padding-inline: var(--sp-space-2);
+    font-style: normal;
+    font-size: var(--sp-text-xs);
+    color: var(--sp-text-primary);
+    white-space: nowrap;
+}
+.sp-askill-adopt__facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+    gap: var(--sp-space-1) var(--sp-space-3);
+    margin: 0;
+}
+.sp-askill-adopt__facts dt {
+    font-size: var(--sp-text-xs);
+    color: var(--sp-text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.sp-askill-adopt__facts dd {
+    margin: 0;
+    font-size: var(--sp-text-xs);
+    color: var(--sp-text-secondary);
+}
+
+.sp-askill-group {
+    min-width: 0;
+    margin-block: var(--sp-space-3) var(--sp-space-4);
+}
+.sp-askill-group__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--sp-space-2);
+    margin-block-end: var(--sp-space-2);
+}
+.sp-askill-group__title {
+    margin: 0;
+    font-size: var(--sp-text-base);
+    font-weight: var(--sp-font-semibold);
+}
+.sp-askill-table {
+    table-layout: fixed;
+}
+.sp-askill-table th.sp-askill-col-skill { width: 16%; }
+.sp-askill-table th.sp-askill-col-spark { width: 7%; }
+.sp-askill-table th.sp-askill-col-models { width: 13%; }
+.sp-askill-table th.sp-col-date { width: 7%; }
+.sp-askill-table th.sp-table__cell--num { width: 5.5%; }
+.sp-askill-table td {
+    vertical-align: top;
+    max-width: 0;
+    font-size: var(--sp-text-sm);
+}
+.sp-askill-table td.sp-askill-col-spark,
+.sp-askill-table td.sp-askill-col-models {
+    display: table-cell;
+    max-width: none;
+    overflow: visible;
+}
+.sp-askill-col-skill {
+    overflow: hidden;
+}
+.sp-askill-col-spark .sp-spark {
+    width: 100%;
+    height: 1.4rem;
+}
+/* The plugin band inside a marketplace table: one row spanning every
+   column, quieter than a header, louder than a row. */
+.sp-askill-plugin th {
+    padding-block: var(--sp-space-1);
+    font-size: var(--sp-text-xs);
+    font-weight: var(--sp-font-semibold);
+    text-align: start;
+    color: var(--sp-text-secondary);
+    background: var(--sp-bg-surface-alt);
+}
+.sp-askill-plugin__name {
+    font-family: var(--sp-font-mono);
+    color: var(--sp-text-primary);
+}
+.sp-askill-unused {
+    margin-block-start: var(--sp-space-3);
+}
+.sp-askill-unused__list {
+    columns: 3 16rem;
+    margin: 0;
+    padding-inline-start: 1.2em;
+    font-size: var(--sp-text-xs);
+}
+}

@@ -4,10 +4,11 @@
 use serde::Serialize;
 
 use super::diff::{ManifestDiff, diff};
+use crate::handlers::ssr::analysis::tone::{completion_tone, score_display};
 use crate::handlers::ssr::format::{format_cost, format_duration_ms};
-use crate::handlers::ssr::scorecard::{ScorecardView, Scores};
-use crate::repositories::analysis::marketplace_versions::MarketplaceVersionMetricsRow;
-use crate::repositories::evaluation::version_scores::VersionScoreRow;
+use crate::repositories::analysis::marketplace_versions::{
+    MarketplaceVersionMetricsRow, VersionCompletionRow,
+};
 
 pub(crate) fn short(value: &str) -> String {
     value.chars().take(12).collect()
@@ -57,36 +58,21 @@ pub(crate) struct VersionView {
     pub cost: String,
     pub p50: String,
     pub p95: String,
-    pub scorecard: ScorecardView,
+    pub completion_display: String,
+    pub completion_tone: &'static str,
     pub scored_sessions: i64,
     pub compare_href: Option<String>,
 }
 
-// Why: the judge's means for a version, or an unscored card when no judged
-// session invoked a skill served by that hash.
-fn scorecard_for(scores: &[VersionScoreRow], hash: &str) -> (ScorecardView, i64) {
+// Why: the judge's mean completion over the conversations a version served,
+// or a dash when no judged conversation invoked a skill served by that hash.
+fn completion_for(scores: &[VersionCompletionRow], hash: &str) -> (String, &'static str, i64) {
     let row = scores.iter().find(|s| s.content_hash == hash);
-    let scored_sessions = row.map_or(0, |r| r.scored_sessions);
+    let avg = row.and_then(|r| r.completion_avg);
     (
-        ScorecardView::new(
-            row.map_or_else(Scores::default, |r| Scores {
-                intent: r.intent,
-                quality: r.quality,
-                speed: r.speed,
-                cost: r.cost,
-            }),
-            None,
-            row.map_or_else(
-                || "No judged session invoked a skill served by this version".to_owned(),
-                |r| {
-                    format!(
-                        "Mean judge scores over {} judged sessions served this version",
-                        r.scored_sessions
-                    )
-                },
-            ),
-        ),
-        scored_sessions,
+        score_display(avg),
+        completion_tone(avg),
+        row.map_or(0, |r| r.judged),
     )
 }
 
@@ -95,13 +81,14 @@ fn scorecard_for(scores: &[VersionScoreRow], hash: &str) -> (ScorecardView, i64)
 // row diffs against nothing and reads as the first version.
 pub(crate) fn views(
     rows: &[MarketplaceVersionMetricsRow],
-    scores: &[VersionScoreRow],
+    scores: &[VersionCompletionRow],
 ) -> Vec<VersionView> {
     rows.iter()
         .enumerate()
         .map(|(i, row)| {
             let previous = rows.get(i + 1);
-            let (scorecard, scored_sessions) = scorecard_for(scores, &row.content_hash);
+            let (completion_display, completion_tone, scored_sessions) =
+                completion_for(scores, &row.content_hash);
             let diff = row.manifest.as_ref().map(|m| {
                 diff(
                     previous.and_then(|p| p.manifest.as_ref()).map(|m| &m.0),
@@ -135,7 +122,8 @@ pub(crate) fn views(
                 cost: cost(row.cost),
                 p50: latency(row.p50_micros, row.latency_measured),
                 p95: latency(row.p95_micros, row.latency_measured),
-                scorecard,
+                completion_display,
+                completion_tone,
                 scored_sessions,
                 compare_href: previous.map(|p| {
                     format!(

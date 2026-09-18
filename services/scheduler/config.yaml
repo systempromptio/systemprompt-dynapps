@@ -203,28 +203,22 @@ scheduler:
       owner: admin
       enabled: true
 
-    # LLM-as-judge session scoring (web extension). Enqueues sessions that
-    # closed, leases one (session, criterion) row at a time and writes
-    # evaluation_runs; judge calls go out as this job's actor. Gated by
-    # `hooks.evaluation` on the governance-owning plugin and by
-    # services/evaluation/config.yaml.
-    - name: session_evaluation
-      extension: web
-      owner: admin
-      enabled: true
-
-    # Purpose classification of gateway conversations (web extension). Every
-    # five minutes: queue conversations quiet for `quiet_minutes` with at
-    # least one turn, lease `batch_size`, read each transcript and ask the
-    # model below for a category / summary / outcome / skills, with the
-    # response schema enforced by the provider API. Feeds
-    # /admin/analysis/conversations. Judge calls are audited as this job's
-    # actor and excluded from every conversation view; `daily_cost_cap_microdollars`
-    # stops a run once the day's judge spend reaches it. Re-classify one:
-    # `systemprompt infra jobs run conversation_classifier -p context_id=<id>`.
-    # Also gated by the profile's `evaluation.automatic`; the manual
-    # `context_id` run bypasses that switch.
-    - name: conversation_classifier
+    # The conversation judge (web extension): the one AI label on top of the
+    # deterministic conversation record. Every five minutes: queue every
+    # conversation with at least one turn that is quiet for `quiet_minutes`
+    # or whose harness session ended, lease `batch_size`, read each
+    # transcript and ask the model below — in one structured call — for a
+    # title, a summary, the intent category, an outcome and a single 0–100
+    # completion score (did the assistant deliver what was originally asked).
+    # Feeds every /admin/analysis page. Judge calls are audited as this job's
+    # actor and excluded from every conversation view;
+    # `daily_cost_cap_microdollars` stops a run once the day's judge spend
+    # reaches it. Re-judge one:
+    # `systemprompt infra jobs run conversation_judge -p context_id=<id>`.
+    # Gated by `hooks.evaluation` on the governance-owning plugin and by the
+    # profile's `evaluation.automatic`; the manual `context_id` run bypasses
+    # the latter.
+    - name: conversation_judge
       extension: web
       owner: admin
       schedule: "0 */5 * * * *"
@@ -236,22 +230,15 @@ scheduler:
         daily_cost_cap_microdollars: "2000000"
         quiet_minutes: "30"
 
-    # The evaluation report (web extension): the zoomed-out view on
-    # /admin/analysis/evaluation. Every hour: queue every scope — the instance
-    # and each marketplace — that the staleness rule in
-    # services/evaluation/config.yaml (`report:`) says is due, lease what is
-    # pending and ask the report model for themes and actions from the
-    # judge's aggregate figures. Gated like session_evaluation and by the
-    # profile's `evaluation.automatic`; Regenerate on the page, or
-    # `systemprompt infra jobs run evaluation_report -p scope=global`, queues
-    # a scope regardless. `daily_cost_cap_microdollars` stops a run once the
-    # day's report spend reaches it.
-    - name: evaluation_report
+    # The conversation rollup (web extension): keeps `conversation_facts` —
+    # the per-conversation deterministic record every Analysis page reads —
+    # current. Every minute it re-derives the row for each conversation
+    # touched since the last tick on any plane (gateway, hooks, governance,
+    # tools, artifacts). Idempotent; `-p all=true` rebuilds every row.
+    - name: conversation_rollup
       extension: web
       owner: admin
       enabled: true
-      parameters:
-        daily_cost_cap_microdollars: "1000000"
 
     # publish_pipeline sub-steps. The composite above runs each of these every
     # 15 minutes in dependency order; scheduling them independently would

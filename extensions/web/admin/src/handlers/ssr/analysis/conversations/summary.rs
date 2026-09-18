@@ -1,16 +1,16 @@
-//! The figures above the conversations table: KPI tiles, the breakdown
-//! rows and the filter state, with the classifier's fixed vocabularies.
+//! The fixed vocabularies the judge writes and the small views above the
+//! conversations table: the filter state and the breakdown rows. The KPI
+//! tiles are in `kpis`, the charts in `charts`.
 
 use serde::Serialize;
 
-use crate::handlers::ssr::analysis::evaluation::views::score_tone;
-use crate::handlers::ssr::format::{format_cost, format_token_total};
-use crate::handlers::ssr::scorecard::{ScorecardView, Scores};
-use crate::repositories::analysis::conversations::{
-    ConversationAnalysisTotals, ConversationBucketRow,
+use crate::handlers::ssr::analysis::tone::{
+    completion_tone, deny_tone, error_rate_tone, percent, score_display,
 };
+use crate::handlers::ssr::format::{format_cost, format_token_total};
+use crate::repositories::analysis::conversations::ConversationBucketRow;
 
-pub(super) const CATEGORIES: [(&str, &str); 7] = [
+pub(crate) const CATEGORIES: [(&str, &str); 7] = [
     ("development", "Development"),
     ("business-analysis", "Business analysis"),
     ("operations", "Operations"),
@@ -20,7 +20,7 @@ pub(super) const CATEGORIES: [(&str, &str); 7] = [
     ("other", "Other"),
 ];
 
-pub(super) const OUTCOMES: [(&str, &str); 4] = [
+pub(crate) const OUTCOMES: [(&str, &str); 4] = [
     ("achieved", "Achieved"),
     ("partial", "Partial"),
     ("abandoned", "Abandoned"),
@@ -28,14 +28,14 @@ pub(super) const OUTCOMES: [(&str, &str); 4] = [
 ];
 
 #[must_use]
-pub(super) fn category_label(value: &str) -> &'static str {
+pub(crate) fn category_label(value: &str) -> &'static str {
     CATEGORIES
         .iter()
         .find(|(v, _)| *v == value)
-        .map_or("Other", |(_, label)| label)
+        .map_or("Unjudged", |(_, label)| label)
 }
 
-pub(super) fn outcome_label(value: &str) -> &'static str {
+pub(crate) fn outcome_label(value: &str) -> &'static str {
     OUTCOMES
         .iter()
         .find(|(v, _)| *v == value)
@@ -44,7 +44,7 @@ pub(super) fn outcome_label(value: &str) -> &'static str {
 
 // Why: the badge tones the console already defines; an outcome reads at a
 // glance without a legend.
-pub(super) fn outcome_tone(value: &str) -> &'static str {
+pub(crate) fn outcome_tone(value: &str) -> &'static str {
     match value {
         "achieved" => "ok",
         "partial" => "warn",
@@ -53,75 +53,17 @@ pub(super) fn outcome_tone(value: &str) -> &'static str {
     }
 }
 
-fn percent(part: i64, whole: i64) -> String {
-    if whole == 0 {
-        "—".to_owned()
-    } else {
-        format!("{}%", (part * 100) / whole)
-    }
-}
-
 #[derive(Debug, Serialize)]
-pub(super) struct KpisView {
-    pub conversations: i64,
-    pub unclassified: i64,
-    pub users: i64,
-    pub turns: i64,
-    pub tool_calls: i64,
-    pub tokens_display: String,
-    pub cost_display: String,
-    pub achieved_display: String,
-    pub scored: i64,
-    pub scored_display: String,
-    pub quality_display: String,
-    pub quality_tone: &'static str,
-    pub scorecard: ScorecardView,
-}
-
-impl KpisView {
-    pub(super) fn new(t: &ConversationAnalysisTotals) -> Self {
-        Self {
-            conversations: t.conversations,
-            unclassified: t.unclassified,
-            users: t.users,
-            turns: t.turns,
-            tool_calls: t.tool_calls,
-            tokens_display: format_token_total(t.total_tokens),
-            cost_display: format_cost(t.total_cost_microdollars),
-            achieved_display: percent(t.achieved, t.conversations),
-            scored: t.scored,
-            scored_display: percent(t.scored, t.conversations),
-            quality_display: t
-                .quality_avg
-                .map_or_else(|| "—".to_owned(), |q| format!("{q:.0}")),
-            quality_tone: t
-                .quality_avg
-                .map_or("muted", |q| score_tone(q.round() as i16)),
-            scorecard: ScorecardView::new(
-                Scores {
-                    intent: t.intent_avg,
-                    quality: t.quality_avg,
-                    speed: t.speed_avg,
-                    cost: t.cost_avg,
-                },
-                None,
-                format!(
-                    "Mean judge scores over the {} scored conversations in this set",
-                    t.scored
-                ),
-            ),
-        }
-    }
-}
-
-#[derive(Debug, Serialize)]
-pub(super) struct ConversationAnalysisFilterView {
+pub(crate) struct ConversationAnalysisFilterView {
     pub since: &'static str,
     pub q: String,
     pub category: String,
     pub outcome: String,
     pub skill: String,
-    pub scored: String,
+    pub judged: String,
+    pub model: String,
+    pub client: String,
+    pub flag: String,
     pub user_key: String,
     pub group: String,
     pub project: String,
@@ -131,24 +73,33 @@ pub(super) struct ConversationAnalysisFilterView {
 }
 
 #[derive(Debug, Serialize)]
-pub(super) struct ConversationBucketView {
+pub(crate) struct ConversationBucketView {
     pub label: String,
     pub href: Option<String>,
     pub conversations: i64,
     pub users: i64,
     pub turns: i64,
+    pub tool_calls: i64,
+    pub tokens_display: String,
     pub cost_display: String,
+    pub cost_share_pct: i64,
+    pub errors: i64,
+    pub errors_tone: &'static str,
+    pub denied: i64,
+    pub denied_tone: &'static str,
     pub achieved_display: String,
-    pub quality_display: String,
-    pub quality_tone: &'static str,
+    pub judged: i64,
+    pub completion_display: String,
+    pub completion_tone: &'static str,
     pub top_category: &'static str,
 }
 
 impl ConversationBucketView {
-    pub(super) fn new(
+    pub(crate) fn new(
         row: &ConversationBucketRow,
         href: Option<String>,
         label: Option<&str>,
+        total_cost: i64,
     ) -> Self {
         Self {
             label: label.map_or_else(|| row.label.clone(), str::to_owned),
@@ -156,14 +107,22 @@ impl ConversationBucketView {
             conversations: row.conversations,
             users: row.users,
             turns: row.turns,
+            tool_calls: row.tool_calls,
+            tokens_display: format_token_total(row.total_tokens),
             cost_display: format_cost(row.total_cost_microdollars),
+            cost_share_pct: if total_cost > 0 {
+                (row.total_cost_microdollars * 100 / total_cost).clamp(0, 100)
+            } else {
+                0
+            },
+            errors: row.errors,
+            errors_tone: error_rate_tone(row.errors, row.turns.max(row.conversations)),
+            denied: row.denied,
+            denied_tone: deny_tone(row.denied),
             achieved_display: percent(row.achieved, row.conversations),
-            quality_display: row
-                .quality_avg
-                .map_or_else(|| "—".to_owned(), |q| format!("{q:.0}")),
-            quality_tone: row
-                .quality_avg
-                .map_or("muted", |q| score_tone(q.round() as i16)),
+            judged: row.judged,
+            completion_display: score_display(row.completion_avg),
+            completion_tone: completion_tone(row.completion_avg),
             top_category: row.top_category.as_deref().map_or("—", category_label),
         }
     }

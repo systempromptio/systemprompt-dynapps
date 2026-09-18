@@ -12,10 +12,10 @@ use super::diff::{Change, diff};
 use super::history::{VersionView, cost, latency, short, views};
 use crate::error::{AdminError, AdminResult};
 use crate::repositories::analysis::marketplace_versions::{
-    MarketplaceVersionMetricsRow, MarketplaceVersionSkillRow, list_marketplace_version_skills,
+    MarketplaceVersionMetricsRow, MarketplaceVersionSkillRow, VersionCompletionRow,
+    list_marketplace_version_skills,
 };
 use crate::repositories::analysis::retained::RetainedWindow;
-use crate::repositories::evaluation::version_scores::VersionScoreRow;
 
 #[derive(Debug, Clone, Default, Serialize)]
 pub(crate) struct SkillFigures {
@@ -150,7 +150,7 @@ fn skill_rows_for(
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct Recorded<'a> {
     pub rows: &'a [MarketplaceVersionMetricsRow],
-    pub scores: &'a [VersionScoreRow],
+    pub scores: &'a [VersionCompletionRow],
 }
 
 pub(crate) async fn build(

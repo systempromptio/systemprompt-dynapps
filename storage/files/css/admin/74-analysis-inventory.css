@@ -1,25 +1,4 @@
 @layer components {
-/* Five stacked bands — header, breadcrumb, tabs, meta line, tiles, toolbar —
-   sit between the top of the page and the first skill. Each default gap is sized
-   for a page whose content is one block; here every one of them is a row
-   pushed under the fold, so this page tightens all six and nothing else. */
-.sp-p-skills .sp-page-header {
-    margin-block: var(--sp-space-3) var(--sp-space-3);
-    padding-bottom: var(--sp-space-2);
-}
-.sp-p-skills .sp-breadcrumbs {
-    margin-top: var(--sp-space-1);
-}
-.sp-p-skills .sp-tabs {
-    margin-bottom: var(--sp-space-2);
-}
-.sp-p-skills .sp-kpi-grid {
-    margin-bottom: var(--sp-space-3);
-}
-.sp-p-skills .sp-toolbar {
-    margin-bottom: var(--sp-space-2);
-}
-
 /* The line that says which marketplace you are looking at. It reads as a
    sentence, so it is one line and never a row of controls. */
 .sp-inventory-summary {
@@ -28,84 +7,18 @@
     font-size: var(--sp-text-xs);
 }
 
-/* Five tiles of organisation-wide context are worth a band, not a card: the
-   rows under them are what the page is for. */
+/* Compact tiles: a band of context above dense rows, not a card each. */
 .sp-kpi-grid--compact .sp-kpi {
     min-height: 0;
     padding: var(--sp-space-2) var(--sp-space-3);
 }
-.sp-inventory-table {
-    font-size: var(--sp-text-sm);
-    min-width: 58rem;
-}
-.sp-inventory-table th[scope="col"] {
-    white-space: nowrap;
-}
-/* The skill rows are one line each; a caption row is the only thing that
-   breaks the rhythm, so it carries weight and a rule rather than the coloured
-   left border that read as a broken connector. */
-.sp-inventory-caption th {
-    background: var(--sp-bg-surface-alt);
-    border-top: 1px solid var(--sp-border-subtle);
-    text-align: start;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    font-size: var(--sp-text-xs);
-    font-weight: var(--sp-font-semibold);
-    color: var(--sp-text-secondary);
-}
-.sp-inventory-caption--marketplace th {
-    background: var(--sp-bg-surface-raised);
-    border-top: 1px solid var(--sp-border-strong);
-    color: var(--sp-text-primary);
-}
-.sp-inventory-rollup {
-    color: var(--sp-text-tertiary);
-    font-weight: var(--sp-font-normal);
-    text-transform: none;
-    letter-spacing: normal;
-    margin-inline-start: var(--sp-space-2);
-}
-.sp-inventory-row td {
-    white-space: nowrap;
-}
-/* A skill id has no upper bound and the rows are one line high, so the name
-   column is capped and ellipsised; the link's title carries the whole name.
-   The selector matches `.sp-table__el td.sp-table__cell--primary`, which sets
-   `max-width: none` — an equal-specificity rule in a later file is the only
-   thing that beats it, and a lower-specificity one silently does nothing.
 
-   The cap is what pays for the actions column: that cell is `width: 1%` and
-   already `nowrap`, so it takes exactly what its three links need and the
-   table overruns its scroller only if some other column refuses to give the
-   room back. This is the column with slack. */
-.sp-table__el td.sp-inventory-cell-id {
-    max-width: 30ch;
-    min-width: 12ch;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-.sp-inventory-bind {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--sp-space-2);
-    margin-block: var(--sp-space-1);
-}
-.sp-inventory-bind .sp-select,
-.sp-inventory-bind .sp-field-input {
-    min-width: 0;
-    max-width: 16rem;
-    font-size: var(--sp-text-xs);
-}
 .sp-inventory-inline {
     display: inline-flex;
     align-items: center;
     gap: var(--sp-space-2);
 }
-}
-@layer components {
+
 /* A version is its hash. The chip is the one mono token on a row of
    numbers, so it is quiet by default and only reads as a link on hover. */
 .sp-hash--chip {
@@ -120,32 +33,5 @@
 .sp-hash--chip:focus-visible {
     color: var(--sp-text-primary);
     border-color: var(--sp-border-strong);
-}
-/* Caption rows carry the group name, its version chip and a rollup in one
-   line, aligned with the Skill column so nothing floats above the rows. */
-.sp-inventory-caption th {
-    padding-inline-start: var(--sp-space-3);
-}
-.sp-inventory-caption__name {
-    display: inline-block;
-    min-width: 12ch;
-}
-.sp-inventory-caption .sp-hash--chip {
-    text-transform: none;
-    letter-spacing: normal;
-    margin-inline-start: var(--sp-space-1);
-}
-}
-
-@layer components {
-/* A scorecard in a table cell, with the judged-session count beside it. */
-.sp-table__el td.sp-inventory-cell-eval {
-    white-space: nowrap;
-}
-.sp-inventory-eval-n {
-    margin-inline-start: var(--sp-space-1);
-    color: var(--sp-text-tertiary);
-    font-size: var(--sp-text-2xs);
-    font-variant-numeric: tabular-nums;
 }
 }

@@ -162,10 +162,6 @@ fn ai_activity_routes() -> Router<Arc<PgPool>> {
             "/sessions/{session_id}",
             get(handlers::ssr::session_detail_page),
         )
-        .route(
-            "/sessions/{session_id}/evaluate",
-            post(handlers::ssr::evaluate_session),
-        )
         .route("/traces", get(handlers::ssr::perf_traces_page))
         .route(
             "/traces/{trace_id}",

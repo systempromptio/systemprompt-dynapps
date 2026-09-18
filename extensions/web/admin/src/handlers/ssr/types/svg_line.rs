@@ -1,4 +1,5 @@
-//! Server-rendered SVG line-chart and sparkline view-models.
+//! Server-rendered SVG line-chart view-models; sparklines and deltas are in
+//! `sparkline`.
 //!
 //! All geometry comes from [`crate::util::svg`]; this module only shapes it
 //! for the `svg-line-chart` partial and the analytics sparklines. Same design
@@ -8,7 +9,6 @@
 
 use serde::Serialize;
 
-use crate::util::delta::{Delta, delta};
 use crate::util::svg;
 
 // Why: shared with the pie so a model keeps one color across every chart in
@@ -41,6 +41,11 @@ pub(crate) struct SvgLineChartView {
     pub x_start_display: String,
     pub x_mid_display: String,
     pub x_end_display: String,
+    // Why: one label per bucket, JSON-encoded, for the client-side crosshair
+    // (`sp-chart.js`) — the server keeps rendering the plot, the script only
+    // narrates it on hover.
+    pub x_labels_json: String,
+    pub y_unit: &'static str,
 }
 
 #[derive(Debug, Serialize)]
@@ -50,6 +55,9 @@ pub(crate) struct SvgSeriesView {
     pub area_d: Option<String>,
     pub color_token: &'static str,
     pub label: String,
+    // Why: the raw values behind the path, comma-separated, so the hover
+    // tooltip prints numbers and never re-derives them from geometry.
+    pub values: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -89,6 +97,11 @@ pub(crate) struct LineChartSpec {
     pub x_end_display: String,
     // Why: Fill under the line — single-series charts only (stacked fills lie).
     pub show_area: bool,
+    // Why: one label per bucket for the hover crosshair; empty leaves the
+    // chart static.
+    pub x_labels: Vec<String>,
+    // Why: the unit the tooltip appends to a value ("", "$", "ms", "tok").
+    pub y_unit: &'static str,
 }
 
 pub(crate) fn line_chart(spec: LineChartSpec) -> SvgLineChartView {
@@ -115,6 +128,12 @@ pub(crate) fn line_chart(spec: LineChartSpec) -> SvgLineChartView {
                 area_d: (spec.show_area && !multi).then(|| svg::area_path(&points)),
                 color_token: CHART_COLOR_TOKENS[i.min(CHART_COLOR_TOKENS.len() - 1)],
                 label: s.label.clone(),
+                values: s
+                    .values
+                    .iter()
+                    .map(ToString::to_string)
+                    .collect::<Vec<_>>()
+                    .join(","),
             }
         })
         .collect();
@@ -131,30 +150,8 @@ pub(crate) fn line_chart(spec: LineChartSpec) -> SvgLineChartView {
         })
         .collect();
 
-    let legend: Vec<SvgLegendItemView> = if multi {
-        spec.series
-            .iter()
-            .enumerate()
-            .map(|(i, s)| SvgLegendItemView {
-                label: s.label.clone(),
-                color_index: i.min(CHART_COLOR_TOKENS.len() - 1) + 1,
-                value_display: s.value_display.clone(),
-            })
-            .collect()
-    } else {
-        Vec::new()
-    };
-
-    let aria_label = format!(
-        "{}: {} — peak {}",
-        spec.title,
-        spec.series
-            .iter()
-            .map(|s| format!("{} {}", s.label, s.value_display))
-            .collect::<Vec<_>>()
-            .join(", "),
-        (spec.y_display)(data_max)
-    );
+    let legend = legend_for(&spec.series, multi);
+    let aria_label = aria_label_for(&spec, data_max);
 
     SvgLineChartView {
         title: spec.title,
@@ -170,47 +167,87 @@ pub(crate) fn line_chart(spec: LineChartSpec) -> SvgLineChartView {
         x_start_display: spec.x_start_display,
         x_mid_display: spec.x_mid_display,
         x_end_display: spec.x_end_display,
+        x_labels_json: serde_json::to_string(&spec.x_labels).unwrap_or_else(|_| "[]".to_owned()),
+        y_unit: spec.y_unit,
     }
 }
 
-// Why: decoration only (`aria-hidden`) — the card's value and delta text are
-// the accessible copy. Its own 100x24 unit space, not the chart's 100x40.
-#[derive(Debug, Serialize)]
-pub(crate) struct SparklineView {
-    pub path_d: String,
-    pub has_data: bool,
+// Why: a chart's own part of a spec — everything but the shared x axis — so
+// a page drawing several charts on one axis passes one value per chart.
+pub(crate) struct Plot {
+    pub title: &'static str,
+    pub subtitle: String,
+    pub series: Vec<SvgSeriesInput>,
+    pub ref_lines: Vec<(i64, String, &'static str)>,
+    pub y_max: Option<i64>,
+    pub y_unit: &'static str,
+    pub y_display: fn(i64) -> String,
 }
 
-pub(crate) fn sparkline(values: &[i64]) -> SparklineView {
-    let max = values.iter().copied().max().unwrap_or(0);
-    if max <= 0 {
-        return SparklineView {
-            path_d: String::new(),
-            has_data: false,
-        };
-    }
-    let points: Vec<(f64, f64)> = svg::scale_points(values, max)
-        .into_iter()
-        .map(|(x, y)| (x, y / svg::PLOT_H * 24.0))
-        .collect();
-    SparklineView {
-        path_d: svg::line_path(&points),
-        has_data: true,
+impl Plot {
+    pub(crate) fn new(title: &'static str, subtitle: String, series: Vec<SvgSeriesInput>) -> Self {
+        Self {
+            title,
+            subtitle,
+            series,
+            ref_lines: Vec::new(),
+            y_max: None,
+            y_unit: "",
+            y_display: |v| v.to_string(),
+        }
     }
 }
 
-#[derive(Debug, Serialize)]
-pub(crate) struct DeltaView {
-    pub display: String,
-    pub direction: &'static str,
-    pub tone: &'static str,
+// Why: draws one plot on a shared axis: the first, middle and last labels go
+// to the gutters, every label to the hover layer.
+pub(crate) fn chart_on_axis(
+    labels: &[String],
+    empty_message: &'static str,
+    plot: Plot,
+) -> SvgLineChartView {
+    let n = labels.len();
+    line_chart(LineChartSpec {
+        title: plot.title,
+        subtitle: plot.subtitle,
+        empty_message,
+        series: plot.series,
+        ref_lines: plot.ref_lines,
+        y_max: plot.y_max,
+        y_display: plot.y_display,
+        x_start_display: labels.first().cloned().unwrap_or_default(),
+        x_mid_display: labels.get(n / 2).cloned().unwrap_or_default(),
+        x_end_display: labels.last().cloned().unwrap_or_default(),
+        show_area: true,
+        x_labels: labels.to_vec(),
+        y_unit: plot.y_unit,
+    })
 }
 
-pub(crate) fn delta_view(current: i64, previous: i64, up_is_good: bool) -> DeltaView {
-    let d: Delta = delta(current, previous, up_is_good);
-    DeltaView {
-        display: d.display(),
-        direction: d.direction,
-        tone: d.tone,
+// Why: a legend only earns its place with two or more series.
+fn legend_for(series: &[SvgSeriesInput], multi: bool) -> Vec<SvgLegendItemView> {
+    if !multi {
+        return Vec::new();
     }
+    series
+        .iter()
+        .enumerate()
+        .map(|(i, s)| SvgLegendItemView {
+            label: s.label.clone(),
+            color_index: i.min(CHART_COLOR_TOKENS.len() - 1) + 1,
+            value_display: s.value_display.clone(),
+        })
+        .collect()
+}
+
+fn aria_label_for(spec: &LineChartSpec, data_max: i64) -> String {
+    format!(
+        "{}: {} — peak {}",
+        spec.title,
+        spec.series
+            .iter()
+            .map(|s| format!("{} {}", s.label, s.value_display))
+            .collect::<Vec<_>>()
+            .join(", "),
+        (spec.y_display)(data_max)
+    )
 }

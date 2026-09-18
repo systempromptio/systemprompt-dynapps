@@ -23,9 +23,9 @@ mod registry;
 mod access_expiry;
 mod bundle_admin_css;
 mod content_analytics;
-mod conversation_classifier;
+mod conversation_judge;
+mod conversation_rollup;
 mod copy_assets;
-mod evaluation_report;
 mod governance_bootstrap;
 mod ingestion;
 mod llms_txt;
@@ -35,7 +35,6 @@ mod quota_month_window;
 mod robots;
 mod scope_defaults;
 mod secret_migration;
-mod session_evaluation;
 mod sitemap;
 mod usage_anomaly;
 mod usage_retention;
@@ -47,9 +46,9 @@ pub use registry::{JOB_TAG, extension_jobs};
 pub use access_expiry::{AccessExpiryJob, ExpirySweep, lost_manage_role};
 pub use bundle_admin_css::BundleAdminCssJob;
 pub use content_analytics::ContentAnalyticsAggregationJob;
-pub use conversation_classifier::ConversationClassifierJob;
+pub use conversation_judge::ConversationJudgeJob;
+pub use conversation_rollup::ConversationRollupJob;
 pub use copy_assets::CopyExtensionAssetsJob;
-pub use evaluation_report::EvaluationReportJob;
 pub use governance_bootstrap::GovernanceBootstrapJob;
 pub use ingestion::ContentIngestionJob;
 pub use llms_txt::LlmsTxtGenerationJob;
@@ -59,7 +58,6 @@ pub use quota_month_window::QuotaMonthWindowJob;
 pub use robots::RobotsTxtGenerationJob;
 pub use scope_defaults::ScopeDefaultsJob;
 pub use secret_migration::SecretMigrationJob;
-pub use session_evaluation::SessionEvaluationJob;
 pub use sitemap::SitemapGenerationJob;
 pub use usage_retention::PluginUsageRetentionJob;
 pub use usage_rollup::UsageDailyRollupJob;
@@ -71,7 +69,7 @@ pub use usage_rollup::UsageDailyRollupJob;
 #[doc(hidden)]
 pub mod internals {
     pub use crate::bundle_admin_css::{collect_css_files, concatenate_css_files};
-    pub use crate::conversation_classifier::{
+    pub use crate::conversation_judge::{
         Category, Classification, Outcome, TranscriptMeta, classification_schema,
         parse_classification, render_transcript,
     };

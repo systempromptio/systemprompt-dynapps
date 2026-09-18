@@ -5,11 +5,11 @@ use serde::Serialize;
 use systemprompt::identifiers::MarketplaceId;
 
 use super::history::short;
-use crate::handlers::ssr::analysis_urls::analysis_evaluation_url;
+use crate::handlers::ssr::analysis::tone::{completion_tone, score_display};
 use crate::handlers::ssr::format::format_cost;
-use crate::handlers::ssr::scorecard::{ScorecardView, Scores};
-use crate::repositories::analysis::marketplace_versions::MarketplaceListRow;
-use crate::repositories::evaluation::version_scores::MarketplaceScoreRollup;
+use crate::repositories::analysis::marketplace_versions::{
+    MarketplaceCompletionRollup, MarketplaceListRow,
+};
 
 #[derive(Serialize)]
 pub(super) struct MarketplaceCard {
@@ -32,37 +32,24 @@ pub(super) struct MarketplaceCard {
     requests: i64,
     failed: i64,
     cost: String,
-    scorecard: ScorecardView,
-    evaluation_href: String,
+    completion_display: String,
+    completion_tone: &'static str,
+    completion_judged: i64,
+    history_display: String,
+    history_judged: i64,
 }
 
 pub(super) fn card(
     row: MarketplaceListRow,
-    scores: Option<&MarketplaceScoreRollup>,
+    scores: Option<&MarketplaceCompletionRollup>,
 ) -> MarketplaceCard {
-    let current = scores.map(|s| s.current);
-    let history = scores.map(|s| s.history);
+    let current = scores.and_then(|s| s.current_completion);
     MarketplaceCard {
-        evaluation_href: analysis_evaluation_url(&row.marketplace_id),
-        scorecard: ScorecardView::with_prior(
-            current.map_or_else(Scores::default, |c| Scores {
-                intent: c.intent,
-                quality: c.quality,
-                speed: c.speed,
-                cost: c.cost,
-            }),
-            history.map_or_else(Scores::default, |h| Scores {
-                intent: h.intent,
-                quality: h.quality,
-                speed: h.speed,
-                cost: h.cost,
-            }),
-            Some(analysis_evaluation_url(&row.marketplace_id)),
-            format!(
-                "Judge scores for the current version over {} judged sessions; the delta is against every earlier version",
-                current.map_or(0, |c| c.scored_sessions)
-            ),
-        ),
+        completion_display: score_display(current),
+        completion_tone: completion_tone(current),
+        completion_judged: scores.map_or(0, |s| s.current_judged),
+        history_display: score_display(scores.and_then(|s| s.history_completion)),
+        history_judged: scores.map_or(0, |s| s.history_judged),
         href: format!(
             "/admin/analysis/versions/{}",
             urlencoding::encode(row.marketplace_id.as_str())

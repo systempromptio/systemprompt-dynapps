@@ -29,11 +29,10 @@ use crate::handlers::ssr::analysis_urls::ANALYSIS_VERSIONS_URL;
 use crate::handlers::ssr::page::Page;
 use crate::handlers::ssr::render_typed_page;
 use crate::handlers::ssr::types::BreadcrumbView;
-use crate::repositories::analysis::marketplace_versions::list_marketplace_rollups;
-use crate::repositories::analysis::retained::RetainedWindow;
-use crate::repositories::evaluation::version_scores::{
-    list_marketplace_score_rollups, list_version_scores,
+use crate::repositories::analysis::marketplace_versions::{
+    list_marketplace_completion_rollups, list_marketplace_rollups, list_version_completion,
 };
+use crate::repositories::analysis::retained::RetainedWindow;
 use crate::routes::managed_state::ManagedState;
 
 use access::readable_versions;
@@ -123,7 +122,7 @@ pub(crate) async fn landing_page(
         .into_iter()
         .filter(|r| may_read_marketplace(&shell.user, &r.marketplace_id))
         .collect();
-    let scores = list_marketplace_score_rollups(&pool).await?;
+    let scores = list_marketplace_completion_rollups(&pool).await?;
     let current = rows.iter().filter(|r| r.content_hash.is_some()).count();
     let data = LandingPage {
         page: "analysis-versions",
@@ -137,7 +136,7 @@ pub(crate) async fn landing_page(
             .map(|row| {
                 let rollup = scores
                     .iter()
-                    .find(|s| s.marketplace_id == row.marketplace_id);
+                    .find(|s| s.marketplace_id == row.marketplace_id.as_str());
                 landing::card(row, rollup)
             })
             .collect(),
@@ -210,7 +209,7 @@ pub(crate) async fn detail_page(
     let tab = Tab::parse(query.tab.as_deref())?;
     let rows =
         readable_versions(&pool, &managed.owner, window, &marketplace_id, &shell.user).await?;
-    let scores = list_version_scores(&pool, &marketplace_id).await?;
+    let scores = list_version_completion(&pool, Some(&marketplace_id)).await?;
     let history = history::views(&rows, &scores);
     let name = history
         .iter()

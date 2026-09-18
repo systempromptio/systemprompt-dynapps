@@ -123,16 +123,13 @@
         </h2>
         <div class="sp-nav-group__items" id="sp-nav-group-analysis">
         <div class="sp-nav-group__inner">
-        <a href="/admin/analysis/conversations"{{navActive page "analysis-conversations"}}>
+        <a href="/admin/analysis/conversations"{{navActive page "analysis-conversations" "analysis-conversation"}}>
             <svg class="sp-icon" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 13h12M4 10V6M8 10V2M12 10V4"/></svg>
             Conversations
         </a>
         {{#if current_user.is_console}}
         {{#> nav-item href="/admin/analysis/skills" text="Skills" leaf="analysis-skills" child="analysis-skill" page=page}}
             {{#*inline "nav_icon"}}<svg class="sp-icon" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="1.5"/><path d="M2 6h12M2 10h12M6 6v8"/></svg>{{/inline}}
-        {{/nav-item}}
-        {{#> nav-item href="/admin/analysis/evaluation" text="Evaluation" leaf="analysis-evaluation" child="analysis-evaluation-marketplace" child2="analysis-evaluation-report" page=page}}
-            {{#*inline "nav_icon"}}<svg class="sp-icon" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 8l3 3 7-7"/><path d="M2 13h12"/></svg>{{/inline}}
         {{/nav-item}}
         {{/if}}
         {{#> nav-item href="/admin/analysis/versions" text="Versions" leaf="analysis-versions" child="analysis-marketplace-versions" child2="analysis-revision" page=page}}

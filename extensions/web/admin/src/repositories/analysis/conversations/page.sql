@@ -1,84 +1,120 @@
--- One statement for the classified-conversation page: the filtered set once,
--- then its totals, its breakdown for the chosen dimension, and one page of
--- rows. Classification predicates narrow `conversation_analyses` first so
--- conversation_metrics_for only aggregates the contexts that can appear.
-WITH picked AS MATERIALIZED (
-    SELECT a.context_id, a.category, a.summary, a.tags, a.skills_used, a.outcome,
-           a.confidence, a.classified_at, a.model AS judge_model
-    FROM conversation_analyses a
-    WHERE a.status = 'classified'
-      AND ($1::text[] IS NULL OR a.user_id = ANY($1))
-      AND ($2::text IS NULL OR a.user_id = $2)
+-- One statement for the conversations page over the conversation_facts
+-- rollup: the filtered set once, then its totals, its time series, one
+-- breakdown dimension, the facet lists and one page of rows. Every row is a
+-- conversation whether or not the judge has seen it; the judge's row is a
+-- LEFT JOIN. Filtering, paging and sorting are bound parameters chosen by
+-- CASE arms, never interpolated text.
+WITH f AS MATERIALIZED (
+    SELECT f.*, u.display_name, g.name AS group_name, p.name AS project_name,
+           f.input_tokens + f.output_tokens AS total_tokens,
+           f.cache_read_tokens + f.cache_creation_tokens AS cache_tokens,
+           a.status AS judge_status, a.title AS judge_title, a.category, a.summary, a.tags,
+           a.skills_used, a.outcome, a.completion, a.completion_rationale, a.confidence,
+           a.classified_at, a.model AS judge_model, a.cost_microdollars AS judge_cost_microdollars,
+           COALESCE(a.input_tokens, 0) + COALESCE(a.output_tokens, 0) AS judge_tokens, a.trigger AS judge_trigger
+    FROM conversation_facts f
+    LEFT JOIN conversation_analyses a ON a.context_id = f.context_id
+    LEFT JOIN users u ON u.id = f.user_id
+    LEFT JOIN groups g ON g.id = f.group_id
+    LEFT JOIN projects p ON p.id = f.project_id
+    WHERE ($1::text[] IS NULL OR f.user_id = ANY($1))
+      AND ($2::text IS NULL OR f.user_id = $2)
       AND ($3::text IS NULL OR a.category = $3)
       AND ($4::text IS NULL OR a.outcome = $4)
-), ids AS MATERIALIZED (
-    SELECT COALESCE(array_agg(context_id), ARRAY[]::text[]) AS ids FROM picked
-), f AS MATERIALIZED (
-    SELECT r.*, p.category, p.summary, p.tags, p.skills_used, p.outcome, p.confidence,
-           p.classified_at, p.judge_model,
-           r.total_input_tokens + r.total_output_tokens AS total_tokens,
-           sc.intent AS intent_score, sc.quality AS quality_score,
-           sc.speed AS speed_score, sc.cost AS cost_score,
-           COALESCE(sc.scored_criteria, 0)::int AS scored_criteria,
-           COALESCE((SELECT array_agg(s.skill ORDER BY s.first_at) FROM conversation_skill_uses s
-                     WHERE s.client_session_id = r.client_session_id), ARRAY[]::text[]) AS skills_hooked
-    FROM ids CROSS JOIN LATERAL conversation_metrics_for(ids.ids) r
-    JOIN picked p ON p.context_id = r.context_id
-    LEFT JOIN evaluation_session_scorecard sc ON sc.session_id = r.client_session_id
-    WHERE ($1::text[] IS NULL OR r.user_id = ANY($1))
-      AND ($2::text IS NULL OR r.user_id = $2)
-      AND ($5::text IS NULL OR $5 = ANY(p.skills_used)
-           OR EXISTS (SELECT 1 FROM conversation_skill_uses s
-                      WHERE s.client_session_id = r.client_session_id AND s.skill = $5))
-      AND ($6::text IS NULL OR r.display_name ILIKE $6 OR r.user_id ILIKE $6 OR p.summary ILIKE $6
-           OR array_to_string(p.tags, ' ') ILIKE $6
-           OR conversation_title(r.context_id, r.client_session_id) ILIKE $6)
-      AND ($7::timestamptz IS NULL OR r.last_at >= $7)
-      AND ($8::timestamptz IS NULL OR r.last_at < $8)
+      AND ($5::text IS NULL OR $5 = ANY(f.skills) OR $5 = ANY(COALESCE(a.skills_used, '{}')))
+      AND ($7::timestamptz IS NULL OR f.last_at >= $7)
+      AND ($8::timestamptz IS NULL OR f.last_at < $8)
       AND ($14::text IS NULL
-           OR ($14 = 'scored' AND sc.scored_criteria > 0)
-           OR ($14 = 'unscored' AND sc.scored_criteria IS NULL)
-           OR ($14 = 'low' AND sc.quality < 50))
+           OR ($14 = 'judged' AND a.completion IS NOT NULL)
+           OR ($14 = 'unjudged' AND a.completion IS NULL)
+           OR ($14 = 'low' AND a.completion < 50)
+           OR ($14 = 'high' AND a.completion >= 80))
+      AND ($15::text IS NULL OR f.model = $15 OR $15 = ANY(f.models))
+      AND ($16::text IS NULL OR f.client_kind = $16)
+      AND ($17::text IS NULL OR f.group_id = $17)
+      AND ($18::text IS NULL OR f.project_id = $18)
+      AND ($19::text IS NULL
+           OR ($19 = 'errors' AND f.error_count > 0)
+           OR ($19 = 'denied' AND f.gov_deny > 0)
+           OR ($19 = 'tools' AND f.tool_calls_intended + f.tool_calls_executed > 0)
+           OR ($19 = 'skills' AND cardinality(f.skills) > 0)
+           OR ($19 = 'safety' AND f.safety_findings > 0))
+      AND ($6::text IS NULL OR u.display_name ILIKE $6 OR f.user_id ILIKE $6 OR a.summary ILIKE $6
+           OR a.title ILIKE $6 OR array_to_string(a.tags, ' ') ILIKE $6
+           OR array_to_string(f.skills, ' ') ILIKE $6 OR array_to_string(f.models, ' ') ILIKE $6
+           OR conversation_title(f.context_id, f.client_session_id) ILIKE $6)
 ), totals AS (
     SELECT COUNT(*)::bigint AS conversations, COUNT(DISTINCT user_id)::bigint AS users,
            COALESCE(SUM(turn_count), 0)::bigint AS turns,
-           COALESCE(SUM(tool_call_count), 0)::bigint AS tool_calls,
-           COALESCE(SUM(total_tokens), 0)::bigint AS total_tokens,
-           COALESCE(SUM(total_cost_microdollars), 0)::bigint AS total_cost_microdollars,
+           COALESCE(SUM(request_count), 0)::bigint AS requests,
+           COALESCE(SUM(tool_calls_intended), 0)::bigint AS tool_calls,
+           COALESCE(SUM(tool_calls_executed), 0)::bigint AS tool_calls_executed,
+           COALESCE(SUM(tool_calls_failed), 0)::bigint AS tool_calls_failed,
+           COALESCE(SUM(input_tokens), 0)::bigint AS input_tokens,
+           COALESCE(SUM(output_tokens), 0)::bigint AS output_tokens,
+           COALESCE(SUM(cache_tokens), 0)::bigint AS cache_tokens,
+           COALESCE(SUM(reasoning_tokens), 0)::bigint AS reasoning_tokens,
+           COALESCE(SUM(cost_microdollars), 0)::bigint AS total_cost_microdollars,
+           COALESCE(SUM(error_count), 0)::bigint AS errors,
+           COALESCE(SUM(rejected_count), 0)::bigint AS rejected,
+           COALESCE(SUM(gov_deny), 0)::bigint AS denied,
+           COALESCE(SUM(gov_warn), 0)::bigint AS warned,
+           COALESCE(SUM(safety_findings), 0)::bigint AS safety_findings,
+           COALESCE(SUM(safety_blocked), 0)::bigint AS safety_blocked,
+           COALESCE(SUM(artifact_count), 0)::bigint AS artifacts,
+           COALESCE(SUM(skill_invocations), 0)::bigint AS skill_invocations,
+           COUNT(*) FILTER (WHERE cardinality(skills) > 0)::bigint AS with_skills,
            COUNT(*) FILTER (WHERE outcome = 'achieved')::bigint AS achieved,
-           COUNT(*) FILTER (WHERE scored_criteria > 0)::bigint AS scored,
-           AVG(quality_score)::float8 AS quality_avg,
-           AVG(intent_score)::float8 AS intent_avg,
-           AVG(speed_score)::float8 AS speed_avg,
-           AVG(cost_score)::float8 AS cost_avg,
-           (SELECT COUNT(*)::bigint FROM conversation_analyses u
-             WHERE u.status <> 'classified'
-               AND ($1::text[] IS NULL OR u.user_id = ANY($1))
-               AND ($2::text IS NULL OR u.user_id = $2)) AS unclassified
+           COUNT(*) FILTER (WHERE completion IS NOT NULL)::bigint AS judged,
+           AVG(completion)::float8 AS completion_avg,
+           percentile_cont(0.95) WITHIN GROUP (ORDER BY p95_latency_ms)::float8 AS p95_latency_ms,
+           (SELECT COUNT(*)::bigint FROM conversation_analyses q
+             WHERE q.status = 'pending'
+               AND ($1::text[] IS NULL OR q.user_id = ANY($1))
+               AND ($2::text IS NULL OR q.user_id = $2)) AS pending_judgement
     FROM f
+), series AS (
+    SELECT date_trunc($20::text, f.first_at) AS bucket,
+           COUNT(*)::bigint AS conversations, COALESCE(SUM(f.turn_count), 0)::bigint AS turns,
+           COALESCE(SUM(f.total_tokens), 0)::bigint AS tokens,
+           COALESCE(SUM(f.cost_microdollars), 0)::bigint AS cost_microdollars,
+           COALESCE(SUM(f.error_count), 0)::bigint AS errors,
+           COALESCE(SUM(f.tool_calls_intended), 0)::bigint AS tool_calls,
+           COUNT(DISTINCT f.user_id)::bigint AS users
+    FROM f GROUP BY 1 ORDER BY 1
 ), keyed AS (
-    SELECT f.category, f.outcome, f.user_id, f.turn_count, f.total_cost_microdollars,
-           f.quality_score, f.scored_criteria,
+    SELECT f.category, f.outcome, f.user_id, f.turn_count, f.total_tokens, f.cost_microdollars,
+           f.error_count, f.gov_deny, f.tool_calls_intended, f.completion,
            CASE $13::text
                WHEN 'group' THEN COALESCE(f.group_name, 'Unattributed')
                WHEN 'project' THEN COALESCE(f.project_name, 'Unattributed')
                WHEN 'user' THEN COALESCE(f.display_name, f.user_id, 'Unattributed')
                WHEN 'outcome' THEN COALESCE(f.outcome, 'unclear')
-               ELSE f.category END AS bucket,
+               WHEN 'model' THEN COALESCE(f.model, 'unknown')
+               WHEN 'client' THEN f.client_kind
+               ELSE COALESCE(f.category, 'unjudged') END AS bucket,
            CASE $13::text WHEN 'user' THEN f.user_id ELSE NULL END AS bucket_user
-    FROM f
+    FROM f WHERE $13::text <> 'skill'
+    UNION ALL
+    SELECT f.category, f.outcome, f.user_id, f.turn_count, f.total_tokens, f.cost_microdollars,
+           f.error_count, f.gov_deny, f.tool_calls_intended, f.completion, s.skill, NULL
+    FROM f CROSS JOIN LATERAL unnest(f.skills) AS s(skill) WHERE $13::text = 'skill'
 ), breakdown AS (
     SELECT k.bucket AS label, k.bucket_user AS user_id,
            COUNT(*)::bigint AS conversations, COUNT(DISTINCT k.user_id)::bigint AS users,
            COALESCE(SUM(k.turn_count), 0)::bigint AS turns,
-           COALESCE(SUM(k.total_cost_microdollars), 0)::bigint AS total_cost_microdollars,
+           COALESCE(SUM(k.total_tokens), 0)::bigint AS total_tokens,
+           COALESCE(SUM(k.cost_microdollars), 0)::bigint AS total_cost_microdollars,
+           COALESCE(SUM(k.error_count), 0)::bigint AS errors,
+           COALESCE(SUM(k.gov_deny), 0)::bigint AS denied,
+           COALESCE(SUM(k.tool_calls_intended), 0)::bigint AS tool_calls,
            COUNT(*) FILTER (WHERE k.outcome = 'achieved')::bigint AS achieved,
-           COUNT(*) FILTER (WHERE k.scored_criteria > 0)::bigint AS scored,
-           AVG(k.quality_score)::float8 AS quality_avg,
+           COUNT(*) FILTER (WHERE k.completion IS NOT NULL)::bigint AS judged,
+           AVG(k.completion)::float8 AS completion_avg,
            mode() WITHIN GROUP (ORDER BY k.category) AS top_category
     FROM keyed k
     GROUP BY k.bucket, k.bucket_user
-    ORDER BY conversations DESC, label
+    ORDER BY total_cost_microdollars DESC, conversations DESC, label
     LIMIT 100
 ), selected AS MATERIALIZED (
     SELECT f.*, conversation_title(f.context_id, f.client_session_id) AS title,
@@ -89,27 +125,55 @@ WITH picked AS MATERIALIZED (
              CASE WHEN $9 = 'turns' AND NOT $10::boolean THEN f.turn_count END ASC,
              CASE WHEN $9 = 'tokens' AND $10::boolean THEN f.total_tokens END DESC,
              CASE WHEN $9 = 'tokens' AND NOT $10::boolean THEN f.total_tokens END ASC,
-             CASE WHEN $9 = 'cost' AND $10::boolean THEN f.total_cost_microdollars END DESC,
-             CASE WHEN $9 = 'cost' AND NOT $10::boolean THEN f.total_cost_microdollars END ASC,
-             CASE WHEN $9 = 'quality' AND $10::boolean THEN f.quality_score END DESC NULLS LAST,
-             CASE WHEN $9 = 'quality' AND NOT $10::boolean THEN f.quality_score END ASC NULLS LAST,
+             CASE WHEN $9 = 'cost' AND $10::boolean THEN f.cost_microdollars END DESC,
+             CASE WHEN $9 = 'cost' AND NOT $10::boolean THEN f.cost_microdollars END ASC,
+             CASE WHEN $9 = 'tools' AND $10::boolean THEN f.tool_calls_intended END DESC,
+             CASE WHEN $9 = 'tools' AND NOT $10::boolean THEN f.tool_calls_intended END ASC,
+             CASE WHEN $9 = 'errors' AND $10::boolean THEN f.error_count + f.gov_deny END DESC,
+             CASE WHEN $9 = 'errors' AND NOT $10::boolean THEN f.error_count + f.gov_deny END ASC,
+             CASE WHEN $9 = 'latency' AND $10::boolean THEN f.p95_latency_ms END DESC NULLS LAST,
+             CASE WHEN $9 = 'latency' AND NOT $10::boolean THEN f.p95_latency_ms END ASC NULLS LAST,
+             CASE WHEN $9 = 'duration' AND $10::boolean THEN f.duration_seconds END DESC,
+             CASE WHEN $9 = 'duration' AND NOT $10::boolean THEN f.duration_seconds END ASC,
+             CASE WHEN $9 = 'completion' AND $10::boolean THEN f.completion END DESC NULLS LAST,
+             CASE WHEN $9 = 'completion' AND NOT $10::boolean THEN f.completion END ASC NULLS LAST,
              f.context_id) AS position
     FROM f
     ORDER BY position
     LIMIT $11 OFFSET $12
+), turn_series AS (
+    SELECT s.context_id,
+           ARRAY(SELECT COALESCE(r.input_tokens, 0) + COALESCE(r.output_tokens, 0)
+                 FROM (SELECT cr.input_tokens, cr.output_tokens, cr.created_at, cr.id
+                       FROM conversation_requests cr
+                       WHERE cr.context_id = s.context_id AND cr.effective_kind = 'turn'
+                       ORDER BY cr.created_at DESC, cr.id DESC LIMIT 32) r
+                 ORDER BY r.created_at, r.id) AS turn_tokens
+    FROM selected s
 ), skills AS (
     SELECT skill, COUNT(*)::bigint AS conversations FROM (
-        SELECT f.context_id, unnest(f.skills_used || f.skills_hooked) AS skill FROM f
+        SELECT f.context_id, unnest(f.skills) AS skill FROM f
     ) s GROUP BY skill ORDER BY conversations DESC, skill LIMIT 200
 ), users AS (
     SELECT f.user_id, MAX(f.display_name) AS display_name, COUNT(*)::bigint AS conversations
     FROM f WHERE f.user_id IS NOT NULL GROUP BY f.user_id ORDER BY conversations DESC LIMIT 500
+), models AS (
+    SELECT m.model, COUNT(*)::bigint AS conversations
+    FROM f CROSS JOIN LATERAL unnest(f.models) AS m(model)
+    GROUP BY m.model ORDER BY conversations DESC, m.model LIMIT 100
+), clients AS (
+    SELECT f.client_kind, COUNT(*)::bigint AS conversations
+    FROM f GROUP BY f.client_kind ORDER BY conversations DESC
 )
 SELECT jsonb_build_object(
-    'rows', COALESCE((SELECT jsonb_agg(to_jsonb(s) ORDER BY s.position) FROM selected s), '[]'::jsonb),
+    'rows', COALESCE((SELECT jsonb_agg(to_jsonb(s) || jsonb_build_object('turn_tokens', t.turn_tokens) ORDER BY s.position)
+                      FROM selected s JOIN turn_series t ON t.context_id = s.context_id), '[]'::jsonb),
     'totals', (SELECT to_jsonb(t) FROM totals t),
+    'series', COALESCE((SELECT jsonb_agg(to_jsonb(x) ORDER BY x.bucket) FROM series x), '[]'::jsonb),
     'breakdown', COALESCE((SELECT jsonb_agg(to_jsonb(b)) FROM breakdown b), '[]'::jsonb),
     'skills', COALESCE((SELECT jsonb_agg(to_jsonb(k)) FROM skills k), '[]'::jsonb),
-    'users', COALESCE((SELECT jsonb_agg(to_jsonb(u)) FROM users u), '[]'::jsonb)
+    'users', COALESCE((SELECT jsonb_agg(to_jsonb(u)) FROM users u), '[]'::jsonb),
+    'models', COALESCE((SELECT jsonb_agg(to_jsonb(m)) FROM models m), '[]'::jsonb),
+    'clients', COALESCE((SELECT jsonb_agg(to_jsonb(c)) FROM clients c), '[]'::jsonb)
 ) AS "payload!: Json<ConversationAnalysisWire>",
     ARRAY(SELECT context_id FROM selected ORDER BY position) AS "context_ids!: Vec<ContextId>"

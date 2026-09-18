@@ -19,7 +19,7 @@
 <th scope="col" class="sp-table__cell--num">Skills</th>
 <th scope="col" class="sp-table__cell--num" title="Distinct versions recorded for this marketplace">Versions</th>
 <th scope="col" title="When the current version was first observed">Since</th>
-<th scope="col" title="The judge's mean scores for the current version; the delta is against every earlier version">Evaluation</th>
+<th scope="col" class="sp-table__cell--num" title="Mean judge completion over the conversations served by the current version, then by every earlier version">Done · before</th>
 <th scope="col" class="sp-table__cell--num">Invocations</th>
 <th scope="col" class="sp-table__cell--num">Users</th>
 <th scope="col" class="sp-table__cell--num">Requests</th>
@@ -36,12 +36,12 @@
 <td class="sp-table__cell--num sp-u-num">{{#if skill_count}}{{skill_count}}{{else}}—{{/if}}</td>
 <td class="sp-table__cell--num sp-u-num">{{versions}}</td>
 <td title="{{last_changed_at}}">{{relativeTime last_changed_at}}</td>
-<td class="sp-inventory-cell-eval">{{> components/scorecard card=scorecard}}</td>
+<td class="sp-table__cell--num"><span class="sp-aconv-score sp-aconv-score--{{completion_tone}}" title="{{completion_judged}} judged conversations on the current version">{{completion_display}}</span> <span class="sp-aconv-meta" title="{{history_judged}} judged conversations on earlier versions">· {{history_display}}</span></td>
 <td class="sp-table__cell--num sp-u-num">{{invocations}}{{#if failed_invocations}} <span class="sp-u-text-danger">{{failed_invocations}} failed</span>{{/if}}</td>
 <td class="sp-table__cell--num sp-u-num">{{users}}</td>
 <td class="sp-table__cell--num sp-u-num">{{requests}}{{#if failed}} <span class="sp-u-text-danger">{{failed}} failed</span>{{/if}}</td>
 <td class="sp-table__cell--num sp-u-num">{{cost}}</td>
-<td class="sp-table__cell--actions"><a class="sp-table__link" href="{{href}}">History</a> <a class="sp-table__link" href="{{href}}&amp;tab=compare">Compare</a> <a class="sp-table__link" href="{{evaluation_href}}">Evaluation</a></td>
+<td class="sp-table__cell--actions"><a class="sp-table__link" href="{{href}}">History</a> <a class="sp-table__link" href="{{href}}&amp;tab=compare">Compare</a></td>
 </tr>
 {{else}}
 <tr class="sp-table__empty"><td colspan="13">{{> components/empty-state heading="No marketplace versions recorded" message="Versions are recorded at boot and on every inventory sync. Press Sync inventory now on Skills, or restart the server after importing a marketplace."}}</td></tr>

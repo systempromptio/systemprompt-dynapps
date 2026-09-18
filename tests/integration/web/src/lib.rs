@@ -56,7 +56,3 @@ mod feedback_attribution;
 #[cfg(test)]
 mod feedback_authentication;
 
-#[cfg(test)]
-mod portfolio_reference;
-#[cfg(test)]
-mod portfolio_snapshots;

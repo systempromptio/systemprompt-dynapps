@@ -148,6 +148,8 @@ fn daily_chart(daily: &[DailyRequests]) -> SvgLineChartView {
         x_mid_display: day(daily.len() / 2),
         x_end_display: day(daily.len().saturating_sub(1)),
         show_area: true,
+        x_labels: Vec::new(),
+        y_unit: "",
     })
 }
 
@@ -174,6 +176,8 @@ fn daily_cost_chart(daily: &[DailyRequests]) -> SvgLineChartView {
         x_mid_display: day(daily.len() / 2),
         x_end_display: day(daily.len().saturating_sub(1)),
         show_area: true,
+        x_labels: Vec::new(),
+        y_unit: "",
     })
 }
 

@@ -42,7 +42,6 @@
 //!   `otlp_export_state` rows into its view
 
 #[cfg(test)]
-mod analysis_inventory;
 #[cfg(test)]
 mod analysis_skills;
 #[cfg(test)]
@@ -123,7 +122,7 @@ mod jobs_assets_copy;
 #[cfg(test)]
 mod jobs_bundles;
 #[cfg(test)]
-mod jobs_conversation_classifier;
+mod jobs_conversation_judge;
 #[cfg(test)]
 mod jobs_errors_stats;
 #[cfg(test)]
@@ -241,14 +240,6 @@ mod authz_quota_subjects;
 #[cfg(test)]
 #[cfg(test)]
 mod config_gateway_pure;
-#[cfg(test)]
-mod evaluation_config;
-#[cfg(test)]
-mod evaluation_prompt;
-#[cfg(test)]
-mod evaluation_scoring;
-#[cfg(test)]
-mod evaluation_worker;
 #[cfg(test)]
 mod frontend_standards;
 #[cfg(test)]

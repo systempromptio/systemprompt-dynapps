@@ -56,7 +56,7 @@ pub use handlers::salesforce_auth::{SalesforceConfig, SalesforceDeps, Salesforce
 pub use routes::managed_state::StateError;
 pub use routes::{admin_ssr_router, bridge_auth_ssr_router};
 pub use services::salesforce_orgs::salesforce_orgs_boot_check;
-pub use services::{connector_oauth, evaluation, salesforce_orgs};
+pub use services::{connector_oauth, salesforce_orgs};
 pub use types::{
     CreateUserRequest, MarketplaceContext, UserContext, UserSummary, UserUsageEvent,
     roles_grant_console,
@@ -71,21 +71,10 @@ pub mod test_support {
     pub use crate::handlers::ssr::analysis::marketplace_versions::diff::{
         Change, ManifestDiff, SkillChange, diff as manifest_diff,
     };
-    pub use crate::handlers::ssr::analysis::portfolio::collisions::{Collision, collisions};
-    pub use crate::handlers::ssr::analysis::portfolio::groups::{
-        Kpis, MarketplaceGroup, MarketplaceTally, PluginGroup, Rollup, UNPLACED, group_rows,
-        in_marketplace, kpis, tally_marketplaces,
-    };
-    pub use crate::handlers::ssr::analysis::portfolio::rows::{
-        Health, HealthInputs, InventoryRow, InventoryRowInputs, RowVersion, health_of, live_for,
-        p95_cell, scores_for, short_hash, version_href,
-    };
     pub use crate::handlers::ssr::analysis::time::{
         parse as parse_window_bound, render as render_window_bound,
     };
-    pub use crate::handlers::ssr::analysis::{
-        AnalysisQuery, RetainedConversationView, drilldown_url, parse_skill_key,
-    };
+    pub use crate::handlers::ssr::analysis::{SkillRef, parse_skill_key};
     pub use crate::handlers::ssr::ssr_history::command_name as history_command_name;
     pub use crate::handlers::ssr::transcript_view::{
         ConversationView, EmptyReason, ParsedAssistant, SideCallRowView, SideCallsView, StepView,

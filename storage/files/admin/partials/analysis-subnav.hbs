@@ -11,15 +11,11 @@
     {{#if (eq page "analysis-skills")}}<span aria-current="page">Skills</span>
     {{else}}{{#if (eq page "analysis-skill")}}<a href="/admin/analysis/skills">Skills</a> <span class="sp-breadcrumbs__sep" aria-hidden="true">›</span> <span aria-current="page">{{skill_name}}</span>
     {{else}}{{#if (eq page "analysis-conversations")}}<span aria-current="page">Conversations</span>
+    {{else}}{{#if (eq page "analysis-conversation")}}<a href="/admin/analysis/conversations">Conversations</a> <span class="sp-breadcrumbs__sep" aria-hidden="true">›</span> <span aria-current="page">{{crumb}}</span>
     {{else}}{{#if (eq page "analysis-versions")}}<span aria-current="page">Versions</span>
     {{else}}{{#if (eq page "analysis-marketplace-versions")}}<a href="/admin/analysis/versions">Versions</a> <span class="sp-breadcrumbs__sep" aria-hidden="true">›</span> <span aria-current="page">{{name}}</span>
     {{else}}{{#if (eq page "analysis-revision")}}<a href="/admin/analysis/versions">Versions</a> <span class="sp-breadcrumbs__sep" aria-hidden="true">›</span> <span aria-current="page">Revision</span>
-    {{else}}{{#if (eq page "analysis-evaluation")}}<span aria-current="page">Evaluation</span>
-    {{else}}{{#if (eq page "analysis-evaluation-marketplace")}}<a href="/admin/analysis/evaluation">Evaluation</a> <span class="sp-breadcrumbs__sep" aria-hidden="true">›</span> <span aria-current="page">{{marketplace_name}}</span>
-    {{else}}{{#if (eq page "analysis-evaluation-report")}}<a href="/admin/analysis/evaluation">Evaluation</a> <span class="sp-breadcrumbs__sep" aria-hidden="true">›</span> <span aria-current="page">Report</span>
-    {{else}}{{#if (eq page "analysis-evaluation-runs")}}<a href="/admin/analysis/evaluation">Evaluation</a> <span class="sp-breadcrumbs__sep" aria-hidden="true">›</span> <span aria-current="page">Judge runs</span>
-    {{else}}{{#if (eq page "analysis-evaluation-run")}}<a href="/admin/analysis/evaluation">Evaluation</a> <span class="sp-breadcrumbs__sep" aria-hidden="true">›</span> <a href="/admin/analysis/evaluation/runs">Judge runs</a> <span class="sp-breadcrumbs__sep" aria-hidden="true">›</span> <span aria-current="page">Run</span>
-    {{else}}<span aria-current="page">Analysis</span>{{/if}}{{/if}}{{/if}}{{/if}}{{/if}}{{/if}}{{/if}}{{/if}}{{/if}}{{/if}}{{/if}}
+    {{else}}<span aria-current="page">Analysis</span>{{/if}}{{/if}}{{/if}}{{/if}}{{/if}}{{/if}}{{/if}}
 </nav>
 <a class="sp-btn sp-btn--xs sp-btn--outline sp-analysis-strip__guide" href="/documentation/analysis" target="_blank" rel="noopener" title="Open the Analysis guide in a new tab">Guide</a>
 </div>

@@ -31,8 +31,8 @@ BEGIN
     DELETE FROM plugin_usage_events WHERE created_at<cutoff;
     GET DIAGNOSTICS deleted = ROW_COUNT;
     DELETE FROM ai_requests WHERE created_at<cutoff;
-    DELETE FROM evaluation_runs WHERE created_at<cutoff;
-    DELETE FROM evaluation_queue WHERE created_at<cutoff;
+    DELETE FROM conversation_facts WHERE last_at<cutoff;
+    DELETE FROM conversation_analyses WHERE created_at<cutoff;
     DELETE FROM session_transcripts WHERE captured_at<cutoff;
     DELETE FROM session_cost_snapshots WHERE updated_at<cutoff;
     DELETE FROM plugin_session_summaries WHERE COALESCE(ended_at,updated_at,created_at)<cutoff;

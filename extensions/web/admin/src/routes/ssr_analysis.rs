@@ -1,5 +1,5 @@
-//! Analysis routes: conversations, skills, evaluation, marketplace versions
-//! and the publication decisions taken from a marketplace's Distribution view.
+//! Analysis routes: conversations, skills, marketplace versions and the
+//! publication decisions taken from a marketplace's Distribution view.
 //!
 //! Every page is `/analysis/<noun>` with the entity's identity as the next
 //! segment — the Platform section's `/<noun>/{id}` shape, one level in.
@@ -14,15 +14,11 @@ pub(super) fn routes() -> Router<Arc<PgPool>> {
     Router::new()
         .route(
             "/analysis/inventory/sync",
-            post(handlers::ssr::analysis::portfolio::actions::sync_inventory),
+            post(handlers::ssr::analysis::inventory_actions::sync_inventory),
         )
         .route(
             "/analysis/skills",
-            get(handlers::ssr::analysis::portfolio::page),
-        )
-        .route(
-            "/analysis/skills.json",
-            get(handlers::ssr::analysis::portfolio::json),
+            get(handlers::ssr::analysis::skills::page),
         )
         .route(
             "/analysis/skills/{skill}",
@@ -30,7 +26,7 @@ pub(super) fn routes() -> Router<Arc<PgPool>> {
         )
         .route(
             "/analysis/inventory/{entry_id}/bind",
-            post(handlers::ssr::analysis::portfolio::actions::bind),
+            post(handlers::ssr::analysis::inventory_actions::bind),
         )
         .route(
             "/analysis/versions",
@@ -48,7 +44,14 @@ pub(super) fn routes() -> Router<Arc<PgPool>> {
             "/analysis/conversations",
             get(handlers::ssr::analysis::conversations::page),
         )
-        .merge(evaluation_routes())
+        .route(
+            "/analysis/conversations/{context_id}",
+            get(handlers::ssr::analysis::conversation_detail::page),
+        )
+        .route(
+            "/analysis/conversations/{context_id}/judge",
+            post(handlers::ssr::analysis::conversation_detail::judge_now),
+        )
         .route(
             "/analysis/publications/review",
             post(handlers::ssr::analysis::lifecycle::review),
@@ -56,44 +59,5 @@ pub(super) fn routes() -> Router<Arc<PgPool>> {
         .route(
             "/analysis/publications/withdrawals",
             post(handlers::ssr::analysis::lifecycle::decide_withdrawal),
-        )
-}
-
-// Why: the judge's pages are one feature; keeping them together also keeps
-// `routes` inside the line budget the lint enforces.
-fn evaluation_routes() -> Router<Arc<PgPool>> {
-    Router::new()
-        .route(
-            "/analysis/evaluation",
-            get(handlers::ssr::analysis::evaluation::overview::page),
-        )
-        .route(
-            "/analysis/evaluation/report",
-            get(handlers::ssr::analysis::evaluation::reports::list_page)
-                .post(handlers::ssr::analysis::evaluation::reports::regenerate),
-        )
-        .route(
-            "/analysis/evaluation/report/{id}",
-            get(handlers::ssr::analysis::evaluation::reports::detail_page),
-        )
-        .route(
-            "/analysis/evaluation/{marketplace_id}",
-            get(handlers::ssr::analysis::evaluation::marketplace::page),
-        )
-        .route(
-            "/analysis/evaluation/runs",
-            get(handlers::ssr::analysis::evaluation::runs_page),
-        )
-        .route(
-            "/analysis/evaluation/runs/{id}",
-            get(handlers::ssr::analysis::evaluation::run_page),
-        )
-        .route(
-            "/analysis/evaluation/run",
-            post(handlers::ssr::analysis::evaluation::actions::run_pending),
-        )
-        .route(
-            "/analysis/evaluation/queue",
-            post(handlers::ssr::analysis::evaluation::actions::queue_closed),
         )
 }

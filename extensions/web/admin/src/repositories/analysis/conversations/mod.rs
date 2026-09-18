@@ -1,28 +1,33 @@
-//! Classified conversations — the repository behind
-//! `/admin/analysis/conversations`.
+//! Conversations — the repository behind `/admin/analysis/conversations`.
 //!
-//! A conversation is a context; `conversation_metrics_for` (schema 27) rolls
-//! its gateway requests up, `conversation_analyses` (schema 37) carries the
-//! classifier's verdict, and `conversation_skill_uses` the skills the harness
-//! hooks reported. One statement (`page.sql`) narrows the classified set,
-//! then reads its totals, one breakdown dimension and one page of rows from
-//! the same filtered set, so every number above the table describes the rows
-//! inside it. Filtering, paging and sorting are bound parameters chosen by
-//! `CASE` arms, never interpolated text.
+//! A conversation is a gateway context; `conversation_facts` (schema 45) is
+//! its deterministic record, rolled up by the `conversation_rollup` job from
+//! the request log, the hook plane, the tool ledger and the governance spine,
+//! and `conversation_analyses` (schema 37) is the judge's one label on top.
+//! One statement (`page.sql`) narrows the fact table, then reads its totals,
+//! its time series, one breakdown dimension, the facet lists and one page of
+//! rows from the same filtered set, so every number above the table
+//! describes the rows inside it. Filtering, paging and sorting are bound
+//! parameters chosen by `CASE` arms, never interpolated text.
 
+pub mod detail;
 mod filter;
+pub mod planes;
+mod row;
+
+pub use row::ConversationFactRow;
+use row::decode_row;
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use sqlx::types::Json;
-use systemprompt::identifiers::{ContextId, SessionId, UserId};
+use systemprompt::identifiers::{ContextId, UserId};
+use systemprompt_web_shared::{GroupId, ProjectId};
 
-use crate::repositories::analytics::conversation_rows::ConversationSort;
+pub use filter::{BreakdownBy, FactSort, FlagFilter, JudgedFilter};
 
-pub use filter::{BreakdownBy, ScoredFilter};
-
-/// Narrowing applied to the rows, totals and breakdown alike.
+/// Narrowing applied to the rows, totals, series and breakdown alike.
 #[derive(Debug, Clone, Default)]
 pub struct ConversationAnalysisFilter {
     // Why: the caller's resolved `SubjectScope::as_sql()`; `None` = every user.
@@ -34,7 +39,12 @@ pub struct ConversationAnalysisFilter {
     pub free_text: Option<String>,
     pub since: Option<DateTime<Utc>>,
     pub until: Option<DateTime<Utc>>,
-    pub scored: Option<ScoredFilter>,
+    pub judged: Option<JudgedFilter>,
+    pub model: Option<String>,
+    pub client_kind: Option<String>,
+    pub group_id: Option<GroupId>,
+    pub project_id: Option<ProjectId>,
+    pub flag: Option<FlagFilter>,
 }
 
 impl ConversationAnalysisFilter {
@@ -44,51 +54,24 @@ impl ConversationAnalysisFilter {
             .filter(|s| !s.is_empty())
             .map(|s| format!("%{}%", s.replace('\\', "\\\\").replace('%', "\\%")))
     }
+
+    // Why: a 24-hour window buckets by hour so the chart has a shape; every
+    // longer window buckets by day.
+    fn bucket(&self) -> &'static str {
+        match self.since {
+            Some(since) if (Utc::now() - since).num_hours() <= 48 => "hour",
+            _ => "day",
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
 pub struct ConversationAnalysisPage {
-    pub sort: ConversationSort,
+    pub sort: FactSort,
     pub descending: bool,
     pub limit: i64,
     pub offset: i64,
     pub breakdown: BreakdownBy,
-}
-
-/// One classified conversation as the page shows it.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConversationAnalysisRow<Id = ContextId> {
-    pub context_id: Id,
-    pub title: String,
-    pub user_id: Option<UserId>,
-    pub display_name: Option<String>,
-    pub session_id: Option<SessionId>,
-    pub client_session_id: Option<String>,
-    pub group_name: Option<String>,
-    pub project_name: Option<String>,
-    pub model: Option<String>,
-    pub client_kind: String,
-    pub turn_count: i64,
-    pub tool_call_count: i64,
-    pub error_count: i64,
-    pub total_tokens: i64,
-    pub total_cost_microdollars: i64,
-    pub first_at: Option<DateTime<Utc>>,
-    pub last_at: Option<DateTime<Utc>>,
-    pub category: String,
-    pub summary: Option<String>,
-    pub tags: Vec<String>,
-    pub skills_used: Vec<String>,
-    pub skills_hooked: Vec<String>,
-    pub outcome: Option<String>,
-    pub confidence: Option<f32>,
-    pub classified_at: Option<DateTime<Utc>>,
-    pub judge_model: Option<String>,
-    pub intent_score: Option<i16>,
-    pub quality_score: Option<i16>,
-    pub speed_score: Option<i16>,
-    pub cost_score: Option<i16>,
-    pub scored_criteria: i32,
 }
 
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
@@ -96,17 +79,44 @@ pub struct ConversationAnalysisTotals {
     pub conversations: i64,
     pub users: i64,
     pub turns: i64,
+    pub requests: i64,
     pub tool_calls: i64,
-    pub total_tokens: i64,
+    pub tool_calls_executed: i64,
+    pub tool_calls_failed: i64,
+    pub input_tokens: i64,
+    pub output_tokens: i64,
+    pub cache_tokens: i64,
+    pub reasoning_tokens: i64,
     pub total_cost_microdollars: i64,
+    pub errors: i64,
+    pub rejected: i64,
+    pub denied: i64,
+    pub warned: i64,
+    pub safety_findings: i64,
+    pub safety_blocked: i64,
+    pub artifacts: i64,
+    pub skill_invocations: i64,
+    pub with_skills: i64,
     pub achieved: i64,
-    pub scored: i64,
-    pub quality_avg: Option<f64>,
-    pub intent_avg: Option<f64>,
-    pub speed_avg: Option<f64>,
-    pub cost_avg: Option<f64>,
-    // Why: pending or failed rows in scope — what the page has not yet seen.
-    pub unclassified: i64,
+    pub judged: i64,
+    pub completion_avg: Option<f64>,
+    pub p95_latency_ms: Option<f64>,
+    // Why: queued judge rows in scope — what the label has not yet covered.
+    pub pending_judgement: i64,
+}
+
+/// One bucket of the time series: conversations started in the bucket and
+/// what they added up to.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct ConversationSeriesPoint {
+    pub bucket: DateTime<Utc>,
+    pub conversations: i64,
+    pub turns: i64,
+    pub tokens: i64,
+    pub cost_microdollars: i64,
+    pub errors: i64,
+    pub tool_calls: i64,
+    pub users: i64,
 }
 
 /// One bucket of the chosen breakdown dimension.
@@ -117,10 +127,14 @@ pub struct ConversationBucketRow {
     pub conversations: i64,
     pub users: i64,
     pub turns: i64,
+    pub total_tokens: i64,
     pub total_cost_microdollars: i64,
+    pub errors: i64,
+    pub denied: i64,
+    pub tool_calls: i64,
     pub achieved: i64,
-    pub scored: i64,
-    pub quality_avg: Option<f64>,
+    pub judged: i64,
+    pub completion_avg: Option<f64>,
     pub top_category: Option<String>,
 }
 
@@ -137,24 +151,42 @@ pub struct UserFacet {
     pub conversations: i64,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ModelFacet {
+    pub model: String,
+    pub conversations: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClientFacet {
+    pub client_kind: String,
+    pub conversations: i64,
+}
+
 #[derive(Debug, Default)]
 pub struct ConversationAnalysisResult {
-    pub rows: Vec<ConversationAnalysisRow>,
+    pub rows: Vec<ConversationFactRow>,
     pub totals: ConversationAnalysisTotals,
+    pub series: Vec<ConversationSeriesPoint>,
     pub breakdown: Vec<ConversationBucketRow>,
     pub skills: Vec<SkillFacet>,
     pub users: Vec<UserFacet>,
+    pub models: Vec<ModelFacet>,
+    pub clients: Vec<ClientFacet>,
 }
 
 // Why: IDs are decoded by SQLx from a companion array; the JSON payload keeps
 // them as text so no unchecked constructor is needed on the way out.
 #[derive(Debug, Deserialize)]
 struct ConversationAnalysisWire {
-    rows: Vec<ConversationAnalysisRow<String>>,
+    rows: Vec<ConversationFactRow<String>>,
     totals: ConversationAnalysisTotals,
+    series: Vec<ConversationSeriesPoint>,
     breakdown: Vec<ConversationBucketRow>,
     skills: Vec<SkillFacet>,
     users: Vec<UserFacet>,
+    models: Vec<ModelFacet>,
+    clients: Vec<ClientFacet>,
 }
 
 pub async fn load_conversation_analysis_page(
@@ -180,7 +212,13 @@ pub async fn load_conversation_analysis_page(
         page.limit,
         page.offset,
         page.breakdown.as_str(),
-        filter.scored.map(ScoredFilter::as_str),
+        filter.judged.map(JudgedFilter::as_str),
+        filter.model,
+        filter.client_kind,
+        filter.group_id.as_ref().map(GroupId::as_str),
+        filter.project_id.as_ref().map(ProjectId::as_str),
+        filter.flag.map(FlagFilter::as_str),
+        filter.bucket(),
     )
     .fetch_one(&mut *connection)
     .await?;
@@ -198,47 +236,11 @@ pub async fn load_conversation_analysis_page(
             .map(|r| decode_row(r, &ids))
             .collect::<Result<_, _>>()?,
         totals: wire.totals,
+        series: wire.series,
         breakdown: wire.breakdown,
         skills: wire.skills,
         users: wire.users,
-    })
-}
-
-fn decode_row(
-    r: ConversationAnalysisRow<String>,
-    ids: &[ContextId],
-) -> Result<ConversationAnalysisRow, sqlx::Error> {
-    Ok(ConversationAnalysisRow {
-        context_id: crate::repositories::dashboard_read::context_id(&r.context_id, ids)?,
-        title: r.title,
-        user_id: r.user_id,
-        display_name: r.display_name,
-        session_id: r.session_id,
-        client_session_id: r.client_session_id,
-        group_name: r.group_name,
-        project_name: r.project_name,
-        model: r.model,
-        client_kind: r.client_kind,
-        turn_count: r.turn_count,
-        tool_call_count: r.tool_call_count,
-        error_count: r.error_count,
-        total_tokens: r.total_tokens,
-        total_cost_microdollars: r.total_cost_microdollars,
-        first_at: r.first_at,
-        last_at: r.last_at,
-        category: r.category,
-        summary: r.summary,
-        tags: r.tags,
-        skills_used: r.skills_used,
-        skills_hooked: r.skills_hooked,
-        outcome: r.outcome,
-        confidence: r.confidence,
-        classified_at: r.classified_at,
-        judge_model: r.judge_model,
-        intent_score: r.intent_score,
-        quality_score: r.quality_score,
-        speed_score: r.speed_score,
-        cost_score: r.cost_score,
-        scored_criteria: r.scored_criteria,
+        models: wire.models,
+        clients: wire.clients,
     })
 }

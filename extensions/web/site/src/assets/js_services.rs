@@ -66,7 +66,6 @@ fn service_core_js(p: &Path) -> Vec<AssetDefinition> {
         svc_js!(p, "header-search-list.js"),
         svc_js!(p, "header-search.js"),
         svc_js!(p, "nav-groups.js"),
-        svc_js!(p, "portfolio-live.js"),
         svc_js!(p, "scope.js"),
         svc_js!(p, "sidebar.js"),
         svc_js!(p, "table-expand.js"),
@@ -96,6 +95,10 @@ fn service_utils_js(storage_js: &Path) -> Vec<AssetDefinition> {
         AssetDefinition::js(
             storage_js.join("components/sp-tabs.js"),
             "js/components/sp-tabs.js",
+        ),
+        AssetDefinition::js(
+            storage_js.join("components/sp-chart.js"),
+            "js/components/sp-chart.js",
         ),
         AssetDefinition::js(
             storage_js.join("components/sp-evidence-lightbox.js"),

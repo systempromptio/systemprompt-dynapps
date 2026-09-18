@@ -130,6 +130,8 @@ pub(super) fn volume_chart(
         x_mid_display: date_label(midpoint(range)),
         x_end_display: date_label(range.to),
         show_area: true,
+        x_labels: Vec::new(),
+        y_unit: "",
     })
 }
 
@@ -156,6 +158,8 @@ pub(super) fn spend_chart(
         x_mid_display: date_label(midpoint(range)),
         x_end_display: date_label(range.to),
         show_area: true,
+        x_labels: Vec::new(),
+        y_unit: "",
     })
 }
 

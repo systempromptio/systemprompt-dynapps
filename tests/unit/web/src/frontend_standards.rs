@@ -223,11 +223,7 @@ fn check_js_line(v: &mut Violations, rel: &str, line_no: usize, raw: &str) {
     {
         v.report(rel, line_no, "console", raw);
     }
-    // Why: the live-snapshot service is evaluated dependency-free inside a vm
-    // harness (`tests/bridge/portfolio-live.test.mjs` links no modules), so
-    // it cannot import the api helper the rest of the admin uses.
     if !is_site_entry(rel)
-        && !rel.contains("services/portfolio-live.js")
         && has_call(&code, "fetch(", true, |p| {
             !p.is_ascii_alphabetic() && p != '.'
         })

@@ -1,19 +1,19 @@
 ---
-title: "Analysis: Measure, Compare and Publish a Skill"
-description: "What the Analysis section of the admin console answers, what each of its tabs is for, and the end-to-end path from an unmeasured skill to a marketplace version whose performance you can read and compare."
+title: "Analysis: The Record of Every Conversation and Skill"
+description: "What the Analysis section of the admin console shows — the deterministic record of every gateway conversation and every skill invocation, with one judge label on top — and how to read it."
 author: "Astound Digital"
 slug: "analysis"
-keywords: "analysis, skills, conversations, versions, marketplace hash, distribution, inventory sync, attribution, retained snapshot"
+keywords: "analysis, conversations, skills, tokens, cost, models, tool calls, governance, judge, completion, versions, marketplace hash, install rate"
 kind: "guide"
 public: true
 tags: ["enterprise", "admin", "analytics"]
 published_at: "2026-09-16"
-updated_at: "2026-09-16"
+updated_at: "2026-09-18"
 after_reading_this:
-  - "Name what each Analysis tab answers, and open the right one for a given question"
-  - "Tell a configured entry, an imported managed resource and a binding apart"
-  - "Explain why a skill shows figures, and why another one shows unbound or pending instead"
-  - "Follow the whole path from syncing the inventory to comparing two versions of a marketplace"
+  - "Name what each Analysis page answers, and open the right one for a given question"
+  - "Say which planes a conversation's row is built from, and how a hook session attaches to a gateway conversation"
+  - "Read the one judge score for what it is — a label on the record, not the record"
+  - "Explain install rate, activation and reach on the Skills page"
 related_docs:
   - title: "Measure Which Skills Are Used"
     url: "/documentation/analysis-measure-skills"
@@ -25,81 +25,72 @@ related_docs:
     url: "/documentation/services-sync"
 ---
 
-# Analysis: measure, compare and publish a skill
+# Analysis: the record of every conversation and skill
 
-**TL;DR:** Analysis is the part of the admin console that answers one question in stages: what did people do with the gateway, how well did it go, is a skill worth its cost, and did the marketplace version you shipped help? It starts at `/admin/analysis/conversations`; the zoomed-out answer is `/admin/analysis/evaluation`. A marketplace version is its content hash — the sha256 of everything it delivers — and every figure is keyed on that hash. Figures are read from retained reporting data, never computed live from raw events, and a skill only carries figures once its inventory entry is bound and attribution evidence exists. Analysis observes and compares; it does not run experiments.
+**TL;DR:** Analysis shows what the gateway and the harness hooks recorded — who, which client and model, turns, tool calls, errors and denials, tokens and cache share, cost, latency, skills, installs — for every conversation and every skill, and puts one AI label on top of each conversation: a title, a summary, the intent, an outcome and a single 0–100 *completion* score (did the assistant deliver what was originally asked). The numbers are the point; the label is a reading aid. It starts at `/admin/analysis/conversations`.
 
 ## What the section is for
 
-Four questions, in the order you normally ask them:
+Three questions, in the order you normally ask them:
 
-1. What did people do with the gateway, and how well did it go — as the classifier and the judge read each conversation?
-2. Which skills are actually used, by how many people, at what cost, and how does the judge score the sessions that used them?
-3. Across everything: what is going wrong, and what should the owners of these skills and marketplaces change?
-4. What did a new version of a marketplace do, compared with the one before it, and which devices received it?
+1. What is flowing through the gateway — how many conversations, by whom, on which models and clients, at what cost, with what errors — and did each one complete what the person asked?
+2. Which skills are actually used, by how many of the people entitled to them, in how many conversations, at what cost, and how do those conversations go?
+3. What did a new version of a marketplace do, compared with the one before it, and which devices received it?
 
 ## The pages
 
-Every Analysis page lives at `/admin/analysis/<noun>`, the same noun and identity the Platform section uses at `/admin/<noun>` — Platform says what is configured, Analysis says how it performs. The sidebar lists them in workflow order.
+Every Analysis page lives at `/admin/analysis/<noun>`, the same noun and identity the Platform section uses at `/admin/<noun>` — Platform says what is configured, Analysis says what happened.
 
 | Page | Route | What it answers |
 |---|---|---|
-| **Conversations** | `/admin/analysis/conversations` | Every gateway conversation with its purpose and outcome (classifier), the judge's four scores for the session behind it, the skills used and the cost. |
-| **Skills** | `/admin/analysis/skills`, `/admin/analysis/skills/{plugin:skill}` | Every skill with the judge's scores inherited from the sessions that invoked it, cost, use and health, grouped by marketplace and stamped with the version hash it serves; a skill's own page has its trend and the conversations behind it. |
-| **Evaluation** | `/admin/analysis/evaluation`, `/admin/analysis/evaluation/{marketplace_id}` | The zoomed-out report: an AI-written account of what the judge is seeing and what to do, every marketplace's current version against its history, the trend, and the judge's configuration. |
-| **Versions** | `/admin/analysis/versions`, `/admin/analysis/versions/{marketplace_id}` | Every marketplace by content hash: its history with the judge's scores per version, what changed between versions, how each performed, and what devices received. |
+| **Conversations** | `/admin/analysis/conversations` | Every gateway conversation in the window: KPI tiles with sparklines, three charts on one time axis, a breakdown by intent, model, client, group, project, person, skill or outcome, and the rows themselves — every figure toned, a tokens-per-turn sparkline per row, and the judge's one score. |
+| **Conversation** | `/admin/analysis/conversations/{context_id}` | One conversation on every plane: the judge's label and rationale, per-turn charts (tokens, cost, latency), the turn ledger with model, status, finish reason and tokens by kind, every tool call from the ledger (intent → execution → artifact), every governance decision, every safety finding, and the skills invoked with the marketplace version served at the time. |
+| **Skills** | `/admin/analysis/skills`, `/admin/analysis/skills/{plugin:skill}` | Every skill invoked in the window, grouped by marketplace: invocations with a fourteen-day sparkline, people over entitled, installs, conversations, tokens, cost per invocation, tools, errors and denials, p95, models and clients seen, and the judge's mean completion. Above the table, marketplace adoption: entitled → installed → active, by host. A skill's own page splits its invocations by model, client, group, project, person, version or outcome, and lists the conversations behind them. |
+| **Versions** | `/admin/analysis/versions`, `/admin/analysis/versions/{marketplace_id}` | Every marketplace by content hash: its history with mean completion per version, what changed between versions, how each performed, and what devices received. |
 
-Two AI judges feed these pages. The `conversation_classifier` job reads each quiet conversation and records its category, summary and outcome. The `session_evaluation` job scores each closed Claude Code session on four criteria — intent, quality, speed, cost — 0–100 with rationale and quoted evidence (`services/evaluation/`). A skill inherits the scores of every judged session that invoked it; a marketplace version inherits those of every session served while it was current. The `evaluation_report` job then writes the report on the Evaluation page from those figures.
+## Where the numbers come from
 
-Versions has three views per marketplace — **History**, **Compare** and **Distribution** — described in [Versions: Marketplace Hashes, History and Compare](/documentation/analysis-versions). The old Impact and Publication pages redirect there.
+A conversation is a gateway context. The `conversation_rollup` job keeps one row per context — `conversation_facts` — re-derived within a minute of any change on any plane:
 
-## Three concepts to get right first
+- **Gateway** (`ai_requests`): turns and side calls, provider and model per request, input, output, cache-read, cache-write and reasoning tokens, cost, latency percentiles, status and finish reason, client kind, attestation and wire protocol, group and project stamped at insert.
+- **Tool ledger**: the model's tool intents joined to their executions and artifacts, so a row can say "asked for 5, executed 4, 1 failed, 2 artifacts".
+- **Governance**: every allow, warn and deny the chain took on the conversation's tool calls; the gateway safety scanners' findings and blocks.
+- **Hooks**: prompts, events and skill invocations from the harness, attached through the Claude Code session id the gateway records on each request.
 
-**Configured entry against imported managed resource.** A configured entry is a skill declared in this repository's `services/` tree or in a kit the profile pins. An imported managed resource is a captured, versioned copy that the platform owns and can publish. They are different objects with the same name, which is why collisions happen.
+The Skills page counts invocations from the hooks and reads everything else from the same per-conversation rows, so a figure on a skill is the same figure on the conversations that produced it. *People / entitled* is distinct invokers over the people the access-control rules reach; *installs* are distinct consumers holding a verified installation receipt for the skill, on any host; *install rate* is installed over entitled and *activation* is active over installed.
 
-**Binding.** Metrics attach to a managed resource, not to a file on disk. A row is *measured* once its inventory entry is bound to a managed resource and a snapshot exists for it. Until then the Skills table shows `unbound` or `pending` in place of figures.
+## The judge
 
-**Retained snapshot.** Nothing on these pages is recomputed from raw events. A background pass drains facts into snapshots, and the Skills table reads a window of 7, 30, 90 or 365 days from them; Users and p95 are read from the retained facts for the same window, so p95 is a real percentile over request latency rather than a histogram bound. Attribution needs verified evidence: a device-authenticated consumer, a session binding and a verified installation receipt. An invocation without that chain still counts in the headline totals, but not in its own skill row.
+One job, `conversation_judge`, runs every five minutes. It queues every conversation with at least one turn that has been quiet for thirty minutes or whose harness session has ended, reads the transcript (credentials redacted) and asks the configured model — in one structured call whose schema the provider enforces — for a title, a summary, the intent (development, business analysis, operations, admin & config, writing & comms, research & learning, other), an outcome (achieved, partial, abandoned, unclear) and the completion score. A conversation that keeps growing is judged again. The job's own gateway calls are audited under its identity and never counted as conversations; a daily cost cap stops a run rather than letting a backlog burn budget.
 
-**Marketplace version.** The sha256 of everything a marketplace delivers — its own config, every plugin it includes and every skill those plugins ship — hashed exactly as a kit's `content_hash` is. It is recorded at boot and on every inventory sync, a new version whenever the bytes move, and every invocation fact is stamped with the hash serving at the time. That hash is the only version identity Analysis shows; there are no generation numbers.
+The judge is switched on by `hooks.evaluation: true` on the plugin that carries the governance hooks, and runs automatically only when the profile sets `evaluation.automatic: true`. With that switch off, **Judge now** on a conversation still queues it and the next tick reads it.
 
-## The end-to-end path
+## Versions
 
-Work through this once and the rest of the section reads itself.
-
-- [ ] Import or pin a marketplace on [Code ↔ Instance](/documentation/services-sync), so there are skills to measure.
-- [ ] On **Skills**, press **Sync inventory now** so every configured skill has an entry and a published revision.
-- [ ] Resolve any **Name collisions** by binding each entry to the right managed resource.
-- [ ] Wait for the first snapshot. Figures appear once it lands.
-- [ ] Connect a client and invoke a skill for real, then find the conversation. See [Create a Conversation and See It Land](/documentation/analysis-test-conversation).
-- [ ] Read the Skills table and open a skill's conversations. See [Measure Which Skills Are Used](/documentation/analysis-measure-skills).
-- [ ] Change a skill and sync again; open **Versions** to see the new hash, what changed and how it performs against the version before.
-- [ ] Check **Distribution** on that marketplace to confirm devices received it.
-
-The three-step strip at the top of the Skills page tracks the first three of these and ticks each one off as it completes.
+A marketplace version is the sha256 of everything it delivers — its own config, every plugin it includes and every skill those plugins ship. It is recorded at boot and on every inventory sync, and a conversation is tied to the version being served when it first invoked one of the marketplace's skills, never to when the judge ran. Versions has three views per marketplace — **History**, **Compare** and **Distribution** — described in [Versions: Marketplace Hashes, History and Compare](/documentation/analysis-versions).
 
 ## Access
 
-Analysis is an administrative surface. The manual review form and the withdrawal decisions on a marketplace's Distribution view require manage rights; without them the pages render read-only. See [User & Access Management](/documentation/enterprise-user-access).
+Conversations and Versions are open to marketplace participants for the people in their scope; Skills and the conversation detail's **Judge now** need console access. The manual review form and the withdrawal decisions on a marketplace's Distribution view require manage rights; without them the pages render read-only. See [User & Access Management](/documentation/enterprise-user-access).
 
 ## Troubleshooting
 
-### Every skill says "unbound"
+### A conversation shows no skills, tools or governance
 
-**Symptom:** The Skills table lists skills but the Invocations column reads `unbound`.
-**Cause:** The inventory has entries but nothing is bound to a managed resource.
-**Solution:** Press **Sync inventory now**, then resolve any collisions listed under **Name collisions**.
+**Symptom:** The row has turns, tokens and cost, but the skills, tools and governance columns are empty.
+**Cause:** The gateway recorded no Claude Code session id on its requests, so nothing from the hook plane can attach. Plain API clients and some third-party harnesses have no hooks.
+**Solution:** Nothing to fix for those clients; the gateway columns are complete. For Claude Code, check the plugin carrying the governance hooks is installed.
 
-### Figures stay empty after a sync
+### Nothing is judged
 
-**Symptom:** Rows are bound, the meta line says the inventory synced, and the figures are still blank.
-**Cause:** The snapshot for that window has not landed yet.
-**Solution:** Wait for the next pass. The inventory refresh runs every minute and the feedback facts and snapshot passes run every five seconds, so a first snapshot is normally a minute or two away, not an hour.
+**Symptom:** Every row says "not judged yet".
+**Cause:** Either no enabled plugin sets `hooks.evaluation: true`, the profile's `evaluation.automatic` is off, or no AI provider is configured for the process.
+**Solution:** Check the boot log for "conversation judge configured"; queue one conversation with **Judge now** and watch `systemprompt infra jobs run conversation_judge`.
 
-### A skill has invocations but no attributed use
+### A skill has invocations but no cost
 
-**Symptom:** The organisation totals move, one skill row does not.
-**Cause:** The invocations lack verified evidence, so they cannot be attributed to that skill.
+**Symptom:** The skill row counts invocations and people, but conversations, tokens and cost are zero.
+**Cause:** The sessions that invoked it produced no gateway conversation with the same session id — the inference went elsewhere, or the client did not send its session id.
 **Solution:** See [Create a Conversation and See It Land](/documentation/analysis-test-conversation#when-it-does-not-appear).
 
 ## Related pages

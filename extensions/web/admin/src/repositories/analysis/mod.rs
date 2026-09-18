@@ -1,10 +1,13 @@
-//! Analysis repositories: every figure is read from retained reporting data
-//! (feedback snapshots, snapshot contributions, normalized facts); nothing is
-//! computed live over raw events.
+//! Analysis repositories.
+//!
+//! Conversations and skills read the deterministic record — the
+//! `conversation_facts` rollup, the hook plane, the tool ledger and the
+//! governance spine — with the judge's one label joined on top; marketplace
+//! versions read the retained reporting data (normalized facts and
+//! snapshots) so a version's figures survive raw-event retention.
 pub mod conversations;
 pub mod inventory_index;
 pub mod marketplace_versions;
-pub mod portfolio_snapshots;
 pub mod publications;
 pub mod retained;
-pub mod snapshot_figures;
+pub mod skills;

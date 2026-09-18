@@ -84,15 +84,6 @@ impl From<serde_yaml::Error> for JobError {
     }
 }
 
-impl From<systemprompt_web_admin::evaluation::report::ReportError> for JobError {
-    fn from(e: systemprompt_web_admin::evaluation::report::ReportError) -> Self {
-        match e {
-            systemprompt_web_admin::evaluation::report::ReportError::Db(e) => Self::from(e),
-            systemprompt_web_admin::evaluation::report::ReportError::Context(e) => Self::from(e),
-        }
-    }
-}
-
 impl From<serde_json::Error> for JobError {
     fn from(e: serde_json::Error) -> Self {
         Self::Infra(InfraError::from(e))

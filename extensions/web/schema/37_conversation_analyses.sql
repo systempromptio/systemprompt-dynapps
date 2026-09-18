@@ -1,11 +1,13 @@
--- Conversation purpose classification: one row per gateway conversation
--- (a `user_contexts` context), written by the `conversation_classifier` job.
--- The job leases pending rows, reads the conversation's transcript, and asks a
--- model for a fixed-taxonomy category, a summary, an outcome and the skills it
--- observed, with the schema enforced by the provider API. A classified row
--- carries the fingerprint of what was read (request count + last request
--- time); a conversation that grows past it is queued again. Twin:
--- migrations/073_conversation_analyses.sql.
+-- The judge's one label per gateway conversation (a `user_contexts` context),
+-- written by the `conversation_judge` job. The job leases pending rows, reads
+-- the conversation's transcript, and asks a model — in one structured call —
+-- for a title, a summary, a fixed-taxonomy intent category, an outcome, the
+-- skills it observed and a single 0–100 `completion` score: did the assistant
+-- deliver what was originally asked. A judged row carries the fingerprint of
+-- what was read (request count + last request time); a conversation that
+-- grows past it is queued again. `trigger` says whether a person asked for
+-- the verdict from the console. Twins: migrations/073 (table) and 085 (the
+-- judge's columns).
 
 CREATE TABLE IF NOT EXISTS conversation_analyses (
     context_id TEXT PRIMARY KEY,
@@ -29,6 +31,14 @@ CREATE TABLE IF NOT EXISTS conversation_analyses (
     lease_token TEXT,
     lease_until TIMESTAMPTZ,
     last_error TEXT,
+    title TEXT,
+    completion SMALLINT CHECK (completion BETWEEN 0 AND 100),
+    completion_rationale TEXT,
+    input_tokens INTEGER,
+    output_tokens INTEGER,
+    cost_microdollars BIGINT,
+    trigger TEXT NOT NULL DEFAULT 'automatic' CHECK (trigger IN ('automatic', 'manual')),
+    requested_by TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
 );
@@ -55,8 +65,8 @@ GROUP BY e.session_id, e.skill;
 -- context, so a page filters `conversation_analyses` first and passes the ids
 -- to conversation_metrics_for.
 CREATE OR REPLACE VIEW conversation_analysis_rows AS
-SELECT r.*, a.status AS analysis_status, a.category, a.summary, a.tags, a.outcome, a.confidence,
-       a.skills_used, a.classified_at, a.model AS judge_model,
+SELECT r.*, a.status AS analysis_status, a.title AS judge_title, a.category, a.summary, a.tags, a.outcome,
+       a.completion, a.confidence, a.skills_used, a.classified_at, a.model AS judge_model,
        COALESCE((SELECT array_agg(s.skill ORDER BY s.first_at) FROM conversation_skill_uses s
                  WHERE s.client_session_id = r.client_session_id), '{}'::text[]) AS skills_hooked
 FROM conversation_metrics_for(NULL) r

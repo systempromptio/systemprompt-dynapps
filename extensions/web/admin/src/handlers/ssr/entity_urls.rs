@@ -11,13 +11,6 @@ pub(crate) fn session_detail_url(session: &SessionId) -> String {
     format!("/admin/sessions/{}", urlencoding::encode(session.as_str()))
 }
 
-pub(crate) fn session_evaluate_url(session: &SessionId) -> String {
-    format!(
-        "/admin/sessions/{}/evaluate",
-        urlencoding::encode(session.as_str())
-    )
-}
-
 pub(crate) fn context_detail_url(context: &ContextId) -> String {
     format!("/admin/contexts/{}", urlencoding::encode(context.as_str()))
 }

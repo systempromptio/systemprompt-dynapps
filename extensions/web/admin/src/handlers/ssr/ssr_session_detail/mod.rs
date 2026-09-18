@@ -5,24 +5,19 @@
 //! `analytics conversations list` with cross-links to the other entity pages.
 
 mod context;
-mod evaluate;
 mod quality;
 mod rows;
 
-pub(crate) use evaluate::evaluate_session;
 
 use crate::error::AdminError;
 use std::sync::Arc;
 
-use axum::extract::{Extension, Path, State};
+use axum::extract::{Path, State};
 use axum::response::Response;
 use sqlx::PgPool;
-use systemprompt::ai::AiService;
 use systemprompt::identifiers::SessionId;
 
 use crate::error::AdminHtmlResult;
-use crate::handlers::ssr::analysis::evaluation::trigger::evaluation_enabled;
-use crate::handlers::ssr::entity_urls::session_evaluate_url;
 use crate::handlers::ssr::format::{
     format_cost, format_duration_ms, format_token_total, local_time, short_id,
 };
@@ -33,15 +28,11 @@ use crate::repositories::analytics::session_detail::{
     list_session_traces,
 };
 use crate::repositories::analytics::session_quality::{SessionRatingRow, list_session_ratings};
-use crate::repositories::evaluation::runs::{SessionCriterionScore, list_session_scores};
 use crate::repositories::scope::may_view;
 
 use rows::{context_view, request_view, trace_view};
 
-use context::{
-    BreadcrumbView, EvaluationActionsView, SessionDetailPageContext, SessionHeaderView,
-    SessionKpisView,
-};
+use context::{BreadcrumbView, SessionDetailPageContext, SessionHeaderView, SessionKpisView};
 
 
 struct SessionRead {
@@ -49,19 +40,17 @@ struct SessionRead {
     contexts: Vec<SessionContextRow>,
     traces: Vec<SessionTraceRow>,
     requests: Vec<SessionRequestRow>,
-    scores: Vec<SessionCriterionScore>,
     ratings: Vec<SessionRatingRow>,
 }
 
 // Why: every section is best-effort once the header has resolved — a panel
 // that cannot load renders empty rather than taking the page down.
 async fn load_session(pool: &PgPool, session_id: &SessionId) -> SessionRead {
-    let (kpis, contexts, traces, requests, scores, ratings) = tokio::join!(
+    let (kpis, contexts, traces, requests, ratings) = tokio::join!(
         get_session_kpis(pool, session_id),
         list_session_contexts(pool, session_id),
         list_session_traces(pool, session_id),
         list_session_requests(pool, session_id),
-        list_session_scores(pool, session_id),
         list_session_ratings(pool, session_id),
     );
     SessionRead {
@@ -77,9 +66,6 @@ async fn load_session(pool: &PgPool, session_id: &SessionId) -> SessionRead {
         requests: requests
             .inspect_err(|e| tracing::warn!(error = %e, "list_session_requests failed"))
             .unwrap_or_default(),
-        scores: scores
-            .inspect_err(|e| tracing::warn!(error = %e, "list_session_scores failed"))
-            .unwrap_or_default(),
         ratings: ratings
             .inspect_err(|e| tracing::warn!(error = %e, "list_session_ratings failed"))
             .unwrap_or_default(),
@@ -88,7 +74,6 @@ async fn load_session(pool: &PgPool, session_id: &SessionId) -> SessionRead {
 
 pub(crate) async fn session_detail_page(
     shell: Page,
-    Extension(ai): Extension<Option<Arc<AiService>>>,
     State(pool): State<Arc<PgPool>>,
     Path(session_id): Path<String>,
 ) -> AdminHtmlResult<Response> {
@@ -128,16 +113,10 @@ pub(crate) async fn session_detail_page(
         has_requests: !read.requests.is_empty(),
         requests: read.requests.iter().map(request_view).collect(),
         back_url: "/admin/sessions",
-        has_scores: !read.scores.is_empty(),
-        scores: read.scores.iter().map(quality::score_view).collect(),
         has_ratings: !rating_views.is_empty(),
         rating_count: rating_views.len(),
         rating_average,
         ratings: rating_views,
-        evaluation: EvaluationActionsView {
-            url: session_evaluate_url(&session_id),
-            enabled: ai.is_some() && evaluation_enabled(),
-        },
     };
 
     Ok(crate::handlers::ssr::render_typed_page(

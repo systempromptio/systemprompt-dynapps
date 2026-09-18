@@ -20,39 +20,10 @@ pub(super) struct SessionDetailPageContext {
     pub(super) has_traces: bool,
     pub(super) has_requests: bool,
     pub(super) back_url: &'static str,
-    // Why: empty until the session has closed and the evaluation job has run,
-    // which is the normal state for a session still in flight — the page says
-    // so rather than rendering an empty verdict panel.
-    pub(super) scores: Vec<EvaluationScoreView>,
-    pub(super) has_scores: bool,
     pub(super) ratings: Vec<RatingView>,
     pub(super) has_ratings: bool,
     pub(super) rating_count: usize,
     pub(super) rating_average: Option<String>,
-    pub(super) evaluation: EvaluationActionsView,
-}
-
-// Why: the buttons are only drawn when a click can actually run — the
-// engine is configured and the process carries an inference client.
-#[derive(Debug, Serialize)]
-pub(super) struct EvaluationActionsView {
-    pub(super) url: String,
-    pub(super) enabled: bool,
-}
-
-#[derive(Debug, Serialize)]
-pub(super) struct EvaluationScoreView {
-    pub(super) criterion: String,
-    pub(super) score_display: String,
-    pub(super) tone: &'static str,
-    pub(super) score_source: String,
-    pub(super) model: String,
-    pub(super) run_url: String,
-    pub(super) evaluated_at_local: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub(super) rationale: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub(super) error: Option<String>,
 }
 
 #[derive(Debug, Serialize)]

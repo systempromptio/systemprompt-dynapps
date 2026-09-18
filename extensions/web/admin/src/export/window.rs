@@ -43,7 +43,6 @@ fn live(query: &WindowQuery) -> ExportWindow {
     ExportWindow {
         from: range.from,
         to: range.to,
-        days: u32::try_from((range.to - range.from).num_days()).unwrap_or(0),
     }
 }
 
@@ -65,7 +64,6 @@ fn days_only(query: &WindowQuery) -> AdminResult<ExportWindow> {
     Ok(ExportWindow {
         from: to - Duration::days(i64::from(days)),
         to,
-        days,
     })
 }
 
@@ -82,9 +80,5 @@ fn retained(query: &WindowQuery) -> AdminResult<ExportWindow> {
             "Choose a window between 1 day and 366 days".to_owned(),
         ));
     }
-    Ok(ExportWindow {
-        from,
-        to,
-        days: u32::try_from((to - from).num_days()).unwrap_or(0),
-    })
+    Ok(ExportWindow { from, to })
 }

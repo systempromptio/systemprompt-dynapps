@@ -1,0 +1,42 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH pending AS (\n                   SELECT context_id FROM conversation_analyses\n                   WHERE status = 'pending' AND next_attempt <= clock_timestamp()\n                     AND (lease_until IS NULL OR lease_until <= clock_timestamp())\n                     AND (NOT $3::boolean OR trigger = 'manual')\n                   ORDER BY next_attempt, context_id LIMIT $1 FOR UPDATE SKIP LOCKED)\n               UPDATE conversation_analyses a\n               SET lease_token = $2, lease_until = clock_timestamp() + interval '5 minutes',\n                   attempts = a.attempts + 1, updated_at = clock_timestamp()\n               FROM pending WHERE a.context_id = pending.context_id\n               RETURNING a.context_id AS \"context_id!: ContextId\", a.trigger AS \"trigger!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "context_id!: ContextId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "conversation_analyses",
+            "name": "context_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "trigger!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "conversation_analyses",
+            "name": "trigger"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Text",
+        "Bool"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "3550495929770f1d794908fbc695902af2464fe2fe050c5463dbf2362458e560"
+}

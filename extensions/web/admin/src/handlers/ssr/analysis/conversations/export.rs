@@ -1,6 +1,7 @@
-//! The classified-conversation set as the export surface reads it.
+//! The conversation set as the export surface reads it.
 
 use sqlx::PgPool;
+use systemprompt_web_shared::{GroupId, ProjectId};
 
 use crate::error::AdminResult;
 use crate::repositories;
@@ -35,7 +36,12 @@ pub(crate) async fn export_rows(
         free_text: params.free_text(),
         since: Some(range.from),
         until: Some(range.to),
-        scored: params.scored(),
+        judged: params.judged(),
+        model: params.model(),
+        client_kind: params.client(),
+        group_id: request.group.as_deref().map(GroupId::new),
+        project_id: request.project.as_deref().map(ProjectId::new),
+        flag: params.flag(),
     };
     Ok(load_conversation_analysis_page(
         pool,
