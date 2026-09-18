@@ -20,6 +20,8 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+## 0.56.0 — 2026-09-18
+
 ### Added
 
 - Tools and artifacts are distinct. `artifact_kind` (schema
@@ -96,8 +98,28 @@ Conventions (strict — hold every entry to them):
   version and outcome. `sp-chart.js` adds hover crosshairs and legend toggles
   to the server-rendered charts.
 
+- The Projects listing is finished: twelve columns on one unwrapped header
+  line, a plain name cell, the report as an icon action, and a printable
+  project report (`/admin/projects/<id>/report`) that counts its sections
+  with the `len` helper, names members on session rows and paginates across
+  sheets — `10-print.css` lets the console shell's viewport-high flex box
+  flow for every page instead of clipping to one.
+- The UK sales band is rebuilt as key-account intelligence
+  (`services/plugins/astound-sales-uk`, plugin 3.0.0): two connector
+  building blocks (`salesforce_account_search`, `google_workspace_search`,
+  gated in `rules.yaml` to people who have connected the server), four
+  report skills that call them by recipe name (Client 360, account status,
+  suggestions, pipeline and renewals review), the three older discovery,
+  prep and research skills, and `install_sales_artifacts`, which places the
+  `uk-client-report` Cowork dashboard in the library; `uk_sales_client_report`
+  is retired in its favour.
+
 ### Changed
 
+- Builds against published core 0.56.0: every core pin in both workspaces is
+  0.56.0, `bridge/CORE_REF` is `v0.56.0`, and the `[patch.crates-io]` blocks
+  in `Cargo.toml` and `tests/Cargo.toml` are commented so the three lockfiles
+  resolve the registry crates.
 - The core pin moves on to `next` `297bd3126` (`bridge/CORE_REF`),
   which carries the two halves of the internal-MCP 503 fix that pair with
   this release: the proxy reconciles a `services` row whose port was written
@@ -153,6 +175,14 @@ Conventions (strict — hold every entry to them):
 
 ### Fixed
 
+- Analysis layout defects from review: the live chart's `hidden` attribute
+  lost to the component display rules so the stretched server plot stayed
+  above it (the live modifier now hides plot, gutters and legend); the KPI
+  trend sits under the value instead of beside it, where eight-tile rows
+  truncated every label; numeric cells no longer clip, breakdown tables lay
+  out by content, the skills table has shorter headers and a wider adoption
+  grid, x-axis labels never collide with the last one, integer series get
+  integer ticks, and the Completed tiles are AI score.
 - A connector-backed MCP server dropped from the bridge manifest by the
   readiness gate used to vanish without a trace, which is why a Salesforce
   server that access control had admitted was missing from Cowork with
