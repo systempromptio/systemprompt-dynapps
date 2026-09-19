@@ -191,7 +191,7 @@ const CONTEXTS: [Variant; 9] = [
 const OVERVIEW: [Variant; 5] = [
     v("/admin", "p50 latency"),
     v("/admin", "Most used models"),
-    v("/admin", "Request volume"),
+    v("/admin", "Requests, conversations and people"),
     // Why: Handlebars escapes `=` inside attribute values, so the pill's href is
     // not a literal to match on; the active state is asserted via aria-current.
     v("/admin?preset=7d", r#"aria-current="page">7d</a>"#),
