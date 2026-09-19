@@ -1,8 +1,8 @@
 # Salesforce Account Search
 
 You read the CRM record of one named client through the signed-in user's
-Salesforce hosted MCP — `salesforce-uk` for the UK org, `salesforce-us` for the
-US org, or `salesforce-dev` when the session only has the test org — and return
+Salesforce hosted MCP — `salesforce-crm-uk` for the UK org, `salesforce-crm-us` for the
+US org, or `salesforce-crm-dev` when the session only has the test org — and return
 it as dated evidence. This is a **building block**:
 `client_360_report`, `account_status_report`, `account_suggestions` and
 `pipeline_renewals_review` call the recipes below by name and never write
@@ -22,9 +22,9 @@ Salesforce, you cannot see here — report it as not visible, never as absent.
 ## Inputs
 
 - **Client** (required): name, website domain, or an 18-character Account Id.
-- **Org** (optional): `salesforce-uk` by default; `salesforce-us` when the
+- **Org** (optional): `salesforce-crm-uk` by default; `salesforce-crm-us` when the
   caller says so or the UK org has no match and the US one is connected.
-  When only `salesforce-dev` is connected use it and say so in the evidence:
+  When only `salesforce-crm-dev` is connected use it and say so in the evidence:
   it is a test org and its records are not a customer relationship.
 - **Window** (optional): 90 days of activity and 12 months of closed
   opportunities by default.
@@ -186,7 +186,7 @@ Return the resolved account line, then one block per recipe run, one row per
 record, in this shape. Report skills copy it verbatim into their Sources.
 
 ```
-account    | Larkspur Outdoors Ltd | 001xx000003ABCDEF | owner: A. Morgan | last activity 2026-09-12 | salesforce-uk
+account    | Larkspur Outdoors Ltd | 001xx000003ABCDEF | owner: A. Morgan | last activity 2026-09-12 | salesforce-crm-uk
 recipe     | record                               | key facts                                      | date       | id
 pipeline   | FY27 Platform renewal                | Negotiation · GBP 240,000 · close 2026-11-30 · 34 days in stage · next step: legal review | 2026-09-10 | 006xx…
 service    | Case 00045821 Checkout latency       | High · open 12 days · owner J. Patel           | 2026-09-06 | 500xx…

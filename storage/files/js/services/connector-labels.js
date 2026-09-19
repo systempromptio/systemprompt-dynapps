@@ -36,7 +36,7 @@ export function groupOf(account) {
 }
 export function glyph(provider) {
     if (provider === 'atlassian') return 'atlassian';
-    if (provider === 'google_drive') return 'google';
+    if (provider === 'google_workspace') return 'google';
     if (provider === 'systemprompt') return 'systemprompt';
     return provider.startsWith('salesforce') ? 'salesforce' : 'generic';
 }

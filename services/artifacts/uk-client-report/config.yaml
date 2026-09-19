@@ -29,7 +29,7 @@ mcp_tools:
 - mcp__salesforce-us__getObjectSchema
 - mcp__salesforce-dev__soqlQuery
 - mcp__salesforce-dev__getObjectSchema
-- mcp__google_drive__search
+- mcp__google_workspace__search
 - mcp__atlassian__getAccessibleAtlassianResources
 - mcp__atlassian__searchJiraIssuesUsingJql
 file: view.html

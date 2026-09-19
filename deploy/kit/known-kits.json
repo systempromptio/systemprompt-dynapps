@@ -23,8 +23,8 @@
           ],
           "mcp_servers": [
             "atlassian",
-            "salesforce-us",
-            "salesforce-uk"
+            "salesforce-crm-us",
+            "salesforce-crm-uk"
           ]
         }
       },
@@ -70,7 +70,7 @@
           ],
           "mcp_servers": [
             "atlassian",
-            "salesforce-us"
+            "salesforce-crm-us"
           ]
         }
       },
@@ -96,7 +96,7 @@
           ],
           "mcp_servers": [
             "atlassian",
-            "salesforce-us"
+            "salesforce-crm-us"
           ]
         },
         "astound-india-sfcore": {
@@ -122,7 +122,7 @@
           ],
           "mcp_servers": [
             "atlassian",
-            "salesforce-us"
+            "salesforce-crm-us"
           ]
         }
       },

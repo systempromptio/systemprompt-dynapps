@@ -100,7 +100,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 
 <div class="toolbar">
   <label>Salesforce org
-    <select id="org"><option value="salesforce-uk" selected>Astound UK</option><option value="salesforce-us">Astound US</option><option value="salesforce-dev">Test org (salesforce-dev)</option></select>
+    <select id="org"><option value="salesforce-crm-uk" selected>Astound UK</option><option value="salesforce-crm-us">Astound US</option><option value="salesforce-crm-dev">Test org (salesforce-crm-dev)</option></select>
   </label>
   <label>Client
     <input id="client" type="search" placeholder="Name, domain or Account Id" autocomplete="off">
@@ -136,7 +136,6 @@ const $ = id => document.getElementById(id);
 const PLUGIN = 'astound-sales-uk';
 const TODAY = new Date(); TODAY.setHours(0,0,0,0);
 const DAY = 86400000;
-const SERVING_CONFIG = 'projects/402649471530/locations/eu/collections/default_collection/engines/workspace-search/servingConfigs/default_search';
 // Salesforce's hosted sobject-all server (verified live 2026-09-18): soqlQuery takes {q}.
 const SF_TOOLS = { soql: ['soqlQuery'], describe: ['getObjectSchema'] };
 
@@ -192,12 +191,12 @@ async function soql(org, query) {
   }
 }
 async function gsearch(query) {
-  const out = await callTool('google_drive', ['search'], { servingConfig: SERVING_CONFIG, query, pageSize: 10 });
+  const out = await callTool('google_workspace', ['search'], { query, pageSize: 10 });
   return records(out).length ? records(out) : (out && out.results) || [];
 }
 
 // ── evidence model ─────────────────────────────────────────────────────────
-const state = { org: 'salesforce-uk', account: null, data: null, coverage: [], tab: 'c360', book: null };
+const state = { org: 'salesforce-crm-uk', account: null, data: null, coverage: [], tab: 'c360', book: null };
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const d = v => v ? String(v).slice(0,10) : '';
 const days = v => v ? Math.floor((TODAY - new Date(d(v))) / DAY) : null;
@@ -264,8 +263,8 @@ async function load(acc) {
     data.mail = await gsearch(`emails from or to ${domain || acc.Name} in the last 90 days`);
     data.meetings = await gsearch(`meetings with ${domain || acc.Name} attendees in the last 90 days or the next 30 days`);
     data.docs = await gsearch(`${acc.Name} proposal, statement of work, contract, account plan or meeting notes`);
-    state.coverage.push({ source: 'google_drive', status: 'ok', detail: '3 queries' });
-  } catch (e) { state.coverage.push({ source: 'google_drive', status: /reconnect|not running|no tool/i.test(e.message) ? 'not_connected' : 'error', detail: e.message.slice(0,160) }); }
+    state.coverage.push({ source: 'google_workspace', status: 'ok', detail: '3 queries' });
+  } catch (e) { state.coverage.push({ source: 'google_workspace', status: /reconnect|not running|no tool/i.test(e.message) ? 'not_connected' : 'error', detail: e.message.slice(0,160) }); }
   const key = acc.Jira_Project_Key__c || acc.Jira_Project__c;
   if (key) {
     try {
@@ -315,7 +314,7 @@ function derive() {
     ['Contact coverage', ['Decision maker','Economic buyer','Champion'].every(r => rolesPresent.has(r)) && active >= 2 ? 20 : ['Decision maker','Economic buyer','Champion'].filter(r => rolesPresent.has(r)).length >= 2 || active === 1 ? 10 : 0, `${active} active contacts; roles: ${[...rolesPresent].join(', ') || 'none'}`],
   ];
   const sfOk = state.coverage.find(c => c.source === state.org && c.status !== 'error');
-  const gOk = state.coverage.find(c => c.source === 'google_drive' && c.status === 'ok');
+  const gOk = state.coverage.find(c => c.source === 'google_workspace' && c.status === 'ok');
   const usable = health.filter(([n]) => (n === 'Communication cadence' ? gOk : sfOk));
   const score = usable.reduce((s, h) => s + h[1], 0), max = usable.length * 20;
   const overdue = D.tasksOverdue.length;

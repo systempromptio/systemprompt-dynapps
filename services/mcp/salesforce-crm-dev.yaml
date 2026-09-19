@@ -1,10 +1,10 @@
-# Salesforce hosted MCP for Astound US. The org itself — My Domain, entitled groups —
+# Salesforce hosted MCP for the Developer Edition test org. The org itself — My Domain, entitled groups —
 # is declared under the same id in services/config/salesforce-orgs.yaml; every org
 # authorises through the one packaged External Client App (deploy/salesforce/)
 # and the shared callback /api/public/connectors/salesforce/callback.
 # Sandboxes use the /sandbox/ endpoint.
 mcp_servers:
-  salesforce-us:
+  salesforce-crm-dev:
     type: external
     # Why: nominal only — an external server never binds it — but the field is
     # required and must be unique across every server, external ones included.
@@ -13,9 +13,9 @@ mcp_servers:
     tool_policy: allow
     display_in_web: false
     removable: true
-    description: Salesforce Hosted MCP (Astound US) — SObject CRUD/SOQL, as the signed-in user
+    description: Salesforce Hosted MCP (the Developer Edition test org) — SObject CRUD/SOQL, as the signed-in user
     external_auth:
-      token_endpoint: "/api/public/connectors/salesforce-us/token"
+      token_endpoint: "/api/public/connectors/salesforce-crm-dev/token"
       header: "Authorization"
       scheme: ""
     oauth:

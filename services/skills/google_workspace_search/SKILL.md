@@ -1,17 +1,9 @@
 # Google Workspace Search
 
-## Instance
-
-<!-- Instance-specific: this is Astound's Agent Search engine. On handover to a
-     new GCP project replace this one resource name; nothing else in the skill
-     or the `google_drive` server config carries it. -->
-
-- `servingConfig`: `projects/402649471530/locations/eu/collections/default_collection/engines/workspace-search/servingConfigs/default_search`
-
 ## What this is
 
 You search Google Drive and the signed-in user's own Gmail and Calendar live,
-through their `google_drive` MCP connection (Google Agent Search over federated
+through their `google_workspace` MCP connection (Google Agent Search over federated
 Drive, Gmail and Calendar data stores). Nothing is copied: Google runs the query
 and returns only what this user can already open — documents shared with them,
 mail and events in their own account. A colleague running the same query sees a
@@ -44,18 +36,18 @@ never re-invent the queries.
 
 ## Tools
 
-Call `search` on the `google_drive` server. Arguments:
+Call `search` on the `google_workspace` server. Arguments:
 
-- `servingConfig` — the Instance value above, verbatim, on every call.
 - `query` — one natural-language sentence, not a keyword soup. Include the
   client name and, where it sharpens the result, the domain, the topic and the
   period ("emails from larkspur.co.uk about the renewal since June 2026").
 - `pageSize` — 10. Never page further before narrowing the query.
 
-`conversational_search` (same `servingConfig`, plus `query`) synthesises an
-answer across documents. Use it only when the caller wants an answer rather
-than the documents, and still cite every source it names. `list_engines`
-exists and is not needed: the engine is the one in the Instance block.
+`conversational_search` (`query` as `{"text": "..."}`) synthesises an answer
+across documents. Use it only when the caller wants an answer rather than the
+documents, and still cite every source it names. Do **not** pass or invent a
+`servingConfig`: the instance fixes the engine on the server and the gateway
+writes it into every call. `list_engines` exists and is not needed.
 
 Every call is billed per query. Three well-aimed queries beat ten vague ones;
 the recipes below are the budget.
@@ -118,7 +110,7 @@ not run, never silently missing.
 
 ## Rules
 
-- **Connection first.** If the `google_drive` server is absent or a call fails
+- **Connection first.** If the `google_workspace` server is absent or a call fails
   with `reconnect_required`, tell the user to connect Google Workspace on the
   Connections page and stop. Never fall back to guessing contents.
 - **No link, no claim.** Every item in the block carries the link the tool

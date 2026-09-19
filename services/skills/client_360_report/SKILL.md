@@ -40,8 +40,8 @@ you have.
 
 ## Workflow
 
-1. **Coverage first.** Check which of `salesforce-uk` (or `-us`),
-   `google_drive` and `atlassian` this session can reach. Record each as
+1. **Coverage first.** Check which of `salesforce-crm-uk` (or `-us`),
+   `google_workspace` and `atlassian` this session can reach. Record each as
    `ok`, `not_connected` or `not_run`. A missing source is reported in the
    Coverage line and its sections are marked *not available to this caller* —
    never dropped, never filled from memory.
@@ -112,13 +112,13 @@ empty, nothing else is added.
   "report": "client_360",
   "title": "Client 360 — <account name>",
   "generated_at": "<RFC 3339>",
-  "account": {"id": "", "name": "", "website": "", "owner": "", "org": "salesforce-uk", "currency": "GBP"},
-  "coverage": [{"source": "salesforce-uk", "status": "ok|partial|not_connected|not_run", "detail": ""}],
+  "account": {"id": "", "name": "", "website": "", "owner": "", "org": "salesforce-crm-uk", "currency": "GBP"},
+  "coverage": [{"source": "salesforce-crm-uk", "status": "ok|partial|not_connected|not_run", "detail": ""}],
   "headline": {"rag": "green|amber|red", "text": ""},
   "metrics": [{"key": "open_pipeline", "label": "Open pipeline", "value": 0, "currency": "GBP", "as_of": "<date>"}],
   "sections": [{"id": "people", "title": "People", "columns": ["Name", "Title", "Role", "Last contact", "Next action"], "rows": [{}], "notes": [""]}],
   "actions": [{"priority": 1, "action": "", "owner": "", "due": "<date|null>", "evidence": "<source row>"}],
-  "sources": [{"source": "salesforce-uk|google_drive|atlassian", "title": "", "date": "<date>", "link": "", "id": ""}]
+  "sources": [{"source": "salesforce-crm-uk|google_workspace|atlassian", "title": "", "date": "<date>", "link": "", "id": ""}]
 }
 ```
 
@@ -131,7 +131,7 @@ empty, nothing else is added.
   90% is still open. Say "in negotiation", never "renewed".
 - **Links are only what a tool returned.** A Salesforce record gets its Id and
   `"link": null`; never compose a URL. `source` in every row is the server id
-  you actually called (`salesforce-dev` when that is the org in use).
+  you actually called (`salesforce-crm-dev` when that is the org in use).
 - **Read-only across all three systems.** Never log, edit, create, transition
   or send. Show a proposed change and wait for a clear yes.
 - **You see what the signed-in user sees.** Every connector runs as the

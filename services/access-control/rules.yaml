@@ -166,7 +166,7 @@ entities:
       group: [india-devs, europe-devs, uk]
       project: [storefront]
 
-  - entity: mcp_server/salesforce-us
+  - entity: mcp_server/salesforce-crm-us
     default: closed
     why: >-
       Astound US org for the delivery groups, the storefront project and
@@ -177,10 +177,10 @@ entities:
       role: [super_admin]
       group: [india-devs, europe-devs, uk]
       project: [storefront]
-      connector: [salesforce-us]
-      salesforce: [salesforce-us]
+      connector: [salesforce-crm-us]
+      salesforce: [salesforce-crm-us]
 
-  - entity: mcp_server/salesforce-uk
+  - entity: mcp_server/salesforce-crm-uk
     default: closed
     why: >-
       Astound UK org for the UK sales group, the delivery groups and
@@ -189,20 +189,20 @@ entities:
       role: [super_admin]
       group: [india-devs, europe-devs, uk]
       project: [storefront]
-      connector: [salesforce-uk]
-      salesforce: [salesforce-uk]
+      connector: [salesforce-crm-uk]
+      salesforce: [salesforce-crm-uk]
 
-  - entity: mcp_server/salesforce-dev
+  - entity: mcp_server/salesforce-crm-dev
     default: closed
     why: >-
       Developer Edition org that proves the packaged app and the consent flow;
       operators only.
     allow:
       role: [super_admin]
-      connector: [salesforce-dev]
-      salesforce: [salesforce-dev]
+      connector: [salesforce-crm-dev]
+      salesforce: [salesforce-crm-dev]
 
-  - entity: mcp_server/google_drive
+  - entity: mcp_server/google_workspace
     default: closed
     why: >-
       Org-wide Drive, Gmail and Calendar search through Agent Search; Google
@@ -213,7 +213,7 @@ entities:
       skills stay usable if the person's group changes.
     allow:
       group: [uk]
-      connector: [google_drive]
+      connector: [google_workspace]
       role: [super_admin]
 
   # ─── UK sales bundle ──────────────────────────────────────────────────────
@@ -252,16 +252,16 @@ entities:
   # skill that can only fail. super_admin keeps them for operating the flow.
   - entity: skill/google_workspace_search
     default: closed
-    why: Google Workspace search recipes; only useful once google_drive is connected.
+    why: Google Workspace search recipes; only useful once google_workspace is connected.
     allow:
-      connector: [google_drive]
+      connector: [google_workspace]
       role: [super_admin]
 
   - entity: skill/salesforce_account_search
     default: closed
     why: Salesforce account recipes; only useful once a Salesforce org is connected.
     allow:
-      connector: [salesforce-uk, salesforce-us, salesforce-dev]
+      connector: [salesforce-crm-uk, salesforce-crm-us, salesforce-crm-dev]
       role: [super_admin]
 
   # The report skills follow the plugin: each one says which source it could

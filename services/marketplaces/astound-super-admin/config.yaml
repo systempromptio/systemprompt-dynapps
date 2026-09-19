@@ -25,9 +25,9 @@ marketplace:
     include:
       - systemprompt
       - atlassian
-      - salesforce-us
-      - salesforce-uk
-      - salesforce-dev
+      - salesforce-crm-us
+      - salesforce-crm-uk
+      - salesforce-crm-dev
   agents:
     source: explicit
     include: []

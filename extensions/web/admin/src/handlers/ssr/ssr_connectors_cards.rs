@@ -70,7 +70,7 @@ pub(super) fn tone(status: &str) -> &'static str {
 fn family(provider: &str) -> &'static str {
     match provider {
         "atlassian" => "atlassian",
-        "google_drive" => "google",
+        "google_workspace" => "google",
         "systemprompt" => "systemprompt",
         p if p.starts_with("salesforce") => "salesforce",
         _ => "generic",

@@ -14,7 +14,7 @@ signed services bundle on GHCR (private package), and composed by this instance
 ## What stays here
 
 Everything the bundle references by id: the MCP servers `atlassian` and
-`salesforce-us` (`services/mcp/`), the `india-devs` group
+`salesforce-crm-us` (`services/mcp/`), the `india-devs` group
 (`services/web/config/groups.yaml`, directory group `Systemprompt-Core`) —
 **and the marketplace's access**. `marketplace/astound-india-dev` is declared
 in `services/access-control/rules.yaml` with `owner: bundle:india` and

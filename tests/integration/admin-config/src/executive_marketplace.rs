@@ -148,7 +148,7 @@ async fn executive_and_uk_membership_grant_only_the_intended_resources() {
             (EntityKind::Skill, "install_sales_artifacts", sales),
             (EntityKind::Skill, "google_workspace_search", operator),
             (EntityKind::Skill, "salesforce_account_search", operator),
-            (EntityKind::McpServer, "google_drive", sales),
+            (EntityKind::McpServer, "google_workspace", sales),
         ] {
             let ids = vec![id.to_owned()];
             let allowed = allowed_ids(

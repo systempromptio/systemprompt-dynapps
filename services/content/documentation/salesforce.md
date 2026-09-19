@@ -101,7 +101,7 @@ Follow Salesforce's [External Client App setup](https://developer.salesforce.com
 
 ### One entry per org: the org registry
 
-Salesforce has no central authorization server. Every org is its own login, holds its own user records, and a sandbox is served by a different hosted MCP endpoint. Astound therefore declares each org in `services/config/salesforce-orgs.yaml`, keyed by the id of the MCP server that fronts it (`salesforce-us`, `salesforce-uk`, `salesforce-<slug>`). A user picks the org on the profile page before signing in; the grant, the verification and every tool call are bound to that org. Every org shares one callback, `/api/public/connectors/salesforce/callback` — the org travels in the OAuth `state` — so adding an org never touches the app.
+Salesforce has no central authorization server. Every org is its own login, holds its own user records, and a sandbox is served by a different hosted MCP endpoint. Astound therefore declares each org in `services/config/salesforce-orgs.yaml`, keyed by the id of the MCP server that fronts it (`salesforce-crm-us`, `salesforce-crm-uk`, `salesforce-<slug>`). A user picks the org on the profile page before signing in; the grant, the verification and every tool call are bound to that org. Every org shares one callback, `/api/public/connectors/salesforce/callback` — the org travels in the OAuth `state` — so adding an org never touches the app.
 
 ```yaml
 orgs:

@@ -8,15 +8,15 @@
 
 includes:
   # MCP servers
-  # `atlassian`, `google_drive` and the internal `systemprompt` control plane
+  # `atlassian`, `google_workspace` and the internal `systemprompt` control plane
   # are reachable. The Salesforce orgs are declared so the catalog and the
   # group grants keep naming them; each Salesforce org is its own server.
   - ../mcp/systemprompt.yaml
-  - ../mcp/salesforce-us.yaml
-  - ../mcp/salesforce-uk.yaml
-  - ../mcp/salesforce-dev.yaml
+  - ../mcp/salesforce-crm-us.yaml
+  - ../mcp/salesforce-crm-uk.yaml
+  - ../mcp/salesforce-crm-dev.yaml
   - ../mcp/atlassian.yaml
-  - ../mcp/google_drive.yaml
+  - ../mcp/google_workspace.yaml
 
   # AI, scheduler, content
   # Note: ../web/config.yaml is NOT included here — the web domain validator

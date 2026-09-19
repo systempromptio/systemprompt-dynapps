@@ -37,7 +37,7 @@ you have.
 
 ## Workflow
 
-1. **Coverage.** Check `salesforce-uk` (or `-us`) and `google_drive`. Record
+1. **Coverage.** Check `salesforce-crm-uk` (or `-us`) and `google_workspace`. Record
    each as `ok`, `not_connected` or `not_run`. With no Salesforce the health
    score cannot be computed — say so and stop after the communications lens.
 2. **Evidence.** Run `salesforce_account_search` recipes `account`, `people`,
@@ -117,7 +117,7 @@ Same envelope with `"report": "account_suggestions"`. `metrics` carries
   90% is still open. Say "in negotiation", never "renewed".
 - **Links are only what a tool returned.** A Salesforce record gets its Id and
   `"link": null`; never compose a URL. `source` in every row is the server id
-  you actually called (`salesforce-dev` when that is the org in use).
+  you actually called (`salesforce-crm-dev` when that is the org in use).
 - **Recommend, never execute.** No task, event, mail or record is created.
   If the user says "do it", show exactly what would be created and wait for
   a clear yes — and even then only through a tool the session actually has.

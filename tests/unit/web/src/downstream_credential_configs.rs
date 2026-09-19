@@ -20,7 +20,11 @@ use crate::support::repo_root;
 // accessor as `api_external_url + token_endpoint`, so a disagreement here is a
 // 404 at tool-call time and nowhere earlier.
 const ATLASSIAN_ACCESSOR: &str = "/api/public/connectors/atlassian/token";
-const SALESFORCE_SERVERS: [&str; 3] = ["salesforce-us", "salesforce-uk", "salesforce-dev"];
+const SALESFORCE_SERVERS: [&str; 3] = [
+    "salesforce-crm-us",
+    "salesforce-crm-uk",
+    "salesforce-crm-dev",
+];
 
 fn web_config(name: &str) -> PathBuf {
     repo_root().join("services/web/config").join(name)
@@ -125,12 +129,12 @@ fn every_external_server_points_at_the_accessor_that_serves_it() {
 }
 
 #[test]
-fn the_google_drive_server_leaves_its_accessor_to_the_generic_connector() {
+fn the_google_workspace_server_leaves_its_accessor_to_the_generic_connector() {
     // Why: with a `connector:` block and no `external_auth`, core synthesises
     // the accessor route itself; declaring both would name the route twice and
     // let them drift apart.
     {
-        let (file, name) = ("google_drive.yaml", "google_drive");
+        let (file, name) = ("google_workspace.yaml", "google_workspace");
         let entry = server(file, name);
         assert!(
             entry.get("external_auth").is_none(),
@@ -184,13 +188,13 @@ fn the_google_drive_server_leaves_its_accessor_to_the_generic_connector() {
 }
 
 #[test]
-fn the_google_drive_server_targets_agent_search_with_its_scope() {
+fn the_google_workspace_server_targets_agent_search_with_its_scope() {
     // Why: the MCP endpoint is regional — the global host refuses an `eu`
     // engine outright — and its protected-resource metadata names exactly this
     // scope; a token minted without it is accepted by Google's OAuth server and
     // then rejected by the MCP endpoint, which surfaces as a failed Test on the
     // Connectors page and nowhere earlier.
-    let entry = server("google_drive.yaml", "google_drive");
+    let entry = server("google_workspace.yaml", "google_workspace");
     assert_eq!(
         entry.get("endpoint").and_then(serde_yaml::Value::as_str),
         Some("https://eu-discoveryengine.googleapis.com/mcp")
@@ -199,13 +203,13 @@ fn the_google_drive_server_targets_agent_search_with_its_scope() {
         .get("connector")
         .and_then(|c| c.get("scopes"))
         .and_then(serde_yaml::Value::as_sequence)
-        .expect("google_drive.yaml: connector.scopes is a list")
+        .expect("google_workspace.yaml: connector.scopes is a list")
         .iter()
         .filter_map(serde_yaml::Value::as_str)
         .collect();
     assert!(
         scopes.contains(&"https://www.googleapis.com/auth/discoveryengine.readwrite"),
-        "google_drive.yaml: scopes must carry discoveryengine.readwrite, got {scopes:?}"
+        "google_workspace.yaml: scopes must carry discoveryengine.readwrite, got {scopes:?}"
     );
 }
 

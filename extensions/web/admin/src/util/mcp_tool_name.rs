@@ -5,7 +5,7 @@
 //! The gateway records the in-process execution under the bare tool and
 //! server names, so a hook report has to be reduced to the same two names
 //! before the ingest can recognise both as one call. Server ids may contain
-//! `_` (`google_drive`), so the plugin form is resolved against the servers
+//! `_` (`google_workspace`), so the plugin form is resolved against the servers
 //! this instance declares and falls back to the last `_` only when none
 //! matches.
 
