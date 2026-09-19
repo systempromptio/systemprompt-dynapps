@@ -46,7 +46,8 @@ else
     exit 0
 fi
 [ "$(jq -r .mergeable <<<"$state")" = MERGEABLE ] || die 'PR is not mergeable'
-git fetch origin main "refs/pull/$pr/merge"
+git fetch origin main
+git fetch origin "refs/pull/$pr/merge"
 [ "$(git rev-parse origin/main)" = "$base" ] || die 'main moved after proof'
 [ "$(git rev-parse FETCH_HEAD^{tree})" = "$(git rev-parse "$sha^{tree}")" ] || die 'proposed merge tree differs from proven candidate'
 bash scripts/check-gates-green.sh "$sha"
