@@ -233,7 +233,12 @@ fn atlassian_site_lookup_cannot_target_arbitrary_hosts() {
 
 #[test]
 fn configured_provider_ids_preserve_legacy_wire_names() {
-    for id in ["atlassian", "salesforce-us", "salesforce-uk", "fourth-mcp"] {
+    for id in [
+        "atlassian",
+        "salesforce-crm-us",
+        "salesforce-crm-uk",
+        "fourth-mcp",
+    ] {
         let provider: Provider = serde_json::from_value(serde_json::json!(id)).unwrap();
         assert_eq!(provider.slug(), id);
         assert_eq!(

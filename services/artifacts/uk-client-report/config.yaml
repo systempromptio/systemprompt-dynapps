@@ -23,12 +23,12 @@ tags:
 - reporting
 - crm
 mcp_tools:
-- mcp__salesforce-uk__soqlQuery
-- mcp__salesforce-uk__getObjectSchema
-- mcp__salesforce-us__soqlQuery
-- mcp__salesforce-us__getObjectSchema
-- mcp__salesforce-dev__soqlQuery
-- mcp__salesforce-dev__getObjectSchema
+- mcp__salesforce-crm-uk__soqlQuery
+- mcp__salesforce-crm-uk__getObjectSchema
+- mcp__salesforce-crm-us__soqlQuery
+- mcp__salesforce-crm-us__getObjectSchema
+- mcp__salesforce-crm-dev__soqlQuery
+- mcp__salesforce-crm-dev__getObjectSchema
 - mcp__google_workspace__search
 - mcp__atlassian__getAccessibleAtlassianResources
 - mcp__atlassian__searchJiraIssuesUsingJql
