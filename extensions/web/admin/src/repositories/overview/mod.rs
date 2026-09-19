@@ -10,6 +10,7 @@
 //! failed is worse than a page that says which number it could not read, so
 //! nothing here is folded into a single fallible load.
 
+pub mod dimension_series;
 pub mod kpis;
 pub mod liveness;
 pub mod queues;

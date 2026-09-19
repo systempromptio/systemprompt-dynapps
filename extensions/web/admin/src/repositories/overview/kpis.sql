@@ -40,7 +40,32 @@ SELECT
         AS "denied!",
     COUNT(*) FILTER (WHERE r.created_at >= $3 AND r.created_at < $1
         AND r.status = 'rejected')::BIGINT
-        AS "prev_denied!"
+        AS "prev_denied!",
+    COALESCE(SUM(COALESCE(r.input_tokens, 0) + COALESCE(r.output_tokens, 0))
+        FILTER (WHERE r.created_at >= $1 AND r.created_at < $2), 0)::BIGINT
+        AS "tokens!",
+    COALESCE(SUM(COALESCE(r.input_tokens, 0) + COALESCE(r.output_tokens, 0))
+        FILTER (WHERE r.created_at >= $3 AND r.created_at < $1), 0)::BIGINT
+        AS "prev_tokens!",
+    COALESCE(SUM(COALESCE(r.input_tokens, 0))
+        FILTER (WHERE r.created_at >= $1 AND r.created_at < $2), 0)::BIGINT
+        AS "input_tokens!",
+    COALESCE(SUM(COALESCE(r.cache_read_tokens, 0))
+        FILTER (WHERE r.created_at >= $1 AND r.created_at < $2), 0)::BIGINT
+        AS "cache_tokens!",
+    COALESCE(SUM(COALESCE(r.cache_read_tokens, 0))
+        FILTER (WHERE r.created_at >= $3 AND r.created_at < $1), 0)::BIGINT
+        AS "prev_cache_tokens!",
+    COUNT(DISTINCT r.context_id) FILTER (WHERE r.created_at >= $1 AND r.created_at < $2)::BIGINT
+        AS "conversations!",
+    COUNT(DISTINCT r.context_id) FILTER (WHERE r.created_at >= $3 AND r.created_at < $1)::BIGINT
+        AS "prev_conversations!",
+    (SELECT COUNT(*) FROM ai_request_tool_calls t JOIN ai_requests q ON q.id = t.request_id
+      WHERE NOT q.synthetic AND q.created_at >= $1 AND q.created_at < $2)::BIGINT
+        AS "tool_calls!",
+    (SELECT COUNT(*) FROM ai_request_tool_calls t JOIN ai_requests q ON q.id = t.request_id
+      WHERE NOT q.synthetic AND q.created_at >= $3 AND q.created_at < $1)::BIGINT
+        AS "prev_tool_calls!"
 FROM ai_requests r
 WHERE NOT r.synthetic
   AND r.created_at >= $3
