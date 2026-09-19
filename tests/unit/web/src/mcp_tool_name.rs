@@ -38,8 +38,11 @@ fn plugin_form_resolves_the_server_against_the_instance() {
 #[test]
 fn plugin_form_keeps_an_underscored_server_id_whole() {
     assert_eq!(
-        parse_mcp_tool_name_with("mcp__plugin_astound-commons_google_workspace__search", &known())
-            .map(|n| n.server),
+        parse_mcp_tool_name_with(
+            "mcp__plugin_astound-commons_google_workspace__search",
+            &known()
+        )
+        .map(|n| n.server),
         Some("google_workspace".to_owned())
     );
 }
