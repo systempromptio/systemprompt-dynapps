@@ -42,6 +42,8 @@
 //!   `otlp_export_state` rows into its view
 
 #[cfg(test)]
+mod agents_ingestion;
+#[cfg(test)]
 #[cfg(test)]
 mod analysis_skills;
 #[cfg(test)]
@@ -125,6 +127,8 @@ mod jobs_bundles;
 mod jobs_conversation_judge;
 #[cfg(test)]
 mod jobs_errors_stats;
+#[cfg(test)]
+mod kit_export;
 #[cfg(test)]
 mod scope;
 #[cfg(test)]
@@ -281,6 +285,10 @@ mod sync_declaration_text;
 #[cfg(test)]
 mod sync_inventory;
 #[cfg(test)]
+mod sync_sources_hash;
+#[cfg(test)]
+mod sync_staging;
+#[cfg(test)]
 mod template_engine;
 #[cfg(test)]
 mod template_helpers;
@@ -317,6 +325,9 @@ mod governance_calibration;
 
 #[cfg(test)]
 mod ingestion_identity;
+
+#[cfg(test)]
+mod judge_params;
 
 #[cfg(test)]
 mod managed_assets;

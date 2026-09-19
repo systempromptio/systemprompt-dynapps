@@ -13,6 +13,8 @@
 //! - Gemini declarability of every listed tool's input schema
 
 #[cfg(test)]
+mod access_policy;
+#[cfg(test)]
 mod audit_metadata;
 #[cfg(test)]
 mod filter_hallucinated_args;
@@ -31,3 +33,5 @@ mod admin_reports;
 mod bounds;
 #[cfg(test)]
 mod typed_inputs;
+#[cfg(all(test, unix))]
+mod typed_users_handler;

@@ -17,7 +17,8 @@ use anyhow::{Context, Result, bail};
 use serde::Serialize;
 use systemprompt::marketplace::{CatalogContent, build_plugin_bundle};
 use systemprompt::models::services::{
-    ComponentSource, MarketplaceConfig, PluginComponentRef, PluginConfig, ServicesConfig,
+    ComponentSource, MarketplaceConfig, PluginComponentRef, PluginConfig, PluginHooksRef,
+    ServicesConfig,
 };
 
 // Why: the catalog loader wants an API URL for agent cards and managed MCP
@@ -29,7 +30,7 @@ const SIDECAR: &str = ".claude-plugin/systemprompt.yaml";
 const MANIFEST: &str = ".claude-plugin/marketplace.json";
 
 #[derive(Debug, Default)]
-pub(crate) struct ExportReport {
+pub struct ExportReport {
     pub marketplace: String,
     pub plugins: Vec<String>,
     pub skills: BTreeSet<String>,
@@ -37,7 +38,7 @@ pub(crate) struct ExportReport {
 }
 
 impl ExportReport {
-    pub(crate) fn summary(&self) -> String {
+    pub fn summary(&self) -> String {
         format!(
             "exported marketplace {} — {} plugin(s), {} skill(s), {} file(s)",
             self.marketplace,
@@ -95,9 +96,10 @@ struct PluginSidecarBody {
     category: String,
     enabled: bool,
     mcp_servers: ComponentRefOut,
+    hooks: PluginHooksRef,
 }
 
-pub(crate) fn export_kit(
+pub fn export_kit(
     services: &ServicesConfig,
     services_root: &Path,
     wanted: &str,
@@ -160,6 +162,7 @@ pub(crate) fn export_kit(
                     category: config.category.clone(),
                     enabled: config.enabled,
                     mcp_servers: (&config.mcp_servers).into(),
+                    hooks: config.hooks.clone(),
                 },
             })?
             .as_bytes(),

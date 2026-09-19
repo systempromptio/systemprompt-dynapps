@@ -20,6 +20,8 @@ mod content_repository;
 #[cfg(test)]
 mod content_services;
 #[cfg(test)]
+mod conversation_judge;
+#[cfg(test)]
 mod fixtures;
 #[cfg(test)]
 mod jobs_context;
@@ -35,6 +37,10 @@ mod link_repository;
 mod mcp_cli;
 #[cfg(test)]
 mod mcp_dispatch;
+#[cfg(test)]
+mod mcp_protocol;
+#[cfg(all(test, unix))]
+mod mcp_report_handler;
 #[cfg(test)]
 mod mcp_server;
 #[cfg(test)]

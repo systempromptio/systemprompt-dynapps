@@ -14,6 +14,8 @@ use systemprompt::models::execution::context::RequestContext;
 
 use crate::JobError;
 
+use super::classifier::{ConversationClassifier, JudgeVerdict};
+
 pub(super) const AGENT_NAME: &str = "conversation-judge";
 
 // Why: the judge's own requests need a context of their own. Using the
@@ -253,13 +255,6 @@ pub(super) struct Judge {
     pub(super) max_output_tokens: u32,
 }
 
-pub(super) struct Verdict {
-    pub(super) classification: Classification,
-    pub(super) ai_request_id: String,
-    pub(super) input_tokens: Option<i32>,
-    pub(super) output_tokens: Option<i32>,
-}
-
 impl Judge {
     // Why: an empty session id keeps core from binding the judge call to a
     // user session; the job context id keeps it out of every conversation.
@@ -272,8 +267,11 @@ impl Judge {
         )
         .with_actor(self.actor.clone()))
     }
+}
 
-    pub(super) async fn classify(&self, transcript: &str) -> Result<Verdict, JobError> {
+#[async_trait::async_trait]
+impl ConversationClassifier for Judge {
+    async fn classify(&self, transcript: &str) -> Result<JudgeVerdict, JobError> {
         let request = AiRequest::builder(
             vec![
                 AiMessage::system(SYSTEM_PROMPT),
@@ -288,7 +286,7 @@ impl Judge {
         .build();
         let response = self.ai.generate(&request).await?;
         let classification = parse_classification(&response.content)?;
-        Ok(Verdict {
+        Ok(JudgeVerdict {
             classification,
             ai_request_id: response.request_id.to_string(),
             input_tokens: response.input_tokens.and_then(|t| i32::try_from(t).ok()),

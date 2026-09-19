@@ -398,10 +398,7 @@ async fn every_warn_is_written_to_governance_decisions_and_rolls_up_by_policy() 
     let rollup = list_governance_warnings(&db.pool, None, 100)
         .await
         .expect("the report query runs");
-    let ours: Vec<_> = rollup
-        .iter()
-        .filter(|r| r.user_id == user.as_str())
-        .collect();
+    let ours: Vec<_> = rollup.iter().filter(|r| r.user_id == user).collect();
     assert_eq!(
         ours.len(),
         3,
@@ -446,7 +443,7 @@ async fn a_clean_call_is_still_recorded_as_an_allow_not_a_warn() {
         .await
         .expect("the report query runs");
     assert!(
-        !rollup.iter().any(|r| r.user_id == user.as_str()),
+        !rollup.iter().any(|r| r.user_id == user),
         "an allow never appears in the warn report"
     );
 

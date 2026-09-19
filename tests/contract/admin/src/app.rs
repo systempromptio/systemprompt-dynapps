@@ -99,6 +99,7 @@ impl App {
                 )
                 .expect("build the admin API router"),
             )
+            .merge(admin::connector_api_router(Arc::clone(pool)))
             .merge(admin::bridge_identity_router(Arc::clone(pool)))
             .merge(admin::salesforce_api_router(admin::SalesforceDeps {
                 config: Arc::new(admin::SalesforceConfig::disabled()),

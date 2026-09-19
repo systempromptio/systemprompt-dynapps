@@ -95,5 +95,13 @@ async fn long_reason_is_truncated_in_the_description() {
     // Reason body capped at MAX_REASON_LEN, plus the "..." suffix.
     assert_eq!(reason_part.len(), MAX_REASON_LEN + 3);
 
+    // The description is deliberately short enough for activity feeds, while
+    // JSONB retains the original policy reason for later incident review.
+    let metadata = db.mcp_metadata(SERVER).await;
+    assert_eq!(metadata.len(), 1);
+    assert_eq!(metadata[0]["tool_name"], TOOL);
+    assert_eq!(metadata[0]["server"], SERVER);
+    assert_eq!(metadata[0]["reason"], reason);
+
     db.cleanup().await;
 }

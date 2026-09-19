@@ -19,8 +19,10 @@
 //! `evaluation.automatic`, which switches off every background judge spend at
 //! once. A manual `-p context_id=<id>` run bypasses the latter.
 
+mod classifier;
 mod discovery;
 mod judge;
+mod params;
 mod repository;
 mod transcript;
 
@@ -29,7 +31,7 @@ use std::sync::Arc;
 use sqlx::PgPool;
 use systemprompt::config::ProfileBootstrap;
 use systemprompt::database::DbPool;
-use systemprompt::identifiers::{Actor, ContextId};
+use systemprompt::identifiers::Actor;
 use systemprompt::system::AppContext;
 use systemprompt::traits::{Job, JobContext, JobResult};
 use systemprompt_web_admin::repositories::analytics::context_detail::{
@@ -42,7 +44,10 @@ use systemprompt_web_admin::test_support::{
 
 use crate::JobError;
 
+pub use classifier::{ConversationClassifier, JudgeVerdict};
 pub use judge::{Category, Classification, Outcome, classification_schema, parse_classification};
+#[doc(hidden)]
+pub use params::JudgeParams;
 pub use transcript::{TranscriptMeta, render_transcript};
 
 use discovery::DiscoveryWindow;
@@ -50,86 +55,36 @@ use repository::{AnalysisLease, Completion, ConversationJudgeRepository};
 
 pub(crate) const JOB_NAME: &str = "conversation_judge";
 
-// Why: Tunables, each overridable from the scheduler entry's `parameters:` or
-// `systemprompt infra jobs run conversation_judge -p key=value`.
-#[derive(Debug, Clone)]
-pub(crate) struct JudgeParams {
-    pub provider: String,
-    pub model: String,
-    pub batch_size: u32,
-    pub daily_cost_cap_microdollars: i64,
-    pub quiet_minutes: i32,
-    pub lookback_days: i32,
-    pub transcript_token_budget: usize,
-    pub max_output_tokens: u32,
-    // Why: one conversation forced through regardless of quiet time or
-    // fingerprint — the operator's re-judge switch.
-    pub context_id: Option<ContextId>,
-}
-
-impl Default for JudgeParams {
-    fn default() -> Self {
-        Self {
-            provider: "gemini".to_owned(),
-            model: "gemini-3.8-flash".to_owned(),
-            batch_size: 20,
-            daily_cost_cap_microdollars: 2_000_000,
-            quiet_minutes: 30,
-            lookback_days: 30,
-            transcript_token_budget: 24_000,
-            max_output_tokens: 2_048,
-            context_id: None,
-        }
-    }
-}
-
-impl JudgeParams {
-    fn from_context(ctx: &JobContext) -> Result<Self, JobError> {
-        let defaults = Self::default();
-        let parse = |key: &str| -> Result<Option<String>, JobError> {
-            Ok(ctx.get_parameter_parsed::<String>(key)?)
-        };
-        let num = |key: &str| -> Result<Option<i64>, JobError> {
-            Ok(ctx.get_parameter_parsed::<i64>(key)?)
-        };
-        let default_batch = i64::from(defaults.batch_size);
-        let default_max_out = i64::from(defaults.max_output_tokens);
-        let default_budget = i64::try_from(defaults.transcript_token_budget).unwrap_or(i64::MAX);
-        let batch = num("batch_size")?.unwrap_or(default_batch);
-        let max_out = num("max_output_tokens")?.unwrap_or(default_max_out);
-        let budget = num("transcript_token_budget")?.unwrap_or(default_budget);
-        Ok(Self {
-            provider: parse("provider")?.unwrap_or(defaults.provider),
-            model: parse("model")?.unwrap_or(defaults.model),
-            batch_size: u32::try_from(batch.clamp(1, 100)).unwrap_or(defaults.batch_size),
-            daily_cost_cap_microdollars: num("daily_cost_cap_microdollars")?
-                .unwrap_or(defaults.daily_cost_cap_microdollars),
-            quiet_minutes: num("quiet_minutes")?.map_or(defaults.quiet_minutes, |v| {
-                i32::try_from(v.clamp(0, 525_600)).unwrap_or(0)
-            }),
-            lookback_days: num("lookback_days")?.map_or(defaults.lookback_days, |v| {
-                i32::try_from(v.clamp(1, 3_660)).unwrap_or(30)
-            }),
-            transcript_token_budget: usize::try_from(budget.clamp(1_000, 400_000))
-                .unwrap_or(defaults.transcript_token_budget),
-            max_output_tokens: u32::try_from(max_out.clamp(256, 65_536))
-                .unwrap_or(defaults.max_output_tokens),
-            context_id: parse("context_id")?.map(ContextId::try_new).transpose()?,
-        })
-    }
-}
-
 #[derive(Debug, Clone, Copy, Default)]
 pub struct ConversationJudgeJob;
 
 struct Tick<'a> {
     pool: &'a PgPool,
     repo: ConversationJudgeRepository,
-    judge: judge::Judge,
+    classifier: &'a dyn ConversationClassifier,
     params: JudgeParams,
     // Why: the profile's automatic switch is off — no discovery, and only
     // rows a person queued from the console are judged.
     manual_only: bool,
+}
+
+// Why: the scheduler and DB-backed tests use this one control-flow runner;
+// only the inference boundary is supplied by the caller.
+#[doc(hidden)]
+pub async fn run_with_classifier(
+    pool: &PgPool,
+    params: JudgeParams,
+    manual_only: bool,
+    classifier: &dyn ConversationClassifier,
+) -> Result<JobResult, JobError> {
+    let tick = Tick {
+        pool,
+        repo: ConversationJudgeRepository::new(pool.clone()),
+        classifier,
+        params,
+        manual_only,
+    };
+    ConversationJudgeJob::run_tick(&tick).await
 }
 
 enum Step {
@@ -164,7 +119,9 @@ impl ConversationJudgeJob {
         } else {
             tick.params.batch_size
         };
-        let leases = repo.claim(batch, tick.manual_only).await?;
+        let leases = repo
+            .claim(batch, tick.manual_only, tick.params.context_id.as_ref())
+            .await?;
         let (mut judged, mut failed) = (0u64, 0u64);
         for (index, lease) in leases.iter().enumerate() {
             match Self::judge_one(tick, lease).await {
@@ -227,7 +184,7 @@ impl ConversationJudgeJob {
             };
             let transcript =
                 render_transcript(&transcript_meta, &view, tick.params.transcript_token_budget);
-            let verdict = tick.judge.classify(&transcript).await?;
+            let verdict = tick.classifier.classify(&transcript).await?;
             (
                 verdict.classification,
                 Some(verdict.ai_request_id),
@@ -306,14 +263,8 @@ impl Job for ConversationJudgeJob {
             max_output_tokens: params.max_output_tokens,
         };
         let pool = db.write_pool();
-        let tick = Tick {
-            pool: &pool,
-            repo: ConversationJudgeRepository::new(PgPool::clone(&pool)),
-            judge,
-            manual_only: !automatic && params.context_id.is_none(),
-            params,
-        };
-        Ok(Self::run_tick(&tick).await?)
+        let manual_only = !automatic && params.context_id.is_none();
+        Ok(run_with_classifier(&pool, params, manual_only, &judge).await?)
     }
 }
 

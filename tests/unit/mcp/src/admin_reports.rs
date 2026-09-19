@@ -1,7 +1,10 @@
 //! Observable reporting invariants, including hostile input and incomplete
 //! source data.
 use serde_json::json;
-use systemprompt_mcp_agent::reports::{ReportInput, normalize_cli, with_dollar_siblings};
+use systemprompt::mcp::McpOutputSchema;
+use systemprompt_mcp_agent::reports::{
+    ReportInput, ReportOutput, normalize_cli, with_dollar_siblings,
+};
 
 #[test]
 fn report_input_cannot_override_command_or_identity() {
@@ -41,6 +44,30 @@ fn days_defaults_to_seven_when_omitted() {
     assert_eq!(input.days, 30);
     // A null is not "omitted": the field is a plain integer on the wire.
     assert!(serde_json::from_value::<ReportInput>(json!({"report":"costs","days":null})).is_err());
+}
+
+#[test]
+fn stored_reports_from_before_request_and_highlights_are_still_renderable() {
+    // These fields were added after reports had already been persisted. The
+    // viewer must be able to open that historical data rather than dropping
+    // the artifact because an optional display enhancement is absent.
+    let report: ReportOutput = serde_json::from_value(json!({
+        "report":"costs", "title":"AI Usage & Cost", "checked_at":"2026-09-01T00:00:00Z",
+        "period":"2026-08-25T00:00:00Z to 2026-09-01T00:00:00Z", "complete":true,
+        "sources":[], "metrics":{}, "tables":[]
+    }))
+    .expect("pre-addition report remains valid");
+
+    assert!(report.highlights.is_empty());
+    assert!(report.request.is_none());
+    assert_eq!(ReportOutput::artifact_type(), "report");
+    assert_eq!(report.artifact_title().as_deref(), Some("AI Usage & Cost"));
+    assert!(
+        report
+            .text_body()
+            .expect("report body")
+            .contains("AI Usage & Cost")
+    );
 }
 
 #[test]
@@ -88,6 +115,47 @@ fn cost_chart_normalization_preserves_dollars_and_refuses_misaligned_data() {
         normalize_cli(&json!({"labels":["today"],"datasets":[{"label":"cost_usd","data":[]}]}))
             .is_err()
     );
+}
+
+#[test]
+fn report_normalization_accepts_each_documented_cli_envelope_without_rewriting_rows() {
+    let item = json!({"heading":"total_requests","content":12});
+    assert_eq!(
+        normalize_cli(&json!({"items":[item.clone()]})).expect("items envelope"),
+        vec![item.clone()]
+    );
+    assert_eq!(
+        normalize_cli(&json!({"sections":[item.clone()]})).expect("sections envelope"),
+        vec![item.clone()]
+    );
+    assert_eq!(
+        normalize_cli(&json!([item.clone()])).expect("bare array"),
+        vec![item.clone()]
+    );
+    assert_eq!(
+        normalize_cli(&json!({"content": format!("[{item}]")})).expect("JSON text envelope"),
+        vec![item]
+    );
+}
+
+#[test]
+fn report_normalization_refuses_text_that_is_not_json_and_unknown_envelopes() {
+    let text = normalize_cli(&json!({"content":"human-readable summary"}))
+        .expect_err("plain text cannot be presented as report rows");
+    assert!(text.message.contains("text instead of structured"));
+
+    let unknown = normalize_cli(&json!({"result":{"rows":[]}}))
+        .expect_err("an unrecognised wrapper must not silently render an empty report");
+    assert!(unknown.message.contains("Unsupported CLI report envelope"));
+}
+
+#[test]
+fn report_normalization_refuses_charts_that_do_not_match_the_chart_contract() {
+    // Having the marker fields selects the chart path. A malformed chart must
+    // fail there rather than being mistaken for an arbitrary report object.
+    let malformed = normalize_cli(&json!({"labels": "today", "datasets": []}))
+        .expect_err("labels must be an array");
+    assert!(malformed.message.contains("Malformed CLI chart"));
 }
 
 // Why: a renderer that cannot read its payload must SAY so. It used to fall
