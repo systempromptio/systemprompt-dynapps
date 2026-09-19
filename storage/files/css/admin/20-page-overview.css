@@ -12,19 +12,32 @@
     grid-template-columns: repeat(auto-fit, minmax(10.5rem, 1fr));
 }
 
-/* Six charts on one x axis, three to a row; they fold to two, then one. The
-   card is the same surface the conversations page draws its charts on. */
+/* Six charts on one x axis, always three to a row so the six read as two
+   bands — volume, models, clients / tokens, work, latency — never six thin
+   strips across an ultrawide. They fold to two, then one. The card has a
+   fixed height, not a minimum: the live chart draws its SVG at the host's
+   pixel height, so a card that grows with its content would grow the SVG,
+   which grows the card, without end. */
 .sp-p-overview__charts {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: var(--sp-density-gap);
     margin-block-end: var(--sp-density-section);
+}
+
+@media (max-width: 80rem) {
+    .sp-p-overview__charts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 48rem) {
+    .sp-p-overview__charts { grid-template-columns: minmax(0, 1fr); }
 }
 
 .sp-p-overview__chart {
     display: flex;
     min-inline-size: 0;
-    min-block-size: 19rem;
+    block-size: 23rem;
+    overflow: auto;
     padding: var(--sp-density-tile);
     background: var(--sp-bg-surface);
     border: 1px solid var(--sp-border-subtle);

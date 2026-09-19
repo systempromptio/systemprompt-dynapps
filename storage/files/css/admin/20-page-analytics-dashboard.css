@@ -11,6 +11,10 @@
     margin-block: var(--sp-space-6);
 }
 
+/* A panel has a fixed height, not a minimum: the live chart draws its SVG at
+   the host's pixel height, so a panel that grew with its content would grow
+   the SVG, which grows the panel, without end. The donut's ring is sized to
+   the same height so the four panels read as one row. */
 .sp-analytics-grid__panel {
     display: flex;
     flex-direction: column;
@@ -18,8 +22,10 @@
     background: var(--sp-bg-surface);
     border: 1px solid var(--sp-border-subtle);
     border-radius: var(--sp-corners-md);
-    padding: var(--sp-space-5);
+    padding: var(--sp-space-4) var(--sp-space-5);
     min-width: 0;
+    block-size: 26rem;
+    overflow: auto;
 }
 
 .sp-analytics-filters {
@@ -65,19 +71,72 @@
     font-variant-numeric: tabular-nums;
 }
 
+/* The ring takes the panel's height and the legend the rest of its width;
+   on a narrow panel the legend drops under the ring. */
 .sp-pie-chart__body {
     display: flex;
     align-items: center;
     gap: var(--sp-space-5);
+    flex: 1;
+    min-height: 0;
     flex-wrap: wrap;
 }
 
-.sp-pie-chart__disc {
-    width: 8rem;
+.sp-pie-chart__ring {
+    position: relative;
+    flex: 0 1 15rem;
+    min-width: 11rem;
+    max-width: 16rem;
     aspect-ratio: 1;
-    border-radius: 50%;
-    background: conic-gradient(var(--pie-stops));
-    flex-shrink: 0;
+    align-self: center;
+}
+
+.sp-pie-chart__svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+}
+
+/* A slice lifts on hover and its siblings step back, so the one under the
+   pointer is the one the tooltip names. */
+.sp-pie-chart__arc {
+    transition: opacity var(--sp-duration-fast) ease, transform var(--sp-duration-fast) ease;
+    transform-origin: 50% 50%;
+    transform-box: view-box;
+}
+
+.sp-pie-chart__svg:hover .sp-pie-chart__arc {
+    opacity: 0.45;
+}
+
+.sp-pie-chart__svg .sp-pie-chart__arc:hover {
+    opacity: 1;
+    transform: scale(1.04);
+}
+
+.sp-pie-chart__center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.sp-pie-chart__center-value {
+    font-size: var(--sp-text-2xl);
+    font-weight: 600;
+    line-height: 1;
+    color: var(--sp-text-primary);
+    font-variant-numeric: tabular-nums;
+}
+
+.sp-pie-chart__center-label {
+    font-size: var(--sp-text-xs);
+    color: var(--sp-text-tertiary);
+    margin-top: var(--sp-space-1);
 }
 
 .sp-pie-chart__legend {
@@ -93,11 +152,34 @@
 
 .sp-pie-chart__item {
     display: grid;
-    grid-template-columns: auto minmax(6rem, 1fr) auto auto;
-    grid-template-areas: "swatch label share value";
+    grid-template-columns: auto minmax(9rem, 1fr) auto auto;
+    grid-template-areas:
+        "swatch label share value"
+        "swatch bar   bar   bar";
     column-gap: var(--sp-space-2);
+    row-gap: var(--sp-space-05);
     align-items: baseline;
     font-size: var(--sp-text-xs);
+}
+
+/* The share as a bar under each row, filled to `--v`, in the slice's colour. */
+.sp-pie-chart__bar {
+    grid-area: bar;
+    display: block;
+    height: 0.25rem;
+    border-radius: var(--sp-radius-sm);
+    background: linear-gradient(var(--sp-border-subtle), var(--sp-border-subtle));
+    position: relative;
+    overflow: hidden;
+}
+
+.sp-pie-chart__bar::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: var(--v, 0%);
+    background: var(--bar-color, var(--sp-accent));
+    border-radius: inherit;
 }
 
 .sp-pie-chart__item--inline {

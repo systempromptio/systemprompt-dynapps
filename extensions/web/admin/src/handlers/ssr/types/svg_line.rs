@@ -70,6 +70,11 @@ pub(crate) struct SvgSeriesView {
     // Why: the raw values behind the path, comma-separated, so the hover
     // tooltip prints numbers and never re-derives them from geometry.
     pub values: String,
+    // Why: the figure the legend prints for the series, decided here rather
+    // than by the live layer summing the buckets — a sum is right for
+    // requests and wrong for a percentile or a peak, and only the builder
+    // knows which the series is.
+    pub value_display: String,
     // Why: one dot per bucket when the window holds few buckets — two days
     // of data drawn as a bare line reads as a slope, not two readings.
     pub points: Vec<SvgPointView>,
@@ -175,6 +180,7 @@ pub(crate) fn line_chart(spec: LineChartSpec) -> SvgLineChartView {
                 points: dots,
                 color_token,
                 label: s.label.clone(),
+                value_display: s.value_display.clone(),
                 values: s
                     .values
                     .iter()

@@ -117,7 +117,8 @@ fn tokens(axis: &Axis, s: &[OverviewSeriesPoint]) -> SvgLineChartView {
     let total = sum(s, |p| p.tokens);
     let cached = sum(s, |p| p.cache_tokens);
     axis.chart(Plot {
-        y_unit: "k tok",
+        y_unit: "tok",
+        y_display: short_num,
         ..Plot::new(
             "Tokens and cache reads",
             format!(
@@ -126,16 +127,11 @@ fn tokens(axis: &Axis, s: &[OverviewSeriesPoint]) -> SvgLineChartView {
                 format_token_total(cached)
             ),
             vec![
+                input(s, "Tokens", |p| p.tokens, format_token_total(total)),
                 input(
                     s,
-                    "Tokens (k)",
-                    |p| p.tokens / 1000,
-                    format_token_total(total),
-                ),
-                input(
-                    s,
-                    "Cache reads (k)",
-                    |p| p.cache_tokens / 1000,
+                    "Cache reads",
+                    |p| p.cache_tokens,
                     format_token_total(cached),
                 ),
             ],

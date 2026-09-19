@@ -6,7 +6,7 @@
 use serde::Serialize;
 use serde::ser::SerializeMap;
 
-use crate::handlers::ssr::types::{PieView, SvgLineChartView, SvgStackedChartView};
+use crate::handlers::ssr::types::{PieView, SvgLineChartView};
 
 pub(super) use super::context_overview::{
     BucketLinkView, DashboardTabLink, DashboardTimeRange, FastSlowView, FiltersView, KpiStripView,
@@ -110,7 +110,7 @@ pub(super) struct AnalyticsDashboardContext {
     pub volume_chart: SvgLineChartView,
     pub cost_chart: SvgLineChartView,
     pub model_pie: PieView,
-    pub model_cost_chart: SvgStackedChartView,
+    pub model_cost_chart: SvgLineChartView,
 
     pub leaderboard: LeaderboardView,
 

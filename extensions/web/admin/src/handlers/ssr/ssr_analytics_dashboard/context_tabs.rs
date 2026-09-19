@@ -9,7 +9,7 @@ use serde::Serialize;
 use systemprompt::identifiers::{SessionId, UserId};
 
 use crate::handlers::ssr::list_view::Pagination;
-use crate::handlers::ssr::types::SvgStackedChartView;
+use crate::handlers::ssr::types::SvgLineChartView;
 
 use super::context::{AttributionLink, KpiTile};
 
@@ -157,7 +157,7 @@ pub(super) struct CostTabView {
     pub container_count: usize,
     pub audience_links: Vec<AttributionLink>,
     pub is_internal: bool,
-    pub day_chart: Option<SvgStackedChartView>,
+    pub day_chart: Option<SvgLineChartView>,
     pub providers: Vec<SupplierRowView>,
     pub has_providers: bool,
     pub models: Vec<SupplierRowView>,
