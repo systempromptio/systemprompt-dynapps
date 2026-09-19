@@ -1,5 +1,5 @@
 //! The overview's page context: the window control and the assembly of the
-//! four widgets.
+//! strip, the six charts and the four boards.
 //!
 //! Every derived value is computed in this module and its two siblings, so
 //! `overview.hbs` does no arithmetic and no formatting: a number the template
@@ -11,8 +11,9 @@ use serde::Serialize;
 use crate::handlers::ssr::types::{BreadcrumbView, SvgLineChartView};
 use crate::util::time_range::{TimeRange, TimeRangePreset};
 
+use super::charts::charts;
 use super::data::OverviewData;
-use super::kpis_view::{OverviewKpiStripView, kpi_strip, volume_chart};
+use super::kpis_view::{OverviewKpiStripView, kpi_strip};
 use super::panels_view::{
     BoardSpec, ModelsBoardView, QueuesView, ScopeBoardView, models_board, queues, scope_board,
 };
@@ -63,24 +64,6 @@ impl OverviewRange {
         }
     }
 
-    // Why: the chart's x axis names the window's edges in the unit the reader
-    // picked, so "7d ago … 3.5d ago … now" rather than a timestamp per tick.
-    pub(super) const fn span_label(self) -> &'static str {
-        match self {
-            Self::Day => "24h",
-            Self::Week => "7d",
-            Self::Month => "30d",
-        }
-    }
-
-    pub(super) const fn half_span_label(self) -> &'static str {
-        match self {
-            Self::Day => "12h",
-            Self::Week => "3.5d",
-            Self::Month => "15d",
-        }
-    }
-
     pub(super) const fn previous_label(self) -> &'static str {
         match self {
             Self::Day => "vs previous 24h",
@@ -116,7 +99,7 @@ pub(super) struct OverviewContext {
     pub breadcrumbs: Vec<BreadcrumbView>,
     pub ranges: Vec<RangeLinkView>,
     pub kpis: OverviewKpiStripView,
-    pub volume_chart: SvgLineChartView,
+    pub charts: Vec<SvgLineChartView>,
     pub models: ModelsBoardView,
     pub queues: QueuesView,
     pub projects: ScopeBoardView,
@@ -135,13 +118,13 @@ pub(super) fn overview_page(range: OverviewRange, data: &OverviewData) -> Overvi
         page: "overview",
         title: "Overview",
         subtitle: format!(
-            "Spend, failures, latency, models and what is waiting on a person, across {}.",
+            "Spend, tokens, models, clients, tool calls, failures, latency and what is waiting on a person, across {}.",
             range.window_label()
         ),
         breadcrumbs: vec![BreadcrumbView::current("Overview")],
         ranges: range_links(range),
         kpis: kpi_strip(range, data),
-        volume_chart: volume_chart(range, data),
+        charts: charts(range, data),
         models: models_board(range, data),
         queues: queues(data),
         projects: scope_board(

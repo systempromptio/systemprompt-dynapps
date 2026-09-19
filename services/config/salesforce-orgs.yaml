@@ -50,14 +50,14 @@
 orgs:
   # Source org: owns the External Client App. Swap the placeholder domain for
   # the real My Domain before the first deploy.
-  salesforce-us:
+  salesforce-crm-us:
     label: "Astound US"
     my_domain: https://REPLACE-astound-us.my.salesforce.com
     environment: production
     groups: []
 
   # Subscriber org: installs the package from Astound US.
-  salesforce-uk:
+  salesforce-crm-uk:
     label: "Astound UK"
     my_domain: https://REPLACE-astound-uk.my.salesforce.com
     environment: production
@@ -67,7 +67,7 @@ orgs:
   # the two production orgs are wired up. Developer Edition orgs are not
   # sandboxes, so they use the production hosted-MCP endpoint. Offered to
   # super_admin only (services/access-control/rules.yaml).
-  salesforce-dev:
+  salesforce-crm-dev:
     label: "Astound dev (testing)"
     my_domain: https://orgfarm-141013b2b4-dev-ed.develop.my.salesforce.com
     environment: production

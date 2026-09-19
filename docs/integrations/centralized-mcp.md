@@ -42,7 +42,7 @@ its credentials independently. Local user grants are not copied into production.
 Register callbacks under that origin:
 
 - `https://YOUR-SERVER/api/public/connectors/atlassian/callback`
-- `https://YOUR-SERVER/api/public/connectors/google_drive/callback`
+- `https://YOUR-SERVER/api/public/connectors/google_workspace/callback`
 - `https://YOUR-SERVER/api/public/connectors/salesforce/callback` — one callback for
   every Salesforce org; the org rides in the OAuth `state`
 
@@ -62,8 +62,8 @@ Setup → API Catalog → MCP Servers. Store `salesforce_mcp_client_id` and
 private key is needed for browser OAuth. New app settings can take up to 30
 minutes to become available.
 
-Every Salesforce org is its own MCP server (`salesforce-us`, `salesforce-uk`,
-`salesforce-dev`, …), each with a registry entry in
+Every Salesforce org is its own MCP server (`salesforce-crm-us`, `salesforce-crm-uk`,
+`salesforce-crm-dev`, …), each with a registry entry in
 `services/config/salesforce-orgs.yaml` (My Domain, environment, optional entitled
 groups) and a `services/mcp/<id>.yaml` whose endpoint matches the org's
 environment (`/platform/mcp/v1/sandbox/platform/sobject-all` for sandboxes).

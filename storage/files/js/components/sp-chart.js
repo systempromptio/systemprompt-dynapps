@@ -30,7 +30,9 @@ const readModel = (figure) => {
       label: group.dataset.label ?? `Series ${index + 1}`,
       color: group.dataset.color ?? '--sp-chart-purple',
       values,
-      total: formatValue(sum(values), unit, true),
+      // The server states each series' legend figure (a sum, a peak or a
+      // percentile — only it knows which); summing here is the fallback.
+      total: group.dataset.total || formatValue(sum(values), unit, true),
       hidden: false,
     };
   });

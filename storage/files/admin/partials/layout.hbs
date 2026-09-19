@@ -4,15 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <title>{{default branding.domain "astounddigital.com"}} Admin - {{title}}</title>
+    <title>{{default branding.domain "astounddigital.com"}} Admin - {{page_title}}</title>
     <link rel="stylesheet" href="/css/core/fonts.css?v={{css_version}}">
     <link rel="stylesheet" href="/css/admin-bundle.css?v={{css_version}}">
     {{#> head_extra}}{{/head_extra}}
 </head>
 <body>
     <a href="#main" class="sp-skip-link">Skip to main content</a>
-    <div class="sp-shell" data-section="{{page}}">
-        {{> sidebar page=page}}
+    <div class="sp-shell" data-section="{{page_id}}">
+        {{> sidebar page=page_id}}
         <div class="sp-sidebar-overlay" id="sp-sidebar-overlay" aria-hidden="true"></div>
         <main class="sp-shell__main" id="main">
             <header class="sp-topbar" role="banner">
@@ -53,7 +53,7 @@
                     </button>
                     <div class="sp-topbar__actions-menu">
                         {{#if demo_help_url}}
-                        <a href="{{demo_help_url}}" target="_blank" rel="noopener noreferrer" class="sp-topbar__help" title="Help for this page" aria-label="Help for {{title}}">
+                        <a href="{{demo_help_url}}" target="_blank" rel="noopener noreferrer" class="sp-topbar__help" title="Help for this page" aria-label="Help for {{page_title}}">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                 <path d="M9 9a3.5 3.5 0 116 2c0 1.5-2 2.5-3 3"/>
                                 <line x1="12" y1="18.5" x2="12.01" y2="18.5"/>

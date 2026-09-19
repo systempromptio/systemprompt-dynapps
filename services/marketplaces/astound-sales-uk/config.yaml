@@ -24,10 +24,10 @@ marketplace:
     source: explicit
     include:
     - atlassian
-    - salesforce-uk
-    - salesforce-us
-    - salesforce-dev
-    - google_drive
+    - salesforce-crm-uk
+    - salesforce-crm-us
+    - salesforce-crm-dev
+    - google_workspace
   agents:
     source: explicit
     include: []

@@ -60,7 +60,6 @@ struct TabViews {
 fn tab_views(
     fetched: &AnalyticsDashboardData,
     query: &AnalyticsDashboardQuery,
-    range: &TimeRange,
     page: i64,
 ) -> TabViews {
     TabViews {
@@ -98,7 +97,6 @@ fn tab_views(
                 axis: query.container_axis(),
                 is_internal: query.is_internal_audience(),
             },
-            range,
             query,
         ),
     }
@@ -120,8 +118,8 @@ pub(super) fn page_context(input: PageInput<'_>) -> AnalyticsDashboardContext {
     let leaderboard = view_tables::leaderboard_view(fetched, &range, query, page);
     let chips = urls::active_chips(query);
     let has_active_filters = !chips.is_empty();
-    let charts = view_models::overview_charts(fetched, query, &range, weekly);
-    let tabs = tab_views(fetched, query, &range, page);
+    let charts = view_models::overview_charts(fetched, query, weekly);
+    let tabs = tab_views(fetched, query, page);
 
     AnalyticsDashboardContext {
         export: crate::export::ExportView::new(

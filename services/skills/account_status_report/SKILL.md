@@ -32,7 +32,7 @@ you have.
 
 ## Workflow
 
-1. **Coverage.** Check `salesforce-uk` (or `-us`) and `google_drive`; Atlassian
+1. **Coverage.** Check `salesforce-crm-uk` (or `-us`) and `google_workspace`; Atlassian
    is not consulted here. Record each as `ok`, `not_connected` or `not_run`.
 2. **Money.** Run `salesforce_account_search` recipes `account`, `pipeline`,
    `contracts`, `service`. From the evidence derive, per currency:
@@ -102,7 +102,7 @@ Same envelope as `client_360_report` with `"report": "account_status"`.
   90% is still open. Say "in negotiation", never "renewed".
 - **Links are only what a tool returned.** A Salesforce record gets its Id and
   `"link": null`; never compose a URL. `source` in every row is the server id
-  you actually called (`salesforce-dev` when that is the org in use).
+  you actually called (`salesforce-crm-dev` when that is the org in use).
 - **No forecasting.** Pipeline totals are pipeline; they are never weighted,
   projected or called revenue. Closed won is the only revenue-shaped number
   and it is labelled as CRM-recorded, not invoiced.

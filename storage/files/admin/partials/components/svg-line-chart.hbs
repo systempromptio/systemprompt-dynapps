@@ -17,7 +17,8 @@
     chart_title / subtitle       heading and one-line summary
     has_data                     false when every bucket is zero
     aria_label                   the plot's accessible summary
-    series                       [{path_d, area_d?, color_token, label, points[{x,y}]}]
+    series                       [{path_d, area_d?, color_token, label, values, value_display, points[{x,y}]}]
+                                 (value_display is the legend figure the live layer prints)
                                  (points are set only for ≤ 12 buckets)
     ref_lines                    [{y, label, tone}] cap/warn dashes
     legend                       [{label, color_index, value_display}] (multi only)
@@ -46,7 +47,7 @@
                   vector-effect="non-scaling-stroke"></line>
             {{/each}}
             {{#each series}}
-            <g class="sp-svgchart__series" data-series="{{@index}}" data-label="{{this.label}}" data-values="{{this.values}}" data-color="{{this.color_token}}">
+            <g class="sp-svgchart__series" data-series="{{@index}}" data-label="{{this.label}}" data-values="{{this.values}}" data-total="{{this.value_display}}" data-color="{{this.color_token}}">
             {{#if this.area_d}}
             <path d="{{this.area_d}}" fill="var({{this.color_token}})" class="sp-svgchart__area"></path>
             {{/if}}

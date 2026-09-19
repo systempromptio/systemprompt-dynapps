@@ -1,22 +1,7 @@
 name: Gates
 
-# The quality gate, identical on both branches: what `just verify` runs
-# locally (preflight-static → preflight-lint → test). It publishes nothing.
-# The coverage floor and ratchet are coverage.yml — a measurement on `main`
-# and nightly, not a gate.
-#
-#   next  — every push and PR. `next` builds against core `next` through an
-#           active [patch.crates-io] pointing at ../systemprompt-core; CI
-#           materialises that tree at bridge/CORE_REF (a SHA on core next).
-#   main  — PRs only. The run on the `next` push is the release's proof:
-#           `just release` refuses to fast-forward unless `Gates passed` is
-#           green on that exact SHA (scripts/check-gates-green.sh), and
-#           release.yml does not run the gates again.
-#
-# One core checkout serves both consumers: the [patch] paths and bridge/ both
-# resolve the sibling path ../systemprompt-core — actions/checkout can only
-# write inside the workspace, so the checkout lands in .vendor/ and a symlink
-# stands in for the sibling. See docs/BRANCHING.md.
+# Full matrix on next pushes and ordinary PRs. Frozen promotion PRs reuse
+# the exact next-push proof and validate the base, head and merge tree.
 
 on:
   workflow_dispatch:
@@ -45,8 +30,52 @@ env:
   # clone; a runner is single-tenant, so bypass it.
   BUILD_NO_COORD: "1"
 
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
 jobs:
+  promotion:
+    name: Verify frozen promotion
+    if: github.event_name == 'pull_request' && github.base_ref == 'main' && startsWith(github.head_ref, 'promote/') && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const {owner, repo} = context.repo;
+            let pr;
+            for (let attempt = 0; attempt < 6; attempt++) {
+              pr = (await github.rest.pulls.get({owner, repo, pull_number: context.payload.pull_request.number})).data;
+              if (pr.mergeable !== null) break;
+              await new Promise(resolve => setTimeout(resolve, 5000));
+            }
+            const match = /^promote\/(\d+\.\d+\.\d+)\/([0-9a-f]{40})\/([0-9a-f]{40})$/.exec(pr.head.ref);
+            if (!match || pr.head.repo.full_name !== context.payload.repository.full_name || pr.base.ref !== 'main' || pr.base.sha !== match[2] || pr.head.sha !== match[3]) {
+              throw new Error('Promotion identity differs from frozen head/base');
+            }
+            const currentMain = (await github.rest.git.getRef({owner, repo, ref: 'heads/main'})).data.object.sha;
+            const currentNext = (await github.rest.git.getRef({owner, repo, ref: 'heads/next'})).data.object.sha;
+            if (currentMain !== pr.base.sha || currentNext !== pr.head.sha) throw new Error('main or next moved');
+            const comparison = (await github.rest.repos.compareCommitsWithBasehead({owner, repo, basehead: `${pr.base.sha}...${pr.head.sha}`})).data;
+            if (comparison.status !== 'ahead' || comparison.behind_by !== 0) throw new Error('main is not an ancestor of candidate');
+            const runs = (await github.rest.actions.listWorkflowRuns({owner, repo, workflow_id: 'gates.yml', event: 'push', branch: 'next', head_sha: pr.head.sha, per_page: 1})).data.workflow_runs;
+            const run = runs[0];
+            if (!run || run.head_sha !== pr.head.sha || run.head_branch !== 'next' || run.event !== 'push' || run.status !== 'completed' || run.conclusion !== 'success') throw new Error('Latest exact next-push Gates run did not succeed');
+            const jobs = await github.paginate('GET /repos/{owner}/{repo}/actions/runs/{run_id}/attempts/{attempt_number}/jobs', {owner, repo, run_id: run.id, attempt_number: run.run_attempt, per_page: 100});
+            const proof = jobs.filter(job => job.name === 'Gates passed');
+            if (proof.length !== 1 || proof[0].status !== 'completed' || proof[0].conclusion !== 'success') throw new Error('Gates passed aggregate did not succeed');
+            const head = (await github.rest.git.getCommit({owner, repo, commit_sha: pr.head.sha})).data;
+            if (pr.mergeable !== true || !pr.merge_commit_sha) throw new Error('GitHub merge result is not ready or conflicts');
+            const merge = (await github.rest.git.getCommit({owner, repo, commit_sha: pr.merge_commit_sha})).data;
+            if (merge.tree.sha !== head.tree.sha || merge.parents.length !== 2 || merge.parents[0].sha !== pr.base.sha || merge.parents[1].sha !== pr.head.sha) throw new Error('Merge result differs from proven candidate');
+            const latest = (await github.rest.actions.listWorkflowRuns({owner, repo, workflow_id: 'gates.yml', event: 'push', branch: 'next', head_sha: pr.head.sha, per_page: 1})).data.workflow_runs[0];
+            if (!latest || latest.id !== run.id || latest.run_attempt !== run.run_attempt || latest.status !== 'completed' || latest.conclusion !== 'success') throw new Error('Push proof changed during verification');
+            core.info(`Verified next-push run ${run.id} attempt ${run.run_attempt}, candidate ${pr.head.sha}, base ${pr.base.sha}`);
+
   static:
+    if: github.event_name != 'pull_request' || github.base_ref != 'main' || !startsWith(github.head_ref, 'promote/') || github.event.pull_request.head.repo.full_name != github.repository
     name: Static (fmt, sqlx cache, source gates)
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -59,6 +88,7 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ripgrep jq python3
       - run: rustup show
       - run: bash scripts/check-core-crate-versions.sh
+      - run: bash tests/scripts/release-proof.sh && bash tests/scripts/release-merge.sh && bash tests/scripts/release-helper.sh && bash tests/scripts/deploy-observation.sh
       - run: just preflight-static
 
   lint:
@@ -184,9 +214,15 @@ jobs:
   gates-passed:
     name: Gates passed
     runs-on: ubuntu-latest
-    needs: [static, lint, test]
+    needs: [promotion, static, lint, test]
     if: always()
     steps:
-      - run: |
-          echo '${{ toJSON(needs) }}' | jq -e 'all(.[]; .result == "success")' >/dev/null \
-            || { echo "::error::a required gate did not succeed"; echo '${{ toJSON(needs) }}' | jq '.'; exit 1; }
+      - env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+          IS_PROMOTION: ${{ github.event_name == 'pull_request' && github.base_ref == 'main' && startsWith(github.head_ref, 'promote/') && github.event.pull_request.head.repo.full_name == github.repository }}
+        run: |
+          if [ "$IS_PROMOTION" = true ]; then
+            jq -e '.promotion.result == "success" and .static.result == "skipped" and .lint.result == "skipped" and .test.result == "skipped"' <<<"$NEEDS_JSON" >/dev/null
+          else
+            jq -e '.promotion.result == "skipped" and .static.result == "success" and .lint.result == "success" and .test.result == "success"' <<<"$NEEDS_JSON" >/dev/null
+          fi

@@ -167,7 +167,7 @@ Option A that is Salesforce's choice.
   Developer Edition org `orgfarm-141013b2b4-dev-ed.develop.my.salesforce.com` proves it first.
 - Gateway: one shared callback `/api/public/connectors/salesforce/callback` (org in the OAuth
   `state` prefix), shared secret pair by default, instance URL stored on every grant.
-- Config: servers `salesforce-us`, `salesforce-uk`, `salesforce-dev`; US/UK My Domains are
+- Config: servers `salesforce-crm-us`, `salesforce-crm-uk`, `salesforce-crm-dev`; US/UK My Domains are
   placeholders until the orgs are wired up. Entitlement is Salesforce's (permission set).
 - Stage 2 groundwork only: the shared callback and the stored `(organization_id, instance_url)`
   are what a one-to-many client connector keys on; nothing else is built.

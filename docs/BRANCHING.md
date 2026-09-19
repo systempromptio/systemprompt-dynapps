@@ -10,11 +10,11 @@ Two branches, two cores. Which one you are on decides where every
 | `[patch.crates-io]` in `Cargo.toml` **and** `tests/Cargo.toml` | active (uncommented) | commented out |
 | Version pins (`systemprompt = "X.Y.Z"`) | the sibling tree's workspace version | the published release |
 | `bridge/CORE_REF` | a 40-char SHA on core `next` — the sibling's HEAD, which `just deploy` enforces | `vX.Y.Z`, the tag of the pinned release |
-| CI on push | **gates only** (`.github/workflows/gates.yml`) — no images | **release** (`.github/workflows/release.yml`): image, bridge binaries, GitHub Release — the gates ran on the push to `next`, which `just release` verifies before fast-forwarding; coverage (`coverage.yml`) measures the merge commit without blocking |
+| CI on push | **gates only** (`.github/workflows/gates.yml`) — no images | **release** (`.github/workflows/release.yml`): image, bridge binaries, GitHub Release — the gates ran on the push to `next`, which `just release` verifies before PR promotion; coverage (`coverage.yml`) measures the merge commit without blocking |
 | Deploys | `just deploy` → the `production` Fly profile, which is a **staging** environment (refuses unless the sibling core is clean at `CORE_REF`) | `just deploy` (Fly), or colleagues pull the published image |
 | Allowed to break? | yes — a red gate on `next` is information, not an incident | no — every push is a release |
 
-`main` only moves by fast-forward from `next` (`just release X.Y.Z`), after the
+`main` only moves through a frozen promotion PR (`just release X.Y.Z`), after the
 core it was proven against has been published. Nothing is committed directly
 to `main`.
 
@@ -80,14 +80,17 @@ must name a commit that exists on GitHub, so push core before pushing here.
 ## Landing `next` on `main` (once core X.Y.Z is on crates.io)
 
 ```bash
-# on next
-#   1. comment out BOTH [patch.crates-io] blocks (Cargo.toml, tests/Cargo.toml)
-just core-bump X.Y.Z             # pins, bridge/CORE_REF=vX.Y.Z, cargo update, migrate, build, clippy
-just prepare                     # refresh .sqlx/ against the new core if queries changed
-just schema-baseline             # re-record tests/fixtures/schema/release-baseline.sql for X.Y.Z
-just preflight                   # static → lint → tests → coverage ratchet
-git commit -am "release: build against published core X.Y.Z" && git push origin next
-just release X.Y.Z               # re-checks everything, then fast-forwards main
+# Remove BOTH [patch.crates-io] blocks, then prepare every version pin and CORE_REF.
+scripts/sync-release-version.sh X.Y.Z
+printf 'vX.Y.Z\n' > bridge/CORE_REF
+cargo update -w
+cargo update -w --manifest-path tests/Cargo.toml
+cargo update -w --manifest-path bridge/Cargo.toml
+# Refresh schema baseline and SQLx caches if their inputs changed.
+git add -A
+git commit -m "release: build against published core X.Y.Z"
+git push origin HEAD:next        # the full Gates matrix runs here
+just release X.Y.Z               # open frozen PR; repeat after its proof passes
 ```
 
 `just release` refuses when the tree is dirty, when run off `next` (a clean

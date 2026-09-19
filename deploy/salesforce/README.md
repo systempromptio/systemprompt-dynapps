@@ -33,7 +33,7 @@ Registries). Put the namespace in `sfdx-project.json` once it exists.
 
 Prove everything on the Developer Edition org first
 (`orgfarm-141013b2b4-dev-ed.develop.my.salesforce.com`, alias `dev`, registry id
-`salesforce-dev`), then repeat steps 1–3 on Astound US as the real source org.
+`salesforce-crm-dev`), then repeat steps 1–3 on Astound US as the real source org.
 
 ### 1. Create the app in the source org (CLI, once)
 
@@ -103,7 +103,7 @@ lacks API access.
 ### 5. Gateway configuration
 
 In `services/config/salesforce-orgs.yaml` replace the `REPLACE-…` My Domains for
-`salesforce-us` and `salesforce-uk` with the real ones (Setup → My Domain →
+`salesforce-crm-us` and `salesforce-crm-uk` with the real ones (Setup → My Domain →
 *Current My Domain URL*), keep `environment: production`, deploy. Each org has
 a `services/mcp/<id>.yaml` and an `mcp_server/<id>` block in
 `services/access-control/rules.yaml` already.

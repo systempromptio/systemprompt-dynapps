@@ -42,11 +42,11 @@ plugin:
   mcp_servers:
     source: explicit
     include:
-    - salesforce-uk
-    - salesforce-us
-    - salesforce-dev
+    - salesforce-crm-uk
+    - salesforce-crm-us
+    - salesforce-crm-dev
     - atlassian
-    - google_drive
+    - google_workspace
   content_sources: {}
   # The Cowork library dashboard. Selection is plugin-driven (core's
   # selected_artifact_ids): the bridge stages it for everyone who receives this

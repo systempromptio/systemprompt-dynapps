@@ -85,7 +85,7 @@ test('renders one compact row per provider with a display name, a status dot and
   await flush();
   h.pending.pop()({ identity: { extra: { connections: { version: 1, user_id: 'user', revision: 1, connections: [
     { provider: 'atlassian', status: 'connected', configured: true, entitled: true, verified_at: '2026-09-08T10:34:00Z', resource_name: 'https://astounddigital.atlassian.net' },
-    { provider: 'salesforce-uk', display_name: 'Astound UK', status: 'not_connected', configured: true, entitled: true },
+    { provider: 'salesforce-crm-uk', display_name: 'Astound UK', status: 'not_connected', configured: true, entitled: true },
     { provider: 'salesforce', status: 'verification_required', configured: true, entitled: false },
   ] } } } });
   await flush();

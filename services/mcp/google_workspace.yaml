@@ -10,19 +10,20 @@
 # GCP project with only discoveryengine.googleapis.com enabled and are billed
 # per query (10k/month free). Gemini Enterprise is the licensed end-user app on
 # the same engine and is not needed for this connector. The engine's
-# servingConfig is a tool argument, so the resource name lives in the
-# `google_drive_search` skill, not here. `access_type=offline` is what makes
+# servingConfig is infrastructure, not intent, so it is fixed here under
+# `tools.<name>.arguments` and the gateway writes it into every call — a model
+# asked to supply it invents `projects/*`. `access_type=offline` is what makes
 # Google issue a refresh token; without it every connection dies after an hour.
 # Setup on the Google side: docs/CONFIGURED-CONNECTORS.md.
 mcp_servers:
-  google_drive:
+  google_workspace:
     type: external
     endpoint: https://eu-discoveryengine.googleapis.com/mcp
     enabled: true
     tool_policy: allow
     display_in_web: false
     removable: true
-    description: Google Agent Search over Drive, Gmail and Calendar, live and filtered to what the signed-in user can already open
+    description: Google Workspace search — Drive documents, the user's own Gmail and Calendar — through Agent Search, live and filtered to what the signed-in user can already open
     connector:
       adapter: generic
       display_name: Google Workspace
@@ -40,6 +41,15 @@ mcp_servers:
       identity: userinfo
       client_id_secret: google_drive_mcp_client_id
       client_secret: google_drive_mcp_client_secret
+    # Why: the one thing a caller cannot know. Replace this resource name on
+    # handover to another GCP project; nothing else carries it.
+    tools:
+      search:
+        arguments:
+          servingConfig: projects/402649471530/locations/eu/collections/default_collection/engines/workspace-search/servingConfigs/default_search
+      conversational_search:
+        arguments:
+          servingConfig: projects/402649471530/locations/eu/collections/default_collection/engines/workspace-search/servingConfigs/default_search
     oauth:
       required: false
       scopes:

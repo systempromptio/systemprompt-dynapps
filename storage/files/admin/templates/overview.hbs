@@ -1,4 +1,4 @@
-{{#> layout title=title page=page}}
+{{#> layout page_title=title page_id=page}}
     {{#*inline "content"}}
     {{> components/breadcrumbs crumbs=breadcrumbs}}
 
@@ -19,16 +19,16 @@
     <section aria-label="Headline figures">
         {{#if kpis.error}}{{> components/notice tone="err" title="Headline figures unavailable" message=kpis.error}}{{/if}}
         {{#if kpis.comparison_note}}<p class="sp-p-overview__note">{{kpis.comparison_note}}</p>{{/if}}
-        <div class="sp-kpi-grid">
+        <div class="sp-kpi-grid sp-kpi-grid--compact sp-p-overview__kpis">
             {{#each kpis.tiles}}
-            {{> components/kpi label=this.label value=this.value note=this.sub href=this.href
-                hint=this.hint tone=this.tone delta=this.delta delta_dir=this.delta_dir}}
+            {{> components/kpi label=this.label icon=this.icon value=this.value note=this.sub href=this.href
+                hint=this.hint tone=this.tone delta=this.delta delta_dir=this.delta_dir spark=this.spark}}
             {{/each}}
         </div>
     </section>
 
-    <section class="sp-p-overview__chart" aria-label="Request volume">
-        {{> components/svg-line-chart volume_chart}}
+    <section class="sp-p-overview__charts" aria-label="Over time">
+        {{#each charts}}<div class="sp-p-overview__chart">{{> components/svg-line-chart this}}</div>{{/each}}
     </section>
 
     <div class="sp-p-overview__two-up">
@@ -79,4 +79,5 @@
     </div>
 
     {{/inline}}
+    {{#*inline "scripts"}}<script type="module" src="/js/components/sp-chart.js?v={{css_version}}"></script>{{/inline}}
 {{/layout}}

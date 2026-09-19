@@ -1,51 +1,78 @@
-//! The request spine behind the overview's sparkline.
+//! The time series behind the overview's charts and tile sparklines.
 //!
-//! A fixed bucket count rather than a fixed bucket width: the sparkline is the
-//! same 24-point shape whichever window is picked, so the tile's height never
-//! depends on how many hours the reader asked for. At the 24-hour window a
-//! bucket is exactly one hour, which is what the tile's caption says.
+//! A fixed bucket count rather than a fixed bucket width: every chart on the
+//! page is the same 24-point shape whichever window is picked, so a chart's
+//! height never depends on how many hours the reader asked for. At the
+//! 24-hour window a bucket is exactly one hour, which is what the caption
+//! says. One statement carries every per-bucket figure — requests, people,
+//! conversations, spend, tokens, cache, errors, denials, latency, tool calls
+//! — so a spike in one series lines up with the others to the bucket.
 
 use sqlx::PgPool;
 
 use crate::util::time_range::TimeRange;
 
-// Why: how many points the sparkline draws. Fixed, so the tile's shape does
-// not change height with the window the reader picked.
+// Why: how many points every chart draws. Fixed, so the page's shape does
+// not change with the window the reader picked.
 pub const BUCKETS: i64 = 24;
 
-pub async fn list_request_buckets(
+/// One bucket of the overview's spine, every figure the charts plot.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct OverviewSeriesPoint {
+    pub requests: i64,
+    pub users: i64,
+    pub conversations: i64,
+    pub cost_microdollars: i64,
+    pub tokens: i64,
+    pub cache_tokens: i64,
+    pub errors: i64,
+    pub rejected: i64,
+    pub p50_latency_ms: i64,
+    pub p95_latency_ms: i64,
+    pub tool_calls: i64,
+    pub denied: i64,
+}
+
+// Why: bucket width in seconds, floored at one so a degenerate range cannot
+// divide by zero in the statement. Shared with the dimension series so both
+// land on the same spine.
+pub(crate) fn bucket_width_secs(range: TimeRange) -> f64 {
+    let span_secs = (range.to - range.from).num_seconds().max(BUCKETS);
+    ((span_secs as f64) / (BUCKETS as f64)).max(1.0)
+}
+
+pub(crate) fn bucket_count() -> i32 {
+    i32::try_from(BUCKETS).unwrap_or(24)
+}
+
+pub async fn list_overview_series(
     pool: &PgPool,
     range: TimeRange,
-) -> Result<Vec<i64>, sqlx::Error> {
-    let span_secs = (range.to - range.from).num_seconds().max(BUCKETS);
-    // Why: bucket width in seconds, floored at one so a degenerate range
-    // cannot divide by zero in the statement below.
-    let width = ((span_secs as f64) / (BUCKETS as f64)).max(1.0);
-    let rows = sqlx::query!(
-        r#"
-        WITH spine AS (SELECT generate_series(0, $3::INT - 1) AS bucket),
-             counts AS (
-                 SELECT LEAST(
-                            $3::INT - 1,
-                            FLOOR(EXTRACT(EPOCH FROM (r.created_at - $1)) / $4::FLOAT8)::INT
-                        ) AS bucket,
-                        COUNT(*)::BIGINT AS requests
-                 FROM ai_requests r
-                 WHERE NOT r.synthetic
-                   AND r.created_at >= $1
-                   AND r.created_at < $2
-                 GROUP BY 1
-             )
-        SELECT COALESCE(counts.requests, 0)::BIGINT AS "requests!"
-        FROM spine LEFT JOIN counts ON counts.bucket = spine.bucket
-        ORDER BY spine.bucket
-        "#,
+) -> Result<Vec<OverviewSeriesPoint>, sqlx::Error> {
+    let rows = sqlx::query_file!(
+        "src/repositories/overview/series.sql",
         range.from,
         range.to,
-        i32::try_from(BUCKETS).unwrap_or(24),
-        width,
+        bucket_count(),
+        bucket_width_secs(range),
     )
     .fetch_all(pool)
     .await?;
-    Ok(rows.into_iter().map(|row| row.requests).collect())
+    Ok(rows
+        .into_iter()
+        .map(|row| OverviewSeriesPoint {
+            requests: row.requests,
+            users: row.users,
+            conversations: row.conversations,
+            cost_microdollars: row.cost,
+            tokens: row.tokens,
+            cache_tokens: row.cache_tokens,
+            errors: row.errors,
+            rejected: row.rejected,
+            p50_latency_ms: row.p50,
+            p95_latency_ms: row.p95,
+            tool_calls: row.tool_calls,
+            denied: row.denied,
+        })
+        .collect())
 }

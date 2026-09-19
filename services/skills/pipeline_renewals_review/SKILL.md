@@ -37,7 +37,7 @@ you have.
 
 ## Workflow
 
-1. **Coverage.** Check `salesforce-uk` (or `-us`). Google and Atlassian are
+1. **Coverage.** Check `salesforce-crm-uk` (or `-us`). Google and Atlassian are
    not consulted at book level; the single-account skills do that.
 2. **Enumerate the book** with `salesforce_account_search` Step 0 discovery,
    then bounded queries (LIMIT 200, paginate and say so):
@@ -111,7 +111,7 @@ order.
   90% is still open. Say "in negotiation", never "renewed".
 - **Links are only what a tool returned.** A Salesforce record gets its Id and
   `"link": null`; never compose a URL. `source` in every row is the server id
-  you actually called (`salesforce-dev` when that is the org in use).
+  you actually called (`salesforce-crm-dev` when that is the org in use).
 - **Scope is declared, never inferred.** `uk` is a Systemprompt audience and
   `business-implementation` is work attribution; neither is a Salesforce
   filter. Ask for the list or the owner if the scope is unclear.

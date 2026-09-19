@@ -3,15 +3,46 @@
 /* The landing page adds no card of its own: everything on it is a KPI tile, a
    section head, a chart or a table from the system. The window control is
    the shared time-range pill, so the active window reads the same here as on
-   every analytics page. What is left is the chart row, the two-up leaderboard
-   row and two one-line notes. */
+   every analytics page. What is left is the chart grid, the two-up
+   leaderboard row and two one-line notes. */
+
+/* Ten tiles: five to a row on a wide screen, so the strip is two rows and
+   the charts still clear the fold. */
+.sp-p-overview__kpis {
+    grid-template-columns: repeat(auto-fit, minmax(10.5rem, 1fr));
+}
+
+/* Six charts on one x axis, always three to a row so the six read as two
+   bands — volume, models, clients / tokens, work, latency — never six thin
+   strips across an ultrawide. They fold to two, then one. The card has a
+   fixed height, not a minimum: the live chart draws its SVG at the host's
+   pixel height, so a card that grows with its content would grow the SVG,
+   which grows the card, without end. */
+.sp-p-overview__charts {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--sp-density-gap);
+    margin-block-end: var(--sp-density-section);
+}
+
+@media (max-width: 80rem) {
+    .sp-p-overview__charts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 48rem) {
+    .sp-p-overview__charts { grid-template-columns: minmax(0, 1fr); }
+}
 
 .sp-p-overview__chart {
+    display: flex;
+    min-inline-size: 0;
+    block-size: 23rem;
+    overflow: auto;
     padding: var(--sp-density-tile);
     background: var(--sp-bg-surface);
-    border-radius: var(--sp-corners-sm);
+    border: 1px solid var(--sp-border-subtle);
+    border-radius: var(--sp-corners-md);
     box-shadow: var(--sp-shadow-card);
-    margin-block-end: var(--sp-density-section);
 }
 
 /* Unattributed is a real row with no page behind it, so it reads as a value

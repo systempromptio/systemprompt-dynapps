@@ -1,4 +1,4 @@
-//! The seven headline figures of the overview, and the same seven over the
+//! The headline figures of the overview, and the same figures over the
 //! immediately preceding window of equal width.
 //!
 //! Both windows are counted in one statement with `FILTER` clauses, so they
@@ -35,6 +35,15 @@ pub struct OverviewKpis {
     pub prev_errors: i64,
     pub denied: i64,
     pub prev_denied: i64,
+    pub tokens: i64,
+    pub prev_tokens: i64,
+    pub input_tokens: i64,
+    pub cache_tokens: i64,
+    pub prev_cache_tokens: i64,
+    pub conversations: i64,
+    pub prev_conversations: i64,
+    pub tool_calls: i64,
+    pub prev_tool_calls: i64,
 }
 
 impl OverviewKpis {
@@ -48,6 +57,14 @@ impl OverviewKpis {
     #[must_use]
     pub const fn prev_error_rate_tenths(&self) -> i64 {
         rate_tenths(self.prev_errors, self.prev_requests)
+    }
+
+    // Why: the share of everything the models read that came back from cache,
+    // in whole percent — the figure that says whether prompt caching is
+    // earning its keep, and the one the Tokens tile is toned on.
+    #[must_use]
+    pub const fn cache_share_percent(&self) -> i64 {
+        rate_tenths(self.cache_tokens, self.input_tokens + self.cache_tokens) / 10
     }
 }
 
@@ -91,5 +108,14 @@ pub async fn get_overview_kpis(
         prev_errors: row.prev_errors,
         denied: row.denied,
         prev_denied: row.prev_denied,
+        tokens: row.tokens,
+        prev_tokens: row.prev_tokens,
+        input_tokens: row.input_tokens,
+        cache_tokens: row.cache_tokens,
+        prev_cache_tokens: row.prev_cache_tokens,
+        conversations: row.conversations,
+        prev_conversations: row.prev_conversations,
+        tool_calls: row.tool_calls,
+        prev_tool_calls: row.prev_tool_calls,
     })
 }

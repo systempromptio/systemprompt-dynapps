@@ -70,9 +70,9 @@ Issuer identifiers are compared as URLs, with a single trailing slash ignored,
 so an issuer advertised as `https://idp.example/` in protected-resource metadata
 matches `https://idp.example` in its own metadata.
 
-## Google Workspace (Agent Search, `google_drive`)
+## Google Workspace (Agent Search, `google_workspace`)
 
-`services/mcp/google_drive.yaml` connects Google Agent Search's hosted MCP
+`services/mcp/google_workspace.yaml` connects Google Agent Search's hosted MCP
 server (Discovery Engine, ex-Vertex AI Search) over **federated** Google
 Drive, Gmail and Calendar data stores: nothing is copied, all are searched
 live, and Google filters every result to what the signed-in user can already
@@ -127,11 +127,11 @@ On the Google side, in one GCP project:
    the API does not.
 4. Create an OAuth **Web application** client with an **Internal** consent
    screen, the scope above and the redirect
-   `https://YOUR-SERVER/api/public/connectors/google_drive/callback`. Store
+   `https://YOUR-SERVER/api/public/connectors/google_workspace/callback`. Store
    the pair as `google_drive_mcp_client_id` / `google_drive_mcp_client_secret`.
 5. Grant the readership group `roles/mcp.toolUser` and
    `roles/discoveryengine.viewer` on the project. IAM decides who may call;
-   Drive decides what they see. The Astound rule for `mcp_server/google_drive`
+   Drive decides what they see. The Astound rule for `mcp_server/google_workspace`
    decides who sees the row.
 6. Workspace Admin → Security → API controls → Manage third-party app access:
    mark Google's Agent Search client as **Trusted**, and turn on "Smart
@@ -166,7 +166,7 @@ accepts a `connector:` band (precedence 160, between `group` and the Salesforce
 `salesforce` link band) whose values are server ids; a person matches while
 `mcp_connector_accounts` holds a `connected` row for that server
 (`extensions/web/admin/src/authz/connector.rs`). The UK sales building-block
-skills use it — `skill/google_workspace_search` allows `connector: [google_drive]`
+skills use it — `skill/google_workspace_search` allows `connector: [google_workspace]`
 — so a skill that can only fail without its connector is not offered to a
 person who has not connected it, and appears the moment they do.
 

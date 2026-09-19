@@ -42,11 +42,11 @@ Reference: [Google service credentials](https://developers.google.com/workspace/
 
 ## Configuration and first import
 
-In `services/knowledge-bank/config.yaml`, set `google_drive.enabled: true` and fill
+In `services/knowledge-bank/config.yaml`, set `google_workspace.enabled: true` and fill
 `extraction.bucket`, `extraction.project_arn` and `extraction.profile_arn`:
 
 ```yaml
-google_drive:
+google_workspace:
   enabled: true
   sources:
     systemprompt_marketing:
@@ -66,7 +66,7 @@ Use `model.provider: bedrock` for production and preserve your configured embedd
 model and dimensions. The development configuration defaults to a local model;
 BDA extraction does not automatically change the retrieval model.
 
-The knowledge-bank binary applies its additive `google_drive.sql` schema to the
+The knowledge-bank binary applies its additive `google_workspace.sql` schema to the
 knowledge database at boot. The web scheduler opens the same database using
 `knowledge_database_url`, falling back to the instance database. Restart the rebuilt
 MCP and application to load configuration and register the scheduler job.

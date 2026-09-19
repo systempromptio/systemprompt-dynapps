@@ -1,7 +1,8 @@
 //! `/admin` — the console landing page.
 //!
 //! One health-and-money screen: what the instance spent, how much of it
-//! failed, which models carried it, what is waiting on a human, and which
+//! failed, which models and clients carried it, how the tokens, tool calls
+//! and latency moved over the window, what is waiting on a human, and which
 //! containers the money went to. Every tile is a link to the page that owns
 //! the detail, carrying the window the reader is already looking at, so the
 //! overview never becomes a place to read numbers off rather than a place to
@@ -11,7 +12,9 @@
 //! every page this shell offers them would refuse them anyway, so a 403 here
 //! would be a dead end where a redirect is a door.
 
+mod charts;
 mod data;
+mod kpi_tiles;
 mod kpis_view;
 mod panels_view;
 mod view;

@@ -63,6 +63,7 @@ concurrency:
 
 permissions:
   actions: read
+  pull-requests: read
   contents: write
   packages: write
   id-token: write
@@ -94,6 +95,13 @@ jobs:
       publish_version_tag: ${{ steps.v.outputs.publish_version_tag }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - name: Verify merged promotion and exact release proofs
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash scripts/check-release-merge.sh "$GITHUB_SHA"
       - name: Assert main builds against the published core
         run: |
           if grep -q '^\[patch\.crates-io\]' Cargo.toml || grep -q '^\[patch\.crates-io\]' tests/Cargo.toml; then

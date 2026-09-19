@@ -31,6 +31,8 @@ WATCH_SECONDS="${DEPLOY_WATCH_SECONDS:-300}"
 WATCH_INTERVAL=15
 DIGEST_WAIT_SECONDS="${DEPLOY_DIGEST_WAIT_SECONDS:-120}"
 DIGEST_WAIT_INTERVAL=5
+HEALTH_READY_SECONDS="${DEPLOY_HEALTH_READY_SECONDS:-300}"
+REPO=Astound-Digital/systemprompt-astound
 
 # A desktop/credential docker shim fails `docker build` with an error naming
 # neither; the real binary is /usr/bin/docker.
@@ -38,6 +40,8 @@ if [ -x /usr/bin/docker ]; then export PATH=/usr/bin:$PATH; fi
 
 log() { printf '\n==> %s\n' "$*"; }
 die() { echo "deploy-release: $*" >&2; exit 1; }
+[[ "$WATCH_SECONDS" =~ ^[0-9]+$ ]] && [ "$WATCH_SECONDS" -ge 300 ] || die 'health watch must last at least 300 seconds'
+source "$ROOT/scripts/deploy-observation.sh"
 
 for tool in git gh flyctl jq curl docker; do
     command -v "$tool" >/dev/null 2>&1 || die "$tool is required"
@@ -59,7 +63,7 @@ main_sha="$(git -C "$ROOT" rev-parse origin/main)"
 tag_sha="$(git -C "$ROOT" rev-parse "$TAG^{commit}" 2>/dev/null || true)"
 [ -n "$tag_sha" ] || die "tag $TAG does not exist — release.yml has not published $VERSION yet"
 [ "$tag_sha" = "$main_sha" ] || die "tag $TAG is $tag_sha but origin/main is $main_sha — deploy the release, not a later main"
-gh release view "$TAG" --json assets --jq '.assets|length' >/dev/null \
+gh release view "$TAG" -R "$REPO" --json assets --jq '.assets|length' >/dev/null \
     || die "no GitHub release $TAG"
 docker manifest inspect "ghcr.io/astound-digital/systemprompt-astound:$VERSION" >/dev/null 2>&1 \
     || die "GHCR has no :$VERSION image — release.yml did not finish"
@@ -92,7 +96,7 @@ DOWNLOADS_STRICT=1 DOWNLOADS_RELEASE_TAG="$TAG" scripts/fetch-remote-downloads.s
 # The worktree runs the fetcher AS OF THE RELEASE COMMIT, which may predate
 # strict mode; verify the staged bytes here regardless of which fetcher ran.
 sums="$(mktemp)"
-gh release download "$TAG" --pattern SHA256SUMS --output "$sums" --clobber
+gh release download "$TAG" -R "$REPO" --pattern SHA256SUMS --output "$sums" --clobber
 for f in storage/files/downloads/*; do
     name="$(basename "$f")"
     case "$name" in *.sha256) continue ;; esac
@@ -110,9 +114,6 @@ SYSTEMPROMPT_PROFILE="$WORKTREE/$LOCAL_PROFILE" target/release/systemprompt infr
 log "preflight"
 target/release/systemprompt cloud doctor --profile production --distributed
 
-machine_state() {
-    flyctl machines list -a "$FLY_APP" --json | jq -r '.[0] | "\(.image_ref.digest) \(.updated_at)"'
-}
 before_state="$(machine_state)"
 before="${before_state%% *}"
 echo "    $FLY_APP image before: $before (updated ${before_state#* })"
@@ -127,45 +128,7 @@ fi
 log "cloud deploy --profile production"
 target/release/systemprompt cloud deploy --profile production
 
-# Why: `cloud deploy` returns when Fly accepts the release; the machine is
-# swapped asynchronously. 0.54.0 read the digest immediately, saw the old one,
-# died with "did not move" and skipped its own health watch while the machine
-# rolled seconds later. Poll until the digest or updated_at moves.
-log "waiting for $FLY_APP to roll (up to ${DIGEST_WAIT_SECONDS}s)"
-roll_deadline=$((SECONDS + DIGEST_WAIT_SECONDS))
-after_state="$(machine_state)"
-while [ "$after_state" = "$before_state" ] && [ "$SECONDS" -lt "$roll_deadline" ]; do
-    sleep "$DIGEST_WAIT_INTERVAL"
-    after_state="$(machine_state)"
-done
-after="${after_state%% *}"
-echo "    $FLY_APP image after:  $after (updated ${after_state#* })"
-[ "$after_state" != "$before_state" ] \
-    || die "the Fly machine did not roll within ${DIGEST_WAIT_SECONDS}s of 'cloud deploy' returning — nothing was deployed"
-
-log "watching $HOST/health for ${WATCH_SECONDS}s (every ${WATCH_INTERVAL}s)"
-deadline=$((SECONDS + WATCH_SECONDS))
-saw_version=0
-failures=0
-while [ "$SECONDS" -lt "$deadline" ]; do
-    body="$(curl -sS -m 10 -w '\n%{http_code}' "$HOST/health" 2>/dev/null || echo -e '\n000')"
-    code="${body##*$'\n'}"
-    payload="${body%$'\n'*}"
-    stamp="$(date -u +%H:%M:%S)"
-    if [ "$code" = "200" ] && printf '%s' "$payload" | grep -q "\"version\":\"$VERSION\""; then
-        saw_version=1
-        echo "    $stamp 200 $payload"
-    else
-        failures=$((failures + 1))
-        echo "    $stamp $code ${payload:-<no body>}"
-        if [ "$saw_version" = 1 ]; then
-            echo "deploy-release: $HOST went unhealthy AFTER reporting $VERSION — read 'flyctl logs -a $FLY_APP' for 'pool timed out' / 'slow statement' (database stall) versus an application fault." >&2
-        fi
-    fi
-    sleep "$WATCH_INTERVAL"
-done
-[ "$saw_version" = 1 ] || die "$HOST never reported version $VERSION within ${WATCH_SECONDS}s"
-[ "$failures" -eq 0 ] || die "$HOST was unhealthy on $failures of the probes after the deploy — not a clean deploy; worktree kept at $WORKTREE"
+observe_deploy
 
 log "served downloads match the release"
 for f in storage/files/downloads/*; do
