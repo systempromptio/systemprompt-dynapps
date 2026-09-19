@@ -20,6 +20,35 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+## 0.57.0 — 2026-09-19
+
+### Breaking
+
+- Connector IDs now identify Google Workspace and each Salesforce CRM tenant.
+  Users must reconnect renamed connectors because existing OAuth grants bind
+  the original provider identifier.
+
+### Added
+
+- Overview and analytics dashboards include dimension series, KPI tiles and
+  charts for comparing activity across time and organizational dimensions.
+
+### Changed
+
+- Server, test and bridge dependencies adopt published core 0.57.0; the bridge
+  source is pinned to `v0.57.0`. Both local core patch blocks are removed.
+- Releases promote a frozen candidate through a pull request. The latest Gates
+  run on the exact `next` push is the build and test proof; the promotion PR
+  verifies that proof and the merge tree without repeating the matrix.
+
+### Fixed
+
+- Connector tools receive configured infrastructure arguments from the gateway.
+- Release deployment waits for both the Fly digest and update timestamp to
+  change and for a healthy target-version response before observing health for
+  five minutes. Failed health probes stop acceptance and retain the worktree.
+- Dashboard layout hash parameters no longer shadow row title and page fields.
+
 ## 0.56.0 — 2026-09-18
 
 ### Added

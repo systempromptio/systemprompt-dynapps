@@ -6,7 +6,8 @@ Release — produced by CI on every push to `main`.
 
 **Nothing is built by hand any more.** `.github/workflows/release.yml` runs on
 every push to `main` and publishes everything; `.github/workflows/gates.yml`
-runs the quality gate on every push to `next` and every PR, and
+runs the quality gate on every push to `next` and ordinary PRs; frozen promotion
+PRs verify the existing push proof, and
 `.github/workflows/coverage.yml` measures coverage on `main` and nightly. The branch
 contract that makes this safe — `next` on the vendored core `next`, `main` on
 the published core — is in [BRANCHING.md](BRANCHING.md); read it first.
@@ -46,15 +47,13 @@ pushes by digest) → `image-merge` (one manifest list, tags, cosign) →
 files, both MCP binaries, and the signature) → `release` (checksums,
 signatures, `gh release create` which creates the tag).
 
-The release does not re-run the gates. `just release` refuses to push unless
-`gates.yml` reported `Gates passed` on the exact SHA being landed, and `next`
-is fast-forwarded onto `main`, so the commit that lands is the tree that run
-gated — re-gating it bought nothing and cost ~55 min of instrumented coverage
-build per release. (A ruleset requiring the check would be the platform-level
-version of this guard; branch protection is not available to a private
-repository on the GitHub Free plan, so the recipe is the enforcement.)
-Coverage (floor + ratchet, `.github/workflows/coverage.yml`) is a measurement
-on every push to `main`, nightly, and on demand; it is not a required check.
+The release does not repeat the Gates matrix. `just release` requires the latest
+`gates.yml` push run on the exact `next` SHA to have completed successfully,
+including `Gates passed`. It freezes that candidate and the current `main` base
+in a promotion ref and opens a PR. The PR verifies the push proof, unchanged
+head/base, ancestry and the GitHub merge tree. Missing, pending, cancelled and
+failed proof all block promotion. Ordinary PRs still run the full Gates matrix.
+Coverage measures `main`, nightly and on demand; it is not a release check.
 
 A passing build or CI run does not establish browser acceptance. Validate the
 exact candidate with the repository preflight and browser acceptance gates
@@ -155,36 +154,23 @@ Step A.
 
 ## Step A — adopt the published core (on `next`)
 
-```bash
-# comment out BOTH [patch.crates-io] blocks first (Cargo.toml, tests/Cargo.toml)
-just core-bump X.Y.Z
-```
+Before publication, prepare the changelog, version pins, `bridge/CORE_REF`, and
+removal of both `[patch.crates-io]` blocks. Once every required core crate exists
+on the sparse index, run `cargo update -w` in root, `tests/` and `bridge/` and
+commit all three lockfiles. Refresh the schema baseline from a fresh local
+schema installation; regenerate SQLx caches when query/schema inputs changed.
 
-Refuses with an active patch, then: `sync-release-version.sh X.Y.Z` (every
-pin in both workspaces), `bridge/CORE_REF = vX.Y.Z`, `cargo update -w` in all
-three workspaces (root, `tests/`, `bridge/`), `infra db migrate --profile
-local`, `just build`, `just clippy`. Then `just prepare` if any query changed,
-`just schema-baseline` to re-record `tests/fixtures/schema/release-baseline.sql`
-for X.Y.Z (the version bump turns `check-schema-baseline.sh` red until you do;
-the upgrade test in `tests/integration/schema-upgrade` restores that fixture
-and migrates it forward on every push, so it must be the schema this release
-ships), exercise what the core changelog touches, and run the full gate:
+Build or clippy only code broken by the core upgrade. If core's bridge GUI
+changed, run `cargo check --manifest-path bridge/Cargo.toml --target
+x86_64-pc-windows-gnu` before pushing. Do not run the local lint or application
+test suites for release adoption: the exact `next` push runs the exhaustive
+Gates matrix and is the release proof. A successful downstream CI run needs no
+additional local build verification.
 
-```bash
-just preflight
-git commit -am "release: build against published core X.Y.Z"
-git push origin next          # gates.yml must be green here
-```
-
-**`core-bump` is local-only.** Its migrate is pinned to `--profile local` and
-a failed migrate stops the bump — there is no `|| true`. This is a 0.51.0
-lesson: `just deploy-check` pins `--profile production`, the core CLI used to
-flip the active session to whatever `--profile` it was last given, and a bare
-`infra db migrate` then targeted the production database. Core now refuses
-`infra db migrate` and `infra jobs run` on a cloud profile that was selected
-implicitly (session or discovery) — pass `--profile <name>` to target one on
-purpose — and never rewrites the active session on an explicit `--profile`.
-`build-all` pins `publish_pipeline` to `local` for the same reason.
+`just core-bump` remains a local development convenience that builds and lints;
+the release lane uses its individual version and lockfile steps above.
+Database migration commands must explicitly select `--profile local`; a bare
+command can select the active session's cloud profile.
 
 **Lockfile drift.** `scripts/check-core-crate-versions.sh` (run by
 `preflight-static` and the `static` gate) fails when any `systemprompt-*`
@@ -212,15 +198,20 @@ with an error unrelated to the shim.
 just release X.Y.Z
 ```
 
-Clean tree, on `next`, patch blocks commented, pins and `CORE_REF` agree,
-`HEAD == origin/next`, `main` is an ancestor, `just preflight-static` green,
-and a successful `gates.yml` run with a green `Gates passed` job on **this
-exact SHA** (`scripts/check-gates-green.sh`) — then `git push origin HEAD:main`.
-The recipe no longer runs the full local `just preflight`: the gates ran on
-the push to `next`, and the coverage build does not belong on the release
-path. That push is the release; watch it with
-`gh run watch` or in the Actions tab. **Do not tag by hand**: `release.yml`
-creates `vX.Y.Z` from the merge commit.
+Run from clean `next` or a detached release worktree whose HEAD equals
+`origin/next`. Both patch blocks must be absent, all version pins and `CORE_REF`
+must agree, the schema baseline must be current, and `main` must be an ancestor.
+The recipe verifies the latest successful next-push Gates result, freezes the
+candidate and base in `promote/X.Y.Z/<base-sha>/<head-sha>`, and opens a PR.
+
+Record the PR and workflow run IDs before waiting. Once the PR's `Gates passed`
+proof completes, repeat `just release X.Y.Z`. The recipe revalidates the exact
+candidate, base and merge tree, merges through GitHub with the expected head SHA,
+and verifies the merged parents and tree. It never pushes directly to `main`.
+The merge starts `release.yml`, whose version job independently verifies the
+merged parents/tree and both successful proofs before publication. Watch that
+run and verify its image and assets
+by content. Do not tag by hand: the workflow creates `vX.Y.Z` at the merge commit.
 
 ## Signing
 
@@ -289,7 +280,8 @@ registry and tag are minted by the systemprompt.io control plane at deploy
 time, so it stays outside CI. It works from a clean worktree of `origin/main`
 (the tag must *be* `origin/main`), installs the release's server binaries and
 bridge downloads and verifies them against the release `SHA256SUMS`, renders
-`web/dist` there, deploys, requires the Fly image digest to move, then watches
+`web/dist` there, deploys, requires both the Fly image digest and update timestamp to move, waits for a
+healthy response at the target version, then watches
 `/health` for five minutes and re-hashes the served downloads. `DEPLOY_DRY_RUN=1`
 runs everything up to the deploy. `just deploy` remains the *preview* path:
 it builds and ships whatever this working tree holds. Colleagues on their own
@@ -300,7 +292,8 @@ infrastructure (Oracle VM, remote Postgres) use the published image:
 
 1. Image users: `SYSTEMPROMPT_TAG=<previous> docker compose up -d`. Tags are
    never rewritten, so the previous build is exactly what it was.
-2. Fly: `just deploy` from the previous release commit.
+2. Fly tenant image tags are overwritten. Record the old digest before deploying;
+   this release procedure provides no rollback. Fix a failed deployment forward.
 3. Never reuse or move a released tag — fix forward and cut the next version.
 4. Core migrations are forward-only; roll back only to a version whose
    migrations match the database.
