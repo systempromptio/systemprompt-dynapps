@@ -36,10 +36,9 @@ pub(crate) struct HistoryRowView {
     pub is_gateway: bool,
     pub session_id: Option<SessionId>,
     pub short_id: String,
-    // Why: not `title`. The page is rendered inside `{{#> layout title=title}}`,
-    // and that hash parameter shadows a field of the same name at every depth,
-    // so `{{this.title}}` in the row loop printed the page's own title on every
-    // row instead of the conversation's.
+    // Why: named for what it is. A partial hash parameter shadows a field of
+    // the same name at every depth (the layout now takes `page_title`, but
+    // the row name stays specific so no later hash can collide with it).
     pub conversation_title: String,
     pub user_id: UserId,
     pub user_label: String,

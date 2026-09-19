@@ -1,4 +1,4 @@
-{{#> layout title=title page=page}}
+{{#> layout page_title=title page_id=page}}
 {{#*inline "content"}}
 {{#> components/page-header title=title help=help subtitle="Every skill as the record shows it: who invoked it and how often, the conversations behind that, their tokens, cost, tools and artifacts, errors and denials, installs against entitlement — and the judge's one completion score."}}
 {{#*inline "header_actions"}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/analysis/conversations?flag=skills">{{> components/icon name="chat"}} Conversations with skills</a> <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/analysis/versions">{{> components/icon name="calendar"}} Versions</a> <a class="sp-btn sp-btn--sm sp-btn--primary" href="/admin/skills">Catalog &rarr;</a> {{> components/export-button export}}{{/inline}}
