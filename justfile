@@ -1639,7 +1639,7 @@ fetch-release VERSION="":
     name="systemprompt-astound-server-$v-linux-$arch.tar.gz"
     tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
     echo "==> downloading $name from release v$v"
-    gh release download "v$v" -p "$name" -p SHA256SUMS -D "$tmp" \
+    gh release download "v$v" -R Astound-Digital/systemprompt-astound -p "$name" -p SHA256SUMS -D "$tmp" \
         || { echo "fetch-release: release v$v has no $name (gh auth, or the release does not exist yet)." >&2; exit 1; }
     (cd "$tmp" && grep " $name\$" SHA256SUMS | sha256sum -c -)
     tar xzf "$tmp/$name" -C "$tmp"
@@ -2195,33 +2195,10 @@ core-pin REF="":
     printf '%s\n' "$ref" > bridge/CORE_REF
     echo "bridge/CORE_REF = $ref"
 
-# Step B: land next on main. main is published-core only, and every push to
-# it IS a release — .github/workflows/release.yml creates the vX.Y.Z tag,
-# the GitHub Release with the bridge binaries, and the GHCR image. This
-# recipe proves the commit and fast-forwards; nothing is tagged by hand.
-#
-# The proof is the `Gates passed` run on this exact SHA (gates.yml on the
-# push to next). release.yml does not re-run the gates, and a private repo
-# on the Free plan has no branch protection to require the check, so this
-# recipe is the only place the requirement is enforced: no green Gates run
-# on HEAD, no push. Local `just preflight` is not a substitute — it is the
-# same tiers on a warm workstation, plus a coverage build that does not fit
-# this box.
+# Promote the exact green next-push candidate through a frozen PR onto main.
+# Repeat after the PR proof finishes; release.yml creates the tag and artifacts.
 release version:
-    @test -z "$(git status --porcelain)" || (echo "ERROR: working tree not clean" && exit 1)
-    @test "$(git branch --show-current)" = "next" || (echo "ERROR: run from next — main only moves by fast-forward from it" && exit 1)
-    @! grep -q '^\[patch\.crates-io\]' Cargo.toml || (echo "ERROR: [patch.crates-io] is active — main builds against published crates only" && exit 1)
-    @! grep -q '^\[patch\.crates-io\]' tests/Cargo.toml || (echo "ERROR: [patch.crates-io] is active in tests/Cargo.toml" && exit 1)
-    scripts/sync-release-version.sh {{version}} --check
-    bash scripts/check-core-ref.sh
-    bash scripts/check-schema-baseline.sh
-    git fetch origin main next
-    @test "$(git rev-parse HEAD)" = "$(git rev-parse origin/next)" || (echo "ERROR: HEAD != origin/next — push next first (CI gates it)" && exit 1)
-    @git merge-base --is-ancestor origin/main HEAD || (echo "ERROR: main is not an ancestor of next — rebase or merge main into next first" && exit 1)
-    just preflight-static
-    bash scripts/check-gates-green.sh "$(git rev-parse HEAD)"
-    git push origin HEAD:main
-    @echo "main -> $(git rev-parse --short HEAD). release.yml is now building v{{version}}: gh run watch"
+    bash scripts/release.sh {{version}}
 
 # Deploy a published release to production from a clean worktree of
 # origin/main — never from this tree, which may hold a peer's work or an

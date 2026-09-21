@@ -133,7 +133,7 @@ checksum = "175571dd1d178ced59193a6fc02dde1b972eb0bc56c892cde9beeceac5bf0f6b"
 
 [[package]]
 name = "astound-bridge"
-version = "0.56.1"
+version = "0.57.0"
 dependencies = [
  "inventory",
  "systemprompt-bridge",

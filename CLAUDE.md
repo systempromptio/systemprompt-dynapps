@@ -43,14 +43,15 @@ The only proof the patch is live is the build log: it must name
 `../systemprompt-core` paths. A bare `v0.40.0` with no path means the pins
 are still wrong.
 
-**`production` in this repo is a staging environment**, so `next` deploys to it
-as that preview. When the core release publishes: re-comment both patch blocks,
-`just core-bump X.Y.Z` (pins + `bridge/CORE_REF`), `just preflight`, and
-`just release X.Y.Z` fast-forwards `next` onto `main`. The gates below are the
-bar on both branches — `just verify` mid-iteration, `just preflight` before
-landing. `bridge/CORE_REF` is the core ref CI checks out: a SHA on core `next`
-while the patch is active, `vX.Y.Z` on `main` (`scripts/check-core-ref.sh`
-enforces the latter).
+****`production` in this repo is a staging environment**, so `next` deploys to it
+as a preview. For a published release, remove both patch blocks, prepare the
+version pins and `bridge/CORE_REF`, refresh all three lockfiles, and push `next`.
+The exact next-push Gates run is the proof; do not repeat application lint or
+tests locally for release adoption. `just release X.Y.Z` opens a frozen PR onto
+`main`; repeat the command after its lightweight proof succeeds to merge it.
+A clean detached worktree at `origin/next` is supported. See `docs/RELEASING.md`.
+`bridge/CORE_REF` names a core SHA while patches are active, and `vX.Y.Z` when
+using published crates (`scripts/check-core-ref.sh` enforces the latter).
 
 **Core (`../systemprompt-core`) is write-only from here.** When patch-active
 work needs a core change: write the functionality, commit on core's `next`
@@ -154,24 +155,22 @@ re-creates the contention. Escape hatches when you truly need them:
 ## Preflight (the gates; CI re-runs them on every push)
 
 ```bash
-just preflight          # the mandatory pre-merge gate: static → lint → tests → coverage
+just preflight          # optional development confidence: static → lint → tests → coverage
 just preflight-static   # seconds: fmt, sqlx cache, 25 source gates
 just preflight-lint     # clippy (both workspaces), doc-check, msrv-check
 just preflight-full     # weekly: preflight + deny + audit + machete + hack
 just init-hooks         # once per clone: tracked .githooks/ (pre-commit only)
 ```
 
-`verify` = preflight minus the coverage tier; use it mid-iteration.
-`.github/workflows/gates.yml` runs it on every push to `next` and every PR,
-**plus a separate coverage job** enforcing the floor and ratchet — so CI is
-now marginally stricter than `verify`, and a change that lands coverage below
-the baseline fails there rather than waiting for the manual `just preflight` at
-`next` → `main`. There is no pre-push hook; `just preflight` is run manually when
-landing `next` onto `main` via `just release X.Y.Z`, and every push to `main`
-is a release: `.github/workflows/release.yml` builds the GHCR image, the
-bridge binaries for Linux/macOS/Windows and the GitHub Release. Contract and
-procedure: `docs/BRANCHING.md`, `docs/RELEASING.md`; installing the published
-image: `docs/install/docker.md`.
+`verify` = preflight minus coverage, for development iteration.
+`.github/workflows/gates.yml` runs the full matrix on each `next` push and
+ordinary PRs. Frozen release PRs verify that exact successful push run, its
+aggregate job, the frozen head/base and the merge tree without repeating tests.
+Coverage is a measurement on `main` and nightly, not a release check.
+`just release X.Y.Z` promotes through a PR; direct pushes to `main` are forbidden.
+The merged commit starts `.github/workflows/release.yml`, which validates the
+promotion proof before publishing the image, bridge binaries and GitHub Release.
+Contract and procedure: `docs/BRANCHING.md`, `docs/RELEASING.md`.
 
 **Coverage floor + ratchet.** `just coverage` runs an instrumented llvm-cov
 pass over all three workspaces (root, `tests/`, `bridge/`) into
