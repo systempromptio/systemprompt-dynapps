@@ -20,6 +20,8 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+## 0.58.0 — 2026-09-21
+
 ### Added
 
 - `astound-salesforce` replaces the UK-only sales workspace with the 32
@@ -29,6 +31,9 @@ Conventions (strict — hold every entry to them):
   results that the tool ledger retains as UI artifacts.
 
 ### Changed
+
+- Core dependencies now resolve from the published 0.58.0 crates rather than
+  local path patches, including gateway prompt-caching and model-catalog fixes.
 
 - Salesforce org declarations now select `sobject_all` or `headless_360` with
   a backward-compatible `server_kind`; existing CRM connectors retain their
