@@ -113,8 +113,11 @@
 
 .sp-chart__tip {
     position: absolute;
-    top: 0;
-    transform: translate(-50%, calc(-100% - var(--sp-space-2)));
+    /* Keep the readout inside the chart host. Dashboard panels scroll their
+       fixed-height contents, so positioning it above the host clips the
+       tooltip at the panel's top edge. */
+    top: var(--sp-space-2);
+    transform: translateX(-50%);
     display: grid;
     gap: var(--sp-space-05);
     min-width: 9rem;
