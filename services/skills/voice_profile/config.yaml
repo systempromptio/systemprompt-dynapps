@@ -1,0 +1,13 @@
+id: voice_profile
+name: Voice Profile
+description: Build a reusable voice profile from recent sent emails to capture a user's greetings, sign-offs,
+  length, structure, tone and recurring phrases. Use during setup or when outreach drafts should sound
+  more like the user; requires access to sent mail.
+enabled: true
+file: SKILL.md
+tags:
+- astound
+- salesforce
+- sales
+category: business
+display_category: Salesforce

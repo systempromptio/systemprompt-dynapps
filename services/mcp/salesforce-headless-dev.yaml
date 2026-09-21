@@ -1,0 +1,20 @@
+# Salesforce Headless 360 for the Developer Edition proof org. Access is
+# restricted to super_admin in services/access-control/rules.yaml.
+mcp_servers:
+  salesforce-headless-dev:
+    type: external
+    endpoint: "https://api.salesforce.com/platform/mcp/v1/platform/headless-360"
+    enabled: true
+    tool_policy: allow
+    display_in_web: false
+    removable: true
+    description: Salesforce Headless 360 (Astound dev) — governed reads, approved writes and dynamic widgets as the signed-in user
+    external_auth:
+      token_endpoint: "/api/public/connectors/salesforce-headless-dev/token"
+      header: "Authorization"
+      scheme: ""
+    oauth:
+      required: false
+      scopes: [user]
+      audience: mcp
+      client_id: null

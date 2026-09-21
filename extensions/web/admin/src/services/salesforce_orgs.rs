@@ -36,9 +36,14 @@ use crate::services::connector_oauth::config::{secret, validate_my_domain};
 pub const ORGS_FILE: &str = "config/salesforce-orgs.yaml";
 pub const SHARED_CLIENT_ID_SECRET: &str = "salesforce_mcp_client_id";
 pub const SHARED_CLIENT_SECRET: &str = "salesforce_mcp_client_secret";
-const PRODUCTION_ENDPOINT: &str = "https://api.salesforce.com/platform/mcp/v1/platform/sobject-all";
-const SANDBOX_ENDPOINT: &str =
+const SOBJECT_PRODUCTION_ENDPOINT: &str =
+    "https://api.salesforce.com/platform/mcp/v1/platform/sobject-all";
+const SOBJECT_SANDBOX_ENDPOINT: &str =
     "https://api.salesforce.com/platform/mcp/v1/sandbox/platform/sobject-all";
+const HEADLESS_PRODUCTION_ENDPOINT: &str =
+    "https://api.salesforce.com/platform/mcp/v1/platform/headless-360";
+const HEADLESS_SANDBOX_ENDPOINT: &str =
+    "https://api.salesforce.com/platform/mcp/v1/sandbox/platform/headless-360";
 const SANDBOX_DOMAIN_SUFFIX: &str = ".sandbox.my.salesforce.com";
 
 static REGISTRY: OnceLock<SalesforceOrgRegistry> = OnceLock::new();
@@ -48,6 +53,15 @@ static REGISTRY: OnceLock<SalesforceOrgRegistry> = OnceLock::new();
 pub enum SalesforceEnvironment {
     Production,
     Sandbox,
+}
+
+#[derive(Debug, Clone, Copy, Default, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum SalesforceServerKind {
+    #[default]
+    SobjectAll,
+    #[serde(rename = "headless_360")]
+    Headless360,
 }
 
 /// One org: its login, its app, and who may connect to it.
@@ -61,6 +75,8 @@ pub struct SalesforceOrg {
     pub label: String,
     pub my_domain: String,
     pub environment: SalesforceEnvironment,
+    #[serde(default)]
+    pub server_kind: SalesforceServerKind,
     #[serde(default)]
     pub org_id: Option<String>,
     #[serde(default)]
@@ -94,9 +110,19 @@ pub fn is_salesforce_server_id(id: &str) -> bool {
 
 impl SalesforceOrg {
     pub const fn expected_endpoint(&self) -> &'static str {
-        match self.environment {
-            SalesforceEnvironment::Production => PRODUCTION_ENDPOINT,
-            SalesforceEnvironment::Sandbox => SANDBOX_ENDPOINT,
+        match (self.server_kind, self.environment) {
+            (SalesforceServerKind::SobjectAll, SalesforceEnvironment::Production) => {
+                SOBJECT_PRODUCTION_ENDPOINT
+            },
+            (SalesforceServerKind::SobjectAll, SalesforceEnvironment::Sandbox) => {
+                SOBJECT_SANDBOX_ENDPOINT
+            },
+            (SalesforceServerKind::Headless360, SalesforceEnvironment::Production) => {
+                HEADLESS_PRODUCTION_ENDPOINT
+            },
+            (SalesforceServerKind::Headless360, SalesforceEnvironment::Sandbox) => {
+                HEADLESS_SANDBOX_ENDPOINT
+            },
         }
     }
 

@@ -20,6 +20,27 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+### Added
+
+- `astound-salesforce` replaces the UK-only sales workspace with the 32
+  workflows from Salesforce's public Sales Cloud plugin, adapted to remove
+  collaboration-channel dependencies. Three org-specific Headless 360
+  connectors provide governed reads, approval-gated writes and dynamic widget
+  results that the tool ledger retains as UI artifacts.
+
+### Changed
+
+- Salesforce org declarations now select `sobject_all` or `headless_360` with
+  a backward-compatible `server_kind`; existing CRM connectors retain their
+  original tool surface. The Salesforce marketplace is granted by a verified
+  Headless 360 connection instead of UK group membership.
+
+### Removed
+
+- The `astound-sales-uk` marketplace, its ten legacy skills and the static UK
+  Client Report artifact are retired in favor of the connection-scoped
+  Salesforce catalog and per-run widgets.
+
 ## 0.57.0 — 2026-09-19
 
 ### Breaking

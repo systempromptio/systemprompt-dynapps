@@ -32,6 +32,8 @@
 #   my_domain          HTTPS My Domain origin; sandboxes end .sandbox.my.salesforce.com
 #   environment        production | sandbox — selects the hosted MCP endpoint the
 #                      server file must declare
+#   server_kind        sobject_all (default) | headless_360 — selects the hosted
+#                      MCP tool surface while reusing the org's OAuth application
 #   org_id             optional 15/18-char org id; when set, a consent that lands
 #                      in a different org is rejected and must be redone
 #   client_id_secret   optional NAME of the secret holding an org-specific consumer key
@@ -71,4 +73,28 @@ orgs:
     label: "Astound dev (testing)"
     my_domain: https://orgfarm-141013b2b4-dev-ed.develop.my.salesforce.com
     environment: production
+    groups: []
+
+  # Headless 360 companions for the Sales Cloud skill bundle. They reuse the
+  # same org domains and packaged External Client App as the sobject-all
+  # servers above, but grants remain server-specific and auditable.
+  salesforce-headless-us:
+    label: "Astound US — Headless 360"
+    my_domain: https://REPLACE-astound-us.my.salesforce.com
+    environment: production
+    server_kind: headless_360
+    groups: []
+
+  salesforce-headless-uk:
+    label: "Astound UK — Headless 360"
+    my_domain: https://REPLACE-astound-uk.my.salesforce.com
+    environment: production
+    server_kind: headless_360
+    groups: []
+
+  salesforce-headless-dev:
+    label: "Astound dev — Headless 360 (testing)"
+    my_domain: https://orgfarm-141013b2b4-dev-ed.develop.my.salesforce.com
+    environment: production
+    server_kind: headless_360
     groups: []

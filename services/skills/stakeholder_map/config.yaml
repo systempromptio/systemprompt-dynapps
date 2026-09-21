@@ -1,0 +1,13 @@
+id: stakeholder_map
+name: Stakeholder Map
+description: 'Build a stakeholder map from Salesforce contacts and roles plus email, calendar, calls,
+  showing influence, stance, gaps and access paths. Use to identify decision makers, assess single-threading
+  or plan introductions. Account brief: account-context.'
+enabled: true
+file: SKILL.md
+tags:
+- astound
+- salesforce
+- sales
+category: business
+display_category: Salesforce

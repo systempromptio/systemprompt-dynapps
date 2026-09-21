@@ -69,11 +69,16 @@ entities:
     allow:
       group: [india-devs]
 
-  - entity: marketplace/astound-sales-uk
+  - entity: marketplace/astound-salesforce
     default: closed
-    why: UK business team client-intelligence workspace.
+    why: >-
+      Salesforce sales workspace; a person receives it after linking one of
+      the governed Headless 360 org connectors. Super-admins retain operating
+      access before a connection is present.
     allow:
-      group: [uk]
+      connector: [salesforce-headless-us, salesforce-headless-uk, salesforce-headless-dev]
+      salesforce: [salesforce-headless-us, salesforce-headless-uk, salesforce-headless-dev]
+      role: [super_admin]
 
   # Arrives as a signed bundle from Astound-Digital/sfnext-claude-dev-kit; the
   # kit owns the content, this file owns who reaches it. Declared here even
@@ -92,9 +97,9 @@ entities:
   - entity: marketplace/astound-super-admin
     default: closed
     why: >-
-      One control plane for every administrator of this instance. It also
-      carries the UK sales bundle so a super_admin outside the uk group can
-      reach it.
+      One control plane for every administrator of this instance. Salesforce
+      sales workflows are delivered through their own connection-scoped
+      marketplace.
     allow:
       role: [admin, platform_admin, super_admin]
 
@@ -202,6 +207,29 @@ entities:
       connector: [salesforce-crm-dev]
       salesforce: [salesforce-crm-dev]
 
+  # Headless 360 is offered independently of marketplace entitlement so a
+  # signed-in person can establish the connection that grants the marketplace.
+  # Salesforce still rejects a person who has no user or permission in the org.
+  - entity: mcp_server/salesforce-headless-us
+    default: open
+    why: Astound US Headless 360 connector for the Salesforce sales workspace.
+    allow:
+      role: [user, admin, platform_admin, project_manager, super_admin]
+
+  - entity: mcp_server/salesforce-headless-uk
+    default: open
+    why: Astound UK Headless 360 connector for the Salesforce sales workspace.
+    allow:
+      role: [user, admin, platform_admin, project_manager, super_admin]
+
+  - entity: mcp_server/salesforce-headless-dev
+    default: closed
+    why: Headless 360 proof connector for the Developer Edition org; operators only.
+    allow:
+      role: [super_admin]
+      connector: [salesforce-headless-dev]
+      salesforce: [salesforce-headless-dev]
+
   - entity: mcp_server/google_workspace
     default: closed
     why: >-
@@ -214,89 +242,4 @@ entities:
     allow:
       group: [uk]
       connector: [google_workspace]
-      role: [super_admin]
-
-  # ─── UK sales bundle ──────────────────────────────────────────────────────
-  # The uk group owns it; super_admin reaches it too via astound-super-admin.
-  - entity: plugin/astound-sales-uk
-    default: closed
-    why: UK sales client-intelligence plugin for the uk group and super_admin.
-    allow:
-      group: [uk]
-      role: [super_admin]
-
-  - entity: skill/uk_sales_client_discovery
-    default: closed
-    why: UK sales skill; follows the astound-sales-uk plugin.
-    allow:
-      group: [uk]
-      role: [super_admin]
-
-  - entity: skill/uk_sales_client_prep
-    default: closed
-    why: UK sales skill; follows the astound-sales-uk plugin.
-    allow:
-      group: [uk]
-      role: [super_admin]
-
-  - entity: skill/uk_sales_client_research
-    default: closed
-    why: UK sales skill; follows the astound-sales-uk plugin.
-    allow:
-      group: [uk]
-      role: [super_admin]
-
-  # The two search building blocks open to the people whose calls will work:
-  # the `connector` band is a live, verified grant on the Connections page, so
-  # a UK member who has not connected Google or Salesforce does not see a
-  # skill that can only fail. super_admin keeps them for operating the flow.
-  - entity: skill/google_workspace_search
-    default: closed
-    why: Google Workspace search recipes; only useful once google_workspace is connected.
-    allow:
-      connector: [google_workspace]
-      role: [super_admin]
-
-  - entity: skill/salesforce_account_search
-    default: closed
-    why: Salesforce account recipes; only useful once a Salesforce org is connected.
-    allow:
-      connector: [salesforce-crm-uk, salesforce-crm-us, salesforce-crm-dev]
-      role: [super_admin]
-
-  # The report skills follow the plugin: each one says which source it could
-  # not reach rather than hiding, so a half-connected user still gets a report.
-  - entity: skill/client_360_report
-    default: closed
-    why: UK sales report skill; follows the astound-sales-uk plugin.
-    allow:
-      group: [uk]
-      role: [super_admin]
-
-  - entity: skill/account_status_report
-    default: closed
-    why: UK sales report skill; follows the astound-sales-uk plugin.
-    allow:
-      group: [uk]
-      role: [super_admin]
-
-  - entity: skill/account_suggestions
-    default: closed
-    why: UK sales report skill; follows the astound-sales-uk plugin.
-    allow:
-      group: [uk]
-      role: [super_admin]
-
-  - entity: skill/pipeline_renewals_review
-    default: closed
-    why: UK sales report skill; follows the astound-sales-uk plugin.
-    allow:
-      group: [uk]
-      role: [super_admin]
-
-  - entity: skill/install_sales_artifacts
-    default: closed
-    why: Puts the UK Client Report into the Cowork library; follows the astound-sales-uk plugin.
-    allow:
-      group: [uk]
       role: [super_admin]

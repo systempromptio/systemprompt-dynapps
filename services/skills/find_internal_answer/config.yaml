@@ -1,0 +1,13 @@
+id: find_internal_answer
+name: Find Internal Answer
+description: Find a concise answer with authoritative sources from internal documents, email and Salesforce,
+  prioritizing the newest canonical material. Use when locating a policy, approver, deck, security asset,
+  prior precedent or teammate with relevant experience.
+enabled: true
+file: SKILL.md
+tags:
+- astound
+- salesforce
+- sales
+category: business
+display_category: Salesforce

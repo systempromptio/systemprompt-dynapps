@@ -1,0 +1,13 @@
+id: using_display_widget
+name: Using Display Widget
+description: Render assembled Salesforce data as a styled widget using either a hydrated dynamic definition
+  or a registered widget with props. Use when a skill needs a composed visual presentation or guidance
+  on rendering mode, structure and supported tiles.
+enabled: true
+file: SKILL.md
+tags:
+- astound
+- salesforce
+- sales
+category: business
+display_category: Salesforce

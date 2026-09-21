@@ -1,0 +1,13 @@
+id: expansion_whitespace
+name: Expansion Whitespace
+description: Identify ranked expansion plays for one customer from Salesforce contacts, owned products
+  and opportunities plus recent email, documents. Use to find evidence-backed whitespace, upsell paths
+  or adjacent teams and products ready for outreach.
+enabled: true
+file: SKILL.md
+tags:
+- astound
+- salesforce
+- sales
+category: business
+display_category: Salesforce

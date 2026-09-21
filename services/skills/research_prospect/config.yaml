@@ -1,0 +1,13 @@
+id: research_prospect
+name: Research Prospect
+description: 'Build a prospect brief from web research and Salesforce, covering company facts, recent
+  signals, likely priorities, contacts and ICP fit. Use to research a net-new company or person before
+  outreach. Existing accounts: account-context.'
+enabled: true
+file: SKILL.md
+tags:
+- astound
+- salesforce
+- sales
+category: business
+display_category: Salesforce

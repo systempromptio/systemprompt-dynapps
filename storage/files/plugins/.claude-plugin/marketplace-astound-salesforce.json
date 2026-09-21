@@ -1,0 +1,18 @@
+{
+  "name": "astound-salesforce",
+  "owner": {
+    "name": "Astound Digital"
+  },
+  "metadata": {
+    "description": "Salesforce account, pipeline, forecasting, meeting and outreach workflows with governed Headless 360 reads, approval-gated writes and dynamic visual artifacts.",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "astound-salesforce",
+      "source": "./storage/files/plugins/astound-salesforce",
+      "description": "Thirty-two Salesforce sales workflows adapted from Salesforce's public Sales Cloud plugin, with optional Google Workspace evidence and dynamic Headless 360 widgets.",
+      "version": "1.0.0"
+    }
+  ]
+}

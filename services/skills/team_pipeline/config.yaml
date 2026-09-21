@@ -1,0 +1,13 @@
+id: team_pipeline
+name: Team Pipeline
+description: 'Build a team pipeline brief from Salesforce users and opportunities, showing closed revenue,
+  forecast, swing deals and coaching needs by rep. Use to review a manager''s team, prepare a pipeline
+  meeting or find where reps need help. One rep: pipeline-review.'
+enabled: true
+file: SKILL.md
+tags:
+- astound
+- salesforce
+- sales
+category: business
+display_category: Salesforce

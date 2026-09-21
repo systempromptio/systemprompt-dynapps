@@ -1,0 +1,13 @@
+id: pipeline_review
+name: Pipeline Review
+description: Build one rep's current pipeline assessment from Salesforce stage aggregates, deal samples
+  and closed-deal history, covering coverage, hygiene and risks. Use when reviewing pipeline health and
+  stage distribution; for changes over time, use deal-signals.
+enabled: true
+file: SKILL.md
+tags:
+- astound
+- salesforce
+- sales
+category: business
+display_category: Salesforce

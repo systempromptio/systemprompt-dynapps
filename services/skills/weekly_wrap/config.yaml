@@ -1,0 +1,13 @@
+id: weekly_wrap
+name: Weekly Wrap
+description: Build a weekly sales recap from Salesforce opportunity and calendar activity plus email,
+  documents, covering wins, losses, deal activity and next week's priorities. Use to review a rep's or
+  team's week, prepare for Monday or draft an internal update.
+enabled: true
+file: SKILL.md
+tags:
+- astound
+- salesforce
+- sales
+category: business
+display_category: Salesforce

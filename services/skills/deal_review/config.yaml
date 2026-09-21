@@ -1,0 +1,13 @@
+id: deal_review
+name: Deal Review
+description: Build a scored deal-health assessment from Salesforce fields, contacts and activity plus
+  email, documents, with evidence-backed risks. Use to judge whether one deal will close; for stage-exit
+  gaps and a sequenced path, use deal-advance-gap.
+enabled: true
+file: SKILL.md
+tags:
+- astound
+- salesforce
+- sales
+category: business
+display_category: Salesforce

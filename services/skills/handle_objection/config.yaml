@@ -1,0 +1,13 @@
+id: handle_objection
+name: Handle Objection
+description: Build a grounded response to a customer objection from the current deal, win-loss history,
+  customer evidence and approved internal documents. Use when interpreting pricing, timing, trust or competitive
+  pushback and preparing a talk track or written reply.
+enabled: true
+file: SKILL.md
+tags:
+- astound
+- salesforce
+- sales
+category: business
+display_category: Salesforce

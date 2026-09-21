@@ -1,4 +1,5 @@
-//! Shipped executive and UK sales access through the runtime policy resolver.
+//! Shipped executive and connection-scoped Salesforce access through the
+//! runtime policy resolver.
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -15,6 +16,7 @@ use systemprompt_web_admin::repositories::config::gateway::{
     dispatchable_route_ids, registered_routes,
 };
 use systemprompt_web_admin::repositories::config::groups_yaml_loader;
+use systemprompt_web_admin::repositories::users::connector_accounts as accounts;
 
 use crate::fixtures::{insert_user_with_roles, set_project, unique};
 use crate::tempdb::TempDb;
@@ -31,7 +33,7 @@ fn services_path() -> PathBuf {
 fn executive_services_load_with_resolvable_plugin_members() {
     let services = ConfigLoader::load_from_path(&services_path().join("config/config.yaml"))
         .expect("shipped services load and validate");
-    for id in ["astound-super-admin", "astound-sales-uk"] {
+    for id in ["astound-super-admin", "astound-salesforce"] {
         let marketplace = services
             .marketplaces
             .iter()
@@ -49,8 +51,74 @@ fn executive_services_load_with_resolvable_plugin_members() {
     }
 }
 
+#[test]
+fn salesforce_catalog_is_exact_and_contains_no_collaboration_channel_content() {
+    const EXPECTED: &[&str] = &[
+        "account_context",
+        "account_tiering",
+        "calendar_events",
+        "call_follow_up",
+        "call_prep",
+        "close_plan",
+        "customer_health",
+        "customer_voice",
+        "daily_briefing",
+        "deal_advance_gap",
+        "deal_review",
+        "deal_signals",
+        "deal_slip_scenario",
+        "draft_outreach",
+        "expansion_whitespace",
+        "find_internal_answer",
+        "forecast_narrative",
+        "handle_objection",
+        "inbox_sweep",
+        "lead_triage",
+        "pipeline_review",
+        "query_activity_history",
+        "renewal_radar",
+        "rep_context",
+        "research_prospect",
+        "salesforce_hygiene_check",
+        "stakeholder_map",
+        "team_pipeline",
+        "using_display_widget",
+        "voice_profile",
+        "weekly_wrap",
+        "win_loss_review",
+    ];
+    let services = ConfigLoader::load_from_path(&services_path().join("config/config.yaml"))
+        .expect("shipped services load and validate");
+    let plugin = services
+        .plugins
+        .iter()
+        .find(|(id, _)| id.as_str() == "astound-salesforce")
+        .expect("Salesforce plugin exists")
+        .1;
+    let actual: Vec<&str> = plugin.skills.include.iter().map(|id| id.as_str()).collect();
+    assert_eq!(actual, EXPECTED);
+    assert!(
+        !services
+            .marketplaces
+            .iter()
+            .any(|(id, _)| id.as_str() == "astound-sales-uk")
+    );
+
+    for id in EXPECTED {
+        let directory = services_path().join("skills").join(id);
+        for file in [directory.join("config.yaml"), directory.join("SKILL.md")] {
+            let body = std::fs::read_to_string(&file).expect("Salesforce skill file");
+            assert!(
+                !body.to_ascii_lowercase().contains("slack"),
+                "{} contains excluded collaboration-channel content",
+                file.display()
+            );
+        }
+    }
+}
+
 #[tokio::test]
-async fn executive_and_uk_membership_grant_only_the_intended_resources() {
+async fn executive_and_salesforce_connection_grant_only_the_intended_resources() {
     let Some(db) = TempDb::create().await else {
         return;
     };
@@ -90,25 +158,23 @@ async fn executive_and_uk_membership_grant_only_the_intended_resources() {
     // Why: `control_plane` is reached by every administrator role, not by
     // super_admin alone — astound-super-admin absorbed the old
     // systemprompt-admin marketplace, and splitting the control plane in two is
-    // exactly how an administrator ended up holding half of it. `sales` is the
-    // UK bundle, reached by the group or by super_admin's own role grant.
-    for (role, uk, project, control_plane, sales) in [
-        ("user", false, false, false, false),
-        ("admin", false, false, true, false),
-        ("platform_admin", false, false, true, false),
-        ("knowledge_worker", false, false, false, false),
-        ("project_manager", false, false, false, false),
-        ("user", true, false, false, true),
-        ("user", false, true, false, false),
-        ("super_admin", false, false, true, true),
-        ("super_admin", true, true, true, true),
+    // exactly how an administrator ended up holding half of it. `sales` is
+    // reached by a verified Headless 360 connection or super_admin's role;
+    // legacy UK membership alone grants nothing.
+    for (role, uk, connected, project, control_plane, sales) in [
+        ("user", false, false, false, false, false),
+        ("admin", false, false, false, true, false),
+        ("platform_admin", false, false, false, true, false),
+        ("knowledge_worker", false, false, false, false, false),
+        ("project_manager", false, false, false, false, false),
+        ("user", true, false, false, false, false),
+        ("user", false, true, false, false, true),
+        ("user", false, false, true, false, false),
+        ("super_admin", false, false, false, true, true),
+        ("super_admin", true, true, true, true, true),
     ] {
         let user = UserId::new(unique("executive-access"));
         let roles = vec!["user".to_owned(), role.to_owned()];
-        // Why: the two search building blocks sit behind the `connector`
-        // band — a live grant from the Connections page — plus super_admin's
-        // role; nobody in this table has connected a server, so only the
-        // operator role reaches them.
         let operator = role == "super_admin";
         insert_user_with_roles(&db.pool, user.as_str(), &roles).await;
         if uk {
@@ -123,6 +189,19 @@ async fn executive_and_uk_membership_grant_only_the_intended_resources() {
         if project {
             set_project(&db.pool, user.as_str(), Some("business-implementation")).await;
         }
+        if connected {
+            let mut tx = db.pool.begin().await.expect("begin connector update");
+            let mut row = accounts::get_locked_account(&mut tx, &user, "salesforce-headless-us")
+                .await
+                .expect("connector account");
+            row.status = "connected".into();
+            row.auth_method = Some("oauth".into());
+            row.verified_at = Some(chrono::Utc::now());
+            accounts::update_account(&mut tx, &user, &row)
+                .await
+                .expect("mark connector ready");
+            tx.commit().await.expect("commit connector update");
+        }
         let attributes = subject_attributes_for(&db.pool, &user)
             .await
             .expect("attributes");
@@ -132,23 +211,18 @@ async fn executive_and_uk_membership_grant_only_the_intended_resources() {
                 "astound-super-admin",
                 control_plane,
             ),
-            (EntityKind::Marketplace, "astound-sales-uk", uk),
+            (EntityKind::Marketplace, "astound-salesforce", sales),
             (EntityKind::Plugin, "astound-super-admin", control_plane),
-            (EntityKind::Plugin, "astound-sales-uk", sales),
+            (EntityKind::Plugin, "astound-salesforce", sales),
             (EntityKind::Skill, "admin_critical_projects", control_plane),
             (EntityKind::Skill, "admin_ai_usage", control_plane),
             (EntityKind::Skill, "admin_daily_brief", control_plane),
-            (EntityKind::Skill, "uk_sales_client_discovery", sales),
-            (EntityKind::Skill, "uk_sales_client_prep", sales),
-            (EntityKind::Skill, "uk_sales_client_research", sales),
-            (EntityKind::Skill, "client_360_report", sales),
-            (EntityKind::Skill, "account_status_report", sales),
-            (EntityKind::Skill, "account_suggestions", sales),
-            (EntityKind::Skill, "pipeline_renewals_review", sales),
-            (EntityKind::Skill, "install_sales_artifacts", sales),
-            (EntityKind::Skill, "google_workspace_search", operator),
-            (EntityKind::Skill, "salesforce_account_search", operator),
-            (EntityKind::McpServer, "google_workspace", sales),
+            (EntityKind::Skill, "account_context", sales),
+            (EntityKind::Skill, "pipeline_review", sales),
+            (EntityKind::Skill, "using_display_widget", sales),
+            (EntityKind::McpServer, "google_workspace", operator || uk),
+            (EntityKind::McpServer, "salesforce-headless-us", true),
+            (EntityKind::McpServer, "salesforce-headless-dev", operator),
         ] {
             let ids = vec![id.to_owned()];
             let allowed = allowed_ids(
@@ -168,7 +242,7 @@ async fn executive_and_uk_membership_grant_only_the_intended_resources() {
             assert_eq!(
                 allowed.contains(id),
                 expected,
-                "{role}, uk={uk}, project={project}: {id}"
+                "{role}, uk={uk}, connected={connected}, project={project}: {id}"
             );
         }
     }
