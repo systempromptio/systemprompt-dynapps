@@ -20,7 +20,10 @@ on:
     - cron: "23 3 * * *"
 
 concurrency:
-  group: coverage-${{ inputs.ref || github.ref }}
+  # Scheduled workflows are created from the default branch. Explicitly make
+  # that run measure `next`, as promised above, instead of silently measuring
+  # `main` again after the release has already landed.
+  group: coverage-${{ inputs.ref || (github.event_name == 'schedule' && 'next') || github.ref }}
   cancel-in-progress: true
 
 env:
@@ -61,7 +64,7 @@ jobs:
           POSTGRES_DB: test
         ports: ["5432:5432"]
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "pg_isready -U test -d test"
           --health-interval 5s
           --health-timeout 3s
           --health-retries 10
@@ -95,11 +98,11 @@ jobs:
           sudo apt-get clean
           sudo rm -rf /var/lib/apt/lists/*
           echo "after:"; df -h / | tail -1
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
-          ref: ${{ inputs.ref || github.sha }}
+          ref: ${{ inputs.ref || (github.event_name == 'schedule' && 'next') || github.sha }}
       - uses: ./.github/actions/core-checkout
-      - uses: extractions/setup-just@v2
+      - uses: extractions/setup-just@v4
       # libdbus: scripts/coverage.sh instruments the bridge workspace too, and
       # bridge pulls keyring -> dbus-secret-service. Without it that phase
       # fails to build; coverage.sh logs "continuing to coverage report" and

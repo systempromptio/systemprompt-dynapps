@@ -34,7 +34,7 @@ jobs:
       sha256: ${{ steps.digest.outputs.sha256 }}
       source_sha: ${{ steps.provenance.outputs.source_sha }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Validate inputs and candidate provenance
         id: provenance
         env:
@@ -115,7 +115,7 @@ jobs:
       EXPECTED_SHA: ${{ needs.verify.outputs.sha256 }}
       CANDIDATE_TAG: repair-0.47.0-${{ inputs.candidate_run || github.run_id }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/download-artifact@v4
         with:
           name: verified-macos-repair
@@ -170,7 +170,7 @@ jobs:
       CANDIDATE_DIGEST: ${{ needs.image.outputs.digest }}
       REPAIR_SOURCE_SHA: ${{ needs.verify.outputs.source_sha }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/download-artifact@v4
         with:
           name: verified-macos-repair

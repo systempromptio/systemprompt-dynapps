@@ -133,15 +133,32 @@ find "$PROFDIR" -name '*.profraw' > "$ROOT/coverage-report/profraw-list.txt"
 "$LLVM_PROFDATA" merge -sparse -f "$ROOT/coverage-report/profraw-list.txt" \
     -o "$ROOT/coverage-report/tests.profdata"
 
-# Test binaries land in <target>/debug/deps; dedupe by crate basename keeping
-# the newest build of each (same awk as core).
-collect_bins() {
+# Test binaries land in <target>/debug/deps. Emit candidates from every
+# workspace, then dedupe the combined stream by crate basename. Prefer the
+# tests workspace because that is where the 1,800+ executed tests live; root
+# and bridge supply only crates absent from it. Within a workspace, keep the
+# newest build. Dedupe must be global: doing it once per target directory
+# feeds llvm-cov multiple feature/build variants of the same crate. Their
+# function names overlap but their mapping hashes differ, so llvm-cov discards
+# profile records with "functions have mismatched data" and under-reports the
+# very tests this job is meant to measure.
+collect_bin_candidates() {
     find "$1/debug/deps" -maxdepth 1 -executable -type f ! -name '*.d' ! -name '*.so' \
-        -printf '%T@ %p\n' 2>/dev/null \
-        | sort -rn \
-        | awk '{ base=$2; sub(".*/", "", base); sub(/-[0-9a-f]+$/, "", base); if (!seen[base]++) print $2 }'
+        -printf '%T@ %p\n' 2>/dev/null | sort -rn
 }
-BINS="$(collect_bins "$TBASE-root"; collect_bins "$TBASE-tests"; collect_bins "$TBASE-bridge")"
+BINS="$(
+    {
+        collect_bin_candidates "$TBASE-tests"
+        collect_bin_candidates "$TBASE-root"
+        collect_bin_candidates "$TBASE-bridge"
+    } | awk '{ base=$2; sub(".*/", "", base); sub(/-[0-9a-f]+$/, "", base); if (!seen[base]++) print $2 }'
+)"
+BIN_COUNT=$(printf '%s\n' "$BINS" | sed '/^$/d' | wc -l)
+if [ "$BIN_COUNT" -eq 0 ]; then
+    echo "error: no instrumented test objects found" >&2
+    exit 1
+fi
+echo "==> Reporting over $BIN_COUNT globally deduplicated test objects"
 OBJ_ARGS=()
 for b in $BINS; do OBJ_ARGS+=(--object "$b"); done
 
@@ -166,11 +183,19 @@ for b in $BINS; do OBJ_ARGS+=(--object "$b"); done
 IGNORE_RE="(\.cargo|/rustc/|/registry/|/debug/build/|/tests/|/target/|systemprompt-core/|systemprompt-astound/src/(main|lib)\.rs|bridge/src/main\.rs|extensions/(cli|mcp)/[^/]+/src/main\.rs|extensions/cli/[^/]+/src/commands/|extensions/.*/extension\.rs|build\.rs)"
 
 echo "==> Coverage report"
+WARNINGS="$ROOT/coverage-report/llvm-cov-warnings.txt"
 "$LLVM_COV" report \
     --instr-profile="$ROOT/coverage-report/tests.profdata" \
     "${OBJ_ARGS[@]}" \
     --ignore-filename-regex="$IGNORE_RE" \
+    2> >(tee "$WARNINGS" >&2) \
     | tee "$ROOT/coverage-report/report.txt"
+
+if grep -q 'mismatched data' "$WARNINGS"; then
+    echo "error: llvm-cov rejected profile data; duplicate or incompatible instrumented objects remain" >&2
+    echo "       inspect coverage-report/llvm-cov-warnings.txt" >&2
+    exit 1
+fi
 
 "$LLVM_COV" export \
     --instr-profile="$ROOT/coverage-report/tests.profdata" \

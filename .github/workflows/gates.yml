@@ -51,11 +51,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref || github.sha }}
       - uses: ./.github/actions/core-checkout
-      - uses: extractions/setup-just@v2
+      - uses: extractions/setup-just@v4
       - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ripgrep jq python3
       - run: rustup show
       - run: bash scripts/check-core-crate-versions.sh
@@ -69,11 +69,11 @@ jobs:
     env:
       RUSTFLAGS: "-D warnings"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref || github.sha }}
       - uses: ./.github/actions/core-checkout
-      - uses: extractions/setup-just@v2
+      - uses: extractions/setup-just@v4
       # libdbus: keyring → dbus-secret-service in the bridge crate.
       # gcc-mingw-w64: `just clippy` cross-lints the bridge GUI for
       # x86_64-pc-windows-gnu, and ring's build script needs a C compiler
@@ -126,7 +126,7 @@ jobs:
           POSTGRES_DB: test
         ports: ["5432:5432"]
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "pg_isready -U test -d test"
           --health-interval 5s
           --health-timeout 3s
           --health-retries 10
@@ -160,11 +160,11 @@ jobs:
           sudo apt-get clean
           sudo rm -rf /var/lib/apt/lists/*
           echo "after:"; df -h / | tail -1
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref || github.sha }}
       - uses: ./.github/actions/core-checkout
-      - uses: extractions/setup-just@v2
+      - uses: extractions/setup-just@v4
       # The unit tier includes bridge/keyring code and the Python BA importer.
       - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends clang mold libpq-dev libssl-dev pkg-config libdbus-1-dev python3 python3-yaml
       - run: rustup show
