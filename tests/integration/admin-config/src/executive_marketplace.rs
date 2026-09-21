@@ -17,6 +17,7 @@ use systemprompt_web_admin::repositories::config::gateway::{
 };
 use systemprompt_web_admin::repositories::config::groups_yaml_loader;
 use systemprompt_web_admin::repositories::users::connector_accounts as accounts;
+use systemprompt_web_admin::salesforce_orgs;
 
 use crate::fixtures::{insert_user_with_roles, set_project, unique};
 use crate::tempdb::TempDb;
@@ -125,6 +126,30 @@ async fn executive_and_salesforce_connection_grant_only_the_intended_resources()
     let path = services_path();
     let services =
         ConfigLoader::load_from_path(&path.join("config/config.yaml")).expect("services");
+    // Why: a connection counts only when its connector is configured — the
+    // MCP server enabled in the shipped catalog and its org in the registry —
+    // and both are read from process-wide bootstraps, so this test installs
+    // the shipped tree rather than the empty fixture the user helper falls
+    // back to.
+    systemprompt::loader::ServicesBootstrap::init_from_path(&path.join("config/config.yaml"))
+        .expect("install shipped services");
+    salesforce_orgs::SalesforceOrgRegistry::init_from_path(&path)
+        .await
+        .expect("install shipped Salesforce orgs");
+    // Why: a connection is `not_provisioned` until the org's External Client
+    // App credentials resolve; nextest runs each test in its own process, so
+    // the environment override reaches only this one.
+    // SAFETY: single-threaded at this point; no other thread reads the environment.
+    unsafe {
+        std::env::set_var(
+            salesforce_orgs::SHARED_CLIENT_ID_SECRET.to_uppercase(),
+            "test-client-id",
+        );
+        std::env::set_var(
+            salesforce_orgs::SHARED_CLIENT_SECRET.to_uppercase(),
+            "test-client-secret",
+        );
+    }
     groups_yaml_loader::load_groups_from_yaml(&db.pool, &path)
         .await
         .expect("groups");
