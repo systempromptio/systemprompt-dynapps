@@ -96,7 +96,7 @@ just stop             # stop local services cleanly
 
 Embedded public-site templates require a rebuild and server restart before publishing. Use [CLI help](docs/README.md) through `systemprompt --help` to discover operational commands. The [demo directory](demo/README.md) contains preflight and data-seeding helpers; use those only on an instance intended for demo data.
 
-[![Coverage 76.79%](https://img.shields.io/badge/coverage-76.79%25-f97316?style=flat-square)](coverage/baseline.json)
+[![Coverage 80.79%](https://img.shields.io/badge/coverage-80.79%25-16a34a?style=flat-square)](coverage/baseline.json)
 
 ## Core versions and releases
 

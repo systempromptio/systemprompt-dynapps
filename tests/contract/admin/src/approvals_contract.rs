@@ -116,3 +116,40 @@ async fn a_project_manager_may_not_decide_a_held_call() {
             .expect("read the untouched row");
     assert_eq!(stored.0, "pending", "the refusal left the row alone");
 }
+
+// Expiry is evaluated by the handler before its compare-and-set write.  A
+// lapsed row must not be revived merely because no background worker has yet
+// rewritten its stored `pending` status.
+#[tokio::test]
+async fn an_admin_cannot_decide_an_expired_pending_call() {
+    if !globals::init() {
+        return;
+    }
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    let credentials = principal::provision(&db.pool).await;
+    let app = App::new(&db.pool, credentials);
+    let call_id = "contract-approval-expired";
+    seed_pending(&db.pool, call_id).await;
+    sqlx::query("UPDATE approval_requests SET expires_at = $2 WHERE call_id = $1")
+        .bind(call_id)
+        .bind(Utc::now() - Duration::seconds(1))
+        .execute(&*db.pool)
+        .await
+        .expect("expire held call");
+
+    let (status, body) = app
+        .call(post(&approve_path(call_id), Principal::Admin))
+        .await;
+    assert_eq!(status, StatusCode::CONFLICT, "expired call refused: {body}");
+
+    let stored: (String, Option<String>) =
+        sqlx::query_as("SELECT status, approver_id FROM approval_requests WHERE call_id = $1")
+            .bind(call_id)
+            .fetch_one(&*db.pool)
+            .await
+            .expect("read untouched expiration");
+    assert_eq!(stored.0, "pending", "expiry is a read-time state");
+    assert!(stored.1.is_none(), "no approver was recorded");
+}

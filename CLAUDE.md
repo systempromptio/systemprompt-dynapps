@@ -187,6 +187,15 @@ page. Never use cargo-llvm-cov
 here (it re-injects the mold linker flags and silently produces zero profraws
 — see `scripts/coverage.sh`).
 
+**The schema-upgrade ladder.** `tests/fixtures/schema/release-baseline-<X.Y.Z>.sql`
+holds one recorded schema per release since 0.52.0; `tests/integration/schema-upgrade`
+restores each rung and runs the current installer over it, then diffs against a fresh
+install. `scripts/check-schema-baseline.sh` (a static gate) requires a rung for every
+release tag from the floor and one named for the workspace version, so `just
+core-bump` turns it red until `just schema-baseline` records the new rung. A rung for
+a release that predates the ladder is recorded from its published binary with
+`just schema-baseline X.Y.Z`. Never edit a rung by hand.
+
 **Every test lives in the `tests/` workspace** (`unit/`, `integration/`,
 `contract/`) — there is exactly one home. Inline `#[cfg(test)]` modules are
 banned, and so are in-crate `extensions/**/tests/` dirs: a test that compiles

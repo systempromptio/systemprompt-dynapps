@@ -36,9 +36,9 @@ Access control answers one question: *may this person reach this entity?* The en
 | Kind | Examples on this instance | What "reach" means |
 |---|---|---|
 | `marketplace` | `astound-commons`, `astound-india-dev` | The workspace appears in Claude Code / Cowork and its plugins can be installed |
-| `plugin` | `astound-super-admin`, `astound-sales-uk` | The plugin is offered |
-| `skill` | `admin_daily_brief`, `uk_sales_client_prep` | The skill is offered and may run |
-| `mcp_server` | `atlassian`, `github`, `google_workspace`, `salesforce`, `systemprompt` | The server is listed and its tools may be called |
+| `plugin` | `astound-super-admin`, `astound-salesforce` | The plugin is offered |
+| `skill` | `admin_daily_brief`, `account_context` | The skill is offered and may run |
+| `mcp_server` | `atlassian`, `google_workspace`, `salesforce-headless-us`, `systemprompt` | The server is listed and its tools may be called |
 | `gateway_route` | `claude-star-4203d1`, … | Requests may be routed to that model |
 
 It does **not** decide whether a person can sign in (that is [authentication](/documentation/authentication) and [SSO](/documentation/adfs-sso-setup)), whether a tool call is allowed to proceed once the person is entitled (the [governance chain](/documentation/enterprise-tool-governance)), or what may be said (the [safety scanners](/documentation/enterprise-safety-guardrails)). Those run after entitlement, on every request.
@@ -54,6 +54,7 @@ A rule names a **subject** at one **band**:
 | person | 0 | one account | an override set on the user's Access tab |
 | project | 140 | a project id | assigned on the Projects page or mapped from an AD group |
 | group | 150 | a group id | mapped from the AD groups the directory asserts at sign-in |
+| connected server | 160 | a ready OAuth-backed MCP server id | recorded after its connection is verified |
 | linked account | 170 | a downstream org id (`salesforce`) | recorded when the person links that org |
 | role | 200 | `user`, `admin`, `platform_admin`, `project_manager`, `super_admin`, … | granted by SSO or on the Roles page |
 
@@ -114,13 +115,12 @@ entities:
     allow:
       role: [user, admin, platform_admin, project_manager, super_admin]
 
-  - entity: marketplace/astound-sales-uk
+  - entity: marketplace/astound-salesforce
     default: closed
-    why: UK business team client-intelligence workspace.
+    why: Salesforce sales workspace for people with a ready Headless 360 connection.
     allow:
-      group:
-        values: [uk]
-        why: A band may carry its own reason when it differs from the entity's.
+      connector: [salesforce-headless-us, salesforce-headless-uk]
+      role: [super_admin]
 ```
 
 Rules of the file, all checked by `scripts/validate-services.sh` in CI and again when the server reads it:

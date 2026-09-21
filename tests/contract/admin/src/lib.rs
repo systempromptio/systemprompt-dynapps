@@ -26,6 +26,12 @@
 mod adfs_auth_contract;
 
 #[cfg(test)]
+mod analysis_lifecycle_distribution_contract;
+#[cfg(test)]
+mod analysis_report_generation_contract;
+#[cfg(test)]
+mod analysis_reports_contract;
+#[cfg(test)]
 mod app;
 #[cfg(test)]
 mod approvals_contract;
@@ -38,9 +44,13 @@ mod bridge_whoami_contract;
 #[cfg(test)]
 mod catalog_contract;
 #[cfg(test)]
+mod connector_accounts_contract;
+#[cfg(test)]
 mod dev_login_contract;
 #[cfg(test)]
 mod devices_contract;
+#[cfg(test)]
+mod devices_credentials_contract;
 #[cfg(test)]
 mod error_contract;
 #[cfg(test)]
@@ -50,6 +60,8 @@ mod gateway_page_contract;
 #[cfg(test)]
 mod globals;
 #[cfg(test)]
+mod governance_ssr_scope_contract;
+#[cfg(test)]
 mod groups_contract;
 #[cfg(test)]
 mod handler_errors;
@@ -58,7 +70,11 @@ mod handler_variants;
 #[cfg(test)]
 mod hooks_track_contract;
 #[cfg(test)]
+mod judge_all_scope_contract;
+#[cfg(test)]
 mod login_contract;
+#[cfg(test)]
+mod mcp_detail_contract;
 #[cfg(test)]
 mod principal;
 #[cfg(test)]
@@ -67,6 +83,8 @@ mod rejected_request_contract;
 mod req_025_time_bound;
 #[cfg(test)]
 mod roles_contract;
+#[cfg(test)]
+mod roles_entitlements_contract;
 #[cfg(test)]
 mod route_source;
 #[cfg(test)]
@@ -78,9 +96,17 @@ mod self_service_contract;
 #[cfg(test)]
 mod share_contract;
 #[cfg(test)]
+mod ssr_access_control_entities_contract;
+#[cfg(test)]
+mod ssr_analysis_coverage;
+#[cfg(test)]
 mod ssr_analytics_contract;
 #[cfg(test)]
 mod ssr_deep_contract;
+#[cfg(test)]
+mod ssr_people_containers_contract;
+#[cfg(test)]
+mod ssr_tools_artifacts_coverage;
 #[cfg(test)]
 mod status_contract;
 #[cfg(test)]
@@ -94,7 +120,14 @@ mod webhook_contract;
 mod dashboard_query_scaling;
 
 #[cfg(test)]
+mod managed_candidate_lifecycle_contract;
+#[cfg(test)]
+mod managed_publication_api_contract;
+#[cfg(test)]
 mod managed_resources_contract;
+#[cfg(test)]
+#[cfg(test)]
+mod marketplace_versions_contract;
 
 #[cfg(test)]
 mod feedback_freshness;

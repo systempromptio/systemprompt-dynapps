@@ -94,7 +94,7 @@ jobs:
       publish_release: ${{ steps.v.outputs.publish_release }}
       publish_version_tag: ${{ steps.v.outputs.publish_version_tag }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 2
       - name: Verify merged promotion and exact release proofs
@@ -185,7 +185,7 @@ jobs:
             asset: astound-bridge-macos.dmg
             script: scripts/package-bridge-macos.sh
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/core-checkout
 
       - name: Install build deps (linux)
@@ -335,7 +335,7 @@ jobs:
           - arch: arm64
             runner: ubuntu-24.04-arm
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # The bridge assets the image serves at /files/downloads. Every platform
       # must be present — a missing one 404s a link the admin page already
@@ -441,7 +441,7 @@ jobs:
       GHCR_AUTH: ${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}
       ASTOUND_BUNDLE_SIGNING_SEED: ${{ secrets.ASTOUND_BUNDLE_SIGNING_SEED }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/download-artifact@v4
         with:
           name: server-amd64
@@ -525,7 +525,7 @@ jobs:
       VERSION: ${{ needs.version.outputs.version }}
       GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/download-artifact@v4
         with:
           pattern: downloads-*

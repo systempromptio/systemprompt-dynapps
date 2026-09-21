@@ -104,6 +104,7 @@ fn fixture_secrets() -> String {
         r#"{{
   "database_url": "{database_url}",
   "oauth_at_rest_pepper": "contract-suite-pepper-not-a-real-secret",
+  "mcp_credential_broker_secret": "contract-suite-broker-not-a-real-secret",
   "manifest_signing_secret_seed": "Y29udHJhY3Qtc3VpdGUtc2VlZC1ub3QtcmVhbC0wMDA=",
   "encryption_master_key": "{MASTER_KEY_HEX}",
   "anthropic": "contract-suite-anthropic-key-not-a-real-secret"

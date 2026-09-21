@@ -1,0 +1,13 @@
+id: lead_triage
+name: Lead Triage
+description: Produce an inbound-lead priority and routing recommendation from Salesforce Lead and Account
+  data, research and email engagement. Use when qualifying a new lead, assessing ICP fit and intent, choosing
+  an owner or deciding the response speed and next step.
+enabled: true
+file: SKILL.md
+tags:
+- astound
+- salesforce
+- sales
+category: business
+display_category: Salesforce

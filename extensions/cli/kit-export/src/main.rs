@@ -10,16 +10,13 @@
 //! Composition forbids an id both local and bundled, so once the kit is
 //! published and pinned the exported ids are removed from `services/`.
 
-mod export;
-mod skill_md;
-mod verify;
-
 use std::path::PathBuf;
 
 use anyhow::{Context, Result, bail};
 use clap::Parser;
 use systemprompt::loader::ConfigLoader;
 use systemprompt::logging::CliService;
+use systemprompt_kit_export::{export_kit, round_trip};
 
 #[derive(Debug, Parser)]
 #[command(
@@ -58,14 +55,14 @@ fn main() -> Result<()> {
     }
     std::fs::create_dir_all(&cli.out)?;
 
-    let report = export::export_kit(&services, &cli.services, &cli.marketplace, &cli.out)?;
+    let report = export_kit(&services, &cli.services, &cli.marketplace, &cli.out)?;
     CliService::output(&report.summary());
 
     if cli.no_verify {
         CliService::info("verify: skipped (--no-verify)");
         return Ok(());
     }
-    let diffs = verify::round_trip(&cli.out, &cli.services, &report)?;
+    let diffs = round_trip(&cli.out, &cli.services, &report)?;
     if diffs.is_empty() {
         CliService::output(&format!(
             "verify: re-import reproduces services/ for {} plugin(s), {} skill(s)",

@@ -13,12 +13,6 @@
       "source": "./storage/files/plugins/astound-super-admin",
       "description": "The administrator control plane: the daily brief and its traffic-light dashboard, critical-project and AI-usage reporting, and direct CLI access to the instance.",
       "version": "4.0.0"
-    },
-    {
-      "name": "astound-sales-uk",
-      "source": "./storage/files/plugins/astound-sales-uk",
-      "description": "Basic CRM for the UK business \u2014 client discovery, meeting prep, account reporting and external research, over Salesforce and the Jira/Confluence delivery record.",
-      "version": "2.0.0"
     }
   ]
 }

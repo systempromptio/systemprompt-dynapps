@@ -53,14 +53,15 @@ systemprompt-web-content = { path = "../extensions/web/content" }
 systemprompt-web-jobs = { path = "../extensions/web/jobs" }
 systemprompt-web-extension = { path = "../extensions/web" }
 systemprompt-web-site = { path = "../extensions/web/site" }
+systemprompt-kit-export = { path = "../extensions/cli/kit-export" }
 
 # Core facade — DbPool / Database / identifiers for the integration crate.
 # The contract crate additionally enables `full`, which links the core
 # extension crates whose `register_extension!` registrations carry the
 # migrations the admin schema needs.
-systemprompt = { version = "0.57.0", default-features = false, features = ["core", "database"] }
-systemprompt-security = { version = "0.57.0" }
-systemprompt-api = { version = "0.57.0" }
+systemprompt = { version = "0.58.0", default-features = false, features = ["core", "database"] }
+systemprompt-security = { version = "0.58.0" }
+systemprompt-api = { version = "0.58.0" }
 
 # HTTP contract harness — drives the real admin router in-process.
 axum = "0.8"

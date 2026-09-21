@@ -1,0 +1,13 @@
+id: forecast_narrative
+name: Forecast Narrative
+description: Build a forecast-call brief from Salesforce opportunity aggregates, top-deal samples and
+  field history, covering the number, bucket movement, risks and asks. Use to explain a rep or team's
+  forecast; for a broader pipeline and coaching view, use team-pipeline.
+enabled: true
+file: SKILL.md
+tags:
+- astound
+- salesforce
+- sales
+category: business
+display_category: Salesforce

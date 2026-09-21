@@ -1,0 +1,13 @@
+id: deal_slip_scenario
+name: Deal Slip Scenario
+description: Model the impact of a deal slipping, shrinking or being lost from Salesforce pipeline and
+  forecast data plus an available quota, including the gap and substitutes. Use to test downside scenarios,
+  plan a backfill or judge whether the number still holds.
+enabled: true
+file: SKILL.md
+tags:
+- astound
+- salesforce
+- sales
+category: business
+display_category: Salesforce

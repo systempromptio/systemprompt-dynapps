@@ -1,5 +1,7 @@
-//! Restore the previous release's schema, run the current installer over it,
-//! and compare the result with a fresh install.
+//! Restore each released schema on the ladder, run the current installer
+//! over it, and compare the result with a fresh install.
+
+use std::path::PathBuf;
 
 use astound_test_common::{TempDb, db_or_skip, empty_db_or_skip, repo_path};
 use systemprompt::database::install_extension_schemas;
@@ -7,12 +9,15 @@ use systemprompt::extension::ExtensionRegistry;
 
 use crate::catalog;
 
-const FIXTURE: &str = "tests/fixtures/schema/release-baseline.sql";
+const FIXTURE_DIR: &str = "tests/fixtures/schema";
+const FIXTURE_PREFIX: &str = "release-baseline-";
 
-pub(super) fn fixture_sql() -> String {
-    let path = repo_path(FIXTURE);
-    let raw = std::fs::read_to_string(&path)
-        .unwrap_or_else(|e| panic!("read {}: {e} — run 'just schema-baseline'", path.display()));
+pub(super) struct Rung {
+    pub(super) version: String,
+    pub(super) sql: String,
+}
+
+fn strip_meta_commands(raw: &str) -> String {
     // Why: pg_dump emits `\restrict` / `\unrestrict` psql meta-commands and a
     // `set_config('search_path', '')` that would stick to the connection the
     // installer then uses; the recorder strips both, this is belt and braces.
@@ -22,23 +27,55 @@ pub(super) fn fixture_sql() -> String {
         .join("\n")
 }
 
-fn fixture_version() -> String {
-    fixture_sql()
-        .lines()
-        .next()
-        .and_then(|l| l.strip_prefix("-- systemprompt-astound release-baseline: "))
-        .and_then(|l| l.split_whitespace().next())
-        .map(str::to_owned)
-        .expect("fixture header names the release it records")
+fn semver_key(version: &str) -> Vec<u64> {
+    version
+        .split('.')
+        .map(|p| p.parse::<u64>().expect("release version component"))
+        .collect()
 }
 
-// Why: restore the fixture and upgrade it with the current installer; the
+// Why: every release since the floor is a rung; the gate
+// (scripts/check-schema-baseline.sh) keeps the set complete, this reads it.
+pub(super) fn ladder() -> Vec<Rung> {
+    let dir: PathBuf = repo_path(FIXTURE_DIR);
+    let mut rungs: Vec<Rung> = std::fs::read_dir(&dir)
+        .unwrap_or_else(|e| panic!("read {}: {e}", dir.display()))
+        .filter_map(|entry| {
+            let path = entry.expect("fixture dir entry").path();
+            let name = path.file_name()?.to_str()?.to_owned();
+            let version = name
+                .strip_prefix(FIXTURE_PREFIX)?
+                .strip_suffix(".sql")?
+                .to_owned();
+            let raw = std::fs::read_to_string(&path)
+                .unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
+            Some(Rung {
+                version,
+                sql: strip_meta_commands(&raw),
+            })
+        })
+        .collect();
+    assert!(
+        !rungs.is_empty(),
+        "no release-baseline-*.sql under {} — run 'just schema-baseline'",
+        dir.display()
+    );
+    rungs.sort_by_key(|r| semver_key(&r.version));
+    rungs
+}
+
+// Why: the stateful upgrade tests seed data against the most recent release.
+pub(super) fn fixture_sql() -> String {
+    ladder().pop().expect("at least one rung").sql
+}
+
+// Why: restore the rung and upgrade it with the current installer; the
 // caller owns the database.
-async fn restore_and_upgrade(db: &TempDb) {
-    sqlx::raw_sql(sqlx::AssertSqlSafe(fixture_sql()))
+async fn restore_and_upgrade(db: &TempDb, rung: &Rung) {
+    sqlx::raw_sql(sqlx::AssertSqlSafe(rung.sql.clone()))
         .execute(&*db.pool)
         .await
-        .expect("restore the previous release's schema");
+        .unwrap_or_else(|e| panic!("restore the release {} schema: {e}", rung.version));
     let registry = ExtensionRegistry::discover().expect("discover extension registrations");
     assert!(
         !registry.is_empty(),
@@ -50,46 +87,53 @@ async fn restore_and_upgrade(db: &TempDb) {
             "the current installer cannot upgrade a database left by release {}:\n{e}\n\n\
              This is the path every deployed instance takes and no other tier exercises. \
              Fix the declarative schema or add the migration the established database needs.",
-            fixture_version()
+            rung.version
         );
     }
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn previous_release_schema_upgrades_with_the_current_installer() {
-    let db = empty_db_or_skip!();
-    restore_and_upgrade(&db).await;
-    db.cleanup().await;
+async fn every_release_schema_upgrades_with_the_current_installer() {
+    for rung in ladder() {
+        let db = empty_db_or_skip!();
+        restore_and_upgrade(&db, &rung).await;
+        db.cleanup().await;
+    }
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn upgraded_schema_matches_a_fresh_install() {
-    let upgraded = empty_db_or_skip!();
-    restore_and_upgrade(&upgraded).await;
+async fn every_upgraded_schema_matches_a_fresh_install() {
     let fresh = db_or_skip!();
-
-    let upgraded_shape = catalog::snapshot(&upgraded.pool).await;
     let fresh_shape = catalog::snapshot(&fresh.pool).await;
-    let diff = catalog::diff(&upgraded_shape, &fresh_shape);
-
-    upgraded.cleanup().await;
     fresh.cleanup().await;
 
-    assert!(
-        diff.is_empty(),
-        "a database upgraded from release {} differs from a fresh install \
-         (- only after upgrade, + only on fresh):\n{diff}\n\
-         A migration and the declarative baseline disagree — fix the migration (existing \
-         databases) or the baseline (fresh installs); never both by hand.",
-        fixture_version()
-    );
+    for rung in ladder() {
+        let upgraded = empty_db_or_skip!();
+        restore_and_upgrade(&upgraded, &rung).await;
+        let upgraded_shape = catalog::snapshot(&upgraded.pool).await;
+        upgraded.cleanup().await;
+
+        let diff = catalog::diff(&upgraded_shape, &fresh_shape);
+        assert!(
+            diff.is_empty(),
+            "a database upgraded from release {} differs from a fresh install \
+             (- only after upgrade, + only on fresh):\n{diff}\n\
+             A migration and the declarative baseline disagree — fix the migration (existing \
+             databases) or the baseline (fresh installs); never both by hand.",
+            rung.version
+        );
+    }
 }
 
 #[test]
-fn fixture_header_names_a_release() {
-    let version = fixture_version();
-    assert!(
-        version.split('.').count() == 3 && version.chars().all(|c| c.is_ascii_digit() || c == '.'),
-        "{version}"
-    );
+fn every_rung_header_names_its_release() {
+    for rung in ladder() {
+        let header = rung.sql.lines().next().unwrap_or_default();
+        let recorded = header
+            .strip_prefix("-- systemprompt-astound release-baseline: ")
+            .and_then(|l| l.split_whitespace().next())
+            .unwrap_or_else(|| panic!("rung {} has no release-baseline header", rung.version));
+        assert_eq!(recorded, rung.version, "{header}");
+        assert_eq!(semver_key(&rung.version).len(), 3, "{}", rung.version);
+    }
 }

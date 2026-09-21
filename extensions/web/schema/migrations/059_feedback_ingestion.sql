@@ -1,3 +1,7 @@
+-- @supersedes-checksum: 6287024a34f58f36
+-- The text above that checksum shipped in 0.53.0 and created the traffic
+-- trigger unguarded; it is corrected here so a database that never ran it
+-- (older than 0.53) can, and every database that did keeps its row.
 CREATE TABLE IF NOT EXISTS feedback_ingestion_outbox (
     id TEXT PRIMARY KEY,
     kind TEXT NOT NULL CHECK(kind IN ('invocation','request','assessment','resource_association')),
@@ -181,8 +185,15 @@ BEGIN
     PERFORM enqueue_feedback_session(data->>'owner_id',data->>'session_id');
     RETURN COALESCE(NEW,OLD);
 END $$;
-DROP TRIGGER IF EXISTS feedback_capture_traffic ON eval_session_bindings;
-CREATE TRIGGER feedback_capture_traffic AFTER INSERT OR UPDATE OR DELETE ON eval_session_bindings FOR EACH ROW EXECUTE FUNCTION capture_feedback_traffic();
+-- `eval_session_bindings` is core's; marketplace 011 drops it, and marketplace
+-- migrations run before web's, so on a database older than 0.53 it is gone by
+-- the time this runs. The trigger dies with the table on every other path.
+DO $$ BEGIN
+    IF to_regclass('eval_session_bindings') IS NOT NULL THEN
+        EXECUTE 'DROP TRIGGER IF EXISTS feedback_capture_traffic ON eval_session_bindings';
+        EXECUTE 'CREATE TRIGGER feedback_capture_traffic AFTER INSERT OR UPDATE OR DELETE ON eval_session_bindings FOR EACH ROW EXECUTE FUNCTION capture_feedback_traffic()';
+    END IF;
+END $$;
 
 CREATE OR REPLACE FUNCTION feedback_fact_key(kind TEXT,event_key TEXT,request_key TEXT,consumer_key TEXT)
 RETURNS JSONB LANGUAGE sql IMMUTABLE AS $$

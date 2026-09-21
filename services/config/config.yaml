@@ -15,6 +15,9 @@ includes:
   - ../mcp/salesforce-crm-us.yaml
   - ../mcp/salesforce-crm-uk.yaml
   - ../mcp/salesforce-crm-dev.yaml
+  - ../mcp/salesforce-headless-us.yaml
+  - ../mcp/salesforce-headless-uk.yaml
+  - ../mcp/salesforce-headless-dev.yaml
   - ../mcp/atlassian.yaml
   - ../mcp/google_workspace.yaml
 

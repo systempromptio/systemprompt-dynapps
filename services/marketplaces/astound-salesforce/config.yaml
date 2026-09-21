@@ -1,0 +1,25 @@
+marketplace:
+  id: astound-salesforce
+  name: "Astound Digital — Salesforce"
+  description: "Salesforce account, pipeline, forecasting, meeting and outreach workflows with governed Headless 360 reads, approval-gated writes and dynamic visual artifacts."
+  version: "1.0.0"
+  visibility: private
+  author:
+    name: Astound Digital
+    email: ed@systemprompt.io
+  keywords: [astound, salesforce, sales, crm, reporting]
+  license: Apache-2.0
+  plugins:
+    source: explicit
+    include:
+      - astound-salesforce
+  mcp_servers:
+    source: explicit
+    include:
+      - salesforce-headless-us
+      - salesforce-headless-uk
+      - salesforce-headless-dev
+      - google_workspace
+  agents:
+    source: explicit
+    include: []

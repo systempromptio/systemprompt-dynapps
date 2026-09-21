@@ -70,8 +70,9 @@ pub use usage_rollup::UsageDailyRollupJob;
 pub mod internals {
     pub use crate::bundle_admin_css::{collect_css_files, concatenate_css_files};
     pub use crate::conversation_judge::{
-        Category, Classification, Outcome, TranscriptMeta, classification_schema,
-        parse_classification, render_transcript,
+        Category, Classification, ConversationClassifier, JudgeParams, JudgeVerdict, Outcome,
+        TranscriptMeta, classification_schema, parse_classification, render_transcript,
+        run_with_classifier,
     };
     pub use crate::copy_assets::{copy_all_assets, copy_asset};
     pub use crate::governance_bootstrap::{

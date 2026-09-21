@@ -15,6 +15,8 @@
 
 
 #[cfg(test)]
+mod analysis_report_digest;
+#[cfg(test)]
 mod analytics_content_metrics;
 #[cfg(test)]
 mod analytics_content_rollup;
@@ -34,6 +36,10 @@ mod analytics_session_children;
 mod analytics_session_detail;
 #[cfg(test)]
 mod analytics_site;
+#[cfg(test)]
+mod approvals;
+#[cfg(test)]
+mod conversation_facts_detail;
 #[cfg(test)]
 #[cfg(test)]
 mod dashboard_counters;
@@ -121,6 +127,8 @@ mod groups_marketplaces;
 mod groups_members;
 #[cfg(test)]
 mod groups_usage;
+#[cfg(test)]
+mod projects_crud;
 #[cfg(test)]
 mod projects_members;
 #[cfg(test)]

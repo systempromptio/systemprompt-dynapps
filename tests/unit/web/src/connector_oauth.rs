@@ -77,6 +77,55 @@ fn debug_redacts_connector_credentials() {
     assert_eq!(format!("{:?}", grant()), "Grant { <redacted> }");
 }
 
+// A failed connection probe is returned to the Connectors page as a report,
+// rather than bubbling out as a blank error. Keep the report stateful: a
+// later successful cleanup step must not make a failed handshake look green.
+#[test]
+fn verification_report_keeps_the_failed_stage_and_finishes_unsuccessfully() {
+    use std::time::Instant;
+    use systemprompt_web_admin::connector_oauth::VerificationReport;
+    use systemprompt_web_admin::error::AdminError;
+
+    let mut report = VerificationReport::for_provider("atlassian");
+    report.record(
+        "initialize",
+        Instant::now(),
+        &Ok("MCP session open at mcp.atlassian.com".to_owned()),
+    );
+    report.record(
+        "tools",
+        Instant::now(),
+        &Err(AdminError::Upstream(
+            "MCP server has no accessible tools".to_owned(),
+        )),
+    );
+    // The caller can still record a later stage while cleaning up a failed
+    // attempt; the first failure remains the outcome shown to the user.
+    report.record("identity", Instant::now(), &Ok("Pilot user".to_owned()));
+
+    let report = report.finish();
+    assert!(!report.ok);
+    assert_eq!(report.provider, "atlassian");
+    assert_eq!(report.steps.len(), 3);
+    assert!(report.steps[0].ok);
+    assert!(!report.steps[1].ok);
+    assert_eq!(report.steps[1].step, "tools");
+    assert_eq!(
+        report.error.as_deref(),
+        Some("Upstream error: MCP server has no accessible tools")
+    );
+}
+
+#[test]
+fn verification_report_does_not_mark_an_empty_probe_as_connected() {
+    use systemprompt_web_admin::connector_oauth::VerificationReport;
+
+    let report = VerificationReport::for_provider("atlassian").finish();
+    assert!(!report.ok);
+    assert!(report.steps.is_empty());
+    assert!(report.error.is_none());
+}
+
 #[tokio::test]
 async fn refresh_sends_the_user_grant_and_preserves_rotation() {
     let (url, mock) =

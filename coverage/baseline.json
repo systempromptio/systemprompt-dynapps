@@ -1,14 +1,15 @@
 {
   "floor": 75.0,
-  "total": 76.79,
+  "total": 80.79,
   "per_crate": {
-    "extensions/mcp/shared": 27.49,
-    "extensions/mcp/systemprompt": 43.86,
+    "extensions/cli/kit-export": 78.57,
+    "extensions/mcp/shared": 95.5,
+    "extensions/mcp/systemprompt": 89.86,
     "extensions/web": 82.57,
-    "extensions/web/admin": 75.89,
+    "extensions/web/admin": 79.93,
     "extensions/web/content": 96.27,
-    "extensions/web/jobs": 80.28,
+    "extensions/web/jobs": 81.34,
     "extensions/web/shared": 95.42,
-    "extensions/web/site": 83.5
+    "extensions/web/site": 83.93
   }
 }

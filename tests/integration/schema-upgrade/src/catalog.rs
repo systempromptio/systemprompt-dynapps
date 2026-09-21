@@ -121,6 +121,9 @@ async fn triggers(pool: &PgPool) -> Vec<String> {
     .await
 }
 
+// Why: functions a Postgres extension (pgcrypto, vector) installs belong to
+// the extension a release happened to load, not to the schema; an older
+// release's extension left behind is not a migration disagreement.
 async fn functions(pool: &PgPool) -> Vec<String> {
     rows(
         pool,
@@ -130,7 +133,9 @@ async fn functions(pool: &PgPool) -> Vec<String> {
                        p.prosecdef, p.provolatile, p.proparallel, p.proisstrict, p.proconfig) \
          FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace \
          JOIN pg_language l ON l.oid = p.prolang \
-         WHERE n.nspname = 'public'",
+         WHERE n.nspname = 'public' \
+           AND NOT EXISTS (SELECT 1 FROM pg_depend d WHERE d.classid = 'pg_proc'::regclass \
+                           AND d.objid = p.oid AND d.deptype = 'e')",
     )
     .await
 }

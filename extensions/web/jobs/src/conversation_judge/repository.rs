@@ -68,6 +68,7 @@ impl ConversationJudgeRepository {
         &self,
         limit: u32,
         manual_only: bool,
+        forced_context: Option<&ContextId>,
     ) -> Result<Vec<AnalysisLease>, JobError> {
         if !(1..=100).contains(&limit) {
             return Err(JobError::other("Invalid judge batch size"));
@@ -79,6 +80,7 @@ impl ConversationJudgeRepository {
                    WHERE status = 'pending' AND next_attempt <= clock_timestamp()
                      AND (lease_until IS NULL OR lease_until <= clock_timestamp())
                      AND (NOT $3::boolean OR trigger = 'manual')
+                     AND ($4::text IS NULL OR context_id = $4)
                    ORDER BY next_attempt, context_id LIMIT $1 FOR UPDATE SKIP LOCKED)
                UPDATE conversation_analyses a
                SET lease_token = $2, lease_until = clock_timestamp() + interval '5 minutes',
@@ -87,7 +89,8 @@ impl ConversationJudgeRepository {
                RETURNING a.context_id AS "context_id!: ContextId", a.trigger AS "trigger!""#,
             i64::from(limit),
             token,
-            manual_only
+            manual_only,
+            forced_context.map(ContextId::as_str)
         )
         .fetch_all(&self.pool)
         .await?;

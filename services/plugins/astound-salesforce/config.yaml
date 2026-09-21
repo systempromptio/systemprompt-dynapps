@@ -1,0 +1,61 @@
+plugin:
+  id: astound-salesforce
+  name: "Astound Digital — Salesforce"
+  description: "Thirty-two Salesforce sales workflows adapted from Salesforce's public Sales Cloud plugin, with optional Google Workspace evidence and dynamic Headless 360 widgets."
+  version: "1.0.0"
+  enabled: true
+  author:
+    name: Astound Digital
+    email: ed@systemprompt.io
+  keywords: [astound, salesforce, sales, crm, pipeline]
+  license: Apache-2.0
+  category: business
+  skills:
+    source: explicit
+    include:
+      - account_context
+      - account_tiering
+      - calendar_events
+      - call_follow_up
+      - call_prep
+      - close_plan
+      - customer_health
+      - customer_voice
+      - daily_briefing
+      - deal_advance_gap
+      - deal_review
+      - deal_signals
+      - deal_slip_scenario
+      - draft_outreach
+      - expansion_whitespace
+      - find_internal_answer
+      - forecast_narrative
+      - handle_objection
+      - inbox_sweep
+      - lead_triage
+      - pipeline_review
+      - query_activity_history
+      - renewal_radar
+      - rep_context
+      - research_prospect
+      - salesforce_hygiene_check
+      - stakeholder_map
+      - team_pipeline
+      - using_display_widget
+      - voice_profile
+      - weekly_wrap
+      - win_loss_review
+  agents:
+    source: explicit
+    include: []
+  mcp_servers:
+    source: explicit
+    include:
+      - salesforce-headless-us
+      - salesforce-headless-uk
+      - salesforce-headless-dev
+      - google_workspace
+  content_sources: {}
+  artifacts:
+    source: explicit
+    include: []

@@ -15,14 +15,14 @@ use serde_yaml::Value;
 use systemprompt::marketplace::{ImportOptions, import_anthropic_tree};
 use systemprompt::models::services::split_frontmatter;
 
-use crate::export::ExportReport;
+use crate::ExportReport;
 
 // Why: Anthropic's marketplace.json has no slot for these and core's sidecar
 // refuses them, so they are reported nowhere rather than as a loss.
 const NOT_IN_KIT_FORM: &[&str] = &["marketplace.keywords", "marketplace.license"];
 
 #[derive(Debug)]
-pub(crate) enum Diff {
+pub enum Diff {
     Value {
         file: String,
         path: String,
@@ -53,11 +53,7 @@ impl fmt::Display for Diff {
     }
 }
 
-pub(crate) fn round_trip(
-    kit: &Path,
-    services_root: &Path,
-    report: &ExportReport,
-) -> Result<Vec<Diff>> {
+pub fn round_trip(kit: &Path, services_root: &Path, report: &ExportReport) -> Result<Vec<Diff>> {
     let scratch = tempfile::tempdir().context("creating a scratch directory")?;
     let into = scratch.path().join("services");
     import_anthropic_tree(

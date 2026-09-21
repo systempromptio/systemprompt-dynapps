@@ -101,7 +101,7 @@ Follow Salesforce's [External Client App setup](https://developer.salesforce.com
 
 ### One entry per org: the org registry
 
-Salesforce has no central authorization server. Every org is its own login, holds its own user records, and a sandbox is served by a different hosted MCP endpoint. Astound therefore declares each org in `services/config/salesforce-orgs.yaml`, keyed by the id of the MCP server that fronts it (`salesforce-crm-us`, `salesforce-crm-uk`, `salesforce-<slug>`). A user picks the org on the profile page before signing in; the grant, the verification and every tool call are bound to that org. Every org shares one callback, `/api/public/connectors/salesforce/callback` — the org travels in the OAuth `state` — so adding an org never touches the app.
+Salesforce has no central authorization server. Every org is its own login, holds its own user records, and a sandbox is served by a different hosted MCP endpoint. Astound therefore declares each org-and-tool-surface in `services/config/salesforce-orgs.yaml`, keyed by the id of the MCP server that fronts it (`salesforce-crm-us`, `salesforce-headless-us`, `salesforce-<slug>`). A user picks the connection on the profile page before signing in; the grant, verification and every tool call are bound to it. Every entry shares one callback, `/api/public/connectors/salesforce/callback` — the server id travels in the OAuth `state` — so adding an entry never touches the app.
 
 ```yaml
 orgs:
@@ -109,16 +109,19 @@ orgs:
     label: "Client A — UAT sandbox"
     my_domain: https://client-a--uat.sandbox.my.salesforce.com
     environment: sandbox                      # production | sandbox
+    server_kind: headless_360                 # sobject_all (default) | headless_360
     org_id: 00DXXXXXXXXXXXXXXX                # optional; a consent in another org is refused
     groups: [Systemprompt-Commerce]           # empty = every active user
     # client_id_secret / client_secret: only for an org running its own app
 ```
 
-Each entry needs a matching `services/mcp/salesforce-<slug>.yaml` (type `external`, listed in `services/config/config.yaml`) whose endpoint matches the environment:
+Each entry needs a matching `services/mcp/salesforce-<slug>.yaml` (type `external`, listed in `services/config/config.yaml`) whose endpoint matches both the environment and `server_kind`:
 
 ```text
 production:  https://api.salesforce.com/platform/mcp/v1/platform/sobject-all
 sandbox:     https://api.salesforce.com/platform/mcp/v1/sandbox/platform/sobject-all
+headless:    https://api.salesforce.com/platform/mcp/v1/platform/headless-360
+headless sb: https://api.salesforce.com/platform/mcp/v1/sandbox/platform/headless-360
 ```
 
 The gateway refuses to start if an org names a server that is missing, disabled, internal, or on the wrong endpoint, or if `my_domain` does not match `environment`. It does **not** refuse to start when the shared secrets are absent: every org is shown as **Not provisioned** on the profile page until the operator has stored the packaged app's key and secret. `groups` controls who sees the row; a user outside those groups sees the org as not entitled and cannot connect, even by URL.

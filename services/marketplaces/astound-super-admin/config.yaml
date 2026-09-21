@@ -11,23 +11,15 @@ marketplace:
   license: proprietary
   # Who reaches this workspace is declared in services/access-control/rules.yaml
   # (entity marketplace/astound-super-admin), the single source of entitlement on this instance.
-  # Why: the UK sales bundle rides along here. rules.yaml grants the plugin and
-  # its skills to super_admin, but a plugin only reaches a user through a
-  # marketplace — so without this line those grants were inert and a super_admin
-  # who was not in the `uk` group got nothing from them.
   plugins:
     source: explicit
     include:
       - astound-super-admin
-      - astound-sales-uk
   mcp_servers:
     source: explicit
     include:
       - systemprompt
       - atlassian
-      - salesforce-crm-us
-      - salesforce-crm-uk
-      - salesforce-crm-dev
   agents:
     source: explicit
     include: []

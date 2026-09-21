@@ -83,4 +83,18 @@ impl TempDb {
         .await
         .expect("query recorded activity")
     }
+
+    // Metadata is part of the durable audit contract. Keep this separate from
+    // `mcp_rows` so its callers only read the columns their assertions need.
+    pub async fn mcp_metadata(&self, entity_name: &str) -> Vec<serde_json::Value> {
+        sqlx::query_scalar::<_, serde_json::Value>(
+            r"SELECT metadata
+              FROM user_activity
+              WHERE category = 'mcp_access' AND entity_name = $1",
+        )
+        .bind(entity_name)
+        .fetch_all(&*self.inner.pool)
+        .await
+        .expect("query recorded activity metadata")
+    }
 }
