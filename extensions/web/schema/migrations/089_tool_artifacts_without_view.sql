@@ -1,11 +1,12 @@
--- Twin of schema/46_tool_artifacts.sql plus the two artifact columns 45_
--- gains: tools and artifacts are distinct concepts, and `artifact_kind` is
--- the one rule that tells them apart. `conversation_facts.artifact_count`
--- now counts by that rule (it used to count every mcp_artifacts row, which
--- made every Edit, Read and Bash result an "artifact"); `artifact_files` and
--- `artifact_cards` split it. `analysis_reports` is the ledger of the
--- on-demand AI reports. The refresh function is re-declared here so an
--- established database counts the new way from this boot.
+-- Re-issue of 087_tool_artifacts without its `CREATE VIEW tool_activity`:
+-- that view selects from core's `tool_call_ledger`, a declarative view the
+-- installer only creates after migrations, so 087 failed every upgrade from
+-- a database that had never booted on core >= 0.55 ("relation
+-- tool_call_ledger does not exist"). `tool_activity` is declarative
+-- (schema/46_tool_artifacts.sql) and is created in the dependent phase;
+-- the rest of 087 is repeated verbatim so a database that never ran it
+-- still gains the columns, the functions and `analysis_reports`, and one
+-- that did is unchanged (every statement is idempotent).
 
 ALTER TABLE conversation_facts ADD COLUMN IF NOT EXISTS artifact_files BIGINT NOT NULL DEFAULT 0;
 ALTER TABLE conversation_facts ADD COLUMN IF NOT EXISTS artifact_cards BIGINT NOT NULL DEFAULT 0;
@@ -44,32 +45,6 @@ BEGIN
 EXCEPTION WHEN others THEN
     RETURN left(input, 160);
 END $$;
-
--- Every tool call with the artifact rule applied. The execution's own
--- context and trace ids are exposed beside the ledger's coalesced ones
--- because the conversation record joins hook-sourced executions through the
--- harness session (`trace_id`), which the ledger overwrites with the
--- request's trace when an intent row exists.
-DROP VIEW IF EXISTS tool_activity;
-CREATE VIEW tool_activity AS
-SELECT l.ai_tool_call_id, l.intent_id, l.request_id, l.mcp_execution_id, l.artifact_id,
-       l.user_id, l.session_id, l.context_id, l.trace_id, l.client_kind,
-       l.tool_name, l.server_name, l.intended_at, l.executed_at, l.completed_at,
-       l.execution_time_ms, l.execution_status, l.error_message, l.source, l.correlation,
-       l.artifact_type, l.artifact_title, l.is_structured, l.has_ui_resource, l.is_error,
-       l.payload_bytes, l.secret_redactions, l.state, l.occurred_at,
-       x.context_id AS execution_context_id,
-       x.trace_id AS execution_trace_id,
-       COALESCE(a.payload_sha256, x.payload_sha256) AS payload_sha256,
-       artifact_kind(l.tool_name, l.artifact_type, l.has_ui_resource, l.is_structured,
-                     COALESCE(a.payload_sha256, x.payload_sha256), x.input, b.is_builtin) AS artifact_kind,
-       tool_input_summary(x.input) AS input_summary,
-       b.is_builtin
-FROM tool_call_ledger l
-LEFT JOIN mcp_tool_executions x ON x.mcp_execution_id = l.mcp_execution_id
-LEFT JOIN mcp_artifacts a ON a.artifact_id = l.artifact_id
-CROSS JOIN LATERAL (SELECT (l.server_name IS NOT NULL AND l.server_name = l.source
-                            AND COALESCE(l.tool_name, '') NOT LIKE 'mcp\_\_%') AS is_builtin) b;
 
 CREATE TABLE IF NOT EXISTS analysis_reports (
     id TEXT PRIMARY KEY,

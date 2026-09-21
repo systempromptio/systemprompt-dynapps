@@ -141,7 +141,13 @@ Three things no gate catches on this path:
 
 - **Migrations run silently and are not reversible.** Run them and then check
   the tables the core changelog describes actually exist, rather than trusting
-  the success line.
+  the success line. What proves an upgrade from a *deployed* database is the
+  ladder in `tests/integration/schema-upgrade`: every rung is restored and
+  migrated forward by the current installer on each push, so a migration that
+  only works on a database that already booted on some newer schema (the
+  2026-09-21 self-host failure) fails here before it ships. A rung older than
+  the floor is a customer database nothing tests — raise the floor only when
+  no such instance exists.
 - **A new core job is inert until this repo schedules it.** Core discovers jobs
   by inventory; whether one *runs* comes from `services/scheduler/config.yaml`.
   Boot warns `job is available in this build but has no scheduler.jobs entry`
@@ -157,8 +163,11 @@ Step A.
 Before publication, prepare the changelog, version pins, `bridge/CORE_REF`, and
 removal of both `[patch.crates-io]` blocks. Once every required core crate exists
 on the sparse index, run `cargo update -w` in root, `tests/` and `bridge/` and
-commit all three lockfiles. Refresh the schema baseline from a fresh local
-schema installation; regenerate SQLx caches when query/schema inputs changed.
+commit all three lockfiles. Record the new rung of the schema-upgrade ladder
+(`just schema-baseline` writes `tests/fixtures/schema/release-baseline-X.Y.Z.sql`
+from a fresh local install; the ladder is append-only, one rung per release
+since 0.52.0, and `scripts/check-schema-baseline.sh` refuses a missing rung);
+regenerate SQLx caches when query/schema inputs changed.
 
 Build or clippy only code broken by the core upgrade. If core's bridge GUI
 changed, run `cargo check --manifest-path bridge/Cargo.toml --target

@@ -86,7 +86,7 @@ printf 'vX.Y.Z\n' > bridge/CORE_REF
 cargo update -w
 cargo update -w --manifest-path tests/Cargo.toml
 cargo update -w --manifest-path bridge/Cargo.toml
-# Refresh schema baseline and SQLx caches if their inputs changed.
+# Record the release's schema-upgrade rung (just schema-baseline) and refresh SQLx caches if their inputs changed.
 git add -A
 git commit -m "release: build against published core X.Y.Z"
 git push origin HEAD:next        # the full Gates matrix runs here

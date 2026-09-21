@@ -22,6 +22,7 @@ pub fn model(id: &str) -> ProviderModel {
         capabilities: ModelCapabilities::default(),
         limits: ModelLimits::default(),
         governance: None,
+        hidden: false,
     }
 }
 
@@ -81,5 +82,6 @@ pub fn config(routes: Vec<GatewayRoute>) -> GatewayConfig {
         system_prompt_overrides: Vec::new(),
         bridge_releases: None,
         quota_fault_mode: Default::default(),
+        automatic_prompt_caching: true,
     }
 }

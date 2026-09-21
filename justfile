@@ -506,31 +506,49 @@ coverage-check: coverage
 coverage-baseline: coverage
     UPDATE_BASELINE=1 bash scripts/coverage-check.sh
 
-# Record tests/fixtures/schema/release-baseline.sql: the schema a fresh install
-# of the current tree produces, plus its extension_migrations rows, dumped by
-# the local Postgres container's own pg_dump (always the server's major — the
-# host client may be older and refuse). The upgrade test restores it into an
-# empty database and runs the current installer over it, so the fixture must
-# be re-recorded (`just schema-baseline`, commit) whenever the workspace
-# version changes; scripts/check-schema-baseline.sh enforces that.
-schema-baseline:
+# Record tests/fixtures/schema/release-baseline-<version>.sql: the schema a
+# fresh install of a release produces, plus its extension_migrations rows,
+# dumped by the local Postgres container's own pg_dump (always the server's
+# major — the host client may be older and refuse). With no argument the
+# current tree is installed under the workspace version — run it after every
+# version bump (scripts/check-schema-baseline.sh enforces that). With a
+# version, that release's server tarball is fetched and ITS binary does the
+# install, so a rung can be added for a release that shipped before the
+# ladder existed. The upgrade test restores every rung into an empty database
+# and runs the current installer over it; the ladder is append-only.
+schema-baseline VERSION="":
     #!/usr/bin/env bash
     set -euo pipefail
-    just build
-    version="$(awk '/^\[workspace\.package\]/{p=1;next}/^\[/{p=0}p&&/^version[[:space:]]*=/{gsub(/[[:space:]"]/,""); sub(/^version=/,""); print; exit}' Cargo.toml)"
-    core_ref="$(tr -d '[:space:]' < bridge/CORE_REF)"
+    version="{{VERSION}}"
+    tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
+    if [ -n "$version" ]; then
+        [ "$(uname -s)" = "Linux" ] || { echo "schema-baseline: release tarballs are Linux-only" >&2; exit 1; }
+        case "$(uname -m)" in x86_64) arch=amd64 ;; aarch64|arm64) arch=arm64 ;; *) echo "schema-baseline: no tarball for $(uname -m)" >&2; exit 1 ;; esac
+        name="systemprompt-astound-server-$version-linux-$arch.tar.gz"
+        echo "schema-baseline: downloading $name"
+        gh release download "v$version" -R Astound-Digital/systemprompt-astound -p "$name" -p SHA256SUMS -D "$tmp"
+        (cd "$tmp" && grep " $name\$" SHA256SUMS | sha256sum -c - >/dev/null)
+        tar xzf "$tmp/$name" -C "$tmp"
+        cli="$tmp/${name%.tar.gz}/bin/systemprompt"
+        core_ref="v$version"
+    else
+        just build
+        version="$(awk '/^\[workspace\.package\]/{p=1;next}/^\[/{p=0}p&&/^version[[:space:]]*=/{gsub(/[[:space:]"]/,""); sub(/^version=/,""); print; exit}' Cargo.toml)"
+        core_ref="$(tr -d '[:space:]' < bridge/CORE_REF)"
+        cli="{{CLI}}"
+    fi
     container="$(docker compose -p "$(just _project_name local)" -f .systemprompt/docker/local.yaml ps -q postgres)"
     [ -n "$container" ] || { echo "schema-baseline: local Postgres is not running (just db-up)" >&2; exit 1; }
     base_url="$(jq -r '.database_url' .systemprompt/profiles/local/secrets.json)"
     scratch="sp_schema_baseline_$$"
     scratch_url="${base_url%/*}/$scratch"
-    fixture="tests/fixtures/schema/release-baseline.sql"
+    fixture="tests/fixtures/schema/release-baseline-$version.sql"
     mkdir -p "$(dirname "$fixture")"
-    cleanup() { docker exec "$container" psql -U systemprompt -d postgres -qc "DROP DATABASE IF EXISTS \"$scratch\" WITH (FORCE)" >/dev/null 2>&1 || true; }
+    cleanup() { docker exec "$container" psql -U systemprompt -d postgres -qc "DROP DATABASE IF EXISTS \"$scratch\" WITH (FORCE)" >/dev/null 2>&1 || true; rm -rf "$tmp"; }
     trap cleanup EXIT
     docker exec "$container" psql -U systemprompt -d postgres -qc "CREATE DATABASE \"$scratch\""
     echo "schema-baseline: fresh install of $version (core $core_ref) into $scratch"
-    if ! log="$(SYSTEMPROMPT_DATABASE_URL="$scratch_url" {{CLI}} infra db migrate --profile local 2>&1)"; then
+    if ! log="$(SYSTEMPROMPT_DATABASE_URL="$scratch_url" "$cli" infra db migrate --profile local 2>&1)"; then
         echo "$log" | tail -30; echo "schema-baseline: fresh install failed" >&2; exit 1
     fi
     {
