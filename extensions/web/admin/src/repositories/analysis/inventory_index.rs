@@ -6,20 +6,19 @@
 //! persisted. It describes the catalog as placed today; historical placement is
 //! not a retained dimension.
 
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
 use serde::Serialize;
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 
-use crate::repositories::groups::crud::list_group_summaries;
 use crate::repositories::marketplace::manifests::{
     MarketplaceConfigSummary, list_marketplace_configs,
 };
 use crate::repositories::marketplace::plugin_maps::{EntityPluginMap, build_entity_plugin_maps};
 use crate::repositories::users::access_control::{
-    MatrixSubject, SectionInput, group_subject, resolve_subject_matrices, role_subject,
+    MatrixSubject, SectionInput, resolve_subject_matrices, user_subject,
 };
 
 const MARKETPLACE_ENTITY: &str = "marketplace";
@@ -97,6 +96,34 @@ impl MarketplaceAudience {
             .map_or(0, HashSet::len)
     }
 
+    // Why: installs are receipts from anyone who ever installed; a rate over
+    // the entitled must count only the installed who are entitled, or one
+    // extra consumer reads as 200%.
+    #[must_use]
+    pub fn entitled_among(&self, marketplace: &str, consumers: &[String]) -> usize {
+        self.users_by_marketplace.get(marketplace).map_or(0, |set| {
+            let ids: HashSet<&str> = set.iter().map(UserId::as_str).collect();
+            consumers
+                .iter()
+                .filter(|c| ids.contains(c.as_str()))
+                .count()
+        })
+    }
+
+    #[must_use]
+    pub fn entitled_among_any(&self, consumers: &[String]) -> usize {
+        let ids: HashSet<&str> = self
+            .users_by_marketplace
+            .values()
+            .flatten()
+            .map(UserId::as_str)
+            .collect();
+        consumers
+            .iter()
+            .filter(|c| ids.contains(c.as_str()))
+            .count()
+    }
+
     #[must_use]
     pub fn users_reaching_any_marketplace(&self) -> usize {
         self.users_by_marketplace
@@ -110,28 +137,29 @@ impl MarketplaceAudience {
 #[derive(Debug, sqlx::FromRow)]
 struct MembershipRow {
     user_id: UserId,
-    group_ids: Vec<String>,
     roles: Vec<String>,
 }
 
-// Why: audience goes through the same subject resolver the enforcement point
-// uses, so a count here and a decision at the gateway cannot disagree.
+// Why: bounded so a large roster does not open one attribute lookup per
+// user at once against the pool; the audience is read per page render.
+const AUDIENCE_CONCURRENCY: usize = 8;
+
+// Why: audience is every signed-in person resolved as the subject the
+// enforcement point sees — own roles plus every registered dimension
+// (groups, projects, connectors, linked Salesforce identities) — so a count
+// here and a decision at the gateway cannot disagree. A marketplace opened by
+// a connected server reaches exactly the people holding that connection;
+// group and role bands alone would count it as reaching nobody.
 pub async fn get_marketplace_audience(
     pool: &PgPool,
     manifests: &[MarketplaceConfigSummary],
-    roles: &[String],
 ) -> Result<MarketplaceAudience, sqlx::Error> {
-    let groups = list_group_summaries(pool).await?;
-    let mut subjects: Vec<MatrixSubject> = Vec::with_capacity(groups.len() + roles.len());
-    let mut subject_keys: Vec<(bool, String)> = Vec::with_capacity(subjects.capacity());
-    for group in &groups {
-        subjects.push(group_subject(group.id.as_str()));
-        subject_keys.push((true, group.id.as_str().to_owned()));
-    }
-    for role in roles {
-        subjects.push(role_subject(role));
-        subject_keys.push((false, role.clone()));
-    }
+    let members = sqlx::query_as::<_, MembershipRow>(
+        "SELECT id AS user_id, roles FROM users WHERE NOT ('anonymous' = ANY(roles)) ORDER BY id",
+    )
+    .fetch_all(pool)
+    .await?;
+    let subjects = gather_subjects(pool, members).await?;
     let sections: Vec<SectionInput> = vec![(
         MARKETPLACE_ENTITY.to_owned(),
         "Marketplaces".to_owned(),
@@ -141,45 +169,43 @@ pub async fn get_marketplace_audience(
             .collect(),
     )];
     let resolved = resolve_subject_matrices(pool, &subjects, &sections).await?;
-    let mut allowed_groups: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
-    let mut allowed_roles: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
-    for ((is_group, key), sections) in subject_keys.into_iter().zip(resolved) {
+    let mut users_by_marketplace: HashMap<String, HashSet<UserId>> = manifests
+        .iter()
+        .map(|m| (m.id.as_str().to_owned(), HashSet::new()))
+        .collect();
+    for (subject, sections) in subjects.iter().zip(resolved) {
         for row in sections.into_iter().flat_map(|s| s.rows) {
-            if row.effective != "allow" {
-                continue;
+            if row.effective == "allow" {
+                users_by_marketplace
+                    .entry(row.entity_id)
+                    .or_default()
+                    .insert(subject.id.clone());
             }
-            let target = if is_group {
-                &mut allowed_groups
-            } else {
-                &mut allowed_roles
-            };
-            target.entry(row.entity_id).or_default().insert(key.clone());
         }
-    }
-    let members = sqlx::query_as::<_, MembershipRow>(
-        "SELECT u.id AS user_id, \
-         coalesce(array_agg(g.group_id) FILTER (WHERE g.group_id IS NOT NULL), '{}') AS group_ids, \
-         u.roles FROM users u LEFT JOIN user_groups g ON g.user_id = u.id \
-         WHERE NOT ('anonymous' = ANY(u.roles)) GROUP BY u.id, u.roles",
-    )
-    .fetch_all(pool)
-    .await?;
-    let mut users_by_marketplace: HashMap<String, HashSet<UserId>> = HashMap::new();
-    for manifest in manifests {
-        let id = manifest.id.as_str();
-        let groups = allowed_groups.get(id);
-        let roles = allowed_roles.get(id);
-        let reached = members
-            .iter()
-            .filter(|m| {
-                groups.is_some_and(|g| m.group_ids.iter().any(|x| g.contains(x)))
-                    || roles.is_some_and(|r| m.roles.iter().any(|x| r.contains(x)))
-            })
-            .map(|m| m.user_id.clone())
-            .collect();
-        users_by_marketplace.insert(id.to_owned(), reached);
     }
     Ok(MarketplaceAudience {
         users_by_marketplace,
     })
+}
+
+async fn gather_subjects(
+    pool: &PgPool,
+    members: Vec<MembershipRow>,
+) -> Result<Vec<MatrixSubject>, sqlx::Error> {
+    let mut subjects = Vec::with_capacity(members.len());
+    for chunk in members.chunks(AUDIENCE_CONCURRENCY) {
+        let mut set = tokio::task::JoinSet::new();
+        for member in chunk {
+            let pool = pool.clone();
+            let user_id = member.user_id.clone();
+            let roles = member.roles.clone();
+            set.spawn(async move { user_subject(&pool, &user_id, roles).await });
+        }
+        while let Some(joined) = set.join_next().await {
+            let subject = joined.map_err(|e| sqlx::Error::Protocol(e.to_string()))??;
+            subjects.push(subject);
+        }
+    }
+    subjects.sort_by(|a, b| a.id.as_str().cmp(b.id.as_str()));
+    Ok(subjects)
 }

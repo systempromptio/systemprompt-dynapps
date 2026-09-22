@@ -36,6 +36,7 @@ pub(super) struct ContextDetailPageContext {
     pub(super) entity_links: Vec<EntityLinkView>,
     pub(super) has_entity_links: bool,
     pub(super) entity_link_count: usize,
+    pub(super) document_export: crate::export::document::DocumentExportView,
 }
 
 #[derive(Debug, Serialize)]

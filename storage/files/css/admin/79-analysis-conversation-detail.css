@@ -110,12 +110,48 @@
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+/* The five planes under the ledger, stacked full width so every table has
+   the same width and its own header; a long plane scrolls inside itself
+   rather than stretching the page or its neighbours. */
 .sp-aconvd-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(28rem, 1fr));
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--sp-space-3);
 }
 .sp-aconvd-grid > .sp-section {
     min-width: 0;
+}
+.sp-aconvd-grid .sp-table__scroll {
+    max-block-size: 28rem;
+    overflow: auto;
+}
+.sp-aconvd-grid .sp-table__el thead th {
+    position: sticky;
+    inset-block-start: 0;
+    background: var(--sp-bg-surface);
+    z-index: 1;
+}
+.sp-aconvd-plane__head {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-space-2);
+    margin-block-end: var(--sp-space-2);
+    color: var(--sp-text-tertiary);
+}
+.sp-aconvd-plane__title {
+    margin: 0;
+    font-size: var(--sp-text-sm);
+    font-weight: var(--sp-font-semibold);
+    color: var(--sp-text-primary);
+}
+.sp-aconvd-plane__head .sp-btn {
+    margin-inline-start: auto;
+}
+.sp-aconvd-tools td,
+.sp-aconvd-artifacts td,
+.sp-aconvd-gov td,
+.sp-aconvd-skills td,
+.sp-aconvd-safety td {
+    font-size: var(--sp-text-sm);
 }
 }

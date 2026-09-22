@@ -145,17 +145,7 @@ fn people_routes() -> Router<Arc<PgPool>> {
 fn ai_activity_routes() -> Router<Arc<PgPool>> {
     Router::new()
         .route("/analytics", get(handlers::ssr::analytics_dashboard_page))
-        // Why: one export surface for every table the console renders — the
-        // file in any format and column selection, and the preview the
-        // dialog counts from. Which tables exist is `export::registry`.
-        .route(
-            "/export/{dataset}",
-            get(crate::export::handler::export_file),
-        )
-        .route(
-            "/export/{dataset}/preview",
-            get(crate::export::handler::export_preview),
-        )
+        .merge(super::ssr_export::routes())
         .route("/requests", get(handlers::ssr::analytics_requests_page))
         .route(
             "/requests/{request_id}",

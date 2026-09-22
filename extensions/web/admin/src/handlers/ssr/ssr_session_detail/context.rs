@@ -24,6 +24,7 @@ pub(super) struct SessionDetailPageContext {
     pub(super) has_ratings: bool,
     pub(super) rating_count: usize,
     pub(super) rating_average: Option<String>,
+    pub(super) document_export: crate::export::document::DocumentExportView,
 }
 
 #[derive(Debug, Serialize)]

@@ -95,6 +95,9 @@ pub(super) fn build_detail_data(
         .map_or_else(|| "Conversations".to_owned(), |_| "Session".to_owned());
     ContextDetailPageContext {
         page: "context-detail",
+        document_export: crate::export::document::DocumentExportView::conversation(
+            &header.context_id,
+        ),
         tabs: tab_links(header, active_tab, requests.len(), entity_link_views.len()),
         show_conversation: active_tab == TAB_CONVERSATION,
         show_requests: active_tab == TAB_REQUESTS,

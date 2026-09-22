@@ -1,7 +1,7 @@
 {{#> layout page_title=title page_id=page}}
 {{#*inline "content"}}
 {{#> components/page-header title=heading help=help subtitle=(concat display_name " · " client.label " · " first_display " → " last_display " · " duration_display)}}
-{{#*inline "header_actions"}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="{{context_href}}">Read transcript &rarr;</a> {{#if session_href}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="{{session_href}}">Session</a> {{/if}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="{{back_url}}">&larr; Conversations</a> {{> components/export-button export}}{{/inline}}
+{{#*inline "header_actions"}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="{{context_href}}">Read transcript &rarr;</a> {{#if session_href}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="{{session_href}}">Session</a> {{/if}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="{{back_url}}">&larr; Conversations</a> {{> components/export-button export}} {{> components/export-document document_export}}{{/inline}}
 {{/components/page-header}}
 {{> analysis-subnav}}
 <section class="sp-aconvd-head" aria-label="Record">
@@ -62,7 +62,8 @@
 {{/components/table}}
 </section>
 <section class="sp-section" aria-label="Governance">
-{{#> components/table caption="Governance decisions" modifier="sp-aconvd-gov"}}
+<header class="sp-aconvd-plane__head">{{> components/icon name="shield"}}<h2 class="sp-aconvd-plane__title">Governance <span class="sp-aconv-meta">{{decision_count}} decisions</span></h2><a class="sp-btn sp-btn--xs sp-btn--outline" href="/admin/governance?q={{context_key}}">All on the Governance page</a></header>
+{{#> components/table caption="Governance decisions — every tool call the chain evaluated for this conversation" modifier="sp-aconvd-gov"}}
 <thead><tr><th scope="col">Tool</th><th scope="col">Decision</th><th scope="col">Policy</th><th scope="col">Reason</th><th scope="col">Plugin</th><th scope="col">At</th></tr></thead>
 <tbody>
 {{#each decisions}}<tr><td class="sp-table__cell--primary"><code>{{tool_name}}</code></td><td>{{> components/badge tone=tone text=decision}}</td><td>{{policy}}</td><td class="sp-aconvd-reason" title="{{reason}}">{{truncate reason 90}}</td><td>{{plugin}}</td><td class="sp-col-date">{{at}}</td></tr>
@@ -71,6 +72,7 @@
 {{/components/table}}
 </section>
 <section class="sp-section" aria-label="Skills">
+<header class="sp-aconvd-plane__head">{{> components/icon name="skill"}}<h2 class="sp-aconvd-plane__title">Skills <span class="sp-aconv-meta">{{skill_count}} invoked</span></h2><a class="sp-btn sp-btn--xs sp-btn--outline" href="/admin/analysis/skills">All on the Skills page</a></header>
 {{#> components/table caption="Skills invoked, with the marketplace version served at the time" modifier="sp-aconvd-skills"}}
 <thead><tr><th scope="col">Skill</th><th scope="col">Plugin</th><th scope="col">Marketplace</th><th scope="col">Version</th><th scope="col" class="sp-table__cell--num">Invocations</th><th scope="col">First</th></tr></thead>
 <tbody>
@@ -80,7 +82,8 @@
 {{/components/table}}
 </section>
 <section class="sp-section" aria-label="Safety">
-{{#> components/table caption="Safety scanner findings" modifier="sp-aconvd-safety"}}
+<header class="sp-aconvd-plane__head">{{> components/icon name="alert"}}<h2 class="sp-aconvd-plane__title">Safety <span class="sp-aconv-meta">{{safety_count}} findings</span></h2></header>
+{{#> components/table caption="Safety scanner findings on this conversation's requests and responses" modifier="sp-aconvd-safety"}}
 <thead><tr><th scope="col">Phase</th><th scope="col">Category</th><th scope="col">Severity</th><th scope="col">Scanner</th><th scope="col">Blocked</th><th scope="col">At</th></tr></thead>
 <tbody>
 {{#each safety}}<tr><td>{{phase}}</td><td class="sp-table__cell--primary"><a class="sp-table__link" href="{{request_href}}">{{category}}</a></td><td>{{> components/badge tone=tone text=severity}}</td><td>{{scanner}}</td><td>{{#if blocked}}yes{{else}}no{{/if}}</td><td class="sp-col-date">{{at}}</td></tr>

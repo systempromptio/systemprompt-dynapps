@@ -34,7 +34,6 @@ use crate::repositories::analysis::skills::{
     SkillListFilter, SkillSort, SkillWindow, list_marketplace_adoption, list_skill_facts,
 };
 use crate::repositories::scope::ScopeRequest;
-use crate::types::Role;
 
 use context::{SkillsPageInputs, SkillsRead, build_context};
 pub(crate) use rows::skill_row_view;
@@ -163,11 +162,10 @@ pub(crate) async fn page(
         skills: None,
     };
     let index = InventoryIndex::build(&crate::handlers::shared::get_services_path()?);
-    let roles: Vec<String> = Role::ALL.iter().map(|r| r.as_str().to_owned()).collect();
     let (rows, adoption, audience) = tokio::join!(
         list_skill_facts(&pool, &window, &filter),
         list_marketplace_adoption(&pool, &window),
-        get_marketplace_audience(&pool, &index.marketplaces, &roles),
+        get_marketplace_audience(&pool, &index.marketplaces),
     );
     let (rows, adoption, audience) = (rows?, adoption?, audience?);
     let report_banner = crate::handlers::ssr::analysis::reports::banner::report_banner(

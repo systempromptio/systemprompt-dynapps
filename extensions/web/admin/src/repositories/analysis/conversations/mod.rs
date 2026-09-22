@@ -11,6 +11,7 @@
 //! parameters chosen by `CASE` arms, never interpolated text.
 
 pub mod detail;
+pub mod hook_events;
 mod filter;
 pub mod planes;
 mod row;

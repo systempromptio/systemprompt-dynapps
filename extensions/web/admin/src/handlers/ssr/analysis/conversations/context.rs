@@ -13,14 +13,14 @@ use crate::repositories::scope::ScopeRequest;
 use systemprompt::identifiers::UserId;
 
 use super::charts::series_charts;
+use super::exports::{DATASET, document_export_view, export_view};
 use super::filters::{filter_view, sort_headers};
 use super::kpis::KpisView;
 use super::page_context::ConversationsPageContext;
-use super::query::{BASE_URL, ConversationAnalysisQuery, PAGE_SIZE, export_preset};
+use super::query::{BASE_URL, ConversationAnalysisQuery, PAGE_SIZE};
 use super::summary::{CATEGORIES, ConversationBucketView, OUTCOMES, category_label};
 use super::view::ConversationRowView;
 
-const DATASET: &str = "analysis-conversations";
 
 // Why: the breakdown dimension's query parameter — the key a bucket row's
 // link and export narrow by; groups and projects narrow through the scope
@@ -228,19 +228,6 @@ fn ribbon(params: &ConversationAnalysisQuery, data: &ConversationAnalysisResult)
     chips(params, ribbon)
 }
 
-fn export_view(params: &ConversationAnalysisQuery) -> crate::export::ExportView {
-    crate::export::ExportView::new(
-        &[DATASET, "analysis-conversation-breakdown"],
-        &params
-            .preserved(&["page", "since", "preset"])
-            .iter()
-            .map(|(k, v)| format!("{k}={}", urlencoding::encode(v)))
-            .chain(std::iter::once(format!("preset={}", export_preset(params))))
-            .collect::<Vec<_>>()
-            .join("&"),
-    )
-}
-
 // Why: what the handler read besides the repository result.
 pub(super) struct ConversationsPageInputs {
     pub(super) scope_filter: ScopeFilterView,
@@ -291,6 +278,7 @@ pub(super) fn build_context(
         pagination: params.pagination(window),
         sort_headers: sort_headers(params),
         export: export_view(params),
+        document_export: document_export_view(params),
         help: conversations_help(),
         report_banner: inputs.report_banner,
         current_url,

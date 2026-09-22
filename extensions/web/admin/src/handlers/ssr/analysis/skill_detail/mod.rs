@@ -32,7 +32,6 @@ use crate::repositories::analysis::skills::{
     list_skill_conversations_paged, list_skill_daily,
 };
 use crate::repositories::scope::ScopeRequest;
-use crate::types::Role;
 
 use context::{SkillRead, build_context};
 
@@ -162,7 +161,6 @@ pub(crate) async fn skill_page(
         subject_ids: scope.as_sql().map(<[String]>::to_vec),
     };
     let index = InventoryIndex::build(&crate::handlers::shared::get_services_path()?);
-    let roles: Vec<String> = Role::ALL.iter().map(|r| r.as_str().to_owned()).collect();
     let (facts, daily, breakdown, conversations, audience) = tokio::join!(
         find_skill_facts(&pool, &window, &skill.skill),
         list_skill_daily(&pool, &window, &skill.skill),
@@ -174,7 +172,7 @@ pub(crate) async fn skill_page(
             PAGE_SIZE,
             query.page() * PAGE_SIZE
         ),
-        get_marketplace_audience(&pool, &index.marketplaces, &roles),
+        get_marketplace_audience(&pool, &index.marketplaces),
     );
     let (facts, daily, breakdown, (conversations, total), audience) =
         (facts?, daily?, breakdown?, conversations?, audience?);

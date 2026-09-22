@@ -157,6 +157,9 @@ const ACCOUNT_PATHS: &[(PathMatch, &str)] = &[
     // Why: the export of "My conversations" is identity-scoped like the page;
     // every other dataset refuses a caller itself (`export::model::DataSet::allows`).
     (PathMatch::Prefix, "/admin/export/history"),
+    // Why: the owner-facing conversation document; the handler 404s any
+    // context the caller does not own, the same as the page it sits on.
+    (PathMatch::Child, "/admin/export/conversation/"),
     (PathMatch::Exact, "/admin/connect"),
     (PathMatch::Exact, "/admin/connectors"),
     (PathMatch::Prefix, "/admin/requirements/"),
@@ -177,6 +180,7 @@ const PARTICIPANT_PATHS: &[(PathMatch, &str)] = &[
     (PathMatch::Exact, "/admin/analysis/conversations"),
     (PathMatch::Prefix, "/admin/analysis/versions"),
     (PathMatch::Prefix, "/admin/export/analysis-conversation"),
+    (PathMatch::Exact, "/admin/export/conversations"),
     (PathMatch::Prefix, "/admin/export/analysis-marketplaces"),
     (PathMatch::Prefix, "/admin/export/analysis-versions"),
     (PathMatch::Exact, "/admin/sync"),

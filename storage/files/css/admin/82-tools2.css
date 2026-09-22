@@ -71,30 +71,6 @@
     background: var(--sp-bg-surface-alt);
 }
 
-.sp-aconvd-plane__head {
-    display: flex;
-    align-items: center;
-    gap: var(--sp-space-2);
-    margin-block-end: var(--sp-space-2);
-    color: var(--sp-text-tertiary);
-}
-
-.sp-aconvd-plane__title {
-    margin: 0;
-    font-size: var(--sp-text-sm);
-    font-weight: var(--sp-font-semibold);
-    color: var(--sp-text-primary);
-}
-
-.sp-aconvd-plane__head .sp-btn {
-    margin-inline-start: auto;
-}
-
-.sp-aconvd-tools td,
-.sp-aconvd-artifacts td {
-    font-size: var(--sp-text-sm);
-}
-
 /* The pinned-window chip beside the presets, when a row link set the range. */
 .sp-tools-pinned {
     display: inline-flex;
