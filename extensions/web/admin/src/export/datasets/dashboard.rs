@@ -237,16 +237,15 @@ live_dataset!(
 
 const SESSION_COLUMNS: &[Column] = &[
     Column::new("updated_at", "Updated", CellKind::Timestamp),
-    Column::new("session_id", "Session", CellKind::Text),
+    Column::new("conversation_id", "Conversation", CellKind::Text),
+    Column::new("session_id", "Client session", CellKind::Text),
     Column::new("user_id", "User", CellKind::Text),
     Column::new("model", "Model", CellKind::Text),
     Column::new("cost_usd", "Cost (USD)", CellKind::Money),
-    Column::new("context_window", "Context window", CellKind::Integer),
+    Column::new("requests", "Requests", CellKind::Integer),
     Column::new("input_tokens", "Input tokens", CellKind::Integer),
     Column::new("output_tokens", "Output tokens", CellKind::Integer),
     Column::new("cache_read_tokens", "Cache read tokens", CellKind::Integer),
-    Column::new("rating", "Rating", CellKind::Integer),
-    Column::new("outcome", "Outcome", CellKind::Text),
 ];
 
 live_dataset!(
@@ -264,16 +263,15 @@ live_dataset!(
                 .map(|r| {
                     vec![
                         r.updated_at.into(),
-                        r.session_id.as_str().into(),
+                        r.context_id.as_str().into(),
+                        Cell::opt_text(r.session_id.as_ref().map(|s| s.as_str())),
                         r.user_id.as_str().into(),
                         Cell::opt_text(r.model.as_deref()),
                         Cell::Money(r.total_cost_microdollars),
-                        r.context_window_size.into(),
+                        r.request_count.into(),
                         r.input_tokens.into(),
                         r.output_tokens.into(),
                         r.cache_read_tokens.into(),
-                        Cell::opt_int(r.rating),
-                        Cell::opt_text(r.outcome.as_deref()),
                     ]
                 })
                 .collect(),

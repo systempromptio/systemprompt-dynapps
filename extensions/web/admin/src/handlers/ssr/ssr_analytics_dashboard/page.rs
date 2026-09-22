@@ -83,7 +83,6 @@ fn tab_views(
             &tab_sessions::SessionsInput {
                 rows: &fetched.tabs.sessions,
                 total_rows: fetched.tabs.sessions_total,
-                ratings: fetched.tabs.session_ratings,
                 page,
             },
             query,

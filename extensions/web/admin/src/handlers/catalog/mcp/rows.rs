@@ -58,7 +58,7 @@ impl Runtime {
                 .into_iter()
                 .map(|a| (a.server_name.clone(), a))
                 .collect(),
-            builtin_calls: builtin.iter().map(|a| a.calls + a.attested).sum(),
+            builtin_calls: builtin.iter().map(|a| a.calls).sum(),
         }
     }
 
@@ -144,15 +144,11 @@ pub(super) fn when_display(t: Option<DateTime<Utc>>) -> String {
     )
 }
 
-// Why: "12 of 13" reads as a fraction of the calls the server saw; with no
-// calls the count alone is the honest figure (a client attested calls the
-// server never recorded, which is its own finding).
+// Why: "12/13" reads as the share of calls the client's hook also
+// confirmed; attested is a subset of calls, so no calls means no figure.
 pub(super) fn attested_display(attested: i64, calls: i64) -> String {
-    if calls == 0 && attested == 0 {
-        return "\u{2014}".to_owned();
-    }
     if calls == 0 {
-        return attested.to_string();
+        return "\u{2014}".to_owned();
     }
     format!("{attested}/{calls}")
 }

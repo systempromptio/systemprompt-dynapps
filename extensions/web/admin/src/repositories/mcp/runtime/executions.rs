@@ -4,13 +4,12 @@
 //! every figure the MCP pages show about behaviour comes from here. Two rules
 //! shape every query:
 //!
-//! - A call is counted once, from the server's side. The proxy and the
-//!   in-process executor each write one row per call (`source` in `in_process`,
-//!   `proxy`); the client's completion hook writes a second row for the same
-//!   call (`hook_*`) that carries no duration and no output. Calls, errors and
-//!   latency read the server-observed rows; the hook rows are reported beside
-//!   them as *attested* — how many calls the client also confirmed — never
-//!   added to them.
+//! - A row is a call. The proxy and the in-process executor record the call as
+//!   it runs; the client's completion hook pairs onto that row and stamps its
+//!   `tool_use_id`, so *attested* is how many calls the client also confirmed
+//!   (`ai_tool_call_id` set), never a second count. A call only a hook saw
+//!   (`source` = `hook_*`) has no measured duration, so latency figures ignore
+//!   it by construction.
 //! - Failures are counted separately from timeouts because they are different
 //!   operator problems: a failing tool is a bug, a timing-out one is capacity.
 
@@ -45,46 +44,38 @@ pub async fn list_mcp_server_activity(
 ) -> Result<Vec<McpServerActivity>, sqlx::Error> {
     let rows = sqlx::query!(
         r#"WITH windowed AS (
-             SELECT x.*, a.payload_bytes, a.secret_redactions,
-                    (x.source IN ('in_process', 'proxy')) AS seen
+             SELECT x.*, a.payload_bytes, a.secret_redactions
                FROM mcp_tool_executions x
-               LEFT JOIN (
-                 SELECT mcp_execution_id,
-                        SUM(payload_bytes)::BIGINT AS payload_bytes,
-                        SUM(secret_redactions)::BIGINT AS secret_redactions
-                   FROM mcp_artifacts GROUP BY mcp_execution_id
-               ) a ON a.mcp_execution_id = x.mcp_execution_id
+               LEFT JOIN mcp_artifacts a ON a.mcp_execution_id = x.mcp_execution_id
               WHERE x.started_at >= $1 AND x.started_at < $2
            ),
            prior AS (
              SELECT server_name, COUNT(*)::BIGINT AS calls
                FROM mcp_tool_executions
               WHERE started_at >= $1 - ($2 - $1) AND started_at < $1
-                AND source IN ('in_process', 'proxy')
               GROUP BY server_name
            )
            SELECT
              w.server_name AS "server_name!",
-             COUNT(*) FILTER (WHERE w.seen)::BIGINT AS "calls!",
-             COUNT(*) FILTER (WHERE w.seen AND w.status = 'success')::BIGINT AS "succeeded!",
-             COUNT(*) FILTER (WHERE w.seen AND w.status = 'failed')::BIGINT AS "failures!",
-             COUNT(*) FILTER (WHERE w.seen AND w.status = 'timeout')::BIGINT AS "timeouts!",
-             COUNT(*) FILTER (WHERE w.source LIKE 'hook_%')::BIGINT AS "attested!",
-             COUNT(DISTINCT w.user_id) FILTER (WHERE w.seen)::BIGINT AS "distinct_users!",
-             COUNT(DISTINCT w.session_id) FILTER (WHERE w.seen)::BIGINT AS "distinct_sessions!",
-             COUNT(DISTINCT w.tool_name) FILTER (WHERE w.seen)::BIGINT AS "distinct_tools!",
-             AVG(w.execution_time_ms) FILTER (WHERE w.seen)::FLOAT8 AS "avg_ms?",
-             PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY w.execution_time_ms)
-               FILTER (WHERE w.seen)::FLOAT8 AS "p95_ms?",
-             COALESCE(SUM(w.payload_bytes) FILTER (WHERE w.seen), 0)::BIGINT AS "payload_bytes!",
-             COALESCE(SUM(w.secret_redactions) FILTER (WHERE w.seen), 0)::BIGINT
-               AS "secret_redactions!",
-             MAX(w.started_at) FILTER (WHERE w.seen) AS "last_call_at?",
+             COUNT(*)::BIGINT AS "calls!",
+             COUNT(*) FILTER (WHERE w.status = 'success')::BIGINT AS "succeeded!",
+             COUNT(*) FILTER (WHERE w.status = 'failed')::BIGINT AS "failures!",
+             COUNT(*) FILTER (WHERE w.status = 'timeout')::BIGINT AS "timeouts!",
+             COUNT(*) FILTER (WHERE w.ai_tool_call_id IS NOT NULL)::BIGINT AS "attested!",
+             COUNT(DISTINCT w.user_id)::BIGINT AS "distinct_users!",
+             COUNT(DISTINCT w.session_id)::BIGINT AS "distinct_sessions!",
+             COUNT(DISTINCT w.tool_name)::BIGINT AS "distinct_tools!",
+             AVG(w.execution_time_ms)::FLOAT8 AS "avg_ms?",
+             PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY w.execution_time_ms)::FLOAT8
+               AS "p95_ms?",
+             COALESCE(SUM(w.payload_bytes), 0)::BIGINT AS "payload_bytes!",
+             COALESCE(SUM(w.secret_redactions), 0)::BIGINT AS "secret_redactions!",
+             MAX(w.started_at) AS "last_call_at?",
              COALESCE(MAX(p.calls), 0)::BIGINT AS "prior_calls!"
            FROM windowed w
            LEFT JOIN prior p ON p.server_name = w.server_name
           GROUP BY w.server_name
-          ORDER BY COUNT(*) FILTER (WHERE w.seen) DESC"#,
+          ORDER BY COUNT(*) DESC"#,
         from,
         to
     )
@@ -141,41 +132,26 @@ pub async fn list_mcp_tool_stats(
         r#"WITH windowed AS (
              SELECT x.*, a.payload_bytes
                FROM mcp_tool_executions x
-               LEFT JOIN (
-                 SELECT mcp_execution_id, SUM(payload_bytes)::BIGINT AS payload_bytes
-                   FROM mcp_artifacts GROUP BY mcp_execution_id
-               ) a ON a.mcp_execution_id = x.mcp_execution_id
+               LEFT JOIN mcp_artifacts a ON a.mcp_execution_id = x.mcp_execution_id
               WHERE ($1::TEXT IS NULL OR x.server_name = $1)
                 AND x.started_at >= $2 AND x.started_at < $3
            )
            SELECT
              server_name AS "server_name!",
              tool_name AS "tool_name!",
-             COUNT(*) FILTER (WHERE source IN ('in_process', 'proxy'))::BIGINT AS "calls!",
-             COUNT(*) FILTER (
-               WHERE source IN ('in_process', 'proxy') AND status IN ('failed', 'timeout')
-             )::BIGINT AS "failures!",
-             COUNT(*) FILTER (WHERE source LIKE 'hook_%')::BIGINT AS "attested!",
-             COUNT(DISTINCT user_id) FILTER (
-               WHERE source IN ('in_process', 'proxy')
-             )::BIGINT AS "distinct_users!",
-             AVG(execution_time_ms) FILTER (
-               WHERE source IN ('in_process', 'proxy')
-             )::FLOAT8 AS "avg_ms?",
-             PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY execution_time_ms)
-               FILTER (WHERE source IN ('in_process', 'proxy'))::FLOAT8 AS "p95_ms?",
-             MAX(execution_time_ms) FILTER (
-               WHERE source IN ('in_process', 'proxy')
-             ) AS "max_ms?",
-             COALESCE(SUM(payload_bytes) FILTER (
-               WHERE source IN ('in_process', 'proxy')
-             ), 0)::BIGINT AS "payload_bytes!",
-             MAX(started_at) FILTER (
-               WHERE source IN ('in_process', 'proxy')
-             ) AS "last_call_at?"
+             COUNT(*)::BIGINT AS "calls!",
+             COUNT(*) FILTER (WHERE status IN ('failed', 'timeout'))::BIGINT AS "failures!",
+             COUNT(*) FILTER (WHERE ai_tool_call_id IS NOT NULL)::BIGINT AS "attested!",
+             COUNT(DISTINCT user_id)::BIGINT AS "distinct_users!",
+             AVG(execution_time_ms)::FLOAT8 AS "avg_ms?",
+             PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY execution_time_ms)::FLOAT8
+               AS "p95_ms?",
+             MAX(execution_time_ms) AS "max_ms?",
+             COALESCE(SUM(payload_bytes), 0)::BIGINT AS "payload_bytes!",
+             MAX(started_at) AS "last_call_at?"
            FROM windowed
           GROUP BY server_name, tool_name
-          ORDER BY COUNT(*) FILTER (WHERE source IN ('in_process', 'proxy')) DESC, tool_name
+          ORDER BY COUNT(*) DESC, tool_name
           LIMIT $4"#,
         server_name,
         from,

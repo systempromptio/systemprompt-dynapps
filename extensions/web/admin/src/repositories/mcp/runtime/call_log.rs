@@ -1,9 +1,9 @@
 //! Who called an MCP server, and the raw call log behind it.
 //!
-//! Both read `mcp_tool_executions` directly. The callers roll up the
-//! server-observed rows per person, so the figure agrees with the Calls tile;
-//! the call log keeps every row and says on each which side recorded it, so a
-//! reader can tell the server's own record from the client's attestation.
+//! Both read `mcp_tool_executions` directly, where a row is one call. The
+//! callers roll it up per person, so the figure agrees with the Calls tile;
+//! the call log keeps every row and says on each which side recorded it and
+//! whether the client's completion hook attested it (`ai_tool_call_id`).
 
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
@@ -19,8 +19,8 @@ pub struct McpCallerRow {
     pub last_call_at: Option<DateTime<Utc>>,
 }
 
-// Why: Who has been using one server in the window, heaviest first. Only
-// server-observed rows count, so the figure agrees with the Calls tile.
+// Why: Who has been using one server in the window, heaviest first; a row
+// is a call, so the figure agrees with the Calls tile.
 pub async fn list_mcp_callers(
     pool: &PgPool,
     server_name: &str,
@@ -40,7 +40,6 @@ pub async fn list_mcp_callers(
            LEFT JOIN users u ON u.id = x.user_id
           WHERE x.server_name = $1
             AND x.started_at >= $2 AND x.started_at < $3
-            AND x.source IN ('in_process', 'proxy')
           GROUP BY x.user_id, u.display_name, u.full_name, u.name, u.email
           ORDER BY COUNT(*) DESC, MAX(x.started_at) DESC
           LIMIT $4"#,
@@ -99,9 +98,9 @@ pub struct CallLogQuery<'a> {
     pub offset: i64,
 }
 
-// Why: The raw call log in the window, newest first, every source included —
-// the `source` column is what tells a server-observed row from the client's
-// attestation of the same call.
+// Why: The raw call log in the window, newest first — the `source` column
+// says which vantage point recorded the call, and `ai_tool_call_id` whether
+// the client attested it.
 pub async fn list_mcp_executions_paged(
     pool: &PgPool,
     q: CallLogQuery<'_>,
@@ -148,16 +147,11 @@ async fn page_mcp_executions(
              x.ai_tool_call_id AS "ai_tool_call_id?",
              x.input AS "input!",
              x.error_message AS "error_message?",
-             a.payload_bytes AS "payload_bytes?",
-             a.secret_redactions AS "secret_redactions?"
+             a.payload_bytes::BIGINT AS "payload_bytes?",
+             a.secret_redactions::BIGINT AS "secret_redactions?"
            FROM mcp_tool_executions x
            LEFT JOIN users u ON u.id = x.user_id
-           LEFT JOIN (
-             SELECT mcp_execution_id,
-                    SUM(payload_bytes)::BIGINT AS payload_bytes,
-                    SUM(secret_redactions)::BIGINT AS secret_redactions
-               FROM mcp_artifacts GROUP BY mcp_execution_id
-           ) a ON a.mcp_execution_id = x.mcp_execution_id
+           LEFT JOIN mcp_artifacts a ON a.mcp_execution_id = x.mcp_execution_id
           WHERE ($1::TEXT IS NULL OR x.server_name = $1)
             AND x.started_at >= $2 AND x.started_at < $3
           ORDER BY x.started_at DESC

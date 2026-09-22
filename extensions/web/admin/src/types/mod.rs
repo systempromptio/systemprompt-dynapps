@@ -113,7 +113,4 @@ pub use users::{
     UserBasicInfo, UserDetail, UserIdentityRow, UserRolesResponse, UserSession, UserSummary,
     UserTier, UserUsageEvent, UsersQuery,
 };
-pub use webhook::{
-    GovernQuery, HookEventPayload, StatusLinePayload, StatusLineQuery, TrackQuery,
-    TranscriptPayload, TranscriptQuery,
-};
+pub use webhook::{GovernQuery, HookEventPayload, TrackQuery};

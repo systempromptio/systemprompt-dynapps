@@ -90,16 +90,16 @@ pub(super) fn caller_rows(rows: Vec<McpCallerRow>) -> Vec<McpCallerRowView> {
         .collect()
 }
 
-// Why: the badge says which side of the call this row is — the server's own
-// record, or the client confirming it happened. The tone separates the two
-// at a glance so a log with both does not read as twice the traffic.
+// Why: the badge says which vantage point recorded the call. A hook-only
+// row is a call the client attested and no server observed (an in-process
+// tool a hook alone reported), which is its own finding.
 fn source_badge(source: &str) -> (&'static str, &'static str) {
     match ExecutionSource::parse(source) {
         Some(ExecutionSource::InProcess) => ("server", "ok"),
         Some(ExecutionSource::Proxy) => ("proxy", "ok"),
         Some(ExecutionSource::Gateway) => ("gateway", "info"),
         Some(ExecutionSource::HookClaudeCode | ExecutionSource::HookOpenCode) => {
-            ("attested", "muted")
+            ("hook only", "muted")
         },
         None => ("unknown", "muted"),
     }

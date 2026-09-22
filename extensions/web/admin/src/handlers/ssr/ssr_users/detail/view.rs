@@ -8,6 +8,7 @@ pub(super) use super::access_view::access_tab;
 
 use crate::handlers::ssr::list_view::{PageWindow, Pagination};
 use crate::handlers::ssr::ssr_history::{HistoryRowView, HistoryView, row_view};
+use crate::repositories::devices::bridge_presence;
 use crate::repositories::scope::defaults::ScopeDefaults;
 use crate::repositories::users::enrolment::UserDeviceRow;
 use crate::repositories::users::sessions::SigninSessionRow;
@@ -119,18 +120,41 @@ fn scope_options(
     out
 }
 
+// Why: a bridge row is a heartbeat, not a credential — it is never revoked,
+// so its state is presence (online / idle / stale by the fleet rule); a
+// certificate or token is active until revoked. "Active" on the tab counts
+// bridges online now plus credentials still valid.
 pub(super) fn devices_tab(rows: Vec<UserDeviceRow>) -> DevicesTabView {
-    let active_count = rows.iter().filter(|r| r.revoked_at.is_none()).count();
+    let now = Utc::now();
+    let rows: Vec<DeviceRowView> = rows.into_iter().map(|r| device_row(r, now)).collect();
+    let active_count = rows.iter().filter(|r| r.is_active).count();
     DevicesTabView {
         count: rows.len(),
         active_count,
         has_rows: !rows.is_empty(),
-        rows: rows.into_iter().map(device_row).collect(),
+        rows,
     }
 }
 
-fn device_row(row: UserDeviceRow) -> DeviceRowView {
+fn device_state(row: &UserDeviceRow, now: DateTime<Utc>) -> (&'static str, &'static str, bool) {
+    if row.revoked_at.is_some() {
+        return ("Revoked", "muted", false);
+    }
+    if row.kind != "bridge" {
+        return ("Active", "ok", true);
+    }
+    match row.last_seen_at {
+        Some(last) => {
+            let presence = bridge_presence(now, last);
+            (presence.label(), presence.tone(), presence.is_online())
+        },
+        None => ("Silent", "muted", false),
+    }
+}
+
+fn device_row(row: UserDeviceRow, now: DateTime<Utc>) -> DeviceRowView {
     let revoked = row.revoked_at.is_some();
+    let (status_label, status_tone, is_active) = device_state(&row, now);
     DeviceRowView {
         kind_label: match row.kind.as_str() {
             "bridge" => "Bridge",
@@ -141,8 +165,9 @@ fn device_row(row: UserDeviceRow) -> DeviceRowView {
         detail: row.detail.unwrap_or_default(),
         created_at: stamp(row.created_at),
         last_seen: stamp(row.last_seen_at),
-        status_label: if revoked { "Revoked" } else { "Active" },
-        status_tone: if revoked { "muted" } else { "ok" },
+        status_label,
+        status_tone,
+        is_active,
         revocable: row.revocable && !revoked,
         kind: row.kind,
         id: row.id,
@@ -155,7 +180,13 @@ pub(super) fn sessions_tab(
     page: i64,
     page_size: i64,
 ) -> UserSessionsTabView {
-    let live_count = rows.iter().filter(|r| r.revoked_at.is_none()).count();
+    // Why: the row badge says Live only when the session is neither revoked
+    // nor past its expiry; the count must agree with the badges beneath it.
+    let now = Utc::now();
+    let live_count = rows
+        .iter()
+        .filter(|r| r.revoked_at.is_none() && r.expires_at.is_none_or(|e| e >= now))
+        .count();
     let total = i64::try_from(rows.len()).unwrap_or(i64::MAX);
     let offset = usize::try_from(page * page_size).unwrap_or(0);
     let take = usize::try_from(page_size).unwrap_or(50);

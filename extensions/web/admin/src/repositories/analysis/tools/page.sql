@@ -3,7 +3,10 @@
 -- every bucket of the window, one breakdown dimension, the facet lists and
 -- one page of rows. The Artifacts page is the same statement with
 -- $14 (artifacts only) true. Filtering, paging and sorting are bound
--- parameters chosen by CASE arms, never interpolated text.
+-- parameters chosen by CASE arms, never interpolated text. A host-native
+-- tool (Bash, Read, …) has no MCP server, so the server facet and the
+-- server breakdown leave builtins out unless $7 asks for them; totals count
+-- every row.
 WITH f AS MATERIALIZED (
     SELECT t.*,
            COALESCE(t.mcp_execution_id, t.ai_tool_call_id, t.intent_id) AS row_key,
@@ -111,6 +114,7 @@ WITH f AS MATERIALIZED (
            percentile_cont(0.95) WITHIN GROUP (ORDER BY k.execution_time_ms)::float8 AS p95_duration_ms,
            COALESCE(SUM(k.payload_bytes) FILTER (WHERE k.artifact_kind IS NOT NULL), 0)::bigint AS bytes
     FROM keyed k
+    WHERE NOT ($21::text = 'server' AND k.is_builtin AND $7::boolean IS DISTINCT FROM TRUE)
     GROUP BY k.bucket, k.bucket_value
     ORDER BY calls DESC, label
     LIMIT 100
@@ -131,7 +135,8 @@ WITH f AS MATERIALIZED (
     SELECT tool_name AS value, COUNT(*)::bigint AS calls FROM s WHERE tool_name IS NOT NULL
     GROUP BY tool_name ORDER BY calls DESC, value LIMIT 200
 ), servers AS (
-    SELECT server_name AS value, COUNT(*)::bigint AS calls FROM s WHERE server_name IS NOT NULL
+    SELECT server_name AS value, COUNT(*)::bigint AS calls FROM s
+    WHERE server_name IS NOT NULL AND ($7::boolean IS TRUE OR NOT is_builtin)
     GROUP BY server_name ORDER BY calls DESC, value LIMIT 100
 ), users AS (
     SELECT user_id AS value, MAX(display_name) AS label, COUNT(*)::bigint AS calls FROM s

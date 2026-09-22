@@ -4,7 +4,7 @@
 use sqlx::PgPool;
 use systemprompt::identifiers::{AgentId, AiRequestId, PluginId, SessionId, TraceId, UserId};
 
-use super::{AiRequestSummary, ChainUsageEvent, DecisionStage, SessionSummary, TranscriptEnvelope};
+use super::{AiRequestSummary, ChainUsageEvent, DecisionStage, SessionSummary};
 
 #[derive(Debug)]
 pub(super) struct DecisionUserSlots {
@@ -168,43 +168,12 @@ pub(super) async fn list_events(
     .collect())
 }
 
-pub(super) async fn find_transcript(
-    pool: &PgPool,
-    session_id: &SessionId,
-) -> Result<Option<TranscriptEnvelope>, sqlx::Error> {
-    Ok(sqlx::query!(
-        r#"SELECT id as "id!",
-                  model,
-                  entries_counted,
-                  total_input_tokens,
-                  total_output_tokens,
-                  captured_at as "captured_at!",
-                  transcript as "transcript!"
-           FROM session_transcripts
-           WHERE session_id = $1
-           ORDER BY captured_at DESC
-           LIMIT 1"#,
-        session_id.as_str(),
-    )
-    .fetch_optional(pool)
-    .await?
-    .map(|r| TranscriptEnvelope {
-        id: r.id,
-        model: r.model,
-        entries_counted: r.entries_counted,
-        total_input_tokens: r.total_input_tokens,
-        total_output_tokens: r.total_output_tokens,
-        captured_at: r.captured_at,
-        transcript: r.transcript,
-    }))
-}
-
 pub(super) async fn find_summary(
     pool: &PgPool,
     session_id: &SessionId,
 ) -> Result<Option<SessionSummary>, sqlx::Error> {
     Ok(sqlx::query!(
-        r"SELECT ai_title, ai_summary, ai_tags, model, status, started_at, ended_at
+        r"SELECT ai_title, ai_summary, model, status, started_at, ended_at
           FROM plugin_session_summaries
           WHERE session_id = $1
           LIMIT 1",
@@ -215,7 +184,6 @@ pub(super) async fn find_summary(
     .map(|r| SessionSummary {
         ai_title: r.ai_title,
         ai_summary: r.ai_summary,
-        ai_tags: r.ai_tags,
         model: r.model,
         status: r.status,
         started_at: r.started_at,

@@ -24,7 +24,9 @@ pub struct SessionHeader {
     pub groups: Vec<String>,
     pub started_at: Option<DateTime<Utc>>,
     pub last_activity_at: Option<DateTime<Utc>>,
-    pub status: Option<String>,
+    // Why: the one liveness fact the rows hold — a `SessionEnd` was seen.
+    // Live versus stale is decided by the reader from `last_activity_at`.
+    pub completed: bool,
     pub model: Option<String>,
     pub plugin_id: Option<PluginId>,
     pub ai_title: Option<String>,
@@ -108,12 +110,16 @@ pub async fn find_session_header(
             ARRAY(SELECT ug.group_id FROM user_groups ug
                    WHERE ug.user_id = u.id)          AS "groups!: Vec<String>",
             COALESCE(s.started_at, r.first_seen) AS "started_at?",
-            -- A hook session that never wrote an `ended_at` still has a last
-            -- activity: the moment it started. Falling through to NULL made
-            -- the field, and the duration derived from it, read as unknown.
-            GREATEST(r.last_seen, COALESCE(s.ended_at, s.started_at))
+            -- The last thing the session did from any vantage point: the
+            -- last gateway request, the last hook event, or its end. A hook
+            -- session that never wrote an `ended_at` still has a last
+            -- activity: the moment it started.
+            GREATEST(r.last_seen, h.last_event, COALESCE(s.ended_at, s.started_at))
                                                  AS "last_activity_at?",
-            s.status                             AS "status?",
+            -- Only the end is a fact the row can state; a session with no
+            -- end is live or stale by how recently it did anything, which
+            -- the reader decides against the heartbeat window.
+            (s.ended_at IS NOT NULL OR s.status = 'completed') AS "completed!",
             COALESCE(s.model, r.model)           AS "model?",
             s.plugin_id                          AS "plugin_id?: PluginId",
             s.ai_title                           AS "ai_title?"
@@ -129,6 +135,11 @@ pub async fn find_session_header(
             WHERE session_id = $1 OR client_session_id = $1
         ) r
         LEFT JOIN plugin_session_summaries s ON s.session_id = $1
+        LEFT JOIN LATERAL (
+            SELECT MAX(e.created_at) AS last_event
+            FROM plugin_usage_events e
+            WHERE e.session_id = $1
+        ) h ON TRUE
         LEFT JOIN users u ON u.id = COALESCE(s.user_id, r.user_id)
         WHERE r.request_count > 0 OR s.session_id IS NOT NULL
         LIMIT 1

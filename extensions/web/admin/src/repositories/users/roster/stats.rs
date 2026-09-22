@@ -42,12 +42,9 @@ pub async fn get_roster_stats(
                SELECT b.id, b.is_active,
                       cardinality(array_remove(array_remove(b.roles, 'user'), 'anonymous')) = 0 AS no_role,
                       EXISTS (SELECT 1 FROM user_groups ug WHERE ug.user_id = b.id AND ug.group_id = 'unassigned') AS unassigned,
-                      GREATEST(
-                        (SELECT MAX(ar.created_at) FROM ai_requests ar WHERE ar.user_id = b.id),
-                        (SELECT MAX(us.last_activity_at) FROM user_sessions us WHERE us.user_id = b.id),
-                        (SELECT MAX(ua.created_at) FROM user_activity ua WHERE ua.user_id = b.id)
-                      ) AS last_active
+                      seen.last_seen_at AS last_active
                  FROM base b
+                 LEFT JOIN user_last_seen seen ON seen.user_id = b.id
            ), spend AS (
                SELECT
                  COALESCE(SUM(ar.cost_microdollars) FILTER (

@@ -145,6 +145,8 @@ mod jobs_robots_llms;
 #[cfg(test)]
 mod link_models;
 #[cfg(test)]
+mod migration_cost;
+#[cfg(test)]
 mod month_range;
 #[cfg(test)]
 mod observability_view;
@@ -273,7 +275,6 @@ mod secrets_crypto_pure;
 #[cfg(test)]
 mod services_tree_declarations;
 #[cfg(test)]
-mod statusline_ingest_pure;
 #[cfg(test)]
 mod support;
 #[cfg(test)]

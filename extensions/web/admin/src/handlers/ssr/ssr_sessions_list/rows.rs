@@ -5,6 +5,7 @@ use crate::handlers::ssr::format::{
     client_chip, format_cost, format_span, format_token_total, relative_time, short_id,
 };
 use crate::repositories::analytics::conversation_rows::ConversationRow;
+use crate::repositories::session_state::session_state;
 
 use super::context::SessionRowView;
 
@@ -51,13 +52,15 @@ pub(super) fn session_row(c: &ConversationRow) -> SessionRowView {
         started_at: c.first_at.map(|t| t.to_rfc3339()),
         started_relative: c.first_at.map(relative_time),
         error_count: c.error_count,
-        has_error: c.error_count > 0,
         status_label: status_label(c),
+        status_tone: status_tone(c),
     }
 }
 
-// Why: a hook-tracked conversation carries an explicit status; a gateway-only
-// one does not, so the error count is the only status signal it has.
+// Why: errors outrank liveness — a conversation that failed is reported as
+// failed however recently it ran. Otherwise the badge reads the same three
+// states as the session page: completed when the hook saw the end, live
+// when something happened inside the heartbeat window, stale when not.
 fn status_label(c: &ConversationRow) -> String {
     if c.error_count > 0 {
         let noun = if c.error_count == 1 {
@@ -67,8 +70,17 @@ fn status_label(c: &ConversationRow) -> String {
         };
         return format!("{} {noun}", c.error_count);
     }
-    c.status
-        .clone()
-        .filter(|v| !v.is_empty())
-        .unwrap_or_else(|| "ok".to_owned())
+    state(c).label().to_owned()
+}
+
+fn status_tone(c: &ConversationRow) -> &'static str {
+    if c.error_count > 0 {
+        return "err";
+    }
+    state(c).tone()
+}
+
+fn state(c: &ConversationRow) -> crate::repositories::session_state::SessionState {
+    let completed = c.status.as_deref() == Some("completed");
+    session_state(chrono::Utc::now(), completed, c.last_at)
 }

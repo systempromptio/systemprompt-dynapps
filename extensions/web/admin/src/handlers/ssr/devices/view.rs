@@ -94,7 +94,8 @@ pub(super) fn build_tabs(
 pub(super) fn build_stats(query: &DevicesQuery, stats: &FleetStats) -> FleetStatsView {
     let stale_active = query.stale.as_deref() == Some("1");
     FleetStatsView {
-        bridges_active: stats.bridges_active.to_string(),
+        bridges_online: stats.bridges_online.to_string(),
+        bridges_seen_week: stats.bridges_seen_week.to_string(),
         bridges_stale: stats.bridges_stale.to_string(),
         bridges_total_sub: format!("of {} enrolled", stats.bridges_total),
         stale_tone: if stats.bridges_stale > 0 {

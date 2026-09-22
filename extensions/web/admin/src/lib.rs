@@ -6,9 +6,8 @@
 //!
 //! - [`admin_router`] — the SSR dashboard (auth-gated; admin-only and
 //!   authenticated-read routes are layered together).
-//! - [`hooks_webhook_router`] — the four governance webhooks called by gateway
-//!   / MCP / Claude Code (`/hooks/track`, `/hooks/govern`, `/govern/authz`,
-//!   statusline/transcript ingest).
+//! - [`hooks_webhook_router`] — the governance webhooks called by gateway / MCP
+//!   / Claude Code (`/hooks/track`, `/hooks/govern`, `/govern/authz`).
 //! - [`secrets_router`], [`share_manifest_router`] — per-plugin secret
 //!   resolution and public manifest sharing.
 //!
@@ -105,8 +104,6 @@ pub fn hooks_webhook_router(
         )
         .route("/hooks/govern", post(handlers::govern_tool_use))
         .route("/govern/authz", post(handlers::govern_authz))
-        .route("/hooks/statusline", post(handlers::track_statusline_event))
-        .route("/hooks/transcript", post(handlers::track_transcript_event))
         .layer(Extension(event_hub::EventHub::default()))
         .layer(Extension(session_service))
         .layer(Extension(managed))

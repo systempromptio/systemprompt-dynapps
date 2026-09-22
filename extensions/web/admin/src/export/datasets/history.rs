@@ -7,7 +7,7 @@ use crate::export::model::{Cell, CellKind, Column, DataSet, ExportContext, Table
 use crate::handlers::ssr::ssr_history::{HistoryView, export_rows};
 use crate::repositories::analytics::conversations::HistoryItem;
 use crate::types::UserContext;
-use systemprompt::identifiers::{ContextId, SessionId};
+use systemprompt::identifiers::SessionId;
 
 pub(crate) struct History;
 pub(crate) struct OrgHistory;
@@ -15,7 +15,6 @@ pub(crate) struct OrgHistory;
 const COLUMNS: &[Column] = &[
     Column::new("started_at", "Started", CellKind::Timestamp),
     Column::new("last_at", "Last activity", CellKind::Timestamp),
-    Column::new("source", "Source", CellKind::Text),
     Column::new("session_id", "Session", CellKind::Text),
     Column::new("context_id", "Context", CellKind::Text),
     Column::new("user_id", "User", CellKind::Text),
@@ -36,9 +35,8 @@ fn row(r: &HistoryItem) -> Vec<Cell> {
     vec![
         Cell::opt_time(r.started_at),
         r.last_at.into(),
-        r.source.label().into(),
         Cell::opt_text(r.session_id.as_ref().map(SessionId::as_str)),
-        Cell::opt_text(r.context_id.as_ref().map(ContextId::as_str)),
+        r.context_id.as_str().into(),
         r.user_id.as_str().into(),
         r.user_label.as_str().into(),
         Cell::opt_text(r.title.as_deref()),

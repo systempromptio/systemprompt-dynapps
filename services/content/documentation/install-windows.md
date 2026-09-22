@@ -119,7 +119,7 @@ claude
 For an exact model ID enabled for your account:
 
 ```powershell
-claude --model gemini-3.8-flash
+claude --model gemini-2.5-flash
 ```
 
 ### Per-session routing
@@ -131,7 +131,7 @@ Remove persistent Claude Code routing while retaining the standalone file:
 & $Bridge sync
 $ClaudeSettings = Join-Path $env:APPDATA "astound\claude-code-settings.json"
 Get-Item -LiteralPath $ClaudeSettings
-claude --settings "$ClaudeSettings" --model gemini-3.8-flash
+claude --settings "$ClaudeSettings" --model gemini-2.5-flash
 ```
 
 Use an approved model ID. If you set an absolute `XDG_CONFIG_HOME`, the file is under that directory's `astound` subdirectory instead; `& $Bridge status` reports the bridge configuration location. A custom `CLAUDE_CONFIG_DIR` is separate: use explicit `--settings` because enrolment's user fallback targets the default Claude Code directory.
@@ -139,7 +139,7 @@ Use an approved model ID. If you set an absolute `XDG_CONFIG_HOME`, the file is 
 A short **CMD** launch after completing PowerShell setup:
 
 ```bat
-claude --settings "%APPDATA%\astound\claude-code-settings.json" --model gemini-3.8-flash
+claude --settings "%APPDATA%\astound\claude-code-settings.json" --model gemini-2.5-flash
 ```
 
 PowerShell uses `$env:APPDATA`; CMD uses `%APPDATA%`. Managed settings can override either launch. See [Claude Code settings precedence](https://code.claude.com/docs/en/settings).

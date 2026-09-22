@@ -93,13 +93,7 @@
           <td class="sp-table__cell--num">{{formatNumber this.tool_call_count}}</td>
           <td class="sp-table__cell--num" title="{{this.tokens_title}}">{{this.tokens_display}}</td>
           <td class="sp-table__cell--num sp-u-mono">{{this.cost_display}}</td>
-          <td class="sp-col-status">
-            {{#if this.has_error}}
-              <span class="sp-badge sp-badge--err">{{this.status_label}}</span>
-            {{else}}
-              <span class="sp-badge sp-badge--ok">{{this.status_label}}</span>
-            {{/if}}
-          </td>
+          <td class="sp-col-status">{{> components/badge tone=this.status_tone text=this.status_label}}</td>
         </tr>
         {{/each}}
         </tbody>

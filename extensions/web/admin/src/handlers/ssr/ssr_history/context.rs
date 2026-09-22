@@ -1,7 +1,7 @@
 //! Typed template context for the conversation-history page.
 
 use serde::Serialize;
-use systemprompt::identifiers::{SessionId, UserId};
+use systemprompt::identifiers::UserId;
 
 use crate::handlers::ssr::format::ClientChipView;
 use crate::handlers::ssr::list_view::Pagination;
@@ -28,13 +28,9 @@ pub(super) struct HistoryPageContext {
 pub(crate) struct HistoryRowView {
     // Why: the chip names the client that recorded the conversation
     // (Claude Code, OpenCode, an API client…) and its tone says how strongly
-    // the gateway evidenced it; `source_kind` keeps the storage side for
-    // tooltips and tests.
+    // the gateway evidenced it.
     pub source: ClientChipView,
     pub source_title: String,
-    pub source_kind: &'static str,
-    pub is_gateway: bool,
-    pub session_id: Option<SessionId>,
     pub short_id: String,
     // Why: named for what it is. A partial hash parameter shadows a field of
     // the same name at every depth (the layout now takes `page_title`, but
@@ -50,10 +46,9 @@ pub(crate) struct HistoryRowView {
     pub side_call_count: i64,
     pub tokens_display: String,
     pub tokens_title: String,
-    pub cost_display: Option<String>,
-    pub snippet: Option<String>,
-    // Why: the gateway detail page is owner-facing, so every viewer gets a
-    // link; the transcript detail page is the admin session view, so only an
-    // admin does.
-    pub detail_url: Option<String>,
+    pub cost_display: String,
+    pub detail_url: String,
+    // Why: the session view is admin-gated, so only an admin gets the link
+    // to the client session the conversation ran in.
+    pub session_url: Option<String>,
 }

@@ -49,7 +49,8 @@ pub(super) struct DevicesPageContext {
 
 #[derive(Debug, Serialize)]
 pub(super) struct FleetStatsView {
-    pub(super) bridges_active: String,
+    pub(super) bridges_online: String,
+    pub(super) bridges_seen_week: String,
     pub(super) bridges_stale: String,
     pub(super) bridges_total_sub: String,
     pub(super) stale_tone: &'static str,

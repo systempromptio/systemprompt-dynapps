@@ -66,7 +66,7 @@ pub(super) fn columns() -> Vec<SortColumn> {
             key: "attested",
             label: "Attested",
             class: "sp-table__cell--num",
-            hint: "Calls the client's completion hook also confirmed, over the calls the server saw",
+            hint: "Calls the client's completion hook also confirmed, as a share of all calls",
         },
         SortColumn {
             key: "last",

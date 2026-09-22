@@ -1,17 +1,16 @@
-//! `repositories::analytics::{conversation_rows, conversations, agents, tools}`
-//! — the conversations index and its totals, transcript flattening, and the
-//! per-agent / per-tool rollups.
+//! `repositories::analytics::{conversation_rows, agents, tools}` — the
+//! conversations index and its totals, and the per-agent / per-tool rollups.
 //!
 //! The fixture inserts requests with no `ai_request_payloads` row, so a lone
 //! request in a context is a side call by the view's rule; the tests that
 //! want one to be listed ask for side calls explicitly.
 
-use systemprompt::identifiers::{ContextId, SessionId, UserId};
+use systemprompt::identifiers::{ContextId, UserId};
 use systemprompt_web_admin::repositories::analytics::conversation_rows::{
     ConversationFilter, ConversationPage, get_conversation_totals, list_conversations_paged,
     list_distinct_models,
 };
-use systemprompt_web_admin::repositories::analytics::{conversations, list_agents, list_tools};
+use systemprompt_web_admin::repositories::analytics::{list_agents, list_tools};
 
 use crate::fixtures::{
     EventSpec, RequestSpec, insert_event, insert_request, insert_user, new_context_id,
@@ -209,62 +208,6 @@ async fn list_distinct_models_only_reports_models_used_inside_a_context() {
 
     assert!(models.contains(&"context-model".to_owned()));
     assert!(!models.contains(&"contextless-model".to_owned()));
-    db.cleanup().await;
-}
-
-#[tokio::test]
-async fn find_raw_turns_returns_none_without_a_transcript() {
-    let Some(db) = TempDb::create().await else {
-        return;
-    };
-    let session = SessionId::new(unique("session"));
-
-    let turns = conversations::find_raw_turns(&db.pool, &session)
-        .await
-        .expect("lookup succeeds");
-
-    assert!(turns.is_none(), "no transcript is None, not an empty page");
-    db.cleanup().await;
-}
-
-#[tokio::test]
-async fn find_raw_turns_flattens_the_stored_transcript_array() {
-    let Some(db) = TempDb::create().await else {
-        return;
-    };
-    let session_id = unique("session");
-    let transcript = serde_json::json!([
-        { "role": "user", "content": "plain string body" },
-        { "role": "assistant", "content": [{ "text": "first" }, { "text": "second" }] },
-        { "role": "assistant", "text": "bare text field" },
-    ]);
-    let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("transcript")).await;
-    sqlx::query(
-        "INSERT INTO session_transcripts (id, user_id, session_id, transcript)
-         VALUES ($1, $2, $3, $4)",
-    )
-    .bind(unique("transcript"))
-    .bind(user.as_str())
-    .bind(&session_id)
-    .bind(&transcript)
-    .execute(&*db.pool)
-    .await
-    .expect("insert transcript");
-    let session = SessionId::new(session_id);
-
-    let turns = conversations::find_raw_turns(&db.pool, &session)
-        .await
-        .expect("lookup succeeds")
-        .expect("the transcript exists");
-
-    assert_eq!(turns.len(), 3);
-    assert_eq!(turns[0].ordinal, 0);
-    assert_eq!(turns[0].content, "plain string body");
-    assert_eq!(
-        turns[1].content, "first\nsecond",
-        "block arrays join on newlines"
-    );
-    assert_eq!(turns[2].content, "bare text field");
     db.cleanup().await;
 }
 

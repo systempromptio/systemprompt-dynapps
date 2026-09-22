@@ -18,15 +18,9 @@ pub async fn find_user_detail(
             u.email as "email?: Email",
             u.roles as "roles!: Vec<String>",
             (u.status = 'active') AS "is_active!",
-            -- Same rule as the listing query: never active is NULL, not the
-            -- join date. GREATEST ignores NULLs and returns NULL only when
-            -- every input is NULL.
-            GREATEST(
-                MAX(a.created_at),
-                pe.last_pe,
-                mcp.last_mcp,
-                air.last_request
-            ) AS "last_active?",
+            -- The one "last seen" rule (`user_last_seen`), shared with the
+            -- roster: never active is NULL, not the join date.
+            seen.last_seen_at AS "last_active?",
             (COALESCE(COUNT(DISTINCT a.id), 0) + COALESCE(air.request_count, 0))::BIGINT AS "total_events!",
             (SELECT a2.entity_name FROM user_activity a2
              WHERE a2.user_id = u.id AND a2.entity_name IS NOT NULL
@@ -42,8 +36,7 @@ pub async fn find_user_detail(
         LEFT JOIN (
             SELECT user_id,
                    COUNT(*) FILTER (WHERE event_type LIKE '%UserPromptSubmit%')::BIGINT AS prompt_count,
-                   COUNT(DISTINCT session_id)::BIGINT AS session_count,
-                   MAX(created_at) AS last_pe
+                   COUNT(DISTINCT session_id)::BIGINT AS session_count
             FROM plugin_usage_events GROUP BY user_id
         ) pe ON pe.user_id = u.id
         LEFT JOIN (
@@ -52,19 +45,14 @@ pub async fn find_user_detail(
             FROM plugin_usage_daily GROUP BY user_id
         ) bytes ON bytes.user_id = u.id
         LEFT JOIN (
-            SELECT user_id, MAX(created_at) AS last_mcp
-            FROM mcp_tool_executions WHERE user_id IS NOT NULL
-            GROUP BY user_id
-        ) mcp ON mcp.user_id = u.id
-        LEFT JOIN (
-            SELECT user_id, MAX(created_at) AS last_request, COUNT(*)::BIGINT AS request_count
+            SELECT user_id, COUNT(*)::BIGINT AS request_count
             FROM ai_requests GROUP BY user_id
         ) air ON air.user_id = u.id
+        LEFT JOIN user_last_seen seen ON seen.user_id = u.id
         WHERE u.id = $1
         GROUP BY u.id, u.created_at, u.name, u.display_name, u.full_name, u.email,
                  u.roles, u.status, pe.prompt_count, pe.session_count,
-                 bytes.total_bytes, pe.last_pe, mcp.last_mcp, air.last_request,
-                 air.request_count"#,
+                 bytes.total_bytes, seen.last_seen_at, air.request_count"#,
         user_id.as_str(),
     )
     .fetch_optional(pool)

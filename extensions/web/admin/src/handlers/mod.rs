@@ -38,9 +38,7 @@ mod users;
 pub(crate) mod users_bootstrap;
 pub(crate) mod webhook;
 
-pub(crate) use webhook::{
-    govern_authz, govern_tool_use, track_statusline_event, track_transcript_event,
-};
+pub(crate) use webhook::{govern_authz, govern_tool_use};
 
 pub(crate) use gateway::{
     create_gateway_route_handler, delete_gateway_route_handler, gateway_config_view,

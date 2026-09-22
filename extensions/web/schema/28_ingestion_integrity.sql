@@ -155,7 +155,7 @@ BEGIN
     PERFORM pg_advisory_xact_lock(hashtextextended('ingestion:' || session_id, 0))
     FROM (SELECT DISTINCT session_id FROM plugin_usage_events WHERE id = ANY(event_ids) ORDER BY session_id) owners;
     INSERT INTO plugin_session_summaries(id,session_id,user_id,total_events,tool_uses,prompts,errors,
-        content_input_bytes,content_output_bytes,started_at,subagent_spawns,user_prompts,automated_actions)
+        content_input_bytes,content_output_bytes,started_at,subagent_spawns,user_prompts,automated_actions,plugin_id)
     SELECT 'sess_' || e.session_id,e.session_id,e.user_id,count(*),
         count(*) FILTER(WHERE event_type IN ('PostToolUse','PostToolUseFailure')),
         count(*) FILTER(WHERE event_type = 'UserPromptSubmit'),
@@ -164,7 +164,8 @@ BEGIN
         min(e.created_at),
         count(*) FILTER(WHERE event_type='SubagentStop'),
         count(*) FILTER(WHERE event_type='UserPromptSubmit' AND coalesce(metadata->>'agent_id','')=''),
-        count(*) FILTER(WHERE event_type IN ('PostToolUse','PostToolUseFailure') AND coalesce(metadata->>'agent_id','')<>'')
+        count(*) FILTER(WHERE event_type IN ('PostToolUse','PostToolUseFailure') AND coalesce(metadata->>'agent_id','')<>''),
+        max(e.plugin_id)
     FROM plugin_usage_events e WHERE (e.user_id,e.session_id) IN (
         SELECT user_id,session_id FROM plugin_usage_events WHERE id = ANY(event_ids))
     GROUP BY e.user_id,e.session_id
@@ -172,7 +173,8 @@ BEGIN
         tool_uses=EXCLUDED.tool_uses,prompts=EXCLUDED.prompts,errors=EXCLUDED.errors,
         content_input_bytes=EXCLUDED.content_input_bytes,content_output_bytes=EXCLUDED.content_output_bytes,
         subagent_spawns=EXCLUDED.subagent_spawns,
-        user_prompts=EXCLUDED.user_prompts,automated_actions=EXCLUDED.automated_actions,updated_at=now()
+        user_prompts=EXCLUDED.user_prompts,automated_actions=EXCLUDED.automated_actions,
+        plugin_id=coalesce(EXCLUDED.plugin_id,plugin_session_summaries.plugin_id),updated_at=now()
     WHERE plugin_session_summaries.user_id=EXCLUDED.user_id;
     UPDATE ingestion_outbox SET processed_at=now() WHERE event_id=ANY(event_ids);
     GET DIAGNOSTICS affected = ROW_COUNT;

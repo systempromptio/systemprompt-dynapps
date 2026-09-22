@@ -2,7 +2,7 @@
     {{#*inline "content"}}
     {{> components/breadcrumbs crumbs=breadcrumbs}}
 
-    {{#> components/page-header title=title subtitle="Your own Claude Code sessions and gateway conversations, newest first — models, turns, tokens and cost. Full-text search runs over the redacted transcript."}}
+    {{#> components/page-header title=title subtitle="Your conversations through the gateway, newest first — models, turns, tokens and cost. Search matches titles, opening prompts, ids and models."}}
         {{#*inline "header_actions"}}
             <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/profile">Profile</a>
             {{> components/export-button export}}
@@ -45,14 +45,14 @@
             {{#each rows}}
             <tr>
                 <td class="sp-col-conversation sp-table__cell--stacked" title="{{this.short_id}}{{#if this.side_call_count}} · {{this.side_call_count}} side call(s){{/if}}">
-                    {{#if this.detail_url}}<a href="{{this.detail_url}}" class="sp-u-link-strong">{{this.conversation_title}}</a>{{else}}<span class="sp-u-link-strong">{{this.conversation_title}}</span>{{/if}}
-                    {{#if this.snippet}}<span class="sp-u-text-xs sp-u-text-tertiary">{{truncate this.snippet 100}}</span>{{else}}<span class="sp-u-text-xs sp-u-text-tertiary sp-u-mono">{{this.short_id}}</span>{{/if}}
+                    <a href="{{this.detail_url}}" class="sp-u-link-strong">{{this.conversation_title}}</a>
+                    <span class="sp-u-text-xs sp-u-text-tertiary sp-u-mono">{{this.short_id}}{{#if this.session_url}} · <a href="{{this.session_url}}">session</a>{{/if}}</span>
                 </td>
-                <td title="{{this.source_title}} · recorded as {{this.source_kind}}">{{> components/badge tone=this.source.tone text=this.source.label}}</td>
+                <td title="{{this.source_title}}">{{> components/badge tone=this.source.tone text=this.source.label}}</td>
                 <td class="sp-table__cell--mono">{{default this.model "—"}}</td>
                 <td class="sp-table__cell--num sp-u-num">{{formatNumber this.entries_counted}}</td>
                 <td class="sp-table__cell--num sp-u-num" title="{{this.tokens_title}}">{{this.tokens_display}}</td>
-                <td class="sp-table__cell--num sp-u-num sp-u-mono">{{default this.cost_display "—"}}</td>
+                <td class="sp-table__cell--num sp-u-num sp-u-mono">{{this.cost_display}}</td>
                 <td class="sp-table__cell--date" title="{{this.when_at}}">{{this.when_relative}}</td>
             </tr>
             {{/each}}
@@ -60,7 +60,7 @@
         {{/components/table}}
         {{else}}
         {{> components/empty-state heading="No conversations match"
-            message="Clear the search, show side calls, or start a Claude Code session or a gateway conversation to populate history."}}
+            message="Clear the search, show side calls, or start a conversation through the gateway to populate history."}}
         {{/if}}
     </section>
     {{/inline}}

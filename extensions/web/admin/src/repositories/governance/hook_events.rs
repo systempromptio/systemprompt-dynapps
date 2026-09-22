@@ -34,7 +34,8 @@ pub async fn count_pretool_fired_24h(pool: &PgPool) -> Result<i64, MarketplaceEr
 pub async fn count_posttool_fired_24h(pool: &PgPool) -> Result<i64, MarketplaceError> {
     let row = sqlx::query!(
         "SELECT COUNT(*)::BIGINT AS n FROM plugin_usage_events \
-         WHERE created_at > NOW() - INTERVAL '24 hours'",
+         WHERE created_at > NOW() - INTERVAL '24 hours' \
+           AND event_type IN ('PostToolUse', 'PostToolUseFailure')",
     )
     .fetch_one(pool)
     .await?;

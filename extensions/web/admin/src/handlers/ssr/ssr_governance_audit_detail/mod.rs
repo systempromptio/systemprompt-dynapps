@@ -22,7 +22,7 @@ use crate::handlers::ssr::entity_urls::{session_detail_url, trace_detail_url};
 use crate::handlers::ssr::page::Page;
 use crate::handlers::ssr::types::BreadcrumbView;
 use crate::repositories::governance::chain::{
-    AiRequestSummary, ChainEnvelope, DecisionStage, TranscriptEnvelope, find_decision_chain,
+    AiRequestSummary, ChainEnvelope, DecisionStage, find_decision_chain,
 };
 use crate::repositories::scope::may_view;
 
@@ -44,7 +44,6 @@ struct AuditDetailContext<'a> {
     decisions: &'a [DecisionStage],
     requests: Vec<rows::RequestRowView>,
     events: &'a [crate::repositories::governance::chain::ChainUsageEvent],
-    transcript: &'a Option<TranscriptEnvelope>,
     session_summary: &'a Option<crate::repositories::governance::chain::SessionSummary>,
     back_url: &'static str,
 }
@@ -161,7 +160,6 @@ pub(crate) async fn governance_audit_detail_page(
             .map(|r| rows::build_request_row(r, primary.is_some_and(|p| p.id == r.id)))
             .collect(),
         events: &envelope.events,
-        transcript: &envelope.transcript,
         session_summary: &envelope.summary,
         // Why: the log this page is reached from. `/admin/governance` was the
         // old answer and is still mounted, but a reader who clicked a request

@@ -72,7 +72,7 @@ claude
 To choose a gateway model explicitly:
 
 ```bash
-claude --model gemini-3.8-flash
+claude --model gemini-2.5-flash
 ```
 
 The example requires that your gateway and account have access to that exact model ID. Your administrator can provide the available IDs.
@@ -92,14 +92,14 @@ Then pass that file when starting a gateway session.
 
 ```bash
 claude --settings "$HOME/Library/Application Support/astound/claude-code-settings.json" \
-  --model gemini-3.8-flash
+  --model gemini-2.5-flash
 ```
 
 **Linux or WSL:**
 
 ```bash
 claude --settings "${XDG_CONFIG_HOME:-$HOME/.config}/astound/claude-code-settings.json" \
-  --model gemini-3.8-flash
+  --model gemini-2.5-flash
 ```
 
 **Windows PowerShell:**
@@ -107,7 +107,7 @@ claude --settings "${XDG_CONFIG_HOME:-$HOME/.config}/astound/claude-code-setting
 ```powershell
 & $Bridge uninstall --host claude-code
 & $Bridge sync
-claude --settings "$env:APPDATA\astound\claude-code-settings.json" --model gemini-3.8-flash
+claude --settings "$env:APPDATA\astound\claude-code-settings.json" --model gemini-2.5-flash
 ```
 
 With a custom absolute `XDG_CONFIG_HOME`, substitute the actual file path reported by the bridge. Keep paths quoted, especially those containing spaces.
@@ -151,8 +151,8 @@ Claude Code's personal configuration directory can also be customized through `C
 Use an exact model ID provided by your administrator with `--model`. For example, if enabled:
 
 ```bash
-claude --model gemini-3.8-flash
-claude --model vertex-gemini-3.8-flash
+claude --model gemini-2.5-flash
+claude --model vertex-gemini-2.5-flash
 ```
 
 For per-session routing, include the `--settings` argument from the previous section in either command.

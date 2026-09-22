@@ -374,17 +374,6 @@
       {{/if}}
     </section>
 
-    {{#if transcript}}
-    <section aria-labelledby="transcript-title">
-      <div class="sp-section__head">
-        <h2 class="sp-section__title" id="transcript-title">Transcript</h2>
-      </div>
-      <details class="sp-code-collapsible">
-        <summary>Show transcript ({{transcript.entries_counted}} entries)</summary>
-        <pre class="sp-code-block"><code>{{transcript.transcript}}</code></pre>
-      </details>
-    </section>
-    {{/if}}
     {{/inline}}
     {{#*inline "scripts"}}
     <script src="/js/components/sp-tabs.js?v={{css_version}}" type="module"></script>

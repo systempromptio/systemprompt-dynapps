@@ -141,6 +141,7 @@ pub async fn list_scope_top_tools(
            JOIN mcp_tool_executions x ON x.user_id = m.user_id
            WHERE m.scope_id = $3
              AND x.started_at >= NOW() - make_interval(days => $4)
+             AND x.server_name <> x.source
            GROUP BY 1, 2
            ORDER BY 3 DESC, 2
            LIMIT $5"#,

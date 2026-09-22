@@ -71,7 +71,6 @@ pub(crate) struct AgentItem {
     pub id: String,
     pub display_name: String,
     pub enabled: bool,
-    pub host_running: bool,
 }
 
 #[derive(Debug, Clone, Default, Serialize)]

@@ -147,50 +147,6 @@ async fn find_user_settings_returns_none_when_the_user_has_none() {
     db.cleanup().await;
 }
 
-#[tokio::test]
-async fn list_device_app_links_is_empty_for_a_user_with_no_devices() {
-    let Some(db) = TempDb::create().await else {
-        return;
-    };
-    let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("devices")).await;
-
-    let devices = users::devices::list_device_app_links(&db.pool, &user)
-        .await
-        .expect("listing succeeds");
-
-    assert!(devices.is_empty());
-    db.cleanup().await;
-}
-
-#[tokio::test]
-async fn list_device_app_links_returns_only_this_users_devices() {
-    let Some(db) = TempDb::create().await else {
-        return;
-    };
-    let mine = insert_user(&db.pool, &unique("user"), &unclaimed_email("mine")).await;
-    let theirs = insert_user(&db.pool, &unique("user"), &unclaimed_email("theirs")).await;
-    for (device, owner) in [("dev-a", &mine), ("dev-b", &theirs)] {
-        sqlx::query(
-            "INSERT INTO device_app_links (device_id, user_id, app_platform, app_version)
-             VALUES ($1, $2, 'linux', '1.2.3')",
-        )
-        .bind(unique(device))
-        .bind(owner.as_str())
-        .execute(&*db.pool)
-        .await
-        .expect("insert device link");
-    }
-
-    let devices = users::devices::list_device_app_links(&db.pool, &mine)
-        .await
-        .expect("listing succeeds");
-
-    assert_eq!(devices.len(), 1);
-    assert_eq!(devices[0].app_platform, "linux");
-    assert_eq!(devices[0].app_version, "1.2.3");
-    db.cleanup().await;
-}
-
 // Why: a non-admin is pinned to the groups and projects they belong to, so
 // the scope is the whole split between Commerce and Core on the users page.
 // It is worth a test of its own.

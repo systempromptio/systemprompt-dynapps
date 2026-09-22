@@ -203,7 +203,6 @@ pub(super) fn build_agents_block() -> AgentsBlock {
                 a.name
             },
             enabled: a.enabled,
-            host_running: false,
         })
         .collect();
 

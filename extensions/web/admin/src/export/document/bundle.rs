@@ -24,7 +24,6 @@ use crate::repositories::analytics::context_detail::{
     list_messages_for_requests,
 };
 use crate::repositories::analytics::context_tool_calls::list_tool_calls_for_requests;
-use crate::repositories::analytics::conversations::{RawTurnBody, find_raw_turns};
 
 use super::view::{
     DecisionDoc, HookEventDoc, MessageDoc, RequestDoc, SafetyDoc, SkillDoc, ToolCallDoc,
@@ -55,8 +54,6 @@ pub(crate) struct ConversationBundle {
     pub skills: Vec<SkillDoc>,
     pub safety_findings: Vec<SafetyDoc>,
     pub hook_events: Vec<HookEventDoc>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub client_transcript: Option<Vec<RawTurnBody>>,
 }
 
 #[derive(Debug, Serialize)]
@@ -107,10 +104,9 @@ pub(crate) async fn load_conversation_bundle(
         list_messages_for_requests(pool, &ids.messages),
         list_tool_calls_for_requests(pool, &ids.tool_calls),
     )?;
-    let (decisions, hook_events, client_transcript) = tokio::try_join!(
+    let (decisions, hook_events) = tokio::try_join!(
         list_conversation_decisions(pool, context_id, client_session),
         hook_events(pool, client_session),
-        client_transcript(pool, &header),
     )?;
     let transcript = build_conversation(&messages, &tool_calls, &requests, opts);
     Ok(Some(ConversationBundle {
@@ -137,7 +133,6 @@ pub(crate) async fn load_conversation_bundle(
         skills: skills.iter().map(skill_doc).collect(),
         safety_findings: safety.iter().map(safety_doc).collect(),
         hook_events: hook_events.iter().map(hook_event_doc).collect(),
-        client_transcript,
     }))
 }
 
@@ -148,16 +143,6 @@ async fn hook_events(
     match client_session {
         Some(session) => list_conversation_hook_events(pool, session).await,
         None => Ok(Vec::new()),
-    }
-}
-
-async fn client_transcript(
-    pool: &PgPool,
-    header: &ContextHeader,
-) -> Result<Option<Vec<RawTurnBody>>, sqlx::Error> {
-    match header.session_id.as_ref() {
-        Some(session) => find_raw_turns(pool, session).await,
-        None => Ok(None),
     }
 }
 

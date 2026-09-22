@@ -1,9 +1,11 @@
 //! The session mint every browser sign-in ends in: create the authenticated
 //! session row, sign the JWT, and spell the `access_token` cookie that
 //! carries it. ADFS and the development login link both land here, so the
-//! two can never drift on what a session is.
+//! two can never drift on what a session is — and both record the sign-in
+//! as a `login` activity, the row every "Logins" figure counts.
 
 use axum::http::HeaderMap;
+use sqlx::PgPool;
 
 use systemprompt::identifiers::UserId;
 
@@ -17,7 +19,9 @@ use systemprompt::oauth::services::{
 };
 
 use super::secure_flag;
+use crate::activity::NewActivity;
 use crate::repositories::dev_login::DevLoginUser;
+use crate::repositories::users::activity::record;
 use crate::repositories::users::federated;
 
 // Why: the account a session is minted for, reduced to what the mint needs.
@@ -51,6 +55,16 @@ impl From<DevLoginUser> for SessionSubject {
             roles: user.roles,
         }
     }
+}
+
+// Why: the activity timeline is the only record of a sign-in as an event;
+// the session row says a session exists, not that a person arrived.
+pub(crate) async fn record_login(pool: &PgPool, subject: &SessionSubject) {
+    record(
+        pool,
+        NewActivity::login(&subject.user_id, &subject.display_name),
+    )
+    .await;
 }
 
 pub(crate) fn session_cookie(jwt: &str, max_age: i64) -> String {

@@ -26,7 +26,7 @@ pub(super) const BRIDGE_COLUMNS: &[ColumnSpec] = &[
         key: "heartbeat",
         label: "Last heartbeat",
         class: "sp-table__cell--date",
-        hint: "The most recent heartbeat from any of their machines; silent for a week is stale",
+        hint: "The most recent heartbeat from any of their machines; online within a minute, stale after a week",
     },
     ColumnSpec {
         key: "forwarded",

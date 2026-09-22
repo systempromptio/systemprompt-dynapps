@@ -22,7 +22,7 @@ use serde::Deserialize;
 
 use super::identity::{AssertionClaims, resolve_identity};
 use super::provider::{idp_descriptor, service_provider};
-use super::session::{SessionSubject, mint_session, session_cookie};
+use super::session::{SessionSubject, mint_session, record_login, session_cookie};
 use super::{
     AdfsDeps, AdfsError, FlowState, LoginRedirect, clear_state_cookie, read_state_cookie,
     sanitize_redirect, use_https,
@@ -99,16 +99,14 @@ async fn run_callback(
     let claims = AssertionClaims::from_identity(&identity);
     let resolved = resolve_identity(deps, &idp, &claims).await?;
 
-    let (jwt, max_age) = mint_session(
-        &deps.session_service,
-        &SessionSubject::from(&resolved),
-        headers,
-    )
-    .await
-    .map_err(|e| {
-        tracing::error!(error = %e, "Failed to mint session for ADFS user");
-        LoginRedirect("error")
-    })?;
+    let subject = SessionSubject::from(&resolved);
+    let (jwt, max_age) = mint_session(&deps.session_service, &subject, headers)
+        .await
+        .map_err(|e| {
+            tracing::error!(error = %e, "Failed to mint session for ADFS user");
+            LoginRedirect("error")
+        })?;
+    record_login(&deps.write_pool, &subject).await;
 
     tracing::info!(
         user_id = %resolved.user_id,

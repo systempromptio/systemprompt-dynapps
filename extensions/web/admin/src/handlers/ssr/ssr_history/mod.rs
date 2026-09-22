@@ -66,9 +66,8 @@ impl HistoryQuery {
 
 #[derive(Debug, Serialize)]
 struct HistorySearchItem {
-    source: &'static str,
     session_id: Option<SessionId>,
-    context_id: Option<ContextId>,
+    context_id: ContextId,
     user_id: UserId,
     ai_title: Option<String>,
     preview: Option<String>,
@@ -80,9 +79,7 @@ struct HistorySearchItem {
     total_output_tokens: i64,
     cost_microdollars: i64,
     side_call_count: i64,
-    rank: Option<f32>,
-    snippet: Option<String>,
-    detail_url: Option<String>,
+    detail_url: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -194,8 +191,7 @@ pub(crate) async fn history_search(
         .items
         .into_iter()
         .map(|item| HistorySearchItem {
-            source: item.source.label(),
-            detail_url: detail_url(&item, &user_ctx, HistoryView::Own),
+            detail_url: detail_url(&item, HistoryView::Own),
             session_id: item.session_id.clone(),
             context_id: item.context_id.clone(),
             user_id: item.user_id,
@@ -209,8 +205,6 @@ pub(crate) async fn history_search(
             total_output_tokens: item.total_output_tokens,
             cost_microdollars: item.cost_microdollars,
             side_call_count: item.side_call_count,
-            rank: item.rank,
-            snippet: item.snippet.map(|s| redact_text(&s).0),
         })
         .collect();
     Ok(Json(HistorySearchEnvelope {

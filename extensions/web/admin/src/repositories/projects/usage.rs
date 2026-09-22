@@ -179,6 +179,7 @@ async fn list_hook_plane(
                FROM membership m
                JOIN mcp_tool_executions x ON x.user_id = m.user_id
                 AND x.started_at >= NOW() - make_interval(days => $3)
+                AND x.server_name <> x.source
                GROUP BY m.scope_id
            ) t ON t.scope_id = p.id
            LEFT JOIN (

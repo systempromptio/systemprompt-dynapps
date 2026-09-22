@@ -562,34 +562,6 @@ pub async fn insert_message(pool: &PgPool, request_id: &str, seq: i32, role: &st
     .expect("insert ai request message");
 }
 
-// A `session_transcripts` row — the Claude Code Stop hook's half of a
-// conversation, and the only source the history page had before gateway rows
-// were unified into it. `search_tsv` is a generated column, so the text that
-// full-text search matches on is whatever this transcript JSON stringifies to.
-pub async fn insert_transcript(
-    pool: &PgPool,
-    session_id: &str,
-    user_id: &UserId,
-    model: &str,
-    body: &str,
-) {
-    let transcript = serde_json::json!([{ "role": "user", "content": body }]);
-    sqlx::query(
-        "INSERT INTO session_transcripts
-             (id, user_id, session_id, transcript, model, entries_counted,
-              total_input_tokens, total_output_tokens)
-         VALUES ($1, $2, $3, $4, $5, 1, 10, 20)",
-    )
-    .bind(unique("transcript"))
-    .bind(user_id.as_str())
-    .bind(session_id)
-    .bind(transcript)
-    .bind(model)
-    .execute(pool)
-    .await
-    .expect("insert session transcript");
-}
-
 // Insert a group row. Appended at the end of the file deliberately: several
 // slices seed groups, and a helper at the tail is the one place two of them
 // can add without landing on the same lines.

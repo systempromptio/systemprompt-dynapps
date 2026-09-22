@@ -20,7 +20,6 @@ pub mod leaderboards;
 pub mod model_series;
 pub mod models;
 pub mod series;
-pub mod session_costs;
 pub mod sessions;
 pub mod skills;
 pub mod tools;

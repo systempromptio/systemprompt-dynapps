@@ -20,24 +20,7 @@ pub(super) struct SessionDetailPageContext {
     pub(super) has_traces: bool,
     pub(super) has_requests: bool,
     pub(super) back_url: &'static str,
-    pub(super) ratings: Vec<RatingView>,
-    pub(super) has_ratings: bool,
-    pub(super) rating_count: usize,
-    pub(super) rating_average: Option<String>,
     pub(super) document_export: crate::export::document::DocumentExportView,
-}
-
-#[derive(Debug, Serialize)]
-pub(super) struct RatingView {
-    pub(super) user_id: UserId,
-    pub(super) user_label: String,
-    pub(super) user_url: String,
-    pub(super) rating: i16,
-    pub(super) stars: String,
-    pub(super) tone: &'static str,
-    pub(super) outcome: String,
-    pub(super) notes: String,
-    pub(super) created_at_local: String,
 }
 
 #[derive(Debug, Serialize)]

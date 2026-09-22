@@ -24,13 +24,8 @@ WITH base AS (
                       COALESCE(r.requests, 0)::BIGINT AS requests,
                       COALESCE(r.cost, 0)::BIGINT AS cost_microdollars,
                       COALESCE(r.tokens, 0)::BIGINT AS tokens,
-                      GREATEST(lr.last_request, ls.last_session, a.last_seen) AS last_active,
-                      CASE
-                        WHEN GREATEST(lr.last_request, ls.last_session, a.last_seen) IS NULL THEN NULL
-                        WHEN lr.last_request = GREATEST(lr.last_request, ls.last_session, a.last_seen) THEN 'gateway'
-                        WHEN ls.last_session = GREATEST(lr.last_request, ls.last_session, a.last_seen) THEN 'session'
-                        ELSE 'console'
-                      END AS last_active_source
+                      seen.last_seen_at AS last_active,
+                      seen.last_seen_source AS last_active_source
                  FROM base b
                  LEFT JOIN LATERAL (
                      SELECT array_agg(DISTINCT ug.group_id) AS ids
@@ -39,15 +34,7 @@ WITH base AS (
                      SELECT array_agg(DISTINCT pm.project_id) AS ids
                        FROM project_members pm WHERE pm.user_id = b.id) p ON TRUE
                  LEFT JOIN spend r ON r.user_id = b.id
-                 LEFT JOIN LATERAL (
-                     SELECT MAX(ua.created_at) AS last_seen
-                       FROM user_activity ua WHERE ua.user_id = b.id) a ON TRUE
-                 LEFT JOIN LATERAL (
-                     SELECT MAX(ar.created_at) AS last_request
-                       FROM ai_requests ar WHERE ar.user_id = b.id) lr ON TRUE
-                 LEFT JOIN LATERAL (
-                     SELECT MAX(us.last_activity_at) AS last_session
-                       FROM user_sessions us WHERE us.user_id = b.id) ls ON TRUE
+                 LEFT JOIN user_last_seen seen ON seen.user_id = b.id
            ), filtered AS (
                SELECT * FROM enriched e
                 WHERE CASE $3::TEXT

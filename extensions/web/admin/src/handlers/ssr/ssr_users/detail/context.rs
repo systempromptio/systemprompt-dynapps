@@ -179,6 +179,7 @@ pub(crate) struct DeviceRowView {
     pub last_seen: String,
     pub status_label: &'static str,
     pub status_tone: &'static str,
+    pub is_active: bool,
     pub revocable: bool,
 }
 

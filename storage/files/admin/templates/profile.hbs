@@ -189,7 +189,7 @@
         </section>
 
         <section aria-label="Agents available to this account">
-            {{> components/section title="Available agents" count=agents.total note="Every agent configured on this instance, and whether its host is up."}}
+            {{> components/section title="Available agents" count=agents.total note="Every agent configured on this instance, and whether it is enabled."}}
             {{#if agents.items}}
             {{#> components/table caption="Agents configured on this instance"}}
                 <thead><tr>
@@ -202,13 +202,13 @@
                 <tr>
                     <td>{{default display_name id}}</td>
                     <td class="sp-table__cell--mono">{{id}}</td>
-                    <td>{{#if host_running}}{{> components/badge tone="ok" text="running"}}{{else if enabled}}{{> components/badge tone="info" text="enabled"}}{{else}}{{> components/badge tone="muted" text="disabled"}}{{/if}}</td>
+                    <td>{{#if enabled}}{{> components/badge tone="info" text="enabled"}}{{else}}{{> components/badge tone="muted" text="disabled"}}{{/if}}</td>
                 </tr>
                 {{/each}}
                 </tbody>
             {{/components/table}}
             {{else}}
-            {{> components/empty-state heading="No agents configured" message="Agents you enable appear here with their live status."}}
+            {{> components/empty-state heading="No agents configured" message="Agents you enable appear here."}}
             {{/if}}
         </section>
     </details>

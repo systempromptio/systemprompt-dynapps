@@ -6,7 +6,7 @@
 //! strings, and derives no scale, percentage or currency of its own.
 
 use serde::Serialize;
-use systemprompt::identifiers::{SessionId, UserId};
+use systemprompt::identifiers::{ContextId, UserId};
 
 use crate::handlers::ssr::list_view::Pagination;
 use crate::handlers::ssr::types::SvgLineChartView;
@@ -128,24 +128,24 @@ pub(super) struct SessionsTabView {
 }
 
 #[derive(Debug, Serialize)]
-// Why: named for the snapshot it renders, not for "a session row". The
-// sessions list page has its own row type and the two are different things —
-// this one is one client-reported cost snapshot, that one is a session.
+// Why: named for the conversation cost it renders, not for "a session row".
+// The sessions list page has its own row type and the two are different
+// things — this one is one gateway-metered conversation, that one is a
+// client session.
 pub(super) struct SessionCostRowView {
-    pub session_id: SessionId,
-    pub session_short: String,
+    pub context_id: ContextId,
+    pub context_short: String,
     pub user_id: UserId,
     pub model_display: String,
     pub cost_display: String,
     pub share_pct: i64,
-    pub context_display: String,
+    pub requests_display: String,
     pub input_display: String,
     pub output_display: String,
     pub cache_display: String,
-    pub rating_display: String,
-    pub outcome_display: String,
     pub updated_display: String,
     pub detail_url: String,
+    pub session_url: Option<String>,
     pub user_url: String,
 }
 
