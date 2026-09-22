@@ -19,7 +19,7 @@ related_docs:
   - title: "Code ↔ Instance: Sources, Planes and Sync"
     url: "/documentation/services-sync"
   - title: "Skills: Lifecycle & Managed Revisions"
-    url: "/documentation/skills-and-evaluations"
+    url: "/documentation/skills-lifecycle"
   - title: "Access Control: Who Reaches What, and Why"
     url: "/documentation/access-control"
 ---

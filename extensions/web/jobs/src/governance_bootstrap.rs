@@ -5,7 +5,7 @@
 //! 0. Validate `services/governance/config.yaml`, failing the boot rather than
 //!    letting an unparseable file degrade to the built-in defaults unnoticed,
 //!    and warn when the resulting chain enforces nothing. Then report whether a
-//!    plugin owns `hooks.evaluation`, the conversation judge's switch.
+//!    plugin owns `hooks.judge`, the conversation judge's switch.
 //! 1. Reconcile the services gateway-route entities into
 //!    `access_control_entities` (so the FK on `access_control_rules` is
 //!    satisfied and a `gateway_route` `entity_match` glob has routes to expand
@@ -82,7 +82,7 @@ async fn execute_inner(ctx: &JobContext) -> Result<JobResult, JobError> {
     );
 
     let governance = check_governance_config(&services_path)?;
-    check_evaluation_config()?;
+    check_judge_config()?;
 
     systemprompt_web_admin::salesforce_orgs_boot_check(&services_path)
         .await
@@ -184,25 +184,25 @@ pub fn check_governance_config(
     Ok(GovernanceStatus { active, warning })
 }
 
-// Why: `hooks.evaluation` on the governance owner is the switch for the
+// Why: `hooks.judge` on the governance owner is the switch for the
 // conversation judge; core already refuses two owners. Reported so the boot
 // log says whether conversations will be labelled.
 #[doc(hidden)]
-pub fn check_evaluation_config() -> Result<(), JobError> {
+pub fn check_judge_config() -> Result<(), JobError> {
     let services = systemprompt::loader::ServicesBootstrap::get()?;
     let owner = services
         .plugins
         .values()
-        .find(|p| p.enabled && p.hooks.evaluation)
+        .find(|p| p.enabled && p.hooks.judge)
         .map(|p| p.id.as_str());
     let automatic = systemprompt::config::ProfileBootstrap::get()?
-        .evaluation
+        .judge
         .automatic;
     if let Some(owner) = owner {
         tracing::info!(owner, automatic, "conversation judge configured");
     } else {
         tracing::warn!(
-            "no enabled plugin sets hooks.evaluation: true — conversations will not be judged"
+            "no enabled plugin sets hooks.judge: true — conversations will not be judged"
         );
     }
     Ok(())

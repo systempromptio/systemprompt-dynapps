@@ -18,14 +18,14 @@ impl CopyExtensionAssetsJob {
     pub async fn execute_copy(paths: &AppPaths) -> Result<JobResult, JobError> {
         let start_time = std::time::Instant::now();
 
-        tracing::info!("Copy extension assets job started");
+        tracing::debug!("Copy extension assets job started");
 
         let registry = ExtensionRegistry::discover().map_err(|e| JobError::other(e.to_string()))?;
         let assets = registry.all_required_assets(paths);
 
         if assets.is_empty() {
             let duration_ms = u64::try_from(start_time.elapsed().as_millis()).unwrap_or(u64::MAX);
-            tracing::info!(duration_ms, "No extension assets to copy");
+            tracing::debug!(duration_ms, "No extension assets to copy");
             return Ok(JobResult::success()
                 .with_stats(0, 0)
                 .with_duration(duration_ms));
@@ -35,7 +35,7 @@ impl CopyExtensionAssetsJob {
 
         let duration_ms = u64::try_from(start_time.elapsed().as_millis()).unwrap_or(u64::MAX);
 
-        tracing::info!(
+        tracing::debug!(
             copied,
             failed,
             duration_ms,

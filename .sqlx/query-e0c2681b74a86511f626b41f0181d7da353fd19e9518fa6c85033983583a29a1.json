@@ -1,0 +1,45 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT COUNT(*) AS \"total!\",\n                  COUNT(*) FILTER (\n                      WHERE last_heartbeat_at >= NOW() - make_interval(secs => $2::float8)\n                  ) AS \"online!\",\n                  COUNT(*) FILTER (\n                      WHERE last_heartbeat_at >= NOW() - make_interval(days => $1)\n                  ) AS \"seen_week!\",\n                  COUNT(DISTINCT bridge_version) AS \"versions!\"\n             FROM bridge_sessions",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "total!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "online!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "seen_week!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "versions!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Float8"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "e0c2681b74a86511f626b41f0181d7da353fd19e9518fa6c85033983583a29a1"
+}

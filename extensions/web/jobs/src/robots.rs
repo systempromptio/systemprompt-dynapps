@@ -40,7 +40,7 @@ impl Job for RobotsTxtGenerationJob {
 async fn execute_inner(ctx: &JobContext) -> Result<JobResult, JobError> {
     let start = std::time::Instant::now();
 
-    tracing::info!("robots.txt generation started");
+    tracing::debug!("robots.txt generation started");
 
     let paths = ctx
         .app_paths::<Arc<AppPaths>>()
@@ -50,7 +50,7 @@ async fn execute_inner(ctx: &JobContext) -> Result<JobResult, JobError> {
 
     let duration_ms = u64::try_from(start.elapsed().as_millis()).unwrap_or(u64::MAX);
 
-    tracing::info!(duration_ms, "robots.txt generation completed");
+    tracing::debug!(duration_ms, "robots.txt generation completed");
 
     Ok(JobResult::success().with_duration(duration_ms))
 }
@@ -69,7 +69,7 @@ pub(crate) async fn generate_robots_txt(paths: &AppPaths) -> Result<(), JobError
     let robots_path = web_dir.join("robots.txt");
     fs::write(&robots_path, &robots_content).await?;
 
-    tracing::info!(path = %robots_path.display(), "Generated robots.txt");
+    tracing::debug!(path = %robots_path.display(), "Generated robots.txt");
 
     Ok(())
 }

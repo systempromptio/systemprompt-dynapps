@@ -67,7 +67,7 @@ The Skills page counts invocations from the hooks and reads everything else from
 
 One job, `conversation_judge`, runs every five minutes. It queues every conversation with at least one turn that has been quiet for thirty minutes or whose harness session has ended, reads the transcript (credentials redacted) and asks the configured model — in one structured call whose schema the provider enforces — for a title, a summary, the intent (development, business analysis, operations, admin & config, writing & comms, research & learning, other), an outcome (achieved, partial, abandoned, unclear) and the completion score. A conversation that keeps growing is judged again. The job's own gateway calls are audited under its identity and never counted as conversations; a daily cost cap stops a run rather than letting a backlog burn budget.
 
-The judge is switched on by `hooks.evaluation: true` on the plugin that carries the governance hooks, and runs automatically only when the profile sets `evaluation.automatic: true`. With that switch off, a manual request still queues the conversation and the next tick reads it: **Judge now** on a conversation's page, the **Judge** button on any unjudged row of the Conversations or Skills lists, **Judge N unjudged** in the Conversations header (every unjudged conversation the current filters select, up to 200), or **Judge selected** in the bulk bar after ticking rows. A judged row shows its verdict — intent, outcome, summary and rationale — in a card on hover or keyboard focus of the title.
+The judge is switched on by `hooks.judge: true` on the plugin that carries the governance hooks, and runs automatically only when the profile sets `judge.automatic: true`. With that switch off, a manual request still queues the conversation and the next tick reads it: **Judge now** on a conversation's page, the **Judge** button on any unjudged row of the Conversations or Skills lists, **Judge N unjudged** in the Conversations header (every unjudged conversation the current filters select, up to 200), or **Judge selected** in the bulk bar after ticking rows. A judged row shows its verdict — intent, outcome, summary and rationale — in a card on hover or keyboard focus of the title.
 
 ## Reports
 
@@ -92,7 +92,7 @@ Conversations and Versions are open to marketplace participants for the people i
 ### Nothing is judged
 
 **Symptom:** Every row says "not judged yet".
-**Cause:** Either no enabled plugin sets `hooks.evaluation: true`, the profile's `evaluation.automatic` is off, or no AI provider is configured for the process.
+**Cause:** Either no enabled plugin sets `hooks.judge: true`, the profile's `judge.automatic` is off, or no AI provider is configured for the process.
 **Solution:** Check the boot log for "conversation judge configured"; queue one conversation with **Judge now** and watch `systemprompt infra jobs run conversation_judge`.
 
 ### A skill has invocations but no cost

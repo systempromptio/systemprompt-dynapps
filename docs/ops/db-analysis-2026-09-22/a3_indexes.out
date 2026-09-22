@@ -1,0 +1,116 @@
+                tbl                |                  narrower                  | narrower_cols |                              wider                              | wider_cols | narrower_size 
+-----------------------------------+--------------------------------------------+---------------+-----------------------------------------------------------------+------------+---------------
+ access_control_rules              | idx_acl_entity                             | 2 3           | access_control_rules_entity_type_entity_id_rule_type_rule_v_key | 2 3 4 5    | 16 kB
+ admin_traffic_reports             | idx_admin_traffic_reports_date             | 2             | idx_atr_date                                                    | 2 5        | 8192 bytes
+ admin_traffic_reports             | idx_admin_traffic_reports_date             | 2             | admin_traffic_reports_report_date_report_period_key             | 2 3        | 8192 bytes
+ agent_tasks                       | idx_agent_tasks_context_id                 | 2             | idx_agent_tasks_context_status                                  | 2 3        | 8192 bytes
+ agent_tasks                       | idx_agent_tasks_user_id                    | 5             | idx_agent_tasks_user_created                                    | 5 15       | 8192 bytes
+ ai_quota_buckets                  | idx_ai_quota_buckets_subject               | 3 2           | ai_quota_buckets_subject_key                                    | 3 2 4 5    | 16 kB
+ ai_request_messages               | idx_ai_request_messages_request_id         | 2             | idx_ai_request_messages_sequence                                | 2 5        | 1320 kB
+ ai_request_messages               | idx_ai_request_messages_request_id         | 2             | ai_request_messages_request_id_sequence_number_key              | 2 5        | 1320 kB
+ ai_request_messages               | idx_ai_request_messages_sequence           | 2 5           | ai_request_messages_request_id_sequence_number_key              | 2 5        | 10 MB
+ ai_requests                       | idx_ai_requests_provider                   | 11            | idx_ai_requests_provider_status                                 | 11 29      | 48 kB
+ ai_requests                       | idx_ai_requests_request_id                 | 2             | ai_requests_request_id_key                                      | 2          | 272 kB
+ ai_requests                       | idx_ai_requests_session_id                 | 4             | idx_ai_requests_session_created                                 | 4 34       | 56 kB
+ ai_requests                       | idx_ai_requests_user_id                    | 3             | idx_ai_requests_user_created                                    | 3 34       | 48 kB
+ ai_requests                       | idx_ai_requests_user_id                    | 3             | idx_ai_requests_user_model                                      | 3 12       | 48 kB
+ ai_request_tool_calls             | idx_ai_request_tool_calls_request_id       | 2             | ai_request_tool_calls_request_id_sequence_number_key            | 2 7        | 152 kB
+ artifact_parts                    | idx_artifact_parts_artifact_id             | 2             | idx_artifact_parts_sequence                                     | 2 5        | 8192 bytes
+ artifact_parts                    | idx_artifact_parts_artifact_id             | 2             | artifact_parts_artifact_id_sequence_number_key                  | 2 5        | 8192 bytes
+ artifact_parts                    | idx_artifact_parts_sequence                | 2 5           | artifact_parts_artifact_id_sequence_number_key                  | 2 5        | 8192 bytes
+ bridge_user_host_model_prefs      | idx_bridge_user_host_model_prefs_user      | 1             | bridge_user_host_model_prefs_pkey                               | 1 2        | 16 kB
+ bridge_user_host_prefs            | idx_bridge_user_host_prefs_user            | 1             | bridge_user_host_prefs_pkey                                     | 1 2        | 8192 bytes
+ campaign_links                    | idx_campaign_links_short_code              | 2             | campaign_links_short_code_key                                   | 2          | 8192 bytes
+ content_files                     | idx_content_files_content_id               | 2             | content_files_unique                                            | 2 3 4      | 8192 bytes
+ content_performance_metrics       | idx_content_performance_metrics_content_id | 2             | content_performance_metrics_content_id_key                      | 2          | 16 kB
+ context_agents                    | idx_context_agents_context                 | 2             | idx_context_agents_active                                       | 2 5        | 8192 bytes
+ context_agents                    | idx_context_agents_context                 | 2             | context_agents_context_id_agent_name_key                        | 2 3        | 8192 bytes
+ daily_summaries                   | idx_daily_summaries_user                   | 1 2           | daily_summaries_pkey                                            | 1 2        | 8192 bytes
+ extension_migrations              | idx_extension_migrations_ext_id            | 2             | extension_migrations_extension_id_version_key                   | 2 3        | 16 kB
+ extension_migrations              | idx_extension_migrations_ext_id            | 2             | idx_extension_migrations_ext_version                            | 2 3        | 16 kB
+ extension_migrations              | idx_extension_migrations_ext_version       | 2 3           | extension_migrations_extension_id_version_key                   | 2 3        | 16 kB
+ funnel_progress                   | idx_funnel_progress_funnel_id              | 2             | idx_funnel_progress_unique                                      | 2 3        | 8192 bytes
+ funnel_steps                      | idx_funnel_steps_funnel_id                 | 1             | funnel_steps_pkey                                               | 1 2        | 8192 bytes
+ governance_decisions              | idx_governance_decisions_session           | 3             | idx_governance_decisions_rate_limit                             | 3 2 19     | 144 kB
+ link_clicks                       | idx_link_clicks_link_id                    | 2             | idx_link_clicks_link_session                                    | 2 3        | 8192 bytes
+ managed_inventory_entries         | managed_inventory_list                     | 1 2           | managed_inventory_entries_pkey                                  | 1 2        | 8192 bytes
+ markdown_categories               | idx_markdown_categories_slug               | 3             | markdown_categories_slug_key                                    | 3          | 8192 bytes
+ marketplace.paddle_customers      | marketplace.idx_mpc_paddle                 | 3             | marketplace.paddle_customers_paddle_customer_id_key             | 3          | 8192 bytes
+ marketplace.paddle_customers      | marketplace.idx_mpc_user                   | 2             | marketplace.paddle_customers_user_id_key                        | 2          | 8192 bytes
+ marketplace.paddle_webhook_events | marketplace.idx_mpwe_event                 | 2             | marketplace.paddle_webhook_events_event_id_key                  | 2          | 8192 bytes
+ marketplace.subscriptions         | marketplace.idx_ms_paddle                  | 3             | marketplace.subscriptions_paddle_subscription_id_key            | 3          | 8192 bytes
+ mcp_artifacts                     | idx_mcp_artifacts_artifact_id              | 2             | mcp_artifacts_artifact_id_key                                   | 2          | 40 kB
+ mcp_artifacts                     | idx_mcp_artifacts_artifact_type            | 7             | idx_mcp_artifacts_type_created                                  | 7 11       | 16 kB
+ mcp_artifacts                     | idx_mcp_artifacts_server_name              | 6             | idx_mcp_artifacts_server_created                                | 6 11       | 16 kB
+ mcp_tool_executions               | idx_mcp_tool_executions_context_id         | 14            | idx_mcp_tool_executions_context_created                         | 14 22      | 16 kB
+ mcp_tool_executions               | idx_mcp_tool_executions_mcp_execution_id   | 1             | mcp_tool_executions_pkey                                        | 1          | 48 kB
+ mcp_tool_executions               | idx_mcp_tool_executions_server_name        | 3             | idx_mcp_tool_executions_server_tool                             | 3 2        | 16 kB
+ mcp_tool_executions               | idx_mcp_tool_executions_server_name        | 3             | idx_mcp_tool_executions_server_status                           | 3 10       | 16 kB
+ mcp_tool_executions               | idx_mcp_tool_executions_session_id         | 13            | idx_mcp_tool_executions_session_tool                            | 13 2       | 16 kB
+ mcp_tool_executions               | idx_mcp_tool_executions_tool_name          | 2             | idx_mcp_tool_executions_tool_status                             | 2 10       | 16 kB
+ mcp_tool_executions               | idx_mcp_tool_executions_tool_name          | 2             | idx_mcp_tool_executions_tool_started                            | 2 4        | 16 kB
+ mcp_tool_executions               | idx_mcp_tool_executions_user_id            | 12            | mcp_tool_executions_owner_id                                    | 12 1       | 16 kB
+ mcp_tool_executions               | idx_mcp_tool_executions_user_id            | 12            | idx_mcp_tool_executions_user_created                            | 12 22      | 16 kB
+ message_parts                     | idx_message_parts_message_id               | 2             | message_parts_message_id_sequence_number_key                    | 2 5        | 8192 bytes
+ message_parts                     | idx_message_parts_message_id               | 2             | idx_message_parts_sequence                                      | 2 5        | 8192 bytes
+ message_parts                     | idx_message_parts_sequence                 | 2 5           | message_parts_message_id_sequence_number_key                    | 2 5        | 8192 bytes
+ oauth_client_contacts             | idx_oauth_client_contacts_client_id        | 1             | oauth_client_contacts_pkey                                      | 1 2        | 8192 bytes
+ oauth_client_grant_types          | idx_oauth_client_grant_types_client_id     | 1             | oauth_client_grant_types_pkey                                   | 1 2        | 16 kB
+ oauth_client_redirect_uris        | idx_oauth_client_redirect_uris_client_id   | 1             | oauth_client_redirect_uris_pkey                                 | 1 2        | 16 kB
+ oauth_client_response_types       | idx_oauth_client_response_types_client_id  | 1             | oauth_client_response_types_pkey                                | 1 2        | 16 kB
+ oauth_client_scopes               | idx_oauth_client_scopes_client_id          | 1             | oauth_client_scopes_pkey                                        | 1 2        | 16 kB
+ plugin_env_vars                   | idx_plugin_env_user_plugin                 | 2 3           | plugin_env_vars_user_id_plugin_id_var_name_key                  | 2 3 4      | 8192 bytes
+ plugin_session_summaries          | idx_session_summary_session                | 2             | plugin_session_summaries_session_id_key                         | 2          | 32 kB
+ plugin_usage_daily                | idx_usage_daily_date                       | 2             | idx_usage_daily_unique                                          | 2 6 4 0    | 16 kB
+ scheduled_jobs                    | idx_scheduled_jobs_job_name                | 2             | scheduled_jobs_job_name_key                                     | 2          | 16 kB
+ secret_resolution_tokens          | idx_secret_resolution_tokens_hash          | 4             | secret_resolution_tokens_token_hash_key                         | 4          | 8192 bytes
+ session_entity_links              | idx_sel_user                               | 2             | session_entity_links_user_id_session_id_entity_type_entity__key | 2 3 4 5    | 16 kB
+ session_ratings                   | idx_sr_user                                | 2             | session_ratings_user_id_session_id_key                          | 2 3        | 8192 bytes
+ skill_ratings                     | idx_skr_user                               | 2             | skill_ratings_user_id_skill_name_key                            | 2 3        | 8192 bytes
+ task_artifacts                    | idx_task_artifacts_context_id              | 3             | idx_task_artifacts_context_type                                 | 3 7        | 8192 bytes
+ task_artifacts                    | idx_task_artifacts_context_id              | 3             | task_artifacts_context_id_artifact_id_key                       | 3 4        | 8192 bytes
+ task_artifacts                    | idx_task_artifacts_task_id                 | 2             | task_artifacts_task_id_artifact_id_key                          | 2 4        | 8192 bytes
+ task_messages                     | idx_task_messages_message_id               | 3             | task_messages_message_id_task_id_key                            | 3 2        | 8192 bytes
+ task_messages                     | idx_task_messages_sequence                 | 2 10          | task_messages_task_id_sequence_number_key                       | 2 10       | 8192 bytes
+ task_messages                     | idx_task_messages_task_id                  | 2             | idx_task_messages_sequence                                      | 2 10       | 8192 bytes
+ task_messages                     | idx_task_messages_task_id                  | 2             | task_messages_task_id_sequence_number_key                       | 2 10       | 8192 bytes
+ task_messages                     | idx_task_messages_task_id                  | 2             | task_messages_task_id_message_id_key                            | 2 3        | 8192 bytes
+ tenant_activity                   | idx_tenant_activity_remote_created_at      | 9             | idx_tenant_activity_sync                                        | 9 10       | 8192 bytes
+ user_contexts                     | idx_user_contexts_user                     | 2             | idx_user_contexts_user_updated                                  | 2 7        | 16 kB
+ user_encryption_keys              | idx_user_encryption_keys_user_id           | 2             | user_encryption_keys_user_id_key                                | 2          | 8192 bytes
+ users                             | idx_users_email                            | 3             | users_email_key                                                 | 3          | 88 kB
+ user_sessions                     | idx_sessions_fingerprint                   | 40            | idx_sessions_fingerprint_activity                               | 40 4       | 48 kB
+ user_sessions                     | idx_sessions_started_at                    | 3             | idx_sessions_started_bot                                        | 3 41       | 64 kB
+ user_sessions                     | idx_user_sessions_client_id                | 10            | idx_user_sessions_client_activity                               | 10 4       | 32 kB
+ user_sessions                     | idx_user_sessions_client_id                | 10            | idx_user_sessions_client_cost                                   | 10 20      | 32 kB
+ user_sessions                     | idx_user_sessions_is_bot                   | 41            | idx_sessions_bot_time                                           | 41 3       | 32 kB
+ user_sessions                     | idx_user_sessions_landing_page             | 32            | idx_sessions_landing                                            | 32 41      | 40 kB
+ webauthn_credentials              | idx_webauthn_credentials_credential_id     | 3             | webauthn_credentials_credential_id_key                          | 3          | 8192 bytes
+ webauthn_setup_tokens             | idx_webauthn_setup_tokens_token_hash       | 3             | webauthn_setup_tokens_token_hash_key                            | 3          | 8192 bytes
+(87 rows)
+
+           relname           | n_idx | idx_size |  heap   
+-----------------------------+-------+----------+---------
+ logs                        |    13 | 134 MB   | 146 MB
+ ai_request_messages         |     5 | 31 MB    | 87 MB
+ event_outbox                |     4 | 13 MB    | 32 MB
+ governance_decisions        |    14 | 5288 kB  | 22 MB
+ ai_requests                 |    22 | 2752 kB  | 2560 kB
+ analytics_events            |    10 | 2608 kB  | 11 MB
+ plugin_usage_events         |    10 | 1560 kB  | 4160 kB
+ feedback_ingestion_outbox   |     4 | 1520 kB  | 2944 kB
+ mcp_tool_executions         |    26 | 824 kB   | 1024 kB
+ ai_request_tool_calls       |     6 | 792 kB   | 1424 kB
+ ai_request_payloads         |     2 | 384 kB   | 4096 kB
+ feedback_ingestion_evidence |     1 | 136 kB   | 3240 kB
+(12 rows)
+
+ extname 
+---------
+(0 rows)
+
+    name     
+-------------
+ pgstattuple
+(1 row)
+

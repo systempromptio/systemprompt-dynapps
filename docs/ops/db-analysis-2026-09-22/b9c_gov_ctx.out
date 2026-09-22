@@ -1,0 +1,42 @@
+ decisions_with_request | same_ctx | diff_ctx | same_session | same_user | ctx_eq_client_session 
+------------------------+----------+----------+--------------+-----------+-----------------------
+                  13241 |     4457 |     8784 |        13241 |     13241 |                     0
+(1 row)
+
+      policy      | diff_ctx |  n   
+------------------+----------+------
+ authz_rule_based |     4392 | 4392
+ authz            |     4392 | 4392
+ default_allow    |        0 | 3513
+ secret_scan      |        0 |  871
+ quota            |        0 |   73
+(5 rows)
+
+ g_ver | r_ver | count 
+-------+-------+-------
+ 5     | 5     |  8784
+(1 row)
+
+                  id                  |               trace_id               |                g_ctx                 |                r_ctx                 |     tool_name      
+--------------------------------------+--------------------------------------+--------------------------------------+--------------------------------------+--------------------
+ 29c94eb2-47aa-4f2a-b2f2-cc51a4951509 | 67a4c325-8236-4941-93c3-c915f0aa06ea | e95d7b09-6023-5a36-886d-0edce37074ca | be0c9aac-1f91-5adf-95d8-07ba07819ce9 | claude-star-4203d1
+ 0f1385bd-0f24-4eca-99a2-3f28e6d35529 | 67a4c325-8236-4941-93c3-c915f0aa06ea | e95d7b09-6023-5a36-886d-0edce37074ca | be0c9aac-1f91-5adf-95d8-07ba07819ce9 | claude-star-4203d1
+ 0c1a7aa5-1de0-462b-8042-1b28bee035cb | a08c8c69-a3c5-4243-bb77-570740daeac6 | e95d7b09-6023-5a36-886d-0edce37074ca | 1cd587b7-fae7-56ed-9f7e-63a981bf885d | claude-star-4203d1
+(3 rows)
+
+ ver | count 
+-----+-------
+ 5   |   550
+(1 row)
+
+ ver | count 
+-----+-------
+ 0   |     1
+ 5   |   421
+(2 rows)
+
+ ver | count 
+-----+-------
+ 5   | 17743
+(1 row)
+

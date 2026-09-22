@@ -14,7 +14,6 @@ CREATE TABLE IF NOT EXISTS plugin_env_vars (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE(user_id, plugin_id, var_name)
 );
-CREATE INDEX IF NOT EXISTS idx_plugin_env_user_plugin ON plugin_env_vars(user_id, plugin_id);
 
 CREATE TABLE IF NOT EXISTS user_encryption_keys (
     id TEXT PRIMARY KEY,
@@ -25,7 +24,6 @@ CREATE TABLE IF NOT EXISTS user_encryption_keys (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     rotated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE INDEX IF NOT EXISTS idx_user_encryption_keys_user_id ON user_encryption_keys(user_id);
 
 CREATE TABLE IF NOT EXISTS secret_audit_log (
     id TEXT PRIMARY KEY,
@@ -49,7 +47,6 @@ CREATE TABLE IF NOT EXISTS secret_resolution_tokens (
     used_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE INDEX IF NOT EXISTS idx_secret_resolution_tokens_hash ON secret_resolution_tokens(token_hash);
 CREATE INDEX IF NOT EXISTS idx_secret_resolution_tokens_expires ON secret_resolution_tokens(expires_at);
 
 -- Shared by the plans/billing tables in 10_admin_dashboard.sql.

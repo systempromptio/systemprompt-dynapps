@@ -2,7 +2,7 @@
 title: "Skills: Lifecycle & Managed Revisions"
 description: "Maintainer guide to the Astound skill lifecycle: authoring, discovery, signed distribution, runtime loading, invocation measurement, and how disk skills relate to managed revisions."
 author: "Astound Digital"
-slug: "skills-and-evaluations"
+slug: "skills-lifecycle"
 keywords: "skills, revisions, bundles, publication, attribution, managed resources"
 kind: "guide"
 public: true

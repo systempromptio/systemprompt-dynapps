@@ -40,7 +40,7 @@ impl Job for ContentPrerenderJob {
 async fn execute_inner(ctx: &JobContext) -> Result<JobResult, JobError> {
     let start = std::time::Instant::now();
 
-    tracing::info!("Content prerender started");
+    tracing::debug!("Content prerender started");
 
     let db_pool = ctx
         .db_pool::<DbPool>()
@@ -56,7 +56,7 @@ async fn execute_inner(ctx: &JobContext) -> Result<JobResult, JobError> {
 
     let duration_ms = u64::try_from(start.elapsed().as_millis()).unwrap_or(u64::MAX);
 
-    tracing::info!(duration_ms, "Content prerender completed");
+    tracing::debug!(duration_ms, "Content prerender completed");
 
     Ok(JobResult::success().with_duration(duration_ms))
 }

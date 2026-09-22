@@ -115,7 +115,7 @@ docs_sidebar:
       - label: "Update a Skill and Ship It"
         href: "/documentation/update-a-skill"
       - label: "Lifecycle & Managed Revisions"
-        href: "/documentation/skills-and-evaluations"
+        href: "/documentation/skills-lifecycle"
       - label: "Analysis Overview"
         href: "/documentation/analysis"
 

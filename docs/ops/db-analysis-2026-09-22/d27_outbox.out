@@ -1,0 +1,80 @@
+                          Table "public.event_outbox"
+       Column       |           Type           | Collation | Nullable | Default 
+--------------------+--------------------------+-----------+----------+---------
+ id                 | text                     |           | not null | 
+ channel            | text                     |           | not null | 
+ user_id            | text                     |           | not null | 
+ payload            | jsonb                    |           | not null | 
+ actor_kind         | text                     |           | not null | 
+ actor_id           | text                     |           | not null | 
+ created_at         | timestamp with time zone |           | not null | now()
+ origin_instance_id | text                     |           | not null | 
+ consumer           | text                     |           |          | 
+ fact               | jsonb                    |           |          | 
+ processed_at       | timestamp with time zone |           |          | 
+ deliver_to_origin  | boolean                  |           | not null | false
+Indexes:
+    "event_outbox_pkey" PRIMARY KEY, btree (id)
+    "idx_event_outbox_actor" btree (actor_kind, actor_id)
+    "idx_event_outbox_created_at" btree (created_at)
+    "idx_event_outbox_pending" btree (consumer, created_at, id) WHERE consumer IS NOT NULL AND processed_at IS NULL
+Check constraints:
+    "event_outbox_actor_id_check" CHECK (length(actor_id) > 0)
+    "event_outbox_actor_id_nonempty" CHECK (length(actor_id) > 0)
+    "event_outbox_actor_kind_check" CHECK (actor_kind = ANY (ARRAY['user'::text, 'job'::text, 'mcp'::text]))
+    "event_outbox_fact_pair" CHECK (consumer IS NULL AND fact IS NULL AND processed_at IS NULL OR consumer IS NOT NULL AND length(consumer) > 0 AND fact IS NOT NULL)
+
+  channel  |      consumer       |   n   | pending |            oldest            |            newest            | oldest_pending_age 
+-----------+---------------------+-------+---------+------------------------------+------------------------------+--------------------
+ reporting | analytics_reporting | 77797 |   77797 | 2026-09-22 09:05:01.92445+00 | 2026-09-22 09:05:01.92445+00 | 01:19:31.962677
+(1 row)
+
+ tbl | op | count 
+-----+----+-------
+     |    | 77797
+(1 row)
+
+ src  |   n   | deleted |  sz   | min_rev | max_rev 
+------+-------+---------+-------+---------+---------
+ logs | 77797 |   77797 | 17 MB |  155403 |  233199
+(1 row)
+
+ distinct_created_at |  ids  
+---------------------+-------
+                   1 | 77797
+(1 row)
+
+         src         | src_rows 
+---------------------+----------
+ logs                |   439002
+ ai_request_messages |   154985
+ users               |     1205
+ user_sessions       |     2147
+ ai_requests         |     4392
+ analytics_events    |    17743
+ mcp_tool_executions |      550
+ user_contexts       |      422
+(8 rows)
+
+ singleton | generation | cutoff_revision | initialized | rebuilt_at | evidence_cutoff 
+-----------+------------+-----------------+-------------+------------+-----------------
+ t         |          0 |               0 | f           |            | 
+(1 row)
+
+ source | entity_key | revision 
+--------+------------+----------
+(0 rows)
+
+                  t                   | count 
+--------------------------------------+-------
+ analytics_report_users               |     0
+ analytics_report_user_sessions       |     0
+ analytics_report_ai_requests         |     0
+ analytics_report_logs                |     0
+ analytics_report_ai_request_messages |     0
+ analytics_report_analytics_events    |     0
+ analytics_report_mcp_tool_executions |     0
+ analytics_report_user_contexts       |     0
+ analytics_report_markdown_content    |     0
+(9 rows)
+

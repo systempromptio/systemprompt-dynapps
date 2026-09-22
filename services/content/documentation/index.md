@@ -48,7 +48,7 @@ Next, try a read-only skill or tool that your administrator has enabled. Model a
 Changing a skill and getting it in front of agents is one walkthrough:
 [Update a Skill and Ship It](/documentation/update-a-skill) — edit, gate, publish,
 import, verify. Maintainers can use the
-[skill lifecycle guide](/documentation/skills-and-evaluations) to trace a skill from
+[skill lifecycle guide](/documentation/skills-lifecycle) to trace a skill from
 its source through distribution, loading and measurement.
 
 ## Sync: code and instance

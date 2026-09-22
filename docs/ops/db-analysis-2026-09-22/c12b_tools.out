@@ -1,0 +1,42 @@
+  n  | has_ctx | has_trace | ctx_matches_conv | trace_matches_client_session | trace_matches_request_trace 
+-----+---------+-----------+------------------+------------------------------+-----------------------------
+ 550 |     550 |       550 |                0 |                            0 |                           0
+(1 row)
+
+  n  | ctx_in_requests | trace_in_requests | session_in_requests | session_in_client_sessions | linked_from_tool_calls | user_in_requests 
+-----+-----------------+-------------------+---------------------+----------------------------+------------------------+------------------
+ 550 |               0 |                 0 |                 549 |                          0 |                      0 |              550
+(1 row)
+
+   source   | request_source | correlation | count 
+------------+----------------+-------------+-------
+ in_process | knowledge-bank | exact       |    46
+ in_process | github         | exact       |    19
+ proxy      | atlassian      | exact       |   228
+ in_process | systemprompt   | exact       |   238
+ proxy      | systemprompt   | exact       |    19
+(5 rows)
+
+  n   | linked 
+------+--------
+ 2901 |      0
+(1 row)
+
+ count 
+-------
+   549
+(1 row)
+
+  sid_shape   |   ctx    |    tr    
+--------------+----------+----------
+ sess_8e686cd | 5574dcf2 | 484f48d7
+ sess_8e686cd | 5574dcf2 | 78e6d110
+ sess_8e686cd | 5574dcf2 | 8158a7d9
+(3 rows)
+
+     left     |     left     |   left   |   left   
+--------------+--------------+----------+----------
+ sess_99c9c5a | 742f2245-ce6 | 32a615d0 | fdfadd3a
+ sess_231a285 | 86cd91f1-256 | fa05a937 | ddcc5762
+(2 rows)
+

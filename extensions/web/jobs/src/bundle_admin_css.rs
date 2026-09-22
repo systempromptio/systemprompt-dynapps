@@ -18,7 +18,7 @@ impl BundleAdminCssJob {
     pub async fn execute_bundle(paths: &AppPaths) -> Result<JobResult, JobError> {
         let start_time = std::time::Instant::now();
 
-        tracing::info!("Bundle admin CSS job started");
+        tracing::debug!("Bundle admin CSS job started");
 
         let css_dir = paths.storage().css().join("admin");
         let bundle_path = paths.storage().css().join("admin-bundle.css");
@@ -36,7 +36,7 @@ impl BundleAdminCssJob {
 
         let duration_ms = u64::try_from(start_time.elapsed().as_millis()).unwrap_or(u64::MAX);
 
-        tracing::info!(
+        tracing::debug!(
             bundled,
             bundle_size = bundle.len(),
             duration_ms,

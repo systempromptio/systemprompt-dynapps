@@ -280,3 +280,4 @@ storage/.systemprompt/
 # CI-only: .github/actions/core-checkout materialises core here (actions/checkout
 # cannot write outside the workspace) and symlinks ../systemprompt-core onto it.
 .vendor/
+*.sql.gz

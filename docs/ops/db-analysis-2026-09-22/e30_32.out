@@ -1,0 +1,18 @@
+  status  | count 
+----------+-------
+ inactive |     1
+ active   |  1204
+(2 rows)
+
+ tbl | rows_for_missing_users 
+-----+------------------------
+(0 rows)
+
+ user_keyed_tables 
+-------------------
+                95
+(1 row)
+
+ERROR:  relation "_growth" does not exist
+LINE 1: ...::date - first_at::date age_days, rows_total FROM _growth WH...
+                                                             ^
