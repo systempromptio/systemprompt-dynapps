@@ -182,12 +182,20 @@ pub struct RequestSpec<'a> {
 // request with no tools as a side call, which the conversation page hides, so
 // a case that reads the page's prompt seeds this beside the request.
 pub async fn insert_offered_tools(pool: &PgPool, request_id: &str) {
-    sqlx::query("INSERT INTO ai_request_payloads (ai_request_id, offered_tools) VALUES ($1, $2)")
-        .bind(request_id)
-        .bind(serde_json::json!([{"name": "bash"}]))
-        .execute(pool)
-        .await
-        .expect("insert ai_request_payload");
+    sqlx::query(
+        "WITH catalog AS (
+             INSERT INTO ai_tool_catalogs (sha256, tools)
+             VALUES (encode(sha256(convert_to($2::jsonb::text, 'UTF8')), 'hex'), $2)
+             ON CONFLICT (sha256) DO UPDATE SET sha256 = EXCLUDED.sha256
+             RETURNING sha256)
+         INSERT INTO ai_request_payloads (ai_request_id, offered_tools_sha256)
+         SELECT $1, sha256 FROM catalog",
+    )
+    .bind(request_id)
+    .bind(serde_json::json!([{"name": "bash"}]))
+    .execute(pool)
+    .await
+    .expect("insert ai_request_payload");
 }
 
 pub async fn insert_request(pool: &PgPool, spec: &RequestSpec<'_>) {

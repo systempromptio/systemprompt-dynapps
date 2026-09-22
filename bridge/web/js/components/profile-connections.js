@@ -48,12 +48,18 @@ async function refresh() {
 export function watchConnections(fn) {
   watchers.add(fn);
   if (watchers.size === 1) {
+    // A connection changes when the user acts on it in a browser and comes
+    // back, so the window regaining focus or visibility is the moment to look.
+    // Polling on a timer made this page two gateway requests every 30 s per
+    // open bridge, and the gateway kept every one of them.
     const onFocus = () => refresh();
+    const onVisible = () => { if (!document.hidden) refresh(); };
     window.addEventListener('focus', onFocus);
-    const timer = setInterval(onFocus, 30000);
+    document.addEventListener('visibilitychange', onVisible);
     const unsubscribe = subscribeSnapshot(receiveSnapshot);
     dispose = () => {
-      clearInterval(timer); unsubscribe(); window.removeEventListener('focus', onFocus);
+      unsubscribe(); window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisible);
       ++epoch; inFlight = null;
     };
   }

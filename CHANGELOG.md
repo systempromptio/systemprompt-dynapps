@@ -20,6 +20,18 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+### Changed
+
+- **Bridge:** the Profile page no longer polls `/v1/bridge/profile` and `/profile/usage` every
+  30 s while open (`bridge/web/js/components/profile-connections.js`); it refreshes when the
+  window regains focus or visibility, which is when a connection made in a browser can have
+  changed. Those two polls were 61k of the rows in a three-week production `logs` table.
+- **Schema:** `conversation_requests` and `conversation_metrics_for` (`extensions/web/schema/
+  27_conversation_requests.sql`, migration `097`) read "offered tools" from
+  `ai_request_payloads.offered_tools_sha256`, the digest into core's new `ai_tool_catalogs`
+  table; core ai migration `033` drops the old JSONB column with CASCADE, and `097` re-declares
+  the view on the upgraded database.
+
 ## 0.58.0 — 2026-09-21
 
 ### Added

@@ -30,11 +30,13 @@ pub async fn find_request_schemas(
 ) -> Result<Option<RequestSchemaRow>, sqlx::Error> {
     sqlx::query_as!(
         RequestSchemaRow,
-        r#"SELECT offered_tools, prepared_tools,
-                  request_body_sha256, prepared_body_sha256,
-                  request_bytes, request_truncated AS "request_truncated!"
-           FROM ai_request_payloads
-           WHERE ai_request_id = $1"#,
+        r#"SELECT o.tools AS offered_tools, q.tools AS prepared_tools,
+                  p.request_body_sha256, p.prepared_body_sha256,
+                  p.request_bytes, p.request_truncated AS "request_truncated!"
+           FROM ai_request_payloads p
+           LEFT JOIN ai_tool_catalogs o ON o.sha256 = p.offered_tools_sha256
+           LEFT JOIN ai_tool_catalogs q ON q.sha256 = p.prepared_tools_sha256
+           WHERE p.ai_request_id = $1"#,
         ai_request_id
     )
     .fetch_optional(pool)
