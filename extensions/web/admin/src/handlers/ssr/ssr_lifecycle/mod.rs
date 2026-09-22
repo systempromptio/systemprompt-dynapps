@@ -36,6 +36,8 @@ struct LifecyclePageData {
     breadcrumbs: Vec<BreadcrumbView>,
     configuration_url: &'static str,
     measures: Vec<MeasureView>,
+    // Why: handlebars-rust has no `.length`, so the KPI takes the count as a field.
+    measures_count: usize,
     periods: Vec<ArchivePeriodView>,
     archive_count: usize,
     health_run_at: Option<String>,
@@ -74,6 +76,7 @@ pub(crate) async fn lifecycle_page(
         ],
         configuration_url: "/admin/configuration",
         archive_count: archives.len(),
+        measures_count: view.measures.len(),
         measures: view.measures,
         periods: view.periods,
         health_run_at: view.health_run_at,

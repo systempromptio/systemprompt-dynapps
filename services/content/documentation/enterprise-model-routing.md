@@ -41,20 +41,16 @@ Anthropic entries, in listing order, are:
 
 | Model | Input / output per million | Context | Max output |
 |---|---|---|---|
+| `claude-opus-5-5` | $4.00 / $20.00 | 1M | 128k |
 | `claude-opus-5` | $5.00 / $25.00 | 1M | 128k |
 | `claude-sonnet-5` | $2.00 / $10.00 | 1M | 128k |
 | `claude-fable-5-1` | $10.00 / $50.00 | 1M | 128k |
 | `claude-fable-5` | $10.00 / $50.00 | 1M | 128k |
-| `claude-opus-4-8` | $5.00 / $25.00 | 1M | 128k |
-| `claude-opus-4-7` | $5.00 / $25.00 | 1M | 128k |
-| `claude-opus-4-6` | $5.00 / $25.00 | 1M | 128k |
-| `claude-sonnet-4-6` | $3.00 / $15.00 | 1M | 128k |
 | `claude-haiku-4-5` | $1.00 / $5.00 | 200k | 64k |
-| `claude-opus-4-5` | $5.00 / $25.00 | 200k | 64k |
-| `claude-sonnet-4-5` | $3.00 / $15.00 | 200k | 64k |
 
-The last three carry their dated ids as aliases, so an existing client pinned to
-`claude-haiku-4-5-20251001` keeps working. `gateway.default_model` is
+`claude-haiku-4-5` carries its dated id as an alias, so an existing client pinned to
+`claude-haiku-4-5-20251001` keeps working. The Claude 4.x Opus and Sonnet models
+were removed when Opus 5.5 was added. `gateway.default_model` is
 `claude-sonnet-5`. Retired dated ids are no longer served: because
 `allow_unlisted_models` is `false`, a request naming one is refused rather than
 silently forwarded.

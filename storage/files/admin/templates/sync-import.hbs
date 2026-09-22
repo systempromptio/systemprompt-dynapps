@@ -57,7 +57,7 @@
     {{/if}}
 
     {{#if other}}
-    {{#> components/section title="Served from code" count=other.length note="Entries the instance reads from the tree rather than the database. Nothing here is applied: commit them to the repository, or publish them as a bundle and pin it."}}{{/components/section}}
+    {{#> components/section title="Served from code" count=other_count note="Entries the instance reads from the tree rather than the database. Nothing here is applied: commit them to the repository, or publish them as a bundle and pin it."}}{{/components/section}}
     {{#> components/table caption="Archive entries not projected into the database" modifier="sp-sync-other"}}
         <thead><tr>
             <th>Entry</th>

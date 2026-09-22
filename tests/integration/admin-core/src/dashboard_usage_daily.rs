@@ -73,7 +73,14 @@ async fn upsert_daily_aggregation_inserts_the_first_event_of_the_day() {
     let date = Utc::now().date_naive();
     let plugin = PluginId::new("astound-commons");
 
-    upsert_daily_aggregation(&daily_params(&db.pool, &user, &plugin, &date, EVENT_POST_TOOL_USE)).await;
+    upsert_daily_aggregation(&daily_params(
+        &db.pool,
+        &user,
+        &plugin,
+        &date,
+        EVENT_POST_TOOL_USE,
+    ))
+    .await;
 
     let rows = read_daily(&db.pool, &user).await;
     assert_eq!(rows.len(), 1);
@@ -94,7 +101,14 @@ async fn upsert_daily_aggregation_accumulates_into_one_row_per_tool_and_day() {
     let plugin = PluginId::new("astound-commons");
 
     for _ in 0..3 {
-        upsert_daily_aggregation(&daily_params(&db.pool, &user, &plugin, &date, EVENT_POST_TOOL_USE)).await;
+        upsert_daily_aggregation(&daily_params(
+            &db.pool,
+            &user,
+            &plugin,
+            &date,
+            EVENT_POST_TOOL_USE,
+        ))
+        .await;
     }
 
     let rows = read_daily(&db.pool, &user).await;
@@ -159,7 +173,14 @@ async fn upsert_daily_aggregation_keeps_separate_rows_per_event_type() {
     let date = Utc::now().date_naive();
     let plugin = PluginId::new("astound-commons");
 
-    upsert_daily_aggregation(&daily_params(&db.pool, &user, &plugin, &date, EVENT_POST_TOOL_USE)).await;
+    upsert_daily_aggregation(&daily_params(
+        &db.pool,
+        &user,
+        &plugin,
+        &date,
+        EVENT_POST_TOOL_USE,
+    ))
+    .await;
     upsert_daily_aggregation(&daily_params(
         &db.pool,
         &user,

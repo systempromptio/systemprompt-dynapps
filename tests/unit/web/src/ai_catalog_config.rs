@@ -78,17 +78,12 @@ fn the_anthropic_lineup_is_exactly_the_current_models() {
     assert_eq!(
         ids,
         vec![
+            "claude-opus-5-5",
             "claude-opus-5",
             "claude-sonnet-5",
             "claude-fable-5-1",
             "claude-fable-5",
-            "claude-opus-4-8",
-            "claude-opus-4-7",
-            "claude-opus-4-6",
-            "claude-sonnet-4-6",
             "claude-haiku-4-5",
-            "claude-opus-4-5",
-            "claude-sonnet-4-5",
         ]
     );
 }
@@ -100,6 +95,14 @@ fn the_retired_dated_ids_are_gone() {
         "claude-opus-4-1-20250805",
         "claude-sonnet-4-20250514",
         "claude-opus-4-20250514",
+        "claude-opus-4-8",
+        "claude-opus-4-7",
+        "claude-opus-4-6",
+        "claude-sonnet-4-6",
+        "claude-opus-4-5",
+        "claude-opus-4-5-20251101",
+        "claude-sonnet-4-5",
+        "claude-sonnet-4-5-20250929",
     ] {
         assert!(
             !models.iter().any(|m| m.matches(retired)),
@@ -112,11 +115,7 @@ fn the_retired_dated_ids_are_gone() {
 #[test]
 fn the_dated_aliases_that_clients_still_pin_keep_resolving() {
     let models = anthropic_models();
-    for alias in [
-        "claude-haiku-4-5-20251001",
-        "claude-opus-4-5-20251101",
-        "claude-sonnet-4-5-20250929",
-    ] {
+    for alias in ["claude-haiku-4-5-20251001"] {
         assert!(
             models.iter().any(|m| m.matches(alias)),
             "{alias} is pinned by shipped clients and must stay an alias"
@@ -143,6 +142,31 @@ fn sonnet_5_carries_the_current_rate_card() {
         .expect("cache write rate");
     assert!(same(cache_read, 0.2));
     assert!(same(cache_write, 2.5));
+}
+
+#[test]
+fn opus_5_5_carries_its_launch_rate_card() {
+    let models = anthropic_models();
+    let opus = models
+        .iter()
+        .find(|m| m.id.as_str() == "claude-opus-5-5")
+        .expect("claude-opus-5-5");
+    assert!(same(opus.pricing.input_per_million, 4.0));
+    assert!(same(opus.pricing.output_per_million, 20.0));
+    assert!(same(
+        opus.pricing
+            .cache_read_per_million
+            .expect("cache read rate"),
+        0.2
+    ));
+    assert!(same(
+        opus.pricing
+            .cache_write_per_million
+            .expect("cache write rate"),
+        5.0
+    ));
+    assert_eq!(opus.limits.context_window, 1_000_000);
+    assert_eq!(opus.limits.max_output_tokens, 128_000);
 }
 
 #[test]

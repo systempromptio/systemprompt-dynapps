@@ -11,7 +11,7 @@
     {{/components/page-header}}
 
     <div class="sp-kpi-grid" aria-label="Lifecycle totals">
-        {{> components/kpi label="Managed tables" value=(formatNumber measures.length) note="measured daily at 04:30"}}
+        {{> components/kpi label="Managed tables" value=(formatNumber measures_count) note="measured daily at 04:30"}}
         {{> components/kpi label="Archive files" value=(formatNumber archive_count) note="under storage/exports"}}
         {{> components/kpi label="P1 findings" value=(formatNumber findings_p1) tone=findings_p1_tone note="last health check"}}
         {{> components/kpi label="P2 findings" value=(formatNumber findings_p2) tone=findings_p2_tone note="last health check"}}

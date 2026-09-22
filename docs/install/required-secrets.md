@@ -14,7 +14,7 @@ Credential issuing for the Google project is covered in more detail in
 
 | secret | provider entry | credential | unlocks |
 |---|---|---|---|
-| `anthropic` | `anthropic` | Anthropic API key | the eleven `claude-*` models, including `claude-opus-5`, `claude-sonnet-5` and `claude-fable-5-1` |
+| `anthropic` | `anthropic` | Anthropic API key | the six `claude-*` models, including `claude-opus-5-5`, `claude-opus-5`, `claude-sonnet-5` and `claude-fable-5-1` |
 | `gemini` | `gemini` | Gemini API key | `gemini-2.5-pro`, `gemini-2.5-flash`, `gemini-2.5-flash-lite` |
 | `vertex` | `vertex` | Google service-account JSON | `vertex-gemini-2.5-pro`, `vertex-gemini-2.5-flash` |
 | `vertex_maas` | `vertex-maas` | Google service-account JSON | the nine open models: four Qwen3, `zai.glm-5`, `moonshotai.kimi-k2-thinking`, `deepseek.v3.2`, `openai.gpt-oss-120b`, `openai.gpt-oss-20b` |
