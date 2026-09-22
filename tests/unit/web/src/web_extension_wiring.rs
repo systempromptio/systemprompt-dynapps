@@ -55,7 +55,7 @@ fn it_declares_the_extensions_whose_tables_it_reads() {
     dependencies.sort_unstable();
     assert_eq!(
         dependencies,
-        vec!["authz", "content", "managed_resources", "users"]
+        vec!["authz", "content", "managed_resources", "oauth", "users"]
     );
 
     let mut shared = extension.cross_extension_tables();
@@ -63,6 +63,7 @@ fn it_declares_the_extensions_whose_tables_it_reads() {
     assert_eq!(
         shared,
         vec![
+            "ai_requests",
             "managed_installation_receipts",
             "managed_invocation_attributions",
             "managed_publications",

@@ -104,7 +104,7 @@
     {{#> components/section title="Archives" note="One gzipped JSON Lines file per table per period, written by COPY with row_to_json, so each is complete and restorable. The manifest lists every file with its SHA-256; weekly archives are pruned after keep_weeks once the month's rollup archive exists, monthly archives are kept."}}{{/components/section}}
     {{#if periods}}
     {{#each periods}}
-    <details class="sp-card sp-lifecycle-period" {{#if @first}}open{{/if}}>
+    <details class="sp-card" {{#if @first}}open{{/if}}>
         <summary class="sp-card__body">
             <strong>{{period}}</strong> <span class="sp-u-text-tertiary">{{tier}} · {{window}} · written {{relativeTime written_at}}</span>
             <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{manifest_href}}">manifest.json</a>

@@ -381,11 +381,10 @@ fn relative_time_buckets_by_age() {
 }
 
 #[test]
-fn relative_time_falls_back_to_an_absolute_date_past_thirty_days() {
+fn relative_time_counts_thirty_day_months_past_thirty_days() {
     let old = chrono::Utc::now() - chrono::Duration::days(400);
     let out = render_value("{{relativeTime v}}", serde_json::json!(old.to_rfc3339()));
-    assert!(!out.ends_with("d ago"), "{out}");
-    assert!(out.contains(&old.format("%Y").to_string()), "{out}");
+    assert_eq!(out, "13mo ago");
 }
 
 #[test]

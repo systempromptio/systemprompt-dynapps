@@ -110,7 +110,7 @@
             </tr>
         </thead>
         {{#each audience.row_groups}}
-        <tbody class="sp-ac-audience__group" data-entity-kind="{{kind}}">
+        <tbody data-entity-kind="{{kind}}">
             <tr class="sp-ac-audience__group-row"><th scope="rowgroup" colspan="{{../audience.colspan}}"><span class="sp-ac-audience__group-label">{{kind_label}}</span> <span class="sp-count-pill">{{count}}</span></th></tr>
             {{#each rows}}
             <tr class="sp-ac-audience__row" data-entity-type="{{entity_type}}" data-entity-id="{{entity_id}}">

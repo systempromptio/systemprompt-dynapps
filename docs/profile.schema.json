@@ -547,6 +547,7 @@
       ]
     },
     "RateLimitsConfig": {
+      "description": "Per-route-group request budgets, in requests per second.\n\nEach `*_per_second` field governs one route group:\n\n- `oauth_public` — `/api/v1/core/oauth` public endpoints,\n  `/auth/link-passkey`, and the public gateway session routes under\n  `/api/public/gateway`.\n- `oauth_auth` — the authenticated half of `/api/v1/core/oauth`, plus\n  `/api/v1/core/users`.\n- `contexts` — `/api/v1/core/contexts` and the inbound `/api/v1/webhook`\n  mount.\n- `tasks` — `/api/v1/core/tasks`.\n- `artifacts` — `/api/v1/core/artifacts`.\n- `agent_registry` — `/api/v1/agents/registry`, discovery only, kept apart\n  from `agents_per_second` so listing agents cannot spend an execution\n  budget.\n- `agents` — `/api/v1/agents` execution, and the Slack and Teams inbound\n  mounts that dispatch to an agent.\n- `mcp_registry` — `/api/v1/mcp/registry`, the MCP server catalog, discovery\n  only.\n- `mcp` — `/api/v1/mcp` tool calls, the busiest protocol route group.\n- `stream` — `/api/v1/stream`, long-lived SSE connections, so this is a\n  connection budget rather than a request one and is set high.\n- `content` — `/api/v1/content`, `/api/v1/sync`, `/api/v1/marketplace`,\n  `/api/v1/analytics` and `/track/engagement`.\n- `gateway` — inference traffic under `/v1`: `/v1/messages` and the\n  OpenAI-shaped `/v1/chat/completions`.\n- `bridge_auth` — `/v1/auth/bridge/*`, deliberately separate from\n  `gateway_per_second`: sign-in is low-volume and must stay reachable on an\n  instance whose inference traffic is saturating its own budget. Sharing one\n  bucket let a busy gateway lock every user out of authenticating.\n\n`per_second_budgets` projects those fields as a list; both validators\niterate it rather than naming the fields themselves, which had already let\nthem drift apart and let a zero in an unnamed field through.",
       "type": "object",
       "properties": {
         "disabled": {
@@ -554,91 +555,78 @@
           "default": false
         },
         "oauth_public_per_second": {
-          "description": "`/api/v1/core/oauth` public endpoints, `/auth/link-passkey`, and the\npublic gateway session routes under `/api/public/gateway`.",
           "type": "integer",
           "format": "uint64",
           "minimum": 0,
           "default": 10
         },
         "oauth_auth_per_second": {
-          "description": "The authenticated half of `/api/v1/core/oauth`, plus `/api/v1/core/users`.",
           "type": "integer",
           "format": "uint64",
           "minimum": 0,
           "default": 10
         },
         "contexts_per_second": {
-          "description": "`/api/v1/core/contexts` and the inbound `/api/v1/webhook` mount.",
           "type": "integer",
           "format": "uint64",
           "minimum": 0,
           "default": 100
         },
         "tasks_per_second": {
-          "description": "`/api/v1/core/tasks`.",
           "type": "integer",
           "format": "uint64",
           "minimum": 0,
           "default": 50
         },
         "artifacts_per_second": {
-          "description": "`/api/v1/core/artifacts`.",
           "type": "integer",
           "format": "uint64",
           "minimum": 0,
           "default": 50
         },
         "agent_registry_per_second": {
-          "description": "`/api/v1/agents/registry` — discovery only, kept apart from\n`agents_per_second` so listing agents cannot spend an execution budget.",
           "type": "integer",
           "format": "uint64",
           "minimum": 0,
           "default": 50
         },
         "agents_per_second": {
-          "description": "`/api/v1/agents` execution, and the Slack and Teams inbound mounts that\ndispatch to an agent.",
           "type": "integer",
           "format": "uint64",
           "minimum": 0,
           "default": 20
         },
         "mcp_registry_per_second": {
-          "description": "`/api/v1/mcp/registry` — the MCP server catalog, discovery only.",
           "type": "integer",
           "format": "uint64",
           "minimum": 0,
           "default": 50
         },
         "mcp_per_second": {
-          "description": "`/api/v1/mcp` — MCP tool calls, the busiest protocol route group.",
           "type": "integer",
           "format": "uint64",
           "minimum": 0,
           "default": 200
         },
         "stream_per_second": {
-          "description": "`/api/v1/stream` — long-lived SSE connections, so this is a connection\nbudget rather than a request one and is set high.",
           "type": "integer",
           "format": "uint64",
           "minimum": 0,
           "default": 100
         },
         "content_per_second": {
-          "description": "`/api/v1/content`, `/api/v1/sync`, `/api/v1/marketplace`,\n`/api/v1/analytics` and `/track/engagement`.",
           "type": "integer",
           "format": "uint64",
           "minimum": 0,
           "default": 50
         },
         "gateway_per_second": {
-          "description": "Inference traffic under `/v1` — `/v1/messages` and the OpenAI-shaped\n`/v1/chat/completions`.",
           "type": "integer",
           "format": "uint64",
           "minimum": 0,
           "default": 100
         },
         "bridge_auth_per_second": {
-          "description": "Budget for `/v1/auth/bridge/*`, kept separate from `gateway_per_second`.\n\nWhy: sign-in is low-volume and must stay reachable on an instance whose\ninference traffic is saturating its own budget. Sharing one bucket let a\nbusy gateway lock every user out of authenticating.",
           "type": "integer",
           "format": "uint64",
           "minimum": 0,
@@ -1064,24 +1052,22 @@
       "additionalProperties": false
     },
     "RetentionConfig": {
+      "description": "Retention windows, in days, for the high-volume operational tables.\n\nEach field names the table it bounds and rows older than the window are\ndeleted, with two exceptions worth knowing:\n\n- `ai_request_messages_days` drops the stored messages and keeps the request\n  row; `None` follows `ai.history.retention_days` from the services\n  configuration instead.\n- `ai_request_payload_raw_days` sets the raw request and response bodies on\n  `ai_request_payloads` to NULL rather than deleting the row; the excerpts,\n  hashes and sizes stay.",
       "type": "object",
       "properties": {
         "logs_days": {
-          "description": "`logs` rows older than this are deleted.",
           "type": "integer",
           "format": "uint32",
           "minimum": 0,
           "default": 30
         },
         "analytics_events_days": {
-          "description": "`analytics_events` rows older than this are deleted.",
           "type": "integer",
           "format": "uint32",
           "minimum": 0,
           "default": 90
         },
         "ai_request_messages_days": {
-          "description": "Stored AI request messages (`ai_request_messages`) older than this are\ndeleted; the request row itself stays. `None` follows\n`ai.history.retention_days` from the services configuration.",
           "type": [
             "integer",
             "null"
@@ -1091,28 +1077,24 @@
           "default": null
         },
         "mcp_tool_executions_days": {
-          "description": "`mcp_tool_executions` rows older than this are deleted.",
           "type": "integer",
           "format": "uint32",
           "minimum": 0,
           "default": 365
         },
         "outbox_processed_days": {
-          "description": "Processed `event_outbox` rows older than this are deleted.",
           "type": "integer",
           "format": "uint32",
           "minimum": 0,
           "default": 7
         },
         "ai_request_payload_raw_days": {
-          "description": "Raw request and response bodies on `ai_request_payloads` older than\nthis are set to NULL; the excerpts, hashes and sizes stay.",
           "type": "integer",
           "format": "uint32",
           "minimum": 0,
           "default": 7
         },
         "governance_decisions_days": {
-          "description": "`governance_decisions` rows older than this are deleted.",
           "type": "integer",
           "format": "uint32",
           "minimum": 0,
