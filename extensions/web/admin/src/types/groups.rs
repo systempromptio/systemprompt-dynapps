@@ -90,13 +90,3 @@ pub struct GroupUsageSummary {
     pub cost_microdollars: i64,
     pub active_users: i64,
 }
-
-/// Per-group user counts and activity, for the access-control overview.
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
-pub struct GroupStats {
-    pub group_id: GroupId,
-    pub user_count: i64,
-    pub active_count: i64,
-    pub total_events: i64,
-    pub active_24h: i64,
-}

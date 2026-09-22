@@ -28,7 +28,7 @@ use crate::repositories::access_control::export::render_export;
 use crate::repositories::access_control::rules::{
     count_band_rules, list_band_rules, list_entity_defaults,
 };
-use crate::repositories::access_control::sync::{SyncOutcome, apply_sync, apply_sync_scoped};
+use crate::repositories::access_control::sync::{apply_sync, apply_sync_scoped};
 use crate::repositories::config::gateway::registered_routes_from_services;
 use crate::repositories::config::rules_yaml_loader::{RULES_FILE, parse_rules_doc};
 
@@ -106,19 +106,6 @@ impl AccessControlPlane {
         )
         .await?;
         Ok(())
-    }
-}
-
-impl From<SyncOutcome> for ApplyOutcome {
-    fn from(outcome: SyncOutcome) -> Self {
-        Self {
-            inserted: outcome.inserted,
-            updated: outcome.updated,
-            deleted: outcome.deleted,
-            entities_inserted: outcome.entities_inserted,
-            entities_updated: outcome.entities_updated,
-            entities_retired: outcome.entities_retired,
-        }
     }
 }
 
@@ -250,7 +237,7 @@ impl SyncPlane for AccessControlPlane {
         let declared = declared_now().await?;
         let outcome = apply_sync_scoped(pool, &declared, mode, scope).await?;
         self.record(pool, &declared, mode, actor).await?;
-        Ok(outcome.into())
+        Ok(outcome)
     }
 
     async fn apply_from(
@@ -263,7 +250,7 @@ impl SyncPlane for AccessControlPlane {
         let declared = declared_from(from).await?;
         let outcome = apply_sync(pool, &declared, mode).await?;
         self.record(pool, &declared, mode, actor).await?;
-        Ok(outcome.into())
+        Ok(outcome)
     }
 
     // Why: renders the database as the file for copy-out only; the instance

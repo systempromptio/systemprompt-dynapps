@@ -14,7 +14,6 @@
 //! Everything happens in one transaction that re-reads the tables first, so
 //! the picture it acts on is the one it commits against.
 
-use serde::Serialize;
 use sqlx::{PgPool, Postgres, Transaction};
 use systemprompt_security::authz::YAML_SOURCE;
 
@@ -22,26 +21,17 @@ use super::declared::{DeclaredEntity, DeclaredRule, DeclaredSet};
 use super::drift::{DriftReport, compute_drift};
 use super::rules::{list_band_rules, list_entity_defaults};
 use super::validity::set_rule_validity;
-pub use crate::repositories::sync::plane::{EntityScope, SyncMode};
+pub use crate::repositories::sync::plane::{ApplyOutcome, EntityScope, SyncMode};
 
 // Why: the `source` stamped on entity rows this module writes.
 pub const RULES_SOURCE: &str = "services/access-control/rules.yaml";
 
-#[derive(Debug, Default, Clone, Copy, Serialize)]
-pub struct SyncOutcome {
-    pub inserted: usize,
-    pub updated: usize,
-    pub deleted: usize,
-    pub entities_inserted: usize,
-    pub entities_updated: usize,
-    pub entities_retired: usize,
-}
 
 pub async fn apply_sync(
     pool: &PgPool,
     declared: &DeclaredSet,
     mode: SyncMode,
-) -> Result<SyncOutcome, sqlx::Error> {
+) -> Result<ApplyOutcome, sqlx::Error> {
     apply_sync_scoped(pool, declared, mode, EntityScope::All).await
 }
 
@@ -53,7 +43,7 @@ pub async fn apply_sync_scoped(
     declared: &DeclaredSet,
     mode: SyncMode,
     scope: EntityScope<'_>,
-) -> Result<SyncOutcome, sqlx::Error> {
+) -> Result<ApplyOutcome, sqlx::Error> {
     let mut tx = pool.begin().await?;
     let rules: Vec<_> = list_band_rules(&mut *tx)
         .await?
@@ -69,7 +59,7 @@ pub async fn apply_sync_scoped(
     let declared = &declared;
     let drift = compute_drift(declared, &rules, &entities);
 
-    let mut outcome = SyncOutcome::default();
+    let mut outcome = ApplyOutcome::default();
     for entity in &drift.entities_missing {
         upsert_entity(&mut tx, entity).await?;
         outcome.entities_inserted += 1;

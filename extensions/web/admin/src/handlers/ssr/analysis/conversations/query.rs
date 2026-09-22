@@ -1,7 +1,7 @@
 //! The query string `/admin/analysis/conversations` binds, and the links that
 //! carry it: every filter, the breakdown dimension, sort and page.
 
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use systemprompt::identifiers::UserId;
 use urlencoding::encode as urlencode;
@@ -67,14 +67,8 @@ impl ConversationAnalysisQuery {
     }
 
     pub(crate) fn since_datetime(&self) -> Option<DateTime<Utc>> {
-        let dur = match self.since_label() {
-            "24h" => Duration::hours(24),
-            "7d" => Duration::days(7),
-            "30d" => Duration::days(30),
-            "90d" => Duration::days(90),
-            _ => return None,
-        };
-        Some(Utc::now() - dur)
+        let preset = crate::util::time_range::TimeRangePreset::parse(self.since_label())?;
+        Some(Utc::now() - preset.duration()?)
     }
 
     pub(crate) fn user_id(&self) -> Option<UserId> {

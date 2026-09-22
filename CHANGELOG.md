@@ -20,7 +20,27 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+### Removed
+
+- **Admin:** the `external_agents` repository module (97 lines), the unused `GroupStats` type,
+  and ten unused conversion helpers in `numeric.rs`. All had zero callers. `external_agents`
+  was invisible to `check-dead-repository-code.sh` because that gate skips files whose head
+  carries `#![cfg(feature = ...)]`.
+
+### Added
+
+- **Gate:** `check-field-copy-from.py` rejects a `From` impl whose body only copies fields
+  across, name for name — the shape of a type declared twice. `check-duplicate-types.sh`
+  cannot see this: it compares names within a crate, and such pairs differ in both. On its
+  first run it found three in `extensions/`, one genuine (collapsed) and two imposed by
+  `query_as!` needing a flat column struct (annotated with the reason).
+
 ### Fixed
+
+- **Admin:** `?preset=90d` meant 90 days on three pages and silently fell back to 30 on
+  another, and `1d` resolved on three pages and nowhere else. `TimeRangePreset` is now the one
+  table, carrying `90d` and the `1d` alias, and three hand-rolled copies of its `as_str` are
+  gone — the compiler found them once the enum gained a variant.
 
 - **Gateway (core 0.58.0):** bridge sign-in on an instance behind an untrusted reverse proxy
   failed with `auth: gateway returned status 429 Too Many Requests from session-pat`, which
