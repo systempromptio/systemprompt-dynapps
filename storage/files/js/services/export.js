@@ -10,18 +10,12 @@ import { on } from './events.js';
 import { rawResponse, errorMessage } from './api.js';
 import { selection, buildUrl } from './export-url.js';
 import { resetFilters, dropFilter, renderWindowLine } from './export-scope.js';
+import { remember, recall, pageKey, columnInputs, updateColumnCount, applyRemembered, filterColumns } from './export-columns.js';
+import { renderPreview, documentHref } from './export-preview.js';
+import { showFormats } from './export-formats.js';
 import { selectedRowIds } from '../components/sp-table-select.js';
 
 const PREVIEW_DEBOUNCE_MS = 250;
-const STORAGE_PREFIX = 'sp-export:';
-
-// A table leaves in any format; one conversation's record as JSON or
-// Markdown; a set of records only as JSON Lines, one conversation per line.
-const FORMATS = {
-  table: ['csv', 'json', 'jsonl', 'markdown'],
-  document: ['json', 'markdown'],
-  transcripts: ['jsonl'],
-};
 
 // The window a dialog falls back to when the page names none, per kind.
 const WINDOW_DEFAULTS = { live_preset: '7d', retained_days: '30', days: '30' };
@@ -34,37 +28,11 @@ const setHidden = (el, hidden) => {
   el.classList.toggle('is-hidden', hidden);
 };
 
-const remember = (key, value) => {
-  try { localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(value)); } catch { /* storage unavailable */ }
-};
-
-const recall = (key) => {
-  try { return JSON.parse(localStorage.getItem(STORAGE_PREFIX + key) ?? 'null'); } catch { return null; }
-};
-
-const pageKey = () => `page:${window.location.pathname}`;
-
 const datasetSelect = (dialog) => dialog.querySelector('[data-export-dataset]');
 
 const datasetOption = (dialog) => datasetSelect(dialog).selectedOptions[0];
 
 const kindOf = (dialog) => datasetOption(dialog).dataset.kind ?? 'table';
-
-const columnInputs = (dialog, dataset) =>
-  [...dialog.querySelectorAll(`[data-export-columns="${dataset}"] input`)];
-
-const formatInputs = (dialog) => [...dialog.querySelectorAll('input[name="format"]')];
-
-const showFormats = (dialog, kind) => {
-  const allowed = FORMATS[kind];
-  const inputs = formatInputs(dialog);
-  for (const input of inputs) setHidden(input.closest('label'), !allowed.includes(input.value));
-  const checked = inputs.find((input) => input.checked);
-  if (!allowed.includes(checked?.value)) {
-    const first = inputs.find((input) => input.value === allowed[0]);
-    if (first) first.checked = true;
-  }
-};
 
 // Only the picked dataset's window kind, formats and column list are
 // visible; a selection disables the window entirely because the ids decide
@@ -76,7 +44,7 @@ const showWindow = (dialog) => {
   const selected = Boolean(dialog.dataset.exportIds);
   dialog.classList.toggle('sp-export--document', kind !== 'table');
   setHidden(dialog.querySelector('.sp-export__pane--columns'), kind !== 'table');
-  showFormats(dialog, kind);
+  showFormats(dialog, kind, setHidden);
   for (const block of dialog.querySelectorAll('[data-export-window]')) {
     setHidden(block, block.dataset.exportWindow !== windowKind);
     block.disabled = selected;
@@ -92,38 +60,6 @@ const showWindow = (dialog) => {
   if (description) description.textContent = option.dataset.description ?? '';
 };
 
-const strong = (value) => {
-  const el = document.createElement('strong');
-  el.textContent = value.toLocaleString();
-  return el;
-};
-
-const renderPreview = (el, preview, kind, columns) => {
-  el.replaceChildren();
-  if (kind === 'transcripts') {
-    el.append(strong(preview.rows), preview.rows === 1 ? ' conversation, in full' : ' conversations, in full');
-  } else {
-    el.append(strong(preview.rows), ` rows × ${columns} columns = `, strong(preview.rows * columns), ' cells');
-  }
-  if (preview.capped) {
-    el.dataset.tone = 'warn';
-    el.append(` — capped at ${preview.cap.toLocaleString()}; narrow the window or the filters for the rest.`);
-  } else {
-    delete el.dataset.tone;
-  }
-};
-
-const updateColumnCount = (dialog, picked) => {
-  const count = dialog.querySelector('[data-export-columns-count]');
-  if (count) count.textContent = `${picked.columns.length} of ${columnInputs(dialog, picked.dataset).length}`;
-};
-
-const documentHref = (dialog) => {
-  const option = datasetOption(dialog);
-  const format = new FormData(dialog.querySelector('[data-export-form]')).get('format');
-  return format === 'markdown' ? option.dataset.hrefMarkdown : option.dataset.hrefJson;
-};
-
 let previewTimer = null;
 let previewSeq = 0;
 
@@ -135,7 +71,7 @@ const refresh = (dialog) => {
   clearTimeout(previewTimer);
   delete el.dataset.tone;
   if (kind === 'document') {
-    dialog.querySelector('[data-export-download]').href = documentHref(dialog);
+    dialog.querySelector('[data-export-download]').href = documentHref(dialog, datasetOption);
     el.textContent = 'The whole conversation, one file.';
     renderWindowLine(windowLine, null);
     return;
@@ -167,30 +103,6 @@ const setColumns = (dialog, predicate) => {
   const { dataset } = selection(dialog);
   for (const input of columnInputs(dialog, dataset)) input.checked = predicate(input);
   refresh(dialog);
-};
-
-const applyRemembered = (dialog) => {
-  const dataset = datasetOption(dialog).value;
-  const saved = recall(dataset);
-  if (!saved) return;
-  const format = dialog.querySelector(`input[name="format"][value="${saved.format}"]`);
-  if (format) format.checked = true;
-  if (Array.isArray(saved.columns) && saved.columns.length) {
-    for (const input of columnInputs(dialog, dataset)) input.checked = saved.columns.includes(input.value);
-  }
-};
-
-const filterColumns = (dialog, query) => {
-  const needle = query.trim().toLowerCase();
-  for (const group of dialog.querySelectorAll('[data-export-group]')) {
-    let visible = 0;
-    for (const column of group.querySelectorAll('[data-export-column]')) {
-      const match = needle === '' || (column.dataset.label ?? '').toLowerCase().includes(needle);
-      setHidden(column, !match);
-      if (match) visible += 1;
-    }
-    setHidden(group, visible === 0);
-  }
 };
 
 // The page's `since` tabs name windows the dialog spells differently; "all"
@@ -273,7 +185,7 @@ const open = (trigger) => {
   resetFilters(dialog);
   applyScope(dialog, trigger);
   syncFromPage(dialog);
-  applyRemembered(dialog);
+  applyRemembered(dialog, datasetOption(dialog).value);
   showWindow(dialog);
   dialog.showModal();
   refresh(dialog);
@@ -301,11 +213,11 @@ export const initExport = () => {
     refresh(dialog);
   });
   on('click', '[data-export-download]', () => setTimeout(close, 0));
-  on('input', '[data-export-column-filter]', (e, input) => filterColumns(dialog, input.value));
+  on('input', '[data-export-column-filter]', (e, input) => filterColumns(dialog, input.value, setHidden));
   dialog.addEventListener('change', (e) => {
     if (e.target.matches('[data-export-dataset]')) {
       remember(pageKey(), e.target.value);
-      applyRemembered(dialog);
+      applyRemembered(dialog, datasetOption(dialog).value);
     }
     showWindow(dialog);
     refresh(dialog);
