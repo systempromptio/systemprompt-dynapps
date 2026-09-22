@@ -17,8 +17,10 @@ use axum::response::{IntoResponse, Response};
 use serde::Serialize;
 use sqlx::PgPool;
 use systemprompt::config::{AppPaths, ProfileBootstrap};
+use systemprompt::loader::ServicesBootstrap;
 
 use self::view::{ArchivePeriodView, LifecycleFindingView, MeasureView, build_view};
+use super::configuration::retention::{RetentionView, retention_view};
 use crate::error::{AdminError, AdminHtmlResult};
 use crate::handlers::ssr::types::BreadcrumbView;
 use crate::repositories::lifecycle::{
@@ -43,6 +45,7 @@ struct LifecyclePageData {
     findings_p3: i32,
     findings_p1_tone: &'static str,
     findings_p2_tone: &'static str,
+    retention: RetentionView,
 }
 
 pub(crate) async fn lifecycle_page(
@@ -54,6 +57,9 @@ pub(crate) async fn lifecycle_page(
     if !user_ctx.is_console {
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
     }
+    let profile = ProfileBootstrap::get().map_err(AdminError::internal)?;
+    let ai_history_days = ServicesBootstrap::get().map_or(30, |s| s.ai.history.retention_days);
+    let retention = retention_view(&pool, &profile.retention, ai_history_days).await?;
     let measures = list_latest_retention_runs(&pool).await?;
     let archives = list_retention_archives(&pool).await?;
     let health = find_latest_health_report(&pool).await?;
@@ -77,6 +83,7 @@ pub(crate) async fn lifecycle_page(
         findings_p3: view.counts.2,
         findings_p1_tone: if view.counts.0 > 0 { "err" } else { "neutral" },
         findings_p2_tone: if view.counts.1 > 0 { "warn" } else { "neutral" },
+        retention,
     };
     Ok(super::render_typed_page(
         &engine,

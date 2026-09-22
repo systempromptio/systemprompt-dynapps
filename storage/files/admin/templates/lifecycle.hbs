@@ -17,6 +17,33 @@
         {{> components/kpi label="P2 findings" value=(formatNumber findings_p2) tone=findings_p2_tone note="last health check"}}
     </div>
 
+    {{#> components/section title="What this instance keeps" note="The retention policy in force. Every window is a profile key — change it in .systemprompt/profiles/<name>/profile.yaml under retention: and restart; a key left out takes the default shown as its source. Deletion runs nightly in database_cleanup and only deletes when its scheduler entry sets enforce: true."}}{{/components/section}}
+    {{#> components/table caption="Retention windows enforced by database_cleanup" modifier="sp-lifecycle-windows"}}
+        <thead><tr><th>Table</th><th>What it holds</th><th>Kept for</th><th>Where the value comes from</th><th>Deleted last run</th></tr></thead>
+        <tbody>
+        {{#each retention.rows}}
+        <tr data-table="{{table}}">
+            <td><strong>{{table}}</strong></td>
+            <td>{{purpose}}</td>
+            <td class="sp-u-mono">{{days}} d</td>
+            <td><span class="sp-u-text-tertiary">{{days_source}}</span></td>
+            <td class="sp-u-mono">{{#if deleted_last_run}}{{deleted_last_run}}{{else}}<span class="sp-u-text-tertiary">&mdash;</span>{{/if}}</td>
+        </tr>
+        {{/each}}
+        </tbody>
+    {{/components/table}}
+    <p class="sp-u-text-tertiary">
+        Job <code class="sp-code-inline">{{retention.job_name}}</code>
+        {{#if retention.never_ran}}has never run{{else}}last ran {{relativeTime retention.last_run}}{{/if}}
+        {{#if retention.last_status}} &middot; {{> components/badge tone=retention.last_status_tone text=retention.last_status}}{{/if}}
+        {{#if retention.next_run}} &middot; next run {{relativeTime retention.next_run}}{{/if}}.
+        Rollups are never expired: <span class="sp-u-mono">conversation_facts</span>,
+        <span class="sp-u-mono">admin_usage_daily_rollups</span> and
+        <span class="sp-u-mono">plugin_usage_daily</span> outlive the raw rows they summarise,
+        and the raw weeks are archived below before they age out.
+        {{#if retention.last_error}}<br><span class="sp-u-text-tertiary">{{retention.last_error}}</span>{{/if}}
+    </p>
+
     {{#> components/section title="Managed tables" note="The latest daily measurement. Growth compares total size with the measurement closest to seven days earlier; a row is flagged when its oldest row is more than a week beyond its window, which means the cleanup job is not running or not enforced."}}{{/components/section}}
     {{#if measures}}
     {{#> components/table caption="Size and age per retention-managed table" modifier="sp-lifecycle-tables"}}

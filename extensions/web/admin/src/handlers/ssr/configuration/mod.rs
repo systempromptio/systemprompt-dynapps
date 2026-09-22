@@ -9,7 +9,7 @@
 //! Platform group's home because it is the one honest answer to "what is
 //! configured here".
 
-mod retention;
+pub(crate) mod retention;
 mod rows;
 mod view;
 

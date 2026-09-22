@@ -39,8 +39,13 @@ and **only deletes with `enforce: true`** on its entry — without it the job
 logs what it would remove and removes nothing, which is how a self-hosted
 instance grew a 500 000-row `logs` table.
 
-Where to see it: `/admin/configuration` shows every window, its source, rows
-deleted at the last run, and when the next run is due. From the CLI:
+Where to see it: **`/admin/lifecycle`** ("Data lifecycle" in the Platform
+nav) is the one page for this — the windows in force with the profile key
+behind each one, what the last run deleted, then the size and growth of every
+managed table, the archives with download links, and the last health check.
+`/admin/configuration` shows the same window table beside the rest of the
+instance's configuration. Both are read-only: the profile is the source, so a
+change means editing `profile.yaml` and restarting. From the CLI:
 
 ```bash
 systemprompt infra jobs run database_cleanup      # run it now
