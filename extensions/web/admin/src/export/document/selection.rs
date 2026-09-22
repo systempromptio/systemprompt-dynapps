@@ -10,7 +10,7 @@ use systemprompt::identifiers::{ContextId, SessionId};
 use crate::error::{AdminError, AdminResult};
 use crate::export::model::{ExportContext, ExportWindow, Window};
 use crate::export::window;
-use crate::handlers::ssr::ssr_history::{HistoryView, export_rows};
+use crate::handlers::ssr::ssr_history::{ExportRequest, HistoryView, export_rows};
 use crate::repositories::analytics::session_detail::list_session_contexts;
 use crate::types::UserContext;
 use crate::util::time_range::{TimeRange, TimeRangePreset};
@@ -167,8 +167,17 @@ async fn history_set(
     w: ExportWindow,
     view: HistoryView,
 ) -> AdminResult<Selection> {
-    let (rows, total) =
-        export_rows(pool, user, ctx.query()?, view, Some(w), MAX_CONVERSATIONS).await?;
+    let (rows, total) = export_rows(
+        pool,
+        user,
+        ExportRequest {
+            query: ctx.query()?,
+            view,
+            window: Some(w),
+            limit: MAX_CONVERSATIONS,
+        },
+    )
+    .await?;
     Ok(Selection {
         context_ids: rows.into_iter().map(|r| r.context_id).collect(),
         total,

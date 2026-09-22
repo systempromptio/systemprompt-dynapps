@@ -136,14 +136,25 @@ async fn fetch_history_slice(
 // Why: the export is the listing the reader sees — their own scope, the same
 // search — through the page's own query type. The dialog's resolved window
 // wins; without one the rows follow the page's own window.
+// What an export asks of the history listing, as opposed to who is asking.
+pub(crate) struct ExportRequest {
+    pub query: HistoryQuery,
+    pub view: HistoryView,
+    pub window: Option<ExportWindow>,
+    pub limit: i64,
+}
+
 pub(crate) async fn export_rows(
     pool: &PgPool,
     user_ctx: &UserContext,
-    query: HistoryQuery,
-    view: HistoryView,
-    window: Option<ExportWindow>,
-    limit: i64,
+    request: ExportRequest,
 ) -> Result<(Vec<HistoryItem>, i64), AdminError> {
+    let ExportRequest {
+        query,
+        view,
+        window,
+        limit,
+    } = request;
     let scope = view.scope(user_ctx);
     let scope_ids = scope_user_ids(&scope, &query, "export")?;
     let (since, until) = window.map_or_else(
@@ -225,7 +236,7 @@ async fn render_listing(
         base_url: base,
         pagination: build_pagination(query, window, base),
         breadcrumbs: view.breadcrumbs(),
-        export: export_view(query, view, history_window),
+        export: export_view(query, view, &history_window),
     };
     Ok(crate::handlers::ssr::render_typed_page(
         &shell.engine,
@@ -242,7 +253,7 @@ async fn render_listing(
 fn export_view(
     query: &HistoryQuery,
     view: HistoryView,
-    window: HistoryWindow,
+    window: &HistoryWindow,
 ) -> crate::export::ExportView {
     let window_pairs = window.export_pairs();
     let mut pairs = vec![

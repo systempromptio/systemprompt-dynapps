@@ -20,13 +20,16 @@ const PRESETS: [(u32, &str, &str); 4] = [
 ];
 
 #[derive(Debug, Clone, Copy)]
+pub(super) struct CustomRange {
+    pub since: DateTime<Utc>,
+    pub until: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone)]
 pub(super) enum HistoryWindow {
     All,
     Days(u32),
-    Custom {
-        since: DateTime<Utc>,
-        until: DateTime<Utc>,
-    },
+    Custom(Box<CustomRange>),
 }
 
 impl HistoryWindow {
@@ -40,7 +43,9 @@ impl HistoryWindow {
                 .and_then(time::parse)
         };
         match (parsed(query.start.as_deref()), parsed(query.end.as_deref())) {
-            (Some(since), Some(until)) if since < until => Self::Custom { since, until },
+            (Some(since), Some(until)) if since < until => {
+                Self::Custom(Box::new(CustomRange { since, until }))
+            },
             _ => match query.days {
                 Some(days) if PRESETS.iter().any(|(d, ..)| *d == days) => Self::Days(days),
                 _ => Self::All,
@@ -48,41 +53,48 @@ impl HistoryWindow {
         }
     }
 
-    pub(super) fn bounds(self) -> (Option<DateTime<Utc>>, Option<DateTime<Utc>>) {
+    pub(super) fn bounds(&self) -> (Option<DateTime<Utc>>, Option<DateTime<Utc>>) {
         match self {
             Self::All => (None, None),
             Self::Days(days) => {
                 let until = next_midnight();
-                (Some(until - Duration::days(i64::from(days))), Some(until))
+                (Some(until - Duration::days(i64::from(*days))), Some(until))
             },
-            Self::Custom { since, until } => (Some(since), Some(until)),
+            Self::Custom(range) => (Some(range.since), Some(range.until)),
         }
     }
 
-    pub(super) fn label(self) -> String {
+    pub(super) fn label(&self) -> String {
         match self {
             Self::All => "all time".to_owned(),
             Self::Days(365) => "last year".to_owned(),
             Self::Days(days) => format!("last {days} days"),
-            Self::Custom { since, until } => {
-                format!("{} to {}", time::render(since), time::render(until))
+            Self::Custom(range) => {
+                format!(
+                    "{} to {}",
+                    time::render(range.since),
+                    time::render(range.until)
+                )
             },
         }
     }
 
     /// The query parameters that carry this window; all time carries none.
-    pub(super) fn pairs(self) -> Vec<(&'static str, String)> {
+    pub(super) fn pairs(&self) -> Vec<(&'static str, String)> {
         match self {
             Self::All => Vec::new(),
             Self::Days(days) => vec![("days", days.to_string())],
-            Self::Custom { since, until } => {
-                vec![("start", time::render(since)), ("end", time::render(until))]
+            Self::Custom(range) => {
+                vec![
+                    ("start", time::render(range.since)),
+                    ("end", time::render(range.until)),
+                ]
             },
         }
     }
 
     /// The `key=value` pairs that carry this window on a link.
-    pub(super) fn query_parts(self) -> Vec<String> {
+    pub(super) fn query_parts(&self) -> Vec<String> {
         self.pairs()
             .into_iter()
             .map(|(key, value)| format!("{key}={}", urlencoding::encode(&value)))
@@ -91,19 +103,19 @@ impl HistoryWindow {
 
     // Why: the export dialog has no "all time" — its retained contract tops
     // out at a year — so an unbounded page opens the dialog on its widest.
-    pub(super) fn export_pairs(self) -> Vec<(&'static str, String)> {
+    pub(super) fn export_pairs(&self) -> Vec<(&'static str, String)> {
         match self {
             Self::All => vec![("days", "365".to_owned())],
-            Self::Days(_) | Self::Custom { .. } => self.pairs(),
+            Self::Days(_) | Self::Custom(_) => self.pairs(),
         }
     }
 
     /// The window tabs; `prefix` already carries every other filter and
     /// ends in `?` or `&`.
-    pub(super) fn tabs(self, prefix: &str) -> Vec<TabLinkView> {
+    pub(super) fn tabs(&self, prefix: &str) -> Vec<TabLinkView> {
         let active = match self {
-            Self::Days(days) => Some(days),
-            Self::All | Self::Custom { .. } => None,
+            Self::Days(days) => Some(*days),
+            Self::All | Self::Custom(_) => None,
         };
         let all_href = prefix.trim_end_matches(['?', '&']).to_owned();
         PRESETS

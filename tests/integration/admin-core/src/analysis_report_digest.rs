@@ -15,15 +15,24 @@ use systemprompt_web_admin::repositories::analysis::reports::{
 use crate::fixtures::{insert_user, unclaimed_email, unique};
 use crate::tempdb::TempDb;
 
-async fn insert_fact(
-    db: &TempDb,
-    context_id: &str,
-    user_id: &str,
-    model: &str,
-    client_kind: &str,
+struct Fact<'a> {
+    context_id: &'a str,
+    user_id: &'a str,
+    model: &'a str,
+    client_kind: &'a str,
     at: chrono::DateTime<Utc>,
     cost: i64,
-) {
+}
+
+async fn insert_fact(db: &TempDb, fact: Fact<'_>) {
+    let Fact {
+        context_id,
+        user_id,
+        model,
+        client_kind,
+        at,
+        cost,
+    } = fact;
     sqlx::query(
         "INSERT INTO conversation_facts
              (context_id, user_id, client_kind, model, models, request_count, turn_count,
@@ -166,32 +175,38 @@ async fn report_digest_scopes_aggregates_and_model_evidence_to_one_person() {
 
     insert_fact(
         &db,
-        &selected_context,
-        selected.as_str(),
-        "selected-model",
-        "claude-code",
-        now,
-        5_000_000,
+        Fact {
+            context_id: &selected_context,
+            user_id: selected.as_str(),
+            model: "selected-model",
+            client_kind: "claude-code",
+            at: now,
+            cost: 5_000_000,
+        },
     )
     .await;
     insert_fact(
         &db,
-        &uuid::Uuid::new_v4().to_string(),
-        other.as_str(),
-        "noise-model",
-        "other-client",
-        now,
-        9_000_000,
+        Fact {
+            context_id: &uuid::Uuid::new_v4().to_string(),
+            user_id: other.as_str(),
+            model: "noise-model",
+            client_kind: "other-client",
+            at: now,
+            cost: 9_000_000,
+        },
     )
     .await;
     insert_fact(
         &db,
-        &uuid::Uuid::new_v4().to_string(),
-        selected.as_str(),
-        "old-model",
-        "claude-code",
-        now - Duration::days(2),
-        7_000_000,
+        Fact {
+            context_id: &uuid::Uuid::new_v4().to_string(),
+            user_id: selected.as_str(),
+            model: "old-model",
+            client_kind: "claude-code",
+            at: now - Duration::days(2),
+            cost: 7_000_000,
+        },
     )
     .await;
     sqlx::query(
@@ -265,22 +280,26 @@ async fn conversation_analysis_page_keeps_rows_totals_facets_and_breakdown_in_on
     let selected_context = uuid::Uuid::new_v4().to_string();
     insert_fact(
         &db,
-        &selected_context,
-        selected.as_str(),
-        "scoped-model",
-        "claude-code",
-        now,
-        2_000_000,
+        Fact {
+            context_id: &selected_context,
+            user_id: selected.as_str(),
+            model: "scoped-model",
+            client_kind: "claude-code",
+            at: now,
+            cost: 2_000_000,
+        },
     )
     .await;
     insert_fact(
         &db,
-        &uuid::Uuid::new_v4().to_string(),
-        other.as_str(),
-        "unscoped-model",
-        "other-client",
-        now,
-        9_000_000,
+        Fact {
+            context_id: &uuid::Uuid::new_v4().to_string(),
+            user_id: other.as_str(),
+            model: "unscoped-model",
+            client_kind: "other-client",
+            at: now,
+            cost: 9_000_000,
+        },
     )
     .await;
 

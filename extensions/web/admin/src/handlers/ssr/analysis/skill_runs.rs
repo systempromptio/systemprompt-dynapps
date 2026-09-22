@@ -78,12 +78,15 @@ pub(crate) struct ReleaseImpact {
 
 // Why: grouped by (version, skill) when `per_skill`, else by version alone;
 // newest release first, so a reader compares each row with the one below it.
+// The version label, and the skill as well when grouping per skill.
+type GroupKey = (String, Option<String>);
+
 pub(crate) fn release_impact(
     runs: &[SkillRunRow],
     per_skill: bool,
     now: DateTime<Utc>,
 ) -> Vec<ReleaseImpact> {
-    let mut groups: Vec<((String, Option<String>), Vec<&SkillRunRow>)> = Vec::new();
+    let mut groups: Vec<(GroupKey, Vec<&SkillRunRow>)> = Vec::new();
     for run in runs {
         let key = (version_label(run), per_skill.then(|| run.skill.clone()));
         match groups.iter_mut().find(|(k, _)| *k == key) {

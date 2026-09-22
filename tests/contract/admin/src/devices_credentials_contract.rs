@@ -14,14 +14,22 @@ use crate::principal::Principal;
 use crate::tempdb::TempDb;
 use crate::{globals, principal, seed};
 
-async fn insert_pat(
-    pool: &PgPool,
-    user_id: &str,
-    name: &str,
-    prefix: &str,
-    hash: &str,
+struct PatRow<'a> {
+    user_id: &'a str,
+    name: &'a str,
+    prefix: &'a str,
+    hash: &'a str,
     revoked: bool,
-) -> String {
+}
+
+async fn insert_pat(pool: &PgPool, pat: PatRow<'_>) -> String {
+    let PatRow {
+        user_id,
+        name,
+        prefix,
+        hash,
+        revoked,
+    } = pat;
     let id = seed::unique("fleet-pat");
     sqlx::query(
         "INSERT INTO user_api_keys
@@ -84,20 +92,24 @@ async fn fleet_pat_view_masks_hashes_and_scopes_revocation_to_live_credentials()
     .await;
     let active_id = insert_pat(
         &db.pool,
-        owner.as_str(),
-        "active fleet token",
-        "sp_live_masked",
-        "this-is-the-secret-hash-not-a-display-value",
-        false,
+        PatRow {
+            user_id: owner.as_str(),
+            name: "active fleet token",
+            prefix: "sp_live_masked",
+            hash: "this-is-the-secret-hash-not-a-display-value",
+            revoked: false,
+        },
     )
     .await;
     let revoked_id = insert_pat(
         &db.pool,
-        owner.as_str(),
-        "revoked fleet token",
-        "sp_dead_masked",
-        "another-secret-hash-not-a-display-value",
-        true,
+        PatRow {
+            user_id: owner.as_str(),
+            name: "revoked fleet token",
+            prefix: "sp_dead_masked",
+            hash: "another-secret-hash-not-a-display-value",
+            revoked: true,
+        },
     )
     .await;
 

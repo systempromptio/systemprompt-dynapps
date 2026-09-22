@@ -53,12 +53,14 @@ fn bad(message: &str) -> AdminError {
 // Why: the dialog's `datetime-local` controls send `%Y-%m-%dT%H:%M`; every
 // spelling `time::parse` accepts is a valid bound.
 fn bound(value: Option<&str>, name: &str) -> AdminResult<Option<DateTime<Utc>>> {
-    match value.map(str::trim).filter(|v| !v.is_empty()) {
-        None => Ok(None),
-        Some(v) => time::parse(v)
-            .map(Some)
-            .ok_or_else(|| bad(&format!("The window's {name} `{v}` is not a date or time."))),
-    }
+    value.map(str::trim).filter(|v| !v.is_empty()).map_or_else(
+        || Ok(None),
+        |v| {
+            time::parse(v)
+                .map(Some)
+                .ok_or_else(|| bad(&format!("The window's {name} `{v}` is not a date or time.")))
+        },
+    )
 }
 
 fn live(query: &WindowQuery) -> AdminResult<ExportWindow> {

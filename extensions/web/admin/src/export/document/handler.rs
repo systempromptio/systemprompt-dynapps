@@ -134,7 +134,7 @@ pub(crate) async fn export_conversations(
     let selection = resolve_selection(&pool, &user, &ctx).await?;
     let opts = options_for(&user);
     let mut body = String::new();
-    let mut skipped = 0_usize;
+    let mut skipped = 0usize;
     for context_id in &selection.context_ids {
         if !visible(&pool, &user, context_id).await? {
             skipped += 1;

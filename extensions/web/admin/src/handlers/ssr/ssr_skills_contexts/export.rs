@@ -23,7 +23,7 @@ pub(super) fn export_preset(since: Option<&str>) -> &'static str {
 }
 
 // Why: the dataset the page's view shows leads the dialog's list.
-pub(super) fn export_datasets(view_is_users: bool) -> &'static [&'static str] {
+pub(super) const fn export_datasets(view_is_users: bool) -> &'static [&'static str] {
     if view_is_users {
         &["people", "contexts"]
     } else {

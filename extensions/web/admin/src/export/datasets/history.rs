@@ -4,7 +4,7 @@ use async_trait::async_trait;
 
 use crate::error::AdminResult;
 use crate::export::model::{Cell, CellKind, Column, DataSet, ExportContext, Table, Window};
-use crate::handlers::ssr::ssr_history::{HistoryView, export_rows};
+use crate::handlers::ssr::ssr_history::{ExportRequest, HistoryView, export_rows};
 use crate::repositories::analytics::conversations::HistoryItem;
 use crate::types::UserContext;
 use systemprompt::identifiers::SessionId;
@@ -59,10 +59,12 @@ async fn load(ctx: &ExportContext<'_>, view: HistoryView) -> AdminResult<Table> 
     let (rows, total) = export_rows(
         ctx.pool,
         ctx.user,
-        ctx.query()?,
-        view,
-        ctx.window,
-        ctx.limit,
+        ExportRequest {
+            query: ctx.query()?,
+            view,
+            window: ctx.window,
+            limit: ctx.limit,
+        },
     )
     .await?;
     Ok(Table {

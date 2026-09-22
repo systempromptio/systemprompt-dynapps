@@ -115,12 +115,12 @@ fn the_retired_dated_ids_are_gone() {
 #[test]
 fn the_dated_aliases_that_clients_still_pin_keep_resolving() {
     let models = anthropic_models();
-    for alias in ["claude-haiku-4-5-20251001"] {
-        assert!(
-            models.iter().any(|m| m.matches(alias)),
-            "{alias} is pinned by shipped clients and must stay an alias"
-        );
-    }
+    // The catalog refresh left one dated id that shipped clients still pin.
+    let alias = "claude-haiku-4-5-20251001";
+    assert!(
+        models.iter().any(|m| m.matches(alias)),
+        "{alias} is pinned by shipped clients and must stay an alias"
+    );
 }
 
 #[test]

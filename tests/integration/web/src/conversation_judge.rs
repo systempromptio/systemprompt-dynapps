@@ -53,14 +53,42 @@ async fn seed_user(pool: &sqlx::PgPool) {
     .expect("seed owner");
 }
 
-async fn seed_request(
-    pool: &sqlx::PgPool,
-    id: &str,
-    context_id: &str,
-    actor_kind: &str,
+struct SeededRequest<'a> {
+    id: &'a str,
+    context_id: &'a str,
+    actor_kind: &'a str,
     synthetic: bool,
-    request_kind: &str,
-) {
+    request_kind: &'a str,
+}
+
+// A lease row: context, attempts, lease token, lease expiry and next attempt.
+type LeaseRow = (
+    String,
+    i32,
+    Option<String>,
+    Option<DateTime<Utc>>,
+    DateTime<Utc>,
+);
+
+// The judge listing row as the query returns it: context, turns, title,
+// last activity, status and created-at.
+type JudgeRow = (
+    String,
+    i32,
+    Option<String>,
+    Option<DateTime<Utc>>,
+    Option<String>,
+    DateTime<Utc>,
+);
+
+async fn seed_request(pool: &sqlx::PgPool, row: SeededRequest<'_>) {
+    let SeededRequest {
+        id,
+        context_id,
+        actor_kind,
+        synthetic,
+        request_kind,
+    } = row;
     sqlx::query(
         "INSERT INTO ai_requests
              (id, request_id, user_id, context_id, provider, model, status, actor_kind, actor_id,
@@ -81,7 +109,17 @@ async fn seed_request(
 
 async fn seed_turn(pool: &sqlx::PgPool, id: &str, with_message: bool) -> String {
     let context_id = uuid::Uuid::new_v4().to_string();
-    seed_request(pool, id, &context_id, "user", false, "turn").await;
+    seed_request(
+        pool,
+        SeededRequest {
+            id,
+            context_id: &context_id,
+            actor_kind: "user",
+            synthetic: false,
+            request_kind: "turn",
+        },
+    )
+    .await;
     if with_message {
         sqlx::query(
             "INSERT INTO ai_request_messages (id, request_id, role, content, sequence_number)
@@ -106,24 +144,38 @@ async fn cap_releases_every_claimed_eligible_conversation_without_inference() {
     let eligible_two = seed_turn(&db.pool, "judge-eligible-two", false).await;
     let synthetic = uuid::Uuid::new_v4().to_string();
     seed_request(
-        &*db.pool,
-        "judge-synthetic",
-        &synthetic,
-        "user",
-        true,
-        "turn",
+        &db.pool,
+        SeededRequest {
+            id: "judge-synthetic",
+            context_id: &synthetic,
+            actor_kind: "user",
+            synthetic: true,
+            request_kind: "turn",
+        },
     )
     .await;
     let job = uuid::Uuid::new_v4().to_string();
-    seed_request(&db.pool, "judge-job", &job, "job", false, "turn").await;
+    seed_request(
+        &db.pool,
+        SeededRequest {
+            id: "judge-job",
+            context_id: &job,
+            actor_kind: "job",
+            synthetic: false,
+            request_kind: "turn",
+        },
+    )
+    .await;
     let utility = uuid::Uuid::new_v4().to_string();
     seed_request(
-        &*db.pool,
-        "judge-utility",
-        &utility,
-        "user",
-        false,
-        "utility",
+        &db.pool,
+        SeededRequest {
+            id: "judge-utility",
+            context_id: &utility,
+            actor_kind: "user",
+            synthetic: false,
+            request_kind: "utility",
+        },
     )
     .await;
     let classifier = StubClassifier {
@@ -162,13 +214,7 @@ async fn cap_releases_every_claimed_eligible_conversation_without_inference() {
     .await
     .expect("read excluded contexts");
     assert_eq!(excluded, 0);
-    let released: Vec<(
-        String,
-        i32,
-        Option<String>,
-        Option<DateTime<Utc>>,
-        DateTime<Utc>,
-    )> = sqlx::query_as(
+    let released: Vec<LeaseRow> = sqlx::query_as(
         "SELECT context_id, attempts, lease_token, lease_until, next_attempt
            FROM conversation_analyses
           WHERE context_id IN ($1, $2) ORDER BY context_id",
@@ -433,7 +479,7 @@ async fn inference_failure_releases_ownership_and_records_retry_audit() {
         (result.items_processed, result.items_failed),
         (Some(0), Some(1))
     );
-    let row: (String, i32, Option<String>, Option<DateTime<Utc>>, Option<String>, DateTime<Utc>) = sqlx::query_as(
+    let row: JudgeRow = sqlx::query_as(
         "SELECT status, attempts, lease_token, lease_until, last_error, next_attempt FROM conversation_analyses WHERE context_id = $1",
     ).bind(&context).fetch_one(&*db.pool).await.expect("retry row");
     assert_eq!((row.0.as_str(), row.1), ("pending", 1));
@@ -518,11 +564,13 @@ async fn idle_tick_backfills_late_settled_judge_spend() {
     let request_context = uuid::Uuid::new_v4().to_string();
     seed_request(
         &db.pool,
-        "judge-late-cost-request",
-        &request_context,
-        "job",
-        false,
-        "utility",
+        SeededRequest {
+            id: "judge-late-cost-request",
+            context_id: &request_context,
+            actor_kind: "job",
+            synthetic: false,
+            request_kind: "utility",
+        },
     )
     .await;
     sqlx::query(
