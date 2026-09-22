@@ -28,7 +28,6 @@ RETURNS void LANGUAGE plpgsql AS $$
 DECLARE key TEXT; was_pending BOOLEAN; original_time TIMESTAMPTZ;
 BEGIN
     IF artifact_key IS NULL OR consumer_key IS NULL THEN RETURN; END IF;
-    PERFORM 1 FROM analytics_ingestion_producers WHERE producer='astound.feedback' FOR UPDATE;
     key := md5(jsonb_build_array('artifact',artifact_key,NULL,consumer_key)::text);
     original_time := COALESCE(event_time,(SELECT created_at FROM mcp_artifacts WHERE artifact_id=artifact_key));
     SELECT pending INTO was_pending FROM feedback_ingestion_outbox WHERE id=key FOR UPDATE;
@@ -177,7 +176,6 @@ RETURNS void LANGUAGE plpgsql AS $$
 DECLARE row RECORD;
 BEGIN
     IF session_key IS NULL THEN RETURN; END IF;
-    PERFORM 1 FROM analytics_ingestion_producers WHERE producer='astound.feedback' FOR UPDATE;
     FOR row IN SELECT kind,event_id,request_id,artifact_id FROM feedback_ingestion_outbox WHERE user_id=consumer_key AND native_session_id=session_key LOOP
         IF row.kind='artifact' THEN
             PERFORM enqueue_feedback_artifact(row.artifact_id,consumer_key,session_key);

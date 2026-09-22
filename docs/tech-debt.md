@@ -32,6 +32,27 @@ out of `logs.user_id` and `event_outbox.user_id` (§5). They are labels, not
 users; the purge deletes by id so they never block a delete, and no foreign
 key is placed on those columns. Re-typing them is a separate change.
 
+## Status (2026-09-22): analytics plane at scale
+
+Landed with the 0.58.1 set (drop `logs`/`ai_request_messages` projections,
+profile retention job, batched outbox worker, statement-level capture).
+Left for the next pass:
+
+- **`feedback_capture` on `ai_requests` is still a row trigger**
+  (`extensions/web/schema/30_feedback_ingestion.sql:86-119`): a `FOR UPDATE`
+  on `analytics_ingestion_producers`, `enqueue_feedback_fact` and the
+  `enqueue_feedback_session` loop per row. With core's capture, the scope
+  stamp and the audit NOTIFY now statement-level, it is the dominant per-row
+  cost on the hottest table. `enqueue_feedback_fact`'s `pending_count` /
+  `was_pending` accounting is per key, so the set-based rewrite is its own
+  change: aggregate the transition table per producer, one `UPDATE … SET
+  pending_count = pending_count + n`, one `INSERT … SELECT` into the outbox.
+- The row-level branch in `sp_capture_reporting_change` (core
+  `crates/infra/events/schema/reporting_capture.sql`) exists so a database
+  mid-upgrade — function bodies swapped, row triggers not yet dropped — keeps
+  working through its migrations. Once every rung on the schema ladder below
+  the current floor carries the statement form, the branch can go.
+
 ## 1. In-process MCP tool calls never join the ledger
 
 Every tool an internal MCP server executes for a Claude Code session lands as
@@ -164,6 +185,46 @@ those rows behind.
   `services/evaluation/config.yaml` gained `report:` and every
   `session_evaluation` tick and `governance_bootstrap` run fails on the old
   binary. Neither is a schema issue, but both hide real ones.
+
+## 8. `ai_request_messages` stores every turn's whole history (deferred from 0.59.0)
+
+`persist_request_messages` (core `crates/entry/api/src/services/gateway/audit/open.rs`)
+inserts the **entire** conversation history on every turn, so a 20-turn session
+writes message 1 twenty times. On the 2026-09-22 customer dump that is 154,985
+rows holding 7,484 distinct contents — 300 MB, the second largest table after
+`ai_request_payloads`.
+
+This was scoped for 0.59.0 and deliberately **not** landed. Both available
+designs need a live database and a build to be safe, and neither was available
+in the release window:
+
+**Delta-only inserts** (write just the turn's new messages) is the obvious fix
+and is wrong here: the conversation reader takes a transcript to be *the last
+request's history*, so delta-only would leave the last request holding only its
+own new messages and silently truncate every transcript.
+
+**Content-addressed storage**, mirroring `ai_tool_catalogs` from ai migration
+033, is the right shape: an `ai_message_contents(sha256, content)` table with
+`ai_request_messages.content_sha256` referencing it. The obstacle is reach —
+`ai_request_messages` is read from roughly twenty call sites across both repos
+and nine cached `.sqlx` queries in astound alone, and every one of them would
+need regenerating against a live database (`just prepare`), which could not be
+run.
+
+A variant that avoids touching any reader — rename the physical table, expose
+`ai_request_messages` as a view joining the content table, and carry writes on
+an `INSTEAD OF` trigger — was evaluated and rejected for now on one specific
+hazard: `database_cleanup`'s `delete_batch` deletes by `ctid = ANY(...)`, and
+`ctid` does not exist on a view, so retention would break silently on the
+largest tables. It is workable, but only alongside a rewritten delete path and
+a real test.
+
+**When picking this up:** take the content-addressed design, budget for
+regenerating the sqlx cache in both workspaces, and change `delete_batch` off
+`ctid` first. Verify with
+`SELECT count(*), count(DISTINCT md5(content)) FROM ai_request_messages;` — the
+two numbers should converge, and `pg_total_relation_size` should fall by roughly
+the 20x the duplication implies.
 
 ## Runbook — reset local activity data (verified 2026-09-17)
 
