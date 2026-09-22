@@ -15,6 +15,7 @@ use crate::handlers::ssr::entity_urls::context_detail_url;
 use crate::handlers::ssr::types::FilterChipView;
 
 use super::context::{RosterChipView, RosterKpiView, RosterRowView};
+use crate::handlers::ssr::list_view::paginate_prefixed;
 
 pub(super) fn build_chips(url: &RosterUrlState, totals: &RosterStats) -> Vec<FilterChipView> {
     let prefix = url.link_prefix(&["filter", "page"]);
@@ -194,21 +195,5 @@ fn initials(name: &str) -> String {
 }
 
 pub(super) fn build_pagination(url: &RosterUrlState, window: PageWindow) -> Pagination {
-    let page = window.index;
-    let prefix = url.link_prefix(&["page"]);
-    let prev_url = (page > 0).then(|| format!("{prefix}page={}", page - 1));
-    let next_url = (page + 1 < window.total_pages).then(|| format!("{prefix}page={}", page + 1));
-    let (first_row, last_row) = window.bounds();
-    Pagination {
-        current_page: page + 1,
-        total_pages: window.total_pages,
-        first_row,
-        last_row,
-        total_rows: window.total_rows,
-        noun: window.noun,
-        has_prev: prev_url.is_some(),
-        has_next: next_url.is_some(),
-        prev_url,
-        next_url,
-    }
+    paginate_prefixed(window, &url.link_prefix(&["page"]))
 }

@@ -44,11 +44,10 @@ use crate::repositories::analytics::conversations::{
 };
 use crate::types::UserContext;
 
+use crate::handlers::ssr::list_view::DEFAULT_PAGE_SIZE;
 use crate::handlers::ssr::page::Page;
 use context::HistoryPageContext;
 use view::{build_pagination, detail_url, scope_label, side_toggle_url};
-
-const PAGE_SIZE: i64 = 50;
 
 #[derive(Debug, Default, Deserialize)]
 pub(crate) struct HistoryQuery {
@@ -129,8 +128,8 @@ async fn fetch_history_slice(
             search: query.q.as_deref(),
             include_side_calls: query.show_side(),
         },
-        PAGE_SIZE,
-        page * PAGE_SIZE,
+        DEFAULT_PAGE_SIZE,
+        page * DEFAULT_PAGE_SIZE,
     )
     .await?;
     Ok(HistorySlice {
@@ -211,7 +210,7 @@ pub(crate) async fn history_search(
         items,
         total: slice.total,
         page: slice.page,
-        page_size: PAGE_SIZE,
+        page_size: DEFAULT_PAGE_SIZE,
     })
     .into_response())
 }
@@ -249,9 +248,9 @@ async fn render_listing(
 
     let window = PageWindow::new(
         slice.page,
-        PAGE_SIZE,
+        DEFAULT_PAGE_SIZE,
         slice.total,
-        i64::try_from(rows.len()).unwrap_or(PAGE_SIZE),
+        i64::try_from(rows.len()).unwrap_or(DEFAULT_PAGE_SIZE),
         "conversations",
     );
     let base = view.base_url();

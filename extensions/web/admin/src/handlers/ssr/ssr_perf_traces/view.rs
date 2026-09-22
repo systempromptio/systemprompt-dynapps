@@ -5,7 +5,6 @@
 //! pagination, per-trace rows, and the display formatting they depend on.
 
 use systemprompt::identifiers::{AgentId, UserId};
-use urlencoding::encode as urlencode;
 
 use crate::handlers::ssr::list_view::{
     AnnotatedOption, Chip, PageWindow, Pagination, Preserved, ScopeFilterView, TimeRangeContext,
@@ -19,6 +18,7 @@ use crate::util::time_range::TimeRange;
 
 use super::context::TraceFilterOptionsView;
 use super::{BASE_URL, TraceListQuery, empty_to_none};
+use crate::handlers::ssr::list_view::{paginate_prefixed, query_string_dropping};
 
 pub(super) const fn sort_col_to_str(c: TraceSortColumn) -> &'static str {
     match c {
@@ -180,15 +180,7 @@ pub(super) fn preserved_query_string(query: &TraceListQuery, drop: &[&str]) -> S
         ("sort", query.sort.as_deref()),
         ("dir", query.dir.as_deref()),
     ];
-    pairs
-        .iter()
-        .filter(|(name, _)| !drop.contains(name))
-        .filter_map(|(name, val)| {
-            val.filter(|s| !s.is_empty())
-                .map(|v| format!("{}={}", name, urlencode(v)))
-        })
-        .collect::<Vec<_>>()
-        .join("&")
+    query_string_dropping(&pairs, &[], drop)
 }
 
 pub(super) fn annotate_options(
@@ -217,28 +209,13 @@ fn annotate_group(items: &[FilterOption], selected: Option<&str>) -> Vec<Annotat
 }
 
 pub(super) fn build_pagination(query: &TraceListQuery, window: PageWindow) -> Pagination {
-    let page = window.index;
     let qs = preserved_query_string(query, &["page"]);
     let prefix = if qs.is_empty() {
         format!("{BASE_URL}?")
     } else {
         format!("{BASE_URL}?{qs}&")
     };
-    let prev_url = (page > 0).then(|| format!("{prefix}page={}", page - 1));
-    let next_url = (page + 1 < window.total_pages).then(|| format!("{prefix}page={}", page + 1));
-    let (first_row, last_row) = window.bounds();
-    Pagination {
-        current_page: page + 1,
-        total_pages: window.total_pages,
-        first_row,
-        last_row,
-        total_rows: window.total_rows,
-        noun: window.noun,
-        has_prev: prev_url.is_some(),
-        has_next: next_url.is_some(),
-        prev_url,
-        next_url,
-    }
+    paginate_prefixed(window, &prefix)
 }
 
 pub(super) fn export_view(

@@ -45,9 +45,10 @@ use crate::repositories::analysis::conversations::{
 };
 use crate::repositories::scope::ScopeRequest;
 
+use crate::handlers::ssr::list_view::DEFAULT_PAGE_SIZE;
 use context::{ConversationsPageInputs, build_context};
 pub(crate) use judge_all::judge_all;
-use query::{BASE_URL, ConversationAnalysisQuery, PAGE_SIZE};
+use query::{BASE_URL, ConversationAnalysisQuery};
 
 pub(crate) async fn page(
     shell: Page,
@@ -86,8 +87,8 @@ pub(crate) async fn page(
         ConversationAnalysisPage {
             sort: params.sort(),
             descending: params.descending(),
-            limit: PAGE_SIZE,
-            offset: params.page() * PAGE_SIZE,
+            limit: DEFAULT_PAGE_SIZE,
+            offset: params.page() * DEFAULT_PAGE_SIZE,
             breakdown: params.breakdown(),
         },
     )

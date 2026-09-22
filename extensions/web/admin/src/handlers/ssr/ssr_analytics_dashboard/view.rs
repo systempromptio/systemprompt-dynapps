@@ -208,17 +208,7 @@ fn model_log_url(query: &AnalyticsDashboardQuery, model: &str) -> String {
     url
 }
 
-pub(super) fn compact(v: i64) -> String {
-    if v >= 1_000_000 {
-        format!("{:.1}M", v as f64 / 1_000_000.0)
-    } else if v >= 10_000 {
-        format!("{}k", v / 1000)
-    } else if v >= 1000 {
-        format!("{:.1}k", v as f64 / 1000.0)
-    } else {
-        v.to_string()
-    }
-}
+pub(super) use systemprompt_web_shared::format::compact_num as compact;
 
 pub(super) fn format_date(ts: chrono::DateTime<chrono::Utc>) -> String {
     ts.with_timezone(&chrono::Local)

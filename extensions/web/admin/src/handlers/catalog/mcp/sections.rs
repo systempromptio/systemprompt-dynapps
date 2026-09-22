@@ -19,41 +19,21 @@ use crate::util::time_range::TimeRange;
 
 use super::rows::BASE_URL;
 use super::{detail, view};
+use crate::handlers::ssr::list_view::{DEFAULT_PAGE_SIZE, paginate};
 
-const EXECUTIONS_PAGE_SIZE: i64 = 50;
 const TOOL_LIMIT: i64 = 50;
 const CALLER_LIMIT: i64 = 25;
 const CONNECTION_LIMIT: i64 = 50;
 
 // Why: the page links carry the window, or turning a page would silently
 // reset the log to the default 24 hours.
-fn build_pagination(
-    page_index: i64,
-    window: PageWindow,
-    base: &str,
-    window_query: &str,
-) -> Pagination {
-    let (first_row, last_row) = window.bounds();
+fn build_pagination(window: PageWindow, base: &str, window_query: &str) -> Pagination {
     let suffix = if window_query.is_empty() {
         String::new()
     } else {
         format!("&{window_query}")
     };
-    let prev_url = (page_index > 0).then(|| format!("{base}?page={}{suffix}", page_index - 1));
-    let next_url = (page_index + 1 < window.total_pages)
-        .then(|| format!("{base}?page={}{suffix}", page_index + 1));
-    Pagination {
-        current_page: page_index + 1,
-        total_pages: window.total_pages,
-        first_row,
-        last_row,
-        total_rows: window.total_rows,
-        noun: window.noun,
-        has_prev: prev_url.is_some(),
-        has_next: next_url.is_some(),
-        prev_url,
-        next_url,
-    }
+    paginate(window, |page| format!("{base}?page={page}{suffix}"))
 }
 
 // Why: everything below the header on the detail page, in one read. It is a
@@ -86,8 +66,8 @@ pub(super) async fn detail_sections(
             server_name: Some(mcp_id.as_str()),
             from: range.from,
             to: range.to,
-            limit: EXECUTIONS_PAGE_SIZE,
-            offset: page_index * EXECUTIONS_PAGE_SIZE,
+            limit: DEFAULT_PAGE_SIZE,
+            offset: page_index * DEFAULT_PAGE_SIZE,
         },
     )
     .await
@@ -132,10 +112,9 @@ pub(super) async fn detail_sections(
 
     DetailSections {
         pagination: build_pagination(
-            page_index,
             PageWindow::new(
                 page_index,
-                EXECUTIONS_PAGE_SIZE,
+                DEFAULT_PAGE_SIZE,
                 executions_total,
                 shown,
                 "calls",

@@ -42,12 +42,11 @@ mod rows;
 mod summary;
 mod view;
 
+use crate::handlers::ssr::list_view::DEFAULT_PAGE_SIZE;
 use crate::handlers::ssr::page::Page;
 use context::{CurrentSessionView, FilterRibbon, SessionsListPageContext};
 
 const BASE_URL: &str = "/admin/sessions";
-const PAGE_SIZE: i64 = 50;
-
 #[derive(Debug, Deserialize)]
 pub(crate) struct SessionListQuery {
     pub from: Option<String>,
@@ -159,8 +158,8 @@ async fn load_sessions(
     let conversation_page = ConversationPage {
         sort,
         descending,
-        limit: PAGE_SIZE,
-        offset: page * PAGE_SIZE,
+        limit: DEFAULT_PAGE_SIZE,
+        offset: page * DEFAULT_PAGE_SIZE,
     };
 
     let (list_res, totals_res, options_res) = tokio::join!(
@@ -216,8 +215,8 @@ async fn load_sessions_data(
     ]);
     let session_rows: Vec<_> = items.iter().map(rows::session_row).collect();
     let has_sessions = !session_rows.is_empty();
-    let shown_rows = i64::try_from(session_rows.len()).unwrap_or(PAGE_SIZE);
-    let page_window = PageWindow::new(page, PAGE_SIZE, total, shown_rows, "conversations");
+    let shown_rows = i64::try_from(session_rows.len()).unwrap_or(DEFAULT_PAGE_SIZE);
+    let page_window = PageWindow::new(page, DEFAULT_PAGE_SIZE, total, shown_rows, "conversations");
 
     SessionsListPageContext {
         page: "sessions",

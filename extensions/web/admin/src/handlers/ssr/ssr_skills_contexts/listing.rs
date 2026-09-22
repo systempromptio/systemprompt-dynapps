@@ -6,7 +6,8 @@ use crate::repositories::scope::ScopeRequest;
 
 use super::context::{ConversationItemView, FilterView, UserSummaryView};
 use super::load::ContextsPageData;
-use super::{ContextsListQuery, ContextsPageInputs, PAGE_SIZE, rows};
+use super::{ContextsListQuery, ContextsPageInputs, rows};
+use crate::handlers::ssr::list_view::DEFAULT_PAGE_SIZE;
 
 pub(super) struct ContextsListing {
     pub(super) conversations: Vec<ConversationItemView>,
@@ -54,7 +55,7 @@ pub(super) fn listing(
         conversations,
         user_summaries,
         count,
-        shown: i64::try_from(shown).unwrap_or(PAGE_SIZE),
+        shown: i64::try_from(shown).unwrap_or(DEFAULT_PAGE_SIZE),
         noun,
     }
 }

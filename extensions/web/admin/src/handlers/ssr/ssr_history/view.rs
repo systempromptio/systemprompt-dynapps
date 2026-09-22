@@ -15,6 +15,7 @@ use crate::types::UserContext;
 
 use super::context::HistoryRowView;
 use super::{HistoryQuery, HistoryView};
+use crate::handlers::ssr::list_view::paginate_prefixed;
 
 pub(super) fn scope_label(scope: &HistoryScope) -> String {
     match scope {
@@ -148,20 +149,5 @@ pub(super) fn build_pagination(query: &HistoryQuery, window: PageWindow, base: &
     } else {
         format!("{base}?{}&", parts.join("&"))
     };
-    let page = window.index;
-    let prev_url = (page > 0).then(|| format!("{prefix}page={}", page - 1));
-    let next_url = (page + 1 < window.total_pages).then(|| format!("{prefix}page={}", page + 1));
-    let (first_row, last_row) = window.bounds();
-    Pagination {
-        current_page: page + 1,
-        total_pages: window.total_pages,
-        first_row,
-        last_row,
-        total_rows: window.total_rows,
-        noun: window.noun,
-        has_prev: prev_url.is_some(),
-        has_next: next_url.is_some(),
-        prev_url,
-        next_url,
-    }
+    paginate_prefixed(window, &prefix)
 }

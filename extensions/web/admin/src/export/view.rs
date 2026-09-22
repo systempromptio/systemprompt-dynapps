@@ -101,13 +101,5 @@ impl ExportView {
 // Why: every list page keeps its filters as `(name, value)` pairs; the export
 // carries the same pairs so the file answers the question the page was asked.
 pub(crate) fn query_string(pairs: &[(&str, Option<&str>)]) -> String {
-    pairs
-        .iter()
-        .filter_map(|(name, value)| {
-            value
-                .filter(|v| !v.is_empty())
-                .map(|v| format!("{name}={}", urlencoding::encode(v)))
-        })
-        .collect::<Vec<_>>()
-        .join("&")
+    crate::handlers::ssr::list_view::query_string_dropping(pairs, &[], &[])
 }

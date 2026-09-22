@@ -48,7 +48,7 @@ fn windows_summary(spec: &GatewayPolicySpec) -> String {
                 parts.push(format!("{n} req"));
             }
             if let Some(n) = w.max_cost_microdollars {
-                parts.push(format!("${:.2}", n as f64 / 1_000_000.0));
+                parts.push(systemprompt_web_shared::format::format_cost(n));
             }
             parts.join(" ")
         })

@@ -71,38 +71,13 @@ pub(super) fn build_sort_headers(url: &RosterUrlState, sort: RosterSort) -> Vec<
             let active = key == sort.column;
             // Why: an active column toggles; an inactive one opens largest-first
             // (and newest-first for a date), which is what an operator scans for.
-            let next_dir = if active && sort.descending {
-                "asc"
-            } else {
-                "desc"
-            };
-            SortHeaderView {
-                label,
-                class,
-                hint,
-                url: format!("{prefix}sort={key}&dir={next_dir}"),
+            let next_dir = SortHeaderView::next_dir(active, sort.descending);
+            SortHeaderView::new(
+                (label, class, hint),
+                format!("{prefix}sort={key}&dir={next_dir}"),
                 active,
-                aria_sort: aria_sort(active, sort.descending),
-                indicator: indicator(active, sort.descending),
-            }
+                sort.descending,
+            )
         })
         .collect()
-}
-
-const fn aria_sort(active: bool, descending: bool) -> &'static str {
-    if !active {
-        return "none";
-    }
-    if descending {
-        "descending"
-    } else {
-        "ascending"
-    }
-}
-
-const fn indicator(active: bool, descending: bool) -> &'static str {
-    if !active {
-        return "";
-    }
-    if descending { "▾" } else { "▴" }
 }

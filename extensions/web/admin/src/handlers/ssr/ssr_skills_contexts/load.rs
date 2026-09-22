@@ -1,5 +1,6 @@
 //! Load only the active view; its rows and KPIs share one filtered aggregate.
-use super::{ContextsPageInputs, PAGE_SIZE, view};
+use super::{ContextsPageInputs, view};
+use crate::handlers::ssr::list_view::DEFAULT_PAGE_SIZE;
 use crate::repositories;
 use crate::repositories::analytics::conversation_rows::{
     ConversationPage, ConversationPageMode, ConversationRow, ConversationTotals,
@@ -25,7 +26,7 @@ pub(super) async fn load_page_data(
     let page = ConversationPage {
         sort: inputs.sort,
         descending: inputs.descending,
-        limit: PAGE_SIZE,
+        limit: DEFAULT_PAGE_SIZE,
         offset: view::page_offset(inputs.page),
     };
     let mode = if inputs.view_is_users {

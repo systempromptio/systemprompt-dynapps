@@ -4,12 +4,13 @@
 //! The sort key is validated against a fixed list rather than passed through,
 //! so a query string can only choose an ordering the page actually offers.
 
-use super::super::types::{ProjectSortHeaderView, ProjectSortHeaders};
+use super::super::types::{ProjectSortHeaders, SortHeaderView};
 use super::BASE_URL;
 use crate::repositories::projects::usage::ProjectRollup;
 
 use super::list::ListQuery;
 use super::pct;
+use crate::handlers::ssr::types::table::SortColumn;
 
 const SORT_KEYS: [&str; 11] = [
     "name",
@@ -74,13 +75,6 @@ pub(super) fn page_url(query: &ListQuery) -> String {
 // Why: one column's static half — the key the URL carries, the words on the
 // header, the class that sizes it, and the sentence its title explains it
 // with. The dynamic half (url, active, indicator) is computed per request.
-struct ColumnSpec {
-    key: &'static str,
-    label: &'static str,
-    class: &'static str,
-    hint: &'static str,
-}
-
 const NUM: &str = "sp-table__cell--num";
 const MIX: &str = "sp-p-projects__col-mix";
 
@@ -89,8 +83,8 @@ const fn spec(
     label: &'static str,
     class: &'static str,
     hint: &'static str,
-) -> ColumnSpec {
-    ColumnSpec {
+) -> SortColumn {
+    SortColumn {
         key,
         label,
         class,
@@ -98,62 +92,62 @@ const fn spec(
     }
 }
 
-const NAME: ColumnSpec = spec(
+const NAME: SortColumn = spec(
     "name",
     "Project",
     "sp-p-projects__col-name",
     "The project id and what it is for",
 );
-const MEMBERS: ColumnSpec = spec(
+const MEMBERS: SortColumn = spec(
     "members",
     "Members",
     NUM,
     "People holding membership, and how many were active in the window",
 );
-const GROUPS: ColumnSpec = spec(
+const GROUPS: SortColumn = spec(
     "groups",
     "Groups",
     NUM,
     "Distinct groups the members belong to — who feeds this project",
 );
-const REQUESTS: ColumnSpec = spec(
+const REQUESTS: SortColumn = spec(
     "requests",
     "Requests",
     NUM,
     "Gateway requests attributed to this project, exclusively",
 );
-const TOKENS: ColumnSpec = spec(
+const TOKENS: SortColumn = spec(
     "tokens",
     "Tokens",
     NUM,
     "Every token the window billed — input, output, cache and reasoning",
 );
-const COST: ColumnSpec = spec("cost", "Cost", NUM, "Billed cost over the window");
-const MODELS: ColumnSpec = spec(
+const COST: SortColumn = spec("cost", "Cost", NUM, "Billed cost over the window");
+const MODELS: SortColumn = spec(
     "models",
     "Models",
     MIX,
     "The busiest model, and how many distinct models the project used",
 );
-const CLIENTS: ColumnSpec = spec(
+const CLIENTS: SortColumn = spec(
     "clients",
     "Agents",
     MIX,
     "The coding agent behind most requests (Claude Code, Codex, desktop…), and how many distinct ones",
 );
-const TOOLS: ColumnSpec = spec(
+const TOOLS: SortColumn = spec(
     "tools",
     "Tools",
     NUM,
     "Share of MCP tool calls that returned success, over the calls made",
 );
-const SKILLS: ColumnSpec = spec(
+const SKILLS: SortColumn = spec(
     "skills",
     "Skills",
     NUM,
     "Distinct skills the project's people invoked",
 );
-const ARTIFACTS: ColumnSpec = spec(
+const ARTIFACTS: SortColumn = spec(
     "artifacts",
     "Artifacts",
     NUM,
@@ -166,32 +160,15 @@ pub(super) fn sort_headers(
     descending: bool,
 ) -> ProjectSortHeaders {
     let tail = preserved(query);
-    let header = |c: &ColumnSpec| {
+    let header = |c: &SortColumn| {
         let is_active = c.key == active;
-        // Why: an active column toggles; an inactive one opens largest-first,
-        // which is the order every one of these questions is asked in.
-        let next = if is_active && descending {
-            "asc"
-        } else {
-            "desc"
-        };
-        ProjectSortHeaderView {
-            label: c.label,
-            class: c.class,
-            hint: c.hint,
-            url: format!("{BASE_URL}?sort={}&dir={next}{tail}", c.key),
-            active: is_active,
-            aria_sort: match (is_active, descending) {
-                (true, true) => "descending",
-                (true, false) => "ascending",
-                (false, _) => "none",
-            },
-            indicator: match (is_active, descending) {
-                (true, true) => "▼",
-                (true, false) => "▲",
-                (false, _) => "↕",
-            },
-        }
+        let next = SortHeaderView::next_dir(is_active, descending);
+        SortHeaderView::new(
+            (c.label, c.class, c.hint),
+            format!("{BASE_URL}?sort={}&dir={next}{tail}", c.key),
+            is_active,
+            descending,
+        )
     };
     ProjectSortHeaders {
         name: header(&NAME),

@@ -173,9 +173,7 @@ pub async fn get_report_digest(
     Ok(digest)
 }
 
-fn usd(micro: i64) -> String {
-    format!("${:.2}", micro as f64 / 1_000_000.0)
-}
+use systemprompt_web_shared::format::format_cost as usd;
 
 fn score(avg: Option<f64>) -> String {
     avg.map_or_else(|| "n/a".to_owned(), |v| format!("{v:.0}"))

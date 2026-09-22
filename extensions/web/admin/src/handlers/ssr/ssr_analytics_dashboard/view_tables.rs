@@ -11,6 +11,7 @@ use crate::handlers::ssr::list_view::PageWindow;
 use super::context::{LeaderRowView, LeaderboardView};
 use super::view::{compact, format_date, window_days};
 use super::{AnalyticsDashboardQuery, urls};
+use crate::handlers::ssr::list_view::DEFAULT_PAGE_SIZE;
 
 pub(super) fn leaderboard_rows(
     rows: &[UserUsageRow],
@@ -69,9 +70,9 @@ pub(super) fn leaderboard_view(
         query,
         PageWindow::new(
             page,
-            super::PAGE_SIZE,
+            DEFAULT_PAGE_SIZE,
             fetched.leaderboard_total,
-            i64::try_from(fetched.leaderboard.len()).unwrap_or(super::PAGE_SIZE),
+            i64::try_from(fetched.leaderboard.len()).unwrap_or(DEFAULT_PAGE_SIZE),
             "users",
         ),
     );

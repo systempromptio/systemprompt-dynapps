@@ -30,10 +30,10 @@ use crate::util::time_range::{TimeRange, TimeRangeQuery, parse_time_range};
 mod context;
 mod view;
 
+use crate::handlers::ssr::list_view::{DEFAULT_PAGE_SIZE, paginate};
 use context::{SecretAuditKpiView, action_options, kpis, url_for};
 
 const BASE_URL: &str = "/admin/governance/secrets";
-const PAGE_SIZE: i64 = 50;
 #[derive(Debug, Default, Deserialize)]
 pub(crate) struct SecretsQuery {
     pub from: Option<String>,
@@ -105,25 +105,8 @@ fn time_range_context(query: &SecretsQuery, range: TimeRange) -> TimeRangeContex
     }
 }
 
-fn pagination(
-    query: &SecretsQuery,
-    action: Option<&str>,
-    page: i64,
-    window: PageWindow,
-) -> Pagination {
-    let (first_row, last_row) = window.bounds();
-    Pagination {
-        current_page: page + 1,
-        total_pages: window.total_pages,
-        first_row,
-        last_row,
-        total_rows: window.total_rows,
-        noun: "entries",
-        has_prev: page > 0,
-        has_next: page + 1 < window.total_pages,
-        prev_url: (page > 0).then(|| url_for(query, action, page - 1)),
-        next_url: (page + 1 < window.total_pages).then(|| url_for(query, action, page + 1)),
-    }
+fn pagination(query: &SecretsQuery, action: Option<&str>, window: PageWindow) -> Pagination {
+    paginate(window, |page| url_for(query, action, page))
 }
 
 pub(crate) async fn secrets_audit_page(
@@ -145,19 +128,25 @@ pub(crate) async fn secrets_audit_page(
             tracing::warn!(error = %e, "secret audit stats failed");
             SecretAuditStats::default()
         });
-    let (rows, total) = list_secret_audit_paged(&pool, range, &filter, PAGE_SIZE, page * PAGE_SIZE)
-        .await
-        .unwrap_or_else(|e| {
-            tracing::warn!(error = %e, "secret audit log failed");
-            (Vec::new(), 0)
-        });
+    let (rows, total) = list_secret_audit_paged(
+        &pool,
+        range,
+        &filter,
+        DEFAULT_PAGE_SIZE,
+        page * DEFAULT_PAGE_SIZE,
+    )
+    .await
+    .unwrap_or_else(|e| {
+        tracing::warn!(error = %e, "secret audit log failed");
+        (Vec::new(), 0)
+    });
     let actions = list_secret_audit_actions(&pool, range)
         .await
         .inspect_err(|e| tracing::warn!(error = %e, "secrets audit: action listing failed"))
         .unwrap_or_default();
 
     let shown = i64::try_from(rows.len()).unwrap_or(0);
-    let window = PageWindow::new(page, PAGE_SIZE, total, shown, "entries");
+    let window = PageWindow::new(page, DEFAULT_PAGE_SIZE, total, shown, "entries");
 
     let ctx = SecretsPageContext {
         page: "governance-secrets",
@@ -173,7 +162,7 @@ pub(crate) async fn secrets_audit_page(
         rows: view::rows(&rows),
         has_rows: !rows.is_empty(),
         row_count: format!("{total} entries"),
-        pagination: pagination(&query, filter.action.as_deref(), page, window),
+        pagination: pagination(&query, filter.action.as_deref(), window),
         actions: action_options(&actions, filter.action.as_deref()),
         search: query.q.clone().unwrap_or_default(),
         export: crate::export::ExportView::single(

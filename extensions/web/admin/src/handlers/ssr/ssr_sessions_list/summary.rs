@@ -25,24 +25,13 @@ pub(super) fn build_sort_headers(
     };
     let header = |col: ConversationSort, label: &'static str, class: &'static str, hint| {
         let active = col == active_col;
-        let next_dir = if active && is_desc { "asc" } else { "desc" };
-        SortHeaderView {
-            label,
-            class,
-            hint,
-            url: format!("{prefix}sort={}&dir={next_dir}", col.as_str()),
+        let next_dir = SortHeaderView::next_dir(active, is_desc);
+        SortHeaderView::new(
+            (label, class, hint),
+            format!("{prefix}sort={}&dir={next_dir}", col.as_str()),
             active,
-            aria_sort: if active {
-                if is_desc { "descending" } else { "ascending" }
-            } else {
-                "none"
-            },
-            indicator: if active {
-                if is_desc { "▼" } else { "▲" }
-            } else {
-                "↕"
-            },
-        }
+            is_desc,
+        )
     };
     SessionsSortHeaders {
         started: header(

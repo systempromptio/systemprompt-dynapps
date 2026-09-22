@@ -191,24 +191,15 @@ pub(super) fn sort_headers(query: &RolesQuery) -> Vec<SortHeaderView> {
     .into_iter()
     .map(|(key, label, class, hint)| {
         let active = current == key;
+        // Why: an empty `dir` is this page's "default direction", not a third
+        // value — it is what the query parser reads as ascending.
         let next_dir = if active && !descending { "desc" } else { "" };
-        SortHeaderView {
-            label,
-            class,
-            hint,
-            url: query.url_with(&[("sort", key), ("dir", next_dir)]),
+        SortHeaderView::new(
+            (label, class, hint),
+            query.url_with(&[("sort", key), ("dir", next_dir)]),
             active,
-            aria_sort: match (active, descending) {
-                (true, false) => "ascending",
-                (true, true) => "descending",
-                (false, _) => "none",
-            },
-            indicator: match (active, descending) {
-                (true, false) => "▲",
-                (true, true) => "▼",
-                (false, _) => "",
-            },
-        }
+            descending,
+        )
     })
     .collect()
 }

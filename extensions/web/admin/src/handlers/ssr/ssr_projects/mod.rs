@@ -20,6 +20,7 @@ use crate::types::{MarketplaceContext, UserContext};
 
 use super::list_view::Pagination;
 use super::types::BreadcrumbView;
+use crate::handlers::ssr::list_view::{DEFAULT_PAGE_SIZE, PageWindow, paginate};
 use crate::handlers::ssr::page::Page;
 
 mod detail;
@@ -29,7 +30,6 @@ mod report;
 mod sort;
 
 pub(super) const BASE_URL: &str = "/admin/projects";
-pub(super) const PAGE_SIZE: i64 = 50;
 pub(super) const WINDOW_LABEL: &str = "Last 30 days · attributed at request time";
 
 // Why: which tab of the detail page a request asked for.
@@ -206,6 +206,9 @@ pub(super) struct PageCounts {
     pub(super) shown: i64,
 }
 
+// Why: this page's `?page=` is 1-based where every other list page counts
+// from 0, so the window is built on the zero-based index and the link adds the
+// one back. The arithmetic is then the same everywhere; only the URL differs.
 pub(super) fn pagination(counts: PageCounts, noun: &'static str, base: &str) -> Pagination {
     let PageCounts {
         page,
@@ -213,17 +216,7 @@ pub(super) fn pagination(counts: PageCounts, noun: &'static str, base: &str) -> 
         offset,
         shown,
     } = counts;
-    let total_pages = ((total + PAGE_SIZE - 1) / PAGE_SIZE).max(1);
-    Pagination {
-        current_page: page.min(total_pages),
-        total_pages,
-        first_row: if shown == 0 { 0 } else { offset + 1 },
-        last_row: offset + shown,
-        total_rows: total,
-        noun,
-        has_prev: page > 1,
-        has_next: page < total_pages,
-        prev_url: (page > 1).then(|| format!("{base}&page={}", page - 1)),
-        next_url: (page < total_pages).then(|| format!("{base}&page={}", page + 1)),
-    }
+    let window = PageWindow::new(page - 1, DEFAULT_PAGE_SIZE, total, shown, noun);
+    debug_assert_eq!(window.bounds().0, if shown == 0 { 0 } else { offset + 1 });
+    paginate(window, |index| format!("{base}&page={}", index + 1))
 }

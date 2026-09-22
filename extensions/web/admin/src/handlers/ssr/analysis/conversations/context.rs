@@ -17,9 +17,10 @@ use super::exports::{DATASET, document_export_view, export_view};
 use super::filters::{filter_view, sort_headers};
 use super::kpis::KpisView;
 use super::page_context::ConversationsPageContext;
-use super::query::{BASE_URL, ConversationAnalysisQuery, PAGE_SIZE};
+use super::query::{BASE_URL, ConversationAnalysisQuery};
 use super::summary::{CATEGORIES, ConversationBucketView, OUTCOMES, category_label};
 use super::view::ConversationRowView;
+use crate::handlers::ssr::list_view::DEFAULT_PAGE_SIZE;
 
 
 // Why: the breakdown dimension's query parameter — the key a bucket row's
@@ -254,7 +255,7 @@ pub(super) fn build_context(
     let shown = i64::try_from(rows.len()).unwrap_or(0);
     let window = PageWindow::new(
         params.page(),
-        PAGE_SIZE,
+        DEFAULT_PAGE_SIZE,
         data.totals.conversations,
         shown,
         "conversations",

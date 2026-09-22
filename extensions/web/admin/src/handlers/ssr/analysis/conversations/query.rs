@@ -11,8 +11,6 @@ use crate::repositories::analysis::conversations::{
 };
 
 pub(crate) const BASE_URL: &str = "/admin/analysis/conversations";
-pub(crate) const PAGE_SIZE: i64 = 50;
-
 // Why: this page's `since` labels reach past the live window contract (90d,
 // all); the export offers the nearest window it can serve.
 pub(crate) fn export_preset(params: &ConversationAnalysisQuery) -> &'static str {

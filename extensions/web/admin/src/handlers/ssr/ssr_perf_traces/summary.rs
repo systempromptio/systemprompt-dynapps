@@ -88,32 +88,14 @@ pub(super) fn build_sort_headers(
         let active = key == active_col;
         // Why: An active column toggles; an inactive one opens largest-first (and
         // newest-first for time), which is what an operator scans for.
-        let next_dir = if active && active_dir == "desc" {
-            "asc"
-        } else {
-            "desc"
-        };
-        SortHeaderView {
-            label,
-            class,
-            hint,
-            url: format!("{prefix}sort={key}&dir={next_dir}"),
+        let descending = active_dir != "asc";
+        let next_dir = SortHeaderView::next_dir(active, descending);
+        SortHeaderView::new(
+            (label, class, hint),
+            format!("{prefix}sort={key}&dir={next_dir}"),
             active,
-            aria_sort: if active {
-                if active_dir == "asc" {
-                    "ascending"
-                } else {
-                    "descending"
-                }
-            } else {
-                "none"
-            },
-            indicator: if active {
-                if active_dir == "asc" { "▲" } else { "▼" }
-            } else {
-                "↕"
-            },
-        }
+            descending,
+        )
     };
     TracesSortHeaders {
         started: header(

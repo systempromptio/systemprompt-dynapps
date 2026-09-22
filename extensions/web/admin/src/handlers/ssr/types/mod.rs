@@ -10,7 +10,7 @@ mod project_report;
 mod projects_page;
 mod sparkline;
 mod svg_line;
-mod table;
+pub(crate) mod table;
 mod tabs;
 mod users;
 

@@ -27,12 +27,11 @@ mod summary;
 mod urls;
 mod view;
 
+use crate::handlers::ssr::list_view::DEFAULT_PAGE_SIZE;
 use crate::handlers::ssr::page::Page;
 use context::{ActiveRequestsTab, AnalyticsRequestsPageContext, RequestsTab};
 
 const BASE_URL: &str = "/admin/requests";
-const PAGE_SIZE: i64 = 50;
-
 #[derive(Debug, Deserialize)]
 pub(crate) struct RequestsQuery {
     pub tab: Option<String>,
@@ -105,7 +104,7 @@ pub(crate) async fn analytics_requests_page(
     let filter = view::filter_from_query(&query, scope);
     let sort = view::sort_from_query(&query);
     let page = query.page.unwrap_or(0).max(0);
-    let offset = page * PAGE_SIZE;
+    let offset = page * DEFAULT_PAGE_SIZE;
 
     let (range, auto_widened) = data::resolve_range(&pool, &query).await;
 
@@ -116,7 +115,7 @@ pub(crate) async fn analytics_requests_page(
             filter: &filter,
             range,
             sort,
-            page_size: PAGE_SIZE,
+            page_size: DEFAULT_PAGE_SIZE,
             offset,
         },
     )
@@ -202,9 +201,9 @@ fn page_context(input: PageInput<'_>) -> AnalyticsRequestsPageContext {
         query,
         crate::handlers::ssr::list_view::PageWindow::new(
             page,
-            PAGE_SIZE,
+            DEFAULT_PAGE_SIZE,
             fetched.total_count,
-            i64::try_from(fetched.rows.len()).unwrap_or(PAGE_SIZE),
+            i64::try_from(fetched.rows.len()).unwrap_or(DEFAULT_PAGE_SIZE),
             "requests",
         ),
     );

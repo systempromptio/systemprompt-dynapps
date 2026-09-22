@@ -71,3 +71,32 @@ pub fn truncate_ellipsis(s: &str, max_chars: usize) -> String {
         format!("{head}\u{2026}")
     }
 }
+
+// Why: distinct from `short_num` — this ladder drops the decimal between 10k
+// and a million, where the tenth of a thousand is noise rather than precision.
+// Two pages had a byte-identical copy of it under two different names.
+pub fn compact_num(v: i64) -> String {
+    if v >= 1_000_000 {
+        format!("{:.1}M", v as f64 / 1_000_000.0)
+    } else if v >= 10_000 {
+        format!("{}k", v / 1000)
+    } else if v >= 1000 {
+        format!("{:.1}k", v as f64 / 1000.0)
+    } else {
+        v.to_string()
+    }
+}
+
+// Why: "3d ago" answers "is this still in use" at a glance; the exact stamp
+// stays on the cell's `title`. Months are thirty days, which is the roster's
+// idle threshold, so "1mo ago" and the idle-30d chip agree. One ladder, so
+// two pages cannot disagree about what a fresh timestamp reads as.
+pub fn relative_time(delta_secs: i64) -> String {
+    match delta_secs.max(0) {
+        d if d < 60 => "just now".to_owned(),
+        d if d < 3_600 => format!("{}m ago", d / 60),
+        d if d < 86_400 => format!("{}h ago", d / 3_600),
+        d if d < 2_592_000 => format!("{}d ago", d / 86_400),
+        d => format!("{}mo ago", d / 2_592_000),
+    }
+}

@@ -12,8 +12,6 @@ use crate::repositories::analysis::tools::{
 };
 use crate::util::time_range::{TimeRange, TimeRangeQuery, parse_time_range};
 
-pub(crate) const PAGE_SIZE: i64 = 50;
-
 // Why: which page is asking — the Artifacts page is the Tools page narrowed
 // to rows with an artifact kind, so one query type serves both and only the
 // base URL and the default breakdown differ.

@@ -12,7 +12,8 @@ use crate::repositories::analytics::site::sessions::SessionCostRow;
 use super::context::{KpiTile, SessionCostRowView, SessionsTabView};
 use super::tab_models::{per, share};
 use super::view::{compact, format_date};
-use super::{AnalyticsDashboardQuery, PAGE_SIZE, urls};
+use super::{AnalyticsDashboardQuery, urls};
+use crate::handlers::ssr::list_view::DEFAULT_PAGE_SIZE;
 
 pub(super) struct SessionsInput<'a> {
     pub rows: &'a [SessionCostRow],
@@ -32,14 +33,14 @@ pub(super) fn sessions_tab(
         .unwrap_or(0);
     let views: Vec<SessionCostRowView> = input.rows.iter().map(|r| row(r, max)).collect();
 
-    let pagination = (input.total_rows > PAGE_SIZE).then(|| {
+    let pagination = (input.total_rows > DEFAULT_PAGE_SIZE).then(|| {
         urls::build_pagination(
             query,
             PageWindow::new(
                 input.page,
-                PAGE_SIZE,
+                DEFAULT_PAGE_SIZE,
                 input.total_rows,
-                i64::try_from(input.rows.len()).unwrap_or(PAGE_SIZE),
+                i64::try_from(input.rows.len()).unwrap_or(DEFAULT_PAGE_SIZE),
                 "sessions",
             ),
         )

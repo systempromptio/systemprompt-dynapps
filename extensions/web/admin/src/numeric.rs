@@ -1,11 +1,16 @@
 //! Saturating and lossy numeric conversions used by the analytics rollups.
 //!
-//! Centralised so the truncation and saturation behaviour of every
-//! count-to-float and float-to-count conversion is decided in one place rather
-//! than at each call site. The `cast_*` lints are allowed at workspace scope on
-//! the understanding that every `as` between an integer and a float lives
-//! here: the values are DB counts, durations and display ratios, all far
-//! inside the range where the cast is exact or the loss is invisible.
+//! These are the conversions worth naming: a count to a float, a float back to
+//! a count, and a ratio as a display percentage. Their behaviour on truncation
+//! and saturation is decided here rather than at each call site.
+//!
+//! This module is **not** the only place an `as` between an integer and a float
+//! appears under `extensions/web/admin` — there are around a hundred others, in
+//! display formatting that divides a count by a unit. The `cast_*` lints are
+//! allowed at workspace scope for that reason, not because this module has them
+//! all: the values are DB counts, durations and display ratios, all far inside
+//! the range where the cast is exact or the loss is invisible. Do not read the
+//! allowance as a claim that every cast was routed through here.
 
 #[must_use]
 #[inline]

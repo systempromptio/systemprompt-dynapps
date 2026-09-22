@@ -10,7 +10,7 @@ use crate::handlers::ssr::analysis::tone::{
 };
 use crate::handlers::ssr::analysis_urls::ANALYSIS_SKILLS_URL;
 use crate::handlers::ssr::format::{format_cost, format_duration_ms, format_token_total};
-use crate::handlers::ssr::list_view::{PageWindow, Pagination};
+use crate::handlers::ssr::list_view::{PageWindow, Pagination, paginate};
 use crate::handlers::ssr::types::{BreadcrumbView, TabLinkView};
 use crate::repositories::analysis::inventory_index::InventoryIndex;
 use crate::repositories::analysis::skills::{
@@ -91,20 +91,7 @@ fn breakdown_tabs(query: &SkillDetailQuery, key: &str) -> Vec<TabLinkView> {
 fn pagination(query: &SkillDetailQuery, key: &str, total: i64, shown: usize) -> Pagination {
     let shown = i64::try_from(shown).unwrap_or(0);
     let window = PageWindow::new(query.page(), PAGE_SIZE, total, shown, "conversations");
-    let (first_row, last_row) = window.bounds();
-    Pagination {
-        current_page: window.index + 1,
-        total_pages: window.total_pages,
-        first_row,
-        last_row,
-        total_rows: total,
-        noun: "conversations",
-        has_prev: window.index > 0,
-        has_next: window.index + 1 < window.total_pages,
-        prev_url: (window.index > 0).then(|| query.link(key, None, None, Some(window.index - 1))),
-        next_url: (window.index + 1 < window.total_pages)
-            .then(|| query.link(key, None, None, Some(window.index + 1))),
-    }
+    paginate(window, |page| query.link(key, None, None, Some(page)))
 }
 
 pub(super) fn build_context(

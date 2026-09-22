@@ -11,7 +11,8 @@ use crate::repositories::analytics::site::tools::{ToolServerRow, ToolStatsRow};
 use super::context::{KpiTile, ToolRowView, ToolServerRowView, ToolsTabView};
 use super::tab_models::{ms, pct, share};
 use super::view::compact;
-use super::{AnalyticsDashboardQuery, PAGE_SIZE, urls};
+use super::{AnalyticsDashboardQuery, urls};
+use crate::handlers::ssr::list_view::DEFAULT_PAGE_SIZE;
 
 pub(super) fn tools_tab(
     servers: &[ToolServerRow],
@@ -38,14 +39,14 @@ pub(super) fn tools_tab(
 
     let tool_views: Vec<ToolRowView> = rows.iter().map(|r| tool_row(r, tool_max, query)).collect();
 
-    let pagination = (total_rows > PAGE_SIZE).then(|| {
+    let pagination = (total_rows > DEFAULT_PAGE_SIZE).then(|| {
         urls::build_pagination(
             query,
             PageWindow::new(
                 page,
-                PAGE_SIZE,
+                DEFAULT_PAGE_SIZE,
                 total_rows,
-                i64::try_from(rows.len()).unwrap_or(PAGE_SIZE),
+                i64::try_from(rows.len()).unwrap_or(DEFAULT_PAGE_SIZE),
                 "tools",
             ),
         )

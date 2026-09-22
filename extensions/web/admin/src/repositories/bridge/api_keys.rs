@@ -8,6 +8,7 @@ use systemprompt::identifiers::UserId;
 use uuid::Uuid;
 
 use super::error::{BridgeRepoError, Result};
+use serde::Serialize;
 
 pub const API_KEY_PREFIX: &str = "sp-live-";
 const SECRET_BYTES: usize = 32;
@@ -24,7 +25,10 @@ pub struct ApiKeyRow {
     pub revoked_at: Option<DateTime<Utc>>,
 }
 
-#[derive(Debug)]
+// Why: `Serialize` here rather than a mirror type in the handler. The two
+// were the same six fields and the same ten, with a `From` copying each one
+// across; the response body is this record.
+#[derive(Debug, Serialize)]
 pub struct IssuedApiKey {
     pub id: String,
     pub name: String,
@@ -75,7 +79,7 @@ pub async fn issue_api_key(
     })
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct EnrolledDevice {
     pub id: String,
     pub user_id: UserId,

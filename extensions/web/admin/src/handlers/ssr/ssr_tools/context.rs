@@ -4,14 +4,14 @@
 use serde::Serialize;
 
 use super::figures::{ToolTileView, charts, tiles};
-use super::query::{Lens, PAGE_SIZE, ToolsQuery};
+use super::query::{Lens, ToolsQuery};
 use super::ribbon::ribbon;
 use super::rows::{ToolActivityRowView, format_bytes, kind_icon, kind_label, tool_row};
 use crate::handlers::ssr::analysis::help::HelpView;
 use crate::handlers::ssr::analysis::ribbon::RibbonView;
 use crate::handlers::ssr::analysis::tone::{deny_tone, error_rate_tone, latency_tone, percent};
 use crate::handlers::ssr::format::format_duration_ms;
-use crate::handlers::ssr::list_view::{PageWindow, Pagination, ScopeFilterView};
+use crate::handlers::ssr::list_view::{DEFAULT_PAGE_SIZE, PageWindow, Pagination, ScopeFilterView};
 use crate::handlers::ssr::types::{BreadcrumbView, SortHeaderView, SvgLineChartView, TabLinkView};
 use crate::repositories::analysis::tools::{
     ToolActivityResult, ToolBreakdownBy, ToolBucketRow, ToolSort,
@@ -177,7 +177,7 @@ pub(crate) fn build_context(
         data.totals.calls
     };
     let shown = i64::try_from(rows.len()).unwrap_or(0);
-    let window = PageWindow::new(q.page(), PAGE_SIZE, total, shown, frame.noun);
+    let window = PageWindow::new(q.page(), DEFAULT_PAGE_SIZE, total, shown, frame.noun);
     let hourly = (frame.range.to - frame.range.from).num_hours() <= 48;
     let current_url = format!("{}?{}", lens.base_url(), q.query_string(&[]));
     ToolsPageContext {
