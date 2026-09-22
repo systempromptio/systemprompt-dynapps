@@ -20,7 +20,24 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+### Fixed
+
+- **Gateway (core 0.58.0):** bridge sign-in on an instance behind an untrusted reverse proxy
+  failed with `auth: gateway returned status 429 Too Many Requests from session-pat`, which
+  reads like a rejected token but is a rate limit. `/v1/auth/bridge/*` now has a budget of its
+  own (`rate_limits.bridge_auth_per_second`, default 20) instead of sharing one with
+  `/v1/messages`, so inference traffic can no longer starve sign-in; a refused request is now
+  logged instead of discarded; and the limiter warns when it is bucketing every client onto one
+  proxy address. Operator write-up and the fix for `sp-dev.astound.digital`:
+  `docs/ops/sp-dev-gateway-429.md`.
+
 ### Changed
+
+- **Profiles:** `rate_limits.gateway_per_second` (100) and `rate_limits.bridge_auth_per_second`
+  (20) are now declared explicitly in `deploy/self-host/profile.yaml.template` and both local
+  and production profiles. No profile in this repo had ever set a rate limit, so every
+  deployment was running invisible serde defaults — including the gateway budget that caused
+  the sign-in outage above.
 
 - **Bridge:** the Profile page no longer polls `/v1/bridge/profile` and `/profile/usage` every
   30 s while open (`bridge/web/js/components/profile-connections.js`); it refreshes when the
