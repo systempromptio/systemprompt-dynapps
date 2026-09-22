@@ -62,20 +62,35 @@ security:
   signing_key_path: signing_key.pem
   id_jag_ttl_secs: 300
 rate_limits:
+  # Requests per second per client address, one bucket per route group. Every
+  # knob below names the group it governs; nothing here is a global cap.
   disabled: false
+  # /api/v1/core/oauth (public), /auth/link-passkey, /api/public/gateway
   oauth_public_per_second: 10
+  # /api/v1/core/oauth (authenticated), /api/v1/core/users
   oauth_auth_per_second: 10
+  # /api/v1/core/contexts, /api/v1/webhook
   contexts_per_second: 100
+  # /api/v1/core/tasks
   tasks_per_second: 50
+  # /api/v1/core/artifacts
   artifacts_per_second: 50
+  # /api/v1/agents/registry — discovery only, so listing agents cannot spend
+  # the execution budget below.
   agent_registry_per_second: 50
+  # /api/v1/agents execution, plus the Slack and Teams inbound mounts
   agents_per_second: 20
+  # /api/v1/mcp/registry — the MCP server catalog, discovery only
   mcp_registry_per_second: 50
+  # /api/v1/mcp — MCP tool calls, the busiest protocol group
   mcp_per_second: 200
+  # /api/v1/stream — long-lived SSE connections, so a connection budget
   stream_per_second: 100
+  # /api/v1/content, /api/v1/sync, /api/v1/marketplace, /api/v1/analytics,
+  # /track/engagement
   content_per_second: 50
-  # The /v1 gateway. Bucketed by client address, not by user, so size it
-  # for a network rather than for a person.
+  # The /v1 gateway: /v1/messages and /v1/chat/completions. Bucketed by client
+  # address, not by user, so size it for a network rather than for a person.
   gateway_per_second: 100
   # /v1/auth/bridge/*, deliberately its own budget: sign-in must stay
   # reachable on an instance whose inference traffic is saturating its own.

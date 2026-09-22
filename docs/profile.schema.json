@@ -554,72 +554,84 @@
           "default": false
         },
         "oauth_public_per_second": {
+          "description": "`/api/v1/core/oauth` public endpoints, `/auth/link-passkey`, and the\npublic gateway session routes under `/api/public/gateway`.",
           "type": "integer",
           "format": "uint64",
           "minimum": 0,
           "default": 10
         },
         "oauth_auth_per_second": {
+          "description": "The authenticated half of `/api/v1/core/oauth`, plus `/api/v1/core/users`.",
           "type": "integer",
           "format": "uint64",
           "minimum": 0,
           "default": 10
         },
         "contexts_per_second": {
+          "description": "`/api/v1/core/contexts` and the inbound `/api/v1/webhook` mount.",
           "type": "integer",
           "format": "uint64",
           "minimum": 0,
           "default": 100
         },
         "tasks_per_second": {
+          "description": "`/api/v1/core/tasks`.",
           "type": "integer",
           "format": "uint64",
           "minimum": 0,
           "default": 50
         },
         "artifacts_per_second": {
+          "description": "`/api/v1/core/artifacts`.",
           "type": "integer",
           "format": "uint64",
           "minimum": 0,
           "default": 50
         },
         "agent_registry_per_second": {
+          "description": "`/api/v1/agents/registry` — discovery only, kept apart from\n`agents_per_second` so listing agents cannot spend an execution budget.",
           "type": "integer",
           "format": "uint64",
           "minimum": 0,
           "default": 50
         },
         "agents_per_second": {
+          "description": "`/api/v1/agents` execution, and the Slack and Teams inbound mounts that\ndispatch to an agent.",
           "type": "integer",
           "format": "uint64",
           "minimum": 0,
           "default": 20
         },
         "mcp_registry_per_second": {
+          "description": "`/api/v1/mcp/registry` — the MCP server catalog, discovery only.",
           "type": "integer",
           "format": "uint64",
           "minimum": 0,
           "default": 50
         },
         "mcp_per_second": {
+          "description": "`/api/v1/mcp` — MCP tool calls, the busiest protocol route group.",
           "type": "integer",
           "format": "uint64",
           "minimum": 0,
           "default": 200
         },
         "stream_per_second": {
+          "description": "`/api/v1/stream` — long-lived SSE connections, so this is a connection\nbudget rather than a request one and is set high.",
           "type": "integer",
           "format": "uint64",
           "minimum": 0,
           "default": 100
         },
         "content_per_second": {
+          "description": "`/api/v1/content`, `/api/v1/sync`, `/api/v1/marketplace`,\n`/api/v1/analytics` and `/track/engagement`.",
           "type": "integer",
           "format": "uint64",
           "minimum": 0,
           "default": 50
         },
         "gateway_per_second": {
+          "description": "Inference traffic under `/v1` — `/v1/messages` and the OpenAI-shaped\n`/v1/chat/completions`.",
           "type": "integer",
           "format": "uint64",
           "minimum": 0,
