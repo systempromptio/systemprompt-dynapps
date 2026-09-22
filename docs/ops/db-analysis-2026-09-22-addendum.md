@@ -28,6 +28,31 @@ evidence is what the production dump showed before them.
   but the columns were only added by ai migrations 028/029 at 07:31:59 on 2026-09-22 and the last request
   in the dump is 07:31:23 — zero requests ran on the new binary (`d22_ai_requests.sql`,
   "requests after today's 07:32 upgrade": 0). Re-check after the instance has served traffic on 0.58.x.
+- **Finding 8's "20 unregistered jobs" is deploy lag, not a scheduler fault.** Established
+  2026-09-22 while fixing it, and the original diagnosis was wrong. The deployed binary dates from
+  `binary_mtime` 1789163073 = 2026-09-11 21:44 UTC, and production ships its own `services/` tree
+  inside the image. The scheduler config as shipped at that commit (astound `162d04e8`) declares 28
+  jobs, 9 of them `enabled: false` — 19 enabled. Those 19 map **exactly** onto `scheduled_jobs`:
+  `comm` of the two name sets shows zero entries in the deployed config missing from the table.
+  Registration therefore dropped nothing. The 20th row is `knowledge_drive_sync`, an orphan whose
+  crate was deleted on 2026-09-10 (`348b8efb`) and which survives because `upsert_job` is
+  `INSERT … ON CONFLICT DO UPDATE` with no delete path; astound migration 095 removes it. The "20
+  missing jobs" are config entries added after that deploy, against a binary whose inventory cannot
+  contain them — they appear on the next deploy.
+
+  Two mechanisms are in play, not one: `oauth_cleanup`'s code lands 2026-09-15 (`f17090e2f`) so it
+  genuinely post-dates the binary, but `user_rate_limit_prune`'s lands 2026-09-02 (`f70a4633c`) and
+  *was* in the deployed inventory — it is absent only because the shipped config did not enable it.
+
+  Also established: a job the config names and the binary lacks never errors. `register_single_job`
+  logs `warn!("Job not found in inventory, skipping")` and returns `Ok(())`, so it never reaches
+  `upsert_job`. That warning has never reached the `logs` table either — the database log layer drops
+  any event whose span carries no user, session and trace (`infra/logging/src/layer/proxy.rs`), and
+  boot registration runs outside such a span. Core `d12777594` reports the inventory miss as degraded
+  and writes it through the logging repository so it is visible, and fault-isolates registration per
+  job — which remains worth having, because a job that genuinely fails at `upsert_job` or
+  `scheduler.add` does still take every later job with it.
+
 - **Every bridge session is a "behavioral bot"** — the main report lists 1,620 flagged sessions as "not a
   fault". It is a fault; see A1.
 
