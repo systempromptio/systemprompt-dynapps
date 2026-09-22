@@ -21,6 +21,7 @@ services:
     volumes:
       - ${ASTOUND_PROFILE_DIR:?path to the rendered profile directory}:/app/.systemprompt/profiles/self-host:ro
       - app_web:/app/web
+      # Per-node runtime state (gateway accounting receipts); never share it.
       - app_storage_data:/app/storage/data
       # Hand-authored knowledge sources (meeting notes, ADRs, spec trees) the
       # knowledge bank indexes, plus its uploads; see services/knowledge-bank/config.yaml.

@@ -96,7 +96,10 @@ sudo install -m 0644 -o 1000 -g 1000 profile/profile.yaml /etc/astound/profile/p
 sudo install -m 0600 -o 1000 -g 1000 profile/secrets.json /etc/astound/profile/secrets.json
 ```
 
-The container runs as uid 1000 and mounts the directory read-only.
+The container runs as uid 1000 and mounts the directory read-only. Nothing
+is ever written there: runtime state the node keeps for itself (the gateway
+accounting journal, `/app/storage/data/gateway-journal`) lives on the
+`app_storage_data` volume, which must stay per node — never a shared mount.
 
 ## 4. Network
 
