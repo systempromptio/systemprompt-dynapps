@@ -37,6 +37,20 @@ Conventions (strict — hold every entry to them):
 
 ### Fixed
 
+- **Database:** boot printed twenty-six warnings before serving a request, and none of them was
+  actionable. Four were live tables owned by no extension — `evaluation_queue`,
+  `evaluation_reports`, `evaluation_runs` and `session_analyses`, all empty, left by the deleted
+  evaluation engine along with four views over them; migration
+  `103_drop_evaluation_engine` retires the lot, idempotently, because the drops in `074`/`085`
+  are stamped applied yet the objects were still live (restoring a dump older than a drop puts
+  them back and nothing notices). The other twenty-two were the boot `@cost` audit reading the
+  whole migration catalogue: every one already grandfathered in
+  `tests/unit/web/migration_cost_baseline.txt` or core's, and none fixable, since a migration
+  that has run cannot be made cheaper by a comment. Core f0e25fdb3 narrows that warning to a
+  migration still pending against a hot table that already holds rows, and reports the row
+  count. The static whole-catalogue gate in `tests/unit/web/src/migration_cost.rs` is unchanged
+  and neither baseline file is touched.
+
 - **Admin:** `?preset=90d` meant 90 days on three pages and silently fell back to 30 on
   another, and `1d` resolved on three pages and nowhere else. `TimeRangePreset` is now the one
   table, carrying `90d` and the `1d` alias, and three hand-rolled copies of its `as_str` are
