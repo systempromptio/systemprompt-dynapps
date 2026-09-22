@@ -6,8 +6,10 @@ description: Explain AI usage, model/provider costs, latency, and adoption trend
 
 # AI usage report
 
-Call `admin_report` with `{"report":"costs","days":7}` at the start of every run; never
-reuse a payload from an earlier turn, even one minutes old. Compare the explicit period
+Call the `admin_report` **tool** with `{"report":"costs","days":7}` at the start of every
+run; never reuse a payload from an earlier turn, even one minutes old. It is a typed MCP
+tool on this server, not a CLI subcommand: there is no `systemprompt admin report` and no
+`systemprompt admin_report`, and passing either to the CLI tool fails. Compare the explicit period
 with an equivalent previous period by re-running the same commands with `--since` and
 `--until` set to the earlier window when asked for change. Read `analytics sessions stats`
 and `analytics requests stats` for usage; counts of requests are not unique active people.
@@ -60,8 +62,9 @@ Use the admin `systemprompt` MCP server as the signed-in caller. Prefer its type
 `{"command":"<command without systemprompt prefix>"}` and already forces structured
 JSON output. Do not append output-format flags (`--json`, `--format`, `--export`), switch
 profiles, or use database URLs. The flags each command takes are tabled in
-`systemprompt_cli`; on an unknown-flag error run `<command> --help` once rather than
-guessing again. A page is a page: follow `next_cursor` / `next_offset`, and set
+`systemprompt_cli`, which also lists every verb each domain has; on an unknown-flag or
+unknown-subcommand error read that table rather than guessing again, and run
+`<command> --help` once if it is not covered there. A page is a page: follow `next_cursor` / `next_offset`, and set
 `since`/`until` to reach an earlier window instead of paging back to it. A denied or
 unavailable source is missing evidence, never a zero. Report the effective period, source, limitations,
 and links or trace IDs behind conclusions. Never expose secrets or full prompt bodies
