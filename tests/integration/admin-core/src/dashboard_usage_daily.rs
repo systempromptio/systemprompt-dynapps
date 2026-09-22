@@ -184,6 +184,7 @@ async fn upsert_daily_aggregation_keeps_separate_rows_per_event_type() {
     upsert_daily_aggregation(&daily_params(
         &db.pool,
         &user,
+        &plugin,
         &date,
         EVENT_POST_TOOL_USE_FAILURE,
     ))
