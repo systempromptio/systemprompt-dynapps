@@ -53,6 +53,38 @@ evidence is what the production dump showed before them.
   job — which remains worth having, because a job that genuinely fails at `upsert_job` or
   `scheduler.add` does still take every later job with it.
 
+- **Finding 10a's "8 prefix-duplicate indexes on `logs`" does not exist.** The claim is in the main
+  report's prose (§33), not in `a3_indexes.out`, which contains no `logs` rows at all. Verified
+  against the restore: `logs` has 13 indexes and no non-unique, non-partial one is a column prefix of
+  another. Core already did that pass in
+  `crates/infra/logging/schema/migrations/003_prune_redundant_log_indexes.sql`, which dropped the five
+  single-column indexes that were prefixes of the `(col, timestamp DESC)` composites. `logs` is
+  134 MB of index for 146 MB of heap because of volume — 89% of rows are bridge-polling access-log
+  lines (finding 7) — not redundancy. Dropping the "8" would have removed useful indexes.
+
+  A check the finding does not mention turned out to be load-bearing: **a candidate covered only by a
+  PARTIAL index is not safe to drop**, since a filtered index does not answer what a full one does.
+  Several of the 47 dropped are also covered by partial indexes
+  (`idx_user_sessions_human_activity` and friends); all 47 were confirmed to have a non-partial
+  superset before being dropped.
+
+- **Finding 10e's proposed action is wrong, and its size is negligible.** `mcp_artifacts.data` is
+  `JSONB NOT NULL` and holds the whole `ToolResponse` envelope — `artifact_id`, `mcp_execution_id`,
+  `_metadata` *and* `artifact`. Only the `artifact` member is duplicated in `artifact_payloads`, so
+  "null out `data` once `payload_sha256` is set" would violate the constraint and discard the
+  envelope; the correct operation is `data - 'artifact'`. It is also not worth doing yet: 284 of 284
+  rows carry both copies, totalling 778 kB. Two readers take the body from the inline copy and have
+  no payload-repository handle (`crates/domain/mcp/src/resources.rs:116`, the render path for every
+  artifact resource, and `IngestOutcome::existing` in `services/artifact_ingest/mod.rs`), so a safe
+  fix is a two-repo signature change. Deferred deliberately.
+
+- **`retention_export_weekly`'s `"0 0 2 * * 0"` is valid; do not "fix" it.** Raised as a possible
+  boot-aborting parse error on the theory that day-of-week is 1-7. The scheduler backend is not the
+  `cron` crate: `tokio-cron-scheduler` 0.15.1 uses **croner 3.0.1**, whose
+  `pattern.rs:41` declares `days_of_week: CronComponent::new(0, 7, ...)` — 0 to 7 inclusive — and
+  which matches through `weekday().num_days_from_sunday()`, 0-indexed with Sunday = 0. So `0` means
+  Sunday and parses. It is the only day-of-week expression in the config.
+
 - **Every bridge session is a "behavioral bot"** — the main report lists 1,620 flagged sessions as "not a
   fault". It is a fault; see A1.
 
