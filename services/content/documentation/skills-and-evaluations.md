@@ -8,7 +8,7 @@ kind: "guide"
 public: true
 tags: ["documentation", "development", "skills"]
 published_at: "2026-09-13"
-updated_at: "2026-09-16"
+updated_at: "2026-09-22"
 after_reading_this:
   - "Trace a skill from its services-tree source through discovery, distribution, loading, and invocation analytics"
   - "Tell a disk skill, a managed revision, a bundle digest and a publication generation apart"
@@ -97,11 +97,17 @@ have YAML front matter for client interoperability. Platform loaders remove that
 front matter before injecting or hashing the instruction body.
 
 The services loader auto-discovers these directories when it loads the active
-profile. Configuration is memoized for the process lifetime, so restart the service
-after changing skill configuration. A missing directory produces an empty catalog;
-an invalid or missing per-skill configuration is skipped or rejected according to
-the consumer and validation stage. Run configuration validation before treating a
-skill as distributable.
+profile. Configuration is memoized for the process lifetime, so a skill changed on
+disk under `services/` is picked up when the service restarts — which for this
+repository's own skills means a deploy. A skill that arrives in a **kit** does not
+need one: **Import sources** recomposes the tree and refreshes the inventory inside
+the running process ([Code ↔ Instance](/documentation/services-sync)). A missing
+directory produces an empty catalog; an invalid or missing per-skill configuration
+is skipped or rejected according to the consumer and validation stage. Run
+configuration validation before treating a skill as distributable.
+
+Most skills on this instance are kit skills. Which kind you are holding, and what
+shipping each one takes, is [Update a Skill and Ship It](/documentation/update-a-skill).
 
 ### Discovery and inspection
 

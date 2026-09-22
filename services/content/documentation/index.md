@@ -7,7 +7,7 @@ kind: "guide"
 public: true
 tags: ["documentation", "getting-started", "bridge"]
 published_at: "2026-02-18"
-updated_at: "2026-09-13"
+updated_at: "2026-09-22"
 related_playbooks:
   - title: "Connect Claude Code"
     url: "/documentation/connect-claude-code"
@@ -45,8 +45,17 @@ Next, try a read-only skill or tool that your administrator has enabled. Model a
 
 ## Skills
 
-Maintainers can use the [skill lifecycle guide](/documentation/skills-and-evaluations)
-to trace a skill from its source through distribution, loading and measurement.
+Changing a skill and getting it in front of agents is one walkthrough:
+[Update a Skill and Ship It](/documentation/update-a-skill) — edit, gate, publish,
+import, verify. Maintainers can use the
+[skill lifecycle guide](/documentation/skills-and-evaluations) to trace a skill from
+its source through distribution, loading and measurement.
+
+## Sync: code and instance
+
+- [Update a Skill and Ship It](/documentation/update-a-skill) — the developer walkthrough, end to end
+- [Code ↔ Instance: sources, planes and sync](/documentation/services-sync) — the model behind it: where declarations come from, what they project into, which hash proves what
+- [Access control: who reaches what, and why](/documentation/access-control) — entitlement, declared here and enforced from the database
 
 ## Analysis: measuring and comparing skills
 
