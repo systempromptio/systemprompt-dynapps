@@ -47,6 +47,11 @@ Left for the next pass:
   `was_pending` accounting is per key, so the set-based rewrite is its own
   change: aggregate the transition table per producer, one `UPDATE … SET
   pending_count = pending_count + n`, one `INSERT … SELECT` into the outbox.
+  Until that lands, every fanning-out row trigger is listed in
+  `tests/unit/web/trigger_fanout_baseline.txt`, which the gate in
+  `tests/unit/web/src/migration_cost.rs` allows to shrink and never grow —
+  so the population cannot quietly increase while this is open. Deleting a
+  line from it is the proof one was fixed.
 - The row-level branch in `sp_capture_reporting_change` (core
   `crates/infra/events/schema/reporting_capture.sql`) exists so a database
   mid-upgrade — function bodies swapped, row triggers not yet dropped — keeps

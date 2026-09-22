@@ -71,14 +71,20 @@ CREATE OR REPLACE TRIGGER audit_event_notify_governance_trg
     EXECUTE FUNCTION audit_event_notify_governance();
 
 
-CREATE OR REPLACE FUNCTION audit_event_notify_ai_requests()
-RETURNS TRIGGER AS $$
+-- One NOTIFY for one request row; the SSE consumer's contract is one event
+-- per request. Scalar arguments so the function exists before the table does
+-- on a fresh install (the installer applies functions first).
+CREATE OR REPLACE FUNCTION audit_event_notify_ai_request(
+    r_id TEXT, r_session_id TEXT, r_trace_id TEXT, r_context_id TEXT,
+    r_user_id TEXT, r_model TEXT, r_status TEXT, r_created_at TIMESTAMPTZ
+)
+RETURNS VOID AS $$
 DECLARE
     sev     TEXT;
     payload TEXT;
 BEGIN
     BEGIN
-        IF NEW.status NOT IN ('ok', 'success', 'completed', 'pending') THEN
+        IF r_status NOT IN ('ok', 'success', 'completed', 'pending') THEN
             sev := 'error';
         ELSE
             sev := 'info';
@@ -86,22 +92,22 @@ BEGIN
 
         payload := json_build_object(
             'table',      'ai_requests',
-            'id',         NEW.id,
-            'session_id', NEW.session_id,
-            'trace_id',   NEW.trace_id,
-            'context_id', NEW.context_id,
-            'user_id',    NEW.user_id,
-            'model',      NEW.model,
-            'status',     NEW.status,
+            'id',         r_id,
+            'session_id', r_session_id,
+            'trace_id',   r_trace_id,
+            'context_id', r_context_id,
+            'user_id',    r_user_id,
+            'model',      r_model,
+            'status',     r_status,
             'severity',   sev,
-            'created_at', NEW.created_at
+            'created_at', r_created_at
         )::text;
 
         IF length(payload) > 7800 THEN
             RAISE WARNING 'audit_event_notify_ai_requests: payload truncated (% bytes)', length(payload);
             payload := json_build_object(
                 'table',     'ai_requests',
-                'id',        NEW.id,
+                'id',        r_id,
                 'truncated', true
             )::text;
         END IF;
@@ -109,15 +115,38 @@ BEGIN
         PERFORM pg_notify('audit_events', payload);
     EXCEPTION WHEN OTHERS THEN
         RAISE WARNING 'audit_event_notify_ai_requests failed: % (id=%, session=%)',
-            SQLERRM, NEW.id, NEW.session_id;
+            SQLERRM, r_id, r_session_id;
     END;
-    RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE TRIGGER audit_event_notify_ai_requests_trg
+-- Statement-level: one invocation per INSERT statement, looping the rows it
+-- added. The TG_LEVEL branch keeps a database mid-upgrade working: the
+-- installer swaps function bodies before migrations run, and the row-form
+-- trigger still fires into this body until the declarative phase replaces it.
+CREATE OR REPLACE FUNCTION audit_event_notify_ai_requests()
+RETURNS TRIGGER AS $$
+DECLARE
+    r RECORD;
+BEGIN
+    IF TG_LEVEL = 'ROW' THEN
+        PERFORM audit_event_notify_ai_request(NEW.id, NEW.session_id, NEW.trace_id, NEW.context_id,
+            NEW.user_id, NEW.model, NEW.status, NEW.created_at);
+        RETURN NEW;
+    END IF;
+    FOR r IN SELECT id, session_id, trace_id, context_id, user_id, model, status, created_at FROM new_rows LOOP
+        PERFORM audit_event_notify_ai_request(r.id, r.session_id, r.trace_id, r.context_id,
+            r.user_id, r.model, r.status, r.created_at);
+    END LOOP;
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS audit_event_notify_ai_requests_trg ON ai_requests;
+CREATE OR REPLACE TRIGGER audit_event_notify_ai_requests_stmt
     AFTER INSERT ON ai_requests
-    FOR EACH ROW
+    REFERENCING NEW TABLE AS new_rows
+    FOR EACH STATEMENT
     EXECUTE FUNCTION audit_event_notify_ai_requests();
 
 

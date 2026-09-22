@@ -27,6 +27,39 @@
         {{/each}}
     </div>
 
+    {{#> components/table caption="Retention — how long the high-volume tables keep their rows" modifier="sp-config-retention"}}
+        <thead><tr>
+            <th>Table</th>
+            <th>Keeps</th>
+            <th>Window from</th>
+            <th>Deleted at last run</th>
+        </tr></thead>
+        <tbody>
+        {{#each retention.rows}}
+        <tr data-table="{{table}}">
+            <td><strong>{{table}}</strong><br><span class="sp-u-text-tertiary">{{purpose}}</span></td>
+            <td><strong>{{days}}</strong> days</td>
+            <td><span class="sp-u-mono sp-u-text-tertiary">{{days_source}}</span></td>
+            <td>{{#if deleted_last_run}}{{deleted_last_run}}{{else}}<span class="sp-u-text-tertiary">—</span>{{/if}}</td>
+        </tr>
+        {{/each}}
+        </tbody>
+        <tfoot><tr>
+            <td colspan="4">
+                <span class="sp-u-mono">{{retention.job_name}}</span>
+                {{#if retention.never_ran}}
+                {{> components/badge tone="warn" text="never ran"}}
+                {{else}}
+                {{#if retention.last_status}}{{> components/badge tone=retention.last_status_tone text=retention.last_status}}{{/if}}
+                last run {{relativeTime retention.last_run}}{{#if retention.orphaned_logs_last_run}} · orphaned log rows removed: {{retention.orphaned_logs_last_run}}{{/if}}
+                {{/if}}
+                {{#if retention.next_run}} · next run {{relativeTime retention.next_run}}{{/if}}
+                {{#if retention.last_error}}<br><span class="sp-u-text-tertiary">{{retention.last_error}}</span>{{/if}}
+                <br><span class="sp-u-text-tertiary">Windows are read from <span class="sp-u-mono">retention:</span> in the profile; a count ending in + means the run stopped at its time budget with more to delete. Manual trigger: <span class="sp-u-mono">systemprompt infra jobs run database_cleanup</span>.</span>
+            </td>
+        </tr></tfoot>
+    {{/components/table}}
+
     {{> components/tabs tabs=tabs nav_label="Configuration views"}}
 
     {{#> components/table caption="Every kind of configuration the instance loads" modifier="sp-config"}}
