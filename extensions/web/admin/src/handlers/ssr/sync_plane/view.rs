@@ -52,6 +52,32 @@ impl SyncRecommendation {
         }
         let code = actions.code_side();
         let console = actions.kept + actions.delete_console;
+        // Why: an entity the file declares and the database has never heard of
+        // is the one drift boot cannot settle by itself. Boot seeds a plane
+        // only when its projection is empty, and for access control "empty"
+        // counts band rules, not entities — a database with 63 entities and
+        // 159 rules can never seed, so entities added by a later release stay
+        // absent and the console is the only route in. Insert only adds them
+        // without touching anything written here, so it is named first and
+        // separately from the general code-side wording, which reads as an
+        // Overwrite recommendation.
+        if actions.insert_entities > 0 {
+            let deletes = if actions.delete > 0 {
+                format!(
+                    " Overwrite from code would also delete {} row(s), so use it only if that is what you want.",
+                    actions.delete
+                )
+            } else {
+                String::new()
+            };
+            return Some(Self {
+                text: format!(
+                    "{} entity(s) declared in code are absent from this database; Insert only adds them, with {} row(s), and changes nothing written here.{deletes}",
+                    actions.insert_entities, actions.insert
+                ),
+                card: "insert",
+            });
+        }
         let moves = format!(
             "+{} · ~{} · −{}",
             actions.insert + actions.insert_entities,

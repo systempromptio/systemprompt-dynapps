@@ -52,7 +52,7 @@
     {{/if}}
 
     <div class="sp-sync-actions" aria-label="Synchronise {{plane.label}}">
-        <article class="sp-sync-card">
+        <article class="sp-sync-card{{#if (eq plane.recommendation.card "insert")}} sp-sync-card--recommended{{/if}}">
             <h3>Insert only</h3>
             <p>Add what {{plane.source_label}} declares and this database lacks. Nothing existing is changed or removed.</p>
             <p class="sp-sync-card__count">+{{plane.actions.insert}} rows · +{{plane.actions.insert_entities}} entities</p>
