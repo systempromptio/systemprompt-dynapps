@@ -97,6 +97,7 @@ mod self_service_contract;
 mod share_contract;
 #[cfg(test)]
 mod ssr_access_control_audience_contract;
+#[cfg(test)]
 mod ssr_access_control_entities_contract;
 #[cfg(test)]
 mod ssr_analysis_coverage;
