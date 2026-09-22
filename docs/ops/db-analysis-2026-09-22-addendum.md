@@ -85,6 +85,21 @@ evidence is what the production dump showed before them.
   which matches through `weekday().num_days_from_sunday()`, 0-indexed with Sunday = 0. So `0` means
   Sunday and parses. It is the only day-of-week expression in the config.
 
+- **Finding 10h's 15 failures are not Vertex, and are not fixed by code.** The finding reads as a
+  Vertex routing fault; the rows say otherwise. All 15 are `provider = gemini` — the public
+  `generativelanguage` endpoint — split `gemini-2.5-flash` (7), `-flash-lite` (5), `-pro` (3), last
+  seen 2026-09-18. The error is Google's own retirement notice, e.g. *"gemini returned 404: This
+  model models/gemini-2.5-flash is no longer available to new users. Please update your code to use
+  models/gemini-3.6-flash"*. So this is catalog staleness on the deployed instance, not a rate-card
+  or routing defect: `services/ai/providers.yaml` in this tree already declares only `gemini-3.x`
+  and no 2.5 model at all. Like finding 8, the fix is a deploy.
+
+  Core `4bab7e7c2` (`VertexRateCardEntry::is_retired`, and `deselect` in `vertex_discovery/merge.rs`
+  removing a declared model past its retirement date instead of warning and keeping it) was written
+  for this finding and is **independent hardening of a different provider's discovery path**. It is
+  worth having — a retired Vertex model should not be routable — but it does not address these 15
+  rows, and the release notes should not claim it does.
+
 - **Every bridge session is a "behavioral bot"** — the main report lists 1,620 flagged sessions as "not a
   fault". It is a fault; see A1.
 
