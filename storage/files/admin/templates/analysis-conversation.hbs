@@ -1,7 +1,7 @@
 {{#> layout page_title=title page_id=page}}
 {{#*inline "content"}}
 {{#> components/page-header title=heading help=help subtitle=(concat display_name " · " client.label " · " first_display " → " last_display " · " duration_display)}}
-{{#*inline "header_actions"}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="{{context_href}}">Read transcript &rarr;</a> {{#if session_href}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="{{session_href}}">Session</a> {{/if}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="{{back_url}}">&larr; Conversations</a> {{> components/export-button export}} {{> components/export-document document_export}}{{/inline}}
+{{#*inline "header_actions"}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="{{context_href}}">Read transcript &rarr;</a> {{#if session_href}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="{{session_href}}">Session</a> {{/if}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="{{back_url}}">&larr; Conversations</a> {{> components/export-button export}}{{/inline}}
 {{/components/page-header}}
 {{> analysis-subnav}}
 <section class="sp-aconvd-head" aria-label="Record">
@@ -41,7 +41,14 @@
 {{/components/table}}
 </section>
 <div class="sp-aconvd-grid">
-<section class="sp-section" aria-label="Tools">
+<div class="sp-tabs" role="tablist" data-tabs="aconvd-planes" aria-label="Conversation planes">
+<button type="button" class="sp-tab sp-tab--active" role="tab" id="aconvd-tab-tools" aria-controls="aconvd-panel-tools" aria-selected="true" data-tab="tools">Tools <span class="sp-tab-count">{{tool_count}}</span></button>
+<button type="button" class="sp-tab" role="tab" id="aconvd-tab-artifacts" aria-controls="aconvd-panel-artifacts" aria-selected="false" tabindex="-1" data-tab="artifacts">Artifacts <span class="sp-tab-count">{{artifact_count}}</span></button>
+<button type="button" class="sp-tab" role="tab" id="aconvd-tab-governance" aria-controls="aconvd-panel-governance" aria-selected="false" tabindex="-1" data-tab="governance">Governance <span class="sp-tab-count">{{decision_count}}</span></button>
+<button type="button" class="sp-tab" role="tab" id="aconvd-tab-skills" aria-controls="aconvd-panel-skills" aria-selected="false" tabindex="-1" data-tab="skills">Skills <span class="sp-tab-count">{{skill_count}}</span></button>
+<button type="button" class="sp-tab" role="tab" id="aconvd-tab-safety" aria-controls="aconvd-panel-safety" aria-selected="false" tabindex="-1" data-tab="safety">Safety <span class="sp-tab-count">{{safety_count}}</span></button>
+</div>
+<section class="sp-section sp-tab-panel" id="aconvd-panel-tools" role="tabpanel" aria-labelledby="aconvd-tab-tools">
 <header class="sp-aconvd-plane__head">{{> components/icon name="wrench"}}<h2 class="sp-aconvd-plane__title">Tools <span class="sp-aconv-meta">{{tool_count}} calls</span></h2><a class="sp-btn sp-btn--xs sp-btn--outline" href="/admin/tools?context={{context_key}}">All on the Tools page</a></header>
 {{#> components/table caption="Tool calls — the model's intent, the execution and its result" modifier="sp-aconvd-tools"}}
 <thead><tr><th scope="col">Tool</th><th scope="col">Input</th><th scope="col">State</th><th scope="col" class="sp-table__cell--num">Duration</th><th scope="col">Result</th><th scope="col">At</th></tr></thead>
@@ -51,7 +58,7 @@
 </tbody>
 {{/components/table}}
 </section>
-<section class="sp-section" aria-label="Artifacts">
+<section class="sp-section sp-tab-panel" id="aconvd-panel-artifacts" role="tabpanel" aria-labelledby="aconvd-tab-artifacts" hidden>
 <header class="sp-aconvd-plane__head">{{> components/icon name="file"}}<h2 class="sp-aconvd-plane__title">Artifacts <span class="sp-aconv-meta">{{artifact_count}} viewable</span></h2><a class="sp-btn sp-btn--xs sp-btn--outline" href="/admin/artifacts?context={{context_key}}">All on the Artifacts page</a></header>
 {{#> components/table caption="Artifacts — the tool calls that produced something viewable" modifier="sp-aconvd-artifacts"}}
 <thead><tr><th scope="col">Kind</th><th scope="col">Title · path</th><th scope="col">Tool</th><th scope="col" class="sp-table__cell--num">Size</th><th scope="col">Open</th><th scope="col">At</th></tr></thead>
@@ -61,7 +68,7 @@
 </tbody>
 {{/components/table}}
 </section>
-<section class="sp-section" aria-label="Governance">
+<section class="sp-section sp-tab-panel" id="aconvd-panel-governance" role="tabpanel" aria-labelledby="aconvd-tab-governance" hidden>
 <header class="sp-aconvd-plane__head">{{> components/icon name="shield"}}<h2 class="sp-aconvd-plane__title">Governance <span class="sp-aconv-meta">{{decision_count}} decisions</span></h2><a class="sp-btn sp-btn--xs sp-btn--outline" href="/admin/governance?q={{context_key}}">All on the Governance page</a></header>
 {{#> components/table caption="Governance decisions — every tool call the chain evaluated for this conversation" modifier="sp-aconvd-gov"}}
 <thead><tr><th scope="col">Tool</th><th scope="col">Decision</th><th scope="col">Policy</th><th scope="col">Reason</th><th scope="col">Plugin</th><th scope="col">At</th></tr></thead>
@@ -71,7 +78,7 @@
 </tbody>
 {{/components/table}}
 </section>
-<section class="sp-section" aria-label="Skills">
+<section class="sp-section sp-tab-panel" id="aconvd-panel-skills" role="tabpanel" aria-labelledby="aconvd-tab-skills" hidden>
 <header class="sp-aconvd-plane__head">{{> components/icon name="skill"}}<h2 class="sp-aconvd-plane__title">Skills <span class="sp-aconv-meta">{{skill_count}} invoked</span></h2><a class="sp-btn sp-btn--xs sp-btn--outline" href="/admin/analysis/skills">All on the Skills page</a></header>
 {{#> components/table caption="Skills invoked, with the marketplace version served at the time" modifier="sp-aconvd-skills"}}
 <thead><tr><th scope="col">Skill</th><th scope="col">Plugin</th><th scope="col">Marketplace</th><th scope="col">Version</th><th scope="col" class="sp-table__cell--num">Invocations</th><th scope="col">First</th></tr></thead>
@@ -81,7 +88,7 @@
 </tbody>
 {{/components/table}}
 </section>
-<section class="sp-section" aria-label="Safety">
+<section class="sp-section sp-tab-panel" id="aconvd-panel-safety" role="tabpanel" aria-labelledby="aconvd-tab-safety" hidden>
 <header class="sp-aconvd-plane__head">{{> components/icon name="alert"}}<h2 class="sp-aconvd-plane__title">Safety <span class="sp-aconv-meta">{{safety_count}} findings</span></h2></header>
 {{#> components/table caption="Safety scanner findings on this conversation's requests and responses" modifier="sp-aconvd-safety"}}
 <thead><tr><th scope="col">Phase</th><th scope="col">Category</th><th scope="col">Severity</th><th scope="col">Scanner</th><th scope="col">Blocked</th><th scope="col">At</th></tr></thead>
@@ -92,4 +99,4 @@
 {{/components/table}}
 </section>
 </div>
-{{/inline}}{{#*inline "scripts"}}<script type="module" src="/js/components/sp-chart.js?v={{css_version}}"></script>{{/inline}}{{/layout}}
+{{/inline}}{{#*inline "scripts"}}<script type="module" src="/js/components/sp-chart.js?v={{css_version}}"></script><script type="module" src="/js/components/sp-tabs.js?v={{css_version}}"></script>{{/inline}}{{/layout}}

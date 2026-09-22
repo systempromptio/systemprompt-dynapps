@@ -261,7 +261,9 @@ impl DataSet for McpTools {
             query.server.as_deref().filter(|s| !s.is_empty()),
             range.from,
             range.to,
-            ctx.limit,
+            // Why: one row per server and tool, so the preview's one-row
+            // `ctx.limit` would count one tool; the aggregate is read whole.
+            self.cap(),
         )
         .await?;
         Ok(Table::complete(rows.iter().map(tool_row).collect()))

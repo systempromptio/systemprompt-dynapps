@@ -173,6 +173,22 @@ pub(crate) async fn export_rows(
     )
 }
 
+// Why: with no range in the URL the page shows the window `resolve_range`
+// widened to, so the export names that preset rather than letting the dialog
+// open on its own default.
+fn export_query(query: &RequestsQuery, auto_widened: Option<&'static str>) -> String {
+    let qs = urls::preserved_query_string(query, &["tab", "page"]);
+    if query.preset.is_some() || (query.from.is_some() && query.to.is_some()) {
+        return qs;
+    }
+    let preset = format!("preset={}", auto_widened.unwrap_or("24h"));
+    if qs.is_empty() {
+        preset
+    } else {
+        format!("{qs}&{preset}")
+    }
+}
+
 // Why: the handler owns auth and I/O; assembling the template context is a pure
 // function of what came back, and keeps either half readable on its own.
 struct PageInput<'a> {
@@ -242,10 +258,7 @@ fn page_context(input: PageInput<'_>) -> AnalyticsRequestsPageContext {
         chips: urls::active_chips(query),
         has_active_filters,
         clear_url: urls::clear_url(query),
-        export: crate::export::ExportView::single(
-            "requests",
-            &urls::preserved_query_string(query, &["tab", "page"]),
-        ),
+        export: crate::export::ExportView::single("requests", &export_query(query, auto_widened)),
         base_url: BASE_URL,
         scope_filter,
     }

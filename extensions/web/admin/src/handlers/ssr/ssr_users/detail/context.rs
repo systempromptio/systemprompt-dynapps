@@ -37,6 +37,11 @@ pub(crate) struct UserDetailContext {
     pub devices: Option<DevicesTabView>,
     pub sessions: Option<UserSessionsTabView>,
     pub usage: Option<UsageTabView>,
+
+    // Why: the person's requests, sessions and conversations, and every
+    // transcript, in one dialog. `None` for a reader the datasets refuse.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub export: Option<crate::export::ExportView>,
 }
 
 #[derive(Debug, Serialize)]

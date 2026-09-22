@@ -26,6 +26,7 @@ live_dataset!(
     ProviderCosts,
     "analytics-cost-providers",
     "Provider cost",
+    "One row per provider: requests, tokens and cost over the window.",
     SUPPLIER_COLUMNS,
     |ctx| {
         let p = plan(ctx).await?;
@@ -56,6 +57,7 @@ live_dataset!(
     ProviderCostByDay,
     "analytics-cost-days",
     "Provider cost by day",
+    "One row per day and provider: requests and cost.",
     DAY_COLUMNS,
     |ctx| {
         let p = plan(ctx).await?;
@@ -90,6 +92,7 @@ live_dataset!(
     ContainerUsage,
     "analytics-cost-containers",
     "Consumption by container",
+    "One row per container: people, sessions, requests and tokens. No cost.",
     CONTAINER_COLUMNS,
     |ctx| {
         let p = plan(ctx).await?;

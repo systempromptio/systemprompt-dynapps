@@ -133,9 +133,8 @@ fn ribbon(query: &SkillsQuery, rows: &[SkillFactRow]) -> RibbonView {
             c,
             query.link_without(SkillsTab::Skills, &["client"]),
             Some(format!(
-                "/admin/export/analysis-skills?{}&client={}&format=csv",
-                export_query(query),
-                urlencoding::encode(c)
+                "/admin/export/analysis-skills?{}&format=csv",
+                export_query(query, SkillsTab::Skills)
             )),
         );
     }
@@ -150,17 +149,31 @@ fn ribbon(query: &SkillsQuery, rows: &[SkillFactRow]) -> RibbonView {
     ribbon
 }
 
-fn export_query(query: &SkillsQuery) -> String {
-    query.marketplace().map_or_else(
-        || format!("days={}", query.days()),
-        |m| {
-            format!(
-                "days={}&marketplace={}",
-                query.days(),
-                urlencoding::encode(&m)
-            )
-        },
-    )
+// Why: the export reads what the page read — the window, marketplace and
+// people scope always, and the client and search only on the Skills tab,
+// which is the only tab that applies them.
+fn export_query(query: &SkillsQuery, tab: SkillsTab) -> String {
+    let table = tab == SkillsTab::Skills;
+    let mut pairs = vec![("days", query.days().to_string())];
+    for (key, value) in [
+        ("marketplace", query.marketplace()),
+        ("group", SkillsQuery::trimmed(query.group.as_deref())),
+        ("project", SkillsQuery::trimmed(query.project.as_deref())),
+        (
+            "client",
+            SkillsQuery::trimmed(query.client.as_deref()).filter(|_| table),
+        ),
+        ("search", query.search().filter(|_| table)),
+    ] {
+        if let Some(value) = value {
+            pairs.push((key, value));
+        }
+    }
+    pairs
+        .iter()
+        .map(|(k, v)| format!("{k}={}", urlencoding::encode(v)))
+        .collect::<Vec<_>>()
+        .join("&")
 }
 
 // Why: what the handler read besides the rows.
@@ -243,7 +256,7 @@ pub(super) fn build_context(
         row_count,
         unused_count: unused.len(),
         unused,
-        export: crate::export::ExportView::new(&["analysis-skills"], &export_query(query)),
+        export: crate::export::ExportView::new(&["analysis-skills"], &export_query(query, tab)),
         is_admin: inputs.is_admin,
         help: skills_help(),
         report_banner: inputs.report_banner,

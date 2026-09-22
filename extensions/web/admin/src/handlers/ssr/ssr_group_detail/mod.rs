@@ -86,6 +86,7 @@ pub(crate) async fn group_detail_page(
         not_found: false,
         can_manage: shell.user.is_admin,
         can_map: shell.user.is_platform_admin,
+        export: (!is_unassigned).then(|| export_view(&group_id)),
         group_id,
     };
 
@@ -231,6 +232,15 @@ async fn load_mappings(
         rows.into_iter().map(|r| (r.ad_group, r.source)),
         user_ctx.is_platform_admin,
     ))
+}
+
+// Why: the group's own traffic, keyed by `group` the way every scoped
+// dataset reads it. Unassigned is membership by absence, which no `group`
+// filter can name, so it offers no export.
+fn export_view(group_id: &GroupId) -> crate::export::ExportView {
+    let query = crate::export::view::query_string(&[("group", Some(group_id.as_str()))]);
+    crate::export::ExportView::new(&["requests", "sessions", "analysis-conversations"], &query)
+        .with_transcripts(crate::export::view::TranscriptSource::Sessions)
 }
 
 fn breadcrumbs(name: &str) -> Vec<BreadcrumbView> {

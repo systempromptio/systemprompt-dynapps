@@ -14,7 +14,7 @@ use crate::handlers::ssr::list_view::{PageWindow, Pagination, paginate};
 use crate::handlers::ssr::types::{BreadcrumbView, TabLinkView};
 use crate::repositories::analysis::inventory_index::InventoryIndex;
 use crate::repositories::analysis::skills::{
-    SkillBreakdownBy, SkillBucketRow, SkillConversationRow, SkillDayRow, SkillFactRow,
+    SkillBreakdownBy, SkillBucketRow, SkillConversationRow, SkillDayRow, SkillFactRow, SkillRunRow,
 };
 
 // Why: the hook carries ids; the inventory index resolves the plugin's
@@ -47,6 +47,7 @@ pub(super) struct SkillRead<'a> {
     pub(super) daily: &'a [SkillDayRow],
     pub(super) breakdown: &'a [SkillBucketRow],
     pub(super) conversations: &'a [SkillConversationRow],
+    pub(super) runs: &'a [SkillRunRow],
     pub(super) total: i64,
     // Why: whether the viewer may press a row's Judge button.
     pub(super) can_judge: bool,
@@ -140,6 +141,9 @@ pub(super) fn build_context(
             .iter()
             .map(|b| bucket_view(b, invocations_total))
             .collect(),
+        releases: super::runs::release_views(read.runs, chrono::Utc::now()),
+        runs: super::runs::run_views(read.runs, chrono::Utc::now()),
+        run_count: read.runs.len(),
         conversations: read
             .conversations
             .iter()
@@ -148,7 +152,11 @@ pub(super) fn build_context(
         conversation_count: read.total,
         pagination: pagination(query, key, read.total, read.conversations.len()),
         export: crate::export::ExportView::new(
-            &["analysis-skill-conversations"],
+            &[
+                "analysis-skill-conversations",
+                "analysis-skill-runs",
+                "analysis-kit-release-impact",
+            ],
             &format!("skill={}&days={}", urlencoding::encode(key), query.days()),
         ),
         help: crate::handlers::ssr::analysis::help::skill_detail_help(),

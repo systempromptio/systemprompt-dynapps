@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 
 use super::format::Format;
-use super::model::{Column, DataSet, ExportContext, HARD_CAP, Table};
+use super::model::{Column, DataSet, ExportContext, Table};
 use super::{registry, window};
 use crate::error::{AdminError, AdminResult};
 use crate::routes::managed_state::ManagedState;
@@ -36,6 +36,7 @@ pub(crate) struct ExportPreview {
     cap: i64,
     from: Option<String>,
     to: Option<String>,
+    clamped: bool,
 }
 
 struct Prepared<'a> {
@@ -58,6 +59,7 @@ fn prepare<'a>(
     }
     let mut ctx = ExportContext::new(pool, user, managed, uri.clone());
     ctx.window = window::resolve(dataset.window(), &ctx.query::<window::WindowQuery>()?)?;
+    ctx.limit = dataset.cap();
     let query: ExportQuery = ctx.query()?;
     let columns = select_columns(dataset.columns(), query.columns.as_deref());
     Ok(Prepared {
@@ -137,19 +139,22 @@ pub(crate) async fn export_preview(
 ) -> AdminResult<Json<ExportPreview>> {
     let mut prepared = prepare(&id, &uri, &pool, &user, &managed)?;
     // Why: one row is enough — every loader reports the filter's total beside
-    // whatever slice it returns, and a preview must not pay for the file.
+    // whatever slice it returns, and a preview must not pay for the file. A
+    // loader that cannot count without loading ignores the limit instead.
     prepared.ctx.limit = 1;
     let table = prepared.dataset.load(&prepared.ctx).await?;
-    let rows = table.total.min(HARD_CAP);
+    let cap = prepared.dataset.cap();
+    let rows = table.total.min(cap);
     let columns = prepared.columns.len();
     Ok(Json(ExportPreview {
         rows,
         columns,
         cells: rows * i64::try_from(columns).unwrap_or(0),
-        capped: table.total > HARD_CAP,
-        cap: HARD_CAP,
+        capped: table.total > cap,
+        cap,
         from: prepared.ctx.window.map(|w| w.from.to_rfc3339()),
         to: prepared.ctx.window.map(|w| w.to.to_rfc3339()),
+        clamped: prepared.ctx.window.is_some_and(|w| w.clamped),
     }))
 }
 

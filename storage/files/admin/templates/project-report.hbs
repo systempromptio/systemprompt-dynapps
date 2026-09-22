@@ -10,6 +10,7 @@
         {{#*inline "header_actions"}}
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{detail_href}}" data-print-hide>Back to project</a>
         <button type="button" class="sp-btn sp-btn--sm sp-btn--primary" data-action="save-pdf" data-print-hide>{{> components/icon name="download" class="sp-icon--sm"}} Save as PDF</button>
+        <span data-print-hide>{{> components/export-button export}}</span>
         {{/inline}}
     {{/components/page-header}}
 

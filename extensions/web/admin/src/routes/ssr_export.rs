@@ -19,14 +19,20 @@ pub(super) fn routes() -> Router<Arc<PgPool>> {
             "/export/{dataset}/preview",
             get(export::handler::export_preview),
         )
-        // Why: static segments win over `{dataset}`, so the document routes
-        // sit beside the table route without a dataset named `conversation`.
+        // Why: static segments win over `{dataset}`, so the transcript
+        // routes sit beside the table route; no dataset may be named
+        // `transcripts`. (They were `/export/conversation(s)`, which shadowed
+        // the `conversations` table and served JSON Lines in its place.)
         .route(
-            "/export/conversation/{context_id}",
-            get(export::document::handler::export_conversation),
+            "/export/transcripts",
+            get(export::document::handler::export_conversations),
         )
         .route(
-            "/export/conversations",
-            get(export::document::handler::export_conversations),
+            "/export/transcripts/preview",
+            get(export::document::handler::export_conversations_preview),
+        )
+        .route(
+            "/export/transcripts/{context_id}",
+            get(export::document::handler::export_conversation),
         )
 }

@@ -1,7 +1,6 @@
-//! The two export links the conversations page offers: the table the page
-//! shows (with its breakdown) and the full-record document of the same set.
-//! Both carry the page's own filters, so a file answers the question the
-//! page was asked.
+//! The conversations page's one Export dialog: the table the page shows,
+//! its breakdown, and the full record of the same set. All three carry the
+//! page's own filters, so a file answers the question the page was asked.
 
 use super::query::{ConversationAnalysisQuery, export_preset};
 
@@ -22,10 +21,5 @@ pub(super) fn export_view(params: &ConversationAnalysisQuery) -> crate::export::
         &[DATASET, "analysis-conversation-breakdown"],
         &export_query(params),
     )
-}
-
-pub(super) fn document_export_view(
-    params: &ConversationAnalysisQuery,
-) -> crate::export::document::DocumentExportView {
-    crate::export::document::DocumentExportView::filtered("analysis", &export_query(params))
+    .with_transcripts(crate::export::view::TranscriptSource::Analysis)
 }

@@ -139,6 +139,9 @@ impl DataSet for Marketplaces {
     fn title(&self) -> &'static str {
         "Marketplaces"
     }
+    fn description(&self) -> &'static str {
+        "One row per marketplace: current hash, contents, version count and usage over the window."
+    }
     fn columns(&self) -> &'static [Column] {
         ROLLUP_COLUMNS
     }
@@ -168,6 +171,9 @@ impl DataSet for Versions {
     }
     fn title(&self) -> &'static str {
         "Marketplace versions"
+    }
+    fn description(&self) -> &'static str {
+        "One row per version of a marketplace: when it was live, contents and usage while it was."
     }
     fn columns(&self) -> &'static [Column] {
         VERSION_COLUMNS

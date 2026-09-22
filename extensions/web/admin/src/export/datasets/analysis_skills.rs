@@ -17,13 +17,27 @@ use systemprompt::identifiers::{MarketplaceId, PluginId};
 pub(crate) struct Skills;
 
 // Why: the ticked rows' keys, comma-joined by the export dialog, and the
-// page's scope — the marketplace and client the rows were filtered by.
+// page's filters — the marketplace, client and search the rows were
+// narrowed by. `skill` is the page's alias for `search`.
 #[derive(Debug, Default, Deserialize)]
 struct SkillIdsQuery {
     ids: Option<String>,
     marketplace: Option<String>,
     client: Option<String>,
+    search: Option<String>,
+    skill: Option<String>,
 }
+
+// Why: the page's group and project scope, read by every skills dataset so a
+// file covers the people the page counted.
+#[derive(Debug, Default, Deserialize)]
+struct ScopeQuery {
+    group: Option<String>,
+    project: Option<String>,
+}
+
+// Why: `list_skill_facts` returns at most 1,000 skills.
+const SKILL_CAP: i64 = 1_000;
 
 impl SkillIdsQuery {
     fn skills(&self) -> Option<Vec<String>> {
@@ -46,7 +60,8 @@ fn trimmed(value: Option<&str>) -> Option<String> {
 
 pub(super) async fn window(ctx: &ExportContext<'_>) -> AdminResult<SkillWindow> {
     let w = ctx.window()?;
-    let request = ScopeRequest::from_query(ctx.user, None, None);
+    let q: ScopeQuery = ctx.query()?;
+    let request = ScopeRequest::from_query(ctx.user, q.group.as_deref(), q.project.as_deref());
     let scope = repositories::scope::membership::get_subject_scope(ctx.pool, &request).await?;
     Ok(SkillWindow {
         start: w.from,
@@ -164,6 +179,9 @@ impl DataSet for Skills {
     fn window(&self) -> Window {
         Window::Retained
     }
+    fn cap(&self) -> i64 {
+        SKILL_CAP
+    }
     fn allows(&self, user: &UserContext) -> bool {
         user.is_console
     }
@@ -177,6 +195,8 @@ impl DataSet for Skills {
                 skills: picked.skills(),
                 marketplace_id: trimmed(picked.marketplace.as_deref()).map(MarketplaceId::new),
                 client_kind: trimmed(picked.client.as_deref()),
+                search: trimmed(picked.search.as_deref())
+                    .or_else(|| trimmed(picked.skill.as_deref())),
                 ..SkillListFilter::default()
             },
         )

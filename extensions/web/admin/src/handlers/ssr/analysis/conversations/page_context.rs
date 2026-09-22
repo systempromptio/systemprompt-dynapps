@@ -44,7 +44,6 @@ pub(crate) struct ConversationsPageContext {
     pub pagination: Pagination,
     pub sort_headers: SortHeaders,
     pub export: crate::export::ExportView,
-    pub document_export: crate::export::document::DocumentExportView,
     pub help: HelpView,
     pub report_banner: ReportBannerView,
     // Why: the page's own URL, so a row's Judge button and the bulk bar

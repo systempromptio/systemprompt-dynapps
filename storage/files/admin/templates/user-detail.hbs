@@ -14,6 +14,7 @@
         {{#if can_write}}
         <button type="button" class="sp-btn sp-btn--sm sp-btn--danger" data-revoke-all="{{header.user_id}}">Sign out everywhere</button>
         {{/if}}
+        {{#if export}}{{> components/export-button export}}{{/if}}
         {{/inline}}
     {{/components/page-header}}
 

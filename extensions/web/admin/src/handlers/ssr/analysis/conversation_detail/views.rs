@@ -165,5 +165,4 @@ pub(super) struct ConversationDetailContext {
     pub(super) safety_count: usize,
     pub(super) help: HelpView,
     pub(super) export: crate::export::ExportView,
-    pub(super) document_export: crate::export::document::DocumentExportView,
 }

@@ -86,6 +86,11 @@
           {{#each outcomes}}<option value="{{this.value}}"{{#if this.selected}} selected{{/if}}>{{this.label}}</option>{{/each}}
         </select>
       </label>
+      <label class="sp-toolbar__search">
+        <span class="sp-u-sr-only">Search the findings</span>
+        <input class="sp-search-input" type="search" name="q" value="{{search}}"
+               placeholder="Category, scanner, excerpt, user, model…">
+      </label>
       {{/if}}
       {{#if is_hooks}}
       <input type="hidden" name="tab" value="hooks">

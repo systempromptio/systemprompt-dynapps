@@ -84,6 +84,7 @@ python3 tools/sanitize-kit.py --strict   # exit 1 on any error, as CI runs it
 | kit repository | `BUNDLE_SIGNING_SEED` | `systemprompt core services keygen` — the base64 seed. Keep the printed public key. |
 | kit repository | `ASTOUND_RELEASE_TOKEN` | fine-grained PAT, Contents: read on this repository — the kit CI downloads the server binary (and packs the base from `services/`) from here while it is private |
 | kit repository (optional) | `SYSTEMPROMPT_ADMIN_TOKEN`, `SYSTEMPROMPT_API_URL` | an instance admin PAT and the gateway URL, so a release imports itself |
+| kit repository (optional) | `ASTOUND_STATS_PAT` (+ `SYSTEMPROMPT_API_URL`) | a PAT whose owner has console access; `tools/kit-stats.sh` writes the run record per kit version into each release's notes and attaches `kit-stats.json`, and `kit-stats.yml` refreshes the latest release daily. The PAT is accepted on `GET /admin/export/{dataset}` only |
 | this repository | `deploy/kit/known-kits.json` `public_key`, `pull`, `channel` | the public half of the kit's seed; `public` when the GHCR package is public (no pull secret anywhere); the channel tag the CI moves |
 | instance profile secrets | `ghcr_pull_token` | `<github-user>:<read:packages PAT>` — only for a kit whose package is private (`pull: private` in `known-kits.json`; `services-pin` then writes `auth_secret: ghcr_pull_token`) |
 | this repository (Actions) | `ASTOUND_BUNDLE_SIGNING_SEED` | signs the **base** bundle `release.yml` publishes as `ghcr.io/astound-digital/systemprompt-astound-base:<version>` |

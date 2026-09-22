@@ -54,6 +54,9 @@ impl DataSet for Contexts {
     fn title(&self) -> &'static str {
         "Conversations by person"
     }
+    fn description(&self) -> &'static str {
+        "One row per conversation in the window: person, model, turns, tokens and cost."
+    }
     fn columns(&self) -> &'static [Column] {
         super::sessions::COLUMNS
     }
@@ -76,6 +79,9 @@ impl DataSet for People {
     }
     fn title(&self) -> &'static str {
         "People"
+    }
+    fn description(&self) -> &'static str {
+        "One row per person active in the window: conversations, turns, tokens, cost and latest conversation."
     }
     fn columns(&self) -> &'static [Column] {
         PEOPLE_COLUMNS

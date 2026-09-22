@@ -1,6 +1,7 @@
-//! `GET /admin/export/conversation/{context_id}` — one conversation as JSON
-//! or Markdown — and `GET /admin/export/conversations` — a selected or
-//! filtered set as JSON Lines, one bundle per line.
+//! `GET /admin/export/transcripts/{context_id}` — one conversation as JSON
+//! or Markdown — and `GET /admin/export/transcripts` — a selected or
+//! filtered set as JSON Lines, one bundle per line, with the `/preview` the
+//! export dialog counts from.
 //!
 //! Visibility is the detail pages' rule: a context outside the caller's
 //! scope answers 404, the same as a missing id, so the URL is no oracle for
@@ -10,16 +11,17 @@
 
 use std::sync::Arc;
 
+use axum::Json;
 use axum::extract::{Extension, OriginalUri, Path, State};
 use axum::http::header;
 use axum::response::Response;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use systemprompt::identifiers::ContextId;
 
 use super::bundle::{ConversationBundle, load_conversation_bundle};
 use super::markdown;
-use super::selection::resolve_selection;
+use super::selection::{MAX_CONVERSATIONS, TranscriptSource, resolve_selection, source_of};
 use crate::error::{AdminError, AdminResult};
 use crate::export::model::ExportContext;
 use crate::handlers::ssr::transcript_view::TranscriptOptions;
@@ -110,49 +112,97 @@ pub(crate) async fn export_conversation(
     })
 }
 
-// Why: only the console exports sets — the selection resolvers read the
-// list pages' scoped queries, and those pages are console pages.
+// Why: a set is read through a list page's scoped query; the console pages
+// need a console seat, and "My conversations" is every signed-in user's own.
+fn may_export_set(user: &UserContext, ctx: &ExportContext<'_>) -> AdminResult<()> {
+    let own_history = matches!(source_of(ctx), Ok(TranscriptSource::History));
+    if user.has_scoped_console() || own_history {
+        Ok(())
+    } else {
+        Err(AdminError::Forbidden("Console access required.".to_owned()))
+    }
+}
+
 pub(crate) async fn export_conversations(
     Extension(user): Extension<UserContext>,
     Extension(managed): Extension<Arc<ManagedState>>,
     State(pool): State<Arc<PgPool>>,
     OriginalUri(uri): OriginalUri,
 ) -> AdminResult<Response> {
-    if !user.has_scoped_console() {
-        return Err(AdminError::Forbidden("Console access required.".to_owned()));
-    }
     let ctx = ExportContext::new(&pool, &user, &managed, uri);
+    may_export_set(&user, &ctx)?;
     let selection = resolve_selection(&pool, &user, &ctx).await?;
     let opts = options_for(&user);
     let mut body = String::new();
+    let mut skipped = 0_usize;
     for context_id in &selection.context_ids {
-        if !may_view(&pool, &user, owner_of(&pool, context_id).await?.as_ref()).await? {
+        if !visible(&pool, &user, context_id).await? {
+            skipped += 1;
             continue;
         }
         if let Some(bundle) = load_conversation_bundle(&pool, context_id, opts).await? {
             push_line(&mut body, &bundle)?;
         }
     }
-    let filename = format!(
-        "conversations-{}.jsonl",
-        chrono::Utc::now().format("%Y%m%dT%H%M%SZ")
+    let filename = selection.window.map_or_else(
+        || {
+            format!(
+                "transcripts-{}.jsonl",
+                chrono::Utc::now().format("%Y%m%dT%H%M%SZ")
+            )
+        },
+        |w| {
+            format!(
+                "transcripts-{}-{}.jsonl",
+                w.from.format("%Y%m%d"),
+                w.to.format("%Y%m%d")
+            )
+        },
     );
     let mut response = attachment("application/x-ndjson; charset=utf-8", &filename, body);
+    let headers = response.headers_mut();
     if selection.capped() {
-        response
-            .headers_mut()
-            .insert("x-export-capped", header::HeaderValue::from_static("true"));
+        headers.insert("x-export-capped", header::HeaderValue::from_static("true"));
+    }
+    if skipped > 0 {
+        headers.insert("x-export-skipped", header::HeaderValue::from(skipped));
     }
     Ok(response)
 }
 
-async fn owner_of(
-    pool: &PgPool,
-    context_id: &ContextId,
-) -> AdminResult<Option<systemprompt::identifiers::UserId>> {
-    Ok(find_context_header(pool, context_id)
-        .await?
-        .and_then(|h| h.user_id))
+#[derive(Debug, Serialize)]
+pub(crate) struct TranscriptsPreview {
+    rows: i64,
+    columns: usize,
+    cells: i64,
+    capped: bool,
+    cap: i64,
+    from: Option<String>,
+    to: Option<String>,
+    clamped: bool,
+}
+
+// Why: the dialog's count for a transcript set — how many conversations the
+// file will hold, whether the 500 ceiling bit, and the window it resolved.
+pub(crate) async fn export_conversations_preview(
+    Extension(user): Extension<UserContext>,
+    Extension(managed): Extension<Arc<ManagedState>>,
+    State(pool): State<Arc<PgPool>>,
+    OriginalUri(uri): OriginalUri,
+) -> AdminResult<Json<TranscriptsPreview>> {
+    let ctx = ExportContext::new(&pool, &user, &managed, uri);
+    may_export_set(&user, &ctx)?;
+    let selection = resolve_selection(&pool, &user, &ctx).await?;
+    Ok(Json(TranscriptsPreview {
+        rows: selection.total.min(MAX_CONVERSATIONS),
+        columns: 0,
+        cells: 0,
+        capped: selection.capped(),
+        cap: MAX_CONVERSATIONS,
+        from: selection.window.map(|w| w.from.to_rfc3339()),
+        to: selection.window.map(|w| w.to.to_rfc3339()),
+        clamped: selection.window.is_some_and(|w| w.clamped),
+    }))
 }
 
 fn push_line(body: &mut String, bundle: &ConversationBundle) -> AdminResult<()> {

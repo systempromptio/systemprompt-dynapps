@@ -2,7 +2,8 @@
 //! window: its KPIs, four day-by-day charts (invocations and people, cost,
 //! p95 latency, completion), the invocations split by model, client, group,
 //! project, person, marketplace version and outcome, and the conversations
-//! that invoked it with the same columns the Conversations page shows.
+//! that invoked it with the same columns the Conversations page shows, and
+//! its timed runs with each kit release's success rate and run time.
 //!
 //! Invocations are hook events; everything else is read from the
 //! `conversation_facts` rollup through the harness session. The skill itself
@@ -11,6 +12,7 @@
 
 mod context;
 mod figures;
+mod runs;
 mod views;
 
 use std::sync::Arc;
@@ -28,14 +30,17 @@ use crate::handlers::ssr::page::Page;
 use crate::repositories;
 use crate::repositories::analysis::inventory_index::{InventoryIndex, get_marketplace_audience};
 use crate::repositories::analysis::skills::{
-    SkillBreakdownBy, SkillWindow, find_skill_facts, list_skill_breakdown,
-    list_skill_conversations_paged, list_skill_daily,
+    SkillBreakdownBy, SkillRunFilter, SkillWindow, find_skill_facts, list_skill_breakdown,
+    list_skill_conversations_paged, list_skill_daily, list_skill_runs,
 };
 use crate::repositories::scope::ScopeRequest;
 
 use context::{SkillRead, build_context};
 
 pub(super) const PAGE_SIZE: i64 = 25;
+// Why: the release figures are medians over every run read, so the page reads
+// far more runs than it lists; the export has no such cap below its own.
+const RUNS_READ: i64 = 1_000;
 
 /// The skill identity the hook events key on, parsed from a `plugin:skill`
 /// path segment: the plugin is the prefix, the key is kept whole.
@@ -161,7 +166,11 @@ pub(crate) async fn skill_page(
         subject_ids: scope.as_sql().map(<[String]>::to_vec),
     };
     let index = InventoryIndex::build(&crate::handlers::shared::get_services_path()?);
-    let (facts, daily, breakdown, conversations, audience) = tokio::join!(
+    let run_filter = SkillRunFilter {
+        marketplace: None,
+        skill: Some(skill.skill.clone()),
+    };
+    let (facts, daily, breakdown, conversations, audience, runs) = tokio::join!(
         find_skill_facts(&pool, &window, &skill.skill),
         list_skill_daily(&pool, &window, &skill.skill),
         list_skill_breakdown(&pool, &window, &skill.skill, query.by()),
@@ -173,9 +182,10 @@ pub(crate) async fn skill_page(
             query.page() * PAGE_SIZE
         ),
         get_marketplace_audience(&pool, &index.marketplaces),
+        list_skill_runs(&pool, &window, &run_filter, RUNS_READ),
     );
-    let (facts, daily, breakdown, (conversations, total), audience) =
-        (facts?, daily?, breakdown?, conversations?, audience?);
+    let (facts, daily, breakdown, (conversations, total), audience, runs) =
+        (facts?, daily?, breakdown?, conversations?, audience?, runs?);
     let today = Utc::now().date_naive();
     let row = facts
         .as_ref()
@@ -190,6 +200,7 @@ pub(crate) async fn skill_page(
             daily: &daily,
             breakdown: &breakdown,
             conversations: &conversations,
+            runs: &runs,
             total,
             can_judge: shell.user.is_console && !super::judge_mode::automatic(),
         },

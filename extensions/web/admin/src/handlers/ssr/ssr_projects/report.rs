@@ -121,6 +121,7 @@ pub(super) fn page_data(inputs: ReportInputs<'_>, user_ctx: &UserContext) -> Pro
         artifacts: report.artifacts.iter().map(artifact_row).collect(),
         artifact_total,
         sessions,
+        export: super::report_export_view(&project.id),
         project_id: project.id.clone(),
         project_name: project.name.clone(),
         description: project.description.clone(),

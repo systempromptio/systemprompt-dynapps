@@ -194,4 +194,5 @@ pub(crate) struct ProjectDetailPageData {
     pub usage: Option<ProjectUsageTabView>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub settings: Option<ProjectSettingsTabView>,
+    pub export: crate::export::ExportView,
 }

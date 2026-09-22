@@ -77,6 +77,9 @@ impl DataSet for Traces {
     fn title(&self) -> &'static str {
         "Traces"
     }
+    fn description(&self) -> &'static str {
+        "One row per trace in the window: who, model, spans, requests, tool calls, tokens and cost."
+    }
     fn columns(&self) -> &'static [Column] {
         COLUMNS
     }

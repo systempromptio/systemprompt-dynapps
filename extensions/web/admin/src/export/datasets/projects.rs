@@ -7,6 +7,7 @@ use serde::Deserialize;
 
 use crate::error::AdminResult;
 use crate::export::model::{Cell, CellKind, Column, DataSet, ExportContext, Table, Window};
+use crate::repositories::projects::crud::list_projects;
 use crate::repositories::projects::usage::{LISTING_CAP, ProjectRollup, list_project_rollups};
 
 pub(crate) struct Projects;
@@ -14,6 +15,10 @@ pub(crate) struct Projects;
 #[derive(Debug, Default, Deserialize)]
 struct ProjectsQuery {
     q: Option<String>,
+}
+
+fn matches_search(needle: &str, id: &str, name: &str) -> bool {
+    needle.is_empty() || name.to_lowercase().contains(needle) || id.to_lowercase().contains(needle)
 }
 
 const COLUMNS: &[Column] = &[
@@ -82,6 +87,9 @@ impl DataSet for Projects {
     fn window(&self) -> Window {
         Window::Days
     }
+    fn cap(&self) -> i64 {
+        LISTING_CAP
+    }
     async fn load(&self, ctx: &ExportContext<'_>) -> AdminResult<Table> {
         let query: ProjectsQuery = ctx.query()?;
         let window = ctx.window()?;
@@ -89,16 +97,23 @@ impl DataSet for Projects {
         // day preset is the number of days it spans.
         let days = i32::try_from((window.to - window.from).num_days().max(1)).unwrap_or(30);
         let needle = query.q.unwrap_or_default().trim().to_lowercase();
-        let rows = list_project_rollups(ctx.pool, days, LISTING_CAP).await?;
-        Ok(Table::complete(
+        // Why: the rollup stops at `LISTING_CAP` projects by name; the plain
+        // project list is what says how many the search matched, so a cut
+        // file reads as capped rather than complete.
+        let (rows, all) = tokio::try_join!(
+            list_project_rollups(ctx.pool, days, LISTING_CAP),
+            list_projects(ctx.pool),
+        )?;
+        let total = all
+            .iter()
+            .filter(|p| matches_search(&needle, p.id.as_str(), &p.name))
+            .count();
+        Ok(Table::capped_at(
             rows.iter()
-                .filter(|p| {
-                    needle.is_empty()
-                        || p.name.to_lowercase().contains(&needle)
-                        || p.id.as_str().to_lowercase().contains(&needle)
-                })
+                .filter(|p| matches_search(&needle, p.id.as_str(), &p.name))
                 .map(row)
                 .collect(),
+            i64::try_from(total).unwrap_or(i64::MAX),
         ))
     }
 }

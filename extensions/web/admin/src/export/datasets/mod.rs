@@ -5,6 +5,7 @@
 pub(crate) mod analysis_conversation;
 pub(crate) mod analysis_conversations;
 pub(crate) mod analysis_skill_conversations;
+pub(crate) mod analysis_skill_runs;
 pub(crate) mod analysis_skills;
 pub(crate) mod contexts;
 pub(crate) mod dashboard;

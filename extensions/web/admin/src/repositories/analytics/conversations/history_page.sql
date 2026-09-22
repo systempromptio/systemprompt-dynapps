@@ -3,6 +3,7 @@ WITH classified AS MATERIALIZED (
             WHERE cr.context_id IN (
                 SELECT DISTINCT context_id FROM ai_requests
                 WHERE ($1::text[] IS NULL OR user_id = ANY($1)) AND context_id <> $4
+                  AND ($7::timestamptz IS NULL OR created_at >= $7)
             )
         ),
         gw AS (
@@ -49,6 +50,7 @@ WITH classified AS MATERIALIZED (
             LEFT JOIN user_contexts uc ON uc.context_id = g.context_id
             LEFT JOIN plugin_session_summaries pss ON pss.session_id = g.client_session_id
             WHERE ($6::bool OR g.turns > 0)
+              AND ($8::timestamptz IS NULL OR g.last_at < $8)
               AND ($5::text IS NULL
                    OR pss.ai_title ILIKE $5
                    OR uc.name ILIKE $5

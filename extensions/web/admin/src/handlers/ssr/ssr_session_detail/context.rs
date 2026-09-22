@@ -20,7 +20,7 @@ pub(super) struct SessionDetailPageContext {
     pub(super) has_traces: bool,
     pub(super) has_requests: bool,
     pub(super) back_url: &'static str,
-    pub(super) document_export: crate::export::document::DocumentExportView,
+    pub(super) export: crate::export::ExportView,
 }
 
 #[derive(Debug, Serialize)]

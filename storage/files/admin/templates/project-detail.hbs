@@ -12,6 +12,7 @@
         {{#if members}}<button type="button" class="sp-btn sp-btn--sm sp-btn--primary" data-action="add-member">Add member</button>{{/if}}
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/projects/{{project_id}}?tab=settings">Settings</a>
         {{/if}}
+        {{> components/export-button export}}
         {{/inline}}
     {{/components/page-header}}
 

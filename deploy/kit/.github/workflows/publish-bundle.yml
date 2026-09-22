@@ -8,8 +8,11 @@
 # repository is private — the job downloads its server binary and base bundle
 # from there. SYSTEMPROMPT_ADMIN_TOKEN + SYSTEMPROMPT_API_URL are optional:
 # with them the job asks the instance to import the new composition in place;
-# without them an operator presses Import on /admin/sync. The image is pushed
-# with the workflow's own token, so no packages PAT is needed.
+# without them an operator presses Import on /admin/sync. ASTOUND_STATS_PAT is
+# optional too: a personal access token (owner with console access) that lets
+# the job write the instance's run record per kit version into the release
+# notes (tools/kit-stats.sh; kit-stats.yml refreshes it daily). The image is
+# pushed with the workflow's own token, so no packages PAT is needed.
 #
 # The version is the trigger. `metadata.version` in marketplace.json names the
 # release: merge to main with a version no tag carries and CI tags, releases
@@ -122,6 +125,7 @@ jobs:
     env:
       ADMIN_TOKEN: ${{ secrets.SYSTEMPROMPT_ADMIN_TOKEN }}
       API_URL: ${{ secrets.SYSTEMPROMPT_API_URL }}
+      STATS_PAT: ${{ secrets.ASTOUND_STATS_PAT }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -207,6 +211,14 @@ jobs:
           gh release create "$TAG" --target "$GITHUB_SHA" --title "$TAG" --generate-notes \
             --notes "Published \`$KIT_IMAGE:$TAG\` and moved \`:$CHANNEL\` to \`$DIGEST\`."
           echo "::notice title=Released::$TAG"
+
+      # The versions before this one, as the instance measured them: what this
+      # release will be compared against. kit-stats.yml keeps it current.
+      - name: Record the run record in the release notes
+        if: steps.decide.outputs.skip == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: tools/kit-stats.sh "${{ steps.decide.outputs.tag }}"
 
       # Ask the instance to import now. It recomposes, projects entitlement and
       # refreshes the inventory in place — no restart. A profile that pins a

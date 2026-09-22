@@ -38,6 +38,8 @@ pub(crate) const ALL: &[&dyn DataSet] = &[
     &datasets::analysis_conversations::ClassifiedConversations,
     &datasets::analysis_conversations::Breakdown,
     &datasets::analysis_conversation::ConversationTurns,
+    &datasets::analysis_skill_runs::SkillRuns,
+    &datasets::analysis_skill_runs::KitReleaseImpact,
     &datasets::versions::Marketplaces,
     &datasets::versions::Versions,
     &datasets::governance::Decisions,

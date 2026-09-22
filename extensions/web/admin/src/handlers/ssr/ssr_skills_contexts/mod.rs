@@ -200,7 +200,7 @@ async fn build_page_context(build: PageBuild<'_>) -> ContextsPageContext {
         show_side: inputs.show_side,
         side_toggle_url: view::side_toggle_url(params, inputs.show_side),
         export: crate::export::ExportView::new(
-            &["contexts", "people"],
+            export::export_datasets(inputs.view_is_users),
             &crate::export::view::query_string(&[
                 (
                     "preset",

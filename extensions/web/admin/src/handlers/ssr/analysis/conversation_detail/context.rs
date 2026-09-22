@@ -90,11 +90,7 @@ pub(super) fn build_context(
         ),
         back_url: ANALYSIS_CONVERSATIONS_URL,
         help: crate::handlers::ssr::analysis::help::conversation_detail_help(),
-        export: crate::export::ExportView::single(
-            "analysis-conversation-turns",
-            &format!("context_id={}", urlencoding::encode(f.context_id.as_str())),
-        ),
-        document_export: crate::export::document::DocumentExportView::conversation(&f.context_id),
+        export: crate::export::ExportView::conversation(&f.context_id, true),
         judge: judge_view(
             f,
             format!("{}/judge", analysis_conversation_url(&f.context_id)),

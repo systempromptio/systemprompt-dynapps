@@ -13,7 +13,7 @@ use crate::repositories::scope::ScopeRequest;
 use systemprompt::identifiers::UserId;
 
 use super::charts::series_charts;
-use super::exports::{DATASET, document_export_view, export_view};
+use super::exports::{DATASET, export_view};
 use super::filters::{filter_view, sort_headers};
 use super::kpis::KpisView;
 use super::page_context::ConversationsPageContext;
@@ -55,14 +55,17 @@ fn breakdown_rows(
             let href = key
                 .as_ref()
                 .map(|(name, value)| params.narrowed(name, value));
-            let export_href = key
-                .as_ref()
-                .map(|(name, value)| params.export_href(DATASET, name, value));
+            let export = key.as_ref().map(|(name, value)| {
+                (
+                    params.export_href(DATASET, name, value),
+                    params.export_query(name, value),
+                )
+            });
             let label = (by == BreakdownBy::Category).then(|| category_label(&row.label));
             ConversationBucketView::new(
                 row,
                 href,
-                export_href,
+                export,
                 label,
                 data.totals.total_cost_microdollars,
             )
@@ -279,7 +282,6 @@ pub(super) fn build_context(
         pagination: params.pagination(window),
         sort_headers: sort_headers(params),
         export: export_view(params),
-        document_export: document_export_view(params),
         help: conversations_help(),
         report_banner: inputs.report_banner,
         current_url,

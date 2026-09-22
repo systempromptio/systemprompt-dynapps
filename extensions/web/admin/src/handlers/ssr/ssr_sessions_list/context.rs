@@ -30,7 +30,6 @@ pub(super) struct SessionsListPageContext {
     pub(super) show_side: bool,
     pub(super) side_toggle_url: String,
     pub(super) export: crate::export::ExportView,
-    pub(super) document_export: crate::export::document::DocumentExportView,
 }
 
 // Why: The "you are here" strip: who this browser is signed in as, and a way

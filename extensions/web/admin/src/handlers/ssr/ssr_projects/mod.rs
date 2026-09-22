@@ -182,6 +182,33 @@ async fn settings_reads(
     (mappings, rules)
 }
 
+fn project_query(project_id: &ProjectId) -> String {
+    crate::export::view::query_string(&[("project", Some(project_id.as_str()))])
+}
+
+// Why: the project's own traffic, keyed by `project` the way every scoped
+// dataset reads it, with every conversation's full record beside the tables.
+pub(super) fn export_view(project_id: &ProjectId) -> crate::export::ExportView {
+    crate::export::ExportView::new(
+        &["requests", "sessions", "analysis-conversations"],
+        &project_query(project_id),
+    )
+    .with_transcripts(crate::export::view::TranscriptSource::Sessions)
+}
+
+// Why: the report is a rolling window but the customer hand-off is a calendar
+// month, so the dialog's month picker chooses which one the files cover.
+pub(super) fn report_export_view(project_id: &ProjectId) -> crate::export::ExportView {
+    crate::export::ExportView::new(
+        &[
+            "report-customer-users",
+            "report-customer-projects",
+            "report-customer-models",
+        ],
+        &project_query(project_id),
+    )
+}
+
 pub(super) fn breadcrumbs(name: &str) -> Vec<BreadcrumbView> {
     vec![
         BreadcrumbView::link("Projects", BASE_URL),

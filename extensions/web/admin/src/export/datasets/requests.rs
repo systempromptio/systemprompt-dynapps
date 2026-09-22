@@ -86,6 +86,9 @@ impl DataSet for Requests {
     fn title(&self) -> &'static str {
         "Inference requests"
     }
+    fn description(&self) -> &'static str {
+        "One row per /v1/messages call: person, scope, model, status, tokens, cost and latency."
+    }
     fn columns(&self) -> &'static [Column] {
         COLUMNS
     }

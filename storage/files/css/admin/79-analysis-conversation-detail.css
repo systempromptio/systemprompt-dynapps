@@ -110,9 +110,9 @@
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-/* The five planes under the ledger, stacked full width so every table has
-   the same width and its own header; a long plane scrolls inside itself
-   rather than stretching the page or its neighbours. */
+/* The five planes under the ledger, one tab each: a single full-width table
+   at a time, so no plane is squeezed beside another; a long plane scrolls
+   inside itself rather than stretching the page. */
 .sp-aconvd-grid {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
@@ -122,7 +122,7 @@
     min-width: 0;
 }
 .sp-aconvd-grid .sp-table__scroll {
-    max-block-size: 28rem;
+    max-block-size: 40rem;
     overflow: auto;
 }
 .sp-aconvd-grid .sp-table__el thead th {

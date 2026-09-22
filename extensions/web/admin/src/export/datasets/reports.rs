@@ -51,7 +51,8 @@ fn month(ctx: &ExportContext<'_>) -> AdminResult<MonthRange> {
 }
 
 macro_rules! dataset {
-    ($ty:ident, $id:literal, $title:literal, $columns:ident, |$ctx:ident| $load:expr) => {
+    ($ty:ident, $id:literal, $title:literal, $description:literal, $columns:ident,
+     |$ctx:ident| $load:expr) => {
         #[async_trait]
         impl DataSet for $ty {
             fn id(&self) -> &'static str {
@@ -60,11 +61,17 @@ macro_rules! dataset {
             fn title(&self) -> &'static str {
                 $title
             }
+            fn description(&self) -> &'static str {
+                $description
+            }
             fn columns(&self) -> &'static [Column] {
                 $columns
             }
+            // Why: the dialog's month picker writes the same `?month=` the
+            // loaders parse, so declaring the window changes the control and
+            // nothing the files contain.
             fn window(&self) -> Window {
-                Window::None
+                Window::Month
             }
             async fn load(&self, $ctx: &ExportContext<'_>) -> AdminResult<Table> {
                 $load
@@ -89,6 +96,7 @@ dataset!(
     CustomerUsers,
     "report-customer-users",
     "Customer usage by person",
+    "One row per person active in the month: project, requests and tokens. No cost.",
     USER_COLUMNS,
     |ctx| {
         let s = scoped(ctx).await?;
@@ -129,6 +137,7 @@ dataset!(
     CustomerProjects,
     "report-customer-projects",
     "Customer usage by project",
+    "One row per project for the month: members, requests and tokens. No cost.",
     PROJECT_COLUMNS,
     |ctx| {
         let s = scoped(ctx).await?;
@@ -168,6 +177,7 @@ dataset!(
     CustomerModels,
     "report-customer-models",
     "Customer usage by model",
+    "One row per provider and model for the month: requests and tokens. No cost.",
     MODEL_COLUMNS,
     |ctx| {
         let s = scoped(ctx).await?;
@@ -219,6 +229,7 @@ dataset!(
     InternalProviders,
     "report-internal-providers",
     "Provider cost for the month",
+    "One row per provider for the month: requests, tokens and cost.",
     SUPPLIER_COLUMNS,
     |ctx| {
         let m = month(ctx)?;
@@ -232,6 +243,7 @@ dataset!(
     InternalModels,
     "report-internal-models",
     "Model cost for the month",
+    "One row per model for the month: requests, tokens and cost.",
     SUPPLIER_COLUMNS,
     |ctx| {
         let m = month(ctx)?;

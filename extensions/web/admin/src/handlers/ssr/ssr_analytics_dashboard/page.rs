@@ -219,6 +219,8 @@ const fn export_datasets(tab: DashboardTab) -> &'static [&'static str] {
             "analytics-cost-providers",
             "analytics-cost-days",
             "analytics-cost-containers",
+            "report-internal-providers",
+            "report-internal-models",
         ],
     }
 }
