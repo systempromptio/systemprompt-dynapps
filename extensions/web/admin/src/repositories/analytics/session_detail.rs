@@ -118,8 +118,11 @@ pub async fn find_session_header(
                                                  AS "last_activity_at?",
             -- Only the end is a fact the row can state; a session with no
             -- end is live or stale by how recently it did anything, which
-            -- the reader decides against the heartbeat window.
-            (s.ended_at IS NOT NULL OR s.status = 'completed') AS "completed!",
+            -- the reader decides against the heartbeat window. A header built
+            -- from requests alone has no session row at all, and the LEFT JOIN
+            -- leaves this NULL rather than false, so it is coalesced: nothing
+            -- to end is not completed.
+            COALESCE(s.ended_at IS NOT NULL OR s.status = 'completed', FALSE) AS "completed!",
             COALESCE(s.model, r.model)           AS "model?",
             s.plugin_id                          AS "plugin_id?: PluginId",
             s.ai_title                           AS "ai_title?"

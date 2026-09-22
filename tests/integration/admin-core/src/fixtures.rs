@@ -321,13 +321,31 @@ impl<'a> RequestSpec<'a> {
 // A payload row offering tools: the conversation view classifies a lone
 // request with no tools as a side call, so a test that wants a real turn
 // (opening prompt, search) inserts this beside the request.
+//
+// Core 0.59.0 stores a tool list once in `ai_tool_catalogs` and has the
+// payload reference its digest, so the catalogue row comes first and the
+// payload names it.
 pub async fn insert_offered_tools(pool: &PgPool, request_id: &str) {
-    sqlx::query("INSERT INTO ai_request_payloads (ai_request_id, offered_tools) VALUES ($1, $2)")
-        .bind(request_id)
-        .bind(serde_json::json!([{"name": "bash"}]))
-        .execute(pool)
-        .await
-        .expect("insert ai request payload");
+    let tools = serde_json::json!([{"name": "bash"}]);
+    let sha256 = format!("{:064x}", 0xba5eba11u64);
+    sqlx::query(
+        "INSERT INTO ai_tool_catalogs (sha256, tools) VALUES ($1, $2) \
+         ON CONFLICT (sha256) DO NOTHING",
+    )
+    .bind(&sha256)
+    .bind(&tools)
+    .execute(pool)
+    .await
+    .expect("insert tool catalogue");
+
+    sqlx::query(
+        "INSERT INTO ai_request_payloads (ai_request_id, offered_tools_sha256) VALUES ($1, $2)",
+    )
+    .bind(request_id)
+    .bind(&sha256)
+    .execute(pool)
+    .await
+    .expect("insert ai request payload");
 }
 
 pub async fn insert_request(pool: &PgPool, spec: &RequestSpec<'_>) {
