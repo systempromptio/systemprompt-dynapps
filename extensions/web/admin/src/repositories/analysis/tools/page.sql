@@ -13,7 +13,9 @@ WITH f AS MATERIALIZED (
              WHERE s.session_id = t.execution_trace_id AND s.skill IS NOT NULL
                AND s.invoked_at <= COALESCE(t.occurred_at, clock_timestamp())
              ORDER BY s.invoked_at DESC LIMIT 1) AS skill,
-           (t.is_error OR t.execution_status IN ('failed', 'timeout')) AS failed
+           -- Why: `execution_status` is NULL on an intent with no execution, and
+           -- `FALSE OR NULL` is NULL — a null the row type's `bool` cannot decode.
+           (COALESCE(t.is_error, FALSE) OR COALESCE(t.execution_status, '') IN ('failed', 'timeout')) AS failed
     FROM tool_activity t
     LEFT JOIN users u ON u.id = t.user_id
     LEFT JOIN LATERAL (
@@ -29,8 +31,8 @@ WITH f AS MATERIALIZED (
       AND ($6::text IS NULL OR t.server_name = $6)
       AND ($7::boolean IS NULL OR t.is_builtin = $7)
       AND ($8::text IS NULL
-           OR ($8 = 'failed' AND (t.is_error OR t.execution_status IN ('failed', 'timeout')))
-           OR ($8 = 'executed' AND t.state = 'executed' AND NOT (t.is_error OR t.execution_status IN ('failed', 'timeout')))
+           OR ($8 = 'failed' AND (COALESCE(t.is_error, FALSE) OR COALESCE(t.execution_status, '') IN ('failed', 'timeout')))
+           OR ($8 = 'executed' AND t.state = 'executed' AND NOT (COALESCE(t.is_error, FALSE) OR COALESCE(t.execution_status, '') IN ('failed', 'timeout')))
            OR ($8 = 'intended' AND t.state = 'intended')
            OR ($8 = 'unattested' AND t.state = 'unattested'))
       AND ($9::text IS NULL OR g.decision = $9)
