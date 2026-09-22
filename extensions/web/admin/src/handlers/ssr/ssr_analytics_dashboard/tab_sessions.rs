@@ -94,13 +94,13 @@ fn kpis(input: &SessionsInput<'_>) -> Vec<KpiTile> {
         KpiTile {
             label: "Conversations".to_owned(),
             value: input.total_rows.to_string(),
-            sub: "with a gateway request in this window".to_owned(),
+            note: "with a gateway request in this window".to_owned(),
             tone: "accent",
         },
         KpiTile {
             label: "Cost on this page".to_owned(),
             value: format_cost(cost),
-            sub: format!(
+            note: format!(
                 "{} per conversation · gateway-metered",
                 format_cost(per(cost, i64::try_from(input.rows.len()).unwrap_or(0)))
             ),
@@ -109,7 +109,7 @@ fn kpis(input: &SessionsInput<'_>) -> Vec<KpiTile> {
         KpiTile {
             label: "Requests on this page".to_owned(),
             value: compact(requests),
-            sub: format!(
+            note: format!(
                 "{} per conversation",
                 per(requests, i64::try_from(input.rows.len()).unwrap_or(0))
             ),
@@ -118,7 +118,7 @@ fn kpis(input: &SessionsInput<'_>) -> Vec<KpiTile> {
         KpiTile {
             label: "Served from cache".to_owned(),
             value: format!("{cache_share}%"),
-            sub: format!(
+            note: format!(
                 "{} of {} prompt tokens",
                 compact(cache),
                 compact(cache + input_tokens)

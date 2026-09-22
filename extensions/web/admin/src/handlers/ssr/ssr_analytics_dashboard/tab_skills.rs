@@ -98,31 +98,31 @@ fn kpis(totals: SkillTotals) -> Vec<KpiTile> {
         KpiTile {
             label: "Invocations".to_owned(),
             value: compact(totals.invocations),
-            sub: format!("{} distinct skills", totals.distinct_skills),
+            note: format!("{} distinct skills", totals.distinct_skills),
             tone: "accent",
         },
         KpiTile {
             label: "People using skills".to_owned(),
             value: totals.distinct_users.to_string(),
-            sub: "distinct users in window".to_owned(),
+            note: "distinct users in window".to_owned(),
             tone: "ok",
         },
         KpiTile {
             label: "Conversations".to_owned(),
             value: compact(totals.conversations),
-            sub: format!("{} gateway requests", compact(totals.requests)),
+            note: format!("{} gateway requests", compact(totals.requests)),
             tone: "accent",
         },
         KpiTile {
             label: "Conversation spend".to_owned(),
             value: format_cost(totals.conversation_cost_microdollars),
-            sub: "each conversation counted once".to_owned(),
+            note: "each conversation counted once".to_owned(),
             tone: "accent",
         },
         KpiTile {
             label: "Attributed to a version".to_owned(),
             value: format!("{attributed:.0}%"),
-            sub: format!(
+            note: format!(
                 "{} of {} invocations via a verified install",
                 totals.attributed_invocations, totals.invocations
             ),

@@ -64,7 +64,7 @@ fn default_detail(layer: &str) -> Option<String> {
 
 struct ItemHead {
     label: String,
-    sub: Option<String>,
+    note: Option<String>,
     kind_label: &'static str,
 }
 
@@ -77,7 +77,7 @@ fn item(
     let expires = rule.and_then(|r| r.valid_until);
     AcAudienceBucketItemView {
         label: head.label,
-        sub: head.sub,
+        note: head.note,
         kind_label: head.kind_label,
         layer: cell.layer.clone(),
         detail: default_detail(&cell.layer).unwrap_or_else(|| cell.detail.clone()),
@@ -137,7 +137,7 @@ fn subject_focus(
                 item(
                     ItemHead {
                         label: row.entity_name.clone(),
-                        sub: row.entity_sub.clone(),
+                        note: row.entity_sub.clone(),
                         kind_label: row.entity_type_label,
                     },
                     row,
@@ -150,7 +150,7 @@ fn subject_focus(
     AcAudienceFocusView {
         kind_label: col.kind_label,
         label: col.label.clone(),
-        sub: Some(col.subject.clone()).filter(|s| *s != col.label),
+        note: Some(col.subject.clone()).filter(|s| *s != col.label),
         back_url: audience_url(&[("subject_kind", col.kind)]),
         item_noun: "entities",
         item_label: "Entity",
@@ -173,7 +173,7 @@ fn entity_drill(
                 item(
                     ItemHead {
                         label: col.label.clone(),
-                        sub: None,
+                        note: None,
                         kind_label: col.kind_label,
                     },
                     row,
@@ -186,7 +186,7 @@ fn entity_drill(
     AcAudienceFocusView {
         kind_label: row.entity_type_label,
         label: row.entity_name.clone(),
-        sub: row
+        note: row
             .entity_sub
             .clone()
             .or_else(|| Some(row.entity_id.clone())),

@@ -145,6 +145,6 @@ pub(super) struct AttributionLink {
 pub(super) struct KpiTile {
     pub label: String,
     pub value: String,
-    pub sub: String,
+    pub note: String,
     pub tone: &'static str,
 }

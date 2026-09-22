@@ -42,7 +42,7 @@ pub(crate) struct ApprovalsQuery {
 struct ApprovalKpiView {
     label: &'static str,
     value: String,
-    sub: &'static str,
+    note: &'static str,
     tone: &'static str,
     href: String,
     active: bool,
@@ -170,7 +170,7 @@ fn kpis(stats: &ApprovalStats, active: Option<&str>) -> Vec<ApprovalKpiView> {
         ApprovalKpiView {
             label: "Pending",
             value: stats.pending.to_string(),
-            sub: "callers blocked now",
+            note: "callers blocked now",
             tone: "warn",
             href: url_for(Some("pending"), 0),
             active: active == Some("pending"),
@@ -179,7 +179,7 @@ fn kpis(stats: &ApprovalStats, active: Option<&str>) -> Vec<ApprovalKpiView> {
         ApprovalKpiView {
             label: "Oldest wait",
             value: format!("{}m", stats.oldest_pending_minutes),
-            sub: "longest open request",
+            note: "longest open request",
             tone: if stats.oldest_pending_minutes > 30 {
                 "err"
             } else {
@@ -192,7 +192,7 @@ fn kpis(stats: &ApprovalStats, active: Option<&str>) -> Vec<ApprovalKpiView> {
         ApprovalKpiView {
             label: "Approved",
             value: stats.approved.to_string(),
-            sub: "let through by a person",
+            note: "let through by a person",
             tone: "ok",
             href: url_for(Some("approved"), 0),
             active: active == Some("approved"),
@@ -201,7 +201,7 @@ fn kpis(stats: &ApprovalStats, active: Option<&str>) -> Vec<ApprovalKpiView> {
         ApprovalKpiView {
             label: "Denied",
             value: stats.denied.to_string(),
-            sub: "refused by a person",
+            note: "refused by a person",
             tone: "err",
             href: url_for(Some("denied"), 0),
             active: active == Some("denied"),
@@ -210,7 +210,7 @@ fn kpis(stats: &ApprovalStats, active: Option<&str>) -> Vec<ApprovalKpiView> {
         ApprovalKpiView {
             label: "Expired",
             value: stats.expired.to_string(),
-            sub: "nobody answered",
+            note: "nobody answered",
             tone: "",
             href: url_for(Some("expired"), 0),
             active: active == Some("expired"),

@@ -203,7 +203,7 @@ pub(crate) struct AcAudienceLegendView {
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct AcAudienceBucketItemView {
     pub label: String,
-    pub sub: Option<String>,
+    pub note: Option<String>,
     pub kind_label: &'static str,
     pub layer: String,
     pub detail: String,
@@ -228,7 +228,7 @@ pub(crate) struct AcAudienceBucketView {
 pub(crate) struct AcAudienceFocusView {
     pub kind_label: &'static str,
     pub label: String,
-    pub sub: Option<String>,
+    pub note: Option<String>,
     pub back_url: String,
     pub item_noun: &'static str,
     pub item_label: &'static str,

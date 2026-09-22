@@ -197,25 +197,25 @@ fn kpis(input: &CostInput<'_>) -> Vec<KpiTile> {
             KpiTile {
                 label: "Provider cost".to_owned(),
                 value: format_cost(cost),
-                sub: format!("{requests} billable requests"),
+                note: format!("{requests} billable requests"),
                 tone: "accent",
             },
             KpiTile {
                 label: "Cost per request".to_owned(),
                 value: format_cost(per(cost, requests)),
-                sub: "supplier price, this window".to_owned(),
+                note: "supplier price, this window".to_owned(),
                 tone: "ok",
             },
             KpiTile {
                 label: "Tokens".to_owned(),
                 value: compact(tokens),
-                sub: "input plus output".to_owned(),
+                note: "input plus output".to_owned(),
                 tone: "ok",
             },
             KpiTile {
                 label: "Providers".to_owned(),
                 value: input.providers.len().to_string(),
-                sub: format!("{} models served", input.models.len()),
+                note: format!("{} models served", input.models.len()),
                 tone: "accent",
             },
         ];
@@ -224,25 +224,25 @@ fn kpis(input: &CostInput<'_>) -> Vec<KpiTile> {
         KpiTile {
             label: "Containers".to_owned(),
             value: containers.to_string(),
-            sub: "with consumption in this window".to_owned(),
+            note: "with consumption in this window".to_owned(),
             tone: "accent",
         },
         KpiTile {
             label: "Requests".to_owned(),
             value: compact(input.containers.iter().map(|c| c.requests).sum()),
-            sub: "from the daily rollups".to_owned(),
+            note: "from the daily rollups".to_owned(),
             tone: "ok",
         },
         KpiTile {
             label: "Unattributed".to_owned(),
             value: compact(unattributed),
-            sub: "requests by people with no primary container".to_owned(),
+            note: "requests by people with no primary container".to_owned(),
             tone: if unattributed > 0 { "warn" } else { "ok" },
         },
         KpiTile {
             label: "Cost shown".to_owned(),
             value: "none".to_owned(),
-            sub: "the customer view carries no supplier figure".to_owned(),
+            note: "the customer view carries no supplier figure".to_owned(),
             tone: "ok",
         },
     ]

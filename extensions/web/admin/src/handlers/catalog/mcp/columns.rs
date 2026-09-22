@@ -116,28 +116,28 @@ pub(super) fn kpis(rows: &[McpServerRow]) -> Vec<McpKpiView> {
         McpKpiView {
             label: "Declared",
             value: configured.to_string(),
-            sub: format!("{unconfigured} serving undeclared"),
+            note: format!("{unconfigured} serving undeclared"),
             tone: if unconfigured > 0 { "warn" } else { "" },
             unit: "",
         },
         McpKpiView {
             label: "Alive now",
             value: alive.to_string(),
-            sub: format!("of {configured} declared"),
+            note: format!("of {configured} declared"),
             tone: if alive == 0 { "warn" } else { "ok" },
             unit: "",
         },
         McpKpiView {
             label: "Connected",
             value: short_num(connections),
-            sub: format!("{connected_users} people attached"),
+            note: format!("{connected_users} people attached"),
             tone: "",
             unit: "",
         },
         McpKpiView {
             label: "Calls",
             value: short_num(calls),
-            sub: if delta_display.is_empty() {
+            note: if delta_display.is_empty() {
                 "tool executions in the window".to_owned()
             } else {
                 format!("{delta_display} vs the window before")
@@ -148,14 +148,14 @@ pub(super) fn kpis(rows: &[McpServerRow]) -> Vec<McpKpiView> {
         McpKpiView {
             label: "Errors",
             value: short_num(errors),
-            sub: format!("{rate} of calls"),
+            note: format!("{rate} of calls"),
             tone: rate_tone,
             unit: "",
         },
         McpKpiView {
             label: "p95 latency",
             value: ms_display(p95),
-            sub: format!("slowest average {}", ms_display(avg)),
+            note: format!("slowest average {}", ms_display(avg)),
             tone: "",
             unit: "",
         },

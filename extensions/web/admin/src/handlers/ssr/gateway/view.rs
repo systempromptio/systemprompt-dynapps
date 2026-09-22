@@ -65,7 +65,7 @@ pub(super) struct ProviderOptionView {
 pub(super) struct GatewayKpiView {
     pub label: &'static str,
     pub value: String,
-    pub sub: String,
+    pub note: String,
     pub tone: &'static str,
 }
 

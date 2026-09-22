@@ -19,14 +19,14 @@ use crate::repositories::governance::decision_log::DecisionStats;
 use crate::repositories::governance::findings::SafetyStats;
 
 // Why: One KPI tile, as `components/kpi` reads it. The supporting line is
-// `note` on the partial; the field keeps the name `sub` and the template reads
-// it as `this.sub`, because a bare `sub` mustache resolves to the registered
-// helper of that name rather than to a field.
+// `note` on the partial, and the field is named `note` too: a bare `sub`
+// mustache resolves to the registered helper of that name rather than to a
+// field, so no view struct here carries a field called `sub`.
 #[derive(Debug, Serialize)]
 pub(super) struct GovernanceKpiView {
     label: &'static str,
     value: String,
-    sub: String,
+    note: String,
     tone: &'static str,
     href: String,
     active: bool,
@@ -46,7 +46,7 @@ fn decision_tiles(s: DecisionStats) -> Vec<Tile> {
         Tile {
             label: "Calls",
             value: s.calls,
-            sub: format!("{} evaluations · {} callers", s.evaluated, s.distinct_users),
+            note: format!("{} evaluations · {} callers", s.evaluated, s.distinct_users),
             tone: "",
             filter: None,
             hint: "Governed calls in this window. Each is one row in the log, folded \
@@ -55,7 +55,7 @@ fn decision_tiles(s: DecisionStats) -> Vec<Tile> {
         Tile {
             label: "Review groups",
             value: s.attention_calls,
-            sub: "Repeated warnings grouped by caller and session".to_owned(),
+            note: "Repeated warnings grouped by caller and session".to_owned(),
             tone: "err",
             filter: Some(("attention", "1")),
             hint: "Denials and actionable warnings grouped by session and evidence. Entropy-only observations remain in the audit log",
@@ -63,7 +63,7 @@ fn decision_tiles(s: DecisionStats) -> Vec<Tile> {
         Tile {
             label: "Denied",
             value: s.denied,
-            sub: format!("{} of evaluated", percent(s.denied, s.evaluated)),
+            note: format!("{} of evaluated", percent(s.denied, s.evaluated)),
             tone: "err",
             filter: Some(("decision", "deny")),
             hint: "Refused outright by one of the four chain stages",
@@ -71,7 +71,7 @@ fn decision_tiles(s: DecisionStats) -> Vec<Tile> {
         Tile {
             label: "Warned",
             value: s.warned,
-            sub: format!("{} of evaluated", percent(s.warned, s.evaluated)),
+            note: format!("{} of evaluated", percent(s.warned, s.evaluated)),
             tone: "warn",
             filter: Some(("decision", "warn")),
             hint: "Warnings recorded by policies; inspect the evidence to distinguish observation, sanitization and refusal",
@@ -79,7 +79,7 @@ fn decision_tiles(s: DecisionStats) -> Vec<Tile> {
         Tile {
             label: "Allowed",
             value: s.allowed,
-            sub: format!("{} of evaluated", percent(s.allowed, s.evaluated)),
+            note: format!("{} of evaluated", percent(s.allowed, s.evaluated)),
             tone: "ok",
             filter: Some(("decision", "allow")),
             hint: "No rule matched, or every rule that matched permitted the call",
@@ -92,7 +92,7 @@ fn safety_tiles(f: SafetyStats) -> Vec<Tile> {
         Tile {
             label: "Safety findings",
             value: f.findings,
-            sub: format!("{} categories, both directions", f.categories),
+            note: format!("{} categories, both directions", f.categories),
             tone: "",
             filter: Some(("tab", "safety")),
             hint: "Gateway scanner findings on requests and on responses",
@@ -100,7 +100,7 @@ fn safety_tiles(f: SafetyStats) -> Vec<Tile> {
         Tile {
             label: "Findings blocked",
             value: f.blocked,
-            sub: format!("{} audited only", f.audited),
+            note: format!("{} audited only", f.audited),
             tone: "err",
             filter: Some(("tab", "safety")),
             hint: "Actual recorded blocks. Informational findings and warn-mode findings do not imply a refusal",
@@ -157,7 +157,7 @@ pub(super) fn stage_filters(
 struct Tile {
     label: &'static str,
     value: i64,
-    sub: String,
+    note: String,
     tone: &'static str,
     filter: Option<(&'static str, &'static str)>,
     hint: &'static str,
@@ -167,7 +167,7 @@ fn tile(query: &GovernanceQuery, tile: Tile) -> GovernanceKpiView {
     let Tile {
         label,
         value,
-        sub,
+        note,
         tone,
         filter,
         hint,
@@ -186,7 +186,7 @@ fn tile(query: &GovernanceQuery, tile: Tile) -> GovernanceKpiView {
     GovernanceKpiView {
         label,
         value: value.to_string(),
-        sub,
+        note,
         tone,
         href,
         active,

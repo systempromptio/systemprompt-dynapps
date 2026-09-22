@@ -114,13 +114,13 @@ fn kpis(servers: &[ToolServerRow], rows: &[ToolStatsRow]) -> Vec<KpiTile> {
         KpiTile {
             label: "Tool calls".to_owned(),
             value: compact(executions),
-            sub: format!("{} tools across {} servers", rows.len(), servers.len()),
+            note: format!("{} tools across {} servers", rows.len(), servers.len()),
             tone: "accent",
         },
         KpiTile {
             label: "Success rate".to_owned(),
             value: format!("{rate:.0}%"),
-            sub: format!("{succeeded} of {executions} settled successfully"),
+            note: format!("{succeeded} of {executions} settled successfully"),
             tone: if rate >= 95.0 {
                 "ok"
             } else if rate >= 80.0 {
@@ -134,13 +134,13 @@ fn kpis(servers: &[ToolServerRow], rows: &[ToolStatsRow]) -> Vec<KpiTile> {
             value: slowest
                 .as_ref()
                 .map_or_else(|| "—".to_owned(), |(_, v)| ms(Some(*v))),
-            sub: slowest.map_or_else(|| "no timed calls".to_owned(), |(name, _)| name),
+            note: slowest.map_or_else(|| "no timed calls".to_owned(), |(name, _)| name),
             tone: "warn",
         },
         KpiTile {
             label: "Callers".to_owned(),
             value: users.to_string(),
-            sub: "distinct users on the busiest server".to_owned(),
+            note: "distinct users on the busiest server".to_owned(),
             tone: "ok",
         },
     ]

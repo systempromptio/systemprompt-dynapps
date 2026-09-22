@@ -50,3 +50,24 @@ pub fn format_duration_ms(ms: i64) -> String {
         format!("{:.1} h", ms as f64 / 3_600_000.0)
     }
 }
+
+// Why: `max_chars` is a character budget, so the guard must count characters
+// too. Guarding on `s.len()` (bytes) and cutting on `char_indices()` lets any
+// string that is longer in bytes than in characters fall through the guard and
+// come back with an ellipsis appended to text that was never truncated.
+pub fn truncate_chars(s: &str, max_chars: usize) -> &str {
+    s.char_indices()
+        .nth(max_chars)
+        .map_or(s, |(end, _)| &s[..end])
+}
+
+// Why: the one truncation the admin console shows a reader, so there is one
+// ellipsis spelling (`…`) and it appears only when something was cut.
+pub fn truncate_ellipsis(s: &str, max_chars: usize) -> String {
+    let head = truncate_chars(s, max_chars);
+    if head.len() == s.len() {
+        s.to_owned()
+    } else {
+        format!("{head}\u{2026}")
+    }
+}

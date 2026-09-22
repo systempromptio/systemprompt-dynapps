@@ -104,7 +104,7 @@ pub(crate) struct MarketplacesPageData {
 pub(crate) struct MarketplaceKpiView {
     pub label: &'static str,
     pub value: String,
-    pub sub: String,
+    pub note: String,
     pub tone: &'static str,
 }
 

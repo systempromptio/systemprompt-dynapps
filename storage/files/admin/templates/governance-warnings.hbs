@@ -13,7 +13,7 @@
 
     <section class="sp-kpi-grid" aria-label="Governance summary">
       {{#each kpis}}
-        {{> components/kpi label=this.label value=this.value note=this.sub
+        {{> components/kpi label=this.label value=this.value note=this.note
             tone=this.tone href=this.href active=this.active hint=this.hint}}
       {{/each}}
     </section>

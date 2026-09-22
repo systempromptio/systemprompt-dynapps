@@ -23,7 +23,7 @@ pub(super) fn volume_tiles(k: &OverviewKpis, i: &TileInputs<'_>) -> Vec<KpiTileV
                 label: "Requests",
                 icon: "bolt",
                 value: short_num(k.requests),
-                sub: comparison(&short_num(k.prev_requests), vs),
+                note: comparison(&short_num(k.prev_requests), vs),
                 hint: "gateway requests in the window".to_owned(),
                 href: format!("/admin/requests?preset={preset}"),
                 tone: "",
@@ -37,7 +37,7 @@ pub(super) fn volume_tiles(k: &OverviewKpis, i: &TileInputs<'_>) -> Vec<KpiTileV
                 label: "Spend",
                 icon: "coins",
                 value: format_cost(k.cost_microdollars),
-                sub: comparison(&format_cost(k.prev_cost_microdollars), vs),
+                note: comparison(&format_cost(k.prev_cost_microdollars), vs),
                 hint: format!(
                     "{} across the window · {} per request",
                     format_cost(k.cost_microdollars),
@@ -55,7 +55,7 @@ pub(super) fn volume_tiles(k: &OverviewKpis, i: &TileInputs<'_>) -> Vec<KpiTileV
                 label: "Active people",
                 icon: "people",
                 value: k.active_users.to_string(),
-                sub: comparison(&k.prev_active_users.to_string(), vs),
+                note: comparison(&k.prev_active_users.to_string(), vs),
                 hint: format!("{} distinct accounts made a request", k.active_users),
                 href: "/admin/users".to_owned(),
                 tone: "",
@@ -69,7 +69,7 @@ pub(super) fn volume_tiles(k: &OverviewKpis, i: &TileInputs<'_>) -> Vec<KpiTileV
                 label: "Conversations",
                 icon: "chat",
                 value: short_num(k.conversations),
-                sub: comparison(&short_num(k.prev_conversations), vs),
+                note: comparison(&short_num(k.prev_conversations), vs),
                 hint: format!(
                     "{} distinct conversations carried a request · {} requests each",
                     k.conversations,
@@ -95,7 +95,7 @@ pub(super) fn work_tiles(k: &OverviewKpis, i: &TileInputs<'_>) -> Vec<KpiTileVie
                 label: "Tokens",
                 icon: "token",
                 value: format_token_total(k.tokens),
-                sub: if k.input_tokens + k.cache_tokens > 0 {
+                note: if k.input_tokens + k.cache_tokens > 0 {
                     format!("{cache}% read from cache")
                 } else {
                     comparison(&format_token_total(k.prev_tokens), vs)
@@ -118,7 +118,7 @@ pub(super) fn work_tiles(k: &OverviewKpis, i: &TileInputs<'_>) -> Vec<KpiTileVie
                 label: "Tool calls",
                 icon: "wrench",
                 value: short_num(k.tool_calls),
-                sub: comparison(&short_num(k.prev_tool_calls), vs),
+                note: comparison(&short_num(k.prev_tool_calls), vs),
                 hint: format!(
                     "{} tool calls the models made · {:.1} per request",
                     k.tool_calls,
@@ -143,7 +143,7 @@ pub(super) fn health_tiles(k: &OverviewKpis, i: &TileInputs<'_>) -> Vec<KpiTileV
                 label: "p50 latency",
                 icon: "clock",
                 value: format_duration_ms(k.p50_latency_ms),
-                sub: comparison(&format_duration_ms(k.prev_p50_latency_ms), vs),
+                note: comparison(&format_duration_ms(k.prev_p50_latency_ms), vs),
                 hint: "half of routed requests finished faster than this".to_owned(),
                 href: format!("/admin/traces?preset={preset}"),
                 tone: "",
@@ -157,7 +157,7 @@ pub(super) fn health_tiles(k: &OverviewKpis, i: &TileInputs<'_>) -> Vec<KpiTileV
                 label: "p95 latency",
                 icon: "gauge",
                 value: format_duration_ms(k.p95_latency_ms),
-                sub: comparison(&format_duration_ms(k.prev_p95_latency_ms), vs),
+                note: comparison(&format_duration_ms(k.prev_p95_latency_ms), vs),
                 hint: "95% of routed requests finished faster than this".to_owned(),
                 href: format!("/admin/traces?preset={preset}"),
                 tone: latency_tone(k.p95_latency_ms),
@@ -171,7 +171,7 @@ pub(super) fn health_tiles(k: &OverviewKpis, i: &TileInputs<'_>) -> Vec<KpiTileV
                 label: "Error rate",
                 icon: "alert",
                 value: percent_tenths(k.error_rate_tenths(), k.requests),
-                sub: comparison(
+                note: comparison(
                     &percent_tenths(k.prev_error_rate_tenths(), k.prev_requests),
                     vs,
                 ),
@@ -188,7 +188,7 @@ pub(super) fn health_tiles(k: &OverviewKpis, i: &TileInputs<'_>) -> Vec<KpiTileV
                 label: "Denied",
                 icon: "shield",
                 value: k.denied.to_string(),
-                sub: comparison(&k.prev_denied.to_string(), vs),
+                note: comparison(&k.prev_denied.to_string(), vs),
                 hint: "refused by policy or quota before routing".to_owned(),
                 href: format!("/admin/requests?status=rejected&preset={preset}"),
                 tone: if k.denied > 0 { "warn" } else { "" },

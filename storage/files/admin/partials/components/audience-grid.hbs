@@ -62,7 +62,7 @@
 {{#if audience.focus}}
 <section class="sp-ac-audience__focus" aria-labelledby="ac-aud-focus-title">
     <div class="sp-section__head">
-        <h2 class="sp-section__title" id="ac-aud-focus-title"><span class="sp-ac-audience__focus-kind">{{audience.focus.kind_label}}</span> {{audience.focus.label}}{{#if audience.focus.sub}} <span class="sp-u-mono sp-ac-audience__focus-sub">{{audience.focus.sub}}</span>{{/if}}</h2>
+        <h2 class="sp-section__title" id="ac-aud-focus-title"><span class="sp-ac-audience__focus-kind">{{audience.focus.kind_label}}</span> {{audience.focus.label}}{{#if audience.focus.note}} <span class="sp-u-mono sp-ac-audience__focus-sub">{{audience.focus.note}}</span>{{/if}}</h2>
         <p class="sp-section__sub">All {{audience.focus.item_noun}} on screen, by the resolver's decision, with the rule that made it.</p>
         <div class="sp-section__actions"><a class="sp-btn sp-btn--sm sp-btn--outline" href="{{audience.focus.back_url}}">← Back to the grid</a></div>
     </div>
@@ -75,7 +75,7 @@
                 <tbody>
                 {{#each items}}
                 <tr>
-                    <td><a class="sp-ac-audience__bucket-label" href="{{rules_url}}">{{label}}</a><span class="sp-ac-audience__bucket-kind">{{kind_label}}{{#if sub}} · {{sub}}{{/if}}</span></td>
+                    <td><a class="sp-ac-audience__bucket-label" href="{{rules_url}}">{{label}}</a><span class="sp-ac-audience__bucket-kind">{{kind_label}}{{#if this.note}} · {{this.note}}{{/if}}</span></td>
                     <td><span class="sp-badge sp-badge--muted sp-badge--nodot sp-badge--sm">{{layer}}</span></td>
                     <td class="sp-u-mono">{{detail}}</td>
                     <td>{{#if why}}{{why}}{{else}}<span class="sp-ac-audience__none">—</span>{{/if}}</td>

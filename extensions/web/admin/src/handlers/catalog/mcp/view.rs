@@ -70,7 +70,7 @@ pub(crate) struct McpServerRow {
 pub(super) struct McpKpiView {
     pub label: &'static str,
     pub value: String,
-    pub sub: String,
+    pub note: String,
     pub tone: &'static str,
     pub unit: &'static str,
 }

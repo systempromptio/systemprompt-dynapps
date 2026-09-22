@@ -13,13 +13,13 @@ use super::view::CatalogKpiView;
 pub(super) const fn kpi(
     label: &'static str,
     value: String,
-    sub: String,
+    note: String,
     tone: &'static str,
 ) -> CatalogKpiView {
     CatalogKpiView {
         label,
         value,
-        sub,
+        note,
         tone,
     }
 }
