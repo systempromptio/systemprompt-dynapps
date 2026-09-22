@@ -34,10 +34,13 @@ plugin:
   # call per tool, and an owner only some users receive leaves every other
   # session ungoverned and unrecorded — no plugin_usage_events, so no skill
   # invocations on the dashboard.
-  # `evaluation` is the switch for the session-evaluation engine (the
-  # LLM-as-judge in services/evaluation/). It installs nothing on the client:
-  # the engine reads the sessions this plugin's track hook already reports, so
-  # it rides on the governance owner and only that plugin may set it.
+  # `evaluation` is the conversation judge's switch — the name predates the
+  # session-evaluation engine's removal (c791ad5a) and is core's key, so it
+  # stays until core renames it. There is no services/evaluation/ any more.
+  # It installs nothing on the client: the judge reads the sessions this
+  # plugin's track hook already reports, so it rides on the governance owner
+  # and only that plugin may set it. The profile's `evaluation.automatic`
+  # decides whether it runs on its own or only when a person asks.
   hooks:
     governance: true
     evaluation: true
