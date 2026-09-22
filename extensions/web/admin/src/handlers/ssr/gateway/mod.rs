@@ -38,6 +38,8 @@ use view::GatewayPageData;
 
 const ENTITY_GATEWAY_ROUTE: &str = "gateway_route";
 
+const NAMES_NOTE: &str = "A route's name and description are written to services/ai/gateway.yaml with the route; a provider's display name lives in services/ai/providers.yaml. The rest of the console reads them from the booted services, so a name edited here shows elsewhere after the same restart.";
+
 #[derive(Debug, Default, serde::Deserialize)]
 pub(crate) struct GatewayQuery {
     tab: Option<String>,
@@ -45,54 +47,75 @@ pub(crate) struct GatewayQuery {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum GatewayTab {
-    Models,
+    Overview,
+    Providers,
     Routes,
-    Resolved,
+    Settings,
 }
 
 impl GatewayTab {
+    // Why: `resolved` was its own tab; the resolved-only set now sits under
+    // Routes, and old links keep landing on it.
     fn parse(tab: Option<&str>) -> Self {
         match tab {
-            Some("routes") => Self::Routes,
-            Some("resolved") => Self::Resolved,
-            _ => Self::Models,
+            Some("providers") => Self::Providers,
+            Some("routes" | "resolved") => Self::Routes,
+            Some("settings") => Self::Settings,
+            _ => Self::Overview,
         }
     }
 }
 
-// Why: four views, each a URL. Models is what an operator comes for —
-// which providers are live and what reaches them; Routes is the ordered
-// table the dispatcher reads, where order is edited; Resolved is what the
-// dispatcher matches that the file does not list; Policies lives on its own
-// page and is linked so the gateway reads as one thing.
-fn view_tabs(active: GatewayTab) -> Vec<TabLinkView> {
-    let link = |slug, label, href: &str, tab: Option<GatewayTab>| TabLinkView {
+// Why: five views, each a URL. Overview is the summary an operator scans —
+// dispatch order and provider health as two tables; Providers opens each
+// upstream into its models and routes; Routes is the ordered table the
+// dispatcher reads, where order is edited, with the resolved-only set below
+// it; Settings holds the switches and the per-account probe; Policies lives
+// on its own page and is linked so the gateway reads as one thing.
+fn view_tabs(active: GatewayTab, routes: usize, providers: usize) -> Vec<TabLinkView> {
+    let link = |slug, label, href: &str, tab: Option<GatewayTab>, count| TabLinkView {
         slug,
         label,
         href: href.to_owned(),
         is_active: tab == Some(active),
-        count: None,
+        count,
     };
     vec![
         link(
-            "models",
-            "Models",
+            "overview",
+            "Overview",
             "/admin/gateway",
-            Some(GatewayTab::Models),
+            Some(GatewayTab::Overview),
+            None,
+        ),
+        link(
+            "providers",
+            "Providers",
+            "/admin/gateway?tab=providers",
+            Some(GatewayTab::Providers),
+            Some(i64::try_from(providers).unwrap_or(i64::MAX)),
         ),
         link(
             "routes",
             "Routes",
             "/admin/gateway?tab=routes",
             Some(GatewayTab::Routes),
+            Some(i64::try_from(routes).unwrap_or(i64::MAX)),
         ),
         link(
-            "resolved",
-            "Resolved only",
-            "/admin/gateway?tab=resolved",
-            Some(GatewayTab::Resolved),
+            "settings",
+            "Settings",
+            "/admin/gateway?tab=settings",
+            Some(GatewayTab::Settings),
+            None,
         ),
-        link("policies", "Policies", "/admin/gateway/policies", None),
+        link(
+            "policies",
+            "Policies",
+            "/admin/gateway/policies",
+            None,
+            None,
+        ),
     ]
 }
 
@@ -138,12 +161,20 @@ pub(crate) async fn gateway_page(
     let tab = GatewayTab::parse(query.tab.as_deref());
     let routes = route_rows(&config, &surfaces, &grants, &dispatchable, &labels);
     let extra = resolved_only(&routes, &resolved, &labels);
-    let provider_cards = if tab == GatewayTab::Models {
+    let overview = matches!(tab, GatewayTab::Overview | GatewayTab::Providers);
+    let provider_cards = if overview {
         models::provider_cards(&labels, &routes, &grants)
     } else {
         Vec::new()
     };
+    let dispatch = if tab == GatewayTab::Overview {
+        models::dispatch_rows(&labels, &routes, &grants)
+    } else {
+        Vec::new()
+    };
 
+    let routes_count = routes.len();
+    let providers_count = surfaces.providers.len();
     let page = GatewayPageData {
         page: "gateway",
         title: "Gateway",
@@ -154,22 +185,26 @@ pub(crate) async fn gateway_page(
         inference_path_prefix: config.inference_path_prefix.clone(),
         source_path: config.source_path.clone(),
         kpis: kpis(&config, &routes, extra.len(), &surfaces),
-        routes_count: routes.len(),
+        routes_count,
         routes,
         resolved_only_count: extra.len(),
         resolved_only: extra,
-        providers_count: surfaces.providers.len(),
+        providers_count,
         providers: surfaces.providers,
         probe_users: list_pickable_users(&pool, None).await,
         provider_cards,
+        dispatch_count: dispatch.len(),
+        dispatch,
         load_error,
         catalog_error,
         runtime_note: repositories::sync::gateway_routes::RUNTIME_NOTE,
         sync_url: "/admin/sync?entity=gateway_route",
-        tabs: view_tabs(tab),
-        show_models: tab == GatewayTab::Models,
+        names_note: NAMES_NOTE,
+        tabs: view_tabs(tab, routes_count, providers_count),
+        show_overview: tab == GatewayTab::Overview,
+        show_providers: tab == GatewayTab::Providers,
         show_routes: tab == GatewayTab::Routes,
-        show_resolved: tab == GatewayTab::Resolved,
+        show_settings: tab == GatewayTab::Settings,
     };
     Ok(render_typed_page(
         &engine, "gateway", &page, &user_ctx, &mkt_ctx,

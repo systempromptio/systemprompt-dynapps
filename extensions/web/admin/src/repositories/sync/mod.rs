@@ -25,6 +25,7 @@ pub mod access_control_rows;
 pub mod archive;
 pub mod boot;
 pub mod declaration;
+pub mod drift_shape;
 pub mod gateway_policies;
 pub mod gateway_routes;
 pub mod governance;

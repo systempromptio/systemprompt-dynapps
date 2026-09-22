@@ -1,6 +1,6 @@
 {{!--
-  One sync plane: declared hash, last apply, drift totals, the three
-  directions and the diff table. Rendered on an owner page's Sync tab and on
+  One sync plane: declared hash, last apply, drift totals by cause, the
+  recommended next step, the three directions and the diff table. Rendered on an owner page's Sync tab and on
   the import preview; the JS is components/sp-sync-plane.js.
 
   Invoke as: {{> components/sync-plane plane=sync can_write=can_write}}
@@ -45,31 +45,36 @@
     {{#if plane.is_clean}}
     {{> components/notice tone="ok" title="In step" message="The declaration and this database hold the same rows."}}
     {{/if}}
+    {{#if plane.recommendation}}
+    <p class="sp-sync-plane__next" data-sync-next="{{plane.recommendation.card}}">
+        <strong>Next:</strong> {{plane.recommendation.text}}
+    </p>
+    {{/if}}
 
     <div class="sp-sync-actions" aria-label="Synchronise {{plane.label}}">
         <article class="sp-sync-card">
             <h3>Insert only</h3>
-            <p>Add every row {{plane.source_label}} declares that the database lacks. Touch nothing else — rows that differ or exist only here stay as they are.</p>
-            <p class="sp-sync-card__count">{{plane.actions.insert}} rows, {{plane.actions.insert_entities}} entities</p>
+            <p>Add what {{plane.source_label}} declares and this database lacks. Nothing existing is changed or removed.</p>
+            <p class="sp-sync-card__count">+{{plane.actions.insert}} rows · +{{plane.actions.insert_entities}} entities</p>
             {{#if can_write}}<button type="button" class="sp-btn sp-btn--secondary" data-action="sync-apply" data-plane="{{plane.id}}" data-apply-url="{{plane.apply_url}}" data-entities="{{plane.entity_filter}}" data-mode="insert_only" data-count="{{plane.actions.insert}}">Insert only</button>{{/if}}
         </article>
-        <article class="sp-sync-card sp-sync-card--danger">
+        <article class="sp-sync-card sp-sync-card--danger{{#if (eq plane.recommendation.card "overwrite")}} sp-sync-card--recommended{{/if}}">
             <h3>Overwrite from code</h3>
-            <p>Make the database equal {{plane.source_label}} for every entity it names: insert what is missing, correct what differs, and <strong>delete</strong> rows on those entities that it does not declare. Entities it does not mention, and every per-person override, are left alone.</p>
-            <p class="sp-sync-card__count">+{{plane.actions.insert}} · ~{{plane.actions.update}} · −{{plane.actions.delete}} ({{plane.actions.delete_console}} written from the console)</p>
-            {{#if can_write}}<button type="button" class="sp-btn sp-btn--primary" data-action="sync-apply" data-plane="{{plane.id}}" data-apply-url="{{plane.apply_url}}" data-entities="{{plane.entity_filter}}" data-mode="overwrite" data-count="{{plane.actions.delete}}" data-dashboard="{{plane.actions.delete_console}}">Overwrite from code</button>{{/if}}
+            <p>Make this database equal {{plane.source_label}}: add what code added, correct what code changed, <strong>delete</strong> what code removed. Rows written here, or by a bundle, on entities the file no longer names are kept; per-person overrides are never touched.</p>
+            <p class="sp-sync-card__count">+{{plane.actions.insert}} · ~{{plane.actions.update}} · −{{plane.actions.delete}}{{#if plane.actions.delete_console}} <span class="sp-u-text-warning">({{plane.actions.delete_console}} of them written here)</span>{{/if}}{{#if plane.actions.kept}} · keeps {{plane.actions.kept}}{{/if}}</p>
+            {{#if can_write}}<button type="button" class="sp-btn sp-btn--primary" data-action="sync-apply" data-plane="{{plane.id}}" data-apply-url="{{plane.apply_url}}" data-entities="{{plane.entity_filter}}" data-mode="overwrite" data-count="{{plane.actions.delete}}" data-dashboard="{{plane.actions.delete_console}}" data-kept="{{plane.actions.kept}}">Overwrite from code</button>{{/if}}
         </article>
         {{#if plane.show_export}}
-        <article class="sp-sync-card">
-            <h3>Export from dashboard</h3>
-            <p>Render this database as <code class="sp-code-inline">{{plane.source_file}}</code>. Commit it in the source repository and the code is back in step with what the console decided.</p>
-            <p class="sp-sync-card__count">{{plane.in_db}} rows</p>
+        <article class="sp-sync-card{{#if (eq plane.recommendation.card "export")}} sp-sync-card--recommended{{/if}}">
+            <h3>Export to code</h3>
+            <p>Render this database as <code class="sp-code-inline">{{plane.source_file}}</code> and commit it. That is the only way a row written here reaches the file; the instance never writes into the repository itself.</p>
+            <p class="sp-sync-card__count">{{plane.in_db}} rows{{#if plane.actions.kept}} · {{plane.actions.kept}} only here{{/if}}</p>
             <button type="button" class="sp-btn sp-btn--outline" data-action="sync-export" data-export-url="{{plane.export_url}}" data-file="{{plane.source_file}}">Export</button>
         </article>
         {{/if}}
     </div>
 
-    {{#> components/section title="Differences" count=plane.row_count note="Each line is one disagreement between the declaration and this database, and which action would resolve it."}}
+    {{#> components/section title="Differences" count=plane.row_count note="One line per disagreement: what happened, who wrote the database row, and the one action that settles it."}}
         {{#*inline "section_actions"}}
         {{#if plane.entity_filter}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="{{plane.clear_filter_url}}">Show all entities</a>{{/if}}
         {{/inline}}
@@ -84,8 +89,7 @@
             <th>In code</th>
             <th>In this database</th>
             <th>Written by</th>
-            <th>Insert only</th>
-            <th>Overwrite</th>
+            <th>Resolves with</th>
         </tr></thead>
         <tbody>
         {{#each plane.rows}}
@@ -96,8 +100,7 @@
             <td class="sp-u-text-secondary">{{in_code}}</td>
             <td class="sp-u-text-secondary">{{in_db}}</td>
             <td>{{#if origin}}{{> components/badge tone=origin_tone text=origin}}{{else}}<span class="sp-u-text-tertiary">—</span>{{/if}}</td>
-            <td>{{#if insert_applies}}inserted{{else}}<span class="sp-u-text-tertiary">no change</span>{{/if}}</td>
-            <td>{{#if overwrite_applies}}{{overwrite_effect}}{{else}}<span class="sp-u-text-tertiary">{{overwrite_effect}}</span>{{/if}}</td>
+            <td>{{> components/badge tone=resolve_tone text=resolve}}</td>
         </tr>
         {{/each}}
         </tbody>

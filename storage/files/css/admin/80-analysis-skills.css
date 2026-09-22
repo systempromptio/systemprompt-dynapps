@@ -1,10 +1,77 @@
 @layer components {
-/* Analysis › Skills: the invocations chart, the adoption funnels
-   (80-analysis-adoption.css), then one table per marketplace with a plugin
-   band per group. */
+/* Analysis › Skills: one scope strip (window, marketplace) over three tabs.
+   Overview is the adoption table (80-analysis-adoption.css); Activity is the
+   chart and its top-skills list; Skills is one table per marketplace with a
+   plugin band per group. */
+
+/* The scope strip: two labelled pill rows, wrapping on a narrow screen. The
+   tab strip beneath it is the page's own — underlined, full width. */
+.sp-askill-scope {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sp-space-2) var(--sp-space-6);
+    margin-block: var(--sp-space-2) var(--sp-space-3);
+}
+
+.sp-askill-scope__group {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-space-2);
+    min-width: 0;
+}
+
+.sp-askill-scope__label {
+    font-size: var(--sp-text-2xs);
+    text-transform: uppercase;
+    letter-spacing: var(--sp-tracking-wide);
+    color: var(--sp-text-tertiary);
+    white-space: nowrap;
+}
+
+.sp-askill-scope .sp-tabs {
+    margin: 0;
+    border-bottom: none;
+    gap: var(--sp-space-1);
+}
+
+.sp-askill-scope .sp-tab {
+    padding: var(--sp-space-1) var(--sp-space-3);
+    border: 1px solid var(--sp-border-default);
+    border-radius: var(--sp-radius-full);
+    background: var(--sp-bg-surface);
+    font-size: var(--sp-text-xs);
+    top: 0;
+}
+
+.sp-askill-scope .sp-tab--active {
+    background: var(--sp-accent-fill);
+    color: var(--sp-text-on-accent);
+    border-color: var(--sp-accent);
+}
+
+.sp-askill-views .sp-tabs {
+    margin-bottom: var(--sp-space-3);
+}
+
 .sp-askill-chart {
     min-height: 20rem;
     margin-block: var(--sp-space-3);
+}
+
+/* Activity: the skills the chart draws, share as a track beside the figure. */
+.sp-askill-top {
+    margin-block: var(--sp-space-3) var(--sp-space-4);
+    min-width: 0;
+}
+
+.sp-askill-top-table th.sp-askill-top__col-share { width: 14%; min-width: 7rem; }
+
+.sp-askill-top__share {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: var(--sp-space-2);
 }
 
 .sp-askill-group {

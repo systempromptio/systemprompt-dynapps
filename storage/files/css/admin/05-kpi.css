@@ -108,6 +108,7 @@
 .sp-kpi--err,
 .sp-kpi--danger  { box-shadow: var(--sp-shadow-card), inset 2px 0 0 var(--sp-danger); }
 .sp-kpi--accent  { box-shadow: var(--sp-shadow-card), inset 2px 0 0 var(--sp-accent); }
+.sp-kpi--info    { box-shadow: var(--sp-shadow-card), inset 2px 0 0 var(--sp-info); }
 
 .sp-kpi--link {
     text-decoration: none;

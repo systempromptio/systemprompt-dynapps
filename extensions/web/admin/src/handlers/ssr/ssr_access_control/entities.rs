@@ -41,11 +41,26 @@ pub(crate) struct AcQuery {
     // `entity=<kind>/<id>` narrows its diff table — the ledger's deep link.
     pub tab: Option<String>,
     pub entity: Option<String>,
+    // Why: the audience grid's own axes. `subject` is one column in focus
+    // as `<kind>:<id>`; `entity` doubles as the row drill on that tab.
+    pub subject_kind: Option<String>,
+    pub subject: Option<String>,
+    pub decision: Option<String>,
 }
 
 impl AcQuery {
-    fn pick(value: Option<&String>) -> Option<&str> {
+    pub(super) fn pick(value: Option<&String>) -> Option<&str> {
         value.map(String::as_str).filter(|v| !v.is_empty())
+    }
+
+    pub(super) fn audience_applied(&self) -> bool {
+        Self::pick(self.subject_kind.as_ref()).is_some()
+            || Self::pick(self.subject.as_ref()).is_some()
+            || Self::pick(self.decision.as_ref()).is_some()
+            || Self::pick(self.entity.as_ref()).is_some()
+            || Self::pick(self.entity_kind.as_ref()).is_some()
+            || Self::pick(self.band.as_ref()).is_some()
+            || Self::pick(self.q.as_ref()).is_some()
     }
 
     pub(super) fn any_applied(&self) -> bool {

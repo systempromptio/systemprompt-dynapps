@@ -113,8 +113,33 @@ async fn populated_analysis_pages_render_facts_and_skill_totals() {
     );
 
     let (status, body) = app
+        .call(Call::get("/admin/analysis/skills", Principal::Admin))
+        .await;
+    assert_eq!(status, StatusCode::OK, "skills overview body: {body}");
+    assert!(
+        body.contains("Adoption by marketplace") && body.contains("sp-adopt-table"),
+        "the default tab is the marketplace overview"
+    );
+    assert!(
+        !body.contains("sp-askill-table"),
+        "the overview does not render the skills table"
+    );
+
+    let (status, body) = app
         .call(Call::get(
-            "/admin/analysis/skills?search=demo",
+            "/admin/analysis/skills?tab=activity",
+            Principal::Admin,
+        ))
+        .await;
+    assert_eq!(status, StatusCode::OK, "skills activity body: {body}");
+    assert!(
+        body.contains("data-chart") && body.contains("Skills in the window"),
+        "the activity tab renders the chart and the top-skills list"
+    );
+
+    let (status, body) = app
+        .call(Call::get(
+            "/admin/analysis/skills?tab=skills&search=demo",
             Principal::Admin,
         ))
         .await;
@@ -124,6 +149,26 @@ async fn populated_analysis_pages_render_facts_and_skill_totals() {
         body.contains("$0.005000"),
         "skill cost preserves sub-cent precision"
     );
+
+    let (status, body) = app
+        .call(Call::get(
+            "/admin/analysis/skills?tab=skills&skill=demo",
+            Principal::Admin,
+        ))
+        .await;
+    assert_eq!(status, StatusCode::OK, "skills body via skill=: {body}");
+    assert!(
+        body.contains("demo:skill"),
+        "a report's skill= link searches the table"
+    );
+
+    let (status, _) = app
+        .call(Call::get(
+            "/admin/analysis/skills?tab=bogus",
+            Principal::Admin,
+        ))
+        .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "an unknown tab is refused");
 
     let (status, body) = app
         .call(Call::get(

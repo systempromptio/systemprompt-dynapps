@@ -166,8 +166,17 @@ pub(crate) fn conversation_detail_help() -> HelpView {
 
 pub(crate) fn skills_help() -> HelpView {
     HelpView::new(
-        "Skills — what the columns mean",
-        "An invocation is a harness hook event — a slash command or the Skill tool — keyed plugin:skill. Everything else on a row is read from the conversations whose Claude Code session invoked the skill, so a number here is the same number on the Conversations page.",
+        "Skills — what the views mean",
+        "An invocation is a harness hook event — a slash command or the Skill tool — keyed plugin:skill; the plugin is the key's prefix, whichever plugin carries the hooks. Everything else is read from the conversations whose Claude Code session invoked the skill, so a number here is the same number on the Conversations page.",
+    )
+    .section(
+        "Scope and views",
+        vec![
+            item("calendar", "Window · Marketplace", "The scope above the tabs. Every view honours both; pick a marketplace to see only its skills, its chart and its row."),
+            item("layers", "Overview", "One row per marketplace: entitled → installed → active, skills used of those declared, the window's invocations, conversations, cost and judge mean."),
+            item("bolt", "Activity", "Invocations over the window as one chart — per day, per week once a year is shown — and the skills it draws, each a link into the table."),
+            item("skill", "Skills", "The table: one row per skill under its marketplace and plugin, with the client, sort and search filters."),
+        ],
     )
     .section(
         "The skill row",
@@ -184,7 +193,7 @@ pub(crate) fn skills_help() -> HelpView {
     .section(
         "Adoption",
         vec![
-            item("layers", "Entitled → installed → active", "Per marketplace: people the rules reach, consumers with a verified receipt for any of its skills, and distinct people who invoked one in the window."),
+            item("layers", "Entitled → installed → active", "Per marketplace: people the rules reach, consumers with a verified receipt for any of its skills, and distinct people who invoked one in the window. The install rate counts only installed people the rules entitle; the rest are shown as \"outside\" so no rate can pass 100%."),
             item("calendar", "Versions", "The marketplace's current content hash and how many hashes it has served; each links to the version history."),
         ],
     )

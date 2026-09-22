@@ -12,7 +12,7 @@ pub(crate) mod view;
 
 use sqlx::PgPool;
 
-pub(crate) use view::{AppliedView, HashView, PlaneCardView};
+pub(crate) use view::{AppliedView, HashView, PlaneCardView, SyncRecommendation};
 
 use crate::error::AdminResult;
 use crate::handlers::ssr::types::TabLinkView;
@@ -63,6 +63,7 @@ pub(crate) async fn plane_card(
         rows.retain(|r| r.entity_type == kind && r.entity_id == id);
     }
     let owner_url = plane.owner_url();
+    let is_clean = drift.is_clean && drift.unreadable.is_none();
     Ok(PlaneCardView {
         id: plane.id(),
         label: plane.label(),
@@ -74,10 +75,11 @@ pub(crate) async fn plane_card(
         declared_count: drift.declared_count,
         in_db: drift.in_db,
         kpis: drift.kpis,
+        recommendation: SyncRecommendation::for_actions(&drift.actions, is_clean),
         actions: drift.actions,
         row_count: rows.len(),
         rows,
-        is_clean: drift.is_clean && drift.unreadable.is_none(),
+        is_clean,
         unreadable: drift.unreadable,
         applied: applied_view(state.as_ref(), &drift.declared_hash),
         export_url: format!("/api/public/admin/sync/planes/{}/export", plane.id()),

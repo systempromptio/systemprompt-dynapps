@@ -117,10 +117,19 @@ fn missing_changed_and_orphan_rows_are_each_classified() {
     assert_eq!(counts.changed, 1, "admin flipped to deny");
     assert_eq!(counts.only_in_db, 3);
     assert_eq!(counts.only_in_db_dashboard, 2);
-    assert_eq!(counts.only_in_db_stale, 1);
+    assert_eq!(counts.only_in_db_code, 1);
+    assert_eq!(counts.only_in_db_bundle, 0);
     assert_eq!(
-        counts.only_in_db_governed, 2,
-        "github is not declared, so not governed"
+        counts.only_in_db_retire, 2,
+        "both atlassian orphans go: one is governed, one code wrote"
+    );
+    assert_eq!(
+        counts.only_in_db_console_retire, 1,
+        "the console row on atlassian"
+    );
+    assert_eq!(
+        counts.only_in_db_kept, 1,
+        "github is not declared and the console wrote it, so it stays"
     );
     assert_eq!(counts.default_changed, 1, "declared closed, database open");
     let github = drift
@@ -129,10 +138,62 @@ fn missing_changed_and_orphan_rows_are_each_classified() {
         .find(|o| o.row.entity_id == "github")
         .expect("github orphan");
     assert!(!github.governed);
-    assert_eq!(github.origin, OrphanOrigin::Dashboard);
+    assert!(!github.retire);
+    assert_eq!(github.origin, OrphanOrigin::Console);
     assert!(drift.touches("mcp_server", "atlassian"));
     assert!(drift.touches("mcp_server", "github"));
     assert!(!drift.touches("mcp_server", "salesforce"));
+}
+
+#[test]
+fn code_written_rows_on_a_dropped_entity_are_retired_but_bundle_rows_are_kept() {
+    let drift = compute_drift(
+        &declared(),
+        &[
+            row("atlassian", "role", "admin", Access::Allow, "pilot", "yaml"),
+            row(
+                "atlassian",
+                "group",
+                "india-devs",
+                Access::Allow,
+                "pilot",
+                "yaml",
+            ),
+            row("github", "group", "uk", Access::Allow, "gone", "yaml"),
+            row(
+                "github",
+                "role",
+                "admin",
+                Access::Allow,
+                "kit",
+                "bundle:sfnext",
+            ),
+        ],
+        &[entity("atlassian", false)],
+    );
+    let counts = drift.counts();
+    assert_eq!(counts.only_in_db, 2);
+    assert_eq!(counts.only_in_db_code, 1);
+    assert_eq!(counts.only_in_db_bundle, 1);
+    assert_eq!(
+        counts.only_in_db_retire, 1,
+        "code removed github; code takes its row away"
+    );
+    assert_eq!(
+        counts.only_in_db_kept, 1,
+        "the bundle's row is not this file's to delete"
+    );
+    let by_source = |source: &str| {
+        drift
+            .only_in_db
+            .iter()
+            .find(|o| o.row.source == source)
+            .expect("orphan")
+    };
+    assert_eq!(by_source("yaml").origin, OrphanOrigin::Code);
+    assert!(by_source("yaml").retire);
+    assert_eq!(by_source("bundle:sfnext").origin, OrphanOrigin::Bundle);
+    assert!(!by_source("bundle:sfnext").retire);
 }
 
 #[test]

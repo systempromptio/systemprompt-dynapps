@@ -1,8 +1,9 @@
 -- Marketplace adoption from the record: who installed (distinct consumers
--- holding a verified receipt for any skill the marketplace owns, by host),
--- who was active in the window (distinct people who invoked one of its
--- skills) and what that activity cost. Entitlement is resolved from the
--- access-control rules in Rust and joined there.
+-- holding a verified receipt for any skill the marketplace owns, by host —
+-- a stock, so never windowed), who was active in the window (distinct people
+-- who invoked one of its skills) and what that activity cost. Entitlement is
+-- resolved from the access-control rules in Rust and joined there, which is
+-- why the consumer ids travel with the count.
 WITH owned AS (
     SELECT o.marketplace_id, replace(o.id, '-', '_') AS skill_key FROM service_owned_ids o WHERE o.kind = 'skill'
 ), receipts AS (
@@ -13,6 +14,7 @@ WITH owned AS (
 ), installs AS (
     SELECT marketplace_id,
            COUNT(DISTINCT consumer_id)::bigint AS installed,
+           ARRAY_AGG(DISTINCT consumer_id) AS installed_consumers,
            COUNT(DISTINCT consumer_id) FILTER (WHERE host = 'claude-code')::bigint AS installed_claude_code,
            COUNT(DISTINCT consumer_id) FILTER (WHERE host = 'opencode')::bigint AS installed_opencode,
            COUNT(DISTINCT consumer_id) FILTER (WHERE host NOT IN ('claude-code', 'opencode'))::bigint AS installed_other,
@@ -52,6 +54,7 @@ SELECT m.marketplace_id AS "marketplace_id!: MarketplaceId",
        (SELECT COUNT(*)::bigint FROM service_owned_ids o WHERE o.kind = 'skill' AND o.marketplace_id = m.marketplace_id) AS "skills!",
        (SELECT COUNT(*)::bigint FROM service_owned_ids o WHERE o.kind = 'plugin' AND o.marketplace_id = m.marketplace_id) AS "plugins!",
        COALESCE(i.installed, 0)::bigint AS "installed!",
+       COALESCE(i.installed_consumers, '{}'::text[]) AS "installed_consumers!",
        COALESCE(i.installed_claude_code, 0)::bigint AS "installed_claude_code!",
        COALESCE(i.installed_opencode, 0)::bigint AS "installed_opencode!",
        COALESCE(i.installed_other, 0)::bigint AS "installed_other!",

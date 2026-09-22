@@ -97,7 +97,10 @@ async fn main() -> Result<()> {
     let router = systemprompt::mcp::create_router(
         server,
         Arc::clone(ctx.mcp_session_repository()),
-        systemprompt::mcp::McpHttpConfig::default(),
+        systemprompt::mcp::McpHttpConfig {
+            server_id: Some(service_id.clone()),
+            ..systemprompt::mcp::McpHttpConfig::default()
+        },
     );
 
     tracing::info!(

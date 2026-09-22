@@ -117,6 +117,7 @@ impl From<SyncOutcome> for ApplyOutcome {
             deleted: outcome.deleted,
             entities_inserted: outcome.entities_inserted,
             entities_updated: outcome.entities_updated,
+            entities_retired: outcome.entities_retired,
         }
     }
 }
@@ -181,33 +182,33 @@ impl SyncPlane for AccessControlPlane {
             in_db,
             kpis: vec![
                 DriftKpi {
-                    label: "In code, not in database",
-                    value: counts.missing_in_db,
-                    note: "Insert only adds these",
+                    label: "Added in code",
+                    value: counts.missing_in_db + counts.entities_missing,
+                    note: "Insert only or Overwrite adds these",
+                    tone: "ok",
+                },
+                DriftKpi {
+                    label: "Changed in code",
+                    value: counts.changed + counts.default_changed,
+                    note: "Overwrite corrects these",
+                    tone: "warn",
+                },
+                DriftKpi {
+                    label: "Removed from code",
+                    value: counts.only_in_db_code,
+                    note: "Overwrite deletes these",
+                    tone: "err",
+                },
+                DriftKpi {
+                    label: "Written in console",
+                    value: counts.only_in_db_dashboard,
+                    note: "Export carries these to code",
                     tone: "info",
                 },
                 DriftKpi {
-                    label: "In database, not in code",
-                    value: counts.only_in_db,
-                    note: "Overwrite deletes those on declared entities",
-                    tone: "warn",
-                },
-                DriftKpi {
-                    label: "Differ",
-                    value: counts.changed,
-                    note: "access or reason disagrees",
-                    tone: "warn",
-                },
-                DriftKpi {
-                    label: "Defaults differ",
-                    value: counts.default_changed,
-                    note: "open vs closed",
-                    tone: "warn",
-                },
-                DriftKpi {
                     label: "Awaiting a bundle",
-                    value: declared.awaiting.len(),
-                    note: "declared with owner:, bundle not active",
+                    value: declared.awaiting.len() + counts.only_in_db_bundle,
+                    note: "owned by a kit; nothing to do here",
                     tone: "muted",
                 },
             ],
@@ -215,8 +216,9 @@ impl SyncPlane for AccessControlPlane {
                 insert: counts.missing_in_db,
                 insert_entities: counts.entities_missing,
                 update: counts.changed + counts.default_changed,
-                delete: counts.only_in_db_governed,
-                delete_console: counts.only_in_db_dashboard,
+                delete: counts.only_in_db_retire,
+                delete_console: counts.only_in_db_console_retire,
+                kept: counts.only_in_db_kept,
             },
             rows,
             is_clean,

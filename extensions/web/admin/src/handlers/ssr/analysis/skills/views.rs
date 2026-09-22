@@ -74,25 +74,27 @@ pub(super) struct MarketplaceGroupView {
     pub(super) users: i64,
 }
 
+// Why: one Overview row — a marketplace's funnel and its window, every rate
+// over its own denominator so none can pass 100.
 #[derive(Debug, Serialize)]
 pub(super) struct AdoptionView {
     pub(super) marketplace: String,
     pub(super) marketplace_name: String,
     pub(super) versions_href: String,
+    pub(super) skills_href: String,
+    pub(super) activity_href: String,
     pub(super) entitled: usize,
     pub(super) installed: i64,
+    // Why: installed people the rules entitle; the rate's numerator. The
+    // difference is shown beside the count, never folded into the rate.
+    pub(super) installed_entitled: usize,
+    pub(super) installed_outside: i64,
     pub(super) active: i64,
     pub(super) install_rate: String,
     pub(super) install_rate_pct: i64,
     pub(super) activation_rate: String,
-    pub(super) activation_rate_pct: i64,
-    // Why: active over entitled — the solid fill on the one track whose
-    // full width is the entitled population.
     pub(super) active_pct: i64,
-    pub(super) skills_href: String,
-    pub(super) installed_claude_code: i64,
-    pub(super) installed_opencode: i64,
-    pub(super) installed_other: i64,
+    pub(super) hosts_title: String,
     pub(super) skills: i64,
     pub(super) skills_used: i64,
     pub(super) plugins: i64,
@@ -117,15 +119,43 @@ pub(super) struct SkillsKpiView {
     pub(super) spark: SparklineView,
 }
 
+// Why: the Activity tab's list under the chart — the skills the chart
+// draws, three columns, each a link into the table.
+#[derive(Debug, Serialize)]
+pub(super) struct TopSkillView {
+    pub(super) skill: String,
+    pub(super) href: String,
+    pub(super) marketplace_name: String,
+    pub(super) invocations: i64,
+    pub(super) users: i64,
+    pub(super) share: String,
+    pub(super) share_pct: i64,
+    pub(super) last_used: String,
+}
+
+// Why: the marketplace scope strip; a name is a String, unlike a tab's.
+#[derive(Debug, Serialize)]
+pub(super) struct ScopeLinkView {
+    pub(super) label: String,
+    pub(super) href: String,
+    pub(super) is_active: bool,
+}
+
 #[derive(Debug, Serialize)]
 pub(super) struct SkillsPageContext {
     pub(super) page: &'static str,
     pub(super) title: &'static str,
+    pub(super) tab: &'static str,
+    pub(super) tabs: Vec<TabLinkView>,
     pub(super) days: i64,
     pub(super) range_links: Vec<TabLinkView>,
+    pub(super) marketplace_links: Vec<ScopeLinkView>,
+    pub(super) marketplace_name: Option<String>,
+    pub(super) scope_label: String,
     pub(super) ribbon: RibbonView,
     pub(super) kpis: Vec<SkillsKpiView>,
-    pub(super) chart: SvgLineChartView,
+    pub(super) chart: Option<SvgLineChartView>,
+    pub(super) top_skills: Vec<TopSkillView>,
     pub(super) adoption: Vec<AdoptionView>,
     pub(super) groups: Vec<MarketplaceGroupView>,
     pub(super) row_count: usize,

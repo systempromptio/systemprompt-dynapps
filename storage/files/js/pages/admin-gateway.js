@@ -119,19 +119,46 @@ const saveSettings = async (event) => {
   }
 };
 
+const probeCell = (text, mono) => {
+  const td = document.createElement('td');
+  if (mono) td.className = 'sp-table__cell--mono';
+  td.textContent = text;
+  return td;
+};
+
+const probeRow = (r) => {
+  const tr = document.createElement('tr');
+  tr.append(
+    probeCell(r.name || r.id, false),
+    probeCell(r.model_pattern, true),
+    probeCell(r.provider, false),
+    probeCell(r.upstream_model || '—', true),
+  );
+  return tr;
+};
+
 const renderProbe = (target, routes) => {
   if (!routes.length) {
     target.textContent = 'No route is visible to this account.';
     return;
   }
-  const list = routes
-    .map((r) => (r.name || r.id) + '  ' + r.model_pattern + ' → ' + r.provider)
-    .join('\n');
-  target.innerHTML = '';
-  const pre = document.createElement('pre');
-  pre.className = 'sp-code-block';
-  pre.textContent = routes.length + ' route(s)\n' + list;
-  target.append(pre);
+  const table = document.createElement('table');
+  table.className = 'sp-table__el sp-table__el--nested';
+  const head = document.createElement('thead');
+  const headRow = document.createElement('tr');
+  ['Route', 'Pattern', 'Provider', 'Upstream'].forEach((label) => {
+    const th = document.createElement('th');
+    th.textContent = label;
+    headRow.append(th);
+  });
+  head.append(headRow);
+  const body = document.createElement('tbody');
+  body.append(...routes.map(probeRow));
+  table.append(head, body);
+  const wrap = document.createElement('div');
+  wrap.className = 'sp-table sp-p-gateway__probe';
+  wrap.append(table);
+  target.replaceChildren(wrap);
 };
 
 const probe = async (event) => {

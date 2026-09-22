@@ -100,28 +100,28 @@ impl SyncPlane for GroupsPlane {
             in_db,
             kpis: vec![
                 DriftKpi {
-                    label: "In code, not in database",
+                    label: "Added in code",
                     value: drift.missing_sets + drift.missing_mappings,
-                    note: "Insert only adds these",
-                    tone: "info",
+                    note: "Insert only or Overwrite adds these",
+                    tone: "ok",
                 },
                 DriftKpi {
-                    label: "Sets only in database",
-                    value: drift.orphan_sets,
-                    note: "kept by every mode; export carries them to code",
-                    tone: "warn",
-                },
-                DriftKpi {
-                    label: "Mappings only in database",
-                    value: drift.orphan_yaml_mappings + drift.orphan_console_mappings,
-                    note: "Overwrite deletes the ones code once declared",
-                    tone: "warn",
-                },
-                DriftKpi {
-                    label: "Differ",
+                    label: "Changed in code",
                     value: drift.changed_sets,
-                    note: "name or description disagrees",
+                    note: "Overwrite corrects these",
                     tone: "warn",
+                },
+                DriftKpi {
+                    label: "Removed from code",
+                    value: drift.orphan_yaml_mappings,
+                    note: "Overwrite deletes these mappings",
+                    tone: "err",
+                },
+                DriftKpi {
+                    label: "Written in console",
+                    value: drift.orphan_sets + drift.orphan_console_mappings,
+                    note: "Export carries these to code",
+                    tone: "info",
                 },
             ],
             actions: ActionCounts {
@@ -130,6 +130,7 @@ impl SyncPlane for GroupsPlane {
                 update: drift.changed_sets,
                 delete: drift.orphan_yaml_mappings,
                 delete_console: 0,
+                kept: drift.orphan_sets + drift.orphan_console_mappings,
             },
             is_clean: drift.is_clean(),
             rows: drift.rows,

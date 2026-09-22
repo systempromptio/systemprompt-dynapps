@@ -4,12 +4,14 @@
 
 pub(crate) mod analysis_conversation;
 pub(crate) mod analysis_conversations;
+pub(crate) mod analysis_skill_conversations;
 pub(crate) mod analysis_skills;
 pub(crate) mod contexts;
 pub(crate) mod dashboard;
 pub(crate) mod dashboard_cost;
 pub(crate) mod governance;
 pub(crate) mod history;
+pub(crate) mod mcp;
 pub(crate) mod people;
 pub(crate) mod projects;
 pub(crate) mod reports;

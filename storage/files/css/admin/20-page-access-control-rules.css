@@ -74,12 +74,4 @@
     color: var(--sp-text-secondary);
 }
 
-.sp-ac-grid { margin-top: var(--sp-space-3); }
-
-.sp-ac-grid .sp-audience-matrix__col {
-    vertical-align: bottom;
-}
-
-.sp-ac-grid .sp-audience-matrix__col .sp-audience-matrix__kind { display: block; }
-
 }

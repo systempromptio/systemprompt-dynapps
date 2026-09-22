@@ -92,13 +92,13 @@ The distinction is the honest one. Only the projected kinds have a database to d
 
 ## The three directions
 
-Each projected plane's Sync tab — `/admin/access-control?tab=sync`, `/admin/groups?tab=sync`, `/admin/gateway/policies?tab=sync` — offers the same three actions, confirmed in words that name what will move:
+Each projected plane's Sync tab — `/admin/access-control?tab=sync`, `/admin/groups?tab=sync`, `/admin/gateway/policies?tab=sync` — counts its differences by cause (*added in code*, *changed in code*, *removed from code*, *written in console*), prints a **Next:** line naming the action that settles the plane, and offers the same three actions, confirmed in words that name what will move. Each difference line carries a **Resolves with** badge naming its button.
 
 | action | writes | leaves alone |
 |---|---|---|
 | **Insert only** | rows the declaration carries and the database lacks | everything that exists, even if it differs |
-| **Overwrite from code** | inserts the missing, corrects what differs, **deletes** rows on declared entities the declaration does not carry | entities the declaration does not mention; for access control, every per-person override |
-| **Export** | nothing — renders the database as the declaration file to commit | — |
+| **Overwrite from code** | adds what code added, corrects what code changed, **deletes** what code removed — including rows the declaration itself once wrote on entities it has since dropped | rows the console or a bundle wrote on entities the declaration does not mention; for access control, every per-person override |
+| **Export** | nothing — renders the database as the declaration file to commit; the only way a console row reaches code | — |
 
 Every apply runs in one transaction that re-reads the tables first, writes an activity row (who, plane, mode, counts), and updates `sync_state` with the declared hash it applied. The card then reads *declared `ab12…` · last applied `ab12…` by Ed 2 minutes ago (overwrite)*; if the file changes afterwards the card says *declaration changed since last apply*. The boot seed — the one write nobody presses — is recorded the same way with actor `boot` and mode `seed`.
 

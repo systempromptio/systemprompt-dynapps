@@ -12,7 +12,7 @@
 use serde::Serialize;
 use sha2::{Digest, Sha256};
 
-use super::plane::DriftRow;
+use super::plane::{DriftRow, resolution};
 use crate::repositories::config::groups_yaml_types::{GroupsDoc, MemberSetDef};
 
 /// A group or project as the database holds it.
@@ -108,10 +108,17 @@ struct Line<'a> {
 }
 
 fn row(line: Line<'_>) -> DriftRow {
-    let (kind_label, kind_tone) = match line.kind {
-        "missing" => ("In code, not in database", "info"),
-        "orphan" => ("In database, not in code", "warn"),
-        _ => ("Differs", "warn"),
+    let (kind_label, kind_tone) = match (line.kind, line.origin) {
+        ("missing", _) => ("Added in code", "ok"),
+        ("orphan", "console") => ("Written in console", "warn"),
+        ("orphan", _) => ("Removed from code", "err"),
+        (_, "console") => ("Edited in console", "warn"),
+        _ => ("Changed in code", "warn"),
+    };
+    let (resolve, resolve_tone) = match (line.kind, line.overwrite_applies) {
+        ("missing", _) => resolution(true, true, line.overwrite_effect),
+        ("orphan", false) if line.origin == "console" => ("Export to keep".to_owned(), "info"),
+        _ => resolution(false, line.overwrite_applies, line.overwrite_effect),
     };
     DriftRow {
         kind: line.kind,
@@ -130,8 +137,8 @@ fn row(line: Line<'_>) -> DriftRow {
         in_code: line.in_code,
         in_db: line.in_db,
         origin: line.origin,
-        origin_tone: if line.origin == "stale" {
-            "err"
+        origin_tone: if line.origin == "console" {
+            "info"
         } else {
             "muted"
         },
@@ -139,6 +146,8 @@ fn row(line: Line<'_>) -> DriftRow {
         insert_applies: line.kind == "missing",
         overwrite_applies: line.overwrite_applies,
         overwrite_effect: line.overwrite_effect,
+        resolve,
+        resolve_tone,
     }
 }
 
@@ -193,7 +202,7 @@ fn compare_sets(doc: &GroupsDoc, sets: &[MemberSetRow], drift: &mut GroupsDrift)
         let origin = if s.source == "dashboard" {
             "console"
         } else {
-            "stale"
+            "code"
         };
         drift.rows.push(row(Line {
             kind: "orphan",

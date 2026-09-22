@@ -1,6 +1,7 @@
 -- Every skill invoked in the window, with what the deterministic record says
 -- about the conversations that invoked it. Invocations come from the hook
--- plane (analysis_skill_version_events, dashed `plugin:skill`); spend, tokens,
+-- plane (analysis_skill_version_events, dashed `plugin:skill`, whose
+-- plugin_id is the key's prefix, not the hook owner); spend, tokens,
 -- tools, errors, governance and the judge's verdict come from the
 -- conversation_facts rows whose harness session invoked the skill. Installs
 -- are distinct consumers holding a verified receipt for the skill resource

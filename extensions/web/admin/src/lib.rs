@@ -85,6 +85,7 @@ pub mod test_support {
         TranscriptRequestIds, TurnView, build_conversation, meta_view, parse_assistant, preview,
         short_id, strip_system_reminders, tidy_lines, transcript_request_ids,
     };
+    pub use crate::repositories::analysis::inventory_index::MarketplaceAudience;
     pub use crate::services::connector_accounts::{
         Connection, ConnectionSnapshot, get_connections,
     };

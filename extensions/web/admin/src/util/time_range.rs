@@ -58,6 +58,32 @@ impl TimeRangePreset {
         }
     }
 
+    // Why: the spelling the URL and the picker use, so a page can hand a
+    // resolved range back to the address bar without a second table.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Min15 => "15m",
+            Self::Hour1 => "1h",
+            Self::Hours24 => "24h",
+            Self::Days7 => "7d",
+            Self::Days30 => "30d",
+            Self::Custom => "custom",
+        }
+    }
+
+    #[must_use]
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::Min15 => "15 minutes",
+            Self::Hour1 => "hour",
+            Self::Hours24 => "24 hours",
+            Self::Days7 => "7 days",
+            Self::Days30 => "30 days",
+            Self::Custom => "custom range",
+        }
+    }
+
     fn parse(value: &str) -> Option<Self> {
         match value {
             "15m" => Some(Self::Min15),

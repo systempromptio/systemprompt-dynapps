@@ -1,12 +1,14 @@
-//! Assembling the Skills page context.
+//! Assembling the Skills page context: the scope strip, the tab strip, and
+//! the active tab's body.
 
 use chrono::Utc;
 
-use super::SkillsQuery;
+use super::activity::{chart, top_skills};
 use super::adoption::adoption_view;
-use super::rows::{group_rows, skill_row_view};
-use super::summary::{chart, kpis, unused};
-use super::views::{SkillFactView, SkillsPageContext};
+use super::rows::{group_rows, marketplace_name, skill_row_view};
+use super::summary::{kpis, unused};
+use super::views::{ScopeLinkView, SkillFactView, SkillsPageContext};
+use super::{SkillsQuery, SkillsTab};
 use crate::handlers::ssr::analysis::help::skills_help;
 use crate::handlers::ssr::analysis::reports::banner::ReportBannerView;
 use crate::handlers::ssr::analysis::ribbon::{RibbonGroupView, RibbonView};
@@ -23,7 +25,7 @@ pub(super) struct SkillsRead<'a> {
     pub(super) index: &'a InventoryIndex,
 }
 
-fn range_links(query: &SkillsQuery) -> Vec<TabLinkView> {
+fn range_links(query: &SkillsQuery, tab: SkillsTab) -> Vec<TabLinkView> {
     [7, 30, 90, 365]
         .iter()
         .map(|d| TabLinkView {
@@ -39,40 +41,77 @@ fn range_links(query: &SkillsQuery) -> Vec<TabLinkView> {
                 365 => "1 year",
                 _ => "30 days",
             },
-            href: query.link(Some(*d), None),
+            href: query.link(tab, Some(*d), None),
             is_active: *d == query.days(),
             count: None,
         })
         .collect()
 }
 
-// Why: the ribbon's marketplace and client pills list what the instance
-// declares and what the rows contain; sort is a pill too, so every control
-// sits in one row.
-fn ribbon(query: &SkillsQuery, rows: &[SkillFactRow], index: &InventoryIndex) -> RibbonView {
+fn tab_links(query: &SkillsQuery, active: SkillsTab, row_count: usize) -> Vec<TabLinkView> {
+    SkillsTab::ALL
+        .iter()
+        .map(|t| TabLinkView {
+            slug: t.as_str(),
+            label: t.label(),
+            href: query.link(*t, None, None),
+            is_active: *t == active,
+            count: (*t == SkillsTab::Skills && *t != active)
+                .then(|| i64::try_from(row_count).ok())
+                .flatten(),
+        })
+        .collect()
+}
+
+// Why: the scope strip lists every marketplace the instance declares, by
+// name, with "All" first; the selection survives a tab or window change.
+fn marketplace_links(
+    query: &SkillsQuery,
+    tab: SkillsTab,
+    index: &InventoryIndex,
+) -> Vec<ScopeLinkView> {
+    let selected = query.marketplace();
+    let mut declared: Vec<(&str, &str)> = index
+        .marketplaces
+        .iter()
+        .map(|m| (m.id.as_str(), m.name.as_str()))
+        .collect();
+    declared.sort_by_key(|(_, name)| *name);
+    std::iter::once(ScopeLinkView {
+        label: "All marketplaces".to_owned(),
+        href: query.link_marketplace(tab, None),
+        is_active: selected.is_none(),
+    })
+    .chain(declared.into_iter().map(|(id, name)| ScopeLinkView {
+        label: name.to_owned(),
+        href: query.link_marketplace(tab, Some(id)),
+        is_active: selected.as_deref() == Some(id),
+    }))
+    .collect()
+}
+
+// Why: the table's own filters — client, sort, search. The scope (window
+// and marketplace) sits above the tabs and travels as preserved fields.
+fn ribbon(query: &SkillsQuery, rows: &[SkillFactRow]) -> RibbonView {
     let clients: std::collections::BTreeSet<&str> = rows
         .iter()
         .flat_map(|r| r.clients.iter().map(String::as_str))
         .collect();
-    let marketplace = SkillsQuery::trimmed(query.marketplace.as_deref());
     let client = SkillsQuery::trimmed(query.client.as_deref());
-    let search = SkillsQuery::trimmed(query.search.as_deref());
+    let search = query.search();
     let sorted = (query.sort() != SkillSort::Invocations).then(|| query.sort().as_str());
+    let mut preserved = vec![
+        ("tab".to_owned(), SkillsTab::Skills.as_str().to_owned()),
+        ("days".to_owned(), query.days().to_string()),
+    ];
+    if let Some(m) = query.marketplace() {
+        preserved.push(("marketplace".to_owned(), m));
+    }
     let mut ribbon = RibbonView::new(
         ANALYSIS_SKILLS_URL,
-        query.link_without(&["marketplace", "client", "search", "sort"]),
+        query.link_without(SkillsTab::Skills, &["client", "search", "sort"]),
     )
-    .preserve(&[("days".to_owned(), query.days().to_string())])
-    .group(RibbonGroupView::single(
-        "marketplace",
-        "Marketplace",
-        "layers",
-        marketplace.as_deref(),
-        index
-            .marketplaces
-            .iter()
-            .map(|m| (m.id.as_str(), m.name.clone(), 0)),
-    ))
+    .preserve(&preserved)
     .group(RibbonGroupView::single(
         "client",
         "Client",
@@ -88,34 +127,40 @@ fn ribbon(query: &SkillsQuery, rows: &[SkillFactRow], index: &InventoryIndex) ->
         &SkillSort::ALL.map(|(s, l)| (s.as_str(), l)),
     ))
     .search("search", search.as_deref(), "skill or plugin");
-    let export = |name: &str, value: &str| {
-        format!(
-            "/admin/export/analysis-skills?days={}&{name}={}&format=csv",
-            query.days(),
-            urlencoding::encode(value)
-        )
-    };
-    if let Some(m) = marketplace.as_deref() {
-        let label = super::rows::marketplace_name(index, m);
-        ribbon = ribbon.chip(
-            "Marketplace",
-            label,
-            query.link_without(&["marketplace"]),
-            Some(export("marketplace", m)),
-        );
-    }
     if let Some(c) = client.as_deref() {
         ribbon = ribbon.chip(
             "Client",
             c,
-            query.link_without(&["client"]),
-            Some(export("client", c)),
+            query.link_without(SkillsTab::Skills, &["client"]),
+            Some(format!(
+                "/admin/export/analysis-skills?{}&client={}&format=csv",
+                export_query(query),
+                urlencoding::encode(c)
+            )),
         );
     }
     if let Some(q) = search.as_deref() {
-        ribbon = ribbon.chip("Search", q, query.link_without(&["search"]), None);
+        ribbon = ribbon.chip(
+            "Search",
+            q,
+            query.link_without(SkillsTab::Skills, &["search"]),
+            None,
+        );
     }
     ribbon
+}
+
+fn export_query(query: &SkillsQuery) -> String {
+    query.marketplace().map_or_else(
+        || format!("days={}", query.days()),
+        |m| {
+            format!(
+                "days={}&marketplace={}",
+                query.days(),
+                urlencoding::encode(&m)
+            )
+        },
+    )
 }
 
 // Why: what the handler read besides the rows.
@@ -126,6 +171,7 @@ pub(super) struct SkillsPageInputs {
 
 pub(super) fn build_context(
     query: &SkillsQuery,
+    tab: SkillsTab,
     read: &SkillsRead<'_>,
     inputs: SkillsPageInputs,
 ) -> SkillsPageContext {
@@ -136,35 +182,71 @@ pub(super) fn build_context(
         index,
     } = *read;
     let today = Utc::now().date_naive();
-    let views: Vec<SkillFactView> = rows
+    let marketplace = query.marketplace();
+    let marketplace_name = marketplace.as_deref().map(|m| marketplace_name(index, m));
+    let scoped_adoption: Vec<&MarketplaceAdoptionRow> = adoption
         .iter()
-        .map(|r| skill_row_view(r, audience, index, today))
+        .filter(|a| {
+            marketplace
+                .as_deref()
+                .is_none_or(|m| m == a.marketplace_id.as_str())
+        })
         .collect();
-    let row_count = views.len();
-    let unused = unused(rows, index, audience);
+    let row_count = rows.len();
+    let (groups, unused) = if tab == SkillsTab::Skills {
+        let views: Vec<SkillFactView> = rows
+            .iter()
+            .map(|r| skill_row_view(r, audience, index, today))
+            .collect();
+        (
+            group_rows(views, index),
+            unused(rows, index, audience, marketplace.as_deref()),
+        )
+    } else {
+        (Vec::new(), Vec::new())
+    };
     SkillsPageContext {
         page: "analysis-skills",
         title: "Skills",
+        tab: tab.as_str(),
+        tabs: tab_links(query, tab, row_count),
         days: query.days(),
-        range_links: range_links(query),
-        ribbon: ribbon(query, rows, index),
-        kpis: kpis(rows, adoption, audience, today),
-        chart: chart(rows, today),
-        adoption: adoption
+        range_links: range_links(query, tab),
+        marketplace_links: marketplace_links(query, tab, index),
+        scope_label: marketplace_name
+            .clone()
+            .unwrap_or_else(|| "All marketplaces".to_owned()),
+        marketplace_name,
+        ribbon: ribbon(query, rows),
+        kpis: if tab == SkillsTab::Overview {
+            kpis(
+                rows,
+                &scoped_adoption,
+                audience,
+                marketplace.as_deref(),
+                today,
+            )
+        } else {
+            Vec::new()
+        },
+        chart: (tab == SkillsTab::Activity).then(|| chart(rows, today, query.days())),
+        top_skills: if tab == SkillsTab::Activity {
+            top_skills(query, rows, index)
+        } else {
+            Vec::new()
+        },
+        adoption: scoped_adoption
             .iter()
-            .map(|a| adoption_view(a, audience, index))
+            .map(|a| adoption_view(query, a, audience, index))
             .collect(),
-        groups: group_rows(views, index),
+        groups,
         row_count,
         unused_count: unused.len(),
         unused,
-        export: crate::export::ExportView::new(
-            &["analysis-skills"],
-            &format!("days={}", query.days()),
-        ),
+        export: crate::export::ExportView::new(&["analysis-skills"], &export_query(query)),
         is_admin: inputs.is_admin,
         help: skills_help(),
         report_banner: inputs.report_banner,
-        current_url: query.link(None, None),
+        current_url: query.link(tab, None, None),
     }
 }
