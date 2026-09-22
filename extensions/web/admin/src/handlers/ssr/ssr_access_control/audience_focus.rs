@@ -95,7 +95,7 @@ fn item(
     }
 }
 
-fn buckets(items: Vec<(&'static str, AcAudienceBucketItemView)>) -> Vec<AcAudienceBucketView> {
+fn buckets(items: &[(&'static str, AcAudienceBucketItemView)]) -> Vec<AcAudienceBucketView> {
     BUCKETS
         .into_iter()
         .map(|(decision, label)| {
@@ -127,7 +127,7 @@ fn subject_focus(
     rows: &[AcAudienceRowView],
     ledger: &[LedgerRuleRow],
 ) -> AcAudienceFocusView {
-    let items = rows
+    let items: Vec<(&'static str, AcAudienceBucketItemView)> = rows
         .iter()
         .filter_map(|row| {
             let cell = row.cells.iter().find(|c| c.subject_id == col.id)?;
@@ -154,7 +154,7 @@ fn subject_focus(
         back_url: audience_url(&[("subject_kind", col.kind)]),
         item_noun: "entities",
         item_label: "Entity",
-        buckets: buckets(items),
+        buckets: buckets(&items),
     }
 }
 
@@ -163,7 +163,7 @@ fn entity_drill(
     columns: &[AcAudienceColumnView],
     ledger: &[LedgerRuleRow],
 ) -> AcAudienceFocusView {
-    let items = columns
+    let items: Vec<(&'static str, AcAudienceBucketItemView)> = columns
         .iter()
         .filter_map(|col| {
             let cell = row.cells.iter().find(|c| c.subject_id == col.id)?;
@@ -193,7 +193,7 @@ fn entity_drill(
         back_url: audience_url(&[("entity_kind", &row.entity_type)]),
         item_noun: "subjects",
         item_label: "Subject",
-        buckets: buckets(items),
+        buckets: buckets(&items),
     }
 }
 

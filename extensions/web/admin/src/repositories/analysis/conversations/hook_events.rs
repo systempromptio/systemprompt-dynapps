@@ -1,6 +1,8 @@
-//! The harness hook plane of one conversation: every event the bridge
-//! reported from inside the host for the client session the conversation's
-//! requests carried, beside the gateway's own record of the same turns.
+//! The harness hook plane of one conversation.
+//!
+//! Every event the bridge reported from inside the host for the client
+//! session the conversation's requests carried, beside the gateway's own
+//! record of the same turns.
 
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;

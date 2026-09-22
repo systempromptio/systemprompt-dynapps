@@ -94,7 +94,7 @@ fn route_view(
     }
 }
 
-fn surface_tone(advertised: bool) -> &'static str {
+const fn surface_tone(advertised: bool) -> &'static str {
     if advertised { "ok" } else { "warn" }
 }
 

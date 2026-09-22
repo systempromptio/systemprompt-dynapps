@@ -45,7 +45,8 @@ pub async fn list_mcp_server_activity(
 ) -> Result<Vec<McpServerActivity>, sqlx::Error> {
     let rows = sqlx::query!(
         r#"WITH windowed AS (
-             SELECT x.*, a.payload_bytes, a.secret_redactions
+             SELECT x.*, a.payload_bytes, a.secret_redactions,
+                    (x.source IN ('in_process', 'proxy')) AS seen
                FROM mcp_tool_executions x
                LEFT JOIN (
                  SELECT mcp_execution_id,
@@ -64,45 +65,26 @@ pub async fn list_mcp_server_activity(
            )
            SELECT
              w.server_name AS "server_name!",
-             COUNT(*) FILTER (WHERE w.source IN ('in_process', 'proxy'))::BIGINT AS "calls!",
-             COUNT(*) FILTER (
-               WHERE w.source IN ('in_process', 'proxy') AND w.status = 'success'
-             )::BIGINT AS "succeeded!",
-             COUNT(*) FILTER (
-               WHERE w.source IN ('in_process', 'proxy') AND w.status = 'failed'
-             )::BIGINT AS "failures!",
-             COUNT(*) FILTER (
-               WHERE w.source IN ('in_process', 'proxy') AND w.status = 'timeout'
-             )::BIGINT AS "timeouts!",
+             COUNT(*) FILTER (WHERE w.seen)::BIGINT AS "calls!",
+             COUNT(*) FILTER (WHERE w.seen AND w.status = 'success')::BIGINT AS "succeeded!",
+             COUNT(*) FILTER (WHERE w.seen AND w.status = 'failed')::BIGINT AS "failures!",
+             COUNT(*) FILTER (WHERE w.seen AND w.status = 'timeout')::BIGINT AS "timeouts!",
              COUNT(*) FILTER (WHERE w.source LIKE 'hook_%')::BIGINT AS "attested!",
-             COUNT(DISTINCT w.user_id) FILTER (
-               WHERE w.source IN ('in_process', 'proxy')
-             )::BIGINT AS "distinct_users!",
-             COUNT(DISTINCT w.session_id) FILTER (
-               WHERE w.source IN ('in_process', 'proxy')
-             )::BIGINT AS "distinct_sessions!",
-             COUNT(DISTINCT w.tool_name) FILTER (
-               WHERE w.source IN ('in_process', 'proxy')
-             )::BIGINT AS "distinct_tools!",
-             AVG(w.execution_time_ms) FILTER (
-               WHERE w.source IN ('in_process', 'proxy')
-             )::FLOAT8 AS "avg_ms?",
+             COUNT(DISTINCT w.user_id) FILTER (WHERE w.seen)::BIGINT AS "distinct_users!",
+             COUNT(DISTINCT w.session_id) FILTER (WHERE w.seen)::BIGINT AS "distinct_sessions!",
+             COUNT(DISTINCT w.tool_name) FILTER (WHERE w.seen)::BIGINT AS "distinct_tools!",
+             AVG(w.execution_time_ms) FILTER (WHERE w.seen)::FLOAT8 AS "avg_ms?",
              PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY w.execution_time_ms)
-               FILTER (WHERE w.source IN ('in_process', 'proxy'))::FLOAT8 AS "p95_ms?",
-             COALESCE(SUM(w.payload_bytes) FILTER (
-               WHERE w.source IN ('in_process', 'proxy')
-             ), 0)::BIGINT AS "payload_bytes!",
-             COALESCE(SUM(w.secret_redactions) FILTER (
-               WHERE w.source IN ('in_process', 'proxy')
-             ), 0)::BIGINT AS "secret_redactions!",
-             MAX(w.started_at) FILTER (
-               WHERE w.source IN ('in_process', 'proxy')
-             ) AS "last_call_at?",
+               FILTER (WHERE w.seen)::FLOAT8 AS "p95_ms?",
+             COALESCE(SUM(w.payload_bytes) FILTER (WHERE w.seen), 0)::BIGINT AS "payload_bytes!",
+             COALESCE(SUM(w.secret_redactions) FILTER (WHERE w.seen), 0)::BIGINT
+               AS "secret_redactions!",
+             MAX(w.started_at) FILTER (WHERE w.seen) AS "last_call_at?",
              COALESCE(MAX(p.calls), 0)::BIGINT AS "prior_calls!"
            FROM windowed w
            LEFT JOIN prior p ON p.server_name = w.server_name
           GROUP BY w.server_name
-          ORDER BY COUNT(*) FILTER (WHERE w.source IN ('in_process', 'proxy')) DESC"#,
+          ORDER BY COUNT(*) FILTER (WHERE w.seen) DESC"#,
         from,
         to
     )

@@ -37,6 +37,7 @@ use crate::handlers::ssr::list_view::TimeRangeContext;
 use crate::handlers::ssr::types::BreadcrumbView;
 use crate::templates::AdminTemplateEngine;
 use crate::types::{ENTITY_MCP_SERVER, MarketplaceContext, UserContext};
+use crate::util::time_range::TimeRange;
 
 use super::super::ssr::ssr_helpers::render_typed_page;
 use super::sorting::{direction, matches, sort_headers};
@@ -165,14 +166,16 @@ pub(crate) async fn mcp_detail_page(
     }
 
     let counts = assignment_counts_by_type(&pool, ENTITY_MCP_SERVER).await;
+    let included_by = catalog
+        .plugins_by_mcp
+        .get(mcp_id.as_str())
+        .cloned()
+        .unwrap_or_default();
     let row = rows::build_row(&RowInputs {
         id: mcp_id.as_str(),
         server,
         runtime: &rt,
-        plugin_count: catalog
-            .plugins_by_mcp
-            .get(mcp_id.as_str())
-            .map_or(0, Vec::len),
+        plugin_count: included_by.len(),
         assignment_count: counts.get(mcp_id.as_str()).copied().unwrap_or(0),
     });
 
@@ -186,11 +189,46 @@ pub(crate) async fn mcp_detail_page(
     )
     .await;
 
+    let page = detail_page_data(DetailInputs {
+        id: mcp_id,
+        range,
+        row,
+        sections,
+        server,
+        included_by,
+    });
+    Ok(render_typed_page(
+        &shell.engine,
+        "catalog-mcp-detail",
+        &page,
+        &shell.user,
+        &shell.marketplace,
+    ))
+}
+
+struct DetailInputs<'a> {
+    id: McpServerId,
+    range: TimeRange,
+    row: McpServerRow,
+    sections: sections::DetailSections,
+    server: Option<&'a crate::types::McpServerDetail>,
+    included_by: Vec<super::view::LinkedEntity>,
+}
+
+fn detail_page_data(input: DetailInputs<'_>) -> McpDetailData {
+    let DetailInputs {
+        id: mcp_id,
+        range,
+        row,
+        sections,
+        server,
+        included_by,
+    } = input;
     let mut export_pairs = vec![("server", Some(mcp_id.as_str().to_owned()))];
     export_pairs.extend(window_pairs(&range));
     let connected_count = sections.connections.iter().filter(|c| c.connected).count();
 
-    let page = McpDetailData {
+    McpDetailData {
         page: "mcp",
         title: mcp_id.as_str().to_owned(),
         subtitle: row.description.clone(),
@@ -203,6 +241,8 @@ pub(crate) async fn mcp_detail_page(
         status_label: row.status_label,
         status_tone: row.status_tone,
         window_label: window_label(&range),
+        // Why: an empty base keeps the picker's links relative, so they stay
+        // on this server's page rather than naming a path the id must escape.
         time_range: TimeRangeContext {
             base_url: "",
             ..time_range_context(&range, BASE_URL)
@@ -224,24 +264,10 @@ pub(crate) async fn mcp_detail_page(
         default_included: sections.default_included,
         config_facts: detail::config_facts(server),
         oauth_scopes: server.map(|s| s.oauth_scopes.clone()).unwrap_or_default(),
-        included_by_count: catalog
-            .plugins_by_mcp
-            .get(mcp_id.as_str())
-            .map_or(0, Vec::len),
-        included_by: catalog
-            .plugins_by_mcp
-            .get(mcp_id.as_str())
-            .cloned()
-            .unwrap_or_default(),
+        included_by_count: included_by.len(),
+        included_by,
         matrix_url: row.matrix_url.clone(),
         access_control_url: "/admin/access-control",
         id: mcp_id,
-    };
-    Ok(render_typed_page(
-        &shell.engine,
-        "catalog-mcp-detail",
-        &page,
-        &shell.user,
-        &shell.marketplace,
-    ))
+    }
 }

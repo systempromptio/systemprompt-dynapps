@@ -88,30 +88,47 @@ pub struct McpExecutionRow {
     pub secret_redactions: Option<i64>,
 }
 
+// Why: one call log ask — which server (`None` is the fleet, which only the
+// export asks for), which window, and which page of it.
+#[derive(Debug, Clone, Copy)]
+pub struct CallLogQuery<'a> {
+    pub server_name: Option<&'a str>,
+    pub from: DateTime<Utc>,
+    pub to: DateTime<Utc>,
+    pub limit: i64,
+    pub offset: i64,
+}
+
 // Why: The raw call log in the window, newest first, every source included —
 // the `source` column is what tells a server-observed row from the client's
-// attestation of the same call. `server_name` narrows to one server; `None`
-// is the fleet, which only the export asks for.
+// attestation of the same call.
 pub async fn list_mcp_executions_paged(
     pool: &PgPool,
-    server_name: Option<&str>,
-    from: DateTime<Utc>,
-    to: DateTime<Utc>,
-    limit: i64,
-    offset: i64,
+    q: CallLogQuery<'_>,
 ) -> Result<(Vec<McpExecutionRow>, i64), sqlx::Error> {
-    let total = sqlx::query_scalar!(
+    let total = count_mcp_executions(pool, q).await?;
+    let rows = page_mcp_executions(pool, q).await?;
+    Ok((rows, total))
+}
+
+async fn count_mcp_executions(pool: &PgPool, q: CallLogQuery<'_>) -> Result<i64, sqlx::Error> {
+    sqlx::query_scalar!(
         r#"SELECT COUNT(*)::BIGINT AS "n!"
              FROM mcp_tool_executions
             WHERE ($1::TEXT IS NULL OR server_name = $1)
               AND started_at >= $2 AND started_at < $3"#,
-        server_name,
-        from,
-        to
+        q.server_name,
+        q.from,
+        q.to
     )
     .fetch_one(pool)
-    .await?;
+    .await
+}
 
+async fn page_mcp_executions(
+    pool: &PgPool,
+    q: CallLogQuery<'_>,
+) -> Result<Vec<McpExecutionRow>, sqlx::Error> {
     let rows = sqlx::query!(
         r#"SELECT
              x.mcp_execution_id AS "execution_id!: McpExecutionId",
@@ -145,39 +162,37 @@ pub async fn list_mcp_executions_paged(
             AND x.started_at >= $2 AND x.started_at < $3
           ORDER BY x.started_at DESC
           LIMIT $4 OFFSET $5"#,
-        server_name,
-        from,
-        to,
-        limit,
-        offset
+        q.server_name,
+        q.from,
+        q.to,
+        q.limit,
+        q.offset
     )
     .fetch_all(pool)
     .await?;
 
-    Ok((
-        rows.into_iter()
-            .map(|r| McpExecutionRow {
-                execution_id: r.execution_id,
-                server_name: r.server_name,
-                tool_name: r.tool_name,
-                source: r.source,
-                correlation: r.correlation,
-                status: r.status,
-                started_at: r.started_at,
-                completed_at: r.completed_at,
-                execution_time_ms: r.execution_time_ms,
-                user_id: r.user_id,
-                user_label: r.user_label,
-                session_id: r.session_id,
-                context_id: r.context_id,
-                trace_id: r.trace_id,
-                ai_tool_call_id: r.ai_tool_call_id,
-                input: r.input,
-                error_message: r.error_message,
-                payload_bytes: r.payload_bytes,
-                secret_redactions: r.secret_redactions,
-            })
-            .collect(),
-        total,
-    ))
+    Ok(rows
+        .into_iter()
+        .map(|r| McpExecutionRow {
+            execution_id: r.execution_id,
+            server_name: r.server_name,
+            tool_name: r.tool_name,
+            source: r.source,
+            correlation: r.correlation,
+            status: r.status,
+            started_at: r.started_at,
+            completed_at: r.completed_at,
+            execution_time_ms: r.execution_time_ms,
+            user_id: r.user_id,
+            user_label: r.user_label,
+            session_id: r.session_id,
+            context_id: r.context_id,
+            trace_id: r.trace_id,
+            ai_tool_call_id: r.ai_tool_call_id,
+            input: r.input,
+            error_message: r.error_message,
+            payload_bytes: r.payload_bytes,
+            secret_redactions: r.secret_redactions,
+        })
+        .collect())
 }

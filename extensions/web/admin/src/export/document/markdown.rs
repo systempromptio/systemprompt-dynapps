@@ -131,6 +131,13 @@ fn step_block(out: &mut String, step: &StepView) {
 }
 
 fn planes(out: &mut String, b: &ConversationBundle) {
+    requests_table(out, b);
+    ledger_table(out, b);
+    governance_tables(out, b);
+    hook_table(out, b);
+}
+
+fn requests_table(out: &mut String, b: &ConversationBundle) {
     line!(out, "## Requests\n");
     line!(
         out,
@@ -153,6 +160,9 @@ fn planes(out: &mut String, b: &ConversationBundle) {
             r.tool_names.join(", ")
         );
     }
+}
+
+fn ledger_table(out: &mut String, b: &ConversationBundle) {
     line!(out, "\n## Tool ledger\n");
     line!(
         out,
@@ -172,6 +182,9 @@ fn planes(out: &mut String, b: &ConversationBundle) {
             cell(t.error_message.as_deref().unwrap_or(""))
         );
     }
+}
+
+fn governance_tables(out: &mut String, b: &ConversationBundle) {
     line!(out, "\n## Governance decisions\n");
     line!(
         out,
@@ -198,8 +211,8 @@ fn planes(out: &mut String, b: &ConversationBundle) {
             out,
             "| {} | {} | {} | {} | {} | {} |",
             s.skill,
-            s.plugin_id.as_deref().unwrap_or("—"),
-            s.marketplace_id.as_deref().unwrap_or("—"),
+            s.plugin_id.as_ref().map_or("—", |p| p.as_str()),
+            s.marketplace_id.as_ref().map_or("—", |m| m.as_str()),
             s.marketplace_hash
                 .as_deref()
                 .map_or("—", |h| &h[..h.len().min(12)]),
@@ -225,6 +238,9 @@ fn planes(out: &mut String, b: &ConversationBundle) {
             cell(s.excerpt.as_deref().unwrap_or(""))
         );
     }
+}
+
+fn hook_table(out: &mut String, b: &ConversationBundle) {
     line!(out, "\n## Hook events\n");
     line!(
         out,

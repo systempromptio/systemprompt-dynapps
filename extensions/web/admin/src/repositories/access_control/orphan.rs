@@ -32,11 +32,13 @@ impl OrphanOrigin {
     }
 }
 
-/// A database-only row. `governed` says whether the file still names this
-/// entity; `retire` says whether an overwrite deletes the row: every orphan
-/// on a governed entity, and every code-written orphan wherever it sits —
-/// code removed it, so code takes it away. Console- and bundle-written rows
-/// on entities the file does not name are the only orphans it keeps.
+/// A database-only rule row.
+///
+/// `governed` says whether the file still names this entity; `retire` says
+/// whether an overwrite deletes the row: every orphan on a governed entity,
+/// and every code-written orphan wherever it sits — code removed it, so code
+/// takes it away. Console- and bundle-written rows on entities the file does
+/// not name are the only orphans it keeps.
 #[derive(Debug, Clone, Serialize)]
 pub struct OrphanRule {
     pub row: BandRuleRow,

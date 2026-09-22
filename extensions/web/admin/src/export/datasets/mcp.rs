@@ -11,12 +11,13 @@
 use async_trait::async_trait;
 use serde::Deserialize;
 
+
 use super::requests::time_range;
 use crate::error::AdminResult;
 use crate::export::model::{Cell, CellKind, Column, DataSet, ExportContext, Table, Window};
 use crate::handlers::catalog::mcp::{McpServerRow, fleet_rows};
 use crate::repositories::mcp::runtime::{
-    McpExecutionRow, McpToolStat, list_mcp_executions_paged, list_mcp_tool_stats,
+    CallLogQuery, McpExecutionRow, McpToolStat, list_mcp_executions_paged, list_mcp_tool_stats,
 };
 
 pub(crate) struct McpServers;
@@ -125,8 +126,16 @@ fn call_row(r: &McpExecutionRow) -> Vec<Cell> {
         Cell::opt_int(r.execution_time_ms),
         r.user_id.as_str().into(),
         r.user_label.as_str().into(),
-        Cell::opt_text(r.session_id.as_ref().map(|s| s.as_str())),
-        Cell::opt_text(r.context_id.as_ref().map(|c| c.as_str())),
+        Cell::opt_text(
+            r.session_id
+                .as_ref()
+                .map(systemprompt::identifiers::SessionId::as_str),
+        ),
+        Cell::opt_text(
+            r.context_id
+                .as_ref()
+                .map(systemprompt::identifiers::ContextId::as_str),
+        ),
         Cell::opt_text(r.trace_id.as_deref()),
         Cell::opt_text(r.ai_tool_call_id.as_deref()),
         Cell::opt_int(r.payload_bytes),
@@ -211,11 +220,13 @@ impl DataSet for McpCalls {
         let range = time_range(ctx)?;
         let (rows, total) = list_mcp_executions_paged(
             ctx.pool,
-            query.server.as_deref().filter(|s| !s.is_empty()),
-            range.from,
-            range.to,
-            ctx.limit,
-            0,
+            CallLogQuery {
+                server_name: query.server.as_deref().filter(|s| !s.is_empty()),
+                from: range.from,
+                to: range.to,
+                limit: ctx.limit,
+                offset: 0,
+            },
         )
         .await?;
         Ok(Table {

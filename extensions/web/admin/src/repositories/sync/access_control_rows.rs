@@ -61,7 +61,9 @@ pub(super) fn awaiting_rows(declared: &DeclaredSet) -> Vec<DriftRow> {
 
 // Why: label, tone and provenance badge for a database-only row, by who
 // wrote it. The label is the cause in plain words; `stale` never appears.
-fn orphan_words(orphan: &OrphanRule) -> (&'static str, &'static str, &'static str, &'static str) {
+const fn orphan_words(
+    orphan: &OrphanRule,
+) -> (&'static str, &'static str, &'static str, &'static str) {
     match orphan.origin {
         OrphanOrigin::Code => ("Removed from code", "err", "code", "muted"),
         OrphanOrigin::Console => ("Written in console", "info", "console", "info"),

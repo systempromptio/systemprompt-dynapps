@@ -19,7 +19,9 @@ mod call_log;
 mod connections;
 mod executions;
 
-pub use call_log::{McpCallerRow, McpExecutionRow, list_mcp_callers, list_mcp_executions_paged};
+pub use call_log::{
+    CallLogQuery, McpCallerRow, McpExecutionRow, list_mcp_callers, list_mcp_executions_paged,
+};
 pub use connections::{
     McpConnectionCount, McpConnectionRow, list_mcp_connections, list_mcp_connections_for_server,
 };

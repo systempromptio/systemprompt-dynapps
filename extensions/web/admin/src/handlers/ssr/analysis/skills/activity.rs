@@ -37,7 +37,7 @@ fn window_values(row: &SkillFactRow, today: NaiveDate, days: i64, step: i64) -> 
         .collect()
 }
 
-fn chart_step(days: i64) -> i64 {
+const fn chart_step(days: i64) -> i64 {
     if days > 90 { 7 } else { 1 }
 }
 
@@ -60,7 +60,7 @@ pub(super) fn chart(rows: &[SkillFactRow], today: NaiveDate, days: i64) -> SvgLi
         })
         .collect();
     if top.len() > CHART_SERIES {
-        let mut rest = vec![0_i64; labels.len()];
+        let mut rest = vec![0i64; labels.len()];
         for r in top.iter().skip(CHART_SERIES) {
             for (slot, n) in rest.iter_mut().zip(window_values(r, today, days, step)) {
                 *slot += n;

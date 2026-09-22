@@ -1,6 +1,8 @@
-//! The drift shape every sync plane renders: the tiles above the table,
-//! one row per line of the declared-versus-database diff, the numbers the
-//! action buttons quote, and a declaration rendered back out as its file.
+//! The drift shape every sync plane renders.
+//!
+//! The tiles above the table, one row per line of the declared-versus-database
+//! diff, the numbers the action buttons quote, and a declaration rendered back
+//! out as its file.
 
 use serde::Serialize;
 
@@ -58,12 +60,13 @@ pub fn resolution(
     }
 }
 
-/// The numbers the action buttons and their confirm dialog quote: what
-/// *Insert only* adds (rows, entity defaults), what *Overwrite* corrects and
-/// deletes, how many of the deletions the console wrote, and how many
-/// database-only rows *Overwrite* keeps because the console or a bundle
-/// wrote them on an entity the file does not name — the rows only *Export*
-/// carries back to code.
+/// The numbers the action buttons and their confirm dialog quote.
+///
+/// What *Insert only* adds (rows, entity defaults), what *Overwrite* corrects
+/// and deletes, how many of the deletions the console wrote, and how many
+/// database-only rows *Overwrite* keeps because the console or a bundle wrote
+/// them on an entity the file does not name — the rows only *Export* carries
+/// back to code.
 #[derive(Debug, Default, Clone, Copy, Serialize)]
 pub struct ActionCounts {
     pub insert: usize,

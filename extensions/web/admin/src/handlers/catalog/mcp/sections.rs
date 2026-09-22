@@ -82,11 +82,13 @@ pub(super) async fn detail_sections(
 ) -> DetailSections {
     let (executions, executions_total) = runtime::list_mcp_executions_paged(
         pool,
-        Some(mcp_id.as_str()),
-        range.from,
-        range.to,
-        EXECUTIONS_PAGE_SIZE,
-        page_index * EXECUTIONS_PAGE_SIZE,
+        runtime::CallLogQuery {
+            server_name: Some(mcp_id.as_str()),
+            from: range.from,
+            to: range.to,
+            limit: EXECUTIONS_PAGE_SIZE,
+            offset: page_index * EXECUTIONS_PAGE_SIZE,
+        },
     )
     .await
     .inspect_err(|e| tracing::warn!(error = %e, "mcp: execution log read failed"))
