@@ -17,7 +17,6 @@
 -- The function body is the declarative one in schema/45_conversation_facts.sql.
 
 CREATE OR REPLACE FUNCTION refresh_conversation_facts(context_ids TEXT[])
-CREATE OR REPLACE FUNCTION refresh_conversation_facts(context_ids TEXT[])
 RETURNS BIGINT LANGUAGE plpgsql AS $$
 DECLARE written BIGINT;
 BEGIN
@@ -249,32 +248,5 @@ BEGIN
     END IF;
     RETURN COALESCE(written, 0);
 END $$;
-
--- Every context touched since `since` on any plane that feeds the row: a
--- request settled, a hook event, a governance decision, a tool execution or
--- an artifact. The rollup job calls this each tick with an overlapping window;
--- the upsert is idempotent, so overlap is free.
-CREATE OR REPLACE FUNCTION refresh_conversation_facts_since(since TIMESTAMPTZ)
-RETURNS BIGINT LANGUAGE sql AS $$
-SELECT refresh_conversation_facts(ARRAY(
-    SELECT DISTINCT context_id FROM (
-        SELECT r.context_id FROM ai_requests r WHERE r.updated_at >= since OR r.created_at >= since
-        UNION ALL
-        SELECT r.context_id FROM ai_requests r
-        WHERE r.client_session_id IN (
-            SELECT e.session_id FROM plugin_usage_events e WHERE e.created_at >= since
-            UNION ALL
-            SELECT d.session_id FROM governance_decisions d WHERE d.created_at >= since
-            UNION ALL
-            SELECT x.trace_id FROM mcp_tool_executions x WHERE x.created_at >= since AND x.trace_id IS NOT NULL)
-        UNION ALL
-        SELECT x.context_id FROM mcp_tool_executions x WHERE x.created_at >= since AND x.context_id IS NOT NULL
-        UNION ALL
-        SELECT m.context_id FROM mcp_artifacts m WHERE m.created_at >= since AND m.context_id IS NOT NULL
-        UNION ALL
-        SELECT d.context_id FROM governance_decisions d WHERE d.created_at >= since
-    ) touched
-    WHERE context_id IS NOT NULL AND context_id <> '00000000-0000-0000-0000-4c4547414359'))
-$$;
 
 SELECT refresh_conversation_facts(NULL);
