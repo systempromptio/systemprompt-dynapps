@@ -1,7 +1,7 @@
 //! Typed template context for the conversation-history page.
 
 use serde::Serialize;
-use systemprompt::identifiers::UserId;
+use systemprompt::identifiers::{ContextId, UserId};
 
 use crate::handlers::ssr::format::ClientChipView;
 use crate::handlers::ssr::list_view::Pagination;
@@ -45,7 +45,7 @@ pub(crate) struct HistoryRowView {
     pub short_id: String,
     // Why: the row's selection key — the id the bulk bar's export and
     // full-record download read.
-    pub context_id: String,
+    pub context_id: ContextId,
     // Why: named for what it is. A partial hash parameter shadows a field of
     // the same name at every depth (the layout now takes `page_title`, but
     // the row name stays specific so no later hash can collide with it).

@@ -4,7 +4,7 @@
 
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
-use systemprompt::identifiers::{ContextId, MarketplaceId};
+use systemprompt::identifiers::{ContextId, MarketplaceId, SessionId};
 
 use super::SkillWindow;
 
@@ -13,7 +13,7 @@ use super::SkillWindow;
 #[derive(Debug, Clone)]
 pub struct SkillRunRow {
     pub context_id: ContextId,
-    pub session_id: String,
+    pub session_id: SessionId,
     pub skill: String,
     pub marketplace_id: Option<MarketplaceId>,
     pub kit_hash: Option<String>,
@@ -71,7 +71,7 @@ pub async fn list_skill_runs(
         .into_iter()
         .map(|r| SkillRunRow {
             context_id: r.context_id,
-            session_id: r.session_id,
+            session_id: SessionId::new(r.session_id),
             skill: r.skill,
             marketplace_id: r.marketplace_id.map(MarketplaceId::new),
             kit_hash: r.kit_hash,

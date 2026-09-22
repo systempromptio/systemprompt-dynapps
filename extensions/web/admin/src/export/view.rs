@@ -66,7 +66,7 @@ pub(crate) struct ExportView {
     // selects — one JSON object per conversation — as one more Data choice.
     #[serde(skip_serializing_if = "Option::is_none")]
     transcripts: Option<TranscriptsView>,
-    filters: Vec<FilterChipView>,
+    filters: Vec<ExportFilterView>,
 }
 
 #[derive(Debug, Serialize)]
@@ -80,7 +80,7 @@ pub(crate) struct TranscriptsView {
 // drop for this one file; `pinned` ones name what the page is *about* (one
 // conversation, one session, one skill) and cannot be dropped.
 #[derive(Debug, Serialize)]
-pub(crate) struct FilterChipView {
+pub(crate) struct ExportFilterView {
     key: String,
     label: String,
     value: String,
@@ -142,10 +142,10 @@ fn filter_label(key: &str) -> &str {
     }
 }
 
-fn filter_chips(query: &str) -> Vec<FilterChipView> {
+fn filter_chips(query: &str) -> Vec<ExportFilterView> {
     url::form_urlencoded::parse(query.as_bytes())
         .filter(|(k, v)| !v.trim().is_empty() && !NOT_FILTERS.contains(&k.as_ref()))
-        .map(|(k, v)| FilterChipView {
+        .map(|(k, v)| ExportFilterView {
             label: filter_label(&k).to_owned(),
             pinned: PINNED.contains(&k.as_ref()),
             key: k.into_owned(),

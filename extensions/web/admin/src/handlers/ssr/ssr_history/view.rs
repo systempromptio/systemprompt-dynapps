@@ -93,7 +93,7 @@ pub(crate) fn row_view(
         source: client_chip(&item.client_kind, &item.client_attestation),
         source_title: attestation_title(&item.client_attestation),
         conversation_title: conversation_title(item, &short),
-        context_id: item.context_id.as_str().to_owned(),
+        context_id: item.context_id.clone(),
         short_id: short,
         user_id: item.user_id.clone(),
         user_label: item.user_label.clone(),

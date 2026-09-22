@@ -3,6 +3,11 @@
 //!
 //! A conversation falls in the window when its last activity does, so a long
 //! conversation still running today is listed under "7 days".
+//!
+//! `pairs` gives the query parameters that carry a window — all time carries
+//! none — and `query_parts` the `key=value` form for a link. `tabs` renders
+//! the preset tabs against a prefix that already holds every other filter and
+//! ends in `?` or `&`.
 
 use chrono::{DateTime, Duration, Utc};
 
@@ -79,7 +84,6 @@ impl HistoryWindow {
         }
     }
 
-    /// The query parameters that carry this window; all time carries none.
     pub(super) fn pairs(&self) -> Vec<(&'static str, String)> {
         match self {
             Self::All => Vec::new(),
@@ -93,7 +97,6 @@ impl HistoryWindow {
         }
     }
 
-    /// The `key=value` pairs that carry this window on a link.
     pub(super) fn query_parts(&self) -> Vec<String> {
         self.pairs()
             .into_iter()
@@ -110,8 +113,6 @@ impl HistoryWindow {
         }
     }
 
-    /// The window tabs; `prefix` already carries every other filter and
-    /// ends in `?` or `&`.
     pub(super) fn tabs(&self, prefix: &str) -> Vec<TabLinkView> {
         let active = match self {
             Self::Days(days) => Some(*days),

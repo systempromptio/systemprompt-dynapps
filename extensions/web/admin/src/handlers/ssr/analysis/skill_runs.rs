@@ -54,7 +54,6 @@ pub(crate) fn version_label(run: &SkillRunRow) -> String {
         .unwrap_or_else(|| "unknown".to_owned())
 }
 
-/// One kit version's (optionally one skill's) run record.
 #[derive(Debug, Clone)]
 pub(crate) struct ReleaseImpact {
     pub(crate) kit_version: String,
