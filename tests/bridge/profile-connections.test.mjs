@@ -10,7 +10,11 @@ async function harness() {
   let receive;
   let syncs = 0;
   const context = vm.createContext({
-    document: { hidden: false }, URL, Date,
+    document: {
+      hidden: false,
+      addEventListener: (_, fn) => listeners.add(fn),
+      removeEventListener: (_, fn) => listeners.delete(fn),
+    }, URL, Date,
     window: { addEventListener: (_, fn) => listeners.add(fn), removeEventListener: (_, fn) => listeners.delete(fn) },
     setInterval: fn => { timers.add(fn); return fn; },
     clearInterval: fn => timers.delete(fn),
@@ -48,9 +52,11 @@ test('import is idle; last unmount tears down every owned resource', async () =>
   assert.equal(h.subscribed, false);
   const first = h.api.watchConnections(() => {});
   const second = h.api.watchConnections(() => {});
-  assert.equal(h.timers.size, 1);
+  // focus on the window and visibilitychange on the document, registered once
+  // for the first watcher and released by the last unmount.
+  assert.equal(h.listeners.size, 2);
   first();
-  assert.equal(h.timers.size, 1);
+  assert.equal(h.listeners.size, 2);
   second();
   assert.equal(h.timers.size, 0);
   assert.equal(h.listeners.size, 0);
@@ -69,7 +75,7 @@ test('replies from an old gateway or unmounted pane cannot mutate or trigger syn
   assert.ok(!h.api.renderConnections(null).includes('old-account'));
   newReply(profile('connected'));
   await flush();
-  for (const tick of h.timers) { tick(); }
+  for (const wake of h.listeners) { wake(); }
   const detachedReply = h.pending.shift();
   dispose();
   detachedReply(profile('reconnect_required'));

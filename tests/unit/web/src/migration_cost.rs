@@ -24,8 +24,8 @@ use systemprompt::database::{HOT_TABLES, audit_one};
 
 use crate::support::repo_root;
 
-/// Tables this repo owns that are large enough for a blind rewrite to matter.
-/// Row counts from the 2026-09-22 production analysis.
+// Tables this repo owns that are large enough for a blind rewrite to matter.
+// Row counts from the 2026-09-22 production analysis.
 const ASTOUND_HOT_TABLES: &[&str] = &[
     "plugin_usage_events",
     "feedback_ingestion_outbox",
@@ -138,7 +138,7 @@ fn every_hot_table_rewrite_declares_its_measured_cost() {
     );
 }
 
-/// A `FOR EACH ROW` trigger and the function it runs.
+// A `FOR EACH ROW` trigger and the function it runs.
 struct RowTrigger {
     file: String,
     trigger: String,
@@ -223,13 +223,13 @@ fn row_triggers(sql: &str, file: &str) -> Vec<RowTrigger> {
     out
 }
 
-/// The body of `CREATE [OR REPLACE] FUNCTION <name>`, as declared last.
-///
-/// Why the `CREATE` prefix is part of the match: the trigger that runs the
-/// function names it too (`EXECUTE FUNCTION f()`), and that mention sits
-/// after the definition. Matching bare `FUNCTION f(` therefore lands on the
-/// trigger and yields a body with no loop in it — every fanning-out function
-/// here reads as clean, which is the one way this gate could fail.
+// The body of `CREATE [OR REPLACE] FUNCTION <name>`, as declared last.
+//
+// Why the `CREATE` prefix is part of the match: the trigger that runs the
+// function names it too (`EXECUTE FUNCTION f()`), and that mention sits
+// after the definition. Matching bare `FUNCTION f(` therefore lands on the
+// trigger and yields a body with no loop in it — every fanning-out function
+// here reads as clean, which is the one way this gate could fail.
 fn function_body(sql: &str, name: &str) -> Option<String> {
     let start = [
         format!("CREATE OR REPLACE FUNCTION {name}("),
@@ -257,7 +257,7 @@ fn loops(body: &str) -> bool {
     body.contains(" LOOP") || body.contains("\nLOOP")
 }
 
-/// Every function this schema declares, so a call can be told from a built-in.
+// Every function this schema declares, so a call can be told from a built-in.
 fn declared_functions(sql: &str) -> BTreeSet<String> {
     let mut out = BTreeSet::new();
     for marker in ["CREATE OR REPLACE FUNCTION ", "CREATE FUNCTION "] {

@@ -8,8 +8,8 @@ description: Explain AI usage, model/provider costs, latency, and adoption trend
 
 Call the `admin_report` **tool** with `{"report":"costs","days":7}` at the start of every
 run; never reuse a payload from an earlier turn, even one minutes old. It is a typed MCP
-tool on this server, not a CLI subcommand: there is no `systemprompt admin report` and no
-`systemprompt admin_report`, and passing either to the CLI tool fails. Compare the explicit period
+tool on this server, not a CLI subcommand: the CLI has no equivalent, and passing the
+tool name to it as a command or a domain fails. Compare the explicit period
 with an equivalent previous period by re-running the same commands with `--since` and
 `--until` set to the earlier window when asked for change. Read `analytics sessions stats`
 and `analytics requests stats` for usage; counts of requests are not unique active people.

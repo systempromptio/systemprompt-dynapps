@@ -130,9 +130,8 @@ async fn archive_one(
 
 // Why: a streamed `SELECT`, not `COPY … TO STDOUT`. COPY's text format
 // escapes backslashes, so a JSON string containing \" arrives as \\" and the
-// line is no longer valid JSON — the first archive written this way failed to
-// parse. `fetch` yields one row at a time, so memory stays flat as it did
-// with COPY, and the text is exactly what `row_to_json` produced.
+// line is not valid JSON. `fetch` yields one row at a time, so memory stays
+// flat, and the text is exactly what `row_to_json` produced.
 fn select_statement(table: &ManagedTable, window: Window) -> String {
     format!(
         "SELECT row_to_json(t)::text FROM {name} t \
