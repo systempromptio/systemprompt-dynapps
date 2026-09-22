@@ -23,7 +23,8 @@ Credential issuing for the Google project is covered in more detail in
 
 One secret is the minimum: `anthropic` alone gives Claude Code and OpenCode a
 working default, since `gateway.yaml` sets `default_provider: anthropic` and
-`default_model: claude-sonnet-5`. Every other secret adds models to the picker.
+`default_model: "claude-sonnet-5[1m]"` (Claude Code's 1M-context form of
+`claude-sonnet-5`; other hosts get the bare id). Every other secret adds models to the picker.
 
 A model whose provider has no secret is still advertised on `/v1/models` — that
 endpoint filters by API surface, not by credential — and fails at dispatch with

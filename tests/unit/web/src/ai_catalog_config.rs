@@ -186,7 +186,7 @@ fn fable_5_1_is_priced_and_sized_as_the_frontier_model() {
 fn the_gateway_default_model_is_a_catalog_entry() {
     let spec = gateway();
     let default_model = spec.default_model.expect("gateway.default_model");
-    assert_eq!(default_model, "claude-sonnet-5");
+    assert_eq!(default_model, "claude-sonnet-5[1m]");
     assert!(
         anthropic_models().iter().any(|m| m.matches(&default_model)),
         "the default model must be listed: allow_unlisted_models is false, so \

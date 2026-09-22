@@ -51,7 +51,10 @@ Anthropic entries, in listing order, are:
 `claude-haiku-4-5` carries its dated id as an alias, so an existing client pinned to
 `claude-haiku-4-5-20251001` keeps working. The Claude 4.x Opus and Sonnet models
 were removed when Opus 5.5 was added. `gateway.default_model` is
-`claude-sonnet-5`. Retired dated ids are no longer served: because
+`claude-sonnet-5[1m]`: the `[1m]` suffix is Claude Code's 1M-context marker, which
+the bridge seeds into Claude Code and the gateway strips before routing, so the
+request reaches Anthropic as `claude-sonnet-5`. Without it Claude Code budgets
+200k for every gateway model. Retired dated ids are no longer served: because
 `allow_unlisted_models` is `false`, a request naming one is refused rather than
 silently forwarded.
 

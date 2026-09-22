@@ -62,7 +62,9 @@ The Anthropic models this deployment serves are `claude-opus-5-5`,
 `claude-opus-5`, `claude-sonnet-5`, `claude-fable-5-1`, `claude-fable-5` and
 `claude-haiku-4-5`; the last also answers to its dated id
 `claude-haiku-4-5-20251001`. A request that names no model, or one no route matches,
-falls back to `gateway.default_model`, which is `claude-sonnet-5`. Retired dated
+falls back to `gateway.default_model`, which is `claude-sonnet-5[1m]`. The `[1m]`
+suffix selects Claude Code's 1M context budget; the gateway accepts it on any
+model and strips it before routing and forwarding. Retired dated
 ids such as `claude-opus-4-1-20250805`, and the Claude 4.x Opus and Sonnet models,
 are no longer listed and are refused.
 
