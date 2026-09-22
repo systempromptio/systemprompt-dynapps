@@ -107,6 +107,7 @@ pub(crate) async fn handle_hook_track(
     dispatch_inserted_event(&DispatchContext {
         pool: &pool,
         user_id: &user_id,
+        plugin_id: &plugin_id,
         payload: &payload,
         event_hub: &event_hub,
     })
@@ -129,6 +130,7 @@ fn log_payload_warnings(payload: &HookEventPayload, warnings: &[String]) {
 struct DispatchContext<'a> {
     pool: &'a PgPool,
     user_id: &'a UserId,
+    plugin_id: &'a PluginId,
     payload: &'a HookEventPayload,
     event_hub: &'a EventHub,
 }
@@ -138,6 +140,7 @@ async fn dispatch_inserted_event(ctx: &DispatchContext<'_>) {
     processing::process_inserted_event(&processing::ProcessInsertedEventParams {
         pool: ctx.pool,
         user_id: ctx.user_id,
+        plugin_id: ctx.plugin_id,
         session_id: &SessionId::new(ctx.payload.session_id()),
         event_type: ctx.payload.event_name(),
         tool_name: ctx.payload.tool_name(),

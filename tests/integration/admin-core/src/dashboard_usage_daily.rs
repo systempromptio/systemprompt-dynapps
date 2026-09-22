@@ -9,7 +9,7 @@
 //! duplicate rows instead of accumulating them.
 
 use chrono::Utc;
-use systemprompt::identifiers::UserId;
+use systemprompt::identifiers::{PluginId, UserId};
 use systemprompt_web_admin::repositories::dashboard::usage_aggregations::{
     DailyAggregationParams, upsert_daily_aggregation,
 };
@@ -47,12 +47,14 @@ async fn read_daily(pool: &sqlx::PgPool, user_id: &UserId) -> Vec<DailyRow> {
 fn daily_params<'a>(
     pool: &'a sqlx::PgPool,
     user_id: &'a UserId,
+    plugin_id: &'a PluginId,
     date: &'a chrono::NaiveDate,
     event_type: &'a str,
 ) -> DailyAggregationParams<'a> {
     DailyAggregationParams {
         pool,
         user_id,
+        plugin_id,
         date,
         event_type,
         tool_name: Some("Bash"),
@@ -69,8 +71,9 @@ async fn upsert_daily_aggregation_inserts_the_first_event_of_the_day() {
     };
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("daily")).await;
     let date = Utc::now().date_naive();
+    let plugin = PluginId::new("astound-commons");
 
-    upsert_daily_aggregation(&daily_params(&db.pool, &user, &date, EVENT_POST_TOOL_USE)).await;
+    upsert_daily_aggregation(&daily_params(&db.pool, &user, &plugin, &date, EVENT_POST_TOOL_USE)).await;
 
     let rows = read_daily(&db.pool, &user).await;
     assert_eq!(rows.len(), 1);
@@ -88,9 +91,10 @@ async fn upsert_daily_aggregation_accumulates_into_one_row_per_tool_and_day() {
     };
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("dailyacc")).await;
     let date = Utc::now().date_naive();
+    let plugin = PluginId::new("astound-commons");
 
     for _ in 0..3 {
-        upsert_daily_aggregation(&daily_params(&db.pool, &user, &date, EVENT_POST_TOOL_USE)).await;
+        upsert_daily_aggregation(&daily_params(&db.pool, &user, &plugin, &date, EVENT_POST_TOOL_USE)).await;
     }
 
     let rows = read_daily(&db.pool, &user).await;
@@ -110,7 +114,8 @@ async fn upsert_daily_aggregation_counts_errors_separately_from_events() {
     };
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("dailyerr")).await;
     let date = Utc::now().date_naive();
-    let mut params = daily_params(&db.pool, &user, &date, EVENT_POST_TOOL_USE);
+    let plugin = PluginId::new("astound-commons");
+    let mut params = daily_params(&db.pool, &user, &plugin, &date, EVENT_POST_TOOL_USE);
     params.is_error = true;
 
     upsert_daily_aggregation(&params).await;
@@ -129,7 +134,8 @@ async fn upsert_daily_aggregation_keeps_a_null_tool_name_on_its_own_row() {
     };
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("dailynull")).await;
     let date = Utc::now().date_naive();
-    let with_tool = daily_params(&db.pool, &user, &date, EVENT_POST_TOOL_USE);
+    let plugin = PluginId::new("astound-commons");
+    let with_tool = daily_params(&db.pool, &user, &plugin, &date, EVENT_POST_TOOL_USE);
     let mut without_tool = with_tool;
     without_tool.tool_name = None;
 
@@ -151,8 +157,9 @@ async fn upsert_daily_aggregation_keeps_separate_rows_per_event_type() {
     };
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("dailytypes")).await;
     let date = Utc::now().date_naive();
+    let plugin = PluginId::new("astound-commons");
 
-    upsert_daily_aggregation(&daily_params(&db.pool, &user, &date, EVENT_POST_TOOL_USE)).await;
+    upsert_daily_aggregation(&daily_params(&db.pool, &user, &plugin, &date, EVENT_POST_TOOL_USE)).await;
     upsert_daily_aggregation(&daily_params(
         &db.pool,
         &user,

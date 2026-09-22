@@ -11,6 +11,15 @@
 //! The resolver runs over core's `user` / `role` dimensions plus every subject
 //! dimension this extension declares in [`crate::authz`] — today that means a
 //! `group` rule binds here, not just in the access matrix.
+//!
+//! Core composes its own `RuleBasedHook` ahead of this one and that hook
+//! audits every evaluation as `authz_rule_based`, over the same
+//! `access_control_rules` rows. An allow recorded here is therefore the same
+//! evaluation written twice: production held 4,695 such pairs, identical in
+//! decision and reason, two thirds of `gov_allow` on every conversation. Only
+//! outcomes this hook adds — a deny, a warn, a hold it had to refuse, or an
+//! unavailable resolver — are audited, so no refusal loses its row and no
+//! reader counts one evaluation as two.
 
 use std::sync::Arc;
 
@@ -102,6 +111,9 @@ async fn audit_decision(
     entity: Option<&EntityRow>,
     decision: &Decision,
 ) {
+    if matches!(decision, Decision::Allow { .. }) {
+        return;
+    }
     let (decision_tag, reason_str, justification_opt): (DecisionTag, String, Option<String>) =
         match decision {
             Decision::Allow { .. } => (DecisionTag::Allow, String::new(), None),

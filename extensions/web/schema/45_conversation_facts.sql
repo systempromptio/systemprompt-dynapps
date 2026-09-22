@@ -164,43 +164,96 @@ BEGIN
                COUNT(*) FILTER (WHERE f.blocked)::bigint AS blocked
         FROM requests r JOIN ai_safety_findings f ON f.ai_request_id = r.id
         GROUP BY r.context_id
+    ), sessions AS (
+        SELECT DISTINCT r.client_session_id
+        FROM requests r WHERE r.client_session_id IS NOT NULL
+    ), windows AS (
+        SELECT r.context_id, r.client_session_id,
+               MIN(r.created_at) AS opened_at,
+               MAX(COALESCE(r.completed_at, r.created_at)) AS closed_at
+        FROM conversation_requests r
+        WHERE r.client_session_id IN (SELECT s.client_session_id FROM sessions s)
+        GROUP BY r.context_id, r.client_session_id
     ), executions AS (
-        SELECT a.context_id,
-               COUNT(t.mcp_execution_id)::bigint AS executed,
-               COUNT(t.mcp_execution_id) FILTER (WHERE t.execution_status IN ('failed', 'timeout'))::bigint AS failed,
-               COUNT(t.mcp_execution_id) FILTER (WHERE t.artifact_kind IS NOT NULL)::bigint AS artifacts,
-               COUNT(t.mcp_execution_id) FILTER (WHERE t.artifact_kind = 'file')::bigint AS artifact_files,
-               COUNT(t.mcp_execution_id) FILTER (WHERE t.artifact_kind IN ('ui', 'card', 'body'))::bigint AS artifact_cards
-        FROM agg a
-        LEFT JOIN tool_activity t ON t.mcp_execution_id IS NOT NULL
-            AND (t.execution_context_id = a.context_id
-                 OR (a.client_session_id IS NOT NULL AND t.execution_trace_id = a.client_session_id))
-        GROUP BY a.context_id
+        SELECT o.context_id,
+               COUNT(*)::bigint AS executed,
+               COUNT(*) FILTER (WHERE o.execution_status IN ('failed', 'timeout'))::bigint AS failed,
+               COUNT(*) FILTER (WHERE o.artifact_kind IS NOT NULL)::bigint AS artifacts,
+               COUNT(*) FILTER (WHERE o.artifact_kind = 'file')::bigint AS artifact_files,
+               COUNT(*) FILTER (WHERE o.artifact_kind IN ('ui', 'card', 'body'))::bigint AS artifact_cards
+        FROM (
+            SELECT CASE WHEN EXISTS (SELECT 1 FROM agg a WHERE a.context_id = t.execution_context_id)
+                        THEN t.execution_context_id ELSE w.context_id END AS context_id,
+                   t.execution_status, t.artifact_kind
+            FROM tool_activity t
+            LEFT JOIN LATERAL (
+                SELECT x.context_id FROM windows x
+                WHERE NOT EXISTS (SELECT 1 FROM agg a WHERE a.context_id = t.execution_context_id)
+                  AND x.client_session_id = t.execution_trace_id
+                ORDER BY (COALESCE(t.executed_at, t.occurred_at) BETWEEN x.opened_at AND x.closed_at) DESC,
+                         abs(EXTRACT(EPOCH FROM COALESCE(t.executed_at, t.occurred_at) - x.opened_at)), x.opened_at, x.context_id
+                LIMIT 1) w ON TRUE
+            WHERE t.mcp_execution_id IS NOT NULL
+              AND (EXISTS (SELECT 1 FROM agg a WHERE a.context_id = t.execution_context_id)
+                   OR w.context_id IS NOT NULL)
+        ) o
+        WHERE EXISTS (SELECT 1 FROM agg a WHERE a.context_id = o.context_id)
+        GROUP BY o.context_id
     ), governance AS (
-        SELECT a.context_id,
-               COUNT(*) FILTER (WHERE d.decision = 'allow')::bigint AS allow,
-               COUNT(*) FILTER (WHERE d.decision = 'warn')::bigint AS warn,
-               COUNT(*) FILTER (WHERE d.decision = 'deny')::bigint AS deny
-        FROM agg a
-        JOIN governance_decisions d ON d.context_id = a.context_id
-            OR (a.client_session_id IS NOT NULL AND d.session_id = a.client_session_id)
-        GROUP BY a.context_id
+        SELECT o.context_id,
+               COUNT(*) FILTER (WHERE o.decision = 'allow')::bigint AS allow,
+               COUNT(*) FILTER (WHERE o.decision = 'warn')::bigint AS warn,
+               COUNT(*) FILTER (WHERE o.decision = 'deny')::bigint AS deny
+        FROM (
+            SELECT CASE WHEN EXISTS (SELECT 1 FROM agg a WHERE a.context_id = g.context_id)
+                        THEN g.context_id ELSE w.context_id END AS context_id, g.decision
+            FROM governance_decisions g
+            LEFT JOIN LATERAL (
+                SELECT x.context_id FROM windows x
+                WHERE NOT EXISTS (SELECT 1 FROM agg a WHERE a.context_id = g.context_id)
+                  AND x.client_session_id = g.session_id
+                ORDER BY (g.created_at BETWEEN x.opened_at AND x.closed_at) DESC,
+                         abs(EXTRACT(EPOCH FROM g.created_at - x.opened_at)), x.opened_at, x.context_id
+                LIMIT 1) w ON TRUE
+            WHERE EXISTS (SELECT 1 FROM agg a WHERE a.context_id = g.context_id)
+               OR w.context_id IS NOT NULL
+        ) o
+        WHERE EXISTS (SELECT 1 FROM agg a WHERE a.context_id = o.context_id)
+        GROUP BY o.context_id
+    ), hook_events AS (
+        SELECT w.context_id, e.event_type, e.id
+        FROM plugin_usage_events e
+        JOIN LATERAL (
+            SELECT x.context_id FROM windows x
+            WHERE x.client_session_id = e.session_id
+            ORDER BY (e.created_at BETWEEN x.opened_at AND x.closed_at) DESC,
+                     abs(EXTRACT(EPOCH FROM e.created_at - x.opened_at)), x.opened_at, x.context_id
+            LIMIT 1) w ON TRUE
+        WHERE EXISTS (SELECT 1 FROM agg a WHERE a.context_id = w.context_id)
     ), hooks AS (
-        SELECT a.context_id,
+        SELECT h.context_id,
                COUNT(*)::bigint AS hook_events,
-               COUNT(*) FILTER (WHERE e.event_type = 'UserPromptSubmit')::bigint AS prompts
-        FROM agg a JOIN plugin_usage_events e ON e.session_id = a.client_session_id
-        WHERE a.client_session_id IS NOT NULL
-        GROUP BY a.context_id
+               COUNT(*) FILTER (WHERE h.event_type = 'UserPromptSubmit')::bigint AS prompts
+        FROM hook_events h
+        GROUP BY h.context_id
+    ), skill_events AS (
+        SELECT w.context_id, s.skill, s.invoked_at
+        FROM analysis_skill_events s
+        JOIN LATERAL (
+            SELECT x.context_id FROM windows x
+            WHERE x.client_session_id = s.session_id
+            ORDER BY (s.invoked_at BETWEEN x.opened_at AND x.closed_at) DESC,
+                     abs(EXTRACT(EPOCH FROM s.invoked_at - x.opened_at)), x.opened_at, x.context_id
+            LIMIT 1) w ON TRUE
+        WHERE s.skill IS NOT NULL AND EXISTS (SELECT 1 FROM agg a WHERE a.context_id = w.context_id)
     ), skills AS (
-        SELECT a.context_id, COUNT(*)::bigint AS invocations,
-               ARRAY(SELECT x.skill FROM (
-                   SELECT skill, MIN(invoked_at) AS first_at FROM analysis_skill_events q
-                   WHERE q.session_id = a.client_session_id AND q.skill IS NOT NULL GROUP BY skill) x
-                   ORDER BY x.first_at, x.skill) AS skills
-        FROM agg a JOIN analysis_skill_events s ON s.session_id = a.client_session_id AND s.skill IS NOT NULL
-        WHERE a.client_session_id IS NOT NULL
-        GROUP BY a.context_id, a.client_session_id
+        SELECT k.context_id, COUNT(*)::bigint AS invocations,
+               ARRAY(SELECT y.skill FROM (
+                   SELECT q.skill, MIN(q.invoked_at) AS first_at FROM skill_events q
+                   WHERE q.context_id = k.context_id GROUP BY q.skill) y
+                   ORDER BY y.first_at, y.skill) AS skills
+        FROM skill_events k
+        GROUP BY k.context_id
     ), upsert AS (
         INSERT INTO conversation_facts AS f (
             context_id, user_id, session_id, client_session_id, group_id, project_id,
