@@ -163,7 +163,7 @@ fn chip_remove_url(query: &TraceListQuery, drop: &str) -> String {
 }
 
 pub(super) fn preserved_query_string(query: &TraceListQuery, drop: &[&str]) -> String {
-    let pairs: [(&str, Option<&str>); 14] = [
+    let pairs: [(&str, Option<&str>); 15] = [
         ("group", query.group.as_deref()),
         ("project", query.project.as_deref()),
         ("preset", query.preset.as_deref()),
@@ -176,6 +176,7 @@ pub(super) fn preserved_query_string(query: &TraceListQuery, drop: &[&str]) -> S
         ("decision", query.decision.as_deref()),
         ("error_only", query.error_only.as_deref()),
         ("deny_only", query.deny_only.as_deref()),
+        ("include_lifecycle", query.include_lifecycle.as_deref()),
         ("sort", query.sort.as_deref()),
         ("dir", query.dir.as_deref()),
     ];
@@ -258,6 +259,7 @@ pub(super) fn export_view(
             ("decision", query.decision.as_deref()),
             ("error_only", query.error_only.as_deref()),
             ("deny_only", query.deny_only.as_deref()),
+            ("include_lifecycle", query.include_lifecycle.as_deref()),
             ("sort", query.sort.as_deref()),
             ("dir", query.dir.as_deref()),
             ("group", query.group.as_deref()),

@@ -35,9 +35,13 @@ pub(super) struct TraceListRow {
     pub(super) has_error: bool,
     pub(super) error_count: i64,
     pub(super) has_deny: bool,
+    pub(super) kind: String,
     pub(super) total_count: i64,
 }
 
+// lint-ok: field-copy-from -- as in `analytics/requests/paged.rs`: the paged
+// total comes back on every row because `query_as!` takes a flat struct, and
+// counting separately would cost a second scan of the same window.
 impl From<TraceListRow> for TraceSummary {
     fn from(r: TraceListRow) -> Self {
         Self {
@@ -68,6 +72,7 @@ impl From<TraceListRow> for TraceSummary {
             has_error: r.has_error,
             error_count: r.error_count,
             has_deny: r.has_deny,
+            kind: r.kind,
         }
     }
 }

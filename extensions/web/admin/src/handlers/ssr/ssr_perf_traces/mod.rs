@@ -49,6 +49,7 @@ pub(crate) struct TraceListQuery {
     pub decision: Option<String>,
     pub error_only: Option<String>,
     pub deny_only: Option<String>,
+    pub include_lifecycle: Option<String>,
     pub sort: Option<String>,
     pub dir: Option<String>,
     pub page: Option<i64>,
@@ -131,7 +132,7 @@ async fn load_traces(
 ) -> TraceRead {
     let (list_res, stats_res, options_res) = tokio::join!(
         list_traces(pool, filter, range, trace_page),
-        get_trace_stats(pool, range, subject_ids),
+        get_trace_stats(pool, range, subject_ids, filter.include_lifecycle),
         get_filter_options(pool, range),
     );
     let (rows, total) = list_res.unwrap_or_else(|e| {
@@ -239,6 +240,7 @@ pub(super) fn build_filter<'a>(
         decision: empty_to_none(query.decision.as_deref()),
         error_only: query.error_only.as_deref() == Some("true"),
         deny_only: query.deny_only.as_deref() == Some("true"),
+        include_lifecycle: query.include_lifecycle.as_deref() == Some("true"),
     }
 }
 

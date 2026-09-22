@@ -14,7 +14,7 @@
     {{/components/page-header}}
 
     <section class="sp-kpi-grid" aria-label="Trace summary">
-      {{> components/kpi label="Traces" value=stats.total_traces note="in window"}}
+      {{> components/kpi label="Traces" value=stats.total_traces note=stats.traces_note}}
       {{> components/kpi label="Denied" value=stats.deny_count tone="err"
           href=stats.deny_url active=stats.deny_active
           note="traces with a deny"
@@ -23,10 +23,10 @@
           href=stats.error_url active=stats.error_active
           note="traces with a failure"
           hint="Show only traces containing a failed request"}}
-      {{> components/kpi label="Cost" value=stats.cost_display note="billed in window"}}
-      {{> components/kpi label="Tokens" value=stats.tokens_display note="total in / out"}}
+      {{> components/kpi label="Cost" value=stats.cost_display note=stats.active_note}}
+      {{> components/kpi label="Tokens" value=stats.tokens_display note=stats.active_note}}
       {{> components/kpi label="p95 active" value=stats.p95_display
-          note=(concat "p50 " stats.p50_display " · p99 " stats.p99_display)
+          note=(concat "p50 " stats.p50_display " · " stats.active_note)
           hint="Percentiles over request latency, across traces that issued at least one request"}}
     </section>
 
@@ -54,6 +54,15 @@
       {{#*inline "toolbar_actions"}}
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{stats.error_url}}">{{#if stats.error_active}}Clear errors filter{{else}}Errors only{{/if}}</a>
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{stats.deny_url}}">{{#if stats.deny_active}}Clear deny filter{{else}}Denies only{{/if}}</a>
+        {{!-- A Claude Code session that opened and closed without a prompt, a
+              tool call or a request is real but empty: no model, no cost, no
+              duration. Hidden by default, one click away. --}}
+        {{#if stats.lifecycle_active}}
+          <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{stats.lifecycle_url}}">Hide session-lifecycle rows</a>
+        {{else}}{{#if stats.lifecycle_count}}
+          <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{stats.lifecycle_url}}"
+             title="Claude Code sessions that opened and closed without a prompt, tool call or request">Show {{stats.lifecycle_count}} session-lifecycle rows</a>
+        {{/if}}{{/if}}
       {{/inline}}
     {{/components/toolbar}}
 
@@ -100,6 +109,7 @@
                   {{#if this.has_error}}<span class="sp-badge sp-badge--warn" title="{{this.error_count}} failed request(s)">ERROR {{this.error_count}}</span>{{/if}}
                   {{#unless this.has_deny}}{{#unless this.has_error}}<span class="sp-badge sp-badge--ok">OK</span>{{/unless}}{{/unless}}
                   {{#if this.cache_hit_any}}<span class="sp-badge" title="Served partly from prompt cache">CACHE</span>{{/if}}
+                  {{#if this.is_hook_only}}<span class="sp-badge sp-badge--muted" title="Governed client activity with no gateway request — no model, tokens, cost or latency to report">HOOK ONLY</span>{{/if}}
                 </div>
               </td>
             </tr>
@@ -110,6 +120,11 @@
       {{> components/empty-state
           heading="No traces in this window"
           message="Nothing ran under the selected scope and time range. Widen the range, clear the filters, or pick a different group or project."}}
+      {{#if stats.lifecycle_count}}
+        <p class="sp-u-text-muted">
+          <a href="{{stats.lifecycle_url}}">{{stats.lifecycle_count}} session-lifecycle row(s)</a> are hidden: Claude Code sessions that opened and closed without doing anything.
+        </p>
+      {{/if}}
     {{/if}}
     {{/inline}}
 {{/layout}}
