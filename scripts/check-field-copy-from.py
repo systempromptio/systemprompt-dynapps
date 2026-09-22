@@ -22,9 +22,12 @@ The rule: a `From` earns its place by doing something -- renaming, narrowing,
 defaulting, tightening an invariant, changing a representation. One that only
 restates the same fields should be a single type, or a borrow.
 
-A projection that drops or renames fields is real work and is not reported;
-so is anything under the threshold, where two types sharing a few field names
-is coincidence rather than duplication.
+A projection that drops or renames fields is real work and is not reported: a
+rename is visible in the impl body, and a drop is found by counting the source
+struct's own fields and comparing. Anything under the threshold is not reported
+either, where two types sharing a few field names is coincidence rather than
+duplication. A source struct this script cannot see -- one from a dependency --
+is reported on the body alone, since there is nothing to compare against.
 
 Exemption: `// lint-ok: field-copy-from` on the line above the impl, with a
 reason.
@@ -46,6 +49,8 @@ IMPL_RE = re.compile(
 )
 # `name: src.name`, tolerating .clone(), .to_owned(), .into(), and a leading &
 FIELD_RE = re.compile(r"^\s*(\w+)\s*:\s*&?(?:\w+)\.(\w+)(?:\s*\.\s*(?:clone|to_owned|to_string|into)\s*\(\s*\))?\s*,\s*$")
+STRUCT_RE = re.compile(r"^[ \t]*(?:pub(?:\([^)]*\))?\s+)?struct\s+(\w+)(?:<[^>]*>)?\s*\{", re.M)
+DECL_FIELD_RE = re.compile(r"^\s*(?:pub(?:\([^)]*\))?\s+)?\w+\s*:\s*\S")
 
 
 def tracked_files():
@@ -69,9 +74,42 @@ def block_at(lines, start):
     return body
 
 
+def struct_field_counts(paths):
+    """Field count per struct name, so a projection that drops fields is seen.
+
+    Name collisions across crates are resolved to the largest declaration: a
+    smaller count would report a drop as a copy, which is the false positive
+    this exists to remove.
+    """
+    counts = {}
+    for path in paths:
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        if "struct " not in text:
+            continue
+        lines = text.splitlines()
+        for match in STRUCT_RE.finditer(text):
+            lineno = text[: match.start()].count("\n")
+            body = block_at(lines, lineno)
+            fields = 0
+            for line in body[1:]:
+                stripped = line.strip()
+                if not stripped or stripped.startswith(("//", "#[")):
+                    continue
+                if DECL_FIELD_RE.match(line):
+                    fields += 1
+            name = match.group(1)
+            counts[name] = max(counts.get(name, 0), fields)
+    return counts
+
+
 def main():
     findings = []
-    for path in tracked_files():
+    files = tracked_files()
+    field_counts = struct_field_counts(files)
+    for path in files:
         try:
             text = path.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError):
@@ -109,6 +147,11 @@ def main():
                         other += 1  # a rename is real work
                 elif stripped not in ("}", "});", "Self {", "}, ") and ":" in stripped:
                     other += 1
+            # A source with more fields than were copied is a projection: it
+            # drops something, which is work, so it is not a duplicate pair.
+            source = match.group(1).rsplit("::", 1)[-1]
+            if field_counts.get(source, copied) > copied:
+                continue
             if copied >= MIN_FIELDS and other == 0:
                 findings.append(
                     f"{path}:{lineno + 1}: From<{match.group(1)}> for {match.group(2)} "
