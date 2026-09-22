@@ -85,14 +85,24 @@ evidence is what the production dump showed before them.
   which matches through `weekday().num_days_from_sunday()`, 0-indexed with Sunday = 0. So `0` means
   Sunday and parses. It is the only day-of-week expression in the config.
 
-- **Finding 10h's 15 failures are not Vertex, and are not fixed by code.** The finding reads as a
-  Vertex routing fault; the rows say otherwise. All 15 are `provider = gemini` — the public
-  `generativelanguage` endpoint — split `gemini-2.5-flash` (7), `-flash-lite` (5), `-pro` (3), last
-  seen 2026-09-18. The error is Google's own retirement notice, e.g. *"gemini returned 404: This
-  model models/gemini-2.5-flash is no longer available to new users. Please update your code to use
-  models/gemini-3.6-flash"*. So this is catalog staleness on the deployed instance, not a rate-card
-  or routing defect: `services/ai/providers.yaml` in this tree already declares only `gemini-3.x`
-  and no 2.5 model at all. Like finding 8, the fix is a deploy.
+- **Finding 10h's 15 failures are not Vertex.** The finding reads as a Vertex routing fault; the rows
+  say otherwise. All 15 are `provider = gemini` — the public `generativelanguage` endpoint — split
+  `gemini-2.5-flash` (7), `-flash-lite` (5), `-pro` (3), last seen 2026-09-18. The error is Google's
+  own retirement notice, e.g. *"gemini returned 404: This model models/gemini-2.5-flash is no longer
+  available to new users. Please update your code to use models/gemini-3.6-flash"*. `route_match` is
+  NULL on all 15 and `requested_model` equals `model`, so no gateway route rewrote anything and no
+  `vertex-*` provider was involved: clients asked for the retired id by name.
+
+  They asked for it by name because our own documentation told them to — both install guides
+  instructed users to run `claude --model gemini-2.5-flash`. So the catalog and the docs were one
+  fault, fixed together in `07b8f751`: the three `gemini-2.5-*` declarations are gone from
+  `services/ai/providers.yaml` and both guides now name `gemini-3.8-flash`.
+
+  An earlier revision of this entry said "like finding 8, the fix is a deploy". That was wrong, and
+  wrong in an instructive way: it was written from the *working tree*, which already had the
+  uncommitted catalog edit in it, rather than from HEAD, which still declared all three retired
+  models. Deploying at that point would have redeployed them and left the guides pointing at them.
+  Only now is the remainder a deploy.
 
   Core `4bab7e7c2` (`VertexRateCardEntry::is_retired`, and `deselect` in `vertex_discovery/merge.rs`
   removing a declared model past its retirement date instead of warning and keeping it) was written
