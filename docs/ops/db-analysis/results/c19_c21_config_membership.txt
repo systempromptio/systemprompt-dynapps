@@ -1,0 +1,93 @@
+== C19 access_control tables and sync state
+ rules | entities | rule_sources | expired_validity 
+-------+----------+--------------+------------------
+   159 |       63 | yaml=159     |                0
+(1 row)
+
+ plane | applied_mode | applied_by | applied_at | in_sync 
+-------+--------------+------------+------------+---------
+(0 rows)
+
+== C19 entity types in DB
+   entity_type   | count 
+-----------------+-------
+ agent           |     1
+ gateway_route   |    11
+ marketplace     |     8
+ mcp_server      |     6
+ plugin          |     4
+ skill           |    32
+ slack_workspace |     1
+(7 rows)
+
+== C19 rules whose entity is not in access_control_entities
+ count 
+-------
+     0
+(1 row)
+
+== C20 groups / projects
+ groups | projects | group_memberships | project_memberships | users_in_no_group | users_in_no_project | defaults_missing_group | defaults_missing_project | dup_group_memberships | dup_project_memberships 
+--------+----------+-------------------+---------------------+-------------------+---------------------+------------------------+--------------------------+-----------------------+-------------------------
+      5 |        4 |                14 |                  13 |              1191 |                1193 |                      0 |                        0 |                     0 |                       0
+(1 row)
+
+== C20 users in more than one group / project (non-exclusive scope attribution)
+ multi_group_users | multi_project_users 
+-------------------+---------------------
+                 0 |                   1
+(1 row)
+
+== C20 requests whose user is in N groups: scope rows vs requests
+ n_groups | requests 
+----------+----------
+        0 |      501
+        1 |     3891
+(2 rows)
+
+== C21 managed_* tables (row counts; several are empty on this instance)
+                 relname                 | n_live_tup 
+-----------------------------------------+------------
+ managed_api_operations                  |          0
+ managed_assets                          |          0
+ managed_consumer_attribution_history    |          0
+ managed_consumer_attribution_projection |          0
+ managed_consumer_credentials            |          0
+ managed_consumer_grants                 |          0
+ managed_consumer_invocation_evidence    |          0
+ managed_consumer_session_bindings       |          0
+ managed_dependency_verifications        |          0
+ managed_distribution_deliveries         |          0
+ managed_distribution_outbox             |          0
+ managed_git_verifications               |          0
+ managed_installation_coverage           |          0
+ managed_installation_coverage_state     |          0
+ managed_installation_receipts           |          0
+ managed_inventory_authoring_heads       |          0
+ managed_inventory_bindings              |          0
+ managed_inventory_captures              |          0
+ managed_inventory_entries               |          0
+ managed_inventory_membership            |          0
+ managed_inventory_observations          |          0
+ managed_inventory_state                 |          0
+ managed_invocation_attributions         |          0
+ managed_publication_reviews             |          0
+ managed_publication_selections          |          0
+ managed_publications                    |          0
+ managed_reconciliation_conflicts        |          0
+ managed_reconciliations                 |          0
+ managed_resource_git_bindings           |          0
+ managed_resources                       |          0
+ managed_revision_assets                 |          0
+ managed_revision_dependencies           |          0
+ managed_revisions                       |          0
+ managed_source_snapshots                |          0
+ managed_sources                         |          0
+ managed_withdrawal_proposals            |          0
+(36 rows)
+
+ active_grants | grants_for_missing_users | undelivered_distribution 
+---------------+--------------------------+--------------------------
+             0 |                        0 |                        0
+(1 row)
+

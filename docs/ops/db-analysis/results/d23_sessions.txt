@@ -1,0 +1,50 @@
+== D23 session anomalies
+ sessions | open_idle_7d | expired_not_ended | revoked | bots | ai_crawlers | scanners | behavioral_bots | anon | ended | no_duration 
+----------+--------------+-------------------+---------+------+-------------+----------+-----------------+------+-------+-------------
+     2147 |            0 |                 7 |       1 |    0 |         169 |      517 |            1620 |    0 |  2133 |        1270
+(1 row)
+
+== D23 sessions by source / client_type
+ session_source | client_type | count | with_ai_requests 
+----------------+-------------+-------+------------------
+ bridge         | firstparty  |  1070 |              103
+ web            | firstparty  |   803 |                0
+ oauth          | firstparty  |   272 |                0
+ api            | firstparty  |     2 |                2
+(4 rows)
+
+== D23 users with > 50 sessions in a day
+               user_id                |     d      | count 
+--------------------------------------+------------+-------
+ f52eb9c6-1dca-4148-8e47-43e322facde0 | 2026-09-09 |   121
+(1 row)
+
+== D23 sessions per user (top 5 by count; ids only)
+               user_id                | sessions |   first    |    last    
+--------------------------------------+----------+------------+------------
+ 7c7d9e56-4da5-4eeb-a6bd-c8b64f7302ed |      256 | 2026-09-05 | 2026-09-22
+ 9e7a44ac-7494-489b-b4d2-fcbb4191c983 |      206 | 2026-09-07 | 2026-09-21
+ c7285985-9211-4fe2-95ee-c143d4502cf5 |      153 | 2026-09-04 | 2026-09-22
+ f52eb9c6-1dca-4148-8e47-43e322facde0 |      121 | 2026-09-09 | 2026-09-09
+ 8a1ece9f-ff46-436e-99d3-21b589ac57f3 |      115 | 2026-09-09 | 2026-09-22
+(5 rows)
+
+== D23 the 7 expired-not-ended sessions
+                session_id                 | session_source |     expires_at      |  last_activity_at   | request_count 
+-------------------------------------------+----------------+---------------------+---------------------+---------------
+ sess_715b6dad-7d98-421e-812e-e15c5c33153f | bridge         | 2026-09-22 07:24:26 | 2026-09-22 06:24:26 |             0
+ sess_63cc1437-83d3-4136-838c-1a3d96009176 | bridge         | 2026-09-22 07:54:57 | 2026-09-22 06:54:57 |             0
+ sess_9681c65e-cffd-46d7-8d2d-e71ff6cd7bb5 | bridge         | 2026-09-22 08:07:55 | 2026-09-22 07:07:55 |             0
+ sess_f0d85b05-466a-4276-8297-6c261ac56e2c | bridge         | 2026-09-22 08:24:06 | 2026-09-22 07:24:06 |             0
+ sess_88814f33-d5a5-46bf-b224-397aca26cf71 | bridge         | 2026-09-22 07:40:22 | 2026-09-22 06:40:22 |             0
+ sess_b447d324-dbcd-44d7-b324-d4fb95009e1a | bridge         | 2026-09-22 07:50:27 | 2026-09-22 06:50:27 |             0
+ sess_32fc3efc-120c-4536-b88a-486ba8b424f5 | bridge         | 2026-09-22 08:04:46 | 2026-09-22 07:04:46 |             0
+(7 rows)
+
+== D23 user_contexts.session_id vs the
+unterminated quoted string
+ contexts | contexts_spanning_sessions | context_session_not_among_requests 
+----------+----------------------------+------------------------------------
+      422 |                         37 |                                  1
+(1 row)
+

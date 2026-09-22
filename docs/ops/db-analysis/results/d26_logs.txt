@@ -1,0 +1,140 @@
+== D26 rows per level
+ level | count  |   first    |    last    
+-------+--------+------------+------------
+ INFO  | 437068 | 2026-09-08 | 2026-09-22
+ WARN  |   1333 | 2026-09-08 | 2026-09-22
+ ERROR |    601 | 2026-09-08 | 2026-09-22
+(3 rows)
+
+== D26 module top 20
+                         module                         | count  | errors | warns 
+--------------------------------------------------------+--------+--------+-------
+ systemprompt_api::gateway                              | 392599 |    584 |  1193
+ systemprompt_generator::prerender::engine              |   5340 |      0 |     0
+ systemprompt_web_jobs::llms_txt                        |   4005 |      0 |     0
+ systemprompt_web_jobs::content_analytics               |   4005 |      0 |     0
+ systemprompt_web_jobs::robots                          |   4005 |      0 |     0
+ systemprompt_web_jobs::ingestion                       |   4005 |      0 |     0
+ systemprompt_api::services::proxy::engine::mcp_session |   3025 |      9 |     0
+ systemprompt_web_jobs::publish                         |   2670 |      0 |     0
+ systemprompt_web_jobs::bundle_admin_css                |   2670 |      0 |     0
+ systemprompt_web_jobs::copy_assets                     |   2670 |      0 |     0
+ systemprompt_web_jobs::sitemap                         |   2670 |      0 |     0
+ systemprompt_web_jobs::prerender                       |   2670 |      0 |     0
+ systemprompt_generator::sitemap::generator             |   1335 |      0 |     0
+ systemprompt_generator::rss::generator                 |   1335 |      0 |     0
+ systemprompt_files::jobs::file_ingestion               |   1334 |      0 |     0
+ systemprompt_scheduler::jobs::cleanup_empty_contexts   |    999 |      0 |     0
+ systemprompt_web_jobs::usage_anomaly                   |    715 |      0 |    49
+ systemprompt_scheduler::jobs::ghost_session_cleanup    |    684 |      0 |     0
+ systemprompt_scheduler::jobs::behavioral_analysis      |    666 |      0 |     0
+ systemprompt_web_jobs::usage_rollup                    |    666 |      0 |     0
+(20 rows)
+
+== D26 ERROR shapes top 20
+                         module                         |                                               shape                                               | count |   first    |    last    
+--------------------------------------------------------+---------------------------------------------------------------------------------------------------+-------+------------+------------
+ systemprompt_api::gateway                              | GET /v#/bridge/latest -> # (#ms)                                                                  |   577 | 2026-09-11 | 2026-09-22
+ systemprompt_api::services::proxy::engine::mcp_session | MCP backend error response                                                                        |     9 | 2026-09-09 | 2026-09-10
+ systemprompt_api::gateway                              | POST /v#/messages -> # (#ms)                                                                      |     7 | 2026-09-08 | 2026-09-08
+ systemprompt_api::services::proxy::errors              | Proxy server error                                                                                |     4 | 2026-09-09 | 2026-09-14
+ systemprompt_models::api::errors                       | Service 'atlassian' is not running (status: token accessor returned status # Unauthorized)        |     2 | 2026-09-14 | 2026-09-14
+ systemprompt_models::api::errors                       | Service 'atlassian' is not running (status: token accessor returned status # Service Unavailable) |     2 | 2026-09-09 | 2026-09-09
+(6 rows)
+
+== D26 WARN shapes top 15
+                                    module                                    |                                                          shape                                                           | count 
+------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------+-------
+ systemprompt_api::gateway                                                    | GET /v#/bridge/stream -> # (#ms)                                                                                         |   394
+ systemprompt_api::gateway                                                    | GET /v#/bridge/latest -> # (#ms)                                                                                         |   383
+ systemprompt_api::gateway                                                    | POST /v#/bridge/heartbeat -> # (#ms)                                                                                     |   290
+ systemprompt_api::gateway                                                    | POST /v#/messages -> # (#ms)                                                                                             |    76
+ systemprompt_web_jobs::usage_anomaly                                         | usage anomaly: check /admin/analytics?tab=spend and the request log                                                      |    49
+ systemprompt_api::gateway                                                    | POST /v#/chat/completions -> # (#ms)                                                                                     |    39
+ systemprompt_api::services::proxy::auth::challenge                           | auth failed                                                                                                              |    11
+ systemprompt_oauth::services::jwt::authorization                             | JWT validation failed                                                                                                    |    11
+ systemprompt_api::services::proxy::auth::challenge                           | Building OAuth challenge                                                                                                 |    11
+ systemprompt_scheduler::jobs::vertex_discovery                               | served Vertex model vertex-gemini-#.#-pro retires on #-#-#; plan its replacement                                         |     7
+ systemprompt_scheduler::jobs::vertex_discovery                               | served Vertex model vertex-gemini-#.#-flash-lite retires on #-#-#; plan its replacement                                  |     7
+ systemprompt_scheduler::jobs::vertex_discovery                               | served Vertex model vertex-gemini-#.#-flash retires on #-#-#; plan its replacement                                       |     7
+ systemprompt_api::services::proxy::resolver                                  | Service not found                                                                                                        |     6
+ systemprompt_api::routes::oauth::endpoints::token::handler::grants::exchange | client_credentials grant rejected                                                                                        |     6
+ systemprompt_loader::vertex_discovery::merge                                 | explicitly declared Vertex model is retiring or unsupported; it stays served because the catalog declares it, but it sho |     6
+(15 rows)
+
+== D26 gateway access-log lines by status class (the INFO bulk)
+ status | count  |    min     |    max     
+--------+--------+------------+------------
+ 200    | 390822 | 2026-09-08 | 2026-09-22
+ 502    |    584 | 2026-09-08 | 2026-09-22
+ 404    |    396 | 2026-09-08 | 2026-09-22
+ 429    |    362 | 2026-09-09 | 2026-09-09
+ 401    |    335 | 2026-09-08 | 2026-09-22
+ 400    |     67 | 2026-09-08 | 2026-09-21
+ 499    |     29 | 2026-09-09 | 2026-09-22
+ 403    |      3 | 2026-09-10 | 2026-09-11
+ 405    |      1 | 2026-09-11 | 2026-09-11
+(9 rows)
+
+== D26 gateway lines by route (top 12)
+                                 route                                  | count  | errors 
+------------------------------------------------------------------------+--------+--------
+ /v1/bridge/profile                                                     | 176436 |      0
+ /v1/bridge/heartbeat                                                   | 104224 |      0
+ /v1/bridge/profile/usage                                               |  61373 |      0
+ /v1/bridge/stream                                                      |   5736 |      0
+ /v1/messages                                                           |   5724 |      7
+ /v1/auth/bridge/pat                                                    |   2322 |      0
+ /v1/chat/completions                                                   |   1076 |      0
+ /v1/bridge/latest                                                      |    960 |    577
+ /v1/bridge/manifest                                                    |    767 |      0
+ /v1/bridge/plugins/astound-india-ba/skills/ba-impact-analysis/SKILL.md |    617 |      0
+ /v1/bridge/plugins/astound-india-ba/.claude-plugin/plugin.json         |    617 |      0
+ /v1/bridge/plugins/astound-india-ba/.mcp.json                          |    617 |      0
+(12 rows)
+
+== D26 /v1/bridge/latest by status and day
+     d      | status | count 
+------------+--------+-------
+ 2026-09-08 | 404    |    19
+ 2026-09-09 | 404    |    60
+ 2026-09-10 | 404    |    48
+ 2026-09-11 | 404    |    24
+ 2026-09-11 | 502    |    34
+ 2026-09-12 | 404    |     9
+ 2026-09-12 | 502    |    19
+ 2026-09-13 | 404    |    10
+ 2026-09-13 | 502    |    10
+ 2026-09-14 | 404    |    16
+ 2026-09-14 | 502    |    15
+ 2026-09-15 | 404    |    19
+ 2026-09-15 | 502    |    71
+ 2026-09-16 | 404    |    22
+ 2026-09-16 | 502    |   130
+ 2026-09-17 | 401    |     2
+ 2026-09-17 | 404    |    30
+ 2026-09-17 | 502    |    78
+ 2026-09-18 | 404    |    33
+ 2026-09-18 | 502    |    62
+ 2026-09-19 | 404    |    27
+ 2026-09-19 | 502    |    34
+ 2026-09-20 | 404    |    24
+ 2026-09-20 | 502    |    26
+ 2026-09-21 | 404    |    31
+ 2026-09-21 | 502    |    63
+ 2026-09-22 | 404    |     9
+ 2026-09-22 | 502    |    35
+(28 rows)
+
+== D26 logs.user_id / session_id sentinel values and real-id coverage
+ user_system | session_system | user_real | user_real_orphan | with_trace | with_context 
+-------------+----------------+-----------+------------------+------------+--------------
+       43158 |         428990 |    395844 |                0 |     439002 |         3245
+(1 row)
+
+== D26 logs with a trace_id: do they join ai_requests?
+ count  | joins_request 
+--------+---------------
+ 439002 |          6767
+(1 row)
+

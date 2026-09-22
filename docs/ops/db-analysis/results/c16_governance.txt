@@ -1,0 +1,106 @@
+== C16 decisions by policy/decision
+      policy      | decision | count | no_trace | has_tool_use | traces 
+------------------+----------+-------+----------+--------------+--------
+ default_allow    | allow    |  5821 |     2061 |            0 |   3760
+ authz            | allow    |  4695 |        0 |            0 |   4695
+ authz_rule_based | allow    |  4695 |        0 |            0 |   4695
+ secret_scan      | warn     |   876 |        8 |            0 |    868
+ quota            | warn     |    73 |        0 |            0 |     73
+ secret_scan      | deny     |     3 |        0 |            0 |      3
+(6 rows)
+
+== C16 authz vs authz_rule_based: identical pairs (same trace, tool, second)
+ pairs | same_decision_and_reason | same_rules 
+-------+--------------------------+------------
+  4695 |                     4695 |          0
+(1 row)
+
+== C16 thesh: 1: authz: not found
+  rows: what distinguishes them from authz_rule_based (reason shapes, agent_scope)
+      policy      | agent_scope | reason | count 
+------------------+-------------+--------+-------
+ authz_rule_based |             |        |  4695
+ authz            |             |        |  4695
+(2 rows)
+
+== C16 per-trace stage multiplicity for traced decisions
+                   stages                   | traces 
+--------------------------------------------+--------
+ authz+authz_rule_based+default_allow       |   3469
+ authz+authz_rule_based+secret_scan         |    842
+ authz+authz_rule_based                     |    311
+ default_allow                              |    247
+ authz+authz_rule_based+default_allow+quota |     44
+ authz+authz_rule_based+quota+secret_scan   |     29
+(6 rows)
+
+== C16 decisions whose trace joins a request / an execution / neither
+ total | on_request | on_execution | no_trace | traced_but_unjoined 
+-------+------------+--------------+----------+---------------------
+ 16163 |      13241 |          853 |     2069 |                   0
+(1 row)
+
+== C16 requests without any decision (should be 0: every /v1/messages passes the prompt gate)
+ requests | without_decision | rejected 
+----------+------------------+----------
+     4392 |                0 |        7
+(1 row)
+
+ status | request_kind | count 
+--------+--------------+-------
+(0 rows)
+
+== C16 executions without a decision
+ count 
+-------
+     0
+(1 row)
+
+== C16 hook (no-trace) decisions: session id namespace and what they carry
+      tool      | count | gateway_session | ctx_null | plugin_null | act_null 
+----------------+-------+-----------------+----------+-------------+----------
+ Bash           |   838 |               0 |        0 |           0 |        0
+ Read           |   300 |               0 |        0 |           0 |        0
+ mcp__systempro |   148 |               0 |        0 |           0 |        0
+ mcp__plugin_as |   117 |               0 |        0 |           0 |        0
+ mcp__atlassian |   114 |               0 |        0 |           0 |        0
+ Edit           |    80 |               0 |        0 |           0 |        0
+ Write          |    78 |               0 |        0 |           0 |        0
+ mcp__workspace |    73 |               0 |        0 |           0 |        0
+ Skill          |    44 |               0 |        0 |           0 |        0
+ AskUserQuestio |    34 |               0 |        0 |           0 |        0
+(10 rows)
+
+== C16 hook decisions vs PostToolUse events: same CC session, tool_use available on the event but not on the decision
+ hook_decisions | post_tool_events | paired_by_session_tool_time 
+----------------+------------------+-----------------------------
+           2069 |             2049 |                        2059
+(1 row)
+
+== C16 decisions per day: with trace / without
+     d      | total | hook_no_trace | authz_dup 
+------------+-------+---------------+-----------
+ 2026-09-03 |   229 |            14 |        76
+ 2026-09-04 |    42 |             0 |        14
+ 2026-09-06 |     3 |             0 |         1
+ 2026-09-07 |   323 |            65 |        86
+ 2026-09-08 |   970 |           311 |       236
+ 2026-09-09 |  1774 |            96 |       627
+ 2026-09-10 |  1274 |            22 |       409
+ 2026-09-11 |  2508 |           367 |       677
+ 2026-09-13 |   185 |            35 |        50
+ 2026-09-14 |    26 |             6 |         6
+ 2026-09-15 |  1599 |           169 |       477
+ 2026-09-16 |  1738 |           309 |       453
+ 2026-09-17 |  1495 |           108 |       461
+ 2026-09-18 |  1398 |           131 |       417
+ 2026-09-21 |  1056 |           121 |       299
+ 2026-09-22 |  1543 |           315 |       406
+(16 rows)
+
+== C16 ai_request_scopes coverage and scope validity
+ requests | scopes | uncovered | no_group | no_project |   sources    
+----------+--------+-----------+----------+------------+--------------
+     4392 |   4392 |         0 |        0 |        844 | primary=4392
+(1 row)
+

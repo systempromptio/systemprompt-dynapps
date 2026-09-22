@@ -1,0 +1,128 @@
+== C17 safety findings: orphans, per phase/category/blocked
+ findings | orphan_findings | requests_with_findings 
+----------+-----------------+------------------------
+     3451 |               0 |                   2649
+(1 row)
+
+  phase   |    category     | blocked | count 
+----------+-----------------+---------+-------
+ request  | pii_email       | f       |  2607
+ request  | pii_phone       | f       |   604
+ request  | pii_credit_card | f       |   105
+ response | pii_email       | f       |    95
+ response | secret          | f       |    28
+ response | pii_phone       | f       |    12
+(6 rows)
+
+== C17 the three tool-call planes and their links
+ intents | intents_linked_to_execution | executions | executions_linked_to_intent | executions_with_correlation | hook_tool_events | hook_events_matching_intent | hook_events_linked_to_execution | ledger_rows |         ledger_states         
+---------+-----------------------------+------------+-----------------------------+-----------------------------+------------------+-----------------------------+---------------------------------+-------------+-------------------------------
+    2901 |                           0 |        550 |                           0 |                         550 |             2049 |                        1822 |                               0 |        3451 | unattested=550, intended=2901
+(1 row)
+
+== C17 executions by source/correlation/status
+   source   | correlation | status  | count | linked 
+------------+-------------+---------+-------+--------
+ in_process | exact       | success |   300 |      0
+ proxy      | exact       | success |   223 |      0
+ proxy      | exact       | failed  |    24 |      0
+ in_process | exact       | failed  |     3 |      0
+(4 rows)
+
+== C17 intents whose tool is an MCP tool (mcp__server__tool) vs executions by server: are executions a subset of intents?
+ intents_mcp | requests 
+-------------+----------
+         536 |      350
+(1 row)
+
+              server               | intents 
+-----------------------------------+---------
+ systemprompt                      |     148
+ atlassian                         |     128
+ plugin_astound-india-ba_atlassian |     104
+ workspace                         |      74
+ salesforce-dx                     |      34
+ plugin_astound-india-ba_github    |      19
+ plugins                           |       7
+ cowork                            |       7
+(8 rows)
+
+  server_name   | executions 
+----------------+------------
+ systemprompt   |        257
+ atlassian      |        228
+ knowledge-bank |         46
+ github         |         19
+(4 rows)
+
+== C17 can an execution be paired to an intent by (user, tool, time)? — what claim_unclaimed_intent should have done
+ executions | pairable_by_user_tool_time | pairable_by_session_tool 
+------------+----------------------------+--------------------------
+        550 |                        277 |                      277
+(1 row)
+
+== C17 intent tool-name shapes vs execution tool-name shapes (namespace mismatch?)
+ prefix | count 
+--------+-------
+ Bash   |   744
+ Read   |   437
+ mcp__s |   183
+ bash   |   182
+ Write  |   176
+ mcp__a |   133
+(6 rows)
+
+  server_name   |         tool         | count 
+----------------+----------------------+-------
+ systemprompt   | systemprompt         |   249
+ atlassian      | createJiraIssue      |    77
+ atlassian      | searchJiraIssuesUsin |    58
+ knowledge-bank | list_knowledge_sourc |    41
+ atlassian      | listJiraProjects     |    22
+ atlassian      | getAccessibleAtlassi |    19
+(6 rows)
+
+== C17 duplicate ai_tool_call_id among intents (ledger fan-out hazard)
+ dup_ids | rows_involved 
+---------+---------------
+       0 |              
+(1 row)
+
+== C17 hook PostToolUse events with tool_use_id not matching any intent, by tool
+                      tool_name                       | count 
+------------------------------------------------------+-------
+ Bash                                                 |   168
+ PowerShell                                           |    23
+ Read                                                 |    19
+ Write                                                |     6
+ WebFetch                                             |     4
+ AskUserQuestion                                      |     2
+ mcp__plugin_astound-admin_systemprompt__systemprompt |     1
+ ExitPlanMode                                         |     1
+(8 rows)
+
+== C17 per-day: intents / executions / hook tool events
+           d            | intents | executions | hook_tool_events 
+------------------------+---------+------------+------------------
+ 2026-09-03 00:00:00+00 |      14 |         13 |               14
+ 2026-09-04 00:00:00+00 |       2 |          0 |                0
+ 2026-09-05 00:00:00+00 |       0 |          0 |                0
+ 2026-09-06 00:00:00+00 |       0 |          0 |                0
+ 2026-09-07 00:00:00+00 |      66 |          0 |               65
+ 2026-09-08 00:00:00+00 |     119 |         42 |              308
+ 2026-09-09 00:00:00+00 |     463 |        203 |               96
+ 2026-09-10 00:00:00+00 |     383 |          9 |               22
+ 2026-09-11 00:00:00+00 |     419 |        112 |              361
+ 2026-09-12 00:00:00+00 |       0 |          0 |                0
+ 2026-09-13 00:00:00+00 |      35 |          0 |               35
+ 2026-09-14 00:00:00+00 |       2 |          2 |                6
+ 2026-09-15 00:00:00+00 |     189 |         69 |              169
+ 2026-09-16 00:00:00+00 |     408 |         60 |              307
+ 2026-09-17 00:00:00+00 |     110 |          4 |              107
+ 2026-09-18 00:00:00+00 |     142 |         17 |              128
+ 2026-09-19 00:00:00+00 |       0 |          0 |                0
+ 2026-09-20 00:00:00+00 |       0 |          0 |                0
+ 2026-09-21 00:00:00+00 |     240 |          9 |              119
+ 2026-09-22 00:00:00+00 |     309 |         10 |              312
+(20 rows)
+

@@ -1,0 +1,28 @@
+== B7 tables present in prod that a fresh 0.58.0 install does not create (deleted crates, no drop migration)
+    family    | tables |  size  | rows 
+--------------+--------+--------+------
+ eval         |     19 | 504 kB |    0
+ knowledge    |     12 | 304 kB |    0
+ requirements |      6 | 96 kB  |    0
+(3 rows)
+
+== B7 unique constraints declared by the 0.58.0 schema files but absent from prod
+                     expected                     | present 
+--------------------------------------------------+---------
+ mcp_tool_executions_user_id_mcp_execution_id_key | f
+ plugin_usage_events_user_id_id_key               | f
+(2 rows)
+
+== B7 objects in prod not in the baseline
+                  obj                   | present 
+----------------------------------------+---------
+ event_outbox_actor_id_nonempty (CHECK) | t
+ idx_ai_safety_findings_blocked (INDEX) | t
+(2 rows)
+
+== B7 object counts (baseline: 200 tables / 32 views / 74 functions / 35 triggers / 493 indexes)
+ tables | views | functions | triggers | indexes 
+--------+-------+-----------+----------+---------
+    237 |    32 |       239 |       53 |     841
+(1 row)
+

@@ -1,0 +1,101 @@
+== D22 anomalies
+ completed_before_created | completed_no_latency | completed_no_completed_at | stuck_pending | in_future | finish_reason_null | served_provider_null | upstream_latency_null | latency_over_10min | no_client_session | no_gateway_conversation 
+--------------------------+----------------------+---------------------------+---------------+-----------+--------------------+----------------------+-----------------------+--------------------+-------------------+-------------------------
+                        0 |                    0 |                         0 |             3 |         0 |               4392 |                 4392 |                  1227 |                  0 |               748 |                       7
+(1 row)
+
+== D22 stuck pending rows (ids)
+                  id                  | provider  |      model      | is_streaming | request_kind | client_kind |     created_at      |     updated_at      
+--------------------------------------+-----------+-----------------+--------------+--------------+-------------+---------------------+---------------------
+ 45f0db81-fa41-4788-ae26-c8a92ca6f1c7 | anthropic | claude-sonnet-5 | t            | turn         | opencode    | 2026-09-16 12:40:49 | 2026-09-16 12:40:49
+ c00d1453-e790-46f0-9180-fe9379f42752 | vertex    | gemini-2.5-pro  | t            | turn         | opencode    | 2026-09-18 21:21:13 | 2026-09-18 21:21:13
+ 58a4d71c-d184-4713-917a-73d2468db017 | anthropic | claude-sonnet-5 | t            | turn         | opencode    | 2026-09-18 23:04:40 | 2026-09-18 23:04:40
+(3 rows)
+
+== D22 status x finish_reason per day
+     d      | completed | failed | rejected | pending | finish_reasons 
+------------+-----------+--------+----------+---------+----------------
+ 2026-09-03 |        63 |      0 |        0 |       0 |              0
+ 2026-09-04 |         7 |      7 |        0 |       0 |              0
+ 2026-09-06 |         1 |      0 |        0 |       0 |              0
+ 2026-09-07 |        84 |      2 |        0 |       0 |              0
+ 2026-09-08 |       181 |      6 |        7 |       0 |              0
+ 2026-09-09 |       423 |      1 |        0 |       0 |              0
+ 2026-09-10 |       393 |      7 |        0 |       0 |              0
+ 2026-09-11 |       669 |      7 |        0 |       0 |              0
+ 2026-09-13 |        50 |      0 |        0 |       0 |              0
+ 2026-09-14 |         6 |      0 |        0 |       0 |              0
+ 2026-09-15 |       431 |     11 |        0 |       0 |              0
+ 2026-09-16 |       450 |      2 |        0 |       1 |              0
+ 2026-09-17 |       440 |     21 |        0 |       0 |              0
+ 2026-09-18 |       397 |     18 |        0 |       2 |              0
+ 2026-09-21 |       288 |     11 |        0 |       0 |              0
+ 2026-09-22 |       404 |      2 |        0 |       0 |              0
+(16 rows)
+
+== D22 error_message shapes (failed/rejected) top 20
+  status  |                                                     shape                                                      | count 
+----------+----------------------------------------------------------------------------------------------------------------+-------
+ failed   | stream ended without stop event                                                                                |    34
+ failed   | anthropic returned #: Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing |    22
+ failed   | gemini returned #: This model models/gemini-#.#-flash is no longer available to new users. Please update your  |     7
+ failed   | gemini returned #: This model models/gemini-#.#-flash-lite is no longer available to new users. Please update  |     5
+ failed   | anthropic returned #: model: claude-sonnet-#-#                                                                 |     4
+ failed   | anthropic returned #: prompt is too long: # tokens > # maximum                                                 |     4
+ failed   | vertex returned #: Unable to submit request because `systemprompt_admin_report` functionDeclaration `parameter |     4
+ rejected | HTTP #: Gateway API key secret 'vertex_maas' not configured                                                    |     4
+ failed   | vertex returned #: Permission 'aiplatform.endpoints.predict' denied on resource '//aiplatform.googleapis.com/p |     3
+ failed   | gemini returned #: Invalid JSON payload received. Unknown name "prefixItems" at 'tools[#].function_declaration |     3
+ failed   | gemini returned #: This model models/gemini-#.#-pro is no longer available to new users. Please update your co |     3
+ failed   | secret detected: High-entropy token (possible credential) at prompt.messages[#].user (AI_AGENT=cla...[REDACTED |     3
+ rejected | HTTP #: Gateway API key secret 'openai' not configured                                                         |     2
+ failed   | gemini returned #: * GenerateContentRequest.tools[#].function_declarations[#].parameters.properties[source_typ |     1
+ failed   | anthropic returned #: This model does not support assistant message prefill. The conversation must end with a  |     1
+ failed   | vertex returned #: Please ensure that the number of function response parts is equal to the number of function |     1
+ rejected | HTTP #: Gateway API key secret 'cerebras' not configured                                                       |     1
+(17 rows)
+
+== D22 client attribution: client_kind x wire_protocol x attestation presence x session_source
+ client_kind |   wire_protocol    | attested | session_source | client_type | count 
+-------------+--------------------+----------+----------------+-------------+-------
+ opencode    | openai.chat        | t        | bridge         | firstparty  |  3644
+ other       | openai.chat        | t        | bridge         | firstparty  |   551
+ other       | unknown            | t        | bridge         | firstparty  |   102
+ other       | anthropic.messages | t        | bridge         | firstparty  |    75
+ unknown     | unknown            | t        | bridge         | firstparty  |    16
+ other       | anthropic.messages | t        | api            | firstparty  |     4
+(6 rows)
+
+== D22 client_attestation shapes (keys only)
+== D22 latency: p50/p95/max by model (completed turns)
+ERROR:  invalid input syntax for type json
+DETAIL:  Token "native" is invalid.
+CONTEXT:  JSON data, line 1: native...
+           model            | count | p50  |  p95  |  max   
+----------------------------+-------+------+-------+--------
+ claude-haiku-4-5-20251001  |  1129 | 3544 | 23052 | 241793
+ claude-sonnet-5            |   964 | 5370 | 35446 | 232714
+ claude-opus-5              |   497 | 6636 | 39337 | 148208
+ claude-sonnet-4-6          |   250 | 5284 | 34846 | 119742
+ claude-fable-5-1           |    41 | 8598 | 55097 | 103518
+ gemini-3.1-pro-preview     |    22 | 4190 |  8015 |  23247
+ claude-sonnet-4-5-20250929 |    20 | 9571 | 26758 |  31836
+ gemini-2.5-pro             |    20 | 9059 | 39086 |  51497
+(8 rows)
+
+== D22 request_id vs id (gateway path uses the same value; internal path differs)
+ same | different 
+------+-----------
+ 4392 |         0
+(1 row)
+
+== D22 probes: what are they (model, client, cost)
+           model           | client_kind | count | usd  | avg_ms 
+---------------------------+-------------+-------+------+--------
+ claude-haiku-4-5-20251001 | opencode    |   702 | 2.63 |    850
+ claude-sonnet-5           | opencode    |   401 | 4.02 |   1082
+ claude-opus-5             | opencode    |   134 | 2.74 |   1397
+ claude-haiku-4-5-20251001 | other       |   100 | 0.00 |    919
+ claude-sonnet-5           | other       |     1 | 0.00 |    706
+(5 rows)
+

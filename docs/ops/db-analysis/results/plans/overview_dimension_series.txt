@@ -1,0 +1,23 @@
+                                                   QUERY PLAN                                                    
+-----------------------------------------------------------------------------------------------------------------
+ GroupAggregate  (cost=69.30..69.90 rows=22 width=52)
+   Group Key: k.bucket, (CASE WHEN (ranked.key IS NULL) THEN 'Other'::text ELSE k.key END)
+   CTE keyed
+     ->  Index Scan using idx_ai_requests_created_at on ai_requests r  (cost=0.28..66.87 rows=22 width=44)
+           Index Cond: ((created_at >= $1) AND (created_at < $2))
+           Filter: (NOT synthetic)
+   ->  Sort  (cost=2.42..2.48 rows=22 width=44)
+         Sort Key: k.bucket, (CASE WHEN (ranked.key IS NULL) THEN 'Other'::text ELSE k.key END)
+         ->  Hash Left Join  (cost=1.42..1.93 rows=22 width=44)
+               Hash Cond: (k.key = ranked.key)
+               ->  CTE Scan on keyed k  (cost=0.00..0.44 rows=22 width=44)
+               ->  Hash  (cost=1.35..1.35 rows=6 width=32)
+                     ->  Subquery Scan on ranked  (cost=1.27..1.35 rows=6 width=32)
+                           ->  Limit  (cost=1.27..1.29 rows=6 width=72)
+                                 ->  Sort  (cost=1.27..1.33 rows=22 width=72)
+                                       Sort Key: (sum(keyed.cost_microdollars)) DESC, (count(*)) DESC, keyed.key
+                                       ->  HashAggregate  (cost=0.61..0.88 rows=22 width=72)
+                                             Group Key: keyed.key
+                                             ->  CTE Scan on keyed  (cost=0.00..0.44 rows=22 width=40)
+(19 rows)
+

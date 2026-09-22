@@ -1,0 +1,47 @@
+ refresh_conversation_facts 
+----------------------------
+                        421
+(1 row)
+
+== C12 rows before / after refresh
+ before | after 
+--------+-------
+    421 |   421
+(1 row)
+
+== C12 per-column differences after refresh
+ compared | request_count | turn_count | cost | tokens | first_last | intended | executed | gov | hook_events | skills 
+----------+---------------+------------+------+--------+------------+----------+----------+-----+-------------+--------
+      421 |             0 |          0 |    0 |      0 |          0 |        0 |        0 |   0 |           0 |      0
+(1 row)
+
+== C12 what the facts actually hold (sums) — the link-plane columns
+ contexts | requests | intended | executed | failed | artifacts | gov_allow | gov_warn | gov_deny | hook_events | prompts | skills | no_client_session 
+----------+----------+----------+----------+--------+-----------+-----------+----------+----------+-------------+---------+--------+-------------------
+      421 |     4392 |     2901 |        0 |      0 |         0 |     13679 |      971 |        3 |       14923 |    1426 |    183 |               124
+(1 row)
+
+== C12 contexts sharing one client_session_id (hook/gov counts re-counted per context)
+ contexts_per_client_session | client_sessions 
+-----------------------------+-----------------
+                           1 |              82
+                           2 |              28
+                           3 |               6
+                           4 |               3
+                           5 |               1
+                           6 |               3
+                           7 |               3
+                           8 |               1
+                           9 |               2
+                          10 |               2
+                          11 |               1
+                          12 |               1
+                          16 |               1
+(13 rows)
+
+== C12 over-count: sum of per-context hook_event_count vs distinct hook events for shared client sessions
+ summed_over_contexts | actual_events | summed_gov | actual_gov_by_session 
+----------------------+---------------+------------+-----------------------
+                14529 |          2604 |      13090 |                  1783
+(1 row)
+

@@ -1,0 +1,31 @@
+                                                                                                                                                                                                                                                                                QUERY PLAN                                                                                                                                                                                                                                                                                
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Incremental Sort  (cost=0.56..0.61 rows=2 width=216)
+   Sort Key: scoped.marketplace_id, scoped.marketplace_hash, (count(*)) DESC, scoped.plugin_id, scoped.skill
+   Presorted Key: scoped.marketplace_id, scoped.marketplace_hash
+   CTE scoped
+     ->  Seq Scan on analytics_normalized_facts f  (cost=0.00..0.29 rows=1 width=257)
+           Filter: ((NOT deleted) AND (occurred_at >= $2) AND (occurred_at < $3) AND (owner_id = $1) AND (fact_kind = 'invocation'::text) AND ((((fact -> 'value'::text) -> 'skill'::text) ->> 'plugin_id'::text) IS NOT NULL) AND (($4 IS NULL) OR ((((fact -> 'value'::text) -> 'skill'::text) ->> 'marketplace_id'::text) = $4)) AND (($5 IS NULL) OR (COALESCE((((fact -> 'value'::text) -> 'skill'::text) ->> 'marketplace_hash'::text), marketplace_version_at((((fact -> 'value'::text) -> 'skill'::text) ->> 'marketplace_id'::text), occurred_at)) = ANY ($5))))
+   ->  Nested Loop Left Join  (cost=0.09..0.26 rows=1 width=216)
+         Join Filter: ((NOT (i.marketplace_id IS DISTINCT FROM scoped.marketplace_id)) AND (NOT (i.marketplace_hash IS DISTINCT FROM scoped.marketplace_hash)) AND (i.plugin_id = scoped.plugin_id) AND (i.skill = scoped.skill))
+         ->  GroupAggregate  (cost=0.03..0.07 rows=1 width=160)
+               Group Key: scoped.marketplace_id, scoped.marketplace_hash, scoped.plugin_id, scoped.skill
+               ->  Sort  (cost=0.03..0.04 rows=1 width=193)
+                     Sort Key: scoped.marketplace_id, scoped.marketplace_hash, scoped.plugin_id, scoped.skill, scoped.consumer_id
+                     ->  CTE Scan on scoped  (cost=0.00..0.02 rows=1 width=193)
+         ->  GroupAggregate  (cost=0.06..0.16 rows=1 width=184)
+               Group Key: i.marketplace_id, i.marketplace_hash, i.plugin_id, i.skill
+               ->  Unique  (cost=0.06..0.10 rows=1 width=257)
+                     ->  Sort  (cost=0.06..0.07 rows=1 width=257)
+                           Sort Key: i.marketplace_id, i.marketplace_hash, i.plugin_id, i.skill, r.source, r.fact_id, r.succeeded, r.input_tokens, r.output_tokens, r.amount_micros, r.currency, r.latency_micros
+                           ->  Nested Loop  (cost=0.00..0.05 rows=1 width=257)
+                                 Join Filter: ((a.request_source = r.source) AND (a.request_id = r.fact_id))
+                                 ->  Nested Loop  (cost=0.00..0.04 rows=1 width=192)
+                                       Join Filter: ((i.source = a.invocation_source) AND (i.fact_id = a.invocation_id))
+                                       ->  CTE Scan on scoped i  (cost=0.00..0.02 rows=1 width=192)
+                                       ->  Seq Scan on analytics_normalized_facts a  (cost=0.00..0.00 rows=1 width=128)
+                                             Filter: ((NOT deleted) AND (owner_id = $1) AND (fact_kind = 'resource_association'::text))
+                                 ->  Seq Scan on analytics_normalized_facts r  (cost=0.00..0.00 rows=1 width=129)
+                                       Filter: ((NOT deleted) AND (occurred_at >= $2) AND (occurred_at < $3) AND (owner_id = $1) AND (fact_kind = 'request'::text))
+(27 rows)
+
