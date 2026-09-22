@@ -144,13 +144,10 @@ fn device_state(row: &UserDeviceRow, now: DateTime<Utc>) -> (&'static str, &'sta
     if row.kind != "bridge" {
         return ("Active", "ok", true);
     }
-    match row.last_seen_at {
-        Some(last) => {
-            let presence = bridge_presence(now, last);
-            (presence.label(), presence.tone(), presence.is_online())
-        },
-        None => ("Silent", "muted", false),
-    }
+    row.last_seen_at.map_or(("Silent", "muted", false), |last| {
+        let presence = bridge_presence(now, last);
+        (presence.label(), presence.tone(), presence.is_online())
+    })
 }
 
 fn device_row(row: UserDeviceRow, now: DateTime<Utc>) -> DeviceRowView {

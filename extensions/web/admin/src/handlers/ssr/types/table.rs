@@ -55,7 +55,7 @@ impl SortHeaderView {
     // on. The URL is the only part a page genuinely owns, so it is the only
     // part it passes.
     #[must_use]
-    pub fn new(
+    pub const fn new(
         (label, class, hint): (&'static str, &'static str, &'static str),
         url: String,
         active: bool,

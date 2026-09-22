@@ -64,7 +64,7 @@ pub(crate) fn build_view(
     health: Option<&HealthReportRow>,
 ) -> LifecycleView {
     let mut rows: Vec<MeasureView> = measures.iter().map(measure_view).collect();
-    rows.sort_by(|a, b| b.live_rows.cmp(&a.live_rows));
+    rows.sort_by_key(|row| std::cmp::Reverse(row.live_rows));
     let (findings, counts, health_run_at) = health.map_or((Vec::new(), (0, 0, 0), None), |h| {
         (
             findings_from(&h.report.0),
@@ -181,9 +181,10 @@ pub(crate) fn valid_tier(tier: &str) -> bool {
 pub(crate) fn valid_period(period: &str) -> bool {
     let b = period.as_bytes();
     let year = b.len() >= 5 && b[..4].iter().all(u8::is_ascii_digit) && b[4] == b'-';
+    // Why: `2026-W38` and `2026-09` differ only by the week marker; both end
+    // in two digits, which is all that is being checked here.
     year && match &b[5..] {
-        [b'W', a, c] => a.is_ascii_digit() && c.is_ascii_digit(),
-        [a, c] => a.is_ascii_digit() && c.is_ascii_digit(),
+        [b'W', a, c] | [a, c] => a.is_ascii_digit() && c.is_ascii_digit(),
         _ => false,
     }
 }

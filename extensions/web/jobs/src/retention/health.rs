@@ -105,7 +105,7 @@ pub(crate) async fn run(pool: &PgPool) -> Result<HealthReport, JobError> {
             window_days: table.window_days,
         });
     }
-    tables.sort_by(|a, b| b.total_bytes.cmp(&a.total_bytes));
+    tables.sort_by_key(|table| std::cmp::Reverse(table.total_bytes));
     check_outboxes(pool, &mut findings).await?;
     check_stuck_requests(pool, &mut findings).await?;
     check_unused_indexes(pool, &mut findings).await?;
@@ -142,18 +142,18 @@ async fn check_outboxes(pool: &PgPool, findings: &mut Vec<HealthFinding>) -> Res
     )
     .fetch_one(pool)
     .await?;
-    if let Some(oldest) = feedback.1 {
-        if oldest < Utc::now() - Duration::days(1) {
-            findings.push(HealthFinding {
-                rank: Rank::P1,
-                check: "feedback_ingestion_stalled",
-                detail: format!(
-                    "{} pending feedback rows, oldest {}",
-                    feedback.0,
-                    oldest.to_rfc3339()
-                ),
-            });
-        }
+    if let Some(oldest) = feedback.1
+        && oldest < Utc::now() - Duration::days(1)
+    {
+        findings.push(HealthFinding {
+            rank: Rank::P1,
+            check: "feedback_ingestion_stalled",
+            detail: format!(
+                "{} pending feedback rows, oldest {}",
+                feedback.0,
+                oldest.to_rfc3339()
+            ),
+        });
     }
     Ok(())
 }

@@ -2,6 +2,7 @@
 //! Tools and Sessions tabs; the Cost tab's tables are `dashboard_cost`.
 
 use async_trait::async_trait;
+use systemprompt::models::SessionId;
 
 use super::requests::time_range;
 use crate::error::AdminResult;
@@ -264,7 +265,7 @@ live_dataset!(
                     vec![
                         r.updated_at.into(),
                         r.context_id.as_str().into(),
-                        Cell::opt_text(r.session_id.as_ref().map(|s| s.as_str())),
+                        Cell::opt_text(r.session_id.as_ref().map(SessionId::as_str)),
                         r.user_id.as_str().into(),
                         Cell::opt_text(r.model.as_deref()),
                         Cell::Money(r.total_cost_microdollars),

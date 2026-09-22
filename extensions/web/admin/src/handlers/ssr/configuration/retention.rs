@@ -49,17 +49,38 @@ pub(crate) async fn retention_view(
         .and_then(|r| r.last_message.as_deref())
         .map(parse_counts)
         .unwrap_or_default();
-    let deleted = |table: &str| {
-        counts
-            .iter()
-            .find(|(name, _)| name == table)
-            .map(|(_, value)| value.clone())
-    };
-    let (messages_days, messages_source) = match retention.ai_request_messages_days {
-        Some(days) => (days, "profile retention.ai_request_messages_days"),
-        None => (ai_history_days, "services ai.history.retention_days"),
-    };
-    let rows = vec![
+    let rows = retention_rows(retention, ai_history_days, &counts);
+    Ok(RetentionView {
+        job_name: JOB_NAME,
+        rows,
+        last_run: run.as_ref().and_then(|r| r.last_run),
+        next_run: run.as_ref().and_then(|r| r.next_run),
+        last_status: run.as_ref().and_then(|r| r.last_status.clone()),
+        last_status_tone: match run.as_ref().and_then(|r| r.last_status.as_deref()) {
+            Some("success") => "ok",
+            Some(_) => "warn",
+            None => "muted",
+        },
+        last_error: run.as_ref().and_then(|r| r.last_error.clone()),
+        orphaned_logs_last_run: deleted_count(&counts, "orphaned_logs"),
+        never_ran: run.as_ref().is_none_or(|r| r.last_run.is_none()),
+    })
+}
+
+// Why: the row list is the bulk of the page and is pure formatting over the
+// config and the last run's counts, so it is built apart from the query that
+// fetches them.
+fn retention_rows(
+    retention: &RetentionConfig,
+    ai_history_days: u32,
+    counts: &[(String, String)],
+) -> Vec<RetentionRowView> {
+    let deleted = |table: &str| deleted_count(counts, table);
+    let (messages_days, messages_source) = retention.ai_request_messages_days.map_or(
+        (ai_history_days, "services ai.history.retention_days"),
+        |days| (days, "profile retention.ai_request_messages_days"),
+    );
+    vec![
         RetentionRowView {
             table: "logs",
             purpose: "server log lines",
@@ -116,22 +137,15 @@ pub(crate) async fn retention_view(
             days_source: "fixed: longest quota window plus carry-forward",
             deleted_last_run: deleted("ai_quota_buckets"),
         },
-    ];
-    Ok(RetentionView {
-        job_name: JOB_NAME,
-        rows,
-        last_run: run.as_ref().and_then(|r| r.last_run),
-        next_run: run.as_ref().and_then(|r| r.next_run),
-        last_status: run.as_ref().and_then(|r| r.last_status.clone()),
-        last_status_tone: match run.as_ref().and_then(|r| r.last_status.as_deref()) {
-            Some("success") => "ok",
-            Some(_) => "warn",
-            None => "muted",
-        },
-        last_error: run.as_ref().and_then(|r| r.last_error.clone()),
-        orphaned_logs_last_run: deleted("orphaned_logs"),
-        never_ran: run.as_ref().is_none_or(|r| r.last_run.is_none()),
-    })
+    ]
+}
+
+// Why: what the last run deleted from one table, as the job reported it.
+fn deleted_count(counts: &[(String, String)], table: &str) -> Option<String> {
+    counts
+        .iter()
+        .find(|(name, _)| name == table)
+        .map(|(_, value)| value.clone())
 }
 
 // Why: `table=count` pairs, the shape of the job's success message.

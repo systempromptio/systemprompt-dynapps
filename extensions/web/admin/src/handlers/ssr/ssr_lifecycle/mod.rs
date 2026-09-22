@@ -121,10 +121,17 @@ pub(crate) async fn lifecycle_archive_download(
         .join(&tier)
         .join(&period)
         .join(&file);
-    let bytes = tokio::fs::read(&path)
-        .await
-        .map_err(|_| AdminError::NotFound("No such archive".to_owned()))?;
-    let content_type = if file.ends_with(".json") {
+    // Why: the cause is logged in full and the client is told only that the
+    // archive is not there. The path is a server-side detail, and a read that
+    // failed for any other reason is still nothing this caller can fetch.
+    let bytes = tokio::fs::read(&path).await.map_err(|error| {
+        tracing::warn!(path = %path.display(), %error, "lifecycle archive unreadable");
+        AdminError::NotFound("No such archive".to_owned())
+    })?;
+    let content_type = if std::path::Path::new(&file)
+        .extension()
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("json"))
+    {
         "application/json"
     } else {
         "application/gzip"
