@@ -1,3 +1,5 @@
+-- @supersedes-checksum: 6de132efff82f622
+-- @cost: rows=421 measured=1.5s triggers=live
 -- Attribute session-scoped facts to one context instead of every context of
 -- the session.
 --
