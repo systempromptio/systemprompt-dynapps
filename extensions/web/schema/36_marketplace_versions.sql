@@ -41,19 +41,3 @@ WHERE marketplace_id = mid AND first_seen_at <= at
 ORDER BY (effective_until IS NULL OR at < effective_until) DESC, first_seen_at DESC
 LIMIT 1
 $$;
-
--- Redefines 31_feedback_projection.sql's feedback_event_skill now that the
--- table it joins exists: every invocation fact carries the hash of the
--- marketplace version its plugin was served from.
-CREATE OR REPLACE FUNCTION feedback_event_skill(event_key TEXT)
-RETURNS JSONB LANGUAGE sql STABLE AS $$
-SELECT CASE WHEN e.plugin_id IS NULL OR e.skill IS NULL OR e.skill='' THEN NULL
- ELSE jsonb_strip_nulls(jsonb_build_object('plugin_id',e.plugin_id,'skill',e.skill,
-  'marketplace_id',o.marketplace_id,'source',o.source,'source_hash',s.content_hash,
-  'marketplace_hash',v.content_hash)) END
-FROM analysis_skill_events e
-LEFT JOIN service_owned_ids o ON o.kind='plugin' AND o.id=e.plugin_id
-LEFT JOIN service_sources s ON s.name=o.source
-LEFT JOIN marketplace_versions v ON v.marketplace_id=o.marketplace_id AND v.effective_until IS NULL
-WHERE e.id=event_key
-$$;

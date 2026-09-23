@@ -16,7 +16,7 @@ WITH inv AS (
            (SELECT o.marketplace_id FROM service_owned_ids o
              WHERE o.kind = 'plugin' AND o.id = e.plugin_id LIMIT 1) AS marketplace_id
     FROM analysis_skill_version_events e
-    WHERE e.invoked_at >= $1 AND e.invoked_at < $2 AND e.traffic_class = 'production'
+    WHERE e.invoked_at >= $1 AND e.invoked_at < $2
       AND ($4::text IS NULL OR e.skill = $4)
       AND ($5::text[] IS NULL OR e.user_id = ANY($5))
 ),

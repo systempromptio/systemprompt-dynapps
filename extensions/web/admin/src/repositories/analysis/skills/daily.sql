@@ -6,7 +6,7 @@ WITH days AS (
 ), events AS (
     SELECT e.user_id, e.session_id, date_trunc('day', e.invoked_at)::date AS day
     FROM analysis_skill_version_events e
-    WHERE e.skill = $3 AND e.invoked_at >= $1 AND e.invoked_at < $2 AND e.traffic_class = 'production'
+    WHERE e.skill = $3 AND e.invoked_at >= $1 AND e.invoked_at < $2
       AND ($4::text[] IS NULL OR e.user_id = ANY($4))
 ), per_day AS (
     SELECT e.day, COUNT(*)::bigint AS invocations, COUNT(DISTINCT e.user_id)::bigint AS users,

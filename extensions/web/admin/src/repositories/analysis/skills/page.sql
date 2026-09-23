@@ -10,7 +10,7 @@ WITH events AS MATERIALIZED (
     SELECT e.skill, e.plugin_id, e.user_id, e.session_id, e.source, e.attribution_status, e.invoked_at
     FROM analysis_skill_version_events e
     WHERE e.invoked_at >= $1 AND e.invoked_at < $2
-      AND e.skill IS NOT NULL AND e.traffic_class = 'production'
+      AND e.skill IS NOT NULL
       AND ($3::text[] IS NULL OR e.user_id = ANY($3))
       AND ($4::text IS NULL OR EXISTS (SELECT 1 FROM service_owned_ids o
                                        WHERE o.kind = 'plugin' AND o.id = e.plugin_id AND o.marketplace_id = $4))

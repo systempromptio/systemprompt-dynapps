@@ -33,6 +33,7 @@ and only moves the floating tags on a repeat (see *Idempotency*).
 | server binaries tarball (`bin/systemprompt` + every `bin/systemprompt-mcp-*`, `services/`, MCP manifests) — consumed by `just fetch-release` / `setup-local` | GitHub Release `vX.Y.Z` | `systemprompt-astound-server-X.Y.Z-linux-{amd64,arm64}.tar.gz` | cosign keyless |
 | bridge, Linux | Release **and** baked into the image at `/files/downloads/` | `astound-bridge-linux-{x86_64,aarch64}.tar.gz` + `.sha256` | cosign keyless |
 | bridge, macOS universal | same | `astound-bridge-macos.dmg` + `.sha256` | cosign; Apple notarization when the `APPLE_*` secrets exist |
+| bridge, macOS self-updater | Release only (the gateway's `/v1/bridge/latest` feed proxies it; `bridge_releases.assets.macos`) | `astound-bridge-macos.zip` + `.sha256` — the same stapled `.app` as the dmg, zipped with `ditto` | cosign; Apple notarization |
 | bridge, Windows x64 | same | `astound-bridge-windows.exe` + `.sha256` | cosign; Authenticode when the `WINDOWS_CERT_*` secrets exist |
 | installer | same | `install.sh` (release copy points at the release; image copy at the gateway) | cosign keyless |
 | checksums | Release | `SHA256SUMS` + `.sig`/`.pem` | cosign keyless |

@@ -22,7 +22,7 @@
 <th scope="col" class="sp-table__cell--num">Users</th>
 <th scope="col" class="sp-table__cell--num">Requests</th>
 <th scope="col" class="sp-table__cell--num">Cost</th>
-<th scope="col" class="sp-table__cell--num" title="Median and 95th percentile request latency, measured">p50 · p95</th>
+<th scope="col" class="sp-table__cell--num" title="Median of the conversations' p50 latency and 95th percentile of their p95">p50 · p95</th>
 <th scope="col" class="sp-table__cell--actions"><span class="sp-u-sr-only">Actions</span></th>
 </tr></thead>
 <tbody>
@@ -62,7 +62,7 @@
 {{> components/kpi label="Invocations" value=invocations note=(concat failed_invocations " failed")}}
 {{> components/kpi label="Users" value=users note=(concat conversations " conversations")}}
 {{> components/kpi label="Requests" value=requests note=(concat failed " failed")}}
-{{> components/kpi label="Cost" value=cost note="related, overlaps"}}
+{{> components/kpi label="Cost" value=cost note="turn spend, overlaps"}}
 {{> components/kpi label="p95" value=p95 note=(concat "p50 " p50)}}
 </div>
 <div class="sp-versions-side__eval"><span class="sp-aconv-score sp-aconv-score--{{completion_tone}} sp-aconv-score--lg">{{completion_display}}</span><p class="sp-u-text-tertiary sp-versions-side__eval-note">mean judge completion over {{scored_sessions}} judged conversations served by this version</p></div>
@@ -215,10 +215,10 @@
 {{/if}}
 
 <details class="sp-analysis-definitions"><summary>How to read this page</summary>
-<p>A version is the sha256 of everything the marketplace delivers — its config, its plugins and their skills — hashed as a kit's <code>content_hash</code> is. Each row of History is one such hash: when it was first served, when it stopped, what moved against the version before it, and the window's figures for the facts that ran under it. Facts recorded since the hash was stamped carry it directly; older facts are placed by the interval the version was serving.</p>
+<p>A version is the sha256 of everything the marketplace delivers — its config, its plugins and their skills — hashed as a kit's <code>content_hash</code> is. Each row of History is one such hash: when it was first served, when it stopped, what moved against the version before it, and the window's figures for the conversations that ran under it. A conversation belongs to the version being served when it first invoked one of the marketplace's skills, and stays there whatever is deployed later.</p>
 <p>Compare puts two versions side by side. Skills are labelled added, removed or changed from the two manifests' digests, and each carries its figures under either version. A version recorded from a source hash before manifests were kept has no diff and says so.</p>
 <p>Distribution is the delivery pipeline for this marketplace's skills: the publication the bridge serves for each, the claims it made, the receipts devices sent back, and how many entitled devices hold the served publication. Withdrawal proposals are decided here.</p>
-<p>Requests, cost and latency reach a version through the conversations its skills ran in, so they overlap across versions and skills and must not be summed.</p>
+<p>Invocations and failures are the skills' own. Users, requests, cost and latency are the figures of the conversations that invoked them: users are every person who ran one, requests are turns, cost is turn spend with side calls excluded, and p50 · p95 are the median of the conversations' median latency and the 95th percentile of their p95. They overlap across versions and skills and must not be summed.</p>
 </details>
 </section>
 {{/inline}}{{/layout}}

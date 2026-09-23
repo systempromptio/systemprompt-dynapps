@@ -109,14 +109,12 @@ pub(crate) struct ProjectToolRowView {
     pub p95_display: String,
 }
 
-// Why: one skill the project leant on, with what its users rated it.
+// Why: one skill the project leant on and how many of its people used it.
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct ProjectSkillRowView {
     pub skill: String,
     pub invocations: i64,
     pub users: i64,
-    pub rating_display: String,
-    pub rating_count: i64,
 }
 
 // Why: one session the project's people ran.

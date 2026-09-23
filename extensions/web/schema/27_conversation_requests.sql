@@ -136,16 +136,3 @@ SELECT COALESCE(
     conversation_opening_prompt(context_key, 160),
     'Conversation ' || LEFT(context_key, 12) || '…')
 $function$;
-
--- Compatibility view for existing callers. New page queries select metrics
--- first and call conversation_title only for search candidates/displayed rows.
-CREATE OR REPLACE VIEW conversation_rollups AS
-SELECT r.context_id::varchar(255) AS context_id, conversation_title(r.context_id, r.client_session_id) AS title,
-       r.user_id::varchar AS user_id, r.display_name::varchar(255) AS display_name,
-       r.session_id::varchar AS session_id, r.client_session_id,
-       r.group_name, r.project_name, r.model, r.client_kind, r.client_attestation, r.turn_count,
-       r.side_call_count,
-       r.side_call_cost_microdollars, r.tool_call_count, r.error_count,
-       r.total_input_tokens, r.total_output_tokens, r.total_cost_microdollars,
-       r.first_at, r.last_at, r.status
-FROM conversation_metrics_for(NULL) r;

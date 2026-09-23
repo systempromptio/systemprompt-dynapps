@@ -28,7 +28,6 @@ use crate::support::repo_root;
 // Row counts from the 2026-09-22 production analysis.
 const ASTOUND_HOT_TABLES: &[&str] = &[
     "plugin_usage_events",
-    "feedback_ingestion_outbox",
     "conversation_facts",
     "analysis_skill_events",
     "mcp_tool_executions",
@@ -273,11 +272,11 @@ fn declared_functions(sql: &str) -> BTreeSet<String> {
     out
 }
 
-// Why transitive: `capture_feedback_artifact` has no loop of its own — it
-// calls `enqueue_feedback_session`, which has five whole-session loops. The
-// cost lands on the row that fired the trigger either way, so a check that
-// stops at the first body would call the artifact trigger clean and miss the
-// exact shape this gate exists to find.
+// Why transitive: the retired `capture_feedback_artifact` had no loop of its
+// own — it called `enqueue_feedback_session`, which had five whole-session
+// loops. The cost lands on the row that fired the trigger either way, so a
+// check that stops at the first body would call such a trigger clean and miss
+// the exact shape this gate exists to find.
 fn fans_out(sql: &str, entry: &str, declared: &BTreeSet<String>) -> bool {
     let mut seen = BTreeSet::new();
     let mut queue = vec![entry.to_owned()];

@@ -32,7 +32,7 @@ A profile that says nothing gets exactly those defaults. Unknown keys are an
 error at load.
 
 The job deletes in batches of 5 000 rows, one statement each, so no long lock
-is ever held and each capture trigger writes one outbox row per batch. A run
+is ever held. A run
 stops at 15 minutes and continues the next night; the console marks that with
 a `+` after the count. It runs nightly at 04:00 (`services/scheduler/config.yaml`)
 and **only deletes with `enforce: true`** on its entry — without it the job
@@ -50,13 +50,13 @@ change means editing `profile.yaml` and restarting. From the CLI:
 ```bash
 systemprompt infra jobs run database_cleanup      # run it now
 systemprompt infra jobs list                      # last run / next run / status
-systemprompt analytics projection status          # reporting backlog and throughput
 ```
 
 Requests themselves (`ai_requests`) are not in this job: the astound
 `plugin_usage_retention` job expires them after 90 days together with the
-feedback aggregates, and the stored message bodies cascade with them. The
-messages window above only trims bodies sooner than the request rows.
+hook events (`expire_raw_evidence`, `extensions/web/schema/32_raw_retention.sql`),
+and the stored message bodies cascade with them. The messages window above
+only trims bodies sooner than the request rows.
 
 ## Measurement, archives and the health check
 
@@ -66,14 +66,15 @@ Three astound jobs are the other half of the policy (`extensions/web/jobs/src/re
 |---|---|---|
 | `retention_daily_report` | 04:30 daily | size, dead tuples and oldest row of every managed table into `retention_runs`; warns when a table grew more than 25 % week on week or an outbox has more than 100 000 pending rows |
 | `retention_export_weekly` | Sunday 02:00 | the previous ISO week of the raw tables (`ai_requests`, messages, payloads, tool calls, safety findings, governance decisions, tool executions, sessions, hook events, logs, analytics and engagement events) to `storage/exports/weekly/<yyyy>-W<ww>/<table>.jsonl.gz` + `manifest.json` |
-| `retention_export_monthly` | 1st, 02:30 | last month's rollups (`admin_usage_daily_rollups`, `plugin_usage_daily`, `conversation_facts`, anomalies, content metrics, `retention_runs`) to `storage/exports/monthly/<yyyy>-<mm>/`, then the health check into `retention_health_reports`, then `VACUUM (ANALYZE)` on the managed tables |
+| `retention_export_monthly` | 1st, 02:30 | last month's rollups (`admin_usage_daily_rollups`, `plugin_usage_daily`, `conversation_facts`, `conversation_skill_facts`, anomalies, content metrics, `retention_runs`) to `storage/exports/monthly/<yyyy>-<mm>/`, then the health check into `retention_health_reports`, then `VACUUM (ANALYZE)` on the managed tables |
 
 Every archive file is `COPY (SELECT row_to_json(t) …) TO STDOUT`, gzipped,
 with a SHA-256 in the manifest — restorable with `COPY … FROM`. Weekly
 archives are pruned after `keep_weeks` (26) once the monthly archive covering
 that week exists; monthly archives are kept (`keep_months: 0`). The rollups
-themselves are never expired: `expire_feedback_raw` stopped deleting them in
-migration 094, so the console keeps its history past the 90-day raw window.
+themselves are never expired — `expire_raw_evidence` does not touch them — so
+the console, the Versions pages included, keeps its history past the 90-day
+raw window.
 
 Where to see it: `/admin/lifecycle` lists the latest measurement per table
 with its growth, every archive with a download link, and the last health

@@ -54,7 +54,7 @@ Every list page shares the same furniture: KPI tiles with an icon and a trend sl
 
 ## Where the numbers come from
 
-A conversation is a gateway context. The `conversation_rollup` job keeps one row per context — `conversation_facts` — re-derived within a minute of any change on any plane:
+A conversation is a gateway context. The `conversation_rollup` job keeps one row per context — `conversation_facts`, with a row per skill it invoked in `conversation_skill_facts` — re-derived within two minutes of any change on any plane:
 
 - **Gateway** (`ai_requests`): turns and side calls, provider and model per request, input, output, cache-read, cache-write and reasoning tokens, cost, latency percentiles, status and finish reason, client kind, attestation and wire protocol, group and project stamped at insert.
 - **Tool ledger**: the model's tool intents joined to their executions and results, so a row can say "asked for 5, executed 4, 1 failed, 2 artifacts". A tool call and an artifact are different things even when they are counted alike: `artifact_kind` (schema `46_tool_artifacts.sql`) marks a call as an artifact only when a person can view or retrieve what it produced — a file the assistant edited, wrote or read (`file`), an MCP Apps UI resource (`ui`), a typed card such as a table, chart or report (`card`), or a retained structured body with a preview (`body`). A shell command, a search, a listing, a Skill or Task call, or an untyped result is a plain tool call. The `tool_activity` view applies the rule to every ledger row, and the Tools page, the Artifacts page, the conversation record and the Skills figures all read it.

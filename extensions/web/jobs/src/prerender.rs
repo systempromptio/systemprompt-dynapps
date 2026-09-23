@@ -1,5 +1,6 @@
-//! `content_prerender` job: renders ingested content into static page
-//! artifacts.
+//! `site_content_prerender` job: renders ingested content into static page
+//! artifacts. Named apart from core's own `content_prerender` so the two
+//! never collide in the scheduler.
 
 use std::sync::Arc;
 use systemprompt::config::AppPaths;
@@ -10,12 +11,12 @@ use systemprompt::traits::{Job, JobContext, JobResult};
 use crate::error::JobError;
 
 #[derive(Debug, Clone, Copy, Default)]
-pub struct ContentPrerenderJob;
+pub struct SiteContentPrerenderJob;
 
 #[async_trait::async_trait]
-impl Job for ContentPrerenderJob {
+impl Job for SiteContentPrerenderJob {
     fn name(&self) -> &'static str {
-        "content_prerender"
+        "site_content_prerender"
     }
 
     fn tags(&self) -> Vec<&'static str> {
@@ -61,4 +62,4 @@ async fn execute_inner(ctx: &JobContext) -> Result<JobResult, JobError> {
     Ok(JobResult::success().with_duration(duration_ms))
 }
 
-systemprompt::traits::submit_job!(&ContentPrerenderJob);
+systemprompt::traits::submit_job!(&SiteContentPrerenderJob);

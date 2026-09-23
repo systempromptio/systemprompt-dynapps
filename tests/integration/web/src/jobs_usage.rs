@@ -304,12 +304,6 @@ async fn the_daily_rollup_and_the_retention_sweep_run_over_the_same_traffic() {
     )
     .await;
 
-    // Why: the retention sweep refuses while seeded traffic is still queued for
-    // the feedback projection; run the ingestion the scheduler would have run
-    // first, then acknowledge the deliveries no relay exists here to make.
-    seed(&db.pool, "jobs-usage-test", &[]).await;
-    crate::feedback_ingestion::drain_as(&db.pool, &UserId::new("jobs-usage-test")).await;
-    crate::fixtures::establish_retention_barrier(&db.pool).await;
     for name in ["usage_daily_rollup", "plugin_usage_retention"] {
         job(name)
             .execute(&context(&db.pool))

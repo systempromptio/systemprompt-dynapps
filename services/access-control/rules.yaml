@@ -72,12 +72,12 @@ entities:
   - entity: marketplace/astound-salesforce
     default: closed
     why: >-
-      Salesforce sales workspace; a person receives it after linking one of
-      the governed Headless 360 org connectors. Super-admins retain operating
-      access before a connection is present.
+      Salesforce sales workspace; a person receives it after linking the
+      Salesforce connector. Super-admins retain operating access
+      before a connection is present.
     allow:
-      connector: [salesforce-headless-us, salesforce-headless-uk, salesforce-headless-dev]
-      salesforce: [salesforce-headless-us, salesforce-headless-uk, salesforce-headless-dev]
+      connector: [salesforce]
+      salesforce: [salesforce]
       role: [super_admin]
 
   # Arrives as a signed bundle from Astound-Digital/sfnext-claude-dev-kit; the
@@ -171,64 +171,14 @@ entities:
       group: [india-devs, europe-devs, uk]
       project: [storefront]
 
-  - entity: mcp_server/salesforce-crm-us
-    default: closed
-    why: >-
-      Astound US org for the delivery groups, the storefront project and
-      super_admin. The salesforce band adds anyone who has linked that org, and
-      the connector band anyone who has connected it, so a person in no group
-      still sees the server their own credential works against.
-    allow:
-      role: [super_admin]
-      group: [india-devs, europe-devs, uk]
-      project: [storefront]
-      connector: [salesforce-crm-us]
-      salesforce: [salesforce-crm-us]
-
-  - entity: mcp_server/salesforce-crm-uk
-    default: closed
-    why: >-
-      Astound UK org for the UK sales group, the delivery groups and
-      super_admin; the salesforce band adds anyone who has linked that org.
-    allow:
-      role: [super_admin]
-      group: [india-devs, europe-devs, uk]
-      project: [storefront]
-      connector: [salesforce-crm-uk]
-      salesforce: [salesforce-crm-uk]
-
-  - entity: mcp_server/salesforce-crm-dev
-    default: closed
-    why: >-
-      Developer Edition org that proves the packaged app and the consent flow;
-      operators only.
-    allow:
-      role: [super_admin]
-      connector: [salesforce-crm-dev]
-      salesforce: [salesforce-crm-dev]
-
-  # Headless 360 is offered independently of marketplace entitlement so a
-  # signed-in person can establish the connection that grants the marketplace.
-  # Salesforce still rejects a person who has no user or permission in the org.
-  - entity: mcp_server/salesforce-headless-us
+  # Open like the connector it fronts: a person must be able to reach the
+  # connector before they hold the marketplace it grants, or nobody could ever
+  # connect. Salesforce still refuses anyone without a user in the org.
+  - entity: mcp_server/salesforce
     default: open
-    why: Astound US Headless 360 connector for the Salesforce sales workspace.
+    why: Salesforce connector for the sales workspace, as the signed-in user.
     allow:
       role: [user, admin, platform_admin, project_manager, super_admin]
-
-  - entity: mcp_server/salesforce-headless-uk
-    default: open
-    why: Astound UK Headless 360 connector for the Salesforce sales workspace.
-    allow:
-      role: [user, admin, platform_admin, project_manager, super_admin]
-
-  - entity: mcp_server/salesforce-headless-dev
-    default: closed
-    why: Headless 360 proof connector for the Developer Edition org; operators only.
-    allow:
-      role: [super_admin]
-      connector: [salesforce-headless-dev]
-      salesforce: [salesforce-headless-dev]
 
   - entity: mcp_server/google_workspace
     default: closed

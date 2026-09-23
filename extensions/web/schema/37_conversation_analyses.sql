@@ -59,15 +59,3 @@ SELECT e.session_id AS client_session_id, e.skill,
 FROM analysis_skill_events e
 WHERE e.skill IS NOT NULL
 GROUP BY e.session_id, e.skill;
-
--- One row per conversation with its metrics, classification and hooked
--- skills. For single-row reads and ad-hoc SQL only: it aggregates every
--- context, so a page filters `conversation_analyses` first and passes the ids
--- to conversation_metrics_for.
-CREATE OR REPLACE VIEW conversation_analysis_rows AS
-SELECT r.*, a.status AS analysis_status, a.category, a.summary, a.tags, a.outcome, a.confidence,
-       a.skills_used, a.classified_at, a.model AS judge_model,
-       COALESCE((SELECT array_agg(s.skill ORDER BY s.first_at) FROM conversation_skill_uses s
-                 WHERE s.client_session_id = r.client_session_id), '{}'::text[]) AS skills_hooked
-FROM conversation_metrics_for(NULL) r
-LEFT JOIN conversation_analyses a ON a.context_id = r.context_id;

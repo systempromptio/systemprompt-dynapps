@@ -46,7 +46,6 @@ WITH f AS MATERIALIZED (
     SELECT s.skill,
            (SELECT COUNT(*)::bigint FROM analysis_skill_version_events e
              WHERE e.skill = s.skill AND e.invoked_at >= $1 AND e.invoked_at < $2
-               AND e.traffic_class = 'production'
                AND ($3::text[] IS NULL OR e.user_id = ANY($3))) AS invocations,
            COUNT(*)::bigint AS conversations,
            COALESCE(SUM(s.cost_microdollars), 0)::bigint AS cost_microdollars,

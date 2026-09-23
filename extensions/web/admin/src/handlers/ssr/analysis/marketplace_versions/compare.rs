@@ -6,16 +6,15 @@ use std::collections::BTreeMap;
 
 use serde::Serialize;
 use sqlx::PgPool;
-use systemprompt::identifiers::{PluginId, SkillId, UserId};
+use systemprompt::identifiers::{PluginId, SkillId};
 
 use super::diff::{Change, diff};
 use super::history::{VersionView, cost, latency, short, views};
 use crate::error::{AdminError, AdminResult};
 use crate::repositories::analysis::marketplace_versions::{
-    MarketplaceVersionMetricsRow, MarketplaceVersionSkillRow, VersionCompletionRow,
+    MarketplaceVersionMetricsRow, MarketplaceVersionSkillRow, VersionCompletionRow, VersionWindow,
     list_marketplace_version_skills,
 };
-use crate::repositories::analysis::retained::RetainedWindow;
 
 #[derive(Debug, Clone, Default, Serialize)]
 pub(crate) struct SkillFigures {
@@ -70,7 +69,7 @@ fn figures(row: Option<&MarketplaceVersionSkillRow>) -> SkillFigures {
         requests: r.requests,
         failed: r.failed,
         cost: cost(r.cost),
-        p95: latency(r.p95_micros, r.latency_measured),
+        p95: latency(r.p95_ms, r.latency_measured),
     })
 }
 
@@ -155,28 +154,26 @@ pub(crate) struct Recorded<'a> {
 
 pub(crate) async fn build(
     pool: &PgPool,
-    owner: &UserId,
-    window: RetainedWindow,
+    window: VersionWindow,
     recorded: Recorded<'_>,
     hashes: (Option<String>, Option<String>),
 ) -> AdminResult<CompareView> {
     let Recorded { rows, scores } = recorded;
     let (a, b) = pick(rows, hashes)?;
     let wanted = [a.content_hash.clone(), b.content_hash.clone()];
-    let skill_rows = list_marketplace_version_skills(
-        pool,
-        owner,
-        window,
-        Some(&a.marketplace_id),
-        Some(&wanted),
-    )
-    .await?;
+    let skill_rows =
+        list_marketplace_version_skills(pool, window, &a.marketplace_id, &wanted).await?;
     let by_key: ByKey<'_> = skill_rows
         .iter()
-        .filter_map(|r| {
-            r.marketplace_hash
-                .as_deref()
-                .map(|h| ((h, r.plugin_id.as_str(), r.skill.as_str()), r))
+        .map(|r| {
+            (
+                (
+                    r.marketplace_hash.as_str(),
+                    r.plugin_id.as_str(),
+                    r.skill.as_str(),
+                ),
+                r,
+            )
         })
         .collect();
 

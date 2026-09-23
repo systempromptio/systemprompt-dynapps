@@ -8,7 +8,7 @@ kind: "guide"
 public: true
 tags: ["enterprise", "admin", "operations"]
 published_at: "2026-09-16"
-updated_at: "2026-09-17"
+updated_at: "2026-09-23"
 after_reading_this:
   - "Say what a marketplace version is, and why a base and a bundled marketplace carry the same kind of identity"
   - "Read a marketplace's history and tell a changed skill from an added or removed one"
@@ -37,7 +37,7 @@ Because the hash covers bytes and nothing else:
 
 Versions are recorded at boot and on every **Sync inventory now**. A hash seen before reopens its row; a hash that moved closes the previous version at that moment; a marketplace the composition no longer declares is closed and reads as *retired*. History is never rewritten.
 
-Every invocation fact is stamped with the hash serving when its plugin ran. Facts made before this record existed carry the coarser source hash and are seeded as *source hash* versions, marked as such; older facts are placed by the interval a version was serving.
+A conversation is credited to the version being served when it first invoked one of the marketplace's skills, and stays there whatever is deployed later. The `conversation_rollup` job records that per skill and per conversation in `conversation_skill_facts`, beside the conversation's own record, and both are kept forever — so a version's figures outlive the 90-day raw-event window. Versions recorded before manifests were kept carry the coarser source hash and are marked *source hash*.
 
 ## The landing page
 
@@ -53,14 +53,14 @@ One row per version, newest first, the current one tinted.
 | **Served** | When the version was first observed and, for a closed one, when it stopped. |
 | **Plugins · Skills** | What the version's manifest carried. |
 | **Change** | Skills added, removed and changed against the version before it, with an inline list behind *what changed*: each moved plugin or skill, its change, and the before → after digest. The oldest row reads *first version*. |
-| **Invocations · Users · Requests · Cost · p50 · p95** | The window's figures for facts that ran under this version. Latency is a real percentile over request latency, never a bound. |
+| **Invocations · Users · Requests · Cost · p50 · p95** | The window's figures for the conversations that ran under this version. Invocations are the skills' own; users are every person who ran one of those conversations; requests are their turns; cost is their turn spend with side calls excluded; p50 is the median of the conversations' median latency and p95 the 95th percentile of their p95. |
 | **Compare** | Opens Compare with this version as *after* and the one before it as *before*. |
 
 ## Compare
 
 Pick a *before* and an *after* version; the two newest are chosen by default. The page shows each version's tiles side by side, then one table with every skill either version carried: its change (added, removed, changed, unchanged — from the manifests' per-skill digests) and its invocations, users, requests, failures, cost and p95 under each version, with the invocation delta.
 
-A version seeded from a source hash has no manifest, so no change can be derived; the page says so and lists skills from their facts alone.
+A version seeded from a source hash has no manifest, so no change can be derived; the page says so and lists skills from their recorded invocations alone.
 
 ## Distribution
 
@@ -75,7 +75,7 @@ The manual review form at the foot records a publication decision by hand.
 
 ## Reading requests, cost and latency
 
-Requests, spend and latency reach a version through the conversations its skills ran in. They are *related* figures: they overlap across versions and across skills in the same conversation and must never be summed.
+Users, requests, spend and latency reach a version through the conversations its skills ran in, each conversation counted once per version. They are *related* figures: they overlap across versions and across skills in the same conversation and must never be summed. Spend is the conversation's turns; side calls such as titles and summaries are excluded. Latency is conversation-level: the median of each conversation's p50 and the 95th percentile of each conversation's p95.
 
 ## How pinning or importing a kit shows up here
 
@@ -97,7 +97,7 @@ A kit owns its content. This repository owns access, so entitlement for a kit's 
 ### A version shows *no manifest*
 
 **Symptom:** The Change cell reads *no manifest* and Compare cannot derive a diff.
-**Cause:** The version was seeded from invocation facts that predate manifests; only its source hash is known.
+**Cause:** The version was seeded before manifests were kept; only its source hash is known.
 **Solution:** Nothing to fix. Every version recorded since carries a manifest.
 
 ### Distribution lists every skill

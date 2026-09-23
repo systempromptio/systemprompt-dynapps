@@ -9,10 +9,9 @@ use crate::error::{AdminError, AdminResult};
 use crate::export::model::{Cell, CellKind, Column, DataSet, ExportContext, Table, Window};
 use crate::handlers::ssr::analysis::marketplace_versions::may_read_marketplace;
 use crate::repositories::analysis::marketplace_versions::{
-    MarketplaceListRow, MarketplaceVersionMetricsRow, list_marketplace_rollups,
+    MarketplaceListRow, MarketplaceVersionMetricsRow, VersionWindow, list_marketplace_rollups,
     list_marketplace_version_metrics,
 };
-use crate::repositories::analysis::retained::RetainedWindow;
 use crate::types::UserContext;
 
 pub(crate) struct Marketplaces;
@@ -23,9 +22,9 @@ struct Target {
     marketplace: Option<String>,
 }
 
-fn window(ctx: &ExportContext<'_>) -> AdminResult<RetainedWindow> {
+fn window(ctx: &ExportContext<'_>) -> AdminResult<VersionWindow> {
     let w = ctx.window()?;
-    Ok(RetainedWindow {
+    Ok(VersionWindow {
         start: w.from,
         end: w.to,
     })
@@ -102,10 +101,6 @@ const VERSION_COLUMNS: &[Column] = &[
     Column::new("p95_ms", "p95 (ms)", CellKind::Decimal),
 ];
 
-fn millis(micros: Option<i64>) -> Cell {
-    Cell::opt_decimal(micros.map(|m| crate::numeric::to_f64(m) / 1000.0))
-}
-
 fn version_row(r: &MarketplaceVersionMetricsRow) -> Vec<Cell> {
     vec![
         r.marketplace_id.as_str().into(),
@@ -126,8 +121,8 @@ fn version_row(r: &MarketplaceVersionMetricsRow) -> Vec<Cell> {
         r.failed.into(),
         r.tokens.into(),
         Cell::Money(r.cost),
-        millis(r.p50_micros),
-        millis(r.p95_micros),
+        Cell::opt_decimal(r.p50_ms),
+        Cell::opt_decimal(r.p95_ms),
     ]
 }
 
@@ -154,7 +149,7 @@ impl DataSet for Marketplaces {
     // Why: a participant's export carries the marketplaces the page shows
     // them, filtered by the same rule.
     async fn load(&self, ctx: &ExportContext<'_>) -> AdminResult<Table> {
-        let rows = list_marketplace_rollups(ctx.pool, &ctx.managed.owner, window(ctx)?).await?;
+        let rows = list_marketplace_rollups(ctx.pool, window(ctx)?).await?;
         Ok(Table::complete(
             rows.iter()
                 .filter(|r| may_read_marketplace(ctx.user, &r.marketplace_id))
@@ -198,9 +193,7 @@ impl DataSet for Versions {
                 "No version of marketplace '{id}' has been recorded"
             )));
         }
-        let rows =
-            list_marketplace_version_metrics(ctx.pool, &ctx.managed.owner, window(ctx)?, &id)
-                .await?;
+        let rows = list_marketplace_version_metrics(ctx.pool, window(ctx)?, &id).await?;
         Ok(Table::complete(rows.iter().map(version_row).collect()))
     }
 }

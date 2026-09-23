@@ -89,11 +89,17 @@ jobs:
       - run: rustup show
       - run: bash scripts/check-core-crate-versions.sh
       - run: bash tests/scripts/release-proof.sh && bash tests/scripts/release-merge.sh && bash tests/scripts/release-helper.sh && bash tests/scripts/deploy-observation.sh
+        if: ${{ !cancelled() }}
       - run: just preflight-static
+        if: ${{ !cancelled() }}
 
+  # Why: lint and test do not wait on static. Each skipped the moment static
+  # went red, so a release-script self-test failure in 0.59 hid clippy and
+  # every test tier for a whole round. All three run and report together;
+  # `Gates passed` still needs every one.
   lint:
+    if: github.event_name != 'pull_request' || github.base_ref != 'main' || !startsWith(github.head_ref, 'promote/') || github.event.pull_request.head.repo.full_name != github.repository
     name: Lint (clippy ×3, rustdoc, MSRV)
-    needs: static
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
@@ -131,8 +137,8 @@ jobs:
       - run: just preflight-lint
 
   test:
+    if: github.event_name != 'pull_request' || github.base_ref != 'main' || !startsWith(github.head_ref, 'promote/') || github.event.pull_request.head.repo.full_name != github.repository
     name: Test (unit, integration, admin contract)
-    needs: static
     runs-on: ubuntu-latest
     # Integration is dominated by CREATE/DROP DATABASE round-trips; leave
     # headroom so a growing suite never turns into a meaningless red X. Green

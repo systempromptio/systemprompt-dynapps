@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO plugin_session_summaries AS s\n            (id, session_id, user_id, total_events, tool_uses, prompts, errors,\n             content_input_bytes, content_output_bytes, started_at, subagent_spawns,\n             user_prompts, automated_actions, plugin_id)\n         SELECT 'sess_' || e.session_id, e.session_id, e.user_id, 1,\n                (e.event_type IN ('PostToolUse', 'PostToolUseFailure'))::int,\n                (e.event_type = 'UserPromptSubmit')::int,\n                (e.event_type = 'PostToolUseFailure')::int,\n                COALESCE(e.content_input_bytes, 0), COALESCE(e.content_output_bytes, 0),\n                e.created_at,\n                (e.event_type = 'SubagentStop')::int,\n                (e.event_type = 'UserPromptSubmit'\n                    AND COALESCE(e.metadata->>'agent_id', '') = '')::int,\n                (e.event_type IN ('PostToolUse', 'PostToolUseFailure')\n                    AND COALESCE(e.metadata->>'agent_id', '') <> '')::int,\n                e.plugin_id\n         FROM plugin_usage_events e WHERE e.id = $1\n         ON CONFLICT (session_id) DO UPDATE SET\n             total_events = s.total_events + EXCLUDED.total_events,\n             tool_uses = s.tool_uses + EXCLUDED.tool_uses,\n             prompts = s.prompts + EXCLUDED.prompts,\n             errors = s.errors + EXCLUDED.errors,\n             content_input_bytes = s.content_input_bytes + EXCLUDED.content_input_bytes,\n             content_output_bytes = s.content_output_bytes + EXCLUDED.content_output_bytes,\n             started_at = LEAST(s.started_at, EXCLUDED.started_at),\n             subagent_spawns = s.subagent_spawns + EXCLUDED.subagent_spawns,\n             user_prompts = COALESCE(s.user_prompts, 0) + EXCLUDED.user_prompts,\n             automated_actions = COALESCE(s.automated_actions, 0) + EXCLUDED.automated_actions,\n             plugin_id = GREATEST(s.plugin_id, EXCLUDED.plugin_id),\n             updated_at = now()\n         WHERE s.user_id = EXCLUDED.user_id",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "a1256c3792d77f11040aa584ce73e2be9cac87ec669c401f4260051b04154ed4"
+}

@@ -166,7 +166,7 @@ accepts a `connector:` band (precedence 160, between `group` and the Salesforce
 `salesforce` link band) whose values are server ids; a person matches while
 `mcp_connector_accounts` holds a `connected` row for that server
 (`extensions/web/admin/src/authz/connector.rs`). The `astound-salesforce`
-marketplace uses it: a verified `salesforce-headless-*` connection admits the
+marketplace uses it: a verified `salesforce` connection admits the
 marketplace, plugin and its inherited skills, so Salesforce workflows are not
 offered before their required server can answer. Google Workspace remains an
 optional connector and is filtered independently.

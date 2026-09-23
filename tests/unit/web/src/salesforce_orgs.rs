@@ -93,11 +93,11 @@ fn server_kind_defaults_to_sobject_and_selects_headless_when_declared() {
     let registry = SalesforceOrgRegistry::parse(
         r#"
 orgs:
-  salesforce-crm-us:
+  salesforce:
     label: CRM
     my_domain: https://example.my.salesforce.com
     environment: production
-  salesforce-headless-us:
+  salesforce-headless:
     label: Headless
     my_domain: https://example.my.salesforce.com
     environment: production
@@ -106,10 +106,10 @@ orgs:
     )
     .expect("registry parses");
     let crm = registry
-        .find(&McpServerId::try_new("salesforce-crm-us").expect("valid fixture identifier"))
+        .find(&McpServerId::try_new("salesforce").expect("valid fixture identifier"))
         .expect("CRM org");
     let headless = registry
-        .find(&McpServerId::try_new("salesforce-headless-us").expect("valid fixture identifier"))
+        .find(&McpServerId::try_new("salesforce-headless").expect("valid fixture identifier"))
         .expect("Headless org");
 
     assert_eq!(crm.server_kind, SalesforceServerKind::SobjectAll);

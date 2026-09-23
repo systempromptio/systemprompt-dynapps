@@ -188,7 +188,7 @@ here (it re-injects the mold linker flags and silently produces zero profraws
 — see `scripts/coverage.sh`).
 
 **The schema-upgrade ladder.** `tests/fixtures/schema/release-baseline-<X.Y.Z>.sql`
-holds one recorded schema per release since 0.52.0; `tests/integration/schema-upgrade`
+holds one recorded schema per release since 0.56.0 (the floor; see `scripts/check-schema-baseline.sh`); `tests/integration/schema-upgrade`
 restores each rung and runs the current installer over it, then diffs against a fresh
 install. `scripts/check-schema-baseline.sh` (a static gate) requires a rung for every
 release tag from the floor and one named for the workspace version, so `just
@@ -554,7 +554,7 @@ After changing templates, CSS, JS, or static files, run:
 just publish
 ```
 
-This runs (in order): `bundle_admin_css` -> `copy_extension_assets` -> `content_prerender`. Order matters — bundles must be built before `copy_extension_assets` copies them to `web/dist/`. Admin pages are SSR'd at runtime from `.hbs` templates in `storage/files/admin/templates/`, not precompiled.
+This runs (in order): `bundle_admin_css` -> `copy_extension_assets` -> `site_content_prerender`. Order matters — bundles must be built before `copy_extension_assets` copies them to `web/dist/`. Admin pages are SSR'd at runtime from `.hbs` templates in `storage/files/admin/templates/`, not precompiled.
 
 **Exception: the public-site partials are compiled into the binary.** `services/web/templates/partials/{head-assets,header,footer,scripts}.html` are `include_str!`-embedded by `extensions/web/site/src/partials.rs`. Editing them requires a rebuild (`just build`) and a server restart before `just publish` — running publish alone keeps serving the markup baked into the old binary.
 

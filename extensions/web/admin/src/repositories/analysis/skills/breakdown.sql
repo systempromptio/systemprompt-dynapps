@@ -5,7 +5,7 @@
 WITH events AS MATERIALIZED (
     SELECT e.invocation_id, e.user_id, e.session_id, e.invoked_at, e.plugin_id
     FROM analysis_skill_version_events e
-    WHERE e.skill = $3 AND e.invoked_at >= $1 AND e.invoked_at < $2 AND e.traffic_class = 'production'
+    WHERE e.skill = $3 AND e.invoked_at >= $1 AND e.invoked_at < $2
       AND ($4::text[] IS NULL OR e.user_id = ANY($4))
 ), joined AS (
     SELECT e.invocation_id, e.user_id, e.session_id, f.context_id, f.model, f.client_kind,

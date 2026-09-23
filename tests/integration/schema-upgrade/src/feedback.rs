@@ -48,37 +48,17 @@ async fn legacy_evidence(pool: &PgPool) -> String {
 async fn retained_rows(pool: &PgPool) -> Vec<String> {
     let mut rows = Vec::new();
     for table in [
-        "managed_api_operations",
         "ai_requests",
         "managed_consumer_credentials",
         "managed_consumer_grants",
         "managed_installation_receipts",
         "managed_consumer_session_bindings",
-        "managed_consumer_invocation_evidence",
-        "managed_consumer_attribution_projection",
-        "managed_consumer_attribution_history",
-        "managed_dependency_verifications",
-        "managed_resource_git_bindings",
         "managed_inventory_state",
         "managed_inventory_entries",
         "managed_inventory_membership",
         "managed_inventory_bindings",
-        "managed_inventory_captures",
         "managed_installation_coverage_state",
         "managed_installation_coverage",
-        "analytics_fact_changes",
-        "analytics_normalized_facts",
-        "analytics_fact_deltas",
-        "analytics_fact_checkpoints",
-        "analytics_fact_consumers",
-        "analytics_ingestion_producers",
-        "analytics_snapshot_state",
-        "analytics_snapshot_daily",
-        "analytics_feedback_snapshots",
-        "analytics_snapshot_jobs",
-        "feedback_ingestion_backfill",
-        "feedback_ingestion_outbox",
-        "feedback_ingestion_evidence",
     ] {
         let query = format!(
             "SELECT COALESCE(jsonb_agg(to_jsonb(t) ORDER BY to_jsonb(t)::text),'[]'::jsonb)::text FROM {table} t"
@@ -89,10 +69,9 @@ async fn retained_rows(pool: &PgPool) -> Vec<String> {
 }
 
 async fn rejects(pool: &PgPool, sql: &str, code: &str) {
-    let error = sqlx::raw_sql(sqlx::AssertSqlSafe(sql))
-        .execute(pool)
-        .await
-        .expect_err("database must reject invalid evidence");
+    let Err(error) = sqlx::raw_sql(sqlx::AssertSqlSafe(sql)).execute(pool).await else {
+        panic!("database must reject invalid evidence: {sql}");
+    };
     assert_eq!(
         error.as_database_error().and_then(|e| e.code()).as_deref(),
         Some(code),
@@ -102,24 +81,11 @@ async fn rejects(pool: &PgPool, sql: &str, code: &str) {
 
 async fn contracts(pool: &PgPool) {
     assert_eq!(scalar(pool,"SELECT (status='failed' AND accounting_failed_at='2020-01-02T00:00:00Z'::timestamptz AND accounting_error='fixture accounting mismatch' AND input_tokens=11 AND output_tokens=7 AND tokens_used=18 AND cost_microdollars=500 AND completed_at='2020-01-01T00:00:00Z'::timestamptz)::text FROM ai_requests WHERE id='feedback-ai-completed'").await,"true");
-    assert_eq!(scalar(pool,"SELECT (fence=7 AND state='pending' AND input_checkpoint->>'retained'='capture-input')::text FROM managed_api_operations WHERE owner_id='feedback-owner' AND id='feedback-api-pending'").await,"true");
-    assert_eq!(scalar(pool,"SELECT issuance_operation FROM managed_consumer_credentials WHERE device_id='feedback-device'").await,"feedback-api-completed");
-    rejects(pool,"INSERT INTO managed_api_operations(owner_id,id,kind,request_digest) VALUES('feedback-owner','feedback-api-pending','source_capture','other')","23505").await;
-    rejects(
-        pool,
-        "UPDATE managed_api_operations SET state='published' WHERE id='feedback-api-pending'",
-        "23514",
-    )
-    .await;
     assert_eq!(scalar(pool, "SELECT (consumer_id IS NULL AND device_id IS NULL AND host IS NULL AND fully_verified IS NULL)::text FROM managed_installation_receipts WHERE id='feedback-legacy-receipt'").await, "true");
     for statement in [
         "UPDATE managed_revisions SET rationale='rewritten' WHERE id='feedback-revision'",
-        "UPDATE managed_consumer_invocation_evidence SET evidence='{}' WHERE id='feedback-evidence'",
         "UPDATE managed_consumer_session_bindings SET native_session_id='forged' WHERE id='feedback-binding'",
-        "UPDATE managed_dependency_verifications SET manifest='{}' WHERE id='feedback-verification'",
-        "UPDATE managed_resource_git_bindings SET relative_root='other' WHERE resource_id='feedback-resource'",
         "UPDATE managed_inventory_bindings SET bound_by='feedback-consumer' WHERE entry_id='feedback-entry'",
-        "UPDATE feedback_ingestion_evidence SET evidence='{}' WHERE event_id='feedback-raw'",
     ] {
         rejects(pool, statement, "23514").await;
     }
@@ -176,65 +142,61 @@ async fn seeded_feedback_survives_release_upgrade_and_installer_restart() {
         assert_eq!(
             retained,
             retained_rows(&db.pool).await,
-            "installer must not reset grants, checkpoints, seeds, leases, snapshots or diagnostics"
+            "installer must not reset grants, inventory, leases or diagnostics"
         );
         contracts(&db.pool).await;
         super::active_devices::contracts(&db.pool).await;
-        privacy(&db.pool).await;
+        retired(&db.pool).await;
+        retention(&db.pool).await;
     }
     upgraded.cleanup().await;
     fresh.cleanup().await;
 }
 
-async fn privacy(pool: &PgPool) {
-    // Why: the privacy preamble refuses while committed reporting evidence is
-    // still undelivered, and this isolated database has no relay to deliver
-    // it. Acknowledge the seeded outbox so the retention checks below are the
-    // ones under test, not the delivery gate in front of them.
-    execute(pool, "UPDATE event_outbox SET processed_at=clock_timestamp() WHERE consumer='analytics_reporting' AND processed_at IS NULL").await;
-    rejects(
-        pool,
-        "SELECT expire_feedback_raw(clock_timestamp()-interval '89 days')",
-        "23514",
-    )
-    .await;
-    rejects(
-        pool,
-        "SELECT expire_feedback_raw('2021-01-01T00:00:00Z')",
-        "55000",
-    )
-    .await;
-    // This isolated database has no workers. Explicitly acknowledge the seeded
-    // source/backfill work to exercise later barriers, not bypass a live queue.
-    execute(pool, "UPDATE feedback_ingestion_outbox SET pending=false; UPDATE feedback_ingestion_backfill SET done=true; UPDATE analytics_ingestion_producers SET pending_count=0,oldest_pending_at=NULL").await;
-    rejects(
-        pool,
-        "SELECT expire_feedback_raw('2021-01-01T00:00:00Z')",
-        "55000",
-    )
-    .await;
-    execute(pool, "UPDATE analytics_snapshot_state SET evidence_cutoff='2021-01-01T00:00:00Z' WHERE owner_id='feedback-owner'").await;
+// Why: the feedback ingestion pipeline (capture triggers, outbox, evidence
+// copy) is retired by migration 105 on the upgrade path and never declared on
+// the fresh one; neither may carry any of it.
+async fn retired(pool: &PgPool) {
     assert_eq!(
         scalar(
             pool,
-            "SELECT expire_feedback_raw('2021-01-01T00:00:00Z')::text"
+            "SELECT (count(*)=0)::text FROM pg_trigger WHERE NOT tgisinternal AND tgname LIKE 'feedback\\_capture%'"
+        )
+        .await,
+        "true",
+        "no feedback capture trigger survives"
+    );
+    assert_eq!(
+        scalar(
+            pool,
+            "SELECT (count(*)=0)::text FROM pg_tables WHERE tablename LIKE 'feedback\\_ingestion%'"
+        )
+        .await,
+        "true",
+        "no feedback ingestion table survives"
+    );
+}
+
+async fn retention(pool: &PgPool) {
+    rejects(
+        pool,
+        "SELECT expire_raw_evidence(clock_timestamp()-interval '89 days')",
+        "23514",
+    )
+    .await;
+    assert_eq!(
+        scalar(
+            pool,
+            "SELECT expire_raw_evidence('2021-01-01T00:00:00Z')::text"
         )
         .await,
         "1"
     );
-    for table in [
-        "plugin_usage_events",
-        "ai_requests",
-        "feedback_ingestion_evidence",
-        "managed_consumer_invocation_evidence",
-        "managed_consumer_attribution_projection",
-        "managed_consumer_attribution_history",
-        "feedback_ingestion_outbox",
-    ] {
+    for table in ["plugin_usage_events", "ai_requests"] {
         assert_eq!(
             scalar(pool, &format!("SELECT count(*)::text FROM {table}")).await,
             "0",
-            "expired evidence and indirect references: {table}"
+            "expired raw evidence: {table}"
         );
     }
     assert_eq!(
@@ -249,13 +211,5 @@ async fn privacy(pool: &PgPool) {
     assert_eq!(
         scalar(pool, "SELECT count(*)::text FROM managed_consumer_grants").await,
         "1"
-    );
-    assert_eq!(
-        scalar(
-            pool,
-            "SELECT COALESCE(current_setting('astound.feedback_retention',true),'')"
-        )
-        .await,
-        ""
     );
 }

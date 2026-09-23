@@ -22,12 +22,17 @@
 # installed cleanly on every fresh database and every local clone; the only
 # database shaped like a deployed install was production. A tracked dump of
 # the release is deterministic, offline, and identical in CI and locally.
+#
+# Why the floor is 0.56.0: core's analytics 015 retires the feedback fact
+# tables before web's own migrations run, and web 059, 071 and 084 still write
+# or select them, so a database older than 0.56 (web below 084) cannot upgrade
+# in one step. Such a database upgrades through 0.59.1 first.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
 DIR="tests/fixtures/schema"
-FLOOR="0.52.0"
+FLOOR="0.56.0"
 
 version="$(awk '/^\[workspace\.package\]/{p=1;next}/^\[/{p=0}p&&/^version[[:space:]]*=/{gsub(/[[:space:]"]/,""); sub(/^version=/,""); print; exit}' Cargo.toml)"
 [ -n "$version" ] || { echo "check-schema-baseline: could not read the workspace version" >&2; exit 1; }

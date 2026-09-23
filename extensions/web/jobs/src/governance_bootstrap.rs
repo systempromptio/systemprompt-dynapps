@@ -95,10 +95,10 @@ async fn execute_inner(ctx: &JobContext) -> Result<JobResult, JobError> {
         .await
         .map_err(|e| JobError::from(MarketplaceError::Internal(e.to_string())))?;
 
-    // Why: the feedback projection stamps every invocation with the source
-    // that shipped its skill, that source's content hash and the hash of the
-    // marketplace version serving it; those come from the composition this
-    // process booted on, so they are recorded here.
+    // Why: every skill invocation is credited to the marketplace that owns
+    // its plugin and the version that marketplace was serving; ownership and
+    // versions come from the composition this process booted on, so they are
+    // recorded here.
     let sources = record_service_sources(&pool)
         .await
         .map_err(JobError::from)?;

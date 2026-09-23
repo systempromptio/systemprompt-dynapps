@@ -1,7 +1,7 @@
-//! Daily and per-session usage counters.
+//! Daily usage counters.
 
 use sqlx::PgPool;
-use systemprompt::identifiers::{PluginId, SessionId, UserId};
+use systemprompt::identifiers::{PluginId, UserId};
 
 #[derive(Debug, Clone, Copy)]
 pub struct DailyAggregationParams<'a> {
@@ -53,20 +53,5 @@ pub async fn upsert_daily_aggregation(params: &DailyAggregationParams<'_>) {
 
     if let Err(e) = result {
         tracing::warn!(error = %e, "Failed to upsert daily aggregation");
-    }
-}
-
-// Why: totals come from durable accepted events, so recovery cannot increment
-// them twice.
-pub async fn refresh_session_summary(
-    pool: &PgPool,
-    session_id: &SessionId,
-    file_path: Option<&str>,
-) {
-    if let Err(error) = super::ingestion::drain_ingestion_outbox(pool).await {
-        tracing::error!(%error, "Session aggregation remains queued for retry");
-    }
-    if let Some(path) = file_path.filter(|path| !path.is_empty()) {
-        super::session_updates::update_unique_files_touched(pool, session_id, path).await;
     }
 }

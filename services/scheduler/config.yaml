@@ -12,29 +12,11 @@
 scheduler:
   enabled: true
   jobs:
-    - name: feedback_ingestion
-      extension: web
-      schedule: "*/5 * * * * *"
-      owner: admin
-      enabled: true
-
     # Core jobs (defined in systemprompt-core)
     - name: managed_inventory_refresh
       extension: core
       owner: admin
       schedule: "0 * * * * *"
-      enabled: true
-
-    - name: feedback_snapshot_processing
-      extension: core
-      schedule: "*/5 * * * * *"
-      owner: admin
-      enabled: true
-
-    - name: feedback_facts_processing
-      extension: core
-      schedule: "*/5 * * * * *"
-      owner: admin
       enabled: true
 
     - name: cleanup_anonymous_users
@@ -166,15 +148,7 @@ scheduler:
       owner: admin
       enabled: true
 
-    # Core next (0.43 → 0.44) additions. service_registry_gc reaps `services`
-    # rows whose replica stopped heartbeating (every minute);
-    # thought_signature_cleanup drops expired Gemini thought signatures
-    # (hourly).
-    - name: service_registry_gc
-      extension: core
-      owner: admin
-      enabled: true
-
+    # Drops expired Gemini thought signatures (hourly).
     - name: thought_signature_cleanup
       extension: core
       owner: admin
@@ -207,7 +181,9 @@ scheduler:
       owner: admin
       enabled: true
 
-    # Prunes plugin usage rows past the retention window (web extension).
+    # Expires raw evidence older than 90 days — hook events, gateway
+    # requests and what hangs off them — in one transaction (web extension).
+    # conversation_facts and conversation_skill_facts are kept.
     - name: plugin_usage_retention
       extension: web
       owner: admin
@@ -276,9 +252,11 @@ scheduler:
 
     # The conversation rollup (web extension): keeps `conversation_facts` —
     # the per-conversation deterministic record every Analysis page reads —
-    # current. Every minute it re-derives the row for each conversation
-    # touched since the last tick on any plane (gateway, hooks, governance,
-    # tools, artifacts). Idempotent; `-p all=true` rebuilds every row.
+    # current, with its per-skill rows (`conversation_skill_facts`, which the
+    # Versions pages read). Every minute it re-derives the rows of each
+    # conversation touched on any plane (gateway, hooks, governance, tools,
+    # artifacts) since a stored watermark, so each change is folded in once.
+    # `-p all=true` rebuilds every row (the backfill after an upgrade).
     - name: conversation_rollup
       extension: web
       owner: admin
@@ -299,6 +277,11 @@ scheduler:
       enabled: false
 
     - name: copy_extension_assets
+      extension: web
+      owner: admin
+      enabled: false
+
+    - name: site_content_prerender
       extension: web
       owner: admin
       enabled: false

@@ -2,7 +2,7 @@
 //! about its own database, on a daily, weekly and monthly cadence.
 //!
 //! Deletion itself is core's `database_cleanup` (windows from
-//! `profile.retention`) and `expire_feedback_raw` (90-day raw evidence).
+//! `profile.retention`) and `expire_raw_evidence` (90-day raw evidence).
 //! These jobs are the other half of a retention policy: the daily job
 //! records size and age per managed table into `retention_runs` so growth is
 //! a series rather than a guess; the weekly job archives the raw request
@@ -73,6 +73,7 @@ pub(crate) const ROLLUP_TABLES: &[ManagedTable] = &[
     managed("admin_usage_daily_rollups", "date", None),
     managed("plugin_usage_daily", "date", None),
     managed("conversation_facts", "last_at", None),
+    managed("conversation_skill_facts", "first_invoked_at", None),
     managed("usage_anomalies", "detected_at", None),
     managed("content_performance_metrics", "updated_at", None),
     managed("retention_runs", "run_at", None),
@@ -81,7 +82,6 @@ pub(crate) const ROLLUP_TABLES: &[ManagedTable] = &[
 // Why: queues and buckets are measured for growth, never archived.
 pub(crate) const TRANSIENT_TABLES: &[ManagedTable] = &[
     managed("event_outbox", "created_at", None),
-    managed("feedback_ingestion_outbox", "created_at", None),
     managed("ai_quota_buckets", "window_start", None),
     managed("user_rate_limit_buckets", "window_start", None),
 ];

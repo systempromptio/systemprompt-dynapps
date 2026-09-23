@@ -192,10 +192,6 @@ pub(super) fn skill_rows(rows: &[SkillEffectivenessRow]) -> Vec<ProjectSkillRowV
             skill: r.skill.clone(),
             invocations: r.invocations,
             users: r.users,
-            rating_display: r
-                .rating_avg
-                .map_or_else(|| "—".to_owned(), |avg| format!("{avg:.1} / 5")),
-            rating_count: r.rating_count,
         })
         .collect()
 }

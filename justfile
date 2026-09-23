@@ -346,7 +346,18 @@ _test-contract-uncoordinated *ARGS:
     cargo nextest run --no-fail-fast --manifest-path tests/Cargo.toml --workspace -E 'package(admin-contract-tests)' "$@"
 
 # All tests
-test: test-unit test-integration test-contract
+# Every tier runs even after one fails. As `just` dependencies they stopped
+# at the first red tier, so the contract tier's failures stayed hidden behind
+# unit and integration fixes for three rounds in 0.59.
+test:
+    #!/usr/bin/env bash
+    set -uo pipefail
+    failed=()
+    for tier in test-unit test-integration test-contract; do
+        echo "==> $tier"
+        {{just_executable()}} "$tier" || failed+=("$tier")
+    done
+    if [ "${#failed[@]}" -gt 0 ]; then printf '::error::test failed: %s\n' "${failed[@]}"; exit 1; fi
 
 # Source gates ported from systemprompt-core (scripts/*.sh)
 # Reject tests that return early on a missing prerequisite without saying so
@@ -448,20 +459,34 @@ preflight: preflight-static preflight-lint test coverage-check
 # checks, so queueing them on the build lock only made pre-push hang behind
 # whoever was mid test run. `just lint-gates` stays coordinated for callers
 # that want dedupe (clippy's dependency).
+#
+# Every check runs even after one fails, and the recipe fails if any did: a
+# formatting slip must not hide thirty-six source gates until the next round.
 preflight-static:
-    cargo fmt --all -- --check
-    cargo fmt --manifest-path tests/Cargo.toml --all -- --check
-    cargo fmt --manifest-path bridge/Cargo.toml --all -- --check
-    bash scripts/check-sqlx-cache.sh
-    bash scripts/check-core-crate-versions.sh
-    {{just_executable()}} --summary | tr ' ' '\n' | grep -qx deploy-release
-    {{just_executable()}} _lint-gates-uncoordinated
+    #!/usr/bin/env bash
+    set -uo pipefail
+    failed=()
+    check() { echo "==> $1"; shift; "$@" || failed+=("$*"); }
+    check "fmt (root)" cargo fmt --all -- --check
+    check "fmt (tests)" cargo fmt --manifest-path tests/Cargo.toml --all -- --check
+    check "fmt (bridge)" cargo fmt --manifest-path bridge/Cargo.toml --all -- --check
+    check "sqlx cache" bash scripts/check-sqlx-cache.sh
+    check "core crate versions" bash scripts/check-core-crate-versions.sh
+    check "deploy-release recipe present" bash -c '{{just_executable()}} --summary | tr " " "\n" | grep -qx deploy-release'
+    check "source gates" {{just_executable()}} _lint-gates-uncoordinated
+    if [ "${#failed[@]}" -gt 0 ]; then printf '::error::preflight-static failed: %s\n' "${failed[@]}"; exit 1; fi
 
 # Tier 1 — compilers. Clippy (both workspaces), rustdoc as errors, MSRV.
+# Each runs even after one fails, as in preflight-static.
 preflight-lint:
-    {{just_executable()}} clippy
-    {{just_executable()}} doc-check
-    {{just_executable()}} msrv-check
+    #!/usr/bin/env bash
+    set -uo pipefail
+    failed=()
+    for recipe in clippy doc-check msrv-check; do
+        echo "==> $recipe"
+        {{just_executable()}} "$recipe" || failed+=("$recipe")
+    done
+    if [ "${#failed[@]}" -gt 0 ]; then printf '::error::preflight-lint failed: %s\n' "${failed[@]}"; exit 1; fi
 
 # Weekly deep pass: preflight plus the network-touching supply-chain gates.
 preflight-full: preflight deny audit machete hack

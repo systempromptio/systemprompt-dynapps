@@ -3,7 +3,6 @@ WITH events AS (
     FROM analysis_skill_version_events e
     WHERE e.invoked_at >= $1 AND e.invoked_at < $2
       AND e.skill IS NOT NULL
-      AND e.traffic_class = 'production'
       AND ($3::TEXT[] IS NULL OR e.user_id = ANY($3))
       AND ($4::TEXT IS NULL OR e.user_id = $4)
 ),

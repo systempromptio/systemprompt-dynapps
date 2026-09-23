@@ -237,12 +237,12 @@ pub async fn list_conversation_skills(
     context_id: &ContextId,
 ) -> Result<Vec<ConversationSkillRow>, sqlx::Error> {
     let rows = sqlx::query!(
-        r#"SELECT v.plugin_id AS "plugin_id?: PluginId", v.skill AS "skill!",
-                  v.marketplace_id AS "marketplace_id?: MarketplaceId", v.marketplace_hash,
-                  v.invocations AS "invocations!", v.first_invoked_at AS "first_invoked_at!"
-           FROM conversation_skill_versions v
-           WHERE v.context_id = $1
-           ORDER BY v.first_invoked_at"#,
+        r#"SELECT s.plugin_id AS "plugin_id?: PluginId", s.skill,
+                  s.marketplace_id AS "marketplace_id?: MarketplaceId", s.marketplace_hash,
+                  s.invocations, s.first_invoked_at
+           FROM conversation_skill_facts s
+           WHERE s.context_id = $1
+           ORDER BY s.first_invoked_at"#,
         context_id.as_str()
     )
     .fetch_all(pool)

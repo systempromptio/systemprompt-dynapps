@@ -1,5 +1,8 @@
-//! Session summaries are derived from durable, accepted events.
+//! Session summaries are maintained by the accepted event's own insert: each
+//! event adds its counts in the transaction that records it.
 use systemprompt::identifiers::{SessionId, UserId};
+use systemprompt_web_admin::repositories::dashboard::usage_aggregations;
+use systemprompt_web_admin::repositories::marketplace::webhook;
 use systemprompt_web_admin::types::{EVENT_POST_TOOL_USE, EVENT_POST_TOOL_USE_FAILURE};
 
 use crate::fixtures::{insert_user, unclaimed_email, unique};
@@ -282,14 +285,32 @@ async fn accept_and_refresh(p: &SessionSummaryParams<'_>) {
     } else {
         p.event_type
     };
-    sqlx::query("INSERT INTO plugin_usage_events(id,user_id,session_id,event_type,metadata,content_input_bytes,content_output_bytes) VALUES($1,$2,$3,$4,jsonb_build_object('agent_id',$5::text),$6,$7)")
-        .bind(unique("event")).bind(p.user_id.as_str()).bind(p.session_id.as_str()).bind(event)
-        .bind(if p.is_from_subagent { "subagent" } else { "" }).bind(p.content_input_bytes).bind(p.content_output_bytes)
-        .execute(p.pool).await.expect("accept event");
-    systemprompt_web_admin::repositories::dashboard::usage_aggregations::refresh_session_summary(
+    let metadata =
+        serde_json::json!({ "agent_id": if p.is_from_subagent { "subagent" } else { "" } });
+    let dedup_key = unique("event");
+    let plugin_id = systemprompt::identifiers::PluginId::new("test");
+    let accepted = webhook::insert_plugin_usage_event(
         p.pool,
-        p.session_id,
-        p.file_path,
+        &webhook::UsageEventParams {
+            plugin_id: &plugin_id,
+            user_id: p.user_id,
+            session_id: p.session_id,
+            event_type: event,
+            tool_name: None,
+            metadata: &metadata,
+            description: None,
+            prompt_preview: None,
+            cwd: None,
+            dedup_key: &dedup_key,
+            content_input_bytes: p.content_input_bytes,
+            content_output_bytes: p.content_output_bytes,
+            tool_use_id: None,
+        },
     )
-    .await;
+    .await
+    .expect("accept event");
+    assert!(accepted, "a fresh dedup key is accepted");
+    if let Some(path) = p.file_path {
+        usage_aggregations::update_unique_files_touched(p.pool, p.session_id, path).await;
+    }
 }

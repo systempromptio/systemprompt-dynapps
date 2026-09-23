@@ -101,7 +101,7 @@ Follow Salesforce's [External Client App setup](https://developer.salesforce.com
 
 ### One entry per org: the org registry
 
-Salesforce has no central authorization server. Every org is its own login, holds its own user records, and a sandbox is served by a different hosted MCP endpoint. Astound therefore declares each org-and-tool-surface in `services/config/salesforce-orgs.yaml`, keyed by the id of the MCP server that fronts it (`salesforce-crm-us`, `salesforce-headless-us`, `salesforce-<slug>`). A user picks the connection on the profile page before signing in; the grant, verification and every tool call are bound to it. Every entry shares one callback, `/api/public/connectors/salesforce/callback` — the server id travels in the OAuth `state` — so adding an entry never touches the app.
+Salesforce has no central authorization server. Every org is its own login, holds its own user records, and a sandbox is served by a different hosted MCP endpoint. Astound therefore declares the org in `services/config/salesforce-orgs.yaml`, keyed by the id of the MCP server that fronts it (`salesforce`; `salesforce-<slug>` for an org added later). A user picks the connection on the profile page before signing in; the grant, verification and every tool call are bound to it. Every entry shares one callback, `/api/public/connectors/salesforce/callback` — the server id travels in the OAuth `state` — so adding an entry never touches the app.
 
 ```yaml
 orgs:
@@ -171,7 +171,7 @@ Restart the target service after provisioning so it loads the settings. Provisio
 ### Employee: connect your Salesforce account
 
 1. Sign in to the intended Astound gateway and open **Account → Connectors** at `/admin/connectors`. In Bridge, **Manage on server** opens the server account page.
-2. Find the org by its label — one row per org you are entitled to — and select **Connect**. Sign in on Salesforce's own page with the account authorized for that org and complete its MFA and consent flow. A row marked **Not provisioned** is waiting on its administrator; nothing you do on the page changes that.
+2. Find the connection by its label — one row per surface you are entitled to — and select **Connect**. Sign in on Salesforce's own page with the account authorized for that org and complete its MFA and consent flow. A row marked **Not provisioned** is waiting on its administrator; nothing you do on the page changes that.
 3. Return to Astound and use **Test connection**. Confirm the connected Salesforce identity and org are the expected ones.
 4. Sync Bridge and reopen the client if needed. Confirm Salesforce tools are available and perform a small read against a known record or object you are permitted to access.
 

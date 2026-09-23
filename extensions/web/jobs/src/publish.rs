@@ -13,8 +13,8 @@ use systemprompt::generator::{generate_feed, organize_dist_assets, prerender_pag
 use systemprompt::traits::{Job, JobContext, JobResult};
 
 use super::{
-    BundleAdminCssJob, ContentIngestionJob, ContentPrerenderJob, CopyExtensionAssetsJob,
-    LlmsTxtGenerationJob, RobotsTxtGenerationJob, SitemapGenerationJob,
+    BundleAdminCssJob, ContentIngestionJob, CopyExtensionAssetsJob, LlmsTxtGenerationJob,
+    RobotsTxtGenerationJob, SiteContentPrerenderJob, SitemapGenerationJob,
 };
 use crate::error::JobError;
 use systemprompt_web_shared::error::MarketplaceError;
@@ -91,7 +91,7 @@ impl PublishPipelineJob {
     }
 
     async fn run_prerender(&self, ctx: &JobContext, stats: &mut PipelineStats) {
-        match ContentPrerenderJob.execute(ctx).await {
+        match SiteContentPrerenderJob.execute(ctx).await {
             Ok(_result) => {
                 tracing::debug!("Content prerender completed");
                 stats.record_success();

@@ -20,7 +20,7 @@ sfcore skill carries the `sf-` prefix declared in the kit's `tools/kit-sanitize.
 ## What stays here
 
 Everything the bundle references by id: the MCP servers `atlassian` and
-`salesforce-crm-us` (`services/mcp/`), the `india-devs` group
+`salesforce` (`services/mcp/`), the `india-devs` group
 (`services/web/config/groups.yaml`, directory group `Systemprompt-Core`) —
 **and the marketplace's access**. `marketplace/astound-india-dev` is declared
 in `services/access-control/rules.yaml` with `owner: bundle:india` and

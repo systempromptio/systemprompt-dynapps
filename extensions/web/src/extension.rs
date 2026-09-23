@@ -78,7 +78,5 @@ user_purge_tables!(
         ("ai_request_scopes", "user_id"),
         ("conversation_analyses", "user_id"),
         ("admin_usage_daily_rollups", "user_id"),
-        ("daily_summaries", "user_id"),
-        ("tenant_activity", "user_id"),
     ]
 );

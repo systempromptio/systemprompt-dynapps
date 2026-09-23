@@ -18,7 +18,6 @@ use super::format::Format;
 use super::model::{Column, DataSet, ExportContext, Table};
 use super::{registry, window};
 use crate::error::{AdminError, AdminResult};
-use crate::routes::managed_state::ManagedState;
 use crate::types::UserContext;
 
 #[derive(Debug, Default, Deserialize)]
@@ -50,14 +49,13 @@ fn prepare<'a>(
     uri: &axum::http::Uri,
     pool: &'a PgPool,
     user: &'a UserContext,
-    managed: &'a ManagedState,
 ) -> AdminResult<Prepared<'a>> {
     let dataset =
         registry::find(id).ok_or_else(|| AdminError::NotFound(format!("No export named {id}")))?;
     if !dataset.allows(user) {
         return Err(AdminError::Forbidden("Admin access required.".to_owned()));
     }
-    let mut ctx = ExportContext::new(pool, user, managed, uri.clone());
+    let mut ctx = ExportContext::new(pool, user, uri.clone());
     ctx.window = window::resolve(dataset.window(), &ctx.query::<window::WindowQuery>()?)?;
     ctx.limit = dataset.cap();
     let query: ExportQuery = ctx.query()?;
@@ -113,12 +111,11 @@ fn project(all: &'static [Column], chosen: &[Column], table: Table) -> Table {
 
 pub(crate) async fn export_file(
     Extension(user): Extension<UserContext>,
-    Extension(managed): Extension<Arc<ManagedState>>,
     State(pool): State<Arc<PgPool>>,
     Path(id): Path<String>,
     OriginalUri(uri): OriginalUri,
 ) -> AdminResult<Response> {
-    let prepared = prepare(&id, &uri, &pool, &user, &managed)?;
+    let prepared = prepare(&id, &uri, &pool, &user)?;
     let format = prepared
         .ctx
         .query::<ExportQuery>()?
@@ -132,12 +129,11 @@ pub(crate) async fn export_file(
 
 pub(crate) async fn export_preview(
     Extension(user): Extension<UserContext>,
-    Extension(managed): Extension<Arc<ManagedState>>,
     State(pool): State<Arc<PgPool>>,
     Path(id): Path<String>,
     OriginalUri(uri): OriginalUri,
 ) -> AdminResult<Json<ExportPreview>> {
-    let mut prepared = prepare(&id, &uri, &pool, &user, &managed)?;
+    let mut prepared = prepare(&id, &uri, &pool, &user)?;
     // Why: one row is enough — every loader reports the filter's total beside
     // whatever slice it returns, and a preview must not pay for the file. A
     // loader that cannot count without loading ignores the limit instead.

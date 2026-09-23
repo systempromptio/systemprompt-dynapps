@@ -34,36 +34,3 @@ pub fn link_params(short_code: &str) -> CreateLinkParams {
         "cta",
     )
 }
-
-// Why: every raw-retention path opens with core's reporting-privacy preamble,
-// which refuses while committed reporting evidence sits undelivered in the
-// event outbox. These databases run no relay, so a test that seeds traffic
-// and then expires it acknowledges the delivery itself — the retention rules
-// are what it exercises, not the delivery gate in front of them.
-pub async fn acknowledge_reporting_outbox(pool: &sqlx::PgPool) {
-    sqlx::query(
-        "UPDATE event_outbox SET processed_at=clock_timestamp() \
-         WHERE consumer='analytics_reporting' AND processed_at IS NULL",
-    )
-    .execute(pool)
-    .await
-    .expect("acknowledge the reporting outbox");
-}
-
-// Why: raw retention also waits for the reporting consumers — facts consumed,
-// the snapshot worker caught up, an evidence cutoff established. None of those
-// workers run in a throwaway database, so a test that only wants the sweep to
-// run over its traffic establishes the completed barrier explicitly.
-pub async fn establish_retention_barrier(pool: &sqlx::PgPool) {
-    for sql in [
-        "UPDATE analytics_fact_deltas SET consumed_at=clock_timestamp()",
-        "INSERT INTO analytics_fact_consumers(owner_id,consumer,generation) SELECT owner_id,'snapshots-v1',generation FROM analytics_fact_checkpoints ON CONFLICT(owner_id,consumer) DO UPDATE SET generation=EXCLUDED.generation",
-        "INSERT INTO analytics_snapshot_state(owner_id,fact_generation,evidence_cutoff) SELECT owner_id,generation,clock_timestamp()-interval '90 days' FROM analytics_fact_checkpoints ON CONFLICT(owner_id) DO UPDATE SET fact_generation=EXCLUDED.fact_generation,evidence_cutoff=EXCLUDED.evidence_cutoff",
-    ] {
-        sqlx::query(sql)
-            .execute(pool)
-            .await
-            .expect("establish the retention barrier");
-    }
-    acknowledge_reporting_outbox(pool).await;
-}

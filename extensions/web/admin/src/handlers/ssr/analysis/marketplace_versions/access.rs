@@ -1,13 +1,12 @@
 //! Who may read which marketplace's version history.
 
 use sqlx::PgPool;
-use systemprompt::identifiers::{MarketplaceId, UserId};
+use systemprompt::identifiers::MarketplaceId;
 
 use crate::error::{AdminError, AdminHtmlResult, AdminResult};
 use crate::repositories::analysis::marketplace_versions::{
-    MarketplaceVersionMetricsRow, list_marketplace_version_metrics,
+    MarketplaceVersionMetricsRow, VersionWindow, list_marketplace_version_metrics,
 };
-use crate::repositories::analysis::retained::RetainedWindow;
 use crate::types::UserContext;
 
 // Why: an admin sees every marketplace's history; a participant sees the
@@ -36,13 +35,12 @@ pub(crate) fn may_read_marketplace(user: &UserContext, marketplace_id: &Marketpl
 // not-found as a marketplace that was never recorded.
 pub(super) async fn readable_versions(
     pool: &PgPool,
-    owner: &UserId,
-    window: RetainedWindow,
+    window: VersionWindow,
     marketplace_id: &MarketplaceId,
     user: &UserContext,
 ) -> AdminHtmlResult<Vec<MarketplaceVersionMetricsRow>> {
     let rows = if may_read_marketplace(user, marketplace_id) {
-        list_marketplace_version_metrics(pool, owner, window, marketplace_id).await?
+        list_marketplace_version_metrics(pool, window, marketplace_id).await?
     } else {
         Vec::new()
     };

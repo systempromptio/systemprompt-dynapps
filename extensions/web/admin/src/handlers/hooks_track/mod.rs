@@ -112,8 +112,6 @@ pub(crate) async fn handle_hook_track(
         event_hub: &event_hub,
     })
     .await;
-    crate::repositories::dashboard::usage_aggregations::ingestion::drain_ingestion_outbox(&pool)
-        .await?;
     Ok(StatusCode::OK.into_response())
 }
 

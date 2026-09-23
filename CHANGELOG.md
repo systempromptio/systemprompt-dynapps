@@ -18,6 +18,110 @@ Conventions (strict — hold every entry to them):
 - Version numbers track the root workspace `version` in `Cargo.toml`; bridge-only releases are
   prefixed `bridge-` (e.g. `bridge-0.17.1`).
 
+## Unreleased
+
+## 0.60.0 — 2026-09-23
+
+### Breaking
+
+- **Upgrade floor is 0.56.0.** Core's analytics migration 015 drops the feedback fact tables
+  before the web extension's migrations run, and web 059, 071 and 084 still write or select
+  them. A database left by 0.52–0.55.1 therefore cannot upgrade to this release in one step.
+  Upgrade it to 0.59.1 first. The schema-upgrade ladder starts at 0.56.0
+  (`FLOOR` in `scripts/check-schema-baseline.sh`); the 0.52.0–0.55.1 rungs are removed.
+
+### Added
+
+- **Claude on Vertex AI.** Every `claude-*` request now goes to the new `vertex-anthropic`
+  provider: Claude on Vertex AI (publisher `anthropic`, `global`) under the `vertex` service
+  account. It fails over to Anthropic's own API when Vertex is out of capacity or unreachable.
+  Anthropic's API stays declared, with its models under `anthropic-claude-*` ids (catalog ids
+  are unique across providers). Those ids are reachable directly, and each is the failover
+  twin of its bare id, because core finds the requested model on the fallback provider by
+  upstream name. The in-process AI service reaches Claude the same way
+  (`ai.default_provider: vertex-anthropic`). The project's Vertex Claude quota is currently
+  zero, so Claude traffic is served by Anthropic until the quota is raised.
+- **Every model Vertex serves, priced from Google's published pages** (read 2026-09-23):
+  - Claude Sonnet/Opus 4.5, Opus/Sonnet 4.6, Opus 4.7 and 4.8 beside the 5.x models, at
+    Vertex's global rates. Each has an `anthropic-claude-*` twin.
+  - The open models on the global MaaS endpoint: GLM 4.7/5/5.2, Kimi K2 Thinking,
+    DeepSeek V3.2, MiniMax M2, Qwen3 235B, Next and Coder, and gpt-oss-20b/120b.
+  - DeepSeek R1 on a new `vertex-maas-us-central1` provider.
+  - Every Qwen, GLM 4.7/5, Kimi, DeepSeek and MiniMax MaaS endpoint, and gpt-oss-20b, retires
+    on 2026-10-21. Core 0.60.0 hides a retired declaration instead of removing it, so those
+    routes keep booting after that date.
+
+### Changed
+
+- **Core 0.60.0 (crates.io):** both `[patch.crates-io]` blocks are commented out and
+  `bridge/CORE_REF` is `v0.60.0`. Core retires its feedback facts/snapshot engine, the
+  reporting projection behind the `analytics` CLI, the managed admin routes nothing called
+  (the managed `/api/v1` surface is now the four routes the bridge calls), and scheduler
+  writes on idle ticks. It also gives the gateway and the in-process AI service one upstream
+  seam, so both reach Vertex-hosted providers. See core's `CHANGELOG.md`.
+- **Analysis → Versions** reads `conversation_skill_facts` (new, migration 104; kept forever
+  like `conversation_facts`, filled by `conversation_rollup`) instead of core's normalized
+  facts. A conversation is credited to the marketplace version served when it first invoked
+  the skill — the old figures stamped the hash current at projection time. Users are now every
+  person who ran those conversations (not only device-authenticated ones), requests are turns,
+  cost is turn spend without side calls, and p50/p95 are over conversation-level latency. The
+  365-day window is now real. Backfill after upgrading:
+  `systemprompt infra jobs run conversation_rollup -p all=true`.
+- **`conversation_rollup`** keeps a watermark (`conversation_rollup_state`) instead of
+  re-reading a three-minute overlapping window every minute, so a conversation is rebuilt once
+  per change. `-p lookback_minutes` is gone; `-p all=true` still rebuilds everything.
+- **`plugin_usage_retention`** calls `expire_raw_evidence` (was `expire_feedback_raw`): plain
+  90-day expiry of hook events, requests and their evidence, no longer gated on the feedback
+  projection or core's snapshot compaction.
+- The astound prerender job is renamed `content_prerender` → `site_content_prerender`; it
+  collided with core's job of the same name.
+
+### Fixed
+
+- **macOS bridge updates:** every Mac bridge's update check failed with `gateway returned status
+  404 Not Found from bridge-latest: no published build for platform macos`. The gateway's
+  `bridge_releases.assets` map had no `macos` key, and the release published only the dmg,
+  which the in-app updater cannot install. It installs a `ditto`-zipped, stapled `.app`.
+  `scripts/package-bridge-macos.sh` now also stages `astound-bridge-macos.zip` from the same
+  notarized bundle, and `tests/release/macos-updater-zip.sh` checks it the way the updater
+  will. The release adds the zip to `SHA256SUMS` and cosign-signs it, the gateway image stays
+  dmg-only, and `services/ai/gateway.yaml` maps `macos` to the zip. Mac clients update
+  themselves once a release carrying the zip is deployed.
+- **Tests:** the web wiring test no longer expects `managed_invocation_attributions` among the
+  cross-extension tables (core no longer owns it, and 105 drops it). `059_feedback_ingestion`
+  leaves the migration-cost baseline, since it no longer rewrites a hot table. The feedback
+  upgrade test names the statement it expected to be rejected. The catalog tests pin the
+  Vertex-served `claude-*` lineup, the `anthropic-claude-*` failover twins and both rate cards.
+- **Schema registration:** the web extension registers its multi-table schema files with
+  `SchemaDefinition::sql_only` instead of `new("", …)`, so `infra db doctor` no longer reports
+  a declared table named `""` as absent.
+
+### Removed
+
+- **Feedback ingestion pipeline:** every `capture_feedback_*` row trigger (on `plugin_usage_events`,
+  `ai_requests`, `ai_request_tool_calls`, `mcp_artifacts`, `conversation_analyses`,
+  `managed_consumer_grants` and the four device-identity tables), the `enqueue_feedback_*` /
+  `feedback_normalized_*` functions, the `feedback_ingestion_{outbox,backfill,evidence}` tables,
+  the `feedback_ingestion` job and its seed (migration 105). Each hook event or request
+  settlement re-enqueued its whole client session (113 ms a row on `ai_requests`) for a
+  projection only the Versions pages read. `feedback_authenticated_events` and
+  `analysis_skill_version_events` stay.
+- **Audit-event NOTIFY triggers** on `governance_decisions`, `ai_requests` and
+  `plugin_usage_events`, and the `audit_event_bus` listener nothing called (migration 106).
+- **`ingestion_outbox`** and `drain_ingestion_outbox` (migration 107): `/hooks/track` now adds
+  each accepted event's counts to `plugin_session_summaries` in the transaction that inserts it
+  — one row written per event instead of a whole-session recompute per drain.
+- **Dead schema** (migration 108): `daily_summaries`, `admin_traffic_reports`, `tenant_activity`,
+  `session_ratings`, `skill_ratings`, `user_profile_reports`, `session_transcripts`,
+  `session_cost_snapshots`, `ingestion_repairs` and the views `conversation_rollups`,
+  `conversation_analysis_rows`, `v_all_activity` — none had a reader or a writer. The always-empty
+  Rating column on the project page and report goes with `skill_ratings`.
+- **Scheduler:** the `feedback_ingestion`, `feedback_snapshot_processing`,
+  `feedback_facts_processing` and `service_registry_gc` entries in
+  `services/scheduler/config.yaml` (three of them ticked every 5 s).
+- `repositories/analysis/retained.rs` and its five queries (no production caller), and the
+  uncompiled `jobs/src/bundle_admin_js.rs`.
+
 ## 0.59.1 — 2026-09-23
 
 ### Removed
