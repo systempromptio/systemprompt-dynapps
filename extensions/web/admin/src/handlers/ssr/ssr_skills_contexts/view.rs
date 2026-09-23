@@ -3,7 +3,6 @@
 //! pagination footer, and the repository-row → template-row transforms.
 
 use systemprompt::identifiers::UserId;
-use urlencoding::encode as urlencode;
 
 use crate::handlers::ssr::list_view::{PageWindow, Pagination};
 use crate::handlers::ssr::types::{SortHeaderView, TabLinkView};
@@ -11,7 +10,10 @@ use crate::repositories::analytics::conversation_rows::ConversationSort;
 
 use super::context::{ContextsSortHeaders, ModelOptionView, UserForFilterView};
 use super::load::ContextsPageData;
-use super::{BASE_URL, ContextsListQuery, ContextsPageInputs, PAGE_SIZE};
+use super::{BASE_URL, ContextsListQuery, ContextsPageInputs};
+use crate::handlers::ssr::list_view::{
+    DEFAULT_PAGE_SIZE, paginate_prefixed, query_string_dropping,
+};
 
 pub(super) fn preserved_query_string(query: &ContextsListQuery, drop: &[&str]) -> String {
     let pairs: [(&str, Option<&str>); 11] = [
@@ -27,15 +29,7 @@ pub(super) fn preserved_query_string(query: &ContextsListQuery, drop: &[&str]) -
         ("sort", query.sort.as_deref()),
         ("dir", query.dir.as_deref()),
     ];
-    pairs
-        .iter()
-        .filter(|(name, _)| !drop.contains(name))
-        .filter_map(|(name, val)| {
-            val.filter(|s| !s.is_empty())
-                .map(|v| format!("{}={}", name, urlencode(v)))
-        })
-        .collect::<Vec<_>>()
-        .join("&")
+    query_string_dropping(&pairs, &[], drop)
 }
 
 pub(super) fn link_prefix(query: &ContextsListQuery, drop: &[&str]) -> String {
@@ -58,23 +52,7 @@ pub(super) fn side_toggle_url(query: &ContextsListQuery, active: bool) -> String
 }
 
 pub(super) fn build_pagination(query: &ContextsListQuery, window: PageWindow) -> Pagination {
-    let page = window.index;
-    let prefix = link_prefix(query, &["page"]);
-    let prev_url = (page > 0).then(|| format!("{prefix}page={}", page.saturating_sub(1)));
-    let next_url = (page + 1 < window.total_pages).then(|| format!("{prefix}page={}", page + 1));
-    let (first_row, last_row) = window.bounds();
-    Pagination {
-        current_page: page + 1,
-        total_pages: window.total_pages,
-        first_row,
-        last_row,
-        total_rows: window.total_rows,
-        noun: window.noun,
-        has_prev: prev_url.is_some(),
-        has_next: next_url.is_some(),
-        prev_url,
-        next_url,
-    }
+    paginate_prefixed(window, &link_prefix(query, &["page"]))
 }
 
 pub(super) fn build_sort_headers(
@@ -85,24 +63,13 @@ pub(super) fn build_sort_headers(
     let prefix = link_prefix(query, &["sort", "dir", "page"]);
     let header = |col: ConversationSort, label: &'static str, class: &'static str, hint| {
         let active = col == active_col;
-        let next_dir = if active && is_desc { "asc" } else { "desc" };
-        SortHeaderView {
-            label,
-            class,
-            hint,
-            url: format!("{prefix}sort={}&dir={next_dir}", col.as_str()),
+        let next_dir = SortHeaderView::next_dir(active, is_desc);
+        SortHeaderView::new(
+            (label, class, hint),
+            format!("{prefix}sort={}&dir={next_dir}", col.as_str()),
             active,
-            aria_sort: if active {
-                if is_desc { "descending" } else { "ascending" }
-            } else {
-                "none"
-            },
-            indicator: if active {
-                if is_desc { "▼" } else { "▲" }
-            } else {
-                "↕"
-            },
-        }
+            is_desc,
+        )
     };
     ContextsSortHeaders {
         activity: header(
@@ -133,7 +100,7 @@ pub(super) fn build_sort_headers(
 }
 
 pub(super) fn page_offset(page: i64) -> i64 {
-    page.max(0) * PAGE_SIZE
+    page.max(0) * DEFAULT_PAGE_SIZE
 }
 
 // Why: links, not buttons, so a view is bookmarkable and survives a reload

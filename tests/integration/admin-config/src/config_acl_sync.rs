@@ -138,7 +138,10 @@ async fn overwrite_corrects_and_deletes_governed_rows_but_spares_user_and_undecl
         .await
         .expect("overwrite");
     assert_eq!(outcome.inserted, 2);
-    assert_eq!(outcome.deleted, 1, "only the governed stale row goes");
+    assert_eq!(
+        outcome.deleted, 1,
+        "the governed row code no longer declares goes"
+    );
     assert_eq!(outcome.entities_updated, 1, "the default is corrected");
 
     let rows = rule_rows(&db.pool, &server).await;
@@ -150,7 +153,7 @@ async fn overwrite_corrects_and_deletes_governed_rows_but_spares_user_and_undecl
     assert_eq!(
         rule_rows(&db.pool, &other).await.len(),
         1,
-        "undeclared entity untouched"
+        "a console row on an undeclared entity is kept"
     );
     let closed: bool = sqlx::query_scalar(
         "SELECT default_included FROM access_control_entities
@@ -161,6 +164,50 @@ async fn overwrite_corrects_and_deletes_governed_rows_but_spares_user_and_undecl
     .await
     .expect("default");
     assert!(!closed);
+
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn overwrite_retires_rows_code_wrote_on_an_entity_it_dropped_and_its_default() {
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    let dir = tempfile::tempdir().expect("temp services dir");
+    let server = unique("srv");
+    let dropped = unique("dropped");
+    write_services_file(dir.path(), RULES, &rules_yaml(&server, "india-devs"));
+    insert_rule(&db.pool, &dropped, "group", "uk", "yaml").await;
+    insert_rule(&db.pool, &dropped, "role", "admin", "yaml").await;
+    sqlx::query(
+        "UPDATE access_control_entities SET source = $2
+         WHERE entity_type = 'mcp_server' AND entity_id = $1",
+    )
+    .bind(&dropped)
+    .bind(systemprompt_web_admin::repositories::access_control::sync::RULES_SOURCE)
+    .execute(&*db.pool)
+    .await
+    .expect("stamp the entity as the file's");
+
+    let set = declared(dir.path()).await;
+    let outcome = apply_sync(&db.pool, &set, SyncMode::Overwrite)
+        .await
+        .expect("overwrite");
+    assert_eq!(
+        outcome.deleted, 2,
+        "code removed the entity; code takes its rows away"
+    );
+    assert_eq!(outcome.entities_retired, 1, "and its default row with them");
+    assert!(rule_rows(&db.pool, &dropped).await.is_empty());
+    let defaults: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM access_control_entities
+         WHERE entity_type = 'mcp_server' AND entity_id = $1",
+    )
+    .bind(&dropped)
+    .fetch_one(&*db.pool)
+    .await
+    .expect("count");
+    assert_eq!(defaults, 0);
 
     db.cleanup().await;
 }

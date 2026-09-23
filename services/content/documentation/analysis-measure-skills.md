@@ -25,7 +25,7 @@ related_docs:
 
 # Measure which skills are used
 
-**TL;DR:** Open `/admin/analysis/skills`, pick a marketplace, press **Sync inventory now**, clear any collisions, wait a minute for the first snapshot, then read the table. Figures are per marketplace and per time window.
+**TL;DR:** Open `/admin/analysis/skills`, pick a window and a marketplace in the scope strip, then read the three views: **Overview** (one row per marketplace: entitled → installed → active), **Activity** (invocations over the window) and **Skills** (the table). Press **Sync inventory** on the Skills tab when the inventory is behind. Figures are per marketplace and per time window.
 
 ## Prerequisites
 
@@ -34,15 +34,17 @@ related_docs:
 
 ## Step 1: Open Skills and pick a marketplace
 
-Go to `/admin/analysis/skills`. The page opens on the marketplace with the most attributed use.
+Go to `/admin/analysis/skills`. The page opens on the **Overview** tab with **All marketplaces** in scope.
 
-**Marketplace** is the first field of the toolbar filter above the table. Each option carries its skill count in brackets. Choose **All marketplaces** to group every marketplace at once and name the plugin beside each skill, then press **Apply**.
+The scope strip above the tabs holds two choices — the **window** (7, 30, 90 days or a year) and the **marketplace**. Both are links, so a choice is bookmarkable, and both survive a change of tab: pick a marketplace on Overview and the Activity chart and the Skills table show only its skills. The tabs are:
 
-The line above the table summarises what you are looking at: how many marketplaces (or which one), the number of skills and how many plugins they span, how many people are entitled, when the inventory last synced, and a **Versions** link to every marketplace's version history.
+- **Overview** — one row per marketplace: people entitled, consumers holding a verified receipt (with the install rate over the entitled), people active in the window, skills used of those declared, invocations, conversations, cost and the judge's mean. The marketplace name opens its Skills table; the invocation count opens its Activity chart.
+- **Activity** — invocations over the window as one chart (per day, per week for a year), with the skills it draws beneath it.
+- **Skills** — the table this guide reads, grouped by marketplace and plugin, with the **Client**, **Sort** and search filters. A skill invoked on the instance is credited to the plugin its key names, whichever plugin carries the hooks.
 
 ## Step 2: Sync the inventory
 
-Press **Sync inventory now** in the page header. It captures every configured skill and publishes the latest revision immediately, instead of waiting for the scheduled pass.
+Press **Sync inventory** in the toolbar of the Skills tab. It captures every configured skill and publishes the latest revision immediately, instead of waiting for the scheduled pass.
 
 **Expected result:** the meta line reads `… · synced a few seconds ago`. If no marketplace caption's version chip changed, nothing on disk changed, which is the correct outcome for a repeat sync.
 
@@ -103,7 +105,7 @@ A skill carried by two plugins appears under each one. Group rollups count it on
 
 ## Step 7: Open one skill's conversations
 
-Click the skill name. Conversations opens at `/admin/analysis/skills` filtered to that skill, listing every session with an attributed invocation: session, consumer, first and last seen, invocations, requests, tokens, cost and the latest retained assessment.
+Click the skill name in the Skills table. The skill's page opens at `/admin/analysis/skills/<plugin:skill>` and lists every conversation with an attributed invocation: listing every session with an attributed invocation: session, consumer, first and last seen, invocations, requests, tokens, cost and the latest retained assessment.
 
 **Verification:** the conversation count on that page should be consistent with the Users column you just read for the same window. If the skill link lands on an empty table, see [Create a Conversation and See It Land](/documentation/analysis-test-conversation).
 

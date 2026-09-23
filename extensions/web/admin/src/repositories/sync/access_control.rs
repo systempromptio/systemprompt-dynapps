@@ -28,7 +28,7 @@ use crate::repositories::access_control::export::render_export;
 use crate::repositories::access_control::rules::{
     count_band_rules, list_band_rules, list_entity_defaults,
 };
-use crate::repositories::access_control::sync::{SyncOutcome, apply_sync, apply_sync_scoped};
+use crate::repositories::access_control::sync::{apply_sync, apply_sync_scoped};
 use crate::repositories::config::gateway::registered_routes_from_services;
 use crate::repositories::config::rules_yaml_loader::{RULES_FILE, parse_rules_doc};
 
@@ -109,18 +109,6 @@ impl AccessControlPlane {
     }
 }
 
-impl From<SyncOutcome> for ApplyOutcome {
-    fn from(outcome: SyncOutcome) -> Self {
-        Self {
-            inserted: outcome.inserted,
-            updated: outcome.updated,
-            deleted: outcome.deleted,
-            entities_inserted: outcome.entities_inserted,
-            entities_updated: outcome.entities_updated,
-        }
-    }
-}
-
 #[async_trait]
 impl SyncPlane for AccessControlPlane {
     fn id(&self) -> &'static str {
@@ -181,33 +169,33 @@ impl SyncPlane for AccessControlPlane {
             in_db,
             kpis: vec![
                 DriftKpi {
-                    label: "In code, not in database",
-                    value: counts.missing_in_db,
-                    note: "Insert only adds these",
+                    label: "Added in code",
+                    value: counts.missing_in_db + counts.entities_missing,
+                    note: "Insert only or Overwrite adds these",
+                    tone: "ok",
+                },
+                DriftKpi {
+                    label: "Changed in code",
+                    value: counts.changed + counts.default_changed,
+                    note: "Overwrite corrects these",
+                    tone: "warn",
+                },
+                DriftKpi {
+                    label: "Removed from code",
+                    value: counts.only_in_db_code,
+                    note: "Overwrite deletes these",
+                    tone: "err",
+                },
+                DriftKpi {
+                    label: "Written in console",
+                    value: counts.only_in_db_dashboard,
+                    note: "Export carries these to code",
                     tone: "info",
                 },
                 DriftKpi {
-                    label: "In database, not in code",
-                    value: counts.only_in_db,
-                    note: "Overwrite deletes those on declared entities",
-                    tone: "warn",
-                },
-                DriftKpi {
-                    label: "Differ",
-                    value: counts.changed,
-                    note: "access or reason disagrees",
-                    tone: "warn",
-                },
-                DriftKpi {
-                    label: "Defaults differ",
-                    value: counts.default_changed,
-                    note: "open vs closed",
-                    tone: "warn",
-                },
-                DriftKpi {
                     label: "Awaiting a bundle",
-                    value: declared.awaiting.len(),
-                    note: "declared with owner:, bundle not active",
+                    value: declared.awaiting.len() + counts.only_in_db_bundle,
+                    note: "owned by a kit; nothing to do here",
                     tone: "muted",
                 },
             ],
@@ -215,8 +203,9 @@ impl SyncPlane for AccessControlPlane {
                 insert: counts.missing_in_db,
                 insert_entities: counts.entities_missing,
                 update: counts.changed + counts.default_changed,
-                delete: counts.only_in_db_governed,
-                delete_console: counts.only_in_db_dashboard,
+                delete: counts.only_in_db_retire,
+                delete_console: counts.only_in_db_console_retire,
+                kept: counts.only_in_db_kept,
             },
             rows,
             is_clean,
@@ -248,7 +237,7 @@ impl SyncPlane for AccessControlPlane {
         let declared = declared_now().await?;
         let outcome = apply_sync_scoped(pool, &declared, mode, scope).await?;
         self.record(pool, &declared, mode, actor).await?;
-        Ok(outcome.into())
+        Ok(outcome)
     }
 
     async fn apply_from(
@@ -261,7 +250,7 @@ impl SyncPlane for AccessControlPlane {
         let declared = declared_from(from).await?;
         let outcome = apply_sync(pool, &declared, mode).await?;
         self.record(pool, &declared, mode, actor).await?;
-        Ok(outcome.into())
+        Ok(outcome)
     }
 
     // Why: renders the database as the file for copy-out only; the instance

@@ -17,7 +17,7 @@ use super::access_control::applied_from;
 use super::declaration::read_or_text;
 use super::plane::{
     ActionCounts, Actor, ApplyOutcome, DeclarationSource, DriftKpi, DriftRow, Export, PlaneDrift,
-    SyncMode, SyncPlane,
+    SyncMode, SyncPlane, resolution,
 };
 use super::state::{Applied, record_applied, record_declared};
 use crate::error::{AdminError, AdminResult};
@@ -48,10 +48,11 @@ fn declared_policies_from(from: DeclarationSource<'_>) -> AdminResult<DeclaredPo
 
 fn row(kind: &'static str, name: &str, in_code: String, in_db: String) -> DriftRow {
     let (kind_label, kind_tone, insert_applies, overwrite_effect) = match kind {
-        "missing" => ("In code, not in database", "info", true, "inserted"),
-        "orphan" => ("In database, not in code", "warn", false, "deleted"),
-        _ => ("Differs", "warn", false, "updated"),
+        "missing" => ("Added in code", "ok", true, "inserted"),
+        "orphan" => ("Written in console", "warn", false, "deleted"),
+        _ => ("Edited in console", "warn", false, "updated"),
     };
+    let (resolve, resolve_tone) = resolution(insert_applies, true, overwrite_effect);
     DriftRow {
         kind,
         kind_label,
@@ -65,11 +66,13 @@ fn row(kind: &'static str, name: &str, in_code: String, in_db: String) -> DriftR
         in_code,
         in_db,
         origin: if kind == "missing" { "" } else { "console" },
-        origin_tone: "muted",
+        origin_tone: "info",
         governed: true,
         insert_applies,
         overwrite_applies: true,
         overwrite_effect,
+        resolve,
+        resolve_tone,
     }
 }
 
@@ -148,19 +151,19 @@ impl SyncPlane for GatewayPoliciesPlane {
             in_db,
             kpis: vec![
                 DriftKpi {
-                    label: "In code, not in database",
+                    label: "Added in code",
                     value: drift.missing_in_db.len(),
-                    note: "Insert only adds these",
-                    tone: "info",
+                    note: "Insert only or Overwrite adds these",
+                    tone: "ok",
                 },
                 DriftKpi {
-                    label: "In database, not in code",
+                    label: "Written in console",
                     value: drift.only_in_db.len(),
                     note: "Overwrite deletes these",
                     tone: "warn",
                 },
                 DriftKpi {
-                    label: "Differ",
+                    label: "Edited in console",
                     value: drift.changed.len(),
                     note: "windows, scanners or modes disagree",
                     tone: "warn",
@@ -172,6 +175,7 @@ impl SyncPlane for GatewayPoliciesPlane {
                 update: drift.changed.len(),
                 delete: drift.only_in_db.len(),
                 delete_console: drift.only_in_db.len(),
+                kept: 0,
             },
             is_clean: drift.is_clean(),
             rows: rows(&drift),

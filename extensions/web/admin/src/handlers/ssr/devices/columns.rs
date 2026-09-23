@@ -7,34 +7,34 @@
 //! actually drew. Every column is an aggregate over a person's rows — the
 //! newest, the latest, the sum — because the row it sorts is a person.
 
-use super::view::ColumnSpec;
+use crate::handlers::ssr::types::table::SortColumn;
 
-pub(super) const BRIDGE_COLUMNS: &[ColumnSpec] = &[
-    ColumnSpec {
+pub(super) const BRIDGE_COLUMNS: &[SortColumn] = &[
+    SortColumn {
         key: "version",
         label: "Version",
         class: "sp-col-version",
         hint: "Newest bridge build across this person's machines; open the row for each one",
     },
-    ColumnSpec {
+    SortColumn {
         key: "started",
         label: "First seen",
         class: "sp-table__cell--date",
         hint: "When this person's first bridge connected",
     },
-    ColumnSpec {
+    SortColumn {
         key: "heartbeat",
         label: "Last heartbeat",
         class: "sp-table__cell--date",
-        hint: "The most recent heartbeat from any of their machines; silent for a week is stale",
+        hint: "The most recent heartbeat from any of their machines; online within a minute, stale after a week",
     },
-    ColumnSpec {
+    SortColumn {
         key: "forwarded",
         label: "Forwarded",
         class: "sp-table__cell--num",
         hint: "Requests relayed to the gateway, summed over every machine and session",
     },
-    ColumnSpec {
+    SortColumn {
         key: "tokens",
         label: "Tokens",
         class: "sp-table__cell--num",
@@ -42,20 +42,20 @@ pub(super) const BRIDGE_COLUMNS: &[ColumnSpec] = &[
     },
 ];
 
-pub(super) const PAT_COLUMNS: &[ColumnSpec] = &[
-    ColumnSpec {
+pub(super) const PAT_COLUMNS: &[SortColumn] = &[
+    SortColumn {
         key: "created",
         label: "Newest issued",
         class: "sp-table__cell--date",
         hint: "When this person's most recent token was minted",
     },
-    ColumnSpec {
+    SortColumn {
         key: "used",
         label: "Last used",
         class: "sp-table__cell--date",
         hint: "The last time any of their tokens was presented",
     },
-    ColumnSpec {
+    SortColumn {
         key: "expires",
         label: "Next expiry",
         class: "sp-table__cell--date",
@@ -63,21 +63,21 @@ pub(super) const PAT_COLUMNS: &[ColumnSpec] = &[
     },
 ];
 
-pub(super) const CERT_COLUMNS: &[ColumnSpec] = &[ColumnSpec {
+pub(super) const CERT_COLUMNS: &[SortColumn] = &[SortColumn {
     key: "enrolled",
     label: "Latest enrolled",
     class: "sp-table__cell--date",
     hint: "When this person's most recent certificate was issued",
 }];
 
-pub(super) const LINK_COLUMNS: &[ColumnSpec] = &[
-    ColumnSpec {
+pub(super) const LINK_COLUMNS: &[SortColumn] = &[
+    SortColumn {
         key: "created",
         label: "Newest issued",
         class: "sp-table__cell--date",
         hint: "When this person's most recent connect code was handed out",
     },
-    ColumnSpec {
+    SortColumn {
         key: "expires",
         label: "Latest expiry",
         class: "sp-table__cell--date",

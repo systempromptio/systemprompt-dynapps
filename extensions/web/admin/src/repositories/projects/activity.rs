@@ -57,11 +57,12 @@ pub async fn list_project_tool_health(
                   COUNT(DISTINCT x.user_id)::BIGINT AS "users!",
                   COALESCE(
                       PERCENTILE_DISC(0.95) WITHIN GROUP (
-                          ORDER BY COALESCE(x.execution_time_ms, 0)), 0)::BIGINT AS "p95_ms!"
+                          ORDER BY x.execution_time_ms), 0)::BIGINT AS "p95_ms!"
            FROM membership m
            JOIN mcp_tool_executions x ON x.user_id = m.user_id
            WHERE m.scope_id = $3
              AND x.started_at >= NOW() - make_interval(days => $4)
+             AND x.server_name <> x.source
            GROUP BY 1, 2
            ORDER BY 4 DESC, 3 DESC, 2
            LIMIT $5"#,

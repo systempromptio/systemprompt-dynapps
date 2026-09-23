@@ -380,6 +380,7 @@ _lint-gates-uncoordinated:
         check-comments.sh
         lint-inline-comments.sh
         check-duplicate-types.sh
+        check-field-copy-from.sh
         check-repository-naming.sh
         check-admin-template-links.sh
         check-admin-template-assets.sh
@@ -391,6 +392,7 @@ _lint-gates-uncoordinated:
         check-asset-reachability.sh
         check-workspace-deps.sh
         check-dockerfile-paths.sh
+        check-dropped-schema.sh
         validate-services.sh
         check-core-ref.sh
         check-schema-baseline.sh

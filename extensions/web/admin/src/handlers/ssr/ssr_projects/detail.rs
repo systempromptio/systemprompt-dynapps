@@ -195,6 +195,7 @@ pub(super) fn page_data(
         project_name: project.name.clone(),
         description: project.description.clone(),
         can_manage: user_ctx.is_admin,
+        export: super::export_view(&project.id),
     }
 }
 

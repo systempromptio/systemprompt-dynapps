@@ -10,6 +10,8 @@ use chrono::Utc;
 use serde::Serialize;
 use systemprompt::identifiers::CallId;
 
+use systemprompt_web_shared::format::truncate_ellipsis;
+
 use crate::handlers::ssr::format::local_time;
 use crate::repositories::governance::approvals::ApprovalRow;
 
@@ -51,7 +53,7 @@ pub(super) fn rows(rows: &[ApprovalRow]) -> Vec<ApprovalRowView> {
                     "/admin/users/{}",
                     urlencoding::encode(r.requested_by.as_str())
                 ),
-                arguments: truncate(&arguments),
+                arguments: truncate_ellipsis(&arguments, ARGS_CHARS),
                 arguments_full: format!(
                     "{arguments}\n\ndigest {}",
                     r.args_digest.chars().take(12).collect::<String>()
@@ -94,14 +96,6 @@ const fn tone_of(status: &str) -> &'static str {
         b"denied" => "err",
         _ => "muted",
     }
-}
-
-fn truncate(text: &str) -> String {
-    if text.chars().count() <= ARGS_CHARS {
-        return text.to_owned();
-    }
-    let head: String = text.chars().take(ARGS_CHARS).collect();
-    format!("{head}\u{2026}")
 }
 
 pub(super) fn title_case(value: &str) -> String {

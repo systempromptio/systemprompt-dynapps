@@ -154,6 +154,9 @@ impl DataSet for Tools {
     fn title(&self) -> &'static str {
         "Tool calls"
     }
+    fn description(&self) -> &'static str {
+        "One row per tool call in the window: tool, server, outcome, decision, person and duration."
+    }
     fn columns(&self) -> &'static [Column] {
         COLUMNS
     }
@@ -172,6 +175,9 @@ impl DataSet for ToolsBreakdown {
     }
     fn title(&self) -> &'static str {
         "Tool call breakdown"
+    }
+    fn description(&self) -> &'static str {
+        "One row per bucket of the chosen dimension: calls, failures, denials, people and artifacts."
     }
     fn columns(&self) -> &'static [Column] {
         BUCKET_COLUMNS
@@ -192,6 +198,9 @@ impl DataSet for Artifacts {
     fn title(&self) -> &'static str {
         "Artifacts"
     }
+    fn description(&self) -> &'static str {
+        "One row per tool call that produced an artifact: the call, its artifact and size."
+    }
     fn columns(&self) -> &'static [Column] {
         COLUMNS
     }
@@ -210,6 +219,9 @@ impl DataSet for ArtifactsBreakdown {
     }
     fn title(&self) -> &'static str {
         "Artifact breakdown"
+    }
+    fn description(&self) -> &'static str {
+        "One row per bucket of the chosen dimension over the artifact-producing calls."
     }
     fn columns(&self) -> &'static [Column] {
         BUCKET_COLUMNS

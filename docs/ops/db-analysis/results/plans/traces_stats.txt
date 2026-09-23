@@ -1,0 +1,67 @@
+                                                                                    QUERY PLAN                                                                                     
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=371.01..371.02 rows=1 width=64)
+   CTE client_to_session
+     ->  GroupAggregate  (cost=66.75..67.10 rows=17 width=69)
+           Group Key: ai_requests_1.client_session_id
+           ->  Sort  (cost=66.75..66.80 rows=18 width=87)
+                 Sort Key: ai_requests_1.client_session_id, ai_requests_1.created_at DESC
+                 ->  Index Scan Backward using idx_ai_requests_created_at on ai_requests ai_requests_1  (cost=0.28..66.38 rows=18 width=87)
+                       Index Cond: ((created_at >= $1) AND (created_at < $2))
+                       Filter: ((client_session_id IS NOT NULL) AND (session_id IS NOT NULL))
+   CTE per_session
+     ->  GroupAggregate  (cost=231.79..233.22 rows=52 width=36)
+           Group Key: "*SELECT* 1".session_id
+           ->  Sort  (cost=231.79..231.92 rows=52 width=80)
+                 Sort Key: "*SELECT* 1".session_id
+                 ->  Append  (cost=0.83..230.30 rows=52 width=80)
+                       ->  Subquery Scan on "*SELECT* 1"  (cost=0.83..62.48 rows=8 width=96)
+                             ->  Hash Left Join  (cost=0.83..62.40 rows=8 width=104)
+                                   Hash Cond: (e.session_id = c.client_session_id)
+                                   ->  Index Scan using idx_plugin_usage_created_at on plugin_usage_events e  (cost=0.28..61.80 rows=8 width=37)
+                                         Index Cond: ((created_at >= $1) AND (created_at < $2))
+                                         Filter: (($3 IS NULL) OR (user_id = ANY ($3)))
+                                   ->  Hash  (cost=0.34..0.34 rows=17 width=64)
+                                         ->  CTE Scan on client_to_session c  (cost=0.00..0.34 rows=17 width=64)
+                       ->  Subquery Scan on "*SELECT* 2"  (cost=68.37..100.81 rows=34 width=69)
+                             ->  Hash Left Join  (cost=68.37..100.47 rows=34 width=77)
+                                   Hash Cond: (NULLIF(g.session_id, ''::text) = c_1.client_session_id)
+                                   ->  Hash Left Join  (cost=67.81..99.64 rows=34 width=125)
+                                         Hash Cond: (g.trace_id = (t.trace_id)::text)
+                                         ->  Index Scan using idx_governance_decisions_created on governance_decisions g  (cost=0.29..31.97 rows=34 width=83)
+                                               Index Cond: ((created_at >= $1) AND (created_at < $2))
+                                               Filter: (((NULLIF(session_id, ''::text) IS NOT NULL) OR (trace_id IS NOT NULL)) AND (($3 IS NULL) OR (user_id = ANY ($3))))
+                                         ->  Hash  (cost=67.25..67.25 rows=22 width=79)
+                                               ->  Subquery Scan on t  (cost=66.87..67.25 rows=22 width=79)
+                                                     ->  Unique  (cost=66.87..67.03 rows=22 width=79)
+                                                           ->  Sort  (cost=66.87..66.92 rows=22 width=79)
+                                                                 Sort Key: ai_requests_2.trace_id, ai_requests_2.session_id
+                                                                 ->  Index Scan using idx_ai_requests_created_at on ai_requests ai_requests_2  (cost=0.28..66.38 rows=22 width=79)
+                                                                       Index Cond: ((created_at >= $1) AND (created_at < $2))
+                                                                       Filter: ((trace_id IS NOT NULL) AND (session_id IS NOT NULL))
+                                   ->  Hash  (cost=0.34..0.34 rows=17 width=64)
+                                         ->  CTE Scan on client_to_session c_1  (cost=0.00..0.34 rows=17 width=64)
+                       ->  Subquery Scan on "*SELECT* 3"  (cost=0.28..66.75 rows=10 width=106)
+                             ->  Index Scan using idx_ai_requests_created_at on ai_requests ai_requests_3  (cost=0.28..66.65 rows=10 width=114)
+                                   Index Cond: ((created_at >= $1) AND (created_at < $2))
+                                   Filter: ((session_id IS NOT NULL) AND (($3 IS NULL) OR ((user_id)::text = ANY ($3))))
+   InitPlan 3
+     ->  Aggregate  (cost=1.17..1.18 rows=1 width=8)
+           ->  CTE Scan on per_session  (cost=0.00..1.04 rows=52 width=0)
+   InitPlan 4
+     ->  Aggregate  (cost=1.10..1.11 rows=1 width=8)
+           ->  CTE Scan on per_session per_session_1  (cost=0.00..1.04 rows=26 width=0)
+                 Filter: has_error
+   InitPlan 5
+     ->  Aggregate  (cost=1.10..1.11 rows=1 width=8)
+           ->  CTE Scan on per_session per_session_2  (cost=0.00..1.04 rows=26 width=0)
+                 Filter: has_deny
+   ->  GroupAggregate  (cost=66.82..67.09 rows=10 width=66)
+         Group Key: ai_requests.session_id
+         ->  Sort  (cost=66.82..66.84 rows=10 width=58)
+               Sort Key: ai_requests.session_id
+               ->  Index Scan using idx_ai_requests_created_at on ai_requests  (cost=0.28..66.65 rows=10 width=58)
+                     Index Cond: ((created_at >= $1) AND (created_at < $2))
+                     Filter: ((session_id IS NOT NULL) AND (($3 IS NULL) OR ((user_id)::text = ANY ($3))))
+(63 rows)
+

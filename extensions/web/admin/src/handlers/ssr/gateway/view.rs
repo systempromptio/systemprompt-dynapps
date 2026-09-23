@@ -10,7 +10,7 @@
 
 use serde::Serialize;
 
-use super::models::ProviderCardView;
+use super::models::{DispatchRow, ProviderCardView};
 use crate::handlers::ssr::types::{BreadcrumbView, PickableUserView, TabLinkView};
 
 #[derive(Debug, Clone, Serialize)]
@@ -65,7 +65,7 @@ pub(super) struct ProviderOptionView {
 pub(super) struct GatewayKpiView {
     pub label: &'static str,
     pub value: String,
-    pub sub: String,
+    pub note: String,
     pub tone: &'static str,
 }
 
@@ -88,6 +88,8 @@ pub(super) struct GatewayPageData {
     pub providers_count: usize,
     pub probe_users: Vec<PickableUserView>,
     pub provider_cards: Vec<ProviderCardView>,
+    pub dispatch: Vec<DispatchRow>,
+    pub dispatch_count: usize,
     // Why: the page cannot mutate a file it could not read. The banner carries
     // the loader's own message rather than an empty table, because "no routes"
     // and "the gateway file is unreadable" are opposite operator situations.
@@ -97,8 +99,10 @@ pub(super) struct GatewayPageData {
     // boots from; the page prints the one sentence that reconciles them.
     pub runtime_note: &'static str,
     pub sync_url: &'static str,
+    pub names_note: &'static str,
     pub tabs: Vec<TabLinkView>,
-    pub show_models: bool,
+    pub show_overview: bool,
+    pub show_providers: bool,
     pub show_routes: bool,
-    pub show_resolved: bool,
+    pub show_settings: bool,
 }

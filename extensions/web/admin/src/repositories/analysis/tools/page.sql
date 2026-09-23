@@ -3,7 +3,10 @@
 -- every bucket of the window, one breakdown dimension, the facet lists and
 -- one page of rows. The Artifacts page is the same statement with
 -- $14 (artifacts only) true. Filtering, paging and sorting are bound
--- parameters chosen by CASE arms, never interpolated text.
+-- parameters chosen by CASE arms, never interpolated text. A host-native
+-- tool (Bash, Read, …) has no MCP server, so the server facet and the
+-- server breakdown leave builtins out unless $7 asks for them; totals count
+-- every row.
 WITH f AS MATERIALIZED (
     SELECT t.*,
            COALESCE(t.mcp_execution_id, t.ai_tool_call_id, t.intent_id) AS row_key,
@@ -13,7 +16,9 @@ WITH f AS MATERIALIZED (
              WHERE s.session_id = t.execution_trace_id AND s.skill IS NOT NULL
                AND s.invoked_at <= COALESCE(t.occurred_at, clock_timestamp())
              ORDER BY s.invoked_at DESC LIMIT 1) AS skill,
-           (t.is_error OR t.execution_status IN ('failed', 'timeout')) AS failed
+           -- Why: `execution_status` is NULL on an intent with no execution, and
+           -- `FALSE OR NULL` is NULL — a null the row type's `bool` cannot decode.
+           (COALESCE(t.is_error, FALSE) OR COALESCE(t.execution_status, '') IN ('failed', 'timeout')) AS failed
     FROM tool_activity t
     LEFT JOIN users u ON u.id = t.user_id
     LEFT JOIN LATERAL (
@@ -29,8 +34,8 @@ WITH f AS MATERIALIZED (
       AND ($6::text IS NULL OR t.server_name = $6)
       AND ($7::boolean IS NULL OR t.is_builtin = $7)
       AND ($8::text IS NULL
-           OR ($8 = 'failed' AND (t.is_error OR t.execution_status IN ('failed', 'timeout')))
-           OR ($8 = 'executed' AND t.state = 'executed' AND NOT (t.is_error OR t.execution_status IN ('failed', 'timeout')))
+           OR ($8 = 'failed' AND (COALESCE(t.is_error, FALSE) OR COALESCE(t.execution_status, '') IN ('failed', 'timeout')))
+           OR ($8 = 'executed' AND t.state = 'executed' AND NOT (COALESCE(t.is_error, FALSE) OR COALESCE(t.execution_status, '') IN ('failed', 'timeout')))
            OR ($8 = 'intended' AND t.state = 'intended')
            OR ($8 = 'unattested' AND t.state = 'unattested'))
       AND ($9::text IS NULL OR g.decision = $9)
@@ -109,6 +114,7 @@ WITH f AS MATERIALIZED (
            percentile_cont(0.95) WITHIN GROUP (ORDER BY k.execution_time_ms)::float8 AS p95_duration_ms,
            COALESCE(SUM(k.payload_bytes) FILTER (WHERE k.artifact_kind IS NOT NULL), 0)::bigint AS bytes
     FROM keyed k
+    WHERE NOT ($21::text = 'server' AND k.is_builtin AND $7::boolean IS DISTINCT FROM TRUE)
     GROUP BY k.bucket, k.bucket_value
     ORDER BY calls DESC, label
     LIMIT 100
@@ -129,7 +135,8 @@ WITH f AS MATERIALIZED (
     SELECT tool_name AS value, COUNT(*)::bigint AS calls FROM s WHERE tool_name IS NOT NULL
     GROUP BY tool_name ORDER BY calls DESC, value LIMIT 200
 ), servers AS (
-    SELECT server_name AS value, COUNT(*)::bigint AS calls FROM s WHERE server_name IS NOT NULL
+    SELECT server_name AS value, COUNT(*)::bigint AS calls FROM s
+    WHERE server_name IS NOT NULL AND ($7::boolean IS TRUE OR NOT is_builtin)
     GROUP BY server_name ORDER BY calls DESC, value LIMIT 100
 ), users AS (
     SELECT user_id AS value, MAX(display_name) AS label, COUNT(*)::bigint AS calls FROM s

@@ -12,6 +12,8 @@
 //! manager can audit.
 
 mod audience;
+mod audience_filter;
+mod audience_focus;
 mod bands;
 mod data;
 pub(crate) mod entities;
@@ -33,7 +35,7 @@ use crate::handlers::ssr::sync_plane::{PlaneCardView, is_sync_tab, plane_card_by
 use crate::handlers::ssr::types::{BreadcrumbView, TabLinkView};
 use crate::repositories::access_control::drift::DriftReport;
 use crate::repositories::access_control::rules::{
-    RULE_CAP, count_open_entities, list_ledger_rules,
+    LedgerRuleRow, RULE_CAP, count_open_entities, list_ledger_rules,
 };
 use crate::repositories::config::gateway::{RouteLabels, get_route_labels_from_services};
 use crate::repositories::sync::access_control::{declared_now, drift_now};
@@ -121,6 +123,7 @@ async fn tab_body(
     services_path: &std::path::Path,
     tab: AcTab,
     query: &AcQuery,
+    ledger: &[LedgerRuleRow],
 ) -> AdminHtmlResult<TabBody> {
     let mut body = TabBody::default();
     match tab {
@@ -137,7 +140,7 @@ async fn tab_body(
             let audience = audience::audience(pool).await;
             body.audiences = audience.columns.len();
             let sections = build_matrix_sections(services_path);
-            body.audience = audience::grid(pool, audience, &sections).await;
+            body.audience = audience::grid(pool, audience, &sections, query, ledger).await;
         },
         AcTab::Person => {
             let selected = query.user.as_deref().filter(|u| !u.is_empty());
@@ -182,7 +185,7 @@ pub(crate) async fn access_control_page(
     let open_entities = count_open_entities(&pool).await?;
 
     let (drift, declared_count, declared_unreadable) = declared_drift(&pool).await;
-    let body = tab_body(&pool, &services_path, tab, &query).await?;
+    let body = tab_body(&pool, &services_path, tab, &query, &ledger_rows).await?;
     let labels = route_labels();
 
     let capped = i64::try_from(ledger_rows.len()).unwrap_or(i64::MAX) >= RULE_CAP;

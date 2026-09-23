@@ -29,7 +29,7 @@
     {{/if}}
 
     {{#if on_audience}}
-    {{> components/section title="Audience grid" note="Every role, group and project against every entity, decided by the same resolver the enforcement point calls. The word in each cell is the band that decided; hover a cell for the rule."}}
+    {{> components/section title="Audience grid" count=audience.total_rows note="Every role, group and project against every governed entity, decided by the same resolver the enforcement point calls. Narrow by subject, entity kind, decision or band; click a column to focus on one subject, a row to see every subject for one entity."}}
     {{> components/audience-grid audience=audience}}
     {{/if}}
 
@@ -81,11 +81,11 @@
     <div class="sp-notice sp-notice--warn sp-ac-drift" role="status">
         <p class="sp-notice__title">Code and database differ</p>
         <p>
-            <strong>{{drift.counts.missing_in_db}}</strong> declared in code but missing here ·
-            <strong>{{drift.counts.only_in_db}}</strong> only in this database
-            ({{drift.counts.only_in_db_dashboard}} from the console, {{drift.counts.only_in_db_stale}} stale) ·
-            <strong>{{drift.counts.changed}}</strong> differ ·
-            <strong>{{drift.counts.default_changed}}</strong> defaults differ.
+            <strong>{{drift.counts.missing_in_db}}</strong> added in code ·
+            <strong>{{drift.counts.changed}}</strong> changed in code ·
+            <strong>{{drift.counts.default_changed}}</strong> defaults changed ·
+            <strong>{{drift.counts.only_in_db_code}}</strong> removed from code ·
+            <strong>{{drift.counts.only_in_db_dashboard}}</strong> written in the console.
             Nothing is changed automatically.
         </p>
         <p><a class="sp-btn sp-btn--sm sp-btn--secondary" href="{{drift.url}}">Review and synchronise</a></p>

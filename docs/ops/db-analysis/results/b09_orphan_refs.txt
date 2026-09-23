@@ -1,0 +1,51 @@
+== B9 orphan references (only columns with orphans > 0 or nulls on spine tables shown; full list in the query)
+                   col                    |  rows  | nulls  | orphans 
+------------------------------------------+--------+--------+---------
+ logs.session_id                          | 439002 |      0 |  429190
+ logs.user_id                             | 439002 |      0 |   43158
+ analytics_events.context_id              |  17743 |      0 |   17743
+ event_outbox.user_id                     |  77797 |      0 |   16641
+ governance_decisions.context_id          |  16163 |      0 |   11706
+ plugin_usage_events.session_id           |   3348 |      0 |    3348
+ logs.context_id                          | 439002 | 435757 |    3245
+ governance_decisions.session_id          |  16163 |      0 |    2069
+ mcp_tool_executions.context_id           |    550 |      0 |     550
+ tool_activity.context_id                 |   3451 |      0 |     550
+ tool_call_ledger.context_id              |   3451 |      0 |     550
+ mcp_artifacts.context_id                 |    284 |      0 |     284
+ plugin_session_summaries.session_id      |    259 |      0 |     259
+ plugin_usage_events.tool_use_id          |   3348 |   1299 |     227
+ session_entity_links.session_id          |    112 |      0 |     112
+ analysis_skill_events.session_id         |     63 |      0 |      63
+ analysis_skill_version_events.session_id |     63 |      0 |      63
+ mcp_sessions.session_id                  |     63 |      0 |      63
+ skill_invocation_events.session_id       |     48 |      0 |      48
+ mcp_proxy_identities.session_id          |     18 |      0 |      18
+ mcp_external_sessions.session_id         |      6 |      0 |       6
+ agent_tasks.context_id                   |      0 |      0 |       0
+ agent_tasks.session_id                   |      0 |      0 |       0
+ agent_tasks.user_id                      |      0 |      0 |       0
+ ai_requests.context_id                   |   4392 |      0 |       0
+ ai_requests.mcp_execution_id             |   4392 |   4392 |       0
+ ai_requests.session_id                   |   4392 |      0 |       0
+ ai_requests.task_id                      |   4392 |   4392 |       0
+ ai_requests.user_id                      |   4392 |      0 |       0
+ ai_request_tool_calls.mcp_execution_id   |   2901 |   2901 |       0
+ ai_request_tool_calls.request_id         |   2901 |      0 |       0
+ analytics_events.session_id              |  17743 |      0 |       0
+ analytics_events.task_id                 |  17743 |  17743 |       0
+ analytics_events.user_id                 |  17743 |      0 |       0
+ governance_decisions.task_id             |  16163 |  16163 |       0
+ governance_decisions.tool_use_id         |  16163 |  16163 |       0
+ governance_decisions.user_id             |  16163 |      0 |       0
+ logs.task_id                             | 439002 | 439002 |       0
+ mcp_tool_executions.ai_tool_call_id      |    550 |    550 |       0
+ mcp_tool_executions.session_id           |    550 |      0 |       0
+ mcp_tool_executions.task_id              |    550 |    550 |       0
+ mcp_tool_executions.user_id              |    550 |      0 |       0
+ plugin_usage_events.mcp_execution_id     |   3348 |   3348 |       0
+ plugin_usage_events.user_id              |   3348 |      0 |       0
+ user_contexts.session_id                 |    422 |      1 |       0
+ user_contexts.user_id                    |    422 |      0 |       0
+(46 rows)
+

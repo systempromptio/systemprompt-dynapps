@@ -34,6 +34,7 @@ pub(crate) struct ToolActivityRowView {
     pub session_href: Option<String>,
     pub conversation_href: Option<String>,
     pub request_href: Option<String>,
+    pub trace_href: Option<String>,
     pub client_kind: String,
     pub source: String,
     pub artifact_kind: Option<String>,
@@ -112,30 +113,41 @@ fn decision_tone(decision: Option<&str>) -> &'static str {
     }
 }
 
-// Why: the four places a call links out to — person, harness session,
-// conversation and request — resolved together so the row stays readable.
-fn entity_links(
-    r: &ToolActivityRow,
-    context_key: Option<&str>,
-) -> (
-    Option<String>,
-    Option<String>,
-    Option<String>,
-    Option<String>,
-) {
-    (
-        r.user_id
+// Why: the five places a call links out to — person, harness session,
+// conversation, request and trace — resolved together so the row stays
+// readable. The session page only answers to a session id, never a trace
+// id; the trace page resolves an execution by its trace id or by its own id,
+// so a call with no gateway trace still links by execution id.
+struct EntityLinks {
+    user: Option<String>,
+    session: Option<String>,
+    conversation: Option<String>,
+    request: Option<String>,
+    trace: Option<String>,
+}
+
+fn entity_links(r: &ToolActivityRow, context_key: Option<&str>) -> EntityLinks {
+    EntityLinks {
+        user: r
+            .user_id
             .as_ref()
             .map(|u| format!("/admin/users/{}", urlencoding::encode(u.as_str()))),
-        r.execution_trace_id
+        session: r
+            .session_key
             .as_ref()
-            .or(r.session_key.as_ref())
             .map(|s| format!("/admin/sessions/{}", urlencoding::encode(s))),
-        context_key.map(|c| format!("/admin/analysis/conversations/{}", urlencoding::encode(c))),
-        r.request_id
+        conversation: context_key
+            .map(|c| format!("/admin/analysis/conversations/{}", urlencoding::encode(c))),
+        request: r
+            .request_id
             .as_ref()
             .map(|id| format!("/admin/requests/{}", urlencoding::encode(id))),
-    )
+        trace: r
+            .execution_trace_id
+            .as_ref()
+            .or(r.mcp_execution_id.as_ref())
+            .map(|id| format!("/admin/traces/{}", urlencoding::encode(id))),
+    }
 }
 
 // Why: the artifact's own title when it has one, else what the call was
@@ -215,10 +227,11 @@ pub(crate) fn tool_row(r: &ToolActivityRow) -> ToolActivityRowView {
             .clone()
             .or_else(|| r.user_id.as_ref().map(|u| u.as_str().to_owned()))
             .unwrap_or_else(|| "\u{2014}".to_owned()),
-        user_href: links.0,
-        session_href: links.1,
-        conversation_href: links.2,
-        request_href: links.3,
+        user_href: links.user,
+        session_href: links.session,
+        conversation_href: links.conversation,
+        request_href: links.request,
+        trace_href: links.trace,
         client_kind: r.client_kind.clone().unwrap_or_default(),
         source: r.source.clone().unwrap_or_default(),
         artifact_icon: kind_icon(r.artifact_kind.as_deref()),

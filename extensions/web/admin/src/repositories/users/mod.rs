@@ -2,7 +2,6 @@
 
 pub mod access_control;
 pub mod activity;
-pub mod devices;
 pub mod enrolment;
 pub mod federated;
 mod federated_provision;

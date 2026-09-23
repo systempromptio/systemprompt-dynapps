@@ -1,6 +1,6 @@
 CREATE OR REPLACE FUNCTION expire_feedback_raw(cutoff TIMESTAMPTZ)
 RETURNS BIGINT LANGUAGE plpgsql AS $$
-DECLARE deleted BIGINT; producer_row RECORD;
+DECLARE deleted BIGINT;
 BEGIN
     PERFORM public.prepare_reporting_privacy();
     LOCK TABLE analytics_ingestion_producers,analytics_fact_checkpoints,analytics_fact_backfills,
@@ -8,9 +8,11 @@ BEGIN
     IF cutoff > clock_timestamp()-interval '90 days' THEN
         RAISE EXCEPTION 'Feedback retention cutoff is too recent' USING ERRCODE='23514';
     END IF;
-    FOR producer_row IN SELECT * FROM analytics_ingestion_producers ORDER BY producer FOR UPDATE LOOP
-        IF producer_row.pending_count<>0 THEN RAISE EXCEPTION 'Feedback retention waits for pending producers' USING ERRCODE='55000'; END IF;
-    END LOOP;
+    PERFORM 1 FROM analytics_ingestion_producers ORDER BY producer FOR UPDATE;
+    IF EXISTS(SELECT 1 FROM feedback_ingestion_outbox WHERE pending)
+       OR EXISTS(SELECT 1 FROM feedback_ingestion_backfill WHERE NOT done) THEN
+        RAISE EXCEPTION 'Feedback retention waits for pending producers' USING ERRCODE='55000';
+    END IF;
     IF EXISTS(SELECT 1 FROM analytics_fact_changes WHERE state IN ('pending','leased'))
        OR EXISTS(SELECT 1 FROM analytics_fact_deltas WHERE consumed_at IS NULL)
        OR EXISTS(SELECT 1 FROM analytics_fact_checkpoints p WHERE NOT EXISTS(
@@ -31,7 +33,6 @@ BEGIN
     DELETE FROM plugin_usage_events WHERE created_at<cutoff;
     GET DIAGNOSTICS deleted = ROW_COUNT;
     DELETE FROM ai_requests WHERE created_at<cutoff;
-    DELETE FROM conversation_facts WHERE last_at<cutoff;
     DELETE FROM conversation_analyses WHERE created_at<cutoff;
     DELETE FROM session_transcripts WHERE captured_at<cutoff;
     DELETE FROM session_cost_snapshots WHERE updated_at<cutoff;
@@ -41,8 +42,6 @@ BEGIN
     DELETE FROM daily_summaries WHERE summary_date<cutoff::date;
     DELETE FROM user_profile_reports WHERE generated_at<cutoff;
     DELETE FROM admin_traffic_reports WHERE report_date<cutoff::date;
-    DELETE FROM admin_usage_daily_rollups WHERE date<cutoff::date;
-    DELETE FROM plugin_usage_daily WHERE date<cutoff::date;
     DELETE FROM ingestion_repairs WHERE repaired_at<cutoff;
     DELETE FROM ingestion_session_owners o WHERE created_at<cutoff
         AND NOT EXISTS(SELECT 1 FROM plugin_usage_events e WHERE e.session_id=o.session_id)

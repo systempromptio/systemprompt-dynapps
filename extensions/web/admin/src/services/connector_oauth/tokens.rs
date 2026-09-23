@@ -33,14 +33,7 @@ struct Tokens {
     token_type: Option<String>,
 }
 
-fn truncate(text: &str, max: usize) -> &str {
-    let end = text
-        .char_indices()
-        .map(|(i, _)| i)
-        .nth(max)
-        .unwrap_or(text.len());
-    &text[..end]
-}
+use systemprompt_web_shared::format::truncate_chars as truncate;
 
 async fn request_with_client(
     grant: &mut Grant,

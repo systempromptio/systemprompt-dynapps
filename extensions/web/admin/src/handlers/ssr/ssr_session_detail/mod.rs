@@ -5,7 +5,6 @@
 //! `analytics conversations list` with cross-links to the other entity pages.
 
 mod context;
-mod quality;
 mod rows;
 
 
@@ -27,8 +26,8 @@ use crate::repositories::analytics::session_detail::{
     find_session_header, get_session_kpis, list_session_contexts, list_session_requests,
     list_session_traces,
 };
-use crate::repositories::analytics::session_quality::{SessionRatingRow, list_session_ratings};
 use crate::repositories::scope::may_view;
+use crate::repositories::session_state::session_state;
 
 use rows::{context_view, request_view, trace_view};
 
@@ -40,18 +39,16 @@ struct SessionRead {
     contexts: Vec<SessionContextRow>,
     traces: Vec<SessionTraceRow>,
     requests: Vec<SessionRequestRow>,
-    ratings: Vec<SessionRatingRow>,
 }
 
 // Why: every section is best-effort once the header has resolved — a panel
 // that cannot load renders empty rather than taking the page down.
 async fn load_session(pool: &PgPool, session_id: &SessionId) -> SessionRead {
-    let (kpis, contexts, traces, requests, ratings) = tokio::join!(
+    let (kpis, contexts, traces, requests) = tokio::join!(
         get_session_kpis(pool, session_id),
         list_session_contexts(pool, session_id),
         list_session_traces(pool, session_id),
         list_session_requests(pool, session_id),
-        list_session_ratings(pool, session_id),
     );
     SessionRead {
         kpis: kpis
@@ -65,9 +62,6 @@ async fn load_session(pool: &PgPool, session_id: &SessionId) -> SessionRead {
             .unwrap_or_default(),
         requests: requests
             .inspect_err(|e| tracing::warn!(error = %e, "list_session_requests failed"))
-            .unwrap_or_default(),
-        ratings: ratings
-            .inspect_err(|e| tracing::warn!(error = %e, "list_session_ratings failed"))
             .unwrap_or_default(),
     }
 }
@@ -91,14 +85,12 @@ pub(crate) async fn session_detail_page(
     };
     let Some(header) = header.filter(|_| visible) else {
         return Err(AdminError::NotFound(
-            "No AI requests, contexts, or transcript rows match that session id.".to_owned(),
+            "No AI requests, contexts, or hook events match that session id.".to_owned(),
         )
         .into());
     };
 
     let read = load_session(&pool, &session_id).await;
-    let rating_average = quality::rating_average(&read.ratings);
-    let rating_views: Vec<_> = read.ratings.iter().map(quality::rating_view).collect();
 
     let data = SessionDetailPageContext {
         page: "session-detail",
@@ -113,10 +105,14 @@ pub(crate) async fn session_detail_page(
         has_requests: !read.requests.is_empty(),
         requests: read.requests.iter().map(request_view).collect(),
         back_url: "/admin/sessions",
-        has_ratings: !rating_views.is_empty(),
-        rating_count: rating_views.len(),
-        rating_average,
-        ratings: rating_views,
+        export: crate::export::ExportView::new(
+            &[],
+            &format!(
+                "session_id={}",
+                urlencoding::encode(header.session_id.as_str())
+            ),
+        )
+        .with_transcripts(crate::export::view::TranscriptSource::Sessions),
     };
 
     Ok(crate::handlers::ssr::render_typed_page(
@@ -151,7 +147,9 @@ fn header_view(h: &SessionHeader) -> SessionHeaderView {
         last_activity_at: h.last_activity_at.map(|t| t.to_rfc3339()),
         last_activity_at_local: h.last_activity_at.map(local_time),
         duration_display: duration_display(h.started_at, h.last_activity_at),
-        status: h.status.as_deref().unwrap_or("ended").to_owned(),
+        status: session_state(chrono::Utc::now(), h.completed, h.last_activity_at)
+            .label()
+            .to_owned(),
         model: h.model.clone(),
         plugin_id: h.plugin_id.clone(),
         ai_title: h.ai_title.clone(),

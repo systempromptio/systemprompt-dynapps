@@ -35,6 +35,7 @@ pub async fn list_top_users(pool: &PgPool) -> Result<Vec<TopUser>, sqlx::Error> 
                 MAX(created_at) AS last_mcp
             FROM mcp_tool_executions
             WHERE user_id IS NOT NULL
+              AND server_name <> source
             GROUP BY user_id
         ) mcp ON mcp.user_id = combined.user_id
         LEFT JOIN (
@@ -57,6 +58,7 @@ pub async fn list_popular_skills(pool: &PgPool) -> Result<Vec<SkillCount>, sqlx:
         r#"SELECT COALESCE(m.tool_name, 'unknown') AS "tool_name!", COUNT(*)::BIGINT AS "count!"
         FROM mcp_tool_executions m
         WHERE m.tool_name IS NOT NULL
+          AND m.server_name <> m.source
         GROUP BY m.tool_name ORDER BY 2 DESC LIMIT 10"#,
     )
     .fetch_all(pool)
@@ -75,6 +77,7 @@ pub async fn list_hourly_activity(pool: &PgPool) -> Result<Vec<HourlyActivity>, 
             (SELECT EXTRACT(HOUR FROM m.created_at)::INT AS hour, COUNT(*)::BIGINT AS cnt
             FROM mcp_tool_executions m
             WHERE m.created_at >= NOW() - INTERVAL '24 hours'
+              AND m.server_name <> m.source
             GROUP BY hour)
         ) combined
         GROUP BY hour ORDER BY hour"#,
@@ -94,6 +97,7 @@ pub async fn list_recent_mcp_errors(
         FROM mcp_tool_executions
         WHERE status = 'failed'
           AND created_at >= NOW() - INTERVAL '24 hours'
+          AND server_name <> source
         ORDER BY created_at DESC
         LIMIT 5"#,
     )
@@ -125,6 +129,7 @@ pub async fn list_tool_success_rates(pool: &PgPool) -> Result<Vec<ToolSuccessRat
             COUNT(*) FILTER (WHERE m.status = 'failed')::BIGINT AS "failures!",
             (100.0 * COUNT(*) FILTER (WHERE m.status = 'success') / NULLIF(COUNT(*), 0))::FLOAT8 AS "success_pct!"
         FROM mcp_tool_executions m
+        WHERE m.server_name <> m.source
         GROUP BY m.tool_name
         HAVING COUNT(*) >= 3
         ORDER BY 5 ASC, 2 DESC LIMIT 15"#,

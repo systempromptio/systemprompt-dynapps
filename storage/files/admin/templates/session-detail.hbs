@@ -16,6 +16,7 @@
         {{#if header.ai_title}} · {{header.ai_title}}{{/if}}
       {{/inline}}
       {{#*inline "header_actions"}}
+        {{> components/export-button export}}
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{back_url}}">All sessions</a>
       {{/inline}}
     {{/components/page-header}}
@@ -33,37 +34,6 @@
         {{> components/kpi label="Started" value=header.started_at_local note=header.duration_display}}
       {{else}}
         {{> components/kpi label="Started" value="—" note=header.duration_display}}
-      {{/if}}
-      {{#if rating_average}}
-        {{> components/kpi label="Rated" value=rating_average unit="/5" note=(concat rating_count " rating(s)")}}
-      {{else}}
-        {{> components/kpi label="Rated" value="—" note="nobody has rated this session"}}
-      {{/if}}
-    </section>
-
-    <section aria-labelledby="ratings-title">
-      {{> components/section title="Ratings" count=rating_count note="What the people on this session said about it."}}
-      {{#if has_ratings}}
-        {{#> components/table caption="Human ratings of this session"}}
-          <thead><tr>
-            <th class="sp-col-date">Rated</th><th>Person</th><th class="sp-col-status">Score</th>
-            <th class="sp-col-status">Outcome</th><th>Notes</th>
-          </tr></thead>
-          <tbody>
-          {{#each ratings}}
-            <tr>
-              <td class="sp-col-date sp-table__cell--date">{{this.created_at_local}}</td>
-              <td class="sp-u-truncate"><a href="{{this.user_url}}" title="{{this.user_id}}">{{this.user_label}}</a></td>
-              <td class="sp-col-status">{{> components/badge tone=this.tone text=this.stars}}</td>
-              <td class="sp-col-status sp-table__cell--muted">{{this.outcome}}</td>
-              <td class="sp-u-truncate sp-table__cell--muted">{{this.notes}}</td>
-            </tr>
-          {{/each}}
-          </tbody>
-        {{/components/table}}
-      {{else}}
-        {{> components/empty-state heading="Not rated"
-            message="Nobody has rated this session. Ratings are left by the person who ran it."}}
       {{/if}}
     </section>
 

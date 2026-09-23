@@ -253,14 +253,5 @@ fn share_display(part: i64, total: i64) -> String {
 // Why: an absolute timestamp makes a reader do the subtraction the state badge
 // already did. The elapsed time is the fact the row is about.
 fn ago_display(now: DateTime<Utc>, ts: DateTime<Utc>) -> String {
-    let secs = (now - ts).num_seconds().max(0);
-    if secs < 60 {
-        format!("{secs}s ago")
-    } else if secs < 3600 {
-        format!("{}m ago", secs / 60)
-    } else if secs < 86_400 {
-        format!("{}h ago", secs / 3600)
-    } else {
-        format!("{}d ago", secs / 86_400)
-    }
+    systemprompt_web_shared::format::relative_time((now - ts).num_seconds())
 }

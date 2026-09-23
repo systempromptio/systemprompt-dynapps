@@ -18,7 +18,9 @@ use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 
 use crate::error::{AdminError, AdminHtmlResult};
-use crate::handlers::ssr::list_view::{PageWindow, Pagination, SelectOptionView};
+use crate::handlers::ssr::list_view::{
+    DEFAULT_PAGE_SIZE, PageWindow, Pagination, SelectOptionView, paginate,
+};
 use crate::handlers::ssr::types::BreadcrumbView;
 use crate::repositories::governance::approvals::{
     ApprovalStats, get_approval_stats, list_approvals_paged,
@@ -29,7 +31,6 @@ use crate::types::{MarketplaceContext, UserContext};
 mod view;
 
 const BASE_URL: &str = "/admin/governance/approvals";
-const PAGE_SIZE: i64 = 50;
 const STATUSES: [&str; 4] = ["pending", "approved", "denied", "expired"];
 
 #[derive(Debug, Default, Deserialize)]
@@ -42,7 +43,7 @@ pub(crate) struct ApprovalsQuery {
 struct ApprovalKpiView {
     label: &'static str,
     value: String,
-    sub: &'static str,
+    note: &'static str,
     tone: &'static str,
     href: String,
     active: bool,
@@ -95,13 +96,17 @@ pub(crate) async fn approvals_page(
         tracing::warn!(error = %e, "approval stats failed");
         ApprovalStats::default()
     });
-    let (rows, total) =
-        list_approvals_paged(&pool, status_filter.as_deref(), PAGE_SIZE, page * PAGE_SIZE)
-            .await
-            .unwrap_or_else(|e| {
-                tracing::warn!(error = %e, "approval queue failed");
-                (Vec::new(), 0)
-            });
+    let (rows, total) = list_approvals_paged(
+        &pool,
+        status_filter.as_deref(),
+        DEFAULT_PAGE_SIZE,
+        page * DEFAULT_PAGE_SIZE,
+    )
+    .await
+    .unwrap_or_else(|e| {
+        tracing::warn!(error = %e, "approval queue failed");
+        (Vec::new(), 0)
+    });
 
     let shown = i64::try_from(rows.len()).unwrap_or(0);
     let ctx = ApprovalsPageContext {
@@ -170,7 +175,7 @@ fn kpis(stats: &ApprovalStats, active: Option<&str>) -> Vec<ApprovalKpiView> {
         ApprovalKpiView {
             label: "Pending",
             value: stats.pending.to_string(),
-            sub: "callers blocked now",
+            note: "callers blocked now",
             tone: "warn",
             href: url_for(Some("pending"), 0),
             active: active == Some("pending"),
@@ -179,7 +184,7 @@ fn kpis(stats: &ApprovalStats, active: Option<&str>) -> Vec<ApprovalKpiView> {
         ApprovalKpiView {
             label: "Oldest wait",
             value: format!("{}m", stats.oldest_pending_minutes),
-            sub: "longest open request",
+            note: "longest open request",
             tone: if stats.oldest_pending_minutes > 30 {
                 "err"
             } else {
@@ -192,7 +197,7 @@ fn kpis(stats: &ApprovalStats, active: Option<&str>) -> Vec<ApprovalKpiView> {
         ApprovalKpiView {
             label: "Approved",
             value: stats.approved.to_string(),
-            sub: "let through by a person",
+            note: "let through by a person",
             tone: "ok",
             href: url_for(Some("approved"), 0),
             active: active == Some("approved"),
@@ -201,7 +206,7 @@ fn kpis(stats: &ApprovalStats, active: Option<&str>) -> Vec<ApprovalKpiView> {
         ApprovalKpiView {
             label: "Denied",
             value: stats.denied.to_string(),
-            sub: "refused by a person",
+            note: "refused by a person",
             tone: "err",
             href: url_for(Some("denied"), 0),
             active: active == Some("denied"),
@@ -210,7 +215,7 @@ fn kpis(stats: &ApprovalStats, active: Option<&str>) -> Vec<ApprovalKpiView> {
         ApprovalKpiView {
             label: "Expired",
             value: stats.expired.to_string(),
-            sub: "nobody answered",
+            note: "nobody answered",
             tone: "",
             href: url_for(Some("expired"), 0),
             active: active == Some("expired"),
@@ -220,20 +225,8 @@ fn kpis(stats: &ApprovalStats, active: Option<&str>) -> Vec<ApprovalKpiView> {
 }
 
 fn pagination(page: i64, total: i64, shown: i64) -> Pagination {
-    let window = PageWindow::new(page, PAGE_SIZE, total, shown, "requests");
-    let (first_row, last_row) = window.bounds();
-    Pagination {
-        current_page: page + 1,
-        total_pages: window.total_pages,
-        first_row,
-        last_row,
-        total_rows: total,
-        noun: "requests",
-        has_prev: page > 0,
-        has_next: page + 1 < window.total_pages,
-        prev_url: (page > 0).then(|| url_for(None, page - 1)),
-        next_url: (page + 1 < window.total_pages).then(|| url_for(None, page + 1)),
-    }
+    let window = PageWindow::new(page, DEFAULT_PAGE_SIZE, total, shown, "requests");
+    paginate(window, |page| url_for(None, page))
 }
 
 fn status_options(active: Option<&str>) -> Vec<SelectOptionView> {

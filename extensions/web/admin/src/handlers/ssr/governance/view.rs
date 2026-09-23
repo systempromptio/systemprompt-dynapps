@@ -8,6 +8,8 @@
 use serde::Serialize;
 use systemprompt::identifiers::{PluginId, UserId};
 
+use systemprompt_web_shared::format::truncate_ellipsis;
+
 use crate::handlers::ssr::format::local_time;
 use crate::repositories::governance::decision_calls::{ChainEvaluation, DecisionCallRow};
 use crate::repositories::governance::findings::SafetyFindingLogRow;
@@ -101,14 +103,6 @@ const fn severity_tone(severity: &str) -> &'static str {
     }
 }
 
-fn truncate(text: &str) -> String {
-    if text.chars().count() <= REASON_CHARS {
-        return text.to_owned();
-    }
-    let head: String = text.chars().take(REASON_CHARS).collect();
-    format!("{head}\u{2026}")
-}
-
 fn dash(value: Option<&str>) -> String {
     value
         .filter(|v| !v.is_empty())
@@ -189,7 +183,7 @@ pub(super) fn decision_rows(rows: &[DecisionCallRow]) -> Vec<DecisionRow> {
                 // Why: an allow has nothing to explain, and the producers write
                 // an empty reason for one anyway. Showing the worst evaluation's
                 // reason means the column carries the objection or nothing.
-                reason: truncate(&r.worst_reason),
+                reason: truncate_ellipsis(&r.worst_reason, REASON_CHARS),
                 reason_full: r.worst_reason.clone(),
                 chain: shown,
                 chain_overflow: if hidden > 0 {
@@ -241,7 +235,7 @@ pub(super) fn finding_rows(rows: &[SafetyFindingLogRow]) -> Vec<FindingRow> {
             },
             outcome: if r.blocked { "blocked" } else { "audited" },
             outcome_tone: if r.blocked { "err" } else { "muted" },
-            excerpt: truncate(r.excerpt.as_deref().unwrap_or("\u{2014}")),
+            excerpt: truncate_ellipsis(r.excerpt.as_deref().unwrap_or("\u{2014}"), REASON_CHARS),
             model: dash(r.model.as_deref()),
             request_url: format!("/admin/requests/{}", urlencoding::encode(&r.ai_request_id)),
             request_label: short(&r.ai_request_id),

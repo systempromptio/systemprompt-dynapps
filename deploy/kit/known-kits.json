@@ -3,8 +3,8 @@
     "The external kits this instance composes, one entry per remote source.",
     "This is the single list both sides read: `just services-pin <kit> <digest>` takes the image and public key from here to write the profile's services.sources[] entry, and the e2e seed derives its bundled expectations from the marketplaces listed here (playwright/tests/support/services-yaml.ts). Nothing is hand-typed twice.",
     "A kit's marketplace, plugins and skills live in the kit's repository; who reaches them is declared in services/access-control/rules.yaml with `owner: bundle:<name>`.",
-    "status: pinned — the profile pins this kit (or is expected to); the seed asserts its marketplaces are served. planned — the kit repository is being seeded (`just kit-export`); its ids still live in services/ until it is pinned, so the seed ignores it.",
-    "pull: public — the GHCR package is public, so the profile entry carries no auth_secret. channel — the tag the kit's CI moves on every release; `just services-pin <kit> <channel>` follows it, `just services-pin <kit> sha256:<digest>` pins one upload."
+    "status: pinned \u2014 the profile pins this kit (or is expected to); the seed asserts its marketplaces are served. planned \u2014 the kit repository is being seeded (`just kit-export`); its ids still live in services/ until it is pinned, so the seed ignores it.",
+    "pull: public \u2014 the GHCR package is public, so the profile entry carries no auth_secret. channel \u2014 the tag the kit's CI moves on every release; `just services-pin <kit> <channel>` follows it, `just services-pin <kit> sha256:<digest>` pins one upload."
   ],
   "kits": [
     {
@@ -101,23 +101,43 @@
         },
         "astound-india-sfcore": {
           "skills": [
+            "sf_apex_architect",
+            "sf_apex_lwc_engineer",
             "sf_apex_test_strategy",
             "sf_app_utilitybar_pattern",
             "sf_assignment_rule_reexecution",
             "sf_bypass_patterns",
             "sf_core_logic",
+            "sf_cpq_lane_engineer",
             "sf_custom_metadata_driven_config",
+            "sf_datacloud_lane_engineer",
+            "sf_declarative_lead",
             "sf_deployment_troubleshooting",
+            "sf_dev_workflow_implementation",
+            "sf_dev_workflow_pr_review",
+            "sf_dev_workflow_requirement_analysis",
+            "sf_dev_workflow_solution_architecture",
+            "sf_dev_workflow_standalone",
             "sf_devops",
+            "sf_docs_curator",
             "sf_dynamic_forms_field_visibility",
             "sf_email_notification_pattern",
+            "sf_feature_lead",
+            "sf_flow_automation_engineer",
             "sf_flow_deployment_strategy",
+            "sf_industries_lane_engineer",
             "sf_integration",
             "sf_lead_conversion",
+            "sf_marketingcloud_lane_engineer",
+            "sf_pr_reviewer",
             "sf_profile_permissionset_patterns",
+            "sf_qa_engineer",
             "sf_quick_action_flow_pattern",
+            "sf_release_manager",
             "sf_salesforce_project_context",
+            "sf_security_compliance_lead",
             "sf_ui_framework",
+            "sf_ui_ux_specialist",
             "sf_validation_rule_patterns"
           ],
           "mcp_servers": [
@@ -126,7 +146,7 @@
           ]
         }
       },
-      "_note": "Private package (auth_secret: ghcr_pull_token). Seeded from services/ with `just kit-export` on 2026-09-18; the ids now live only in the kit."
+      "_note": "Private package (auth_secret: ghcr_pull_token). Seeded from services/ with `just kit-export` on 2026-09-18; the ids now live only in the kit. Every sfcore skill carries the sf- prefix its tools/kit-sanitize.json declares \u2014 ids are claimed globally at composition, so a generic id collides with another kit at boot."
     }
   ]
 }

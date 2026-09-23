@@ -191,6 +191,8 @@ pub(crate) struct GroupDetailPageData {
     pub projects: Option<Vec<ProjectRowView>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mappings: Option<Vec<MappingRowView>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub export: Option<crate::export::ExportView>,
 }
 
 // Why: One entity's effective grant for a group subject, plus the toggle state

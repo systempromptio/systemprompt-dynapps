@@ -1,0 +1,42 @@
+                                                                                                                                                                                                                                                                                                                                                QUERY PLAN                                                                                                                                                                                                                                                                                                                                                
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.48..0.48 rows=1 width=336)
+   CTE inv
+     ->  Seq Scan on analytics_normalized_facts analytics_normalized_facts_1  (cost=0.00..0.04 rows=1 width=320)
+           Filter: ((NOT deleted) AND (occurred_at >= $2) AND (occurred_at < $3) AND (owner_id = $1) AND (fact_kind = 'invocation'::text) AND ((((fact -> 'value'::text) -> 'skill'::text) ->> 'plugin_id'::text) IS NOT NULL))
+   ->  Sort  (cost=0.44..0.44 rows=1 width=336)
+         Sort Key: (count(*)) DESC, inv.plugin_id, inv.skill, inv.source_hash
+         ->  WindowAgg  (cost=0.22..0.43 rows=1 width=336)
+               Window: w1 AS ()
+               ->  Nested Loop Left Join  (cost=0.22..0.41 rows=1 width=328)
+                     Join Filter: ((NOT (((((analytics_normalized_facts.fact -> 'value'::text) -> 'skill'::text) ->> 'marketplace_id'::text)) IS DISTINCT FROM inv.marketplace_id)) AND (NOT (((((analytics_normalized_facts.fact -> 'value'::text) -> 'skill'::text) ->> 'source'::text)) IS DISTINCT FROM inv.src)) AND (NOT (((((analytics_normalized_facts.fact -> 'value'::text) -> 'skill'::text) ->> 'source_hash'::text)) IS DISTINCT FROM inv.source_hash)) AND (((((analytics_normalized_facts.fact -> 'value'::text) -> 'skill'::text) ->> 'plugin_id'::text)) = inv.plugin_id) AND (((((analytics_normalized_facts.fact -> 'value'::text) -> 'skill'::text) ->> 'skill'::text)) = inv.skill))
+                     ->  Nested Loop Left Join  (cost=0.16..0.27 rows=1 width=312)
+                           Join Filter: ((NOT (i.marketplace_id IS DISTINCT FROM inv.marketplace_id)) AND (NOT (i.src IS DISTINCT FROM inv.src)) AND (NOT (i.source_hash IS DISTINCT FROM inv.source_hash)) AND (i.plugin_id = inv.plugin_id) AND (i.skill = inv.skill))
+                           ->  Nested Loop Left Join  (cost=0.03..0.09 rows=1 width=280)
+                                 Join Filter: (m.id = (max(inv.resource_id)))
+                                 ->  GroupAggregate  (cost=0.03..0.07 rows=1 width=216)
+                                       Group Key: inv.plugin_id, inv.skill, inv.marketplace_id, inv.src, inv.source_hash
+                                       ->  Sort  (cost=0.03..0.04 rows=1 width=256)
+                                             Sort Key: inv.plugin_id, inv.skill, inv.marketplace_id, inv.src, inv.source_hash
+                                             ->  CTE Scan on inv  (cost=0.00..0.02 rows=1 width=256)
+                                 ->  Seq Scan on managed_resources m  (cost=0.00..0.00 rows=1 width=96)
+                                       Filter: (owner_id = $1)
+                           ->  HashAggregate  (cost=0.13..0.15 rows=1 width=192)
+                                 Group Key: i.plugin_id, i.skill, i.marketplace_id, i.src, i.source_hash
+                                 ->  HashAggregate  (cost=0.08..0.09 rows=1 width=281)
+                                       Group Key: i.plugin_id, i.skill, i.marketplace_id, i.src, i.source_hash, r.source, r.fact_id, r.succeeded, r.input_tokens, r.output_tokens, r.amount_micros, r.currency
+                                       ->  Nested Loop  (cost=0.00..0.05 rows=1 width=281)
+                                             Join Filter: ((a.request_source = r.source) AND (a.request_id = r.fact_id))
+                                             ->  Nested Loop  (cost=0.00..0.04 rows=1 width=224)
+                                                   Join Filter: ((i.source = a.invocation_source) AND (i.fact_id = a.invocation_id))
+                                                   ->  CTE Scan on inv i  (cost=0.00..0.02 rows=1 width=224)
+                                                   ->  Seq Scan on analytics_normalized_facts a  (cost=0.00..0.00 rows=1 width=128)
+                                                         Filter: ((NOT deleted) AND (owner_id = $1) AND (fact_kind = 'resource_association'::text))
+                                             ->  Seq Scan on analytics_normalized_facts r  (cost=0.00..0.00 rows=1 width=121)
+                                                   Filter: ((NOT deleted) AND (occurred_at >= $2) AND (occurred_at < $3) AND (owner_id = $1) AND (fact_kind = 'request'::text))
+                     ->  HashAggregate  (cost=0.07..0.11 rows=1 width=176)
+                           Group Key: (((analytics_normalized_facts.fact -> 'value'::text) -> 'skill'::text) ->> 'plugin_id'::text), (((analytics_normalized_facts.fact -> 'value'::text) -> 'skill'::text) ->> 'skill'::text), (((analytics_normalized_facts.fact -> 'value'::text) -> 'skill'::text) ->> 'marketplace_id'::text), (((analytics_normalized_facts.fact -> 'value'::text) -> 'skill'::text) ->> 'source'::text), (((analytics_normalized_facts.fact -> 'value'::text) -> 'skill'::text) ->> 'source_hash'::text)
+                           ->  Seq Scan on analytics_normalized_facts  (cost=0.00..0.04 rows=1 width=192)
+                                 Filter: ((NOT deleted) AND (occurred_at >= $2) AND (occurred_at < $3) AND (owner_id = $1) AND (fact_kind = 'artifact'::text) AND ((((fact -> 'value'::text) -> 'skill'::text) ->> 'plugin_id'::text) IS NOT NULL))
+(38 rows)
+

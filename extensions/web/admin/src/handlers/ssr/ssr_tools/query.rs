@@ -10,9 +10,7 @@ use urlencoding::encode as urlencode;
 use crate::repositories::analysis::tools::{
     ArtifactKind, ToolActivityFilter, ToolBreakdownBy, ToolSort, ToolState,
 };
-use crate::util::time_range::{TimeRange, TimeRangePreset, TimeRangeQuery, parse_time_range};
-
-pub(crate) const PAGE_SIZE: i64 = 50;
+use crate::util::time_range::{TimeRange, TimeRangeQuery, parse_time_range};
 
 // Why: which page is asking — the Artifacts page is the Tools page narrowed
 // to rows with an artifact kind, so one query type serves both and only the
@@ -93,14 +91,7 @@ impl ToolsQuery {
         if self.from.is_some() && self.to.is_some() {
             return "custom";
         }
-        match range.preset {
-            TimeRangePreset::Min15 => "15m",
-            TimeRangePreset::Hour1 => "1h",
-            TimeRangePreset::Hours24 => "24h",
-            TimeRangePreset::Days7 => "7d",
-            TimeRangePreset::Days30 => "30d",
-            TimeRangePreset::Custom => "custom",
-        }
+        range.preset.as_str()
     }
 
     pub(crate) fn user_id(&self) -> Option<UserId> {

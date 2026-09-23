@@ -1,0 +1,36 @@
+                                                                                                          QUERY PLAN                                                                                                          
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Sort  (cost=0.54..0.55 rows=1 width=313)
+   Sort Key: ((v.effective_until IS NULL)) DESC, v.first_seen_at DESC
+   CTE inv
+     ->  Seq Scan on analytics_normalized_facts f  (cost=0.00..0.27 rows=1 width=193)
+           Filter: ((NOT deleted) AND (occurred_at >= $2) AND (occurred_at < $3) AND (owner_id = $1) AND (fact_kind = 'invocation'::text) AND ((((fact -> 'value'::text) -> 'skill'::text) ->> 'marketplace_id'::text) = $4))
+   ->  Nested Loop Left Join  (cost=0.10..0.26 rows=1 width=313)
+         Join Filter: (i.marketplace_hash = v.content_hash)
+         ->  Nested Loop Left Join  (cost=0.03..0.08 rows=1 width=256)
+               Join Filter: (inv.marketplace_hash = v.content_hash)
+               ->  Seq Scan on marketplace_versions v  (cost=0.00..0.00 rows=1 width=224)
+                     Filter: (marketplace_id = $4)
+               ->  GroupAggregate  (cost=0.03..0.06 rows=1 width=96)
+                     Group Key: inv.marketplace_hash
+                     ->  Sort  (cost=0.03..0.04 rows=1 width=129)
+                           Sort Key: inv.marketplace_hash, inv.consumer_id
+                           ->  CTE Scan on inv  (cost=0.00..0.02 rows=1 width=129)
+                                 Filter: (marketplace_id = $4)
+         ->  GroupAggregate  (cost=0.06..0.15 rows=1 width=120)
+               Group Key: i.marketplace_hash
+               ->  Unique  (cost=0.06..0.09 rows=1 width=193)
+                     ->  Sort  (cost=0.06..0.07 rows=1 width=193)
+                           Sort Key: i.marketplace_hash, r.source, r.fact_id, r.succeeded, r.input_tokens, r.output_tokens, r.amount_micros, r.currency, r.latency_micros
+                           ->  Nested Loop  (cost=0.00..0.05 rows=1 width=193)
+                                 Join Filter: ((a.request_source = r.source) AND (a.request_id = r.fact_id))
+                                 ->  Nested Loop  (cost=0.00..0.04 rows=1 width=128)
+                                       Join Filter: ((i.source = a.invocation_source) AND (i.fact_id = a.invocation_id))
+                                       ->  CTE Scan on inv i  (cost=0.00..0.02 rows=1 width=128)
+                                             Filter: (marketplace_id = $4)
+                                       ->  Seq Scan on analytics_normalized_facts a  (cost=0.00..0.00 rows=1 width=128)
+                                             Filter: ((NOT deleted) AND (owner_id = $1) AND (fact_kind = 'resource_association'::text))
+                                 ->  Seq Scan on analytics_normalized_facts r  (cost=0.00..0.00 rows=1 width=129)
+                                       Filter: ((NOT deleted) AND (occurred_at >= $2) AND (occurred_at < $3) AND (owner_id = $1) AND (fact_kind = 'request'::text))
+(32 rows)
+

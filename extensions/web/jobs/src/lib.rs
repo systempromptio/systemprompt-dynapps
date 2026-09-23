@@ -12,6 +12,10 @@
 //!   consumed by the SSR layer.
 //! - **Analytics / housekeeping** ([`ContentAnalyticsAggregationJob`],
 //!   [`SecretMigrationJob`]) — periodic rollups and one-shot migrations.
+//! - **Data lifecycle** ([`RetentionDailyReportJob`],
+//!   [`RetentionExportWeeklyJob`], [`RetentionExportMonthlyJob`]) — measures,
+//!   archives and health-checks the retention-managed tables; see
+//!   `retention/mod.rs`.
 //!
 //! Errors normalise on [`JobError`]; the scheduler logs and surfaces them
 //! through `infra logs trace`.
@@ -32,6 +36,7 @@ mod llms_txt;
 mod prerender;
 mod publish;
 mod quota_month_window;
+mod retention;
 mod robots;
 mod scope_defaults;
 mod secret_migration;
@@ -55,6 +60,7 @@ pub use llms_txt::LlmsTxtGenerationJob;
 pub use prerender::ContentPrerenderJob;
 pub use publish::PublishPipelineJob;
 pub use quota_month_window::QuotaMonthWindowJob;
+pub use retention::{RetentionDailyReportJob, RetentionExportMonthlyJob, RetentionExportWeeklyJob};
 pub use robots::RobotsTxtGenerationJob;
 pub use scope_defaults::ScopeDefaultsJob;
 pub use secret_migration::SecretMigrationJob;
@@ -76,7 +82,7 @@ pub mod internals {
     };
     pub use crate::copy_assets::{copy_all_assets, copy_asset};
     pub use crate::governance_bootstrap::{
-        GovernanceStatus, check_evaluation_config, check_governance_config,
+        GovernanceStatus, check_governance_config, check_judge_config,
     };
     pub use crate::llms_txt::{sort_entries_in_place, write_header, write_section};
     pub use crate::publish::PipelineStats;

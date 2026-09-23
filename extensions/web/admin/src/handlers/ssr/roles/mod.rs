@@ -32,6 +32,7 @@ use crate::templates::AdminTemplateEngine;
 use crate::types::role::{ROLES_PLATFORM, has_any};
 use crate::types::{MarketplaceContext, Role, UserContext};
 
+use crate::handlers::ssr::list_view::DEFAULT_PAGE_SIZE;
 use data::RolesQuery;
 use view::{HeaderFactView, RolesPageData};
 
@@ -81,16 +82,16 @@ pub(crate) async fn roles_page(
     let matching = data::filtered_sorted(&member_rows, &query);
     let total = i64::try_from(matching.len()).unwrap_or(i64::MAX);
     let index = data::page_index(&query, total);
-    let start = usize::try_from(index * data::PAGE_SIZE).unwrap_or(0);
+    let start = usize::try_from(index * DEFAULT_PAGE_SIZE).unwrap_or(0);
     let page_rows: Vec<_> = matching
         .iter()
         .skip(start)
-        .take(usize::try_from(data::PAGE_SIZE).unwrap_or(50))
+        .take(usize::try_from(DEFAULT_PAGE_SIZE).unwrap_or(50))
         .cloned()
         .collect();
     let window = PageWindow::new(
         index,
-        data::PAGE_SIZE,
+        DEFAULT_PAGE_SIZE,
         total,
         i64::try_from(page_rows.len()).unwrap_or(0),
         "people",

@@ -10,13 +10,14 @@ use crate::handlers::ssr::format::{
 };
 use crate::handlers::ssr::list_view::{PageWindow, Pagination};
 use crate::handlers::ssr::transcript_view::short_id;
-use crate::repositories::analytics::conversations::{
-    HistoryItem, HistoryScope, HistorySource, redact_text,
-};
+use crate::handlers::ssr::types::TabLinkView;
+use crate::repositories::analytics::conversations::{HistoryItem, HistoryScope, redact_text};
 use crate::types::UserContext;
 
 use super::context::HistoryRowView;
+use super::window::HistoryWindow;
 use super::{HistoryQuery, HistoryView};
+use crate::handlers::ssr::list_view::paginate_prefixed;
 
 pub(super) fn scope_label(scope: &HistoryScope) -> String {
     match scope {
@@ -29,38 +30,27 @@ pub(super) fn scope_label(scope: &HistoryScope) -> String {
 // wider scope, so every query link takes the base url of whichever of the two
 // is rendering rather than assuming `/admin/history`.
 
-// Why: a gateway conversation has an owner-facing detail page, so every viewer
-// gets the link. A transcript's only detail page is the admin session view.
-//
-// The org-wide listing sends its rows to the admin context view instead: it is
-// already admin-gated, renders the same transcript unredacted, and carries the
-// operational identifiers an admin came to that page for.
-pub(crate) fn detail_url(
-    item: &HistoryItem,
-    viewer: &UserContext,
-    view: HistoryView,
-) -> Option<String> {
-    match item.source {
-        HistorySource::Gateway => item.context_id.as_ref().map(|c| match view {
-            HistoryView::Org => context_detail_url(c),
-            HistoryView::Own => format!(
-                "/admin/history/conversations/{}",
-                urlencoding::encode(c.as_str())
-            ),
-        }),
-        HistorySource::Transcript => viewer
-            .is_admin
-            .then(|| item.session_id.as_ref().map(session_detail_url))
-            .flatten(),
+// Why: a conversation has an owner-facing detail page, so every viewer gets
+// the link. The org-wide listing sends its rows to the admin context view
+// instead: it is already admin-gated and carries the operational identifiers
+// an admin came to that page for.
+pub(crate) fn detail_url(item: &HistoryItem, view: HistoryView) -> String {
+    match view {
+        HistoryView::Org => context_detail_url(&item.context_id),
+        HistoryView::Own => format!(
+            "/admin/history/conversations/{}",
+            urlencoding::encode(item.context_id.as_str())
+        ),
     }
 }
 
-fn row_identity(item: &HistoryItem) -> String {
-    item.session_id
-        .as_ref()
-        .map(|s| s.as_str().to_owned())
-        .or_else(|| item.context_id.as_ref().map(|c| c.as_str().to_owned()))
-        .unwrap_or_default()
+// Why: the client session is the admin session view's key, so an admin gets
+// a second link to the session the conversation ran in when one is known.
+pub(crate) fn session_url(item: &HistoryItem, viewer: &UserContext) -> Option<String> {
+    viewer
+        .is_admin
+        .then(|| item.session_id.as_ref().map(session_detail_url))
+        .flatten()
 }
 
 // Why: a slash command's opening prompt is the client's XML envelope, not
@@ -76,9 +66,9 @@ pub fn command_name(prompt: &str) -> Option<String> {
     (!name.is_empty()).then(|| format!("/{name}"))
 }
 
-// Why: a gateway conversation without a recorded title is named by its
-// opening prompt, so a row never shows a bare id where words exist.
-fn conversation_title(item: &HistoryItem, is_gateway: bool, short: &str) -> String {
+// Why: a conversation without a recorded title is named by its opening
+// prompt, so a row never shows a bare id where words exist.
+fn conversation_title(item: &HistoryItem, short: &str) -> String {
     item.title
         .clone()
         .filter(|t| !t.trim().is_empty())
@@ -89,13 +79,7 @@ fn conversation_title(item: &HistoryItem, is_gateway: bool, short: &str) -> Stri
                 .filter(|p| !p.trim().is_empty())
                 .map(|p| command_name(&p).unwrap_or_else(|| p.chars().take(160).collect()))
         })
-        .unwrap_or_else(|| {
-            if is_gateway {
-                format!("Conversation {short}")
-            } else {
-                format!("Session {short}")
-            }
-        })
+        .unwrap_or_else(|| format!("Conversation {short}"))
 }
 
 pub(crate) fn row_view(
@@ -104,16 +88,12 @@ pub(crate) fn row_view(
     view: HistoryView,
 ) -> HistoryRowView {
     let when = item.last_at;
-    let identity = row_identity(item);
-    let short = short_id(&identity);
-    let is_gateway = item.source == HistorySource::Gateway;
+    let short = short_id(item.context_id.as_str());
     HistoryRowView {
         source: client_chip(&item.client_kind, &item.client_attestation),
         source_title: attestation_title(&item.client_attestation),
-        source_kind: item.source.label(),
-        is_gateway,
-        session_id: item.session_id.clone(),
-        conversation_title: conversation_title(item, is_gateway, &short),
+        conversation_title: conversation_title(item, &short),
+        context_id: item.context_id.clone(),
         short_id: short,
         user_id: item.user_id.clone(),
         user_label: item.user_label.clone(),
@@ -128,13 +108,19 @@ pub(crate) fn row_view(
             "{} in / {} out",
             item.total_input_tokens, item.total_output_tokens
         ),
-        cost_display: is_gateway.then(|| format_cost(item.cost_microdollars)),
-        snippet: item.snippet.as_deref().map(|s| redact_text(s).0),
-        detail_url: detail_url(item, viewer, view),
+        cost_display: format_cost(item.cost_microdollars),
+        detail_url: detail_url(item, view),
+        session_url: session_url(item, viewer),
     }
 }
 
 fn query_parts(query: &HistoryQuery, keep_side: bool) -> Vec<String> {
+    let mut parts = filter_parts(query, keep_side);
+    parts.extend(HistoryWindow::of(query).query_parts());
+    parts
+}
+
+fn filter_parts(query: &HistoryQuery, keep_side: bool) -> Vec<String> {
     let mut parts: Vec<String> = Vec::new();
     if let Some(q) = query.q.as_deref().filter(|s| !s.is_empty()) {
         parts.push(format!("q={}", urlencoding::encode(q)));
@@ -172,20 +158,17 @@ pub(super) fn build_pagination(query: &HistoryQuery, window: PageWindow, base: &
     } else {
         format!("{base}?{}&", parts.join("&"))
     };
-    let page = window.index;
-    let prev_url = (page > 0).then(|| format!("{prefix}page={}", page - 1));
-    let next_url = (page + 1 < window.total_pages).then(|| format!("{prefix}page={}", page + 1));
-    let (first_row, last_row) = window.bounds();
-    Pagination {
-        current_page: page + 1,
-        total_pages: window.total_pages,
-        first_row,
-        last_row,
-        total_rows: window.total_rows,
-        noun: window.noun,
-        has_prev: prev_url.is_some(),
-        has_next: next_url.is_some(),
-        prev_url,
-        next_url,
-    }
+    paginate_prefixed(window, &prefix)
+}
+
+// Why: a new window starts from the first page, so the tabs carry every
+// filter but the window itself and the page.
+pub(super) fn window_links(query: &HistoryQuery, base: &str) -> Vec<TabLinkView> {
+    let parts = filter_parts(query, true);
+    let prefix = if parts.is_empty() {
+        format!("{base}?")
+    } else {
+        format!("{base}?{}&", parts.join("&"))
+    };
+    HistoryWindow::of(query).tabs(&prefix)
 }

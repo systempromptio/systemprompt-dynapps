@@ -90,7 +90,7 @@ async fn access_control_ledger_filters_and_explains_expiring_mixed_rules() {
     .expect("write non-expiring comparison rule");
 
     let path = "/admin/access-control?entity_kind=skill&band=group&expiring=7d&q=access-ledger";
-    let (status, body) = app.call(Call::get(&path, Principal::Admin)).await;
+    let (status, body) = app.call(Call::get(path, Principal::Admin)).await;
     assert_eq!(status, StatusCode::OK, "access ledger: {body}");
     let marker = format!("data-entity-id=\"{entity}\"");
     assert!(

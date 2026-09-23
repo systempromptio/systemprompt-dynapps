@@ -14,6 +14,7 @@ use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 
 use crate::handlers::ssr::format::{format_token_total, short_num};
+use crate::repositories::devices::bridge_presence;
 use crate::repositories::devices::sessions::{
     self, BridgeHostRow, BridgeUserSessionsRow, SessionQuery,
 };
@@ -146,11 +147,8 @@ fn session_group(user: &BridgeUserSessionsRow, hosts: &[BridgeHostRow]) -> UserG
         cell(short_num(user.forwarded_total), NUM),
         cell(format_token_total(user.tokens_total), NUM),
     ];
-    (view.status_label, view.status_tone) = if user.any_active {
-        ("Active", "ok")
-    } else {
-        ("Stale", "warn")
-    };
+    let presence = bridge_presence(Utc::now(), user.last_heartbeat_at);
+    (view.status_label, view.status_tone) = (presence.label(), presence.tone());
     view
 }
 
@@ -164,7 +162,7 @@ fn host_row(row: &BridgeHostRow) -> BridgeHostRowView {
         forwarded_display: short_num(row.forwarded_total),
         tokens_display: format_token_total(row.tokens_total),
         sessions_display: (row.session_count > 1).then(|| plural(row.session_count, "session")),
-        status_label: if row.is_stale { "Stale" } else { "Active" },
-        status_tone: if row.is_stale { "warn" } else { "ok" },
+        status_label: bridge_presence(Utc::now(), row.last_heartbeat_at).label(),
+        status_tone: bridge_presence(Utc::now(), row.last_heartbeat_at).tone(),
     }
 }

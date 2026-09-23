@@ -37,6 +37,7 @@ use crate::repositories::analytics::conversation_rows::{
 use crate::repositories::scope::{ScopeRequest, SubjectScope};
 use crate::types::UserContext;
 
+use crate::handlers::ssr::list_view::DEFAULT_PAGE_SIZE;
 use crate::handlers::ssr::page::Page;
 use context::{ContextsPageContext, PageKpisView};
 use load::{ContextsPageData, load_page_data};
@@ -61,8 +62,6 @@ pub(crate) struct ContextsListQuery {
 }
 
 const BASE_URL: &str = "/admin/contexts";
-const PAGE_SIZE: i64 = 50;
-
 fn since_to_datetime(value: &str) -> Option<DateTime<Utc>> {
     let now = Utc::now();
     let dur = match value {
@@ -193,7 +192,7 @@ async fn build_page_context(build: PageBuild<'_>) -> ContextsPageContext {
         view_is_all: !inputs.view_is_users,
         pagination: view::build_pagination(
             params,
-            PageWindow::new(inputs.page, PAGE_SIZE, count, shown, noun),
+            PageWindow::new(inputs.page, DEFAULT_PAGE_SIZE, count, shown, noun),
         ),
         sort_headers: view::build_sort_headers(params, inputs.sort, inputs.descending),
         total_count: data.total_conversations,
@@ -201,7 +200,7 @@ async fn build_page_context(build: PageBuild<'_>) -> ContextsPageContext {
         show_side: inputs.show_side,
         side_toggle_url: view::side_toggle_url(params, inputs.show_side),
         export: crate::export::ExportView::new(
-            &["contexts", "people"],
+            export::export_datasets(inputs.view_is_users),
             &crate::export::view::query_string(&[
                 (
                     "preset",

@@ -9,6 +9,7 @@
 //! Platform group's home because it is the one honest answer to "what is
 //! configured here".
 
+pub(crate) mod retention;
 mod rows;
 mod view;
 
@@ -20,7 +21,9 @@ use axum::response::Response;
 use serde::Deserialize;
 use sqlx::PgPool;
 use systemprompt::config::ProfileBootstrap;
+use systemprompt::loader::ServicesBootstrap;
 
+use self::retention::RetentionView;
 use self::view::{ConfigKpiView, ConfigRowView, ConfigurationPageData};
 use crate::error::{AdminError, AdminHtmlResult};
 use crate::handlers::ssr::ssr_sync::{DOCS_URL, EXPORT_ZIP_URL, empty_sources};
@@ -118,6 +121,11 @@ pub(crate) async fn configuration_page(
     // Why: discard-ok: an unreadable cache means every row reads as base
     let bundles = active_bundle_files().unwrap_or_default();
     let all = rows::build_rows(&pool, &active_root, baked_root, &bundles).await?;
+    // Why: discard-ok: an unreadable services tree leaves the messages window at
+    // core's default
+    let ai_history_days = ServicesBootstrap::get().map_or(30, |s| s.ai.history.retention_days);
+    let retention: RetentionView =
+        retention::retention_view(&pool, &profile.retention, ai_history_days).await?;
 
     let kpis = kpis(&all);
 
@@ -148,6 +156,7 @@ pub(crate) async fn configuration_page(
         sources_unreadable,
         kpis,
         rows,
+        retention,
         sync_url: super::ssr_sync::BASE_URL,
         export_zip_url: EXPORT_ZIP_URL,
         docs_url: DOCS_URL,

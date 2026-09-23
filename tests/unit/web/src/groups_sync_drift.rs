@@ -130,14 +130,18 @@ fn orphans_follow_the_loader_asymmetry() {
         .find(|r| r.subject == "Systemprompt-Core")
         .expect("console mapping");
     assert!(!console_mapping.overwrite_applies);
+    assert_eq!(console_mapping.kind_label, "Written in console");
+    assert_eq!(console_mapping.resolve, "Export to keep");
 
-    let stale_mapping = drift
+    let code_mapping = drift
         .rows
         .iter()
         .find(|r| r.subject == "Systemprompt-Legacy")
-        .expect("stale mapping");
-    assert!(stale_mapping.overwrite_applies);
-    assert_eq!(stale_mapping.overwrite_effect, "deleted");
+        .expect("mapping code once declared");
+    assert!(code_mapping.overwrite_applies);
+    assert_eq!(code_mapping.overwrite_effect, "deleted");
+    assert_eq!(code_mapping.kind_label, "Removed from code");
+    assert_eq!(code_mapping.resolve, "Overwrite deletes");
 }
 
 #[test]

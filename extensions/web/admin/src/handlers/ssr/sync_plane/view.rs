@@ -36,6 +36,74 @@ pub(crate) struct AppliedView {
     pub declared_changed: bool,
 }
 
+// Why: the one line under the tiles that says what to press. `card` names
+// the direction card it points at (`overwrite` or `export`) so the template
+// can highlight it; a clean plane has none.
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct SyncRecommendation {
+    pub text: String,
+    pub card: &'static str,
+}
+
+impl SyncRecommendation {
+    pub(crate) fn for_actions(actions: &ActionCounts, is_clean: bool) -> Option<Self> {
+        if is_clean {
+            return None;
+        }
+        let code = actions.code_side();
+        let console = actions.kept + actions.delete_console;
+        // Why: an entity the file declares and the database has never heard of
+        // is the one drift boot cannot settle by itself. Boot seeds a plane
+        // only when its projection is empty, and for access control "empty"
+        // counts band rules, not entities — a database with 63 entities and
+        // 159 rules can never seed, so entities added by a later release stay
+        // absent and the console is the only route in. Insert only adds them
+        // without touching anything written here, so it is named first and
+        // separately from the general code-side wording, which reads as an
+        // Overwrite recommendation.
+        if actions.insert_entities > 0 {
+            let deletes = if actions.delete > 0 {
+                format!(
+                    " Overwrite from code would also delete {} row(s), so use it only if that is what you want.",
+                    actions.delete
+                )
+            } else {
+                String::new()
+            };
+            return Some(Self {
+                text: format!(
+                    "{} entity(s) declared in code are absent from this database; Insert only adds them, with {} row(s), and changes nothing written here.{deletes}",
+                    actions.insert_entities, actions.insert
+                ),
+                card: "insert",
+            });
+        }
+        let moves = format!(
+            "+{} · ~{} · −{}",
+            actions.insert + actions.insert_entities,
+            actions.update,
+            actions.delete
+        );
+        let text = match (code, console) {
+            (true, 0) => format!("Overwrite from code brings this database in step ({moves})."),
+            (false, n) => format!(
+                "{n} row(s) exist only in this database. Export it and commit the file to keep them; nothing here is deleted by code."
+            ),
+            (true, n) => format!(
+                "Overwrite from code settles the code side ({moves}); {n} row(s) written here need Export to reach the file first if they are to be kept."
+            ),
+        };
+        Some(Self {
+            text,
+            card: if code && actions.delete_console == 0 {
+                "overwrite"
+            } else {
+                "export"
+            },
+        })
+    }
+}
+
 // Why: `apply_url` is where the buttons post — the plane's own apply, or a
 // staged import's — and `show_export` is off on a preview, where the
 // database is not the thing being read.
@@ -52,6 +120,7 @@ pub(crate) struct PlaneCardView {
     pub in_db: usize,
     pub kpis: Vec<DriftKpi>,
     pub actions: ActionCounts,
+    pub recommendation: Option<SyncRecommendation>,
     pub rows: Vec<DriftRow>,
     pub row_count: usize,
     pub is_clean: bool,

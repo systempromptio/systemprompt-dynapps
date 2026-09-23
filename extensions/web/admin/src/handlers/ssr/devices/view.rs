@@ -13,6 +13,8 @@ use crate::repositories::devices::stats::FleetStats;
 
 use super::context::{FleetStatsView, VersionBarView};
 use super::{BASE_URL, DevicesQuery, Tab};
+use crate::handlers::ssr::list_view::paginate;
+use crate::handlers::ssr::types::table::SortColumn;
 
 pub(super) fn url_with(query: &DevicesQuery, overrides: &[(&str, &str)]) -> String {
     let mut parts: Vec<(&str, String)> = Vec::new();
@@ -94,7 +96,8 @@ pub(super) fn build_tabs(
 pub(super) fn build_stats(query: &DevicesQuery, stats: &FleetStats) -> FleetStatsView {
     let stale_active = query.stale.as_deref() == Some("1");
     FleetStatsView {
-        bridges_active: stats.bridges_active.to_string(),
+        bridges_online: stats.bridges_online.to_string(),
+        bridges_seen_week: stats.bridges_seen_week.to_string(),
         bridges_stale: stats.bridges_stale.to_string(),
         bridges_total_sub: format!("of {} enrolled", stats.bridges_total),
         stale_tone: if stats.bridges_stale > 0 {
@@ -191,16 +194,9 @@ pub(super) fn build_stale_chips(query: &DevicesQuery, stats: &FleetStats) -> Vec
     ]
 }
 
-pub(super) struct ColumnSpec {
-    pub(super) key: &'static str,
-    pub(super) label: &'static str,
-    pub(super) class: &'static str,
-    pub(super) hint: &'static str,
-}
-
 pub(super) fn build_sort_headers(
     query: &DevicesQuery,
-    columns: &[ColumnSpec],
+    columns: &[SortColumn],
     active_sort: &str,
     active_dir: &str,
 ) -> Vec<SortHeaderView> {
@@ -208,48 +204,20 @@ pub(super) fn build_sort_headers(
         .iter()
         .map(|column| {
             let active = column.key == active_sort;
-            let next_dir = if active && active_dir == "desc" {
-                "asc"
-            } else {
-                "desc"
-            };
-            SortHeaderView {
-                label: column.label,
-                class: column.class,
-                hint: column.hint,
-                url: url_with(query, &[("sort", column.key), ("dir", next_dir)]),
+            let descending = active_dir != "asc";
+            let next_dir = SortHeaderView::next_dir(active, descending);
+            SortHeaderView::new(
+                (column.label, column.class, column.hint),
+                url_with(query, &[("sort", column.key), ("dir", next_dir)]),
                 active,
-                aria_sort: match (active, active_dir) {
-                    (false, _) => "none",
-                    (true, "asc") => "ascending",
-                    (true, _) => "descending",
-                },
-                indicator: match (active, active_dir) {
-                    (false, _) => "\u{2195}",
-                    (true, "asc") => "\u{2191}",
-                    (true, _) => "\u{2193}",
-                },
-            }
+                descending,
+            )
         })
         .collect()
 }
 
 pub(super) fn build_pagination(query: &DevicesQuery, window: PageWindow) -> Pagination {
-    let page = window.index;
-    let prev_url = (page > 0).then(|| url_with(query, &[("page", &(page - 1).to_string())]));
-    let next_url = (page + 1 < window.total_pages)
-        .then(|| url_with(query, &[("page", &(page + 1).to_string())]));
-    let (first_row, last_row) = window.bounds();
-    Pagination {
-        current_page: page + 1,
-        total_pages: window.total_pages,
-        first_row,
-        last_row,
-        total_rows: window.total_rows,
-        noun: window.noun,
-        has_prev: prev_url.is_some(),
-        has_next: next_url.is_some(),
-        prev_url,
-        next_url,
-    }
+    paginate(window, |page| {
+        url_with(query, &[("page", &page.to_string())])
+    })
 }

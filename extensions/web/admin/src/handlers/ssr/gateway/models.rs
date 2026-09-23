@@ -1,11 +1,14 @@
-//! The Models tab: one card per provider, in `providers.yaml` order, with
-//! the routes that reach it and what they carry.
+//! The Overview and Providers tabs: one row per provider, in
+//! `providers.yaml` order, with the routes that reach it and what they
+//! carry; and the dispatch table, one row per resolved route in the order
+//! the dispatcher tries them.
 //!
-//! The routes table answers "in what order are patterns tried"; this view
-//! answers the question an operator actually brings — which providers are
-//! live, which models they serve, and which routes deliver traffic there.
-//! It is read from the same labels every other page uses, so a route is
-//! named here exactly as it is in access control.
+//! The routes table answers "in what order are patterns tried" and is where
+//! order is edited; these views answer the question an operator actually
+//! brings — which providers are live, which models they serve, and which
+//! routes deliver traffic there. They are read from the same labels every
+//! other page uses, so a route is named here exactly as it is in access
+//! control.
 
 use std::collections::HashMap;
 
@@ -29,9 +32,21 @@ pub(crate) struct ProviderRouteView {
     pub matrix_url: String,
 }
 
+// Why: the overview's dispatch table — a resolved route with the provider it
+// lands on, so the whole chain from pattern to upstream reads on one line.
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct DispatchRow {
+    pub route: ProviderRouteView,
+    pub provider: String,
+    pub provider_label: String,
+    pub surface: String,
+    pub surface_tone: &'static str,
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct ProviderCardView {
     pub id: String,
+    pub anchor: String,
     pub label: String,
     pub description: Option<String>,
     pub endpoint: String,
@@ -44,6 +59,8 @@ pub(crate) struct ProviderCardView {
     pub routes: Vec<ProviderRouteView>,
     pub route_count: usize,
     pub unreachable: bool,
+    pub state_label: &'static str,
+    pub state_tone: &'static str,
     pub fallback_for: Vec<String>,
     pub grants_total: i64,
     pub reached_by_url: String,
@@ -77,6 +94,33 @@ fn route_view(
     }
 }
 
+const fn surface_tone(advertised: bool) -> &'static str {
+    if advertised { "ok" } else { "warn" }
+}
+
+pub(super) fn dispatch_rows(
+    labels: &RouteLabels,
+    rows: &[GatewayRouteRow],
+    grants: &HashMap<String, i64>,
+) -> Vec<DispatchRow> {
+    let declared: HashMap<&str, &GatewayRouteRow> =
+        rows.iter().map(|r| (r.id.as_str(), r)).collect();
+    labels
+        .routes
+        .iter()
+        .map(|r| {
+            let provider = labels.find_provider(&r.provider);
+            DispatchRow {
+                route: route_view(r, &declared, grants),
+                provider: r.provider.clone(),
+                provider_label: r.provider_label.clone(),
+                surface: provider.map_or_else(|| "unknown".to_owned(), |p| p.surface.clone()),
+                surface_tone: provider.map_or("err", |p| surface_tone(p.advertised)),
+            }
+        })
+        .collect()
+}
+
 pub(super) fn provider_cards(
     labels: &RouteLabels,
     rows: &[GatewayRouteRow],
@@ -104,19 +148,23 @@ pub(super) fn provider_cards(
                 })
                 .map(|r| r.label.clone())
                 .collect();
+            let unreachable = routes.is_empty();
             ProviderCardView {
                 id: p.id.clone(),
+                anchor: format!("provider-{}", p.id),
                 label: p.label.clone(),
                 description: p.description.clone(),
                 endpoint: p.endpoint.clone(),
                 surface: p.surface.clone(),
-                surface_tone: if p.advertised { "ok" } else { "warn" },
+                surface_tone: surface_tone(p.advertised),
                 wire: p.wire.clone(),
                 advertised: p.advertised,
                 model_count: p.model_count,
                 models: p.models.clone(),
                 route_count: routes.len(),
-                unreachable: routes.is_empty(),
+                unreachable,
+                state_label: if unreachable { "no route" } else { "reachable" },
+                state_tone: if unreachable { "err" } else { "ok" },
                 grants_total: routes.iter().map(|r| r.grants).sum(),
                 reached_by_url: format!(
                     "/admin/access-control?entity_kind=gateway_route&q={}",

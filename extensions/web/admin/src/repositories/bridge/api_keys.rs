@@ -8,6 +8,7 @@ use systemprompt::identifiers::UserId;
 use uuid::Uuid;
 
 use super::error::{BridgeRepoError, Result};
+use serde::Serialize;
 
 pub const API_KEY_PREFIX: &str = "sp-live-";
 const SECRET_BYTES: usize = 32;
@@ -24,7 +25,10 @@ pub struct ApiKeyRow {
     pub revoked_at: Option<DateTime<Utc>>,
 }
 
-#[derive(Debug)]
+// Why: `Serialize` here rather than a mirror type in the handler. The two
+// were the same six fields and the same ten, with a `From` copying each one
+// across; the response body is this record.
+#[derive(Debug, Serialize)]
 pub struct IssuedApiKey {
     pub id: String,
     pub name: String,
@@ -75,7 +79,7 @@ pub async fn issue_api_key(
     })
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct EnrolledDevice {
     pub id: String,
     pub user_id: UserId,
@@ -202,6 +206,51 @@ pub async fn revoke_api_key(pool: &PgPool, user_id: &UserId, id: &str) -> Result
     .execute(pool)
     .await?;
     Ok(result.rows_affected() > 0)
+}
+
+/// The user a presented PAT belongs to, for the surfaces that accept one in
+/// place of a browser session.
+#[derive(Debug, Clone)]
+pub struct ApiKeyUser {
+    pub key_id: String,
+    pub user_id: UserId,
+    pub username: String,
+    pub email: String,
+}
+
+// Why: the same acceptance rule as core's `ApiKeyService::verify` — an
+// unrevoked, unexpired key whose stored hash matches — plus an active owner,
+// so a PAT reads identically on the gateway and here. The hash is compared in
+// the database, never in Rust. `last_used_at` is not touched: the admin
+// middleware holds the read pool, and the gateway's own use keeps it current.
+pub async fn find_api_key_user(pool: &PgPool, presented: &str) -> Result<Option<ApiKeyUser>> {
+    let Some(key_prefix) = presented
+        .strip_prefix(API_KEY_PREFIX)
+        .and_then(|_| presented.split_once('.'))
+        .map(|(prefix, _)| prefix)
+    else {
+        return Ok(None);
+    };
+    let row = sqlx::query!(
+        r#"
+        SELECT k.id, u.id AS user_id, u.name AS username, u.email
+        FROM user_api_keys k
+        JOIN users u ON u.id = k.user_id
+        WHERE k.key_prefix = $1 AND k.key_hash = $2 AND k.revoked_at IS NULL
+          AND (k.expires_at IS NULL OR k.expires_at > CURRENT_TIMESTAMP)
+          AND u.status = 'active'
+        "#,
+        key_prefix,
+        hash_secret(presented),
+    )
+    .fetch_optional(pool)
+    .await?;
+    Ok(row.map(|r| ApiKeyUser {
+        key_id: r.id,
+        user_id: UserId::new(r.user_id),
+        username: r.username,
+        email: r.email,
+    }))
 }
 
 fn generate_secret() -> (String, String, String) {

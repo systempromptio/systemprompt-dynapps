@@ -1,0 +1,32 @@
+== C10 sessions with ai_requests: stored counter vs recomputed
+ sessions_with_requests | ai_request_count_wrong | total_tokens_wrong | total_cost_wrong | error_count_wrong | actual_requests | stored_requests | actual_tokens | stored_tokens | actual_cost_ud | stored_cost_ud 
+------------------------+------------------------+--------------------+------------------+-------------------+-----------------+-----------------+---------------+---------------+----------------+----------------
+                    105 |                    105 |                102 |              102 |                25 |            4392 |               0 |     312091073 |             0 |      279641627 |              0
+(1 row)
+
+== C10 distribution of stored ai counters across all sessions
+ sessions | ai_count_nonzero | tokens_nonzero | cost_nonzero | error_nonzero | http_request_nonzero | task_nonzero | message_nonzero 
+----------+------------------+----------------+--------------+---------------+----------------------+--------------+-----------------
+     2147 |                0 |              0 |            0 |             0 |                  877 |            0 |               0
+(1 row)
+
+== C10 three example sessions (ids only)
+                session_id                 | stored | actual | stored_tokens | actual_tokens | session_source | client_type 
+-------------------------------------------+--------+--------+---------------+---------------+----------------+-------------
+ sess_8e686cdd-1d95-48e5-8895-16d3043d156c |      0 |    613 |             0 |      77352350 | bridge         | firstparty
+ sess_99c9c5a3-550a-44d6-8797-d216bc754295 |      0 |    584 |             0 |      24311585 | bridge         | firstparty
+ sess_89047507-c4e4-409f-8889-1352712aa362 |      0 |    280 |             0 |       7761283 | bridge         | firstparty
+(3 rows)
+
+== C10 agent_tasks / task_messages (the task_count and message_count sources)
+ agent_tasks | task_messages | stored_task_count | stored_message_count 
+-------------+---------------+-------------------+----------------------
+           0 |             0 |                 0 |                    0
+(1 row)
+
+== C10 request_count (HTTP) vs analytics_events http_request rows per session
+ sessions | exact_match | stored_higher | stored_lower 
+----------+-------------+---------------+--------------
+      877 |         877 |             0 |            0
+(1 row)
+

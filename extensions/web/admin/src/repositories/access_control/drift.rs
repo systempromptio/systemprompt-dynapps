@@ -12,9 +12,10 @@
 
 use chrono::{DateTime, Utc};
 use serde::Serialize;
-use systemprompt_security::authz::{Access, DASHBOARD_SOURCE};
+use systemprompt_security::authz::Access;
 
 use super::declared::{DeclaredEntity, DeclaredKey, DeclaredRule, DeclaredSet};
+pub use super::orphan::{OrphanOrigin, OrphanRule};
 
 /// One non-user rule row as the database holds it.
 #[derive(Debug, Clone, Serialize)]
@@ -49,27 +50,6 @@ pub struct EntityDefaultRow {
     pub entity_id: String,
     pub default_included: bool,
     pub source: String,
-}
-
-/// Where a database-only row came from, as far as its `source` column says.
-///
-/// `Dashboard` was written from the console and stamped as such; `Stale` is
-/// stamped `yaml` but absent from the file, or written by the console
-/// without a stamp.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub enum OrphanOrigin {
-    Dashboard,
-    Stale,
-}
-
-/// A database-only row. `governed` says whether the file speaks for this
-/// entity; only governed orphans are deleted by an overwrite.
-#[derive(Debug, Clone, Serialize)]
-pub struct OrphanRule {
-    pub row: BandRuleRow,
-    pub origin: OrphanOrigin,
-    pub governed: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -107,8 +87,11 @@ pub struct DriftCounts {
     pub missing_in_db: usize,
     pub only_in_db: usize,
     pub only_in_db_dashboard: usize,
-    pub only_in_db_stale: usize,
-    pub only_in_db_governed: usize,
+    pub only_in_db_code: usize,
+    pub only_in_db_bundle: usize,
+    pub only_in_db_retire: usize,
+    pub only_in_db_console_retire: usize,
+    pub only_in_db_kept: usize,
     pub changed: usize,
     pub default_changed: usize,
     pub entities_missing: usize,
@@ -123,12 +106,14 @@ impl DriftReport {
 
     #[must_use]
     pub fn counts(&self) -> DriftCounts {
-        let dashboard = self
+        let origin =
+            |want: OrphanOrigin| self.only_in_db.iter().filter(|o| o.origin == want).count();
+        let retire = self.only_in_db.iter().filter(|o| o.retire).count();
+        let console_retire = self
             .only_in_db
             .iter()
-            .filter(|o| o.origin == OrphanOrigin::Dashboard)
+            .filter(|o| o.retire && o.origin == OrphanOrigin::Console)
             .count();
-        let governed = self.only_in_db.iter().filter(|o| o.governed).count();
         let total = self.missing_in_db.len()
             + self.only_in_db.len()
             + self.changed.len()
@@ -137,9 +122,12 @@ impl DriftReport {
         DriftCounts {
             missing_in_db: self.missing_in_db.len(),
             only_in_db: self.only_in_db.len(),
-            only_in_db_dashboard: dashboard,
-            only_in_db_stale: self.only_in_db.len() - dashboard,
-            only_in_db_governed: governed,
+            only_in_db_dashboard: origin(OrphanOrigin::Console),
+            only_in_db_code: origin(OrphanOrigin::Code),
+            only_in_db_bundle: origin(OrphanOrigin::Bundle),
+            only_in_db_retire: retire,
+            only_in_db_console_retire: console_retire,
+            only_in_db_kept: self.only_in_db.len() - retire,
             changed: self.changed.len(),
             default_changed: self.default_changed.len(),
             entities_missing: self.entities_missing.len(),
@@ -228,15 +216,16 @@ pub fn compute_drift(
             continue;
         }
         match declared.rules.get(&row.key()) {
-            None => report.only_in_db.push(OrphanRule {
-                origin: if row.source == DASHBOARD_SOURCE {
-                    OrphanOrigin::Dashboard
-                } else {
-                    OrphanOrigin::Stale
-                },
-                governed: declared.governs(&row.entity_type, &row.entity_id),
-                row: row.clone(),
-            }),
+            None => {
+                let origin = OrphanOrigin::of_source(&row.source);
+                let governed = declared.governs(&row.entity_type, &row.entity_id);
+                report.only_in_db.push(OrphanRule {
+                    origin,
+                    governed,
+                    retire: governed || origin == OrphanOrigin::Code,
+                    row: row.clone(),
+                });
+            },
             Some(want) => {
                 let why_differs = row.justification.as_deref() != Some(want.justification.as_str());
                 let window_differs = row.valid_until != want.valid_until;

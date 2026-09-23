@@ -1,7 +1,11 @@
 {{#> layout page_title=title page_id=page}}
     {{#*inline "content"}}
     {{> components/breadcrumbs crumbs=breadcrumbs}}
-    {{> components/page-header title=group_name subtitle=description}}
+    {{#> components/page-header title=group_name subtitle=description}}
+        {{#*inline "header_actions"}}
+        {{#if export}}{{> components/export-button export}}{{/if}}
+        {{/inline}}
+    {{/components/page-header}}
 
     {{#if not_found}}
     {{> components/empty-state message="No group with that identifier."}}

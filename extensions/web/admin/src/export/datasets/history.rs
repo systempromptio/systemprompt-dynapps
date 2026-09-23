@@ -4,18 +4,20 @@ use async_trait::async_trait;
 
 use crate::error::AdminResult;
 use crate::export::model::{Cell, CellKind, Column, DataSet, ExportContext, Table, Window};
-use crate::handlers::ssr::ssr_history::{HistoryView, export_rows};
+use crate::handlers::ssr::ssr_history::{ExportRequest, HistoryView, export_rows};
 use crate::repositories::analytics::conversations::HistoryItem;
 use crate::types::UserContext;
-use systemprompt::identifiers::{ContextId, SessionId};
+use systemprompt::identifiers::SessionId;
 
 pub(crate) struct History;
 pub(crate) struct OrgHistory;
 
+const DESCRIPTION: &str =
+    "One row per conversation — who, model, turns, tokens, cost — by last activity.";
+
 const COLUMNS: &[Column] = &[
     Column::new("started_at", "Started", CellKind::Timestamp),
     Column::new("last_at", "Last activity", CellKind::Timestamp),
-    Column::new("source", "Source", CellKind::Text),
     Column::new("session_id", "Session", CellKind::Text),
     Column::new("context_id", "Context", CellKind::Text),
     Column::new("user_id", "User", CellKind::Text),
@@ -36,9 +38,8 @@ fn row(r: &HistoryItem) -> Vec<Cell> {
     vec![
         Cell::opt_time(r.started_at),
         r.last_at.into(),
-        r.source.label().into(),
         Cell::opt_text(r.session_id.as_ref().map(SessionId::as_str)),
-        Cell::opt_text(r.context_id.as_ref().map(ContextId::as_str)),
+        r.context_id.as_str().into(),
         r.user_id.as_str().into(),
         r.user_label.as_str().into(),
         Cell::opt_text(r.title.as_deref()),
@@ -55,7 +56,17 @@ fn row(r: &HistoryItem) -> Vec<Cell> {
 }
 
 async fn load(ctx: &ExportContext<'_>, view: HistoryView) -> AdminResult<Table> {
-    let (rows, total) = export_rows(ctx.pool, ctx.user, ctx.query()?, view, ctx.limit).await?;
+    let (rows, total) = export_rows(
+        ctx.pool,
+        ctx.user,
+        ExportRequest {
+            query: ctx.query()?,
+            view,
+            window: ctx.window,
+            limit: ctx.limit,
+        },
+    )
+    .await?;
     Ok(Table {
         rows: rows.iter().map(row).collect(),
         total,
@@ -70,11 +81,14 @@ impl DataSet for History {
     fn title(&self) -> &'static str {
         "My conversations"
     }
+    fn description(&self) -> &'static str {
+        DESCRIPTION
+    }
     fn columns(&self) -> &'static [Column] {
         COLUMNS
     }
     fn window(&self) -> Window {
-        Window::None
+        Window::Retained
     }
     // Why: identity-scoped like the page — every signed-in user may export
     // their own history; the handler narrows the rows to their scope.
@@ -94,11 +108,14 @@ impl DataSet for OrgHistory {
     fn title(&self) -> &'static str {
         "Conversations"
     }
+    fn description(&self) -> &'static str {
+        DESCRIPTION
+    }
     fn columns(&self) -> &'static [Column] {
         COLUMNS
     }
     fn window(&self) -> Window {
-        Window::None
+        Window::Retained
     }
     async fn load(&self, ctx: &ExportContext<'_>) -> AdminResult<Table> {
         load(ctx, HistoryView::Org).await

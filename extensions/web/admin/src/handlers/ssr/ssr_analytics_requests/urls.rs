@@ -13,6 +13,7 @@ use crate::handlers::ssr::list_view::Chip;
 
 use super::context::{RequestsTab, TabLinkView};
 use super::{BASE_URL, RequestsQuery};
+use crate::handlers::ssr::list_view::{paginate_prefixed, query_string_dropping};
 
 // Why: a breakdown row drills into the Log tab carrying its own dimension as a
 // filter, on top of whatever filters and window are already active.
@@ -109,7 +110,6 @@ pub(super) fn clear_url(query: &RequestsQuery) -> String {
 }
 
 pub(super) fn preserved_query_string(query: &RequestsQuery, drop: &[&str]) -> String {
-    let mut parts: Vec<String> = Vec::new();
     let pairs_str: [(&str, Option<&str>); 15] = [
         ("tab", query.tab.as_deref()),
         ("group", query.group.as_deref()),
@@ -139,21 +139,8 @@ pub(super) fn preserved_query_string(query: &RequestsQuery, drop: &[&str]) -> St
         ("sort", query.sort.as_deref()),
         ("dir", query.dir.as_deref()),
     ];
-    for (name, value) in pairs_str {
-        if drop.contains(&name) {
-            continue;
-        }
-        let Some(v) = value.filter(|s| !s.is_empty()) else {
-            continue;
-        };
-        parts.push(format!("{}={}", name, urlencode(v)));
-    }
-    if !drop.contains(&"page")
-        && let Some(p) = query.page.filter(|p| *p > 0)
-    {
-        parts.push(format!("page={p}"));
-    }
-    parts.join("&")
+    let extra = [("page", query.page.filter(|p| *p > 0))];
+    query_string_dropping(&pairs_str, &extra, drop)
 }
 
 // Why: a sortable header keeps every filter and the window, and drops the page
@@ -169,26 +156,11 @@ pub(super) fn sort_url_prefix(query: &RequestsQuery) -> String {
 }
 
 pub(super) fn build_pagination(query: &RequestsQuery, window: PageWindow) -> Pagination {
-    let page = window.index;
     let qs = preserved_query_string(query, &["page"]);
     let prefix = if qs.is_empty() {
         format!("{BASE_URL}?")
     } else {
         format!("{BASE_URL}?{qs}&")
     };
-    let prev_url = (page > 0).then(|| format!("{prefix}page={}", page - 1));
-    let next_url = (page + 1 < window.total_pages).then(|| format!("{prefix}page={}", page + 1));
-    let (first_row, last_row) = window.bounds();
-    Pagination {
-        current_page: page + 1,
-        total_pages: window.total_pages,
-        first_row,
-        last_row,
-        total_rows: window.total_rows,
-        noun: window.noun,
-        has_prev: prev_url.is_some(),
-        has_next: next_url.is_some(),
-        prev_url,
-        next_url,
-    }
+    paginate_prefixed(window, &prefix)
 }

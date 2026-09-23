@@ -1,0 +1,164 @@
+ completed_before_created | completed_latency_null | stuck | future | completed_no_completed_at | completed_no_finish_reason | latency_over_10m | max_latency_ms | no_upstream_latency | upstream_gt_total | accounting_failed 
+--------------------------+------------------------+-------+--------+---------------------------+----------------------------+------------------+----------------+---------------------+-------------------+-------------------
+                        0 |                      0 |     3 |      0 |                         0 |                       4287 |                0 |         241793 |                1227 |                 0 |                 0
+(1 row)
+
+ count | count | dup_request_ids 
+-------+-------+-----------------
+  4392 |  4392 |               0
+(1 row)
+
+ id | status | created_at | completed_at | latency_ms 
+----+--------+------------+--------------+------------
+(0 rows)
+
+                  id                  | status  |          created_at           | has_error 
+--------------------------------------+---------+-------------------------------+-----------
+ 45f0db81-fa41-4788-ae26-c8a92ca6f1c7 | pending | 2026-09-16 12:40:49.428137+00 | f
+ c00d1453-e790-46f0-9180-fe9379f42752 | pending | 2026-09-18 21:21:13.125154+00 | f
+ 58a4d71c-d184-4713-917a-73d2468db017 | pending | 2026-09-18 23:04:40.290753+00 | f
+(3 rows)
+
+     d      |  status   | finish_reason | count 
+------------+-----------+---------------+-------
+ 2026-09-03 | completed |               |    63
+ 2026-09-04 | completed |               |     7
+ 2026-09-04 | failed    |               |     7
+ 2026-09-06 | completed |               |     1
+ 2026-09-07 | completed |               |    84
+ 2026-09-07 | failed    |               |     2
+ 2026-09-08 | completed |               |   181
+ 2026-09-08 | failed    |               |     6
+ 2026-09-08 | rejected  |               |     7
+ 2026-09-09 | completed |               |   423
+ 2026-09-09 | failed    |               |     1
+ 2026-09-10 | completed |               |   393
+ 2026-09-10 | failed    |               |     7
+ 2026-09-11 | completed |               |   669
+ 2026-09-11 | failed    |               |     7
+ 2026-09-13 | completed |               |    50
+ 2026-09-14 | completed |               |     6
+ 2026-09-15 | completed |               |   431
+ 2026-09-15 | failed    |               |    11
+ 2026-09-16 | completed |               |   450
+ 2026-09-16 | failed    |               |     2
+ 2026-09-16 | pending   |               |     1
+ 2026-09-17 | completed |               |   440
+ 2026-09-17 | failed    |               |    21
+ 2026-09-18 | completed |               |   397
+ 2026-09-18 | failed    |               |    18
+ 2026-09-18 | pending   |               |     2
+ 2026-09-21 | completed |               |   288
+ 2026-09-21 | failed    |               |    11
+ 2026-09-22 | completed |               |   404
+ 2026-09-22 | failed    |               |     2
+(31 rows)
+
+                                                     shape                                                      | count 
+----------------------------------------------------------------------------------------------------------------+-------
+ stream ended without stop event                                                                                |    34
+ anthropic returned <n>: Your credit balance is too low to access the Anthropic API. Please go to Plans & Billi |    22
+ gemini returned <n>: This model models/gemini-<n>.<n>-flash is no longer available to new users. Please update |     7
+ gemini returned <n>: This model models/gemini-<n>.<n>-flash-lite is no longer available to new users. Please u |     5
+ anthropic returned <n>: model: claude-sonnet-<n>-<n>                                                           |     4
+ anthropic returned <n>: prompt is too long: <n> tokens > <n> maximum                                           |     4
+ HTTP <n>: Gateway API key secret 'vertex_maas' not configured                                                  |     4
+ vertex returned <n>: Unable to submit request because `systemprompt_admin_report` functionDeclaration `paramet |     4
+ vertex returned <n>: Permission 'aiplatform.endpoints.predict' denied on resource '//aiplatform.googleapis.com |     3
+ gemini returned <n>: Invalid JSON payload received. Unknown name "prefixItems" at 'tools[<n>].function_declara |     3
+ secret detected: High-entropy token (possible credential) at prompt.messages[<n>].user (AI_AGENT=cla...[REDACT |     3
+ gemini returned <n>: This model models/gemini-<n>.<n>-pro is no longer available to new users. Please update y |     3
+ HTTP <n>: Gateway API key secret 'openai' not configured                                                       |     2
+ gemini returned <n>: * GenerateContentRequest.tools[<n>].function_declarations[<n>].parameters.properties[sour |     1
+ anthropic returned <n>: This model does not support assistant message prefill. The conversation must end with  |     1
+ vertex returned <n>: Please ensure that the number of function response parts is equal to the number of functi |     1
+ HTTP <n>: Gateway API key secret 'cerebras' not configured                                                     |     1
+(17 rows)
+
+ open_but_idle_7d | expired_not_ended | open_total | total | bots | ai_crawlers | scanners | behavioral_bots | revoked | ended_no_duration 
+------------------+-------------------+------------+-------+------+-------------+----------+-----------------+---------+-------------------
+                0 |                 7 |         14 |  2147 |    0 |         169 |      517 |            1620 |       1 |              1263
+(1 row)
+
+               user_id                | started_at | count 
+--------------------------------------+------------+-------
+ f52eb9c6-1dca-4148-8e47-43e322facde0 | 2026-09-09 |   121
+(1 row)
+
+ session_source | count | open | avg_secs 
+----------------+-------+------+----------
+ web            |   803 |    4 |     6439
+ api            |     2 |    0 |     6597
+ bridge         |  1070 |    7 |     6794
+ oauth          |   272 |    3 |     6762
+(4 rows)
+
+ incomplete_old | status  | count | p50_ms |       p99_ms       | max_ms 
+----------------+---------+-------+--------+--------------------+--------
+              0 | failed  |    27 |     10 |  996.7199999999999 |   1017
+              0 | success |   523 |    166 | 2017.4599999999957 |   9588
+(2 rows)
+
+  server_name   | count 
+----------------+-------
+ systemprompt   |   257
+ atlassian      |   228
+ knowledge-bank |    46
+ github         |    19
+(4 rows)
+
+ tasks | steps | steps_without_task 
+-------+-------+--------------------
+     0 |     0 |                  0
+(1 row)
+
+ level | count  
+-------+--------
+ INFO  | 437068
+ WARN  |   1333
+ ERROR |    601
+(3 rows)
+
+     d      | err | warn | info  | debug | total 
+------------+-----+------+-------+-------+-------
+ 2026-09-08 |   7 |   38 | 13564 |     0 | 13609
+ 2026-09-09 |   9 |  457 | 43809 |     0 | 44275
+ 2026-09-10 |   4 |   71 | 33069 |     0 | 33144
+ 2026-09-11 |  34 |   54 | 36266 |     0 | 36354
+ 2026-09-12 |  19 |   12 | 15318 |     0 | 15349
+ 2026-09-13 |  10 |   15 |  8836 |     0 |  8861
+ 2026-09-14 |  19 |   26 | 17928 |     0 | 17973
+ 2026-09-15 |  71 |   74 | 38914 |     0 | 39059
+ 2026-09-16 | 130 |   74 | 55891 |     0 | 56095
+ 2026-09-17 |  78 |  107 | 44479 |     0 | 44664
+ 2026-09-18 |  62 |  103 | 36433 |     0 | 36598
+ 2026-09-19 |  34 |   79 | 19616 |     0 | 19729
+ 2026-09-20 |  26 |   80 | 22517 |     0 | 22623
+ 2026-09-21 |  63 |  114 | 36385 |     0 | 36562
+ 2026-09-22 |  35 |   29 | 14043 |     0 | 14107
+(15 rows)
+
+                         module                         | count  
+--------------------------------------------------------+--------
+ systemprompt_api::gateway                              | 392599
+ systemprompt_generator::prerender::engine              |   5340
+ systemprompt_web_jobs::llms_txt                        |   4005
+ systemprompt_web_jobs::content_analytics               |   4005
+ systemprompt_web_jobs::robots                          |   4005
+ systemprompt_web_jobs::ingestion                       |   4005
+ systemprompt_api::services::proxy::engine::mcp_session |   3025
+ systemprompt_web_jobs::publish                         |   2670
+ systemprompt_web_jobs::bundle_admin_css                |   2670
+ systemprompt_web_jobs::copy_assets                     |   2670
+ systemprompt_web_jobs::sitemap                         |   2670
+ systemprompt_web_jobs::prerender                       |   2670
+ systemprompt_generator::sitemap::generator             |   1335
+ systemprompt_generator::rss::generator                 |   1335
+ systemprompt_files::jobs::file_ingestion               |   1334
+ systemprompt_scheduler::jobs::cleanup_empty_contexts   |    999
+ systemprompt_web_jobs::usage_anomaly                   |    715
+ systemprompt_scheduler::jobs::ghost_session_cleanup    |    684
+ systemprompt_scheduler::jobs::behavioral_analysis      |    666
+ systemprompt_web_jobs::usage_rollup                    |    666
+(20 rows)
+

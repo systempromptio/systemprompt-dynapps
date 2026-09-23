@@ -52,6 +52,7 @@ pub async fn list_traces(
         sort_col,
         sort_dir,
         filter.subject_ids,
+        filter.include_lifecycle,
     )
     .fetch_all(pool)
     .await?;

@@ -35,8 +35,9 @@ use crate::repositories::scope::ScopeRequest;
 use crate::types::UserContext;
 use crate::util::time_range::TimeRange;
 
+use crate::handlers::ssr::list_view::DEFAULT_PAGE_SIZE;
 pub(crate) use context::{Frame, build_context};
-pub(crate) use query::{Lens, PAGE_SIZE, ToolsQuery};
+pub(crate) use query::{Lens, ToolsQuery};
 
 // Why: what a lens page reads before it builds its context — the data and
 // the scope form, resolved against the caller's visibility.
@@ -62,8 +63,8 @@ pub(crate) async fn read_lens(
         ToolActivityPage {
             sort: q.sort(),
             descending: q.descending(),
-            limit: PAGE_SIZE,
-            offset: q.page() * PAGE_SIZE,
+            limit: DEFAULT_PAGE_SIZE,
+            offset: q.page() * DEFAULT_PAGE_SIZE,
             breakdown: q.breakdown(lens),
         },
     )

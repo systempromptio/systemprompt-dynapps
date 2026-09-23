@@ -15,12 +15,13 @@
 
 use sqlx::PgPool;
 
-use super::STALE_AFTER_DAYS;
+use super::{BRIDGE_HEARTBEAT_SECS, STALE_AFTER_DAYS};
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct FleetStats {
     pub bridges_total: i64,
-    pub bridges_active: i64,
+    pub bridges_online: i64,
+    pub bridges_seen_week: i64,
     pub bridges_stale: i64,
     pub versions: i64,
     pub pats_active: i64,
@@ -33,14 +34,19 @@ pub struct FleetStats {
 
 pub async fn get_fleet_stats(pool: &PgPool) -> Result<FleetStats, sqlx::Error> {
     let days = i32::try_from(STALE_AFTER_DAYS).unwrap_or(7);
+    let online_secs = (BRIDGE_HEARTBEAT_SECS * 2) as f64;
     let bridges = sqlx::query!(
         r#"SELECT COUNT(*) AS "total!",
                   COUNT(*) FILTER (
+                      WHERE last_heartbeat_at >= NOW() - make_interval(secs => $2::float8)
+                  ) AS "online!",
+                  COUNT(*) FILTER (
                       WHERE last_heartbeat_at >= NOW() - make_interval(days => $1)
-                  ) AS "active!",
+                  ) AS "seen_week!",
                   COUNT(DISTINCT bridge_version) AS "versions!"
              FROM bridge_sessions"#,
         days,
+        online_secs,
     )
     .fetch_one(pool)
     .await?;
@@ -64,8 +70,9 @@ pub async fn get_fleet_stats(pool: &PgPool) -> Result<FleetStats, sqlx::Error> {
 
     Ok(FleetStats {
         bridges_total: bridges.total,
-        bridges_active: bridges.active,
-        bridges_stale: bridges.total - bridges.active,
+        bridges_online: bridges.online,
+        bridges_seen_week: bridges.seen_week,
+        bridges_stale: bridges.total - bridges.seen_week,
         versions: bridges.versions,
         pats_active: creds.pats_active,
         pats_total: creds.pats_total,

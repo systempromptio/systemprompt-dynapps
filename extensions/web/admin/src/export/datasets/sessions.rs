@@ -76,6 +76,9 @@ impl DataSet for Sessions {
     fn title(&self) -> &'static str {
         "Sessions"
     }
+    fn description(&self) -> &'static str {
+        "One row per conversation in the window: person, client, model, turns, tokens and cost."
+    }
     fn columns(&self) -> &'static [Column] {
         COLUMNS
     }

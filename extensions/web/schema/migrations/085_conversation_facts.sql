@@ -5,6 +5,8 @@
 -- the single `completion` score on conversation_analyses replaces all of it,
 -- so the feedback assessment fact now reads that row and the retention sweep
 -- prunes the rollup instead of the runs.
+--
+-- @supersedes-checksum: 7402154fdbf04cb7
 
 DROP VIEW IF EXISTS evaluation_version_scores;
 DROP VIEW IF EXISTS evaluation_session_skills;
@@ -439,16 +441,22 @@ BEGIN
     RETURN deleted;
 END $$;
 
--- conversation_analysis_rows (37_), re-created so its definition matches the
--- declarative file byte for byte; the judge's columns live on the pages'
--- own queries, never on this ad-hoc view.
-DROP VIEW IF EXISTS conversation_analysis_rows;
-CREATE OR REPLACE VIEW conversation_analysis_rows AS
-SELECT r.*, a.status AS analysis_status, a.category, a.summary, a.tags, a.outcome, a.confidence,
-       a.skills_used, a.classified_at, a.model AS judge_model,
-       COALESCE((SELECT array_agg(s.skill ORDER BY s.first_at) FROM conversation_skill_uses s
-                 WHERE s.client_session_id = r.client_session_id), '{}'::text[]) AS skills_hooked
-FROM conversation_metrics_for(NULL) r
-LEFT JOIN conversation_analyses a ON a.context_id = r.context_id;
+-- conversation_analysis_rows is declarative state (37_) and the dependent
+-- phase re-establishes it on every boot, so it is not re-created here: its
+-- definition reads conversation_skill_uses, a view only that same declarative
+-- file creates, and migrations run before the dependent phase. A database
+-- that had not already booted on that schema failed the whole migration.
 
-SELECT refresh_conversation_facts(NULL);
+-- The rollup is populated from conversation_requests, which is declarative
+-- state the dependent phase establishes after every migration has run. On an
+-- established database it is already there and this fills the rollup as it
+-- always did; on one upgrading from a release that predates it there is
+-- nothing to read yet, and the first scheduled refresh fills it instead. The
+-- catalog test keeps the reference out of the parser's reach, which is the
+-- sanctioned form for a declarative object.
+DO $$
+BEGIN
+    IF to_regclass('public.conversation_requests') IS NOT NULL THEN
+        PERFORM refresh_conversation_facts(NULL);
+    END IF;
+END $$;

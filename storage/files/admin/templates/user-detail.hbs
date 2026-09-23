@@ -14,6 +14,7 @@
         {{#if can_write}}
         <button type="button" class="sp-btn sp-btn--sm sp-btn--danger" data-revoke-all="{{header.user_id}}">Sign out everywhere</button>
         {{/if}}
+        {{#if export}}{{> components/export-button export}}{{/if}}
         {{/inline}}
     {{/components/page-header}}
 
@@ -151,14 +152,14 @@
             {{#each conversations.rows}}
             <tr>
                 <td class="sp-col-conversation sp-table__cell--stacked" title="{{this.short_id}}{{#if this.side_call_count}} · {{this.side_call_count}} side call(s){{/if}}">
-                    {{#if this.detail_url}}<a href="{{this.detail_url}}" class="sp-u-link-strong">{{this.conversation_title}}</a>{{else}}<span class="sp-u-link-strong">{{this.conversation_title}}</span>{{/if}}
-                    {{#if this.snippet}}<span class="sp-u-text-xs sp-u-text-tertiary">{{truncate this.snippet 100}}</span>{{else}}<span class="sp-u-text-xs sp-u-text-tertiary sp-u-mono">{{this.short_id}}</span>{{/if}}
+                    <a href="{{this.detail_url}}" class="sp-u-link-strong">{{this.conversation_title}}</a>
+                    <span class="sp-u-text-xs sp-u-text-tertiary sp-u-mono">{{this.short_id}}{{#if this.session_url}} · <a href="{{this.session_url}}">session</a>{{/if}}</span>
                 </td>
-                <td title="{{this.source_title}} · recorded as {{this.source_kind}}">{{> components/badge tone=this.source.tone text=this.source.label}}</td>
+                <td title="{{this.source_title}}">{{> components/badge tone=this.source.tone text=this.source.label}}</td>
                 <td class="sp-table__cell--mono">{{default this.model "—"}}</td>
                 <td class="sp-table__cell--num sp-u-num">{{formatNumber this.entries_counted}}</td>
                 <td class="sp-table__cell--num sp-u-num" title="{{this.tokens_title}}">{{this.tokens_display}}</td>
-                <td class="sp-table__cell--num sp-u-num sp-u-mono">{{default this.cost_display "—"}}</td>
+                <td class="sp-table__cell--num sp-u-num sp-u-mono">{{this.cost_display}}</td>
                 <td class="sp-table__cell--date" title="{{this.when_at}}">{{this.when_relative}}</td>
             </tr>
             {{/each}}

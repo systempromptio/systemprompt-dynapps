@@ -1,13 +1,13 @@
 //! Daily and per-session usage counters.
 
 use sqlx::PgPool;
-use systemprompt::identifiers::{SessionId, UserId};
-
+use systemprompt::identifiers::{PluginId, SessionId, UserId};
 
 #[derive(Debug, Clone, Copy)]
 pub struct DailyAggregationParams<'a> {
     pub pool: &'a PgPool,
     pub user_id: &'a UserId,
+    pub plugin_id: &'a PluginId,
     pub date: &'a chrono::NaiveDate,
     pub event_type: &'a str,
     pub tool_name: Option<&'a str>,
@@ -28,10 +28,11 @@ pub async fn upsert_daily_aggregation(params: &DailyAggregationParams<'_>) {
 
     let result = sqlx::query!(
         r"INSERT INTO plugin_usage_daily
-            (id, date, user_id, event_type, tool_name, event_count, content_input_bytes, content_output_bytes, error_count)
-           VALUES ($1, $2, $3, $4, $5, 1, $6, $7, $8)
+            (id, date, user_id, plugin_id, event_type, tool_name, event_count, content_input_bytes, content_output_bytes, error_count)
+           VALUES ($1, $2, $3, $9, $4, $5, 1, $6, $7, $8)
            ON CONFLICT (date, user_id, event_type, COALESCE(tool_name, ''))
            DO UPDATE SET
+             plugin_id = COALESCE(plugin_usage_daily.plugin_id, EXCLUDED.plugin_id),
              event_count = plugin_usage_daily.event_count + 1,
              content_input_bytes = plugin_usage_daily.content_input_bytes + $6,
              content_output_bytes = plugin_usage_daily.content_output_bytes + $7,
@@ -45,6 +46,7 @@ pub async fn upsert_daily_aggregation(params: &DailyAggregationParams<'_>) {
         params.content_input_bytes,
         params.content_output_bytes,
         error_inc,
+        params.plugin_id.as_str(),
     )
     .execute(params.pool)
     .await;

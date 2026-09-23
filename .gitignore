@@ -178,6 +178,10 @@ skills-admin/
 storage/marketplace-versions/
 # Composed services bundles fetched at boot/import (profile services.cache_dir)
 storage/services-cache/
+# Report/export bundles written at runtime by the admin export routes
+storage/exports/
+# Gateway journal and other runtime state (profile gateway journal dir)
+storage/data/
 
 # Secrets and credentials
 .systemprompt/credentials.json
@@ -280,3 +284,4 @@ storage/.systemprompt/
 # CI-only: .github/actions/core-checkout materialises core here (actions/checkout
 # cannot write outside the workspace) and symlinks ../systemprompt-core onto it.
 .vendor/
+*.sql.gz

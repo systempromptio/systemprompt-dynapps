@@ -76,6 +76,8 @@ mod login_contract;
 #[cfg(test)]
 mod mcp_detail_contract;
 #[cfg(test)]
+mod pat_export_contract;
+#[cfg(test)]
 mod principal;
 #[cfg(test)]
 mod rejected_request_contract;
@@ -95,6 +97,8 @@ mod seed;
 mod self_service_contract;
 #[cfg(test)]
 mod share_contract;
+#[cfg(test)]
+mod ssr_access_control_audience_contract;
 #[cfg(test)]
 mod ssr_access_control_entities_contract;
 #[cfg(test)]

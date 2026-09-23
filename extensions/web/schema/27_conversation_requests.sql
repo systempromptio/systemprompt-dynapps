@@ -34,7 +34,7 @@ SELECT r.id, r.user_id, r.session_id, r.client_session_id, r.context_id,
        r.client_attestation, r.status,
        r.max_tokens, r.input_tokens, r.output_tokens, r.cost_microdollars,
        r.latency_ms, r.created_at, r.completed_at,
-       conversation_request_kind(r.request_kind, p.offered_tools IS NOT NULL, t.thread_requests, r.client_session_id IS NOT NULL) AS effective_kind
+       conversation_request_kind(r.request_kind, p.offered_tools_sha256 IS NOT NULL, t.thread_requests, r.client_session_id IS NOT NULL) AS effective_kind
 FROM ai_requests r
 LEFT JOIN ai_request_payloads p ON p.ai_request_id = r.id
 JOIN threads t ON t.context_id = r.context_id
@@ -69,7 +69,7 @@ WITH scoped AS (
       AND ar.actor_kind <> 'job'
       AND (context_ids IS NULL OR ar.context_id IN (SELECT unnest(context_ids)))
 ), requests AS MATERIALIZED (
-    SELECT r.*, conversation_request_kind(r.request_kind, p.offered_tools IS NOT NULL, r.thread_size, r.client_session_id IS NOT NULL) AS effective_kind
+    SELECT r.*, conversation_request_kind(r.request_kind, p.offered_tools_sha256 IS NOT NULL, r.thread_size, r.client_session_id IS NOT NULL) AS effective_kind
     FROM scoped r LEFT JOIN ai_request_payloads p ON p.ai_request_id = r.id
 ), agg AS (
     SELECT r.context_id,

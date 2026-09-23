@@ -260,7 +260,7 @@ impl PublishPipelineJob {
             ))?
             .as_ref();
 
-        tracing::info!(actor = %ctx.actor().user_id.as_str(), "Publish pipeline started");
+        tracing::debug!(actor = %ctx.actor().user_id.as_str(), "Publish pipeline started");
 
         let mut stats = PipelineStats::default();
 

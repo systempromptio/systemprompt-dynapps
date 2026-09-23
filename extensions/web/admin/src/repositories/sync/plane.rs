@@ -25,6 +25,8 @@ use systemprompt::identifiers::UserId;
 
 use crate::error::{AdminError, AdminResult};
 
+pub use super::drift_shape::{ActionCounts, DriftKpi, DriftRow, Export, PlaneDrift, resolution};
+
 /// Where a plane reads its declaration: the composed services root (every
 /// page and the boot seed), or the text of one uploaded file (an import
 /// preview, and the apply chosen from it).
@@ -139,74 +141,7 @@ pub struct ApplyOutcome {
     pub deleted: usize,
     pub entities_inserted: usize,
     pub entities_updated: usize,
-}
-
-/// One tile above the drift table.
-#[derive(Debug, Clone, Copy, Serialize)]
-pub struct DriftKpi {
-    pub label: &'static str,
-    pub value: usize,
-    pub note: &'static str,
-    pub tone: &'static str,
-}
-
-/// One line of a plane's diff table. `kind` is a stable token the page and
-/// the tests key on; the labels are for people.
-#[derive(Debug, Clone, Serialize)]
-pub struct DriftRow {
-    pub kind: &'static str,
-    pub kind_label: &'static str,
-    pub kind_tone: &'static str,
-    pub entity_type: String,
-    pub entity_type_label: String,
-    pub entity_id: String,
-    pub band: String,
-    pub band_label: &'static str,
-    pub subject: String,
-    pub in_code: String,
-    pub in_db: String,
-    pub origin: &'static str,
-    pub origin_tone: &'static str,
-    pub governed: bool,
-    pub insert_applies: bool,
-    pub overwrite_applies: bool,
-    pub overwrite_effect: &'static str,
-}
-
-/// The numbers the action buttons and their confirm dialog quote: what
-/// *Insert only* adds (rows, entity defaults), what *Overwrite* corrects and
-/// deletes, and how many of the deletions the console wrote.
-#[derive(Debug, Default, Clone, Copy, Serialize)]
-pub struct ActionCounts {
-    pub insert: usize,
-    pub insert_entities: usize,
-    pub update: usize,
-    pub delete: usize,
-    pub delete_console: usize,
-}
-
-/// A plane's declared-versus-database picture, ready to render. `unreadable`
-/// carries the message when the declaration could not be read; it is the
-/// card's headline, not an error.
-#[derive(Debug, Default, Clone, Serialize)]
-pub struct PlaneDrift {
-    pub declared_hash: String,
-    pub declared_count: usize,
-    pub in_db: usize,
-    pub kpis: Vec<DriftKpi>,
-    pub actions: ActionCounts,
-    pub rows: Vec<DriftRow>,
-    pub is_clean: bool,
-    pub unreadable: Option<String>,
-}
-
-/// A declaration rendered back out of the database as its file.
-#[derive(Debug, Clone, Serialize)]
-pub struct Export {
-    pub filename: &'static str,
-    pub content_type: &'static str,
-    pub body: String,
-    pub row_count: usize,
+    pub entities_retired: usize,
 }
 
 #[async_trait]

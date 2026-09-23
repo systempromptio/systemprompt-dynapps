@@ -1,11 +1,11 @@
 //! Typed template context for the conversation-history page.
 
 use serde::Serialize;
-use systemprompt::identifiers::{SessionId, UserId};
+use systemprompt::identifiers::{ContextId, UserId};
 
 use crate::handlers::ssr::format::ClientChipView;
 use crate::handlers::ssr::list_view::Pagination;
-use crate::handlers::ssr::types::BreadcrumbView;
+use crate::handlers::ssr::types::{BreadcrumbView, TabLinkView};
 
 #[derive(Debug, Serialize)]
 pub(super) struct HistoryPageContext {
@@ -18,6 +18,11 @@ pub(super) struct HistoryPageContext {
     pub rows: Vec<HistoryRowView>,
     pub show_side: bool,
     pub side_toggle_url: String,
+    pub window_links: Vec<TabLinkView>,
+    pub window_label: String,
+    // Why: the search forms submit with GET, so the window rides along as
+    // hidden inputs or a search would silently widen to all time.
+    pub window_inputs: Vec<HiddenInputView>,
     pub base_url: &'static str,
     pub pagination: Pagination,
     pub breadcrumbs: Vec<BreadcrumbView>,
@@ -25,17 +30,22 @@ pub(super) struct HistoryPageContext {
 }
 
 #[derive(Debug, Serialize)]
+pub(super) struct HiddenInputView {
+    pub name: &'static str,
+    pub value: String,
+}
+
+#[derive(Debug, Serialize)]
 pub(crate) struct HistoryRowView {
     // Why: the chip names the client that recorded the conversation
     // (Claude Code, OpenCode, an API client…) and its tone says how strongly
-    // the gateway evidenced it; `source_kind` keeps the storage side for
-    // tooltips and tests.
+    // the gateway evidenced it.
     pub source: ClientChipView,
     pub source_title: String,
-    pub source_kind: &'static str,
-    pub is_gateway: bool,
-    pub session_id: Option<SessionId>,
     pub short_id: String,
+    // Why: the row's selection key — the id the bulk bar's export and
+    // full-record download read.
+    pub context_id: ContextId,
     // Why: named for what it is. A partial hash parameter shadows a field of
     // the same name at every depth (the layout now takes `page_title`, but
     // the row name stays specific so no later hash can collide with it).
@@ -50,10 +60,9 @@ pub(crate) struct HistoryRowView {
     pub side_call_count: i64,
     pub tokens_display: String,
     pub tokens_title: String,
-    pub cost_display: Option<String>,
-    pub snippet: Option<String>,
-    // Why: the gateway detail page is owner-facing, so every viewer gets a
-    // link; the transcript detail page is the admin session view, so only an
-    // admin does.
-    pub detail_url: Option<String>,
+    pub cost_display: String,
+    pub detail_url: String,
+    // Why: the session view is admin-gated, so only an admin gets the link
+    // to the client session the conversation ran in.
+    pub session_url: Option<String>,
 }

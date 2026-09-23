@@ -15,7 +15,7 @@ use crate::repositories::governance::secret_audit_log::SecretAuditStats;
 pub(super) struct SecretAuditKpiView {
     pub(super) label: &'static str,
     pub(super) value: String,
-    pub(super) sub: &'static str,
+    pub(super) note: &'static str,
     pub(super) tone: &'static str,
     pub(super) href: String,
     pub(super) active: bool,
@@ -51,7 +51,7 @@ pub(super) fn kpis(stats: &SecretAuditStats, query: &SecretsQuery) -> Vec<Secret
         SecretAuditKpiView {
             label: "Entries",
             value: stats.entries.to_string(),
-            sub: "recorded actions",
+            note: "recorded actions",
             tone: "",
             href: url_for(query, None, 0),
             active: query.action.is_none(),
@@ -60,7 +60,7 @@ pub(super) fn kpis(stats: &SecretAuditStats, query: &SecretsQuery) -> Vec<Secret
         SecretAuditKpiView {
             label: "Variables",
             value: stats.variables.to_string(),
-            sub: "distinct secrets touched",
+            note: "distinct secrets touched",
             tone: "",
             href: url_for(query, None, 0),
             active: false,
@@ -69,7 +69,7 @@ pub(super) fn kpis(stats: &SecretAuditStats, query: &SecretsQuery) -> Vec<Secret
         SecretAuditKpiView {
             label: "Actors",
             value: stats.actors.to_string(),
-            sub: "people who acted",
+            note: "people who acted",
             tone: "",
             href: url_for(query, None, 0),
             active: false,
@@ -78,7 +78,7 @@ pub(super) fn kpis(stats: &SecretAuditStats, query: &SecretsQuery) -> Vec<Secret
         SecretAuditKpiView {
             label: "Reads",
             value: stats.accesses.to_string(),
-            sub: "decrypt events",
+            note: "decrypt events",
             tone: "warn",
             href: url_for(query, Some("accessed"), 0),
             active: query.action.as_deref() == Some("accessed"),
@@ -87,7 +87,7 @@ pub(super) fn kpis(stats: &SecretAuditStats, query: &SecretsQuery) -> Vec<Secret
         SecretAuditKpiView {
             label: "Rotations",
             value: stats.rotations.to_string(),
-            sub: "credentials replaced",
+            note: "credentials replaced",
             tone: "ok",
             href: url_for(query, Some("rotated"), 0),
             active: query.action.as_deref() == Some("rotated"),
@@ -96,7 +96,7 @@ pub(super) fn kpis(stats: &SecretAuditStats, query: &SecretsQuery) -> Vec<Secret
         SecretAuditKpiView {
             label: "Third party",
             value: stats.third_party.to_string(),
-            sub: "actor was not the owner",
+            note: "actor was not the owner",
             tone: if stats.third_party > 0 { "err" } else { "ok" },
             href: url_for(query, None, 0),
             active: false,

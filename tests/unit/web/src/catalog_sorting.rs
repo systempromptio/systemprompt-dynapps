@@ -104,12 +104,12 @@ fn the_declaration_is_read_before_the_heartbeat() {
 }
 
 // Why: the liveness third is the overview rule verbatim, so the labels here are
-// that rule's own — "No sessions", not a second wording for the same state.
+// that rule's own — "Idle", not a second wording for the same state.
 #[test]
 fn a_declared_and_enabled_server_reports_the_shared_liveness_state() {
     assert_eq!(status_of(true, true, recent()).0, "Alive");
     assert_eq!(status_of(true, true, stale()).0, "Stale");
-    assert_eq!(status_of(true, true, None).0, "No sessions");
+    assert_eq!(status_of(true, true, None).0, "Idle");
 }
 
 #[test]

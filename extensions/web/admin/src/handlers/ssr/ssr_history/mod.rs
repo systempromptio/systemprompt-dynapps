@@ -20,35 +20,39 @@
 mod context;
 mod conversation;
 mod kind;
+mod search;
 mod view;
+mod window;
 
 pub(crate) use context::HistoryRowView;
 pub(crate) use conversation::history_conversation_page;
 pub(crate) use kind::HistoryView;
+pub(crate) use search::history_search;
 pub use view::command_name;
 pub(crate) use view::row_view;
 
 use std::sync::Arc;
 
-use axum::Json;
-use axum::extract::{Extension, Query, State};
-use axum::response::{IntoResponse, Response};
-use serde::{Deserialize, Serialize};
+use axum::extract::{Query, State};
+use axum::response::Response;
+use serde::Deserialize;
 use sqlx::PgPool;
-use systemprompt::identifiers::{ContextId, SessionId, UserId};
+use systemprompt::identifiers::UserId;
 
-use crate::error::{AdminError, AdminHtmlResult, AdminResult};
+use crate::error::{AdminError, AdminHtmlResult};
+use crate::export::model::ExportWindow;
+use crate::export::view::TranscriptSource;
 use crate::handlers::ssr::list_view::PageWindow;
 use crate::repositories::analytics::conversations::{
-    HistoryFilter, HistoryItem, HistoryScope, list_history_items, redact_text,
+    HistoryFilter, HistoryItem, HistoryScope, list_history_items,
 };
 use crate::types::UserContext;
 
+use crate::handlers::ssr::list_view::DEFAULT_PAGE_SIZE;
 use crate::handlers::ssr::page::Page;
-use context::HistoryPageContext;
-use view::{build_pagination, detail_url, scope_label, side_toggle_url};
-
-const PAGE_SIZE: i64 = 50;
+use context::{HiddenInputView, HistoryPageContext};
+use view::{build_pagination, scope_label, side_toggle_url, window_links};
+use window::HistoryWindow;
 
 #[derive(Debug, Default, Deserialize)]
 pub(crate) struct HistoryQuery {
@@ -56,41 +60,17 @@ pub(crate) struct HistoryQuery {
     user_id: Option<UserId>,
     page: Option<i64>,
     side: Option<String>,
+    // Why: the window — a preset `days`, or a custom `start`/`end` — bounds a
+    // conversation's last activity; none of them means all time.
+    days: Option<u32>,
+    start: Option<String>,
+    end: Option<String>,
 }
 
 impl HistoryQuery {
     fn show_side(&self) -> bool {
         self.side.as_deref() == Some("1")
     }
-}
-
-#[derive(Debug, Serialize)]
-struct HistorySearchItem {
-    source: &'static str,
-    session_id: Option<SessionId>,
-    context_id: Option<ContextId>,
-    user_id: UserId,
-    ai_title: Option<String>,
-    preview: Option<String>,
-    model: Option<String>,
-    started_at: Option<String>,
-    captured_at: String,
-    entries_counted: i64,
-    total_input_tokens: i64,
-    total_output_tokens: i64,
-    cost_microdollars: i64,
-    side_call_count: i64,
-    rank: Option<f32>,
-    snippet: Option<String>,
-    detail_url: Option<String>,
-}
-
-#[derive(Debug, Serialize)]
-struct HistorySearchEnvelope {
-    items: Vec<HistorySearchItem>,
-    total: i64,
-    page: i64,
-    page_size: i64,
 }
 
 struct HistorySlice {
@@ -100,6 +80,28 @@ struct HistorySlice {
     page: i64,
 }
 
+// Why: the viewer's scope, narrowed to one user when the query names one they
+// may see; naming one outside it is a 403 on the page and the export alike.
+fn scope_user_ids(
+    scope: &HistoryScope,
+    query: &HistoryQuery,
+    verb: &str,
+) -> Result<Option<Vec<String>>, AdminError> {
+    let target = query
+        .user_id
+        .as_ref()
+        .filter(|u| !u.as_str().trim().is_empty());
+    match target {
+        Some(target_id) if scope.may_view(target_id) => {
+            Ok(Some(vec![target_id.as_str().to_owned()]))
+        },
+        Some(_) => Err(AdminError::Forbidden(format!(
+            "You may only {verb} conversation history within your own scope."
+        ))),
+        None => Ok(scope.user_ids()),
+    }
+}
+
 async fn fetch_history_slice(
     pool: &PgPool,
     user_ctx: &UserContext,
@@ -107,23 +109,8 @@ async fn fetch_history_slice(
     view: HistoryView,
 ) -> Result<HistorySlice, AdminError> {
     let scope = view.scope(user_ctx);
-
-    let target = query
-        .user_id
-        .as_ref()
-        .filter(|u| !u.as_str().trim().is_empty());
-    let scope_ids = match target {
-        Some(target_id) => {
-            if !scope.may_view(target_id) {
-                return Err(AdminError::Forbidden(
-                    "You may only view conversation history within your own scope.".to_owned(),
-                ));
-            }
-            Some(vec![target_id.as_str().to_owned()])
-        },
-        None => scope.user_ids(),
-    };
-
+    let scope_ids = scope_user_ids(&scope, query, "view")?;
+    let (since, until) = HistoryWindow::of(query).bounds();
     let page = query.page.unwrap_or(0).max(0);
     let (items, total) = list_history_items(
         pool,
@@ -131,9 +118,11 @@ async fn fetch_history_slice(
             scope_user_ids: scope_ids.as_deref(),
             search: query.q.as_deref(),
             include_side_calls: query.show_side(),
+            since,
+            until,
         },
-        PAGE_SIZE,
-        page * PAGE_SIZE,
+        DEFAULT_PAGE_SIZE,
+        page * DEFAULT_PAGE_SIZE,
     )
     .await?;
     Ok(HistorySlice {
@@ -145,81 +134,46 @@ async fn fetch_history_slice(
 }
 
 // Why: the export is the listing the reader sees — their own scope, the same
-// search — through the page's own query type.
+// search — through the page's own query type. The dialog's resolved window
+// wins; without one the rows follow the page's own window.
+// What an export asks of the history listing, as opposed to who is asking.
+pub(crate) struct ExportRequest {
+    pub query: HistoryQuery,
+    pub view: HistoryView,
+    pub window: Option<ExportWindow>,
+    pub limit: i64,
+}
+
 pub(crate) async fn export_rows(
     pool: &PgPool,
     user_ctx: &UserContext,
-    query: HistoryQuery,
-    view: HistoryView,
-    limit: i64,
+    request: ExportRequest,
 ) -> Result<(Vec<HistoryItem>, i64), AdminError> {
-    let query = HistoryQuery {
-        page: None,
-        ..query
-    };
+    let ExportRequest {
+        query,
+        view,
+        window,
+        limit,
+    } = request;
     let scope = view.scope(user_ctx);
-    let target = query
-        .user_id
-        .as_ref()
-        .filter(|u| !u.as_str().trim().is_empty());
-    let scope_ids = match target {
-        Some(target_id) if scope.may_view(target_id) => Some(vec![target_id.as_str().to_owned()]),
-        Some(_) => {
-            return Err(AdminError::Forbidden(
-                "You may only export conversation history within your own scope.".to_owned(),
-            ));
-        },
-        None => scope.user_ids(),
-    };
+    let scope_ids = scope_user_ids(&scope, &query, "export")?;
+    let (since, until) = window.map_or_else(
+        || HistoryWindow::of(&query).bounds(),
+        |w| (Some(w.from), Some(w.to)),
+    );
     Ok(list_history_items(
         pool,
         HistoryFilter {
             scope_user_ids: scope_ids.as_deref(),
             search: query.q.as_deref(),
             include_side_calls: query.show_side(),
+            since,
+            until,
         },
         limit,
         0,
     )
     .await?)
-}
-
-pub(crate) async fn history_search(
-    Extension(user_ctx): Extension<UserContext>,
-    State(pool): State<Arc<PgPool>>,
-    Query(query): Query<HistoryQuery>,
-) -> AdminResult<Response> {
-    let slice = fetch_history_slice(&pool, &user_ctx, &query, HistoryView::Own).await?;
-    let items = slice
-        .items
-        .into_iter()
-        .map(|item| HistorySearchItem {
-            source: item.source.label(),
-            detail_url: detail_url(&item, &user_ctx, HistoryView::Own),
-            session_id: item.session_id.clone(),
-            context_id: item.context_id.clone(),
-            user_id: item.user_id,
-            ai_title: item.title,
-            preview: item.preview.map(|s| redact_text(&s).0),
-            model: item.model,
-            started_at: item.started_at.map(|t| t.to_rfc3339()),
-            captured_at: item.last_at.to_rfc3339(),
-            entries_counted: item.turns,
-            total_input_tokens: item.total_input_tokens,
-            total_output_tokens: item.total_output_tokens,
-            cost_microdollars: item.cost_microdollars,
-            side_call_count: item.side_call_count,
-            rank: item.rank,
-            snippet: item.snippet.map(|s| redact_text(&s).0),
-        })
-        .collect();
-    Ok(Json(HistorySearchEnvelope {
-        items,
-        total: slice.total,
-        page: slice.page,
-        page_size: PAGE_SIZE,
-    })
-    .into_response())
 }
 
 pub(crate) async fn history_page(
@@ -255,12 +209,13 @@ async fn render_listing(
 
     let window = PageWindow::new(
         slice.page,
-        PAGE_SIZE,
+        DEFAULT_PAGE_SIZE,
         slice.total,
-        i64::try_from(rows.len()).unwrap_or(PAGE_SIZE),
+        i64::try_from(rows.len()).unwrap_or(DEFAULT_PAGE_SIZE),
         "conversations",
     );
     let base = view.base_url();
+    let history_window = HistoryWindow::of(query);
     let data = HistoryPageContext {
         page: view.page_id(),
         title: view.title(),
@@ -271,17 +226,17 @@ async fn render_listing(
         rows,
         show_side: query.show_side(),
         side_toggle_url: side_toggle_url(query, base),
+        window_links: window_links(query, base),
+        window_label: history_window.label(),
+        window_inputs: history_window
+            .pairs()
+            .into_iter()
+            .map(|(name, value)| HiddenInputView { name, value })
+            .collect(),
         base_url: base,
         pagination: build_pagination(query, window, base),
         breadcrumbs: view.breadcrumbs(),
-        export: crate::export::ExportView::single(
-            view.dataset(),
-            &crate::export::view::query_string(&[
-                ("q", query.q.as_deref()),
-                ("user_id", query.user_id.as_ref().map(UserId::as_str)),
-                ("side", query.side.as_deref()),
-            ]),
-        ),
+        export: export_view(query, view, &history_window),
     };
     Ok(crate::handlers::ssr::render_typed_page(
         &shell.engine,
@@ -290,4 +245,27 @@ async fn render_listing(
         &shell.user,
         &shell.marketplace,
     ))
+}
+
+// Why: the export opens on the listing the reader is looking at — the same
+// search, user, side calls and window — and offers the full record of every
+// conversation it selects.
+fn export_view(
+    query: &HistoryQuery,
+    view: HistoryView,
+    window: &HistoryWindow,
+) -> crate::export::ExportView {
+    let window_pairs = window.export_pairs();
+    let mut pairs = vec![
+        ("q", query.q.as_deref()),
+        ("user_id", query.user_id.as_ref().map(UserId::as_str)),
+        ("side", query.side.as_deref()),
+    ];
+    pairs.extend(window_pairs.iter().map(|(k, v)| (*k, Some(v.as_str()))));
+    let source = match view {
+        HistoryView::Org => TranscriptSource::Conversations,
+        HistoryView::Own => TranscriptSource::History,
+    };
+    crate::export::ExportView::single(view.dataset(), &crate::export::view::query_string(&pairs))
+        .with_transcripts(source)
 }

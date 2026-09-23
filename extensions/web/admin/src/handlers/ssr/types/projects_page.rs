@@ -8,6 +8,8 @@
 //! its own label saying so.
 
 use serde::Serialize;
+
+use super::table::SortHeaderView;
 use systemprompt::identifiers::{SessionId, UserId};
 use systemprompt_web_shared::ProjectId;
 
@@ -28,18 +30,6 @@ pub(crate) struct ProjectKpiView {
     pub tone: &'static str,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub href: Option<String>,
-}
-
-// Why: one sortable column header, as `components/sort-header` reads it.
-#[derive(Debug, Clone, Serialize)]
-pub(crate) struct ProjectSortHeaderView {
-    pub label: &'static str,
-    pub class: &'static str,
-    pub hint: &'static str,
-    pub url: String,
-    pub active: bool,
-    pub aria_sort: &'static str,
-    pub indicator: &'static str,
 }
 
 // Why: one project on the listing.
@@ -93,17 +83,17 @@ pub(crate) struct ProjectsPageData {
 // name and the column set is checked when the page compiles.
 #[derive(Debug, Serialize)]
 pub(crate) struct ProjectSortHeaders {
-    pub name: ProjectSortHeaderView,
-    pub members: ProjectSortHeaderView,
-    pub groups: ProjectSortHeaderView,
-    pub requests: ProjectSortHeaderView,
-    pub tokens: ProjectSortHeaderView,
-    pub cost: ProjectSortHeaderView,
-    pub models: ProjectSortHeaderView,
-    pub clients: ProjectSortHeaderView,
-    pub tools: ProjectSortHeaderView,
-    pub skills: ProjectSortHeaderView,
-    pub artifacts: ProjectSortHeaderView,
+    pub name: SortHeaderView,
+    pub members: SortHeaderView,
+    pub groups: SortHeaderView,
+    pub requests: SortHeaderView,
+    pub tokens: SortHeaderView,
+    pub cost: SortHeaderView,
+    pub models: SortHeaderView,
+    pub clients: SortHeaderView,
+    pub tools: SortHeaderView,
+    pub skills: SortHeaderView,
+    pub artifacts: SortHeaderView,
 }
 
 // Why: one tool the project ran, with the share that did not succeed.
@@ -204,4 +194,5 @@ pub(crate) struct ProjectDetailPageData {
     pub usage: Option<ProjectUsageTabView>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub settings: Option<ProjectSettingsTabView>,
+    pub export: crate::export::ExportView,
 }

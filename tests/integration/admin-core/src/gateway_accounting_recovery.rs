@@ -92,7 +92,7 @@ async fn terminal_receipt_survives_database_failure_and_replays_without_duplicat
         systemprompt::agent::repository::ContextRepository::new(&pool).expect("context repo"),
     ));
     let journal = systemprompt::api::services::gateway::audit::journal::GatewayJournal::open(
-        systemprompt::config::ProfileBootstrap::get_path().expect("profile bootstrapped"),
+        profile.path(),
         systemprompt::config::SecretsBootstrap::get().expect("secrets bootstrapped"),
     )
     .expect("gateway journal opens");

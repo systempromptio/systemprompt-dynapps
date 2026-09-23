@@ -56,7 +56,7 @@ pub(super) struct PluginListRow {
 pub(super) struct CatalogKpiView {
     pub(super) label: &'static str,
     pub(super) value: String,
-    pub(super) sub: String,
+    pub(super) note: String,
     pub(super) tone: &'static str,
 }
 

@@ -17,7 +17,7 @@ impl ContentAnalyticsAggregationJob {
     pub async fn execute_with_pool(pool: &PgPool) -> Result<JobResult, JobError> {
         let start = std::time::Instant::now();
 
-        tracing::info!("Content analytics aggregation started");
+        tracing::debug!("Content analytics aggregation started");
 
         let stats = content_rollup::aggregate_engagement_stats(pool).await?;
         let total_count = stats.len();
@@ -119,7 +119,7 @@ impl Job for ContentAnalyticsAggregationJob {
         &self,
         ctx: &JobContext,
     ) -> Result<JobResult, systemprompt::traits::ProviderError> {
-        tracing::info!(actor = %ctx.actor().user_id.as_str(), "Content analytics aggregation invoked");
+        tracing::debug!(actor = %ctx.actor().user_id.as_str(), "Content analytics aggregation invoked");
 
         let db = ctx
             .db_pool::<DbPool>()

@@ -20,7 +20,7 @@ use serde::Deserialize;
 use systemprompt::config::ProfileBootstrap;
 use systemprompt::models::profile::{Environment, ProfileType};
 
-use super::adfs_auth::{AdfsDeps, SessionSubject, mint_session, session_cookie};
+use super::adfs_auth::{AdfsDeps, SessionSubject, mint_session, record_login, session_cookie};
 use crate::repositories::dev_login::consume_dev_login_code;
 
 pub const DEV_LOGIN_PATH: &str = "/admin/auth/dev/login";
@@ -75,14 +75,15 @@ pub(crate) async fn dev_login_redeem(
 
     let user_id = user.user_id.clone();
     let email = user.email.clone();
-    let (jwt, max_age) =
-        match mint_session(&deps.session_service, &SessionSubject::from(user), &headers).await {
-            Ok(minted) => minted,
-            Err(e) => {
-                tracing::error!(error = %e, user_id = %user_id, "dev login session mint failed");
-                return Err(DevLoginRejected);
-            },
-        };
+    let subject = SessionSubject::from(user);
+    let (jwt, max_age) = match mint_session(&deps.session_service, &subject, &headers).await {
+        Ok(minted) => minted,
+        Err(e) => {
+            tracing::error!(error = %e, user_id = %user_id, "dev login session mint failed");
+            return Err(DevLoginRejected);
+        },
+    };
+    record_login(&deps.write_pool, &subject).await;
 
     tracing::info!(user_id = %user_id, email = %email, "dev login code redeemed");
 

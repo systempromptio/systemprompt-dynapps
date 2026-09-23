@@ -4,7 +4,7 @@ use std::borrow::Cow;
 
 use crate::types::webhook::{HookEvent, HookEventPayload, ToolInputSummary};
 
-use super::helpers::truncate;
+use systemprompt_web_shared::format::truncate_ellipsis as truncate;
 
 pub(super) fn generate_description(payload: &HookEventPayload) -> Cow<'static, str> {
     match &payload.event {

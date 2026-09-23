@@ -90,10 +90,7 @@ pub(super) fn build_context(
         ),
         back_url: ANALYSIS_CONVERSATIONS_URL,
         help: crate::handlers::ssr::analysis::help::conversation_detail_help(),
-        export: crate::export::ExportView::single(
-            "analysis-conversation-turns",
-            &format!("context_id={}", urlencoding::encode(f.context_id.as_str())),
-        ),
+        export: crate::export::ExportView::conversation(&f.context_id, true),
         judge: judge_view(
             f,
             format!("{}/judge", analysis_conversation_url(&f.context_id)),
@@ -108,7 +105,10 @@ pub(super) fn build_context(
         artifacts: artifact_views(tools),
         tool_calls: tools.iter().map(tool_view).collect(),
         decisions: decisions.iter().map(decision_view).collect(),
+        decision_count: decisions.len(),
         skills: skills.iter().map(skill_view).collect(),
+        skill_count: skills.len(),
         safety: safety.iter().map(safety_view).collect(),
+        safety_count: safety.len(),
     }
 }

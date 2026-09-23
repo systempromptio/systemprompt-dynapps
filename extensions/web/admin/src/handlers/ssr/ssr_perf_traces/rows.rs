@@ -49,6 +49,8 @@ pub(super) struct TraceRow {
     has_error: bool,
     error_count: i64,
     has_deny: bool,
+    kind: String,
+    is_hook_only: bool,
     detail_url: String,
 }
 
@@ -63,7 +65,7 @@ pub(super) fn trace_to_json(t: &TraceSummary) -> TraceRow {
         started_at_time: started_local.format("%H:%M:%S").to_string(),
         started_at_day: started_local.format("%b %-d").to_string(),
         active_ms: t.active_ms,
-        active_display: format_duration_ms(t.active_ms),
+        active_display: active_display(t),
         window_display: format_duration_ms(t.window_ms),
         user_id: t.user_id.clone(),
         user_label: t.user_label.clone().unwrap_or_else(|| {
@@ -92,8 +94,20 @@ pub(super) fn trace_to_json(t: &TraceSummary) -> TraceRow {
         has_error: t.has_error,
         error_count: t.error_count,
         has_deny: t.has_deny,
+        kind: t.kind.clone(),
+        is_hook_only: t.kind == "hook",
         detail_url: format!("{BASE_URL}/{}", urlencode(t.session_id.as_str())),
     }
+}
+
+// Why: `active_ms` is summed request latency, so a trace that issued no
+// request has no duration to report. `0 ms` would read as a measurement — the
+// em dash says there is nothing to measure, as the cost and token cells do.
+fn active_display(t: &TraceSummary) -> String {
+    if t.request_count == 0 {
+        return "—".to_owned();
+    }
+    format_duration_ms(t.active_ms)
 }
 
 fn ellipsize(s: &str, max: usize) -> String {

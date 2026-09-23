@@ -16,7 +16,7 @@
 //! burn budget.
 //!
 //! Two gates: the scheduler entry's `enabled:` and the profile's
-//! `evaluation.automatic`, which switches off every background judge spend at
+//! `judge.automatic`, which switches off every background judge spend at
 //! once. A manual `-p context_id=<id>` run bypasses the latter.
 
 mod classifier;
@@ -248,7 +248,7 @@ impl Job for ConversationJudgeJob {
         let params = JudgeParams::from_context(ctx)?;
         let automatic = ProfileBootstrap::get()
             .map_err(JobError::from)?
-            .evaluation
+            .judge
             .automatic;
         let Some(ai) = app.ai_service_arc() else {
             return Ok(

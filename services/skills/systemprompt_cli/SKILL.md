@@ -76,29 +76,92 @@ These are the flags on the commands behind the typed tools. Use the table; do no
 | `admin users search <text>` | `--limit`, `--include-anonymous` |
 | `infra logs governance report` | `--since`, `--group-by policy\|tool\|user`, `--limit`, `--format table\|csv` |
 | `infra logs trace list` | `--since`, `--agent`, `--status`, `--tool`, `--decision`, `--has-mcp`, `--all`, `--limit/-n` |
+| `admin users role assign <user-id>` | `--roles <role>[,<role>]` — the only roles are `admin`, `user`, `anonymous`. There is no `developer`, `member` or `viewer`; "platform admin" is the `admin` role plus platform-organization membership, which the deployment grants and no CLI command does |
+| `admin users api-key issue` | `--user <id>`, `--name <label>`, `--expires <RFC3339>` — the secret prints once. `api-key list --user <id>`, `api-key revoke --user <id> --id <key-id>` |
+
+`infra logs request list` has **no** `--offset` and no `--export`: it pages with
+`--before <cursor>` (each row carries its own `cursor`) and never writes a file. To reach
+an earlier window set `--since` and `--until` rather than paging back to it. Only
+`analytics requests list` takes `--offset`.
 
 Time values: a duration back from now (`30m`, `1h`, `24h`, `7d`) or an absolute `YYYY-MM-DD` / `YYYY-MM-DDTHH:MM:SS`. `--until` takes the same forms and is exclusive.
 
 A cursor is `<created_at RFC3339>@<request_id>`; every `request list` row carries its own in the `cursor` field, and `--before` takes the last row's.
 
-### The 8 domains
+### The 8 domains, and every verb each one has
 
 ```
-systemprompt <domain> <subcommand> [args] [options]
+systemprompt <domain> <subcommand> [verb] [args] [options]
 ```
 
-| Domain | Purpose |
-|--------|---------|
-| `core` | Skills, content, files, contexts, plugins, hooks, artifacts |
-| `infra` | Services, database, jobs, logs (view, stream, request, trace, audit, governance) |
-| `admin` | Users, agents, config, setup, session |
-| `cloud` | Auth, deploy, sync, secrets, tenant, domain, profiles |
-| `analytics` | Overview, conversations, agents, tools, requests, sessions, content, traffic, costs |
-| `web` | Content-types, templates, assets, sitemap, validate |
-| `plugins` | Extensions, MCP servers, capabilities |
-| `build` | Build the core workspace and MCP extensions |
+This is the whole tree as the binary defines it. A verb that is not listed here does not
+exist — guessing one costs a failed tool call and an error the caller sees. Where a
+subcommand has verbs, one of them is required unless noted.
 
-Most `analytics` subcommands need a further verb: `analytics costs summary`, `analytics requests stats`, `analytics agents list`, `analytics tools list`. `analytics costs` and `analytics requests` default to their summary; `agents` and `tools` do not.
+**`core`** — `artifacts` (list, show) · `content` (list, show, search, edit, delete,
+delete-source, popular, verify, status, link, analytics, files) · `files` (list, show,
+upload, delete, validate, config, search, stats, ai) · `contexts` (list, show, create,
+edit, delete, use, new) · `skills` (list, show) · `plugins` (list, show, validate,
+generate) · `marketplace` (explain, import) · `hooks` (list, validate) · `services`
+(validate, bundle, keygen, publish, refresh, inspect)
+
+**`infra`** — `services` · `db` (query, execute, tables, describe, info, migrate,
+migrate-down, migrations, migrate-plan, migrate-status, migrate-repair,
+migrate-mark-applied, assign-admin, status, count, indexes, size, doctor) · `jobs`
+(list, show, run, history, enable, disable, cleanup-sessions, log-cleanup,
+session-cleanup) · `logs` (view, search, stream, export, cleanup, delete, summary, show,
+trace, governance, request, tools, audit)
+
+`infra logs` sub-trees: `request` (list, show, stats) · `trace` (list, show) ·
+`governance` (report) · `tools` (list). `audit <request-id>` takes the id directly.
+
+**`admin`** — `users` · `agents` · `config` · `setup` · `bootstrap` · `session` (show,
+list, login, logout) · `bridge` (enroll-cert, issue-code, list, rotate-signing-key) ·
+`access-control` (export-yaml, lint) · `keys` (generate, issue-plugin-token) · `identity`
+(generate). There is no `admin report` and no top-level `admin_report` command — the
+dashboard is the `admin_report` **MCP tool**, not a CLI subcommand.
+
+`admin users`: list, show, search, create, update, delete, count, export, stats, merge,
+bulk (delete, update), role (assign, promote, demote), session (list, end, cleanup), ban
+(list, add, remove, check, cleanup), webauthn (generate-setup-token), api-key (issue,
+list, revoke). Note `role` has no `list` — read a user's roles with
+`admin users show <id>` — and `api-key` issues with `issue`, not `create`.
+
+`admin config`: show, list, validate, rate-limits, server, runtime, security, services,
+paths, provider, gateway, governance, catalog, secret. The sub-trees that have verbs:
+`gateway` (enable, disable, route {add, remove, list}, default-provider {set, clear} —
+there is **no** `config gateway show`; `admin config show` prints the whole config),
+`provider` (list, set, enable, disable), `catalog` (provider {list, add}, model {add},
+discovery), `governance` (show, set), `security` (show, set, trusted-issuer add),
+`server` (show, set, cors {list, add, remove}), `runtime` (show, set), `services` (show,
+set), `paths` (show, validate), `secret` (set, check), `rate-limits` (show, set, enable,
+disable, validate, reset, preset {list, show, apply}, export, import, diff).
+
+**`analytics`** — `projection` (status, rebuild) · `overview` · `conversations` (stats,
+trends, list) · `agents` (stats, list, trends, show) · `tools` (stats, list, trends,
+show) · `requests` (stats, list, trends, models) · `sessions` (stats, trends, live) ·
+`content` (stats, top, popular, trends) · `traffic` (sources, pages, navigation, geo,
+devices, bots) · `costs` (summary, trends, breakdown).
+
+`costs` and `requests` default to their summary/stats aggregate when no verb is given;
+`sessions`, `tools`, `agents`, `conversations`, `content`, `traffic` and `projection`
+each require one. There is no `costs users` — spend per user is
+`costs breakdown --by user`. There is no `tools usage` — use `tools stats` or
+`tools list`. There is no bare `sessions --since`: pick `sessions stats`,
+`sessions trends` or `sessions live`.
+
+**`cloud`** — `auth` (logout, whoami) · `init` · `tenant` (create, list, delete,
+rotate-credentials) · `profile` (create, list, delete, edit) · `deploy` · `backup` ·
+`doctor` · `status` · `dockerfile`
+
+**`web`** — `content-types` (list, show, create, edit, delete) · `templates` (list, show,
+create, edit, delete) · `assets` (list, show) · `sitemap` (show, generate) · `validate`
+
+**`plugins`** — `list` · `show` · `run` · `validate` · `config` · `capabilities` (jobs,
+templates, schemas, tools, roles) · `mcp` (list, status, validate, logs, list-packages,
+tools, call)
+
+**`build`** — `core` · `mcp`
 
 Walk the help tree when a task is outside the tables above:
 
@@ -118,7 +181,7 @@ systemprompt analytics costs --help       # a subcommand's own verbs
 | Who is on the platform, by role and status | `users` tool / `systemprompt admin users stats` |
 | Deep-dive one request and its trace | `conversation_audit` tool / `systemprompt infra logs trace show <trace-id>` |
 | Providers, routing and jobs | `systemprompt admin config` / `infra jobs list` |
-| Change a user's roles | `systemprompt admin users role promote\|demote <user-id>` |
+| Change a user's roles | `systemprompt admin users role promote\|demote <user-id>`, or `role assign <user-id> --roles admin\|user\|anonymous` |
 | Start/inspect services, database, and jobs | `systemprompt infra services status` / `infra db` / `infra jobs` |
 
 ### Examples

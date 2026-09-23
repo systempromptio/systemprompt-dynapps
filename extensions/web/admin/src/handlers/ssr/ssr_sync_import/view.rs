@@ -48,6 +48,8 @@ pub(crate) struct ImportPreviewPageData {
     pub planes: Vec<PlaneCardView>,
     pub absent: Vec<AbsentPlaneView>,
     pub other: Vec<OtherEntry>,
+    // Why: handlebars-rust has no `.length`, so the section takes the count as a field.
+    pub other_count: usize,
     pub apply_all_url: String,
     pub discard_url: String,
     pub sync_url: &'static str,

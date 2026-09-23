@@ -1,7 +1,7 @@
 # India development marketplace is a fetched bundle
 
 `astound-india-dev` (Astound Digital — India Development), its plugins
-`astound-india-sfcore` (18 skills) and `astound-india-ba` (16 skills) and their
+`astound-india-sfcore` (38 skills) and `astound-india-ba` (16 skills) and their
 skills are not defined in `services/`. Since 2026-09-18 they are authored in
 [Astound-Digital/sfscore-claude-india-kit](https://github.com/Astound-Digital/sfscore-claude-india-kit)
 in Claude Code marketplace format, published by that repository's CI as a
@@ -9,7 +9,13 @@ signed services bundle on GHCR (private package), and composed by this instance
 — the profiles follow the kit's `stable` channel, so a release is one
 **Import** on `/admin/sync` away. Kit contract and runbook:
 `deploy/kit/README-INTEGRATION.md`; another instance: `docs/kits-on-another-instance.md`; registry: `deploy/kit/known-kits.json`
-(kit `india`); model: `/documentation/services-sync`.
+(kit `india`); model: `/documentation/services-sync`; the developer walkthrough from an
+edit to the agent: `/documentation/update-a-skill`.
+
+Since v3.3.0 (2026-09-22) the kit publishes on **merge to `main`**, not on a hand-cut
+release: `metadata.version` in `marketplace.json` names the tag, CI validates every
+pull request first, and a merge that leaves the version alone publishes nothing. Every
+sfcore skill carries the `sf-` prefix declared in the kit's `tools/kit-sanitize.json`.
 
 ## What stays here
 

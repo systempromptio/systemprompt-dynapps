@@ -2,6 +2,7 @@
 //! Tools and Sessions tabs; the Cost tab's tables are `dashboard_cost`.
 
 use async_trait::async_trait;
+use systemprompt::models::SessionId;
 
 use super::requests::time_range;
 use crate::error::AdminResult;
@@ -40,7 +41,8 @@ pub(super) async fn plan(ctx: &ExportContext<'_>) -> AdminResult<DashboardRead> 
 // columns and the read behind them; the trait boilerplate is one macro so
 // each table is its column list and its query.
 macro_rules! live_dataset {
-    ($ty:ident, $id:literal, $title:literal, $columns:ident, |$ctx:ident| $load:expr) => {
+    ($ty:ident, $id:literal, $title:literal, $description:literal, $columns:ident,
+     |$ctx:ident| $load:expr) => {
         #[async_trait]
         impl DataSet for $ty {
             fn id(&self) -> &'static str {
@@ -48,6 +50,9 @@ macro_rules! live_dataset {
             }
             fn title(&self) -> &'static str {
                 $title
+            }
+            fn description(&self) -> &'static str {
+                $description
             }
             fn columns(&self) -> &'static [Column] {
                 $columns
@@ -83,6 +88,7 @@ live_dataset!(
     ModelStats,
     "analytics-models",
     "Models",
+    "One row per model: requests, tokens, cost, latency and errors over the window.",
     MODEL_COLUMNS,
     |ctx| {
         let p = plan(ctx).await?;
@@ -138,6 +144,7 @@ live_dataset!(
     SkillStats,
     "analytics-skills",
     "Skills",
+    "One row per skill: invocations by kind, people, conversations and requests over the window.",
     SKILL_COLUMNS,
     |ctx| {
         let p = plan(ctx).await?;
@@ -179,29 +186,36 @@ const TOOL_COLUMNS: &[Column] = &[
     Column::new("distinct_users", "Users", CellKind::Integer),
 ];
 
-live_dataset!(ToolStats, "analytics-tools", "Tools", TOOL_COLUMNS, |ctx| {
-    let p = plan(ctx).await?;
-    let (rows, total) = list_tool_stats(ctx.pool, p.range, &p.scope, ctx.limit, 0).await?;
-    Ok(Table {
-        rows: rows
-            .iter()
-            .map(|r| {
-                vec![
-                    r.server_name.as_str().into(),
-                    r.tool_name.as_str().into(),
-                    r.executions.into(),
-                    r.succeeded.into(),
-                    r.failed.into(),
-                    r.pending.into(),
-                    Cell::opt_decimal(r.p50_ms),
-                    Cell::opt_decimal(r.p95_ms),
-                    r.distinct_users.into(),
-                ]
-            })
-            .collect(),
-        total,
-    })
-});
+live_dataset!(
+    ToolStats,
+    "analytics-tools",
+    "Tools",
+    "One row per server and tool: executions, outcomes, latency and people over the window.",
+    TOOL_COLUMNS,
+    |ctx| {
+        let p = plan(ctx).await?;
+        let (rows, total) = list_tool_stats(ctx.pool, p.range, &p.scope, ctx.limit, 0).await?;
+        Ok(Table {
+            rows: rows
+                .iter()
+                .map(|r| {
+                    vec![
+                        r.server_name.as_str().into(),
+                        r.tool_name.as_str().into(),
+                        r.executions.into(),
+                        r.succeeded.into(),
+                        r.failed.into(),
+                        r.pending.into(),
+                        Cell::opt_decimal(r.p50_ms),
+                        Cell::opt_decimal(r.p95_ms),
+                        r.distinct_users.into(),
+                    ]
+                })
+                .collect(),
+            total,
+        })
+    }
+);
 
 const SERVER_COLUMNS: &[Column] = &[
     Column::new("server", "Server", CellKind::Text),
@@ -215,6 +229,7 @@ live_dataset!(
     ToolServers,
     "analytics-tool-servers",
     "Tool servers",
+    "One row per tool server: executions, successes, tools used and people over the window.",
     SERVER_COLUMNS,
     |ctx| {
         let p = plan(ctx).await?;
@@ -237,22 +252,22 @@ live_dataset!(
 
 const SESSION_COLUMNS: &[Column] = &[
     Column::new("updated_at", "Updated", CellKind::Timestamp),
-    Column::new("session_id", "Session", CellKind::Text),
+    Column::new("conversation_id", "Conversation", CellKind::Text),
+    Column::new("session_id", "Client session", CellKind::Text),
     Column::new("user_id", "User", CellKind::Text),
     Column::new("model", "Model", CellKind::Text),
     Column::new("cost_usd", "Cost (USD)", CellKind::Money),
-    Column::new("context_window", "Context window", CellKind::Integer),
+    Column::new("requests", "Requests", CellKind::Integer),
     Column::new("input_tokens", "Input tokens", CellKind::Integer),
     Column::new("output_tokens", "Output tokens", CellKind::Integer),
     Column::new("cache_read_tokens", "Cache read tokens", CellKind::Integer),
-    Column::new("rating", "Rating", CellKind::Integer),
-    Column::new("outcome", "Outcome", CellKind::Text),
 ];
 
 live_dataset!(
     SessionCosts,
     "analytics-sessions",
     "Session costs",
+    "One row per conversation: person, model, requests, tokens and cost over the window.",
     SESSION_COLUMNS,
     |ctx| {
         let p = plan(ctx).await?;
@@ -264,16 +279,15 @@ live_dataset!(
                 .map(|r| {
                     vec![
                         r.updated_at.into(),
-                        r.session_id.as_str().into(),
+                        r.context_id.as_str().into(),
+                        Cell::opt_text(r.session_id.as_ref().map(SessionId::as_str)),
                         r.user_id.as_str().into(),
                         Cell::opt_text(r.model.as_deref()),
                         Cell::Money(r.total_cost_microdollars),
-                        r.context_window_size.into(),
+                        r.request_count.into(),
                         r.input_tokens.into(),
                         r.output_tokens.into(),
                         r.cache_read_tokens.into(),
-                        Cell::opt_int(r.rating),
-                        Cell::opt_text(r.outcome.as_deref()),
                     ]
                 })
                 .collect(),

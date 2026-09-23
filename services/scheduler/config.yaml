@@ -42,12 +42,18 @@ scheduler:
       owner: admin
       schedule: "0 0 3 * * *"
       enabled: true
+      # Anonymous fingerprint rows are 98 % of `users` in production (scanner
+      # bursts); a week is long enough for a returning visitor to be re-linked.
+      enforce: true
+      parameters:
+        retention_days: "7"
 
     - name: cleanup_empty_contexts
       extension: core
       owner: admin
       schedule: "0 0 * * * *"
       enabled: true
+      enforce: true
 
     - name: cleanup_inactive_sessions
       extension: core
@@ -55,11 +61,21 @@ scheduler:
       schedule: "0 0 * * * *"
       enabled: true
 
+    # The one retention job. Windows come from `retention:` in the profile
+    # (defaults: logs 30 d, analytics_events 90 d, ai_request_messages =
+    # ai.history.retention_days, mcp_tool_executions 365 d, processed
+    # event_outbox 7 d); deletes run in 5 000-row batches. `enforce: true`
+    # is what makes it delete — without it the job only reports what it
+    # would remove, which is how a self-hosted instance grew a history no
+    # analytics rebuild could fit in memory. The console shows the windows
+    # and the last run at /admin/configuration; the manual trigger is
+    # `systemprompt infra jobs run database_cleanup`.
     - name: database_cleanup
       extension: core
       owner: admin
       schedule: "0 0 4 * * *"
       enabled: true
+      enforce: true
 
     - name: oauth_cleanup
       extension: core
@@ -72,6 +88,7 @@ scheduler:
       owner: admin
       schedule: "0 0 * * * *"
       enabled: true
+      enforce: true
 
     # Primary group/project recompute for the membership changes nothing
     # announces (directory sign-ins rewriting AD membership).
@@ -81,11 +98,15 @@ scheduler:
       schedule: "0 15 * * * *"
       enabled: true
 
-    # Web extension jobs (publishing pipeline)
+    # Web extension jobs (publishing pipeline). Hourly: the bootstrap entry
+    # publishes at boot and content edits go through `just publish` or
+    # `systemprompt infra jobs run publish_pipeline`; every run regenerates
+    # the whole site unconditionally, so a 15-minute cadence was ~2 700 runs
+    # a month of identical output.
     - name: publish_pipeline
       extension: web
       owner: admin
-      schedule: "0 */15 * * * *"
+      schedule: "0 0 * * * *"
       enabled: true
 
     # Standalone core jobs, running on each job's built-in default schedule
@@ -148,8 +169,7 @@ scheduler:
     # Core next (0.43 → 0.44) additions. service_registry_gc reaps `services`
     # rows whose replica stopped heartbeating (every minute);
     # thought_signature_cleanup drops expired Gemini thought signatures
-    # (hourly). Evaluation experiments are explicitly launched against a
-    # shared budget and are never sampled/replayed by a cron job.
+    # (hourly).
     - name: service_registry_gc
       extension: core
       owner: admin
@@ -193,6 +213,30 @@ scheduler:
       owner: admin
       enabled: true
 
+    # Data lifecycle: measure daily, archive raw weeks before they expire,
+    # archive the rollups monthly (kept forever) and run the health check.
+    # Archives land under storage/exports/{weekly,monthly}/ and are listed on
+    # /admin/configuration?tab=lifecycle. Parameters: weeks_back / keep_weeks
+    # (26) on the weekly job, months_back / keep_months (0 = forever) on the
+    # monthly one.
+    - name: retention_daily_report
+      extension: web
+      owner: admin
+      schedule: "0 30 4 * * *"
+      enabled: true
+
+    - name: retention_export_weekly
+      extension: web
+      owner: admin
+      schedule: "0 0 2 * * 0"
+      enabled: true
+
+    - name: retention_export_monthly
+      extension: web
+      owner: admin
+      schedule: "0 30 2 1 * *"
+      enabled: true
+
     # Calendar-month quota windows (web extension, interim until core has
     # calendar windows). Five minutes past UTC midnight: rewrites every
     # monthly window in ai_gateway_policies to run out at month end and
@@ -215,8 +259,8 @@ scheduler:
     # `daily_cost_cap_microdollars` stops a run once the day's judge spend
     # reaches it. Re-judge one:
     # `systemprompt infra jobs run conversation_judge -p context_id=<id>`.
-    # Gated by `hooks.evaluation` on the governance-owning plugin and by the
-    # profile's `evaluation.automatic`; the manual `context_id` run bypasses
+    # Gated by `hooks.judge` on the governance-owning plugin and by the
+    # profile's `judge.automatic`; the manual `context_id` run bypasses
     # the latter.
     - name: conversation_judge
       extension: web

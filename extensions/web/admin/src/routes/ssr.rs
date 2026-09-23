@@ -145,17 +145,7 @@ fn people_routes() -> Router<Arc<PgPool>> {
 fn ai_activity_routes() -> Router<Arc<PgPool>> {
     Router::new()
         .route("/analytics", get(handlers::ssr::analytics_dashboard_page))
-        // Why: one export surface for every table the console renders — the
-        // file in any format and column selection, and the preview the
-        // dialog counts from. Which tables exist is `export::registry`.
-        .route(
-            "/export/{dataset}",
-            get(crate::export::handler::export_file),
-        )
-        .route(
-            "/export/{dataset}/preview",
-            get(crate::export::handler::export_preview),
-        )
+        .merge(super::ssr_export::routes())
         .route("/requests", get(handlers::ssr::analytics_requests_page))
         .route(
             "/requests/{request_id}",
@@ -239,6 +229,14 @@ fn platform_routes() -> Router<Arc<PgPool>> {
         // agrees — and Code sync, the sources and the archive that move
         // declarations between the repository and this instance.
         .route("/configuration", get(handlers::ssr::configuration_page))
+        // Why: the retention ledger — measurements, archives and the health
+        // report the retention_* jobs write — beside Configuration, where the
+        // windows and the cleanup job's last run are shown.
+        .route("/lifecycle", get(handlers::ssr::lifecycle_page))
+        .route(
+            "/lifecycle/archive/{tier}/{period}/{file}",
+            get(handlers::ssr::lifecycle_archive_download),
+        )
         .route("/sync", get(handlers::ssr::sync_page))
         .route(
             "/sync/import/{stage_id}",
@@ -283,10 +281,6 @@ fn account_routes() -> Router<Arc<PgPool>> {
 fn api_routes() -> Router<Arc<PgPool>> {
     Router::new()
         .route("/auth/me", get(middleware::auth_me_handler))
-        .route(
-            "/api/conversations/{session_id}/raw",
-            get(handlers::ssr::conversations_raw),
-        )
         .route("/api/chain/{id}", get(handlers::ssr::chain_envelope))
         .route("/api/history/search", get(handlers::ssr::history_search))
         .route("/api/search/resolve", get(handlers::ssr::search_resolve))

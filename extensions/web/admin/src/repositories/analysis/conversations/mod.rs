@@ -12,6 +12,7 @@
 
 pub mod detail;
 mod filter;
+pub mod hook_events;
 pub mod planes;
 mod row;
 

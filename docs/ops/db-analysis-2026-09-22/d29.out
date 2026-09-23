@@ -1,0 +1,38 @@
+  metric  | count |    min     |    max     | avg_ratio 
+----------+-------+------------+------------+-----------
+ cost     |    33 | 2026-09-08 | 2026-09-22 |      26.7
+ requests |    33 | 2026-09-03 | 2026-09-22 |      15.7
+ errors   |     2 | 2026-09-08 | 2026-09-17 |          
+(3 rows)
+
+ count 
+-------
+     0
+(1 row)
+
+ window_seconds | count |    min     |    max     | closed_over_7d_ago 
+----------------+-------+------------+------------+--------------------
+           3600 |   152 | 2026-09-03 | 2026-09-22 |                 82
+(1 row)
+
+ scope | count |          min           |          max           | older_1d 
+-------+-------+------------------------+------------------------+----------
+ mcp   |  1780 | 2026-09-04 08:04:40+00 | 2026-09-22 07:31:20+00 |     1651
+(1 row)
+
+ subject_kind | window_seconds | buckets | bucket_requests | bucket_cost 
+--------------+----------------+---------+-----------------+-------------
+ user         |           3600 |     152 |            4384 |   279641627
+(1 row)
+
+ quota_requests_total | ai_requests | quota_cost | actual_cost 
+----------------------+-------------+------------+-------------
+                 4384 |        4392 |  279641627 |   279641627
+(1 row)
+
+ERROR:  column "expires_at" does not exist
+LINE 1: ..._revocations' t, count(*), count(*) FILTER (WHERE expires_at...
+                                                             ^
+ERROR:  column "status" does not exist
+LINE 1: SELECT status, count(*), count(*) FILTER (WHERE ended_at IS ...
+               ^

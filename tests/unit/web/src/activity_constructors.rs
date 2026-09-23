@@ -51,12 +51,12 @@ fn a_long_preview_is_truncated_at_a_word_boundary() {
     let message = "word ".repeat(40);
     let activity = NewActivity::agent_response(&user(), &session(), Some(&message));
     assert!(
-        activity.description.ends_with("...\""),
+        activity.description.ends_with("\u{2026}\""),
         "{}",
         activity.description
     );
     assert!(activity.description.len() < message.len());
-    assert!(!activity.description.contains("word...word"));
+    assert!(!activity.description.contains("word\u{2026}word"));
 }
 
 #[test]
@@ -71,11 +71,11 @@ fn truncation_does_not_split_a_multibyte_character() {
     // to panic mid-character on anything non-ASCII.
     let message = "é".repeat(200);
     let activity = NewActivity::agent_response(&user(), &session(), Some(&message));
-    assert!(activity.description.ends_with("...\""));
+    assert!(activity.description.ends_with("\u{2026}\""));
 
     let emoji = "🚀".repeat(200);
     let activity = NewActivity::notification(&user(), &session(), None, Some(&emoji));
-    assert!(activity.description.ends_with("..."));
+    assert!(activity.description.ends_with('\u{2026}'));
 }
 
 #[test]

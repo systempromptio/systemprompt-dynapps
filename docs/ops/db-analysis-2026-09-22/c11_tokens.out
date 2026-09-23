@@ -1,0 +1,48 @@
+  status   |  n   | formula_mismatch | io_only | tokens_null | tokens_zero | has_reasoning | reasoning_gt_output 
+-----------+------+------------------+---------+-------------+-------------+---------------+---------------------
+ completed | 4287 |                0 |    1945 |           0 |           0 |          1844 |                   0
+ failed    |   95 |               95 |       0 |          95 |           0 |             0 |                   0
+ rejected  |    7 |                7 |       0 |           7 |           0 |             0 |                   0
+ pending   |    3 |                3 |       0 |           3 |           0 |             0 |                   0
+(4 rows)
+
+ id | provider | model | tokens_used | input_tokens | output_tokens | cache_read_tokens | cache_creation_tokens | reasoning_tokens 
+----+----------+-------+-------------+--------------+---------------+-------------------+-----------------------+------------------
+(0 rows)
+
+ provider  | served_provider |           model            | request_kind |  n   | uncosted |  tokens   |  usd   | avg_usd 
+-----------+-----------------+----------------------------+--------------+------+----------+-----------+--------+---------
+ anthropic |                 | claude-haiku-4-5-20251001  | turn         | 1129 |        0 |  79213576 |  35.01 |  0.0310
+ anthropic |                 | claude-sonnet-5            | turn         |  964 |        0 | 126756736 | 111.66 |  0.1158
+ anthropic |                 | claude-haiku-4-5-20251001  | probe        |  802 |        0 |   2631950 |   2.64 |  0.0033
+ anthropic |                 | claude-opus-5              | turn         |  497 |        0 |  66432054 |  85.00 |  0.1710
+ anthropic |                 | claude-sonnet-5            | probe        |  401 |        0 |   2009065 |   4.02 |  0.0100
+ anthropic |                 | claude-sonnet-4-6          | turn         |  250 |        0 |  22503740 |  14.39 |  0.0576
+ anthropic |                 | claude-opus-5              | probe        |  115 |        0 |    547758 |   2.74 |  0.0238
+ anthropic |                 | claude-fable-5-1           | turn         |   41 |        0 |   8793591 |  19.09 |  0.4655
+ vertex    |                 | gemini-3.1-pro-preview     | turn         |   22 |        0 |    545106 |   0.69 |  0.0316
+ anthropic |                 | claude-sonnet-4-5-20250929 | turn         |   20 |        0 |   1059053 |   1.28 |  0.0639
+ vertex    |                 | gemini-2.5-pro             | turn         |   20 |        0 |    826330 |   0.93 |  0.0467
+ vertex    |                 | gemini-3.5-flash-lite      | turn         |    6 |        0 |    274663 |   0.07 |  0.0111
+ anthropic |                 | claude-fable-5             | turn         |    6 |        0 |    203182 |   1.96 |  0.3266
+ vertex    |                 | gemini-2.5-flash-lite      | turn         |    4 |        0 |     87419 |   0.01 |  0.0022
+ vertex    |                 | gemini-3.5-flash           | turn         |    3 |        0 |     45413 |   0.07 |  0.0240
+ vertex    |                 | gemini-3.6-flash           | turn         |    2 |        0 |     33247 |   0.03 |  0.0130
+ vertex    |                 | gemini-3.1-flash-lite      | turn         |    2 |        0 |     32955 |   0.01 |  0.0041
+ vertex    |                 | gemini-3.8-flash           | turn         |    1 |        0 |     32408 |   0.02 |  0.0243
+ vertex    |                 | gemini-3.7-flash           | turn         |    1 |        0 |     32425 |   0.02 |  0.0244
+ vertex    |                 | gemini-2.5-flash           | turn         |    1 |        0 |     30402 |   0.01 |  0.0092
+(20 rows)
+
+       model       |  n   | stored_usd | recomputed_usd 
+-------------------+------+------------+----------------
+ claude-sonnet-5   | 1365 |     115.68 |         115.68
+ claude-opus-5     |  612 |      87.74 |          87.74
+ claude-sonnet-4-6 |  250 |      14.39 |          14.39
+(3 rows)
+
+ uncosted_total | completed 
+----------------+-----------
+              0 |      4287
+(1 row)
+

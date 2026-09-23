@@ -21,6 +21,11 @@ pub(super) fn serde_stats(query: &TraceListQuery, s: &TraceStats) -> TraceStatsV
         error_url: toggle_flag_url(query, "error_only"),
         deny_active: query.deny_only.as_deref() == Some("true"),
         error_active: query.error_only.as_deref() == Some("true"),
+        lifecycle_count: s.lifecycle_count,
+        lifecycle_url: toggle_flag_url(query, "include_lifecycle"),
+        lifecycle_active: query.include_lifecycle.as_deref() == Some("true"),
+        traces_note: traces_note(query, s),
+        active_note: format!("across {} traces with requests", s.active_traces),
         cost_display: format_cost(s.total_cost_microdollars),
         tokens_display: format_token_total(s.total_tokens),
         p50_display: format_duration_ms(s.p50_active_ms),
@@ -29,9 +34,23 @@ pub(super) fn serde_stats(query: &TraceListQuery, s: &TraceStats) -> TraceStatsV
     }
 }
 
+// Why: the cards count the traces the table lists. Saying how many were left
+// out — and that they were lifecycle-only — keeps the number honest without
+// putting thirty empty rows back on the page.
+fn traces_note(query: &TraceListQuery, s: &TraceStats) -> String {
+    if query.include_lifecycle.as_deref() == Some("true") {
+        return "in window · lifecycle-only shown".to_owned();
+    }
+    if s.lifecycle_count == 0 {
+        return "in window".to_owned();
+    }
+    format!("in window · {} lifecycle-only hidden", s.lifecycle_count)
+}
+
 fn toggle_flag_url(query: &TraceListQuery, flag: &str) -> String {
     let already_on = match flag {
         "deny_only" => query.deny_only.as_deref() == Some("true"),
+        "include_lifecycle" => query.include_lifecycle.as_deref() == Some("true"),
         _ => query.error_only.as_deref() == Some("true"),
     };
     let qs = preserved_query_string(query, &[flag, "page"]);
@@ -69,32 +88,14 @@ pub(super) fn build_sort_headers(
         let active = key == active_col;
         // Why: An active column toggles; an inactive one opens largest-first (and
         // newest-first for time), which is what an operator scans for.
-        let next_dir = if active && active_dir == "desc" {
-            "asc"
-        } else {
-            "desc"
-        };
-        SortHeaderView {
-            label,
-            class,
-            hint,
-            url: format!("{prefix}sort={key}&dir={next_dir}"),
+        let descending = active_dir != "asc";
+        let next_dir = SortHeaderView::next_dir(active, descending);
+        SortHeaderView::new(
+            (label, class, hint),
+            format!("{prefix}sort={key}&dir={next_dir}"),
             active,
-            aria_sort: if active {
-                if active_dir == "asc" {
-                    "ascending"
-                } else {
-                    "descending"
-                }
-            } else {
-                "none"
-            },
-            indicator: if active {
-                if active_dir == "asc" { "▲" } else { "▼" }
-            } else {
-                "↕"
-            },
-        }
+            descending,
+        )
     };
     TracesSortHeaders {
         started: header(

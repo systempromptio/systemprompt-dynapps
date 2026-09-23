@@ -22,7 +22,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 
 use crate::error::{AdminError, AdminHtmlResult};
-use crate::handlers::ssr::list_view::scope_filter_view;
+use crate::handlers::ssr::list_view::{DEFAULT_PAGE_SIZE, scope_filter_view};
 use crate::repositories::governance::decision_log::{DecisionFilter, DecisionLogRow, DecisionSort};
 use crate::repositories::governance::findings::{FindingFilter, SafetyFindingLogRow};
 use crate::repositories::governance::{DecisionPage, PageSlice};
@@ -40,8 +40,6 @@ mod view;
 
 
 pub(crate) const BASE_URL: &str = "/admin/governance";
-const PAGE_SIZE: i64 = 50;
-
 // Why: Which log the URL asked for.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum GovernanceTab {
@@ -154,6 +152,7 @@ fn finding_filter(query: &GovernanceQuery) -> FindingFilter {
             Some("audited") => Some(false),
             _ => None,
         },
+        search: non_empty(query.q.as_deref()),
     }
 }
 
@@ -251,8 +250,8 @@ pub(crate) async fn governance_page(
             decision_filter: &decision_filter(&query),
             finding_filter: &finding_filter(&query),
             sort,
-            page_size: PAGE_SIZE,
-            offset: page * PAGE_SIZE,
+            page_size: DEFAULT_PAGE_SIZE,
+            offset: page * DEFAULT_PAGE_SIZE,
         },
     )
     .await;

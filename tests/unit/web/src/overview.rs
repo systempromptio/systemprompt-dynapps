@@ -22,7 +22,7 @@ fn now() -> DateTime<Utc> {
 fn a_server_no_session_has_ever_touched_is_silent_not_dead() {
     let state = liveness_state(now(), None, HEARTBEAT_INTERVAL_SECS);
     assert_eq!(state, Liveness::Silent);
-    assert_eq!(state.label(), "No sessions");
+    assert_eq!(state.label(), "Idle");
     assert!(!state.is_alive());
 }
 

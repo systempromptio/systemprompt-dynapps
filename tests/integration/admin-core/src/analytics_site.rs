@@ -1,6 +1,6 @@
 //! `repositories::analytics::site` — the site dashboard's read models:
-//! period-over-period KPIs, cost-by-model series, the latency split, the
-//! client-reported session snapshots, and the per-user daily rollups.
+//! period-over-period KPIs, cost-by-model series, the latency split, and the
+//! per-user daily rollups.
 
 use chrono::{Duration, Utc};
 use systemprompt_web_admin::repositories::analytics::site::SiteScope;
@@ -10,7 +10,6 @@ use systemprompt_web_admin::repositories::analytics::site::latency::{
 };
 use systemprompt_web_admin::repositories::analytics::site::model_series::list_model_cost_series;
 use systemprompt_web_admin::repositories::analytics::site::series::SeriesBucket;
-use systemprompt_web_admin::repositories::analytics::site::session_costs::list_user_session_costs;
 use systemprompt_web_admin::repositories::analytics::site::user_rollups::list_user_daily_rollups;
 use systemprompt_web_admin::repositories::scope::{Attribution, SubjectScope};
 use systemprompt_web_admin::util::time_range::{TimeRange, TimeRangePreset};
@@ -179,37 +178,6 @@ async fn get_latency_split_buckets_on_the_fixed_threshold() {
     assert_eq!(tight.slow, 2);
     assert_eq!(tight.threshold_ms, 2_000);
 
-    db.cleanup().await;
-}
-
-#[tokio::test]
-async fn session_cost_snapshots_list_per_user() {
-    let Some(db) = TempDb::create().await else {
-        return;
-    };
-    let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("snap")).await;
-
-    for (i, cache_read) in [(0, 3_000i64), (1, 1_000)] {
-        sqlx::query(
-            "INSERT INTO session_cost_snapshots
-                 (session_id, user_id, model, total_cost_microdollars, context_window_size,
-                  input_tokens, output_tokens, cache_creation_input_tokens,
-                  cache_read_input_tokens)
-             VALUES ($1, $2, 'claude-opus-5', 1000, $3, 1000, 200, 500, $4)",
-        )
-        .bind(format!("snap-session-{i}"))
-        .bind(user.as_str())
-        .bind(100_000i64 + i64::from(i) * 50_000)
-        .bind(cache_read)
-        .execute(&*db.pool)
-        .await
-        .expect("insert snapshot");
-    }
-
-    let rows = list_user_session_costs(&db.pool, &user, 1)
-        .await
-        .expect("session list succeeds");
-    assert_eq!(rows.len(), 1, "limit is honoured");
     db.cleanup().await;
 }
 

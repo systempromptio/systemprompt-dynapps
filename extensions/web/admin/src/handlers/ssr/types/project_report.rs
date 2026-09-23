@@ -75,4 +75,5 @@ pub(crate) struct ProjectReportPageData {
     pub artifacts: Vec<ProjectArtifactRowView>,
     pub artifact_total: i64,
     pub sessions: Vec<ProjectSessionRowView>,
+    pub export: crate::export::ExportView,
 }

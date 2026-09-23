@@ -44,7 +44,6 @@ CREATE OR REPLACE FUNCTION enqueue_feedback_fact(fact_kind TEXT, event_key TEXT,
 RETURNS void LANGUAGE plpgsql AS $$
 DECLARE key TEXT; was_pending BOOLEAN; original_time TIMESTAMPTZ;
 BEGIN
-    PERFORM 1 FROM analytics_ingestion_producers WHERE producer='astound.feedback' FOR UPDATE;
     key := md5(jsonb_build_array(fact_kind,event_key,request_key,consumer_key)::text);
     original_time := COALESCE(event_time,(SELECT created_at FROM plugin_usage_events WHERE id=event_key),(SELECT created_at FROM ai_requests WHERE id=request_key));
     SELECT pending INTO was_pending FROM feedback_ingestion_outbox WHERE id=key FOR UPDATE;
@@ -64,7 +63,6 @@ RETURNS void LANGUAGE plpgsql AS $$
 DECLARE row RECORD;
 BEGIN
     IF session_key IS NULL THEN RETURN; END IF;
-    PERFORM 1 FROM analytics_ingestion_producers WHERE producer='astound.feedback' FOR UPDATE;
     FOR row IN SELECT kind,event_id,request_id FROM feedback_ingestion_outbox WHERE user_id=consumer_key AND native_session_id=session_key LOOP
         PERFORM enqueue_feedback_fact(row.kind,row.event_id,row.request_id,consumer_key,session_key);
     END LOOP;
@@ -88,7 +86,6 @@ RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE data JSONB; old_data JSONB; session_key TEXT; linked RECORD;
 BEGIN
     IF TG_OP='DELETE' AND current_setting('astound.feedback_retention',true)='expiry' THEN RETURN OLD; END IF;
-    PERFORM 1 FROM analytics_ingestion_producers WHERE producer='astound.feedback' FOR UPDATE;
     data := CASE WHEN TG_OP='DELETE' THEN to_jsonb(OLD) ELSE to_jsonb(NEW) END;
     session_key := CASE WHEN TG_TABLE_NAME='ai_requests' THEN data->>'client_session_id' ELSE data->>'session_id' END;
     IF TG_TABLE_NAME='ai_requests' THEN
@@ -123,7 +120,6 @@ RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE data JSONB; row RECORD;
 BEGIN
     IF TG_OP='DELETE' AND current_setting('astound.feedback_retention',true)='expiry' THEN RETURN OLD; END IF;
-    PERFORM 1 FROM analytics_ingestion_producers WHERE producer='astound.feedback' FOR UPDATE;
     data := CASE WHEN TG_OP='DELETE' THEN to_jsonb(OLD) ELSE to_jsonb(NEW) END;
     IF TG_TABLE_NAME='managed_consumer_attribution_projection' THEN
         FOR row IN SELECT consumer_id,native_session_id FROM managed_consumer_invocation_evidence WHERE id=data->>'evidence_id' LOOP

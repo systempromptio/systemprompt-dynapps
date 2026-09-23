@@ -13,7 +13,7 @@
 
     <section class="sp-kpi-grid" aria-label="Governance summary">
       {{#each kpis}}
-        {{> components/kpi label=this.label value=this.value note=this.sub
+        {{> components/kpi label=this.label value=this.value note=this.note
             tone=this.tone href=this.href active=this.active hint=this.hint}}
       {{/each}}
     </section>
@@ -85,6 +85,11 @@
         <select class="sp-filter-select" name="blocked">
           {{#each outcomes}}<option value="{{this.value}}"{{#if this.selected}} selected{{/if}}>{{this.label}}</option>{{/each}}
         </select>
+      </label>
+      <label class="sp-toolbar__search">
+        <span class="sp-u-sr-only">Search the findings</span>
+        <input class="sp-search-input" type="search" name="q" value="{{search}}"
+               placeholder="Category, scanner, excerpt, user, model…">
       </label>
       {{/if}}
       {{#if is_hooks}}

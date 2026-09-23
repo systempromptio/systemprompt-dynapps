@@ -1,53 +1,56 @@
-//! Marketplace adoption as the Skills page draws it: entitled → installed →
-//! active, by host, with the window's activity and spend.
+//! One Overview row per marketplace: entitled → installed → active, with
+//! the window's activity and spend. The install rate counts only installed
+//! people the rules entitle, so a consumer outside the entitlement is shown
+//! beside the count rather than pushing the rate past 100.
 
 use super::rows::marketplace_name;
 use super::views::AdoptionView;
+use super::{SkillsQuery, SkillsTab};
 use crate::handlers::ssr::analysis::tone::{completion_tone, percent, score_display};
 use crate::handlers::ssr::analysis_urls::analysis_version_url;
 use crate::handlers::ssr::format::format_cost;
 use crate::repositories::analysis::inventory_index::{InventoryIndex, MarketplaceAudience};
 use crate::repositories::analysis::skills::MarketplaceAdoptionRow;
 
+fn share(part: i64, whole: i64) -> i64 {
+    if whole > 0 {
+        (part * 100 / whole).min(100)
+    } else {
+        0
+    }
+}
+
 pub(super) fn adoption_view(
+    query: &SkillsQuery,
     a: &MarketplaceAdoptionRow,
     audience: &MarketplaceAudience,
     index: &InventoryIndex,
 ) -> AdoptionView {
-    let entitled = audience.users_reaching_marketplace(a.marketplace_id.as_str());
+    let id = a.marketplace_id.as_str();
+    let entitled = audience.users_reaching_marketplace(id);
     let entitled_i = i64::try_from(entitled).unwrap_or(0);
+    let installed_entitled = audience.entitled_among(id, &a.installed_consumers);
+    let installed_entitled_i = i64::try_from(installed_entitled).unwrap_or(0);
+    let active_capped = a.active_users.min(a.installed);
     AdoptionView {
-        marketplace_name: marketplace_name(index, a.marketplace_id.as_str()),
+        marketplace_name: marketplace_name(index, id),
         versions_href: analysis_version_url(&a.marketplace_id, None),
-        marketplace: a.marketplace_id.as_str().to_owned(),
+        skills_href: query.link_marketplace(SkillsTab::Skills, Some(id)),
+        activity_href: query.link_marketplace(SkillsTab::Activity, Some(id)),
+        marketplace: id.to_owned(),
         entitled,
         installed: a.installed,
+        installed_entitled,
+        installed_outside: a.installed - installed_entitled_i,
         active: a.active_users,
-        install_rate: percent(a.installed, entitled_i),
-        install_rate_pct: if entitled_i > 0 {
-            (a.installed * 100 / entitled_i).min(100)
-        } else {
-            0
-        },
-        activation_rate: percent(a.active_users, a.installed),
-        activation_rate_pct: if a.installed > 0 {
-            (a.active_users * 100 / a.installed).min(100)
-        } else {
-            0
-        },
-        active_pct: if entitled_i > 0 {
-            (a.active_users * 100 / entitled_i).min(100)
-        } else {
-            0
-        },
-        skills_href: format!(
-            "{}?marketplace={}",
-            crate::handlers::ssr::analysis_urls::ANALYSIS_SKILLS_URL,
-            urlencoding::encode(a.marketplace_id.as_str())
+        install_rate: percent(installed_entitled_i, entitled_i),
+        install_rate_pct: share(installed_entitled_i, entitled_i),
+        activation_rate: percent(active_capped, a.installed),
+        active_pct: share(a.active_users, entitled_i),
+        hosts_title: format!(
+            "{} claude-code · {} opencode · {} other",
+            a.installed_claude_code, a.installed_opencode, a.installed_other
         ),
-        installed_claude_code: a.installed_claude_code,
-        installed_opencode: a.installed_opencode,
-        installed_other: a.installed_other,
         skills: a.skills,
         skills_used: a.skills_used,
         plugins: a.plugins,

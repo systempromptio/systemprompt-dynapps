@@ -69,9 +69,7 @@ pub(crate) fn short_model(model: &str) -> String {
     tail.strip_prefix("claude-").unwrap_or(tail).to_owned()
 }
 
-pub(crate) fn format_usd(microdollars: i64) -> String {
-    format!("${:.2}", microdollars as f64 / 1_000_000.0)
-}
+pub(crate) use systemprompt_web_shared::format::format_cost as format_usd;
 
 #[must_use]
 pub(crate) fn share(value: i64, total: i64) -> i64 {

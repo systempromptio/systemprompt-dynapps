@@ -8,7 +8,7 @@ kind: "guide"
 public: true
 tags: ["enterprise", "admin", "operations"]
 published_at: "2026-09-16"
-updated_at: "2026-09-17"
+updated_at: "2026-09-22"
 after_reading_this:
   - "Read the Configuration page and say, for every kind of configuration, where it comes from and whether the database agrees with the code"
   - "Read Code sync and say, for every source, whether the instance is serving what the profile pins"
@@ -16,6 +16,7 @@ after_reading_this:
   - "Ship a kit from its own GitHub repository to the instance: publish, pin, refresh, verify"
   - "Reconcile a plane in either direction from its own page's Sync tab and read back who applied what, when, from which declaration"
   - "Move the whole projected configuration as one zip: export it for a commit, or stage an import and preview every plane before applying"
+  - "Follow a skill edit from a kit pull request to the client that loads it"
 related_docs:
   - title: "Access Control: Who Reaches What, and Why"
     url: "/documentation/access-control"
@@ -92,13 +93,13 @@ The distinction is the honest one. Only the projected kinds have a database to d
 
 ## The three directions
 
-Each projected plane's Sync tab — `/admin/access-control?tab=sync`, `/admin/groups?tab=sync`, `/admin/gateway/policies?tab=sync` — offers the same three actions, confirmed in words that name what will move:
+Each projected plane's Sync tab — `/admin/access-control?tab=sync`, `/admin/groups?tab=sync`, `/admin/gateway/policies?tab=sync` — counts its differences by cause (*added in code*, *changed in code*, *removed from code*, *written in console*), prints a **Next:** line naming the action that settles the plane, and offers the same three actions, confirmed in words that name what will move. Each difference line carries a **Resolves with** badge naming its button.
 
 | action | writes | leaves alone |
 |---|---|---|
 | **Insert only** | rows the declaration carries and the database lacks | everything that exists, even if it differs |
-| **Overwrite from code** | inserts the missing, corrects what differs, **deletes** rows on declared entities the declaration does not carry | entities the declaration does not mention; for access control, every per-person override |
-| **Export** | nothing — renders the database as the declaration file to commit | — |
+| **Overwrite from code** | adds what code added, corrects what code changed, **deletes** what code removed — including rows the declaration itself once wrote on entities it has since dropped | rows the console or a bundle wrote on entities the declaration does not mention; for access control, every per-person override |
+| **Export** | nothing — renders the database as the declaration file to commit; the only way a console row reaches code | — |
 
 Every apply runs in one transaction that re-reads the tables first, writes an activity row (who, plane, mode, counts), and updates `sync_state` with the declared hash it applied. The card then reads *declared `ab12…` · last applied `ab12…` by Ed 2 minutes ago (overwrite)*; if the file changes afterwards the card says *declaration changed since last apply*. The boot seed — the one write nobody presses — is recorded the same way with actor `boot` and mode `seed`.
 
@@ -112,18 +113,22 @@ Code sync's **Export & import** tab moves every projected plane at once.
 
 ## Kits: content from another repository
 
-A **kit** is a GitHub repository in Anthropic marketplace format — `.claude-plugin/marketplace.json`, `plugins/<id>/` — plus two small systemprompt sidecars. Its CI publishes a signed **services bundle** on every release; the instance composes it with `services/` at boot. The Europe development workspace is a kit; the India workspace is being seeded as one from this repository with `just kit-export`.
+A **kit** is a GitHub repository in Anthropic marketplace format — `.claude-plugin/marketplace.json`, `plugins/<id>/` — plus two small systemprompt sidecars. Its CI publishes a signed **services bundle** on every release; the instance composes it with `services/` at boot. Both development workspaces are kits: Europe (`sfnext`) and India (`india`). A new one is seeded from this repository with `just kit-export`.
 
 **Kits own content; this repository owns access.** A kit ships no `access:` block. Who reaches `marketplace/astound-europe-dev` is declared in `services/access-control/rules.yaml` here with `owner: bundle:sfnext`, which lets the entity be declared before the digest is pinned: until the source is active the access-control card lists it as **awaiting its bundle** rather than failing boot. An access block a kit carries anyway is ignored as a declaration, flagged on its Sources row, and the rows it wrote at reconcile (`source = bundle:<name>`) appear as *bundle* orphans that an Overwrite deletes.
 
 ### End to end
 
-1. **Kit CI** (`deploy/kit/.github/workflows/publish-bundle.yml`): import the authored tree → validate it composed under the **base** (the release's base-bundle asset, or `services/` packed from this repository's deploy branch when the release has none) → pack and sign with the kit's Ed25519 seed → publish to `ghcr.io/<org>/<kit>:<tag>` **and** move the kit's channel tag (`stable`) to the same digest → ask the instance to import.
+1. **Kit CI** (`deploy/kit/.github/workflows/publish-bundle.yml`), two jobs. `validate` runs on every push **and every pull request**: sanitize the tree (`tools/sanitize-kit.py --strict`) → import it → validate it composed under the **base** (the release's base-bundle asset, or `services/` packed from this repository's deploy branch when the release has none). `publish` then runs on a merge to `main`: it reads `metadata.version` from `marketplace.json` and ships only a version no tag carries — pack and sign with the kit's Ed25519 seed → publish to `ghcr.io/<org>/<kit>:v<version>` **and** move the kit's channel tag (`stable`) to the same digest → create the tag and the GitHub release → ask the instance to import. **The version is the trigger:** a merge that leaves `metadata.version` alone validates and stops, so nothing republishes under a version that already shipped.
 2. **Pin**, once: `just services-pin <kit> stable` makes the profile follow the channel (image, public key and pull mode from `deploy/kit/known-kits.json`); `just services-pin <kit> sha256:<digest>` pins one upload instead. The instance never rewrites its own profile.
 3. **Import**: the CI's call, or **Import sources** on `/admin/sync`. The reply says `changed`, `reconciled` and `restart_recommended`.
 4. **Green**: the kit's row reads *in step* with the new active digest; Marketplaces lists the kit's marketplace; the access-control card shows the `owner:` entity as governed; Analysis → Versions minted a generation carrying the new hash. The process never restarted.
 
 The live kits are `sfnext` (`Astound-Digital/sfnext-claude-dev-kit`, the Europe development marketplace) and `india` (`Astound-Digital/sfscore-claude-india-kit`, the India development marketplace), both private packages the instance pulls with `ghcr_pull_token`. A plugin may also carry `package.json` + lockfile (Claude Code runs `npm ci` on the client) and `plugin.json` dependencies, including cross-marketplace ones.
+
+The sanitation step exists because core's importer is deliberately permissive: `description` is the only frontmatter key it requires, so the rest degrades quietly. A skill directory with no `SKILL.md` is not imported and nothing it holds reaches the bundle; a `references/` file a body cites but does not carry is simply absent; a path to a sibling skill can never resolve, because composition renames skill directories to `snake_case`; and an id generic enough to clash — `devops`, `integration` — collides with another kit at boot and neither starts. The gate reports each as an annotation on the file and line that causes it, so a pull request is refused before it is merged.
+
+Step by step, from an edit to the agent that runs it: [Update a Skill and Ship It](/documentation/update-a-skill).
 
 ### Rollback
 
@@ -171,6 +176,6 @@ receive.
 | the inventory | `repositories/sync/inventory.rs` — every kind the configuration page lists |
 | the planes | `extensions/web/admin/src/repositories/sync/` — one `impl SyncPlane` and one registry line per plane |
 | the state | table `sync_state`, one row per plane |
-| the kit template and registry | `deploy/kit/` — runbook, publish workflow, sidecars, `known-kits.json` |
+| the kit template and registry | `deploy/kit/` — runbook, publish workflow, the sanitation gate (`tools/sanitize-kit.py`), sidecars, `known-kits.json` |
 | the exporter | `just kit-export <marketplace> <dir>` — writes a kit and proves it re-imports identically |
 | the pin | `just services-pin <kit> <digest \| channel> [profile]` |

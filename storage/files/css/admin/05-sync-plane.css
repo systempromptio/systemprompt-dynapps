@@ -69,6 +69,21 @@
 
 .sp-sync-card--danger { border-color: var(--sp-danger-strong); }
 
+/* Why: the card the "Next:" line points at is the one the eye should land
+   on; a left rule in the accent colour marks it without recolouring the
+   danger border of an overwrite. */
+.sp-sync-card--recommended {
+    box-shadow: inset 4px 0 0 var(--sp-info);
+}
+
+.sp-sync-plane__next {
+    margin-block: 0 var(--sp-space-3);
+    padding: var(--sp-space-2) var(--sp-space-3);
+    border-left: 4px solid var(--sp-info);
+    background: var(--sp-bg-surface-alt);
+    font-size: var(--sp-text-sm);
+}
+
 .sp-sync-card__count {
     font-family: var(--sp-font-mono);
     color: var(--sp-text-primary);

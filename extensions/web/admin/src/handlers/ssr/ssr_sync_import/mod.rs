@@ -123,6 +123,7 @@ pub(crate) async fn import_preview_page(
         kpis,
         planes: cards,
         absent,
+        other_count: stage.other.len(),
         other: stage.other.clone(),
         apply_all_url: apply_url,
         discard_url: format!("/api/public/admin/sync/import/{}", stage.id),

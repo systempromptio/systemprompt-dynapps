@@ -5,12 +5,7 @@
 //! the audit trail and the client cannot retry a 400.
 
 mod event_types;
-mod statusline;
 mod validation;
-pub use statusline::{
-    ContextWindow, ContextWindowUsage, StatusLineCost, StatusLineIngest, StatusLineModel,
-    StatusLinePayload, StatusLineQuery, StatusLineRejection, TokenUsage, usd_to_microdollars,
-};
 pub use validation::validate_session_key;
 
 pub use event_types::{
@@ -250,17 +245,5 @@ pub struct TrackQuery {
 
 #[derive(Debug, Deserialize)]
 pub struct GovernQuery {
-    pub plugin_id: Option<systemprompt::identifiers::PluginId>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct TranscriptPayload {
-    pub session_id: Option<systemprompt::identifiers::SessionId>,
-    // JSON: protocol boundary — arbitrary third-party tool payload
-    pub transcript: serde_json::Value,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct TranscriptQuery {
     pub plugin_id: Option<systemprompt::identifiers::PluginId>,
 }

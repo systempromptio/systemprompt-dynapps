@@ -41,11 +41,27 @@ async fn the_gateway_page_renders_the_routing_table() {
         ));
     }
 
-    // Why: the default view is the picture by provider, and the settings
-    // form is the only place the enabled flag can be changed from.
-    for marker in ["sp-p-gateway__provider", "gateway-settings"] {
+    // Why: the default view is the overview — dispatch order and the provider
+    // table — so an operator sees both without opening a tab.
+    for marker in ["Dispatch order", "sp-p-gateway__providers"] {
         if !body.contains(marker) {
             failures.push(format!("  /admin/gateway rendered without {marker:?}"));
+        }
+    }
+
+    // Why: each provider opens into its models and routes on its own tab, and
+    // the settings form is the only place the enabled flag can be changed from.
+    for (tab, marker) in [
+        ("providers", "data-expand-row"),
+        ("settings", "gateway-settings"),
+    ] {
+        let path = format!("/admin/gateway?tab={tab}");
+        let (tab_status, tab_body) = app.call(Call::get(&path, Principal::Admin)).await;
+        if tab_status != StatusCode::OK || !tab_body.contains(marker) {
+            failures.push(format!(
+                "  /admin/gateway?tab={tab} -> {} without {marker:?}",
+                tab_status.as_u16()
+            ));
         }
     }
 
@@ -64,8 +80,8 @@ async fn the_gateway_page_renders_the_routing_table() {
     }
 
     // Why: the resolved-only section is the half an operator cannot see in
-    // the file. It sits behind its own tab so the routing table keeps the
-    // fold, and the tab has to render it.
+    // the file. It sits under the Routes tab, and the old `resolved` tab
+    // link still has to land on it.
     let (resolved_status, resolved_body) = app
         .call(Call::get("/admin/gateway?tab=resolved", Principal::Admin))
         .await;

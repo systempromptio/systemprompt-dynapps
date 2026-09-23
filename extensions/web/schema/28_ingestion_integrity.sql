@@ -73,27 +73,37 @@ BEGIN
 EXCEPTION WHEN invalid_text_representation THEN RETURN NULL;
 END $$;
 
+-- Why: `plugin_id` is the plugin the skill key names. The hook rows carry the
+-- plugin whose hooks reported them (one plugin owns the session-global hooks
+-- for every user), so that column would credit every marketplace's skills to
+-- the hook owner; the invoked skill is `<plugin>:<skill>`, and its prefix is
+-- the id the marketplaces declare. `reporter_plugin_id` keeps the hook owner.
 CREATE OR REPLACE VIEW analysis_skill_events AS
-SELECT e.id, e.user_id, e.session_id, e.plugin_id,
-       replace(substring(e.prompt_preview from '^/([A-Za-z0-9._-]+:[A-Za-z0-9._-]+)'), '_', '-') AS skill,
-       NULL::text AS tool_use_id, 'slash'::text AS source, e.created_at AS invoked_at
-FROM plugin_usage_events e
-WHERE e.event_type = 'UserPromptSubmit'
-  AND e.prompt_preview ~ '^/[A-Za-z0-9._-]+:[A-Za-z0-9._-]+'
-UNION ALL
-SELECT e.id, e.user_id, e.session_id, e.plugin_id,
-       replace(e.metadata->'tool_input'->>'skill', '_', '-') AS skill,
-       e.tool_use_id, 'tool'::text AS source, e.created_at AS invoked_at
-FROM plugin_usage_events e
-WHERE e.event_type IN ('PostToolUse', 'PostToolUseFailure') AND e.tool_name = 'Skill'
-  AND e.metadata->'tool_input'->>'skill' IS NOT NULL
-UNION ALL
-SELECT e.id, e.user_id, e.session_id, e.plugin_id,
-       COALESCE(e.metadata->>'skill_ref', 'opencode:' || replace(e.metadata->'tool_input'->>'name', '_', '-')) AS skill,
-       e.tool_use_id, 'tool'::text AS source, e.created_at AS invoked_at
-FROM plugin_usage_events e
-WHERE e.event_type IN ('PostToolUse', 'PostToolUseFailure') AND e.tool_name = 'skill'
-  AND e.metadata->'tool_input'->>'name' IS NOT NULL;
+SELECT s.id, s.user_id, s.session_id,
+       COALESCE(NULLIF(split_part(s.skill, ':', 1), ''), s.reporter_plugin_id) AS plugin_id,
+       s.skill, s.tool_use_id, s.source, s.invoked_at, s.reporter_plugin_id
+FROM (
+    SELECT e.id, e.user_id, e.session_id, e.plugin_id AS reporter_plugin_id,
+           replace(substring(e.prompt_preview from '^/([A-Za-z0-9._-]+:[A-Za-z0-9._-]+)'), '_', '-') AS skill,
+           NULL::text AS tool_use_id, 'slash'::text AS source, e.created_at AS invoked_at
+    FROM plugin_usage_events e
+    WHERE e.event_type = 'UserPromptSubmit'
+      AND e.prompt_preview ~ '^/[A-Za-z0-9._-]+:[A-Za-z0-9._-]+'
+    UNION ALL
+    SELECT e.id, e.user_id, e.session_id, e.plugin_id,
+           replace(e.metadata->'tool_input'->>'skill', '_', '-') AS skill,
+           e.tool_use_id, 'tool'::text AS source, e.created_at AS invoked_at
+    FROM plugin_usage_events e
+    WHERE e.event_type IN ('PostToolUse', 'PostToolUseFailure') AND e.tool_name = 'Skill'
+      AND e.metadata->'tool_input'->>'skill' IS NOT NULL
+    UNION ALL
+    SELECT e.id, e.user_id, e.session_id, e.plugin_id,
+           COALESCE(e.metadata->>'skill_ref', 'opencode:' || replace(e.metadata->'tool_input'->>'name', '_', '-')) AS skill,
+           e.tool_use_id, 'tool'::text AS source, e.created_at AS invoked_at
+    FROM plugin_usage_events e
+    WHERE e.event_type IN ('PostToolUse', 'PostToolUseFailure') AND e.tool_name = 'skill'
+      AND e.metadata->'tool_input'->>'name' IS NOT NULL
+) s;
 
 CREATE TABLE IF NOT EXISTS ingestion_event_receipts (
     dedup_key TEXT PRIMARY KEY,
@@ -145,7 +155,7 @@ BEGIN
     PERFORM pg_advisory_xact_lock(hashtextextended('ingestion:' || session_id, 0))
     FROM (SELECT DISTINCT session_id FROM plugin_usage_events WHERE id = ANY(event_ids) ORDER BY session_id) owners;
     INSERT INTO plugin_session_summaries(id,session_id,user_id,total_events,tool_uses,prompts,errors,
-        content_input_bytes,content_output_bytes,started_at,subagent_spawns,user_prompts,automated_actions)
+        content_input_bytes,content_output_bytes,started_at,subagent_spawns,user_prompts,automated_actions,plugin_id)
     SELECT 'sess_' || e.session_id,e.session_id,e.user_id,count(*),
         count(*) FILTER(WHERE event_type IN ('PostToolUse','PostToolUseFailure')),
         count(*) FILTER(WHERE event_type = 'UserPromptSubmit'),
@@ -154,7 +164,8 @@ BEGIN
         min(e.created_at),
         count(*) FILTER(WHERE event_type='SubagentStop'),
         count(*) FILTER(WHERE event_type='UserPromptSubmit' AND coalesce(metadata->>'agent_id','')=''),
-        count(*) FILTER(WHERE event_type IN ('PostToolUse','PostToolUseFailure') AND coalesce(metadata->>'agent_id','')<>'')
+        count(*) FILTER(WHERE event_type IN ('PostToolUse','PostToolUseFailure') AND coalesce(metadata->>'agent_id','')<>''),
+        max(e.plugin_id)
     FROM plugin_usage_events e WHERE (e.user_id,e.session_id) IN (
         SELECT user_id,session_id FROM plugin_usage_events WHERE id = ANY(event_ids))
     GROUP BY e.user_id,e.session_id
@@ -162,7 +173,8 @@ BEGIN
         tool_uses=EXCLUDED.tool_uses,prompts=EXCLUDED.prompts,errors=EXCLUDED.errors,
         content_input_bytes=EXCLUDED.content_input_bytes,content_output_bytes=EXCLUDED.content_output_bytes,
         subagent_spawns=EXCLUDED.subagent_spawns,
-        user_prompts=EXCLUDED.user_prompts,automated_actions=EXCLUDED.automated_actions,updated_at=now()
+        user_prompts=EXCLUDED.user_prompts,automated_actions=EXCLUDED.automated_actions,
+        plugin_id=coalesce(EXCLUDED.plugin_id,plugin_session_summaries.plugin_id),updated_at=now()
     WHERE plugin_session_summaries.user_id=EXCLUDED.user_id;
     UPDATE ingestion_outbox SET processed_at=now() WHERE event_id=ANY(event_ids);
     GET DIAGNOSTICS affected = ROW_COUNT;

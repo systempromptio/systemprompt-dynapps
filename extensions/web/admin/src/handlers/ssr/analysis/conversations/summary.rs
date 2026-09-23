@@ -79,6 +79,9 @@ pub(crate) struct ConversationBucketView {
     pub label: String,
     pub href: Option<String>,
     pub export_href: Option<String>,
+    // Why: the bucket's own query for the export dialog, so the icon opens on
+    // this bucket's rows rather than the page's whole filter set.
+    pub export_query: Option<String>,
     pub conversations: i64,
     pub users: i64,
     pub turns: i64,
@@ -102,14 +105,16 @@ impl ConversationBucketView {
     pub(crate) fn new(
         row: &ConversationBucketRow,
         href: Option<String>,
-        export_href: Option<String>,
+        export: Option<(String, String)>,
         label: Option<&str>,
         total_cost: i64,
     ) -> Self {
+        let (export_href, export_query) = export.unzip();
         Self {
             label: label.map_or_else(|| row.label.clone(), str::to_owned),
             href,
             export_href,
+            export_query,
             conversations: row.conversations,
             users: row.users,
             turns: row.turns,

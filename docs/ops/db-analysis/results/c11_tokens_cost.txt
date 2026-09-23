@@ -1,0 +1,49 @@
+== C11 tokens_used identity: which formula holds
+ total | in_plus_out | in_out_cache | in_out_cache_reasoning | has_reasoning | reasoning_total | reasoning_within_output 
+-------+-------------+--------------+------------------------+---------------+-----------------+-------------------------
+  4392 |        1945 |         4287 |                   2443 |          1844 |          573408 |                    1844
+(1 row)
+
+== C11 uncosted completed requests with tokens, by provider/model
+ provider | model | count 
+----------+-------+-------
+(0 rows)
+
+== C11 completed with zero tokens (settlement never landed usage)
+ provider | model | is_streaming | request_kind | count 
+----------+-------+--------------+--------------+-------
+(0 rows)
+
+== C11 cost per provider/model: requests, tokens, cost, USD per 1M tokens
+ provider  |           model            |  n   |  tokens   |  usd   | usd_per_mtok 
+-----------+----------------------------+------+-----------+--------+--------------
+ anthropic | claude-sonnet-5            | 1365 | 128765801 | 115.68 |         0.90
+ anthropic | claude-opus-5              |  612 |  66979812 |  87.74 |         1.31
+ anthropic | claude-haiku-4-5-20251001  | 1931 |  81845526 |  37.64 |         0.46
+ anthropic | claude-fable-5-1           |   41 |   8793591 |  19.09 |         2.17
+ anthropic | claude-sonnet-4-6          |  250 |  22503740 |  14.39 |         0.64
+ anthropic | claude-fable-5             |    6 |    203182 |   1.96 |         9.65
+ anthropic | claude-sonnet-4-5-20250929 |   20 |   1059053 |   1.28 |         1.21
+ vertex    | gemini-2.5-pro             |   20 |    826330 |   0.93 |         1.13
+ vertex    | gemini-3.1-pro-preview     |   22 |    545106 |   0.69 |         1.27
+ vertex    | gemini-3.5-flash-lite      |    6 |    274663 |   0.07 |         0.24
+ vertex    | gemini-3.5-flash           |    3 |     45413 |   0.07 |         1.59
+ vertex    | gemini-3.6-flash           |    2 |     33247 |   0.03 |         0.78
+ vertex    | gemini-3.7-flash           |    1 |     32425 |   0.02 |         0.75
+ vertex    | gemini-3.8-flash           |    1 |     32408 |   0.02 |         0.75
+ vertex    | gemini-3.1-flash-lite      |    2 |     32955 |   0.01 |         0.25
+(15 rows)
+
+== C11 accounting failures
+ failed | example 
+--------+---------
+      0 | 
+(1 row)
+
+== C11 probe requests: are they costed / tokened
+ request_kind | count |  tokens   |   usd    | synthetic 
+--------------+-------+-----------+----------+-----------
+ probe        |  1338 |   5188773 |   9.3976 |         0
+ turn         |  3054 | 306902300 | 270.2440 |         0
+(2 rows)
+

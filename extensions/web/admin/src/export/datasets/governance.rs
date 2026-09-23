@@ -120,6 +120,9 @@ impl DataSet for Decisions {
     fn title(&self) -> &'static str {
         "Governance decisions"
     }
+    fn description(&self) -> &'static str {
+        "One row per policy evaluation: decision, policy, tool, person and reason."
+    }
     fn columns(&self) -> &'static [Column] {
         DECISION_COLUMNS
     }
@@ -150,6 +153,9 @@ impl DataSet for Findings {
     fn title(&self) -> &'static str {
         "Safety findings"
     }
+    fn description(&self) -> &'static str {
+        "One row per scanner finding: category, scanner, severity, outcome and the request it hit."
+    }
     fn columns(&self) -> &'static [Column] {
         FINDING_COLUMNS
     }
@@ -179,6 +185,9 @@ impl DataSet for Secrets {
     }
     fn title(&self) -> &'static str {
         "Secrets audit"
+    }
+    fn description(&self) -> &'static str {
+        "One row per secret read or change: variable, plugin, owner and who acted."
     }
     fn columns(&self) -> &'static [Column] {
         SECRET_COLUMNS

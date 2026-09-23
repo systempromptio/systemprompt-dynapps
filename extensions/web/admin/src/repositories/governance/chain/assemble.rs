@@ -3,7 +3,7 @@
 
 use sqlx::PgPool;
 
-use super::fetch::{find_summary, find_transcript, list_decisions, list_events, list_requests};
+use super::fetch::{find_summary, list_decisions, list_events, list_requests};
 use super::resolve::resolve_session_id;
 use super::{
     AiRequestSummary, ChainEnvelope, ChainIdentity, ChainTotals, ChainUsageEvent, DecisionStage,
@@ -44,7 +44,6 @@ pub async fn find_decision_chain(
     let (requests, request_slots) = list_requests(pool, &session_id).await?;
     let trace_id = request_slots.trace_id;
     let events = list_events(pool, &session_id).await?;
-    let transcript = find_transcript(pool, &session_id).await?;
     let summary = find_summary(pool, &session_id).await?;
 
     // Why: a gateway-only session has no governance decision to name its user,
@@ -68,7 +67,6 @@ pub async fn find_decision_chain(
         decisions,
         requests,
         events,
-        transcript,
         summary,
         totals,
     }))

@@ -2,11 +2,13 @@
 //!
 //! One row per disagreement, in a fixed vocabulary of `kind` tokens the page
 //! and the tests key on (`missing`, `orphan`, `changed`, `default`, `entity`,
-//! `awaiting`). Orphans stamped `bundle:<name>` — rows a kit's own `access:`
-//! block wrote — are labelled as such so the operator sees which kit is
-//! carrying a second truth.
+//! `awaiting`). The label says what happened in words a reader acts on —
+//! *removed from code*, *written in console* — and the resolution badge names
+//! the one button that settles it. Orphans stamped `bundle:<name>` — rows a
+//! kit's own `access:` block wrote — are labelled as such so the operator
+//! sees which kit is carrying a second truth.
 
-use super::plane::DriftRow;
+use super::plane::{DriftRow, resolution};
 use crate::repositories::access_control::declared::{DeclaredEntity, DeclaredRule, DeclaredSet};
 use crate::repositories::access_control::drift::{
     ChangedRule, DefaultDrift, DriftReport, OrphanOrigin, OrphanRule,
@@ -51,17 +53,21 @@ pub(super) fn awaiting_rows(declared: &DeclaredSet) -> Vec<DriftRow> {
             insert_applies: false,
             overwrite_applies: false,
             overwrite_effect: "no change until the bundle is pinned",
+            resolve: "Pin the bundle".to_owned(),
+            resolve_tone: "muted",
         })
         .collect()
 }
 
-fn orphan_origin(source: &str, origin: OrphanOrigin) -> (&'static str, &'static str) {
-    if source.starts_with("bundle:") {
-        return ("bundle", "err");
-    }
-    match origin {
-        OrphanOrigin::Dashboard => ("console", "warn"),
-        OrphanOrigin::Stale => ("stale", "err"),
+// Why: label, tone and provenance badge for a database-only row, by who
+// wrote it. The label is the cause in plain words; `stale` never appears.
+const fn orphan_words(
+    orphan: &OrphanRule,
+) -> (&'static str, &'static str, &'static str, &'static str) {
+    match orphan.origin {
+        OrphanOrigin::Code => ("Removed from code", "err", "code", "muted"),
+        OrphanOrigin::Console => ("Written in console", "info", "console", "info"),
+        OrphanOrigin::Bundle => ("Owned by a bundle", "muted", "bundle", "muted"),
     }
 }
 
@@ -85,10 +91,11 @@ pub fn rows(drift: &DriftReport) -> Vec<DriftRow> {
 }
 
 fn missing_row(rule: &DeclaredRule) -> DriftRow {
+    let (resolve, resolve_tone) = resolution(true, true, "inserted");
     DriftRow {
         kind: "missing",
-        kind_label: "In code, not in database",
-        kind_tone: "info",
+        kind_label: "Added in code",
+        kind_tone: "ok",
         entity_type_label: label(&rule.key.entity_type),
         entity_type: rule.key.entity_type.clone(),
         entity_id: rule.key.entity_id.clone(),
@@ -103,15 +110,22 @@ fn missing_row(rule: &DeclaredRule) -> DriftRow {
         insert_applies: true,
         overwrite_applies: true,
         overwrite_effect: "inserted",
+        resolve,
+        resolve_tone,
     }
 }
 
 fn orphan_row(orphan: &OrphanRule) -> DriftRow {
-    let (origin, origin_tone) = orphan_origin(&orphan.row.source, orphan.origin);
+    let (kind_label, kind_tone, origin, origin_tone) = orphan_words(orphan);
+    let (resolve, resolve_tone) = match (orphan.retire, orphan.origin) {
+        (true, _) => ("Overwrite deletes".to_owned(), "err"),
+        (false, OrphanOrigin::Console) => ("Export to keep".to_owned(), "info"),
+        (false, _) => ("Kept — the bundle's own truth".to_owned(), "muted"),
+    };
     DriftRow {
         kind: "orphan",
-        kind_label: "In database, not in code",
-        kind_tone: "warn",
+        kind_label,
+        kind_tone,
         entity_type_label: label(&orphan.row.entity_type),
         entity_type: orphan.row.entity_type.clone(),
         entity_id: orphan.row.entity_id.clone(),
@@ -132,19 +146,27 @@ fn orphan_row(orphan: &OrphanRule) -> DriftRow {
         origin_tone,
         governed: orphan.governed,
         insert_applies: false,
-        overwrite_applies: orphan.governed,
-        overwrite_effect: if orphan.governed {
+        overwrite_applies: orphan.retire,
+        overwrite_effect: if orphan.retire {
             "deleted"
         } else {
             "kept (entity not in code)"
         },
+        resolve,
+        resolve_tone,
     }
 }
 
 fn changed_row(changed: &ChangedRule) -> DriftRow {
+    let console = changed.db_source == "dashboard";
+    let (resolve, resolve_tone) = resolution(false, true, "updated");
     DriftRow {
         kind: "changed",
-        kind_label: "Differs",
+        kind_label: if console {
+            "Edited in console"
+        } else {
+            "Changed in code"
+        },
         kind_tone: "warn",
         entity_type_label: label(&changed.key.entity_type),
         entity_type: changed.key.entity_type.clone(),
@@ -158,23 +180,22 @@ fn changed_row(changed: &ChangedRule) -> DriftRow {
             changed.db_access,
             changed.db_why.as_deref().unwrap_or("(no reason recorded)")
         ),
-        origin: if changed.db_source == "dashboard" {
-            "console"
-        } else {
-            "code"
-        },
-        origin_tone: "muted",
+        origin: if console { "console" } else { "code" },
+        origin_tone: if console { "info" } else { "muted" },
         governed: true,
         insert_applies: false,
         overwrite_applies: true,
         overwrite_effect: "updated",
+        resolve,
+        resolve_tone,
     }
 }
 
 fn default_row(d: &DefaultDrift) -> DriftRow {
+    let (resolve, resolve_tone) = resolution(false, true, "updated");
     DriftRow {
         kind: "default",
-        kind_label: "Default differs",
+        kind_label: "Default changed in code",
         kind_tone: "warn",
         entity_type_label: label(&d.entity_type),
         entity_type: d.entity_type.clone(),
@@ -190,14 +211,17 @@ fn default_row(d: &DefaultDrift) -> DriftRow {
         insert_applies: false,
         overwrite_applies: true,
         overwrite_effect: "updated",
+        resolve,
+        resolve_tone,
     }
 }
 
 fn entity_row(e: &DeclaredEntity) -> DriftRow {
+    let (resolve, resolve_tone) = resolution(true, true, "inserted");
     DriftRow {
         kind: "entity",
-        kind_label: "Entity not catalogued",
-        kind_tone: "info",
+        kind_label: "Entity added in code",
+        kind_tone: "ok",
         entity_type_label: label(&e.entity_type),
         entity_type: e.entity_type.clone(),
         entity_id: e.entity_id.clone(),
@@ -212,5 +236,7 @@ fn entity_row(e: &DeclaredEntity) -> DriftRow {
         insert_applies: true,
         overwrite_applies: true,
         overwrite_effect: "inserted",
+        resolve,
+        resolve_tone,
     }
 }

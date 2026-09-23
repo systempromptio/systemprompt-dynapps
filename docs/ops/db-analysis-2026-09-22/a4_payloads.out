@@ -1,0 +1,29 @@
+          ?column?           |    ?column?     | count  | pg_size_pretty | pg_size_pretty | pg_size_pretty | pg_size_pretty 
+-----------------------------+-----------------+--------+----------------+----------------+----------------+----------------
+ artifact_payloads           | body            |    208 | 2926 bytes     | 53 kB          | 182 kB         | 594 kB
+ mcp_artifacts               | data            |    284 | 2804 bytes     | 22 kB          | 182 kB         | 778 kB
+ mcp_tool_executions         | output          |    550 | 3287 bytes     | 91 kB          | 241 kB         | 1705 kB
+ feedback_ingestion_evidence | evidence        |   2049 | 1447 bytes     | 1874 bytes     | 2084 bytes     | 2895 kB
+ ai_request_payloads         | prepared_tools  |   4392 |                |                |                | 
+ ai_request_payloads         | offered_tools   |   4392 | 59 kB          | 126 kB         | 129 kB         | 184 MB
+ ai_request_payloads         | response_body   |   4392 | 600 bytes      | 736 bytes      | 2080 bytes     | 826 kB
+ ai_request_payloads         | request_body    |   4392 | 115 kB         | 573 kB         | 1000 kB        | 490 MB
+ governance_decisions        | act_chain       |  16163 | 5 bytes        | 5 bytes        | 5 bytes        | 79 kB
+ governance_decisions        | evaluated_rules |  16163 | 964 bytes      | 1540 bytes     | 1584 bytes     | 15 MB
+ event_outbox                | payload         |  77797 | 5 bytes        | 5 bytes        | 5 bytes        | 380 kB
+ event_outbox                | fact            |  77797 | 227 bytes      | 227 bytes      | 227 bytes      | 17 MB
+ ai_request_messages         | content         | 154985 | 1546 bytes     | 15 kB          | 81 kB          | 228 MB
+ logs                        | message         | 439002 | 42 bytes       | 115 bytes      | 148 bytes      | 17 MB
+ logs                        | metadata        | 439002 | 113 bytes      | 193 bytes      | 223 bytes      | 46 MB
+(15 rows)
+
+ req_raw_avg | req_raw_max | resp_raw_avg | tools_raw_avg 
+-------------+-------------+--------------+---------------
+ 230 kB      | 1031 kB     | 526 bytes    | 137 kB
+(1 row)
+
+ tools_in_body_avg | msgs_in_body_avg | system_avg |     n_tools_avg     |     n_msgs_avg      
+-------------------+------------------+------------+---------------------+---------------------
+ 135 kB            | 149 kB           | 34 kB      | 67.6705918810040285 | 45.1220948249147815
+(1 row)
+

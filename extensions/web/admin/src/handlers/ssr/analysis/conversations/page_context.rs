@@ -51,7 +51,7 @@ pub(crate) struct ConversationsPageContext {
     pub current_url: String,
     pub judge_all_url: &'static str,
     pub can_judge: bool,
-    // Why: the profile's `evaluation.automatic` is off — verdicts arrive
+    // Why: the profile's `judge.automatic` is off — verdicts arrive
     // only when a person asks, so the page shows the buttons that ask.
     pub manual_judge: bool,
     pub unjudged_in_view: i64,

@@ -43,13 +43,13 @@ mod ssr_connect;
 mod ssr_connectors;
 pub(crate) mod ssr_connectors_cards;
 mod ssr_context_detail;
-mod ssr_conversations_raw;
 mod ssr_demo_help;
 mod ssr_governance_audit_detail;
 mod ssr_group_detail;
 mod ssr_groups;
 pub(crate) mod ssr_helpers;
 pub(crate) mod ssr_history;
+mod ssr_lifecycle;
 mod ssr_observability;
 mod ssr_perf_trace_detail;
 pub(crate) mod ssr_perf_traces;
@@ -90,7 +90,6 @@ pub(crate) use ssr_chain::chain_envelope;
 pub(crate) use ssr_connect::connect_page;
 pub(crate) use ssr_connectors::connectors_page;
 pub(crate) use ssr_context_detail::context_detail_page;
-pub(crate) use ssr_conversations_raw::conversations_raw;
 pub(crate) use ssr_governance_audit_detail::governance_audit_detail_page;
 pub(crate) use ssr_group_detail::group_detail_page;
 pub(crate) use ssr_groups::groups_page;
@@ -98,6 +97,7 @@ pub(crate) use ssr_helpers::{branding_context, render_typed_page};
 pub(crate) use ssr_history::{
     conversations_page, history_conversation_page, history_page, history_search,
 };
+pub(crate) use ssr_lifecycle::{lifecycle_archive_download, lifecycle_page};
 pub(crate) use ssr_observability::{
     export_now as observability_export_now, observability_page,
     test_connection as observability_test_connection,

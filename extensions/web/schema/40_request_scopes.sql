@@ -3,14 +3,14 @@
 -- Spend used to be attributed by joining `ai_requests` to each person's
 -- *current* primary group and project, so moving someone silently rewrote
 -- their history. This table pins the answer per request: an `AFTER INSERT`
--- trigger on core's `ai_requests` copies the primary group and project from
+-- statement trigger on core's `ai_requests` copies the primary group and project from
 -- `user_scope_defaults` the moment the row lands, and nothing later touches it.
 -- `source` says who decided — `primary` is the person's default; `header` is
 -- reserved for a per-request override a gateway seam may supply later.
 --
 -- Extension-only: `ai_requests` is core's and has no scope column, and the
 -- insert is a plain statement on the write pool, so the trigger resolves the
--- scope itself from `NEW.user_id`. The body is wrapped exactly like
+-- scope itself from each new row's `user_id`. The body is wrapped exactly like
 -- `audit_event_notify_ai_requests` (14_): a fault here warns and returns, it
 -- never rolls back the core insert. Established databases are backfilled by
 -- migration 078.
@@ -38,30 +38,40 @@ CREATE INDEX IF NOT EXISTS idx_ai_request_scopes_user
 -- a job or MCP actor carries its owner's id and is never a person's spend.
 CREATE OR REPLACE FUNCTION request_scope_stamp_ai_requests()
 RETURNS TRIGGER AS $$
-DECLARE
-    primary_group TEXT;
-    primary_project TEXT;
 BEGIN
     BEGIN
-        IF NEW.actor_kind = 'user' THEN
-            SELECT d.primary_group_id, d.primary_project_id
-              INTO primary_group, primary_project
-              FROM user_scope_defaults d
-             WHERE d.user_id = NEW.user_id;
+        -- TG_LEVEL: the installer swaps function bodies before migrations run,
+        -- so a database mid-upgrade still fires the row-form trigger into this
+        -- body until the declarative phase replaces it below.
+        IF TG_LEVEL = 'ROW' THEN
+            INSERT INTO ai_request_scopes (request_id, user_id, group_id, project_id, source)
+            SELECT NEW.id, NEW.user_id, d.primary_group_id, d.primary_project_id, 'primary'
+              FROM (SELECT 1) one
+              LEFT JOIN user_scope_defaults d
+                ON NEW.actor_kind = 'user' AND d.user_id = NEW.user_id
+            ON CONFLICT (request_id) DO NOTHING;
+            RETURN NEW;
         END IF;
-
         INSERT INTO ai_request_scopes (request_id, user_id, group_id, project_id, source)
-        VALUES (NEW.id, NEW.user_id, primary_group, primary_project, 'primary')
+        SELECT r.id, r.user_id, d.primary_group_id, d.primary_project_id, 'primary'
+          FROM new_rows r
+          LEFT JOIN user_scope_defaults d
+            ON r.actor_kind = 'user' AND d.user_id = r.user_id
         ON CONFLICT (request_id) DO NOTHING;
     EXCEPTION WHEN OTHERS THEN
-        RAISE WARNING 'request_scope_stamp_ai_requests failed: % (id=%, user=%)',
-            SQLERRM, NEW.id, NEW.user_id;
+        RAISE WARNING 'request_scope_stamp_ai_requests failed: %', SQLERRM;
     END;
-    RETURN NEW;
+    RETURN NULL;
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE TRIGGER request_scope_stamp_ai_requests_trg
+-- Statement-level: one INSERT ... SELECT over the rows the statement added,
+-- not one lookup and insert per request. The row form is dropped first
+-- because a statement trigger with a transition table is a new definition,
+-- not a replacement.
+DROP TRIGGER IF EXISTS request_scope_stamp_ai_requests_trg ON ai_requests;
+CREATE OR REPLACE TRIGGER request_scope_stamp_ai_requests_stmt
     AFTER INSERT ON ai_requests
-    FOR EACH ROW
+    REFERENCING NEW TABLE AS new_rows
+    FOR EACH STATEMENT
     EXECUTE FUNCTION request_scope_stamp_ai_requests();

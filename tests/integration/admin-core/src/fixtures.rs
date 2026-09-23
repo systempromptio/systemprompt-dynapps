@@ -321,13 +321,31 @@ impl<'a> RequestSpec<'a> {
 // A payload row offering tools: the conversation view classifies a lone
 // request with no tools as a side call, so a test that wants a real turn
 // (opening prompt, search) inserts this beside the request.
+//
+// Core 0.59.0 stores a tool list once in `ai_tool_catalogs` and has the
+// payload reference its digest, so the catalogue row comes first and the
+// payload names it.
 pub async fn insert_offered_tools(pool: &PgPool, request_id: &str) {
-    sqlx::query("INSERT INTO ai_request_payloads (ai_request_id, offered_tools) VALUES ($1, $2)")
-        .bind(request_id)
-        .bind(serde_json::json!([{"name": "bash"}]))
-        .execute(pool)
-        .await
-        .expect("insert ai request payload");
+    let tools = serde_json::json!([{"name": "bash"}]);
+    let sha256 = format!("{:064x}", 0xba5eba11u64);
+    sqlx::query(
+        "INSERT INTO ai_tool_catalogs (sha256, tools) VALUES ($1, $2) \
+         ON CONFLICT (sha256) DO NOTHING",
+    )
+    .bind(&sha256)
+    .bind(&tools)
+    .execute(pool)
+    .await
+    .expect("insert tool catalogue");
+
+    sqlx::query(
+        "INSERT INTO ai_request_payloads (ai_request_id, offered_tools_sha256) VALUES ($1, $2)",
+    )
+    .bind(request_id)
+    .bind(&sha256)
+    .execute(pool)
+    .await
+    .expect("insert ai request payload");
 }
 
 pub async fn insert_request(pool: &PgPool, spec: &RequestSpec<'_>) {
@@ -560,34 +578,6 @@ pub async fn insert_message(pool: &PgPool, request_id: &str, seq: i32, role: &st
     .execute(pool)
     .await
     .expect("insert ai request message");
-}
-
-// A `session_transcripts` row — the Claude Code Stop hook's half of a
-// conversation, and the only source the history page had before gateway rows
-// were unified into it. `search_tsv` is a generated column, so the text that
-// full-text search matches on is whatever this transcript JSON stringifies to.
-pub async fn insert_transcript(
-    pool: &PgPool,
-    session_id: &str,
-    user_id: &UserId,
-    model: &str,
-    body: &str,
-) {
-    let transcript = serde_json::json!([{ "role": "user", "content": body }]);
-    sqlx::query(
-        "INSERT INTO session_transcripts
-             (id, user_id, session_id, transcript, model, entries_counted,
-              total_input_tokens, total_output_tokens)
-         VALUES ($1, $2, $3, $4, $5, 1, 10, 20)",
-    )
-    .bind(unique("transcript"))
-    .bind(user_id.as_str())
-    .bind(session_id)
-    .bind(transcript)
-    .bind(model)
-    .execute(pool)
-    .await
-    .expect("insert session transcript");
 }
 
 // Insert a group row. Appended at the end of the file deliberately: several

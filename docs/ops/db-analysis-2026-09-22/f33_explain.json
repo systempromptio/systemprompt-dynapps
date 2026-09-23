@@ -1,0 +1,229 @@
+[
+ {
+  "label": "core-ai",
+  "hash": "daa4202f631e1bbd",
+  "tables": [
+   "ai_request_payloads",
+   "ai_requests"
+  ],
+  "ms": 0.1,
+  "plan_ms": 1.6,
+  "seq": [],
+  "disk": [],
+  "shared_read": 0,
+  "shared_hit": 5,
+  "temp": 0
+ },
+ {
+  "label": "core-ai",
+  "hash": "9e78134e2cd85d04",
+  "tables": [
+   "ai_request_payloads",
+   "ai_requests"
+  ],
+  "ms": 0.1,
+  "plan_ms": 1.4,
+  "seq": [],
+  "disk": [],
+  "shared_read": 0,
+  "shared_hit": 5,
+  "temp": 0
+ },
+ {
+  "label": "core-ai",
+  "hash": "10a7c09f5cc494d3",
+  "tables": [
+   "ai_request_tool_calls",
+   "ai_requests"
+  ],
+  "ms": 0.1,
+  "plan_ms": 1.1,
+  "seq": [],
+  "disk": [],
+  "shared_read": 0,
+  "shared_hit": 3,
+  "temp": 0
+ },
+ {
+  "label": "core-ai",
+  "hash": "ad58ff3104571652",
+  "tables": [
+   "ai_requests"
+  ],
+  "ms": 0.1,
+  "plan_ms": 1.0,
+  "seq": [],
+  "disk": [],
+  "shared_read": 1,
+  "shared_hit": 2,
+  "temp": 0
+ },
+ {
+  "label": "core-ai",
+  "hash": "06706a6c0fb09ae0",
+  "tables": [
+   "ai_requests"
+  ],
+  "ms": 0.1,
+  "plan_ms": 1.0,
+  "seq": [],
+  "disk": [],
+  "shared_read": 0,
+  "shared_hit": 8,
+  "temp": 0
+ },
+ {
+  "label": "core-security",
+  "hash": "5fc620856faa6a18",
+  "tables": [
+   "governance_decisions"
+  ],
+  "ms": 0.1,
+  "plan_ms": 0.9,
+  "seq": [],
+  "disk": [],
+  "shared_read": 0,
+  "shared_hit": 11,
+  "temp": 0
+ },
+ {
+  "label": "core-ai",
+  "hash": "2c246d70d7856ab6",
+  "tables": [
+   "ai_safety_findings"
+  ],
+  "ms": 0.1,
+  "plan_ms": 1.0,
+  "seq": [],
+  "disk": [],
+  "shared_read": 0,
+  "shared_hit": 11,
+  "temp": 0
+ },
+ {
+  "label": "core-security",
+  "hash": "9f5dbc9931eebeb0",
+  "tables": [
+   "governance_decisions"
+  ],
+  "ms": 0.1,
+  "plan_ms": 0.6,
+  "seq": [],
+  "disk": [],
+  "shared_read": 0,
+  "shared_hit": 0,
+  "temp": 0
+ },
+ {
+  "label": "core-ai",
+  "hash": "e0514dcbe5a16272",
+  "tables": [
+   "ai_request_tool_calls"
+  ],
+  "ms": 0.0,
+  "plan_ms": 0.4,
+  "seq": [],
+  "disk": [],
+  "shared_read": 0,
+  "shared_hit": 3,
+  "temp": 0
+ },
+ {
+  "label": "core-ai",
+  "hash": "a49e7b898e458c84",
+  "tables": [
+   "ai_requests"
+  ],
+  "ms": 0.9,
+  "plan_ms": 0.8,
+  "seq": [],
+  "disk": [],
+  "shared_read": 0,
+  "shared_hit": 201,
+  "temp": 0
+ },
+ {
+  "label": "core-ai",
+  "hash": "9a16da62fc736da1",
+  "tables": [
+   "ai_request_tool_calls"
+  ],
+  "ms": 0.1,
+  "plan_ms": 0.7,
+  "seq": [],
+  "disk": [],
+  "shared_read": 1,
+  "shared_hit": 2,
+  "temp": 0
+ },
+ {
+  "label": "core-ai",
+  "hash": "1a9ed813d0a50db6",
+  "tables": [
+   "ai_request_messages"
+  ],
+  "ms": 1.0,
+  "plan_ms": 0.7,
+  "seq": [],
+  "disk": [],
+  "shared_read": 7,
+  "shared_hit": 3,
+  "temp": 0
+ },
+ {
+  "label": "core-ai",
+  "hash": "f189d40b46313779",
+  "tables": [
+   "ai_request_payloads"
+  ],
+  "ms": 0.3,
+  "plan_ms": 0.4,
+  "seq": [],
+  "disk": [],
+  "shared_read": 1,
+  "shared_hit": 2,
+  "temp": 0
+ },
+ {
+  "label": "core-ai",
+  "hash": "a311e00ca91c0b1e",
+  "tables": [
+   "ai_request_messages"
+  ],
+  "ms": 0.1,
+  "plan_ms": 0.5,
+  "seq": [],
+  "disk": [],
+  "shared_read": 0,
+  "shared_hit": 10,
+  "temp": 0
+ },
+ {
+  "label": "core-ai",
+  "hash": "89e440dd69ea1171",
+  "tables": [
+   "ai_requests"
+  ],
+  "ms": 0.1,
+  "plan_ms": 0.8,
+  "seq": [],
+  "disk": [],
+  "shared_read": 0,
+  "shared_hit": 5,
+  "temp": 0
+ },
+ {
+  "label": "core-ai",
+  "hash": "4ce8a9ed93eee36e",
+  "tables": [
+   "ai_request_payloads"
+  ],
+  "ms": 0.1,
+  "plan_ms": 0.5,
+  "seq": [],
+  "disk": [],
+  "shared_read": 0,
+  "shared_hit": 3,
+  "temp": 0
+ }
+]

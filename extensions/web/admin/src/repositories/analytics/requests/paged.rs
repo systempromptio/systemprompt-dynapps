@@ -110,6 +110,10 @@ async fn run_paged_query(
     .await
 }
 
+// Why: lint-ok: field-copy-from — `query_as!` binds a flat struct whose fields
+// are the selected columns, so the window-function total has to ride on the row
+// rather than sit beside it. The alternative is a second COUNT query, which
+// costs another scan and can disagree with the page it labels.
 impl From<RequestRowWithTotal> for RequestRow {
     fn from(r: RequestRowWithTotal) -> Self {
         Self {

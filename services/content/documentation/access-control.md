@@ -141,7 +141,7 @@ The database — `access_control_rules` and `access_control_entities` — is wha
 
 - **A group's Access tab** (`/admin/groups/<id>` → Access) sets that group's band on any entity. Allow or deny asks for a **reason** and refuses to save without one.
 - **A person's Access tab** (`/admin/users/<id>` → Access) sets a person-band override. The reason is optional there.
-- Every console write is stamped `source = dashboard`, so the Sync page can tell a console decision from a stale row.
+- Every console write is stamped `source = dashboard`, so the Sync page can tell a console decision from one the file wrote.
 
 The Access control page shows this database, one row per entity: the bands as chips, the reason in full, and a **Code ↔ DB** column saying whether the file agrees. The column has three words. **In sync** — the file and the database agree on this entity. **Drift** — they differ; the link opens the Sync page filtered to it. **Unknown** — the declaration could not be compared at all, and the notice at the top of the page says why: either `rules.yaml` did not parse, or the services tree it validates against did not compose (a plugin including an MCP server no file declares, for instance). *Unknown* never means "no rules" or "not yet synced" — a readable file against an empty database is *Drift*. Expand a row for the individual rules and the resolver's outcome in a sentence.
 
@@ -151,21 +151,21 @@ Code and database are two copies of the same intent. Either may be edited; neith
 
 **On boot** the server reads `rules.yaml` and, if the database holds **no** band rules at all (a fresh install), seeds it from the file in one transaction. Otherwise it computes the differences, logs them (`sync_drift` in the server log), and **writes nothing**. A deploy that adds a rule to the file therefore does not land that rule until an administrator chooses to. The same contract governs the groups and gateway-policy planes: no plane rewrites its tables on a restart. People are outside the loop entirely — membership, manual roles and person-band overrides are never declared in code, never reported as drift and never exported.
 
-**`/admin/sync`** lists every difference as a line — what the code declares, what the database holds, where the database row came from (`console` or `stale`), and which action would resolve it — and offers three directions:
+**The Sync tab** (`/admin/access-control?tab=sync`) says what happened, in the words a reader acts on. The tiles count differences by **cause** — *added in code*, *changed in code*, *removed from code*, *written in console*, *awaiting a bundle* — and a **Next:** line names the one action that settles the plane. Every difference is a line: the cause, the entity and band, what code and the database each hold, who wrote the database row (`code`, `console` or `bundle`), and a **Resolves with** badge naming the button. Three directions:
 
 | Action | Writes | Leaves alone |
 |---|---|---|
 | **Insert only** | Rules and entity defaults the file declares that the database lacks | Everything that already exists, even if it differs |
-| **Overwrite from code** | Inserts the missing, updates rows whose access or reason differs, and **deletes** rows on entities the file names that the file does not declare | Entities the file does not mention; every person-band override |
-| **Export from dashboard** | Nothing in the database. Renders it as a `rules.yaml` to copy or download | — |
+| **Overwrite from code** | Adds what code added, corrects what code changed, and **deletes** what code removed: every undeclared row on an entity the file names, and every row the file itself wrote on an entity it has since dropped (with that entity's default, once nothing is left on it) | Rows the console or a bundle wrote on entities the file does not mention; every person-band override |
+| **Export to code** | Nothing in the database. Renders it as a `rules.yaml` to copy or download | — |
 
 Both writes run in one transaction that re-reads the tables first, are recorded in the activity log with your name and the counts, and are confirmed in words that name what will be deleted.
+
+The asymmetry is the point. Code is the source for everything code wrote, so deleting an entity from the file and pressing Overwrite removes its rows even though the file no longer says a word about it. The console is the source for what it wrote, so a console row on an entity the file has never named survives every Overwrite and reaches the file only through **Export** — the instance never writes into the repository itself.
 
 **To make the console the source and the code catch up:** edit in the console, press **Export**, replace `services/access-control/rules.yaml` with the result, commit, deploy. The next boot reports *in sync*. Lines beginning `# NOTE:` in the export name what could not be expressed — a band whose rows carry different reasons, or gateway routes whose rule sets differ from one another — and must be resolved by hand.
 
 **To make the code the source and the database catch up:** edit the file, commit, deploy, open the Sync page, choose **Insert only** (additive) or **Overwrite from code** (authoritative).
-
-A note on `stale`: rows written from the console before it stamped its writes carry `source = yaml` and appear as *stale* rather than *console*. Overwrite treats them as any other undeclared row on a declared entity. Re-saving a rule from the console re-stamps it.
 
 The Sync page is instance-wide — access control is one **plane** of it, beside the **sources** every declaration comes from. Each plane records the declared hash it last applied, when, by whom and in which mode, so the card can say *declared `ab12…` · last applied `ab12…` by Ed (overwrite)* or *declaration changed since last apply*. How sources, planes and hashes fit together: [Code ↔ Instance](/documentation/services-sync).
 
@@ -192,7 +192,7 @@ A marketplace can arrive as a signed **services bundle** published by another Gi
 
 **Explain one person's access.** Access control → Check a person, or User page → Access. Each row says *allow*/*deny* and the band that decided. Compare with the Audience grid tab to see what would change if they joined a group or gained a role.
 
-**Retire a rule cleanly.** Remove it from `rules.yaml`, deploy, Sync → Overwrite. Insert only would leave the old row in place; the Sync page would keep listing it as *stale*.
+**Retire a rule — or a whole entity — cleanly.** Remove it from `rules.yaml`, deploy, Sync → Overwrite. The row is deleted whether or not the entity is still in the file, because the file wrote it. Insert only would leave it in place, listed as *removed from code* until an Overwrite.
 
 **Add a subject band.** A new dimension (cost centre, clearance, …) is a provider registered in `extensions/web/admin/src/authz/` and a new key in `BandMap`; no core change.
 

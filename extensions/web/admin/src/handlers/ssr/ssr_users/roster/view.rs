@@ -15,6 +15,7 @@ use crate::handlers::ssr::entity_urls::context_detail_url;
 use crate::handlers::ssr::types::FilterChipView;
 
 use super::context::{RosterChipView, RosterKpiView, RosterRowView};
+use crate::handlers::ssr::list_view::paginate_prefixed;
 
 pub(super) fn build_chips(url: &RosterUrlState, totals: &RosterStats) -> Vec<FilterChipView> {
     let prefix = url.link_prefix(&["filter", "page"]);
@@ -135,7 +136,11 @@ pub(super) fn build_rows(input: &RowInput<'_>) -> Vec<RosterRowView> {
                 cost_display: format_cost(row.cost_microdollars),
                 requests_display: format_token_total(row.requests),
                 tokens_display: format_token_total(row.tokens),
-                status_label: if row.is_active { "Active" } else { "Suspended" },
+                status_label: if row.is_active {
+                    "Enabled"
+                } else {
+                    "Suspended"
+                },
                 status_tone: if row.is_active { "ok" } else { "muted" },
                 is_active: row.is_active,
                 name,
@@ -161,17 +166,20 @@ fn chips(
         .collect()
 }
 
-// Why: the stamp alone cannot say which of the three activity clocks it came
-// from, and an admin reading "2h ago" on an account with no gateway traffic
-// needs to know it was a sign-in, not a prompt.
+// Why: the stamp alone cannot say which of the six activity clocks it came
+// from (`user_last_seen`), and an admin reading "2h ago" on an account with
+// no gateway traffic needs to know it was a bridge heartbeat, not a prompt.
 fn last_active_title(row: &RosterRow) -> String {
     let Some(t) = row.last_active else {
         return "No recorded activity".to_owned();
     };
     let source = match row.last_active_source.as_deref() {
-        Some("gateway") => "last gateway request",
+        Some("request") => "last gateway request",
         Some("session") => "last sign-in activity",
-        Some("console") => "last console action",
+        Some("activity") => "last console action",
+        Some("hook") => "last Claude Code hook event",
+        Some("tool") => "last MCP tool call",
+        Some("bridge") => "last bridge heartbeat",
         _ => "last activity",
     };
     format!("{} · {source}", t.to_rfc3339())
@@ -187,21 +195,5 @@ fn initials(name: &str) -> String {
 }
 
 pub(super) fn build_pagination(url: &RosterUrlState, window: PageWindow) -> Pagination {
-    let page = window.index;
-    let prefix = url.link_prefix(&["page"]);
-    let prev_url = (page > 0).then(|| format!("{prefix}page={}", page - 1));
-    let next_url = (page + 1 < window.total_pages).then(|| format!("{prefix}page={}", page + 1));
-    let (first_row, last_row) = window.bounds();
-    Pagination {
-        current_page: page + 1,
-        total_pages: window.total_pages,
-        first_row,
-        last_row,
-        total_rows: window.total_rows,
-        noun: window.noun,
-        has_prev: prev_url.is_some(),
-        has_next: next_url.is_some(),
-        prev_url,
-        next_url,
-    }
+    paginate_prefixed(window, &url.link_prefix(&["page"]))
 }

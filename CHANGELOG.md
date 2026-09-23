@@ -18,7 +18,100 @@ Conventions (strict — hold every entry to them):
 - Version numbers track the root workspace `version` in `Cargo.toml`; bridge-only releases are
   prefixed `bridge-` (e.g. `bridge-0.17.1`).
 
-## Unreleased
+## 0.59.1 — 2026-09-23
+
+### Removed
+
+- **Admin:** the `external_agents` repository module (97 lines), the unused `GroupStats` type,
+  and ten unused conversion helpers in `numeric.rs`. All had zero callers. `external_agents`
+  was invisible to `check-dead-repository-code.sh` because that gate skips files whose head
+  carries `#![cfg(feature = ...)]`.
+
+### Added
+
+- **Gate:** `check-field-copy-from.py` rejects a `From` impl whose body only copies fields
+  across, name for name — the shape of a type declared twice. `check-duplicate-types.sh`
+  cannot see this: it compares names within a crate, and such pairs differ in both. On its
+  first run it found three in `extensions/`, one genuine (collapsed) and two imposed by
+  `query_as!` needing a flat column struct (annotated with the reason).
+
+### Fixed
+
+- **Schema:** the upgrade ladder could not replay past 0.52.0, so no established database could
+  reach this release. Five migrations (`049`, `050`, `063`, `067`, `073`) only re-created
+  declarative views over `ai_request_payloads.offered_tools`, a column core's ai `033` has since
+  moved into `ai_tool_catalogs`; carrying no state of their own, they are now `.tombstone` files.
+  Core 0.59.0's boot-time migration parser then refused `085` for naming a declarative-only view,
+  and three rollup refreshes (`085`, `099`, `102`) called `refresh_conversation_facts` before the
+  declarative pass had created `tool_activity` and `conversation_requests`; each is now guarded on
+  `to_regclass`. `097` could not re-shape `conversation_metrics_for` in place (42P13) and left the
+  superseded three-argument `conversation_request_kind` behind, so it drops its dependents and both
+  functions first. Every edited migration names the checksum it supersedes, so an established
+  database moves its tracking row without re-executing. `tests/integration/schema-upgrade` is the
+  only tier that exercises this path.
+
+- **Gateway (core 0.59.1):** core's `infra/events` migration `007` dropped
+  `event_outbox_actor_id_check` assuming migration `001`'s `event_outbox_actor_id_nonempty` stood
+  beside it. Restoring a release snapshot stamps that 001-era `ALTER` rather than executing it, so
+  the auto-named check was the only one and `event_outbox.actor_id` was left unguarded on every
+  upgrading instance. Core 0.59.1's migration `008` restores it; this release pins it.
+
+- **Database:** boot printed twenty-six warnings before serving a request, and none of them was
+  actionable. Four were live tables owned by no extension — `evaluation_queue`,
+  `evaluation_reports`, `evaluation_runs` and `session_analyses`, all empty, left by the deleted
+  evaluation engine along with four views over them; migration
+  `103_drop_evaluation_engine` retires the lot, idempotently, because the drops in `074`/`085`
+  are stamped applied yet the objects were still live (restoring a dump older than a drop puts
+  them back and nothing notices). The other twenty-two were the boot `@cost` audit reading the
+  whole migration catalogue: every one already grandfathered in
+  `tests/unit/web/migration_cost_baseline.txt` or core's, and none fixable, since a migration
+  that has run cannot be made cheaper by a comment. Core f0e25fdb3 narrows that warning to a
+  migration still pending against a hot table that already holds rows, and reports the row
+  count. The static whole-catalogue gate in `tests/unit/web/src/migration_cost.rs` is unchanged
+  and neither baseline file is touched.
+
+- **Admin:** `?preset=90d` meant 90 days on three pages and silently fell back to 30 on
+  another, and `1d` resolved on three pages and nowhere else. `TimeRangePreset` is now the one
+  table, carrying `90d` and the `1d` alias, and three hand-rolled copies of its `as_str` are
+  gone — the compiler found them once the enum gained a variant.
+
+- **Gateway (core 0.58.0):** bridge sign-in on an instance behind an untrusted reverse proxy
+  failed with `auth: gateway returned status 429 Too Many Requests from session-pat`, which
+  reads like a rejected token but is a rate limit. `/v1/auth/bridge/*` now has a budget of its
+  own (`rate_limits.bridge_auth_per_second`, default 20) instead of sharing one with
+  `/v1/messages`, so inference traffic can no longer starve sign-in; a refused request is now
+  logged instead of discarded; and the limiter warns when it is bucketing every client onto one
+  proxy address. Operator write-up and the fix for `sp-dev.astound.digital`:
+  `docs/ops/sp-dev-gateway-429.md`.
+
+### Changed
+
+- **Admin:** a personal access token is now accepted on the transcript exports
+  (`/admin/export/transcripts`, `…/preview`, `…/{context_id}`) as well as the table
+  exports, so an analysis job can read conversation records without a browser
+  session. The token still resolves to its owner and passes the same gates a
+  session does: a transcript outside the owner's view is a 404, as in the
+  console. A user's own transcripts are `/admin/export/transcripts?source=history`
+  and their per-conversation figures (turns, tokens, cost) `/admin/export/history`;
+  the console sources still need a console seat. Every other admin route still
+  refuses a PAT (`extensions/web/admin/src/middleware/pat.rs`), and
+  `tests/contract/admin/src/pat_export_contract.rs` pins all of it end to end.
+
+- **Profiles:** `rate_limits.gateway_per_second` (100) and `rate_limits.bridge_auth_per_second`
+  (20) are now declared explicitly in `deploy/self-host/profile.yaml.template` and both local
+  and production profiles. No profile in this repo had ever set a rate limit, so every
+  deployment was running invisible serde defaults — including the gateway budget that caused
+  the sign-in outage above.
+
+- **Bridge:** the Profile page no longer polls `/v1/bridge/profile` and `/profile/usage` every
+  30 s while open (`bridge/web/js/components/profile-connections.js`); it refreshes when the
+  window regains focus or visibility, which is when a connection made in a browser can have
+  changed. Those two polls were 61k of the rows in a three-week production `logs` table.
+- **Schema:** `conversation_requests` and `conversation_metrics_for` (`extensions/web/schema/
+  27_conversation_requests.sql`, migration `097`) read "offered tools" from
+  `ai_request_payloads.offered_tools_sha256`, the digest into core's new `ai_tool_catalogs`
+  table; core ai migration `033` drops the old JSONB column with CASCADE, and `097` re-declares
+  the view on the upgraded database.
 
 ## 0.58.0 — 2026-09-21
 

@@ -22,7 +22,7 @@ use crate::repositories::traces::{
     get_trace_stats, list_traces,
 };
 use crate::types::UserContext;
-use crate::util::time_range::{TimeRange, TimeRangePreset, TimeRangeQuery, parse_time_range};
+use crate::util::time_range::{TimeRange, TimeRangeQuery, parse_time_range};
 
 
 mod context;
@@ -31,12 +31,11 @@ mod rows;
 mod summary;
 mod view;
 
+use crate::handlers::ssr::list_view::DEFAULT_PAGE_SIZE;
 use crate::handlers::ssr::page::Page;
 use context::PerfTracesPageContext;
 
 const BASE_URL: &str = "/admin/traces";
-const PAGE_SIZE: i64 = 50;
-
 #[derive(Debug, Deserialize)]
 pub(crate) struct TraceListQuery {
     pub from: Option<String>,
@@ -49,6 +48,7 @@ pub(crate) struct TraceListQuery {
     pub decision: Option<String>,
     pub error_only: Option<String>,
     pub deny_only: Option<String>,
+    pub include_lifecycle: Option<String>,
     pub sort: Option<String>,
     pub dir: Option<String>,
     pub page: Option<i64>,
@@ -131,7 +131,7 @@ async fn load_traces(
 ) -> TraceRead {
     let (list_res, stats_res, options_res) = tokio::join!(
         list_traces(pool, filter, range, trace_page),
-        get_trace_stats(pool, range, subject_ids),
+        get_trace_stats(pool, range, subject_ids, filter.include_lifecycle),
         get_filter_options(pool, range),
     );
     let (rows, total) = list_res.unwrap_or_else(|e| {
@@ -164,8 +164,8 @@ async fn load_traces_data(
     let sort = sort_from_query(query);
     let trace_page = TracePage {
         sort,
-        limit: PAGE_SIZE,
-        offset: page * PAGE_SIZE,
+        limit: DEFAULT_PAGE_SIZE,
+        offset: page * DEFAULT_PAGE_SIZE,
     };
     let read = load_traces(pool, filter, scope.subjects.as_sql(), range, trace_page).await;
 
@@ -173,9 +173,9 @@ async fn load_traces_data(
     let has_traces = !trace_rows.is_empty();
     let window = list_view::PageWindow::new(
         page,
-        PAGE_SIZE,
+        DEFAULT_PAGE_SIZE,
         read.total,
-        i64::try_from(trace_rows.len()).unwrap_or(PAGE_SIZE),
+        i64::try_from(trace_rows.len()).unwrap_or(DEFAULT_PAGE_SIZE),
         "traces",
     );
     let sort_col = view::sort_col_to_str(sort.column);
@@ -210,7 +210,7 @@ async fn load_traces_data(
         traces: trace_rows,
         has_traces,
         total_count: read.total,
-        page_size: PAGE_SIZE,
+        page_size: DEFAULT_PAGE_SIZE,
         page_index: page,
         page_count: window.total_pages,
         pagination: view::build_pagination(query, window),
@@ -239,6 +239,7 @@ pub(super) fn build_filter<'a>(
         decision: empty_to_none(query.decision.as_deref()),
         error_only: query.error_only.as_deref() == Some("true"),
         deny_only: query.deny_only.as_deref() == Some("true"),
+        include_lifecycle: query.include_lifecycle.as_deref() == Some("true"),
     }
 }
 
@@ -255,15 +256,7 @@ fn preset_str(query: &TraceListQuery, range: TimeRange) -> String {
     if query.from.is_some() && query.to.is_some() {
         return "custom".to_owned();
     }
-    match range.preset {
-        TimeRangePreset::Min15 => "15m",
-        TimeRangePreset::Hour1 => "1h",
-        TimeRangePreset::Hours24 => "24h",
-        TimeRangePreset::Days7 => "7d",
-        TimeRangePreset::Days30 => "30d",
-        TimeRangePreset::Custom => "custom",
-    }
-    .to_owned()
+    range.preset.as_str().to_owned()
 }
 
 pub(super) fn sort_from_query(query: &TraceListQuery) -> TraceSort {

@@ -25,6 +25,26 @@
 {{else}}
 <section class="sp-section">{{> components/empty-state heading="Not invoked in this window" message="No harness hook reported this skill in the window. Widen the window, or open the catalog to check the plugin is still published."}}</section>
 {{/if}}
+{{#if run_count}}
+<section class="sp-section sp-aconv-block" aria-label="Runs by kit version">
+{{#> components/table caption="Runs by kit version — a run is one session from the first invocation to the agent's last stop" modifier="sp-aconv-breakdown"}}
+<thead><tr><th scope="col">Kit version</th><th scope="col" class="sp-table__cell--num">Runs</th><th scope="col" class="sp-table__cell--num" title="Reached PR_CREATED, or judged achieved when the skill keeps no workflow log">Succeeded</th><th scope="col" class="sp-table__cell--num">Median time</th><th scope="col" class="sp-table__cell--num">p90 time</th><th scope="col" class="sp-table__cell--num" title="Wall time minus human wait">Agent</th><th scope="col" class="sp-table__cell--num" title="Time the agent sat waiting for a reply or an answer">Human wait</th><th scope="col" class="sp-table__cell--num">Prompts</th><th scope="col" class="sp-table__cell--num">Questions</th><th scope="col" class="sp-table__cell--num">Cost / run</th></tr></thead>
+<tbody>
+{{#each releases}}<tr><td class="sp-table__cell--primary">{{version}}{{#if low_sample}} <span class="sp-aconv-meta" title="Fewer than five runs — read the figures as anecdote">few runs</span>{{/if}}</td><td class="sp-table__cell--num sp-u-num">{{runs}}</td><td class="sp-table__cell--num sp-u-num"><span class="sp-aconv-num sp-aconv-num--{{success_tone}}">{{success_display}}</span>{{#if success_change}}<div class="sp-aconv-meta">{{success_change}}</div>{{/if}}</td><td class="sp-table__cell--num sp-u-num">{{median_wall}}{{#if wall_change}}<div class="sp-aconv-meta">{{wall_change}}</div>{{/if}}</td><td class="sp-table__cell--num sp-u-num">{{p90_wall}}</td><td class="sp-table__cell--num sp-u-num">{{median_agent}}</td><td class="sp-table__cell--num sp-u-num">{{median_wait}}</td><td class="sp-table__cell--num sp-u-num">{{median_prompts}}</td><td class="sp-table__cell--num sp-u-num">{{median_questions}}</td><td class="sp-table__cell--num sp-u-num">{{cost_per_run}}</td></tr>
+{{/each}}
+</tbody>
+{{/components/table}}
+</section>
+<section class="sp-section sp-aconv-block" aria-label="Runs">
+{{#> components/table caption=(concat "Latest runs of " run_count) modifier="sp-aconv-table"}}
+<thead><tr><th scope="col" class="sp-col-date">Started</th><th scope="col">Kit</th><th scope="col" class="sp-table__cell--num">Time</th><th scope="col" class="sp-table__cell--num">Agent</th><th scope="col" class="sp-table__cell--num">Wait</th><th scope="col" class="sp-table__cell--num">Prompts</th><th scope="col" class="sp-table__cell--num">Questions</th><th scope="col" class="sp-table__cell--num" title="Failed tool calls">Tool err</th><th scope="col" class="sp-table__cell--num">Cost</th><th scope="col">Reached</th><th scope="col">Result</th></tr></thead>
+<tbody>
+{{#each runs}}<tr data-context-id="{{context_key}}"><td class="sp-col-date"><a class="sp-table__link" href="{{href}}"><time datetime="{{started_full}}" title="{{started_full}}">{{started_display}}</time></a></td><td>{{version}}</td><td class="sp-table__cell--num sp-u-num">{{wall}}</td><td class="sp-table__cell--num sp-u-num">{{agent}}</td><td class="sp-table__cell--num sp-u-num">{{wait}}</td><td class="sp-table__cell--num sp-u-num">{{prompts}}</td><td class="sp-table__cell--num sp-u-num">{{questions}}</td><td class="sp-table__cell--num sp-u-num"><span class="sp-aconv-num sp-aconv-num--{{failures_tone}}">{{tool_failures}}</span></td><td class="sp-table__cell--num sp-u-num">{{cost}}</td><td>{{state}}{{#if phases}}<div class="sp-aconv-meta">{{phases}}</div>{{/if}}</td><td><span class="sp-aconv-num sp-aconv-num--{{verdict_tone}}">{{verdict}}</span></td></tr>
+{{/each}}
+</tbody>
+{{/components/table}}
+</section>
+{{/if}}
 <section class="sp-section sp-aconv-block" aria-label="Conversations">
 {{#> components/table caption=(concat conversation_count " conversations invoked this skill") pagination=pagination modifier="sp-aconv-table"}}
 <thead><tr><th scope="col" class="sp-aconv-col-title">Conversation</th><th scope="col" class="sp-aconv-col-person">Person</th><th scope="col" class="sp-aconv-col-client">Client · model</th><th scope="col" class="sp-table__cell--num">Turns</th><th scope="col" class="sp-table__cell--num" title="Tool calls">{{> components/icon name="wrench"}}</th><th scope="col" class="sp-table__cell--num" title="Artifacts">{{> components/icon name="file"}}</th><th scope="col" class="sp-table__cell--num">Err</th><th scope="col" class="sp-table__cell--num">Tokens</th><th scope="col" class="sp-table__cell--num">Cost</th><th scope="col" class="sp-table__cell--num">p95</th><th scope="col" class="sp-table__cell--num">Length</th><th scope="col" class="sp-aconv-col-skills">Skills</th><th scope="col" class="sp-col-date">Last</th><th scope="col" class="sp-aconv-col-judge" title="AI judge completion">{{> components/icon name="sparkle"}} AI</th></tr></thead>

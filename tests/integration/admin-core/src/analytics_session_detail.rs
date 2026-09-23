@@ -57,8 +57,8 @@ async fn find_session_header_builds_a_header_from_requests_alone() {
     );
     assert_eq!(header.model.as_deref(), Some("claude-header-model"));
     assert!(
-        header.status.is_none(),
-        "no summary row means no hook status"
+        !header.completed,
+        "no summary row means no SessionEnd was seen"
     );
     assert!(header.started_at.is_some());
     db.cleanup().await;
@@ -83,7 +83,7 @@ async fn find_session_header_builds_a_header_from_a_summary_alone() {
         .expect("header present");
 
     assert_eq!(header.session_id.as_str(), session);
-    assert_eq!(header.status.as_deref(), Some("active"));
+    assert!(!header.completed, "an active summary is not completed");
     assert_eq!(header.model.as_deref(), Some("hook-model"));
     assert_eq!(header.ai_title.as_deref(), Some("Refactor the parser"));
     db.cleanup().await;
@@ -136,7 +136,10 @@ async fn find_session_header_prefers_the_summary_over_the_request_rollup() {
         .expect("header present");
 
     assert_eq!(header.model.as_deref(), Some("summary-model"));
-    assert_eq!(header.status.as_deref(), Some("completed"));
+    assert!(
+        header.completed,
+        "a completed summary marks the header completed"
+    );
     db.cleanup().await;
 }
 

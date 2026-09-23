@@ -8,7 +8,7 @@
 use serde::Serialize;
 
 use super::{BASE_URL, GovernanceQuery};
-use crate::handlers::ssr::list_view::{PageWindow, Pagination};
+use crate::handlers::ssr::list_view::{PageWindow, Pagination, paginate};
 use crate::repositories::governance::decision_log::DecisionSort;
 
 // Why: One `(name, value)` the page's URLs carry forward.
@@ -143,19 +143,10 @@ pub(super) fn build_pagination(
     window: PageWindow,
     noun: &'static str,
 ) -> Pagination {
-    let page = window.index;
-    let (first_row, last_row) = window.bounds();
     Pagination {
-        current_page: page + 1,
-        total_pages: window.total_pages,
-        first_row,
-        last_row,
-        total_rows: window.total_rows,
         noun,
-        has_prev: page > 0,
-        has_next: page + 1 < window.total_pages,
-        prev_url: (page > 0).then(|| url_with(query, &[("page", &(page - 1).to_string())])),
-        next_url: (page + 1 < window.total_pages)
-            .then(|| url_with(query, &[("page", &(page + 1).to_string())])),
+        ..paginate(window, |page| {
+            url_with(query, &[("page", &page.to_string())])
+        })
     }
 }

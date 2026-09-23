@@ -37,32 +37,14 @@ pub(super) fn sort_headers(query: &RequestsQuery) -> RequestsSortHeaders {
     let prefix = sort_url_prefix(query);
     let header = |key: &str, label: &'static str, class: &'static str, hint: &'static str| {
         let active = key == active_col;
-        let next_dir = if active && active_dir == "desc" {
-            "asc"
-        } else {
-            "desc"
-        };
-        SortHeaderView {
-            label,
-            class,
-            hint,
-            url: format!("{prefix}sort={key}&dir={next_dir}"),
+        let descending = active_dir != "asc";
+        let next_dir = SortHeaderView::next_dir(active, descending);
+        SortHeaderView::new(
+            (label, class, hint),
+            format!("{prefix}sort={key}&dir={next_dir}"),
             active,
-            aria_sort: if !active {
-                "none"
-            } else if active_dir == "asc" {
-                "ascending"
-            } else {
-                "descending"
-            },
-            indicator: if !active {
-                "\u{2195}"
-            } else if active_dir == "asc" {
-                "\u{25b2}"
-            } else {
-                "\u{25bc}"
-            },
-        }
+            descending,
+        )
     };
     RequestsSortHeaders {
         time: header(
@@ -263,23 +245,10 @@ pub(super) fn breakdown_view(
 }
 
 fn pct_of(part: i64, whole: i64) -> f64 {
-    if whole <= 0 {
-        return 0.0;
-    }
-    part as f64 / whole as f64 * 100.0
+    crate::numeric::percentage(part, whole)
 }
 
-fn compact_int(v: i64) -> String {
-    if v >= 1_000_000 {
-        format!("{:.1}M", v as f64 / 1_000_000.0)
-    } else if v >= 10_000 {
-        format!("{}k", v / 1000)
-    } else if v >= 1000 {
-        format!("{:.1}k", v as f64 / 1000.0)
-    } else {
-        v.to_string()
-    }
-}
+use systemprompt_web_shared::format::compact_num as compact_int;
 
 // Why: a four-digit request count read as a bare number is easy to misread by
 // an order of magnitude in a dense grid of tiles.

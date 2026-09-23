@@ -39,13 +39,12 @@ mod credentials;
 mod data;
 mod view;
 
+use crate::handlers::ssr::list_view::DEFAULT_PAGE_SIZE;
+use crate::handlers::ssr::types::table::SortColumn;
 use columns::{BRIDGE_COLUMNS, CERT_COLUMNS, LINK_COLUMNS, PAT_COLUMNS};
 use context::{DevicesPageContext, UserGroupView};
-use view::ColumnSpec;
 
 pub(crate) const BASE_URL: &str = "/admin/devices";
-const PAGE_SIZE: i64 = 50;
-
 #[derive(Debug, Deserialize)]
 pub(crate) struct DevicesQuery {
     tab: Option<String>,
@@ -118,7 +117,7 @@ impl Tab {
     // an unknown key is harmless — but falling back to the tab's default is
     // still the honest answer, because a header the reader cannot see cannot
     // be the one they clicked.
-    const fn columns(self) -> &'static [ColumnSpec] {
+    const fn columns(self) -> &'static [SortColumn] {
         match self {
             Self::Bridges => BRIDGE_COLUMNS,
             Self::Pats => PAT_COLUMNS,
@@ -174,7 +173,7 @@ async fn load_tab_rows(
                     stale_only: query.stale.as_deref() == Some("1"),
                     sort,
                     dir,
-                    limit: PAGE_SIZE,
+                    limit: DEFAULT_PAGE_SIZE,
                     offset,
                 },
             )
@@ -185,7 +184,7 @@ async fn load_tab_rows(
                 state,
                 sort,
                 dir,
-                limit: PAGE_SIZE,
+                limit: DEFAULT_PAGE_SIZE,
                 offset,
             };
             if tab == Tab::Pats {
@@ -194,7 +193,7 @@ async fn load_tab_rows(
                 credentials::load_certs(pool, credentials, can_manage).await
             }
         },
-        Tab::Links => credentials::load_links(pool, sort, dir, PAGE_SIZE, offset).await,
+        Tab::Links => credentials::load_links(pool, sort, dir, DEFAULT_PAGE_SIZE, offset).await,
     }
 }
 
@@ -249,7 +248,7 @@ pub(crate) async fn devices_page(
         state,
         sort,
         dir,
-        offset: page * PAGE_SIZE,
+        offset: page * DEFAULT_PAGE_SIZE,
         can_manage: user_ctx.is_admin,
     };
 
@@ -266,9 +265,9 @@ pub(crate) async fn devices_page(
     let shown = groups.len();
     let window = PageWindow::new(
         page,
-        PAGE_SIZE,
+        DEFAULT_PAGE_SIZE,
         users_total,
-        i64::try_from(shown).unwrap_or(PAGE_SIZE),
+        i64::try_from(shown).unwrap_or(DEFAULT_PAGE_SIZE),
         "people",
     );
     let version_bars = view::build_version_bars(&versions);

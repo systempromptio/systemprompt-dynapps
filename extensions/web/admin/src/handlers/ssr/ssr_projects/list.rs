@@ -16,7 +16,8 @@ use super::super::format::short_num;
 use super::super::people_view::{format_usd, or_default, short_model};
 use super::super::types::{BreadcrumbView, ProjectKpiView, ProjectListRowView, ProjectsPageData};
 use super::sort::{page_url, sort_headers, sort_key, sort_rows};
-use super::{PAGE_SIZE, PageCounts, WINDOW_LABEL, pagination, pct};
+use super::{PageCounts, WINDOW_LABEL, pagination, pct};
+use crate::handlers::ssr::list_view::DEFAULT_PAGE_SIZE;
 
 // Why: what the query string may ask of the listing.
 #[derive(Debug, Clone, serde::Deserialize)]
@@ -56,11 +57,11 @@ pub(super) async fn page_data(
 
     let total = matched.len() as i64;
     let page = query.page.unwrap_or(1).max(1);
-    let offset = ((page - 1) * PAGE_SIZE).min(total.max(0));
+    let offset = ((page - 1) * DEFAULT_PAGE_SIZE).min(total.max(0));
     let rows: Vec<ProjectListRowView> = matched
         .iter()
         .skip(usize::try_from(offset).unwrap_or(0))
-        .take(usize::try_from(PAGE_SIZE).unwrap_or(50))
+        .take(usize::try_from(DEFAULT_PAGE_SIZE).unwrap_or(50))
         .map(row_view)
         .collect();
 

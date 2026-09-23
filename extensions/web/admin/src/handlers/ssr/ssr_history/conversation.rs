@@ -45,6 +45,7 @@ struct ConversationPageContext {
     timeline: Option<String>,
     conversation: ConversationView,
     admin_url: Option<String>,
+    export: crate::export::ExportView,
 }
 
 fn not_found() -> AdminError {
@@ -116,6 +117,10 @@ pub(crate) async fn history_conversation_page(
         timeline: timeline_display(kpis.first_request_at, kpis.last_request_at),
         conversation,
         admin_url: shell.user.is_admin.then(|| context_detail_url(&context_id)),
+        export: crate::export::ExportView::conversation(
+            &context_id,
+            shell.user.has_scoped_console(),
+        ),
     };
 
     Ok(crate::handlers::ssr::render_typed_page(

@@ -44,7 +44,6 @@ GET    /admin/analysis/versions/{marketplace_id}             anonymous=307 non-a
 GET    /admin/analytics                                      anonymous=307 non-admin=303 developer=303 admin=200 platform-admin=200 project-manager=303 knowledge-worker=303
 GET    /admin/analytics/users/{user_id}                      anonymous=307 non-admin=303 developer=303 admin=308 platform-admin=308 project-manager=303 knowledge-worker=303
 GET    /admin/api/chain/{id}                                 anonymous=307 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=403 knowledge-worker=403
-GET    /admin/api/conversations/{session_id}/raw             anonymous=307 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=403 knowledge-worker=403
 GET    /admin/api/history/search                             anonymous=307 non-admin=200 developer=200 admin=200 platform-admin=200 project-manager=200 knowledge-worker=200
 GET    /admin/api/search/resolve                             anonymous=307 non-admin=403 developer=403 admin=200 platform-admin=200 project-manager=403 knowledge-worker=403
 GET    /admin/artifacts                                      anonymous=307 non-admin=303 developer=303 admin=200 platform-admin=200 project-manager=303 knowledge-worker=303
@@ -82,6 +81,9 @@ GET    /admin/entities/sessions/{session_id}                 anonymous=307 non-a
 GET    /admin/entities/skills                                anonymous=307 non-admin=303 developer=303 admin=308 platform-admin=308 project-manager=303 knowledge-worker=303
 GET    /admin/entities/traces                                anonymous=307 non-admin=303 developer=303 admin=308 platform-admin=308 project-manager=303 knowledge-worker=303
 GET    /admin/entities/traces/{trace_id}                     anonymous=307 non-admin=303 developer=303 admin=308 platform-admin=308 project-manager=303 knowledge-worker=303
+GET    /admin/export/transcripts                             anonymous=307 non-admin=403 developer=403 admin=200 platform-admin=200 project-manager=403 knowledge-worker=403
+GET    /admin/export/transcripts/preview                     anonymous=307 non-admin=403 developer=403 admin=200 platform-admin=200 project-manager=403 knowledge-worker=403
+GET    /admin/export/transcripts/{context_id}                anonymous=307 non-admin=404 developer=404 admin=404 platform-admin=404 project-manager=404 knowledge-worker=404
 GET    /admin/export/{dataset}                               anonymous=307 non-admin=303 developer=303 admin=404 platform-admin=404 project-manager=303 knowledge-worker=303
 GET    /admin/export/{dataset}/preview                       anonymous=307 non-admin=303 developer=303 admin=404 platform-admin=404 project-manager=303 knowledge-worker=303
 GET    /admin/gateway                                        anonymous=307 non-admin=303 developer=303 admin=200 platform-admin=200 project-manager=303 knowledge-worker=303
@@ -96,6 +98,8 @@ GET    /admin/groups                                         anonymous=307 non-a
 GET    /admin/groups/{group_id}                              anonymous=307 non-admin=303 developer=303 admin=404 platform-admin=404 project-manager=303 knowledge-worker=303
 GET    /admin/history                                        anonymous=307 non-admin=200 developer=200 admin=200 platform-admin=200 project-manager=200 knowledge-worker=200
 GET    /admin/history/conversations/{context_id}             anonymous=307 non-admin=404 developer=404 admin=404 platform-admin=404 project-manager=404 knowledge-worker=404
+GET    /admin/lifecycle                                      anonymous=307 non-admin=303 developer=303 admin=200 platform-admin=200 project-manager=303 knowledge-worker=303
+GET    /admin/lifecycle/archive/{tier}/{period}/{file}       anonymous=307 non-admin=303 developer=303 admin=404 platform-admin=404 project-manager=303 knowledge-worker=303
 GET    /admin/login                                          anonymous=200 non-admin=303 developer=303 admin=303 platform-admin=303 project-manager=303 knowledge-worker=303
 GET    /admin/marketplaces                                   anonymous=307 non-admin=303 developer=303 admin=200 platform-admin=200 project-manager=303 knowledge-worker=303
 GET    /admin/marketplaces/{marketplace_id}                  anonymous=307 non-admin=303 developer=303 admin=404 platform-admin=404 project-manager=303 knowledge-worker=303

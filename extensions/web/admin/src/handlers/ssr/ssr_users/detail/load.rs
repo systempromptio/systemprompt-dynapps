@@ -18,9 +18,6 @@ use crate::repositories::analytics::conversations::{
 use crate::repositories::users::enrolment::UserDeviceRow;
 use crate::repositories::users::sessions::SigninSessionRow;
 
-// Why: how many sign-in sessions one page of the Sessions tab carries.
-pub(super) const SESSION_PAGE_SIZE: i64 = 50;
-
 // Why: how many conversations one page of the Conversations tab carries.
 pub(super) const CONVERSATION_PAGE_SIZE: i64 = 25;
 
@@ -45,6 +42,8 @@ pub(super) async fn load_conversations(
             scope_user_ids: Some(&scope),
             search: None,
             include_side_calls: false,
+            since: None,
+            until: None,
         },
         CONVERSATION_PAGE_SIZE,
         page * CONVERSATION_PAGE_SIZE,

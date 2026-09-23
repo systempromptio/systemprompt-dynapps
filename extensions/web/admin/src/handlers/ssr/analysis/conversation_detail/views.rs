@@ -158,8 +158,11 @@ pub(super) struct ConversationDetailContext {
     pub(super) artifacts: Vec<LedgerCallView>,
     pub(super) artifact_count: usize,
     pub(super) decisions: Vec<DecisionView>,
+    pub(super) decision_count: usize,
     pub(super) skills: Vec<ConversationSkillView>,
+    pub(super) skill_count: usize,
     pub(super) safety: Vec<SafetyView>,
+    pub(super) safety_count: usize,
     pub(super) help: HelpView,
     pub(super) export: crate::export::ExportView,
 }

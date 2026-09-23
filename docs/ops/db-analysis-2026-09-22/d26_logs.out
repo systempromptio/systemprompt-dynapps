@@ -1,0 +1,110 @@
+                                            shape                                            |                         module                         | count 
+---------------------------------------------------------------------------------------------+--------------------------------------------------------+-------
+ GET /v<n>/bridge/latest -> <n> (<n>ms)                                                      | systemprompt_api::gateway                              |   577
+ MCP backend error response                                                                  | systemprompt_api::services::proxy::engine::mcp_session |     9
+ POST /v<n>/messages -> <n> (<n>ms)                                                          | systemprompt_api::gateway                              |     7
+ Proxy server error                                                                          | systemprompt_api::services::proxy::errors              |     4
+ Service <q> is not running (status: token accessor returned status <n> Service Unavailable) | systemprompt_models::api::errors                       |     2
+ Service <q> is not running (status: token accessor returned status <n> Unauthorized)        | systemprompt_models::api::errors                       |     2
+(6 rows)
+
+                                               shape                                               |                       module                       | count 
+---------------------------------------------------------------------------------------------------+----------------------------------------------------+-------
+ GET /v<n>/bridge/stream -> <n> (<n>ms)                                                            | systemprompt_api::gateway                          |   394
+ GET /v<n>/bridge/latest -> <n> (<n>ms)                                                            | systemprompt_api::gateway                          |   383
+ POST /v<n>/bridge/heartbeat -> <n> (<n>ms)                                                        | systemprompt_api::gateway                          |   290
+ POST /v<n>/messages -> <n> (<n>ms)                                                                | systemprompt_api::gateway                          |    76
+ usage anomaly: check /admin/analytics?tab=spend and the request log                               | systemprompt_web_jobs::usage_anomaly               |    49
+ POST /v<n>/chat/completions -> <n> (<n>ms)                                                        | systemprompt_api::gateway                          |    39
+ Building OAuth challenge                                                                          | systemprompt_api::services::proxy::auth::challenge |    11
+ JWT validation failed                                                                             | systemprompt_oauth::services::jwt::authorization   |    11
+ auth failed                                                                                       | systemprompt_api::services::proxy::auth::challenge |    11
+ served Vertex model vertex-gemini-<n>.<n>-flash-lite retires on <n>-<n>-<n>; plan its replacement | systemprompt_scheduler::jobs::vertex_discovery     |     7
+ served Vertex model vertex-gemini-<n>.<n>-pro retires on <n>-<n>-<n>; plan its replacement        | systemprompt_scheduler::jobs::vertex_discovery     |     7
+ served Vertex model vertex-gemini-<n>.<n>-flash retires on <n>-<n>-<n>; plan its replacement      | systemprompt_scheduler::jobs::vertex_discovery     |     7
+(12 rows)
+
+                                                shape                                                 | count  
+------------------------------------------------------------------------------------------------------+--------
+ GET /v<n>/bridge/profile -> <n> (<n>ms)                                                              | 176436
+ POST /v<n>/bridge/heartbeat -> <n> (<n>ms)                                                           | 103934
+ GET /v<n>/bridge/profile/usage -> <n> (<n>ms)                                                        |  61371
+ POST /v<n>/messages -> <n> (<n>ms)                                                                   |   5641
+ GET /v<n>/bridge/stream -> <n> (<n>ms)                                                               |   5342
+ POST /v<n>/auth/bridge/pat -> <n> (<n>ms)                                                            |   2319
+ GET /v<n>/bridge/plugins/astound-india-sfcore/skills/sf-salesforce-project-context/references/rules/ |   1180
+ POST /v<n>/chat/completions -> <n> (<n>ms)                                                           |   1036
+ GET /v<n>/bridge/manifest -> <n> (<n>ms)                                                             |    766
+ GET /v<n>/bridge/plugins/astound-india-ba/skills/ba-impact-analysis/SKILL.md -> <n> (<n>ms)          |    617
+ GET /v<n>/bridge/plugins/astound-india-ba/.claude-plugin/plugin.json -> <n> (<n>ms)                  |    617
+ GET /v<n>/bridge/plugins/astound-india-ba/.mcp.json -> <n> (<n>ms)                                   |    617
+(12 rows)
+
+ logs_of_deleted_users 
+-----------------------
+                     0
+(1 row)
+
+ gateway_info_logs | requests | logs_per_request 
+-------------------+----------+------------------
+            390822 |     4392 |             89.0
+(1 row)
+
+ status | level | count |    min     |    max     
+--------+-------+-------+------------+------------
+ 502    | ERROR |   577 | 2026-09-11 | 2026-09-22
+ 404    | WARN  |   381 | 2026-09-08 | 2026-09-22
+ 401    | WARN  |     2 | 2026-09-17 | 2026-09-17
+(3 rows)
+
+ status | count 
+--------+-------
+ 200    |  5641
+ 400    |    58
+ 499    |    17
+ 502    |     7
+ 401    |     1
+(5 rows)
+
+ status | count 
+--------+-------
+ 200    |  5342
+ 429    |   362
+ 401    |    32
+(3 rows)
+
+ has_status | count  
+------------+--------
+ t          | 392599
+(1 row)
+
+                                                      left                                                       
+-----------------------------------------------------------------------------------------------------------------
+ {"kind":"access_log","method":"GET","path":"/v1/bridge/latest","status":502,"elapsed_ms":669,"phase":"headers"}
+(1 row)
+
+                                                                                                           left                                                                                                            
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ {"service":"knowledge-bank","status":"404 Not Found","headers":"[\"content-type: application/json\", \"x-accel-buffering: no\", \"connection: close\", \"content-length: 75\", \"date: Wed, 09 Sep 2026 14:14:54 GMT\"]"}
+ {"service":"knowledge-bank","status":"404 Not Found","headers":"[\"content-type: application/json\", \"x-accel-buffering: no\", \"connection: close\", \"content-length: 75\", \"date: Wed, 09 Sep 2026 14:13:08 GMT\"]"}
+(2 rows)
+
+ERROR:  column "status" does not exist
+LINE 1: SELECT job_name, enabled, status, last_run_at, last_duration...
+                                  ^
+   column_name    
+------------------
+ id
+ job_name
+ schedule
+ enabled
+ last_run
+ next_run
+ last_status
+ last_error
+ run_count
+ created_at
+ updated_at
+ last_instance_id
+(12 rows)
+

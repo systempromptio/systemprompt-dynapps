@@ -2,14 +2,8 @@
 
 use crate::types::webhook::{HookEvent, HookEventPayload, ToolInputSummary};
 
-pub(super) fn truncate(s: &str, max: usize) -> String {
-    if s.len() <= max {
-        s.to_owned()
-    } else {
-        let end = s.char_indices().nth(max).map_or(s.len(), |(i, _)| i);
-        format!("{}…", &s[..end])
-    }
-}
+use systemprompt_web_shared::format::{truncate_chars, truncate_ellipsis as truncate};
+
 
 pub(super) fn generate_prompt_preview(payload: &HookEventPayload) -> Option<String> {
     match &payload.event {
@@ -113,29 +107,15 @@ fn truncate_json_value(value: &serde_json::Value, max_chars: usize) -> serde_jso
             for (k, v) in map {
                 match v {
                     serde_json::Value::Null => {},
-                    serde_json::Value::String(s) if s.len() > max_chars => {
-                        let end = s.char_indices().nth(max_chars).map_or(s.len(), |(i, _)| i);
-                        result.insert(
-                            k.clone(),
-                            serde_json::Value::String(format!("{}...[truncated]", &s[..end])),
-                        );
+                    serde_json::Value::String(s) => {
+                        result.insert(k.clone(), capped(s, max_chars));
                     },
                     _ => {
                         let serialized = v.to_string();
-                        if serialized.len() > max_chars {
-                            let end = serialized
-                                .char_indices()
-                                .nth(max_chars)
-                                .map_or(serialized.len(), |(i, _)| i);
-                            result.insert(
-                                k.clone(),
-                                serde_json::Value::String(format!(
-                                    "{}...[truncated]",
-                                    &serialized[..end]
-                                )),
-                            );
-                        } else {
+                        if truncate_chars(&serialized, max_chars).len() == serialized.len() {
                             result.insert(k.clone(), v.clone());
+                        } else {
+                            result.insert(k.clone(), capped(&serialized, max_chars));
                         }
                     },
                 }
@@ -144,10 +124,21 @@ fn truncate_json_value(value: &serde_json::Value, max_chars: usize) -> serde_jso
             serde_json::Value::Object(result)
         },
         // JSON: protocol boundary — see the function comment above.
-        serde_json::Value::String(s) if s.len() > max_chars => {
-            let end = s.char_indices().nth(max_chars).map_or(s.len(), |(i, _)| i);
-            serde_json::Value::String(format!("{}...[truncated]", &s[..end]))
-        },
+        serde_json::Value::String(s) => capped(s, max_chars),
         _ => value.clone(),
+    }
+}
+
+// Why: the `[truncated]` marker is a claim about what happened, so it is
+// appended only when the character budget actually cut something — the
+// character count is what `truncate_chars` measures, not the byte length.
+fn capped(s: &str, max_chars: usize) -> serde_json::Value {
+    let head = truncate_chars(s, max_chars);
+    if head.len() == s.len() {
+        // JSON: protocol boundary — see `truncate_json_value` above.
+        serde_json::Value::String(s.to_owned())
+    } else {
+        // JSON: protocol boundary — see `truncate_json_value` above.
+        serde_json::Value::String(format!("{head}...[truncated]"))
     }
 }

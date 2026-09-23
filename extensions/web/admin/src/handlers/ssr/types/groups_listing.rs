@@ -63,9 +63,9 @@ pub(crate) struct UnattributedRowView {
 pub(crate) struct GroupKpiView {
     pub label: &'static str,
     pub value: String,
-    // Why: `note`, not `sub`. `sub` is a registered Handlebars helper, so
-    // `this.sub` in the template resolves to the helper rather than the field
-    // and the supporting line renders as nothing at all.
+    // Why: `note`, not `sub`. `sub` is a registered Handlebars helper, so a
+    // bare `{{sub}}` mustache calls it with no arguments and prints 0 instead
+    // of the field. No view struct here is allowed to be named `sub`.
     pub note: String,
     pub tone: &'static str,
 }

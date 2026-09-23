@@ -83,7 +83,6 @@ fn tab_views(
             &tab_sessions::SessionsInput {
                 rows: &fetched.tabs.sessions,
                 total_rows: fetched.tabs.sessions_total,
-                ratings: fetched.tabs.session_ratings,
                 page,
             },
             query,
@@ -220,6 +219,8 @@ const fn export_datasets(tab: DashboardTab) -> &'static [&'static str] {
             "analytics-cost-providers",
             "analytics-cost-days",
             "analytics-cost-containers",
+            "report-internal-providers",
+            "report-internal-models",
         ],
     }
 }

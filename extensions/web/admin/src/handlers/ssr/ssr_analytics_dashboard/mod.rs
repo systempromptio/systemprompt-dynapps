@@ -59,13 +59,12 @@ mod view_models;
 mod view_spend;
 mod view_tables;
 
+use crate::handlers::ssr::list_view::DEFAULT_PAGE_SIZE;
 use crate::handlers::ssr::page::Page;
 use context::DashboardTab;
 use page::{PageInput, page_context};
 
 const BASE_URL: &str = "/admin/analytics";
-const PAGE_SIZE: i64 = 50;
-
 #[derive(Debug, Deserialize)]
 pub(crate) struct AnalyticsDashboardQuery {
     pub tab: Option<String>,
@@ -157,8 +156,8 @@ pub(crate) async fn analytics_dashboard_page(
             range,
             bucket,
             sort,
-            page_size: PAGE_SIZE,
-            offset: page * PAGE_SIZE,
+            page_size: DEFAULT_PAGE_SIZE,
+            offset: page * DEFAULT_PAGE_SIZE,
             slo_ms,
             axis: query.container_axis(),
         },

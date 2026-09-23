@@ -2,18 +2,24 @@
     {{#*inline "content"}}
     {{> components/breadcrumbs crumbs=breadcrumbs}}
 
-    {{#> components/page-header title=title subtitle="Your own Claude Code sessions and gateway conversations, newest first — models, turns, tokens and cost. Full-text search runs over the redacted transcript."}}
+    {{#> components/page-header title=title subtitle="Your conversations through the gateway, newest first — models, turns, tokens and cost. Search matches titles, opening prompts, ids and models."}}
+        {{#*inline "header_meta"}}
+            <span>Showing {{window_label}}.</span>
+        {{/inline}}
         {{#*inline "header_actions"}}
             <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/profile">Profile</a>
             {{> components/export-button export}}
         {{/inline}}
     {{/components/page-header}}
 
+    {{> components/tabs tabs=window_links nav_label="Window"}}
+
     <section aria-label="Conversation history">
         {{#> components/toolbar toolbar_count=(concat pagination.total_rows " conversations")}}
             {{#*inline "toolbar_filters"}}
             <form method="get" action="{{base_url}}" class="sp-toolbar__search" role="search">
                 {{#if show_side}}<input type="hidden" name="side" value="1">{{/if}}
+                {{#each window_inputs}}<input type="hidden" name="{{this.name}}" value="{{this.value}}">{{/each}}
                 <label class="sp-u-sr-only" for="history-q">Search conversation history</label>
                 <input type="search" id="history-q" name="q" value="{{search_query}}" class="sp-search-input"
                        placeholder="Search prompts and responses…">
@@ -33,6 +39,7 @@
         {{#if has_rows}}
         {{#> components/table caption="Your conversations, newest first" pagination=pagination modifier="sp-p-history__table"}}
             <thead><tr>
+                <th scope="col" class="sp-col-select">{{> components/table-select header=true label="conversations"}}</th>
                 <th scope="col" class="sp-col-conversation">Conversation</th>
                 <th scope="col">Source</th>
                 <th scope="col">Model</th>
@@ -43,24 +50,26 @@
             </tr></thead>
             <tbody>
             {{#each rows}}
-            <tr>
+            <tr data-row-id="{{this.context_id}}">
+                <td class="sp-col-select">{{> components/table-select id=this.context_id label=this.conversation_title}}</td>
                 <td class="sp-col-conversation sp-table__cell--stacked" title="{{this.short_id}}{{#if this.side_call_count}} · {{this.side_call_count}} side call(s){{/if}}">
-                    {{#if this.detail_url}}<a href="{{this.detail_url}}" class="sp-u-link-strong">{{this.conversation_title}}</a>{{else}}<span class="sp-u-link-strong">{{this.conversation_title}}</span>{{/if}}
-                    {{#if this.snippet}}<span class="sp-u-text-xs sp-u-text-tertiary">{{truncate this.snippet 100}}</span>{{else}}<span class="sp-u-text-xs sp-u-text-tertiary sp-u-mono">{{this.short_id}}</span>{{/if}}
+                    <a href="{{this.detail_url}}" class="sp-u-link-strong">{{this.conversation_title}}</a>
+                    <span class="sp-u-text-xs sp-u-text-tertiary sp-u-mono">{{this.short_id}}{{#if this.session_url}} · <a href="{{this.session_url}}">session</a>{{/if}}</span>
                 </td>
-                <td title="{{this.source_title}} · recorded as {{this.source_kind}}">{{> components/badge tone=this.source.tone text=this.source.label}}</td>
+                <td title="{{this.source_title}}">{{> components/badge tone=this.source.tone text=this.source.label}}</td>
                 <td class="sp-table__cell--mono">{{default this.model "—"}}</td>
                 <td class="sp-table__cell--num sp-u-num">{{formatNumber this.entries_counted}}</td>
                 <td class="sp-table__cell--num sp-u-num" title="{{this.tokens_title}}">{{this.tokens_display}}</td>
-                <td class="sp-table__cell--num sp-u-num sp-u-mono">{{default this.cost_display "—"}}</td>
+                <td class="sp-table__cell--num sp-u-num sp-u-mono">{{this.cost_display}}</td>
                 <td class="sp-table__cell--date" title="{{this.when_at}}">{{this.when_relative}}</td>
             </tr>
             {{/each}}
             </tbody>
         {{/components/table}}
+        {{> components/bulk-bar noun="conversations" export_dataset="history" transcripts=true}}
         {{else}}
         {{> components/empty-state heading="No conversations match"
-            message="Clear the search, show side calls, or start a Claude Code session or a gateway conversation to populate history."}}
+            message="Clear the search, widen the window, show side calls, or start a conversation through the gateway to populate history."}}
         {{/if}}
     </section>
     {{/inline}}

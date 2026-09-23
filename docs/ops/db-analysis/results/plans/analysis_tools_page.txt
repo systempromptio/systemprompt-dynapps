@@ -1,0 +1,182 @@
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   QUERY PLAN                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Result  (cost=532.58..532.59 rows=1 width=32)
+   CTE f
+     ->  Nested Loop Left Join  (cost=252.81..448.23 rows=1 width=5057)
+           Filter: (($9 IS NULL) OR (d.decision = $9))
+           ->  Nested Loop Left Join  (cost=244.65..398.56 rows=1 width=2168)
+                 ->  Nested Loop Left Join  (cost=244.38..397.60 rows=1 width=2084)
+                       Filter: ((($10 IS NULL) OR ((COALESCE(r.context_id, e_3.context_id, a_1.context_id))::text = $10) OR ((x.context_id)::text = $10)) AND (($11 IS NULL) OR ((COALESCE(r.session_id, e_3.session_id, a_1.session_id))::text = $11) OR ((x.trace_id)::text = $11)) AND ((NOT $14) OR (CASE WHEN (((COALESCE(i.tool_name, e_3.tool_name, a_1.tool_name))::text = ANY ('{Edit,Write,MultiEdit,NotebookEdit,Read}'::text[])) AND (x.input IS NOT NULL) AND (POSITION(('"file_path"'::text) IN (x.input)) > 0)) THEN 'file'::text WHEN COALESCE(((COALESCE(e_3.server_name, a_1.server_name) IS NOT NULL) AND ((COALESCE(e_3.server_name, a_1.server_name))::text = (e_3.source)::text) AND ((COALESCE(COALESCE(i.tool_name, e_3.tool_name, a_1.tool_name), ''::character varying))::text !~~ 'mcp\_\_%'::text)), false) THEN NULL::text WHEN COALESCE(COALESCE(a_1.has_ui_resource, false), false) THEN 'ui'::text WHEN (((a_1.artifact_type)::text IS NOT NULL) AND ((a_1.artifact_type)::text <> 'tool_result'::text)) THEN 'card'::text WHEN (((COALESCE(a.payload_sha256, x.payload_sha256))::text IS NOT NULL) AND COALESCE(COALESCE(a_1.is_structured, false), false)) THEN 'body'::text ELSE NULL::text END IS NOT NULL)) AND (($13 IS NULL) OR (CASE WHEN (((COALESCE(i.tool_name, e_3.tool_name, a_1.tool_name))::text = ANY ('{Edit,Write,MultiEdit,NotebookEdit,Read}'::text[])) AND (x.input IS NOT NULL) AND (POSITION(('"file_path"'::text) IN (x.input)) > 0)) THEN 'file'::text WHEN COALESCE(((COALESCE(e_3.server_name, a_1.server_name) IS NOT NULL) AND ((COALESCE(e_3.server_name, a_1.server_name))::text = (e_3.source)::text) AND ((COALESCE(COALESCE(i.tool_name, e_3.tool_name, a_1.tool_name), ''::character varying))::text !~~ 'mcp\_\_%'::text)), false) THEN NULL::text WHEN COALESCE(COALESCE(a_1.has_ui_resource, false), false) THEN 'ui'::text WHEN (((a_1.artifact_type)::text IS NOT NULL) AND ((a_1.artifact_type)::text <> 'tool_result'::text)) THEN 'card'::text WHEN (((COALESCE(a.payload_sha256, x.payload_sha256))::text IS NOT NULL) AND COALESCE(COALESCE(a_1.is_structured, false), false)) THEN 'body'::text ELSE NULL::text END = $13)) AND (($15 IS NULL) OR ((COALESCE(i.tool_name, e_3.tool_name, a_1.tool_name))::text ~~* $15) OR ((COALESCE(e_3.server_name, a_1.server_name))::text ~~* $15) OR (tool_input_summary(x.input) ~~* $15) OR ((a_1.title)::text ~~* $15)))
+                       ->  Nested Loop Left Join  (cost=244.10..396.01 rows=1 width=1522)
+                             ->  Nested Loop Left Join  (cost=243.83..394.74 rows=1 width=1457)
+                                   Filter: ((($4 IS NULL) OR ((COALESCE(r.user_id, e_3.user_id, a_1.user_id))::text = $4)) AND (($23 IS NULL) OR (r.client_kind = $23)) AND (($3 IS NULL) OR ((COALESCE(r.user_id, e_3.user_id, a_1.user_id))::text = ANY ($3))))
+                                   ->  Nested Loop Left Join  (cost=243.54..393.93 rows=1 width=1296)
+                                         Filter: ((($5 IS NULL) OR ((COALESCE(i.tool_name, e_3.tool_name, a_1.tool_name))::text = $5)) AND (($6 IS NULL) OR ((COALESCE(e_3.server_name, a_1.server_name))::text = $6)) AND (($7 IS NULL) OR (((COALESCE(e_3.server_name, a_1.server_name) IS NOT NULL) AND ((COALESCE(e_3.server_name, a_1.server_name))::text = (e_3.source)::text) AND ((COALESCE(COALESCE(i.tool_name, e_3.tool_name, a_1.tool_name), ''::character varying))::text !~~ 'mcp\_\_%'::text)) = $7)) AND (($8 IS NULL) OR (($8 = 'failed'::text) AND (COALESCE(a_1.is_error, false) OR ((e_3.status)::text = ANY ('{failed,timeout}'::text[])))) OR (($8 = 'executed'::text) AND (CASE WHEN (i.id IS NULL) THEN 'unattested'::text WHEN (e_3.mcp_execution_id IS NULL) THEN 'intended'::text ELSE 'executed'::text END = 'executed'::text) AND (NOT COALESCE(a_1.is_error, false)) AND ((e_3.status)::text <> ALL ('{failed,timeout}'::text[]))) OR (($8 = 'intended'::text) AND (CASE WHEN (i.id IS NULL) THEN 'unattested'::text WHEN (e_3.mcp_execution_id IS NULL) THEN 'intended'::text ELSE 'executed'::text END = 'intended'::text)) OR (($8 = 'unattested'::text) AND (CASE WHEN (i.id IS NULL) THEN 'unattested'::text WHEN (e_3.mcp_execution_id IS NULL) THEN 'intended'::text ELSE 'executed'::text END = 'unattested'::text))))
+                                         ->  Hash Full Join  (cost=243.27..378.86 rows=18 width=1045)
+                                               Hash Cond: ((e_3.ai_tool_call_id)::text = (i.ai_tool_call_id)::text)
+                                               Filter: ((($1 IS NULL) OR (COALESCE(e_3.started_at, i.created_at) >= $1)) AND (($2 IS NULL) OR (COALESCE(e_3.started_at, i.created_at) < $2)) AND (($16 IS NULL) OR (COALESCE(e_3.mcp_execution_id, (COALESCE(i.ai_tool_call_id, e_3.ai_tool_call_id))::text, i.id) = ANY ($16))))
+                                               ->  Seq Scan on mcp_tool_executions e_3  (cost=0.00..133.50 rows=550 width=919)
+                                               ->  Hash  (cost=207.01..207.01 rows=2901 width=126)
+                                                     ->  Seq Scan on ai_request_tool_calls i  (cost=0.00..207.01 rows=2901 width=126)
+                                         ->  Index Scan using idx_mcp_artifacts_execution on mcp_artifacts a_1  (cost=0.27..0.79 rows=1 width=288)
+                                               Index Cond: ((mcp_execution_id)::text = e_3.mcp_execution_id)
+                                   ->  Index Scan using ai_requests_pkey on ai_requests r  (cost=0.28..0.79 rows=1 width=198)
+                                         Index Cond: (id = (i.request_id)::text)
+                             ->  Index Scan using idx_mcp_artifacts_artifact_id on mcp_artifacts a  (cost=0.27..1.26 rows=1 width=102)
+                                   Index Cond: ((artifact_id)::text = (a_1.artifact_id)::text)
+                       ->  Index Scan using idx_mcp_tool_executions_mcp_execution_id on mcp_tool_executions x  (cost=0.28..1.27 rows=1 width=599)
+                             Index Cond: (mcp_execution_id = e_3.mcp_execution_id)
+                 ->  Index Scan using users_pkey on users u  (cost=0.28..0.96 rows=1 width=121)
+                       Index Cond: (id = (COALESCE(r.user_id, e_3.user_id, a_1.user_id))::text)
+           ->  Limit  (cost=8.15..8.16 rows=1 width=50)
+                 ->  Sort  (cost=8.15..8.16 rows=1 width=50)
+                       Sort Key: d.created_at DESC
+                       ->  Index Scan using idx_governance_decisions_tool_use_id on governance_decisions d  (cost=0.12..8.14 rows=1 width=50)
+                             Index Cond: (tool_use_id = (COALESCE(i.ai_tool_call_id, e_3.ai_tool_call_id))::text)
+           SubPlan 1
+             ->  Limit  (cost=41.21..41.21 rows=1 width=40)
+                   ->  Sort  (cost=41.21..41.21 rows=3 width=40)
+                         Sort Key: "*SELECT* 1".invoked_at DESC
+                         ->  Append  (cost=11.84..41.19 rows=3 width=40)
+                               ->  Subquery Scan on "*SELECT* 1"  (cost=11.84..19.54 rows=1 width=40)
+                                     ->  Bitmap Heap Scan on plugin_usage_events e  (cost=11.84..19.53 rows=1 width=232)
+                                           Recheck Cond: ((session_id = (x.trace_id)::text) AND (event_type = 'UserPromptSubmit'::text))
+                                           Filter: ((prompt_preview ~ '^/[A-Za-z0-9._-]+:[A-Za-z0-9._-]+'::text) AND (replace("substring"(prompt_preview, '^/([A-Za-z0-9._-]+:[A-Za-z0-9._-]+)'::text), '_'::text, '-'::text) IS NOT NULL) AND (created_at <= COALESCE(COALESCE(e_3.started_at, i.created_at), clock_timestamp())))
+                                           ->  BitmapAnd  (cost=11.84..11.84 rows=2 width=0)
+                                                 ->  Bitmap Index Scan on idx_plugin_usage_session_created  (cost=0.00..4.38 rows=13 width=0)
+                                                       Index Cond: (session_id = (x.trace_id)::text)
+                                                 ->  Bitmap Index Scan on idx_plugin_usage_event_type  (cost=0.00..7.21 rows=391 width=0)
+                                                       Index Cond: (event_type = 'UserPromptSubmit'::text)
+                               ->  Subquery Scan on "*SELECT* 2"  (cost=9.24..13.29 rows=1 width=40)
+                                     ->  Bitmap Heap Scan on plugin_usage_events e_1  (cost=9.24..13.28 rows=1 width=232)
+                                           Recheck Cond: ((session_id = (x.trace_id)::text) AND (tool_name = 'Skill'::text))
+                                           Filter: ((event_type = ANY ('{PostToolUse,PostToolUseFailure}'::text[])) AND (((metadata -> 'tool_input'::text) ->> 'skill'::text) IS NOT NULL) AND (created_at <= COALESCE(COALESCE(e_3.started_at, i.created_at), clock_timestamp())) AND (replace(((metadata -> 'tool_input'::text) ->> 'skill'::text), '_'::text, '-'::text) IS NOT NULL))
+                                           ->  BitmapAnd  (cost=9.24..9.24 rows=1 width=0)
+                                                 ->  Bitmap Index Scan on idx_plugin_usage_session_created  (cost=0.00..4.38 rows=13 width=0)
+                                                       Index Cond: (session_id = (x.trace_id)::text)
+                                                 ->  Bitmap Index Scan on idx_plugin_usage_tool_name  (cost=0.00..4.61 rows=44 width=0)
+                                                       Index Cond: (tool_name = 'Skill'::text)
+                               ->  Subquery Scan on "*SELECT* 3"  (cost=0.28..8.35 rows=1 width=40)
+                                     ->  Index Scan using idx_plugin_usage_tool_name on plugin_usage_events e_2  (cost=0.28..8.34 rows=1 width=232)
+                                           Index Cond: (tool_name = 'skill'::text)
+                                           Filter: ((event_type = ANY ('{PostToolUse,PostToolUseFailure}'::text[])) AND (session_id = (x.trace_id)::text) AND (((metadata -> 'tool_input'::text) ->> 'name'::text) IS NOT NULL) AND (created_at <= COALESCE(COALESCE(e_3.started_at, i.created_at), clock_timestamp())) AND (COALESCE((metadata ->> 'skill_ref'::text), ('opencode:'::text || replace(((metadata -> 'tool_input'::text) ->> 'name'::text), '_'::text, '-'::text))) IS NOT NULL))
+   CTE s
+     ->  CTE Scan on f  (cost=0.00..0.02 rows=1 width=8235)
+           Filter: (($12 IS NULL) OR (skill = $12))
+   CTE buckets
+     ->  ProjectSet  (cost=0.03..5.06 rows=1000 width=8)
+           InitPlan 4
+             ->  Aggregate  (cost=0.02..0.03 rows=1 width=8)
+                   ->  CTE Scan on s s_1  (cost=0.00..0.02 rows=1 width=8)
+           ->  Result  (cost=0.00..0.01 rows=1 width=0)
+   CTE selected
+     ->  Limit  (cost=0.12..0.13 rows=1 width=8339)
+           ->  Sort  (cost=0.12..0.12 rows=1 width=8339)
+                 Sort Key: (row_number() OVER w1)
+                 ->  WindowAgg  (cost=0.05..0.11 rows=1 width=8339)
+                       Window: w1 AS (ORDER BY (CASE WHEN (($17 = 'time'::text) AND $18) THEN s_2.occurred_at ELSE NULL::timestamp with time zone END), (CASE WHEN (($17 = 'time'::text) AND (NOT $18)) THEN s_2.occurred_at ELSE NULL::timestamp with time zone END), (CASE WHEN (($17 = 'duration'::text) AND $18) THEN s_2.execution_time_ms ELSE NULL::integer END), (CASE WHEN (($17 = 'duration'::text) AND (NOT $18)) THEN s_2.execution_time_ms ELSE NULL::integer END), (CASE WHEN (($17 = 'tool'::text) AND $18) THEN s_2.tool_name ELSE NULL::character varying END), (CASE WHEN (($17 = 'tool'::text) AND (NOT $18)) THEN s_2.tool_name ELSE NULL::character varying END), (CASE WHEN (($17 = 'size'::text) AND $18) THEN s_2.payload_bytes ELSE NULL::integer END), (CASE WHEN (($17 = 'size'::text) AND (NOT $18)) THEN s_2.payload_bytes ELSE NULL::integer END), s_2.row_key ROWS UNBOUNDED PRECEDING)
+                       ->  Sort  (cost=0.05..0.06 rows=1 width=8331)
+                             Sort Key: (CASE WHEN (($17 = 'time'::text) AND $18) THEN s_2.occurred_at ELSE NULL::timestamp with time zone END) DESC NULLS LAST, (CASE WHEN (($17 = 'time'::text) AND (NOT $18)) THEN s_2.occurred_at ELSE NULL::timestamp with time zone END), (CASE WHEN (($17 = 'duration'::text) AND $18) THEN s_2.execution_time_ms ELSE NULL::integer END) DESC NULLS LAST, (CASE WHEN (($17 = 'duration'::text) AND (NOT $18)) THEN s_2.execution_time_ms ELSE NULL::integer END), (CASE WHEN (($17 = 'tool'::text) AND $18) THEN s_2.tool_name ELSE NULL::character varying END) DESC NULLS LAST, (CASE WHEN (($17 = 'tool'::text) AND (NOT $18)) THEN s_2.tool_name ELSE NULL::character varying END), (CASE WHEN (($17 = 'size'::text) AND $18) THEN s_2.payload_bytes ELSE NULL::integer END) DESC NULLS LAST, (CASE WHEN (($17 = 'size'::text) AND (NOT $18)) THEN s_2.payload_bytes ELSE NULL::integer END), s_2.row_key
+                             ->  CTE Scan on s s_2  (cost=0.00..0.04 rows=1 width=8331)
+   InitPlan 7
+     ->  Aggregate  (cost=0.03..0.04 rows=1 width=32)
+           ->  CTE Scan on selected x_1  (cost=0.00..0.02 rows=1 width=40)
+   InitPlan 8
+     ->  Subquery Scan on t  (cost=0.12..0.14 rows=1 width=32)
+           ->  Aggregate  (cost=0.12..0.13 rows=1 width=168)
+                 ->  Sort  (cost=0.03..0.04 rows=1 width=2691)
+                       Sort Key: s_3.tool_name
+                       ->  CTE Scan on s s_3  (cost=0.00..0.02 rows=1 width=2691)
+   InitPlan 9
+     ->  Aggregate  (cost=78.23..78.24 rows=1 width=32)
+           ->  Subquery Scan on x_2  (cost=74.73..77.23 rows=200 width=40)
+                 ->  Sort  (cost=74.73..75.23 rows=200 width=80)
+                       Sort Key: b.bucket
+                       ->  HashAggregate  (cost=65.08..67.08 rows=200 width=80)
+                             Group Key: b.bucket
+                             ->  Hash Left Join  (cost=0.03..25.08 rows=1000 width=137)
+                                   Hash Cond: (b.bucket = date_trunc($22, s_4.occurred_at))
+                                   ->  CTE Scan on buckets b  (cost=0.00..20.00 rows=1000 width=8)
+                                   ->  Hash  (cost=0.02..0.02 rows=1 width=137)
+                                         ->  CTE Scan on s s_4  (cost=0.00..0.02 rows=1 width=137)
+   InitPlan 10
+     ->  Aggregate  (cost=0.17..0.18 rows=1 width=32)
+           ->  Subquery Scan on b_1  (cost=0.15..0.16 rows=1 width=24)
+                 ->  Limit  (cost=0.15..0.15 rows=1 width=128)
+                       ->  Sort  (cost=0.15..0.15 rows=1 width=128)
+                             Sort Key: (count(*)) DESC, (CASE $21 WHEN 'server'::text THEN COALESCE(s_5.server_name, 'unknown'::character varying) WHEN 'user'::text THEN COALESCE(s_5.display_name, s_5.user_id, 'Unattributed'::character varying) WHEN 'client'::text THEN (COALESCE(s_5.client_kind, 'unknown'::text))::character varying WHEN 'skill'::text THEN (COALESCE(s_5.skill, 'no skill'::text))::character varying WHEN 'kind'::text THEN (COALESCE(s_5.artifact_kind, 'tool call'::text))::character varying ELSE COALESCE(s_5.tool_name, 'unknown'::character varying) END)
+                             ->  GroupAggregate  (cost=0.06..0.14 rows=1 width=128)
+                                   Group Key: (CASE $21 WHEN 'server'::text THEN COALESCE(s_5.server_name, 'unknown'::character varying) WHEN 'user'::text THEN COALESCE(s_5.display_name, s_5.user_id, 'Unattributed'::character varying) WHEN 'client'::text THEN (COALESCE(s_5.client_kind, 'unknown'::text))::character varying WHEN 'skill'::text THEN (COALESCE(s_5.skill, 'no skill'::text))::character varying WHEN 'kind'::text THEN (COALESCE(s_5.artifact_kind, 'tool call'::text))::character varying ELSE COALESCE(s_5.tool_name, 'unknown'::character varying) END), (CASE $21 WHEN 'user'::text THEN s_5.user_id WHEN 'skill'::text THEN (s_5.skill)::character varying WHEN 'kind'::text THEN (s_5.artifact_kind)::character varying WHEN 'server'::text THEN s_5.server_name WHEN 'client'::text THEN (s_5.client_kind)::character varying ELSE s_5.tool_name END)
+                                   ->  Sort  (cost=0.06..0.07 rows=1 width=685)
+                                         Sort Key: (CASE $21 WHEN 'server'::text THEN COALESCE(s_5.server_name, 'unknown'::character varying) WHEN 'user'::text THEN COALESCE(s_5.display_name, s_5.user_id, 'Unattributed'::character varying) WHEN 'client'::text THEN (COALESCE(s_5.client_kind, 'unknown'::text))::character varying WHEN 'skill'::text THEN (COALESCE(s_5.skill, 'no skill'::text))::character varying WHEN 'kind'::text THEN (COALESCE(s_5.artifact_kind, 'tool call'::text))::character varying ELSE COALESCE(s_5.tool_name, 'unknown'::character varying) END), (CASE $21 WHEN 'user'::text THEN s_5.user_id WHEN 'skill'::text THEN (s_5.skill)::character varying WHEN 'kind'::text THEN (s_5.artifact_kind)::character varying WHEN 'server'::text THEN s_5.server_name WHEN 'client'::text THEN (s_5.client_kind)::character varying ELSE s_5.tool_name END), s_5.user_id
+                                         ->  CTE Scan on s s_5  (cost=0.00..0.05 rows=1 width=685)
+                                               Filter: (($21 <> 'server'::text) OR (NOT is_builtin) OR (NOT ($7 IS DISTINCT FROM true)))
+   InitPlan 11
+     ->  Aggregate  (cost=0.07..0.08 rows=1 width=32)
+           ->  Subquery Scan on x_3  (cost=0.04..0.06 rows=1 width=540)
+                 ->  Limit  (cost=0.04..0.05 rows=1 width=524)
+                       ->  Sort  (cost=0.04..0.05 rows=1 width=524)
+                             Sort Key: (count(*)) DESC, s_6.tool_name
+                             ->  HashAggregate  (cost=0.02..0.03 rows=1 width=524)
+                                   Group Key: s_6.tool_name
+                                   ->  CTE Scan on s s_6  (cost=0.00..0.02 rows=1 width=516)
+                                         Filter: (tool_name IS NOT NULL)
+   InitPlan 12
+     ->  Aggregate  (cost=0.07..0.08 rows=1 width=32)
+           ->  Subquery Scan on x_4  (cost=0.04..0.06 rows=1 width=540)
+                 ->  Limit  (cost=0.04..0.05 rows=1 width=524)
+                       ->  Sort  (cost=0.04..0.05 rows=1 width=524)
+                             Sort Key: (count(*)) DESC, s_7.server_name
+                             ->  HashAggregate  (cost=0.02..0.03 rows=1 width=524)
+                                   Group Key: s_7.server_name
+                                   ->  CTE Scan on s s_7  (cost=0.00..0.02 rows=1 width=516)
+                                         Filter: ((server_name IS NOT NULL) AND (($7 IS TRUE) OR (NOT is_builtin)))
+   InitPlan 13
+     ->  Aggregate  (cost=0.07..0.08 rows=1 width=32)
+           ->  Subquery Scan on x_5  (cost=0.05..0.06 rows=1 width=540)
+                 ->  Limit  (cost=0.05..0.05 rows=1 width=556)
+                       ->  Sort  (cost=0.05..0.05 rows=1 width=556)
+                             Sort Key: (count(*)) DESC
+                             ->  HashAggregate  (cost=0.03..0.04 rows=1 width=556)
+                                   Group Key: s_8.user_id
+                                   ->  CTE Scan on s s_8  (cost=0.00..0.02 rows=1 width=1032)
+                                         Filter: (user_id IS NOT NULL)
+   InitPlan 14
+     ->  Aggregate  (cost=0.07..0.08 rows=1 width=32)
+           ->  Subquery Scan on x_6  (cost=0.04..0.06 rows=1 width=56)
+                 ->  Sort  (cost=0.04..0.05 rows=1 width=40)
+                       Sort Key: (count(*)) DESC
+                       ->  HashAggregate  (cost=0.02..0.03 rows=1 width=40)
+                             Group Key: s_9.client_kind
+                             ->  CTE Scan on s s_9  (cost=0.00..0.02 rows=1 width=32)
+                                   Filter: (client_kind IS NOT NULL)
+   InitPlan 15
+     ->  Aggregate  (cost=0.07..0.08 rows=1 width=32)
+           ->  Subquery Scan on x_7  (cost=0.04..0.06 rows=1 width=56)
+                 ->  Limit  (cost=0.04..0.05 rows=1 width=40)
+                       ->  Sort  (cost=0.04..0.05 rows=1 width=40)
+                             Sort Key: (count(*)) DESC, f_1.skill
+                             ->  HashAggregate  (cost=0.02..0.03 rows=1 width=40)
+                                   Group Key: f_1.skill
+                                   ->  CTE Scan on f f_1  (cost=0.00..0.02 rows=1 width=32)
+                                         Filter: (skill IS NOT NULL)
+   InitPlan 16
+     ->  Aggregate  (cost=0.07..0.08 rows=1 width=32)
+           ->  Subquery Scan on x_8  (cost=0.04..0.06 rows=1 width=56)
+                 ->  Sort  (cost=0.04..0.05 rows=1 width=40)
+                       Sort Key: (count(*)) DESC
+                       ->  HashAggregate  (cost=0.02..0.03 rows=1 width=40)
+                             Group Key: s_10.artifact_kind
+                             ->  CTE Scan on s s_10  (cost=0.00..0.02 rows=1 width=32)
+                                   Filter: (artifact_kind IS NOT NULL)
+   InitPlan 17
+     ->  Aggregate  (cost=0.07..0.08 rows=1 width=32)
+           ->  Subquery Scan on x_9  (cost=0.04..0.06 rows=1 width=56)
+                 ->  Sort  (cost=0.04..0.05 rows=1 width=40)
+                       Sort Key: (count(*)) DESC
+                       ->  HashAggregate  (cost=0.02..0.03 rows=1 width=40)
+                             Group Key: s_11.decision
+                             ->  CTE Scan on s s_11  (cost=0.00..0.02 rows=1 width=32)
+                                   Filter: (decision IS NOT NULL)
+(178 rows)
+

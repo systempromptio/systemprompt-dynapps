@@ -33,6 +33,7 @@ use crate::types::UserContext;
 use context::{DetailKpiView, DetailTabView, UserDetailContext, UserHeaderView};
 
 use super::BASE_URL;
+use crate::handlers::ssr::list_view::DEFAULT_PAGE_SIZE;
 use crate::handlers::ssr::page::Page;
 
 // Why: Conversations sits second, directly after Identity. What this person
@@ -129,6 +130,7 @@ pub(crate) async fn user_detail_page(
         devices: None,
         sessions: None,
         usage: None,
+        export: view::export(&user_id, &shell.user),
     };
 
     let data = Box::pin(fill_tab(
@@ -202,12 +204,7 @@ async fn fill_tab(read: TabRead<'_>, mut data: UserDetailContext) -> UserDetailC
         },
         "sessions" => {
             let rows = load::load_sessions(pool, user_id).await;
-            data.sessions = Some(view::sessions_tab(
-                &rows,
-                user_id,
-                page,
-                load::SESSION_PAGE_SIZE,
-            ));
+            data.sessions = Some(view::sessions_tab(&rows, user_id, page, DEFAULT_PAGE_SIZE));
         },
         "usage" => {
             data.usage = Some(view::usage_tab(

@@ -180,6 +180,10 @@ pub struct ConversationDecisionRow {
     pub reason: String,
     pub plugin_id: Option<PluginId>,
     pub created_at: DateTime<Utc>,
+    // JSON: the chain's per-rule evaluations, shaped by each policy stage.
+    pub evaluated_rules: Option<serde_json::Value>,
+    pub tool_use_id: Option<String>,
+    pub trace_id: Option<String>,
 }
 
 pub async fn list_conversation_decisions(
@@ -190,7 +194,8 @@ pub async fn list_conversation_decisions(
     let rows = sqlx::query!(
         r#"SELECT d.tool_name, d.decision AS "decision!", d.policy, d.reason,
                   d.plugin_id AS "plugin_id?: PluginId",
-                  d.created_at AS "created_at!"
+                  d.created_at AS "created_at!",
+                  d.evaluated_rules, d.tool_use_id, d.trace_id
            FROM governance_decisions d
            WHERE d.context_id = $1 OR ($2::text IS NOT NULL AND d.session_id = $2)
            ORDER BY d.created_at
@@ -209,6 +214,9 @@ pub async fn list_conversation_decisions(
             reason: r.reason,
             plugin_id: r.plugin_id,
             created_at: r.created_at,
+            evaluated_rules: r.evaluated_rules,
+            tool_use_id: r.tool_use_id,
+            trace_id: r.trace_id,
         })
         .collect())
 }
@@ -262,6 +270,7 @@ pub struct ConversationSafetyRow {
     pub blocked: bool,
     pub created_at: DateTime<Utc>,
     pub request_id: String,
+    pub excerpt: Option<String>,
 }
 
 pub async fn list_conversation_safety_findings(
@@ -271,7 +280,7 @@ pub async fn list_conversation_safety_findings(
     let rows = sqlx::query!(
         r#"SELECT s.phase AS "phase!", s.category AS "category!", s.severity AS "severity!",
                   s.scanner, s.blocked AS "blocked!", s.created_at AS "created_at!",
-                  s.ai_request_id AS "request_id!"
+                  s.ai_request_id AS "request_id!", s.excerpt
            FROM ai_safety_findings s
            JOIN conversation_requests cr ON cr.id = s.ai_request_id
            WHERE cr.context_id = $1
@@ -291,6 +300,7 @@ pub async fn list_conversation_safety_findings(
             blocked: r.blocked,
             created_at: r.created_at,
             request_id: r.request_id,
+            excerpt: r.excerpt,
         })
         .collect())
 }

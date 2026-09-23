@@ -17,6 +17,27 @@ providers:
     european: false
     no_retain: true
   models:
+  - id: claude-opus-5-5
+    pricing:
+      input_per_million: 4.0
+      output_per_million: 20.0
+      cache_read_per_million: 0.2
+      cache_write_per_million: 5.0
+      per_image_cents: null
+    capabilities:
+      vision: true
+      audio_input: false
+      video_input: false
+      image_generation: false
+      audio_generation: false
+      streaming: true
+      tools: true
+      structured_output: true
+      system_prompts: true
+      image_resolution_config: false
+    limits:
+      context_window: 1000000
+      max_output_tokens: 128000
   - id: claude-opus-5
     pricing:
       input_per_million: 5.0
@@ -101,90 +122,6 @@ providers:
     limits:
       context_window: 1000000
       max_output_tokens: 128000
-  - id: claude-opus-4-8
-    pricing:
-      input_per_million: 5.0
-      output_per_million: 25.0
-      cache_read_per_million: 0.5
-      cache_write_per_million: 6.25
-      per_image_cents: null
-    capabilities:
-      vision: true
-      audio_input: false
-      video_input: false
-      image_generation: false
-      audio_generation: false
-      streaming: true
-      tools: true
-      structured_output: true
-      system_prompts: true
-      image_resolution_config: false
-    limits:
-      context_window: 1000000
-      max_output_tokens: 128000
-  - id: claude-opus-4-7
-    pricing:
-      input_per_million: 5.0
-      output_per_million: 25.0
-      cache_read_per_million: 0.5
-      cache_write_per_million: 6.25
-      per_image_cents: null
-    capabilities:
-      vision: true
-      audio_input: false
-      video_input: false
-      image_generation: false
-      audio_generation: false
-      streaming: true
-      tools: true
-      structured_output: true
-      system_prompts: true
-      image_resolution_config: false
-    limits:
-      context_window: 1000000
-      max_output_tokens: 128000
-  - id: claude-opus-4-6
-    pricing:
-      input_per_million: 5.0
-      output_per_million: 25.0
-      cache_read_per_million: 0.5
-      cache_write_per_million: 6.25
-      per_image_cents: null
-    capabilities:
-      vision: true
-      audio_input: false
-      video_input: false
-      image_generation: false
-      audio_generation: false
-      streaming: true
-      tools: true
-      structured_output: true
-      system_prompts: true
-      image_resolution_config: false
-    limits:
-      context_window: 1000000
-      max_output_tokens: 128000
-  - id: claude-sonnet-4-6
-    pricing:
-      input_per_million: 3.0
-      output_per_million: 15.0
-      cache_read_per_million: 0.3
-      cache_write_per_million: 3.75
-      per_image_cents: null
-    capabilities:
-      vision: true
-      audio_input: false
-      video_input: false
-      image_generation: false
-      audio_generation: false
-      streaming: true
-      tools: true
-      structured_output: true
-      system_prompts: true
-      image_resolution_config: false
-    limits:
-      context_window: 1000000
-      max_output_tokens: 128000
   - id: claude-haiku-4-5
     aliases:
     - claude-haiku-4-5-20251001
@@ -193,52 +130,6 @@ providers:
       output_per_million: 5.0
       cache_read_per_million: 0.1
       cache_write_per_million: 1.25
-      per_image_cents: null
-    capabilities:
-      vision: true
-      audio_input: false
-      video_input: false
-      image_generation: false
-      audio_generation: false
-      streaming: true
-      tools: true
-      structured_output: true
-      system_prompts: true
-      image_resolution_config: false
-    limits:
-      context_window: 200000
-      max_output_tokens: 64000
-  - id: claude-opus-4-5
-    aliases:
-    - claude-opus-4-5-20251101
-    pricing:
-      input_per_million: 5.0
-      output_per_million: 25.0
-      cache_read_per_million: 0.5
-      cache_write_per_million: 6.25
-      per_image_cents: null
-    capabilities:
-      vision: true
-      audio_input: false
-      video_input: false
-      image_generation: false
-      audio_generation: false
-      streaming: true
-      tools: true
-      structured_output: true
-      system_prompts: true
-      image_resolution_config: false
-    limits:
-      context_window: 200000
-      max_output_tokens: 64000
-  - id: claude-sonnet-4-5
-    aliases:
-    - claude-sonnet-4-5-20250929
-    pricing:
-      input_per_million: 3.0
-      output_per_million: 15.0
-      cache_read_per_million: 0.3
-      cache_write_per_million: 3.75
       per_image_cents: null
     capabilities:
       vision: true
@@ -269,10 +160,16 @@ providers:
   #
   # Why: cache_read_per_million is Google's published context-caching rate for
   # each model (25% of the input rate), read from ai.google.dev/gemini-api/docs/
-  # pricing on 2026-09-05: 2.5 Pro $0.31/M, 2.5 Flash $0.075/M, 2.5 Flash-Lite
-  # $0.025/M, all at the <=200k-token tier. Google bills cache *storage* per
-  # hour rather than per written token, so cache_write_per_million is an
-  # explicit 0.0: there is no per-token write charge to pass on.
+  # pricing on 2026-09-05, at the <=200k-token tier. Google bills cache
+  # *storage* per hour rather than per written token, so cache_write_per_million
+  # is an explicit 0.0: there is no per-token write charge to pass on.
+  #
+  # The 2.5 family (Pro, Flash, Flash-Lite) was declared here until 2026-09-22
+  # and is gone: Google withdrew it from the public endpoint for accounts that
+  # had not already used it, so every request 404ed with "no longer available
+  # to new users" (15 of them on this instance between 09-11 and 09-18). The
+  # Vertex-hosted 2.5 copies are separately undeclared under `vertex` for the
+  # same family's 2026-10-20 retirement.
   api_key_secret: gemini
   governance:
     european: false
@@ -287,75 +184,6 @@ providers:
       input_per_million: 0.75
       output_per_million: 3.75
       cache_read_per_million: 0.075
-      cache_write_per_million: 0.0
-      per_image_cents: null
-    capabilities:
-      vision: true
-      audio_input: false
-      video_input: false
-      image_generation: false
-      audio_generation: false
-      streaming: true
-      tools: true
-      structured_output: true
-      system_prompts: true
-      image_resolution_config: false
-      reasoning: true
-    limits:
-      context_window: 1000000
-      max_output_tokens: 65536
-      max_thinking_budget: 24576
-  - id: gemini-2.5-pro
-    pricing:
-      input_per_million: 1.25
-      output_per_million: 10.0
-      cache_read_per_million: 0.31
-      cache_write_per_million: 0.0
-      per_image_cents: null
-    capabilities:
-      vision: true
-      audio_input: false
-      video_input: false
-      image_generation: false
-      audio_generation: false
-      streaming: true
-      tools: true
-      structured_output: true
-      system_prompts: true
-      image_resolution_config: false
-      reasoning: true
-    limits:
-      context_window: 1000000
-      max_output_tokens: 65536
-      max_thinking_budget: 32768
-  - id: gemini-2.5-flash
-    pricing:
-      input_per_million: 0.3
-      output_per_million: 2.5
-      cache_read_per_million: 0.075
-      cache_write_per_million: 0.0
-      per_image_cents: null
-    capabilities:
-      vision: true
-      audio_input: false
-      video_input: false
-      image_generation: false
-      audio_generation: false
-      streaming: true
-      tools: true
-      structured_output: true
-      system_prompts: true
-      image_resolution_config: false
-      reasoning: true
-    limits:
-      context_window: 1000000
-      max_output_tokens: 65536
-      max_thinking_budget: 24576
-  - id: gemini-2.5-flash-lite
-    pricing:
-      input_per_million: 0.1
-      output_per_million: 0.4
-      cache_read_per_million: 0.025
       cache_write_per_million: 0.0
       per_image_cents: null
     capabilities:

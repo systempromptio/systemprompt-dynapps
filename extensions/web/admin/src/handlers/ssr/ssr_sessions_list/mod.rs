@@ -34,7 +34,7 @@ use crate::repositories::analytics::conversation_rows::{
 use crate::repositories::governance::filter_options::{FilterOptions, get_filter_options};
 use crate::repositories::scope::{ScopeRequest, SubjectScope};
 use crate::types::UserContext;
-use crate::util::time_range::{TimeRange, TimeRangePreset, TimeRangeQuery, parse_time_range};
+use crate::util::time_range::{TimeRange, TimeRangeQuery, parse_time_range};
 
 mod context;
 pub(crate) mod export;
@@ -42,12 +42,11 @@ mod rows;
 mod summary;
 mod view;
 
+use crate::handlers::ssr::list_view::DEFAULT_PAGE_SIZE;
 use crate::handlers::ssr::page::Page;
 use context::{CurrentSessionView, FilterRibbon, SessionsListPageContext};
 
 const BASE_URL: &str = "/admin/sessions";
-const PAGE_SIZE: i64 = 50;
-
 #[derive(Debug, Deserialize)]
 pub(crate) struct SessionListQuery {
     pub from: Option<String>,
@@ -159,8 +158,8 @@ async fn load_sessions(
     let conversation_page = ConversationPage {
         sort,
         descending,
-        limit: PAGE_SIZE,
-        offset: page * PAGE_SIZE,
+        limit: DEFAULT_PAGE_SIZE,
+        offset: page * DEFAULT_PAGE_SIZE,
     };
 
     let (list_res, totals_res, options_res) = tokio::join!(
@@ -202,10 +201,22 @@ async fn load_sessions_data(
     let show_side = loaded.filter.include_side_calls;
 
     let preset = preset_str(query, range);
+    let export_query = crate::export::view::query_string(&[
+        ("preset", Some(preset.as_str())),
+        ("from", Some(&range.from.to_rfc3339())),
+        ("to", Some(&range.to.to_rfc3339())),
+        ("user_id", query.user_id.as_ref().map(UserId::as_str)),
+        ("error_only", query.error_only.as_deref()),
+        ("side", query.side.as_deref()),
+        ("sort", query.sort.as_deref()),
+        ("dir", query.dir.as_deref()),
+        ("group", query.group.as_deref()),
+        ("project", query.project.as_deref()),
+    ]);
     let session_rows: Vec<_> = items.iter().map(rows::session_row).collect();
     let has_sessions = !session_rows.is_empty();
-    let shown_rows = i64::try_from(session_rows.len()).unwrap_or(PAGE_SIZE);
-    let page_window = PageWindow::new(page, PAGE_SIZE, total, shown_rows, "conversations");
+    let shown_rows = i64::try_from(session_rows.len()).unwrap_or(DEFAULT_PAGE_SIZE);
+    let page_window = PageWindow::new(page, DEFAULT_PAGE_SIZE, total, shown_rows, "conversations");
 
     SessionsListPageContext {
         page: "sessions",
@@ -247,21 +258,8 @@ async fn load_sessions_data(
         error_toggle_url: view::error_toggle_url(query, error_only),
         show_side,
         side_toggle_url: view::side_toggle_url(query, show_side),
-        export: crate::export::ExportView::single(
-            "sessions",
-            &crate::export::view::query_string(&[
-                ("preset", Some(preset.as_str())),
-                ("from", Some(&range.from.to_rfc3339())),
-                ("to", Some(&range.to.to_rfc3339())),
-                ("user_id", query.user_id.as_ref().map(UserId::as_str)),
-                ("error_only", query.error_only.as_deref()),
-                ("side", query.side.as_deref()),
-                ("sort", query.sort.as_deref()),
-                ("dir", query.dir.as_deref()),
-                ("group", query.group.as_deref()),
-                ("project", query.project.as_deref()),
-            ]),
-        ),
+        export: crate::export::ExportView::single("sessions", &export_query)
+            .with_transcripts(crate::export::view::TranscriptSource::Sessions),
     }
 }
 
@@ -274,15 +272,7 @@ fn preset_str(query: &SessionListQuery, range: TimeRange) -> String {
     if query.from.is_some() && query.to.is_some() {
         return "custom".to_owned();
     }
-    match range.preset {
-        TimeRangePreset::Min15 => "15m",
-        TimeRangePreset::Hour1 => "1h",
-        TimeRangePreset::Hours24 => "24h",
-        TimeRangePreset::Days7 => "7d",
-        TimeRangePreset::Days30 => "30d",
-        TimeRangePreset::Custom => "custom",
-    }
-    .to_owned()
+    range.preset.as_str().to_owned()
 }
 
 fn current_session_view(user_ctx: &UserContext) -> CurrentSessionView {

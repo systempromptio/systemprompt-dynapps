@@ -16,6 +16,7 @@ use sqlx::PgPool;
 use super::access_control::applied_from;
 use super::plane::{
     ActionCounts, Actor, ApplyOutcome, DriftKpi, DriftRow, Export, PlaneDrift, SyncMode, SyncPlane,
+    resolution,
 };
 use super::state::{Applied, record_applied, record_declared};
 use crate::error::AdminResult;
@@ -41,11 +42,12 @@ pub struct GovernancePlane;
 
 fn row(kind: &'static str, id: &str, in_code: String, in_db: String) -> DriftRow {
     let (kind_label, kind_tone, insert_applies, overwrite_effect) = match kind {
-        "missing" => ("In code, not in database", "info", true, "inserted"),
-        "orphan" => ("In database, not in code", "warn", false, "deleted"),
-        "reordered" => ("Order differs", "warn", false, "reordered"),
-        _ => ("Differs", "warn", false, "updated"),
+        "missing" => ("Added in code", "ok", true, "inserted"),
+        "orphan" => ("Removed from code", "err", false, "deleted"),
+        "reordered" => ("Order changed in code", "warn", false, "reordered"),
+        _ => ("Changed in code", "warn", false, "updated"),
     };
+    let (resolve, resolve_tone) = resolution(insert_applies, true, overwrite_effect);
     DriftRow {
         kind,
         kind_label,
@@ -64,6 +66,8 @@ fn row(kind: &'static str, id: &str, in_code: String, in_db: String) -> DriftRow
         insert_applies,
         overwrite_applies: true,
         overwrite_effect,
+        resolve,
+        resolve_tone,
     }
 }
 
@@ -153,19 +157,19 @@ impl SyncPlane for GovernancePlane {
             in_db,
             kpis: vec![
                 DriftKpi {
-                    label: "In code, not in database",
+                    label: "Added in code",
                     value: drift.missing_in_db.len(),
-                    note: "Insert only adds these",
-                    tone: "info",
+                    note: "Insert only or Overwrite adds these",
+                    tone: "ok",
                 },
                 DriftKpi {
-                    label: "In database, not in code",
+                    label: "Removed from code",
                     value: drift.only_in_db.len(),
                     note: "Overwrite deletes these",
                     tone: "warn",
                 },
                 DriftKpi {
-                    label: "Differ",
+                    label: "Changed in code",
                     value: differ,
                     note: "switch, mode, parameters or order disagree",
                     tone: "warn",
@@ -177,6 +181,7 @@ impl SyncPlane for GovernancePlane {
                 update: differ,
                 delete: drift.only_in_db.len(),
                 delete_console: 0,
+                kept: 0,
             },
             is_clean: drift.is_clean(),
             rows: rows(&drift, &declared, &staged),

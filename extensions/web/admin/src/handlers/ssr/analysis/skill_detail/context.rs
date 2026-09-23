@@ -10,11 +10,11 @@ use crate::handlers::ssr::analysis::tone::{
 };
 use crate::handlers::ssr::analysis_urls::ANALYSIS_SKILLS_URL;
 use crate::handlers::ssr::format::{format_cost, format_duration_ms, format_token_total};
-use crate::handlers::ssr::list_view::{PageWindow, Pagination};
+use crate::handlers::ssr::list_view::{PageWindow, Pagination, paginate};
 use crate::handlers::ssr::types::{BreadcrumbView, TabLinkView};
 use crate::repositories::analysis::inventory_index::InventoryIndex;
 use crate::repositories::analysis::skills::{
-    SkillBreakdownBy, SkillBucketRow, SkillConversationRow, SkillDayRow, SkillFactRow,
+    SkillBreakdownBy, SkillBucketRow, SkillConversationRow, SkillDayRow, SkillFactRow, SkillRunRow,
 };
 
 // Why: the hook carries ids; the inventory index resolves the plugin's
@@ -47,6 +47,7 @@ pub(super) struct SkillRead<'a> {
     pub(super) daily: &'a [SkillDayRow],
     pub(super) breakdown: &'a [SkillBucketRow],
     pub(super) conversations: &'a [SkillConversationRow],
+    pub(super) runs: &'a [SkillRunRow],
     pub(super) total: i64,
     // Why: whether the viewer may press a row's Judge button.
     pub(super) can_judge: bool,
@@ -91,20 +92,7 @@ fn breakdown_tabs(query: &SkillDetailQuery, key: &str) -> Vec<TabLinkView> {
 fn pagination(query: &SkillDetailQuery, key: &str, total: i64, shown: usize) -> Pagination {
     let shown = i64::try_from(shown).unwrap_or(0);
     let window = PageWindow::new(query.page(), PAGE_SIZE, total, shown, "conversations");
-    let (first_row, last_row) = window.bounds();
-    Pagination {
-        current_page: window.index + 1,
-        total_pages: window.total_pages,
-        first_row,
-        last_row,
-        total_rows: total,
-        noun: "conversations",
-        has_prev: window.index > 0,
-        has_next: window.index + 1 < window.total_pages,
-        prev_url: (window.index > 0).then(|| query.link(key, None, None, Some(window.index - 1))),
-        next_url: (window.index + 1 < window.total_pages)
-            .then(|| query.link(key, None, None, Some(window.index + 1))),
-    }
+    paginate(window, |page| query.link(key, None, None, Some(page)))
 }
 
 pub(super) fn build_context(
@@ -153,6 +141,9 @@ pub(super) fn build_context(
             .iter()
             .map(|b| bucket_view(b, invocations_total))
             .collect(),
+        releases: super::runs::release_views(read.runs, chrono::Utc::now()),
+        runs: super::runs::run_views(read.runs, chrono::Utc::now()),
+        run_count: read.runs.len(),
         conversations: read
             .conversations
             .iter()
@@ -161,7 +152,11 @@ pub(super) fn build_context(
         conversation_count: read.total,
         pagination: pagination(query, key, read.total, read.conversations.len()),
         export: crate::export::ExportView::new(
-            &["analysis-skill-conversations"],
+            &[
+                "analysis-skill-conversations",
+                "analysis-skill-runs",
+                "analysis-kit-release-impact",
+            ],
             &format!("skill={}&days={}", urlencoding::encode(key), query.days()),
         ),
         help: crate::handlers::ssr::analysis::help::skill_detail_help(),

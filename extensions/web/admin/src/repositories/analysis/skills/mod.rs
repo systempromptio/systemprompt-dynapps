@@ -9,9 +9,11 @@
 //! verified `managed_installation_receipts` on the skill resource. Each
 //! query is one bound statement in a `.sql` file beside this module. The
 //! list and its row are here; the per-day and per-dimension splits are in
-//! `daily`, the conversations and marketplace adoption in `usage`.
+//! `daily`, the conversations and marketplace adoption in `usage`, the
+//! timed runs and their workflow phases in `runs`.
 
 mod daily;
+mod runs;
 mod usage;
 
 use chrono::{DateTime, NaiveDate, Utc};
@@ -21,6 +23,7 @@ use systemprompt::identifiers::{MarketplaceId, PluginId};
 pub use daily::{
     SkillBreakdownBy, SkillBucketRow, SkillDayRow, list_skill_breakdown, list_skill_daily,
 };
+pub use runs::{SkillRunFilter, SkillRunRow, list_skill_runs};
 pub use usage::{
     MarketplaceAdoptionRow, SkillConversationRow, list_marketplace_adoption,
     list_skill_conversations_paged,

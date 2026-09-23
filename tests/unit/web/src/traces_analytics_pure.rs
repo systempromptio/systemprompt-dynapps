@@ -7,7 +7,6 @@
 )]
 
 use systemprompt_web_admin::repositories::analytics::conversation_rows::ConversationFilter;
-use systemprompt_web_admin::repositories::analytics::conversations::ConversationListFilter;
 use systemprompt_web_admin::repositories::analytics::requests::{
     RequestFilter, RequestSortColumn, RequestSortSpec, SortDir,
 };
@@ -114,15 +113,4 @@ fn conversation_filter_defaults_to_turns_only_and_no_narrowing() {
     assert!(filter.until.is_none());
     assert!(!filter.include_side_calls);
     assert!(!filter.error_only);
-}
-
-#[test]
-fn conversation_filter_defaults_to_an_unbounded_window() {
-    let filter = ConversationListFilter::default();
-    assert!(filter.user_id.is_none());
-    assert!(filter.plugin_id.is_none());
-    assert!(filter.free_text.is_none());
-    assert!(filter.since.is_none());
-    assert!(filter.until.is_none());
-    assert_eq!(filter.limit, 0);
 }

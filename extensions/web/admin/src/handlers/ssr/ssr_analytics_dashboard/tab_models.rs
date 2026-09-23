@@ -67,25 +67,25 @@ fn kpis(rows: &[ModelStatsRow], total: i64) -> Vec<KpiTile> {
         KpiTile {
             label: "Models served".to_owned(),
             value: served.to_string(),
-            sub: format!("{total} requests in window"),
+            note: format!("{total} requests in window"),
             tone: "accent",
         },
         KpiTile {
             label: "Spend".to_owned(),
             value: format_cost(cost),
-            sub: format!("{} per request", format_cost(per(cost, total))),
+            note: format!("{} per request", format_cost(per(cost, total))),
             tone: "ok",
         },
         KpiTile {
             label: "Unrouted".to_owned(),
             value: unrouted.to_string(),
-            sub: "rejected before a route was chosen".to_owned(),
+            note: "rejected before a route was chosen".to_owned(),
             tone: if unrouted > 0 { "err" } else { "ok" },
         },
         KpiTile {
             label: "Error rate".to_owned(),
             value: format!("{:.1}%", pct(errors, total)),
-            sub: format!("{errors} failed or rejected"),
+            note: format!("{errors} failed or rejected"),
             tone: tone(pct(errors, total)),
         },
     ]

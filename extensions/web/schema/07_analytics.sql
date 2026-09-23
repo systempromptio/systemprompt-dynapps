@@ -35,7 +35,6 @@ CREATE TABLE IF NOT EXISTS plugin_usage_daily (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_usage_daily_unique ON plugin_usage_daily(date, user_id, event_type, COALESCE(tool_name, ''));
-CREATE INDEX IF NOT EXISTS idx_usage_daily_date ON plugin_usage_daily(date DESC);
 CREATE INDEX IF NOT EXISTS idx_usage_daily_plugin ON plugin_usage_daily(plugin_id, date DESC);
 CREATE INDEX IF NOT EXISTS idx_usage_daily_user ON plugin_usage_daily(user_id, date DESC);
 
@@ -70,7 +69,6 @@ CREATE TABLE IF NOT EXISTS plugin_session_summaries (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_session_summary_user ON plugin_session_summaries(user_id, started_at DESC);
-CREATE INDEX IF NOT EXISTS idx_session_summary_session ON plugin_session_summaries(session_id);
 CREATE INDEX IF NOT EXISTS idx_session_summary_source ON plugin_session_summaries(user_id, client_source);
 CREATE INDEX IF NOT EXISTS idx_session_summary_mode ON plugin_session_summaries(user_id, permission_mode);
 

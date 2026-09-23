@@ -22,14 +22,19 @@ const CONFIRM = {
     title: 'Insert only',
     body: `Add ${button.dataset.count} row(s) the declaration holds and this database lacks. Nothing existing is changed or removed.`,
   }),
-  overwrite: (button) => ({
-    title: 'Overwrite from code',
-    body:
-      `Make the database equal the declaration for every entity it names. ` +
-      `${button.dataset.count} row(s) only this database holds will be deleted — ` +
-      `${button.dataset.dashboard ?? 0} of them were written from the console. ` +
-      `Per-person overrides and entities the declaration does not mention are untouched.`,
-  }),
+  overwrite: (button) => {
+    const deleted = Number(button.dataset.count ?? 0);
+    const console = Number(button.dataset.dashboard ?? 0);
+    const kept = Number(button.dataset.kept ?? 0);
+    return {
+      title: 'Overwrite from code',
+      body:
+        `Make this database equal the declaration. ${deleted} row(s) will be deleted: ` +
+        `${deleted - console} that code removed and ${console} written from the console on entities the code still names. ` +
+        `${kept} row(s) written here or by a bundle on entities the code no longer names are kept. ` +
+        `Per-person overrides are never touched.`,
+    };
+  },
 };
 
 const askSync = (button) => {

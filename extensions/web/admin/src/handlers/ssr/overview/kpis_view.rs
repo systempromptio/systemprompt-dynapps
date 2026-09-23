@@ -28,7 +28,7 @@ pub(super) struct KpiTileView {
     pub label: &'static str,
     pub icon: &'static str,
     pub value: String,
-    pub sub: String,
+    pub note: String,
     pub hint: String,
     pub href: String,
     pub tone: &'static str,
@@ -97,7 +97,7 @@ pub(super) struct Tile {
     pub label: &'static str,
     pub icon: &'static str,
     pub value: String,
-    pub sub: String,
+    pub note: String,
     // Why: the figure a tile's own sub line has no room for. It reaches the
     // reader as the tile's title, so the sub line can stay one band and still
     // say what the previous window held.
@@ -123,7 +123,7 @@ pub(super) fn tile(spec: Tile, d: Option<Delta>, spark_values: &[i64]) -> KpiTil
         label: spec.label,
         icon: spec.icon,
         value: spec.value,
-        sub: spec.sub,
+        note: spec.note,
         hint: spec.hint,
         href: spec.href,
         tone: spec.tone,

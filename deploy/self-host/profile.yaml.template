@@ -1,4 +1,4 @@
-# template-version: 0.58.0
+# template-version: 0.59.1
 # Astound Digital profile template for self-hosted, multi-node deployments.
 # Rendered by deploy/self-host/render-profile.sh; @TOKENS@ are substituted.
 # Every node runs this exact file. The provider catalog and gateway routes are
@@ -62,18 +62,39 @@ security:
   signing_key_path: signing_key.pem
   id_jag_ttl_secs: 300
 rate_limits:
+  # Requests per second per client address, one bucket per route group. Every
+  # knob below names the group it governs; nothing here is a global cap.
   disabled: false
+  # /api/v1/core/oauth (public), /auth/link-passkey, /api/public/gateway
   oauth_public_per_second: 10
+  # /api/v1/core/oauth (authenticated), /api/v1/core/users
   oauth_auth_per_second: 10
+  # /api/v1/core/contexts, /api/v1/webhook
   contexts_per_second: 100
+  # /api/v1/core/tasks
   tasks_per_second: 50
+  # /api/v1/core/artifacts
   artifacts_per_second: 50
+  # /api/v1/agents/registry — discovery only, so listing agents cannot spend
+  # the execution budget below.
   agent_registry_per_second: 50
+  # /api/v1/agents execution, plus the Slack and Teams inbound mounts
   agents_per_second: 20
+  # /api/v1/mcp/registry — the MCP server catalog, discovery only
   mcp_registry_per_second: 50
+  # /api/v1/mcp — MCP tool calls, the busiest protocol group
   mcp_per_second: 200
+  # /api/v1/stream — long-lived SSE connections, so a connection budget
   stream_per_second: 100
+  # /api/v1/content, /api/v1/sync, /api/v1/marketplace, /api/v1/analytics,
+  # /track/engagement
   content_per_second: 50
+  # The /v1 gateway: /v1/messages and /v1/chat/completions. Bucketed by client
+  # address, not by user, so size it for a network rather than for a person.
+  gateway_per_second: 100
+  # /v1/auth/bridge/*, deliberately its own budget: sign-in must stay
+  # reachable on an instance whose inference traffic is saturating its own.
+  bridge_auth_per_second: 20
   burst_multiplier: 3
 system_admin:
   username: admin
@@ -97,3 +118,14 @@ governance:
       url: http://localhost:8080/api/public/govern/authz
       timeout_ms: 500
       acknowledgement: null
+# Retention windows for the tables that grow with traffic, applied nightly by
+# database_cleanup. Named explicitly so a default change in the image never
+# silently changes what this deployment keeps; every key is optional.
+retention:
+  logs_days: 14
+  analytics_events_days: 30
+  ai_request_messages_days: 30
+  ai_request_payload_raw_days: 7
+  governance_decisions_days: 180
+  mcp_tool_executions_days: 180
+  outbox_processed_days: 7

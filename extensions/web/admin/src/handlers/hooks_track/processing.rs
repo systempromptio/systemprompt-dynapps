@@ -1,7 +1,7 @@
 //! Post-insert processing dispatched once a hook event is persisted.
 
 use sqlx::PgPool;
-use systemprompt::identifiers::{SessionId, UserId};
+use systemprompt::identifiers::{PluginId, SessionId, UserId};
 
 use crate::event_hub::EventHub;
 use crate::repositories::dashboard::{conversation_analytics, hooks_track, usage_aggregations};
@@ -15,6 +15,7 @@ use super::{entity, helpers};
 pub(super) struct ProcessInsertedEventParams<'a> {
     pub pool: &'a PgPool,
     pub user_id: &'a UserId,
+    pub plugin_id: &'a PluginId,
     pub session_id: &'a SessionId,
     pub event_type: &'a str,
     pub tool_name: Option<&'a str>,
@@ -35,6 +36,7 @@ pub(super) async fn process_inserted_event(params: &ProcessInsertedEventParams<'
     usage_aggregations::upsert_daily_aggregation(&usage_aggregations::DailyAggregationParams {
         pool,
         user_id,
+        plugin_id: params.plugin_id,
         date: &today,
         event_type,
         tool_name: params.tool_name,

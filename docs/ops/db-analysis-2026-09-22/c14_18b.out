@@ -1,0 +1,91 @@
+                        Table "public.feedback_ingestion_outbox"
+      Column       |           Type           | Collation | Nullable |      Default      
+-------------------+--------------------------+-----------+----------+-------------------
+ id                | text                     |           | not null | 
+ kind              | text                     |           | not null | 
+ event_id          | text                     |           |          | 
+ request_id        | text                     |           |          | 
+ artifact_id       | text                     |           |          | 
+ user_id           | text                     |           | not null | 
+ native_session_id | text                     |           |          | 
+ revision          | bigint                   |           | not null | 1
+ pending           | boolean                  |           | not null | true
+ lease_token       | text                     |           |          | 
+ lease_until       | timestamp with time zone |           |          | 
+ attempts          | integer                  |           | not null | 0
+ next_attempt      | timestamp with time zone |           | not null | clock_timestamp()
+ created_at        | timestamp with time zone |           | not null | clock_timestamp()
+ updated_at        | timestamp with time zone |           | not null | clock_timestamp()
+ occurred_at       | timestamp with time zone |           | not null | clock_timestamp()
+ last_error        | text                     |           |          | 
+Indexes:
+    "feedback_ingestion_outbox_pkey" PRIMARY KEY, btree (id)
+    "feedback_ingestion_artifact" btree (artifact_id) WHERE artifact_id IS NOT NULL
+    "feedback_ingestion_pending" btree (next_attempt, id) WHERE pending
+    "feedback_ingestion_session" btree (user_id, native_session_id)
+Check constraints:
+    "feedback_ingestion_outbox_kind_check" CHECK (kind = ANY (ARRAY['invocation'::text, 'request'::text, 'assessment'::text, 'resource_association'::text, 'artifact'::text]))
+
+ actual_pending | recorded_pending |            oldest            
+----------------+------------------+------------------------------
+          11161 |            11164 | 2026-09-03 08:38:47.04196+00
+(1 row)
+
+    policy     | decision |              tool              |  n  | matches_hook_event_by_trace | matches_hook_session 
+---------------+----------+--------------------------------+-----+-----------------------------+----------------------
+ default_allow | allow    | Bash                           | 833 |                           0 |                  833
+ default_allow | allow    | Read                           | 300 |                           0 |                  300
+ default_allow | allow    | mcp__systemprompt__systempromp | 145 |                           0 |                  145
+ default_allow | allow    | mcp__plugin_astound-india-ba_a |  97 |                           0 |                   97
+ default_allow | allow    | Edit                           |  78 |                           0 |                   78
+ default_allow | allow    | Write                          |  77 |                           0 |                   77
+ default_allow | allow    | mcp__workspace__bash           |  71 |                           0 |                   71
+ default_allow | allow    | mcp__atlassian__searchJiraIssu |  45 |                           0 |                   45
+ default_allow | allow    | Skill                          |  44 |                           0 |                   44
+ default_allow | allow    | AskUserQuestion                |  34 |                           0 |                   34
+ default_allow | allow    | TaskUpdate                     |  30 |                           0 |                   30
+ default_allow | allow    | PowerShell                     |  28 |                           0 |                   28
+(12 rows)
+
+ count 
+-------
+  2049
+(1 row)
+
+     event_type     | count | with_trace | with_tool_use | with_exec 
+--------------------+-------+------------+---------------+-----------
+ PostToolUse        |  1915 |       1915 |          1915 |         0
+ UserPromptSubmit   |   391 |          0 |             0 |         0
+ Stop               |   309 |          0 |             0 |         0
+ SessionEnd         |   251 |          0 |             0 |         0
+ SubagentStop       |   174 |          0 |             0 |         0
+ PostToolUseFailure |   134 |        134 |           134 |         0
+ Notification       |    83 |          0 |             0 |         0
+ PermissionRequest  |    60 |          0 |             0 |         0
+ SubagentStart      |    17 |          0 |             0 |         0
+ TaskCompleted      |    14 |          0 |             0 |         0
+(10 rows)
+
+ requests | with_scope | null_group | null_project 
+----------+------------+------------+--------------
+     4392 |       4392 |          0 |          844
+(1 row)
+
+    category     | blocked | count 
+-----------------+---------+-------
+ pii_email       | f       |  2702
+ pii_phone       | f       |   616
+ pii_credit_card | f       |   105
+ secret          | f       |    28
+(4 rows)
+
+ artifacts | task_artifacts | parts | payloads | artifacts_without_payload | payloads_unreferenced | ref_count_wrong | artifacts_without_execution | data_and_payload_both 
+-----------+----------------+-------+----------+---------------------------+-----------------------+-----------------+-----------------------------+-----------------------
+       284 |              0 |     0 |      208 |                         0 |                     0 |               0 |                           0 |                   284
+(1 row)
+
+ inline_data | payload_bytes 
+-------------+---------------
+ 778 kB      | 1389 kB
+(1 row)
+

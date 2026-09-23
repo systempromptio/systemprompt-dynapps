@@ -22,7 +22,7 @@ all_sessions AS (
     SELECT
         COALESCE(t.session_id, c.session_id, NULLIF(g.session_id, ''), g.trace_id) AS session_id,
         g.user_id, g.agent_id, g.agent_scope,
-        g.created_at, g.decision, 'gov'::text AS source
+        g.created_at, g.decision, NULL::text AS event_type, 'gov'::text AS source
     FROM governance_decisions g
     LEFT JOIN trace_to_session t ON t.trace_id = g.trace_id
     LEFT JOIN client_to_session c ON c.client_session_id = NULLIF(g.session_id, '')
@@ -30,14 +30,14 @@ all_sessions AS (
       AND (NULLIF(g.session_id, '') IS NOT NULL OR g.trace_id IS NOT NULL)
     UNION ALL
     SELECT session_id, user_id, NULL::text AS agent_id, NULL::text AS agent_scope,
-           created_at, NULL::text AS decision, 'ai'::text AS source
+           created_at, NULL::text AS decision, NULL::text AS event_type, 'ai'::text AS source
     FROM ai_requests
     WHERE created_at >= $1 AND created_at < $2
       AND session_id IS NOT NULL
     UNION ALL
     SELECT COALESCE(c.session_id, e.session_id) AS session_id,
            e.user_id, NULL::text AS agent_id, NULL::text AS agent_scope,
-           e.created_at, NULL::text AS decision, 'evt'::text AS source
+           e.created_at, NULL::text AS decision, e.event_type, 'evt'::text AS source
     FROM plugin_usage_events e
     LEFT JOIN client_to_session c ON c.client_session_id = e.session_id
     WHERE e.created_at >= $1 AND e.created_at < $2
@@ -53,7 +53,18 @@ per_session AS (
         MAX(created_at)            AS ended_at,
         COUNT(*)::bigint           AS span_count,
         COUNT(*) FILTER (WHERE source = 'gov')::bigint        AS governance_count,
-        COUNT(*) FILTER (WHERE decision = 'deny')::bigint     AS deny_count
+        COUNT(*) FILTER (WHERE decision = 'deny')::bigint     AS deny_count,
+        -- Why: Claude Code emits a hook for opening and closing a session as
+        -- well as for doing something in it. A session whose only events are
+        -- lifecycle ones did no work, so it is counted apart from the events
+        -- that represent a prompt, a tool call or a permission request.
+        COUNT(*) FILTER (
+            WHERE source = 'evt'
+              AND event_type NOT IN (
+                  'SessionStart', 'SessionEnd', 'Stop',
+                  'SubagentStart', 'SubagentStop', 'Notification'
+              )
+        )::bigint                                             AS substantive_event_count
     FROM all_sessions
     GROUP BY session_id
 ),
@@ -107,7 +118,17 @@ joined AS (
         COALESCE(a.total_latency_ms, 0)     AS total_latency_ms,
         COALESCE(a.cache_hit_any, false)    AS cache_hit_any,
         COALESCE(a.has_error, false)        AS has_error,
-        COALESCE(a.error_count, 0)          AS error_count
+        COALESCE(a.error_count, 0)          AS error_count,
+        -- Why: what the row is evidence of. `gateway` reached /v1/messages and
+        -- carries a model, tokens, cost and latency; `hook` did governed work
+        -- on the client with no gateway call, so those columns are empty by
+        -- nature rather than missing; `lifecycle` is a Claude Code session that
+        -- opened and closed without doing anything.
+        CASE
+            WHEN COALESCE(a.request_count, 0) > 0 THEN 'gateway'
+            WHEN p.substantive_event_count > 0 OR p.governance_count > 0 THEN 'hook'
+            ELSE 'lifecycle'
+        END                                 AS kind
     FROM per_session p
     LEFT JOIN ai_sums a ON a.session_id = p.session_id
 ),
@@ -131,6 +152,7 @@ filtered AS (
       AND (NOT $8 OR j.has_error = true)
       AND (NOT $9 OR j.has_deny  = true)
       AND ($14::TEXT[] IS NULL OR j.user_id = ANY($14))
+      AND ($15::BOOLEAN OR j.kind <> 'lifecycle')
 ),
 -- The page is chosen here, so everything below runs for at most
 -- `limit` sessions. The session_id tiebreaker makes ties (and thus
@@ -206,6 +228,7 @@ SELECT
     pg.has_error            AS "has_error!",
     pg.error_count          AS "error_count!",
     pg.has_deny             AS "has_deny!",
+    pg.kind                 AS "kind!",
     pg.total_count          AS "total_count!"
 FROM page pg
 LEFT JOIN ai_picks k ON k.session_id = pg.session_id

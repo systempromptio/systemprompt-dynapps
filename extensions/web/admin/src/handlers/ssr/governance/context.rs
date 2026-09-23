@@ -12,7 +12,7 @@ use super::kpis::{GovernanceKpiView, StageFilterView, kpis, stage_filters};
 use super::urls::{ColumnHeader, build_pagination, filter_url, url_with};
 use super::{BASE_URL, GovernanceQuery, GovernanceTab, TabLink, view};
 use crate::handlers::ssr::list_view::{
-    PageWindow, Pagination, ScopeFilterView, SelectOptionView, TimeRangeContext,
+    DEFAULT_PAGE_SIZE, PageWindow, Pagination, ScopeFilterView, SelectOptionView, TimeRangeContext,
 };
 use crate::handlers::ssr::types::BreadcrumbView;
 use crate::repositories::governance::decision_log::DecisionSort;
@@ -142,7 +142,7 @@ pub(super) fn build(input: Build<'_>) -> GovernancePageContext {
     };
     let window = PageWindow::new(
         page,
-        super::PAGE_SIZE,
+        DEFAULT_PAGE_SIZE,
         total,
         i64::try_from(rows_shown).unwrap_or(0),
         noun,

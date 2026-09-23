@@ -17,6 +17,7 @@ use sqlx::PgPool;
 use super::access_control::applied_from;
 use super::plane::{
     ActionCounts, Actor, ApplyOutcome, DriftKpi, DriftRow, Export, PlaneDrift, SyncMode, SyncPlane,
+    resolution,
 };
 use super::state::{Applied, record_applied, record_declared};
 use crate::error::AdminResult;
@@ -40,12 +41,15 @@ pub const RUNTIME_NOTE: &str = "Core boots its dispatcher from services/ai/gatew
 pub struct GatewayRoutesPlane;
 
 fn row(kind: &'static str, id: &str, in_code: String, in_db: String, dashboard: bool) -> DriftRow {
-    let (kind_label, kind_tone, insert_applies, overwrite_effect) = match kind {
-        "missing" => ("In code, not in database", "info", true, "inserted"),
-        "orphan" => ("In database, not in code", "warn", false, "deleted"),
-        "reordered" => ("Order differs", "warn", false, "reordered"),
-        _ => ("Differs", "warn", false, "updated"),
+    let (kind_label, kind_tone, insert_applies, overwrite_effect) = match (kind, dashboard) {
+        ("missing", _) => ("Added in code", "ok", true, "inserted"),
+        ("orphan", true) => ("Written in console", "warn", false, "deleted"),
+        ("orphan", false) => ("Removed from code", "err", false, "deleted"),
+        ("reordered", _) => ("Order changed in code", "warn", false, "reordered"),
+        (_, true) => ("Edited in console", "warn", false, "updated"),
+        (_, false) => ("Changed in code", "warn", false, "updated"),
     };
+    let (resolve, resolve_tone) = resolution(insert_applies, true, overwrite_effect);
     DriftRow {
         kind,
         kind_label,
@@ -63,11 +67,13 @@ fn row(kind: &'static str, id: &str, in_code: String, in_db: String, dashboard: 
             _ if dashboard => "console",
             _ => "code",
         },
-        origin_tone: "muted",
+        origin_tone: if dashboard { "info" } else { "muted" },
         governed: true,
         insert_applies,
         overwrite_applies: true,
         overwrite_effect,
+        resolve,
+        resolve_tone,
     }
 }
 
@@ -201,19 +207,19 @@ impl SyncPlane for GatewayRoutesPlane {
             in_db,
             kpis: vec![
                 DriftKpi {
-                    label: "In code, not in database",
+                    label: "Added in code",
                     value: drift.missing_in_db.len(),
-                    note: "Insert only adds these",
-                    tone: "info",
+                    note: "Insert only or Overwrite adds these",
+                    tone: "ok",
                 },
                 DriftKpi {
-                    label: "In database, not in code",
+                    label: "Removed from code",
                     value: drift.only_in_db.len(),
                     note: "Overwrite deletes these",
                     tone: "warn",
                 },
                 DriftKpi {
-                    label: "Differ",
+                    label: "Changed in code",
                     value: drift.changed.len() + usize::from(drift.reordered.is_some()),
                     note: "provider, model, fallback or order disagree",
                     tone: "warn",
@@ -225,6 +231,7 @@ impl SyncPlane for GatewayRoutesPlane {
                 update: drift.changed.len() + usize::from(drift.reordered.is_some()),
                 delete: drift.only_in_db.len(),
                 delete_console: console_orphans,
+                kept: 0,
             },
             is_clean: drift.is_clean(),
             rows: rows(&drift),

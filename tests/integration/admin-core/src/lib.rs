@@ -87,6 +87,8 @@ mod scope_attribution;
 #[cfg(test)]
 mod tempdb;
 #[cfg(test)]
+mod tool_activity_intent_rows;
+#[cfg(test)]
 mod traces_list;
 #[cfg(test)]
 mod traces_spans;

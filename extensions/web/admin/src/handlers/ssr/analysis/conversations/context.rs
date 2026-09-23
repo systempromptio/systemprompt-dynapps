@@ -13,14 +13,15 @@ use crate::repositories::scope::ScopeRequest;
 use systemprompt::identifiers::UserId;
 
 use super::charts::series_charts;
+use super::exports::{DATASET, export_view};
 use super::filters::{filter_view, sort_headers};
 use super::kpis::KpisView;
 use super::page_context::ConversationsPageContext;
-use super::query::{BASE_URL, ConversationAnalysisQuery, PAGE_SIZE, export_preset};
+use super::query::{BASE_URL, ConversationAnalysisQuery};
 use super::summary::{CATEGORIES, ConversationBucketView, OUTCOMES, category_label};
 use super::view::ConversationRowView;
+use crate::handlers::ssr::list_view::DEFAULT_PAGE_SIZE;
 
-const DATASET: &str = "analysis-conversations";
 
 // Why: the breakdown dimension's query parameter — the key a bucket row's
 // link and export narrow by; groups and projects narrow through the scope
@@ -54,14 +55,17 @@ fn breakdown_rows(
             let href = key
                 .as_ref()
                 .map(|(name, value)| params.narrowed(name, value));
-            let export_href = key
-                .as_ref()
-                .map(|(name, value)| params.export_href(DATASET, name, value));
+            let export = key.as_ref().map(|(name, value)| {
+                (
+                    params.export_href(DATASET, name, value),
+                    params.export_query(name, value),
+                )
+            });
             let label = (by == BreakdownBy::Category).then(|| category_label(&row.label));
             ConversationBucketView::new(
                 row,
                 href,
-                export_href,
+                export,
                 label,
                 data.totals.total_cost_microdollars,
             )
@@ -228,19 +232,6 @@ fn ribbon(params: &ConversationAnalysisQuery, data: &ConversationAnalysisResult)
     chips(params, ribbon)
 }
 
-fn export_view(params: &ConversationAnalysisQuery) -> crate::export::ExportView {
-    crate::export::ExportView::new(
-        &[DATASET, "analysis-conversation-breakdown"],
-        &params
-            .preserved(&["page", "since", "preset"])
-            .iter()
-            .map(|(k, v)| format!("{k}={}", urlencoding::encode(v)))
-            .chain(std::iter::once(format!("preset={}", export_preset(params))))
-            .collect::<Vec<_>>()
-            .join("&"),
-    )
-}
-
 // Why: what the handler read besides the repository result.
 pub(super) struct ConversationsPageInputs {
     pub(super) scope_filter: ScopeFilterView,
@@ -267,7 +258,7 @@ pub(super) fn build_context(
     let shown = i64::try_from(rows.len()).unwrap_or(0);
     let window = PageWindow::new(
         params.page(),
-        PAGE_SIZE,
+        DEFAULT_PAGE_SIZE,
         data.totals.conversations,
         shown,
         "conversations",

@@ -21,7 +21,7 @@
         {{#if kpis.comparison_note}}<p class="sp-p-overview__note">{{kpis.comparison_note}}</p>{{/if}}
         <div class="sp-kpi-grid sp-kpi-grid--compact sp-p-overview__kpis">
             {{#each kpis.tiles}}
-            {{> components/kpi label=this.label icon=this.icon value=this.value note=this.sub href=this.href
+            {{> components/kpi label=this.label icon=this.icon value=this.value note=this.note href=this.href
                 hint=this.hint tone=this.tone delta=this.delta delta_dir=this.delta_dir spark=this.spark}}
             {{/each}}
         </div>

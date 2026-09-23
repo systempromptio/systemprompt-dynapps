@@ -11,13 +11,23 @@ use crate::repositories::scope::ScopeRequest;
 
 use super::{ContextsListQuery, parse_inputs};
 
-// Why: this page's `since` labels reach past the live window contract (90d,
-// all); the export offers the nearest window it can serve.
+// Why: this page's `all` reaches past the live window contract, whose widest
+// preset is 90 days; the export offers that nearest window.
 pub(super) fn export_preset(since: Option<&str>) -> &'static str {
     match since {
         Some("24h") => "24h",
         Some("7d") => "7d",
+        Some("90d" | "all") => "90d",
         _ => "30d",
+    }
+}
+
+// Why: the dataset the page's view shows leads the dialog's list.
+pub(super) const fn export_datasets(view_is_users: bool) -> &'static [&'static str] {
+    if view_is_users {
+        &["people", "contexts"]
+    } else {
+        &["contexts", "people"]
     }
 }
 

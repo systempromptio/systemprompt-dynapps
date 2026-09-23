@@ -33,7 +33,7 @@ impl ContentIngestionJob {
     ) -> Result<JobResult, MarketplaceError> {
         let start = std::time::Instant::now();
 
-        tracing::info!(
+        tracing::debug!(
             delete_orphans = options.delete_orphans,
             "Blog content ingestion started"
         );
@@ -60,7 +60,7 @@ impl ContentIngestionJob {
 
         let duration_ms = u64::try_from(start.elapsed().as_millis()).unwrap_or(u64::MAX);
 
-        tracing::info!(
+        tracing::debug!(
             files_processed = total_processed,
             orphans_deleted = total_orphans_deleted,
             errors = total_errors,
@@ -169,7 +169,7 @@ async fn ingest_source(
                 );
             }
 
-            tracing::info!(
+            tracing::debug!(
                 source_id = %source.source_id(),
                 files_found = report.files_found,
                 files_processed = report.files_processed,

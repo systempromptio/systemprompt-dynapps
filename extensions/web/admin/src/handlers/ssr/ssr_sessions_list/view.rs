@@ -6,7 +6,6 @@
 //! removal.
 
 use systemprompt::identifiers::UserId;
-use urlencoding::encode as urlencode;
 
 use crate::handlers::ssr::list_view::{
     AnnotatedOption, Chip, PageWindow, Pagination, Preserved, ScopeFilterView, TimeRangeContext,
@@ -19,6 +18,7 @@ use crate::util::time_range::TimeRange;
 
 use super::context::SessionFilterOptionsView;
 use super::{BASE_URL, SessionListQuery};
+use crate::handlers::ssr::list_view::{paginate, query_string_dropping};
 
 pub(super) fn preserved_query_string(query: &SessionListQuery, drop: &[&str]) -> String {
     let pairs: [(&str, Option<&str>); 10] = [
@@ -33,15 +33,7 @@ pub(super) fn preserved_query_string(query: &SessionListQuery, drop: &[&str]) ->
         ("sort", query.sort.as_deref()),
         ("dir", query.dir.as_deref()),
     ];
-    pairs
-        .iter()
-        .filter(|(name, _)| !drop.contains(name))
-        .filter_map(|(name, val)| {
-            val.filter(|s| !s.is_empty())
-                .map(|v| format!("{}={}", name, urlencode(v)))
-        })
-        .collect::<Vec<_>>()
-        .join("&")
+    query_string_dropping(&pairs, &[], drop)
 }
 
 fn url_with(query: &SessionListQuery, drop: &[&str], extra: &str) -> String {
@@ -187,27 +179,7 @@ pub(super) fn side_toggle_url(query: &SessionListQuery, active: bool) -> String 
 }
 
 pub(super) fn build_pagination(query: &SessionListQuery, window: PageWindow) -> Pagination {
-    let page = window.index;
-    let prev_url = (page > 0).then(|| {
-        url_with(
-            query,
-            &["page"],
-            &format!("page={}", page.saturating_sub(1)),
-        )
-    });
-    let next_url = (page + 1 < window.total_pages)
-        .then(|| url_with(query, &["page"], &format!("page={}", page + 1)));
-    let (first_row, last_row) = window.bounds();
-    Pagination {
-        current_page: page + 1,
-        total_pages: window.total_pages,
-        first_row,
-        last_row,
-        total_rows: window.total_rows,
-        noun: window.noun,
-        has_prev: prev_url.is_some(),
-        has_next: next_url.is_some(),
-        prev_url,
-        next_url,
-    }
+    paginate(window, |page| {
+        url_with(query, &["page"], &format!("page={page}"))
+    })
 }

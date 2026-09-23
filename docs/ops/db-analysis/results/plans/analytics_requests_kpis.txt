@@ -1,0 +1,31 @@
+                                                                                                                                                                                                                                                                                                            QUERY PLAN                                                                                                                                                                                                                                                                                                             
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=7607.91..7607.93 rows=1 width=88)
+   ->  Nested Loop Left Join  (cost=0.28..7593.34 rows=1 width=124)
+         Join Filter: (sd.user_id = (ar.user_id)::text)
+         Filter: ((($11 IS NULL) OR (sd.primary_group_id = $11)) AND (($12 IS NULL) OR (sd.primary_project_id = $12)))
+         ->  Index Scan using idx_ai_requests_user_created on ai_requests ar  (cost=0.28..7591.63 rows=1 width=145)
+               Index Cond: ((created_at >= $1) AND (created_at < $2))
+               Filter: ((($3 IS NULL) OR ((user_id)::text = $3)) AND (($7 IS NULL) OR ((status)::text = $7)) AND (($5 IS NULL) OR (($5 = 'unrouted'::text) AND (model IS NULL)) OR (model = $5)) AND (($6 IS NULL) OR (($6 = 'unrouted'::text) AND (provider IS NULL)) OR (provider = $6)) AND (($10 IS NULL) OR ((user_id)::text = ANY ($10))) AND (($9 IS NULL) OR ((user_id)::text ~~* $9) OR (model ~~* $9) OR (provider ~~* $9) OR (COALESCE(error_message, ''::text) ~~* $9) OR ((COALESCE(trace_id, ''::character varying))::text ~~* $9)) AND (($8 IS NULL) OR EXISTS(SubPlan 5)) AND (($4 IS NULL) OR EXISTS(SubPlan 3)))
+               SubPlan 5
+                 ->  Index Scan using idx_ai_request_tool_calls_request_id on ai_request_tool_calls tc_1  (cost=0.28..8.30 rows=1 width=0)
+                       Index Cond: ((request_id)::text = ar.id)
+                       Filter: ((tool_name)::text = $8)
+               SubPlan 3
+                 ->  Bitmap Heap Scan on governance_decisions gd_1  (cost=5.00..330.38 rows=1 width=0)
+                       Recheck Cond: (session_id = (ar.session_id)::text)
+                       Filter: (agent_id = $4)
+                       ->  Bitmap Index Scan on idx_governance_decisions_session  (cost=0.00..5.00 rows=95 width=0)
+                             Index Cond: (session_id = (ar.session_id)::text)
+         ->  Seq Scan on user_scope_defaults sd  (cost=0.00..1.26 rows=26 width=53)
+   SubPlan 1
+     ->  Aggregate  (cost=4.30..4.31 rows=1 width=8)
+           ->  Index Only Scan using idx_ai_request_tool_calls_request_id on ai_request_tool_calls tc  (cost=0.28..4.30 rows=1 width=0)
+                 Index Cond: (request_id = ar.id)
+   SubPlan 2
+     ->  Aggregate  (cost=10.19..10.20 rows=1 width=8)
+           ->  Index Scan using idx_governance_decisions_decision on governance_decisions gd  (cost=0.29..10.19 rows=1 width=0)
+                 Index Cond: (decision = 'deny'::text)
+                 Filter: (session_id = (ar.session_id)::text)
+(27 rows)
+

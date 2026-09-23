@@ -11,13 +11,9 @@ pub mod dashboard_report;
 pub mod request_stats;
 pub mod requests;
 pub mod session_detail;
-pub mod session_quality;
 pub mod site;
 pub mod tools;
 
 pub use agents::{AgentRow, list_agents};
-pub use conversations::{
-    ConversationDetail, ConversationListFilter, ConversationListItem, HistoryScope, RawTurnBody,
-    TranscriptTurn, find_raw_turns, history_scope_for,
-};
+pub use conversations::{HistoryScope, history_scope_for};
 pub use tools::{ToolRow, list_tools};

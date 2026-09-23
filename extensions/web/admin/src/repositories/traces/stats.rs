@@ -12,12 +12,14 @@ pub async fn get_trace_stats(
     pool: &PgPool,
     range: TimeRange,
     subject_ids: Option<&[String]>,
+    include_lifecycle: bool,
 ) -> Result<TraceStats, sqlx::Error> {
     let row = sqlx::query_file!(
         "src/repositories/traces/stats.sql",
         range.from,
         range.to,
         subject_ids,
+        include_lifecycle,
     )
     .fetch_one(pool)
     .await?;
@@ -26,6 +28,8 @@ pub async fn get_trace_stats(
         total_traces: row.total_traces,
         error_count: row.error_count,
         deny_count: row.deny_count,
+        active_traces: row.active_traces,
+        lifecycle_count: row.lifecycle_count,
         p50_active_ms: row.p50,
         p95_active_ms: row.p95,
         p99_active_ms: row.p99,

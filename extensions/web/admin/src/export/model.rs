@@ -165,27 +165,40 @@ impl Table {
         let total = i64::try_from(rows.len()).unwrap_or(i64::MAX);
         Self { rows, total }
     }
+
+    // Why: a loader whose repository stops at its own ceiling (below
+    // `HARD_CAP`) still knows how many rows the filter matched; reporting that
+    // total beside the rows is what lets the preview say the file is cut.
+    pub(crate) const fn capped_at(rows: Vec<Vec<Cell>>, total: i64) -> Self {
+        Self { rows, total }
+    }
 }
 
-// Why: three window contracts exist across the console and each dataset
+// Why: four window contracts exist across the console and each dataset
 // names its own. `Live` is the AI-activity `?preset=&from=&to=` contract
-// (minutes to 30 days); `Retained` is the snapshot pipeline's UTC-day window
+// (minutes to 90 days); `Retained` is the snapshot pipeline's UTC-day window
 // (up to a year); `Days` is a fixed-size preset only, for tables whose
-// custom ranges schedule work rather than read it; `None` for tables with no
-// time axis.
+// custom ranges schedule work rather than read it; `Month` is one calendar
+// month (`?month=YYYY-MM`), for the billing reports; `None` for tables with
+// no time axis.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
 #[serde(rename_all = "snake_case")]
 pub(crate) enum Window {
     Live,
     Retained,
     Days,
+    Month,
     None,
 }
 
+// Why: `clamped` is true when the range asked for was wider than the
+// contract allows and was narrowed, so the preview can say the file covers
+// less than the reader picked.
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct ExportWindow {
     pub from: DateTime<Utc>,
     pub to: DateTime<Utc>,
+    pub clamped: bool,
 }
 
 pub(crate) struct ExportContext<'a> {
@@ -242,6 +255,11 @@ pub(crate) trait DataSet: Send + Sync {
     }
     fn columns(&self) -> &'static [Column];
     fn window(&self) -> Window;
+    // Why: the most rows one file of this table holds. A repository with its
+    // own lower ceiling declares it, so the preview's "capped" is honest.
+    fn cap(&self) -> i64 {
+        HARD_CAP
+    }
     fn allows(&self, user: &UserContext) -> bool {
         user.is_console
     }

@@ -5,14 +5,15 @@
 //! administrator presses a button on `/admin/sync`, in one of
 //! two modes: *insert only* adds what the file declares and the database
 //! lacks; *overwrite* additionally corrects rows the two disagree on and
-//! deletes rows the file does not declare on entities it governs. Neither
-//! mode touches the `user` band, and neither touches an entity the file does
-//! not mention.
+//! deletes rows the file does not declare: every undeclared row on an entity
+//! it names, and every row this file itself wrote on an entity it has since
+//! dropped — with that entity's default row, once nothing is left on it.
+//! Neither mode touches the `user` band, and rows the console or a bundle
+//! wrote on an entity the file does not mention are left alone.
 //!
 //! Everything happens in one transaction that re-reads the tables first, so
 //! the picture it acts on is the one it commits against.
 
-use serde::Serialize;
 use sqlx::{PgPool, Postgres, Transaction};
 use systemprompt_security::authz::YAML_SOURCE;
 
@@ -20,25 +21,17 @@ use super::declared::{DeclaredEntity, DeclaredRule, DeclaredSet};
 use super::drift::{DriftReport, compute_drift};
 use super::rules::{list_band_rules, list_entity_defaults};
 use super::validity::set_rule_validity;
-pub use crate::repositories::sync::plane::{EntityScope, SyncMode};
+pub use crate::repositories::sync::plane::{ApplyOutcome, EntityScope, SyncMode};
 
 // Why: the `source` stamped on entity rows this module writes.
 pub const RULES_SOURCE: &str = "services/access-control/rules.yaml";
 
-#[derive(Debug, Default, Clone, Copy, Serialize)]
-pub struct SyncOutcome {
-    pub inserted: usize,
-    pub updated: usize,
-    pub deleted: usize,
-    pub entities_inserted: usize,
-    pub entities_updated: usize,
-}
 
 pub async fn apply_sync(
     pool: &PgPool,
     declared: &DeclaredSet,
     mode: SyncMode,
-) -> Result<SyncOutcome, sqlx::Error> {
+) -> Result<ApplyOutcome, sqlx::Error> {
     apply_sync_scoped(pool, declared, mode, EntityScope::All).await
 }
 
@@ -50,7 +43,7 @@ pub async fn apply_sync_scoped(
     declared: &DeclaredSet,
     mode: SyncMode,
     scope: EntityScope<'_>,
-) -> Result<SyncOutcome, sqlx::Error> {
+) -> Result<ApplyOutcome, sqlx::Error> {
     let mut tx = pool.begin().await?;
     let rules: Vec<_> = list_band_rules(&mut *tx)
         .await?
@@ -66,7 +59,7 @@ pub async fn apply_sync_scoped(
     let declared = &declared;
     let drift = compute_drift(declared, &rules, &entities);
 
-    let mut outcome = SyncOutcome::default();
+    let mut outcome = ApplyOutcome::default();
     for entity in &drift.entities_missing {
         upsert_entity(&mut tx, entity).await?;
         outcome.entities_inserted += 1;
@@ -85,7 +78,8 @@ pub async fn apply_sync_scoped(
     }
     if mode == SyncMode::Overwrite {
         outcome.updated = update_changed(&mut tx, &drift).await?;
-        outcome.deleted = delete_governed_orphans(&mut tx, &drift).await?;
+        outcome.deleted = delete_retired_orphans(&mut tx, &drift).await?;
+        outcome.entities_retired = retire_entities(&mut tx, declared, &entities).await?;
     }
 
     tx.commit().await?;
@@ -192,14 +186,14 @@ async fn update_changed(
 // Why: the `rule_type <> 'user'` guard is redundant with the drift engine's
 // filter and stays anyway. A per-person override is the one thing this module
 // must never delete, and one predicate in SQL is cheaper than trusting two.
-async fn delete_governed_orphans(
+async fn delete_retired_orphans(
     tx: &mut Transaction<'_, Postgres>,
     drift: &DriftReport,
 ) -> Result<usize, sqlx::Error> {
     let ids: Vec<String> = drift
         .only_in_db
         .iter()
-        .filter(|o| o.governed)
+        .filter(|o| o.retire)
         .map(|o| o.row.id.clone())
         .collect();
     if ids.is_empty() {
@@ -212,4 +206,37 @@ async fn delete_governed_orphans(
     .execute(&mut **tx)
     .await?;
     Ok(usize::try_from(result.rows_affected()).unwrap_or(usize::MAX))
+}
+
+// Why: an entity default this file wrote for an entity it does not name
+// would otherwise outlive every rule on it and keep the entity catalogued.
+// Only rows stamped with this file go; a console- or bundle-catalogued
+// entity is somebody else's. The rule count is checked in SQL so a console
+// row that survived the delete above keeps its entity.
+async fn retire_entities(
+    tx: &mut Transaction<'_, Postgres>,
+    declared: &DeclaredSet,
+    entities: &[super::drift::EntityDefaultRow],
+) -> Result<usize, sqlx::Error> {
+    let mut retired = 0;
+    for entity in entities {
+        if declared.governs(&entity.entity_type, &entity.entity_id) || entity.source != RULES_SOURCE
+        {
+            continue;
+        }
+        let result = sqlx::query!(
+            r"DELETE FROM access_control_entities e
+               WHERE e.entity_type = $1 AND e.entity_id = $2 AND e.source = $3
+                 AND NOT EXISTS (
+                     SELECT 1 FROM access_control_rules r
+                      WHERE r.entity_type = e.entity_type AND r.entity_id = e.entity_id)",
+            entity.entity_type,
+            entity.entity_id,
+            RULES_SOURCE,
+        )
+        .execute(&mut **tx)
+        .await?;
+        retired += usize::try_from(result.rows_affected()).unwrap_or(0);
+    }
+    Ok(retired)
 }

@@ -109,6 +109,6 @@ pub(super) struct SessionRowView {
     pub(super) started_at: Option<String>,
     pub(super) started_relative: Option<String>,
     pub(super) error_count: i64,
-    pub(super) has_error: bool,
     pub(super) status_label: String,
+    pub(super) status_tone: &'static str,
 }

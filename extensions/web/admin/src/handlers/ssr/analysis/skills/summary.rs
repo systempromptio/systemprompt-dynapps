@@ -1,28 +1,25 @@
-//! The KPI tiles, the invocations chart and the unused-skills list above and
-//! below the Skills table.
+//! The Overview's KPI strip and the unused-skills list under the table —
+//! each computed over the rows the scope admitted.
 
-use chrono::{Duration, NaiveDate};
+use chrono::NaiveDate;
 
-use super::SPARK_DAYS;
 use super::rows::spark_values;
 use super::views::{SkillsKpiView, UnusedSkillView};
 use crate::handlers::ssr::analysis::tone::{
     completion_tone, error_rate_tone, percent, score_display,
 };
-use crate::handlers::ssr::format::{format_cost, format_token_total};
-use crate::handlers::ssr::types::{
-    LineChartSpec, SvgLineChartView, SvgSeriesInput, line_chart, sparkline_toned,
-};
+use crate::handlers::ssr::format::format_cost;
+use crate::handlers::ssr::types::sparkline_toned;
 use crate::repositories::analysis::inventory_index::{InventoryIndex, MarketplaceAudience};
 use crate::repositories::analysis::skills::{MarketplaceAdoptionRow, SkillFactRow};
 
-// Why: the window's headline figures, computed once and read by both tile
-// groups.
+// Why: the scope's headline figures, computed once and read by every tile.
 struct Figures {
     spark_sum: Vec<i64>,
     completion: Option<f64>,
     judged: i64,
     installed: i64,
+    installed_entitled: i64,
     entitled: i64,
     active: i64,
     invocations: i64,
@@ -32,8 +29,9 @@ struct Figures {
 impl Figures {
     fn new(
         rows: &[SkillFactRow],
-        adoption: &[MarketplaceAdoptionRow],
+        adoption: &[&MarketplaceAdoptionRow],
         audience: &MarketplaceAudience,
+        marketplace: Option<&str>,
         today: NaiveDate,
     ) -> Self {
         let judged_rows: Vec<&SkillFactRow> =
@@ -46,8 +44,26 @@ impl Figures {
                 .sum::<f64>()
                 / judged as f64
         });
+        let consumers: Vec<String> = adoption
+            .iter()
+            .flat_map(|a| a.installed_consumers.iter().cloned())
+            .collect();
+        let (entitled, installed_entitled) = marketplace.map_or_else(
+            || {
+                (
+                    audience.users_reaching_any_marketplace(),
+                    audience.entitled_among_any(&consumers),
+                )
+            },
+            |m| {
+                (
+                    audience.users_reaching_marketplace(m),
+                    audience.entitled_among(m, &consumers),
+                )
+            },
+        );
         Self {
-            spark_sum: (0..SPARK_DAYS)
+            spark_sum: (0..super::SPARK_DAYS)
                 .map(|i| {
                     rows.iter()
                         .map(|r| spark_values(r, today)[usize::try_from(i).unwrap_or(0)])
@@ -57,7 +73,8 @@ impl Figures {
             completion,
             judged,
             installed: adoption.iter().map(|a| a.installed).sum(),
-            entitled: i64::try_from(audience.users_reaching_any_marketplace()).unwrap_or(0),
+            installed_entitled: i64::try_from(installed_entitled).unwrap_or(0),
+            entitled: i64::try_from(entitled).unwrap_or(0),
             active: rows.iter().map(|r| r.users).max().unwrap_or(0),
             invocations: rows.iter().map(|r| r.invocations).sum(),
             cost: rows.iter().map(|r| r.cost_microdollars).sum(),
@@ -85,34 +102,42 @@ fn tile(
 
 fn adoption_tiles(rows: &[SkillFactRow], g: &Figures) -> Vec<SkillsKpiView> {
     let sum = |f: fn(&SkillFactRow) -> i64| rows.iter().map(f).sum::<i64>();
-    let invocations = g.invocations;
-    let (installed, entitled, active) = (g.installed, g.entitled, g.active);
-    let entitled_i = entitled;
+    let outside = g.installed - g.installed_entitled;
     let mut tiles = vec![
         tile(
             ("Skills used", "skill"),
             rows.len().to_string(),
-            format!("{} invocations in the window", invocations),
+            format!("{} invocations in the window", g.invocations),
             "accent",
             "Distinct plugin:skill keys with at least one hook-reported invocation",
         ),
         tile(
             ("People", "people"),
-            active.to_string(),
-            format!("of {entitled} entitled · {installed} installed"),
+            g.active.to_string(),
+            format!("of {} entitled · {} installed", g.entitled, g.installed),
             "accent",
             "Most people any one skill reached; entitlement is resolved from the access-control rules",
         ),
         tile(
             ("Install rate", "download"),
-            percent(installed, entitled_i),
-            format!("{installed} consumers hold a verified receipt"),
-            if entitled_i > 0 && installed * 2 >= entitled_i {
+            percent(g.installed_entitled, g.entitled),
+            if outside > 0 {
+                format!(
+                    "{} of {} entitled hold a receipt · +{outside} outside",
+                    g.installed_entitled, g.entitled
+                )
+            } else {
+                format!(
+                    "{} of {} entitled hold a receipt",
+                    g.installed_entitled, g.entitled
+                )
+            },
+            if g.entitled > 0 && g.installed_entitled * 2 >= g.entitled {
                 "ok"
             } else {
                 "warn"
             },
-            "Distinct consumers with a verified installation receipt over the people entitled to any marketplace",
+            "Entitled people holding a verified installation receipt, over everyone entitled; consumers the rules do not reach are counted beside it",
         ),
         tile(
             ("Conversations", "chat"),
@@ -135,20 +160,14 @@ fn adoption_tiles(rows: &[SkillFactRow], g: &Figures) -> Vec<SkillsKpiView> {
 
 fn spend_tiles(rows: &[SkillFactRow], g: &Figures) -> Vec<SkillsKpiView> {
     let sum = |f: fn(&SkillFactRow) -> i64| rows.iter().map(f).sum::<i64>();
-    let (cost, invocations, completion) = (g.cost, g.invocations, g.completion);
-    let judged_total = g.judged;
     vec![
         tile(
-            ("Tokens", "token"),
-            format_token_total(sum(|r| r.input_tokens + r.output_tokens)),
-            format!("{} from cache", format_token_total(sum(|r| r.cache_tokens))),
-            "accent",
-            "Tokens the skill conversations ran up",
-        ),
-        tile(
             ("Cost", "coins"),
-            format_cost(cost),
-            format!("{} per invocation", format_cost(cost / invocations.max(1))),
+            format_cost(g.cost),
+            format!(
+                "{} per invocation",
+                format_cost(g.cost / g.invocations.max(1))
+            ),
             "accent",
             "Priced spend of the skill conversations",
         ),
@@ -161,9 +180,9 @@ fn spend_tiles(rows: &[SkillFactRow], g: &Figures) -> Vec<SkillsKpiView> {
         ),
         tile(
             ("AI score", "sparkle"),
-            score_display(completion),
-            format!("{judged_total} conversations judged"),
-            completion_tone(completion),
+            score_display(g.completion),
+            format!("{} conversations judged", g.judged),
+            completion_tone(g.completion),
             "Mean of the judge's one completion score over judged skill conversations",
         ),
     ]
@@ -171,69 +190,22 @@ fn spend_tiles(rows: &[SkillFactRow], g: &Figures) -> Vec<SkillsKpiView> {
 
 pub(super) fn kpis(
     rows: &[SkillFactRow],
-    adoption: &[MarketplaceAdoptionRow],
+    adoption: &[&MarketplaceAdoptionRow],
     audience: &MarketplaceAudience,
+    marketplace: Option<&str>,
     today: NaiveDate,
 ) -> Vec<SkillsKpiView> {
-    let figures = Figures::new(rows, adoption, audience, today);
+    let figures = Figures::new(rows, adoption, audience, marketplace, today);
     let mut tiles = adoption_tiles(rows, &figures);
     tiles.extend(spend_tiles(rows, &figures));
     tiles
-}
-
-pub(super) fn chart(rows: &[SkillFactRow], today: NaiveDate) -> SvgLineChartView {
-    let mut top: Vec<&SkillFactRow> = rows.iter().collect();
-    top.sort_by_key(|r| std::cmp::Reverse(r.invocations));
-    let labels: Vec<String> = (0..SPARK_DAYS)
-        .rev()
-        .map(|back| (today - Duration::days(back)).format("%b %-d").to_string())
-        .collect();
-    let mut series: Vec<SvgSeriesInput> = top
-        .iter()
-        .take(6)
-        .map(|r| SvgSeriesInput {
-            label: r.skill.clone(),
-            values: spark_values(r, today),
-            value_display: r.invocations.to_string(),
-        })
-        .collect();
-    if top.len() > 6 {
-        let rest: Vec<i64> = (0..SPARK_DAYS)
-            .map(|i| {
-                top.iter()
-                    .skip(6)
-                    .map(|r| spark_values(r, today)[usize::try_from(i).unwrap_or(0)])
-                    .sum()
-            })
-            .collect();
-        series.push(SvgSeriesInput {
-            label: format!("{} other skills", top.len() - 6),
-            value_display: rest.iter().sum::<i64>().to_string(),
-            values: rest,
-        });
-    }
-    line_chart(LineChartSpec {
-        title: "Invocations per day",
-        subtitle: format!("Last {SPARK_DAYS} days, top skills"),
-        empty_message: "No skill was invoked in the last fourteen days",
-        series,
-        ref_lines: Vec::new(),
-        y_max: None,
-        y_display: |v| v.to_string(),
-        x_start_display: labels.first().cloned().unwrap_or_default(),
-        x_mid_display: labels.get(labels.len() / 2).cloned().unwrap_or_default(),
-        x_end_display: labels.last().cloned().unwrap_or_default(),
-        show_area: true,
-        x_labels: labels,
-        y_unit: "",
-    })
-    .into_columns()
 }
 
 pub(super) fn unused(
     rows: &[SkillFactRow],
     index: &InventoryIndex,
     audience: &MarketplaceAudience,
+    marketplace: Option<&str>,
 ) -> Vec<UnusedSkillView> {
     let used: std::collections::HashSet<&str> = rows.iter().map(|r| r.skill.as_str()).collect();
     let used = &used;
@@ -243,15 +215,17 @@ pub(super) fn unused(
         .flat_map(|(skill, plugins)| {
             plugins.iter().filter_map(move |p| {
                 let key = format!("{}:{}", p.0, skill.replace('_', "-"));
-                (!used.contains(key.as_str())).then(|| UnusedSkillView {
+                let placed = index
+                    .marketplaces_by_plugin
+                    .get(&p.0)
+                    .and_then(|m| m.first())
+                    .map(|m| m.id.clone())
+                    .unwrap_or_default();
+                let in_scope = marketplace.is_none_or(|m| m == placed);
+                (in_scope && !used.contains(key.as_str())).then(|| UnusedSkillView {
                     catalog_href: format!("/admin/skills/{}", urlencoding::encode(skill)),
                     entitled: audience.users_reaching_skill(index, skill),
-                    marketplace: index
-                        .marketplaces_by_plugin
-                        .get(&p.0)
-                        .and_then(|m| m.first())
-                        .map(|m| m.id.clone())
-                        .unwrap_or_default(),
+                    marketplace: placed,
                     plugin: p.0.clone(),
                     skill: key,
                 })

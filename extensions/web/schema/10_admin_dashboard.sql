@@ -15,7 +15,6 @@ CREATE TABLE IF NOT EXISTS tenant_activity (
 );
 CREATE INDEX IF NOT EXISTS idx_tenant_activity_tenant_id ON tenant_activity(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_tenant_activity_event_type ON tenant_activity(event_type);
-CREATE INDEX IF NOT EXISTS idx_tenant_activity_remote_created_at ON tenant_activity(remote_created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_tenant_activity_sync ON tenant_activity(remote_created_at, synced_at);
 
 -- admin_traffic_reports
@@ -27,7 +26,6 @@ CREATE TABLE IF NOT EXISTS admin_traffic_reports (
     generated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE (report_date, report_period)
 );
-CREATE INDEX IF NOT EXISTS idx_admin_traffic_reports_date ON admin_traffic_reports(report_date DESC);
 CREATE INDEX IF NOT EXISTS idx_atr_date ON admin_traffic_reports(report_date DESC, generated_at DESC);
 
 -- daily_summaries - use 047 version (composite PK)
@@ -79,7 +77,6 @@ CREATE TABLE IF NOT EXISTS daily_summaries (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY (user_id, summary_date)
 );
-CREATE INDEX IF NOT EXISTS idx_daily_summaries_user ON daily_summaries(user_id, summary_date DESC);
 CREATE INDEX IF NOT EXISTS idx_daily_summaries_date ON daily_summaries(summary_date DESC);
 
 -- session_entity_links
@@ -96,7 +93,6 @@ CREATE TABLE IF NOT EXISTS session_entity_links (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE (user_id, session_id, entity_type, entity_name)
 );
-CREATE INDEX IF NOT EXISTS idx_sel_user ON session_entity_links(user_id);
 CREATE INDEX IF NOT EXISTS idx_sel_session ON session_entity_links(session_id);
 CREATE INDEX IF NOT EXISTS idx_sel_entity ON session_entity_links(entity_type, entity_name);
 
@@ -112,7 +108,6 @@ CREATE TABLE IF NOT EXISTS session_ratings (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE (user_id, session_id)
 );
-CREATE INDEX IF NOT EXISTS idx_sr_user ON session_ratings(user_id);
 CREATE INDEX IF NOT EXISTS idx_sr_session ON session_ratings(session_id);
 
 -- skill_ratings
@@ -126,7 +121,6 @@ CREATE TABLE IF NOT EXISTS skill_ratings (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE (user_id, skill_name)
 );
-CREATE INDEX IF NOT EXISTS idx_skr_user ON skill_ratings(user_id);
 
 -- user_settings
 CREATE TABLE IF NOT EXISTS user_settings (
@@ -170,8 +164,6 @@ CREATE TABLE IF NOT EXISTS marketplace.paddle_customers (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE INDEX IF NOT EXISTS idx_mpc_user ON marketplace.paddle_customers(user_id);
-CREATE INDEX IF NOT EXISTS idx_mpc_paddle ON marketplace.paddle_customers(paddle_customer_id);
 
 CREATE TABLE IF NOT EXISTS marketplace.subscriptions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -188,7 +180,6 @@ CREATE TABLE IF NOT EXISTS marketplace.subscriptions (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_ms_user ON marketplace.subscriptions(user_id);
-CREATE INDEX IF NOT EXISTS idx_ms_paddle ON marketplace.subscriptions(paddle_subscription_id);
 CREATE INDEX IF NOT EXISTS idx_ms_status ON marketplace.subscriptions(status);
 
 CREATE TABLE IF NOT EXISTS marketplace.paddle_webhook_events (
@@ -201,7 +192,6 @@ CREATE TABLE IF NOT EXISTS marketplace.paddle_webhook_events (
     processed_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE INDEX IF NOT EXISTS idx_mpwe_event ON marketplace.paddle_webhook_events(event_id);
 CREATE INDEX IF NOT EXISTS idx_mpwe_type ON marketplace.paddle_webhook_events(event_type);
 
 -- user_profile_reports from 049

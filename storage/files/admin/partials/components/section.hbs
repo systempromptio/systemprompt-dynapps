@@ -1,7 +1,8 @@
 {{!--
   Section heading: title, optional count, optional supporting note, optional
   actions slot. The note is `note`, not `sub`: `sub` is a registered helper, so
-  a bare `sub` mustache printed its zero-argument result on every heading.
+  a bare `sub` mustache printed its zero-argument result on every heading. No
+  view struct carries a field called `sub`.
 
     {{#> components/section title="Recent warnings" count=total note="…"}}
       {{#*inline "section_actions"}}{{> components/export-button export}}{{/inline}}

@@ -20,7 +20,8 @@ pub async fn get_activity_stats(pool: &PgPool) -> Result<ActivityStats, sqlx::Er
         r#"SELECT
             COUNT(*)::BIGINT AS "mcp_tool_calls!",
             COALESCE(COUNT(*) FILTER (WHERE status = 'failed'), 0)::BIGINT AS "mcp_errors!"
-        FROM mcp_tool_executions"#,
+        FROM mcp_tool_executions
+        WHERE server_name <> source"#,
     )
     .fetch_one(pool)
     .await;
@@ -84,6 +85,7 @@ pub async fn list_usage_timeseries(
                 COUNT(*) FILTER (WHERE m.status = 'failed')::BIGINT AS mcp_errors
             FROM mcp_tool_executions m
             WHERE m.created_at >= NOW() - $2::text::interval
+              AND m.server_name <> m.source
             GROUP BY 1
         )
         SELECT

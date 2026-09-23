@@ -2,6 +2,7 @@
 
 use serde::Serialize;
 
+use super::retention::RetentionView;
 use crate::handlers::ssr::sync_plane::{AppliedView, HashView};
 use crate::handlers::ssr::types::{BreadcrumbView, TabLinkView};
 
@@ -50,6 +51,7 @@ pub(crate) struct ConfigurationPageData {
     pub sources_unreadable: Option<String>,
     pub kpis: Vec<ConfigKpiView>,
     pub rows: Vec<ConfigRowView>,
+    pub retention: RetentionView,
     pub sync_url: &'static str,
     pub export_zip_url: &'static str,
     pub docs_url: &'static str,

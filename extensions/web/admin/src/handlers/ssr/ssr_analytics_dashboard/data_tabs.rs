@@ -11,9 +11,7 @@ use crate::repositories::analytics::site::cost::{
     list_provider_cost_by_day, list_provider_costs,
 };
 use crate::repositories::analytics::site::models::{ModelStatsRow, list_model_stats};
-use crate::repositories::analytics::site::sessions::{
-    SessionCostRow, SessionRatingStats, get_session_rating_stats, list_session_costs_paged,
-};
+use crate::repositories::analytics::site::sessions::{SessionCostRow, list_session_costs_paged};
 use crate::repositories::analytics::site::skills::{
     SkillStatsRow, SkillTotals, get_skill_totals, list_skill_stats,
 };
@@ -36,7 +34,6 @@ pub(super) struct TabData {
     pub tools_total: i64,
     pub sessions: Vec<SessionCostRow>,
     pub sessions_total: i64,
-    pub session_ratings: SessionRatingStats,
     pub cost_days: Vec<CostDayRow>,
     pub cost_providers: Vec<SupplierCostRow>,
     pub cost_models: Vec<SupplierCostRow>,
@@ -91,18 +88,12 @@ pub(super) async fn load_tools(pool: &PgPool, plan: &TabPlan<'_>) -> TabData {
 }
 
 pub(super) async fn load_sessions(pool: &PgPool, plan: &TabPlan<'_>) -> TabData {
-    let (paged, ratings) = tokio::join!(
-        list_session_costs_paged(pool, plan.range, plan.scope, plan.limit, plan.offset),
-        get_session_rating_stats(pool, plan.range, plan.scope),
-    );
+    let paged =
+        list_session_costs_paged(pool, plan.range, plan.scope, plan.limit, plan.offset).await;
     let (sessions, sessions_total) = unwrap_paged(paged, "list_session_costs_paged");
     TabData {
         sessions,
         sessions_total,
-        session_ratings: ratings.unwrap_or_else(|e| {
-            tracing::warn!(error = %e, "get_session_rating_stats failed");
-            SessionRatingStats::default()
-        }),
         ..TabData::default()
     }
 }

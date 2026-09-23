@@ -1,0 +1,42 @@
+== C13 plugin_usage_daily vs events grouped by day/user/event_type/tool
+ groups | mismatched | events | daily 
+--------+------------+--------+-------
+    514 |          0 |   3348 |  3348
+(1 row)
+
+== C13 plugin_usage_daily.plugin_id population
+ plugin_null | count | sum  
+-------------+-------+------
+ t           |   514 | 3348
+(1 row)
+
+== C13 admin_usage_daily_rollups vs ai_requests by user/day (ai_requests_count, cost)
+ rollup_rows | with_requests | count_mismatch | cost_mismatch | rollup_requests | actual_requests | user_days_missing_from_rollups 
+-------------+---------------+----------------+---------------+-----------------+-----------------+--------------------------------
+          71 |            70 |              2 |             2 |            4347 |            4392 |                              0
+(1 row)
+
+== C13 rollups: date range and probe inclusion
+    min     |    max     | count | sum  
+------------+------------+-------+------
+ 2026-09-03 | 2026-09-22 |    71 | 4347
+(1 row)
+
+ probes_not_synthetic | job_actor | sentinel_context 
+----------------------+-----------+------------------
+                 1338 |         0 |                0
+(1 row)
+
+== C13 rollups tool_uses (hook plane) vs PostToolUse events, per day
+    date    | rollup_tool_uses | hook_events | rollup_sessions | prompts 
+------------+------------------+-------------+-----------------+---------
+ 2026-09-22 |              274 |         312 |              14 |      17
+ 2026-09-21 |              119 |         119 |              23 |      15
+ 2026-09-18 |              128 |         128 |              31 |      56
+ 2026-09-17 |              107 |         107 |              24 |      19
+ 2026-09-16 |              307 |         307 |              34 |      43
+ 2026-09-15 |              169 |         169 |              33 |      37
+ 2026-09-14 |                6 |           6 |               6 |       5
+ 2026-09-13 |               35 |          35 |               4 |       5
+(8 rows)
+

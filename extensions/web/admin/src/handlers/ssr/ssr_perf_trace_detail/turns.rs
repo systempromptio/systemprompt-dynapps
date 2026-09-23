@@ -29,7 +29,7 @@ pub(super) struct TraceTurnView {
     pub(super) kind: &'static str,
     pub(super) is_request: bool,
     pub(super) name: String,
-    pub(super) sub: String,
+    pub(super) note: String,
     pub(super) started_at_local: String,
     pub(super) offset_label: String,
     pub(super) gap_label: Option<String>,
@@ -140,7 +140,7 @@ fn build_turn(
     };
     // Why: under a model the second line names the client; under a decision
     // or hook event it names the policy or event type.
-    let sub = match s.kind {
+    let note = match s.kind {
         SpanKind::Model => s
             .client_kind
             .as_deref()
@@ -155,7 +155,7 @@ fn build_turn(
         kind: s.kind.as_str(),
         is_request,
         name: s.name.clone(),
-        sub,
+        note,
         started_at_local: local_time(s.started_at),
         offset_label: offset_label(offset_of(s)),
         gap_label,

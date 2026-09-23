@@ -1,0 +1,65 @@
+== D24 execution anomalies
+ executions | stuck | pending | no_duration | p50_ms | p95_ms | max_ms | over_1min | completed_before_started 
+------------+-------+---------+-------------+--------+--------+--------+-----------+--------------------------
+        550 |     0 |       0 |           0 |    165 |   1314 |   9588 |         0 |                        0
+(1 row)
+
+== D24 server_name values vs services/mcp/*.yaml (checked offline: services/mcp/ has atlassian, github, knowledge-bank?, systemprompt …)
+  server_name   |   source   | count | users 
+----------------+------------+-------+-------
+ systemprompt   | in_process |   238 |     4
+ atlassian      | proxy      |   228 |     6
+ knowledge-bank | in_process |    46 |     3
+ github         | in_process |    19 |     1
+ systemprompt   | proxy      |    19 |     2
+(5 rows)
+
+== D24 error shapes
+ server_name  |                                    shape                                    | count 
+--------------+-----------------------------------------------------------------------------+-------
+ atlassian    | MCP tool call returned isError                                              |     5
+ github       | MCP tool call returned isError                                              |     3
+ systemprompt | Command failed (exit code #):                                              +|     2
+              | error: unexpected argument '--offset' found                                +| 
+              |                                                                            +| 
+              | Usage: systemprompt infra                                                   | 
+ systemprompt | Command failed (exit code #):                                              +|     2
+              | error: unrecognized subcommand 'report'                                    +| 
+              |                                                                            +| 
+              | Usage: systemprompt admin [OP                                               | 
+ systemprompt | Command failed (exit code #):                                              +|     2
+              | Error: Unknown role 'developer'. Valid roles: admin, user, anonymous.       | 
+ systemprompt | Atlassian connection failed; check your linked account and connector access |     2
+ systemprompt | Command failed (exit code #):                                              +|     1
+              | error: unexpected argument '--since' found                                 +| 
+              |                                                                            +| 
+              | Usage: systemprompt analyt                                                  | 
+ systemprompt | Command failed (exit code #):                                              +|     1
+              | error: unexpected argument '--until' found                                 +| 
+              |                                                                            +| 
+              | Usage: systemprompt infra                                                   | 
+ systemprompt | Command failed (exit code #):                                              +|     1
+              | error: unexpected argument '--export' found                                +| 
+              |                                                                            +| 
+              | Usage: systemprompt infra                                                   | 
+ systemprompt | Command failed (exit code #):                                              +|     1
+              | error: unrecognized subcommand 'create'                                    +| 
+              |                                                                            +| 
+              | Usage: systemprompt admin use                                               | 
+(10 rows)
+
+== D24 request_method / actor
+ request_method | request_source | actor_kind | count 
+----------------+----------------+------------+-------
+ mcp            | systemprompt   | user       |   257
+ mcp            | atlassian      | user       |   228
+ mcp            | knowledge-bank | user       |    46
+ mcp            | github         | user       |    19
+(4 rows)
+
+== D25 agent tasks (this instance ships no A2A agents)
+ tasks | steps | messages | steps_without_task 
+-------+-------+----------+--------------------
+     0 |     0 |        0 |                  0
+(1 row)
+

@@ -68,22 +68,9 @@ pub struct ChainUsageEvent {
 }
 
 #[derive(Debug, Clone, Serialize)]
-pub struct TranscriptEnvelope {
-    pub id: String,
-    pub model: Option<String>,
-    pub entries_counted: Option<i32>,
-    pub total_input_tokens: Option<i64>,
-    pub total_output_tokens: Option<i64>,
-    pub captured_at: DateTime<Utc>,
-    // JSON: third-party Claude Code transcript, stored as received.
-    pub transcript: serde_json::Value,
-}
-
-#[derive(Debug, Clone, Serialize)]
 pub struct SessionSummary {
     pub ai_title: Option<String>,
     pub ai_summary: Option<String>,
-    pub ai_tags: Option<String>,
     pub model: Option<String>,
     pub status: Option<String>,
     pub started_at: Option<DateTime<Utc>>,
@@ -109,7 +96,6 @@ pub struct ChainEnvelope {
     pub decisions: Vec<DecisionStage>,
     pub requests: Vec<AiRequestSummary>,
     pub events: Vec<ChainUsageEvent>,
-    pub transcript: Option<TranscriptEnvelope>,
     pub summary: Option<SessionSummary>,
     pub totals: ChainTotals,
 }

@@ -16,6 +16,7 @@ pub(crate) mod reports;
 pub(crate) mod revisions;
 pub(crate) mod ribbon;
 pub(crate) mod skill_detail;
+pub(crate) mod skill_runs;
 pub(crate) mod skills;
 pub(crate) mod time;
 pub(crate) mod tone;

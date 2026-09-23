@@ -137,37 +137,37 @@ pub(super) fn kpis(
         GatewayKpiView {
             label: "Gateway",
             value: if config.enabled { "On" } else { "Off" }.to_owned(),
-            sub: format!("{} on {}", config.auth_scheme, config.inference_path_prefix),
+            note: format!("{} on {}", config.auth_scheme, config.inference_path_prefix),
             tone: if config.enabled { "ok" } else { "warn" },
         },
         GatewayKpiView {
             label: "Routes declared",
             value: rows.len().to_string(),
-            sub: format!("{resolved_extra} resolved but not in the file"),
+            note: format!("{resolved_extra} resolved but not in the file"),
             tone: "",
         },
         GatewayKpiView {
             label: "Providers",
             value: surfaces.providers.len().to_string(),
-            sub: format!("{backend} routes on a backend-only provider"),
+            note: format!("{backend} routes on a backend-only provider"),
             tone: "",
         },
         GatewayKpiView {
             label: "Unknown provider",
             value: unknown.to_string(),
-            sub: "routes naming a provider the registry lacks".to_owned(),
+            note: "routes naming a provider the registry lacks".to_owned(),
             tone: if unknown > 0 { "err" } else { "ok" },
         },
         GatewayKpiView {
             label: "Governed routes",
             value: governed.to_string(),
-            sub: "carry a requires: classification".to_owned(),
+            note: "carry a requires: classification".to_owned(),
             tone: "",
         },
         GatewayKpiView {
             label: "Route grants",
             value: grants.to_string(),
-            sub: "access-control rules on routes".to_owned(),
+            note: "access-control rules on routes".to_owned(),
             tone: "",
         },
     ]

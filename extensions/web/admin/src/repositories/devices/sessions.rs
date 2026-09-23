@@ -30,7 +30,6 @@ pub struct BridgeUserSessionsRow {
     pub last_heartbeat_at: DateTime<Utc>,
     pub forwarded_total: i64,
     pub tokens_total: i64,
-    pub any_active: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -44,7 +43,6 @@ pub struct BridgeHostRow {
     pub forwarded_total: i64,
     pub tokens_total: i64,
     pub session_count: i64,
-    pub is_stale: bool,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -74,9 +72,7 @@ pub async fn list_bridge_users_paged(
                   MIN(b.started_at) AS "first_started_at!",
                   MAX(b.last_heartbeat_at) AS "last_heartbeat_at!",
                   SUM(b.forwarded_total)::BIGINT AS "forwarded_total!",
-                  SUM(b.tokens_in_total + b.tokens_out_total)::BIGINT AS "tokens_total!",
-                  BOOL_OR(b.last_heartbeat_at >= NOW() - make_interval(days => $1))
-                      AS "any_active!"
+                  SUM(b.tokens_in_total + b.tokens_out_total)::BIGINT AS "tokens_total!"
              FROM bridge_sessions b
              JOIN users u ON u.id = b.user_id
             WHERE NOT $2::BOOLEAN
@@ -145,9 +141,7 @@ pub async fn list_bridge_hosts_for_users(
                   l.last_heartbeat_at AS "last_heartbeat_at!",
                   h.forwarded_total AS "forwarded_total!",
                   h.tokens_total AS "tokens_total!",
-                  h.session_count AS "session_count!",
-                  (l.last_heartbeat_at < NOW() - make_interval(days => $1))
-                      AS "is_stale!"
+                  h.session_count AS "session_count!"
              FROM (SELECT user_id, hostname,
                           SUM(forwarded_total)::BIGINT AS forwarded_total,
                           SUM(tokens_in_total + tokens_out_total)::BIGINT AS tokens_total,

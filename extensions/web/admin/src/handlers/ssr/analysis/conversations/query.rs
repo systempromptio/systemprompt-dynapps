@@ -1,7 +1,7 @@
 //! The query string `/admin/analysis/conversations` binds, and the links that
 //! carry it: every filter, the breakdown dimension, sort and page.
 
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use systemprompt::identifiers::UserId;
 use urlencoding::encode as urlencode;
@@ -11,14 +11,13 @@ use crate::repositories::analysis::conversations::{
 };
 
 pub(crate) const BASE_URL: &str = "/admin/analysis/conversations";
-pub(crate) const PAGE_SIZE: i64 = 50;
-
-// Why: this page's `since` labels reach past the live window contract (90d,
-// all); the export offers the nearest window it can serve.
+// Why: this page's `all` reaches past the live window contract, whose widest
+// preset is 90 days; the export offers that nearest window.
 pub(crate) fn export_preset(params: &ConversationAnalysisQuery) -> &'static str {
     match params.since_label() {
         "24h" => "24h",
         "7d" => "7d",
+        "90d" | "all" => "90d",
         _ => "30d",
     }
 }
@@ -67,14 +66,8 @@ impl ConversationAnalysisQuery {
     }
 
     pub(crate) fn since_datetime(&self) -> Option<DateTime<Utc>> {
-        let dur = match self.since_label() {
-            "24h" => Duration::hours(24),
-            "7d" => Duration::days(7),
-            "30d" => Duration::days(30),
-            "90d" => Duration::days(90),
-            _ => return None,
-        };
-        Some(Utc::now() - dur)
+        let preset = crate::util::time_range::TimeRangePreset::parse(self.since_label())?;
+        Some(Utc::now() - preset.duration()?)
     }
 
     pub(crate) fn user_id(&self) -> Option<UserId> {
@@ -188,14 +181,24 @@ impl ConversationAnalysisQuery {
         url
     }
 
-    // Why: the CSV of one breakdown bucket or one facet: the page's filters
-    // narrowed by that value, on the dataset the page exports.
-    pub(crate) fn export_href(&self, dataset: &str, name: &str, value: &str) -> String {
-        let narrowed = self.narrowed(name, value);
-        let query = narrowed.split_once('?').map_or("", |(_, q)| q);
+    // Why: the page's filters narrowed by one breakdown bucket or facet, as
+    // the export dialog's query; `export_href` is its no-script CSV link. The
+    // page's `preset` and ticked `ids` are dropped: the window is stated
+    // once, and a bucket is every row in it, not the selection.
+    pub(crate) fn export_query(&self, name: &str, value: &str) -> String {
+        let prefix = self.link_prefix(&[name, "page", "preset", "ids"]);
+        let kept = prefix.split_once('?').map_or("", |(_, q)| q);
         format!(
-            "/admin/export/{dataset}?{query}&preset={}&format=csv",
+            "{kept}{name}={}&preset={}",
+            urlencode(value),
             export_preset(self)
+        )
+    }
+
+    pub(crate) fn export_href(&self, dataset: &str, name: &str, value: &str) -> String {
+        format!(
+            "/admin/export/{dataset}?{}&format=csv",
+            self.export_query(name, value)
         )
     }
 

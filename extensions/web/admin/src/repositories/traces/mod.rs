@@ -61,6 +61,10 @@ pub struct TraceSummary {
     // Why: Failed gateway requests on the trace — the count behind `has_error`.
     pub error_count: i64,
     pub has_deny: bool,
+    // Why: `gateway`, `hook` or `lifecycle` — what the trace is evidence of.
+    // A `hook` trace has no model, tokens, cost or latency because it never
+    // reached the gateway, not because the numbers went missing.
+    pub kind: String,
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -74,6 +78,10 @@ pub struct TraceFilter<'a> {
     pub decision: Option<&'a str>,
     pub error_only: bool,
     pub deny_only: bool,
+    // Why: Claude Code sessions that only opened and closed are hidden by
+    // default; they carry no model, cost or duration and would otherwise be
+    // most of the page.
+    pub include_lifecycle: bool,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -132,6 +140,12 @@ pub struct TraceStats {
     pub total_traces: i64,
     pub error_count: i64,
     pub deny_count: i64,
+    // Why: the traces that issued at least one request — the population the
+    // cost, token and percentile figures below are drawn from.
+    pub active_traces: i64,
+    // Why: the lifecycle-only sessions the list suppressed, so the page can
+    // say how many rows it is not showing.
+    pub lifecycle_count: i64,
     // Why: Percentiles over `active_ms` of the traces that issued at least one
     // request; governance-only traces have no latency to contribute and would
     // otherwise drag every percentile to zero.

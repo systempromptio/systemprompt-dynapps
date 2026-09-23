@@ -1,0 +1,142 @@
+                                                                                                                                                                                                                                          QUERY PLAN                                                                                                                                                                                                                                          
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Result  (cost=72.45..72.47 rows=1 width=32)
+   CTE f
+     ->  Nested Loop Left Join  (cost=4.58..19.79 rows=1 width=828)
+           ->  Hash Left Join  (cost=4.31..11.23 rows=1 width=773)
+                 Hash Cond: (f.context_id = a.context_id)
+                 Filter: ((($9 IS NULL) OR (a.category = $9)) AND (($10 IS NULL) OR (a.outcome = $10)) AND (($5 IS NULL) OR ($5 = ANY (f.skills)) OR ($5 = ANY (COALESCE(a.skills_used, '{}'::text[])))))
+                 ->  Bitmap Heap Scan on conversation_facts f  (cost=4.29..11.22 rows=1 width=611)
+                       Recheck Cond: ((last_at >= $1) AND (last_at < $2))
+                       Filter: ((($6 IS NULL) OR (user_id = $6)) AND (($8 IS NULL) OR (client_kind = $8)) AND (($7 IS NULL) OR (model = $7) OR ($7 = ANY (models))) AND (($3 IS NULL) OR (user_id = ANY ($3))) AND (($4 IS NULL) OR EXISTS(SubPlan 1)))
+                       ->  Bitmap Index Scan on idx_conversation_facts_last_at  (cost=0.00..4.29 rows=2 width=0)
+                             Index Cond: ((last_at >= $1) AND (last_at < $2))
+                       SubPlan 1
+                         ->  Hash Join  (cost=0.02..0.14 rows=1 width=0)
+                               Hash Cond: (split_part(s.skill, ':'::text, 1) = o.id)
+                               ->  Function Scan on unnest s  (cost=0.00..0.10 rows=10 width=32)
+                               ->  Hash  (cost=0.00..0.00 rows=1 width=32)
+                                     ->  Seq Scan on service_owned_ids o  (cost=0.00..0.00 rows=1 width=32)
+                                           Filter: ((kind = 'plugin'::text) AND (marketplace_id = $4))
+                 ->  Hash  (cost=0.00..0.00 rows=1 width=194)
+                       ->  Seq Scan on conversation_analyses a  (cost=0.00..0.00 rows=1 width=194)
+           ->  Index Scan using users_pkey on users u  (cost=0.28..8.29 rows=1 width=52)
+                 Index Cond: (id = f.user_id)
+   CTE judged
+     ->  CTE Scan on f f_1  (cost=0.00..0.02 rows=1 width=210)
+           Filter: (completion IS NOT NULL)
+   InitPlan 4
+     ->  Subquery Scan on t  (cost=0.11..0.15 rows=1 width=32)
+           ->  Aggregate  (cost=0.11..0.14 rows=1 width=128)
+                 ->  Sort  (cost=0.03..0.04 rows=1 width=130)
+                       Sort Key: f_2.user_id
+                       ->  CTE Scan on f f_2  (cost=0.00..0.02 rows=1 width=130)
+   InitPlan 6
+     ->  Aggregate  (cost=41.59..41.60 rows=1 width=32)
+           ->  Subquery Scan on s_1  (cost=41.57..41.58 rows=1 width=56)
+                 ->  Limit  (cost=41.57..41.57 rows=1 width=72)
+                       ->  Sort  (cost=41.57..41.57 rows=1 width=72)
+                             Sort Key: ((SubPlan 5)) DESC, (count(*)) DESC, (unnest(f_3.skills))
+                             ->  GroupAggregate  (cost=0.04..41.56 rows=1 width=72)
+                                   Group Key: (unnest(f_3.skills))
+                                   ->  Sort  (cost=0.04..0.05 rows=1 width=58)
+                                         Sort Key: (unnest(f_3.skills))
+                                         ->  ProjectSet  (cost=0.00..0.03 rows=1 width=58)
+                                               ->  CTE Scan on f f_3  (cost=0.00..0.02 rows=1 width=58)
+                                   SubPlan 5
+                                     ->  Aggregate  (cost=41.46..41.47 rows=1 width=8)
+                                           ->  Nested Loop  (cost=11.91..41.45 rows=3 width=0)
+                                                 ->  Append  (cost=11.91..41.36 rows=3 width=37)
+                                                       ->  Subquery Scan on "*SELECT* 1"  (cost=11.91..19.63 rows=1 width=37)
+                                                             ->  Bitmap Heap Scan on plugin_usage_events e_1  (cost=11.91..19.62 rows=1 width=237)
+                                                                   Recheck Cond: ((created_at >= $1) AND (created_at < $2) AND (event_type = 'UserPromptSubmit'::text))
+                                                                   Filter: ((prompt_preview ~ '^/[A-Za-z0-9._-]+:[A-Za-z0-9._-]+'::text) AND (replace("substring"(prompt_preview, '^/([A-Za-z0-9._-]+:[A-Za-z0-9._-]+)'::text), '_'::text, '-'::text) = (unnest(f_3.skills))) AND (($3 IS NULL) OR (user_id = ANY ($3))))
+                                                                   ->  BitmapAnd  (cost=11.91..11.91 rows=2 width=0)
+                                                                         ->  Bitmap Index Scan on idx_plugin_usage_created_at  (cost=0.00..4.45 rows=17 width=0)
+                                                                               Index Cond: ((created_at >= $1) AND (created_at < $2))
+                                                                         ->  Bitmap Index Scan on idx_plugin_usage_event_type  (cost=0.00..7.21 rows=391 width=0)
+                                                                               Index Cond: (event_type = 'UserPromptSubmit'::text)
+                                                       ->  Subquery Scan on "*SELECT* 2"  (cost=9.31..13.37 rows=1 width=37)
+                                                             ->  Bitmap Heap Scan on plugin_usage_events e_2  (cost=9.31..13.36 rows=1 width=237)
+                                                                   Recheck Cond: ((created_at >= $1) AND (created_at < $2) AND (tool_name = 'Skill'::text))
+                                                                   Filter: ((event_type = ANY ('{PostToolUse,PostToolUseFailure}'::text[])) AND (((metadata -> 'tool_input'::text) ->> 'skill'::text) IS NOT NULL) AND (replace(((metadata -> 'tool_input'::text) ->> 'skill'::text), '_'::text, '-'::text) = (unnest(f_3.skills))) AND (($3 IS NULL) OR (user_id = ANY ($3))))
+                                                                   ->  BitmapAnd  (cost=9.31..9.31 rows=1 width=0)
+                                                                         ->  Bitmap Index Scan on idx_plugin_usage_created_at  (cost=0.00..4.45 rows=17 width=0)
+                                                                               Index Cond: ((created_at >= $1) AND (created_at < $2))
+                                                                         ->  Bitmap Index Scan on idx_plugin_usage_tool_name  (cost=0.00..4.61 rows=44 width=0)
+                                                                               Index Cond: (tool_name = 'Skill'::text)
+                                                       ->  Subquery Scan on "*SELECT* 3"  (cost=0.28..8.35 rows=1 width=37)
+                                                             ->  Index Scan using idx_plugin_usage_tool_name on plugin_usage_events e_3  (cost=0.28..8.34 rows=1 width=237)
+                                                                   Index Cond: (tool_name = 'skill'::text)
+                                                                   Filter: ((event_type = ANY ('{PostToolUse,PostToolUseFailure}'::text[])) AND (created_at >= $1) AND (created_at < $2) AND (((metadata -> 'tool_input'::text) ->> 'name'::text) IS NOT NULL) AND (($3 IS NULL) OR (user_id = ANY ($3))) AND (COALESCE((metadata ->> 'skill_ref'::text), ('opencode:'::text || replace(((metadata -> 'tool_input'::text) ->> 'name'::text), '_'::text, '-'::text))) = (unnest(f_3.skills))))
+                                                 ->  Result  (cost=0.00..0.01 rows=1 width=32)
+   InitPlan 7
+     ->  Aggregate  (cost=0.10..0.11 rows=1 width=32)
+           ->  Subquery Scan on m  (cost=0.08..0.09 rows=1 width=24)
+                 ->  Limit  (cost=0.08..0.08 rows=1 width=72)
+                       ->  Sort  (cost=0.08..0.08 rows=1 width=72)
+                             Sort Key: ((COALESCE(sum(f_4.cost_microdollars), '0'::numeric))::bigint) DESC, (count(*)) DESC
+                             ->  HashAggregate  (cost=0.04..0.07 rows=1 width=72)
+                                   Group Key: COALESCE(f_4.model, 'unknown'::text)
+                                   ->  CTE Scan on f f_4  (cost=0.00..0.02 rows=1 width=58)
+   InitPlan 8
+     ->  Aggregate  (cost=0.10..0.11 rows=1 width=32)
+           ->  Subquery Scan on p  (cost=0.07..0.09 rows=1 width=56)
+                 ->  Limit  (cost=0.07..0.08 rows=1 width=96)
+                       ->  Sort  (cost=0.07..0.08 rows=1 width=96)
+                             Sort Key: ((COALESCE(sum(f_5.cost_microdollars), '0'::numeric))::bigint) DESC
+                             ->  HashAggregate  (cost=0.04..0.06 rows=1 width=96)
+                                   Group Key: f_5.user_id
+                                   ->  CTE Scan on f f_5  (cost=0.00..0.02 rows=1 width=574)
+   InitPlan 9
+     ->  Aggregate  (cost=0.05..0.06 rows=1 width=32)
+           ->  Subquery Scan on w  (cost=0.03..0.05 rows=1 width=234)
+                 ->  Limit  (cost=0.03..0.04 rows=1 width=210)
+                       ->  Sort  (cost=0.03..0.04 rows=1 width=210)
+                             Sort Key: judged.completion, judged.cost_microdollars DESC
+                             ->  CTE Scan on judged  (cost=0.00..0.02 rows=1 width=210)
+   InitPlan 10
+     ->  Aggregate  (cost=0.05..0.06 rows=1 width=32)
+           ->  Subquery Scan on b  (cost=0.03..0.05 rows=1 width=234)
+                 ->  Limit  (cost=0.03..0.04 rows=1 width=210)
+                       ->  Sort  (cost=0.03..0.04 rows=1 width=210)
+                             Sort Key: judged_1.completion DESC, judged_1.cost_microdollars DESC
+                             ->  CTE Scan on judged judged_1  (cost=0.00..0.02 rows=1 width=210)
+   InitPlan 11
+     ->  Aggregate  (cost=0.05..0.06 rows=1 width=32)
+           ->  Subquery Scan on o_1  (cost=0.03..0.05 rows=1 width=146)
+                 ->  Limit  (cost=0.03..0.04 rows=1 width=122)
+                       ->  Sort  (cost=0.03..0.04 rows=1 width=122)
+                             Sort Key: f_6.cost_microdollars DESC
+                             ->  CTE Scan on f f_6  (cost=0.00..0.02 rows=1 width=122)
+   InitPlan 12
+     ->  Aggregate  (cost=10.31..10.32 rows=1 width=32)
+           ->  Subquery Scan on d  (cost=10.29..10.30 rows=1 width=40)
+                 ->  Limit  (cost=10.29..10.29 rows=1 width=32)
+                       ->  Sort  (cost=10.29..10.29 rows=1 width=32)
+                             Sort Key: (count(*)) DESC
+                             ->  GroupAggregate  (cost=10.25..10.28 rows=1 width=32)
+                                   Group Key: d_1.tool_name
+                                   ->  Sort  (cost=10.25..10.26 rows=1 width=53)
+                                         Sort Key: d_1.tool_name, d_1.user_id
+                                         ->  Index Scan using idx_governance_decisions_decision on governance_decisions d_1  (cost=0.29..10.24 rows=1 width=53)
+                                               Index Cond: (decision = 'deny'::text)
+                                               Filter: ((created_at >= $1) AND (created_at < $2) AND (($6 IS NULL) OR (user_id = $6)) AND (($3 IS NULL) OR (user_id = ANY ($3))))
+   InitPlan 13
+     ->  Aggregate  (cost=0.08..0.09 rows=1 width=32)
+           ->  Subquery Scan on i  (cost=0.05..0.07 rows=1 width=24)
+                 ->  Sort  (cost=0.05..0.06 rows=1 width=48)
+                       Sort Key: (count(*)) DESC
+                       ->  HashAggregate  (cost=0.03..0.04 rows=1 width=48)
+                             Group Key: COALESCE(f_7.category, 'unjudged'::text)
+                             ->  CTE Scan on f f_7  (cost=0.00..0.02 rows=1 width=34)
+   InitPlan 14
+     ->  Aggregate  (cost=0.08..0.09 rows=1 width=32)
+           ->  Subquery Scan on c  (cost=0.05..0.07 rows=1 width=56)
+                 ->  Sort  (cost=0.05..0.06 rows=1 width=48)
+                       Sort Key: (count(*)) DESC
+                       ->  HashAggregate  (cost=0.03..0.04 rows=1 width=48)
+                             Group Key: f_8.client_kind
+                             ->  CTE Scan on f f_8  (cost=0.00..0.02 rows=1 width=40)
+(138 rows)
+
