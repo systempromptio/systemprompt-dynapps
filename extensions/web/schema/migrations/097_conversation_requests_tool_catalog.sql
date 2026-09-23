@@ -1,3 +1,4 @@
+-- @supersedes-checksum: 4608909d1e6beea2
 -- Re-declare the conversation views over the tool catalog.
 --
 -- Core ai migration 033 moved `ai_request_payloads.offered_tools` into
@@ -14,6 +15,17 @@
 -- single-request thread that offered no tools. A hash-derived context has no
 -- harness behind it: every request there is a turn, whatever its shape, so an
 -- SDK or OpenCode thread of one prompt is a conversation and not hidden.
+-- An established database may still hold an older conversation_metrics_for
+-- whose row type differs from the one below, and CREATE OR REPLACE cannot
+-- change a function's return type (42P13). The dependents go first, then the
+-- function itself; conversation_analysis_rows is declarative and comes back
+-- with the declarative pass.
+DROP VIEW IF EXISTS conversation_analysis_rows;
+DROP VIEW IF EXISTS conversation_rollups;
+DROP VIEW IF EXISTS conversation_requests;
+DROP FUNCTION IF EXISTS conversation_metrics_for(text[]);
+DROP FUNCTION IF EXISTS conversation_request_kind(text, boolean, bigint);
+
 CREATE OR REPLACE FUNCTION conversation_request_kind(kind text, has_tools boolean, thread_size bigint, harness_bound boolean)
 RETURNS text LANGUAGE sql IMMUTABLE PARALLEL SAFE AS $function$
 SELECT CASE WHEN kind = 'probe' THEN 'probe' WHEN kind = 'utility' THEN 'utility'

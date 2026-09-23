@@ -1,3 +1,4 @@
+-- @supersedes-checksum: 2d2f1288476c091f
 -- @cost: rows=3644 measured=30s triggers=suspended
 --
 -- Re-derive the client of every request core migration ai/034 left mislabelled.
@@ -64,4 +65,14 @@ DROP TABLE ai_request_claude_markers;
 
 -- `conversation_facts.client_kind` is copied from each context's latest
 -- request, so the rollup carried `opencode` too.
-SELECT refresh_conversation_facts(NULL);
+--
+-- Why: the rollup reads tool_activity and conversation_requests, both
+-- declarative objects an established database only gains in the declarative
+-- pass that follows the migrations.
+DO $$
+BEGIN
+    IF to_regclass('public.tool_activity') IS NOT NULL
+        AND to_regclass('public.conversation_requests') IS NOT NULL THEN
+        PERFORM refresh_conversation_facts(NULL);
+    END IF;
+END $$;

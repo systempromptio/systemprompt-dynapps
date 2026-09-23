@@ -40,9 +40,9 @@ documentation = "https://systemprompt.io/documentation"
 # ============================================
 # CORE FACADE (single dependency for all systemprompt-core)
 # ============================================
-systemprompt = { version = "0.59.0", default-features = false, features = ["core", "database", "config"] }
-systemprompt-security = { version = "0.59.0" }
-systemprompt-extension = { version = "0.59.0" }
+systemprompt = { version = "0.59.1", default-features = false, features = ["core", "database", "config"] }
+systemprompt-security = { version = "0.59.1" }
+systemprompt-extension = { version = "0.59.1" }
 
 # ============================================
 # LOCAL EXTENSIONS

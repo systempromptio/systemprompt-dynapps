@@ -1,3 +1,4 @@
+-- @supersedes-checksum: 070e202c5f6fdc61
 -- @supersedes-checksum: 6de132efff82f622
 -- @cost: rows=421 measured=1.5s triggers=live
 -- Attribute session-scoped facts to one context instead of every context of
@@ -251,4 +252,14 @@ BEGIN
     RETURN COALESCE(written, 0);
 END $$;
 
-SELECT refresh_conversation_facts(NULL);
+-- Why: the rollup reads tool_activity and conversation_requests, both
+-- declarative objects that an established database does not hold until the
+-- declarative pass runs after the migrations. The catalog test keeps the
+-- reference out of the parser's reach.
+DO $$
+BEGIN
+    IF to_regclass('public.tool_activity') IS NOT NULL
+        AND to_regclass('public.conversation_requests') IS NOT NULL THEN
+        PERFORM refresh_conversation_facts(NULL);
+    END IF;
+END $$;
