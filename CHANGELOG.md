@@ -20,6 +20,8 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+## 0.60.0 — 2026-09-23
+
 ### Breaking
 
 - **Upgrade floor is 0.56.0.** Core's analytics migration 015 drops the feedback fact tables
@@ -28,12 +30,35 @@ Conventions (strict — hold every entry to them):
   Upgrade it to 0.59.1 first. The schema-upgrade ladder starts at 0.56.0
   (`FLOOR` in `scripts/check-schema-baseline.sh`); the 0.52.0–0.55.1 rungs are removed.
 
+### Added
+
+- **Claude on Vertex AI.** Every `claude-*` request now goes to the new `vertex-anthropic`
+  provider: Claude on Vertex AI (publisher `anthropic`, `global`) under the `vertex` service
+  account. It fails over to Anthropic's own API when Vertex is out of capacity or unreachable.
+  Anthropic's API stays declared, with its models under `anthropic-claude-*` ids (catalog ids
+  are unique across providers). Those ids are reachable directly, and each is the failover
+  twin of its bare id, because core finds the requested model on the fallback provider by
+  upstream name. The in-process AI service reaches Claude the same way
+  (`ai.default_provider: vertex-anthropic`). The project's Vertex Claude quota is currently
+  zero, so Claude traffic is served by Anthropic until the quota is raised.
+- **Every model Vertex serves, priced from Google's published pages** (read 2026-09-23):
+  - Claude Sonnet/Opus 4.5, Opus/Sonnet 4.6, Opus 4.7 and 4.8 beside the 5.x models, at
+    Vertex's global rates. Each has an `anthropic-claude-*` twin.
+  - The open models on the global MaaS endpoint: GLM 4.7/5/5.2, Kimi K2 Thinking,
+    DeepSeek V3.2, MiniMax M2, Qwen3 235B, Next and Coder, and gpt-oss-20b/120b.
+  - DeepSeek R1 on a new `vertex-maas-us-central1` provider.
+  - Every Qwen, GLM 4.7/5, Kimi, DeepSeek and MiniMax MaaS endpoint, and gpt-oss-20b, retires
+    on 2026-10-21. Core 0.60.0 hides a retired declaration instead of removing it, so those
+    routes keep booting after that date.
+
 ### Changed
 
-- **Core:** `next` builds against core `next` again (patch active, `bridge/CORE_REF` pins the
-  commit). Core retires its feedback facts/snapshot engine, the reporting projection behind the
-  `analytics` CLI, the managed admin routes nothing called, and scheduler writes on idle ticks;
-  see core's `CHANGELOG.md`.
+- **Core 0.60.0 (crates.io):** both `[patch.crates-io]` blocks are commented out and
+  `bridge/CORE_REF` is `v0.60.0`. Core retires its feedback facts/snapshot engine, the
+  reporting projection behind the `analytics` CLI, the managed admin routes nothing called
+  (the managed `/api/v1` surface is now the four routes the bridge calls), and scheduler
+  writes on idle ticks. It also gives the gateway and the in-process AI service one upstream
+  seam, so both reach Vertex-hosted providers. See core's `CHANGELOG.md`.
 - **Analysis → Versions** reads `conversation_skill_facts` (new, migration 104; kept forever
   like `conversation_facts`, filled by `conversation_rollup`) instead of core's normalized
   facts. A conversation is credited to the marketplace version served when it first invoked
@@ -65,7 +90,8 @@ Conventions (strict — hold every entry to them):
 - **Tests:** the web wiring test no longer expects `managed_invocation_attributions` among the
   cross-extension tables (core no longer owns it, and 105 drops it). `059_feedback_ingestion`
   leaves the migration-cost baseline, since it no longer rewrites a hot table. The feedback
-  upgrade test names the statement it expected to be rejected.
+  upgrade test names the statement it expected to be rejected. The catalog tests pin the
+  Vertex-served `claude-*` lineup, the `anthropic-claude-*` failover twins and both rate cards.
 - **Schema registration:** the web extension registers its multi-table schema files with
   `SchemaDefinition::sql_only` instead of `new("", …)`, so `infra db doctor` no longer reports
   a declared table named `""` as absent.
