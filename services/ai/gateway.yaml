@@ -104,6 +104,7 @@ gateway:
     token_secret: ASTOUND_RELEASE_TOKEN
     tag_prefix: v
     assets:
+      macos: astound-bridge-macos.zip
       windows: astound-bridge-windows.exe
       linux-x86_64: astound-bridge-linux-x86_64.tar.gz
       linux-aarch64: astound-bridge-linux-aarch64.tar.gz

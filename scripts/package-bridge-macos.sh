@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 # Build, sign, notarize, and stage the macOS bridge as the single-file DMG the
 # homepage and the admin Bridge Setup page link to
-# (storage/files/downloads/astound-bridge-macos.dmg).
+# (storage/files/downloads/astound-bridge-macos.dmg), plus the zipped .app the
+# in-app self-updater installs (astound-bridge-macos.zip). The updater cannot
+# consume the DMG: it unpacks with `ditto -x -k` and assesses the bundle with
+# codesign + spctl before swapping it in (core bin/bridge/src/update/install/macos.rs).
 #
 # Must run on macOS: the build needs the Apple toolchain, the .app wrap uses
 # sips/iconutil (bridge/scripts/make-mac-app.sh), and signing needs a
@@ -33,6 +36,7 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BRIDGE_DIR="$REPO_ROOT/bridge"
 DOWNLOADS_DIR="$REPO_ROOT/storage/files/downloads"
 ASSET="astound-bridge-macos.dmg"
+UPDATER_ASSET="astound-bridge-macos.zip"
 NOTARY_PROFILE="${NOTARY_PROFILE:-astound-bridge}"
 TARGETS=(aarch64-apple-darwin x86_64-apple-darwin)
 UNIVERSAL="universal-apple-darwin"
@@ -198,6 +202,14 @@ install -m 0644 "$DMG" "$DOWNLOADS_DIR/$ASSET"
 # shasum on macOS, sha256sum on Linux CI — output format is identical.
 (cd "$DOWNLOADS_DIR" && shasum -a 256 "$ASSET" > "$ASSET.sha256")
 
-echo "==> staged $DOWNLOADS_DIR/$ASSET"
-cat "$DOWNLOADS_DIR/$ASSET.sha256"
+# The stapled bundle, zipped with ditto so the symlinks, xattrs and ticket the
+# signature covers survive; a plain `zip` strips them and fails Gatekeeper.
+rm -f "$DOWNLOADS_DIR/$UPDATER_ASSET"
+ditto -c -k --keepParent "$APP" "$DOWNLOADS_DIR/$UPDATER_ASSET"
+chmod 0644 "$DOWNLOADS_DIR/$UPDATER_ASSET"
+(cd "$DOWNLOADS_DIR" && shasum -a 256 "$UPDATER_ASSET" > "$UPDATER_ASSET.sha256")
+bash "$REPO_ROOT/tests/release/macos-updater-zip.sh" "$DOWNLOADS_DIR/$UPDATER_ASSET"
+
+echo "==> staged $DOWNLOADS_DIR/$ASSET and $DOWNLOADS_DIR/$UPDATER_ASSET"
+cat "$DOWNLOADS_DIR/$ASSET.sha256" "$DOWNLOADS_DIR/$UPDATER_ASSET.sha256"
 echo "Served from /files/downloads at runtime; cloud deploy bakes storage/ into the image."

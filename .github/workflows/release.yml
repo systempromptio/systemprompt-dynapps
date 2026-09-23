@@ -9,7 +9,8 @@ name: Release
 #       :X.Y.Z (create-once)  :latest  :sha-<short>   — amd64 + arm64, cosign-signed
 #   * a GitHub Release vX.Y.Z (create-once) carrying
 #       astound-bridge-linux-{x86_64,aarch64}.tar.gz, astound-bridge-macos.dmg,
-#       astound-bridge-windows.exe, their .sha256 sidecars, install.sh,
+#       astound-bridge-macos.zip, astound-bridge-windows.exe, their .sha256
+#       sidecars, install.sh,
 #       systemprompt-astound-server-<version>-linux-{amd64,arm64}.tar.gz,
 #       SHA256SUMS, and a cosign keyless .sig/.pem per asset
 #
@@ -19,7 +20,11 @@ name: Release
 # first. Asset names are version-less and load-bearing — they are referenced by
 # extensions/web/admin/src/handlers/ssr/ssr_bridge_setup.rs,
 # storage/files/admin/templates/bridge-setup.hbs and
-# scripts/fetch-remote-downloads.sh.
+# scripts/fetch-remote-downloads.sh, and by the `assets:` map of the gateway's
+# `bridge_releases` config (services/ai/gateway.yaml — the in-app self-updater).
+# macOS publishes two artifacts from one stapled bundle: the .dmg humans
+# download, and the .zip the updater installs. Only the .dmg is baked into the
+# image; the updater's zip is a release asset the gateway feed proxies.
 #
 # Immutability: the vX.Y.Z tag, the Release and its assets, and the :X.Y.Z
 # image tag are created once and never overwritten. A second push to main at
@@ -183,6 +188,8 @@ jobs:
             script: scripts/package-bridge-windows.sh
           - runner: macos-14
             asset: astound-bridge-macos.dmg
+            # What the in-app updater downloads; the dmg stays the human one.
+            updater_asset: astound-bridge-macos.zip
             script: scripts/package-bridge-macos.sh
     steps:
       - uses: actions/checkout@v7
@@ -246,22 +253,30 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ needs.version.outputs.tag }}
           ASSET: ${{ matrix.asset }}
+          UPDATER_ASSET: ${{ matrix.updater_asset }}
         run: |
           mkdir -p storage/files/downloads
-          gh release download "$RELEASE_TAG" --dir storage/files/downloads \
-            --pattern "$ASSET" --pattern "$ASSET.sha256" --pattern install.sh
+          # Releases before the updater zip existed do not carry it; its
+          # pattern matches nothing there and only the dmg is re-served.
+          patterns=(--pattern "$ASSET" --pattern "$ASSET.sha256" --pattern install.sh)
+          [ -z "$UPDATER_ASSET" ] || patterns+=(--pattern "$UPDATER_ASSET" --pattern "$UPDATER_ASSET.sha256")
+          gh release download "$RELEASE_TAG" --dir storage/files/downloads "${patterns[@]}"
           cd storage/files/downloads
-          if command -v sha256sum >/dev/null; then
-            sha256sum -c "$ASSET.sha256"
-          else
-            shasum -a 256 -c "$ASSET.sha256"
-          fi
+          for sums in *.sha256; do
+            if command -v sha256sum >/dev/null; then
+              sha256sum -c "$sums"
+            else
+              shasum -a 256 -c "$sums"
+            fi
+          done
 
       - name: Verify the staged macOS download
         if: runner.os == 'macOS'
         run: |
           dmg=storage/files/downloads/astound-bridge-macos.dmg
           bash tests/release/macos-smoke.sh "$dmg" "$(shasum -a 256 "$dmg" | cut -d' ' -f1)"
+          zip=storage/files/downloads/astound-bridge-macos.zip
+          [ ! -f "$zip" ] || bash tests/release/macos-updater-zip.sh "$zip"
 
       - name: Tear down signing keychain
         if: always() && runner.os == 'macOS' && needs.version.outputs.publish_release == 'true'
@@ -317,6 +332,7 @@ jobs:
             storage/files/downloads/${{ matrix.asset }}
             storage/files/downloads/${{ matrix.asset }}.sha256
             storage/files/downloads/${{ matrix.asset }}.signing
+            storage/files/downloads/astound-bridge-macos.zip*
             storage/files/downloads/install.sh
           if-no-files-found: error
           retention-days: 7
@@ -353,7 +369,7 @@ jobs:
             [ -s "$f" ] || { echo "::error::missing download asset $f"; exit 1; }
           done
           for f in *.sha256; do sha256sum -c "$f"; done
-          rm -f *.signing
+          rm -f *.signing astound-bridge-macos.zip astound-bridge-macos.zip.sha256
           ls -la
 
       - uses: docker/setup-buildx-action@v3
@@ -555,8 +571,9 @@ jobs:
         working-directory: dist
         run: |
           # The per-asset .sha256 sidecars stay: install.sh fetches <base>/<asset>.sha256.
+          # The gateway's update feed reads the updater zip's digest from here.
           sha256sum astound-bridge-linux-x86_64.tar.gz astound-bridge-linux-aarch64.tar.gz \
-            astound-bridge-macos.dmg astound-bridge-windows.exe \
+            astound-bridge-macos.dmg astound-bridge-macos.zip astound-bridge-windows.exe \
             systemprompt-astound-server-*.tar.gz install.sh > SHA256SUMS
           cat SHA256SUMS
       - uses: sigstore/cosign-installer@v3
@@ -564,7 +581,7 @@ jobs:
         working-directory: dist
         run: |
           for f in astound-bridge-linux-x86_64.tar.gz astound-bridge-linux-aarch64.tar.gz \
-                   astound-bridge-macos.dmg astound-bridge-windows.exe \
+                   astound-bridge-macos.dmg astound-bridge-macos.zip astound-bridge-windows.exe \
                    systemprompt-astound-server-*.tar.gz install.sh SHA256SUMS; do
             cosign sign-blob --yes --output-signature "$f.sig" --output-certificate "$f.pem" "$f"
           done
@@ -602,6 +619,7 @@ jobs:
             echo "| astound-bridge-linux-x86_64.tar.gz | Linux x86_64 (glibc ≥ 2.35) | n/a |"
             echo "| astound-bridge-linux-aarch64.tar.gz | Linux aarch64 | n/a |"
             echo "| astound-bridge-macos.dmg | macOS universal (Apple Silicon + Intel) | $mac |"
+            echo "| astound-bridge-macos.zip | macOS in-app updater (same bundle as the dmg) | $mac |"
             echo "| astound-bridge-windows.exe | Windows x86_64 | $win |"
             echo
             if [ "$mac" != "notarized" ]; then
