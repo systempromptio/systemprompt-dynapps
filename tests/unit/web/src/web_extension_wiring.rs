@@ -65,7 +65,6 @@ fn it_declares_the_extensions_whose_tables_it_reads() {
         vec![
             "ai_requests",
             "managed_installation_receipts",
-            "managed_invocation_attributions",
             "managed_publications",
             "managed_resources",
             "markdown_content",

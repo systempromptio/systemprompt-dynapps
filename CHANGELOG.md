@@ -20,6 +20,14 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+### Breaking
+
+- **Upgrade floor is 0.56.0.** Core's analytics migration 015 drops the feedback fact tables
+  before the web extension's migrations run, and web 059, 071 and 084 still write or select
+  them. A database left by 0.52–0.55.1 therefore cannot upgrade to this release in one step.
+  Upgrade it to 0.59.1 first. The schema-upgrade ladder starts at 0.56.0
+  (`FLOOR` in `scripts/check-schema-baseline.sh`); the 0.52.0–0.55.1 rungs are removed.
+
 ### Changed
 
 - **Core:** `next` builds against core `next` again (patch active, `bridge/CORE_REF` pins the
@@ -45,6 +53,19 @@ Conventions (strict — hold every entry to them):
 
 ### Fixed
 
+- **macOS bridge updates:** every Mac bridge's update check failed with `gateway returned status
+  404 Not Found from bridge-latest: no published build for platform macos`. The gateway's
+  `bridge_releases.assets` map had no `macos` key, and the release published only the dmg,
+  which the in-app updater cannot install. It installs a `ditto`-zipped, stapled `.app`.
+  `scripts/package-bridge-macos.sh` now also stages `astound-bridge-macos.zip` from the same
+  notarized bundle, and `tests/release/macos-updater-zip.sh` checks it the way the updater
+  will. The release adds the zip to `SHA256SUMS` and cosign-signs it, the gateway image stays
+  dmg-only, and `services/ai/gateway.yaml` maps `macos` to the zip. Mac clients update
+  themselves once a release carrying the zip is deployed.
+- **Tests:** the web wiring test no longer expects `managed_invocation_attributions` among the
+  cross-extension tables (core no longer owns it, and 105 drops it). `059_feedback_ingestion`
+  leaves the migration-cost baseline, since it no longer rewrites a hot table. The feedback
+  upgrade test names the statement it expected to be rejected.
 - **Schema registration:** the web extension registers its multi-table schema files with
   `SchemaDefinition::sql_only` instead of `new("", …)`, so `infra db doctor` no longer reports
   a declared table named `""` as absent.

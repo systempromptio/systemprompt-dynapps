@@ -69,10 +69,9 @@ async fn retained_rows(pool: &PgPool) -> Vec<String> {
 }
 
 async fn rejects(pool: &PgPool, sql: &str, code: &str) {
-    let error = sqlx::raw_sql(sqlx::AssertSqlSafe(sql))
-        .execute(pool)
-        .await
-        .expect_err("database must reject invalid evidence");
+    let Err(error) = sqlx::raw_sql(sqlx::AssertSqlSafe(sql)).execute(pool).await else {
+        panic!("database must reject invalid evidence: {sql}");
+    };
     assert_eq!(
         error.as_database_error().and_then(|e| e.code()).as_deref(),
         Some(code),

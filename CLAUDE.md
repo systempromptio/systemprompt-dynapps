@@ -188,7 +188,7 @@ here (it re-injects the mold linker flags and silently produces zero profraws
 — see `scripts/coverage.sh`).
 
 **The schema-upgrade ladder.** `tests/fixtures/schema/release-baseline-<X.Y.Z>.sql`
-holds one recorded schema per release since 0.52.0; `tests/integration/schema-upgrade`
+holds one recorded schema per release since 0.56.0 (the floor; see `scripts/check-schema-baseline.sh`); `tests/integration/schema-upgrade`
 restores each rung and runs the current installer over it, then diffs against a fresh
 install. `scripts/check-schema-baseline.sh` (a static gate) requires a rung for every
 release tag from the floor and one named for the workspace version, so `just
