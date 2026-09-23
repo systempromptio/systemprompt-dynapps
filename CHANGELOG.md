@@ -18,7 +18,7 @@ Conventions (strict — hold every entry to them):
 - Version numbers track the root workspace `version` in `Cargo.toml`; bridge-only releases are
   prefixed `bridge-` (e.g. `bridge-0.17.1`).
 
-## Unreleased
+## 0.59.0 — 2026-09-23
 
 ### Removed
 
@@ -36,6 +36,25 @@ Conventions (strict — hold every entry to them):
   `query_as!` needing a flat column struct (annotated with the reason).
 
 ### Fixed
+
+- **Schema:** the upgrade ladder could not replay past 0.52.0, so no established database could
+  reach this release. Five migrations (`049`, `050`, `063`, `067`, `073`) only re-created
+  declarative views over `ai_request_payloads.offered_tools`, a column core's ai `033` has since
+  moved into `ai_tool_catalogs`; carrying no state of their own, they are now `.tombstone` files.
+  Core 0.59.0's boot-time migration parser then refused `085` for naming a declarative-only view,
+  and three rollup refreshes (`085`, `099`, `102`) called `refresh_conversation_facts` before the
+  declarative pass had created `tool_activity` and `conversation_requests`; each is now guarded on
+  `to_regclass`. `097` could not re-shape `conversation_metrics_for` in place (42P13) and left the
+  superseded three-argument `conversation_request_kind` behind, so it drops its dependents and both
+  functions first. Every edited migration names the checksum it supersedes, so an established
+  database moves its tracking row without re-executing. `tests/integration/schema-upgrade` is the
+  only tier that exercises this path.
+
+- **Gateway (core 0.59.1):** core's `infra/events` migration `007` dropped
+  `event_outbox_actor_id_check` assuming migration `001`'s `event_outbox_actor_id_nonempty` stood
+  beside it. Restoring a release snapshot stamps that 001-era `ALTER` rather than executing it, so
+  the auto-named check was the only one and `event_outbox.actor_id` was left unguarded on every
+  upgrading instance. Core 0.59.1's migration `008` restores it; this release pins it.
 
 - **Database:** boot printed twenty-six warnings before serving a request, and none of them was
   actionable. Four were live tables owned by no extension — `evaluation_queue`,
