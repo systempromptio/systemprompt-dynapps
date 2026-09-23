@@ -161,7 +161,7 @@ const UNKNOWN_ID: [Case; 16] = [
     get(
         "/admin/sessions/no-such-session",
         Expect::Status(NOT_FOUND),
-        Some("No AI requests, contexts, or transcript rows match that session id."),
+        Some("No AI requests, contexts, or hook events match that session id."),
     ),
     get(
         "/admin/traces/no-such-trace",

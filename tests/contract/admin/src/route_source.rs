@@ -21,6 +21,10 @@ const MANAGED_SRC: &str =
 const ANALYSIS_SRC: &str =
     include_str!("../../../../extensions/web/admin/src/routes/ssr_analysis.rs");
 const SSR_SRC: &str = include_str!("../../../../extensions/web/admin/src/routes/ssr.rs");
+// Merged into the SSR router from its own module, so it is read on its own:
+// without it every export route — the PAT surface included — drops out of the
+// table and out of the contract.
+const EXPORT_SRC: &str = include_str!("../../../../extensions/web/admin/src/routes/ssr_export.rs");
 const GOVERNANCE_SRC: &str =
     include_str!("../../../../extensions/web/admin/src/routes/ssr_governance.rs");
 // The legacy paths, which answer 308 rather than HTML. They are a route table
@@ -77,6 +81,7 @@ pub fn mounted_routes() -> Vec<MountedRoute> {
         (MANAGED_SRC, ADMIN_API_PREFIX),
         (SSR_SRC, SSR_PREFIX),
         (ANALYSIS_SRC, SSR_PREFIX),
+        (EXPORT_SRC, SSR_PREFIX),
         (GOVERNANCE_SRC, SSR_PREFIX),
         (SSR_REDIRECT_SRC, SSR_PREFIX),
     ] {

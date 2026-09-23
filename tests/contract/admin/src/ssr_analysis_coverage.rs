@@ -83,6 +83,25 @@ async fn seed_analysis(pool: &PgPool) -> (String, String, String) {
     .execute(pool)
     .await
     .expect("insert skill invocation");
+    // Why: the adoption table lists the marketplaces a services sync recorded
+    // in `service_owned_ids`, and a contract database never runs a sync.
+    sqlx::query(
+        "INSERT INTO service_sources (name, kind, provenance)
+         VALUES ('contract-base', 'base', 'contract fixture')
+         ON CONFLICT (name) DO NOTHING",
+    )
+    .execute(pool)
+    .await
+    .expect("record the fixture services source");
+    sqlx::query(
+        "INSERT INTO service_owned_ids (kind, id, source, marketplace_id)
+         VALUES ('marketplace', 'demo-marketplace', 'contract-base', NULL),
+                ('plugin', 'demo', 'contract-base', 'demo-marketplace')
+         ON CONFLICT (kind, id) DO NOTHING",
+    )
+    .execute(pool)
+    .await
+    .expect("declare the fixture marketplace");
     (user.as_str().to_owned(), context, request_id)
 }
 
@@ -118,7 +137,7 @@ async fn populated_analysis_pages_render_facts_and_skill_totals() {
     assert_eq!(status, StatusCode::OK, "skills overview body: {body}");
     assert!(
         body.contains("Adoption by marketplace") && body.contains("sp-adopt-table"),
-        "the default tab is the marketplace overview"
+        "the default tab is the marketplace overview: {body}"
     );
     assert!(
         !body.contains("sp-askill-table"),
