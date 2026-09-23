@@ -62,7 +62,7 @@ silently forwarded.
 
 Access to models is a **`gateway_route` ACL matrix**, administered in the admin UI and granted per role or per AD group (which is how a project is named). A request for a route the caller is not entitled to is refused with **HTTP 403**, the denial is audited, and grants are revocable with immediate effect.
 
-Route ids are generated (`slug + fnv1a6`), so every console surface names a route by the optional `name:` its declaration carries — `name: Claude (Anthropic)` beside `model_pattern` in `services/ai/gateway.yaml`, with a `description:` for the longer story — and derives "Claude models · Anthropic" from the pattern and provider when none is declared. A provider carries `display_name:` and `description:` in `services/ai/providers.yaml` the same way (`name` stays the id). The `/admin/gateway` **Models** tab is the picture by provider: endpoint, surface, wire, the models it serves and the routes that reach it; the route editor there writes `name` and `description` back to the file.
+Route ids are generated (`slug + fnv1a6`), so every console surface names a route by the optional `name:` its declaration carries — `name: Claude (Vertex AI)` beside `model_pattern` in `services/ai/gateway.yaml`, with a `description:` for the longer story — and derives "Claude models · Anthropic" from the pattern and provider when none is declared. A provider carries `display_name:` and `description:` in `services/ai/providers.yaml` the same way (`name` stays the id). The `/admin/gateway` **Models** tab is the picture by provider: endpoint, surface, wire, the models it serves and the routes that reach it; the route editor there writes `name` and `description` back to the file.
 
 ## Credentials
 
@@ -80,21 +80,61 @@ A **configurable latency SLO threshold** is tracked per the reporting views: bre
 
 Quota windows are configured per user and instance-wide in `services/gateway/policies.yaml`. The shipped `quota_mode: warn` records breaches without refusing requests; it does not impose a hard spend cap. See [Cost Management](/documentation/enterprise-cost-management) for the active thresholds and enforcement option.
 
+## Claude on Vertex AI
+
+Claude is served from **Google Vertex AI**, not from Anthropic's API. The
+`claude-*` route points at the `vertex-anthropic` provider, which uses the same
+Google service account as the Gemini-on-Vertex provider:
+
+```yaml
+providers:
+- name: vertex-anthropic
+  wire: anthropic
+  surface: anthropic
+  endpoint: https://aiplatform.googleapis.com/v1/projects/{project}/locations/global/publishers/anthropic
+  api_key_secret: vertex
+gateway:
+  routes:
+  - id: claude-star-4203d1
+    model_pattern: claude-*
+    provider: vertex-anthropic
+    fallback_provider: anthropic
+```
+
+Clients call it the same way. The gateway speaks the Anthropic Messages wire
+unchanged, and only the envelope differs:
+
+- The gateway mints an OAuth token from the service account and fills
+  `{project}` from its key.
+- Requests go to the model's own `:rawPredict` or `:streamRawPredict` path.
+- The API version travels in the body as `anthropic_version`, not as a header.
+
+Whether a provider is Vertex-hosted is read from the endpoint host, so the
+catalog cannot claim one platform while pointing at another. The in-process AI
+service (agents and jobs) reaches the same provider in the same way.
+
+Anthropic's own API stays configured as the `anthropic` provider. Its models
+are addressed by `anthropic-claude-*` ids, because a model id must be unique
+across the catalog. It is the `claude-*` route's failover target: when Vertex is
+out of capacity or unreachable, the gateway re-sends the request to Anthropic
+and serves the same model. It finds that model through the upstream name the
+two entries share.
+
 ## Provider failover
 
 A route may name a **`fallback_provider`**, optionally with a
 **`fallback_upstream_model`** when the fallback's model id differs from the
-requested one. The shipped `claude-*` route fails over from Anthropic to
-Vertex AI:
+requested one. The shipped `claude-*` route fails over from Claude on Vertex AI
+to Anthropic's API. It needs no `fallback_upstream_model`, because the fallback
+provider serves the requested model under an id whose upstream name matches:
 
 ```yaml
 gateway:
   routes:
   - id: claude-star-4203d1
     model_pattern: claude-*
-    provider: anthropic
-    fallback_provider: vertex
-    fallback_upstream_model: vertex-gemini-3.8-flash
+    provider: vertex-anthropic
+    fallback_provider: anthropic
 ```
 
 **When it triggers.** The primary keeps its bounded retry budget for
@@ -115,7 +155,7 @@ lane is never re-sent — it is bound to the wire the client spoke.
 **What the audit shows.** The `ai_requests` row keeps `provider` as the
 route's primary and records the provider that actually answered in
 **`served_provider`**, with the request repriced at the serving provider's
-catalog rate. The route-match descriptor gains a `failover:anthropic->vertex`
+catalog rate. The route-match descriptor gains a `failover:<primary>-><fallback>`
 segment. `systemprompt infra logs audit <request-id>` prints both; the
 Prometheus counter **`gateway_upstream_failovers_total{from,to,reason}`**
 (`reason` is `status_<code>`, `transport` or `circuit_open`) is on

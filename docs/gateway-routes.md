@@ -38,6 +38,8 @@ Each provider is declared once under `providers:` — its wire `protocol`, `endp
 
 Routes evaluate in order; first `model_pattern` match wins. On a model entry, `upstream_model` aliases a client-requested model to a different upstream name without the client knowing.
 
+**Hosting is read from the endpoint.** A provider on `aiplatform.googleapis.com` is Vertex AI. For those providers the secret is a Google service account, which is exchanged for an OAuth token and fills `{project}` in the endpoint. The request envelope follows the platform: Claude on Vertex (`wire: anthropic`, `…/publishers/anthropic`) is posted to `/models/<id>:rawPredict` or `:streamRawPredict`, with `anthropic_version` in the body. The gateway and the in-process AI service share this resolution, so any provider one of them can reach, the other can too. This installation serves `claude-*` from `vertex-anthropic`, with failover to Anthropic's API, which is also reachable directly as `anthropic-claude-*`.
+
 ## Configuring routes from the CLI
 
 Worked example: proxy every Anthropic model to Gemini Flash. Instead of hand-editing the services files, use `admin config`, which edits them, validates against the merged catalog, and reconciles access control. To make a client that asks for `claude-*` actually serve Google Gemini Flash:

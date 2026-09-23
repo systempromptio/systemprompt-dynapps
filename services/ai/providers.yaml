@@ -6,9 +6,17 @@
 # Edit by hand or with: systemprompt admin config catalog ...
 providers:
 - name: anthropic
+  # Claude on Anthropic's own API, by API key. Kept declared and routable,
+  # but this installation serves Claude from Vertex AI (`vertex-anthropic`
+  # below), so the bare `claude-*` ids belong there.
+  #
+  # Why the `anthropic-` prefix: a model id must be unique across the whole
+  # catalog (ProviderRegistry::validate), and Claude Code asks for the bare
+  # ids. `upstream_model` carries the real name, so a client asking for
+  # `anthropic-claude-sonnet-5` reaches Anthropic's `claude-sonnet-5`.
   display_name: Anthropic
   description: >-
-    Claude models on Anthropic's own API, authenticated with the anthropic key. The default provider: anything no other route claims lands here.
+    Claude models on Anthropic's own API, authenticated with the anthropic key. Reached by the anthropic-claude-* ids; the bare claude-* ids are served from Vertex AI.
   wire: anthropic
   surface: anthropic
   endpoint: https://api.anthropic.com/v1
@@ -17,7 +25,8 @@ providers:
     european: false
     no_retain: true
   models:
-  - id: claude-opus-5-5
+  - id: anthropic-claude-opus-5-5
+    upstream_model: claude-opus-5-5
     pricing:
       input_per_million: 4.0
       output_per_million: 20.0
@@ -38,7 +47,8 @@ providers:
     limits:
       context_window: 1000000
       max_output_tokens: 128000
-  - id: claude-opus-5
+  - id: anthropic-claude-opus-5
+    upstream_model: claude-opus-5
     pricing:
       input_per_million: 5.0
       output_per_million: 25.0
@@ -59,7 +69,8 @@ providers:
     limits:
       context_window: 1000000
       max_output_tokens: 128000
-  - id: claude-sonnet-5
+  - id: anthropic-claude-sonnet-5
+    upstream_model: claude-sonnet-5
     pricing:
       input_per_million: 2.0
       output_per_million: 10.0
@@ -80,7 +91,8 @@ providers:
     limits:
       context_window: 1000000
       max_output_tokens: 128000
-  - id: claude-fable-5-1
+  - id: anthropic-claude-fable-5-1
+    upstream_model: claude-fable-5-1
     pricing:
       input_per_million: 10.0
       output_per_million: 50.0
@@ -101,7 +113,8 @@ providers:
     limits:
       context_window: 1000000
       max_output_tokens: 128000
-  - id: claude-fable-5
+  - id: anthropic-claude-fable-5
+    upstream_model: claude-fable-5
     pricing:
       input_per_million: 10.0
       output_per_million: 50.0
@@ -122,9 +135,8 @@ providers:
     limits:
       context_window: 1000000
       max_output_tokens: 128000
-  - id: claude-haiku-4-5
-    aliases:
-    - claude-haiku-4-5-20251001
+  - id: anthropic-claude-haiku-4-5
+    upstream_model: claude-haiku-4-5
     pricing:
       input_per_million: 1.0
       output_per_million: 5.0
@@ -235,7 +247,7 @@ providers:
   # and the scheduler warns 60 days ahead.
   display_name: Google Vertex AI (Gemini)
   description: >-
-    The Gemini models served from Vertex AI under a Google OAuth token minted from the vertex service-account secret. Also the failover target for Claude traffic.
+    The Gemini models served from Vertex AI under a Google OAuth token minted from the vertex service-account secret.
   wire: gemini
   surface: gemini
   endpoint: https://aiplatform.googleapis.com/v1/projects/{project}/locations/global/publishers/google
@@ -318,6 +330,164 @@ providers:
       context_window: 1000000
       max_output_tokens: 65536
       max_thinking_budget: 24576
+- name: vertex-anthropic
+  # Claude served from Vertex AI (publisher `anthropic`), under the same
+  # Google service account as `vertex`: the gateway and the in-process AI
+  # service mint an OAuth token from the `vertex` secret, fill `{project}`
+  # from it, and post to the model's own `:rawPredict`/`:streamRawPredict`
+  # path with `anthropic_version: vertex-2023-10-16` in the body. The wire is
+  # the Anthropic Messages codec unchanged; hosting is read off the host.
+  #
+  # Which models: every catalog Claude that the Vertex publisher listing for
+  # this project serves (read 2026-09-23 with the `vertex` service account).
+  # Opus/Sonnet/Fable 5.x are served on their `default` version, so the bare
+  # name is the upstream id; Haiku 4.5 is pinned to `@20251001`.
+  #
+  # `global` because every model above is listed there. Pricing is carried
+  # over from the first-party entry (Anthropic's list rate); it has not been
+  # checked against Vertex's partner-model price list, which governs what
+  # Google bills, so reconcile it with the invoice before trusting cost
+  # reports for this provider.
+  display_name: Google Vertex AI (Claude)
+  description: >-
+    Claude models served from Vertex AI under a Google OAuth token minted from the vertex service-account secret. Serves every claude-* request on this installation.
+  wire: anthropic
+  surface: anthropic
+  endpoint: https://aiplatform.googleapis.com/v1/projects/{project}/locations/global/publishers/anthropic
+  api_key_secret: vertex
+  governance:
+    european: false
+    no_retain: true
+  models:
+  - id: claude-opus-5-5
+    pricing:
+      input_per_million: 4.0
+      output_per_million: 20.0
+      cache_read_per_million: 0.2
+      cache_write_per_million: 5.0
+      per_image_cents: null
+    capabilities:
+      vision: true
+      audio_input: false
+      video_input: false
+      image_generation: false
+      audio_generation: false
+      streaming: true
+      tools: true
+      structured_output: true
+      system_prompts: true
+      image_resolution_config: false
+    limits:
+      context_window: 1000000
+      max_output_tokens: 128000
+  - id: claude-opus-5
+    pricing:
+      input_per_million: 5.0
+      output_per_million: 25.0
+      cache_read_per_million: 0.5
+      cache_write_per_million: 6.25
+      per_image_cents: null
+    capabilities:
+      vision: true
+      audio_input: false
+      video_input: false
+      image_generation: false
+      audio_generation: false
+      streaming: true
+      tools: true
+      structured_output: true
+      system_prompts: true
+      image_resolution_config: false
+    limits:
+      context_window: 1000000
+      max_output_tokens: 128000
+  - id: claude-sonnet-5
+    pricing:
+      input_per_million: 2.0
+      output_per_million: 10.0
+      cache_read_per_million: 0.2
+      cache_write_per_million: 2.5
+      per_image_cents: null
+    capabilities:
+      vision: true
+      audio_input: false
+      video_input: false
+      image_generation: false
+      audio_generation: false
+      streaming: true
+      tools: true
+      structured_output: true
+      system_prompts: true
+      image_resolution_config: false
+    limits:
+      context_window: 1000000
+      max_output_tokens: 128000
+  - id: claude-fable-5-1
+    pricing:
+      input_per_million: 10.0
+      output_per_million: 50.0
+      cache_read_per_million: 1.0
+      cache_write_per_million: 12.5
+      per_image_cents: null
+    capabilities:
+      vision: true
+      audio_input: false
+      video_input: false
+      image_generation: false
+      audio_generation: false
+      streaming: true
+      tools: true
+      structured_output: true
+      system_prompts: true
+      image_resolution_config: false
+    limits:
+      context_window: 1000000
+      max_output_tokens: 128000
+  - id: claude-fable-5
+    pricing:
+      input_per_million: 10.0
+      output_per_million: 50.0
+      cache_read_per_million: 1.0
+      cache_write_per_million: 12.5
+      per_image_cents: null
+    capabilities:
+      vision: true
+      audio_input: false
+      video_input: false
+      image_generation: false
+      audio_generation: false
+      streaming: true
+      tools: true
+      structured_output: true
+      system_prompts: true
+      image_resolution_config: false
+    limits:
+      context_window: 1000000
+      max_output_tokens: 128000
+  - id: claude-haiku-4-5
+    upstream_model: claude-haiku-4-5@20251001
+    aliases:
+    - claude-haiku-4-5-20251001
+    pricing:
+      input_per_million: 1.0
+      output_per_million: 5.0
+      cache_read_per_million: 0.1
+      cache_write_per_million: 1.25
+      per_image_cents: null
+    capabilities:
+      vision: true
+      audio_input: false
+      video_input: false
+      image_generation: false
+      audio_generation: false
+      streaming: true
+      tools: true
+      structured_output: true
+      system_prompts: true
+      image_resolution_config: false
+    limits:
+      context_window: 200000
+      max_output_tokens: 64000
 - name: vertex-maas
   # Third-party open models on Vertex AI Model-as-a-Service, OpenAI-compatible
   # surface. The wire appends /chat/completions. Advertised under the openai
