@@ -1,12 +1,13 @@
-//! A personal access token in place of a browser session, on the table
-//! exports only.
+//! A personal access token in place of a browser session, on the export
+//! routes only.
 //!
 //! A kit repository's CI reads its release figures from
-//! `/admin/export/{dataset}`, and CI holds a PAT, not a browser session. The
-//! PAT resolves to its owner and then passes through exactly the gates a
-//! browser session does, so it reads what its owner could export and no more.
-//! Every other admin route still refuses it, including the conversation
-//! documents, which carry message bodies.
+//! `/admin/export/{dataset}`, and an analysis job reads conversation records
+//! from `/admin/export/transcripts`; both hold a PAT, not a browser session.
+//! The PAT resolves to its owner and then passes through exactly the gates a
+//! browser session does, so it reads what its owner could export and no more
+//! — a transcript outside the owner's view is a 404, the same as in the
+//! console. Every other admin route still refuses it.
 
 use axum::Json;
 use axum::extract::Request;
@@ -26,11 +27,11 @@ pub(super) enum PatSession {
     Rejected(Response),
 }
 
-// Why: `/export/{dataset}` and `/export/{dataset}/preview`, with or without
-// the `/admin` mount prefix; the transcript routes (`transcripts`, `…/{id}`,
-// `…/preview`) carry message bodies and stay browser-only, as do the names
-// they used to have (`conversation/…`, `conversations`).
-fn is_table_export(path: &str) -> bool {
+// Why: `/export/{dataset}`, `/export/{dataset}/preview`, and the transcript
+// routes — `/export/transcripts`, `/export/transcripts/preview` and
+// `/export/transcripts/{context_id}` — with or without the `/admin` mount
+// prefix. Nothing deeper, and nothing outside `/export/`.
+fn is_export(path: &str) -> bool {
     let path = path.strip_prefix("/admin").unwrap_or(path);
     let Some(rest) = path.strip_prefix("/export/") else {
         return false;
@@ -38,11 +39,11 @@ fn is_table_export(path: &str) -> bool {
     let mut parts = rest.split('/');
     let dataset = parts.next().unwrap_or_default();
     let tail = parts.next();
-    let is_document = matches!(dataset, "transcripts" | "conversation" | "conversations");
-    !dataset.is_empty()
-        && !is_document
-        && matches!(tail, None | Some("preview"))
-        && parts.next().is_none()
+    let tail_ok = match tail {
+        None | Some("preview") => true,
+        Some(id) => dataset == "transcripts" && !id.is_empty(),
+    };
+    !dataset.is_empty() && tail_ok && parts.next().is_none()
 }
 
 fn rejected(message: &str) -> PatSession {
@@ -61,7 +62,7 @@ pub(super) fn pat_request(request: &Request) -> Option<PatRequest> {
     let token = extract_token_from_headers(request.headers()).ok()?;
     token.starts_with(API_KEY_PREFIX).then(|| PatRequest {
         token,
-        allowed: request.method() == Method::GET && is_table_export(request.uri().path()),
+        allowed: request.method() == Method::GET && is_export(request.uri().path()),
         path: request.uri().path().to_owned(),
     })
 }
@@ -82,7 +83,7 @@ pub(super) async fn pat_session(pool: &PgPool, pat: Option<PatRequest>) -> PatSe
         return PatSession::NotApplicable;
     };
     if !allowed {
-        return rejected("A personal access token is accepted only on GET /admin/export/{dataset}");
+        return rejected("A personal access token is accepted only on GET /admin/export/…");
     }
     let user = match find_api_key_user(pool, &token).await {
         Ok(Some(user)) => user,

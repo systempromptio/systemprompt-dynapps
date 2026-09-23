@@ -86,6 +86,14 @@ Conventions (strict — hold every entry to them):
 
 ### Changed
 
+- **Admin:** a personal access token is now accepted on the transcript exports
+  (`/admin/export/transcripts`, `…/preview`, `…/{context_id}`) as well as the table
+  exports, so an analysis job can read conversation records without a browser
+  session. The token still resolves to its owner and passes the same gates a
+  session does: a transcript outside the owner's view is a 404, as in the
+  console. Every other admin route still refuses a PAT
+  (`extensions/web/admin/src/middleware/pat.rs`).
+
 - **Profiles:** `rate_limits.gateway_per_second` (100) and `rate_limits.bridge_auth_per_second`
   (20) are now declared explicitly in `deploy/self-host/profile.yaml.template` and both local
   and production profiles. No profile in this repo had ever set a rate limit, so every
