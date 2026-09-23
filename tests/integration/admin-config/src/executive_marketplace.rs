@@ -216,7 +216,7 @@ async fn executive_and_salesforce_connection_grant_only_the_intended_resources()
         }
         if connected {
             let mut tx = db.pool.begin().await.expect("begin connector update");
-            let mut row = accounts::get_locked_account(&mut tx, &user, "salesforce-headless-us")
+            let mut row = accounts::get_locked_account(&mut tx, &user, "salesforce")
                 .await
                 .expect("connector account");
             row.status = "connected".into();
@@ -246,8 +246,7 @@ async fn executive_and_salesforce_connection_grant_only_the_intended_resources()
             (EntityKind::Skill, "pipeline_review", sales),
             (EntityKind::Skill, "using_display_widget", sales),
             (EntityKind::McpServer, "google_workspace", operator || uk),
-            (EntityKind::McpServer, "salesforce-headless-us", true),
-            (EntityKind::McpServer, "salesforce-headless-dev", operator),
+            (EntityKind::McpServer, "salesforce", true),
         ] {
             let ids = vec![id.to_owned()];
             let allowed = allowed_ids(

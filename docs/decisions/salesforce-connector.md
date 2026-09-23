@@ -169,6 +169,9 @@ Option A that is Salesforce's choice.
   `state` prefix), shared secret pair by default, instance URL stored on every grant.
 - Config: servers `salesforce-crm-us`, `salesforce-crm-uk`, `salesforce-crm-dev`; US/UK My Domains are
   placeholders until the orgs are wired up. Entitlement is Salesforce's (permission set).
+  **Superseded 2026-09-23:** there is one org, `ontrq.my.salesforce.com`, on two surfaces —
+  `salesforce` and `salesforce-headless`. The three-org topology below was never wired up;
+  the packaged-app machinery it describes still stands for an org added later.
 - Stage 2 groundwork only: the shared callback and the stored `(organization_id, instance_url)`
   are what a one-to-many client connector keys on; nothing else is built.
 

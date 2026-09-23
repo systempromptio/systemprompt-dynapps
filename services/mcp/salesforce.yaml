@@ -1,0 +1,24 @@
+# Salesforce hosted MCP (Headless 360), authenticated as the signed-in user.
+# The org itself — My Domain, entitled groups — is declared under the same id in
+# services/config/salesforce-orgs.yaml; consent goes through the External Client
+# App (deploy/salesforce/) and the callback
+# /api/public/connectors/salesforce/callback. Sandboxes use the /sandbox/ endpoint.
+mcp_servers:
+  salesforce:
+    type: external
+    endpoint: "https://api.salesforce.com/platform/mcp/v1/platform/headless-360"
+    enabled: true
+    tool_policy: allow
+    display_in_web: false
+    removable: true
+    description: Salesforce hosted MCP — governed reads, approved writes and dynamic widgets, as the signed-in user
+    external_auth:
+      token_endpoint: "/api/public/connectors/salesforce/token"
+      header: "Authorization"
+      scheme: ""
+    oauth:
+      required: false
+      scopes:
+      - user
+      audience: mcp
+      client_id: null

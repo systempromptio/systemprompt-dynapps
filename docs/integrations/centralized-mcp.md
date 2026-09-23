@@ -62,8 +62,7 @@ Setup → API Catalog → MCP Servers. Store `salesforce_mcp_client_id` and
 private key is needed for browser OAuth. New app settings can take up to 30
 minutes to become available.
 
-Every Salesforce org is its own MCP server (`salesforce-crm-us`, `salesforce-crm-uk`,
-`salesforce-crm-dev`, …), each with a registry entry in
+The Salesforce connector is one server, `salesforce`, with a registry entry in
 `services/config/salesforce-orgs.yaml` (My Domain, environment, optional entitled
 groups) and a `services/mcp/<id>.yaml` whose endpoint matches the org's
 environment (`/platform/mcp/v1/sandbox/platform/sobject-all` for sandboxes).

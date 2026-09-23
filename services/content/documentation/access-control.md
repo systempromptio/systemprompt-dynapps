@@ -38,7 +38,7 @@ Access control answers one question: *may this person reach this entity?* The en
 | `marketplace` | `astound-commons`, `astound-india-dev` | The workspace appears in Claude Code / Cowork and its plugins can be installed |
 | `plugin` | `astound-super-admin`, `astound-salesforce` | The plugin is offered |
 | `skill` | `admin_daily_brief`, `account_context` | The skill is offered and may run |
-| `mcp_server` | `atlassian`, `google_workspace`, `salesforce-headless-us`, `systemprompt` | The server is listed and its tools may be called |
+| `mcp_server` | `atlassian`, `google_workspace`, `salesforce`, `systemprompt` | The server is listed and its tools may be called |
 | `gateway_route` | `claude-star-4203d1`, … | Requests may be routed to that model |
 
 It does **not** decide whether a person can sign in (that is [authentication](/documentation/authentication) and [SSO](/documentation/adfs-sso-setup)), whether a tool call is allowed to proceed once the person is entitled (the [governance chain](/documentation/enterprise-tool-governance)), or what may be said (the [safety scanners](/documentation/enterprise-safety-guardrails)). Those run after entitlement, on every request.
@@ -119,7 +119,7 @@ entities:
     default: closed
     why: Salesforce sales workspace for people with a ready Headless 360 connection.
     allow:
-      connector: [salesforce-headless-us, salesforce-headless-uk]
+      connector: [salesforce]
       role: [super_admin]
 ```
 

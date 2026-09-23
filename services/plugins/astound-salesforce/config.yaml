@@ -51,9 +51,7 @@ plugin:
   mcp_servers:
     source: explicit
     include:
-      - salesforce-headless-us
-      - salesforce-headless-uk
-      - salesforce-headless-dev
+      - salesforce
       - google_workspace
   content_sources: {}
   artifacts:

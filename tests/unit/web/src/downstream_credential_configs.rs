@@ -20,11 +20,7 @@ use crate::support::repo_root;
 // accessor as `api_external_url + token_endpoint`, so a disagreement here is a
 // 404 at tool-call time and nowhere earlier.
 const ATLASSIAN_ACCESSOR: &str = "/api/public/connectors/atlassian/token";
-const SALESFORCE_SERVERS: [&str; 3] = [
-    "salesforce-crm-us",
-    "salesforce-crm-uk",
-    "salesforce-crm-dev",
-];
+const SALESFORCE_SERVERS: [&str; 1] = ["salesforce"];
 
 fn web_config(name: &str) -> PathBuf {
     repo_root().join("services/web/config").join(name)
