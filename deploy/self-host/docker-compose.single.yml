@@ -6,7 +6,7 @@
 #     --admin-email you@example.com --trusted-proxies <your proxy CIDR> \
 #     --database-url 'postgres://systemprompt:pw@postgres:5432/systemprompt' \
 #     --anthropic-key sk-ant-... --bedrock-key ...
-#   SYSTEMPROMPT_TAG=0.59.0 POSTGRES_PASSWORD=pw docker compose -f docker-compose.single.yml up -d
+#   SYSTEMPROMPT_TAG=0.59.1 POSTGRES_PASSWORD=pw docker compose -f docker-compose.single.yml up -d
 #
 # Bundled Postgres is pgvector/pgvector:pg18 (the knowledge bank needs
 # pgvector). To use your own PostgreSQL instead, point --database-url and
@@ -31,7 +31,7 @@ services:
       retries: 10
 
   app:
-    image: ghcr.io/astound-digital/systemprompt-astound:${SYSTEMPROMPT_TAG:?pin a release, e.g. 0.59.0}
+    image: ghcr.io/astound-digital/systemprompt-astound:${SYSTEMPROMPT_TAG:?pin a release, e.g. 0.59.1}
     restart: unless-stopped
     stop_grace_period: 30s
     depends_on:

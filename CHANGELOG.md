@@ -18,7 +18,7 @@ Conventions (strict — hold every entry to them):
 - Version numbers track the root workspace `version` in `Cargo.toml`; bridge-only releases are
   prefixed `bridge-` (e.g. `bridge-0.17.1`).
 
-## 0.59.0 — 2026-09-23
+## 0.59.1 — 2026-09-23
 
 ### Removed
 
