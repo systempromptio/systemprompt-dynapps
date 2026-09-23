@@ -14,9 +14,9 @@ pub(crate) fn short(value: &str) -> String {
     value.chars().take(12).collect()
 }
 
-pub(crate) fn latency(micros: Option<i64>, measured: i64) -> String {
-    match micros {
-        Some(m) if measured > 0 => format_duration_ms(m / 1000),
+pub(crate) fn latency(ms: Option<f64>, measured: i64) -> String {
+    match ms {
+        Some(ms) if measured > 0 => format_duration_ms(ms.round() as i64),
         _ => "—".to_owned(),
     }
 }
@@ -120,8 +120,8 @@ pub(crate) fn views(
                 failed: row.failed,
                 tokens: row.tokens,
                 cost: cost(row.cost),
-                p50: latency(row.p50_micros, row.latency_measured),
-                p95: latency(row.p95_micros, row.latency_measured),
+                p50: latency(row.p50_ms, row.latency_measured),
+                p95: latency(row.p95_ms, row.latency_measured),
                 completion_display,
                 completion_tone,
                 scored_sessions,

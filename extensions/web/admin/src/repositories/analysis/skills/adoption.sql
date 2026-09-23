@@ -28,7 +28,7 @@ WITH owned AS (
            COUNT(DISTINCT e.skill)::bigint AS skills_used
     FROM analysis_skill_version_events e
     JOIN service_owned_ids o ON o.kind = 'plugin' AND o.id = e.plugin_id
-    WHERE e.invoked_at >= $1 AND e.invoked_at < $2 AND e.skill IS NOT NULL AND e.traffic_class = 'production'
+    WHERE e.invoked_at >= $1 AND e.invoked_at < $2 AND e.skill IS NOT NULL
       AND ($3::text[] IS NULL OR e.user_id = ANY($3))
     GROUP BY o.marketplace_id
 ), spend AS (
@@ -40,7 +40,7 @@ WITH owned AS (
     FROM (SELECT DISTINCT o.marketplace_id, e.session_id
           FROM analysis_skill_version_events e
           JOIN service_owned_ids o ON o.kind = 'plugin' AND o.id = e.plugin_id
-          WHERE e.invoked_at >= $1 AND e.invoked_at < $2 AND e.skill IS NOT NULL AND e.traffic_class = 'production'
+          WHERE e.invoked_at >= $1 AND e.invoked_at < $2 AND e.skill IS NOT NULL
             AND ($3::text[] IS NULL OR e.user_id = ANY($3))) x
     JOIN conversation_facts f ON f.client_session_id = x.session_id
     LEFT JOIN conversation_analyses a ON a.context_id = f.context_id

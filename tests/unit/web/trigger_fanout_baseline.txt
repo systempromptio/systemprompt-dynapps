@@ -1,11 +1,7 @@
 # Trigger functions that run FOR EACH ROW and loop beyond that row.
 #
-# Each one turns a single write into N statements, which is what makes a bulk
-# UPDATE on ai_requests cost 113 ms a row. They are the open tech-debt item in
-# docs/tech-debt.md (the set-based rewrite of enqueue_feedback_fact); this list
-# exists so the population cannot grow while that is done, and may only shrink.
-capture_feedback_grant
-capture_feedback_identity
-capture_feedback_judgement
-capture_feedback_source
-capture_feedback_tool_request
+# Each one turns a single write into N statements, which is what once made a
+# bulk UPDATE on ai_requests cost 113 ms a row. The last of them — the
+# feedback ingestion capture triggers — were retired by migration 105, so the
+# list is empty; it exists so the population cannot grow again, and may only
+# shrink.

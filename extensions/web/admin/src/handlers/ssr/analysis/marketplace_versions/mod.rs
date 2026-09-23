@@ -30,9 +30,9 @@ use crate::handlers::ssr::page::Page;
 use crate::handlers::ssr::render_typed_page;
 use crate::handlers::ssr::types::BreadcrumbView;
 use crate::repositories::analysis::marketplace_versions::{
-    list_marketplace_completion_rollups, list_marketplace_rollups, list_version_completion,
+    VersionWindow, list_marketplace_completion_rollups, list_marketplace_rollups,
+    list_version_completion,
 };
-use crate::repositories::analysis::retained::RetainedWindow;
 use crate::routes::managed_state::ManagedState;
 
 use access::readable_versions;
@@ -69,7 +69,7 @@ impl Tab {
     }
 }
 
-fn window(days: Option<u32>) -> AdminResult<(u32, RetainedWindow)> {
+fn window(days: Option<u32>) -> AdminResult<(u32, VersionWindow)> {
     let days = days.unwrap_or(30);
     if !WINDOWS.contains(&days) {
         return Err(AdminError::BadRequest("Unsupported window".to_owned()));
@@ -81,7 +81,7 @@ fn window(days: Option<u32>) -> AdminResult<(u32, RetainedWindow)> {
         .and_utc();
     Ok((
         days,
-        RetainedWindow {
+        VersionWindow {
             start: end - Duration::days(i64::from(days)),
             end,
         },
@@ -111,13 +111,12 @@ struct LandingPage {
 
 pub(crate) async fn landing_page(
     shell: Page,
-    Extension(managed): Extension<Arc<ManagedState>>,
     State(pool): State<Arc<PgPool>>,
     Query(query): Query<VersionsQuery>,
 ) -> AdminHtmlResult<Response> {
     require_versions_reader(&shell.user)?;
     let (days, window) = window(query.days)?;
-    let rows: Vec<_> = list_marketplace_rollups(&pool, &managed.owner, window)
+    let rows: Vec<_> = list_marketplace_rollups(&pool, window)
         .await?
         .into_iter()
         .filter(|r| may_read_marketplace(&shell.user, &r.marketplace_id))
@@ -207,8 +206,7 @@ pub(crate) async fn detail_page(
     let marketplace_id = MarketplaceId::new(marketplace_id);
     let (days, window) = window(query.days)?;
     let tab = Tab::parse(query.tab.as_deref())?;
-    let rows =
-        readable_versions(&pool, &managed.owner, window, &marketplace_id, &shell.user).await?;
+    let rows = readable_versions(&pool, window, &marketplace_id, &shell.user).await?;
     let scores = list_version_completion(&pool, Some(&marketplace_id)).await?;
     let history = history::views(&rows, &scores);
     let name = history
@@ -219,7 +217,6 @@ pub(crate) async fn detail_page(
         Tab::Compare => Some(
             compare::build(
                 &pool,
-                &managed.owner,
                 window,
                 compare::Recorded {
                     rows: &rows,

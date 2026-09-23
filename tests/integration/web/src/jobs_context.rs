@@ -22,8 +22,8 @@ use systemprompt::models::profile::{
 use systemprompt::models::{Config, PathResolution};
 use systemprompt::traits::{Job, JobContext};
 use systemprompt_web_jobs::{
-    BundleAdminCssJob, ContentIngestionJob, ContentPrerenderJob, CopyExtensionAssetsJob,
-    LlmsTxtGenerationJob, PublishPipelineJob, RobotsTxtGenerationJob, SecretMigrationJob,
+    BundleAdminCssJob, ContentIngestionJob, CopyExtensionAssetsJob, LlmsTxtGenerationJob,
+    PublishPipelineJob, RobotsTxtGenerationJob, SecretMigrationJob, SiteContentPrerenderJob,
     SitemapGenerationJob,
 };
 use tempfile::TempDir;
@@ -656,8 +656,8 @@ async fn bundle_admin_css_refuses_a_context_with_no_app_paths() {
 }
 
 #[tokio::test]
-async fn content_prerender_refuses_a_context_with_no_database() {
-    let error = ContentPrerenderJob
+async fn site_content_prerender_refuses_a_context_with_no_database() {
+    let error = SiteContentPrerenderJob
         .execute(&Harness::empty_context())
         .await
         .expect_err("prerendering reads content out of the database");
@@ -666,12 +666,12 @@ async fn content_prerender_refuses_a_context_with_no_database() {
 }
 
 #[tokio::test]
-async fn content_prerender_refuses_a_context_with_no_app_paths() {
+async fn site_content_prerender_refuses_a_context_with_no_app_paths() {
     let Some(h) = Harness::create_or_skip().await else {
         return;
     };
 
-    let error = ContentPrerenderJob
+    let error = SiteContentPrerenderJob
         .execute(&h.context_without_paths())
         .await
         .expect_err("prerendering has nowhere to write without AppPaths");
@@ -1029,7 +1029,7 @@ async fn a_required_asset_that_cannot_be_copied_fails_the_copy() {
     let _ = error;
 }
 
-// `SitemapGenerationJob` and `ContentPrerenderJob` are not driven to
+// `SitemapGenerationJob` and `SiteContentPrerenderJob` are not driven to
 // completion here. Both delegate to a core generator that loads the full
 // `WebConfig` from the *global* `Config`'s `web_config_path` — a
 // process-wide value fixed by the first test to install a config, which

@@ -17,7 +17,6 @@
 
 pub mod activity;
 pub mod assets;
-pub mod audit_event_bus;
 pub mod authz;
 pub mod error;
 pub mod event_hub;

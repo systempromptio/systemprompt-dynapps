@@ -1,10 +1,8 @@
-//! The ingestion outbox: hook events land durably first and the aggregates
-//! are drained from it, so a crash between the two never double-counts.
+//! Session ownership at ingestion: a session id is bound to the first
+//! principal that reports it.
 
 use sqlx::PgPool;
 use systemprompt::identifiers::{SessionId, UserId};
-
-const DRAIN_BATCH: i32 = 100;
 
 // Why: binds the session to the authenticated principal before anything is
 // recorded against it, so a hook carrying someone else's session id is
@@ -21,12 +19,5 @@ pub(crate) async fn assert_ingestion_owner(
     )
     .fetch_one(pool)
     .await?;
-    Ok(())
-}
-
-pub(crate) async fn drain_ingestion_outbox(pool: &PgPool) -> Result<(), sqlx::Error> {
-    sqlx::query!("SELECT drain_ingestion_outbox($1)", DRAIN_BATCH)
-        .fetch_one(pool)
-        .await?;
     Ok(())
 }

@@ -45,21 +45,11 @@ async fn ingestion_rejects_owner_changes_and_conflicting_retries() {
             .is_err()
     );
     assert!(write(other, "one".into()).execute(&*db.pool).await.is_err());
-    let first: i64 = sqlx::query_scalar("SELECT drain_ingestion_outbox(100)")
-        .fetch_one(&*db.pool)
-        .await
-        .expect("drain");
-    let second: i64 = sqlx::query_scalar("SELECT drain_ingestion_outbox(100)")
-        .fetch_one(&*db.pool)
-        .await
-        .expect("redrain");
-    assert!(first >= 1);
-    assert_eq!(second, 0);
-    let count: i64 =
-        sqlx::query_scalar("SELECT total_events FROM plugin_session_summaries WHERE session_id=$1")
+    let events: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM plugin_usage_events WHERE session_id=$1")
             .bind(session)
             .fetch_one(&*db.pool)
             .await
-            .expect("summary");
-    assert_eq!(count, 1);
+            .expect("events");
+    assert_eq!(events, 1, "only the first delivery is recorded");
 }

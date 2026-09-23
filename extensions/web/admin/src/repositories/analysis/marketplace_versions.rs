@@ -1,21 +1,32 @@
 //! Performance keyed on marketplace version: every figure below is grouped
 //! by the content hash of the marketplace a skill was served from.
 //!
-//! Facts made since the hash was stamped carry it directly; older facts are
-//! resolved to the version whose interval contains them
-//! (`marketplace_version_at`). Requests, spend and latency reach a version
-//! through the conversation association, so they are *related* and overlap
-//! when several skills share a conversation — never sum them across
-//! versions or skills. Latency percentiles are real `percentile_cont` over
-//! request latencies, not histogram bounds.
+//! The version is the one being served when a conversation first invoked the
+//! skill (`conversation_skill_facts`, fixed at that instant). Invocations and
+//! failures are the skill's own; users, requests, spend, tokens and latency
+//! are the figures of the conversations that invoked it
+//! (`conversation_facts`), counted once per conversation within a version.
+//! A conversation that used several versions or skills counts under each, so
+//! never sum them across versions or skills. Spend is the conversation's
+//! turns — its side calls (titles, summaries) are excluded — and latency is
+//! the median of the conversations' p50 and the 95th percentile of their
+//! p95. Both tables are kept forever, so a version's figures outlive
+//! raw-event retention.
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 use sqlx::PgPool;
 use sqlx::types::Json;
-use systemprompt::identifiers::{MarketplaceId, PluginId, UserId};
+use systemprompt::identifiers::{MarketplaceId, PluginId};
 
-use super::retained::RetainedWindow;
 use crate::repositories::sync::marketplace_hash::MarketplaceManifest;
+
+/// Half-open UTC window `[start, end)` applied to the instant a conversation
+/// first invoked a skill.
+#[derive(Debug, Clone, Copy)]
+pub struct VersionWindow {
+    pub start: DateTime<Utc>,
+    pub end: DateTime<Utc>,
+}
 
 /// One marketplace on the Versions landing: its current version, how many
 /// versions it has had, and the window's figures across all of them.
@@ -61,16 +72,16 @@ pub struct MarketplaceVersionMetricsRow {
     pub failed: i64,
     pub tokens: i64,
     pub cost: i64,
-    pub p50_micros: Option<i64>,
-    pub p95_micros: Option<i64>,
+    pub p50_ms: Option<f64>,
+    pub p95_ms: Option<f64>,
     pub latency_measured: i64,
 }
 
 /// One skill within one marketplace version.
 #[derive(Debug, Clone, Serialize)]
 pub struct MarketplaceVersionSkillRow {
-    pub marketplace_id: Option<MarketplaceId>,
-    pub marketplace_hash: Option<String>,
+    pub marketplace_id: MarketplaceId,
+    pub marketplace_hash: String,
     pub plugin_id: PluginId,
     pub skill: String,
     pub invocations: i64,
@@ -81,20 +92,18 @@ pub struct MarketplaceVersionSkillRow {
     pub failed: i64,
     pub tokens: i64,
     pub cost: i64,
-    pub p50_micros: Option<i64>,
-    pub p95_micros: Option<i64>,
+    pub p50_ms: Option<f64>,
+    pub p95_ms: Option<f64>,
     pub latency_measured: i64,
 }
 
 pub async fn list_marketplace_rollups(
     pool: &PgPool,
-    owner: &UserId,
-    window: RetainedWindow,
+    window: VersionWindow,
 ) -> Result<Vec<MarketplaceListRow>, sqlx::Error> {
     sqlx::query_file_as!(
         MarketplaceListRow,
         "src/repositories/analysis/marketplace_version_list.sql",
-        owner.as_str(),
         window.start,
         window.end,
     )
@@ -104,14 +113,12 @@ pub async fn list_marketplace_rollups(
 
 pub async fn list_marketplace_version_metrics(
     pool: &PgPool,
-    owner: &UserId,
-    window: RetainedWindow,
+    window: VersionWindow,
     marketplace_id: &MarketplaceId,
 ) -> Result<Vec<MarketplaceVersionMetricsRow>, sqlx::Error> {
     sqlx::query_file_as!(
         MarketplaceVersionMetricsRow,
         "src/repositories/analysis/marketplace_version_metrics.sql",
-        owner.as_str(),
         window.start,
         window.end,
         marketplace_id.as_str(),
@@ -120,22 +127,20 @@ pub async fn list_marketplace_version_metrics(
     .await
 }
 
-// Why: `None` for `marketplace_id` spans every marketplace and `None` for
-// `hashes` every version; the compare view passes exactly two hashes.
+// Why: every skill of one marketplace under each of the named versions — the
+// compare view names exactly two.
 pub async fn list_marketplace_version_skills(
     pool: &PgPool,
-    owner: &UserId,
-    window: RetainedWindow,
-    marketplace_id: Option<&MarketplaceId>,
-    hashes: Option<&[String]>,
+    window: VersionWindow,
+    marketplace_id: &MarketplaceId,
+    hashes: &[String],
 ) -> Result<Vec<MarketplaceVersionSkillRow>, sqlx::Error> {
     sqlx::query_file_as!(
         MarketplaceVersionSkillRow,
         "src/repositories/analysis/marketplace_version_skills.sql",
-        owner.as_str(),
         window.start,
         window.end,
-        marketplace_id.map(MarketplaceId::as_str),
+        marketplace_id.as_str(),
         hashes,
     )
     .fetch_all(pool)
@@ -145,7 +150,7 @@ pub async fn list_marketplace_version_skills(
 /// The judge's completion over the conversations a marketplace version served.
 ///
 /// A conversation is tied to the version being served when it first invoked
-/// one of the marketplace's skills (`conversation_skill_versions`).
+/// one of the marketplace's skills (`conversation_skill_facts`).
 #[derive(Debug, Clone)]
 pub struct VersionCompletionRow {
     pub marketplace_id: MarketplaceId,
@@ -167,7 +172,7 @@ pub async fn list_version_completion(
                   COUNT(DISTINCT s.context_id) FILTER (WHERE a.completion IS NOT NULL)::bigint AS "judged!",
                   AVG(a.completion)::float8 AS completion_avg
            FROM marketplace_versions v
-           LEFT JOIN conversation_skill_versions s
+           LEFT JOIN conversation_skill_facts s
                   ON s.marketplace_id = v.marketplace_id AND s.marketplace_hash = v.content_hash
            LEFT JOIN conversation_analyses a ON a.context_id = s.context_id
            WHERE $1::text IS NULL OR v.marketplace_id = $1

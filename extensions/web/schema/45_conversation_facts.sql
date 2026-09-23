@@ -27,6 +27,11 @@
 -- `artifact_count`, `artifact_files` and `artifact_cards` count by the one
 -- artifact definition in 46_tool_artifacts.sql (`tool_activity.artifact_kind`);
 -- 087 adds the two split columns to an established table.
+--
+-- `conversation_skill_facts` is the per-skill half of the same record and is
+-- written by the same refresh; `conversation_rollup_state` is the rollup job's
+-- watermark. Both are kept as long as `conversation_facts` (forever) and are
+-- the declarative twin of migration 104.
 
 CREATE INDEX IF NOT EXISTS idx_conversation_analyses_completion
     ON conversation_analyses(completion) WHERE completion IS NOT NULL;
@@ -94,14 +99,48 @@ CREATE INDEX IF NOT EXISTS idx_conversation_facts_session ON conversation_facts(
     WHERE client_session_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_conversation_facts_skills ON conversation_facts USING gin(skills);
 
+-- One row per (conversation, skill): how often it was invoked and failed, and
+-- which marketplace version was being served when the conversation first
+-- invoked it. The version is fixed at first invocation — `invoked_at` is
+-- history, so a deploy after the fact never credits the new hash with
+-- behaviour the old one produced. The Versions pages read this table joined
+-- to `conversation_facts`, so their figures outlive raw-event retention.
+CREATE TABLE IF NOT EXISTS conversation_skill_facts (
+    context_id TEXT NOT NULL REFERENCES conversation_facts(context_id) ON DELETE CASCADE,
+    plugin_id TEXT NOT NULL,
+    skill TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    marketplace_id TEXT,
+    marketplace_hash TEXT,
+    invocations BIGINT NOT NULL DEFAULT 0,
+    failures BIGINT NOT NULL DEFAULT 0,
+    first_invoked_at TIMESTAMPTZ NOT NULL,
+    last_invoked_at TIMESTAMPTZ NOT NULL,
+    refreshed_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
+    PRIMARY KEY (context_id, plugin_id, skill)
+);
+CREATE INDEX IF NOT EXISTS idx_conversation_skill_facts_version
+    ON conversation_skill_facts(marketplace_id, marketplace_hash, first_invoked_at);
+CREATE INDEX IF NOT EXISTS idx_conversation_skill_facts_first
+    ON conversation_skill_facts(first_invoked_at);
+
+-- The rollup job's high-water mark: every source row stamped before it has
+-- been folded into the tables above. One row.
+CREATE TABLE IF NOT EXISTS conversation_rollup_state (
+    id BOOLEAN PRIMARY KEY DEFAULT TRUE CHECK (id),
+    watermark TIMESTAMPTZ NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
+);
+
 -- Rebuilds the fact row for each context given (NULL = every context that
--- has a conversation request). Returns the number of rows written. The
--- request classification is `conversation_requests` (27_), so a turn here is
--- a turn everywhere; the group and project are the ones stamped on the latest
--- request, so a conversation stays filed where it was made.
+-- has a conversation request), and its skill rows. Returns the number of
+-- fact rows written. The request classification is `conversation_requests`
+-- (27_), so a turn here is a turn everywhere; the group and project are the
+-- ones stamped on the latest request, so a conversation stays filed where it
+-- was made.
 CREATE OR REPLACE FUNCTION refresh_conversation_facts(context_ids TEXT[])
 RETURNS BIGINT LANGUAGE plpgsql AS $$
-DECLARE written BIGINT;
+DECLARE written BIGINT; stamp TIMESTAMPTZ := clock_timestamp();
 BEGIN
     WITH requests AS MATERIALIZED (
         SELECT r.*, ar.wire_protocol, ar.cache_read_tokens, ar.cache_creation_tokens,
@@ -237,7 +276,7 @@ BEGIN
         FROM hook_events h
         GROUP BY h.context_id
     ), skill_events AS (
-        SELECT w.context_id, s.skill, s.invoked_at
+        SELECT w.context_id, s.id, s.plugin_id, s.skill, s.invoked_at
         FROM analysis_skill_events s
         JOIN LATERAL (
             SELECT x.context_id FROM windows x
@@ -254,6 +293,27 @@ BEGIN
                    ORDER BY y.first_at, y.skill) AS skills
         FROM skill_events k
         GROUP BY k.context_id
+    ), skill_upsert AS (
+        INSERT INTO conversation_skill_facts AS t (
+            context_id, plugin_id, skill, user_id, marketplace_id, marketplace_hash,
+            invocations, failures, first_invoked_at, last_invoked_at, refreshed_at)
+        SELECT k.context_id, k.plugin_id, k.skill, a.user_id, o.marketplace_id,
+               marketplace_version_at(o.marketplace_id, MIN(k.invoked_at)),
+               COUNT(*)::bigint,
+               COUNT(*) FILTER (WHERE p.event_type = 'PostToolUseFailure')::bigint,
+               MIN(k.invoked_at), MAX(k.invoked_at), stamp
+        FROM skill_events k
+        JOIN agg a ON a.context_id = k.context_id
+        JOIN plugin_usage_events p ON p.id = k.id
+        LEFT JOIN service_owned_ids o ON o.kind = 'plugin' AND o.id = k.plugin_id
+        WHERE k.plugin_id IS NOT NULL
+        GROUP BY k.context_id, k.plugin_id, k.skill, a.user_id, o.marketplace_id
+        ON CONFLICT (context_id, plugin_id, skill) DO UPDATE SET
+            user_id = EXCLUDED.user_id, marketplace_id = EXCLUDED.marketplace_id,
+            marketplace_hash = EXCLUDED.marketplace_hash, invocations = EXCLUDED.invocations,
+            failures = EXCLUDED.failures, first_invoked_at = EXCLUDED.first_invoked_at,
+            last_invoked_at = EXCLUDED.last_invoked_at, refreshed_at = EXCLUDED.refreshed_at
+        RETURNING 1
     ), upsert AS (
         INSERT INTO conversation_facts AS f (
             context_id, user_id, session_id, client_session_id, group_id, project_id,
@@ -325,6 +385,12 @@ BEGIN
             duration_seconds = EXCLUDED.duration_seconds, refreshed_at = EXCLUDED.refreshed_at
         RETURNING 1)
     SELECT COUNT(*) INTO written FROM upsert;
+    -- Why: a skill row this run did not rewrite belongs to a skill the
+    -- conversation no longer shows. Only conversations rebuilt here are
+    -- judged, so a conversation whose raw events expired keeps its rows.
+    DELETE FROM conversation_skill_facts s
+    USING conversation_facts f
+    WHERE f.context_id = s.context_id AND f.refreshed_at >= stamp AND s.refreshed_at < stamp;
     IF context_ids IS NOT NULL THEN
         DELETE FROM conversation_facts f WHERE f.context_id = ANY(context_ids)
             AND NOT EXISTS (SELECT 1 FROM conversation_requests r WHERE r.context_id = f.context_id);
@@ -332,63 +398,68 @@ BEGIN
     RETURN COALESCE(written, 0);
 END $$;
 
--- Every context touched since `since` on any plane that feeds the row: a
+-- Every context touched in [from_at, to_at) on any plane that feeds the row: a
 -- request settled, a hook event, a governance decision, a tool execution or
--- an artifact. The rollup job calls this each tick with an overlapping window;
--- the upsert is idempotent, so overlap is free.
-CREATE OR REPLACE FUNCTION refresh_conversation_facts_since(since TIMESTAMPTZ)
+-- an artifact.
+CREATE OR REPLACE FUNCTION refresh_conversation_facts_between(from_at TIMESTAMPTZ, to_at TIMESTAMPTZ)
 RETURNS BIGINT LANGUAGE sql AS $$
 SELECT refresh_conversation_facts(ARRAY(
     SELECT DISTINCT context_id FROM (
-        SELECT r.context_id FROM ai_requests r WHERE r.updated_at >= since OR r.created_at >= since
+        SELECT r.context_id FROM ai_requests r
+        WHERE (r.updated_at >= from_at AND r.updated_at < to_at)
+           OR (r.created_at >= from_at AND r.created_at < to_at)
         UNION ALL
         SELECT r.context_id FROM ai_requests r
         WHERE r.client_session_id IN (
-            SELECT e.session_id FROM plugin_usage_events e WHERE e.created_at >= since
+            SELECT e.session_id FROM plugin_usage_events e
+            WHERE e.created_at >= from_at AND e.created_at < to_at
             UNION ALL
-            SELECT d.session_id FROM governance_decisions d WHERE d.created_at >= since
+            SELECT d.session_id FROM governance_decisions d
+            WHERE d.created_at >= from_at AND d.created_at < to_at
             UNION ALL
-            SELECT x.trace_id FROM mcp_tool_executions x WHERE x.created_at >= since AND x.trace_id IS NOT NULL)
+            SELECT x.trace_id FROM mcp_tool_executions x
+            WHERE x.created_at >= from_at AND x.created_at < to_at AND x.trace_id IS NOT NULL)
         UNION ALL
-        SELECT x.context_id FROM mcp_tool_executions x WHERE x.created_at >= since AND x.context_id IS NOT NULL
+        SELECT x.context_id FROM mcp_tool_executions x
+        WHERE x.created_at >= from_at AND x.created_at < to_at AND x.context_id IS NOT NULL
         UNION ALL
-        SELECT m.context_id FROM mcp_artifacts m WHERE m.created_at >= since AND m.context_id IS NOT NULL
+        SELECT m.context_id FROM mcp_artifacts m
+        WHERE m.created_at >= from_at AND m.created_at < to_at AND m.context_id IS NOT NULL
         UNION ALL
-        SELECT d.context_id FROM governance_decisions d WHERE d.created_at >= since
+        SELECT d.context_id FROM governance_decisions d
+        WHERE d.created_at >= from_at AND d.created_at < to_at
     ) touched
     WHERE context_id IS NOT NULL AND context_id <> '00000000-0000-0000-0000-4c4547414359'))
 $$;
 
--- Which skills a conversation invoked and which marketplace version was
--- being served when it first did — the version is fixed at first invocation,
--- never at judge time, so a deploy between the two never credits the new hash
--- with behaviour the old one produced.
-CREATE OR REPLACE VIEW conversation_skill_versions AS
-SELECT f.context_id, f.user_id, f.client_session_id, e.plugin_id, e.skill, o.marketplace_id,
-       marketplace_version_at(o.marketplace_id, MIN(e.invoked_at)) AS marketplace_hash,
-       COUNT(*)::bigint AS invocations, MIN(e.invoked_at) AS first_invoked_at
-FROM conversation_facts f
-JOIN analysis_skill_events e ON e.session_id = f.client_session_id AND e.skill IS NOT NULL
-LEFT JOIN service_owned_ids o ON o.kind = 'plugin' AND o.id = e.plugin_id
-WHERE f.client_session_id IS NOT NULL
-GROUP BY f.context_id, f.user_id, f.client_session_id, e.plugin_id, e.skill, o.marketplace_id;
-
--- A judge verdict is a feedback assessment fact for every skill invocation in
--- the conversation's harness session. The fact body is built by
--- feedback_normalized_fact (31_), which reads this table by context; here the
--- conversation's session is re-enqueued so those facts are regenerated.
-CREATE OR REPLACE FUNCTION capture_feedback_judgement()
-RETURNS trigger LANGUAGE plpgsql AS $$
-DECLARE data JSONB; row RECORD;
+-- One rollup tick: every context touched between the stored watermark and a
+-- new high-water mark, then the mark moves. Consecutive ticks cover disjoint
+-- windows, so a conversation is rebuilt once per change, not once per tick.
+--
+-- Why the mark trails the clock: a row carries the `now()` of the transaction
+-- that wrote it, so a transaction still open can commit a row stamped before
+-- this tick. The mark stops at the oldest open transaction's start, less a
+-- margin for timestamps the application stamps before it begins one; the
+-- next tick picks up whatever that transaction commits. A transaction open
+-- longer than ten minutes stops holding the mark back, so one stuck session
+-- cannot freeze the rollup. The state row is held FOR UPDATE, so two ticks
+-- never overlap.
+CREATE OR REPLACE FUNCTION refresh_conversation_facts_pending()
+RETURNS BIGINT LANGUAGE plpgsql AS $$
+DECLARE from_at TIMESTAMPTZ; to_at TIMESTAMPTZ; written BIGINT;
 BEGIN
-    IF TG_OP='DELETE' AND current_setting('astound.feedback_retention',true)='expiry' THEN RETURN OLD; END IF;
-    data := CASE WHEN TG_OP='DELETE' THEN to_jsonb(OLD) ELSE to_jsonb(NEW) END;
-    FOR row IN SELECT DISTINCT r.user_id, r.client_session_id FROM ai_requests r
-        WHERE r.context_id = data->>'context_id' AND r.client_session_id IS NOT NULL LOOP
-        PERFORM enqueue_feedback_session(row.user_id, row.client_session_id);
-    END LOOP;
-    RETURN COALESCE(NEW,OLD);
+    INSERT INTO conversation_rollup_state(id, watermark)
+    VALUES (TRUE, now() - interval '3 minutes')
+    ON CONFLICT (id) DO NOTHING;
+    SELECT s.watermark INTO from_at FROM conversation_rollup_state s WHERE s.id FOR UPDATE;
+    SELECT LEAST(now(), GREATEST(COALESCE(MIN(a.xact_start), now()), now() - interval '10 minutes'))
+           - interval '30 seconds' INTO to_at
+    FROM pg_stat_activity a
+    WHERE a.datname = current_database() AND a.pid <> pg_backend_pid() AND a.xact_start IS NOT NULL;
+    IF to_at <= from_at THEN
+        RETURN 0;
+    END IF;
+    written := refresh_conversation_facts_between(from_at, to_at);
+    UPDATE conversation_rollup_state SET watermark = to_at, updated_at = clock_timestamp() WHERE id;
+    RETURN written;
 END $$;
-DROP TRIGGER IF EXISTS feedback_capture ON conversation_analyses;
-CREATE TRIGGER feedback_capture AFTER INSERT OR UPDATE OR DELETE ON conversation_analyses
-FOR EACH ROW EXECUTE FUNCTION capture_feedback_judgement();

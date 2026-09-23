@@ -8,7 +8,7 @@
 //!   prerender, sitemap/robots/llms.txt generation, and secret migration.
 //!   Sub-jobs are individually addressable via the CLI for targeted re-runs.
 //! - **Build helpers** ([`BundleAdminCssJob`], [`CopyExtensionAssetsJob`],
-//!   [`ContentPrerenderJob`]) — emit the static surface under `web/dist/`
+//!   [`SiteContentPrerenderJob`]) — emit the static surface under `web/dist/`
 //!   consumed by the SSR layer.
 //! - **Analytics / housekeeping** ([`ContentAnalyticsAggregationJob`],
 //!   [`SecretMigrationJob`]) — periodic rollups and one-shot migrations.
@@ -21,7 +21,6 @@
 //! through `infra logs trace`.
 
 mod error;
-pub mod feedback_ingestion;
 mod registry;
 
 mod access_expiry;
@@ -57,7 +56,7 @@ pub use copy_assets::CopyExtensionAssetsJob;
 pub use governance_bootstrap::GovernanceBootstrapJob;
 pub use ingestion::ContentIngestionJob;
 pub use llms_txt::LlmsTxtGenerationJob;
-pub use prerender::ContentPrerenderJob;
+pub use prerender::SiteContentPrerenderJob;
 pub use publish::PublishPipelineJob;
 pub use quota_month_window::QuotaMonthWindowJob;
 pub use retention::{RetentionDailyReportJob, RetentionExportMonthlyJob, RetentionExportWeeklyJob};

@@ -18,6 +18,63 @@ Conventions (strict — hold every entry to them):
 - Version numbers track the root workspace `version` in `Cargo.toml`; bridge-only releases are
   prefixed `bridge-` (e.g. `bridge-0.17.1`).
 
+## Unreleased
+
+### Changed
+
+- **Core:** `next` builds against core `next` again (patch active, `bridge/CORE_REF` pins the
+  commit). Core retires its feedback facts/snapshot engine, the reporting projection behind the
+  `analytics` CLI, the managed admin routes nothing called, and scheduler writes on idle ticks;
+  see core's `CHANGELOG.md`.
+- **Analysis → Versions** reads `conversation_skill_facts` (new, migration 104; kept forever
+  like `conversation_facts`, filled by `conversation_rollup`) instead of core's normalized
+  facts. A conversation is credited to the marketplace version served when it first invoked
+  the skill — the old figures stamped the hash current at projection time. Users are now every
+  person who ran those conversations (not only device-authenticated ones), requests are turns,
+  cost is turn spend without side calls, and p50/p95 are over conversation-level latency. The
+  365-day window is now real. Backfill after upgrading:
+  `systemprompt infra jobs run conversation_rollup -p all=true`.
+- **`conversation_rollup`** keeps a watermark (`conversation_rollup_state`) instead of
+  re-reading a three-minute overlapping window every minute, so a conversation is rebuilt once
+  per change. `-p lookback_minutes` is gone; `-p all=true` still rebuilds everything.
+- **`plugin_usage_retention`** calls `expire_raw_evidence` (was `expire_feedback_raw`): plain
+  90-day expiry of hook events, requests and their evidence, no longer gated on the feedback
+  projection or core's snapshot compaction.
+- The astound prerender job is renamed `content_prerender` → `site_content_prerender`; it
+  collided with core's job of the same name.
+
+### Fixed
+
+- **Schema registration:** the web extension registers its multi-table schema files with
+  `SchemaDefinition::sql_only` instead of `new("", …)`, so `infra db doctor` no longer reports
+  a declared table named `""` as absent.
+
+### Removed
+
+- **Feedback ingestion pipeline:** every `capture_feedback_*` row trigger (on `plugin_usage_events`,
+  `ai_requests`, `ai_request_tool_calls`, `mcp_artifacts`, `conversation_analyses`,
+  `managed_consumer_grants` and the four device-identity tables), the `enqueue_feedback_*` /
+  `feedback_normalized_*` functions, the `feedback_ingestion_{outbox,backfill,evidence}` tables,
+  the `feedback_ingestion` job and its seed (migration 105). Each hook event or request
+  settlement re-enqueued its whole client session (113 ms a row on `ai_requests`) for a
+  projection only the Versions pages read. `feedback_authenticated_events` and
+  `analysis_skill_version_events` stay.
+- **Audit-event NOTIFY triggers** on `governance_decisions`, `ai_requests` and
+  `plugin_usage_events`, and the `audit_event_bus` listener nothing called (migration 106).
+- **`ingestion_outbox`** and `drain_ingestion_outbox` (migration 107): `/hooks/track` now adds
+  each accepted event's counts to `plugin_session_summaries` in the transaction that inserts it
+  — one row written per event instead of a whole-session recompute per drain.
+- **Dead schema** (migration 108): `daily_summaries`, `admin_traffic_reports`, `tenant_activity`,
+  `session_ratings`, `skill_ratings`, `user_profile_reports`, `session_transcripts`,
+  `session_cost_snapshots`, `ingestion_repairs` and the views `conversation_rollups`,
+  `conversation_analysis_rows`, `v_all_activity` — none had a reader or a writer. The always-empty
+  Rating column on the project page and report goes with `skill_ratings`.
+- **Scheduler:** the `feedback_ingestion`, `feedback_snapshot_processing`,
+  `feedback_facts_processing` and `service_registry_gc` entries in
+  `services/scheduler/config.yaml` (three of them ticked every 5 s).
+- `repositories/analysis/retained.rs` and its five queries (no production caller), and the
+  uncompiled `jobs/src/bundle_admin_js.rs`.
+
 ## 0.59.1 — 2026-09-23
 
 ### Removed

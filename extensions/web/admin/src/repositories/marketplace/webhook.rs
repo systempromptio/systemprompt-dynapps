@@ -94,6 +94,10 @@ pub async fn insert_plugin_usage_event_with_device(
         AdminError::Unavailable("Event was not accepted; retry with the same event ID".to_owned())
     })?;
 
+    let inserted = result.rows_affected() > 0;
+    if inserted {
+        add_event_to_session_summary(&mut tx, &id).await?;
+    }
     if let Some(device) = device {
         let event_id = sqlx::query_scalar!("SELECT id FROM plugin_usage_events WHERE dedup_key=$1 AND user_id=$2 AND session_id=$3", params.dedup_key, params.user_id.as_str(), params.session_id.as_str()).fetch_one(&mut *tx).await.map_err(AdminError::internal)?;
         let host = systemprompt::marketplace::managed::consumer::host_key(device.host);
@@ -110,7 +114,55 @@ pub async fn insert_plugin_usage_event_with_device(
         }
     }
     tx.commit().await.map_err(AdminError::internal)?;
-    Ok(result.rows_affected() > 0)
+    Ok(inserted)
+}
+
+// Why: the summary is the running total of its session's events, so the
+// event adds its own counts in the transaction that records it — one row
+// written whatever the session's length, and a retried delivery that the
+// dedup key rejects never reaches here, so nothing is counted twice.
+async fn add_event_to_session_summary(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    event_id: &str,
+) -> Result<(), AdminError> {
+    sqlx::query!(
+        "INSERT INTO plugin_session_summaries AS s
+            (id, session_id, user_id, total_events, tool_uses, prompts, errors,
+             content_input_bytes, content_output_bytes, started_at, subagent_spawns,
+             user_prompts, automated_actions, plugin_id)
+         SELECT 'sess_' || e.session_id, e.session_id, e.user_id, 1,
+                (e.event_type IN ('PostToolUse', 'PostToolUseFailure'))::int,
+                (e.event_type = 'UserPromptSubmit')::int,
+                (e.event_type = 'PostToolUseFailure')::int,
+                COALESCE(e.content_input_bytes, 0), COALESCE(e.content_output_bytes, 0),
+                e.created_at,
+                (e.event_type = 'SubagentStop')::int,
+                (e.event_type = 'UserPromptSubmit'
+                    AND COALESCE(e.metadata->>'agent_id', '') = '')::int,
+                (e.event_type IN ('PostToolUse', 'PostToolUseFailure')
+                    AND COALESCE(e.metadata->>'agent_id', '') <> '')::int,
+                e.plugin_id
+         FROM plugin_usage_events e WHERE e.id = $1
+         ON CONFLICT (session_id) DO UPDATE SET
+             total_events = s.total_events + EXCLUDED.total_events,
+             tool_uses = s.tool_uses + EXCLUDED.tool_uses,
+             prompts = s.prompts + EXCLUDED.prompts,
+             errors = s.errors + EXCLUDED.errors,
+             content_input_bytes = s.content_input_bytes + EXCLUDED.content_input_bytes,
+             content_output_bytes = s.content_output_bytes + EXCLUDED.content_output_bytes,
+             started_at = LEAST(s.started_at, EXCLUDED.started_at),
+             subagent_spawns = s.subagent_spawns + EXCLUDED.subagent_spawns,
+             user_prompts = COALESCE(s.user_prompts, 0) + EXCLUDED.user_prompts,
+             automated_actions = COALESCE(s.automated_actions, 0) + EXCLUDED.automated_actions,
+             plugin_id = GREATEST(s.plugin_id, EXCLUDED.plugin_id),
+             updated_at = now()
+         WHERE s.user_id = EXCLUDED.user_id",
+        event_id
+    )
+    .execute(&mut **tx)
+    .await
+    .map_err(AdminError::internal)?;
+    Ok(())
 }
 
 // Why: the event row links to the execution and artifact the ingest resolved

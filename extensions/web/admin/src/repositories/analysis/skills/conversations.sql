@@ -3,7 +3,7 @@
 WITH sessions AS (
     SELECT e.session_id, COUNT(*)::bigint AS invocations, MIN(e.invoked_at) AS first_invoked_at
     FROM analysis_skill_version_events e
-    WHERE e.skill = $3 AND e.invoked_at >= $1 AND e.invoked_at < $2 AND e.traffic_class = 'production'
+    WHERE e.skill = $3 AND e.invoked_at >= $1 AND e.invoked_at < $2
       AND ($4::text[] IS NULL OR e.user_id = ANY($4))
     GROUP BY e.session_id
 )

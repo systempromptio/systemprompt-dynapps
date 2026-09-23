@@ -18,7 +18,6 @@ use serde::de::DeserializeOwned;
 use sqlx::PgPool;
 
 use crate::error::{AdminError, AdminResult};
-use crate::routes::managed_state::ManagedState;
 use crate::types::UserContext;
 
 pub(crate) const HARD_CAP: i64 = 50_000;
@@ -204,23 +203,16 @@ pub(crate) struct ExportWindow {
 pub(crate) struct ExportContext<'a> {
     pub pool: &'a PgPool,
     pub user: &'a UserContext,
-    pub managed: &'a ManagedState,
     pub window: Option<ExportWindow>,
     pub limit: i64,
     uri: Uri,
 }
 
 impl<'a> ExportContext<'a> {
-    pub(crate) const fn new(
-        pool: &'a PgPool,
-        user: &'a UserContext,
-        managed: &'a ManagedState,
-        uri: Uri,
-    ) -> Self {
+    pub(crate) const fn new(pool: &'a PgPool, user: &'a UserContext, uri: Uri) -> Self {
         Self {
             pool,
             user,
-            managed,
             window: None,
             limit: HARD_CAP,
             uri,

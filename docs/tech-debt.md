@@ -38,20 +38,11 @@ Landed with the 0.58.1 set (drop `logs`/`ai_request_messages` projections,
 profile retention job, batched outbox worker, statement-level capture).
 Left for the next pass:
 
-- **`feedback_capture` on `ai_requests` is still a row trigger**
-  (`extensions/web/schema/30_feedback_ingestion.sql:86-119`): a `FOR UPDATE`
-  on `analytics_ingestion_producers`, `enqueue_feedback_fact` and the
-  `enqueue_feedback_session` loop per row. With core's capture, the scope
-  stamp and the audit NOTIFY now statement-level, it is the dominant per-row
-  cost on the hottest table. `enqueue_feedback_fact`'s `pending_count` /
-  `was_pending` accounting is per key, so the set-based rewrite is its own
-  change: aggregate the transition table per producer, one `UPDATE … SET
-  pending_count = pending_count + n`, one `INSERT … SELECT` into the outbox.
-  Until that lands, every fanning-out row trigger is listed in
-  `tests/unit/web/trigger_fanout_baseline.txt`, which the gate in
-  `tests/unit/web/src/migration_cost.rs` allows to shrink and never grow —
-  so the population cannot quietly increase while this is open. Deleting a
-  line from it is the proof one was fixed.
+- ~~**`feedback_capture` on `ai_requests` is still a row trigger**~~ —
+  resolved 2026-09-23 by retiring the feedback ingestion pipeline outright
+  (migration 105): every `capture_feedback_*` trigger and its outbox are
+  gone, the Versions pages read `conversation_skill_facts`, and
+  `tests/unit/web/trigger_fanout_baseline.txt` is empty.
 - The row-level branch in `sp_capture_reporting_change` (core
   `crates/infra/events/schema/reporting_capture.sql`) exists so a database
   mid-upgrade — function bodies swapped, row triggers not yet dropped — keeps

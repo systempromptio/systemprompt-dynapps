@@ -63,13 +63,10 @@ pub(super) async fn process_inserted_event(params: &ProcessInsertedEventParams<'
 }
 
 async fn update_session_tracking(params: &ProcessInsertedEventParams<'_>) {
-    let file_path = helpers::extract_file_path(params.payload);
-    usage_aggregations::refresh_session_summary(
-        params.pool,
-        params.session_id,
-        file_path.as_deref(),
-    )
-    .await;
+    if let Some(path) = helpers::extract_file_path(params.payload).filter(|path| !path.is_empty()) {
+        usage_aggregations::update_unique_files_touched(params.pool, params.session_id, &path)
+            .await;
+    }
 
     if params.event_type == EVENT_SESSION_START
         && let HookEvent::SessionStart(ref data) = params.payload.event

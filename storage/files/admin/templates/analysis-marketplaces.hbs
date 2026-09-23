@@ -51,7 +51,7 @@
 
 <details class="sp-analysis-definitions"><summary>How to read this page</summary>
 <p>A marketplace version is the sha256 of everything it delivers — its own config, every plugin it includes and every skill those plugins ship — hashed the same way a kit's <code>content_hash</code> and this tree's hash are. A base marketplace and a bundled one therefore have the same kind of identity, and the source hash beside it is provenance, not identity.</p>
-<p>A new version is recorded whenever the bytes move, at boot and on every inventory sync; the previous one is closed at that moment. Invocations, users, requests and cost are the window's figures across every version of the marketplace. Requests and cost reach a marketplace through the conversations its skills ran in, so they overlap across marketplaces and must not be summed.</p>
+<p>A new version is recorded whenever the bytes move, at boot and on every inventory sync; the previous one is closed at that moment. Invocations, users, requests and cost are the window's figures across every version of the marketplace, counted from the conversations that first invoked one of its skills in the window. Users are every person who ran those conversations. Requests are their turns and cost is their turn spend (side calls such as titles excluded); a conversation that used several marketplaces counts under each, so these must not be summed.</p>
 <p>A retired marketplace is one the composition no longer declares; its history stays.</p>
 </details>
 </section>

@@ -132,6 +132,3 @@ mod managed_resources_contract;
 #[cfg(test)]
 #[cfg(test)]
 mod marketplace_versions_contract;
-
-#[cfg(test)]
-mod feedback_freshness;

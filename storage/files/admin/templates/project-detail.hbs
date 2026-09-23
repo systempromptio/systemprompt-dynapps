@@ -120,17 +120,16 @@
                 {{/components/table}}
             </div>
             <div>
-                {{> components/section title="Skills" count=usage.skill_count note="Invocations, and what the people using them rated them."}}
-                {{#> components/table caption="Skills used, with their ratings"}}
-                    <thead><tr><th>Skill</th><th class="sp-table__cell--num">Calls</th><th class="sp-table__cell--num">People</th><th class="sp-table__cell--num">Rating</th></tr></thead>
+                {{> components/section title="Skills" count=usage.skill_count note="Invocations, and how many of the project's people used each."}}
+                {{#> components/table caption="Skills used"}}
+                    <thead><tr><th>Skill</th><th class="sp-table__cell--num">Calls</th><th class="sp-table__cell--num">People</th></tr></thead>
                     <tbody>
                     {{#each usage.skills}}
                     <tr><td>{{skill}}</td>
                         <td class="sp-table__cell--num sp-u-num">{{formatNumber invocations}}</td>
-                        <td class="sp-table__cell--num sp-u-num">{{users}}</td>
-                        <td class="sp-table__cell--num sp-u-num" title="{{rating_count}} ratings">{{rating_display}}</td></tr>
+                        <td class="sp-table__cell--num sp-u-num">{{users}}</td></tr>
                     {{else}}
-                    <tr class="sp-table__empty"><td colspan="4">{{> components/empty-state message="No skill invocations in the window."}}</td></tr>
+                    <tr class="sp-table__empty"><td colspan="3">{{> components/empty-state message="No skill invocations in the window."}}</td></tr>
                     {{/each}}
                     </tbody>
                 {{/components/table}}

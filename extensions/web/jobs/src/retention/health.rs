@@ -137,24 +137,6 @@ async fn check_outboxes(pool: &PgPool, findings: &mut Vec<HealthFinding>) -> Res
             });
         }
     }
-    let feedback: (i64, Option<chrono::DateTime<Utc>>) = sqlx::query_as(
-        "SELECT COUNT(*), MIN(created_at) FROM feedback_ingestion_outbox WHERE pending",
-    )
-    .fetch_one(pool)
-    .await?;
-    if let Some(oldest) = feedback.1
-        && oldest < Utc::now() - Duration::days(1)
-    {
-        findings.push(HealthFinding {
-            rank: Rank::P1,
-            check: "feedback_ingestion_stalled",
-            detail: format!(
-                "{} pending feedback rows, oldest {}",
-                feedback.0,
-                oldest.to_rfc3339()
-            ),
-        });
-    }
     Ok(())
 }
 

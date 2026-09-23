@@ -28,7 +28,6 @@ use crate::handlers::ssr::transcript_view::TranscriptOptions;
 use crate::repositories::analytics::context_detail::find_context_header;
 use crate::repositories::analytics::conversations::history_scope_for;
 use crate::repositories::scope::visibility::may_view;
-use crate::routes::managed_state::ManagedState;
 use crate::types::UserContext;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
@@ -125,11 +124,10 @@ fn may_export_set(user: &UserContext, ctx: &ExportContext<'_>) -> AdminResult<()
 
 pub(crate) async fn export_conversations(
     Extension(user): Extension<UserContext>,
-    Extension(managed): Extension<Arc<ManagedState>>,
     State(pool): State<Arc<PgPool>>,
     OriginalUri(uri): OriginalUri,
 ) -> AdminResult<Response> {
-    let ctx = ExportContext::new(&pool, &user, &managed, uri);
+    let ctx = ExportContext::new(&pool, &user, uri);
     may_export_set(&user, &ctx)?;
     let selection = resolve_selection(&pool, &user, &ctx).await?;
     let opts = options_for(&user);
@@ -186,11 +184,10 @@ pub(crate) struct TranscriptsPreview {
 // file will hold, whether the 500 ceiling bit, and the window it resolved.
 pub(crate) async fn export_conversations_preview(
     Extension(user): Extension<UserContext>,
-    Extension(managed): Extension<Arc<ManagedState>>,
     State(pool): State<Arc<PgPool>>,
     OriginalUri(uri): OriginalUri,
 ) -> AdminResult<Json<TranscriptsPreview>> {
-    let ctx = ExportContext::new(&pool, &user, &managed, uri);
+    let ctx = ExportContext::new(&pool, &user, uri);
     may_export_set(&user, &ctx)?;
     let selection = resolve_selection(&pool, &user, &ctx).await?;
     Ok(Json(TranscriptsPreview {

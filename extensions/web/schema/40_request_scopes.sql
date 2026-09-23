@@ -10,10 +10,9 @@
 --
 -- Extension-only: `ai_requests` is core's and has no scope column, and the
 -- insert is a plain statement on the write pool, so the trigger resolves the
--- scope itself from each new row's `user_id`. The body is wrapped exactly like
--- `audit_event_notify_ai_requests` (14_): a fault here warns and returns, it
--- never rolls back the core insert. Established databases are backfilled by
--- migration 078.
+-- scope itself from each new row's `user_id`. The body is wrapped so that a
+-- fault here warns and returns; it never rolls back the core insert.
+-- Established databases are backfilled by migration 078.
 
 CREATE TABLE IF NOT EXISTS ai_request_scopes (
     request_id TEXT PRIMARY KEY REFERENCES ai_requests(id) ON DELETE CASCADE,

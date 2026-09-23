@@ -22,14 +22,12 @@ pub struct ToolHealthRow {
     pub p95_ms: i64,
 }
 
-/// One skill, how much the project leant on it, and what its users rated it.
+/// One skill and how much the project leant on it.
 #[derive(Debug, Clone, Serialize)]
 pub struct SkillEffectivenessRow {
     pub skill: String,
     pub invocations: i64,
     pub users: i64,
-    pub rating_count: i64,
-    pub rating_avg: Option<f64>,
 }
 
 /// One session the project's people ran, summarised from its requests.
@@ -95,13 +93,7 @@ pub async fn list_project_skill_effectiveness(
     let rows = crate::scoped_query!(
         r#"SELECT e.skill AS "skill!",
                   COUNT(*)::BIGINT AS "invocations!",
-                  COUNT(DISTINCT e.user_id)::BIGINT AS "users!",
-                  (SELECT COUNT(*) FROM skill_ratings sr
-                    JOIN membership m2 ON m2.user_id = sr.user_id
-                   WHERE m2.scope_id = $3 AND sr.skill_name = e.skill)::BIGINT AS "rating_count!",
-                  (SELECT AVG(sr.rating)::FLOAT8 FROM skill_ratings sr
-                    JOIN membership m2 ON m2.user_id = sr.user_id
-                   WHERE m2.scope_id = $3 AND sr.skill_name = e.skill) AS "rating_avg?"
+                  COUNT(DISTINCT e.user_id)::BIGINT AS "users!"
            FROM membership m
            JOIN skill_invocation_events e ON e.user_id = m.user_id
            WHERE m.scope_id = $3
@@ -124,8 +116,6 @@ pub async fn list_project_skill_effectiveness(
             skill: row.skill,
             invocations: row.invocations,
             users: row.users,
-            rating_count: row.rating_count,
-            rating_avg: row.rating_avg,
         })
         .collect())
 }
