@@ -183,11 +183,13 @@ entities:
     why: >-
       Org-wide Drive, Gmail and Calendar search through Agent Search; Google
       filters every result to what the user can already open, so the band only
-      decides who sees the connector. Starts on the UK pilot band; widening is a one-line
-      change here. The connector band keeps the server for anyone who has
-      already connected it, which is what lets the connection-gated search
-      skills stay usable if the person's group changes.
+      decides who sees the connector. Open to the UK pilot and the
+      business-users group, whose Salesforce sales workspace draws on it; IAM
+      in astound-knowledge-uk-sales is granted to the whole astounddigital.com
+      domain, so widening needs no Google change. The connector band keeps the
+      server for anyone who has already connected it, which is what lets the
+      connection-gated search skills stay usable if the person's group changes.
     allow:
-      group: [uk]
+      group: [uk, business-users]
       connector: [google_workspace]
       role: [super_admin]
