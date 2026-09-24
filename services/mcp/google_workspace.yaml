@@ -2,8 +2,10 @@
 # Search) over federated Google Drive, Gmail and Calendar data stores: nothing
 # is copied, all are searched live and every result is filtered to what the
 # signed-in user can already open — their Drive permissions, their own mailbox
-# and calendar. (A People/directory store is not servable in `eu`.) Each user connects their own Google account on the
-# Connectors page; core synthesises the token accessor from the `connector:`
+# and calendar. The engine lives in the Enterprise AI project
+# (enterprise-ai-505512, number 611435061062) at location `global`, which is why
+# the endpoint is the global host. Each user connects their own Google account on
+# the Connectors page; core synthesises the token accessor from the `connector:`
 # block, so no `external_auth:` is declared here.
 #
 # No licence is involved: the data store and Enterprise-tier engine live in the
@@ -46,10 +48,10 @@ mcp_servers:
     tools:
       search:
         arguments:
-          servingConfig: projects/148780456827/locations/global/collections/default_collection/engines/workspace-search/servingConfigs/default_search
+          servingConfig: projects/611435061062/locations/global/collections/default_collection/engines/workspace-search/servingConfigs/default_search
       conversational_search:
         arguments:
-          servingConfig: projects/148780456827/locations/global/collections/default_collection/engines/workspace-search/servingConfigs/default_search
+          servingConfig: projects/611435061062/locations/global/collections/default_collection/engines/workspace-search/servingConfigs/default_search
     oauth:
       required: false
       scopes:
