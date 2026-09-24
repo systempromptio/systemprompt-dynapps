@@ -59,7 +59,8 @@ METRICS = [
     "conversation_tool_calls", "request_log_calls", "atlassian_calls",
     "single_page_conclusions", "invented_causes", "cross_tool_mismatch",
     "connector_calls", "schema_errors", "access_errors", "upstream_errors",
-    "bad_arguments", "timeouts", "console_success",
+    "bad_arguments", "timeouts", "console_success", "repeated_calls",
+    "placeholder_mentions", "tools_unavailable",
 ] + list(ERROR_CLASSES)
 
 
@@ -68,8 +69,11 @@ def bundle_of(raw, skill):
     if not f.exists() or not f.stat().st_size:
         return None
     lines = [json.loads(l) for l in open(f, encoding="utf-8") if l.strip()]
-    # Why: a session can hold a side context; the skill run is the one with turns.
-    return max(lines, key=lambda b: (b.get("facts") or {}).get("turn_count") or 0)
+    # Why: a session can hold a side context; the skill run is the one with
+    # turns. The gateway sometimes credits the skill to a one-turn sibling
+    # context of the same session, so the run keeps every context's skills.
+    best = max(lines, key=lambda b: (b.get("facts") or {}).get("turn_count") or 0)
+    return {**best, "session_skills": [s for b in lines for s in b.get("skills") or []]}
 
 
 def cc_events(raw, skill):
@@ -111,9 +115,9 @@ def skill_metrics(raw, skill, manifest):
     m["session_id"] = run.get("session_id")
     m["context_id"] = (b or {}).get("context_id")
     m["attempts"] = run.get("attempts", 1)
-    m["invoked"] = int(any(s.get("skill") == dashed for s in (b or {}).get("skills") or []))
+    m["invoked"] = int(any(s.get("skill") == dashed for s in (b or {}).get("session_skills") or []))
     m["marketplace_hash"] = next(
-        (s.get("marketplace_hash") for s in (b or {}).get("skills") or [] if s.get("skill") == dashed), None)
+        (s.get("marketplace_hash") for s in (b or {}).get("session_skills") or [] if s.get("skill") == dashed), None)
     for k_out, k_in in [("turns", "turn_count"), ("requests", "request_count"),
                         ("input_tokens", "input_tokens"), ("output_tokens", "output_tokens"),
                         ("cache_read_tokens", "cache_read_tokens"),

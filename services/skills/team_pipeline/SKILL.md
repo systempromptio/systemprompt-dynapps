@@ -24,7 +24,7 @@ Resolve team → ONE combined read → analyze → output. Exactly two `dispatch
 
 ## 1. Resolve team (call 1)
 
-"my team" (default) — active reps whose Manager = current user (the bootstrap `currentUser` read gives `<CURRENT_USER_ID>`):
+"my team" (default) — active reps whose Manager = current user (read it once as `query { uiapi { currentUser { Id Name { value } } } }` — `Name` needs `{ value }`; this gives `<CURRENT_USER_ID>`):
 
 ```
 dispatch_readonly(method: "GET", url: "/services/data/v67.0/graphql",
