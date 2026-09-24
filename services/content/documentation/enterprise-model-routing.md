@@ -93,12 +93,6 @@ providers:
   surface: anthropic
   endpoint: https://aiplatform.googleapis.com/v1/projects/{project}/locations/global/publishers/anthropic
   api_key_secret: vertex
-gateway:
-  routes:
-  - id: claude-star-4203d1
-    model_pattern: claude-*
-    provider: vertex-anthropic
-    fallback_provider: anthropic
 ```
 
 Clients call it the same way. The gateway speaks the Anthropic Messages wire
