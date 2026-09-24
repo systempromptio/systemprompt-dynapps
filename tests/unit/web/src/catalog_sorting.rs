@@ -82,12 +82,12 @@ fn sort_links_carry_the_active_filter() {
 #[test]
 fn preserved_search_encodes_and_omits_the_empty_filter() {
     assert_eq!(preserved_search(""), "");
-    assert_eq!(preserved_search("knowledge bank"), "q=knowledge%20bank");
+    assert_eq!(preserved_search("google workspace"), "q=google%20workspace");
 }
 
 #[test]
 fn the_filter_is_case_insensitive_and_matches_any_field() {
-    assert!(matches(&["knowledge-bank", "Atlassian search"], "ATLAS"));
+    assert!(matches(&["google-workspace", "Atlassian search"], "ATLAS"));
     assert!(matches(&["jira"], ""));
     assert!(!matches(&["jira", "issues"], "confluence"));
 }

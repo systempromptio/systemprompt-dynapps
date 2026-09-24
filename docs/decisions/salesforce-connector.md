@@ -27,7 +27,7 @@ Orgs in scope are **both** Astound-owned (production + sandboxes) **and** client
 | Hosted MCP (`api.salesforce.com/platform/mcp/…/sobject-all`) accepts only authorization-code + PKCE via an ECA with scope `mcp_api`. Tokens are org-scoped. Salesforce states MCP "doesn't support multitenant systems like Salesforce", so the user must be logged into the target org before consent. | [Hosted MCP: create an ECA](https://developer.salesforce.com/docs/platform/hosted-mcp-servers/guide/create-external-client-app.html), [log into your org](https://developer.salesforce.com/docs/platform/hosted-mcp-servers/guide/log-into-org.html) | Org selection cannot be pushed past consent while we proxy the hosted server. |
 | Astound owns **no** Salesforce MCP code. `services/mcp/salesforce.yaml` is `type: external` pointing at Salesforce's hosted `sobject-all`; core's external proxy injects a per-user bearer minted by `/api/public/connectors/<id>/token`. | `extensions/web/admin/src/services/salesforce_orgs.rs`, `connector_oauth/` | The tool surface is Salesforce's. Every org is a separate MCP server id. |
 | The registry only stores secret **names**; nothing rejects two orgs naming the same secret. Only one org (`salesforce`, production) is declared. | `salesforce_orgs.rs::validate` | A shared client id needs no registry change. |
-| Salesforce is not indexed by the knowledge bank; the docs already say "live query". | `services/content/documentation/enterprise-knowledge-rag.md` | "No Salesforce RAG" is a decision to record, not work to undo. |
+| Salesforce is not indexed for retrieval; the connector is live query only. | `services/mcp/salesforce.yaml` | "No Salesforce RAG" is a decision to record, not work to undo. |
 
 ## Adopt regardless of option
 

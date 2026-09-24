@@ -10,13 +10,19 @@
 //! `anthropic-claude-*`, each naming the bare id as its upstream model. That
 //! twin is what the route's failover lands on: core finds the requested model
 //! on the fallback provider by upstream name, so a Vertex model with no twin
-//! has nowhere to fail over to.
+//! has nowhere to fail over to. The twins are `hidden`: they are never listed
+//! to a client, so nobody picks an `anthropic-claude-*` id, while the failover
+//! still finds them because it looks up by upstream name, not by listing.
 //!
 //! That makes catalog drift expensive in two directions. A missing current
 //! model is an outage for every client that names it. A stale price is a
 //! silently wrong cost figure on every audit row, every budget window, and
 //! every finance report derived from them — nothing downstream re-checks the
 //! vendor's rate card.
+//!
+//! The Claude 4.x Opus and Sonnet models were removed on 2026-09-24, and
+//! with them the direct OpenAI and Cerebras providers; every Vertex provider
+//! now authenticates with the one `vertex` service-account secret.
 //!
 //! These tests pin the served id set and its twins, the Sonnet 5 rate that was
 //! wrong here until 2026-09-04, the Opus 5.5 and Fable 5.1 rate cards on both
@@ -36,19 +42,13 @@ use systemprompt::models::services::{
 
 use crate::support::repo_root;
 
-const SERVED: [&str; 12] = [
+const SERVED: [&str; 6] = [
     "claude-opus-5-5",
     "claude-opus-5",
     "claude-sonnet-5",
     "claude-fable-5-1",
     "claude-fable-5",
     "claude-haiku-4-5",
-    "claude-sonnet-4-5",
-    "claude-opus-4-5",
-    "claude-opus-4-6",
-    "claude-sonnet-4-6",
-    "claude-opus-4-7",
-    "claude-opus-4-8",
 ];
 
 // Rate-card figures are written as decimal literals in the YAML and parsed to
@@ -142,6 +142,20 @@ fn every_served_claude_model_has_an_anthropic_api_twin_to_fail_over_to() {
 }
 
 #[test]
+fn the_anthropic_api_twins_are_hidden_from_every_listing() {
+    let registry = registry();
+    let listed = registry.advertised_model_ids(&[]);
+    for m in &provider("anthropic").models {
+        assert!(m.hidden, "{} must be hidden", m.id.as_str());
+        assert!(
+            !listed.iter().any(|id| id == m.id.as_str()),
+            "{} must not be advertised",
+            m.id.as_str()
+        );
+    }
+}
+
+#[test]
 fn the_retired_dated_ids_are_gone() {
     for name in ["vertex-anthropic", "anthropic"] {
         let models = provider(name).models;
@@ -151,6 +165,12 @@ fn the_retired_dated_ids_are_gone() {
             "claude-opus-4-20250514",
             "claude-opus-4-5-20251101",
             "claude-sonnet-4-5-20250929",
+            "claude-sonnet-4-5",
+            "claude-opus-4-5",
+            "claude-opus-4-6",
+            "claude-sonnet-4-6",
+            "claude-opus-4-7",
+            "claude-opus-4-8",
         ] {
             assert!(
                 !models.iter().any(|m| m.matches(retired)),
@@ -252,4 +272,57 @@ fn the_gateway_default_model_is_a_catalog_entry() {
         "the default model must be listed: allow_unlisted_models is false, so \
          an unlisted default is a 403 for every request that omits a model"
     );
+}
+
+#[test]
+fn the_removed_providers_stay_removed() {
+    let registry = registry();
+    for gone in ["openai", "openai-responses", "cerebras"] {
+        assert!(
+            !registry.providers.iter().any(|p| p.name.as_str() == gone),
+            "{gone} was removed from the catalog on 2026-09-24"
+        );
+    }
+    for pattern in ["gpt-oss-120b", "gpt-4.1", "o4-mini"] {
+        assert!(
+            !gateway().routes.iter().any(|r| r.matches(pattern)),
+            "{pattern} has no provider left to route to"
+        );
+    }
+}
+
+#[test]
+fn every_vertex_provider_shares_the_vertex_secret() {
+    for name in [
+        "vertex",
+        "vertex-anthropic",
+        "vertex-maas",
+        "vertex-maas-us-central1",
+    ] {
+        assert_eq!(
+            provider(name).api_key_secret.as_str(),
+            "vertex",
+            "{name}: one service-account JSON serves every Vertex provider"
+        );
+    }
+}
+
+#[test]
+fn the_current_open_models_are_declared_and_routed_to_maas() {
+    let spec = gateway();
+    let maas = provider("vertex-maas").models;
+    for id in [
+        "zai.glm-5.2",
+        "deepseek.v3.2",
+        "moonshotai.kimi-k2-thinking",
+        "qwen.qwen3-coder-480b",
+    ] {
+        assert!(maas.iter().any(|m| m.matches(id)), "{id} is not declared");
+        let route = spec
+            .routes
+            .iter()
+            .find(|r| r.matches(id))
+            .unwrap_or_else(|| panic!("no route for {id}"));
+        assert_eq!(route.provider.as_str(), "vertex-maas", "{id}");
+    }
 }

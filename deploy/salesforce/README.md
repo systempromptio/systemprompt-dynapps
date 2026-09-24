@@ -1,11 +1,11 @@
 # Systemprompt connector — Salesforce package
 
-One External Client App (ECA), built in **ONTRQ**
-(`ontrq.my.salesforce.com`), is how Salesforce authorises the Systemprompt
-gateway. The gateway holds one consumer key and secret; each org-and-surface is
+One External Client App (ECA), built in our own source org (alias `dev`) and
+installed into the client's org, **ONTRQ** (`ontrq.my.salesforce.com`), is how
+Salesforce authorises the Systemprompt gateway. The gateway holds one consumer key and secret; each org-and-surface is
 a row in `services/config/salesforce-orgs.yaml` and a Connect button on the
-profile page. The app is authored `Packaged`, so a second org can install it as
-a 2GP package later without rebuilding it. Decision and tradeoffs: `docs/decisions/salesforce-connector.md`.
+profile page. The app is authored `Packaged`, so any client org installs it as
+a 2GP package without rebuilding it. Decision and tradeoffs: `docs/decisions/salesforce-connector.md`.
 
 ```
 deploy/salesforce/
@@ -25,7 +25,8 @@ deploy/salesforce/
 ```
 
 Prerequisites: Salesforce CLI (`sf`), an authenticated alias per org
-(`sf org login web --alias ontrq`), Dev Hub enabled on the source org
+(`sf org login web --alias dev` for the source org, `--alias ontrq` for the
+client org), Dev Hub enabled on the source org
 (Setup → Dev Hub), and — for a managed package — a namespace registered on
 a Developer Edition org and linked to the Dev Hub (Setup → Namespace
 Registries). Put the namespace in `sfdx-project.json` once it exists.
@@ -34,9 +35,9 @@ Registries). Put the namespace in `sfdx-project.json` once it exists.
 
 This instance fronts one org, `ontrq.my.salesforce.com`, through one connector
 (`salesforce`, on the Headless 360 endpoint). Steps 1–2 and 5 are the whole
-setup for it. Steps 3–4 build and install the package and are
-needed only to add a *second* org later — the app is authored `Packaged` from the
-start so that stays possible without rebuilding it.
+setup of the app in the source org. Steps 3–4 build the package and install it
+into an org that uses it, ONTRQ included — the app is authored `Packaged` so
+every such org installs the same app.
 
 To rehearse against a throwaway org first, run steps 1–2 on a Developer Edition
 org and point a temporary registry entry at it.
@@ -44,8 +45,8 @@ org and point a temporary registry entry at it.
 ### 1. Create the app in the source org (CLI, once)
 
 ```
-sf org login web --alias ontrq --instance-url https://ontrq.my.salesforce.com
-scripts/bootstrap-source-org.sh ontrq
+sf org login web --alias dev
+scripts/bootstrap-source-org.sh dev
 ```
 
 The script deploys the app, the global OAuth settings (authored without a
@@ -71,39 +72,43 @@ tool call.
 Setup-UI alternative: External Client App Manager → New (`Systemprompt`,
 Packaged), enable OAuth with the callbacks in `bootstrap/…`, scopes mcp_api /
 refresh_token / openid, PKCE, secret required for refresh flow, named-user JWT
-tokens; then `scripts/retrieve-eca.sh ontrq`.
+tokens; then `scripts/retrieve-eca.sh dev`.
 
 ### 2. Re-retrieve after any change made in Setup
 
 ```
-scripts/retrieve-eca.sh ontrq
+scripts/retrieve-eca.sh dev
 ```
+
+Always the source org: settings changed in an org that installed the package
+stay in that org and are never retrieved.
 
 Review the diff: `distributionState` stays `Packaged`, `oauthLink` is
 unchanged. Commit `force-app/`. `.retrieved/` holds the secret and is
 gitignored; delete it when done.
 
-### 3. Build the package (Dev Hub) — only to add a second org
+### 3. Build the package (Dev Hub)
 
 ```
 sf package create --name systemprompt-connector --package-type Managed \
-  --path force-app --target-dev-hub ontrq        # once; writes packageAliases
-scripts/package-version.sh ontrq                 # every release; prints the 04t… id
-sf package version promote --package <04t…> --target-dev-hub ontrq   # when proven
+  --path force-app --target-dev-hub dev          # once; writes packageAliases
+scripts/package-version.sh dev                   # every release; prints the 04t… id
+sf package version promote --package <04t…> --target-dev-hub dev     # when proven
 ```
 
 While testing, an `Unlocked` package behaves the same for install and OAuth and
-needs no namespace; switch to `Managed` for a real second org.
+needs no namespace; switch to `Managed` for a client org.
 
-### 4. Install into a second org — only to add one
+### 4. Install into a client org (ONTRQ)
 
 ```
-scripts/install.sh <alias> <04t…>
+scripts/install.sh ontrq <04t…>
 ```
 
 Then in that org: Setup → API Catalog → MCP Servers → activate the surfaces it
-needs. The installed app references ONTRQ's OAuth settings, so the consumer key
-stored in step 1 works there too; nothing is typed into the second org. A user
+needs — until they are active, consent fails with `invalid_scope`. The
+installed app references the source org's OAuth settings, so the consumer key
+stored in step 1 works there too; nothing is typed into the client org. A user
 without a login there is refused by Salesforce at consent — that is the
 entitlement. Assign `Systemprompt_MCP_Access` only to users whose profile
 lacks API access.
@@ -139,7 +144,6 @@ gateway so every user is told to reconnect.
 
 ## Open checks
 
-- Whether a callback URL added to the app on ONTRQ reaches a subscriber org
+- Whether a callback URL added to the app in the source org reaches a subscriber org
   without a new package version (it should — subscribers reference the source
-  settings — but test it against a scratch org before relying on it). Only
-  matters once a second org exists.
+  settings — but test it against a scratch org before relying on it).

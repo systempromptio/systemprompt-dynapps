@@ -79,8 +79,9 @@ fn create_tool(def: &ToolDef<'_>) -> Tool {
 pub fn list_tools() -> Vec<Tool> {
     let desc = format!(
         "Execute SystemPrompt CLI commands. Pass the command WITHOUT the 'systemprompt' prefix.\n\n\
-        For usage-by-user, request logs, conversation audits and the user roster use the typed \
-        tools instead — usage_by_user, request_log, conversation_audit, users — they carry their \
+        For people's activity, conversations, spend, request logs, audits and the user roster use \
+        the typed tools instead — user_activity, conversation_list, usage_by_user, request_log, \
+        conversation_audit, users — they carry their \
         flags in the schema, page, and never return more than a model can read.\n\n\
         Common commands:\n  \
         - core skills list: List installed skills\n  \
@@ -112,6 +113,8 @@ pub fn list_tools() -> Vec<Tool> {
     let cli = &location;
     let token = "";
     tools.push(crate::reports::ReportHandler { cli, token }.tool_definition(SERVER_NAME));
+    tools.push(crate::typed::UserActivityHandler { cli, token }.tool_definition(SERVER_NAME));
+    tools.push(crate::typed::ConversationListHandler { cli, token }.tool_definition(SERVER_NAME));
     tools.push(crate::typed::UsageByUserHandler { cli, token }.tool_definition(SERVER_NAME));
     tools.push(crate::typed::RequestLogHandler { cli, token }.tool_definition(SERVER_NAME));
     tools.push(crate::typed::ConversationAuditHandler { cli, token }.tool_definition(SERVER_NAME));

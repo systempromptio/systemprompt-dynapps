@@ -72,13 +72,11 @@ entities:
   - entity: marketplace/astound-salesforce
     default: closed
     why: >-
-      Salesforce sales workspace; a person receives it after linking the
-      Salesforce connector. Super-admins retain operating access
-      before a connection is present.
+      Salesforce sales workspace for the business-users group. Membership
+      alone grants it; the Salesforce connector is linked from inside the
+      workspace and Salesforce still refuses anyone without a user in the org.
     allow:
-      connector: [salesforce]
-      salesforce: [salesforce]
-      role: [super_admin]
+      group: [business-users]
 
   # Arrives as a signed bundle from Astound-Digital/sfnext-claude-dev-kit; the
   # kit owns the content, this file owns who reaches it. Declared here even
@@ -141,6 +139,12 @@ entities:
     allow:
       role: [platform_admin, admin, super_admin]
 
+  - entity: skill/admin_person_activity
+    default: closed
+    why: Admin skill shipped by astound-super-admin; it reads every user's conversation history.
+    allow:
+      role: [platform_admin, admin, super_admin]
+
   - entity: skill/admin_daily_brief
     default: closed
     why: Admin skill shipped by astound-super-admin.
@@ -185,11 +189,13 @@ entities:
     why: >-
       Org-wide Drive, Gmail and Calendar search through Agent Search; Google
       filters every result to what the user can already open, so the band only
-      decides who sees the connector. Starts on the UK pilot band; widening is a one-line
-      change here. The connector band keeps the server for anyone who has
-      already connected it, which is what lets the connection-gated search
-      skills stay usable if the person's group changes.
+      decides who sees the connector. Open to the UK pilot and the
+      business-users group, whose Salesforce sales workspace draws on it; IAM
+      in astound-knowledge-uk-sales is granted to the whole astounddigital.com
+      domain, so widening needs no Google change. The connector band keeps the
+      server for anyone who has already connected it, which is what lets the
+      connection-gated search skills stay usable if the person's group changes.
     allow:
-      group: [uk]
+      group: [uk, business-users]
       connector: [google_workspace]
       role: [super_admin]

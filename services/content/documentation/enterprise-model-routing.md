@@ -31,7 +31,7 @@ related_docs:
 
 ## One gateway, any provider
 
-The gateway speaks **four wire protocols** behind `/v1/messages` and `/v1/responses`, so any Anthropic-SDK or OpenAI-compatible client points at it unchanged. Routes match on model pattern and can rewrite via `upstream_model` — a client asking for `claude-*` can be transparently served by a different backend without any application change. Substitution across Cerebras, OpenAI, and Gemini is proven in live deployments.
+The gateway speaks **four wire protocols** behind `/v1/messages` and `/v1/responses`, so any Anthropic-SDK or OpenAI-compatible client points at it unchanged. Routes match on model pattern and can rewrite via `upstream_model` — a client asking for `claude-*` can be transparently served by a different backend without any application change. Substitution across Vertex AI (Claude, Gemini and the open models) and Anthropic's own API is proven in live deployments.
 
 ## The shipped Anthropic lineup
 
@@ -93,12 +93,6 @@ providers:
   surface: anthropic
   endpoint: https://aiplatform.googleapis.com/v1/projects/{project}/locations/global/publishers/anthropic
   api_key_secret: vertex
-gateway:
-  routes:
-  - id: claude-star-4203d1
-    model_pattern: claude-*
-    provider: vertex-anthropic
-    fallback_provider: anthropic
 ```
 
 Clients call it the same way. The gateway speaks the Anthropic Messages wire
@@ -118,7 +112,8 @@ are addressed by `anthropic-claude-*` ids, because a model id must be unique
 across the catalog. It is the `claude-*` route's failover target: when Vertex is
 out of capacity or unreachable, the gateway re-sends the request to Anthropic
 and serves the same model. It finds that model through the upstream name the
-two entries share.
+two entries share. Those ids are `hidden`, so no client lists them and nobody
+picks one: Anthropic's API is reached only through the failover.
 
 ## Provider failover
 

@@ -2,7 +2,7 @@
     {{#*inline "head_extra"}}{{/inline}}
     {{#*inline "content"}}
     {{> components/breadcrumbs crumbs=breadcrumbs}}
-    {{#> components/page-header title=title subtitle="Where declarations come from and how they move. Sources are the internal base tree this repository ships and each external bundle the profile pins — one mechanism, some local, some remote. The archive carries every projected plane between the database and the repository. What each plane's database says against its file is on the plane's own page, under Sync."}}
+    {{#> components/page-header title=title subtitle="Where declarations come from and how they move. Sources are the internal base tree this repository ships and each external bundle the profile pins — one mechanism, some local, some remote. The archive carries every projected plane between the database and the repository. Access review settles the access-control rules entity by entity; every other plane's database against its file is on that plane's own page, under Sync."}}
         {{#*inline "header_actions"}}
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{docs_url}}" target="_blank" rel="noopener noreferrer">How sync works</a>
         {{#unless is_participant}}
@@ -26,6 +26,33 @@
     {{> components/notice tone="err" title="Sources could not be read" message=sources_unreadable}}
     {{/if}}
 
+    {{#if show_access}}
+    {{#with access_review}}
+    {{#if unreadable}}
+    {{> components/notice tone="err" title="rules.yaml could not be compared" message=unreadable}}
+    {{/if}}
+    {{#if not_live_count}}
+    {{> components/notice tone="err" title="Declared in code, not live" message="Some entities rules.yaml names were never applied to this database, so nobody reaches them through those rules. Apply code on each row below; nothing is ever applied at boot."}}
+    {{/if}}
+    {{#> components/section title="To review" count=pending_count note="One row per entity where rules.yaml and this database disagree. Apply code makes that entity match the file; Keep database writes nothing and takes the row off this list until either side changes; Export carries the database into the file. Every choice asks for a reason."}}
+        {{#*inline "section_actions"}}
+        <button type="button" class="sp-btn sp-btn--sm sp-btn--outline" data-action="sync-export" data-export-url="{{export_url}}" data-file="access-control/rules.yaml">Export database to code</button>
+        {{/inline}}
+    {{/components/section}}
+    {{#each pending}}{{> components/access-review-row row=this can_write=@root.can_write}}{{else}}
+    {{> components/notice tone="ok" title="Nothing to review" message="Every entity rules.yaml names is live as declared, and nothing was written here that code lacks."}}
+    {{/each}}
+    {{#if kept}}
+    <details class="sp-access-review__kept">
+        <summary>Kept as they are in this database ({{kept_count}})</summary>
+        {{#each kept}}{{> components/access-review-row row=this can_write=@root.can_write}}{{/each}}
+    </details>
+    {{/if}}
+    {{#if plane}}{{> components/sync-plane plane=plane can_write=@root.can_write}}{{/if}}
+    {{/with}}
+    {{> components/sync-plane-dialogs}}
+    {{> components/access-reason-dialog}}
+    {{else}}
     {{#if show_sources}}
     {{#if sources.base.provenance_error}}
     {{> components/notice tone="warn" title="Serving a fallback tree" message=sources.base.provenance_error}}
@@ -163,6 +190,7 @@ owner key for rules.yaml: {{owner_key}}</pre>
             {{/if}}
         </article>
     </div>
+    {{/if}}
     {{/if}}
 
     <dialog class="sp-dialog sp-ac-dialog" data-dialog="refresh" aria-labelledby="sync-refresh-title">

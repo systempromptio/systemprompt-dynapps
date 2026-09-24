@@ -1,19 +1,22 @@
 //! Versions: every marketplace by the content hash of what it serves.
 //!
 //! The landing page lists each marketplace with its current hash and the
-//! window's figures across all its versions. A marketplace's page has three
+//! window's figures across all its versions. A marketplace's page has four
 //! views over one window — History (every version, what changed between
 //! consecutive ones, how each performed), Compare (two versions side by side,
-//! skill by skill) and Distribution (what the publication pipeline delivered
-//! to devices for this marketplace's skills). A version is its hash; no
-//! counter is shown anywhere.
+//! skill by skill), Evaluation (every conversation scored by fixed rules, by
+//! version and skill: the rows the `analysis-plugin-eval` export returns) and
+//! Distribution (what the publication pipeline delivered to devices for this
+//! marketplace's skills). A version is its hash; no counter is shown anywhere.
 
 mod access;
 mod compare;
 pub(crate) mod diff;
 mod distribution;
+mod evaluation;
 mod history;
 mod landing;
+mod views;
 
 use std::sync::Arc;
 
@@ -55,14 +58,25 @@ pub(crate) struct VersionsQuery {
 pub(crate) enum Tab {
     History,
     Compare,
+    Evaluation,
     Distribution,
 }
 
 impl Tab {
+    // Why: the Evaluation tab's figures are its own export's rows, so its
+    // button downloads them; every other view exports the version history.
+    const fn dataset(self) -> &'static str {
+        match self {
+            Self::Evaluation => "analysis-plugin-eval",
+            Self::History | Self::Compare | Self::Distribution => "analysis-versions",
+        }
+    }
+
     fn parse(value: Option<&str>) -> AdminResult<Self> {
         Ok(match value.unwrap_or("history") {
             "history" => Self::History,
             "compare" => Self::Compare,
+            "evaluation" => Self::Evaluation,
             "distribution" => Self::Distribution,
             _ => return Err(AdminError::BadRequest("Unknown versions tab".to_owned())),
         })
@@ -161,6 +175,7 @@ fn tab_links(base: &str, active: Tab) -> Vec<TabLink> {
     [
         (Tab::History, "History", "history"),
         (Tab::Compare, "Compare", "compare"),
+        (Tab::Evaluation, "Evaluation", "evaluation"),
         (Tab::Distribution, "Distribution", "distribution"),
     ]
     .into_iter()
@@ -187,6 +202,7 @@ struct DetailPage {
     version_count: usize,
     history: Vec<history::VersionView>,
     compare: Option<compare::CompareView>,
+    evaluation: Option<evaluation::EvaluationView>,
     distribution: Option<distribution::DistributionPage>,
     can_manage: bool,
     export: crate::export::ExportView,
@@ -213,33 +229,27 @@ pub(crate) async fn detail_page(
         .iter()
         .find_map(|v| v.name.clone())
         .unwrap_or_else(|| marketplace_id.as_str().to_owned());
-    let compare = match tab {
-        Tab::Compare => Some(
-            compare::build(
-                &pool,
-                window,
-                compare::Recorded {
-                    rows: &rows,
-                    scores: &scores,
-                },
-                (clean_hash(query.a)?, clean_hash(query.b)?),
-            )
-            .await?,
-        ),
-        _ => None,
-    };
-    let distribution = match tab {
-        Tab::Distribution => Some(distribution::build(&pool, &managed, &rows).await?),
-        _ => None,
-    };
+    let views = views::tab_views(
+        &pool,
+        &managed,
+        views::TabInput {
+            tab,
+            window,
+            marketplace_id: &marketplace_id,
+            rows: &rows,
+            scores: &scores,
+            history: &history,
+        },
+        query,
+    )
+    .await?;
     let encoded = urlencoding::encode(marketplace_id.as_str());
     let base_href = format!("/admin/analysis/versions/{encoded}?days={days}");
-    let export = crate::export::ExportView::single(
-        "analysis-versions",
-        &format!("days={days}&marketplace={encoded}"),
-    );
     let data = DetailPage {
-        export,
+        export: crate::export::ExportView::single(
+            tab.dataset(),
+            &format!("days={days}&marketplace={encoded}"),
+        ),
         page: "analysis-marketplace-versions",
         title: format!("{name} — versions"),
         breadcrumbs: vec![
@@ -255,8 +265,9 @@ pub(crate) async fn detail_page(
         current: history.iter().find(|v| v.is_current).cloned(),
         version_count: history.len(),
         history,
-        compare,
-        distribution,
+        compare: views.compare,
+        evaluation: views.evaluation,
+        distribution: views.distribution,
         can_manage: shell.user.is_admin,
     };
     Ok(render_typed_page(

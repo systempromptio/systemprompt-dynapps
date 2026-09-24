@@ -68,7 +68,7 @@
             <td class="sp-table__cell--num sp-u-num" title="average {{avg_display}}">{{p95_display}}</td>
             <td class="sp-table__cell--num sp-u-num" title="{{attested}} calls confirmed by the client's completion hook">{{attested_display}}</td>
             <td class="sp-table__cell--date">{{last_call_display}}</td>
-            <td class="sp-table__cell--num sp-u-num">{{#if assignment_count}}<a class="sp-table__link" href="{{matrix_url}}">{{assignment_count}}</a>{{else}}<span class="sp-u-text-tertiary">0</span>{{/if}}</td>
+            <td class="sp-table__cell--num sp-u-num">{{#if assignment_count}}<a class="sp-table__link" href="{{access_url}}">{{assignment_count}}</a>{{else}}<span class="sp-u-text-tertiary">0</span>{{/if}}</td>
             <td class="sp-table__cell--actions"><a class="sp-btn sp-btn--xs sp-btn--outline" href="{{detail_url}}{{#if preserved_query}}?{{preserved_query}}{{/if}}">Open</a></td>
         </tr>
         {{/each}}

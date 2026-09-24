@@ -14,15 +14,12 @@ Credential issuing for the Google project is covered in more detail in
 
 | secret | provider entry | credential | unlocks |
 |---|---|---|---|
-| `anthropic` | `anthropic` | Anthropic API key | the six `claude-*` models, including `claude-opus-5-5`, `claude-opus-5`, `claude-sonnet-5` and `claude-fable-5-1` |
-| `gemini` | `gemini` | Gemini API key | `gemini-2.5-pro`, `gemini-2.5-flash`, `gemini-2.5-flash-lite` |
-| `vertex` | `vertex` | Google service-account JSON | `vertex-gemini-2.5-pro`, `vertex-gemini-2.5-flash` |
-| `vertex_maas` | `vertex-maas` | Google service-account JSON | the nine open models: four Qwen3, `zai.glm-5`, `moonshotai.kimi-k2-thinking`, `deepseek.v3.2`, `openai.gpt-oss-120b`, `openai.gpt-oss-20b` |
-| `openai` | `openai` and `openai-responses` | OpenAI API key | `gpt-4.1`, `gpt-4.1-mini`, and `o4-mini` on the `/responses` wire |
-| `cerebras` | `cerebras` | Cerebras API key | `gpt-oss-120b` |
+| `vertex` | `vertex`, `vertex-anthropic`, `vertex-maas`, `vertex-maas-us-central1` | Google service-account JSON | the six `claude-*` models (`claude-opus-5-5`, `claude-opus-5`, `claude-sonnet-5`, `claude-fable-5-1`, `claude-fable-5`, `claude-haiku-4-5`), the `vertex-gemini-*` models, and the open models (`zai.glm-5.2`, `deepseek.v3.2`, `moonshotai.kimi-k2-thinking`, `qwen.qwen3-coder-480b`, `openai.gpt-oss-120b` and the rest of `vertex-maas`) |
+| `anthropic` | `anthropic` | Anthropic API key | failover for `claude-*` when Vertex is out of capacity (the `anthropic-claude-*` twins it lands on are hidden from clients) |
+| `gemini` | `gemini` | Gemini API key | `gemini-3.8-flash` (the classifier job) |
 
-One secret is the minimum: `anthropic` alone gives Claude Code and OpenCode a
-working default, since `gateway.yaml` sets `default_provider: anthropic` and
+One secret is the minimum: `vertex` alone gives Claude Code and OpenCode a
+working default, since `gateway.yaml` sets `default_provider: vertex-anthropic` and
 `default_model: "claude-sonnet-5[1m]"` (Claude Code's 1M-context form of
 `claude-sonnet-5`; other hosts get the bare id). Every other secret adds models to the picker.
 
@@ -42,21 +39,20 @@ credential and endpoint.
   `CREDENTIALS_MISSING`. It wants an OAuth access token asserting a principal.
   That is the `vertex` secret.
 
-The model ids are prefixed on the Vertex entry (`vertex-gemini-2.5-pro`) because
+The model ids are prefixed on the Vertex entry (`vertex-gemini-3.8-flash`) because
 a model id must be unique across the whole catalog: `ProviderRegistry::validate`
 hoists its `seen_models` set outside the per-provider loop, so two entries both
-claiming `gemini-2.5-pro` fail at boot with `DuplicateModel`. Credential and
+claiming `gemini-3.8-flash` fail at boot with `DuplicateModel`. Credential and
 endpoint therefore travel together per entry.
 
 ## The Google service account
 
-`vertex` and `vertex_maas` take the **same kind** of credential and can take the
-same one: a service-account JSON key with `roles/aiplatform.user` on the Google
-project. Store the whole document verbatim as the secret value.
+Every Vertex provider reads the one `vertex` secret: a service-account JSON key
+with `roles/aiplatform.user` on the Google project. Store the whole document
+verbatim as the secret value. There is no separate `vertex_maas` secret.
 
 ```bash
 systemprompt admin config secret set vertex "$(cat service-account.json)"
-systemprompt admin config secret set vertex_maas "$(cat service-account.json)"
 ```
 
 The gateway recognises a service-account key by the `type` field the document
@@ -70,7 +66,7 @@ such a document is sent verbatim as an API key, exactly as before.
 
 ### The project id comes from the service account, never the catalog
 
-Both Vertex endpoints in `providers.yaml` are project-scoped and written with a
+Every Vertex endpoint in `providers.yaml` is project-scoped and written with a
 `{project}` segment. The gateway fills it from the `project_id` field of the
 service-account key in the secret, so swapping the secret for another
 customer's re-targets the endpoint with it and nothing in `services/` names a
@@ -125,7 +121,7 @@ SID=$(curl -sS -X POST localhost:8080/api/public/gateway/sessions \
 curl -sS -X POST localhost:8080/v1/messages \
   -H "Authorization: Bearer $PAT" -H "x-session-id: $SID" \
   -H 'content-type: application/json' -d '{
-    "model":"vertex-gemini-2.5-flash","max_tokens":64,
+    "model":"vertex-gemini-3.8-flash","max_tokens":64,
     "messages":[{"role":"user","content":"ping"}]}' | jq '{stop:.stop_reason, usage}'
 ```
 
@@ -145,7 +141,7 @@ Nothing changes on the developer's machine. The bridge install points Claude
 Code at the gateway and enables gateway model discovery, so every credentialed
 model appears in the `/model` picker beside the Claude models. OpenCode reads
 the same catalog. A request names the catalog id (`qwen.qwen3-coder-480b`,
-`vertex-gemini-2.5-pro`, `gemini-2.5-flash`), the gateway routes it by the
+`vertex-gemini-3.8-flash`, `gemini-3.8-flash`), the gateway routes it by the
 patterns in [`services/ai/gateway.yaml`](../../services/ai/gateway.yaml),
 rewrites it to the upstream name where `upstream_model` differs, and audits the
 call.

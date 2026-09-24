@@ -1,3 +1,4 @@
+-- @supersedes-checksum: 7fd7c681e3d2ad28
 -- @supersedes-checksum: 070e202c5f6fdc61
 -- @supersedes-checksum: 6de132efff82f622
 -- @cost: rows=421 measured=1.5s triggers=live
@@ -252,14 +253,17 @@ BEGIN
     RETURN COALESCE(written, 0);
 END $$;
 
--- Why: the rollup reads tool_activity and conversation_requests, both
--- declarative objects that an established database does not hold until the
--- declarative pass runs after the migrations. The catalog test keeps the
--- reference out of the parser's reach.
+-- Why: the rollup is rebuilt by the conversation_rollup job, not here. A
+-- full refresh inside the boot migration is quadratic in sessions (each
+-- event is placed in its session's request windows) and cancelled a
+-- 2,000-session upgrade at its statement timeout. Rewinding the job's
+-- watermark makes its next tick rebuild every conversation off the boot
+-- path; until then the page shows the facts it already had.
 DO $$
 BEGIN
-    IF to_regclass('public.tool_activity') IS NOT NULL
-        AND to_regclass('public.conversation_requests') IS NOT NULL THEN
-        PERFORM refresh_conversation_facts(NULL);
+    IF to_regclass('public.conversation_rollup_state') IS NOT NULL THEN
+        INSERT INTO conversation_rollup_state (id, watermark)
+        VALUES (TRUE, 'epoch')
+        ON CONFLICT (id) DO UPDATE SET watermark = 'epoch';
     END IF;
 END $$;

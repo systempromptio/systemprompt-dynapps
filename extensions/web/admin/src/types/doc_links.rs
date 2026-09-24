@@ -32,7 +32,6 @@ pub const fn doc_slug_for(topic: &str) -> Option<&'static str> {
         b"safety" => "enterprise-safety-guardrails",
         b"tool-governance" | b"hooks" | b"mcp-servers" | b"marketplace" | b"plugins"
         | b"skills" | b"browse-plugins" => "enterprise-tool-governance",
-        b"knowledge" => "enterprise-knowledge-rag",
         b"authentication" | b"secrets" => "authentication",
         b"downloads" => "downloads",
         // Why: no page covers these yet. Listed rather than left to a catch-all

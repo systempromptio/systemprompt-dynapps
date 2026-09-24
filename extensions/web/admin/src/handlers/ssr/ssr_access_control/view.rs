@@ -1,17 +1,15 @@
-//! Template contexts for `/admin/access-control` and its sync page.
+//! Template contexts for `/admin/access-control`.
 //!
 //! The Rules tab is entity-centric: one row per governed entity under a
 //! heading per kind, its bands as chips, its why in full, and whether code
 //! and database agree about it. The audience grid — every role, group and
 //! project against every entity, each cell the resolver's own answer — and
-//! the one-person check are their own tabs. `can_write` is the MANAGE tier;
+//! the person search are their own tabs. `can_write` is the MANAGE tier;
 //! a project manager reads every tab and changes nothing.
 
 use serde::Serialize;
 
 use super::person::PersonCheckView;
-use crate::handlers::ssr::ssr_users::detail::AccessTabView;
-use crate::handlers::ssr::sync_plane::PlaneCardView;
 use crate::handlers::ssr::types::{BreadcrumbView, TabLinkView};
 use crate::repositories::access_control::drift::DriftCounts;
 
@@ -262,8 +260,6 @@ pub(crate) struct AccessControlPageData {
     pub on_rules: bool,
     pub on_audience: bool,
     pub on_person: bool,
-    // Why: each tab's body is set only for that tab; the others stay empty.
-    pub sync: Option<PlaneCardView>,
     pub docs_url: &'static str,
     pub sync_url: &'static str,
     pub drift: Option<DriftBannerView>,
@@ -271,7 +267,4 @@ pub(crate) struct AccessControlPageData {
     pub entities: AcEntitiesView,
     pub audience: AudienceGridView,
     pub person: Option<PersonCheckView>,
-    // Why: named `access` at the page root because the shared
-    // `components/user-access` partial reads `@root.access`.
-    pub access: Option<AccessTabView>,
 }

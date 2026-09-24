@@ -3,8 +3,10 @@
 //! `rules` owns the CRUD over `access_control_rules`; `matrix` resolves the
 //! effective grant for every catalog entity against a single user's rule
 //! chain, and `matrix_subject` does the same for a subject that is not a
-//! person — a group or a role, as the audience matrix reads them.
+//! person — a group or a role, as the audience matrix reads them. `explain`
+//! walks one person's band ladder for one entity.
 
+pub mod explain;
 pub(crate) mod matrix;
 mod matrix_resolution;
 mod matrix_source;

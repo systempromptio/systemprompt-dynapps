@@ -15,6 +15,7 @@
 //! through untouched. The page never writes YAML itself.
 
 mod models;
+mod route_detail;
 mod rows;
 mod view;
 
@@ -33,6 +34,7 @@ use crate::repositories::config::gateway::{RouteLabels, get_route_labels_from_se
 use crate::templates::AdminTemplateEngine;
 use crate::types::{GatewayConfigView, MarketplaceContext, UserContext};
 
+pub(crate) use route_detail::gateway_route_page;
 use rows::{kpis, load_surfaces, resolved_only, route_rows};
 use view::GatewayPageData;
 

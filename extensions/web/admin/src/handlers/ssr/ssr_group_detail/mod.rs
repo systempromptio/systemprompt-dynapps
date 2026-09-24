@@ -1,4 +1,5 @@
-//! `/admin/groups/{group_id}` — one group across five tabs, and the
+//! `/admin/groups/{group_id}` — one group across five tabs (its marketplaces
+//! are the first section of Access), and the
 //! Unassigned bucket as a variant of the same page.
 //!
 //! Unassigned is not a group anyone created: it is everyone with no group row
@@ -10,7 +11,7 @@
 use std::sync::Arc;
 
 use axum::extract::{Path, Query, State};
-use axum::response::Response;
+use axum::response::{IntoResponse, Redirect, Response};
 use serde::Deserialize;
 use sqlx::PgPool;
 use systemprompt_web_shared::GroupId;
@@ -23,8 +24,8 @@ use super::people_chart::daily_requests_chart;
 use super::people_view;
 use super::ssr_groups::UNASSIGNED_GROUP;
 use super::types::{
-    BreadcrumbView, GroupDetailPageData, GroupOverviewView, MarketplaceAssignmentView,
-    MemberSetChipView, MembersTabView, UsageLeaderRowView,
+    BreadcrumbView, GroupDetailPageData, GroupOverviewView, MemberSetChipView, MembersTabView,
+    UsageLeaderRowView,
 };
 use crate::handlers::ssr::page::Page;
 
@@ -45,6 +46,12 @@ pub(crate) async fn group_detail_page(
 ) -> AdminHtmlResult<Response> {
     if !shell.user.is_console {
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
+    }
+
+    // Why: a group's marketplaces are rows of its Access tab now; the old
+    // tab's links land there.
+    if query.tab.as_deref() == Some("marketplaces") {
+        return Ok(Redirect::to(&format!("/admin/groups/{group_id}?tab=access")).into_response());
     }
 
     let group = repositories::groups::crud::find_group(&pool, &group_id).await?;
@@ -75,7 +82,6 @@ pub(crate) async fn group_detail_page(
         },
         overview: load_overview(&pool, &group_id, active).await,
         members: load_members(&pool, &group_id, active, &shell.user).await,
-        marketplaces: load_marketplaces(&pool, &group_id, active).await,
         access: load_access(&pool, &group_id, active).await,
         projects: load_projects(&pool, &group_id, active).await,
         mappings: load_mappings(&pool, &group_id, active, &shell.user).await,
@@ -131,31 +137,6 @@ async fn load_overview(
             })
             .collect(),
     })
-}
-
-// Why: the whole catalog, flagged with what this group already reaches. The
-// rows a group is not entitled to are what makes the tab an editor rather
-// than a receipt.
-async fn load_marketplaces(
-    pool: &PgPool,
-    group_id: &GroupId,
-    active: &str,
-) -> Option<Vec<MarketplaceAssignmentView>> {
-    if active != tabs::MARKETPLACES {
-        return None;
-    }
-    Some(
-        data::load_marketplace_options(pool, group_id)
-            .await
-            .into_iter()
-            .map(|m| MarketplaceAssignmentView {
-                id: m.id,
-                name: m.name,
-                description: m.description,
-                assigned: m.assigned,
-            })
-            .collect(),
-    )
 }
 
 async fn load_members(

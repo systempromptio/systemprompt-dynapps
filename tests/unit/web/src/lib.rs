@@ -215,7 +215,11 @@ mod access_control_drift;
 #[cfg(test)]
 mod access_control_export;
 #[cfg(test)]
+mod access_control_review;
+#[cfg(test)]
 mod access_control_rules_yaml;
+#[cfg(test)]
+mod access_explain;
 #[cfg(test)]
 mod account_pages;
 #[cfg(test)]

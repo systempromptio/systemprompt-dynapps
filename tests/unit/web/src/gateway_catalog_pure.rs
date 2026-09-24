@@ -50,7 +50,7 @@ fn only_the_gateway_route_kind_is_enforced() {
     let registered = registered_routes(&ids(&["route-abc123"]));
 
     registered
-        .require(EntityKind::McpServer, "knowledge-bank")
+        .require(EntityKind::McpServer, "google-workspace")
         .expect("kinds this deployment does not declare keep self-materialising");
 }
 

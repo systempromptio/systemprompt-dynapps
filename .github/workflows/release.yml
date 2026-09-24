@@ -533,7 +533,7 @@ jobs:
 
   release:
     name: Publish GitHub Release
-    needs: [version, bridge, image, image-merge, smoke, base-bundle]
+    needs: [version, bridge, image, image-merge, smoke, upgrade-boot, base-bundle]
     if: needs.version.outputs.publish_release == 'true' && !(github.event_name == 'workflow_dispatch' && inputs.dry_run == true)
     runs-on: ubuntu-latest
     env:
@@ -655,6 +655,69 @@ jobs:
             dist/astound-bridge-* dist/systemprompt-astound-server-* dist/systemprompt-astound-base-* \
             dist/install.sh dist/install.sh.sig dist/install.sh.pem \
             dist/SHA256SUMS dist/SHA256SUMS.sig dist/SHA256SUMS.pem
+
+  upgrade-boot:
+    name: Boot the image over every seeded release
+    needs: [version, image-merge]
+    if: needs.image-merge.result == 'success'
+    runs-on: ubuntu-latest
+    # Why: a 0.58 -> 0.60 client upgrade failed five ways the gates never saw
+    # (stale triggers, a retirement split across extensions, a named trigger
+    # toggle, a blind retry, a root-owned /app/storage/data). Only this path —
+    # the published image, its entrypoint, an old release's database with
+    # rows in it, a fresh named volume — exercises all of them together.
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U test" --health-interval 5s --health-timeout 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upgrade and boot from every rung
+        env:
+          PGPASSWORD: test
+        run: |
+          set -euo pipefail
+          ref="$IMAGE:sha-${{ needs.version.outputs.short }}"
+          docker pull "$ref"
+          for fixture in tests/fixtures/schema/release-baseline-*.sql; do
+            rung=$(basename "$fixture" .sql); rung=${rung#release-baseline-}
+            db="upgrade_${rung//./_}"
+            echo "::group::$rung"
+            psql -h localhost -U test -d postgres -v ON_ERROR_STOP=1 -c "CREATE DATABASE $db"
+            grep -v '^\\' "$fixture" | grep -v "set_config('search_path'" \
+              | psql -q -h localhost -U test -d "$db" -v ON_ERROR_STOP=1 > /dev/null
+            psql -q -h localhost -U test -d "$db" -v ON_ERROR_STOP=1 \
+              -f tests/integration/schema-upgrade/src/seed_hot_tables.sql
+            vol="storage_data_${db}"
+            docker volume create "$vol" > /dev/null
+            docker run -d --name "boot_$db" --network host \
+              -e ANTHROPIC_API_KEY=sk-ant-release-gate \
+              -e DATABASE_URL="postgres://test:test@localhost:5432/$db" \
+              -v "$vol:/app/storage/data" "$ref" > /dev/null
+            healthy=""
+            for _ in $(seq 1 60); do
+              if curl -fsS http://localhost:8080/health > /dev/null 2>&1; then healthy=1; break; fi
+              if [ "$(docker inspect -f '{{.State.Running}}' "boot_$db")" != "true" ]; then break; fi
+              sleep 5
+            done
+            docker logs "boot_$db" 2>&1 | tail -40
+            docker rm -f "boot_$db" > /dev/null
+            [ -n "$healthy" ] || { echo "::error::image did not become healthy over release $rung"; exit 1; }
+            rows=$(psql -At -h localhost -U test -d "$db" -c "SELECT count(*) FROM ai_requests")
+            [ "$rows" = "2000" ] || { echo "::error::release $rung lost ai_requests rows ($rows)"; exit 1; }
+            echo "::endgroup::"
+          done
 
   smoke:
     name: Smoke (pull, run, verify)

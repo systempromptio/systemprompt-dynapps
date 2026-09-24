@@ -143,3 +143,21 @@ pub(crate) fn carriers_of_skill<'a>(
         .filter(|m| m.plugins.iter().any(|p| plugin_ids.contains(p)))
         .collect()
 }
+
+// Why: two cheap reads the badge needs on every catalog page. Both are
+// best-effort: a badge that cannot be computed renders as restricted, which is
+// the safe reading, rather than failing the page.
+pub(super) async fn visibility_inputs(
+    pool: &sqlx::PgPool,
+    services_path: &std::path::Path,
+) -> (Vec<MarketplaceConfigSummary>, Vec<AccessControlRule>) {
+    let mut manifests =
+        crate::repositories::marketplace::manifests::list_marketplace_configs(services_path)
+            .unwrap_or_default();
+    crate::repositories::marketplace::manifests_access::attach_access(pool, &mut manifests).await;
+    let rules = crate::repositories::users::access_control::list_all_rules(pool)
+        .await
+        .inspect_err(|e| tracing::warn!(error = %e, "catalog: rule listing failed"))
+        .unwrap_or_default();
+    (manifests, rules)
+}

@@ -3,7 +3,7 @@ title: "Deploy: Validate Every Stage"
 description: "The deployment as a sequence of stages, each with the command that proves it, the output to expect, and the failure signatures with their fixes."
 author: "Astound Digital"
 slug: "deploy-troubleshooting"
-keywords: "troubleshooting, deploy, preflight, validate, image, ghcr, postgresql, pgvector, secrets, vault, profile, entrypoint, health, load balancer, boot"
+keywords: "troubleshooting, deploy, preflight, validate, image, ghcr, postgresql, secrets, vault, profile, entrypoint, health, load balancer, boot"
 kind: "guide"
 public: true
 tags: ["documentation", "deployment", "troubleshooting"]
@@ -78,7 +78,7 @@ directory read-only.
 
 ```bash
 jq -r 'keys[]' /etc/astound/profile/secrets.json
-# database_url  oauth_at_rest_pepper  manifest_signing_secret_seed  signing_key_pem  anthropic  (bedrock_api_key only with model.provider: bedrock)
+# database_url  oauth_at_rest_pepper  manifest_signing_secret_seed  signing_key_pem  anthropic
 stat -c '%a %U' /etc/astound/profile/secrets.json                    # 600 <uid 1000>
 jq -r .manifest_signing_secret_seed secrets.json | base64 -d | wc -c   # 32
 jq -r .signing_key_pem secrets.json | base64 -d | openssl pkey -noout && echo key-ok
@@ -144,7 +144,7 @@ sha256sum /etc/astound/profile/profile.yaml
 ```bash
 psql "$DATABASE_URL" -c 'select version()'                          # PostgreSQL 16.x or newer
 psql "$DATABASE_URL" -tAc 'select pg_is_in_recovery()'              # f  (must be the primary)
-psql "$DATABASE_URL" -tAc "select extname from pg_extension where extname in ('vector','uuid-ossp','pgcrypto')"  # three rows
+psql "$DATABASE_URL" -tAc "select extname from pg_extension where extname in ('uuid-ossp','pgcrypto')"  # two rows
 psql "$DATABASE_URL" -c 'create table _probe(i int); drop table _probe'   # role can migrate
 psql "$DATABASE_URL" -c '\conninfo'                                  # ... SSL connection
 ```
@@ -159,7 +159,6 @@ private endpoint's FQDN must resolve from the node.
 | `Postgres did not become ready within 300s` | host unreachable, security list, DNS, wrong port | `pg_isready -d "$DATABASE_URL"` from the node; check the OCI security list and the private endpoint FQDN |
 | `password authentication failed` | wrong password, or the role was not created | run `provision.sql` as the admin user |
 | `database_write_url points at a read-only standby` / `pg_is_in_recovery` is `t` | the URL is a replica | point at the primary; replicas are for DR only |
-| `knowledge-bank: database ... has no pgvector; it is required` | `vector` not installed on the database the knowledge bank uses | enable at system level, then `CREATE EXTENSION vector` |
 | `permission denied for schema public` during migration | role lacks rights | `GRANT ALL ON SCHEMA public TO systemprompt` (in `provision.sql`) |
 | `SSL connection is required` / handshake errors | `sslmode` missing or a private CA | add `?sslmode=require`; for a private CA mount the bundle and add `?sslrootcert=<path>` to the database URL |
 
@@ -175,7 +174,7 @@ and find the first step that does not appear:
 | `Running database migrations...` then `Database migration completed successfully` | schema applied | migration error text names the table; a checksum mismatch means the database was seeded by a different tag: repair per the log's hint |
 | `Ensuring bootstrap admin user...` | admin user upserted | `No admin email configured` → stage 3 |
 | `Publishing web assets for this node...` | site rendered into this node's `web/dist` | a warning here never stops boot; the public site 404s until fixed |
-| `Starting services...` and `MCP Servers (1/1)` | children up | the count grows with every server you enable; knowledge-bank exits on missing pgvector (stage 4), or on a missing `bedrock_api_key` when its config selects `model.provider: bedrock` (stage 2) |
+| `Starting services...` and `MCP Servers (1/1)` | children up | the count grows with every server you enable |
 | `Secrets initialization failed` | a secret is malformed | stage 2 signatures |
 | `MCP services running but not properly registered in database` | two nodes booted at the same moment | start this node again once the other is `healthy`; boot nodes one at a time |
 | `signing key init: ... unavailable` | `signing_key_pem` missing or malformed | stage 2 |
@@ -196,8 +195,6 @@ anonymous calls, the binary version, the configured MCP servers, the migration l
 | download `.sha256` mismatch | the image is not a release build | pull the versioned tag again |
 | `MCP server ... not answering` | child died after boot | `docker compose logs app` for the child's exit reason; usually stage 2 or 4 |
 | `no users row` | bootstrap did not run | boot log, stage 5 |
-
-The bundled `verify-node.sh` still probes the legacy `admin_console` agent and the knowledge-bank port. This configuration ships no A2A agent and no enabled knowledge-bank server, so those two probes are not current readiness requirements. Check the enabled MCP servers with `systemprompt infra services status`; investigate failures for resources that are actually configured.
 
 ## 7. Edge
 

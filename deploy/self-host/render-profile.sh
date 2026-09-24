@@ -13,7 +13,7 @@
 #     --external-url https://ai.example.com --admin-email platform-admin@example.com \
 #     --trusted-proxies 10.0.0.0/8,10.1.0.0/16 \
 #     --database-url 'postgres://systemprompt:pw@db:5432/systemprompt?sslmode=require' \
-#     --anthropic-key sk-ant-... --bedrock-key ... \
+#     --anthropic-key sk-ant-... \
 #     [--secret name=value ...] [--image ghcr.io/astound-digital/systemprompt-astound:0.44.0]
 #
 # Portable: bash, openssl, jq. --image checks the template's version pin
@@ -23,7 +23,7 @@
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
-OUT="" EXTERNAL_URL="" TRUSTED="" DATABASE_URL="" ANTHROPIC="" BEDROCK="" IMAGE="" ADMIN_EMAIL=""
+OUT="" EXTERNAL_URL="" TRUSTED="" DATABASE_URL="" ANTHROPIC="" IMAGE="" ADMIN_EMAIL=""
 EXTRA=()
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -33,7 +33,6 @@ while [ $# -gt 0 ]; do
         --trusted-proxies) TRUSTED="$2"; shift 2 ;;
         --database-url) DATABASE_URL="$2"; shift 2 ;;
         --anthropic-key) ANTHROPIC="$2"; shift 2 ;;
-        --bedrock-key) BEDROCK="$2"; shift 2 ;;
         --secret) EXTRA+=("$2"); shift 2 ;;
         --image) IMAGE="$2"; shift 2 ;;
         -h|--help) sed -n '2,20p' "$0"; exit 0 ;;
@@ -91,7 +90,6 @@ next="$(echo "$current" | jq \
     '.oauth_at_rest_pepper = $pepper | .manifest_signing_secret_seed = $seed | .signing_key_pem = $pem')"
 [ -n "$DATABASE_URL" ] && next="$(echo "$next" | jq --arg v "$DATABASE_URL" '.database_url = $v')"
 [ -n "$ANTHROPIC" ]    && next="$(echo "$next" | jq --arg v "$ANTHROPIC" '.anthropic = $v')"
-[ -n "$BEDROCK" ]      && next="$(echo "$next" | jq --arg v "$BEDROCK" '.bedrock_api_key = $v')"
 for kv in "${EXTRA[@]+"${EXTRA[@]}"}"; do
     k="${kv%%=*}"; v="${kv#*=}"
     next="$(echo "$next" | jq --arg k "$k" --arg v "$v" '.[$k] = $v')"

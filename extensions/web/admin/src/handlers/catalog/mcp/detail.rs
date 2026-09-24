@@ -1,5 +1,6 @@
 //! Assembling `/admin/mcp/{id}`: the tools, the callers, the call log, the
-//! attached connections, the grants, and the declaration.
+//! attached connections and the declaration. Who may reach it is the shared
+//! "Who gets this" panel.
 //!
 //! The page answers four questions in that order — what it serves, what it did
 //! and for whom, who is on it, and who may reach it — because that is the
@@ -16,13 +17,11 @@ use crate::repositories::mcp::runtime::{
 };
 use crate::repositories::overview::liveness::{HEARTBEAT_INTERVAL_SECS, liveness_state};
 use crate::types::McpServerDetail;
-use crate::types::access_control::AccessControlRule;
 use systemprompt::identifiers::McpExecutionId;
 use systemprompt::models::mcp::ExecutionSource;
 
 use super::view::{
-    ConfigFactView, McpCallerRowView, McpConnectionRowView, McpExecutionRowView, McpGrantRow,
-    McpToolRow,
+    ConfigFactView, McpCallerRowView, McpConnectionRowView, McpExecutionRowView, McpToolRow,
 };
 
 fn error_rate(calls: i64, failures: i64) -> (String, &'static str) {
@@ -198,22 +197,6 @@ pub(super) fn connection_rows(rows: Vec<McpConnectionRow>) -> Vec<McpConnectionR
                     .map_or_else(|| "\u{2014}".to_owned(), local_time),
                 expires_display: local_time(r.expires_at),
                 session: r.session_id.as_str().to_owned(),
-            }
-        })
-        .collect()
-}
-
-pub(super) fn grant_rows(rules: Vec<AccessControlRule>) -> Vec<McpGrantRow> {
-    rules
-        .into_iter()
-        .map(|r| {
-            let access = r.access.to_string();
-            McpGrantRow {
-                subject_kind: r.rule_type.as_str().to_owned(),
-                subject: r.rule_value,
-                is_allow: access == "allow",
-                access,
-                updated_display: local_time(r.updated_at),
             }
         })
         .collect()

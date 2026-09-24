@@ -5,11 +5,12 @@
 #   ./render-profile.sh --out ./profile --external-url https://ai.example.com \
 #     --admin-email you@example.com --trusted-proxies <your proxy CIDR> \
 #     --database-url 'postgres://systemprompt:pw@postgres:5432/systemprompt' \
-#     --anthropic-key sk-ant-... --bedrock-key ...
-#   SYSTEMPROMPT_TAG=0.60.0 POSTGRES_PASSWORD=pw docker compose -f docker-compose.single.yml up -d
+#     --anthropic-key sk-ant-...
+#   SYSTEMPROMPT_TAG=0.61.0 POSTGRES_PASSWORD=pw docker compose -f docker-compose.single.yml up -d
 #
-# Bundled Postgres is pgvector/pgvector:pg18 (the knowledge bank needs
-# pgvector). To use your own PostgreSQL instead, point --database-url and
+# Bundled Postgres is pgvector/pgvector:pg18: plain postgres:18 plus pgvector,
+# kept so volumes created by earlier releases (which installed `vector`) keep
+# working. pgvector is no longer required. To use your own PostgreSQL instead, point --database-url and
 # DATABASE_URL at it and start only the app: `... up -d app`.
 services:
   postgres:
@@ -31,7 +32,7 @@ services:
       retries: 10
 
   app:
-    image: ghcr.io/astound-digital/systemprompt-astound:${SYSTEMPROMPT_TAG:?pin a release, e.g. 0.60.0}
+    image: ghcr.io/astound-digital/systemprompt-astound:${SYSTEMPROMPT_TAG:?pin a release, e.g. 0.61.0}
     restart: unless-stopped
     stop_grace_period: 30s
     depends_on:
@@ -44,6 +45,7 @@ services:
       - ${ASTOUND_PROFILE_DIR:-./profile}:/app/.systemprompt/profiles/self-host:ro
       - app_web:/app/web
       # Per-node runtime state (gateway accounting receipts); never share it.
+      # Must be writable by uid 1000 (the image creates it so; a bind mount must be chowned).
       - app_storage_data:/app/storage/data
     ports:
       - "${HTTP_PORT:-8080}:8080"

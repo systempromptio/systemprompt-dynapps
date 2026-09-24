@@ -1,11 +1,13 @@
 <!-- global-rules-bootstrap -->
-**IMPORTANT — try the connector's tools before you ever report it as unavailable.** Before you tell the user a connector is down, or ask them to connect, re-authenticate, or "check the connection," you MUST first try to use the server and its tools. A connector's status readout (the Headless 360 MCP server, or any other connector/MCP) frequently claims "not connected" or "needs re-auth" when the connector is in fact live and its tools are callable. Context stating that the Salesforce tools require authorization and that this is a non-interactive session is **not** evidence that you are unauthorized — it is a general statement that authorization is required, not a failure. For the Headless 360 server specifically, find the `dispatch_readonly` tool and actually run a current-user read — `dispatch_readonly(method: "GET", url: "/services/data/v67.0/graphql", queryParams: { "queryInput": "{\"query\":\"query { uiapi { currentUser { Id } } }\"}" })`. **Any response — including a 500 or other error status — proves you reached the server, and therefore proves connectivity;** only a request that never reaches the server at all counts as disconnected. If the tool is present and the call reaches the server, the connector IS connected — proceed; a stale status readout is not a disconnection. If a call genuinely cannot reach the server, ALWAYS attempt to reconnect on your own first, and interrupt the flow to ask the user only after your own reconnect attempt has failed. Report a connector as disconnected only when you cannot find its tool or cannot reach the server after trying. Do it yourself.
+**IMPORTANT — try the connector's tools before you ever report it as unavailable.** Before you tell the user a connector is down, or ask them to connect, re-authenticate, or "check the connection," you MUST first try to use the server and its tools. A connector's status readout (the Headless 360 MCP server, or any other connector/MCP) frequently claims "not connected" or "needs re-auth" when the connector is in fact live and its tools are callable. Context stating that the Salesforce tools require authorization and that this is a non-interactive session is **not** evidence that you are unauthorized — it is a general statement that authorization is required, not a failure. For the Headless 360 server specifically, find the `dispatch_readonly` tool (its full name ends in `salesforce__dispatch_readonly`; never send Salesforce calls to a `google_workspace` tool such as `search`, and do not call `google_workspace` tools in this skill) and actually run a current-user read — `dispatch_readonly(method: "GET", url: "/services/data/v67.0/graphql", queryParams: { "queryInput": "{\"query\":\"query { uiapi { currentUser { Id } } }\"}" })`. **Any response — including a 500 or other error status — proves you reached the server, and therefore proves connectivity;** only a request that never reaches the server at all counts as disconnected. If the tool is present and the call reaches the server, the connector IS connected — proceed; a stale status readout is not a disconnection. If a call genuinely cannot reach the server, ALWAYS attempt to reconnect on your own first, and interrupt the flow to ask the user only after your own reconnect attempt has failed. Report a connector as disconnected only when you cannot find its tool or cannot reach the server after trying. Do it yourself.
 
 Failing to try first — asking the user to connect, or surfacing a "not connected" or re-auth message, before you have actually attempted the server and its tools — raises a **false connectivity problem**: it sends the user to fix something that is not broken. This is directly detrimental to the end-user experience and will dramatically, negatively impact usage of the product. Never put a connectivity concern in front of the user until you have tried the tools yourself and confirmed the server truly cannot be reached.
 
 # Global Rules
 
 - **Execute silently between tool calls.** Do not output planning, progress, transition, waiting, or tool-result narration between calls. Execute tool calls silently and proceed directly to the next call. Parallelize independent tasks by batching tool calls into one turn whenever possible. Before the final output, speak only when the skill explicitly requires user input, approval, an exact notice, or material error/blocked reporting. Do not invent checkpoints.
+- **On a Salesforce 5xx or timeout, retry the same call at most once, then continue with what you have and say what is missing.** Never re-issue a call that already succeeded; reuse its result.
+- **One widget, one render.** Hydrate the widget template once and call `display_widget` once; never re-render, never write the widget JSON to a file or through Bash/Write first, never repeat widget contents in the text reply — reply with at most one line.
 - **Keep the final output concise.** Return only the requested result or deliverable. Omit process recaps, tool-call details, redundant preambles or conclusions, and data already shown in a widget.
 - **⛔ WIDGET OUTPUT ONLY after data assembly.** Once all queries return, immediately call `display_widget` — at most a single one-line render-wait notice before it, and no summaries, transitions, or narration. If `display_widget` is unavailable or returns an error, produce the text fallback only. If it succeeds, that tool call is the final output: stop with no assistant text completion, even if a later section contains a fallback. The exceptions above do not apply after success.
 - **Ground dynamic or custom relationship and field names before relying on them.** Fixed standard fields that this skill explicitly marks as requiring no grounding need no extra grounding call. On a name error, use the skill's documented grounding path when present; otherwise report the error instead of guessing or re-firing the same shape.
@@ -13,389 +15,55 @@ Failing to try first — asking the user to connect, or surfacing a "not connect
 - **Show human labels, never API/field literals.** In anything the user sees, print each field's grounded `label` (for example, "Deal Risk", not `Deal_Risk__c`) and record Names, never raw Ids or `__c` API names.
 - **Empty `MINE` scope → fail fast, then ask which scope.** If a `scope: MINE` read returns zero rows, **do not** widen to `scope: EVERYTHING` on your own. Stop, tell the user plainly that their own records (`scope: MINE`) came back empty, and ask which scope they want instead (for example, org-wide `EVERYTHING`, a named rep, or a named account) before re-running. Never invent records, and never silently fall back to org-wide.
 <!-- /global-rules-bootstrap -->
-# Rules:
-
 
 # Lead Triage
 
-Ground → read Lead + Account → enrich → score → route. **No per-lead follow-ups** — the reads have the data.
+Resolve lead(s) → read Lead + matching Account + prior activity in one turn → score fit and intent → route. Salesforce only: no web search, email or Drive lookups (not available). All fields below are verified on this org — no `objectInfos` grounding calls.
 
-## 1. Ground (hardcoded — Lead and Account)
+## 1. Read (one turn, parallel)
 
-Ground **Lead** and **Account** (for ICP fields). Both always exist. Issue these independent requests in the **same tool turn** so they run in **parallel**:
+SOQL via `dispatch_readonly(method: "GET", url: "/services/data/v67.0/query", queryParams: { "q": "<SOQL>" })`.
 
+**Lead** — `<LEAD_FILTER>` from user input: `Id = '<id>'`, `Email = '<email>'`, or `Name LIKE '%<name>%' AND Company LIKE '%<company>%'`. For a queue ("my new leads") use `OwnerId = '<currentUserId>' AND IsConverted = false AND CreatedDate = LAST_N_DAYS:30`, `LIMIT 50`.
 ```
-dispatch_readonly(method: "GET", url: "/services/data/v67.0/graphql",
-  queryParams: { "queryInput": "{\"query\":\"query { uiapi { objectInfos(apiNames: [\\\"Lead\\\"]) { ApiName fields { ApiName label } } } }\"}" })
+SELECT Id, Name, Company, Title, Email, Website, Industry, NumberOfEmployees, AnnualRevenue, LeadSource, Status, Rating, CreatedDate, LastActivityDate, IsConverted, QualificationScore__c, Lead_Score__c, Deal_Size__c, Market_segment__c, Business_Challenge__c, Requested_demo__c, Attended_event_or_webinar__c, Responded_to_Outreach__c, Next_Step__c, Owner.Name FROM Lead WHERE <LEAD_FILTER> ORDER BY CreatedDate DESC LIMIT 5
 ```
+(Lead `Owner` is polymorphic — use SOQL `Owner.Name`; GraphQL `Owner { Name }` fails on Lead.)
 
+**Account** (existing relationship check; Account has NO `Type` — use `Account_Type__c`):
 ```
-dispatch_readonly(method: "GET", url: "/services/data/v67.0/graphql",
-  queryParams: { "queryInput": "{\"query\":\"query { uiapi { objectInfos(apiNames: [\\\"Account\\\"]) { ApiName fields { ApiName label } } } }\"}" })
-```
-
-**If either overflows**, the result auto-persists to a temp file **outside the bash mount** — don't shell to it (`cat`/`python3`/`ls` will fail, it's not on that mount). Read it back with the Read tool only, and go straight to that — don't retry bash first. If the Read tool can't load it either, skip custom-field grounding and proceed with standard fields only; don't keep retrying.
-
-From each response, select relevant `__c` fields by API name and label (segment, industry, employee count, lead score, MQL status, etc.) and take their `{ value }`. The `Owner` spans below are standard and hardcoded.
-
-## 2. Read lead + matching account (templated, one turn)
-
-Fire these as tool calls in **one turn** (independent). Insert `<LEAD_CUSTOM>` = confirmed scalar `__c` fields on Lead, `<ACCOUNT_CUSTOM>` = confirmed scalar `__c` fields on Account.
-
-**Lead (by identifier user provided — Id, email, or name+company):**
-```
-dispatch_readonly(method: "GET", url: "/services/data/v67.0/graphql",
-  queryParams: { "queryInput": "{\"query\":\"query { uiapi { query { Lead(where: { <LEAD_FILTER> }, first: 1) { edges { node { Id Name { value } Company { value } Title { value } Email { value } LeadSource { value } Status { value } CreatedDate { value } <LEAD_CUSTOM> Owner { Name { value } } } } } } } }\"}" })
+SELECT Id, Name, Account_Type__c, Industry, Market_segment__c, Employee_Range__c, Client_Tier__c, Account_Health__c, Owner.Name FROM Account WHERE Name LIKE '%<COMPANY>%' OR Website LIKE '%<DOMAIN>%' LIMIT 5
 ```
 
-**Account (by company name or domain):**
+**Prior engagement** (once the lead Id is known; activity lives in Event — Task is usually empty, query both):
 ```
-dispatch_readonly(method: "GET", url: "/services/data/v67.0/graphql",
-  queryParams: { "queryInput": "{\"query\":\"query { uiapi { query { Account(where: { or: [{ Name: { like: \\\"%<COMPANY>%\\\" } }, { Website: { like: \\\"%<DOMAIN>%\\\" } }] }, first: 5) { edges { node { Id Name { value } Type { value } <ACCOUNT_CUSTOM> Owner { Name { value } } } } } } } }\"}" })
+SELECT Subject, ActivityDateTime, Owner.Name FROM Event WHERE WhoId IN (<leadIds>) ORDER BY ActivityDateTime DESC LIMIT 10
+SELECT Subject, ActivityDate, Status FROM Task WHERE WhoId IN (<leadIds>) ORDER BY ActivityDate DESC LIMIT 10
 ```
 
-`<LEAD_FILTER>` = build from user input: `Id: { eq: "<id>" }` OR `Email: { eq: "<email>" }` OR `and: [{ Name: { like: "%<name>%" } }, { Company: { like: "%<company>%" } }]`
+Account with an owner → existing relationship: routing = coordinate with that owner.
 
-If Account exists with Owner → existing relationship, routing = coordinate with that owner.
+## 2. Score
 
-**Web research (parallel with SF reads):** Use web search/fetch if available to find company size, industry, funding, recent news. Fire in SAME turn as SF reads. If tools absent, skip silently.
+**ICP fit** (ask once if the ICP is not inferable from org data): Industry, Size (NumberOfEmployees / Employee_Range__c / AnnualRevenue), Persona (Title), Disqualifiers (e.g. Reason_Disqualified__c set, IsConverted). Each ✅/⚠️/❌ with the Salesforce value as evidence.
 
-**Email search (parallel):** Use email search if available to find prior threads from this domain. Fire in SAME turn. If tool absent, skip silently.
+**Intent:** Source quality (High: demo request/referral · Med: content/event · Low: list/cold) · Specificity (Business_Challenge__c, Requested_demo__c) · Prior engagement (Event/Task, Responded_to_Outreach__c) · Scores (Lead_Score__c, QualificationScore__c, Rating).
 
-## 3. Score ICP fit
+**Priority** (P0 ≈ top 20%, P1 next 25%, P2 rest): P0 strong fit AND high intent · P1 strong fit + medium intent, or moderate fit + high intent · P2 moderate fit + low intent, or unclear · DQ hard disqualifier. Widget tiers: P0 = Hot, P1 = Warm, P2 = Nurture.
 
-Against ICP (ask user once if not inferrable from org data):
+## 3. Render
 
-| Dimension | Fit | Evidence |
-|---|---|---|
-| Industry | ✅ / ⚠️ / ❌ | [from Account/web] |
-| Size | ✅ / ⚠️ / ❌ | [from Account custom/web] |
-| Persona (title) | ✅ / ⚠️ / ❌ | [from Lead.Title] |
-| Disqualifiers | ✅ none / ❌ [which] | [check against ICP] |
+Call `display_widget({ resourceType: "dynamic", widgetDefinition: <hydrated template> })` immediately — `widgetDefinition` is a native JSON object, never a quoted string. Replace every `{{token}}` with a literal (no `{{…}}`/`{!…}` left). A slot that is only a token becomes the typed value (numbers stay numbers, arrays stay arrays); a token inside a string interpolates as text; omit keys you have no data for.
 
-## 4. Score intent
+Tokens:
+- `headerTitle` ("Lead triage — 23 new leads"), `headerSubtitle` ("Scored by fit and intent · 5 hot, 9 warm, 9 nurture").
+- `centerValue` (string lead total); `slices`: `[{label:"Hot",value:5,role:"highlight"},{label:"Warm",value:9},{label:"Nurture",value:9}]`.
+- `donutAsideTitle`; `donutAside`: one sentence (18–32 words) naming every slice with count and % (legend is off), insight first.
+- `chartAsideTitle`; `chartAside`: one sentence on which sources dominate. `categories`: LeadSource names; `series`: `[{name:"Leads",data:[numbers matching categories]}]`.
+- `totalRows` (number); `hotRows`: `[{status:{value:"Hot",badgeVariant:"success"}, lead, co, score (0–100), src:{value,badgeVariant}, next}]` — src badge `success` for demo/referral, `info` or `secondary` for webinar/event/content.
+- `calloutTitle`/`calloutDescription`: the queue's single most important read (don't repeat aside claims). `ctaPrimaryLabel`/`ctaPrimaryMsg`: first-person prompt, e.g. "Draft outreach to Beacon Health (J. Okafor)…". `salesforceUrl`: `https://<myDomain>/lightning/o/Lead/list`.
+- Quote blank fields as blank; drop leads with no data; never fabricate.
 
-| Signal | Strength |
-|---|---|
-| Source quality | High (demo request, referral) / Med (content, event) / Low (list, cold) |
-| Message specificity | Specific use case / Generic interest / None |
-| Prior engagement | Email thread / SFDC history / None |
-| Timing trigger | Recent funding, hiring, exec change / None |
-
-## 5. Assign priority
-
-Calibration: P0 ≈ top 20%, P1 ≈ next 25%, P2 ≈ remaining.
-
-- **P0:** Strong ICP fit AND high intent (specific ask, demo request, or hot trigger)
-- **P1:** Strong fit with medium intent, OR moderate fit with high intent
-- **P2:** Moderate fit with low intent, or fit unclear
-- **DQ:** Hard disqualifier hit
-
-Override: if Account exists with owner → routing = "coordinate with [owner]"
-
-
-## 6. Render
-
-Call `display_widget` now with the data you collected. Do not write markdown first — call immediately. Only fall back to markdown if the tool is unavailable.
-
-When the data is assembled, call `display_widget`; a single one-line "Displaying the visualization now (this may take a minute)." notice may precede it.
-
-### Self-verification (before calling display_widget)
-
-- [ ] `widgetDefinition` is passed as a native JSON object — not a quoted string, not a code block pasted as text. If the value starts with `"{"`, it is wrong.
-
-The widget template is embedded below. Call `display_widget` in **dynamic** mode with it. It is a skeleton: replace every `{{token}}` placeholder with a fully-resolved literal computed from the leads you scored — this echo path does no expression compilation, so no `{!…}` bindings.
-
-Two blocks below: first the **variable contract** (`renderer.props.schema.json`) — every `{{token}}`'s type + a worked example, use it to compute each value; then the **widget template** to hydrate. Substitute your computed values into the template's `{{token}}`s (see the token-typing rules above), leaving no `{{…}}`/`{!…}`.
-```json
-{
-  "$comment": "Variable contract for the native-mosaic dynamic-mode template (renderer.json, sibling). This is NOT a separate display_widget call — it names every {{token}} in the template with its type and a worked example so you compute the right value for each. Workflow: build a props object with these keys, substitute each into the matching {{token}} in renderer.json (a slot that is only a {{token}} becomes the typed value — arrays stay arrays, numbers stay numbers; a {{token}} inside a larger string interpolates as text; a key you have no data for is omitted so that leaf drops), then call display_widget({ resourceType: 'dynamic', widgetDefinition: <the hydrated template> }) once with no {{…}}/{!…} left. Realistic values: sample-data.json (sibling). Authoring guidance (from the skill): The widget template is embedded below. Call `display_widget` in **dynamic** mode with it. It is a skeleton: replace every `{{token}}` placeholder with a fully-resolved literal computed from the leads you scored — this echo path does no expression compilation, so no `{!…}` bindings.\n- **Header** — an icon, page-title text (`{{headerTitle}}`), with a one-line caption subhead (`{{headerSubtitle}}`) summarizing the leads (scored by fit and intent · tier counts) and a separator.\n- **Tier donut + its written breakdown** — a piechart (donut, \"Leads by tier\", `{{slices}}` with Hot/Warm/Nurture counts, center shows `{{centerValue}}` \"New leads\") paired in a row with a text column to its right (`{{donutAsideTitle}}` section-title + `{{donutAside}}` body). The donut runs with `showLegend:false`, so `{{donutAside}}` must name every slice with its count (and %) in prose — it replaces the legend, and a colorblind reader relies on it. Keep it to one sentence (~18–32 words) that leads with the insight, not a bare list.\n- **Source column chart, full-width** — preceded by a caption pair (`{{chartAsideTitle}}` section-title + `{{chartAside}}` body, one-sentence takeaway), then the column chart itself full-width (\"Leads by source\", `{{categories}}` on x-axis, `{{series}}` data, `valueFormat:\"number\"`, `showValues:true`, `showLegend:false`). A column chart must be full-width to keep its axis, value labels, and bar height legible — never put it in a shared row.\n- **Hot leads datagrid** (`{{hotRows}}`) — one row per hot lead. Columns: Lead (text), Company (text), Fit score (databar, target 100, sortable), Source (badge), Next step (text). Every row carries a leading `status` object (`{value,badgeVariant}` — value Hot, badgeVariant success); the leading Status column reads each row's `status`. `totalRows` shows the full lead count.\n- **One synthesis callout** (`variant:\"info\"`) — `{{calloutTitle}}` (the queue's single most important read) and `{{calloutDescription}}`. It carries two real buttons: a primary \"Draft outreach to both\" (`{{ctaPrimaryLabel}}` / `{{ctaPrimaryMsg}}`, `action/sendMessage`) and a secondary \"View in Salesforce\" (`{{salesforceUrl}}`, `action/openLink`).\n1. Start from the embedded template above — a valid-JSON widget-definition envelope whose leaf values carry `{{token}}` placeholders.\n2. Resolve every `{{token}}`. A value that is **only** a `{{token}}` (piechart `slices`, chart `categories` and `series`, datagrid `rows`, `totalRows`, `centerValue`) becomes the resolved **typed** literal — numbers stay numbers, arrays stay arrays. A `{{token}}` **inside** a larger string is interpolated as text.\n3. `{{slices}}` is an array of slice objects — each with `label`, `value`, and optionally `role:\"highlight\"` (for Hot). `{{categories}}` is an array of source names. `{{series}}` is an array with one series object carrying `name` and `data` (array of numbers).\n4. `{{hotRows}}` is an array of lead objects — each with `lead` (name), `co` (company), `score` (number 0-100), `src` (`{ value, badgeVariant }`), `next` (next step text), and `status` (`{value,badgeVariant}` — value Hot, badgeVariant success).\n5. The result is hydrated widget definition (no `{{…}}` placeholders remain). Then call:\n- Resolve every `{{token}}` to a literal before calling — numbers stay numbers (`{{totalRows}}`, `{{centerValue}}`, each row's `score`, each slice's `value`, chart `data` numbers), arrays stay arrays (`{{slices}}`, `{{categories}}`, `{{series}}`, `{{hotRows}}`), strings stay strings.\n- Aside text: `{{donutAsideTitle}}` / `{{donutAside}}` describe the tier donut (donutAside states each slice's count and % in words, since the legend is off); `{{chartAsideTitle}}` / `{{chartAside}}` sit above the source chart (chartAside interprets the shape — which sources dominate — rather than re-listing every bar). All four are plain strings computed from the same counts you charted. Do not repeat the callout's specific claims.\n- Callout buttons: the primary is `action/sendMessage` with a first-person `content` prompt (`{{ctaPrimaryMsg}}`, e.g. \"Draft outreach to Beacon Health...\"); the secondary is `action/openLink` with `{{salesforceUrl}}` — the Leads list view Lightning URL (`https://<myDomain>/lightning/o/Lead/list`), opening a new tab.",
-  "props": {
-    "headerTitle": {
-      "description": "Page title for lead triage.",
-      "type": "string",
-      "example": "Lead triage — 23 new leads this week"
-    },
-    "headerSubtitle": {
-      "description": "Caption: leads scored by fit and intent, with tier counts.",
-      "type": "string",
-      "example": "Scored by fit and intent · 5 hot, 9 warm, 9 nurture"
-    },
-    "centerValue": {
-      "description": "Donut center value — the new-lead total.",
-      "type": "string",
-      "example": "23"
-    },
-    "slices": {
-      "description": "Leads by tier — one slice per tier (Hot / Warm / Nurture). Empty array → the donut is omitted.",
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "label": {
-            "description": "Tier label.",
-            "type": "string"
-          },
-          "value": {
-            "description": "Lead count in this tier.",
-            "type": "number"
-          },
-          "role": {
-            "description": "Optional emphasis; set \"highlight\" on Hot.",
-            "type": "string",
-            "enum": [
-              "normal",
-              "highlight"
-            ]
-          }
-        }
-      },
-      "example": [
-        {
-          "label": "Hot",
-          "value": 5,
-          "role": "highlight"
-        },
-        {
-          "label": "Warm",
-          "value": 9
-        },
-        {
-          "label": "Nurture",
-          "value": 9
-        }
-      ]
-    },
-    "donutAsideTitle": {
-      "description": "Section title beside the tier donut.",
-      "type": "string",
-      "example": "Tier breakdown"
-    },
-    "donutAside": {
-      "description": "One-sentence written breakdown of the donut — names each slice's count and % (replaces the off legend).",
-      "type": "string",
-      "example": "Only 5 of the 23 leads are hot (22%). Warm and nurture each hold 9 leads (39%), so 18 sit below sales-ready and need working before they convert."
-    },
-    "chartAsideTitle": {
-      "description": "Section title above the source chart.",
-      "type": "string",
-      "example": "Where leads originate"
-    },
-    "chartAside": {
-      "description": "One-sentence takeaway interpreting which sources dominate.",
-      "type": "string",
-      "example": "Webinar and inbound demo produce 13 of 23 leads, over half; the other three sources trail to referral's 2, so most new leads trace to those top two channels."
-    },
-    "categories": {
-      "description": "Lead-source names for the chart's x-axis.",
-      "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "example": [
-        "Webinar",
-        "Inbound demo",
-        "Content",
-        "Event",
-        "Referral"
-      ]
-    },
-    "series": {
-      "description": "Source-chart series — one object {name, data}.",
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "description": "Series name.",
-            "type": "string"
-          },
-          "data": {
-            "description": "Lead counts per source — a number array matching categories.",
-            "type": "array",
-            "items": {
-              "type": "number"
-            }
-          }
-        }
-      },
-      "example": [
-        {
-          "name": "Leads",
-          "data": [
-            7,
-            6,
-            5,
-            3,
-            2
-          ]
-        }
-      ]
-    },
-    "totalRows": {
-      "description": "Full lead count (number).",
-      "type": "number",
-      "example": 23
-    },
-    "hotRows": {
-      "description": "Hot leads — one row per lead. Empty array → the datagrid is omitted.",
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "status": {
-            "description": "Leading Status badge cell; omit on normal rows.",
-            "type": "object",
-            "properties": {
-              "value": {
-                "description": "Status label.",
-                "type": "string"
-              },
-              "badgeVariant": {
-                "description": "Badge color.",
-                "type": "string",
-                "enum": [
-                  "neutral",
-                  "primary",
-                  "secondary",
-                  "outline",
-                  "success",
-                  "info",
-                  "warning",
-                  "error"
-                ]
-              }
-            }
-          },
-          "lead": {
-            "description": "Lead name.",
-            "type": "string"
-          },
-          "co": {
-            "description": "Company.",
-            "type": "string"
-          },
-          "score": {
-            "description": "Fit score, 0–100 (feeds the databar).",
-            "type": "number"
-          },
-          "src": {
-            "description": "Source badge cell.",
-            "type": "object",
-            "properties": {
-              "value": {
-                "description": "Source label.",
-                "type": "string"
-              },
-              "badgeVariant": {
-                "description": "Badge color.",
-                "type": "string",
-                "enum": [
-                  "neutral",
-                  "primary",
-                  "secondary",
-                  "outline",
-                  "success",
-                  "info",
-                  "warning",
-                  "error"
-                ]
-              }
-            }
-          },
-          "next": {
-            "description": "Next step (text).",
-            "type": "string"
-          }
-        }
-      },
-      "example": [
-        {
-          "status": {
-            "value": "Hot",
-            "badgeVariant": "success"
-          },
-          "lead": "J. Okafor",
-          "co": "Beacon Health",
-          "score": 92,
-          "src": {
-            "value": "Inbound demo",
-            "badgeVariant": "success"
-          },
-          "next": "Call today — requested pricing"
-        },
-        {
-          "status": {
-            "value": "Hot",
-            "badgeVariant": "success"
-          },
-          "lead": "P. Nardi",
-          "co": "Orbit Logistics",
-          "score": 85,
-          "src": {
-            "value": "Referral",
-            "badgeVariant": "info"
-          },
-          "next": "Warm intro from Cobalt"
-        },
-        {
-          "status": {
-            "value": "Hot",
-            "badgeVariant": "success"
-          },
-          "lead": "S. Realm",
-          "co": "Vantage Retail",
-          "score": 78,
-          "src": {
-            "value": "Webinar",
-            "badgeVariant": "neutral"
-          },
-          "next": "Book discovery"
-        },
-        {
-          "status": {
-            "value": "Hot",
-            "badgeVariant": "success"
-          },
-          "lead": "M. Cho",
-          "co": "Delta Freight",
-          "score": 71,
-          "src": {
-            "value": "Event",
-            "badgeVariant": "neutral"
-          },
-          "next": "Send case study"
-        }
-      ]
-    },
-    "calloutTitle": {
-      "description": "Synthesis callout heading — the queue's single most important read.",
-      "type": "string",
-      "example": "Two hot leads can't wait"
-    },
-    "calloutDescription": {
-      "description": "Synthesis callout body.",
-      "type": "string",
-      "example": "Beacon Health asked for pricing (score 92) and Orbit is a warm referral from your Cobalt champion. Call both today; the other three hot leads can take a same-week discovery booking."
-    },
-    "ctaPrimaryLabel": {
-      "description": "Primary button label (action/sendMessage).",
-      "type": "string",
-      "example": "Draft outreach to both"
-    },
-    "ctaPrimaryMsg": {
-      "description": "First-person prompt the primary button sends (action/sendMessage).",
-      "type": "string",
-      "example": "Draft outreach to Beacon Health (J. Okafor) requesting pricing and Orbit Logistics (P. Nardi) following up on the warm referral from Cobalt."
-    },
-    "salesforceUrl": {
-      "description": "Leads list-view Lightning URL for the secondary button (action/openLink).",
-      "type": "string",
-      "example": "https://org.lightning.force.com/lightning/o/Lead/list"
-    }
-  }
-}
-```
 ```json
 {
   "renderer": {
@@ -631,62 +299,16 @@ Two blocks below: first the **variable contract** (`renderer.props.schema.json`)
 }
 ```
 
-What each block shows, from data you already have — a synthesis-forward layout: a header, two charts, one datagrid, and one recommendation. Not a dashboard.
-
-- **Header** — an icon, page-title text (`{{headerTitle}}`), with a one-line caption subhead (`{{headerSubtitle}}`) summarizing the leads (scored by fit and intent · tier counts) and a separator.
-- **Tier donut + its written breakdown** — a piechart (donut, "Leads by tier", `{{slices}}` with Hot/Warm/Nurture counts, center shows `{{centerValue}}` "New leads") paired in a row with a text column to its right (`{{donutAsideTitle}}` section-title + `{{donutAside}}` body). The donut runs with `showLegend:false`, so `{{donutAside}}` must name every slice with its count (and %) in prose — it replaces the legend, and a colorblind reader relies on it. Keep it to one sentence (~18–32 words) that leads with the insight, not a bare list.
-- **Source column chart, full-width** — preceded by a caption pair (`{{chartAsideTitle}}` section-title + `{{chartAside}}` body, one-sentence takeaway), then the column chart itself full-width ("Leads by source", `{{categories}}` on x-axis, `{{series}}` data, `valueFormat:"number"`, `showValues:true`, `showLegend:false`). A column chart must be full-width to keep its axis, value labels, and bar height legible — never put it in a shared row.
-- **Hot leads datagrid** (`{{hotRows}}`) — one row per hot lead. Columns: Lead (text), Company (text), Fit score (databar, target 100, sortable), Source (badge), Next step (text). Every row carries a leading `status` object (`{value,badgeVariant}` — value Hot, badgeVariant success); the leading Status column reads each row's `status`. `totalRows` shows the full lead count.
-- **One synthesis callout** (`variant:"info"`) — `{{calloutTitle}}` (the queue's single most important read) and `{{calloutDescription}}`. It carries two real buttons: a primary "Draft outreach to both" (`{{ctaPrimaryLabel}}` / `{{ctaPrimaryMsg}}`, `action/sendMessage`) and a secondary "View in Salesforce" (`{{salesforceUrl}}`, `action/openLink`).
-
-**Hydration rules:**
-1. Start from the embedded template above — a valid-JSON widget-definition envelope whose leaf values carry `{{token}}` placeholders.
-2. Resolve every `{{token}}`. A value that is **only** a `{{token}}` (piechart `slices`, chart `categories` and `series`, datagrid `rows`, `totalRows`, `centerValue`) becomes the resolved **typed** literal — numbers stay numbers, arrays stay arrays. A `{{token}}` **inside** a larger string is interpolated as text.
-3. `{{slices}}` is an array of slice objects — each with `label`, `value`, and optionally `role:"highlight"` (for Hot). `{{categories}}` is an array of source names. `{{series}}` is an array with one series object carrying `name` and `data` (array of numbers).
-4. `{{hotRows}}` is an array of lead objects — each with `lead` (name), `co` (company), `score` (number 0-100), `src` (`{ value, badgeVariant }`), `next` (next step text), and `status` (`{value,badgeVariant}` — value Hot, badgeVariant success).
-5. The result is hydrated widget definition (no `{{…}}` placeholders remain). Then call:
-
-```
-display_widget({ resourceType: "dynamic", widgetDefinition: <hydrated renderer.json> })
-```
-
-**Binding rules:**
-- Resolve every `{{token}}` to a literal before calling — numbers stay numbers (`{{totalRows}}`, `{{centerValue}}`, each row's `score`, each slice's `value`, chart `data` numbers), arrays stay arrays (`{{slices}}`, `{{categories}}`, `{{series}}`, `{{hotRows}}`), strings stay strings.
-- Piechart `slices`: each slice has `label`, `value` (number), and optionally `role:"highlight"` for the Hot tier.
-- Chart `series`: array with one object `{ name: "Leads", data: [array of numbers] }` matching the `categories` count.
-- Aside text: `{{donutAsideTitle}}` / `{{donutAside}}` describe the tier donut (donutAside states each slice's count and % in words, since the legend is off); `{{chartAsideTitle}}` / `{{chartAside}}` sit above the source chart (chartAside interprets the shape — which sources dominate — rather than re-listing every bar). All four are plain strings computed from the same counts you charted. Do not repeat the callout's specific claims.
-- `datagrid` rows: one per hot lead. `score` is a raw number (0-100) — the databar fills against `target:100`. The Source badge (`src.badgeVariant`) reflects source quality — `"success"` (Inbound demo, Referral), `"info"`, or `"secondary"` (Webinar, Event, Content). `status` fills the leading Status column.
-- Callout buttons: the primary is `action/sendMessage` with a first-person `content` prompt (`{{ctaPrimaryMsg}}`, e.g. "Draft outreach to Beacon Health..."); the secondary is `action/openLink` with `{{salesforceUrl}}` — the Leads list view Lightning URL (`https://<myDomain>/lightning/o/Lead/list`), opening a new tab.
-- No fabricated content — quote blank fields as blank rather than inventing them; drop leads you have no data for.
-
-
-
-
-## 7. Output
+## 4. Text fallback (only if display_widget is unavailable or errors)
 
 ```
 # Lead Triage: [Name] @ [Company]
-
-**Priority: P[0/1/2/DQ]**
-[One-sentence rationale]
-
-## CRM Status
-[Net new | OR | Account exists - owned by [Name], coordinate first]
-
-## ICP Fit: [Strong / Moderate / Poor]
-[fit table]
-
-## Intent: [High / Medium / Low]
-[intent table]
-
+**Priority: P[0/1/2/DQ]** — [one-sentence rationale]
+## CRM Status: [Net new | Account exists — owned by [Name], coordinate first]
+## ICP Fit: [Strong/Moderate/Poor]  [fit table]
+## Intent: [High/Medium/Low]  [intent table]
 ## Recommended Action
-- **Route to:** [self / named owner / DQ queue]
-- **Response SLA:** [P0: same day / P1: 48h / P2: this week]
-- **First touch:** [e.g. "draft-outreach with [hook]" or "send qualification questions" or "DQ - reply with polite no"]
-
-## Suggested SFDC updates
-[Apply with write skills, or manually if read-only.]
-- Lead Status → [value]
-- Lead Owner → [name]
-- [Notes field] → "[triage summary]"
+- Route to: [self / owner / DQ queue] · SLA: [P0 same day / P1 48h / P2 this week]
+- First touch: [hook or qualification questions or polite DQ]
+## Suggested SFDC updates: Lead Status → … · Lead Owner → … · Next Step → "[triage summary]"
 ```

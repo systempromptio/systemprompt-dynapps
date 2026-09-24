@@ -4,7 +4,7 @@
 # Usage: verify-node.sh [--url http://localhost:8080] [--container <name>] [--version X.Y.Z]
 #
 # --container enables the in-container checks (binary version, MCP child
-# servers, admin_console agent, migration ledger) via `docker exec`.
+# server, migration ledger) via `docker exec`.
 # Portable across macOS and Linux (curl, sha256sum or shasum, docker).
 set -uo pipefail
 
@@ -63,7 +63,7 @@ if [ -n "$CONTAINER" ]; then
     fi
     # MCP servers speak streamable HTTP under /mcp; a bare GET without the MCP
     # Accept header is answered 406 by a live server and refused by a dead one.
-    for port in 5010:systemprompt 5030:knowledge-bank; do
+    for port in 5010:systemprompt; do
         p="${port%%:*}"; n="${port#*:}"
         code="$(x curl -s -o /dev/null -w '%{http_code}' --max-time 5 "http://127.0.0.1:$p/mcp" 2>/dev/null || echo 000)"
         case "$code" in
@@ -71,11 +71,6 @@ if [ -n "$CONTAINER" ]; then
             *) ok "MCP server $n on :$p alive (HTTP $code)" ;;
         esac
     done
-    if x curl -fsS --max-time 5 "http://127.0.0.1:9101/.well-known/agent-card.json" >/dev/null 2>&1; then
-        ok "admin_console A2A agent on :9101 answers"
-    else
-        bad "admin_console A2A agent on :9101 does not answer"
-    fi
     n="$(x sh -c 'psql "$DATABASE_URL" -tAc "select count(*) from extension_migrations"' 2>/dev/null | tr -d '[:space:]')"
     [ -n "$n" ] && [ "$n" -gt 0 ] 2>/dev/null && ok "migration ledger: $n applied" || bad "migration ledger unreadable"
     n="$(x sh -c 'psql "$DATABASE_URL" -tAc "select count(*) from users"' 2>/dev/null | tr -d '[:space:]')"

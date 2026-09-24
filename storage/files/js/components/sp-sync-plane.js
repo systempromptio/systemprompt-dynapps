@@ -19,7 +19,7 @@ let pending = null;
 
 const CONFIRM = {
   insert_only: (button) => ({
-    title: 'Insert only',
+    title: 'Apply all new',
     body: `Add ${button.dataset.count} row(s) the declaration holds and this database lacks. Nothing existing is changed or removed.`,
   }),
   overwrite: (button) => {
@@ -27,7 +27,7 @@ const CONFIRM = {
     const console = Number(button.dataset.dashboard ?? 0);
     const kept = Number(button.dataset.kept ?? 0);
     return {
-      title: 'Overwrite from code',
+      title: 'Replace database with code',
       body:
         `Make this database equal the declaration. ${deleted} row(s) will be deleted: ` +
         `${deleted - console} that code removed and ${console} written from the console on entities the code still names. ` +
@@ -46,6 +46,7 @@ const askSync = (button) => {
   pending = { url: button.dataset.applyUrl, plane: button.dataset.plane, mode: button.dataset.mode, entities };
   field('confirm-title').textContent = words.title;
   field('confirm-body').textContent = words.body;
+  field('confirm-reason').value = '';
   dialog('sync-confirm')?.showModal();
 };
 
@@ -53,13 +54,19 @@ const askSync = (button) => {
 // also names the plane (or `all`). Sending all three is harmless to either.
 const runSync = async () => {
   if (!pending) return;
+  const reason = field('confirm-reason')?.value.trim() ?? '';
+  if (!reason) {
+    showToast('A reason is required', 'error');
+    field('confirm-reason')?.focus();
+    return;
+  }
   const { url, plane, mode, entities } = pending;
   pending = null;
   closeDialogs();
   try {
     const result = await rawFetch(url, {
       method: 'POST',
-      body: JSON.stringify({ mode, plane, entities }),
+      body: JSON.stringify({ mode, plane, entities, reason }),
     });
     const applied = result?.applied ?? [result];
     const total = applied.reduce(

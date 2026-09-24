@@ -23,6 +23,7 @@
 pub mod access_control;
 pub mod access_control_rows;
 pub mod archive;
+pub mod attention;
 pub mod boot;
 pub mod declaration;
 pub mod drift_shape;

@@ -67,6 +67,8 @@ pub(crate) struct McpDetailQuery {
     pub preset: Option<String>,
     pub from: Option<String>,
     pub to: Option<String>,
+    // Why: the "Who gets this" panel's "Why?" person.
+    pub why: Option<String>,
 }
 
 fn console_only(user_ctx: &UserContext) -> AdminHtmlResult<()> {
@@ -179,6 +181,13 @@ pub(crate) async fn mcp_detail_page(
         assignment_count: counts.get(mcp_id.as_str()).copied().unwrap_or(0),
     });
 
+    let access = super::access::panel(
+        &pool,
+        &shell.user,
+        (ENTITY_MCP_SERVER, mcp_id.as_str()),
+        query.why.as_deref(),
+    )
+    .await;
     let window_query = pairs_to_query(&window_pairs(&range));
     let sections = sections::detail_sections(
         &pool,
@@ -196,6 +205,7 @@ pub(crate) async fn mcp_detail_page(
         sections,
         server,
         included_by,
+        access,
     });
     Ok(render_typed_page(
         &shell.engine,
@@ -213,6 +223,7 @@ struct DetailInputs<'a> {
     sections: sections::DetailSections,
     server: Option<&'a crate::types::McpServerDetail>,
     included_by: Vec<super::view::LinkedEntity>,
+    access: crate::handlers::ssr::entity_panel::EntityAccessView,
 }
 
 fn detail_page_data(input: DetailInputs<'_>) -> McpDetailData {
@@ -223,6 +234,7 @@ fn detail_page_data(input: DetailInputs<'_>) -> McpDetailData {
         sections,
         server,
         included_by,
+        access,
     } = input;
     let mut export_pairs = vec![("server", Some(mcp_id.as_str().to_owned()))];
     export_pairs.extend(window_pairs(&range));
@@ -259,15 +271,12 @@ fn detail_page_data(input: DetailInputs<'_>) -> McpDetailData {
         connections_count: sections.connections.len(),
         connected_count,
         connections: sections.connections,
-        grants_count: sections.grants.len(),
-        grants: sections.grants,
-        default_included: sections.default_included,
+        access,
         config_facts: detail::config_facts(server),
         oauth_scopes: server.map(|s| s.oauth_scopes.clone()).unwrap_or_default(),
         included_by_count: included_by.len(),
         included_by,
-        matrix_url: row.matrix_url.clone(),
-        access_control_url: "/admin/access-control",
+        access_url: row.access_url.clone(),
         id: mcp_id,
     }
 }

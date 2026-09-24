@@ -159,14 +159,14 @@ async fn access_control(RawQuery(q): RawQuery) -> Redirect {
     with_query("/admin/access-control", q)
 }
 
-// Why: the access-control sync view is the Sync tab of the access-control
-// page; its `?entity=` filter still applies there.
+// Why: the access-control plane is reconciled on Code sync's Access review,
+// entity by entity; the old sync view's links land there.
 async fn access_control_sync(RawQuery(q): RawQuery) -> Redirect {
     let q = Some(match q {
-        Some(q) if !q.is_empty() => format!("tab=sync&{q}"),
-        _ => "tab=sync".to_owned(),
+        Some(q) if !q.is_empty() => format!("tab=access&{q}"),
+        _ => "tab=access".to_owned(),
     });
-    with_query("/admin/access-control", q)
+    with_query("/admin/sync", q)
 }
 
 async fn catalog() -> Redirect {

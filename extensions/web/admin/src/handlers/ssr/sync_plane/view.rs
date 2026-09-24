@@ -57,14 +57,14 @@ impl SyncRecommendation {
         // only when its projection is empty, and for access control "empty"
         // counts band rules, not entities — a database with 63 entities and
         // 159 rules can never seed, so entities added by a later release stay
-        // absent and the console is the only route in. Insert only adds them
+        // absent and the console is the only route in. Apply all new adds them
         // without touching anything written here, so it is named first and
         // separately from the general code-side wording, which reads as an
         // Overwrite recommendation.
         if actions.insert_entities > 0 {
             let deletes = if actions.delete > 0 {
                 format!(
-                    " Overwrite from code would also delete {} row(s), so use it only if that is what you want.",
+                    " Replace database with code would also delete {} row(s), so use it only if that is what you want.",
                     actions.delete
                 )
             } else {
@@ -72,7 +72,7 @@ impl SyncRecommendation {
             };
             return Some(Self {
                 text: format!(
-                    "{} entity(s) declared in code are absent from this database; Insert only adds them, with {} row(s), and changes nothing written here.{deletes}",
+                    "{} entity(s) declared in code are absent from this database; Apply all new adds them, with {} row(s), and changes nothing written here.{deletes}",
                     actions.insert_entities, actions.insert
                 ),
                 card: "insert",
@@ -85,12 +85,14 @@ impl SyncRecommendation {
             actions.delete
         );
         let text = match (code, console) {
-            (true, 0) => format!("Overwrite from code brings this database in step ({moves})."),
+            (true, 0) => {
+                format!("Replace database with code brings this database in step ({moves}).")
+            },
             (false, n) => format!(
                 "{n} row(s) exist only in this database. Export it and commit the file to keep them; nothing here is deleted by code."
             ),
             (true, n) => format!(
-                "Overwrite from code settles the code side ({moves}); {n} row(s) written here need Export to reach the file first if they are to be kept."
+                "Replace database with code settles the code side ({moves}); {n} row(s) written here need Export to reach the file first if they are to be kept."
             ),
         };
         Some(Self {

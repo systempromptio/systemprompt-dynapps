@@ -63,9 +63,11 @@ related_docs:
 
 ### Enterprise knowledge platform (RAG)
 
-**What it will do:** governed retrieval over enterprise knowledge — Jira, Confluence, and GitHub — through a `knowledge-bank` MCP server, with source-system permissions respected at retrieval time.
+**What it will do:** governed retrieval over enterprise knowledge — Jira, Confluence, and GitHub — with source-system permissions respected at retrieval time.
 
-**Current state:** the retrieval engine and its six-tool contract are implemented. Source access, deployment enablement, and corpus validation remain operational prerequisites. See [Enterprise Knowledge & RAG](/documentation/enterprise-knowledge-rag) for source-specific status.
+**Current state:** not shipped. The earlier retrieval server was removed; knowledge sources are reached today through their own connected MCP servers (for example Atlassian), under the same governance as any other tool.
+
+**Honest note:** not yet available.
 
 ### ADFS SSO
 

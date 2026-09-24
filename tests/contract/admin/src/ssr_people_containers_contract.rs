@@ -328,8 +328,8 @@ async fn user_access_tab_explains_a_group_grant_without_offering_a_personal_over
 
 // The non-member group tabs answer three distinct questions about the same
 // group: what directory claim feeds it, which project its people work in, and
-// which workspace it entitles.  Rendering them together proves their typed
-// loaders keep the relationships aligned.
+// which workspace it entitles (a marketplace row of the Access tab).  Rendering
+// them together proves their typed loaders keep the relationships aligned.
 #[tokio::test(flavor = "multi_thread")]
 async fn group_detail_tabs_render_mapping_project_and_marketplace_relationships() {
     if !globals::init() {
@@ -361,8 +361,8 @@ async fn group_detail_tabs_render_mapping_project_and_marketplace_relationships(
         ("mappings", "AD-SSR-Delivery", "directory mapping"),
         ("projects", "Core", "linked project"),
         (
-            "marketplaces",
-            "data-marketplace-id=\"astound-commons\"",
+            "access",
+            "data-entity-type=\"marketplace\" data-entity-id=\"astound-commons\"",
             "workspace entitlement",
         ),
     ] {
@@ -374,5 +374,12 @@ async fn group_detail_tabs_render_mapping_project_and_marketplace_relationships(
             "{meaning} is rendered on the {tab} tab: {body}"
         );
     }
+    let old_tab = format!("/admin/groups/{group}?tab=marketplaces");
+    let (status, _) = app.call(Call::get(&old_tab, Principal::Admin)).await;
+    assert_eq!(
+        status,
+        StatusCode::SEE_OTHER,
+        "the retired Marketplaces tab redirects to Access"
+    );
     db.cleanup().await;
 }

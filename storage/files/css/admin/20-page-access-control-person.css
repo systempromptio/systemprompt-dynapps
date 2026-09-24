@@ -1,15 +1,19 @@
 @layer components {
 
-/* Why: the picker is the whole tab until a person is chosen, so it reads as
-   one line — the account select takes the width, the button sits beside it. */
+/* Why: the search is the whole tab until it has run, so it reads as one
+   line — the input takes the width, the button sits beside it. */
 .sp-ac-person__picker { margin-bottom: var(--sp-space-4); }
 
 .sp-ac-person__field { flex: 1 1 24rem; }
 
-.sp-ac-person__field .sp-select { width: 100%; }
+.sp-ac-person__field .sp-search-input { width: 100%; }
 
-/* Why: who is being checked stays above the resolved picture, with a way
-   back to their own page where roles and membership are edited. */
+.sp-ac-person__hits {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
 .sp-ac-person__who {
     display: flex;
     align-items: center;

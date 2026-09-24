@@ -16,8 +16,6 @@ after_reading_this:
   - "Interpret the Code tab's productivity proxies for what they are"
   - "Understand what stands between usage data and an outcome metric"
 related_docs:
-  - title: "Enterprise Knowledge & RAG"
-    url: "/documentation/enterprise-knowledge-rag"
   - title: "Cost Management, Budgets & FinOps"
     url: "/documentation/enterprise-cost-management"
   - title: "Dashboard"

@@ -1,7 +1,7 @@
 id: customer_health
 name: Customer Health
 description: 'Assess customer health from Salesforce account, renewal, case, task, and health data plus
-  email, calendar, documents. Use to judge risk, explain engagement or value trends, or prepare a business
+  Salesforce Event activity. Use to judge risk, explain engagement or value trends, or prepare a business
   review; prospect meeting prep: call-prep.'
 enabled: true
 file: SKILL.md

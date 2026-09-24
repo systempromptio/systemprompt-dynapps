@@ -1,6 +1,6 @@
 id: systemprompt_cli
 name: systemprompt CLI Reference
-description: "Navigable reference for the systemprompt CLI and the admin systemprompt MCP server - the typed analytics tools (usage_by_user, request_log, conversation_audit, users), the paging loop, the flags that exist, and the 8 CLI domains"
+description: "Operate and inspect the Astound Digital platform through the admin systemprompt MCP server and CLI - is the instance healthy, services status, which MCP servers are configured or running, recent errors, list skills, plugins or users, who is using AI, or run any CLI command"
 enabled: true
 file: SKILL.md
 tags:

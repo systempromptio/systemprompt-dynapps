@@ -104,8 +104,9 @@ impl ServerHandler for SystempromptServer {
             .with_website_url(WEBSITE_URL),
         )
         .with_instructions(format!(
-            "Admin control plane for this platform. Typed tools first: usage_by_user (spend and \
-             conversations per user), request_log (requests by user/window, cursor-paged), \
+            "Admin control plane for this platform. Typed tools first: user_activity (per person: \
+             conversations, active days, skills, titles), conversation_list (one row per \
+             conversation), usage_by_user (spend per user), request_log (requests by user/window, cursor-paged), \
              conversation_audit (one request's transcript, paged and bounded), users (roster), \
              admin_report (dashboard). The 'systemprompt' tool runs any other CLI command: \
              'core skills list', 'core skills show <id>', 'admin users role promote <id>'. \

@@ -19,8 +19,7 @@ cd deploy/self-host
   --admin-email you@example.com \
   --trusted-proxies 127.0.0.0/8 \
   --database-url 'postgres://systemprompt:<db-password>@postgres:5432/systemprompt' \
-  --anthropic-key sk-ant-... \
-  --bedrock-key ...
+  --anthropic-key sk-ant-...
 ```
 
 - `--external-url` is the HTTPS address users will open. Put nginx or your
@@ -36,7 +35,7 @@ cd deploy/self-host
 ## 2b. Prove the inputs before starting anything
 
 ```bash
-./preflight.sh --image ghcr.io/astound-digital/systemprompt-astound:0.60.0 \
+./preflight.sh --image ghcr.io/astound-digital/systemprompt-astound:0.61.0 \
   --profile-dir ./profile --external-url https://ai.example.com
 ```
 
@@ -45,7 +44,7 @@ Every line must pass; a failure names the stage and the fix.
 ## 3. Start
 
 ```bash
-export SYSTEMPROMPT_TAG=0.60.0 POSTGRES_PASSWORD='<db-password>'
+export SYSTEMPROMPT_TAG=0.61.0 POSTGRES_PASSWORD='<db-password>'
 docker compose -f docker-compose.single.yml pull
 docker compose -f docker-compose.single.yml up -d          # own database: add `app` at the end
 docker compose -f docker-compose.single.yml ps              # wait for app: healthy
@@ -64,7 +63,7 @@ docker compose -f docker-compose.single.yml exec \
 ## 4. Check
 
 ```bash
-./verify-node.sh --url http://localhost:8080 --container "$(docker compose -f docker-compose.single.yml ps -q app)" --version 0.60.0
+./verify-node.sh --url http://localhost:8080 --container "$(docker compose -f docker-compose.single.yml ps -q app)" --version 0.61.0
 ```
 
 Then sign in at `https://ai.example.com/admin/login` as the admin e-mail you

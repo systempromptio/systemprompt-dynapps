@@ -19,8 +19,9 @@ use systemprompt_mcp_shared::truncate_on_char_boundary;
 pub const MAX_RESULT_BYTES: usize = 1024 * 1024;
 
 const NARROW_HINT: &str = "Narrow the query: add --since/--until/--user or a smaller --limit, page \
-                           with --before <cursor>, or use the typed tools (request_log, \
-                           conversation_audit, usage_by_user, users), which page on their own.";
+                           with --before <cursor>, or use the typed tools (user_activity, \
+                           conversation_list, request_log, conversation_audit, usage_by_user, \
+                           users), which page on their own.";
 
 /// The bounded artifact and whether anything was cut.
 #[derive(Debug)]

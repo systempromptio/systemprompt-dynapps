@@ -1,8 +1,8 @@
 plugin:
   id: astound-super-admin
   name: "Astound Super Admin — Control Plane"
-  description: "The administrator control plane: a daily brief with a traffic light per project from Jira and Confluence, critical-project analysis, AI usage and spend per user with paged request logs and bounded conversation audits, and direct CLI access to the instance."
-  version: "5.1.0"
+  description: "The administrator control plane: a daily brief with a traffic light per project from Jira and Confluence, critical-project analysis, what each person and team has been working on (conversations, skills, Jira and Confluence), AI spend per user, and direct CLI access to the instance."
+  version: "5.2.0"
   enabled: true
   author:
     name: Astound Digital
@@ -21,6 +21,7 @@ plugin:
       - systemprompt_cli
       - admin_critical_projects
       - admin_ai_usage
+      - admin_person_activity
       - admin_daily_brief
   # No agents. This instance ships none: the one it had existed only so the
   # inbound Slack slash command could dispatch somewhere, and that is gone.

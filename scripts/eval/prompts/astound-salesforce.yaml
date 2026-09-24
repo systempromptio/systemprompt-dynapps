@@ -1,0 +1,46 @@
+# Fixed eval inputs for the astound-salesforce plugin. Every run sends exactly
+# these prompts, so a change in the metrics is a change in the skills, not in
+# the question. Edit a prompt only with a new suite version: prompts are hashed
+# into every run's manifest and runs with different hashes are not compared.
+#
+# Every record named here is in the Salesforce MCP TEST seed dataset
+# (5 accounts, 8 opportunities, 8 contacts, 0 leads) on ontrq.
+plugin: astound-salesforce
+suite_version: 1
+model: claude-sonnet-5[1m]
+suffix: >-
+  EVAL RUN. Work only with Salesforce records whose name contains 'MCP TEST'
+  and include that filter in every record query. Do not create, update or send
+  anything. Do not ask questions; make reasonable assumptions and finish.
+skills:
+  account_context: "Give me the account context for MCP TEST UK Alpha Ltd."
+  account_tiering: "Tier the MCP TEST accounts."
+  call_follow_up: "Write the follow-up for yesterday's call with Alice MCP Test Alpha at MCP TEST UK Alpha Ltd about the Alpha Renewal 2026: they want a 3-year term, pricing by Friday, and a security review before signature."
+  call_prep: "Prep me for tomorrow's call with MCP TEST UK Beta Ltd about MCP TEST Beta Transformation."
+  close_plan: "Build a close plan for MCP TEST Alpha Renewal 2026."
+  customer_health: "How healthy is MCP TEST US Gamma Inc?"
+  customer_voice: "What are MCP TEST customers telling us? Use the MCP TEST accounts."
+  daily_briefing: "Give me my daily briefing across the MCP TEST accounts and opportunities."
+  deal_advance_gap: "What does MCP TEST Beta Discovery need to advance to the next stage?"
+  deal_review: "Review the deal MCP TEST Gamma Platform Upgrade."
+  deal_signals: "What signals are there on MCP TEST Delta Advisory?"
+  deal_slip_scenario: "What happens to the MCP TEST pipeline if MCP TEST Omega Pilot slips a quarter?"
+  draft_outreach: "Draft outreach to Bella MCP Test Beta at MCP TEST UK Beta Ltd to restart MCP TEST Beta Transformation."
+  expansion_whitespace: "Where is the expansion whitespace in MCP TEST UK Alpha Ltd?"
+  find_internal_answer: "What stage is MCP TEST Alpha Expansion 2027 in, who owns it, and what is the amount?"
+  forecast_narrative: "Write the forecast narrative for the MCP TEST opportunities this quarter."
+  handle_objection: "MCP TEST US Gamma Inc says our price is too high on MCP TEST Gamma Support Renewal. Help me handle it."
+  lead_triage: "Triage the MCP TEST leads. If there are none, say so and stop."
+  pipeline_review: "Review the MCP TEST pipeline."
+  query_activity_history: "Show the activity history on MCP TEST UK Alpha Ltd."
+  renewal_radar: "Which MCP TEST renewals are coming up?"
+  rep_context: "Give me the rep context for the owner of MCP TEST Alpha Renewal 2026."
+  research_prospect: "Research MCP TEST DE Delta GmbH as a prospect using what is in Salesforce."
+  salesforce_hygiene_check: "Run a hygiene check on the MCP TEST opportunities."
+  stakeholder_map: "Map the stakeholders on MCP TEST Alpha Renewal 2026."
+  team_pipeline: "Show the team pipeline for the MCP TEST opportunities."
+  weekly_wrap: "Write my weekly wrap for the MCP TEST accounts."
+  win_loss_review: "Run a win/loss review over the MCP TEST opportunities."
+# Out of the suite until the Google Workspace connector works (IAM on project
+# 148780456827). google_workspace_test is the connector check, never scored.
+excluded: [calendar_events, inbox_sweep, voice_profile, google_workspace_test, using_display_widget]

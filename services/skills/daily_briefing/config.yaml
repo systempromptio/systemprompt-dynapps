@@ -1,8 +1,8 @@
 id: daily_briefing
 name: Daily Briefing
 description: 'Create today''s sales briefing from Salesforce events, near-term and overdue deals, account
-  context, commitments, and unread customer email. Use for a morning rundown combining meetings, pipeline,
-  and inbox priorities; schedule-only requests: calendar-events.'
+  context, and follow-ups. Use for a morning rundown combining meetings and pipeline;
+  schedule-only requests: calendar-events.'
 enabled: true
 file: SKILL.md
 tags:

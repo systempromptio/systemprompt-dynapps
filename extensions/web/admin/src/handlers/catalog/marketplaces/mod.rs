@@ -3,9 +3,9 @@
 //!
 //! A marketplace is the unit entitlement is granted on, so these two pages
 //! answer a question the plugin and skill pages cannot: not "what is in the
-//! catalog" but "who reaches it". Both pages are read-only — the manifests
-//! live in `services/marketplaces/*/config.yaml` and rules are edited on the
-//! access-control page.
+//! catalog" but "who reaches it". The manifests live in
+//! `services/marketplaces/*/config.yaml`; who reaches one is read and edited
+//! on its own detail page, in the shared "Who gets this" panel.
 
 mod cards;
 mod data;
@@ -15,12 +15,14 @@ mod view;
 use std::sync::Arc;
 use systemprompt::identifiers::MarketplaceId;
 
-use axum::extract::{Extension, Path, State};
+use axum::extract::{Extension, Path, Query, State};
 use axum::response::Response;
 use sqlx::PgPool;
 
 use crate::error::{AdminError, AdminHtmlResult};
 use crate::handlers::shared;
+use crate::handlers::ssr::entity_panel::{PanelRequest, build_entity_panel};
+use crate::handlers::ssr::page::Page;
 use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, Role, UserContext};
 
@@ -29,7 +31,7 @@ use self::view::{
     MarketplaceCardView, MarketplaceDetailData, MarketplacesPageData, MemberLinkView,
 };
 use super::super::ssr::ssr_helpers::render_typed_page;
-use super::view::{mcp_url, plugin_url, skill_url};
+use super::view::{PanelQuery, mcp_url, plugin_url, skill_url};
 use crate::handlers::ssr::types::BreadcrumbView;
 
 // Why: the two views the listing offers. Links, not script, so a matrix an
@@ -69,7 +71,7 @@ pub(crate) async fn marketplaces_page(
     Extension(mkt_ctx): Extension<MarketplaceContext>,
     Extension(engine): Extension<AdminTemplateEngine>,
     State(pool): State<Arc<PgPool>>,
-    axum::extract::Query(query): axum::extract::Query<super::CatalogListQuery>,
+    Query(query): Query<super::CatalogListQuery>,
 ) -> AdminHtmlResult<Response> {
     console_only(&user_ctx)?;
     let path = shared::get_services_path()?;
@@ -166,12 +168,16 @@ pub(super) fn skills_of(
 }
 
 pub(crate) async fn marketplace_detail_page(
-    Extension(user_ctx): Extension<UserContext>,
-    Extension(mkt_ctx): Extension<MarketplaceContext>,
-    Extension(engine): Extension<AdminTemplateEngine>,
+    shell: Page,
     State(pool): State<Arc<PgPool>>,
     Path(marketplace_id): Path<MarketplaceId>,
+    Query(query): Query<PanelQuery>,
 ) -> AdminHtmlResult<Response> {
+    let Page {
+        engine,
+        user: user_ctx,
+        marketplace: mkt_ctx,
+    } = shell;
     console_only(&user_ctx)?;
     let path = shared::get_services_path()?;
     let manifests = data::load_manifests(&pool, &path).await;
@@ -181,9 +187,19 @@ pub(crate) async fn marketplace_detail_page(
         .cloned()
         .ok_or_else(|| AdminError::NotFound("No such marketplace.".to_owned()))?;
 
-    let (group_audience, role_audience) =
-        data::audience_for(&pool, &manifests, &marketplace_id, &known_roles()).await;
-    let group_assignments = data::group_assignments(&pool, &marketplace_id, &group_audience).await;
+    let page_url = view::marketplace_url(marketplace_id.as_str());
+    let access = build_entity_panel(
+        &pool,
+        PanelRequest {
+            entity_type: data::MARKETPLACE_ENTITY,
+            entity_id: marketplace_id.as_str(),
+            page_url: &page_url,
+            why: query.why.as_deref(),
+            can_write: user_ctx.is_admin,
+            note: None,
+        },
+    )
+    .await;
 
     let plugins = member_links(&manifest.plugins, plugin_url);
     let mcp_servers = member_links(&manifest.mcp_servers, mcp_url);
@@ -205,29 +221,14 @@ pub(crate) async fn marketplace_detail_page(
         version: manifest.version,
         enabled: manifest.enabled,
         visibility: manifest.visibility,
-        default_included: manifest.access.default_included,
-        default_included_label: if manifest.access.default_included {
-            "Yes"
-        } else {
-            "No"
-        },
-        justification: manifest.access.justification,
         source_path: manifest.source_path,
-        roles: manifest.access.roles,
-        groups: manifest.access.groups,
-        projects: manifest.access.projects,
         plugins_count: plugins.len(),
         skills_count: skills.len(),
         mcp_count: mcp_servers.len(),
         plugins,
         skills,
         mcp_servers,
-        group_audience,
-        role_audience,
-        assigned_count: group_assignments.iter().filter(|g| g.assigned).count(),
-        group_assignments_count: group_assignments.len(),
-        group_assignments,
-        access_control_url: "/admin/access-control",
+        access,
     };
     Ok(render_typed_page(
         &engine,

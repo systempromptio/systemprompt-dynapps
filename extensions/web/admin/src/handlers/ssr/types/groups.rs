@@ -92,17 +92,6 @@ pub(crate) struct GroupOverviewView {
     pub leaderboard: Vec<UsageLeaderRowView>,
 }
 
-// Why: One marketplace, and whether this group reaches it. Entitlement is an
-// ordinary access-control rule on the marketplace entity keyed by the group
-// dimension, so the checkbox writes a rule rather than a membership.
-#[derive(Debug, Clone, Serialize)]
-pub(crate) struct MarketplaceAssignmentView {
-    pub id: String,
-    pub name: String,
-    pub description: String,
-    pub assigned: bool,
-}
-
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct MemberRowView {
     pub user_id: UserId,
@@ -183,8 +172,6 @@ pub(crate) struct GroupDetailPageData {
     pub overview: Option<GroupOverviewView>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub members: Option<MembersTabView>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub marketplaces: Option<Vec<MarketplaceAssignmentView>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub access: Option<Vec<AccessSectionView>>,
     #[serde(skip_serializing_if = "Option::is_none")]

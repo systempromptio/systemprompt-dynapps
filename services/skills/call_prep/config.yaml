@@ -1,7 +1,7 @@
 id: call_prep
 name: Call Prep
 description: 'Build a call brief from Salesforce meeting, account, opportunity, contact, and activity
-  data plus email, documents. Use before a customer meeting to understand attendees, deal history, open
+  data. Use before a customer meeting to understand attendees, deal history, open
   threads, and discovery needs; rep one-on-one: rep-context.'
 enabled: true
 file: SKILL.md

@@ -11,7 +11,7 @@
 )]
 
 use chrono::{DateTime, TimeZone, Utc};
-use systemprompt::identifiers::{AiRequestId, GatewayConversationId};
+use systemprompt::identifiers::{AiRequestId, AiToolCallId, GatewayConversationId};
 use systemprompt_web_admin::repositories::analytics::context_detail::{
     ContextMessageRow, ContextRequestRow,
 };
@@ -66,6 +66,8 @@ fn history(id: &str, secs: i64, rows: &[(&str, &str)]) -> Vec<ContextMessageRow>
             role: (*role).to_owned(),
             sequence_number: seq as i32,
             content: (*content).to_owned(),
+            tool_call_id: None,
+            name: None,
             created_at: at(secs),
         })
         .collect()
@@ -76,6 +78,7 @@ fn tool(id: &str, seq: i32, name: &str, input: &str) -> ContextToolCallRow {
         request_id: AiRequestId::new(id),
         tool_name: name.to_owned(),
         sequence_number: seq,
+        ai_tool_call_id: None,
         tool_input: serde_json::from_str(input).expect("valid json"),
         tool_result_payload: None,
         artifact_id: None,
@@ -489,4 +492,116 @@ fn retained_message_rows_supply_attribution_even_when_the_summary_count_is_inval
         reply.request_id_short.as_deref(),
         Some(short_id("retained").as_str())
     );
+}
+
+fn parallel_call() -> &'static str {
+    "[tool_use:Read {\"path\":\"a.rs\"}]\n[tool_use:request_log {\"id\":\"q\"}]"
+}
+
+fn parallel_thread(results: &[(&str, &str)]) -> (Vec<ContextMessageRow>, Vec<ContextRequestRow>) {
+    let mut messages = history("r1", 1, &[("user", "go"), ("assistant", parallel_call())]);
+    let mut rows = vec![("user", "go"), ("assistant", parallel_call())];
+    rows.extend_from_slice(results);
+    rows.push(("assistant", "done"));
+    let count = rows.len() as i64;
+    messages.extend(history("r2", 2, &rows));
+    let requests = vec![
+        req("r1", 1, "turn", Some(MAIN), "completed", 2),
+        req("r2", 2, "turn", Some(MAIN), "completed", count),
+    ];
+    (messages, requests)
+}
+
+fn with_id(mut t: ContextToolCallRow, id: &str) -> ContextToolCallRow {
+    t.ai_tool_call_id = Some(AiToolCallId::new(id));
+    t
+}
+
+#[test]
+fn a_ledger_payload_is_kept_and_message_text_goes_to_the_step_without_one() {
+    let (messages, requests) = parallel_thread(&[("user", "file body")]);
+    let mut log = with_id(tool("r1", 1, "request_log", "{\"id\":\"q\"}"), "toolu_b");
+    log.tool_result_payload = Some(serde_json::json!({"rows": 3}));
+    let tools = vec![
+        with_id(tool("r1", 0, "Read", "{\"path\":\"a.rs\"}"), "toolu_a"),
+        log,
+    ];
+    let view = build(&messages, &tools, &requests);
+    let steps = &view.threads[0].turns[0].steps;
+    let read = steps
+        .iter()
+        .find(|s| s.tool_name.as_deref() == Some("Read"))
+        .expect("read");
+    let log = steps
+        .iter()
+        .find(|s| s.tool_name.as_deref() == Some("request_log"))
+        .expect("log");
+    assert_eq!(read.tool_result_pretty.as_deref(), Some("file body"));
+    assert!(
+        log.tool_result_pretty
+            .as_deref()
+            .expect("payload")
+            .contains("\"rows\": 3")
+    );
+}
+
+#[test]
+fn tool_rows_pair_by_id_not_by_position() {
+    let (mut messages, requests) =
+        parallel_thread(&[("tool", "log result"), ("tool", "file body")]);
+    for m in messages.iter_mut().filter(|m| m.role == "tool") {
+        let id = if m.content == "log result" {
+            "toolu_b"
+        } else {
+            "toolu_a"
+        };
+        m.tool_call_id = Some(AiToolCallId::new(id));
+    }
+    let tools = vec![
+        with_id(tool("r1", 0, "Read", "{\"path\":\"a.rs\"}"), "toolu_a"),
+        with_id(tool("r1", 1, "request_log", "{\"id\":\"q\"}"), "toolu_b"),
+    ];
+    let view = build(&messages, &tools, &requests);
+    assert_eq!(view.turn_count, 1, "tool rows never start a turn");
+    let steps = &view.threads[0].turns[0].steps;
+    assert_eq!(steps[0].tool_result_pretty.as_deref(), Some("file body"));
+    assert_eq!(steps[1].tool_result_pretty.as_deref(), Some("log result"));
+}
+
+#[test]
+fn an_unsplittable_parallel_block_is_said_to_be_one_and_never_leaks_forward() {
+    let (mut messages, mut requests) = parallel_thread(&[("user", "both results")]);
+    let second = "[tool_use:Bash {\"command\":\"ls\"}]";
+    let mut rows: Vec<(&str, &str)> = messages
+        .iter()
+        .filter(|m| m.request_id.as_str() == "r2")
+        .map(|m| (m.role.as_str(), m.content.as_str()))
+        .collect();
+    rows.pop();
+    rows.extend([
+        ("assistant", second),
+        ("user", "listing"),
+        ("assistant", "done"),
+    ]);
+    let r3 = history("r3", 3, &rows);
+    requests.push(req(
+        "r3",
+        3,
+        "turn",
+        Some(MAIN),
+        "completed",
+        r3.len() as i64,
+    ));
+    messages.extend(r3);
+    let view = build(&messages, &[], &requests);
+    let steps = &view.threads[0].turns[0].steps;
+    let first = steps[0].tool_result_pretty.as_deref().expect("combined");
+    assert!(first.starts_with("Results of 2 parallel calls"));
+    assert!(first.contains("both results"));
+    assert!(steps[1].tool_result_pretty.is_none());
+    let bash = steps
+        .iter()
+        .find(|s| s.tool_name.as_deref() == Some("Bash"))
+        .expect("bash");
+    assert_eq!(bash.tool_result_pretty.as_deref(), Some("listing"));
 }

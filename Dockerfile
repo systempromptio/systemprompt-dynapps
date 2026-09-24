@@ -90,7 +90,11 @@ RUN ln -s /usr/local/aws-cli/v2/current/bin/aws /usr/local/bin/aws
 RUN useradd -m -u 1000 app
 WORKDIR /app
 
-RUN mkdir -p /app/bin /app/logs /app/storage /app/web /app/.systemprompt/profiles/docker
+# /app/storage/data is runtime state (the gateway journal lives there since
+# 0.58.1) and is excluded from the build context, so it must be created here:
+# a named volume mounted at a path the image lacks comes up root-owned, and
+# the server, running as uid 1000, cannot write it.
+RUN mkdir -p /app/bin /app/logs /app/storage/data /app/web /app/.systemprompt/profiles/docker
 
 COPY --from=builder /out/bin/ /app/bin/
 COPY --from=heybuilder /go/bin/hey /app/bin/hey

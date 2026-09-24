@@ -50,9 +50,12 @@ impl McpToolHandler for UsersHandler<'_> {
         let rows = read_rows(self.cli, self.token, &command).await?;
         let limit = page_limit(input.limit, 50);
         let mut output = PagedOutput::new(command, rows);
-        let paged = input.role.trim().is_empty() && output.returned >= usize::from(limit);
+        let full = output.returned >= usize::from(limit);
+        let dropped = output.fit_to_budget(super::MAX_OUTPUT_BYTES);
+        let paged = input.role.trim().is_empty() && (full || dropped > 0);
         if paged {
-            output.next_cursor = (input.offset + limit).to_string();
+            let kept = u16::try_from(output.returned).unwrap_or(limit);
+            output.next_cursor = input.offset.saturating_add(kept).to_string();
         }
         output.hint.push_str(if paged {
             "More users may follow; call again with `offset` set to `next_cursor`."

@@ -30,7 +30,7 @@ opt-level = "z"
 [workspace.package]
 edition = "2024"
 rust-version = "1.96"
-version = "0.60.0"
+version = "0.61.0"
 authors = ["Astound Digital <ed@systemprompt.io>"]
 repository = "https://github.com/systempromptio/systemprompt-astound"
 homepage = "https://astounddigital.com"
@@ -40,9 +40,9 @@ documentation = "https://systemprompt.io/documentation"
 # ============================================
 # CORE FACADE (single dependency for all systemprompt-core)
 # ============================================
-systemprompt = { version = "0.60.0", default-features = false, features = ["core", "database", "config"] }
-systemprompt-security = { version = "0.60.0" }
-systemprompt-extension = { version = "0.60.0" }
+systemprompt = { version = "0.61.0", default-features = false, features = ["core", "database", "config"] }
+systemprompt-security = { version = "0.61.0" }
+systemprompt-extension = { version = "0.61.0" }
 
 # ============================================
 # LOCAL EXTENSIONS
@@ -88,8 +88,6 @@ inventory = "0.3"
 walkdir = "2.0"
 tempfile = "3.0"
 zip = { version = "8", default-features = false, features = ["deflate-flate2"] }
-# Knowledge-bank ingestion: Confluence/Jira HTML -> Markdown, file-tree globs,
-# and the PDF / DOCX parsers for hand-authored sources.
 glob = "0.3"
 url = "2.5"
 urlencoding = "2.1"
@@ -253,7 +251,7 @@ workspace = true
 # Local development and `next` deploys use the persistent sibling core checkout
 # directly; `just core-guard` requires it clean at bridge/CORE_REF. Keep version
 # requirements and this block aligned in both workspaces; `main` comments it out.
-# INACTIVE: core 0.60.0 is published; `main` builds against the registry. Uncomment on `next` when building against the sibling core checkout.
+# INACTIVE: core 0.61.0 is published; `main` builds against the registry. Uncomment on `next` when building against the sibling core checkout.
 # [patch.crates-io]
 # systemprompt = { path = "../systemprompt-core/systemprompt" }
 # systemprompt-models = { path = "../systemprompt-core/crates/shared/models" }

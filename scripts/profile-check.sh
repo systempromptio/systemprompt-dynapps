@@ -60,9 +60,9 @@ fi
 HAS_AI="$(python3 -c "
 import json
 s = json.load(open('$SECRETS'))
-print(any(s.get(k) for k in ('anthropic','vertex','vertex_maas')))")"
+print(any(s.get(k) for k in ('anthropic','vertex')))")"
 [ "$HAS_AI" = "True" ] && ok "at least one AI provider key set" \
-    || warn "no AI provider key (anthropic/vertex/vertex_maas) — inference will fail"
+    || warn "no AI provider key (anthropic/vertex) — inference will fail"
 
 echo "── profile.yaml ──"
 NAME="$(yaml_val name)"

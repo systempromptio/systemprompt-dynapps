@@ -1,3 +1,4 @@
+-- @supersedes-checksum: 7d39e40a3cad2a75
 -- @supersedes-checksum: 2d2f1288476c091f
 -- @cost: rows=3644 measured=30s triggers=suspended
 --
@@ -11,9 +12,11 @@
 -- about. `feedback_capture` re-enqueues every request of the whole client
 -- session on each row it sees — 113 ms per corrected row — and this
 -- correction changes no identity, session or timing column, so no feedback
--- fact changes. It is suspended for the backfill. Core's `reporting_capture`
--- stays on: it is what carries the corrected client into the analytics
--- projection.
+-- fact changes. The migration runner suspends every row trigger on the
+-- tables a migration writes, so the explicit DISABLE/ENABLE pair this
+-- migration shipped with is gone: on a database that skipped releases the
+-- trigger can already be retired, and a named toggle then fails. The
+-- analytics projection `reporting_capture` fed has since been retired too.
 CREATE TEMPORARY TABLE ai_request_claude_markers ON COMMIT DROP AS
 WITH bodies AS (
     SELECT p.ai_request_id,
@@ -42,8 +45,6 @@ SELECT ai_request_id,
            ELSE 'claude-code' END AS client_kind
   FROM bodies;
 
-ALTER TABLE ai_requests DISABLE TRIGGER feedback_capture;
-
 -- Why: `metadata.user_id` is a Messages-API field; the body cannot have
 -- arrived on the Chat Completions route migration ai/026 assigned it.
 UPDATE ai_requests r
@@ -51,8 +52,6 @@ UPDATE ai_requests r
        wire_protocol = 'anthropic.messages'
   FROM ai_request_claude_markers m
  WHERE m.ai_request_id = r.id;
-
-ALTER TABLE ai_requests ENABLE TRIGGER feedback_capture;
 
 -- Rows backfilled by ai/026 never got an evidence row; the re-derived ones
 -- get the marker the runtime classifier would now record.
@@ -66,13 +65,17 @@ DROP TABLE ai_request_claude_markers;
 -- `conversation_facts.client_kind` is copied from each context's latest
 -- request, so the rollup carried `opencode` too.
 --
--- Why: the rollup reads tool_activity and conversation_requests, both
--- declarative objects an established database only gains in the declarative
--- pass that follows the migrations.
+-- Why: the rollup is rebuilt by the conversation_rollup job, not here. A
+-- full refresh inside the boot migration is quadratic in sessions (each
+-- event is placed in its session's request windows) and cancelled a
+-- 2,000-session upgrade at its statement timeout. Rewinding the job's
+-- watermark makes its next tick rebuild every conversation off the boot
+-- path; until then the page shows the facts it already had.
 DO $$
 BEGIN
-    IF to_regclass('public.tool_activity') IS NOT NULL
-        AND to_regclass('public.conversation_requests') IS NOT NULL THEN
-        PERFORM refresh_conversation_facts(NULL);
+    IF to_regclass('public.conversation_rollup_state') IS NOT NULL THEN
+        INSERT INTO conversation_rollup_state (id, watermark)
+        VALUES (TRUE, 'epoch')
+        ON CONFLICT (id) DO UPDATE SET watermark = 'epoch';
     END IF;
 END $$;

@@ -1,11 +1,13 @@
 <!-- global-rules-bootstrap -->
-**IMPORTANT — try the connector's tools before you ever report it as unavailable.** Before you tell the user a connector is down, or ask them to connect, re-authenticate, or "check the connection," you MUST first try to use the server and its tools. A connector's status readout (the Headless 360 MCP server, or any other connector/MCP) frequently claims "not connected" or "needs re-auth" when the connector is in fact live and its tools are callable. Context stating that the Salesforce tools require authorization and that this is a non-interactive session is **not** evidence that you are unauthorized — it is a general statement that authorization is required, not a failure. For the Headless 360 server specifically, find the `dispatch_readonly` tool and actually run a current-user read — `dispatch_readonly(method: "GET", url: "/services/data/v67.0/graphql", queryParams: { "queryInput": "{\"query\":\"query { uiapi { currentUser { Id } } }\"}" })`. **Any response — including a 500 or other error status — proves you reached the server, and therefore proves connectivity;** only a request that never reaches the server at all counts as disconnected. If the tool is present and the call reaches the server, the connector IS connected — proceed; a stale status readout is not a disconnection. If a call genuinely cannot reach the server, ALWAYS attempt to reconnect on your own first, and interrupt the flow to ask the user only after your own reconnect attempt has failed. Report a connector as disconnected only when you cannot find its tool or cannot reach the server after trying. Do it yourself.
+**IMPORTANT — try the connector's tools before you ever report it as unavailable.** Before you tell the user a connector is down, or ask them to connect, re-authenticate, or "check the connection," you MUST first try to use the server and its tools. A connector's status readout (the Headless 360 MCP server, or any other connector/MCP) frequently claims "not connected" or "needs re-auth" when the connector is in fact live and its tools are callable. Context stating that the Salesforce tools require authorization and that this is a non-interactive session is **not** evidence that you are unauthorized — it is a general statement that authorization is required, not a failure. For the Headless 360 server specifically, find the `dispatch_readonly` tool (its full name ends in `salesforce__dispatch_readonly`; never send Salesforce calls to a `google_workspace` tool such as `search`, and do not call `google_workspace` tools in this skill) and actually run a current-user read — `dispatch_readonly(method: "GET", url: "/services/data/v67.0/graphql", queryParams: { "queryInput": "{\"query\":\"query { uiapi { currentUser { Id } } }\"}" })`. **Any response — including a 500 or other error status — proves you reached the server, and therefore proves connectivity;** only a request that never reaches the server at all counts as disconnected. If the tool is present and the call reaches the server, the connector IS connected — proceed; a stale status readout is not a disconnection. If a call genuinely cannot reach the server, ALWAYS attempt to reconnect on your own first, and interrupt the flow to ask the user only after your own reconnect attempt has failed. Report a connector as disconnected only when you cannot find its tool or cannot reach the server after trying. Do it yourself.
 
 Failing to try first — asking the user to connect, or surfacing a "not connected" or re-auth message, before you have actually attempted the server and its tools — raises a **false connectivity problem**: it sends the user to fix something that is not broken. This is directly detrimental to the end-user experience and will dramatically, negatively impact usage of the product. Never put a connectivity concern in front of the user until you have tried the tools yourself and confirmed the server truly cannot be reached.
 
 # Global Rules
 
 - **Execute silently between tool calls.** Do not output planning, progress, transition, waiting, or tool-result narration between calls. Execute tool calls silently and proceed directly to the next call. Parallelize independent tasks by batching tool calls into one turn whenever possible. Before the final output, speak only when the skill explicitly requires user input, approval, an exact notice, or material error/blocked reporting. Do not invent checkpoints.
+- **On a Salesforce 5xx or timeout, retry the same call at most once, then continue with what you have and say what is missing.** Never re-issue a call that already succeeded; reuse its result.
+- **One widget, one render.** Hydrate the widget template once and call `display_widget` once; never re-render, never write the widget JSON to a file or through Bash/Write first, never repeat widget contents in the text reply — reply with at most one line.
 - **Keep the final output concise.** Return only the requested result or deliverable. Omit process recaps, tool-call details, redundant preambles or conclusions, and data already shown in a widget.
 - **⛔ WIDGET OUTPUT ONLY after data assembly.** Once all queries return, immediately call `display_widget` — at most a single one-line render-wait notice before it, and no summaries, transitions, or narration. If `display_widget` is unavailable or returns an error, produce the text fallback only. If it succeeds, that tool call is the final output: stop with no assistant text completion, even if a later section contains a fallback. The exceptions above do not apply after success.
 - **Ground dynamic or custom relationship and field names before relying on them.** Fixed standard fields that this skill explicitly marks as requiring no grounding need no extra grounding call. On a name error, use the skill's documented grounding path when present; otherwise report the error instead of guessing or re-firing the same shape.
@@ -13,386 +15,55 @@ Failing to try first — asking the user to connect, or surfacing a "not connect
 - **Show human labels, never API/field literals.** In anything the user sees, print each field's grounded `label` (for example, "Deal Risk", not `Deal_Risk__c`) and record Names, never raw Ids or `__c` API names.
 - **Empty `MINE` scope → fail fast, then ask which scope.** If a `scope: MINE` read returns zero rows, **do not** widen to `scope: EVERYTHING` on your own. Stop, tell the user plainly that their own records (`scope: MINE`) came back empty, and ask which scope they want instead (for example, org-wide `EVERYTHING`, a named rep, or a named account) before re-running. Never invent records, and never silently fall back to org-wide.
 <!-- /global-rules-bootstrap -->
-# Rules:
-
 # Deal Signals
 
-Ground → (read + evidence, one turn) → check thresholds → digest. Scope: my book (default), or a tier/team if asked. Since: last run, else 7 days.
+Read book + activity (one turn) → check thresholds → widget. Scope: my book (default), a named account/opp, or a tier/team if asked. Since: last run, else 7 days. All fields below are verified on this org — no schema/grounding calls.
 
-## 1. Ground (hardcoded — Opportunity only)
+## 1. Read (parallel, API v67.0 only)
 
-Opportunity always exists; naming a missing object fails the whole call. Its fields reveal this org's custom signal fields — don't assume names.
-
-```
-dispatch_readonly(method: "GET", url: "/services/data/v67.0/graphql",
-  queryParams: { "queryInput": "{\"query\":\"query { uiapi { objectInfos(apiNames: [\\\"Opportunity\\\"]) { fields { ApiName label } } } }\"}" })
-```
-
-Note scalar `__c` fields relevant to signals (renewal date, competitor, champion, deal-desk/legal-hold). Use exact names from this result.
-
-## 2. Read the open book (one call, scope: MINE)
-
-`scope: MINE` = the running user's book (no user lookup needed). Add confirmed `__c { value }` fields into `<OPP_CUSTOM>`. For a tier/team scope, drop `scope: MINE` and filter on owner/team instead.
+Named account/opp: add `{ Name: { like: \\\"%<name>%\\\" } }` to the `and` list. Tier/team: drop `scope: MINE`, filter on owner instead.
 
 ```
 dispatch_readonly(method: "GET", url: "/services/data/v67.0/graphql",
-  queryParams: { "queryInput": "{\"query\":\"query { uiapi { query { Opportunity(scope: MINE, where: { IsClosed: { eq: false } }, first: 100) { edges { node { Id Name { value } StageName { value displayValue } Amount { value displayValue } CloseDate { value } NextStep { value } LastActivityDate { value } LastModifiedDate { value } ForecastCategory { value } <OPP_CUSTOM> Account { Name { value } } } } } } } }\"}" })
+  queryParams: { "queryInput": "{\"query\":\"query { uiapi { query { Opportunity(scope: MINE, where: { and: [{ IsClosed: { eq: false } }] }, first: 100) { edges { node { Id Name { value } StageName { value displayValue } Amount { value displayValue } CloseDate { value } Next_Step__c { value } LastActivityDate { value } LastModifiedDate { value } LastStageChangeDate { value } ForecastCategoryName { value } Contract_Renewal_Date__c { value } Competition__c { value displayValue } Risks__c { value } Coach__c { value } Account { Name { value } } } } } } } }\"}" })
 ```
 
-## 2b. Evidence (same turn, only for CRM-flagged accounts — keeps the sweep fast)
+Same turn, for the returned opp Ids (activity lives in Event; Task is usually empty but query it too):
 
+```
+dispatch_readonly(method: "GET", url: "/services/data/v67.0/query",
+  queryParams: { "q": "SELECT WhatId, Subject, ActivityDate, Who.Name FROM Event WHERE WhatId IN (<oppIds>) AND ActivityDate >= LAST_N_DAYS:90 ORDER BY ActivityDate DESC" })
+dispatch_readonly(method: "GET", url: "/services/data/v67.0/query",
+  queryParams: { "q": "SELECT OpportunityId, CloseDate, PrevCloseDate, StageName, CreatedDate FROM OpportunityHistory WHERE OpportunityId IN (<oppIds>) AND CreatedDate = LAST_N_DAYS:42 ORDER BY CreatedDate" })
+```
+(Task: same shape as Event with `ActivityDate`, `Status`.)
 
+## 2. Thresholds (explicit dates from today)
 
-## 3. Check thresholds (compute explicit dates from today — never quarter-relative)
-
-Per open opp, fire a signal only when the record shows the trigger:
-- **Gone quiet** — LastActivityDate >14d ago (or null) AND CloseDate within 90d
-- **Inbound waiting** — customer emailed us and we haven't replied in 3+ business days (email evidence; the ball is on our side)
-- **Danger zone** — CloseDate ≤21d out and stage still early
+Fire only when the record shows the trigger:
+- **Gone quiet** — last Event/LastActivityDate >14d (or none) AND CloseDate ≤90d
+- **Danger zone** — CloseDate ≤21d and stage still early
 - **Overdue** — CloseDate < today
-- **Slipped** — CloseDate moved out / recent LastModifiedDate date change
-- **Stale commitment** — NextStep unchanged 21d+
-- **Champion risk** — primary contact left/quiet (email/OOO evidence)
-- **Renewal opening** — renewal entering lead-time window
-- **Competitor mention** — named in recent email/transcript
+- **Slipped** — OpportunityHistory shows CloseDate > PrevCloseDate in window
+- **Stale commitment** — Next Step blank or LastModifiedDate 21d+ ago
+- **Renewal opening** — Contract Renewal Date within 120d
+- **Competitor** — Competition populated
+- **Risk flagged** — Risks populated; **no coach** — Coach blank on late-stage opp
+- **Positive** — upcoming Event with the customer, recent stage advance (LastStageChangeDate ≤14d)
 
-## 4. Widget (default output when `display_widget` is present: Cowork/desktop/web)
+Weekly score trend (6 weeks): derive from OpportunityHistory stage/close-date moves and Event counts per week; say so in the chart caption.
 
-When the data is assembled, call `display_widget`; a single one-line "Displaying the visualization now (this may take a minute)." notice may precede it.
+## 3. Widget (when `display_widget` is present)
 
-### Self-verification (before calling display_widget)
+Hydrate the template below, then call `display_widget({ resourceType: "dynamic", widgetDefinition: <hydrated JSON object, not a string> })` once. Every `{{token}}` resolved; a slot that is only a token takes the typed value (arrays stay arrays, numbers numbers); data-less leaves are dropped, never invented. For a book sweep, headline the top opp and list signals across opps (prefix `signal` with the opp name).
 
-- [ ] `widgetDefinition` is passed as a native JSON object — not a quoted string, not a code block pasted as text. If the value starts with `"{"`, it is wrong.
+Tokens:
+- `title`, `headerStatus` (e.g. STRONG BUY / AT RISK), `subtitle` (score · trend · signal counts), `dealContext` (Stage · Amount · Close · Next Step · last activity, joined ` · `)
+- `chartCaption`, `chartCategories` (6 week labels), `chartSeries` (`[{name, data:[numbers]}]`)
+- `meterLabel`, `meterValue`/`meterMax`/`meterTarget` (numbers), `meterValueLabel`, `meterTargetLabel`, `meterStatus`, `meterBands` (`[{from,to,variant,label}]` covering 0→max: error Cold / warning Warm / success Hot)
+- `datagridCaption`, `datagridRows`: `[{ status:{value:"Buy"|"Watch", badgeVariant:"success"|"warning"}, signal, dir:{value:"Positive"|"Watch", badgeVariant}, when:"YYYY-MM-DD", note }]`, strongest first
+- `calloutTitle` (the single most important read), `calloutDescription` (read + move), `primaryButtonLabel`, `primaryButtonContent` (first-person prompt), `oppUrl` (`https://<myDomain>/lightning/r/Opportunity/<Id>/view`; omit if no Id)
 
-The widget template is embedded below — a widget-definition envelope whose leaf values carry `{{token}}` placeholders. Resolve every `{{token}}` to a literal (no `{{…}}`/`{!…}` left), then call `display_widget({ resourceType: "dynamic", widgetDefinition: <hydrated> })` once. A value that is *only* a `{{token}}` (chart/meter/datagrid arrays) becomes the typed literal — arrays stay arrays, numbers stay numbers; a `{{token}}` inside a larger string is interpolated as text. Compute every leaf from data already fetched; no `{!…}` bindings, no fabrication (blank fields stay blank; drop signals with no data).
-
-Synthesis-forward layout — header, two graphs, one datagrid, one callout:
-- **Header** — activity icon, title (`{{title}}`), status badge (`{{headerStatus}}`), one-line caption (`{{subtitle}}`) summarizing score/trend/signal counts, and a second muted caption (`{{dealContext}}`) carrying this opp's shared deal facts — StageName label · Amount · CloseDate · next step · last activity — joined by ` · ` (constant across the signals below, so it sits once in the header, not per row).
-- **Two graphs** — line chart of the 6-week signal-score trend (`{{chartCaption}}`, `{{chartCategories}}` = week labels, `{{chartSeries}}` = one `[{ name, data: [numbers] }]`); and a meter for the composite score (`{{meterLabel}}`, `{{meterValue}}` vs target `{{meterTarget}}` max `{{meterMax}}`, `valueFormat:"number"`, `{{meterValueLabel}}`, `{{meterTargetLabel}}`, `{{meterStatus}}`, and `{{meterBands}}` = ordered `[{ from, to, variant, label }]` covering 0→max for Cold/Warm/Hot, variants error/warning/success).
-- **Signals datagrid** (`{{datagridCaption}}`, `{{datagridRows}}`) — one row per signal, strongest first: `signal` (name), `dir` (badge `{ value, badgeVariant }` — success Positive / warning Watch), `when` (ISO `YYYY-MM-DD`), `note` (detail), plus a leading `status` object (`{value,badgeVariant}` — value Buy/Watch, badgeVariant success/warning); the leading Status column reads each row's `status`.
-- **One synthesis callout** (`variant:"success"`) closes the widget — `{{calloutTitle}}` (the single most important read) and `{{calloutDescription}}`, with two real buttons: primary `action/sendMessage` (`{{primaryButtonLabel}}` / first-person `{{primaryButtonContent}}`) and secondary "View in Salesforce" `action/openLink` to `{{oppUrl}}` (`https://<myDomain>/lightning/r/Opportunity/<Id>/view`; omit if you lack the Id). No decorative buttons.
-
-Before calling, verify: no `{{…}}`/`{!…}` remain; `{{chartCategories}}`/`{{chartSeries}}`/`{{meterBands}}`/`{{datagridRows}}` are arrays and `{{meterValue}}`/`{{meterMax}}`/`{{meterTarget}}` numbers; both buttons wired (real sendMessage `content`, openLink `url`); two graphs present; the callout closes it.
-
-Two blocks below: first the **variable contract** (`renderer.props.schema.json`) — every `{{token}}`'s type + a worked example, use it to compute each value; then the **widget template** to hydrate. Substitute your computed values into the template's `{{token}}`s (see the token-typing rules above), leaving no `{{…}}`/`{!…}`.
-```json
-{
-  "$comment": "Variable contract for the native-mosaic dynamic-mode template (renderer.json, sibling). This is NOT a separate display_widget call — it names every {{token}} in the template with its type and a worked example so you compute the right value for each. Workflow: build a props object with these keys, substitute each into the matching {{token}} in renderer.json (a slot that is only a {{token}} becomes the typed value — arrays stay arrays, numbers stay numbers; a {{token}} inside a larger string interpolates as text; a key you have no data for is omitted so that leaf drops), then call display_widget({ resourceType: 'dynamic', widgetDefinition: <the hydrated template> }) once with no {{…}}/{!…} left. Realistic values: sample-data.json (sibling). Authoring guidance (from the skill): The widget template is embedded below — a widget-definition envelope whose leaf values carry `{{token}}` placeholders. Resolve every `{{token}}` to a literal (no `{{…}}`/`{!…}` left), then call `display_widget({ resourceType: \"dynamic\", widgetDefinition: <hydrated> })` once. A value that is *only* a `{{token}}` (chart/meter/datagrid arrays) becomes the typed literal — arrays stay arrays, numbers stay numbers; a `{{token}}` inside a larger string is interpolated as text. Compute every leaf from data already fetched; no `{!…}` bindings, no fabrication (blank fields stay blank; drop signals with no data).\n- **Header** — activity icon, title (`{{title}}`), status badge (`{{headerStatus}}`), one-line caption (`{{subtitle}}`) summarizing score/trend/signal counts, and a second muted caption (`{{dealContext}}`) carrying this opp's shared deal facts — StageName label · Amount · CloseDate · next step · last activity — joined by ` · ` (constant across the signals below, so it sits once in the header, not per row).\n- **Two graphs** — line chart of the 6-week signal-score trend (`{{chartCaption}}`, `{{chartCategories}}` = week labels, `{{chartSeries}}` = one `[{ name, data: [numbers] }]`); and a meter for the composite score (`{{meterLabel}}`, `{{meterValue}}` vs target `{{meterTarget}}` max `{{meterMax}}`, `valueFormat:\"number\"`, `{{meterValueLabel}}`, `{{meterTargetLabel}}`, `{{meterStatus}}`, and `{{meterBands}}` = ordered `[{ from, to, variant, label }]` covering 0→max for Cold/Warm/Hot, variants error/warning/success).\n- **Signals datagrid** (`{{datagridCaption}}`, `{{datagridRows}}`) — one row per signal, strongest first: `signal` (name), `dir` (badge `{ value, badgeVariant }` — success Positive / warning Watch), `when` (ISO `YYYY-MM-DD`), `note` (detail), plus a leading `status` object (`{value,badgeVariant}` — value Buy/Watch, badgeVariant success/warning); the leading Status column reads each row's `status`.\n- **One synthesis callout** (`variant:\"success\"`) closes the widget — `{{calloutTitle}}` (the single most important read) and `{{calloutDescription}}`, with two real buttons: primary `action/sendMessage` (`{{primaryButtonLabel}}` / first-person `{{primaryButtonContent}}`) and secondary \"View in Salesforce\" `action/openLink` to `{{oppUrl}}` (`https://<myDomain>/lightning/r/Opportunity/<Id>/view`; omit if you lack the Id). No decorative buttons.\nBefore calling, verify: no `{{…}}`/`{!…}` remain; `{{chartCategories}}`/`{{chartSeries}}`/`{{meterBands}}`/`{{datagridRows}}` are arrays and `{{meterValue}}`/`{{meterMax}}`/`{{meterTarget}}` numbers; both buttons wired (real sendMessage `content`, openLink `url`); two graphs present; the callout closes it. Tokens: title subtitle dealContext headerStatus meterLabel/Value/Max/Target/ValueLabel/TargetLabel/Status/Bands chartCaption/chartCategories/chartSeries datagridCaption/datagridRows calloutTitle/calloutDescription primaryButtonLabel/primaryButtonContent oppUrl.",
-  "props": {
-    "title": {
-      "description": "Header title for the buying-signals view.",
-      "type": "string",
-      "example": "Buying signals — Cobalt Robotics"
-    },
-    "headerStatus": {
-      "description": "Header status badge (overall signal strength).",
-      "type": "string",
-      "example": "STRONG BUY"
-    },
-    "subtitle": {
-      "description": "Caption: composite score, trend, and signal counts.",
-      "type": "string",
-      "example": "Signal score 74 / 100 · trending up · 3 strong buys, 1 warning"
-    },
-    "dealContext": {
-      "description": "Muted second caption with the opp's shared deal facts — stage · amount · close date · next step · last activity, joined by ' · '.",
-      "type": "string",
-      "example": "Negotiation · $1.8M · close Sep 30 · next: exec review Jul 28 · last activity Jul 20"
-    },
-    "chartCaption": {
-      "description": "Caption for the 6-week signal-score trend line chart.",
-      "type": "string",
-      "example": "Signal score, last 6 weeks"
-    },
-    "chartCategories": {
-      "description": "Week labels for the trend chart's x-axis, as strings.",
-      "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "example": [
-        "Wk 1",
-        "Wk 2",
-        "Wk 3",
-        "Wk 4",
-        "Wk 5",
-        "Wk 6"
-      ]
-    },
-    "chartSeries": {
-      "description": "Trend series — one object {name, data}.",
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "description": "Series name.",
-            "type": "string"
-          },
-          "data": {
-            "description": "Weekly signal scores — a number array matching chartCategories.",
-            "type": "array",
-            "items": {
-              "type": "number"
-            }
-          }
-        }
-      },
-      "example": [
-        {
-          "name": "Score",
-          "data": [
-            48,
-            52,
-            60,
-            63,
-            70,
-            74
-          ]
-        }
-      ]
-    },
-    "meterLabel": {
-      "description": "Label for the composite-score meter.",
-      "type": "string",
-      "example": "Composite signal score"
-    },
-    "meterValue": {
-      "description": "Composite signal score — the meter's current value.",
-      "type": "number",
-      "example": 74
-    },
-    "meterMax": {
-      "description": "The meter's max.",
-      "type": "number",
-      "example": 100
-    },
-    "meterTarget": {
-      "description": "Target marker on the meter.",
-      "type": "number",
-      "example": 70
-    },
-    "meterValueLabel": {
-      "description": "Display string for the score.",
-      "type": "string",
-      "example": "74 / 100"
-    },
-    "meterTargetLabel": {
-      "description": "Display string for the target.",
-      "type": "string",
-      "example": "70 = strong"
-    },
-    "meterStatus": {
-      "description": "Short read shown on the meter (Cold / Warm / Hot).",
-      "type": "string",
-      "example": "strong buy"
-    },
-    "meterBands": {
-      "description": "Color bands for the meter, in order covering 0→max (Cold / Warm / Hot).",
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "from": {
-            "description": "Band start value.",
-            "type": "number"
-          },
-          "to": {
-            "description": "Band end value.",
-            "type": "number"
-          },
-          "variant": {
-            "description": "Band color.",
-            "type": "string",
-            "enum": [
-              "error",
-              "warning",
-              "success"
-            ]
-          },
-          "label": {
-            "description": "Short band label.",
-            "type": "string"
-          }
-        }
-      },
-      "example": [
-        {
-          "from": 0,
-          "to": 40,
-          "variant": "error",
-          "label": "Cold"
-        },
-        {
-          "from": 40,
-          "to": 70,
-          "variant": "warning",
-          "label": "Warm"
-        },
-        {
-          "from": 70,
-          "to": 100,
-          "variant": "success",
-          "label": "Hot"
-        }
-      ]
-    },
-    "datagridCaption": {
-      "description": "Caption for the signals datagrid.",
-      "type": "string",
-      "example": "Signals detected, strongest first"
-    },
-    "datagridRows": {
-      "description": "Buying signals — one row per signal, strongest first. Empty array → the datagrid is omitted.",
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "status": {
-            "description": "Leading Status badge cell; omit on normal rows.",
-            "type": "object",
-            "properties": {
-              "value": {
-                "description": "Status label.",
-                "type": "string"
-              },
-              "badgeVariant": {
-                "description": "Badge color.",
-                "type": "string",
-                "enum": [
-                  "neutral",
-                  "primary",
-                  "secondary",
-                  "outline",
-                  "success",
-                  "info",
-                  "warning",
-                  "error"
-                ]
-              }
-            }
-          },
-          "signal": {
-            "description": "Signal name.",
-            "type": "string"
-          },
-          "dir": {
-            "description": "Direction badge cell.",
-            "type": "object",
-            "properties": {
-              "value": {
-                "description": "Direction label (Positive / Watch).",
-                "type": "string"
-              },
-              "badgeVariant": {
-                "description": "Badge color: success=Positive, warning=Watch.",
-                "type": "string",
-                "enum": [
-                  "neutral",
-                  "primary",
-                  "secondary",
-                  "outline",
-                  "success",
-                  "info",
-                  "warning",
-                  "error"
-                ]
-              }
-            }
-          },
-          "when": {
-            "description": "Signal date, ISO YYYY-MM-DD.",
-            "type": "string"
-          },
-          "note": {
-            "description": "Short detail for the signal.",
-            "type": "string"
-          }
-        }
-      },
-      "example": [
-        {
-          "status": {
-            "value": "Buy",
-            "badgeVariant": "success"
-          },
-          "signal": "Budget approved",
-          "dir": {
-            "value": "Positive",
-            "badgeVariant": "success"
-          },
-          "when": "2026-07-06",
-          "note": "CFO confirmed renewal + expansion budget"
-        },
-        {
-          "status": {
-            "value": "Buy",
-            "badgeVariant": "success"
-          },
-          "signal": "Multi-thread widening",
-          "dir": {
-            "value": "Positive",
-            "badgeVariant": "success"
-          },
-          "when": "2026-07-13",
-          "note": "5 contacts engaged, up from 2"
-        },
-        {
-          "status": {
-            "value": "Buy",
-            "badgeVariant": "success"
-          },
-          "signal": "Usage climbing",
-          "dir": {
-            "value": "Positive",
-            "badgeVariant": "success"
-          },
-          "when": "2026-07-18",
-          "note": "Platform seats +12% this month"
-        },
-        {
-          "status": {
-            "value": "Watch",
-            "badgeVariant": "warning"
-          },
-          "signal": "Competitor mentioned",
-          "dir": {
-            "value": "Watch",
-            "badgeVariant": "warning"
-          },
-          "when": "2026-07-20",
-          "note": "CIO referenced in-house build option"
-        }
-      ]
-    },
-    "calloutTitle": {
-      "description": "Synthesis callout heading — the single most important read.",
-      "type": "string",
-      "example": "Signals say press now"
-    },
-    "calloutDescription": {
-      "description": "Synthesis callout body — the read and the move.",
-      "type": "string",
-      "example": "Score climbed 48→74 in six weeks on budget approval, wider threading, and rising usage. The one caution is the CIO's in-house-build comment — get ahead of it in the exec meeting and this closes on time."
-    },
-    "primaryButtonLabel": {
-      "description": "Primary button label (action/sendMessage).",
-      "type": "string",
-      "example": "Draft exec ask"
-    },
-    "primaryButtonContent": {
-      "description": "First-person prompt the primary button sends (action/sendMessage).",
-      "type": "string",
-      "example": "Draft an exec ask for the Cobalt meeting focused on addressing the in-house-build option the CIO mentioned."
-    },
-    "oppUrl": {
-      "description": "Opportunity Lightning URL for the secondary \"View in Salesforce\" button; omit if no Id.",
-      "type": "string",
-      "example": "https://org.lightning.force.com/lightning/r/Opportunity/006AX00000M8k2pYAD/view"
-    }
-  }
-}
-```
 ```json
 {
   "renderer": {
@@ -512,20 +183,17 @@ Two blocks below: first the **variable contract** (`renderer.props.schema.json`)
 }
 ```
 
-
-## 5. Text — FALLBACK ONLY — DO NOT USE IF `display_widget` SUCCEEDED
-
-Per fired signal, surface the trigger value **plus one or two supporting facts** from the Step 2 record (all already fetched — no new read), separated by ` • ` so the evidence is scannable, not a single condensed fact. Blank line between the 🔴 and 🟡 groups.
+## 4. Text — FALLBACK ONLY (display_widget absent or errored)
 
 ```
 # Deal Signals — <today> — <scope>
 
 🔴 Act today
-- **<Account / Opp>** — <signal> — <StageName label> • $<Amount> • close <CloseDate> • last activity <LastActivityDate> • next step <NextStep> → <action>
+- **<Account / Opp>** — <signal> — <Stage> • $<Amount> • close <CloseDate> • last activity <date> • next step <Next Step> → <action>
 
 🟡 This week
 - **<Account / Opp>** — <signal> — <trigger value> • <supporting fact> • <supporting fact> → <action>
 
 ✅ Nothing else crossed a threshold (<N> opps swept)
 ```
-Link each record. CRM fix → preview an approval-gated `dispatch`; a touch → `draft-outreach` or proposed meeting times. Scheduled run: lead with count of new items since last run; a quiet digest is success.
+Link each record. A touch → suggest `draft-outreach`. Scheduled run: lead with count of new items since last run; a quiet digest is success.

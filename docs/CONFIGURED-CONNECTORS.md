@@ -79,8 +79,11 @@ live, and Google filters every result to what the signed-in user can already
 open — their Drive permissions, their own mailbox and calendar. Tools: `search`,
 `conversational_search`, `list_engines`. Scope:
 `https://www.googleapis.com/auth/discoveryengine.readwrite`. The endpoint is
-**regional** — `eu-discoveryengine.googleapis.com/mcp` for an `eu` engine; the
-global host answers `Incorrect API endpoint used` for anything else.
+**regional** and must match the engine's location: this instance's engine is
+`global` in the Astound Knowledge UK Sales project
+(`astound-knowledge-uk-sales`, number `148780456827`), so it calls `discoveryengine.googleapis.com/mcp`. An `eu`
+engine needs `eu-discoveryengine.googleapis.com/mcp`; the wrong host answers
+`Incorrect API endpoint used`.
 
 **No licence.** Discovery Engine is usage-billed (10k queries/month free);
 Gemini Enterprise is the licensed end-user app on the same engine and is not
@@ -98,10 +101,11 @@ access is requested, and without one the connection expires with the hour-long
 access token — and `identity: userinfo` so the row shows the Google address.
 
 The engine's serving config is a **tool argument**, and nothing model-visible
-in a server config reaches the model, so the `google_drive_search` skill's
-`## Instance` block holds that one resource name. **On handover** two things
-change and nothing else: the `servingConfig` in
-`services/skills/google_drive_search/SKILL.md` and the OAuth client id/secret.
+in a server config reaches the model, so the gateway writes it into every call
+from `tools.<name>.arguments` in `services/mcp/google_workspace.yaml`. **On
+handover** two things change and nothing else: that `servingConfig` and the
+OAuth client id/secret. Engine, OAuth client and IAM grants must all live in the
+same project.
 
 On the Google side, in one GCP project:
 
@@ -109,7 +113,7 @@ On the Google side, in one GCP project:
 2. AI Applications → Settings → Identity provider → Google Identity (before
    the data store; the wizard refuses otherwise).
 3. Create federated data stores for Drive, Gmail and Calendar (location
-   `eu`) and one Enterprise-tier search app over **all of them** — an app
+   `global`, matching the endpoint) and one Enterprise-tier search app over **all of them** — an app
    created with a single store can never gain a second (`Engines with a
    single data store cannot add or remove data stores`); the app's
    `…/servingConfigs/default_search` is the `servingConfig`. Scriptable against
@@ -122,6 +126,7 @@ On the Google side, in one GCP project:
    three fields is accepted, silently unbound from the Workspace, and returns
    nothing forever — `workspaceConfig` is immutable, so delete and recreate.
    `GOOGLE_PEOPLE` (directory) is not servable by the search backend in `eu`
+   (untested in `global`)
    (`No mapping of workspace config type found`); Chat, Groups, Sites and Keep
    were left out deliberately. The console wizard sets all of this for you;
    the API does not.
@@ -165,11 +170,12 @@ A live connection is an authorization subject. `services/access-control/rules.ya
 accepts a `connector:` band (precedence 160, between `group` and the Salesforce
 `salesforce` link band) whose values are server ids; a person matches while
 `mcp_connector_accounts` holds a `connected` row for that server
-(`extensions/web/admin/src/authz/connector.rs`). The `astound-salesforce`
-marketplace uses it: a verified `salesforce` connection admits the
-marketplace, plugin and its inherited skills, so Salesforce workflows are not
-offered before their required server can answer. Google Workspace remains an
-optional connector and is filtered independently.
+(`extensions/web/admin/src/authz/connector.rs`). The band is available to any
+entity; the `astound-salesforce` marketplace no longer uses it — it reaches the
+`business-users` group by membership alone, and the Salesforce connector is
+linked from inside the workspace (Salesforce still refuses anyone without a
+user in the org). Google Workspace remains an optional connector and is
+filtered independently.
 
 ## Tool permissions in the clients
 

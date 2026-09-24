@@ -133,6 +133,10 @@ fn build_sync_participant_routes() -> Router<Arc<PgPool>> {
             post(handlers::sync::apply_handler),
         )
         .route(
+            "/sync/access-control/keep",
+            post(handlers::sync::keep_handler),
+        )
+        .route(
             "/sync/sources/refresh",
             post(handlers::sync::refresh_sources_handler),
         )

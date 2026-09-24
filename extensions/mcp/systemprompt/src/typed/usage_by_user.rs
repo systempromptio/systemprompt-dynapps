@@ -33,7 +33,7 @@ impl McpToolHandler for UsageByUserHandler<'_> {
         "usage_by_user"
     }
     fn description(&self) -> &'static str {
-        "Rank this platform's users by AI spend over a window: cost, request count, tokens and distinct conversations per user, highest spend first. The `name` column is `<user_id> (<display name>)`; pass the id to `request_log` to see that user's requests. Quote `cost_usd`, never `cost_microdollars`. Emails are not available here — use `users` for the roster."
+        "Rank this platform's users by AI spend over a window: cost, request count, tokens and distinct conversations per user, highest spend first. The `name` column is `<user_id> (<display name>)`; pass the id to `request_log` to see that user's requests. Costs are in `cost_usd`. Emails are not available here — use `users` for the roster. Spend only: for what people did, active days and skills use `user_activity`. It excludes deleted users, so its totals can be below a sum of `request_log` rows; report both figures rather than explaining the gap."
     }
     fn read_only(&self) -> bool {
         true
@@ -48,9 +48,11 @@ impl McpToolHandler for UsageByUserHandler<'_> {
         let rows = read_rows(self.cli, self.token, &command).await?;
         let limit = usize::from(page_limit(input.limit, 50));
         let mut output = PagedOutput::new(command, rows);
-        output.truncated = output.returned >= limit;
+        let full = output.returned >= limit;
+        output.fit_to_budget(super::MAX_OUTPUT_BYTES);
+        output.truncated |= full;
         output.hint = if output.truncated {
-            "The page is full; raise `limit` (max 200) or narrow `since`/`until` to see every user."
+            "The page is full; raise `limit` (max 100) or narrow `since`/`until` to see every user."
                 .to_owned()
         } else {
             "Every user with spend in the window is listed.".to_owned()

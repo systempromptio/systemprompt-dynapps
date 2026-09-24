@@ -5,7 +5,8 @@
 
 use serde_json::json;
 use systemprompt_mcp_agent::typed::{
-    ConversationAuditInput, MAX_PAGE, RequestLogInput, UsageByUserInput, UsersInput,
+    ConversationAuditInput, MAX_OUTPUT_BYTES, MAX_PAGE, PagedOutput, RequestLogInput,
+    UsageByUserInput, UsersInput,
 };
 
 fn parse<T: serde::de::DeserializeOwned>(value: serde_json::Value) -> T {
@@ -123,4 +124,44 @@ fn a_value_cannot_smuggle_a_second_flag() {
     }
     let blank: ConversationAuditInput = parse(json!({"request_id": "  "}));
     assert!(systemprompt_mcp_agent::typed::conversation_audit_command(&blank).is_err());
+}
+
+#[test]
+fn conversation_audit_caps_the_page_and_every_body() {
+    let input: ConversationAuditInput = parse(json!({
+        "request_id": "req_1", "limit": 200, "max_chars": 0
+    }));
+    assert_eq!(
+        systemprompt_mcp_agent::typed::conversation_audit_command(&input).unwrap(),
+        "infra logs audit req_1 --offset 0 --limit 25 --max-content 2000 --messages"
+    );
+}
+
+#[test]
+fn a_page_is_cut_to_the_byte_budget_and_says_so() {
+    let rows: Vec<serde_json::Value> = (0..100)
+        .map(|i| json!({"request_id": format!("req_{i}"), "body": "x".repeat(2000)}))
+        .collect();
+    let mut output = PagedOutput::new("infra logs request list".to_owned(), rows);
+
+    let dropped = output.fit_to_budget(MAX_OUTPUT_BYTES);
+
+    assert!(dropped > 0);
+    assert!(output.truncated);
+    assert_eq!(output.returned, output.rows.len());
+    assert!(serde_json::to_vec(&output).unwrap().len() <= MAX_OUTPUT_BYTES);
+    assert_eq!(output.rows[0]["request_id"], json!("req_0"));
+}
+
+#[test]
+fn raw_microdollars_are_dropped_beside_their_dollar_sibling() {
+    let output = PagedOutput::new(
+        "analytics costs breakdown".to_owned(),
+        vec![json!({"cost_microdollars": 1_500_000, "cost_usd": 1.5, "tokens_microdollars": 7})],
+    );
+
+    let row = &output.rows[0];
+    assert!(!row.contains_key("cost_microdollars"));
+    assert_eq!(row["cost_usd"], json!(1.5));
+    assert!(row.contains_key("tokens_microdollars"));
 }

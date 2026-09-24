@@ -3,7 +3,7 @@ title: "Deploy: One Node and PostgreSQL"
 description: "Run the published Astound Digital gateway image on one Linux machine against PostgreSQL, from pulling the image to the first admin sign-in."
 author: "Astound Digital"
 slug: "deploy"
-keywords: "deploy, self-host, docker, docker compose, postgresql, pgvector, ghcr, image, profile, secrets, single node, install"
+keywords: "deploy, self-host, docker, docker compose, postgresql, ghcr, image, profile, secrets, single node, install"
 kind: "guide"
 public: true
 tags: ["documentation", "deployment", "configuration"]
@@ -46,9 +46,8 @@ name a release the gateway is not on.
 |------|-------------|
 | Machine | Linux (amd64 or arm64), Docker Engine 24+ with Compose v2, 2 vCPU and 4 GB RAM minimum, outbound HTTPS |
 | Image access | a GitHub token with `read:packages`, issued by Astound. The image is private |
-| PostgreSQL | version 16 or newer, reachable from the machine on 5432 with TLS. The `vector`, `uuid-ossp` and `pgcrypto` extensions must be available. The bundled option runs `pgvector/pgvector:pg18` beside the app |
-| Model provider | an Anthropic API key (OpenAI or Gemini also work; `claude-*` models route to Anthropic) |
-| Knowledge bank (optional) | only if you enable the knowledge-bank MCP server, which ships disabled: an AWS Bedrock long-term API key with model access in `eu-central-1`. Once enabled, the server refuses to start without it, and that stops the node |
+| PostgreSQL | version 16 or newer, reachable from the machine on 5432 with TLS. The `uuid-ossp` and `pgcrypto` extensions must be available. The bundled option runs PostgreSQL 18 beside the app |
+| Model provider | a Google service-account JSON for Vertex AI (`claude-*` models route to Vertex, failing over to Anthropic), plus an Anthropic API key |
 | Public hostname | an HTTPS address with TLS terminated by nginx on the machine or by a load balancer in front of it. HTTPS is mandatory: the sign-in cookie is `Secure` and SSO callbacks must match the public HTTPS URL |
 
 ## 1. Get the bundle and the image
@@ -109,7 +108,6 @@ line pins it to the image release, which `--image` and `preflight.sh` check.
   --trusted-proxies 127.0.0.0/8 \
   --database-url 'postgres://systemprompt:<pw>@<db-host>:5432/systemprompt?sslmode=require' \
   --anthropic-key sk-ant-... \
-  --bedrock-key ... \
   --image ghcr.io/astound-digital/systemprompt-astound:@RELEASE_VERSION@
 ```
 
@@ -186,8 +184,6 @@ migration ledger and the admin user. Resolve failures for the configured resourc
 
 Configure [Astound SSO](/documentation/adfs-sso-setup) for the public hostname, sign in at `https://ai.example.com/admin/login`, and hand users the
 [Downloads](/documentation/downloads) page, which your own gateway serves.
-
-The bundled `verify-node.sh` still probes the legacy `admin_console` agent and the knowledge-bank port. This configuration ships no A2A agent and no enabled knowledge-bank server, so those two probes are not current readiness requirements. Check the enabled MCP servers with `systemprompt infra services status`; investigate failures for resources that are actually configured.
 
 ## Upgrade and roll back
 

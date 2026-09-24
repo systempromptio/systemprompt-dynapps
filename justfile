@@ -404,6 +404,7 @@ _lint-gates-uncoordinated:
         check-workspace-deps.sh
         check-dockerfile-paths.sh
         check-dropped-schema.sh
+        check-retired-features.sh
         validate-services.sh
         check-core-ref.sh
         check-schema-baseline.sh

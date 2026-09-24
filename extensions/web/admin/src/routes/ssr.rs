@@ -214,6 +214,10 @@ fn platform_routes() -> Router<Arc<PgPool>> {
             get(handlers::catalog::skill_detail_page),
         )
         .route("/gateway", get(handlers::ssr::gateway_page))
+        .route(
+            "/gateway/routes/{route_id}",
+            get(handlers::ssr::gateway_route_page),
+        )
         // Why: the policy editor writes `ai_gateway_policies` directly; core
         // re-reads it per request, so these are live edits, not file edits.
         .route(

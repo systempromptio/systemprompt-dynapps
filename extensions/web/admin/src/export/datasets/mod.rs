@@ -14,6 +14,7 @@ pub(crate) mod governance;
 pub(crate) mod history;
 pub(crate) mod mcp;
 pub(crate) mod people;
+pub(crate) mod plugin_eval;
 pub(crate) mod projects;
 pub(crate) mod reports;
 pub(crate) mod requests;

@@ -42,6 +42,8 @@ pub(crate) const ALL: &[&dyn DataSet] = &[
     &datasets::analysis_skill_runs::KitReleaseImpact,
     &datasets::versions::Marketplaces,
     &datasets::versions::Versions,
+    &datasets::plugin_eval::PluginEval,
+    &datasets::plugin_eval::PluginEvalTools,
     &datasets::governance::Decisions,
     &datasets::governance::Findings,
     &datasets::governance::Secrets,

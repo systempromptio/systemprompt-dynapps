@@ -70,6 +70,8 @@ pub(crate) struct SyncPageData {
     pub breadcrumbs: Vec<BreadcrumbView>,
     pub tabs: Vec<TabLinkView>,
     pub show_sources: bool,
+    pub show_access: bool,
+    pub access_review: Option<super::access_review::AccessReviewView>,
     pub docs_url: &'static str,
     pub configuration_url: &'static str,
     pub observability_url: &'static str,

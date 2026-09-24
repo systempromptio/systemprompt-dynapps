@@ -20,6 +20,72 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+## 0.61.0 — 2026-09-24
+
+### Breaking
+
+- Every Vertex provider now reads the one `vertex` secret. `vertex-maas` and
+  `vertex-maas-us-central1` in `services/ai/providers.yaml` switch `api_key_secret` from
+  `vertex_maas` to `vertex`: a single service-account JSON in a single GCP project already served
+  `vertex` and `vertex-anthropic`, and holding it twice under two names only let the open models
+  fail with `Gateway API key secret 'vertex_maas' not configured` when the second copy was
+  missing. An operator who set only `vertex_maas` must set `vertex` to the same document; the
+  `vertex_maas` secret is no longer read. `docs/install/vertex.md`,
+  `docs/install/required-secrets.md`, `deploy/self-host/SECRETS.md` and
+  `scripts/profile-check.sh` describe the one secret.
+
+### Added
+
+- `scripts/check-retired-features.sh`, a `lint-gates` gate that fails when any tracked file names
+  the knowledge bank outside the history allowlist (applied migrations, schema baselines, this
+  changelog, dated ops analyses, demo transcripts).
+
+### Changed
+
+- Builds against published core 0.61.0; both `[patch.crates-io]` blocks are commented out and
+  `bridge/CORE_REF` is `v0.61.0`. What an operator sees from core: a model whose provider has no
+  usable credential or no pricing now answers 404 `not_found_error` instead of 502, and is left
+  out of `/v1/models` and the bridge profile's `models`, so clients stop retrying it; an
+  `anthropic-beta` value an upstream refuses (Claude Code's `advisor-tool-2026-03-01` after a
+  Vertex failover to Anthropic) is dropped and the request re-sent once instead of failing; a
+  forwarded `anthropic-beta` is narrowed to the provider's `accepted_betas`, so a Vertex provider
+  forwards none unless it declares them; a Vertex provider on a non-Gemini wire configured with an
+  API-key secret is withheld at boot; and the `report_*` analytics views are replaced in place
+  rather than recreated on every boot. Core's AI Rust API changes (`UpstreamTarget::provider`
+  returns `&ProviderId`, upstreams are built only from a catalog entry) do not reach this tree's
+  code.
+
+### Removed
+
+- The direct OpenAI and Cerebras providers (`openai`, `openai-responses`, `cerebras`) and their
+  gateway routes (`gpt-4.1*`, `o4-mini`, bare `gpt-oss-120b`). They existed to exercise the
+  openai-chat and responses outbound wires, not to serve users; the open models are served from
+  Vertex Model-as-a-Service, where `openai.gpt-oss-120b` stays. The `openai` and `cerebras`
+  secrets are no longer read, and self-host `preflight.sh` no longer counts an `openai` key as a
+  model provider.
+- The Claude 4.x Opus and Sonnet models (`claude-opus-4-5` to `claude-opus-4-8`,
+  `claude-sonnet-4-5`, `claude-sonnet-4-6`) from `vertex-anthropic`, and their
+  `anthropic-claude-*` twins from `anthropic`. The 5.x family replaces them; `claude-haiku-4-5`
+  and its dated alias stay. A request naming a removed id is refused (`allow_unlisted_models` is
+  `false`). `tests/unit/web/src/ai_catalog_config.rs` pins the six served ids, bars the removed
+  ones, and checks the removed providers stay gone and every Vertex provider shares `vertex`.
+
+- The last traces of the knowledge-bank MCP server, whose code was removed in 348b8efb. Self-host
+  `preflight.sh` no longer requires the `systemprompt-mcp-knowledge-bank` binary or reads
+  `services/knowledge-bank/config.yaml`, and `verify-node.sh` no longer probes port 5030 or the
+  retired `admin_console` agent. `render-profile.sh --bedrock-key` and the `bedrock_api_key` and
+  `knowledge_database_url` secrets are gone; nothing reads them. The `app_knowledge` volume is
+  gone from `docker-compose.yml` and `deploy/self-host/docker-compose.node.yml`. An existing volume
+  is left unmounted and can be deleted with `docker volume rm`. The kit templates no longer
+  include `knowledge-bank`. Also removed: `deploy/fly/knowledge-db/`, the three
+  `docs/install/*knowledge*` guides, the `enterprise-knowledge-rag` documentation page (and its
+  navigation and console links), `scripts/executive-insights/` (it called the removed tools and
+  imported a deleted directory), and unused `wiremock`/`zip` test dependencies.
+- pgvector is no longer required. `provision.sql` and `provision-bundled.sql` stop creating the
+  `vector` extension, CI runs on plain `postgres:18`, and the deploy docs list only `uuid-ossp`
+  and `pgcrypto`. The bundled and local compose files keep the `pgvector/pgvector:pg18` image so
+  that databases created by earlier releases, which installed `vector`, still start and restore.
+
 ## 0.60.0 — 2026-09-23
 
 ### Breaking

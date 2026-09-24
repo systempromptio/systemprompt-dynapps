@@ -20,6 +20,8 @@ mod bridge_identity;
 #[cfg(test)]
 mod config_acl_detect;
 #[cfg(test)]
+mod config_acl_review;
+#[cfg(test)]
 mod config_acl_sync;
 #[cfg(test)]
 mod config_gateway_acl;

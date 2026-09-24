@@ -9,8 +9,6 @@ into the product documentation site remains under `services/content/documentatio
 - [Docker installation](install/docker.md)
 - [Oracle Cloud deployment](install/oracle-cloud.md)
 - [Required secrets](install/required-secrets.md) and [Vertex configuration](install/vertex.md)
-- [Knowledge database](install/knowledge-db.md) and [model providers](install/knowledge-model-provider.md)
-- [Google Drive ingestion](install/google-drive-knowledge.md)
 - [Profile schema](profile.schema.json)
 
 ## Use the system

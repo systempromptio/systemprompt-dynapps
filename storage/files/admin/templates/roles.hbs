@@ -106,7 +106,7 @@
     {{/unless}}
 
     {{#if on_entitlements}}
-    {{#> components/section title="What each role opens" count=entitlement_total note="Every access-control rule written at the role band, grouped by role and then by kind. A kind reads as one line when the role reaches all of it; expand it for the individual entities. Edit rules in Access control."}}
+    {{#> components/section title="What each role opens" count=entitlement_total note="Every access-control rule written at the role band, grouped by role and then by kind. A kind reads as one line when the role reaches all of it; expand it for the individual entities. Each entity links to its own Who gets this panel, where its rules are edited."}}
         {{#*inline "section_actions"}}
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/access-control?band=role">Open in Access control</a>
         {{/inline}}
@@ -133,7 +133,7 @@
                     {{#each rows}}
                     <tr>
                         <td><a href="{{href}}">{{entity_label}}</a>{{#if labelled}} <span class="sp-u-text-tertiary sp-u-text-xs">{{entity_sub}}</span> <span class="sp-u-mono sp-u-text-xs sp-u-text-tertiary">{{entity_id}}</span>{{/if}}</td>
-                        <td>{{> components/badge tone=access_tone text=access}}</td>
+                        <td>{{> components/access-badge decision=access}}</td>
                         <td class="sp-u-text-muted">{{default_label}}</td>
                     </tr>
                     {{/each}}

@@ -15,6 +15,8 @@ after_reading_this:
   - "Compare two versions and read the figures under each, skill by skill"
   - "Find whether devices received the version being served"
 related_docs:
+  - title: "Evaluate a Plugin: Fixed Suite, PAT Export, Deterministic Metrics"
+    url: "/documentation/analysis-evaluate-plugins"
   - title: "Analysis: Measure, Compare and Publish a Skill"
     url: "/documentation/analysis"
   - title: "Code ↔ Instance: Sources, Planes and Sync"

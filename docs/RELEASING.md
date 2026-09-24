@@ -298,6 +298,42 @@ it builds and ships whatever this working tree holds. Colleagues on their own
 infrastructure (Oracle VM, remote Postgres) use the published image:
 [install/docker.md](install/docker.md).
 
+## Upgrading across several releases
+
+A database is upgraded straight from any release on the ladder (0.56.0 and
+later) to the current one in a single boot. Three guarantees make that safe;
+each exists because a 0.58 → 0.60 client upgrade failed without it:
+
+- **Migrations never run stale row triggers.** The runner suspends every
+  enabled row trigger on the tables a migration writes, for that migration
+  only, and restores exactly those. A migration that needs its triggers to
+  fire declares `-- @cost: … triggers=live`. Never toggle a trigger by name in
+  a migration (`ALTER TABLE … DISABLE TRIGGER <name>`): it fails on a
+  database where the trigger is already retired, and boot refuses it.
+- **Retirements run before any migration.** A trigger, function or view an
+  extension retires goes in its `retirements()` (astound:
+  `extensions/web/schema/retire/*.sql`, `DROP … IF EXISTS` only), not only in
+  a migration: core migrates first, and a table core drops must not outlive
+  the trigger that writes it.
+- **Boot refuses a dangling trigger routine.** Once the schema is final, an
+  enabled trigger whose function uses a relation that does not exist stops the
+  boot with the trigger, function and relation named.
+
+`docker/entrypoint.sh` runs `infra db migrate --repair-drift`: checksum drift
+is repaired and retried once; any other failure stops with core's hint.
+`/app/storage/data` must be a persistent volume writable by uid 1000 (see
+`deploy/self-host/README.md`).
+
+**A client stuck on 0.56–0.58 with an older image** (symptoms: ai 032
+statement timeout, web 093 `relation "analytics_ingestion_producers" does not
+exist`, web 102 `trigger "feedback_capture" … does not exist`, or `Cannot
+create gateway journal`) upgrades cleanly to a release carrying these fixes.
+Before that release, the manual route was: drop every `feedback_capture*`
+trigger (`extensions/web/schema/retire/001_feedback_ingestion.sql` lists
+them), create a no-op `feedback_capture` trigger on `ai_requests` so web 102
+has something to toggle, and `chown -R 1000:1000` the `app_storage_data`
+volume.
+
 ## Rollback
 
 1. Image users: `SYSTEMPROMPT_TAG=<previous> docker compose up -d`. Tags are

@@ -87,6 +87,7 @@ pub(crate) struct MessageDoc {
     pub sequence_number: i32,
     pub role: String,
     pub content: String,
+    pub tool_call_id: Option<String>,
     pub created_at: DateTime<Utc>,
 }
 
@@ -96,6 +97,7 @@ pub(crate) fn message_doc(m: &ContextMessageRow, body: impl Fn(&str) -> String) 
         sequence_number: m.sequence_number,
         role: m.role.clone(),
         content: body(&m.content),
+        tool_call_id: m.tool_call_id.as_ref().map(|id| id.as_str().to_owned()),
         created_at: m.created_at,
     }
 }
@@ -107,6 +109,7 @@ pub(crate) struct ToolCallDoc {
     pub request_id: String,
     pub sequence_number: i32,
     pub tool_name: String,
+    pub tool_use_id: Option<String>,
     pub tool_input: serde_json::Value,
     pub tool_result: Option<serde_json::Value>,
     pub artifact_id: Option<ArtifactId>,
@@ -119,6 +122,7 @@ pub(crate) fn tool_call_doc(t: &ContextToolCallRow) -> ToolCallDoc {
         request_id: t.request_id.as_str().to_owned(),
         sequence_number: t.sequence_number,
         tool_name: t.tool_name.clone(),
+        tool_use_id: t.ai_tool_call_id.as_ref().map(|id| id.as_str().to_owned()),
         tool_input: t.tool_input.clone(),
         tool_result: t.tool_result_payload.clone(),
         artifact_id: t.artifact_id.clone(),
