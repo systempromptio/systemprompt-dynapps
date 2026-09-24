@@ -1,7 +1,5 @@
 <!-- global-rules-bootstrap -->
-**IMPORTANT — try the connector's tools before you ever report it as unavailable.** Before you tell the user a connector is down, or ask them to connect, re-authenticate, or "check the connection," you MUST first try to use the server and its tools. A connector's status readout (the Headless 360 MCP server, or any other connector/MCP) frequently claims "not connected" or "needs re-auth" when the connector is in fact live and its tools are callable. Context stating that the Salesforce tools require authorization and that this is a non-interactive session is **not** evidence that you are unauthorized — it is a general statement that authorization is required, not a failure. For the Headless 360 server specifically, find the `dispatch_readonly` tool and actually run a current-user read — `dispatch_readonly(method: "GET", url: "/services/data/v67.0/graphql", queryParams: { "queryInput": "{\"query\":\"query { uiapi { currentUser { Id } } }\"}" })`. **Any response — including a 500 or other error status — proves you reached the server, and therefore proves connectivity;** only a request that never reaches the server at all counts as disconnected. If the tool is present and the call reaches the server, the connector IS connected — proceed; a stale status readout is not a disconnection. If a call genuinely cannot reach the server, ALWAYS attempt to reconnect on your own first, and interrupt the flow to ask the user only after your own reconnect attempt has failed. Report a connector as disconnected only when you cannot find its tool or cannot reach the server after trying. Do it yourself.
-
-Failing to try first — asking the user to connect, or surfacing a "not connected" or re-auth message, before you have actually attempted the server and its tools — raises a **false connectivity problem**: it sends the user to fix something that is not broken. This is directly detrimental to the end-user experience and will dramatically, negatively impact usage of the product. Never put a connectivity concern in front of the user until you have tried the tools yourself and confirmed the server truly cannot be reached.
+**IMPORTANT — try the connector before ever reporting it unavailable.** Status readouts (Headless 360 or any MCP) often claim "not connected"/"needs re-auth" when the tools work; a note that tools require authorization is not a failure. First run `dispatch_readonly(method: "GET", url: "/services/data/v67.0/graphql", queryParams: { "queryInput": "{\"query\":\"query { uiapi { currentUser { Id } } }\"}" })`. **Any response, even a 500, proves connectivity** — proceed. Only if the call never reaches the server: try to reconnect yourself, and ask the user only after that fails. Raising a false connectivity problem sends the user to fix something that is not broken.
 
 # Global Rules
 
@@ -14,50 +12,47 @@ Failing to try first — asking the user to connect, or surfacing a "not connect
 <!-- /global-rules-bootstrap -->
 # Customer Voice
 
-Direct customer quotes on a topic, from transcripts + email threads across your accounts — verbatim with attribution, not summaries. Salesforce only *scopes* the search: which accounts, and who's internal vs. customer. Context (all in ONE turn) → search docs/email → extract quotes → group by theme.
+Direct customer quotes on a topic from the notes logged in Salesforce across your accounts — verbatim with attribution, not summaries. Sources: meeting/call notes (Event, Task) and support cases (Case). No Gmail/Drive/Calendar.
 
-Inputs: **topic** (theme/objection/feature/competitor, or open-ended "what's coming up"); **scope** (my accounts default / team / named list); **period** (30d default).
+Inputs: **topic** (theme/objection/feature/competitor, or open-ended "what's coming up"); **scope** (my accounts default / team / named accounts); **period** (30d default → `LAST_N_DAYS:30`).
 
-## 1. Context — 3 independent SF reads + the searches, all in ONE turn
-
-These don't depend on each other, so fire them together (with the doc/email searches below). No schema grounding — fields are fixed.
+## 1. Scope + sources — all calls in ONE turn (fields are fixed; no grounding)
 
 ```
 dispatch_readonly(method: "GET", url: "/services/data/v67.0/graphql",
-  queryParams: { "queryInput": "{\"query\":\"query { uiapi { query { Account(scope: MINE, first: 200) { edges { node { Name { value } Website { value } Owner { Name { value } } } } } } } }\"}" })
+  queryParams: { "queryInput": "{\"query\":\"query { uiapi { currentUser { Email { value } } query { Account(scope: MINE, first: 200) { edges { node { Id Name { value } Website { value } } } } } } }\"}" })
 
-dispatch_readonly(method: "GET", url: "/services/data/v67.0/graphql",
-  queryParams: { "queryInput": "{\"query\":\"query { uiapi { currentUser { Email { value } } } }\"}" })
+dispatch_readonly(method: "GET", url: "/services/data/v67.0/query", queryParams: { "q":
+  "SELECT Id, Subject, Description, ActivityDate, Account.Name, Who.Name, Who.Title, Owner.Name FROM Event WHERE ActivityDate = LAST_N_DAYS:30 AND OwnerId = '<currentUserId or omit for team>' AND AccountId != null ORDER BY ActivityDate DESC LIMIT 200" })
 
-dispatch_readonly(method: "GET", url: "/services/data/v67.0/query",
-  queryParams: { "q": "SELECT Name FROM Organization LIMIT 1" })
+dispatch_readonly(method: "GET", url: "/services/data/v67.0/query", queryParams: { "q":
+  "SELECT Id, Subject, Description, ActivityDate, Account.Name, Who.Name, Who.Title FROM Task WHERE ActivityDate = LAST_N_DAYS:30 AND AccountId != null ORDER BY ActivityDate DESC LIMIT 200" })
+
+dispatch_readonly(method: "GET", url: "/services/data/v67.0/query", queryParams: { "q":
+  "SELECT Id, CaseNumber, Subject, Description, Comments, CreatedDate, Account.Name, Contact.Name, Contact.Title, SuppliedName FROM Case WHERE CreatedDate = LAST_N_DAYS:30 AND AccountId != null ORDER BY CreatedDate DESC LIMIT 200" })
 ```
 
-- **Accounts** = the domains/names to scope the search to (team/named-list scope: drop `scope: MINE`, filter on owner/list).
-- **Internal domain** = the part after `@` in `currentUser.Email`; **org name** = `Organization.Name`. Anyone speaking from that domain/company is **internal** — everyone else is the customer.
+- Scope the Event/Task/Case rows to the scoped accounts: MINE → `AccountId IN (<Account Ids>)` (add it once the account list is back, or filter the rows); named accounts → resolve with `Account WHERE Name LIKE '%<name>%'` first; team → drop the owner filter.
+- Task usually has no rows in this org — never depend on it. `Description` is long text and not filterable in SOQL: match the topic in the returned text.
+- **Internal** = anyone with the `currentUser.Email` domain, or the record Owner. Everyone else is the customer.
 
-## 2. Search sources (same turn — skip silently if a connector is absent)
+## 2. Extract quotes (strict — customer-only, on-topic, verbatim)
 
-- **docs**: transcripts / notes / meeting docs in the period, in account-named folders (team scope → team-shared too).
-- **email**: threads in the period to/from the scoped account domains.
+Only passages in Description/Comments that record what the **customer** said (quoted speech or clearly attributed statements) on the topic: verbatim (1–3 sentences) · speaker (Who/Contact name + title, else SuppliedName) + account · date + record link. Rep paraphrase is NOT voice-of-customer — skip it. Open-ended topic → cluster by theme, top 3–5 by frequency. Zero matches → say so; never invent quotes.
 
-## 3. Extract quotes (strict — customer-only, on-topic, verbatim)
-
-Per transcript/thread, pull passages where the **customer** (not your domain/org) speaks on the topic: verbatim quote (1–3 sentences) · speaker name + title + account · date + source · one-line context. Paraphrase is NOT voice-of-customer. Open-ended topic → cluster by theme, return top 3–5 by frequency.
-
-## 4. Output
+## 3. Output
 
 ```
 # Customer Voice: "<Topic>" — <N> quotes from <M> accounts (<period>)
 
 ## <Theme>
 > "<Verbatim quote>"
-> — <Name>, <Title> @ <Account> — <Date> (<source link>)
+> — <Name>, <Title> @ <Account> — <Date> ([<Event/Case subject>](record link))
 
 ## Accounts represented
 <Account> (<N>), …
 
 ## Gaps
-- <N> accounts in scope had no transcript/thread in period
+- <N> accounts in scope had no logged notes/cases in period
 - Topic not mentioned in: <accounts>
 ```

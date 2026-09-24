@@ -106,4 +106,5 @@ Conversations and Versions are open to marketplace participants for the people i
 - [Measure Which Skills Are Used](/documentation/analysis-measure-skills)
 - [Create a Conversation and See It Land](/documentation/analysis-test-conversation)
 - [Versions: Marketplace Hashes, History and Compare](/documentation/analysis-versions)
+- [Evaluate a Plugin: Fixed Suite, PAT Export, Deterministic Metrics](/documentation/analysis-evaluate-plugins)
 - [Code ↔ Instance: Sources, Planes and Sync](/documentation/services-sync)

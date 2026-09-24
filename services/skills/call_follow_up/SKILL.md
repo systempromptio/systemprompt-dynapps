@@ -1,147 +1,72 @@
 <!-- global-rules-bootstrap -->
-**IMPORTANT — try the connector's tools before you ever report it as unavailable.** Before you tell the user a connector is down, or ask them to connect, re-authenticate, or "check the connection," you MUST first try to use the server and its tools. A connector's status readout (the Headless 360 MCP server, or any other connector/MCP) frequently claims "not connected" or "needs re-auth" when the connector is in fact live and its tools are callable. Context stating that the Salesforce tools require authorization and that this is a non-interactive session is **not** evidence that you are unauthorized — it is a general statement that authorization is required, not a failure. For the Headless 360 server specifically, find the `dispatch_readonly` tool and actually run a current-user read — `dispatch_readonly(method: "GET", url: "/services/data/v67.0/graphql", queryParams: { "queryInput": "{\"query\":\"query { uiapi { currentUser { Id } } }\"}" })`. **Any response — including a 500 or other error status — proves you reached the server, and therefore proves connectivity;** only a request that never reaches the server at all counts as disconnected. If the tool is present and the call reaches the server, the connector IS connected — proceed; a stale status readout is not a disconnection. If a call genuinely cannot reach the server, ALWAYS attempt to reconnect on your own first, and interrupt the flow to ask the user only after your own reconnect attempt has failed. Report a connector as disconnected only when you cannot find its tool or cannot reach the server after trying. Do it yourself.
-
-Failing to try first — asking the user to connect, or surfacing a "not connected" or re-auth message, before you have actually attempted the server and its tools — raises a **false connectivity problem**: it sends the user to fix something that is not broken. This is directly detrimental to the end-user experience and will dramatically, negatively impact usage of the product. Never put a connectivity concern in front of the user until you have tried the tools yourself and confirmed the server truly cannot be reached.
+**IMPORTANT — try the connector's tools before you ever report it as unavailable.** A connector status readout often claims "not connected" or "needs re-auth" when its tools are callable; a note that Salesforce tools require authorization is not evidence you are unauthorized. Before telling the user a connector is down or asking them to connect/re-authenticate, run a current-user read: `dispatch_readonly(method: "GET", url: "/services/data/v67.0/graphql", queryParams: { "queryInput": "{\"query\":\"query { uiapi { currentUser { Id } } }\"}" })`. **Any response — including a 500 — proves connectivity;** proceed. Only if the call never reaches the server, attempt to reconnect yourself first, and ask the user only after that fails. Raising a false connectivity problem sends the user to fix something that is not broken and badly damages the product experience.
 
 # Global Rules
 
-- **Execute silently between tool calls.** Do not output planning, progress, transition, waiting, or tool-result narration between calls. Execute tool calls silently and proceed directly to the next call. Parallelize independent tasks by batching tool calls into one turn whenever possible. Before the final output, speak only when the skill explicitly requires user input, approval, an exact notice, or material error/blocked reporting. Do not invent checkpoints.
-- **Keep the final output concise.** Return only the requested result or deliverable. Omit process recaps, tool-call details, redundant preambles or conclusions, and data already shown in a widget.
-- **Ground dynamic or custom relationship and field names before relying on them.** Fixed standard fields that this skill explicitly marks as requiring no grounding need no extra grounding call. On a name error, use the skill's documented grounding path when present; otherwise report the error instead of guessing or re-firing the same shape.
-- **Cite every value exactly as queried**; never fabricate; distinguish a blank value from a value that was not queried. Link each Salesforce record inline: `https://[instanceUrl]/lightning/r/[SObjectType]/[Id]/view`.
-- **Show human labels, never API/field literals.** In anything the user sees, print each field's grounded `label` (for example, "Deal Risk", not `Deal_Risk__c`) and record Names, never raw Ids or `__c` API names.
-- **Empty `MINE` scope → fail fast, then ask which scope.** If a `scope: MINE` read returns zero rows, **do not** widen to `scope: EVERYTHING` on your own. Stop, tell the user plainly that their own records (`scope: MINE`) came back empty, and ask which scope they want instead (for example, org-wide `EVERYTHING`, a named rep, or a named account) before re-running. Never invent records, and never silently fall back to org-wide.
+- **Execute silently between tool calls.** No planning, progress or tool-result narration; batch independent calls in one turn. Speak before the final output only for required input, approval, or material errors.
+- **Keep the final output concise.** Only the deliverable; no process recaps or data already shown in a widget.
+- **Ground dynamic or custom field names before relying on them.** Fields this skill lists as verified need no grounding. On a name error, report it instead of guessing or re-firing the same shape.
+- **Cite every value exactly as queried**; never fabricate; distinguish blank from not queried. Link records inline: `https://[instanceUrl]/lightning/r/[SObjectType]/[Id]/view`.
+- **Show human labels, never API literals** (e.g. "Next Step", not `Next_Step__c`); show record Names, never raw Ids.
+- **Empty `MINE` scope → fail fast, then ask which scope.** Never widen to `EVERYTHING` on your own or invent records.
 <!-- /global-rules-bootstrap -->
-
-# Rules:
-
-- Gather thorough, contextual background before acting. Explain material errors and inference logic explicitly in the final output.
 
 # Call Follow-Up
 
-
+Gather thorough context before acting. State material errors and inference logic explicitly in the output.
 
 ## 1. Get transcript
 
-**If link or "find it":** Use doc search tools (Google Workspace, etc.) to read the doc. Search by account name if needed.
-**If pasted:** Use as-is.
+- **Pasted:** use as-is.
+- **Not provided:** ask the user to paste it. Salesforce Event `Description` (Step 3) may hold call notes — use it if the user points to that meeting. Never invent a transcript.
 
-Extract: attendees (internal + external), date, account name.
+Extract attendees (internal + external), date, account name.
 
-## 2. Extract structure (analyze transcript deeply)
+## 2. Extract structure
 
-From transcript, pull:
-- **Decisions:** anything agreed/confirmed
-- **Customer commitments:** what they'll do (send data, loop someone in, review proposal)
-- **Our commitments:** what we'll do (send doc, schedule demo, answer question)
-- **Open questions:** raised but unresolved
-- **Objections/concerns:** pushback
-- **Next meeting:** if scheduled
-- **Qual signals:** budget/authority/timeline/pain mentions (BANT/MEDDIC default, or infer from org)
-- **Specific human moments:** quotes, phrases, analogies customer used — for email personalization
-- **Urgency signals:** timeline drivers, consequences of delay, events forcing decision
+Decisions · customer commitments · our commitments · open questions · objections · next meeting · qualification signals (budget/authority/timeline/pain; MEDDICC if the org uses it) · specific human moments (customer phrases/analogies, for personalization) · urgency signals (forcing events, cost of delay).
 
+## 3. Salesforce context
 
-**A. Draft customer email** (under 150 words):
-- Thank-you opener (one line, **reference specific human moment from call** — their phrase/analogy/framing, not generic)
-- Recap agreed next steps as short bullet list (their commitments + ours)
-- Answers/links you committed to — if you don't have yet, `[ATTACH: description]` placeholder
-- Propose or confirm next meeting
-- Minimal signature: `[User name]` (or infer from org)
+Verified fields (no grounding call): Account `Name, Industry, Account_Type__c, Client_Tier__c, Account_Health__c, Account_Status__c, Owner`; Opportunity `Name, StageName, Amount, CloseDate, IsClosed, IsWon, Probability, ForecastCategoryName, Type, Next_Step__c, MEDDICC__c`; Event `Subject, StartDateTime, Description, Who, What`. There is **no** `NextStep` and **no** Account `Type`.
 
-Tone: professional, warm, specific to this call (or match voice from org data). Create as email draft to external attendees. **Do not send.**
-
-```
-*[Account] - [Call type] - [Date]*
-Stage: [Opp stage] $[Amount]
-Attendees: [names]
-
-*TL;DR:* [one sentence on where deal is]
-
-*Key points:*
-• [decision/signal]
-• ...
-
-*Risks / objections:*
-• [concern raised]
-• [flag urgency gaps: "No urgency anchor beyond X — timeline TBD" if no forcing event/deadline surfaced]
-
-*Next steps:*
-• [ ] Us: [commitment] - [owner] by [date]
-• [ ] Them: [commitment]
-
-*SFDC updates needed:* [stage change / next step / amount]
-```
-
-
-
-Ground Account and Opportunity with two individual calls in the same tool turn:
+One call, account resolved by 1–2 word `%NAME%` (combine all three queries):
 ```
 dispatch_readonly(method: "GET", url: "/services/data/v67.0/graphql",
-  queryParams: { "queryInput": "{\"query\":\"query { uiapi { objectInfos(apiNames: [\\\"Account\\\"]) { ApiName fields { ApiName label } } } }\"}" })
+  queryParams: { "queryInput": "{\"query\":\"query { uiapi { query { Account(where: { Name: { like: \\\"%NAME%\\\" } }, first: 5) { edges { node { Id Name { value } Industry { value } Account_Type__c { displayValue } Client_Tier__c { displayValue } Account_Health__c { displayValue } Owner { Name { value } } } } } Opportunity(where: { Account: { Name: { like: \\\"%NAME%\\\" } } }, first: 50, orderBy: { CloseDate: { order: DESC } }) { edges { node { Id Name { value } AccountId { value } StageName { value displayValue } Amount { value displayValue } CloseDate { value } IsClosed { value } IsWon { value } Next_Step__c { value } MEDDICC__c { value } } } } Event(where: { Account: { Name: { like: \\\"%NAME%\\\" } } }, first: 10, orderBy: { StartDateTime: { order: DESC } }) { edges { node { Id Subject { value } StartDateTime { value } Description { value } } } } } } }\"}" })
 ```
 
-```
-dispatch_readonly(method: "GET", url: "/services/data/v67.0/graphql",
-  queryParams: { "queryInput": "{\"query\":\"query { uiapi { objectInfos(apiNames: [\\\"Opportunity\\\"]) { ApiName fields { ApiName label } } } }\"}" })
-```
+- Multiple accounts matched → pick the one named in the transcript; keep only opps whose `AccountId` matches.
+- No open opp → note closed/lost opps (prior relationship; prevents duplicate records).
+- No account → broaden the filter once, else propose Account creation.
+- Errors (500, timeout) → state them and what you inferred instead.
 
-Then read **account + all opps (open + closed/historical)** with two individual GraphQL calls in the same tool turn so they run in parallel, both filtered by account name (1–2 word `%NAME%`):
-```
-dispatch_readonly(method: "GET", url: "/services/data/v67.0/graphql",
-  queryParams: { "queryInput": "{\"query\":\"query { uiapi { query { Account(where: { Name: { like: \\\"%NAME%\\\" } }, first: 1) { edges { node { Id Name { value } <ACCOUNT_CUSTOM> Owner { Name { value } } } } } } } }\"}" })
-```
+## 4. Drafts and SFDC proposal
 
-```
-dispatch_readonly(method: "GET", url: "/services/data/v67.0/graphql",
-  queryParams: { "queryInput": "{\"query\":\"query { uiapi { query { Opportunity(where: { Account: { Name: { like: \\\"%NAME%\\\" } } }, first: 50, orderBy: { CloseDate: { order: DESC } }) { edges { node { Id Name { value } AccountId { value } StageName { value displayValue } Amount { value displayValue } CloseDate { value } IsClosed { value } IsWon { value } NextStep { value } <OPP_CUSTOM> } } } } } }\"}" })
-```
+**Customer email** (<150 words, draft only — **do not send**; no mail tool is available, so output the text): one-line thank-you referencing a specific human moment; bullet recap of both sides' next steps; committed answers or `[ATTACH: description]`; propose/confirm next meeting; signature `[User name]`.
 
-Insert `<ACCOUNT_CUSTOM>` and `<OPP_CUSTOM>` = confirmed `__c { value }` fields whose labels match the follow-up context, using the matching Account or Opportunity grounding response.
-
-If the name filter matches multiple accounts, keep only opportunities whose `AccountId` matches the resolved Account `Id`.
-
-**Historical context matters:** If no active opp found, note closed/dead opps exist — shows account is known, prevents duplicate account creation, surfaces prior relationship context.
-
-Empty account match → broaden `%…%` or infer account doesn't exist yet in CRM (propose creation).
-
-**If system errors (500, timeout, auth):** Log explicitly in output, explain what you inferred and why (e.g., "User lookup failed 500, inferring [name] as owner from transcript").
-
-
-## 4. Salesforce update checklist
-
-Propose changes based on the call. Show the exact fields and values first. Only after the user explicitly approves that preview may `dispatch` write one change at a time; read the record back after each write. If `dispatch` is unavailable or read-only, output the same proposal as a manual checklist.
-
-**CRM hygiene checks:**
-- If **account exists** (found in Step 3C historical search), note existing AccountId — don't create duplicate
-- If **no account found**, propose Account creation with fields from transcript
-- If **old closed/dead opps exist**, surface that prior relationship context in output
-
-**Proposed updates:**
-- NextStep → "[suggested from call]"
-- StageName → [if progression warranted]
-- Amount → [if discussed]
-- CloseDate → [if timeline shifted]
-- Log Activity: "[Call type] - [one-line summary]"
+**SFDC updates:** show exact fields and values first. Only after explicit user approval may `dispatch` write one change at a time, reading back after each. If writes are unavailable, output a manual checklist. Candidates: Next Step (`Next_Step__c`), Stage, Amount, Close Date, log an Event "[Call type] – [summary]".
 
 ## 5. Output
 
 ```
 # Call Follow-Up: [Account] - [Date]
 
-## Customer Email
-✉️ Drafted in email to [recipients]: [draft link]
----
-[email body preview]
----
+## Customer Email (draft — not sent)
+To: [external attendees]
+[email body]
 
 ## Internal Summary
-[Copyable recap for the account team]
+*[Account] - [Call type] - [Date]*  Stage: [Stage] [Amount]  Attendees: [names]
+*TL;DR:* [where the deal is]
+*Key points:* • [decision/signal]
+*Risks / objections:* • [concern] • [urgency gap, e.g. "No forcing event — timeline TBD"]
+*Next steps:* • [ ] Us: [commitment] – [owner] by [date]  • [ ] Them: [commitment]
 
 ## Update Salesforce
-- [ ] NextStep: "[value]"
+- [ ] Next Step: "[value]"
 - [ ] [other fields]
-- [ ] Log Activity
+- [ ] Log Event
 
 ## Our Commitments (don't drop these)
 - [ ] [commitment] - by [date]

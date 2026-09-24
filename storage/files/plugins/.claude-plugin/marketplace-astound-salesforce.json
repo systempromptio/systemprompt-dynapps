@@ -5,14 +5,14 @@
   },
   "metadata": {
     "description": "Salesforce account, pipeline, forecasting, meeting and outreach workflows with governed Headless 360 reads, approval-gated writes and dynamic visual artifacts.",
-    "version": "1.0.0"
+    "version": "1.1.0"
   },
   "plugins": [
     {
       "name": "astound-salesforce",
       "source": "./storage/files/plugins/astound-salesforce",
-      "description": "Thirty-two Salesforce sales workflows adapted from Salesforce's public Sales Cloud plugin, with optional Google Workspace evidence and dynamic Headless 360 widgets.",
-      "version": "1.0.0"
+      "description": "Salesforce sales workflows adapted from Salesforce's public Sales Cloud plugin, with dynamic Headless 360 widgets. Google Workspace evidence returns when its connector is live; google_workspace_test checks it.",
+      "version": "1.1.0"
     }
   ]
 }

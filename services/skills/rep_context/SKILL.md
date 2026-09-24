@@ -13,325 +13,42 @@ Failing to try first — asking the user to connect, or surfacing a "not connect
 - **Show human labels, never API/field literals.** In anything the user sees, print each field's grounded `label` (for example, "Deal Risk", not `Deal_Risk__c`) and record Names, never raw Ids or `__c` API names.
 - **Empty `MINE` scope → fail fast, then ask which scope.** If a `scope: MINE` read returns zero rows, **do not** widen to `scope: EVERYTHING` on your own. Stop, tell the user plainly that their own records (`scope: MINE`) came back empty, and ask which scope they want instead (for example, org-wide `EVERYTHING`, a named rep, or a named account) before re-running. Never invent records, and never silently fall back to org-wide.
 <!-- /global-rules-bootstrap -->
-# Rules:
-
 
 # Rep Context
 
-Leader's 1:1 prep on one rep — pipeline, activity, where they're stuck. The named person is an INTERNAL rep (not a customer). Ground → read (pipeline + activity, one turn) → needs-help + questions.
+Leader's 1:1 prep on one INTERNAL rep (not a customer): pipeline, activity, where they're stuck. Two dispatches in ONE turn → analyze → widget. Salesforce only; no email/calendar/document sources.
 
-## 1. Ground (hardcoded — Opportunity only)
+## 1. Read (all in one turn — no schema/grounding call)
 
-Opportunity always exists; naming a missing object fails the whole call. Its fields reveal this org's risk/health/next-step `__c` fields — use exact names.
-
-```
-dispatch_readonly(method: "GET", url: "/services/data/v67.0/graphql",
-  queryParams: { "queryInput": "{\"query\":\"query { uiapi { objectInfos(apiNames: [\\\"Opportunity\\\"]) { fields { ApiName label } } } }\"}" })
-```
-
-## 2. Read the rep's book + activity (one turn)
-
-Filter by `Owner: { Name: { like: "%REP%" } }` (the rep's name/email). Splice confirmed `__c` fields into `<OPP_CUSTOM>`. **Check `{` vs `}` balance before dispatching.**
+Verified Opportunity fields: `Next_Step__c` (there is NO `NextStep`), `LastActivityDate`, `LastStageChangeDate`, `ForecastCategoryName`, `Probability`, `MEDDICC__c`. Replace `REP` with the rep's name. Check `{`/`}` balance before dispatch (`<EOF>` error = missing `}`).
 
 ```
 dispatch_readonly(method: "GET", url: "/services/data/v67.0/graphql",
-  queryParams: { "queryInput": "{\"query\":\"query { uiapi { query { Opportunity(where: { Owner: { Name: { like: \\\"%REP%\\\" } }, IsClosed: { eq: false } }, orderBy: { Amount: { order: DESC } }, first: 100) { edges { node { Id Name { value } StageName { value displayValue } Amount { value displayValue } CloseDate { value } NextStep { value } LastActivityDate { value } <OPP_CUSTOM> Account { Name { value } } OpportunityContactRoles { edges { node { Id } } } } } } } } }\"}" })
-```
-
-In the SAME turn, fire the rep's recent activity — both Tasks AND Events (last 14d), plus this-quarter closed-won for the "This Q closed" number. These are independent reads keyed on the rep name (not on each other), so batch all of them in this one turn — no added round-trip depth:
-
-```
-dispatch_readonly(method: "GET", url: "/services/data/v67.0/query",
-  queryParams: { "q": "SELECT Subject, ActivityDate, TaskSubtype, Status FROM Task WHERE Owner.Name LIKE '%REP%' AND ActivityDate >= LAST_N_DAYS:14 ORDER BY ActivityDate DESC" })
+  queryParams: { "queryInput": "{\"query\":\"query { uiapi { query { open: Opportunity(where: { Owner: { Name: { like: \\\"%REP%\\\" } }, IsClosed: { eq: false } }, orderBy: { Amount: { order: DESC } }, first: 100) { edges { node { Id Name { value } StageName { value displayValue } Amount { value } CloseDate { value } CreatedDate { value } LastStageChangeDate { value } LastActivityDate { value } Next_Step__c { value } ForecastCategoryName { value } MEDDICC__c { value } Account { Name { value } } OpportunityContactRoles { edges { node { Id } } } } } } wonQ: Opportunity(where: { Owner: { Name: { like: \\\"%REP%\\\" } }, IsWon: { eq: true }, CloseDate: { eq: { literal: THIS_QUARTER } } }, first: 100) { edges { node { Id Amount { value } Account { Name { value } } } } } } } }\"}" })
 
 dispatch_readonly(method: "GET", url: "/services/data/v67.0/query",
-  queryParams: { "q": "SELECT Subject, ActivityDate, EventSubtype FROM Event WHERE Owner.Name LIKE '%REP%' AND ActivityDate >= LAST_N_DAYS:14 ORDER BY ActivityDate DESC" })
-
-dispatch_readonly(method: "GET", url: "/services/data/v67.0/query",
-  queryParams: { "q": "SELECT SUM(Amount) amt, COUNT(Id) cnt FROM Opportunity WHERE Owner.Name LIKE '%REP%' AND IsWon = true AND CloseDate = THIS_QUARTER" })
+  queryParams: { "q": "SELECT Id, Subject, ActivityDate, StartDateTime, Type, Account.Name, What.Name FROM Event WHERE Owner.Name LIKE '%REP%' AND ActivityDate >= LAST_N_DAYS:14 AND ActivityDate <= NEXT_N_DAYS:7 ORDER BY ActivityDate DESC LIMIT 200" })
 ```
 
-Count logged meetings from the Event read alongside Tasks toward the activity tally. `InvalidSyntax` / "offending token `<EOF>`" → missing a closing `}`; add it and retry.
+Activity lives in **Event** (Task is empty in this org — do not query or depend on it). Past 14d = logged meetings; next 7d = booked. Sum `wonQ` amounts client-side for "This Q closed".
 
-## 2b. Evidence (same turn — skip silently if absent)
+## 2. Analyze (cite records; invent nothing)
 
-- **calendar**: external meetings last 14d + booked next 7d, if visible.
+Flag per open deal: close date past, no stage change >30d, no activity >14d, blank `Next_Step__c`, zero contact roles, blank MEDDICC. Pick the 2–3 deals needing help and 3–5 evidenced 1:1 questions. Note wins to acknowledge from `wonQ`. Quarter-attainment chart: only quarters you have data for; no quota/plan unless queried — omit, don't invent.
 
-## 3. Analyze (cite records/threads; invent nothing)
+## 3. Widget (default output)
 
+Call `display_widget` once all reads return (one-line "Displaying the visualization now (this may take a minute)." notice allowed). `widgetDefinition` is a native JSON object, never a quoted string.
 
-## 4. 1:1 questions
+Hydrate the template: replace every `{{token}}`; a slot that is only a token becomes the typed literal (arrays/numbers stay typed), a token inside a string interpolates as text; drop a leaf you have no data for. No `{{…}}`/`{!…}` left. Then `display_widget({ resourceType: "dynamic", widgetDefinition: <hydrated> })`.
 
+Tokens:
+- `pageTitle` ("Rep snapshot — <Name>"), `headerStatus` (e.g. "BEHIND PACE"), `subtitle` (quarter · closed $ · open $).
+- `chartCategories` string[] quarter labels; `chartSeries` `[{name, data:number[]}]` (percent).
+- `pieCenter` string (e.g. "$2.5M"); `pieSlices` `[{label, value:number, role?:"highlight"}]` one per stage, highlight largest/riskiest.
+- `gridRows` `[{status?:{value:"At risk"|"Coach"|"Advance", badgeVariant:"error"|"warning"|"info"}, deal:string (Account.Name.value, plain string), amount:number, stage:{value, badgeVariant:"warning" stalled/Negotiation|"info" advancing}, age:number days, next:string}]`, amount desc.
+- `synthTitle`/`synthDescription` biggest gap; `primaryLabel`/`primaryPrompt` (pipeline gap), `secondaryLabel`/`secondaryPrompt` (most urgent deal) — prompts first-person.
 
-## 5. Widget (default output when `display_widget` is present: Cowork/desktop/web)
-
-When the data is assembled, call `display_widget`; a single one-line "Displaying the visualization now (this may take a minute)." notice may precede it.
-
-### Self-verification (before calling display_widget)
-
-- [ ] `widgetDefinition` is passed as a native JSON object — not a quoted string, not a code block pasted as text. If the value starts with `"{"`, it is wrong.
-
-The widget template is embedded below — a widget-definition envelope whose leaf values carry `{{token}}` placeholders. The widget is the output when `display_widget` is available; produce the text below only as the fallback when it's unavailable (e.g. a terminal). Resolve every `{{token}}` to a literal (no `{{…}}`/`{!…}` left), then call `display_widget({ resourceType: "dynamic", widgetDefinition: <hydrated> })` once. A value that is *only* a `{{token}}` (chart categories/series, piechart slices, datagrid rows) becomes the typed literal — arrays stay arrays, numbers stay numbers; a `{{token}}` inside a larger string is interpolated as text.
-
-Two blocks below: first the **variable contract** (`renderer.props.schema.json`) — every `{{token}}`'s type + a worked example, use it to compute each value; then the **widget template** to hydrate. Substitute your computed values into the template's `{{token}}`s (see the token-typing rules above), leaving no `{{…}}`/`{!…}`.
-```json
-{
-  "$comment": "Variable contract for the native-mosaic dynamic-mode template (renderer.json, sibling). This is NOT a separate display_widget call — it names every {{token}} in the template with its type and a worked example so you compute the right value for each. Workflow: build a props object with these keys, substitute each into the matching {{token}} in renderer.json (a slot that is only a {{token}} becomes the typed value — arrays stay arrays, numbers stay numbers; a {{token}} inside a larger string interpolates as text; a key you have no data for is omitted so that leaf drops), then call display_widget({ resourceType: 'dynamic', widgetDefinition: <the hydrated template> }) once with no {{…}}/{!…} left. Realistic values: sample-data.json (sibling). Authoring guidance (from the skill): `{{pageTitle}}` header title (users icon) + `{{headerStatus}}` status badge (e.g. \"BEHIND PACE\", variant error) + `{{subtitle}}` quarter/attainment subhead; two wrapped graphs — column chart with `{{chartCategories}}` (quarter-label string array) and `{{chartSeries}}` (`[{ name, data }]`, data a number array, valueFormat percent, showValues), and piechart with `{{pieCenter}}` center value + `{{pieSlices}}` (`[{ label, value, role? }]`, one per stage, mark the largest/riskiest `\"role\":\"highlight\"`); `{{gridRows}}` top-open-deals datagrid (`[{ deal (plain string — format as the account name (e.g. \"Cobalt Robotics\"); names must be plain strings, not objects: use `Account.Name.value` from the SF GraphQL response), amount (number), stage ({ value, badgeVariant }: warning stalled/Negotiation, info Proposal/advancing), age (number), next, status:{value,badgeVariant} (value At risk|Coach|Advance, badgeVariant error|warning|info) }]`, ranked by amount desc, a leading `status` object on deals needing attention); `{{synthTitle}}`/`{{synthDescription}}` synthesis callout (variant warning) with two action/sendMessage buttons — primary `{{primaryLabel}}`/`{{primaryPrompt}}` (biggest gap / pipeline generation), secondary `{{secondaryLabel}}`/`{{secondaryPrompt}}` (most urgent deal / unstick the stalled deal). Before calling: every `{{token}}` resolved (no `{{…}}`/`{!…}`); exactly 2 graphs (column + piechart); datagrid `amount`/`age` numbers and `stage` a badge object, rows carry a leading `status` object where needed; callout has 2 real sendMessage buttons; the text section below is produced only when `display_widget` is unavailable.",
-  "props": {
-    "pageTitle": {
-      "description": "Header title for the rep-context view.",
-      "type": "string",
-      "example": "Rep snapshot — Priya Nair"
-    },
-    "headerStatus": {
-      "description": "Header status badge (e.g. \"BEHIND PACE\").",
-      "type": "string",
-      "example": "BEHIND PACE"
-    },
-    "subtitle": {
-      "description": "Quarter / attainment subhead.",
-      "type": "string",
-      "example": "Q3 · $0.82M closed of $2.0M plan · 41% to plan · behind pace"
-    },
-    "chartCategories": {
-      "description": "Quarter labels for the column chart's x-axis, as strings.",
-      "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "example": [
-        "Q4",
-        "Q1",
-        "Q2",
-        "Q3"
-      ]
-    },
-    "chartSeries": {
-      "description": "Column-chart series — one object {name, data} (attainment %).",
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "description": "Series name.",
-            "type": "string"
-          },
-          "data": {
-            "description": "Attainment values per quarter — a number array matching chartCategories.",
-            "type": "array",
-            "items": {
-              "type": "number"
-            }
-          }
-        }
-      },
-      "example": [
-        {
-          "name": "Attainment",
-          "data": [
-            104,
-            98,
-            71,
-            41
-          ]
-        }
-      ]
-    },
-    "pieCenter": {
-      "description": "Pie center value.",
-      "type": "string",
-      "example": "$2.5M"
-    },
-    "pieSlices": {
-      "description": "Pipeline by stage — one slice per stage. Empty array → the pie is omitted.",
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "label": {
-            "description": "Stage label.",
-            "type": "string"
-          },
-          "value": {
-            "description": "Stage value.",
-            "type": "number"
-          },
-          "role": {
-            "description": "Optional emphasis; set \"highlight\" on the largest/riskiest stage.",
-            "type": "string",
-            "enum": [
-              "normal",
-              "highlight"
-            ]
-          }
-        }
-      },
-      "example": [
-        {
-          "label": "Proposal",
-          "value": 1400000,
-          "role": "highlight"
-        },
-        {
-          "label": "Negotiation",
-          "value": 800000
-        },
-        {
-          "label": "Closing",
-          "value": 300000
-        }
-      ]
-    },
-    "gridRows": {
-      "description": "Top open deals — one row per deal, ranked by amount desc. Empty array → the datagrid is omitted.",
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "status": {
-            "description": "Leading Status badge cell; omit on normal rows.",
-            "type": "object",
-            "properties": {
-              "value": {
-                "description": "Status label.",
-                "type": "string"
-              },
-              "badgeVariant": {
-                "description": "Badge color.",
-                "type": "string",
-                "enum": [
-                  "neutral",
-                  "primary",
-                  "secondary",
-                  "outline",
-                  "success",
-                  "info",
-                  "warning",
-                  "error"
-                ]
-              }
-            }
-          },
-          "deal": {
-            "description": "Account name, a plain string (use Account.Name.value — never a nested object).",
-            "type": "string"
-          },
-          "amount": {
-            "description": "Deal amount (number).",
-            "type": "number"
-          },
-          "stage": {
-            "description": "Stage badge cell.",
-            "type": "object",
-            "properties": {
-              "value": {
-                "description": "Stage label.",
-                "type": "string"
-              },
-              "badgeVariant": {
-                "description": "Badge color: warning=stalled/Negotiation, info=Proposal/advancing.",
-                "type": "string",
-                "enum": [
-                  "neutral",
-                  "primary",
-                  "secondary",
-                  "outline",
-                  "success",
-                  "info",
-                  "warning",
-                  "error"
-                ]
-              }
-            }
-          },
-          "age": {
-            "description": "Age in days (number).",
-            "type": "number"
-          },
-          "next": {
-            "description": "Next step (text).",
-            "type": "string"
-          }
-        }
-      },
-      "example": [
-        {
-          "status": {
-            "value": "Coach",
-            "badgeVariant": "warning"
-          },
-          "deal": "Cobalt Robotics",
-          "amount": 1800000,
-          "stage": {
-            "value": "Negotiation",
-            "badgeVariant": "warning"
-          },
-          "age": 71,
-          "next": "Redlines to legal"
-        },
-        {
-          "status": {
-            "value": "Advance",
-            "badgeVariant": "info"
-          },
-          "deal": "Delta Systems",
-          "amount": 600000,
-          "stage": {
-            "value": "Proposal",
-            "badgeVariant": "info"
-          },
-          "age": 34,
-          "next": "Book exec demo"
-        },
-        {
-          "status": {
-            "value": "At risk",
-            "badgeVariant": "error"
-          },
-          "deal": "Harbor Freight Co",
-          "amount": 400000,
-          "stage": {
-            "value": "Proposal",
-            "badgeVariant": "info"
-          },
-          "age": 52,
-          "next": "Stalled 18d — requalify"
-        }
-      ]
-    },
-    "synthTitle": {
-      "description": "Synthesis callout heading — the biggest gap.",
-      "type": "string",
-      "example": "Coverage is thin and slipping"
-    },
-    "synthDescription": {
-      "description": "Synthesis callout body.",
-      "type": "string",
-      "example": "Attainment fell from 71% to 41% quarter-over-quarter and pipeline is only 2.1×. Cobalt is the swing deal; Harbor has stalled 18 days. Run a pipeline-gen block and unstick Harbor this week."
-    },
-    "primaryLabel": {
-      "description": "Primary button label (action/sendMessage) — biggest gap / pipeline generation.",
-      "type": "string",
-      "example": "Draft pipeline plan"
-    },
-    "primaryPrompt": {
-      "description": "First-person prompt the primary button sends (action/sendMessage).",
-      "type": "string",
-      "example": "Draft a pipeline generation plan for Priya Nair to build coverage from 2.1× to 3.0× and close the $1.18M gap to plan."
-    },
-    "secondaryLabel": {
-      "description": "Secondary button label (action/sendMessage) — most urgent deal.",
-      "type": "string",
-      "example": "Unstick Harbor deal"
-    },
-    "secondaryPrompt": {
-      "description": "First-person prompt the secondary button sends (action/sendMessage).",
-      "type": "string",
-      "example": "Draft coaching notes for the Harbor Freight Co deal which has stalled 18 days and needs requalifying."
-    }
-  }
-}
-```
 ```json
 {
   "renderer": {
@@ -447,7 +164,7 @@ Two blocks below: first the **variable contract** (`renderer.props.schema.json`)
 ```
 
 
-## 6. Text — FALLBACK ONLY — DO NOT USE IF `display_widget` SUCCEEDED
+## 4. Text — FALLBACK ONLY — DO NOT USE IF `display_widget` SUCCEEDED
 
 ```
 # Rep Context: <Name>
@@ -455,7 +172,7 @@ Two blocks below: first the **variable contract** (`renderer.props.schema.json`)
 - Open: <N> opps, $<total> | by stage: <counts> | This Q closed: $<X> (<N> won)
 - Top 3: **<Account>** $<X> <Stage> …
 ## Last 2 Weeks
-- <N> activities logged; <N> external meetings (if calendar visible)
+- <N> meetings logged (Event); <N> booked next 7d
 ## Likely Needs Help On
 - **<Account>** $<X> — <specific flag + evidence>
 ## 1:1 Questions

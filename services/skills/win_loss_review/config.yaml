@@ -1,7 +1,7 @@
 id: win_loss_review
 name: Win Loss Review
-description: Build a win-loss analysis from closed Salesforce opportunities, stage history, call transcripts
-  and email, showing win rates, loss stages, objections and deal patterns. Use to explain wins and losses,
+description: Build a win-loss analysis from closed Salesforce opportunities, stage history, loss reasons
+  and logged activity, showing win rates, loss stages, objections and deal patterns. Use to explain wins and losses,
   compare segments or identify coaching and process changes.
 enabled: true
 file: SKILL.md

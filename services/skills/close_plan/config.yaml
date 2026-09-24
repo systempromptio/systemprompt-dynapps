@@ -1,7 +1,7 @@
 id: close_plan
 name: Close Plan
 description: Build a customer-facing business case and dated mutual action plan from Salesforce opportunity
-  data plus transcripts, email, documents. Use to frame why buy and why now, quantify return, map the
+  data, contact roles and Event activity. Use to frame why buy and why now, quantify return, map the
   path to signature, or test the close date.
 enabled: true
 file: SKILL.md

@@ -1,7 +1,7 @@
 id: customer_voice
 name: Customer Voice
-description: Compile attributable customer quotes and themes from call transcripts and email threads across
-  Salesforce-scoped accounts. Use to understand feedback on a feature, objection, competitor, or emerging
+description: Compile attributable customer quotes and themes from Salesforce meeting notes and cases across
+  scoped accounts. Use to understand feedback on a feature, objection, competitor, or emerging
   issue, compare accounts, or surface recurring themes.
 enabled: true
 file: SKILL.md

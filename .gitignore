@@ -281,3 +281,6 @@ storage/.systemprompt/
 # cannot write outside the workspace) and symlinks ../systemprompt-core onto it.
 .vendor/
 *.sql.gz
+
+# Plugin eval raw exports (transcripts, bundles) — metrics are tracked, raw is not
+evals/*/*/raw/

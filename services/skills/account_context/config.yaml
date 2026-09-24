@@ -1,7 +1,7 @@
 id: account_context
 name: Account Context
-description: 'Build a 360-degree brief on a company already in Salesforce: CRM state, key contacts, recent
-  email, documents. Use when asked to tell about, catch up on, or give the full picture on an existing
+description: 'Build a 360-degree brief on a company already in Salesforce: CRM state, open pipeline, key contacts,
+  recent meetings. Use when asked to tell about, catch up on, or give the full picture on an existing
   account. Not in CRM: research-prospect.'
 enabled: true
 file: SKILL.md

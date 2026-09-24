@@ -13,554 +13,72 @@ Failing to try first — asking the user to connect, or surfacing a "not connect
 - **Show human labels, never API/field literals.** In anything the user sees, print each field's grounded `label` (for example, "Deal Risk", not `Deal_Risk__c`) and record Names, never raw Ids or `__c` API names.
 - **Empty `MINE` scope → fail fast, then ask which scope.** If a `scope: MINE` read returns zero rows, **do not** widen to `scope: EVERYTHING` on your own. Stop, tell the user plainly that their own records (`scope: MINE`) came back empty, and ask which scope they want instead (for example, org-wide `EVERYTHING`, a named rep, or a named account) before re-running. Never invent records, and never silently fall back to org-wide.
 <!-- /global-rules-bootstrap -->
-# Rules:
-
-
 # Research Prospect
 
-Ground Account → CRM read + web research (ONE turn) → score fit → output. Grounding surfaces this org's custom ICP fields (tier/segment/territory) — fit scoring reads them, so don't skip it.
+Salesforce only. **Web search and external research are out of scope** (blocked for this model) — do not call WebSearch/WebFetch or any Google Workspace tool. Say once in the output that company facts, news and funding signals were not researched externally.
+
+Resolve Account by name → ONE combined read → score fit → widget. All fields below are verified for this org; no grounding/describe call.
 
 ## 1. Inputs
 
-- **Company name or domain** (required)
-- **Contact name or title** (optional)
+- **Company name or domain** (required); **contact name or title** (optional).
+- ICP, value prop and competitors are not in Salesforce — infer only from org data or ask the user once. Never invent.
 
-ICP (industries, size, titles, disqualifiers), value prop, competitors, differentiators are external knowledge — infer from org data or confirm with the user once. Never invent.
+## 2. Read (one call; Website fallback only if Name finds nothing)
 
-## 2. Ground Account (this turn), then CRM read + web research (ONE turn)
+Match on `Name` first. Never combine Name and Website with `or` (500s). Account has **no `Type`** — use `Account_Type__c`.
 
-**Ground Account first** — its `__c` fields are this org's ICP schema (tier, segment, territory, employee band, etc.), and Step 3 scores fit against them. Account always exists, so this one call never fails on a missing object:
 ```
 dispatch_readonly(method: "GET", url: "/services/data/v67.0/graphql",
-         queryParams: { "queryInput": "{\"query\":\"query { uiapi { objectInfos(apiNames: [\\\"Account\\\"]) { fields { ApiName label } } } }\"}" })
+  queryParams: { "queryInput": "{\"query\":\"query { uiapi { query { Account(where: { Name: { like: \\\"%COMPANY%\\\" } }, first: 5) { edges { node { Id Name { value } Website { value } Industry { value displayValue } NumberOfEmployees { value } AnnualRevenue { value displayValue } Account_Type__c { value displayValue } Client_Tier__c { value displayValue } Segment__c { value displayValue } Market_segment__c { value displayValue } Verticle__c { value displayValue } Employee_Range__c { value displayValue } Territory__c { value displayValue } Account_Status__c { value displayValue } Account_Health__c { value displayValue } Current_Platform__c { value displayValue } Owner { Name { value } } Opportunities(orderBy: { CloseDate: { order: DESC } }, first: 10) { edges { node { Id Name { value } StageName { value displayValue } Amount { value displayValue } CloseDate { value } IsClosed { value } IsWon { value } Next_Step__c { value } } } } Contacts(first: 10) { edges { node { Id Name { value } Title { value } Email { value } } } } } } } lead: Lead(where: { Company: { like: \\\"%COMPANY%\\\" }, IsConverted: { eq: false } }, first: 5) { edges { node { Id Name { value } Title { value } Company { value } Status { value displayValue } Industry { value } NumberOfEmployees { value } Owner { ... on User { Name { value } } } } } } events: Event(where: { Account: { Name: { like: \\\"%COMPANY%\\\" } } }, orderBy: { ActivityDate: { order: DESC } }, first: 10) { edges { node { Id Subject { value } ActivityDate { value } Type { value } } } } } } }\"}" })
 ```
-From the result, note the scalar `__c` fields whose label carries ICP/segment/tier/territory/employee-band signal — add each as `Field__c { value }` to `<ACCOUNT_CUSTOM>` in the read below.
 
-**Just scan the result by eye — do not script the extraction** (no `cat` / `python3` / `jq` / `grep` over the response). The Account catalog is large and may not come back inline: if the host wrote it to a temp file, open that file with the **Read tool only** — its path is outside the shell sandbox, so `cat` / `ls` fail on it. If the Read fails or the payload is unwieldy, skip grounding and use the standard fields below only — don't retry.
+- **Account found** → output must say prominently "already in CRM, owned by [Name]" (plus open opps, past wins/losses, recent Events) so the user doesn't step on a colleague.
+- **No Account** → rerun the Account root only with `Website: { like: \"%DOMAIN%\" }`. Still nothing → "net new — no Account"; report any open Lead rows (owner, status). Broaden `%…%` once at most; never re-fire the same shape.
+- If `lead` or `events` errors, drop that root and retry once without it rather than abandoning the read.
 
-**CRM read + web search — fire BOTH as tool calls in ONE turn (independent).**
+## 3. ICP fit (from Salesforce values only)
 
-**Salesforce** — read the matching Account over GraphQL (Account is UI-API-serviceable; no SOQL needed). Insert `<ACCOUNT_CUSTOM>` = the confirmed scalar `__c { value }` fields from grounding.
+Score Industry/Vertical, Size (employees/revenue/range), Buyer persona (contact titles), Relationship (tier, status, health, past wins), Timing (open opps, recent Events). Each ✅/⚠️/❌ with the queried evidence; a dimension with no data is "unknown", not ❌. Overall **Strong / Moderate / Poor** (0-100 score) + one-sentence rationale.
 
-Match on **`Name` first**. Do **not** combine Name and Website with `or` — a two-clause `or` in a UI-API `where` 500s on this endpoint. Only if the name search returns no rows, run the Website-only fallback below.
-```
-dispatch_readonly(method: "GET", url: "/services/data/v67.0/graphql",
-         queryParams: { "queryInput": "{\"query\":\"query { uiapi { query { Account(where: { Name: { like: \\\"%COMPANY%\\\" } }, first: 5) { edges { node { Id Name { value } Website { value } Industry { value displayValue } NumberOfEmployees { value } Type { value displayValue } <ACCOUNT_CUSTOM> Owner { Name { value } } Opportunities(where: { IsClosed: { eq: false } }, orderBy: { CloseDate: { order: ASC } }, first: 10) { edges { node { Id Name { value } StageName { value displayValue } Amount { value displayValue } CloseDate { value } } } } Contacts(first: 10) { edges { node { Id Name { value } Title { value } Email { value } } } } } } } } } }\"}" })
-```
-- **Found** → note owner, open opps, known contacts. Output must say "already in CRM, owned by [Name]" prominently so the user doesn't step on a colleague.
-- **No rows** → run the **Website-only fallback** (a `%DOMAIN%` match), still no `or`:
-```
-dispatch_readonly(method: "GET", url: "/services/data/v67.0/graphql",
-         queryParams: { "queryInput": "{\"query\":\"query { uiapi { query { Account(where: { Website: { like: \\\"%DOMAIN%\\\" } }, first: 5) { edges { node { Id Name { value } Website { value } Industry { value displayValue } NumberOfEmployees { value } Type { value displayValue } <ACCOUNT_CUSTOM> Owner { Name { value } } Opportunities(where: { IsClosed: { eq: false } }, orderBy: { CloseDate: { order: ASC } }, first: 10) { edges { node { Id Name { value } StageName { value displayValue } Amount { value displayValue } CloseDate { value } } } } Contacts(first: 10) { edges { node { Id Name { value } Title { value } Email { value } } } } } } } } } }\"}" })
-```
-- **Still no match** → "net new - no CRM record". Broaden `%…%` once if a partial name seems likely; don't retry the same shape.
+## 4. Hooks
 
-**Web search** (same turn, independent of the SFDC result):
-- Company basics: what they do, HQ, size, funding stage, leadership
-- Recent signals (last 6 months): funding rounds, exec hires, product launches, layoffs, earnings, expansion
-- Tech/operating context relevant to your product category
-- Likely priorities, inferred from the signals (e.g. just raised → hiring + scaling; new CRO → pipeline overhaul)
-- If a contact was specified: their role, tenure, prior companies, public talks/posts, and what they likely care about
+2-3 specific hooks grounded in CRM facts (current platform, prior opp outcomes, recent meetings, contact roles). No generic claims, no external facts.
 
-## 3. ICP fit scoring
+## 5. Widget
 
-| Dimension | Fit | Evidence |
-|---|---|---|
-| Industry | ✅ / ⚠️ / ❌ | [from research] |
-| Company size | ✅ / ⚠️ / ❌ | [employee count vs ICP range] |
-| Buyer persona present | ✅ / ⚠️ / ❌ | [title found / inferred] |
-| Disqualifiers | ✅ none / ❌ [which] | |
-| Timing signal | ✅ / ⚠️ / ❌ | [recent trigger event or none] |
+When data is assembled, call `display_widget` (one optional notice line: "Displaying the visualization now (this may take a minute)."). `widgetDefinition` is a native JSON object, not a string. Hydrate this template, replacing every `{{token}}`:
 
-Overall: **Strong fit / Moderate fit / Poor fit** with one-sentence rationale.
-
-## 4. Relevance hooks
-
-2-3 specific, sourced hooks for outreach — things from the research that connect to your value prop. Not generic ("they're growing") but specific ("they posted 12 [relevant role] openings last month and their [exec title] spoke about [relevant pain] at [conf]").
-
-## 5. Prospect brief widget (editorial layout)
-
-When the `display_widget` tool is available (Claude Cowork, the desktop app, the web app), render the prospect brief as a visual widget instead of the section 6 text. When `display_widget` is unavailable (e.g. a terminal) the section 6 markdown is the whole output, so produce it only then.
-
-When the data is assembled, call `display_widget`; a single one-line "Displaying the visualization now (this may take a minute)." notice may precede it.
-
-### Self-verification (before calling display_widget)
-
-- [ ] `widgetDefinition` is passed as a native JSON object — not a quoted string, not a code block pasted as text. If the value starts with `"{"`, it is wrong.
-- [ ] Every `{{token}}` placeholder replaced with a resolved literal — no `{{…}}` left, no `{!…}` expressions in the widget definition.
-- [ ] Numeric attributes (meter `value`/`max`/`target`, meter band `from`/`to`) are numbers, not strings.
-- [ ] The meter is in numeric units (value/target as raw scores 0-100), bands span `[0, 100]`, and `valueLabel`/`status` carry the score and fit read.
-- [ ] Every `datagrid` signal row carries a leading `status` object; `tag` is a badge object.
-- [ ] The `tile/callout` carries a resolved `title`/`description` (the approach + the timing), not empty and not a recap.
-- [ ] No fabricated content — blank fields omitted or quoted blank, not invented.
-- [ ] The section 6 markdown is produced only when `display_widget` is unavailable (the terminal fallback) — not alongside a rendered widget.
-
-The widget template is embedded below. Call `display_widget` in **dynamic** mode with it. It is a skeleton: replace every `{{token}}` with a fully-resolved literal computed from the data you researched and scored — this echo path does no expression compilation, so no `{!…}` bindings. See `sample-data.json` in this dir for a fully-worked example of every token.
-
-Two blocks below: first the **variable contract** (`renderer.props.schema.json`) — every `{{token}}`'s type + a worked example, use it to compute each value; then the **widget template** to hydrate. Substitute your computed values into the template's `{{token}}`s (see the token-typing rules above), leaving no `{{…}}`/`{!…}`.
 ```json
-{
-  "$comment": "Variable contract for the native-mosaic dynamic-mode template (renderer.json, sibling). This is NOT a separate display_widget call — it names every {{token}} in the template with its type and a worked example so you compute the right value for each. Workflow: build a props object with these keys, substitute each into the matching {{token}} in renderer.json (a slot that is only a {{token}} becomes the typed value — arrays stay arrays, numbers stay numbers; a {{token}} inside a larger string interpolates as text; a key you have no data for is omitted so that leaf drops), then call display_widget({ resourceType: 'dynamic', widgetDefinition: <the hydrated template> }) once with no {{…}}/{!…} left. Realistic values: sample-data.json (sibling). Authoring guidance (from the skill): - [ ] Every `{{token}}` placeholder replaced with a resolved literal — no `{{…}}` left, no `{!…}` expressions in the widget definition.\nThe widget template is embedded below. Call `display_widget` in **dynamic** mode with it. It is a skeleton: replace every `{{token}}` with a fully-resolved literal computed from the data you researched and scored — this echo path does no expression compilation, so no `{!…}` bindings. See `sample-data.json` in this dir for a fully-worked example of every token.\n- **Header** — an icon (search) + page-title text (`{{prospectTitle}}`, the prospect brief title) + a status badge (`{{fitStatus}}`, e.g. \"STRONG FIT\", variant by ICP verdict), with a one-line caption subhead (`{{prospectSubtitle}}`) summarizing firmographics (industry/employees/revenue/fit), and a separator.\n- **One meter** — \"ICP fit\": `{{icpValue}}` against `{{icpTarget}}` (max 100), `valueFormat:\"number\"`, with `{{icpValueLabel}}`, `{{icpTargetLabel}}`, `{{icpStatus}}`, and `{{icpBands}}` (Weak/Fair/Strong). This is the single chart.\n- **Signals and openings datagrid** (`{{signalRows}}`) — one row per signal. Columns: Signal (text), Read (badge), Detail (text). Every row carries a leading `status` object (`{value,badgeVariant}` — value Buy/Fit/Watch, badgeVariant success/info/warning); the leading Status column reads each row's `status`.\n- **One synthesis callout** (`variant:\"recommended\"`) — `{{synthTitle}}` (the prospect's single most important read) and `{{synthDetail}}`. It carries two real buttons: a primary prompt button (`{{ctaLabel}}` / `{{ctaMsg}}`, `action/sendMessage`) and a secondary \"View in Salesforce\" (`{{prospectUrl}}`, `action/openLink`).\n1. Start from the embedded template above — a valid-JSON widget-definition envelope whose leaf values carry `{{token}}` placeholders.\n2. Resolve every `{{token}}`. A value that is **only** a `{{token}}` (meter `value`/`bands`, datagrid `rows`) becomes the resolved **typed** literal — numbers stay numbers, arrays stay arrays. A `{{token}}` **inside** a larger string is interpolated as text.\n3. `{{signalRows}}` is an array of signal objects — each with `topic` (signal name), `tag` (`{ value, badgeVariant }`), `note` (detail text), and `status` (`{value,badgeVariant}` — value Buy/Fit/Watch, badgeVariant success/info/warning).\n4. The result is hydrated widget definition (no `{{…}}` placeholders remain). Then call:\n- Resolve every `{{token}}` to a literal before calling — numbers stay numbers (`{{icpValue}}`, `{{icpTarget}}`), arrays stay arrays (`{{icpBands}}`, `{{signalRows}}`), strings stay strings.\n- `{{icpBands}}` is an array of `{ from, to, variant, label }` (variants error/warning/success) covering the meter's full 0→100 range in order.\n- Callout buttons: the primary is `action/sendMessage` with a first-person `content` prompt (`{{ctaMsg}}`, e.g. \"Draft a warm intro request…\"); the secondary is `action/openLink` with `{{prospectUrl}}` — the account's Lightning URL (`https://<myDomain>/lightning/r/Account/<Id>/view`), opening a new tab. Omit the openLink button if you lack the Id.",
-  "props": {
-    "prospectTitle": {
-      "description": "Header page title — the prospect brief title.",
-      "type": "string",
-      "example": "Prospect brief — Beacon Health"
-    },
-    "fitStatus": {
-      "description": "Header status badge — ICP verdict (e.g. \"STRONG FIT\").",
-      "type": "string",
-      "example": "STRONG FIT"
-    },
-    "prospectSubtitle": {
-      "description": "Caption subhead: firmographics (industry / employees / revenue / fit).",
-      "type": "string",
-      "example": "Healthcare · 4,200 employees · $890M revenue · strong ICP fit"
-    },
-    "icpValue": {
-      "description": "ICP fit score — the meter's current value (0–100).",
-      "type": "number",
-      "example": 88
-    },
-    "icpTarget": {
-      "description": "Target marker on the ICP meter.",
-      "type": "number",
-      "example": 70
-    },
-    "icpValueLabel": {
-      "description": "Display string for the ICP score.",
-      "type": "string",
-      "example": "88 / 100"
-    },
-    "icpTargetLabel": {
-      "description": "Display string for the target.",
-      "type": "string",
-      "example": "70 = qualified"
-    },
-    "icpStatus": {
-      "description": "Short read shown on the meter (Weak / Fair / Strong).",
-      "type": "string",
-      "example": "strong fit"
-    },
-    "icpBands": {
-      "description": "Color bands for the ICP meter, in order covering 0→100 (Weak / Fair / Strong).",
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "from": {
-            "description": "Band start value.",
-            "type": "number"
-          },
-          "to": {
-            "description": "Band end value.",
-            "type": "number"
-          },
-          "variant": {
-            "description": "Band color.",
-            "type": "string",
-            "enum": [
-              "error",
-              "warning",
-              "success"
-            ]
-          },
-          "label": {
-            "description": "Short band label.",
-            "type": "string"
-          }
-        }
-      },
-      "example": [
-        {
-          "from": 0,
-          "to": 50,
-          "variant": "error",
-          "label": "Weak"
-        },
-        {
-          "from": 50,
-          "to": 70,
-          "variant": "warning",
-          "label": "Fair"
-        },
-        {
-          "from": 70,
-          "to": 100,
-          "variant": "success",
-          "label": "Strong"
-        }
-      ]
-    },
-    "signalRows": {
-      "description": "Signals and openings — one row per signal. Empty array → the datagrid is omitted.",
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "status": {
-            "description": "Leading Status badge cell; omit on normal rows.",
-            "type": "object",
-            "properties": {
-              "value": {
-                "description": "Status label.",
-                "type": "string"
-              },
-              "badgeVariant": {
-                "description": "Badge color.",
-                "type": "string",
-                "enum": [
-                  "neutral",
-                  "primary",
-                  "secondary",
-                  "outline",
-                  "success",
-                  "info",
-                  "warning",
-                  "error"
-                ]
-              }
-            }
-          },
-          "topic": {
-            "description": "Signal name.",
-            "type": "string"
-          },
-          "tag": {
-            "description": "Read badge cell.",
-            "type": "object",
-            "properties": {
-              "value": {
-                "description": "Read label (Buy / Fit / Watch).",
-                "type": "string"
-              },
-              "badgeVariant": {
-                "description": "Badge color.",
-                "type": "string",
-                "enum": [
-                  "neutral",
-                  "primary",
-                  "secondary",
-                  "outline",
-                  "success",
-                  "info",
-                  "warning",
-                  "error"
-                ]
-              }
-            }
-          },
-          "note": {
-            "description": "Detail for the signal.",
-            "type": "string"
-          }
-        }
-      },
-      "example": [
-        {
-          "status": {
-            "value": "Buy",
-            "badgeVariant": "success"
-          },
-          "topic": "Recent funding",
-          "tag": {
-            "value": "Opportunity",
-            "badgeVariant": "success"
-          },
-          "note": "$120M Series D in May — budget available"
-        },
-        {
-          "status": {
-            "value": "Buy",
-            "badgeVariant": "success"
-          },
-          "topic": "New CIO hired",
-          "tag": {
-            "value": "Opportunity",
-            "badgeVariant": "success"
-          },
-          "note": "From a customer of ours — warm angle"
-        },
-        {
-          "status": {
-            "value": "Fit",
-            "badgeVariant": "info"
-          },
-          "topic": "Hiring data engineers",
-          "tag": {
-            "value": "Signal",
-            "badgeVariant": "info"
-          },
-          "note": "12 open reqs — scaling analytics"
-        },
-        {
-          "status": {
-            "value": "Watch",
-            "badgeVariant": "warning"
-          },
-          "topic": "Uses competitor for CRM",
-          "tag": {
-            "value": "Obstacle",
-            "badgeVariant": "warning"
-          },
-          "note": "Contract renews Q1 — time the approach"
-        }
-      ]
-    },
-    "synthTitle": {
-      "description": "Synthesis callout heading — the prospect's single most important read.",
-      "type": "string",
-      "example": "Lead with the new CIO and the funding"
-    },
-    "synthDetail": {
-      "description": "Synthesis callout body.",
-      "type": "string",
-      "example": "Beacon just raised $120M and hired a CIO who knows us from a prior account. Open with a warm intro to the CIO framed around scaling their new data-engineering team — and time it ahead of their Q1 CRM renewal."
-    },
-    "ctaLabel": {
-      "description": "Primary button label (action/sendMessage).",
-      "type": "string",
-      "example": "Draft warm intro"
-    },
-    "ctaMsg": {
-      "description": "First-person prompt the primary button sends (action/sendMessage).",
-      "type": "string",
-      "example": "Draft a warm intro request to connect me to the Beacon Health CIO, mentioning they know our product from a prior account."
-    },
-    "prospectUrl": {
-      "description": "Account Lightning URL for the secondary \"View in Salesforce\" button; omit if no Id.",
-      "type": "string",
-      "example": "https://org.lightning.force.com/lightning/r/Account/001AX000005mNq8YAE/view"
-    }
-  }
-}
-```
-```json
-{
-  "renderer": {
-    "componentOverrides": {
-      "$": {
-        "type": "mosaic",
-        "definition": "tile/widget",
-        "children": [
-          {
-            "definition": "tile/row",
-            "attributes": {
-              "gap": "sm",
-              "align": "center",
-              "justify": "between",
-              "isWrapped": true
-            },
-            "children": [
-              {
-                "definition": "tile/row",
-                "attributes": {
-                  "gap": "sm",
-                  "align": "center",
-                  "isWrapped": false
-                },
-                "children": [
-                  {
-                    "definition": "tile/icon",
-                    "attributes": {
-                      "name": "search",
-                      "size": "xl",
-                      "alt": ""
-                    }
-                  },
-                  {
-                    "definition": "tile/text",
-                    "attributes": {
-                      "text": "{{prospectTitle}}",
-                      "variant": "h1"
-                    }
-                  }
-                ]
-              },
-              {
-                "definition": "tile/badge",
-                "attributes": {
-                  "label": "{{fitStatus}}",
-                  "variant": "success"
-                }
-              }
-            ]
-          },
-          {
-            "definition": "tile/text",
-            "attributes": {
-              "text": "{{prospectSubtitle}}",
-              "variant": "caption",
-              "color": "muted"
-            }
-          },
-          {
-            "definition": "tile/separator"
-          },
-          {
-            "definition": "tile/meter",
-            "attributes": {
-              "label": "ICP fit",
-              "value": "{{icpValue}}",
-              "min": 0,
-              "max": 100,
-              "target": "{{icpTarget}}",
-              "valueFormat": "number",
-              "valueLabel": "{{icpValueLabel}}",
-              "targetLabel": "{{icpTargetLabel}}",
-              "status": "{{icpStatus}}",
-              "bands": "{{icpBands}}"
-            }
-          },
-          {
-            "definition": "tile/datagrid",
-            "attributes": {
-              "caption": "What we know — signals and openings",
-              "appearance": "striped",
-              "size": "sm",
-              "columns": [
-                {
-                  "key": "status",
-                  "header": "Status",
-                  "type": "badge"
-                },
-                {
-                  "key": "topic",
-                  "header": "Signal",
-                  "type": "text"
-                },
-                {
-                  "key": "tag",
-                  "header": "Read",
-                  "type": "badge"
-                },
-                {
-                  "key": "note",
-                  "header": "Detail",
-                  "type": "text"
-                }
-              ],
-              "rows": "{{signalRows}}"
-            }
-          },
-          {
-            "definition": "tile/callout",
-            "attributes": {
-              "variant": "recommended",
-              "title": "{{synthTitle}}",
-              "description": "{{synthDetail}}"
-            },
-            "children": [
-              {
-                "definition": "tile/row",
-                "attributes": {
-                  "gap": "sm",
-                  "align": "center",
-                  "isWrapped": true
-                },
-                "children": [
-                  {
-                    "definition": "tile/button",
-                    "attributes": {
-                      "label": "{{ctaLabel}}",
-                      "variant": "primary",
-                      "actions": {
-                        "click": [
-                          {
-                            "definition": "action/sendMessage",
-                            "attributes": {
-                              "content": "{{ctaMsg}}"
-                            }
-                          }
-                        ]
-                      }
-                    }
-                  },
-                  {
-                    "definition": "tile/button",
-                    "attributes": {
-                      "label": "View in Salesforce",
-                      "iconName": "open-in-new",
-                      "variant": "secondary",
-                      "actions": {
-                        "click": [
-                          {
-                            "definition": "action/openLink",
-                            "attributes": {
-                              "url": "{{prospectUrl}}"
-                            }
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            ]
-          }
-        ]
-      }
-    }
-  }
-}
+{"renderer":{"componentOverrides":{"$":{"type":"mosaic","definition":"tile/widget","children":[{"definition":"tile/row","attributes":{"gap":"sm","align":"center","justify":"between","isWrapped":true},"children":[{"definition":"tile/row","attributes":{"gap":"sm","align":"center","isWrapped":false},"children":[{"definition":"tile/icon","attributes":{"name":"search","size":"xl","alt":""}},{"definition":"tile/text","attributes":{"text":"{{prospectTitle}}","variant":"h1"}}]},{"definition":"tile/badge","attributes":{"label":"{{fitStatus}}","variant":"success"}}]},{"definition":"tile/text","attributes":{"text":"{{prospectSubtitle}}","variant":"caption","color":"muted"}},{"definition":"tile/separator"},{"definition":"tile/meter","attributes":{"label":"ICP fit","value":"{{icpValue}}","min":0,"max":100,"target":"{{icpTarget}}","valueFormat":"number","valueLabel":"{{icpValueLabel}}","targetLabel":"{{icpTargetLabel}}","status":"{{icpStatus}}","bands":"{{icpBands}}"}},{"definition":"tile/datagrid","attributes":{"caption":"What we know — signals and openings","appearance":"striped","size":"sm","columns":[{"key":"status","header":"Status","type":"badge"},{"key":"topic","header":"Signal","type":"text"},{"key":"tag","header":"Read","type":"badge"},{"key":"note","header":"Detail","type":"text"}],"rows":"{{signalRows}}"}},{"definition":"tile/callout","attributes":{"variant":"recommended","title":"{{synthTitle}}","description":"{{synthDetail}}"},"children":[{"definition":"tile/row","attributes":{"gap":"sm","align":"center","isWrapped":true},"children":[{"definition":"tile/button","attributes":{"label":"{{ctaLabel}}","variant":"primary","actions":{"click":[{"definition":"action/sendMessage","attributes":{"content":"{{ctaMsg}}"}}]}}},{"definition":"tile/button","attributes":{"label":"View in Salesforce","iconName":"open-in-new","variant":"secondary","actions":{"click":[{"definition":"action/openLink","attributes":{"url":"{{prospectUrl}}"}}]}}}]}]}]}}}}
 ```
 
-What each block shows, from data you already gathered:
+Tokens:
+- `prospectTitle` ("Prospect brief — [Company]"), `fitStatus` ("STRONG FIT"…), `prospectSubtitle` (industry · employees · revenue · fit).
+- Meter: `icpValue`, `icpTarget` (e.g. 70) — numbers 0-100; `icpValueLabel` ("88 / 100"), `icpTargetLabel` ("70 = qualified"), `icpStatus`; `icpBands` = `[{from:0,to:50,variant:"error",label:"Weak"},{from:50,to:70,variant:"warning",label:"Fair"},{from:70,to:100,variant:"success",label:"Strong"}]`.
+- `signalRows`: array of `{status:{value:"Buy|Fit|Watch",badgeVariant:"success|info|warning"}, topic, tag:{value:"Opportunity|Signal|Obstacle",badgeVariant:"success|info|warning"}, note}` — one per CRM signal; empty → omit.
+- Callout: `synthTitle` (single most important read), `synthDetail` (approach + timing); `ctaLabel`/`ctaMsg` (first-person prompt, e.g. "Draft outreach to …"); `prospectUrl` = `https://[instanceUrl]/lightning/r/Account/[Id]/view` — omit that button if no Account Id.
 
-- **Header** — an icon (search) + page-title text (`{{prospectTitle}}`, the prospect brief title) + a status badge (`{{fitStatus}}`, e.g. "STRONG FIT", variant by ICP verdict), with a one-line caption subhead (`{{prospectSubtitle}}`) summarizing firmographics (industry/employees/revenue/fit), and a separator.
-- **One meter** — "ICP fit": `{{icpValue}}` against `{{icpTarget}}` (max 100), `valueFormat:"number"`, with `{{icpValueLabel}}`, `{{icpTargetLabel}}`, `{{icpStatus}}`, and `{{icpBands}}` (Weak/Fair/Strong). This is the single chart.
-- **Signals and openings datagrid** (`{{signalRows}}`) — one row per signal. Columns: Signal (text), Read (badge), Detail (text). Every row carries a leading `status` object (`{value,badgeVariant}` — value Buy/Fit/Watch, badgeVariant success/info/warning); the leading Status column reads each row's `status`.
-- **One synthesis callout** (`variant:"recommended"`) — `{{synthTitle}}` (the prospect's single most important read) and `{{synthDetail}}`. It carries two real buttons: a primary prompt button (`{{ctaLabel}}` / `{{ctaMsg}}`, `action/sendMessage`) and a secondary "View in Salesforce" (`{{prospectUrl}}`, `action/openLink`).
-
-**Hydration rules:**
-1. Start from the embedded template above — a valid-JSON widget-definition envelope whose leaf values carry `{{token}}` placeholders.
-2. Resolve every `{{token}}`. A value that is **only** a `{{token}}` (meter `value`/`bands`, datagrid `rows`) becomes the resolved **typed** literal — numbers stay numbers, arrays stay arrays. A `{{token}}` **inside** a larger string is interpolated as text.
-3. `{{signalRows}}` is an array of signal objects — each with `topic` (signal name), `tag` (`{ value, badgeVariant }`), `note` (detail text), and `status` (`{value,badgeVariant}` — value Buy/Fit/Watch, badgeVariant success/info/warning).
-4. The result is hydrated widget definition (no `{{…}}` placeholders remain). Then call:
+A slot that is only a `{{token}}` takes the typed value (numbers stay numbers, arrays stay arrays); a token inside a string interpolates as text. No `{{…}}`/`{!…}` may remain; quote blanks as blank, drop signals with no data.
 
 ```
-display_widget({ resourceType: "dynamic", widgetDefinition: <hydrated renderer.json> })
+display_widget({ resourceType: "dynamic", widgetDefinition: <hydrated> })
 ```
 
-**Binding rules:**
-- Resolve every `{{token}}` to a literal before calling — numbers stay numbers (`{{icpValue}}`, `{{icpTarget}}`), arrays stay arrays (`{{icpBands}}`, `{{signalRows}}`), strings stay strings.
-- `{{icpBands}}` is an array of `{ from, to, variant, label }` (variants error/warning/success) covering the meter's full 0→100 range in order.
-- `datagrid` rows: one per signal. The Read badge (`tag.badgeVariant`) reflects signal type — `"success"` (Opportunity), `"info"` (Signal), `"warning"` (Obstacle). `status` fills the leading Status column.
-- Callout buttons: the primary is `action/sendMessage` with a first-person `content` prompt (`{{ctaMsg}}`, e.g. "Draft a warm intro request…"); the secondary is `action/openLink` with `{{prospectUrl}}` — the account's Lightning URL (`https://<myDomain>/lightning/r/Account/<Id>/view`), opening a new tab. Omit the openLink button if you lack the Id.
-- No fabricated content — quote blank fields as blank rather than inventing them; drop signals you have no data for.
-
-
-
-## 6. Output
+## 6. Text — fallback only if `display_widget` is unavailable or errors
 
 ```
 # Prospect Research: [Company]
-
 ## CRM Status
-[Already in Salesforce - owned by [Name], [N] open opps | OR | Net new - no CRM record]
-
-## Company Snapshot
-- What they do: [one line]
-- Size / stage: [employees, funding]
-- HQ: [location]
-- Leadership: [key names + titles]
-
-## Recent Signals
-- [Date] - [Signal] ([source])
-...
-
-## [Contact Name] (if specified)
-- Role / tenure / background
-- What they likely care about
-
-## ICP Fit: [Strong / Moderate / Poor]
-[Scoring table]
-[One-sentence rationale]
-
-## Relevance Hooks
-1. [Specific hook] - ties to [your value prop angle]
-2. ...
-
+[Already in Salesforce — owned by [Name], [N] open opps | Net new — no Account (Lead: …)]
+## Snapshot (Salesforce)
+Industry/vertical, employees, revenue, tier, segment, platform, territory
+## Relationship
+Opps (open/won/lost), contacts (name, title), recent Events
+## ICP Fit: [Strong/Moderate/Poor]
+[table] + rationale
+## Hooks
+1. …
 ## Suggested Next Step
-[e.g. "Run draft-outreach targeting [Contact]" or "Low fit - log as disqualified" or "Already owned by [Name] - coordinate before reaching out"]
-```
+[e.g. "Owned by [Name] — coordinate first" | "Run draft-outreach to [Contact]" | "Poor fit — disqualify"]
+_External research (news, funding, leadership) not performed — out of scope._

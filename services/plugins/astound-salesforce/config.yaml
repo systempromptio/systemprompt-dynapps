@@ -1,8 +1,8 @@
 plugin:
   id: astound-salesforce
   name: "Astound Digital — Salesforce"
-  description: "Thirty-two Salesforce sales workflows adapted from Salesforce's public Sales Cloud plugin, with optional Google Workspace evidence and dynamic Headless 360 widgets."
-  version: "1.0.0"
+  description: "Salesforce sales workflows adapted from Salesforce's public Sales Cloud plugin, with dynamic Headless 360 widgets. Google Workspace evidence returns when its connector is live; google_workspace_test checks it."
+  version: "1.1.0"
   enabled: true
   author:
     name: Astound Digital
@@ -12,10 +12,11 @@ plugin:
   category: business
   skills:
     source: explicit
+    # calendar_events, inbox_sweep and voice_profile read only Google
+    # Workspace; they return when its connector works (IAM on 148780456827).
     include:
       - account_context
       - account_tiering
-      - calendar_events
       - call_follow_up
       - call_prep
       - close_plan
@@ -30,8 +31,8 @@ plugin:
       - expansion_whitespace
       - find_internal_answer
       - forecast_narrative
+      - google_workspace_test
       - handle_objection
-      - inbox_sweep
       - lead_triage
       - pipeline_review
       - query_activity_history
@@ -42,7 +43,6 @@ plugin:
       - stakeholder_map
       - team_pipeline
       - using_display_widget
-      - voice_profile
       - weekly_wrap
       - win_loss_review
   agents:

@@ -13,340 +13,71 @@ Failing to try first — asking the user to connect, or surfacing a "not connect
 - **Show human labels, never API/field literals.** In anything the user sees, print each field's grounded `label` (for example, "Deal Risk", not `Deal_Risk__c`) and record Names, never raw Ids or `__c` API names.
 - **Empty `MINE` scope → fail fast, then ask which scope.** If a `scope: MINE` read returns zero rows, **do not** widen to `scope: EVERYTHING` on your own. Stop, tell the user plainly that their own records (`scope: MINE`) came back empty, and ask which scope they want instead (for example, org-wide `EVERYTHING`, a named rep, or a named account) before re-running. Never invent records, and never silently fall back to org-wide.
 <!-- /global-rules-bootstrap -->
-# Rules:
-
-- Reconcile headline totals with the detail rows.
 
 # Win-Loss Review
 
-Ground → (read + evidence, ONE turn) → find patterns → output. Leader-focused: look across recently closed opportunities for patterns a leader can act on.
+Read → find patterns → widget. Leader-focused: patterns across recently closed opportunities. Salesforce only — no transcripts, email or documents; qualitative evidence comes from Reason Lost, Next Step and logged Event/Task activity. No grounding call: fields below are verified (`ReasonLost__c` = Reason Lost; `OpportunityHistories` = stage history child; Account type is `Account_Type__c`). There is **no competitor field** — never report "lost to" unless Reason Lost text names one.
 
 ## Inputs
 
-- **Scope:** "team" (default - all reps under leader) or a specific rep
-- **Period:** last quarter (default) or specified range
-- **Focus:** all / wins only / losses only
+- **Scope:** team (default, no owner filter) · "mine" (`scope: MINE`) · a named rep (resolve one `User` by `Name: { like }`, then `OwnerId: { eq: \"<Id>\" }`).
+- **Period:** last quarter (default) — compute explicit `gte`/`lte` dates; never `LAST_N_DAYS`.
+- **Focus:** all / wins / losses (add `IsWon` filter).
 
-## 1. Ground (hardcoded — Opportunity only)
-
-Ground **only Opportunity** — it always exists (naming a missing object fails the whole call). Its fields reveal this org's loss-reason `__c` schema; don't assume names.
+## 1. Read — one dispatch
 
 ```
 dispatch_readonly(method: "GET", url: "/services/data/v67.0/graphql",
-  queryParams: { "queryInput": "{\"query\":\"query { uiapi { objectInfos(apiNames: [\\\"Opportunity\\\"]) { fields { ApiName label } childRelationships { childObjectApiName relationshipName } } } }\"}" })
+  queryParams: { "queryInput": "{\"query\":\"query { uiapi { query { Opportunity(where: { IsClosed: { eq: true }, CloseDate: { gte: { value: \\\"%START%\\\" }, lte: { value: \\\"%END%\\\" } } }, first: 200, orderBy: { Amount: { order: DESC } }) { edges { node { Id Name { value } StageName { value } Amount { value } CloseDate { value } CreatedDate { value } LeadSource { value } Type { value } IsWon { value } ReasonLost__c { value } Next_Step__c { value } Account { Name { value } Industry { value } Account_Type__c { value } } Owner { Name { value } } OpportunityHistories(first: 15, orderBy: { CreatedDate: { order: DESC } }) { edges { node { StageName { value } CreatedDate { value } } } } } } } } } }\"}" })
 ```
 
-Step 1 is the authority on names — use exact strings, never guess. Note the scalar `__c` field(s) that carry a loss-reason/lost-reason category — that's `<OPP_CUSTOM>` below. If none is grounded, omit it and rely on transcript/email evidence for loss reasons instead.
+Empty `edges` → say no closed deals in this window/scope and stop. If 200 rows return, note the cap. On a `FieldUndefined` error drop only that field and re-run once.
 
-## 2. Read (fill from step 1)
+Optional second call, only for the 5 largest losses and 5 largest wins: their Events (`WhatId: { in: [<opp Ids>] }`, fields `Subject StartDateTime WhatId`) to show engagement depth. Skip it if the first read is empty.
 
-Compute explicit `gte`/`lte` date-literal boundaries for the review period from today's date — do not use a relative literal like `LAST_N_DAYS:90`, it silently drifts the window as today moves. `scope: MINE` for "my closed deals"; swap for `OwnerId: { eq: \"<UserId>\" }` after resolving one User by name for a named rep (team default = no owner filter, all reps roll up together — ask once if genuinely ambiguous).
+## 2. Patterns (record only; reconcile totals; invent nothing)
 
-One call pulls every closed opportunity in the window — with `Account` spanned for industry/size AND the stage-history child nested (no separate round-trip). **Loss death-stage:** a lost opp's closing `StageName` is just "Closed Lost", so "where losses die" must come from the stage-history child — the last **non-closed** `StageName` before close. Nest `<HISTORY_CHILD>` = the OpportunityHistory child's exact `relationshipName` from Step 1 grounding (commonly `OpportunityHistories`); keep its `first:` small (history rows are tiny, but the child rides on up to 200 parents).
+- **Win rate** overall and by rep, lead source, size band, industry, type.
+- **Where losses die** — last non-closed `StageName` in each lost opp's history (not "Closed Lost"); fall back to final stage only if history is empty.
+- **Median days in stage** from consecutive history `CreatedDate` deltas (omit if no history).
+- **Cycle length** (CloseDate − CreatedDate) and **median Amount**, wins vs losses.
+- **Loss reasons** — count Reason Lost values; blank = "Not recorded" (a data-quality finding in itself).
+- **Qualitative** — for the 5 largest wins/losses cite Reason Lost, Next Step and meeting counts: "[Account] — lost at Proposal, Reason Lost: Pricing, 1 meeting in last 60 days."
 
-```
-dispatch_readonly(method: "GET", url: "/services/data/v67.0/graphql",
-  queryParams: { "queryInput": "{\"query\":\"query { uiapi { query { Opportunity(scope: MINE, where: { IsClosed: { eq: true }, CloseDate: { gte: { value: \\\"%START%\\\" }, lte: { value: \\\"%END%\\\" } } }, first: 200, orderBy: { Amount: { order: DESC } }) { edges { node { Id Name { value } StageName { value displayValue } Amount { value displayValue } CloseDate { value } CreatedDate { value } LeadSource { value } Type { value } IsWon { value } <OPP_CUSTOM> Account { Name { value } Industry { value } NumberOfEmployees { value } } Owner { Name { value } } <HISTORY_CHILD>(first: 15, orderBy: { CreatedDate: { order: DESC } }) { edges { node { StageName { value } CreatedDate { value } } } } } } } } } }\"}" })
-```
+## 3. Output — widget first
 
-Empty `edges` → no closed deals in this window/scope; say so plainly, skip the rest. `first: 200` is a bounded sample; if it truncates on a very high-volume team, note the cap rather than imply full coverage. **If the history child is empty/unavailable**, fall back to the record's final `StageName` for the death-stage line and omit the median-days-in-stage column — don't fire a separate history round-trip.
-
-## 2b. Evidence (run IN PARALLEL with step 2 — same turn, issue all at once)
-
-**Issue step 2 and all of step 2b as tool calls in a single turn — do not wait for the SF read to return before firing the searches.** They key on the account/rep names from the request, not the SF result:
-- **docs**: call transcripts for the largest wins and losses (will narrow to the top 5 each once step 2 returns names, but a first broad pass can start now on account names already known from the request)
-- **email**: late-stage threads on the same accounts → stated objections, loss reasons
-
-Use whatever doc/email tools are available; skip silently if none are present (SFDC-only is fine). Cite source + date for anything you use.
-
-## 3. Find patterns (record only; reconcile totals; invent nothing)
-
-- **Win rate** overall and by: rep, lead source, deal size band, industry, type (new vs expansion)
-- **Loss stage distribution:** where do losses die — the last **non-closed** `StageName` in each lost opp's history child (NOT "Closed Lost"). Most at Discovery? at Proposal? (Fall back to final `StageName` only if history is unavailable.)
-- **Median days in stage:** from consecutive history-row `CreatedDate` deltas (omit if no history child).
-- **Cycle length:** median days (`CloseDate` − `CreatedDate`) for wins vs losses
-- **Size:** median Amount for wins vs losses
-- **Qualitative:** for the 5 largest losses and 5 largest wins (by Amount, from step 2), pull the evidence gathered in 2b — stated loss reasons (competitor, budget, timing, no decision), objections in losses but not wins, what wins had in common. Cite specifics: "[Account] - lost at Proposal, transcript on [date] shows pricing objection with no follow-up."
-
-## 4. Output — widget FIRST (the rendered UI is the default)
-
-When the data is assembled, call `display_widget`; a single one-line "Displaying the visualization now (this may take a minute)." notice may precede it.
-
-### Self-verification (before calling display_widget)
-
-- [ ] `widgetDefinition` is passed as a native JSON object — not a quoted string, not a code block pasted as text. If the value starts with `"{"`, it is wrong.
-
-The widget template is embedded below — resolve its tokens and call `display_widget({ resourceType: "dynamic", widgetDefinition: <hydrated> })` once (see the `widgetDefinition` param for token-resolution rules).
-
-Layout note: the loss-reason donut runs with `showLegend:false` and sits in a row beside a text column (`donutAsideTitle` + `donutAside`); the win-rate column chart is full-width, preceded by a caption pair (`chartAsideTitle` + `chartAside`). A column chart must be full-width to keep its axis, value labels, and bar height legible — do not put it in a shared row.
-
-Tokens: `title` (page-title text, e.g. "Win / loss review — last 2 quarters") · `subtitle` (one-line caption with closed count, win rate, won/lost $ totals) · `donutAsideTitle donutAside` (short title + one-sentence breakdown beside the loss-reason donut; because the legend is off, `donutAside` must name every slice with its count in prose — a colorblind reader relies on it) · `pieCaption pieSlices` (pie chart — `slices` is `[{label, value, role?}]`; top reason carries `role:"highlight"`) · `chartAsideTitle chartAside` (short title + one-sentence takeaway above the full-width win-rate chart; interpret the shape — e.g. the decline with deal size — rather than re-listing every band) · `chartCaption chartCategories chartSeries` (column chart — `categories` is size-band labels, `series` is an array with one object: `{name:"Win rate", data:[...numbers...]}` — these are win-RATE percentages, not deal counts) · `datagridCaption lossRows` (datagrid — `rows` is `[{name (plain string — format as the opportunity name (e.g. "Meridian Health platform"); names must be plain strings, not objects: use `Opportunity.Name.value` from the SF response), amount, stage:{value, badgeVariant}, reason, comp, status:{value:"Lost",badgeVariant:"error"}}]`, largest first; `amount` is a raw number; `comp` is competitor name or "—" for no-decision losses) · `calloutTitle calloutDescription button1Label button1Content reportUrl` (callout — primary button is `action/sendMessage` with a first-person `content` prompt; `reportUrl` is a Win/Loss report Lightning URL `https://<myDomain>/lightning/r/Report/<Id>/view`, opens new tab). Omit any block whose data you lack rather than passing empty arrays.
+Call `display_widget` once data is assembled (at most one line "Displaying the visualization now (this may take a minute)." before it). `widgetDefinition` is a native JSON object, not a string. Replace every `{{token}}` — a value that is only a token becomes a typed literal; a token inside text is interpolated. Omit a block whose data you lack rather than passing empty arrays. The win-rate column chart stays full-width.
 
 ```json
-{
-  "renderer": {
-    "componentOverrides": {
-      "$": {
-        "type": "mosaic",
-        "definition": "tile/widget",
-        "children": [
-          {
-            "definition": "tile/row",
-            "attributes": {
-              "gap": "sm",
-              "align": "center",
-              "isWrapped": false
-            },
-            "children": [
-              {
-                "definition": "tile/icon",
-                "attributes": {
-                  "name": "trending-up",
-                  "size": "xl",
-                  "alt": ""
-                }
-              },
-              {
-                "definition": "tile/text",
-                "attributes": {
-                  "text": "{{title}}",
-                  "variant": "h1"
-                }
-              }
-            ]
-          },
-          {
-            "definition": "tile/text",
-            "attributes": {
-              "text": "{{subtitle}}",
-              "variant": "caption",
-              "color": "muted"
-            }
-          },
-          {
-            "definition": "tile/separator"
-          },
-          {
-            "definition": "tile/row",
-            "attributes": {
-              "gap": "lg",
-              "align": "center",
-              "isWrapped": false
-            },
-            "children": [
-              {
-                "definition": "tile/column",
-                "attributes": {
-                  "width": "auto"
-                },
-                "children": [
-                  {
-                    "definition": "tile/piechart",
-                    "attributes": {
-                      "variant": "donut",
-                      "caption": "{{pieCaption}}",
-                      "valueFormat": "number",
-                      "showLegend": false,
-                      "slices": "{{pieSlices}}"
-                    }
-                  }
-                ]
-              },
-              {
-                "definition": "tile/column",
-                "attributes": {
-                  "gap": "sm",
-                  "align": "start",
-                  "width": "stretch"
-                },
-                "children": [
-                  {
-                    "definition": "tile/text",
-                    "attributes": {
-                      "text": "{{donutAsideTitle}}",
-                      "variant": "section-title"
-                    }
-                  },
-                  {
-                    "definition": "tile/text",
-                    "attributes": {
-                      "text": "{{donutAside}}",
-                      "variant": "body",
-                      "color": "muted"
-                    }
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "definition": "tile/text",
-            "attributes": {
-              "text": "{{chartAsideTitle}}",
-              "variant": "section-title"
-            }
-          },
-          {
-            "definition": "tile/text",
-            "attributes": {
-              "text": "{{chartAside}}",
-              "variant": "body",
-              "color": "muted"
-            }
-          },
-          {
-            "definition": "tile/chart",
-            "attributes": {
-              "chartType": "column",
-              "caption": "{{chartCaption}}",
-              "categories": "{{chartCategories}}",
-              "series": "{{chartSeries}}",
-              "valueFormat": "number",
-              "showValues": true,
-              "showLegend": false
-            }
-          },
-          {
-            "definition": "tile/datagrid",
-            "attributes": {
-              "caption": "{{datagridCaption}}",
-              "appearance": "striped",
-              "size": "sm",
-              "defaultSort": {
-                "key": "amount",
-                "direction": "desc"
-              },
-              "columns": [
-                {
-                  "key": "status",
-                  "header": "Status",
-                  "type": "badge"
-                },
-                {
-                  "key": "name",
-                  "header": "Opportunity",
-                  "type": "text"
-                },
-                {
-                  "key": "amount",
-                  "header": "Amount",
-                  "type": "currency",
-                  "align": "right",
-                  "sortable": true
-                },
-                {
-                  "key": "stage",
-                  "header": "Died at",
-                  "type": "badge"
-                },
-                {
-                  "key": "reason",
-                  "header": "Reason",
-                  "type": "text"
-                },
-                {
-                  "key": "comp",
-                  "header": "Lost to",
-                  "type": "text"
-                }
-              ],
-              "rows": "{{lossRows}}"
-            }
-          },
-          {
-            "definition": "tile/callout",
-            "attributes": {
-              "variant": "info",
-              "title": "{{calloutTitle}}",
-              "description": "{{calloutDescription}}"
-            },
-            "children": [
-              {
-                "definition": "tile/row",
-                "attributes": {
-                  "gap": "sm",
-                  "align": "center",
-                  "isWrapped": true
-                },
-                "children": [
-                  {
-                    "definition": "tile/button",
-                    "attributes": {
-                      "label": "{{button1Label}}",
-                      "variant": "primary",
-                      "actions": {
-                        "click": [
-                          {
-                            "definition": "action/sendMessage",
-                            "attributes": {
-                              "content": "{{button1Content}}"
-                            }
-                          }
-                        ]
-                      }
-                    }
-                  },
-                  {
-                    "definition": "tile/button",
-                    "attributes": {
-                      "label": "View in Salesforce",
-                      "iconName": "open-in-new",
-                      "variant": "secondary",
-                      "actions": {
-                        "click": [
-                          {
-                            "definition": "action/openLink",
-                            "attributes": {
-                              "url": "{{reportUrl}}"
-                            }
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            ]
-          }
-        ]
-      }
-    }
-  }
-}
+{"renderer":{"componentOverrides":{"$":{"type":"mosaic","definition":"tile/widget","children":[{"definition":"tile/row","attributes":{"gap":"sm","align":"center","isWrapped":false},"children":[{"definition":"tile/icon","attributes":{"name":"trending-up","size":"xl","alt":""}},{"definition":"tile/text","attributes":{"text":"{{title}}","variant":"h1"}}]},{"definition":"tile/text","attributes":{"text":"{{subtitle}}","variant":"caption","color":"muted"}},{"definition":"tile/separator"},{"definition":"tile/row","attributes":{"gap":"lg","align":"center","isWrapped":false},"children":[{"definition":"tile/column","attributes":{"width":"auto"},"children":[{"definition":"tile/piechart","attributes":{"variant":"donut","caption":"{{pieCaption}}","valueFormat":"number","showLegend":false,"slices":"{{pieSlices}}"}}]},{"definition":"tile/column","attributes":{"gap":"sm","align":"start","width":"stretch"},"children":[{"definition":"tile/text","attributes":{"text":"{{donutAsideTitle}}","variant":"section-title"}},{"definition":"tile/text","attributes":{"text":"{{donutAside}}","variant":"body","color":"muted"}}]}]},{"definition":"tile/text","attributes":{"text":"{{chartAsideTitle}}","variant":"section-title"}},{"definition":"tile/text","attributes":{"text":"{{chartAside}}","variant":"body","color":"muted"}},{"definition":"tile/chart","attributes":{"chartType":"column","caption":"{{chartCaption}}","categories":"{{chartCategories}}","series":"{{chartSeries}}","valueFormat":"number","showValues":true,"showLegend":false}},{"definition":"tile/datagrid","attributes":{"caption":"{{datagridCaption}}","appearance":"striped","size":"sm","defaultSort":{"key":"amount","direction":"desc"},"columns":[{"key":"status","header":"Status","type":"badge"},{"key":"name","header":"Opportunity","type":"text"},{"key":"amount","header":"Amount","type":"currency","align":"right","sortable":true},{"key":"stage","header":"Died at","type":"badge"},{"key":"reason","header":"Reason","type":"text"},{"key":"comp","header":"Lost to","type":"text"}],"rows":"{{lossRows}}"}},{"definition":"tile/callout","attributes":{"variant":"info","title":"{{calloutTitle}}","description":"{{calloutDescription}}"},"children":[{"definition":"tile/row","attributes":{"gap":"sm","align":"center","isWrapped":true},"children":[{"definition":"tile/button","attributes":{"label":"{{button1Label}}","variant":"primary","actions":{"click":[{"definition":"action/sendMessage","attributes":{"content":"{{button1Content}}"}}]}}},{"definition":"tile/button","attributes":{"label":"View in Salesforce","iconName":"open-in-new","variant":"secondary","actions":{"click":[{"definition":"action/openLink","attributes":{"url":"{{reportUrl}}"}}]}}}]}]}]}}}}
 ```
 
+Tokens:
+- `title` ("Win / loss review — Q2 2026"), `subtitle` (closed count, win rate, won/lost $).
+- `pieCaption`, `pieSlices` `[{label, value, role?}]` — loss reasons, top one `role:"highlight"`. Legend is off, so `donutAsideTitle` + `donutAside` must name every slice with its count in prose.
+- `chartAsideTitle`, `chartAside` (one-sentence interpretation), `chartCaption`, `chartCategories` (size bands), `chartSeries` `[{name:"Win rate", data:[percentages]}]`.
+- `datagridCaption`, `lossRows` `[{status:{value:"Lost",badgeVariant:"error"}, name (plain opp name string), amount (number), stage:{value,badgeVariant}, reason (Reason Lost or "Not recorded"), comp ("—" unless Reason Lost names a competitor)}]`, largest first.
+- `calloutTitle`, `calloutDescription`, `button1Label`/`button1Content` (first-person follow-up prompt), `reportUrl` (a Salesforce Lightning URL for the scope, e.g. the Opportunities list view).
 
-## 5. Text — FALLBACK ONLY — DO NOT USE IF `display_widget` SUCCEEDED
+```
+display_widget({ resourceType: "dynamic", widgetDefinition: <hydrated object> })
+```
+
+## 4. Text — FALLBACK ONLY (if `display_widget` is unavailable or errors)
 
 ```
 # Win-Loss Review — <Scope> — <Period>
 **Headline:** <the pattern that matters most, 2 sentences>
-
 ## Win Rate
 | Cut | Win Rate | n |
-|---|---|---|
-| Overall | <pct>% | <N> |
-| By rep / source / size band / industry | <pct>% | <N> |
-
 ## Where Losses Die
 | Stage | % of losses | Median days in stage |
-|---|---|---|
-| <Stage> | <pct>% | <N>d |
-(Stage = last non-closed stage from history; omit the median-days column if no history child.)
-
 ## Loss Reasons
 | Reason | Count | Example |
-|---|---|---|
-| <Reason> | <N> | <Account>: <one-line evidence w/ date+source> |
-
 ## What Wins Have In Common
-- <pattern> (<N of M> wins) …
-
+- <pattern> (<N of M> wins)
 ## Largest Losses
-- **<Account>** $<X> — died at <Stage> — <one-line evidence>
-
+- **<Account>** $<X> — died at <Stage> — <Reason Lost>
 ## Recommended Actions
-1. Systemic — <process/enablement tied to the headline>
-2. Coaching — <which rep, on what>
-3. Data — <what to start capturing>
+1. Systemic  2. Coaching (rep, topic)  3. Data (e.g. Reason Lost capture rate)
 ```
