@@ -103,6 +103,92 @@
 {{#unless compare.comparable}}{{> components/notice tone="info" title="No manifest on one side" message="One of these versions was recorded from a source hash before manifests were kept, so skills are listed from their facts only and no change can be derived."}}{{/unless}}
 {{/if}}
 
+{{#if evaluation}}
+{{#if evaluation.has_runs}}
+<form method="get" action="/admin/analysis/versions/{{marketplace_id}}" class="sp-toolbar__filter sp-versions-pick">
+<input type="hidden" name="tab" value="evaluation"><input type="hidden" name="days" value="{{days}}">
+<div class="sp-toolbar__field"><label class="sp-toolbar__field-label" for="ev-b">Version</label><select class="sp-select sp-u-mono" id="ev-b" name="b">{{#each evaluation.versions}}<option value="{{hash}}"{{#if is_selected}} selected{{/if}}>{{hash_short}}{{#if declared_version}} · v{{declared_version}}{{/if}}{{#if is_current}} · current{{/if}}</option>{{/each}}</select></div>
+<div class="sp-toolbar__field"><label class="sp-toolbar__field-label" for="ev-a">Against</label><select class="sp-select sp-u-mono" id="ev-a" name="a"><option value="">previous version</option>{{#each evaluation.versions}}<option value="{{hash}}"{{#if is_baseline}} selected{{/if}}>{{hash_short}}{{#if declared_version}} · v{{declared_version}}{{/if}}</option>{{/each}}</select></div>
+<button class="sp-btn sp-btn--sm sp-btn--primary" type="submit">Show</button>
+</form>
+
+{{#with evaluation.selected}}
+<p class="sp-inventory-summary">Version <span class="sp-hash sp-hash--chip" title="{{hash}}">{{hash_short}}</span>{{#if declared_version}} v{{declared_version}}{{/if}} · {{summary.runs}} conversations{{#if ../evaluation.baseline}} · compared with <span class="sp-hash" title="{{../evaluation.baseline.hash}}">{{../evaluation.baseline.hash_short}}</span>{{/if}} · every figure is an aggregate of the rows in the export</p>
+<dl class="sp-eval-kpis">
+<div class="sp-eval-kpi"><dt>Success</dt><dd>{{summary.success_rate.value}}{{#if summary.success_rate.delta}} <span class="sp-eval-delta sp-eval-delta--{{summary.success_rate.tone}}">{{summary.success_rate.delta}}</span>{{/if}}</dd></div>
+<div class="sp-eval-kpi"><dt>Completed</dt><dd>{{summary.completed_rate.value}}{{#if summary.completed_rate.delta}} <span class="sp-eval-delta sp-eval-delta--{{summary.completed_rate.tone}}">{{summary.completed_rate.delta}}</span>{{/if}}</dd></div>
+<div class="sp-eval-kpi"><dt>Cost per run</dt><dd>{{summary.avg_cost.value}}{{#if summary.avg_cost.delta}} <span class="sp-eval-delta sp-eval-delta--{{summary.avg_cost.tone}}">{{summary.avg_cost.delta}}</span>{{/if}}</dd></div>
+<div class="sp-eval-kpi"><dt>Output tokens per run</dt><dd>{{summary.avg_output_tokens.value}}{{#if summary.avg_output_tokens.delta}} <span class="sp-eval-delta sp-eval-delta--{{summary.avg_output_tokens.tone}}">{{summary.avg_output_tokens.delta}}</span>{{/if}}</dd></div>
+<div class="sp-eval-kpi"><dt>Cached context per run</dt><dd>{{summary.avg_cache_read_tokens.value}}{{#if summary.avg_cache_read_tokens.delta}} <span class="sp-eval-delta sp-eval-delta--{{summary.avg_cache_read_tokens.tone}}">{{summary.avg_cache_read_tokens.delta}}</span>{{/if}}</dd></div>
+<div class="sp-eval-kpi"><dt>Turns per run</dt><dd>{{summary.avg_turns.value}}{{#if summary.avg_turns.delta}} <span class="sp-eval-delta sp-eval-delta--{{summary.avg_turns.tone}}">{{summary.avg_turns.delta}}</span>{{/if}}</dd></div>
+<div class="sp-eval-kpi"><dt>Connector calls per run</dt><dd>{{summary.avg_connector_calls.value}}{{#if summary.avg_connector_calls.delta}} <span class="sp-eval-delta sp-eval-delta--{{summary.avg_connector_calls.tone}}">{{summary.avg_connector_calls.delta}}</span>{{/if}}</dd></div>
+<div class="sp-eval-kpi"><dt>Failed calls</dt><dd>{{summary.failed_calls.value}}{{#if summary.failed_calls.delta}} <span class="sp-eval-delta sp-eval-delta--{{summary.failed_calls.tone}}">{{summary.failed_calls.delta}}</span>{{/if}}</dd></div>
+</dl>
+<p class="sp-inventory-summary">Failed calls by class: schema {{summary.schema_errors}} · access {{summary.access_errors}} · upstream {{summary.upstream_errors}} · bad arguments {{summary.bad_arguments}} · timeouts {{summary.timeouts}} · writes {{summary.writes}}</p>
+{{/with}}
+
+{{#> components/table caption="Every version with conversations, oldest first; each is compared with the one before it" modifier="sp-analysis-table sp-versions-table"}}
+<thead><tr>
+<th scope="col">Version</th>
+<th scope="col">Served</th>
+<th scope="col" class="sp-table__cell--num">Runs</th>
+<th scope="col" class="sp-table__cell--num">Success</th>
+<th scope="col" class="sp-table__cell--num">Cost per run</th>
+<th scope="col" class="sp-table__cell--num">Output tokens</th>
+<th scope="col" class="sp-table__cell--num">Cached context</th>
+<th scope="col" class="sp-table__cell--num">Turns</th>
+<th scope="col" class="sp-table__cell--num">Failed calls</th>
+</tr></thead>
+<tbody>
+{{#each evaluation.versions}}
+<tr class="sp-versions-row{{#if is_selected}} sp-versions-row--current{{/if}}">
+<td class="sp-table__cell--primary"><span class="sp-hash sp-hash--chip" title="{{hash}}">{{hash_short}}</span>{{#if is_current}} {{> components/badge tone="ok" text="current"}}{{/if}}{{#if declared_version}} <span class="sp-u-text-tertiary">v{{declared_version}}</span>{{/if}}</td>
+<td title="{{first_seen_at}}">{{relativeTime first_seen_at}}</td>
+<td class="sp-table__cell--num sp-u-num">{{summary.runs}}</td>
+<td class="sp-table__cell--num sp-u-num">{{summary.success_rate.value}}{{#if summary.success_rate.delta}} <span class="sp-eval-delta sp-eval-delta--{{summary.success_rate.tone}}">{{summary.success_rate.delta}}</span>{{/if}}</td>
+<td class="sp-table__cell--num sp-u-num">{{summary.avg_cost.value}}{{#if summary.avg_cost.delta}} <span class="sp-eval-delta sp-eval-delta--{{summary.avg_cost.tone}}">{{summary.avg_cost.delta}}</span>{{/if}}</td>
+<td class="sp-table__cell--num sp-u-num">{{summary.avg_output_tokens.value}}{{#if summary.avg_output_tokens.delta}} <span class="sp-eval-delta sp-eval-delta--{{summary.avg_output_tokens.tone}}">{{summary.avg_output_tokens.delta}}</span>{{/if}}</td>
+<td class="sp-table__cell--num sp-u-num">{{summary.avg_cache_read_tokens.value}}{{#if summary.avg_cache_read_tokens.delta}} <span class="sp-eval-delta sp-eval-delta--{{summary.avg_cache_read_tokens.tone}}">{{summary.avg_cache_read_tokens.delta}}</span>{{/if}}</td>
+<td class="sp-table__cell--num sp-u-num">{{summary.avg_turns.value}}</td>
+<td class="sp-table__cell--num sp-u-num">{{summary.failed_calls.value}}{{#if summary.failed_calls.delta}} <span class="sp-eval-delta sp-eval-delta--{{summary.failed_calls.tone}}">{{summary.failed_calls.delta}}</span>{{/if}}</td>
+</tr>
+{{/each}}
+</tbody>
+{{/components/table}}
+
+{{#> components/table caption="Each skill under the selected version, compared with the same skill under the baseline" modifier="sp-analysis-table"}}
+<thead><tr>
+<th scope="col">Skill</th>
+<th scope="col" class="sp-table__cell--num">Runs</th>
+<th scope="col" class="sp-table__cell--num">Success</th>
+<th scope="col" class="sp-table__cell--num">Cost per run</th>
+<th scope="col" class="sp-table__cell--num">Output tokens</th>
+<th scope="col" class="sp-table__cell--num">Turns</th>
+<th scope="col" class="sp-table__cell--num">Connector calls</th>
+<th scope="col" class="sp-table__cell--num">Failed calls</th>
+<th scope="col" class="sp-table__cell--actions"><span class="sp-u-sr-only">Conversation</span></th>
+</tr></thead>
+<tbody>
+{{#each evaluation.skills}}
+<tr>
+<td class="sp-table__cell--primary sp-u-mono">{{skill}}</td>
+<td class="sp-table__cell--num sp-u-num">{{summary.runs}}</td>
+<td class="sp-table__cell--num sp-u-num">{{summary.success_rate.value}}{{#if summary.success_rate.delta}} <span class="sp-eval-delta sp-eval-delta--{{summary.success_rate.tone}}">{{summary.success_rate.delta}}</span>{{/if}}</td>
+<td class="sp-table__cell--num sp-u-num">{{summary.avg_cost.value}}{{#if summary.avg_cost.delta}} <span class="sp-eval-delta sp-eval-delta--{{summary.avg_cost.tone}}">{{summary.avg_cost.delta}}</span>{{/if}}</td>
+<td class="sp-table__cell--num sp-u-num">{{summary.avg_output_tokens.value}}{{#if summary.avg_output_tokens.delta}} <span class="sp-eval-delta sp-eval-delta--{{summary.avg_output_tokens.tone}}">{{summary.avg_output_tokens.delta}}</span>{{/if}}</td>
+<td class="sp-table__cell--num sp-u-num">{{summary.avg_turns.value}}</td>
+<td class="sp-table__cell--num sp-u-num">{{summary.avg_connector_calls.value}}</td>
+<td class="sp-table__cell--num sp-u-num">{{summary.failed_calls.value}}{{#if summary.failed_calls.delta}} <span class="sp-eval-delta sp-eval-delta--{{summary.failed_calls.tone}}">{{summary.failed_calls.delta}}</span>{{/if}}</td>
+<td class="sp-table__cell--actions">{{#if last_context_id}}<a class="sp-table__link" href="/admin/analysis/conversations/{{last_context_id}}">Latest run</a>{{/if}}</td>
+</tr>
+{{/each}}
+</tbody>
+{{/components/table}}
+{{else}}
+{{> components/notice tone="info" title="No conversations in this window" message="No conversation invoked one of this marketplace's skills in the window. Widen the window, or run the plugin's eval suite."}}
+{{/if}}
+{{/if}}
+
 {{#if distribution}}
 <div class="sp-kpi-grid sp-kpi-grid--compact">
 {{> components/kpi label="Published skills" value=distribution.published_resources note="with a reviewed publication"}}

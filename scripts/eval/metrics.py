@@ -17,6 +17,12 @@ import pathlib
 import re
 import sys
 
+import plugin_rules
+
+# Set by main(): the console dataset for this run and any disagreement with it.
+DATASET = None
+MISMATCHES = []
+
 # Error classes, matched against tool RESULT bodies only (never inputs).
 ERROR_CLASSES = {
     "sf_invalid_field": r"INVALID_FIELD|No such column",
@@ -38,12 +44,22 @@ RECORD_QUERY = re.compile(
 ID_PINNED = re.compile(r"\b(Id|AccountId|WhatId|WhoId|OpportunityId)\W+(=|eq|IN)\W", re.I)
 WRITE_TOOL = re.compile(r"create|update|delete|upsert|send|insert", re.I)
 
+# Super-admin checks. A day, a total or an hours figure drawn while the last
+# request_log page still had older rows is a conclusion from one page.
+DAY_CLAIM = re.compile(r"busiest|heaviest|peak day|hours? (per|a) day|per day|most active day", re.I)
+INVENTED_CAUSE = re.compile(r"\blag\b|lags behind|hasn'?t caught up|not caught up|rollup delay|aggregation (delay|lag)", re.I)
+CONVERSATION_TOOLS = ("user_activity", "conversation_list", "conversation_audit")
+
 METRICS = [
     "invoked", "completed", "success", "turns", "requests", "input_tokens",
     "output_tokens", "cache_read_tokens", "cache_creation_tokens", "cost_usd",
     "duration_s", "p95_latency_ms", "mcp_calls", "sf_calls", "google_calls",
     "builtin_calls", "failed_calls", "unscoped_queries", "writes",
     "answer_chars", "widgets", "mock_mentions", "attempts",
+    "conversation_tool_calls", "request_log_calls", "atlassian_calls",
+    "single_page_conclusions", "invented_causes", "cross_tool_mismatch",
+    "connector_calls", "schema_errors", "access_errors", "upstream_errors",
+    "bad_arguments", "timeouts", "console_success",
 ] + list(ERROR_CLASSES)
 
 
@@ -87,7 +103,8 @@ def skill_metrics(raw, skill, manifest):
     b = bundle_of(raw, skill)
     facts = (b or {}).get("facts") or {}
     uses, results = cc_events(raw, skill)
-    dashed = f"{manifest['plugin']}:{skill.replace('_', '-')}"
+    expected = (manifest.get("expect") or {}).get(skill, skill)
+    dashed = f"{manifest['plugin']}:{expected.replace('_', '-')}"
 
     m = {k: 0 for k in METRICS}
     m["skill"] = skill
@@ -123,6 +140,8 @@ def skill_metrics(raw, skill, manifest):
                 m["writes"] += 1
         elif "google" in name:
             m["google_calls"] += 1
+    admin = admin_checks(uses, results)
+    m.update(admin)
     widget_ids = {u.get("id") for u in uses if u.get("name", "").endswith("__display_widget")}
     for r in results:
         text = result_text(r)
@@ -142,10 +161,68 @@ def skill_metrics(raw, skill, manifest):
     # Why: a skill's deliverable is either a rendered widget or a written answer.
     m["completed"] = int(bool(result) and not result.get("is_error")
                          and (m["widgets"] > 0 or len(answer) >= 200))
-    m["success"] = int(m["invoked"] and m["completed"] and m["sf_calls"] > 0
-                       and m["unscoped_queries"] == 0 and m["writes"] == 0
-                       and m["sf_invalid_field"] + m["sf_invalid_type"] + m["sf_malformed"] == 0)
+    m["single_page_conclusions"] = int(admin["_last_log_open"] and bool(DAY_CLAIM.search(answer)))
+    m["invented_causes"] = len(INVENTED_CAUSE.findall(answer))
+    m.pop("_last_log_open", None)
+    # Why: the headline figures are the console's own (the analysis-plugin-eval
+    # rows, or the same rules over the bundle until the gateway serves them),
+    # so a report and the Versions → Evaluation tab show one set of numbers.
+    # The checks below are the suite's extra guards on top of them.
+    console, m["source"] = plugin_rules.consistent_row(
+        b, manifest["plugin"], DATASET, m["session_id"], dashed, MISMATCHES)
+    if console:
+        m.update(console)
+    m["completed"] = int(bool(m["completed"]) and bool(m["invoked"]))
+    m["console_success"] = int(bool(m["success"]) and bool(m["invoked"]))
+    if manifest["plugin"] != "astound-salesforce":
+        m["success"] = int(m["console_success"] and m["single_page_conclusions"] == 0
+                           and m["invented_causes"] == 0 and m["cross_tool_mismatch"] == 0
+                           and m["writes"] == 0)
+        return m
+    m["success"] = int(m["console_success"] and m["unscoped_queries"] == 0)
     return m
+
+
+def admin_checks(uses, results):
+    """Tool mix, whether the last request_log page was left open, and whether a
+    user's usage_by_user spend disagrees with a request_log read to its end."""
+    by_id = {u.get("id"): u for u in uses}
+    out = {"conversation_tool_calls": 0, "request_log_calls": 0, "atlassian_calls": 0,
+           "cross_tool_mismatch": 0, "_last_log_open": False}
+    usage, logs = {}, {}
+    for u in uses:
+        name = u.get("name", "")
+        if "atlassian" in name:
+            out["atlassian_calls"] += 1
+        elif name.endswith(CONVERSATION_TOOLS):
+            out["conversation_tool_calls"] += 1
+        elif name.endswith("__request_log"):
+            out["request_log_calls"] += 1
+    for r in results:
+        u = by_id.get(r.get("tool_use_id")) or {}
+        name, inp = u.get("name", ""), u.get("input") or {}
+        try:
+            body = json.loads(result_text(r))
+        except ValueError:
+            continue
+        if not isinstance(body, dict):
+            continue
+        if name.endswith("__request_log"):
+            out["_last_log_open"] = bool(body.get("next_cursor"))
+            key = (inp.get("user"), inp.get("since"), inp.get("until", ""))
+            page = logs.setdefault(key, {"cost": 0.0, "open": False})
+            page["cost"] += sum(float(x.get("cost_usd") or 0) for x in body.get("rows") or [])
+            page["open"] = bool(body.get("next_cursor"))
+        elif name.endswith("__usage_by_user") and not inp.get("until"):
+            for row in body.get("rows") or []:
+                uid = str(row.get("name", "")).split(" ")[0]
+                usage[(uid, inp.get("since"))] = float(row.get("cost_usd") or 0)
+    for (user, since, until), page in logs.items():
+        spend = usage.get((user, since))
+        if spend is not None and not until and not page["open"] \
+                and abs(spend - page["cost"]) > max(0.01, 0.01 * spend):
+            out["cross_tool_mismatch"] += 1
+    return out
 
 
 def rollup(rows):
@@ -154,6 +231,7 @@ def rollup(rows):
     tot["skills"] = len(rows)
     tot["success_rate"] = round(tot["success"] / n, 3)
     tot["completed_rate"] = round(tot["completed"] / n, 3)
+    tot["console_success_rate"] = round(tot["console_success"] / n, 3)
     tot["cost_usd"] = round(tot["cost_usd"], 4)
     for k in ["input_tokens", "output_tokens", "cache_read_tokens", "cost_usd", "turns", "mcp_calls",
               "failed_calls", "duration_s"]:
@@ -175,8 +253,12 @@ def main():
     run_dir = evals / label
     manifest = json.load(open(run_dir / "manifest.json"))
     raw = run_dir / "raw"
+    global DATASET
+    DATASET = plugin_rules.load_dataset(raw)
     rows = [skill_metrics(raw, s, manifest) for s in manifest["skills"]]
     out = {
+        "source": sorted({r["source"] for r in rows}),
+        "consistency": (MISMATCHES or "ok") if DATASET else "console dataset not served yet",
         "label": label,
         "plugin": manifest["plugin"],
         "plugin_version": manifest.get("plugin_version"),
@@ -203,18 +285,26 @@ def main():
     t = out["plugin_totals"]
     d = (out.get("delta") or {}).get("plugin_totals", {})
     lines += ["| metric | value | Δ |", "|---|---|---|"]
-    for k in ["skills", "success_rate", "completed_rate", "cost_usd", "avg_cost_usd", "avg_input_tokens",
+    for k in ["skills", "console_success_rate", "success_rate", "completed_rate", "cost_usd", "avg_cost_usd", "avg_input_tokens",
               "avg_output_tokens", "avg_cache_read_tokens", "avg_turns", "avg_mcp_calls", "failed_calls",
-              "unscoped_queries", "writes", *ERROR_CLASSES]:
+              "unscoped_queries", "writes", "conversation_tool_calls", "request_log_calls",
+              "atlassian_calls", "single_page_conclusions", "invented_causes",
+              "cross_tool_mismatch", *ERROR_CLASSES]:
         lines.append(f"| {k} | {t.get(k)} | {d.get(k, '')} |")
-    lines += ["", "| skill | success | turns | cost $ | in tok | out tok | mcp | failed | unscoped |",
-              "|---|---|---|---|---|---|---|---|---|"]
+    judged = [r for r in rows if r.get("console_success") is not None]
+    if judged:
+        agree = sum(r["console_success"] == r["success"] for r in judged)
+        lines += ["", f"console Evaluation tab agrees on {agree}/{len(judged)} conversations"]
+    lines += ["", "| case | invoked | success | turns | cost $ | in tok | mcp | failed | conv | req_log | jira | 1-page | invented |",
+              "|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
     for r in rows:
-        lines.append(f"| {r['skill']} | {r['success']} | {r['turns']} | {r['cost_usd']} | {r['input_tokens']} "
-                     f"| {r['output_tokens']} | {r['mcp_calls']} | {r['failed_calls']} | {r['unscoped_queries']} |")
+        lines.append(f"| {r['skill']} | {r['invoked']} | {r['success']} | {r['turns']} | {r['cost_usd']} "
+                     f"| {r['input_tokens']} | {r['mcp_calls']} | {r['failed_calls']} | {r['conversation_tool_calls']} "
+                     f"| {r['request_log_calls']} | {r['atlassian_calls']} | {r['single_page_conclusions']} "
+                     f"| {r['invented_causes']} |")
     json.dump(out, open(run_dir / "metrics.json", "w"), indent=2)
     with open(run_dir / "metrics.csv", "w", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=["skill", "session_id", "context_id", "marketplace_hash", *METRICS])
+        w = csv.DictWriter(f, fieldnames=["skill", "session_id", "context_id", "marketplace_hash", "source", *METRICS])
         w.writeheader()
         w.writerows(rows)
     (run_dir / "summary.md").write_text("\n".join(lines) + "\n")

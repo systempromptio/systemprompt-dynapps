@@ -97,37 +97,79 @@ A bundle carries `facts` (the conversation's record: tokens, cost, turns, latenc
 
 ## The metrics
 
-`eval.sh metrics` writes `metrics.json`, `metrics.csv` and `summary.md` for the run. Per skill:
+Every per-run figure is one row of the **`analysis-plugin-eval`** dataset: one row per conversation that invoked one of the marketplace's skills, scored by the fixed rules in `plugin_eval.sql`. The console's **Versions → Evaluation** tab aggregates exactly these rows, and `eval.sh metrics` reads the same rows, so the page, the file and a run's report are one set of numbers. If the gateway doesn't serve the dataset yet, the harness applies a line-for-line copy of the same rules to the exported conversation. When both exist it compares them and fails the run on any disagreement.
 
-| Metric | Source | Rule |
-|---|---|---|
-| `invoked` | bundle `skills[]` | 1 when the skill ran under this plugin. |
-| `marketplace_hash` | bundle `skills[]` | The version that served the run. |
-| `turns`, `requests` | bundle `facts` | `turn_count`, `request_count`. |
-| `input_tokens`, `output_tokens`, `cache_read_tokens`, `cache_creation_tokens` | bundle `facts` | As recorded by the gateway. |
-| `cost_usd` | bundle `facts` | `cost_microdollars` / 1,000,000. |
-| `duration_s`, `p95_latency_ms` | bundle `facts` | Wall time of the conversation and its p95 request latency. |
-| `mcp_calls`, `sf_calls`, `google_calls`, `builtin_calls` | client transcript | Tool calls by server. |
-| `failed_calls` | client transcript | Tool results that are errors or match any error class. |
-| `sf_invalid_field`, `sf_invalid_type`, `sf_malformed`, `sf_access`, `sf_5xx` | client transcript | Salesforce error codes in tool results. |
-| `google_iam`, `google_bad_args` | client transcript | Workspace permission denials, and malformed Workspace calls. |
-| `timeout`, `tool_missing` | client transcript | Timeouts, and calls to tools that were not loaded. |
-| `unscoped_queries` | client transcript | Record queries with neither the suite's scope filter nor a pinned record ID. |
-| `writes` | client transcript | Any create, update, delete or send call. It must be 0. |
-| `answer_chars`, `mock_mentions` | client result | Length of the final answer, and how often it had to invent labelled mock data. |
-| `completed` | client result | Finished without error, with an answer of at least 200 characters. |
-| `success` | all of the above | `invoked` and `completed`, at least one Salesforce call, no unscoped queries, no writes, and no field, object or malformed-query errors. |
+```bash
+curl -H "Authorization: Bearer $PAT" \
+  "https://<gateway>/admin/export/analysis-plugin-eval?marketplace=<id>&days=30&format=json"
+```
 
-The plugin row sums every count and adds `success_rate`, `completed_rate` and per-skill averages. With `--against <label>`, every metric also gets its delta, per skill and for the plugin.
+Tool calls are read from every turn of the conversation. Each turn repeats the thread before it, so a call is counted once. A call's result is the message after it.
+
+| Column | Rule |
+|---|---|
+| `context_id`, `client_session_id` | The conversation, and the client session that ran it (the harness keys on this). |
+| `skill`, `plugin_id`, `marketplace_hash` | The skill invoked and the marketplace version that served it. |
+| `turns`, `requests`, `input_tokens`, `output_tokens`, `cache_read_tokens`, `cache_creation_tokens` | The conversation's record. |
+| `cost_usd` | Turn spend, excluding side calls (titles, summaries). |
+| `duration_seconds`, `p50_ms`, `p95_ms` | Wall time, and median and p95 request latency. |
+| `mcp_calls`, `connector_calls`, `builtin_calls` | MCP tool calls; calls to the plugin's own MCP servers; built-in tool calls. |
+| `schema_errors` | Results with `INVALID_FIELD`, `No such column`, `No such relation`, `INVALID_TYPE`, `is not supported`, `MALFORMED_QUERY` or `ValidationError`. |
+| `access_errors` | `INSUFFICIENT_ACCESS`, `Permission '…' denied` or `PERMISSION_DENIED`. |
+| `upstream_errors` | A 5xx `status_code` or `UNKNOWN_EXCEPTION` from the connector's backend. |
+| `bad_arguments` | The tool rejected the call's shape: `Invalid JSON payload`, `Invalid value at '…'`, or a name that does not match its pattern. |
+| `timeouts` | `timed out`. |
+| `failed_calls` | Calls whose result is in any class above. |
+| `repeated_calls` | Calls re-issued with identical input: retry loops. |
+| `widgets` | `display_widget` calls that rendered. |
+| `writes` | Calls to a create, update, delete, upsert, send or insert tool, or with a POST, PATCH, PUT or DELETE method. |
+| `answer_chars` | Length of the final answer. |
+| `placeholder_mentions` | `MOCK`, `placeholder` or `sample data` in the final answer: output built on invented data. |
+| `tools_unavailable` | The final answer says a tool or connector was unavailable: the run never reached its connector. |
+| `completed` | A widget rendered, or the final answer is at least 200 characters. |
+| `success` | Completed, at least one call to the plugin's connector, no schema errors, no writes, and tools were available. |
+
+The harness adds guards of its own on top of the console's figures, reported separately and never shown in the console. For example, `unscoped_queries` counts record queries without the suite's test-data filter. The suite's `success_rate` also requires those guards to pass, while `console_success_rate` is exactly the console's figure.
+
+**`analysis-plugin-eval-tools`** returns one row per version, skill and tool: calls, conversations, failed calls by class and repeated calls, by the same rules. It names the tool that is failing, not just the skill.
+
+### Levels
+
+| Level | Where |
+|---|---|
+| Marketplace version | The Evaluation tab's version table; `marketplace_hash` in both exports. |
+| Plugin | The tab's plugin table; `plugin_id`. |
+| Skill | The tab's skill table; `skill`. |
+| Tool | The tab's tool table; `analysis-plugin-eval-tools`. |
+| Conversation | Each row of `analysis-plugin-eval`; each skill links to its latest run. |
+| Day | The tab's day table for the selected version; `first_invoked_at`. |
+
+### Attention list
+
+The top of the tab lists what needs a look, by fixed thresholds:
+
+| Flag | Rule |
+|---|---|
+| Wrote to a connector | Any write call. |
+| Ran without its tools | Any run with `tools_unavailable`. |
+| Succeeds less often | The skill's success rate is below its rate under the baseline version. |
+| Costs more per run | The skill's average cost is 25% or more above the baseline. |
+| Repeats calls | A run re-issued the same call 3 or more times. |
+| Tool fails | A tool with 3 or more calls fails 20% or more of them. |
+
+Every item links to the latest conversation that shows it.
 
 ## Read the change in the console
 
-- **Analysis → Versions → the plugin's marketplace → History.** The run's version appears as a new row when the shipped hash moves, with invocations, requests, cost and latency for the conversations that ran under it.
-- **Compare.** Pick the baseline's version as *before* and the new one as *after*. Every skill either version carried is listed with its change and its figures under each.
-- **Analysis → Skills → a skill.** Per-skill figures over the window, including tool failures and cost.
-- **Analysis → Conversations.** Open any run's conversation by its `context_id` from `metrics.csv` to read the full transcript and tool ledger.
+- **Analysis → Versions → the plugin's marketplace → Evaluation.** Pick a version, and optionally a version to compare with (by default, the previous version that has conversations). The headline shows success, completion, cost, tokens, turns, connector calls and failed calls, each with its change. Below it:
+  - a table of every version with conversations, oldest first, each compared with the one before it;
+  - each skill under the selected version, compared with the same skill under the baseline, linked to its latest conversation.
 
-The deterministic metrics and the console agree on tokens and cost because both read the same record. The eval adds what the console does not classify: error classes, scoping and success.
+  **Export** on this tab downloads `analysis-plugin-eval` for the same window.
+- **History** and **Compare.** Usage, spend and latency per version, and what changed between two versions skill by skill.
+- **Analysis → Conversations.** Open any run by its `context_id` from `metrics.csv` to read the transcript and tool ledger.
+
+A run made on skills patched into the client before a deploy is served by the old marketplace version, so the console lists it under that version until the deploy. The harness's report still shows it as its own run.
 
 ## Repeat
 
