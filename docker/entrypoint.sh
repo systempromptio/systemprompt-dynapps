@@ -131,13 +131,10 @@ fi
 echo "Running database migrations..."
 # A managed volume/database outlives the image, so a database seeded by an older
 # tag can carry checksums for migrations that were since edited in the source
-# tree. Reconcile the tracking table and retry once; anything else is a real
-# migration failure and still aborts boot.
-if ! /app/bin/systemprompt infra db migrate; then
-    echo "Migration failed; reconciling migration checksums and retrying..." >&2
-    /app/bin/systemprompt infra db migrate-repair --apply
-    /app/bin/systemprompt infra db migrate
-fi
+# tree. --repair-drift repairs that case, and only that case, then retries
+# once; every other failure aborts boot with core's classified error and hint
+# (a blind repair-and-retry used to repeat the same failure twice).
+/app/bin/systemprompt infra db migrate --repair-drift
 
 echo "Ensuring bootstrap admin user..."
 /app/bin/systemprompt admin bootstrap

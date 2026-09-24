@@ -100,6 +100,11 @@ The container runs as uid 1000 and mounts the directory read-only. Nothing
 is ever written there: runtime state the node keeps for itself (the gateway
 accounting journal, `/app/storage/data/gateway-journal`) lives on the
 `app_storage_data` volume, which must stay per node — never a shared mount.
+It must also be writable by uid 1000. A named volume from these compose files
+is, because the image creates `/app/storage/data` owned by that uid. A bind
+mount or pre-existing volume must be `chown -R 1000:1000`; on Kubernetes set
+`securityContext.fsGroup: 1000`. The server checks this before it starts and
+names each directory it cannot write, its owner and the uid it runs as.
 
 ## 4. Network
 

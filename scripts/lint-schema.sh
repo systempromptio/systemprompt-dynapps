@@ -29,11 +29,15 @@ fi
 # schema/seeds/ is exempt: seed bodies are idempotent INSERT/UPDATE/MERGE by
 # contract, enforced at boot by the runner's seed classifier (rejects anything
 # else and non-idempotent INSERTs), not by this declarative-schema gate.
+# schema/retire/ is exempt the same way: retirements are DROP … IF EXISTS of
+# triggers, functions and views by contract, and core's retire phase refuses
+# anything else before the first write.
 # shellcheck disable=SC2207
 files=($(find "$ROOT" -type f -name '*.sql' \
     -path '*/schema/*' \
     -not -path '*/schema/migrations/*' \
     -not -path '*/schema/seeds/*' \
+    -not -path '*/schema/retire/*' \
     -not -path '*/target/*' \
     | sort))
 

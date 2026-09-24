@@ -22,6 +22,7 @@ services:
       - ${ASTOUND_PROFILE_DIR:?path to the rendered profile directory}:/app/.systemprompt/profiles/self-host:ro
       - app_web:/app/web
       # Per-node runtime state (gateway accounting receipts); never share it.
+      # Must be writable by uid 1000 (the image creates it so; a bind mount must be chowned).
       - app_storage_data:/app/storage/data
       # Hand-authored knowledge sources (meeting notes, ADRs, spec trees) the
       # knowledge bank indexes, plus its uploads; see services/knowledge-bank/config.yaml.

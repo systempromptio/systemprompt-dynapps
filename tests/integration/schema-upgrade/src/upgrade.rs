@@ -1,5 +1,9 @@
-//! Restore each released schema on the ladder, run the current installer
-//! over it, and compare the result with a fresh install.
+//! Restore each released schema on the ladder, seed its hot tables, run the
+//! current installer over it, and compare the result with a fresh install.
+//!
+//! The seed is what makes this the path a real instance takes: a schema-only
+//! rung ran no backfill against rows and fired no trigger, so 0.58 -> 0.60
+//! passed here and failed on the first client database.
 
 use std::path::PathBuf;
 
@@ -11,6 +15,8 @@ use crate::catalog;
 
 const FIXTURE_DIR: &str = "tests/fixtures/schema";
 const FIXTURE_PREFIX: &str = "release-baseline-";
+const SEED_HOT_TABLES: &str = include_str!("seed_hot_tables.sql");
+const SEEDED_ROWS: i64 = 2000;
 
 pub(super) struct Rung {
     pub(super) version: String,
@@ -76,6 +82,10 @@ async fn restore_and_upgrade(db: &TempDb, rung: &Rung) {
         .execute(&*db.pool)
         .await
         .unwrap_or_else(|e| panic!("restore the release {} schema: {e}", rung.version));
+    sqlx::raw_sql(SEED_HOT_TABLES)
+        .execute(&*db.pool)
+        .await
+        .unwrap_or_else(|e| panic!("seed the release {} hot tables: {e}", rung.version));
     let registry = ExtensionRegistry::discover().expect("discover extension registrations");
     assert!(
         !registry.is_empty(),
@@ -97,6 +107,20 @@ async fn every_release_schema_upgrades_with_the_current_installer() {
     for rung in ladder() {
         let db = empty_db_or_skip!();
         restore_and_upgrade(&db, &rung).await;
+        for table in ["ai_requests", "ai_request_messages", "plugin_usage_events"] {
+            let rows: i64 =
+                sqlx::query_scalar(sqlx::AssertSqlSafe(format!("SELECT count(*) FROM {table}")))
+                    .fetch_one(&*db.pool)
+                    .await
+                    .unwrap_or_else(|e| {
+                        panic!("count {table} after upgrading {}: {e}", rung.version)
+                    });
+            assert_eq!(
+                rows, SEEDED_ROWS,
+                "upgrading release {} changed the row count of {table}",
+                rung.version
+            );
+        }
         db.cleanup().await;
     }
 }

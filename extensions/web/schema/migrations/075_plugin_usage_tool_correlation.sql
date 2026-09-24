@@ -1,3 +1,4 @@
+-- @supersedes-checksum: 630eb2fb5d76acc4
 -- Promote the tool-call correlation keys on plugin_usage_events.
 --
 -- A hook event carried the client's tool_use_id only inside metadata, so
@@ -14,15 +15,15 @@ ALTER TABLE plugin_usage_events ADD COLUMN IF NOT EXISTS mcp_execution_id TEXT;
 
 -- Why: the ownership trigger re-asserts the owner on every UPDATE, and
 -- historical rows can belong to accounts that no longer exist; a backfill of
--- two derived columns changes no ownership and must not fail on them.
-ALTER TABLE plugin_usage_events DISABLE TRIGGER ingestion_owner;
+-- two derived columns changes no ownership and must not fail on them. The
+-- migration runner suspends it (and every other row trigger on the table)
+-- for this migration; the named DISABLE/ENABLE pair it shipped with is gone.
 UPDATE plugin_usage_events
 SET tool_use_id = NULLIF(metadata->>'tool_use_id', ''),
     trace_id = session_id
 WHERE tool_use_id IS NULL
   AND event_type IN ('PreToolUse', 'PostToolUse', 'PostToolUseFailure')
   AND metadata ? 'tool_use_id';
-ALTER TABLE plugin_usage_events ENABLE TRIGGER ingestion_owner;
 
 CREATE INDEX IF NOT EXISTS idx_plugin_usage_tool_use_id ON plugin_usage_events(tool_use_id) WHERE tool_use_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_plugin_usage_execution ON plugin_usage_events(mcp_execution_id) WHERE mcp_execution_id IS NOT NULL;
