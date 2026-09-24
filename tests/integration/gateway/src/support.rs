@@ -41,6 +41,7 @@ pub fn provider(
         endpoint: "https://api.example.com/v1".to_owned(),
         api_key_secret: SecretName::new("test_api_key"),
         extra_headers: HashMap::new(),
+        accepted_betas: None,
         models,
         governance,
     }
