@@ -80,8 +80,8 @@ open — their Drive permissions, their own mailbox and calendar. Tools: `search
 `conversational_search`, `list_engines`. Scope:
 `https://www.googleapis.com/auth/discoveryengine.readwrite`. The endpoint is
 **regional** and must match the engine's location: this instance's engine is
-`global` in the Enterprise AI project (`enterprise-ai-505512`, number
-`611435061062`), so it calls `discoveryengine.googleapis.com/mcp`. An `eu`
+`global` in the Astound Knowledge UK Sales project
+(`astound-knowledge-uk-sales`, number `148780456827`), so it calls `discoveryengine.googleapis.com/mcp`. An `eu`
 engine needs `eu-discoveryengine.googleapis.com/mcp`; the wrong host answers
 `Incorrect API endpoint used`.
 
