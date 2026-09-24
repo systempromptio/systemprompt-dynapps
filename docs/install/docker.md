@@ -32,6 +32,7 @@ Edit `.env`:
 | variable | required | notes |
 |---|---|---|
 | `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / `GEMINI_API_KEY` | one of them | the first set becomes the default provider |
+| `SYSTEMPROMPT_ADMIN_EMAIL` | yes, first boot | the administrator the container's first-boot `admin setup` creates; the entrypoint refuses to start without it |
 | `EXTERNAL_URL` | on a server | the public URL, e.g. `https://gateway.example.com` — sets `api_external_url` and CORS |
 | `SYSTEMPROMPT_TAG` | no | `latest` follows `main`; pin a release with its version, e.g. `0.61.0` |
 | `POSTGRES_PASSWORD`, `HTTP_PORT`, `PG_PORT` | no | bundled Postgres and port mapping |

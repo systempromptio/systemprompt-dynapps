@@ -703,6 +703,7 @@ jobs:
             docker volume create "$vol" > /dev/null
             docker run -d --name "boot_$db" --network host \
               -e ANTHROPIC_API_KEY=sk-ant-release-gate \
+              -e SYSTEMPROMPT_ADMIN_EMAIL=release-gate@astounddigital.com \
               -e DATABASE_URL="postgres://test:test@localhost:5432/$db" \
               -v "$vol:/app/storage/data" "$ref" > /dev/null
             healthy=""

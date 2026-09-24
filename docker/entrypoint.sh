@@ -58,6 +58,10 @@ else
         echo "ERROR: DATABASE_URL is required." >&2
         exit 1
     fi
+    if [ ! -f "$PROFILE_FILE" ] && [ -z "${SYSTEMPROMPT_ADMIN_EMAIL:-}" ]; then
+        echo "ERROR: SYSTEMPROMPT_ADMIN_EMAIL is required on first boot (the administrator admin setup creates)." >&2
+        exit 1
+    fi
 
     if [ ! -f "$PROFILE_FILE" ]; then
         echo "Generating profile via admin setup..."
