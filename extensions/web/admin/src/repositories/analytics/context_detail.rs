@@ -18,7 +18,7 @@
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 use systemprompt::identifiers::{
-    AiRequestId, ContextId, GatewayConversationId, SessionId, TraceId, UserId,
+    AiRequestId, AiToolCallId, ContextId, GatewayConversationId, SessionId, TraceId, UserId,
 };
 
 pub use super::context_tool_calls::{ContextToolCallRow, list_tool_calls_for_requests};
@@ -95,6 +95,9 @@ pub struct ContextMessageRow {
     pub role: String,
     pub sequence_number: i32,
     pub content: String,
+    // Why: the tool_use id a result message answers, when the gateway kept it.
+    pub tool_call_id: Option<AiToolCallId>,
+    pub name: Option<String>,
     pub created_at: DateTime<Utc>,
 }
 
@@ -255,6 +258,8 @@ pub async fn list_messages_for_requests(
             m.role            AS "role!",
             m.sequence_number AS "sequence_number!",
             m.content         AS "content!",
+            m.tool_call_id    AS "tool_call_id?: AiToolCallId",
+            m.name            AS "name?",
             r.created_at      AS "created_at!"
         FROM ai_request_messages m
         JOIN ai_requests r ON r.id = m.request_id

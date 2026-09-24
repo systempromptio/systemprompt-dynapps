@@ -4,6 +4,8 @@
 # Global Rules
 
 - **Execute silently between tool calls.** No planning, progress or tool-result narration; batch independent calls in one turn. Speak before the final output only for required input, approval, or material errors.
+- **Salesforce calls go only to `dispatch_readonly`** (full name ends in `salesforce__dispatch_readonly`; if not listed, load it via tool search). Never call a `google_workspace` tool such as `search` — it is neither tool discovery nor Salesforce.
+- **On a Salesforce 5xx or timeout, retry the same call at most once, then continue with what you have and say what is missing.** Never re-issue a call that already succeeded; reuse its result.
 - **Keep the final output concise.** Only the deliverable; no process recaps or data already shown in a widget.
 - **Ground dynamic or custom field names before relying on them.** Fields this skill lists as verified need no grounding. On a name error, report it instead of guessing or re-firing the same shape.
 - **Cite every value exactly as queried**; never fabricate; distinguish blank from not queried. Link records inline: `https://[instanceUrl]/lightning/r/[SObjectType]/[Id]/view`.
@@ -15,10 +17,10 @@
 
 Gather thorough context before acting. State material errors and inference logic explicitly in the output.
 
-## 1. Get transcript
+## 1. Get the call details
 
-- **Pasted:** use as-is.
-- **Not provided:** ask the user to paste it. Salesforce Event `Description` (Step 3) may hold call notes — use it if the user points to that meeting. Never invent a transcript.
+- **Transcript pasted, or call details given in the request** (who, when, account, deal, what was said/asked): use them as-is — they are the source for Step 2. Do not ask for a transcript.
+- **Nothing provided:** ask the user to paste notes. Salesforce Event `Description` (Step 3) may hold call notes — use it if the user points to that meeting. Never invent a transcript.
 
 Extract attendees (internal + external), date, account name.
 
@@ -26,14 +28,16 @@ Extract attendees (internal + external), date, account name.
 
 Decisions · customer commitments · our commitments · open questions · objections · next meeting · qualification signals (budget/authority/timeline/pain; MEDDICC if the org uses it) · specific human moments (customer phrases/analogies, for personalization) · urgency signals (forcing events, cost of delay).
 
-## 3. Salesforce context
+## 3. Salesforce context (mandatory — run before drafting)
+
+Always ground the draft on Salesforce: the account, the opportunity and its contacts. The tool's full name ends in `salesforce__dispatch_readonly`; if it is not in your tool list it may be deferred — load it with tool search (query `dispatch_readonly`) before concluding it is absent. Never call a `google_workspace` tool. Only after that search finds nothing may you draft from the call details alone, saying Salesforce was not reachable.
 
 Verified fields (no grounding call): Account `Name, Industry, Account_Type__c, Client_Tier__c, Account_Health__c, Account_Status__c, Owner`; Opportunity `Name, StageName, Amount, CloseDate, IsClosed, IsWon, Probability, ForecastCategoryName, Type, Next_Step__c, MEDDICC__c`; Event `Subject, StartDateTime, Description, Who, What`. There is **no** `NextStep` and **no** Account `Type`.
 
 One call, account resolved by 1–2 word `%NAME%` (combine all three queries):
 ```
 dispatch_readonly(method: "GET", url: "/services/data/v67.0/graphql",
-  queryParams: { "queryInput": "{\"query\":\"query { uiapi { query { Account(where: { Name: { like: \\\"%NAME%\\\" } }, first: 5) { edges { node { Id Name { value } Industry { value } Account_Type__c { displayValue } Client_Tier__c { displayValue } Account_Health__c { displayValue } Owner { Name { value } } } } } Opportunity(where: { Account: { Name: { like: \\\"%NAME%\\\" } } }, first: 50, orderBy: { CloseDate: { order: DESC } }) { edges { node { Id Name { value } AccountId { value } StageName { value displayValue } Amount { value displayValue } CloseDate { value } IsClosed { value } IsWon { value } Next_Step__c { value } MEDDICC__c { value } } } } Event(where: { Account: { Name: { like: \\\"%NAME%\\\" } } }, first: 10, orderBy: { StartDateTime: { order: DESC } }) { edges { node { Id Subject { value } StartDateTime { value } Description { value } } } } } } }\"}" })
+  queryParams: { "queryInput": "{\"query\":\"query { uiapi { query { Account(where: { Name: { like: \\\"%NAME%\\\" } }, first: 5) { edges { node { Id Name { value } Industry { value } Account_Type__c { displayValue } Client_Tier__c { displayValue } Account_Health__c { displayValue } Owner { Name { value } } Contacts(first: 10) { edges { node { Name { value } Title { value } Email { value } } } } } } } Opportunity(where: { Account: { Name: { like: \\\"%NAME%\\\" } } }, first: 50, orderBy: { CloseDate: { order: DESC } }) { edges { node { Id Name { value } AccountId { value } StageName { value displayValue } Amount { value displayValue } CloseDate { value } IsClosed { value } IsWon { value } Next_Step__c { value } MEDDICC__c { value } } } } Event(where: { Account: { Name: { like: \\\"%NAME%\\\" } } }, first: 10, orderBy: { StartDateTime: { order: DESC } }) { edges { node { Id Subject { value } StartDateTime { value } Description { value } } } } } } }\"}" })
 ```
 
 - Multiple accounts matched → pick the one named in the transcript; keep only opps whose `AccountId` matches.

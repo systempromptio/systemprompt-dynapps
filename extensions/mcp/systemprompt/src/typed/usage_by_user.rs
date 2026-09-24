@@ -33,7 +33,7 @@ impl McpToolHandler for UsageByUserHandler<'_> {
         "usage_by_user"
     }
     fn description(&self) -> &'static str {
-        "Rank this platform's users by AI spend over a window: cost, request count, tokens and distinct conversations per user, highest spend first. The `name` column is `<user_id> (<display name>)`; pass the id to `request_log` to see that user's requests. Costs are in `cost_usd`. Emails are not available here — use `users` for the roster."
+        "Rank this platform's users by AI spend over a window: cost, request count, tokens and distinct conversations per user, highest spend first. The `name` column is `<user_id> (<display name>)`; pass the id to `request_log` to see that user's requests. Costs are in `cost_usd`. Emails are not available here — use `users` for the roster. Spend only: for what people did, active days and skills use `user_activity`. It excludes deleted users, so its totals can be below a sum of `request_log` rows; report both figures rather than explaining the gap."
     }
     fn read_only(&self) -> bool {
         true

@@ -4,6 +4,8 @@
 # Global Rules
 
 - **Execute silently between tool calls.** Do not output planning, progress, transition, waiting, or tool-result narration between calls. Execute tool calls silently and proceed directly to the next call. Parallelize independent tasks by batching tool calls into one turn whenever possible. Before the final output, speak only when the skill explicitly requires user input, approval, an exact notice, or material error/blocked reporting. Do not invent checkpoints.
+- **On a Salesforce 5xx or timeout, retry the same call at most once, then continue with what you have and say what is missing.** Never re-issue a call that already succeeded; reuse its result.
+- **One widget, one render.** Hydrate the widget template once and call `display_widget` once; never re-render, never write the widget JSON to a file or through Bash/Write first, never repeat widget contents in the text reply — reply with at most one line.
 - **Keep the final output concise.** Return only the requested result or deliverable. Omit process recaps, tool-call details, redundant preambles or conclusions, and data already shown in a widget.
 - **⛔ WIDGET OUTPUT ONLY after data assembly.** Once all queries return, immediately call `display_widget` — at most a single one-line render-wait notice before it, and no summaries, transitions, or narration. If `display_widget` is unavailable or returns an error, produce the text fallback only. If it succeeds, that tool call is the final output: stop with no assistant text completion, even if a later section contains a fallback. The exceptions above do not apply after success.
 - **Ground dynamic or custom relationship and field names before relying on them.** Fixed standard fields that this skill explicitly marks as requiring no grounding need no extra grounding call. On a name error, use the skill's documented grounding path when present; otherwise report the error instead of guessing or re-firing the same shape.
@@ -26,15 +28,15 @@ One match → continue. None → broaden or ask; don't guess. Several → if the
 ## 2. Read — fire all in ONE turn
 A — account, contacts, child accounts:
 ```
-dispatch_readonly(method: "GET", url: "/services/data/v67.0/graphql", queryParams: { "queryInput": "{\"query\":\"query { uiapi { query { Account(where: { Id: { eq: \\\"<ACCOUNT_ID>\\\" } }, first: 1) { edges { node { Id Name { value } Industry { value } NumberOfEmployees { value } AnnualRevenue { value displayValue } Account_Type__c { value } Client_Tier__c { value } Account_Health__c { value } Account_Status__c { value } Segment__c { value } Salesforce_Clouds_Owned__c { value } Contacts(first: 30) { edges { node { Name { value } Title { value } Department { value } Job_Function__c { value } } } } ChildAccounts { edges { node { Name { value } Industry { value } Owner { Name { value } } } } } } } } } } }\"}" })
+dispatch_readonly(method: "GET", url: "/services/data/v67.0/query", queryParams: { "q": "SELECT Id, Name, Industry, NumberOfEmployees, AnnualRevenue, Account_Type__c, Client_Tier__c, Account_Health__c, Account_Status__c, Segment__c, Salesforce_Clouds_Owned__c, (SELECT Name, Title, Department, Job_Function__c FROM Contacts LIMIT 30), (SELECT Name, Industry, Owner.Name FROM ChildAccounts) FROM Account WHERE Id = '<ACCOUNT_ID>'" })
 ```
 B — won opportunities + line items (what they own; use Opportunity Name only if line items are empty):
 ```
-dispatch_readonly(method: "GET", url: "/services/data/v67.0/graphql", queryParams: { "queryInput": "{\"query\":\"query { uiapi { query { Opportunity(where: { Account: { Id: { eq: \\\"<ACCOUNT_ID>\\\" } }, IsWon: { eq: true } }, first: 30, orderBy: { CloseDate: { order: DESC } }) { edges { node { Name { value } Amount { value } CloseDate { value } Type { value } OpportunityLineItems(first: 50) { edges { node { Quantity { value } TotalPrice { value displayValue } Product2 { Name { value } } } } } } } } } } }\"}" })
+dispatch_readonly(method: "GET", url: "/services/data/v67.0/query", queryParams: { "q": "SELECT Id, Name, Amount, CloseDate, Type, (SELECT Quantity, TotalPrice, Product2.Name FROM OpportunityLineItems) FROM Opportunity WHERE AccountId = '<ACCOUNT_ID>' AND IsWon = true ORDER BY CloseDate DESC LIMIT 30" })
 ```
 C — timing hooks: `dispatch_readonly(method: "GET", url: "/services/data/v67.0/query", queryParams: { "q": "SELECT Subject, StartDateTime, Type, Description FROM Event WHERE AccountId = '<ACCOUNT_ID>' ORDER BY StartDateTime DESC LIMIT 20" })` (activity lives in Event; Task is empty here — never depend on it).
 
-Book sweep: replace A's Id filter with `scope: MINE`, `first: 20`.
+Book sweep: replace A's `WHERE Id = ...` with `WHERE OwnerId = '<currentUserId>' LIMIT 20`. C filters by AccountId only — never filter on Description (long text, not filterable). On a 500 from Salesforce, retry that call at most once, then continue with what you have.
 
 ## 3. Map whitespace
 | Dimension | Owned today | Whitespace | Evidence |

@@ -4,7 +4,7 @@
 //! to discover flags by trial: a production session spent fifteen calls on
 //! `--help`, invented `--until` and `--export`, never found the `--user`
 //! filter that existed, and then pulled a 400 KB audit it could not read.
-//! These four tools carry the flags in their JSON schema instead, page with
+//! These tools carry the flags in their JSON schema instead, page with
 //! a cursor or offset, and bound what comes back. They shell out to the same
 //! CLI as the passthrough so auth-token forwarding, remote routing, access
 //! audit and the reporting-privacy projection are unchanged.
@@ -13,14 +13,19 @@
 //! fields to a number, never `Option`, because schemars renders an `Option`
 //! as a type list and Gemini refuses a function declaration that holds one.
 
+mod activity;
 mod conversation_audit;
 mod inputs;
 mod request_log;
 mod usage_by_user;
 mod users;
 
+pub use activity::{ConversationListHandler, UserActivityHandler};
 pub use conversation_audit::ConversationAuditHandler;
-pub use inputs::{ConversationAuditInput, RequestLogInput, UsageByUserInput, UsersInput};
+pub use inputs::{
+    ConversationAuditInput, ConversationListInput, RequestLogInput, UsageByUserInput,
+    UserActivityInput, UsersInput,
+};
 pub use request_log::RequestLogHandler;
 pub use usage_by_user::UsageByUserHandler;
 pub use users::UsersHandler;
@@ -28,6 +33,8 @@ pub use users::UsersHandler;
 // Why: the argv each tool builds is its contract with the CLI; exposed behind
 // `#[doc(hidden)]` so the external test workspace can pin it without a
 // binary in the path. Not part of the public API.
+#[doc(hidden)]
+pub use activity::{conversation_list_command, user_activity_command, window_bound};
 #[doc(hidden)]
 pub use conversation_audit::command as conversation_audit_command;
 #[doc(hidden)]

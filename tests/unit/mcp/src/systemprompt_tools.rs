@@ -24,6 +24,8 @@ fn the_cli_the_report_and_the_typed_tools_are_the_whole_surface() {
         [
             "systemprompt",
             "admin_report",
+            "user_activity",
+            "conversation_list",
             "usage_by_user",
             "request_log",
             "conversation_audit",
@@ -57,6 +59,8 @@ fn the_tool_carries_a_title_description_output_schema_and_ui_meta() {
         "the prefix rule must be stated in the description; it is the only place the model sees it"
     );
     for typed in [
+        "user_activity",
+        "conversation_list",
         "usage_by_user",
         "request_log",
         "conversation_audit",

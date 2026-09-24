@@ -4,6 +4,8 @@
 # Global Rules
 
 - **Execute silently between tool calls.** Do not output planning, progress, transition, waiting, or tool-result narration between calls. Execute tool calls silently and proceed directly to the next call. Parallelize independent tasks by batching tool calls into one turn whenever possible. Before the final output, speak only when the skill explicitly requires user input, approval, an exact notice, or material error/blocked reporting. Do not invent checkpoints.
+- **Salesforce calls go only to `dispatch_readonly`** (full name ends in `salesforce__dispatch_readonly`; if not listed, load it via tool search). Never call a `google_workspace` tool such as `search` — it is neither tool discovery nor Salesforce.
+- **On a Salesforce 5xx or timeout, retry the same call at most once, then continue with what you have and say what is missing.** Never re-issue a call that already succeeded; reuse its result.
 - **Keep the final output concise.** Return only the requested result or deliverable. Omit process recaps, tool-call details, redundant preambles or conclusions, and data already shown in a widget.
 - **Ground dynamic or custom relationship and field names before relying on them.** Fixed standard fields that this skill explicitly marks as requiring no grounding need no extra grounding call. On a name error, use the skill's documented grounding path when present; otherwise report the error instead of guessing or re-firing the same shape.
 - **Cite every value exactly as queried**; never fabricate; distinguish a blank value from a value that was not queried. Link each Salesforce record inline: `https://[instanceUrl]/lightning/r/[SObjectType]/[Id]/view`.
@@ -23,13 +25,13 @@ dispatch_readonly(method: "GET", url: "/services/data/v67.0/graphql",
   queryParams: { "queryInput": "{\"query\":\"query { uiapi { currentUser { Email { value } } query { Account(scope: MINE, first: 200) { edges { node { Id Name { value } Website { value } } } } } } }\"}" })
 
 dispatch_readonly(method: "GET", url: "/services/data/v67.0/query", queryParams: { "q":
-  "SELECT Id, Subject, Description, ActivityDate, Account.Name, Who.Name, Who.Title, Owner.Name FROM Event WHERE ActivityDate = LAST_N_DAYS:30 AND OwnerId = '<currentUserId or omit for team>' AND AccountId != null ORDER BY ActivityDate DESC LIMIT 200" })
+  "SELECT Id, Subject, Description, ActivityDate, Account.Name, Who.Name, Owner.Name FROM Event WHERE ActivityDate = LAST_N_DAYS:30 AND OwnerId = '<currentUserId or omit for team>' AND AccountId != null ORDER BY ActivityDate DESC LIMIT 200" })
 
 dispatch_readonly(method: "GET", url: "/services/data/v67.0/query", queryParams: { "q":
-  "SELECT Id, Subject, Description, ActivityDate, Account.Name, Who.Name, Who.Title FROM Task WHERE ActivityDate = LAST_N_DAYS:30 AND AccountId != null ORDER BY ActivityDate DESC LIMIT 200" })
+  "SELECT Id, Subject, Description, ActivityDate, Account.Name, Who.Name FROM Task WHERE ActivityDate = LAST_N_DAYS:30 AND AccountId != null ORDER BY ActivityDate DESC LIMIT 200" })
 
 dispatch_readonly(method: "GET", url: "/services/data/v67.0/query", queryParams: { "q":
-  "SELECT Id, CaseNumber, Subject, Description, Comments, CreatedDate, Account.Name, Contact.Name, Contact.Title, SuppliedName FROM Case WHERE CreatedDate = LAST_N_DAYS:30 AND AccountId != null ORDER BY CreatedDate DESC LIMIT 200" })
+  "SELECT Id, CaseNumber, Subject, Description, Comments, CreatedDate, Account.Name, ContactId, SuppliedName FROM Case WHERE CreatedDate = LAST_N_DAYS:30 AND AccountId != null ORDER BY CreatedDate DESC LIMIT 200" })
 ```
 
 - Scope the Event/Task/Case rows to the scoped accounts: MINE → `AccountId IN (<Account Ids>)` (add it once the account list is back, or filter the rows); named accounts → resolve with `Account WHERE Name LIKE '%<name>%'` first; team → drop the owner filter.

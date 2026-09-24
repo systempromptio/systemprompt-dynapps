@@ -174,7 +174,7 @@ async fn run_typed<H: McpToolHandler>(
         .await
 }
 
-// Why: the four typed tools share one constructor shape; matching them here
+// Why: the typed tools share one constructor shape; matching them here
 // keeps `dispatch_tool` a flat name table.
 async fn dispatch_typed(
     ctx: &Dispatch<'_>,
@@ -183,6 +183,10 @@ async fn dispatch_typed(
 ) -> Option<Result<CallToolResult, McpError>> {
     let cli = ctx.cli;
     Some(match tool_name {
+        "user_activity" => run_typed(ctx, &crate::typed::UserActivityHandler { cli, token }).await,
+        "conversation_list" => {
+            run_typed(ctx, &crate::typed::ConversationListHandler { cli, token }).await
+        },
         "usage_by_user" => run_typed(ctx, &crate::typed::UsageByUserHandler { cli, token }).await,
         "request_log" => run_typed(ctx, &crate::typed::RequestLogHandler { cli, token }).await,
         "conversation_audit" => {
@@ -228,8 +232,8 @@ pub async fn dispatch_tool(
         _ => Err(McpError::invalid_params(
             format!(
                 "Unknown tool: '{tool_name}'. This server exposes: systemprompt (CLI \
-                 passthrough), admin_report, usage_by_user, request_log, conversation_audit, \
-                 users.\n\nMANDATORY FIRST STEP: Run 'core skills show systemprompt_cli' before \
+                 passthrough), admin_report, user_activity, conversation_list, usage_by_user, \
+                 request_log, conversation_audit, users.\n\nMANDATORY FIRST STEP: Run 'core skills show systemprompt_cli' before \
                  any task.\n\nUse 'systemprompt' tool with command 'core skills show \
                  systemprompt_cli' to get started."
             ),

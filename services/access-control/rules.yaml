@@ -139,6 +139,12 @@ entities:
     allow:
       role: [platform_admin, admin, super_admin]
 
+  - entity: skill/admin_person_activity
+    default: closed
+    why: Admin skill shipped by astound-super-admin; it reads every user's conversation history.
+    allow:
+      role: [platform_admin, admin, super_admin]
+
   - entity: skill/admin_daily_brief
     default: closed
     why: Admin skill shipped by astound-super-admin.

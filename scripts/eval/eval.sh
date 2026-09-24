@@ -33,7 +33,8 @@ run_one() {
       -OutFile "$(wslpath -w "$raw/results/$skill.json")" -Model "$model" >/dev/null 2>&1 || true
     # Why: a session that starts before the bridge's MCP servers are ready sees
     # no connector tools at all; that is a harness failure, not a skill result.
-    if python3 "$here/suite.py" had-mcp "$raw/results/$skill.json" "$cc_projects"; then break; fi
+    if python3 "$here/suite.py" had-mcp "$raw/results/$skill.json" "$cc_projects" \
+        "$(python3 "$here/suite.py" connector "$prompts")"; then break; fi
     echo "  $dashed: no MCP tools on attempt $attempt" >&2
   done
   echo "$skill $attempt" >> "$raw/attempts.txt"
@@ -62,7 +63,8 @@ PY
       cp "$cc_projects/$sid.jsonl" "$raw/cc/$skill.jsonl" 2>/dev/null || echo "  no local transcript: $skill" >&2
     done
     window=$(python3 -c "import json;m=json.load(open('$out/manifest.json'));print(f\"from={m['started_at']}&to={m['finished_at']}\")")
-    for ds in "analysis-skills?$window" "analysis-versions?marketplace=$plugin&$window" "analysis-marketplaces?$window"; do
+    for ds in "analysis-skills?$window" "analysis-versions?marketplace=$plugin&$window" "analysis-marketplaces?$window" \
+              "analysis-plugin-eval?marketplace=$plugin&$window"; do
       curl -sf -m 300 -H "Authorization: Bearer $token" \
         "$GATEWAY/admin/export/$ds&format=json" -o "$raw/datasets/${ds%%\?*}.json" \
         || echo "  dataset failed: ${ds%%\?*}" >&2

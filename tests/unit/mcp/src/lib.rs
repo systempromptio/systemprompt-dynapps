@@ -32,6 +32,8 @@ mod admin_reports;
 #[cfg(test)]
 mod bounds;
 #[cfg(test)]
+mod typed_activity;
+#[cfg(test)]
 mod typed_inputs;
 #[cfg(all(test, unix))]
 mod typed_users_handler;

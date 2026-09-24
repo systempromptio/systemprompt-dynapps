@@ -6,6 +6,8 @@ Failing to try first — asking the user to connect, or surfacing a "not connect
 # Global Rules
 
 - **Execute silently between tool calls.** Do not output planning, progress, transition, waiting, or tool-result narration between calls. Execute tool calls silently and proceed directly to the next call. Parallelize independent tasks by batching tool calls into one turn whenever possible. Before the final output, speak only when the skill explicitly requires user input, approval, an exact notice, or material error/blocked reporting. Do not invent checkpoints.
+- **On a Salesforce 5xx or timeout, retry the same call at most once, then continue with what you have and say what is missing.** Never re-issue a call that already succeeded; reuse its result.
+- **One widget, one render.** Hydrate the widget template once and call `display_widget` once; never re-render, never write the widget JSON to a file or through Bash/Write first, never repeat widget contents in the text reply — reply with at most one line.
 - **Keep the final output concise.** Return only the requested result or deliverable. Omit process recaps, tool-call details, redundant preambles or conclusions, and data already shown in a widget.
 - **⛔ WIDGET OUTPUT ONLY after data assembly.** Once all queries return, immediately call `display_widget` — at most a single one-line render-wait notice before it, and no summaries, transitions, or narration. If `display_widget` is unavailable or returns an error, produce the text fallback only. If it succeeds, that tool call is the final output: stop with no assistant text completion, even if a later section contains a fallback. The exceptions above do not apply after success.
 - **Ground dynamic or custom relationship and field names before relying on them.** Fixed standard fields that this skill explicitly marks as requiring no grounding need no extra grounding call. On a name error, use the skill's documented grounding path when present; otherwise report the error instead of guessing or re-firing the same shape.
@@ -33,9 +35,9 @@ Never add `Type` (it does not exist on Account; use `Account_Type__c`). `first: 
 Task is usually empty in this org; Event holds the activity. Fire both in parallel with the Account Ids from step 1:
 ```
 dispatch_readonly(method: "GET", url: "/services/data/v67.0/query",
-  queryParams: { "q": "SELECT AccountId, COUNT(Id) n, MAX(ActivityDate) lastDate FROM Event WHERE AccountId IN ('<ids>') AND ActivityDate = LAST_N_DAYS:90 GROUP BY AccountId" })
+  queryParams: { "q": "SELECT AccountId, ActivityDate FROM Event WHERE AccountId IN ('<ids>') AND ActivityDate = LAST_N_DAYS:90 ORDER BY ActivityDate DESC LIMIT 2000" })
 ```
-Same shape with `FROM Task`. No rows → signal = 0; never block on it.
+Same shape with `FROM Task`. Never use COUNT/MAX here (ActivityDate rejects aggregates) — count rows and take the latest ActivityDate per AccountId yourself. No rows → signal = 0; never block on it.
 
 ## 3. Score ICP fit (0-10)
 

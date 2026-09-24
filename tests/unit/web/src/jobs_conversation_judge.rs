@@ -140,6 +140,8 @@ fn conversation(turns: usize, prompt_len: usize) -> ConversationView {
             role: (*role).to_owned(),
             sequence_number: seq as i32,
             content: content.clone(),
+            tool_call_id: None,
+            name: None,
             created_at: at(1),
         })
         .collect();

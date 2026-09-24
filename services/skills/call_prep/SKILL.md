@@ -4,6 +4,9 @@
 # Global Rules
 
 - **Execute silently between tool calls.** No planning, progress, or tool-result narration. Batch independent calls in one turn. Speak before the final output only for required user input, approval, or material errors.
+- **Salesforce calls go only to `dispatch_readonly`** (full name ends in `salesforce__dispatch_readonly`; if not listed, load it via tool search). Never call a `google_workspace` tool such as `search` — it is neither tool discovery nor Salesforce.
+- **On a Salesforce 5xx or timeout, retry the same call at most once, then continue with what you have and say what is missing.** Never re-issue a call that already succeeded; reuse its result.
+- **One widget, one render.** Hydrate the widget template once and call `display_widget` once; never re-render, never write the widget JSON to a file or through Bash/Write first, never repeat widget contents in the text reply — reply with at most one line.
 - **Keep the final output concise.** Only the deliverable; no process recaps or data already shown in a widget.
 - **⛔ WIDGET OUTPUT ONLY after data assembly.** Once queries return, call `display_widget` (at most a one-line render-wait notice before it). If it succeeds, that call is the final output — no further text. If unavailable or it errors, produce the text fallback only.
 - **Ground dynamic or custom names before relying on them.** Fields this skill lists as verified need no grounding call. On a name error, report it; never guess or re-fire the same shape.
@@ -28,8 +31,8 @@ Inputs: a meeting (time, title, "my next call", or Event Id `00U…`) or an acco
 |---|---|
 | "my next call" | `Event(scope: MINE, where: { StartDateTime: { gte: { literal: TODAY } } }, first: 1)` |
 | "[Rep]'s next call" | first `User(where: { Name: { like: "%REP%" } }, first: 10) { Id Name Email IsActive }` (several → list, ask), then `Event(where: { OwnerId: { eq: "<UserId>" }, StartDateTime: { gte: { literal: TODAY } } }, first: 1)` |
-| title ("City of Hope call") | `Event(scope: MINE, where: { Subject: { like: "%TITLE%" }, StartDateTime: { gte: { literal: TODAY }, lte: { range: { next_n_days: 30 } } } }, first: 10)` |
-| time ("tomorrow", "Thursday", "next week") | `Event(scope: MINE, where: { StartDateTime: { gte: { range: { next_n_days: <S> } }, lte: { range: { next_n_days: <E> } } } }, first: 10)` — tomorrow 1/1, a weekday its offset/offset, next week 7/14 |
+| title ("City of Hope call") | `Event(scope: MINE, where: { Subject: { like: "%TITLE%" }, StartDateTime: { gte: { literal: TODAY }, lte: { value: "<TODAY+30d>T23:59:59Z" } } }, first: 10)` |
+| time ("tomorrow", "Thursday", "next week") | `Event(scope: MINE, where: { StartDateTime: { gte: { value: "<START>T00:00:00Z" }, lte: { value: "<END>T23:59:59Z" } } }, first: 10)` — compute ISO dates from today (tomorrow: that day; a weekday: that date; next week: Mon–Sun). Never use `range`/`NEXT_N_DAYS` in GraphQL date filters (WrongType) |
 | Event Id | `Event(where: { Id: { eq: "<EventId>" } }, first: 1)` |
 | account name only | skip to step 2 |
 

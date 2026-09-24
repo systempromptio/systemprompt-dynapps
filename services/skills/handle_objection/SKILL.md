@@ -4,6 +4,8 @@
 # Global Rules
 
 - **Execute silently between tool calls**; batch independent calls into one turn. Speak before the final output only for required input, approval, or a material error.
+- **Salesforce calls go only to `dispatch_readonly`** (full name ends in `salesforce__dispatch_readonly`; if not listed, load it via tool search). Never call a `google_workspace` tool such as `search` — it is neither tool discovery nor Salesforce.
+- **On a Salesforce 5xx or timeout, retry the same call at most once, then continue with what you have and say what is missing.** Never re-issue a call that already succeeded; reuse its result.
 - **Keep the final output concise** — the deliverable only, no process recap.
 - **Use only the fields this skill lists as verified**; on a name error, report it rather than guessing or re-firing the same shape. API version is always v67.0.
 - **Cite every value exactly as queried**; never fabricate or mock data; distinguish blank from not-queried. Link records inline: `https://[instanceUrl]/lightning/r/[SObjectType]/[Id]/view`.

@@ -39,9 +39,20 @@ def bridge_patch(plugin):
     return json.loads(stamp.read_text()) if stamp.exists() else None
 
 
-def prompt(suite, skill):
-    dashed = skill.replace("_", "-")
-    return f"/{suite['plugin']}:{dashed} {suite['skills'][skill]}\n\n{suite['suffix']}"
+def cases(suite):
+    """Case id -> (prompt, expected skill). A `skills:` suite invokes each skill
+    by slash command; a `cases:` suite asks a natural question, so whether the
+    expected skill triggers is itself measured."""
+    if "cases" in suite:
+        return {k: (v["prompt"], v["expect"]) for k, v in suite["cases"].items()}
+    return {k: (v, k) for k, v in suite["skills"].items()}
+
+
+def prompt(suite, case):
+    text, skill = cases(suite)[case]
+    if "cases" in suite:
+        return f"{text}\n\n{suite['suffix']}"
+    return f"/{suite['plugin']}:{skill.replace('_', '-')} {text}\n\n{suite['suffix']}"
 
 
 def manifest_start(path, label):
@@ -56,7 +67,8 @@ def manifest_start(path, label):
         "prompts_hash": prompts_hash,
         "model": suite["model"],
         "started_at": now(),
-        "skills": {s: skill_hash(s) for s in suite["skills"]},
+        "skills": {c: skill_hash(s) for c, (_, s) in cases(suite).items()},
+        "expect": {c: s for c, (_, s) in cases(suite).items()},
         # Why: a run on skills patched into the client ahead of a deploy is
         # served by the old marketplace version; the console credits it there.
         "bridge_patch": bridge_patch(suite["plugin"]),
@@ -84,7 +96,7 @@ def manifest_finish(path, raw):
     json.dump(m, open(path, "w"), indent=2)
 
 
-def had_mcp(result, cc_projects):
+def had_mcp(result, cc_projects, connector="_salesforce__"):
     try:
         sid = json.load(open(result, encoding="utf-8-sig"))["session_id"]
         text = open(pathlib.Path(cc_projects) / f"{sid}.jsonl", encoding="utf-8").read()
@@ -92,13 +104,15 @@ def had_mcp(result, cc_projects):
         return False
     # Why: the check is for the plugin's primary connector; another server's
     # tools loading first is exactly the race this retry exists for.
-    return '_salesforce__' in text
+    return any(c in text for c in connector.split("|"))
 
 
 if __name__ == "__main__":
     op, *args = sys.argv[1:]
     if op == "skills":
-        print("\n".join(load(args[0])["skills"]))
+        print("\n".join(cases(load(args[0]))))
+    elif op == "connector":
+        print(load(args[0]).get("primary_connector", "_salesforce__"))
     elif op == "model":
         print(load(args[0])["model"])
     elif op == "prompt":

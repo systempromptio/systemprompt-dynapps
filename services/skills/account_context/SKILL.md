@@ -6,6 +6,8 @@ Failing to try first — asking the user to connect, or surfacing a "not connect
 # Global Rules
 
 - **Execute silently between tool calls.** Do not output planning, progress, transition, waiting, or tool-result narration between calls. Execute tool calls silently and proceed directly to the next call. Parallelize independent tasks by batching tool calls into one turn whenever possible. Before the final output, speak only when the skill explicitly requires user input, approval, an exact notice, or material error/blocked reporting. Do not invent checkpoints.
+- **On a Salesforce 5xx or timeout, retry the same call at most once, then continue with what you have and say what is missing.** Never re-issue a call that already succeeded; reuse its result.
+- **One widget, one render.** Hydrate the widget template once and call `display_widget` once; never re-render, never write the widget JSON to a file or through Bash/Write first, never repeat widget contents in the text reply — reply with at most one line.
 - **Keep the final output concise.** Return only the requested result or deliverable. Omit process recaps, tool-call details, redundant preambles or conclusions, and data already shown in a widget.
 - **⛔ WIDGET OUTPUT ONLY after data assembly.** Once all queries return, immediately call `display_widget` — at most a single one-line render-wait notice before it, and no summaries, transitions, or narration. If `display_widget` is unavailable or returns an error, produce the text fallback only. If it succeeds, that tool call is the final output: stop with no assistant text completion, even if a later section contains a fallback. The exceptions above do not apply after success.
 - **Ground dynamic or custom relationship and field names before relying on them.** Fixed standard fields that this skill explicitly marks as requiring no grounding need no extra grounding call. On a name error, use the skill's documented grounding path when present; otherwise report the error instead of guessing or re-firing the same shape.
@@ -48,7 +50,7 @@ The aggregate is authoritative for open pipeline (count + `Amount.sum`); the 10 
 
 ## 3. Widget (default when `display_widget` exists)
 
-Once data is in, call `display_widget({ resourceType: "dynamic", widgetDefinition: <hydrated> })` once; at most one line ("Displaying the visualization now (this may take a minute).") before it. `widgetDefinition` must be a native JSON object, never a stringified one (`"{\"renderer\"…"` is wrong). Resolve every `{{token}}` to literal text; no `{{…}}`/`{!…}` may remain. Drop any block you have no data for — never empty rows or invented content.
+Once data is in, call `display_widget({ resourceType: "dynamic", widgetDefinition: <hydrated> })` once; hydrate it in your head straight into that call — never Bash, Write or a file first, never a second render, and after success reply with at most one line; at most one line ("Displaying the visualization now (this may take a minute).") before it. `widgetDefinition` must be a native JSON object, never a stringified one (`"{\"renderer\"…"` is wrong). Resolve every `{{token}}` to literal text; no `{{…}}`/`{!…}` may remain. Drop any block you have no data for — never empty rows or invented content.
 
 Layout: chartless one-page memo. Header (account name + status badge) → recommended move → severity-ranked flags → open opportunity card → key contacts (exactly 2 cards; pick the 2 most relevant) → account details chips + recent activity.
 

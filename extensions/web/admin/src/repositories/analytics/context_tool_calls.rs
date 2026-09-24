@@ -6,13 +6,14 @@
 
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
-use systemprompt::identifiers::{AiRequestId, ArtifactId};
+use systemprompt::identifiers::{AiRequestId, AiToolCallId, ArtifactId};
 
 #[derive(Debug, Clone)]
 pub struct ContextToolCallRow {
     pub request_id: AiRequestId,
     pub tool_name: String,
     pub sequence_number: i32,
+    pub ai_tool_call_id: Option<AiToolCallId>,
     // JSON: arbitrary MCP tool arguments, shaped by each tool's own schema.
     pub tool_input: serde_json::Value,
     // JSON: arbitrary MCP tool result payload, shaped by each tool's own schema.
@@ -38,6 +39,7 @@ pub async fn list_tool_calls_for_requests(
             t.request_id          AS "request_id!: AiRequestId",
             t.tool_name           AS "tool_name!",
             t.sequence_number     AS "sequence_number!",
+            t.ai_tool_call_id     AS "ai_tool_call_id?: AiToolCallId",
             -- `tool_input` is a TEXT column holding a JSON document. Selecting
             -- it raw decoded to JSON null in every row, because sqlx handed
             -- the text bytes to `serde_json::Value`'s Postgres decoder, which
