@@ -55,6 +55,14 @@ Conventions (strict — hold every entry to them):
   returns `&ProviderId`, upstreams are built only from a catalog entry) do not reach this tree's
   code.
 
+### Fixed
+
+- The image refuses a first boot without `SYSTEMPROMPT_ADMIN_EMAIL`. With no profile mounted,
+  `docker/entrypoint.sh` runs `admin setup`, which core refuses non-interactively without an
+  administrator email; the container used to die inside setup. It now stops before setup with a
+  message naming the variable. `.env.example` and `docs/install/docker.md` list it, and the
+  release workflow's upgrade-boot gate passes one.
+
 ### Removed
 
 - The direct OpenAI and Cerebras providers (`openai`, `openai-responses`, `cerebras`) and their
