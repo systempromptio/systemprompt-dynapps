@@ -20,8 +20,6 @@ tokens the other two reject.
 
 | key | effect when set |
 |---|---|
-| `knowledge_database_url` | keeps the knowledge index on a separate pgvector database instead of the instance database. Same URL format as `database_url`; that database needs `CREATE EXTENSION vector`. |
-| `bedrock_api_key` | AWS Bedrock long-term API key, bearer, with model access in `eu-central-1`. Read **only** when `services/knowledge-bank/config.yaml` sets `model.provider: bedrock`; with that setting the knowledge-bank server refuses to boot without it, which fails the whole node. The shipped `local` provider ignores it (`docs/install/knowledge-model-provider.md`). |
 | `database_write_url` | read/write split: reads use `database_url`, writes use this. Phase 2 only; cross-region replica lag breaks read-after-write for sessions. Leave unset at launch. |
 | `vertex` | Vertex AI express-mode API key for the `vertex` provider (`gemini-*` routes, sent as `x-goog-api-key`). A route whose provider has no key is unusable, not fatal. |
 | `vertex_maas` | bearer credential for the `vertex-maas` provider (`qwen.*`, `zai.*`, `moonshotai.*`, `deepseek.*`, `openai.gpt-oss-*`). Vertex Model-as-a-Service accepts a Google OAuth access token here, not an API key — see `docs/install/vertex.md`. |
@@ -48,7 +46,7 @@ to the file takes effect on the next `docker compose restart app`.
 
 | key | procedure |
 |---|---|
-| provider keys, `bedrock_api_key`, SMTP, Slack, `astound_release_token`, `ghcr_pull_token` | update the file on all nodes, rolling restart. No user impact. |
+| provider keys, SMTP, Slack, `astound_release_token`, `ghcr_pull_token` | update the file on all nodes, rolling restart. No user impact. |
 | `database_url` password | create the new role or password, update the file, rolling restart, drop the old. |
 | `signing_key_pem` | update all nodes, restart **all** nodes within the same window; every session and PAT is invalidated, bridge clients re-link with a new code. |
 | `oauth_at_rest_pepper`, `manifest_signing_secret_seed` | treat as non-rotatable in practice: rotating the pepper destroys stored OAuth tokens, rotating the seed forces every client re-sync. |

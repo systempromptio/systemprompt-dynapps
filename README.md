@@ -6,7 +6,7 @@
 
 # Astound Digital AI platform
 
-Astound Digital's deployment of SystemPrompt. This repository contains the server configuration, admin interface, MCP integrations, skills, knowledge bank, requirements workflow and branded desktop Bridge. The server links the `systemprompt` Rust library; Astound-specific behavior lives in the extension crates and service configuration.
+Astound Digital's deployment of SystemPrompt. This repository contains the server configuration, admin interface, MCP integrations, skills and branded desktop Bridge. The server links the `systemprompt` Rust library; Astound-specific behavior lives in the extension crates and service configuration.
 
 This README covers local development and points to installation and release procedures. Requests sent through the gateway and connected MCP services are subject to their configured access rules and audit handling. Local client actions require the corresponding client integration.
 
@@ -28,7 +28,7 @@ just setup-local
 just start
 ```
 
-`setup-local` prompts for a provider, creates `.systemprompt/profiles/local/`, starts PostgreSQL 18 with pgvector, builds the release workspace, runs migrations, bootstraps an admin and publishes web assets. HTTP defaults to port `8080`; PostgreSQL defaults to `5432`. Open **http://localhost:8080/admin/login** after startup.
+`setup-local` prompts for a provider, creates `.systemprompt/profiles/local/`, starts PostgreSQL 18, builds the release workspace, runs migrations, bootstraps an admin and publishes web assets. HTTP defaults to port `8080`; PostgreSQL defaults to `5432`. Open **http://localhost:8080/admin/login** after startup.
 
 The bootstrap admin email defaults to `git config user.email`, then `admin@localhost.localdomain`. To choose it explicitly, or run another clone on different ports:
 
@@ -39,8 +39,6 @@ just setup-local <anthropic_key> "" "" 8081 5436 you@example.com
 The positional arguments are Anthropic key, OpenAI key, Gemini key, HTTP port, PostgreSQL port and admin email. The first supplied provider key becomes the default provider.
 
 On Linux, setup can fetch a matching release using an authenticated `gh` CLI before provisioning. **The current recipe still runs a release build later**, so install Rust for this path. Use the published Docker image for installation without compiling.
-
-The knowledge bank requires pgvector and otherwise prevents startup. Local setup supplies the correct database image. Its default retrieval provider runs locally without model credentials; see [knowledge database setup](docs/install/knowledge-db.md) and [model-provider configuration](docs/install/knowledge-model-provider.md).
 
 Additional workflows have their own dependencies. Before using the requirements workflow outside Docker, follow its [runtime setup](services/requirements-workflow/README.md), including Node dependencies, the approval signing seed and evaluator credentials.
 
@@ -76,7 +74,7 @@ For host installation and desktop clients, see [Bridge documentation](bridge/REA
 | `extensions/` | Rust web, CLI and MCP capabilities. |
 | `services/` | Provider routing, access rules, MCP servers, skills, plugins and workflow configuration. |
 | `bridge/` | Branded client, built separately from the server. |
-| `storage/` | Web assets and local content; runtime knowledge files are gitignored. |
+| `storage/` | Web assets and local content. |
 | `tests/` | Rust test workspace. |
 | `deploy/`, `docs/` | Installation, operations and release procedures. |
 

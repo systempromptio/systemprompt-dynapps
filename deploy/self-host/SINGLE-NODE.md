@@ -19,8 +19,7 @@ cd deploy/self-host
   --admin-email you@example.com \
   --trusted-proxies 127.0.0.0/8 \
   --database-url 'postgres://systemprompt:<db-password>@postgres:5432/systemprompt' \
-  --anthropic-key sk-ant-... \
-  --bedrock-key ...
+  --anthropic-key sk-ant-...
 ```
 
 - `--external-url` is the HTTPS address users will open. Put nginx or your

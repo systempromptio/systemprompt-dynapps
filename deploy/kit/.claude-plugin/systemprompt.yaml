@@ -16,4 +16,4 @@ marketplace:
   # (services/mcp/<id>.yaml). The kit does not define servers.
   mcp_servers:
     source: explicit
-    include: [knowledge-bank, atlassian, github, salesforce]
+    include: [atlassian, github, salesforce]

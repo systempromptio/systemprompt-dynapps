@@ -153,9 +153,9 @@ jobs:
       SYSTEMPROMPT_TEST_DATABASE_URL: postgres://test:test@localhost:5432/postgres
     services:
       postgres:
-        # postgres 18 + the `vector` extension the knowledge-bank index needs —
-        # the same image docker-compose.yml and setup-local use.
-        image: pgvector/pgvector:pg18
+        # Plain postgres 18: no schema needs an extension beyond uuid-ossp and
+        # pgcrypto, which the stock image ships.
+        image: postgres:18
         env:
           POSTGRES_USER: test
           POSTGRES_PASSWORD: test

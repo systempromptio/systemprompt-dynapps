@@ -158,8 +158,6 @@ docs_sidebar:
         href: "/documentation/enterprise-user-access"
       - label: "Usage & Productivity Analytics"
         href: "/documentation/enterprise-analytics"
-      - label: "Knowledge & RAG"
-        href: "/documentation/enterprise-knowledge-rag"
       - label: "Cost Management & FinOps"
         href: "/documentation/enterprise-cost-management"
       - label: "Model Gateway & Data Residency"

@@ -37,6 +37,6 @@ rmcp = { workspace = true, features = ["client", "transport-async-rw"] }
 # the `axum::Router` it returns is how each mounted plane is pinned.
 axum = { workspace = true }
 tower = { workspace = true }
-# `KnowledgeRetriever` is an `#[async_trait]` seam, so a fake backend needs it.
+# `#[async_trait]` seams (the conversation judge backend) need it for fakes.
 async-trait = { workspace = true }
 http-body-util = { workspace = true }

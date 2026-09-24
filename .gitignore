@@ -263,10 +263,6 @@ extensions/**/.sqlx/
 .e2e.env
 deploy/self-host/E2E-REPORT-*.md
 
-# Knowledge-bank files categories and uploads: content, never source.
-storage/knowledge/*
-!storage/knowledge/README.md
-
 # Per-boot instance markers written by the shared-storage probe.
 storage/.systemprompt/
 

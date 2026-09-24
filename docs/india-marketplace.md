@@ -93,10 +93,6 @@ user's Systemprompt credential, not a provider token. Output defaults to
 provider data. A failed enrollment, missing grant, empty tool list, model failure
 or absent audit evidence exits nonzero. No skip counts as a live pass.
 
-Run `scripts/e2e-marketplaces.sh --hosts opencode` as well for other-audience
-regressions. Its knowledge-bank model cells do not cover India's new connectors;
-the India harness above is required separately.
-
 ## Deployment and later access changes
 
 Use the repository's preflight and deployment gates and the branch-specific

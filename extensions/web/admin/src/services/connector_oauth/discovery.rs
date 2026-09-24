@@ -4,9 +4,9 @@ use super::transport::{Metadata, atlassian_endpoint, client};
 use crate::error::{AdminError, AdminResult};
 use serde::Deserialize;
 
-// Why: the knowledge bank reads through this grant and the BA skills write
-// through it (createJiraIssue, createConfluencePage), so both directions
-// are consented once. Widening the list invalidates every banked grant:
+// Why: skills both read and write through this grant (searchJira, and
+// createJiraIssue / createConfluencePage), so both directions are consented
+// once. Widening the list invalidates every banked grant:
 // users reconnect on /admin/profile.
 pub const ATLASSIAN_SCOPES: &str = "read:me read:account offline_access email read:jira:agent-interface write:jira:agent-interface search:jira:agent-interface read:confluence:agent-interface write:confluence:agent-interface search:confluence:agent-interface";
 

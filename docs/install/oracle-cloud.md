@@ -20,7 +20,7 @@ is the accepted launch trade-off; per-region replica reads are the phase-2
 option described in `deploy/self-host/SECRETS.md` under `database_write_url`.
 
 What Astound has verified: `scripts/e2e-published-release.sh` reproduces this
-topology (PostgreSQL 16 + pgvector primary with a streaming replica, three
+topology (PostgreSQL 16 primary with a streaming replica, three
 nodes sharing one rendered profile, a TLS load balancer, the Linux bridge
 installer from a config-free client) in Docker for each release; the report
 is attached to the hand-over.

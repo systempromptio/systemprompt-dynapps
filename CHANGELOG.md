@@ -20,6 +20,30 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+### Removed
+
+- The last traces of the knowledge-bank MCP server, whose code was removed in 348b8efb. Self-host
+  `preflight.sh` no longer requires the `systemprompt-mcp-knowledge-bank` binary or reads
+  `services/knowledge-bank/config.yaml`, and `verify-node.sh` no longer probes port 5030 or the
+  retired `admin_console` agent. `render-profile.sh --bedrock-key` and the `bedrock_api_key` and
+  `knowledge_database_url` secrets are gone; nothing reads them. The `app_knowledge` volume is
+  gone from `docker-compose.yml` and `deploy/self-host/docker-compose.node.yml`. An existing volume
+  is left unmounted and can be deleted with `docker volume rm`. The kit templates no longer
+  include `knowledge-bank`. Also removed: `deploy/fly/knowledge-db/`, the three
+  `docs/install/*knowledge*` guides, the `enterprise-knowledge-rag` documentation page (and its
+  navigation and console links), `scripts/executive-insights/` (it called the removed tools and
+  imported a deleted directory), and unused `wiremock`/`zip` test dependencies.
+- pgvector is no longer required. `provision.sql` and `provision-bundled.sql` stop creating the
+  `vector` extension, CI runs on plain `postgres:18`, and the deploy docs list only `uuid-ossp`
+  and `pgcrypto`. The bundled and local compose files keep the `pgvector/pgvector:pg18` image so
+  that databases created by earlier releases, which installed `vector`, still start and restore.
+
+### Added
+
+- `scripts/check-retired-features.sh`, a `lint-gates` gate that fails when any tracked file names
+  the knowledge bank outside the history allowlist (applied migrations, schema baselines, this
+  changelog, dated ops analyses, demo transcripts).
+
 ## 0.60.0 — 2026-09-23
 
 ### Breaking

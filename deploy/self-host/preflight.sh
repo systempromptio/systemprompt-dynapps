@@ -53,7 +53,7 @@ label="$(docker image inspect "$IMAGE" -f '{{index .Config.Labels "org.openconta
 [ -n "$label" ] && [ "$label" = "$VERSION" ] && ok "image label version $label matches the tag" || bad "image version label '$label' ≠ tag '$VERSION'"
 bv="$(inimg /app/bin/systemprompt "$IMAGE" --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)"
 [ "$bv" = "$VERSION" ] && ok "binary inside the image reports $bv" || bad "binary reports '$bv', expected $VERSION"
-for b in systemprompt-mcp-agent systemprompt-mcp-knowledge-bank; do
+for b in systemprompt-mcp-agent; do
     docker run --rm --entrypoint test "$IMAGE" -x "/app/bin/$b" 2>/dev/null && ok "MCP binary $b present" || bad "MCP binary $b missing (boot would fail)"
 done
 n="$(docker run --rm --entrypoint sh "$IMAGE" -c 'ls /app/storage/files/downloads | wc -l' 2>/dev/null | tr -d ' ')"
@@ -96,14 +96,6 @@ if [ -f "$S" ]; then
     for k in database_url oauth_at_rest_pepper manifest_signing_secret_seed signing_key_pem; do
         [ -n "$(jq -r --arg k "$k" '.[$k] // empty' "$S")" ] && ok "secret $k present" || bad "secret $k missing (SECRETS.md)"
     done
-    # bedrock_api_key is read only when services/knowledge-bank/config.yaml
-    # selects `model.provider: bedrock`; the shipped `local` provider needs none.
-    kb_provider="$(sed -n 's/^  provider:[[:space:]]*\([a-z]*\).*/\1/p' "$(dirname "$0")/../../services/knowledge-bank/config.yaml" 2>/dev/null | head -1)"
-    if [ "$kb_provider" = "bedrock" ]; then
-        [ -n "$(jq -r '.bedrock_api_key // empty' "$S")" ] && ok "secret bedrock_api_key present (knowledge-bank provider is bedrock)" || bad "secret bedrock_api_key missing but services/knowledge-bank/config.yaml selects model.provider: bedrock (SECRETS.md)"
-    else
-        ok "knowledge-bank model provider is '${kb_provider:-local}': no bedrock_api_key needed"
-    fi
     prov=0; for k in anthropic openai gemini; do [ -n "$(jq -r --arg k "$k" '.[$k] // empty' "$S")" ] && prov=1; done
     [ "$prov" = 1 ] && ok "at least one model provider key present" || bad "no provider key (anthropic / openai / gemini)"
     plen="$(jq -r '.oauth_at_rest_pepper // ""' "$S" | wc -c)"; [ "$plen" -gt 32 ] && ok "pepper ≥ 32 chars" || bad "oauth_at_rest_pepper shorter than 32 chars"

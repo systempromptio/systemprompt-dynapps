@@ -3,7 +3,7 @@ title: "Deploy on Oracle Cloud"
 description: "Single node on an OCI Compute instance with OCI Database with PostgreSQL: the resources to create, the settings that matter, and the exact commands, step by step."
 author: "Astound Digital"
 slug: "deploy-oracle-cloud"
-keywords: "oracle cloud, oci, compute, oci database with postgresql, pgvector, load balancer, vault, deploy, self-host, docker"
+keywords: "oracle cloud, oci, compute, oci database with postgresql, load balancer, vault, deploy, self-host, docker"
 kind: "guide"
 public: true
 tags: ["documentation", "deployment", "configuration"]
@@ -42,7 +42,7 @@ balancers to this exact base later.
 |--------------|----------|
 | VCN | one VCN with a public subnet (load balancer) and a private subnet (compute + database), a NAT gateway on the private subnet for outbound HTTPS |
 | Compute instance | `VM.Standard.E4.Flex`, 2 OCPU / 8 GB, Oracle Linux 9 or Ubuntu 22.04, private subnet, Docker Engine + Compose v2 installed |
-| Database with PostgreSQL | **version 16**, one primary node (add read replicas later for DR only), private endpoint in the private subnet, `vector`, `uuid-ossp`, `pgcrypto` enabled on the DB system |
+| Database with PostgreSQL | **version 16**, one primary node (add read replicas later for DR only), private endpoint in the private subnet, `uuid-ossp`, `pgcrypto` enabled on the DB system |
 | Load Balancer | flexible shape, public subnet, TLS listener on 443 with your certificate, backend set → compute instance port 8080 |
 | Vault | one secret holding `secrets.json` (base64 of the file) |
 | Security lists | LB → compute 8080; compute → database 5432; nothing else inbound. Ports 5000–5999 and 9000–9999 on the compute instance stay closed |
@@ -50,10 +50,9 @@ balancers to this exact base later.
 ## 1. Database
 
 Create the DB system with PostgreSQL 16. Before anything else open
-**Configuration → Extensions** on the DB system and enable `vector`,
-`uuid-ossp` and `pgcrypto`; an extension not enabled at the system level
-cannot be created inside the database, and the knowledge bank refuses to
-start without `vector`.
+**Configuration → Extensions** on the DB system and enable `uuid-ossp` and
+`pgcrypto`; an extension not enabled at the system level cannot be created
+inside the database.
 
 From the compute instance (the endpoint is private), run the bundle's
 provisioning script as the DB-system admin user:
@@ -83,7 +82,7 @@ docker pull ghcr.io/astound-digital/systemprompt-astound:@RELEASE_VERSION@
 ```
 
 Outbound access needed through the NAT gateway: `ghcr.io`,
-`api.anthropic.com`, `bedrock-runtime.eu-central-1.amazonaws.com`, all on 443.
+`api.anthropic.com`, both on 443.
 
 ## 3. Secrets and profile
 
@@ -96,7 +95,6 @@ Render once, on the compute instance or an operator machine:
   --trusted-proxies 10.0.0.0/24 \
   --database-url 'postgres://systemprompt:<pw>@<db-private-fqdn>:5432/systemprompt?sslmode=require' \
   --anthropic-key sk-ant-... \
-  --bedrock-key ... \
   --image ghcr.io/astound-digital/systemprompt-astound:@RELEASE_VERSION@
 ```
 

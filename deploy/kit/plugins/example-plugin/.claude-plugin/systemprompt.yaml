@@ -8,4 +8,4 @@ plugin:
   enabled: true
   mcp_servers:
     source: explicit
-    include: [knowledge-bank]
+    include: []
