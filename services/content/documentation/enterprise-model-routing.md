@@ -112,7 +112,8 @@ are addressed by `anthropic-claude-*` ids, because a model id must be unique
 across the catalog. It is the `claude-*` route's failover target: when Vertex is
 out of capacity or unreachable, the gateway re-sends the request to Anthropic
 and serves the same model. It finds that model through the upstream name the
-two entries share.
+two entries share. Those ids are `hidden`, so no client lists them and nobody
+picks one: Anthropic's API is reached only through the failover.
 
 ## Provider failover
 

@@ -10,6 +10,12 @@ providers:
   # but this installation serves Claude from Vertex AI (`vertex-anthropic`
   # below), so the bare `claude-*` ids belong there.
   #
+  # Every model here is `hidden`: none is listed to clients, so nobody picks
+  # an `anthropic-claude-*` id. The entries stay because they are the
+  # failover target of the `claude-*` Vertex route, which finds them by
+  # `upstream_model` (ProviderEntry::find_served_model ignores `hidden`) and
+  # prices the served request from them.
+  #
   # Why the `anthropic-` prefix: a model id must be unique across the whole
   # catalog (ProviderRegistry::validate), and Claude Code asks for the bare
   # ids. `upstream_model` carries the real name, so a client asking for
@@ -26,6 +32,7 @@ providers:
     no_retain: true
   models:
   - id: anthropic-claude-opus-5-5
+    hidden: true
     upstream_model: claude-opus-5-5
     pricing:
       input_per_million: 4.0
@@ -48,6 +55,7 @@ providers:
       context_window: 1000000
       max_output_tokens: 128000
   - id: anthropic-claude-opus-5
+    hidden: true
     upstream_model: claude-opus-5
     pricing:
       input_per_million: 5.0
@@ -70,6 +78,7 @@ providers:
       context_window: 1000000
       max_output_tokens: 128000
   - id: anthropic-claude-sonnet-5
+    hidden: true
     upstream_model: claude-sonnet-5
     pricing:
       input_per_million: 2.0
@@ -92,6 +101,7 @@ providers:
       context_window: 1000000
       max_output_tokens: 128000
   - id: anthropic-claude-fable-5-1
+    hidden: true
     upstream_model: claude-fable-5-1
     pricing:
       input_per_million: 10.0
@@ -114,6 +124,7 @@ providers:
       context_window: 1000000
       max_output_tokens: 128000
   - id: anthropic-claude-fable-5
+    hidden: true
     upstream_model: claude-fable-5
     pricing:
       input_per_million: 10.0
@@ -136,6 +147,7 @@ providers:
       context_window: 1000000
       max_output_tokens: 128000
   - id: anthropic-claude-haiku-4-5
+    hidden: true
     upstream_model: claude-haiku-4-5
     pricing:
       input_per_million: 1.0

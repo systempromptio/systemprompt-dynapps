@@ -10,7 +10,9 @@
 //! `anthropic-claude-*`, each naming the bare id as its upstream model. That
 //! twin is what the route's failover lands on: core finds the requested model
 //! on the fallback provider by upstream name, so a Vertex model with no twin
-//! has nowhere to fail over to.
+//! has nowhere to fail over to. The twins are `hidden`: they are never listed
+//! to a client, so nobody picks an `anthropic-claude-*` id, while the failover
+//! still finds them because it looks up by upstream name, not by listing.
 //!
 //! That makes catalog drift expensive in two directions. A missing current
 //! model is an outage for every client that names it. A stale price is a
@@ -136,6 +138,20 @@ fn every_served_claude_model_has_an_anthropic_api_twin_to_fail_over_to() {
             .unwrap_or_else(|| panic!("failover from {id} finds no model on anthropic"));
         assert_eq!(twin.id.as_str(), format!("anthropic-{id}"));
         assert_eq!(twin.upstream_model.as_deref(), Some(id));
+    }
+}
+
+#[test]
+fn the_anthropic_api_twins_are_hidden_from_every_listing() {
+    let registry = registry();
+    let listed = registry.advertised_model_ids(&[]);
+    for m in &provider("anthropic").models {
+        assert!(m.hidden, "{} must be hidden", m.id.as_str());
+        assert!(
+            !listed.iter().any(|id| id == m.id.as_str()),
+            "{} must not be advertised",
+            m.id.as_str()
+        );
     }
 }
 
