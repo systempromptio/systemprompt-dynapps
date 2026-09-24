@@ -57,7 +57,6 @@ fn salesforce_catalog_is_exact_and_contains_no_collaboration_channel_content() {
     const EXPECTED: &[&str] = &[
         "account_context",
         "account_tiering",
-        "calendar_events",
         "call_follow_up",
         "call_prep",
         "close_plan",
@@ -72,8 +71,8 @@ fn salesforce_catalog_is_exact_and_contains_no_collaboration_channel_content() {
         "expansion_whitespace",
         "find_internal_answer",
         "forecast_narrative",
+        "google_workspace_test",
         "handle_objection",
-        "inbox_sweep",
         "lead_triage",
         "pipeline_review",
         "query_activity_history",
@@ -84,7 +83,6 @@ fn salesforce_catalog_is_exact_and_contains_no_collaboration_channel_content() {
         "stakeholder_map",
         "team_pipeline",
         "using_display_widget",
-        "voice_profile",
         "weekly_wrap",
         "win_loss_review",
     ];
@@ -184,19 +182,20 @@ async fn executive_and_salesforce_connection_grant_only_the_intended_resources()
     // super_admin alone — astound-super-admin absorbed the old
     // systemprompt-admin marketplace, and splitting the control plane in two is
     // exactly how an administrator ended up holding half of it. `sales` is
-    // reached by a verified Headless 360 connection or super_admin's role;
-    // legacy UK membership alone grants nothing.
-    for (role, uk, connected, project, control_plane, sales) in [
-        ("user", false, false, false, false, false),
-        ("admin", false, false, false, true, false),
-        ("platform_admin", false, false, false, true, false),
-        ("knowledge_worker", false, false, false, false, false),
-        ("project_manager", false, false, false, false, false),
-        ("user", true, false, false, false, false),
-        ("user", false, true, false, false, true),
-        ("user", false, false, true, false, false),
-        ("super_admin", false, false, false, true, true),
-        ("super_admin", true, true, true, true, true),
+    // reached by business-users membership; a verified Salesforce connection
+    // or legacy UK membership alone grants nothing.
+    for (role, uk, business, connected, project, control_plane, sales) in [
+        ("user", false, false, false, false, false, false),
+        ("admin", false, false, false, false, true, false),
+        ("platform_admin", false, false, false, false, true, false),
+        ("knowledge_worker", false, false, false, false, false, false),
+        ("project_manager", false, false, false, false, false, false),
+        ("user", true, false, false, false, false, false),
+        ("user", false, true, false, false, false, true),
+        ("user", false, false, true, false, false, false),
+        ("user", false, false, false, true, false, false),
+        ("super_admin", false, false, false, false, true, false),
+        ("super_admin", true, true, true, true, true, true),
     ] {
         let user = UserId::new(unique("executive-access"));
         let roles = vec!["user".to_owned(), role.to_owned()];
@@ -210,6 +209,15 @@ async fn executive_and_salesforce_connection_grant_only_the_intended_resources()
             .execute(&*db.pool)
             .await
             .expect("UK membership");
+        }
+        if business {
+            sqlx::query(
+                "INSERT INTO group_members (group_id,user_id,source) VALUES ('business-users',$1,'manual')",
+            )
+            .bind(user.as_str())
+            .execute(&*db.pool)
+            .await
+            .expect("business-users membership");
         }
         if project {
             set_project(&db.pool, user.as_str(), Some("business-implementation")).await;
@@ -245,7 +253,11 @@ async fn executive_and_salesforce_connection_grant_only_the_intended_resources()
             (EntityKind::Skill, "account_context", sales),
             (EntityKind::Skill, "pipeline_review", sales),
             (EntityKind::Skill, "using_display_widget", sales),
-            (EntityKind::McpServer, "google_workspace", operator || uk),
+            (
+                EntityKind::McpServer,
+                "google_workspace",
+                operator || uk || business,
+            ),
             (EntityKind::McpServer, "salesforce", true),
         ] {
             let ids = vec![id.to_owned()];
@@ -266,7 +278,7 @@ async fn executive_and_salesforce_connection_grant_only_the_intended_resources()
             assert_eq!(
                 allowed.contains(id),
                 expected,
-                "{role}, uk={uk}, connected={connected}, project={project}: {id}"
+                "{role}, uk={uk}, business={business}, connected={connected}, project={project}: {id}"
             );
         }
     }

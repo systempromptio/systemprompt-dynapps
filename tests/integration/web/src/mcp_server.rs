@@ -149,12 +149,12 @@ async fn the_server_exposes_the_cli_and_read_only_reporting_tools() {
 
     let listed = tools::list_tools();
 
-    // The CLI plus one read-only report and four typed analytics tools, all
+    // The CLI plus one read-only report and six typed analytics tools, all
     // over this platform's own data. The two Atlassian-backed tools that used
     // to sit here are gone: the client reaches Jira and Confluence through the
     // `atlassian` server it already holds, rather than through a proxy here
     // that re-translated an unversioned shape.
-    assert_eq!(listed.len(), 6);
+    assert_eq!(listed.len(), 8);
     for report in &listed[1..] {
         assert_eq!(
             report.annotations.as_ref().and_then(|a| a.read_only_hint),
@@ -170,6 +170,8 @@ async fn the_server_exposes_the_cli_and_read_only_reporting_tools() {
     assert_eq!(
         typed,
         [
+            "user_activity",
+            "conversation_list",
             "usage_by_user",
             "request_log",
             "conversation_audit",

@@ -522,13 +522,27 @@ fn a_ledger_payload_is_kept_and_message_text_goes_to_the_step_without_one() {
     let (messages, requests) = parallel_thread(&[("user", "file body")]);
     let mut log = with_id(tool("r1", 1, "request_log", "{\"id\":\"q\"}"), "toolu_b");
     log.tool_result_payload = Some(serde_json::json!({"rows": 3}));
-    let tools = vec![with_id(tool("r1", 0, "Read", "{\"path\":\"a.rs\"}"), "toolu_a"), log];
+    let tools = vec![
+        with_id(tool("r1", 0, "Read", "{\"path\":\"a.rs\"}"), "toolu_a"),
+        log,
+    ];
     let view = build(&messages, &tools, &requests);
     let steps = &view.threads[0].turns[0].steps;
-    let read = steps.iter().find(|s| s.tool_name.as_deref() == Some("Read")).expect("read");
-    let log = steps.iter().find(|s| s.tool_name.as_deref() == Some("request_log")).expect("log");
+    let read = steps
+        .iter()
+        .find(|s| s.tool_name.as_deref() == Some("Read"))
+        .expect("read");
+    let log = steps
+        .iter()
+        .find(|s| s.tool_name.as_deref() == Some("request_log"))
+        .expect("log");
     assert_eq!(read.tool_result_pretty.as_deref(), Some("file body"));
-    assert!(log.tool_result_pretty.as_deref().expect("payload").contains("\"rows\": 3"));
+    assert!(
+        log.tool_result_pretty
+            .as_deref()
+            .expect("payload")
+            .contains("\"rows\": 3")
+    );
 }
 
 #[test]
@@ -536,7 +550,11 @@ fn tool_rows_pair_by_id_not_by_position() {
     let (mut messages, requests) =
         parallel_thread(&[("tool", "log result"), ("tool", "file body")]);
     for m in messages.iter_mut().filter(|m| m.role == "tool") {
-        let id = if m.content == "log result" { "toolu_b" } else { "toolu_a" };
+        let id = if m.content == "log result" {
+            "toolu_b"
+        } else {
+            "toolu_a"
+        };
         m.tool_call_id = Some(AiToolCallId::new(id));
     }
     let tools = vec![
@@ -560,9 +578,20 @@ fn an_unsplittable_parallel_block_is_said_to_be_one_and_never_leaks_forward() {
         .map(|m| (m.role.as_str(), m.content.as_str()))
         .collect();
     rows.pop();
-    rows.extend([("assistant", second), ("user", "listing"), ("assistant", "done")]);
+    rows.extend([
+        ("assistant", second),
+        ("user", "listing"),
+        ("assistant", "done"),
+    ]);
     let r3 = history("r3", 3, &rows);
-    requests.push(req("r3", 3, "turn", Some(MAIN), "completed", r3.len() as i64));
+    requests.push(req(
+        "r3",
+        3,
+        "turn",
+        Some(MAIN),
+        "completed",
+        r3.len() as i64,
+    ));
     messages.extend(r3);
     let view = build(&messages, &[], &requests);
     let steps = &view.threads[0].turns[0].steps;
@@ -570,6 +599,9 @@ fn an_unsplittable_parallel_block_is_said_to_be_one_and_never_leaks_forward() {
     assert!(first.starts_with("Results of 2 parallel calls"));
     assert!(first.contains("both results"));
     assert!(steps[1].tool_result_pretty.is_none());
-    let bash = steps.iter().find(|s| s.tool_name.as_deref() == Some("Bash")).expect("bash");
+    let bash = steps
+        .iter()
+        .find(|s| s.tool_name.as_deref() == Some("Bash"))
+        .expect("bash");
     assert_eq!(bash.tool_result_pretty.as_deref(), Some("listing"));
 }
