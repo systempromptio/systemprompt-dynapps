@@ -1,0 +1,199 @@
+<title>Salesforce Plugin Eval</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#f5f7f8;--surface:#ffffff;--ink:#17222a;--muted:#5b6b75;--line:#dde4e8;--soft:#eef2f4;
+  --accent:#0f6e74;--accent-soft:#d7ecec;--good:#1f7a4d;--good-soft:#dcf1e5;--warn:#9a6200;--warn-soft:#f8ebd2;
+  --bad:#b3372c;--bad-soft:#f8dedb;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;--mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  color-scheme:dark;--bg:#10171b;--surface:#162127;--ink:#e3eaee;--muted:#93a4ae;--line:#26343c;--soft:#1c2a31;
+  --accent:#4fb8bd;--accent-soft:#1b3b3e;--good:#5ccf93;--good-soft:#18362a;--warn:#e0a94a;--warn-soft:#3a2e17;--bad:#ef7d72;--bad-soft:#3d1f1c;}}
+:root[data-theme="dark"]{
+  color-scheme:dark;--bg:#10171b;--surface:#162127;--ink:#e3eaee;--muted:#93a4ae;--line:#26343c;--soft:#1c2a31;
+  --accent:#4fb8bd;--accent-soft:#1b3b3e;--good:#5ccf93;--good-soft:#18362a;--warn:#e0a94a;--warn-soft:#3a2e17;--bad:#ef7d72;--bad-soft:#3d1f1c;}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.5}
+.wrap{max-width:1180px;margin:0 auto;padding-inline:16px;padding-block:24px 48px;display:grid;gap:20px}
+header{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:end;justify-content:space-between}
+h1{font-size:22px;font-weight:600;margin:0;text-wrap:balance}
+.sub{color:var(--muted);font-size:13px;margin:2px 0 0}
+.pickers{display:flex;gap:12px;flex-wrap:wrap}
+label{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);display:grid;gap:4px}
+select{font:inherit;font-size:13px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--ink)}
+select:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.meta{font-family:var(--mono);font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:6px 16px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px 14px;display:grid;gap:2px}
+.kpi .k{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.kpi .v{font-family:var(--mono);font-size:22px;font-weight:500;font-variant-numeric:tabular-nums}
+.d{font-family:var(--mono);font-size:12px;font-variant-numeric:tabular-nums}
+.d.up{color:var(--good)}.d.down{color:var(--bad)}.d.flat{color:var(--muted)}
+section{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:16px;display:grid;gap:12px;min-width:0}
+h2{font-size:15px;font-weight:600;margin:0}
+.hint{color:var(--muted);font-size:12.5px;margin:0;max-width:75ch}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media (max-width:860px){.two{grid-template-columns:1fr}}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+th{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:500;cursor:pointer;user-select:none;position:sticky;top:0;background:var(--surface)}
+th:first-child,td:first-child{text-align:left}
+td.num{font-family:var(--mono);font-size:12.5px}
+tr:hover td{background:var(--soft)}
+.pill{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:999px}
+.pill.ok{background:var(--good-soft);color:var(--good)}.pill.fail{background:var(--bad-soft);color:var(--bad)}
+.bar{display:inline-block;height:8px;border-radius:2px;background:var(--accent);vertical-align:middle;margin-left:6px}
+a{color:var(--accent)}
+.errs{display:grid;gap:8px}
+.erow{display:grid;grid-template-columns:150px 1fr 56px;gap:10px;align-items:center;font-size:13px}
+.erow .track{height:10px;background:var(--soft);border-radius:3px;overflow:hidden}
+.erow .fill{height:100%;background:var(--bad)}
+.erow .n{font-family:var(--mono);text-align:right;font-variant-numeric:tabular-nums}
+.erow code{font-family:var(--mono);font-size:12px}
+svg text{fill:var(--muted);font-family:var(--mono);font-size:11px}
+.notes{white-space:pre-wrap;font-size:13px;max-width:90ch;margin:0}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{font-family:var(--mono);font-size:11.5px;background:var(--accent-soft);color:var(--accent);padding:2px 8px;border-radius:4px}
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Salesforce Plugin Eval</h1>
+      <p class="sub">astound-salesforce · deterministic metrics from the gateway export of every run</p>
+    </div>
+    <div class="pickers">
+      <label for="run">Run<select id="run"></select></label>
+      <label for="base">Compare against<select id="base"></select></label>
+    </div>
+  </header>
+  <div class="meta" id="meta"></div>
+  <div class="kpis" id="kpis"></div>
+
+  <section>
+    <h2>Trend across runs</h2>
+    <p class="hint">Each point is one run of the fixed suite. Runs with a different prompt set are marked with a ring, and their numbers aren't directly comparable.</p>
+    <div class="pickers"><label for="trendMetric">Metric<select id="trendMetric"></select></label></div>
+    <div class="scroll"><svg id="trend" viewBox="0 0 900 220" width="100%" role="img" aria-label="Trend of the selected metric across runs"></svg></div>
+  </section>
+
+  <div class="two">
+    <section>
+      <h2>Failed tool calls by class</h2>
+      <p class="hint">Counted from tool results in the run's transcripts. Salesforce classes are skill defects. <code>google_iam</code> is the connector's permission setup.</p>
+      <div class="errs" id="errs"></div>
+    </section>
+    <section>
+      <h2>Where the money goes</h2>
+      <p class="hint">Cost per skill for the selected run, largest first.</p>
+      <div class="errs" id="costs"></div>
+    </section>
+  </div>
+
+  <section>
+    <h2>Skills</h2>
+    <p class="hint">Click a column to sort. Δ compares with the selected baseline. Each skill links to its conversation in the sp-dev console.</p>
+    <div class="scroll"><table id="skills"></table></div>
+  </section>
+
+  <section id="notesSec" hidden>
+    <h2>Review notes</h2>
+    <pre class="notes" id="notes"></pre>
+  </section>
+</div>
+
+<script>
+const DATA = __DATA__;
+const runs = DATA.runs;
+const $ = id => document.getElementById(id);
+const ERR = ["sf_invalid_field","sf_invalid_type","sf_malformed","sf_access","sf_5xx","google_iam","google_bad_args","timeout","tool_missing"];
+// better: +1 means higher is better, -1 lower is better
+const KPI = [
+  ["success_rate","Success rate",1,v=>(v*100).toFixed(0)+"%"],
+  ["avg_cost_usd","Avg cost / skill",-1,v=>"$"+v.toFixed(3)],
+  ["cost_usd","Suite cost",-1,v=>"$"+v.toFixed(2)],
+  ["avg_input_tokens","Avg input tokens",-1,v=>Math.round(v).toLocaleString()],
+  ["avg_output_tokens","Avg output tokens",-1,v=>Math.round(v).toLocaleString()],
+  ["avg_turns","Avg turns",-1,v=>v.toFixed(1)],
+  ["avg_mcp_calls","Avg MCP calls",-1,v=>v.toFixed(1)],
+  ["failed_calls","Failed calls",-1,v=>v],
+  ["unscoped_queries","Unscoped queries",-1,v=>v],
+  ["writes","Writes",-1,v=>v],
+];
+const COLS = [
+  ["skill","Skill"],["success","Result"],["turns","Turns"],["cost_usd","Cost $"],["input_tokens","In tok"],
+  ["output_tokens","Out tok"],["mcp_calls","MCP"],["failed_calls","Failed"],["unscoped_queries","Unscoped"],["duration_s","Secs"],
+];
+let sortKey = "cost_usd", sortDir = -1;
+
+function opt(sel, items, val){ sel.innerHTML = items.map(([v,t])=>`<option value="${v}">${t}</option>`).join(""); if(val!=null) sel.value = val; }
+function fmtD(d, better, fmt){
+  if(d==null || isNaN(d)) return "";
+  if(Math.abs(d) < 1e-9) return `<span class="d flat">±0</span>`;
+  const good = (d>0) === (better>0);
+  const s = (d>0?"+":"−") + (fmt? fmt(Math.abs(d)) : Math.abs(d));
+  return `<span class="d ${good?"up":"down"}">${s}</span>`;
+}
+function label(r){ return `${r.label} · v${r.plugin_version}`; }
+
+function render(){
+  const run = runs[+$("run").value];
+  const bi = $("base").value; const base = bi==="" ? null : runs[+bi];
+  const t = run.plugin_totals, bt = base && base.plugin_totals;
+  $("meta").innerHTML = [
+    `plugin ${run.plugin_version}`, `model ${run.model}`, `prompts ${run.prompts_hash}`,
+    `${run.started_at.replace("T"," ").replace("Z"," UTC")}`,
+    ...run.marketplace_hashes.map(h=>`marketplace ${h.slice(0,12)}`),
+  ].map(x=>`<span>${x}</span>`).join("") + (base && base.prompts_hash!==run.prompts_hash ? `<span class="d down">prompt sets differ: deltas compare different questions</span>`:"");
+  $("kpis").innerHTML = KPI.map(([k,name,better,f])=>{
+    const d = bt ? t[k]-bt[k] : null;
+    return `<div class="kpi"><span class="k">${name}</span><span class="v">${f(t[k])}</span>${fmtD(d,better,f)}</div>`;
+  }).join("");
+  const maxE = Math.max(1, ...ERR.map(e=>t[e]));
+  $("errs").innerHTML = ERR.map(e=>`<div class="erow"><code>${e}</code><div class="track"><div class="fill" style="width:${t[e]/maxE*100}%"></div></div><span class="n">${t[e]}${bt?" "+fmtD(t[e]-bt[e],-1):""}</span></div>`).join("");
+  const byCost = [...run.skills].sort((a,b)=>b.cost_usd-a.cost_usd).slice(0,12); const maxC = Math.max(...byCost.map(s=>s.cost_usd),0.001);
+  $("costs").innerHTML = byCost.map(s=>`<div class="erow"><code>${s.skill}</code><div class="track"><div class="fill" style="background:var(--accent);width:${s.cost_usd/maxC*100}%"></div></div><span class="n">$${s.cost_usd.toFixed(2)}</span></div>`).join("");
+  const bs = base ? Object.fromEntries(base.skills.map(s=>[s.skill,s])) : {};
+  const rows = [...run.skills].sort((a,b)=> (a[sortKey]>b[sortKey]?1:a[sortKey]<b[sortKey]?-1:0)*sortDir);
+  const maxCost = Math.max(...run.skills.map(s=>s.cost_usd), 0.001);
+  $("skills").innerHTML = `<thead><tr>${COLS.map(([k,n])=>`<th data-k="${k}">${n}${sortKey===k?(sortDir>0?" ▲":" ▼"):""}</th>`).join("")}</tr></thead><tbody>` +
+    rows.map(s=>{
+      const b = bs[s.skill];
+      const link = s.context_id ? `<a href="${DATA.gateway}/admin/analysis/conversations/${s.context_id}" target="_blank" rel="noopener">${s.skill}</a>` : s.skill;
+      const cell = (k,better)=> `<td class="num">${k==="cost_usd"?s[k].toFixed(3):s[k]}${b?" "+fmtD(s[k]-b[k],better,k==="cost_usd"?v=>v.toFixed(3):null):""}${k==="cost_usd"?`<span class="bar" style="width:${Math.round(s.cost_usd/maxCost*40)}px"></span>`:""}</td>`;
+      return `<tr><td>${link}</td><td>${s.success?'<span class="pill ok">pass</span>':'<span class="pill fail">fail</span>'}${b&&b.success!==s.success?" "+fmtD(s.success-b.success,1):""}</td>`+
+        cell("turns",-1)+cell("cost_usd",-1)+cell("input_tokens",-1)+cell("output_tokens",-1)+cell("mcp_calls",-1)+cell("failed_calls",-1)+cell("unscoped_queries",-1)+cell("duration_s",-1)+`</tr>`;
+    }).join("") + `</tbody>`;
+  document.querySelectorAll("#skills th").forEach(th=>th.onclick=()=>{ const k=th.dataset.k; sortDir = sortKey===k ? -sortDir : -1; sortKey=k; render(); });
+  $("notesSec").hidden = !run.notes; $("notes").textContent = run.notes || "";
+  trend();
+}
+
+function trend(){
+  const k = $("trendMetric").value, f = (KPI.find(x=>x[0]===k)||[])[3] || (v=>v);
+  const svg = $("trend"), W=900,H=220,L=70,R=20,T=16,B=40;
+  const vals = runs.map(r=>r.plugin_totals[k]); const max = Math.max(...vals)*1.15 || 1;
+  const x = i => runs.length===1 ? (L+W-R)/2 : L + i*(W-L-R)/(runs.length-1);
+  const y = v => H-B - v/max*(H-T-B);
+  const ticks = [0, max/2, max];
+  let s = ticks.map(v=>`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-width="1"/><text x="${L-8}" y="${y(v)+4}" text-anchor="end">${f(v)}</text>`).join("");
+  if(runs.length>1) s += `<polyline fill="none" stroke="var(--accent)" stroke-width="2" points="${vals.map((v,i)=>`${x(i)},${y(v)}`).join(" ")}"/>`;
+  const cur = +$("run").value;
+  s += runs.map((r,i)=>{
+    const odd = r.prompts_hash !== runs[runs.length-1].prompts_hash;
+    return `<circle cx="${x(i)}" cy="${y(vals[i])}" r="${i===cur?6:4}" fill="${odd?"var(--surface)":"var(--accent)"}" stroke="var(--accent)" stroke-width="2"/>`+
+      `<text x="${x(i)}" y="${y(vals[i])-10}" text-anchor="middle">${f(vals[i])}</text>`+
+      `<text x="${x(i)}" y="${H-B+18}" text-anchor="middle">${r.label}</text>`;
+  }).join("");
+  svg.innerHTML = s;
+}
+
+opt($("run"), runs.map((r,i)=>[i,label(r)]), runs.length-1);
+opt($("base"), [["","— none —"], ...runs.map((r,i)=>[i,label(r)])], runs.length>1 ? runs.length-2 : "");
+opt($("trendMetric"), KPI.map(([k,n])=>[k,n]), "success_rate");
+["run","base","trendMetric"].forEach(id=>$(id).addEventListener("change", render));
+render();
+</script>
