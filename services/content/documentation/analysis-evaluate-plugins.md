@@ -32,7 +32,7 @@ related_docs:
 - **Fixed inputs.** The prompts live in `scripts/eval/prompts/<plugin>.yaml`, and their hash is stamped on every run. Runs with different prompt hashes are flagged as not comparable, so a change in the numbers is a change in the skills.
 - **A real client.** The suite runs in Claude Code through the Astound bridge, so every turn goes through the gateway, governance, cost accounting and the audit record exactly as a user's would. The eval measures what users get.
 - **Deterministic scoring.** Tokens, cost, turns, tool calls and errors come from the gateway's own record of each conversation. Error classes are fixed patterns over tool results. Quality review is done separately by a person or by the engineer changing the skills, and it is never mixed into the metrics.
-- **Two histories.** Each run's metrics are committed under `evals/<plugin>/<label>/`. Each shipped change also produces a new marketplace version in the console, so the change is visible in both places.
+- **Two histories.** Each run's metrics are written locally under `evals/<plugin>/<label>/` (the directory is gitignored: runs read real users' data). Each shipped change also produces a new marketplace version in the console, which is the shared history.
 
 ## The loop
 
@@ -173,4 +173,4 @@ A run made on skills patched into the client before a deploy is served by the ol
 
 ## Repeat
 
-After each change, run the same suite with a new label, export it, and compute the metrics against the baseline and against the previous run. Commit `evals/<plugin>/<label>/` (raw exports are gitignored), so the plugin's history is readable in git beside the skill diffs that caused it.
+After each change, run the same suite with a new label, export it, and compute the metrics against the baseline and against the previous run. Runs stay on the machine that made them: `evals/` is gitignored, because transcripts and per-case results describe real users' work. The console's Evaluation tab is the shared record.

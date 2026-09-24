@@ -282,5 +282,6 @@ storage/.systemprompt/
 .vendor/
 *.sql.gz
 
-# Plugin eval raw exports (transcripts, bundles) — metrics are tracked, raw is not
-evals/*/*/raw/
+# Plugin eval runs (transcripts, bundles, per-case results) stay local: they
+# describe real users' work. The console's Evaluation tab is the shared record.
+evals/
