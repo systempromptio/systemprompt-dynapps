@@ -43,7 +43,7 @@ METRICS = [
     "output_tokens", "cache_read_tokens", "cache_creation_tokens", "cost_usd",
     "duration_s", "p95_latency_ms", "mcp_calls", "sf_calls", "google_calls",
     "builtin_calls", "failed_calls", "unscoped_queries", "writes",
-    "answer_chars", "mock_mentions", "attempts",
+    "answer_chars", "widgets", "mock_mentions", "attempts",
 ] + list(ERROR_CLASSES)
 
 
@@ -123,8 +123,11 @@ def skill_metrics(raw, skill, manifest):
                 m["writes"] += 1
         elif "google" in name:
             m["google_calls"] += 1
+    widget_ids = {u.get("id") for u in uses if u.get("name", "").endswith("__display_widget")}
     for r in results:
         text = result_text(r)
+        if r.get("tool_use_id") in widget_ids and not r.get("is_error") and not re.search(r'"status_code"\W*[45]\d\d', text):
+            m["widgets"] += 1
         hit = False
         for cls, pat in ERROR_CLASSES.items():
             if re.search(pat, text):
@@ -136,7 +139,9 @@ def skill_metrics(raw, skill, manifest):
     answer = result.get("result") or ""
     m["answer_chars"] = len(answer)
     m["mock_mentions"] = len(re.findall(r"\bMOCK\b", answer))
-    m["completed"] = int(bool(result) and not result.get("is_error") and len(answer) >= 200)
+    # Why: a skill's deliverable is either a rendered widget or a written answer.
+    m["completed"] = int(bool(result) and not result.get("is_error")
+                         and (m["widgets"] > 0 or len(answer) >= 200))
     m["success"] = int(m["invoked"] and m["completed"] and m["sf_calls"] > 0
                        and m["unscoped_queries"] == 0 and m["writes"] == 0
                        and m["sf_invalid_field"] + m["sf_invalid_type"] + m["sf_malformed"] == 0)

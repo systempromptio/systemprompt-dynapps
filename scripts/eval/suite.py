@@ -90,7 +90,9 @@ def had_mcp(result, cc_projects):
         text = open(pathlib.Path(cc_projects) / f"{sid}.jsonl", encoding="utf-8").read()
     except (OSError, ValueError, KeyError):
         return False
-    return '"name":"mcp__' in text
+    # Why: the check is for the plugin's primary connector; another server's
+    # tools loading first is exactly the race this retry exists for.
+    return '_salesforce__' in text
 
 
 if __name__ == "__main__":
