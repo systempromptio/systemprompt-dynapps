@@ -89,6 +89,7 @@ pub(crate) struct EntityAccessView {
     pub subjects: SubjectOptions,
     pub people: Vec<PickableUserView>,
     pub can_write: bool,
+    pub note: Option<&'static str>,
     pub why: Option<WhyView>,
     pub page_url: String,
     pub sync_url: &'static str,

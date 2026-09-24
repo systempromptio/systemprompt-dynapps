@@ -72,7 +72,7 @@ pub(crate) mod types;
 pub(crate) use approvals::approvals_page;
 pub(crate) use configuration::configuration_page;
 pub(crate) use devices::devices_page;
-pub(crate) use gateway::gateway_page;
+pub(crate) use gateway::{gateway_page, gateway_route_page};
 pub(crate) use gateway_policies::{
     delete_gateway_policy, gateway_policies_page, save_gateway_policy,
 };

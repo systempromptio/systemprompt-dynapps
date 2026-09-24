@@ -254,49 +254,12 @@
     {{/if}}
     {{/if}}
 
-    {{#if marketplaces}}
-    <section class="sp-group-panel" aria-label="Marketplaces" data-group-id="{{group_id}}">
-        <p class="sp-group-panel__note">
-            A marketplace a group reaches is an access-control rule on the marketplace entity keyed by
-            this group, not a membership. Assigning one here writes that rule; unassigning deletes it and
-            leaves the marketplace's own default for the rest of the estate untouched.
-        </p>
-        {{#if can_manage}}
-        <div class="sp-toolbar" role="toolbar" aria-label="Marketplace actions">
-            <span class="sp-toolbar__count">Tick a marketplace to entitle this group to it</span>
-            <div class="sp-toolbar__actions">
-                <button type="button" class="sp-btn sp-btn--primary sp-btn--sm" data-action="save-marketplaces">Save entitlement</button>
-            </div>
-        </div>
-        {{/if}}
-        {{#> components/table caption="Marketplaces this group is entitled to"}}
-            <thead><tr>
-                <th class="sp-table__cell--actions">Assigned</th>
-                <th>Marketplace</th>
-                <th>Description</th>
-            </tr></thead>
-            <tbody>
-            {{#each marketplaces}}
-            <tr data-marketplace-id="{{id}}">
-                <td class="sp-table__cell--actions">
-                    <input type="checkbox" id="mkt-{{id}}" data-field="marketplace" value="{{id}}"
-                           {{#if assigned}}checked{{/if}}{{#unless @root.can_manage}} disabled{{/unless}}>
-                    <label class="sp-u-sr-only" for="mkt-{{id}}">Assign {{name}} to this group</label>
-                </td>
-                <td><a href="/admin/marketplaces/{{id}}">{{name}}</a> <code class="sp-u-mono">{{id}}</code></td>
-                <td>{{truncate description 120}}</td>
-            </tr>
-            {{/each}}
-            </tbody>
-        {{/components/table}}
-    </section>
-    {{/if}}
-
     {{#if (eq active_tab "access")}}
     <section class="sp-group-panel" aria-label="Effective access" data-group-id="{{group_id}}">
         <p class="sp-group-panel__note">
             Every entity resolved for a subject holding only this group's membership, through the
-            same resolver the enforcement point calls. <strong>Inherit</strong> means this group
+            same resolver the enforcement point calls. Marketplaces come first: allowing one here is
+            what entitles this group to it. <strong>Inherit</strong> means this group
             holds no rule of its own and the cell is whatever the wider bands decided. Allow or
             deny asks for a reason: it is recorded on the rule and shown on
             <a href="/admin/access-control">Access control</a>.
@@ -314,7 +277,7 @@
             {{#each rows}}
             <tr data-entity-type="{{entity_type}}" data-entity-id="{{entity_id}}">
                 <td>{{entity_name}}</td>
-                <td class="sp-col-status"><span class="sp-badge sp-badge-{{#if (eq effective "allow")}}is-success{{else}}is-danger{{/if}}">{{effective}}</span></td>
+                <td class="sp-col-status">{{> components/access-badge decision=effective}}</td>
                 <td><span class="sp-access-layer">{{layer}}</span> <span class="sp-u-text-tertiary sp-u-text-xs">{{detail}}</span></td>
                 <td class="sp-table__cell--actions">
                     <div class="sp-group-rule" data-group-rule>
@@ -400,6 +363,5 @@
     <script data-cfasync="false" type="module" src="/js/pages/admin-group-detail.js"></script>
     <script data-cfasync="false" type="module" src="/js/pages/admin-group-access.js"></script>
     <script data-cfasync="false" type="module" src="/js/pages/admin-group-assign.js"></script>
-    <script data-cfasync="false" type="module" src="/js/pages/admin-group-marketplaces.js"></script>
     {{/inline}}
 {{/layout}}

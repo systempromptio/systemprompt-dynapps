@@ -66,9 +66,12 @@ pub(crate) struct ProviderCardView {
     pub reached_by_url: String,
 }
 
+// Why: a route's access is read and edited on its own page, in the shared
+// "Who gets this" panel.
 pub(super) fn matrix_url(route: &str) -> String {
     format!(
-        "/admin/access-control?entity_kind=gateway_route&q={}",
+        "{}/{}#access",
+        super::route_detail::ROUTES_URL,
         urlencoding::encode(route)
     )
 }

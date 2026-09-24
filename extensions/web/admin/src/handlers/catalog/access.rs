@@ -27,6 +27,7 @@ pub(crate) async fn panel(
             page_url: &page_url,
             why,
             can_write: user_ctx.is_admin,
+            note: None,
         },
     )
     .await

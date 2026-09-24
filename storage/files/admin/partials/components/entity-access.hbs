@@ -19,6 +19,7 @@
         <p class="sp-section__sub">Default {{> components/access-badge decision=panel.default_decision}} — every rule below is enforced as held in this database.</p>
     </div>
 
+    {{#if panel.note}}<p class="sp-u-text-sm sp-u-text-secondary">{{panel.note}}</p>{{/if}}
     {{#if panel.not_live}}
     {{> components/notice tone="err" title="Declared in code, not live — nobody reaches this" message=panel.review.advice}}
     {{/if}}

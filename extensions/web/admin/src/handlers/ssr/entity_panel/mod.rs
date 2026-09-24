@@ -38,6 +38,7 @@ pub(crate) fn entity_access_url(entity_type: &str, entity_id: &str) -> Option<St
         "plugin" => "/admin/plugins",
         "skill" => "/admin/skills",
         "mcp_server" => "/admin/mcp",
+        "gateway_route" => "/admin/gateway/routes",
         _ => return None,
     };
     Some(format!("{base}/{}#access", urlencoding::encode(entity_id)))
@@ -50,6 +51,9 @@ pub(crate) struct PanelRequest<'a> {
     pub page_url: &'a str,
     pub why: Option<&'a str>,
     pub can_write: bool,
+    // Why: a kind whose declaration is not per entity says so above its rules
+    // — a gateway route's code rules are the `*` glob, not its own.
+    pub note: Option<&'static str>,
 }
 
 async fn subject_options(pool: &PgPool) -> SubjectOptions {
@@ -160,6 +164,7 @@ pub(crate) async fn build_entity_panel(pool: &PgPool, req: PanelRequest<'_>) -> 
         subjects,
         people: list_pickable_users(pool, None).await,
         can_write: req.can_write,
+        note: req.note,
         why,
         page_url: req.page_url.to_owned(),
         sync_url: SYNC_URL,

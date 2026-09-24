@@ -185,15 +185,16 @@ fn the_google_workspace_server_leaves_its_accessor_to_the_generic_connector() {
 
 #[test]
 fn the_google_workspace_server_targets_agent_search_with_its_scope() {
-    // Why: the MCP endpoint is regional — the global host refuses an `eu`
-    // engine outright — and its protected-resource metadata names exactly this
+    // Why: the MCP endpoint is regional and must match the engine's location
+    // — Astound's workspace-search engine is `global`, so the host is the
+    // global one — and its protected-resource metadata names exactly this
     // scope; a token minted without it is accepted by Google's OAuth server and
     // then rejected by the MCP endpoint, which surfaces as a failed Test on the
     // Connectors page and nowhere earlier.
     let entry = server("google_workspace.yaml", "google_workspace");
     assert_eq!(
         entry.get("endpoint").and_then(serde_yaml::Value::as_str),
-        Some("https://eu-discoveryengine.googleapis.com/mcp")
+        Some("https://discoveryengine.googleapis.com/mcp")
     );
     let scopes: Vec<&str> = entry
         .get("connector")

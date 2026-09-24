@@ -196,6 +196,7 @@ pub(crate) async fn marketplace_detail_page(
             page_url: &page_url,
             why: query.why.as_deref(),
             can_write: user_ctx.is_admin,
+            note: None,
         },
     )
     .await;
