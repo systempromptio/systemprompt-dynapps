@@ -7,6 +7,7 @@ the same questions.
 import datetime
 import hashlib
 import json
+import os
 import pathlib
 import sys
 
@@ -32,6 +33,12 @@ def skill_hash(skill):
     return h.hexdigest()[:12]
 
 
+def bridge_patch(plugin):
+    win = pathlib.Path(os.environ.get("WIN_HOME", "/mnt/c/Users/ejb50"))
+    stamp = win / f".claude/plugins/cache/{plugin}/{plugin}/current/.eval-patch"
+    return json.loads(stamp.read_text()) if stamp.exists() else None
+
+
 def prompt(suite, skill):
     dashed = skill.replace("_", "-")
     return f"/{suite['plugin']}:{dashed} {suite['skills'][skill]}\n\n{suite['suffix']}"
@@ -50,6 +57,9 @@ def manifest_start(path, label):
         "model": suite["model"],
         "started_at": now(),
         "skills": {s: skill_hash(s) for s in suite["skills"]},
+        # Why: a run on skills patched into the client ahead of a deploy is
+        # served by the old marketplace version; the console credits it there.
+        "bridge_patch": bridge_patch(suite["plugin"]),
         "runs": {},
     }
 

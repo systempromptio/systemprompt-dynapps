@@ -62,6 +62,17 @@ This runs every skill in the suite four at a time. Each run is a headless Claude
 | `runs.<skill>.session_id` | The client session ID. It is the key the export uses. |
 | `runs.<skill>.attempts` | 2 when the first attempt started before the connector tools were ready. That is a harness retry, not a skill failure. |
 
+### Before the marketplace is deployed
+
+To measure a change the same day, before it ships, install this tree's skills straight into the eval host's plugin cache:
+
+```bash
+python3 scripts/eval/patch-bridge.py astound-salesforce            # back up, then install
+python3 scripts/eval/patch-bridge.py astound-salesforce --restore  # put the served version back
+```
+
+The run manifest records the patch under `bridge_patch`. The gateway still credits these conversations to the marketplace version it serves, so the console's Versions page shows them under the old hash until the deploy. The deterministic metrics are unaffected. The next bridge sync replaces a patch, so check that `.eval-patch` is still in the cache before a run.
+
 ## Export with a personal access token
 
 A PAT (`sp-live-…`) is accepted on **GET requests to `/admin/export/…` only**. It resolves to its owner and sees exactly what that person's console session would. Any other method or path returns 401. Issue one under **Account → Devices → Personal access tokens**, or use the bridge's own token. `eval.sh export` does the following:
