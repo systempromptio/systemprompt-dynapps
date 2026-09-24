@@ -88,23 +88,6 @@ gateway:
       OpenAI GPT-OSS open-weight models on Vertex AI Model-as-a-Service.
     model_pattern: openai.gpt-oss-*
     provider: vertex-maas
-  - name: GPT-OSS 120B (Cerebras)
-    description: >-
-      The bare gpt-oss-120b id served by Cerebras at low latency.
-    model_pattern: gpt-oss-120b
-    provider: cerebras
-  - id: openai-gpt-41
-    name: GPT-4.1 (OpenAI)
-    description: >-
-      The GPT-4.1 family on OpenAI chat completions.
-    model_pattern: gpt-4.1*
-    provider: openai
-  - id: openai-o4-mini
-    name: o4-mini (OpenAI Responses)
-    description: >-
-      Reasoning model on the OpenAI /responses wire.
-    model_pattern: o4-mini
-    provider: openai-responses
   - id: e2e-mock-route
     name: E2E mock
     description: >-

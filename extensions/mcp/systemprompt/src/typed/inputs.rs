@@ -47,7 +47,7 @@ pub struct UsageByUserInput {
     #[schemars(description = "Window end, same formats as `since`, exclusive. Empty means now.")]
     #[serde(default)]
     pub until: String,
-    #[schemars(description = "Rows to return, highest spend first. 1-200; defaults to 50.")]
+    #[schemars(description = "Rows to return, highest spend first. 1-100; defaults to 50.")]
     #[serde(default = "fifty")]
     pub limit: u16,
 }
@@ -76,7 +76,7 @@ pub struct RequestLogInput {
     #[schemars(description = "Provider substring, e.g. `anthropic`. Empty means every provider.")]
     #[serde(default)]
     pub provider: String,
-    #[schemars(description = "Rows per page. 1-200; defaults to 50.")]
+    #[schemars(description = "Rows per page. 1-100; defaults to 50.")]
     #[serde(default = "fifty")]
     pub limit: u16,
     #[schemars(
@@ -104,11 +104,11 @@ pub struct ConversationAuditInput {
     #[schemars(description = "Messages / tool calls to skip before this page. Defaults to 0.")]
     #[serde(default = "zero")]
     pub offset: u16,
-    #[schemars(description = "Messages / tool calls per page. 1-200; defaults to 20.")]
+    #[schemars(description = "Messages / tool calls per page. 1-25; defaults to 20.")]
     #[serde(default = "twenty")]
     pub limit: u16,
     #[schemars(
-        description = "Truncate each message body and tool input to this many characters. 0 = full text; defaults to 800."
+        description = "Truncate each message body and tool input to this many characters, at most 2000. 0 means the maximum; defaults to 800."
     )]
     #[serde(default = "eight_hundred")]
     pub max_chars: u16,
@@ -118,7 +118,7 @@ pub struct ConversationAuditInput {
 #[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct UsersInput {
-    #[schemars(description = "Rows per page. 1-200; defaults to 50.")]
+    #[schemars(description = "Rows per page. 1-100; defaults to 50.")]
     #[serde(default = "fifty")]
     pub limit: u16,
     #[schemars(description = "Rows to skip. Defaults to 0.")]

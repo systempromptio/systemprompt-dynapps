@@ -48,8 +48,8 @@ pub fn command(input: &ConversationAuditInput) -> Result<String, ErrorData> {
     let mut command = format!(
         "infra logs audit {id} --offset {} --limit {} --max-content {}",
         input.offset,
-        page_limit(input.limit, 20),
-        input.max_chars
+        audit_page(input.limit),
+        body_chars(input.max_chars)
     );
     if input.messages {
         command.push_str(" --messages");
@@ -58,6 +58,24 @@ pub fn command(input: &ConversationAuditInput) -> Result<String, ErrorData> {
         command.push_str(" --tools");
     }
     Ok(command)
+}
+
+// Why: `--max-content 0` is the whole transcript body, which for one long
+// agent turn is hundreds of KB; with the page cap a full page stays near
+// 50 KB, which a model can read.
+pub(super) const MAX_BODY_CHARS: u16 = 2000;
+pub(super) const MAX_AUDIT_PAGE: u16 = 25;
+
+fn audit_page(requested: u16) -> u16 {
+    page_limit(requested, 20).min(MAX_AUDIT_PAGE)
+}
+
+fn body_chars(requested: u16) -> u16 {
+    if requested == 0 {
+        MAX_BODY_CHARS
+    } else {
+        requested.min(MAX_BODY_CHARS)
+    }
 }
 
 impl McpToolHandler for ConversationAuditHandler<'_> {
@@ -92,7 +110,7 @@ impl McpToolHandler for ConversationAuditHandler<'_> {
             .and_then(Value::as_bool)
             .unwrap_or(false);
         let next_offset = if has_more {
-            input.offset.saturating_add(page_limit(input.limit, 20))
+            input.offset.saturating_add(audit_page(input.limit))
         } else {
             input.offset
         };

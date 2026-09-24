@@ -14,15 +14,15 @@ tokens the other two reject.
 | `oauth_at_rest_pepper` | generated once by `render-profile.sh` | ≥ 32 random chars | at-rest encryption of stored OAuth material. Changing it orphans every stored token. |
 | `manifest_signing_secret_seed` | generated once | standard base64 of exactly 32 random bytes (44 chars) | signs the plugin manifests the bridge verifies. Changing it forces every client to re-sync. |
 | `signing_key_pem` | generated once | standard base64 (one line) of an RSA-2048 PKCS#8 PEM file | signs every JWT (sessions, PATs, bridge tokens). Rotating it signs everyone out. |
-| `anthropic` | customer | Anthropic API key | the image's gateway routes `claude-*` to `anthropic`; keys map by the `api_key_secret` name in `services/ai/providers.yaml`. |
+| `anthropic` | customer | Anthropic API key | the `anthropic` provider, which the image's `claude-*` route fails over to from `vertex-anthropic`; keys map by the `api_key_secret` name in `services/ai/providers.yaml`. |
 
 ## Optional
 
 | key | effect when set |
 |---|---|
 | `database_write_url` | read/write split: reads use `database_url`, writes use this. Phase 2 only; cross-region replica lag breaks read-after-write for sessions. Leave unset at launch. |
-| `vertex` | Vertex AI express-mode API key for the `vertex` provider (`gemini-*` routes, sent as `x-goog-api-key`). A route whose provider has no key is unusable, not fatal. |
-| `vertex_maas` | bearer credential for the `vertex-maas` provider (`qwen.*`, `zai.*`, `moonshotai.*`, `deepseek.*`, `openai.gpt-oss-*`). Vertex Model-as-a-Service accepts a Google OAuth access token here, not an API key — see `docs/install/vertex.md`. |
+| `vertex` | Google service-account JSON (`roles/aiplatform.user`) for **every** Vertex provider: `vertex` (`vertex-gemini-*`), `vertex-anthropic` (the primary for `claude-*`), `vertex-maas` and `vertex-maas-us-central1` (`qwen.*`, `zai.*`, `moonshotai.*`, `deepseek.*`, `minimax.*`, `openai.gpt-oss-*`). One key, one GCP project; there is no separate `vertex_maas` secret — see `docs/install/vertex.md`. A route whose provider has no key is unusable, not fatal. |
+| `gemini` | Gemini API key for the `gemini` provider (`gemini-*`, sent as `x-goog-api-key`); the classifier job dispatches here. |
 | `smtp_host`, `smtp_port`, `smtp_username`, `smtp_password`, `smtp_from` | outbound e-mail (magic links, invitations). Without them invitations are printed to the log. |
 | `slack_signing_secret`, `slack_bot_token` | inbound `/systemprompt` slash command and outbound alerts (`services/slack/astound.yaml`). |
 | `astound_release_token` | the bridge update feed. `services/ai/gateway.yaml` points `bridge_releases` at the private `Astound-Digital/systemprompt-astound` repo, so the gateway needs a GitHub token to list releases, read `SHA256SUMS`, and proxy the installer bytes. **Astound issues this token** — a fine-grained PAT scoped to that one repository with `Contents: Read-only`, never a classic PAT. Without it `/v1/bridge/latest` answers 503 `bridge release token secret ASTOUND_RELEASE_TOKEN is not configured`, and every bridge shows an update-check error every 6 h and on each wake-from-sleep; nobody can self-update. An **expired** token reads differently — 502 `github returned 401` — so record the renewal date. |

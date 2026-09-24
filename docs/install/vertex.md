@@ -4,22 +4,28 @@ This page is for the team issuing Google credentials from the Cloud project.
 For the full set of secrets an operator must provide across every provider, and
 how to set and verify them, see [required-secrets.md](required-secrets.md).
 
-The gateway serves three Google providers beside Anthropic. All are declared in
+The gateway serves five Google providers beside Anthropic. All are declared in
 `services/ai/providers.yaml`; each names the secret it reads its credential
 from, and the secret store supplies the value per environment
 (`systemprompt admin config secret set <name> <value>`).
 
 | secret | provider | Google endpoint | what the gateway sends |
 |---|---|---|---|
-| `gemini` | `gemini` (Gemini 2.5 Pro, Flash, Flash-Lite — retiring 2026-10-20) | `https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent` | the value on the `x-goog-api-key` header |
+| `gemini` | `gemini` (`gemini-3.8-flash`, used by the classifier job) | `https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent` | the value on the `x-goog-api-key` header |
 | `vertex` | `vertex` (`vertex-gemini-3.8-flash`, `vertex-gemini-3.5-flash`, `vertex-gemini-3.5-flash-lite`, plus whatever discovery adds) | `https://aiplatform.googleapis.com/v1/projects/{project}/locations/global/publishers/google/models/{model}:generateContent` | a minted OAuth token as `Authorization: Bearer` |
-| `vertex_maas` | `vertex-maas` (Qwen3 Coder, GLM 5, GLM 5.2, gpt-oss-120b) | `https://aiplatform.googleapis.com/v1beta1/projects/{project}/locations/global/endpoints/openapi/chat/completions` | a minted OAuth token as `Authorization: Bearer` |
+| `vertex` | `vertex-anthropic` (the `claude-*` models) | `https://aiplatform.googleapis.com/v1/projects/{project}/locations/global/publishers/anthropic/models/{model}:rawPredict` | a minted OAuth token as `Authorization: Bearer` |
+| `vertex` | `vertex-maas` (GLM 5.2, DeepSeek V3.2, Kimi K2 Thinking, Qwen3 Coder, gpt-oss and the other open models) | `https://aiplatform.googleapis.com/v1beta1/projects/{project}/locations/global/endpoints/openapi/chat/completions` | a minted OAuth token as `Authorization: Bearer` |
+| `vertex` | `vertex-maas-us-central1` (DeepSeek R1) | `https://us-central1-aiplatform.googleapis.com/v1beta1/projects/{project}/locations/us-central1/endpoints/openapi/chat/completions` | a minted OAuth token as `Authorization: Bearer` |
+
+Every Vertex provider reads the **one** `vertex` secret: a single
+service-account JSON in a single GCP project serves Gemini, Claude and the open
+models alike. There is no separate `vertex_maas` secret any more.
 
 **The `vertex` endpoint must be the `global` location.** Every Gemini 3.x
 model is served from `locations/global` only; a regional endpoint such as
 `us-central1-aiplatform.googleapis.com/.../locations/us-central1` returns `404`
 for all of them, which took the whole provider down until 2026-09-11. The MaaS
-endpoint was already global.
+endpoint was already global, except DeepSeek R1, which only us-central1 serves.
 
 **`{project}` is filled by the gateway** from the `project_id` of the
 service-account key stored in the secret. It is never written literally in
@@ -36,7 +42,7 @@ account, no OAuth exchange.
 ```bash
 curl -sS -H "x-goog-api-key: $KEY" \
   -H 'content-type: application/json' \
-  https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent \
+  https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent \
   -d '{"contents":[{"role":"user","parts":[{"text":"ping"}]}]}'
 ```
 
@@ -44,9 +50,8 @@ A `200` with a `candidates` array means the key is good.
 
 ### Vertex authentication
 
-The `vertex` and `vertex_maas` entries use service-account credentials to obtain
-OAuth access tokens. Configure their project-scoped endpoints and credentials
-together. Use the separate `gemini` entry for API-key authentication.
+Every Vertex entry uses the `vertex` service-account credential to obtain
+OAuth access tokens, and fills its project-scoped endpoint from the same key. Use the separate `gemini` entry for API-key authentication.
 
 ### Why the Vertex Gemini models carry a prefix
 
@@ -55,26 +60,26 @@ the bare Gemini model ids — does not load. `ProviderRegistry::validate` hoists
 its `seen_models` set outside the per-provider loop
 (`crates/shared/models/src/services/providers/mod.rs`), so a model id must be
 unique across the *whole* catalog, not merely within one provider. Two entries
-both listing `gemini-2.5-pro` fail at boot with `DuplicateModel`.
+both listing `gemini-3.8-flash` fail at boot with `DuplicateModel`.
 
-So the `vertex` entry prefixes its ids (`vertex-gemini-2.5-pro`) and carries the
-real name in `upstream_model`. A client asking for `vertex-gemini-2.5-flash`
-reaches Google's `gemini-2.5-flash`, and the two routes to the same model stay
+So the `vertex` entry prefixes its ids (`vertex-gemini-3.8-flash`) and carries the
+real name in `upstream_model`. A client asking for `vertex-gemini-3.8-flash`
+reaches Google's `gemini-3.8-flash`, and the two routes to the same model stay
 independently selectable and independently audited.
 
-## `vertex_maas` — the open models
+## `vertex` — the service account
 
-The Model-as-a-Service endpoint is OpenAI-compatible, but it authenticates with
-a **Google OAuth 2.0 access token** on the bearer header, not an API key. An
+Vertex AI — including the OpenAI-compatible Model-as-a-Service endpoint —
+authenticates with a **Google OAuth 2.0 access token** on the bearer header, not an API key. An
 access token lasts about an hour, so a pasted token is not a credential — it
 has to be minted and refreshed.
 
 **What to ask the project for: a service-account JSON key** with
 `roles/aiplatform.user` on the project named in the endpoint. Store the whole
-JSON document as the `vertex_maas` secret:
+JSON document as the `vertex` secret:
 
 ```bash
-systemprompt admin config secret set vertex_maas "$(cat service-account.json)"
+systemprompt admin config secret set vertex "$(cat service-account.json)"
 ```
 
 The gateway recognises a service-account key by the `type: service_account`
@@ -83,27 +88,26 @@ exchanges that for an access token (RFC 7523), and caches the token until
 shortly before it expires. No flag to set: a secret that is not such a document
 is still sent verbatim as an API key.
 
-The same credential serves the `vertex` entry, so one service-account key
-covers every Vertex model. Set it under both secret names — the gateway
-resolves and caches a token per secret name, not per document:
+Every Vertex provider (`vertex`, `vertex-anthropic`, `vertex-maas`,
+`vertex-maas-us-central1`) names this one secret, so one service-account key in
+one project covers every Vertex model and the gateway mints and caches a single
+token for all of them.
 
-```bash
-systemprompt admin config secret set vertex "$(cat service-account.json)"
-```
-
-The models the credential must be entitled to, by their Vertex names:
+The open models the credential must be entitled to include, by their Vertex
+names:
 
 ```
-qwen/qwen3-coder-480b-a35b-instruct-maas
-zai-org/glm-5-maas
 zai-org/glm-5.2-maas
+deepseek-ai/deepseek-v3.2-maas
+moonshotai/kimi-k2-thinking-maas
+qwen/qwen3-coder-480b-a35b-instruct-maas
 openai/gpt-oss-120b-maas
 ```
 
-`qwen3-next-*`, `qwen3-235b`, `glm-4.7`, `deepseek-v3.2`, `kimi-k2-thinking`
-and `gpt-oss-20b` were deprecated on 2026-07-21 and retire on 2026-10-21; they
-are no longer declared here and discovery withholds them from 2026-09-21 (see
-the lifecycle rule below).
+`services/ai/providers.yaml` is the full list. Every Qwen, GLM 4.7/5, Kimi,
+DeepSeek and MiniMax endpoint and `gpt-oss-20b` were deprecated on 2026-07-21
+and retire on 2026-10-21; they stay declared until then (see the lifecycle
+rule below). Only `gpt-oss-120b` and `glm-5.2` are not retiring.
 
 Each must be enabled in Model Garden for the project; a model that is not
 enabled returns `404` to every user who picks it.

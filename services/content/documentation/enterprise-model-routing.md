@@ -31,7 +31,7 @@ related_docs:
 
 ## One gateway, any provider
 
-The gateway speaks **four wire protocols** behind `/v1/messages` and `/v1/responses`, so any Anthropic-SDK or OpenAI-compatible client points at it unchanged. Routes match on model pattern and can rewrite via `upstream_model` — a client asking for `claude-*` can be transparently served by a different backend without any application change. Substitution across Cerebras, OpenAI, and Gemini is proven in live deployments.
+The gateway speaks **four wire protocols** behind `/v1/messages` and `/v1/responses`, so any Anthropic-SDK or OpenAI-compatible client points at it unchanged. Routes match on model pattern and can rewrite via `upstream_model` — a client asking for `claude-*` can be transparently served by a different backend without any application change. Substitution across Vertex AI (Claude, Gemini and the open models) and Anthropic's own API is proven in live deployments.
 
 ## The shipped Anthropic lineup
 

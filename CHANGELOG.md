@@ -20,7 +20,32 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+### Breaking
+
+- Every Vertex provider now reads the one `vertex` secret. `vertex-maas` and
+  `vertex-maas-us-central1` in `services/ai/providers.yaml` switch `api_key_secret` from
+  `vertex_maas` to `vertex`: a single service-account JSON in a single GCP project already served
+  `vertex` and `vertex-anthropic`, and holding it twice under two names only let the open models
+  fail with `Gateway API key secret 'vertex_maas' not configured` when the second copy was
+  missing. An operator who set only `vertex_maas` must set `vertex` to the same document; the
+  `vertex_maas` secret is no longer read. `docs/install/vertex.md`,
+  `docs/install/required-secrets.md`, `deploy/self-host/SECRETS.md` and
+  `scripts/profile-check.sh` describe the one secret.
+
 ### Removed
+
+- The direct OpenAI and Cerebras providers (`openai`, `openai-responses`, `cerebras`) and their
+  gateway routes (`gpt-4.1*`, `o4-mini`, bare `gpt-oss-120b`). They existed to exercise the
+  openai-chat and responses outbound wires, not to serve users; the open models are served from
+  Vertex Model-as-a-Service, where `openai.gpt-oss-120b` stays. The `openai` and `cerebras`
+  secrets are no longer read, and self-host `preflight.sh` no longer counts an `openai` key as a
+  model provider.
+- The Claude 4.x Opus and Sonnet models (`claude-opus-4-5` to `claude-opus-4-8`,
+  `claude-sonnet-4-5`, `claude-sonnet-4-6`) from `vertex-anthropic`, and their
+  `anthropic-claude-*` twins from `anthropic`. The 5.x family replaces them; `claude-haiku-4-5`
+  and its dated alias stay. A request naming a removed id is refused (`allow_unlisted_models` is
+  `false`). `tests/unit/web/src/ai_catalog_config.rs` pins the six served ids, bars the removed
+  ones, and checks the removed providers stay gone and every Vertex provider shares `vertex`.
 
 - The last traces of the knowledge-bank MCP server, whose code was removed in 348b8efb. Self-host
   `preflight.sh` no longer requires the `systemprompt-mcp-knowledge-bank` binary or reads

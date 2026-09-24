@@ -47,7 +47,7 @@ name a release the gateway is not on.
 | Machine | Linux (amd64 or arm64), Docker Engine 24+ with Compose v2, 2 vCPU and 4 GB RAM minimum, outbound HTTPS |
 | Image access | a GitHub token with `read:packages`, issued by Astound. The image is private |
 | PostgreSQL | version 16 or newer, reachable from the machine on 5432 with TLS. The `uuid-ossp` and `pgcrypto` extensions must be available. The bundled option runs PostgreSQL 18 beside the app |
-| Model provider | an Anthropic API key (OpenAI or Gemini also work; `claude-*` models route to Anthropic) |
+| Model provider | a Google service-account JSON for Vertex AI (`claude-*` models route to Vertex, failing over to Anthropic), plus an Anthropic API key |
 | Public hostname | an HTTPS address with TLS terminated by nginx on the machine or by a load balancer in front of it. HTTPS is mandatory: the sign-in cookie is `Secure` and SSO callbacks must match the public HTTPS URL |
 
 ## 1. Get the bundle and the image

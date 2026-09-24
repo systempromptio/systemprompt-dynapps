@@ -48,7 +48,16 @@ use systemprompt::mcp::McpOutputSchema;
 
 // Why: a request for more than this is clamped, not refused, and the output
 // says so — a refusal is one more error the model has to reason around.
-pub const MAX_PAGE: u16 = 200;
+pub const MAX_PAGE: u16 = 100;
+
+// Why: rows are ~1 KB of JSON each and a host folds the whole result into the
+// model's context (pretty-printed for clients without structured content),
+// so a row count alone is no bound: 200 wide request rows filled most of a
+// 200k-token window. Past this serialized size trailing rows are dropped and
+// the page ends early with a cursor to the rest.
+pub const MAX_OUTPUT_BYTES: usize = 48 * 1024;
+
+const MICRODOLLARS_SUFFIX: &str = "_microdollars";
 
 /// One page of rows from a CLI list command, with what a caller needs to ask
 /// for the next one.
@@ -67,11 +76,12 @@ pub struct PagedOutput {
 }
 
 impl PagedOutput {
-    pub(crate) fn new(command: String, rows: Vec<Value>) -> Self {
+    #[must_use]
+    pub fn new(command: String, rows: Vec<Value>) -> Self {
         let rows: Vec<BTreeMap<String, Value>> = rows
             .into_iter()
             .map(|row| match row {
-                Value::Object(map) => map.into_iter().collect(),
+                Value::Object(map) => without_raw_costs(map.into_iter().collect()),
                 other => BTreeMap::from([("value".to_owned(), other)]),
             })
             .collect();
@@ -90,6 +100,26 @@ impl PagedOutput {
             next_cursor: String::new(),
             hint: String::new(),
         }
+    }
+
+    // Why: a page must fit a model's context whatever its row width, so
+    // trailing rows are dropped until the serialized output fits.
+    pub fn fit_to_budget(&mut self, max_bytes: usize) -> usize {
+        let received = self.rows.len();
+        while !self.rows.is_empty() && self.wire_bytes() > max_bytes {
+            let keep = self.rows.len() * 3 / 4;
+            self.rows.truncate(keep);
+            self.returned = self.rows.len();
+        }
+        let dropped = received - self.rows.len();
+        if dropped > 0 {
+            self.truncated = true;
+        }
+        dropped
+    }
+
+    fn wire_bytes(&self) -> usize {
+        serde_json::to_vec(self).map_or(0, |bytes| bytes.len())
     }
 
     pub(crate) fn summary(&self) -> String {
@@ -113,6 +143,24 @@ impl McpOutputSchema for PagedOutput {
     fn artifact_title(&self) -> Option<String> {
         Some(self.command.clone())
     }
+}
+
+// Why: `with_dollar_siblings` adds `<x>_usd` beside every `<x>_microdollars`
+// and the tools tell the model to quote the dollars, so the raw integer is
+// only width.
+fn without_raw_costs(mut row: BTreeMap<String, Value>) -> BTreeMap<String, Value> {
+    let raw: Vec<String> = row
+        .keys()
+        .filter(|key| {
+            key.strip_suffix(MICRODOLLARS_SUFFIX)
+                .is_some_and(|prefix| row.contains_key(&format!("{prefix}_usd")))
+        })
+        .cloned()
+        .collect();
+    for key in raw {
+        row.remove(&key);
+    }
+    row
 }
 
 pub(crate) fn page_limit(requested: u16, default: u16) -> u16 {

@@ -5,6 +5,7 @@ use crate::cli::CliLocation;
 use rmcp::ErrorData;
 // JSON: rows are the CLI's own row objects.
 use serde_json::Value;
+use std::collections::BTreeMap;
 use systemprompt::identifiers::McpExecutionId;
 use systemprompt::mcp::McpToolHandler;
 use systemprompt::models::execution::context::RequestContext;
@@ -37,8 +38,8 @@ pub fn command(input: &RequestLogInput) -> Result<String, ErrorData> {
 }
 
 // Why: the last row's own cursor is the next page's `--before`; a short page
-// has no next page, so it yields none.
-pub(crate) fn next_cursor(rows: &[Value], page_full: bool) -> String {
+// has no next page, so it yields none, unless the byte budget cut it short.
+pub(crate) fn next_cursor(rows: &[BTreeMap<String, Value>], page_full: bool) -> String {
     if !page_full {
         return String::new();
     }
@@ -56,7 +57,7 @@ impl McpToolHandler for RequestLogHandler<'_> {
         "request_log"
     }
     fn description(&self) -> &'static str {
-        "List AI gateway requests newest first: request_id, timestamp, user_id, model, tokens (`input+cachedc/output(reasoningr)`), cost, latency and status. Filter by `user`, `model`, `provider` and a `since`/`until` window; page backwards by passing the returned `next_cursor` as `cursor`. Pass a row's `request_id` to `conversation_audit` to read what was said."
+        "List AI gateway requests newest first, at most 100 per page and cut shorter when the rows would be too large to read: request_id, timestamp, user_id, model, tokens (`input+cachedc/output(reasoningr)`), cost, latency and status. Filter by `user`, `model`, `provider` and a `since`/`until` window; page backwards by passing the returned `next_cursor` as `cursor`. Pass a row's `request_id` to `conversation_audit` to read what was said."
     }
     fn read_only(&self) -> bool {
         true
@@ -70,9 +71,10 @@ impl McpToolHandler for RequestLogHandler<'_> {
         let command = command(&input)?;
         let rows = read_rows(self.cli, self.token, &command).await?;
         let page_full = rows.len() >= usize::from(page_limit(input.limit, 50));
-        let cursor = next_cursor(&rows, page_full);
         let mut output = PagedOutput::new(command, rows);
-        output.truncated = input.limit > super::MAX_PAGE;
+        let dropped = output.fit_to_budget(super::MAX_OUTPUT_BYTES);
+        let cursor = next_cursor(&output.rows, page_full || dropped > 0);
+        output.truncated |= input.limit > super::MAX_PAGE;
         output.hint = if cursor.is_empty() {
             "Last page for these filters.".to_owned()
         } else {
