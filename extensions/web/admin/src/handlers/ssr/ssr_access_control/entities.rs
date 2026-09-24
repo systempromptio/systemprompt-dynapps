@@ -22,7 +22,7 @@ use crate::repositories::config::gateway::RouteLabels;
 use crate::types::access_control::AccessDecision;
 
 pub(super) const BASE_URL: &str = "/admin/access-control";
-pub(super) const SYNC_URL: &str = "/admin/access-control?tab=sync";
+pub(super) const SYNC_URL: &str = "/admin/sync?tab=access";
 pub(super) const DOCS_URL: &str = "/documentation/access-control";
 
 #[derive(Debug, Default, Deserialize)]
@@ -37,8 +37,8 @@ pub(crate) struct AcQuery {
     // next week — the list an operator renews from.
     pub expiring: Option<String>,
     pub q: Option<String>,
-    // Why: `tab=sync` renders the plane's Sync tab instead of the ledger;
-    // `entity=<kind>/<id>` narrows its diff table — the ledger's deep link.
+    // Why: `tab=sync` is an old link, redirected to Code sync's Access
+    // review; `entity` is the audience grid's row drill.
     pub tab: Option<String>,
     pub entity: Option<String>,
     // Why: the audience grid's own axes. `subject` is one column in focus

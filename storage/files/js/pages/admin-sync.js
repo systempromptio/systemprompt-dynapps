@@ -8,6 +8,7 @@ import { apiFetch, rawFetch } from '../services/api.js';
 import { showToast } from '../services/toast.js';
 import { on, initDelegation } from '../services/events.js';
 import { initSyncPlane } from '../components/sp-sync-plane.js';
+import { initAccessReview } from '../components/sp-access-review.js';
 
 const dialog = (name) => document.querySelector(`dialog[data-dialog="${name}"]`);
 const field = (name) => document.querySelector(`[data-sync="${name}"]`);
@@ -96,6 +97,7 @@ const ACTIONS = {
 const init = () => {
   initDelegation();
   initSyncPlane();
+  initAccessReview();
   on('click', '[data-action]', (event, target) => {
     const handler = ACTIONS[target.dataset.action];
     if (handler) handler(target, event);

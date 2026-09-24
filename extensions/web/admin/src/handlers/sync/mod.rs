@@ -1,13 +1,14 @@
 //! The JSON API behind `/admin/sync`: status of every source and plane,
 //! a plane's drift, the two writes, the export, and the source refresh.
 //!
-//! Reads are open to the console tier. The plane apply and the source
-//! refresh sit in the participant tier: an administrator applies a whole
-//! plane; a marketplace participant must name the marketplaces they are
-//! syncing, every one inside their participation, and the apply is narrowed
-//! to those entities. The archive import stays in the manage tier. Every
-//! write and every export leaves an activity row, awaited inline so the
-//! audit trail exists by the time the response does.
+//! Reads are open to the console tier. The plane apply, the per-entity
+//! "keep the database" decision and the source refresh sit in the
+//! participant tier: an administrator applies a whole plane; a marketplace
+//! participant must name the marketplaces they are syncing, every one inside
+//! their participation, and the apply is narrowed to those entities. Every
+//! apply carries a stated reason. The archive import stays in the manage
+//! tier. Every write and every export leaves an activity row, awaited inline
+//! so the audit trail exists by the time the response does.
 
 mod archive;
 mod refresh;
@@ -43,6 +44,24 @@ pub(crate) struct ApplyRequest {
     // participant, optional from an administrator.
     #[serde(default)]
     pub entities: Vec<String>,
+    // Why: every apply is a person's decision to overwrite what the
+    // database holds, and the trail records why they took it.
+    #[serde(default)]
+    pub reason: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct KeepRequest {
+    pub entity: String,
+    pub fingerprint: String,
+    pub reason: String,
+}
+
+fn required_reason(reason: Option<&str>) -> AdminResult<&str> {
+    reason
+        .map(str::trim)
+        .filter(|r| !r.is_empty())
+        .ok_or_else(|| AdminError::BadRequest("a reason is required to apply a sync".to_owned()))
 }
 
 // Why: the rule that makes a participant's apply safe: every key must be a
@@ -150,6 +169,7 @@ pub(crate) async fn apply_handler(
 ) -> AdminResult<Response> {
     let plane = plane_or_404(&plane)?;
     let scope = authorise_scope(&user_ctx, &body.entities)?;
+    let reason = required_reason(body.reason.as_deref())?;
     let outcome = plane
         .apply_scoped(&pool, body.mode, Actor::User(&user_ctx.user_id), scope)
         .await?;
@@ -162,6 +182,7 @@ pub(crate) async fn apply_handler(
                 label: plane.label(),
                 mode: body.mode,
                 outcome: &outcome,
+                reason: Some(reason),
             },
             scope,
         ),
@@ -175,6 +196,28 @@ pub(crate) async fn apply_handler(
         drift_after,
     })
     .into_response())
+}
+
+// Why: "keep the database" writes no rule — the activity row is the whole
+// decision, and the review holds the entity out of the to-do list for as
+// long as its diff stays the one the decision was taken against.
+pub(crate) async fn keep_handler(
+    State(pool): State<Arc<PgPool>>,
+    Extension(user_ctx): Extension<UserContext>,
+    Json(body): Json<KeepRequest>,
+) -> AdminResult<Response> {
+    let reason = required_reason(Some(&body.reason))?;
+    if body.fingerprint.trim().is_empty() {
+        return Err(AdminError::BadRequest("fingerprint required".to_owned()));
+    }
+    let keys = [body.entity.clone()];
+    authorise_scope(&user_ctx, &keys)?;
+    activity::record(
+        &pool,
+        NewActivity::sync_kept(&user_ctx.user_id, &body.entity, &body.fingerprint, reason),
+    )
+    .await;
+    Ok(StatusCode::NO_CONTENT.into_response())
 }
 
 pub(crate) async fn export_handler(

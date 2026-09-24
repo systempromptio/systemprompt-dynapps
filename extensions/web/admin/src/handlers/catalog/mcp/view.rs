@@ -23,7 +23,7 @@ pub(crate) struct McpServerRow {
     pub id: String,
     pub description: String,
     pub detail_url: String,
-    pub matrix_url: String,
+    pub access_url: String,
     pub source_path: String,
     pub configured: bool,
     pub enabled: bool,
@@ -172,16 +172,6 @@ pub(super) struct McpConnectionRowView {
     pub expires_display: String,
 }
 
-// Why: One access-control rule pointing at this server.
-#[derive(Debug, Clone, Serialize)]
-pub(super) struct McpGrantRow {
-    pub subject_kind: String,
-    pub subject: String,
-    pub access: String,
-    pub is_allow: bool,
-    pub updated_display: String,
-}
-
 // Why: A `label: value` line of the configuration summary.
 #[derive(Debug, Clone, Serialize)]
 pub(super) struct ConfigFactView {
@@ -215,13 +205,10 @@ pub(super) struct McpDetailData {
     pub connections: Vec<McpConnectionRowView>,
     pub connections_count: usize,
     pub connected_count: usize,
-    pub grants: Vec<McpGrantRow>,
-    pub grants_count: usize,
-    pub default_included: bool,
+    pub access: crate::handlers::ssr::entity_panel::EntityAccessView,
     pub config_facts: Vec<ConfigFactView>,
     pub oauth_scopes: Vec<String>,
     pub included_by: Vec<LinkedEntity>,
     pub included_by_count: usize,
-    pub matrix_url: String,
-    pub access_control_url: &'static str,
+    pub access_url: String,
 }

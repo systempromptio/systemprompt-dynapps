@@ -1,0 +1,65 @@
+@Andrew Nagornyy @s.kubrakov @v.ivshyn cc: @b.gulyaev — Google Workspace connector: one project, GLOBAL
+
+*Please ignore my earlier message about project 402649471530. This replaces it.*
+
+The Google Workspace connector on sp-dev is live, but every call gets an OAuth/IAM error:
+`Permission 'mcp.googleapis.com/tools.call' denied`. The cause is that we ended up with *two* setups, and the connector was pointing at the wrong one. We are standardising on *one*, and it must work for *all* Astound users, not just me:
+
+*✅ USE:* astound-knowledge-uk-sales — project number *148780456827* — location *global*
+*❌ RETIRE:* the earlier *eu* setup (project 402649471530, engine `workspace-search` in `eu`). Please don't grant anything there. Delete its app and data stores once the global one is confirmed working.
+
+The sp-dev connector now points at the global engine (commit a222ee87 on `next`), so everything below is in *astound-knowledge-uk-sales (148780456827)*.
+
+*1. APIs*
+• Enable *Discovery Engine API* (`discoveryengine.googleapis.com`) and *MCP API* (`mcp.googleapis.com`).
+• Check that billing is attached.
+
+*2. Identity provider*
+• AI Applications → Settings → Identity provider → *Google Identity*. This must be set before the data stores are created.
+
+*3. Data stores + app, all in location `global`*
+• Data stores → Create → *Google Drive*, *Gmail* and *Google Calendar*, all federated (live).
+• Apps → Create → *Search* app, Enterprise tier, app ID exactly *`workspace-search`*, with *all three* stores attached at creation. You can't add stores to it later.
+• The serving config must be exactly:
+`projects/148780456827/locations/global/collections/default_collection/engines/workspace-search/servingConfigs/default_search`
+• Check that the app's *Preview* returns your own Drive files, emails and calendar events.
+• If the app already exists with a different ID, don't recreate it. Just tell me the ID.
+
+*4. OAuth consent screen*
+• Audience: *Internal*
+• Scopes: `openid`, `.../auth/userinfo.email`, `https://www.googleapis.com/auth/discoveryengine.readwrite`
+
+*5. OAuth client* `148780456827-jo8bqncipjh50jf2hsr9mgtq5a6ntb62.apps.googleusercontent.com`
+• Add this redirect URI (the existing `google_rag` ones won't work):
+`https://sp-dev.astound.digital/api/public/connectors/google_workspace/callback`
+• The current secret was posted in Slack, so please *add a new secret, delete the old one*, and send the new one via 1Password.
+
+*6. IAM on 148780456827: for ALL Astound users*
+Grant the whole org (or an all-staff group) these two roles:
+• *Discovery Engine Viewer* (`roles/discoveryengine.viewer`)
+• *MCP Tool User* (`roles/mcp.toolUser`)
+```
+gcloud projects add-iam-policy-binding 148780456827 --member="domain:astounddigital.com" --role="roles/discoveryengine.viewer"
+gcloud projects add-iam-policy-binding 148780456827 --member="domain:astounddigital.com" --role="roles/mcp.toolUser"
+```
+(Use `group:<all-staff>@astounddigital.com` in place of `domain:` if you'd rather grant a group.) This only lets people call search; Google still returns only what each person can already open.
+
+*7. Workspace Admin console*
+• Security → API controls → Manage third-party app access → mark *both* of these as *Trusted*:
+  – Google's Agent Search client `502998392228-hpelhql0ouj9ckiu3l39lllsir24b02s…`
+  – ours: `148780456827-jo8bqncipjh50jf2hsr9mgtq5a6ntb62.apps.googleusercontent.com`
+• Gmail → User settings → turn on *Smart features and personalization* and the same *in other Google products*, org-wide.
+• These can take up to 24h to propagate. Until then, searches succeed but return nothing.
+
+*8. Check it's granted*
+```
+gcloud policy-intelligence troubleshoot-policy iam //discoveryengine.googleapis.com/projects/148780456827 --principal-email=e.burton@astounddigital.com --permission=mcp.googleapis.com/tools.call
+```
+It should say *granted*.
+
+*Please send back:*
+1. ✅ Steps 1–8 done, and Preview in step 3 returns results
+2. The new client secret, via 1Password
+3. Once confirmed: the eu setup (402649471530) is deleted
+
+After that I'll store the secret on sp-dev, reconnect, and test with a few Astound accounts. Thanks!

@@ -53,7 +53,8 @@ groups:
     name: Business users
     description: >-
       Non-engineering staff: delivery, account and project management. No
-      development tooling; the Cowork workspace is reached through the
+      development tooling. Reaches the Salesforce sales workspace
+      (astound-salesforce); the Cowork workspace is reached through the
       knowledge_worker role, not through this group.
     ad_groups: [Systemprompt-Business]
 

@@ -53,16 +53,16 @@
 
     <div class="sp-sync-actions" aria-label="Synchronise {{plane.label}}">
         <article class="sp-sync-card{{#if (eq plane.recommendation.card "insert")}} sp-sync-card--recommended{{/if}}">
-            <h3>Insert only</h3>
+            <h3>Apply all new</h3>
             <p>Add what {{plane.source_label}} declares and this database lacks. Nothing existing is changed or removed.</p>
             <p class="sp-sync-card__count">+{{plane.actions.insert}} rows · +{{plane.actions.insert_entities}} entities</p>
-            {{#if can_write}}<button type="button" class="sp-btn sp-btn--secondary" data-action="sync-apply" data-plane="{{plane.id}}" data-apply-url="{{plane.apply_url}}" data-entities="{{plane.entity_filter}}" data-mode="insert_only" data-count="{{plane.actions.insert}}">Insert only</button>{{/if}}
+            {{#if can_write}}<button type="button" class="sp-btn sp-btn--secondary" data-action="sync-apply" data-plane="{{plane.id}}" data-apply-url="{{plane.apply_url}}" data-entities="{{plane.entity_filter}}" data-mode="insert_only" data-count="{{plane.actions.insert}}">Apply all new</button>{{/if}}
         </article>
         <article class="sp-sync-card sp-sync-card--danger{{#if (eq plane.recommendation.card "overwrite")}} sp-sync-card--recommended{{/if}}">
-            <h3>Overwrite from code</h3>
+            <h3>Replace database with code</h3>
             <p>Make this database equal {{plane.source_label}}: add what code added, correct what code changed, <strong>delete</strong> what code removed. Rows written here, or by a bundle, on entities the file no longer names are kept; per-person overrides are never touched.</p>
             <p class="sp-sync-card__count">+{{plane.actions.insert}} · ~{{plane.actions.update}} · −{{plane.actions.delete}}{{#if plane.actions.delete_console}} <span class="sp-u-text-warning">({{plane.actions.delete_console}} of them written here)</span>{{/if}}{{#if plane.actions.kept}} · keeps {{plane.actions.kept}}{{/if}}</p>
-            {{#if can_write}}<button type="button" class="sp-btn sp-btn--primary" data-action="sync-apply" data-plane="{{plane.id}}" data-apply-url="{{plane.apply_url}}" data-entities="{{plane.entity_filter}}" data-mode="overwrite" data-count="{{plane.actions.delete}}" data-dashboard="{{plane.actions.delete_console}}" data-kept="{{plane.actions.kept}}">Overwrite from code</button>{{/if}}
+            {{#if can_write}}<button type="button" class="sp-btn sp-btn--primary" data-action="sync-apply" data-plane="{{plane.id}}" data-apply-url="{{plane.apply_url}}" data-entities="{{plane.entity_filter}}" data-mode="overwrite" data-count="{{plane.actions.delete}}" data-dashboard="{{plane.actions.delete_console}}" data-kept="{{plane.actions.kept}}">Replace database with code</button>{{/if}}
         </article>
         {{#if plane.show_export}}
         <article class="sp-sync-card{{#if (eq plane.recommendation.card "export")}} sp-sync-card--recommended{{/if}}">

@@ -1,10 +1,13 @@
 //! `/admin/sync` — Code sync: where declarations come from and how they
 //! move between the repository and this instance.
 //!
-//! Two tabs. *Sources* lists every place a declaration comes from in one
+//! Three tabs. *Sources* lists every place a declaration comes from in one
 //! table — the internal base tree this repository ships and each external
 //! bundle the profile pins — with the hash each declares and what it owns,
-//! and offers the in-place import that recomposes them. *Export & import*
+//! and offers the in-place import that recomposes them. *Access review* is
+//! the access-control plane, entity by entity: what code and this database
+//! disagree about, settled one row at a time with a stated reason, above the
+//! whole-plane card. *Export & import*
 //! moves the projected planes as one archive: the database rendered back
 //! to its files for a commit, or an uploaded archive staged for a preview
 //! on `/admin/sync/import/{stage}`. What each plane's database says
@@ -16,6 +19,7 @@
 //! what touched their marketplaces. The archive and the whole-plane writes
 //! stay with administrators.
 
+mod access_review;
 mod view;
 
 use std::sync::Arc;
@@ -32,6 +36,7 @@ use crate::handlers::ssr::sync_plane::{HashView, PlaneCardOpts, plane_card};
 use crate::handlers::ssr::types::{BreadcrumbView, TabLinkView};
 use crate::repositories::sync::access_control::{AccessControlPlane, PLANE_ID};
 use crate::repositories::sync::archive::staging::STAGE_TTL_MINUTES;
+use crate::repositories::sync::attention::access_attention;
 use crate::repositories::sync::history::{SyncHistoryRow, SyncHistoryScope, list_sync_history};
 use crate::repositories::sync::plane::DeclarationSource;
 use crate::repositories::sync::registry::planes;
@@ -50,20 +55,44 @@ pub(crate) struct SyncQuery {
     pub tab: Option<String>,
 }
 
-fn tabs(show_sources: bool) -> Vec<TabLinkView> {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SyncTab {
+    Sources,
+    Access,
+    Archive,
+}
+
+impl SyncTab {
+    fn parse(tab: Option<&str>) -> Self {
+        match tab {
+            Some("access") => Self::Access,
+            Some("archive") => Self::Archive,
+            _ => Self::Sources,
+        }
+    }
+}
+
+fn tabs(active: SyncTab, attention: usize) -> Vec<TabLinkView> {
     vec![
         TabLinkView {
             slug: "sources",
             label: "Sources",
             href: BASE_URL.to_owned(),
-            is_active: show_sources,
+            is_active: active == SyncTab::Sources,
             count: None,
+        },
+        TabLinkView {
+            slug: "access",
+            label: "Access review",
+            href: format!("{BASE_URL}?tab=access"),
+            is_active: active == SyncTab::Access,
+            count: i64::try_from(attention).ok().filter(|n| *n > 0),
         },
         TabLinkView {
             slug: "archive",
             label: "Export & import",
             href: format!("{BASE_URL}?tab=archive"),
-            is_active: !show_sources,
+            is_active: active == SyncTab::Archive,
             count: None,
         },
     ]
@@ -121,9 +150,18 @@ pub(crate) async fn sync_page(
     let is_participant = !user_ctx.is_console;
     let (sources, sources_unreadable) = visible_sources(&user_ctx);
     let (marketplaces, history) = scoped_cards(&pool, &user_ctx).await?;
-    // Why: the archive tab is an administrator's; a participant's page has
-    // one layout and no tabs.
-    let show_sources = is_participant || query.tab.as_deref() != Some("archive");
+    // Why: the review and archive tabs are an administrator's; a
+    // participant's page has one layout and no tabs.
+    let tab = if is_participant {
+        SyncTab::Sources
+    } else {
+        SyncTab::parse(query.tab.as_deref())
+    };
+    let access_review = if tab == SyncTab::Access {
+        Some(access_review::access_review(&pool).await?)
+    } else {
+        None
+    };
     let export_planes = planes()
         .iter()
         .map(|p| ExportPlaneView {
@@ -150,9 +188,11 @@ pub(crate) async fn sync_page(
         tabs: if is_participant {
             Vec::new()
         } else {
-            tabs(show_sources)
+            tabs(tab, access_attention())
         },
-        show_sources,
+        show_sources: tab == SyncTab::Sources,
+        show_access: tab == SyncTab::Access,
+        access_review,
         docs_url: DOCS_URL,
         configuration_url: "/admin/configuration",
         observability_url: crate::handlers::ssr::ssr_observability::PAGE_URL,

@@ -8,9 +8,12 @@
 //!   [`mcp`] because they also read the runtime tables.
 //!
 //! Each family has a list page and a detail page. Detail pages surface the
-//! plugin ↔ member relationship in both directions. The plugin and skill pages
-//! are strictly read-only: operators edit `services/*.yaml` and restart.
+//! plugin ↔ member relationship in both directions, and every detail page
+//! carries the shared "Who gets this" panel — the one place an entity's
+//! access is read and edited. The catalog itself is read-only: operators
+//! edit `services/*.yaml` and restart.
 
+mod access;
 mod data;
 mod entries;
 pub(crate) mod marketplaces;
@@ -29,7 +32,7 @@ use sqlx::PgPool;
 
 use crate::error::{AdminError, AdminHtmlResult};
 use crate::handlers::shared;
-use crate::repositories;
+use crate::handlers::ssr::page::Page;
 use crate::repositories::sync::provenance::{OwnedKind, Provenance, owned_by};
 use crate::repositories::sync::sources::build_sources;
 use crate::templates::AdminTemplateEngine;
@@ -56,27 +59,6 @@ pub(crate) struct CatalogListQuery {
     pub tab: Option<String>,
 }
 
-// Why: two cheap reads the badge needs on every catalog page. Both are
-// best-effort: a badge that cannot be computed renders as restricted, which is
-// the safe reading, rather than failing the page.
-async fn visibility_inputs(
-    pool: &PgPool,
-    services_path: &std::path::Path,
-) -> (
-    Vec<repositories::marketplace::manifests::MarketplaceConfigSummary>,
-    Vec<crate::types::access_control::AccessControlRule>,
-) {
-    let mut manifests =
-        repositories::marketplace::manifests::list_marketplace_configs(services_path)
-            .unwrap_or_default();
-    repositories::marketplace::manifests_access::attach_access(pool, &mut manifests).await;
-    let rules = repositories::users::access_control::list_all_rules(pool)
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, "catalog: rule listing failed"))
-        .unwrap_or_default();
-    (manifests, rules)
-}
-
 pub(crate) async fn plugins_page(
     Extension(user_ctx): Extension<UserContext>,
     Extension(mkt_ctx): Extension<MarketplaceContext>,
@@ -89,7 +71,7 @@ pub(crate) async fn plugins_page(
 
     let catalog = data::load_catalog(&path, &user_ctx.roles);
     let counts = assignment_counts_by_type(&pool, ENTITY_PLUGIN).await;
-    let (manifests, rules) = visibility_inputs(&pool, &path).await;
+    let (manifests, rules) = visibility::visibility_inputs(&pool, &path).await;
     let mut plugins = view_models::plugin_rows(
         catalog,
         &counts,
@@ -161,20 +143,33 @@ pub(crate) async fn plugins_page(
 }
 
 pub(crate) async fn plugin_detail_page(
-    Extension(user_ctx): Extension<UserContext>,
-    Extension(mkt_ctx): Extension<MarketplaceContext>,
-    Extension(engine): Extension<AdminTemplateEngine>,
+    shell: Page,
     State(pool): State<Arc<PgPool>>,
     Path(plugin_id): Path<PluginId>,
+    axum::extract::Query(query): axum::extract::Query<view::PanelQuery>,
 ) -> AdminHtmlResult<Response> {
+    let Page {
+        engine,
+        user: user_ctx,
+        marketplace: mkt_ctx,
+    } = shell;
     admin_only(&user_ctx)?;
     let path = shared::get_services_path()?;
 
     let catalog = data::load_catalog(&path, &user_ctx.roles);
     let counts = assignment_counts_by_type(&pool, ENTITY_PLUGIN).await;
     let assignment_count = counts.get(plugin_id.as_str()).copied().unwrap_or(0);
-    let page = view_models::plugin_detail(&catalog, &plugin_id, assignment_count)
+    let mut page = view_models::plugin_detail(&catalog, &plugin_id, assignment_count)
         .ok_or_else(|| AdminError::NotFound("No such plugin.".to_owned()))?;
+    page.access = Some(
+        access::panel(
+            &pool,
+            &user_ctx,
+            (ENTITY_PLUGIN, plugin_id.as_str()),
+            query.why.as_deref(),
+        )
+        .await,
+    );
     Ok(render_typed_page(
         &engine,
         "catalog-plugin-detail",
@@ -196,7 +191,7 @@ pub(crate) async fn skills_page(
 
     let catalog = data::load_catalog(&path, &user_ctx.roles);
     let counts = assignment_counts_by_type(&pool, ENTITY_SKILL).await;
-    let (manifests, rules) = visibility_inputs(&pool, &path).await;
+    let (manifests, rules) = visibility::visibility_inputs(&pool, &path).await;
     let mut skills = view_models::skill_rows(
         &catalog,
         &counts,
@@ -258,12 +253,16 @@ pub(crate) async fn skills_page(
 }
 
 pub(crate) async fn skill_detail_page(
-    Extension(user_ctx): Extension<UserContext>,
-    Extension(mkt_ctx): Extension<MarketplaceContext>,
-    Extension(engine): Extension<AdminTemplateEngine>,
+    shell: Page,
     State(pool): State<Arc<PgPool>>,
     Path(skill_id): Path<String>,
+    axum::extract::Query(query): axum::extract::Query<view::PanelQuery>,
 ) -> AdminHtmlResult<Response> {
+    let Page {
+        engine,
+        user: user_ctx,
+        marketplace: mkt_ctx,
+    } = shell;
     admin_only(&user_ctx)?;
     let path = shared::get_services_path()?;
 
@@ -271,8 +270,17 @@ pub(crate) async fn skill_detail_page(
     let counts = assignment_counts_by_type(&pool, ENTITY_SKILL).await;
     let assignment_count = counts.get(&skill_id).copied().unwrap_or(0);
     let skill = systemprompt::identifiers::SkillId::new(&skill_id);
-    let page = view_models::skill_detail(&catalog, &skill, assignment_count)
+    let mut page = view_models::skill_detail(&catalog, &skill, assignment_count)
         .ok_or_else(|| AdminError::NotFound("No such skill.".to_owned()))?;
+    page.access = Some(
+        access::panel(
+            &pool,
+            &user_ctx,
+            (ENTITY_SKILL, &skill_id),
+            query.why.as_deref(),
+        )
+        .await,
+    );
     Ok(render_typed_page(
         &engine,
         "catalog-skill-detail",

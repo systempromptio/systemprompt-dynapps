@@ -117,10 +117,9 @@ entities:
 
   - entity: marketplace/astound-salesforce
     default: closed
-    why: Salesforce sales workspace for people with a ready Headless 360 connection.
+    why: Salesforce sales workspace for the business-users group.
     allow:
-      connector: [salesforce]
-      role: [super_admin]
+      group: [business-users]
 ```
 
 Rules of the file, all checked by `scripts/validate-services.sh` in CI and again when the server reads it:

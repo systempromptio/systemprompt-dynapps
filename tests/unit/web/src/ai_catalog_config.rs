@@ -277,7 +277,12 @@ fn the_removed_providers_stay_removed() {
 
 #[test]
 fn every_vertex_provider_shares_the_vertex_secret() {
-    for name in ["vertex", "vertex-anthropic", "vertex-maas", "vertex-maas-us-central1"] {
+    for name in [
+        "vertex",
+        "vertex-anthropic",
+        "vertex-maas",
+        "vertex-maas-us-central1",
+    ] {
         assert_eq!(
             provider(name).api_key_secret.as_str(),
             "vertex",

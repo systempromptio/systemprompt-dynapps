@@ -165,11 +165,12 @@ A live connection is an authorization subject. `services/access-control/rules.ya
 accepts a `connector:` band (precedence 160, between `group` and the Salesforce
 `salesforce` link band) whose values are server ids; a person matches while
 `mcp_connector_accounts` holds a `connected` row for that server
-(`extensions/web/admin/src/authz/connector.rs`). The `astound-salesforce`
-marketplace uses it: a verified `salesforce` connection admits the
-marketplace, plugin and its inherited skills, so Salesforce workflows are not
-offered before their required server can answer. Google Workspace remains an
-optional connector and is filtered independently.
+(`extensions/web/admin/src/authz/connector.rs`). The band is available to any
+entity; the `astound-salesforce` marketplace no longer uses it — it reaches the
+`business-users` group by membership alone, and the Salesforce connector is
+linked from inside the workspace (Salesforce still refuses anyone without a
+user in the org). Google Workspace remains an optional connector and is
+filtered independently.
 
 ## Tool permissions in the clients
 

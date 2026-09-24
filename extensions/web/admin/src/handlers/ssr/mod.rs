@@ -18,6 +18,7 @@ mod context;
 pub(crate) mod conversation_header;
 mod devices;
 pub(crate) mod entity_kind;
+pub(crate) mod entity_panel;
 pub(crate) mod entity_urls;
 pub(crate) mod format;
 mod gateway;

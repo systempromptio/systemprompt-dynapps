@@ -176,6 +176,7 @@ pub(crate) async fn apply_import_handler(
                     label: plane.label(),
                     mode: body.mode,
                     outcome: &outcome,
+                    reason: None,
                 },
             ),
         )

@@ -72,13 +72,11 @@ entities:
   - entity: marketplace/astound-salesforce
     default: closed
     why: >-
-      Salesforce sales workspace; a person receives it after linking the
-      Salesforce connector. Super-admins retain operating access
-      before a connection is present.
+      Salesforce sales workspace for the business-users group. Membership
+      alone grants it; the Salesforce connector is linked from inside the
+      workspace and Salesforce still refuses anyone without a user in the org.
     allow:
-      connector: [salesforce]
-      salesforce: [salesforce]
-      role: [super_admin]
+      group: [business-users]
 
   # Arrives as a signed bundle from Astound-Digital/sfnext-claude-dev-kit; the
   # kit owns the content, this file owns who reaches it. Declared here even

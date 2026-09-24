@@ -15,6 +15,7 @@ pub struct PlaneApply<'a> {
     pub label: &'a str,
     pub mode: SyncMode,
     pub outcome: &'a ApplyOutcome,
+    pub reason: Option<&'a str>,
 }
 
 fn plane_ref(plane: &str, label: &str) -> ActivityEntityRef {
@@ -36,6 +37,7 @@ impl NewActivity {
             label,
             mode,
             outcome,
+            reason,
         } = apply;
         let marketplaces: Vec<&str> = scope
             .keys()
@@ -43,17 +45,21 @@ impl NewActivity {
             .filter_map(|k| k.strip_prefix("marketplace/"))
             .collect();
         let scoped = if marketplaces.is_empty() {
-            String::new()
+            match scope.keys() {
+                [] => String::new(),
+                keys => format!(" for {}", keys.join(", ")),
+            }
         } else {
             format!(" for {}", marketplaces.join(", "))
         };
+        let because = reason.map_or_else(String::new, |r| format!(" — {r}"));
         Self {
             user_id: user_id.clone(),
             category: ActivityCategory::UserManagement,
             action: ActivityAction::Imported,
             entity: Some(plane_ref(plane, label)),
             description: format!(
-                "Synced {label} from code{scoped} ({}): +{} ~{} -{}",
+                "Synced {label} from code{scoped} ({}): +{} ~{} -{}{because}",
                 mode.human(),
                 outcome.inserted,
                 outcome.updated,
@@ -71,6 +77,28 @@ impl NewActivity {
                 "deleted": outcome.deleted,
                 "entities_inserted": outcome.entities_inserted,
                 "entities_updated": outcome.entities_updated,
+                "reason": reason,
+            }),
+        }
+    }
+
+    // Why: "keep the database" writes no rule, so this row is the whole
+    // decision. `kept_entity` and `fingerprint` are what the review reads
+    // back to hold the entity out of the to-do list until its diff moves.
+    #[must_use]
+    pub fn sync_kept(user_id: &UserId, key: &str, fingerprint: &str, reason: &str) -> Self {
+        Self {
+            user_id: user_id.clone(),
+            category: ActivityCategory::UserManagement,
+            action: ActivityAction::Rejected,
+            entity: Some(plane_ref("access_control", "Access control")),
+            description: format!("Kept the database version of {key} over code — {reason}"),
+            // JSON: JSONB column — the decision the review reads back
+            metadata: serde_json::json!({
+                "plane": "access_control",
+                "kept_entity": key,
+                "fingerprint": fingerprint,
+                "reason": reason,
             }),
         }
     }
@@ -136,6 +164,7 @@ impl NewActivity {
             label,
             mode,
             outcome,
+            ..
         } = apply;
         Self {
             user_id: user_id.clone(),

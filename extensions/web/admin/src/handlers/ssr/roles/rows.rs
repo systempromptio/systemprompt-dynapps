@@ -6,6 +6,7 @@
 //! [`RolesQuery`] and writes a view type; nothing here filters.
 
 use crate::handlers::ssr::entity_kind::entity_kind_label;
+use crate::handlers::ssr::entity_panel::entity_access_url;
 use crate::handlers::ssr::types::SortHeaderView;
 use crate::repositories::config::gateway::RouteLabels;
 use crate::repositories::roles::entitlements::RoleEntitlementRow;
@@ -149,11 +150,13 @@ pub(super) fn entitlement_views(
                 } else {
                     "Closed by default"
                 },
-                href: format!(
-                    "/admin/access-control?entity_kind={}&q={}",
-                    row.entity_type,
-                    urlencoding::encode(&row.entity_id)
-                ),
+                href: entity_access_url(&row.entity_type, &row.entity_id).unwrap_or_else(|| {
+                    format!(
+                        "/admin/access-control?entity_kind={}&q={}",
+                        row.entity_type,
+                        urlencoding::encode(&row.entity_id)
+                    )
+                }),
             }
         })
         .collect()

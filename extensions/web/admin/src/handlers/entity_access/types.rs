@@ -27,6 +27,12 @@ pub(crate) struct UpsertRuleBody {
     pub valid_until: Option<DateTime<Utc>>,
 }
 
+#[derive(Debug, Default, Deserialize)]
+pub(crate) struct RemoveRuleQuery {
+    #[serde(default)]
+    pub reason: Option<String>,
+}
+
 #[derive(Debug, Serialize)]
 pub(crate) struct UpsertRuleResponse {
     pub rule: AccessRule,

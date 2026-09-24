@@ -2,7 +2,7 @@
     {{#*inline "head_extra"}}{{/inline}}
     {{#*inline "content"}}
     {{> components/breadcrumbs crumbs=breadcrumbs}}
-    {{#> components/page-header title=title subtitle="Who reaches what on this instance, and why. Rules is the ledger by entity; Audience grid is every role, group and project at once; Check a person is one account resolved live; Sync is this database against services/access-control/rules.yaml."}}
+    {{#> components/page-header title=title subtitle="Who reaches what on this instance, and why. Rules is the ledger by entity; Audience grid is every role, group and project at once; Find a person opens one account's own Access tab; Sync opens Code sync's Access review, where rules.yaml and this database are reconciled entity by entity."}}
         {{#*inline "header_actions"}}
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{docs_url}}" target="_blank" rel="noopener noreferrer">How it works</a>
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/groups">Group rules</a>
@@ -20,54 +20,43 @@
 
     {{> components/tabs tabs=tabs nav_label="Access control views"}}
 
-    {{#if sync}}
-    {{#if drift}}
-    {{> components/notice tone="warn" title="Code and database differ" message="Review the diff below; nothing is changed automatically."}}
-    {{/if}}
-    {{> components/sync-plane plane=sync can_write=can_write}}
-    {{> components/sync-plane-dialogs}}
-    {{/if}}
-
     {{#if on_audience}}
     {{> components/section title="Audience grid" count=audience.total_rows note="Every role, group and project against every governed entity, decided by the same resolver the enforcement point calls. Narrow by subject, entity kind, decision or band; click a column to focus on one subject, a row to see every subject for one entity."}}
     {{> components/audience-grid audience=audience}}
     {{/if}}
 
     {{#if on_person}}
-    {{> components/section title="Check a person" note="Pick one account to see exactly what the resolver gives them: workspaces, connections and every individual rule, as on their own Access tab."}}
-    <form class="sp-toolbar sp-toolbar--fields sp-ac-person__picker" method="get" action="/admin/access-control" aria-label="Choose a person">
+    {{> components/section title="Find a person" note="Search every account by name, email or id. Each match opens that person's own Access tab: every workspace, connection and rule the resolver gives them, and their overrides."}}
+    <form class="sp-toolbar sp-toolbar--fields sp-ac-person__picker" method="get" action="/admin/access-control" aria-label="Find a person">
         <input type="hidden" name="tab" value="person">
         <div class="sp-toolbar__field sp-ac-person__field">
-            <label class="sp-toolbar__field-label" for="ac-person-user">Person</label>
-            <select class="sp-select" id="ac-person-user" name="user">
-                <option value="">Choose an account…</option>
-                {{#each person.people}}<option value="{{id}}"{{#if selected}} selected{{/if}}>{{label}}</option>{{/each}}
-            </select>
+            <label class="sp-toolbar__field-label" for="ac-person-q">Person</label>
+            <input class="sp-search-input" id="ac-person-q" name="q" value="{{person.query}}" placeholder="name, email or account id" autocomplete="off">
         </div>
         <div class="sp-toolbar__actions">
-            <button type="submit" class="sp-btn sp-btn--sm sp-btn--primary">Check</button>
+            <button type="submit" class="sp-btn sp-btn--sm sp-btn--primary">Search</button>
         </div>
     </form>
-    {{#if person.capped}}
-    {{> components/notice tone="info" title="Listing is capped" message="Only the first 200 accounts are offered here. Open the person from the Users page to check anyone else."}}
-    {{/if}}
-    {{#if person.not_found}}
-    {{> components/notice tone="err" title="No such account" message="Nothing matches the id in the address bar. Choose a person from the list."}}
-    {{/if}}
-    {{#if person.header}}
-    <div class="sp-ac-person__who">
-        <span class="sp-avatar sp-avatar--sm sp-avatar--tone-{{avatar_tone person.header.name}}" aria-hidden="true">{{initials person.header.name}}</span>
-        <span class="sp-user-cell-text">
-            <span class="sp-user-cell-name">{{person.header.name}}</span>
-            <span class="sp-user-cell-email">{{#if person.header.email}}{{person.header.email}}{{else}}{{person.header.user_id}}{{/if}}</span>
-        </span>
-        <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{person.header.href}}">Open their profile →</a>
-    </div>
-    {{#if access}}{{> components/user-access header=person.header}}{{/if}}
+    {{#if person.searched}}
+    {{#if person.hits}}
+    <ul class="sp-ac-person__hits">
+        {{#each person.hits}}
+        <li class="sp-ac-person__who">
+            <span class="sp-avatar sp-avatar--sm sp-avatar--tone-{{avatar_tone name}}" aria-hidden="true">{{initials name}}</span>
+            <span class="sp-user-cell-text">
+                <span class="sp-user-cell-name">{{name}}</span>
+                <span class="sp-user-cell-email">{{email}}</span>
+            </span>
+            <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{href}}">Open their access →</a>
+        </li>
+        {{/each}}
+    </ul>
+    {{#if person.more}}{{> components/notice tone="info" title="More matches" message="Only the first 25 matches are listed. Narrow the search."}}{{/if}}
     {{else}}
-    {{#unless person.not_found}}
-    {{> components/empty-state heading="No one chosen yet" message="Choose an account above. The answer is resolved live through the same rules the enforcement point reads."}}
-    {{/unless}}
+    {{> components/notice tone="warn" title="No match" message="No account's name, email or id contains that text."}}
+    {{/if}}
+    {{else}}
+    {{> components/empty-state heading="Search for someone" message="Type part of a name, an email or an account id."}}
     {{/if}}
     {{/if}}
 
@@ -264,6 +253,5 @@
     {{/inline}}
     {{#*inline "scripts"}}
     <script data-cfasync="false" type="module" src="/js/pages/admin-access-control.js?v={{css_version}}"></script>
-    {{#if access}}<script data-cfasync="false" type="module" src="/js/pages/admin-user-access.js?v={{css_version}}"></script>{{/if}}
     {{/inline}}
 {{/layout}}

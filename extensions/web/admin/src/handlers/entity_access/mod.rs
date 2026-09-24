@@ -13,7 +13,7 @@ mod types;
 use std::sync::Arc;
 
 use axum::Json;
-use axum::extract::{Path, Query, State};
+use axum::extract::{Extension, Path, Query, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use sqlx::PgPool;
@@ -22,15 +22,20 @@ use systemprompt_security::authz::{
     Access, AccessRule, DASHBOARD_SOURCE, EntityRef, RuleType, UpsertRuleParams,
 };
 
+use crate::activity::RuleChange;
 use crate::error::{AdminError, AdminResult};
 use crate::repositories::config::gateway::registered_routes_from_services;
+use crate::types::UserContext;
 
-use support::{collect_entity_ids, parse_access, parse_subject, repo, validate_entity_type};
+use support::{
+    collect_entity_ids, parse_access, parse_subject, record_change, repo, rule_subject,
+    validate_entity_type,
+};
 use template::{Tally, TemplateSubject, clear_subject_rules, upsert_subject_rule};
 use types::{
     AllAccessQuery, ApplyTemplateBody, ApplyTemplateResponse, DefaultIncludedBody,
     EntityAccessEntry, EntityAccessResponse, EntityDefaultResponse, ListAllEntityAccessResponse,
-    UpsertRuleBody, UpsertRuleResponse,
+    RemoveRuleQuery, UpsertRuleBody, UpsertRuleResponse,
 };
 
 pub(crate) async fn list_entity_access_handler(
@@ -61,6 +66,7 @@ pub(crate) async fn list_entity_access_handler(
 
 pub(crate) async fn upsert_entity_rule_handler(
     State(pool): State<Arc<PgPool>>,
+    Extension(user_ctx): Extension<UserContext>,
     Path((entity_type, entity_id)): Path<(String, String)>,
     Json(body): Json<UpsertRuleBody>,
 ) -> AdminResult<Response> {
@@ -90,7 +96,7 @@ pub(crate) async fn upsert_entity_rule_handler(
         .upsert_rule(UpsertRuleParams {
             entity_type: kind,
             entity_id: &entity_id,
-            rule_type,
+            rule_type: rule_type.clone(),
             rule_value: &rule_value,
             access,
             justification,
@@ -112,6 +118,18 @@ pub(crate) async fn upsert_entity_rule_handler(
         body.valid_until,
     )
     .await?;
+    record_change(
+        &pool,
+        &user_ctx.user_id,
+        RuleChange {
+            entity_type: kind.as_str(),
+            entity_id: &entity_id,
+            subject: &format!("{rule_type}:{rule_value}"),
+            access: Some(&body.access),
+            reason: justification,
+        },
+    )
+    .await;
     Ok(Json(UpsertRuleResponse {
         rule,
         valid_until: body.valid_until,
@@ -119,11 +137,16 @@ pub(crate) async fn upsert_entity_rule_handler(
     .into_response())
 }
 
+// Why: the reason is optional here — a subject page removing its own
+// override has nothing to explain — and recorded whenever it is given.
 pub(crate) async fn delete_entity_rule_handler(
     State(pool): State<Arc<PgPool>>,
-    Path((entity_type, _entity_id, rule_id)): Path<(String, String, String)>,
+    Extension(user_ctx): Extension<UserContext>,
+    Path((entity_type, entity_id, rule_id)): Path<(String, String, String)>,
+    Query(query): Query<RemoveRuleQuery>,
 ) -> AdminResult<Response> {
-    validate_entity_type(&entity_type)?;
+    let kind = validate_entity_type(&entity_type)?;
+    let subject = rule_subject(&pool, kind, &entity_id, &rule_id).await;
     if !repo(&pool)
         .delete_rule(&RuleId::new(rule_id))
         .await
@@ -131,6 +154,23 @@ pub(crate) async fn delete_entity_rule_handler(
     {
         return Err(AdminError::NotFound("rule not found".to_owned()));
     }
+    let reason = query
+        .reason
+        .as_deref()
+        .map(str::trim)
+        .filter(|r| !r.is_empty());
+    record_change(
+        &pool,
+        &user_ctx.user_id,
+        RuleChange {
+            entity_type: kind.as_str(),
+            entity_id: &entity_id,
+            subject: &subject,
+            access: None,
+            reason,
+        },
+    )
+    .await;
     Ok((StatusCode::NO_CONTENT, ()).into_response())
 }
 

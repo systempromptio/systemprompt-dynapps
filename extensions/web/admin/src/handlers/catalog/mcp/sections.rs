@@ -9,12 +9,9 @@ use std::sync::Arc;
 use systemprompt::identifiers::McpServerId;
 
 use sqlx::PgPool;
-use systemprompt_security::authz::{AccessControlRepository, EntityKind};
 
 use crate::handlers::ssr::list_view::{PageWindow, Pagination};
-use crate::repositories;
 use crate::repositories::mcp::runtime;
-use crate::types::ENTITY_MCP_SERVER;
 use crate::util::time_range::TimeRange;
 
 use super::rows::BASE_URL;
@@ -46,8 +43,6 @@ pub(super) struct DetailSections {
     pub executions_total: i64,
     pub pagination: Pagination,
     pub connections: Vec<view::McpConnectionRowView>,
-    pub grants: Vec<view::McpGrantRow>,
-    pub default_included: bool,
 }
 
 // Why: every read is best-effort for the same reason the fleet reads are — a
@@ -95,20 +90,6 @@ pub(super) async fn detail_sections(
             .await
             .inspect_err(|e| tracing::warn!(error = %e, "mcp: connection read failed"))
             .unwrap_or_default();
-    let rules = repositories::users::access_control::list_rules_for_entity(
-        pool,
-        ENTITY_MCP_SERVER,
-        mcp_id.as_str(),
-    )
-    .await
-    .inspect_err(|e| tracing::warn!(error = %e, "mcp: grant read failed"))
-    .unwrap_or_default();
-    let default_included = AccessControlRepository::from_pool(Arc::clone(pool))
-        .get_entity(EntityKind::McpServer, mcp_id.as_str())
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, "mcp: entity access read failed"))
-        .unwrap_or_default()
-        .is_some_and(|e| e.default_included);
 
     DetailSections {
         pagination: build_pagination(
@@ -127,7 +108,5 @@ pub(super) async fn detail_sections(
         executions: detail::execution_rows(executions),
         executions_total,
         connections: detail::connection_rows(connections),
-        grants: detail::grant_rows(rules),
-        default_included,
     }
 }

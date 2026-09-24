@@ -27,6 +27,7 @@ pub fn band_label(rule_type: &str) -> &'static str {
         "connector" => "connected server",
         "salesforce" => "linked account",
         "role" => "role",
+        "organization" => "organization",
         _ => "band",
     }
 }

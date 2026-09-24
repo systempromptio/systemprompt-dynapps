@@ -159,6 +159,9 @@ impl SyncPlane for AccessControlPlane {
             record_declared(pool, PLANE_ID, &declared_hash).await?;
         }
         let report = drift_now(pool, &declared).await?;
+        if from.is_disk() {
+            super::attention::reviews_for(pool, &report).await?;
+        }
         let counts = report.counts();
         let mut rows = rows(&report);
         rows.extend(awaiting_rows(&declared));
@@ -171,19 +174,19 @@ impl SyncPlane for AccessControlPlane {
                 DriftKpi {
                     label: "Added in code",
                     value: counts.missing_in_db + counts.entities_missing,
-                    note: "Insert only or Overwrite adds these",
+                    note: "Apply all new adds these",
                     tone: "ok",
                 },
                 DriftKpi {
                     label: "Changed in code",
                     value: counts.changed + counts.default_changed,
-                    note: "Overwrite corrects these",
+                    note: "Replace database with code corrects these",
                     tone: "warn",
                 },
                 DriftKpi {
                     label: "Removed from code",
                     value: counts.only_in_db_code,
-                    note: "Overwrite deletes these",
+                    note: "Replace database with code deletes these",
                     tone: "err",
                 },
                 DriftKpi {

@@ -10,7 +10,10 @@
     </div>
     <div class="sp-ac-dialog__body">
         <p data-sync="confirm-body"></p>
-        <p class="sp-ac-modal-hint">The change is recorded in the activity log with your name, the plane and the counts, and the sync state records the declared hash you applied.</p>
+        <label class="sp-entity-access__field sp-entity-access__field--wide">Reason
+            <textarea class="sp-search-input" data-sync="confirm-reason" rows="2" maxlength="240" required></textarea>
+        </label>
+        <p class="sp-ac-modal-hint">The change is recorded in the activity log with your name, your reason, the plane and the counts, and the sync state records the declared hash you applied.</p>
     </div>
     <div class="sp-ac-dialog__actions">
         <button type="button" class="sp-btn sp-btn--primary" data-action="sync-confirm">Apply</button>
