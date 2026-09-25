@@ -43,10 +43,16 @@ version) → `bridge`
 matrix (four runners; dependency caches exclude workspace outputs) → `image`
 per arch (downloads the bridge artifacts into
 `storage/files/downloads/` **before** building, because the image serves them;
-pushes by digest) → `image-merge` (one manifest list, tags, cosign) →
-`smoke` (pulls the image, checks `--version`, both arches, the five download
-files, both MCP binaries, and the signature) → `release` (checksums,
-signatures, `gh release create` which creates the tag).
+pushes by digest) → `image-merge` (one manifest list, tagged only
+`:sha-<7>`, cosign) → `smoke` (pulls the image, checks `--version`, both arches,
+the five download files, both MCP binaries, and the signature) and
+`upgrade-boot` (boots it over every seeded release) → `promote-tags` (points
+`:latest` and, when absent, `:X.Y.Z` at that proven digest) → `release`
+(checksums, signatures, `gh release create` which creates the tag).
+
+`:X.Y.Z` is create-once and an org package version cannot be deleted from this
+account, so it is written only after the image has passed smoke and
+upgrade-boot. A failed run leaves its `:sha-<7>` and nothing else.
 
 The release does not repeat the Gates matrix. `just release` requires the latest
 `gates.yml` push run on the exact `next` SHA to have completed successfully,
@@ -66,7 +72,7 @@ before promotion.
 |---|---|
 | tag `vX.Y.Z`, the Release, its assets | untouched — never re-uploaded, never clobbered |
 | image `:X.Y.Z` | untouched |
-| image `:latest`, `:sha-<7>` | moved to the new build |
+| image `:latest`, `:sha-<7>` | moved to the new build once it passes smoke and upgrade-boot |
 | bridge binaries inside the image | rebuilt (they live in the image, not only in the Release) |
 
 A tag that exists at a **different** commit with no Release behind it fails the

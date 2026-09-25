@@ -20,6 +20,10 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+### Changed
+
+- **Release:** `:latest` and `:X.Y.Z` are written only after the image passes smoke and upgrade-boot (new `promote-tags` job); `image-merge` pushes only `:sha-<7>`. A failed release no longer burns the create-once version tag or moves `:latest` to an unproven build.
+
 ## 0.61.0 — 2026-09-24
 
 ### Breaking
