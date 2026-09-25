@@ -32,6 +32,7 @@ Built on core 0.61.0 (no core release). Use this in place of 0.61.0: GHCR `:0.61
 
 ### Fixed
 
+- **Docker:** first boot without a profile now generates `encryption_master_key` into the new `secrets.json`. `admin setup` does not mint that key, and the gateway accounting journal refuses to start without it, so a fresh profile-less container failed at boot. The second 0.61.1 release run caught this in upgrade-boot on every attempt.
 - **Release:** the smoke test (`release.yml`) and the production health watch (`scripts/deploy-observation.sh`) now expect the core version. Both `systemprompt --version` and `/health` report the core crate version, so after the version split both would have failed every astound-only release. The first 0.61.1 run stopped at smoke because of this, and published nothing but `:sha-0f96c9b`.
 
 ## 0.61.0 — 2026-09-24
