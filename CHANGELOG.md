@@ -20,6 +20,10 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+### Fixed
+
+- **Release:** upgrade-boot no longer passes on core's startup stub. Core's early-bind listener answers `GET /health` with `200 {"status":"starting"}` while bootstrap is still running, and the gate accepted any 200, so 0.61.0 and the first 0.61.1 attempt "passed" an image that then failed to initialise the `gateway` extension. The probe now requires `.status == "healthy"` or a 200 from `/readyz`, and prints the last `/health` body alongside the container log when it gives up. The `just claude` gateway probes and `just profile-check --live` use the same body check.
+
 ## 0.61.1 — 2026-09-25
 
 Built on core 0.61.0 (no core release). Use this in place of 0.61.0: GHCR `:0.61.0` points at the `fd619fd6` build that failed upgrade-boot and lacks the first-boot `SYSTEMPROMPT_ADMIN_EMAIL` check, and that org package version cannot be deleted.

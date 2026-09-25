@@ -143,8 +143,8 @@ fi
 
 if [ "$LIVE" -eq 1 ] && [ -n "$EXT_URL" ]; then
     echo "── live probe ──"
-    if curl -fsk --max-time 10 "$EXT_URL/api/v1/health" >/dev/null 2>&1; then
-        ok "$EXT_URL/api/v1/health responds"
+    if curl -fsk --max-time 10 "$EXT_URL/api/v1/health" 2>/dev/null | grep -Eq '"status" *: *"healthy"'; then
+        ok "$EXT_URL/api/v1/health reports healthy"
     else
         bad "$EXT_URL/api/v1/health not responding — server down, port not exposed, or DNS/proxy misconfigured"
     fi

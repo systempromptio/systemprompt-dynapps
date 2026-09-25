@@ -746,13 +746,21 @@ jobs:
               -v "$vol:/app/storage/data" "$ref" > /dev/null
             healthy=""
             for _ in $(seq 1 60); do
-              if curl -fsS http://localhost:8080/health > /dev/null 2>&1; then healthy=1; break; fi
+              # The early-bind listener answers /health 200 {"status":"starting"}
+              # during bootstrap, so a bare 200 proves nothing: require the
+              # finished-boot body, or /readyz (503 until boot completes).
+              if curl -fsS http://localhost:8080/health 2>/dev/null | jq -e '.status == "healthy"' > /dev/null 2>&1 \
+                || curl -fsS http://localhost:8080/readyz > /dev/null 2>&1; then healthy=1; break; fi
               if [ "$(docker inspect -f '{{.State.Running}}' "boot_$db")" != "true" ]; then break; fi
               sleep 5
             done
             docker logs "boot_$db" 2>&1 | tail -40
             docker rm -f "boot_$db" > /dev/null
-            [ -n "$healthy" ] || { echo "::error::image did not become healthy over release $rung"; exit 1; }
+            if [ -z "$healthy" ]; then
+              echo "last /health body: $(curl -sS --max-time 5 http://localhost:8080/health 2>&1 || true)"
+              echo "::error::image did not finish booting over release $rung (see container log above)"
+              exit 1
+            fi
             rows=$(psql -At -h localhost -U test -d "$db" -c "SELECT count(*) FROM ai_requests")
             [ "$rows" = "2000" ] || { echo "::error::release $rung lost ai_requests rows ($rows)"; exit 1; }
             echo "::endgroup::"
