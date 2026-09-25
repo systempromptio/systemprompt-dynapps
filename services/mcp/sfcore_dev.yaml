@@ -1,0 +1,27 @@
+# SFCore dev workflow server, hosted by the SFCore team on Cloud Run.
+# Identity-backed: the gateway asks /api/public/identity/sfcore_dev/token for a
+# short-lived RS256 JWT signed by this instance and sends it as the bearer. The
+# server verifies it against /.well-known/jwks.json; `aud` is `endpoint` below.
+# See docs/EXTERNAL-MCP-IDENTITY.md.
+#
+# Disabled until the SFCore server verifies these tokens; until then every call
+# would 401 upstream. Go-live is flipping `enabled` to true.
+mcp_servers:
+  sfcore_dev:
+    type: external
+    endpoint: https://mcp-dev-server-611435061062.asia-south1.run.app/mcp
+    enabled: false
+    tool_policy: allow
+    display_in_web: false
+    removable: true
+    description: SFCore dev workflow (requirements, solution and implementation phases), hosted by the SFCore team
+    external_auth:
+      token_endpoint: /api/public/identity/sfcore_dev/token
+      header: Authorization
+      scheme: Bearer
+    oauth:
+      required: false
+      scopes:
+      - user
+      audience: mcp
+      client_id: null

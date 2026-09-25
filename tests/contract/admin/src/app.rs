@@ -253,6 +253,16 @@ impl App {
         self.dispatch(call, Some(token), &[]).await
     }
 
+    // Issue a call carrying extra request headers, for the broker-only routes
+    // whose authentication is a header no principal holds.
+    pub async fn call_with_headers(
+        &self,
+        call: Call<'_>,
+        headers: &[(&str, &str)],
+    ) -> (StatusCode, String) {
+        self.dispatch(call, None, headers).await
+    }
+
     // The redirect target of a call, for the flows whose whole contract is
     // where they send the browser.
     pub async fn redirect_of(&self, call: Call<'_>) -> (StatusCode, String) {

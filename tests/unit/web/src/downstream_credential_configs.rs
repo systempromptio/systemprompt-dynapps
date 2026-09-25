@@ -21,6 +21,9 @@ use crate::support::repo_root;
 // 404 at tool-call time and nowhere earlier.
 const ATLASSIAN_ACCESSOR: &str = "/api/public/connectors/atlassian/token";
 const SALESFORCE_SERVERS: [&str; 1] = ["salesforce"];
+// Servers that trust the identity this instance signs rather than a banked
+// provider token; their accessor is `identity_token::accessor_path`.
+const IDENTITY_SERVERS: [&str; 1] = ["sfcore_dev"];
 
 fn web_config(name: &str) -> PathBuf {
     repo_root().join("services/web/config").join(name)
@@ -90,6 +93,13 @@ fn every_external_server_points_at_the_accessor_that_serves_it() {
         ATLASSIAN_ACCESSOR.to_owned(),
     )];
     servers.extend(salesforce);
+    servers.extend(IDENTITY_SERVERS.map(|name| {
+        (
+            format!("{name}.yaml"),
+            name,
+            systemprompt_web_admin::identity_token::accessor_path(name),
+        )
+    }));
     for (file, name, accessor) in servers {
         let entry = server(&file, name);
         let external_auth = entry

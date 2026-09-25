@@ -184,6 +184,18 @@ entities:
     allow:
       role: [user, admin, platform_admin, project_manager, super_admin]
 
+  # Identity-backed, client-hosted: the instance signs who is calling, so this
+  # band is the whole access decision. Starts with the SFCore delivery group;
+  # widens to project allocation as teams are assigned.
+  - entity: mcp_server/sfcore_dev
+    default: closed
+    why: >-
+      SFCore dev workflow server hosted by the SFCore team; it trusts the
+      identity this instance signs, so only entitled users may reach it.
+    allow:
+      role: [platform_admin, admin, super_admin]
+      group: [india-devs]
+
   - entity: mcp_server/google_workspace
     default: closed
     why: >-

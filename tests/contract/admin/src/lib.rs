@@ -45,6 +45,9 @@ mod bridge_whoami_contract;
 mod catalog_contract;
 #[cfg(test)]
 mod connector_accounts_contract;
+
+#[cfg(test)]
+mod identity_token_contract;
 #[cfg(test)]
 mod dev_login_contract;
 #[cfg(test)]
