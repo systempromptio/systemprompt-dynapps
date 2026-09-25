@@ -10,6 +10,7 @@ branch="$(git branch --show-current)"
 [ -z "$branch" ] || [ "$branch" = next ] || die 'use next or a detached release worktree'
 ! grep -q '^\[patch\.crates-io\]' Cargo.toml tests/Cargo.toml || die 'published releases cannot use local core patches'
 scripts/sync-release-version.sh "$version" --check
+scripts/sync-core-version.sh --check
 bash scripts/check-core-ref.sh
 bash scripts/check-schema-baseline.sh
 git fetch origin main next

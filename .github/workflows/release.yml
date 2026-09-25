@@ -127,6 +127,7 @@ jobs:
         run: |
           version=$(sed -n 's/^version = "\([0-9.]*\)"/\1/p' Cargo.toml | head -1)
           scripts/sync-release-version.sh "$version" --check
+          scripts/sync-core-version.sh --check
           tag="v$version"
           short=$(git rev-parse --short=7 HEAD)
 
@@ -450,7 +451,9 @@ jobs:
   # deploys anything.
   base-bundle:
     name: Base services bundle
-    needs: [version, image]
+    # Why: GHCR tags are create-once and this account cannot delete an org
+    # package version, so the versioned base bundle waits for the image proofs.
+    needs: [version, image, smoke, upgrade-boot]
     runs-on: ubuntu-latest
     env:
       VERSION: ${{ needs.version.outputs.version }}

@@ -14,12 +14,15 @@ the published core — is in [BRANCHING.md](BRANCHING.md); read it first.
 
 ## Versioning policy
 
-The fork tracks core in lockstep: core `X.Y.Z` on crates.io → workspace
-`version = X.Y.Z` in both manifests → `bridge/CORE_REF = vX.Y.Z` → git tag
-`vX.Y.Z` → image tag `X.Y.Z`. `scripts/sync-release-version.sh X.Y.Z --check`
-is the drift gate. The bridge crate (`bridge/Cargo.toml`) keeps its own
-version; its binaries ship attached to the `vX.Y.Z` release and the notes
-state the bridge version.
+Astound and core carry **separate** versions. Astound's version (the workspace
+`version`, `bridge/Cargo.toml`, the profile template, the operator docs) → git
+tag `vX.Y.Z` → image tag `X.Y.Z`; `scripts/sync-release-version.sh X.Y.Z`
+writes it and `--check` gates it. The core pins in both manifests and
+`bridge/CORE_REF = vC.D.E` name the published core it builds on;
+`scripts/sync-core-version.sh C.D.E` writes them and `--check` gates them. A
+core release normally means an astound release, but an astound release (a
+fix, or a re-release after a failed run) needs no core release: bump only
+astound's version.
 
 Because the version is core's, most pushes to `main` will *not* carry a new
 version. That is fine: the workflow is create-once for everything versioned
@@ -103,15 +106,13 @@ proving nothing about the new core. The pins live in **two** manifests, because
 ```bash
 grep -rn '^systemprompt[a-z-]* = { version = "' --include=Cargo.toml . | grep -v target
 sed -i 's/OLD/NEW/g' Cargo.toml tests/Cargo.toml     # or let the script do it
-scripts/sync-release-version.sh NEW --check          # core-pin lines must be silent
+scripts/sync-core-version.sh NEW --check            # must be silent
 ```
 
-`sync-release-version.sh` covers every core pin in both manifests plus a
+`sync-core-version.sh` covers every core pin in both manifests plus a
 residual sweep that fails on any core pin it does not itself move — so a pin
-added to a new crate cannot sit stale. Its remaining `DRIFT:` lines on this
-path are the *product* version (workspace version, Chart.yaml, deploy files);
-those belong to Step A, not here. Do **not** bump them for a core that has not
-shipped.
+added to a new crate cannot sit stale. Astound's own version is
+`sync-release-version.sh` and belongs to Step A, not here.
 
 Then prove it, in this order — each step catches a class the previous one
 cannot:
@@ -274,7 +275,7 @@ belongs in git or workflow inputs. Both normal releases and repairs use
 
 ## Versions in documentation
 
-`scripts/sync-release-version.sh X.Y.Z` (run by `just core-bump`) also rewrites
+`scripts/sync-release-version.sh X.Y.Z` (astound's version) also rewrites
 the image pins in the operator docs (`deploy/self-host/*.md`,
 `docs/install/*.md`), and its `--check` refuses any other `0.x.y` there. Hosted
 pages under `services/content/` never carry a literal version: they write

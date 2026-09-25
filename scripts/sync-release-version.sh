@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
-# Sync every version pin in the repo to a single release version.
+# Sync astound's own release version. The core crate pins and
+# bridge/CORE_REF are a separate number, owned by scripts/sync-core-version.sh:
+# astound can release without a core release.
 #
 #   scripts/sync-release-version.sh 0.21.0          # apply
 #   scripts/sync-release-version.sh 0.21.0 --check  # verify only (CI guard)
 #
 # Covered pins:
-#   Cargo.toml            workspace version + systemprompt/-security/-extension pins
-#   tests/Cargo.toml      its own systemprompt/-security/-api pins (separate workspace)
+#   Cargo.toml            workspace version
 #   bridge/Cargo.toml     the bridge crate version (displayed + reported to the gateway)
 #   deploy/self-host/profile.yaml.template   `# template-version:` on line 1
+#   operator docs that pin the image by version
 #
 # macOS + Linux compatible (no GNU-only sed flags).
 set -eu
@@ -47,39 +49,9 @@ check_or_apply Cargo.toml \
     "^version = \"$VERSION\"" \
     "workspace version"
 
-# Cargo.toml — core crate pins.
-check_or_apply Cargo.toml \
-    "s|^systemprompt = { version = \"[0-9.]*\"|systemprompt = { version = \"$VERSION\"|" \
-    "^systemprompt = \\{ version = \"$VERSION\"" \
-    "systemprompt core pin"
-check_or_apply Cargo.toml \
-    "s|^systemprompt-security = { version = \"[0-9.]*\"|systemprompt-security = { version = \"$VERSION\"|" \
-    "^systemprompt-security = \\{ version = \"$VERSION\"" \
-    "systemprompt-security core pin"
-check_or_apply Cargo.toml \
-    "s|^systemprompt-extension = { version = \"[0-9.]*\"|systemprompt-extension = { version = \"$VERSION\"|" \
-    "^systemprompt-extension = \\{ version = \"$VERSION\"" \
-    "systemprompt-extension core pin"
-
-# tests/Cargo.toml — the test workspace is excluded from the root workspace and
-# carries its own copies of the same pins. Nothing else rewrites them, and a
-# stale pin here silently disables the test workspace's [patch.crates-io].
-check_or_apply tests/Cargo.toml \
-    "s|^systemprompt = { version = \"[0-9.]*\"|systemprompt = { version = \"$VERSION\"|" \
-    "^systemprompt = \\{ version = \"$VERSION\"" \
-    "systemprompt core pin (test workspace)"
-check_or_apply tests/Cargo.toml \
-    "s|^systemprompt-security = { version = \"[0-9.]*\"|systemprompt-security = { version = \"$VERSION\"|" \
-    "^systemprompt-security = \\{ version = \"$VERSION\"" \
-    "systemprompt-security core pin (test workspace)"
-check_or_apply tests/Cargo.toml \
-    "s|^systemprompt-api = { version = \"[0-9.]*\"|systemprompt-api = { version = \"$VERSION\"|" \
-    "^systemprompt-api = \\{ version = \"$VERSION\"" \
-    "systemprompt-api core pin (test workspace)"
-
 # bridge/Cargo.toml — the white-label bridge crate. Its version is what the
 # desktop app displays and what the gateway heartbeat reports, so it tracks the
-# core release rather than carrying its own numbering.
+# astound release.
 check_or_apply bridge/Cargo.toml \
     "s|^version = \"[0-9.]*\"|version = \"$VERSION\"|" \
     "^version = \"$VERSION\"" \
@@ -138,27 +110,8 @@ for doc in deploy/self-host/README.md deploy/self-host/SINGLE-NODE.md \
     fi
 done
 
-# Residual sweep: any core pin in any manifest that the rules above do not
-# already move. A pin added to a new crate would otherwise sit stale forever,
-# because no gate distinguishes a forgotten pin from a deliberate one.
-#
-# Both spellings count. A bare-string pin (`systemprompt-models = "0.43.0"`) is
-# as load-bearing as the table form, and sweeping only the table form let a
-# stale one sit behind an active patch in a sibling repo until the patch came
-# off and the lockfile quietly resolved two versions of the same core crate.
-# .vendor/ is where CI checks core out (a copy of core itself), not our pins.
-stale=$(grep -rnE '^systemprompt[a-z-]* = ("[0-9]|\{ version = ")' --include=Cargo.toml . \
-    | grep -v '/target/' | grep -v '/\.vendor/' \
-    | grep -vE "= \"$VERSION\"|version = \"$VERSION\"" || true)
-if [ -n "$stale" ]; then
-    echo "DRIFT: core pins not on $VERSION and not covered by this script:"
-    echo "$stale"
-    fail=1
-    [ "$MODE" = "--check" ] || exit 1
-fi
-
 if [ "$MODE" = "--check" ]; then
-    [ "$fail" -eq 0 ] && echo "version sync OK: everything pinned to $VERSION" || exit 1
+    [ "$fail" -eq 0 ] && echo "version sync OK: astound pinned to $VERSION" || exit 1
 else
     echo "version sync applied: $VERSION"
 fi

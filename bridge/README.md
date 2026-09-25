@@ -197,4 +197,4 @@ no forking of the bridge source:
    "WebView2Loader.dll was not found".
 
 Everything else — auth, sync, proxy, GUI, host integrations — is inherited from
-core and stays in lockstep across all brands.
+core and matches across all brands at the same core version.
