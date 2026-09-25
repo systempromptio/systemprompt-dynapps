@@ -625,7 +625,7 @@ jobs:
         run: |
           bridge_version=$(sed -n 's/^version = "\([0-9.]*\)"/\1/p' bridge/Cargo.toml | head -1)
           # The bridge shows this number in its footer and reports it to the
-          # gateway; a release whose bridge disagrees with core is a defect.
+          # gateway; a release whose bridge disagrees with its tag is a defect.
           if [ "$bridge_version" != "$VERSION" ]; then
             echo "::error::bridge/Cargo.toml is $bridge_version but the release is $VERSION (run scripts/sync-release-version.sh $VERSION)"
             exit 1
@@ -636,7 +636,8 @@ jobs:
           {
             echo "## Astound Digital gateway $TAG"
             echo
-            echo "Built against published \`systemprompt\` core **$VERSION** (crates.io); the bridge carries the same version."
+            core=$(sed -n 's/^systemprompt = { version = "\([0-9.]*\)".*/\1/p' Cargo.toml | head -1)
+            echo "Built against published \`systemprompt\` core **$core** (crates.io); the bridge carries the release version."
             echo
             echo "### Image"
             echo

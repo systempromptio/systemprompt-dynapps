@@ -20,10 +20,14 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+## 0.61.1 — 2026-09-25
+
+Built on core 0.61.0 (no core release). Use this in place of 0.61.0: GHCR `:0.61.0` points at the `fd619fd6` build that failed upgrade-boot and lacks the first-boot `SYSTEMPROMPT_ADMIN_EMAIL` check, and that org package version cannot be deleted.
+
 ### Changed
 
 - **Release:** `:latest` and `:X.Y.Z` are written only after the image passes smoke and upgrade-boot (new `promote-tags` job); `image-merge` pushes only `:sha-<7>`. A failed release no longer burns the create-once version tag or moves `:latest` to an unproven build.
-- **Release:** astound's version is decoupled from core's. `scripts/sync-release-version.sh` sets only astound's own version; the new `scripts/sync-core-version.sh` owns the core pins and `bridge/CORE_REF`, and `release.yml`, `release.sh` and `check-release-merge.sh` check both. An astound release no longer needs a core release; `just core-bump` adopts a core without touching astound's version.
+- **Release:** astound's version is decoupled from core's. `scripts/sync-release-version.sh` sets only astound's own version; the new `scripts/sync-core-version.sh` owns the core pins and `bridge/CORE_REF`, and `release.yml`, `release.sh` and `check-release-merge.sh` check both, and the release notes name the core pin rather than the release version. An astound release no longer needs a core release; `just core-bump` adopts a core without touching astound's version.
 - **Release:** the versioned base services bundle is published only after smoke and upgrade-boot pass.
 
 ## 0.61.0 — 2026-09-24
