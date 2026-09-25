@@ -52,7 +52,8 @@
     white-space: nowrap;
 }
 
-.sp-nav-group--account {
+.sp-nav-group--account,
+.sp-nav-group--developer {
     margin-top: var(--sp-space-4);
     border-top: 1px solid var(--sp-sidebar-border);
     padding-top: var(--sp-space-2);

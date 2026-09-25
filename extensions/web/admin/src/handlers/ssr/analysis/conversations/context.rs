@@ -7,7 +7,7 @@ use crate::handlers::ssr::analysis::reports::banner::ReportBannerView;
 use crate::handlers::ssr::analysis::ribbon::{RibbonGroupView, RibbonView};
 use crate::handlers::ssr::list_view::{PageWindow, ScopeFilterView};
 use crate::repositories::analysis::conversations::{
-    BreakdownBy, ConversationAnalysisResult, FlagFilter, JudgedFilter,
+    BreakdownBy, ConversationAnalysisResult, FlagFilter,
 };
 use crate::repositories::scope::ScopeRequest;
 use systemprompt::identifiers::UserId;
@@ -202,13 +202,6 @@ fn fixed_groups(params: &ConversationAnalysisQuery) -> Vec<RibbonGroupView> {
             params.outcome().as_deref(),
             &OUTCOMES,
         ),
-        RibbonGroupView::fixed(
-            "judged",
-            "Judged",
-            "judge",
-            params.judged().map(JudgedFilter::as_str),
-            &JudgedFilter::ALL.map(|(v, l)| (v.as_str(), l)),
-        ),
     ]
 }
 
@@ -278,6 +271,7 @@ pub(super) fn build_context(
         breakdown: breakdown_rows(params, data),
         has_rows: !rows.is_empty(),
         count_label: format!("{} conversations", data.totals.conversations),
+        turns_toggle: params.turns_toggle(data.totals.without_turns),
         rows,
         pagination: params.pagination(window),
         sort_headers: sort_headers(params),

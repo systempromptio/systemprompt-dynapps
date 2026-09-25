@@ -42,17 +42,6 @@
   white-space: nowrap;
 }
 
-/* Badges sit inline and are clipped by the cell rather than wrapping it. */
-.sp-p-users__chips-cell .sp-badge {
-  margin-inline-end: var(--sp-space-1);
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  vertical-align: middle;
-}
-
-.sp-p-users__chips-cell .sp-badge:last-child { margin-inline-end: 0; }
-
 /* The shell's main element carries `contain: layout style`, which makes it the
    containing block for fixed descendants. The create-user panel is
    `position: fixed` and parks itself off-canvas with `translateX(100%)`, so

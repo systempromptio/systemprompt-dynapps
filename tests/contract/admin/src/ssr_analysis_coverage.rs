@@ -126,10 +126,6 @@ async fn populated_analysis_pages_render_facts_and_skill_totals() {
         body.contains("Contract analysis"),
         "judge title is rendered"
     );
-    assert!(
-        body.contains("sp-verdict__score") && body.contains(">92</span>"),
-        "completion score is rendered in the judge score cell"
-    );
 
     let (status, body) = app
         .call(Call::get("/admin/analysis/skills", Principal::Admin))

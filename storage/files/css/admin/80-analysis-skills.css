@@ -95,14 +95,9 @@
 }
 .sp-askill-table th.sp-askill-col-skill { width: 13%; }
 .sp-askill-table th.sp-askill-col-spark { width: 5%; }
-.sp-askill-table th.sp-askill-col-models { width: 11%; min-width: 9rem; }
+.sp-askill-table th.sp-askill-col-models { width: 9%; min-width: 8rem; }
+.sp-askill-table th.sp-askill-col-agents { width: 7%; min-width: 6rem; }
 .sp-askill-table th.sp-aconv-col-select { width: 1.6rem; }
-.sp-askill-models .sp-aconv-tag {
-    max-width: 100%;
-}
-.sp-askill-models {
-    overflow: hidden;
-}
 .sp-askill-table th.sp-col-date { width: 6%; }
 .sp-askill-table th.sp-table__cell--num { width: 5%; }
 .sp-askill-table th.sp-askill-col-done { width: 4.5rem; }

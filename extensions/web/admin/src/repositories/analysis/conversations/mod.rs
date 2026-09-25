@@ -16,8 +16,8 @@ pub mod hook_events;
 pub mod planes;
 mod row;
 
-pub use row::ConversationFactRow;
 use row::decode_row;
+pub use row::{ContinuationLink, ConversationFactRow};
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -49,6 +49,9 @@ pub struct ConversationAnalysisFilter {
     // Why: an explicit row selection — the export of ticked rows and the
     // judge-selected action read exactly these contexts, window aside.
     pub context_ids: Option<Vec<String>>,
+    // Why: a conversation with no turn is a title or side call the client
+    // made on its own; the page hides those unless asked for every row.
+    pub include_without_turns: bool,
 }
 
 impl ConversationAnalysisFilter {
@@ -111,6 +114,11 @@ pub struct ConversationAnalysisTotals {
     pub p95_latency_ms: Option<f64>,
     // Why: queued judge rows in scope — what the label has not yet covered.
     pub pending_judgement: i64,
+    // Why: rows in scope left out because they have no turn.
+    #[serde(default)]
+    pub without_turns: i64,
+    #[serde(default)]
+    pub active_ms: i64,
 }
 
 /// One bucket of the time series: conversations started in the bucket and
@@ -234,6 +242,7 @@ pub async fn load_conversation_analysis_page(
         filter.flag.map(FlagFilter::as_str),
         filter.bucket(),
         filter.context_ids.as_deref(),
+        filter.include_without_turns,
     )
     .fetch_one(&mut *connection)
     .await?;

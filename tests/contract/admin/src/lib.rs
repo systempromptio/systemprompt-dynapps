@@ -47,8 +47,6 @@ mod catalog_contract;
 mod connector_accounts_contract;
 
 #[cfg(test)]
-mod identity_token_contract;
-#[cfg(test)]
 mod dev_login_contract;
 #[cfg(test)]
 mod devices_contract;
@@ -72,6 +70,8 @@ mod handler_errors;
 mod handler_variants;
 #[cfg(test)]
 mod hooks_track_contract;
+#[cfg(test)]
+mod identity_token_contract;
 #[cfg(test)]
 mod judge_all_scope_contract;
 #[cfg(test)]

@@ -68,6 +68,7 @@ CREATE TABLE IF NOT EXISTS conversation_facts (
     p50_latency_ms INTEGER,
     p95_latency_ms INTEGER,
     max_latency_ms INTEGER,
+    active_ms BIGINT NOT NULL DEFAULT 0,
     tool_calls_intended BIGINT NOT NULL DEFAULT 0,
     tool_calls_executed BIGINT NOT NULL DEFAULT 0,
     tool_calls_failed BIGINT NOT NULL DEFAULT 0,
@@ -181,6 +182,7 @@ BEGIN
             percentile_cont(0.95) WITHIN GROUP (ORDER BY r.latency_ms)
                 FILTER (WHERE r.latency_ms IS NOT NULL AND r.effective_kind = 'turn') AS p95,
             MAX(r.latency_ms) FILTER (WHERE r.effective_kind = 'turn') AS max_latency_ms,
+            COALESCE(SUM(r.latency_ms) FILTER (WHERE r.effective_kind = 'turn'), 0)::bigint AS active_ms,
             MIN(r.created_at) AS first_at,
             MAX(COALESCE(r.completed_at, r.created_at)) AS last_at
         FROM requests r
@@ -321,7 +323,7 @@ BEGIN
             request_count, turn_count, side_call_count, side_call_cost_microdollars,
             error_count, rejected_count, streaming_count,
             input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens, reasoning_tokens,
-            cost_microdollars, p50_latency_ms, p95_latency_ms, max_latency_ms,
+            cost_microdollars, p50_latency_ms, p95_latency_ms, max_latency_ms, active_ms,
             tool_calls_intended, tool_calls_executed, tool_calls_failed, artifact_count,
             artifact_files, artifact_cards,
             safety_findings, safety_blocked, gov_allow, gov_warn, gov_deny,
@@ -334,7 +336,7 @@ BEGIN
                a.request_count, a.turn_count, a.side_call_count, a.side_call_cost,
                a.error_count, a.rejected_count, a.streaming_count,
                a.input_tokens, a.output_tokens, a.cache_read_tokens, a.cache_creation_tokens, a.reasoning_tokens,
-               a.cost_microdollars, a.p50::int, a.p95::int, a.max_latency_ms,
+               a.cost_microdollars, a.p50::int, a.p95::int, a.max_latency_ms, a.active_ms,
                COALESCE(i.tool_calls_intended, 0), COALESCE(x.executed, 0), COALESCE(x.failed, 0), COALESCE(x.artifacts, 0),
                COALESCE(x.artifact_files, 0), COALESCE(x.artifact_cards, 0),
                COALESCE(s.findings, 0), COALESCE(s.blocked, 0),
@@ -372,7 +374,7 @@ BEGIN
             cache_creation_tokens = EXCLUDED.cache_creation_tokens,
             reasoning_tokens = EXCLUDED.reasoning_tokens, cost_microdollars = EXCLUDED.cost_microdollars,
             p50_latency_ms = EXCLUDED.p50_latency_ms, p95_latency_ms = EXCLUDED.p95_latency_ms,
-            max_latency_ms = EXCLUDED.max_latency_ms,
+            max_latency_ms = EXCLUDED.max_latency_ms, active_ms = EXCLUDED.active_ms,
             tool_calls_intended = EXCLUDED.tool_calls_intended,
             tool_calls_executed = EXCLUDED.tool_calls_executed,
             tool_calls_failed = EXCLUDED.tool_calls_failed, artifact_count = EXCLUDED.artifact_count,

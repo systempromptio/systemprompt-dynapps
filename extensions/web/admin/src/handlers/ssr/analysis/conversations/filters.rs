@@ -81,23 +81,17 @@ pub(super) fn sort_headers(params: &ConversationAnalysisQuery) -> SortHeaders {
             "sp-table__cell--num",
             "Priced spend on the conversation",
         ),
-        latency: h(
-            FactSort::Latency,
-            "p95",
+        active: h(
+            FactSort::Active,
+            "Active",
             "sp-table__cell--num",
-            "95th percentile turn latency",
+            "Time the model spent answering: the summed latency of every turn",
         ),
         duration: h(
             FactSort::Duration,
             "Length",
             "sp-table__cell--num",
-            "First to last request",
-        ),
-        completion: h(
-            FactSort::Completion,
-            "AI",
-            "sp-aconv-col-judge",
-            "The AI judge's one score: did the assistant deliver what was originally asked (0–100). Green from 80, amber from 50, red below.",
+            "Wall clock from first to last activity, idle time included",
         ),
     }
 }

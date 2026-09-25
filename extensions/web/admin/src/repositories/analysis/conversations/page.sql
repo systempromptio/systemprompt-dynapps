@@ -6,7 +6,9 @@
 -- CASE arms, never interpolated text. The series is joined onto a
 -- generate_series of buckets so a thirty-day window always yields thirty
 -- points, zeros included — two busy days must not draw as one slope.
-WITH f AS MATERIALIZED (
+-- A conversation with no turn (title and side calls only) is left out unless
+-- $22 asks for every row; `scoped` keeps it so the page can say how many.
+WITH scoped AS MATERIALIZED (
     SELECT f.*, u.display_name, g.name AS group_name, p.name AS project_name,
            f.input_tokens + f.output_tokens AS total_tokens,
            f.cache_read_tokens + f.cache_creation_tokens AS cache_tokens,
@@ -47,6 +49,8 @@ WITH f AS MATERIALIZED (
            OR a.title ILIKE $6 OR array_to_string(a.tags, ' ') ILIKE $6
            OR array_to_string(f.skills, ' ') ILIKE $6 OR array_to_string(f.models, ' ') ILIKE $6
            OR conversation_title(f.context_id, f.client_session_id) ILIKE $6)
+), f AS MATERIALIZED (
+    SELECT * FROM scoped WHERE $22::boolean OR turn_count > 0
 ), totals AS (
     SELECT COUNT(*)::bigint AS conversations, COUNT(DISTINCT user_id)::bigint AS users,
            COALESCE(SUM(turn_count), 0)::bigint AS turns,
@@ -69,6 +73,7 @@ WITH f AS MATERIALIZED (
            COALESCE(SUM(artifact_files), 0)::bigint AS artifact_files,
            COALESCE(SUM(artifact_cards), 0)::bigint AS artifact_cards,
            COALESCE(SUM(skill_invocations), 0)::bigint AS skill_invocations,
+           COALESCE(SUM(active_ms), 0)::bigint AS active_ms,
            COUNT(*) FILTER (WHERE cardinality(skills) > 0)::bigint AS with_skills,
            COUNT(*) FILTER (WHERE outcome = 'achieved')::bigint AS achieved,
            COUNT(*) FILTER (WHERE completion IS NOT NULL)::bigint AS judged,
@@ -77,7 +82,8 @@ WITH f AS MATERIALIZED (
            (SELECT COUNT(*)::bigint FROM conversation_analyses q
              WHERE q.status = 'pending'
                AND ($1::text[] IS NULL OR q.user_id = ANY($1))
-               AND ($2::text IS NULL OR q.user_id = $2)) AS pending_judgement
+               AND ($2::text IS NULL OR q.user_id = $2)) AS pending_judgement,
+           (SELECT COUNT(*)::bigint FROM scoped WHERE turn_count = 0) AS without_turns
     FROM f
 ), buckets AS (
     SELECT generate_series(
@@ -158,6 +164,8 @@ WITH f AS MATERIALIZED (
              CASE WHEN $9 = 'errors' AND NOT $10::boolean THEN f.error_count + f.gov_deny END ASC,
              CASE WHEN $9 = 'latency' AND $10::boolean THEN f.p95_latency_ms END DESC NULLS LAST,
              CASE WHEN $9 = 'latency' AND NOT $10::boolean THEN f.p95_latency_ms END ASC NULLS LAST,
+             CASE WHEN $9 = 'active' AND $10::boolean THEN f.active_ms END DESC,
+             CASE WHEN $9 = 'active' AND NOT $10::boolean THEN f.active_ms END ASC,
              CASE WHEN $9 = 'duration' AND $10::boolean THEN f.duration_seconds END DESC,
              CASE WHEN $9 = 'duration' AND NOT $10::boolean THEN f.duration_seconds END ASC,
              CASE WHEN $9 = 'completion' AND $10::boolean THEN f.completion END DESC NULLS LAST,
@@ -166,6 +174,25 @@ WITH f AS MATERIALIZED (
     FROM f
     ORDER BY position
     LIMIT $11 OFFSET $12
+), continued AS (
+    -- Why: a Claude Code session resumed after compaction opens a new context
+    -- whose first prompt is the harness's "continued from a previous
+    -- conversation" preamble. Its predecessor is the same person's latest
+    -- conversation on the same client that was last active within 30
+    -- minutes before it opened.
+    SELECT s.context_id, p.context_id AS prev_context_id,
+           conversation_title(p.context_id, p.client_session_id) AS prev_title
+    FROM selected s
+    JOIN LATERAL (
+        SELECT q.context_id, q.client_session_id FROM conversation_facts q
+        WHERE q.user_id = s.user_id AND q.client_kind = s.client_kind
+          AND q.context_id <> s.context_id
+          AND q.first_at < s.first_at
+          AND q.last_at >= s.first_at - interval '30 minutes'
+        ORDER BY (q.client_session_id IS NOT DISTINCT FROM s.client_session_id) DESC,
+                 q.last_at DESC, q.context_id
+        LIMIT 1) p ON TRUE
+    WHERE s.title LIKE 'This session is being continued from a previous%'
 ), turn_series AS (
     SELECT s.context_id,
            ARRAY(SELECT COALESCE(r.input_tokens, 0) + COALESCE(r.output_tokens, 0)
@@ -191,8 +218,12 @@ WITH f AS MATERIALIZED (
     FROM f GROUP BY f.client_kind ORDER BY conversations DESC
 )
 SELECT jsonb_build_object(
-    'rows', COALESCE((SELECT jsonb_agg(to_jsonb(s) || jsonb_build_object('turn_tokens', t.turn_tokens) ORDER BY s.position)
-                      FROM selected s JOIN turn_series t ON t.context_id = s.context_id), '[]'::jsonb),
+    'rows', COALESCE((SELECT jsonb_agg(to_jsonb(s) || jsonb_build_object(
+                          'turn_tokens', t.turn_tokens,
+                          'is_continuation', s.title LIKE 'This session is being continued from a previous%',
+                          'prev_context_id', c.prev_context_id, 'prev_title', c.prev_title) ORDER BY s.position)
+                      FROM selected s JOIN turn_series t ON t.context_id = s.context_id
+                      LEFT JOIN continued c ON c.context_id = s.context_id), '[]'::jsonb),
     'totals', (SELECT to_jsonb(t) FROM totals t),
     'series', COALESCE((SELECT jsonb_agg(to_jsonb(x) ORDER BY x.bucket) FROM series x), '[]'::jsonb),
     'breakdown', COALESCE((SELECT jsonb_agg(to_jsonb(b)) FROM breakdown b), '[]'::jsonb),

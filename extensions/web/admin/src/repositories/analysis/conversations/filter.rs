@@ -96,6 +96,7 @@ pub enum FactSort {
     Tools,
     Errors,
     Latency,
+    Active,
     Duration,
     Completion,
 }
@@ -111,6 +112,7 @@ impl FactSort {
             Self::Tools => "tools",
             Self::Errors => "errors",
             Self::Latency => "latency",
+            Self::Active => "active",
             Self::Duration => "duration",
             Self::Completion => "completion",
         }
@@ -125,6 +127,7 @@ impl FactSort {
             Some("tools") => Self::Tools,
             Some("errors") => Self::Errors,
             Some("latency") => Self::Latency,
+            Some("active") => Self::Active,
             Some("duration") => Self::Duration,
             Some("completion") => Self::Completion,
             _ => Self::Activity,
@@ -135,8 +138,10 @@ impl FactSort {
 /// The dimension the breakdown table groups the filtered set by.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum BreakdownBy {
-    #[default]
     Category,
+    // Why: the default while no judge labels conversations — every row
+    // would otherwise sit in one "unjudged" intent bucket.
+    #[default]
     Model,
     Client,
     Group,
@@ -148,8 +153,8 @@ pub enum BreakdownBy {
 
 impl BreakdownBy {
     pub const ALL: [Self; 8] = [
-        Self::Category,
         Self::Model,
+        Self::Category,
         Self::Client,
         Self::Group,
         Self::Project,
@@ -189,14 +194,14 @@ impl BreakdownBy {
     #[must_use]
     pub fn from_breakdown_param(value: Option<&str>) -> Self {
         match value {
-            Some("model") => Self::Model,
+            Some("category") => Self::Category,
             Some("client") => Self::Client,
             Some("group") => Self::Group,
             Some("project") => Self::Project,
             Some("user") => Self::User,
             Some("skill") => Self::Skill,
             Some("outcome") => Self::Outcome,
-            _ => Self::Category,
+            _ => Self::Model,
         }
     }
 }

@@ -24,8 +24,13 @@
     display: none;
 }
 
+/* Out of flow on purpose: draw() sizes the SVG from the host, so an in-flow
+   SVG would feed its own height back into the host and every resize would
+   grow the chart without bound. The host is sized by layout alone. */
 .sp-chart__svg {
     display: block;
+    position: absolute;
+    inset: 0;
     width: 100%;
     height: 100%;
     overflow: visible;
