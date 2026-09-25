@@ -4,13 +4,13 @@
 # server verifies it against /.well-known/jwks.json; `aud` is `endpoint` below.
 # See docs/EXTERNAL-MCP-IDENTITY.md.
 #
-# Disabled until the SFCore server verifies these tokens; until then every call
-# would 401 upstream. Go-live is flipping `enabled` to true.
+# Enabled for go-live; if the SFCore server does not yet verify these tokens,
+# every call 401s upstream until it does.
 mcp_servers:
   sfcore_dev:
     type: external
     endpoint: https://mcp-dev-server-611435061062.asia-south1.run.app/mcp
-    enabled: false
+    enabled: true
     tool_policy: allow
     display_in_web: false
     removable: true
