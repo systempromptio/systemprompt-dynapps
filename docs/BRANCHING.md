@@ -55,8 +55,9 @@ has proved nothing about the core you meant to test. For a 0.x crate
 
 Defences, in the order they catch it:
 
-1. `scripts/sync-release-version.sh <version> --check` — every pin in both
-   workspaces must agree (a residual sweep fails on any pin it does not move).
+1. `scripts/sync-core-version.sh <core-version> --check` — every core pin in
+   both workspaces must agree (a residual sweep fails on any pin it does not
+   move).
 2. `scripts/check-core-ref.sh` (a `lint-gates` gate) — with the patch
    commented, `bridge/CORE_REF` must be `v<pin>`.
 3. The build log. On `next` it must name `../systemprompt-core/...`
@@ -81,8 +82,8 @@ must name a commit that exists on GitHub, so push core before pushing here.
 
 ```bash
 # Remove BOTH [patch.crates-io] blocks, then prepare every version pin and CORE_REF.
-scripts/sync-release-version.sh X.Y.Z
-printf 'vX.Y.Z\n' > bridge/CORE_REF
+scripts/sync-core-version.sh C.D.E           # core pins + bridge/CORE_REF
+scripts/sync-release-version.sh X.Y.Z        # astound's own version
 cargo update -w
 cargo update -w --manifest-path tests/Cargo.toml
 cargo update -w --manifest-path bridge/Cargo.toml

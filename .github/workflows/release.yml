@@ -127,6 +127,7 @@ jobs:
         run: |
           version=$(sed -n 's/^version = "\([0-9.]*\)"/\1/p' Cargo.toml | head -1)
           scripts/sync-release-version.sh "$version" --check
+          scripts/sync-core-version.sh --check
           tag="v$version"
           short=$(git rev-parse --short=7 HEAD)
 
@@ -450,7 +451,9 @@ jobs:
   # deploys anything.
   base-bundle:
     name: Base services bundle
-    needs: [version, image]
+    # Why: GHCR tags are create-once and this account cannot delete an org
+    # package version, so the versioned base bundle waits for the image proofs.
+    needs: [version, image, smoke, upgrade-boot]
     runs-on: ubuntu-latest
     env:
       VERSION: ${{ needs.version.outputs.version }}
@@ -513,8 +516,6 @@ jobs:
         with:
           images: ${{ env.IMAGE }}
           tags: |
-            type=raw,value=${{ needs.version.outputs.version }},enable=${{ needs.version.outputs.publish_version_tag }}
-            type=raw,value=latest
             type=raw,value=sha-${{ needs.version.outputs.short }}
       - name: Create and push manifest list
         working-directory: /tmp/digests
@@ -531,9 +532,43 @@ jobs:
       - name: Cosign sign (keyless)
         run: cosign sign --yes "$IMAGE@${{ steps.digest.outputs.digest }}"
 
+  # Why: GHCR `:X.Y.Z` is create-once and this account cannot delete an org
+  # package version, so the versioned tag (and `:latest`) may only point at a
+  # digest that already passed smoke and upgrade-boot. A failed run leaves
+  # nothing but its own `:sha-*`.
+  promote-tags:
+    name: Tag the proven image
+    needs: [version, image-merge, smoke, upgrade-boot]
+    if: needs.image-merge.result == 'success' && needs.smoke.result == 'success' && needs.upgrade-boot.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Point :latest and :X.Y.Z at the proven digest
+        env:
+          DIGEST: ${{ needs.image-merge.outputs.digest }}
+          VERSION: ${{ needs.version.outputs.version }}
+          PUBLISH_VERSION_TAG: ${{ needs.version.outputs.publish_version_tag }}
+        run: |
+          published=(latest)
+          if [ "$PUBLISH_VERSION_TAG" = "true" ]; then
+            published+=("$VERSION")
+          fi
+          args=()
+          for t in "${published[@]}"; do args+=(-t "$IMAGE:$t"); done
+          docker buildx imagetools create "${args[@]}" "$IMAGE@$DIGEST"
+          for t in "${published[@]}"; do
+            got=$(docker buildx imagetools inspect "$IMAGE:$t" --format '{{json .Manifest.Digest}}' | tr -d '"')
+            [ "$got" = "$DIGEST" ] || { echo "::error::$IMAGE:$t is $got, expected $DIGEST"; exit 1; }
+          done
+
   release:
     name: Publish GitHub Release
-    needs: [version, bridge, image, image-merge, smoke, upgrade-boot, base-bundle]
+    needs: [version, bridge, image, image-merge, smoke, upgrade-boot, base-bundle, promote-tags]
     if: needs.version.outputs.publish_release == 'true' && !(github.event_name == 'workflow_dispatch' && inputs.dry_run == true)
     runs-on: ubuntu-latest
     env:
@@ -590,7 +625,7 @@ jobs:
         run: |
           bridge_version=$(sed -n 's/^version = "\([0-9.]*\)"/\1/p' bridge/Cargo.toml | head -1)
           # The bridge shows this number in its footer and reports it to the
-          # gateway; a release whose bridge disagrees with core is a defect.
+          # gateway; a release whose bridge disagrees with its tag is a defect.
           if [ "$bridge_version" != "$VERSION" ]; then
             echo "::error::bridge/Cargo.toml is $bridge_version but the release is $VERSION (run scripts/sync-release-version.sh $VERSION)"
             exit 1
@@ -601,7 +636,8 @@ jobs:
           {
             echo "## Astound Digital gateway $TAG"
             echo
-            echo "Built against published \`systemprompt\` core **$VERSION** (crates.io); the bridge carries the same version."
+            core=$(sed -n 's/^systemprompt = { version = "\([0-9.]*\)".*/\1/p' Cargo.toml | head -1)
+            echo "Built against published \`systemprompt\` core **$core** (crates.io); the bridge carries the release version."
             echo
             echo "### Image"
             echo

@@ -2204,8 +2204,8 @@ benchmark REQUESTS="200" CONCURRENCY="100":
 
 # --- Release ------------------------------------------------------------
 
-# Step A of a release (on `next`, patch blocks re-commented): bump every pin to
-# the new published core, point bridge/CORE_REF at its tag, and gate locally
+# Adopt a published core (on `next`, patch blocks re-commented): bump every
+# core pin, point bridge/CORE_REF at its tag, and gate locally
 # (migrate + build + clippy). Then `just preflight` and `just release`.
 # See docs/RELEASING.md.
 #
@@ -2217,8 +2217,7 @@ benchmark REQUESTS="200" CONCURRENCY="100":
 # (scripts/check-core-crate-versions.sh).
 core-bump version:
     @! grep -q '^\[patch\.crates-io\]' Cargo.toml || (echo "ERROR: [patch.crates-io] is active — publish core and re-comment it first" && exit 1)
-    scripts/sync-release-version.sh {{version}}
-    @printf 'v{{version}}\n' > bridge/CORE_REF
+    scripts/sync-core-version.sh {{version}}
     cargo update -w
     cargo update -w --manifest-path tests/Cargo.toml
     cargo update -w --manifest-path bridge/Cargo.toml
@@ -2226,7 +2225,7 @@ core-bump version:
     cargo run --bin systemprompt -- infra db migrate --profile local
     just build
     just clippy
-    @echo "core-bump {{version}} complete — review the diff, then: just preflight && just release {{version}}"
+    @echo "core-bump {{version}} complete — set astound's version with scripts/sync-release-version.sh X.Y.Z, then: just preflight && just release X.Y.Z"
 
 # Pin bridge/CORE_REF to a core `next` commit while [patch.crates-io] is
 # active (the sibling checkout's HEAD by default). CI checks that ref out.

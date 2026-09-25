@@ -19,6 +19,7 @@ ref="$(jq -r .head.ref <<<"$pr")"
 [ "${BASH_REMATCH[2]}" = "$base" ] && [ "${BASH_REMATCH[3]}" = "$head" ] || die 'merge parents differ from frozen promotion'
 version="${BASH_REMATCH[1]}"
 scripts/sync-release-version.sh "$version" --check
+scripts/sync-core-version.sh --check
 bash scripts/check-gates-green.sh "$head"
 identity="$(bash scripts/check-promotion-green.sh "$head" "$ref")" || die 'promotion proof did not succeed'
 IFS=$'\t' read -r run_id attempt <<<"$identity"
