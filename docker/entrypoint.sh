@@ -92,6 +92,13 @@ else
             jq --arg db "$DATABASE_WRITE_URL" '.database_write_url = $db' "$SECRETS_FILE" \
                 > "$SECRETS_FILE.tmp" && mv "$SECRETS_FILE.tmp" "$SECRETS_FILE"
         fi
+        # 2c. The gateway accounting journal and at-rest sealing refuse to
+        #     start without encryption_master_key, and setup does not mint it.
+        if [ -z "$(jq -r '.encryption_master_key // empty' "$SECRETS_FILE")" ]; then
+            key="$(od -An -tx1 -N32 /dev/urandom | tr -d ' \n')"
+            jq --arg key "$key" '.encryption_master_key = $key' "$SECRETS_FILE" \
+                > "$SECRETS_FILE.tmp" && mv "$SECRETS_FILE.tmp" "$SECRETS_FILE"
+        fi
         chmod 600 "$SECRETS_FILE"
         # 3. Advertise the public URL when the platform provides one
         #    (EXTERNAL_URL, or RENDER_EXTERNAL_URL via the fallback above).
