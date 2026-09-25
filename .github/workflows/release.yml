@@ -754,10 +754,11 @@ jobs:
               if [ "$(docker inspect -f '{{.State.Running}}' "boot_$db")" != "true" ]; then break; fi
               sleep 5
             done
+            last=$(curl -sS --max-time 5 http://localhost:8080/health 2>&1 || true)
             docker logs "boot_$db" 2>&1 | tail -40
             docker rm -f "boot_$db" > /dev/null
             if [ -z "$healthy" ]; then
-              echo "last /health body: $(curl -sS --max-time 5 http://localhost:8080/health 2>&1 || true)"
+              echo "last /health body: $last"
               echo "::error::image did not finish booting over release $rung (see container log above)"
               exit 1
             fi
