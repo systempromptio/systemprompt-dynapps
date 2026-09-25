@@ -165,6 +165,16 @@ fn write_fixture_services(root: &std::path::Path, dest: &std::path::Path) {
         .expect("write fixture providers.yaml");
     std::fs::write(dest.join("ai/gateway.yaml"), FIXTURE_GATEWAY)
         .expect("write fixture gateway.yaml");
+    enable_identity_server(&dest.join("mcp/sfcore_dev.yaml"));
+}
+
+// `sfcore_dev` ships disabled until its upstream verifies identity tokens; the
+// suite enables its copy either way so the accessor's signing path is
+// exercised.
+fn enable_identity_server(path: &std::path::Path) {
+    let yaml = std::fs::read_to_string(path).expect("read sfcore_dev.yaml");
+    std::fs::write(path, yaml.replacen("enabled: false", "enabled: true", 1))
+        .expect("enable fixture sfcore_dev.yaml");
 }
 
 fn copy_tree(from: &std::path::Path, to: &std::path::Path) {

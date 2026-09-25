@@ -6,6 +6,7 @@
 
 use serde::Serialize;
 
+use super::continuation::{ContinuationView, row_title};
 use super::row_facts::RowFacts;
 use super::summary::{category_label, outcome_label, outcome_tone};
 use crate::handlers::ssr::analysis::tone::{
@@ -85,6 +86,8 @@ pub(crate) struct ConversationRowView {
     pub latency_display: String,
     pub latency_tone: &'static str,
     pub duration_display: String,
+    pub active_display: String,
+    pub continuation: Option<ContinuationView>,
     pub skills: Vec<SkillChipView>,
     pub spark: SparklineView,
     pub judge: JudgeCellView,
@@ -226,11 +229,7 @@ impl ConversationRowView {
             session_href: f
                 .client_session_id
                 .map(|s| format!("/admin/sessions/{}", urlencoding::encode(s))),
-            title: f
-                .judge_title
-                .filter(|t| !t.is_empty())
-                .unwrap_or(f.title)
-                .to_owned(),
+            title: row_title(f),
             user_key: f.user_id.to_owned(),
             user_href: format!("/admin/users/{}", urlencoding::encode(f.user_id)),
             display_name: f
@@ -267,6 +266,11 @@ impl ConversationRowView {
                 .map_or_else(|| "—".to_owned(), |ms| format_duration_ms(i64::from(ms))),
             latency_tone: latency_tone(f.p95_latency_ms.map(f64::from)),
             duration_display: format_duration_ms(f.duration_seconds * 1000),
+            active_display: f
+                .active_ms
+                .filter(|ms| *ms > 0)
+                .map_or_else(|| "—".to_owned(), format_duration_ms),
+            continuation: ContinuationView::for_row(f),
             skills: skill_chips(f.skills, f.skills_used),
             spark: turn_spark(f.turn_tokens),
             judge: judge_cell(f),

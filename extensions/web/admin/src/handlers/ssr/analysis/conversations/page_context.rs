@@ -20,9 +20,8 @@ pub(crate) struct SortHeaders {
     pub errors: SortHeaderView,
     pub tokens: SortHeaderView,
     pub cost: SortHeaderView,
-    pub latency: SortHeaderView,
+    pub active: SortHeaderView,
     pub duration: SortHeaderView,
-    pub completion: SortHeaderView,
 }
 
 #[derive(Debug, Serialize)]
@@ -41,6 +40,7 @@ pub(crate) struct ConversationsPageContext {
     pub rows: Vec<ConversationRowView>,
     pub has_rows: bool,
     pub count_label: String,
+    pub turns_toggle: TurnsToggleView,
     pub pagination: Pagination,
     pub sort_headers: SortHeaders,
     pub export: crate::export::ExportView,
@@ -55,4 +55,13 @@ pub(crate) struct ConversationsPageContext {
     // only when a person asks, so the page shows the buttons that ask.
     pub manual_judge: bool,
     pub unjudged_in_view: i64,
+}
+
+// Why: conversations with no turn are hidden by default; the toggle says how
+// many and links to the other view.
+#[derive(Debug, Serialize)]
+pub(crate) struct TurnsToggleView {
+    pub show_all: bool,
+    pub without_turns: i64,
+    pub href: String,
 }

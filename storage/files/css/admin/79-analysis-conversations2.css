@@ -107,3 +107,20 @@
     white-space: nowrap;
 }
 }
+.sp-aconv-turns-toggle {
+    margin-inline-start: auto;
+    color: var(--sp-text-tertiary);
+    font-size: var(--sp-text-xs);
+}
+.sp-aconv-turns-toggle:hover {
+    color: var(--sp-accent-text);
+}
+.sp-aconv-continued {
+    display: inline-block;
+    padding: 0 var(--sp-space-2);
+    border-radius: var(--sp-radius-sm);
+    color: var(--sp-text-secondary);
+    border: 1px solid var(--sp-border-subtle);
+    font-size: var(--sp-text-xs);
+    white-space: nowrap;
+}

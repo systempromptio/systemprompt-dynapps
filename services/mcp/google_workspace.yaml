@@ -3,9 +3,8 @@
 # is copied, all are searched live and every result is filtered to what the
 # signed-in user can already open — their Drive permissions, their own mailbox
 # and calendar. The engine lives in the Astound Knowledge UK Sales project
-# (astound-knowledge-uk-sales, number 148780456827) at location `global`,
-# which is why
-# the endpoint is the global host. Each user connects their own Google account on
+# (astound-knowledge-uk-sales, number 148780456827) at location `global`, which
+# is why the endpoint is the global host. Each user connects their own Google account on
 # the Connectors page; core synthesises the token accessor from the `connector:`
 # block, so no `external_auth:` is declared here.
 #
@@ -49,10 +48,13 @@ mcp_servers:
     tools:
       search:
         arguments:
-          servingConfig: projects/148780456827/locations/global/collections/default_collection/engines/workspace-search/servingConfigs/default_search
+          servingConfig: projects/148780456827/locations/global/collections/default_collection/engines/workspace-search_1789722022815/servingConfigs/default_search
       conversational_search:
         arguments:
-          servingConfig: projects/148780456827/locations/global/collections/default_collection/engines/workspace-search/servingConfigs/default_search
+          servingConfig: projects/148780456827/locations/global/collections/default_collection/engines/workspace-search_1789722022815/servingConfigs/default_search
+      list_engines:
+        arguments:
+          parent: projects/148780456827/locations/global/collections/default_collection
     oauth:
       required: false
       scopes:

@@ -1,14 +1,13 @@
-//! The KPI tiles above the conversations table: eight figures from the
+//! The KPI tiles above the conversations table: seven figures from the
 //! filtered set's totals, each toned, icon-led and carrying a sparkline of
 //! the window in the tile's trend slot.
 
 use serde::Serialize;
 
 use crate::handlers::ssr::analysis::tone::{
-    cache_tone, completion_tone, deny_tone, error_rate_tone, latency_tone, percent, safety_tone,
-    score_display,
+    cache_tone, completion_tone, deny_tone, error_rate_tone, percent, safety_tone, score_display,
 };
-use crate::handlers::ssr::format::{format_cost, format_token_total};
+use crate::handlers::ssr::format::{format_cost, format_duration_ms, format_token_total};
 use crate::handlers::ssr::types::{SparklineView, sparkline_toned};
 use crate::repositories::analysis::conversations::{
     ConversationAnalysisTotals, ConversationSeriesPoint,
@@ -151,36 +150,21 @@ fn health_tiles(
         }
         .with_spark(&column(series, |p| p.denied)),
         Tile {
-            label: "p95 latency",
+            label: "Active time",
             icon: "gauge",
-            value: t
-                .p95_latency_ms
-                .map_or_else(|| "—".to_owned(), |ms| format!("{:.1}s", ms / 1000.0)),
+            value: format_duration_ms(t.active_ms / t.conversations.max(1)),
             note: format!(
-                "{} safety findings · {} blocked",
+                "per conversation · {} safety findings · {} blocked",
                 t.safety_findings, t.safety_blocked
             ),
             tone: if t.safety_blocked > 0 {
                 safety_tone(t.safety_findings, t.safety_blocked)
             } else {
-                latency_tone(t.p95_latency_ms)
+                "accent"
             },
-            hint: "95th percentile of each conversation's own p95 turn latency",
+            hint: "Mean time the model spent answering per conversation: the summed latency of its turns, idle time excluded",
         }
         .with_spark(&column(series, |p| p.users)),
-        Tile {
-            label: "AI score",
-            icon: "sparkle",
-            value: score_display(t.completion_avg),
-            note: format!(
-                "{} judged · {} achieved",
-                percent(t.judged, t.conversations),
-                percent(t.achieved, t.conversations)
-            ),
-            tone: completion_tone(t.completion_avg),
-            hint: "Mean of the judge's one score: did the assistant deliver what was originally asked (0–100)",
-        }
-        .with_spark(&column(series, |p| p.conversations)),
     ]
 }
 

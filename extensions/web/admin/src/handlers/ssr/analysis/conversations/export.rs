@@ -45,6 +45,8 @@ pub(crate) async fn export_rows(
         project_id: request.project.as_deref().map(ProjectId::new),
         flag: params.flag(),
         context_ids: params.context_ids(),
+        // Why: ticked rows are exported as ticked, empty or not.
+        include_without_turns: params.show_all() || params.context_ids().is_some(),
     };
     Ok(load_conversation_analysis_page(
         pool,

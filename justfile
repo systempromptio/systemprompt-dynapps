@@ -1786,7 +1786,7 @@ claude CODE="" GATEWAY="http://localhost:8080":
         docker run --rm --entrypoint curl \
             --add-host host.docker.internal:host-gateway \
             astound-clean-client:local \
-            -sf --max-time 5 "$GATEWAY/health" >/dev/null 2>&1
+            -sf --max-time 5 "$GATEWAY/health" 2>/dev/null | grep -Eq '"status" *: *"healthy"'
     }
 
     if ! gateway_reachable; then
@@ -1795,7 +1795,9 @@ claude CODE="" GATEWAY="http://localhost:8080":
         # rebinding it would be treating the wrong illness — Docker Desktop and
         # WSL2 proxy host.docker.internal to host loopback, so a 127.0.0.1 bind
         # is genuinely reachable there and the bind is often not the problem.
-        if ! curl -sf --max-time 5 "$HOST_GATEWAY/health" >/dev/null 2>&1; then
+        # A bootstrapping server answers 200 {"status":"starting"}; only a
+        # finished boot counts as up.
+        if ! curl -sf --max-time 5 "$HOST_GATEWAY/health" 2>/dev/null | grep -Eq '"status" *: *"healthy"'; then
             echo "ERROR: the gateway is not answering at $HOST_GATEWAY" >&2
             echo "" >&2
             echo "  It is not reachable from this host either, so it is down or" >&2

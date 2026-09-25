@@ -1,14 +1,30 @@
 //! The links the conversations page draws from its query: window tabs,
-//! breakdown tabs, pagination and sortable column headers.
+//! breakdown tabs, pagination, sortable column headers and the toggle that
+//! shows conversations without turns.
 
 use crate::handlers::ssr::list_view::{PageWindow, Pagination};
 use crate::handlers::ssr::types::{SortHeaderView, TabLinkView};
 use crate::repositories::analysis::conversations::{BreakdownBy, FactSort};
 
+use super::page_context::TurnsToggleView;
 use super::query::ConversationAnalysisQuery;
 use crate::handlers::ssr::list_view::paginate_prefixed;
 
 impl ConversationAnalysisQuery {
+    pub(crate) fn turns_toggle(&self, without_turns: i64) -> TurnsToggleView {
+        let show_all = self.show_all();
+        let prefix = self.link_prefix(&["show", "page"]);
+        TurnsToggleView {
+            show_all,
+            without_turns,
+            href: if show_all {
+                prefix.trim_end_matches(['?', '&']).to_owned()
+            } else {
+                format!("{prefix}show=all")
+            },
+        }
+    }
+
     pub(crate) fn range_links(&self) -> Vec<TabLinkView> {
         let prefix = self.link_prefix(&["since", "preset", "page"]);
         let active = self.since_label();

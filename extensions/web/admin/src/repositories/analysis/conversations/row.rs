@@ -68,6 +68,8 @@ pub struct ConversationFactRow<Id = ContextId> {
     pub first_at: DateTime<Utc>,
     pub last_at: DateTime<Utc>,
     pub duration_seconds: i64,
+    #[serde(default)]
+    pub active_ms: i64,
     pub judge_status: Option<String>,
     pub judge_title: Option<String>,
     pub category: Option<String>,
@@ -88,6 +90,20 @@ pub struct ConversationFactRow<Id = ContextId> {
     pub judge_trigger: Option<String>,
     #[serde(default)]
     pub turn_tokens: Vec<i64>,
+    #[serde(flatten)]
+    pub continuation: ContinuationLink,
+}
+
+/// A Claude Code session resumed after compaction, and the conversation it
+/// most likely continues (text, since it only builds a link).
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct ContinuationLink {
+    #[serde(default)]
+    pub is_continuation: bool,
+    #[serde(default)]
+    pub prev_context_id: Option<String>,
+    #[serde(default)]
+    pub prev_title: Option<String>,
 }
 
 pub(super) fn decode_row(
@@ -149,6 +165,7 @@ pub(super) fn decode_row(
         first_at: r.first_at,
         last_at: r.last_at,
         duration_seconds: r.duration_seconds,
+        active_ms: r.active_ms,
         judge_status: r.judge_status,
         judge_title: r.judge_title,
         category: r.category,
@@ -165,5 +182,6 @@ pub(super) fn decode_row(
         judge_tokens: r.judge_tokens,
         judge_trigger: r.judge_trigger,
         turn_tokens: r.turn_tokens,
+        continuation: r.continuation,
     })
 }

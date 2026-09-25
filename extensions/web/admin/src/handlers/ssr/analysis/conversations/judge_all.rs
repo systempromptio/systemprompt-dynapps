@@ -108,6 +108,7 @@ pub(crate) async fn judge_all(
         project_id: request.project.as_deref().map(ProjectId::new),
         flag: params.flag(),
         context_ids: selected,
+        include_without_turns: false,
     };
     let data = load_conversation_analysis_page(
         &pool,

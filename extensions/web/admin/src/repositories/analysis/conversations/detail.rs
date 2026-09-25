@@ -9,7 +9,7 @@ use sqlx::PgPool;
 use systemprompt::identifiers::{ContextId, SessionId, UserId};
 use systemprompt_web_shared::{GroupId, ProjectId};
 
-use super::ConversationFactRow;
+use super::{ContinuationLink, ConversationFactRow};
 
 // Why: re-derives the fact row for one context; `false` when the context has
 // no conversation requests (nothing to show).
@@ -154,6 +154,7 @@ impl From<FactRecord> for ConversationFactRow {
             first_at: r.first_at,
             last_at: r.last_at,
             duration_seconds: r.duration_seconds,
+            active_ms: 0,
             judge_status: r.judge_status,
             judge_title: r.judge_title,
             category: r.category,
@@ -170,6 +171,7 @@ impl From<FactRecord> for ConversationFactRow {
             judge_tokens: r.judge_tokens.unwrap_or(0),
             judge_trigger: r.judge_trigger,
             turn_tokens: Vec::new(),
+            continuation: ContinuationLink::default(),
         }
     }
 }

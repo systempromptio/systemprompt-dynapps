@@ -22,14 +22,16 @@ if (!window.cowork && window.parent !== window) {
     else item.resolve(event.data.result);
   });
   let scheduled = false;
+  let last = '';
   new ResizeObserver(() => {
     if (scheduled) return;
     scheduled = true;
     requestAnimationFrame(() => {
       scheduled = false;
-      window.parent.postMessage({ jsonrpc: '2.0', method: 'ui/notifications/size-changed', params: {
-        width: document.documentElement.scrollWidth, height: document.documentElement.scrollHeight,
-      } }, '*');
+      const { scrollWidth: width, scrollHeight: height } = document.documentElement;
+      if (`${width}x${height}` === last) return;
+      last = `${width}x${height}`;
+      window.parent.postMessage({ jsonrpc: '2.0', method: 'ui/notifications/size-changed', params: { width, height } }, '*');
     });
   }).observe(document.documentElement);
 }

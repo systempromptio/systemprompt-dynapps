@@ -10,10 +10,12 @@ includes:
   # MCP servers
   # `atlassian`, `google_workspace`, `salesforce` and the internal `systemprompt`
   # control plane are reachable. One connector each; one Connect row each.
+  # `sfcore_dev` is identity-backed: no connector, the instance signs who calls.
   - ../mcp/systemprompt.yaml
   - ../mcp/salesforce.yaml
   - ../mcp/atlassian.yaml
   - ../mcp/google_workspace.yaml
+  - ../mcp/sfcore_dev.yaml
 
   # AI, scheduler, content
   # Note: ../web/config.yaml is NOT included here — the web domain validator

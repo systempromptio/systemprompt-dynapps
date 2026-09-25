@@ -30,7 +30,7 @@
 .sp-aconv-chart {
     display: flex;
     min-width: 0;
-    min-height: 19rem;
+    height: 19rem;
     padding: var(--sp-space-3);
     border: 1px solid var(--sp-border-subtle);
     border-radius: var(--sp-corners-md);

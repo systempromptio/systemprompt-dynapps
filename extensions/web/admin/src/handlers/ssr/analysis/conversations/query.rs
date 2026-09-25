@@ -46,6 +46,8 @@ pub(crate) struct ConversationAnalysisQuery {
     // Why: a comma-joined selection of context ids from the bulk bar; the
     // export dialog appends it so a download holds exactly the ticked rows.
     pub ids: Option<String>,
+    // Why: `all` lists conversations with no turn too; hidden by default.
+    pub show: Option<String>,
 }
 
 impl ConversationAnalysisQuery {
@@ -100,6 +102,10 @@ impl ConversationAnalysisQuery {
         JudgedFilter::parse_judged_filter(Self::trimmed(self.judged.as_deref()))
     }
 
+    pub(crate) fn show_all(&self) -> bool {
+        Self::trimmed(self.show.as_deref()) == Some("all")
+    }
+
     pub(crate) fn flag(&self) -> Option<FlagFilter> {
         FlagFilter::parse_flag_filter(Self::trimmed(self.flag.as_deref()))
     }
@@ -136,7 +142,7 @@ impl ConversationAnalysisQuery {
         self.page.unwrap_or(0).max(0)
     }
 
-    fn pairs(&self) -> [(&'static str, Option<&str>); 17] {
+    fn pairs(&self) -> [(&'static str, Option<&str>); 18] {
         [
             ("group", self.group.as_deref()),
             ("project", self.project.as_deref()),
@@ -155,6 +161,7 @@ impl ConversationAnalysisQuery {
             ("sort", self.sort.as_deref()),
             ("dir", self.dir.as_deref()),
             ("ids", self.ids.as_deref()),
+            ("show", self.show.as_deref()),
         ]
     }
 

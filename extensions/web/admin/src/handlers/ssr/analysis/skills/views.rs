@@ -40,10 +40,6 @@ pub(crate) struct SkillFactView {
     pub latency_tone: &'static str,
     pub models: Vec<String>,
     pub clients: Vec<String>,
-    // Why: the cell shows two model chips; the rest are counted and listed
-    // in the cell's title.
-    pub models_more: usize,
-    pub models_title: String,
     pub judged: i64,
     pub completion_display: String,
     pub completion_tone: &'static str,

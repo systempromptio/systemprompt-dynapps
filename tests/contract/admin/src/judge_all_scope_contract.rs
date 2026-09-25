@@ -20,7 +20,7 @@ fn origin() -> String {
 
 async fn insert_fact(pool: &sqlx::PgPool, context: &str, user: &systemprompt::identifiers::UserId) {
     let now = Utc::now();
-    sqlx::query("INSERT INTO conversation_facts (context_id, user_id, client_kind, client_attestation, wire_protocol, first_at, last_at, duration_seconds) VALUES ($1, $2, 'contract', 'verified', 'contract', $3, $3, 0)")
+    sqlx::query("INSERT INTO conversation_facts (context_id, user_id, client_kind, client_attestation, wire_protocol, turn_count, first_at, last_at, duration_seconds) VALUES ($1, $2, 'contract', 'verified', 'contract', 1, $3, $3, 0)")
         .bind(context).bind(user.as_str()).bind(now - Duration::minutes(1)).execute(pool).await.expect("insert conversation fact");
     sqlx::query("INSERT INTO conversation_analyses (context_id, user_id, status, trigger, title) VALUES ($1, $2, 'classified', 'automatic', 'previous verdict')")
         .bind(context).bind(user.as_str()).execute(pool).await.expect("insert existing verdict");

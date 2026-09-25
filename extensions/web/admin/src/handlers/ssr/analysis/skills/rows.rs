@@ -58,14 +58,6 @@ fn reach_display(users: i64, entitled: usize) -> String {
     )
 }
 
-fn models_title(row: &SkillFactRow) -> String {
-    format!(
-        "Models: {} · Clients: {}",
-        row.models.join(", "),
-        row.clients.join(", ")
-    )
-}
-
 pub(crate) fn skill_row_view(
     row: &SkillFactRow,
     audience: &MarketplaceAudience,
@@ -121,8 +113,6 @@ pub(crate) fn skill_row_view(
             |ms| format_duration_ms(ms.round() as i64),
         ),
         latency_tone: latency_tone(row.p95_latency_ms),
-        models_more: row.models.len().saturating_sub(2),
-        models_title: models_title(row),
         models: row.models.clone(),
         clients: row.clients.clone(),
         judged: row.judged,

@@ -17,6 +17,7 @@
 
 pub(crate) mod charts;
 mod context;
+mod continuation;
 pub(crate) mod export;
 mod exports;
 mod filters;
@@ -80,6 +81,7 @@ pub(crate) async fn page(
         project_id: request.project.as_deref().map(ProjectId::new),
         flag: params.flag(),
         context_ids: params.context_ids(),
+        include_without_turns: params.show_all(),
     };
     let data = load_conversation_analysis_page(
         &pool,
