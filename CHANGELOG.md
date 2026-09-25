@@ -20,8 +20,26 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+## 0.62.0 — 2026-09-25
+
+Built on core 0.62.0. Supersedes the unreleased 0.61.2 version bump; 0.61.2 was never tagged or published.
+
+### Added
+
+- **MCP:** signed identity accessor for externally hosted MCP servers. A server whose `external_auth.token_endpoint` names `/api/public/identity/<id>/token` receives, on every proxied call, a 5-minute RS256 JWT signed with the instance authority key (`iss`, `aud` = endpoint, `sub`, `email`, `name`, `iat`, `exp`, `jti`). The accessor is broker-only, requires a live session, refuses servers that are disabled or did not opt in, and enforces the `mcp_server/<id>` band in `rules.yaml`.
+- **MCP:** `sfcore_dev` (the SFCore dev workflow server on Cloud Run) is registered and enabled, entitled to the `india-devs` group only.
+- **Analysis:** conversations record active time (`conversation_facts.active_ms`, migration 110) with an active-time sort and totals; the list hides turnless contexts unless asked and defaults to the model breakdown; users' roles/scope and the skills table render as badge stacks.
+
+### Changed
+
+- **Core 0.62.0:** secrets bootstrap now mints `encryption_master_key` when it creates `secrets.json` and refuses to start when an existing secrets file lacks it, so the gateway accounting journal can no longer fail late at boot on a missing key. Astound's first-boot generation of the key (0.61.1) remains correct and is now also enforced by core.
+- **Core 0.62.0:** the bridge lists 1M-context Claude models to Claude Desktop only as `<id>[1m]`, the form Claude Desktop resolves; the bare id is no longer offered alongside it.
+- **Core 0.62.0:** bridge self-update downloads go to their own `updates/` directory instead of `staging/`, superseded downloads are pruned, and uninstall removes `updates/`.
+
 ### Fixed
 
+- **Connectors:** `google_workspace` targets the real engine id `workspace-search_1789722022815` (the console appends a creation timestamp, so `workspace-search` answered "Cannot fetch Engine") and pins `list_engines` to the UK Sales collection instead of the `projects/-/...` parent Google rejects.
+- **Release:** every lockfile now resolves core crates at one version. `bridge/` builds against core's `bin/bridge` by path, so regenerating `bridge/Cargo.lock` against a newer core checkout while the root stayed on 0.61.0 split `systemprompt-extension`, `-identifiers`, `-models`, `-provider-contracts` and `-traits` across 0.61.0 and 0.62.0, and `check-core-crate-versions.sh` failed the 0.61.2 Gates run.
 - **Release:** upgrade-boot no longer passes on core's startup stub. Core's early-bind listener answers `GET /health` with `200 {"status":"starting"}` while bootstrap is still running, and the gate accepted any 200, so 0.61.0 and the first 0.61.1 attempt "passed" an image that then failed to initialise the `gateway` extension. The probe now requires `.status == "healthy"` or a 200 from `/readyz`, and prints the last `/health` body alongside the container log when it gives up. The `just claude` gateway probes and `just profile-check --live` use the same body check.
 
 ## 0.61.1 — 2026-09-25
