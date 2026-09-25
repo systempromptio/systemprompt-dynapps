@@ -48,10 +48,10 @@ mcp_servers:
     tools:
       search:
         arguments:
-          servingConfig: projects/148780456827/locations/global/collections/default_collection/engines/workspace-search/servingConfigs/default_search
+          servingConfig: projects/148780456827/locations/global/collections/default_collection/engines/workspace-search_1789722022815/servingConfigs/default_search
       conversational_search:
         arguments:
-          servingConfig: projects/148780456827/locations/global/collections/default_collection/engines/workspace-search/servingConfigs/default_search
+          servingConfig: projects/148780456827/locations/global/collections/default_collection/engines/workspace-search_1789722022815/servingConfigs/default_search
       list_engines:
         arguments:
           parent: projects/148780456827/locations/global/collections/default_collection
