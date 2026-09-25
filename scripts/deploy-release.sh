@@ -88,6 +88,9 @@ sed -i -E \
 grep -q "^  system: $WORKTREE\$" "$LOCAL_PROFILE" || die "could not re-point the local profile at the worktree"
 grep -q "^  bin: $WORKTREE/target/release\$" "$LOCAL_PROFILE" || die "could not re-point paths.bin at the release binaries"
 
+CORE_VERSION="$(sed -n 's/^systemprompt = { version = "\([0-9.]*\)".*/\1/p' Cargo.toml | head -1)"
+[ -n "$CORE_VERSION" ] || die "could not read the core pin from Cargo.toml"
+
 log "binaries from release $TAG"
 just fetch-release "$VERSION"
 
@@ -148,5 +151,5 @@ git worktree remove --force "$WORKTREE"
 log "deployed $TAG to $FLY_APP"
 echo "    main/tag: ${main_sha:0:12}"
 echo "    image:    $before -> $after"
-echo "    health:   $VERSION steady for ${WATCH_SECONDS}s"
+echo "    health:   core $CORE_VERSION steady for ${WATCH_SECONDS}s"
 echo "Record these in the release notes; a version string alone is not deploy evidence."

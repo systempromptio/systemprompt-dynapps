@@ -3,7 +3,7 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 run_case() (
     source scripts/deploy-observation.sh
-    FLY_APP=test HOST=https://example.invalid VERSION=0.57.0 WORKTREE=/retained
+    FLY_APP=test HOST=https://example.invalid VERSION=0.57.0 CORE_VERSION=0.57.0 WORKTREE=/retained
     DIGEST_WAIT_SECONDS=15 DIGEST_WAIT_INTERVAL=5 HEALTH_READY_SECONDS=15
     WATCH_SECONDS=30 WATCH_INTERVAL=15
     before_state='sha256:old before' before=sha256:old

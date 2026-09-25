@@ -94,6 +94,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.v.outputs.version }}
+      core_version: ${{ steps.v.outputs.core_version }}
       tag: ${{ steps.v.outputs.tag }}
       short: ${{ steps.v.outputs.short }}
       publish_release: ${{ steps.v.outputs.publish_release }}
@@ -153,6 +154,7 @@ jobs:
 
           {
             echo "version=$version"
+            echo "core_version=$(sed -n 's/^systemprompt = { version = "\([0-9.]*\)".*/\1/p' Cargo.toml | head -1)"
             echo "tag=$tag"
             echo "short=$short"
             echo "publish_release=$publish_release"
@@ -774,7 +776,9 @@ jobs:
           docker pull "$ref"
           out=$(docker run --rm --entrypoint /app/bin/systemprompt "$ref" --version)
           echo "$out"
-          echo "$out" | grep -q "${{ needs.version.outputs.version }}" || { echo "::error::--version does not report ${{ needs.version.outputs.version }}"; exit 1; }
+          # --version reports the core crate version, not astound's.
+          core="${{ needs.version.outputs.core_version }}"
+          [ -n "$core" ] && echo "$out" | grep -q "$core" || { echo "::error::--version does not report core $core"; exit 1; }
           docker run --rm --entrypoint ls "$ref" -la /app/storage/files/downloads
           docker run --rm --entrypoint sh "$ref" -c 'for f in astound-bridge-linux-x86_64.tar.gz astound-bridge-linux-aarch64.tar.gz astound-bridge-macos.dmg astound-bridge-windows.exe install.sh; do test -s /app/storage/files/downloads/$f || exit 1; done'
           docker run --rm --entrypoint ls "$ref" /app/bin/systemprompt-mcp-agent

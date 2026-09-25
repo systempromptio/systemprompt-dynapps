@@ -30,6 +30,10 @@ Built on core 0.61.0 (no core release). Use this in place of 0.61.0: GHCR `:0.61
 - **Release:** astound's version is decoupled from core's. `scripts/sync-release-version.sh` sets only astound's own version; the new `scripts/sync-core-version.sh` owns the core pins and `bridge/CORE_REF`, and `release.yml`, `release.sh` and `check-release-merge.sh` check both, and the release notes name the core pin rather than the release version. An astound release no longer needs a core release; `just core-bump` adopts a core without touching astound's version.
 - **Release:** the versioned base services bundle is published only after smoke and upgrade-boot pass.
 
+### Fixed
+
+- **Release:** the smoke test (`release.yml`) and the production health watch (`scripts/deploy-observation.sh`) now expect the core version. Both `systemprompt --version` and `/health` report the core crate version, so after the version split both would have failed every astound-only release. The first 0.61.1 run stopped at smoke because of this, and published nothing but `:sha-0f96c9b`.
+
 ## 0.61.0 — 2026-09-24
 
 ### Breaking

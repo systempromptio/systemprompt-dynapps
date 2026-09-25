@@ -14,7 +14,8 @@ read_health() {
     local code="${body##*$'\n'}"
     local payload="${body%$'\n'*}"
     echo "    $(date -u +%H:%M:%S) $code $payload"
-    [ "$code" = 200 ] && jq -e --arg version "$VERSION" '.status == "healthy" and .version == $version' <<<"$payload" >/dev/null
+    # /health reports the core crate version, not astound's.
+    [ "$code" = 200 ] && jq -e --arg version "$CORE_VERSION" '.status == "healthy" and .version == $version' <<<"$payload" >/dev/null
 }
 
 observe_deploy() {
@@ -29,10 +30,10 @@ observe_deploy() {
         sleep "$DIGEST_WAIT_INTERVAL"
     done
     echo "    $FLY_APP image after: $after (updated ${state#* })"
-    log "waiting for healthy $VERSION before the observation window"
+    log "waiting for healthy core $CORE_VERSION before the observation window"
     deadline=$((SECONDS + HEALTH_READY_SECONDS))
     until read_health; do
-        [ "$SECONDS" -lt "$deadline" ] || die "no healthy $VERSION response within ${HEALTH_READY_SECONDS}s; worktree kept at $WORKTREE"
+        [ "$SECONDS" -lt "$deadline" ] || die "no healthy core $CORE_VERSION response within ${HEALTH_READY_SECONDS}s; worktree kept at $WORKTREE"
         sleep "$DIGEST_WAIT_INTERVAL"
     done
     log "watching $HOST/health for ${WATCH_SECONDS}s (every ${WATCH_INTERVAL}s)"
