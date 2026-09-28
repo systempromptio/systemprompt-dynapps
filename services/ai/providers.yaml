@@ -362,6 +362,12 @@ providers:
   # usual tenth of input — kept as published. Haiku 4.5 is guaranteed only
   # to 2026-10-15. The Claude 4.x Opus and Sonnet models were removed on
   # 2026-09-24; the 5.x family replaces them.
+  #
+  # `accepted_betas: []` tells the gateway to drop all Anthropic beta headers
+  # before forwarding to Vertex, since Vertex does not accept context_management
+  # or other beta-gated fields. The gateway learns refused betas per-provider
+  # and will drop them on retry; this list prevents the first attempt from ever
+  # reaching Vertex with unsupported betas.
   display_name: Google Vertex AI (Claude)
   description: >-
     Claude models served from Vertex AI under a Google OAuth token minted from the vertex service-account secret. Serves every claude-* request on this installation.
@@ -369,6 +375,7 @@ providers:
   surface: anthropic
   endpoint: https://aiplatform.googleapis.com/v1/projects/{project}/locations/global/publishers/anthropic
   api_key_secret: vertex
+  accepted_betas: []
   governance:
     european: false
     no_retain: true
