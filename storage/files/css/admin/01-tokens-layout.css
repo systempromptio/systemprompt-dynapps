@@ -24,6 +24,10 @@
 
     --sp-z-sticky: 1;
     --sp-z-sticky-header: 3;
+    /* Raised sits above sibling page blocks (an open filter pill panel) but
+       below the topbar, so an in-page popover never covers the bar's menus. */
+    --sp-z-raised: 5;
+    --sp-z-topbar: 10;
     --sp-z-sidebar: 900;
     --sp-z-sidebar-drawer: 950;
     --sp-z-dropdown: 1000;
@@ -54,8 +58,19 @@ html[data-density="comfortable"] {
     :root { --sp-gutter: var(--sp-space-4); }
 }
 
+/* Phones get taller rows and looser cell lines because a thumb, not a
+   pointer, is the input: 44px targets and wrapped values need the room, and
+   the desktop fold budget no longer applies once tables become cards. */
 @media (max-width: 48rem) {
-    :root { --sp-gutter: var(--sp-space-3); }
+    :root {
+        --sp-gutter: var(--sp-space-3);
+        --sp-density-row: 2.75rem;
+        --sp-density-cell-y: 0.5rem;
+        --sp-density-cell-line: 1.5rem;
+        --sp-density-tile-h: 5.25rem;
+        --sp-density-gap: 0.5rem;
+        --sp-density-section: 1rem;
+    }
 }
 
 }

@@ -68,23 +68,32 @@
 
 @layer responsive {
 
-@media (max-width: 768px) {
+/* The drawer stops short of the full width so the dimmed page stays visible as
+   the tap target that closes it, and uses dvh so the iOS toolbar cannot hide
+   its last links. Overscroll is contained because a flick past the end of the
+   nav would otherwise scroll the page underneath. */
+@media (max-width: 48rem) {
     .sp-topbar__nav-toggle {
         display: flex;
     }
     .sp-sidebar-close-btn {
         display: flex;
+        top: calc(var(--sp-space-3) + env(safe-area-inset-top));
+        width: 44px;
+        height: 44px;
     }
     .sp-admin-sidebar {
         position: fixed;
         top: 0;
         left: 0;
-        width: 280px;
-        height: 100vh;
+        width: min(20rem, 85vw);
+        height: 100dvh;
+        overscroll-behavior: contain;
         z-index: var(--sp-z-sidebar-drawer);
         transform: translateX(-100%);
         transition: transform var(--sp-duration-slow) var(--sp-ease-out);
         box-shadow: none;
+        padding-top: env(safe-area-inset-top);
         padding-bottom: env(safe-area-inset-bottom);
     }
     .sp-admin-sidebar.is-open {
@@ -96,17 +105,16 @@
         min-height: 2.75rem;
         padding: var(--sp-space-2);
     }
-}
-
-@media (max-width: 768px) and (prefers-reduced-motion: reduce) {
-    .sp-admin-sidebar {
-        transition: none;
+    /* Locks the page behind an open drawer so a swipe on the overlay does not
+       scroll the content the drawer is covering. */
+    html.is-drawer-open {
+        overflow: hidden;
     }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 48rem) and (prefers-reduced-motion: reduce) {
     .sp-admin-sidebar {
-        width: 100vw;
+        transition: none;
     }
 }
 

@@ -55,14 +55,19 @@
 
 @layer responsive {
 
+/* On a phone the document scrolls, not the column, and both shell boxes clip
+   rather than hide. Any overflow other than visible or clip makes an element a
+   scroll container, and a position:sticky topbar sticks to its nearest scroll
+   container — which, being height:auto, never scrolls — so the bar would ride
+   off the top of the screen with the page. */
 @media (max-width: 48rem) {
     .sp-shell {
         display: block;
         height: auto;
-        overflow-y: auto;
+        overflow: clip;
     }
     .sp-shell__main {
-        overflow-x: hidden;
+        overflow: clip;
         max-width: 100vw;
     }
 }

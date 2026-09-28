@@ -106,11 +106,3 @@
 .sp-skip-link:focus-visible { top: 0; }
 
 }
-
-@layer responsive {
-
-@media (max-width: 48rem) {
-    .sp-u-grid-2, .sp-u-grid-3, .sp-u-grid-2col, .sp-u-grid-3col { grid-template-columns: 1fr; }
-}
-
-}

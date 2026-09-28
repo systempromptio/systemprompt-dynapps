@@ -138,7 +138,7 @@
     to { transform: rotate(360deg); }
 }
 
-@media (max-width: 720px) {
+@media (max-width: 48rem) {
     .sp-topbar__search {
         max-width: none;
         margin: 0 var(--sp-space-2);
@@ -153,10 +153,38 @@
     display: flex;
     align-items: center;
     gap: var(--sp-space-3);
-    z-index: var(--sp-z-sticky-header);
+    z-index: var(--sp-z-topbar);
     padding-block: var(--sp-space-4) var(--sp-space-3);
     margin-bottom: var(--sp-space-2);
     border-bottom: 1px solid var(--sp-border-subtle);
+}
+
+/* The icon that stands in for the search form on a phone; the desktop bar
+   has room for the whole form, so the toggle only appears in the mobile file. */
+.sp-topbar__search-toggle {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0;
+    background: none;
+    border: none;
+    border-radius: var(--sp-corners-sm);
+    color: var(--sp-text-secondary);
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.sp-topbar__search-toggle:hover,
+.sp-topbar__search-toggle[aria-expanded="true"] {
+    background: var(--sp-accent-dim);
+    color: var(--sp-text-primary);
+}
+
+.sp-topbar__search-toggle:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--sp-bg-canvas), 0 0 0 4px var(--sp-accent);
 }
 
 .sp-topbar__spacer {

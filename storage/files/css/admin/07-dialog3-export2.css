@@ -170,22 +170,4 @@
     accent-color: var(--sp-accent);
 }
 
-/* On a phone the two panes stack and the checklist drops to two columns,
-   so the dialog stays scrollable as one column rather than two competing
-   scroll regions. */
-@media (max-width: 48rem) {
-    .sp-export__panes {
-        grid-template-columns: 1fr;
-    }
-
-    .sp-export__pane--what {
-        border-inline-end: 0;
-        border-bottom: 1px solid var(--sp-border-subtle);
-    }
-
-    .sp-export__column-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-}
-
 }

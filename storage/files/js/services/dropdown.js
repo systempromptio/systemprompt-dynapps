@@ -1,4 +1,5 @@
 import { on, onOutsideClick } from './events.js';
+import { closeSidebar } from './sidebar.js';
 
 let portal = null;
 let activeDropdown = null;
@@ -29,11 +30,24 @@ export const open = (triggerBtn) => {
       const rect = triggerBtn.getBoundingClientRect();
       const clone = dropdown.cloneNode(true);
       clone.classList.add('sp-dropdown-menu');
-      clone.style.top = (rect.bottom + 4) + 'px';
-      clone.style.right = (window.innerWidth - rect.right) + 'px';
       clone.setAttribute('data-portal-dropdown', 'true');
+      const isPhone = window.matchMedia('(max-width: 48rem)').matches;
+      if (isPhone) {
+        clone.classList.add('is-sheet');
+      } else {
+        clone.style.top = (rect.bottom + 4) + 'px';
+        clone.style.right = (window.innerWidth - rect.right) + 'px';
+      }
 
       portal.append(clone);
+      // A menu opened near the viewport foot would run off screen, so it flips above its trigger.
+      const box = clone.getBoundingClientRect();
+      if (!isPhone && box.bottom > window.innerHeight - 8) {
+        clone.style.top = Math.max(8, rect.top - 4 - box.height) + 'px';
+      }
+      if (!isPhone && box.left < 8) {
+        clone.style.right = Math.max(8, window.innerWidth - box.width - 8) + 'px';
+      }
       activeMenu = menu;
       activeDropdown = clone;
       menu.classList.add('is-open');
@@ -63,12 +77,7 @@ export const closeAllMenus = () => {
     headerActions.classList.remove('is-open');
     headerActions.querySelector('.sp-topbar__actions-toggle')?.setAttribute('aria-expanded', 'false');
   }
-  const sidebar = document.getElementById('sp-admin-sidebar');
-  if (sidebar?.classList.contains('is-open')) {
-    sidebar.classList.remove('is-open');
-    document.getElementById('sp-sidebar-overlay')?.classList.remove('is-open');
-    document.querySelector('.sp-topbar__nav-toggle')?.setAttribute('aria-expanded', 'false');
-  }
+  closeSidebar();
   for (const p of document.querySelectorAll('.sf-action-menu--portal')) p.remove();
 };
 

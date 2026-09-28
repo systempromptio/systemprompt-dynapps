@@ -10,7 +10,7 @@
 {{> components/tabs tabs=tabs nav_label="Version views"}}
 
 {{#if (eq tab "history")}}
-{{#> components/table caption="Every version of this marketplace, newest first, with what changed and how it performed in the window" modifier="sp-analysis-table sp-versions-table"}}
+{{#> components/table caption="Every version of this marketplace, newest first, with what changed and how it performed in the window" modifier="sp-analysis-table sp-versions-table" table_mode="scroll"}}
 <thead><tr>
 <th scope="col">Version</th>
 <th scope="col">Served</th>
@@ -70,7 +70,7 @@
 {{/each}}
 </div>
 
-{{#> components/table caption="Every skill either version carried, with its change and its figures under each" modifier="sp-analysis-table sp-versions-table"}}
+{{#> components/table caption="Every skill either version carried, with its change and its figures under each" modifier="sp-analysis-table sp-versions-table" table_mode="scroll"}}
 <thead><tr>
 <th scope="col">Skill</th>
 <th scope="col" title="{{compare.added}} added · {{compare.removed}} removed · {{compare.changed}} changed · {{compare.unchanged}} unchanged">Change</th>
@@ -127,7 +127,7 @@
 <p class="sp-inventory-summary">Failed calls by class: schema {{summary.schema_errors}} · access {{summary.access_errors}} · upstream {{summary.upstream_errors}} · bad arguments {{summary.bad_arguments}} · timeouts {{summary.timeouts}} · writes {{summary.writes}}</p>
 {{/with}}
 
-{{#> components/table caption="Every version with conversations, oldest first; each is compared with the one before it" modifier="sp-analysis-table sp-versions-table"}}
+{{#> components/table caption="Every version with conversations, oldest first; each is compared with the one before it" modifier="sp-analysis-table sp-versions-table" table_mode="scroll"}}
 <thead><tr>
 <th scope="col">Version</th>
 <th scope="col">Served</th>

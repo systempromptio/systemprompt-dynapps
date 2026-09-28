@@ -113,7 +113,7 @@
 
 .sp-pie-chart__item {
     display: grid;
-    grid-template-columns: auto minmax(9rem, 1fr) auto auto;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
     grid-template-areas:
         "swatch label share value"
         "swatch bar   bar   bar";

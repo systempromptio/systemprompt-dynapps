@@ -88,7 +88,7 @@
 
 @layer responsive {
 
-@media (max-width: 768px) {
+@media (max-width: 48rem) {
   .sp-p-users__search { width: 100%; }
 }
 

@@ -52,15 +52,3 @@
 }
 
 }
-
-@layer responsive {
-
-@media (max-width: 40rem) {
-    .sp-page-header {
-        flex-direction: column;
-        gap: var(--sp-space-3);
-        align-items: stretch;
-    }
-}
-
-}

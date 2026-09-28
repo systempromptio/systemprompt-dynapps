@@ -2,12 +2,18 @@
 
 .sp-filter-ribbon {
     position: relative;
-    z-index: var(--sp-z-panel);
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: var(--sp-space-2);
     margin-bottom: var(--sp-space-4);
+}
+
+/* The ribbon rises only while a pill panel is open, and only to the raised
+   tier. A permanent panel-tier z-index made it paint over the sidebar drawer,
+   its overlay and the topbar menus, since main forms no stacking context. */
+.sp-filter-ribbon:has(.sp-filter-ribbon__group[open]) {
+    z-index: var(--sp-z-raised);
 }
 
 .sp-filter-ribbon__groups {

@@ -9,8 +9,13 @@
   `pagination` on the context (or passed explicitly) renders the footer inside
   the same card. `modifier` adds one page-specific class to the <table> for
   column widths.
+
+  On a phone every row is drawn as a labelled card (services/table-cards.js).
+  `table_mode="scroll"` opts a wide ledger out of that: it stays a table that
+  scrolls sideways with its first column pinned. Use it only where a row is
+  read across its columns, such as a diff or a waterfall.
 --}}
-<div class="sp-table">
+<div class="sp-table{{#if table_mode}} sp-table--{{table_mode}}{{/if}}">
   <div class="sp-table__scroll" tabindex="0">
     <table class="sp-table__el{{#if modifier}} {{modifier}}{{/if}}">
       {{#if caption}}<caption class="sp-u-sr-only">{{caption}}</caption>{{/if}}

@@ -146,3 +146,52 @@
 }
 
 }
+
+@layer responsive {
+
+/* iOS Safari zooms the page into any focused control whose text is under
+   16px and never zooms back out, so every control in the shell reads at
+   least 1rem on a phone and is tall enough to hit with a thumb. */
+@media (max-width: 48rem) {
+    .sp-shell input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+    .sp-shell select,
+    .sp-shell textarea {
+        font-size: max(1rem, var(--sp-text-base));
+        min-height: 44px;
+    }
+
+    .sp-form-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .sp-form-field--inline {
+        flex-wrap: wrap;
+        align-self: stretch;
+    }
+
+    .sp-form-actions {
+        flex-wrap: wrap;
+    }
+
+    .sp-form-actions .sp-btn {
+        flex: 1 1 100%;
+        justify-content: center;
+        min-width: 0;
+        min-height: 44px;
+    }
+
+    /* A long value (a hash, a URL) beside its label squeezed the label to a
+       sliver, so on a phone the label sits above the value it names. */
+    .sp-kv-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--sp-space-1);
+    }
+
+    .sp-kv-row dd {
+        text-align: left;
+        max-width: 100%;
+    }
+}
+
+}

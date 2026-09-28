@@ -18,7 +18,10 @@ body {
     background: var(--sp-bg-base);
     font-size: var(--sp-text-base);
     line-height: var(--sp-leading-normal);
-    overflow-x: hidden;
+    /* Clip, not hidden: with the root already clipping sideways overflow, a
+       hidden body becomes its own scroll container and the sticky topbar then
+       tracks the body instead of the viewport, so it never sticks. */
+    overflow-x: clip;
 }
 
 [hidden] { display: none; }

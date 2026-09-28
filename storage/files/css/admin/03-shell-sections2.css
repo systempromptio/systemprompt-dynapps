@@ -2,7 +2,7 @@
 
 @layer responsive {
 
-@media (max-width: 768px) {
+@media (max-width: 48rem) {
     .sp-topbar__actions {
         position: relative;
         flex-shrink: 0;

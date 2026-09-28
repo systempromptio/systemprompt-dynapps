@@ -17,6 +17,12 @@
     margin-bottom: var(--sp-density-section);
 }
 
+/* A compact strip sits inside a card or beside a table, where the full
+   section gap would read as two unrelated groups of tiles. */
+.sp-kpi-grid--compact {
+    gap: var(--sp-space-2);
+}
+
 .sp-kpi {
     display: flex;
     flex-direction: column;
@@ -127,6 +133,44 @@
 
 .sp-kpi--link.is-active {
     box-shadow: var(--sp-shadow-focus-inset);
+}
+
+}
+
+@layer responsive {
+
+/* On a phone the auto-fit track collapses to one tile per row, which turns a
+   ten-tile strip into ten screens of scrolling. Two to a row keeps the scan,
+   and the label and note may take two lines because a clamped single line at
+   this width cut every label to three letters. */
+@media (max-width: 48rem) {
+    .sp-kpi-grid,
+    .sp-p-overview__kpis {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .sp-kpi {
+        min-height: 0;
+    }
+
+    .sp-kpi__label,
+    .sp-kpi__sub {
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+}
+
+/* Below the narrowest phones two tiles leave the value no room for its
+   digits, so the strip falls back to one column. */
+@media (max-width: 22rem) {
+    .sp-kpi-grid,
+    .sp-p-overview__kpis {
+        grid-template-columns: minmax(0, 1fr);
+    }
 }
 
 }

@@ -22,6 +22,37 @@ Conventions (strict — hold every entry to them):
 
 ### Changed
 
+- **Admin console on phones.** Below 48rem every admin data table is drawn as a stack of cards
+  instead of a squashed, sideways-scrolling grid: `storage/files/js/services/table-cards.js`
+  copies each column's header text onto its cells as `data-label` (no template changes across
+  the 139 table uses), and `06-table-cards.css` / `06-table-cards2.css` render the identity
+  column as the card title, numbers and dates right-aligned against their labels, the actions
+  cell as a card footer, an expandable row's detail as a full-width card beneath it, and a
+  phone-only "Sort by" select in place of the hidden header row. A wide ledger opts out with
+  `table_mode="scroll"` on `components/table` (marketplace versions, the sync diff, the trace
+  turn list) and keeps a pinned first column. Without JS the tables stay as they were.
+- **Mobile shell.** The topbar is sticky on phones (`03-shell-header-mobile.css`; `body` and the
+  main column now use `overflow: clip`, since a hidden overflow made them scroll containers and
+  defeated sticky), the ID search collapses behind an icon that opens a full-width row, the
+  sidebar drawer is `100dvh` and `min(20rem, 85vw)`, locks page scroll, marks the page `inert`,
+  traps Tab and returns focus on close (`sidebar.js`), and touch targets are 44px. The filter
+  ribbon no longer carries `z-index: 1100`, which had painted it over the drawer and the topbar
+  menu; it is raised only while one of its panels is open, and the topbar has its own
+  `--sp-z-topbar` layer. Filter panels, dialogs, the export dialog, the side panel and row-action
+  menus become bottom sheets on phones (`06-filter-ribbon-mobile.css`, `07-overlay-mobile.css`),
+  KPI tiles sit two to a row with wrapping labels, chart cards size to their content instead of
+  scrolling inside themselves (`08-chart-mobile.css`), form controls are at least 1rem so iOS
+  does not zoom, and page header actions, breadcrumbs, tabs and pill rows scroll sideways with a
+  fade instead of clipping (`04-page-chrome-mobile.css`). Breakpoints in the touched files are
+  now rem (30 / 48 / 64 / 80); `10-responsive.css` and `07-field-details.css` were folded into
+  the files that own their rules and removed.
+
+### Fixed
+
+- `07-panel.css` and `07-dialog.css` each had `transition` declarations whose property name had
+  been lost, leaving orphaned continuation lines and, in the panel file, a selector list that
+  swallowed the reduced-motion block; both are valid CSS again.
+
 - **Admin crate split, stage 0.** The shared half of `systemprompt-web-admin` now lives in its own
   shared-tier crate, `systemprompt-web-admin-core` (`extensions/web/shared/admin-core`): the error
   type, view types, templates, SSR page shell and list view, the export framework, the access-rule

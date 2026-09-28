@@ -45,9 +45,11 @@ const measureLeft = (ticks, unit) => {
 
 export const layout = ({ kind, visible, labels, unit, width, height }) => {
   const buckets = Math.max(labels.length, ...visible.map((s) => s.values.length), 1);
-  const { top, ticks } = yTicks(maxValue(kind, visible, buckets));
+  // A phone-width plot has no room for a 12px gutter or five gridlines in a short card.
+  const right = width < 420 ? 6 : MARGIN.right;
+  const { top, ticks } = yTicks(maxValue(kind, visible, buckets), height < 180 ? 3 : 4);
   const left = measureLeft(ticks, unit);
-  const plotW = Math.max(width - left - MARGIN.right, 10);
+  const plotW = Math.max(width - left - right, 10);
   const plotH = Math.max(height - MARGIN.top - MARGIN.bottom, 10);
   const slot = plotW / buckets;
   return {

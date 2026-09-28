@@ -38,7 +38,7 @@
 .sp-sidebar-overlay.is-open {
     display: block;
     background: var(--sp-overlay-light);
-    backdrop-filter: blur(2px);
+    backdrop-filter: blur(4px);
 }
 
 .sp-sidebar-close-btn {

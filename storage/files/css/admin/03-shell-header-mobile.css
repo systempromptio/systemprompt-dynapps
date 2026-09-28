@@ -1,0 +1,48 @@
+@layer responsive {
+
+/* On a phone the topbar is the only way back to navigation and search, so it
+   sticks to the top of the document instead of scrolling away. It bleeds to
+   the screen edge through the gutter and carries an opaque background, since
+   table cards scrolling underneath a transparent bar read as overlapping text.
+   The top padding clears the notch when the page runs edge to edge. */
+@media (max-width: 48rem) {
+    .sp-topbar {
+        position: sticky;
+        top: 0;
+        z-index: var(--sp-z-topbar);
+        flex-wrap: wrap;
+        row-gap: var(--sp-space-2);
+        margin-inline: calc(-1 * var(--sp-gutter));
+        padding-inline: var(--sp-gutter);
+        padding-top: calc(var(--sp-space-2) + env(safe-area-inset-top));
+        padding-bottom: var(--sp-space-2);
+        background: var(--sp-bg-main-gradient);
+    }
+
+    .sp-topbar__search-toggle {
+        display: inline-flex;
+    }
+
+    .sp-topbar__actions-toggle {
+        width: 44px;
+        height: 44px;
+    }
+
+    /* A 390px bar cannot hold a menu button, a search form and the kebab on
+       one line without squeezing the input to a few characters, so the form
+       waits behind its icon and opens as a full-width row under the bar. */
+    .sp-topbar__search {
+        display: none;
+        order: 1;
+        flex-basis: 100%;
+        max-width: none;
+        margin: 0;
+        height: 44px;
+    }
+
+    .sp-topbar.is-search-open .sp-topbar__search {
+        display: flex;
+    }
+}
+
+}

@@ -7,6 +7,9 @@
     z-index: calc(var(--sp-z-panel) - 1);
     opacity: 0;
     visibility: hidden;
+    transition: opacity var(--sp-duration-slow) var(--sp-ease-in-out),
+                visibility var(--sp-duration-slow) var(--sp-ease-in-out),
+                background var(--sp-duration-slow) var(--sp-ease-in-out),
                 backdrop-filter var(--sp-duration-slow) var(--sp-ease-in-out);
     backdrop-filter: blur(0px);
 }
@@ -66,6 +69,7 @@
     padding: var(--sp-space-1) var(--sp-space-2);
     border-radius: var(--sp-radius-sm);
     line-height: 1;
+    transition: color var(--sp-duration-fast),
                 background var(--sp-duration-fast);
 }
 
@@ -94,18 +98,27 @@
     to { opacity: 1; transform: translateY(0); }
 }
 
-.sp-side-panel.is-open .sp-panel-body .sp-form-group,
-.sp-side-panel.is-open .sp-panel-body .sp-form-group:nth-child(1),
-.sp-side-panel.is-open .sp-panel-body .sp-form-group:nth-child(2),
-.sp-side-panel.is-open .sp-panel-body .sp-form-group:nth-child(3),
-.sp-side-panel.is-open .sp-panel-body .sp-form-group:nth-child(4),
-.sp-side-panel.is-open .sp-panel-body .sp-form-group:nth-child(n+5),
+/* The first four fields stagger in so the eye follows the form top-down;
+   the rest arrive together because a longer cascade reads as lag. */
+.sp-side-panel.is-open .sp-panel-body .sp-form-group {
+    animation: panelContentIn var(--sp-duration-normal) var(--sp-ease-out) both;
+}
+
+.sp-side-panel.is-open .sp-panel-body .sp-form-group:nth-child(1) { animation-delay: 40ms; }
+.sp-side-panel.is-open .sp-panel-body .sp-form-group:nth-child(2) { animation-delay: 80ms; }
+.sp-side-panel.is-open .sp-panel-body .sp-form-group:nth-child(3) { animation-delay: 120ms; }
+.sp-side-panel.is-open .sp-panel-body .sp-form-group:nth-child(4) { animation-delay: 160ms; }
+.sp-side-panel.is-open .sp-panel-body .sp-form-group:nth-child(n+5) { animation-delay: 200ms; }
+
 @media (prefers-reduced-motion: reduce) {
     .sp-panel-overlay {
         transition: none;
     }
     .sp-side-panel {
         transition: none;
+    }
+    .sp-side-panel.is-open .sp-panel-body .sp-form-group {
+        animation: none;
     }
 }
 

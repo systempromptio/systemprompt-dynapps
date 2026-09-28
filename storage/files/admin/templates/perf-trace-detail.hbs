@@ -82,7 +82,7 @@
     <section aria-labelledby="turns-title">
       {{> components/section title="Turns" count=turn_count
           note="One row per gateway call, hook event, or standalone decision. Open a row for the checks the gateway ran on it."}}
-      {{#> components/table caption="Turns in this trace" modifier="sp-p-trace-detail__table"}}
+      {{#> components/table caption="Turns in this trace" modifier="sp-p-trace-detail__table" table_mode="scroll"}}
         <thead><tr>
           <th class="sp-table__cell--num">#</th>
           <th class="sp-col-date">When</th>
