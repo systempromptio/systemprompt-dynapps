@@ -22,7 +22,7 @@ Conventions (strict — hold every entry to them):
 
 ### Changed
 
-- Builds against core `next` at `bridge/CORE_REF` (`4f353fc2`, ahead of 0.62.0) with both `[patch.crates-io]` blocks active, so the gateway fix below ships with the config: a `anthropic-beta` flag the gateway drops now takes the body field it gates with it, and a body field an upstream refuses (`<field>: Extra inputs are not permitted`) is learned per provider, dropped and re-sent once, the way a refused beta already was. Core's `wire::anthropic::BETA_GATED_FIELDS` names the pairs; `UpstreamCall::{beta_policy, dropped_betas}` are the one policy header and body both apply.
+- Builds against core `next` at `bridge/CORE_REF` (`3026924d`, ahead of 0.62.0) with both `[patch.crates-io]` blocks active, so the gateway fix below ships with the config: a `anthropic-beta` flag the gateway drops now takes the body field it gates with it, and a body field an upstream refuses (`<field>: Extra inputs are not permitted`) is learned per provider, dropped and re-sent once, the way a refused beta already was. Core's `wire::anthropic::BETA_GATED_FIELDS` names the pairs; `UpstreamCall::{beta_policy, dropped_betas}` are the one policy header and body both apply.
 
 ### Fixed
 
