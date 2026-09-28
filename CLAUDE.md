@@ -366,6 +366,17 @@ with a 10-minute TTL, so build the bridge before issuing one. Headless code
 issue: `systemprompt admin bridge issue-code --user-id <email>`.
 `just claude-reset` signs this clone out (`ALL=1` for every clone on the host).
 
+**Betas through the gateway.** Claude Code sends every `anthropic-beta` flag it
+knows; the gateway forwards to a Vertex provider exactly the flags in that
+provider's `accepted_betas` (`services/ai/providers.yaml`), and a body field
+one of the dropped flags gates (`context_management`) is removed with it, so
+header and body never disagree. A flag or field the upstream still refuses is
+learned per provider for the rest of the process, dropped, and the request
+re-sent once. The bridge rewrites nothing: a request that fails through it is a
+gateway or config fault, never a client install to downgrade. The 2026-09-28
+`400 context_management: Extra inputs are not permitted` on Claude Code 2.1.283
+was an empty `accepted_betas` list with the body field forwarded alone.
+
 ---
 
 ## Operating on production from this machine

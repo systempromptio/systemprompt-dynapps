@@ -362,6 +362,24 @@ providers:
   # usual tenth of input — kept as published. Haiku 4.5 is guaranteed only
   # to 2026-10-15. The Claude 4.x Opus and Sonnet models were removed on
   # 2026-09-24; the 5.x family replaces them.
+  #
+  # `accepted_betas` is the whole list of `anthropic-beta` flags the gateway
+  # forwards here; Vertex refuses a flag it does not serve, so the gateway
+  # sends none that is not declared. A flag that gates a body field
+  # (`context-management-*` gates `context_management`) must be declared or
+  # the field arrives alone and Vertex answers `context_management: Extra
+  # inputs are not permitted` — the 400 every Claude Code 2.1.283 prompt got
+  # on 2026-09-28 while this list was empty. Which flags: the betas Claude
+  # Code 2.1.283 sends (captured 2026-09-28) that Anthropic's feature matrix
+  # (platform.claude.com/docs/en/build-with-claude/overview, read 2026-09-28)
+  # lists for Google Cloud. Absent on purpose because Vertex does not serve
+  # them: advisor-tool-*, code-execution-*, mcp-client-*, files-api-*,
+  # skills-*, web-fetch-*; and context-1m-*, since Vertex serves 1M natively.
+  # Also sent by 2.1.283 but held back until Vertex is seen to accept them:
+  # claude-code-20250219, thinking-token-count-2026-05-13,
+  # prompt-caching-scope-2026-01-05, mid-conversation-system-2026-04-07.
+  # A flag Vertex still refuses is learned at runtime and dropped, together
+  # with the body field it gates, so a mistake here costs one round trip.
   display_name: Google Vertex AI (Claude)
   description: >-
     Claude models served from Vertex AI under a Google OAuth token minted from the vertex service-account secret. Serves every claude-* request on this installation.
@@ -369,7 +387,10 @@ providers:
   surface: anthropic
   endpoint: https://aiplatform.googleapis.com/v1/projects/{project}/locations/global/publishers/anthropic
   api_key_secret: vertex
-  accepted_betas: []
+  accepted_betas:
+  - context-management-2025-06-27
+  - interleaved-thinking-2025-05-14
+  - effort-2025-11-24
   governance:
     european: false
     no_retain: true

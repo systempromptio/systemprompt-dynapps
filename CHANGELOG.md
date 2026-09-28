@@ -20,6 +20,10 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+### Fixed
+
+- **Gateway:** Claude Code 2.1.283 failed on every prompt through the bridge with `400 context_management: Extra inputs are not permitted`. The client sends `anthropic-beta: context-management-2025-06-27` with a `context_management` body field; `vertex-anthropic` declared no `accepted_betas`, so the gateway dropped the header and forwarded the field alone, which Vertex refuses. `services/ai/providers.yaml` now declares the betas Claude Code 2.1.283 sends that Vertex serves (context management, interleaved thinking, effort), pinned by `tests/unit/web/src/vertex_accepted_betas.rs`. The `accepted_betas: []` from earlier today was a no-op: for Vertex an empty list and an absent one are the same policy, and the gateway's learned-beta retry only parses header refusals. Core `next` closes the category (a dropped flag takes its body field with it; a refused body field is learned and re-sent once); this entry ships on core 0.62.0 and needs only the config.
+
 ## 0.62.0 — 2026-09-25
 
 Built on core 0.62.0. Supersedes the unreleased 0.61.2 version bump; 0.61.2 was never tagged or published.
