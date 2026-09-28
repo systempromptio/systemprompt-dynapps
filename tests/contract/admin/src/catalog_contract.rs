@@ -535,6 +535,7 @@ async fn access_control_api_replaces_rules_and_projects_a_matrix() {
 // so the grant reads as a narrowing and not a widening.
 #[tokio::test(flavor = "multi_thread")]
 async fn the_matrix_resolves_a_role_granted_marketplace_at_the_role_layer() {
+    const MARKETPLACE: &str = "astound-super-admin";
     if !globals::init() {
         return;
     }
@@ -546,7 +547,6 @@ async fn the_matrix_resolves_a_role_granted_marketplace_at_the_role_layer() {
     let knowledge_worker = credentials.knowledge_worker_user_id.clone();
     let plain_user = credentials.non_admin_user_id.clone();
     let app = App::new(&db.pool, credentials);
-    const MARKETPLACE: &str = "astound-super-admin";
     seed::insert_acl_rule(
         &db.pool,
         "marketplace",

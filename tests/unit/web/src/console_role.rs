@@ -9,6 +9,7 @@ use std::collections::BTreeMap;
 
 use systemprompt::identifiers::{Email, UserId};
 use systemprompt_web_admin::repositories::analytics::conversations::has_full_history_view;
+use systemprompt_web_admin::repositories::scope::Participation;
 use systemprompt_web_admin::types::{
     ROLE_ADMIN, ROLE_PROJECT_MANAGER, ROLE_USER, roles_grant_console, roles_grant_manage,
 };
@@ -26,7 +27,7 @@ fn ctx(list: &[&str], groups: &[&str]) -> UserContext {
         email: Email::try_new("u-1@example.test".to_owned()).expect("fixture email"),
         group_ids: groups.iter().map(|g| (*g).to_owned()).collect(),
         project_ids: Vec::new(),
-        participation: Default::default(),
+        participation: Participation::default(),
         is_admin: roles_grant_manage(&roles),
         is_console: roles_grant_console(&roles),
         is_platform_admin: roles.iter().any(|r| r == "platform_admin"),

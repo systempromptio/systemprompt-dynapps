@@ -288,6 +288,8 @@ mod sync_boot_contract;
 #[cfg(test)]
 mod sync_declaration_text;
 #[cfg(test)]
+mod sync_drift_kpis;
+#[cfg(test)]
 mod sync_inventory;
 #[cfg(test)]
 mod sync_sources_hash;
@@ -315,6 +317,7 @@ mod connector_cards;
 #[cfg(test)]
 mod connector_oauth;
 #[cfg(test)]
+mod connector_oauth_classify;
 #[cfg(test)]
 mod salesforce_orgs;
 

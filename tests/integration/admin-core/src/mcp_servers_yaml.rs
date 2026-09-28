@@ -44,7 +44,8 @@ impl ServicesDir {
 
 impl Drop for ServicesDir {
     fn drop(&mut self) {
-        let _ = fs::remove_dir_all(&self.root);
+        // Why: best-effort cleanup; a leftover temp dir fails nothing.
+        fs::remove_dir_all(&self.root).ok();
     }
 }
 

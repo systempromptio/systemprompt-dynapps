@@ -74,61 +74,36 @@ impl ValidationService {
 
     #[must_use]
     pub fn validate_metadata(metadata: &ContentMetadata) -> ValidationResult {
-        let mut result = ValidationResult::valid();
-
-        if metadata.title.trim().is_empty() {
-            result = result.with_error(ValidationError::new("title", "Title cannot be empty"));
-        } else if metadata.title.len() > MAX_TITLE_LENGTH {
-            result = result.with_error(ValidationError::new(
-                "title",
-                format!("Title cannot exceed {MAX_TITLE_LENGTH} characters"),
-            ));
+        let errors: Vec<ValidationError> = [
+            title_error(&metadata.title),
+            slug_error(&metadata.slug),
+            published_at_error(&metadata.published_at),
+            kind_error(&metadata.kind),
+            description_error(&metadata.description),
+        ]
+        .into_iter()
+        .flatten()
+        .collect();
+        let warnings: Vec<String> = [
+            (
+                &metadata.description,
+                "Description is empty - this may affect SEO",
+            ),
+            (&metadata.author, "Author is not specified"),
+            (
+                &metadata.keywords,
+                "Keywords are empty - this may affect SEO",
+            ),
+        ]
+        .into_iter()
+        .filter(|(value, _)| value.trim().is_empty())
+        .map(|(_, warning)| warning.to_owned())
+        .collect();
+        ValidationResult {
+            is_valid: errors.is_empty(),
+            errors,
+            warnings,
         }
-
-        if metadata.slug.trim().is_empty() {
-            result = result.with_error(ValidationError::new("slug", "Slug cannot be empty"));
-        } else if !Self::is_valid_slug(&metadata.slug) {
-            result = result.with_error(ValidationError::new(
-                "slug",
-                "Slug must contain only lowercase letters, numbers, and hyphens",
-            ));
-        }
-
-        if metadata.published_at.trim().is_empty() {
-            result = result.with_error(ValidationError::new(
-                "published_at",
-                "Published date is required",
-            ));
-        }
-
-        if metadata.kind.parse::<ContentKind>().is_err() {
-            result = result.with_error(ValidationError::new(
-                "kind",
-                format!(
-                    "Invalid content kind '{}'. Must be one of: blog, guide, tutorial, reference, docs-index, docs, docs-list, feature, playbook, legal",
-                    metadata.kind
-                ),
-            ));
-        }
-
-        if metadata.description.trim().is_empty() {
-            result = result.with_warning("Description is empty - this may affect SEO".to_owned());
-        } else if metadata.description.len() > MAX_DESCRIPTION_LENGTH {
-            result = result.with_error(ValidationError::new(
-                "description",
-                format!("Description cannot exceed {MAX_DESCRIPTION_LENGTH} characters"),
-            ));
-        }
-
-        if metadata.author.trim().is_empty() {
-            result = result.with_warning("Author is not specified".to_owned());
-        }
-
-        if metadata.keywords.trim().is_empty() {
-            result = result.with_warning("Keywords are empty - this may affect SEO".to_owned());
-        }
-
-        result
     }
 
     #[must_use]
@@ -182,14 +157,68 @@ impl ValidationService {
             Err(BlogError::Validation(error_messages.join("; ")))
         }
     }
+}
 
-    fn is_valid_slug(slug: &str) -> bool {
-        !slug.is_empty()
-            && slug
-                .chars()
-                .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
-            && !slug.starts_with('-')
-            && !slug.ends_with('-')
-            && !slug.contains("--")
+fn title_error(title: &str) -> Option<ValidationError> {
+    if title.trim().is_empty() {
+        Some(ValidationError::new("title", "Title cannot be empty"))
+    } else if title.len() > MAX_TITLE_LENGTH {
+        Some(ValidationError::new(
+            "title",
+            format!("Title cannot exceed {MAX_TITLE_LENGTH} characters"),
+        ))
+    } else {
+        None
     }
+}
+
+fn slug_error(slug: &str) -> Option<ValidationError> {
+    if slug.trim().is_empty() {
+        Some(ValidationError::new("slug", "Slug cannot be empty"))
+    } else if is_valid_slug(slug) {
+        None
+    } else {
+        Some(ValidationError::new(
+            "slug",
+            "Slug must contain only lowercase letters, numbers, and hyphens",
+        ))
+    }
+}
+
+fn published_at_error(published_at: &str) -> Option<ValidationError> {
+    published_at
+        .trim()
+        .is_empty()
+        .then(|| ValidationError::new("published_at", "Published date is required"))
+}
+
+fn kind_error(kind: &str) -> Option<ValidationError> {
+    kind.parse::<ContentKind>().is_err().then(|| {
+        ValidationError::new(
+            "kind",
+            format!(
+                "Invalid content kind '{kind}'. Must be one of: blog, guide, tutorial, reference, docs-index, docs, docs-list, feature, playbook, legal"
+            ),
+        )
+    })
+}
+
+fn description_error(description: &str) -> Option<ValidationError> {
+    let oversized = !description.trim().is_empty() && description.len() > MAX_DESCRIPTION_LENGTH;
+    oversized.then(|| {
+        ValidationError::new(
+            "description",
+            format!("Description cannot exceed {MAX_DESCRIPTION_LENGTH} characters"),
+        )
+    })
+}
+
+fn is_valid_slug(slug: &str) -> bool {
+    !slug.is_empty()
+        && slug
+            .chars()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
+        && !slug.starts_with('-')
+        && !slug.ends_with('-')
+        && !slug.contains("--")
 }

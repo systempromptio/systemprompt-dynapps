@@ -1,19 +1,18 @@
-//! `/admin/users/{id}` — one account, in six tabs.
+//! `/admin/users/{id}` — one account, in seven tabs.
 //!
 //! Every tab is a link
-//! (`?tab=identity|membership|access|devices|sessions|usage`), so
-//! a view is bookmarkable and the server renders only the tab the reader asked
-//! for. Usage is the page that used to live at `/admin/analytics/users/{id}`,
-//! folded in: it was the same account seen from a different sidebar entry, and
-//! the two are now one URL.
+//! (`?tab=identity|conversations|membership|access|devices|sessions|usage`),
+//! so a view is bookmarkable and the server loads and renders only the tab the
+//! reader asked for.
 
 mod access_overview;
 mod access_view;
 mod context;
+mod headline;
 mod load;
 mod usage;
 mod view;
-
+mod workspace_grant;
 
 use std::sync::Arc;
 
@@ -24,20 +23,15 @@ use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 
 use crate::error::{AdminError, AdminHtmlResult};
-use crate::handlers::ssr::types::BreadcrumbView;
 use crate::repositories;
-use crate::repositories::scope::membership::UNATTRIBUTED;
 use crate::types::UserContext;
 
-use context::{DetailKpiView, DetailTabView, UserDetailContext, UserHeaderView};
+use context::{DetailTabView, UserDetailContext};
+use headline::{BaseInputs, base_context};
 
-use super::BASE_URL;
 use crate::handlers::ssr::list_view::DEFAULT_PAGE_SIZE;
 use crate::handlers::ssr::page::Page;
 
-// Why: Conversations sits second, directly after Identity. What this person
-// has actually been asking the models is the question an operator opens an
-// account for.
 const TABS: [(&str, &str); 7] = [
     ("identity", "Identity"),
     ("conversations", "Conversations"),
@@ -54,23 +48,21 @@ pub(crate) struct DetailQuery {
     pub page: Option<i64>,
 }
 
+fn may_open_profile(viewer: &UserContext, user_id_raw: &str) -> bool {
+    viewer.is_console || viewer.user_id.as_str() == user_id_raw
+}
+
 pub(crate) async fn user_detail_page(
     shell: Page,
     State(pool): State<Arc<PgPool>>,
     Path(user_id_raw): Path<String>,
     Query(query): Query<DetailQuery>,
 ) -> AdminHtmlResult<Response> {
-    // Why: a non-console caller may open their own page and nobody else's.
-    // Refusing by identity rather than by role keeps the profile link working
-    // for a plain user without opening the roster to them.
-    if !shell.user.is_console && shell.user.user_id.as_str() != user_id_raw {
+    if !may_open_profile(&shell.user, &user_id_raw) {
         return Err(AdminError::Forbidden("You can only view your own profile.".to_owned()).into());
     }
 
     let user_id = UserId::new(user_id_raw.as_str());
-    // Why: `Err` and `Ok(None)` must not collapse: this value alone decides
-    // whether the page 404s, so a failed query would tell an admin the account
-    // had been deleted. Only a genuine absence is a not-found.
     let Some(detail) = repositories::users::queries::find_user_detail(&pool, &user_id).await?
     else {
         return Err(AdminError::NotFound("No such user.".to_owned()).into());
@@ -78,55 +70,17 @@ pub(crate) async fn user_detail_page(
 
     let tab = resolve_tab(query.tab.as_deref());
     let page = query.page.unwrap_or(0).max(0);
-
-    let load::Headline {
-        profile,
-        summary,
-        defaults,
-    } = load::load_headline(&pool, &user_id).await;
-    let group_ids = profile
-        .as_ref()
-        .map(|p| p.group_ids.clone())
-        .unwrap_or_default();
-    let project_ids = profile
-        .as_ref()
-        .map(|p| p.project_ids.clone())
-        .unwrap_or_default();
-
-    let data = UserDetailContext {
-        page: "user-detail",
-        title: display_name(&detail),
-        breadcrumbs: vec![
-            BreadcrumbView::link("Users", BASE_URL),
-            BreadcrumbView::current(display_name(&detail)),
-        ],
-        tabs: tab_links(&user_id, tab),
+    let headline = load::load_headline(&pool, &user_id).await;
+    let data = base_context(BaseInputs {
+        user_id: &user_id,
+        detail: &detail,
+        headline,
         tab,
-        header: header_view(&detail, defaults.as_ref()),
-        kpis: DetailKpiView {
-            requests_display: crate::handlers::ssr::format::format_token_total(summary.requests),
-            cost_display: crate::handlers::ssr::format::format_cost(summary.cost_microdollars),
-            tokens_display: crate::handlers::ssr::format::format_token_total(summary.tokens),
-            sessions: i64::try_from(detail.sessions.len()).unwrap_or(0),
-            devices: 0,
-            groups: group_ids.len(),
-            projects: project_ids.len(),
-            membership_url: tab_href(&user_id, "membership"),
-        },
-        can_write: shell.user.is_admin,
-        is_self: shell.user.user_id.as_str() == user_id.as_str(),
-        identity: None,
-        conversations: None,
-        membership: None,
-        access: None,
-        devices: None,
-        sessions: None,
-        usage: None,
-        export: view::export(&user_id, &shell.user),
-    };
+        viewer: &shell.user,
+    });
 
-    let data = Box::pin(fill_tab(
-        TabRead {
+    let data = Box::pin(fill_active_tab(
+        ActiveTabRead {
             pool: &pool,
             user_id: &user_id,
             detail: &detail,
@@ -147,9 +101,7 @@ pub(crate) async fn user_detail_page(
     ))
 }
 
-// Why: only the active tab is loaded. Rendering all seven would make opening a
-// person's Identity tab pay for their whole request history.
-struct TabRead<'a> {
+struct ActiveTabRead<'a> {
     pool: &'a PgPool,
     user_id: &'a UserId,
     detail: &'a crate::types::UserDetail,
@@ -158,8 +110,11 @@ struct TabRead<'a> {
     viewer: &'a UserContext,
 }
 
-async fn fill_tab(read: TabRead<'_>, mut data: UserDetailContext) -> UserDetailContext {
-    let TabRead {
+async fn fill_active_tab(
+    read: ActiveTabRead<'_>,
+    mut data: UserDetailContext,
+) -> UserDetailContext {
+    let ActiveTabRead {
         pool,
         user_id,
         detail,
@@ -233,54 +188,4 @@ fn tab_links(user_id: &UserId, active: &'static str) -> Vec<DetailTabView> {
             is_active: slug == active,
         })
         .collect()
-}
-
-fn display_name(detail: &crate::types::UserDetail) -> String {
-    detail
-        .display_name
-        .clone()
-        .unwrap_or_else(|| detail.user_id.as_str().to_owned())
-}
-
-fn header_view(
-    detail: &crate::types::UserDetail,
-    defaults: Option<&repositories::scope::defaults::ScopeDefaults>,
-) -> UserHeaderView {
-    let name = display_name(detail);
-    UserHeaderView {
-        initials: name
-            .split(|c: char| c.is_whitespace() || c == '-' || c == '.' || c == '@')
-            .filter(|p| !p.is_empty())
-            .take(2)
-            .filter_map(|p| p.chars().next())
-            .flat_map(char::to_uppercase)
-            .collect(),
-        email: detail
-            .email
-            .as_ref()
-            .map(|e| e.as_str().to_owned())
-            .unwrap_or_default(),
-        has_roles: !detail.roles.is_empty(),
-        roles: detail.roles.clone(),
-        status_label: if detail.is_active {
-            "Active"
-        } else {
-            "Suspended"
-        },
-        status_tone: if detail.is_active { "ok" } else { "muted" },
-        is_active: detail.is_active,
-        created_at: view::stamp(Some(detail.created_at)),
-        last_active: view::stamp(detail.last_active),
-        // Why: this is what the next request will be stamped with. A person
-        // with no primary is stamped unattributed however many groups they
-        // are in, so the tile says so rather than naming one of them.
-        primary_group: defaults
-            .and_then(|d| d.primary_group_id.as_ref().map(ToString::to_string))
-            .unwrap_or_else(|| UNATTRIBUTED.to_owned()),
-        primary_project: defaults
-            .and_then(|d| d.primary_project_id.as_ref().map(ToString::to_string))
-            .unwrap_or_else(|| UNATTRIBUTED.to_owned()),
-        name,
-        user_id: detail.user_id.clone(),
-    }
 }

@@ -12,6 +12,9 @@
 //! carries the shared "Who gets this" panel — the one place an entity's
 //! access is read and edited. The catalog itself is read-only: operators
 //! edit `services/*.yaml` and restart.
+//!
+//! The `q=` filter is applied server-side rather than as a class toggle, so
+//! the row count, the empty state and the URL always agree.
 
 mod access;
 mod data;
@@ -25,6 +28,7 @@ mod view;
 mod view_models;
 mod visibility;
 
+use std::cmp::Ordering;
 use std::sync::Arc;
 
 use axum::extract::{Extension, State};
@@ -42,20 +46,14 @@ use super::ssr::ssr_helpers::render_typed_page;
 use crate::handlers::ssr::types::BreadcrumbView;
 use entries::entry_columns;
 use sorting::{apply_direction, direction, matches, preserved_search, sort_headers};
-use view::assignment_counts_by_type;
+use view::{PluginListRow, SkillListRow, assignment_counts_by_type};
 use view_models::VisibilityInput;
 
 #[derive(Debug, Default, serde::Deserialize)]
 pub(crate) struct CatalogListQuery {
     pub sort: Option<String>,
     pub dir: Option<String>,
-    // Why: the filter is a server round trip rather than a class toggle, so the
-    // row count, the empty state and the URL all agree — a client-side hide
-    // leaves the filtered rows in the DOM and the count above them wrong.
     pub q: Option<String>,
-    // Why: which view a listing that has more than one is showing. Only the
-    // marketplaces listing reads it today; the field is on the shared query so
-    // the three listings keep one parameter set between them.
     pub tab: Option<String>,
 }
 
@@ -80,15 +78,7 @@ pub(crate) async fn plugins_page(
             rules: &rules,
         },
     );
-    // Why: discard-ok: an unreadable profile leaves every row as base
-    let sources = build_sources().ok();
-    for row in &mut plugins {
-        let p = sources.as_ref().map_or_else(Provenance::base, |s| {
-            owned_by(s, OwnedKind::Plugin, row.id.as_str())
-        });
-        row.source = p.source;
-        row.source_tone = p.tone;
-    }
+    stamp_sources(&mut plugins, OwnedKind::Plugin);
     let search = query.q.unwrap_or_default();
     plugins.retain(|p| {
         matches(
@@ -98,19 +88,7 @@ pub(crate) async fn plugins_page(
     });
     let sort_key = query.sort.unwrap_or_else(|| "name".to_owned());
     let dir = direction(query.dir.as_deref());
-    match sort_key.as_str() {
-        "status" => apply_direction(&mut plugins, dir, |a, b| a.enabled.cmp(&b.enabled)),
-        "members" => apply_direction(&mut plugins, dir, |a, b| {
-            a.skills_count.cmp(&b.skills_count)
-        }),
-        "visibility" => apply_direction(&mut plugins, dir, |a, b| {
-            a.visibility.is_public.cmp(&b.visibility.is_public)
-        }),
-        "grants" => apply_direction(&mut plugins, dir, |a, b| {
-            a.assignment_count.cmp(&b.assignment_count)
-        }),
-        _ => apply_direction(&mut plugins, dir, |a, b| b.name.cmp(&a.name)),
-    }
+    apply_direction(&mut plugins, dir, plugin_order(&sort_key));
 
     let page = view::PluginsPageData {
         page: "plugins",
@@ -163,30 +141,12 @@ pub(crate) async fn skills_page(
             rules: &rules,
         },
     );
-    // Why: discard-ok: an unreadable profile leaves every row as base
-    let sources = build_sources().ok();
-    for row in &mut skills {
-        let p = sources
-            .as_ref()
-            .map_or_else(Provenance::base, |s| owned_by(s, OwnedKind::Skill, &row.id));
-        row.source = p.source;
-        row.source_tone = p.tone;
-    }
+    stamp_sources(&mut skills, OwnedKind::Skill);
     let search = query.q.unwrap_or_default();
     skills.retain(|s| matches(&[&s.id, &s.name, &s.description], &search));
     let sort_key = query.sort.unwrap_or_else(|| "name".to_owned());
     let dir = direction(query.dir.as_deref());
-    match sort_key.as_str() {
-        "status" => apply_direction(&mut skills, dir, |a, b| a.enabled.cmp(&b.enabled)),
-        "members" => apply_direction(&mut skills, dir, |a, b| a.plugin_count.cmp(&b.plugin_count)),
-        "visibility" => apply_direction(&mut skills, dir, |a, b| {
-            a.visibility.is_public.cmp(&b.visibility.is_public)
-        }),
-        "grants" => apply_direction(&mut skills, dir, |a, b| {
-            a.assignment_count.cmp(&b.assignment_count)
-        }),
-        _ => apply_direction(&mut skills, dir, |a, b| b.name.cmp(&a.name)),
-    }
+    apply_direction(&mut skills, dir, skill_order(&sort_key));
 
     let page = view::SkillsPageData {
         page: "skills",
@@ -213,6 +173,71 @@ pub(crate) async fn skills_page(
         &user_ctx,
         &mkt_ctx,
     ))
+}
+
+type RowOrder<T> = fn(&T, &T) -> Ordering;
+
+fn plugin_order(sort_key: &str) -> RowOrder<PluginListRow> {
+    match sort_key {
+        "status" => |a, b| a.enabled.cmp(&b.enabled),
+        "members" => |a, b| a.skills_count.cmp(&b.skills_count),
+        "visibility" => |a, b| a.visibility.is_public.cmp(&b.visibility.is_public),
+        "grants" => |a, b| a.assignment_count.cmp(&b.assignment_count),
+        _ => |a, b| b.name.cmp(&a.name),
+    }
+}
+
+fn skill_order(sort_key: &str) -> RowOrder<SkillListRow> {
+    match sort_key {
+        "status" => |a, b| a.enabled.cmp(&b.enabled),
+        "members" => |a, b| a.plugin_count.cmp(&b.plugin_count),
+        "visibility" => |a, b| a.visibility.is_public.cmp(&b.visibility.is_public),
+        "grants" => |a, b| a.assignment_count.cmp(&b.assignment_count),
+        _ => |a, b| b.name.cmp(&a.name),
+    }
+}
+
+trait SourceStamped {
+    fn source_key(&self) -> &str;
+    fn stamp(&mut self, provenance: Provenance);
+}
+
+impl SourceStamped for PluginListRow {
+    fn source_key(&self) -> &str {
+        self.id.as_str()
+    }
+
+    fn stamp(&mut self, provenance: Provenance) {
+        self.source = provenance.source;
+        self.source_tone = provenance.tone;
+    }
+}
+
+impl SourceStamped for SkillListRow {
+    fn source_key(&self) -> &str {
+        &self.id
+    }
+
+    fn stamp(&mut self, provenance: Provenance) {
+        self.source = provenance.source;
+        self.source_tone = provenance.tone;
+    }
+}
+
+fn stamp_sources<T: SourceStamped>(rows: &mut [T], kind: OwnedKind) {
+    let sources = match build_sources() {
+        Ok(sources) => Some(sources),
+        Err(error) => {
+            tracing::warn!(%error, "catalog sources unreadable; rows stay base");
+            None
+        },
+    };
+    for row in rows {
+        let provenance = sources
+            .as_ref()
+            .map_or_else(Provenance::base, |s| owned_by(s, kind, row.source_key()));
+        row.stamp(provenance);
+    }
 }
 
 fn admin_only(user_ctx: &UserContext) -> AdminHtmlResult<()> {

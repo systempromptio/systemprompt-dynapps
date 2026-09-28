@@ -8,7 +8,9 @@
 //! its time series, one breakdown dimension, the facet lists and one page of
 //! rows from the same filtered set, so every number above the table
 //! describes the rows inside it. Filtering, paging and sorting are bound
-//! parameters chosen by `CASE` arms, never interpolated text.
+//! parameters chosen by `CASE` arms, never interpolated text. A conversation
+//! with no turn is a title or side call the client made on its own, so it is
+//! hidden unless `include_without_turns` asks for every row.
 
 pub mod detail;
 mod filter;
@@ -31,7 +33,6 @@ pub use filter::{BreakdownBy, FactSort, FlagFilter, JudgedFilter};
 /// Narrowing applied to the rows, totals, series and breakdown alike.
 #[derive(Debug, Clone, Default)]
 pub struct ConversationAnalysisFilter {
-    // Why: the caller's resolved `SubjectScope::as_sql()`; `None` = every user.
     pub subject_ids: Option<Vec<String>>,
     pub user_id: Option<UserId>,
     pub category: Option<String>,
@@ -46,11 +47,7 @@ pub struct ConversationAnalysisFilter {
     pub group_id: Option<GroupId>,
     pub project_id: Option<ProjectId>,
     pub flag: Option<FlagFilter>,
-    // Why: an explicit row selection — the export of ticked rows and the
-    // judge-selected action read exactly these contexts, window aside.
     pub context_ids: Option<Vec<String>>,
-    // Why: a conversation with no turn is a title or side call the client
-    // made on its own; the page hides those unless asked for every row.
     pub include_without_turns: bool,
 }
 
@@ -62,8 +59,6 @@ impl ConversationAnalysisFilter {
             .map(|s| format!("%{}%", s.replace('\\', "\\\\").replace('%', "\\%")))
     }
 
-    // Why: a 24-hour window buckets by hour so the chart has a shape; every
-    // longer window buckets by day.
     fn bucket(&self) -> &'static str {
         match self.since {
             Some(since) if (Utc::now() - since).num_hours() <= 48 => "hour",
@@ -112,9 +107,7 @@ pub struct ConversationAnalysisTotals {
     pub judged: i64,
     pub completion_avg: Option<f64>,
     pub p95_latency_ms: Option<f64>,
-    // Why: queued judge rows in scope — what the label has not yet covered.
     pub pending_judgement: i64,
-    // Why: rows in scope left out because they have no turn.
     #[serde(default)]
     pub without_turns: i64,
     #[serde(default)]
@@ -217,6 +210,19 @@ pub async fn load_conversation_analysis_page(
     page: ConversationAnalysisPage,
 ) -> Result<ConversationAnalysisResult, sqlx::Error> {
     let started = std::time::Instant::now();
+    let (wire, ids) = query_page_payload(pool, filter, page).await?;
+    tracing::debug!(
+        query_ms = started.elapsed().as_secs_f64() * 1000.0,
+        "conversation analysis page loaded"
+    );
+    decode_page(wire, &ids)
+}
+
+async fn query_page_payload(
+    pool: &PgPool,
+    filter: &ConversationAnalysisFilter,
+    page: ConversationAnalysisPage,
+) -> Result<(ConversationAnalysisWire, Vec<ContextId>), sqlx::Error> {
     let mut connection = crate::repositories::dashboard_read::begin(pool).await?;
     let pattern = filter.free_text_pattern();
     let result = sqlx::query_file!(
@@ -247,17 +253,18 @@ pub async fn load_conversation_analysis_page(
     .fetch_one(&mut *connection)
     .await?;
     connection.commit().await?;
-    tracing::debug!(
-        query_ms = started.elapsed().as_secs_f64() * 1000.0,
-        "conversation analysis page loaded"
-    );
-    let ids = result.context_ids;
-    let wire = result.payload.0;
+    Ok((result.payload.0, result.context_ids))
+}
+
+fn decode_page(
+    wire: ConversationAnalysisWire,
+    ids: &[ContextId],
+) -> Result<ConversationAnalysisResult, sqlx::Error> {
     Ok(ConversationAnalysisResult {
         rows: wire
             .rows
             .into_iter()
-            .map(|r| decode_row(r, &ids))
+            .map(|r| decode_row(r, ids))
             .collect::<Result<_, _>>()?,
         totals: wire.totals,
         series: wire.series,

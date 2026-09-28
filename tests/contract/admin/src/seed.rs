@@ -24,7 +24,7 @@ use systemprompt::models::auth::{
 use crate::globals;
 
 // A fresh, collision-proof id fragment.
-pub fn unique(prefix: &str) -> String {
+pub(crate) fn unique(prefix: &str) -> String {
     format!("{prefix}-{}", uuid::Uuid::new_v4().simple())
 }
 
@@ -35,7 +35,7 @@ pub fn unique(prefix: &str) -> String {
 // `JwtService::generate_admin_token` hard-codes the standard audiences. The
 // claims are therefore assembled here so a case can also mint the *wrong*
 // token on purpose and prove the validator rejects it.
-pub struct TokenSpec<'a> {
+pub(crate) struct TokenSpec<'a> {
     pub subject: &'a str,
     pub audiences: Vec<JwtAudience>,
     pub scopes: Vec<Permission>,
@@ -44,7 +44,7 @@ pub struct TokenSpec<'a> {
 
 impl<'a> TokenSpec<'a> {
     // A well-formed hook token: `aud=hook`, both hook scopes, a plugin id.
-    pub fn hook(subject: &'a str) -> Self {
+    pub(crate) fn hook(subject: &'a str) -> Self {
         Self {
             subject,
             audiences: vec![JwtAudience::Hook],
@@ -58,7 +58,7 @@ impl<'a> TokenSpec<'a> {
     // `validate_plugin_jwt` checks the audience and nothing else, and the
     // resource audience is one no minter in core produces — the admin session
     // token carries the standard set, which is why it is rejected there.
-    pub fn plugin(subject: &'a str) -> Self {
+    pub(crate) fn plugin(subject: &'a str) -> Self {
         Self {
             subject,
             audiences: vec![JwtAudience::Resource("plugin".to_owned())],
@@ -68,7 +68,7 @@ impl<'a> TokenSpec<'a> {
     }
 }
 
-pub fn mint(spec: &TokenSpec<'_>) -> String {
+pub(crate) fn mint(spec: &TokenSpec<'_>) -> String {
     let now = Utc::now();
     let claims = JwtClaims {
         sub: spec.subject.to_owned(),
@@ -103,7 +103,7 @@ pub fn mint(spec: &TokenSpec<'_>) -> String {
 
 // Insert a user with the `user` role. `users.name` is unique, so the email
 // doubles as the name exactly as the production provisioning paths do.
-pub async fn insert_user(pool: &PgPool, id: &str, email: &str) -> UserId {
+pub(crate) async fn insert_user(pool: &PgPool, id: &str, email: &str) -> UserId {
     sqlx::query(
         "INSERT INTO users (id, name, email, display_name, status, email_verified, roles)
          VALUES ($1, $2, $2, $3, 'active', true, ARRAY['user'])",
@@ -123,7 +123,7 @@ pub async fn insert_user(pool: &PgPool, id: &str, email: &str) -> UserId {
 // that absence as `Ok(None)` — which the public manifest endpoint answers the
 // same way it answers a forged token. A share token is therefore only
 // verifiable once this row exists.
-pub async fn insert_profile_ext(pool: &PgPool, user_id: &UserId, version: i32) {
+pub(crate) async fn insert_profile_ext(pool: &PgPool, user_id: &UserId, version: i32) {
     sqlx::query(
         "INSERT INTO user_profile_ext (user_id, share_token_version) VALUES ($1, $2)
          ON CONFLICT (user_id) DO UPDATE SET share_token_version = EXCLUDED.share_token_version",
@@ -137,7 +137,7 @@ pub async fn insert_profile_ext(pool: &PgPool, user_id: &UserId, version: i32) {
 
 // `ai_requests.session_id` carries a foreign key to `user_sessions`, so a
 // request with a session needs the session row first.
-pub async fn insert_session(pool: &PgPool, session_id: &str, user_id: &UserId) {
+pub(crate) async fn insert_session(pool: &PgPool, session_id: &str, user_id: &UserId) {
     sqlx::query("INSERT INTO user_sessions (session_id, user_id) VALUES ($1, $2)")
         .bind(session_id)
         .bind(user_id.as_str())
@@ -146,7 +146,7 @@ pub async fn insert_session(pool: &PgPool, session_id: &str, user_id: &UserId) {
         .expect("insert user session");
 }
 
-pub async fn insert_context(
+pub(crate) async fn insert_context(
     pool: &PgPool,
     context_id: &str,
     user_id: &UserId,
@@ -167,9 +167,9 @@ pub async fn insert_context(
 
 // `ai_requests.context_id` is NOT NULL; core's sentinel stands in for a row
 // that belongs to no known context.
-pub const LEGACY_CONTEXT_ID: &str = "00000000-0000-0000-0000-4c4547414359";
+pub(crate) const LEGACY_CONTEXT_ID: &str = "00000000-0000-0000-0000-4c4547414359";
 
-pub struct RequestSpec<'a> {
+pub(crate) struct RequestSpec<'a> {
     pub id: String,
     pub user_id: &'a UserId,
     pub session_id: Option<&'a str>,
@@ -181,7 +181,7 @@ pub struct RequestSpec<'a> {
 // A payload row offering tools. The conversation view classifies a lone
 // request with no tools as a side call, which the conversation page hides, so
 // a case that reads the page's prompt seeds this beside the request.
-pub async fn insert_offered_tools(pool: &PgPool, request_id: &str) {
+pub(crate) async fn insert_offered_tools(pool: &PgPool, request_id: &str) {
     sqlx::query(
         "WITH catalog AS (
              INSERT INTO ai_tool_catalogs (sha256, tools)
@@ -198,7 +198,7 @@ pub async fn insert_offered_tools(pool: &PgPool, request_id: &str) {
     .expect("insert ai_request_payload");
 }
 
-pub async fn insert_request(pool: &PgPool, spec: &RequestSpec<'_>) {
+pub(crate) async fn insert_request(pool: &PgPool, spec: &RequestSpec<'_>) {
     sqlx::query(
         "INSERT INTO ai_requests (
              id, request_id, user_id, session_id, trace_id, context_id,
@@ -225,7 +225,7 @@ pub async fn insert_request(pool: &PgPool, spec: &RequestSpec<'_>) {
 // `provider` and `model` are NULL, which the table's CHECK constraint permits
 // only for this status. Any reader that overrides those columns to non-null
 // fails to decode the row rather than rendering the refusal.
-pub async fn insert_rejected_request(pool: &PgPool, spec: &RequestSpec<'_>) {
+pub(crate) async fn insert_rejected_request(pool: &PgPool, spec: &RequestSpec<'_>) {
     sqlx::query(
         "INSERT INTO ai_requests (
              id, request_id, user_id, session_id, trace_id, context_id,
@@ -247,7 +247,7 @@ pub async fn insert_rejected_request(pool: &PgPool, spec: &RequestSpec<'_>) {
 
 // A `governance_decisions` row. `trace_id` is what the trace explorer groups
 // on, so a decision without one is invisible to the pages under test.
-pub struct DecisionSpec<'a> {
+pub(crate) struct DecisionSpec<'a> {
     pub id: String,
     pub user_id: &'a UserId,
     pub session_id: &'a str,
@@ -256,7 +256,7 @@ pub struct DecisionSpec<'a> {
     pub tool_name: &'a str,
 }
 
-pub async fn insert_decision(pool: &PgPool, spec: &DecisionSpec<'_>) {
+pub(crate) async fn insert_decision(pool: &PgPool, spec: &DecisionSpec<'_>) {
     sqlx::query(
         "INSERT INTO governance_decisions (
              id, user_id, session_id, context_id, tool_name, decision, policy, reason,
@@ -275,7 +275,7 @@ pub async fn insert_decision(pool: &PgPool, spec: &DecisionSpec<'_>) {
     .expect("insert governance decision");
 }
 
-pub async fn insert_summary(pool: &PgPool, session_id: &str, user_id: &UserId, title: &str) {
+pub(crate) async fn insert_summary(pool: &PgPool, session_id: &str, user_id: &UserId, title: &str) {
     sqlx::query(
         "INSERT INTO plugin_session_summaries
              (id, session_id, user_id, started_at, tool_uses, prompts, errors,
@@ -292,7 +292,7 @@ pub async fn insert_summary(pool: &PgPool, session_id: &str, user_id: &UserId, t
     .expect("insert session summary");
 }
 
-pub async fn insert_event(pool: &PgPool, user_id: &UserId, session_id: &str, tool: &str) {
+pub(crate) async fn insert_event(pool: &PgPool, user_id: &UserId, session_id: &str, tool: &str) {
     sqlx::query(
         "INSERT INTO plugin_usage_events
              (id, user_id, session_id, event_type, tool_name, created_at)
@@ -312,7 +312,7 @@ pub async fn insert_event(pool: &PgPool, user_id: &UserId, session_id: &str, too
     clippy::too_many_arguments,
     reason = "one parameter per column of the row being seeded; a params struct would churn 43 call sites to say the same thing"
 )]
-pub async fn insert_acl_rule(
+pub(crate) async fn insert_acl_rule(
     pool: &PgPool,
     entity_type: &str,
     entity_id: &str,

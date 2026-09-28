@@ -28,6 +28,10 @@ use crate::{globals, principal, seed};
 // Everything one seeded activity trail is keyed on. The pages cross-link, so
 // the same session must carry the requests, the decisions, the context, and
 // the hook events for the joins to have anything to join.
+#[expect(
+    clippy::struct_field_names,
+    reason = "each field is named for the id column it seeds"
+)]
 struct Trail {
     user_id: UserId,
     session_id: String,
@@ -533,13 +537,7 @@ async fn a_gateway_conversation_is_readable_by_its_owner_and_invisible_to_everyo
 
     let own_url = format!("/admin/history/conversations/{context_id}");
     let (status, body) = app.call(Call::get(&own_url, Principal::NonAdmin)).await;
-    if status != StatusCode::OK {
-        failures.push(format!(
-            "  the owner reading their own conversation -> {} (expected 200): {}",
-            status.as_u16(),
-            body.chars().take(240).collect::<String>()
-        ));
-    } else {
+    if status == StatusCode::OK {
         if !body.contains("rotate the deploy key") {
             failures
                 .push("  the owner's page rendered without the prompt it was asked for".to_owned());
@@ -549,6 +547,12 @@ async fn a_gateway_conversation_is_readable_by_its_owner_and_invisible_to_everyo
                 "  the gateway marker framing reached the owner's page unstripped".to_owned(),
             );
         }
+    } else {
+        failures.push(format!(
+            "  the owner reading their own conversation -> {} (expected 200): {}",
+            status.as_u16(),
+            body.chars().take(240).collect::<String>()
+        ));
     }
 
     // A conversation belonging to someone else answers exactly as a

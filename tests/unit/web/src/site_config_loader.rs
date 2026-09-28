@@ -18,10 +18,18 @@ fn write_skill(root: &Path, dir: &str, yaml: &str) {
     fs::write(path.join("config.yaml"), yaml).expect("skill config");
 }
 
+#[expect(
+    clippy::unnecessary_wraps,
+    reason = "stands in for a loader, so it must have the loader's signature"
+)]
 fn ok_value() -> Result<Option<String>, ConfigError> {
     Ok(Some("loaded".to_owned()))
 }
 
+#[expect(
+    clippy::unnecessary_wraps,
+    reason = "stands in for a loader, so it must have the loader's signature"
+)]
 fn absent() -> Result<Option<String>, ConfigError> {
     Ok(None)
 }

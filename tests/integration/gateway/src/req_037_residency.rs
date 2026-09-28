@@ -113,7 +113,7 @@ routes:
     assert!(!requires.no_retain);
 
     let entry: ProviderEntry = serde_yaml::from_str(
-        r#"
+        r"
 name: eu-provider
 wire: openai-chat
 surface: backend
@@ -121,7 +121,7 @@ endpoint: https://eu.example.com/v1
 api_key_secret: eu_key
 governance:
   european: true
-"#,
+",
     )
     .expect("the governance block parses from YAML");
     assert!(entry.governance.european);

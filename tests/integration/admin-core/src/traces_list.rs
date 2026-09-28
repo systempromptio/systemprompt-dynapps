@@ -253,7 +253,10 @@ async fn list_traces_filters_by_user() {
 
     assert_eq!(total, 1);
     assert_eq!(
-        traces[0].user_id.as_ref().map(|u| u.as_str()),
+        traces[0]
+            .user_id
+            .as_ref()
+            .map(systemprompt_web_shared::UserId::as_str),
         Some(mine.as_str())
     );
     db.cleanup().await;
@@ -485,7 +488,10 @@ async fn list_traces_filters_by_project() {
 
     assert_eq!(total, 1);
     assert_eq!(
-        traces[0].user_id.as_ref().map(|u| u.as_str()),
+        traces[0]
+            .user_id
+            .as_ref()
+            .map(systemprompt_web_shared::UserId::as_str),
         Some(commerce.as_str())
     );
     db.cleanup().await;

@@ -105,13 +105,8 @@ async fn deleting_a_group_removes_it_from_the_listing() {
 
     delete_group(&db.pool, &id).await.expect("delete");
 
-    let ids: Vec<GroupId> = list_groups(&db.pool)
-        .await
-        .expect("list")
-        .into_iter()
-        .map(|g| g.id)
-        .collect();
-    assert!(!ids.contains(&id));
+    let groups = list_groups(&db.pool).await.expect("list");
+    assert!(groups.iter().all(|g| g.id != id));
     db.cleanup().await;
 }
 

@@ -67,7 +67,7 @@ fn audit(repos: &GatewayRepositories, user: &UserId, request: &CanonicalRequest)
     };
     let audit = GatewayAudit::new(repos, ctx);
     audit
-        .pin_pricing(Default::default())
+        .pin_pricing(systemprompt::models::services::ModelPricing::default())
         .expect("explicit fixture pricing");
     audit
 }
@@ -129,7 +129,7 @@ async fn terminal_receipt_survives_database_failure_and_replays_without_duplicat
         grounding: None,
         code_execution: None,
         raw_finish_reason: None,
-        received_surface: Default::default(),
+        received_surface: systemprompt::models::wire::inspect::ForwardedSurface::default(),
     };
     let body = Vec::from(br#"{"text":"private-recovery-evidence"}"#.as_slice()).into();
     let tools = vec![CapturedToolUse {

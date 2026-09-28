@@ -1,6 +1,10 @@
 //! Declared policies against the rows: one difference per policy, and
 //! which fields disagree.
 //!
+//! The difference is field-level so the row names what moved —
+//! `quota_windows` against `safety.block_categories` is the difference
+//! between a spend and a scanner decision, without diffing two JSON blobs.
+//!
 //! Comparison is on the normalised spec (monthly windows folded to their
 //! sentinel), so the daily rewrite is invisible here; a console edit to a
 //! ceiling or a scanner list is not. A row the file does not name is an
@@ -71,81 +75,71 @@ pub fn summarise_policy(entry_enabled: bool, priority: i32, spec: &GatewayPolicy
     .to_lowercase()
 }
 
-// Why: field-level so the row names what moved — "quota_windows" against
-// "safety.block_categories" is the difference between a spend and a scanner
-// decision, and the operator should not have to diff two JSON blobs.
 fn changed_fields(declared: &GatewayPolicyEntry, row: &PolicyRow) -> Vec<String> {
-    let mut out = Vec::new();
-    if declared.enabled != row.enabled {
-        out.push("enabled".to_owned());
-    }
-    if declared.priority != row.priority {
-        out.push("priority".to_owned());
-    }
     let db = normalise_spec(&row.spec);
     let d = &declared.spec;
-    if d.quota_mode != db.quota_mode {
-        out.push("quota_mode".to_owned());
-    }
-    if json(&d.quota_windows) != json(&db.quota_windows) {
-        out.push("quota_windows".to_owned());
-    }
-    if d.safety.mode != db.safety.mode {
-        out.push("safety.mode".to_owned());
-    }
-    if d.safety.scanners != db.safety.scanners {
-        out.push("safety.scanners".to_owned());
-    }
-    if d.safety.block_categories != db.safety.block_categories {
-        out.push("safety.block_categories".to_owned());
-    }
-    if d.safety.block_response_categories != db.safety.block_response_categories {
-        out.push("safety.block_response_categories".to_owned());
-    }
-    if d.safety.history != db.safety.history {
-        out.push("safety.history".to_owned());
-    }
-    if json(&d.safety.heuristic) != json(&db.safety.heuristic) {
-        out.push("safety.heuristic".to_owned());
-    }
-    out
+    [
+        ("enabled", declared.enabled != row.enabled),
+        ("priority", declared.priority != row.priority),
+        ("quota_mode", d.quota_mode != db.quota_mode),
+        (
+            "quota_windows",
+            comparison_key(&d.quota_windows) != comparison_key(&db.quota_windows),
+        ),
+        ("safety.mode", d.safety.mode != db.safety.mode),
+        ("safety.scanners", d.safety.scanners != db.safety.scanners),
+        (
+            "safety.block_categories",
+            d.safety.block_categories != db.safety.block_categories,
+        ),
+        (
+            "safety.block_response_categories",
+            d.safety.block_response_categories != db.safety.block_response_categories,
+        ),
+        ("safety.history", d.safety.history != db.safety.history),
+        (
+            "safety.heuristic",
+            comparison_key(&d.safety.heuristic) != comparison_key(&db.safety.heuristic),
+        ),
+    ]
+    .into_iter()
+    .filter(|(_, differs)| *differs)
+    .map(|(field, _)| field.to_owned())
+    .collect()
 }
 
-// JSON: a comparison key only — two spec sections are equal when their
-// serialised forms are, and the value never leaves this function
-fn json<T: Serialize>(v: &T) -> serde_json::Value {
-    // Why: discard-ok: the spec types serialise infallibly; Null on both
-    // sides compares equal, which is the harmless direction
+// JSON: variable-shape comparison key, never leaves this module
+fn comparison_key<T: Serialize>(v: &T) -> serde_json::Value {
     serde_json::to_value(v).unwrap_or(serde_json::Value::Null)
+}
+
+fn changed_policy(entry: &GatewayPolicyEntry, row: &PolicyRow) -> Option<ChangedPolicy> {
+    let fields = changed_fields(entry, row);
+    if fields.is_empty() {
+        return None;
+    }
+    Some(ChangedPolicy {
+        name: entry.name.clone(),
+        fields,
+        in_code: summarise_policy(entry.enabled, entry.priority, &entry.spec),
+        in_db: summarise_policy(row.enabled, row.priority, &normalise_spec(&row.spec)),
+    })
 }
 
 #[must_use]
 pub fn compute_policy_drift(declared: &DeclaredPolicies, rows: &[PolicyRow]) -> PolicyDrift {
     let mut drift = PolicyDrift::default();
     for entry in &declared.entries {
-        match rows.iter().find(|r| r.name == entry.name) {
-            None => drift.missing_in_db.push(entry.name.clone()),
-            Some(row) => {
-                let fields = changed_fields(entry, row);
-                if !fields.is_empty() {
-                    drift.changed.push(ChangedPolicy {
-                        name: entry.name.clone(),
-                        fields,
-                        in_code: summarise_policy(entry.enabled, entry.priority, &entry.spec),
-                        in_db: summarise_policy(
-                            row.enabled,
-                            row.priority,
-                            &normalise_spec(&row.spec),
-                        ),
-                    });
-                }
-            },
-        }
+        let Some(row) = rows.iter().find(|r| r.name == entry.name) else {
+            drift.missing_in_db.push(entry.name.clone());
+            continue;
+        };
+        drift.changed.extend(changed_policy(entry, row));
     }
-    for row in rows {
-        if declared.find(&row.name).is_none() {
-            drift.only_in_db.push(row.name.clone());
-        }
-    }
+    drift.only_in_db = rows
+        .iter()
+        .filter(|row| declared.find(&row.name).is_none())
+        .map(|row| row.name.clone())
+        .collect();
     drift
 }

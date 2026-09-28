@@ -35,7 +35,7 @@ async fn record_version(
     .expect("record marketplace version");
 }
 
-fn manifest(marketplace: &str, version: &str, skills: serde_json::Value) -> serde_json::Value {
+fn manifest(marketplace: &str, version: &str, skills: &serde_json::Value) -> serde_json::Value {
     json!({
         "marketplace_id": marketplace,
         "name": "Contract version marketplace",
@@ -81,7 +81,7 @@ async fn comparison_renders_manifest_changes_and_escapes_skill_identifiers() {
         manifest(
             &marketplace,
             "1.0.0",
-            json!([
+            &json!([
                 {"skill_id": changed, "skill_key": "changed", "digest": "old"},
                 {"skill_id": removed, "skill_key": "removed", "digest": "removed"},
             ]),
@@ -96,7 +96,7 @@ async fn comparison_renders_manifest_changes_and_escapes_skill_identifiers() {
         manifest(
             &marketplace,
             "2.0.0",
-            json!([
+            &json!([
                 {"skill_id": changed, "skill_key": "changed", "digest": "new"},
                 {"skill_id": added, "skill_key": "added", "digest": "added"},
                 {"skill_id": hostile, "skill_key": "untrusted", "digest": "hostile"},

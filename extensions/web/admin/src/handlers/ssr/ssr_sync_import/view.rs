@@ -1,10 +1,13 @@
-//! View types for `/admin/sync/import/{stage}` — the staged-archive preview.
+//! View types and the page context for `/admin/sync/import/{stage}` — the
+//! staged-archive preview.
 
 use serde::Serialize;
 
+use crate::handlers::ssr::ssr_sync::{BASE_URL as SYNC_URL, DOCS_URL};
 use crate::handlers::ssr::sync_plane::{HashView, PlaneCardView};
 use crate::handlers::ssr::types::BreadcrumbView;
-use crate::repositories::sync::archive::staging::OtherEntry;
+use crate::repositories::sync::archive::manifest::ArchiveManifest;
+use crate::repositories::sync::archive::staging::{OtherEntry, StagedArchive};
 
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct ManifestView {
@@ -16,7 +19,6 @@ pub(crate) struct ManifestView {
     pub planes: usize,
 }
 
-// Why: a plane the instance projects that the archive did not carry.
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct AbsentPlaneView {
     pub label: &'static str,
@@ -54,4 +56,86 @@ pub(crate) struct ImportPreviewPageData {
     pub discard_url: String,
     pub sync_url: &'static str,
     pub docs_url: &'static str,
+}
+
+fn kpis(cards: &[PlaneCardView], other: usize) -> Vec<PreviewKpiView> {
+    let clean = cards.iter().filter(|c| c.is_clean).count();
+    vec![
+        PreviewKpiView {
+            label: "Planes in the archive",
+            value: cards.len(),
+            note: "each previewed against this database",
+            tone: "info",
+        },
+        PreviewKpiView {
+            label: "Already in step",
+            value: clean,
+            note: "an apply would move nothing",
+            tone: "ok",
+        },
+        PreviewKpiView {
+            label: "Would change",
+            value: cards.len() - clean,
+            note: "choose a direction per plane",
+            tone: if cards.len() > clean { "warn" } else { "ok" },
+        },
+        PreviewKpiView {
+            label: "Served from code",
+            value: other,
+            note: "not applied here; commit or publish",
+            tone: "muted",
+        },
+    ]
+}
+
+pub(super) fn apply_url(stage_id: &str) -> String {
+    format!("/api/public/admin/sync/import/{stage_id}/apply")
+}
+
+fn manifest_view(m: &ArchiveManifest) -> ManifestView {
+    ManifestView {
+        release: m.release.clone(),
+        exported_at: m.exported_at.to_rfc3339(),
+        exported_by: m.exported_by.clone(),
+        base_tree_hash: m.base_tree_hash.as_deref().and_then(HashView::of),
+        composed_hash: m.composed_hash.as_deref().and_then(HashView::of),
+        planes: m.planes.len(),
+    }
+}
+
+pub(super) struct PreviewPlanes {
+    pub cards: Vec<PlaneCardView>,
+    pub absent: Vec<AbsentPlaneView>,
+}
+
+pub(super) fn page_data(
+    stage: &StagedArchive,
+    planes: PreviewPlanes,
+    can_write: bool,
+) -> ImportPreviewPageData {
+    ImportPreviewPageData {
+        page: "sync",
+        title: "Import preview",
+        can_write,
+        breadcrumbs: vec![
+            BreadcrumbView::link("Admin", "/admin"),
+            BreadcrumbView::link("Code sync", SYNC_URL),
+            BreadcrumbView::current("Import preview"),
+        ],
+        stage_id: stage.id.clone(),
+        staged_by: stage.actor.clone(),
+        staged_at: stage.created_at.to_rfc3339(),
+        expires_at: stage.expires_at().to_rfc3339(),
+        manifest: stage.manifest.as_ref().map(manifest_view),
+        manifest_error: stage.manifest_error.clone(),
+        kpis: kpis(&planes.cards, stage.other.len()),
+        planes: planes.cards,
+        absent: planes.absent,
+        other_count: stage.other.len(),
+        other: stage.other.clone(),
+        apply_all_url: apply_url(&stage.id),
+        discard_url: format!("/api/public/admin/sync/import/{}", stage.id),
+        sync_url: SYNC_URL,
+        docs_url: DOCS_URL,
+    }
 }

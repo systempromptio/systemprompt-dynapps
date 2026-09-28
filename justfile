@@ -258,6 +258,8 @@ _clippy-uncoordinated *FLAGS: lint-no-synthesis lint-no-untyped-admin lint-gates
     else
         SQLX_OFFLINE=false cargo clippy --workspace {{FLAGS}} -- -D warnings
     fi
+    # tests/ is a standalone workspace and is not covered by --workspace
+    SQLX_OFFLINE=true cargo clippy --manifest-path tests/Cargo.toml --workspace --all-targets {{FLAGS}} -- -D warnings
     # bridge/ is a standalone workspace and is not covered by --workspace
     cargo clippy --manifest-path bridge/Cargo.toml --all-targets {{FLAGS}} -- -D warnings
     # Why: the GUI (src/registry.rs's marketplace seam included) is cfg'd to

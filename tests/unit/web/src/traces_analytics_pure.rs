@@ -1,11 +1,3 @@
-#![allow(
-    clippy::expect_used,
-    clippy::panic,
-    clippy::needless_pass_by_value,
-    clippy::redundant_clone,
-    reason = "test code: panics are the assertion mechanism and clones keep fixtures readable"
-)]
-
 use systemprompt_web_admin::repositories::analytics::conversation_rows::ConversationFilter;
 use systemprompt_web_admin::repositories::analytics::requests::{
     RequestFilter, RequestSortColumn, RequestSortSpec, SortDir,

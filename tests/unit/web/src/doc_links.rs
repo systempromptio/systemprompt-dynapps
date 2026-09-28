@@ -53,7 +53,7 @@ fn last_literal_before_close(chunk: &str) -> Option<String> {
     let arm = chunk.split("))").next()?;
     let mut literals = arm.rsplit('"');
     let _after = literals.next()?;
-    literals.next().map(std::borrow::ToOwned::to_owned)
+    literals.next().map(ToOwned::to_owned)
 }
 
 fn shipped_docs() -> BTreeSet<String> {
@@ -62,11 +62,8 @@ fn shipped_docs() -> BTreeSet<String> {
     let docs: BTreeSet<String> = entries
         .filter_map(|e| {
             let path = e.ok()?.path();
-            (path.extension()?.to_str()? == "md").then(|| {
-                path.file_stem()?
-                    .to_str()
-                    .map(std::borrow::ToOwned::to_owned)
-            })?
+            (path.extension()?.to_str()? == "md")
+                .then(|| path.file_stem()?.to_str().map(ToOwned::to_owned))?
         })
         .collect();
     assert!(!docs.is_empty(), "no documentation found to check against");

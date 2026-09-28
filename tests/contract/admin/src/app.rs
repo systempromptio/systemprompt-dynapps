@@ -25,10 +25,10 @@ use crate::principal::{Credentials, Principal};
 
 // Mount prefixes, kept next to the router build so the contract table and the
 // exhaustiveness check agree on where each route module lands.
-pub const ADMIN_API_PREFIX: &str = "/api/public/admin";
-pub const SSR_PREFIX: &str = "/admin";
+pub(crate) const ADMIN_API_PREFIX: &str = "/api/public/admin";
+pub(crate) const SSR_PREFIX: &str = "/admin";
 
-pub struct App {
+pub(crate) struct App {
     router: Router,
     credentials: Credentials,
 }
@@ -49,7 +49,7 @@ fn session_service(pool: &Arc<PgPool>) -> Arc<SessionCreationService> {
 }
 
 impl App {
-    pub fn new(pool: &Arc<PgPool>, credentials: Credentials) -> Self {
+    pub(crate) fn new(pool: &Arc<PgPool>, credentials: Credentials) -> Self {
         Self::build(pool, credentials, admin::AdfsConfig::disabled())
     }
 
@@ -61,7 +61,7 @@ impl App {
     // points at an address that refuses connections, so the branches before
     // and around the network call are reachable without a live org and
     // without the suite ever talking to a farm.
-    pub fn with_adfs(
+    pub(crate) fn with_adfs(
         pool: &Arc<PgPool>,
         credentials: Credentials,
         config: admin::AdfsConfig,
@@ -119,7 +119,7 @@ impl App {
             &database,
             Arc::clone(pool),
             engine.clone(),
-            sso_deps.clone(),
+            sso_deps,
             credentials.admin_user_id.clone(),
         )
         .expect("build the admin SSR router")
@@ -178,7 +178,7 @@ impl App {
     // A contract failure that reports `500` and nothing else is barely
     // actionable, and the whole point of the suite is that a 5xx is a defect
     // someone has to go and fix.
-    pub async fn send(
+    pub(crate) async fn send(
         &self,
         method: &str,
         path: &str,
@@ -237,7 +237,7 @@ impl App {
     // The variant and error suites need the opposite: a chosen query string, a
     // chosen payload, a chosen content type, and the rendered body on every
     // response, because the assertion *is* about which branch rendered.
-    pub async fn call(&self, call: Call<'_>) -> (StatusCode, String) {
+    pub(crate) async fn call(&self, call: Call<'_>) -> (StatusCode, String) {
         self.dispatch(call, None, &[]).await
     }
 
@@ -249,13 +249,17 @@ impl App {
     // token is therefore passed per call rather than resolved from the
     // principal, which also lets a case present one that is deliberately
     // wrong.
-    pub async fn call_with_bearer(&self, call: Call<'_>, token: &str) -> (StatusCode, String) {
+    pub(crate) async fn call_with_bearer(
+        &self,
+        call: Call<'_>,
+        token: &str,
+    ) -> (StatusCode, String) {
         self.dispatch(call, Some(token), &[]).await
     }
 
     // Issue a call carrying extra request headers, for the broker-only routes
     // whose authentication is a header no principal holds.
-    pub async fn call_with_headers(
+    pub(crate) async fn call_with_headers(
         &self,
         call: Call<'_>,
         headers: &[(&str, &str)],
@@ -265,11 +269,11 @@ impl App {
 
     // The redirect target of a call, for the flows whose whole contract is
     // where they send the browser.
-    pub async fn redirect_of(&self, call: Call<'_>) -> (StatusCode, String) {
+    pub(crate) async fn redirect_of(&self, call: Call<'_>) -> (StatusCode, String) {
         self.redirect_with_headers(call, &[]).await
     }
 
-    pub async fn redirect_with_headers(
+    pub(crate) async fn redirect_with_headers(
         &self,
         call: Call<'_>,
         headers: &[(&str, &str)],
@@ -278,7 +282,7 @@ impl App {
         (status, headers.location.unwrap_or_default())
     }
 
-    pub async fn response_headers(&self, call: Call<'_>) -> (StatusCode, ResponseHeaders) {
+    pub(crate) async fn response_headers(&self, call: Call<'_>) -> (StatusCode, ResponseHeaders) {
         self.response_headers_with(call, &[]).await
     }
 
@@ -288,7 +292,7 @@ impl App {
     // `call` reads the body, which is empty on a redirect: for the SSO flows
     // the entire outcome — where the browser goes, and what state it carries
     // there — lives in `Location` and `Set-Cookie`.
-    pub async fn response_headers_with(
+    pub(crate) async fn response_headers_with(
         &self,
         call: Call<'_>,
         extra_headers: &[(&str, &str)],
@@ -377,13 +381,14 @@ impl App {
 }
 
 // The response headers the redirect-driven flows are specified in terms of.
-pub struct ResponseHeaders {
+pub(crate) struct ResponseHeaders {
     pub location: Option<String>,
     pub set_cookie: Vec<String>,
 }
 
 // One request, spelled out.
-pub struct Call<'a> {
+#[derive(Clone, Copy)]
+pub(crate) struct Call<'a> {
     pub method: &'a str,
     pub path: &'a str,
     pub principal: Principal,
@@ -396,7 +401,7 @@ pub struct Call<'a> {
 
 impl<'a> Call<'a> {
     // A page fetch: no body, no content type.
-    pub const fn get(path: &'a str, principal: Principal) -> Self {
+    pub(crate) const fn get(path: &'a str, principal: Principal) -> Self {
         Self {
             method: "get",
             path,
@@ -407,7 +412,12 @@ impl<'a> Call<'a> {
     }
 
     // A JSON write, with the content type the extractor expects.
-    pub const fn json(method: &'a str, path: &'a str, principal: Principal, body: &'a str) -> Self {
+    pub(crate) const fn json(
+        method: &'a str,
+        path: &'a str,
+        principal: Principal,
+        body: &'a str,
+    ) -> Self {
         Self {
             method,
             path,

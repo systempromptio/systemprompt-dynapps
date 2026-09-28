@@ -3,12 +3,6 @@
 //! them, tool results fold into their tool step, probes go to side calls, and
 //! a failed final request appends no reply.
 
-#![allow(
-    clippy::expect_used,
-    clippy::panic,
-    clippy::needless_pass_by_value,
-    reason = "test code: panics are the assertion mechanism"
-)]
 
 use chrono::{DateTime, TimeZone, Utc};
 use systemprompt::identifiers::{AiRequestId, AiToolCallId, GatewayConversationId};

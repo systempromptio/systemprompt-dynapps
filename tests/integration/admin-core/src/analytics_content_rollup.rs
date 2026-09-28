@@ -13,7 +13,7 @@ use systemprompt_web_admin::repositories::analytics::content_rollup::aggregate_e
 use crate::fixtures::unique;
 use crate::tempdb::TempDb;
 
-pub async fn insert_content(pool: &sqlx::PgPool, id: &str, slug: &str, source_id: &str) {
+pub(crate) async fn insert_content(pool: &sqlx::PgPool, id: &str, slug: &str, source_id: &str) {
     sqlx::query(
         "INSERT INTO markdown_content
              (id, slug, title, description, body, author, published_at, keywords,

@@ -21,7 +21,7 @@
 //! vendor's rate card.
 //!
 //! The Claude 4.x Opus and Sonnet models were removed on 2026-09-24, and
-//! with them the direct OpenAI and Cerebras providers; every Vertex provider
+//! with them the direct `OpenAI` and Cerebras providers; every Vertex provider
 //! now authenticates with the one `vertex` service-account secret.
 //!
 //! These tests pin the served id set and its twins, the Sonnet 5 rate that was
@@ -30,11 +30,6 @@
 //! the catalog through the `claude-*` route. Changing any of them is then a
 //! deliberate, review-visible edit rather than a one-line drift.
 
-#![allow(
-    clippy::expect_used,
-    clippy::panic,
-    reason = "test code: panics are the assertion mechanism"
-)]
 
 use systemprompt::models::services::{
     GatewayConfigSpec, ProviderEntry, ProviderModel, ProviderRegistry,
@@ -261,7 +256,10 @@ fn the_gateway_default_model_is_a_catalog_entry() {
         .expect("a route for the default model");
     assert_eq!(route.provider.as_str(), "vertex-anthropic");
     assert_eq!(
-        route.fallback_provider.as_ref().map(|p| p.as_str()),
+        route
+            .fallback_provider
+            .as_ref()
+            .map(systemprompt::identifiers::ProviderId::as_str),
         Some("anthropic")
     );
     assert!(

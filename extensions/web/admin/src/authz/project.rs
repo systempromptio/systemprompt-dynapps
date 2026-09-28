@@ -10,8 +10,9 @@ use systemprompt_security::authz::{
 use systemprompt_web_shared::ProjectId;
 
 use crate::authz::primary::lead_with_primary;
+use crate::authz::rule_type::{ExtensionSlug, extension_rule_type};
 
-const PROJECT_SLUG: &str = "project";
+const PROJECT_SLUG: ExtensionSlug = ExtensionSlug::new("project");
 
 // Why: the narrowest of the tenant dimensions — a project rule is the most
 // specific statement an operator can make about who a user is, so it out-ranks
@@ -20,8 +21,7 @@ const PROJECT_PRECEDENCE: u16 = 140;
 
 #[must_use]
 pub fn project_rule_type() -> RuleType {
-    RuleType::extension(PROJECT_SLUG)
-        .unwrap_or_else(|e| unreachable!("`{PROJECT_SLUG}` is a well-formed slug: {e}"))
+    extension_rule_type(PROJECT_SLUG)
 }
 
 #[must_use]

@@ -1,15 +1,21 @@
-//! The group listing's header tiles and its page window.
+//! The group listing's page context, header tiles and page window.
+//!
+//! The tiles report the whole estate and are computed before the source
+//! filter narrows the rows, so "Cost" reconciles with the instance total on
+//! every filtered view rather than meaning something different on each.
 
 use super::super::list_view::{PageWindow, Pagination, paginate as build_pagination};
 use super::super::people_view::format_usd;
-use super::super::types::{GroupKpiView, GroupRowView, UnattributedRowView};
-use super::UNASSIGNED_GROUP;
+use super::super::sync_plane::PlaneCardView;
+use super::super::types::{
+    BreadcrumbView, GroupKpiView, GroupRowView, GroupsPageData, MemberSetChipView,
+    UnattributedRowView,
+};
+use super::data::Listing;
 use super::sorting::BASE_URL;
+use super::{UNASSIGNED_GROUP, sorting, tabs};
 use crate::handlers::ssr::list_view::DEFAULT_PAGE_SIZE;
 
-// Why: the KPI row answers the five questions this page exists for before any
-// column is read: how many groups, how many people, what the estate spent,
-// how much of that no group accounts for, and whether attribution is intact.
 pub(super) fn kpis(
     rows: &[GroupRowView],
     unattributed: &UnattributedRowView,
@@ -77,8 +83,6 @@ pub(super) fn kpis(
     ]
 }
 
-// Why: the query-string facets every page link must carry to keep the view
-// the reader is on.
 #[derive(Clone, Copy)]
 pub(super) struct ListingFacets<'a> {
     pub(super) range: &'a str,
@@ -99,10 +103,8 @@ pub(super) fn paginate(
         source,
     } = facets;
     let total_rows = rows.len() as i64;
-    // Why: `i64::div_ceil` is unstable on the pinned toolchain, so the ceiling
-    // is spelled out as the quotient plus a partial page. Written this way
-    // rather than as `(n + size - 1) / size` because that form reads as a
-    // rounding trick and clippy asks for the intrinsic that is not available.
+    // Why: rustc's signed `i64::div_ceil` is unstable on the pinned toolchain,
+    // and clippy rejects the `(n + size - 1) / size` spelling in its favour.
     let total_pages =
         (total_rows / DEFAULT_PAGE_SIZE + i64::from(total_rows % DEFAULT_PAGE_SIZE != 0)).max(1);
     let current_page = page.clamp(1, total_pages);
@@ -112,22 +114,80 @@ pub(super) fn paginate(
         .skip(start.max(0) as usize)
         .take(DEFAULT_PAGE_SIZE as usize)
         .collect();
-    let source_query = super::sorting::source_query(source);
+    let source_query = sorting::source_query(source);
     let url =
         |p: i64| format!("{BASE_URL}?range={range}&sort={sort}&dir={dir}{source_query}&page={p}");
 
-    // Why: this page's `?page=` is 1-based where every other list page counts
-    // from 0, so the window is built on the zero-based index and the link adds
-    // the one back.
+    let zero_based_page = current_page - 1;
     let pagination = build_pagination(
         PageWindow::new(
-            current_page - 1,
+            zero_based_page,
             DEFAULT_PAGE_SIZE,
             total_rows,
             window.len() as i64,
             "groups",
         ),
-        |index| url(index + 1),
+        |zero_based| url(zero_based + 1),
     );
     (window, pagination)
+}
+
+pub(super) struct GroupsPageInput<'a> {
+    pub listing: Listing,
+    pub window_days: i32,
+    pub facets: ListingFacets<'a>,
+    pub page: i64,
+    pub sync: Option<PlaneCardView>,
+    pub on_sync: bool,
+    pub can_manage: bool,
+    pub can_map: bool,
+    pub group_options: Vec<MemberSetChipView>,
+}
+
+pub(super) fn page_data(input: GroupsPageInput<'_>) -> GroupsPageData {
+    let GroupsPageInput {
+        mut listing,
+        window_days,
+        facets,
+        ..
+    } = input;
+    let range_label = sorting::range_label(window_days);
+    let estate_kpis = kpis(
+        &listing.rows,
+        &listing.unattributed,
+        listing.unkeyed_people,
+        range_label,
+    );
+    if !facets.source.is_empty() {
+        listing.rows.retain(|r| r.source_label == facets.source);
+    }
+    let total_groups = listing.rows.len() as i64;
+    let (rows, pagination) = paginate(listing.rows, input.page, facets);
+    GroupsPageData {
+        export: crate::export::ExportView::single(
+            "groups",
+            &crate::export::view::query_string(&[("days", Some(&window_days.to_string()))]),
+        ),
+        page: "groups",
+        title: "Groups",
+        breadcrumbs: vec![BreadcrumbView::current("Groups")],
+        tabs: tabs(input.on_sync),
+        sync: input.sync,
+        kpis: estate_kpis,
+        sort_headers: sorting::sort_headers(facets.sort, facets.dir, facets.range, facets.source),
+        ranges: sorting::range_links(window_days, facets.source),
+        sources: sorting::source_links(facets.source, facets.range),
+        source_filter: facets.source.to_owned(),
+        range_label,
+        toolbar_count: format!("{total_groups} groups · last {range_label}"),
+        window_days,
+        groups: rows,
+        unattributed: listing.unattributed,
+        pagination,
+        total_groups,
+        can_manage: input.can_manage,
+        can_map: input.can_map,
+        group_options: input.group_options,
+        unkeyed_people: listing.unkeyed_people,
+    }
 }

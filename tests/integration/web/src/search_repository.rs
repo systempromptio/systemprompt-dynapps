@@ -16,8 +16,8 @@ async fn search_by_category_returns_only_that_category() {
     let content_repo = ContentRepository::new(Arc::clone(&db.pool));
     let search = SearchRepository::new(Arc::clone(&db.pool));
     let source = source_id();
-    let guides = CategoryId::new("guides".to_string());
-    let news = CategoryId::new("news".to_string());
+    let guides = CategoryId::new("guides".to_owned());
+    let news = CategoryId::new("news".to_owned());
 
     content_repo
         .create(&content_params("in-guides", &source).with_category_id(Some(guides.clone())))

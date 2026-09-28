@@ -84,6 +84,32 @@ fn a_console_edit_names_the_field_that_moved() {
 }
 
 #[test]
+fn compute_policy_drift_with_every_scalar_edit_returns_fields_in_declaration_order() {
+    let declared = parse_declared_policies(DECLARED).expect("parses");
+    let mut row = row_from_declared("default-quotas");
+    row.enabled = !row.enabled;
+    row.priority += 1;
+    row.spec.quota_mode = QuotaMode::Enforce;
+    row.spec.safety.scanners.pop();
+    row.spec.safety.block_categories.clear();
+    row.spec.safety.block_response_categories.clear();
+    let drift = compute_policy_drift(&declared, &[row]);
+    assert_eq!(
+        drift.changed[0].fields,
+        vec![
+            "enabled".to_owned(),
+            "priority".to_owned(),
+            "quota_mode".to_owned(),
+            "safety.scanners".to_owned(),
+            "safety.block_categories".to_owned(),
+            "safety.block_response_categories".to_owned(),
+        ]
+    );
+    assert!(drift.missing_in_db.is_empty());
+    assert!(drift.only_in_db.is_empty());
+}
+
+#[test]
 fn missing_and_orphan_policies_are_reported_by_name() {
     let declared = parse_declared_policies(DECLARED).expect("parses");
     let mut orphan = row_from_declared("default-quotas");

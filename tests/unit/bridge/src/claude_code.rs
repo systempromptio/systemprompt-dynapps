@@ -112,7 +112,7 @@ fn enrolment_and_disconnect_preserve_user_settings_and_standalone_profile() {
                 .block_on(enrol::enrol_hosts(
                     &ctx,
                     &selection,
-                    &Default::default(),
+                    &std::collections::BTreeMap::default(),
                     None,
                 ))
                 .unwrap();
@@ -172,7 +172,7 @@ fn enrolment_reports_invalid_settings_and_forced_login_without_overwriting_them(
                 .block_on(enrol::enrol_hosts(
                     &ctx,
                     &selection,
-                    &Default::default(),
+                    &std::collections::BTreeMap::default(),
                     None,
                 ))
                 .unwrap();

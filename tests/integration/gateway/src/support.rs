@@ -10,10 +10,10 @@ use std::collections::HashMap;
 use systemprompt::identifiers::{ModelId, ProviderId, RouteId, SecretName};
 use systemprompt::models::services::{
     ApiSurface, GatewayConfig, GatewayRoute, ModelCapabilities, ModelGovernance, ModelLimits,
-    ModelPricing, ProviderEntry, ProviderModel, ProviderRegistry, WireProtocol,
+    ModelPricing, ProviderEntry, ProviderModel, ProviderRegistry, QuotaFaultMode, WireProtocol,
 };
 
-pub fn model(id: &str) -> ProviderModel {
+pub(crate) fn model(id: &str) -> ProviderModel {
     ProviderModel {
         id: ModelId::new(id),
         aliases: Vec::new(),
@@ -26,7 +26,7 @@ pub fn model(id: &str) -> ProviderModel {
     }
 }
 
-pub fn provider(
+pub(crate) fn provider(
     name: &str,
     wire: WireProtocol,
     governance: ModelGovernance,
@@ -47,11 +47,11 @@ pub fn provider(
     }
 }
 
-pub fn registry(providers: Vec<ProviderEntry>) -> ProviderRegistry {
+pub(crate) fn registry(providers: Vec<ProviderEntry>) -> ProviderRegistry {
     ProviderRegistry { providers }
 }
 
-pub fn route(id: &str, pattern: &str, provider_name: &str) -> GatewayRoute {
+pub(crate) fn route(id: &str, pattern: &str, provider_name: &str) -> GatewayRoute {
     GatewayRoute {
         id: RouteId::new(id),
         name: None,
@@ -71,7 +71,7 @@ pub fn route(id: &str, pattern: &str, provider_name: &str) -> GatewayRoute {
 // `enabled: false` keeps `validate()` off the route-pricing tier, which is
 // billing evidence, not the residency/exposure evidence these modules are
 // about; the governance tier runs regardless of `enabled`.
-pub fn config(routes: Vec<GatewayRoute>) -> GatewayConfig {
+pub(crate) fn config(routes: Vec<GatewayRoute>) -> GatewayConfig {
     GatewayConfig {
         enabled: false,
         routes,
@@ -82,7 +82,7 @@ pub fn config(routes: Vec<GatewayRoute>) -> GatewayConfig {
         inference_path_prefix: "/v1".to_owned(),
         system_prompt_overrides: Vec::new(),
         bridge_releases: None,
-        quota_fault_mode: Default::default(),
+        quota_fault_mode: QuotaFaultMode::default(),
         automatic_prompt_caching: true,
     }
 }

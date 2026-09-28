@@ -1,20 +1,18 @@
 //! `/admin/users` — the roster.
 //!
-//! One flat, paged table rather than the group-bucketed list this page used to
-//! be: grouping hid the number an admin comes here for, which is who is
-//! spending what. Group membership is a column and a filter instead.
+//! One flat, paged table: who is spending what is the number an admin comes
+//! here for, so group membership is a column and a filter, not a bucketing.
 //!
 //! Every facet lives in the URL —
 //! `?filter=&role=&q=&group=&project=&sort=&dir=&page=` — so a view is
-//! bookmarkable, the browser back button works, and the `?filter=unassigned`
-//! link the retired Unassigned page redirects to is just another chip.
+//! bookmarkable and the browser back button works.
 
 mod columns;
 mod context;
 mod form;
+mod load;
 mod view;
 
-use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use axum::extract::{Extension, Query, State};
@@ -22,24 +20,21 @@ use axum::response::Response;
 use serde::Deserialize;
 use sqlx::PgPool;
 
-use crate::error::{AdminError, AdminHtmlResult, AdminResult};
+use crate::error::{AdminError, AdminHtmlResult};
+use crate::export::ExportView;
 use crate::handlers::ssr::list_view::PageWindow;
 use crate::handlers::ssr::types::BreadcrumbView;
 use crate::repositories;
 use crate::repositories::scope::ScopeRequest;
-use crate::repositories::users::roster::{
-    DEFAULT_PAGE_SIZE, RosterFilter, RosterQuery, RosterSort,
-};
+use crate::repositories::users::roster::{DEFAULT_PAGE_SIZE, RosterFilter, RosterSort};
 
-use context::{CreateUserChoiceView, CreateUserPanelView, RosterContext};
+use context::RosterContext;
 use form::{preserved_hidden, role_options};
+use load::{create_user_panel, load_roster};
 
 use super::BASE_URL;
 use crate::handlers::ssr::page::Page;
 
-// Why: one value so every link builder asks the same question — "the current
-// URL, minus these parameters" — instead of each one re-deriving the url it
-// must preserve.
 pub(super) struct RosterUrlState {
     pub filter: RosterFilter,
     pub role: Option<String>,
@@ -51,8 +46,22 @@ pub(super) struct RosterUrlState {
 }
 
 impl RosterUrlState {
-    // Why: `?a=b&` — always trailing, so a caller appends `key=value` without
-    // knowing whether it is the first parameter.
+    fn from_params(params: &RosterQueryParams) -> Self {
+        Self {
+            filter: RosterFilter::parse_filter(params.filter.as_deref()),
+            role: non_empty(params.role.as_deref()),
+            search: non_empty(params.q.as_deref()),
+            group: non_empty(params.group.as_deref()),
+            project: non_empty(params.project.as_deref()),
+            sort: RosterSort::parse_sort(params.sort.as_deref(), params.dir.as_deref()),
+            page: params.page.unwrap_or(0).max(0),
+        }
+    }
+
+    const fn dir_param(&self) -> &'static str {
+        if self.sort.descending { "desc" } else { "asc" }
+    }
+
     fn link_prefix(&self, drop: &[&str]) -> String {
         let mut parts: Vec<(String, String)> = Vec::new();
         let mut push = |key: &str, value: String| {
@@ -66,10 +75,7 @@ impl RosterUrlState {
         push("group", self.group.clone().unwrap_or_default());
         push("project", self.project.clone().unwrap_or_default());
         push("sort", self.sort.column.to_owned());
-        push(
-            "dir",
-            if self.sort.descending { "desc" } else { "asc" }.to_owned(),
-        );
+        push("dir", self.dir_param().to_owned());
         if self.page > 0 && !drop.contains(&"page") {
             parts.push(("page".to_owned(), self.page.to_string()));
         }
@@ -98,53 +104,6 @@ pub(crate) struct RosterQueryParams {
     pub page: Option<i64>,
 }
 
-struct RosterRead {
-    rows: Vec<repositories::users::roster::RosterRow>,
-    total: i64,
-    totals: repositories::users::roster::RosterStats,
-    roles: Vec<String>,
-    group_names: BTreeMap<String, String>,
-    project_names: BTreeMap<String, String>,
-}
-
-// Why: the page, the headline numbers, the role facet and the two name maps
-// are independent reads; one round of latency rather than five.
-async fn load_roster(
-    pool: &PgPool,
-    scope: &repositories::scope::SubjectScope,
-    url: &RosterUrlState,
-) -> AdminResult<RosterRead> {
-    let query = RosterQuery {
-        filter: url.filter,
-        role: url.role.clone(),
-        search: url.search.clone(),
-        sort: url.sort,
-        limit: DEFAULT_PAGE_SIZE,
-        offset: url.page.saturating_mul(DEFAULT_PAGE_SIZE),
-    };
-    let (page_res, stats_res, roles_res, (group_names, project_names)) = tokio::join!(
-        repositories::users::roster::list_users_paged(pool, scope, &query),
-        repositories::users::roster::get_roster_stats(pool, scope),
-        repositories::users::queries::list_distinct_roles(pool),
-        load_scope_names(pool),
-    );
-    let (rows, total) =
-        page_res.inspect_err(|e| tracing::warn!(error = %e, "roster page query failed"))?;
-    Ok(RosterRead {
-        rows,
-        total,
-        totals: stats_res.unwrap_or_else(|e| {
-            tracing::warn!(error = %e, "roster totals query failed");
-            repositories::users::roster::RosterStats::default()
-        }),
-        roles: roles_res
-            .inspect_err(|e| tracing::warn!(error = %e, "roster role facet failed"))
-            .unwrap_or_default(),
-        group_names,
-        project_names,
-    })
-}
-
 pub(crate) async fn users_page(
     shell: Page,
     Extension(sso): Extension<crate::handlers::adfs_auth::AdfsDeps>,
@@ -155,16 +114,7 @@ pub(crate) async fn users_page(
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
     }
 
-    let url = RosterUrlState {
-        filter: RosterFilter::parse_filter(params.filter.as_deref()),
-        role: non_empty(params.role.as_deref()),
-        search: non_empty(params.q.as_deref()),
-        group: non_empty(params.group.as_deref()),
-        project: non_empty(params.project.as_deref()),
-        sort: RosterSort::parse_sort(params.sort.as_deref(), params.dir.as_deref()),
-        page: params.page.unwrap_or(0).max(0),
-    };
-
+    let url = RosterUrlState::from_params(&params);
     let request =
         ScopeRequest::from_query(&shell.user, url.group.as_deref(), url.project.as_deref());
     let scope = repositories::scope::membership::get_subject_scope(&pool, &request).await?;
@@ -204,21 +154,7 @@ pub(crate) async fn users_page(
         can_write: shell.user.is_admin,
         role_choices: read.roles,
         create_user: create_user_panel(&pool, &sso.config, shell.user.is_admin).await,
-        export: crate::export::ExportView::single(
-            "users",
-            &crate::export::view::query_string(&[
-                ("filter", Some(url.filter.as_str())),
-                ("role", url.role.as_deref()),
-                ("q", url.search.as_deref()),
-                ("group", url.group.as_deref()),
-                ("project", url.project.as_deref()),
-                ("sort", Some(url.sort.column)),
-                (
-                    "dir",
-                    Some(if url.sort.descending { "desc" } else { "asc" }),
-                ),
-            ]),
-        ),
+        export: export_view(&url),
     };
 
     Ok(super::super::render_typed_page(
@@ -230,73 +166,23 @@ pub(crate) async fn users_page(
     ))
 }
 
-// Why: the drawer's choices are loaded only for someone who can open it; a
-// reader sees neither the button nor the two listings behind it.
-async fn create_user_panel(
-    pool: &PgPool,
-    sso: &crate::handlers::adfs_auth::AdfsConfig,
-    can_write: bool,
-) -> CreateUserPanelView {
-    let sso_provisions = sso.enabled && sso.auto_provision;
-    if !can_write || sso_provisions {
-        return CreateUserPanelView {
-            sso_provisions,
-            groups: Vec::new(),
-            projects: Vec::new(),
-        };
-    }
-    let groups = repositories::groups::crud::list_groups(pool)
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, "roster: group choices unavailable"))
-        .unwrap_or_default()
-        .into_iter()
-        .filter(|g| !g.is_system)
-        .map(|g| CreateUserChoiceView {
-            id: g.id.into_inner(),
-            name: g.name,
-        })
-        .collect();
-    let projects = repositories::projects::crud::list_projects(pool)
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, "roster: project choices unavailable"))
-        .unwrap_or_default()
-        .into_iter()
-        .map(|p| CreateUserChoiceView {
-            id: p.id.into_inner(),
-            name: p.name,
-        })
-        .collect();
-    CreateUserPanelView {
-        sso_provisions,
-        groups,
-        projects,
-    }
+fn export_view(url: &RosterUrlState) -> ExportView {
+    ExportView::single(
+        "users",
+        &crate::export::view::query_string(&[
+            ("filter", Some(url.filter.as_str())),
+            ("role", url.role.as_deref()),
+            ("q", url.search.as_deref()),
+            ("group", url.group.as_deref()),
+            ("project", url.project.as_deref()),
+            ("sort", Some(url.sort.column)),
+            ("dir", Some(url.dir_param())),
+        ]),
+    )
 }
 
 fn non_empty(raw: Option<&str>) -> Option<String> {
     raw.map(str::trim)
         .filter(|s| !s.is_empty())
         .map(ToOwned::to_owned)
-}
-
-// Why: chips carry names, the URL carries ids. Both maps travel with the page
-// rather than being denormalised onto every row. A failed read degrades to
-// showing the id, which is still a working link.
-async fn load_scope_names(pool: &PgPool) -> (BTreeMap<String, String>, BTreeMap<String, String>) {
-    let (groups, projects) = tokio::join!(
-        repositories::groups::crud::list_groups(pool),
-        repositories::projects::crud::list_projects(pool),
-    );
-    (
-        groups
-            .unwrap_or_default()
-            .into_iter()
-            .map(|g| (g.id.as_str().to_owned(), g.name))
-            .collect(),
-        projects
-            .unwrap_or_default()
-            .into_iter()
-            .map(|p| (p.id.as_str().to_owned(), p.name))
-            .collect(),
-    )
 }

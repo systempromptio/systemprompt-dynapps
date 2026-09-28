@@ -1,9 +1,3 @@
-#![allow(
-    clippy::expect_used,
-    clippy::panic,
-    reason = "test code: panics are the assertion mechanism"
-)]
-
 //! The route and provider labels every console page names a route by.
 //!
 //! A declared name wins; without one the label is derived from the pattern

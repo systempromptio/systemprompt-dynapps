@@ -6,11 +6,6 @@
 //! it silently falls through to the default ordering and the page quietly
 //! stops honouring the header the user clicked.
 
-#![allow(
-    clippy::expect_used,
-    clippy::panic,
-    reason = "test code: panics are the assertion mechanism"
-)]
 
 use systemprompt_web_admin::repositories::analytics::conversation_rows::{
     ConversationPage, ConversationSort,

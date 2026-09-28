@@ -139,7 +139,7 @@ fn drift_reports_order_once_not_per_route() {
     rows.swap(0, 2);
     let drift = compute_route_drift(&declared, &rows);
     assert!(drift.changed.is_empty());
-    let (code, db) = drift.reordered.clone().expect("order differs");
+    let (code, db) = drift.reordered.expect("order differs");
     assert_eq!(code[0], "claude-star");
     assert_eq!(db[0], "gpt");
 }
@@ -158,7 +158,7 @@ fn render_replaces_the_sequence_and_keeps_settings_and_header() {
     let back = parse_declared_routes(&out).expect("round-trips");
     assert_eq!(back.routes.len(), 1);
     assert_eq!(back.declared_hash(), {
-        let mut one = declared.clone();
+        let mut one = declared;
         one.routes.truncate(1);
         one.declared_hash()
     });

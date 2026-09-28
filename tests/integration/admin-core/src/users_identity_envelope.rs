@@ -5,7 +5,7 @@
 //! across several tables, so the assertions here are about the joins: that an
 //! account with no SSO mapping and no group or project membership still
 //! resolves, that the federated half and the memberships attach when they
-//! exist, and that a user holding two IdP mappings reports the one they last
+//! exist, and that a user holding two `IdP` mappings reports the one they last
 //! signed in with.
 
 use systemprompt_web_admin::repositories::users::queries::find_identity_envelope;

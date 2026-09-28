@@ -7,6 +7,7 @@ use systemprompt_web_admin::UserContext;
 use systemprompt_web_admin::repositories::analytics::conversations::{
     HistoryScope, history_scope_for, resolve_history_scope,
 };
+use systemprompt_web_admin::repositories::scope::Participation;
 
 fn uid(s: &str) -> UserId {
     UserId::new(s.to_owned())
@@ -20,7 +21,7 @@ fn ctx(user: &str, roles: &[&str]) -> UserContext {
         roles: roles.iter().map(|r| (*r).to_owned()).collect(),
         group_ids: Vec::new(),
         project_ids: vec!["core".to_owned()],
-        participation: Default::default(),
+        participation: Participation::default(),
         is_admin: roles.contains(&"admin"),
         is_console: roles.contains(&"admin"),
         is_platform_admin: roles.contains(&"platform_admin"),

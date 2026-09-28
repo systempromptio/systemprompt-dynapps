@@ -102,7 +102,7 @@ fn install_services_profile() {
     });
 }
 
-fn mcp_request(body: serde_json::Value, session: Option<&str>) -> http::Request<Body> {
+fn mcp_request(body: &serde_json::Value, session: Option<&str>) -> http::Request<Body> {
     let mut request = http::Request::builder()
         .method(http::Method::POST)
         .uri("/mcp")
@@ -162,7 +162,7 @@ async fn first_sse_json(mut body: Body) -> serde_json::Value {
 
 async fn post_mcp(
     router: axum::Router,
-    body: serde_json::Value,
+    body: &serde_json::Value,
     session: Option<&str>,
 ) -> (http::StatusCode, http::HeaderMap, serde_json::Value) {
     let request = mcp_request(body, session);
@@ -183,7 +183,7 @@ async fn post_mcp(
 async fn notify_initialized(router: axum::Router, session: &str) {
     let response = router
         .oneshot(mcp_request(
-            serde_json::json!({
+            &serde_json::json!({
                 "jsonrpc": "2.0",
                 "method": "notifications/initialized"
             }),
@@ -198,7 +198,7 @@ async fn notify_initialized(router: axum::Router, session: &str) {
     );
 }
 
-async fn seed_artifact(ingest: &ArtifactIngest) -> systemprompt::identifiers::ArtifactId {
+async fn seed_artifact(ingest: &ArtifactIngest) -> ArtifactId {
     let artifact = CliArtifact::text(
         TextArtifact::new("protocol artifact body").with_title("Protocol artifact"),
     );
@@ -237,8 +237,7 @@ async fn protocol_client_initializes_discovers_resources_and_reads_stored_artifa
     let artifact_id = seed_artifact(&ingest).await;
     let (server_transport, client_transport) = tokio::io::duplex(16 * 1024);
     let server_task = tokio::spawn(async move {
-        server
-            .serve(server_transport)
+        Box::pin(server.serve(server_transport))
             .await
             .expect("server starts")
             .waiting()
@@ -344,7 +343,7 @@ async fn unauthenticated_http_tool_call_reaches_oauth_and_creates_no_execution()
     );
     let (status, headers, initialized) = post_mcp(
         router.clone(),
-        serde_json::json!({
+        &serde_json::json!({
             "jsonrpc": "2.0",
             "id": 1,
             "method": "initialize",
@@ -373,7 +372,7 @@ async fn unauthenticated_http_tool_call_reaches_oauth_and_creates_no_execution()
         .expect("count executions before denial");
     let (status, _, denied) = post_mcp(
         router,
-        serde_json::json!({
+        &serde_json::json!({
             "jsonrpc": "2.0",
             "id": 2,
             "method": "tools/call",

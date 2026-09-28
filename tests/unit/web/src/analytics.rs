@@ -6,11 +6,6 @@
 //! right-aligned and tabular. A rendering test could not see any of these —
 //! a leaked cost column renders perfectly well.
 
-#![allow(
-    clippy::expect_used,
-    clippy::panic,
-    reason = "test code: panics are the assertion mechanism"
-)]
 
 use std::path::PathBuf;
 

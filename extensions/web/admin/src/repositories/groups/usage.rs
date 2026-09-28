@@ -10,6 +10,13 @@
 //!
 //! Everything else — membership, the projects a group's people reach, its
 //! busiest model — is metadata the totals cannot carry, and is read here.
+//! Membership counts read `user_groups` (a person in two groups is in both);
+//! `active_members` and the busiest model read the request-stamped scope, so
+//! they describe the same traffic as the spend columns beside them.
+//!
+//! The remainder is a row of the list, not a second return value: the rows
+//! partition the instance, and a caller handed it separately could drop it.
+//! `MAX_GROUPS` guards against a runaway directory; the handler pages.
 
 use std::collections::HashMap;
 
@@ -18,17 +25,13 @@ use sqlx::PgPool;
 use crate::repositories::people_usage::totals::list_scope_totals;
 use crate::repositories::scope::membership::UNATTRIBUTED;
 
-// Why: the id the remainder row carries, so a caller can split it out by name.
 pub use crate::repositories::scope::membership::UNATTRIBUTED as UNATTRIBUTED_ROW;
 use crate::repositories::scope::{Attribution, ScopeKind};
 
-// Why: the listing is a page of groups, not of people, so a bound this high is
-// a guard against a runaway directory rather than a paging window. The handler
-// pages what it gets.
 const MAX_GROUPS: i64 = 500;
 
 /// One group on the listing: who is in it, what it reaches, what it spent.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct GroupUsageRow {
     pub id: String,
     pub name: String,
@@ -45,14 +48,6 @@ pub struct GroupUsageRow {
     pub top_model_requests: i64,
 }
 
-// Why: Every group, plus the remainder that belongs to none of them, as one
-// list.
-//
-// The remainder is a row rather than a second return value because that is
-// what it is: under exclusive attribution these rows partition the instance,
-// and the one carrying `UNATTRIBUTED_ROW` completes the partition. Returning
-// it separately would invite a caller to render the groups and drop it, which
-// is precisely how a listing stops adding up.
 pub async fn list_groups_with_usage(
     pool: &PgPool,
     window_days: i32,
@@ -81,29 +76,16 @@ pub async fn list_groups_with_usage(
     rows.push(GroupUsageRow {
         id: UNATTRIBUTED.to_owned(),
         name: "Unattributed".to_owned(),
-        description: None,
         is_system: true,
         source: "system".to_owned(),
-        member_count: 0,
-        project_count: 0,
-        active_members: 0,
         requests: remainder.map_or(0, |t| t.requests),
         tokens: remainder.map_or(0, |t| t.tokens),
         cost_microdollars: remainder.map_or(0, |t| t.cost_microdollars),
-        top_model: None,
-        top_model_requests: 0,
+        ..GroupUsageRow::default()
     });
     Ok(rows)
 }
 
-// Why: two attributions, one row, on purpose.
-//
-// `member_count` and `project_count` read `user_groups`, which is full
-// membership — a person in two groups is in both, because that is what "who is
-// in this group" means. `active_members` and the busiest model read the
-// request-stamped scope instead, so that they describe the same traffic as the
-// spend columns beside them; counting a two-group person as active in both
-// would put a number next to a cost that excludes them.
 async fn list_group_metadata(
     pool: &PgPool,
     window_days: i32,
@@ -175,11 +157,9 @@ async fn list_group_metadata(
             member_count: row.member_count,
             project_count: row.project_count,
             active_members: row.active_members,
-            requests: 0,
-            tokens: 0,
-            cost_microdollars: 0,
             top_model: row.top_model,
             top_model_requests: row.top_model_requests,
+            ..GroupUsageRow::default()
         })
         .collect())
 }

@@ -3,11 +3,6 @@
 //! source, which choose the key an execution is queried by and the status
 //! its span shows. Both are exercised without a database.
 
-#![allow(
-    clippy::expect_used,
-    clippy::panic,
-    reason = "test code: panics are the assertion mechanism"
-)]
 
 use systemprompt::identifiers::{McpExecutionId, SessionId, TraceId};
 use systemprompt_web_admin::repositories::traces::{

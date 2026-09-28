@@ -3,13 +3,6 @@
 //! Every one of these formats a number, a date, or a decision that an operator
 //! reads off a governance page, so the exact output string is the contract.
 
-#![allow(
-    clippy::expect_used,
-    clippy::panic,
-    clippy::needless_pass_by_value,
-    clippy::redundant_clone,
-    reason = "test code: panics are the assertion mechanism and clones keep fixtures readable"
-)]
 
 use handlebars::Handlebars;
 use systemprompt_web_admin::templates::helpers::register_helpers;
@@ -28,7 +21,9 @@ fn render(template: &str, data: &serde_json::Value) -> String {
 }
 
 fn render_value(template: &str, value: serde_json::Value) -> String {
-    render(template, &serde_json::json!({ "v": value }))
+    let data: serde_json::Map<String, serde_json::Value> =
+        std::iter::once(("v".to_owned(), value)).collect();
+    render(template, &serde_json::Value::Object(data))
 }
 
 #[test]

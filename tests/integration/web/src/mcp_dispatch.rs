@@ -45,10 +45,9 @@ fn request_context() -> systemprompt::models::execution::context::RequestContext
 }
 
 fn call(tool: &'static str, arguments: serde_json::Value) -> CallToolRequestParams {
-    let object = arguments
-        .as_object()
-        .expect("tool arguments are a JSON object")
-        .clone();
+    let serde_json::Value::Object(object) = arguments else {
+        panic!("tool arguments are a JSON object");
+    };
     CallToolRequestParams::new(tool).with_arguments(object)
 }
 

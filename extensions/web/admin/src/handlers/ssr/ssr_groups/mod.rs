@@ -9,6 +9,10 @@
 //! unattributed row at the foot of the table reproduce the instance total.
 //! That is the property the page is built around: a group listing whose
 //! numbers do not add up to anything cannot answer "where did the money go".
+//!
+//! `unassigned` is never offered as a mapping destination: it is where people
+//! land when no mapping matched, so mapping a directory group into it would be
+//! a contradiction.
 
 use std::sync::Arc;
 
@@ -23,7 +27,7 @@ use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, UserContext};
 
 use super::sync_plane::{is_sync_tab, plane_card_by_id, sync_tab};
-use super::types::{BreadcrumbView, GroupsPageData, MemberSetChipView, TabLinkView};
+use super::types::{MemberSetChipView, TabLinkView};
 
 mod data;
 mod sorting;
@@ -38,7 +42,6 @@ pub(crate) struct GroupsQuery {
     dir: Option<String>,
     page: Option<i64>,
     source: Option<String>,
-    // Why: `tab=sync` renders the groups plane instead of the listing.
     tab: Option<String>,
 }
 
@@ -82,69 +85,28 @@ pub(crate) async fn groups_page(
     let mut listing = data::load_listing(&pool, window_days).await;
     sorting::apply(&mut listing.rows, sort, dir);
 
-    // Why: the tiles are computed before the source filter is applied. They
-    // report the estate, and the whole point of the exclusive split is that
-    // they reconcile with it — narrowing them to the rows on screen would give
-    // a "Cost" that means something different on every filtered view.
-    let range_label = sorting::range_label(window_days);
-    let kpis = view::kpis(
-        &listing.rows,
-        &listing.unattributed,
-        listing.unkeyed_people,
-        range_label,
-    );
-
-    if !source.is_empty() {
-        listing.rows.retain(|r| r.source_label == source);
-    }
-    let total_groups = listing.rows.len() as i64;
-    let (rows, pagination) = view::paginate(
-        listing.rows,
-        query.page.unwrap_or(1),
-        view::ListingFacets {
+    let data = view::page_data(view::GroupsPageInput {
+        listing,
+        window_days,
+        facets: view::ListingFacets {
             range: &range,
             sort,
             dir,
             source: &source,
         },
-    );
-
-    let data = GroupsPageData {
-        export: crate::export::ExportView::single(
-            "groups",
-            &crate::export::view::query_string(&[("days", Some(&window_days.to_string()))]),
-        ),
-        page: "groups",
-        title: "Groups",
-        breadcrumbs: vec![BreadcrumbView::current("Groups")],
-        tabs: tabs(on_sync),
+        page: query.page.unwrap_or(1),
         sync,
-        kpis,
-        sort_headers: sorting::sort_headers(sort, dir, &range, &source),
-        ranges: sorting::range_links(window_days, &source),
-        sources: sorting::source_links(&source, &range),
-        source_filter: source.clone(),
-        range_label,
-        toolbar_count: format!("{total_groups} groups · last {range_label}"),
-        window_days,
-        groups: rows,
-        unattributed: listing.unattributed,
-        pagination,
-        total_groups,
+        on_sync,
         can_manage: user_ctx.is_admin,
         can_map: user_ctx.is_platform_admin,
         group_options: group_options(&pool).await,
-        unkeyed_people: listing.unkeyed_people,
-    };
+    });
 
     Ok(super::render_typed_page(
         &engine, "groups", &data, &user_ctx, &mkt_ctx,
     ))
 }
 
-// Why: the destination select on the header's mapping dialog. Unassigned is
-// excluded: it is where people land when no mapping matched, so a directory
-// group mapped into it would be a contradiction.
 async fn group_options(pool: &PgPool) -> Vec<MemberSetChipView> {
     repositories::groups::crud::list_groups(pool)
         .await

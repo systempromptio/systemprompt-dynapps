@@ -58,7 +58,7 @@ struct Call<'a> {
     scope: AccessScope,
     user: &'a UserId,
     session: &'a SessionId,
-    call_id: CallId,
+    id: CallId,
 }
 
 impl<'a> Call<'a> {
@@ -69,7 +69,7 @@ impl<'a> Call<'a> {
             scope: AccessScope::User,
             user,
             session,
-            call_id: CallId::new(unique("call")),
+            id: CallId::new(unique("call")),
         }
     }
 
@@ -82,7 +82,7 @@ impl<'a> Call<'a> {
             scope: AccessScope::User,
             user,
             session,
-            call_id: CallId::new(unique("call")),
+            id: CallId::new(unique("call")),
         }
     }
 
@@ -96,14 +96,14 @@ impl<'a> Call<'a> {
             session_id: self.session,
             user_id: self.user,
             input: &self.input,
-            call_id: &self.call_id,
+            call_id: &self.id,
         })
     }
 
     fn audit(&self, evaluation: Evaluation) -> DecisionAudit {
         DecisionAudit {
             id: unique("dec"),
-            call_id: self.call_id.clone(),
+            call_id: self.id.clone(),
             origin: AuditOrigin::Governed,
             decision: evaluation.decision,
             principal: PrincipalSnapshot {

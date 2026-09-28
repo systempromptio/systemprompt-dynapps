@@ -199,6 +199,74 @@ fn a_malformed_owner_is_rejected_at_parse() {
     assert!(err.contains("bundle:<name>"), "{err}");
 }
 
+fn rejection(yaml: &str) -> String {
+    parse_rules_doc(yaml).expect_err("rejected").to_string()
+}
+
+#[test]
+fn validate_with_literal_generated_id_returns_the_glob_hint() {
+    let err = rejection(
+        "entities:\n  - entity: gateway_route/abc\n    why: x\n    allow:\n      role: [user]\n",
+    );
+    assert!(
+        err.contains("gateway_route/abc: gateway_route ids are generated, never written — use gateway_route/*"),
+        "{err}"
+    );
+}
+
+#[test]
+fn validate_with_neither_allow_nor_deny_returns_declares_nothing() {
+    let err = rejection("entities:\n  - entity: mcp_server/x\n    why: x\n");
+    assert!(
+        err.contains("mcp_server/x: declares no allow and no deny"),
+        "{err}"
+    );
+}
+
+#[test]
+fn validate_with_owner_on_a_glob_returns_glob_owner_error() {
+    let err = rejection(
+        "entities:\n  - entity: gateway_route/*\n    owner: bundle:kit\n    why: x\n    allow:\n      role: [user]\n",
+    );
+    assert!(
+        err.contains("gateway_route/*: a glob cannot name an owner"),
+        "{err}"
+    );
+}
+
+#[test]
+fn validate_with_conflict_returns_band_and_subject() {
+    let err = rejection(
+        "entities:\n  - entity: mcp_server/x\n    why: x\n    allow:\n      role: [admin, user]\n    deny:\n      role: [user]\n",
+    );
+    assert!(
+        err.contains("mcp_server/x: role 'user' is both allowed and denied"),
+        "{err}"
+    );
+}
+
+#[test]
+fn validate_with_empty_band_returns_names_no_subjects() {
+    let err = rejection(
+        "entities:\n  - entity: mcp_server/x\n    why: x\n    allow:\n      role: [admin]\n    deny:\n      group: []\n",
+    );
+    assert!(
+        err.contains("mcp_server/x: group names no subjects"),
+        "{err}"
+    );
+}
+
+#[test]
+fn validate_with_blank_subject_returns_blank_subject_error() {
+    let err = rejection(
+        "entities:\n  - entity: mcp_server/x\n    why: x\n    allow:\n      project: [' ']\n",
+    );
+    assert!(
+        err.contains("mcp_server/x: project contains a blank subject"),
+        "{err}"
+    );
+}
+
 #[test]
 fn the_declared_hash_follows_meaning_not_formatting() {
     let a = project(

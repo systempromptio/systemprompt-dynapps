@@ -30,6 +30,7 @@ use systemprompt_web_extension as _;
 
 use crate::skip::skip_or_panic;
 
+#[derive(Debug)]
 pub struct TempDb {
     pub pool: Arc<PgPool>,
     admin_url: String,
@@ -160,9 +161,10 @@ async fn drop_stale_templates(conn: &mut sqlx::PgConnection, prefix: &str, keep:
         return; // skip-ok: a stale template that cannot be listed is collected next run
     };
     for name in stale {
-        let _ = sqlx::query(AssertSqlSafe(format!("DROP DATABASE IF EXISTS \"{name}\"")))
+        sqlx::query(AssertSqlSafe(format!("DROP DATABASE IF EXISTS \"{name}\"")))
             .execute(&mut *conn)
-            .await;
+            .await
+            .ok();
     }
 }
 

@@ -50,7 +50,7 @@ fn extend(mut data: Value) -> Value {
     let items: Vec<Value> = vec![];
     // ReleaseVersionExtender reads neither the per-source config nor the web
     // config, so these values exercise it fully.
-    let config = Default::default();
+    let config = serde_yaml::Value::default();
     let web = web_config();
     let erased = ();
     let ctx = ExtenderContext::builder(&item, &items, &config, &web, &erased).build();
@@ -76,11 +76,10 @@ fn the_extender_applies_to_every_template_at_the_same_priority_as_the_url_keys()
 }
 
 #[test]
-// Why: `default_constructed_unit_structs` wants the bare `ReleaseVersionExtender`,
-// but that is the one rewrite this test cannot take — agreement between the two
-// constructors is the whole assertion, so writing the literal would leave it
-// comparing nothing.
-#[allow(clippy::default_constructed_unit_structs)]
+#[expect(
+    clippy::default_constructed_unit_structs,
+    reason = "comparing Default against new is the assertion; the bare literal would compare nothing"
+)]
 fn default_and_new_build_the_same_extender() {
     assert_eq!(
         ReleaseVersionExtender::default().extender_id(),

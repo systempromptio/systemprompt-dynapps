@@ -1,12 +1,5 @@
 //! Window resolution for the audit and usage-report pages.
 
-#![allow(
-    clippy::expect_used,
-    clippy::panic,
-    clippy::unwrap_used,
-    clippy::separated_literal_suffix,
-    reason = "test code: panics are the assertion mechanism"
-)]
 
 use chrono::{Datelike, Duration, Months, TimeZone, Utc};
 use systemprompt_web_admin::util::month_range::{

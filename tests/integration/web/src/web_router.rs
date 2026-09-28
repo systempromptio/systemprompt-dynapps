@@ -33,10 +33,10 @@ impl ConfigProvider for StubConfig {
     fn get(&self, _key: &str) -> Option<String> {
         None
     }
-    fn database_url(&self) -> &str {
+    fn database_url(&self) -> &'static str {
         "postgres://unused/unused"
     }
-    fn system_path(&self) -> &str {
+    fn system_path(&self) -> &'static str {
         "/tmp"
     }
     fn api_port(&self) -> u16 {
@@ -70,7 +70,7 @@ impl ExtensionContext for PoolCtx {
         Arc::new(StubConfig)
     }
     fn database(&self) -> Arc<dyn DatabaseHandle> {
-        Arc::clone(&self.database) as Arc<dyn DatabaseHandle>
+        Arc::<Database>::clone(&self.database)
     }
     fn get_extension(&self, _id: &str) -> Option<Arc<dyn Extension>> {
         None

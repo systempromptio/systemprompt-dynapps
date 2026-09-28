@@ -73,7 +73,10 @@ async fn rejects(pool: &PgPool, sql: &str, code: &str) {
         panic!("database must reject invalid evidence: {sql}");
     };
     assert_eq!(
-        error.as_database_error().and_then(|e| e.code()).as_deref(),
+        error
+            .as_database_error()
+            .and_then(sqlx::error::DatabaseError::code)
+            .as_deref(),
         Some(code),
         "{sql}: {error}"
     );

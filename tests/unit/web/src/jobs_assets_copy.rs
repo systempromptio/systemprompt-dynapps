@@ -19,8 +19,8 @@ async fn copying_creates_missing_parent_directories() {
     let asset = AssetDefinition::css(&source, "css/admin/admin-bundle.css");
     copy_asset(dist.path(), "web", &asset).await.unwrap();
 
-    let dest = dist.path().join("css/admin/admin-bundle.css");
-    assert_eq!(std::fs::read_to_string(dest).unwrap(), "body{}");
+    let copied = dist.path().join("css/admin/admin-bundle.css");
+    assert_eq!(std::fs::read_to_string(copied).unwrap(), "body{}");
 }
 
 #[tokio::test]

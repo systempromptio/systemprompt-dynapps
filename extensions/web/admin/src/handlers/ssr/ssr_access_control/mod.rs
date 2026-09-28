@@ -10,6 +10,11 @@
 //! lives where it is shown: an entity's rules in its "Who gets this" panel, a
 //! group's band on its Access tab, a person's overrides on theirs. Reading
 //! here is the CONSOLE tier so a project manager can audit.
+//!
+//! Each tab builds only what it shows: the audience grid runs the resolver
+//! per entity and the person tab per account. An unreadable declaration is
+//! reported on the page, and unreadable route labels are logged, so neither
+//! turns the audit page into a 500.
 
 mod audience;
 mod audience_filter;
@@ -17,6 +22,7 @@ mod audience_focus;
 mod bands;
 mod data;
 pub(crate) mod entities;
+mod page;
 mod person;
 mod summary;
 mod view;
@@ -30,7 +36,7 @@ use sqlx::PgPool;
 use crate::error::{AdminError, AdminHtmlResult};
 use crate::handlers::access_control::build_matrix_sections;
 use crate::handlers::shared;
-use crate::handlers::ssr::types::{BreadcrumbView, TabLinkView};
+use crate::handlers::ssr::types::TabLinkView;
 use crate::repositories::access_control::drift::DriftReport;
 use crate::repositories::access_control::rules::{
     LedgerRuleRow, RULE_CAP, count_open_entities, list_ledger_rules,
@@ -41,9 +47,10 @@ use crate::repositories::sync::attention::access_attention;
 use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, UserContext};
 
-use entities::{AcQuery, BASE_URL, DOCS_URL, EntitiesInput, SYNC_URL};
+use entities::{AcQuery, BASE_URL, EntitiesInput, SYNC_URL};
+use page::AcPageParts;
 use person::PersonCheckView;
-use view::{AccessControlPageData, AudienceGridView, DriftBannerView};
+use view::AudienceGridView;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum AcTab {
@@ -87,9 +94,6 @@ fn tabs(active: AcTab) -> Vec<TabLinkView> {
     ]
 }
 
-// Why: each tab pays only for what it shows. The audience grid runs the real
-// resolver per entity and the person tab per account, and neither is built
-// for a tab that never renders it.
 #[derive(Default)]
 struct TabBody {
     audience: AudienceGridView,
@@ -97,18 +101,12 @@ struct TabBody {
     person: Option<PersonCheckView>,
 }
 
-// Why: labels are a courtesy, not a gate — an unreadable gateway file still
-// leaves every route addressable by id, and is logged rather than 500ing
-// the audit page.
 fn route_labels() -> RouteLabels {
     get_route_labels_from_services()
         .inspect_err(|e| tracing::warn!(error = %e, "access-control: route labels unavailable"))
         .unwrap_or_default()
 }
 
-// Why: the file failing to load is reported on the page, not as a 500.
-// The rules that ARE enforced are still worth showing while the operator
-// fixes the declaration.
 async fn declared_drift(pool: &PgPool) -> (Option<DriftReport>, usize, Option<String>) {
     match declared_now().await {
         Ok(declared) => match drift_now(pool, &declared).await {
@@ -144,6 +142,18 @@ async fn tab_body(
     Ok(body)
 }
 
+fn legacy_link_redirect(query: &AcQuery) -> Option<Redirect> {
+    if query.tab.as_deref() == Some("sync") {
+        return Some(Redirect::to(SYNC_URL));
+    }
+    query.user.as_deref().filter(|u| !u.is_empty()).map(|user| {
+        Redirect::to(&format!(
+            "/admin/users/{}?tab=access",
+            urlencoding::encode(user)
+        ))
+    })
+}
+
 pub(crate) async fn access_control_page(
     Extension(user_ctx): Extension<UserContext>,
     Extension(mkt_ctx): Extension<MarketplaceContext>,
@@ -154,19 +164,10 @@ pub(crate) async fn access_control_page(
     if !user_ctx.is_console {
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
     }
-    // Why: the plane's Sync tab moved to Code sync; an old `?tab=sync` link
-    // follows it there rather than rendering the ledger it did not ask for.
-    if query.tab.as_deref() == Some("sync") {
-        return Ok(Redirect::to(SYNC_URL).into_response());
+    if let Some(redirect) = legacy_link_redirect(&query) {
+        return Ok(redirect.into_response());
     }
     let tab = AcTab::parse(query.tab.as_deref());
-    // Why: the editor's old deep link, `?user=`, lands on that person's own
-    // Access tab — a temporary redirect, since the old one was permanent and
-    // browsers cache those.
-    if let Some(user) = query.user.as_deref().filter(|u| !u.is_empty()) {
-        let target = format!("/admin/users/{}?tab=access", urlencoding::encode(user));
-        return Ok(Redirect::to(&target).into_response());
-    }
     let services_path = shared::get_services_path()?;
 
     let stats = data::load_stats(&pool).await;
@@ -193,37 +194,15 @@ pub(crate) async fn access_control_page(
         &query,
     );
 
-    let banner = drift
-        .as_ref()
-        .filter(|d| !d.is_clean())
-        .map(|d| DriftBannerView {
-            counts: d.counts(),
-            url: SYNC_URL,
-            declared: declared_count,
-        });
-
-    let page = AccessControlPageData {
-        page: "access-control",
-        title: "Access control",
+    let page = page::page_data(AcPageParts {
+        tab,
         can_write: user_ctx.is_admin,
         stats,
-        breadcrumbs: vec![
-            BreadcrumbView::link("Admin", "/admin"),
-            BreadcrumbView::link("People & access", "/admin/users"),
-            BreadcrumbView::current("Access control"),
-        ],
-        tabs: tabs(tab),
-        on_rules: tab == AcTab::Rules,
-        on_audience: tab == AcTab::Audience,
-        on_person: tab == AcTab::Person,
-        docs_url: DOCS_URL,
-        sync_url: SYNC_URL,
-        drift: banner,
+        drift: page::drift_banner(drift.as_ref(), declared_count),
         declared_unreadable,
         entities,
-        audience: body.audience,
-        person: body.person,
-    };
+        body,
+    });
 
     Ok(super::render_typed_page(
         &engine,

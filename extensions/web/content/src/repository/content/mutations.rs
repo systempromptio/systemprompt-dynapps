@@ -47,6 +47,57 @@ async fn insert_enrichment(
     Ok(())
 }
 
+async fn upsert_content_row(
+    tx: &mut sqlx::Transaction<'_, Postgres>,
+    id: &ContentId,
+    params: &CreateContentParams,
+    now: chrono::DateTime<Utc>,
+) -> Result<ContentId, sqlx::Error> {
+    let row = sqlx::query!(
+        r#"
+            INSERT INTO markdown_content (
+                id, slug, title, description, body, author,
+                published_at, keywords, kind, image, category_id, source_id,
+                version_hash, links, updated_at
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+            ON CONFLICT (slug, locale) DO UPDATE SET
+                title = EXCLUDED.title,
+                description = EXCLUDED.description,
+                body = EXCLUDED.body,
+                author = EXCLUDED.author,
+                published_at = EXCLUDED.published_at,
+                keywords = EXCLUDED.keywords,
+                kind = EXCLUDED.kind,
+                image = EXCLUDED.image,
+                category_id = EXCLUDED.category_id,
+                source_id = EXCLUDED.source_id,
+                version_hash = EXCLUDED.version_hash,
+                links = EXCLUDED.links,
+                updated_at = EXCLUDED.updated_at
+            RETURNING id AS "id!: ContentId"
+            "#,
+        id.as_str(),
+        params.slug,
+        params.title,
+        params.description,
+        params.body,
+        params.author,
+        params.published_at,
+        params.keywords,
+        params.kind.as_str(),
+        params.image,
+        params.category_id.as_ref().map(CategoryId::as_str),
+        params.source_id.as_str(),
+        params.version_hash,
+        params.links as _,
+        now
+    )
+    .fetch_one(&mut **tx)
+    .await?;
+    Ok(row.id)
+}
+
 async fn get_content(
     tx: &mut sqlx::Transaction<'_, Postgres>,
     id: &str,
@@ -89,52 +140,11 @@ impl ContentMutationRepository {
         let now = Utc::now();
         let mut tx = self.pool.begin().await?;
 
-        let row = sqlx::query!(
-            r#"
-            INSERT INTO markdown_content (
-                id, slug, title, description, body, author,
-                published_at, keywords, kind, image, category_id, source_id,
-                version_hash, links, updated_at
-            )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-            ON CONFLICT (slug, locale) DO UPDATE SET
-                title = EXCLUDED.title,
-                description = EXCLUDED.description,
-                body = EXCLUDED.body,
-                author = EXCLUDED.author,
-                published_at = EXCLUDED.published_at,
-                keywords = EXCLUDED.keywords,
-                kind = EXCLUDED.kind,
-                image = EXCLUDED.image,
-                category_id = EXCLUDED.category_id,
-                source_id = EXCLUDED.source_id,
-                version_hash = EXCLUDED.version_hash,
-                links = EXCLUDED.links,
-                updated_at = EXCLUDED.updated_at
-            RETURNING id AS "id!: ContentId"
-            "#,
-            id.as_str(),
-            params.slug,
-            params.title,
-            params.description,
-            params.body,
-            params.author,
-            params.published_at,
-            params.keywords,
-            params.kind.as_str(),
-            params.image,
-            params.category_id.as_ref().map(CategoryId::as_str),
-            params.source_id.as_str(),
-            params.version_hash,
-            params.links as _,
-            now
-        )
-        .fetch_one(&mut *tx)
-        .await?;
+        let content_id = upsert_content_row(&mut tx, &id, params, now).await?;
 
-        insert_enrichment(&mut tx, &row.id, params, now).await?;
+        insert_enrichment(&mut tx, &content_id, params, now).await?;
 
-        let content = get_content(&mut tx, row.id.as_str()).await?;
+        let content = get_content(&mut tx, content_id.as_str()).await?;
         tx.commit().await?;
         Ok(content)
     }

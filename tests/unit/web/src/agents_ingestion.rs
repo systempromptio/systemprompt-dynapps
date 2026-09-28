@@ -86,7 +86,7 @@ fn agent_loader_joins_declared_skills_and_discards_invalid_mcp_ids() {
         agent
             .mcp_servers
             .iter()
-            .map(|id| id.as_str())
+            .map(systemprompt::identifiers::McpServerId::as_str)
             .collect::<Vec<_>>(),
         ["deployment"],
         "empty MCP ids must not reach the bridge profile"

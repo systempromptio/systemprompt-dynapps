@@ -23,24 +23,24 @@ static READY: OnceLock<bool> = OnceLock::new();
 // the minter and the validator agree on.
 const ISSUER: &str = "http://localhost:8099";
 
-pub use astound_test_common::repo_root;
+pub(crate) use astound_test_common::repo_root;
 
 // Install the profile, secrets, config, and an ephemeral signing key.
 //
 // Returns `false` only if the fixture cannot be materialised; the suite then
 // self-skips the same way it does without a database.
-pub fn init() -> bool {
+pub(crate) fn init() -> bool {
     INIT.call_once(|| {
         let ready = try_init();
-        let _ = READY.set(ready);
+        READY
+            .set(ready)
+            .expect("call_once runs this exactly once, so READY is unset");
     });
     *READY.get().unwrap_or(&false)
 }
 
 fn try_init() -> bool {
-    let Some(profile) = write_fixture_profile() else {
-        return false;
-    };
+    let profile = write_fixture_profile();
 
     systemprompt::config::ProfileBootstrap::init_from_path(&profile)
         .expect("initialise the contract fixture profile");
@@ -122,7 +122,7 @@ const MASTER_KEY_HEX: &str = "00112233445566778899aabbccddeeff001122334455667788
 // to it, and `paths.bin` is an empty directory beside it too: profile path
 // validation requires it to exist, and a runner that has only built this
 // workspace has no `target/debug` to borrow.
-fn write_fixture_profile() -> Option<PathBuf> {
+fn write_fixture_profile() -> PathBuf {
     let root = repo_root();
     // Why: the tree is removed and rewritten on every init, so two contract
     // runs sharing one path (a peer's and yours) race each other into
@@ -144,7 +144,7 @@ fn write_fixture_profile() -> Option<PathBuf> {
     std::fs::write(dir.join("secrets.json"), fixture_secrets()).expect("write fixture secrets");
     write_fixture_services(&root, &dir.join("services"));
 
-    Some(dir.join("profile.yaml"))
+    dir.join("profile.yaml")
 }
 
 // The provider catalog and gateway routes are services files, not profile
@@ -191,7 +191,7 @@ fn copy_tree(from: &std::path::Path, to: &std::path::Path) {
 }
 
 // The issuer the admin cookie validator will check tokens against.
-pub fn jwt_issuer() -> String {
+pub(crate) fn jwt_issuer() -> String {
     systemprompt::models::Config::get()
         .expect("config installed by init()")
         .jwt_issuer

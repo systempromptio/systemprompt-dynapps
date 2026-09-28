@@ -14,7 +14,7 @@ use systemprompt_security::{AdminTokenParams, JwtService};
 use crate::globals;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum Principal {
+pub(crate) enum Principal {
     // No cookie and no `Authorization` header.
     Anonymous,
     // A valid session for a user holding only the `user` role.
@@ -40,7 +40,7 @@ pub enum Principal {
 }
 
 impl Principal {
-    pub const ALL: [Self; 7] = [
+    pub(crate) const ALL: [Self; 7] = [
         Self::Anonymous,
         Self::NonAdmin,
         Self::Developer,
@@ -50,7 +50,7 @@ impl Principal {
         Self::KnowledgeWorker,
     ];
 
-    pub const fn label(self) -> &'static str {
+    pub(crate) const fn label(self) -> &'static str {
         match self {
             Self::Anonymous => "anonymous",
             Self::NonAdmin => "non-admin",
@@ -65,7 +65,7 @@ impl Principal {
 
 // Bearer tokens for the two authenticated principals, minted once and reused
 // across the whole table.
-pub struct Credentials {
+pub(crate) struct Credentials {
     pub non_admin: String,
     pub developer: String,
     pub admin: String,
@@ -82,7 +82,7 @@ pub struct Credentials {
 }
 
 impl Credentials {
-    pub fn token_for(&self, principal: Principal) -> Option<&str> {
+    pub(crate) fn token_for(&self, principal: Principal) -> Option<&str> {
         match principal {
             Principal::Anonymous => None,
             Principal::NonAdmin => Some(&self.non_admin),
@@ -108,7 +108,7 @@ const CONTRACT_GROUP: &str = "contract-group";
 // The admin carries no group, as an operator account that never came through
 // AD FS would; everyone else is placed in `contract-group` as an
 // SSO-provisioned account is. Roles alone decide what a principal reaches.
-pub async fn provision(pool: &PgPool) -> Credentials {
+pub(crate) async fn provision(pool: &PgPool) -> Credentials {
     sqlx::query(
         "INSERT INTO groups (id, name, source) VALUES ($1, 'Contract group', 'dashboard')
          ON CONFLICT (id) DO NOTHING",

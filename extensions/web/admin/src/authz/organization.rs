@@ -12,7 +12,9 @@ use systemprompt_security::authz::{
     AuthzError, RuleType, SubjectAttributeProvider, SubjectDimension,
 };
 
-const ORGANIZATION_SLUG: &str = "organization";
+use crate::authz::rule_type::{ExtensionSlug, extension_rule_type};
+
+const ORGANIZATION_SLUG: ExtensionSlug = ExtensionSlug::new("organization");
 
 pub const ORGANIZATION_DEFAULT: &str = "default";
 
@@ -23,8 +25,7 @@ const ORGANIZATION_PRECEDENCE: u16 = 300;
 
 #[must_use]
 pub fn organization_rule_type() -> RuleType {
-    RuleType::extension(ORGANIZATION_SLUG)
-        .unwrap_or_else(|e| unreachable!("`{ORGANIZATION_SLUG}` is a well-formed slug: {e}"))
+    extension_rule_type(ORGANIZATION_SLUG)
 }
 
 #[must_use]

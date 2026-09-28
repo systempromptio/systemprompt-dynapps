@@ -17,7 +17,7 @@ async fn seed_artifact(pool: &PgPool) -> String {
     .await;
     let execution = seed::unique("artifact-execution");
     let artifact = seed::unique("artifact");
-    let payload = format!("{:064x}", 7_u8);
+    let payload = format!("{:064x}", 7u8);
     sqlx::query(
         "INSERT INTO mcp_tool_executions
          (mcp_execution_id, tool_name, server_name, started_at, completed_at,

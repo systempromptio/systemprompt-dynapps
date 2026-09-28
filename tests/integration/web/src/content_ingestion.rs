@@ -18,7 +18,7 @@ use crate::fixtures::source_id;
 use crate::tempdb::TempDb;
 
 fn category() -> CategoryId {
-    CategoryId::new("guides".to_string())
+    CategoryId::new("guides".to_owned())
 }
 
 fn article(slug: &str, title: &str, body: &str) -> String {
@@ -131,7 +131,7 @@ async fn ingest_path_descends_into_subdirectories_and_ignores_non_markdown() {
         .await
         .expect("list the ingested slugs");
     slugs.sort();
-    assert_eq!(slugs, vec!["inner".to_string(), "top".to_string()]);
+    assert_eq!(slugs, vec!["inner".to_owned(), "top".to_owned()]);
 
     db.cleanup().await;
 }
@@ -294,7 +294,7 @@ async fn delete_orphans_prunes_rows_whose_file_disappeared() {
     assert_eq!(report.orphans_deleted, 1);
     assert_eq!(
         repo.get_slugs_by_source(&source).await.expect("list slugs"),
-        vec!["keeper".to_string()],
+        vec!["keeper".to_owned()],
         "only the slug still on disk survives"
     );
 

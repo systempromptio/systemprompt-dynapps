@@ -1,4 +1,8 @@
 //! Records plugin usage events emitted over the webhook path.
+//!
+//! Each event adds its own counts to its session's running summary in the
+//! transaction that records it, and a retry the dedup key rejects never
+//! reaches the summary, so nothing is counted twice.
 
 use sqlx::PgPool;
 use systemprompt::identifiers::{PluginId, SessionId, UserId};
@@ -12,7 +16,7 @@ pub struct UsageEventParams<'a> {
     pub session_id: &'a SessionId,
     pub event_type: &'a str,
     pub tool_name: Option<&'a str>,
-    // JSON: arbitrary per-event metadata posted by the plugin hook.
+    // JSON: variable-shape plugin event metadata
     pub metadata: &'a serde_json::Value,
     pub description: Option<&'a str>,
     pub prompt_preview: Option<&'a str>,
@@ -51,7 +55,22 @@ pub async fn insert_plugin_usage_event_with_device(
     }
     let mut tx = pool.begin().await.map_err(AdminError::internal)?;
     let id = uuid::Uuid::new_v4().to_string();
+    let inserted = insert_event_row(&mut tx, &id, params).await?;
+    if inserted {
+        add_event_to_session_summary(&mut tx, &id).await?;
+    }
+    if let Some(device) = device {
+        retain_device_evidence(&mut tx, params, device).await?;
+    }
+    tx.commit().await.map_err(AdminError::internal)?;
+    Ok(inserted)
+}
 
+async fn insert_event_row(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    id: &str,
+    params: &UsageEventParams<'_>,
+) -> Result<bool, AdminError> {
     let result = sqlx::query!(
         "INSERT INTO plugin_usage_events
             (id, user_id, session_id, event_type, tool_name, metadata, plugin_id,
@@ -59,7 +78,7 @@ pub async fn insert_plugin_usage_event_with_device(
              content_input_bytes, content_output_bytes, tool_use_id, trace_id)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $3)
          ON CONFLICT (dedup_key) WHERE dedup_key IS NOT NULL DO NOTHING",
-        &id,
+        id,
         params.user_id.as_str(),
         params.session_id.as_str(),
         params.event_type,
@@ -74,53 +93,65 @@ pub async fn insert_plugin_usage_event_with_device(
         params.content_output_bytes,
         params.tool_use_id,
     )
-    .execute(&mut *tx)
+    .execute(&mut **tx)
     .await
-    .map_err(|error| {
-        if let Some(db) = error.as_database_error() {
-            match db.code().as_deref() {
-                Some("23505") => {
-                    return AdminError::Conflict(
-                        "Event ID was already used with different content".to_owned(),
-                    );
-                },
-                Some("23514" | "23503") => {
-                    return AdminError::Forbidden("Invalid session ownership".to_owned());
-                },
-                _ => {},
-            }
-        }
-        tracing::error!(%error, "Event persistence unavailable");
-        AdminError::Unavailable("Event was not accepted; retry with the same event ID".to_owned())
-    })?;
-
-    let inserted = result.rows_affected() > 0;
-    if inserted {
-        add_event_to_session_summary(&mut tx, &id).await?;
-    }
-    if let Some(device) = device {
-        let event_id = sqlx::query_scalar!("SELECT id FROM plugin_usage_events WHERE dedup_key=$1 AND user_id=$2 AND session_id=$3", params.dedup_key, params.user_id.as_str(), params.session_id.as_str()).fetch_one(&mut *tx).await.map_err(AdminError::internal)?;
-        let host = systemprompt::marketplace::managed::consumer::host_key(device.host);
-        sqlx::query!("INSERT INTO feedback_authenticated_events(event_id,consumer_id,device_id,host,native_session_id) VALUES($1,$2,$3,$4,$5) ON CONFLICT(event_id) DO NOTHING",event_id,device.consumer_id.as_str(),device.device_id.as_str(),host,params.session_id.as_str()).execute(&mut *tx).await.map_err(AdminError::internal)?;
-        let retained = sqlx::query!("SELECT consumer_id,device_id,host,native_session_id FROM feedback_authenticated_events WHERE event_id=$1",event_id).fetch_one(&mut *tx).await.map_err(AdminError::internal)?;
-        if retained.consumer_id != device.consumer_id.as_str()
-            || retained.device_id != device.device_id.as_str()
-            || retained.host != host
-            || retained.native_session_id != params.session_id.as_str()
-        {
-            return Err(AdminError::Conflict(
-                "Hook retry conflicts with authenticated device evidence".to_owned(),
-            ));
-        }
-    }
-    tx.commit().await.map_err(AdminError::internal)?;
-    Ok(inserted)
+    .map_err(|error| classify_insert_error(&error))?;
+    Ok(result.rows_affected() > 0)
 }
 
-// Why: the summary is the running total of its session's events, so the
-// event adds its own counts in the transaction that records it — one row
-// written whatever the session's length, and a retried delivery that the
-// dedup key rejects never reaches here, so nothing is counted twice.
+fn classify_insert_error(error: &sqlx::Error) -> AdminError {
+    if let Some(db) = error.as_database_error() {
+        match db.code().as_deref() {
+            Some("23505") => {
+                return AdminError::Conflict(
+                    "Event ID was already used with different content".to_owned(),
+                );
+            },
+            Some("23514" | "23503") => {
+                return AdminError::Forbidden("Invalid session ownership".to_owned());
+            },
+            _ => {},
+        }
+    }
+    tracing::error!(%error, "Event persistence unavailable");
+    AdminError::Unavailable("Event was not accepted; retry with the same event ID".to_owned())
+}
+
+async fn retain_device_evidence(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    params: &UsageEventParams<'_>,
+    device: &AuthenticatedHookDevice,
+) -> Result<(), AdminError> {
+    let event_id = sqlx::query_scalar!(
+        "SELECT id FROM plugin_usage_events WHERE dedup_key=$1 AND user_id=$2 AND session_id=$3",
+        params.dedup_key,
+        params.user_id.as_str(),
+        params.session_id.as_str()
+    )
+    .fetch_one(&mut **tx)
+    .await
+    .map_err(AdminError::internal)?;
+    let host = systemprompt::marketplace::managed::consumer::host_key(device.host);
+    sqlx::query!("INSERT INTO feedback_authenticated_events(event_id,consumer_id,device_id,host,native_session_id) VALUES($1,$2,$3,$4,$5) ON CONFLICT(event_id) DO NOTHING",event_id,device.consumer_id.as_str(),device.device_id.as_str(),host,params.session_id.as_str())
+        .execute(&mut **tx)
+        .await
+        .map_err(AdminError::internal)?;
+    let retained = sqlx::query!("SELECT consumer_id,device_id,host,native_session_id FROM feedback_authenticated_events WHERE event_id=$1",event_id)
+        .fetch_one(&mut **tx)
+        .await
+        .map_err(AdminError::internal)?;
+    if retained.consumer_id != device.consumer_id.as_str()
+        || retained.device_id != device.device_id.as_str()
+        || retained.host != host
+        || retained.native_session_id != params.session_id.as_str()
+    {
+        return Err(AdminError::Conflict(
+            "Hook retry conflicts with authenticated device evidence".to_owned(),
+        ));
+    }
+    Ok(())
+}
+
 async fn add_event_to_session_summary(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     event_id: &str,
@@ -165,8 +196,6 @@ async fn add_event_to_session_summary(
     Ok(())
 }
 
-// Why: the event row links to the execution and artifact the ingest resolved
-// by key, not by time.
 pub async fn update_event_execution(
     pool: &PgPool,
     dedup_key: &str,

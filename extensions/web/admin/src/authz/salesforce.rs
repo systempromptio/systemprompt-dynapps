@@ -12,7 +12,9 @@ use systemprompt_security::authz::{
     AuthzError, RuleType, SubjectAttributeProvider, SubjectDimension,
 };
 
-const SALESFORCE_SLUG: &str = "salesforce";
+use crate::authz::rule_type::{ExtensionSlug, extension_rule_type};
+
+const SALESFORCE_SLUG: ExtensionSlug = ExtensionSlug::new("salesforce");
 
 // Why: above `group` (150) and below core's `ROLE` (200). A link rule
 // must out-rank the role band that grants the marketplace to every user, while
@@ -21,8 +23,7 @@ const SALESFORCE_PRECEDENCE: u16 = 170;
 
 #[must_use]
 pub fn salesforce_rule_type() -> RuleType {
-    RuleType::extension(SALESFORCE_SLUG)
-        .unwrap_or_else(|e| unreachable!("`{SALESFORCE_SLUG}` is a well-formed slug: {e}"))
+    extension_rule_type(SALESFORCE_SLUG)
 }
 
 #[must_use]

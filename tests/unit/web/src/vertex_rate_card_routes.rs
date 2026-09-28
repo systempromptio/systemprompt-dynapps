@@ -1,7 +1,7 @@
 //! The embedded Vertex rate card, cross-checked against this deployment's
 //! gateway routes.
 //!
-//! Vertex publishes and retires MaaS models without an operator edit, so the
+//! Vertex publishes and retires `MaaS` models without an operator edit, so the
 //! served catalog is not only what `services/ai/providers.yaml` names: at boot,
 //! every model Vertex publishes that the core rate card prices is added to the
 //! `vertex-maas` provider. A card id with no matching route in
@@ -13,11 +13,6 @@
 //! validate (so nothing the card prices can break the boot-time pricing gate),
 //! and every card id that is not on its way out must match a route.
 
-#![allow(
-    clippy::expect_used,
-    clippy::panic,
-    reason = "test code: panics are the assertion mechanism"
-)]
 
 use systemprompt::loader::config_loader::gateway::backfill_route_ids;
 use systemprompt::models::services::{GatewayConfigSpec, ProviderRegistry, VertexRateCard};

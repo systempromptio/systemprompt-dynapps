@@ -54,7 +54,7 @@ pub(super) async fn contracts(pool: &PgPool) {
     assert_eq!(
         error
             .as_database_error()
-            .and_then(|error| error.code())
+            .and_then(sqlx::error::DatabaseError::code)
             .as_deref(),
         Some("55P03")
     );

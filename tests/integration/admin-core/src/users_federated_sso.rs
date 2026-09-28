@@ -18,7 +18,7 @@ use crate::fixtures::{
 };
 use crate::tempdb::TempDb;
 
-pub const ISSUER: &str = "https://login.adfs.test/adfs";
+pub(crate) const ISSUER: &str = "https://login.adfs.test/adfs";
 
 const USER_ROLE: &[String] = &[];
 

@@ -18,9 +18,10 @@ use systemprompt_security::authz::{
     AuthzError, RuleType, SubjectAttributeProvider, SubjectDimension,
 };
 
+use crate::authz::rule_type::{ExtensionSlug, extension_rule_type};
 use crate::services::connector_accounts::Connection;
 
-const CONNECTOR_SLUG: &str = "connector";
+const CONNECTOR_SLUG: ExtensionSlug = ExtensionSlug::new("connector");
 
 // Why: above `group` (150) and below `salesforce` (170). A connection rule is
 // narrower than group membership — it names people, not a team — but a linked
@@ -29,8 +30,7 @@ const CONNECTOR_PRECEDENCE: u16 = 160;
 
 #[must_use]
 pub fn connector_rule_type() -> RuleType {
-    RuleType::extension(CONNECTOR_SLUG)
-        .unwrap_or_else(|e| unreachable!("`{CONNECTOR_SLUG}` is a well-formed slug: {e}"))
+    extension_rule_type(CONNECTOR_SLUG)
 }
 
 #[must_use]

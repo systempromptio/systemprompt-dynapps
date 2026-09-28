@@ -52,7 +52,8 @@ fn install_services() {
     )
     .expect("write services fixture");
     systemprompt::loader::ServicesBootstrap::init_from_path(&path).expect("install services");
-    std::mem::forget(directory);
+    // Why: the registry holds this path for the life of the process.
+    let _kept = directory.keep();
 }
 
 struct Harness {

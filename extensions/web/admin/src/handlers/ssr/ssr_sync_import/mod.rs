@@ -17,45 +17,14 @@ use axum::extract::{Extension, Path, State};
 use axum::response::Response;
 use sqlx::PgPool;
 
-use self::view::{AbsentPlaneView, ImportPreviewPageData, ManifestView, PreviewKpiView};
+use self::view::AbsentPlaneView;
 use crate::error::{AdminError, AdminHtmlResult};
-use crate::handlers::ssr::sync_plane::{HashView, PlaneCardOpts, PlaneCardView, plane_card};
-use crate::handlers::ssr::types::BreadcrumbView;
+use crate::handlers::ssr::sync_plane::{PlaneCardOpts, plane_card};
 use crate::repositories::sync::archive::staging::StagingStore;
 use crate::repositories::sync::plane::DeclarationSource;
 use crate::repositories::sync::registry::planes;
 use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, UserContext};
-
-fn kpis(cards: &[PlaneCardView], other: usize) -> Vec<PreviewKpiView> {
-    let clean = cards.iter().filter(|c| c.is_clean).count();
-    vec![
-        PreviewKpiView {
-            label: "Planes in the archive",
-            value: cards.len(),
-            note: "each previewed against this database",
-            tone: "info",
-        },
-        PreviewKpiView {
-            label: "Already in step",
-            value: clean,
-            note: "an apply would move nothing",
-            tone: "ok",
-        },
-        PreviewKpiView {
-            label: "Would change",
-            value: cards.len() - clean,
-            note: "choose a direction per plane",
-            tone: if cards.len() > clean { "warn" } else { "ok" },
-        },
-        PreviewKpiView {
-            label: "Served from code",
-            value: other,
-            note: "not applied here; commit or publish",
-            tone: "muted",
-        },
-    ]
-}
 
 pub(crate) async fn import_preview_page(
     Extension(user_ctx): Extension<UserContext>,
@@ -73,7 +42,7 @@ pub(crate) async fn import_preview_page(
         )
         .into());
     };
-    let apply_url = format!("/api/public/admin/sync/import/{}/apply", stage.id);
+    let apply_url = view::apply_url(&stage.id);
     let mut cards = Vec::new();
     let mut absent = Vec::new();
     for plane in planes() {
@@ -96,40 +65,11 @@ pub(crate) async fn import_preview_page(
             }),
         }
     }
-    let kpis = kpis(&cards, stage.other.len());
-    let manifest = stage.manifest.as_ref().map(|m| ManifestView {
-        release: m.release.clone(),
-        exported_at: m.exported_at.to_rfc3339(),
-        exported_by: m.exported_by.clone(),
-        base_tree_hash: m.base_tree_hash.as_deref().and_then(HashView::of),
-        composed_hash: m.composed_hash.as_deref().and_then(HashView::of),
-        planes: m.planes.len(),
-    });
-    let page = ImportPreviewPageData {
-        page: "sync",
-        title: "Import preview",
-        can_write: user_ctx.is_admin,
-        breadcrumbs: vec![
-            BreadcrumbView::link("Admin", "/admin"),
-            BreadcrumbView::link("Code sync", super::ssr_sync::BASE_URL),
-            BreadcrumbView::current("Import preview"),
-        ],
-        stage_id: stage.id.clone(),
-        staged_by: stage.actor.clone(),
-        staged_at: stage.created_at.to_rfc3339(),
-        expires_at: stage.expires_at().to_rfc3339(),
-        manifest,
-        manifest_error: stage.manifest_error.clone(),
-        kpis,
-        planes: cards,
-        absent,
-        other_count: stage.other.len(),
-        other: stage.other.clone(),
-        apply_all_url: apply_url,
-        discard_url: format!("/api/public/admin/sync/import/{}", stage.id),
-        sync_url: super::ssr_sync::BASE_URL,
-        docs_url: super::ssr_sync::DOCS_URL,
-    };
+    let page = view::page_data(
+        &stage,
+        view::PreviewPlanes { cards, absent },
+        user_ctx.is_admin,
+    );
     Ok(super::render_typed_page(
         &engine,
         "sync-import",

@@ -12,9 +12,11 @@ use systemprompt::marketplace::{AssembleRequest, ManifestService, MarketplaceCac
 use systemprompt::models::Config;
 
 use crate::marketplace_filter::TemplateMarketplaceFilter;
-use crate::repositories::users::access_control::UserMatrix;
+use crate::repositories::users::access_control::{MatrixRow, UserMatrix};
 use crate::repositories::users::queries;
 use crate::services::connector_accounts;
+
+use super::workspace_grant::{grants_access, workspace_reason, workspace_status, workspace_tone};
 
 #[derive(Debug, Default, Serialize)]
 pub(crate) struct AccessOverview {
@@ -70,56 +72,9 @@ impl AccessOverview {
         };
         let mut included = std::mem::take(&mut self.workspaces);
         for row in &section.rows {
-            let allowed = matches!(row.effective.as_str(), "allow" | "warn");
-            let plugins = included
-                .iter_mut()
-                .find(|w| w.id == row.entity_id)
-                .map(|w| std::mem::take(&mut w.plugins))
-                .unwrap_or_default();
-            let status = match (row.effective.as_str(), row.source.layer.as_str()) {
-                ("allow", _) => "Allowed",
-                ("deny", "user" | "role" | "group" | "project") => "Explicitly denied",
-                ("deny", "default") if row.source.detail.contains("not assigned") => "Not assigned",
-                ("deny", _) => "Access denied",
-                ("warn", _) => "Allowed with warning",
-                _ => "Approval pending",
-            };
-            let source = row
-                .source
-                .detail
-                .strip_suffix(" allow")
-                .or_else(|| row.source.detail.strip_suffix(" deny"))
-                .unwrap_or(&row.source.detail);
-            let reason = match row.source.layer.as_str() {
-                "user" => "A rule for this person".to_owned(),
-                "default" if allowed => "Included by default".to_owned(),
-                "default" if status == "Not assigned" => {
-                    "No matching grant for this workspace".to_owned()
-                },
-                "group" | "role" | "project" => format!(
-                    "{} through {}",
-                    if allowed { "Allowed" } else { "Denied" },
-                    source.replace(':', " ")
-                ),
-                _ => row.source.detail.clone(),
-            };
-            let workspace = WorkspaceView {
-                id: row.entity_id.clone(),
-                name: row.entity_name.clone(),
-                status: status.into(),
-                tone: if row.effective == "warn" {
-                    "warn"
-                } else if allowed {
-                    "ok"
-                } else if status == "Not assigned" {
-                    "muted"
-                } else {
-                    "warn"
-                },
-                reason,
-                plugins,
-            };
-            if allowed {
+            let plugins = take_plugins(&mut included, &row.entity_id);
+            let workspace = workspace_view(row, plugins);
+            if grants_access(row) {
                 self.workspaces.push(workspace);
             } else {
                 self.other_workspaces.push(workspace);
@@ -128,6 +83,27 @@ impl AccessOverview {
         if self.catalog_available {
             self.allowed_count = Some(self.workspaces.len());
         }
+    }
+}
+
+fn take_plugins(included: &mut [WorkspaceView], workspace_id: &str) -> Vec<PluginView> {
+    included
+        .iter_mut()
+        .find(|w| w.id == workspace_id)
+        .map(|w| std::mem::take(&mut w.plugins))
+        .unwrap_or_default()
+}
+
+fn workspace_view(row: &MatrixRow, plugins: Vec<PluginView>) -> WorkspaceView {
+    let allowed = grants_access(row);
+    let status = workspace_status(row);
+    WorkspaceView {
+        id: row.entity_id.clone(),
+        name: row.entity_name.clone(),
+        status: status.into(),
+        tone: workspace_tone(row, allowed, status),
+        reason: workspace_reason(row, allowed, status),
+        plugins,
     }
 }
 
@@ -191,9 +167,7 @@ async fn included_content(pool: &PgPool, user_id: &UserId) -> Result<Vec<Workspa
         .api_external_url
         .clone();
     let filter = TemplateMarketplaceFilter::from_pool(Arc::new(pool.clone()));
-    // Why: the catalogue cache lives on core's application context, which the
-    // admin plane never receives; one user-detail render reloads it once.
-    let cache = MarketplaceCache::default();
+    let cache = uncached_marketplace();
     let request = AssembleRequest {
         services: &services,
         services_root: &root,
@@ -233,6 +207,12 @@ async fn included_content(pool: &PgPool, user_id: &UserId) -> Result<Vec<Workspa
         });
     }
     Ok(workspaces)
+}
+
+// Why: core keeps the marketplace cache on its application context, which the
+// admin plane never receives; one user-detail render reloads it once.
+fn uncached_marketplace() -> MarketplaceCache {
+    MarketplaceCache::default()
 }
 
 fn needs_attention(connection: &connector_accounts::Connection) -> bool {

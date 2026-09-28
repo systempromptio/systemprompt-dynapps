@@ -1,15 +1,22 @@
-//! View types for `/admin/sync` — Code sync.
+//! View types and the page context for `/admin/sync` — Code sync.
+//!
+//! `can_write` is the administrator's whole-plane and archive authority;
+//! `can_refresh` is the source refresh any participant may press;
+//! `is_participant` switches the page to the scoped layout with no tabs.
 
 use serde::Serialize;
 use systemprompt::identifiers::MarketplaceId;
 
+use super::access_review::AccessReviewView;
+use super::{DOCS_URL, EXPORT_ZIP_URL, IMPORT_URL, SyncTab, tabs};
 use crate::handlers::ssr::sync_plane::{HashView, PlaneCardView};
 use crate::handlers::ssr::types::{BreadcrumbView, TabLinkView};
+use crate::repositories::sync::archive::staging::STAGE_TTL_MINUTES;
+use crate::repositories::sync::attention::access_attention;
 use crate::repositories::sync::history::SyncHistoryRow;
+use crate::repositories::sync::registry::planes;
 use crate::repositories::sync::sources::SourcesView;
 
-// Why: one row of the sync trail — who did what to which plane, and for
-// which marketplaces when the apply was scoped.
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct SyncHistoryView {
     pub id: String,
@@ -37,8 +44,6 @@ impl From<SyncHistoryRow> for SyncHistoryView {
     }
 }
 
-// Why: a participant's per-marketplace card — the access-control drift
-// narrowed to that one marketplace, with the apply narrowed the same way.
 #[derive(Debug, Serialize)]
 pub(crate) struct MarketplaceSyncView {
     pub marketplace_id: MarketplaceId,
@@ -46,7 +51,6 @@ pub(crate) struct MarketplaceSyncView {
     pub card: PlaneCardView,
 }
 
-// Why: one plane as the export card lists it.
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct ExportPlaneView {
     pub id: &'static str,
@@ -59,9 +63,6 @@ pub(crate) struct ExportPlaneView {
 pub(crate) struct SyncPageData {
     pub page: &'static str,
     pub title: &'static str,
-    // Why: `can_write` is the administrator's whole-plane and archive
-    // authority; `can_refresh` is the source refresh any participant may
-    // press; `is_participant` switches the page to the scoped layout.
     pub can_write: bool,
     pub can_refresh: bool,
     pub is_participant: bool,
@@ -71,7 +72,7 @@ pub(crate) struct SyncPageData {
     pub tabs: Vec<TabLinkView>,
     pub show_sources: bool,
     pub show_access: bool,
-    pub access_review: Option<super::access_review::AccessReviewView>,
+    pub access_review: Option<AccessReviewView>,
     pub docs_url: &'static str,
     pub configuration_url: &'static str,
     pub observability_url: &'static str,
@@ -85,4 +86,73 @@ pub(crate) struct SyncPageData {
     pub sources_unreadable: Option<String>,
     pub export_planes: Vec<ExportPlaneView>,
     pub stage_ttl_minutes: i64,
+}
+
+pub(super) struct SyncPageInput {
+    pub tab: SyncTab,
+    pub is_participant: bool,
+    pub can_write: bool,
+    pub marketplaces: Vec<MarketplaceSyncView>,
+    pub history: Vec<SyncHistoryRow>,
+    pub access_review: Option<AccessReviewView>,
+    pub sources: SourcesView,
+    pub sources_unreadable: Option<String>,
+}
+
+fn export_planes() -> Vec<ExportPlaneView> {
+    planes()
+        .iter()
+        .map(|p| ExportPlaneView {
+            id: p.id(),
+            label: p.label(),
+            source_file: p.source_file(),
+            owner_url: p.owner_url(),
+        })
+        .collect()
+}
+
+pub(super) fn page_data(input: SyncPageInput) -> SyncPageData {
+    let SyncPageInput { tab, sources, .. } = input;
+    SyncPageData {
+        page: "sync",
+        title: "Code sync",
+        can_write: input.can_write,
+        can_refresh: true,
+        is_participant: input.is_participant,
+        marketplaces: input.marketplaces,
+        history: input
+            .history
+            .into_iter()
+            .map(SyncHistoryView::from)
+            .collect(),
+        breadcrumbs: vec![
+            BreadcrumbView::link("Admin", "/admin"),
+            BreadcrumbView::link("Platform", "/admin/configuration"),
+            BreadcrumbView::current("Code sync"),
+        ],
+        tabs: if input.is_participant {
+            Vec::new()
+        } else {
+            tabs(tab, access_attention())
+        },
+        show_sources: tab == SyncTab::Sources,
+        show_access: tab == SyncTab::Access,
+        access_review: input.access_review,
+        docs_url: DOCS_URL,
+        configuration_url: "/admin/configuration",
+        observability_url: crate::handlers::ssr::ssr_observability::PAGE_URL,
+        export_zip_url: EXPORT_ZIP_URL,
+        kit_patch_url: "/api/public/admin/sync/export/kit",
+        import_url: IMPORT_URL,
+        composed_hash: sources.composed_hash.as_deref().and_then(HashView::of),
+        last_reconciled_hash: sources
+            .last_reconciled_hash
+            .as_deref()
+            .and_then(HashView::of),
+        base_tree_hash: sources.base.tree_hash.as_deref().and_then(HashView::of),
+        sources,
+        sources_unreadable: input.sources_unreadable,
+        export_planes: export_planes(),
+        stage_ttl_minutes: STAGE_TTL_MINUTES,
+    }
 }

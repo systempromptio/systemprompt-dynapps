@@ -28,9 +28,11 @@ fn adfs_config_files() -> Vec<PathBuf> {
         .flatten()
         .map(|entry| entry.path())
         .filter(|path| {
-            path.file_name()
-                .and_then(|n| n.to_str())
-                .is_some_and(|name| name.starts_with("adfs.") && name.ends_with(".yaml"))
+            path.extension().is_some_and(|ext| ext == "yaml")
+                && path
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .is_some_and(|name| name.starts_with("adfs."))
         })
         .collect();
     files.sort();

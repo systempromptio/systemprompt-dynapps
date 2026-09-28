@@ -7,7 +7,7 @@
 
 use systemprompt::models::Config;
 use systemprompt::models::profile::{
-    ContentNegotiationConfig, RateLimitsConfig, SecurityHeadersConfig,
+    ContentNegotiationConfig, RateLimitsConfig, RetentionConfig, SecurityHeadersConfig,
 };
 use systemprompt::models::services::WebConfig;
 use systemprompt::template_provider::{ExtenderContext, TemplateDataExtender};
@@ -26,7 +26,7 @@ fn install_config() {
     if Config::is_initialized() {
         return;
     }
-    let _ = Config::install(Config {
+    let installed = Config::install(Config {
         instance_id: "org-url-tests".to_owned(),
         metrics_port: None,
         max_concurrent_streams: 16,
@@ -62,7 +62,7 @@ fn install_config() {
         signing_key_path: std::path::PathBuf::from("signing_key.pem"),
         use_https: true,
         rate_limits: RateLimitsConfig::default(),
-        retention: Default::default(),
+        retention: RetentionConfig::default(),
         cors_allowed_origins: vec![],
         trusted_proxies: vec![],
         is_cloud: false,
@@ -73,6 +73,10 @@ fn install_config() {
         system_admin_username: "admin".to_owned(),
         system_admin_email: None,
     });
+    assert!(
+        installed.is_ok() || Config::is_initialized(),
+        "a Config is installed, by this call or a racing test"
+    );
 }
 
 fn extend(mut data: serde_json::Value) -> serde_json::Value {
@@ -82,7 +86,7 @@ fn extend(mut data: serde_json::Value) -> serde_json::Value {
     let items: Vec<serde_json::Value> = vec![];
     // OrgUrlExtender never reads the per-source config, so an empty mapping
     // exercises it fully.
-    let config = Default::default();
+    let config = serde_yaml::Value::default();
     let erased = ();
     let ctx = ExtenderContext::builder(&item, &items, &config, &web, &erased).build();
 
@@ -107,11 +111,10 @@ fn the_extender_applies_to_every_template_at_the_lowest_priority() {
 }
 
 #[test]
-// Why: `default_constructed_unit_structs` wants the bare `OrgUrlExtender`, but
-// that is the one rewrite this test cannot take — agreement between the two
-// constructors is the whole assertion, so writing the literal would leave it
-// comparing nothing.
-#[allow(clippy::default_constructed_unit_structs)]
+#[expect(
+    clippy::default_constructed_unit_structs,
+    reason = "comparing Default against new is the assertion; the bare literal would compare nothing"
+)]
 fn default_and_new_build_the_same_extender() {
     assert_eq!(
         OrgUrlExtender::default().extender_id(),

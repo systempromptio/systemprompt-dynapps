@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# Identifier fields (user_id, tenant_id, session_id, ...) must use core's typed
+# ID newtypes, never raw String/&str. A raw string skips the validator and lets
+# one kind of ID be passed where another is expected. DB `*Row`/`*Output`
+# structs in types.rs are exempt: they mirror columns before conversion.
 set -uo pipefail
 
 BANNED='(user_id|agent_id|task_id|tenant_id|context_id|session_id|file_id|skill_id|client_id|artifact_id|message_id|role_id|hook_id|execution_step_id|content_id|source_id|group_id|project_id|plugin_id|marketplace_id|route_id|call_id|server_id|execution_id)'

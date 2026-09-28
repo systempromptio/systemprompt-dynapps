@@ -19,7 +19,7 @@ use systemprompt_web_shared::{GroupId, ProjectId};
 
 // A window that starts after any seeded `ai_requests` row and runs into the
 // future, so a windowed query sees only what the test inserted.
-pub fn narrow_window() -> TimeRange {
+pub(crate) fn narrow_window() -> TimeRange {
     let now = Utc::now();
     TimeRange {
         from: now - Duration::seconds(30),
@@ -30,7 +30,7 @@ pub fn narrow_window() -> TimeRange {
 }
 
 // An hour either side of now, for tables with no seeded rows at all.
-pub fn wide_window() -> TimeRange {
+pub(crate) fn wide_window() -> TimeRange {
     let now = Utc::now();
     TimeRange {
         from: now - Duration::hours(1),
@@ -41,26 +41,26 @@ pub fn wide_window() -> TimeRange {
 }
 
 // A fresh, collision-proof id fragment.
-pub fn unique_group(prefix: &str) -> GroupId {
+pub(crate) fn unique_group(prefix: &str) -> GroupId {
     GroupId::new(unique(prefix))
 }
 
-pub fn unique_project(prefix: &str) -> ProjectId {
+pub(crate) fn unique_project(prefix: &str) -> ProjectId {
     ProjectId::new(unique(prefix))
 }
 
-pub fn unique(prefix: &str) -> String {
+pub(crate) fn unique(prefix: &str) -> String {
     format!("{prefix}-{}", uuid::Uuid::new_v4().simple())
 }
 
 // `ContextId::new` panics on anything that is not a UUID v4, so context ids
 // are minted as UUIDs rather than with the readable `unique`.
-pub fn new_context_id() -> String {
+pub(crate) fn new_context_id() -> String {
     ContextId::generate().to_string()
 }
 
 // An email in a domain nothing else in the suite uses.
-pub fn unclaimed_email(local: &str) -> String {
+pub(crate) fn unclaimed_email(local: &str) -> String {
     format!("{local}@{}.example", uuid::Uuid::new_v4().simple())
 }
 
@@ -69,7 +69,7 @@ pub fn unclaimed_email(local: &str) -> String {
 // `users.name` is unique and `users.email` must already be lowercase and
 // trimmed, so the email doubles as the name exactly as the production
 // provisioning paths do.
-pub async fn insert_user(pool: &PgPool, id: &str, email: &str) -> UserId {
+pub(crate) async fn insert_user(pool: &PgPool, id: &str, email: &str) -> UserId {
     insert_user_full(pool, id, email, Some(email), &["user".to_owned()], "active").await
 }
 
@@ -77,7 +77,7 @@ pub async fn insert_user(pool: &PgPool, id: &str, email: &str) -> UserId {
     clippy::too_many_arguments,
     reason = "one parameter per column of the row being seeded; a params struct would churn 20 call sites to say the same thing"
 )]
-pub async fn insert_user_full(
+pub(crate) async fn insert_user_full(
     pool: &PgPool,
     id: &str,
     email: &str,
@@ -119,7 +119,7 @@ pub async fn insert_user_full(
 // Why: the tests that call this are about scoping, and scoping is now a
 // membership question rather than a column on the profile. Creating a group
 // beside the project keeps the two filters exercisable from one fixture.
-pub async fn set_project<S: AsRef<str> + ?Sized>(
+pub(crate) async fn set_project<S: AsRef<str> + Sync + ?Sized>(
     pool: &PgPool,
     user_id: &UserId,
     project: Option<&S>,
@@ -145,7 +145,7 @@ pub async fn set_project<S: AsRef<str> + ?Sized>(
 }
 
 // The users in one project, as a bound scope.
-pub async fn project_scope(pool: &PgPool, project: impl AsRef<str>) -> SubjectScope {
+pub(crate) async fn project_scope(pool: &PgPool, project: impl AsRef<str>) -> SubjectScope {
     let ids: Vec<String> =
         sqlx::query_scalar("SELECT user_id FROM project_members WHERE project_id = $1")
             .bind(project.as_ref())
@@ -156,7 +156,7 @@ pub async fn project_scope(pool: &PgPool, project: impl AsRef<str>) -> SubjectSc
 }
 
 // The users in one group, as a bound scope.
-pub async fn group_scope(pool: &PgPool, group: impl AsRef<str>) -> SubjectScope {
+pub(crate) async fn group_scope(pool: &PgPool, group: impl AsRef<str>) -> SubjectScope {
     let ids: Vec<String> =
         sqlx::query_scalar("SELECT user_id FROM user_groups WHERE group_id = $1")
             .bind(group.as_ref())
@@ -170,7 +170,7 @@ pub async fn group_scope(pool: &PgPool, group: impl AsRef<str>) -> SubjectScope 
 //
 // `session_id` carries a foreign key to `user_sessions`, so pass `None`
 // unless that session row already exists.
-pub async fn insert_context(
+pub(crate) async fn insert_context(
     pool: &PgPool,
     context_id: &str,
     user_id: &UserId,
@@ -191,7 +191,7 @@ pub async fn insert_context(
 
 // A `plugin_session_summaries` row — the hook-side half of a session, which
 // `find_session_header` full-outer-joins against the `ai_requests` rollup.
-pub struct SummarySpec<'a> {
+pub(crate) struct SummarySpec<'a> {
     pub session_id: &'a str,
     pub user_id: &'a UserId,
     pub started_at: Option<DateTime<Utc>>,
@@ -206,7 +206,7 @@ pub struct SummarySpec<'a> {
 
 impl<'a> SummarySpec<'a> {
     // A summary that started an hour ago and has not ended.
-    pub fn open(session_id: &'a str, user_id: &'a UserId) -> Self {
+    pub(crate) fn open(session_id: &'a str, user_id: &'a UserId) -> Self {
         Self {
             session_id,
             user_id,
@@ -222,7 +222,7 @@ impl<'a> SummarySpec<'a> {
     }
 }
 
-pub async fn insert_summary(pool: &PgPool, spec: &SummarySpec<'_>) {
+pub(crate) async fn insert_summary(pool: &PgPool, spec: &SummarySpec<'_>) {
     sqlx::query(
         "INSERT INTO plugin_session_summaries
              (id, session_id, user_id, started_at, ended_at, tool_uses, prompts, errors,
@@ -247,7 +247,7 @@ pub async fn insert_summary(pool: &PgPool, spec: &SummarySpec<'_>) {
 
 // `ai_requests.session_id` carries a foreign key to `user_sessions`, so a
 // request with a session needs the session row first.
-pub async fn insert_session(pool: &PgPool, session_id: &str, user_id: &UserId) {
+pub(crate) async fn insert_session(pool: &PgPool, session_id: &str, user_id: &UserId) {
     sqlx::query("INSERT INTO user_sessions (session_id, user_id) VALUES ($1, $2)")
         .bind(session_id)
         .bind(user_id.as_str())
@@ -256,9 +256,9 @@ pub async fn insert_session(pool: &PgPool, session_id: &str, user_id: &UserId) {
         .expect("insert user session");
 }
 
-pub const LEGACY_CONTEXT_ID: &str = "00000000-0000-0000-0000-4c4547414359";
+pub(crate) const LEGACY_CONTEXT_ID: &str = "00000000-0000-0000-0000-4c4547414359";
 
-pub struct RequestSpec<'a> {
+pub(crate) struct RequestSpec<'a> {
     // Owned so a caller may pass `&unique("req")` directly: a borrowed id would
     // dangle the moment the `let` binding holding the spec ended.
     pub id: String,
@@ -292,7 +292,7 @@ pub struct RequestSpec<'a> {
 }
 
 impl<'a> RequestSpec<'a> {
-    pub fn completed(id: &str, user_id: &'a UserId) -> Self {
+    pub(crate) fn completed(id: &str, user_id: &'a UserId) -> Self {
         Self {
             id: id.to_owned(),
             user_id,
@@ -325,9 +325,9 @@ impl<'a> RequestSpec<'a> {
 // Core 0.59.0 stores a tool list once in `ai_tool_catalogs` and has the
 // payload reference its digest, so the catalogue row comes first and the
 // payload names it.
-pub async fn insert_offered_tools(pool: &PgPool, request_id: &str) {
+pub(crate) async fn insert_offered_tools(pool: &PgPool, request_id: &str) {
     let tools = serde_json::json!([{"name": "bash"}]);
-    let sha256 = format!("{:064x}", 0xba5eba11u64);
+    let sha256 = format!("{:064x}", 0xba5e_ba11u64);
     sqlx::query(
         "INSERT INTO ai_tool_catalogs (sha256, tools) VALUES ($1, $2) \
          ON CONFLICT (sha256) DO NOTHING",
@@ -348,7 +348,7 @@ pub async fn insert_offered_tools(pool: &PgPool, request_id: &str) {
     .expect("insert ai request payload");
 }
 
-pub async fn insert_request(pool: &PgPool, spec: &RequestSpec<'_>) {
+pub(crate) async fn insert_request(pool: &PgPool, spec: &RequestSpec<'_>) {
     sqlx::query(
         "INSERT INTO ai_requests (
              id, request_id, user_id, session_id, trace_id, context_id,
@@ -382,7 +382,7 @@ pub async fn insert_request(pool: &PgPool, spec: &RequestSpec<'_>) {
     .expect("insert ai_request");
 }
 
-pub struct DecisionSpec<'a> {
+pub(crate) struct DecisionSpec<'a> {
     pub id: String,
     pub user_id: &'a UserId,
     pub session_id: &'a str,
@@ -398,7 +398,7 @@ pub struct DecisionSpec<'a> {
 }
 
 impl<'a> DecisionSpec<'a> {
-    pub fn allow(id: &str, user_id: &'a UserId, session_id: &'a str) -> Self {
+    pub(crate) fn allow(id: &str, user_id: &'a UserId, session_id: &'a str) -> Self {
         Self {
             id: id.to_owned(),
             user_id,
@@ -416,7 +416,7 @@ impl<'a> DecisionSpec<'a> {
     }
 }
 
-pub async fn insert_decision(pool: &PgPool, spec: &DecisionSpec<'_>) {
+pub(crate) async fn insert_decision(pool: &PgPool, spec: &DecisionSpec<'_>) {
     sqlx::query(
         "INSERT INTO governance_decisions (
              id, user_id, session_id, context_id, tool_name, agent_id, agent_scope,
@@ -445,7 +445,7 @@ pub async fn insert_decision(pool: &PgPool, spec: &DecisionSpec<'_>) {
     .expect("insert governance decision");
 }
 
-pub struct EventSpec<'a> {
+pub(crate) struct EventSpec<'a> {
     pub id: String,
     pub user_id: &'a UserId,
     pub session_id: &'a str,
@@ -455,7 +455,7 @@ pub struct EventSpec<'a> {
 }
 
 impl<'a> EventSpec<'a> {
-    pub fn tool_use(id: &str, user_id: &'a UserId, session_id: &'a str) -> Self {
+    pub(crate) fn tool_use(id: &str, user_id: &'a UserId, session_id: &'a str) -> Self {
         Self {
             id: id.to_owned(),
             user_id,
@@ -467,7 +467,7 @@ impl<'a> EventSpec<'a> {
     }
 }
 
-pub async fn insert_event(pool: &PgPool, spec: &EventSpec<'_>) {
+pub(crate) async fn insert_event(pool: &PgPool, spec: &EventSpec<'_>) {
     sqlx::query(
         "INSERT INTO plugin_usage_events
              (id, user_id, session_id, event_type, tool_name, created_at)
@@ -484,7 +484,7 @@ pub async fn insert_event(pool: &PgPool, spec: &EventSpec<'_>) {
     .expect("insert plugin usage event");
 }
 
-pub async fn insert_activity(
+pub(crate) async fn insert_activity(
     pool: &PgPool,
     id: &str,
     user_id: &UserId,
@@ -511,7 +511,7 @@ pub async fn insert_activity(
     clippy::too_many_arguments,
     reason = "one parameter per column of the row being seeded; a params struct would churn 42 call sites to say the same thing"
 )]
-pub async fn insert_acl_rule(
+pub(crate) async fn insert_acl_rule(
     pool: &PgPool,
     entity_type: &str,
     entity_id: &str,
@@ -546,7 +546,7 @@ pub async fn insert_acl_rule(
     .expect("insert access control rule");
 }
 
-pub async fn insert_federated_identity(
+pub(crate) async fn insert_federated_identity(
     pool: &PgPool,
     issuer: &str,
     external_sub: &str,
@@ -565,7 +565,13 @@ pub async fn insert_federated_identity(
 
 // One `ai_request_messages` row — the prompt/response bodies the context
 // transcript and the unified history preview are built from.
-pub async fn insert_message(pool: &PgPool, request_id: &str, seq: i32, role: &str, body: &str) {
+pub(crate) async fn insert_message(
+    pool: &PgPool,
+    request_id: &str,
+    seq: i32,
+    role: &str,
+    body: &str,
+) {
     sqlx::query(
         "INSERT INTO ai_request_messages (id, request_id, role, content, sequence_number)
          VALUES ($1, $2, $3, $4, $5)",
@@ -583,7 +589,7 @@ pub async fn insert_message(pool: &PgPool, request_id: &str, seq: i32, role: &st
 // Insert a group row. Appended at the end of the file deliberately: several
 // slices seed groups, and a helper at the tail is the one place two of them
 // can add without landing on the same lines.
-pub async fn insert_group(pool: &PgPool, id: impl AsRef<str>, name: &str) {
+pub(crate) async fn insert_group(pool: &PgPool, id: impl AsRef<str>, name: &str) {
     sqlx::query(
         "INSERT INTO groups (id, name, source) VALUES ($1, $2, 'dashboard')
          ON CONFLICT (id) DO NOTHING",
@@ -598,7 +604,7 @@ pub async fn insert_group(pool: &PgPool, id: impl AsRef<str>, name: &str) {
 // Place a user in a group. `source` is 'adfs' for a directory-written row and
 // 'manual' for a dashboard grant; the two are separate rows by primary key,
 // which is what lets a manual membership survive the directory's replace.
-pub async fn insert_group_member(
+pub(crate) async fn insert_group_member(
     pool: &PgPool,
     group_id: impl AsRef<str>,
     user_id: &UserId,
@@ -616,7 +622,7 @@ pub async fn insert_group_member(
     .expect("insert group member");
 }
 
-pub async fn insert_project(pool: &PgPool, id: impl AsRef<str>, name: &str) {
+pub(crate) async fn insert_project(pool: &PgPool, id: impl AsRef<str>, name: &str) {
     sqlx::query(
         "INSERT INTO projects (id, name, source) VALUES ($1, $2, 'dashboard')
          ON CONFLICT (id) DO NOTHING",
@@ -628,7 +634,7 @@ pub async fn insert_project(pool: &PgPool, id: impl AsRef<str>, name: &str) {
     .expect("insert project");
 }
 
-pub async fn insert_project_member(
+pub(crate) async fn insert_project_member(
     pool: &PgPool,
     project_id: impl AsRef<str>,
     user_id: &UserId,

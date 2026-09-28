@@ -1,8 +1,3 @@
-#![allow(
-    clippy::expect_used,
-    clippy::panic,
-    reason = "test code: panics are the assertion mechanism"
-)]
 //! `docs/profile.schema.json` is the JSON Schema of core's `Profile`, and it
 //! is what the self-host guides and editors validate a `profile.yaml` against.
 //! It was hand-refreshed, which is how it kept describing `providers:` and

@@ -6,6 +6,15 @@
 //! page needs from every plane: a declared hash, and a `sync_state` row
 //! written on every apply. The database-only rows a kit's own `access:`
 //! block wrote (source `bundle:<name>`) surface here as *bundle* orphans.
+//!
+//! Every request-time caller — the page, the drift API, the apply — reads the
+//! declared set through [`declared_from`], from the composed root, and
+//! uploaded text is projected by the same code as the file, so a preview's
+//! drift is the drift the file would show once committed. An unreadable file
+//! is the card's headline, not a 500. A scoped apply records the whole file's
+//! hash, since the projection it leaves is still measured against the whole
+//! file. Export renders the database for copy-out only; the instance never
+//! writes into `services/`.
 
 use async_trait::async_trait;
 use sqlx::PgPool;
@@ -23,7 +32,7 @@ use crate::repositories::access_control::declared::DeclaredSet;
 use crate::repositories::access_control::declared_load::{
     build_declared_from_doc, load_declared_set, marketplace_ids_from_services,
 };
-use crate::repositories::access_control::drift::{DriftReport, compute_drift};
+use crate::repositories::access_control::drift::{DriftCounts, DriftReport, compute_drift};
 use crate::repositories::access_control::export::render_export;
 use crate::repositories::access_control::rules::{
     count_band_rules, list_band_rules, list_entity_defaults,
@@ -37,21 +46,12 @@ pub const PLANE_ID: &str = "access_control";
 #[derive(Debug, Clone, Copy, Default)]
 pub struct AccessControlPlane;
 
-// Why: one place assembles the declared set for every request-time caller so
-// the page, the drift API and the apply all read the same file the same way
-// — from the composed root, so a kit's marketplace validates once its
-// bundle is active.
 pub async fn declared_now() -> AdminResult<DeclaredSet> {
     declared_from(DeclarationSource::Disk).await
 }
 
-// Why: uploaded text is projected by the same code as the file — same route
-// catalog, same marketplace ids — so a preview's drift is the drift the
-// file would show once committed.
 pub async fn declared_from(from: DeclarationSource<'_>) -> AdminResult<DeclaredSet> {
     let registered = registered_routes_from_services()?;
-    // Why: the catalog failing is not the file failing; the two get different
-    // headlines so an operator fixes the tree, not the declaration.
     let marketplace_ids = marketplace_ids_from_services()
         .map_err(|source| AdminError::invalid("services tree could not be composed", source))?;
     let loaded = match from {
@@ -76,13 +76,68 @@ pub async fn drift_now(pool: &PgPool, declared: &DeclaredSet) -> AdminResult<Dri
 
 #[must_use]
 pub fn applied_from() -> AppliedFrom {
-    // Why: the hashes decorate the sync_state row; an unreadable profile or
-    // cache (a test, a CLI) records an apply without them.
-    // Why: discard-ok: an apply is never refused for want of a decoration
+    // Why: discard-ok: an unreadable profile or cache records no hashes
     let sources = super::sources::build_sources().ok();
     AppliedFrom {
         base_tree_hash: sources.as_ref().and_then(|s| s.base.tree_hash.clone()),
         composed_hash: sources.and_then(|s| s.composed_hash),
+    }
+}
+
+fn unreadable_declaration(in_db: usize, error: &AdminError) -> PlaneDrift {
+    PlaneDrift {
+        in_db,
+        unreadable: Some(error.to_string()),
+        ..PlaneDrift::default()
+    }
+}
+
+#[must_use]
+pub fn drift_kpis(counts: &DriftCounts, awaiting_bundle: usize) -> Vec<DriftKpi> {
+    vec![
+        DriftKpi {
+            label: "Added in code",
+            value: counts.missing_in_db + counts.entities_missing,
+            note: "Apply all new adds these",
+            tone: "ok",
+        },
+        DriftKpi {
+            label: "Changed in code",
+            value: counts.changed + counts.default_changed,
+            note: "Replace database with code corrects these",
+            tone: "warn",
+        },
+        DriftKpi {
+            label: "Removed from code",
+            value: counts.only_in_db_code,
+            note: "Replace database with code deletes these",
+            tone: "err",
+        },
+        DriftKpi {
+            label: "Written in console",
+            value: counts.only_in_db_dashboard,
+            note: "Export carries these to code",
+            tone: "info",
+        },
+        DriftKpi {
+            label: "Awaiting a bundle",
+            value: awaiting_bundle + counts.only_in_db_bundle,
+            note: "owned by a kit; nothing to do here",
+            tone: "muted",
+        },
+    ]
+}
+
+impl From<&DriftCounts> for ActionCounts {
+    fn from(counts: &DriftCounts) -> Self {
+        Self {
+            insert: counts.missing_in_db,
+            insert_entities: counts.entities_missing,
+            update: counts.changed + counts.default_changed,
+            delete: counts.only_in_db_retire,
+            delete_console: counts.only_in_db_console_retire,
+            kept: counts.only_in_db_kept,
+        }
     }
 }
 
@@ -141,18 +196,9 @@ impl SyncPlane for AccessControlPlane {
         from: DeclarationSource<'_>,
     ) -> AdminResult<PlaneDrift> {
         let in_db = usize::try_from(count_band_rules(pool).await?).unwrap_or(0);
-        // Why: an unreadable file is the card's headline, not a 500 — the
-        // operator came to see the state of the declaration, and "it does
-        // not parse" is that state.
         let declared = match declared_from(from).await {
             Ok(d) => d,
-            Err(e) => {
-                return Ok(PlaneDrift {
-                    in_db,
-                    unreadable: Some(e.to_string()),
-                    ..PlaneDrift::default()
-                });
-            },
+            Err(e) => return Ok(unreadable_declaration(in_db, &e)),
         };
         let declared_hash = declared.declared_hash();
         if from.is_disk() {
@@ -170,46 +216,8 @@ impl SyncPlane for AccessControlPlane {
             declared_hash,
             declared_count: declared.rule_count(),
             in_db,
-            kpis: vec![
-                DriftKpi {
-                    label: "Added in code",
-                    value: counts.missing_in_db + counts.entities_missing,
-                    note: "Apply all new adds these",
-                    tone: "ok",
-                },
-                DriftKpi {
-                    label: "Changed in code",
-                    value: counts.changed + counts.default_changed,
-                    note: "Replace database with code corrects these",
-                    tone: "warn",
-                },
-                DriftKpi {
-                    label: "Removed from code",
-                    value: counts.only_in_db_code,
-                    note: "Replace database with code deletes these",
-                    tone: "err",
-                },
-                DriftKpi {
-                    label: "Written in console",
-                    value: counts.only_in_db_dashboard,
-                    note: "Export carries these to code",
-                    tone: "info",
-                },
-                DriftKpi {
-                    label: "Awaiting a bundle",
-                    value: declared.awaiting.len() + counts.only_in_db_bundle,
-                    note: "owned by a kit; nothing to do here",
-                    tone: "muted",
-                },
-            ],
-            actions: ActionCounts {
-                insert: counts.missing_in_db,
-                insert_entities: counts.entities_missing,
-                update: counts.changed + counts.default_changed,
-                delete: counts.only_in_db_retire,
-                delete_console: counts.only_in_db_console_retire,
-                kept: counts.only_in_db_kept,
-            },
+            kpis: drift_kpis(&counts, declared.awaiting.len()),
+            actions: ActionCounts::from(&counts),
             rows,
             is_clean,
             unreadable: None,
@@ -226,10 +234,6 @@ impl SyncPlane for AccessControlPlane {
             .await
     }
 
-    // Why: a scoped apply is a participant syncing their own marketplaces.
-    // It records to `sync_state` like any apply — the actor and mode are the
-    // provenance — but the hash it records is the whole file's, since the
-    // projection it leaves behind is still measured against the whole file.
     async fn apply_scoped(
         &self,
         pool: &PgPool,
@@ -256,20 +260,16 @@ impl SyncPlane for AccessControlPlane {
         Ok(outcome)
     }
 
-    // Why: renders the database as the file for copy-out only; the instance
-    // never writes into `services/`. Committing the result is the operator's
-    // act.
     async fn export(&self, pool: &PgPool) -> AdminResult<Option<Export>> {
         let rules = list_band_rules(pool).await?;
         let entities = list_entity_defaults(pool).await?;
-        // Why: the owners come from the file, not the database — an
-        // unreadable file exports without them rather than not at all.
-        let owners = declared_now().await.map(|d| d.owners).unwrap_or_default();
+        let owners_or_none_when_unreadable =
+            declared_now().await.map(|d| d.owners).unwrap_or_default();
         Ok(Some(Export {
             filename: "rules.yaml",
             content_type: "application/yaml; charset=utf-8",
             row_count: rules.len(),
-            body: render_export(&rules, &entities, &owners),
+            body: render_export(&rules, &entities, &owners_or_none_when_unreadable),
         }))
     }
 }

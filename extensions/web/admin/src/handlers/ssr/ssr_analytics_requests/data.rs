@@ -63,9 +63,6 @@ pub(super) async fn resolve_range(
 pub(super) struct RequestsData {
     pub rows: Vec<RequestRow>,
     pub total_count: i64,
-    // Why: an empty list and a list that could not be read look identical on
-    // the page, and the second one spent a day being read as the first. The
-    // view needs to be able to tell them apart.
     pub rows_unavailable: bool,
     pub kpis: RequestKpis,
     pub facets: Vec<FacetValue>,
@@ -84,9 +81,6 @@ pub(super) struct RequestsPageQuery<'a> {
     pub offset: i64,
 }
 
-// Why: the KPI strip and the tab bar's count render on every tab, so the paged
-// list, the tiles and the filter facets always run; the charts and the rollups
-// only run for the tab that shows them.
 pub(super) async fn load_requests_data(
     pool: &Arc<PgPool>,
     query: RequestsPageQuery<'_>,
@@ -104,7 +98,17 @@ pub(super) async fn load_requests_data(
         limit: page_size,
         offset,
     };
+    let mut data = load_every_tab(pool, filter, range, page).await;
+    load_active_tab_only(pool, tab, filter, range, &mut data).await;
+    data
+}
 
+async fn load_every_tab(
+    pool: &PgPool,
+    filter: &RequestFilter,
+    range: TimeRange,
+    page: RequestPage,
+) -> RequestsData {
     let (paged, stats_res, kpis_res, facets_res) = tokio::join!(
         list_requests_paged(pool, filter, range, page),
         get_request_stats(pool, range, &filter.scope),
@@ -126,7 +130,7 @@ pub(super) async fn load_requests_data(
         RequestKpis::default()
     });
 
-    let mut data = RequestsData {
+    RequestsData {
         rows,
         total_count,
         rows_unavailable,
@@ -134,8 +138,16 @@ pub(super) async fn load_requests_data(
         facets: unwrap_or_empty(facets_res, "list_request_facets"),
         stats,
         ..RequestsData::default()
-    };
+    }
+}
 
+async fn load_active_tab_only(
+    pool: &PgPool,
+    tab: RequestsTab,
+    filter: &RequestFilter,
+    range: TimeRange,
+    data: &mut RequestsData,
+) {
     match tab {
         RequestsTab::Overview => {
             let (hist_res, series_res) = tokio::join!(
@@ -165,8 +177,6 @@ pub(super) async fn load_requests_data(
         },
         RequestsTab::Log => {},
     }
-
-    data
 }
 
 fn unwrap_or_empty<T>(res: Result<Vec<T>, sqlx::Error>, what: &'static str) -> Vec<T> {

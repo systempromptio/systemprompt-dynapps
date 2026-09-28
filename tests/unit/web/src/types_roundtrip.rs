@@ -4,13 +4,6 @@
 //! Claude Code, template JSON), so their string encodings are the contract —
 //! a renamed variant is a silently dropped audit row, not a compile error.
 
-#![allow(
-    clippy::expect_used,
-    clippy::panic,
-    clippy::needless_pass_by_value,
-    clippy::redundant_clone,
-    reason = "test code: panics are the assertion mechanism and clones keep fixtures readable"
-)]
 
 use systemprompt_web_admin::activity::{ActivityAction, ActivityCategory, ActivityEntity};
 use systemprompt_web_admin::types::access_control::{AccessControlRule, AccessDecision};

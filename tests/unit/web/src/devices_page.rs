@@ -17,7 +17,7 @@ fn template() -> String {
 fn every_revoke_control_sits_inside_the_manage_guard() {
     let source = template();
     let mut depth: i32 = 0;
-    let mut guarded = 0_usize;
+    let mut guarded = 0usize;
     for line in source.lines() {
         if line.contains("{{#if can_manage}}")
             || line.contains("{{#if ../can_manage}}")

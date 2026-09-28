@@ -7,6 +7,8 @@
 //! knows (core's MCP client sends no `x-trace-id`, so a proxied call's trace
 //! id exists in `mcp_tool_executions` alone) and may have no session at all;
 //! [`execution_trace_key`] states which of its ids stands in as the key.
+//! A gateway request with no session follows the same rule: its trace id
+//! stands in, and the request span source matches on it.
 
 use sqlx::PgPool;
 use systemprompt::identifiers::{McpExecutionId, SessionId, TraceId, UserId};
@@ -15,11 +17,17 @@ pub async fn resolve_trace_session(
     pool: &PgPool,
     id: &str,
 ) -> Result<Option<SessionId>, sqlx::Error> {
-    // Why: a gateway request that arrived with no session (an internal
-    // `ai_service` call, or a client that sent no `x-session-id`) still has
-    // a trace; its trace id stands in as the key, the same rule as
-    // [`execution_trace_key`], and the request span source matches on it.
-    if let Some(row) = sqlx::query!(
+    if let Some(key) = find_request_key(pool, id).await? {
+        return Ok(Some(key));
+    }
+    if let Some(key) = find_hook_key(pool, id).await? {
+        return Ok(Some(key));
+    }
+    find_execution_key(pool, id).await
+}
+
+async fn find_request_key(pool: &PgPool, id: &str) -> Result<Option<SessionId>, sqlx::Error> {
+    let by_trace = sqlx::query!(
         r#"SELECT COALESCE(session_id, trace_id) AS "session_id!: SessionId"
            FROM ai_requests
            WHERE trace_id = $1
@@ -28,15 +36,11 @@ pub async fn resolve_trace_session(
         id,
     )
     .fetch_optional(pool)
-    .await?
-    {
+    .await?;
+    if let Some(row) = by_trace {
         return Ok(Some(row.session_id));
     }
-
-    // Why: a pasted Claude Code session uuid is the `client_session_id` of
-    // the gateway rows; it lands on the bridge session those rows and the
-    // hook rows are folded into on the list.
-    if let Some(row) = sqlx::query!(
+    let by_client_session = sqlx::query!(
         r#"SELECT session_id AS "session_id!: SessionId"
            FROM ai_requests
            WHERE client_session_id = $1 AND session_id IS NOT NULL
@@ -45,12 +49,12 @@ pub async fn resolve_trace_session(
         id,
     )
     .fetch_optional(pool)
-    .await?
-    {
-        return Ok(Some(row.session_id));
-    }
+    .await?;
+    Ok(by_client_session.map(|row| row.session_id))
+}
 
-    if let Some(row) = sqlx::query!(
+async fn find_hook_key(pool: &PgPool, id: &str) -> Result<Option<SessionId>, sqlx::Error> {
+    let by_governance = sqlx::query!(
         r#"SELECT session_id AS "session_id!: SessionId"
            FROM governance_decisions
            WHERE session_id = $1
@@ -58,12 +62,11 @@ pub async fn resolve_trace_session(
         id,
     )
     .fetch_optional(pool)
-    .await?
-    {
+    .await?;
+    if let Some(row) = by_governance {
         return Ok(Some(row.session_id));
     }
-
-    if let Some(row) = sqlx::query!(
+    let by_request = sqlx::query!(
         r#"SELECT session_id AS "session_id!: SessionId"
            FROM ai_requests
            WHERE session_id = $1
@@ -71,14 +74,11 @@ pub async fn resolve_trace_session(
         id,
     )
     .fetch_optional(pool)
-    .await?
-    {
+    .await?;
+    if let Some(row) = by_request {
         return Ok(Some(row.session_id));
     }
-
-    // Why: hook-only traces exist solely in plugin_usage_events; without this
-    // arm the trace list links them but the detail page answers 404.
-    if let Some(row) = sqlx::query!(
+    let by_hook_event = sqlx::query!(
         r#"SELECT session_id AS "session_id!: SessionId"
            FROM plugin_usage_events
            WHERE session_id = $1
@@ -86,17 +86,10 @@ pub async fn resolve_trace_session(
         id,
     )
     .fetch_optional(pool)
-    .await?
-    {
-        return Ok(Some(row.session_id));
-    }
-
-    find_execution_key(pool, id).await
+    .await?;
+    Ok(by_hook_event.map(|row| row.session_id))
 }
 
-// Why: the person a trace belongs to, read from whichever span source holds
-// the key — the request rows first, then the hook and decision rows a
-// hook-only trace lives in. The scoped detail page asks this before rendering.
 pub async fn find_trace_owner(
     pool: &PgPool,
     key: &SessionId,
@@ -120,9 +113,6 @@ pub async fn find_trace_owner(
     .await
 }
 
-// Why: an in-process or proxied tool call lands only in
-// `mcp_tool_executions`; its `trace_id` and `mcp_execution_id` are both
-// linked from the MCP server page, so both must resolve here.
 async fn find_execution_key(pool: &PgPool, id: &str) -> Result<Option<SessionId>, sqlx::Error> {
     let row = sqlx::query!(
         r#"SELECT
@@ -140,9 +130,6 @@ async fn find_execution_key(pool: &PgPool, id: &str) -> Result<Option<SessionId>
     Ok(row.map(|r| execution_trace_key(r.session_id, r.trace_id.as_ref(), &r.mcp_execution_id)))
 }
 
-// Why: the key an execution's spans are queried by — its session when it has
-// one, else its trace id, else the execution id itself. The ledger span
-// source matches all three, so whichever stands in still finds the execution.
 pub fn execution_trace_key(
     session_id: Option<SessionId>,
     trace_id: Option<&TraceId>,

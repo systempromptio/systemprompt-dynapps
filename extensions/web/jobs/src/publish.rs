@@ -8,6 +8,7 @@
 use std::sync::Arc;
 
 use systemprompt::config::AppPaths;
+use systemprompt::content::ContentRepository;
 use systemprompt::database::DbPool;
 use systemprompt::generator::{generate_feed, organize_dist_assets, prerender_pages};
 use systemprompt::traits::{Job, JobContext, JobResult};
@@ -109,13 +110,8 @@ impl PublishPipelineJob {
         db_pool: &DbPool,
         stats: &mut PipelineStats,
     ) {
-        let content_repo = match systemprompt::content::ContentRepository::new(db_pool) {
-            Ok(repo) => repo,
-            Err(e) => {
-                tracing::error!(error = %e, "Content repository init failed");
-                stats.record_failure();
-                return;
-            },
+        let Some(content_repo) = open_content_repo(db_pool, stats) else {
+            return;
         };
         match prerender_pages(Arc::clone(db_pool), content_repo, paths).await {
             Ok(results) => {
@@ -156,28 +152,11 @@ impl PublishPipelineJob {
     }
 
     async fn run_feed(&self, paths: &AppPaths, db_pool: &DbPool, stats: &mut PipelineStats) {
-        let content_repo = match systemprompt::content::ContentRepository::new(db_pool) {
-            Ok(repo) => repo,
-            Err(e) => {
-                tracing::error!(error = %e, "Content repository init failed");
-                stats.record_failure();
-                return;
-            },
+        let Some(content_repo) = open_content_repo(db_pool, stats) else {
+            return;
         };
-        match generate_feed(content_repo, paths).await {
-            Ok(()) => {
-                tracing::debug!("RSS feed generation completed");
-                stats.record_success();
-            },
-            Err(e) if e.to_string().contains("No RSS feeds generated") => {
-                tracing::debug!("RSS feed generation skipped: no RssFeedProvider registered");
-                stats.record_success();
-            },
-            Err(e) => {
-                tracing::error!(error = %e, "RSS feed generation failed");
-                stats.record_failure();
-            },
-        }
+        let outcome = generate_feed(content_repo, paths).await;
+        record_feed_outcome(outcome, stats);
     }
 
     async fn run_robots_txt(&self, ctx: &JobContext, stats: &mut PipelineStats) {
@@ -286,6 +265,34 @@ impl PublishPipelineJob {
         Ok(JobResult::success()
             .with_stats(stats.succeeded, stats.failed)
             .with_duration(duration_ms))
+    }
+}
+
+fn open_content_repo(db_pool: &DbPool, stats: &mut PipelineStats) -> Option<ContentRepository> {
+    match ContentRepository::new(db_pool) {
+        Ok(repo) => Some(repo),
+        Err(e) => {
+            tracing::error!(error = %e, "Content repository init failed");
+            stats.record_failure();
+            None
+        },
+    }
+}
+
+fn record_feed_outcome<E: std::fmt::Display>(outcome: Result<(), E>, stats: &mut PipelineStats) {
+    match outcome {
+        Ok(()) => {
+            tracing::debug!("RSS feed generation completed");
+            stats.record_success();
+        },
+        Err(e) if e.to_string().contains("No RSS feeds generated") => {
+            tracing::debug!("RSS feed generation skipped: no RssFeedProvider registered");
+            stats.record_success();
+        },
+        Err(e) => {
+            tracing::error!(error = %e, "RSS feed generation failed");
+            stats.record_failure();
+        },
     }
 }
 

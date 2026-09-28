@@ -1,5 +1,10 @@
 //! Hosted MCP authorization, with encrypted user-bound grants and locked
 //! refresh.
+//!
+//! `verified_token` resolves a server-only Authorization header. A probe that
+//! fails at a stage is a result, not an error — the Connectors page shows
+//! which stage — so `probe_connection` only propagates a failure raised before
+//! the first stage (no grant, not configured).
 
 mod account_state;
 pub mod config;
@@ -8,9 +13,11 @@ pub mod generic;
 mod generic_discovery;
 pub mod payload;
 mod report;
+mod resolve;
 mod response;
 mod salesforce;
 pub mod site;
+pub mod token_plan;
 mod tokens;
 mod transport;
 mod userinfo;
@@ -18,21 +25,18 @@ pub mod verify;
 
 use crate::error::{AdminError, AdminResult};
 use crate::repositories::secrets::secret_crypto;
-use crate::repositories::users::connector_credentials::{self as repo, EncryptedGrant};
-use account_state::{
-    apply_verification, open_or_flag, record_grant_failure, require_connection, token_state,
-};
-use chrono::Utc;
+use crate::repositories::users::connector_credentials::EncryptedGrant;
 pub use config::Provider;
 pub use generic::Consent;
 pub use report::{VerificationReport, VerificationStep};
+use resolve::resolve_token;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 pub use transport::{authorize, exchange, exchange_with_client, refresh_with_client};
 
-// Why: Debug output must never reveal credentials; serialization is only for
-// the encrypted credential store, not HTTP responses.
+/// Debug output never reveals credentials; serialization is only for the
+/// encrypted credential store, never an HTTP response.
 #[derive(Deserialize, Serialize)]
 pub struct Grant {
     pub user: String,
@@ -94,8 +98,7 @@ pub fn open(row: &EncryptedGrant, user: &UserId, provider: &Provider) -> AdminRe
         .map_err(AdminError::internal)?;
     let bytes = secret_crypto::decrypt(&key, &nonce, &row.ciphertext)?;
     let grant: Grant = serde_json::from_slice(&bytes).map_err(AdminError::internal)?;
-    // Why: Bind the encrypted payload as well as the database key to its principal.
-    if grant.user != user.as_str() || grant.provider.slug() != provider.slug() {
+    if !grant_bound_to(&grant, user, provider) {
         return Err(AdminError::Forbidden(
             "Connector credential owner mismatch".into(),
         ));
@@ -104,9 +107,10 @@ pub fn open(row: &EncryptedGrant, user: &UserId, provider: &Provider) -> AdminRe
     Ok(grant)
 }
 
-// Why: Resolve a server-only Authorization header, refreshing under the account
-// lock. One account-locked transaction keeps refresh, generation checks and
-// error-state commits together.
+fn grant_bound_to(grant: &Grant, user: &UserId, provider: &Provider) -> bool {
+    grant.user == user.as_str() && grant.provider.slug() == provider.slug()
+}
+
 pub async fn verified_token(
     pool: &PgPool,
     user: &UserId,
@@ -117,9 +121,6 @@ pub async fn verified_token(
     resolve_token(pool, user, provider, probe, &mut report).await
 }
 
-// Why: a probe that fails at a stage is a result, not an error — the page
-// shows which stage. Only a failure before the first stage (no grant, not
-// configured) propagates as an error.
 pub async fn probe_connection(
     pool: &PgPool,
     user: &UserId,
@@ -132,100 +133,6 @@ pub async fn probe_connection(
     }
 }
 
-async fn resolve_token(
-    pool: &PgPool,
-    user: &UserId,
-    provider: Provider,
-    probe: bool,
-    report: &mut VerificationReport,
-) -> AdminResult<String> {
-    use crate::repositories::users::connector_accounts as accounts;
-    if !provider.configured() {
-        return Err(AdminError::Unavailable("Connector not configured".into()));
-    }
-    let mut tx = pool.begin().await?;
-    let mut account = accounts::get_locked_account(&mut tx, user, provider.slug()).await?;
-    let row = repo::lock(&mut tx, user, provider.slug()).await?;
-    let preauthorize = row.is_none() && provider.is_salesforce() && account.generation == 0;
-    require_connection(&account.status, preauthorize)?;
-    if !probe && account_state::in_outage_hold(&account, row.as_ref().map(|r| r.updated_at)) {
-        return Err(AdminError::Unavailable(
-            "Connector provider recently unavailable; retry shortly".into(),
-        ));
-    }
-    let row = row.map(|r| r.grant);
-    // Why: a saved OAuth grant is not usable until the MCP verification has
-    // succeeded.
-    if !probe && !preauthorize && account.verified_at.is_none() {
-        return Err(AdminError::Forbidden(
-            "Test the connection on the Connectors page before using this MCP".into(),
-        ));
-    }
-    let mut grant = match row {
-        Some(row) => match open_or_flag(&mut tx, user, &provider, &row, &mut account).await {
-            Ok(grant) => grant,
-            Err(error) => {
-                tx.commit().await?;
-                return Err(error);
-            },
-        },
-        None if preauthorize => salesforce::mint(pool, user, &provider, account.generation).await?,
-        None => {
-            return Err(AdminError::NotFound(
-                "Connect your provider account in Systemprompt".into(),
-            ));
-        },
-    };
-    let remint = grant.auth_method == "jwt_bearer" && grant.expires_at <= Utc::now().timestamp();
-    if remint {
-        grant = salesforce::mint(pool, user, &provider, account.generation).await?;
-    }
-    let refresh = grant.auth_method == "oauth" && grant.expires_at <= Utc::now().timestamp() + 120;
-    let verify = probe || preauthorize || remint;
-    let result = refresh_and_verify(&mut grant, refresh, verify, remint, report).await;
-    if let Err(error) = result {
-        record_grant_failure(&mut tx, user, &mut account, &grant, &error).await?;
-        tx.commit().await?;
-        return Err(error);
-    }
-    if refresh || probe || preauthorize || remint {
-        repo::store(&mut tx, user, provider.slug(), &seal(&grant)?).await?;
-    }
-    if probe || preauthorize || remint {
-        apply_verification(&mut account, &grant);
-        accounts::update_account(&mut tx, user, &account).await?;
-    }
-    tx.commit().await?;
-    Ok(format!(
-        "{} {}",
-        grant.authorization_scheme, grant.access_token
-    ))
-}
-
-async fn refresh_and_verify(
-    grant: &mut Grant,
-    refresh: bool,
-    verify: bool,
-    remint: bool,
-    report: &mut VerificationReport,
-) -> AdminResult<()> {
-    let started = std::time::Instant::now();
-    let outcome = if refresh {
-        transport::refresh(grant)
-            .await
-            .map(|()| "Access token refreshed".to_owned())
-    } else {
-        Ok(token_state(grant, remint))
-    };
-    report.record("token", started, &outcome);
-    outcome?;
-    if verify {
-        verify::verify_reporting(grant, &transport::client()?, report).await?;
-    }
-    Ok(())
-}
-
-// Why: Token-refresh transport seam used by the external integration tests.
 #[doc(hidden)]
 pub async fn refresh_at(grant: &mut Grant, endpoint: &str) -> AdminResult<()> {
     let previous = std::mem::replace(&mut grant.token_endpoint, endpoint.to_owned());

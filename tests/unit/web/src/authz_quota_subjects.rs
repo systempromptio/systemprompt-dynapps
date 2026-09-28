@@ -2,13 +2,6 @@
 //! installation-wide `organization`, the re-exposed `role`, and the ordering
 //! that puts a person's attribution key first.
 
-#![allow(
-    clippy::expect_used,
-    clippy::panic,
-    clippy::unwrap_used,
-    clippy::separated_literal_suffix,
-    reason = "test code: panics are the assertion mechanism"
-)]
 
 use systemprompt_security::authz::{ROLE_PRECEDENCE, RuleType};
 use systemprompt_web_admin::authz::group::group_dimension;

@@ -91,7 +91,7 @@ fn registry_parses_and_selects_the_endpoint_by_environment() {
 #[test]
 fn server_kind_defaults_to_sobject_and_selects_headless_when_declared() {
     let registry = SalesforceOrgRegistry::parse(
-        r#"
+        r"
 orgs:
   salesforce:
     label: CRM
@@ -102,7 +102,7 @@ orgs:
     my_domain: https://example.my.salesforce.com
     environment: production
     server_kind: headless_360
-"#,
+",
     )
     .expect("registry parses");
     let crm = registry

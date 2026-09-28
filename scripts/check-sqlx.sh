@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# Every sqlx query must use the compile-time verified macros (query!,
+# query_as!, query_scalar!). A runtime `sqlx::query(...)` is unchecked against
+# the schema and breaks only in production. Paths that genuinely need dynamic
+# SQL go in the allowlist below, each with its reason.
 set -euo pipefail
 
 cd "$(git rev-parse --show-toplevel)"

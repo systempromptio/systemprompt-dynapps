@@ -1,8 +1,3 @@
-#![allow(
-    clippy::expect_used,
-    clippy::panic,
-    reason = "test code: panics are the assertion mechanism"
-)]
 //! The gateway entity catalog: which route ids this deployment vouches for,
 //! and what happens to a grant naming one it does not.
 //!

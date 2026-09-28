@@ -138,7 +138,7 @@ module_name_repetitions = "allow"
 missing_errors_doc = "allow"
 missing_panics_doc = "allow"
 derive_partial_eq_without_eq = "allow"
-cognitive_complexity = "allow"
+cognitive_complexity = "deny"
 unwrap_or_default = "allow"
 redundant_pub_crate = "allow"
 

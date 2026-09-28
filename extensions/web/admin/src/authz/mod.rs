@@ -35,6 +35,7 @@ pub mod organization;
 pub mod primary;
 pub mod project;
 pub mod role;
+mod rule_type;
 pub mod salesforce;
 
 use std::collections::HashMap;
@@ -96,15 +97,9 @@ struct Registry {
 
 static REGISTRIES: OnceLock<Mutex<HashMap<String, &'static Registry>>> = OnceLock::new();
 
-// Why: keyed per database, not once per process. The providers capture the
-// pool they are built with, so a single OnceLock would bind every later
-// caller to whichever pool arrived first — wrong in any process that talks
-// to more than one database, which is exactly what the integration suite's
-// per-test throwaway databases do. One registry per distinct database; the
-// leak is bounded by the number of distinct databases a process ever opens
-// (one in production).
-// Why: shared with the marketplace-parent cache in the authz webhook so the
-// two per-database keying schemes cannot drift apart.
+// Why: providers capture the pool they are built with, so the registry is
+// keyed per database; a process that opens several (the integration suite's
+// throwaway databases) would otherwise bind every caller to the first pool.
 pub(crate) fn database_key(pool: &PgPool) -> String {
     let options = pool.connect_options();
     format!(
@@ -140,9 +135,6 @@ pub fn dimensions(pool: &PgPool) -> &'static [SubjectDimension] {
     &registry(pool).dimensions
 }
 
-// Why: The subject's values for every registered dimension. The one async step
-// in the authorization path; call it once per request and reuse the result
-// across entities.
 pub async fn subject_attributes_for(
     pool: &PgPool,
     user_id: &UserId,

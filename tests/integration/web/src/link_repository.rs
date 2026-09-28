@@ -18,8 +18,8 @@ async fn create_link_returns_the_persisted_row() {
     let created = repo
         .create_link(
             &link_params("abc123")
-                .with_link_text(Some("Read the guide".to_string()))
-                .with_campaign_name(Some("launch".to_string())),
+                .with_link_text(Some("Read the guide".to_owned()))
+                .with_campaign_name(Some("launch".to_owned())),
         )
         .await
         .expect("create link");
@@ -97,8 +97,8 @@ async fn list_links_by_campaign_returns_only_that_campaign() {
         return;
     };
     let repo = LinkRepository::new(Arc::clone(&db.pool));
-    let campaign = CampaignId::new("spring-2026".to_string());
-    let other = CampaignId::new("autumn-2026".to_string());
+    let campaign = CampaignId::new("spring-2026".to_owned());
+    let other = CampaignId::new("autumn-2026".to_owned());
 
     for code in ["camp01", "camp02"] {
         repo.create_link(&link_params(code).with_campaign_id(Some(campaign.clone())))
@@ -119,7 +119,7 @@ async fn list_links_by_campaign_returns_only_that_campaign() {
     assert_eq!(codes, vec!["camp01", "camp02"]);
 
     let empty = repo
-        .list_links_by_campaign(&CampaignId::new("never-ran".to_string()))
+        .list_links_by_campaign(&CampaignId::new("never-ran".to_owned()))
         .await
         .expect("list links for a campaign with none");
     assert!(empty.is_empty(), "a campaign with no links lists empty");

@@ -17,7 +17,7 @@ use crate::fixtures::content_params;
 use crate::tempdb::TempDb;
 
 fn blog_source() -> SourceId {
-    SourceId::new("blog".to_string())
+    SourceId::new("blog".to_owned())
 }
 
 async fn seed_article(db: &TempDb, slug: &str) -> ContentId {
@@ -90,7 +90,7 @@ async fn upsert_metrics_inserts_the_first_rollup() {
     let row = metrics_row(&db, &content_id)
         .await
         .expect("the rollup row exists");
-    assert_eq!(row, (12, 5, "up".to_string()));
+    assert_eq!(row, (12, 5, "up".to_owned()));
 
     db.cleanup().await;
 }
@@ -130,7 +130,7 @@ async fn upsert_metrics_updates_in_place_on_the_second_run() {
         .expect("the rollup row exists");
     assert_eq!(
         row,
-        (30, 2, "down".to_string()),
+        (30, 2, "down".to_owned()),
         "the second run's values win"
     );
 

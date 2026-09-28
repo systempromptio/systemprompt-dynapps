@@ -93,7 +93,11 @@ fn declared() -> (ServicesConfig, DeclaredSet) {
 fn rules_yaml_projects_against_the_tree_it_ships_with() {
     let (services, set) = declared();
     assert!(set.rule_count() > 0, "the file declares rules");
-    let marketplaces: BTreeSet<&str> = services.marketplaces.keys().map(|id| id.as_str()).collect();
+    let marketplaces: BTreeSet<&str> = services
+        .marketplaces
+        .keys()
+        .map(systemprompt_web_shared::MarketplaceId::as_str)
+        .collect();
     for (entity_type, entity_id) in set.entities.keys() {
         if entity_type == "marketplace" {
             assert!(

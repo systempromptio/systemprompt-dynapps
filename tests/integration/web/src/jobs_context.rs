@@ -17,7 +17,7 @@ use systemprompt::database::Database;
 use systemprompt::extension::{AssetDefinition, AssetType, ExtensionRegistry};
 use systemprompt::identifiers::{Actor, UserId};
 use systemprompt::models::profile::{
-    ContentNegotiationConfig, PathsConfig, RateLimitsConfig, SecurityHeadersConfig,
+    ContentNegotiationConfig, PathsConfig, RateLimitsConfig, RetentionConfig, SecurityHeadersConfig,
 };
 use systemprompt::models::{Config, PathResolution};
 use systemprompt::traits::{Job, JobContext};
@@ -39,7 +39,13 @@ const PIPELINE_STAGES: u64 = 11;
 // A 32-byte key, hex-encoded, so `load_master_key` accepts it. Under nextest
 // each test is its own process and sets this before spawning anything, so
 // there is no concurrent reader of the environment.
+#[expect(
+    unsafe_code,
+    reason = "set_var is unsafe in edition 2024; see the SAFETY note"
+)]
 fn set_master_key() {
+    // SAFETY: callers are current-thread `#[tokio::test]`s and nextest gives
+    // each test its own process, so nothing else reads the environment here.
     unsafe {
         std::env::set_var(
             "ENCRYPTION_MASTER_KEY",
@@ -80,7 +86,7 @@ pub(crate) fn install_config() {
     if Config::is_initialized() {
         return;
     }
-    let _ = Config::install(Config {
+    let installed = Config::install(Config {
         instance_id: "jobs-context-tests".to_owned(),
         metrics_port: None,
         max_concurrent_streams: 16,
@@ -116,7 +122,7 @@ pub(crate) fn install_config() {
         signing_key_path: std::path::PathBuf::from("signing_key.pem"),
         use_https: true,
         rate_limits: RateLimitsConfig::default(),
-        retention: Default::default(),
+        retention: RetentionConfig::default(),
         cors_allowed_origins: vec![],
         trusted_proxies: vec![],
         is_cloud: false,
@@ -127,6 +133,10 @@ pub(crate) fn install_config() {
         system_admin_username: "admin".to_owned(),
         system_admin_email: None,
     });
+    assert!(
+        installed.is_ok() || Config::is_initialized(),
+        "a Config is installed, by this call or a racing test"
+    );
 }
 
 // The jobs write into `paths.web().dist()` and read `paths.system()`, so the

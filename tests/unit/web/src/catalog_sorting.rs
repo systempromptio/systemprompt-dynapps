@@ -1,8 +1,3 @@
-#![allow(
-    clippy::expect_used,
-    clippy::panic,
-    reason = "test code: panics are the assertion mechanism"
-)]
 //! The pure half of the platform list pages: sort-link construction, the
 //! server-side text filter, and the MCP status a declaration plus a heartbeat
 //! resolve to.
@@ -30,7 +25,7 @@ fn columns() -> Vec<SortColumn> {
 }
 
 fn beat_secs_ago(seconds: i64) -> Option<chrono::DateTime<chrono::Utc>> {
-    Some(chrono::Utc::now() - chrono::Duration::seconds(seconds))
+    chrono::Utc::now().checked_sub_signed(chrono::Duration::seconds(seconds))
 }
 
 fn recent() -> Option<chrono::DateTime<chrono::Utc>> {

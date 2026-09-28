@@ -8,13 +8,13 @@
 
 use systemprompt::database::DbPool;
 
-pub struct TempDb {
+pub(crate) struct TempDb {
     inner: astound_test_common::TempDb,
     pub pool: DbPool,
 }
 
 impl TempDb {
-    pub async fn create() -> Option<Self> {
+    pub(crate) async fn create() -> Option<Self> {
         let inner = astound_test_common::TempDb::create_empty().await?;
         let pg = &*inner.pool;
 
@@ -52,13 +52,13 @@ impl TempDb {
         Some(Self { inner, pool })
     }
 
-    pub async fn cleanup(self) {
+    pub(crate) async fn cleanup(self) {
         self.inner.cleanup().await;
     }
 
     // Insert a user row with the given id/email. Used to seed (or omit) the
     // reserved anonymous principal.
-    pub async fn insert_user(&self, id: &str, email: &str) {
+    pub(crate) async fn insert_user(&self, id: &str, email: &str) {
         sqlx::query("INSERT INTO users (id, email) VALUES ($1, $2)")
             .bind(id)
             .bind(email)
@@ -69,7 +69,7 @@ impl TempDb {
 
     // All `mcp_access` rows recorded for a given `entity_name` (server or
     // tool), returned as (user_id, action, entity_type, description).
-    pub async fn mcp_rows(
+    pub(crate) async fn mcp_rows(
         &self,
         entity_name: &str,
     ) -> Vec<(String, String, Option<String>, String)> {
@@ -86,7 +86,7 @@ impl TempDb {
 
     // Metadata is part of the durable audit contract. Keep this separate from
     // `mcp_rows` so its callers only read the columns their assertions need.
-    pub async fn mcp_metadata(&self, entity_name: &str) -> Vec<serde_json::Value> {
+    pub(crate) async fn mcp_metadata(&self, entity_name: &str) -> Vec<serde_json::Value> {
         sqlx::query_scalar::<_, serde_json::Value>(
             r"SELECT metadata
               FROM user_activity

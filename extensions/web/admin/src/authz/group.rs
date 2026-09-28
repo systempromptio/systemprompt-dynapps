@@ -10,8 +10,9 @@ use systemprompt_security::authz::{
 use systemprompt_web_shared::GroupId;
 
 use crate::authz::primary::lead_with_primary;
+use crate::authz::rule_type::{ExtensionSlug, extension_rule_type};
 
-const GROUP_SLUG: &str = "group";
+const GROUP_SLUG: ExtensionSlug = ExtensionSlug::new("group");
 
 // Why: below core's `ROLE` (200) so a group rule out-ranks the role band that
 // grants a marketplace to every user, and above `project` (140) so a project
@@ -20,8 +21,7 @@ const GROUP_PRECEDENCE: u16 = 150;
 
 #[must_use]
 pub fn group_rule_type() -> RuleType {
-    RuleType::extension(GROUP_SLUG)
-        .unwrap_or_else(|e| unreachable!("`{GROUP_SLUG}` is a well-formed slug: {e}"))
+    extension_rule_type(GROUP_SLUG)
 }
 
 #[must_use]

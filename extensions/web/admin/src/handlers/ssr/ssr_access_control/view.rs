@@ -4,14 +4,10 @@
 //! heading per kind, its bands as chips, its why in full, and whether code
 //! and database agree about it. The audience grid — every role, group and
 //! project against every entity, each cell the resolver's own answer — and
-//! the person search are their own tabs. `can_write` is the MANAGE tier;
-//! a project manager reads every tab and changes nothing.
+//! the person search are their own tabs.
 
 use serde::Serialize;
 
-use super::person::PersonCheckView;
-use crate::handlers::ssr::types::{BreadcrumbView, TabLinkView};
-use crate::repositories::access_control::drift::DriftCounts;
 
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct AcStatsView {
@@ -35,7 +31,6 @@ pub(crate) struct AcOptionView {
     pub selected: bool,
 }
 
-// Why: One band's subjects on one entity, e.g. `group: india-devs, uk`.
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct BandChipsView {
     pub band: String,
@@ -43,7 +38,6 @@ pub(crate) struct BandChipsView {
     pub values: Vec<String>,
 }
 
-// Why: One rule row, for the expanded detail under an entity.
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct AcRuleView {
     pub band: String,
@@ -63,9 +57,6 @@ pub(crate) struct AcEntityView {
     pub entity_type: String,
     pub entity_type_label: &'static str,
     pub entity_id: String,
-    // Why: what the row is called — a route's declared name, a plugin's
-    // title — with the id demoted to a subtitle. `entity_sub` is the one
-    // line of context a generated id cannot give (pattern → provider).
     pub entity_label: String,
     pub entity_sub: Option<String>,
     pub labelled: bool,
@@ -85,8 +76,6 @@ pub(crate) struct AcEntityView {
     pub expiring_soon: bool,
 }
 
-// Why: one heading per entity kind, in a fixed order, so the table reads
-// as a catalogue rather than a ledger dump.
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct AcEntityGroupView {
     pub kind: String,
@@ -108,13 +97,6 @@ pub(crate) struct AcEntitiesView {
     pub filters_applied: bool,
     pub clear_url: &'static str,
     pub capped: bool,
-}
-
-#[derive(Debug, Clone, Serialize)]
-pub(crate) struct DriftBannerView {
-    pub counts: DriftCounts,
-    pub url: &'static str,
-    pub declared: usize,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -220,8 +202,6 @@ pub(crate) struct AcAudienceBucketView {
     pub items: Vec<AcAudienceBucketItemView>,
 }
 
-// Why: one shape for both directions of the inspector — a subject in focus
-// lists entities, an entity drill lists subjects — so the template is one.
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct AcAudienceFocusView {
     pub kind_label: &'static str,
@@ -247,24 +227,4 @@ pub(crate) struct AudienceGridView {
     pub legend: Vec<AcAudienceLegendView>,
     pub filters: AcAudienceFiltersView,
     pub focus: Option<AcAudienceFocusView>,
-}
-
-#[derive(Debug, Serialize)]
-pub(crate) struct AccessControlPageData {
-    pub page: &'static str,
-    pub title: &'static str,
-    pub can_write: bool,
-    pub stats: AcStatsView,
-    pub breadcrumbs: Vec<BreadcrumbView>,
-    pub tabs: Vec<TabLinkView>,
-    pub on_rules: bool,
-    pub on_audience: bool,
-    pub on_person: bool,
-    pub docs_url: &'static str,
-    pub sync_url: &'static str,
-    pub drift: Option<DriftBannerView>,
-    pub declared_unreadable: Option<String>,
-    pub entities: AcEntitiesView,
-    pub audience: AudienceGridView,
-    pub person: Option<PersonCheckView>,
 }

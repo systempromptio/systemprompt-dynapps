@@ -70,7 +70,7 @@ async fn get_by_id_is_none_for_an_unknown_id() {
     let repo = ContentRepository::new(Arc::clone(&db.pool));
 
     let missing = repo
-        .get_by_id(&ContentId::new("no-such-content".to_string()))
+        .get_by_id(&ContentId::new("no-such-content".to_owned()))
         .await
         .expect("query an absent id");
 
@@ -89,7 +89,7 @@ async fn get_by_source_and_slug_is_scoped_to_the_source() {
     };
     let repo = ContentRepository::new(Arc::clone(&db.pool));
     let mine = source_id();
-    let other = SourceId::new("other-source".to_string());
+    let other = SourceId::new("other-source".to_owned());
 
     let created = repo
         .create(&content_params("scoped", &mine))
@@ -130,11 +130,11 @@ async fn update_replaces_the_mutable_fields() {
 
     let params = UpdateContentParams::builder(UpdateContentSeed {
         id: created.id.clone(),
-        title: "Revised title".to_string(),
-        description: "Revised description".to_string(),
-        body: "Revised body".to_string(),
-        keywords: "gamma".to_string(),
-        version_hash: "hash-v2".to_string(),
+        title: "Revised title".to_owned(),
+        description: "Revised description".to_owned(),
+        body: "Revised body".to_owned(),
+        keywords: "gamma".to_owned(),
+        version_hash: "hash-v2".to_owned(),
     })
     .with_image("/img/revised.png")
     .build();
@@ -187,7 +187,7 @@ async fn get_slugs_by_source_returns_only_that_source() {
     };
     let repo = ContentRepository::new(Arc::clone(&db.pool));
     let mine = source_id();
-    let other = SourceId::new("other-source".to_string());
+    let other = SourceId::new("other-source".to_owned());
 
     for slug in ["one", "two"] {
         repo.create(&content_params(slug, &mine))
@@ -204,7 +204,7 @@ async fn get_slugs_by_source_returns_only_that_source() {
         .expect("list slugs by source");
     slugs.sort();
 
-    assert_eq!(slugs, vec!["one".to_string(), "two".to_string()]);
+    assert_eq!(slugs, vec!["one".to_owned(), "two".to_owned()]);
 
     db.cleanup().await;
 }
@@ -227,7 +227,7 @@ async fn delete_orphaned_slugs_drops_the_missing_and_keeps_the_found() {
         .expect("create the slug whose file was removed");
 
     let deleted = repo
-        .delete_orphaned_slugs(&source, &["survivor".to_string()])
+        .delete_orphaned_slugs(&source, &["survivor".to_owned()])
         .await
         .expect("prune orphaned slugs");
 
@@ -257,7 +257,7 @@ async fn delete_orphaned_slugs_leaves_other_sources_alone() {
     };
     let repo = ContentRepository::new(Arc::clone(&db.pool));
     let mine = source_id();
-    let other = SourceId::new("other-source".to_string());
+    let other = SourceId::new("other-source".to_owned());
 
     repo.create(&content_params("mine", &mine))
         .await
@@ -334,7 +334,7 @@ async fn list_all_pages_across_every_source() {
         ("from-docs", "documentation", 2),
         ("from-guides", "guides", 3),
     ] {
-        let mut params = content_params(slug, &SourceId::new(source.to_string()));
+        let mut params = content_params(slug, &SourceId::new(source.to_owned()));
         params.published_at = Utc
             .with_ymd_and_hms(2026, 1, day, 12, 0, 0)
             .single()

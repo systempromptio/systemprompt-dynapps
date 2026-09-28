@@ -74,10 +74,9 @@ fn call(command: &str) -> CallToolRequestParams {
 }
 
 fn typed_call(tool: &str, arguments: serde_json::Value) -> CallToolRequestParams {
-    let arguments = arguments
-        .as_object()
-        .expect("tool arguments are a JSON object")
-        .clone();
+    let serde_json::Value::Object(arguments) = arguments else {
+        panic!("tool arguments are a JSON object");
+    };
     CallToolRequestParams::new(tool.to_owned()).with_arguments(arguments)
 }
 

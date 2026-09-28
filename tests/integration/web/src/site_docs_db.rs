@@ -19,7 +19,7 @@ use crate::fixtures::content_params;
 use crate::tempdb::TempDb;
 
 fn documentation() -> SourceId {
-    SourceId::new("documentation".to_string())
+    SourceId::new("documentation".to_owned())
 }
 
 fn doc(slug: &str, kind: ContentKind) -> CreateContentParams {
@@ -287,7 +287,7 @@ async fn a_source_with_no_documentation_rows_yields_no_children() {
     };
 
     let children = DocsContentDataProvider::new()
-        .get_children_static(&db.pool, &SourceId::new("empty".to_string()), "index")
+        .get_children_static(&db.pool, &SourceId::new("empty".to_owned()), "index")
         .await;
 
     assert!(children.is_empty());

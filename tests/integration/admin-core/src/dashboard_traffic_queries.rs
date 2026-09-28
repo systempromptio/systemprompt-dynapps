@@ -15,7 +15,7 @@ use systemprompt_web_admin::repositories::dashboard::traffic::{
 use crate::fixtures::unique;
 use crate::tempdb::TempDb;
 
-pub struct SessionSpec<'a> {
+pub(crate) struct SessionSpec<'a> {
     pub country: &'a str,
     pub is_bot: bool,
     pub is_scanner: bool,
@@ -35,7 +35,7 @@ impl Default for SessionSpec<'_> {
     }
 }
 
-pub async fn insert_traffic_session(pool: &sqlx::PgPool, spec: &SessionSpec<'_>) {
+pub(crate) async fn insert_traffic_session(pool: &sqlx::PgPool, spec: &SessionSpec<'_>) {
     sqlx::query(
         "INSERT INTO user_sessions
              (session_id, started_at, country, is_bot, is_scanner, is_behavioral_bot,
@@ -53,7 +53,7 @@ pub async fn insert_traffic_session(pool: &sqlx::PgPool, spec: &SessionSpec<'_>)
     .expect("insert traffic session");
 }
 
-pub async fn insert_view(
+pub(crate) async fn insert_view(
     pool: &sqlx::PgPool,
     page_url: &str,
     session_id: &str,
@@ -73,7 +73,7 @@ pub async fn insert_view(
     .expect("insert engagement event");
 }
 
-pub async fn insert_view_yesterday(pool: &sqlx::PgPool, page_url: &str) {
+pub(crate) async fn insert_view_yesterday(pool: &sqlx::PgPool, page_url: &str) {
     sqlx::query(
         "INSERT INTO engagement_events
              (id, session_id, user_id, page_url, time_on_page_ms, created_at)
@@ -87,7 +87,7 @@ pub async fn insert_view_yesterday(pool: &sqlx::PgPool, page_url: &str) {
     .expect("insert yesterday engagement event");
 }
 
-pub async fn insert_content_metrics(
+pub(crate) async fn insert_content_metrics(
     pool: &sqlx::PgPool,
     title: &str,
     views_7d: i32,

@@ -1,6 +1,10 @@
 //! Identity half of the ADFS callback: turn a verified assertion into gated
 //! claims (allow-listed domain, mapped AD group) and resolve them to a local
 //! user with the roles the groups map to.
+//!
+//! A refused sign-in (`forbidden`, `no_group`) also revokes the cookie
+//! sessions and bridge links the directory once vouched for; revocation
+//! failures are logged and never turn the `?sso=` redirect into a 500.
 
 use saml::{Identity, NameIdFormat};
 
@@ -32,8 +36,8 @@ impl AssertionClaims {
         }
     }
 
-    // Why: Every value under the named attribute, in assertion order. AD FS
-    // emits one `<AttributeValue>` per group.
+    // Why: AD FS emits one `<AttributeValue>` per group, so values are
+    // flattened across every matching attribute, in assertion order.
     #[must_use]
     pub fn values(&self, attribute: &str) -> Vec<String> {
         self.attributes
@@ -50,9 +54,8 @@ impl AssertionClaims {
             .find(|v| !v.is_empty())
     }
 
-    // Why: The sign-in email: the configured email attribute, else an
-    // email-format NameID. Lower-cased, since AD is case-insensitive and
-    // `users.email` is stored lower.
+    // Why: AD compares addresses case-insensitively and `users.email` is
+    // stored lower-cased, so the asserted email is folded before any lookup.
     #[must_use]
     pub fn login_email(&self, cfg: &AdfsConfig) -> Option<String> {
         self.first(&cfg.email_attribute)
@@ -71,9 +74,8 @@ impl AssertionClaims {
         self.first(&cfg.name_attribute)
     }
 
-    // Why: The stable external subject: the NameID when the IdP sends one,
-    // else the email — AD FS relying parties are routinely configured with
-    // claims but no NameID, and the login email is the next-best stable key.
+    // Why: AD FS relying parties are routinely configured with claims but no
+    // NameID, so the login email stands in as the stable external subject.
     #[must_use]
     pub fn external_sub(&self, email: &str) -> String {
         self.name_id
@@ -84,8 +86,6 @@ impl AssertionClaims {
     }
 }
 
-// Why: What survives the gate: the identity to resolve and the entitlements
-// the assertion carried.
 pub(super) struct GatedIdentity {
     pub external_sub: String,
     pub email: String,
@@ -94,10 +94,8 @@ pub(super) struct GatedIdentity {
     pub roles: Vec<String>,
 }
 
-// Why: Pure so the gate can be pinned by unit tests without a farm. AD is the
-// corporate directory: an address it asserts is verified by construction, so
-// there is no `email_verified` check here — the domain allow-list and the
-// group map are the gate.
+// Why: AD is the corporate directory, so an address it asserts is verified by
+// construction; the domain allow-list and group map gate, not `email_verified`.
 pub(super) fn gate_claims(
     cfg: &AdfsConfig,
     claims: &AssertionClaims,
@@ -107,19 +105,9 @@ pub(super) fn gate_claims(
         tracing::warn!(email, "ADFS login rejected: domain not allow-listed");
         return Err(LoginRedirect("forbidden"));
     }
-    // Why: every group the assertion carried, in assertion order. Which DB
-    // group or project a name resolves to is decided by `group_ad_mappings`,
-    // and a name that resolves to none leaves the member in the derived
-    // `unassigned` group. Filtering here would hide memberships the database
-    // is able to place.
     let groups = claims.values(&cfg.groups_attribute);
-    // Why: the refusal is "the directory vouched for nobody" — an assertion
-    // with no group claim at all. A group the role map does not name is not a
-    // refusal: which group a person is in is decided by the DB mapping in
-    // services/web/config/groups.yaml, and the role map only says what that
-    // membership additionally mints. Denying on an unmapped group would refuse
-    // every member of a group IT added before we did.
-    if groups.is_empty() && cfg.deny_without_group {
+    let directory_vouched_for_nobody = groups.is_empty();
+    if directory_vouched_for_nobody && cfg.deny_without_group {
         tracing::warn!(email, "ADFS login rejected: assertion carried no AD group");
         return Err(LoginRedirect("no_group"));
     }
@@ -137,22 +125,29 @@ pub(super) fn gate_claims(
     })
 }
 
-// Why: Gate the verified claims and resolve them to a local user. Each step
-// logs its own failure and collapses to a login *reason*.
 pub(super) async fn resolve_identity(
     deps: &AdfsDeps,
     idp_entity_id: &str,
     claims: &AssertionClaims,
 ) -> Result<federated::ResolvedFederatedUser, LoginRedirect> {
-    let cfg = &deps.config;
-    let gated = match gate_claims(cfg, claims) {
+    let gated = match gate_claims(&deps.config, claims) {
         Ok(gated) => gated,
         Err(reason) => {
-            revoke_on_denial(deps, cfg, claims, reason.0).await;
+            revoke_on_denial(deps, &deps.config, claims, reason.0).await;
             return Err(reason);
         },
     };
+    let resolved = find_or_provision_user(deps, idp_entity_id, &gated).await?;
+    persist_directory_memberships(deps, &resolved, &gated.groups).await;
+    revoke_if_demoted(deps, &resolved).await;
+    Ok(resolved)
+}
 
+async fn find_or_provision_user(
+    deps: &AdfsDeps,
+    idp_entity_id: &str,
+    gated: &GatedIdentity,
+) -> Result<federated::ResolvedFederatedUser, LoginRedirect> {
     let federated_claims = federated::FederatedClaims {
         issuer: idp_entity_id,
         external_sub: &gated.external_sub,
@@ -160,75 +155,64 @@ pub(super) async fn resolve_identity(
         display_name: &gated.display_name,
         roles: &gated.roles,
     };
-    let resolved =
-        federated::resolve_federated_user(&deps.write_pool, &federated_claims, cfg.auto_provision)
-            .await
-            .map_err(|e| {
-                tracing::error!(error = %e, "Failed to resolve federated ADFS user");
-                LoginRedirect("error")
-            })?
-            .ok_or_else(|| {
-                tracing::warn!(
-                    email = %gated.email,
-                    "ADFS login rejected: auto-provisioning disabled and no existing account"
-                );
-                LoginRedirect("not_provisioned")
-            })?;
-
-    // Why: the assertion's groups are replayed onto both memberships as the
-    // directory-sourced half, replacing what the last sign-in wrote. A
-    // failure here must not break login — the roles already carry the coarse
-    // entitlement.
-    if let Err(e) = groups::members::replace_directory_group_memberships(
+    federated::resolve_federated_user(
         &deps.write_pool,
-        &resolved.user_id,
-        &gated.groups,
+        &federated_claims,
+        deps.config.auto_provision,
     )
     .await
-    {
-        tracing::warn!(error = %e, user_id = %resolved.user_id, "Failed to persist ADFS group memberships");
-    }
-    if let Err(e) = projects::members::replace_directory_project_memberships(
-        &deps.write_pool,
-        &resolved.user_id,
-        &gated.groups,
-    )
-    .await
-    {
-        tracing::warn!(error = %e, user_id = %resolved.user_id, "Failed to persist ADFS project memberships");
-    }
-
-    // Why: `permissions_for_roles` baked `Permission::Admin` into every token
-    // minted while the user was still in the admins group, and those tokens
-    // outlive this assertion. A demotion has to reach them, or the directory
-    // has not actually demoted anyone until they expire.
-    if resolved.lost_admin {
-        match revocation::revoke_user_access(&deps.write_pool, &resolved.user_id).await {
-            Ok(counts) => tracing::warn!(
-                user_id = %resolved.user_id,
-                sessions = counts.sessions,
-                api_keys = counts.api_keys,
-                "Revoked credentials after ADFS removed the admin role"
-            ),
-            Err(e) => tracing::error!(
-                error = %e,
-                user_id = %resolved.user_id,
-                "Failed to revoke credentials after an ADFS admin demotion"
-            ),
-        }
-    }
-
-    Ok(resolved)
+    .map_err(|e| {
+        tracing::error!(error = %e, "Failed to resolve federated ADFS user");
+        LoginRedirect("error")
+    })?
+    .ok_or_else(|| {
+        tracing::warn!(
+            email = %gated.email,
+            "ADFS login rejected: auto-provisioning disabled and no existing account"
+        );
+        LoginRedirect("not_provisioned")
+    })
 }
 
-// Why: a refused sign-in is only half of a deprovision. The person still holds
-// a cookie session and a linked bridge from the last time the directory did
-// vouch for them, and neither expires on its own. Failures are logged and
-// swallowed: the caller owes the user a `?sso=` redirect either way, and a
-// revocation error must never become a 500 on the login path.
-//
-// `no_email` carries no handle to revoke on; `not_provisioned` is reached only
-// when no local account exists at all.
+async fn persist_directory_memberships(
+    deps: &AdfsDeps,
+    resolved: &federated::ResolvedFederatedUser,
+    groups: &[String],
+) {
+    let user_id = &resolved.user_id;
+    if let Err(e) =
+        groups::members::replace_directory_group_memberships(&deps.write_pool, user_id, groups)
+            .await
+    {
+        tracing::warn!(error = %e, %user_id, "Failed to persist ADFS group memberships");
+    }
+    if let Err(e) =
+        projects::members::replace_directory_project_memberships(&deps.write_pool, user_id, groups)
+            .await
+    {
+        tracing::warn!(error = %e, %user_id, "Failed to persist ADFS project memberships");
+    }
+}
+
+async fn revoke_if_demoted(deps: &AdfsDeps, resolved: &federated::ResolvedFederatedUser) {
+    if !resolved.lost_admin {
+        return;
+    }
+    match revocation::revoke_user_access(&deps.write_pool, &resolved.user_id).await {
+        Ok(counts) => tracing::warn!(
+            user_id = %resolved.user_id,
+            sessions = counts.sessions,
+            api_keys = counts.api_keys,
+            "Revoked credentials after ADFS removed the admin role"
+        ),
+        Err(e) => tracing::error!(
+            error = %e,
+            user_id = %resolved.user_id,
+            "Failed to revoke credentials after an ADFS admin demotion"
+        ),
+    }
+}
+
 async fn revoke_on_denial(
     deps: &AdfsDeps,
     cfg: &AdfsConfig,

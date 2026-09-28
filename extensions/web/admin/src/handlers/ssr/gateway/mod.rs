@@ -13,12 +13,19 @@
 //! a saved route is dispatched at the next restart and the page says so.
 //! `pricing`/`when`/`requires` blocks the form does not render are carried
 //! through untouched. The page never writes YAML itself.
+//!
+//! Each of the four tabs is a URL: Overview (dispatch order and provider
+//! health), Providers (each upstream opened into its models and routes),
+//! Routes (the ordered dispatch table plus the resolved-only set) and
+//! Settings (switches and the per-account probe). Policies is linked as a
+//! fifth tab but lives on its own page.
 
 mod models;
 mod route_detail;
 mod rows;
 mod view;
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use axum::extract::{Extension, Query, State};
@@ -32,10 +39,10 @@ use crate::handlers::ssr::types::{BreadcrumbView, TabLinkView};
 use crate::repositories;
 use crate::repositories::config::gateway::{RouteLabels, get_route_labels_from_services};
 use crate::templates::AdminTemplateEngine;
-use crate::types::{GatewayConfigView, MarketplaceContext, UserContext};
+use crate::types::{GatewayConfigView, GatewayRouteView, MarketplaceContext, UserContext};
 
 pub(crate) use route_detail::gateway_route_page;
-use rows::{kpis, load_surfaces, resolved_only, route_rows};
+use rows::{Surfaces, kpis, load_surfaces, resolved_only, route_rows};
 use view::GatewayPageData;
 
 const ENTITY_GATEWAY_ROUTE: &str = "gateway_route";
@@ -56,8 +63,6 @@ enum GatewayTab {
 }
 
 impl GatewayTab {
-    // Why: `resolved` was its own tab; the resolved-only set now sits under
-    // Routes, and old links keep landing on it.
     fn parse(tab: Option<&str>) -> Self {
         match tab {
             Some("providers") => Self::Providers,
@@ -68,12 +73,6 @@ impl GatewayTab {
     }
 }
 
-// Why: five views, each a URL. Overview is the summary an operator scans —
-// dispatch order and provider health as two tables; Providers opens each
-// upstream into its models and routes; Routes is the ordered table the
-// dispatcher reads, where order is edited, with the resolved-only set below
-// it; Settings holds the switches and the per-account probe; Policies lives
-// on its own page and is linked so the gateway reads as one thing.
 fn view_tabs(active: GatewayTab, routes: usize, providers: usize) -> Vec<TabLinkView> {
     let link = |slug, label, href: &str, tab: Option<GatewayTab>, count| TabLinkView {
         slug,
@@ -128,16 +127,18 @@ fn console_only(user_ctx: &UserContext) -> AdminHtmlResult<()> {
     Err(crate::error::AdminError::Forbidden("Admin access required.".to_owned()).into())
 }
 
-pub(crate) async fn gateway_page(
-    Extension(user_ctx): Extension<UserContext>,
-    Extension(mkt_ctx): Extension<MarketplaceContext>,
-    Extension(engine): Extension<AdminTemplateEngine>,
-    State(pool): State<Arc<PgPool>>,
-    Query(query): Query<GatewayQuery>,
-) -> AdminHtmlResult<Response> {
-    console_only(&user_ctx)?;
+struct GatewayRead {
+    config: GatewayConfigView,
+    config_error: String,
+    resolved: Vec<GatewayRouteView>,
+    catalog_error: String,
+    labels: RouteLabels,
+    surfaces: Surfaces,
+    grants_by_route: HashMap<String, i64>,
+}
 
-    let (config, load_error) = match super::super::gateway_config_view(&pool).await {
+async fn load_gateway(pool: &PgPool) -> GatewayRead {
+    let (config, config_error) = match super::super::gateway_config_view(pool).await {
         Ok(config) => (config, String::new()),
         Err(e) => (GatewayConfigView::default(), e.to_string()),
     };
@@ -146,25 +147,42 @@ pub(crate) async fn gateway_page(
             Ok(routes) => (routes, String::new()),
             Err(e) => (Vec::new(), e.to_string()),
         };
-
     let labels: RouteLabels = get_route_labels_from_services()
         .inspect_err(|e| tracing::warn!(error = %e, "gateway: route labels unavailable"))
         .unwrap_or_default();
     let surfaces = load_surfaces(&labels);
-    let grants = repositories::users::access_control::count_assignments_by_entity_type(
-        &pool,
+    let grants_by_route = repositories::users::access_control::count_assignments_by_entity_type(
+        pool,
         ENTITY_GATEWAY_ROUTE,
     )
     .await
     .inspect_err(|e| tracing::warn!(error = %e, "gateway: route rule listing failed"))
     .unwrap_or_default();
-    let dispatchable: Vec<String> = resolved.iter().map(|r| r.id.clone()).collect();
+    GatewayRead {
+        config,
+        config_error,
+        resolved,
+        catalog_error,
+        labels,
+        surfaces,
+        grants_by_route,
+    }
+}
 
-    let tab = GatewayTab::parse(query.tab.as_deref());
+async fn gateway_view(pool: &PgPool, read: GatewayRead, tab: GatewayTab) -> GatewayPageData {
+    let GatewayRead {
+        config,
+        config_error,
+        resolved,
+        catalog_error,
+        labels,
+        surfaces,
+        grants_by_route: grants,
+    } = read;
+    let dispatchable: Vec<String> = resolved.iter().map(|r| r.id.clone()).collect();
     let routes = route_rows(&config, &surfaces, &grants, &dispatchable, &labels);
     let extra = resolved_only(&routes, &resolved, &labels);
-    let overview = matches!(tab, GatewayTab::Overview | GatewayTab::Providers);
-    let provider_cards = if overview {
+    let provider_cards = if matches!(tab, GatewayTab::Overview | GatewayTab::Providers) {
         models::provider_cards(&labels, &routes, &grants)
     } else {
         Vec::new()
@@ -177,7 +195,7 @@ pub(crate) async fn gateway_page(
 
     let routes_count = routes.len();
     let providers_count = surfaces.providers.len();
-    let page = GatewayPageData {
+    GatewayPageData {
         page: "gateway",
         title: "Gateway",
         subtitle: "Which providers this instance can reach, the models they serve, and which requested model goes where.",
@@ -193,11 +211,11 @@ pub(crate) async fn gateway_page(
         resolved_only: extra,
         providers_count,
         providers: surfaces.providers,
-        probe_users: list_pickable_users(&pool, None).await,
+        probe_users: list_pickable_users(pool, None).await,
         provider_cards,
         dispatch_count: dispatch.len(),
         dispatch,
-        load_error,
+        load_error: config_error,
         catalog_error,
         runtime_note: repositories::sync::gateway_routes::RUNTIME_NOTE,
         sync_url: "/admin/sync?entity=gateway_route",
@@ -207,7 +225,19 @@ pub(crate) async fn gateway_page(
         show_providers: tab == GatewayTab::Providers,
         show_routes: tab == GatewayTab::Routes,
         show_settings: tab == GatewayTab::Settings,
-    };
+    }
+}
+
+pub(crate) async fn gateway_page(
+    Extension(user_ctx): Extension<UserContext>,
+    Extension(mkt_ctx): Extension<MarketplaceContext>,
+    Extension(engine): Extension<AdminTemplateEngine>,
+    State(pool): State<Arc<PgPool>>,
+    Query(query): Query<GatewayQuery>,
+) -> AdminHtmlResult<Response> {
+    console_only(&user_ctx)?;
+    let read = load_gateway(&pool).await;
+    let page = gateway_view(&pool, read, GatewayTab::parse(query.tab.as_deref())).await;
     Ok(render_typed_page(
         &engine, "gateway", &page, &user_ctx, &mkt_ctx,
     ))

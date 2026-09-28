@@ -175,7 +175,7 @@ async fn a_retired_refresh_token_is_an_authentication_failure_not_an_outage() {
 
 #[tokio::test]
 async fn a_4xx_without_an_oauth_error_body_still_retires_the_grant() {
-    let (url, mock) = endpoint_with_status(400, "Bad Request", r#"{}"#).await;
+    let (url, mock) = endpoint_with_status(400, "Bad Request", r"{}").await;
     let error = refresh_at(&mut grant(), &url).await.unwrap_err();
     assert_eq!(error.status(), axum::http::StatusCode::UNAUTHORIZED);
     mock.await.unwrap();
@@ -374,8 +374,9 @@ async fn fourth_configured_connector_completes_oauth_and_mcp_verification() {
     struct Server(std::process::Child);
     impl Drop for Server {
         fn drop(&mut self) {
-            let _ = self.0.kill();
-            let _ = self.0.wait();
+            if self.0.kill().is_ok() {
+                self.0.wait().ok();
+            }
         }
     }
     let root = tempfile::tempdir().unwrap();
@@ -486,8 +487,9 @@ async fn google_shaped_connector_sends_offline_params_and_reads_userinfo() {
     struct Server(std::process::Child);
     impl Drop for Server {
         fn drop(&mut self) {
-            let _ = self.0.kill();
-            let _ = self.0.wait();
+            if self.0.kill().is_ok() {
+                self.0.wait().ok();
+            }
         }
     }
     let root = tempfile::tempdir().unwrap();

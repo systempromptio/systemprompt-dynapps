@@ -1,14 +1,27 @@
-//! View-model builders for the conversation reader: map repository rows into
-//! the typed template-context structs in `context`.
+//! Loads the conversation reader's rows and maps them into the typed
+//! template-context structs in `context`.
+//!
+//! Loading runs in two phases because message and tool-call bodies are fetched
+//! by request id: the request rollup names the handful of requests the
+//! transcript is built from. Tool calls are the one load that fails the page
+//! instead of degrading to empty — no KPI counts them, so an empty list would
+//! silently redact every tool invocation from the evidence.
 //!
 //! The transcript itself is built by `handlers::ssr::transcript_view`, which
 //! the owner-facing page under `/admin/history` shares — this page asks it for
 //! the unredacted, unstripped view an admin is entitled to.
 
+use sqlx::PgPool;
+use systemprompt::identifiers::ContextId;
+
 use crate::repositories::analytics::context_detail::{
-    ContextHeader, ContextKpis, ContextMessageRow, ContextRequestRow,
+    ContextHeader, ContextKpis, ContextMessageRow, ContextRequestRow, get_context_kpis,
+    list_context_requests, list_messages_for_requests,
 };
-use crate::repositories::analytics::context_tool_calls::ContextToolCallRow;
+use crate::repositories::analytics::context_tool_calls::{
+    ContextToolCallRow, list_tool_calls_for_requests,
+};
+use crate::repositories::dashboard::conversation_analytics::list_session_entity_links;
 
 use crate::types::conversation_analytics::SessionEntityLink;
 
@@ -22,7 +35,7 @@ use crate::handlers::ssr::conversation_header::{
 use crate::handlers::ssr::entity_urls::{request_detail_url, session_detail_url, trace_detail_url};
 use crate::handlers::ssr::format::{format_cost, local_time};
 use crate::handlers::ssr::transcript_view::{
-    TranscriptOptions, build_conversation, format_latency, short_id,
+    TranscriptOptions, build_conversation, format_latency, short_id, transcript_request_ids,
 };
 
 pub(super) const TAB_CONVERSATION: &str = "conversation";
@@ -37,7 +50,7 @@ pub(super) fn resolve_tab(requested: Option<&str>) -> &'static str {
     }
 }
 
-pub(super) const fn default_kpis() -> ContextKpis {
+const fn default_kpis() -> ContextKpis {
     ContextKpis {
         request_count: 0,
         trace_count: 0,
@@ -58,29 +71,86 @@ pub(super) const fn default_kpis() -> ContextKpis {
     }
 }
 
-// Why: Everything the page renders beside its header, gathered so the builder
-// stays inside clippy's argument cap.
-pub(super) struct DetailInputs<'a> {
-    pub kpis: &'a ContextKpis,
-    pub requests: &'a [ContextRequestRow],
-    pub messages: &'a [ContextMessageRow],
-    pub tool_calls: &'a [ContextToolCallRow],
-    pub entity_links: &'a [SessionEntityLink],
-    pub active_tab: &'static str,
+pub(super) struct TranscriptRead {
+    kpis: ContextKpis,
+    requests: Vec<ContextRequestRow>,
+    messages: Vec<ContextMessageRow>,
+    tool_calls: Vec<ContextToolCallRow>,
+    entity_links: Vec<SessionEntityLink>,
 }
 
-pub(super) fn build_detail_data(
+pub(super) async fn load_transcript(
+    pool: &PgPool,
     header: &ContextHeader,
-    inputs: &DetailInputs<'_>,
-) -> ContextDetailPageContext {
-    let DetailInputs {
+    context_id: &ContextId,
+) -> Result<TranscriptRead, sqlx::Error> {
+    let (kpis, requests) = load_request_rollup(pool, context_id).await;
+    let ids = transcript_request_ids(&requests);
+    let (messages_res, tool_calls_res) = tokio::join!(
+        list_messages_for_requests(pool, &ids.messages),
+        list_tool_calls_for_requests(pool, &ids.tool_calls),
+    );
+    let messages = messages_res.unwrap_or_else(|e| {
+        tracing::warn!(error = %e, "list_messages_for_requests failed");
+        Vec::new()
+    });
+    let tool_calls = tool_calls_res?;
+    let entity_links = load_session_entity_links(pool, header).await;
+    Ok(TranscriptRead {
         kpis,
         requests,
         messages,
         tool_calls,
         entity_links,
-        active_tab,
-    } = *inputs;
+    })
+}
+
+async fn load_request_rollup(
+    pool: &PgPool,
+    context_id: &ContextId,
+) -> (ContextKpis, Vec<ContextRequestRow>) {
+    let (kpis_res, requests_res) = tokio::join!(
+        get_context_kpis(pool, context_id),
+        list_context_requests(pool, context_id),
+    );
+    let kpis = kpis_res.unwrap_or_else(|e| {
+        tracing::warn!(error = %e, "get_context_kpis failed");
+        default_kpis()
+    });
+    let requests = requests_res.unwrap_or_else(|e| {
+        tracing::warn!(error = %e, "list_context_requests failed");
+        Vec::new()
+    });
+    (kpis, requests)
+}
+
+async fn load_session_entity_links(
+    pool: &PgPool,
+    header: &ContextHeader,
+) -> Vec<SessionEntityLink> {
+    let Some(session_id) = header.session_id.as_ref() else {
+        return Vec::new();
+    };
+    list_session_entity_links(pool, session_id)
+        .await
+        .unwrap_or_else(|e| {
+            tracing::warn!(error = %e, "list_session_entity_links failed");
+            Vec::new()
+        })
+}
+
+pub(super) fn build_detail_data(
+    header: &ContextHeader,
+    read: &TranscriptRead,
+    active_tab: &'static str,
+) -> ContextDetailPageContext {
+    let TranscriptRead {
+        kpis,
+        requests,
+        messages,
+        tool_calls,
+        entity_links,
+    } = read;
     let entity_link_views = entity_link_views(entity_links);
     let conversation =
         build_conversation(messages, tool_calls, requests, TranscriptOptions::default());
@@ -156,24 +226,25 @@ fn breadcrumbs(h: &ContextHeader, title: &str) -> Vec<BreadcrumbView> {
     crumbs
 }
 
-// Why: the share is measured against the busiest entity, not the total —
-// a hundred touches of one file and one of another should read as a full bar
-// beside an empty one, which a share-of-total would flatten.
 fn entity_link_views(links: &[SessionEntityLink]) -> Vec<EntityLinkView> {
-    let max = links.iter().map(|l| l.usage_count).max().unwrap_or(0);
+    let busiest = links.iter().map(|l| l.usage_count).max().unwrap_or(0);
     links
         .iter()
         .map(|l| EntityLinkView {
             entity_type: l.entity_type.clone(),
             entity_name: l.entity_name.clone(),
             usage_count: l.usage_count,
-            share_pct: if max > 0 {
-                (f64::from(l.usage_count) / f64::from(max) * 100.0).round()
-            } else {
-                0.0
-            },
+            share_pct: share_of_busiest_pct(l.usage_count, busiest),
         })
         .collect()
+}
+
+fn share_of_busiest_pct(usage_count: i32, busiest: i32) -> f64 {
+    if busiest > 0 {
+        (f64::from(usage_count) / f64::from(busiest) * 100.0).round()
+    } else {
+        0.0
+    }
 }
 
 fn header_view(h: &ContextHeader, k: &ContextKpis) -> HeaderView {
@@ -189,8 +260,6 @@ fn header_view(h: &ContextHeader, k: &ContextKpis) -> HeaderView {
         session_id: h.session_id.clone(),
         session_url: h.session_id.as_ref().map(session_detail_url),
         client_session_id: h.client_session_id.clone(),
-        // Why: the sessions page keys on the hooks session id, which for
-        // gateway traffic is the Claude Code session uuid the context derives from.
         hooks_session_url: h
             .client_session_id
             .as_ref()

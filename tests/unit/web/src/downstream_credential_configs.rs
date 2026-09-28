@@ -260,7 +260,7 @@ fn the_external_mcp_servers_are_listed_in_the_aggregator() {
     // nothing reports it — the server simply does not exist.
     let aggregator = std::fs::read_to_string(repo_root().join("services/config/config.yaml"))
         .expect("services/config/config.yaml is readable");
-    for name in ["atlassian"].into_iter().chain(SALESFORCE_SERVERS) {
+    for name in std::iter::once("atlassian").chain(SALESFORCE_SERVERS) {
         assert!(
             aggregator.contains(&format!("../mcp/{name}.yaml")),
             "services/config/config.yaml must include ../mcp/{name}.yaml"
