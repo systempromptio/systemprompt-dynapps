@@ -369,6 +369,7 @@ providers:
   surface: anthropic
   endpoint: https://aiplatform.googleapis.com/v1/projects/{project}/locations/global/publishers/anthropic
   api_key_secret: vertex
+  accepted_betas: []
   governance:
     european: false
     no_retain: true
