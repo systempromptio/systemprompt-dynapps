@@ -93,7 +93,7 @@ struct PluginSection {
 #[derive(Serialize, Debug)]
 struct PluginEnvResponse {
     pub definitions: Vec<PluginVariableDef>,
-    pub stored: Vec<PluginEnvVar>,
+    pub stored: Vec<repositories::marketplace::plugin_env::PluginEnvVar>,
     pub valid: bool,
     pub missing_required: Vec<String>,
 }
