@@ -5,7 +5,7 @@ use super::page_context::SortHeaders;
 use super::query::ConversationAnalysisQuery;
 use super::summary::ConversationAnalysisFilterView;
 use crate::repositories::analysis::conversations::{FactSort, FlagFilter, JudgedFilter};
-use crate::repositories::scope::ScopeRequest;
+use systemprompt_web_admin_core::repositories::scope::ScopeRequest;
 
 pub(super) fn filter_view(
     params: &ConversationAnalysisQuery,

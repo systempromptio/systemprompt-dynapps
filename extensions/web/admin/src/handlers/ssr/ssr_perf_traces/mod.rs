@@ -4,8 +4,8 @@
 //! shared time-range + identity-filter-ribbon URL contract. Each row links to
 //! the per-trace waterfall at `/admin/traces/{session_id}`.
 
-use crate::error::AdminError;
 use std::sync::Arc;
+use systemprompt_web_admin_core::error::AdminError;
 
 use axum::extract::{Query, State};
 use axum::response::Response;
@@ -13,16 +13,18 @@ use serde::Deserialize;
 use sqlx::PgPool;
 use systemprompt::identifiers::{AgentId, UserId};
 
-use crate::error::AdminHtmlResult;
-use crate::handlers::ssr::list_view;
-use crate::repositories::governance::filter_options::{FilterOptions, get_filter_options};
-use crate::repositories::scope::{ScopeRequest, SubjectScope};
 use crate::repositories::traces::{
     TraceFilter, TracePage, TraceSort, TraceSortColumn, TraceSortDir, TraceStats, TraceSummary,
     get_trace_stats, list_traces,
 };
-use crate::types::UserContext;
-use crate::util::time_range::{TimeRange, TimeRangeQuery, parse_time_range};
+use systemprompt_web_admin_core::error::AdminHtmlResult;
+use systemprompt_web_admin_core::repositories::filter_options::{
+    FilterOptions, get_filter_options,
+};
+use systemprompt_web_admin_core::repositories::scope::{ScopeRequest, SubjectScope};
+use systemprompt_web_admin_core::ssr::list_view;
+use systemprompt_web_admin_core::types::UserContext;
+use systemprompt_web_admin_core::util::time_range::{TimeRange, TimeRangeQuery, parse_time_range};
 
 
 mod context;
@@ -31,9 +33,9 @@ mod rows;
 mod summary;
 mod view;
 
-use crate::handlers::ssr::list_view::DEFAULT_PAGE_SIZE;
-use crate::handlers::ssr::page::Page;
 use context::PerfTracesPageContext;
+use systemprompt_web_admin_core::ssr::list_view::DEFAULT_PAGE_SIZE;
+use systemprompt_web_admin_core::ssr::page::Page;
 
 const BASE_URL: &str = "/admin/traces";
 #[derive(Debug, Deserialize)]
@@ -80,7 +82,10 @@ pub(crate) async fn perf_traces_page(
         query.group.as_deref(),
         query.project.as_deref(),
     );
-    let scope = crate::repositories::scope::membership::get_subject_scope(&pool, &request).await?;
+    let scope = systemprompt_web_admin_core::repositories::scope::membership::get_subject_scope(
+        &pool, &request,
+    )
+    .await?;
     let ctx = load_traces_data(
         &pool,
         &shell.user,
@@ -92,13 +97,15 @@ pub(crate) async fn perf_traces_page(
         window,
     )
     .await;
-    Ok(crate::handlers::ssr::render_typed_page(
-        &shell.engine,
-        "perf-traces",
-        &ctx,
-        &shell.user,
-        &shell.marketplace,
-    ))
+    Ok(
+        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+            &shell.engine,
+            "perf-traces",
+            &ctx,
+            &shell.user,
+            &shell.marketplace,
+        ),
+    )
 }
 
 struct TraceWindow {
@@ -192,8 +199,11 @@ async fn load_traces_data(
         page: "traces",
         title: "Trace Explorer",
         breadcrumbs: vec![
-            crate::handlers::ssr::types::BreadcrumbView::link("AI activity", "/admin/analytics"),
-            crate::handlers::ssr::types::BreadcrumbView::current("Traces"),
+            systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView::link(
+                "AI activity",
+                "/admin/analytics",
+            ),
+            systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView::current("Traces"),
         ],
         time_range: view::time_range_context(range, &preset),
         filter_ribbon: context::TraceFilterRibbon {

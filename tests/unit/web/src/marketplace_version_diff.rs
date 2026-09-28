@@ -3,10 +3,10 @@
 //! plugins likewise; a first version diffs against nothing.
 
 use systemprompt::identifiers::{MarketplaceId, PluginId, SkillId};
-use systemprompt_web_admin::repositories::sync::marketplace_hash::{
+use systemprompt_web_admin::test_support::{Change, manifest_diff};
+use systemprompt_web_admin_core::repositories::sync::marketplace_hash::{
     MarketplaceManifest, PluginManifest, SkillManifest,
 };
-use systemprompt_web_admin::test_support::{Change, manifest_diff};
 
 fn skill(plugin: &str, id: &str, digest: &str) -> SkillManifest {
     SkillManifest {

@@ -13,7 +13,7 @@ use axum::response::{IntoResponse, Response};
 use sqlx::PgPool;
 use systemprompt_security::authz::{Access, AccessRule, EntityRef};
 
-use crate::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
 use super::support::{collect_entity_ids, parse_subject, repo, validate_entity_type};
 use super::template::{Tally, TemplateSubject, clear_subject_rules, upsert_subject_rule};

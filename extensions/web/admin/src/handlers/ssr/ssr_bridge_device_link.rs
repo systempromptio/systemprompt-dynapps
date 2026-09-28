@@ -17,13 +17,13 @@ use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use systemprompt_web_shared::html_escape;
 
-use crate::error::{AdminHtmlError, AdminHtmlResult};
-use crate::repositories::bridge;
 use crate::services::bridge_profile::BRIDGE_BINARY;
-use crate::templates::AdminTemplateEngine;
-use crate::types::UserContext;
+use systemprompt_web_admin_core::error::{AdminHtmlError, AdminHtmlResult};
+use systemprompt_web_admin_core::repositories::bridge;
+use systemprompt_web_admin_core::templates::AdminTemplateEngine;
+use systemprompt_web_admin_core::types::UserContext;
 
-use super::ssr_helpers::branding_context;
+use systemprompt_web_admin_core::ssr::helpers::branding_context;
 use systemprompt_web_shared::BrandingConfig;
 
 #[derive(Debug, Deserialize)]

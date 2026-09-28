@@ -9,7 +9,9 @@
 use std::collections::HashMap;
 
 use crate::repositories;
-use crate::types::{ConfiguredHook, McpServerDetail, PluginDetail, SkillCatalogEntry};
+use systemprompt_web_admin_core::types::{
+    ConfiguredHook, McpServerDetail, PluginDetail, SkillCatalogEntry,
+};
 
 use super::view::{LinkedEntity, plugin_url};
 
@@ -24,7 +26,7 @@ pub(super) struct Catalog {
 }
 
 fn to_entity_refs(
-    map: repositories::marketplace::plugin_maps::EntityPluginMap,
+    map: systemprompt_web_admin_core::catalog_index::plugin_maps::EntityPluginMap,
 ) -> HashMap<String, Vec<LinkedEntity>> {
     map.into_iter()
         .map(|(entity_id, plugins)| {
@@ -73,7 +75,9 @@ pub(super) fn load_catalog(services_path: &std::path::Path, roles: &[String]) ->
     }
 
     let (skill_map, _agent_map, mcp_map) =
-        repositories::marketplace::plugin_maps::build_entity_plugin_maps(services_path);
+        systemprompt_web_admin_core::catalog_index::plugin_maps::build_entity_plugin_maps(
+            services_path,
+        );
 
     Catalog {
         plugins,

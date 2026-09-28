@@ -13,11 +13,11 @@ use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 
-use crate::handlers::ssr::format::{format_token_total, short_num};
-use crate::repositories::devices::bridge_presence;
 use crate::repositories::devices::sessions::{
     self, BridgeHostRow, BridgeUserSessionsRow, SessionQuery,
 };
+use systemprompt_web_admin_core::repositories::bridge::presence::bridge_presence;
+use systemprompt_web_admin_core::ssr::format::{format_token_total, short_num};
 
 use super::context::{BridgeHostRowView, CellView, UserGroupView};
 

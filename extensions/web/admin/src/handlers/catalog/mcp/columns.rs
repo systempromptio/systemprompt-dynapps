@@ -5,8 +5,8 @@
 //! tiles are the same six numbers on the list page and on one server's detail
 //! page, which is what lets a single server be read against the fleet.
 
-use crate::handlers::catalog::sorting::SortColumn;
-use crate::handlers::ssr::format::short_num;
+use systemprompt_web_admin_core::ssr::format::short_num;
+use systemprompt_web_admin_core::ssr::types::table::SortColumn;
 
 use super::rows::{delta, error_rate, ms_display};
 use super::view::{McpKpiView, McpServerRow};

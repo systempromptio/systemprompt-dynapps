@@ -18,7 +18,7 @@ use crate::repositories::overview::queues::UsageAnomalyRow;
 use crate::repositories::overview::scopes::ScopeCostRow;
 use crate::repositories::overview::series::OverviewSeriesPoint;
 use crate::repositories::overview::{dimension_series, kpis, queues, scopes, series};
-use crate::repositories::scope::{ScopeKind, SubjectScope};
+use systemprompt_web_admin_core::repositories::scope::{ScopeKind, SubjectScope};
 
 use super::view::OverviewRange;
 

@@ -34,19 +34,21 @@ use axum::extract::{Extension, Query, State};
 use axum::response::{IntoResponse, Redirect, Response};
 use sqlx::PgPool;
 
-use crate::error::{AdminError, AdminHtmlResult};
 use crate::handlers::access_control::build_matrix_sections;
-use crate::handlers::shared;
-use crate::handlers::ssr::types::TabLinkView;
-use crate::repositories::access_control::drift::DriftReport;
-use crate::repositories::access_control::rules::{
+use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
+use systemprompt_web_admin_core::repositories::access_rules::drift::DriftReport;
+use systemprompt_web_admin_core::repositories::access_rules::rules::{
     LedgerRuleRow, RULE_CAP, count_open_entities, list_ledger_rules,
 };
-use crate::repositories::config::gateway::{RouteLabels, get_route_labels_from_services};
-use crate::repositories::sync::access_control::{declared_now, drift_now};
-use crate::repositories::sync::attention::access_attention;
-use crate::templates::AdminTemplateEngine;
-use crate::types::{MarketplaceContext, UserContext};
+use systemprompt_web_admin_core::repositories::gateway_catalog::{
+    RouteLabels, get_route_labels_from_services,
+};
+use systemprompt_web_admin_core::repositories::sync::access_control::{declared_now, drift_now};
+use systemprompt_web_admin_core::repositories::sync::attention::access_attention;
+use systemprompt_web_admin_core::request as shared;
+use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;
+use systemprompt_web_admin_core::templates::AdminTemplateEngine;
+use systemprompt_web_admin_core::types::{MarketplaceContext, UserContext};
 
 use entities::{AcQuery, BASE_URL, EntitiesInput, SYNC_URL};
 use page::AcPageParts;
@@ -205,11 +207,13 @@ pub(crate) async fn access_control_page(
         body,
     });
 
-    Ok(super::render_typed_page(
-        &engine,
-        "access-control",
-        &page,
-        &user_ctx,
-        &mkt_ctx,
-    ))
+    Ok(
+        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+            &engine,
+            "access-control",
+            &page,
+            &user_ctx,
+            &mkt_ctx,
+        ),
+    )
 }

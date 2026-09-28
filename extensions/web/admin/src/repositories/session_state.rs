@@ -10,7 +10,9 @@
 
 use chrono::{DateTime, Utc};
 
-use crate::repositories::overview::liveness::{HEARTBEAT_INTERVAL_SECS, liveness_state};
+use systemprompt_web_admin_core::repositories::liveness::{
+    HEARTBEAT_INTERVAL_SECS, liveness_state,
+};
 
 /// One of three states every session badge reads.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

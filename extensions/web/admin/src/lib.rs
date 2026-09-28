@@ -15,25 +15,16 @@
 //! the DB directly. Errors normalise on `error::MarketplaceError` via the
 //! `MarketplaceError` re-export in [`systemprompt_web_shared`].
 
-pub mod activity;
-pub mod assets;
 pub mod authz;
-pub mod error;
-pub mod event_hub;
 pub(crate) mod export;
 pub mod gateway_entitlement;
 pub mod gateway_safety;
 pub(crate) mod handlers;
 mod marketplace_context;
-pub mod marketplace_filter;
 mod middleware;
-pub mod numeric;
 pub mod repositories;
 mod routes;
 pub(crate) mod services;
-pub mod templates;
-pub mod types;
-pub mod util;
 
 use std::sync::Arc;
 
@@ -51,43 +42,31 @@ pub use handlers::dev_login::{
     DEV_LOGIN_PATH, dev_login_allowed, dev_login_enabled, dev_login_url,
 };
 pub use handlers::salesforce_auth::{SalesforceConfig, SalesforceDeps, SalesforceError};
-pub use routes::managed_state::StateError;
 pub use routes::{admin_ssr_router, bridge_auth_ssr_router};
 pub use services::salesforce_orgs::salesforce_orgs_boot_check;
 pub use services::{connector_oauth, identity_token, salesforce_orgs};
-pub use types::{
-    CreateUserRequest, MarketplaceContext, UserContext, UserSummary, UserUsageEvent,
-    roles_grant_console,
-};
+use systemprompt_web_admin_core::state::StateError;
 
 pub mod test_support {
     pub use crate::handlers::catalog::mcp::status_of;
     pub use crate::handlers::catalog::sorting::{
-        SortColumn, direction, matches, preserved_search, sort_headers,
+        direction, matches, preserved_search, sort_headers,
     };
-    pub use crate::handlers::resolve_principal;
+
     pub use crate::handlers::ssr::analysis::marketplace_versions::diff::{
         Change, ManifestDiff, SkillChange, diff as manifest_diff,
     };
-    pub use crate::handlers::ssr::analysis::time::{
-        parse as parse_window_bound, render as render_window_bound,
-    };
+
     pub use crate::handlers::ssr::analysis::{SkillRef, parse_skill_key};
     pub use crate::handlers::ssr::ssr_connectors_cards::{
         ConnectorCardView, card as connector_card,
     };
-    pub use crate::handlers::ssr::ssr_history::command_name as history_command_name;
     pub use crate::handlers::ssr::transcript_view::{
         ConversationView, EmptyReason, ParsedAssistant, SideCallRowView, SideCallsView, StepView,
         ThreadView, ToolChipView, ToolUseMarker, TranscriptMetaView, TranscriptOptions,
         TranscriptRequestIds, TurnView, build_conversation, meta_view, parse_assistant, preview,
         short_id, strip_system_reminders, tidy_lines, transcript_request_ids,
     };
-    pub use crate::repositories::analysis::inventory_index::MarketplaceAudience;
-    pub use crate::services::connector_accounts::{
-        Connection, ConnectionSnapshot, get_connections,
-    };
-    pub use crate::services::connector_readiness::NotReady;
 }
 
 pub fn hooks_webhook_router(
@@ -103,7 +82,9 @@ pub fn hooks_webhook_router(
         )
         .route("/hooks/govern", post(handlers::govern_tool_use))
         .route("/govern/authz", post(handlers::govern_authz))
-        .layer(Extension(event_hub::EventHub::default()))
+        .layer(Extension(
+            systemprompt_web_admin_core::event_hub::EventHub::default(),
+        ))
         .layer(Extension(session_service))
         .layer(Extension(managed))
         .with_state(pool))
@@ -175,7 +156,7 @@ pub fn admin_router(
         .merge(auth_reads)
         .merge(self_service)
         .layer(axum_middleware::from_fn(
-            middleware::require_auth_middleware,
+            systemprompt_web_admin_core::middleware::gates::require_auth_middleware,
         ))
         .layer(axum_middleware::from_fn_with_state(
             read_pool,

@@ -12,10 +12,6 @@ mod entity;
 mod helpers;
 mod processing;
 
-use crate::error::{AdminError, AdminResult};
-use crate::event_hub::EventHub;
-use crate::repositories::marketplace::webhook;
-use crate::types::webhook::HookEventPayload;
 use auth::extract_and_validate_jwt;
 use axum::Json;
 use axum::extract::rejection::ExtensionRejection;
@@ -27,6 +23,10 @@ use sha2::Digest;
 use sqlx::PgPool;
 use std::sync::Arc;
 use systemprompt::identifiers::{PluginId, SessionId, UserId};
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::event_hub::EventHub;
+use systemprompt_web_admin_core::repositories::ingestion::webhook;
+use systemprompt_web_admin_core::types::webhook::HookEventPayload;
 
 #[derive(Debug, Clone)]
 pub(crate) struct TrackDeps {

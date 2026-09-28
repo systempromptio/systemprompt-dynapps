@@ -11,7 +11,6 @@ use chrono::{DateTime, Duration, Utc};
 
 use systemprompt::identifiers::UserId;
 
-use super::format::short_num;
 use super::types::{
     AttributionSourceRowView, MappingRowView, MemberRowView, MemberSetChipView, ModelMixRowView,
     NameCountRowView, ProjectRowView, SourceBadgeView, StatTileView,
@@ -19,6 +18,7 @@ use super::types::{
 use crate::repositories::people_usage::attribution::AttributionSourceRow;
 use crate::repositories::people_usage::breakdown::{LinkedScopeRow, ModelUsageRow};
 use crate::repositories::people_usage::{MemberUsageRow, ScopeUsageRow};
+use systemprompt_web_admin_core::ssr::format::short_num;
 
 pub(crate) const DIRECTORY_SOURCE: &str = "adfs";
 

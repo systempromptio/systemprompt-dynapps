@@ -8,7 +8,7 @@
 
 use sqlx::PgPool;
 
-use crate::util::time_range::TimeRange;
+use systemprompt_web_admin_core::util::time_range::TimeRange;
 
 use super::SiteScope;
 

@@ -11,13 +11,14 @@ use axum::routing::get;
 use sqlx::PgPool;
 
 use crate::export;
+use systemprompt_web_admin_core::export::handler as table_export;
 
 pub(super) fn routes() -> Router<Arc<PgPool>> {
     Router::new()
-        .route("/export/{dataset}", get(export::handler::export_file))
+        .route("/export/{dataset}", get(table_export::export_file))
         .route(
             "/export/{dataset}/preview",
-            get(export::handler::export_preview),
+            get(table_export::export_preview),
         )
         // Why: axum routes a static segment ahead of `{dataset}`, so no
         // dataset may be named `transcripts` or it is shadowed.

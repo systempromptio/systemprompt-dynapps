@@ -13,9 +13,9 @@ use serde_yaml::Value;
 use sqlx::PgPool;
 
 use super::rows::{RouteRow, list_gateway_routes};
-use crate::error::{AdminError, AdminResult};
-use crate::repositories::config::gateway::{replace_routes, route_to_yaml};
-use crate::types::GatewayRouteView;
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::repositories::gateway_catalog::{replace_routes, route_to_yaml};
+use systemprompt_web_admin_core::types::GatewayRouteView;
 
 fn views(rows: &[RouteRow]) -> Vec<GatewayRouteView> {
     rows.iter().map(|r| r.route.clone()).collect()

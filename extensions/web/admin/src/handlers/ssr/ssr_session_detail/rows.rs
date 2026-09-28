@@ -3,10 +3,14 @@
 
 use super::context::{SessionContextRowView, SessionRequestRowView, SessionTraceRowView};
 use super::tokens_note;
-use crate::handlers::ssr::entity_urls::{context_detail_url, request_detail_url, trace_detail_url};
-use crate::handlers::ssr::format::{format_cost, format_duration_ms, local_time, short_id};
 use crate::repositories::analytics::session_detail::{
     SessionContextRow, SessionRequestRow, SessionTraceRow,
+};
+use systemprompt_web_admin_core::ssr::entity_urls::{
+    context_detail_url, request_detail_url, trace_detail_url,
+};
+use systemprompt_web_admin_core::ssr::format::{
+    format_cost, format_duration_ms, local_time, short_id,
 };
 
 pub(super) fn context_view(c: &SessionContextRow) -> SessionContextRowView {

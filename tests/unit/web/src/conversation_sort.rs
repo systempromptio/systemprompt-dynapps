@@ -7,7 +7,7 @@
 //! stops honouring the header the user clicked.
 
 
-use systemprompt_web_admin::repositories::analytics::conversation_rows::{
+use systemprompt_web_admin_core::repositories::conversations::rows::{
     ConversationPage, ConversationSort,
 };
 

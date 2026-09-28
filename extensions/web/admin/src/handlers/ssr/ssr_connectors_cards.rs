@@ -8,8 +8,8 @@ use chrono::{DateTime, Utc};
 use serde::Serialize;
 use systemprompt::models::services::ComponentSource;
 
-use crate::handlers::ssr::format::relative_time;
-use crate::services::connector_accounts::Connection;
+use systemprompt_web_admin_core::connections::Connection;
+use systemprompt_web_admin_core::ssr::format::relative_time;
 
 pub(super) const ATTENTION: [&str; 3] = [
     "reconnect_required",

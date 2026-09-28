@@ -218,7 +218,7 @@ drop to `cargo nextest` directly with a filter — this bypasses the coordinator
 so keep it to iteration and finish with the `just` recipe:
 
 ```bash
-cargo nextest run -p systemprompt-web-admin --tests -E 'test(list_top_users)'
+cargo nextest run -p systemprompt-web-admin-analytics --tests -E 'test(list_top_users)'
 cargo nextest run --manifest-path tests/Cargo.toml -p web-unit-tests some_name
 # DB-backed suites need the maintenance DB, normally derived from the local
 # profile; override explicitly with:
@@ -291,7 +291,7 @@ three times:
 
 | Workspace | Members | Note |
 |-----------|---------|------|
-| root (`Cargo.toml`) | `extensions/**` | `exclude = ["tests"]` |
+| root (`Cargo.toml`) | `extensions/**` — admin is split into `web/shared/admin-core` plus the domain crates `web/admin/{identity,analytics,catalog,governance,platform}` | `exclude = ["tests"]` |
 | `tests/Cargo.toml` | `unit/`, `integration/`, `contract/` crates | separate so it never compiles when extensions are consumed as deps |
 | `bridge/Cargo.toml` | the Claude Code client | depends on unpublished `systemprompt-bridge` **by path** — needs `../systemprompt-core` checked out (`just bridge-build` clones it) |
 
@@ -299,13 +299,16 @@ three times:
 
 ```
 facade (src/) -> aggregator (extensions/web) -> app (site, jobs)
-  -> domain (admin, content) -> shared (web/shared, mcp/shared)
+  -> domain (admin/{identity,analytics,catalog,governance,platform}, content)
+  -> shared (web/shared/{admin-core, …}, mcp/shared)
 ```
 
 Membership is derived from a crate's directory, so moving a crate re-classifies
 it. Three properties are checked and must hold exactly: no dependency points
-upward, no cycles, and **no domain -> domain edges** — `admin` and `content` are
-peers, so anything they both need belongs in `shared`. `extensions/cli/*` and
+upward, no cycles, and **no domain -> domain edges** — the admin domain crates
+and `content` are peers, so anything two of them need belongs in `shared`
+(`web/shared/admin-core` for admin code). The residual `extensions/web/admin`
+crate itself is classified app until it is deleted. `extensions/cli/*` and
 `extensions/mcp/*` sit at the entry tier beside the aggregator. Dev-dependencies
 are exempt.
 
@@ -531,8 +534,9 @@ and artifacts — `admin agents list` returning zero rows is the correct answer.
 
 ## Repository Naming Convention
 
-Every function under `extensions/web/admin/src/repositories/` is named for what
-it returns, so a call site reads the same as its signature:
+Every function under an admin `src/repositories/` (in
+`extensions/web/shared/admin-core` and each `extensions/web/admin/*` crate) is
+named for what it returns, so a call site reads the same as its signature:
 
 | Returns | Prefix | Example |
 |---------|--------|---------|
@@ -616,7 +620,7 @@ Every id listed must resolve to a real top-level resource in `services/`. `Servi
 
 Skills follow the same nested shape: `services/skills/<id>/config.yaml`, with the instruction body beside it. So do marketplaces (`services/marketplaces/<id>/config.yaml`) and artifacts (`services/artifacts/<id>/config.yaml`).
 
-**Skill ids are `snake_case` in `services/` and dashed everywhere else.** Core renders a skill for every host as `<id>` with `_` → `-` (`/astound-commons:who-am-i` for `services/skills/who_am_i/`), the hooks report the dashed name, and every analytics key is the dashed `plugin:skill`. Code that starts from a services id and needs the host or analytics form goes through `extensions/web/admin/src/util/skill_ref.rs`; never compare the two spellings directly.
+**Skill ids are `snake_case` in `services/` and dashed everywhere else.** Core renders a skill for every host as `<id>` with `_` → `-` (`/astound-commons:who-am-i` for `services/skills/who_am_i/`), the hooks report the dashed name, and every analytics key is the dashed `plugin:skill`. Code that starts from a services id and needs the host or analytics form goes through `extensions/web/shared/admin-core/src/util/skill_ref.rs`; never compare the two spellings directly.
 
 **Every entitlement is declared in `services/access-control/rules.yaml`** — one block per
 entity (`marketplace/<id>`, `plugin/<id>`, `skill/<id>`, `mcp_server/<id>`, `gateway_route/*`),

@@ -9,17 +9,51 @@
 use async_trait::async_trait;
 use serde::Deserialize;
 
-use crate::error::AdminResult;
-use crate::export::model::{Cell, CellKind, Column, DataSet, ExportContext, Table, Window};
 use crate::repositories::reports::{customer, internal};
-use crate::repositories::scope::{ScopeRequest, SubjectScope};
-use crate::util::month_range::{MonthQuery, MonthRange, parse_month_range};
+use systemprompt_web_admin_core::error::AdminResult;
+use systemprompt_web_admin_core::export::model::{
+    Cell, CellKind, Column, DataSet, ExportContext, Table, Window,
+};
+use systemprompt_web_admin_core::export::registry::DataSetRegistration;
+use systemprompt_web_admin_core::repositories::scope::{ScopeRequest, SubjectScope};
+use systemprompt_web_admin_core::util::month_range::{MonthQuery, MonthRange, parse_month_range};
 
 pub(crate) struct CustomerUsers;
 pub(crate) struct CustomerProjects;
 pub(crate) struct CustomerModels;
 pub(crate) struct InternalProviders;
 pub(crate) struct InternalModels;
+
+inventory::submit! {
+    DataSetRegistration {
+        order: 39,
+        dataset: &CustomerUsers,
+    }
+}
+inventory::submit! {
+    DataSetRegistration {
+        order: 40,
+        dataset: &CustomerProjects,
+    }
+}
+inventory::submit! {
+    DataSetRegistration {
+        order: 41,
+        dataset: &CustomerModels,
+    }
+}
+inventory::submit! {
+    DataSetRegistration {
+        order: 42,
+        dataset: &InternalProviders,
+    }
+}
+inventory::submit! {
+    DataSetRegistration {
+        order: 43,
+        dataset: &InternalModels,
+    }
+}
 
 #[derive(Debug, Default, Deserialize)]
 struct ReportQuery {
@@ -37,8 +71,10 @@ async fn scoped(ctx: &ExportContext<'_>) -> AdminResult<Scoped> {
     let query: ReportQuery = ctx.query()?;
     let request =
         ScopeRequest::from_query(ctx.user, query.group.as_deref(), query.project.as_deref());
-    let scope =
-        crate::repositories::scope::membership::get_subject_scope(ctx.pool, &request).await?;
+    let scope = systemprompt_web_admin_core::repositories::scope::membership::get_subject_scope(
+        ctx.pool, &request,
+    )
+    .await?;
     Ok(Scoped {
         month: parse_month_range(&MonthQuery { month: query.month }),
         scope,

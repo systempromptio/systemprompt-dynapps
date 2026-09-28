@@ -26,21 +26,21 @@ use serde::Deserialize;
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 
-use crate::error::{AdminError, AdminHtmlResult};
-use crate::handlers::ssr::format::{format_cost, format_token_total};
-use crate::handlers::ssr::list_view::PageWindow;
-use crate::handlers::ssr::types::BreadcrumbView;
-use crate::repositories;
-use crate::repositories::analytics::conversation_rows::{
+use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
+use systemprompt_web_admin_core::ssr::format::{format_cost, format_token_total};
+use systemprompt_web_admin_core::ssr::list_view::PageWindow;
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
+
+use systemprompt_web_admin_core::repositories::conversations::rows::{
     ConversationFilter, ConversationSort, ConversationTotals,
 };
-use crate::repositories::scope::{ScopeRequest, SubjectScope};
-use crate::types::UserContext;
+use systemprompt_web_admin_core::repositories::scope::{ScopeRequest, SubjectScope};
+use systemprompt_web_admin_core::types::UserContext;
 
-use crate::handlers::ssr::list_view::DEFAULT_PAGE_SIZE;
-use crate::handlers::ssr::page::Page;
 use context::{ContextsPageContext, PageKpisView};
 use load::{ContextsPageData, load_page_data};
+use systemprompt_web_admin_core::ssr::list_view::DEFAULT_PAGE_SIZE;
+use systemprompt_web_admin_core::ssr::page::Page;
 
 #[derive(Debug, Deserialize, Default)]
 pub(crate) struct ContextsListQuery {
@@ -160,7 +160,7 @@ async fn build_page_context(build: PageBuild<'_>) -> ContextsPageContext {
         noun,
     } = listing::listing(inputs, data, params);
     let options = view::filter_options(inputs, data);
-    let scope_filter = crate::handlers::ssr::list_view::scope_filter_view(
+    let scope_filter = systemprompt_web_admin_core::ssr::list_view::scope_filter_view(
         pool,
         user_ctx,
         request,
@@ -196,9 +196,9 @@ async fn build_page_context(build: PageBuild<'_>) -> ContextsPageContext {
         count_label: format!("{count} {noun}"),
         show_side: inputs.show_side,
         side_toggle_url: view::side_toggle_url(params, inputs.show_side),
-        export: crate::export::ExportView::new(
+        export: systemprompt_web_admin_core::export::view::ExportView::new(
             export::export_datasets(inputs.view_is_users),
-            &crate::export::view::query_string(&[
+            &systemprompt_web_admin_core::export::view::query_string(&[
                 (
                     "preset",
                     Some(export::export_preset(inputs.since_label.as_deref())),
@@ -230,7 +230,10 @@ pub(crate) async fn skills_contexts_page(
         params.group.as_deref(),
         params.project.as_deref(),
     );
-    let scope = repositories::scope::membership::get_subject_scope(&pool, &request).await?;
+    let scope = systemprompt_web_admin_core::repositories::scope::membership::get_subject_scope(
+        &pool, &request,
+    )
+    .await?;
     let inputs = parse_inputs(&params, &scope);
     let data = load_page_data(&pool, &inputs, &scope).await?;
     let payload = build_page_context(PageBuild {
@@ -242,13 +245,15 @@ pub(crate) async fn skills_contexts_page(
         params: &params,
     })
     .await;
-    Ok(crate::handlers::ssr::render_typed_page(
-        &shell.engine,
-        "skills-contexts",
-        &payload,
-        &shell.user,
-        &shell.marketplace,
-    ))
+    Ok(
+        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+            &shell.engine,
+            "skills-contexts",
+            &payload,
+            &shell.user,
+            &shell.marketplace,
+        ),
+    )
 }
 
 fn page_kpis(t: &ConversationTotals) -> PageKpisView {

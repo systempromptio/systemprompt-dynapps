@@ -11,8 +11,8 @@ mod context;
 mod data;
 mod view;
 
-use crate::error::AdminError;
 use std::sync::Arc;
+use systemprompt_web_admin_core::error::AdminError;
 
 use axum::extract::{Path, Query, State};
 use axum::response::Response;
@@ -20,12 +20,12 @@ use serde::Deserialize;
 use sqlx::PgPool;
 use systemprompt::identifiers::ContextId;
 
-use crate::error::AdminHtmlResult;
 use crate::repositories::analytics::context_detail::find_context_header;
-use crate::repositories::scope::may_view;
+use systemprompt_web_admin_core::error::AdminHtmlResult;
+use systemprompt_web_admin_core::repositories::scope::may_view;
 
-use crate::handlers::ssr::page::Page;
 use data::load_transcript;
+use systemprompt_web_admin_core::ssr::page::Page;
 use view::{build_detail_data, resolve_tab};
 
 #[derive(Debug, Deserialize)]
@@ -68,11 +68,13 @@ pub(crate) async fn context_detail_page(
     let transcript = load_transcript(&pool, &header, &context_id).await?;
     let data = build_detail_data(&header, &transcript, resolve_tab(query.tab.as_deref()));
 
-    Ok(crate::handlers::ssr::render_typed_page(
-        &shell.engine,
-        "context-detail",
-        &data,
-        &shell.user,
-        &shell.marketplace,
-    ))
+    Ok(
+        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+            &shell.engine,
+            "context-detail",
+            &data,
+            &shell.user,
+            &shell.marketplace,
+        ),
+    )
 }

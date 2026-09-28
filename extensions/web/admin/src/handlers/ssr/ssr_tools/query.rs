@@ -10,7 +10,7 @@ use urlencoding::encode as urlencode;
 use crate::repositories::analysis::tools::{
     ArtifactKind, ToolActivityFilter, ToolBreakdownBy, ToolSort, ToolState,
 };
-use crate::util::time_range::{TimeRange, TimeRangeQuery, parse_time_range};
+use systemprompt_web_admin_core::util::time_range::{TimeRange, TimeRangeQuery, parse_time_range};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Lens {

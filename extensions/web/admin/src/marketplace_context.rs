@@ -8,8 +8,6 @@
 //! A session refused for its own account state keeps that status; only a
 //! failure to evaluate entitlement for a real account is `Unavailable`.
 
-use super::error::AdminError;
-use super::types::{MarketplaceContext, UserContext};
 use axum::Extension;
 use axum::extract::{Request, State};
 use axum::middleware::Next;
@@ -17,6 +15,8 @@ use axum::response::{IntoResponse, Response};
 use sqlx::PgPool;
 use std::sync::Arc;
 use systemprompt::identifiers::UserId;
+use systemprompt_web_admin_core::error::AdminError;
+use systemprompt_web_admin_core::types::{MarketplaceContext, UserContext};
 
 pub(crate) async fn marketplace_context_middleware(
     State(pool): State<Arc<PgPool>>,
@@ -25,7 +25,7 @@ pub(crate) async fn marketplace_context_middleware(
     next: Next,
 ) -> Response {
     let result = async {
-        let path = crate::handlers::shared::get_services_path()?;
+        let path = systemprompt_web_admin_core::request::get_services_path()?;
         let plugins = crate::repositories::marketplace::plugins::list_plugins_for_user(
             &pool,
             &path,

@@ -3,7 +3,7 @@
 
 use systemprompt::identifiers::{Email, UserId};
 use systemprompt_web_admin::repositories::users;
-use systemprompt_web_admin::types::{CreateUserRequest, UpdateUserRequest};
+use systemprompt_web_admin_core::types::{CreateUserRequest, UpdateUserRequest};
 
 use crate::fixtures::{
     insert_group, insert_group_member, insert_project, insert_project_member, insert_user,
@@ -196,7 +196,10 @@ async fn find_user_access_profile_returns_none_for_an_absent_user() {
     };
     let missing = UserId::new(unique("absent"));
 
-    let found = users::queries::find_user_access_profile(&db.pool, &missing)
+    let found =
+        systemprompt_web_admin_core::repositories::principal::role::find_user_access_profile(
+            &db.pool, &missing,
+        )
         .await
         .expect("lookup succeeds");
 
@@ -222,7 +225,10 @@ async fn find_user_access_profile_reads_the_roles_and_the_derived_group() {
     )
     .await;
 
-    let profile = users::queries::find_user_access_profile(&db.pool, &user)
+    let profile =
+        systemprompt_web_admin_core::repositories::principal::role::find_user_access_profile(
+            &db.pool, &user,
+        )
         .await
         .expect("lookup succeeds")
         .expect("the user exists");
@@ -253,7 +259,10 @@ async fn find_user_access_profile_reads_an_assigned_group_and_project() {
     insert_project(&db.pool, &project, "Commerce").await;
     insert_project_member(&db.pool, &project, &user, "adfs").await;
 
-    let profile = users::queries::find_user_access_profile(&db.pool, &user)
+    let profile =
+        systemprompt_web_admin_core::repositories::principal::role::find_user_access_profile(
+            &db.pool, &user,
+        )
         .await
         .expect("lookup succeeds")
         .expect("the user exists");

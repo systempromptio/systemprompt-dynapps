@@ -10,11 +10,15 @@ use super::views::{MarketplaceGroupView, PluginGroupView, SkillFactView};
 use crate::handlers::ssr::analysis::tone::{
     completion_tone, deny_tone, error_rate_tone, latency_tone, percent, score_display,
 };
-use crate::handlers::ssr::analysis_urls::{analysis_skill_url, analysis_version_url};
-use crate::handlers::ssr::format::{format_cost, format_duration_ms, format_token_total};
-use crate::handlers::ssr::types::sparkline_toned;
-use crate::repositories::analysis::inventory_index::{InventoryIndex, MarketplaceAudience};
 use crate::repositories::analysis::skills::SkillFactRow;
+use systemprompt_web_admin_core::catalog_index::inventory_index::{
+    InventoryIndex, MarketplaceAudience,
+};
+use systemprompt_web_admin_core::ssr::analysis_urls::{analysis_skill_url, analysis_version_url};
+use systemprompt_web_admin_core::ssr::format::{
+    format_cost, format_duration_ms, format_token_total,
+};
+use systemprompt_web_admin_core::ssr::types::sparkline::sparkline_toned;
 
 pub(super) fn spark_values(row: &SkillFactRow, end: NaiveDate) -> Vec<i64> {
     let by_day: HashMap<NaiveDate, i64> = row

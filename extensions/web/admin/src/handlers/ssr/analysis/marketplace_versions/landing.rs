@@ -6,10 +6,10 @@ use systemprompt::identifiers::MarketplaceId;
 
 use super::history::short;
 use crate::handlers::ssr::analysis::tone::{completion_tone, score_display};
-use crate::handlers::ssr::format::format_cost;
 use crate::repositories::analysis::marketplace_versions::{
     MarketplaceCompletionRollup, MarketplaceListRow,
 };
+use systemprompt_web_admin_core::ssr::format::format_cost;
 
 #[derive(Serialize)]
 pub(super) struct MarketplaceCard {

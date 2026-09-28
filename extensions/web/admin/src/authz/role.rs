@@ -1,4 +1,4 @@
-//! The user's effective role set, exposed as a quota subject.
+//! The user's effective role set, exposed as a quota subject (rung 200).
 //!
 //! Core's authorization resolver already reads roles off the request and
 //! ignores this dimension (`ladder` filters `RuleType::ROLE` out), so
@@ -16,7 +16,8 @@ use sqlx::PgPool;
 use std::sync::Arc;
 use systemprompt::identifiers::UserId;
 use systemprompt_security::authz::{
-    AuthzError, ROLE_PRECEDENCE, RuleType, SubjectAttributeProvider, SubjectDimension,
+    AuthzError, ROLE_PRECEDENCE, RuleType, SharedSubjectAttributeProvider,
+    SubjectAttributeProvider, SubjectDimension,
 };
 
 use crate::repositories::users::roles::{list_directory_roles, list_manual_roles};
@@ -65,3 +66,9 @@ impl SubjectAttributeProvider for RoleAttributeProvider {
         Ok(effective_roles(manual, directory))
     }
 }
+
+systemprompt_security::register_subject_attribute_provider!(|ctx| {
+    let provider: SharedSubjectAttributeProvider =
+        Arc::new(RoleAttributeProvider::new(Arc::clone(&ctx.pool)));
+    provider
+});

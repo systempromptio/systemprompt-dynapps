@@ -5,7 +5,7 @@ use systemprompt_web_admin::connector_oauth::token_plan::{
     AccessMode, Admission, REFRESH_LEEWAY_SECONDS, TokenPlan, needs_refresh, needs_remint,
 };
 use systemprompt_web_admin::connector_oauth::{Grant, Provider};
-use systemprompt_web_admin::error::AdminError;
+use systemprompt_web_admin_core::error::AdminError;
 
 const NOW: i64 = 1_800_000_000;
 

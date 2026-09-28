@@ -24,13 +24,13 @@ use systemprompt::loader::ServicesBootstrap;
 
 use self::view::{ArchivePeriodView, LifecycleFindingView, MeasureView, build_view};
 use super::configuration::retention::{RetentionView, retention_view};
-use crate::error::{AdminError, AdminHtmlResult};
-use crate::handlers::ssr::types::BreadcrumbView;
 use crate::repositories::lifecycle::{
     find_latest_health_report, list_latest_retention_runs, list_retention_archives,
 };
-use crate::templates::AdminTemplateEngine;
-use crate::types::{MarketplaceContext, UserContext};
+use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
+use systemprompt_web_admin_core::templates::AdminTemplateEngine;
+use systemprompt_web_admin_core::types::{MarketplaceContext, UserContext};
 
 #[derive(Debug, Serialize)]
 struct LifecyclePageData {
@@ -91,13 +91,15 @@ pub(crate) async fn lifecycle_page(
         findings_p2_tone: if view.counts.1 > 0 { "warn" } else { "neutral" },
         retention,
     };
-    Ok(super::render_typed_page(
-        &engine,
-        "lifecycle",
-        &page,
-        &user_ctx,
-        &mkt_ctx,
-    ))
+    Ok(
+        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+            &engine,
+            "lifecycle",
+            &page,
+            &user_ctx,
+            &mkt_ctx,
+        ),
+    )
 }
 
 pub(crate) async fn lifecycle_archive_download(

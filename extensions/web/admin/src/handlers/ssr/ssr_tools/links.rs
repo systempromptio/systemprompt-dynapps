@@ -2,10 +2,11 @@
 //! window tabs, the breakdown tabs, the pager and the sortable headers.
 
 use super::query::{Lens, ToolsQuery};
-use crate::handlers::ssr::list_view::{PageWindow, Pagination, paginate_prefixed};
-use crate::handlers::ssr::types::{SortHeaderView, TabLinkView};
 use crate::repositories::analysis::tools::{ToolBreakdownBy, ToolSort};
-use crate::util::time_range::TimeRange;
+use systemprompt_web_admin_core::ssr::list_view::{PageWindow, Pagination, paginate_prefixed};
+use systemprompt_web_admin_core::ssr::types::table::SortHeaderView;
+use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;
+use systemprompt_web_admin_core::util::time_range::TimeRange;
 
 impl ToolsQuery {
     pub(crate) fn range_links(&self, lens: Lens, range: TimeRange) -> Vec<TabLinkView> {

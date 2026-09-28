@@ -9,15 +9,16 @@ use sqlx::PgPool;
 
 use crate::repositories::people_usage::{DEFAULT_WINDOW_DAYS, totals};
 use crate::repositories::projects::usage::{LISTING_CAP, ProjectRollup, list_project_rollups};
-use crate::repositories::scope::membership::UNATTRIBUTED;
-use crate::repositories::scope::{Attribution, ScopeKind};
+use systemprompt_web_admin_core::repositories::scope::membership::UNATTRIBUTED;
+use systemprompt_web_admin_core::repositories::scope::{Attribution, ScopeKind};
 
-use super::super::format::short_num;
 use super::super::people_view::{format_usd, or_default, short_model};
-use super::super::types::{BreadcrumbView, ProjectKpiView, ProjectListRowView, ProjectsPageData};
+use super::super::types::{ProjectKpiView, ProjectListRowView, ProjectsPageData};
 use super::sort::{page_url, sort_headers, sort_key, sort_rows};
 use super::{PageCounts, WINDOW_LABEL, pagination, pct};
-use crate::handlers::ssr::list_view::DEFAULT_PAGE_SIZE;
+use systemprompt_web_admin_core::ssr::format::short_num;
+use systemprompt_web_admin_core::ssr::list_view::DEFAULT_PAGE_SIZE;
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 
 #[derive(Debug, Clone, serde::Deserialize)]
 pub(crate) struct ListQuery {
@@ -84,9 +85,9 @@ pub(super) async fn page_data(
             &page_url(query),
         ),
         rows,
-        export: crate::export::ExportView::single(
+        export: systemprompt_web_admin_core::export::view::ExportView::single(
             "projects",
-            &crate::export::view::query_string(&[("q", query.q.as_deref())]),
+            &systemprompt_web_admin_core::export::view::query_string(&[("q", query.q.as_deref())]),
         ),
         query: query.q.clone().unwrap_or_default(),
         truncated,

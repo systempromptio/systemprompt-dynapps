@@ -15,9 +15,9 @@ use serde::Serialize;
 use sqlx::PgPool;
 use systemprompt_web_shared::GroupId;
 
-use crate::error::{AdminError, AdminResult};
 use crate::repositories::groups::{crud, mappings as repo};
-use crate::types::groups::{AddAdMappingRequest, GroupAdMappingRow};
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::types::groups::{AddAdMappingRequest, GroupAdMappingRow};
 
 #[derive(Debug, Serialize)]
 pub(crate) struct ListAdMappingsResponse {

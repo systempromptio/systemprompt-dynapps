@@ -16,14 +16,20 @@
 # comment block directly above the function, and say why.
 set -uo pipefail
 
-REPO_DIR="${REPO_DIR:-extensions/web/admin/src/repositories}"
+# The repository layer is spread over the shared admin core, the residual admin
+# crate and each admin domain crate. REPO_DIR (space-separated, globs allowed)
+# overrides the list; directories that do not exist are skipped.
+REPO_DIRS=()
+for d in ${REPO_DIR:-extensions/web/shared/admin-core/src/repositories extensions/web/admin/src/repositories extensions/web/admin/*/src/repositories}; do
+    [ -d "$d" ] && REPO_DIRS+=("$d")
+done
 
-[ -d "$REPO_DIR" ] || { echo "check-repository-naming: no $REPO_DIR - nothing to check"; exit 0; }
+[ "${#REPO_DIRS[@]}" -gt 0 ] || { echo "check-repository-naming: no repository directory - nothing to check"; exit 0; }
 
-python3 - "$REPO_DIR" <<'PY'
+python3 - "${REPO_DIRS[@]}" <<'PY'
 import re, sys, pathlib
 
-root = pathlib.Path(sys.argv[1])
+roots = [pathlib.Path(a) for a in sys.argv[1:]]
 SHAPE_PREFIXES = ("list_", "find_", "get_")
 violations = []
 
@@ -67,7 +73,7 @@ def shape_of(rt):
         return 'list'
     return 'get'
 
-for path in sorted(root.rglob('*.rs')):
+for path in sorted(p for root in roots for p in root.rglob('*.rs')):
     src = path.read_text()
     lines = src.splitlines()
     for m in re.finditer(r'\bfn ([a-z][a-z0-9_]*)\s*(?:<[^>]*>)?\s*\(', src):

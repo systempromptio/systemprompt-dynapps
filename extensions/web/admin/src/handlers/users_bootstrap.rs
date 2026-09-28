@@ -15,14 +15,15 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use sqlx::PgPool;
 
-use crate::activity::{self, ActivityEntity, NewActivity};
-use crate::error::{AdminError, AdminResult};
 use crate::repositories;
-use crate::types::{CreateUserRequest, UserContext};
+use systemprompt_web_admin_core::activity;
+use systemprompt_web_admin_core::activity::{ActivityEntity, NewActivity};
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::types::{CreateUserRequest, UserContext};
 
 #[derive(Debug, serde::Serialize)]
 pub(crate) struct CreatedUserResponse {
-    pub user: crate::types::UserSummary,
+    pub user: systemprompt_web_admin_core::types::UserSummary,
     pub invite_note: String,
 }
 

@@ -7,16 +7,16 @@
 //! overlap. Each row links to the Analysis section for the conversation-level
 //! detail so both screens tell one story.
 
-use crate::handlers::ssr::analysis_urls::analysis_skill_url;
-use crate::handlers::ssr::format::format_cost;
-use crate::handlers::ssr::list_view::PageWindow;
 use crate::repositories::analytics::site::skills::{SkillStatsRow, SkillTotals};
+use systemprompt_web_admin_core::ssr::analysis_urls::analysis_skill_url;
+use systemprompt_web_admin_core::ssr::format::format_cost;
+use systemprompt_web_admin_core::ssr::list_view::PageWindow;
 
 use super::context::{KpiTile, SkillRowView, SkillsTabView};
 use super::tab_models::{pct, share, short_name};
 use super::view::compact;
 use super::{AnalyticsDashboardQuery, urls};
-use crate::handlers::ssr::list_view::DEFAULT_PAGE_SIZE;
+use systemprompt_web_admin_core::ssr::list_view::DEFAULT_PAGE_SIZE;
 
 const UNPRICED_COST_DISPLAY: &str = "—";
 

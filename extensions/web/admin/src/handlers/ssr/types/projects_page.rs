@@ -9,15 +9,18 @@
 
 use serde::Serialize;
 
-use super::table::SortHeaderView;
 use systemprompt::identifiers::{SessionId, UserId};
+use systemprompt_web_admin_core::ssr::types::table::SortHeaderView;
 use systemprompt_web_shared::ProjectId;
 
-use super::super::list_view::Pagination;
 use super::{
-    AccessRowView, AttributionSourceRowView, BreadcrumbView, MappingRowView, MemberRowView,
-    MemberSetChipView, ModelMixRowView, SvgLineChartView, TabLinkView, UserOptionView,
+    AccessRowView, AttributionSourceRowView, MappingRowView, MemberRowView, MemberSetChipView,
+    ModelMixRowView, UserOptionView,
 };
+use systemprompt_web_admin_core::ssr::list_view::Pagination;
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
+use systemprompt_web_admin_core::ssr::types::svg_line::SvgLineChartView;
+use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;
 
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct ProjectKpiView {
@@ -72,7 +75,7 @@ pub(crate) struct ProjectsPageData {
     pub query: String,
     pub truncated: bool,
     pub can_manage: bool,
-    pub export: crate::export::ExportView,
+    pub export: systemprompt_web_admin_core::export::view::ExportView,
 }
 
 #[derive(Debug, Serialize)]
@@ -178,5 +181,5 @@ pub(crate) struct ProjectDetailPageData {
     pub usage: Option<ProjectUsageTabView>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub settings: Option<ProjectSettingsTabView>,
-    pub export: crate::export::ExportView,
+    pub export: systemprompt_web_admin_core::export::view::ExportView,
 }

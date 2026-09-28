@@ -15,16 +15,6 @@ use std::path::PathBuf;
 use systemprompt::loader::ConfigLoader;
 use systemprompt::models::services::ServicesConfig;
 use systemprompt_security::authz::{EntityKind, RegisteredEntities};
-use systemprompt_web_admin::repositories::access_control::declared::{
-    DeclaredInputs, DeclaredSet, build_declared_set,
-};
-use systemprompt_web_admin::repositories::access_control::drift::{BandRuleRow, EntityDefaultRow};
-use systemprompt_web_admin::repositories::access_control::export::{Owners, render_export};
-use systemprompt_web_admin::repositories::config::gateway::dispatchable_route_ids;
-use systemprompt_web_admin::repositories::config::rules_yaml_loader::{
-    RULES_FILE, parse_rules_doc,
-};
-use systemprompt_web_admin::repositories::config::rules_yaml_types::RulesDoc;
 use systemprompt_web_admin::repositories::gateway_policies::declared::{
     POLICIES_FILE, parse_declared_policies,
 };
@@ -37,6 +27,18 @@ use systemprompt_web_admin::repositories::sync::groups_db::{
     parse_groups_doc, render_groups_export,
 };
 use systemprompt_web_admin::repositories::sync::groups_drift::{MappingRow, MemberSetRow};
+use systemprompt_web_admin_core::repositories::access_rules::declared::{
+    DeclaredInputs, DeclaredSet, build_declared_set,
+};
+use systemprompt_web_admin_core::repositories::access_rules::drift::{
+    BandRuleRow, EntityDefaultRow,
+};
+use systemprompt_web_admin_core::repositories::access_rules::export::{Owners, render_export};
+use systemprompt_web_admin_core::repositories::access_rules::rules_yaml_loader::{
+    RULES_FILE, parse_rules_doc,
+};
+use systemprompt_web_admin_core::repositories::access_rules::rules_yaml_types::RulesDoc;
+use systemprompt_web_admin_core::repositories::gateway_catalog::dispatchable_route_ids;
 
 use crate::support::repo_root;
 

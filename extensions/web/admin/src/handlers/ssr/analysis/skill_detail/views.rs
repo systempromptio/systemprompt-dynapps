@@ -5,8 +5,10 @@ use serde::Serialize;
 use crate::handlers::ssr::analysis::conversations::view::ConversationRowView;
 use crate::handlers::ssr::analysis::help::HelpView;
 use crate::handlers::ssr::analysis::skills::SkillFactView;
-use crate::handlers::ssr::list_view::Pagination;
-use crate::handlers::ssr::types::{BreadcrumbView, SvgLineChartView, TabLinkView};
+use systemprompt_web_admin_core::ssr::list_view::Pagination;
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
+use systemprompt_web_admin_core::ssr::types::svg_line::SvgLineChartView;
+use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;
 
 #[derive(Debug, Serialize)]
 pub(super) struct SkillKpiView {
@@ -64,6 +66,6 @@ pub(super) struct SkillDetailContext {
     pub(super) conversations: Vec<ConversationRowView>,
     pub(super) conversation_count: i64,
     pub(super) pagination: Pagination,
-    pub(super) export: crate::export::ExportView,
+    pub(super) export: systemprompt_web_admin_core::export::view::ExportView,
     pub(super) help: HelpView,
 }

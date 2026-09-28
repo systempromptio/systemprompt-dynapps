@@ -8,18 +8,21 @@ use crate::repositories::people_usage::DailyRequests;
 use crate::repositories::projects::activity::{
     ProjectSessionRow, SkillEffectivenessRow, ToolHealthRow,
 };
-use crate::types::access_control::{AccessControlRule, AccessDecision};
+use systemprompt_web_admin_core::types::access_control::{AccessControlRule, AccessDecision};
 use systemprompt_web_shared::ProjectId;
 
-use super::super::format::short_num;
 use super::super::people_view::{attribution_rows, format_usd, model_rows};
 use super::super::types::{
-    AccessRowView, LineChartSpec, ProjectKpiView, ProjectSessionRowView, ProjectSkillRowView,
-    ProjectToolRowView, ProjectUsageTabView, SvgLineChartView, SvgSeriesInput, TabLinkView,
-    line_chart,
+    AccessRowView, ProjectKpiView, ProjectSessionRowView, ProjectSkillRowView, ProjectToolRowView,
+    ProjectUsageTabView,
 };
 use super::detail::{DetailData, ProjectUsageData};
 use super::pct;
+use systemprompt_web_admin_core::ssr::format::short_num;
+use systemprompt_web_admin_core::ssr::types::svg_line::{
+    LineChartSpec, SvgLineChartView, SvgSeriesInput, line_chart,
+};
+use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;
 
 pub(super) fn tabs(project_id: &ProjectId, active: &str) -> Vec<TabLinkView> {
     [

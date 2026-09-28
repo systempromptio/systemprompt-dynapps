@@ -11,15 +11,15 @@ use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 use systemprompt::security::authz::{EntityKind, RegisteredEntities};
 
-use crate::activity::{self, ActivityEntity, NewActivity};
-use crate::error::{AdminError, AdminResult};
-use crate::handlers::shared;
 use crate::repositories;
-use crate::repositories::config::gateway::registered_routes_from_services;
-use crate::types::UserContext;
-use crate::types::access_control::{
+use systemprompt_web_admin_core::activity::{ActivityEntity, NewActivity};
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::repositories::gateway_catalog::registered_routes_from_services;
+use systemprompt_web_admin_core::types::UserContext;
+use systemprompt_web_admin_core::types::access_control::{
     AccessControlQuery, AccessControlRule, BulkAssignRequest, UpdateEntityRulesRequest,
 };
+use systemprompt_web_admin_core::{activity, request as shared};
 
 #[derive(Debug, Serialize)]
 pub(crate) struct RulesResponse {
@@ -37,9 +37,12 @@ pub(crate) async fn list_access_rules_handler(
     Query(query): Query<AccessControlQuery>,
 ) -> AdminResult<Response> {
     let rules = if let (Some(et), Some(eid)) = (&query.entity_type, &query.entity_id) {
-        repositories::users::access_control::list_rules_for_entity(&pool, et, eid).await?
+        systemprompt_web_admin_core::repositories::entitlement::list_rules_for_entity(
+            &pool, et, eid,
+        )
+        .await?
     } else {
-        repositories::users::access_control::list_all_rules(&pool).await?
+        systemprompt_web_admin_core::repositories::entitlement::list_all_rules(&pool).await?
     };
 
     Ok(Json(RulesResponse { rules }).into_response())
@@ -55,9 +58,13 @@ pub(crate) async fn update_entity_rules_handler(
     registered_routes_from_services()?.require(kind, &entity_id)?;
     require_band_justification(&body.rules)?;
 
-    let rules =
-        repositories::users::access_control::set_entity_rules(&pool, kind, &entity_id, &body.rules)
-            .await?;
+    let rules = systemprompt_web_admin_core::repositories::entitlement::set_entity_rules(
+        &pool,
+        kind,
+        &entity_id,
+        &body.rules,
+    )
+    .await?;
 
     if entity_type == "gateway_route" {
         let uid = user_ctx.user_id.clone();
@@ -87,8 +94,12 @@ pub(crate) async fn bulk_assign_handler(
 
     require_band_justification(&body.rules)?;
     let rules_per_entity = body.rules.len();
-    let updated_count =
-        repositories::users::access_control::bulk_set_rules(&pool, &entities, &body.rules).await?;
+    let updated_count = systemprompt_web_admin_core::repositories::entitlement::bulk_set_rules(
+        &pool,
+        &entities,
+        &body.rules,
+    )
+    .await?;
     Ok(Json(BulkAssignResponse {
         updated_count,
         rules_per_entity,
@@ -97,10 +108,10 @@ pub(crate) async fn bulk_assign_handler(
 }
 
 pub(crate) fn require_band_justification(
-    rules: &[crate::types::access_control::AccessControlRuleInput],
+    rules: &[systemprompt_web_admin_core::types::access_control::AccessControlRuleInput],
 ) -> AdminResult<()> {
     let missing = rules.iter().find(|r| {
-        r.rule_type != crate::types::access_control::RuleType::USER
+        r.rule_type != systemprompt_web_admin_core::types::access_control::RuleType::USER
             && r.justification
                 .as_deref()
                 .is_none_or(|j| j.trim().is_empty())
@@ -153,20 +164,22 @@ pub(crate) async fn user_matrix_handler(
     let sections = build_matrix_sections(&services_path);
 
     let user_id = UserId::new(user_id);
-    let matrix =
-        repositories::users::access_control::resolve_user_matrix(&pool, &user_id, sections)
-            .await?
-            .ok_or_else(|| AdminError::NotFound("User not found".to_owned()))?;
+    let matrix = systemprompt_web_admin_core::repositories::entitlement::resolve_user_matrix(
+        &pool, &user_id, sections,
+    )
+    .await?
+    .ok_or_else(|| AdminError::NotFound("User not found".to_owned()))?;
     Ok(Json(matrix).into_response())
 }
 
 pub(crate) fn build_matrix_sections(
     services_path: &std::path::Path,
-) -> Vec<repositories::users::access_control::SectionInput> {
-    let mut sections: Vec<repositories::users::access_control::SectionInput> = Vec::new();
+) -> Vec<systemprompt_web_admin_core::repositories::entitlement::SectionInput> {
+    let mut sections: Vec<systemprompt_web_admin_core::repositories::entitlement::SectionInput> =
+        Vec::new();
 
     let marketplace_rows: Vec<(String, String, Option<String>)> =
-        crate::services::marketplaces::load_marketplaces()
+        systemprompt_web_admin_core::catalog_index::marketplaces::load_marketplaces()
             .into_iter()
             .map(|m| (m.id.to_string(), m.name, Some(m.description)))
             .collect();
@@ -178,7 +191,8 @@ pub(crate) fn build_matrix_sections(
         ));
     }
 
-    match repositories::config::gateway::get_route_labels_from_services() {
+    match systemprompt_web_admin_core::repositories::gateway_catalog::get_route_labels_from_services(
+    ) {
         Err(e) => {
             tracing::error!(error = %e, "gateway routes unavailable for the access-control matrix");
         },
@@ -198,7 +212,7 @@ pub(crate) fn build_matrix_sections(
 
 fn push_catalog_sections(
     services_path: &std::path::Path,
-    sections: &mut Vec<repositories::users::access_control::SectionInput>,
+    sections: &mut Vec<systemprompt_web_admin_core::repositories::entitlement::SectionInput>,
 ) {
     if let Ok(servers) = repositories::mcp::mcp_servers::list_mcp_servers(services_path) {
         let rows: Vec<(String, String, Option<String>)> = servers

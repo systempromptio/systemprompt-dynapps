@@ -95,7 +95,7 @@ fn every_source_file_is_registered() {
 
     assert!(
         orphans.is_empty(),
-        "unregistered source files (register in extensions/web/site/src/assets/ or extensions/web/admin/src/assets.rs, or delete):\n{}",
+        "unregistered source files (register in extensions/web/site/src/assets/ or extensions/web/shared/admin-core/src/assets.rs, or delete):\n{}",
         orphans.join("\n")
     );
 }

@@ -4,15 +4,16 @@
 //! context the `analytics-dashboard` template consumes. All percentage and
 //! label math happens here so the template never derives a scale.
 
-use crate::handlers::ssr::format::format_cost;
-use crate::handlers::ssr::types::{
-    PieSliceInput, PieView, Plot, SvgLineChartView, SvgSeriesInput, chart_on_axis, delta_view,
-    pie_view, sparkline,
-};
 use crate::repositories::analytics::site::distribution::ModelDistributionRow;
 use crate::repositories::analytics::site::kpis::SiteKpis;
 use crate::repositories::analytics::site::series::UsageBucket;
-use crate::util::time_range::TimeRange;
+use systemprompt_web_admin_core::ssr::format::format_cost;
+use systemprompt_web_admin_core::ssr::types::pie::{PieSliceInput, PieView, pie_view};
+use systemprompt_web_admin_core::ssr::types::sparkline::{delta_view, sparkline};
+use systemprompt_web_admin_core::ssr::types::svg_line::{
+    Plot, SvgLineChartView, SvgSeriesInput, chart_on_axis,
+};
+use systemprompt_web_admin_core::util::time_range::TimeRange;
 
 use super::context::{DashboardTimeRange, KpiStripView};
 use super::{AnalyticsDashboardQuery, BASE_URL, urls};

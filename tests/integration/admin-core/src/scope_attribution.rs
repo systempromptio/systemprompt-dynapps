@@ -10,10 +10,10 @@
 use systemprompt_web_admin::repositories::groups::members::replace_directory_group_memberships;
 use systemprompt_web_admin::repositories::people_usage::get_scope_usage;
 use systemprompt_web_admin::repositories::people_usage::totals::list_scope_totals;
-use systemprompt_web_admin::repositories::scope::defaults::{
+use systemprompt_web_admin_core::repositories::scope::defaults::{
     find_scope_defaults, recompute_scope_defaults, set_scope_defaults,
 };
-use systemprompt_web_admin::repositories::scope::{
+use systemprompt_web_admin_core::repositories::scope::{
     Attribution, ScopeKind, ScopeQuery, ScopeTarget,
 };
 

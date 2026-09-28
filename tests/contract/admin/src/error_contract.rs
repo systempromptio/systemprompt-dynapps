@@ -14,7 +14,7 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use http_body_util::BodyExt as _;
 use serde_json::Value;
-use systemprompt_web_admin::error::{AdminError, AdminHtmlError};
+use systemprompt_web_admin_core::error::{AdminError, AdminHtmlError};
 
 // The status and rendered body of the JSON face.
 async fn json_face(error: AdminError) -> (StatusCode, Value) {

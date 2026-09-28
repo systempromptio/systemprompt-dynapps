@@ -32,14 +32,19 @@ use axum::extract::{Extension, Query, State};
 use axum::response::Response;
 use sqlx::PgPool;
 
-use crate::error::AdminHtmlResult;
-use crate::handlers::ssr::pickable_users::list_pickable_users;
-use crate::handlers::ssr::ssr_helpers::render_typed_page;
-use crate::handlers::ssr::types::{BreadcrumbView, TabLinkView};
 use crate::repositories;
-use crate::repositories::config::gateway::{RouteLabels, get_route_labels_from_services};
-use crate::templates::AdminTemplateEngine;
-use crate::types::{GatewayConfigView, GatewayRouteView, MarketplaceContext, UserContext};
+use systemprompt_web_admin_core::error::AdminHtmlResult;
+use systemprompt_web_admin_core::repositories::gateway_catalog::{
+    RouteLabels, get_route_labels_from_services,
+};
+use systemprompt_web_admin_core::ssr::helpers::render_typed_page;
+use systemprompt_web_admin_core::ssr::pickable_users::list_pickable_users;
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
+use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;
+use systemprompt_web_admin_core::templates::AdminTemplateEngine;
+use systemprompt_web_admin_core::types::{
+    GatewayConfigView, GatewayRouteView, MarketplaceContext, UserContext,
+};
 
 pub(crate) use route_detail::gateway_route_page;
 use rows::{Surfaces, kpis, load_surfaces, resolved_only, route_rows};
@@ -124,7 +129,10 @@ fn console_only(user_ctx: &UserContext) -> AdminHtmlResult<()> {
     if user_ctx.is_console {
         return Ok(());
     }
-    Err(crate::error::AdminError::Forbidden("Admin access required.".to_owned()).into())
+    Err(systemprompt_web_admin_core::error::AdminError::Forbidden(
+        "Admin access required.".to_owned(),
+    )
+    .into())
 }
 
 struct GatewayRead {
@@ -143,7 +151,7 @@ async fn load_gateway(pool: &PgPool) -> GatewayRead {
         Err(e) => (GatewayConfigView::default(), e.to_string()),
     };
     let (resolved, catalog_error) =
-        match repositories::config::gateway::dispatchable_routes_from_services() {
+        match systemprompt_web_admin_core::repositories::gateway_catalog::dispatchable_routes_from_services() {
             Ok(routes) => (routes, String::new()),
             Err(e) => (Vec::new(), e.to_string()),
         };
@@ -151,13 +159,14 @@ async fn load_gateway(pool: &PgPool) -> GatewayRead {
         .inspect_err(|e| tracing::warn!(error = %e, "gateway: route labels unavailable"))
         .unwrap_or_default();
     let surfaces = load_surfaces(&labels);
-    let grants_by_route = repositories::users::access_control::count_assignments_by_entity_type(
-        pool,
-        ENTITY_GATEWAY_ROUTE,
-    )
-    .await
-    .inspect_err(|e| tracing::warn!(error = %e, "gateway: route rule listing failed"))
-    .unwrap_or_default();
+    let grants_by_route =
+        systemprompt_web_admin_core::repositories::entitlement::count_assignments_by_entity_type(
+            pool,
+            ENTITY_GATEWAY_ROUTE,
+        )
+        .await
+        .inspect_err(|e| tracing::warn!(error = %e, "gateway: route rule listing failed"))
+        .unwrap_or_default();
     GatewayRead {
         config,
         config_error,

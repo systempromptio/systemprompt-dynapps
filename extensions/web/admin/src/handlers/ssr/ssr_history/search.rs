@@ -10,13 +10,13 @@ use serde::Serialize;
 use sqlx::PgPool;
 use systemprompt::identifiers::{ContextId, SessionId, UserId};
 
-use crate::error::AdminResult;
-use crate::handlers::ssr::list_view::DEFAULT_PAGE_SIZE;
-use crate::repositories::analytics::conversations::redact_text;
-use crate::types::UserContext;
+use systemprompt_web_admin_core::error::AdminResult;
+use systemprompt_web_admin_core::repositories::conversations::redact_text;
+use systemprompt_web_admin_core::ssr::list_view::DEFAULT_PAGE_SIZE;
+use systemprompt_web_admin_core::types::UserContext;
 
-use super::view::detail_url;
-use super::{HistoryQuery, HistoryView, fetch_history_slice};
+use super::{HistoryQuery, fetch_history_slice};
+use systemprompt_web_admin_core::ssr::history_rows::{HistoryView, detail_url};
 
 #[derive(Debug, Serialize)]
 struct HistorySearchItem {

@@ -9,7 +9,6 @@ use serde::Serialize;
 use sqlx::PgPool;
 use systemprompt::identifiers::{ContextId, SessionId, UserId};
 
-use crate::error::AdminResult;
 use crate::handlers::ssr::transcript_view::{
     ConversationView, TranscriptOptions, build_conversation, display_body, transcript_request_ids,
 };
@@ -27,6 +26,7 @@ use crate::repositories::analytics::context_detail::{
     list_messages_for_requests,
 };
 use crate::repositories::analytics::context_tool_calls::list_tool_calls_for_requests;
+use systemprompt_web_admin_core::error::AdminResult;
 
 use super::view::{
     DecisionDoc, HookEventDoc, MessageDoc, RequestDoc, SafetyDoc, SkillDoc, ToolCallDoc,
@@ -113,7 +113,7 @@ pub(crate) async fn load_conversation_bundle(
         context_id: context_id.clone(),
         title: facts
             .as_ref()
-            .map(|f| f.title.clone())
+            .map(|f| f.facts.title.clone())
             .or_else(|| header.ai_title.take())
             .or_else(|| header.name.take()),
         header: header_doc(header),

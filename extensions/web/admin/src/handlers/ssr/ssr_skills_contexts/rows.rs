@@ -7,11 +7,13 @@ use std::collections::HashMap;
 use systemprompt::identifiers::UserId;
 use urlencoding::encode as urlencode;
 
-use crate::handlers::ssr::entity_urls::context_detail_url;
-use crate::handlers::ssr::format::{
+use systemprompt_web_admin_core::repositories::conversations::rows::{
+    ConversationRow, UserConversationSummary,
+};
+use systemprompt_web_admin_core::ssr::entity_urls::context_detail_url;
+use systemprompt_web_admin_core::ssr::format::{
     client_chip, format_cost, format_token_total, relative_time, short_id,
 };
-use crate::repositories::analytics::conversation_rows::{ConversationRow, UserConversationSummary};
 
 use super::ContextsListQuery;
 use super::context::{ConversationItemView, ModelChipView, UserSummaryView};

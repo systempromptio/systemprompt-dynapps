@@ -5,14 +5,14 @@
 //! survive and deciding what they look like. Everything here reads a
 //! [`RolesQuery`] and writes a view type; nothing here filters.
 
-use crate::handlers::ssr::entity_kind::entity_kind_label;
-use crate::handlers::ssr::entity_panel::entity_access_url;
-use crate::handlers::ssr::types::SortHeaderView;
-use crate::repositories::config::gateway::RouteLabels;
 use crate::repositories::roles::entitlements::RoleEntitlementRow;
 use crate::repositories::roles::members::RoleHolderRow;
-use crate::types::Role;
-use crate::types::access_control::AccessDecision;
+use systemprompt_web_admin_core::repositories::gateway_catalog::RouteLabels;
+use systemprompt_web_admin_core::ssr::entity_kind::entity_kind_label;
+use systemprompt_web_admin_core::ssr::entity_panel::entity_access_url;
+use systemprompt_web_admin_core::ssr::types::table::SortHeaderView;
+use systemprompt_web_admin_core::types::Role;
+use systemprompt_web_admin_core::types::access_control::AccessDecision;
 
 use super::data::RolesQuery;
 
@@ -138,7 +138,7 @@ pub(super) fn entitlement_views(
                 entity_type_label: entity_kind_label(&row.entity_type),
                 entity_type: row.entity_type.clone(),
                 entity_label: route.map_or_else(|| row.entity_id.clone(), |l| l.label.clone()),
-                entity_sub: route.map(crate::repositories::config::gateway::RouteLabel::subtitle),
+                entity_sub: route.map(systemprompt_web_admin_core::repositories::gateway_catalog::RouteLabel::subtitle),
                 labelled: route.is_some(),
                 entity_id: row.entity_id.clone(),
                 access: row.access.to_string(),

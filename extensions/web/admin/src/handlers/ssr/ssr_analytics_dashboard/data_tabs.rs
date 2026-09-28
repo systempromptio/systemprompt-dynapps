@@ -19,7 +19,7 @@ use crate::repositories::analytics::site::tools::{
     ToolServerRow, ToolStatsRow, list_tool_servers, list_tool_stats,
 };
 use crate::repositories::analytics::site::{SiteScope, distribution};
-use crate::util::time_range::TimeRange;
+use systemprompt_web_admin_core::util::time_range::TimeRange;
 
 use super::data::unwrap_or_empty;
 

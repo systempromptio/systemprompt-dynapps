@@ -10,7 +10,7 @@ use sqlx::PgPool;
 use systemprompt::identifiers::{AgentId, UserId};
 
 use super::RequestFilter;
-use crate::util::time_range::TimeRange;
+use systemprompt_web_admin_core::util::time_range::TimeRange;
 
 /// Window totals for the request log, over the same predicate the list uses.
 #[derive(Debug, Clone, Copy, Default)]

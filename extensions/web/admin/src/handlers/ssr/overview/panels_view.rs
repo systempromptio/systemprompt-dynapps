@@ -8,11 +8,11 @@
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 
-use crate::handlers::ssr::format::{format_cost, short_num};
 use crate::handlers::ssr::ssr_analytics_dashboard::{ms, qualifier, short_name};
 use crate::repositories::analytics::site::models::ModelStatsRow;
 use crate::repositories::overview::queues::{UsageAnomalyRow, anomaly_tone};
 use crate::repositories::overview::scopes::ScopeCostRow;
+use systemprompt_web_admin_core::ssr::format::{format_cost, short_num};
 
 use super::data::{OverviewData, TOP_MODELS, TOP_SCOPES};
 use super::view::OverviewRange;

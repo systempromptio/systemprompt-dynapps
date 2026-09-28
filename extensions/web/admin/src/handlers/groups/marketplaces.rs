@@ -16,9 +16,9 @@ use sqlx::PgPool;
 use systemprompt::identifiers::MarketplaceId;
 use systemprompt_web_shared::GroupId;
 
-use crate::error::AdminResult;
 use crate::repositories::groups::marketplaces as repo;
-use crate::types::groups::SetGroupMarketplacesRequest;
+use systemprompt_web_admin_core::error::AdminResult;
+use systemprompt_web_admin_core::types::groups::SetGroupMarketplacesRequest;
 
 #[derive(Debug, Serialize)]
 pub(crate) struct GroupMarketplacesResponse {

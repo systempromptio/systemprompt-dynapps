@@ -12,7 +12,7 @@ use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 use systemprompt_web_shared::error::MarketplaceError;
 
-use crate::types::constants::ROLE_USER;
+use systemprompt_web_admin_core::types::constants::ROLE_USER;
 
 use super::federated::{FederatedClaims, ResolvedFederatedUser};
 
@@ -108,5 +108,8 @@ pub(super) async fn project_roles(
 }
 
 fn mints_admin_permission(roles: &[String]) -> bool {
-    crate::types::role::has_any(roles, crate::types::role::ROLES_MANAGE)
+    systemprompt_web_admin_core::types::role::has_any(
+        roles,
+        systemprompt_web_admin_core::types::role::ROLES_MANAGE,
+    )
 }

@@ -20,7 +20,7 @@ pub(crate) struct SsrRouters {
 pub(crate) fn build(db: &DbHandles, sso_deps: admin::AdfsDeps) -> Option<SsrRouters> {
     let admin_dir = admin_template_dir()?;
     let branding = config_loader::branding_config();
-    let engine = admin::templates::AdminTemplateEngine::new(&admin_dir)
+    let engine = systemprompt_web_admin_core::templates::AdminTemplateEngine::new(&admin_dir)
         .map_err(|e| tracing::error!(error = %e, "Failed to initialize admin template engine"))
         .ok()?
         .with_branding(branding);

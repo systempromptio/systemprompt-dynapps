@@ -14,7 +14,7 @@ use systemprompt::identifiers::{AgentId, AiRequestId, SessionId, TraceId, UserId
 use systemprompt_web_shared::{GroupId, ProjectId};
 
 use super::{RequestFilter, RequestRow, RequestSortSpec};
-use crate::util::time_range::TimeRange;
+use systemprompt_web_admin_core::util::time_range::TimeRange;
 
 #[derive(Debug)]
 struct RequestRowWithTotal {

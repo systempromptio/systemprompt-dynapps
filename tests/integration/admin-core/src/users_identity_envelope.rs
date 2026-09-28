@@ -8,7 +8,7 @@
 //! exist, and that a user holding two `IdP` mappings reports the one they last
 //! signed in with.
 
-use systemprompt_web_admin::repositories::users::queries::find_identity_envelope;
+use systemprompt_web_admin_core::repositories::principal::identity::find_identity_envelope;
 
 use crate::fixtures::{
     insert_federated_identity, insert_user, insert_user_full, set_project, unclaimed_email, unique,

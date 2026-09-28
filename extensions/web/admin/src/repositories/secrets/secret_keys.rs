@@ -3,7 +3,8 @@
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 
-use crate::repositories::secrets::secret_crypto::{self, SecretCryptoError};
+use systemprompt_web_admin_core::crypto::secret_crypto;
+use systemprompt_web_admin_core::crypto::secret_crypto::SecretCryptoError;
 
 pub async fn get_or_create_user_dek(
     pool: &PgPool,

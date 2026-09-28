@@ -6,8 +6,8 @@ use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 use systemprompt_web_shared::ProjectId;
 
-use crate::error::{AdminError, AdminResult};
-use crate::types::projects::ProjectMemberRow;
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::types::projects::ProjectMemberRow;
 
 pub async fn list_project_members(
     pool: &PgPool,
@@ -153,6 +153,9 @@ pub async fn replace_directory_project_memberships(
     .execute(&mut *tx)
     .await?;
     tx.commit().await?;
-    crate::repositories::scope::defaults::recompute_scope_defaults_for_user(pool, user_id).await?;
+    systemprompt_web_admin_core::repositories::scope::defaults::recompute_scope_defaults_for_user(
+        pool, user_id,
+    )
+    .await?;
     Ok(())
 }

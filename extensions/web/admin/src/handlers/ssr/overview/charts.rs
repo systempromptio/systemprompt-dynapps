@@ -8,11 +8,15 @@
 
 use chrono::{DateTime, Utc};
 
-use crate::handlers::ssr::format::{client_label, format_cost, format_token_total, short_num};
 use crate::handlers::ssr::ssr_analytics_dashboard::short_name;
-use crate::handlers::ssr::types::{Plot, SvgLineChartView, SvgSeriesInput, chart_on_axis};
 use crate::repositories::overview::dimension_series::{DimensionBucket, OverviewDimension};
 use crate::repositories::overview::series::{BUCKETS, OverviewSeriesPoint};
+use systemprompt_web_admin_core::ssr::format::{
+    client_label, format_cost, format_token_total, short_num,
+};
+use systemprompt_web_admin_core::ssr::types::svg_line::{
+    Plot, SvgLineChartView, SvgSeriesInput, chart_on_axis,
+};
 
 use super::data::OverviewData;
 use super::view::OverviewRange;

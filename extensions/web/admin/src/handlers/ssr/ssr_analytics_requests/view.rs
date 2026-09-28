@@ -4,14 +4,14 @@
 //! repository row into the shape the table renders. The tiles, headers and
 //! pickers above the table live in `summary`.
 
-use crate::handlers::ssr::format::{format_cost, format_duration_ms};
-use crate::handlers::ssr::list_view::{ScopeFilterView, scope_filter_view};
 use crate::repositories::analytics::requests::{
     RequestFilter, RequestRow, RequestSortColumn, RequestSortSpec, SortDir,
 };
-use crate::repositories::scope::{ScopeRequest, SubjectScope};
-use crate::types::UserContext;
-use crate::util::time_range::TimeRange;
+use systemprompt_web_admin_core::repositories::scope::{ScopeRequest, SubjectScope};
+use systemprompt_web_admin_core::ssr::format::{format_cost, format_duration_ms};
+use systemprompt_web_admin_core::ssr::list_view::{ScopeFilterView, scope_filter_view};
+use systemprompt_web_admin_core::types::UserContext;
+use systemprompt_web_admin_core::util::time_range::TimeRange;
 
 use super::context::{RequestListRowView, TimeRangeView};
 use super::summary::group_digits;

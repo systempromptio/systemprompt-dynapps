@@ -1,4 +1,4 @@
-//! Current database-backed Salesforce attributes for authorization.
+//! Current database-backed Salesforce attributes for authorization (rung 170).
 //!
 //! The dimension's values are the Salesforce server ids the user holds a
 //! linked Username for, so a link gate written at `rule_value = <server id>`
@@ -9,18 +9,17 @@ use sqlx::PgPool;
 use std::sync::Arc;
 use systemprompt::identifiers::UserId;
 use systemprompt_security::authz::{
-    AuthzError, RuleType, SubjectAttributeProvider, SubjectDimension,
+    AuthzError, RuleType, SharedSubjectAttributeProvider, SubjectAttributeProvider,
+    SubjectDimension,
 };
 
-use crate::authz::rule_type::{ExtensionSlug, extension_rule_type};
-
-const SALESFORCE_SLUG: ExtensionSlug = ExtensionSlug::new("salesforce");
+const SALESFORCE_RULE_TYPE: RuleType = RuleType::extension_static("salesforce");
 
 const SALESFORCE_PRECEDENCE: u16 = 170;
 
 #[must_use]
 pub fn salesforce_rule_type() -> RuleType {
-    extension_rule_type(SALESFORCE_SLUG)
+    SALESFORCE_RULE_TYPE
 }
 
 #[must_use]
@@ -59,3 +58,9 @@ impl SubjectAttributeProvider for SalesforceAttributeProvider {
         )
     }
 }
+
+systemprompt_security::register_subject_attribute_provider!(|ctx| {
+    let provider: SharedSubjectAttributeProvider =
+        Arc::new(SalesforceAttributeProvider::new(Arc::clone(&ctx.pool)));
+    provider
+});

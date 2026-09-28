@@ -1,17 +1,17 @@
 //! Table builders for the usage tab: the top-user leaderboard.
 //! Split from `view.rs` at the 300-line ceiling.
 
-use crate::handlers::ssr::format::format_cost;
 use crate::handlers::ssr::types::bar_pct;
 use crate::repositories::analytics::site::leaderboards::{LeaderboardSort, UserUsageRow};
-use crate::util::time_range::TimeRange;
+use systemprompt_web_admin_core::ssr::format::format_cost;
+use systemprompt_web_admin_core::util::time_range::TimeRange;
 
-use crate::handlers::ssr::list_view::PageWindow;
+use systemprompt_web_admin_core::ssr::list_view::PageWindow;
 
 use super::context::{LeaderRowView, LeaderboardView};
 use super::view::{compact, format_date, window_days};
 use super::{AnalyticsDashboardQuery, urls};
-use crate::handlers::ssr::list_view::DEFAULT_PAGE_SIZE;
+use systemprompt_web_admin_core::ssr::list_view::DEFAULT_PAGE_SIZE;
 
 pub(super) fn leaderboard_rows(
     rows: &[UserUsageRow],

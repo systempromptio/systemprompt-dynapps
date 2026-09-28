@@ -25,8 +25,8 @@ use sqlx::PgPool;
 use sqlx::types::Json;
 use systemprompt::identifiers::UserId;
 
-use crate::repositories::scope::SubjectScope;
-use crate::util::time_range::TimeRange;
+use systemprompt_web_admin_core::repositories::scope::SubjectScope;
+use systemprompt_web_admin_core::util::time_range::TimeRange;
 
 use super::decision_log::DecisionFilter;
 

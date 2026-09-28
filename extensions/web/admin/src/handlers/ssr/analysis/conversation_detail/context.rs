@@ -3,14 +3,16 @@
 use super::figures::{charts, kpis};
 use super::rows::{decision_view, judge_view, safety_view, skill_view, tool_view, turn_view};
 use super::views::{ConversationDetailContext, LedgerCallView};
-use crate::handlers::ssr::analysis_urls::{ANALYSIS_CONVERSATIONS_URL, analysis_conversation_url};
-use crate::handlers::ssr::format::{client_chip, format_duration_ms, local_time};
-use crate::handlers::ssr::types::BreadcrumbView;
-use crate::repositories::analysis::conversations::ConversationFactRow;
 use crate::repositories::analysis::conversations::planes::{
     ConversationDecisionRow, ConversationSafetyRow, ConversationSkillRow, ConversationToolCallRow,
     ConversationTurnRow,
 };
+use crate::repositories::analysis::conversations::{ConversationFactRow, ConversationFacts};
+use systemprompt_web_admin_core::ssr::analysis_urls::{
+    ANALYSIS_CONVERSATIONS_URL, analysis_conversation_url,
+};
+use systemprompt_web_admin_core::ssr::format::{client_chip, format_duration_ms, local_time};
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 
 pub(super) struct Planes {
     pub(super) turns: Vec<ConversationTurnRow>,
@@ -29,7 +31,7 @@ fn artifact_views(tools: &[ConversationToolCallRow]) -> Vec<LedgerCallView> {
         .collect()
 }
 
-fn display_name(f: &ConversationFactRow) -> String {
+fn display_name(f: &ConversationFacts) -> String {
     f.display_name
         .clone()
         .filter(|n| !n.is_empty())
@@ -37,10 +39,11 @@ fn display_name(f: &ConversationFactRow) -> String {
 }
 
 pub(super) fn build_context(
-    f: &ConversationFactRow,
+    row: &ConversationFactRow,
     planes: Planes,
     can_judge: bool,
 ) -> ConversationDetailContext {
+    let (context_id, f) = (&row.context_id, &row.facts);
     let Planes {
         turns,
         tools,
@@ -57,7 +60,7 @@ pub(super) fn build_context(
         .clone()
         .filter(|t| !t.is_empty())
         .unwrap_or_else(|| f.title.clone());
-    let short = f.context_id.as_str()[..f.context_id.as_str().len().min(8)].to_owned();
+    let short = context_id.as_str()[..context_id.as_str().len().min(8)].to_owned();
     ConversationDetailContext {
         page: "analysis-conversation",
         title: format!("{heading} · Conversation"),
@@ -67,7 +70,7 @@ pub(super) fn build_context(
             BreadcrumbView::link("Conversations", ANALYSIS_CONVERSATIONS_URL),
             BreadcrumbView::current(short),
         ],
-        context_key: f.context_id.as_str().to_owned(),
+        context_key: context_id.as_str().to_owned(),
         heading,
         user_href: format!("/admin/users/{}", urlencoding::encode(f.user_id.as_str())),
         display_name: display_name(f),
@@ -90,14 +93,16 @@ pub(super) fn build_context(
             .map(|s| format!("/admin/sessions/{}", urlencoding::encode(s))),
         context_href: format!(
             "/admin/contexts/{}",
-            urlencoding::encode(f.context_id.as_str())
+            urlencoding::encode(context_id.as_str())
         ),
         back_url: ANALYSIS_CONVERSATIONS_URL,
         help: crate::handlers::ssr::analysis::help::conversation_detail_help(),
-        export: crate::export::ExportView::conversation(&f.context_id, true),
+        export: systemprompt_web_admin_core::export::view::ExportView::conversation(
+            context_id, true,
+        ),
         judge: judge_view(
             f,
-            format!("{}/judge", analysis_conversation_url(&f.context_id)),
+            format!("{}/judge", analysis_conversation_url(context_id)),
         ),
         can_judge,
         kpis: kpis(f),

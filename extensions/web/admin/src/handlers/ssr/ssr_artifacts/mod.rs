@@ -18,10 +18,10 @@ use axum::extract::{Query, State};
 use axum::response::Response;
 use sqlx::PgPool;
 
-use crate::error::{AdminError, AdminHtmlResult};
-use crate::handlers::ssr::page::Page;
 use crate::handlers::ssr::ssr_tools::{Frame, Lens, ToolsQuery, build_context, help, read_lens};
-use crate::handlers::ssr::types::BreadcrumbView;
+use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
+use systemprompt_web_admin_core::ssr::page::Page;
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 
 pub(crate) use detail::artifact_detail_page;
 pub(crate) use preview::artifact_preview;
@@ -52,11 +52,13 @@ pub(crate) async fn artifacts_page(
             datasets: &["artifacts", "artifacts-breakdown"],
         },
     );
-    Ok(crate::handlers::ssr::render_typed_page(
-        &shell.engine,
-        "artifacts",
-        &context,
-        &shell.user,
-        &shell.marketplace,
-    ))
+    Ok(
+        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+            &shell.engine,
+            "artifacts",
+            &context,
+            &shell.user,
+            &shell.marketplace,
+        ),
+    )
 }

@@ -5,9 +5,11 @@
 use serde::Serialize;
 use systemprompt::identifiers::AiRequestId;
 
-use crate::handlers::ssr::entity_urls::request_detail_url;
-use crate::handlers::ssr::format::{format_cost, format_duration_ms, local_time, short_num};
 use crate::repositories::governance::chain::AiRequestSummary;
+use systemprompt_web_admin_core::ssr::entity_urls::request_detail_url;
+use systemprompt_web_admin_core::ssr::format::{
+    format_cost, format_duration_ms, local_time, short_num,
+};
 
 #[derive(Debug, Serialize)]
 pub(super) struct RequestRowView {

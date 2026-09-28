@@ -18,11 +18,11 @@ use super::rows::{
     RouteRow, RouteWrite, SOURCE_DASHBOARD, delete_gateway_route, list_gateway_routes,
     set_gateway_route_position, upsert_gateway_route,
 };
-use crate::error::{AdminError, AdminResult};
-use crate::repositories::config::gateway::{
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::repositories::gateway_catalog::{
     normalise_metadata, synthesize_route_id, validate_route,
 };
-use crate::types::GatewayRouteView;
+use systemprompt_web_admin_core::types::GatewayRouteView;
 
 async fn renumber(pool: &PgPool, rows: &[RouteRow]) -> AdminResult<()> {
     for (i, r) in rows.iter().enumerate() {

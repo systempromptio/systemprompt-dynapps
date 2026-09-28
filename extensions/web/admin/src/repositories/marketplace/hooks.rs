@@ -6,13 +6,13 @@ use systemprompt::identifiers::PluginId;
 use systemprompt::models::{DiskHookConfig, HOOK_CONFIG_FILENAME};
 use systemprompt_web_shared::error::MarketplaceError;
 
-use crate::types::ConfiguredHook;
+use systemprompt_web_admin_core::types::ConfiguredHook;
 
 pub fn list_configured_hooks(
     services_path: &Path,
     roles: &[String],
 ) -> Result<Vec<ConfiguredHook>, MarketplaceError> {
-    let is_admin = crate::types::roles_grant_manage(roles);
+    let is_admin = systemprompt_web_admin_core::types::roles_grant_manage(roles);
 
     let hooks_dir = services_path.join("hooks");
     if !hooks_dir.is_dir() {

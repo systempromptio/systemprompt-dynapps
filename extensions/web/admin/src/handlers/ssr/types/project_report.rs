@@ -10,10 +10,11 @@ use serde::Serialize;
 use systemprompt_web_shared::ProjectId;
 
 use super::{
-    AttributionSourceRowView, BreadcrumbView, MemberRowView, MemberSetChipView, ModelMixRowView,
-    ProjectKpiView, ProjectSessionRowView, ProjectSkillRowView, ProjectToolRowView,
-    SvgLineChartView,
+    AttributionSourceRowView, MemberRowView, MemberSetChipView, ModelMixRowView, ProjectKpiView,
+    ProjectSessionRowView, ProjectSkillRowView, ProjectToolRowView,
 };
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
+use systemprompt_web_admin_core::ssr::types::svg_line::SvgLineChartView;
 
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct ProjectAgentRowView {
@@ -72,5 +73,5 @@ pub(crate) struct ProjectReportPageData {
     pub artifacts: Vec<ProjectArtifactRowView>,
     pub artifact_total: i64,
     pub sessions: Vec<ProjectSessionRowView>,
-    pub export: crate::export::ExportView,
+    pub export: systemprompt_web_admin_core::export::view::ExportView,
 }

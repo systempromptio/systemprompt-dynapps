@@ -6,17 +6,27 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use systemprompt::identifiers::{ArtifactId, ContextId};
 
-use crate::error::{AdminError, AdminResult};
-use crate::export::model::{Cell, CellKind, Column, DataSet, ExportContext, Table, Window};
 use crate::repositories::analysis::conversations::detail::find_conversation_facts;
 use crate::repositories::analysis::conversations::planes::{
     ConversationToolCallRow, ConversationTurnRow, list_conversation_tool_calls,
     list_conversation_turns,
 };
-use crate::repositories::scope::visibility::may_view;
-use crate::types::UserContext;
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::export::model::{
+    Cell, CellKind, Column, DataSet, ExportContext, Table, Window,
+};
+use systemprompt_web_admin_core::export::registry::DataSetRegistration;
+use systemprompt_web_admin_core::repositories::scope::visibility::may_view;
+use systemprompt_web_admin_core::types::UserContext;
 
 pub(crate) struct ConversationTurns;
+
+inventory::submit! {
+    DataSetRegistration {
+        order: 29,
+        dataset: &ConversationTurns,
+    }
+}
 
 const COLUMNS: &[Column] = &[
     Column::new("at", "Time", CellKind::Timestamp).group("Identity"),
@@ -137,7 +147,8 @@ impl DataSet for ConversationTurns {
         let not_found = || AdminError::NotFound("No conversation matches that id.".to_owned());
         let facts = find_conversation_facts(ctx.pool, &context_id)
             .await?
-            .ok_or_else(not_found)?;
+            .ok_or_else(not_found)?
+            .facts;
         if !may_view(ctx.pool, ctx.user, Some(&facts.user_id)).await? {
             return Err(not_found());
         }

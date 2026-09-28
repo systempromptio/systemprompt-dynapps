@@ -7,15 +7,14 @@ use serde::Deserialize;
 use sqlx::PgPool;
 use systemprompt::identifiers::{ContextId, SessionId};
 
-use crate::error::{AdminError, AdminResult};
-use crate::export::model::{ExportContext, ExportWindow, Window};
-use crate::export::window;
 use crate::handlers::ssr::ssr_history::{ExportRequest, HistoryView, export_rows};
 use crate::repositories::analytics::session_detail::list_session_contexts;
-use crate::types::UserContext;
-use crate::util::time_range::{TimeRange, TimeRangePreset};
-
-pub(crate) const MAX_CONVERSATIONS: i64 = 500;
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::export::model::{ExportContext, ExportWindow};
+use systemprompt_web_admin_core::export::transcripts::{MAX_CONVERSATIONS, TranscriptSource};
+use systemprompt_web_admin_core::export::window;
+use systemprompt_web_admin_core::types::UserContext;
+use systemprompt_web_admin_core::util::time_range::{TimeRange, TimeRangePreset};
 
 #[derive(Debug, Default, Deserialize)]
 pub(crate) struct SelectionQuery {
@@ -34,43 +33,6 @@ pub(crate) struct Selection {
 impl Selection {
     pub(crate) fn capped(&self) -> bool {
         self.total > i64::try_from(self.context_ids.len()).unwrap_or(i64::MAX)
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum TranscriptSource {
-    Sessions,
-    Analysis,
-    Conversations,
-    History,
-}
-
-impl TranscriptSource {
-    pub(crate) const fn as_str(self) -> &'static str {
-        match self {
-            Self::Sessions => "sessions",
-            Self::Analysis => "analysis",
-            Self::Conversations => "conversations",
-            Self::History => "history",
-        }
-    }
-
-    pub(crate) const fn window(self) -> Window {
-        match self {
-            Self::Sessions | Self::Analysis => Window::Live,
-            Self::Conversations | Self::History => Window::Retained,
-        }
-    }
-
-    fn parse(value: &str) -> Option<Self> {
-        [
-            Self::Sessions,
-            Self::Analysis,
-            Self::Conversations,
-            Self::History,
-        ]
-        .into_iter()
-        .find(|s| s.as_str() == value)
     }
 }
 

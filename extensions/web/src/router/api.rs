@@ -14,7 +14,7 @@ use crate::{admin, api};
 pub(crate) fn build(
     db: &DbHandles,
     session_service: &Arc<SessionCreationService>,
-) -> Result<Router, admin::StateError> {
+) -> Result<Router, systemprompt_web_admin_core::state::StateError> {
     let admin_api = admin::admin_router(&db.db, Arc::clone(&db.read), &db.write, db.owner.clone())?;
     let webhook_api =
         admin::hooks_webhook_router(&db.db, Arc::clone(&db.write), Arc::clone(session_service))?;

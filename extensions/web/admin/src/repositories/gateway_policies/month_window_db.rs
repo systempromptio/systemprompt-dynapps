@@ -28,7 +28,7 @@ use super::month_window::{
     MONTH_WINDOW_SECONDS, align_window, is_month_window, month_window_seconds,
 };
 use super::rows::{PolicyWrite, list_policies, upsert_policy};
-use crate::error::AdminResult;
+use systemprompt_web_admin_core::error::AdminResult;
 
 #[derive(Debug, Default, Clone, Copy, Serialize)]
 pub struct MonthWindowReport {

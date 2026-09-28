@@ -2,14 +2,14 @@
 
 use sqlx::PgPool;
 
-use crate::error::AdminResult;
-use crate::repositories::analytics::conversation_rows::{
+use systemprompt_web_admin_core::error::AdminResult;
+use systemprompt_web_admin_core::repositories::conversations::rows::{
     ConversationFilter, ConversationPage, ConversationPageMode, ConversationRow, ConversationSort,
     load_conversation_page,
 };
-use crate::repositories::scope::ScopeRequest;
-use crate::types::UserContext;
-use crate::util::time_range::TimeRange;
+use systemprompt_web_admin_core::repositories::scope::ScopeRequest;
+use systemprompt_web_admin_core::types::UserContext;
+use systemprompt_web_admin_core::util::time_range::TimeRange;
 
 use super::SessionListQuery;
 
@@ -22,8 +22,10 @@ pub(crate) async fn export_rows(
 ) -> AdminResult<(Vec<ConversationRow>, i64)> {
     let request =
         ScopeRequest::from_query(user_ctx, query.group.as_deref(), query.project.as_deref());
-    let subjects =
-        crate::repositories::scope::membership::get_subject_scope(pool, &request).await?;
+    let subjects = systemprompt_web_admin_core::repositories::scope::membership::get_subject_scope(
+        pool, &request,
+    )
+    .await?;
     let filter = ConversationFilter {
         user_id: query.user_id.clone().filter(|u| !u.as_str().is_empty()),
         subject_ids: subjects.as_sql().map(<[String]>::to_vec),

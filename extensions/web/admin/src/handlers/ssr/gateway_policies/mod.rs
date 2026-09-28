@@ -20,17 +20,19 @@ use serde::Deserialize;
 use sqlx::PgPool;
 
 use self::view::{GatewayPoliciesPageData, InForce, new_policy_view, policy_view};
-use crate::activity::{self, NewActivity};
-use crate::error::{AdminError, AdminHtmlResult};
-use crate::handlers::shared::require_write_origin;
-use crate::handlers::ssr::page::Page;
-use crate::handlers::ssr::sync_plane::{is_sync_tab, plane_card_by_id, sync_tab};
-use crate::handlers::ssr::types::{BreadcrumbView, TabLinkView};
 use crate::repositories::gateway_policies::form::parse_policy_form;
 use crate::repositories::gateway_policies::month_window_db::refresh_month_windows;
 use crate::repositories::gateway_policies::rows::{
     PolicyWrite, delete_policy, list_policies, upsert_policy,
 };
+use systemprompt_web_admin_core::activity;
+use systemprompt_web_admin_core::activity::NewActivity;
+use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
+use systemprompt_web_admin_core::request::require_write_origin;
+use systemprompt_web_admin_core::ssr::page::Page;
+use systemprompt_web_admin_core::ssr::sync_plane::{is_sync_tab, plane_card_by_id, sync_tab};
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
+use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;
 
 pub(crate) const BASE_URL: &str = "/admin/gateway/policies";
 
@@ -144,13 +146,15 @@ pub(crate) async fn gateway_policies_page(
         sync_url: "/admin/gateway/policies?tab=sync",
         docs_url: "/documentation/enterprise-cost-management",
     };
-    Ok(crate::handlers::ssr::render_typed_page(
-        &page.engine,
-        "gateway-policies",
-        &data,
-        &page.user,
-        &page.marketplace,
-    ))
+    Ok(
+        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+            &page.engine,
+            "gateway-policies",
+            &data,
+            &page.user,
+            &page.marketplace,
+        ),
+    )
 }
 
 fn back_with(param: &str, value: &str) -> Redirect {

@@ -19,7 +19,7 @@ use std::path::Path;
 
 // Every name passed to register_helper in the admin crate's registration site.
 fn registered_helpers(root: &Path) -> BTreeSet<String> {
-    let path = root.join("extensions/web/admin/src/templates/helpers/mod.rs");
+    let path = root.join("extensions/web/shared/admin-core/src/templates/helpers/mod.rs");
     let source = std::fs::read_to_string(&path)
         .unwrap_or_else(|e| panic!("gate cannot read {}: {e}", path.display()));
     let mut names = BTreeSet::new();

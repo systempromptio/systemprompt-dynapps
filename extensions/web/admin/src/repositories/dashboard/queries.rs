@@ -3,7 +3,7 @@
 use sqlx::PgPool;
 use systemprompt::identifiers::{Email, UserId};
 
-use crate::types::{HourlyActivity, SkillCount, ToolSuccessRate, TopUser};
+use systemprompt_web_admin_core::types::{HourlyActivity, SkillCount, ToolSuccessRate, TopUser};
 
 pub async fn list_top_users(pool: &PgPool) -> Result<Vec<TopUser>, sqlx::Error> {
     sqlx::query_as!(
@@ -88,7 +88,7 @@ pub async fn list_hourly_activity(pool: &PgPool) -> Result<Vec<HourlyActivity>, 
 
 pub async fn list_recent_mcp_errors(
     pool: &PgPool,
-) -> Result<Vec<crate::types::RecentMcpError>, sqlx::Error> {
+) -> Result<Vec<systemprompt_web_admin_core::types::RecentMcpError>, sqlx::Error> {
     let rows = sqlx::query_as!(
         McpErrorRow,
         r#"SELECT
@@ -106,7 +106,7 @@ pub async fn list_recent_mcp_errors(
 
     Ok(rows
         .into_iter()
-        .map(|r| crate::types::RecentMcpError {
+        .map(|r| systemprompt_web_admin_core::types::RecentMcpError {
             tool_name: r.tool_name,
             created_at: r.created_at,
         })

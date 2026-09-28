@@ -1,4 +1,4 @@
-use systemprompt_web_admin::repositories::analytics::conversations::redact_text;
+use systemprompt_web_admin_core::repositories::conversations::redact_text;
 
 #[test]
 fn redact_aws_key() {

@@ -1,4 +1,4 @@
-use systemprompt_web_admin::repositories::secrets::secret_crypto::{
+use systemprompt_web_admin_core::crypto::secret_crypto::{
     SecretCryptoError, decrypt, encrypt, generate_dek, generate_nonce,
 };
 

@@ -3,14 +3,24 @@
 use async_trait::async_trait;
 use systemprompt_web_shared::{GroupId, ProjectId};
 
-use crate::error::AdminResult;
-use crate::export::model::{Cell, CellKind, Column, DataSet, ExportContext, Table, Window};
 use crate::handlers::ssr::ssr_analytics_requests::export_rows;
 use crate::repositories::analytics::requests::RequestRow;
-use crate::util::time_range::{TimeRange, TimeRangePreset};
 use systemprompt::identifiers::{SessionId, TraceId};
+use systemprompt_web_admin_core::error::AdminResult;
+use systemprompt_web_admin_core::export::model::{
+    Cell, CellKind, Column, DataSet, ExportContext, Table, Window,
+};
+use systemprompt_web_admin_core::export::registry::DataSetRegistration;
+use systemprompt_web_admin_core::util::time_range::{TimeRange, TimeRangePreset};
 
 pub(crate) struct Requests;
+
+inventory::submit! {
+    DataSetRegistration {
+        order: 0,
+        dataset: &Requests,
+    }
+}
 
 const COLUMNS: &[Column] = &[
     Column::new("created_at", "Time", CellKind::Timestamp),

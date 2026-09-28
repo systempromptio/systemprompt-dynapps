@@ -2,13 +2,14 @@
 //! breakdown tabs, pagination, sortable column headers and the toggle that
 //! shows conversations without turns.
 
-use crate::handlers::ssr::list_view::{PageWindow, Pagination};
-use crate::handlers::ssr::types::{SortHeaderView, TabLinkView};
 use crate::repositories::analysis::conversations::{BreakdownBy, FactSort};
+use systemprompt_web_admin_core::ssr::list_view::{PageWindow, Pagination};
+use systemprompt_web_admin_core::ssr::types::table::SortHeaderView;
+use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;
 
 use super::page_context::TurnsToggleView;
 use super::query::ConversationAnalysisQuery;
-use crate::handlers::ssr::list_view::paginate_prefixed;
+use systemprompt_web_admin_core::ssr::list_view::paginate_prefixed;
 
 impl ConversationAnalysisQuery {
     pub(crate) fn turns_toggle(&self, without_turns: i64) -> TurnsToggleView {

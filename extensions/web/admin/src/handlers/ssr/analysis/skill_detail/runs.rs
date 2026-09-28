@@ -7,9 +7,9 @@ use serde::Serialize;
 use crate::handlers::ssr::analysis::skill_runs::{
     ReleaseImpact, agent_s, human_wait_s, release_impact, run_success, version_label,
 };
-use crate::handlers::ssr::analysis_urls::analysis_conversation_url;
-use crate::handlers::ssr::format::{format_cost, format_duration_ms};
 use crate::repositories::analysis::skills::SkillRunRow;
+use systemprompt_web_admin_core::ssr::analysis_urls::analysis_conversation_url;
+use systemprompt_web_admin_core::ssr::format::{format_cost, format_duration_ms};
 
 pub(super) const RUNS_SHOWN: usize = 25;
 const LOW_SAMPLE: i64 = 5;

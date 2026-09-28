@@ -21,19 +21,20 @@ use axum::extract::{Extension, Query, State};
 use axum::response::Response;
 use sqlx::PgPool;
 
-use crate::error::{AdminError, AdminHtmlResult};
 use crate::handlers::access_control::build_matrix_sections;
-use crate::handlers::shared;
-use crate::handlers::ssr::list_view::PageWindow;
-use crate::handlers::ssr::types::{BreadcrumbView, TabLinkView};
-use crate::repositories::config::gateway::get_route_labels_from_services;
 use crate::repositories::roles::{entitlements, members};
-use crate::templates::AdminTemplateEngine;
-use crate::types::role::{ROLES_PLATFORM, has_any};
-use crate::types::{MarketplaceContext, Role, UserContext};
+use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
+use systemprompt_web_admin_core::repositories::gateway_catalog::get_route_labels_from_services;
+use systemprompt_web_admin_core::request as shared;
+use systemprompt_web_admin_core::ssr::list_view::PageWindow;
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
+use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;
+use systemprompt_web_admin_core::templates::AdminTemplateEngine;
+use systemprompt_web_admin_core::types::role::{ROLES_PLATFORM, has_any};
+use systemprompt_web_admin_core::types::{MarketplaceContext, Role, UserContext};
 
-use crate::handlers::ssr::list_view::DEFAULT_PAGE_SIZE;
 use data::RolesQuery;
+use systemprompt_web_admin_core::ssr::list_view::DEFAULT_PAGE_SIZE;
 use view::{HeaderFactView, RolesPageData};
 
 const ENTITLEMENTS_URL: &str = "/admin/roles?tab=entitlements";
@@ -129,9 +130,11 @@ pub(crate) async fn roles_page(
         cards,
     };
 
-    Ok(super::render_typed_page(
-        &engine, "roles", &page, &user_ctx, &mkt_ctx,
-    ))
+    Ok(
+        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+            &engine, "roles", &page, &user_ctx, &mkt_ctx,
+        ),
+    )
 }
 
 fn entitlement_groups(
@@ -171,7 +174,12 @@ fn facts(
         .map_or(0, |c| c.member_count);
     let denies = entitlements
         .iter()
-        .filter(|e| matches!(e.access, crate::types::access_control::AccessDecision::Deny))
+        .filter(|e| {
+            matches!(
+                e.access,
+                systemprompt_web_admin_core::types::access_control::AccessDecision::Deny
+            )
+        })
         .count();
     vec![
         HeaderFactView {

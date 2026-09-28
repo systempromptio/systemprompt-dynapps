@@ -4,7 +4,7 @@
 //! view is bookmarkable and the page never ships five tabs' worth of queries
 //! to show one.
 
-use super::super::types::TabLinkView;
+use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;
 use systemprompt_web_shared::GroupId;
 
 pub(super) const USAGE: &str = "usage";

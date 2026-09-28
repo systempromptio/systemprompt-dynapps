@@ -26,10 +26,10 @@ use systemprompt::models::Config;
 use systemprompt::models::auth::JwtAudience;
 use systemprompt::oauth::validate_jwt_token;
 
-use crate::error::{AdminError, AdminResult};
 use crate::repositories;
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
-use super::users::extract_token_from_headers;
+use systemprompt_web_admin_core::auth::session::extract_token_from_headers;
 
 const SIGN_IN_MECHANISM_ADFS: &str = "adfs";
 const BRIDGE_AUDIENCES: &[JwtAudience] = &[JwtAudience::Bridge, JwtAudience::Api, JwtAudience::Mcp];
@@ -39,7 +39,7 @@ const BRIDGE_AUDIENCES: &[JwtAudience] = &[JwtAudience::Bridge, JwtAudience::Api
 // stays flat and every key is a label.
 #[derive(Debug, Serialize)]
 pub(crate) struct BridgeWhoamiResponse {
-    connections: crate::services::connector_accounts::ConnectionSnapshot,
+    connections: systemprompt_web_admin_core::connections::ConnectionSnapshot,
     user_id: UserId,
     email: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -95,7 +95,10 @@ pub(crate) async fn bridge_whoami_handler(
     })?;
 
     let user_id = UserId::new(claims.sub.clone());
-    let envelope = repositories::users::queries::find_identity_envelope(&pool, &user_id)
+    let envelope =
+        systemprompt_web_admin_core::repositories::principal::identity::find_identity_envelope(
+            &pool, &user_id,
+        )
         .await?
         .ok_or_else(|| AdminError::NotFound(format!("User not found: {}", user_id.as_str())))?;
 
@@ -104,9 +107,10 @@ pub(crate) async fn bridge_whoami_handler(
         .inspect_err(|e| tracing::warn!(error = %e, "bridge whoami: AD group lookup failed"))
         .unwrap_or_default();
 
-    let is_admin = crate::types::roles_grant_manage(&envelope.roles);
+    let is_admin = systemprompt_web_admin_core::types::roles_grant_manage(&envelope.roles);
 
-    let connections = crate::services::connector_accounts::get_connections(&pool, &user_id).await?;
+    let connections =
+        systemprompt_web_admin_core::connections::source::get_connections(&pool, &user_id).await?;
     Ok(Json(BridgeWhoamiResponse {
         connections,
         provider: envelope

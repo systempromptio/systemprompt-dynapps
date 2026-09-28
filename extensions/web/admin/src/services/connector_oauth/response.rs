@@ -2,7 +2,7 @@
 //! with credentials scrubbed from any error text that reaches a caller.
 
 use super::Grant;
-use crate::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 // JSON: JSON-RPC and provider payloads are an open protocol boundary; only the
 // `result`, `error` and `isError` members are read before the typed decoders.
 use serde_json::Value;

@@ -11,7 +11,7 @@ use systemprompt::database::DbPool;
 use systemprompt::traits::{Job, JobContext, JobResult};
 
 use crate::error::JobError;
-use systemprompt_web_admin::repositories::scope::defaults;
+use systemprompt_web_admin_core::repositories::scope::defaults;
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct ScopeDefaultsJob;

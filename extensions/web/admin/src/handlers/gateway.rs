@@ -14,11 +14,11 @@ use axum::response::{IntoResponse, Response};
 use serde::Serialize;
 use sqlx::PgPool;
 
-use crate::error::{AdminError, AdminResult};
-use crate::handlers::shared;
 use crate::repositories;
 use crate::repositories::gateway_routes::editor;
-use crate::types::{
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::request as shared;
+use systemprompt_web_admin_core::types::{
     GatewayConfigView, GatewayRouteView, ReorderRoutesRequest, UpdateGatewaySettingsRequest,
 };
 
@@ -29,7 +29,10 @@ pub(crate) struct CreateRouteResponse {
 
 pub(crate) async fn gateway_config_view(pool: &PgPool) -> AdminResult<GatewayConfigView> {
     let gateway_path = shared::get_gateway_file_path()?;
-    let mut config = repositories::config::gateway::get_gateway_config(&gateway_path)
+    let mut config =
+        systemprompt_web_admin_core::repositories::gateway_catalog::get_gateway_config(
+            &gateway_path,
+        )
         .map_err(AdminError::internal)?;
     config.routes = repositories::gateway_routes::rows::list_gateway_routes(pool)
         .await?
@@ -48,7 +51,10 @@ pub(crate) async fn update_gateway_settings_handler(
     Json(body): Json<UpdateGatewaySettingsRequest>,
 ) -> AdminResult<Response> {
     let gateway_path = shared::get_gateway_file_path()?;
-    repositories::config::gateway::update_gateway_settings(&gateway_path, &body)?;
+    systemprompt_web_admin_core::repositories::gateway_catalog::update_gateway_settings(
+        &gateway_path,
+        &body,
+    )?;
     Ok(Json(gateway_config_view(&pool).await?).into_response())
 }
 

@@ -6,7 +6,9 @@
 
 
 use serde_json::json;
-use systemprompt_web_admin::types::tool_schema_diff::{gemini_rules_apply, pair_tools, wire_tools};
+use systemprompt_web_admin_core::types::tool_schema_diff::{
+    gemini_rules_apply, pair_tools, wire_tools,
+};
 
 fn schema() -> serde_json::Value {
     json!({"type": "object", "properties": {"q": {"type": "string"}}})

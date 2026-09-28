@@ -3,8 +3,8 @@
 
 use serde::Serialize;
 
-pub(super) use crate::handlers::ssr::types::BreadcrumbView;
 use systemprompt::identifiers::{AiRequestId, ContextId, PluginId, SessionId, TraceId, UserId};
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 
 #[derive(Debug, Serialize)]
 pub(super) struct SessionDetailPageContext {
@@ -20,7 +20,7 @@ pub(super) struct SessionDetailPageContext {
     pub(super) has_traces: bool,
     pub(super) has_requests: bool,
     pub(super) back_url: &'static str,
-    pub(super) export: crate::export::ExportView,
+    pub(super) export: systemprompt_web_admin_core::export::view::ExportView,
 }
 
 #[derive(Debug, Serialize)]

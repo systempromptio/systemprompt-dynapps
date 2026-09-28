@@ -3,11 +3,11 @@
 
 use super::config::validate_my_domain;
 use super::{Grant, Provider};
-use crate::error::{AdminError, AdminResult};
 use crate::handlers::salesforce_auth::SalesforceConfig;
 use crate::repositories::users::salesforce_identity;
 use crate::services::salesforce_jwt_bearer;
 use chrono::Utc;
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 // JSON: Salesforce's OAuth userinfo is an open claim set; only
 // `organization_id` and `urls.custom_domain` are read, at consent time.
 use serde_json::Value;

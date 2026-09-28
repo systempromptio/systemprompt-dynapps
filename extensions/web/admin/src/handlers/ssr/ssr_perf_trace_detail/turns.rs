@@ -11,11 +11,11 @@
 use serde::Serialize;
 use std::collections::BTreeMap;
 
-use crate::handlers::ssr::entity_urls::context_detail_url;
-use crate::handlers::ssr::format::{
+use crate::repositories::traces::{PolicyStage, Span, SpanKind, SpanStatus};
+use systemprompt_web_admin_core::ssr::entity_urls::context_detail_url;
+use systemprompt_web_admin_core::ssr::format::{
     client_label, format_cost, format_duration_ms, local_time, short_id, short_num,
 };
-use crate::repositories::traces::{PolicyStage, Span, SpanKind, SpanStatus};
 
 const GAP_THRESHOLD_MS: i64 = 30_000;
 

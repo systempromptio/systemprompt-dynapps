@@ -10,9 +10,10 @@ use axum::response::{IntoResponse, Response};
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 
-use crate::error::AdminResult;
-use crate::repositories::users::queries::{list_distinct_roles, list_users};
-use crate::types::UserContext;
+use crate::repositories::users::queries::list_distinct_roles;
+use systemprompt_web_admin_core::error::AdminResult;
+use systemprompt_web_admin_core::repositories::principal::listing::list_users;
+use systemprompt_web_admin_core::types::UserContext;
 
 #[derive(Debug, Serialize)]
 pub(crate) struct DistinctRolesResponse {
@@ -51,8 +52,13 @@ pub(crate) async fn search_users_handler(
     Extension(user_ctx): Extension<UserContext>,
     Query(query): Query<UserSearchQuery>,
 ) -> AdminResult<Response> {
-    let request = crate::repositories::scope::ScopeRequest::from_query(&user_ctx, None, None);
-    let scope = crate::repositories::scope::membership::get_subject_scope(&pool, &request).await?;
+    let request = systemprompt_web_admin_core::repositories::scope::ScopeRequest::from_query(
+        &user_ctx, None, None,
+    );
+    let scope = systemprompt_web_admin_core::repositories::scope::membership::get_subject_scope(
+        &pool, &request,
+    )
+    .await?;
     let users = list_users(&pool, &scope).await?;
     let q = query.q.unwrap_or_default().to_lowercase();
     let limit = query.limit.unwrap_or(10).min(50);

@@ -4,12 +4,9 @@
 //! this module re-exports nothing, so the module path is the only name a
 //! symbol has and collisions between domains cannot arise.
 
-pub mod access_control;
 pub mod analytics;
-pub mod bridge;
 pub mod config;
 pub mod dashboard;
-pub(crate) mod dashboard_read;
 pub mod dev_login;
 pub mod devices;
 pub mod gateway_policies;
@@ -27,7 +24,6 @@ pub mod people_usage;
 pub mod projects;
 pub mod reports;
 pub mod roles;
-pub mod scope;
 pub mod secrets;
 pub mod session_state;
 pub mod sync;

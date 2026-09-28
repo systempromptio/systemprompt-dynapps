@@ -2,9 +2,6 @@
 //! server.
 
 use super::{live_user, require_broker};
-use crate::authz::catalog::CatalogAccess;
-use crate::error::{AdminError, AdminResult};
-use crate::repositories::users::queries::find_identity_envelope;
 use crate::services::identity_token;
 use axum::Json;
 use axum::extract::{Path, State};
@@ -14,6 +11,9 @@ use axum::response::{IntoResponse, Response};
 use sqlx::PgPool;
 use std::sync::Arc;
 use systemprompt_security::authz::EntityKind;
+use systemprompt_web_admin_core::authz::catalog::CatalogAccess;
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::repositories::principal::identity::find_identity_envelope;
 
 pub(super) async fn token(
     State(pool): State<Arc<PgPool>>,

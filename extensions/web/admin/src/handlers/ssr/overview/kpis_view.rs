@@ -8,9 +8,9 @@
 
 use serde::Serialize;
 
-use crate::handlers::ssr::types::{SparklineView, sparkline_toned};
 use crate::repositories::overview::series::OverviewSeriesPoint;
-use crate::util::delta::Delta;
+use systemprompt_web_admin_core::ssr::types::sparkline::{SparklineView, sparkline_toned};
+use systemprompt_web_admin_core::util::delta::Delta;
 
 use super::data::OverviewData;
 use super::kpi_tiles::{health_tiles, volume_tiles, work_tiles};

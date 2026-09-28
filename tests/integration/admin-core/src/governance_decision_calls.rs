@@ -15,7 +15,7 @@ use systemprompt_web_admin::repositories::governance::decision_log::{
     DecisionFilter, DecisionSort,
 };
 use systemprompt_web_admin::repositories::governance::{DecisionPage, PageSlice};
-use systemprompt_web_admin::repositories::scope::SubjectScope;
+use systemprompt_web_admin_core::repositories::scope::SubjectScope;
 
 use crate::fixtures::{
     DecisionSpec, insert_decision, insert_user, unclaimed_email, unique, wide_window,

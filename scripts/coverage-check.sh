@@ -24,7 +24,9 @@ fi
 
 # Aggregate per-file llvm-cov summaries into per-crate line coverage. Crate
 # key = path relative to the repo root, truncated to the crate directory
-# (extensions/web/admin, extensions/mcp/shared, bridge, src, ...).
+# (extensions/web/admin, extensions/web/admin/catalog, extensions/web/shared,
+# extensions/web/shared/admin-core, extensions/mcp/shared, bridge, src, ...).
+# Nested crates are listed before their parent so the longest prefix wins.
 python3 - "$SUMMARY" "$BASELINE" <<'PY'
 import json, os, re, sys
 
@@ -38,7 +40,11 @@ with open(summary_path) as f:
 total = data["totals"]["lines"]["percent"]
 
 CRATE_PATTERNS = [
-    re.compile(r"^(extensions/(?:web/(?:admin|site|content|jobs|shared)|web|mcp/[^/]+|cli/[^/]+))/"),
+    re.compile(
+        r"^(extensions/(?:web/shared/admin-core"
+        r"|web/admin/(?:identity|analytics|catalog|governance|platform)"
+        r"|web/(?:admin|site|content|jobs|shared)|web|mcp/[^/]+|cli/[^/]+))/"
+    ),
     re.compile(r"^(bridge)/"),
     re.compile(r"^(src)/"),
 ]

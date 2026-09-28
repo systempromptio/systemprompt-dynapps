@@ -17,7 +17,7 @@ use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 
-use super::STALE_AFTER_DAYS;
+use systemprompt_web_admin_core::repositories::bridge::presence::STALE_AFTER_DAYS;
 
 #[derive(Debug, Clone)]
 pub struct BridgeUserSessionsRow {

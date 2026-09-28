@@ -2,7 +2,7 @@
 
 use sqlx::PgPool;
 
-use crate::types::{ActivityStats, TimeSeriesBucket};
+use systemprompt_web_admin_core::types::{ActivityStats, TimeSeriesBucket};
 
 pub async fn get_activity_stats(pool: &PgPool) -> Result<ActivityStats, sqlx::Error> {
     let row = sqlx::query!(

@@ -15,7 +15,7 @@ use std::collections::HashMap;
 use serde::Serialize;
 
 use super::view::GatewayRouteRow;
-use crate::repositories::config::gateway::{RouteLabel, RouteLabels};
+use systemprompt_web_admin_core::repositories::gateway_catalog::{RouteLabel, RouteLabels};
 
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct ProviderRouteView {

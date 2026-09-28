@@ -6,12 +6,14 @@ use std::path::Path;
 use sqlx::PgPool;
 
 use super::view::ConfigRowView;
-use crate::error::AdminResult;
-use crate::handlers::ssr::sync_plane::{HashView, PlaneCardView, SYNC_TAB, plane_card_by_id};
-use crate::repositories::sync::inventory::{CONFIG_KINDS, ConfigKind};
-use crate::repositories::sync::provenance::{BundleFiles, source_for_path};
-use crate::repositories::sync::registry::planes;
-use crate::repositories::sync::tree_hash::subtree_hash;
+use systemprompt_web_admin_core::error::AdminResult;
+use systemprompt_web_admin_core::repositories::sync::inventory::{CONFIG_KINDS, ConfigKind};
+use systemprompt_web_admin_core::repositories::sync::provenance::{BundleFiles, source_for_path};
+use systemprompt_web_admin_core::repositories::sync::registry::planes;
+use systemprompt_web_admin_core::repositories::sync::tree_hash::subtree_hash;
+use systemprompt_web_admin_core::ssr::sync_plane::{
+    HashView, PlaneCardView, SYNC_TAB, plane_card_by_id,
+};
 
 fn projected_state(card: &PlaneCardView) -> (&'static str, &'static str, String) {
     if card.applied.is_none() {

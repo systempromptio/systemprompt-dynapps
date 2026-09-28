@@ -5,7 +5,7 @@ use systemprompt::identifiers::{AgentId, SessionId, TraceId, UserId};
 
 use super::list_row::TraceListRow;
 use super::{TraceFilter, TraceSort, TraceSummary};
-use crate::util::time_range::TimeRange;
+use systemprompt_web_admin_core::util::time_range::TimeRange;
 
 #[derive(Debug, Clone, Copy)]
 pub struct TracePage {

@@ -35,11 +35,11 @@ use systemprompt::traits::{Job, JobContext, JobResult};
 use systemprompt::security::authz::{EntityKind, RegisteredEntities};
 
 use crate::error::JobError;
-use systemprompt_web_admin::repositories::config::gateway::{
+use systemprompt_web_admin_core::repositories::gateway_catalog::{
     dispatchable_route_ids, registered_routes,
 };
-use systemprompt_web_admin::repositories::sync::boot::reconcile_all;
-use systemprompt_web_admin::repositories::sync::sources_db::record_service_sources;
+use systemprompt_web_admin_core::repositories::sync::boot::reconcile_all;
+use systemprompt_web_admin_core::repositories::sync::sources_db::record_service_sources;
 use systemprompt_web_shared::error::MarketplaceError;
 
 #[derive(Debug, Clone, Copy, Default)]

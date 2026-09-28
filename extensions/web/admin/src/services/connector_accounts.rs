@@ -1,45 +1,20 @@
-//! One public connection model for browser accounts and every enrolled bridge.
+//! The connection snapshot source: browser accounts and every enrolled bridge,
+//! described against the caller's entitlement.
 
-use super::connector_oauth::{Provider, VerificationReport};
-use crate::error::{AdminError, AdminResult};
+use super::connector_oauth::Provider;
 use crate::repositories::groups::members;
-use crate::repositories::users::{connector_accounts as repo, queries};
+use crate::repositories::users::connector_accounts as repo;
 use chrono::Utc;
-use serde::Serialize;
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 use systemprompt::models::auth::Permission;
+use systemprompt_web_admin_core::connections::source::{
+    ConnectionSnapshotSource, ConnectionSourceRegistration,
+};
+use systemprompt_web_admin_core::connections::{Connection, ConnectionSnapshot};
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
 pub(crate) use super::connector_readiness::probe_session_connection;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct Connection {
-    pub provider: String,
-    pub display_name: String,
-    pub requires_auth: bool,
-    pub session_attested: bool,
-    pub configured: bool,
-    pub entitled: bool,
-    pub status: String,
-    pub auth_method: Option<String>,
-    pub account_id: Option<String>,
-    pub account_name: Option<String>,
-    pub resource_id: Option<String>,
-    pub resource_name: Option<String>,
-    pub error_code: Option<String>,
-    pub verified_at: Option<String>,
-    pub actions: Vec<String>,
-}
-
-#[derive(Debug, Clone, Serialize)]
-pub struct ConnectionSnapshot {
-    pub version: u32,
-    pub user_id: UserId,
-    pub revision: i64,
-    pub connections: Vec<Connection>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub verification: Option<VerificationReport>,
-}
 
 pub(super) struct Entitlement {
     pub(super) active: bool,
@@ -49,14 +24,17 @@ pub(super) struct Entitlement {
 
 pub(super) fn scopes_granted(roles: &[String], scopes: &[Permission]) -> bool {
     scopes.iter().all(|scope| match scope {
-        Permission::Admin => crate::types::roles_grant_manage(roles),
+        Permission::Admin => systemprompt_web_admin_core::types::roles_grant_manage(roles),
         Permission::User | Permission::Anonymous => true,
         _ => false,
     })
 }
 
 pub(super) async fn load_entitlement(pool: &PgPool, user: &UserId) -> AdminResult<Entitlement> {
-    let identity = queries::find_identity_envelope(pool, user)
+    let identity =
+        systemprompt_web_admin_core::repositories::principal::identity::find_identity_envelope(
+            pool, user,
+        )
         .await?
         .ok_or_else(|| AdminError::Unauthorized("Account unavailable".into()))?;
     let groups = members::list_group_ids_for_user(pool, user)
@@ -197,7 +175,18 @@ fn describe(
     }
 }
 
-pub async fn get_connections(pool: &PgPool, user: &UserId) -> AdminResult<ConnectionSnapshot> {
+struct AccountConnectionSource;
+
+#[async_trait::async_trait]
+impl ConnectionSnapshotSource for AccountConnectionSource {
+    async fn snapshot(&self, pool: &PgPool, user: &UserId) -> AdminResult<ConnectionSnapshot> {
+        build_snapshot(pool, user).await
+    }
+}
+
+inventory::submit! { ConnectionSourceRegistration(&AccountConnectionSource) }
+
+async fn build_snapshot(pool: &PgPool, user: &UserId) -> AdminResult<ConnectionSnapshot> {
     let rows = repo::list_accounts(pool, user).await?;
     let entitlement = load_entitlement(pool, user).await?;
     let services = systemprompt::loader::ServicesBootstrap::get().map_err(AdminError::internal)?;

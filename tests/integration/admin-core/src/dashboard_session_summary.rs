@@ -2,8 +2,8 @@
 //! event adds its counts in the transaction that records it.
 use systemprompt::identifiers::{SessionId, UserId};
 use systemprompt_web_admin::repositories::dashboard::usage_aggregations;
-use systemprompt_web_admin::repositories::marketplace::webhook;
-use systemprompt_web_admin::types::{EVENT_POST_TOOL_USE, EVENT_POST_TOOL_USE_FAILURE};
+use systemprompt_web_admin_core::repositories::ingestion::webhook;
+use systemprompt_web_admin_core::types::{EVENT_POST_TOOL_USE, EVENT_POST_TOOL_USE_FAILURE};
 
 use crate::fixtures::{insert_user, unclaimed_email, unique};
 use crate::tempdb::TempDb;

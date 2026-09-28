@@ -4,15 +4,31 @@
 use async_trait::async_trait;
 
 use super::requests::time_range;
-use crate::error::AdminResult;
-use crate::export::model::{Cell, CellKind, Column, DataSet, ExportContext, Table, Window};
 use crate::handlers::ssr::analysis::conversations::export::export_rows;
 use crate::repositories::analysis::conversations::{ConversationBucketRow, ConversationFactRow};
-use crate::types::UserContext;
 use systemprompt::identifiers::{SessionId, UserId};
+use systemprompt_web_admin_core::error::AdminResult;
+use systemprompt_web_admin_core::export::model::{
+    Cell, CellKind, Column, DataSet, ExportContext, Table, Window,
+};
+use systemprompt_web_admin_core::export::registry::DataSetRegistration;
+use systemprompt_web_admin_core::types::UserContext;
 
 pub(crate) struct ClassifiedConversations;
 pub(crate) struct Breakdown;
+
+inventory::submit! {
+    DataSetRegistration {
+        order: 27,
+        dataset: &ClassifiedConversations,
+    }
+}
+inventory::submit! {
+    DataSetRegistration {
+        order: 28,
+        dataset: &Breakdown,
+    }
+}
 
 const COLUMNS: &[Column] = &[
     Column::new("first_at", "Started", CellKind::Timestamp).group("Identity"),
@@ -121,56 +137,57 @@ const COLUMNS: &[Column] = &[
 ];
 
 fn row(r: &ConversationFactRow) -> Vec<Cell> {
+    let f = &r.facts;
     vec![
-        Cell::opt_time(Some(r.first_at)),
-        Cell::opt_time(Some(r.last_at)),
+        Cell::opt_time(Some(f.first_at)),
+        Cell::opt_time(Some(f.last_at)),
         r.context_id.as_str().into(),
-        Cell::opt_text(r.session_id.as_ref().map(SessionId::as_str)),
-        Cell::opt_text(r.client_session_id.as_deref()),
-        Cell::opt_text(r.judge_title.as_deref().or(Some(r.title.as_str()))),
-        r.user_id.as_str().into(),
-        Cell::opt_text(r.display_name.as_deref()),
-        Cell::opt_text(r.group_name.as_deref()),
-        Cell::opt_text(r.project_name.as_deref()),
-        r.client_kind.as_str().into(),
-        r.client_attestation.as_str().into(),
-        r.wire_protocol.as_str().into(),
-        Cell::opt_text(r.model.as_deref()),
-        Cell::list(&r.models),
-        Cell::opt_text(r.provider.as_deref()),
-        r.request_count.into(),
-        r.turn_count.into(),
-        r.side_call_count.into(),
-        r.error_count.into(),
-        r.rejected_count.into(),
-        r.input_tokens.into(),
-        r.output_tokens.into(),
-        r.cache_read_tokens.into(),
-        r.cache_creation_tokens.into(),
-        r.reasoning_tokens.into(),
-        Cell::Money(r.cost_microdollars),
-        Cell::opt_int(r.p50_latency_ms),
-        Cell::opt_int(r.p95_latency_ms),
-        r.tool_calls_intended.into(),
-        r.tool_calls_executed.into(),
-        r.tool_calls_failed.into(),
-        r.artifact_count.into(),
-        r.gov_allow.into(),
-        r.gov_warn.into(),
-        r.gov_deny.into(),
-        r.safety_findings.into(),
-        r.safety_blocked.into(),
-        r.prompt_count.into(),
-        r.skill_invocations.into(),
-        Cell::list(&r.skills),
-        r.duration_seconds.into(),
-        Cell::opt_text(r.category.as_deref()),
-        Cell::opt_text(r.outcome.as_deref()),
-        Cell::opt_int(r.completion),
-        Cell::opt_text(r.summary.as_deref()),
-        Cell::list(&r.tags),
-        Cell::opt_time(r.classified_at),
-        Cell::opt_text(r.judge_model.as_deref()),
+        Cell::opt_text(f.session_id.as_ref().map(SessionId::as_str)),
+        Cell::opt_text(f.client_session_id.as_deref()),
+        Cell::opt_text(f.judge_title.as_deref().or(Some(f.title.as_str()))),
+        f.user_id.as_str().into(),
+        Cell::opt_text(f.display_name.as_deref()),
+        Cell::opt_text(f.group_name.as_deref()),
+        Cell::opt_text(f.project_name.as_deref()),
+        f.client_kind.as_str().into(),
+        f.client_attestation.as_str().into(),
+        f.wire_protocol.as_str().into(),
+        Cell::opt_text(f.model.as_deref()),
+        Cell::list(&f.models),
+        Cell::opt_text(f.provider.as_deref()),
+        f.request_count.into(),
+        f.turn_count.into(),
+        f.side_call_count.into(),
+        f.error_count.into(),
+        f.rejected_count.into(),
+        f.input_tokens.into(),
+        f.output_tokens.into(),
+        f.cache_read_tokens.into(),
+        f.cache_creation_tokens.into(),
+        f.reasoning_tokens.into(),
+        Cell::Money(f.cost_microdollars),
+        Cell::opt_int(f.p50_latency_ms),
+        Cell::opt_int(f.p95_latency_ms),
+        f.tool_calls_intended.into(),
+        f.tool_calls_executed.into(),
+        f.tool_calls_failed.into(),
+        f.artifact_count.into(),
+        f.gov_allow.into(),
+        f.gov_warn.into(),
+        f.gov_deny.into(),
+        f.safety_findings.into(),
+        f.safety_blocked.into(),
+        f.prompt_count.into(),
+        f.skill_invocations.into(),
+        Cell::list(&f.skills),
+        f.duration_seconds.into(),
+        Cell::opt_text(f.category.as_deref()),
+        Cell::opt_text(f.outcome.as_deref()),
+        Cell::opt_int(f.completion),
+        Cell::opt_text(f.summary.as_deref()),
+        Cell::list(&f.tags),
+        Cell::opt_time(f.classified_at),
+        Cell::opt_text(f.judge_model.as_deref()),
     ]
 }
 

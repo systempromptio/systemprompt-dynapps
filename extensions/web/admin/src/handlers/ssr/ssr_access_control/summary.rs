@@ -5,7 +5,7 @@
 
 use super::entities::EntitiesInput;
 use super::view::{AcKpiView, AcOptionView};
-use crate::types::access_control::AccessDecision;
+use systemprompt_web_admin_core::types::access_control::AccessDecision;
 
 pub(super) fn kpis(input: &EntitiesInput<'_>, entities: usize) -> Vec<AcKpiView> {
     let denies = input

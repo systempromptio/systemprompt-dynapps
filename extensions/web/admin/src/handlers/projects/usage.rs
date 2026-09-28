@@ -14,15 +14,15 @@ use axum::response::{IntoResponse, Response};
 use serde::Serialize;
 use sqlx::PgPool;
 
-use crate::error::AdminResult;
 use crate::repositories::people_usage::breakdown::{
     ModelUsageRow, SkillUsageRow, list_scope_top_models, list_scope_top_skills,
 };
 use crate::repositories::people_usage::{
     DailyRequests, LEADERBOARD_LIMIT, get_scope_usage, list_daily_requests,
 };
-use crate::repositories::scope::{Attribution, ScopeQuery, ScopeTarget};
-use crate::types::groups::GroupUsageSummary;
+use systemprompt_web_admin_core::error::AdminResult;
+use systemprompt_web_admin_core::repositories::scope::{Attribution, ScopeQuery, ScopeTarget};
+use systemprompt_web_admin_core::types::groups::GroupUsageSummary;
 
 use super::super::groups::usage::{UsageQuery, window_days};
 

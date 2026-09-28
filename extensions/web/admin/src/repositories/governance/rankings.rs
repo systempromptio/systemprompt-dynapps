@@ -6,7 +6,7 @@
 
 use sqlx::PgPool;
 
-use crate::types::{TopActor, TopPolicy};
+use systemprompt_web_admin_core::types::{TopActor, TopPolicy};
 
 pub async fn list_top_actors(
     pool: &PgPool,

@@ -4,8 +4,8 @@
 use sqlx::PgPool;
 use systemprompt_web_shared::ProjectId;
 
-use crate::error::{AdminError, AdminResult};
-use crate::types::projects::ProjectAdMappingRow;
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::types::projects::ProjectAdMappingRow;
 
 pub async fn list_project_ad_mappings(
     pool: &PgPool,

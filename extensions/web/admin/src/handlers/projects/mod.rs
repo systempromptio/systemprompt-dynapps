@@ -18,9 +18,9 @@ use axum::response::{IntoResponse, Response};
 use serde::Serialize;
 use sqlx::PgPool;
 
-use crate::error::{AdminError, AdminResult};
 use crate::repositories::projects::{crud, members as member_repo};
-use crate::types::projects::{
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::types::projects::{
     CreateProjectRequest, ProjectRow, ProjectSummary, UpdateProjectRequest,
 };
 
@@ -38,7 +38,9 @@ pub(crate) struct ProjectDetailResponse {
 pub(crate) async fn list_projects_handler(
     State(pool): State<Arc<PgPool>>,
 ) -> AdminResult<Response> {
-    let projects = crud::list_project_summaries(&pool).await?;
+    let projects =
+        systemprompt_web_admin_core::repositories::scope::containers::list_project_summaries(&pool)
+            .await?;
     Ok(Json(ListProjectsResponse { projects }).into_response())
 }
 

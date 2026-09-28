@@ -8,8 +8,8 @@
 use serde::Serialize;
 
 use super::{BASE_URL, SecretsQuery};
-use crate::handlers::ssr::list_view::SelectOptionView;
 use crate::repositories::governance::secret_audit_log::SecretAuditStats;
+use systemprompt_web_admin_core::ssr::list_view::SelectOptionView;
 
 #[derive(Debug, Serialize)]
 pub(super) struct SecretAuditKpiView {

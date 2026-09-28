@@ -17,9 +17,9 @@ use systemprompt::extension::{FrameOptions, FrameOptionsOverride};
 use systemprompt::identifiers::{ArtifactId, ContextId};
 use systemprompt::mcp::services::ui_renderer::{RenderTarget, artifact_ui_resource};
 
-use crate::error::{AdminError, AdminHtmlResult};
-use crate::handlers::ssr::page::Page;
 use crate::repositories::analytics::artifacts::find_artifact;
+use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
+use systemprompt_web_admin_core::ssr::page::Page;
 
 pub(crate) async fn artifact_preview(
     shell: Page,

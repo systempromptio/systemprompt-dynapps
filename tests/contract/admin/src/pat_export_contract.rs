@@ -9,7 +9,7 @@
 
 use axum::http::StatusCode;
 use systemprompt::identifiers::UserId;
-use systemprompt_web_admin::repositories::bridge::api_keys::issue_api_key;
+use systemprompt_web_admin_core::repositories::bridge::api_keys::issue_api_key;
 
 use crate::app::{App, Call};
 use crate::principal::Principal;

@@ -3,8 +3,9 @@
 use serde::Serialize;
 
 use super::retention::RetentionView;
-use crate::handlers::ssr::sync_plane::{AppliedView, HashView};
-use crate::handlers::ssr::types::{BreadcrumbView, TabLinkView};
+use systemprompt_web_admin_core::ssr::sync_plane::{AppliedView, HashView};
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
+use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;
 
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct ConfigRowView {

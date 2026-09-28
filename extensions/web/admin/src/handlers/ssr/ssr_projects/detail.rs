@@ -25,9 +25,9 @@ use crate::repositories::projects::activity::{
     ProjectSessionRow, SkillEffectivenessRow, ToolHealthRow, list_project_sessions,
     list_project_skill_effectiveness, list_project_tool_health,
 };
-use crate::repositories::scope::{Attribution, ScopeQuery, ScopeTarget};
-use crate::types::UserContext;
-use crate::types::projects::{ProjectMemberRow, ProjectRow};
+use systemprompt_web_admin_core::repositories::scope::{Attribution, ScopeQuery, ScopeTarget};
+use systemprompt_web_admin_core::types::UserContext;
+use systemprompt_web_admin_core::types::projects::{ProjectMemberRow, ProjectRow};
 use systemprompt_web_shared::ProjectId;
 
 use super::super::people_view::{
@@ -137,8 +137,8 @@ pub(super) async fn load_usage(pool: &PgPool, project_id: &ProjectId) -> Project
 pub(super) struct TabReads<'a> {
     pub(super) tab: &'a str,
     pub(super) usage: Option<&'a ProjectUsageData>,
-    pub(super) mappings: Vec<crate::types::projects::ProjectAdMappingRow>,
-    pub(super) rules: &'a [crate::types::access_control::AccessControlRule],
+    pub(super) mappings: Vec<systemprompt_web_admin_core::types::projects::ProjectAdMappingRow>,
+    pub(super) rules: &'a [systemprompt_web_admin_core::types::access_control::AccessControlRule],
 }
 
 pub(super) fn page_data(

@@ -3,13 +3,15 @@
 use sqlx::PgPool;
 use systemprompt::identifiers::{Email, UserId};
 
-use crate::activity;
-use crate::types::{EventTypeCount, ToolUsageCount, UserSession, UserSummary};
+use systemprompt_web_admin_core::activity;
+use systemprompt_web_admin_core::types::{
+    EventTypeCount, ToolUsageCount, UserSession, UserSummary,
+};
 
 pub async fn find_user_detail(
     pool: &PgPool,
     user_id: &UserId,
-) -> Result<Option<crate::types::UserDetail>, sqlx::Error> {
+) -> Result<Option<systemprompt_web_admin_core::types::UserDetail>, sqlx::Error> {
     let row = sqlx::query_as!(
         UserSummary,
         r#"SELECT
@@ -69,7 +71,7 @@ async fn build_user_detail(
     pool: &PgPool,
     user_id: &UserId,
     summary: UserSummary,
-) -> Result<Option<crate::types::UserDetail>, sqlx::Error> {
+) -> Result<Option<systemprompt_web_admin_core::types::UserDetail>, sqlx::Error> {
     let recent_activity = activity::queries::list_user_recent_activity(pool, user_id)
         .await
         .unwrap_or_else(|e| {
@@ -109,7 +111,7 @@ async fn build_user_detail(
         return Ok(None);
     };
 
-    Ok(Some(crate::types::UserDetail {
+    Ok(Some(systemprompt_web_admin_core::types::UserDetail {
         user_id: summary.user_id,
         display_name: summary.display_name,
         email: summary.email,

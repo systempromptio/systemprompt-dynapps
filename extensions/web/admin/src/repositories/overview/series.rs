@@ -10,7 +10,7 @@
 
 use sqlx::PgPool;
 
-use crate::util::time_range::TimeRange;
+use systemprompt_web_admin_core::util::time_range::TimeRange;
 
 pub const BUCKETS: i64 = 24;
 

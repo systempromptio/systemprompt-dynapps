@@ -8,17 +8,19 @@
 //! last: it is the thing they will go and edit once the first four have told
 //! them what is wrong.
 
-use crate::handlers::ssr::entity_urls::{context_detail_url, session_detail_url};
-use crate::handlers::ssr::format::{format_duration_ms, local_time, short_id};
 use crate::handlers::ssr::ssr_tools::rows::format_bytes;
-use crate::numeric::{percentage, round_to_i64};
 use crate::repositories::mcp::runtime::{
     McpCallerRow, McpConnectionRow, McpExecutionRow, McpToolStat,
 };
-use crate::repositories::overview::liveness::{HEARTBEAT_INTERVAL_SECS, liveness_state};
-use crate::types::McpServerDetail;
 use systemprompt::identifiers::McpExecutionId;
 use systemprompt::models::mcp::ExecutionSource;
+use systemprompt_web_admin_core::numeric::{percentage, round_to_i64};
+use systemprompt_web_admin_core::repositories::liveness::{
+    HEARTBEAT_INTERVAL_SECS, liveness_state,
+};
+use systemprompt_web_admin_core::ssr::entity_urls::{context_detail_url, session_detail_url};
+use systemprompt_web_admin_core::ssr::format::{format_duration_ms, local_time, short_id};
+use systemprompt_web_admin_core::types::McpServerDetail;
 
 use super::view::{
     ConfigFactView, McpCallerRowView, McpConnectionRowView, McpExecutionRowView, McpToolRow,

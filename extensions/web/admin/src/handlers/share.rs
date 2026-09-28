@@ -28,10 +28,10 @@ use sqlx::PgPool;
 use systemprompt::config::SecretsBootstrap;
 use systemprompt::identifiers::UserId;
 
-use crate::error::{AdminError, AdminResult};
-use crate::handlers::shared;
 use crate::repositories;
-use crate::types::UserContext;
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::request as shared;
+use systemprompt_web_admin_core::types::UserContext;
 
 const SHARE_TOKEN_TTL_DAYS: i64 = 30;
 
@@ -184,8 +184,9 @@ fn opt_desc(desc: String) -> Option<String> {
 
 fn collect_manifest_sections(
     services_path: &std::path::Path,
-) -> Vec<repositories::users::access_control::SectionInput> {
-    let mut sections_in: Vec<repositories::users::access_control::SectionInput> = Vec::new();
+) -> Vec<systemprompt_web_admin_core::repositories::entitlement::SectionInput> {
+    let mut sections_in: Vec<systemprompt_web_admin_core::repositories::entitlement::SectionInput> =
+        Vec::new();
 
     if let Ok(servers) = repositories::mcp::mcp_servers::list_mcp_servers(services_path) {
         let rows = servers
@@ -226,10 +227,13 @@ async fn build_user_manifest(pool: &PgPool, user_id: &UserId) -> AdminResult<Man
     let services_path = shared::get_services_path()?;
     let sections_in = collect_manifest_sections(&services_path);
 
-    let matrix =
-        repositories::users::access_control::filter_catalog_for_user(pool, user_id, sections_in)
-            .await?
-            .ok_or_else(|| AdminError::NotFound("User not found".to_owned()))?;
+    let matrix = systemprompt_web_admin_core::repositories::entitlement::filter_catalog_for_user(
+        pool,
+        user_id,
+        sections_in,
+    )
+    .await?
+    .ok_or_else(|| AdminError::NotFound("User not found".to_owned()))?;
 
     let sections = matrix
         .sections

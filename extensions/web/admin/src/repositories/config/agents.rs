@@ -8,8 +8,8 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use crate::repositories::marketplace::plugins::list_skill_catalog;
-use crate::types::{AgentDetail, AgentSkillInfo};
 use systemprompt::identifiers::{AgentId, McpServerId};
+use systemprompt_web_admin_core::types::{AgentDetail, AgentSkillInfo};
 use systemprompt_web_shared::error::MarketplaceError;
 
 pub fn list_configured_agents(services_path: &Path) -> Result<Vec<AgentDetail>, MarketplaceError> {

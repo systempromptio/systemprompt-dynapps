@@ -4,10 +4,12 @@
 use serde::Serialize;
 
 use crate::handlers::ssr::ssr_sync::{BASE_URL as SYNC_URL, DOCS_URL};
-use crate::handlers::ssr::sync_plane::{HashView, PlaneCardView};
-use crate::handlers::ssr::types::BreadcrumbView;
-use crate::repositories::sync::archive::manifest::ArchiveManifest;
-use crate::repositories::sync::archive::staging::{OtherEntry, StagedArchive};
+use systemprompt_web_admin_core::repositories::sync::archive::manifest::ArchiveManifest;
+use systemprompt_web_admin_core::repositories::sync::archive::staging::{
+    OtherEntry, StagedArchive,
+};
+use systemprompt_web_admin_core::ssr::sync_plane::{HashView, PlaneCardView};
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct ManifestView {

@@ -7,9 +7,10 @@
 use serde::Serialize;
 use systemprompt::identifiers::{ContextId, SessionId, UserId};
 
-use crate::handlers::ssr::list_view::Pagination;
-use crate::handlers::ssr::ssr_history::HistoryRowView;
-use crate::handlers::ssr::types::{BreadcrumbView, MembershipChoiceView, RoleChoiceView};
+use crate::handlers::ssr::types::{MembershipChoiceView, RoleChoiceView};
+use systemprompt_web_admin_core::ssr::history_rows::HistoryRowView;
+use systemprompt_web_admin_core::ssr::list_view::Pagination;
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 
 #[derive(Debug, Serialize)]
 pub(crate) struct UserDetailContext {
@@ -34,7 +35,7 @@ pub(crate) struct UserDetailContext {
     pub usage: Option<UsageTabView>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub export: Option<crate::export::ExportView>,
+    pub export: Option<systemprompt_web_admin_core::export::view::ExportView>,
 }
 
 #[derive(Debug, Serialize)]

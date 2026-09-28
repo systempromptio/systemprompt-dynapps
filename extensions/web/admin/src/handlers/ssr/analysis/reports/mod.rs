@@ -24,13 +24,13 @@ use serde::Serialize;
 use sqlx::PgPool;
 use systemprompt::ai::AiService;
 
-use crate::error::{AdminError, AdminHtmlResult, AdminResult};
 use crate::handlers::ssr::analysis::help::{HelpView, item};
-use crate::handlers::ssr::list_view::SelectOptionView;
-use crate::handlers::ssr::page::Page;
-use crate::repositories::analysis::inventory_index::InventoryIndex;
 use crate::repositories::analysis::reports::{AnalysisReportRow, find_report, list_reports};
 use crate::services::analysis_report::generate_report;
+use systemprompt_web_admin_core::catalog_index::inventory_index::InventoryIndex;
+use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult, AdminResult};
+use systemprompt_web_admin_core::ssr::list_view::SelectOptionView;
+use systemprompt_web_admin_core::ssr::page::Page;
 
 use form::{ReportRequestForm, queue, regenerate_form, resolve};
 use report_context::report_context;
@@ -77,7 +77,7 @@ pub(crate) async fn page(
 ) -> AdminHtmlResult<Response> {
     require_console(&shell)?;
     let rows = list_reports(&pool, HISTORY_LIMIT).await?;
-    let index = InventoryIndex::build(&crate::handlers::shared::get_services_path()?);
+    let index = InventoryIndex::build(&systemprompt_web_admin_core::request::get_services_path()?);
     let context = ReportsPageContext {
         page: "analysis-reports",
         title: "Reports",
@@ -94,13 +94,15 @@ pub(crate) async fn page(
             .collect(),
         help: reports_help(),
     };
-    Ok(crate::handlers::ssr::render_typed_page(
-        &shell.engine,
-        "analysis-reports",
-        &context,
-        &shell.user,
-        &shell.marketplace,
-    ))
+    Ok(
+        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+            &shell.engine,
+            "analysis-reports",
+            &context,
+            &shell.user,
+            &shell.marketplace,
+        ),
+    )
 }
 
 async fn load_report(pool: &PgPool, id: &str) -> Result<AnalysisReportRow, AdminError> {
@@ -123,13 +125,15 @@ pub(crate) async fn report_page(
     require_console(&shell)?;
     let row = load_report(&pool, &id).await?;
     let context = report_context(&row);
-    Ok(crate::handlers::ssr::render_typed_page(
-        &shell.engine,
-        "analysis-report",
-        &context,
-        &shell.user,
-        &shell.marketplace,
-    ))
+    Ok(
+        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+            &shell.engine,
+            "analysis-report",
+            &context,
+            &shell.user,
+            &shell.marketplace,
+        ),
+    )
 }
 
 async fn start(
@@ -164,7 +168,7 @@ pub(crate) async fn create(
     Form(form): Form<ReportRequestForm>,
 ) -> AdminHtmlResult<Redirect> {
     require_console(&shell)?;
-    crate::handlers::shared::require_write_origin(&headers)?;
+    systemprompt_web_admin_core::request::require_write_origin(&headers)?;
     let id = start(&pool, ai, &shell, &form).await?;
     Ok(report_redirect(&id))
 }
@@ -177,7 +181,7 @@ pub(crate) async fn regenerate(
     headers: HeaderMap,
 ) -> AdminHtmlResult<Redirect> {
     require_console(&shell)?;
-    crate::handlers::shared::require_write_origin(&headers)?;
+    systemprompt_web_admin_core::request::require_write_origin(&headers)?;
     let row = load_report(&pool, &id).await?;
     let new_id = start(&pool, ai, &shell, &regenerate_form(&row)).await?;
     Ok(report_redirect(&new_id))

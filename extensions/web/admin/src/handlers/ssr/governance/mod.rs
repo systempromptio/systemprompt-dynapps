@@ -21,15 +21,15 @@ use axum::response::Response;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 
-use crate::error::{AdminError, AdminHtmlResult};
-use crate::handlers::ssr::list_view::{DEFAULT_PAGE_SIZE, scope_filter_view};
 use crate::repositories::governance::decision_log::{DecisionFilter, DecisionLogRow, DecisionSort};
 use crate::repositories::governance::findings::{FindingFilter, SafetyFindingLogRow};
 use crate::repositories::governance::{DecisionPage, PageSlice};
-use crate::repositories::scope::{ScopeRequest, SubjectScope, membership};
-use crate::templates::AdminTemplateEngine;
-use crate::types::{MarketplaceContext, UserContext};
-use crate::util::time_range::{TimeRange, TimeRangeQuery, parse_time_range};
+use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
+use systemprompt_web_admin_core::repositories::scope::{ScopeRequest, SubjectScope, membership};
+use systemprompt_web_admin_core::ssr::list_view::{DEFAULT_PAGE_SIZE, scope_filter_view};
+use systemprompt_web_admin_core::templates::AdminTemplateEngine;
+use systemprompt_web_admin_core::types::{MarketplaceContext, UserContext};
+use systemprompt_web_admin_core::util::time_range::{TimeRange, TimeRangeQuery, parse_time_range};
 
 mod columns;
 mod context;
@@ -263,11 +263,13 @@ pub(crate) async fn governance_page(
         data: &loaded,
     });
 
-    Ok(super::render_typed_page(
-        &engine,
-        "governance-warnings",
-        &ctx,
-        &user_ctx,
-        &mkt_ctx,
-    ))
+    Ok(
+        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+            &engine,
+            "governance-warnings",
+            &ctx,
+            &user_ctx,
+            &mkt_ctx,
+        ),
+    )
 }

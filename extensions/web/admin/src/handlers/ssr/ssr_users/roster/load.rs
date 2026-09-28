@@ -10,9 +10,9 @@ use std::collections::BTreeMap;
 
 use sqlx::PgPool;
 
-use crate::error::AdminResult;
 use crate::repositories;
 use crate::repositories::users::roster::{DEFAULT_PAGE_SIZE, RosterQuery};
+use systemprompt_web_admin_core::error::AdminResult;
 
 use super::RosterUrlState;
 use super::context::{CreateUserChoiceView, CreateUserPanelView};
@@ -28,7 +28,7 @@ pub(super) struct RosterRead {
 
 pub(super) async fn load_roster(
     pool: &PgPool,
-    scope: &repositories::scope::SubjectScope,
+    scope: &systemprompt_web_admin_core::repositories::scope::SubjectScope,
     url: &RosterUrlState,
 ) -> AdminResult<RosterRead> {
     let query = RosterQuery {
@@ -75,27 +75,29 @@ pub(super) async fn create_user_panel(
             projects: Vec::new(),
         };
     }
-    let groups = repositories::groups::crud::list_groups(pool)
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, "roster: group choices unavailable"))
-        .unwrap_or_default()
-        .into_iter()
-        .filter(|g| !g.is_system)
-        .map(|g| CreateUserChoiceView {
-            id: g.id.into_inner(),
-            name: g.name,
-        })
-        .collect();
-    let projects = repositories::projects::crud::list_projects(pool)
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, "roster: project choices unavailable"))
-        .unwrap_or_default()
-        .into_iter()
-        .map(|p| CreateUserChoiceView {
-            id: p.id.into_inner(),
-            name: p.name,
-        })
-        .collect();
+    let groups =
+        systemprompt_web_admin_core::repositories::scope::containers::list_group_options(pool)
+            .await
+            .inspect_err(|e| tracing::warn!(error = %e, "roster: group choices unavailable"))
+            .unwrap_or_default()
+            .into_iter()
+            .filter(|g| !g.is_system)
+            .map(|g| CreateUserChoiceView {
+                id: g.id.into_inner(),
+                name: g.name,
+            })
+            .collect();
+    let projects =
+        systemprompt_web_admin_core::repositories::scope::containers::list_project_options(pool)
+            .await
+            .inspect_err(|e| tracing::warn!(error = %e, "roster: project choices unavailable"))
+            .unwrap_or_default()
+            .into_iter()
+            .map(|p| CreateUserChoiceView {
+                id: p.id.into_inner(),
+                name: p.name,
+            })
+            .collect();
     CreateUserPanelView {
         sso_provisions,
         groups,
@@ -105,8 +107,8 @@ pub(super) async fn create_user_panel(
 
 async fn load_scope_names(pool: &PgPool) -> (BTreeMap<String, String>, BTreeMap<String, String>) {
     let (groups, projects) = tokio::join!(
-        repositories::groups::crud::list_groups(pool),
-        repositories::projects::crud::list_projects(pool),
+        systemprompt_web_admin_core::repositories::scope::containers::list_group_options(pool),
+        systemprompt_web_admin_core::repositories::scope::containers::list_project_options(pool),
     );
     (
         groups

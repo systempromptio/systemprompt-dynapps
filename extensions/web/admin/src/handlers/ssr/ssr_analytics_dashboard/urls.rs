@@ -7,13 +7,13 @@
 
 use urlencoding::encode as urlencode;
 
-use crate::handlers::ssr::list_view::{PageWindow, Pagination};
+use systemprompt_web_admin_core::ssr::list_view::{PageWindow, Pagination};
 
 use super::context::{BucketLinkView, DashboardTab, DashboardTabLink, ScopeChipView, SloOption};
 
 pub(super) use super::urls_controls::{attribution_links, audience_links, axis_links, drill_url};
 use super::{AnalyticsDashboardQuery, BASE_URL};
-use crate::handlers::ssr::list_view::{paginate_prefixed, query_string_dropping};
+use systemprompt_web_admin_core::ssr::list_view::{paginate_prefixed, query_string_dropping};
 
 pub(super) fn preserved_query_string(query: &AnalyticsDashboardQuery, drop: &[&str]) -> String {
     let pairs: [(&str, Option<&str>); 12] = [

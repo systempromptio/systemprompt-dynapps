@@ -2,8 +2,8 @@
 
 use super::context::{AccessTabView, UserAccessRowView, UserAccessSectionView};
 use super::load::AccessData;
-use crate::types::access_control::{AccessControlRule, AccessDecision};
 use systemprompt::identifiers::UserId;
+use systemprompt_web_admin_core::types::access_control::{AccessControlRule, AccessDecision};
 
 pub(super) fn access_tab(mut data: AccessData, user_id: &UserId) -> AccessTabView {
     data.overview.set_permissions(data.matrix.as_ref());

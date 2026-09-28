@@ -153,7 +153,8 @@ pub async fn list_skill_facts(
     window: &SkillWindow,
     filter: &SkillListFilter,
 ) -> Result<Vec<SkillFactRow>, sqlx::Error> {
-    let mut connection = crate::repositories::dashboard_read::begin(pool).await?;
+    let mut connection =
+        systemprompt_web_admin_core::repositories::dashboard_read::begin(pool).await?;
     let rows = sqlx::query_file!(
         "src/repositories/analysis/skills/page.sql",
         window.start,

@@ -3,11 +3,11 @@
 //! allowlist is exactly themselves.
 
 use systemprompt::identifiers::{Email, UserId};
-use systemprompt_web_admin::UserContext;
-use systemprompt_web_admin::repositories::analytics::conversations::{
+use systemprompt_web_admin_core::repositories::conversations::{
     HistoryScope, history_scope_for, resolve_history_scope,
 };
-use systemprompt_web_admin::repositories::scope::Participation;
+use systemprompt_web_admin_core::repositories::scope::Participation;
+use systemprompt_web_admin_core::types::UserContext;
 
 fn uid(s: &str) -> UserId {
     UserId::new(s.to_owned())

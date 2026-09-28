@@ -11,9 +11,9 @@
 
 use chrono::{DateTime, Duration, Utc};
 
-use crate::export::window::next_midnight;
-use crate::handlers::ssr::analysis::time;
-use crate::handlers::ssr::types::TabLinkView;
+use systemprompt_web_admin_core::export::window::next_midnight;
+use systemprompt_web_admin_core::ssr::time_window as time;
+use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;
 
 use super::HistoryQuery;
 

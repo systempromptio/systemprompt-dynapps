@@ -6,12 +6,12 @@
 //! `/.well-known/jwks.json` and reads who is calling; no provider credential
 //! and no systemprompt session token ever leaves the gateway.
 
-use crate::error::{AdminError, AdminResult};
 use jsonwebtoken::{Algorithm, Header, encode};
 use serde::{Deserialize, Serialize};
 use systemprompt::identifiers::UserId;
 use systemprompt::models::ServicesConfig;
 use systemprompt::models::mcp::McpServerType;
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
 pub const TOKEN_TTL_SECS: i64 = 300;
 

@@ -15,7 +15,9 @@
 
 use sqlx::PgPool;
 
-use super::{BRIDGE_HEARTBEAT_SECS, STALE_AFTER_DAYS};
+use systemprompt_web_admin_core::repositories::bridge::presence::{
+    BRIDGE_HEARTBEAT_SECS, STALE_AFTER_DAYS,
+};
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct FleetStats {

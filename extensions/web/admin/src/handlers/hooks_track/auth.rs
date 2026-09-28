@@ -3,11 +3,11 @@
 //! Hook JWTs carry `aud=hook` and scope `hook:track`, distinct from the API and
 //! plugin audiences.
 
-use crate::error::{AdminError, AdminResult};
 use axum::http::HeaderMap;
 use systemprompt::identifiers::{PluginId, UserId};
 use systemprompt::models::Config;
 use systemprompt_security::HookTokenValidator;
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
 pub(super) fn extract_and_validate_jwt(headers: &HeaderMap) -> AdminResult<(UserId, PluginId)> {
     let token = headers
@@ -26,7 +26,9 @@ pub(super) async fn authenticated_device(
     repository: &systemprompt::marketplace::managed::ManagedRepository,
     headers: &HeaderMap,
     user: &UserId,
-) -> AdminResult<Option<crate::repositories::marketplace::webhook::AuthenticatedHookDevice>> {
+) -> AdminResult<
+    Option<systemprompt_web_admin_core::repositories::ingestion::webhook::AuthenticatedHookDevice>,
+> {
     let Some(credential) = headers.get("x-systemprompt-device-credential") else {
         return Ok(None);
     };
@@ -59,7 +61,7 @@ pub(super) async fn authenticated_device(
         ));
     }
     Ok(Some(
-        crate::repositories::marketplace::webhook::AuthenticatedHookDevice {
+        systemprompt_web_admin_core::repositories::ingestion::webhook::AuthenticatedHookDevice {
             consumer_id: identity.consumer_id,
             device_id: identity.device_id,
             host,

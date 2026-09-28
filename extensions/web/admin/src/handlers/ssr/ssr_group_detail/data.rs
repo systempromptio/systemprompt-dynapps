@@ -8,8 +8,8 @@ use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 
 use crate::repositories;
-use crate::services::marketplaces::load_marketplaces;
-use crate::types::groups::{GroupAdMappingRow, GroupMemberRow};
+use systemprompt_web_admin_core::catalog_index::marketplaces::load_marketplaces;
+use systemprompt_web_admin_core::types::groups::{GroupAdMappingRow, GroupMemberRow};
 
 use crate::repositories::people_usage::attribution::{
     AttributionSourceRow, list_scope_attribution_sources,
@@ -22,7 +22,7 @@ use crate::repositories::people_usage::{
     DEFAULT_WINDOW_DAYS, LEADERBOARD_LIMIT, MemberUsageRow, ScopeUsageRow, get_scope_usage,
     list_daily_requests, list_member_usage,
 };
-use crate::repositories::scope::{Attribution, ScopeQuery, ScopeTarget};
+use systemprompt_web_admin_core::repositories::scope::{Attribution, ScopeQuery, ScopeTarget};
 use systemprompt_web_shared::GroupId;
 
 use super::super::people_view::or_default;
@@ -207,7 +207,7 @@ pub(super) async fn load_mappings(pool: &PgPool, group_id: &GroupId) -> Vec<Grou
 }
 
 pub(super) async fn load_access(pool: &PgPool, group_id: &GroupId) -> Vec<AccessSectionView> {
-    let Ok(services_path) = crate::handlers::shared::get_services_path() else {
+    let Ok(services_path) = systemprompt_web_admin_core::request::get_services_path() else {
         tracing::warn!("services path unavailable; group access matrix skipped");
         return Vec::new();
     };
@@ -223,14 +223,16 @@ pub(super) async fn load_access(pool: &PgPool, group_id: &GroupId) -> Vec<Access
         );
     }
 
-    let subject = repositories::users::access_control::group_subject(group_id.as_str());
-    let resolved =
-        repositories::users::access_control::resolve_subject_matrix(pool, &subject, sections)
-            .await
-            .inspect_err(|e| tracing::warn!(error = %e, "group access matrix failed"))
-            .unwrap_or_default();
+    let subject =
+        systemprompt_web_admin_core::repositories::entitlement::group_subject(group_id.as_str());
+    let resolved = systemprompt_web_admin_core::repositories::entitlement::resolve_subject_matrix(
+        pool, &subject, sections,
+    )
+    .await
+    .inspect_err(|e| tracing::warn!(error = %e, "group access matrix failed"))
+    .unwrap_or_default();
 
-    let own_rules = repositories::users::access_control::list_all_rules(pool)
+    let own_rules = systemprompt_web_admin_core::repositories::entitlement::list_all_rules(pool)
         .await
         .inspect_err(|e| tracing::warn!(error = %e, "access rules failed"))
         .unwrap_or_default();

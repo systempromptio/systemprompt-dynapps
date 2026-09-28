@@ -14,7 +14,7 @@ use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 use systemprompt::identifiers::{PluginId, UserId};
 
-use crate::util::time_range::TimeRange;
+use systemprompt_web_admin_core::util::time_range::TimeRange;
 
 /// One recorded action against one secret.
 #[derive(Debug, Clone)]

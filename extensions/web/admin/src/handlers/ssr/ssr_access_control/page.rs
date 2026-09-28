@@ -9,8 +9,9 @@ use super::entities::{DOCS_URL, SYNC_URL};
 use super::person::PersonCheckView;
 use super::view::{AcEntitiesView, AcStatsView, AudienceGridView};
 use super::{AcTab, TabBody, tabs};
-use crate::handlers::ssr::types::{BreadcrumbView, TabLinkView};
-use crate::repositories::access_control::drift::{DriftCounts, DriftReport};
+use systemprompt_web_admin_core::repositories::access_rules::drift::{DriftCounts, DriftReport};
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
+use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;
 
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct DriftBannerView {

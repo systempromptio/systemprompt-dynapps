@@ -11,7 +11,9 @@
 use serde::Serialize;
 
 use super::models::{DispatchRow, ProviderCardView};
-use crate::handlers::ssr::types::{BreadcrumbView, PickableUserView, TabLinkView};
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
+use systemprompt_web_admin_core::ssr::types::pickable_user::PickableUserView;
+use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;
 
 #[derive(Debug, Clone, Serialize)]
 pub(super) struct GatewayRouteRow {

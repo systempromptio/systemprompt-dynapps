@@ -6,7 +6,8 @@
 use serde::Serialize;
 use serde::ser::SerializeMap;
 
-use crate::handlers::ssr::types::{PieView, SvgLineChartView};
+use systemprompt_web_admin_core::ssr::types::pie::PieView;
+use systemprompt_web_admin_core::ssr::types::svg_line::SvgLineChartView;
 
 pub(super) use super::context_overview::{
     BucketLinkView, DashboardTabLink, DashboardTimeRange, FastSlowView, FiltersView, KpiStripView,
@@ -110,7 +111,7 @@ pub(super) struct AnalyticsDashboardContext {
     pub tools: ToolsTabView,
     pub sessions: SessionsTabView,
     pub cost: CostTabView,
-    pub export: crate::export::ExportView,
+    pub export: systemprompt_web_admin_core::export::view::ExportView,
 }
 
 #[derive(Debug, Serialize)]

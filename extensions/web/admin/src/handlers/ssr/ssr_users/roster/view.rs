@@ -5,17 +5,17 @@
 
 use std::collections::BTreeMap;
 
-use crate::handlers::ssr::format::{format_cost, format_token_total, relative_time};
-use crate::handlers::ssr::list_view::{PageWindow, Pagination};
 use crate::repositories::users::roster::{RosterFilter, RosterRow, RosterStats};
+use systemprompt_web_admin_core::ssr::format::{format_cost, format_token_total, relative_time};
+use systemprompt_web_admin_core::ssr::list_view::{PageWindow, Pagination};
 
 use super::super::BASE_URL;
 use super::RosterUrlState;
-use crate::handlers::ssr::entity_urls::context_detail_url;
-use crate::handlers::ssr::types::FilterChipView;
+use systemprompt_web_admin_core::ssr::entity_urls::context_detail_url;
+use systemprompt_web_admin_core::ssr::types::table::FilterChipView;
 
 use super::context::{RosterChipView, RosterKpiView, RosterRowView};
-use crate::handlers::ssr::list_view::paginate_prefixed;
+use systemprompt_web_admin_core::ssr::list_view::paginate_prefixed;
 
 pub(super) fn build_chips(url: &RosterUrlState, totals: &RosterStats) -> Vec<FilterChipView> {
     let prefix = url.link_prefix(&["filter", "page"]);
@@ -80,7 +80,7 @@ fn delta(current: i64, prior: i64) -> (String, &'static str) {
     if prior == 0 {
         return (String::new(), "flat");
     }
-    let pct = crate::numeric::percentage(current - prior, prior);
+    let pct = systemprompt_web_admin_core::numeric::percentage(current - prior, prior);
     let dir = if pct > 1.0 {
         "up"
     } else if pct < -1.0 {

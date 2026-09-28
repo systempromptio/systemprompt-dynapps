@@ -21,13 +21,14 @@ use axum::response::Response;
 use serde::Deserialize;
 use sqlx::PgPool;
 
-use crate::error::{AdminError, AdminHtmlResult};
 use crate::repositories;
-use crate::templates::AdminTemplateEngine;
-use crate::types::{MarketplaceContext, UserContext};
+use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
+use systemprompt_web_admin_core::templates::AdminTemplateEngine;
+use systemprompt_web_admin_core::types::{MarketplaceContext, UserContext};
 
-use super::sync_plane::{is_sync_tab, plane_card_by_id, sync_tab};
-use super::types::{MemberSetChipView, TabLinkView};
+use super::types::MemberSetChipView;
+use systemprompt_web_admin_core::ssr::sync_plane::{is_sync_tab, plane_card_by_id, sync_tab};
+use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;
 
 mod data;
 mod sorting;
@@ -102,13 +103,15 @@ pub(crate) async fn groups_page(
         group_options: group_options(&pool).await,
     });
 
-    Ok(super::render_typed_page(
-        &engine, "groups", &data, &user_ctx, &mkt_ctx,
-    ))
+    Ok(
+        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+            &engine, "groups", &data, &user_ctx, &mkt_ctx,
+        ),
+    )
 }
 
 async fn group_options(pool: &PgPool) -> Vec<MemberSetChipView> {
-    repositories::groups::crud::list_groups(pool)
+    systemprompt_web_admin_core::repositories::scope::containers::list_group_options(pool)
         .await
         .inspect_err(|e| tracing::warn!(error = %e, "group option list failed"))
         .unwrap_or_default()

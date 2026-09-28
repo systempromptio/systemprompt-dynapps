@@ -4,13 +4,14 @@
 //! The sort key is validated against a fixed list rather than passed through,
 //! so a query string can only choose an ordering the page actually offers.
 
-use super::super::types::{ProjectSortHeaders, SortHeaderView};
+use super::super::types::ProjectSortHeaders;
 use super::BASE_URL;
 use crate::repositories::projects::usage::ProjectRollup;
+use systemprompt_web_admin_core::ssr::types::table::SortHeaderView;
 
 use super::list::ListQuery;
 use super::pct;
-use crate::handlers::ssr::types::table::SortColumn;
+use systemprompt_web_admin_core::ssr::types::table::SortColumn;
 
 const SORT_KEYS: [&str; 11] = [
     "name",

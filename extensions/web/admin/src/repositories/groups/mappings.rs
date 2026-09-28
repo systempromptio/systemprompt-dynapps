@@ -7,8 +7,8 @@
 use sqlx::PgPool;
 use systemprompt_web_shared::GroupId;
 
-use crate::error::{AdminError, AdminResult};
-use crate::types::groups::GroupAdMappingRow;
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::types::groups::GroupAdMappingRow;
 
 pub async fn list_group_ad_mappings(
     pool: &PgPool,

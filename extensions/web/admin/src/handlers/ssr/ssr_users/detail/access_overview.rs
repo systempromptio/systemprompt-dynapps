@@ -11,10 +11,11 @@ use systemprompt::loader::ConfigLoader;
 use systemprompt::marketplace::{AssembleRequest, ManifestService, MarketplaceCache};
 use systemprompt::models::Config;
 
-use crate::marketplace_filter::TemplateMarketplaceFilter;
-use crate::repositories::users::access_control::{MatrixRow, UserMatrix};
 use crate::repositories::users::queries;
-use crate::services::connector_accounts;
+use systemprompt_web_admin_core::connections::Connection;
+use systemprompt_web_admin_core::connections::source::get_connections;
+use systemprompt_web_admin_core::marketplace_filter::TemplateMarketplaceFilter;
+use systemprompt_web_admin_core::repositories::entitlement::{MatrixRow, UserMatrix};
 
 use super::workspace_grant::{grants_access, workspace_reason, workspace_status, workspace_tone};
 
@@ -110,7 +111,7 @@ fn workspace_view(row: &MatrixRow, plugins: Vec<PluginView>) -> WorkspaceView {
 pub(super) async fn load(pool: &PgPool, user_id: &UserId) -> AccessOverview {
     let (catalog, connections, runtime) = tokio::join!(
         included_content(pool, user_id),
-        connector_accounts::get_connections(pool, user_id),
+        get_connections(pool, user_id),
         queries::get_user_runtime_detail(pool, user_id),
     );
     let mut view = AccessOverview::default();
@@ -161,7 +162,8 @@ pub(super) async fn load(pool: &PgPool, user_id: &UserId) -> AccessOverview {
 
 async fn included_content(pool: &PgPool, user_id: &UserId) -> Result<Vec<WorkspaceView>, String> {
     let services = ConfigLoader::load().map_err(|e| e.to_string())?;
-    let root = crate::handlers::shared::get_services_path().map_err(|e| e.to_string())?;
+    let root =
+        systemprompt_web_admin_core::request::get_services_path().map_err(|e| e.to_string())?;
     let url = Config::get()
         .map_err(|e| e.to_string())?
         .api_external_url
@@ -215,11 +217,11 @@ fn uncached_marketplace() -> MarketplaceCache {
     MarketplaceCache::default()
 }
 
-fn needs_attention(connection: &connector_accounts::Connection) -> bool {
+fn needs_attention(connection: &Connection) -> bool {
     !connection.configured || connection.status != "connected" || connection.verified_at.is_none()
 }
 
-fn connection_view(c: &connector_accounts::Connection) -> ConnectionView {
+fn connection_view(c: &Connection) -> ConnectionView {
     let (status, tone, next_step) = if c.configured {
         match c.status.as_str() {
             "connected" if c.verified_at.is_some() => (

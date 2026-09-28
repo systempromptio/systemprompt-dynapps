@@ -12,7 +12,7 @@
 use serde::Serialize;
 use sqlx::PgPool;
 
-use crate::repositories::scope::ScopeQuery;
+use systemprompt_web_admin_core::repositories::scope::ScopeQuery;
 
 /// One row of the model mix: the request and token split for one model.
 #[derive(Debug, Clone, Serialize)]
@@ -57,7 +57,7 @@ pub async fn list_scope_top_models(
     q: &ScopeQuery<'_>,
     limit: i64,
 ) -> Result<Vec<ModelUsageRow>, sqlx::Error> {
-    let rows = crate::scoped_query!(
+    let rows = systemprompt_web_admin_core::scoped_query!(
         r#"SELECT COALESCE(r.model, 'unknown') AS "model!",
                   COALESCE(r.provider, 'unknown') AS "provider!",
                   COUNT(*)::BIGINT AS "requests!",
@@ -97,7 +97,7 @@ pub async fn list_scope_top_skills(
     q: &ScopeQuery<'_>,
     limit: i64,
 ) -> Result<Vec<SkillUsageRow>, sqlx::Error> {
-    let rows = crate::scoped_query!(
+    let rows = systemprompt_web_admin_core::scoped_query!(
         r#"SELECT e.skill AS "skill!",
                   COUNT(*)::BIGINT AS "invocations!",
                   COUNT(DISTINCT e.user_id)::BIGINT AS "users!"
@@ -132,7 +132,7 @@ pub async fn list_scope_top_tools(
     q: &ScopeQuery<'_>,
     limit: i64,
 ) -> Result<Vec<ToolUsageRow>, sqlx::Error> {
-    let rows = crate::scoped_query!(
+    let rows = systemprompt_web_admin_core::scoped_query!(
         r#"SELECT x.server_name AS "server_name!",
                   x.tool_name AS "tool_name!",
                   COUNT(*)::BIGINT AS "invocations!",
@@ -168,7 +168,7 @@ pub async fn list_linked_scopes(
     pool: &PgPool,
     q: &ScopeQuery<'_>,
 ) -> Result<Vec<LinkedScopeRow>, sqlx::Error> {
-    let rows = crate::scoped_query!(
+    let rows = systemprompt_web_admin_core::scoped_query!(
         r#", linked AS (
                SELECT ug.user_id, g.id, g.name, g.description
                FROM user_groups ug JOIN groups g ON g.id = ug.group_id

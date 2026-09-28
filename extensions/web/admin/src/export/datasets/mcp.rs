@@ -14,16 +14,38 @@ use serde::Deserialize;
 
 
 use super::requests::time_range;
-use crate::error::AdminResult;
-use crate::export::model::{Cell, CellKind, Column, DataSet, ExportContext, Table, Window};
 use crate::handlers::catalog::mcp::{McpServerRow, fleet_rows};
 use crate::repositories::mcp::runtime::{
     CallLogQuery, McpExecutionRow, McpToolStat, list_mcp_executions_paged, list_mcp_tool_stats,
 };
+use systemprompt_web_admin_core::error::AdminResult;
+use systemprompt_web_admin_core::export::model::{
+    Cell, CellKind, Column, DataSet, ExportContext, Table, Window,
+};
+use systemprompt_web_admin_core::export::registry::DataSetRegistration;
 
 pub(crate) struct McpServers;
 pub(crate) struct McpCalls;
 pub(crate) struct McpTools;
+
+inventory::submit! {
+    DataSetRegistration {
+        order: 18,
+        dataset: &McpServers,
+    }
+}
+inventory::submit! {
+    DataSetRegistration {
+        order: 19,
+        dataset: &McpCalls,
+    }
+}
+inventory::submit! {
+    DataSetRegistration {
+        order: 20,
+        dataset: &McpTools,
+    }
+}
 
 #[derive(Debug, Default, Deserialize)]
 struct ServerQuery {

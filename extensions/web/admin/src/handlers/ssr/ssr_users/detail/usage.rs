@@ -6,13 +6,13 @@
 
 use systemprompt::identifiers::UserId;
 
-use crate::repositories::analytics::conversation_rows::ConversationRow;
+use systemprompt_web_admin_core::repositories::conversations::rows::ConversationRow;
 
 use super::context::{LatestConversationView, UsageTabView, UserModelRowView};
 use super::load::UsageData;
 use super::view::stamp;
-use crate::handlers::ssr::entity_urls::context_detail_url;
-use crate::handlers::ssr::format::{format_cost, format_token_total, relative_time};
+use systemprompt_web_admin_core::ssr::entity_urls::context_detail_url;
+use systemprompt_web_admin_core::ssr::format::{format_cost, format_token_total, relative_time};
 
 pub(super) fn usage_tab(data: UsageData, user_id: &UserId) -> UsageTabView {
     let encoded = urlencoding::encode(user_id.as_str()).into_owned();

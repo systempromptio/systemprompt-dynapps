@@ -13,7 +13,7 @@ use systemprompt_web_admin::repositories::sync::groups_db::{
 use systemprompt_web_admin::repositories::sync::groups_drift::{
     MappingRow, MemberSetRow, compute_groups_drift,
 };
-use systemprompt_web_admin::repositories::sync::plane::DeclarationSource;
+use systemprompt_web_admin_core::repositories::sync::plane::DeclarationSource;
 
 const POLICIES: &str = r"
 policies:

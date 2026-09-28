@@ -11,10 +11,10 @@ use serde::Deserialize;
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 
-use crate::error::{AdminError, AdminResult};
 use crate::repositories;
 use crate::services::device_service;
-use crate::types::UserContext;
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::types::UserContext;
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct IssueApiKeyRequest {

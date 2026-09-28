@@ -4,7 +4,7 @@
 //!
 //! The status labels are compared by the templates, so they are page contract.
 
-use crate::repositories::users::access_control::MatrixRow;
+use systemprompt_web_admin_core::repositories::entitlement::MatrixRow;
 
 const NOT_ASSIGNED: &str = "Not assigned";
 

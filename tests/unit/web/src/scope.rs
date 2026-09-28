@@ -7,10 +7,10 @@
 //! 403 there would confirm the group exists.
 
 use systemprompt::identifiers::{Email, UserId};
-use systemprompt_web_admin::repositories::scope::{
+use systemprompt_web_admin_core::repositories::scope::{
     Participation, ScopeRequest, SubjectScope, Visibility,
 };
-use systemprompt_web_admin::types::{UserContext, roles_grant_console, roles_grant_manage};
+use systemprompt_web_admin_core::types::{UserContext, roles_grant_console, roles_grant_manage};
 
 fn owned(list: &[&str]) -> Vec<String> {
     list.iter().map(|g| (*g).to_owned()).collect()

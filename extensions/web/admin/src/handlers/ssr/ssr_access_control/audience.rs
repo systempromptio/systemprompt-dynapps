@@ -22,14 +22,15 @@ use super::view::{
     AcAudienceCellView, AcAudienceColumnGroupView, AcAudienceColumnView, AcAudienceLegendView,
     AcAudienceRowGroupView, AcAudienceRowView, AudienceGridView,
 };
-use crate::handlers::ssr::entity_kind::{entity_kind_label, entity_kind_plural, entity_kind_rank};
-use crate::repositories;
-use crate::repositories::access_control::rules::LedgerRuleRow;
-use crate::repositories::users::access_control::{
+use systemprompt_web_admin_core::repositories::access_rules::rules::LedgerRuleRow;
+use systemprompt_web_admin_core::repositories::entitlement::{
     MatrixSubject, SectionInput, group_subject, project_subject, resolve_subject_matrices,
     role_subject,
 };
-use crate::types::Role;
+use systemprompt_web_admin_core::ssr::entity_kind::{
+    entity_kind_label, entity_kind_plural, entity_kind_rank,
+};
+use systemprompt_web_admin_core::types::Role;
 
 pub(super) const AUDIENCE_URL: &str = "/admin/access-control?tab=audience";
 
@@ -80,18 +81,20 @@ pub(super) async fn audience(pool: &PgPool) -> Audience {
         subjects.push(role_subject(role.as_str()));
         columns.push(column(role.as_str(), role.as_str().to_owned(), "role"));
     }
-    let groups = repositories::groups::crud::list_group_summaries(pool)
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, "access-control: group listing failed"))
-        .unwrap_or_default();
+    let groups =
+        systemprompt_web_admin_core::repositories::scope::containers::list_group_summaries(pool)
+            .await
+            .inspect_err(|e| tracing::warn!(error = %e, "access-control: group listing failed"))
+            .unwrap_or_default();
     for group in groups {
         subjects.push(group_subject(group.id.as_str()));
         columns.push(column(group.id.as_str(), group.name, "group"));
     }
-    let projects = repositories::projects::crud::list_project_summaries(pool)
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, "access-control: project listing failed"))
-        .unwrap_or_default();
+    let projects =
+        systemprompt_web_admin_core::repositories::scope::containers::list_project_summaries(pool)
+            .await
+            .inspect_err(|e| tracing::warn!(error = %e, "access-control: project listing failed"))
+            .unwrap_or_default();
     for project in projects {
         subjects.push(project_subject(project.id.as_str()));
         columns.push(column(project.id.as_str(), project.name, "project"));
@@ -155,7 +158,7 @@ fn route_pattern_line(entity_type: &str, description: Option<&str>) -> Option<St
 }
 
 fn resolved_rows(
-    resolved: &[Vec<repositories::users::access_control::MatrixSection>],
+    resolved: &[Vec<systemprompt_web_admin_core::repositories::entitlement::MatrixSection>],
     columns: &[AcAudienceColumnView],
     sections: &[SectionInput],
 ) -> Vec<AcAudienceRowView> {

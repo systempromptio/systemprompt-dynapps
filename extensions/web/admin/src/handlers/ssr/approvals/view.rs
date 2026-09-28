@@ -12,8 +12,8 @@ use systemprompt::identifiers::CallId;
 
 use systemprompt_web_shared::format::truncate_ellipsis;
 
-use crate::handlers::ssr::format::local_time;
 use crate::repositories::governance::approvals::ApprovalRow;
+use systemprompt_web_admin_core::ssr::format::local_time;
 
 const ARGS_CHARS: usize = 70;
 

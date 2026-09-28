@@ -11,7 +11,7 @@
 
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
-use systemprompt_web_admin::repositories::users::access_control::{
+use systemprompt_web_admin_core::repositories::entitlement::{
     MatrixRow, SectionInput, resolve_user_matrix,
 };
 

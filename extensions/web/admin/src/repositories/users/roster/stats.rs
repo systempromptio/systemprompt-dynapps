@@ -7,7 +7,7 @@
 use serde::Serialize;
 use sqlx::PgPool;
 
-use crate::repositories::scope::SubjectScope;
+use systemprompt_web_admin_core::repositories::scope::SubjectScope;
 
 use super::WINDOW_DAYS;
 

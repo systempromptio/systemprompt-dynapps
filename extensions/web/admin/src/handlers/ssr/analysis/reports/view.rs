@@ -3,13 +3,15 @@
 
 use serde::Serialize;
 
-use crate::handlers::ssr::types::BreadcrumbView;
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 
 use crate::handlers::ssr::analysis::help::HelpView;
 use crate::handlers::ssr::analysis::tone::{completion_tone, score_display};
-use crate::handlers::ssr::format::{format_cost, format_token_total, local_time, relative_time};
-use crate::handlers::ssr::list_view::SelectOptionView;
 use crate::repositories::analysis::reports::{AnalysisReportRow, DigestTotals, Evidence};
+use systemprompt_web_admin_core::ssr::format::{
+    format_cost, format_token_total, local_time, relative_time,
+};
+use systemprompt_web_admin_core::ssr::list_view::SelectOptionView;
 
 use super::REPORTS_URL;
 

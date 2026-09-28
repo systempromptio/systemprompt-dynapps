@@ -9,10 +9,10 @@
 use serde::Serialize;
 use systemprompt::identifiers::{McpExecutionId, McpServerId};
 
-use crate::export::ExportView;
-use crate::handlers::catalog::sorting::SortHeaderView;
-use crate::handlers::ssr::list_view::{Pagination, TimeRangeContext};
-use crate::handlers::ssr::types::BreadcrumbView;
+use systemprompt_web_admin_core::export::view::ExportView;
+use systemprompt_web_admin_core::ssr::list_view::{Pagination, TimeRangeContext};
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
+use systemprompt_web_admin_core::ssr::types::table::SortHeaderView;
 
 use super::super::view::LinkedEntity;
 
@@ -193,7 +193,7 @@ pub(super) struct McpDetailData {
     pub connections: Vec<McpConnectionRowView>,
     pub connections_count: usize,
     pub connected_count: usize,
-    pub access: crate::handlers::ssr::entity_panel::EntityAccessView,
+    pub access: systemprompt_web_admin_core::ssr::entity_panel::EntityAccessView,
     pub config_facts: Vec<ConfigFactView>,
     pub oauth_scopes: Vec<String>,
     pub included_by: Vec<LinkedEntity>,

@@ -8,7 +8,7 @@
 
 use sqlx::PgPool;
 
-use crate::types::access_control::AccessDecision;
+use systemprompt_web_admin_core::types::access_control::AccessDecision;
 
 /// One entity one role reaches, or is denied.
 #[derive(Debug, Clone)]

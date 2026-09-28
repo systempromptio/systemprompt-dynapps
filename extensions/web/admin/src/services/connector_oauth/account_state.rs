@@ -4,11 +4,11 @@
 //! `OUTAGE_HOLD_SECONDS` so accessor calls do not refresh once per MCP request.
 
 use super::{Grant, Provider, seal};
-use crate::error::{AdminError, AdminResult};
 use crate::repositories::users::connector_accounts::{ProviderConnection, update_account};
 use crate::repositories::users::connector_credentials::{self as repo, EncryptedGrant};
 use chrono::Utc;
 use systemprompt::identifiers::UserId;
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
 pub(super) async fn record_grant_failure(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,

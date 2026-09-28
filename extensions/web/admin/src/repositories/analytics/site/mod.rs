@@ -14,7 +14,7 @@
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 
-use crate::repositories::scope::{Attribution, Scope, SubjectScope};
+use systemprompt_web_admin_core::repositories::scope::{Attribution, Scope, SubjectScope};
 
 pub mod anomalies;
 pub mod cost;

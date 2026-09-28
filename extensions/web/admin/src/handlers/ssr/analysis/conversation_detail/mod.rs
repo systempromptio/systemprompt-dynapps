@@ -21,9 +21,6 @@ use axum::response::{Redirect, Response};
 use sqlx::PgPool;
 use systemprompt::identifiers::ContextId;
 
-use crate::error::{AdminError, AdminHtmlResult};
-use crate::handlers::ssr::analysis_urls::analysis_conversation_url;
-use crate::handlers::ssr::page::Page;
 use crate::repositories::analysis::conversations::ConversationFactRow;
 use crate::repositories::analysis::conversations::detail::{
     find_conversation_facts, insert_manual_judgement, refresh_conversation_facts,
@@ -32,8 +29,11 @@ use crate::repositories::analysis::conversations::planes::{
     list_conversation_decisions, list_conversation_safety_findings, list_conversation_skills,
     list_conversation_tool_calls, list_conversation_turns,
 };
-use crate::repositories::scope::visibility::may_view;
-use crate::types::UserContext;
+use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
+use systemprompt_web_admin_core::repositories::scope::visibility::may_view;
+use systemprompt_web_admin_core::ssr::analysis_urls::analysis_conversation_url;
+use systemprompt_web_admin_core::ssr::page::Page;
+use systemprompt_web_admin_core::types::UserContext;
 
 use context::{Planes, build_context};
 
@@ -57,13 +57,13 @@ async fn load_visible(
     if !refresh_conversation_facts(pool, context_id).await? {
         return Err(not_found());
     }
-    let facts = find_conversation_facts(pool, context_id)
+    let row = find_conversation_facts(pool, context_id)
         .await?
         .ok_or_else(not_found)?;
-    if !may_view(pool, user, Some(&facts.user_id)).await? {
+    if !may_view(pool, user, Some(&row.facts.user_id)).await? {
         return Err(not_found());
     }
-    Ok(facts)
+    Ok(row)
 }
 
 pub(crate) async fn page(
@@ -75,8 +75,8 @@ pub(crate) async fn page(
         return Err(AdminError::Forbidden("Console access required".into()).into());
     }
     let context_id = parse_context(&context_id)?;
-    let facts = load_visible(&pool, &shell.user, &context_id).await?;
-    let session = facts.client_session_id.as_deref();
+    let row = load_visible(&pool, &shell.user, &context_id).await?;
+    let session = row.facts.client_session_id.as_deref();
     let (turns, tools, decisions, skills, safety) = tokio::join!(
         list_conversation_turns(&pool, &context_id),
         list_conversation_tool_calls(&pool, &context_id, session),
@@ -86,7 +86,7 @@ pub(crate) async fn page(
     );
     let (turns, tools, decisions, skills, safety) = (turns?, tools?, decisions?, skills?, safety?);
     let context = build_context(
-        &facts,
+        &row,
         Planes {
             turns,
             tools,
@@ -96,13 +96,15 @@ pub(crate) async fn page(
         },
         shell.user.is_console,
     );
-    Ok(crate::handlers::ssr::render_typed_page(
-        &shell.engine,
-        "analysis-conversation",
-        &context,
-        &shell.user,
-        &shell.marketplace,
-    ))
+    Ok(
+        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+            &shell.engine,
+            "analysis-conversation",
+            &context,
+            &shell.user,
+            &shell.marketplace,
+        ),
+    )
 }
 
 #[derive(Debug, Default, serde::Deserialize)]
@@ -120,7 +122,7 @@ pub(crate) async fn judge_now(
     if !shell.user.is_console {
         return Err(AdminError::Forbidden("Console access required".into()).into());
     }
-    crate::handlers::shared::require_write_origin(&headers)?;
+    systemprompt_web_admin_core::request::require_write_origin(&headers)?;
     let context_id = parse_context(&context_id)?;
     load_visible(&pool, &shell.user, &context_id).await?;
     insert_manual_judgement(&pool, &context_id, &shell.user.user_id).await?;

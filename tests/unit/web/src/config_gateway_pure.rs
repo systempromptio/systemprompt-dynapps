@@ -1,10 +1,10 @@
 use std::path::{Path, PathBuf};
 
-use systemprompt_web_admin::repositories::config::gateway::{
+use systemprompt_web_admin_core::repositories::gateway_catalog::{
     create_route, delete_route, get_gateway_config, glob_match, reorder_routes, slugify_pattern,
     synthesize_route_id, update_gateway_settings, update_route,
 };
-use systemprompt_web_admin::types::{GatewayRouteView, UpdateGatewaySettingsRequest};
+use systemprompt_web_admin_core::types::{GatewayRouteView, UpdateGatewaySettingsRequest};
 use systemprompt_web_shared::error::MarketplaceError;
 
 fn profile(dir: &Path, body: &str) -> PathBuf {

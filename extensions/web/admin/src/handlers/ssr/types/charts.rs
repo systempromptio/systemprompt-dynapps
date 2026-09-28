@@ -11,9 +11,9 @@
 
 use serde::Serialize;
 
-use crate::handlers::ssr::format::{format_cost, format_duration_ms};
 use crate::repositories::analytics::request_stats::{LatencyBucket, RequestStats, TimeBucket};
-use crate::util::time_range::TimeRange;
+use systemprompt_web_admin_core::ssr::format::{format_cost, format_duration_ms};
+use systemprompt_web_admin_core::util::time_range::TimeRange;
 
 #[derive(Debug, Serialize)]
 pub(crate) struct ChartView {

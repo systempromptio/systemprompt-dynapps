@@ -10,13 +10,18 @@ use super::rows::{ToolActivityRowView, format_bytes, kind_icon, kind_label, tool
 use crate::handlers::ssr::analysis::help::HelpView;
 use crate::handlers::ssr::analysis::ribbon::RibbonView;
 use crate::handlers::ssr::analysis::tone::{deny_tone, error_rate_tone, latency_tone, percent};
-use crate::handlers::ssr::format::format_duration_ms;
-use crate::handlers::ssr::list_view::{DEFAULT_PAGE_SIZE, PageWindow, Pagination, ScopeFilterView};
-use crate::handlers::ssr::types::{BreadcrumbView, SortHeaderView, SvgLineChartView, TabLinkView};
 use crate::repositories::analysis::tools::{
     ToolActivityResult, ToolBreakdownBy, ToolBucketRow, ToolSort,
 };
-use crate::util::time_range::TimeRange;
+use systemprompt_web_admin_core::ssr::format::format_duration_ms;
+use systemprompt_web_admin_core::ssr::list_view::{
+    DEFAULT_PAGE_SIZE, PageWindow, Pagination, ScopeFilterView,
+};
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
+use systemprompt_web_admin_core::ssr::types::svg_line::SvgLineChartView;
+use systemprompt_web_admin_core::ssr::types::table::SortHeaderView;
+use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;
+use systemprompt_web_admin_core::util::time_range::TimeRange;
 
 #[derive(Debug, Serialize)]
 pub(crate) struct ToolBucketView {
@@ -69,7 +74,7 @@ pub(crate) struct ToolsPageContext {
     pub count_label: String,
     pub pagination: Pagination,
     pub sort_headers: ToolSortHeaders,
-    pub export: crate::export::ExportView,
+    pub export: systemprompt_web_admin_core::export::view::ExportView,
     pub help: HelpView,
     pub current_url: String,
 }
@@ -212,7 +217,10 @@ pub(crate) fn build_context(
         rows,
         pagination: q.pagination(lens, window),
         sort_headers: sort_headers(lens, q),
-        export: crate::export::ExportView::new(frame.datasets, &q.query_string(&["page", "ids"])),
+        export: systemprompt_web_admin_core::export::view::ExportView::new(
+            frame.datasets,
+            &q.query_string(&["page", "ids"]),
+        ),
         help: frame.help,
         current_url,
     }

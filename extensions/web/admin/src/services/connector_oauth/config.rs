@@ -1,6 +1,5 @@
 //! Pinned provider resources and server-only application configuration.
 
-use crate::error::{AdminError, AdminResult};
 use crate::services::salesforce_orgs::{
     SalesforceOrg, SalesforceOrgRegistry, is_salesforce_server_id,
 };
@@ -8,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use systemprompt::identifiers::McpServerId;
 use systemprompt::models::auth::Permission;
 use systemprompt::models::mcp::Deployment;
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
 pub const SALESFORCE_CALLBACK_SEGMENT: &str = "salesforce";
 

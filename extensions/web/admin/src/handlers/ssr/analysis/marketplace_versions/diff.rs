@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 use serde::Serialize;
 use systemprompt::identifiers::{PluginId, SkillId};
 
-use crate::repositories::sync::marketplace_hash::MarketplaceManifest;
+use systemprompt_web_admin_core::repositories::sync::marketplace_hash::MarketplaceManifest;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]

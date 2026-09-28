@@ -2,7 +2,7 @@
 //! `userinfo` endpoint when the descriptor asks for it.
 
 use super::Grant;
-use crate::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 // JSON: OIDC userinfo is an open claim set; only `sub`, `email` and `name`
 // are read, and the body was already verified as JSON by `response::body`.
 use serde_json::Value;

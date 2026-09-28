@@ -24,8 +24,8 @@ use systemprompt_security::policy::{
     GovernedTarget, PolicyContext, PrincipalSnapshot, record_decision,
 };
 
-use crate::repositories::dashboard::usage_aggregations::ingestion;
-use crate::types::webhook::{GovernQuery, HookEventPayload};
+use systemprompt_web_admin_core::repositories::ingestion::usage as ingestion;
+use systemprompt_web_admin_core::types::webhook::{GovernQuery, HookEventPayload};
 
 use super::types::AuthDenialParams;
 
@@ -63,7 +63,7 @@ async fn resolve_access_scope(
     user_id: &UserId,
     denial: &AuthDenialParams<'_>,
 ) -> Result<AccessScope, &'static str> {
-    match crate::authz::account_scope(pool, user_id).await {
+    match systemprompt_web_admin_core::authz::account::account_scope(pool, user_id).await {
         Ok(AccessScope::Admin) => Ok(AccessScope::Admin),
         Ok(AccessScope::User) => Ok(AccessScope::User),
         result => {

@@ -12,8 +12,10 @@
 
 use serde::Deserialize;
 
-use crate::handlers::ssr::list_view::{DEFAULT_PAGE_SIZE, PageWindow, Pagination, paginate};
 use crate::repositories::roles::members::RoleHolderRow;
+use systemprompt_web_admin_core::ssr::list_view::{
+    DEFAULT_PAGE_SIZE, PageWindow, Pagination, paginate,
+};
 
 pub(super) const BASE_URL: &str = "/admin/roles";
 pub(super) const MEMBER_CAP: i64 = 2000;

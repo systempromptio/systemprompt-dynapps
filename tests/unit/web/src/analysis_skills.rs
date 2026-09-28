@@ -6,8 +6,10 @@ use std::collections::{HashMap, HashSet};
 
 use chrono::{DateTime, TimeZone, Utc};
 use systemprompt::identifiers::UserId;
-use systemprompt_web_admin::test_support::{
-    MarketplaceAudience, parse_skill_key, parse_window_bound, render_window_bound,
+use systemprompt_web_admin::test_support::parse_skill_key;
+use systemprompt_web_admin_core::catalog_index::inventory_index::MarketplaceAudience;
+use systemprompt_web_admin_core::ssr::time_window::{
+    parse as parse_window_bound, render as render_window_bound,
 };
 
 fn at(y: i32, m: u32, d: u32, h: u32, min: u32) -> DateTime<Utc> {

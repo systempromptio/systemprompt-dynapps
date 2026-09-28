@@ -19,10 +19,12 @@ use axum::{Extension, Json};
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 
-use crate::error::{AdminError, AdminResult};
 use crate::repositories::users::{revocation, roles as repo};
-use crate::types::role::{ROLES_MANAGE, Role, authorize_role_change, has_any};
-use crate::types::{SetUserRolesRequest, UserContext, UserRolesResponse};
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::types::role::{
+    ROLES_MANAGE, Role, authorize_role_change, has_any,
+};
+use systemprompt_web_admin_core::types::{SetUserRolesRequest, UserContext, UserRolesResponse};
 
 pub(crate) async fn get_user_roles_handler(
     State(pool): State<Arc<PgPool>>,

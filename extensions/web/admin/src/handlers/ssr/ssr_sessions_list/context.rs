@@ -3,11 +3,12 @@
 use serde::Serialize;
 use systemprompt::identifiers::{ContextId, SessionId, UserId};
 
-use crate::handlers::ssr::format::ClientChipView;
-use crate::handlers::ssr::list_view::{
+use systemprompt_web_admin_core::ssr::format::ClientChipView;
+use systemprompt_web_admin_core::ssr::list_view::{
     AnnotatedOption, Chip, Pagination, Preserved, ScopeFilterView, TimeRangeContext,
 };
-use crate::handlers::ssr::types::{BreadcrumbView, SortHeaderView};
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
+use systemprompt_web_admin_core::ssr::types::table::SortHeaderView;
 
 #[derive(Debug, Serialize)]
 pub(super) struct SessionsListPageContext {
@@ -29,7 +30,7 @@ pub(super) struct SessionsListPageContext {
     pub(super) error_toggle_url: String,
     pub(super) show_side: bool,
     pub(super) side_toggle_url: String,
-    pub(super) export: crate::export::ExportView,
+    pub(super) export: systemprompt_web_admin_core::export::view::ExportView,
 }
 
 #[derive(Debug, Serialize)]

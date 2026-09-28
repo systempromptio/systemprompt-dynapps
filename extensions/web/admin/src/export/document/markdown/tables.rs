@@ -4,7 +4,7 @@
 //! break the row — and clipped, since the JSON document carries it in full.
 
 use crate::export::document::bundle::ConversationBundle;
-use crate::export::format::usd;
+use systemprompt_web_admin_core::export::format::usd;
 
 const TABLE_TEXT_CHARS: usize = 160;
 

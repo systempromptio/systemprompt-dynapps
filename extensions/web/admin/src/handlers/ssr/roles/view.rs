@@ -11,8 +11,10 @@ use serde::Serialize;
 use systemprompt::identifiers::UserId;
 
 use super::entitlements_view::RoleEntitlementGroupView;
-use crate::handlers::ssr::list_view::Pagination;
-use crate::handlers::ssr::types::{BreadcrumbView, SortHeaderView, TabLinkView};
+use systemprompt_web_admin_core::ssr::list_view::Pagination;
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
+use systemprompt_web_admin_core::ssr::types::table::SortHeaderView;
+use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;
 
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct RoleCardView {

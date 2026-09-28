@@ -22,13 +22,10 @@ use serde::Serialize;
 use sqlx::PgPool;
 use systemprompt::identifiers::ContextId;
 
-use crate::error::{AdminError, AdminHtmlResult};
 use crate::handlers::ssr::conversation_header::{
     ConversationStatsView, StatusBadgeView, resolve_title, stats_view, status_badge,
     timeline_display,
 };
-use crate::handlers::ssr::entity_urls::context_detail_url;
-use crate::handlers::ssr::page::Page;
 use crate::handlers::ssr::transcript_view::{
     ConversationView, TranscriptOptions, build_conversation, transcript_request_ids,
 };
@@ -36,7 +33,10 @@ use crate::repositories::analytics::context_detail::{
     find_context_header, get_context_kpis, list_context_requests, list_messages_for_requests,
 };
 use crate::repositories::analytics::context_tool_calls::list_tool_calls_for_requests;
-use crate::repositories::analytics::conversations::history_scope_for;
+use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
+use systemprompt_web_admin_core::repositories::conversations::history_scope_for;
+use systemprompt_web_admin_core::ssr::entity_urls::context_detail_url;
+use systemprompt_web_admin_core::ssr::page::Page;
 
 #[derive(Debug, Serialize)]
 struct ConversationPageContext {
@@ -49,7 +49,7 @@ struct ConversationPageContext {
     timeline: Option<String>,
     conversation: ConversationView,
     admin_url: Option<String>,
-    export: crate::export::ExportView,
+    export: systemprompt_web_admin_core::export::view::ExportView,
 }
 
 fn not_found() -> AdminError {
@@ -108,17 +108,19 @@ pub(crate) async fn history_conversation_page(
         timeline: timeline_display(kpis.first_request_at, kpis.last_request_at),
         conversation,
         admin_url: shell.user.is_admin.then(|| context_detail_url(&context_id)),
-        export: crate::export::ExportView::conversation(
+        export: systemprompt_web_admin_core::export::view::ExportView::conversation(
             &context_id,
             shell.user.has_scoped_console(),
         ),
     };
 
-    Ok(crate::handlers::ssr::render_typed_page(
-        &shell.engine,
-        "history-conversation",
-        &data,
-        &shell.user,
-        &shell.marketplace,
-    ))
+    Ok(
+        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+            &shell.engine,
+            "history-conversation",
+            &data,
+            &shell.user,
+            &shell.marketplace,
+        ),
+    )
 }

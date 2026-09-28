@@ -1,47 +1,27 @@
 //! The conversation row shared by the Analysis pages.
 //!
-//! It is the `conversation_facts` record plus the judge's columns. The JSON
-//! wire form keeps the context id as text; `decode_row` resolves it to the
-//! id `SQLx` decoded in the same statement. The struct is declared through
-//! `fact_row!` so its field list, written once, also generates the
-//! id-swapping conversion.
+//! It is the `conversation_facts` record plus the judge's columns, split into
+//! the context id and everything else (`ConversationFacts`). The JSON wire
+//! form keeps the context id as text; `decode_row` resolves it to the id
+//! `SQLx` decoded in the same statement. `facts` is flattened, so the JSON
+//! shape is the same flat object either way.
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use systemprompt::identifiers::{ContextId, SessionId, UserId};
 use systemprompt_web_shared::{GroupId, ProjectId};
 
-macro_rules! fact_row {
-    (
-        $(#[$meta:meta])*
-        pub struct $name:ident<$id:ident = $default:ty> {
-            pub context_id: $id_field:ident,
-            $($(#[$field_meta:meta])* pub $field:ident: $ty:ty,)*
-        }
-    ) => {
-        $(#[$meta])*
-        pub struct $name<$id = $default> {
-            pub context_id: $id_field,
-            $($(#[$field_meta])* pub $field: $ty,)*
-        }
-
-        impl<$id> $name<$id> {
-            fn with_context_id<Next>(self, context_id: Next) -> $name<Next> {
-                $name {
-                    context_id,
-                    $($field: self.$field,)*
-                }
-            }
-        }
-    };
-}
-
-fact_row! {
 /// One conversation as the pages show it: the fact row, the judge's label
 /// and the tokens of its last turns for the row sparkline.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConversationFactRow<Id = ContextId> {
-    pub context_id: Id,
+pub struct ConversationFactRow {
+    pub context_id: ContextId,
+    #[serde(flatten)]
+    pub facts: ConversationFacts,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConversationFacts {
     pub title: String,
     pub user_id: UserId,
     pub display_name: Option<String>,
@@ -121,7 +101,6 @@ pub struct ConversationFactRow<Id = ContextId> {
     #[serde(flatten)]
     pub continuation: ContinuationLink,
 }
-}
 
 /// A Claude Code session resumed after compaction, and the conversation it
 /// most likely continues (text, since it only builds a link).
@@ -135,10 +114,23 @@ pub struct ContinuationLink {
     pub prev_title: Option<String>,
 }
 
+#[derive(Debug, Deserialize)]
+pub(super) struct WireFactRow {
+    #[serde(rename = "context_id")]
+    context_key: String,
+    #[serde(flatten)]
+    facts: ConversationFacts,
+}
+
 pub(super) fn decode_row(
-    r: ConversationFactRow<String>,
+    r: WireFactRow,
     ids: &[ContextId],
 ) -> Result<ConversationFactRow, sqlx::Error> {
-    let context_id = crate::repositories::dashboard_read::context_id(&r.context_id, ids)?;
-    Ok(r.with_context_id(context_id))
+    Ok(ConversationFactRow {
+        context_id: systemprompt_web_admin_core::repositories::dashboard_read::context_id(
+            &r.context_key,
+            ids,
+        )?,
+        facts: r.facts,
+    })
 }

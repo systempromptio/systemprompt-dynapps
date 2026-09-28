@@ -19,9 +19,9 @@ use systemprompt::models::RequestContext;
 use systemprompt::models::auth::UserType;
 use systemprompt::models::mcp::ExecutionSource;
 
-use crate::repositories::dashboard::hooks_track::find_latest_skill_invocation;
-use crate::repositories::marketplace::webhook;
-use crate::types::webhook::{HookEvent, HookEventPayload};
+use systemprompt_web_admin_core::repositories::ingestion::hooks_track::find_latest_skill_invocation;
+use systemprompt_web_admin_core::repositories::ingestion::webhook;
+use systemprompt_web_admin_core::types::webhook::{HookEvent, HookEventPayload};
 
 use super::dedup;
 
@@ -64,11 +64,11 @@ pub(super) async fn ingest_tool_result(params: ToolResultIngestion<'_>) {
         .await
         .map(|reference| (SkillId::new(reference.clone()), reference));
 
-    let (tool_name, server_name) = match crate::util::mcp_tool_name::parse_mcp_tool_name(&tool_name)
-    {
-        Some(mcp) => (mcp.tool, Some(mcp.server)),
-        None => (tool_name, None),
-    };
+    let (tool_name, server_name) =
+        match systemprompt_web_admin_core::util::mcp_tool_name::parse_mcp_tool_name(&tool_name) {
+            Some(mcp) => (mcp.tool, Some(mcp.server)),
+            None => (tool_name, None),
+        };
 
     let request = IngestRequest {
         result,

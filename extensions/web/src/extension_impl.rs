@@ -149,7 +149,7 @@ impl Extension for WebExtension {
 
     fn required_assets(&self, paths: &dyn AssetPaths) -> Vec<AssetDefinition> {
         let mut assets = web_assets(paths);
-        assets.extend(crate::admin::assets::admin_assets(paths));
+        assets.extend(systemprompt_web_admin_core::assets::admin_assets(paths));
         assets
     }
 }

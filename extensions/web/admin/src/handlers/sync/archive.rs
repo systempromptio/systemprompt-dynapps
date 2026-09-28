@@ -19,17 +19,20 @@ use axum::response::{IntoResponse, Response};
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 
-use crate::activity::{self, NewActivity, PlaneApply};
-use crate::error::{AdminError, AdminResult};
-use crate::handlers::shared::require_write_origin;
-use crate::repositories::sync::archive::read::{classify, unpack_zip};
-use crate::repositories::sync::archive::staging::{StagedArchive, StagingStore};
-use crate::repositories::sync::archive::write::build_export_zip;
-use crate::repositories::sync::plane::{
+use systemprompt_web_admin_core::activity;
+use systemprompt_web_admin_core::activity::{NewActivity, PlaneApply};
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::repositories::sync::archive::read::{classify, unpack_zip};
+use systemprompt_web_admin_core::repositories::sync::archive::staging::{
+    StagedArchive, StagingStore,
+};
+use systemprompt_web_admin_core::repositories::sync::archive::write::build_export_zip;
+use systemprompt_web_admin_core::repositories::sync::plane::{
     Actor, ApplyOutcome, DeclarationSource, PlaneDrift, SyncMode,
 };
-use crate::repositories::sync::registry::{find_plane, planes};
-use crate::types::UserContext;
+use systemprompt_web_admin_core::repositories::sync::registry::{find_plane, planes};
+use systemprompt_web_admin_core::request::require_write_origin;
+use systemprompt_web_admin_core::types::UserContext;
 
 fn preview_url(stage_id: &str) -> String {
     format!("/admin/sync/import/{stage_id}")

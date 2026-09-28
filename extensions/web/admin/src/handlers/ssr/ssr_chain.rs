@@ -11,9 +11,9 @@ use axum::extract::{Extension, Path, State};
 use axum::response::{IntoResponse, Response};
 use sqlx::PgPool;
 
-use crate::error::{AdminError, AdminResult};
 use crate::repositories::governance::chain::find_decision_chain;
-use crate::types::UserContext;
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::types::UserContext;
 
 pub(crate) async fn chain_envelope(
     Extension(user_ctx): Extension<UserContext>,

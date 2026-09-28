@@ -7,19 +7,10 @@
 use sqlx::PgPool;
 use systemprompt_web_shared::ProjectId;
 
-use crate::error::{AdminError, AdminResult};
-use crate::types::projects::{
-    CreateProjectRequest, ProjectRow, ProjectSummary, UpdateProjectRequest,
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::types::projects::{
+    CreateProjectRequest, ProjectRow, UpdateProjectRequest,
 };
-
-pub async fn list_projects(pool: &PgPool) -> Result<Vec<ProjectRow>, sqlx::Error> {
-    sqlx::query_as!(
-        ProjectRow,
-        r#"SELECT id AS "id: ProjectId", name, description, source FROM projects ORDER BY name"#
-    )
-    .fetch_all(pool)
-    .await
-}
 
 pub async fn find_project(
     pool: &PgPool,
@@ -31,41 +22,6 @@ pub async fn find_project(
         project_id.as_str()
     )
     .fetch_optional(pool)
-    .await
-}
-
-pub async fn list_project_summaries(pool: &PgPool) -> Result<Vec<ProjectSummary>, sqlx::Error> {
-    sqlx::query_as!(
-        ProjectSummary,
-        r#"
-        SELECT
-            p.id AS "id!: ProjectId",
-            p.name AS "name!",
-            p.description,
-            COALESCE(m.member_count, 0)::BIGINT AS "member_count!",
-            COALESCE(u.active_members, 0)::BIGINT AS "active_members_30d!",
-            COALESCE(u.requests, 0)::BIGINT AS "requests_30d!",
-            COALESCE(u.cost_microdollars, 0)::BIGINT AS "cost_30d_microdollars!"
-        FROM projects p
-        LEFT JOIN (
-            SELECT project_id, COUNT(*) AS member_count
-            FROM user_projects GROUP BY project_id
-        ) m ON m.project_id = p.id
-        LEFT JOIN (
-            SELECT pm.project_id,
-                   COUNT(DISTINCT r.user_id) AS active_members,
-                   COUNT(r.id) AS requests,
-                   COALESCE(SUM(r.cost_microdollars), 0) AS cost_microdollars
-            FROM user_projects pm
-            JOIN ai_requests r
-              ON r.user_id = pm.user_id
-             AND r.created_at >= NOW() - INTERVAL '30 days'
-            GROUP BY pm.project_id
-        ) u ON u.project_id = p.id
-        ORDER BY p.name
-        "#
-    )
-    .fetch_all(pool)
     .await
 }
 

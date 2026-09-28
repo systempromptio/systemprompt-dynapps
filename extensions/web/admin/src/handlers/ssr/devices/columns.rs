@@ -7,7 +7,7 @@
 //! actually drew. Every column is an aggregate over a person's rows — the
 //! newest, the latest, the sum — because the row it sorts is a person.
 
-use crate::handlers::ssr::types::table::SortColumn;
+use systemprompt_web_admin_core::ssr::types::table::SortColumn;
 
 pub(super) const BRIDGE_COLUMNS: &[SortColumn] = &[
     SortColumn {

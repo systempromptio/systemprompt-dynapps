@@ -1,0 +1,186 @@
+//! What a scoped admin query is asked about, and how usage is attributed.
+//!
+//! Three things pin a scoped query: a [`Scope`] (everyone, one group, one
+//! project, one person), an [`Attribution`] (whether a person counts once or
+//! in every container they belong to), and a time range — `TimeRange` from
+//! `util::time_range`, which every audit and analytics page already parses.
+//!
+//! [`Visibility`] and [`ScopeRequest`] are the caller-facing half: what an
+//! identity may see, narrowed by what a query string asked for. Resolving them
+//! yields a [`SubjectScope`], the user id list a listing binds. The membership
+//! half lives in [`membership`], which owns the single CTE every container
+//! query is built on, and [`defaults`] owns the primary group and project that
+//! exclusive attribution reads.
+
+pub mod containers;
+pub mod defaults;
+pub mod expiry;
+pub mod membership;
+pub mod participation;
+pub mod visibility;
+
+use sqlx::PgPool;
+use systemprompt::identifiers::UserId;
+use systemprompt_web_shared::{GroupId, ProjectId};
+
+pub use participation::Participation;
+pub use visibility::{ScopeRequest, SubjectScope, Visibility, may_view};
+
+/// Which container a usage query names.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ScopeKind {
+    Group,
+    Project,
+}
+
+impl ScopeKind {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Group => "group",
+            Self::Project => "project",
+        }
+    }
+
+    #[must_use]
+    pub const fn linked(self) -> Self {
+        match self {
+            Self::Group => Self::Project,
+            Self::Project => Self::Group,
+        }
+    }
+}
+
+/// The people a scoped query spans.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Scope {
+    All,
+    Group(GroupId),
+    Project(ProjectId),
+    User(UserId),
+}
+
+impl Scope {
+    #[must_use]
+    pub const fn kind(&self) -> Option<ScopeKind> {
+        match self {
+            Self::Group(_) => Some(ScopeKind::Group),
+            Self::Project(_) => Some(ScopeKind::Project),
+            Self::All | Self::User(_) => None,
+        }
+    }
+
+    #[must_use]
+    pub const fn target(&self) -> Option<ScopeTarget<'_>> {
+        match self {
+            Self::Group(id) => Some(ScopeTarget::Group(id)),
+            Self::Project(id) => Some(ScopeTarget::Project(id)),
+            Self::All | Self::User(_) => None,
+        }
+    }
+
+    #[must_use]
+    pub fn container_id(&self) -> Option<&str> {
+        self.target().map(ScopeTarget::id)
+    }
+
+    pub async fn resolve(
+        &self,
+        pool: &PgPool,
+        attribution: Attribution,
+    ) -> Result<SubjectScope, sqlx::Error> {
+        match self.target() {
+            Some(target) => {
+                let ids = membership::list_scope_user_ids(pool, target, attribution).await?;
+                Ok(SubjectScope::Users(
+                    ids.into_iter()
+                        .map(|user_id| user_id.as_str().to_owned())
+                        .collect(),
+                ))
+            },
+            _ => match self {
+                Self::User(user_id) => Ok(SubjectScope::Users(vec![user_id.as_str().to_owned()])),
+                _ => Ok(SubjectScope::All),
+            },
+        }
+    }
+}
+
+/// The one container a scoped query names, carried with its kind so the two
+/// cannot be paired wrongly.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ScopeTarget<'a> {
+    Group(&'a GroupId),
+    Project(&'a ProjectId),
+}
+
+impl<'a> ScopeTarget<'a> {
+    #[must_use]
+    pub const fn kind(self) -> ScopeKind {
+        match self {
+            Self::Group(_) => ScopeKind::Group,
+            Self::Project(_) => ScopeKind::Project,
+        }
+    }
+
+    #[must_use]
+    pub fn id(self) -> &'a str {
+        match self {
+            Self::Group(id) => id.as_str(),
+            Self::Project(id) => id.as_str(),
+        }
+    }
+}
+
+/// One scoped question: which container, attributed how, over how long.
+///
+/// The trailing-days window is what the people pages ask for; a page working
+/// from absolute bounds parses a
+/// [`TimeRange`](crate::util::time_range::TimeRange) and narrows the rows it
+/// selects itself.
+#[derive(Debug, Clone, Copy)]
+pub struct ScopeQuery<'a> {
+    pub target: ScopeTarget<'a>,
+    pub attribution: Attribution,
+    pub window_days: i32,
+}
+
+impl<'a> ScopeQuery<'a> {
+    #[must_use]
+    pub const fn new(target: ScopeTarget<'a>, attribution: Attribution, window_days: i32) -> Self {
+        Self {
+            target,
+            attribution,
+            window_days,
+        }
+    }
+
+    #[must_use]
+    pub const fn kind(&self) -> ScopeKind {
+        self.target.kind()
+    }
+
+    #[must_use]
+    pub fn id(&self) -> &'a str {
+        self.target.id()
+    }
+}
+
+/// Whether a person's usage lands in one container or in all of them.
+///
+/// `Exclusive` reads each person's primary container, so container totals
+/// partition the instance and sum back to it. `Member` reads full membership,
+/// so a person in two containers counts in full in both and the totals
+/// deliberately overlap.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Attribution {
+    Exclusive,
+    Member,
+}
+
+impl Attribution {
+    #[must_use]
+    pub const fn is_exclusive(self) -> bool {
+        matches!(self, Self::Exclusive)
+    }
+}

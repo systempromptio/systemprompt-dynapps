@@ -5,12 +5,12 @@ use super::generic_discovery::{bounded_json, metadata, trusted_endpoint};
 pub use super::generic_discovery::{same_issuer, validate_endpoint};
 use super::transport::client;
 use super::{Grant, Provider, config};
-use crate::error::{AdminError, AdminResult};
 use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
 use systemprompt::identifiers::ClientId;
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
 #[derive(Deserialize)]
 struct Registration {

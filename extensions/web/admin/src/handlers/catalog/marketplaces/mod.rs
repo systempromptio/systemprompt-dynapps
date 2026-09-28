@@ -19,31 +19,33 @@ use axum::extract::{Extension, Path, Query, State};
 use axum::response::Response;
 use sqlx::PgPool;
 
-use crate::error::{AdminError, AdminHtmlResult};
-use crate::handlers::shared;
-use crate::handlers::ssr::entity_panel::{PanelRequest, build_entity_panel};
-use crate::handlers::ssr::page::Page;
-use crate::templates::AdminTemplateEngine;
-use crate::types::{MarketplaceContext, Role, UserContext};
+use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
+use systemprompt_web_admin_core::request as shared;
+use systemprompt_web_admin_core::ssr::entity_panel::{PanelRequest, build_entity_panel};
+use systemprompt_web_admin_core::ssr::page::Page;
+use systemprompt_web_admin_core::templates::AdminTemplateEngine;
+use systemprompt_web_admin_core::types::{MarketplaceContext, Role, UserContext};
 
 use self::kpis::list_kpis;
 use self::view::{
     MarketplaceCardView, MarketplaceDetailData, MarketplacesPageData, MemberLinkView,
 };
-use super::super::ssr::ssr_helpers::render_typed_page;
 use super::view::{PanelQuery, mcp_url, plugin_url, skill_url};
-use crate::handlers::ssr::types::BreadcrumbView;
+use systemprompt_web_admin_core::ssr::helpers::render_typed_page;
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 
-fn audience_tabs(show_audience: bool) -> Vec<crate::handlers::ssr::types::TabLinkView> {
+fn audience_tabs(
+    show_audience: bool,
+) -> Vec<systemprompt_web_admin_core::ssr::types::tabs::TabLinkView> {
     vec![
-        crate::handlers::ssr::types::TabLinkView {
+        systemprompt_web_admin_core::ssr::types::tabs::TabLinkView {
             slug: "list",
             label: "Marketplaces",
             href: "/admin/marketplaces".to_owned(),
             is_active: !show_audience,
             count: None,
         },
-        crate::handlers::ssr::types::TabLinkView {
+        systemprompt_web_admin_core::ssr::types::tabs::TabLinkView {
             slug: "audience",
             label: "Audience matrix",
             href: "/admin/marketplaces?tab=audience".to_owned(),
@@ -130,7 +132,7 @@ fn member_links(ids: &[String], url: fn(&str) -> String) -> Vec<MemberLinkView> 
 }
 
 pub(super) fn skills_of(
-    catalog: &[crate::types::PluginDetail],
+    catalog: &[systemprompt_web_admin_core::types::PluginDetail],
     plugin_ids: &[String],
 ) -> Vec<MemberLinkView> {
     let mut out: Vec<MemberLinkView> = Vec::new();

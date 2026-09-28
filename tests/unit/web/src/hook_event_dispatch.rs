@@ -15,7 +15,7 @@
 //! replace it with a 400 and drop the event.
 
 use serde_json::json;
-use systemprompt_web_admin::types::webhook::{HookEvent, HookEventPayload};
+use systemprompt_web_admin_core::types::webhook::{HookEvent, HookEventPayload};
 
 fn common() -> serde_json::Value {
     json!({

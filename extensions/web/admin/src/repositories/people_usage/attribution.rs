@@ -11,7 +11,7 @@
 use serde::Serialize;
 use sqlx::PgPool;
 
-use crate::repositories::scope::ScopeQuery;
+use systemprompt_web_admin_core::repositories::scope::ScopeQuery;
 
 /// One attribution source and the slice of the window it decided.
 #[derive(Debug, Clone, Serialize)]
@@ -25,7 +25,7 @@ pub async fn list_scope_attribution_sources(
     pool: &PgPool,
     q: &ScopeQuery<'_>,
 ) -> Result<Vec<AttributionSourceRow>, sqlx::Error> {
-    let rows = crate::scoped_query!(
+    let rows = systemprompt_web_admin_core::scoped_query!(
         r#"SELECT rs.source AS "source!",
                   COUNT(*)::BIGINT AS "requests!",
                   COALESCE(SUM(r.cost_microdollars), 0)::BIGINT AS "cost_microdollars!"

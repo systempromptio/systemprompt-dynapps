@@ -1,7 +1,6 @@
 //! Account state and explicit mutations shared by the browser and bridge.
 
 use super::live_user;
-use crate::error::{AdminError, AdminResult};
 use crate::repositories::users::{
     connector_accounts as accounts, connector_credentials as credentials,
 };
@@ -18,6 +17,8 @@ use chrono::Utc;
 use serde::Deserialize;
 use sqlx::PgPool;
 use std::sync::Arc;
+use systemprompt_web_admin_core::connections::source::get_connections;
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
 pub(super) async fn list(
     State(pool): State<Arc<PgPool>>,
@@ -26,7 +27,7 @@ pub(super) async fn list(
     let user = live_user(&pool, &headers, false).await?;
     Ok((
         [(CACHE_CONTROL, "no-store")],
-        Json(service::get_connections(&pool, &user.user_id).await?),
+        Json(get_connections(&pool, &user.user_id).await?),
     )
         .into_response())
 }
@@ -55,7 +56,7 @@ pub(super) async fn disconnect(
     tracing::info!(user_id = %user.user_id, provider = provider.slug(), "connector_disconnected");
     Ok((
         [(CACHE_CONTROL, "no-store")],
-        Json(service::get_connections(&pool, &user.user_id).await?),
+        Json(get_connections(&pool, &user.user_id).await?),
     )
         .into_response())
 }
@@ -73,7 +74,7 @@ pub(super) async fn test(
         oauth::probe_connection(&pool, &user.user_id, provider.clone()).await?
     };
     tracing::info!(user_id = %user.user_id, provider = provider.slug(), ok = report.ok, "connector_probed");
-    let mut snapshot = service::get_connections(&pool, &user.user_id).await?;
+    let mut snapshot = get_connections(&pool, &user.user_id).await?;
     snapshot.verification = Some(report);
     Ok(([(CACHE_CONTROL, "no-store")], Json(snapshot)).into_response())
 }
@@ -147,7 +148,7 @@ pub(super) async fn manual(
     tracing::info!(user_id = %user.user_id, provider = provider.slug(), "connector_personal_token_verified");
     Ok((
         [(CACHE_CONTROL, "no-store")],
-        Json(service::get_connections(&pool, &user.user_id).await?),
+        Json(get_connections(&pool, &user.user_id).await?),
     )
         .into_response())
 }

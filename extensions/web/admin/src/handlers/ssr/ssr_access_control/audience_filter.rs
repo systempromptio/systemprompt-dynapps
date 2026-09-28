@@ -13,7 +13,7 @@ use super::bands::band_label;
 use super::entities::AcQuery;
 use super::summary::options;
 use super::view::{AcAudienceColumnView, AcAudienceFiltersView, AcAudienceRowView};
-use crate::handlers::ssr::entity_kind::{entity_kind_plural, entity_kind_rank};
+use systemprompt_web_admin_core::ssr::entity_kind::{entity_kind_plural, entity_kind_rank};
 
 pub(super) struct Narrowed {
     pub columns: Vec<AcAudienceColumnView>,

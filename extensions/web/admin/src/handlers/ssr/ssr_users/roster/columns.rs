@@ -7,7 +7,7 @@
 use crate::repositories::users::roster::RosterSort;
 
 use super::RosterUrlState;
-use crate::handlers::ssr::types::SortHeaderView;
+use systemprompt_web_admin_core::ssr::types::table::SortHeaderView;
 
 const COLUMNS: [(&str, &str, &str, &str); 8] = [
     (

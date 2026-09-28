@@ -20,7 +20,7 @@ use crate::repositories::analytics::context_tool_calls::{
 };
 use crate::repositories::dashboard::conversation_analytics::list_session_entity_links;
 
-use crate::types::conversation_analytics::SessionEntityLink;
+use systemprompt_web_admin_core::types::conversation_analytics::SessionEntityLink;
 
 use crate::handlers::ssr::transcript_view::transcript_request_ids;
 

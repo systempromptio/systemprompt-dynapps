@@ -4,7 +4,7 @@
 //! numbers are attributed by the same rule the rest of the console counts by
 //! and the page never restates what membership means. Spend joins
 //! `request_scope` — the project stamped on each request when it landed —
-//! under [`Attribution::Exclusive`](crate::repositories::scope::Attribution)
+//! under [`Attribution::Exclusive`](systemprompt_web_admin_core::repositories::scope::Attribution)
 //! so the projects partition the instance; tool calls and skills are
 //! hook-plane events with no request to stamp and still read membership. The
 //! per-member breakdown is the one place the pages ask for member
@@ -24,7 +24,7 @@ use serde::Serialize;
 use sqlx::PgPool;
 use systemprompt_web_shared::ProjectId;
 
-use crate::repositories::scope::{Attribution, ScopeKind};
+use systemprompt_web_admin_core::repositories::scope::{Attribution, ScopeKind};
 
 pub const LISTING_CAP: i64 = 500;
 
@@ -90,7 +90,7 @@ async fn list_request_plane(
     window_days: i32,
     limit: i64,
 ) -> Result<Vec<ProjectRollup>, sqlx::Error> {
-    let rows = crate::scoped_query!(
+    let rows = systemprompt_web_admin_core::scoped_query!(
         r#"SELECT p.id AS "id!: ProjectId",
                   p.name AS "name!",
                   p.description AS "description?",
@@ -163,7 +163,7 @@ async fn list_hook_plane(
     pool: &PgPool,
     window_days: i32,
 ) -> Result<Vec<HookPlaneRow>, sqlx::Error> {
-    let rows = crate::scoped_query!(
+    let rows = systemprompt_web_admin_core::scoped_query!(
         r#"SELECT p.id AS "scope_id!",
                   COALESCE(t.calls, 0)::BIGINT AS "tool_calls!",
                   COALESCE(t.ok, 0)::BIGINT AS "tool_success!",

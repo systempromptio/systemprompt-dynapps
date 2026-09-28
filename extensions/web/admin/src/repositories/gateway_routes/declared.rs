@@ -11,9 +11,9 @@ use std::path::Path;
 use serde_yaml::Value;
 use sha2::{Digest, Sha256};
 
-use crate::error::{AdminError, AdminResult};
-use crate::repositories::config::gateway::route_from_yaml;
-use crate::types::GatewayRouteView;
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::repositories::gateway_catalog::route_from_yaml;
+use systemprompt_web_admin_core::types::GatewayRouteView;
 
 pub const GATEWAY_FILE: &str = "ai/gateway.yaml";
 

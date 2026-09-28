@@ -9,8 +9,10 @@ use super::view::ConversationRowView;
 use crate::handlers::ssr::analysis::help::HelpView;
 use crate::handlers::ssr::analysis::reports::banner::ReportBannerView;
 use crate::handlers::ssr::analysis::ribbon::RibbonView;
-use crate::handlers::ssr::list_view::{Pagination, ScopeFilterView};
-use crate::handlers::ssr::types::{SortHeaderView, SvgLineChartView, TabLinkView};
+use systemprompt_web_admin_core::ssr::list_view::{Pagination, ScopeFilterView};
+use systemprompt_web_admin_core::ssr::types::svg_line::SvgLineChartView;
+use systemprompt_web_admin_core::ssr::types::table::SortHeaderView;
+use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;
 
 #[derive(Debug, Serialize)]
 pub(crate) struct SortHeaders {
@@ -43,7 +45,7 @@ pub(crate) struct ConversationsPageContext {
     pub turns_toggle: TurnsToggleView,
     pub pagination: Pagination,
     pub sort_headers: SortHeaders,
-    pub export: crate::export::ExportView,
+    pub export: systemprompt_web_admin_core::export::view::ExportView,
     pub help: HelpView,
     pub report_banner: ReportBannerView,
     pub current_url: String,

@@ -8,15 +8,15 @@ use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 
 use crate::repositories;
-use crate::repositories::analytics::conversation_rows::{
+use crate::repositories::users::enrolment::UserDeviceRow;
+use crate::repositories::users::sessions::SigninSessionRow;
+use systemprompt_web_admin_core::repositories::conversations::rows::{
     ConversationFilter, ConversationRow, ConversationTotals, find_latest_conversation,
     get_conversation_totals,
 };
-use crate::repositories::analytics::conversations::{
+use systemprompt_web_admin_core::repositories::conversations::{
     HistoryFilter, HistoryItem, list_history_items,
 };
-use crate::repositories::users::enrolment::UserDeviceRow;
-use crate::repositories::users::sessions::SigninSessionRow;
 
 pub(super) const CONVERSATION_PAGE_SIZE: i64 = 25;
 
@@ -92,14 +92,16 @@ pub(super) async fn load_identity(
 pub(super) struct MembershipData {
     pub groups: Vec<crate::handlers::ssr::types::MembershipChoiceView>,
     pub projects: Vec<crate::handlers::ssr::types::MembershipChoiceView>,
-    pub defaults: Option<repositories::scope::defaults::ScopeDefaults>,
+    pub defaults: Option<systemprompt_web_admin_core::repositories::scope::defaults::ScopeDefaults>,
 }
 
 pub(super) async fn load_membership(pool: &PgPool, user_id: &UserId) -> MembershipData {
     let (groups, projects, defaults) = tokio::join!(
         super::super::scope_data::group_choices(pool, user_id),
         super::super::scope_data::project_choices(pool, user_id),
-        repositories::scope::defaults::find_scope_defaults(pool, user_id),
+        systemprompt_web_admin_core::repositories::scope::defaults::find_scope_defaults(
+            pool, user_id
+        ),
     );
     MembershipData {
         groups,
@@ -113,13 +115,13 @@ pub(super) async fn load_membership(pool: &PgPool, user_id: &UserId) -> Membersh
 pub(super) struct AccessData {
     pub overview: super::access_overview::AccessOverview,
     pub rules_available: bool,
-    pub matrix: Option<repositories::users::access_control::UserMatrix>,
-    pub rules: Vec<crate::types::access_control::AccessControlRule>,
+    pub matrix: Option<systemprompt_web_admin_core::repositories::entitlement::UserMatrix>,
+    pub rules: Vec<systemprompt_web_admin_core::types::access_control::AccessControlRule>,
 }
 
 pub(super) async fn load_access(pool: &PgPool, user_id: &UserId) -> AccessData {
     let overview = super::access_overview::load(pool, user_id).await;
-    let Ok(services_path) = crate::handlers::shared::get_services_path() else {
+    let Ok(services_path) = systemprompt_web_admin_core::request::get_services_path() else {
         tracing::warn!("services path unavailable; user access matrix skipped");
         return AccessData {
             overview,
@@ -130,8 +132,10 @@ pub(super) async fn load_access(pool: &PgPool, user_id: &UserId) -> AccessData {
     };
     let sections = crate::handlers::access_control::build_matrix_sections(&services_path);
     let (matrix, rules) = tokio::join!(
-        repositories::users::access_control::resolve_user_matrix(pool, user_id, sections),
-        repositories::users::access_control::list_all_rules(pool),
+        systemprompt_web_admin_core::repositories::entitlement::resolve_user_matrix(
+            pool, user_id, sections
+        ),
+        systemprompt_web_admin_core::repositories::entitlement::list_all_rules(pool),
     );
     AccessData {
         overview,
@@ -159,8 +163,8 @@ pub(super) async fn load_sessions(pool: &PgPool, user_id: &UserId) -> Vec<Signin
 }
 
 pub(super) struct UsageData {
-    pub summary: repositories::users::usage::UserGatewayUsage,
-    pub models: Vec<repositories::users::usage::ModelShare>,
+    pub summary: systemprompt_web_admin_core::repositories::user_usage::UserGatewayUsage,
+    pub models: Vec<systemprompt_web_admin_core::repositories::user_usage::ModelShare>,
     pub latest: Option<ConversationRow>,
     pub totals: ConversationTotals,
 }
@@ -173,8 +177,12 @@ pub(super) async fn load_usage(pool: &PgPool, user_id: &UserId) -> UsageData {
         ..ConversationFilter::default()
     };
     let (summary, models, latest, totals) = tokio::join!(
-        repositories::users::usage::get_ai_request_summary(pool, user_id),
-        repositories::users::usage::list_top_models(pool, user_id, None, 10),
+        systemprompt_web_admin_core::repositories::user_usage::get_ai_request_summary(
+            pool, user_id
+        ),
+        systemprompt_web_admin_core::repositories::user_usage::list_top_models(
+            pool, user_id, None, 10
+        ),
         find_latest_conversation(pool, user_id),
         get_conversation_totals(pool, &filter),
     );
@@ -198,16 +206,24 @@ fn warn_empty<T>(res: Result<Vec<T>, sqlx::Error>, what: &'static str) -> Vec<T>
 }
 
 pub(super) struct Headline {
-    pub(super) profile: Option<repositories::users::queries::UserAccessProfile>,
-    pub(super) summary: repositories::users::usage::UserGatewayUsage,
-    pub(super) defaults: Option<repositories::scope::defaults::ScopeDefaults>,
+    pub(super) profile:
+        Option<systemprompt_web_admin_core::repositories::principal::role::UserAccessProfile>,
+    pub(super) summary: systemprompt_web_admin_core::repositories::user_usage::UserGatewayUsage,
+    pub(super) defaults:
+        Option<systemprompt_web_admin_core::repositories::scope::defaults::ScopeDefaults>,
 }
 
 pub(super) async fn load_headline(pool: &PgPool, user_id: &UserId) -> Headline {
     let (profile, summary, defaults) = tokio::join!(
-        repositories::users::queries::find_user_access_profile(pool, user_id),
-        repositories::users::usage::get_ai_request_summary(pool, user_id),
-        repositories::scope::defaults::find_scope_defaults(pool, user_id),
+        systemprompt_web_admin_core::repositories::principal::role::find_user_access_profile(
+            pool, user_id
+        ),
+        systemprompt_web_admin_core::repositories::user_usage::get_ai_request_summary(
+            pool, user_id
+        ),
+        systemprompt_web_admin_core::repositories::scope::defaults::find_scope_defaults(
+            pool, user_id
+        ),
     );
     Headline {
         profile: profile

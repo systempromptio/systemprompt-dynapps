@@ -30,8 +30,8 @@ use systemprompt::identifiers::McpServerId;
 use serde::Deserialize;
 use systemprompt::models::mcp::{Deployment, McpServerType};
 
-use crate::error::{AdminError, AdminResult};
 use crate::services::connector_oauth::config::{secret, validate_my_domain};
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
 pub const ORGS_FILE: &str = "config/salesforce-orgs.yaml";
 pub const SHARED_CLIENT_ID_SECRET: &str = "salesforce_mcp_client_id";

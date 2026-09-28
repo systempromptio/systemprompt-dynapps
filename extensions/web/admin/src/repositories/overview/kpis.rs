@@ -16,7 +16,7 @@
 
 use sqlx::PgPool;
 
-use crate::util::time_range::TimeRange;
+use systemprompt_web_admin_core::util::time_range::TimeRange;
 
 /// Both windows of the KPI strip. `prev_*` covers `[from - width, from)`.
 #[derive(Debug, Default, Clone, Copy)]

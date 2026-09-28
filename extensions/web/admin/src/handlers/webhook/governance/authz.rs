@@ -38,9 +38,11 @@ use systemprompt_security::authz::{
     DecisionTag, DenyReason, EntityRow, ParentChainIndex, ResolveBase, SubjectAttributes,
 };
 
-use crate::authz::{dimensions, subject_attributes_for};
-use crate::repositories::users::queries::{IdentityEnvelope, find_identity_envelope};
 use systemprompt_security::authz::{GovernanceDecisionRecord, insert_governance_decision};
+use systemprompt_web_admin_core::authz::{dimensions, subject_attributes_for};
+use systemprompt_web_admin_core::repositories::principal::identity::{
+    IdentityEnvelope, find_identity_envelope,
+};
 
 const POLICY_NAME: &str = "authz";
 

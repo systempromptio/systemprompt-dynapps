@@ -8,8 +8,8 @@
 
 use axum::http::StatusCode;
 use systemprompt::security::authz::{AuthzError, EntityKind};
-use systemprompt_web_admin::error::AdminError;
-use systemprompt_web_admin::repositories::config::gateway::registered_routes;
+use systemprompt_web_admin_core::error::AdminError;
+use systemprompt_web_admin_core::repositories::gateway_catalog::registered_routes;
 
 fn ids(list: &[&str]) -> Vec<String> {
     list.iter().map(|s| (*s).to_owned()).collect()

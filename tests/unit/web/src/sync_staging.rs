@@ -3,7 +3,7 @@
 //! final plane must close the stage so neither can be applied twice.
 
 use chrono::{Duration, Utc};
-use systemprompt_web_admin::repositories::sync::archive::staging::{
+use systemprompt_web_admin_core::repositories::sync::archive::staging::{
     STAGE_TTL_MINUTES, StagedArchive, StagingStore,
 };
 

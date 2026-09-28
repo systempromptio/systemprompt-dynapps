@@ -15,7 +15,7 @@ use systemprompt::identifiers::{RouteId, UserId};
 use systemprompt_security::authz::resolver::{ResolveInput, resolve};
 use systemprompt_security::authz::{Decision, EntityRef};
 
-use crate::authz;
+
 use crate::repositories::config::gateway_acl;
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -73,7 +73,8 @@ async fn resolve_route(
         .await
         .inspect_err(|e| tracing::warn!(error = %e, %route_id, "route rule lookup failed"))?;
     let user_roles = load_roles(pool, user_id).await?;
-    let attributes = authz::subject_attributes_for(pool, user_id).await?;
+    let attributes =
+        systemprompt_web_admin_core::authz::subject_attributes_for(pool, user_id).await?;
 
     let entity_ref = EntityRef::GatewayRoute(route_id.clone());
 
@@ -85,12 +86,15 @@ async fn resolve_route(
         default_included: entity.map(|e| e.default_included),
         parents: &[],
         attributes: &attributes,
-        dimensions: authz::dimensions(pool),
+        dimensions: systemprompt_web_admin_core::authz::dimensions(pool),
     }))
 }
 
 async fn load_roles(pool: &PgPool, user_id: &UserId) -> Result<Vec<String>, sqlx::Error> {
-    let identity = crate::repositories::users::queries::find_identity_envelope(pool, user_id)
+    let identity =
+        systemprompt_web_admin_core::repositories::principal::identity::find_identity_envelope(
+            pool, user_id,
+        )
         .await?
         .ok_or(sqlx::Error::RowNotFound)?;
     if identity.status != "active" {

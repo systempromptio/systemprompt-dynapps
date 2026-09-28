@@ -6,7 +6,7 @@
 //! not share them: it has a runtime half these two do not.
 
 
-use crate::handlers::catalog::sorting::SortColumn;
+use systemprompt_web_admin_core::ssr::types::table::SortColumn;
 
 use super::view::CatalogKpiView;
 

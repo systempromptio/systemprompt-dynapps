@@ -2,10 +2,10 @@
 //! day/week bucket toggle, plus the hidden fields the GET form must carry.
 //! Split from `mod.rs` at the 300-line ceiling.
 
-use crate::handlers::ssr::list_view::scope_filter_view;
 use crate::repositories::analytics::site::series::SeriesBucket;
-use crate::repositories::scope::ScopeRequest;
-use crate::types::UserContext;
+use systemprompt_web_admin_core::repositories::scope::ScopeRequest;
+use systemprompt_web_admin_core::ssr::list_view::scope_filter_view;
+use systemprompt_web_admin_core::types::UserContext;
 
 use sqlx::PgPool;
 

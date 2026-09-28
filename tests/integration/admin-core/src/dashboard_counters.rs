@@ -12,7 +12,7 @@ use systemprompt_web_admin::repositories::dashboard::queries::{
     list_top_users,
 };
 use systemprompt_web_admin::repositories::dashboard::{get_dashboard_data, get_events_page};
-use systemprompt_web_admin::types::EventsQuery;
+use systemprompt_web_admin_core::types::EventsQuery;
 
 use crate::dashboard_sessions::insert_mcp_execution;
 use crate::fixtures::{

@@ -24,7 +24,7 @@ use serde::Serialize;
 use sqlx::PgPool;
 use systemprompt::identifiers::{ContextId, Email, UserId};
 
-use crate::repositories::scope::SubjectScope;
+use systemprompt_web_admin_core::repositories::scope::SubjectScope;
 
 pub const DEFAULT_PAGE_SIZE: i64 = 50;
 
@@ -131,7 +131,8 @@ pub async fn list_users_paged(
     scope: &SubjectScope,
     query: &RosterQuery,
 ) -> Result<(Vec<RosterRow>, i64), sqlx::Error> {
-    let mut transaction = crate::repositories::dashboard_read::begin(pool).await?;
+    let mut transaction =
+        systemprompt_web_admin_core::repositories::dashboard_read::begin(pool).await?;
     let rows = sqlx::query_file!(
         "src/repositories/users/roster/page.sql",
         scope.as_sql(),

@@ -6,16 +6,18 @@
 
 use sqlx::PgPool;
 
-use crate::repositories;
-use crate::repositories::scope::SubjectScope;
+use systemprompt_web_admin_core::repositories::scope::SubjectScope;
 
 use super::view::AcStatsView;
 
 pub(super) async fn load_stats(pool: &PgPool) -> AcStatsView {
     let (users, groups, projects) = tokio::join!(
-        repositories::users::queries::list_users(pool, &SubjectScope::All),
-        repositories::groups::crud::list_groups(pool),
-        repositories::projects::crud::list_project_summaries(pool),
+        systemprompt_web_admin_core::repositories::principal::listing::list_users(
+            pool,
+            &SubjectScope::All
+        ),
+        systemprompt_web_admin_core::repositories::scope::containers::list_group_options(pool),
+        systemprompt_web_admin_core::repositories::scope::containers::list_project_summaries(pool),
     );
     AcStatsView {
         users: users

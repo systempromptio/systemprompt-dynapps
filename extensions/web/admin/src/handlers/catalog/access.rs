@@ -5,8 +5,10 @@
 use sqlx::PgPool;
 
 use super::view;
-use crate::handlers::ssr::entity_panel::{EntityAccessView, PanelRequest, build_entity_panel};
-use crate::types::{ENTITY_PLUGIN, ENTITY_SKILL, UserContext};
+use systemprompt_web_admin_core::ssr::entity_panel::{
+    EntityAccessView, PanelRequest, build_entity_panel,
+};
+use systemprompt_web_admin_core::types::{ENTITY_PLUGIN, ENTITY_SKILL, UserContext};
 
 pub(crate) async fn panel(
     pool: &PgPool,

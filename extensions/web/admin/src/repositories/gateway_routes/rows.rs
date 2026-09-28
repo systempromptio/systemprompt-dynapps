@@ -4,7 +4,7 @@ use chrono::{DateTime, Utc};
 use serde::Serialize;
 use sqlx::PgPool;
 
-use crate::types::GatewayRouteView;
+use systemprompt_web_admin_core::types::GatewayRouteView;
 
 pub const SOURCE_CODE: &str = "code";
 pub const SOURCE_DASHBOARD: &str = "dashboard";

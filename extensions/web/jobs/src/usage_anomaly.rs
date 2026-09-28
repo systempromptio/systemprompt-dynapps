@@ -193,7 +193,7 @@ fn alert(finding: Finding, obs: &HourlyObservation) {
 fn usd(microdollars: i64) -> String {
     format!(
         "${:.2}",
-        systemprompt_web_admin::numeric::to_f64(microdollars) / 1_000_000.0
+        systemprompt_web_admin_core::numeric::to_f64(microdollars) / 1_000_000.0
     )
 }
 

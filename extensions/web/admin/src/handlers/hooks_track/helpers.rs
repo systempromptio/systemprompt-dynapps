@@ -1,6 +1,6 @@
 //! Payload trimming shared by the hook ingestion path.
 
-use crate::types::webhook::{HookEvent, HookEventPayload, ToolInputSummary};
+use systemprompt_web_admin_core::types::webhook::{HookEvent, HookEventPayload, ToolInputSummary};
 
 use systemprompt_web_shared::format::{truncate_chars, truncate_ellipsis as truncate};
 
@@ -22,7 +22,9 @@ pub(super) fn generate_prompt_preview(payload: &HookEventPayload) -> Option<Stri
     }
 }
 
-pub(super) fn compute_content_bytes(payload: &HookEventPayload) -> crate::types::ContentBytes {
+pub(super) fn compute_content_bytes(
+    payload: &HookEventPayload,
+) -> systemprompt_web_admin_core::types::ContentBytes {
     let mut input_bytes: i64 = 0;
     let mut output_bytes: i64 = 0;
 
@@ -54,7 +56,7 @@ pub(super) fn compute_content_bytes(payload: &HookEventPayload) -> crate::types:
         _ => {},
     }
 
-    crate::types::ContentBytes {
+    systemprompt_web_admin_core::types::ContentBytes {
         input: input_bytes,
         output: output_bytes,
     }

@@ -24,12 +24,14 @@ use sqlx::PgPool;
 use systemprompt::identifiers::MarketplaceId;
 use systemprompt_web_shared::GroupId;
 
-use crate::error::{AdminError, AdminResult};
 use crate::repositories::groups::{crud, marketplaces as marketplace_repo, members as member_repo};
 use crate::repositories::people_usage::DEFAULT_WINDOW_DAYS;
 use crate::repositories::people_usage::breakdown::{LinkedScopeRow, list_linked_scopes};
-use crate::repositories::scope::{Attribution, ScopeQuery, ScopeTarget};
-use crate::types::groups::{CreateGroupRequest, GroupRecord, GroupSummary, UpdateGroupRequest};
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::repositories::scope::{Attribution, ScopeQuery, ScopeTarget};
+use systemprompt_web_admin_core::types::groups::{
+    CreateGroupRequest, GroupRecord, GroupSummary, UpdateGroupRequest,
+};
 
 #[derive(Debug, Serialize)]
 pub(crate) struct ListGroupsResponse {
@@ -45,7 +47,9 @@ pub(crate) struct GroupDetailResponse {
 }
 
 pub(crate) async fn list_groups_handler(State(pool): State<Arc<PgPool>>) -> AdminResult<Response> {
-    let groups = crud::list_group_summaries(&pool).await?;
+    let groups =
+        systemprompt_web_admin_core::repositories::scope::containers::list_group_summaries(&pool)
+            .await?;
     Ok(Json(ListGroupsResponse { groups }).into_response())
 }
 

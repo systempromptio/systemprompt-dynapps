@@ -5,8 +5,9 @@ use serde::Serialize;
 use crate::handlers::ssr::analysis::help::HelpView;
 
 use crate::handlers::ssr::analysis::conversations::view::SkillChipView;
-use crate::handlers::ssr::format::ClientChipView;
-use crate::handlers::ssr::types::{BreadcrumbView, SvgLineChartView};
+use systemprompt_web_admin_core::ssr::format::ClientChipView;
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
+use systemprompt_web_admin_core::ssr::types::svg_line::SvgLineChartView;
 
 #[derive(Debug, Serialize)]
 pub(super) struct ConversationKpiView {
@@ -164,5 +165,5 @@ pub(super) struct ConversationDetailContext {
     pub(super) safety: Vec<SafetyView>,
     pub(super) safety_count: usize,
     pub(super) help: HelpView,
-    pub(super) export: crate::export::ExportView,
+    pub(super) export: systemprompt_web_admin_core::export::view::ExportView,
 }

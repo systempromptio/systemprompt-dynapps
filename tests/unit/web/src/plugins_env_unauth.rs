@@ -4,7 +4,7 @@
 //! resolution returns `None` and the handler returns 401.
 
 
-use systemprompt_web_admin::test_support::resolve_principal;
+use systemprompt_web_admin_core::auth::session::resolve_principal;
 
 #[test]
 fn returns_none_when_neither_cookie_nor_query_present() {

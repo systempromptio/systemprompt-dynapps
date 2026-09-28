@@ -4,10 +4,13 @@
 //!
 //! Split from `view.rs` at the 300-line ceiling.
 
-use crate::handlers::ssr::format::format_cost;
-use crate::handlers::ssr::types::{PieView, Plot, SvgLineChartView, SvgSeriesInput, chart_on_axis};
 use crate::repositories::analytics::site::model_series::ModelCostBucket;
 use crate::repositories::analytics::site::series::UsageBucket;
+use systemprompt_web_admin_core::ssr::format::format_cost;
+use systemprompt_web_admin_core::ssr::types::pie::PieView;
+use systemprompt_web_admin_core::ssr::types::svg_line::{
+    Plot, SvgLineChartView, SvgSeriesInput, chart_on_axis,
+};
 
 use super::view::{self, bucket_label};
 

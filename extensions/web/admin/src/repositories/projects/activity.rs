@@ -9,7 +9,7 @@ use serde::Serialize;
 use sqlx::PgPool;
 use systemprompt::identifiers::{SessionId, UserId};
 
-use crate::repositories::scope::ScopeQuery;
+use systemprompt_web_admin_core::repositories::scope::ScopeQuery;
 
 /// One MCP tool as the project used it, with the share that failed.
 #[derive(Debug, Clone, Serialize)]
@@ -47,7 +47,7 @@ pub async fn list_project_tool_health(
     q: &ScopeQuery<'_>,
     limit: i64,
 ) -> Result<Vec<ToolHealthRow>, sqlx::Error> {
-    let rows = crate::scoped_query!(
+    let rows = systemprompt_web_admin_core::scoped_query!(
         r#"SELECT x.server_name AS "server_name!",
                   x.tool_name AS "tool_name!",
                   COUNT(*)::BIGINT AS "calls!",
@@ -90,7 +90,7 @@ pub async fn list_project_skill_effectiveness(
     q: &ScopeQuery<'_>,
     limit: i64,
 ) -> Result<Vec<SkillEffectivenessRow>, sqlx::Error> {
-    let rows = crate::scoped_query!(
+    let rows = systemprompt_web_admin_core::scoped_query!(
         r#"SELECT e.skill AS "skill!",
                   COUNT(*)::BIGINT AS "invocations!",
                   COUNT(DISTINCT e.user_id)::BIGINT AS "users!"
@@ -125,7 +125,7 @@ pub async fn list_project_sessions(
     q: &ScopeQuery<'_>,
     limit: i64,
 ) -> Result<Vec<ProjectSessionRow>, sqlx::Error> {
-    let rows = crate::scoped_query!(
+    let rows = systemprompt_web_admin_core::scoped_query!(
         r#"SELECT s.session_id AS "session_id!: SessionId",
                   m.user_id AS "user_id!: UserId",
                   COUNT(x.id)::BIGINT AS "requests!",

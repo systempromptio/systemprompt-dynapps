@@ -10,7 +10,7 @@ use systemprompt::config::ProfileBootstrap;
 use systemprompt::loader::services_root::ServicesRootBootstrap;
 
 use super::month_window::normalise_spec;
-use crate::error::AdminResult;
+use systemprompt_web_admin_core::error::AdminResult;
 
 pub const POLICIES_FILE: &str = GATEWAY_POLICIES_FILE;
 

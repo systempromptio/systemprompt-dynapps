@@ -3,7 +3,7 @@
 use sqlx::PgPool;
 use systemprompt::identifiers::{SessionId, UserId};
 
-use crate::types::conversation_analytics::SessionEntityLink;
+use systemprompt_web_admin_core::types::conversation_analytics::SessionEntityLink;
 
 pub async fn list_session_entity_links(
     pool: &PgPool,

@@ -9,11 +9,13 @@ use systemprompt_web_shared::GroupId;
 
 use super::skills_of;
 use super::view::{AudienceMatrixView, MarketplaceCardView, marketplace_url};
-use crate::handlers::ssr::sync_plane::HashView;
-use crate::repositories::marketplace::manifests::MarketplaceConfigSummary;
-use crate::repositories::sync::marketplace_versions_db::list_current_marketplace_versions;
-use crate::repositories::sync::provenance::{OwnedKind, Provenance, owned_by};
-use crate::repositories::sync::sources::build_sources;
+use systemprompt_web_admin_core::catalog_index::manifests::MarketplaceConfigSummary;
+use systemprompt_web_admin_core::repositories::sync::marketplace_versions_db::list_current_marketplace_versions;
+use systemprompt_web_admin_core::repositories::sync::provenance::{
+    OwnedKind, Provenance, owned_by,
+};
+use systemprompt_web_admin_core::repositories::sync::sources::build_sources;
+use systemprompt_web_admin_core::ssr::sync_plane::HashView;
 
 pub(super) async fn current_hashes(pool: &PgPool) -> HashMap<String, String> {
     // Why: discard-ok: a missing versions table leaves every card with no hash
@@ -30,7 +32,7 @@ pub(super) struct CardInputs<'a> {
     pub manifests: &'a [MarketplaceConfigSummary],
     pub audience: &'a AudienceMatrixView,
     pub grants: &'a HashMap<MarketplaceId, Vec<GroupId>>,
-    pub plugin_catalog: &'a [crate::types::PluginDetail],
+    pub plugin_catalog: &'a [systemprompt_web_admin_core::types::PluginDetail],
     pub versions: &'a HashMap<String, String>,
 }
 

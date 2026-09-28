@@ -8,13 +8,13 @@ use axum::extract::{Path, Query, State};
 use axum::response::Response;
 use sqlx::PgPool;
 
-use super::super::ssr::ssr_helpers::render_typed_page;
 use super::view::{PanelQuery, assignment_counts_by_type};
 use super::{access, admin_only, data, view_models};
-use crate::error::{AdminError, AdminHtmlResult};
-use crate::handlers::shared;
-use crate::handlers::ssr::page::Page;
-use crate::types::{ENTITY_PLUGIN, ENTITY_SKILL};
+use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
+use systemprompt_web_admin_core::request as shared;
+use systemprompt_web_admin_core::ssr::helpers::render_typed_page;
+use systemprompt_web_admin_core::ssr::page::Page;
+use systemprompt_web_admin_core::types::{ENTITY_PLUGIN, ENTITY_SKILL};
 
 pub(crate) async fn plugin_detail_page(
     shell: Page,

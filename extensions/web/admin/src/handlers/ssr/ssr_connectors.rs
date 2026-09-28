@@ -12,12 +12,13 @@ use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 
 use super::ssr_connectors_cards::{ATTENTION, ConnectorCardView, card};
-use crate::error::AdminHtmlResult;
-use crate::handlers::ssr::ssr_helpers::render_typed_page;
-use crate::handlers::ssr::types::BreadcrumbView;
-use crate::services::connector_accounts::{Connection, get_connections};
-use crate::templates::AdminTemplateEngine;
-use crate::types::{MarketplaceContext, UserContext};
+use systemprompt_web_admin_core::connections::Connection;
+use systemprompt_web_admin_core::connections::source::get_connections;
+use systemprompt_web_admin_core::error::AdminHtmlResult;
+use systemprompt_web_admin_core::ssr::helpers::render_typed_page;
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
+use systemprompt_web_admin_core::templates::AdminTemplateEngine;
+use systemprompt_web_admin_core::types::{MarketplaceContext, UserContext};
 
 #[derive(Debug, Default, Serialize)]
 struct ConnectorsSummary {

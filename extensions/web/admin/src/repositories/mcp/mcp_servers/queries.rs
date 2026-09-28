@@ -2,9 +2,9 @@
 
 use std::path::Path;
 
-use crate::types::McpServerDetail;
-use crate::util::source_path::display_source_path;
 use systemprompt::identifiers::McpServerId;
+use systemprompt_web_admin_core::types::McpServerDetail;
+use systemprompt_web_admin_core::util::source_path::display_source_path;
 use systemprompt_web_shared::error::MarketplaceError;
 
 const DEFAULT_MCP_PORT: u16 = 5000;

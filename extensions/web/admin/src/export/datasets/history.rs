@@ -2,15 +2,31 @@
 
 use async_trait::async_trait;
 
-use crate::error::AdminResult;
-use crate::export::model::{Cell, CellKind, Column, DataSet, ExportContext, Table, Window};
 use crate::handlers::ssr::ssr_history::{ExportRequest, HistoryView, export_rows};
-use crate::repositories::analytics::conversations::HistoryItem;
-use crate::types::UserContext;
 use systemprompt::identifiers::SessionId;
+use systemprompt_web_admin_core::error::AdminResult;
+use systemprompt_web_admin_core::export::model::{
+    Cell, CellKind, Column, DataSet, ExportContext, Table, Window,
+};
+use systemprompt_web_admin_core::export::registry::DataSetRegistration;
+use systemprompt_web_admin_core::repositories::conversations::HistoryItem;
+use systemprompt_web_admin_core::types::UserContext;
 
 pub(crate) struct History;
 pub(crate) struct OrgHistory;
+
+inventory::submit! {
+    DataSetRegistration {
+        order: 12,
+        dataset: &History,
+    }
+}
+inventory::submit! {
+    DataSetRegistration {
+        order: 13,
+        dataset: &OrgHistory,
+    }
+}
 
 const DESCRIPTION: &str =
     "One row per conversation — who, model, turns, tokens, cost — by last activity.";

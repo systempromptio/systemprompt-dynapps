@@ -25,7 +25,7 @@ use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 
-use crate::types::constants::ROLE_PLATFORM_ADMIN;
+use systemprompt_web_admin_core::types::constants::ROLE_PLATFORM_ADMIN;
 
 pub async fn list_manual_roles(
     pool: &PgPool,

@@ -1,8 +1,8 @@
 //! Stable event identity shared by first delivery and retries.
 
-use crate::types::webhook::HookEventPayload;
 use sha2::{Digest, Sha256};
 use systemprompt::identifiers::{SessionId, UserId};
+use systemprompt_web_admin_core::types::webhook::HookEventPayload;
 
 pub(super) fn compute_dedup_key(
     user_id: &UserId,

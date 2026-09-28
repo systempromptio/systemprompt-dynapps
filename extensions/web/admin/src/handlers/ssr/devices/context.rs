@@ -10,8 +10,10 @@
 
 use serde::Serialize;
 
-use crate::handlers::ssr::list_view::Pagination;
-use crate::handlers::ssr::types::{BreadcrumbView, FilterChipView, SortHeaderView, TabLinkView};
+use systemprompt_web_admin_core::ssr::list_view::Pagination;
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
+use systemprompt_web_admin_core::ssr::types::table::{FilterChipView, SortHeaderView};
+use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;
 
 #[derive(Debug, Serialize)]
 pub(super) struct DevicesPageContext {

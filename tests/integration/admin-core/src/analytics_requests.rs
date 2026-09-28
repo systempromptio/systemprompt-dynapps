@@ -9,7 +9,7 @@ use systemprompt_web_admin::repositories::analytics::requests::{
     list_requests_by_model, list_requests_by_provider, list_requests_by_status,
     list_requests_paged,
 };
-use systemprompt_web_admin::repositories::scope::SubjectScope;
+use systemprompt_web_admin_core::repositories::scope::SubjectScope;
 
 use crate::fixtures::{
     DecisionSpec, RequestSpec, insert_decision, insert_request, insert_session, insert_user,

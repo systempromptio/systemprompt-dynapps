@@ -2,7 +2,7 @@
 
 use systemprompt::generator::PublishError;
 use systemprompt::traits::ProviderError;
-use systemprompt_web_admin::repositories::secrets::secret_crypto::SecretCryptoError;
+use systemprompt_web_admin_core::crypto::secret_crypto::SecretCryptoError;
 use systemprompt_web_shared::error::{InfraError, MarketplaceError};
 use thiserror::Error;
 

@@ -3,11 +3,11 @@
 use sqlx::PgPool;
 use systemprompt::identifiers::MarketplaceId;
 
-use crate::error::{AdminError, AdminHtmlResult, AdminResult};
 use crate::repositories::analysis::marketplace_versions::{
     MarketplaceVersionMetricsRow, VersionWindow, list_marketplace_version_metrics,
 };
-use crate::types::UserContext;
+use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult, AdminResult};
+use systemprompt_web_admin_core::types::UserContext;
 
 pub(crate) fn require_versions_reader(user: &UserContext) -> AdminResult<()> {
     if !user.has_scoped_console() {

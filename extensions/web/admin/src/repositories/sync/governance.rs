@@ -13,13 +13,6 @@
 use async_trait::async_trait;
 use sqlx::PgPool;
 
-use super::access_control::applied_from;
-use super::plane::{
-    ActionCounts, Actor, ApplyOutcome, DriftKpi, DriftRow, Export, PlaneDrift, SyncMode, SyncPlane,
-    resolution,
-};
-use super::state::{Applied, record_applied, record_declared};
-use crate::error::AdminResult;
 use crate::repositories::governance_chain::declared::{
     DeclaredChain, GOVERNANCE_FILE, declared_chain_now,
 };
@@ -30,8 +23,19 @@ use crate::repositories::governance_chain::rows::{
     SOURCE_CODE, count_chain_policies, delete_chain_policy, find_chain_settings,
     list_chain_policies, staged_chain, upsert_chain_policy, upsert_chain_settings,
 };
+use systemprompt_web_admin_core::error::AdminResult;
+use systemprompt_web_admin_core::repositories::sync::access_control::applied_from;
+use systemprompt_web_admin_core::repositories::sync::plane::{
+    ActionCounts, Actor, ApplyOutcome, DriftKpi, DriftRow, Export, PlaneDrift, SyncMode, SyncPlane,
+    resolution,
+};
+use systemprompt_web_admin_core::repositories::sync::plane_ids;
+use systemprompt_web_admin_core::repositories::sync::registry::PlaneRegistration;
+use systemprompt_web_admin_core::repositories::sync::state::{
+    Applied, record_applied, record_declared,
+};
 
-pub const PLANE_ID: &str = "governance";
+pub const PLANE_ID: &str = plane_ids::GOVERNANCE;
 
 pub const RUNTIME_NOTE: &str = "Core builds the policy chain from services/governance/config.yaml \
     at boot and never reads governance_chain. A change staged here is enforced only after the \
@@ -39,6 +43,10 @@ pub const RUNTIME_NOTE: &str = "Core builds the policy chain from services/gover
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct GovernancePlane;
+
+inventory::submit! {
+    PlaneRegistration { order: 4, build: || Box::new(GovernancePlane) }
+}
 
 fn row(kind: &'static str, id: &str, in_code: String, in_db: String) -> DriftRow {
     let (kind_label, kind_tone, insert_applies, overwrite_effect) = match kind {

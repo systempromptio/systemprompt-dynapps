@@ -15,14 +15,14 @@ use axum::{Extension, Router, middleware as axum_middleware};
 use sqlx::PgPool;
 use tower_http::normalize_path::NormalizePathLayer;
 
-use super::super::templates::AdminTemplateEngine;
 use super::super::{handlers, middleware};
-use super::managed_state::StateError;
 use super::ssr_redirects;
 use crate::handlers::adfs_auth::AdfsDeps;
 use activity::ai_activity_routes;
 use platform::platform_routes;
 use systemprompt::database::DbPool;
+use systemprompt_web_admin_core::state::StateError;
+use systemprompt_web_admin_core::templates::AdminTemplateEngine;
 
 pub fn admin_ssr_router(
     db: &DbPool,
@@ -31,7 +31,9 @@ pub fn admin_ssr_router(
     sso_deps: AdfsDeps,
     owner: systemprompt::identifiers::UserId,
 ) -> Result<Router, StateError> {
-    let managed = Arc::new(super::managed_state::ManagedState::new(db, owner)?);
+    let managed = Arc::new(systemprompt_web_admin_core::state::ManagedState::new(
+        db, owner,
+    )?);
     let inner = overview_routes()
         .merge(people_routes())
         .merge(ai_activity_routes())
@@ -49,10 +51,10 @@ pub fn admin_ssr_router(
             middleware::marketplace_context_middleware,
         ))
         .layer(axum_middleware::from_fn(
-            middleware::non_admin_gate_middleware,
+            systemprompt_web_admin_core::middleware::gates::non_admin_gate_middleware,
         ))
         .layer(axum_middleware::from_fn(
-            middleware::require_user_middleware,
+            systemprompt_web_admin_core::middleware::gates::require_user_middleware,
         ))
         .layer(axum_middleware::from_fn_with_state(
             Arc::clone(&pool),

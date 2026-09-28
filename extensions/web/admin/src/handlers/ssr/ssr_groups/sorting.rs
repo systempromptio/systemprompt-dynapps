@@ -8,8 +8,8 @@
 
 use std::cmp::Ordering;
 
-use super::super::types::{FilterLinkView, GroupRowView, GroupSortHeaders, SortHeaderView};
-use crate::handlers::ssr::types::table::SortColumn;
+use super::super::types::{FilterLinkView, GroupRowView, GroupSortHeaders};
+use systemprompt_web_admin_core::ssr::types::table::{SortColumn, SortHeaderView};
 
 pub(super) const BASE_URL: &str = "/admin/groups";
 

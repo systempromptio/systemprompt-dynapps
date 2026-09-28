@@ -22,15 +22,15 @@ use serde::Deserialize;
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 
-use crate::error::{AdminError, AdminHtmlResult};
 use crate::repositories;
-use crate::types::UserContext;
+use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
+use systemprompt_web_admin_core::types::UserContext;
 
 use context::{DetailTabView, UserDetailContext};
 use headline::{BaseInputs, base_context};
 
-use crate::handlers::ssr::list_view::DEFAULT_PAGE_SIZE;
-use crate::handlers::ssr::page::Page;
+use systemprompt_web_admin_core::ssr::list_view::DEFAULT_PAGE_SIZE;
+use systemprompt_web_admin_core::ssr::page::Page;
 
 const TABS: [(&str, &str); 7] = [
     ("identity", "Identity"),
@@ -92,19 +92,21 @@ pub(crate) async fn user_detail_page(
     ))
     .await;
 
-    Ok(super::super::render_typed_page(
-        &shell.engine,
-        "user-detail",
-        &data,
-        &shell.user,
-        &shell.marketplace,
-    ))
+    Ok(
+        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+            &shell.engine,
+            "user-detail",
+            &data,
+            &shell.user,
+            &shell.marketplace,
+        ),
+    )
 }
 
 struct ActiveTabRead<'a> {
     pool: &'a PgPool,
     user_id: &'a UserId,
-    detail: &'a crate::types::UserDetail,
+    detail: &'a systemprompt_web_admin_core::types::UserDetail,
     tab: &'static str,
     page: i64,
     viewer: &'a UserContext,

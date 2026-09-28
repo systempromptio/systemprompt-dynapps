@@ -14,9 +14,11 @@ use serde::Serialize;
 // JSON: per-tool payloads pretty-printed for the transcript view.
 use serde_json::Value;
 
-use crate::handlers::ssr::format::format_cost;
 use crate::repositories::analytics::context_detail::ContextRequestRow;
-use crate::repositories::analytics::conversations::{redact_text, strip_gateway_markers};
+use systemprompt_web_admin_core::repositories::conversations::{
+    redact_text, strip_gateway_markers,
+};
+use systemprompt_web_admin_core::ssr::format::format_cost;
 
 mod conversation;
 mod grouping;

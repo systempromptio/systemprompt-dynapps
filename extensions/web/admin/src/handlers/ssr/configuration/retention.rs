@@ -9,8 +9,8 @@ use serde::Serialize;
 use sqlx::PgPool;
 use systemprompt::models::profile::RetentionConfig;
 
-use crate::error::AdminResult;
 use crate::repositories::jobs::find_job_run;
+use systemprompt_web_admin_core::error::AdminResult;
 
 const JOB_NAME: &str = "database_cleanup";
 

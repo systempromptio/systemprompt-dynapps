@@ -1,20 +1,15 @@
 //! Admin plane request middleware: session resolution and page context.
 //!
 //! `user_context_middleware` runs first and puts a [`UserContext`] on the
-//! request; [`gates`] then decides whether the request may proceed, and
-//! `marketplace_context_middleware` supplies what a page needs to render.
+//! request; `systemprompt_web_admin_core::middleware::gates` then decides
+//! whether the request may proceed, and `marketplace_context_middleware`
+//! supplies what a page needs to render.
 //!
 //! The marketplace counts injected into every render are cached because they
 //! are derived from a remote catalog and are identical for every user holding
 //! the same role set.
 
-mod gates;
 mod pat;
-
-pub(crate) use gates::{
-    non_admin_gate_middleware, require_auth_middleware, require_roles_middleware,
-    require_scoped_console_middleware, require_user_middleware,
-};
 
 use std::sync::Arc;
 
@@ -27,9 +22,9 @@ use serde::Serialize;
 use sqlx::PgPool;
 use systemprompt::identifiers::{Email, UserId};
 
-use super::handlers::extract_user_from_cookie;
-use super::repositories::scope::Participation;
-use super::types::{
+use systemprompt_web_admin_core::auth::session::extract_user_from_cookie;
+use systemprompt_web_admin_core::repositories::scope::Participation;
+use systemprompt_web_admin_core::types::{
     UserContext, roles_grant_console, roles_grant_developer, roles_grant_manage,
     roles_grant_platform,
 };
@@ -107,14 +102,14 @@ pub(crate) async fn user_context_middleware(
 async fn find_access_profile(
     pool: &PgPool,
     user_id: &UserId,
-) -> Option<super::repositories::users::queries::UserAccessProfile> {
-    super::repositories::users::queries::find_user_access_profile(pool, user_id)
-        .await
-        .inspect_err(
-            |e| tracing::warn!(error = %e, user_id = %user_id, "Failed to fetch user roles"),
-        )
-        .ok()
-        .flatten()
+) -> Option<systemprompt_web_admin_core::repositories::principal::role::UserAccessProfile> {
+    systemprompt_web_admin_core::repositories::principal::role::find_user_access_profile(
+        pool, user_id,
+    )
+    .await
+    .inspect_err(|e| tracing::warn!(error = %e, user_id = %user_id, "Failed to fetch user roles"))
+    .ok()
+    .flatten()
 }
 
 async fn find_participation(
@@ -123,7 +118,7 @@ async fn find_participation(
     group_ids: &[String],
     project_ids: &[String],
 ) -> Participation {
-    super::repositories::scope::participation::get_participation(
+    systemprompt_web_admin_core::repositories::scope::participation::get_participation(
         pool, user_id, group_ids, project_ids,
     )
     .await

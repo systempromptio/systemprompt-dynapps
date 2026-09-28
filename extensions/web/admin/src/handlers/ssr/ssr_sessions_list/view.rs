@@ -7,18 +7,18 @@
 
 use systemprompt::identifiers::UserId;
 
-use crate::handlers::ssr::list_view::{
+use systemprompt_web_admin_core::repositories::filter_options::FilterOption;
+use systemprompt_web_admin_core::repositories::scope::ScopeRequest;
+use systemprompt_web_admin_core::ssr::list_view::{
     AnnotatedOption, Chip, PageWindow, Pagination, Preserved, ScopeFilterView, TimeRangeContext,
     scope_filter_view,
 };
-use crate::repositories::governance::filter_options::FilterOption;
-use crate::repositories::scope::ScopeRequest;
-use crate::types::UserContext;
-use crate::util::time_range::TimeRange;
+use systemprompt_web_admin_core::types::UserContext;
+use systemprompt_web_admin_core::util::time_range::TimeRange;
 
 use super::context::SessionFilterOptionsView;
 use super::{BASE_URL, SessionListQuery};
-use crate::handlers::ssr::list_view::{paginate, query_string_dropping};
+use systemprompt_web_admin_core::ssr::list_view::{paginate, query_string_dropping};
 
 pub(super) fn preserved_query_string(query: &SessionListQuery, drop: &[&str]) -> String {
     let pairs: [(&str, Option<&str>); 10] = [

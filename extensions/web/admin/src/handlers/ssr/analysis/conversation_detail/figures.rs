@@ -4,10 +4,14 @@ use super::views::ConversationKpiView;
 use crate::handlers::ssr::analysis::tone::{
     cache_tone, deny_tone, error_rate_tone, latency_tone, percent, safety_tone,
 };
-use crate::handlers::ssr::format::{format_cost, format_duration_ms, format_token_total};
-use crate::handlers::ssr::types::{Plot, SvgLineChartView, SvgSeriesInput, chart_on_axis};
-use crate::repositories::analysis::conversations::ConversationFactRow;
+use crate::repositories::analysis::conversations::ConversationFacts;
 use crate::repositories::analysis::conversations::planes::ConversationTurnRow;
+use systemprompt_web_admin_core::ssr::format::{
+    format_cost, format_duration_ms, format_token_total,
+};
+use systemprompt_web_admin_core::ssr::types::svg_line::{
+    Plot, SvgLineChartView, SvgSeriesInput, chart_on_axis,
+};
 
 const fn kpi(
     head: (&'static str, &'static str),
@@ -26,7 +30,7 @@ const fn kpi(
     }
 }
 
-fn usage_kpis(f: &ConversationFactRow) -> Vec<ConversationKpiView> {
+fn usage_kpis(f: &ConversationFacts) -> Vec<ConversationKpiView> {
     let cache = f.cache_read_tokens + f.cache_creation_tokens;
     vec![
         kpi(
@@ -90,7 +94,7 @@ fn usage_kpis(f: &ConversationFactRow) -> Vec<ConversationKpiView> {
     ]
 }
 
-fn health_kpis(f: &ConversationFactRow) -> Vec<ConversationKpiView> {
+fn health_kpis(f: &ConversationFacts) -> Vec<ConversationKpiView> {
     vec![
         kpi(
             ("Tools", "wrench"),
@@ -159,7 +163,7 @@ fn health_kpis(f: &ConversationFactRow) -> Vec<ConversationKpiView> {
     ]
 }
 
-pub(super) fn kpis(f: &ConversationFactRow) -> Vec<ConversationKpiView> {
+pub(super) fn kpis(f: &ConversationFacts) -> Vec<ConversationKpiView> {
     let mut tiles = usage_kpis(f);
     tiles.extend(health_kpis(f));
     tiles

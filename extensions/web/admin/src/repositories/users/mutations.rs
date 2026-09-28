@@ -10,7 +10,7 @@ use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 use systemprompt_web_shared::error::MarketplaceError;
 
-use crate::types::{CreateUserRequest, UpdateUserRequest, UserSummary};
+use systemprompt_web_admin_core::types::{CreateUserRequest, UpdateUserRequest, UserSummary};
 
 pub async fn create_user(
     pool: &PgPool,

@@ -5,11 +5,11 @@ use axum::http::HeaderMap;
 use axum::response::Response;
 use serde::Serialize;
 
-use crate::error::AdminHtmlResult;
-use crate::templates::AdminTemplateEngine;
-use crate::types::{MarketplaceContext, UserContext};
+use systemprompt_web_admin_core::error::AdminHtmlResult;
+use systemprompt_web_admin_core::templates::AdminTemplateEngine;
+use systemprompt_web_admin_core::types::{MarketplaceContext, UserContext};
 
-use super::ssr_helpers::render_typed_page;
+use systemprompt_web_admin_core::ssr::helpers::render_typed_page;
 
 // Why: core's `RoutingDecision::is_static_asset_path` has no archive extension
 // but whitelists the `/files` prefix, so `/downloads` would not serve. Names

@@ -20,9 +20,10 @@ use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use systemprompt::api::routes::admin::services::ServicesRefresh;
 
-use crate::activity::{self, NewActivity};
-use crate::error::{AdminError, AdminResult};
-use crate::types::UserContext;
+use systemprompt_web_admin_core::activity;
+use systemprompt_web_admin_core::activity::NewActivity;
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::types::UserContext;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub(crate) struct CoreRefreshResponse {

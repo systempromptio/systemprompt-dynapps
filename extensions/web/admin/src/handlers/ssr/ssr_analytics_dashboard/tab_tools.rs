@@ -5,14 +5,14 @@
 //! they are counted in their own column rather than folded into the
 //! percentile as zeros.
 
-use crate::handlers::ssr::list_view::PageWindow;
 use crate::repositories::analytics::site::tools::{ToolServerRow, ToolStatsRow};
+use systemprompt_web_admin_core::ssr::list_view::PageWindow;
 
 use super::context::{KpiTile, ToolRowView, ToolServerRowView, ToolsTabView};
 use super::tab_models::{ms, pct, share};
 use super::view::compact;
 use super::{AnalyticsDashboardQuery, urls};
-use crate::handlers::ssr::list_view::DEFAULT_PAGE_SIZE;
+use systemprompt_web_admin_core::ssr::list_view::DEFAULT_PAGE_SIZE;
 
 pub(super) fn tools_tab(
     servers: &[ToolServerRow],

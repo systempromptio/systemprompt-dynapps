@@ -10,13 +10,13 @@ use systemprompt::identifiers::McpServerId;
 
 use sqlx::PgPool;
 
-use crate::handlers::ssr::list_view::{PageWindow, Pagination};
 use crate::repositories::mcp::runtime;
-use crate::util::time_range::TimeRange;
+use systemprompt_web_admin_core::ssr::list_view::{PageWindow, Pagination};
+use systemprompt_web_admin_core::util::time_range::TimeRange;
 
 use super::rows::BASE_URL;
 use super::{detail, view};
-use crate::handlers::ssr::list_view::{DEFAULT_PAGE_SIZE, paginate};
+use systemprompt_web_admin_core::ssr::list_view::{DEFAULT_PAGE_SIZE, paginate};
 
 const TOOL_LIMIT: i64 = 50;
 const CALLER_LIMIT: i64 = 25;

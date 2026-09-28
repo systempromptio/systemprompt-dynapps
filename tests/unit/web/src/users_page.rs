@@ -200,7 +200,7 @@ fn render_access(mut access: serde_json::Value, can_write: bool) -> String {
         access["sections"] = serde_json::json!([]);
     }
     access["overview"]["device_detail"] = serde_json::json!("");
-    let engine = systemprompt_web_admin::templates::AdminTemplateEngine::new(
+    let engine = systemprompt_web_admin_core::templates::AdminTemplateEngine::new(
         &repo_root().join("storage/files/admin"),
     )
     .expect("templates load");

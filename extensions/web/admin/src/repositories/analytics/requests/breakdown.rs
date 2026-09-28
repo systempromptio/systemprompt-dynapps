@@ -17,8 +17,8 @@
 
 use sqlx::PgPool;
 
-use crate::repositories::scope::SubjectScope;
-use crate::util::time_range::TimeRange;
+use systemprompt_web_admin_core::repositories::scope::SubjectScope;
+use systemprompt_web_admin_core::util::time_range::TimeRange;
 
 #[derive(Debug, Clone)]
 pub struct BreakdownRow {

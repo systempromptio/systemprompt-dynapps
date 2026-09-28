@@ -5,13 +5,13 @@
 //! a renamed variant is a silently dropped audit row, not a compile error.
 
 
-use systemprompt_web_admin::activity::{ActivityAction, ActivityCategory, ActivityEntity};
-use systemprompt_web_admin::types::access_control::{AccessControlRule, AccessDecision};
-use systemprompt_web_admin::types::hooks_export::{
+use systemprompt_web_admin_core::activity::{ActivityAction, ActivityCategory, ActivityEntity};
+use systemprompt_web_admin_core::types::access_control::{AccessControlRule, AccessDecision};
+use systemprompt_web_admin_core::types::hooks_export::{
     HookEventType, HookHandler, HooksFile, HttpHook, MatcherGroup,
 };
-use systemprompt_web_admin::types::webhook::{HookEvent, HookEventPayload, ToolInputSummary};
-use systemprompt_web_admin::types::{DashboardQuery, GatewayRouteView};
+use systemprompt_web_admin_core::types::webhook::{HookEvent, HookEventPayload, ToolInputSummary};
+use systemprompt_web_admin_core::types::{DashboardQuery, GatewayRouteView};
 
 const ACTIVITY_CATEGORIES: &[(ActivityCategory, &str)] = &[
     (ActivityCategory::Login, "login"),

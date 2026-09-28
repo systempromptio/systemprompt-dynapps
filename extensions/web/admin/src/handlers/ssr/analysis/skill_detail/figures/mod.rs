@@ -3,9 +3,11 @@
 
 mod tiles;
 
-use crate::handlers::ssr::format::{format_cost, format_token_total};
-use crate::handlers::ssr::types::{Plot, SvgLineChartView, SvgSeriesInput, chart_on_axis};
 use crate::repositories::analysis::skills::SkillDayRow;
+use systemprompt_web_admin_core::ssr::format::{format_cost, format_token_total};
+use systemprompt_web_admin_core::ssr::types::svg_line::{
+    Plot, SvgLineChartView, SvgSeriesInput, chart_on_axis,
+};
 
 pub(super) use tiles::kpis;
 

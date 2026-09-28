@@ -17,16 +17,16 @@ use axum::response::Response;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 
-use crate::error::{AdminError, AdminHtmlResult};
-use crate::handlers::ssr::list_view::{
-    DEFAULT_PAGE_SIZE, PageWindow, Pagination, SelectOptionView, paginate,
-};
-use crate::handlers::ssr::types::BreadcrumbView;
 use crate::repositories::governance::approvals::{
     ApprovalStats, get_approval_stats, list_approvals_paged,
 };
-use crate::templates::AdminTemplateEngine;
-use crate::types::{MarketplaceContext, UserContext};
+use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
+use systemprompt_web_admin_core::ssr::list_view::{
+    DEFAULT_PAGE_SIZE, PageWindow, Pagination, SelectOptionView, paginate,
+};
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
+use systemprompt_web_admin_core::templates::AdminTemplateEngine;
+use systemprompt_web_admin_core::types::{MarketplaceContext, UserContext};
 
 mod view;
 
@@ -129,13 +129,15 @@ pub(crate) async fn approvals_page(
         base_url: BASE_URL,
     };
 
-    Ok(super::render_typed_page(
-        &engine,
-        "governance-approvals",
-        &ctx,
-        &user_ctx,
-        &mkt_ctx,
-    ))
+    Ok(
+        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+            &engine,
+            "governance-approvals",
+            &ctx,
+            &user_ctx,
+            &mkt_ctx,
+        ),
+    )
 }
 
 fn url_for(status: Option<&str>, page: i64) -> String {

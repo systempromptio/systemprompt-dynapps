@@ -28,16 +28,23 @@
 # this tree, so they are skipped entirely.
 set -uo pipefail
 
-REPO_DIR="${REPO_DIR:-extensions/web/admin/src/repositories}"
 SIBLING_REPO="${SIBLING_REPO:-}"
 
-[ -d "$REPO_DIR" ] || { echo "check-dead-repository-code: no $REPO_DIR - nothing to check"; exit 0; }
+# The repository layer is spread over the shared admin core, the residual admin
+# crate and each admin domain crate. REPO_DIR (space-separated, globs allowed)
+# overrides the list; directories that do not exist are skipped.
+REPO_DIRS=()
+for d in ${REPO_DIR:-extensions/web/shared/admin-core/src/repositories extensions/web/admin/src/repositories extensions/web/admin/*/src/repositories}; do
+    [ -d "$d" ] && REPO_DIRS+=("$d")
+done
+
+[ "${#REPO_DIRS[@]}" -gt 0 ] || { echo "check-dead-repository-code: no repository directory - nothing to check"; exit 0; }
 
 RS_FILES=()
 while IFS= read -r f; do
     head -n 30 "$f" | grep -q '^#!\[cfg(feature' && continue
     RS_FILES+=("$f")
-done < <(find "$REPO_DIR" -name '*.rs' | sort)
+done < <(find "${REPO_DIRS[@]}" -name '*.rs' | sort)
 [ "${#RS_FILES[@]}" -gt 0 ] || { echo "check-dead-repository-code: OK (no non-feature-gated files)"; exit 0; }
 
 roots_for() {
@@ -76,7 +83,7 @@ done < <(awk '
 DUPES=$(grep -hoE '^\s*pub (async )?fn [a-z_0-9]+\([^)]*' "${RS_FILES[@]}" 2>/dev/null \
         | grep -vE '\(\s*&?\s*(mut\s+)?self\b' | sed -E 's/.*fn ([a-z_0-9]+)\(.*/\1/' | sort | uniq -d)
 if [ -n "$DUPES" ]; then
-    echo "check-dead-repository-code: duplicate public function name(s) in $REPO_DIR."
+    echo "check-dead-repository-code: duplicate public function name(s) in ${REPO_DIRS[*]}."
     echo "Same-named functions mask each other's liveness; rename for distinctness:"
     printf '    %s\n' $DUPES
     exit 1

@@ -7,13 +7,14 @@
 
 use urlencoding::encode as urlencode;
 
-use crate::handlers::ssr::list_view::{PageWindow, Pagination};
+use systemprompt_web_admin_core::ssr::list_view::{PageWindow, Pagination};
 
-use crate::handlers::ssr::list_view::Chip;
+use systemprompt_web_admin_core::ssr::list_view::Chip;
 
-use super::context::{RequestsTab, TabLinkView};
+use super::context::RequestsTab;
 use super::{BASE_URL, RequestsQuery};
-use crate::handlers::ssr::list_view::{paginate_prefixed, query_string_dropping};
+use systemprompt_web_admin_core::ssr::list_view::{paginate_prefixed, query_string_dropping};
+use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;
 
 pub(super) fn log_filter_url(query: &RequestsQuery, param: &str, value: &str) -> String {
     let qs = preserved_query_string(query, &[param, "page", "tab"]);

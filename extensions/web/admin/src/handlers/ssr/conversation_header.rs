@@ -7,9 +7,11 @@
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 
-use crate::handlers::ssr::format::{format_cost, format_span, format_token_total, short_id};
 use crate::handlers::ssr::transcript_view::ConversationView;
 use crate::repositories::analytics::context_detail::{ContextHeader, ContextKpis};
+use systemprompt_web_admin_core::ssr::format::{
+    format_cost, format_span, format_token_total, short_id,
+};
 
 const TITLE_PROMPT_CHARS: usize = 120;
 const GATEWAY_DEFAULT_NAME: &str = "Gateway conversation";

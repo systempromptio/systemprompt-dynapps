@@ -5,12 +5,22 @@
 use async_trait::async_trait;
 use serde::Deserialize;
 
-use crate::error::AdminResult;
-use crate::export::model::{Cell, CellKind, Column, DataSet, ExportContext, Table, Window};
-use crate::repositories::projects::crud::list_projects;
 use crate::repositories::projects::usage::{LISTING_CAP, ProjectRollup, list_project_rollups};
+use systemprompt_web_admin_core::error::AdminResult;
+use systemprompt_web_admin_core::export::model::{
+    Cell, CellKind, Column, DataSet, ExportContext, Table, Window,
+};
+use systemprompt_web_admin_core::export::registry::DataSetRegistration;
+use systemprompt_web_admin_core::repositories::scope::containers::list_project_options;
 
 pub(crate) struct Projects;
+
+inventory::submit! {
+    DataSetRegistration {
+        order: 11,
+        dataset: &Projects,
+    }
+}
 
 #[derive(Debug, Default, Deserialize)]
 struct ProjectsQuery {
@@ -97,7 +107,7 @@ impl DataSet for Projects {
         let needle = query.q.unwrap_or_default().trim().to_lowercase();
         let (capped_rollups, uncapped_projects) = tokio::try_join!(
             list_project_rollups(ctx.pool, days, LISTING_CAP),
-            list_projects(ctx.pool),
+            list_project_options(ctx.pool),
         )?;
         let total = uncapped_projects
             .iter()

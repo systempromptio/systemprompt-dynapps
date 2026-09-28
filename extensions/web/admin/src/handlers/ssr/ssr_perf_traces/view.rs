@@ -6,19 +6,19 @@
 
 use systemprompt::identifiers::{AgentId, UserId};
 
-use crate::handlers::ssr::list_view::{
+use crate::repositories::traces::{TraceFilter, TraceSortColumn, TraceSortDir};
+use systemprompt_web_admin_core::repositories::filter_options::{FilterOption, FilterOptions};
+use systemprompt_web_admin_core::repositories::scope::ScopeRequest;
+use systemprompt_web_admin_core::ssr::list_view::{
     AnnotatedOption, Chip, PageWindow, Pagination, Preserved, ScopeFilterView, TimeRangeContext,
     scope_filter_view,
 };
-use crate::repositories::governance::filter_options::{FilterOption, FilterOptions};
-use crate::repositories::scope::ScopeRequest;
-use crate::repositories::traces::{TraceFilter, TraceSortColumn, TraceSortDir};
-use crate::types::UserContext;
-use crate::util::time_range::TimeRange;
+use systemprompt_web_admin_core::types::UserContext;
+use systemprompt_web_admin_core::util::time_range::TimeRange;
 
 use super::context::TraceFilterOptionsView;
 use super::{BASE_URL, TraceListQuery, empty_to_none};
-use crate::handlers::ssr::list_view::{paginate_prefixed, query_string_dropping};
+use systemprompt_web_admin_core::ssr::list_view::{paginate_prefixed, query_string_dropping};
 
 pub(super) const fn sort_col_to_str(c: TraceSortColumn) -> &'static str {
     match c {
@@ -218,10 +218,10 @@ pub(super) fn export_view(
     query: &TraceListQuery,
     range: TimeRange,
     preset: &str,
-) -> crate::export::ExportView {
-    crate::export::ExportView::single(
+) -> systemprompt_web_admin_core::export::view::ExportView {
+    systemprompt_web_admin_core::export::view::ExportView::single(
         "traces",
-        &crate::export::view::query_string(&[
+        &systemprompt_web_admin_core::export::view::query_string(&[
             ("preset", Some(preset)),
             ("from", Some(&range.from.to_rfc3339())),
             ("to", Some(&range.to.to_rfc3339())),

@@ -10,10 +10,10 @@ use systemprompt::identifiers::{PluginId, UserId};
 
 use systemprompt_web_shared::format::truncate_ellipsis;
 
-use crate::handlers::ssr::format::local_time;
 use crate::repositories::governance::decision_calls::{ChainEvaluation, DecisionCallRow};
 use crate::repositories::governance::findings::SafetyFindingLogRow;
 use crate::repositories::governance::hook_events::RecentHookEvent;
+use systemprompt_web_admin_core::ssr::format::local_time;
 
 const REASON_CHARS: usize = 90;
 
@@ -73,7 +73,7 @@ pub(super) struct HookRow {
     pub(super) tone: &'static str,
 }
 
-pub(super) use crate::types::governance_labels::{plane_of, target_label};
+use systemprompt_web_admin_core::types::governance_labels::{plane_of, target_label};
 
 pub(super) const fn decision_tone(decision: &str) -> &'static str {
     match decision.as_bytes() {
@@ -188,7 +188,7 @@ fn span_of(row: &DecisionCallRow) -> String {
     if ms < 1000 {
         return String::new();
     }
-    let seconds = crate::numeric::to_f64(ms) / 1000.0;
+    let seconds = systemprompt_web_admin_core::numeric::to_f64(ms) / 1000.0;
     format!("+{seconds:.1}s")
 }
 
@@ -221,7 +221,7 @@ fn short(id: &str) -> String {
     if id.is_empty() {
         return "\u{2014}".to_owned();
     }
-    crate::handlers::ssr::format::short_id(id)
+    systemprompt_web_admin_core::ssr::format::short_id(id)
 }
 
 pub(super) fn hook_rows(events: &[RecentHookEvent]) -> Vec<HookRow> {

@@ -11,7 +11,6 @@ use serde::Serialize;
 use sqlx::PgPool;
 use systemprompt::marketplace::managed::{WithdrawalProposal, WithdrawalStatus};
 
-use crate::error::AdminResult;
 use crate::handlers::ssr::analysis::lifecycle::view::{
     DistributionView, PublicationView, ReceiptView, distribution_view, list_publication_views,
     receipt_view,
@@ -20,7 +19,8 @@ use crate::repositories::analysis::marketplace_versions::MarketplaceVersionMetri
 use crate::repositories::analysis::publications::{
     list_publication_lifecycle, list_resource_coverage,
 };
-use crate::routes::managed_state::ManagedState;
+use systemprompt_web_admin_core::error::AdminResult;
+use systemprompt_web_admin_core::state::ManagedState;
 
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct CoverageView {

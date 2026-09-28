@@ -12,8 +12,8 @@ use systemprompt::identifiers::PluginId;
 
 use serde::Serialize;
 
-use crate::repositories::marketplace::manifests::MarketplaceConfigSummary;
-use crate::types::access_control::{AccessControlRule, AccessDecision};
+use systemprompt_web_admin_core::catalog_index::manifests::MarketplaceConfigSummary;
+use systemprompt_web_admin_core::types::access_control::{AccessControlRule, AccessDecision};
 
 const EVERYONE_ROLE: &str = "user";
 
@@ -145,10 +145,16 @@ pub(super) async fn visibility_inputs(
     services_path: &std::path::Path,
 ) -> (Vec<MarketplaceConfigSummary>, Vec<AccessControlRule>) {
     let mut manifests =
-        crate::repositories::marketplace::manifests::list_marketplace_configs(services_path)
-            .unwrap_or_default();
-    crate::repositories::marketplace::manifests_access::attach_access(pool, &mut manifests).await;
-    let rules = crate::repositories::users::access_control::list_all_rules(pool)
+        systemprompt_web_admin_core::catalog_index::manifests::list_marketplace_configs(
+            services_path,
+        )
+        .unwrap_or_default();
+    systemprompt_web_admin_core::catalog_index::manifests_access::attach_access(
+        pool,
+        &mut manifests,
+    )
+    .await;
+    let rules = systemprompt_web_admin_core::repositories::entitlement::list_all_rules(pool)
         .await
         .inspect_err(|e| tracing::warn!(error = %e, "catalog: rule listing failed"))
         .unwrap_or_default();

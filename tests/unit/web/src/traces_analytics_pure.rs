@@ -1,10 +1,10 @@
-use systemprompt_web_admin::repositories::analytics::conversation_rows::ConversationFilter;
 use systemprompt_web_admin::repositories::analytics::requests::{
     RequestFilter, RequestSortColumn, RequestSortSpec, SortDir,
 };
 use systemprompt_web_admin::repositories::traces::{
     SpanKind, SpanStatus, TraceFilter, TraceSort, TraceSortColumn, TraceSortDir, TraceStats,
 };
+use systemprompt_web_admin_core::repositories::conversations::rows::ConversationFilter;
 
 #[test]
 fn span_kind_serialises_to_its_snake_case_name() {

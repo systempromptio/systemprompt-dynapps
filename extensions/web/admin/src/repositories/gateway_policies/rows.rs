@@ -14,7 +14,7 @@ use sqlx::PgPool;
 use systemprompt::ai::GatewayPolicySpec;
 use systemprompt::identifiers::AiGatewayPolicyId;
 
-use crate::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
 #[derive(Debug, Clone, Serialize)]
 pub struct PolicyRow {

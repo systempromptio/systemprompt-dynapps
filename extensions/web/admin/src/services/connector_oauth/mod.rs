@@ -12,7 +12,6 @@ pub mod discovery;
 pub mod generic;
 mod generic_discovery;
 pub mod payload;
-mod report;
 mod resolve;
 mod response;
 mod salesforce;
@@ -23,16 +22,16 @@ mod transport;
 mod userinfo;
 pub mod verify;
 
-use crate::error::{AdminError, AdminResult};
-use crate::repositories::secrets::secret_crypto;
 use crate::repositories::users::connector_credentials::EncryptedGrant;
 pub use config::Provider;
 pub use generic::Consent;
-pub use report::{VerificationReport, VerificationStep};
 use resolve::resolve_token;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
+use systemprompt_web_admin_core::connections::report::VerificationReport;
+use systemprompt_web_admin_core::crypto::secret_crypto;
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 pub use transport::{authorize, exchange, exchange_with_client, refresh_with_client};
 
 /// Debug output never reveals credentials; serialization is only for the

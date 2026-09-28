@@ -5,7 +5,7 @@
 
 
 use handlebars::Handlebars;
-use systemprompt_web_admin::templates::helpers::register_helpers;
+use systemprompt_web_admin_core::templates::helpers::register_helpers;
 
 fn engine() -> Handlebars<'static> {
     let mut hbs = Handlebars::new();

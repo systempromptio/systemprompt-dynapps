@@ -26,9 +26,9 @@ use axum::response::{IntoResponse, Redirect, Response};
 use serde::Deserialize;
 use sqlx::PgPool;
 
-use crate::error::AdminHtmlResult;
-use crate::templates::AdminTemplateEngine;
-use crate::types::{MarketplaceContext, UserContext};
+use systemprompt_web_admin_core::error::AdminHtmlResult;
+use systemprompt_web_admin_core::templates::AdminTemplateEngine;
+use systemprompt_web_admin_core::types::{MarketplaceContext, UserContext};
 
 use view::OverviewRange;
 
@@ -52,7 +52,9 @@ pub(crate) async fn overview_page(
     let loaded = data::load_overview(&pool, range).await;
     let page = view::overview_page(range, &loaded);
 
-    Ok(super::render_typed_page(
-        &engine, "overview", &page, &user_ctx, &mkt_ctx,
-    ))
+    Ok(
+        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+            &engine, "overview", &page, &user_ctx, &mkt_ctx,
+        ),
+    )
 }

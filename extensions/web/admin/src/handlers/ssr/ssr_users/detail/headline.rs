@@ -8,11 +8,11 @@
 
 use systemprompt::identifiers::UserId;
 
-use crate::handlers::ssr::format::{format_cost, format_token_total};
-use crate::handlers::ssr::types::BreadcrumbView;
-use crate::repositories::scope::defaults::ScopeDefaults;
-use crate::repositories::scope::membership::UNATTRIBUTED;
-use crate::types::{UserContext, UserDetail};
+use systemprompt_web_admin_core::repositories::scope::defaults::ScopeDefaults;
+use systemprompt_web_admin_core::repositories::scope::membership::UNATTRIBUTED;
+use systemprompt_web_admin_core::ssr::format::{format_cost, format_token_total};
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
+use systemprompt_web_admin_core::types::{UserContext, UserDetail};
 
 use super::super::BASE_URL;
 use super::context::{DetailKpiView, UserDetailContext, UserHeaderView};

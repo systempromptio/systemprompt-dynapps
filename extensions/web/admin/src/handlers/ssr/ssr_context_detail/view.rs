@@ -8,21 +8,22 @@
 use crate::repositories::analytics::context_detail::{
     ContextHeader, ContextKpis, ContextRequestRow,
 };
-use crate::types::conversation_analytics::SessionEntityLink;
+use systemprompt_web_admin_core::types::conversation_analytics::SessionEntityLink;
 
-use super::context::{
-    BreadcrumbView, ContextDetailPageContext, ContextRequestRowView, EntityLinkView, HeaderView,
-    TabLinkView,
-};
+use super::context::{ContextDetailPageContext, ContextRequestRowView, EntityLinkView, HeaderView};
 use super::data::TranscriptRead;
 use crate::handlers::ssr::conversation_header::{
     resolve_title, stats_view, status_badge, timeline_display,
 };
-use crate::handlers::ssr::entity_urls::{request_detail_url, session_detail_url, trace_detail_url};
-use crate::handlers::ssr::format::{format_cost, local_time};
 use crate::handlers::ssr::transcript_view::{
     TranscriptOptions, build_conversation, format_latency, short_id,
 };
+use systemprompt_web_admin_core::ssr::entity_urls::{
+    request_detail_url, session_detail_url, trace_detail_url,
+};
+use systemprompt_web_admin_core::ssr::format::{format_cost, local_time};
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
+use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;
 
 const TAB_CONVERSATION: &str = "conversation";
 const TAB_REQUESTS: &str = "requests";
@@ -62,7 +63,10 @@ pub(super) fn build_detail_data(
         .map_or_else(|| "Conversations".to_owned(), |_| "Session".to_owned());
     ContextDetailPageContext {
         page: "context-detail",
-        export: crate::export::ExportView::conversation(&header.context_id, true),
+        export: systemprompt_web_admin_core::export::view::ExportView::conversation(
+            &header.context_id,
+            true,
+        ),
         tabs: tab_links(header, active_tab, requests.len(), entity_link_views.len()),
         show_conversation: active_tab == TAB_CONVERSATION,
         show_requests: active_tab == TAB_REQUESTS,

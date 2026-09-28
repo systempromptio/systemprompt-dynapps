@@ -2,7 +2,7 @@
 //! credential, device certificates, and one-shot exchange codes.
 
 use chrono::Utc;
-use systemprompt_web_admin::repositories::bridge::{
+use systemprompt_web_admin_core::repositories::bridge::{
     BridgeRepoError, EXCHANGE_CODE_TTL_SECONDS, EnrollDeviceParams, enroll_device,
     find_bridge_user, issue_exchange_code, list_api_keys_for_user, revoke_device_cert,
 };

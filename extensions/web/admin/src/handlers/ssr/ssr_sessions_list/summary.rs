@@ -4,9 +4,11 @@
 //! pagination. Both halves build their links from the same
 //! `preserved_query_string`, so a sort and a page turn carry identical state.
 
-use crate::handlers::ssr::format::{format_cost, format_token_total};
-use crate::handlers::ssr::types::SortHeaderView;
-use crate::repositories::analytics::conversation_rows::{ConversationSort, ConversationTotals};
+use systemprompt_web_admin_core::repositories::conversations::rows::{
+    ConversationSort, ConversationTotals,
+};
+use systemprompt_web_admin_core::ssr::format::{format_cost, format_token_total};
+use systemprompt_web_admin_core::ssr::types::table::SortHeaderView;
 
 use super::context::{SessionsSortHeaders, StatsView};
 use super::view::preserved_query_string;
@@ -113,7 +115,7 @@ fn delta(current: i64, previous: i64, rising: Rising) -> (Option<String>, Option
     if previous <= 0 {
         return (None, None);
     }
-    let pct = crate::numeric::percentage(current - previous, previous);
+    let pct = systemprompt_web_admin_core::numeric::percentage(current - previous, previous);
     let rounded = pct.round();
     if rounded == 0.0 {
         return (Some("0%".to_owned()), None);

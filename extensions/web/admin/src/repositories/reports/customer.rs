@@ -14,7 +14,7 @@ use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 use systemprompt_web_shared::error::MarketplaceError;
 
-use crate::repositories::scope::SubjectScope;
+use systemprompt_web_admin_core::repositories::scope::SubjectScope;
 
 /// The header figures: who was active and what they used.
 #[derive(Debug, Clone, Copy)]

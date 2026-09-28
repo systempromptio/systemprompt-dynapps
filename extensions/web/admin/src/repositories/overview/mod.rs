@@ -12,7 +12,6 @@
 
 pub mod dimension_series;
 pub mod kpis;
-pub mod liveness;
 pub mod queues;
 pub mod scopes;
 pub mod series;

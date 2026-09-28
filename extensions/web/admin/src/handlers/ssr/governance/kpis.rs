@@ -184,5 +184,8 @@ fn percent(part: i64, whole: i64) -> String {
     if whole <= 0 {
         return "0%".to_owned();
     }
-    format!("{:.1}%", crate::numeric::percentage(part, whole))
+    format!(
+        "{:.1}%",
+        systemprompt_web_admin_core::numeric::percentage(part, whole)
+    )
 }

@@ -5,7 +5,7 @@
 
 use std::path::Path;
 
-use systemprompt_web_admin::repositories::sync::tree_hash::subtree_hash;
+use systemprompt_web_admin_core::repositories::sync::tree_hash::subtree_hash;
 
 fn write(root: &Path, relative: &str, body: &str) {
     let path = root.join(relative);

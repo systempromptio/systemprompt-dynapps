@@ -8,8 +8,8 @@
 use serde::Serialize;
 
 use super::{BASE_URL, GovernanceQuery};
-use crate::handlers::ssr::list_view::{PageWindow, Pagination, paginate};
 use crate::repositories::governance::decision_log::DecisionSort;
+use systemprompt_web_admin_core::ssr::list_view::{PageWindow, Pagination, paginate};
 
 type Param = (&'static str, String);
 

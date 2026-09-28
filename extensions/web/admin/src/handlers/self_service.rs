@@ -21,10 +21,10 @@ use axum::response::{IntoResponse, Response};
 use serde::Deserialize;
 use sqlx::PgPool;
 
-use crate::error::{AdminError, AdminResult};
 use crate::repositories;
 use crate::repositories::users::user_settings::UserSettingsInput;
-use crate::types::UserContext;
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::types::UserContext;
 
 const TIMEZONE_MAX: usize = 64;
 

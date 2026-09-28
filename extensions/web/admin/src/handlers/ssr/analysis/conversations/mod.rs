@@ -37,19 +37,19 @@ use axum::response::Response;
 use sqlx::PgPool;
 use systemprompt_web_shared::{GroupId, ProjectId};
 
-use crate::error::{AdminError, AdminHtmlResult};
-use crate::handlers::ssr::list_view::scope_filter_view;
-use crate::handlers::ssr::page::Page;
-use crate::repositories;
+use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
+use systemprompt_web_admin_core::ssr::list_view::scope_filter_view;
+use systemprompt_web_admin_core::ssr::page::Page;
+
 use crate::repositories::analysis::conversations::{
     ConversationAnalysisFilter, ConversationAnalysisPage, load_conversation_analysis_page,
 };
-use crate::repositories::scope::ScopeRequest;
+use systemprompt_web_admin_core::repositories::scope::ScopeRequest;
 
-use crate::handlers::ssr::list_view::DEFAULT_PAGE_SIZE;
 use context::{ConversationsPageInputs, build_context};
 pub(crate) use judge_all::judge_all;
 use query::{BASE_URL, ConversationAnalysisQuery};
+use systemprompt_web_admin_core::ssr::list_view::DEFAULT_PAGE_SIZE;
 
 pub(crate) async fn page(
     shell: Page,
@@ -64,7 +64,10 @@ pub(crate) async fn page(
         params.group.as_deref(),
         params.project.as_deref(),
     );
-    let scope = repositories::scope::membership::get_subject_scope(&pool, &request).await?;
+    let scope = systemprompt_web_admin_core::repositories::scope::membership::get_subject_scope(
+        &pool, &request,
+    )
+    .await?;
     let filter = ConversationAnalysisFilter {
         subject_ids: scope.as_sql().map(<[String]>::to_vec),
         user_id: params.user_id(),
@@ -122,11 +125,13 @@ pub(crate) async fn page(
             manual_judge: !crate::handlers::ssr::analysis::judge_mode::automatic(),
         },
     );
-    Ok(crate::handlers::ssr::render_typed_page(
-        &shell.engine,
-        "analysis-conversations",
-        &context,
-        &shell.user,
-        &shell.marketplace,
-    ))
+    Ok(
+        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+            &shell.engine,
+            "analysis-conversations",
+            &context,
+            &shell.user,
+            &shell.marketplace,
+        ),
+    )
 }

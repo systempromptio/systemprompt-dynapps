@@ -34,11 +34,11 @@ use super::conversation::{
 use super::markers::{parse_assistant, strip_system_reminders, tidy_lines};
 use super::steps::{tool_step, turn_view};
 use super::{meta_view, preview, short_id};
-use crate::handlers::ssr::entity_urls::request_detail_url;
 use crate::repositories::analytics::context_detail::{ContextMessageRow, ContextRequestRow};
 use crate::repositories::analytics::context_tool_calls::ContextToolCallRow;
 use attribution::{Attribution, attribute, turn_started_at};
 use results::closes_tool_group;
+use systemprompt_web_admin_core::ssr::entity_urls::request_detail_url;
 
 type MessagesByRequest<'a> = HashMap<&'a str, Vec<&'a ContextMessageRow>>;
 type ToolsByRequest<'a> = HashMap<&'a str, Vec<&'a ContextToolCallRow>>;

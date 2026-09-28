@@ -15,17 +15,33 @@ use chrono::Utc;
 use serde::Deserialize;
 
 use super::analysis_skills::window;
-use crate::error::{AdminError, AdminResult};
-use crate::export::model::{Cell, CellKind, Column, DataSet, ExportContext, Table, Window};
 use crate::handlers::ssr::analysis::parse_skill_key;
 use crate::handlers::ssr::analysis::skill_runs::{
     ReleaseImpact, agent_s, human_wait_s, release_impact, run_success, version_label,
 };
 use crate::repositories::analysis::skills::{SkillRunFilter, SkillRunRow, list_skill_runs};
-use crate::types::UserContext;
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::export::model::{
+    Cell, CellKind, Column, DataSet, ExportContext, Table, Window,
+};
+use systemprompt_web_admin_core::export::registry::DataSetRegistration;
+use systemprompt_web_admin_core::types::UserContext;
 
 pub(crate) struct SkillRuns;
 pub(crate) struct KitReleaseImpact;
+
+inventory::submit! {
+    DataSetRegistration {
+        order: 30,
+        dataset: &SkillRuns,
+    }
+}
+inventory::submit! {
+    DataSetRegistration {
+        order: 31,
+        dataset: &KitReleaseImpact,
+    }
+}
 
 #[derive(Debug, Default, Deserialize)]
 struct RunScope {

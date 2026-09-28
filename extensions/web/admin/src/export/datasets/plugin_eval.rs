@@ -8,16 +8,32 @@ use async_trait::async_trait;
 use systemprompt::identifiers::MarketplaceId;
 
 use super::versions::readable_marketplace;
-use crate::error::AdminResult;
-use crate::export::model::{Cell, CellKind, Column, DataSet, ExportContext, Table, Window};
 use crate::repositories::analysis::marketplace_versions::VersionWindow;
 use crate::repositories::analysis::plugin_eval::{
     PluginEvalRow, PluginEvalToolRow, list_plugin_eval_runs, list_plugin_eval_tools,
 };
-use crate::types::UserContext;
+use systemprompt_web_admin_core::error::AdminResult;
+use systemprompt_web_admin_core::export::model::{
+    Cell, CellKind, Column, DataSet, ExportContext, Table, Window,
+};
+use systemprompt_web_admin_core::export::registry::DataSetRegistration;
+use systemprompt_web_admin_core::types::UserContext;
 
 pub(crate) struct PluginEval;
 pub(crate) struct PluginEvalTools;
+
+inventory::submit! {
+    DataSetRegistration {
+        order: 34,
+        dataset: &PluginEval,
+    }
+}
+inventory::submit! {
+    DataSetRegistration {
+        order: 35,
+        dataset: &PluginEvalTools,
+    }
+}
 
 const COLUMNS: &[Column] = &[
     Column::new("context_id", "Conversation", CellKind::Text),

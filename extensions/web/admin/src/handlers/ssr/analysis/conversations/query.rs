@@ -61,7 +61,9 @@ impl ConversationAnalysisQuery {
     }
 
     pub(crate) fn since_datetime(&self) -> Option<DateTime<Utc>> {
-        let preset = crate::util::time_range::TimeRangePreset::parse(self.since_label())?;
+        let preset = systemprompt_web_admin_core::util::time_range::TimeRangePreset::parse(
+            self.since_label(),
+        )?;
         Some(Utc::now() - preset.duration()?)
     }
 

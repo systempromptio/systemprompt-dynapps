@@ -8,7 +8,7 @@
 //! the sentinel is excluded from the conversation count alone.
 
 use chrono::{Duration, Utc};
-use systemprompt_web_admin::repositories::users::usage::{
+use systemprompt_web_admin_core::repositories::user_usage::{
     CONVERSATION_WINDOW_DAYS, get_conversation_summary, list_top_models,
 };
 

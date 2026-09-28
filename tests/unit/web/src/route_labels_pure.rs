@@ -6,7 +6,7 @@
 
 use systemprompt::models::ServicesConfig;
 use systemprompt::models::services::{GatewayConfigSpec, GatewayState, ProviderEntry};
-use systemprompt_web_admin::repositories::config::gateway::{
+use systemprompt_web_admin_core::repositories::gateway_catalog::{
     derive_provider_label, derive_route_label, get_route_labels,
 };
 

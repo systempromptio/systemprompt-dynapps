@@ -18,7 +18,7 @@ use sqlx::PgPool;
 use sqlx::types::Json;
 use systemprompt::identifiers::{MarketplaceId, PluginId};
 
-use crate::repositories::sync::marketplace_hash::MarketplaceManifest;
+use systemprompt_web_admin_core::repositories::sync::marketplace_hash::MarketplaceManifest;
 
 /// Half-open UTC window `[start, end)` applied to the instant a conversation
 /// first invoked a skill.

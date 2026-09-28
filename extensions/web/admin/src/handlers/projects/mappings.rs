@@ -14,10 +14,10 @@ use axum::response::{IntoResponse, Response};
 use serde::Serialize;
 use sqlx::PgPool;
 
-use crate::error::{AdminError, AdminResult};
 use crate::repositories::projects::mappings as repo;
-use crate::types::groups::AddAdMappingRequest;
-use crate::types::projects::ProjectAdMappingRow;
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::types::groups::AddAdMappingRequest;
+use systemprompt_web_admin_core::types::projects::ProjectAdMappingRow;
 
 use super::require_project;
 

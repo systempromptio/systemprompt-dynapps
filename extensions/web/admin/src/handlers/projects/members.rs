@@ -15,11 +15,11 @@ use serde::Serialize;
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 
-use crate::error::AdminResult;
 use crate::repositories::projects::members as repo;
-use crate::repositories::scope::defaults;
-use crate::types::UserContext;
-use crate::types::projects::{AddProjectMemberRequest, ProjectMemberRow};
+use systemprompt_web_admin_core::error::AdminResult;
+use systemprompt_web_admin_core::repositories::scope::defaults;
+use systemprompt_web_admin_core::types::UserContext;
+use systemprompt_web_admin_core::types::projects::{AddProjectMemberRequest, ProjectMemberRow};
 
 use super::require_project;
 

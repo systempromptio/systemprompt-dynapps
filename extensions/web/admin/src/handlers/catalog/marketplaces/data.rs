@@ -3,7 +3,7 @@
 //! The audience matrix asks the resolver one question per (subject,
 //! marketplace) pair, where the subject is a group or a role rather than a
 //! person. Every row goes through the same
-//! [`resolve_subject_matrix`](crate::repositories::users::access_control::resolve_subject_matrix)
+//! [`resolve_subject_matrix`](systemprompt_web_admin_core::repositories::entitlement::resolve_subject_matrix)
 //! the per-user matrix uses, so a cell here and a decision at the enforcement
 //! point cannot disagree.
 
@@ -14,9 +14,8 @@ use systemprompt_web_shared::GroupId;
 
 use sqlx::PgPool;
 
-use crate::repositories;
-use crate::repositories::marketplace::manifests::MarketplaceConfigSummary;
-use crate::repositories::users::access_control::{
+use systemprompt_web_admin_core::catalog_index::manifests::MarketplaceConfigSummary;
+use systemprompt_web_admin_core::repositories::entitlement::{
     MatrixSection, MatrixSubject, group_subject, resolve_subject_matrices, role_subject,
 };
 
@@ -29,18 +28,24 @@ pub(super) async fn load_manifests(
     services_path: &Path,
 ) -> Vec<MarketplaceConfigSummary> {
     let mut manifests =
-        repositories::marketplace::manifests::list_marketplace_configs(services_path)
-            .unwrap_or_else(|e| {
-                tracing::warn!(error = %e, "Failed to load marketplace manifests");
-                Vec::new()
-            });
-    repositories::marketplace::manifests_access::attach_access(pool, &mut manifests).await;
+        systemprompt_web_admin_core::catalog_index::manifests::list_marketplace_configs(
+            services_path,
+        )
+        .unwrap_or_else(|e| {
+            tracing::warn!(error = %e, "Failed to load marketplace manifests");
+            Vec::new()
+        });
+    systemprompt_web_admin_core::catalog_index::manifests_access::attach_access(
+        pool,
+        &mut manifests,
+    )
+    .await;
     manifests
 }
 
 fn section_input(
     manifests: &[MarketplaceConfigSummary],
-) -> Vec<repositories::users::access_control::SectionInput> {
+) -> Vec<systemprompt_web_admin_core::repositories::entitlement::SectionInput> {
     let rows = manifests
         .iter()
         .map(|m| (m.id.as_str().to_owned(), m.name.clone(), None))
@@ -76,10 +81,11 @@ pub(super) async fn audience_matrix(
     manifests: &[MarketplaceConfigSummary],
     roles: &[String],
 ) -> AudienceMatrixView {
-    let groups = repositories::groups::crud::list_group_summaries(pool)
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, "audience matrix: group listing failed"))
-        .unwrap_or_default();
+    let groups =
+        systemprompt_web_admin_core::repositories::scope::containers::list_group_summaries(pool)
+            .await
+            .inspect_err(|e| tracing::warn!(error = %e, "audience matrix: group listing failed"))
+            .unwrap_or_default();
 
     let mut subjects: Vec<MatrixSubject> = Vec::with_capacity(groups.len() + roles.len());
     let mut labels: Vec<(String, &'static str)> = Vec::with_capacity(subjects.capacity());
@@ -123,7 +129,7 @@ pub(super) async fn audience_matrix(
 }
 
 pub(super) async fn group_grants(pool: &PgPool) -> HashMap<MarketplaceId, Vec<GroupId>> {
-    let rules = repositories::users::access_control::list_all_rules(pool)
+    let rules = systemprompt_web_admin_core::repositories::entitlement::list_all_rules(pool)
         .await
         .inspect_err(|e| tracing::warn!(error = %e, "marketplaces: rule listing failed"))
         .unwrap_or_default();

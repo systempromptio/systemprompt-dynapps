@@ -16,11 +16,11 @@ use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 use systemprompt_web_shared::GroupId;
 
-use crate::error::AdminResult;
 use crate::repositories::groups::members as repo;
-use crate::repositories::scope::defaults;
-use crate::types::UserContext;
-use crate::types::groups::{AddGroupMemberRequest, GroupMemberRow};
+use systemprompt_web_admin_core::error::AdminResult;
+use systemprompt_web_admin_core::repositories::scope::defaults;
+use systemprompt_web_admin_core::types::UserContext;
+use systemprompt_web_admin_core::types::groups::{AddGroupMemberRequest, GroupMemberRow};
 
 use super::refuse_system_write;
 

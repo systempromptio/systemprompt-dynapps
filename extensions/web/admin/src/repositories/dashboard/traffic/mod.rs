@@ -10,7 +10,7 @@ pub use queries::{
 
 use sqlx::PgPool;
 
-use crate::types::{
+use systemprompt_web_admin_core::types::{
     TopPageDailyBucket, TrafficData, TrafficDevice, TrafficGeo, TrafficSource, TrafficTimeBucket,
     TrafficTopPage,
 };

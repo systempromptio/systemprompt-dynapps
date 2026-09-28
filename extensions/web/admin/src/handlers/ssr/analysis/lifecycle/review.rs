@@ -1,10 +1,6 @@
 //! The two review writes behind the publication page: deciding an upstream
 //! withdrawal proposal, and recording a manual review that publishes.
 
-use crate::error::{AdminError, AdminHtmlResult};
-use crate::handlers::shared::require_write_origin;
-use crate::routes::managed_state::ManagedState;
-use crate::types::UserContext;
 use axum::extract::{Extension, Form};
 use axum::http::HeaderMap;
 use axum::response::{IntoResponse, Redirect};
@@ -12,6 +8,10 @@ use serde::Deserialize;
 use std::sync::Arc;
 use systemprompt::identifiers::{ManagedResourceId, ResourceRevisionId};
 use systemprompt::marketplace::managed::{PublicationAction, PublicationRequest};
+use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
+use systemprompt_web_admin_core::request::require_write_origin;
+use systemprompt_web_admin_core::state::ManagedState;
+use systemprompt_web_admin_core::types::UserContext;
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]

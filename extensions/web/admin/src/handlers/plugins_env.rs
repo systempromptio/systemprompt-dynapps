@@ -16,11 +16,9 @@ use systemprompt::config::ProfileBootstrap;
 
 use systemprompt::identifiers::{PluginId, UserId};
 
-use crate::error::{AdminError, AdminResult};
 use crate::repositories;
-use crate::types::UserQuery;
-
-use super::responses::PluginEnvResponse;
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::types::UserQuery;
 
 pub(crate) async fn list_plugin_env_handler(
     State(pool): State<Arc<PgPool>>,
@@ -28,10 +26,10 @@ pub(crate) async fn list_plugin_env_handler(
     headers: HeaderMap,
     Query(query): Query<UserQuery>,
 ) -> AdminResult<Response> {
-    let cookie_uid = super::extract_user_from_cookie(&headers)
+    let cookie_uid = systemprompt_web_admin_core::auth::session::extract_user_from_cookie(&headers)
         .ok()
         .map(|s| s.user_id);
-    let Some(user_id) = resolve_principal(
+    let Some(user_id) = systemprompt_web_admin_core::auth::session::resolve_principal(
         cookie_uid.as_ref().map(UserId::as_str),
         query.user_id.as_ref().map(UserId::as_str),
     ) else {
@@ -64,13 +62,6 @@ pub(crate) async fn list_plugin_env_handler(
     .into_response())
 }
 
-pub fn resolve_principal(
-    cookie_user_id: Option<&str>,
-    query_user_id: Option<&str>,
-) -> Option<UserId> {
-    cookie_user_id.or(query_user_id).map(UserId::new)
-}
-
 fn load_plugin_variable_defs(
     plugin_id: &PluginId,
 ) -> Result<Vec<PluginVariableDef>, systemprompt_web_shared::error::MarketplaceError> {
@@ -97,6 +88,14 @@ struct PluginConfigFile {
 struct PluginSection {
     #[serde(default)]
     variables: Vec<PluginVariableDef>,
+}
+
+#[derive(Serialize, Debug)]
+struct PluginEnvResponse {
+    pub definitions: Vec<PluginVariableDef>,
+    pub stored: Vec<PluginEnvVar>,
+    pub valid: bool,
+    pub missing_required: Vec<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]

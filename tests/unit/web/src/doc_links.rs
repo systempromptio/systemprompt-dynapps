@@ -9,14 +9,14 @@
 
 use std::collections::BTreeSet;
 
-use systemprompt_web_admin::types::doc_links::{doc_slug_for, documentation_url};
+use systemprompt_web_admin_core::types::doc_links::{doc_slug_for, documentation_url};
 
 use crate::support::repo_root;
 
 // Why: read from the handler source rather than a second hand-kept list. A
 // duplicated list would agree with itself while both drifted from the pages.
 fn help_topics() -> BTreeSet<String> {
-    let dir = repo_root().join("extensions/web/admin/src/handlers/ssr/ssr_demo_help");
+    let dir = repo_root().join("extensions/web/shared/admin-core/src/ssr/demo_help");
     let mut topics = BTreeSet::new();
     let entries = std::fs::read_dir(&dir).unwrap_or_else(|e| panic!("read {}: {e}", dir.display()));
     for entry in entries {

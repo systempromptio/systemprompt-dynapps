@@ -4,19 +4,41 @@
 use async_trait::async_trait;
 
 use super::requests::time_range;
-use crate::error::AdminResult;
-use crate::export::model::{Cell, CellKind, Column, DataSet, ExportContext, Table, Window};
 use crate::handlers::ssr::governance::{export_decisions, export_findings};
 use crate::handlers::ssr::secrets_audit;
 use crate::repositories::governance::decision_log::DecisionLogRow;
 use crate::repositories::governance::findings::SafetyFindingLogRow;
 use crate::repositories::governance::secret_audit_log::SecretAuditRow;
-use crate::types::governance_labels::plane_of;
 use systemprompt::identifiers::{CallId, SessionId, UserId};
+use systemprompt_web_admin_core::error::AdminResult;
+use systemprompt_web_admin_core::export::model::{
+    Cell, CellKind, Column, DataSet, ExportContext, Table, Window,
+};
+use systemprompt_web_admin_core::export::registry::DataSetRegistration;
+use systemprompt_web_admin_core::types::governance_labels::plane_of;
 
 pub(crate) struct Decisions;
 pub(crate) struct Findings;
 pub(crate) struct Secrets;
+
+inventory::submit! {
+    DataSetRegistration {
+        order: 36,
+        dataset: &Decisions,
+    }
+}
+inventory::submit! {
+    DataSetRegistration {
+        order: 37,
+        dataset: &Findings,
+    }
+}
+inventory::submit! {
+    DataSetRegistration {
+        order: 38,
+        dataset: &Secrets,
+    }
+}
 
 const DECISION_COLUMNS: &[Column] = &[
     Column::new("at", "Time", CellKind::Timestamp),

@@ -2,8 +2,8 @@
 //! order, the allow/deny chips, and the resolver's outcome in one sentence.
 
 use super::view::BandChipsView;
-use crate::repositories::access_control::rules::LedgerRuleRow;
-use crate::types::access_control::AccessDecision;
+use systemprompt_web_admin_core::repositories::access_rules::rules::LedgerRuleRow;
+use systemprompt_web_admin_core::types::access_control::AccessDecision;
 
 pub(super) fn band_label(rule_type: &str) -> &'static str {
     match rule_type {

@@ -25,9 +25,9 @@ use crate::repositories::governance::hook_events::{
 use crate::repositories::governance::{
     DecisionPage, PageSlice, list_top_actors, list_top_policies,
 };
-use crate::repositories::scope::SubjectScope;
-use crate::types::{TopActor, TopPolicy};
-use crate::util::time_range::TimeRange;
+use systemprompt_web_admin_core::repositories::scope::SubjectScope;
+use systemprompt_web_admin_core::types::{TopActor, TopPolicy};
+use systemprompt_web_admin_core::util::time_range::TimeRange;
 
 use super::GovernanceTab;
 

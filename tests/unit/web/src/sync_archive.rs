@@ -5,12 +5,13 @@
 use std::io::Write;
 
 use chrono::Utc;
-use systemprompt_web_admin::repositories::sync::archive::manifest::{
+use systemprompt_web_admin as _;
+use systemprompt_web_admin_core::repositories::sync::archive::manifest::{
     ArchiveManifest, MANIFEST_FORMAT, ManifestPlane, parse_manifest, render_manifest,
 };
-use systemprompt_web_admin::repositories::sync::archive::read::{classify, unpack_zip};
-use systemprompt_web_admin::repositories::sync::archive::{MANIFEST_FILE, MAX_ENTRY_BYTES};
-use systemprompt_web_admin::repositories::sync::registry::planes;
+use systemprompt_web_admin_core::repositories::sync::archive::read::{classify, unpack_zip};
+use systemprompt_web_admin_core::repositories::sync::archive::{MANIFEST_FILE, MAX_ENTRY_BYTES};
+use systemprompt_web_admin_core::repositories::sync::registry::planes;
 use zip::CompressionMethod;
 use zip::write::SimpleFileOptions;
 

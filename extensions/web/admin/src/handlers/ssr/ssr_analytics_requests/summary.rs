@@ -5,11 +5,11 @@
 //! what the query asked for, so the page's arithmetic can be read without the
 //! handler's I/O around it.
 
-use crate::handlers::ssr::format::{format_cost, format_duration_ms};
-use crate::handlers::ssr::list_view::{HiddenFieldView, SelectOptionView};
 use crate::handlers::ssr::types::bar_pct;
 use crate::repositories::analytics::request_stats::RequestStats;
 use crate::repositories::analytics::requests::{BreakdownRow, FacetValue, RequestKpis};
+use systemprompt_web_admin_core::ssr::format::{format_cost, format_duration_ms};
+use systemprompt_web_admin_core::ssr::list_view::{HiddenFieldView, SelectOptionView};
 
 use super::RequestsQuery;
 use super::context::{
@@ -17,7 +17,7 @@ use super::context::{
     RequestsSortHeaders, RequestsTab,
 };
 use super::urls::{log_filter_url, sort_url_prefix};
-use crate::handlers::ssr::types::SortHeaderView;
+use systemprompt_web_admin_core::ssr::types::table::SortHeaderView;
 
 fn empty_to_none(v: Option<&String>) -> Option<String> {
     v.map(String::as_str)
@@ -240,7 +240,7 @@ pub(super) fn breakdown_view(
 }
 
 fn pct_of(part: i64, whole: i64) -> f64 {
-    crate::numeric::percentage(part, whole)
+    systemprompt_web_admin_core::numeric::percentage(part, whole)
 }
 
 use systemprompt_web_shared::format::compact_num as compact_int;

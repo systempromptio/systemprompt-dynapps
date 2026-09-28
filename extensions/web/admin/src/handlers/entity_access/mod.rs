@@ -25,10 +25,10 @@ use sqlx::PgPool;
 use systemprompt::identifiers::RuleId;
 use systemprompt_security::authz::{DASHBOARD_SOURCE, EntityRef, RuleType, UpsertRuleParams};
 
-use crate::activity::RuleChange;
-use crate::error::{AdminError, AdminResult};
-use crate::repositories::config::gateway::registered_routes_from_services;
-use crate::types::UserContext;
+use systemprompt_web_admin_core::activity::RuleChange;
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::repositories::gateway_catalog::registered_routes_from_services;
+use systemprompt_web_admin_core::types::UserContext;
 
 use support::{
     parse_access, parse_subject, record_change, repo, rule_subject, validate_entity_type,
@@ -118,7 +118,7 @@ pub(crate) async fn upsert_entity_rule_handler(
             "valid_until must be in the future".to_owned(),
         ));
     }
-    crate::repositories::access_control::validity::set_rule_validity(
+    systemprompt_web_admin_core::repositories::access_rules::validity::set_rule_validity(
         pool.as_ref(),
         rule.id.as_str(),
         body.valid_until,

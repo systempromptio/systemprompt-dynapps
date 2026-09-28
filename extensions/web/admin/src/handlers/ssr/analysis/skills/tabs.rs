@@ -11,8 +11,8 @@ use super::views::{
     MarketplaceGroupView, SkillFactView, SkillsKpiView, TopSkillView, UnusedSkillView,
 };
 use super::{SkillsQuery, SkillsTab};
-use crate::handlers::ssr::types::SvgLineChartView;
 use crate::repositories::analysis::skills::MarketplaceAdoptionRow;
+use systemprompt_web_admin_core::ssr::types::svg_line::SvgLineChartView;
 
 pub(super) struct TabInputs<'a> {
     pub(super) query: &'a SkillsQuery,

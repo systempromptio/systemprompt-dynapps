@@ -3,8 +3,8 @@
 //! Everything else on this page is shaped by `people_view`, which the project
 //! pages share.
 
-use crate::types::access_control::{AccessControlRule, AccessDecision};
-use crate::types::groups::GroupMemberRow;
+use systemprompt_web_admin_core::types::access_control::{AccessControlRule, AccessDecision};
+use systemprompt_web_admin_core::types::groups::GroupMemberRow;
 use systemprompt_web_shared::GroupId;
 
 use super::super::people_view::{MemberContext, MemberInput, member_rows};
@@ -35,7 +35,7 @@ fn as_member_input(row: &GroupMemberRow) -> MemberInput<'_> {
 }
 
 pub(super) fn access_sections(
-    resolved: Vec<crate::repositories::users::access_control::MatrixSection>,
+    resolved: Vec<systemprompt_web_admin_core::repositories::entitlement::MatrixSection>,
     rules: &[AccessControlRule],
     group_id: &GroupId,
 ) -> Vec<AccessSectionView> {

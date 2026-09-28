@@ -15,10 +15,11 @@ use super::account_state::{
     token_state,
 };
 use super::token_plan::{AccessMode, TokenPlan, needs_remint};
-use super::{Grant, Provider, VerificationReport, salesforce, seal, transport, verify};
-use crate::error::{AdminError, AdminResult};
+use super::{Grant, Provider, salesforce, seal, transport, verify};
 use crate::repositories::users::connector_accounts::{self as accounts, ProviderConnection};
 use crate::repositories::users::connector_credentials::{self as repo, EncryptedGrant};
+use systemprompt_web_admin_core::connections::report::VerificationReport;
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
 type Tx = Transaction<'static, Postgres>;
 

@@ -4,17 +4,27 @@
 use async_trait::async_trait;
 use serde::Deserialize;
 
-use crate::error::AdminResult;
-use crate::export::model::{Cell, CellKind, Column, DataSet, ExportContext, Table, Window};
-use crate::repositories;
+use systemprompt_web_admin_core::error::AdminResult;
+use systemprompt_web_admin_core::export::model::{
+    Cell, CellKind, Column, DataSet, ExportContext, Table, Window,
+};
+
 use crate::repositories::analysis::skills::{
     SkillFactRow, SkillListFilter, SkillWindow, list_skill_facts,
 };
-use crate::repositories::scope::ScopeRequest;
-use crate::types::UserContext;
 use systemprompt::identifiers::{MarketplaceId, PluginId};
+use systemprompt_web_admin_core::export::registry::DataSetRegistration;
+use systemprompt_web_admin_core::repositories::scope::ScopeRequest;
+use systemprompt_web_admin_core::types::UserContext;
 
 pub(crate) struct Skills;
+
+inventory::submit! {
+    DataSetRegistration {
+        order: 25,
+        dataset: &Skills,
+    }
+}
 
 #[derive(Debug, Default, Deserialize)]
 struct SkillIdsQuery {
@@ -56,7 +66,10 @@ pub(super) async fn window(ctx: &ExportContext<'_>) -> AdminResult<SkillWindow> 
     let w = ctx.window()?;
     let q: ScopeQuery = ctx.query()?;
     let request = ScopeRequest::from_query(ctx.user, q.group.as_deref(), q.project.as_deref());
-    let scope = repositories::scope::membership::get_subject_scope(ctx.pool, &request).await?;
+    let scope = systemprompt_web_admin_core::repositories::scope::membership::get_subject_scope(
+        ctx.pool, &request,
+    )
+    .await?;
     Ok(SkillWindow {
         start: w.from,
         end: w.to,

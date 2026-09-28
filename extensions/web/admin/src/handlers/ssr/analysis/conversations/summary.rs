@@ -7,8 +7,8 @@ use serde::Serialize;
 use crate::handlers::ssr::analysis::tone::{
     completion_tone, deny_tone, error_rate_tone, percent, score_display,
 };
-use crate::handlers::ssr::format::{format_cost, format_token_total};
 use crate::repositories::analysis::conversations::ConversationBucketRow;
+use systemprompt_web_admin_core::ssr::format::{format_cost, format_token_total};
 
 pub(crate) const CATEGORIES: [(&str, &str); 7] = [
     ("development", "Development"),

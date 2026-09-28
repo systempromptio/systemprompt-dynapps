@@ -8,8 +8,8 @@ use serde::Serialize;
 
 use systemprompt::identifiers::UserId;
 
-use crate::handlers::ssr::list_view::{Pagination, ScopeFilterView};
-use crate::handlers::ssr::types::{DeltaView, SparklineView};
+use systemprompt_web_admin_core::ssr::list_view::{Pagination, ScopeFilterView};
+use systemprompt_web_admin_core::ssr::types::sparkline::{DeltaView, SparklineView};
 
 #[derive(Debug, Serialize)]
 pub(super) struct FastSlowView {

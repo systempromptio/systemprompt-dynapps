@@ -21,14 +21,14 @@ use axum::response::{IntoResponse, Response};
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 
-use crate::error::{AdminError, AdminResult};
-use crate::handlers::ssr::entity_urls::{
-    context_detail_url, request_detail_url, session_detail_url, trace_detail_url,
-};
 use crate::repositories::governance::resolve::{ResolvedId, ResolvedKind, resolve_id};
 use crate::repositories::governance::suggest::list_id_matches;
-use crate::types::UserContext;
 use systemprompt::identifiers::{AiRequestId, ContextId, SessionId, TraceId};
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::ssr::entity_urls::{
+    context_detail_url, request_detail_url, session_detail_url, trace_detail_url,
+};
+use systemprompt_web_admin_core::types::UserContext;
 
 const MAX_MATCHES: i64 = 8;
 

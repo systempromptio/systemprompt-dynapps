@@ -6,11 +6,11 @@
 //! Every tile links to the page that owns exactly the rows it counted, with
 //! the window carried along, so the overview stays a place to start from.
 
-use crate::handlers::ssr::format::{
+use crate::repositories::overview::kpis::OverviewKpis;
+use systemprompt_web_admin_core::ssr::format::{
     format_cost, format_duration_ms, format_token_total, short_num,
 };
-use crate::repositories::overview::kpis::OverviewKpis;
-use crate::util::delta::delta;
+use systemprompt_web_admin_core::util::delta::delta;
 
 use super::kpis_view::{KpiTileView, Tile, TileInputs, comparison, percent_tenths, tile};
 

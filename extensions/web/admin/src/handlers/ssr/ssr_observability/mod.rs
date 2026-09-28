@@ -21,14 +21,14 @@ use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use systemprompt::models::profile::OtlpExportConfig;
 
-use crate::error::{AdminError, AdminHtmlResult};
-use crate::handlers::shared::require_write_origin;
-use crate::handlers::ssr::types::BreadcrumbView;
 use crate::repositories::observability::view::{ObservabilityView, build_view};
 use crate::repositories::observability::{find_declared_export, list_export_states};
-use crate::routes::managed_state::ManagedState;
-use crate::templates::AdminTemplateEngine;
-use crate::types::{MarketplaceContext, UserContext};
+use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
+use systemprompt_web_admin_core::request::require_write_origin;
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
+use systemprompt_web_admin_core::state::ManagedState;
+use systemprompt_web_admin_core::templates::AdminTemplateEngine;
+use systemprompt_web_admin_core::types::{MarketplaceContext, UserContext};
 
 pub(crate) const PAGE_URL: &str = "/admin/system/observability";
 const DOCS_URL: &str = "/documentation/enterprise-audit-observability";
@@ -116,13 +116,15 @@ pub(crate) async fn observability_page(
         outcome: OutcomeView::from_query(&query),
         view: build_view(config.as_ref(), &states),
     };
-    Ok(super::render_typed_page(
-        &engine,
-        "system-observability",
-        &page,
-        &user_ctx,
-        &mkt_ctx,
-    ))
+    Ok(
+        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+            &engine,
+            "system-observability",
+            &page,
+            &user_ctx,
+            &mkt_ctx,
+        ),
+    )
 }
 
 fn redirect(outcome: &str, detail: &str) -> Redirect {

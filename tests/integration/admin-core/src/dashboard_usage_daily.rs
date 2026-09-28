@@ -13,7 +13,7 @@ use systemprompt::identifiers::{PluginId, UserId};
 use systemprompt_web_admin::repositories::dashboard::usage_aggregations::{
     DailyAggregationParams, upsert_daily_aggregation,
 };
-use systemprompt_web_admin::types::{EVENT_POST_TOOL_USE, EVENT_POST_TOOL_USE_FAILURE};
+use systemprompt_web_admin_core::types::{EVENT_POST_TOOL_USE, EVENT_POST_TOOL_USE_FAILURE};
 
 use crate::fixtures::{insert_user, unclaimed_email, unique};
 use crate::tempdb::TempDb;

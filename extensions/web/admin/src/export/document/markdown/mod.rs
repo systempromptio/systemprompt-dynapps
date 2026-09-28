@@ -6,8 +6,8 @@
 //! joining the document's outline.
 
 use super::bundle::ConversationBundle;
-use crate::export::format::usd;
 use crate::handlers::ssr::transcript_view::{StepView, ThreadView};
+use systemprompt_web_admin_core::export::format::usd;
 
 // Why: `std::fmt::Write` into a `String` cannot fail, but `writeln!` still
 // returns a `Result` that every line would have to discard.
@@ -33,7 +33,7 @@ pub(crate) fn render(b: &ConversationBundle) -> String {
     if let Some(session) = &b.header.client_session_id {
         line!(out, "- Harness session: `{session}`");
     }
-    if let Some(f) = &b.facts {
+    if let Some(f) = b.facts.as_ref().map(|row| &row.facts) {
         line!(
             out,
             "- Client: {} · Models: {} · {} → {}",

@@ -27,13 +27,13 @@ use axum::response::Response;
 use serde::Deserialize;
 use sqlx::PgPool;
 
-use crate::error::{AdminError, AdminHtmlResult};
 use crate::repositories::analytics::site::cost::ContainerAxis;
 use crate::repositories::analytics::site::leaderboards::LeaderboardSort;
 use crate::repositories::analytics::site::resolve_site_scope;
 use crate::repositories::analytics::site::series::SeriesBucket;
-use crate::repositories::scope::{Attribution, Scope, ScopeRequest};
-use crate::util::time_range::{
+use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
+use systemprompt_web_admin_core::repositories::scope::{Attribution, Scope, ScopeRequest};
+use systemprompt_web_admin_core::util::time_range::{
     TimeRange, TimeRangePreset, TimeRangeQuery, parse_time_range, preset_to_range,
 };
 
@@ -57,10 +57,10 @@ mod view_models;
 mod view_spend;
 mod view_tables;
 
-use crate::handlers::ssr::list_view::DEFAULT_PAGE_SIZE;
-use crate::handlers::ssr::page::Page;
 use context::DashboardTab;
 use page::{PageInput, page_context};
+use systemprompt_web_admin_core::ssr::list_view::DEFAULT_PAGE_SIZE;
+use systemprompt_web_admin_core::ssr::page::Page;
 
 const BASE_URL: &str = "/admin/analytics";
 const TRENDS_DEFAULT_PRESET: TimeRangePreset = TimeRangePreset::Days7;
@@ -167,13 +167,15 @@ pub(crate) async fn analytics_dashboard_page(
         slo_ms,
     });
 
-    Ok(crate::handlers::ssr::render_typed_page(
-        &shell.engine,
-        "analytics-dashboard",
-        &ctx,
-        &shell.user,
-        &shell.marketplace,
-    ))
+    Ok(
+        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+            &shell.engine,
+            "analytics-dashboard",
+            &ctx,
+            &shell.user,
+            &shell.marketplace,
+        ),
+    )
 }
 
 pub(super) fn resolve_range(query: &AnalyticsDashboardQuery) -> TimeRange {

@@ -4,9 +4,9 @@
 //! for requests rejected before a route was chosen. The redirect column
 //! counts requests whose `requested_model` differed from what served them.
 
-use crate::handlers::ssr::format::format_cost;
 use crate::handlers::ssr::types::bar_pct;
 use crate::repositories::analytics::site::models::ModelStatsRow;
+use systemprompt_web_admin_core::ssr::format::format_cost;
 
 use super::context::{KpiTile, ModelUsageRowView, ModelsTabView};
 use super::view::compact;

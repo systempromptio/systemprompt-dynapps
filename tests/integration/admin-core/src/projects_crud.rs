@@ -3,9 +3,10 @@
 //! and deleting completed work removes its attribution membership.
 
 use systemprompt_web_admin::repositories::projects::crud::{
-    delete_project, find_project, insert_project, list_projects, update_project,
+    delete_project, find_project, insert_project, update_project,
 };
-use systemprompt_web_admin::types::projects::{CreateProjectRequest, UpdateProjectRequest};
+use systemprompt_web_admin_core::repositories::scope::containers::list_project_options;
+use systemprompt_web_admin_core::types::projects::{CreateProjectRequest, UpdateProjectRequest};
 
 use crate::fixtures::unique_project;
 use crate::tempdb::TempDb;
@@ -119,7 +120,7 @@ async fn deleting_a_project_removes_it_from_the_listing() {
             .is_none()
     );
     assert!(
-        !list_projects(&db.pool)
+        !list_project_options(&db.pool)
             .await
             .expect("list projects")
             .iter()

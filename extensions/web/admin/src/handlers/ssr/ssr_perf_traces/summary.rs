@@ -4,13 +4,15 @@
 //! Both halves share `preserved_query_string` so every link on the page carries
 //! the same filter and time-range state.
 
-use crate::handlers::ssr::format::{format_cost, format_duration_ms, format_token_total};
 use crate::repositories::traces::TraceStats;
+use systemprompt_web_admin_core::ssr::format::{
+    format_cost, format_duration_ms, format_token_total,
+};
 
 use super::context::{TraceStatsView, TracesSortHeaders};
 use super::view::preserved_query_string;
 use super::{BASE_URL, TraceListQuery};
-use crate::handlers::ssr::types::SortHeaderView;
+use systemprompt_web_admin_core::ssr::types::table::SortHeaderView;
 
 pub(super) fn serde_stats(query: &TraceListQuery, s: &TraceStats) -> TraceStatsView {
     TraceStatsView {

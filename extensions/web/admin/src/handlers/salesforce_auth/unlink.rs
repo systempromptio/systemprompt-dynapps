@@ -6,9 +6,9 @@ use axum::response::{IntoResponse, Response};
 use axum::{Extension, Json};
 use std::sync::Arc;
 
-use crate::error::AdminResult;
 use crate::repositories::users::salesforce_identity;
-use crate::types::UserContext;
+use systemprompt_web_admin_core::error::AdminResult;
+use systemprompt_web_admin_core::types::UserContext;
 
 pub(crate) async fn salesforce_unlink(
     Extension(user_ctx): Extension<UserContext>,

@@ -3,7 +3,7 @@
 
 use std::path::{Path, PathBuf};
 
-use systemprompt_web_admin::templates::{AdminTemplateEngine, AdminTemplateError};
+use systemprompt_web_admin_core::templates::{AdminTemplateEngine, AdminTemplateError};
 
 fn write(path: &Path, body: &str) {
     if let Some(parent) = path.parent() {

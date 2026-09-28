@@ -9,8 +9,8 @@
 //! caller's view answers 404 exactly like a missing id, so the URL is no
 //! oracle for other people's request ids.
 
-use crate::error::AdminError;
 use std::sync::Arc;
+use systemprompt_web_admin_core::error::AdminError;
 
 use systemprompt::identifiers::{AgentId, AiRequestId, SessionId, TraceId, UserId};
 
@@ -19,14 +19,14 @@ use axum::response::Response;
 use serde::Serialize;
 use sqlx::PgPool;
 
-use crate::error::AdminHtmlResult;
-use crate::handlers::ssr::entity_urls::{session_detail_url, trace_detail_url};
-use crate::handlers::ssr::page::Page;
-use crate::handlers::ssr::types::BreadcrumbView;
 use crate::repositories::governance::chain::{
     AiRequestSummary, ChainEnvelope, DecisionStage, find_decision_chain,
 };
-use crate::repositories::scope::may_view;
+use systemprompt_web_admin_core::error::AdminHtmlResult;
+use systemprompt_web_admin_core::repositories::scope::may_view;
+use systemprompt_web_admin_core::ssr::entity_urls::{session_detail_url, trace_detail_url};
+use systemprompt_web_admin_core::ssr::page::Page;
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 
 mod evidence;
 mod rows;
@@ -164,13 +164,15 @@ pub(crate) async fn governance_audit_detail_page(
         back_url: "/admin/requests",
     };
 
-    Ok(crate::handlers::ssr::render_typed_page(
-        &shell.engine,
-        "governance-audit-detail",
-        &ctx,
-        &shell.user,
-        &shell.marketplace,
-    ))
+    Ok(
+        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+            &shell.engine,
+            "governance-audit-detail",
+            &ctx,
+            &shell.user,
+            &shell.marketplace,
+        ),
+    )
 }
 
 fn pick_primary<'a>(env: &'a ChainEnvelope, id: &str) -> Option<&'a AiRequestSummary> {

@@ -4,9 +4,12 @@ use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 
-use crate::error::{AdminError, AdminResult};
-use crate::repositories::bridge::{self, EnrollDeviceParams, EnrolledDevice, IssuedApiKey};
 use crate::repositories::config::security_policy::{SecurityPolicy, bound_pat_expiry};
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::repositories::bridge;
+use systemprompt_web_admin_core::repositories::bridge::{
+    EnrollDeviceParams, EnrolledDevice, IssuedApiKey,
+};
 
 fn policy_bounded(expires_at: Option<DateTime<Utc>>) -> AdminResult<DateTime<Utc>> {
     bound_pat_expiry(expires_at, Utc::now(), SecurityPolicy::get())

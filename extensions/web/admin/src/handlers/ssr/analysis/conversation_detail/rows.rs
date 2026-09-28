@@ -9,15 +9,15 @@ use crate::handlers::ssr::analysis::conversations::summary::{
 };
 use crate::handlers::ssr::analysis::conversations::view::SkillChipView;
 use crate::handlers::ssr::analysis::tone::{latency_tone, safety_tone, score_tone};
-use crate::handlers::ssr::analysis_urls::{analysis_skill_url, analysis_version_url};
-use crate::handlers::ssr::format::{
-    format_cost, format_duration_ms, format_token_total, local_time,
-};
 use crate::handlers::ssr::ssr_tools::rows::{format_bytes, kind_icon, kind_label};
-use crate::repositories::analysis::conversations::ConversationFactRow;
+use crate::repositories::analysis::conversations::ConversationFacts;
 use crate::repositories::analysis::conversations::planes::{
     ConversationDecisionRow, ConversationSafetyRow, ConversationSkillRow, ConversationToolCallRow,
     ConversationTurnRow,
+};
+use systemprompt_web_admin_core::ssr::analysis_urls::{analysis_skill_url, analysis_version_url};
+use systemprompt_web_admin_core::ssr::format::{
+    format_cost, format_duration_ms, format_token_total, local_time,
 };
 
 pub(super) fn turn_view((index, t): (usize, ConversationTurnRow)) -> LedgerTurnView {
@@ -189,7 +189,7 @@ pub(super) fn safety_view(s: ConversationSafetyRow) -> SafetyView {
     }
 }
 
-pub(super) fn judge_view(f: &ConversationFactRow, judge_url: String) -> JudgeView {
+pub(super) fn judge_view(f: &ConversationFacts, judge_url: String) -> JudgeView {
     JudgeView {
         judged: f.completion.is_some(),
         pending: f.completion.is_none() && f.judge_status.as_deref() == Some("pending"),

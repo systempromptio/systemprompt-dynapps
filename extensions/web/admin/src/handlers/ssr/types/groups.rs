@@ -10,8 +10,9 @@ use serde::Serialize;
 use systemprompt::identifiers::UserId;
 use systemprompt_web_shared::GroupId;
 
-use super::super::types::SvgLineChartView;
-use super::{BreadcrumbView, TabLinkView};
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
+use systemprompt_web_admin_core::ssr::types::svg_line::SvgLineChartView;
+use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;
 
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct StatTileView {
@@ -157,7 +158,7 @@ pub(crate) struct GroupDetailPageData {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mappings: Option<Vec<MappingRowView>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub export: Option<crate::export::ExportView>,
+    pub export: Option<systemprompt_web_admin_core::export::view::ExportView>,
 }
 
 #[derive(Debug, Clone, Serialize)]

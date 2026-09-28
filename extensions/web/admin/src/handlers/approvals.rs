@@ -21,11 +21,11 @@ use axum::response::{IntoResponse, Response};
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 
-use crate::error::{AdminError, AdminResult};
 use crate::repositories::governance::approvals::{
     ApprovalVerdict, find_approval, update_approval_decision,
 };
-use crate::types::UserContext;
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::types::UserContext;
 
 const NOTE_LIMIT: usize = 500;
 

@@ -14,13 +14,6 @@
 use async_trait::async_trait;
 use sqlx::PgPool;
 
-use super::access_control::applied_from;
-use super::plane::{
-    ActionCounts, Actor, ApplyOutcome, DriftKpi, DriftRow, Export, PlaneDrift, SyncMode, SyncPlane,
-    resolution,
-};
-use super::state::{Applied, record_applied, record_declared};
-use crate::error::AdminResult;
 use crate::repositories::gateway_routes::declared::{
     DeclaredRoutes, GATEWAY_FILE, declared_routes_now, gateway_file_path,
 };
@@ -30,8 +23,19 @@ use crate::repositories::gateway_routes::rows::{
     RouteWrite, SOURCE_CODE, count_gateway_routes, delete_gateway_route, list_gateway_routes,
     upsert_gateway_route,
 };
+use systemprompt_web_admin_core::error::AdminResult;
+use systemprompt_web_admin_core::repositories::sync::access_control::applied_from;
+use systemprompt_web_admin_core::repositories::sync::plane::{
+    ActionCounts, Actor, ApplyOutcome, DriftKpi, DriftRow, Export, PlaneDrift, SyncMode, SyncPlane,
+    resolution,
+};
+use systemprompt_web_admin_core::repositories::sync::plane_ids;
+use systemprompt_web_admin_core::repositories::sync::registry::PlaneRegistration;
+use systemprompt_web_admin_core::repositories::sync::state::{
+    Applied, record_applied, record_declared,
+};
 
-pub const PLANE_ID: &str = "gateway_routes";
+pub const PLANE_ID: &str = plane_ids::GATEWAY_ROUTES;
 
 pub const RUNTIME_NOTE: &str = "Core boots its dispatcher from services/ai/gateway.yaml and \
     never reads this table. Every console write and every apply regenerates the file from the \
@@ -39,6 +43,10 @@ pub const RUNTIME_NOTE: &str = "Core boots its dispatcher from services/ai/gatew
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct GatewayRoutesPlane;
+
+inventory::submit! {
+    PlaneRegistration { order: 3, build: || Box::new(GatewayRoutesPlane) }
+}
 
 fn row(kind: &'static str, id: &str, in_code: String, in_db: String, dashboard: bool) -> DriftRow {
     let (kind_label, kind_tone, insert_applies, overwrite_effect) = match (kind, dashboard) {
@@ -264,10 +272,17 @@ impl SyncPlane for GatewayRoutesPlane {
 
     async fn export(&self, pool: &PgPool) -> AdminResult<Option<Export>> {
         let rows = list_gateway_routes(pool).await?;
-        let file = std::fs::read_to_string(gateway_file_path()?)
-            .map_err(|e| crate::error::AdminError::invalid("gateway.yaml could not be read", e))?;
+        let file = std::fs::read_to_string(gateway_file_path()?).map_err(|e| {
+            systemprompt_web_admin_core::error::AdminError::invalid(
+                "gateway.yaml could not be read",
+                e,
+            )
+        })?;
         let body = render_routes_export(&file, &rows).map_err(|e| {
-            crate::error::AdminError::invalid("gateway.yaml could not be rendered", e)
+            systemprompt_web_admin_core::error::AdminError::invalid(
+                "gateway.yaml could not be rendered",
+                e,
+            )
         })?;
         Ok(Some(Export {
             filename: "gateway.yaml",

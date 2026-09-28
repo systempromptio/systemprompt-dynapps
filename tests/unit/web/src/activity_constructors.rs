@@ -3,8 +3,8 @@
 
 
 use systemprompt::identifiers::{SessionId, UserId};
-use systemprompt_web_admin::activity::enums::entity_label;
-use systemprompt_web_admin::activity::{
+use systemprompt_web_admin_core::activity::enums::entity_label;
+use systemprompt_web_admin_core::activity::{
     ActivityAction, ActivityCategory, ActivityEntity, NewActivity,
 };
 

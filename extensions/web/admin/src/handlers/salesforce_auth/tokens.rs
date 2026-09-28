@@ -7,10 +7,10 @@ use axum::{Extension, Json};
 use serde::{Deserialize, Serialize};
 
 use super::{SalesforceDeps, SalesforceError, salesforce_private_key};
-use crate::error::{AdminError, AdminResult};
-use crate::handlers::users::extract_mcp_accessor_user;
 use crate::repositories::users::salesforce_identity;
 use crate::services::salesforce_jwt_bearer;
+use systemprompt_web_admin_core::auth::session::extract_mcp_accessor_user;
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct SalesforceTokenResponse {

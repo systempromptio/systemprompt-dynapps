@@ -3,8 +3,9 @@
 
 use serde::Serialize;
 
-pub(super) use crate::handlers::ssr::types::{BreadcrumbView, TabLinkView};
 use systemprompt::identifiers::{AiRequestId, ContextId, SessionId, TraceId, UserId};
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
+use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;
 
 pub(super) use crate::handlers::ssr::conversation_header::{
     ConversationStatsView, StatusBadgeView,
@@ -33,7 +34,7 @@ pub(super) struct ContextDetailPageContext {
     pub(super) entity_links: Vec<EntityLinkView>,
     pub(super) has_entity_links: bool,
     pub(super) entity_link_count: usize,
-    pub(super) export: crate::export::ExportView,
+    pub(super) export: systemprompt_web_admin_core::export::view::ExportView,
 }
 
 #[derive(Debug, Serialize)]

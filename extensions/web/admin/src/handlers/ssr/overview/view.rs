@@ -8,8 +8,9 @@
 
 use serde::Serialize;
 
-use crate::handlers::ssr::types::{BreadcrumbView, SvgLineChartView};
-use crate::util::time_range::{TimeRange, TimeRangePreset};
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
+use systemprompt_web_admin_core::ssr::types::svg_line::SvgLineChartView;
+use systemprompt_web_admin_core::util::time_range::{TimeRange, TimeRangePreset};
 
 use super::charts::charts;
 use super::data::OverviewData;

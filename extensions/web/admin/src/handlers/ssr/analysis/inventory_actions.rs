@@ -2,9 +2,6 @@
 //! that shares its name, so retained snapshots and coverage can attach to it,
 //! and the on-demand inventory sync that publishes every configured skill.
 
-use crate::error::{AdminError, AdminHtmlResult};
-use crate::routes::managed_state::ManagedState;
-use crate::types::UserContext;
 use axum::Extension;
 use axum::extract::{Form, Path, State};
 use axum::http::HeaderMap;
@@ -13,6 +10,9 @@ use serde::Deserialize;
 use sqlx::PgPool;
 use std::sync::Arc;
 use systemprompt::identifiers::{InventoryEntryId, ManagedResourceId};
+use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
+use systemprompt_web_admin_core::state::ManagedState;
+use systemprompt_web_admin_core::types::UserContext;
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -30,12 +30,12 @@ pub(crate) async fn bind(
     if !user.is_admin {
         return Err(AdminError::Forbidden("Administrator access required".to_owned()).into());
     }
-    crate::handlers::shared::require_write_origin(&headers)?;
+    systemprompt_web_admin_core::request::require_write_origin(&headers)?;
     state
         .repository
         .bind_inventory_resource(&state.owner, &user.user_id, &entry, &form.resource_id)
         .await?;
-    let root = crate::handlers::shared::get_services_path()?;
+    let root = systemprompt_web_admin_core::request::get_services_path()?;
     let services = systemprompt::loader::ConfigLoader::load().map_err(AdminError::internal)?;
     systemprompt::marketplace::inventory::InventoryService::new(state.repository.clone())
         .refresh(&state.owner, &root, &services)
@@ -52,8 +52,8 @@ pub(crate) async fn sync_inventory(
     if !user.is_admin {
         return Err(AdminError::Forbidden("Administrator access required".to_owned()).into());
     }
-    crate::handlers::shared::require_write_origin(&headers)?;
-    let root = crate::handlers::shared::get_services_path()?;
+    systemprompt_web_admin_core::request::require_write_origin(&headers)?;
+    let root = systemprompt_web_admin_core::request::get_services_path()?;
     let services = systemprompt::loader::ConfigLoader::load().map_err(AdminError::internal)?;
     let service =
         systemprompt::marketplace::inventory::InventoryService::new(state.repository.clone());
@@ -69,10 +69,10 @@ pub(crate) async fn sync_inventory(
             &mut systemprompt::marketplace::inventory::PublishGuard::default(),
         )
         .await?;
-    crate::repositories::sync::sources_db::record_service_sources(&pool)
+    systemprompt_web_admin_core::repositories::sync::sources_db::record_service_sources(&pool)
         .await
         .map_err(AdminError::internal)?;
     Ok(Redirect::to(SKILLS_PAGE))
 }
 
-const SKILLS_PAGE: &str = crate::handlers::ssr::analysis_urls::ANALYSIS_SKILLS_URL;
+const SKILLS_PAGE: &str = systemprompt_web_admin_core::ssr::analysis_urls::ANALYSIS_SKILLS_URL;

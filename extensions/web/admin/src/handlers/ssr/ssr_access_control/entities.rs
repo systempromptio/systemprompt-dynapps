@@ -18,10 +18,10 @@ use super::bands::{band_label, band_rank};
 use super::entity_row::entity_view;
 use super::summary::{self, options};
 use super::view::{AcEntitiesView, AcEntityGroupView, AcEntityView};
-use crate::handlers::ssr::entity_kind::{entity_kind_plural, entity_kind_rank};
-use crate::repositories::access_control::drift::DriftReport;
-use crate::repositories::access_control::rules::LedgerRuleRow;
-use crate::repositories::config::gateway::RouteLabels;
+use systemprompt_web_admin_core::repositories::access_rules::drift::DriftReport;
+use systemprompt_web_admin_core::repositories::access_rules::rules::LedgerRuleRow;
+use systemprompt_web_admin_core::repositories::gateway_catalog::RouteLabels;
+use systemprompt_web_admin_core::ssr::entity_kind::{entity_kind_plural, entity_kind_rank};
 
 pub(super) const BASE_URL: &str = "/admin/access-control";
 pub(super) const SYNC_URL: &str = "/admin/sync?tab=access";

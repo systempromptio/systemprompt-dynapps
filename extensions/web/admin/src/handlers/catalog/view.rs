@@ -7,9 +7,10 @@
 //! that include it). The handlers own the request flow and data loading; this
 //! module owns the row/page shaping and the cross-link URL construction.
 
-use crate::handlers::ssr::entity_panel::EntityAccessView;
 use std::collections::HashMap;
 use systemprompt::identifiers::PluginId;
+use systemprompt_web_admin_core::ssr::entity_panel::EntityAccessView;
+use systemprompt_web_admin_core::ssr::types::table::SortHeaderView;
 
 use serde::Serialize;
 use sqlx::PgPool;
@@ -63,9 +64,10 @@ pub(super) struct PluginsPageData {
     pub(super) page: &'static str,
     pub(super) title: &'static str,
     pub(super) subtitle: &'static str,
-    pub(super) breadcrumbs: Vec<crate::handlers::ssr::types::BreadcrumbView>,
+    pub(super) breadcrumbs:
+        Vec<systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView>,
     pub(super) kpis: Vec<CatalogKpiView>,
-    pub(super) sort_headers: Vec<super::sorting::SortHeaderView>,
+    pub(super) sort_headers: Vec<SortHeaderView>,
     pub(super) plugins: Vec<PluginListRow>,
     pub(super) plugins_count: usize,
     pub(super) access_control_url: &'static str,
@@ -93,9 +95,10 @@ pub(super) struct SkillsPageData {
     pub(super) page: &'static str,
     pub(super) title: &'static str,
     pub(super) subtitle: &'static str,
-    pub(super) breadcrumbs: Vec<crate::handlers::ssr::types::BreadcrumbView>,
+    pub(super) breadcrumbs:
+        Vec<systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView>,
     pub(super) kpis: Vec<CatalogKpiView>,
-    pub(super) sort_headers: Vec<super::sorting::SortHeaderView>,
+    pub(super) sort_headers: Vec<SortHeaderView>,
     pub(super) skills: Vec<SkillListRow>,
     pub(super) skills_count: usize,
     pub(super) access_control_url: &'static str,
@@ -106,7 +109,8 @@ pub(super) struct SkillsPageData {
 pub(super) struct PluginDetailData {
     pub(super) page: &'static str,
     pub(super) title: String,
-    pub(super) breadcrumbs: Vec<crate::handlers::ssr::types::BreadcrumbView>,
+    pub(super) breadcrumbs:
+        Vec<systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView>,
     pub(super) id: PluginId,
     pub(super) name: String,
     pub(super) description: String,
@@ -134,7 +138,8 @@ pub(super) struct PluginDetailData {
 pub(super) struct SkillDetailData {
     pub(super) page: &'static str,
     pub(super) title: String,
-    pub(super) breadcrumbs: Vec<crate::handlers::ssr::types::BreadcrumbView>,
+    pub(super) breadcrumbs:
+        Vec<systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView>,
     pub(super) activity_url: String,
     pub(super) id: String,
     pub(super) name: String,
@@ -173,10 +178,13 @@ pub(super) async fn assignment_counts_by_type(
     pool: &PgPool,
     entity_type: &str,
 ) -> HashMap<String, i64> {
-    crate::repositories::users::access_control::count_assignments_by_entity_type(pool, entity_type)
-        .await
-        .unwrap_or_else(|e| {
-            tracing::warn!(error = %e, entity_type, "Failed to load assignment counts");
-            HashMap::new()
-        })
+    systemprompt_web_admin_core::repositories::entitlement::count_assignments_by_entity_type(
+        pool,
+        entity_type,
+    )
+    .await
+    .unwrap_or_else(|e| {
+        tracing::warn!(error = %e, entity_type, "Failed to load assignment counts");
+        HashMap::new()
+    })
 }

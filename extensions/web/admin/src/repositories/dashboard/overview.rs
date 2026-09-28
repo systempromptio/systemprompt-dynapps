@@ -3,7 +3,6 @@
 use sqlx::PgPool;
 use systemprompt::identifiers::{Email, PluginId, SessionId, UserId};
 
-use crate::activity::queries::list_timeline;
 use crate::repositories::dashboard::aggregates::{
     get_active_users_24h, get_activity_stats, list_usage_timeseries,
 };
@@ -12,8 +11,9 @@ use crate::repositories::dashboard::queries::{
     list_top_users,
 };
 use crate::repositories::dashboard::traffic;
-use crate::repositories::scope::SubjectScope;
-use crate::types::{
+use systemprompt_web_admin_core::activity::queries::list_timeline;
+use systemprompt_web_admin_core::repositories::scope::SubjectScope;
+use systemprompt_web_admin_core::types::{
     ContentPerformanceRow, DashboardData, EventFeedRow, EventsQuery, EventsResponse, RealtimePulse,
     RecentMcpError, TrafficData, TrafficTopPage,
 };

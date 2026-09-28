@@ -6,8 +6,9 @@
 use serde::Serialize;
 use systemprompt::identifiers::UserId;
 
-use crate::handlers::ssr::list_view::{Pagination, ScopeFilterView};
-use crate::handlers::ssr::types::{BreadcrumbView, FilterChipView, SortHeaderView};
+use systemprompt_web_admin_core::ssr::list_view::{Pagination, ScopeFilterView};
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
+use systemprompt_web_admin_core::ssr::types::table::{FilterChipView, SortHeaderView};
 
 #[derive(Debug, Serialize)]
 pub(crate) struct RosterContext {
@@ -30,7 +31,7 @@ pub(crate) struct RosterContext {
     pub can_write: bool,
     pub role_choices: Vec<String>,
     pub create_user: CreateUserPanelView,
-    pub export: crate::export::ExportView,
+    pub export: systemprompt_web_admin_core::export::view::ExportView,
 }
 
 #[derive(Debug, Serialize)]

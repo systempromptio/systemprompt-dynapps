@@ -6,8 +6,8 @@
 
 use super::models::matrix_url;
 use super::view::{GatewayKpiView, GatewayRouteRow, ProviderOptionView, ResolvedOnlyRow};
-use crate::repositories::config::gateway::{RouteLabels, derive_route_label};
-use crate::types::{GatewayConfigView, GatewayRouteView};
+use systemprompt_web_admin_core::repositories::gateway_catalog::{RouteLabels, derive_route_label};
+use systemprompt_web_admin_core::types::{GatewayConfigView, GatewayRouteView};
 
 fn yaml_summary(value: Option<&serde_yaml::Value>) -> String {
     let Some(value) = value else {

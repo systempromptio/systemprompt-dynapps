@@ -16,18 +16,18 @@ use serde::Deserialize;
 use sqlx::PgPool;
 use systemprompt_web_shared::GroupId;
 
-use crate::error::{AdminError, AdminHtmlResult};
 use crate::repositories;
-use crate::types::UserContext;
+use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
+use systemprompt_web_admin_core::types::UserContext;
 
 use super::people_chart::daily_requests_chart;
 use super::people_view;
 use super::ssr_groups::UNASSIGNED_GROUP;
 use super::types::{
-    BreadcrumbView, GroupDetailPageData, GroupOverviewView, MemberSetChipView, MembersTabView,
-    UsageLeaderRowView,
+    GroupDetailPageData, GroupOverviewView, MemberSetChipView, MembersTabView, UsageLeaderRowView,
 };
-use crate::handlers::ssr::page::Page;
+use systemprompt_web_admin_core::ssr::page::Page;
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 
 mod data;
 mod tabs;
@@ -94,13 +94,15 @@ pub(crate) async fn group_detail_page(
         group_id,
     };
 
-    Ok(super::render_typed_page(
-        &shell.engine,
-        "group-detail",
-        &data,
-        &shell.user,
-        &shell.marketplace,
-    ))
+    Ok(
+        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+            &shell.engine,
+            "group-detail",
+            &data,
+            &shell.user,
+            &shell.marketplace,
+        ),
+    )
 }
 
 async fn load_overview(
@@ -160,7 +162,7 @@ async fn load_members(
 }
 
 async fn assign_targets(pool: &PgPool) -> Vec<MemberSetChipView> {
-    repositories::groups::crud::list_groups(pool)
+    systemprompt_web_admin_core::repositories::scope::containers::list_group_options(pool)
         .await
         .inspect_err(|e| tracing::warn!(error = %e, "assign target list failed"))
         .unwrap_or_default()
@@ -212,10 +214,16 @@ async fn load_mappings(
     ))
 }
 
-fn export_view(group_id: &GroupId) -> crate::export::ExportView {
-    let query = crate::export::view::query_string(&[("group", Some(group_id.as_str()))]);
-    crate::export::ExportView::new(&["requests", "sessions", "analysis-conversations"], &query)
-        .with_transcripts(crate::export::view::TranscriptSource::Sessions)
+fn export_view(group_id: &GroupId) -> systemprompt_web_admin_core::export::view::ExportView {
+    let query = systemprompt_web_admin_core::export::view::query_string(&[(
+        "group",
+        Some(group_id.as_str()),
+    )]);
+    systemprompt_web_admin_core::export::view::ExportView::new(
+        &["requests", "sessions", "analysis-conversations"],
+        &query,
+    )
+    .with_transcripts(systemprompt_web_admin_core::export::transcripts::TranscriptSource::Sessions)
 }
 
 fn breadcrumbs(name: &str) -> Vec<BreadcrumbView> {

@@ -2,8 +2,9 @@
 //!
 //! The token total here must match the profile pane's exactly. The canonical
 //! definition, and why it is what it is, lives in
-//! [`crate::repositories::users::usage`]; the two are pinned together by
-//! `tests/integration/admin-core/src/usage_reconciliation.rs`.
+//! [`systemprompt_web_admin_core::repositories::user_usage`]; the two are
+//! pinned together by `tests/integration/admin-core/src/usage_reconciliation.
+//! rs`.
 //!
 //! Every `prev_*` figure covers the preceding window of equal width. Weekly
 //! active users ignore the picked window: both WAU figures are trailing weeks
@@ -12,7 +13,7 @@
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 
-use crate::util::time_range::TimeRange;
+use systemprompt_web_admin_core::util::time_range::TimeRange;
 
 use super::SiteScope;
 

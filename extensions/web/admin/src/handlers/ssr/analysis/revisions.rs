@@ -2,18 +2,18 @@
 //! their digests. Authoring evidence, reached from a marketplace's
 //! Distribution view; separate from measured run outcomes.
 
-use crate::error::{AdminError, AdminHtmlResult};
-use crate::handlers::ssr::analysis_urls::ANALYSIS_VERSIONS_URL;
-use crate::handlers::ssr::types::BreadcrumbView;
-use crate::routes::managed_state::ManagedState;
-use crate::templates::AdminTemplateEngine;
-use crate::types::{MarketplaceContext, UserContext};
 use axum::Extension;
 use axum::extract::Path;
 use axum::response::Response;
 use serde::Serialize;
 use std::sync::Arc;
 use systemprompt::identifiers::ResourceRevisionId;
+use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
+use systemprompt_web_admin_core::ssr::analysis_urls::ANALYSIS_VERSIONS_URL;
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
+use systemprompt_web_admin_core::state::ManagedState;
+use systemprompt_web_admin_core::templates::AdminTemplateEngine;
+use systemprompt_web_admin_core::types::{MarketplaceContext, UserContext};
 
 #[derive(Serialize)]
 struct FilePreview {
@@ -83,13 +83,15 @@ pub(crate) async fn revision_page(
         manifest,
         files,
     };
-    Ok(super::super::render_typed_page(
-        &engine,
-        "analysis-revision",
-        &rendered,
-        &user,
-        &marketplace,
-    ))
+    Ok(
+        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+            &engine,
+            "analysis-revision",
+            &rendered,
+            &user,
+            &marketplace,
+        ),
+    )
 }
 
 fn require_console(user: &UserContext) -> Result<(), AdminError> {

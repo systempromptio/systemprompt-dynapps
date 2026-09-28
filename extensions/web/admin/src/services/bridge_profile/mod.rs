@@ -12,7 +12,7 @@ use serde::Serialize;
 use sqlx::PgPool;
 use systemprompt::identifiers::{MarketplaceId, TenantId, UserId};
 
-use crate::types::UserContext;
+use systemprompt_web_admin_core::types::UserContext;
 
 pub(crate) use assemble::read_config_strings;
 use assemble::{
@@ -33,7 +33,9 @@ pub(crate) struct ProfileIdentity {
     pub is_admin: bool,
 }
 
-pub(crate) use crate::repositories::users::usage::{ConversationSummary, ModelShare, UsageWindow};
+use systemprompt_web_admin_core::repositories::user_usage::{
+    ConversationSummary, ModelShare, UsageWindow,
+};
 
 #[derive(Debug, Clone, Default, Serialize)]
 pub(crate) struct ProfileUsage {
@@ -124,15 +126,18 @@ pub(crate) async fn issue_bridge_connect(
     gateway: Option<&str>,
 ) -> Option<BridgeConnectBlock> {
     let gateway = gateway?.to_owned();
-    let issued = crate::repositories::bridge::issue_exchange_code(pool, &user_ctx.user_id)
-        .await
-        .map_err(|e| {
-            tracing::warn!(
-                error = %e,
-                "could not mint a bridge exchange code"
-            );
-        })
-        .ok()?;
+    let issued = systemprompt_web_admin_core::repositories::bridge::issue_exchange_code(
+        pool,
+        &user_ctx.user_id,
+    )
+    .await
+    .map_err(|e| {
+        tracing::warn!(
+            error = %e,
+            "could not mint a bridge exchange code"
+        );
+    })
+    .ok()?;
 
     let expires_in_seconds = (issued.expires_at - chrono::Utc::now())
         .num_seconds()
@@ -161,7 +166,7 @@ pub(crate) async fn issue_bridge_connect(
 pub(crate) async fn build_bridge_profile_data(
     pool: Arc<PgPool>,
     user_ctx: &UserContext,
-) -> crate::error::AdminResult<BridgeProfilePageData> {
+) -> systemprompt_web_admin_core::error::AdminResult<BridgeProfilePageData> {
     let user_id = user_ctx.user_id.clone();
 
     let sections = load_usage_sections(&pool, &user_id).await;
@@ -171,12 +176,14 @@ pub(crate) async fn build_bridge_profile_data(
         .and_then(|u| u.display_name.clone());
 
     let federated_provider =
-        crate::repositories::users::queries::find_identity_envelope(&pool, &user_id)
-            .await
-            .inspect_err(|e| tracing::warn!(error = %e, "profile: identity provider lookup failed"))
-            .ok()
-            .flatten()
-            .and_then(|env| env.idp_issuer.map(|_| "adfs".to_owned()));
+        systemprompt_web_admin_core::repositories::principal::identity::find_identity_envelope(
+            &pool, &user_id,
+        )
+        .await
+        .inspect_err(|e| tracing::warn!(error = %e, "profile: identity provider lookup failed"))
+        .ok()
+        .flatten()
+        .and_then(|env| env.idp_issuer.map(|_| "adfs".to_owned()));
 
     let (jwt_issuer, gateway_url) = read_config_strings();
     let bridge_profile = build_bridge_profile_block();
@@ -196,7 +203,8 @@ pub(crate) async fn build_bridge_profile_data(
 
     let usage = build_usage(sections);
     let mut agents = build_agents_block();
-    let access = crate::authz::catalog::CatalogAccess::load(&pool, &user_id).await?;
+    let access =
+        systemprompt_web_admin_core::authz::catalog::CatalogAccess::load(&pool, &user_id).await?;
     let ids = agents
         .items
         .iter()

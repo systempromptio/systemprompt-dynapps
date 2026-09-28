@@ -4,8 +4,6 @@ mod account;
 mod consent;
 mod identity;
 
-use crate::error::{AdminError, AdminResult};
-use crate::handlers::users::extract_mcp_accessor_user;
 use crate::repositories::users::{
     connector_accounts as accounts, connector_credentials as credentials,
 };
@@ -16,6 +14,8 @@ use axum::routing::{get, post};
 use sqlx::PgPool;
 use std::sync::Arc;
 use systemprompt::identifiers::UserId;
+use systemprompt_web_admin_core::auth::session::extract_mcp_accessor_user;
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
 pub fn router(pool: Arc<PgPool>) -> Router {
     Router::new()
@@ -60,7 +60,7 @@ async fn live_user(
     pool: &PgPool,
     headers: &HeaderMap,
     mutation: bool,
-) -> AdminResult<crate::types::CookieSession> {
+) -> AdminResult<systemprompt_web_admin_core::types::CookieSession> {
     let rides_ambient_cookies = !headers.contains_key("authorization");
     if mutation && rides_ambient_cookies {
         let origin = headers

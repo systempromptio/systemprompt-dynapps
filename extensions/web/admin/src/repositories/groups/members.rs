@@ -16,8 +16,8 @@ use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 use systemprompt_web_shared::GroupId;
 
-use crate::error::{AdminError, AdminResult};
-use crate::types::groups::GroupMemberRow;
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::types::groups::GroupMemberRow;
 
 pub async fn list_group_members(
     pool: &PgPool,
@@ -193,6 +193,9 @@ pub async fn replace_directory_group_memberships(
     .execute(&mut *tx)
     .await?;
     tx.commit().await?;
-    crate::repositories::scope::defaults::recompute_scope_defaults_for_user(pool, user_id).await?;
+    systemprompt_web_admin_core::repositories::scope::defaults::recompute_scope_defaults_for_user(
+        pool, user_id,
+    )
+    .await?;
     Ok(())
 }

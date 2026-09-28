@@ -1,13 +1,13 @@
 //! Bounded OAuth exchanges; provider bodies and credentials never enter logs.
 
 use super::{Consent, Grant, Provider};
-use crate::error::{AdminError, AdminResult};
 use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
 use std::time::Duration;
 use systemprompt::identifiers::ClientId;
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
 pub(super) fn client() -> AdminResult<reqwest::Client> {
     reqwest::Client::builder()

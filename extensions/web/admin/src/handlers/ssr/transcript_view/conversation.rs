@@ -17,10 +17,10 @@ use serde::Serialize;
 use super::grouping::{group_threads, has_turns};
 use super::thread::ThreadBuilder;
 use super::{TranscriptMetaView, TranscriptOptions, display_body, short_id};
-use crate::handlers::ssr::entity_urls::request_detail_url;
-use crate::handlers::ssr::format::format_cost;
 use crate::repositories::analytics::context_detail::{ContextMessageRow, ContextRequestRow};
 use crate::repositories::analytics::context_tool_calls::ContextToolCallRow;
+use systemprompt_web_admin_core::ssr::entity_urls::request_detail_url;
+use systemprompt_web_admin_core::ssr::format::format_cost;
 
 pub(super) const LONG_TEXT_CHARS: usize = 1200;
 pub(super) const LONG_TEXT_LINES: usize = 12;

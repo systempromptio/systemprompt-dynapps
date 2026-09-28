@@ -10,11 +10,11 @@ use systemprompt::identifiers::{PluginId, SkillId};
 
 use super::diff::{Change, diff};
 use super::history::{VersionView, cost, latency, short, views};
-use crate::error::{AdminError, AdminResult};
 use crate::repositories::analysis::marketplace_versions::{
     MarketplaceVersionMetricsRow, MarketplaceVersionSkillRow, VersionCompletionRow, VersionWindow,
     list_marketplace_version_skills,
 };
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
 #[derive(Debug, Clone, Default, Serialize)]
 pub(crate) struct SkillFigures {

@@ -5,7 +5,9 @@ use serde::Serialize;
 use crate::handlers::ssr::analysis::help::HelpView;
 use crate::handlers::ssr::analysis::reports::banner::ReportBannerView;
 use crate::handlers::ssr::analysis::ribbon::RibbonView;
-use crate::handlers::ssr::types::{SparklineView, SvgLineChartView, TabLinkView};
+use systemprompt_web_admin_core::ssr::types::sparkline::SparklineView;
+use systemprompt_web_admin_core::ssr::types::svg_line::SvgLineChartView;
+use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;
 
 #[derive(Debug, Serialize)]
 pub(crate) struct SkillFactView {
@@ -147,7 +149,7 @@ pub(super) struct SkillsPageContext {
     pub(super) row_count: usize,
     pub(super) unused: Vec<UnusedSkillView>,
     pub(super) unused_count: usize,
-    pub(super) export: crate::export::ExportView,
+    pub(super) export: systemprompt_web_admin_core::export::view::ExportView,
     pub(super) is_admin: bool,
     pub(super) help: HelpView,
     pub(super) report_banner: ReportBannerView,

@@ -15,7 +15,7 @@
 use serde_json::json;
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
-use systemprompt_web_admin::activity::{
+use systemprompt_web_admin_core::activity::{
     ActivityAction, ActivityCategory, ActivityEntity, ActivityEntityRef, NewActivity, record,
 };
 

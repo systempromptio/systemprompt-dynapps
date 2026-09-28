@@ -35,17 +35,21 @@ use axum::extract::{Extension, State};
 use axum::response::Response;
 use sqlx::PgPool;
 
-use crate::error::{AdminError, AdminHtmlResult};
-use crate::handlers::shared;
-use crate::repositories::sync::provenance::{OwnedKind, Provenance, owned_by};
-use crate::repositories::sync::sources::build_sources;
-use crate::templates::AdminTemplateEngine;
-use crate::types::{ENTITY_PLUGIN, ENTITY_SKILL, MarketplaceContext, UserContext};
+use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
+use systemprompt_web_admin_core::repositories::sync::provenance::{
+    OwnedKind, Provenance, owned_by,
+};
+use systemprompt_web_admin_core::repositories::sync::sources::build_sources;
+use systemprompt_web_admin_core::request as shared;
+use systemprompt_web_admin_core::templates::AdminTemplateEngine;
+use systemprompt_web_admin_core::types::{
+    ENTITY_PLUGIN, ENTITY_SKILL, MarketplaceContext, UserContext,
+};
 
-use super::ssr::ssr_helpers::render_typed_page;
-use crate::handlers::ssr::types::BreadcrumbView;
 use entries::entry_columns;
 use sorting::{apply_direction, direction, matches, preserved_search, sort_headers};
+use systemprompt_web_admin_core::ssr::helpers::render_typed_page;
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 use view::{PluginListRow, SkillListRow, assignment_counts_by_type};
 use view_models::VisibilityInput;
 

@@ -6,14 +6,15 @@ use chrono::NaiveDate;
 use serde::Serialize;
 use systemprompt::ai::{QuotaWindow, SafetyHistoryMode};
 
-use crate::handlers::ssr::list_view::SelectOptionView;
-use crate::handlers::ssr::sync_plane::PlaneCardView;
-use crate::handlers::ssr::types::{BreadcrumbView, TabLinkView};
 use crate::repositories::gateway_policies::form::{CATEGORIES, MAX_WINDOWS, SCANNERS, SUBJECTS};
 use crate::repositories::gateway_policies::month_window::{
     MONTH_WINDOW_SECONDS, is_month_window, window_label,
 };
 use crate::repositories::gateway_policies::rows::PolicyRow;
+use systemprompt_web_admin_core::ssr::list_view::SelectOptionView;
+use systemprompt_web_admin_core::ssr::sync_plane::PlaneCardView;
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
+use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;
 
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct ToggleView {

@@ -7,10 +7,10 @@ use serde::Serialize;
 use systemprompt::identifiers::{AgentId, SessionId, TraceId, UserId};
 use urlencoding::encode as urlencode;
 
-use crate::handlers::ssr::format::{
+use crate::repositories::traces::{TraceKind, TraceSummary};
+use systemprompt_web_admin_core::ssr::format::{
     format_cost, format_duration_ms, format_token_total, short_num,
 };
-use crate::repositories::traces::{TraceKind, TraceSummary};
 
 use super::BASE_URL;
 

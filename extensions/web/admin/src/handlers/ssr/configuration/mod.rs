@@ -25,15 +25,16 @@ use systemprompt::loader::ServicesBootstrap;
 
 use self::retention::RetentionView;
 use self::view::{ConfigKpiView, ConfigRowView, ConfigurationPageData};
-use crate::error::{AdminError, AdminHtmlResult};
 use crate::handlers::ssr::ssr_sync::{DOCS_URL, EXPORT_ZIP_URL, empty_sources};
-use crate::handlers::ssr::sync_plane::HashView;
-use crate::handlers::ssr::types::{BreadcrumbView, TabLinkView};
 use crate::repositories::gateway_policies::declared::services_root;
-use crate::repositories::sync::provenance::active_bundle_files;
-use crate::repositories::sync::sources::build_sources;
-use crate::templates::AdminTemplateEngine;
-use crate::types::{MarketplaceContext, UserContext};
+use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
+use systemprompt_web_admin_core::repositories::sync::provenance::active_bundle_files;
+use systemprompt_web_admin_core::repositories::sync::sources::build_sources;
+use systemprompt_web_admin_core::ssr::sync_plane::HashView;
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
+use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;
+use systemprompt_web_admin_core::templates::AdminTemplateEngine;
+use systemprompt_web_admin_core::types::{MarketplaceContext, UserContext};
 
 pub(crate) const BASE_URL: &str = "/admin/configuration";
 
@@ -161,11 +162,13 @@ pub(crate) async fn configuration_page(
         export_zip_url: EXPORT_ZIP_URL,
         docs_url: DOCS_URL,
     };
-    Ok(super::render_typed_page(
-        &engine,
-        "configuration",
-        &page,
-        &user_ctx,
-        &mkt_ctx,
-    ))
+    Ok(
+        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+            &engine,
+            "configuration",
+            &page,
+            &user_ctx,
+            &mkt_ctx,
+        ),
+    )
 }

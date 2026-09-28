@@ -4,17 +4,18 @@
 //! filter narrows the rows, so "Cost" reconciles with the instance total on
 //! every filtered view rather than meaning something different on each.
 
-use super::super::list_view::{PageWindow, Pagination, paginate as build_pagination};
 use super::super::people_view::format_usd;
-use super::super::sync_plane::PlaneCardView;
 use super::super::types::{
-    BreadcrumbView, GroupKpiView, GroupRowView, GroupsPageData, MemberSetChipView,
-    UnattributedRowView,
+    GroupKpiView, GroupRowView, GroupsPageData, MemberSetChipView, UnattributedRowView,
 };
 use super::data::Listing;
 use super::sorting::BASE_URL;
 use super::{UNASSIGNED_GROUP, sorting, tabs};
-use crate::handlers::ssr::list_view::DEFAULT_PAGE_SIZE;
+use systemprompt_web_admin_core::ssr::list_view::{
+    DEFAULT_PAGE_SIZE, PageWindow, Pagination, paginate as build_pagination,
+};
+use systemprompt_web_admin_core::ssr::sync_plane::PlaneCardView;
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 
 pub(super) fn kpis(
     rows: &[GroupRowView],
@@ -168,9 +169,12 @@ pub(super) fn page_data(input: GroupsPageInput<'_>) -> GroupsPageData {
     let total_groups = listing.rows.len() as i64;
     let (rows, pagination) = paginate(listing.rows, input.page, facets);
     GroupsPageData {
-        export: crate::export::ExportView::single(
+        export: systemprompt_web_admin_core::export::view::ExportView::single(
             "groups",
-            &crate::export::view::query_string(&[("days", Some(&window_days.to_string()))]),
+            &systemprompt_web_admin_core::export::view::query_string(&[(
+                "days",
+                Some(&window_days.to_string()),
+            )]),
         ),
         page: "groups",
         title: "Groups",

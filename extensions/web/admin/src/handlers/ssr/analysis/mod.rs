@@ -18,7 +18,6 @@ pub(crate) mod ribbon;
 pub(crate) mod skill_detail;
 pub(crate) mod skill_runs;
 pub(crate) mod skills;
-pub(crate) mod time;
 pub(crate) mod tone;
 pub(crate) use skill_detail::skill_page;
 pub use skill_detail::{SkillRef, parse_skill_key};

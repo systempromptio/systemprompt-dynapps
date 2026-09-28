@@ -8,9 +8,12 @@
 
 use serde::Serialize;
 
-use super::super::list_view::Pagination;
-use super::{BreadcrumbView, MemberSetChipView, SortHeaderView, TabLinkView};
-use crate::handlers::ssr::sync_plane::PlaneCardView;
+use super::MemberSetChipView;
+use systemprompt_web_admin_core::ssr::list_view::Pagination;
+use systemprompt_web_admin_core::ssr::sync_plane::PlaneCardView;
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
+use systemprompt_web_admin_core::ssr::types::table::SortHeaderView;
+use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;
 
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct GroupRowView {
@@ -100,5 +103,5 @@ pub(crate) struct GroupsPageData {
     pub can_map: bool,
     pub group_options: Vec<MemberSetChipView>,
     pub unkeyed_people: i64,
-    pub export: crate::export::ExportView,
+    pub export: systemprompt_web_admin_core::export::view::ExportView,
 }

@@ -4,8 +4,8 @@
 
 use axum::http::StatusCode;
 use systemprompt::identifiers::MarketplaceId;
-use systemprompt_web_admin::repositories::bridge::issue_api_key;
 use systemprompt_web_admin::repositories::groups::marketplaces::set_group_marketplaces;
+use systemprompt_web_admin_core::repositories::bridge::issue_api_key;
 
 use crate::app::{App, Call};
 use crate::principal::Principal;

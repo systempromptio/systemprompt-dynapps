@@ -1,8 +1,8 @@
 //! OAuth discovery bound to the hosted Atlassian MCP resource.
 
 use super::transport::{Metadata, atlassian_endpoint, client};
-use crate::error::{AdminError, AdminResult};
 use serde::Deserialize;
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
 // Why: Atlassian binds consent to this exact scope list, so widening it
 // invalidates every banked grant and users must reconnect.

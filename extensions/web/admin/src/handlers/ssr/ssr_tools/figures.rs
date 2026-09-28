@@ -7,11 +7,12 @@ use serde::Serialize;
 use super::query::Lens;
 use super::rows::format_bytes;
 use crate::handlers::ssr::analysis::tone::{deny_tone, error_rate_tone, latency_tone, percent};
-use crate::handlers::ssr::format::format_duration_ms;
-use crate::handlers::ssr::types::{
-    Plot, SparklineView, SvgLineChartView, SvgSeriesInput, chart_on_axis, sparkline_toned,
-};
 use crate::repositories::analysis::tools::{ToolActivityTotals, ToolSeriesPoint};
+use systemprompt_web_admin_core::ssr::format::format_duration_ms;
+use systemprompt_web_admin_core::ssr::types::sparkline::{SparklineView, sparkline_toned};
+use systemprompt_web_admin_core::ssr::types::svg_line::{
+    Plot, SvgLineChartView, SvgSeriesInput, chart_on_axis,
+};
 
 #[derive(Debug, Serialize)]
 pub(crate) struct ToolTileView {

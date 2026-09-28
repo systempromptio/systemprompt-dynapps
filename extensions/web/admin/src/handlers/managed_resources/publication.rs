@@ -11,10 +11,10 @@ use systemprompt::marketplace::managed::{
     DistributionClaim, InstallationReceipt, InstallationReceiptRequest,
 };
 
-use crate::error::AdminResult;
-use crate::handlers::shared::require_write_origin;
-use crate::routes::managed_state::ManagedState;
-use crate::types::UserContext;
+use systemprompt_web_admin_core::error::AdminResult;
+use systemprompt_web_admin_core::request::require_write_origin;
+use systemprompt_web_admin_core::state::ManagedState;
+use systemprompt_web_admin_core::types::UserContext;
 
 pub(crate) async fn create_candidate(
     Extension(_user): Extension<UserContext>,
@@ -87,7 +87,7 @@ pub(crate) async fn publish(
     Json<systemprompt::marketplace::managed::PublicationDecision>,
 )> {
     if !user.is_admin {
-        return Err(crate::error::AdminError::Forbidden(
+        return Err(systemprompt_web_admin_core::error::AdminError::Forbidden(
             "Administrator publication review required".to_owned(),
         ));
     }

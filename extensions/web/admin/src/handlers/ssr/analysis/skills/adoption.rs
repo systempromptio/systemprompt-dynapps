@@ -7,10 +7,12 @@ use super::rows::marketplace_name;
 use super::views::AdoptionView;
 use super::{SkillsQuery, SkillsTab};
 use crate::handlers::ssr::analysis::tone::{completion_tone, percent, score_display};
-use crate::handlers::ssr::analysis_urls::analysis_version_url;
-use crate::handlers::ssr::format::format_cost;
-use crate::repositories::analysis::inventory_index::{InventoryIndex, MarketplaceAudience};
 use crate::repositories::analysis::skills::MarketplaceAdoptionRow;
+use systemprompt_web_admin_core::catalog_index::inventory_index::{
+    InventoryIndex, MarketplaceAudience,
+};
+use systemprompt_web_admin_core::ssr::analysis_urls::analysis_version_url;
+use systemprompt_web_admin_core::ssr::format::format_cost;
 
 fn share(part: i64, whole: i64) -> i64 {
     if whole > 0 {

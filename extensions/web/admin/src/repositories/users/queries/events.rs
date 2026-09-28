@@ -3,7 +3,7 @@
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 
-use crate::types::UserUsageEvent;
+use systemprompt_web_admin_core::types::UserUsageEvent;
 
 pub async fn list_user_usage(
     pool: &PgPool,

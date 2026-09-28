@@ -6,10 +6,10 @@
 //! them, so a group removal that only blocks the next login has revoked
 //! nothing.
 
-use systemprompt_web_admin::repositories::bridge::{issue_api_key, issue_exchange_code};
 use systemprompt_web_admin::repositories::users::revocation::{
     revoke_access_by_email, revoke_user_access,
 };
+use systemprompt_web_admin_core::repositories::bridge::{issue_api_key, issue_exchange_code};
 
 use crate::fixtures::{insert_session, insert_user, insert_user_full, unclaimed_email, unique};
 use crate::tempdb::TempDb;

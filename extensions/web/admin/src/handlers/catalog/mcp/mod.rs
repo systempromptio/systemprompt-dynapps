@@ -30,21 +30,21 @@ use axum::response::Response;
 use serde::Deserialize;
 use sqlx::PgPool;
 
-use crate::error::{AdminError, AdminHtmlResult};
-use crate::export::ExportView;
-use crate::handlers::shared;
-use crate::handlers::ssr::list_view::TimeRangeContext;
-use crate::handlers::ssr::types::BreadcrumbView;
-use crate::templates::AdminTemplateEngine;
-use crate::types::{ENTITY_MCP_SERVER, MarketplaceContext, UserContext};
-use crate::util::time_range::TimeRange;
+use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
+use systemprompt_web_admin_core::export::view::ExportView;
+use systemprompt_web_admin_core::request as shared;
+use systemprompt_web_admin_core::ssr::list_view::TimeRangeContext;
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
+use systemprompt_web_admin_core::templates::AdminTemplateEngine;
+use systemprompt_web_admin_core::types::{ENTITY_MCP_SERVER, MarketplaceContext, UserContext};
+use systemprompt_web_admin_core::util::time_range::TimeRange;
 
-use super::super::ssr::ssr_helpers::render_typed_page;
 use super::sorting::{direction, matches, sort_headers};
 use super::view::assignment_counts_by_type;
-use crate::handlers::ssr::page::Page;
 use fleet::load_runtime;
 use rows::{BASE_URL, RowInputs};
+use systemprompt_web_admin_core::ssr::helpers::render_typed_page;
+use systemprompt_web_admin_core::ssr::page::Page;
 use view::{McpDetailData, McpPageData};
 use window::{pairs_to_query, time_range_context, window_label, window_of, window_pairs};
 
@@ -108,7 +108,7 @@ pub(crate) async fn mcp_servers_page(
         window_label: window_label(&range),
         heartbeat_label: format!(
             "alive = spoke within {} minutes",
-            crate::repositories::overview::liveness::HEARTBEAT_INTERVAL_SECS * 2 / 60
+            systemprompt_web_admin_core::repositories::liveness::HEARTBEAT_INTERVAL_SECS * 2 / 60
         ),
         time_range: time_range_context(&range, BASE_URL),
         window_from: range.from.to_rfc3339(),
@@ -213,9 +213,9 @@ struct DetailInputs<'a> {
     range: TimeRange,
     row: McpServerRow,
     sections: sections::DetailSections,
-    server: Option<&'a crate::types::McpServerDetail>,
+    server: Option<&'a systemprompt_web_admin_core::types::McpServerDetail>,
     included_by: Vec<super::view::LinkedEntity>,
-    access: crate::handlers::ssr::entity_panel::EntityAccessView,
+    access: systemprompt_web_admin_core::ssr::entity_panel::EntityAccessView,
 }
 
 fn detail_page_data(input: DetailInputs<'_>) -> McpDetailData {

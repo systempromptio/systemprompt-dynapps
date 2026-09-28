@@ -3,8 +3,8 @@
 //! Split from `view.rs` at the 300-line ceiling; the shared label helpers
 //! stay there and are imported here.
 
-use crate::handlers::ssr::format::format_duration_ms;
 use crate::repositories::analytics::site::latency::LatencySplit;
+use systemprompt_web_admin_core::ssr::format::format_duration_ms;
 
 use super::context::FastSlowView;
 

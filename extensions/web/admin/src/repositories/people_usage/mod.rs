@@ -27,7 +27,7 @@ use serde::Serialize;
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 
-use crate::repositories::scope::ScopeQuery;
+use systemprompt_web_admin_core::repositories::scope::ScopeQuery;
 
 pub const DEFAULT_WINDOW_DAYS: i32 = 30;
 
@@ -68,7 +68,7 @@ pub async fn get_scope_usage(
     pool: &PgPool,
     q: &ScopeQuery<'_>,
 ) -> Result<ScopeUsageRow, sqlx::Error> {
-    let row = crate::scoped_query!(
+    let row = systemprompt_web_admin_core::scoped_query!(
         r#"SELECT COUNT(r.id)::BIGINT AS "requests!",
                   COUNT(DISTINCT r.user_id)::BIGINT AS "active_members!",
                   COALESCE(SUM(COALESCE(r.tokens_used, COALESCE(r.input_tokens, 0) + COALESCE(r.output_tokens, 0) + COALESCE(r.cache_read_tokens, 0) + COALESCE(r.cache_creation_tokens, 0))), 0)::BIGINT AS "tokens!",
@@ -102,7 +102,7 @@ pub async fn list_member_usage(
     pool: &PgPool,
     q: &ScopeQuery<'_>,
 ) -> Result<HashMap<String, MemberUsageRow>, sqlx::Error> {
-    let rows = crate::scoped_query!(
+    let rows = systemprompt_web_admin_core::scoped_query!(
         r#", spent AS (
                SELECT r.id, r.user_id, r.input_tokens, r.output_tokens,
                       r.cost_microdollars, r.created_at
@@ -151,7 +151,7 @@ pub async fn list_daily_requests(
     pool: &PgPool,
     q: &ScopeQuery<'_>,
 ) -> Result<Vec<DailyRequests>, sqlx::Error> {
-    let rows = crate::scoped_query!(
+    let rows = systemprompt_web_admin_core::scoped_query!(
         r#", days AS (
                SELECT generate_series(
                    (NOW() - make_interval(days => $4 - 1))::date,

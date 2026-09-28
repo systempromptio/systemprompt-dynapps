@@ -16,10 +16,12 @@ fn export_query(params: &ConversationAnalysisQuery) -> String {
         .join("&")
 }
 
-pub(super) fn export_view(params: &ConversationAnalysisQuery) -> crate::export::ExportView {
-    crate::export::ExportView::new(
+pub(super) fn export_view(
+    params: &ConversationAnalysisQuery,
+) -> systemprompt_web_admin_core::export::view::ExportView {
+    systemprompt_web_admin_core::export::view::ExportView::new(
         &[DATASET, "analysis-conversation-breakdown"],
         &export_query(params),
     )
-    .with_transcripts(crate::export::view::TranscriptSource::Analysis)
+    .with_transcripts(systemprompt_web_admin_core::export::transcripts::TranscriptSource::Analysis)
 }

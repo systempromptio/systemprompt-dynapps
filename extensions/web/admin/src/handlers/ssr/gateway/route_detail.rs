@@ -13,12 +13,14 @@ use serde::Serialize;
 use sqlx::PgPool;
 use systemprompt::identifiers::RouteId;
 
-use crate::error::{AdminError, AdminHtmlResult};
-use crate::handlers::ssr::entity_panel::{EntityAccessView, PanelRequest, build_entity_panel};
-use crate::handlers::ssr::page::Page;
-use crate::handlers::ssr::ssr_helpers::render_typed_page;
-use crate::handlers::ssr::types::BreadcrumbView;
-use crate::repositories::config::gateway::get_route_labels_from_services;
+use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
+use systemprompt_web_admin_core::repositories::gateway_catalog::get_route_labels_from_services;
+use systemprompt_web_admin_core::ssr::entity_panel::{
+    EntityAccessView, PanelRequest, build_entity_panel,
+};
+use systemprompt_web_admin_core::ssr::helpers::render_typed_page;
+use systemprompt_web_admin_core::ssr::page::Page;
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 
 use super::ENTITY_GATEWAY_ROUTE;
 

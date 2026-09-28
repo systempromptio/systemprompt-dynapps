@@ -1,6 +1,6 @@
 //! Infers which skill, agent, or MCP server a hook event belongs to.
 
-use crate::types::webhook::HookEventPayload;
+use systemprompt_web_admin_core::types::webhook::HookEventPayload;
 
 pub(super) fn detect_entity(payload: &HookEventPayload) -> Option<(&'static str, String)> {
     let tool_name = payload.tool_name();
@@ -44,7 +44,8 @@ fn detect_skill_entity(payload: &HookEventPayload, key: &str) -> Option<(&'stati
 }
 
 fn detect_mcp_server(tool_name: &str) -> Option<String> {
-    crate::util::mcp_tool_name::parse_mcp_tool_name(tool_name).map(|name| name.server)
+    systemprompt_web_admin_core::util::mcp_tool_name::parse_mcp_tool_name(tool_name)
+        .map(|name| name.server)
 }
 
 fn detect_agent_entity(payload: &HookEventPayload) -> Option<(&'static str, String)> {

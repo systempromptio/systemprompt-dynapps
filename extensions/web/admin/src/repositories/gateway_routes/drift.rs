@@ -10,7 +10,7 @@ use serde::Serialize;
 
 use super::declared::{DeclaredRoutes, route_fingerprint};
 use super::rows::{RouteRow, SOURCE_DASHBOARD};
-use crate::types::GatewayRouteView;
+use systemprompt_web_admin_core::types::GatewayRouteView;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct ChangedRoute {

@@ -27,15 +27,16 @@ pub(crate) use archive::{
 };
 pub(crate) use refresh::refresh_sources_handler;
 
-use crate::activity::{self, NewActivity, PlaneApply};
-use crate::error::{AdminError, AdminResult};
-use crate::repositories::sync::plane::{
+use systemprompt_web_admin_core::activity;
+use systemprompt_web_admin_core::activity::{NewActivity, PlaneApply};
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::repositories::sync::plane::{
     Actor, ApplyOutcome, EntityScope, PlaneDrift, SyncMode, SyncPlane,
 };
-use crate::repositories::sync::registry::{find_plane, planes};
-use crate::repositories::sync::sources::{SourcesView, build_sources};
-use crate::repositories::sync::state::{SyncStateRow, find_sync_state};
-use crate::types::UserContext;
+use systemprompt_web_admin_core::repositories::sync::registry::{find_plane, planes};
+use systemprompt_web_admin_core::repositories::sync::sources::{SourcesView, build_sources};
+use systemprompt_web_admin_core::repositories::sync::state::{SyncStateRow, find_sync_state};
+use systemprompt_web_admin_core::types::UserContext;
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct ApplyRequest {

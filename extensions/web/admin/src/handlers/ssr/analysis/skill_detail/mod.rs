@@ -24,16 +24,18 @@ use serde::Deserialize;
 use sqlx::PgPool;
 use systemprompt::identifiers::PluginId;
 
-use crate::error::{AdminError, AdminHtmlResult};
-use crate::handlers::ssr::analysis_urls::analysis_skill_url;
-use crate::handlers::ssr::page::Page;
-use crate::repositories;
-use crate::repositories::analysis::inventory_index::{InventoryIndex, get_marketplace_audience};
+use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
+use systemprompt_web_admin_core::ssr::analysis_urls::analysis_skill_url;
+use systemprompt_web_admin_core::ssr::page::Page;
+
 use crate::repositories::analysis::skills::{
     SkillBreakdownBy, SkillRunFilter, SkillWindow, find_skill_facts, list_skill_breakdown,
     list_skill_conversations_paged, list_skill_daily, list_skill_runs,
 };
-use crate::repositories::scope::ScopeRequest;
+use systemprompt_web_admin_core::catalog_index::inventory_index::{
+    InventoryIndex, get_marketplace_audience,
+};
+use systemprompt_web_admin_core::repositories::scope::ScopeRequest;
 
 use context::{SkillRead, build_context};
 
@@ -156,14 +158,17 @@ pub(crate) async fn skill_page(
         query.group.as_deref(),
         query.project.as_deref(),
     );
-    let scope = repositories::scope::membership::get_subject_scope(&pool, &request).await?;
+    let scope = systemprompt_web_admin_core::repositories::scope::membership::get_subject_scope(
+        &pool, &request,
+    )
+    .await?;
     let end = Utc::now();
     let window = SkillWindow {
         start: end - Duration::days(query.days()),
         end,
         subject_ids: scope.as_sql().map(<[String]>::to_vec),
     };
-    let index = InventoryIndex::build(&crate::handlers::shared::get_services_path()?);
+    let index = InventoryIndex::build(&systemprompt_web_admin_core::request::get_services_path()?);
     let run_filter = SkillRunFilter {
         marketplace: None,
         skill: Some(skill.skill.clone()),
@@ -203,11 +208,13 @@ pub(crate) async fn skill_page(
             can_judge: shell.user.is_console && !super::judge_mode::automatic(),
         },
     );
-    Ok(crate::handlers::ssr::render_typed_page(
-        &shell.engine,
-        "analysis-skill",
-        &context,
-        &shell.user,
-        &shell.marketplace,
-    ))
+    Ok(
+        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+            &shell.engine,
+            "analysis-skill",
+            &context,
+            &shell.user,
+            &shell.marketplace,
+        ),
+    )
 }

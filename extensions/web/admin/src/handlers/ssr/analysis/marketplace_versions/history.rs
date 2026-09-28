@@ -5,10 +5,10 @@ use serde::Serialize;
 
 use super::diff::{ManifestDiff, diff};
 use crate::handlers::ssr::analysis::tone::{completion_tone, score_display};
-use crate::handlers::ssr::format::{format_cost, format_duration_ms};
 use crate::repositories::analysis::marketplace_versions::{
     MarketplaceVersionMetricsRow, VersionCompletionRow,
 };
+use systemprompt_web_admin_core::ssr::format::{format_cost, format_duration_ms};
 
 pub(crate) fn short(value: &str) -> String {
     value.chars().take(12).collect()

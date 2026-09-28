@@ -10,9 +10,10 @@ use std::collections::HashMap;
 
 use sqlx::PgPool;
 
-use crate::repositories;
-use crate::repositories::groups::usage::{GroupUsageRow, UNATTRIBUTED_ROW, list_groups_with_usage};
-use crate::services::marketplaces::load_marketplaces;
+
+use crate::repositories::groups::usage::{GroupUsageRow, list_groups_with_usage};
+use systemprompt_web_admin_core::catalog_index::marketplaces::load_marketplaces;
+use systemprompt_web_admin_core::repositories::scope::membership::UNATTRIBUTED as UNATTRIBUTED_ROW;
 
 use super::super::people_view::{share, short_model};
 use super::super::types::{GroupRowView, MemberSetChipView, UnattributedRowView};
@@ -142,14 +143,16 @@ async fn load_group_marketplaces(
 
     let subjects: Vec<_> = groups
         .iter()
-        .map(|g| repositories::users::access_control::group_subject(&g.id))
+        .map(|g| systemprompt_web_admin_core::repositories::entitlement::group_subject(&g.id))
         .collect();
     let sections = vec![("marketplace".to_owned(), "Marketplaces".to_owned(), section)];
     let matrices =
-        repositories::users::access_control::resolve_subject_matrices(pool, &subjects, &sections)
-            .await
-            .inspect_err(|e| tracing::warn!(error = %e, "group marketplace resolve failed"))
-            .unwrap_or_default();
+        systemprompt_web_admin_core::repositories::entitlement::resolve_subject_matrices(
+            pool, &subjects, &sections,
+        )
+        .await
+        .inspect_err(|e| tracing::warn!(error = %e, "group marketplace resolve failed"))
+        .unwrap_or_default();
     groups
         .iter()
         .zip(matrices)

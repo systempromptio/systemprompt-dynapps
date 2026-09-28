@@ -11,8 +11,8 @@ use systemprompt_web_admin::repositories::analytics::site::latency::{
 use systemprompt_web_admin::repositories::analytics::site::model_series::list_model_cost_series;
 use systemprompt_web_admin::repositories::analytics::site::series::SeriesBucket;
 use systemprompt_web_admin::repositories::analytics::site::user_rollups::list_user_daily_rollups;
-use systemprompt_web_admin::repositories::scope::{Attribution, SubjectScope};
-use systemprompt_web_admin::util::time_range::{TimeRange, TimeRangePreset};
+use systemprompt_web_admin_core::repositories::scope::{Attribution, SubjectScope};
+use systemprompt_web_admin_core::util::time_range::{TimeRange, TimeRangePreset};
 
 use crate::fixtures::{
     RequestSpec, insert_request, insert_user, project_scope, set_project, unclaimed_email, unique,

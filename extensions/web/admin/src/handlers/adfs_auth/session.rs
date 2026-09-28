@@ -22,10 +22,10 @@ use systemprompt::oauth::services::{
 };
 
 use super::secure_flag;
-use crate::activity::NewActivity;
 use crate::repositories::dev_login::DevLoginUser;
-use crate::repositories::users::activity::record;
 use crate::repositories::users::federated;
+use systemprompt_web_admin_core::activity::NewActivity;
+use systemprompt_web_admin_core::repositories::user_activity::record;
 
 #[derive(Debug, Clone)]
 pub(crate) struct SessionSubject {
@@ -73,7 +73,7 @@ pub(crate) fn session_cookie(jwt: &str, max_age: i64) -> String {
 }
 
 pub fn permissions_for_roles(roles: &[String]) -> Vec<Permission> {
-    if crate::types::roles_grant_manage(roles) {
+    if systemprompt_web_admin_core::types::roles_grant_manage(roles) {
         vec![Permission::Admin, Permission::User]
     } else {
         vec![Permission::User]

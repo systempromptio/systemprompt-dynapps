@@ -2,7 +2,7 @@
 
 use sqlx::PgPool;
 
-use crate::types::TrafficKpis;
+use systemprompt_web_admin_core::types::TrafficKpis;
 
 pub(super) async fn get_traffic_kpis(
     pool: &PgPool,

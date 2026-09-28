@@ -7,7 +7,9 @@ use std::collections::HashMap;
 
 use systemprompt::identifiers::{PluginId, SkillId};
 
-use crate::types::{ConfiguredHook, ENTITY_PLUGIN, ENTITY_SKILL, PluginDetail, SkillCatalogEntry};
+use systemprompt_web_admin_core::types::{
+    ConfiguredHook, ENTITY_PLUGIN, ENTITY_SKILL, PluginDetail, SkillCatalogEntry,
+};
 
 use super::data::Catalog;
 use super::view::{
@@ -15,10 +17,10 @@ use super::view::{
     access_url, mcp_url, plugin_url, skill_url,
 };
 use super::visibility::{VisibilityView, carriers_of_plugin, carriers_of_skill, visibility_for};
-use crate::handlers::ssr::analysis_urls::{ANALYSIS_SKILLS_URL, analysis_skill_url};
-use crate::handlers::ssr::types::BreadcrumbView;
-use crate::repositories::marketplace::manifests::MarketplaceConfigSummary;
-use crate::types::access_control::AccessControlRule;
+use systemprompt_web_admin_core::catalog_index::manifests::MarketplaceConfigSummary;
+use systemprompt_web_admin_core::ssr::analysis_urls::{ANALYSIS_SKILLS_URL, analysis_skill_url};
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
+use systemprompt_web_admin_core::types::access_control::AccessControlRule;
 
 pub(super) struct VisibilityInput<'a> {
     pub(super) manifests: &'a [MarketplaceConfigSummary],

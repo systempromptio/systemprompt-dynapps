@@ -1,5 +1,5 @@
-//! Whether a connection will carry a person's calls, and the live check a
-//! session-attested connector runs in place of an OAuth probe.
+//! The live check a session-attested connector runs in place of an OAuth
+//! probe.
 
 use std::time::Instant;
 
@@ -11,62 +11,10 @@ use systemprompt::mcp::services::client::{
 use systemprompt::models::auth::Permission;
 use systemprompt::models::mcp::McpServerType;
 
-use super::connector_accounts::{Connection, load_entitlement, scopes_granted};
-use super::connector_oauth::{Provider, VerificationReport};
-use crate::error::{AdminError, AdminResult};
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum NotReady {
-    NotConfigured,
-    NotEntitled,
-    Status,
-    Unverified,
-}
-
-impl NotReady {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Self::NotConfigured => "not_configured",
-            Self::NotEntitled => "not_entitled",
-            Self::Status => "status",
-            Self::Unverified => "verified_at_null",
-        }
-    }
-}
-
-impl std::fmt::Display for NotReady {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(self.as_str())
-    }
-}
-
-impl Connection {
-    pub fn readiness(&self) -> Result<(), NotReady> {
-        if !self.configured {
-            return Err(NotReady::NotConfigured);
-        }
-        if !self.requires_auth {
-            return Ok(());
-        }
-        if !self.entitled {
-            return Err(NotReady::NotEntitled);
-        }
-        if !matches!(
-            self.status.as_str(),
-            "connected" | "temporarily_unavailable"
-        ) {
-            return Err(NotReady::Status);
-        }
-        if self.verified_at.is_none() {
-            return Err(NotReady::Unverified);
-        }
-        Ok(())
-    }
-
-    pub fn is_ready(&self) -> bool {
-        self.readiness().is_ok()
-    }
-}
+use super::connector_accounts::{load_entitlement, scopes_granted};
+use super::connector_oauth::Provider;
+use systemprompt_web_admin_core::connections::report::VerificationReport;
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
 pub(crate) async fn probe_session_connection(
     pool: &PgPool,

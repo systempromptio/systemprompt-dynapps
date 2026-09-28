@@ -9,7 +9,7 @@
 //! does with more than one section and with an entity type core's
 //! `EntityKind` does not know.
 
-use systemprompt_web_admin::repositories::users::access_control::{
+use systemprompt_web_admin_core::repositories::entitlement::{
     filter_catalog_for_user, resolve_user_matrix,
 };
 

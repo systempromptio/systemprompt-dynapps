@@ -12,26 +12,34 @@
 use async_trait::async_trait;
 use sqlx::PgPool;
 
-use super::access_control::applied_from;
-use super::declaration::read_or_text;
 use super::groups_db::{
     count_member_sets, insert_missing, list_mappings, list_member_sets, parse_groups_doc,
     render_groups_export,
 };
 use super::groups_drift::{GroupsDrift, compute_groups_drift, declared_count, declared_hash};
-use super::plane::{
+use crate::repositories::config::groups_yaml_loader::{GROUPS_FILE, apply_groups_doc};
+use crate::repositories::config::groups_yaml_types::GroupsDoc;
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::repositories::sync::access_control::applied_from;
+use systemprompt_web_admin_core::repositories::sync::declaration::read_or_text;
+use systemprompt_web_admin_core::repositories::sync::plane::{
     ActionCounts, Actor, ApplyOutcome, DeclarationSource, DriftKpi, Export, PlaneDrift, SyncMode,
     SyncPlane,
 };
-use super::state::{Applied, record_applied, record_declared};
-use crate::error::{AdminError, AdminResult};
-use crate::repositories::config::groups_yaml_loader::{GROUPS_FILE, apply_groups_doc};
-use crate::repositories::config::groups_yaml_types::GroupsDoc;
+use systemprompt_web_admin_core::repositories::sync::plane_ids;
+use systemprompt_web_admin_core::repositories::sync::registry::PlaneRegistration;
+use systemprompt_web_admin_core::repositories::sync::state::{
+    Applied, record_applied, record_declared,
+};
 
-pub const PLANE_ID: &str = "groups";
+pub const PLANE_ID: &str = plane_ids::GROUPS;
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct GroupsPlane;
+
+inventory::submit! {
+    PlaneRegistration { order: 1, build: || Box::new(GroupsPlane) }
+}
 
 fn declared_groups_from(from: DeclarationSource<'_>) -> AdminResult<GroupsDoc> {
     let Some(yaml) = read_or_text(from, GROUPS_FILE)? else {

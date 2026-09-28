@@ -3,7 +3,7 @@
 use systemprompt::identifiers::McpToolName;
 use systemprompt_security::policy::{GovernedInput, GovernedTarget, McpToolInput};
 
-use crate::types::webhook::HookEventPayload;
+use systemprompt_web_admin_core::types::webhook::HookEventPayload;
 
 pub(super) fn governed_target(
     payload: &HookEventPayload,

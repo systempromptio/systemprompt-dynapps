@@ -3,34 +3,24 @@
 //! Each module owns one page: it builds a typed template context and renders a
 //! `.hbs` template from `storage/files/admin/templates/` at request time.
 
-use crate::error::AdminHtmlResult;
-use crate::templates::AdminTemplateEngine;
-use crate::types::UserContext;
 use axum::Extension;
 use axum::extract::Query;
 use axum::response::{Html, IntoResponse, Redirect, Response};
+use systemprompt_web_admin_core::error::AdminHtmlResult;
+use systemprompt_web_admin_core::templates::AdminTemplateEngine;
+use systemprompt_web_admin_core::types::UserContext;
 
-
-pub(crate) mod analysis_urls;
 mod approvals;
 mod configuration;
-mod context;
 pub(crate) mod conversation_header;
 mod devices;
-pub(crate) mod entity_kind;
-pub(crate) mod entity_panel;
-pub(crate) mod entity_urls;
-pub(crate) mod format;
 mod gateway;
 mod gateway_policies;
 pub(crate) mod governance;
 mod governance_quotas;
-pub(crate) mod list_view;
 mod overview;
-pub(crate) mod page;
 pub(crate) mod people_chart;
 pub(crate) mod people_view;
-pub(crate) mod pickable_users;
 mod roles;
 pub(crate) mod secrets_audit;
 mod ssr_access_control;
@@ -44,11 +34,9 @@ mod ssr_connect;
 mod ssr_connectors;
 pub(crate) mod ssr_connectors_cards;
 mod ssr_context_detail;
-mod ssr_demo_help;
 mod ssr_governance_audit_detail;
 mod ssr_group_detail;
 mod ssr_groups;
-pub(crate) mod ssr_helpers;
 pub(crate) mod ssr_history;
 mod ssr_lifecycle;
 mod ssr_observability;
@@ -65,7 +53,6 @@ mod ssr_sync;
 mod ssr_sync_import;
 pub(crate) mod ssr_tools;
 mod ssr_users;
-pub(crate) mod sync_plane;
 pub(crate) mod transcript_view;
 pub(crate) mod types;
 
@@ -94,7 +81,6 @@ pub(crate) use ssr_context_detail::context_detail_page;
 pub(crate) use ssr_governance_audit_detail::governance_audit_detail_page;
 pub(crate) use ssr_group_detail::group_detail_page;
 pub(crate) use ssr_groups::groups_page;
-pub(crate) use ssr_helpers::{branding_context, render_typed_page};
 pub(crate) use ssr_history::{
     conversations_page, history_conversation_page, history_page, history_search,
 };
@@ -116,6 +102,7 @@ pub(crate) use ssr_sync::sync_page;
 pub(crate) use ssr_sync_import::import_preview_page;
 pub(crate) use ssr_tools::tools_page;
 pub(crate) use ssr_users::{user_detail_by_id_page, user_detail_page, users_page};
+use systemprompt_web_admin_core::ssr::helpers::branding_context;
 
 #[derive(serde::Deserialize)]
 pub(crate) struct LoginParams {
@@ -125,7 +112,7 @@ pub(crate) struct LoginParams {
 #[derive(serde::Serialize)]
 struct LoginContext<'a> {
     #[serde(flatten)]
-    shell: context::BrandingShell<'a>,
+    shell: systemprompt_web_admin_core::ssr::context::BrandingShell<'a>,
     #[serde(skip_serializing_if = "Option::is_none")]
     redirect_encoded: Option<String>,
     sso_enabled: bool,

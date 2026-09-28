@@ -3,11 +3,12 @@
 use sqlx::PgPool;
 use systemprompt::identifiers::{PluginId, SessionId, UserId};
 
-use crate::event_hub::EventHub;
-use crate::repositories::dashboard::{conversation_analytics, hooks_track, usage_aggregations};
+use crate::repositories::dashboard::{conversation_analytics, usage_aggregations};
+use systemprompt_web_admin_core::event_hub::EventHub;
+use systemprompt_web_admin_core::repositories::ingestion::hooks_track;
 
-use crate::types::webhook::{HookEvent, HookEventPayload};
-use crate::types::{ENTITY_SKILL, EVENT_SESSION_END, EVENT_SESSION_START};
+use systemprompt_web_admin_core::types::webhook::{HookEvent, HookEventPayload};
+use systemprompt_web_admin_core::types::{ENTITY_SKILL, EVENT_SESSION_END, EVENT_SESSION_START};
 
 use super::{entity, helpers};
 

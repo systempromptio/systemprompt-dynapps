@@ -1,7 +1,7 @@
 //! A host's namespaced MCP tool name reduced to the server and bare tool the
 //! gateway records.
 
-use systemprompt_web_admin::util::mcp_tool_name::{McpToolName, parse_mcp_tool_name_with};
+use systemprompt_web_admin_core::util::mcp_tool_name::{McpToolName, parse_mcp_tool_name_with};
 
 fn known() -> Vec<String> {
     ["systemprompt", "google_workspace", "atlassian"]

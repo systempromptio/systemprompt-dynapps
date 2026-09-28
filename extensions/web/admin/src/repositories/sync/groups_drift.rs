@@ -12,8 +12,8 @@
 use serde::Serialize;
 use sha2::{Digest, Sha256};
 
-use super::plane::{DriftRow, resolution};
 use crate::repositories::config::groups_yaml_types::{GroupsDoc, MemberSetDef};
+use systemprompt_web_admin_core::repositories::sync::plane::{DriftRow, resolution};
 
 /// A group or project as the database holds it.
 #[derive(Debug, Clone, Serialize)]

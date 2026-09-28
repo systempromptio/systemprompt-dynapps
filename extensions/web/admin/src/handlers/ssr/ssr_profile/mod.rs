@@ -9,15 +9,17 @@ use serde::Serialize;
 use sqlx::PgPool;
 use systemprompt::identifiers::ContextId;
 
-use crate::error::{AdminError, AdminHtmlResult, AdminResult};
-use crate::handlers::ssr::format::{format_cost, relative_time};
-use crate::handlers::ssr::ssr_helpers::render_typed_page;
-use crate::handlers::ssr::types::BreadcrumbView;
 use crate::repositories;
-use crate::repositories::users::usage::{ConversationSummary, RecentConversation};
 use crate::services::bridge_profile::{self, BridgeProfilePageData};
-use crate::templates::AdminTemplateEngine;
-use crate::types::{MarketplaceContext, UserContext};
+use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult, AdminResult};
+use systemprompt_web_admin_core::repositories::user_usage::{
+    ConversationSummary, RecentConversation,
+};
+use systemprompt_web_admin_core::ssr::format::{format_cost, relative_time};
+use systemprompt_web_admin_core::ssr::helpers::render_typed_page;
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
+use systemprompt_web_admin_core::templates::AdminTemplateEngine;
+use systemprompt_web_admin_core::types::{MarketplaceContext, UserContext};
 
 // Why: the bridge GUI shares `BridgeProfilePageData` as a wire shape, so the
 // console's extras wrap it here; fields may be added to it, never removed.

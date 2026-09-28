@@ -21,7 +21,10 @@ use systemprompt::models::services::MarketplaceAccess;
 use systemprompt_security::authz::{
     Access, AccessControlRepository, EntityKind, RuleType, UpsertRuleParams,
 };
-use systemprompt_web_admin::marketplace_filter::TemplateMarketplaceFilter;
+// Why: the filter reads connection snapshots through an `inventory`
+// registration submitted by the residual admin crate, which must be linked.
+use systemprompt_web_admin as _;
+use systemprompt_web_admin_core::marketplace_filter::TemplateMarketplaceFilter;
 
 use crate::fixtures::{insert_user_with_roles, unique};
 

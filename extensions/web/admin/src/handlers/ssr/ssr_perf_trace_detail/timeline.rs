@@ -9,8 +9,8 @@
 
 use serde::Serialize;
 
-use crate::handlers::ssr::format::format_duration_ms;
 use crate::repositories::traces::{Span, SpanKind};
+use systemprompt_web_admin_core::ssr::format::format_duration_ms;
 
 const VIEW_WIDTH: f64 = 1000.0;
 const LANE_HEIGHT: f64 = 18.0;

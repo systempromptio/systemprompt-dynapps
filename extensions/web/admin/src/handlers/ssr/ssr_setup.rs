@@ -1,12 +1,12 @@
 //! SSR page driving first-run instance setup.
 
-use crate::error::AdminHtmlResult;
-use crate::handlers::ssr::types::BreadcrumbView;
-use crate::templates::AdminTemplateEngine;
-use crate::types::{MarketplaceContext, UserContext};
 use axum::extract::{Extension, Query};
 use axum::response::Response;
 use serde::{Deserialize, Serialize};
+use systemprompt_web_admin_core::error::AdminHtmlResult;
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
+use systemprompt_web_admin_core::templates::AdminTemplateEngine;
+use systemprompt_web_admin_core::types::{MarketplaceContext, UserContext};
 
 #[derive(Debug, Serialize)]
 struct SetupPageContext {
@@ -134,7 +134,9 @@ pub(crate) async fn setup_page(
         just_verified: query.verified.is_some(),
     };
 
-    Ok(super::render_typed_page(
-        &engine, "setup", &ctx, &user_ctx, &mkt_ctx,
-    ))
+    Ok(
+        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+            &engine, "setup", &ctx, &user_ctx, &mkt_ctx,
+        ),
+    )
 }

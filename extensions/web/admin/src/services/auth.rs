@@ -5,7 +5,7 @@ use systemprompt::models::Config;
 use systemprompt::models::auth::JwtAudience;
 use systemprompt::oauth::validate_jwt_token;
 
-use crate::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
 pub(crate) fn validate_plugin_jwt(headers: &HeaderMap) -> AdminResult<String> {
     let token = headers

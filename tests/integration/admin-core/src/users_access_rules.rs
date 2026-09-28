@@ -9,11 +9,11 @@
 //! grants written by the governance bootstrap.
 
 use systemprompt_security::authz::EntityKind;
-use systemprompt_web_admin::repositories::users::access_control::{
+use systemprompt_web_admin_core::repositories::entitlement::{
     bulk_set_rules, count_assignments_by_entity_type, list_all_rules, list_rules_for_entity,
     set_entity_rules,
 };
-use systemprompt_web_admin::types::access_control::{
+use systemprompt_web_admin_core::types::access_control::{
     AccessControlRuleInput, AccessDecision, RuleType,
 };
 

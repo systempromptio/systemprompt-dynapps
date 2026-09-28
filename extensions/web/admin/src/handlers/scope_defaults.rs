@@ -19,9 +19,10 @@ use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 use systemprompt_web_shared::{GroupId, ProjectId};
 
-use crate::error::{AdminError, AdminResult};
-use crate::repositories::scope::defaults::{self, ScopeDefaults};
-use crate::types::UserContext;
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::repositories::scope::defaults;
+use systemprompt_web_admin_core::repositories::scope::defaults::ScopeDefaults;
+use systemprompt_web_admin_core::types::UserContext;
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct SetScopeDefaultsRequest {

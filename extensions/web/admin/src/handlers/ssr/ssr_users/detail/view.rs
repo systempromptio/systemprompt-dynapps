@@ -6,12 +6,12 @@ use systemprompt_web_shared::{GroupId, ProjectId};
 
 pub(super) use super::access_view::access_tab;
 
-use crate::handlers::ssr::list_view::{PageWindow, Pagination};
-use crate::handlers::ssr::ssr_history::{HistoryRowView, HistoryView, row_view};
-use crate::repositories::devices::bridge_presence;
-use crate::repositories::scope::defaults::ScopeDefaults;
 use crate::repositories::users::enrolment::UserDeviceRow;
 use crate::repositories::users::sessions::SigninSessionRow;
+use systemprompt_web_admin_core::repositories::bridge::presence::bridge_presence;
+use systemprompt_web_admin_core::repositories::scope::defaults::ScopeDefaults;
+use systemprompt_web_admin_core::ssr::history_rows::{HistoryRowView, HistoryView, row_view};
+use systemprompt_web_admin_core::ssr::list_view::{PageWindow, Pagination};
 
 use super::context::{
     DeviceRowView, DevicesTabView, IdentityTabView, MembershipTabView, SalesforceIdentityView,
@@ -19,23 +19,34 @@ use super::context::{
 };
 use super::load::{IdentityData, MembershipData, UserConversationsData};
 use crate::services::connector_oauth::Provider;
-use crate::types::UserContext;
+use systemprompt_web_admin_core::types::UserContext;
 
 pub(super) use super::usage::usage_tab;
-use crate::handlers::ssr::list_view::paginate_prefixed;
+use systemprompt_web_admin_core::ssr::list_view::paginate_prefixed;
 
 const SLACK_ISSUER: &str = "https://slack.com";
 
-pub(super) fn export(user_id: &UserId, viewer: &UserContext) -> Option<crate::export::ExportView> {
+pub(super) fn export(
+    user_id: &UserId,
+    viewer: &UserContext,
+) -> Option<systemprompt_web_admin_core::export::view::ExportView> {
     viewer.is_console.then(|| {
-        let query = crate::export::view::query_string(&[("user_id", Some(user_id.as_str()))]);
-        crate::export::ExportView::new(&["requests", "sessions", "conversations"], &query)
-            .with_transcripts(crate::export::view::TranscriptSource::Sessions)
+        let query = systemprompt_web_admin_core::export::view::query_string(&[(
+            "user_id",
+            Some(user_id.as_str()),
+        )]);
+        systemprompt_web_admin_core::export::view::ExportView::new(
+            &["requests", "sessions", "conversations"],
+            &query,
+        )
+        .with_transcripts(
+            systemprompt_web_admin_core::export::transcripts::TranscriptSource::Sessions,
+        )
     })
 }
 
 pub(super) fn identity_tab(
-    detail: &crate::types::UserDetail,
+    detail: &systemprompt_web_admin_core::types::UserDetail,
     data: &IdentityData,
     role_choices: Vec<crate::handlers::ssr::types::RoleChoiceView>,
 ) -> IdentityTabView {

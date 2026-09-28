@@ -16,7 +16,7 @@ use super::view::{
     AcAudienceFocusView, AcAudienceKpiView, AcAudienceRowView,
 };
 use crate::handlers::ssr::people_view::expires_soon;
-use crate::repositories::access_control::rules::LedgerRuleRow;
+use systemprompt_web_admin_core::repositories::access_rules::rules::LedgerRuleRow;
 
 const BUCKETS: [(&str, &str); 4] = [
     ("allow", "Allowed"),

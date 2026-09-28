@@ -5,12 +5,12 @@
 use crate::handlers::ssr::analysis::help::conversations_help;
 use crate::handlers::ssr::analysis::reports::banner::ReportBannerView;
 use crate::handlers::ssr::analysis::ribbon::{RibbonGroupView, RibbonView};
-use crate::handlers::ssr::list_view::{PageWindow, ScopeFilterView};
 use crate::repositories::analysis::conversations::{
     BreakdownBy, ConversationAnalysisResult, FlagFilter,
 };
-use crate::repositories::scope::ScopeRequest;
 use systemprompt::identifiers::UserId;
+use systemprompt_web_admin_core::repositories::scope::ScopeRequest;
+use systemprompt_web_admin_core::ssr::list_view::{PageWindow, ScopeFilterView};
 
 use super::charts::series_charts;
 use super::exports::{DATASET, export_view};
@@ -20,7 +20,7 @@ use super::page_context::ConversationsPageContext;
 use super::query::{BASE_URL, ConversationAnalysisQuery};
 use super::summary::{CATEGORIES, ConversationBucketView, OUTCOMES, category_label};
 use super::view::ConversationRowView;
-use crate::handlers::ssr::list_view::DEFAULT_PAGE_SIZE;
+use systemprompt_web_admin_core::ssr::list_view::DEFAULT_PAGE_SIZE;
 
 
 const fn bucket_param(by: BreakdownBy) -> Option<&'static str> {

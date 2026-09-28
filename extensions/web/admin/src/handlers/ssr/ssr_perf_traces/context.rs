@@ -4,10 +4,11 @@
 
 use serde::Serialize;
 
-use crate::handlers::ssr::list_view::{
+use systemprompt_web_admin_core::ssr::list_view::{
     AnnotatedOption, Chip, Pagination, Preserved, ScopeFilterView, TimeRangeContext,
 };
-use crate::handlers::ssr::types::{BreadcrumbView, SortHeaderView};
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
+use systemprompt_web_admin_core::ssr::types::table::SortHeaderView;
 
 #[derive(Debug, Serialize)]
 pub(super) struct PerfTracesPageContext {
@@ -30,7 +31,7 @@ pub(super) struct PerfTracesPageContext {
     pub(super) error_only: bool,
     pub(super) deny_only: bool,
     pub(super) scope_filter: ScopeFilterView,
-    pub(super) export: crate::export::ExportView,
+    pub(super) export: systemprompt_web_admin_core::export::view::ExportView,
 }
 
 #[derive(Debug, Serialize)]

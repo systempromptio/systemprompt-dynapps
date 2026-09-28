@@ -6,7 +6,7 @@
 use sqlx::PgPool;
 
 use super::TraceStats;
-use crate::util::time_range::TimeRange;
+use systemprompt_web_admin_core::util::time_range::TimeRange;
 
 pub async fn get_trace_stats(
     pool: &PgPool,

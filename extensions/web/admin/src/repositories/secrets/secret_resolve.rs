@@ -7,7 +7,7 @@ use sqlx::PgPool;
 
 use systemprompt::identifiers::{PluginId, UserId};
 
-use crate::repositories::secrets::secret_crypto;
+use systemprompt_web_admin_core::crypto::secret_crypto;
 
 use crate::repositories::secrets::secret_keys;
 

@@ -7,10 +7,14 @@ use serde::ser::SerializeMap;
 use systemprompt::identifiers::{AiRequestId, SessionId, TraceId, UserId};
 use systemprompt_web_shared::{GroupId, ProjectId};
 
-use crate::handlers::ssr::list_view::{Chip, Pagination, ScopeFilterView, SelectOptionView};
-use crate::handlers::ssr::types::{BreadcrumbView, ChartView, HistogramView, SortHeaderView};
+use crate::handlers::ssr::types::{ChartView, HistogramView};
+use systemprompt_web_admin_core::ssr::list_view::{
+    Chip, Pagination, ScopeFilterView, SelectOptionView,
+};
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
+use systemprompt_web_admin_core::ssr::types::table::SortHeaderView;
 
-pub(super) use crate::handlers::ssr::types::TabLinkView;
+use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum RequestsTab {
@@ -87,7 +91,7 @@ pub(super) struct AnalyticsRequestsPageContext {
     pub chips: Vec<Chip>,
     pub has_active_filters: bool,
     pub clear_url: String,
-    pub export: crate::export::ExportView,
+    pub export: systemprompt_web_admin_core::export::view::ExportView,
     pub base_url: &'static str,
     pub scope_filter: ScopeFilterView,
 }
@@ -98,7 +102,7 @@ pub(super) struct FilterOptionsView {
     pub providers: Vec<SelectOptionView>,
     pub statuses: Vec<SelectOptionView>,
     pub tools: Vec<SelectOptionView>,
-    pub hidden: Vec<crate::handlers::ssr::list_view::HiddenFieldView>,
+    pub hidden: Vec<systemprompt_web_admin_core::ssr::list_view::HiddenFieldView>,
 }
 
 #[derive(Debug, Serialize)]

@@ -8,7 +8,7 @@
 use chrono::{DateTime, TimeZone, Utc};
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
-use systemprompt_web_admin::repositories::scope::SubjectScope;
+use systemprompt_web_admin_core::repositories::scope::SubjectScope;
 
 // A window far enough in the past that no seeded row falls in it.
 #[must_use]

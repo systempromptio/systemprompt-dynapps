@@ -18,7 +18,7 @@ use serde::Serialize;
 use systemprompt::identifiers::{AgentId, AiRequestId, SessionId, TraceId, UserId};
 use systemprompt_web_shared::{GroupId, ProjectId};
 
-use crate::repositories::scope::SubjectScope;
+use systemprompt_web_admin_core::repositories::scope::SubjectScope;
 
 mod breakdown;
 mod detail;

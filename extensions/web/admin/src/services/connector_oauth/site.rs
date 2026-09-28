@@ -2,8 +2,8 @@
 
 use super::Grant;
 use super::transport::client;
-use crate::error::{AdminError, AdminResult};
 use serde::Deserialize;
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 // JSON: the MCP site catalog has legacy and v2 shapes normalized by payload.rs.
 use serde_json::Value;
 

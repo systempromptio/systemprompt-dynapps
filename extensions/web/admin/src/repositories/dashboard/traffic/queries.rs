@@ -5,7 +5,7 @@
 
 use sqlx::PgPool;
 
-use crate::types::{
+use systemprompt_web_admin_core::types::{
     ContentPerformanceRow, RealtimePulse, TRAFFIC_RANGE_30D, TRAFFIC_RANGE_YESTERDAY,
     TrafficCountryBucket, TrafficTopPage,
 };

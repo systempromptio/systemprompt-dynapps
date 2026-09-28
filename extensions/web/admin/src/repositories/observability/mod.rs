@@ -13,7 +13,7 @@ use systemprompt::config::ProfileBootstrap;
 use systemprompt::models::profile::OtlpExportConfig;
 use systemprompt::scheduler::{OtlpExportState, OtlpExportStateRepository};
 
-use crate::error::AdminError;
+use systemprompt_web_admin_core::error::AdminError;
 
 pub fn find_declared_export() -> Result<Option<OtlpExportConfig>, AdminError> {
     Ok(ProfileBootstrap::get()?.observability.otlp().cloned())

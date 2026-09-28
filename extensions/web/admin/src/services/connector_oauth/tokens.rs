@@ -1,11 +1,11 @@
 //! OAuth token exchange and refresh, using only bound destinations.
 use super::transport::client;
 use super::{Grant, Provider};
-use crate::error::{AdminError, AdminResult};
 use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use chrono::Utc;
 use serde::Deserialize;
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
 const SALESFORCE_OPAQUE_TOKEN_SECONDS: i64 = 900;
 

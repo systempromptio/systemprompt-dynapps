@@ -10,7 +10,7 @@
 use serde::Serialize;
 use sqlx::PgPool;
 
-use crate::repositories::scope::ScopeQuery;
+use systemprompt_web_admin_core::repositories::scope::ScopeQuery;
 
 /// One coding agent as the project used it.
 #[derive(Debug, Clone, Serialize)]
@@ -38,7 +38,7 @@ pub async fn list_project_agents(
     pool: &PgPool,
     q: &ScopeQuery<'_>,
 ) -> Result<Vec<ProjectAgentRow>, sqlx::Error> {
-    let rows = crate::scoped_query!(
+    let rows = systemprompt_web_admin_core::scoped_query!(
         r#"SELECT x.client_kind AS "client_kind!",
                   COUNT(x.id)::BIGINT AS "requests!",
                   COUNT(DISTINCT x.user_id)::BIGINT AS "users!",
@@ -76,7 +76,7 @@ pub async fn list_project_artifacts(
     q: &ScopeQuery<'_>,
     limit: i64,
 ) -> Result<Vec<ProjectArtifactRow>, sqlx::Error> {
-    let rows = crate::scoped_query!(
+    let rows = systemprompt_web_admin_core::scoped_query!(
         r#"SELECT x.server_name AS "server_name!",
                   x.artifact_type AS "artifact_type!",
                   COUNT(*)::BIGINT AS "artifacts!",

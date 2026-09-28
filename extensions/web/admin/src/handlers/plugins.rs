@@ -6,12 +6,12 @@ use axum::response::{IntoResponse, Response};
 use sqlx::PgPool;
 use std::sync::Arc;
 
-use crate::error::AdminResult;
-use crate::handlers::shared;
 use crate::repositories;
-use crate::types::{UserContext, UserQuery};
+use systemprompt_web_admin_core::error::AdminResult;
+use systemprompt_web_admin_core::request as shared;
+use systemprompt_web_admin_core::types::{UserContext, UserQuery};
 
-use super::responses::PluginsListResponse;
+use systemprompt_web_admin_core::types::responses::PluginsListResponse;
 
 pub(crate) async fn list_plugins_handler(
     State(pool): State<Arc<PgPool>>,

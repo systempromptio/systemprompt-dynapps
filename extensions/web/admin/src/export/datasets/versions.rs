@@ -6,17 +6,33 @@ use async_trait::async_trait;
 use serde::Deserialize;
 use systemprompt::identifiers::MarketplaceId;
 
-use crate::error::{AdminError, AdminResult};
-use crate::export::model::{Cell, CellKind, Column, DataSet, ExportContext, Table, Window};
 use crate::handlers::ssr::analysis::marketplace_versions::may_read_marketplace;
 use crate::repositories::analysis::marketplace_versions::{
     MarketplaceListRow, MarketplaceVersionMetricsRow, VersionWindow, list_marketplace_rollups,
     list_marketplace_version_metrics,
 };
-use crate::types::UserContext;
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::export::model::{
+    Cell, CellKind, Column, DataSet, ExportContext, Table, Window,
+};
+use systemprompt_web_admin_core::export::registry::DataSetRegistration;
+use systemprompt_web_admin_core::types::UserContext;
 
 pub(crate) struct Marketplaces;
 pub(crate) struct Versions;
+
+inventory::submit! {
+    DataSetRegistration {
+        order: 32,
+        dataset: &Marketplaces,
+    }
+}
+inventory::submit! {
+    DataSetRegistration {
+        order: 33,
+        dataset: &Versions,
+    }
+}
 
 #[derive(Debug, Default, Deserialize)]
 struct Target {

@@ -21,13 +21,13 @@ use systemprompt::identifiers::{RouteId, UserId};
 use systemprompt_security::authz::EntityRef;
 use systemprompt_security::authz::resolver::ResolveInput;
 
-use crate::authz::{dimensions, subject_attributes_for};
-use crate::error::{AdminError, AdminResult};
-use crate::repositories;
+use systemprompt_web_admin_core::authz::{dimensions, subject_attributes_for};
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+
 use crate::repositories::config::acl_detect;
 use crate::repositories::config::gateway_acl::{self, Decision};
 
-use crate::types::{GatewayRouteView, UserContext};
+use systemprompt_web_admin_core::types::{GatewayRouteView, UserContext};
 
 #[derive(Debug, Serialize)]
 pub(crate) struct CatalogEntry {
@@ -52,10 +52,13 @@ pub(crate) async fn for_user_handler(
     if !user_ctx.is_console && user_ctx.user_id != user_id {
         return Err(AdminError::Forbidden("Forbidden".to_owned()));
     }
-    let routes = repositories::config::gateway::client_facing_routes_from_services()
+    let routes = systemprompt_web_admin_core::repositories::gateway_catalog::client_facing_routes_from_services()
         .map_err(AdminError::internal)?;
 
-    let user_roles = repositories::users::queries::find_user_access_profile(&pool, &user_id)
+    let user_roles =
+        systemprompt_web_admin_core::repositories::principal::role::find_user_access_profile(
+            &pool, &user_id,
+        )
         .await?
         .ok_or_else(|| AdminError::NotFound("User not found".to_owned()))?
         .roles;
@@ -130,7 +133,7 @@ pub(crate) async fn detect_handler(
     if !user_ctx.is_admin {
         return Err(AdminError::Forbidden("Admin only".to_owned()));
     }
-    let routes = repositories::config::gateway::dispatchable_routes_from_services()
+    let routes = systemprompt_web_admin_core::repositories::gateway_catalog::dispatchable_routes_from_services()
         .map_err(AdminError::internal)?;
     let emitted = detect_after_the_fact(&pool, &routes, query.since_minutes).await?;
     Ok(Json(DetectResponse {
@@ -157,12 +160,19 @@ pub(crate) async fn detect_after_the_fact(
 
     let mut emitted = 0usize;
     for row in rows {
-        let Some(route) = repositories::config::gateway::find_matching_route(routes, &row.model)
+        let Some(route) =
+            systemprompt_web_admin_core::repositories::gateway_catalog::find_matching_route(
+                routes, &row.model,
+            )
         else {
             continue;
         };
         let Some(profile) =
-            repositories::users::queries::find_user_access_profile(pool, &row.user_id).await?
+            systemprompt_web_admin_core::repositories::principal::role::find_user_access_profile(
+                pool,
+                &row.user_id,
+            )
+            .await?
         else {
             continue;
         };

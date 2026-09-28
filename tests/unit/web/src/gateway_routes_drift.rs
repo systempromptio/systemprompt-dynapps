@@ -107,7 +107,7 @@ fn drift_names_missing_orphan_changed_fields_and_console_origin() {
     rows[0].route.fallback_provider = Some("cerebras".to_owned());
     rows[0].source = SOURCE_DASHBOARD.to_owned();
     rows.push(RouteRow {
-        route: systemprompt_web_admin::types::GatewayRouteView {
+        route: systemprompt_web_admin_core::types::GatewayRouteView {
             id: "console-only".to_owned(),
             model_pattern: "o4-*".to_owned(),
             provider: "openai".to_owned(),

@@ -1,0 +1,33 @@
+//! The per-request values every server-rendered admin page reads.
+
+use axum::Extension;
+use axum::extract::FromRequestParts;
+use axum::extract::rejection::ExtensionRejection;
+use axum::http::request::Parts;
+
+use crate::templates::AdminTemplateEngine;
+use crate::types::{MarketplaceContext, UserContext};
+
+#[derive(Debug, Clone)]
+pub struct Page {
+    pub engine: AdminTemplateEngine,
+    pub user: UserContext,
+    pub marketplace: MarketplaceContext,
+}
+
+impl<S: Send + Sync> FromRequestParts<S> for Page {
+    type Rejection = ExtensionRejection;
+
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        let Extension(engine) =
+            Extension::<AdminTemplateEngine>::from_request_parts(parts, state).await?;
+        let Extension(user) = Extension::<UserContext>::from_request_parts(parts, state).await?;
+        let Extension(marketplace) =
+            Extension::<MarketplaceContext>::from_request_parts(parts, state).await?;
+        Ok(Self {
+            engine,
+            user,
+            marketplace,
+        })
+    }
+}

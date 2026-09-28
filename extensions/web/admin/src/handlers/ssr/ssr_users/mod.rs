@@ -16,7 +16,7 @@ pub(crate) use roster::users_page;
 use axum::extract::Query;
 use axum::response::Redirect;
 
-use crate::types::IdQuery;
+use systemprompt_web_admin_core::types::IdQuery;
 
 pub(crate) async fn user_detail_page(Query(params): Query<IdQuery>) -> Redirect {
     params.id().map_or_else(

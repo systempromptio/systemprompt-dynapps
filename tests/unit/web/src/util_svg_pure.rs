@@ -1,7 +1,7 @@
 //! Pure-geometry tests for the SVG chart utilities and delta math.
 
-use systemprompt_web_admin::util::delta::{DeltaKind, delta};
-use systemprompt_web_admin::util::svg::{
+use systemprompt_web_admin_core::util::delta::{DeltaKind, delta};
+use systemprompt_web_admin_core::util::svg::{
     PLOT_H, PLOT_W, area_path, bar_slots, cumulative, line_path, nice_max, ref_line_y,
     scale_points, stack_segments,
 };

@@ -5,9 +5,10 @@ use std::collections::HashMap;
 use sqlx::PgPool;
 use systemprompt::identifiers::{PluginId, UserId};
 
-use crate::error::{AdminError, AdminResult};
 use crate::repositories::secrets::secret_audit::{self, AuditLogRow};
-use crate::repositories::secrets::{secret_crypto, secret_keys, secret_resolve};
+use crate::repositories::secrets::{secret_keys, secret_resolve};
+use systemprompt_web_admin_core::crypto::secret_crypto;
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
 pub(crate) async fn create_resolution_token(
     pool: &PgPool,

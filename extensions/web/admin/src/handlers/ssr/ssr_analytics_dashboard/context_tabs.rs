@@ -8,8 +8,8 @@
 use serde::Serialize;
 use systemprompt::identifiers::{ContextId, UserId};
 
-use crate::handlers::ssr::list_view::Pagination;
-use crate::handlers::ssr::types::SvgLineChartView;
+use systemprompt_web_admin_core::ssr::list_view::Pagination;
+use systemprompt_web_admin_core::ssr::types::svg_line::SvgLineChartView;
 
 use super::context::{AttributionLink, KpiTile};
 

@@ -4,16 +4,16 @@
 //! `conversation_facts` rollup — so the page can quote cost and tokens as
 //! measurements rather than a client's own estimate.
 
-use crate::handlers::ssr::entity_urls::{context_detail_url, session_detail_url};
-use crate::handlers::ssr::format::format_cost;
-use crate::handlers::ssr::list_view::PageWindow;
 use crate::repositories::analytics::site::sessions::SessionCostRow;
+use systemprompt_web_admin_core::ssr::entity_urls::{context_detail_url, session_detail_url};
+use systemprompt_web_admin_core::ssr::format::format_cost;
+use systemprompt_web_admin_core::ssr::list_view::PageWindow;
 
 use super::context::{KpiTile, SessionCostRowView, SessionsTabView};
 use super::tab_models::{per, share};
 use super::view::{compact, format_date};
 use super::{AnalyticsDashboardQuery, urls};
-use crate::handlers::ssr::list_view::DEFAULT_PAGE_SIZE;
+use systemprompt_web_admin_core::ssr::list_view::DEFAULT_PAGE_SIZE;
 
 pub(super) struct SessionsInput<'a> {
     pub rows: &'a [SessionCostRow],

@@ -11,12 +11,12 @@ use systemprompt_security::authz::DASHBOARD_SOURCE;
 use super::bands::{band_label, band_rank, chips, resolution};
 use super::entities::SYNC_URL;
 use super::view::{AcEntityView, AcRuleView};
-use crate::handlers::ssr::entity_kind::entity_kind_label;
 use crate::handlers::ssr::people_view::expires_soon;
-use crate::repositories::access_control::drift::{DriftReport, EntityState};
-use crate::repositories::access_control::rules::LedgerRuleRow;
-use crate::repositories::config::gateway::RouteLabels;
-use crate::types::access_control::AccessDecision;
+use systemprompt_web_admin_core::repositories::access_rules::drift::{DriftReport, EntityState};
+use systemprompt_web_admin_core::repositories::access_rules::rules::LedgerRuleRow;
+use systemprompt_web_admin_core::repositories::gateway_catalog::RouteLabels;
+use systemprompt_web_admin_core::ssr::entity_kind::entity_kind_label;
+use systemprompt_web_admin_core::types::access_control::AccessDecision;
 
 fn rule_view(row: &LedgerRuleRow) -> AcRuleView {
     let dashboard = row.source == DASHBOARD_SOURCE;

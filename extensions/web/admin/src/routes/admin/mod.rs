@@ -28,12 +28,12 @@ use axum::routing::{delete, get, patch, post, put};
 use axum::{Router, middleware as axum_middleware};
 use sqlx::PgPool;
 
-use super::super::types::{ROLES_CONSOLE, ROLES_MANAGE, ROLES_PLATFORM};
-use super::super::{handlers, middleware};
+use super::super::handlers;
 use super::admin_groups;
-use super::managed_state::StateError;
-use crate::repositories::sync::archive::MAX_UPLOAD_BYTES;
 use systemprompt::database::DbPool;
+use systemprompt_web_admin_core::repositories::sync::archive::MAX_UPLOAD_BYTES;
+use systemprompt_web_admin_core::state::StateError;
+use systemprompt_web_admin_core::types::{ROLES_CONSOLE, ROLES_MANAGE, ROLES_PLATFORM};
 
 mod read;
 use read::build_admin_read_routes_inner;
@@ -48,24 +48,28 @@ pub(crate) fn build_admin_only_routes(
         .merge(super::managed_resources::reads())
         .layer(axum_middleware::from_fn_with_state(
             ROLES_CONSOLE,
-            middleware::require_roles_middleware,
+            systemprompt_web_admin_core::middleware::gates::require_roles_middleware,
         ));
     let writes = build_admin_write_routes(write_pool)
         .merge(super::managed_resources::writes())
         .layer(axum_middleware::from_fn_with_state(
             ROLES_MANAGE,
-            middleware::require_roles_middleware,
+            systemprompt_web_admin_core::middleware::gates::require_roles_middleware,
         ));
-    let platform = build_admin_platform_routes(write_pool).layer(
-        axum_middleware::from_fn_with_state(ROLES_PLATFORM, middleware::require_roles_middleware),
-    );
+    let platform =
+        build_admin_platform_routes(write_pool).layer(axum_middleware::from_fn_with_state(
+            ROLES_PLATFORM,
+            systemprompt_web_admin_core::middleware::gates::require_roles_middleware,
+        ));
     let participant = build_sync_participant_routes()
         .with_state(Arc::clone(write_pool))
         .layer(axum_middleware::from_fn(
-            middleware::require_scoped_console_middleware,
+            systemprompt_web_admin_core::middleware::gates::require_scoped_console_middleware,
         ));
 
-    let managed = Arc::new(super::managed_state::ManagedState::new(db, owner)?);
+    let managed = Arc::new(systemprompt_web_admin_core::state::ManagedState::new(
+        db, owner,
+    )?);
     Ok(reads
         .merge(writes)
         .merge(platform)

@@ -8,14 +8,17 @@ use crate::handlers::ssr::analysis::skills::SkillFactView;
 use crate::handlers::ssr::analysis::tone::{
     completion_tone, error_rate_tone, latency_tone, score_display,
 };
-use crate::handlers::ssr::analysis_urls::ANALYSIS_SKILLS_URL;
-use crate::handlers::ssr::format::{format_cost, format_duration_ms, format_token_total};
-use crate::handlers::ssr::list_view::{PageWindow, Pagination, paginate};
-use crate::handlers::ssr::types::{BreadcrumbView, TabLinkView};
-use crate::repositories::analysis::inventory_index::InventoryIndex;
 use crate::repositories::analysis::skills::{
     SkillBreakdownBy, SkillBucketRow, SkillConversationRow, SkillDayRow, SkillFactRow, SkillRunRow,
 };
+use systemprompt_web_admin_core::catalog_index::inventory_index::InventoryIndex;
+use systemprompt_web_admin_core::ssr::analysis_urls::ANALYSIS_SKILLS_URL;
+use systemprompt_web_admin_core::ssr::format::{
+    format_cost, format_duration_ms, format_token_total,
+};
+use systemprompt_web_admin_core::ssr::list_view::{PageWindow, Pagination, paginate};
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
+use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;
 
 pub(super) fn resolve_names(
     index: &InventoryIndex,
@@ -147,7 +150,7 @@ pub(super) fn build_context(
             .collect(),
         conversation_count: read.total,
         pagination: pagination(query, key, read.total, read.conversations.len()),
-        export: crate::export::ExportView::new(
+        export: systemprompt_web_admin_core::export::view::ExportView::new(
             &[
                 "analysis-skill-conversations",
                 "analysis-skill-runs",

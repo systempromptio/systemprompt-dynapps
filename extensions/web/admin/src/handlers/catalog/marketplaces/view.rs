@@ -11,9 +11,9 @@
 
 use serde::Serialize;
 
-use crate::handlers::ssr::entity_panel::EntityAccessView;
-use crate::handlers::ssr::sync_plane::HashView;
 use systemprompt::identifiers::MarketplaceId;
+use systemprompt_web_admin_core::ssr::entity_panel::EntityAccessView;
+use systemprompt_web_admin_core::ssr::sync_plane::HashView;
 use systemprompt_web_shared::GroupId;
 
 #[derive(Debug, Clone, Serialize)]
@@ -75,14 +75,14 @@ pub(crate) struct MarketplacesPageData {
     pub page: &'static str,
     pub title: &'static str,
     pub subtitle: &'static str,
-    pub breadcrumbs: Vec<crate::handlers::ssr::types::BreadcrumbView>,
+    pub breadcrumbs: Vec<systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView>,
     pub marketplaces: Vec<MarketplaceCardView>,
     pub marketplaces_count: usize,
     pub audience: AudienceMatrixView,
     pub kpis: Vec<MarketplaceKpiView>,
     pub access_control_url: &'static str,
     pub search: String,
-    pub tabs: Vec<crate::handlers::ssr::types::TabLinkView>,
+    pub tabs: Vec<systemprompt_web_admin_core::ssr::types::tabs::TabLinkView>,
     pub show_audience: bool,
 }
 
@@ -105,7 +105,7 @@ pub(crate) struct MemberLinkView {
 pub(crate) struct MarketplaceDetailData {
     pub page: &'static str,
     pub title: String,
-    pub breadcrumbs: Vec<crate::handlers::ssr::types::BreadcrumbView>,
+    pub breadcrumbs: Vec<systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView>,
     pub id: MarketplaceId,
     pub name: String,
     pub description: String,

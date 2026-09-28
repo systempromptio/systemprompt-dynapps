@@ -1,8 +1,8 @@
 //! The access-control plane's drift tiles and action counts, from the counts.
 
-use systemprompt_web_admin::repositories::access_control::drift::DriftCounts;
-use systemprompt_web_admin::repositories::sync::access_control::drift_kpis;
-use systemprompt_web_admin::repositories::sync::plane::ActionCounts;
+use systemprompt_web_admin_core::repositories::access_rules::drift::DriftCounts;
+use systemprompt_web_admin_core::repositories::sync::access_control::drift_kpis;
+use systemprompt_web_admin_core::repositories::sync::plane::ActionCounts;
 
 fn counts() -> DriftCounts {
     DriftCounts {

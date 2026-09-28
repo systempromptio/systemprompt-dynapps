@@ -16,22 +16,24 @@ use axum::response::Response;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 
-use crate::error::{AdminError, AdminHtmlResult, AdminResult};
-use crate::handlers::ssr::list_view::{PageWindow, Pagination, SelectOptionView, TimeRangeContext};
-use crate::handlers::ssr::types::BreadcrumbView;
 use crate::repositories::governance::secret_audit_log::{
     SecretAuditFilter, SecretAuditRow, SecretAuditStats, get_secret_audit_stats,
     list_secret_audit_actions, list_secret_audit_paged,
 };
-use crate::templates::AdminTemplateEngine;
-use crate::types::{MarketplaceContext, UserContext};
-use crate::util::time_range::{TimeRange, TimeRangeQuery, parse_time_range};
+use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult, AdminResult};
+use systemprompt_web_admin_core::ssr::list_view::{
+    PageWindow, Pagination, SelectOptionView, TimeRangeContext,
+};
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
+use systemprompt_web_admin_core::templates::AdminTemplateEngine;
+use systemprompt_web_admin_core::types::{MarketplaceContext, UserContext};
+use systemprompt_web_admin_core::util::time_range::{TimeRange, TimeRangeQuery, parse_time_range};
 
 mod context;
 mod view;
 
-use crate::handlers::ssr::list_view::{DEFAULT_PAGE_SIZE, paginate};
 use context::{SecretAuditKpiView, action_options, kpis, url_for};
+use systemprompt_web_admin_core::ssr::list_view::{DEFAULT_PAGE_SIZE, paginate};
 
 const BASE_URL: &str = "/admin/governance/secrets";
 #[derive(Debug, Default, Deserialize)]
@@ -58,7 +60,7 @@ struct SecretsPageContext {
     pagination: Pagination,
     actions: Vec<SelectOptionView>,
     search: String,
-    export: crate::export::ExportView,
+    export: systemprompt_web_admin_core::export::view::ExportView,
     clear_url: &'static str,
     has_filters: bool,
     base_url: &'static str,
@@ -165,9 +167,9 @@ pub(crate) async fn secrets_audit_page(
         pagination: pagination(&query, filter.action.as_deref(), window),
         actions: action_options(&actions, filter.action.as_deref()),
         search: query.q.clone().unwrap_or_default(),
-        export: crate::export::ExportView::single(
+        export: systemprompt_web_admin_core::export::view::ExportView::single(
             "governance-secrets",
-            &crate::export::view::query_string(&[
+            &systemprompt_web_admin_core::export::view::query_string(&[
                 ("preset", query.preset.as_deref()),
                 ("from", query.from.as_deref()),
                 ("to", query.to.as_deref()),
@@ -180,13 +182,15 @@ pub(crate) async fn secrets_audit_page(
         base_url: BASE_URL,
     };
 
-    Ok(super::render_typed_page(
-        &engine,
-        "governance-secrets",
-        &ctx,
-        &user_ctx,
-        &mkt_ctx,
-    ))
+    Ok(
+        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+            &engine,
+            "governance-secrets",
+            &ctx,
+            &user_ctx,
+            &mkt_ctx,
+        ),
+    )
 }
 
 pub(crate) async fn export_rows(

@@ -1,13 +1,12 @@
 //! Load only the active view; its rows and KPIs share one filtered aggregate.
 use super::{ContextsPageInputs, view};
-use crate::handlers::ssr::list_view::DEFAULT_PAGE_SIZE;
-use crate::repositories;
-use crate::repositories::analytics::conversation_rows::{
+use sqlx::PgPool;
+use systemprompt_web_admin_core::repositories::conversations::rows::{
     ConversationPage, ConversationPageMode, ConversationRow, ConversationTotals,
     UserConversationSummary, list_distinct_models, load_conversation_page,
 };
-use crate::repositories::scope::SubjectScope;
-use sqlx::PgPool;
+use systemprompt_web_admin_core::repositories::scope::SubjectScope;
+use systemprompt_web_admin_core::ssr::list_view::DEFAULT_PAGE_SIZE;
 
 pub(super) struct ContextsPageData {
     pub(super) conversations: Vec<ConversationRow>,
@@ -15,7 +14,7 @@ pub(super) struct ContextsPageData {
     pub(super) user_summaries: Vec<UserConversationSummary>,
     pub(super) totals: ConversationTotals,
     pub(super) models: Vec<String>,
-    pub(super) users_for_filter: Vec<crate::types::UserSummary>,
+    pub(super) users_for_filter: Vec<systemprompt_web_admin_core::types::UserSummary>,
 }
 
 pub(super) async fn load_page_data(
@@ -37,7 +36,7 @@ pub(super) async fn load_page_data(
     let (result, models, users) = tokio::join!(
         load_conversation_page(pool, &inputs.filter, page, mode),
         list_distinct_models(pool),
-        repositories::users::queries::list_users(pool, user_scope),
+        systemprompt_web_admin_core::repositories::principal::listing::list_users(pool, user_scope),
     );
     let result = result?;
     Ok(ContextsPageData {

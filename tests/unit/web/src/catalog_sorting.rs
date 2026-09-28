@@ -2,10 +2,11 @@
 //! server-side text filter, and the MCP status a declaration plus a heartbeat
 //! resolve to.
 
-use systemprompt_web_admin::repositories::overview::liveness::HEARTBEAT_INTERVAL_SECS;
 use systemprompt_web_admin::test_support::{
-    SortColumn, direction, matches, preserved_search, sort_headers, status_of,
+    direction, matches, preserved_search, sort_headers, status_of,
 };
+use systemprompt_web_admin_core::repositories::liveness::HEARTBEAT_INTERVAL_SECS;
+use systemprompt_web_admin_core::ssr::types::table::SortColumn;
 
 fn columns() -> Vec<SortColumn> {
     vec![

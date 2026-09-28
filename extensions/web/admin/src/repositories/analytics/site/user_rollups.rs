@@ -8,7 +8,7 @@
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 
-use crate::util::time_range::TimeRange;
+use systemprompt_web_admin_core::util::time_range::TimeRange;
 
 #[derive(Debug, Clone, Copy)]
 pub struct UserDailyRollupRow {

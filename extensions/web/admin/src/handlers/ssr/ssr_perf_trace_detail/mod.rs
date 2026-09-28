@@ -15,22 +15,22 @@ use serde::Serialize;
 use sqlx::PgPool;
 use systemprompt::identifiers::SessionId;
 
-use crate::error::{AdminError, AdminHtmlResult};
-use crate::handlers::ssr::entity_urls::session_detail_url;
-use crate::handlers::ssr::format::{
-    client_label, format_cost, format_duration_ms, local_time, short_id, short_num,
-};
-use crate::handlers::ssr::types::BreadcrumbView;
-use crate::repositories::scope::may_view;
 use crate::repositories::traces::resolve::find_trace_owner;
 use crate::repositories::traces::{
     Span, SpanKind, SpanStatus, list_trace_spans, resolve_trace_session,
 };
+use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
+use systemprompt_web_admin_core::repositories::scope::may_view;
+use systemprompt_web_admin_core::ssr::entity_urls::session_detail_url;
+use systemprompt_web_admin_core::ssr::format::{
+    client_label, format_cost, format_duration_ms, local_time, short_id, short_num,
+};
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 
 mod timeline;
 mod turns;
 
-use crate::handlers::ssr::page::Page;
+use systemprompt_web_admin_core::ssr::page::Page;
 use timeline::{TimelineView, build_timeline};
 use turns::{TraceTurnView, build_turns};
 
@@ -110,13 +110,15 @@ pub(crate) async fn perf_trace_detail_page(
         back_url: "/admin/traces",
     };
 
-    Ok(crate::handlers::ssr::render_typed_page(
-        &shell.engine,
-        "perf-trace-detail",
-        &ctx,
-        &shell.user,
-        &shell.marketplace,
-    ))
+    Ok(
+        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+            &shell.engine,
+            "perf-trace-detail",
+            &ctx,
+            &shell.user,
+            &shell.marketplace,
+        ),
+    )
 }
 
 fn breadcrumbs(session_id: &SessionId) -> Vec<BreadcrumbView> {

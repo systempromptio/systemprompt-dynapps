@@ -5,11 +5,15 @@
 use serde::Serialize;
 use sqlx::PgPool;
 
-use crate::error::AdminResult;
-use crate::handlers::ssr::entity_panel::entity_access_url;
-use crate::handlers::ssr::sync_plane::{PlaneCardView, plane_card_by_id};
-use crate::repositories::sync::access_control::{PLANE_ID, declared_now, drift_now};
-use crate::repositories::sync::attention::{ReviewSplit, ReviewedEntity, reviews_for};
+use systemprompt_web_admin_core::error::AdminResult;
+use systemprompt_web_admin_core::repositories::sync::access_control::{
+    PLANE_ID, declared_now, drift_now,
+};
+use systemprompt_web_admin_core::repositories::sync::attention::{
+    ReviewSplit, ReviewedEntity, reviews_for,
+};
+use systemprompt_web_admin_core::ssr::entity_panel::entity_access_url;
+use systemprompt_web_admin_core::ssr::sync_plane::{PlaneCardView, plane_card_by_id};
 
 #[derive(Debug, Serialize)]
 pub(crate) struct ReviewRowView {

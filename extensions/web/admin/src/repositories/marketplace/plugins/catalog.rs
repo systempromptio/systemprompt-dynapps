@@ -5,10 +5,10 @@ use std::path::Path;
 
 use systemprompt::identifiers::{AgentId, McpServerId, SkillId};
 
-use crate::repositories::marketplace::plugin_loader;
-use crate::repositories::marketplace::plugin_resolvers::resolve_all_plugin_skill_ids;
-use crate::types::{AgentCatalogEntry, SkillCatalogEntry};
-use crate::util::source_path::display_source_path;
+use systemprompt_web_admin_core::catalog_index::plugin_loader;
+use systemprompt_web_admin_core::catalog_index::plugin_resolvers::resolve_all_plugin_skill_ids;
+use systemprompt_web_admin_core::types::{AgentCatalogEntry, SkillCatalogEntry};
+use systemprompt_web_admin_core::util::source_path::display_source_path;
 use systemprompt_web_shared::error::MarketplaceError;
 
 pub fn list_skill_catalog(
@@ -146,8 +146,8 @@ pub fn list_agent_catalog(
 
 pub fn list_plugin_catalog(
     services_path: &Path,
-) -> Result<Vec<crate::types::PluginDetail>, MarketplaceError> {
-    use crate::types::PluginDetail;
+) -> Result<Vec<systemprompt_web_admin_core::types::PluginDetail>, MarketplaceError> {
+    use systemprompt_web_admin_core::types::PluginDetail;
     let skills_path = services_path.join("skills");
     let agents_path = services_path.join("agents");
     let mut out: Vec<PluginDetail> = Vec::new();

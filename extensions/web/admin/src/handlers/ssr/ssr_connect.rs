@@ -5,12 +5,12 @@ use axum::extract::Extension;
 use axum::response::Response;
 use serde::Serialize;
 
-use crate::error::AdminHtmlResult;
-use crate::handlers::ssr::ssr_helpers::render_typed_page;
-use crate::handlers::ssr::types::BreadcrumbView;
 use crate::services::bridge_profile;
-use crate::templates::AdminTemplateEngine;
-use crate::types::{MarketplaceContext, UserContext};
+use systemprompt_web_admin_core::error::AdminHtmlResult;
+use systemprompt_web_admin_core::ssr::helpers::render_typed_page;
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
+use systemprompt_web_admin_core::templates::AdminTemplateEngine;
+use systemprompt_web_admin_core::types::{MarketplaceContext, UserContext};
 
 #[derive(Debug, Serialize)]
 struct ConnectPageView {

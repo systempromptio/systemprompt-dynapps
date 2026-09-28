@@ -6,8 +6,7 @@
 //! adding a column to a page is naming it, not re-deriving the link, the
 //! indicator glyph and the `aria-sort` value a fourth time.
 
-pub(crate) use crate::handlers::ssr::types::SortHeaderView;
-pub use crate::handlers::ssr::types::table::SortColumn;
+use systemprompt_web_admin_core::ssr::types::table::{SortColumn, SortHeaderView};
 
 pub fn sort_headers(
     base_url: &str,

@@ -19,17 +19,14 @@
 
 mod context;
 mod conversation;
-mod kind;
 mod search;
 mod view;
 mod window;
 
-pub(crate) use context::HistoryRowView;
 pub(crate) use conversation::history_conversation_page;
-pub(crate) use kind::HistoryView;
 pub(crate) use search::history_search;
-pub use view::command_name;
-pub(crate) use view::row_view;
+pub(crate) use systemprompt_web_admin_core::ssr::history_rows::HistoryView;
+use systemprompt_web_admin_core::ssr::history_rows::{HistoryRowView, row_view};
 
 use std::sync::Arc;
 
@@ -39,18 +36,18 @@ use serde::Deserialize;
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 
-use crate::error::{AdminError, AdminHtmlResult};
-use crate::export::model::ExportWindow;
-use crate::export::view::TranscriptSource;
-use crate::handlers::ssr::list_view::PageWindow;
-use crate::repositories::analytics::conversations::{
+use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
+use systemprompt_web_admin_core::export::model::ExportWindow;
+use systemprompt_web_admin_core::export::transcripts::TranscriptSource;
+use systemprompt_web_admin_core::repositories::conversations::{
     HistoryFilter, HistoryItem, HistoryScope, list_history_items,
 };
-use crate::types::UserContext;
+use systemprompt_web_admin_core::ssr::list_view::PageWindow;
+use systemprompt_web_admin_core::types::UserContext;
 
-use crate::handlers::ssr::list_view::DEFAULT_PAGE_SIZE;
-use crate::handlers::ssr::page::Page;
 use context::{HiddenInputView, HistoryPageContext};
+use systemprompt_web_admin_core::ssr::list_view::DEFAULT_PAGE_SIZE;
+use systemprompt_web_admin_core::ssr::page::Page;
 use view::{build_pagination, scope_label, side_toggle_url, window_links};
 use window::HistoryWindow;
 
@@ -230,20 +227,22 @@ async fn render_listing(
         breadcrumbs: view.breadcrumbs(),
         export: export_view(query, view, &history_window),
     };
-    Ok(crate::handlers::ssr::render_typed_page(
-        &shell.engine,
-        view.template(),
-        &data,
-        &shell.user,
-        &shell.marketplace,
-    ))
+    Ok(
+        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+            &shell.engine,
+            view.template(),
+            &data,
+            &shell.user,
+            &shell.marketplace,
+        ),
+    )
 }
 
 fn export_view(
     query: &HistoryQuery,
     view: HistoryView,
     window: &HistoryWindow,
-) -> crate::export::ExportView {
+) -> systemprompt_web_admin_core::export::view::ExportView {
     let window_pairs = window.export_pairs();
     let mut pairs = vec![
         ("q", query.q.as_deref()),
@@ -255,6 +254,9 @@ fn export_view(
         HistoryView::Org => TranscriptSource::Conversations,
         HistoryView::Own => TranscriptSource::History,
     };
-    crate::export::ExportView::single(view.dataset(), &crate::export::view::query_string(&pairs))
-        .with_transcripts(source)
+    systemprompt_web_admin_core::export::view::ExportView::single(
+        view.dataset(),
+        &systemprompt_web_admin_core::export::view::query_string(&pairs),
+    )
+    .with_transcripts(source)
 }

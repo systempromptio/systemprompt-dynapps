@@ -13,15 +13,16 @@ use axum::extract::{Extension, Path, Query, State};
 use axum::response::Response;
 use sqlx::PgPool;
 
-use crate::error::{AdminError, AdminHtmlResult};
 use crate::repositories;
-use crate::templates::AdminTemplateEngine;
-use crate::types::{MarketplaceContext, UserContext};
+use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
+use systemprompt_web_admin_core::templates::AdminTemplateEngine;
+use systemprompt_web_admin_core::types::{MarketplaceContext, UserContext};
 
-use super::list_view::Pagination;
-use super::types::BreadcrumbView;
-use crate::handlers::ssr::list_view::{DEFAULT_PAGE_SIZE, PageWindow, paginate};
-use crate::handlers::ssr::page::Page;
+use systemprompt_web_admin_core::ssr::list_view::{
+    DEFAULT_PAGE_SIZE, PageWindow, Pagination, paginate,
+};
+use systemprompt_web_admin_core::ssr::page::Page;
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 
 mod detail;
 mod detail_view;
@@ -54,9 +55,11 @@ pub(crate) async fn projects_page(
     }
 
     let data = list::page_data(&pool, &query, user_ctx.is_admin).await;
-    Ok(super::render_typed_page(
-        &engine, "projects", &data, &user_ctx, &mkt_ctx,
-    ))
+    Ok(
+        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+            &engine, "projects", &data, &user_ctx, &mkt_ctx,
+        ),
+    )
 }
 
 pub(crate) async fn project_detail_page(
@@ -98,13 +101,15 @@ pub(crate) async fn project_detail_page(
             rules: &rules,
         },
     );
-    Ok(super::render_typed_page(
-        &shell.engine,
-        "project-detail",
-        &data,
-        &shell.user,
-        &shell.marketplace,
-    ))
+    Ok(
+        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+            &shell.engine,
+            "project-detail",
+            &data,
+            &shell.user,
+            &shell.marketplace,
+        ),
+    )
 }
 
 pub(crate) async fn project_report_page(
@@ -137,13 +142,15 @@ pub(crate) async fn project_report_page(
         },
         &shell.user,
     );
-    Ok(super::render_typed_page(
-        &shell.engine,
-        "project-report",
-        &data,
-        &shell.user,
-        &shell.marketplace,
-    ))
+    Ok(
+        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+            &shell.engine,
+            "project-report",
+            &data,
+            &shell.user,
+            &shell.marketplace,
+        ),
+    )
 }
 
 fn active_tab(requested: Option<&str>) -> &'static str {
@@ -158,14 +165,14 @@ async fn settings_reads(
     pool: &PgPool,
     project_id: &ProjectId,
 ) -> (
-    Vec<crate::types::projects::ProjectAdMappingRow>,
-    Vec<crate::types::access_control::AccessControlRule>,
+    Vec<systemprompt_web_admin_core::types::projects::ProjectAdMappingRow>,
+    Vec<systemprompt_web_admin_core::types::access_control::AccessControlRule>,
 ) {
     let mappings = repositories::projects::mappings::list_project_ad_mappings(pool, project_id)
         .await
         .inspect_err(|e| tracing::warn!(error = %e, "project AD mappings failed"))
         .unwrap_or_default();
-    let rules = repositories::users::access_control::list_all_rules(pool)
+    let rules = systemprompt_web_admin_core::repositories::entitlement::list_all_rules(pool)
         .await
         .inspect_err(|e| tracing::warn!(error = %e, "access rules failed"))
         .unwrap_or_default()
@@ -176,19 +183,26 @@ async fn settings_reads(
 }
 
 fn project_query(project_id: &ProjectId) -> String {
-    crate::export::view::query_string(&[("project", Some(project_id.as_str()))])
+    systemprompt_web_admin_core::export::view::query_string(&[(
+        "project",
+        Some(project_id.as_str()),
+    )])
 }
 
-pub(super) fn export_view(project_id: &ProjectId) -> crate::export::ExportView {
-    crate::export::ExportView::new(
+pub(super) fn export_view(
+    project_id: &ProjectId,
+) -> systemprompt_web_admin_core::export::view::ExportView {
+    systemprompt_web_admin_core::export::view::ExportView::new(
         &["requests", "sessions", "analysis-conversations"],
         &project_query(project_id),
     )
-    .with_transcripts(crate::export::view::TranscriptSource::Sessions)
+    .with_transcripts(systemprompt_web_admin_core::export::transcripts::TranscriptSource::Sessions)
 }
 
-pub(super) fn report_export_view(project_id: &ProjectId) -> crate::export::ExportView {
-    crate::export::ExportView::new(
+pub(super) fn report_export_view(
+    project_id: &ProjectId,
+) -> systemprompt_web_admin_core::export::view::ExportView {
+    systemprompt_web_admin_core::export::view::ExportView::new(
         &[
             "report-customer-users",
             "report-customer-projects",

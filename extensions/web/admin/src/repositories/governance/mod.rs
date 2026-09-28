@@ -38,7 +38,6 @@ pub mod counts;
 pub mod decision_calls;
 pub mod decision_log;
 pub mod decisions;
-pub mod filter_options;
 pub mod findings;
 pub mod hook_events;
 pub mod rankings;

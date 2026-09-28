@@ -8,7 +8,6 @@
 use serde::Serialize;
 use sqlx::PgPool;
 
-use crate::repositories;
 
 const HIT_LIMIT: usize = 25;
 
@@ -33,30 +32,33 @@ pub(super) async fn build(pool: &PgPool, query: Option<&str>) -> PersonCheckView
     };
     let wanted = query.to_lowercase();
     let matches: Vec<PersonHitView> =
-        repositories::users::queries::list_users(pool, &repositories::scope::SubjectScope::All)
-            .await
-            .inspect_err(|e| tracing::warn!(error = %e, "find a person: user listing failed"))
-            .unwrap_or_default()
-            .into_iter()
-            .filter_map(|u| {
-                let id = u.user_id.as_str().to_owned();
-                let email = u
-                    .email
-                    .as_ref()
-                    .map(ToString::to_string)
-                    .unwrap_or_default();
-                let name = u.display_name.unwrap_or_default();
-                let hit = [&id, &email, &name]
-                    .iter()
-                    .any(|field| field.to_lowercase().contains(&wanted));
-                hit.then(|| PersonHitView {
-                    href: format!("/admin/users/{}?tab=access", urlencoding::encode(&id)),
-                    name: if name.trim().is_empty() { id } else { name },
-                    email,
-                })
+        systemprompt_web_admin_core::repositories::principal::listing::list_users(
+            pool,
+            &systemprompt_web_admin_core::repositories::scope::SubjectScope::All,
+        )
+        .await
+        .inspect_err(|e| tracing::warn!(error = %e, "find a person: user listing failed"))
+        .unwrap_or_default()
+        .into_iter()
+        .filter_map(|u| {
+            let id = u.user_id.as_str().to_owned();
+            let email = u
+                .email
+                .as_ref()
+                .map(ToString::to_string)
+                .unwrap_or_default();
+            let name = u.display_name.unwrap_or_default();
+            let hit = [&id, &email, &name]
+                .iter()
+                .any(|field| field.to_lowercase().contains(&wanted));
+            hit.then(|| PersonHitView {
+                href: format!("/admin/users/{}?tab=access", urlencoding::encode(&id)),
+                name: if name.trim().is_empty() { id } else { name },
+                email,
             })
-            .take(HIT_LIMIT + 1)
-            .collect();
+        })
+        .take(HIT_LIMIT + 1)
+        .collect();
     let more = matches.len() > HIT_LIMIT;
     PersonCheckView {
         query: query.to_owned(),

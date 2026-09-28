@@ -9,7 +9,6 @@
 //! version's figures survive raw-event retention. Plugin evaluation scores
 //! each of those conversations from its stored messages by fixed rules.
 pub mod conversations;
-pub mod inventory_index;
 pub mod marketplace_versions;
 pub mod plugin_eval;
 pub mod publications;

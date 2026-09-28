@@ -1,13 +1,13 @@
 //! Read-only provider identity and MCP protocol verification before connection
 //! use.
 
-use super::report::VerificationReport;
 use super::response::{body, tool_error};
 use super::transport::client;
 use super::{Grant, Provider};
-use crate::error::{AdminError, AdminResult};
 use serde_json::{Value, json};
 use std::time::Instant;
+use systemprompt_web_admin_core::connections::report::VerificationReport;
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
 async fn rpc(
     http: &reqwest::Client,

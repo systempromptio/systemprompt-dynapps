@@ -4,12 +4,12 @@
 
 use systemprompt::identifiers::McpServerId;
 
-use crate::repositories::marketplace::plugin_loader;
-use crate::repositories::marketplace::plugin_resolvers::{
+use std::path::Path;
+use systemprompt_web_admin_core::catalog_index::plugin_loader;
+use systemprompt_web_admin_core::catalog_index::plugin_resolvers::{
     resolve_plugin_agents, resolve_plugin_skills,
 };
-use crate::types::PluginOverview;
-use std::path::Path;
+use systemprompt_web_admin_core::types::PluginOverview;
 use systemprompt_web_shared::error::MarketplaceError;
 
 #[derive(Debug, Clone, Copy)]
@@ -33,7 +33,7 @@ pub fn list_plugins_for_roles_full(
 ) -> Result<Vec<PluginOverview>, MarketplaceError> {
     let skills_path = services_path.join("skills");
     let agents_path = services_path.join("agents");
-    let is_admin = crate::types::roles_grant_manage(roles);
+    let is_admin = systemprompt_web_admin_core::types::roles_grant_manage(roles);
     let mut overviews = Vec::new();
     for (_id, plugin) in plugin_loader::load_all_plugins()? {
         if !plugin.base.enabled && !is_admin {
@@ -70,12 +70,13 @@ pub async fn list_plugins_for_user(
     pool: &sqlx::PgPool,
     services_path: &Path,
     user: &systemprompt::identifiers::UserId,
-) -> Result<Vec<PluginOverview>, crate::error::AdminError> {
+) -> Result<Vec<PluginOverview>, systemprompt_web_admin_core::error::AdminError> {
     use systemprompt_security::authz::EntityKind;
     let mut plugins = list_plugins_for_roles_full(services_path, &["admin".to_owned()])
-        .map_err(crate::error::AdminError::internal)?;
+        .map_err(systemprompt_web_admin_core::error::AdminError::internal)?;
     plugins.retain(|p| p.enabled);
-    let access = crate::authz::catalog::CatalogAccess::load(pool, user).await?;
+    let access =
+        systemprompt_web_admin_core::authz::catalog::CatalogAccess::load(pool, user).await?;
     let ids = plugins.iter().map(|p| p.id.clone()).collect::<Vec<_>>();
     let permitted = access.allowed(EntityKind::Plugin, &ids).await?;
     plugins.retain(|p| permitted.contains(&p.id));

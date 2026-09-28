@@ -6,12 +6,14 @@
 //! sent outside the platform team — the repository selects no cost for it, so
 //! this file has none to render even by accident.
 
-use crate::handlers::ssr::format::format_cost;
-use crate::handlers::ssr::types::{Plot, SvgLineChartView, SvgSeriesInput, chart_on_axis};
 use crate::repositories::analytics::site::cost::{
     ContainerAxis, ContainerUsageRow, CostDayRow, SupplierCostRow,
 };
-use crate::repositories::scope::membership::UNATTRIBUTED;
+use systemprompt_web_admin_core::repositories::scope::membership::UNATTRIBUTED;
+use systemprompt_web_admin_core::ssr::format::format_cost;
+use systemprompt_web_admin_core::ssr::types::svg_line::{
+    Plot, SvgLineChartView, SvgSeriesInput, chart_on_axis,
+};
 
 use super::context::{ContainerRowView, CostTabView, KpiTile, SupplierRowView};
 use super::tab_models::{per, share};

@@ -272,7 +272,7 @@ _clippy-uncoordinated *FLAGS: lint-no-synthesis lint-no-untyped-admin lint-gates
         cargo clippy --manifest-path bridge/Cargo.toml --all-targets --target x86_64-pc-windows-gnu {{FLAGS}} -- -D warnings
     fi
 
-# Unit tests: extensions/web/admin (main workspace) + the tests/ workspace.
+# Unit tests: the unit crates of the tests/ workspace.
 # If sqlx offline errors appear, run `just prepare` first to refresh .sqlx.
 test-unit:
     @scripts/build-coordinator.sh run test-unit "" -- {{just_executable()}} _test-unit-uncoordinated

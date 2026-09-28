@@ -438,7 +438,7 @@ fn an_empty_transcript_says_which_of_the_two_reasons_it_was() {
 
 #[test]
 fn a_slash_command_row_is_named_by_its_command_not_its_xml_envelope() {
-    use systemprompt_web_admin::test_support::history_command_name;
+    use systemprompt_web_admin_core::ssr::history_rows::command_name as history_command_name;
     assert_eq!(
         history_command_name(
             "<command-message>astound-commons:cowork-setup</command-message> \

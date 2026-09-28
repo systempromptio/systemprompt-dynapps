@@ -18,7 +18,7 @@ use crate::repositories::analytics::requests::{
     get_request_kpis, list_request_facets, list_requests_by_model, list_requests_by_provider,
     list_requests_by_status, list_requests_paged,
 };
-use crate::util::time_range::{
+use systemprompt_web_admin_core::util::time_range::{
     TimeRange, TimeRangePreset, TimeRangeQuery, count_requests_in_range, parse_time_range,
     preset_to_range,
 };

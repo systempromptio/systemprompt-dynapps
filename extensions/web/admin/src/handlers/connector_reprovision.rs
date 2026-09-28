@@ -15,10 +15,10 @@ use axum::response::{IntoResponse, Response};
 use serde::Serialize;
 use sqlx::PgPool;
 
-use crate::error::{AdminError, AdminResult};
 use crate::repositories::users::{connector_accounts, connector_credentials};
 use crate::services::connector_oauth::Provider;
-use crate::types::UserContext;
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::types::UserContext;
 
 const SANDBOX_REFRESHED: &str = "sandbox_refreshed";
 

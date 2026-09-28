@@ -15,15 +15,15 @@ use serde::Deserialize;
 use sqlx::PgPool;
 use systemprompt_web_shared::{GroupId, ProjectId};
 
-use crate::error::{AdminError, AdminHtmlResult};
-use crate::handlers::ssr::page::Page;
-use crate::repositories;
+use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
+use systemprompt_web_admin_core::ssr::page::Page;
+
 use crate::repositories::analysis::conversations::detail::insert_manual_judgements;
 use crate::repositories::analysis::conversations::{
     ConversationAnalysisFilter, ConversationAnalysisPage, JudgedFilter,
     load_conversation_analysis_page,
 };
-use crate::repositories::scope::ScopeRequest;
+use systemprompt_web_admin_core::repositories::scope::ScopeRequest;
 
 use super::query::{BASE_URL, ConversationAnalysisQuery};
 
@@ -73,14 +73,17 @@ pub(crate) async fn judge_all(
     if !shell.user.is_console {
         return Err(AdminError::Forbidden("Console access required".into()).into());
     }
-    crate::handlers::shared::require_write_origin(&headers)?;
+    systemprompt_web_admin_core::request::require_write_origin(&headers)?;
     let params = params_from(&form)?;
     let request = ScopeRequest::from_query(
         &shell.user,
         params.group.as_deref(),
         params.project.as_deref(),
     );
-    let scope = repositories::scope::membership::get_subject_scope(&pool, &request).await?;
+    let scope = systemprompt_web_admin_core::repositories::scope::membership::get_subject_scope(
+        &pool, &request,
+    )
+    .await?;
     let selected = params.context_ids();
     let rejudge_ticked_rows = selected.is_some();
     let filter = ConversationAnalysisFilter {

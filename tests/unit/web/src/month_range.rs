@@ -6,11 +6,11 @@
 //! error — only as a total that does not reconcile.
 
 use chrono::{Datelike, Timelike};
-use systemprompt_web_admin::util::month_range::{
+use systemprompt_web_admin_core::util::month_range::{
     MonthQuery, list_month_options, parse_month_range,
 };
 
-fn month(key: &str) -> systemprompt_web_admin::util::month_range::MonthRange {
+fn month(key: &str) -> systemprompt_web_admin_core::util::month_range::MonthRange {
     parse_month_range(&MonthQuery {
         month: Some(key.to_owned()),
     })

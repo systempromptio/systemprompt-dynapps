@@ -12,10 +12,11 @@ use axum::response::{IntoResponse, Response};
 use sqlx::PgPool;
 use systemprompt::identifiers::{SessionId, UserId};
 
-use crate::activity::{self, ActivityEntity, NewActivity};
-use crate::error::{AdminError, AdminResult};
 use crate::repositories::users::sessions;
-use crate::types::UserContext;
+use systemprompt_web_admin_core::activity;
+use systemprompt_web_admin_core::activity::{ActivityEntity, NewActivity};
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::types::UserContext;
 
 #[derive(Debug, serde::Serialize)]
 pub(crate) struct SessionsListResponse {

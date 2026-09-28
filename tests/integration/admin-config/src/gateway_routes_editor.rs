@@ -7,7 +7,7 @@ use systemprompt_web_admin::repositories::gateway_routes::editor::{
     create_route_entry, delete_route_at, reorder_route_positions, update_route_at,
 };
 use systemprompt_web_admin::repositories::gateway_routes::rows::list_gateway_routes;
-use systemprompt_web_admin::types::GatewayRouteView;
+use systemprompt_web_admin_core::types::GatewayRouteView;
 
 use crate::tempdb::TempDb;
 

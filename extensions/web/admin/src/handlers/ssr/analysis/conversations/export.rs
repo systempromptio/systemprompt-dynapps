@@ -3,15 +3,15 @@
 use sqlx::PgPool;
 use systemprompt_web_shared::{GroupId, ProjectId};
 
-use crate::error::AdminResult;
-use crate::repositories;
+use systemprompt_web_admin_core::error::AdminResult;
+
 use crate::repositories::analysis::conversations::{
     ConversationAnalysisFilter, ConversationAnalysisPage, ConversationAnalysisResult,
     load_conversation_analysis_page,
 };
-use crate::repositories::scope::ScopeRequest;
-use crate::types::UserContext;
-use crate::util::time_range::TimeRange;
+use systemprompt_web_admin_core::repositories::scope::ScopeRequest;
+use systemprompt_web_admin_core::types::UserContext;
+use systemprompt_web_admin_core::util::time_range::TimeRange;
 
 use super::query::ConversationAnalysisQuery;
 
@@ -24,7 +24,10 @@ pub(crate) async fn export_rows(
 ) -> AdminResult<ConversationAnalysisResult> {
     let request =
         ScopeRequest::from_query(user_ctx, params.group.as_deref(), params.project.as_deref());
-    let scope = repositories::scope::membership::get_subject_scope(pool, &request).await?;
+    let scope = systemprompt_web_admin_core::repositories::scope::membership::get_subject_scope(
+        pool, &request,
+    )
+    .await?;
     let ticked_only = params.context_ids().is_some();
     let filter = ConversationAnalysisFilter {
         subject_ids: scope.as_sql().map(<[String]>::to_vec),

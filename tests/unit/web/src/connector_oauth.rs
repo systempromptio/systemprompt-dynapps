@@ -83,8 +83,8 @@ fn debug_redacts_connector_credentials() {
 #[test]
 fn verification_report_keeps_the_failed_stage_and_finishes_unsuccessfully() {
     use std::time::Instant;
-    use systemprompt_web_admin::connector_oauth::VerificationReport;
-    use systemprompt_web_admin::error::AdminError;
+    use systemprompt_web_admin_core::connections::report::VerificationReport;
+    use systemprompt_web_admin_core::error::AdminError;
 
     let mut report = VerificationReport::for_provider("atlassian");
     report.record(
@@ -118,7 +118,7 @@ fn verification_report_keeps_the_failed_stage_and_finishes_unsuccessfully() {
 
 #[test]
 fn verification_report_does_not_mark_an_empty_probe_as_connected() {
-    use systemprompt_web_admin::connector_oauth::VerificationReport;
+    use systemprompt_web_admin_core::connections::report::VerificationReport;
 
     let report = VerificationReport::for_provider("atlassian").finish();
     assert!(!report.ok);
@@ -566,7 +566,7 @@ async fn subject_attribute_failure_is_not_an_empty_membership() {
     pool.close().await;
     let user = systemprompt::identifiers::UserId::new("00000000-0000-0000-0000-000000000001");
     assert!(
-        systemprompt_web_admin::authz::subject_attributes_for(&pool, &user)
+        systemprompt_web_admin_core::authz::subject_attributes_for(&pool, &user)
             .await
             .is_err()
     );

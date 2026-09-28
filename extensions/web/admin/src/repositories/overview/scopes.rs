@@ -13,9 +13,9 @@
 
 use sqlx::PgPool;
 
-use crate::repositories::scope::membership::UNATTRIBUTED;
-use crate::repositories::scope::{Attribution, ScopeKind};
-use crate::util::time_range::TimeRange;
+use systemprompt_web_admin_core::repositories::scope::membership::UNATTRIBUTED;
+use systemprompt_web_admin_core::repositories::scope::{Attribution, ScopeKind};
+use systemprompt_web_admin_core::util::time_range::TimeRange;
 
 /// One container's slice of the window, or the unattributed remainder.
 #[derive(Debug, Clone)]
@@ -40,7 +40,7 @@ pub async fn list_top_scopes_by_cost(
     limit: i64,
 ) -> Result<Vec<ScopeCostRow>, sqlx::Error> {
     let exclusive = Attribution::Exclusive.is_exclusive();
-    let rows = crate::scoped_query!(
+    let rows = systemprompt_web_admin_core::scoped_query!(
         r#"SELECT COALESCE(rs.scope_id, $3) AS "scope_id!",
                   COALESCE(g.name, p.name, rs.scope_id, $3) AS "label!",
                   COUNT(*)::BIGINT AS "requests!",

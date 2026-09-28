@@ -22,6 +22,33 @@ Conventions (strict — hold every entry to them):
 
 ### Changed
 
+- **Admin crate split, stage 0.** The shared half of `systemprompt-web-admin` now lives in its own
+  shared-tier crate, `systemprompt-web-admin-core` (`extensions/web/shared/admin-core`): the error
+  type, view types, templates, SSR page shell and list view, the export framework, the access-rule
+  ledger, the sync engine, scope and entitlement resolution, the principal and conversation
+  readers, the authz provider registry, connections, and the entity panel. Anything that consumed
+  those through `systemprompt_web_admin::…` (the web facade, `web/jobs`, `cli/dev-login`, the
+  test workspace) imports `systemprompt_web_admin_core::…` instead. Three cross-domain lists
+  became `inventory` registrations so the remaining domains can be carved into their own crates
+  without depending on each other: export datasets (`export::registry::DataSetRegistration`,
+  ordered), sync planes (`repositories::sync::registry::PlaneRegistration`) and the connection
+  snapshot source (`connections::ConnectionSourceRegistration`). `scripts/lint-layers.sh`
+  classifies the residual `extensions/web/admin` as app-tier until the split completes; the
+  repository, HTTP-error, template-link and coverage gates scan both crates.
+- Builds against core `next` at `bridge/CORE_REF` (`208ba1c3`), which adds
+  `RuleType::extension_static` so an extension rule type is built from a literal slug in a `const`
+  and a malformed slug fails the build; the five `authz/*` dimensions use it and the last
+  `unreachable!` under `extensions/` is gone. The conversation fact row is now
+  `ConversationFactRow { context_id, facts: ConversationFacts }` (serde-flattened, same JSON), in
+  place of a macro-generated generic.
+- **Lint bar.** `clippy::cognitive_complexity` is enforced (deny, threshold 30) and `just clippy`
+  lints the `tests/` workspace with `--all-targets` under a strict mirror of the root lint set
+  (`tests/Cargo.toml` lists the nine test-only relaxations). Comment gates now hold what the
+  cleanup established: at most six `// Why:` blocks per production file, none inside a function
+  body unless it is a `discard-ok`/`lint-ok` marker or names an external system, and a `// Why:`
+  that opens as paraphrase fails `scripts/check-comments.sh`; `scripts/check-file-size.sh` warns
+  on files within twenty lines of the ceiling. `scripts/audit-rust-standards.sh --dry-run` prints
+  without writing `ISSUE.md`.
 - Builds against core `next` at `bridge/CORE_REF` (`c8d340fe`, ahead of 0.62.0) with both `[patch.crates-io]` blocks active, so the gateway fix below ships with the config: a `anthropic-beta` flag the gateway drops now takes the body field it gates with it, and a body field an upstream refuses (`<field>: Extra inputs are not permitted`) is learned per provider, dropped and re-sent once, the way a refused beta already was. Core's `wire::anthropic::BETA_GATED_FIELDS` names the pairs; `UpstreamCall::{beta_policy, dropped_betas}` are the one policy header and body both apply.
 
 ### Fixed

@@ -1,12 +1,12 @@
 //! One report row shaped into the report page's Handlebars context: headline,
 //! assessment, theme cards, recommendations and the digest text. Pure — no I/O.
 
-use crate::handlers::ssr::analysis_urls::ANALYSIS_CONVERSATIONS_URL;
-use crate::handlers::ssr::format::{format_cost, format_token_total, local_time};
-use crate::handlers::ssr::types::BreadcrumbView;
 use crate::repositories::analysis::reports::{
     AnalysisReportRow, ReportFindings, render_digest_text,
 };
+use systemprompt_web_admin_core::ssr::analysis_urls::ANALYSIS_CONVERSATIONS_URL;
+use systemprompt_web_admin_core::ssr::format::{format_cost, format_token_total, local_time};
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 
 use super::view::{
     RecommendationView, ReportPageContext, ThemeView, assessment_icon, scope_label, severity_icon,

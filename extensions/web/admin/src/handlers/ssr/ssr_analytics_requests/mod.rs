@@ -7,19 +7,19 @@
 //! window up by model, provider and status, or draw it as traffic, cost and
 //! latency; each doubles as the fastest way to pick a filter.
 
-use crate::error::AdminError;
 use std::sync::Arc;
+use systemprompt_web_admin_core::error::AdminError;
 
 use axum::extract::{Query, State};
 use axum::response::Response;
 use serde::Deserialize;
 use sqlx::PgPool;
 
-use crate::error::{AdminHtmlResult, AdminResult};
 use crate::handlers::ssr::types as charts;
-use crate::handlers::ssr::types::BreadcrumbView;
-use crate::types::UserContext;
-use crate::util::time_range::TimeRange;
+use systemprompt_web_admin_core::error::{AdminHtmlResult, AdminResult};
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
+use systemprompt_web_admin_core::types::UserContext;
+use systemprompt_web_admin_core::util::time_range::TimeRange;
 
 mod context;
 mod data;
@@ -27,9 +27,9 @@ mod summary;
 mod urls;
 mod view;
 
-use crate::handlers::ssr::list_view::DEFAULT_PAGE_SIZE;
-use crate::handlers::ssr::page::Page;
 use context::{ActiveRequestsTab, AnalyticsRequestsPageContext, RequestsTab};
+use systemprompt_web_admin_core::ssr::list_view::DEFAULT_PAGE_SIZE;
+use systemprompt_web_admin_core::ssr::page::Page;
 
 const BASE_URL: &str = "/admin/requests";
 #[derive(Debug, Deserialize)]
@@ -88,12 +88,15 @@ pub(crate) async fn analytics_requests_page(
     query.normalize();
 
     let tab = RequestsTab::from_query(query.tab.as_deref());
-    let request = crate::repositories::scope::ScopeRequest::from_query(
+    let request = systemprompt_web_admin_core::repositories::scope::ScopeRequest::from_query(
         &shell.user,
         query.group.as_deref(),
         query.project.as_deref(),
     );
-    let scope = crate::repositories::scope::membership::get_subject_scope(&pool, &request).await?;
+    let scope = systemprompt_web_admin_core::repositories::scope::membership::get_subject_scope(
+        &pool, &request,
+    )
+    .await?;
     let filter = view::filter_from_query(&query, scope);
     let sort = view::sort_from_query(&query);
     let page = query.page.unwrap_or(0).max(0);
@@ -126,13 +129,15 @@ pub(crate) async fn analytics_requests_page(
         fetched: &fetched,
     });
 
-    Ok(crate::handlers::ssr::render_typed_page(
-        &shell.engine,
-        "analytics-requests",
-        &ctx,
-        &shell.user,
-        &shell.marketplace,
-    ))
+    Ok(
+        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+            &shell.engine,
+            "analytics-requests",
+            &ctx,
+            &shell.user,
+            &shell.marketplace,
+        ),
+    )
 }
 
 pub(crate) async fn export_rows(
@@ -146,12 +151,15 @@ pub(crate) async fn export_rows(
     i64,
 )> {
     query.normalize();
-    let request = crate::repositories::scope::ScopeRequest::from_query(
+    let request = systemprompt_web_admin_core::repositories::scope::ScopeRequest::from_query(
         user_ctx,
         query.group.as_deref(),
         query.project.as_deref(),
     );
-    let scope = crate::repositories::scope::membership::get_subject_scope(pool, &request).await?;
+    let scope = systemprompt_web_admin_core::repositories::scope::membership::get_subject_scope(
+        pool, &request,
+    )
+    .await?;
     let filter = view::filter_from_query(&query, scope);
     let page = crate::repositories::analytics::requests::RequestPage {
         sort: view::sort_from_query(&query),
@@ -178,7 +186,7 @@ fn export_query(query: &RequestsQuery, auto_widened: Option<&'static str>) -> St
 }
 
 struct PageInput<'a> {
-    scope_filter: crate::handlers::ssr::list_view::ScopeFilterView,
+    scope_filter: systemprompt_web_admin_core::ssr::list_view::ScopeFilterView,
     query: &'a RequestsQuery,
     tab: RequestsTab,
     filter: &'a crate::repositories::analytics::requests::RequestFilter,
@@ -201,7 +209,7 @@ fn page_context(input: PageInput<'_>) -> AnalyticsRequestsPageContext {
     } = input;
     let pagination = urls::build_pagination(
         query,
-        crate::handlers::ssr::list_view::PageWindow::new(
+        systemprompt_web_admin_core::ssr::list_view::PageWindow::new(
             page,
             DEFAULT_PAGE_SIZE,
             fetched.total_count,
@@ -244,7 +252,10 @@ fn page_context(input: PageInput<'_>) -> AnalyticsRequestsPageContext {
         chips: urls::active_chips(query),
         has_active_filters,
         clear_url: urls::clear_url(query),
-        export: crate::export::ExportView::single("requests", &export_query(query, auto_widened)),
+        export: systemprompt_web_admin_core::export::view::ExportView::single(
+            "requests",
+            &export_query(query, auto_widened),
+        ),
         base_url: BASE_URL,
         scope_filter,
     }

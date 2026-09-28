@@ -5,7 +5,7 @@
 
 use systemprompt::identifiers::{MarketplaceId, PluginId, SkillId};
 use systemprompt::models::services::bundle::FileEntry;
-use systemprompt_web_admin::repositories::sync::marketplace_hash::{
+use systemprompt_web_admin_core::repositories::sync::marketplace_hash::{
     MarketplaceSpec, MarketplaceVersion, PluginSpec, SourceOf, hash_marketplaces, skill_key,
 };
 

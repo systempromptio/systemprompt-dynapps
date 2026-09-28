@@ -18,7 +18,7 @@ use crate::repositories::analysis::tools::{
     load_tool_activity_page,
 };
 use crate::repositories::analytics::requests::{RequestSchemaRow, find_request_schemas};
-use crate::types::tool_schema_diff::{
+use systemprompt_web_admin_core::types::tool_schema_diff::{
     ToolSchemaPair, WireTool, gemini_rules_apply, pair_tools, wire_tools,
 };
 

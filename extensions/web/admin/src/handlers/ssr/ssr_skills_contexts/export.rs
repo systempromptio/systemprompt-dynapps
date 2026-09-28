@@ -1,13 +1,13 @@
 //! Activity by person as the export surface reads it.
 
-use crate::error::AdminResult;
 use crate::export::datasets::requests::time_range;
-use crate::export::model::ExportContext;
-use crate::repositories;
-use crate::repositories::analytics::conversation_rows::{
+use systemprompt_web_admin_core::error::AdminResult;
+use systemprompt_web_admin_core::export::model::ExportContext;
+
+use systemprompt_web_admin_core::repositories::conversations::rows::{
     ConversationPage, ConversationPageMode, ConversationPageResult, load_conversation_page,
 };
-use crate::repositories::scope::ScopeRequest;
+use systemprompt_web_admin_core::repositories::scope::ScopeRequest;
 
 use super::{ContextsListQuery, parse_inputs};
 
@@ -36,7 +36,10 @@ pub(crate) async fn export_rows(
     let range = time_range(ctx)?;
     let request =
         ScopeRequest::from_query(ctx.user, params.group.as_deref(), params.project.as_deref());
-    let scope = repositories::scope::membership::get_subject_scope(ctx.pool, &request).await?;
+    let scope = systemprompt_web_admin_core::repositories::scope::membership::get_subject_scope(
+        ctx.pool, &request,
+    )
+    .await?;
     let mut inputs = parse_inputs(&params, &scope);
     inputs.filter.since = Some(range.from);
     inputs.filter.until = Some(range.to);

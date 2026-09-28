@@ -3,7 +3,7 @@
 use std::sync::LazyLock;
 
 use systemprompt::identifiers::{PluginId, SessionId, UserId};
-use systemprompt_web_admin::repositories::marketplace::webhook::{
+use systemprompt_web_admin_core::repositories::ingestion::webhook::{
     UsageEventParams, insert_plugin_usage_event,
 };
 

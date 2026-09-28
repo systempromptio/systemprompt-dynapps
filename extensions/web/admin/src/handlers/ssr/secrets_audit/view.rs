@@ -3,8 +3,8 @@
 use serde::Serialize;
 use systemprompt::identifiers::PluginId;
 
-use crate::handlers::ssr::format::local_time;
 use crate::repositories::governance::secret_audit_log::SecretAuditRow;
+use systemprompt_web_admin_core::ssr::format::local_time;
 
 #[derive(Debug, Serialize)]
 pub(super) struct SecretAuditRowView {

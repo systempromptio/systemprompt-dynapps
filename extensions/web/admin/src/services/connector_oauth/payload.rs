@@ -1,6 +1,6 @@
 //! Decode MCP tool envelopes without mistaking a site ID for a user identity.
 
-use crate::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 // JSON: remote MCP tools may return structured content or JSON text with
 // wrapper objects.
 use serde_json::Value;

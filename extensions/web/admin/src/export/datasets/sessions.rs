@@ -3,13 +3,23 @@
 use async_trait::async_trait;
 
 use super::requests::time_range;
-use crate::error::AdminResult;
-use crate::export::model::{Cell, CellKind, Column, DataSet, ExportContext, Table, Window};
 use crate::handlers::ssr::ssr_sessions_list::export::export_rows;
-use crate::repositories::analytics::conversation_rows::ConversationRow;
 use systemprompt::identifiers::{SessionId, UserId};
+use systemprompt_web_admin_core::error::AdminResult;
+use systemprompt_web_admin_core::export::model::{
+    Cell, CellKind, Column, DataSet, ExportContext, Table, Window,
+};
+use systemprompt_web_admin_core::export::registry::DataSetRegistration;
+use systemprompt_web_admin_core::repositories::conversations::rows::ConversationRow;
 
 pub(crate) struct Sessions;
+
+inventory::submit! {
+    DataSetRegistration {
+        order: 1,
+        dataset: &Sessions,
+    }
+}
 
 pub(crate) const COLUMNS: &[Column] = &[
     Column::new("first_at", "Started", CellKind::Timestamp),

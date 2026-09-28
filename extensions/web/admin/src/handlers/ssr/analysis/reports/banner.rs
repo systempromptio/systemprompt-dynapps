@@ -6,8 +6,8 @@
 use serde::Serialize;
 use sqlx::PgPool;
 
-use crate::handlers::ssr::format::relative_time;
 use crate::repositories::analysis::reports::find_latest_generated_report;
+use systemprompt_web_admin_core::ssr::format::relative_time;
 
 use super::REPORTS_URL;
 

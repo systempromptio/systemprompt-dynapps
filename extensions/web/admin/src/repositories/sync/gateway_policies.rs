@@ -13,14 +13,6 @@
 use async_trait::async_trait;
 use sqlx::PgPool;
 
-use super::access_control::applied_from;
-use super::declaration::read_or_text;
-use super::plane::{
-    ActionCounts, Actor, ApplyOutcome, DeclarationSource, DriftKpi, DriftRow, Export, PlaneDrift,
-    SyncMode, SyncPlane, resolution,
-};
-use super::state::{Applied, record_applied, record_declared};
-use crate::error::{AdminError, AdminResult};
 use crate::repositories::gateway_policies::declared::{
     DeclaredPolicies, POLICIES_FILE, parse_declared_policies,
 };
@@ -30,11 +22,27 @@ use crate::repositories::gateway_policies::month_window_db::refresh_month_window
 use crate::repositories::gateway_policies::rows::{
     PolicyWrite, count_policies, delete_policy, list_policies, upsert_policy,
 };
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::repositories::sync::access_control::applied_from;
+use systemprompt_web_admin_core::repositories::sync::declaration::read_or_text;
+use systemprompt_web_admin_core::repositories::sync::plane::{
+    ActionCounts, Actor, ApplyOutcome, DeclarationSource, DriftKpi, DriftRow, Export, PlaneDrift,
+    SyncMode, SyncPlane, resolution,
+};
+use systemprompt_web_admin_core::repositories::sync::plane_ids;
+use systemprompt_web_admin_core::repositories::sync::registry::PlaneRegistration;
+use systemprompt_web_admin_core::repositories::sync::state::{
+    Applied, record_applied, record_declared,
+};
 
-pub const PLANE_ID: &str = "gateway_policies";
+pub const PLANE_ID: &str = plane_ids::GATEWAY_POLICIES;
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct GatewayPoliciesPlane;
+
+inventory::submit! {
+    PlaneRegistration { order: 2, build: || Box::new(GatewayPoliciesPlane) }
+}
 
 // Why: core boots permissive when the policies file is absent, so no file
 // is a legitimate "no policies" declaration, not an error.

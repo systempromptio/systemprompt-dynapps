@@ -3,7 +3,7 @@
 
 use sqlx::PgPool;
 
-use crate::types::GovernanceDecisionRow;
+use systemprompt_web_admin_core::types::GovernanceDecisionRow;
 
 pub async fn list_decisions_for_policy(
     pool: &PgPool,

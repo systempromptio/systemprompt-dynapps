@@ -6,12 +6,12 @@ use chrono::{DateTime, Duration, Utc};
 use serde::Deserialize;
 use sqlx::PgPool;
 
-use crate::error::{AdminError, AdminResult};
 use crate::repositories::analysis::reports::{
     AnalysisReportRow, DigestScope, NewReport, ReportDigestInputs, get_report_digest,
 };
-use crate::repositories::scope::ScopeRequest;
-use crate::types::UserContext;
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::repositories::scope::ScopeRequest;
+use systemprompt_web_admin_core::types::UserContext;
 
 #[derive(Debug, Default, Deserialize)]
 pub(crate) struct ReportRequestForm {
@@ -100,8 +100,10 @@ pub(super) async fn resolve(
 
     let request =
         ScopeRequest::from_query(user, lookup(&pairs, "group"), lookup(&pairs, "project"));
-    let subjects =
-        crate::repositories::scope::membership::get_subject_scope(pool, &request).await?;
+    let subjects = systemprompt_web_admin_core::repositories::scope::membership::get_subject_scope(
+        pool, &request,
+    )
+    .await?;
     let digest_scope = DigestScope {
         window_start,
         window_end,

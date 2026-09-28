@@ -10,7 +10,7 @@ use std::path::Path;
 use sha2::{Digest, Sha256};
 use systemprompt::security::policy::GovernanceConfig;
 
-use crate::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
 pub const GOVERNANCE_FILE: &str = "governance/config.yaml";
 

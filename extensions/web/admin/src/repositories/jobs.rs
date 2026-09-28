@@ -3,7 +3,7 @@
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 
-use crate::types::JobSummary;
+use systemprompt_web_admin_core::types::JobSummary;
 
 pub async fn list_jobs(pool: &PgPool) -> Result<Vec<JobSummary>, sqlx::Error> {
     sqlx::query_as!(

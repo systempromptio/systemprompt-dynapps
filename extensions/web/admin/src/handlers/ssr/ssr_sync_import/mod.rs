@@ -18,13 +18,13 @@ use axum::response::Response;
 use sqlx::PgPool;
 
 use self::view::AbsentPlaneView;
-use crate::error::{AdminError, AdminHtmlResult};
-use crate::handlers::ssr::sync_plane::{PlaneCardOpts, plane_card};
-use crate::repositories::sync::archive::staging::StagingStore;
-use crate::repositories::sync::plane::DeclarationSource;
-use crate::repositories::sync::registry::planes;
-use crate::templates::AdminTemplateEngine;
-use crate::types::{MarketplaceContext, UserContext};
+use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
+use systemprompt_web_admin_core::repositories::sync::archive::staging::StagingStore;
+use systemprompt_web_admin_core::repositories::sync::plane::DeclarationSource;
+use systemprompt_web_admin_core::repositories::sync::registry::planes;
+use systemprompt_web_admin_core::ssr::sync_plane::{PlaneCardOpts, plane_card};
+use systemprompt_web_admin_core::templates::AdminTemplateEngine;
+use systemprompt_web_admin_core::types::{MarketplaceContext, UserContext};
 
 pub(crate) async fn import_preview_page(
     Extension(user_ctx): Extension<UserContext>,
@@ -70,11 +70,13 @@ pub(crate) async fn import_preview_page(
         view::PreviewPlanes { cards, absent },
         user_ctx.is_admin,
     );
-    Ok(super::render_typed_page(
-        &engine,
-        "sync-import",
-        &page,
-        &user_ctx,
-        &mkt_ctx,
-    ))
+    Ok(
+        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+            &engine,
+            "sync-import",
+            &page,
+            &user_ctx,
+            &mkt_ctx,
+        ),
+    )
 }

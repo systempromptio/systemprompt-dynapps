@@ -7,8 +7,8 @@
 use chrono::{DateTime, Duration, Utc};
 use sqlx::PgPool;
 use systemprompt::identifiers::{ContextId, UserId};
-use systemprompt_web_admin::repositories::scope::SubjectScope;
-use systemprompt_web_admin::util::time_range::{TimeRange, TimeRangePreset};
+use systemprompt_web_admin_core::repositories::scope::SubjectScope;
+use systemprompt_web_admin_core::util::time_range::{TimeRange, TimeRangePreset};
 use systemprompt_web_shared::{GroupId, ProjectId};
 
 // Starts after any seeded `ai_requests` row, so a windowed query sees only

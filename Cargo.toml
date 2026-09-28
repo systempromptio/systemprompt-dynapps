@@ -2,6 +2,7 @@
 members = [
     "extensions/web",
     "extensions/web/shared",
+    "extensions/web/shared/admin-core",
     "extensions/web/admin",
     "extensions/web/content",
     "extensions/web/site",
@@ -49,6 +50,7 @@ systemprompt-extension = { version = "0.62.0" }
 # ============================================
 systemprompt-web-extension = { path = "extensions/web" }
 systemprompt-web-shared = { path = "extensions/web/shared" }
+systemprompt-web-admin-core = { path = "extensions/web/shared/admin-core" }
 systemprompt-web-admin = { path = "extensions/web/admin" }
 systemprompt-web-content = { path = "extensions/web/content" }
 systemprompt-web-site = { path = "extensions/web/site" }

@@ -1,7 +1,6 @@
 //! Rollups derived from hook events as sessions progress.
 
 mod daily;
-pub(crate) mod ingestion;
 mod session_titles;
 pub(crate) mod session_updates;
 

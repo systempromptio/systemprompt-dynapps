@@ -10,7 +10,7 @@ use systemprompt_web_admin::repositories::groups::members::{
     insert_group_member, list_group_ids_for_user, list_source_ad_groups,
     replace_directory_group_memberships,
 };
-use systemprompt_web_admin::types::groups::CreateGroupRequest;
+use systemprompt_web_admin_core::types::groups::CreateGroupRequest;
 use systemprompt_web_shared::GroupId;
 
 use crate::fixtures::{insert_user, unclaimed_email, unique, unique_group};

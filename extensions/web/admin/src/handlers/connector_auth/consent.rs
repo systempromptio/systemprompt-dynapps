@@ -1,7 +1,6 @@
 //! Browser consent bound to the initiating login and connection generation.
 
 use super::live_user;
-use crate::error::{AdminError, AdminResult};
 use crate::repositories::users::{
     connector_accounts as accounts, connector_credentials as credentials,
 };
@@ -18,6 +17,7 @@ use rand::Rng;
 use serde::Deserialize;
 use sqlx::PgPool;
 use std::sync::Arc;
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
 #[derive(Deserialize)]
 pub(super) struct Start {

@@ -1,8 +1,8 @@
 //! `repositories::users` read models — the user index, its filter options, and
 //! the per-user side tables the detail page renders.
 
-use systemprompt_web_admin::repositories::scope::SubjectScope;
 use systemprompt_web_admin::repositories::users;
+use systemprompt_web_admin_core::repositories::scope::SubjectScope;
 
 use crate::fixtures::{
     group_scope, insert_user, insert_user_full, project_scope, set_project, unclaimed_email, unique,
@@ -16,9 +16,12 @@ async fn list_users_includes_a_freshly_created_user() {
     };
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("listed")).await;
 
-    let listed = users::queries::list_users(&db.pool, &SubjectScope::All)
-        .await
-        .expect("listing succeeds");
+    let listed = systemprompt_web_admin_core::repositories::principal::listing::list_users(
+        &db.pool,
+        &SubjectScope::All,
+    )
+    .await
+    .expect("listing succeeds");
 
     let row = listed
         .iter()
@@ -44,9 +47,12 @@ async fn list_users_excludes_anonymous_identities() {
     )
     .await;
 
-    let listed = users::queries::list_users(&db.pool, &SubjectScope::All)
-        .await
-        .expect("listing succeeds");
+    let listed = systemprompt_web_admin_core::repositories::principal::listing::list_users(
+        &db.pool,
+        &SubjectScope::All,
+    )
+    .await
+    .expect("listing succeeds");
 
     assert!(
         !listed.iter().any(|u| u.user_id == anon),
@@ -160,9 +166,12 @@ async fn list_users_narrows_to_a_groups_and_a_projects_members() {
     set_project(&db.pool, &ours, Some("commerce")).await;
     set_project(&db.pool, &theirs, Some("core")).await;
 
-    let scoped = users::queries::list_users(&db.pool, &project_scope(&db.pool, "commerce").await)
-        .await
-        .expect("listing succeeds");
+    let scoped = systemprompt_web_admin_core::repositories::principal::listing::list_users(
+        &db.pool,
+        &project_scope(&db.pool, "commerce").await,
+    )
+    .await
+    .expect("listing succeeds");
     let ids: Vec<&str> = scoped.iter().map(|u| u.user_id.as_str()).collect();
     assert!(
         ids.contains(&ours.as_str()),
@@ -173,18 +182,24 @@ async fn list_users_narrows_to_a_groups_and_a_projects_members() {
         "the other project's member must not be listed"
     );
 
-    let by_group = users::queries::list_users(&db.pool, &group_scope(&db.pool, "commerce").await)
-        .await
-        .expect("listing succeeds");
+    let by_group = systemprompt_web_admin_core::repositories::principal::listing::list_users(
+        &db.pool,
+        &group_scope(&db.pool, "commerce").await,
+    )
+    .await
+    .expect("listing succeeds");
     let group_ids: Vec<&str> = by_group.iter().map(|u| u.user_id.as_str()).collect();
     assert!(
         group_ids.contains(&ours.as_str()) && !group_ids.contains(&theirs.as_str()),
         "the group half of the split scopes the same way the project half does"
     );
 
-    let all = users::queries::list_users(&db.pool, &SubjectScope::All)
-        .await
-        .expect("listing succeeds");
+    let all = systemprompt_web_admin_core::repositories::principal::listing::list_users(
+        &db.pool,
+        &SubjectScope::All,
+    )
+    .await
+    .expect("listing succeeds");
     let all_ids: Vec<&str> = all.iter().map(|u| u.user_id.as_str()).collect();
     assert!(all_ids.contains(&ours.as_str()));
     assert!(all_ids.contains(&theirs.as_str()));
@@ -202,9 +217,12 @@ async fn list_users_scoped_to_nothing_lists_nobody() {
     let member = insert_user(&db.pool, &unique("user"), &unclaimed_email("member")).await;
     set_project(&db.pool, &member, Some("core")).await;
 
-    let listed = users::queries::list_users(&db.pool, &SubjectScope::Users(Vec::new()))
-        .await
-        .expect("listing succeeds");
+    let listed = systemprompt_web_admin_core::repositories::principal::listing::list_users(
+        &db.pool,
+        &SubjectScope::Users(Vec::new()),
+    )
+    .await
+    .expect("listing succeeds");
     assert!(listed.is_empty(), "the empty scope must match no project");
     db.cleanup().await;
 }

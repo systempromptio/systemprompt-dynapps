@@ -7,22 +7,42 @@ use async_trait::async_trait;
 use systemprompt::models::SessionId;
 
 use super::requests::time_range;
-use crate::error::AdminResult;
-use crate::export::model::{Cell, CellKind, Column, DataSet, ExportContext, Table, Window};
 use crate::handlers::ssr::ssr_analytics_dashboard::AnalyticsDashboardQuery;
 use crate::repositories::analytics::site::models::list_model_stats;
 use crate::repositories::analytics::site::sessions::list_session_costs_paged;
 use crate::repositories::analytics::site::skills::list_skill_stats;
 use crate::repositories::analytics::site::{SiteScope, resolve_site_scope};
-use crate::util::time_range::TimeRange;
+use systemprompt_web_admin_core::error::AdminResult;
+use systemprompt_web_admin_core::export::model::{
+    Cell, CellKind, Column, DataSet, ExportContext, Table, Window,
+};
+use systemprompt_web_admin_core::export::registry::DataSetRegistration;
+use systemprompt_web_admin_core::util::time_range::TimeRange;
 
 mod tools;
-
-pub(crate) use tools::{ToolServers, ToolStats};
 
 pub(crate) struct ModelStats;
 pub(crate) struct SkillStats;
 pub(crate) struct SessionCosts;
+
+inventory::submit! {
+    DataSetRegistration {
+        order: 14,
+        dataset: &ModelStats,
+    }
+}
+inventory::submit! {
+    DataSetRegistration {
+        order: 15,
+        dataset: &SkillStats,
+    }
+}
+inventory::submit! {
+    DataSetRegistration {
+        order: 21,
+        dataset: &SessionCosts,
+    }
+}
 
 pub(super) struct DashboardRead {
     pub(super) query: AnalyticsDashboardQuery,

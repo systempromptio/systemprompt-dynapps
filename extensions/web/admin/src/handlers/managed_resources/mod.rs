@@ -1,12 +1,12 @@
 //! Owner-authenticated source and revision authoring; no implicit activation.
 
-use crate::error::AdminResult;
-use crate::handlers::shared::require_write_origin;
-use crate::routes::managed_state::ManagedState;
-use crate::types::UserContext;
 use axum::extract::Path;
 use axum::http::{HeaderMap, StatusCode};
 use std::sync::Arc;
+use systemprompt_web_admin_core::error::AdminResult;
+use systemprompt_web_admin_core::request::require_write_origin;
+use systemprompt_web_admin_core::state::ManagedState;
+use systemprompt_web_admin_core::types::UserContext;
 
 use axum::{Extension, Json};
 use serde::Deserialize;
@@ -81,7 +81,7 @@ pub(crate) async fn sync_git(
 ) -> AdminResult<Json<systemprompt::marketplace::managed::GitSyncResult>> {
     require_write_origin(&headers)?;
     if input.source_id != id {
-        return Err(crate::error::AdminError::Conflict(
+        return Err(systemprompt_web_admin_core::error::AdminError::Conflict(
             "Source path and body differ".to_owned(),
         ));
     }

@@ -5,7 +5,7 @@
 //! so these tests exercise the storage paths without mutating process state.
 
 use systemprompt::identifiers::PluginId;
-use systemprompt_web_admin::repositories::secrets::secret_crypto::{encrypt, generate_nonce};
+use systemprompt_web_admin_core::crypto::secret_crypto::{encrypt, generate_nonce};
 
 fn plug() -> PluginId {
     PluginId::new("plug")

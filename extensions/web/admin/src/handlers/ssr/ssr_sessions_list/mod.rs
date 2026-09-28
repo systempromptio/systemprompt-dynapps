@@ -22,19 +22,21 @@ use serde::Deserialize;
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 
-use crate::error::{AdminError, AdminHtmlResult};
-use crate::handlers::ssr::entity_urls::session_detail_url;
-use crate::handlers::ssr::format::short_id;
-use crate::handlers::ssr::list_view::PageWindow;
-use crate::handlers::ssr::types::BreadcrumbView;
-use crate::repositories::analytics::conversation_rows::{
+use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
+use systemprompt_web_admin_core::repositories::conversations::rows::{
     ConversationFilter, ConversationPage, ConversationPageMode, ConversationPageResult,
     ConversationSort, ConversationTotals, get_conversation_totals, load_conversation_page,
 };
-use crate::repositories::governance::filter_options::{FilterOptions, get_filter_options};
-use crate::repositories::scope::{ScopeRequest, SubjectScope};
-use crate::types::UserContext;
-use crate::util::time_range::{TimeRange, TimeRangeQuery, parse_time_range};
+use systemprompt_web_admin_core::repositories::filter_options::{
+    FilterOptions, get_filter_options,
+};
+use systemprompt_web_admin_core::repositories::scope::{ScopeRequest, SubjectScope};
+use systemprompt_web_admin_core::ssr::entity_urls::session_detail_url;
+use systemprompt_web_admin_core::ssr::format::short_id;
+use systemprompt_web_admin_core::ssr::list_view::PageWindow;
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
+use systemprompt_web_admin_core::types::UserContext;
+use systemprompt_web_admin_core::util::time_range::{TimeRange, TimeRangeQuery, parse_time_range};
 
 mod context;
 pub(crate) mod export;
@@ -42,9 +44,9 @@ mod rows;
 mod summary;
 mod view;
 
-use crate::handlers::ssr::list_view::DEFAULT_PAGE_SIZE;
-use crate::handlers::ssr::page::Page;
 use context::{CurrentSessionView, FilterRibbon, SessionsListPageContext};
+use systemprompt_web_admin_core::ssr::list_view::DEFAULT_PAGE_SIZE;
+use systemprompt_web_admin_core::ssr::page::Page;
 
 const BASE_URL: &str = "/admin/sessions";
 #[derive(Debug, Deserialize)]
@@ -83,8 +85,10 @@ pub(crate) async fn sessions_list_page(
         query.group.as_deref(),
         query.project.as_deref(),
     );
-    let subjects =
-        crate::repositories::scope::membership::get_subject_scope(&pool, &request).await?;
+    let subjects = systemprompt_web_admin_core::repositories::scope::membership::get_subject_scope(
+        &pool, &request,
+    )
+    .await?;
 
     let ctx = load_sessions_data(
         &pool,
@@ -97,13 +101,15 @@ pub(crate) async fn sessions_list_page(
         SessionWindow { range, page },
     )
     .await;
-    Ok(crate::handlers::ssr::render_typed_page(
-        &shell.engine,
-        "sessions",
-        &ctx,
-        &shell.user,
-        &shell.marketplace,
-    ))
+    Ok(
+        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+            &shell.engine,
+            "sessions",
+            &ctx,
+            &shell.user,
+            &shell.marketplace,
+        ),
+    )
 }
 
 #[derive(Clone, Copy)]
@@ -196,7 +202,7 @@ async fn load_sessions_data(
     let show_side = loaded.filter.include_side_calls;
 
     let preset = preset_str(query, range);
-    let export_query = crate::export::view::query_string(&[
+    let export_query = systemprompt_web_admin_core::export::view::query_string(&[
         ("preset", Some(preset.as_str())),
         ("from", Some(&range.from.to_rfc3339())),
         ("to", Some(&range.to.to_rfc3339())),
@@ -253,8 +259,13 @@ async fn load_sessions_data(
         error_toggle_url: view::error_toggle_url(query, error_only),
         show_side,
         side_toggle_url: view::side_toggle_url(query, show_side),
-        export: crate::export::ExportView::single("sessions", &export_query)
-            .with_transcripts(crate::export::view::TranscriptSource::Sessions),
+        export: systemprompt_web_admin_core::export::view::ExportView::single(
+            "sessions",
+            &export_query,
+        )
+        .with_transcripts(
+            systemprompt_web_admin_core::export::transcripts::TranscriptSource::Sessions,
+        ),
     }
 }
 

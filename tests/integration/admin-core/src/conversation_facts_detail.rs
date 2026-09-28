@@ -40,7 +40,8 @@ async fn detail_keeps_required_fact_metrics_when_directory_and_judge_rows_are_ab
     let row = find_conversation_facts(&db.pool, &context)
         .await
         .expect("detail fact query")
-        .expect("retained fact row");
+        .expect("retained fact row")
+        .facts;
     assert_eq!(row.user_id, historical_user);
     assert_eq!(row.client_kind, "historical-client");
     assert_eq!(row.models, vec!["historical-model".to_owned()]);

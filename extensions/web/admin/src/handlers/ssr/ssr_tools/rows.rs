@@ -3,9 +3,11 @@
 
 use serde::Serialize;
 
-use crate::handlers::ssr::analysis_urls::analysis_skill_url;
-use crate::handlers::ssr::format::{format_duration_ms, local_time, relative_time, short_num};
 use crate::repositories::analysis::tools::ToolActivityRow;
+use systemprompt_web_admin_core::ssr::analysis_urls::analysis_skill_url;
+use systemprompt_web_admin_core::ssr::format::{
+    format_duration_ms, local_time, relative_time, short_num,
+};
 
 const INPUT_CLIP: usize = 72;
 

@@ -12,10 +12,12 @@ use super::{SkillsQuery, SkillsTab};
 use crate::handlers::ssr::analysis::help::skills_help;
 use crate::handlers::ssr::analysis::reports::banner::ReportBannerView;
 use crate::handlers::ssr::analysis::ribbon::{RibbonGroupView, RibbonView};
-use crate::handlers::ssr::analysis_urls::ANALYSIS_SKILLS_URL;
-use crate::handlers::ssr::types::TabLinkView;
-use crate::repositories::analysis::inventory_index::{InventoryIndex, MarketplaceAudience};
 use crate::repositories::analysis::skills::{MarketplaceAdoptionRow, SkillFactRow, SkillSort};
+use systemprompt_web_admin_core::catalog_index::inventory_index::{
+    InventoryIndex, MarketplaceAudience,
+};
+use systemprompt_web_admin_core::ssr::analysis_urls::ANALYSIS_SKILLS_URL;
+use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;
 
 pub(super) struct SkillsRead<'a> {
     pub(super) rows: &'a [SkillFactRow],
@@ -228,7 +230,10 @@ pub(super) fn build_context(
         row_count,
         unused_count: body.unused.len(),
         unused: body.unused,
-        export: crate::export::ExportView::new(&["analysis-skills"], &export_query(query, tab)),
+        export: systemprompt_web_admin_core::export::view::ExportView::new(
+            &["analysis-skills"],
+            &export_query(query, tab),
+        ),
         is_admin: inputs.is_admin,
         help: skills_help(),
         report_banner: inputs.report_banner,

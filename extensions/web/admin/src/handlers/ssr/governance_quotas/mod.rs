@@ -14,14 +14,14 @@ use axum::response::Response;
 use serde::Serialize;
 use sqlx::PgPool;
 
-use crate::error::{AdminError, AdminHtmlResult};
-use crate::handlers::ssr::format::relative_time;
-use crate::handlers::ssr::page::Page;
 use crate::handlers::ssr::people_view::format_usd;
-use crate::handlers::ssr::types::BreadcrumbView;
 use crate::repositories::gateway_policies::month_window::{is_month_window, window_label};
 use crate::repositories::gateway_policies::rows::{effective_spec, list_policies};
 use crate::repositories::gateway_policies::usage::{get_window_usage, headroom};
+use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
+use systemprompt_web_admin_core::ssr::format::relative_time;
+use systemprompt_web_admin_core::ssr::page::Page;
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 
 #[derive(Debug, Serialize)]
 struct SubjectRow {
@@ -154,11 +154,13 @@ pub(crate) async fn governance_quotas_page(
         editor_url: "/admin/gateway/policies",
         docs_url: "/documentation/enterprise-cost-management",
     };
-    Ok(crate::handlers::ssr::render_typed_page(
-        &page.engine,
-        "governance-quotas",
-        &data,
-        &page.user,
-        &page.marketplace,
-    ))
+    Ok(
+        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+            &page.engine,
+            "governance-quotas",
+            &data,
+            &page.user,
+            &page.marketplace,
+        ),
+    )
 }

@@ -5,7 +5,7 @@ use systemprompt::identifiers::PluginId;
 use systemprompt_web_admin::repositories::secrets::secret_audit::{
     insert_audit_entry, list_audit_log,
 };
-use systemprompt_web_admin::repositories::secrets::secret_crypto::{encrypt, generate_nonce};
+use systemprompt_web_admin_core::crypto::secret_crypto::{encrypt, generate_nonce};
 
 fn plug() -> PluginId {
     PluginId::new("plug")

@@ -11,12 +11,12 @@ use sqlx::PgPool;
 
 use systemprompt::identifiers::{PluginId, UserId};
 
-use crate::error::AdminResult;
-use crate::handlers::users::extract_user_from_cookie;
 use crate::services::auth::validate_plugin_jwt;
 use crate::services::secret_service;
+use systemprompt_web_admin_core::auth::session::extract_user_from_cookie;
+use systemprompt_web_admin_core::error::AdminResult;
 
-use super::responses::{
+use systemprompt_web_admin_core::types::responses::{
     AuditLogEntry, AuditLogListResponse, ResolutionTokenResponse, ResultOkResponse,
     SecretsListResponse,
 };

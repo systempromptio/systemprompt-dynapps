@@ -27,16 +27,16 @@ use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use systemprompt::identifiers::MarketplaceId;
 
-use crate::error::{AdminError, AdminHtmlResult, AdminResult};
-use crate::handlers::ssr::analysis_urls::ANALYSIS_VERSIONS_URL;
-use crate::handlers::ssr::page::Page;
-use crate::handlers::ssr::render_typed_page;
-use crate::handlers::ssr::types::BreadcrumbView;
 use crate::repositories::analysis::marketplace_versions::{
     VersionWindow, list_marketplace_completion_rollups, list_marketplace_rollups,
     list_version_completion,
 };
-use crate::routes::managed_state::ManagedState;
+use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult, AdminResult};
+use systemprompt_web_admin_core::ssr::analysis_urls::ANALYSIS_VERSIONS_URL;
+use systemprompt_web_admin_core::ssr::helpers::render_typed_page;
+use systemprompt_web_admin_core::ssr::page::Page;
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
+use systemprompt_web_admin_core::state::ManagedState;
 
 use access::readable_versions;
 pub(crate) use access::{may_read_marketplace, require_versions_reader};
@@ -118,7 +118,7 @@ struct LandingPage {
     current: usize,
     retired: usize,
     versions: i64,
-    export: crate::export::ExportView,
+    export: systemprompt_web_admin_core::export::view::ExportView,
 }
 
 pub(crate) async fn landing_page(
@@ -151,7 +151,10 @@ pub(crate) async fn landing_page(
                 landing::card(row, rollup)
             })
             .collect(),
-        export: crate::export::ExportView::single("analysis-marketplaces", &format!("days={days}")),
+        export: systemprompt_web_admin_core::export::view::ExportView::single(
+            "analysis-marketplaces",
+            &format!("days={days}"),
+        ),
     };
     Ok(render_typed_page(
         &shell.engine,
@@ -203,7 +206,7 @@ struct DetailPage {
     evaluation: Option<evaluation::EvaluationView>,
     distribution: Option<distribution::DistributionPage>,
     can_manage: bool,
-    export: crate::export::ExportView,
+    export: systemprompt_web_admin_core::export::view::ExportView,
 }
 
 pub(crate) async fn detail_page(
@@ -244,7 +247,7 @@ pub(crate) async fn detail_page(
     let encoded = urlencoding::encode(marketplace_id.as_str());
     let base_href = format!("/admin/analysis/versions/{encoded}?days={days}");
     let data = DetailPage {
-        export: crate::export::ExportView::single(
+        export: systemprompt_web_admin_core::export::view::ExportView::single(
             tab.dataset(),
             &format!("days={days}&marketplace={encoded}"),
         ),

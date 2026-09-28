@@ -7,8 +7,8 @@ use axum::{Extension, Router, middleware as axum_middleware};
 use sqlx::PgPool;
 use tower_http::normalize_path::NormalizePathLayer;
 
-use super::super::templates::AdminTemplateEngine;
 use super::super::{handlers, middleware};
+use systemprompt_web_admin_core::templates::AdminTemplateEngine;
 
 pub fn bridge_auth_ssr_router(pool: Arc<PgPool>, engine: AdminTemplateEngine) -> Router {
     let inner = Router::new()
@@ -25,7 +25,7 @@ pub fn bridge_auth_ssr_router(pool: Arc<PgPool>, engine: AdminTemplateEngine) ->
             middleware::marketplace_context_middleware,
         ))
         .layer(axum_middleware::from_fn(
-            middleware::require_user_middleware,
+            systemprompt_web_admin_core::middleware::gates::require_user_middleware,
         ))
         .layer(axum_middleware::from_fn_with_state(
             Arc::clone(&pool),

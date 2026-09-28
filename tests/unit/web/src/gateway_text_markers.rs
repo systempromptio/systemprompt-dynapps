@@ -6,7 +6,7 @@
 //! so the rule is pinned here rather than left to two implementations to agree
 //! on by accident.
 
-use systemprompt_web_admin::repositories::analytics::conversations::strip_gateway_markers;
+use systemprompt_web_admin_core::repositories::conversations::strip_gateway_markers;
 
 #[test]
 fn the_user_prompt_header_is_removed() {

@@ -7,7 +7,7 @@
 //! until one probe has succeeded.
 
 use super::Grant;
-use crate::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
 pub const REFRESH_LEEWAY_SECONDS: i64 = 120;
 

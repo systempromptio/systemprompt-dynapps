@@ -11,9 +11,9 @@
 use serde::Serialize;
 
 use super::view::RoleEntitlementView;
-use crate::handlers::ssr::entity_kind::{entity_kind_plural, entity_kind_rank};
-use crate::repositories::users::access_control::SectionInput;
-use crate::types::Role;
+use systemprompt_web_admin_core::repositories::entitlement::SectionInput;
+use systemprompt_web_admin_core::ssr::entity_kind::{entity_kind_plural, entity_kind_rank};
+use systemprompt_web_admin_core::types::Role;
 
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct EntitlementKindView {

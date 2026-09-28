@@ -4,14 +4,15 @@
 
 use systemprompt::identifiers::UserId;
 
-use crate::handlers::ssr::list_view::{PageWindow, Pagination};
-use crate::handlers::ssr::types::{SortHeaderView, TabLinkView};
-use crate::repositories::analytics::conversation_rows::ConversationSort;
+use systemprompt_web_admin_core::repositories::conversations::rows::ConversationSort;
+use systemprompt_web_admin_core::ssr::list_view::{PageWindow, Pagination};
+use systemprompt_web_admin_core::ssr::types::table::SortHeaderView;
+use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;
 
 use super::context::{ContextsSortHeaders, ModelOptionView, UserForFilterView};
 use super::load::ContextsPageData;
 use super::{BASE_URL, ContextsListQuery, ContextsPageInputs};
-use crate::handlers::ssr::list_view::{
+use systemprompt_web_admin_core::ssr::list_view::{
     DEFAULT_PAGE_SIZE, paginate_prefixed, query_string_dropping,
 };
 

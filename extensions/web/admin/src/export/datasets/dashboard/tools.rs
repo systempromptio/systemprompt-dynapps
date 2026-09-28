@@ -4,12 +4,28 @@
 use async_trait::async_trait;
 
 use super::{live_dataset, plan};
-use crate::error::AdminResult;
-use crate::export::model::{Cell, CellKind, Column, DataSet, ExportContext, Table, Window};
 use crate::repositories::analytics::site::tools::{list_tool_servers, list_tool_stats};
+use systemprompt_web_admin_core::error::AdminResult;
+use systemprompt_web_admin_core::export::model::{
+    Cell, CellKind, Column, DataSet, ExportContext, Table, Window,
+};
+use systemprompt_web_admin_core::export::registry::DataSetRegistration;
 
 pub(crate) struct ToolStats;
 pub(crate) struct ToolServers;
+
+inventory::submit! {
+    DataSetRegistration {
+        order: 16,
+        dataset: &ToolStats,
+    }
+}
+inventory::submit! {
+    DataSetRegistration {
+        order: 17,
+        dataset: &ToolServers,
+    }
+}
 
 const TOOL_COLUMNS: &[Column] = &[
     Column::new("server", "Server", CellKind::Text),

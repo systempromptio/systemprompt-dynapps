@@ -5,7 +5,7 @@
 //! back to the tab's default.
 
 use super::columns::{BRIDGE_COLUMNS, CERT_COLUMNS, LINK_COLUMNS, PAT_COLUMNS};
-use crate::handlers::ssr::types::table::SortColumn;
+use systemprompt_web_admin_core::ssr::types::table::SortColumn;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum DeviceTab {

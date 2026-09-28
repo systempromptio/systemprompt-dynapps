@@ -18,8 +18,8 @@ pub mod hook_events;
 pub mod planes;
 mod row;
 
-use row::decode_row;
-pub use row::{ContinuationLink, ConversationFactRow};
+pub use row::{ContinuationLink, ConversationFactRow, ConversationFacts};
+use row::{WireFactRow, decode_row};
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -194,7 +194,7 @@ pub struct ConversationAnalysisResult {
 // them as text so no unchecked constructor is needed on the way out.
 #[derive(Debug, Deserialize)]
 struct ConversationAnalysisWire {
-    rows: Vec<ConversationFactRow<String>>,
+    rows: Vec<WireFactRow>,
     totals: ConversationAnalysisTotals,
     series: Vec<ConversationSeriesPoint>,
     breakdown: Vec<ConversationBucketRow>,
@@ -223,7 +223,8 @@ async fn query_page_payload(
     filter: &ConversationAnalysisFilter,
     page: ConversationAnalysisPage,
 ) -> Result<(ConversationAnalysisWire, Vec<ContextId>), sqlx::Error> {
-    let mut connection = crate::repositories::dashboard_read::begin(pool).await?;
+    let mut connection =
+        systemprompt_web_admin_core::repositories::dashboard_read::begin(pool).await?;
     let pattern = filter.free_text_pattern();
     let result = sqlx::query_file!(
         "src/repositories/analysis/conversations/page.sql",

@@ -10,30 +10,31 @@ mod context;
 mod rows;
 
 
-use crate::error::AdminError;
 use std::sync::Arc;
+use systemprompt_web_admin_core::error::AdminError;
 
 use axum::extract::{Path, State};
 use axum::response::Response;
 use sqlx::PgPool;
 use systemprompt::identifiers::SessionId;
 
-use crate::error::AdminHtmlResult;
-use crate::handlers::ssr::format::{
-    format_cost, format_duration_ms, format_token_total, local_time, short_id,
-};
-use crate::handlers::ssr::page::Page;
 use crate::repositories::analytics::session_detail::{
     SessionContextRow, SessionHeader, SessionKpis, SessionRequestRow, SessionTraceRow,
     find_session_header, get_session_kpis, list_session_contexts, list_session_requests,
     list_session_traces,
 };
-use crate::repositories::scope::may_view;
 use crate::repositories::session_state::session_state;
+use systemprompt_web_admin_core::error::AdminHtmlResult;
+use systemprompt_web_admin_core::repositories::scope::may_view;
+use systemprompt_web_admin_core::ssr::format::{
+    format_cost, format_duration_ms, format_token_total, local_time, short_id,
+};
+use systemprompt_web_admin_core::ssr::page::Page;
 
 use rows::{context_view, request_view, trace_view};
 
-use context::{BreadcrumbView, SessionDetailPageContext, SessionHeaderView, SessionKpisView};
+use context::{SessionDetailPageContext, SessionHeaderView, SessionKpisView};
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 
 
 struct SessionRead {
@@ -103,23 +104,27 @@ pub(crate) async fn session_detail_page(
         has_requests: !read.requests.is_empty(),
         requests: read.requests.iter().map(request_view).collect(),
         back_url: "/admin/sessions",
-        export: crate::export::ExportView::new(
+        export: systemprompt_web_admin_core::export::view::ExportView::new(
             &[],
             &format!(
                 "session_id={}",
                 urlencoding::encode(header.session_id.as_str())
             ),
         )
-        .with_transcripts(crate::export::view::TranscriptSource::Sessions),
+        .with_transcripts(
+            systemprompt_web_admin_core::export::transcripts::TranscriptSource::Sessions,
+        ),
     };
 
-    Ok(crate::handlers::ssr::render_typed_page(
-        &shell.engine,
-        "session-detail",
-        &data,
-        &shell.user,
-        &shell.marketplace,
-    ))
+    Ok(
+        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+            &shell.engine,
+            "session-detail",
+            &data,
+            &shell.user,
+            &shell.marketplace,
+        ),
+    )
 }
 
 fn breadcrumbs(h: &SessionHeader) -> Vec<BreadcrumbView> {

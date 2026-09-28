@@ -21,14 +21,15 @@ use systemprompt::identifiers::ContextId;
 
 use super::bundle::{ConversationBundle, load_conversation_bundle};
 use super::markdown;
-use super::selection::{MAX_CONVERSATIONS, TranscriptSource, resolve_selection, source_of};
-use crate::error::{AdminError, AdminResult};
-use crate::export::model::ExportContext;
+use super::selection::{resolve_selection, source_of};
 use crate::handlers::ssr::transcript_view::TranscriptOptions;
 use crate::repositories::analytics::context_detail::find_context_header;
-use crate::repositories::analytics::conversations::history_scope_for;
-use crate::repositories::scope::visibility::may_view;
-use crate::types::UserContext;
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::export::model::ExportContext;
+use systemprompt_web_admin_core::export::transcripts::{MAX_CONVERSATIONS, TranscriptSource};
+use systemprompt_web_admin_core::repositories::conversations::history_scope_for;
+use systemprompt_web_admin_core::repositories::scope::visibility::may_view;
+use systemprompt_web_admin_core::types::UserContext;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "lowercase")]

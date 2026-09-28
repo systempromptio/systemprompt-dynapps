@@ -4,15 +4,31 @@
 use async_trait::async_trait;
 
 use super::sessions::conversation_row;
-use crate::error::AdminResult;
-use crate::export::model::{Cell, CellKind, Column, DataSet, ExportContext, Table, Window};
 use crate::handlers::ssr::ssr_skills_contexts::export::export_rows;
-use crate::repositories::analytics::conversation_rows::{
+use systemprompt_web_admin_core::error::AdminResult;
+use systemprompt_web_admin_core::export::model::{
+    Cell, CellKind, Column, DataSet, ExportContext, Table, Window,
+};
+use systemprompt_web_admin_core::export::registry::DataSetRegistration;
+use systemprompt_web_admin_core::repositories::conversations::rows::{
     ConversationPageMode, UserConversationSummary,
 };
 
 pub(crate) struct Contexts;
 pub(crate) struct People;
+
+inventory::submit! {
+    DataSetRegistration {
+        order: 7,
+        dataset: &Contexts,
+    }
+}
+inventory::submit! {
+    DataSetRegistration {
+        order: 8,
+        dataset: &People,
+    }
+}
 
 const PEOPLE_COLUMNS: &[Column] = &[
     Column::new("user_id", "User", CellKind::Text),

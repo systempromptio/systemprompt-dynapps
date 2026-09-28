@@ -9,7 +9,7 @@ use sqlx::PgPool;
 use systemprompt::identifiers::{ContextId, SessionId, UserId};
 use systemprompt_web_shared::{GroupId, ProjectId};
 
-use super::{ContinuationLink, ConversationFactRow};
+use super::{ContinuationLink, ConversationFactRow, ConversationFacts};
 
 mod judge;
 
@@ -98,10 +98,9 @@ struct FactRecord {
     title: String,
 }
 
-impl From<FactRecord> for ConversationFactRow {
+impl From<FactRecord> for ConversationFacts {
     fn from(r: FactRecord) -> Self {
         Self {
-            context_id: r.context_id,
             title: r.title,
             user_id: r.user_id,
             display_name: r.display_name,
@@ -232,5 +231,8 @@ pub async fn find_conversation_facts(
     )
     .fetch_optional(pool)
     .await?;
-    Ok(row.map(ConversationFactRow::from))
+    Ok(row.map(|r| ConversationFactRow {
+        context_id: r.context_id.clone(),
+        facts: r.into(),
+    }))
 }

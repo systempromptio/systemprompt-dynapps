@@ -11,9 +11,6 @@
 
 pub(crate) mod bundle;
 pub(crate) mod handler;
-pub(crate) mod links;
 pub(crate) mod markdown;
 pub(crate) mod selection;
 pub(crate) mod view;
-
-pub(crate) use links::DocumentExportView;

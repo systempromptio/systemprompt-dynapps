@@ -11,8 +11,8 @@
 use serde::Serialize;
 use sqlx::PgPool;
 
-use crate::repositories::scope::membership::UNATTRIBUTED;
-use crate::repositories::scope::{Attribution, ScopeKind};
+use systemprompt_web_admin_core::repositories::scope::membership::UNATTRIBUTED;
+use systemprompt_web_admin_core::repositories::scope::{Attribution, ScopeKind};
 
 /// One container's slice of the window, or the unattributed remainder.
 #[derive(Debug, Clone, Serialize)]
@@ -29,7 +29,7 @@ pub async fn list_scope_totals(
     attribution: Attribution,
     window_days: i32,
 ) -> Result<Vec<ScopeTotalRow>, sqlx::Error> {
-    let rows = crate::scoped_query!(
+    let rows = systemprompt_web_admin_core::scoped_query!(
         r#"SELECT COALESCE(rs.scope_id, $3) AS "scope_id!",
                   COUNT(*)::BIGINT AS "requests!",
                   COALESCE(SUM(COALESCE(r.input_tokens, 0) + COALESCE(r.output_tokens, 0)), 0)::BIGINT AS "tokens!",

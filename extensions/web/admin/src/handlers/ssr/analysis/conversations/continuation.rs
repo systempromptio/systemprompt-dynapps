@@ -5,7 +5,7 @@
 use serde::Serialize;
 
 use super::row_facts::RowFacts;
-use crate::handlers::ssr::analysis_urls::ANALYSIS_CONVERSATIONS_URL;
+use systemprompt_web_admin_core::ssr::analysis_urls::ANALYSIS_CONVERSATIONS_URL;
 
 #[derive(Debug, Serialize)]
 pub(crate) struct ContinuationView {

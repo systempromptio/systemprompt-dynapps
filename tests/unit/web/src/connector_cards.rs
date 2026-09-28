@@ -2,7 +2,8 @@
 //! first-class MCP server with a live, green state, never as something the
 //! person was "signed into automatically".
 
-use systemprompt_web_admin::test_support::{Connection, connector_card};
+use systemprompt_web_admin::test_support::connector_card;
+use systemprompt_web_admin_core::connections::Connection;
 
 fn control_plane(entitled: bool) -> Connection {
     Connection {

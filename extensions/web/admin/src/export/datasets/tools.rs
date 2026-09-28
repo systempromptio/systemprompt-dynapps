@@ -6,16 +6,44 @@
 use async_trait::async_trait;
 
 use super::requests::time_range;
-use crate::error::AdminResult;
-use crate::export::model::{Cell, CellKind, Column, DataSet, ExportContext, Table, Window};
 use crate::handlers::ssr::ssr_tools::{Lens, export_rows};
 use crate::repositories::analysis::tools::{ToolActivityRow, ToolBucketRow};
 use systemprompt::identifiers::UserId;
+use systemprompt_web_admin_core::error::AdminResult;
+use systemprompt_web_admin_core::export::model::{
+    Cell, CellKind, Column, DataSet, ExportContext, Table, Window,
+};
+use systemprompt_web_admin_core::export::registry::DataSetRegistration;
 
 pub(crate) struct Tools;
 pub(crate) struct ToolsBreakdown;
 pub(crate) struct Artifacts;
 pub(crate) struct ArtifactsBreakdown;
+
+inventory::submit! {
+    DataSetRegistration {
+        order: 3,
+        dataset: &Tools,
+    }
+}
+inventory::submit! {
+    DataSetRegistration {
+        order: 4,
+        dataset: &ToolsBreakdown,
+    }
+}
+inventory::submit! {
+    DataSetRegistration {
+        order: 5,
+        dataset: &Artifacts,
+    }
+}
+inventory::submit! {
+    DataSetRegistration {
+        order: 6,
+        dataset: &ArtifactsBreakdown,
+    }
+}
 
 const COLUMNS: &[Column] = &[
     Column::new("occurred_at", "Time", CellKind::Timestamp),

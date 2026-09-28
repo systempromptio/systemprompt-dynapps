@@ -23,21 +23,21 @@ use axum::extract::{Query, State};
 use axum::response::Response;
 use sqlx::PgPool;
 
-use crate::error::{AdminError, AdminHtmlResult, AdminResult};
-use crate::handlers::ssr::list_view::{ScopeFilterView, scope_filter_view};
-use crate::handlers::ssr::page::Page;
-use crate::handlers::ssr::types::BreadcrumbView;
-use crate::repositories;
+use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult, AdminResult};
+use systemprompt_web_admin_core::ssr::list_view::{ScopeFilterView, scope_filter_view};
+use systemprompt_web_admin_core::ssr::page::Page;
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
+
 use crate::repositories::analysis::tools::{
     ToolActivityPage, ToolActivityResult, load_tool_activity_page,
 };
-use crate::repositories::scope::ScopeRequest;
-use crate::types::UserContext;
-use crate::util::time_range::TimeRange;
+use systemprompt_web_admin_core::repositories::scope::ScopeRequest;
+use systemprompt_web_admin_core::types::UserContext;
+use systemprompt_web_admin_core::util::time_range::TimeRange;
 
-use crate::handlers::ssr::list_view::DEFAULT_PAGE_SIZE;
 pub(crate) use context::{Frame, build_context};
 pub(crate) use query::{Lens, ToolsQuery};
+use systemprompt_web_admin_core::ssr::list_view::DEFAULT_PAGE_SIZE;
 
 pub(crate) struct LensRead {
     pub data: ToolActivityResult,
@@ -53,7 +53,10 @@ pub(crate) async fn read_lens(
 ) -> AdminResult<LensRead> {
     let range = q.range();
     let request = ScopeRequest::from_query(user, q.group.as_deref(), q.project.as_deref());
-    let scope = repositories::scope::membership::get_subject_scope(pool, &request).await?;
+    let scope = systemprompt_web_admin_core::repositories::scope::membership::get_subject_scope(
+        pool, &request,
+    )
+    .await?;
     let filter = q.filter(lens, range, scope.as_sql());
     let data = load_tool_activity_page(
         pool,
@@ -108,13 +111,15 @@ pub(crate) async fn tools_page(
             datasets: &["tools", "tools-breakdown"],
         },
     );
-    Ok(crate::handlers::ssr::render_typed_page(
-        &shell.engine,
-        "tools",
-        &context,
-        &shell.user,
-        &shell.marketplace,
-    ))
+    Ok(
+        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+            &shell.engine,
+            "tools",
+            &context,
+            &shell.user,
+            &shell.marketplace,
+        ),
+    )
 }
 
 pub(crate) async fn export_rows(
@@ -125,7 +130,10 @@ pub(crate) async fn export_rows(
     (range, limit): (TimeRange, i64),
 ) -> AdminResult<ToolActivityResult> {
     let request = ScopeRequest::from_query(user, q.group.as_deref(), q.project.as_deref());
-    let scope = repositories::scope::membership::get_subject_scope(pool, &request).await?;
+    let scope = systemprompt_web_admin_core::repositories::scope::membership::get_subject_scope(
+        pool, &request,
+    )
+    .await?;
     let filter = q.filter(lens, range, scope.as_sql());
     Ok(load_tool_activity_page(
         pool,

@@ -8,12 +8,12 @@ use std::sync::Arc;
 
 use systemprompt::identifiers::AgentId;
 
-use crate::error::{AdminError, AdminResult};
-use crate::handlers::shared;
 use crate::repositories;
-use crate::types::UserContext;
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::request as shared;
+use systemprompt_web_admin_core::types::UserContext;
 
-use super::responses::AgentsListResponse;
+use systemprompt_web_admin_core::types::responses::AgentsListResponse;
 
 pub(crate) async fn list_agents_handler(
     State(pool): State<Arc<PgPool>>,
@@ -25,7 +25,9 @@ pub(crate) async fn list_agents_handler(
     if user_ctx.is_admin {
         return Ok(Json(AgentsListResponse { agents }).into_response());
     }
-    let access = crate::authz::catalog::CatalogAccess::load(&pool, &user_ctx.user_id).await?;
+    let access =
+        systemprompt_web_admin_core::authz::catalog::CatalogAccess::load(&pool, &user_ctx.user_id)
+            .await?;
     let ids = agents
         .iter()
         .filter(|a| a.enabled)

@@ -16,19 +16,19 @@ use crate::repositories::people_usage::DEFAULT_WINDOW_DAYS;
 use crate::repositories::projects::output::{
     ProjectAgentRow, ProjectArtifactRow, list_project_agents, list_project_artifacts,
 };
-use crate::repositories::scope::{Attribution, ScopeQuery, ScopeTarget};
-use crate::types::UserContext;
-use crate::types::projects::ProjectRow;
+use systemprompt_web_admin_core::repositories::scope::{Attribution, ScopeQuery, ScopeTarget};
+use systemprompt_web_admin_core::types::UserContext;
+use systemprompt_web_admin_core::types::projects::ProjectRow;
 
-use super::super::format::short_num;
 use super::super::people_view::{attribution_rows, chips, format_usd, model_rows, or_default};
 use super::super::types::{
-    BreadcrumbView, ProjectAgentRowView, ProjectArtifactRowView, ProjectReportFactView,
-    ProjectReportPageData,
+    ProjectAgentRowView, ProjectArtifactRowView, ProjectReportFactView, ProjectReportPageData,
 };
 use super::detail::{DetailData, ProjectUsageData, member_views};
 use super::detail_view::{daily_charts, kpis, session_row, skill_rows, tool_rows};
 use super::{BASE_URL, WINDOW_LABEL};
+use systemprompt_web_admin_core::ssr::format::short_num;
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 
 const ARTIFACT_LIMIT: i64 = 25;
 

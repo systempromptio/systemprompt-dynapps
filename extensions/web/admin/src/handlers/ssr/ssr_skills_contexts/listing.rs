@@ -2,12 +2,12 @@
 
 use std::collections::HashMap;
 
-use crate::repositories::scope::ScopeRequest;
+use systemprompt_web_admin_core::repositories::scope::ScopeRequest;
 
 use super::context::{ConversationItemView, FilterView, UserSummaryView};
 use super::load::ContextsPageData;
 use super::{ContextsListQuery, ContextsPageInputs, rows};
-use crate::handlers::ssr::list_view::DEFAULT_PAGE_SIZE;
+use systemprompt_web_admin_core::ssr::list_view::DEFAULT_PAGE_SIZE;
 
 pub(super) struct ContextsListing {
     pub(super) conversations: Vec<ConversationItemView>,

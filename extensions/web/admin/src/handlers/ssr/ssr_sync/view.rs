@@ -9,13 +9,14 @@ use systemprompt::identifiers::MarketplaceId;
 
 use super::access_review::AccessReviewView;
 use super::{DOCS_URL, EXPORT_ZIP_URL, IMPORT_URL, SyncTab, tabs};
-use crate::handlers::ssr::sync_plane::{HashView, PlaneCardView};
-use crate::handlers::ssr::types::{BreadcrumbView, TabLinkView};
-use crate::repositories::sync::archive::staging::STAGE_TTL_MINUTES;
-use crate::repositories::sync::attention::access_attention;
-use crate::repositories::sync::history::SyncHistoryRow;
-use crate::repositories::sync::registry::planes;
-use crate::repositories::sync::sources::SourcesView;
+use systemprompt_web_admin_core::repositories::sync::archive::staging::STAGE_TTL_MINUTES;
+use systemprompt_web_admin_core::repositories::sync::attention::access_attention;
+use systemprompt_web_admin_core::repositories::sync::history::SyncHistoryRow;
+use systemprompt_web_admin_core::repositories::sync::registry::planes;
+use systemprompt_web_admin_core::repositories::sync::sources::SourcesView;
+use systemprompt_web_admin_core::ssr::sync_plane::{HashView, PlaneCardView};
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
+use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;
 
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct SyncHistoryView {

@@ -1,7 +1,7 @@
 //! Trusted OAuth discovery and bounded metadata parsing.
 use super::Provider;
-use crate::error::{AdminError, AdminResult};
 use serde::Deserialize;
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 use url::Url;
 #[derive(Deserialize)]
 struct Resource {

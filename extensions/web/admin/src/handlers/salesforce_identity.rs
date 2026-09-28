@@ -15,10 +15,10 @@ use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 
-use crate::error::{AdminError, AdminResult};
 use crate::repositories::users::salesforce_identity;
 use crate::services::connector_oauth::Provider;
-use crate::types::UserContext;
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::types::UserContext;
 
 fn default_provider() -> String {
     "salesforce".to_owned()

@@ -11,12 +11,12 @@ use super::data::GovernanceData;
 use super::kpis::{GovernanceKpiView, StageFilterView, kpis, stage_filters};
 use super::urls::{ColumnHeader, build_pagination, filter_url, url_with};
 use super::{BASE_URL, GovernanceQuery, GovernanceTab, TabLink, view};
-use crate::handlers::ssr::list_view::{
+use crate::repositories::governance::decision_log::DecisionSort;
+use systemprompt_web_admin_core::ssr::list_view::{
     DEFAULT_PAGE_SIZE, PageWindow, Pagination, ScopeFilterView, SelectOptionView, TimeRangeContext,
 };
-use crate::handlers::ssr::types::BreadcrumbView;
-use crate::repositories::governance::decision_log::DecisionSort;
-use crate::util::time_range::TimeRange;
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
+use systemprompt_web_admin_core::util::time_range::TimeRange;
 
 #[derive(Debug, Serialize)]
 pub(super) struct RankView {
@@ -54,7 +54,7 @@ pub(super) struct GovernancePageContext {
     pub(super) categories: Vec<SelectOptionView>,
     pub(super) outcomes: Vec<SelectOptionView>,
     pub(super) search: String,
-    pub(super) export: crate::export::ExportView,
+    pub(super) export: systemprompt_web_admin_core::export::view::ExportView,
     pub(super) clear_url: String,
     pub(super) has_filters: bool,
     pub(super) base_url: &'static str,
@@ -264,7 +264,10 @@ fn time_range_context(query: &GovernanceQuery, range: TimeRange) -> TimeRangeCon
     }
 }
 
-fn export_view(query: &GovernanceQuery, tab: GovernanceTab) -> crate::export::ExportView {
+fn export_view(
+    query: &GovernanceQuery,
+    tab: GovernanceTab,
+) -> systemprompt_web_admin_core::export::view::ExportView {
     let query = url_with(query, &[("page", ""), ("tab", "")]);
     let query = query.split_once('?').map_or("", |(_, q)| q);
     let ids: &[&str] = match tab {
@@ -273,5 +276,5 @@ fn export_view(query: &GovernanceQuery, tab: GovernanceTab) -> crate::export::Ex
             &["governance-decisions", "governance-findings"]
         },
     };
-    crate::export::ExportView::new(ids, query)
+    systemprompt_web_admin_core::export::view::ExportView::new(ids, query)
 }

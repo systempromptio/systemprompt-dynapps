@@ -5,13 +5,23 @@ use async_trait::async_trait;
 use serde::Deserialize;
 
 use super::analysis_skills::window;
-use crate::error::{AdminError, AdminResult};
-use crate::export::model::{Cell, CellKind, Column, DataSet, ExportContext, Table, Window};
 use crate::handlers::ssr::analysis::parse_skill_key;
 use crate::repositories::analysis::skills::{SkillConversationRow, list_skill_conversations_paged};
-use crate::types::UserContext;
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::export::model::{
+    Cell, CellKind, Column, DataSet, ExportContext, Table, Window,
+};
+use systemprompt_web_admin_core::export::registry::DataSetRegistration;
+use systemprompt_web_admin_core::types::UserContext;
 
 pub(crate) struct SkillConversations;
+
+inventory::submit! {
+    DataSetRegistration {
+        order: 26,
+        dataset: &SkillConversations,
+    }
+}
 
 #[derive(Debug, Default, Deserialize)]
 struct Drilldown {

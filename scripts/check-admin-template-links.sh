@@ -7,10 +7,12 @@
 # every static `href="/admin/..."` in the templates and partials and fails if
 # it does not match a route registered in the admin route modules.
 #
-# The route corpus is every `.route("...")` literal under
-# extensions/web/admin/src/routes/*.rs plus routes/ssr/*.rs, where the SSR
-# page route groups live; a new route subdirectory must be added to the glob
-# below or its routes silently drop out of the corpus. Those routers are nested under an
+# The route corpus is every `.route("...")` literal in `*.rs` and `ssr/*.rs`
+# of each route directory: the residual admin crate's and each admin domain
+# crate's `src/routes`, the shared admin core's `src/routes`, and the
+# composition root in extensions/web/src/router/admin. Missing directories are
+# skipped; a new route subdirectory must be added to the glob below or its
+# routes silently drop out of the corpus. Those routers are nested under an
 # `/admin` prefix, so a literal `/governance/policies` serves
 # `/admin/governance/policies`. A `{param}` segment matches any single path
 # segment. Query strings and fragments are ignored, and any href containing
@@ -23,15 +25,20 @@ set -uo pipefail
 
 TPL_DIR="${TPL_DIR:-storage/files/admin/templates}"
 PARTIAL_DIR="${PARTIAL_DIR:-storage/files/admin/partials}"
-ROUTE_DIR="${ROUTE_DIR:-extensions/web/admin/src/routes}"
 EXEMPT_FILE="${EXEMPT_FILE:-scripts/admin-link-exemptions.txt}"
+
+ROUTE_DIRS=()
+for d in ${ROUTE_DIR:-extensions/web/admin/src/routes extensions/web/admin/*/src/routes extensions/web/shared/admin-core/src/routes extensions/web/src/router/admin}; do
+    [ -d "$d" ] && ROUTE_DIRS+=("$d")
+done
 
 [ -d "$TPL_DIR" ] || { echo "check-admin-template-links: no $TPL_DIR - nothing to check"; exit 0; }
 
-python3 - "$TPL_DIR" "$PARTIAL_DIR" "$ROUTE_DIR" "$EXEMPT_FILE" <<'PY'
+python3 - "$TPL_DIR" "$PARTIAL_DIR" "$EXEMPT_FILE" "${ROUTE_DIRS[@]}" <<'PY'
 import re, sys, pathlib
 
-tpl_dir, partial_dir, route_dir, exempt_file = sys.argv[1:5]
+tpl_dir, partial_dir, exempt_file = sys.argv[1:4]
+route_dirs = [pathlib.Path(d) for d in sys.argv[4:]]
 
 exempt = set()
 p = pathlib.Path(exempt_file)
@@ -46,7 +53,7 @@ if p.exists():
 # one segment. A handful of alias/redirect targets exist without their own
 # `.route(...)` literal, so they are seeded explicitly.
 route_literals = set()
-for f in sorted(pathlib.Path(route_dir).glob('*.rs')) + sorted(pathlib.Path(route_dir).glob('ssr/*.rs')):
+for f in sorted(f for d in route_dirs for g in ('*.rs', 'ssr/*.rs') for f in d.glob(g)):
     for m in re.finditer(r'\.route\(\s*"([^"]*)"', f.read_text()):
         route_literals.add(m.group(1))
 

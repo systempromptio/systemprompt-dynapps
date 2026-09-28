@@ -1,7 +1,9 @@
 //! The thirty-day request chart on the group detail page.
 
-use super::format::short_num;
-use super::types::{LineChartSpec, SvgLineChartView, SvgSeriesInput, line_chart};
+use systemprompt_web_admin_core::ssr::format::short_num;
+use systemprompt_web_admin_core::ssr::types::svg_line::{
+    LineChartSpec, SvgLineChartView, SvgSeriesInput, line_chart,
+};
 
 pub(crate) fn daily_requests_chart(daily: &[i64]) -> SvgLineChartView {
     let total: i64 = daily.iter().sum();

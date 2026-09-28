@@ -18,14 +18,16 @@ use chrono::{DateTime, Utc};
 use systemprompt::models::mcp::ExecutionSource;
 
 use crate::handlers::catalog::sorting::apply_direction;
-use crate::handlers::ssr::format::format_duration_ms;
 use crate::handlers::ssr::ssr_tools::rows::format_bytes;
 use crate::repositories::mcp::runtime::{McpConnectionCount, McpServerActivity};
-use crate::repositories::overview::liveness::{HEARTBEAT_INTERVAL_SECS, liveness_state};
-use crate::types::McpServerDetail;
+use systemprompt_web_admin_core::repositories::liveness::{
+    HEARTBEAT_INTERVAL_SECS, liveness_state,
+};
+use systemprompt_web_admin_core::ssr::format::format_duration_ms;
+use systemprompt_web_admin_core::types::McpServerDetail;
 
 use super::view::McpServerRow;
-use crate::numeric::{percentage, round_to_i64};
+use systemprompt_web_admin_core::numeric::{percentage, round_to_i64};
 
 pub(super) const BASE_URL: &str = "/admin/mcp";
 
@@ -125,7 +127,7 @@ pub(super) fn ms_display(ms: Option<f64>) -> String {
 pub(super) fn when_display(t: Option<DateTime<Utc>>) -> String {
     t.map_or_else(
         || "\u{2014}".to_owned(),
-        crate::handlers::ssr::format::local_time,
+        systemprompt_web_admin_core::ssr::format::local_time,
     )
 }
 

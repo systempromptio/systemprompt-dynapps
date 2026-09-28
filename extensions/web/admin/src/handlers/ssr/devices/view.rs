@@ -7,15 +7,16 @@
 //! of being patched per control. A tab link keeps the filter but resets the
 //! tab-scoped sort, direction and state parameters.
 
-use crate::handlers::ssr::list_view::{PageWindow, Pagination};
-use crate::handlers::ssr::types::{FilterChipView, SortHeaderView, TabLinkView};
 use crate::repositories::devices::sessions::VersionCount;
 use crate::repositories::devices::stats::FleetStats;
+use systemprompt_web_admin_core::ssr::list_view::{PageWindow, Pagination};
+use systemprompt_web_admin_core::ssr::types::table::{FilterChipView, SortHeaderView};
+use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;
 
 use super::context::{FleetStatsView, VersionBarView};
 use super::{BASE_URL, DeviceTab, DevicesQuery};
-use crate::handlers::ssr::list_view::paginate;
-use crate::handlers::ssr::types::table::SortColumn;
+use systemprompt_web_admin_core::ssr::list_view::paginate;
+use systemprompt_web_admin_core::ssr::types::table::SortColumn;
 
 pub(super) fn url_with(query: &DevicesQuery, overrides: &[(&str, &str)]) -> String {
     let mut parts: Vec<(&str, String)> = Vec::new();

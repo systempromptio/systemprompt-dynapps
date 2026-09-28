@@ -8,17 +8,33 @@
 use async_trait::async_trait;
 use serde::Deserialize;
 
-use crate::error::AdminResult;
-use crate::export::model::{Cell, CellKind, Column, DataSet, ExportContext, Table, Window};
 use crate::repositories::groups::usage::{GroupUsageRow, list_groups_with_usage};
-use crate::repositories::scope::ScopeRequest;
-use crate::repositories::scope::membership::get_subject_scope;
 use crate::repositories::users::roster::{
     RosterFilter, RosterQuery, RosterRow, RosterSort, list_users_paged,
 };
+use systemprompt_web_admin_core::error::AdminResult;
+use systemprompt_web_admin_core::export::model::{
+    Cell, CellKind, Column, DataSet, ExportContext, Table, Window,
+};
+use systemprompt_web_admin_core::export::registry::DataSetRegistration;
+use systemprompt_web_admin_core::repositories::scope::ScopeRequest;
+use systemprompt_web_admin_core::repositories::scope::membership::get_subject_scope;
 
 pub(crate) struct Users;
 pub(crate) struct Groups;
+
+inventory::submit! {
+    DataSetRegistration {
+        order: 9,
+        dataset: &Users,
+    }
+}
+inventory::submit! {
+    DataSetRegistration {
+        order: 10,
+        dataset: &Groups,
+    }
+}
 
 #[derive(Debug, Default, Deserialize)]
 struct UsersQuery {

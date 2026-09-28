@@ -34,15 +34,19 @@ use sqlx::PgPool;
 use systemprompt::identifiers::MarketplaceId;
 
 use self::view::MarketplaceSyncView;
-use crate::error::{AdminError, AdminHtmlResult, AdminResult};
-use crate::handlers::ssr::sync_plane::{PlaneCardOpts, plane_card};
-use crate::handlers::ssr::types::TabLinkView;
-use crate::repositories::sync::access_control::{AccessControlPlane, PLANE_ID};
-use crate::repositories::sync::history::{SyncHistoryRow, SyncHistoryScope, list_sync_history};
-use crate::repositories::sync::plane::DeclarationSource;
-use crate::repositories::sync::sources::{SourcesView, build_sources};
-use crate::templates::AdminTemplateEngine;
-use crate::types::{MarketplaceContext, UserContext};
+use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult, AdminResult};
+use systemprompt_web_admin_core::repositories::sync::access_control::{
+    AccessControlPlane, PLANE_ID,
+};
+use systemprompt_web_admin_core::repositories::sync::history::{
+    SyncHistoryRow, SyncHistoryScope, list_sync_history,
+};
+use systemprompt_web_admin_core::repositories::sync::plane::DeclarationSource;
+use systemprompt_web_admin_core::repositories::sync::sources::{SourcesView, build_sources};
+use systemprompt_web_admin_core::ssr::sync_plane::{PlaneCardOpts, plane_card};
+use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;
+use systemprompt_web_admin_core::templates::AdminTemplateEngine;
+use systemprompt_web_admin_core::types::{MarketplaceContext, UserContext};
 
 pub(crate) const DOCS_URL: &str = "/documentation/services-sync";
 pub(crate) const BASE_URL: &str = "/admin/sync";
@@ -172,9 +176,11 @@ pub(crate) async fn sync_page(
         sources,
         sources_unreadable,
     });
-    Ok(super::render_typed_page(
-        &engine, "sync", &page, &user_ctx, &mkt_ctx,
-    ))
+    Ok(
+        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+            &engine, "sync", &page, &user_ctx, &mkt_ctx,
+        ),
+    )
 }
 
 async fn marketplace_cards(
@@ -206,7 +212,7 @@ async fn marketplace_cards(
 
 pub(crate) const fn empty_sources() -> SourcesView {
     SourcesView {
-        base: crate::repositories::sync::sources::BaseSourceView {
+        base: systemprompt_web_admin_core::repositories::sync::sources::BaseSourceView {
             version: env!("CARGO_PKG_VERSION"),
             tree_hash: None,
             tree_path: String::new(),

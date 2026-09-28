@@ -13,8 +13,8 @@ use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 use systemprompt::identifiers::{SessionId, UserId};
 
-use crate::repositories::scope::SubjectScope;
-use crate::util::time_range::TimeRange;
+use systemprompt_web_admin_core::repositories::scope::SubjectScope;
+use systemprompt_web_admin_core::util::time_range::TimeRange;
 
 /// One scanner finding, as the safety tab renders it.
 #[derive(Debug, Clone)]

@@ -3,17 +3,39 @@
 
 use async_trait::async_trait;
 
-use crate::error::AdminResult;
-use crate::export::model::{Cell, CellKind, Column, DataSet, ExportContext, Table, Window};
 use crate::repositories::analytics::site::cost::{
     list_container_usage, list_provider_cost_by_day, list_provider_costs,
 };
+use systemprompt_web_admin_core::error::AdminResult;
+use systemprompt_web_admin_core::export::model::{
+    Cell, CellKind, Column, DataSet, ExportContext, Table, Window,
+};
 
 use super::dashboard::{live_dataset, plan};
+use systemprompt_web_admin_core::export::registry::DataSetRegistration;
 
 pub(crate) struct ProviderCosts;
 pub(crate) struct ProviderCostByDay;
 pub(crate) struct ContainerUsage;
+
+inventory::submit! {
+    DataSetRegistration {
+        order: 22,
+        dataset: &ProviderCosts,
+    }
+}
+inventory::submit! {
+    DataSetRegistration {
+        order: 23,
+        dataset: &ProviderCostByDay,
+    }
+}
+inventory::submit! {
+    DataSetRegistration {
+        order: 24,
+        dataset: &ContainerUsage,
+    }
+}
 
 const SUPPLIER_COLUMNS: &[Column] = &[
     Column::new("provider", "Provider", CellKind::Text),

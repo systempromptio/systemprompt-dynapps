@@ -11,12 +11,12 @@ use std::sync::Mutex;
 use async_trait::async_trait;
 use sqlx::PgPool;
 use sqlx::postgres::PgPoolOptions;
-use systemprompt_web_admin::error::AdminResult;
-use systemprompt_web_admin::repositories::sync::boot::{BOOT_ORDER, reconcile_plane};
-use systemprompt_web_admin::repositories::sync::plane::{
+use systemprompt_web_admin_core::error::AdminResult;
+use systemprompt_web_admin_core::repositories::sync::boot::{BOOT_ORDER, reconcile_plane};
+use systemprompt_web_admin_core::repositories::sync::plane::{
     Actor, ApplyOutcome, Export, PlaneDrift, SyncMode, SyncPlane,
 };
-use systemprompt_web_admin::repositories::sync::state::BOOT_ACTOR;
+use systemprompt_web_admin_core::repositories::sync::state::BOOT_ACTOR;
 
 #[derive(Debug, Clone)]
 struct Call {

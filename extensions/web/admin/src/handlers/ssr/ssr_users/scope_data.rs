@@ -28,10 +28,11 @@ pub(super) async fn group_choices(pool: &PgPool, user_id: &UserId) -> Vec<Member
         .inspect_err(|e| tracing::warn!(error = %e, "user detail: group ids unavailable"))
         .unwrap_or_default();
     let mut out = Vec::new();
-    for group in repositories::groups::crud::list_groups(pool)
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, "user detail: group listing failed"))
-        .unwrap_or_default()
+    for group in
+        systemprompt_web_admin_core::repositories::scope::containers::list_group_options(pool)
+            .await
+            .inspect_err(|e| tracing::warn!(error = %e, "user detail: group listing failed"))
+            .unwrap_or_default()
     {
         let is_held = held.iter().any(|id| id == &group.id);
         let source = if is_held {
@@ -64,7 +65,7 @@ pub(super) async fn project_choices(pool: &PgPool, user_id: &UserId) -> Vec<Memb
         .await
         .inspect_err(|e| tracing::warn!(error = %e, "user detail: project ids unavailable"))
         .unwrap_or_default();
-    repositories::projects::crud::list_projects(pool)
+    systemprompt_web_admin_core::repositories::scope::containers::list_project_options(pool)
         .await
         .inspect_err(|e| tracing::warn!(error = %e, "user detail: project listing failed"))
         .unwrap_or_default()
@@ -83,13 +84,16 @@ pub(super) async fn project_choices(pool: &PgPool, user_id: &UserId) -> Vec<Memb
 }
 
 pub(super) fn role_choices(held: &[String]) -> Vec<RoleChoiceView> {
-    crate::types::Role::ALL
+    systemprompt_web_admin_core::types::Role::ALL
         .iter()
         .map(|role| RoleChoiceView {
             id: role.as_str().to_owned(),
             label: role.label().to_owned(),
             held: held.iter().any(|r| r == role.as_str()),
-            platform_only: matches!(role, crate::types::Role::PlatformAdmin),
+            platform_only: matches!(
+                role,
+                systemprompt_web_admin_core::types::Role::PlatformAdmin
+            ),
         })
         .collect()
 }

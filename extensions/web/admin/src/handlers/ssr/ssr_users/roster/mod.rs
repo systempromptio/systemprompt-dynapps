@@ -20,20 +20,20 @@ use axum::response::Response;
 use serde::Deserialize;
 use sqlx::PgPool;
 
-use crate::error::{AdminError, AdminHtmlResult};
-use crate::export::ExportView;
-use crate::handlers::ssr::list_view::PageWindow;
-use crate::handlers::ssr::types::BreadcrumbView;
-use crate::repositories;
-use crate::repositories::scope::ScopeRequest;
+use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
+use systemprompt_web_admin_core::export::view::ExportView;
+use systemprompt_web_admin_core::ssr::list_view::PageWindow;
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
+
 use crate::repositories::users::roster::{DEFAULT_PAGE_SIZE, RosterFilter, RosterSort};
+use systemprompt_web_admin_core::repositories::scope::ScopeRequest;
 
 use context::RosterContext;
 use form::{preserved_hidden, role_options};
 use load::{create_user_panel, load_roster};
 
 use super::BASE_URL;
-use crate::handlers::ssr::page::Page;
+use systemprompt_web_admin_core::ssr::page::Page;
 
 pub(super) struct RosterUrlState {
     pub filter: RosterFilter,
@@ -117,7 +117,10 @@ pub(crate) async fn users_page(
     let url = RosterUrlState::from_params(&params);
     let request =
         ScopeRequest::from_query(&shell.user, url.group.as_deref(), url.project.as_deref());
-    let scope = repositories::scope::membership::get_subject_scope(&pool, &request).await?;
+    let scope = systemprompt_web_admin_core::repositories::scope::membership::get_subject_scope(
+        &pool, &request,
+    )
+    .await?;
     let read = load_roster(&pool, &scope, &url).await?;
 
     let shown = i64::try_from(read.rows.len()).unwrap_or(DEFAULT_PAGE_SIZE);
@@ -136,12 +139,12 @@ pub(crate) async fn users_page(
         chips: view::build_chips(&url, &read.totals),
         role_options: role_options(&read.roles, url.role.as_deref()),
         search: url.search.clone().unwrap_or_default(),
-        scope_filter: super::super::list_view::scope_filter_from_names(
+        scope_filter: systemprompt_web_admin_core::ssr::list_view::scope_filter_from_names(
             &shell.user,
             &request,
             BASE_URL,
             preserved_hidden(&url),
-            super::super::list_view::ScopeNames {
+            systemprompt_web_admin_core::ssr::list_view::ScopeNames {
                 groups: &read.group_names,
                 projects: &read.project_names,
             },
@@ -157,19 +160,21 @@ pub(crate) async fn users_page(
         export: export_view(&url),
     };
 
-    Ok(super::super::render_typed_page(
-        &shell.engine,
-        "users",
-        &data,
-        &shell.user,
-        &shell.marketplace,
-    ))
+    Ok(
+        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+            &shell.engine,
+            "users",
+            &data,
+            &shell.user,
+            &shell.marketplace,
+        ),
+    )
 }
 
 fn export_view(url: &RosterUrlState) -> ExportView {
     ExportView::single(
         "users",
-        &crate::export::view::query_string(&[
+        &systemprompt_web_admin_core::export::view::query_string(&[
             ("filter", Some(url.filter.as_str())),
             ("role", url.role.as_deref()),
             ("q", url.search.as_deref()),

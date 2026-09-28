@@ -5,11 +5,11 @@
 //! itself. Split from `mod.rs` at the 300-line ceiling.
 
 
-use crate::handlers::ssr::format::format_cost;
 use crate::repositories::analytics::site::leaderboards::LeaderboardSort;
 use crate::repositories::analytics::site::series::SeriesBucket;
-use crate::repositories::scope::Attribution;
-use crate::util::time_range::TimeRange;
+use systemprompt_web_admin_core::repositories::scope::Attribution;
+use systemprompt_web_admin_core::ssr::format::format_cost;
+use systemprompt_web_admin_core::util::time_range::TimeRange;
 
 use super::context::{
     ActiveDashboardTab, AnalyticsDashboardContext, CostTabView, Crumb, DashboardTab, FiltersView,
@@ -121,7 +121,7 @@ pub(super) fn page_context(input: PageInput<'_>) -> AnalyticsDashboardContext {
     let tabs = tab_views(fetched, query, page);
 
     AnalyticsDashboardContext {
-        export: crate::export::ExportView::new(
+        export: systemprompt_web_admin_core::export::view::ExportView::new(
             export_datasets(tab),
             &urls::preserved_query_string(query, &["tab", "page"]),
         ),

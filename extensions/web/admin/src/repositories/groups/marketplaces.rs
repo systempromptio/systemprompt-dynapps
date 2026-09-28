@@ -23,7 +23,7 @@ use systemprompt_security::authz::{
 };
 use systemprompt_web_shared::GroupId;
 
-use crate::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
 const GROUP_RULE_TYPE: &str = "group";
 const JUSTIFICATION: &str = "admin:groups";

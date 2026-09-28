@@ -23,10 +23,9 @@ use std::collections::HashMap;
 use sqlx::PgPool;
 
 use crate::repositories::people_usage::totals::list_scope_totals;
-use crate::repositories::scope::membership::UNATTRIBUTED;
+use systemprompt_web_admin_core::repositories::scope::membership::UNATTRIBUTED;
 
-pub use crate::repositories::scope::membership::UNATTRIBUTED as UNATTRIBUTED_ROW;
-use crate::repositories::scope::{Attribution, ScopeKind};
+use systemprompt_web_admin_core::repositories::scope::{Attribution, ScopeKind};
 
 const MAX_GROUPS: i64 = 500;
 
@@ -90,7 +89,7 @@ async fn list_group_metadata(
     pool: &PgPool,
     window_days: i32,
 ) -> Result<Vec<GroupUsageRow>, sqlx::Error> {
-    let rows = crate::scoped_query!(
+    let rows = systemprompt_web_admin_core::scoped_query!(
         r#", win AS (
                SELECT rs.scope_id, w.user_id, w.model
                FROM request_scope rs

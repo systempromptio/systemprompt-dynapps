@@ -23,16 +23,17 @@ use axum::response::Response;
 use serde::Deserialize;
 use sqlx::PgPool;
 
-use crate::error::{AdminError, AdminHtmlResult};
-use crate::handlers::ssr::list_view::PageWindow;
-use crate::handlers::ssr::types::{BreadcrumbView, FilterChipView};
 use crate::repositories::config::security_policy::SecurityPolicy;
 use crate::repositories::devices::pats::CredentialQuery;
 use crate::repositories::devices::sessions::SessionQuery;
 use crate::repositories::devices::stats::FleetStats;
 use crate::repositories::devices::{sessions, stats};
-use crate::templates::AdminTemplateEngine;
-use crate::types::{MarketplaceContext, UserContext};
+use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
+use systemprompt_web_admin_core::ssr::list_view::PageWindow;
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
+use systemprompt_web_admin_core::ssr::types::table::FilterChipView;
+use systemprompt_web_admin_core::templates::AdminTemplateEngine;
+use systemprompt_web_admin_core::types::{MarketplaceContext, UserContext};
 
 mod columns;
 mod context;
@@ -41,8 +42,8 @@ mod data;
 mod tabs;
 mod view;
 
-use crate::handlers::ssr::list_view::DEFAULT_PAGE_SIZE;
 use context::{DevicesPageContext, UserGroupView};
+use systemprompt_web_admin_core::ssr::list_view::DEFAULT_PAGE_SIZE;
 use tabs::{DeviceTab, resolve_sort};
 
 pub(crate) const BASE_URL: &str = "/admin/devices";
@@ -212,7 +213,9 @@ pub(crate) async fn devices_page(
         max_pat_lifetime_days: SecurityPolicy::get().max_pat_lifetime_days,
     };
 
-    Ok(super::render_typed_page(
-        &engine, "devices", &ctx, &user_ctx, &mkt_ctx,
-    ))
+    Ok(
+        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+            &engine, "devices", &ctx, &user_ctx, &mkt_ctx,
+        ),
+    )
 }

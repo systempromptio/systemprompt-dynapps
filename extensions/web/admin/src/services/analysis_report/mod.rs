@@ -16,10 +16,10 @@ use systemprompt::identifiers::{Actor, AgentName, ContextId, SessionId, TraceId,
 use systemprompt::loader::ConfigLoader;
 use systemprompt::models::execution::context::RequestContext;
 
-use crate::error::{AdminError, AdminResult};
 use crate::repositories::analysis::reports::{
     AnalysisReportRow, ReportCompletion, fail_report, render_digest_text, update_report_completion,
 };
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
 pub(crate) use prompt::{findings_schema, parse_findings};
 

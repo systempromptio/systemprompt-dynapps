@@ -7,9 +7,11 @@ use super::rows::marketplace_name;
 use super::views::TopSkillView;
 use super::{SkillsQuery, SkillsTab};
 use crate::handlers::ssr::analysis::tone::percent;
-use crate::handlers::ssr::types::{LineChartSpec, SvgLineChartView, SvgSeriesInput, line_chart};
-use crate::repositories::analysis::inventory_index::InventoryIndex;
 use crate::repositories::analysis::skills::SkillFactRow;
+use systemprompt_web_admin_core::catalog_index::inventory_index::InventoryIndex;
+use systemprompt_web_admin_core::ssr::types::svg_line::{
+    LineChartSpec, SvgLineChartView, SvgSeriesInput, line_chart,
+};
 
 const CHART_SERIES: usize = 6;
 
