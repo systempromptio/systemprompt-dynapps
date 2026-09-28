@@ -153,6 +153,7 @@ fn api_routes() -> Router<Arc<PgPool>> {
         .route("/auth/me", get(middleware::auth_me_handler))
         .route("/api/chain/{id}", get(handlers::ssr::chain_envelope))
         .route("/api/history/search", get(handlers::ssr::history_search))
+        .route("/api/overview", get(handlers::ssr::overview_fragment))
         .route("/api/search/resolve", get(handlers::ssr::search_resolve))
         .route(
             "/api/profile/bridge-code",

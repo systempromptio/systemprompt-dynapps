@@ -111,6 +111,8 @@ mod ssr_analytics_contract;
 #[cfg(test)]
 mod ssr_deep_contract;
 #[cfg(test)]
+mod ssr_overview_live_contract;
+#[cfg(test)]
 mod ssr_people_containers_contract;
 #[cfg(test)]
 mod ssr_tools_artifacts_coverage;

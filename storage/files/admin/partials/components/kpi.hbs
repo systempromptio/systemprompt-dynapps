@@ -4,7 +4,8 @@
   paints the inline-start bar only. `icon` names a components/icon glyph drawn
   before the label; `spark` is a SparklineView drawn in a reserved trend row
   between the value and the note — part of the flow, so the trend can never
-  sit over the number or squeeze the label.
+  sit over the number or squeeze the label. `key` stamps `data-kpi` so a live
+  layer can find the same tile again after a refresh.
 
   The supporting line is `note`, not `sub` and not `subtitle`: `sub` is a
   registered helper, so a bare `sub` mustache called it with no arguments and
@@ -16,9 +17,9 @@
 --}}
 {{#if href}}
 <a class="sp-kpi sp-kpi--link{{#if tone}} sp-kpi--{{tone}}{{/if}}{{#if active}} is-active{{/if}}"
-   href="{{href}}"{{#if hint}} title="{{hint}}"{{/if}}>
+   href="{{href}}"{{#if key}} data-kpi="{{key}}"{{/if}}{{#if hint}} title="{{hint}}"{{/if}}>
 {{else}}
-<div class="sp-kpi{{#if tone}} sp-kpi--{{tone}}{{/if}}"{{#if hint}} title="{{hint}}"{{/if}}>
+<div class="sp-kpi{{#if tone}} sp-kpi--{{tone}}{{/if}}"{{#if key}} data-kpi="{{key}}"{{/if}}{{#if hint}} title="{{hint}}"{{/if}}>
 {{/if}}
     <div class="sp-kpi__body">
     <span class="sp-kpi__label">{{#if icon}}{{> components/icon name=icon}}{{/if}}{{label}}</span>

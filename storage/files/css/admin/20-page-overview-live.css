@@ -1,0 +1,83 @@
+@layer components {
+
+/* The live layer on the overview: a freshness indicator in the page header,
+   the flip a delta makes when its direction changes, the fade a sparkline
+   makes when it is redrawn, and the flash a table cell makes when its text
+   changed under a silent refresh. Every one of these is a cue that something
+   moved; none of them carries information a reader without motion would
+   miss, so the whole file switches off under reduced motion. */
+
+/* The live root is a plain wrapper; the rule exists so the class the client
+   keys on is a real class and not an unstyled hook. */
+.sp-p-overview__live { display: block; }
+
+.sp-live {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-space-2);
+    font-size: var(--sp-text-2xs);
+    font-variant-numeric: tabular-nums;
+    color: var(--sp-text-secondary);
+}
+
+.sp-live__dot {
+    inline-size: 0.5rem;
+    block-size: 0.5rem;
+    border-radius: var(--sp-radius-full);
+    background: var(--sp-success);
+}
+
+.sp-live--loading .sp-live__dot {
+    animation: sp-live-pulse var(--sp-duration-slower) var(--sp-ease-in-out) infinite;
+}
+
+.sp-live--paused { color: var(--sp-text-tertiary); }
+.sp-live--paused .sp-live__dot { background: var(--sp-text-disabled); }
+
+.sp-live--error .sp-live__dot { background: var(--sp-danger); }
+.sp-live--auth .sp-live__dot { background: var(--sp-warning); }
+
+.sp-live__text { white-space: nowrap; }
+
+.sp-live__toggle { margin-inline-start: var(--sp-space-1); }
+
+@keyframes sp-live-pulse {
+    50% { opacity: 0.25; }
+}
+
+.sp-delta.is-flipping {
+    animation: sp-delta-flip var(--sp-duration-moderate) var(--sp-ease-out);
+}
+
+@keyframes sp-delta-flip {
+    from { opacity: 0; transform: translateY(-0.35em); }
+}
+
+.sp-kpi__trend.is-updating .sp-spark {
+    animation: sp-live-fade var(--sp-duration-normal) var(--sp-ease-out);
+}
+
+@keyframes sp-live-fade {
+    from { opacity: 0.3; }
+}
+
+.sp-u-changed {
+    animation: sp-live-flash var(--sp-duration-slower) var(--sp-ease-out);
+}
+
+@keyframes sp-live-flash {
+    from { background: var(--sp-accent-dim); }
+}
+
+.sp-time-range__presets[aria-busy="true"] .sp-time-range__btn { cursor: progress; }
+
+@media (prefers-reduced-motion: reduce) {
+    .sp-live--loading .sp-live__dot,
+    .sp-delta.is-flipping,
+    .sp-kpi__trend.is-updating .sp-spark,
+    .sp-u-changed {
+        animation: none;
+    }
+}
+
+}

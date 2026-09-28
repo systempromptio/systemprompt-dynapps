@@ -42,6 +42,9 @@ fn page_js_assets(storage_js: &Path) -> Vec<AssetDefinition> {
     let pages = storage_js.join("pages");
     vec![
         page_js!(&pages, "admin-access-control.js"),
+        page_js!(&pages, "admin-overview.js"),
+        page_js!(&pages, "admin-overview-fetch.js"),
+        page_js!(&pages, "admin-overview-morph.js"),
         page_js!(&pages, "admin-sync.js"),
         page_js!(&pages, "admin-approvals.js"),
         page_js!(&pages, "admin-bridge-setup.js"),

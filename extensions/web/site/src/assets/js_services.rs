@@ -64,6 +64,9 @@ fn service_core_js(p: &Path) -> Vec<AssetDefinition> {
         svc_js!(p, "export-preview.js"),
         svc_js!(p, "export-scope.js"),
         svc_js!(p, "export-url.js"),
+        svc_js!(p, "live-number.js"),
+        svc_js!(p, "live-poll.js"),
+        svc_js!(p, "live-status.js"),
         svc_js!(p, "export.js"),
         svc_js!(p, "filter-ribbon.js"),
         svc_js!(p, "header-actions.js"),
@@ -143,6 +146,10 @@ fn service_utils_js(storage_js: &Path) -> Vec<AssetDefinition> {
         AssetDefinition::js(
             storage_js.join("components/sp-chart-tooltip.js"),
             "js/components/sp-chart-tooltip.js",
+        ),
+        AssetDefinition::js(
+            storage_js.join("components/sp-chart-update.js"),
+            "js/components/sp-chart-update.js",
         ),
     ]
 }

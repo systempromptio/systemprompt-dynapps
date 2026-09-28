@@ -1,0 +1,44 @@
+{{!--
+  The human queues: calls held for approval and usage the detector flagged.
+  Lifted out of the overview body so the live layer can key each tile and the
+  body partial stays short enough to read at a sitting.
+
+  Invoke as: {{> overview/queues}} (reads `queues` from the page context)
+--}}
+<section aria-label="Waiting on a person">
+    {{#> components/section title="Waiting on a person" note="Held for approval, and flagged usage."}}
+        {{#*inline "section_actions"}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/governance">Governance</a>{{/inline}}
+    {{/components/section}}
+    {{#if queues.approvals_error}}{{> components/notice tone="err" title="Approval queue unavailable" message=queues.approvals_error}}{{/if}}
+    <div class="sp-kpi-grid">
+        {{> components/kpi key="pending-approvals" label="Pending approvals" value=queues.approvals tone=queues.approvals_tone
+            note="calls held by require_approval" href="/admin/governance/approvals"}}
+        {{> components/kpi key="open-anomalies" label="Open anomalies" value=queues.anomaly_count tone=queues.anomalies_tone
+            note="detected in the last 24 hours" href="/admin/analytics?tab=spend"}}
+    </div>
+    {{#if queues.anomalies_error}}{{> components/notice tone="err" title="Anomalies unavailable" message=queues.anomalies_error}}{{/if}}
+    {{#if queues.has_anomalies}}
+    {{#> components/table caption="Usage anomalies detected in the last 24 hours"}}
+        <thead><tr>
+            <th scope="col">Metric</th>
+            <th scope="col">Window</th>
+            <th scope="col" class="sp-table__cell--num">Observed</th>
+            <th scope="col" class="sp-table__cell--num">Baseline</th>
+            <th scope="col">Severity</th>
+        </tr></thead>
+        <tbody>
+        {{#each queues.anomalies}}
+        <tr>
+            <td>{{this.metric}}</td>
+            <td class="sp-table__cell--date">{{this.window_display}}</td>
+            <td class="sp-table__cell--num sp-u-num">{{this.observed_display}}</td>
+            <td class="sp-table__cell--num sp-u-num">{{this.baseline_display}}</td>
+            <td>{{> components/badge tone=this.severity_tone text=this.severity_display}}</td>
+        </tr>
+        {{/each}}
+        </tbody>
+    {{/components/table}}
+    {{else}}
+    {{> components/empty-state heading="Nothing flagged" message="No usage anomaly has been detected in the last 24 hours."}}
+    {{/if}}
+</section>

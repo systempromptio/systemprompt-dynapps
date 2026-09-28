@@ -73,3 +73,12 @@ pub fn attestation_title(attestation: &str) -> String {
         |tier| tier.label().to_owned(),
     )
 }
+
+pub fn key_slug(label: &str) -> String {
+    label
+        .split(|c: char| !c.is_ascii_alphanumeric())
+        .filter(|part| !part.is_empty())
+        .map(str::to_ascii_lowercase)
+        .collect::<Vec<_>>()
+        .join("-")
+}

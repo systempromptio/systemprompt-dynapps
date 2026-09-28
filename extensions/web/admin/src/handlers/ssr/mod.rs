@@ -65,7 +65,7 @@ pub(crate) use gateway_policies::{
 };
 pub(crate) use governance::governance_page;
 pub(crate) use governance_quotas::governance_quotas_page;
-pub(crate) use overview::overview_page;
+pub(crate) use overview::{overview_fragment, overview_page};
 pub(crate) use roles::roles_page;
 pub(crate) use secrets_audit::secrets_audit_page;
 pub(crate) use ssr_access_control::access_control_page;

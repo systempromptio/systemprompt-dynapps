@@ -14,6 +14,7 @@
 
 mod charts;
 mod data;
+mod fragment;
 mod kpi_tiles;
 mod kpis_view;
 mod panels_view;
@@ -30,6 +31,7 @@ use systemprompt_web_admin_core::error::AdminHtmlResult;
 use systemprompt_web_admin_core::templates::AdminTemplateEngine;
 use systemprompt_web_admin_core::types::{MarketplaceContext, UserContext};
 
+pub(crate) use fragment::overview_fragment;
 use view::OverviewRange;
 
 #[derive(Debug, Default, Deserialize)]

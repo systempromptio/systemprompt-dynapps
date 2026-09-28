@@ -90,6 +90,7 @@ impl OverviewRange {
 pub(super) struct OverviewContext {
     pub page: &'static str,
     pub title: &'static str,
+    pub preset: &'static str,
     pub subtitle: String,
     pub breadcrumbs: Vec<BreadcrumbView>,
     pub ranges: Vec<RangeLinkView>,
@@ -104,6 +105,7 @@ pub(super) struct OverviewContext {
 #[derive(Debug, Serialize)]
 pub(super) struct RangeLinkView {
     pub label: &'static str,
+    pub preset: &'static str,
     pub href: String,
     pub is_active: bool,
 }
@@ -112,6 +114,7 @@ pub(super) fn overview_page(range: OverviewRange, data: &OverviewData) -> Overvi
     OverviewContext {
         page: "overview",
         title: "Overview",
+        preset: range.preset(),
         subtitle: format!(
             "Spend, tokens, models, clients, tool calls, failures, latency and what is waiting on a person, across {}.",
             range.window_label()
@@ -152,6 +155,7 @@ fn range_links(active: OverviewRange) -> Vec<RangeLinkView> {
     .into_iter()
     .map(|(range, label)| RangeLinkView {
         label,
+        preset: range.preset(),
         href: format!("/admin?preset={}", range.preset()),
         is_active: range == active,
     })

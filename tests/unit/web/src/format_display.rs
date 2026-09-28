@@ -2,6 +2,7 @@
 //! every admin page, and zero/negative cost renders as an em-dash rather
 //! than `$0` (no billed traffic is not the same as free traffic).
 
+use systemprompt_web_admin_core::ssr::format::key_slug;
 use systemprompt_web_shared::format::{format_cost, format_duration_ms, short_num};
 
 #[test]
@@ -30,4 +31,11 @@ fn short_num_bands() {
     assert_eq!(short_num(999), "999");
     assert_eq!(short_num(1_500), "1.5k");
     assert_eq!(short_num(2_500_000), "2.5M");
+}
+
+#[test]
+fn a_tile_label_becomes_a_stable_dashed_key() {
+    assert_eq!(key_slug("Active people"), "active-people");
+    assert_eq!(key_slug("p95 latency"), "p95-latency");
+    assert_eq!(key_slug("  Spend  "), "spend");
 }

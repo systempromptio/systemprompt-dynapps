@@ -9,6 +9,7 @@
 use serde::Serialize;
 
 use crate::repositories::overview::series::OverviewSeriesPoint;
+use systemprompt_web_admin_core::ssr::format::key_slug;
 use systemprompt_web_admin_core::ssr::types::sparkline::{SparklineView, sparkline_toned};
 use systemprompt_web_admin_core::util::delta::Delta;
 
@@ -25,6 +26,7 @@ pub(super) struct OverviewKpiStripView {
 
 #[derive(Debug, Serialize)]
 pub(super) struct KpiTileView {
+    pub key: String,
     pub label: &'static str,
     pub icon: &'static str,
     pub value: String,
@@ -100,6 +102,7 @@ pub(super) fn tile(spec: Tile, d: Option<Delta>, spark_values: &[i64]) -> KpiTil
             spark_tone,
             format!("{} per bucket over the window", spec.label),
         ),
+        key: key_slug(spec.label),
         label: spec.label,
         icon: spec.icon,
         value: spec.value,
