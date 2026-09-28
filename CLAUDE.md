@@ -159,7 +159,7 @@ re-creates the contention. Escape hatches when you truly need them:
 ```bash
 just preflight          # optional development confidence: static → lint → tests → coverage
 just preflight-static   # seconds: fmt, sqlx cache, 25 source gates
-just preflight-lint     # clippy (both workspaces), doc-check, msrv-check
+just preflight-lint     # clippy (all three workspaces), doc-check, msrv-check
 just preflight-full     # weekly: preflight + deny + audit + machete + hack
 just init-hooks         # once per clone: tracked .githooks/ (pre-commit only)
 ```
@@ -311,7 +311,7 @@ are exempt.
 
 ### Source-shape gates worth knowing before you write code
 
-`just lint-gates` runs 25 independent read-only checks concurrently (the
+`just lint-gates` runs 37 independent read-only checks concurrently (the
 `gates=()` array in the justfile is the list — trust the array, not this count;
 every failure is reported, so one red gate never hides the rest). Two frontend
 gates that used to live there — admin CSS classes and frontend standards — are
@@ -341,12 +341,25 @@ makes every one of them walk an empty tree and pass. The ones that most often su
   image alone is built with the repo root as its context (`COPY . /src`).
   `.systemprompt/profiles/production/docker/` is gitignored by design and sits
   outside this gate; `cloud deploy` refuses a stale COPY there itself.
-- Comment density, inline comments, file size, duplicate types, dead repository
-  code, admin template links/assets, and `services/` validity are all gates too
-  — read the failing script's header comment, which states the rule and why.
+- **`// Why:` is for external constraints, not narration**
+  (`lint-inline-comments.sh`, `check-comments.sh`). At most 6 `// Why:` blocks
+  per production file. None inside a function body (indent ≥ 8) unless the block
+  is a `// Why: discard-ok:` / `// Why: lint-ok:` marker or its first line names
+  an external system on the script's allowlist (AD FS, axum, Postgres, core,
+  Claude Code, MCP, …) — otherwise extract a named `let`, fn, or enum. A
+  `// Why:` that opens with `The`/`A`/`What`/`Returns`/`Builds`… is paraphrase
+  and fails; delete it or rename the item (`// doc-ok:` on the line above exempts).
+- **File size: 300 lines hard, 280 warns** (`check-file-size.sh`, `//!` lines
+  excluded). The warning is non-fatal; a file on that list is split before the
+  next feature lands in it.
+- Comment density, duplicate types, dead repository code, admin template
+  links/assets, and `services/` validity are all gates too — read the failing
+  script's header comment, which states the rule and why.
 
-`just clippy` additionally depends on two identity gates that are not in that
-array, so they fail the lint tier rather than `lint-gates`:
+`just clippy` lints all three workspaces with `-D warnings` — the `tests/`
+workspace with `--all-targets`, so test code carries the same lint bar as
+production. It additionally depends on two identity gates that are not in the
+`lint-gates` array, so they fail the lint tier rather than `lint-gates`:
 
 - **`lint-no-synthesis`** — no `UserId::new("…")` with a string literal anywhere
   under `extensions/`. Every legitimate `UserId::new` takes an identifier

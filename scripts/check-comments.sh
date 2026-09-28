@@ -64,6 +64,13 @@ report "doc restates the signature." \
     "Delete it, or rewrite to carry the constraint the signature cannot encode." \
     "$PARAPHRASE"
 
+WHY_PARAPHRASE=$(rg -n --no-heading --color=never -g '*.rs' -g '!**/tests/**' \
+    '^\s*// Why:\s*(The|A|An|One|What|Whether|This|These|Builds?|Returns?|Creates?|Fetches|Gets) ' \
+    "${SEARCH_DIRS[@]}" 2>/dev/null | strip_errors_sections || true)
+report "// Why: opens by describing the item instead of a constraint." \
+    "Delete it (rename the item if the name falls short), or lead with the external system that forces the code." \
+    "$WHY_PARAPHRASE"
+
 if [ "$fail" -ne 0 ]; then
     exit 1
 fi
