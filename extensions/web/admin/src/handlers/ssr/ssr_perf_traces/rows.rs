@@ -100,9 +100,6 @@ pub(super) fn trace_to_json(t: &TraceSummary) -> TraceRow {
     }
 }
 
-// Why: `active_ms` is summed request latency, so a trace that issued no
-// request has no duration to report. `0 ms` would read as a measurement — the
-// em dash says there is nothing to measure, as the cost and token cells do.
 fn active_display(t: &TraceSummary) -> String {
     if t.request_count == 0 {
         return "—".to_owned();
@@ -134,10 +131,6 @@ fn format_token_split(total: i64, input: i64, output: i64) -> String {
     format!("{} in / {} out", short_num(input), short_num(output))
 }
 
-// Why: the trace's size is one column now, so the split it used to spend three
-// more columns on lives on the cell's title instead. Naming each part keeps the
-// number honest: a trace of forty spans that issued two requests is a different
-// thing from one that issued forty.
 fn format_spans_breakdown(t: &TraceSummary) -> String {
     let mut parts = Vec::new();
     if t.request_count > 0 {

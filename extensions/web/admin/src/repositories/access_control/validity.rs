@@ -9,8 +9,6 @@
 use chrono::{DateTime, Utc};
 use sqlx::{PgExecutor, PgPool};
 
-// Why: `None` removes the window, so a rule edited back to open-ended does not
-// keep an old expiry the sweep would still act on.
 pub async fn set_rule_validity<'e, E: PgExecutor<'e>>(
     exec: E,
     rule_id: &str,
@@ -41,9 +39,8 @@ pub async fn set_rule_validity<'e, E: PgExecutor<'e>>(
     Ok(())
 }
 
-// Why: the sweep's half. Deleting the rule cascades the validity row away,
-// and `updated_at` on the survivors is untouched — core's parent-chain cache
-// keys on COUNT + MAX(updated_at), and the count moving is enough.
+// Why: core's parent-chain cache keys on COUNT + MAX(updated_at); the cascade
+// moves the count, so survivors' `updated_at` is deliberately left untouched.
 pub async fn delete_expired_rules(pool: &PgPool) -> Result<u64, sqlx::Error> {
     let result = sqlx::query!(
         "DELETE FROM access_control_rules r

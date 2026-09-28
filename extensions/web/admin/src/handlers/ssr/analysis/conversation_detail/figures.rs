@@ -165,8 +165,6 @@ pub(super) fn kpis(f: &ConversationFactRow) -> Vec<ConversationKpiView> {
     tiles
 }
 
-// Why: the per-turn x axis — one label per turn and the first/middle/last
-// index the gutters print — built once for the three charts.
 struct TurnAxis<'a> {
     turns: Vec<&'a ConversationTurnRow>,
     labels: Vec<String>,

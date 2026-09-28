@@ -1,20 +1,10 @@
 //! Throwaway database with the full extension schema applied.
 //!
-//! Every DB-backed suite in this repository used to carry its own copy of this
-//! file. They drifted: four applied the real schema and one hand-rolled two
-//! tables, and only one of the five refused to skip under `CI` -- so four
-//! tiers could report green with no Postgres at all. This is the single copy,
-//! and the `CI` guard is its only behaviour on a missing database.
-//!
-//! Each suite still gets its own databases and its own template: the
-//! name prefix is derived from the running test binary, so two suites cannot
-//! collide and neither can two builds of the same suite.
-//!
-//! The schema comes from the same `install_extension_schemas` path the server
-//! runs at startup, so it cannot drift from the one the queries were compiled
-//! against. Migrations are collected from `inventory` registrations, which
-//! exist only for crates linked into the binary -- hence the `use ... as _`
-//! below, and the extension dependencies in this crate's manifest.
+//! Each suite gets its own databases and template, prefixed by the running
+//! test binary's name. The schema comes from `install_extension_schemas`, the
+//! same path the server runs; migrations are collected from `inventory`
+//! registrations, which exist only for crates linked into the binary --
+//! hence the `use ... as _` below.
 
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
@@ -37,14 +27,10 @@ pub struct TempDb {
     db_name: String,
 }
 
-// Maintenance-server URL, or `None` so a developer machine with no Postgres
-// still runs the rest of the suite. Under `CI` the absence is a panic.
-//
-// Refuses to run against a development database: only database names `test`,
-// `postgres`, or `*_test` are accepted, so a stray `DATABASE_URL` pointing at
-// a dev server's live database panics instead of being used as the
-// maintenance connection. Only throwaway `<prefix>_p<pid>_<hex>` databases
-// (and this suite's templates) are ever created or dropped.
+// `None` lets a developer machine with no Postgres run the rest of the
+// suite; under `CI` the absence is a panic. Only databases named `test`,
+// `postgres` or `*_test` are accepted, so a stray `DATABASE_URL` pointing
+// at a live dev database panics instead of being used.
 fn server_url() -> Option<String> {
     let raw = std::env::var("SYSTEMPROMPT_TEST_DATABASE_URL")
         .or_else(|_| std::env::var("DATABASE_URL"))
@@ -75,20 +61,10 @@ fn with_database(base: &str, db_name: &str) -> String {
     url.into()
 }
 
-// Why: installing the schema is a full migration run plus the seed rows those
-// migrations insert -- around a second of work, paid once per test, for a
-// result that is byte-identical every time. `CREATE DATABASE ... TEMPLATE` is
-// a file copy of an already-installed database instead, which is the same
-// schema and the same seeds for a fraction of the cost.
-//
-// The template has to live in Postgres rather than in a process-local cache:
-// nextest runs every test in its own process, so a cache that did not outlive
-// the process would never once be hit.
-//
-// Why: the schema is compiled into this binary, so a rebuild is exactly the
-// event that can invalidate a template -- and keying on the binary rather than
-// on the schema text means a change to the schema cannot be missed, only
-// over-reported. An over-report costs one rebuild of the template.
+// Why: a schema install costs ~1s per test for an identical result, so each
+// test copies a `CREATE DATABASE ... TEMPLATE`. nextest runs every test in
+// its own process, so the cache must live in Postgres, keyed on the binary
+// fingerprint (the schema is compiled in; a rebuild may over-report only).
 fn template_name(prefix: &str) -> String {
     let exe = std::env::current_exe().expect("locate the running test binary");
     let meta = std::fs::metadata(&exe).expect("stat the running test binary");
@@ -98,10 +74,8 @@ fn template_name(prefix: &str) -> String {
     format!("{prefix}_tpl_{:016x}", hasher.finish())
 }
 
-// Why: the prefix names the suite, so no call site has to pass one and no two
-// suites can share a template. Cargo appends a build hash to the binary name,
-// which is dropped: it changes on every rebuild, and the template already
-// keys on the binary's own fingerprint.
+// Why: Cargo's build hash is dropped from the binary name; it changes every
+// rebuild and the template already keys on the binary fingerprint.
 fn suite_prefix() -> String {
     let exe = std::env::current_exe().expect("locate the running test binary");
     let stem = exe
@@ -126,9 +100,8 @@ fn suite_prefix() -> String {
     cleaned.chars().take(24).collect()
 }
 
-// Why: a 64-bit key for `pg_advisory_lock`, so concurrent test processes that
-// find the template missing build it once between them rather than racing to
-// `CREATE DATABASE` the same name.
+// Why: concurrent processes that find the template missing build it once
+// under `pg_advisory_lock` rather than racing on `CREATE DATABASE`.
 fn advisory_key(template: &str) -> i64 {
     let mut hasher = DefaultHasher::new();
     template.hash(&mut hasher);
@@ -143,14 +116,11 @@ async fn database_exists(conn: &mut sqlx::PgConnection, name: &str) -> bool {
         .expect("query pg_database")
 }
 
-// Why: templates from earlier binaries are dead weight, but a concurrent run
-// may still be copying one, and `DROP DATABASE` on a database in use is an
-// error rather than a wait. Failures are therefore ignored: the next run
-// collects whatever this one could not.
+// Why: Postgres `DROP DATABASE` errors on a database in use by a concurrent
+// run, so failures are ignored; the next run collects the rest.
 async fn drop_stale_templates(conn: &mut sqlx::PgConnection, prefix: &str, keep: &str) {
     let Ok(stale) = sqlx::query_scalar::<_, String>(
-        // `LIKE` would read the underscores in the prefix as wildcards, so the
-        // match is a plain prefix comparison instead.
+        // `LIKE` would treat the prefix's underscores as wildcards.
         "SELECT datname FROM pg_database WHERE left(datname, length($1)) = $1 AND datname <> $2",
     )
     .bind(format!("{prefix}_tpl_"))
@@ -170,8 +140,8 @@ async fn drop_stale_templates(conn: &mut sqlx::PgConnection, prefix: &str, keep:
 
 async fn ensure_template(admin: &PgPool, base: &str, prefix: &str, template: &str) {
     let mut conn = admin.acquire().await.expect("maintenance connection");
-    // The lock is session-scoped, so every statement below has to run on this
-    // one connection -- a pool would hand the unlock to a different session.
+    // The advisory lock is session-scoped: every statement must run on this
+    // one connection, or the unlock lands on a different session.
     sqlx::query("SELECT pg_advisory_lock($1)")
         .bind(advisory_key(template))
         .execute(&mut *conn)
@@ -198,8 +168,7 @@ async fn ensure_template(admin: &PgPool, base: &str, prefix: &str, template: &st
         install_extension_schemas(&registry, database.write())
             .await
             .expect("install extension schemas");
-        // The copy refuses to run while any session holds the template open, so
-        // this close is load-bearing, not tidiness.
+        // Postgres refuses the template copy while any session holds it open.
         pool.close().await;
         drop_stale_templates(&mut conn, prefix, template).await;
     }
@@ -211,10 +180,9 @@ async fn ensure_template(admin: &PgPool, base: &str, prefix: &str, template: &st
         .expect("release the template build lock");
 }
 
-// Why: `CREATE DATABASE ... TEMPLATE` fails outright, rather than waiting, if
-// any session is still connected to the source. The closing connection of a
-// process that has just built the template can linger for a few milliseconds,
-// so the copy is retried briefly before it is called a failure.
+// Why: Postgres fails `CREATE DATABASE ... TEMPLATE` outright while any
+// session is connected to the source, and a builder's closing connection
+// can linger, so the copy is retried briefly.
 async fn copy_template(admin: &PgPool, template: &str, db_name: &str) {
     let statement = format!("CREATE DATABASE \"{db_name}\" TEMPLATE \"{template}\"");
     let mut last = None;
@@ -240,8 +208,7 @@ impl TempDb {
     pub async fn create() -> Option<Self> {
         let prefix = &suite_prefix();
         let base = server_url()?;
-        // CREATE DATABASE cannot run inside a transaction, so the maintenance
-        // connection lives on `postgres` and executes autocommit.
+        // Postgres: CREATE DATABASE cannot run inside a transaction.
         let admin_url = with_database(&base, "postgres");
         let db_name = crate::orphans::database_name(prefix);
 
@@ -251,7 +218,6 @@ impl TempDb {
         crate::orphans::sweep(&admin).await;
         let template = template_name(prefix);
         ensure_template(&admin, &base, prefix, &template).await;
-        // Name is a UUID-derived literal, not user input — safe to interpolate.
         copy_template(&admin, &template, &db_name).await;
         admin.close().await;
 
@@ -268,10 +234,6 @@ impl TempDb {
         })
     }
 
-    // Why: a database with no schema at all, for the suites that install their
-    // own. Skipping the template is the point -- an empty database is faster to
-    // make than a copy, and the suite's assertions are about the tables it
-    // creates itself.
     pub async fn create_empty() -> Option<Self> {
         let prefix = &suite_prefix();
         let base = server_url()?;

@@ -10,12 +10,6 @@ const MARKER_OPEN: &str = "[tool_use:";
 const REMINDER_OPEN: &str = "<system-reminder>";
 const REMINDER_CLOSE: &str = "</system-reminder>";
 
-// Why: Claude Code appends its own housekeeping to the person's prompt inside
-// `<system-reminder>` blocks. They are not what was typed, so a prompt is shown
-// without them; an unterminated block is left as it is.
-// Why: the stored text keeps whatever indentation the client's content parts
-// carried, which renders as a ragged left edge under `pre-wrap`; the words
-// matter, the indentation does not.
 #[must_use]
 pub fn tidy_lines(body: &str) -> String {
     let mut out = String::with_capacity(body.len());
@@ -87,8 +81,6 @@ pub fn parse_assistant(body: &str) -> ParsedAssistant {
     }
 }
 
-// Why: `after` starts right past `[tool_use:`; returns the marker and how many
-// bytes of `after` it occupied, including the closing `]`.
 fn parse_marker(after: &str) -> Option<(ToolUseMarker, usize)> {
     let name_end = after.find(|c: char| c.is_whitespace() || c == ']')?;
     let name = after[..name_end].trim();
@@ -128,8 +120,6 @@ fn parse_marker(after: &str) -> Option<(ToolUseMarker, usize)> {
     ))
 }
 
-// Why: byte length of the JSON value at the start of `s`, honouring strings
-// and escapes so a `]` inside a string argument does not end the marker.
 fn json_len(s: &str) -> Option<usize> {
     let mut depth: usize = 0;
     let mut in_string = false;

@@ -8,6 +8,11 @@
 //! that declares any rule owns its decision outright. Default policy is
 //! **explicit allow**: if neither path grants access, the item is dropped
 //! (see `services/access-control/rules.yaml`).
+//!
+//! Connection readiness is a second, independent gate: an MCP server access
+//! control admitted is still withheld until the user's connection to it is
+//! ready, with a diagnostic naming the failed sub-condition so a server missing
+//! on a bridge is traceable.
 
 use std::sync::Arc;
 
@@ -22,6 +27,7 @@ use systemprompt_security::authz::AccessControlRepository;
 
 use crate::authz::{dimensions, subject_attributes_for};
 use crate::repositories::users::queries::find_user_access_profile;
+use crate::services::connector_accounts::Connection;
 
 #[derive(Debug)]
 pub struct TemplateMarketplaceFilter {
@@ -75,52 +81,50 @@ impl MarketplaceFilter for TemplateMarketplaceFilter {
             },
         )
         .await?;
-        // Why: Authorization and connection readiness are independent gates. A
-        // grant can never make an otherwise denied marketplace visible, and a
-        // server access control admitted is still withheld until the person's
-        // connection to it is ready — visibly, so a missing server on a bridge
-        // is traceable to the sub-condition that failed.
         let connections = crate::services::connector_accounts::get_connections(&self.pool, user_id)
             .await
             .map_err(|e| MarketplaceFilterError::Backend(e.to_string()))?;
         let diagnostics = &mut candidate.diagnostics;
         keep.mcp_servers.retain(|id| {
-            let Some(connection) = connections
-                .connections
-                .iter()
-                .find(|c| c.provider == id.as_str())
-            else {
-                return true;
-            };
-            match connection.readiness() {
-                Ok(()) => true,
-                Err(reason) => {
-                    tracing::warn!(
-                        user_id = %user_id,
-                        mcp_server = %id,
-                        reason = reason.as_str(),
-                        status = %connection.status,
-                        configured = connection.configured,
-                        entitled = connection.entitled,
-                        verified = connection.verified_at.is_some(),
-                        "marketplace filter dropped an authorized MCP server: connection not ready"
-                    );
-                    diagnostics.push(format!(
-                        "mcp server '{id}' was admitted by access control but dropped because the \
-                         connection is not ready ({reason}; status={}, configured={}, entitled={}, \
-                         verified={})",
-                        connection.status,
-                        connection.configured,
-                        connection.entitled,
-                        connection.verified_at.is_some(),
-                    ));
-                    false
-                },
-            }
+            keep_if_connection_ready(&connections.connections, id.as_str(), user_id, diagnostics)
         });
         candidate.retain_entries(&keep);
         Ok(candidate)
     }
+}
+
+fn keep_if_connection_ready(
+    connections: &[Connection],
+    mcp_server: &str,
+    user_id: &UserId,
+    diagnostics: &mut Vec<String>,
+) -> bool {
+    let Some(connection) = connections.iter().find(|c| c.provider == mcp_server) else {
+        return true;
+    };
+    let Err(reason) = connection.readiness() else {
+        return true;
+    };
+    tracing::warn!(
+        user_id = %user_id,
+        mcp_server,
+        reason = reason.as_str(),
+        status = %connection.status,
+        configured = connection.configured,
+        entitled = connection.entitled,
+        verified = connection.verified_at.is_some(),
+        "marketplace filter dropped an authorized MCP server: connection not ready"
+    );
+    diagnostics.push(format!(
+        "mcp server '{mcp_server}' was admitted by access control but dropped because the \
+         connection is not ready ({reason}; status={}, configured={}, entitled={}, \
+         verified={})",
+        connection.status,
+        connection.configured,
+        connection.entitled,
+        connection.verified_at.is_some(),
+    ));
+    false
 }
 
 register_marketplace_filter!(TemplateMarketplaceFilter::from_db, priority = 100);

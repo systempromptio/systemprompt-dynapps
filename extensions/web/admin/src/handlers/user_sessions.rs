@@ -64,9 +64,6 @@ pub(crate) async fn revoke_all_user_sessions_handler(
     let user_id = UserId::new(user_id_raw);
     guard(&user_ctx)?;
 
-    // Why: no 404 on zero. "Sign this person out everywhere" has succeeded
-    // when they hold no live session, however many rows that took; only a
-    // single named session can be genuinely absent.
     let revoked = sessions::revoke_all_signin_sessions(&pool, &user_id).await?;
     if revoked > 0 {
         record(&pool, &user_ctx, &user_id, revoked);
@@ -74,11 +71,7 @@ pub(crate) async fn revoke_all_user_sessions_handler(
     Ok(Json(RevokedResponse { revoked }).into_response())
 }
 
-// Why: admins administer every account on this single-tenant instance;
-// nobody else administers anyone.
 fn guard(user_ctx: &UserContext) -> Result<(), AdminError> {
-    // Why: `admin`, not `is_console`. Revoking another account's sessions is
-    // a credential mutation.
     if !user_ctx.is_admin {
         return Err(AdminError::Forbidden("Admin access required".to_owned()));
     }

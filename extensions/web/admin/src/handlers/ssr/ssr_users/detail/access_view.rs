@@ -58,9 +58,6 @@ pub(super) fn access_tab(mut data: AccessData, user_id: &UserId) -> AccessTabVie
     }
 }
 
-// Why: `warn` and `pending` are real resolver outcomes, not failures. A warn
-// is a reach that enforcement is currently letting through; a pending is a
-// hold awaiting approval. Both get a tone that says "look here", not red.
 const fn effective_tone(effective: &str) -> &'static str {
     match effective.as_bytes() {
         b"allow" => "ok",

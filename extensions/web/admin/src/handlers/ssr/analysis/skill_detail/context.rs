@@ -17,8 +17,6 @@ use crate::repositories::analysis::skills::{
     SkillBreakdownBy, SkillBucketRow, SkillConversationRow, SkillDayRow, SkillFactRow, SkillRunRow,
 };
 
-// Why: the hook carries ids; the inventory index resolves the plugin's
-// display name and the marketplaces that include it.
 pub(super) fn resolve_names(
     index: &InventoryIndex,
     skill: &SkillRef,
@@ -40,7 +38,6 @@ pub(super) fn resolve_names(
     (skill_name, plugin_name, marketplaces)
 }
 
-// Why: what the repositories read for the page, handed to the builder as one.
 pub(super) struct SkillRead<'a> {
     pub(super) row: Option<SkillFactView>,
     pub(super) facts: Option<&'a SkillFactRow>,
@@ -49,7 +46,6 @@ pub(super) struct SkillRead<'a> {
     pub(super) conversations: &'a [SkillConversationRow],
     pub(super) runs: &'a [SkillRunRow],
     pub(super) total: i64,
-    // Why: whether the viewer may press a row's Judge button.
     pub(super) can_judge: bool,
 }
 

@@ -30,8 +30,6 @@ use super::detail::{DetailData, ProjectUsageData, member_views};
 use super::detail_view::{daily_charts, kpis, session_row, skill_rows, tool_rows};
 use super::{BASE_URL, WINDOW_LABEL};
 
-// Why: the artifact table is bounded like every other section; a project
-// that produced more kinds than this has outgrown a one-page report.
 const ARTIFACT_LIMIT: i64 = 25;
 
 pub(super) struct ReportData {
@@ -193,8 +191,6 @@ fn agent_rows(rows: &[ProjectAgentRow]) -> Vec<ProjectAgentRowView> {
         .collect()
 }
 
-// Why: the wire value is the check constraint's spelling; the report is read
-// by people who know the product names.
 fn agent_label(client_kind: &str) -> &'static str {
     match client_kind {
         "claude-code" => "Claude Code",

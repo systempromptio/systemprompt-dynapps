@@ -8,7 +8,6 @@ use systemprompt_security::authz::AccessRule;
 #[derive(Debug, Serialize)]
 pub(crate) struct EntityAccessResponse {
     pub entity_type: String,
-    // Why: polymorphic entity reference (gateway_route/mcp_server), no single typed-ID equivalent
     pub entity_id: String,
     pub default_included: bool,
     pub rules: Vec<AccessRule>,
@@ -21,8 +20,6 @@ pub(crate) struct UpsertRuleBody {
     pub access: String,
     #[serde(default)]
     pub justification: Option<String>,
-    // Why: when the rule stops applying. None is open-ended and clears any
-    // window an earlier save put on the same row.
     #[serde(default)]
     pub valid_until: Option<DateTime<Utc>>,
 }
@@ -47,7 +44,6 @@ pub(crate) struct DefaultIncludedBody {
 #[derive(Debug, Serialize)]
 pub(crate) struct EntityDefaultResponse {
     pub entity_type: String,
-    // Why: polymorphic entity reference (gateway_route/mcp_server), no single typed-ID equivalent
     pub entity_id: String,
     pub default_included: bool,
 }
@@ -59,7 +55,6 @@ pub(crate) struct AllAccessQuery {
 
 #[derive(Debug, Serialize)]
 pub(crate) struct EntityAccessEntry {
-    // Why: polymorphic entity reference (gateway_route/mcp_server), no single typed-ID equivalent
     pub entity_id: String,
     pub default_included: bool,
     pub rules: Vec<AccessRule>,

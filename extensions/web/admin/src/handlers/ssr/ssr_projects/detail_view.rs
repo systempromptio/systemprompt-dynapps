@@ -158,9 +158,6 @@ fn daily_chart(daily: &[DailyRequests]) -> SvgLineChartView {
     })
 }
 
-// Why: cost gets its own plot rather than a second series on the request
-// chart — two units on one axis would make the cheaper line look like less
-// work rather than less money.
 fn daily_cost_chart(daily: &[DailyRequests]) -> SvgLineChartView {
     let cost: Vec<i64> = daily.iter().map(|d| d.cost_microdollars).collect();
     let total: i64 = cost.iter().sum();
@@ -234,8 +231,6 @@ pub(super) fn session_row(s: &ProjectSessionRow) -> ProjectSessionRowView {
     }
 }
 
-// Why: identifiers are read for recognition, not transcription — the full
-// value stays on the row as its title attribute.
 fn short(id: &str) -> String {
     id.chars().take(8).collect()
 }

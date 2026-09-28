@@ -128,7 +128,6 @@ pub(super) fn clear_url(query: &AnalyticsDashboardQuery) -> String {
     with_qs(BASE_URL.to_owned(), &qs)
 }
 
-// Why: the dashboard re-rendered scoped to one user — the "Focus" drill.
 pub(super) fn scope_to_user_url(
     query: &AnalyticsDashboardQuery,
     user_id: &systemprompt::identifiers::UserId,
@@ -155,8 +154,6 @@ pub(super) fn build_pagination(query: &AnalyticsDashboardQuery, window: PageWind
     paginate_prefixed(window, &prefix)
 }
 
-// Why: same link-not-select shape as the inactivity window below, for the
-// same reason: the SLO threshold only means anything on the Spend tab.
 pub(super) fn slo_links(query: &AnalyticsDashboardQuery, active_ms: i32) -> Vec<SloOption> {
     const CHOICES: [(i32, &str); 4] =
         [(1_000, "1s"), (2_000, "2s"), (5_000, "5s"), (10_000, "10s")];

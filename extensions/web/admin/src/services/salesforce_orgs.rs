@@ -256,9 +256,6 @@ impl SalesforceOrgRegistry {
     }
 }
 
-// Why: the bootstrap job is the one place that has both the services path and
-// the loaded MCP catalog; an org declared against a server the catalog does
-// not carry is a misconfiguration nothing downstream can repair.
 pub async fn salesforce_orgs_boot_check(services_path: &Path) -> Result<(), String> {
     SalesforceOrgRegistry::init_from_path(services_path).await?;
     let services = systemprompt::loader::ServicesBootstrap::get().map_err(|e| e.to_string())?;

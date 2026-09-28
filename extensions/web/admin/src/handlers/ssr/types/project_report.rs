@@ -15,7 +15,6 @@ use super::{
     SvgLineChartView,
 };
 
-// Why: one coding agent on the report, with its share of the window.
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct ProjectAgentRowView {
     pub client_kind: String,
@@ -28,7 +27,6 @@ pub(crate) struct ProjectAgentRowView {
     pub share_pct: i64,
 }
 
-// Why: one artifact type from one server, with the share that were errors.
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct ProjectArtifactRowView {
     pub server_name: String,
@@ -39,7 +37,6 @@ pub(crate) struct ProjectArtifactRowView {
     pub last_created_at: String,
 }
 
-// Why: one row of the report's summary block: a label and its value.
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct ProjectReportFactView {
     pub label: &'static str,

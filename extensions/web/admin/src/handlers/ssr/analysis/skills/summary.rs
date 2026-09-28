@@ -13,7 +13,6 @@ use crate::handlers::ssr::types::sparkline_toned;
 use crate::repositories::analysis::inventory_index::{InventoryIndex, MarketplaceAudience};
 use crate::repositories::analysis::skills::{MarketplaceAdoptionRow, SkillFactRow};
 
-// Why: the scope's headline figures, computed once and read by every tile.
 struct Figures {
     spark_sum: Vec<i64>,
     completion: Option<f64>,

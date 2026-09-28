@@ -17,10 +17,6 @@ pub(crate) struct CurrentUser<'a> {
     username: &'a str,
     roles: &'a [String],
     is_admin: bool,
-    // Why: the sidebar gates the full console on `is_console` and the scoped
-    // one — Analysis's Conversations and Versions, Platform's Code sync — on
-    // `is_participant`, so a marketplace participant sees their own slice of
-    // the estate and nothing of the rest.
     is_console: bool,
     is_participant: bool,
     has_console: bool,
@@ -102,23 +98,13 @@ pub(crate) struct PageShell<'a, T> {
     demo_help: Option<&'static str>,
     #[serde(skip_serializing_if = "Option::is_none")]
     demo_help_url: Option<String>,
-    // Why: the shell decides this, not the page. Every AI-activity page shares
-    // one scope contract, and a page author who forgot the flag would silently
-    // lose the control — so it is derived from the page id in one place.
     scope_selector: bool,
-    // Why: the sidebar states which release is serving the page. The workspace
-    // version is inherited by every crate from the release pin, so this crate's
-    // own is the release version and cannot drift from it.
     app_version: &'static str,
-    // Why: the sidebar's count of access-control entities where code and the
-    // database disagree and nobody has decided yet. Console viewers only.
     access_attention: usize,
     #[serde(flatten)]
     page: &'a T,
 }
 
-// Why: what the shell knows about the page beyond its data — the id its
-// help text and scope bar key on.
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct PageChrome<'a> {
     pub(crate) page_id: Option<&'a str>,
@@ -139,10 +125,6 @@ impl<'a, T: Serialize> PageShell<'a, T> {
             marketplace: MarketplaceView::from(viewer.marketplace),
             page_stats: [],
             demo_help: help.map(|(text, _)| text),
-            // Why: the help table names a topic, not a page. Topics with no
-            // documentation behind them resolve to `None` and the template
-            // then draws no icon — the alternative, which shipped, was an icon
-            // on 63 pages that opened a 404.
             demo_help_url: help
                 .and_then(|(_, topic)| crate::types::doc_links::documentation_url(topic)),
             scope_selector: takes_scope_selector(page_id),
@@ -157,10 +139,7 @@ impl<'a, T: Serialize> PageShell<'a, T> {
     }
 }
 
-// Why: the AI-activity listings, the pages whose rows a scope and a time range
-// narrow. Detail pages are absent on purpose: one row is already the narrowest
-// scope there is, and a filter above it would do nothing.
-const SCOPED_PAGES: [&str; 5] = [
+const SCOPE_FILTERED_LISTINGS: [&str; 5] = [
     "analytics-dashboard",
     "requests",
     "sessions",
@@ -169,5 +148,5 @@ const SCOPED_PAGES: [&str; 5] = [
 ];
 
 fn takes_scope_selector(page_id: Option<&str>) -> bool {
-    page_id.is_some_and(|id| SCOPED_PAGES.contains(&id))
+    page_id.is_some_and(|id| SCOPE_FILTERED_LISTINGS.contains(&id))
 }

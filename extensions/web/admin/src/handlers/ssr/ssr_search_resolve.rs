@@ -7,6 +7,8 @@
 //! and an ellipsis), so a pasted value is usually a prefix — and the matches
 //! come back as `matches` for the box to offer; a lone match also fills `url`
 //! so Enter jumps to it. Returns `{kind: "none"}` when nothing resolves.
+//! Prefix matching enumerates ids instance-wide, so a scoped caller gets exact
+//! resolution only and the detail page decides whether the owner is visible.
 //!
 //! This is a JSON endpoint that happens to live beside the SSR pages it feeds,
 //! so its failures are `AdminError`, not the HTML-rendering face.
@@ -54,8 +56,6 @@ pub(crate) async fn search_resolve(
     State(pool): State<Arc<PgPool>>,
     Query(query): Query<SearchQuery>,
 ) -> AdminResult<Response> {
-    // Why: a signed-in caller without any console — no admin role, no
-    // marketplace participation — has nowhere the lookup could land.
     if !user_ctx.has_scoped_console() {
         return Err(AdminError::Forbidden("Console access required".to_owned()));
     }
@@ -76,10 +76,8 @@ pub(crate) async fn search_resolve(
         .into_response());
     }
 
-    // Why: prefix suggestion enumerates ids across the instance. A scoped
-    // caller gets exact resolution only; the detail page they land on then
-    // decides whether the owner is inside their view.
-    if !user_ctx.is_console {
+    let may_enumerate_instance_ids = user_ctx.is_console;
+    if !may_enumerate_instance_ids {
         return Ok(unresolved());
     }
 
@@ -96,15 +94,11 @@ pub(crate) async fn search_resolve(
     Ok(Json(SearchResponse { kind, url, matches }).into_response())
 }
 
-// Why: the copied text carries the `short_id` ellipsis and whatever
-// whitespace the clipboard added; neither is part of the id.
 fn normalise(raw: &str) -> &str {
     raw.trim().trim_end_matches('…').trim()
 }
 
 fn to_match(r: ResolvedId) -> AdminResult<SearchMatch> {
-    // Why: The resolver picks the entity kind at runtime from an opaque id, so
-    // the typed newtype is only known here, in the arm that matched.
     let (kind, url) = match r.kind {
         ResolvedKind::Request => ("request", request_detail_url(&AiRequestId::new(&r.id))),
         ResolvedKind::Trace => ("trace", trace_detail_url(&TraceId::new(&r.id))),

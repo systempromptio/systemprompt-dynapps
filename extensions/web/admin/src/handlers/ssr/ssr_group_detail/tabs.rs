@@ -19,9 +19,6 @@ pub(super) struct TabCounts {
     pub mappings: i64,
 }
 
-// Why: Why: the Unassigned bucket has no rules and no directory mapping of its
-// own — it is where people land when no mapping matched — so those two tabs
-// would render an editor for a subject that can never hold a rule.
 pub(super) const fn visible_tabs(is_unassigned: bool) -> &'static [&'static str] {
     if is_unassigned {
         &[MEMBERS, USAGE, PROJECTS]

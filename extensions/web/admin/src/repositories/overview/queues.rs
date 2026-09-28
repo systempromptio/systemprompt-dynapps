@@ -4,19 +4,18 @@
 //! Both are counted rather than listed in full. The overview's job is to say
 //! that something is waiting and where to go; the pages behind them own the
 //! detail.
+//!
+//! `usage_anomalies` has no resolved flag — the detector writes a row per
+//! metric per hourly window and nothing closes it — so "open" is the recency
+//! rule [`ANOMALY_OPEN_HOURS`]. Expired approval holds are not pending: the
+//! call behind one has already failed.
 
 use sqlx::PgPool;
 
 pub use crate::repositories::analytics::site::anomalies::UsageAnomalyRow;
 
-// Why: `usage_anomalies` has no resolved flag — the detector writes a row per
-// metric per hourly window and nothing closes it — so "open" is a recency rule
-// stated here rather than a column read from the table.
 pub const ANOMALY_OPEN_HOURS: i64 = 24;
 
-// Why: expired holds are excluded. The call one was holding has already
-// failed, so counting it would send an admin to approve something that can no
-// longer run.
 pub async fn count_pending_approvals(pool: &PgPool) -> Result<i64, sqlx::Error> {
     let count = sqlx::query_scalar!(
         r#"SELECT COUNT(*) AS "count!"
@@ -59,19 +58,19 @@ pub async fn list_open_anomalies(
         .collect())
 }
 
-// Why: the bands the overview's severity badge paints. Twice the baseline is
-// the detector's own idea of an anomaly worth a page, so it is red; a metric
-// with no baseline at all is new traffic rather than a spike, and reads as a
-// caution rather than a failure.
+const DETECTOR_PAGE_RATIO: f64 = 2.0;
+const ELEVATED_RATIO: f64 = 1.5;
+
 #[must_use]
 pub fn anomaly_tone(observed: i64, baseline: i64) -> &'static str {
-    if baseline <= 0 {
+    let new_traffic_without_baseline = baseline <= 0;
+    if new_traffic_without_baseline {
         return "warn";
     }
     let ratio = observed as f64 / baseline as f64;
-    if ratio >= 2.0 {
+    if ratio >= DETECTOR_PAGE_RATIO {
         "err"
-    } else if ratio >= 1.5 {
+    } else if ratio >= ELEVATED_RATIO {
         "warn"
     } else {
         "muted"

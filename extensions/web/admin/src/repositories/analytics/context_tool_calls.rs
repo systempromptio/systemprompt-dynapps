@@ -14,11 +14,10 @@ pub struct ContextToolCallRow {
     pub tool_name: String,
     pub sequence_number: i32,
     pub ai_tool_call_id: Option<AiToolCallId>,
-    // JSON: arbitrary MCP tool arguments, shaped by each tool's own schema.
+    // JSON: variable-shape MCP tool arguments
     pub tool_input: serde_json::Value,
-    // JSON: arbitrary MCP tool result payload, shaped by each tool's own schema.
+    // JSON: variable-shape MCP tool result
     pub tool_result_payload: Option<serde_json::Value>,
-    // Why: the stored artifact of this call, joined by the client tool_use_id.
     pub artifact_id: Option<ArtifactId>,
     pub artifact_structured: bool,
     pub created_at: DateTime<Utc>,
@@ -31,7 +30,7 @@ pub async fn list_tool_calls_for_requests(
     if request_ids.is_empty() {
         return Ok(Vec::new());
     }
-    // JSON: per-tool payload columns — see ContextToolCallRow above.
+    // JSON: variable-shape tool payload columns
     sqlx::query_as!(
         ContextToolCallRow,
         r#"

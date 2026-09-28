@@ -11,9 +11,6 @@
 const USER_MARKER: &str = "=== USER PROMPT ===";
 const ASSISTANT_MARKER: &str = "=== ASSISTANT ANSWER ===";
 
-// Why: everything before the assistant marker, with the user marker removed
-// Why: and surrounding whitespace trimmed. A body carrying neither marker is
-// Why: returned trimmed but otherwise untouched.
 #[must_use]
 pub fn strip_gateway_markers(input: &str) -> String {
     let head = input.split(ASSISTANT_MARKER).next().unwrap_or(input);

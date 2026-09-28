@@ -14,12 +14,12 @@
 //! when it landed — so re-running the rollup after someone moves never rewrites
 //! the days they spent elsewhere. A day with hook activity but no gateway
 //! request has nothing pinned and takes the person's current primary instead.
+//! A person who moved mid-day takes the scope most of that day's requests
+//! carry, ties broken by id so the answer is stable across runs.
 
 use sqlx::PgPool;
 use systemprompt_web_shared::error::MarketplaceError;
 
-// Why: Recompute rollup rows for every UTC day in the trailing window
-// (`days_back = 1` covers yesterday and today). Returns rows written.
 pub async fn upsert_daily_rollups_for_window(
     pool: &PgPool,
     days_back: i32,
@@ -113,9 +113,6 @@ async fn rollup_gateway_requests(pool: &PgPool, days_back: i32) -> Result<u64, M
     .rows_affected())
 }
 
-// Why: a person's requests on one day can carry two scopes if they moved that
-// day; the row takes the scope most of them carry, ties broken by id so the
-// answer is stable across runs.
 async fn rollup_attribution(pool: &PgPool, days_back: i32) -> Result<u64, MarketplaceError> {
     Ok(sqlx::query!(
         r"

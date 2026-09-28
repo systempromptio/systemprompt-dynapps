@@ -33,7 +33,6 @@ pub struct RouteDrift {
     pub missing_in_db: Vec<String>,
     pub only_in_db: Vec<OrphanRoute>,
     pub changed: Vec<ChangedRoute>,
-    // Why: `Some((code order, db order))` when the shared routes disagree on sequence.
     pub reordered: Option<(Vec<String>, Vec<String>)>,
 }
 

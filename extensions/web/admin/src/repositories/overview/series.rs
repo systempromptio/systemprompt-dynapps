@@ -12,8 +12,6 @@ use sqlx::PgPool;
 
 use crate::util::time_range::TimeRange;
 
-// Why: how many points every chart draws. Fixed, so the page's shape does
-// not change with the window the reader picked.
 pub const BUCKETS: i64 = 24;
 
 /// One bucket of the overview's spine, every figure the charts plot.
@@ -33,9 +31,6 @@ pub struct OverviewSeriesPoint {
     pub denied: i64,
 }
 
-// Why: bucket width in seconds, floored at one so a degenerate range cannot
-// divide by zero in the statement. Shared with the dimension series so both
-// land on the same spine.
 pub(crate) fn bucket_width_secs(range: TimeRange) -> f64 {
     let span_secs = (range.to - range.from).num_seconds().max(BUCKETS);
     ((span_secs as f64) / (BUCKETS as f64)).max(1.0)

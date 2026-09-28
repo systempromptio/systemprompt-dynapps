@@ -76,9 +76,6 @@ pub(super) fn build_kpis(url: &RosterUrlState, totals: &RosterStats) -> RosterKp
     }
 }
 
-// Why: a percentage against the previous window of the same length. With no
-// prior traffic there is nothing to compare, so the tile shows no delta rather
-// than an infinite rise.
 fn delta(current: i64, prior: i64) -> (String, &'static str) {
     if prior == 0 {
         return (String::new(), "flat");
@@ -166,9 +163,6 @@ fn chips(
         .collect()
 }
 
-// Why: the stamp alone cannot say which of the six activity clocks it came
-// from (`user_last_seen`), and an admin reading "2h ago" on an account with
-// no gateway traffic needs to know it was a bridge heartbeat, not a prompt.
 fn last_active_title(row: &RosterRow) -> String {
     let Some(t) = row.last_active else {
         return "No recorded activity".to_owned();

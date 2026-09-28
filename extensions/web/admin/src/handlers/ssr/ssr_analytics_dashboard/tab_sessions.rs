@@ -74,10 +74,10 @@ fn row(r: &SessionCostRow, max: i64) -> SessionCostRowView {
     }
 }
 
-// Why: a conversation id is a uuid nobody reads in full; the head is enough
-// to recognise a row, and the cell links to the conversation itself.
+const CONVERSATION_ID_HEAD_CHARS: usize = 12;
+
 fn short_id(id: &str) -> String {
-    id.chars().take(12).collect()
+    id.chars().take(CONVERSATION_ID_HEAD_CHARS).collect()
 }
 
 fn kpis(input: &SessionsInput<'_>) -> Vec<KpiTile> {

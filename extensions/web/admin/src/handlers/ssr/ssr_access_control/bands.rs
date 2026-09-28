@@ -5,7 +5,6 @@ use super::view::BandChipsView;
 use crate::repositories::access_control::rules::LedgerRuleRow;
 use crate::types::access_control::AccessDecision;
 
-// Why: the ladder's own words for each band, so the page and the docs agree.
 pub(super) fn band_label(rule_type: &str) -> &'static str {
     match rule_type {
         "user" => "person",
@@ -18,7 +17,6 @@ pub(super) fn band_label(rule_type: &str) -> &'static str {
     }
 }
 
-// Why: ladder order, narrowest first — the order the resolver consults them.
 pub(super) fn band_rank(rule_type: &str) -> u8 {
     match rule_type {
         "user" => 0,
@@ -63,9 +61,6 @@ fn phrase(band: &BandChipsView) -> String {
     }
 }
 
-// Why: the resolver's outcome in one sentence, built from the bands in ladder
-// order. It is deliberately literal: "or" between allow bands because any one
-// suffices, the deny clause first because a deny inside a band wins.
 pub(super) fn resolution(allow: &[BandChipsView], deny: &[BandChipsView], open: bool) -> String {
     let mut out = String::new();
     if !deny.is_empty() {

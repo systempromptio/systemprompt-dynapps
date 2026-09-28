@@ -89,7 +89,6 @@ pub(crate) struct SkillsQuery {
     pub marketplace: Option<String>,
     pub client: Option<String>,
     pub search: Option<String>,
-    // Why: report links name a skill; it is the search term of the table.
     pub skill: Option<String>,
     pub sort: Option<String>,
     pub group: Option<String>,
@@ -129,8 +128,6 @@ impl SkillsQuery {
         SkillsTab::parse(self.tab.as_deref())
     }
 
-    // Why: the page minus the named filters — a chip's remove link and the
-    // ribbon's Clear.
     pub(super) fn link_without(&self, tab: SkillsTab, drop: &[&str]) -> String {
         let keep = |name: &str, value: &Option<String>| {
             (!drop.contains(&name)).then(|| value.clone()).flatten()

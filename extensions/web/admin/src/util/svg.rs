@@ -6,13 +6,13 @@
 //! in Rust and the Handlebars partials only print attributes. Axis labels stay
 //! in HTML gutters exactly like the CSS bar charts, which keeps this module
 //! free of text layout entirely.
+//!
+//! The y scale is never per-series: every series on one chart shares one, or
+//! the chart lies.
 
 pub const PLOT_W: f64 = 100.0;
 pub const PLOT_H: f64 = 40.0;
 
-// Why: The scale is never per-series — every series on one chart must share one
-// or the chart lies. X sits at bucket centers; y is inverted and clamped.
-// Empty input or a non-positive max yields no points.
 #[must_use]
 pub fn scale_points(values: &[i64], y_max: i64) -> Vec<(f64, f64)> {
     if values.is_empty() || y_max <= 0 {
@@ -102,6 +102,8 @@ pub fn bar_slots(n: usize, gap_ratio: f64) -> Vec<(f64, f64)> {
         .collect()
 }
 
+const NICE_STEPS_IN_TENTHS: [i64; 4] = [10, 20, 25, 50];
+
 #[must_use]
 pub fn nice_max(raw_max: i64) -> i64 {
     if raw_max <= 0 {
@@ -109,20 +111,11 @@ pub fn nice_max(raw_max: i64) -> i64 {
     }
     let mut magnitude: i64 = 1;
     loop {
-        for ladder in [1, 2, 3, 5] {
-            // Why: 2.5 only makes sense once a decade has room for it — at
-            // magnitude 1 the ladder is 1/2/3/5 so small counts stay integral.
-            let step = if ladder == 3 {
-                if magnitude >= 10 {
-                    magnitude * 5 / 2
-                } else {
-                    continue;
-                }
-            } else {
-                ladder * magnitude
-            };
-            if step >= raw_max {
-                return step;
+        for tenths in NICE_STEPS_IN_TENTHS {
+            let scaled = tenths.saturating_mul(magnitude);
+            let step_is_integral = scaled % 10 == 0;
+            if step_is_integral && scaled / 10 >= raw_max {
+                return scaled / 10;
             }
         }
         magnitude = magnitude.saturating_mul(10);

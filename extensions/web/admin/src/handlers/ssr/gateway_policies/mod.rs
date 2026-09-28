@@ -70,9 +70,6 @@ fn require_admin_write(page: &Page, headers: &HeaderMap) -> Result<(), AdminErro
     require_write_origin(headers)
 }
 
-// Why: which row core's merge lets win each section, so the page can say
-// "this policy's windows are the live ones" rather than leave two enabled
-// rows looking equally in force.
 fn winners(
     rows: &[crate::repositories::gateway_policies::rows::PolicyRow],
 ) -> (Option<&str>, Option<&str>) {
@@ -184,8 +181,6 @@ pub(crate) async fn save_gateway_policy(
         },
     )
     .await?;
-    // Why: a monthly window is saved with its sentinel; the rewrite makes it
-    // live on today's value now rather than at the next daily run.
     refresh_month_windows(&pool, chrono::Utc::now()).await?;
     activity::record(
         &pool,

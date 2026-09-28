@@ -7,7 +7,6 @@ use crate::handlers::ssr::analysis::reports::banner::ReportBannerView;
 use crate::handlers::ssr::analysis::ribbon::RibbonView;
 use crate::handlers::ssr::types::{SparklineView, SvgLineChartView, TabLinkView};
 
-// Why: one skill row, every number pre-formatted and toned.
 #[derive(Debug, Serialize)]
 pub(crate) struct SkillFactView {
     pub skill: String,
@@ -43,8 +42,6 @@ pub(crate) struct SkillFactView {
     pub judged: i64,
     pub completion_display: String,
     pub completion_tone: &'static str,
-    // Why: "82 · 12/40" — the mean beside how many of the skill's
-    // conversations it rests on.
     pub completion_note: String,
     pub attributed_pct: String,
     pub spark: SparklineView,
@@ -70,8 +67,6 @@ pub(super) struct MarketplaceGroupView {
     pub(super) users: i64,
 }
 
-// Why: one Overview row — a marketplace's funnel and its window, every rate
-// over its own denominator so none can pass 100.
 #[derive(Debug, Serialize)]
 pub(super) struct AdoptionView {
     pub(super) marketplace: String,
@@ -81,8 +76,6 @@ pub(super) struct AdoptionView {
     pub(super) activity_href: String,
     pub(super) entitled: usize,
     pub(super) installed: i64,
-    // Why: installed people the rules entitle; the rate's numerator. The
-    // difference is shown beside the count, never folded into the rate.
     pub(super) installed_entitled: usize,
     pub(super) installed_outside: i64,
     pub(super) active: i64,
@@ -115,8 +108,6 @@ pub(super) struct SkillsKpiView {
     pub(super) spark: SparklineView,
 }
 
-// Why: the Activity tab's list under the chart — the skills the chart
-// draws, three columns, each a link into the table.
 #[derive(Debug, Serialize)]
 pub(super) struct TopSkillView {
     pub(super) skill: String,
@@ -129,7 +120,6 @@ pub(super) struct TopSkillView {
     pub(super) last_used: String,
 }
 
-// Why: the marketplace scope strip; a name is a String, unlike a tab's.
 #[derive(Debug, Serialize)]
 pub(super) struct ScopeLinkView {
     pub(super) label: String,

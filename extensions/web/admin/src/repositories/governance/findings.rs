@@ -119,10 +119,6 @@ pub async fn list_safety_findings_paged(
     Ok((rows, total))
 }
 
-// Why: `findings` and `blocked` are deliberately separate measures. Under warn
-// mode a finding in a blocking category is recorded and the call proceeds, so a
-// non-zero findings count beside a zero blocked count is the signal that the
-// plane is absorbing rather than enforcing.
 pub async fn get_safety_stats(
     pool: &PgPool,
     range: TimeRange,
@@ -149,8 +145,6 @@ pub async fn get_safety_stats(
     .await
 }
 
-// Why: the select is built from what the window actually holds, not from a
-// fixed list — a category nobody tripped is not an option worth offering.
 pub async fn list_finding_categories(
     pool: &PgPool,
     range: TimeRange,

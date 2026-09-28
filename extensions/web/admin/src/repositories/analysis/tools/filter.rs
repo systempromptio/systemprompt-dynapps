@@ -75,7 +75,6 @@ impl ArtifactKind {
         }
     }
 
-    // Why: the glyph is the kind's name in `components/icon`.
     #[must_use]
     pub const fn icon(self) -> &'static str {
         self.as_str()
@@ -171,8 +170,6 @@ impl ToolBreakdownBy {
         }
     }
 
-    // Why: the query parameter a bucket narrows the list by, so a breakdown
-    // row links into the table filtered to itself.
     #[must_use]
     pub const fn param(self) -> &'static str {
         match self {

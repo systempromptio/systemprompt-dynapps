@@ -21,7 +21,6 @@ pub struct FleetCertRow {
     pub fingerprint: String,
     pub enrolled_at: DateTime<Utc>,
     pub revoked_at: Option<DateTime<Utc>>,
-    // Why: the window from `user_device_cert_validity`; None is open-ended.
     pub valid_until: Option<DateTime<Utc>>,
 }
 
@@ -116,10 +115,9 @@ pub async fn revoke_any_device_cert(pool: &PgPool, id: &str) -> Result<bool, sql
     Ok(result.rows_affected() > 0)
 }
 
-// Why: the window is a side row because `user_device_certs` is core's table.
-// It binds through the hourly sweep (`revoke_expired_device_certs`), which
-// stamps `revoked_at` — the column core's device gate actually reads. Only a
-// live certificate takes a window; a revoked one has nothing left to bound.
+// Why: `user_device_certs` is core's table, so the window is a side row; it
+// binds only via the hourly sweep stamping `revoked_at`, the column core's
+// device gate reads.
 pub async fn set_device_cert_validity(
     pool: &PgPool,
     id: &str,

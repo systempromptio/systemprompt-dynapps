@@ -135,7 +135,6 @@ impl DriftReport {
         }
     }
 
-    // Why: the per-row "State" column on the access-control page.
     #[must_use]
     pub fn touches(&self, entity_type: &str, entity_id: &str) -> bool {
         let same = |t: &str, i: &str| t == entity_type && i == entity_id;

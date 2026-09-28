@@ -113,8 +113,9 @@ const MAX_SUMMARY_CHARS: usize = 600;
 const MAX_TITLE_CHARS: usize = 80;
 const MAX_RATIONALE_CHARS: usize = 400;
 
-// JSON: outgoing fixed-shape — Gemini's responseSchema is an OpenAPI subset:
-// enums and `required` only, and core's sanitizer strips anything richer.
+// Why: Gemini's responseSchema is an OpenAPI subset (enums and `required`
+// only); core's sanitizer strips anything richer.
+// JSON: outgoing fixed-shape
 #[must_use]
 pub fn classification_schema() -> serde_json::Value {
     let categories: Vec<&str> = Category::ALL.iter().map(|c| c.as_str()).collect();

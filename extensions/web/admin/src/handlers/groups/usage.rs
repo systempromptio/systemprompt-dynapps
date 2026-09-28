@@ -44,9 +44,6 @@ pub(crate) struct GroupUsageResponse {
     pub daily: Vec<DailyRequests>,
 }
 
-// Why: an unrecognised range is 30 days rather than a 400. The value comes
-// from a query string the dashboard writes, and a stale bookmark should draw
-// the default view, not an error page.
 pub(crate) fn window_days(range: Option<&str>) -> (String, i32) {
     match range {
         Some("7d") => ("7d".to_owned(), 7),

@@ -18,8 +18,6 @@ use systemprompt::identifiers::{MarketplaceId, UserId};
 
 const SYNC_ENTITY: &str = "sync";
 const SOURCES_PLANE: &str = "sources";
-// Why: the action a "keep the database" decision is recorded under — it
-// rejects the change code proposes.
 pub const KEPT_ACTION: &str = "rejected";
 
 #[derive(Debug, Clone)]
@@ -104,8 +102,6 @@ pub struct KeptReview {
     pub created_at: DateTime<Utc>,
 }
 
-// Why: the latest decision per entity only. An older one was taken against
-// a diff that has since moved, and the fingerprint is how the caller tells.
 pub async fn list_kept_reviews(pool: &PgPool) -> Result<Vec<KeptReview>, sqlx::Error> {
     sqlx::query_as!(
         KeptReview,

@@ -18,6 +18,8 @@ use super::view::compact;
 use super::{AnalyticsDashboardQuery, urls};
 use crate::handlers::ssr::list_view::DEFAULT_PAGE_SIZE;
 
+const UNPRICED_COST_DISPLAY: &str = "—";
+
 pub(super) struct SkillsInput<'a> {
     pub rows: &'a [SkillStatsRow],
     pub total_rows: i64,
@@ -70,17 +72,12 @@ fn row_view(r: &SkillStatsRow, max: i64) -> SkillRowView {
         users: r.distinct_users,
         conversations: r.conversations,
         requests: r.requests,
-        // Why: blank, not zero. A conversation with no priced request has an
-        // unknown spend, and zero would be a measurement it does not have.
         cost_display: if r.priced_requests > 0 {
             format_cost(r.conversation_cost_microdollars)
         } else {
-            "—".to_owned()
+            UNPRICED_COST_DISPLAY.to_owned()
         },
         attributed_display: format!("{:.0}%", pct(r.attributed_invocations, r.invocations)),
-        // Why: the skill's Analysis page lists the conversations behind this
-        // row and the judge's scores; a resolved managed resource narrows it
-        // to revision-verified evidence.
         analysis_url: Some(format!(
             "{}{}",
             analysis_skill_url(&r.skill),

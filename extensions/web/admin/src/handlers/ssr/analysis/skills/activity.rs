@@ -13,9 +13,6 @@ use crate::repositories::analysis::skills::SkillFactRow;
 
 const CHART_SERIES: usize = 6;
 
-// Why: the row's `spark_days` hold every day in the window that saw an
-// invocation; the chart wants every day, zeros included, oldest first, and
-// weeks once a year is on screen so the line stays readable.
 fn window_values(row: &SkillFactRow, today: NaiveDate, days: i64, step: i64) -> Vec<i64> {
     let by_day: std::collections::HashMap<NaiveDate, i64> = row
         .spark_days

@@ -1,5 +1,8 @@
 //! Shapes the gateway route table: provider surfaces, declared and
 //! resolved-only rows, and the KPI strip above them.
+//!
+//! A route's own saved name wins over the label resolver, which reads the
+//! booted services and so lags a console save until the next restart.
 
 use super::models::matrix_url;
 use super::view::{GatewayKpiView, GatewayRouteRow, ProviderOptionView, ResolvedOnlyRow};
@@ -63,9 +66,6 @@ pub(super) fn route_rows(
         .enumerate()
         .map(|(index, route)| {
             let (surface, surface_tone) = surfaces.surface_of(&route.provider);
-            // Why: the table reads the DB rows, which a console save updates
-            // at once; the label resolver reads the booted services and lags
-            // a restart behind. A name on the row wins so an edit shows.
             let provider_label = labels
                 .find_provider(&route.provider)
                 .map_or_else(|| route.provider.clone(), |p| p.label.clone());

@@ -12,8 +12,6 @@ use systemprompt::traits::{Job, JobContext, JobResult};
 use crate::error::JobError;
 use systemprompt_web_admin::repositories::dashboard::usage_rollups;
 
-// Why: yesterday and today — late-arriving events for the previous UTC day
-// are still folded in on the next run after midnight.
 const WINDOW_DAYS_BACK: i32 = 1;
 
 #[derive(Debug, Clone, Copy, Default)]

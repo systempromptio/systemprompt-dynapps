@@ -231,8 +231,6 @@ impl DataSet for ClassifiedConversations {
     fn window(&self) -> Window {
         Window::Live
     }
-    // Why: the loader narrows to the caller's scope, so a participant exports
-    // exactly the rows the page shows them.
     fn allows(&self, user: &UserContext) -> bool {
         user.has_scoped_console()
     }
@@ -269,8 +267,6 @@ impl DataSet for Breakdown {
     fn window(&self) -> Window {
         Window::Live
     }
-    // Why: the loader narrows to the caller's scope, so a participant exports
-    // exactly the rows the page shows them.
     fn allows(&self, user: &UserContext) -> bool {
         user.has_scoped_console()
     }

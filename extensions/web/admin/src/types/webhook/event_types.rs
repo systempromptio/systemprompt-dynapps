@@ -47,9 +47,9 @@ pub struct UserPromptSubmitData {
     pub prompt: String,
 }
 
-// Why: the known-shape view of a tool input. Claude Code's built-in tools agree
-// on these three field names; every other key in the payload is tool-defined
-// and stays in the untyped `input` the secret scanner walks.
+/// Known-shape view of a tool input: Claude Code's built-in tools agree on
+/// these three field names; every other key stays in the untyped `input` the
+/// secret scanner walks.
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
 pub struct ToolInputSummary {
     #[serde(default)]
@@ -143,11 +143,8 @@ pub struct StopData {
 pub struct SubagentStartData;
 
 impl<'de> Deserialize<'de> for SubagentStartData {
-    // Why: Accepts the whole envelope and discards it.
-    //
-    // Why: the derived unit-struct impl only accepts `null`, so every real
-    // `SubagentStart` post — a JSON object — failed to parse and landed as
-    // [`HookEvent::Unknown`], a hole in the audit trail.
+    // Why: serde's derived unit-struct impl accepts only `null`, so a real
+    // Claude Code `SubagentStart` object would parse as `HookEvent::Unknown`.
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         serde::de::IgnoredAny::deserialize(deserializer)?;
         Ok(Self)

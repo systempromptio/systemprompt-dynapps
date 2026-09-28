@@ -33,10 +33,6 @@ pub(super) fn write_gateway_file(gateway_path: &Path, doc: &Value) -> Result<(),
     Ok(())
 }
 
-// Why: the header names the file's purpose and the CLI that edits it. It is
-// the only comment block whose position survives a value round-trip, because
-// nothing above it can move; inline comments cannot be anchored to a `Value`
-// and are lost, which is why the editor writes as little as it can.
 fn leading_comment_header(gateway_path: &Path) -> String {
     let Ok(content) = std::fs::read_to_string(gateway_path) else {
         return String::new();
@@ -96,10 +92,6 @@ pub fn route_from_yaml(val: &Value) -> Option<GatewayRouteView> {
     })
 }
 
-// Why: `id` is written only when it is not derivable. Synthesis is
-// deterministic in `(model_pattern, provider)`, so a synthesized id in the file
-// is noise the operator did not write and `route_from_yaml` recreates it on
-// every read. A hand-chosen id is data and is always kept.
 pub fn route_to_yaml(route: &GatewayRouteView) -> Value {
     let mut map = Mapping::new();
     let derived = synthesize_route_id(&route.model_pattern, &route.provider);

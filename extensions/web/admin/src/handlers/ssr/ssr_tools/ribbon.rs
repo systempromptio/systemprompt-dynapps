@@ -21,7 +21,6 @@ fn facet(items: &[ToolFacet]) -> impl Iterator<Item = (&str, String, i64)> {
     })
 }
 
-// Why: the artifact-kind pill, drawn on both lenses under different labels.
 fn kind_group(label: &'static str, q: &ToolsQuery, data: &ToolActivityResult) -> RibbonGroupView {
     RibbonGroupView::single(
         "artifact",
@@ -39,8 +38,6 @@ fn kind_group(label: &'static str, q: &ToolsQuery, data: &ToolActivityResult) ->
     )
 }
 
-// Why: state and decision only mean something for every call; the
-// Artifacts lens is already the executed, successful subset.
 fn tools_only_groups(q: &ToolsQuery, data: &ToolActivityResult) -> Vec<RibbonGroupView> {
     vec![
         RibbonGroupView::single(

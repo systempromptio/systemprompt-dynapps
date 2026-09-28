@@ -8,6 +8,9 @@
 //!
 //! `MatrixSource::layer` names which band decided, mapped back from the
 //! resolver's `MatchedBy` / `DenyReason`.
+//!
+//! The rule table and entity defaults are read once per page
+//! ([`ResolutionInputs`]) and shared by every subject resolved on it.
 
 use std::collections::HashMap;
 
@@ -46,7 +49,6 @@ pub struct MatrixSection {
 
 #[derive(Debug, Serialize)]
 pub struct MatrixRow {
-    // Why: polymorphic entity reference (gateway_route/mcp_server), no single typed-ID equivalent
     pub entity_id: String,
     pub entity_name: String,
     pub description: Option<String>,
@@ -81,16 +83,11 @@ pub async fn resolve_user_matrix(
     let Some(user) = find_user_for_matrix(pool, user_id).await? else {
         return Ok(None);
     };
-    // Why: the same lookup the enforcement webhook performs, so the matrix and
-    // the decision see identical subject values.
     let subject = user_subject(pool, user_id, user.roles.clone()).await?;
     let sections = resolve_sections_for(pool, &subject, sections_in).await?;
     Ok(Some(UserMatrix { user, sections }))
 }
 
-// Why: Resolve every supplied section for one subject — a person, a group, or a
-// role. The subject abstraction is what lets the audience matrix ask the
-// question of a group without inventing a second resolver.
 pub(super) async fn resolve_sections_for(
     pool: &PgPool,
     subject: &MatrixSubject,
@@ -108,10 +105,6 @@ pub(super) async fn resolve_sections_for(
     ))
 }
 
-// Why: The rule set and entity defaults every cell resolves against. Loaded
-// once per page rather than once per subject: the audience matrix asks the same
-// question of a dozen subjects, and re-reading the whole rule table for each
-// of them turns one page render into two dozen round trips.
 pub(super) struct ResolutionInputs {
     pub(super) rules: Vec<AccessControlRule>,
     pub(super) defaults: HashMap<(String, String), bool>,

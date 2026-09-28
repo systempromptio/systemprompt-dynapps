@@ -25,8 +25,6 @@ impl WebExtension {
         Self
     }
 
-    // Why: Backed by [`BlogConfigValidated::cached`], so every consumer sees the
-    // same load result; a load failure is logged and treated as "no config".
     #[must_use]
     pub fn blog_config() -> Option<Arc<BlogConfigValidated>> {
         match BlogConfigValidated::cached() {
@@ -69,9 +67,8 @@ impl WebExtension {
 
 register_extension!(WebExtension);
 
-// Why: the tables whose user_id may also carry the `system` principal cannot
-// reference users(id), so a deleted user's rows leave through the purge; the
-// rest cascade from the constraints in schema/.
+// Why: Postgres FKs cannot hold where `user_id` may be the `system` principal,
+// so these tables purge explicitly; the rest cascade from `schema/`.
 user_purge_tables!(
     "systemprompt-web",
     [

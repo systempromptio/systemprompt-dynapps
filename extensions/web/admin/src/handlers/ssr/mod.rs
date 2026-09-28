@@ -128,13 +128,7 @@ struct LoginContext<'a> {
     shell: context::BrandingShell<'a>,
     #[serde(skip_serializing_if = "Option::is_none")]
     redirect_encoded: Option<String>,
-    // Why: Whether the page offers "Sign in with Astound SSO". Off when no
-    // usable ADFS config is loaded, so the UI never advertises a door that
-    // only redirects back with `?sso=unavailable`.
     sso_enabled: bool,
-    // Why: tells a developer how to get in when SSO is off locally; the same
-    // predicate that mounts the redeem route, so the hint never points at a
-    // door that is not there.
     dev_login_enabled: bool,
 }
 

@@ -34,7 +34,6 @@ pub use usage::{
 pub struct SkillWindow {
     pub start: DateTime<Utc>,
     pub end: DateTime<Utc>,
-    // Why: the caller's resolved `SubjectScope::as_sql()`; `None` = every user.
     pub subject_ids: Option<Vec<String>>,
 }
 
@@ -46,8 +45,6 @@ pub struct SkillListFilter {
     pub sort: SkillSort,
     pub limit: i64,
     pub offset: i64,
-    // Why: an explicit row selection (`plugin:skill` keys) from the bulk bar;
-    // the export of ticked rows reads exactly these.
     pub skills: Option<Vec<String>>,
 }
 
@@ -214,7 +211,6 @@ pub async fn list_skill_facts(
         .collect())
 }
 
-// Why: one skill's row, or `None` when it was not invoked in the window.
 pub async fn find_skill_facts(
     pool: &PgPool,
     window: &SkillWindow,

@@ -60,9 +60,6 @@ pub fn schema_definitions() -> Vec<SchemaDefinition> {
     ]
 }
 
-// Why: not `const` — with migrations present, `extension_migrations!()`
-// expands to a `vec![…]` of embedded files, which cannot be built in const
-// context (it could while the migrations directory was empty).
 #[doc(hidden)]
 pub fn migrations() -> Vec<Migration> {
     extension_migrations!()

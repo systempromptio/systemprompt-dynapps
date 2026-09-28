@@ -94,8 +94,6 @@ pub struct EntityReview {
     pub kind_tone: &'static str,
     pub advice: &'static str,
     pub not_live: bool,
-    // Why: an entity-scoped overwrite keeps console rows on an entity the
-    // file does not govern, so "Apply code" would move nothing there.
     pub applies: bool,
     pub lines: Vec<ReviewLine>,
     pub fingerprint: String,

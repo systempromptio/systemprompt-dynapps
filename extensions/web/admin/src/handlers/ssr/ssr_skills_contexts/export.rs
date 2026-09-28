@@ -11,8 +11,6 @@ use crate::repositories::scope::ScopeRequest;
 
 use super::{ContextsListQuery, parse_inputs};
 
-// Why: this page's `all` reaches past the live window contract, whose widest
-// preset is 90 days; the export offers that nearest window.
 pub(super) fn export_preset(since: Option<&str>) -> &'static str {
     match since {
         Some("24h") => "24h",
@@ -22,7 +20,6 @@ pub(super) fn export_preset(since: Option<&str>) -> &'static str {
     }
 }
 
-// Why: the dataset the page's view shows leads the dialog's list.
 pub(super) const fn export_datasets(view_is_users: bool) -> &'static [&'static str] {
     if view_is_users {
         &["people", "contexts"]
@@ -31,8 +28,6 @@ pub(super) const fn export_datasets(view_is_users: bool) -> &'static [&'static s
     }
 }
 
-// Why: the export reads the same filtered aggregate the page shows, in either
-// view — one row per conversation, or one per person.
 pub(crate) async fn export_rows(
     ctx: &ExportContext<'_>,
     mode: ConversationPageMode,

@@ -30,9 +30,6 @@ pub(super) async fn load_listing(pool: &PgPool, window_days: i32) -> Listing {
         .inspect_err(|e| tracing::warn!(error = %e, "group usage listing failed"))
         .unwrap_or_default();
 
-    // Why: the remainder arrives as a row of the same partition, so it is
-    // split out here rather than queried separately — which is what keeps the
-    // rows and the remainder guaranteed to sum to the instance.
     let (remainder, groups): (Vec<GroupUsageRow>, Vec<GroupUsageRow>) =
         loaded.into_iter().partition(|g| g.id == UNATTRIBUTED_ROW);
     let remainder = remainder.into_iter().next();
@@ -88,10 +85,6 @@ pub(super) async fn load_listing(pool: &PgPool, window_days: i32) -> Listing {
     }
 }
 
-// Why: the cell shows the whole word and the title says what it means for
-// membership. A two-letter abbreviation ("Di", "Sy") saved a few pixels in a
-// ten-column table and cost the one thing the column is for — knowing whether
-// a group's members are decided in Active Directory or on this page.
 fn source_abbrev(label: &str) -> &'static str {
     match label {
         "Directory" => {
@@ -104,8 +97,6 @@ fn source_abbrev(label: &str) -> &'static str {
     }
 }
 
-// Why: the URL value (`?source=Directory|Dashboard|System`) is stable so
-// bookmarks and the e2e specs hold; only the words a reader sees changed.
 fn source_label(source: &str) -> &'static str {
     match source {
         "yaml" | "adfs" => "Directory",
@@ -122,12 +113,6 @@ fn source_display(label: &str) -> &'static str {
     }
 }
 
-// Why: How many accounts hold no primary group.
-//
-// Exclusive attribution has nowhere to file their spend, so it lands in the
-// unattributed bucket and every group looks cheaper than it is. The number is
-// on the page because the fix — recomputing the keys — is a button beside it,
-// and an operator cannot know to press it from a total that merely looks low.
 async fn count_unkeyed_people(pool: &PgPool) -> i64 {
     sqlx::query_scalar!(
         r#"SELECT COUNT(*)::BIGINT AS "count!"
@@ -143,10 +128,6 @@ async fn count_unkeyed_people(pool: &PgPool) -> i64 {
     .unwrap_or_default()
 }
 
-// Why: Every group's allowed marketplaces, resolved one subject at a time.
-//
-// The catalog is read once and shared: it comes off disk, and re-reading it
-// per group would turn a page render into one filesystem walk per row.
 async fn load_group_marketplaces(
     pool: &PgPool,
     groups: &[GroupUsageRow],

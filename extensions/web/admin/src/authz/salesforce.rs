@@ -16,9 +16,6 @@ use crate::authz::rule_type::{ExtensionSlug, extension_rule_type};
 
 const SALESFORCE_SLUG: ExtensionSlug = ExtensionSlug::new("salesforce");
 
-// Why: above `group` (150) and below core's `ROLE` (200). A link rule
-// must out-rank the role band that grants the marketplace to every user, while
-// remaining a narrower scope than a role.
 const SALESFORCE_PRECEDENCE: u16 = 170;
 
 #[must_use]

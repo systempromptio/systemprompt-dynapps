@@ -12,6 +12,10 @@
 //! (`transcript_view::transcript_request_ids`) and the queries stay bounded by
 //! the transcript rather than by the conversation's whole history.
 //!
+//! The request list itself is capped against a runaway context. The cap is
+//! taken newest-first and then reversed, so it only ever drops the oldest
+//! history, never the latest request of a thread that the transcript needs.
+//!
 //! Tool calls live in the sibling `context_tool_calls` module and are
 //! re-exported here so a caller that reads a context reads it whole.
 
@@ -23,11 +27,7 @@ use systemprompt::identifiers::{
 
 pub use super::context_tool_calls::{ContextToolCallRow, list_tool_calls_for_requests};
 
-// Why: a conversation of any sane size fits well inside this; the cap only
-// exists so a runaway context cannot pull an unbounded result set into memory.
-// It is taken newest-first and reversed, so what a cap drops is always the
-// oldest history rather than the transcript the reader is built from.
-const REQUEST_CAP: i64 = 5000;
+const RUNAWAY_CONTEXT_REQUEST_CAP: i64 = 5000;
 
 #[derive(Debug, Clone)]
 pub struct ContextHeader {
@@ -38,8 +38,6 @@ pub struct ContextHeader {
     pub name: Option<String>,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
-    // Why: the Claude Code session uuid, which is also the key into the hook
-    // pipeline's `plugin_session_summaries` row the next two fields come from.
     pub client_session_id: Option<String>,
     pub ai_title: Option<String>,
     pub hook_status: Option<String>,
@@ -50,9 +48,8 @@ pub struct ContextKpis {
     pub request_count: i64,
     pub trace_count: i64,
     pub error_count: i64,
-    // Why: `input_tokens` is the uncached count — core stores the four
-    // billable counts disjointly — so the wire volume a session sent is the
-    // three summed, and a session whose cache never hit shows it here.
+    // Why: core stores the billable token counts disjointly, so the input
+    // volume sent is uncached + cache-read + cache-creation summed.
     pub total_input_tokens: i64,
     pub total_cache_read_tokens: i64,
     pub total_cache_creation_tokens: i64,
@@ -72,7 +69,6 @@ pub struct ContextKpis {
 pub struct ContextRequestRow {
     pub id: AiRequestId,
     pub trace_id: Option<TraceId>,
-    // Why: NULL for a gateway-rejected request, which never reached a provider.
     pub model: Option<String>,
     pub status: String,
     pub latency_ms: Option<i32>,
@@ -82,7 +78,6 @@ pub struct ContextRequestRow {
     pub output_tokens: Option<i32>,
     pub cost_microdollars: i64,
     pub created_at: DateTime<Utc>,
-    // Why: 'turn' | 'probe' | 'utility', as `conversation_requests` decides it.
     pub effective_kind: String,
     pub gateway_conversation_id: Option<GatewayConversationId>,
     pub max_tokens: Option<i32>,
@@ -95,7 +90,6 @@ pub struct ContextMessageRow {
     pub role: String,
     pub sequence_number: i32,
     pub content: String,
-    // Why: the tool_use id a result message answers, when the gateway kept it.
     pub tool_call_id: Option<AiToolCallId>,
     pub name: Option<String>,
     pub created_at: DateTime<Utc>,
@@ -204,7 +198,7 @@ pub async fn list_context_requests(
     pool: &PgPool,
     context_id: &ContextId,
 ) -> Result<Vec<ContextRequestRow>, sqlx::Error> {
-    let mut rows = sqlx::query_as!(
+    let mut newest_first = sqlx::query_as!(
         ContextRequestRow,
         r#"
         SELECT
@@ -231,16 +225,12 @@ pub async fn list_context_requests(
         LIMIT $2
         "#,
         context_id.as_str(),
-        REQUEST_CAP
+        RUNAWAY_CONTEXT_REQUEST_CAP
     )
     .fetch_all(pool)
     .await?;
-    // Why: the cap has to fall on the OLDEST requests, never the newest. The
-    // transcript is built from the latest request of each thread, so a
-    // cap taken ascending drops exactly the rows the reader needs and the page
-    // renders empty while the KPI tiles still report the real totals.
-    rows.reverse();
-    Ok(rows)
+    newest_first.reverse();
+    Ok(newest_first)
 }
 
 pub async fn list_messages_for_requests(

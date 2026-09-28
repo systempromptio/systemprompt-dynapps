@@ -29,11 +29,6 @@ fn trimmed(value: Option<&str>) -> Option<String> {
         .map(str::to_owned)
 }
 
-// Why: the page query a "Report on this view" action carries is the
-// Conversations / Skills query string as-is. The keys read from it are
-// `since` (24h|7d|30d|90d|all) or `days` (N), `group`, `project`, `user_id`,
-// `model`, `client`, `skill`, `category` and `outcome`; anything else
-// (sort, page, breakdown, free text) does not narrow a digest and is ignored.
 fn query_pairs(query: &str) -> Vec<(String, String)> {
     query
         .trim_start_matches('?')
@@ -68,7 +63,6 @@ fn window_days(form: &ReportRequestForm, pairs: &[(String, String)]) -> i64 {
     }
 }
 
-// Why: what a request resolved to before it is written.
 pub(super) struct ResolvedRequest {
     pub scope_kind: String,
     pub scope_id: Option<String>,
@@ -137,7 +131,6 @@ pub(super) async fn resolve(
     })
 }
 
-// Why: the row's id and the lease the generation task must present.
 pub(super) struct Queued {
     pub(super) id: String,
     pub(super) lease_token: String,
@@ -171,8 +164,6 @@ pub(super) async fn queue(
     Ok(Queued { id, lease_token })
 }
 
-// Why: a regenerate is a fresh request over the same scope; the window is
-// re-anchored to now with the same length so the report reads the present.
 pub(super) fn regenerate_form(row: &AnalysisReportRow) -> ReportRequestForm {
     ReportRequestForm {
         scope_kind: Some(row.scope_kind.clone()),

@@ -138,10 +138,6 @@ fn decl_for(entity: &str, rows: &EntityRows, notes: &mut Vec<String>) -> EntityD
     }
 }
 
-// Why: the declaration has one window per entity, so rows that disagree
-// have no single truthful value — the export writes none and says so, and
-// the sync then reports those rows as changed until they are brought into
-// line by hand.
 fn valid_until_for(
     entity: &str,
     rows: &EntityRows,
@@ -158,9 +154,6 @@ fn valid_until_for(
     }
 }
 
-// Why: a band keeps its own `why` only when every row in it agrees on one
-// that differs from the entity's; a band that disagrees with itself has no
-// single truthful sentence, so the entity's stands and the export says so.
 fn band_spec(
     entity: &str,
     rule_type: &str,
@@ -203,10 +196,6 @@ fn dominant_why(rows: &EntityRows) -> Option<String> {
         .map(|(w, _)| w.to_owned())
 }
 
-// Why: route ids are generated, so the file can only ever say `kind/*`. The
-// majority rule set becomes the glob; any route that differs is named in a
-// note because the declaration cannot express it and the sync would report
-// that route as drift until it is brought into line.
 fn collapse_glob(
     entity_type: &str,
     routes: Vec<(String, EntityRows)>,

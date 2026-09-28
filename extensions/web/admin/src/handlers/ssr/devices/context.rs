@@ -31,19 +31,8 @@ pub(super) struct DevicesPageContext {
     pub(super) has_rows: bool,
     pub(super) empty_message: &'static str,
     pub(super) pagination: Pagination,
-    // Why: the revoke buttons, not the page. A project manager reads the
-    // fleet; only the admin roles may disable a credential, and the API
-    // refuses them anyway — this stops the console offering a button that
-    // would come back 403.
     pub(super) can_manage: bool,
-    // Why: two of the four tabs offer no row action, and an actions column
-    // with nothing in it is a column of whitespace taken from the columns that
-    // do carry content. The header and the cells are drawn from this together,
-    // so they cannot disagree about how many columns the row has.
     pub(super) has_row_actions: bool,
-    // Why: the issue-token dialog's ceiling, from `security.max_pat_lifetime_days`.
-    // The picker refuses a later day and the note states the policy, so the
-    // 400 the API would answer with is never the first anyone hears of it.
     pub(super) max_pat_lifetime_days: u32,
 }
 
@@ -71,8 +60,6 @@ pub(super) struct FleetStatsView {
 pub(super) struct VersionBarView {
     pub(super) label: String,
     pub(super) devices: i64,
-    // Why: a percentage rather than a pixel width, so the bar is drawn from
-    // the same number the label states and cannot drift from it.
     pub(super) pct: i64,
     pub(super) is_latest: bool,
 }
@@ -101,9 +88,6 @@ pub(super) struct CellView {
 
 #[derive(Debug, Serialize)]
 pub(super) struct BridgeHostRowView {
-    // Why: no session id. A machine is the unit here, and its sessions are
-    // folded into a count; the console has no page for a bridge session
-    // anyway — `/admin/sessions/{id}` is a different id space.
     pub(super) hostname: String,
     pub(super) os: String,
     pub(super) version: String,

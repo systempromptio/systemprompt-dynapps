@@ -23,7 +23,6 @@ pub(crate) fn entity_kind_label(kind: &str) -> &'static str {
     }
 }
 
-// Why: Plural form for section headings and group rows.
 #[must_use]
 pub(crate) fn entity_kind_plural(kind: &str) -> &'static str {
     match kind {
@@ -38,8 +37,6 @@ pub(crate) fn entity_kind_plural(kind: &str) -> &'static str {
     }
 }
 
-// Why: Display order for grouped entity listings: the things people install
-// first, then what they run through.
 #[must_use]
 pub(crate) fn entity_kind_rank(kind: &str) -> u8 {
     match kind {

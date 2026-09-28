@@ -26,8 +26,6 @@ impl DeclaredPolicies {
     pub fn declared_hash(&self) -> String {
         let mut hasher = Sha256::new();
         for e in &self.entries {
-            // Why: a spec that serialised on the way in serialises on the way
-            // out; an empty string only makes the hash differ.
             // Why: discard-ok: infallible for a value that already round-tripped
             let spec = serde_json::to_string(&e.spec).unwrap_or_default();
             hasher.update(

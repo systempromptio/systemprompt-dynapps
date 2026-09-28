@@ -18,8 +18,6 @@ pub(super) use super::context_tabs::{
     ToolsTabView,
 };
 
-// Why: each tab is its own GET so it can be bookmarked, and so only the
-// queries that tab renders ever run.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum DashboardTab {
     Overview,
@@ -31,8 +29,6 @@ pub(super) enum DashboardTab {
 }
 
 impl DashboardTab {
-    // Why: anything unrecognised lands on Overview — a mistyped tab in a
-    // shared link should still show the page rather than a 400.
     pub(super) fn from_query(raw: Option<&str>) -> Self {
         match raw {
             Some("models") => Self::Models,
@@ -65,8 +61,6 @@ impl DashboardTab {
     ];
 }
 
-// Why: The active tab, projected onto the `is_<tab>` flags the template
-// branches on: one `true` and the rest `false`, flattened into the page.
 #[derive(Debug, Clone, Copy)]
 pub(super) struct ActiveDashboardTab(pub(super) DashboardTab);
 
@@ -86,17 +80,10 @@ pub(super) struct AnalyticsDashboardContext {
     pub title: String,
     pub time_range: DashboardTimeRange,
     pub tabs: Vec<DashboardTabLink>,
-    // Why: the window's headline figures, on the toolbar rather than under the
-    // title. The page header used to carry a meta line saying the same thing,
-    // which cost a row of vertical space the tables needed.
     pub toolbar_count: String,
     pub breadcrumbs: Vec<Crumb>,
     #[serde(flatten)]
     pub active: ActiveDashboardTab,
-    // Why: the one thing a reader must be told before summing a column. Member
-    // attribution counts a person in every container they belong to, so the
-    // rows deliberately overlap and the page says so rather than letting the
-    // reader discover it by adding up to more than the instance.
     pub is_member_view: bool,
     pub attribution_links: Vec<AttributionLink>,
 

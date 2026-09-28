@@ -4,7 +4,8 @@
 //! sort and page — because each of them is a link rather than a script. A tab
 //! that dropped the filter would silently widen what the reader is looking at,
 //! so the query string is rebuilt from the parsed state in one place instead
-//! of being patched per control.
+//! of being patched per control. A tab link keeps the filter but resets the
+//! tab-scoped sort, direction and state parameters.
 
 use crate::handlers::ssr::list_view::{PageWindow, Pagination};
 use crate::handlers::ssr::types::{FilterChipView, SortHeaderView, TabLinkView};
@@ -79,19 +80,7 @@ pub(super) fn build_tabs(
         .map(|(tab, slug, label, count)| TabLinkView {
             slug,
             label,
-            // Why: switching tab drops the sort and filter with it. They name
-            // columns and states that only exist on the tab that set them,
-            // and carrying them across would sort by a column that is not there.
-            href: url_with(
-                query,
-                &[
-                    ("tab", slug),
-                    ("sort", ""),
-                    ("dir", ""),
-                    ("state", ""),
-                    ("stale", ""),
-                ],
-            ),
+            href: tab_href(query, slug),
             is_active: tab == active,
             count: Some(count),
         })
@@ -136,8 +125,6 @@ pub(super) fn build_stats(query: &DevicesQuery, stats: &FleetStats) -> FleetStat
 
 pub(super) fn build_version_bars(rows: &[VersionCount]) -> Vec<VersionBarView> {
     let max = rows.iter().map(|r| r.devices).max().unwrap_or(0);
-    // Why: a string max ranks "0.9.0" above "0.47.0". Compare the dotted
-    // components numerically; anything unparsable ranks below every real version.
     let latest = rows
         .iter()
         .filter_map(|r| {
@@ -157,9 +144,19 @@ pub(super) fn build_version_bars(rows: &[VersionCount]) -> Vec<VersionBarView> {
         .collect()
 }
 
-// Why: the counts come from the fleet totals already read for the KPI strip
-// rather than from three more aggregates. A chip states what it would leave
-// behind, and the number it states is the one the tile above it states.
+fn tab_href(query: &DevicesQuery, slug: &str) -> String {
+    url_with(
+        query,
+        &[
+            ("tab", slug),
+            ("sort", ""),
+            ("dir", ""),
+            ("state", ""),
+            ("stale", ""),
+        ],
+    )
+}
+
 pub(super) fn build_state_chips(
     query: &DevicesQuery,
     active: &str,

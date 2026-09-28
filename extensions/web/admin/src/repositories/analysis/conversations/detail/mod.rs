@@ -176,13 +176,13 @@ impl From<FactRecord> for ConversationFactRow {
     }
 }
 
+// Why: SQLx infers `f`'s NOT NULL columns as nullable through the outer join;
+// the `!` aliases mirror the `conversation_facts` schema and change only
+// compile-time decoding, not the join semantics.
 pub async fn find_conversation_facts(
     pool: &PgPool,
     context_id: &ContextId,
 ) -> Result<Option<ConversationFactRow>, sqlx::Error> {
-    // Why: PostgreSQL's outer-join plan makes SQLx infer `f`'s non-null columns
-    // as nullable; the `!` aliases mirror the `conversation_facts` schema and
-    // change only compile-time decoding, not the join semantics.
     let row = sqlx::query_as!(
         FactRecord,
         r#"SELECT f.context_id AS "context_id!: ContextId", f.user_id AS "user_id!: UserId",

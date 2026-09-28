@@ -13,6 +13,9 @@
 //! A declaration that cannot be read fails the boot. The page turns the same
 //! condition into a card headline because an operator came to look; a server
 //! starting with half its declarations is a server nobody asked for.
+//!
+//! Groups seed before access control because the rules name group and
+//! project ids.
 
 use sqlx::PgPool;
 
@@ -20,11 +23,6 @@ use super::plane::{Actor, SyncMode, SyncPlane};
 use super::registry::find_plane;
 use crate::error::{AdminError, AdminResult};
 
-// Why: groups before access control because the rules name group and
-// project ids; the last three name nothing and are named by nothing. The two
-// trailing ids are literals so this file compiles whether or not those plane
-// modules are present yet — `reconcile_all` fails loudly on an unregistered
-// id, which is the check that matters.
 pub const BOOT_ORDER: [&str; 5] = [
     super::groups::PLANE_ID,
     super::access_control::PLANE_ID,

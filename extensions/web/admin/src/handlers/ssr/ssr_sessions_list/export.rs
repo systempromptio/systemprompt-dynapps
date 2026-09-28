@@ -13,8 +13,6 @@ use crate::util::time_range::TimeRange;
 
 use super::SessionListQuery;
 
-// Why: the export reads the rows the ledger shows — same scope, filter and
-// sort — through the page's own query type.
 pub(crate) async fn export_rows(
     pool: &PgPool,
     user_ctx: &UserContext,

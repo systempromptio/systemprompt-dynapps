@@ -5,7 +5,10 @@
 //! import did not reproduce is reported as *lost* and is a failure too — the
 //! point of the exporter is that nothing about the marketplace changes when
 //! it moves repositories. Keys the import adds (defaults it fills in) are
-//! not differences: they are the same declaration written out fully.
+//! not differences: they are the same declaration written out fully, and an
+//! empty value on the `services/` side is nothing to lose. A SKILL.md is
+//! compared by body only, since the kit merges `config.yaml` into its
+//! frontmatter.
 
 use std::fmt;
 use std::path::Path;
@@ -100,12 +103,7 @@ fn compare_file(
     }
     let a_text = std::fs::read_to_string(&a).with_context(|| a.display().to_string())?;
     let b_text = std::fs::read_to_string(&b).with_context(|| b.display().to_string())?;
-    // Why: the kit's SKILL.md carries config.yaml merged into its frontmatter,
-    // so the frontmatter is expected to differ; the instructions must not.
-    if Path::new(rel)
-        .extension()
-        .is_some_and(|ext| ext.eq_ignore_ascii_case("md"))
-    {
+    if compares_body_only(rel) {
         if body_of(&a_text) != body_of(&b_text) {
             out.push(Diff::Value {
                 file: rel.to_owned(),
@@ -120,6 +118,12 @@ fn compare_file(
     let b_doc: Value = serde_yaml::from_str(&b_text).with_context(|| b.display().to_string())?;
     diff_values(rel, "", &a_doc, &b_doc, out);
     Ok(())
+}
+
+fn compares_body_only(rel: &str) -> bool {
+    Path::new(rel)
+        .extension()
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("md"))
 }
 
 fn diff_values(file: &str, path: &str, services: &Value, imported: &Value, out: &mut Vec<Diff>) {
@@ -153,8 +157,6 @@ fn diff_values(file: &str, path: &str, services: &Value, imported: &Value, out: 
     }
 }
 
-// Why: an empty list, map or null on the instance side is nothing to lose;
-// the import writes the same declaration without spelling out the absence.
 fn is_empty(v: &Value) -> bool {
     match v {
         Value::Null => true,

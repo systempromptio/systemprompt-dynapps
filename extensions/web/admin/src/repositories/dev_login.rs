@@ -6,7 +6,8 @@
 //! reverse. Consumption is one atomic `UPDATE`; a code stays redeemable for a
 //! short grace after its first use because address-bar prefetchers and link
 //! previews fetch a URL before the person does, and a strictly single-use
-//! link then locks the real browser out.
+//! link then locks the real browser out. Roles are read at redeem time, not
+//! issue time, so a role change between the two is honoured.
 
 use chrono::{DateTime, Duration as ChronoDuration, Utc};
 use rand::RngCore;
@@ -24,9 +25,6 @@ pub struct IssuedDevLoginCode {
     pub expires_at: DateTime<Utc>,
 }
 
-// Why: the account a redeemed code signs in, in the shape the session mint
-// needs. Roles are read at redeem time, not issue time, so a role change
-// between the two is honoured.
 #[derive(Debug, Clone)]
 pub struct DevLoginUser {
     pub user_id: UserId,
@@ -39,8 +37,6 @@ pub fn hash_dev_login_code(code: &str) -> String {
     hex::encode(Sha256::digest(code.as_bytes()))
 }
 
-// Why: the CLI takes "a username"; on this instance that is the e-mail, but
-// the `name` column is matched too so the short form works where it differs.
 pub async fn find_active_user_id_by_login(
     pool: &PgPool,
     login: &str,

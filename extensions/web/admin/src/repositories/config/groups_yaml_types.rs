@@ -21,8 +21,6 @@ pub struct MemberSetDef {
     pub name: String,
     #[serde(default)]
     pub description: Option<String>,
-    // Why: the AD group names that place a signing-in user here. Empty is
-    // legitimate: a group an operator fills by hand from the dashboard.
     #[serde(default)]
     pub ad_groups: Vec<String>,
 }
@@ -37,10 +35,6 @@ pub struct GroupsDoc {
 }
 
 impl GroupsDoc {
-    // Why: an id is a DB primary key with a CHECK constraint behind it, and a
-    // duplicate id in the file would make the later definition silently win.
-    // Both are caught here so a bad file fails the boot with a readable
-    // message instead of a constraint violation.
     pub fn validate(&self) -> Result<(), String> {
         validate_set("groups", &self.groups)?;
         validate_set("projects", &self.projects)
@@ -68,9 +62,9 @@ fn validate_set(label: &str, defs: &[MemberSetDef]) -> Result<(), String> {
     Ok(())
 }
 
-// Why: mirrors the `CHECK (id ~ '^[a-z0-9][a-z0-9_-]{0,63}$')` on `groups` and
-// `projects`. The two must agree — the loader rejects anything this accepts
-// but the constraint does not.
+// Why: Postgres `CHECK (id ~ '^[a-z0-9][a-z0-9_-]{0,63}$')` on `groups` and
+// `projects` must agree with this, or boot fails on a constraint violation
+// instead of a readable validation message.
 #[must_use]
 pub fn is_valid_id(id: &str) -> bool {
     let mut chars = id.chars();

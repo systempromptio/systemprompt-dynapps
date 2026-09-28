@@ -20,11 +20,6 @@ pub(super) struct Principal {
     pub client_id: Option<ClientId>,
 }
 
-// Why: `policy` names the plane and `detail` carries the cause — core added
-// `detail` precisely so a transient fault and a malformed token stop writing
-// byte-identical audit rows. Folding the cause into `policy`, as this did
-// before the field existed, would keep every failure looking like a distinct
-// policy and leave the audit column unqueryable.
 pub(super) fn deny_for_auth_failure(reason: &str) -> Decision {
     Decision::Deny {
         reason: DenyReason::HookUnavailable {
@@ -34,13 +29,8 @@ pub(super) fn deny_for_auth_failure(reason: &str) -> Decision {
     }
 }
 
-// Why: the `Err` arm is deliberately **not** an
-// [`crate::error::AdminError`]. A `PreToolUse` hook blocks a tool call by
-// answering `200 OK` with a deny decision; a `401` is a transport failure,
-// which the client is free to treat as the hook being unavailable and carry on.
-// Converting this channel to the admin error type would silently turn every
-// rejected token into an allowed tool call, so it stays a pre-built
-// [`Response`].
+// Why: a Claude Code `PreToolUse` hook treats a 401 as "hook unavailable" and
+// allows the call, so this `Err` is a 200 deny verdict, never an `AdminError`.
 pub(super) fn authenticate_request(
     headers: &HeaderMap,
     denial_params: &AuthDenialParams<'_>,

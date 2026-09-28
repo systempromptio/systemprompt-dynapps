@@ -71,8 +71,6 @@ pub(super) struct TraceStatsView {
     pub(super) p99_display: String,
 }
 
-// Why: named fields rather than a Vec so the template addresses each header by
-// name and the column set is checked at compile time.
 #[derive(Debug, Serialize)]
 pub(super) struct TracesSortHeaders {
     pub(super) started: SortHeaderView,

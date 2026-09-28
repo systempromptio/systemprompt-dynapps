@@ -1,7 +1,8 @@
 //! Reading `analysis_reports`: the history list, one report, and the latest
 //! generated report for a scope (what the banner on the Conversations and
-//! Skills pages shows). One record shape, one column list, so every read
-//! decodes the same way.
+//! Skills pages shows), falling back to the newest pending one so the banner
+//! can say "queued" rather than "none". One record shape, one column list, so
+//! every read decodes the same way.
 
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
@@ -9,8 +10,6 @@ use sqlx::types::Json;
 
 use super::{AnalysisReportRow, ReportDigestInputs, ReportFindings};
 
-// Why: the table row as SQLx decodes it; folded into `AnalysisReportRow` so
-// the jsonb columns are typed once, here.
 pub(super) struct ReportRecord {
     pub(super) id: String,
     pub(super) scope_kind: String,
@@ -106,9 +105,6 @@ pub async fn find_report(
     Ok(row.map(AnalysisReportRow::from))
 }
 
-// Why: the newest generated report for a scope, or the newest pending one
-// when nothing has been generated yet, so a banner can say "queued" rather
-// than "none".
 pub async fn find_latest_generated_report(
     pool: &PgPool,
     scope_kind: &str,

@@ -26,16 +26,9 @@ pub struct UserDeviceRow {
     pub created_at: Option<DateTime<Utc>>,
     pub last_seen_at: Option<DateTime<Utc>>,
     pub revoked_at: Option<DateTime<Utc>>,
-    // Why: whether the row can be revoked from the page at all. A bridge
-    // session is telemetry, not a credential — ending it is done by revoking
-    // the token it authenticated with, so the action column stays empty.
     pub revocable: bool,
 }
 
-// Why: `UNION ALL` over three shapes rather than three round trips, so the
-// combined list is ordered as one thing. Every branch projects the same
-// columns; the ones a branch has no answer for are `NULL` rather than a
-// fabricated value.
 pub async fn list_user_devices(
     pool: &PgPool,
     user_id: &UserId,

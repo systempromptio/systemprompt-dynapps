@@ -10,7 +10,10 @@
 //! Everything here is an `UPDATE` setting `revoked_at`, never a `DELETE` — the
 //! rows are the audit trail of what that person held and when it was taken
 //! away. One transaction, so a partial teardown cannot leave a live bridge PAT
-//! behind a dead session.
+//! behind a dead session. Unconsumed bridge exchange codes are consumed too:
+//! they are the one credential a revoked user could still redeem into a fresh
+//! PAT. Connector grants advance their generation, which also invalidates any
+//! consent callback already in flight.
 
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
@@ -33,9 +36,6 @@ impl RevokedCounts {
     }
 }
 
-// Why: the unconsumed exchange codes go too. A code minted moments before the
-// group was pulled is a bridge link waiting to happen, and it is the one
-// credential here that a revoked user could still redeem into a fresh PAT.
 pub async fn revoke_user_access(
     pool: &PgPool,
     user_id: &UserId,
@@ -79,28 +79,7 @@ pub async fn revoke_user_access(
     .await?
     .rows_affected();
 
-    // Why: Revoke downstream grants in the same transaction as device sessions.
-    // Advancing generations also invalidates consent callbacks already in flight.
-    sqlx::query!(
-        "UPDATE mcp_connector_accounts SET status = 'not_connected', auth_method = NULL,
-        error_code = 'user_revoked', generation = generation + 1,
-        revision = nextval('mcp_connector_revision') WHERE user_id = $1",
-        uid
-    )
-    .execute(&mut *tx)
-    .await?;
-    sqlx::query!(
-        "DELETE FROM mcp_connector_credentials WHERE user_id = $1",
-        uid
-    )
-    .execute(&mut *tx)
-    .await?;
-    sqlx::query!(
-        "DELETE FROM mcp_connector_oauth_states WHERE user_id = $1",
-        uid
-    )
-    .execute(&mut *tx)
-    .await?;
+    revoke_connector_grants(&mut tx, uid).await?;
 
     tx.commit().await?;
 
@@ -112,10 +91,33 @@ pub async fn revoke_user_access(
     })
 }
 
-// Why: the group gate fails before an identity is resolved, so the only handle
-// on the person being turned away is the address the assertion carried. An
-// inactive row is skipped: `revoke_user_access` is about live credentials, and
-// a closed account's were taken when it closed.
+async fn revoke_connector_grants(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    uid: &str,
+) -> Result<(), sqlx::Error> {
+    sqlx::query!(
+        "UPDATE mcp_connector_accounts SET status = 'not_connected', auth_method = NULL,
+        error_code = 'user_revoked', generation = generation + 1,
+        revision = nextval('mcp_connector_revision') WHERE user_id = $1",
+        uid
+    )
+    .execute(&mut **tx)
+    .await?;
+    sqlx::query!(
+        "DELETE FROM mcp_connector_credentials WHERE user_id = $1",
+        uid
+    )
+    .execute(&mut **tx)
+    .await?;
+    sqlx::query!(
+        "DELETE FROM mcp_connector_oauth_states WHERE user_id = $1",
+        uid
+    )
+    .execute(&mut **tx)
+    .await?;
+    Ok(())
+}
+
 pub async fn revoke_access_by_email(
     pool: &PgPool,
     email: &str,

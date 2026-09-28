@@ -25,14 +25,9 @@ pub enum GovernanceDecision {
 impl GovernanceDecision {
     pub const fn from_decision(d: &Decision) -> Self {
         match d {
-            // Why: warn is an allow to the caller. The policy that warned is
-            // already on the `governance_decisions` row, so answering the hook
-            // with a deny reason here would block the call the mode exists to
-            // let through.
             Decision::Allow { .. } | Decision::Warn { .. } => Self::Allow,
-            // Why: the Anthropic hook contract has no third answer, and this
-            // webhook answers synchronously — it cannot park the call and
-            // resume it. A hold degrades to a deny rather than an allow.
+            // Why: the Claude Code hook contract has no "hold" answer and this
+            // webhook is synchronous, so a pending decision degrades to deny.
             Decision::Deny { .. } | Decision::Pending { .. } => Self::Deny,
         }
     }
@@ -70,8 +65,6 @@ pub(super) struct AuthDenialParams<'a> {
     pub pool: &'a Arc<PgPool>,
     pub session_id: &'a SessionId,
     pub tool_name: &'a str,
-    // Why: Echoed into the response envelope so a `UserPromptSubmit` caller is not
-    // answered with a `PreToolUse` denial it has to reinterpret.
     pub hook_event_name: &'static str,
     pub plugin_id: Option<&'a PluginId>,
     pub session_service: &'a Arc<SessionCreationService>,

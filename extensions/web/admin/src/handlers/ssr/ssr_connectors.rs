@@ -75,8 +75,6 @@ const GROUPS: [(&str, &str, &str); 4] = [
     ),
 ];
 
-// Why: the order a person should act in — broken first, then never
-// connected, then healthy, then the ones nothing can be done about.
 fn group_key(c: &Connection) -> &'static str {
     match c.status.as_str() {
         s if ATTENTION.contains(&s) && c.entitled => "attention",

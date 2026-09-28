@@ -25,9 +25,6 @@ pub(super) struct ModelsTabView {
 #[derive(Debug, Serialize)]
 pub(super) struct ModelUsageRowView {
     pub model: String,
-    // Why: the vendor namespace is a prefix on most model ids and repeats down
-    // the whole column. It moves to the muted second line so the part that
-    // distinguishes one row from the next gets the width, uncut.
     pub name_display: String,
     pub qualifier_display: String,
     pub requests: i64,
@@ -59,8 +56,6 @@ pub(super) struct SkillsTabView {
 #[derive(Debug, Serialize)]
 pub(super) struct SkillRowView {
     pub skill: String,
-    // Why: no qualifier field. The full `plugin:skill` is already on the
-    // title, so a separate plugin string would be the same text twice.
     pub name_display: String,
     pub invocations: i64,
     pub share_pct: i64,
@@ -69,8 +64,6 @@ pub(super) struct SkillRowView {
     pub users: i64,
     pub conversations: i64,
     pub requests: i64,
-    // Why: the spend of the conversations that invoked the skill — not a
-    // cost of the skill, which has none.
     pub cost_display: String,
     pub attributed_display: String,
     pub analysis_url: Option<String>,
@@ -119,8 +112,6 @@ pub(super) struct ToolRowView {
 #[derive(Debug, Default, Serialize)]
 pub(super) struct SessionsTabView {
     pub kpis: Vec<KpiTile>,
-    // Why: the section header counts the whole result, not the page. A header
-    // reading 0 beside a tile reading 3 is the bug that produced this field.
     pub session_count: i64,
     pub rows: Vec<SessionCostRowView>,
     pub has_rows: bool,
@@ -128,10 +119,6 @@ pub(super) struct SessionsTabView {
 }
 
 #[derive(Debug, Serialize)]
-// Why: named for the conversation cost it renders, not for "a session row".
-// The sessions list page has its own row type and the two are different
-// things — this one is one gateway-metered conversation, that one is a
-// client session.
 pub(super) struct SessionCostRowView {
     pub context_id: ContextId,
     pub context_short: String,

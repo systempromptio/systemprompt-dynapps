@@ -13,8 +13,6 @@ use crate::{globals, principal};
 
 const TRACK: &str = "/hooks/track";
 
-// A hook request carries its own bearer, so it is issued as an anonymous
-// principal with the token spelled out rather than through `Credentials`.
 fn hook_call<'a>(token: &'a str, body: &'a str) -> (Call<'a>, &'a str) {
     (
         Call {
@@ -28,7 +26,6 @@ fn hook_call<'a>(token: &'a str, body: &'a str) -> (Call<'a>, &'a str) {
     )
 }
 
-// One event payload and the event name the handler must record for it.
 struct EventCase {
     label: &'static str,
     body: String,
@@ -71,11 +68,8 @@ fn cases(session: &str) -> Vec<EventCase> {
             r#""prompt":"Explain the governance chain in one paragraph.""#,
             Some("UserPromptSubmit"),
         ),
-        // Recorded, not dropped. The governance *decision* still belongs to
-        // `/hooks/govern`; this row is the attempt itself, which the grant-rate
-        // proxy needs paired with its PostToolUse. It does not double-count
-        // tool use: the rollup's `tool_uses` filters on PostToolUse and
-        // PostToolUseFailure only.
+        // Recorded as the attempt; the rollup's `tool_uses` counts only
+        // PostToolUse and PostToolUseFailure, so this does not double-count.
         ev(
             "pre tool use",
             "PreToolUse",
@@ -166,14 +160,12 @@ fn cases(session: &str) -> Vec<EventCase> {
             r#""file_path":"/tmp/CLAUDE.md","memory_type":"project","load_reason":"startup","globs":["**/*.rs"],"trigger_file_path":null,"parent_file_path":null"#,
             Some("InstructionsLoaded"),
         ),
-        // Unsupported event names are rejected at the ingestion boundary.
         ev(
             "unrecognised event name",
             "SomeFutureEvent",
             r#""whatever":true"#,
             None,
         ),
-        // Malformed recognized events must not become successful audit entries.
         EventCase {
             label: "recognised name with a malformed body",
             body: format!(
@@ -252,12 +244,8 @@ async fn hook_track_validates_and_records_supported_event_kinds() {
     );
 }
 
-// The entity detector: which skill, agent, or MCP server an event belongs to.
-//
-// Detection runs off the tool name and the tool input, and the result lands in
-// `session_entity_links`. Asserting on that table rather than the response is
-// the only way to tell a detection that fired from one that returned `None` —
-// both answer `200`.
+// Detection that returns `None` also answers 200, so assert on
+// `session_entity_links`, not the response.
 #[tokio::test(flavor = "multi_thread")]
 async fn hook_track_links_events_to_the_entity_they_name() {
     if !globals::init() {
@@ -273,7 +261,6 @@ async fn hook_track_links_events_to_the_entity_they_name() {
     seed::insert_user(&db.pool, &user_id, &format!("{user_id}@contract.test")).await;
     let token = seed::mint(&TokenSpec::hook(&user_id));
 
-    // (label, tool payload, expected entity_type, expected entity_name)
     let expectations: [(&str, String, &str, &str); 6] = [
         (
             "skill invocation",
@@ -357,10 +344,6 @@ async fn hook_track_links_events_to_the_entity_they_name() {
     );
 }
 
-// The dedup key, the session rollup, and the derived title.
-//
-// These are the three side effects a caller can observe without an AI service
-// configured, and each is a branch the status contract never reaches.
 #[tokio::test(flavor = "multi_thread")]
 async fn hook_track_deduplicates_and_rolls_up_the_session() {
     if !globals::init() {
@@ -382,8 +365,7 @@ async fn hook_track_deduplicates_and_rolls_up_the_session() {
         common(&session, "UserPromptSubmit")
     );
 
-    // The same event posted twice is one row: a hook that retries on a slow
-    // response must not double-count.
+    // Hooks retry on a slow response; a retried event must stay one row.
     for _ in 0..2 {
         let (call, tok) = hook_call(&token, &prompt);
         let (status, _) = app.call_with_bearer(call, tok).await;
@@ -414,8 +396,6 @@ async fn hook_track_deduplicates_and_rolls_up_the_session() {
         "a new identified prompt must survive even when its text is identical"
     );
 
-    // The first prompt seeds the session title, so the session page has
-    // something to show before any AI summary exists.
     let title: Option<String> =
         sqlx::query_scalar("SELECT ai_title FROM plugin_session_summaries WHERE session_id = $1")
             .bind(&session)
@@ -428,8 +408,6 @@ async fn hook_track_deduplicates_and_rolls_up_the_session() {
         "the first UserPromptSubmit must derive a session title"
     );
 
-    // A daily aggregation row is what the usage dashboards read; without it the
-    // event is recorded but invisible.
     let daily: i64 =
         sqlx::query_scalar("SELECT COUNT(*) FROM plugin_usage_daily WHERE user_id = $1")
             .bind(&user_id)
@@ -438,8 +416,6 @@ async fn hook_track_deduplicates_and_rolls_up_the_session() {
             .expect("count daily aggregations");
     assert!(daily > 0, "ingestion must upsert the daily usage rollup");
 
-    // `Stop` is accepted as an ordinary event and `SessionEnd` closes the
-    // summary — the one path gated on event type.
     for event in ["Stop", "SessionEnd"] {
         let body = format!(
             r#"{{{},"stop_hook_active":false,"reason":"clear"}}"#,
@@ -461,8 +437,6 @@ async fn hook_track_deduplicates_and_rolls_up_the_session() {
     db.cleanup().await;
 }
 
-// The token gate. Each case is wrong in exactly one way, so a `401` names the
-// check that caught it rather than "some token problem".
 #[tokio::test(flavor = "multi_thread")]
 async fn hook_track_refuses_every_token_that_is_not_a_hook_token() {
     if !globals::init() {
@@ -489,8 +463,6 @@ async fn hook_track_refuses_every_token_that_is_not_a_hook_token() {
     let wrong_scope = seed::mint(&TokenSpec {
         subject: &subject,
         audiences: vec![JwtAudience::Hook],
-        // `hook:govern` is the *other* hook endpoint's scope; a token minted
-        // for the governance gate must not be able to write tracking rows.
         scopes: vec![Permission::HookGovern],
         plugin_id: Some("contract-plugin"),
     });
@@ -527,8 +499,6 @@ async fn hook_track_refuses_every_token_that_is_not_a_hook_token() {
         }
     }
 
-    // A body that is not JSON at all is refused by the extractor, before the
-    // token is ever read.
     let (status, _) = app
         .call(Call {
             method: "post",

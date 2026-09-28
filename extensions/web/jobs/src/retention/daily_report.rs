@@ -1,6 +1,9 @@
 //! The daily measurement: size, dead tuples and oldest row of every managed
 //! table into `retention_runs`, with a warning when a table grew more than
 //! a quarter week on week or an outbox is backing up.
+//!
+//! The outbox is judged on age, not depth: a healthy consumer drains it within
+//! seconds, so a row pending for an hour means a stalled consumer at any depth.
 
 use sqlx::PgPool;
 use systemprompt::database::DbPool;
@@ -10,11 +13,6 @@ use super::all_managed;
 use super::ledger::{measure, record_run, size_days_ago};
 use crate::error::JobError;
 
-// Why: growth above a quarter in a week is a change in behaviour, not
-// traffic. The outbox is judged on age, not depth: the consumer drains
-// within seconds when it is healthy, so anything pending for an hour is
-// stalled — the production boot loop sat at 77k rows, under any depth
-// threshold worth setting, with the oldest row two hours old.
 const GROWTH_WARN_PERCENT: i64 = 25;
 const OUTBOX_STALE_MINUTES: i64 = 60;
 

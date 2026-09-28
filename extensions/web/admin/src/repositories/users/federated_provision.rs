@@ -1,15 +1,23 @@
 //! The write half of federated resolution: just-in-time provisioning and the
 //! per-login role projection. Split from [`super::federated`] so the read
 //! ladder there stays readable; nothing here is called from outside it.
+//!
+//! A returning login rewrites only the directory half of the role set; manual
+//! dashboard grants survive it. A claim that maps no roles projects nothing, so
+//! an operator-created account keeps its CLI-granted roles. Losing any role
+//! that mints `Permission::Admin` is reported as `lost_admin`, because tokens
+//! issued before this login still carry it.
 
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 use systemprompt_web_shared::error::MarketplaceError;
 
+use crate::types::constants::ROLE_USER;
+
 use super::federated::{FederatedClaims, ResolvedFederatedUser};
 
-// Why: `name` is set to the email to sidestep the `users.name` uniqueness
-// constraint; `display_name` carries the human-friendly form.
+// Why: Postgres `users.name` is UNIQUE, so `name` is set to the email;
+// `display_name` carries the human-friendly form.
 pub(super) async fn create_federated(
     pool: &PgPool,
     claims: &FederatedClaims<'_>,
@@ -23,13 +31,7 @@ pub(super) async fn create_federated(
     } = *claims;
 
     let user_id = uuid::Uuid::new_v4().to_string();
-    // Why: an IdP that maps no roles still provisions a plain user; an empty
-    // role list would be an account that can reach nothing.
-    let roles = if roles.is_empty() {
-        vec!["user".to_owned()]
-    } else {
-        roles.to_vec()
-    };
+    let roles = roles_or_plain_user(roles);
     let mut tx = pool.begin().await?;
 
     sqlx::query!(
@@ -73,20 +75,19 @@ pub(super) async fn create_federated(
     })
 }
 
+fn roles_or_plain_user(mapped: &[String]) -> Vec<String> {
+    if mapped.is_empty() {
+        vec![ROLE_USER.to_owned()]
+    } else {
+        mapped.to_vec()
+    }
+}
+
 pub(super) struct ProjectedRoles {
     pub roles: Vec<String>,
-    // Why: the JWT bakes permissions in at issue time, so a write-tier role
-    // the directory has taken away still rides in every token minted before
-    // this login. The caller uses this to tear those down.
     pub lost_admin: bool,
 }
 
-// Why: The IdP is the source of truth for the *directory* half of the role
-// set, so a returning login rewrites it — but the effective set is that union
-// the manual grants an admin made in the dashboard, which a sign-in must not
-// wipe. Skipped when the claim carries nothing: an operator-created account
-// signing in through an IdP that maps no roles (evaluation instances) keeps
-// its CLI-granted roles rather than losing them.
 pub(super) async fn project_roles(
     pool: &PgPool,
     user_id: &UserId,
@@ -101,15 +102,11 @@ pub(super) async fn project_roles(
     }
     let roles = super::roles::recompute_roles(pool, user_id, Some(mapped)).await?;
     Ok(ProjectedRoles {
-        lost_admin: has_manage(&current) && !has_manage(&roles),
+        lost_admin: mints_admin_permission(&current) && !mints_admin_permission(&roles),
         roles,
     })
 }
 
-// Why: any role in the write tier, not `admin` alone. `platform_admin` mints
-// the same `Permission::Admin` into a token, so a directory that drops it has
-// to reach the tokens issued while it was held, exactly as a dropped `admin`
-// does.
-fn has_manage(roles: &[String]) -> bool {
+fn mints_admin_permission(roles: &[String]) -> bool {
     crate::types::role::has_any(roles, crate::types::role::ROLES_MANAGE)
 }

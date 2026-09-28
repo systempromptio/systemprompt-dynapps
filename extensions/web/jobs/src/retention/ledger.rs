@@ -18,8 +18,6 @@ pub(crate) struct TableMeasure {
     pub oldest_row: Option<DateTime<Utc>>,
 }
 
-// Why: size and dead tuples come from the catalog, the age from one MIN()
-// over the table's time column — the two reads a retention policy is about.
 pub(crate) async fn measure(pool: &PgPool, table: &ManagedTable) -> Result<TableMeasure, JobError> {
     let stats: (i64, i64, i64, i64) = sqlx::query_as(
         "SELECT COALESCE(s.n_live_tup, 0), COALESCE(s.n_dead_tup, 0),
@@ -72,7 +70,6 @@ pub(crate) async fn record_run(
     Ok(())
 }
 
-// Why: the size recorded closest to `days` ago is the growth baseline.
 pub(crate) async fn size_days_ago(
     pool: &PgPool,
     table: &str,

@@ -1,5 +1,6 @@
 //! Activity constructors for one access-control rule written or removed from
 //! an entity's "Who gets this" panel: which entity, which subject, and why.
+//! An entity kind with no mapping is filed under the access plane.
 
 use systemprompt::identifiers::UserId;
 
@@ -16,8 +17,8 @@ pub struct RuleChange<'a> {
     pub reason: Option<&'a str>,
 }
 
-// Why: an entity kind the activity table has no word for is filed under
-// the access-control plane, so the row still reads as an access change.
+const FALLBACK_ENTITY: ActivityEntity = ActivityEntity::Sync;
+
 fn entity_ref(entity_type: &str, entity_id: &str) -> ActivityEntityRef {
     let kind = match entity_type {
         "marketplace" => ActivityEntity::Marketplace,
@@ -25,7 +26,7 @@ fn entity_ref(entity_type: &str, entity_id: &str) -> ActivityEntityRef {
         "skill" => ActivityEntity::Skill,
         "mcp_server" => ActivityEntity::McpServer,
         "gateway_route" => ActivityEntity::GatewayRoute,
-        _ => ActivityEntity::Sync,
+        _ => FALLBACK_ENTITY,
     };
     ActivityEntityRef {
         kind,

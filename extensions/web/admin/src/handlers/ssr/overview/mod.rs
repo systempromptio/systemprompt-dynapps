@@ -32,11 +32,6 @@ use crate::types::{MarketplaceContext, UserContext};
 
 use view::OverviewRange;
 
-// Why: `preset` is the same parameter the AI-activity pages carry, so a window
-// chosen there survives a hop through the overview. Everything else those pages
-// put on the query string is ignored here on purpose — the overview is
-// instance-wide, and honouring a container filter halfway would show a scoped
-// number under an unscoped heading.
 #[derive(Debug, Default, Deserialize)]
 pub(crate) struct OverviewQuery {
     pub preset: Option<String>,

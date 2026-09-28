@@ -1,6 +1,11 @@
 //! The `conversation_analyses` queue: fenced leases, completion, retry and
 //! the reads a judge call needs. Discovery lives in `discovery.rs`. Every
 //! statement is bound; the job never interpolates.
+//!
+//! A verdict records the `SourceFingerprint` it read, so a conversation that
+//! grows past it is queued again. The gateway settles a judge call's cost after
+//! the response returns, so `complete` reads it at write time and
+//! `update_judge_costs` catches it up on the next tick.
 
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
@@ -9,7 +14,6 @@ use systemprompt::identifiers::ContextId;
 use super::judge::Classification;
 use crate::JobError;
 
-// Why: A claim on one conversation for the length of one judge call.
 #[derive(Debug, Clone)]
 pub(super) struct AnalysisLease {
     pub(super) context_id: ContextId,
@@ -17,15 +21,12 @@ pub(super) struct AnalysisLease {
     pub(super) manual: bool,
 }
 
-// Why: What the judge read, recorded so a conversation that grows past it is
-// queued again.
 #[derive(Debug, Clone, Copy)]
 pub(super) struct SourceFingerprint {
     pub(super) request_count: i64,
     pub(super) last_at: Option<DateTime<Utc>>,
 }
 
-// Why: The judge's verdict plus the audit row it came from.
 #[derive(Debug)]
 pub(super) struct Completion<'a> {
     pub(super) classification: &'a Classification,
@@ -38,8 +39,6 @@ pub(super) struct Completion<'a> {
     pub(super) fingerprint: SourceFingerprint,
 }
 
-// Why: The conversation's rolled-up shape plus the fingerprint of the requests
-// the judge is about to read.
 #[derive(Debug, Clone)]
 pub(super) struct SourceMeta {
     pub(super) client_kind: String,
@@ -62,8 +61,6 @@ impl ConversationJudgeRepository {
         Self { pool }
     }
 
-    // Why: `manual_only` is the run with the profile's automatic switch off —
-    // only rows a person asked for from the console are read.
     pub(super) async fn claim(
         &self,
         limit: u32,
@@ -110,9 +107,6 @@ impl ConversationJudgeRepository {
         done: Completion<'_>,
     ) -> Result<(), JobError> {
         let c = done.classification;
-        // Why: the judge call's cost is settled by the gateway after the
-        // response returns, so it is read from ai_requests at write time and
-        // again by `update_judge_costs` on the next tick.
         sqlx::query!(
             r#"UPDATE conversation_analyses
                SET status = 'classified', category = $3, summary = $4, tags = $5, skills_used = $6,
@@ -149,8 +143,6 @@ impl ConversationJudgeRepository {
         Ok(())
     }
 
-    // Why: backs off on failure; the fifth failure parks the row as `failed`
-    // until someone re-queues it.
     pub(super) async fn retry(&self, lease: &AnalysisLease, error: &str) -> Result<(), JobError> {
         sqlx::query!(
             r#"UPDATE conversation_analyses
@@ -168,7 +160,6 @@ impl ConversationJudgeRepository {
         Ok(())
     }
 
-    // Why: hands leases back untouched when the run stops early (cost cap).
     pub(super) async fn release(&self, leases: &[AnalysisLease]) -> Result<(), JobError> {
         let ids: Vec<String> = leases
             .iter()
@@ -190,8 +181,6 @@ impl ConversationJudgeRepository {
         Ok(())
     }
 
-    // Why: settlement lands after the verdict row is written; this catches up
-    // the judge's own spend so the page can show what the label cost.
     pub(super) async fn update_judge_costs(&self) -> Result<u64, JobError> {
         let result = sqlx::query!(
             r#"UPDATE conversation_analyses a
@@ -206,7 +195,6 @@ impl ConversationJudgeRepository {
         Ok(result.rows_affected())
     }
 
-    // Why: what this job has spent on judge calls since UTC midnight.
     pub(super) async fn get_job_spend_today(&self, job_name: &str) -> Result<i64, JobError> {
         let spend = sqlx::query_scalar!(
             r#"SELECT COALESCE(SUM(cost_microdollars), 0)::bigint AS "spend!"
@@ -220,7 +208,6 @@ impl ConversationJudgeRepository {
         Ok(spend)
     }
 
-    // Why: `None` when the conversation has no non-job requests left to read.
     pub(super) async fn find_source_meta(
         &self,
         context_id: &ContextId,
@@ -253,8 +240,6 @@ impl ConversationJudgeRepository {
         }))
     }
 
-    // Why: skills the harness hooks reported for the conversation's client
-    // session, so the judge sees them alongside the transcript.
     pub(super) async fn list_hooked_skills(
         &self,
         context_id: &ContextId,

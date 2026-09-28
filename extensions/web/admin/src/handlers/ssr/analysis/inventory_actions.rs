@@ -43,8 +43,6 @@ pub(crate) async fn bind(
     Ok(Redirect::to(SKILLS_PAGE))
 }
 
-// Why: the same pass the scheduler runs each minute, on demand — refresh the
-// inventory, then publish the latest configured revision of every skill.
 pub(crate) async fn sync_inventory(
     Extension(user): Extension<UserContext>,
     Extension(state): Extension<Arc<ManagedState>>,
@@ -71,8 +69,6 @@ pub(crate) async fn sync_inventory(
             &mut systemprompt::marketplace::inventory::PublishGuard::default(),
         )
         .await?;
-    // Why: a sync is also when a marketplace's bytes may have moved, so the
-    // version record is refreshed here and not only at boot.
     crate::repositories::sync::sources_db::record_service_sources(&pool)
         .await
         .map_err(AdminError::internal)?;

@@ -77,9 +77,7 @@ live_dataset!(
     }
 );
 
-// Why: no cost column, by construction — `list_container_usage` selects
-// none, so this table is the one that can be sent outside the platform team.
-const CONTAINER_COLUMNS: &[Column] = &[
+const CONTAINER_COLUMNS_WITHOUT_COST: &[Column] = &[
     Column::new("container", "Container", CellKind::Text),
     Column::new("users", "Users", CellKind::Integer),
     Column::new("sessions", "Sessions", CellKind::Integer),
@@ -93,7 +91,7 @@ live_dataset!(
     "analytics-cost-containers",
     "Consumption by container",
     "One row per container: people, sessions, requests and tokens. No cost.",
-    CONTAINER_COLUMNS,
+    CONTAINER_COLUMNS_WITHOUT_COST,
     |ctx| {
         let p = plan(ctx).await?;
         let rows =

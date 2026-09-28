@@ -6,6 +6,13 @@
 //! Parsed from `?from=&to=&preset=` on audit pages. `count_requests_in_range`
 //! exists so a page can cheaply test a candidate window before committing to it
 //! and widen when the default returns nothing.
+//!
+//! A window the URL asked for but that could not be resolved falls back to the
+//! default 24h and sets `rejected_bounds`, so the page can say the listing is
+//! not for the window in the address bar. Custom ranges are capped at
+//! [`MAX_CUSTOM_WINDOW_DAYS`] (anchored on `to`): the trace-page percentiles
+//! aggregate every row in the window, so an unbounded `?from=&to=` would be a
+//! full-table scan anyone could trigger from a query string.
 
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
@@ -25,13 +32,6 @@ pub struct TimeRange {
     pub from: DateTime<Utc>,
     pub to: DateTime<Utc>,
     pub preset: TimeRangePreset,
-    // Why: The query asked for a window and did not get it.
-    //
-    // Set when `?preset=`, `?from=` or `?to=` was supplied and could not be
-    // resolved, so the range below is the default rather than the one the URL
-    // names. The page must say so: a listing that quietly answers for a
-    // different window than the one in the address bar is read as the answer
-    // to the question that was asked.
     pub rejected_bounds: bool,
 }
 
@@ -47,6 +47,8 @@ pub enum TimeRangePreset {
     Custom,
 }
 
+const LEGACY_PRESET_ALIASES: &[(&str, TimeRangePreset)] = &[("1d", TimeRangePreset::Hours24)];
+
 impl TimeRangePreset {
     #[must_use]
     pub const fn duration(self) -> Option<Duration> {
@@ -61,8 +63,6 @@ impl TimeRangePreset {
         }
     }
 
-    // Why: the spelling the URL and the picker use, so a page can hand a
-    // resolved range back to the address bar without a second table.
     #[must_use]
     pub const fn as_str(self) -> &'static str {
         match self {
@@ -89,22 +89,20 @@ impl TimeRangePreset {
         }
     }
 
-    // Why: the inverse of `as_str`, and it accepts the aliases three pages
-    // shipped before this table was the only one — a URL carrying `1d` or
-    // `90d` must resolve rather than silently fall back to the default.
     #[must_use]
     pub fn parse(value: &str) -> Option<Self> {
         match value {
             "15m" => Some(Self::Min15),
             "1h" => Some(Self::Hour1),
-            // Why: three pages shipped "1d" for the same window before this
-            // table was the only one; a URL carrying it must not fall back.
-            "24h" | "1d" => Some(Self::Hours24),
+            "24h" => Some(Self::Hours24),
             "7d" => Some(Self::Days7),
             "30d" => Some(Self::Days30),
             "90d" => Some(Self::Days90),
             "custom" => Some(Self::Custom),
-            _ => None,
+            _ => LEGACY_PRESET_ALIASES
+                .iter()
+                .find(|(alias, _)| *alias == value)
+                .map(|&(_, preset)| preset),
         }
     }
 }
@@ -138,15 +136,6 @@ pub fn parse_time_range(query: &TimeRangeQuery) -> TimeRange {
     }
 }
 
-// Why: the fallback is not a refusal — a listing is still the right answer to
-// "show me this page" — but it is only honest if the reader is told the
-// window is not theirs. So the default window stands and this decides whether
-// the page owes them a notice.
-//
-// Three ways to land here having asked for something: a preset that is not one
-// of ours, a bound that is not a timestamp, and a lone bound, which needs the
-// other end before it means a range at all. A query naming none of the three
-// asked for nothing and gets the default silently, which is correct.
 fn asked_for_a_window(query: &TimeRangeQuery) -> bool {
     let preset_rejected = query
         .preset
@@ -156,19 +145,8 @@ fn asked_for_a_window(query: &TimeRangeQuery) -> bool {
     preset_rejected || bound_supplied
 }
 
-// Why: The widest window any query may scan. Matches the widest preset (30d).
-//
-// Why: the presets are bounded by construction, but `?from=&to=` is not —
-// and the percentile stats behind the trace page (`repositories/traces/
-// stats.rs`) aggregate *every* row in the window, because exact p50/p95/p99
-// cannot be derived from a rollup. An unbounded custom range is therefore a
-// full-table scan anyone can trigger from a query string. Bounding the window
-// is what keeps that query O(window) instead of O(all rows).
 pub const MAX_CUSTOM_WINDOW_DAYS: i64 = 30;
 
-// Why: inverted ranges are swapped, and an over-wide one keeps its `to` and
-// pulls `from` up to the cap — anchoring on the recent end, which is the half
-// a reader is actually looking at.
 fn clamp_custom(from: DateTime<Utc>, to: DateTime<Utc>) -> TimeRange {
     let (from, to) = if from <= to { (from, to) } else { (to, from) };
     let max = Duration::days(MAX_CUSTOM_WINDOW_DAYS);
@@ -182,16 +160,11 @@ fn clamp_custom(from: DateTime<Utc>, to: DateTime<Utc>) -> TimeRange {
 }
 
 fn parse_rfc3339(s: &str) -> Option<DateTime<Utc>> {
-    // Why: malformed input from user-supplied query strings is the "None"
-    // branch — the standard carve-out for parse failures.
     DateTime::parse_from_rfc3339(s)
         .ok()
         .map(|dt| dt.with_timezone(&Utc))
 }
 
-// Why: Resolve a fixed [`TimeRangePreset`] (not Custom) to a concrete window
-// anchored at `now()`. Returns the same window `parse_time_range` would have
-// produced for the matching preset string.
 pub fn preset_to_range(preset: TimeRangePreset) -> TimeRange {
     let now = Utc::now();
     let d = preset.duration().unwrap_or_else(|| Duration::hours(24));
@@ -203,9 +176,6 @@ pub fn preset_to_range(preset: TimeRangePreset) -> TimeRange {
     }
 }
 
-// Why: Cheap probe for the auto-widen path: just count rows in `ai_requests`
-// inside the candidate window. Used to decide whether the default 24h
-// window has data, or whether to fall back to a wider preset.
 pub async fn count_requests_in_range(pool: &PgPool, range: TimeRange) -> Result<i64, sqlx::Error> {
     let row = sqlx::query!(
         r#"SELECT COUNT(*)::bigint AS "count!"

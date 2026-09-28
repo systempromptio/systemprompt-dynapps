@@ -72,41 +72,28 @@ struct Summary {
     events_note: String,
 }
 
+fn no_visible_trace() -> AdminError {
+    AdminError::NotFound("No spans found for that session or trace id.".to_owned())
+}
+
 pub(crate) async fn perf_trace_detail_page(
     shell: Page,
     State(pool): State<Arc<PgPool>>,
     Path(id): Path<String>,
 ) -> AdminHtmlResult<Response> {
     let Some(session_id) = resolve_trace_session(&pool, &id).await? else {
-        return Err(AdminError::NotFound(
-            "No spans found for that session or trace id.".to_owned(),
-        )
-        .into());
+        return Err(no_visible_trace().into());
     };
 
-    // Why: 404, not 403, for an owner outside the caller's view — the same
-    // answer as a missing id, so the URL is no oracle for other people's ids.
     let owner = find_trace_owner(&pool, &session_id).await?;
     if !may_view(&pool, &shell.user, owner.as_ref()).await? {
-        return Err(AdminError::NotFound(
-            "No spans found for that session or trace id.".to_owned(),
-        )
-        .into());
+        return Err(no_visible_trace().into());
     }
 
-    // Why: `resolve_trace_session` just succeeded, which proves rows exist for
-    // this id. Degrading a failed span fetch to an empty vec would fall into
-    // the not-found arm below and answer "No spans found for that session or
-    // trace id" — asserting as fact something this handler disproved one
-    // statement earlier, and sending an investigator away believing the trace
-    // was purged.
     let spans = list_trace_spans(&pool, &session_id).await?;
 
     if spans.is_empty() {
-        return Err(AdminError::NotFound(
-            "No spans found for that session or trace id.".to_owned(),
-        )
-        .into());
+        return Err(no_visible_trace().into());
     }
 
     let summary = build_summary(&session_id, &spans);
@@ -139,7 +126,6 @@ fn breadcrumbs(session_id: &SessionId) -> Vec<BreadcrumbView> {
     ]
 }
 
-// Why: the tallies the tiles read, counted once over the span list.
 struct Tally {
     requests: usize,
     failed: usize,
@@ -196,8 +182,6 @@ fn build_summary(session_id: &SessionId, spans: &[Span]) -> Summary {
         .filter(|s| matches!(s.kind, SpanKind::Tool | SpanKind::Spawn))
         .collect();
 
-    // Why: the first request names the client for the whole session; a
-    // hook-only session has no request and so no client to name.
     let client = spans
         .iter()
         .filter(|s| matches!(s.kind, SpanKind::Model))
@@ -269,8 +253,6 @@ fn checks_note(total: usize, denied: usize, warned: usize) -> String {
     }
 }
 
-// Why: the note names the busiest event type, which is what tells an
-// operator whether hooks were firing at all.
 fn events_note(events: &[&Span]) -> String {
     if events.is_empty() {
         return "no hook events".to_owned();

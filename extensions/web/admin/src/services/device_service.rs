@@ -8,8 +8,6 @@ use crate::error::{AdminError, AdminResult};
 use crate::repositories::bridge::{self, EnrollDeviceParams, EnrolledDevice, IssuedApiKey};
 use crate::repositories::config::security_policy::{SecurityPolicy, bound_pat_expiry};
 
-// Why: both minting paths write a `user_api_keys` row, so both go through the
-// policy — a device enrolment is a token with a hostname attached.
 fn policy_bounded(expires_at: Option<DateTime<Utc>>) -> AdminResult<DateTime<Utc>> {
     bound_pat_expiry(expires_at, Utc::now(), SecurityPolicy::get())
         .map_err(|e| AdminError::BadRequest(e.to_string()))

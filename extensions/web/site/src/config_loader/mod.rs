@@ -103,12 +103,8 @@ fn load_branding_config() -> Result<Option<BrandingConfig>, ConfigError> {
     Ok(Some(branding_config))
 }
 
-// Why: Both router builds and the HTTP contract suite need the engine
-// configured the same way; the templates read `branding.*` under strict mode,
-// so an engine built without it fails to render every page that has one.
-//
-// Cached: the router build and each prerender context ask for branding
-// independently, and re-reading theme.yaml per caller is pure waste.
+// Why: Handlebars strict mode fails every page reading `branding.*` when an
+// engine is built without it, so all builders share this one cached load.
 #[must_use]
 pub fn branding_config() -> Option<BrandingConfig> {
     log_and_discard_err(

@@ -19,9 +19,6 @@ use super::view::OverviewRange;
 
 const EMPTY: &str = "No gateway traffic in this window.";
 
-// Why: the shared x axis: one label per bucket, built once from the window's
-// edges and handed to every chart, so the hover crosshair says the same time
-// on all six.
 struct Axis {
     labels: Vec<String>,
 }
@@ -42,8 +39,6 @@ impl Axis {
     }
 }
 
-// Why: a bucket is an hour at 24h, seven hours at 7d and thirty at 30d, so the
-// label carries the day once the buckets stop fitting inside one.
 fn bucket_label(t: DateTime<Utc>, range: OverviewRange) -> String {
     let local = t.with_timezone(&chrono::Local);
     match range {
@@ -200,9 +195,6 @@ fn latency_display(ms: i64) -> String {
     }
 }
 
-// Why: pivots the sparse (bucket, key) rows onto the spine, one series per
-// key ranked by its window total so the biggest spender takes the first
-// colour — the same order the model board lists them in.
 fn dimension(axis: &Axis, data: &OverviewData, dim: OverviewDimension) -> SvgLineChartView {
     let (rows, title, measure): (
         &[DimensionBucket],

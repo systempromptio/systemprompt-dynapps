@@ -27,11 +27,9 @@ const ACTOR_JOB_NAME: &str = "analysis_report";
 const AGENT_NAME: &str = "analysis-reporter";
 const MAX_OUTPUT_TOKENS: u32 = 4_096;
 
-// Why: the reporter's own requests need a context of their own, distinct
-// from the judge's, so each source of spend can be told apart in the audit.
-const CONTEXT_SEED: &[u8] = b"astound:analysis_report";
+const JUDGE_JOB_NAME: &str = "conversation_judge";
+const REPORTER_CONTEXT_SEED: &[u8] = b"astound:analysis_report";
 
-// Why: the provider and model a report is written with.
 #[derive(Debug, Clone)]
 pub(crate) struct ReportModel {
     pub(crate) provider: String,
@@ -39,15 +37,12 @@ pub(crate) struct ReportModel {
 }
 
 impl ReportModel {
-    // Why: the judge's model, so every AI reading of the record is written
-    // by the same model: the `conversation_judge` scheduler entry's
-    // parameters, else the default provider's default model.
-    pub(crate) fn configured() -> AdminResult<Self> {
+    pub(crate) fn judge_model() -> AdminResult<Self> {
         let services = ConfigLoader::load().map_err(AdminError::internal)?;
         let judge = services
             .scheduler
             .as_ref()
-            .and_then(|s| s.jobs.iter().find(|j| j.name == "conversation_judge"));
+            .and_then(|s| s.jobs.iter().find(|j| j.name == JUDGE_JOB_NAME));
         let provider = judge
             .and_then(|j| j.parameters.get("provider").cloned())
             .filter(|p| !p.is_empty())
@@ -74,7 +69,10 @@ fn request_context(actor: Actor) -> AdminResult<RequestContext> {
     Ok(RequestContext::new(
         SessionId::new(""),
         TraceId::new(uuid::Uuid::new_v4().to_string()),
-        ContextId::from_uuid(uuid::Uuid::new_v5(&uuid::Uuid::NAMESPACE_OID, CONTEXT_SEED)),
+        ContextId::from_uuid(uuid::Uuid::new_v5(
+            &uuid::Uuid::NAMESPACE_OID,
+            REPORTER_CONTEXT_SEED,
+        )),
         AgentName::try_new(AGENT_NAME).map_err(AdminError::internal)?,
     )
     .with_actor(actor))
@@ -94,8 +92,6 @@ fn digest_text(row: &AnalysisReportRow) -> String {
     format!("SCOPE {}{scope}\n{digest}", row.scope_kind)
 }
 
-// Why: who asked and the lease the row was inserted with — the two facts
-// the completion must present together.
 struct Grant<'a> {
     requested_by: &'a UserId,
     lease: &'a str,
@@ -143,9 +139,6 @@ async fn call_model(
     Ok(())
 }
 
-// Why: one report, start to finish: the model call, then the row written
-// as generated or as failed with the reason the page shows. Runs on a
-// spawned task, so every outcome is recorded rather than returned.
 pub(crate) async fn generate_report(
     pool: Arc<PgPool>,
     ai: Option<Arc<AiService>>,
@@ -157,7 +150,7 @@ pub(crate) async fn generate_report(
         None => Err(AdminError::internal(
             "no AI provider is configured on this instance, so a report cannot be written",
         )),
-        Some(ai) => match ReportModel::configured() {
+        Some(ai) => match ReportModel::judge_model() {
             Err(error) => Err(error),
             Ok(model) => {
                 let grant = Grant {

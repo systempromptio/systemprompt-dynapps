@@ -50,10 +50,6 @@ fn normalise(key: &str) -> String {
     key.replace('-', "_")
 }
 
-// Why: the manifest names skills by config id; managed resources are keyed
-// by the same id modulo dash/underscore, which the inventory sync already
-// treats as one name. Without a manifest (a legacy version) every resource
-// is shown, and the page says so.
 fn skill_keys(rows: &[MarketplaceVersionMetricsRow]) -> Option<BTreeSet<String>> {
     let current = rows.iter().find(|r| r.effective_until.is_none())?;
     let manifest = current.manifest.as_ref()?;

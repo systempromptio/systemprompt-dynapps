@@ -4,6 +4,11 @@
 //! Both are filtered by `marketplace=<id>` or `skill=<plugin:skill>` (one is
 //! required) and carry no person, prompt or transcript: a row is a run's
 //! timings, counts, cost and verdict, keyed by its conversation.
+//!
+//! A file holds one run fewer than `list_skill_runs` reads, so a full read
+//! proves there were more and the preview says capped. Both datasets read the
+//! whole allowance whatever `ctx.limit` is: the preview's one-row limit would
+//! otherwise count one run and fold one run into the release rows.
 
 use async_trait::async_trait;
 use chrono::Utc;
@@ -22,9 +27,6 @@ use crate::types::UserContext;
 pub(crate) struct SkillRuns;
 pub(crate) struct KitReleaseImpact;
 
-// Why: the request carries `format=`, `columns=` and the window beside these,
-// so unknown keys are expected; `per_skill=false` folds a release's skills
-// into one row.
 #[derive(Debug, Default, Deserialize)]
 struct RunScope {
     marketplace: Option<String>,
@@ -58,18 +60,13 @@ impl RunScope {
     }
 }
 
-// Why: `list_skill_runs` reads at most 5,000 runs. The file holds one fewer,
-// so a 5,000th row is the proof there were more and the preview says capped;
-// both datasets read the whole allowance whatever `ctx.limit` is, because the
-// preview's one-row limit would otherwise count one run and fold one run
-// into the release rows.
-const RUN_READ: i64 = 5_000;
-const RUN_CAP: i64 = RUN_READ - 1;
+const LIST_SKILL_RUNS_MAX: i64 = 5_000;
+const RUN_FILE_CAP: i64 = LIST_SKILL_RUNS_MAX - 1;
 
 async fn load_runs(ctx: &ExportContext<'_>) -> AdminResult<(RunScope, Vec<SkillRunRow>)> {
     let scope: RunScope = ctx.query()?;
     let filter = scope.filter()?;
-    let runs = list_skill_runs(ctx.pool, &window(ctx).await?, &filter, RUN_READ).await?;
+    let runs = list_skill_runs(ctx.pool, &window(ctx).await?, &filter, LIST_SKILL_RUNS_MAX).await?;
     Ok((scope, runs))
 }
 
@@ -165,7 +162,7 @@ impl DataSet for SkillRuns {
         Window::Retained
     }
     fn cap(&self) -> i64 {
-        RUN_CAP
+        RUN_FILE_CAP
     }
     fn allows(&self, user: &UserContext) -> bool {
         user.is_console
@@ -176,7 +173,7 @@ impl DataSet for SkillRuns {
         let total = i64::try_from(runs.len()).unwrap_or(i64::MAX);
         Ok(Table::capped_at(
             runs.iter()
-                .take(usize::try_from(RUN_CAP).unwrap_or(usize::MAX))
+                .take(usize::try_from(RUN_FILE_CAP).unwrap_or(usize::MAX))
                 .map(|r| run_row(r, now))
                 .collect(),
             total,

@@ -41,8 +41,6 @@ pub struct GroupMemberRow {
     pub email: Option<String>,
     pub sources: Vec<String>,
     pub source_ad_groups: Vec<String>,
-    // Why: the manual row's expiry, or None for an open-ended membership. A
-    // directory row never carries one — the directory decides its own end.
     pub valid_until: Option<DateTime<Utc>>,
 }
 

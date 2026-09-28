@@ -107,7 +107,6 @@ pub(crate) async fn stage_import_handler(
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct ImportApplyRequest {
-    // Why: a plane id, or `all` for every plane the archive holds.
     pub plane: String,
     pub mode: SyncMode,
 }
@@ -181,8 +180,6 @@ pub(crate) async fn apply_import_handler(
             ),
         )
         .await;
-        // Why: after the apply the honest picture is the disk declaration
-        // against the database — that is what the next page load shows.
         let drift_after = plane.drift(&pool).await?;
         stage_closed = store.drop_plane(&stage_id, id);
         applied.push(ImportApplied {

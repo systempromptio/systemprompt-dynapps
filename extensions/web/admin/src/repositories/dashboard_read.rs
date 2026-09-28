@@ -13,9 +13,6 @@ pub(crate) async fn begin(pool: &PgPool) -> Result<Transaction<'static, Postgres
     Ok(transaction)
 }
 
-// Why: resolve a JSON row's key to the ID decoded by SQLx in the same
-// statement, preserving the database decoding contract without unchecked
-// constructors.
 pub(crate) fn context_id(
     key: &str,
     ids: &[systemprompt::identifiers::ContextId],

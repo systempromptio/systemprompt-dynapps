@@ -189,8 +189,6 @@ pub(crate) async fn secrets_audit_page(
     ))
 }
 
-// Why: the export reads the same window and filter the page shows, through
-// the page's own query type.
 pub(crate) async fn export_rows(
     pool: &PgPool,
     user_ctx: &UserContext,

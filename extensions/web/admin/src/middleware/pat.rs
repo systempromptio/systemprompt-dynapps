@@ -27,10 +27,6 @@ pub(super) enum PatSession {
     Rejected(Response),
 }
 
-// Why: `/export/{dataset}`, `/export/{dataset}/preview`, and the transcript
-// routes — `/export/transcripts`, `/export/transcripts/preview` and
-// `/export/transcripts/{context_id}` — with or without the `/admin` mount
-// prefix. Nothing deeper, and nothing outside `/export/`.
 fn is_export(path: &str) -> bool {
     let path = path.strip_prefix("/admin").unwrap_or(path);
     let Some(rest) = path.strip_prefix("/export/") else {
@@ -56,8 +52,6 @@ fn rejected(message: &str) -> PatSession {
     )
 }
 
-// Why: everything the check needs is read out of the request before the
-// lookup awaits, so the middleware future holds no borrow of the body.
 pub(super) fn pat_request(request: &Request) -> Option<PatRequest> {
     let token = extract_token_from_headers(request.headers()).ok()?;
     token.starts_with(API_KEY_PREFIX).then(|| PatRequest {

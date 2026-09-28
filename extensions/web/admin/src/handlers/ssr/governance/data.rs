@@ -34,11 +34,8 @@ use super::GovernanceTab;
 const RANK_LIMIT: i64 = 10;
 const HOOK_LIMIT: i64 = 50;
 
-// Why: the band is a summary, not a second table. Ten is what fits above the
-// log without pushing it off the screen; the "see all" link carries the rest.
 const ATTENTION_LIMIT: i64 = 10;
 
-// Why: What one render of the page needs from the database.
 pub(super) struct GovernanceData {
     pub(super) stats: DecisionStats,
     pub(super) safety: SafetyStats,
@@ -57,7 +54,6 @@ pub(super) struct GovernanceData {
     pub(super) top_actors: Vec<TopActor>,
 }
 
-// Why: The parameters one load is bound by.
 pub(super) struct GovernanceRead<'a> {
     pub(super) tab: GovernanceTab,
     pub(super) range: TimeRange,
@@ -78,11 +74,6 @@ impl GovernanceRead<'_> {
     }
 }
 
-// Why: the band that puts the denials and the warnings above the log rather
-// than somewhere inside twenty pages of allows. It is skipped when the log is
-// already narrowed to them — the table would then be the band, repeated — and
-// when the window is clean, because a band that is empty every day is a band
-// nobody reads.
 async fn load_attention(
     pool: &PgPool,
     read: &GovernanceRead<'_>,
@@ -205,9 +196,6 @@ struct HookData {
     top_actors: Vec<TopActor>,
 }
 
-// Why: five reads nothing else on the page needs, so they run only when the
-// hooks tab asked for them. Loading them on every tab would put the rankings'
-// two GROUP BYs on the critical path of the decisions log.
 async fn load_hooks(pool: &PgPool, tab: GovernanceTab, window_seconds: i64) -> HookData {
     if tab != GovernanceTab::Hooks {
         return HookData::default();

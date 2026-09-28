@@ -17,7 +17,6 @@ use crate::types::GatewayRouteView;
 
 pub const GATEWAY_FILE: &str = "ai/gateway.yaml";
 
-// Why: one declared route and whether the file spelled its `id:` out.
 #[derive(Debug, Clone)]
 pub struct DeclaredRoute {
     pub route: GatewayRouteView,
@@ -29,13 +28,9 @@ pub struct DeclaredRoutes {
     pub routes: Vec<DeclaredRoute>,
 }
 
-// Why: the canonical line for one route — the same function keys the hash
-// and the drift comparison, so the two cannot disagree about what counts.
 #[must_use]
 pub fn route_fingerprint(route: &GatewayRouteView) -> String {
     let block = |v: Option<&Value>| {
-        // Why: discard-ok: a block that parsed as YAML serialises; an empty
-        // string only makes the fingerprint differ
         v.map(|v| serde_yaml::to_string(v).unwrap_or_default())
             .unwrap_or_default()
     };
@@ -116,10 +111,8 @@ pub fn load_declared_routes(services_path: &Path) -> AdminResult<DeclaredRoutes>
         .map_err(|e| AdminError::invalid("gateway.yaml could not be parsed", e))
 }
 
-// Why: the baked tree, not the composed root — the composed root is a
-// content-addressed overlay the next refresh replaces, and this is the one
-// file the console writes back, so declaration and runtime must be the
-// same path.
+// Why: not core's composed services root — that is a content-addressed overlay
+// the next refresh replaces, and this is the one file the console writes back.
 pub fn baked_services_path() -> AdminResult<std::path::PathBuf> {
     Ok(std::path::PathBuf::from(
         &systemprompt::config::ProfileBootstrap::get()?

@@ -4,6 +4,9 @@
 //! governance decision, every safety finding, the skills invoked with the
 //! marketplace version served at the time — and the judge's one label with
 //! its rationale, plus the button that asks for it again.
+//!
+//! An owner outside the caller's view answers 404 like a missing id, so the
+//! URL is no oracle for other people's ids.
 
 mod context;
 mod figures;
@@ -50,8 +53,6 @@ async fn load_visible(
     user: &UserContext,
     context_id: &ContextId,
 ) -> Result<ConversationFactRow, AdminError> {
-    // Why: 404, not 403, for an owner outside the caller's view — the same
-    // answer as a missing id, so the URL is no oracle for other people's ids.
     let not_found = || AdminError::NotFound("No conversation matches that id.".to_owned());
     if !refresh_conversation_facts(pool, context_id).await? {
         return Err(not_found());
@@ -104,16 +105,11 @@ pub(crate) async fn page(
     ))
 }
 
-// Why: where the Judge button returns to — the list it was pressed on when
-// the form says so, else this conversation's own page.
 #[derive(Debug, Default, serde::Deserialize)]
 pub(crate) struct JudgeNowForm {
     pub back: Option<String>,
 }
 
-// Why: `POST …/{context_id}/judge` — ask the judge for this conversation now.
-// The row is queued as a manual request and the next `conversation_judge`
-// tick (within five minutes) reads it, whatever the profile's automatic switch.
 pub(crate) async fn judge_now(
     shell: Page,
     State(pool): State<Arc<PgPool>>,

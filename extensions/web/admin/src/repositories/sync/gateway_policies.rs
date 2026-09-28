@@ -36,8 +36,8 @@ pub const PLANE_ID: &str = "gateway_policies";
 #[derive(Debug, Clone, Copy, Default)]
 pub struct GatewayPoliciesPlane;
 
-// Why: no file is a legitimate declaration of "no policies" — core boots
-// permissive on it — so it is an empty set, not an error.
+// Why: core boots permissive when the policies file is absent, so no file
+// is a legitimate "no policies" declaration, not an error.
 fn declared_policies_from(from: DeclarationSource<'_>) -> AdminResult<DeclaredPolicies> {
     let Some(yaml) = read_or_text(from, POLICIES_FILE)? else {
         return Ok(DeclaredPolicies::default());

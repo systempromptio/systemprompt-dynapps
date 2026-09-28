@@ -22,12 +22,9 @@ use crate::handlers::ssr::types::{SparklineView, sparkline_toned};
 pub(crate) struct SkillChipView {
     pub name: String,
     pub href: String,
-    // Why: a skill the harness hook reported is evidence; one the judge
-    // inferred from the transcript alone is a reading.
     pub hooked: bool,
 }
 
-// Why: the judge's label as a row shows it.
 #[derive(Debug, Serialize)]
 pub(crate) struct JudgeCellView {
     pub judged: bool,
@@ -42,11 +39,7 @@ pub(crate) struct JudgeCellView {
     pub summary: String,
     pub rationale: String,
     pub title: String,
-    // Why: the POST that queues this one conversation for the judge; the
-    // row's button posts it with `back=` the page it was pressed on.
     pub judge_url: String,
-    // Why: whether the reader may press it; set by the page once it knows
-    // the viewer, since the row itself is built from facts alone.
     pub can_judge: bool,
 }
 
@@ -94,8 +87,6 @@ pub(crate) struct ConversationRowView {
     pub first_display: String,
     pub last_display: String,
     pub last_full: String,
-    // Why: where a row's Judge POST returns to — the page as the reader
-    // has it, filled in by the page.
     pub back_url: String,
 }
 
@@ -120,8 +111,6 @@ fn skill_chips(hooked: &[String], inferred: &[String]) -> Vec<SkillChipView> {
     skills
 }
 
-// Why: the tools cell reads "executed/asked" only when the two differ, so a
-// clean row shows one number.
 fn tools_cell(f: &RowFacts<'_>) -> (String, &'static str, String) {
     let asked = f.tool_calls_intended.max(f.tool_calls_executed);
     let display = if f.tool_calls_executed > 0 && f.tool_calls_executed != f.tool_calls_intended {
@@ -181,12 +170,11 @@ pub(crate) fn judge_cell(f: &RowFacts<'_>) -> JudgeCellView {
     }
 }
 
-// Why: the Tools / Artifacts pages default to the last 24 hours; a link from
-// a row carries the conversation's own span (an hour either side) so it
-// lands on the calls it counted, however old the conversation is.
+const ACTIVITY_SPAN_MARGIN_HOURS: i64 = 1;
+
 fn activity_href(base: &str, f: &RowFacts<'_>) -> String {
-    let from = f.first_at - chrono::Duration::hours(1);
-    let to = f.last_at + chrono::Duration::hours(1);
+    let from = f.first_at - chrono::Duration::hours(ACTIVITY_SPAN_MARGIN_HOURS);
+    let to = f.last_at + chrono::Duration::hours(ACTIVITY_SPAN_MARGIN_HOURS);
     format!(
         "{base}?context={}&from={}&to={}",
         urlencoding::encode(f.context_id.as_str()),
@@ -195,8 +183,6 @@ fn activity_href(base: &str, f: &RowFacts<'_>) -> String {
     )
 }
 
-// Why: a one-turn conversation still deserves a flat line rather than an
-// empty cell — the reader's eye expects the slot to be filled.
 fn turn_spark(turn_tokens: &[i64]) -> SparklineView {
     let title = format!("Tokens per turn, last {} turns", turn_tokens.len());
     if turn_tokens.len() == 1 {
@@ -206,8 +192,6 @@ fn turn_spark(turn_tokens: &[i64]) -> SparklineView {
 }
 
 impl ConversationRowView {
-    // Why: the viewer-dependent parts of a row, set once the page knows who
-    // is reading and where they are.
     pub(crate) fn with_viewer(mut self, can_judge: bool, back_url: &str) -> Self {
         self.judge.can_judge = can_judge;
         back_url.clone_into(&mut self.back_url);

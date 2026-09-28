@@ -24,9 +24,6 @@ pub(super) const fn kpi(
     }
 }
 
-// Why: the entry columns two of the three catalog lists share. Sorting is on
-// the assembled rows rather than in a query because the catalog is read from
-// YAML on disk — there is no query to push an ORDER BY into.
 pub(super) fn entry_columns(
     members_label: &'static str,
     members_hint: &'static str,
@@ -66,11 +63,6 @@ pub(super) fn entry_columns(
 }
 
 
-// Why: The six figures above the plugin listing.
-//
-// "Public" and "No direct grant" are the two that matter when they are wrong:
-// a public plugin is one no rule restricts, and a plugin with no direct grant
-// is reachable only through whatever marketplace happens to ship it.
 pub(super) fn plugin_kpis(plugins: &[super::view::PluginListRow]) -> Vec<CatalogKpiView> {
     let enabled = plugins.iter().filter(|p| p.enabled).count();
     let public = plugins.iter().filter(|p| p.visibility.is_public).count();
@@ -117,11 +109,6 @@ pub(super) fn plugin_kpis(plugins: &[super::view::PluginListRow]) -> Vec<Catalog
     ]
 }
 
-// Why: The six figures above the skill listing.
-//
-// "In no plugin" is the one an operator acts on: a skill nothing ships is
-// declared and unreachable, and it is invisible on every usage screen because
-// it can never be invoked.
 pub(super) fn skill_kpis(
     skills: &[super::view::SkillListRow],
     marketplaces: usize,

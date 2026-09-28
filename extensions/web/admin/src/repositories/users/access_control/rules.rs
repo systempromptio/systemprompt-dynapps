@@ -3,6 +3,10 @@
 //!
 //! The entity catalog is core's table: the row a grant's FK needs is ensured
 //! through [`AccessControlRepository`], never written here.
+//!
+//! Replacing an entity's rules is an upsert plus a delete of what is absent,
+//! not a wipe and re-insert: a file-declared row the console left alone keeps
+//! its `yaml` source and justification, so it does not turn into drift.
 
 use std::sync::Arc;
 
@@ -70,21 +74,15 @@ pub async fn list_rules_for_entity(
 
 const SOURCE_LABEL: &str = "admin:dashboard";
 
-// Why: replaces the entity's rule set with `rules`, but as an upsert plus a
-// delete of what is absent rather than a wipe and re-insert. A row the file
-// already declared and the console left alone keeps its `yaml` source and its
-// justification, so it does not turn into drift; only rows the console changed
-// or added are stamped `dashboard`.
+// Why: core's `ensure_entity` takes the pool, not this transaction, so the
+// catalog row commits first; a later failure leaves an unruled entity, which
+// already means "grants nothing".
 pub async fn set_entity_rules(
     pool: &PgPool,
     entity_type: EntityKind,
     entity_id: &str,
     rules: &[AccessControlRuleInput],
 ) -> Result<Vec<AccessControlRule>, AuthzError> {
-    // Why: core's `ensure_entity` takes the pool, not this transaction, so the
-    // catalog row is committed before the rules are replaced. A failure between
-    // the two leaves a catalog row with no grants — an entity that exists and
-    // grants nothing, which is what an unruled entity already means here.
     catalog(pool)
         .ensure_entity(entity_type, entity_id, SOURCE_LABEL)
         .await?;

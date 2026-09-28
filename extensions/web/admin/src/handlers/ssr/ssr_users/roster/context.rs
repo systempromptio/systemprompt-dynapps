@@ -27,19 +27,12 @@ pub(crate) struct RosterContext {
     pub row_count: usize,
     pub pagination: Pagination,
 
-    // Why: the write controls. A project manager reads the roster but may not
-    // create an account or change a role, so the buttons are absent rather
-    // than present and refused.
     pub can_write: bool,
     pub role_choices: Vec<String>,
     pub create_user: CreateUserPanelView,
     pub export: crate::export::ExportView,
 }
 
-// Why: what the Add User drawer offers. With `auto_provision` on, Astound SSO
-// creates the account itself at first sign-in and an operator-created row is
-// a duplicate waiting to happen, so the door is shown shut with the reason
-// rather than removed — flipping the config reopens it without a deploy.
 #[derive(Debug, Serialize)]
 pub(crate) struct CreateUserPanelView {
     pub sso_provisions: bool,
@@ -93,14 +86,10 @@ pub(crate) struct RosterRowView {
     pub roles: Vec<String>,
     pub roles_title: String,
     pub has_roles: bool,
-    // Why: groups and projects share one cell. Two columns of chips is what
-    // pushed a 32px row to 80px, and the question they answer together —
-    // "what does this person belong to" — is one question.
     pub scope: Vec<RosterChipView>,
     pub has_scope: bool,
     pub last_active: Option<String>,
     pub last_active_title: String,
-    // Why: the conversation the stamp came from, when it was a gateway turn.
     pub last_active_url: Option<String>,
     pub cost_display: String,
     pub requests_display: String,

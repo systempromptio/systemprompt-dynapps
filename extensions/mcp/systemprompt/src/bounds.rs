@@ -7,15 +7,14 @@
 //! says whether a result fits under [`MAX_RESULT_BYTES`]; the handler stores
 //! an oversize result whole as an artifact and sends [`overflow_pointer`] in
 //! its place, so nothing is lost and the model gets a link it can act on.
-//! [`bound_artifact`] is the last resort when that store fails: trim, and say
-//! what was cut.
+//! [`bound_artifact`] is the last resort when that store fails: a table loses
+//! trailing rows, anything else is truncated as text, and the title says what
+//! was cut.
 
 use systemprompt::identifiers::ArtifactId;
 use systemprompt::models::artifacts::{CliArtifact, TextArtifact};
 use systemprompt_mcp_shared::truncate_on_char_boundary;
 
-// Why: Largest serialized result sent to the model as a tool result. Anything
-// over it is stored whole as an artifact and replaced by a pointer.
 pub const MAX_RESULT_BYTES: usize = 1024 * 1024;
 
 const NARROW_HINT: &str = "Narrow the query: add --since/--until/--user or a smaller --limit, page \
@@ -28,8 +27,6 @@ const NARROW_HINT: &str = "Narrow the query: add --since/--until/--user or a sma
 pub struct Bounded {
     pub artifact: CliArtifact,
     pub truncated: bool,
-    // Why: (kept, received) for a table so the summary can say what was cut;
-    // other shapes have no row count to report.
     pub rows: Option<(usize, usize)>,
 }
 
@@ -39,25 +36,20 @@ pub struct StoredOverflow {
     pub artifact_id: ArtifactId,
     pub bytes: usize,
     pub rows: Option<usize>,
-    // Why: past the platform's payload ceiling only the digest is kept, and
-    // the pointer must not promise a body the artifact page cannot show.
     pub digest_only: bool,
 }
 
-// Why: Serialized size of the artifact as it would go on the wire.
 #[must_use]
 pub fn wire_bytes(artifact: &CliArtifact) -> usize {
     serde_json::to_vec(artifact).map_or(0, |b| b.len())
 }
 
-// Why: The overflow decision: `Some(bytes)` when the result is too big to send.
 #[must_use]
 pub fn oversize_bytes(artifact: &CliArtifact) -> Option<usize> {
     let bytes = wire_bytes(artifact);
     (bytes > MAX_RESULT_BYTES).then_some(bytes)
 }
 
-// Why: The rows an artifact carries, when it is a table.
 #[must_use]
 pub const fn row_count(artifact: &CliArtifact) -> Option<usize> {
     match artifact {
@@ -66,7 +58,6 @@ pub const fn row_count(artifact: &CliArtifact) -> Option<usize> {
     }
 }
 
-// Why: The short result sent in place of a stored oversize one.
 #[must_use]
 pub fn overflow_pointer(command: &str, stored: &StoredOverflow) -> CliArtifact {
     let rows = stored
@@ -91,8 +82,6 @@ pub fn overflow_pointer(command: &str, stored: &StoredOverflow) -> CliArtifact {
     )
 }
 
-// Why: a table loses trailing rows (the newest survive); anything else is
-// serialized and truncated as text. An artifact that fits is untouched.
 #[must_use]
 pub fn bound_artifact(artifact: CliArtifact, command: &str) -> Bounded {
     if oversize_bytes(&artifact).is_none() {

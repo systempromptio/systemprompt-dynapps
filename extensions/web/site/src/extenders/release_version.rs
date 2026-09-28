@@ -1,7 +1,7 @@
 //! Injects the running build's crate version into every template context.
 
 use async_trait::async_trait;
-// JSON: template context crosses the extender trait as a Value.
+// JSON: required by trait contract
 use serde_json::Value;
 use systemprompt::template_provider::{ExtenderContext, TemplateDataExtender};
 

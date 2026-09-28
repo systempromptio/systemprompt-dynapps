@@ -81,18 +81,21 @@ impl Provider {
     }
     pub fn callback(&self) -> AdminResult<String> {
         let cfg = systemprompt::models::Config::get().map_err(AdminError::internal)?;
-        // Why: Every Salesforce org shares one callback because they share one
-        // External Client App whose callback list is fixed in the source org;
-        // the org comes back in the `state` prefix instead (`consent::start`).
-        let segment = if self.is_salesforce() {
+        Ok(format!(
+            "{}/api/public/connectors/{}/callback",
+            cfg.api_external_url.trim_end_matches('/'),
+            self.callback_segment(),
+        ))
+    }
+    // Why: Salesforce orgs share one External Client App whose callback list is
+    // fixed in the source org, so every org uses one callback; the org returns in
+    // the `state` prefix (`consent::start`).
+    fn callback_segment(&self) -> &str {
+        if self.is_salesforce() {
             SALESFORCE_CALLBACK_SEGMENT
         } else {
             self.slug()
-        };
-        Ok(format!(
-            "{}/api/public/connectors/{segment}/callback",
-            cfg.api_external_url.trim_end_matches('/'),
-        ))
+        }
     }
     pub fn configured(&self) -> bool {
         let enabled = systemprompt::loader::ServicesBootstrap::get().is_ok_and(|services| {
@@ -121,10 +124,6 @@ impl Provider {
     pub fn settings(&self) -> Option<systemprompt::models::mcp::deployment::ConnectorConfig> {
         self.server()?.connector.clone()
     }
-    // Why: a server that requires the platform's own OAuth and declares no
-    // `connector:` block is authenticated by the caller's signed-in session,
-    // not by a grant they consent to. Its `oauth.scopes` are the entitlement,
-    // so `systemprompt` (scope `admin`) is a connector only an admin holds.
     pub fn session_scopes(&self) -> Option<&'static [Permission]> {
         if !matches!(self, Self::Generic(_)) || self.settings().is_some() {
             return None;
@@ -149,7 +148,6 @@ impl Provider {
     }
 }
 
-// Why: No provider secret is included in a service descriptor or client bundle.
 pub(crate) fn secret(name: &str) -> AdminResult<String> {
     std::env::var(name.to_uppercase())
         .ok()

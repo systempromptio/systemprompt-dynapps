@@ -10,10 +10,6 @@ use crate::config_loader::ConfigError;
 
 use super::load_config_section;
 
-// Why: a flat section deserialized into the admin crate's type, absent meaning
-// "not configured" rather than an error. It is not required for the server to
-// run: the accessor reports itself unavailable and the MCP server that uses it
-// ships disabled.
 fn load_downstream_config<T: serde::de::DeserializeOwned>(
     filename: &str,
     label: &str,

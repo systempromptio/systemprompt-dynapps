@@ -16,8 +16,6 @@ use crate::handlers::ssr::types::BreadcrumbView;
 
 use super::super::view::LinkedEntity;
 
-// Why: One row of the server list: the declaration, the liveness, and the
-// traffic. `pub(crate)` because the fleet export is the same rows.
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct McpServerRow {
     pub id: String,
@@ -84,8 +82,6 @@ pub(super) struct McpPageData {
     pub window_label: String,
     pub heartbeat_label: String,
     pub time_range: TimeRangeContext,
-    // Why: the custom bounds as RFC 3339, which is the only spelling the
-    // range parser reads back; the picker's own fields are datetime-local.
     pub window_from: String,
     pub window_to: String,
     pub export: ExportView,
@@ -94,9 +90,6 @@ pub(super) struct McpPageData {
     pub servers: Vec<McpServerRow>,
     pub servers_count: usize,
     pub unconfigured_count: usize,
-    // Why: calls in the window that were builtin tools of the client or the
-    // gateway, not any MCP server — reported once under the table rather
-    // than as rows, so the fleet is only servers.
     pub builtin_calls: i64,
     pub access_control_url: &'static str,
     pub sort_key: String,
@@ -105,7 +98,6 @@ pub(super) struct McpPageData {
     pub preserved_query: String,
 }
 
-// Why: A tool the server has actually served, with how well it served it.
 #[derive(Debug, Clone, Serialize)]
 pub(super) struct McpToolRow {
     pub tool_name: String,
@@ -122,7 +114,6 @@ pub(super) struct McpToolRow {
     pub last_call_display: String,
 }
 
-// Why: One person who used the server in the window.
 #[derive(Debug, Clone, Serialize)]
 pub(super) struct McpCallerRowView {
     pub caller: String,
@@ -133,7 +124,6 @@ pub(super) struct McpCallerRowView {
     pub last_call_display: String,
 }
 
-// Why: One line of the call log.
 #[derive(Debug, Clone, Serialize)]
 pub(super) struct McpExecutionRowView {
     pub execution_id: McpExecutionId,
@@ -156,7 +146,6 @@ pub(super) struct McpExecutionRowView {
     pub error_message: String,
 }
 
-// Why: One client attached to the server, now or recently.
 #[derive(Debug, Clone, Serialize)]
 pub(super) struct McpConnectionRowView {
     pub session: String,
@@ -172,7 +161,6 @@ pub(super) struct McpConnectionRowView {
     pub expires_display: String,
 }
 
-// Why: A `label: value` line of the configuration summary.
 #[derive(Debug, Clone, Serialize)]
 pub(super) struct ConfigFactView {
     pub label: &'static str,

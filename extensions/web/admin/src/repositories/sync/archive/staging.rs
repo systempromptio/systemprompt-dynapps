@@ -75,16 +75,11 @@ impl StagedArchive {
 pub struct StagingStore(Arc<Mutex<HashMap<String, StagedArchive>>>);
 
 impl StagingStore {
-    // Why: the JSON API and the SSR pages are separate routers built in
-    // separate places; one process-wide store is what lets a stage created
-    // through one be read by the other.
     pub fn global() -> &'static Self {
         static STORE: OnceLock<StagingStore> = OnceLock::new();
         STORE.get_or_init(Self::default)
     }
 
-    // Why: expired stages are swept on every put, and the oldest is dropped
-    // past the cap, so the store is bounded without a background task.
     pub fn put(&self, stage: StagedArchive) -> String {
         let id = stage.id.clone();
         if let Ok(mut map) = self.0.lock() {
@@ -119,8 +114,6 @@ impl StagingStore {
         }
     }
 
-    // Why: an applied plane leaves the stage so the preview cannot apply it
-    // twice; when the last one goes the stage goes with it.
     pub fn drop_plane(&self, id: &str, plane: &str) -> bool {
         let Ok(mut map) = self.0.lock() else {
             return false;

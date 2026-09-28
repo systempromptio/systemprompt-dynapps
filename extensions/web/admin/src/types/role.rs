@@ -75,15 +75,6 @@ impl fmt::Display for Role {
     }
 }
 
-// Why: the three tiers the admin router layers. `developer`,
-// `knowledge_worker`, `super_admin` and `project_manager` are entitlement
-// roles — they decide which marketplace and MCP servers a person reaches —
-// and sit in none of them. The console tier is the two admin roles: they alone
-// see the instance unscoped. Everyone else reaches the console only through
-// marketplace participation (`repositories::scope::participation`), which
-// scopes what they see. Writes go to the same two roles; the platform tier is
-// `platform_admin` alone, which holds the directory-shaped controls (AD
-// mappings, granting `platform_admin` itself).
 pub const ROLES_CONSOLE: &[Role] = &[Role::PlatformAdmin, Role::Admin];
 pub const ROLES_MANAGE: &[Role] = &[Role::PlatformAdmin, Role::Admin];
 pub const ROLES_PLATFORM: &[Role] = &[Role::PlatformAdmin];
@@ -96,9 +87,6 @@ pub fn has_any(roles: &[String], accepted: &[Role]) -> bool {
         .any(|r| accepted.contains(&r))
 }
 
-// Why: unknown strings are dropped rather than rejected. `users.roles` is a
-// free-text array an older release may have written into, and a stale value
-// must not make a whole account unreadable.
 #[must_use]
 pub fn parse_roles(roles: &[String]) -> Vec<Role> {
     roles
@@ -142,13 +130,8 @@ impl fmt::Display for RoleChangeRefusal {
     }
 }
 
-// Why: The whole rule for a role edit, as a pure function of what the caller
-// holds, what the target held, what is being asked for, and how many
-// platform admins exist.
-//
-// `directory_roles` are the roles the target's AD groups project onto them:
-// removing one here would be undone at their next sign-in, so it is refused
-// rather than silently reverted.
+// Why: AD-group-projected `directory_roles` are re-applied at the next ADFS
+// sign-in, so revoking one here is refused rather than silently reverted.
 pub fn authorize_role_change(
     caller_roles: &[String],
     before: &[String],

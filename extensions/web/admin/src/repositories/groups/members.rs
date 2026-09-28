@@ -9,6 +9,7 @@
 //! Every read here is windowed: a row outside its `valid_from`/`valid_until`
 //! or stamped `revoked_at` is not a membership. The `user_groups` view carries
 //! the same predicate, so the two never disagree about who is in a group.
+//! Re-adding a manual row the sweep revoked revives it rather than refusing.
 
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
@@ -58,9 +59,6 @@ pub async fn list_group_members(
     .await
 }
 
-// Why: reads the `user_groups` view, not the table, so a user with no rows
-// resolves to `unassigned` here exactly as they do in a listing. The
-// `group` authz dimension binds to this, so the two cannot disagree.
 pub async fn list_group_ids_for_user(
     pool: &PgPool,
     user_id: &UserId,
@@ -73,9 +71,6 @@ pub async fn list_group_ids_for_user(
     .await
 }
 
-// Why: the AD groups that produced this user's directory memberships, read
-// off the membership rows they created. The bridge shows these on its account
-// card, so a person can see which directory group placed them.
 pub async fn list_source_ad_groups(
     pool: &PgPool,
     user_id: &UserId,
@@ -109,10 +104,6 @@ pub async fn count_group_members(pool: &PgPool, group_id: &GroupId) -> Result<i6
     .await
 }
 
-// Why: a manual row the sweep already revoked is revived rather than refused —
-// the person was granted again, and the old window is what the audit trail
-// already recorded. A live manual row is the one conflict that means
-// "already a member".
 pub async fn insert_group_member(
     pool: &PgPool,
     group_id: &GroupId,
@@ -144,9 +135,8 @@ pub async fn insert_group_member(
     Ok(())
 }
 
-// Why: a directory-sourced membership cannot be removed here. It would
-// reappear at the member's next sign-in, so refusing says what is actually
-// true — the change belongs in AD.
+// Why: AD re-asserts a directory membership at the member's next sign-in, so
+// deleting one here would be undone; the change belongs in AD.
 pub async fn delete_group_member(
     pool: &PgPool,
     group_id: &GroupId,
@@ -181,13 +171,6 @@ pub async fn delete_group_member(
     Ok(())
 }
 
-// Why: Replace this user's directory memberships with what the assertion's AD
-// groups map to.
-//
-// Why replace and not union: an AD group the user has left must stop
-// granting anything, and the assertion is the whole truth about their
-// current directory membership. Manual rows are untouched, which is the
-// point of keeping `source` in the key.
 pub async fn replace_directory_group_memberships(
     pool: &PgPool,
     user_id: &UserId,

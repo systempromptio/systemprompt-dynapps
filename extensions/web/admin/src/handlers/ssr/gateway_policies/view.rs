@@ -1,4 +1,6 @@
 //! View types for `/admin/gateway/policies`.
+//!
+//! The form renders reserved blank window rows in place of an add control.
 
 use chrono::NaiveDate;
 use serde::Serialize;
@@ -129,8 +131,6 @@ pub(crate) struct PolicyView {
     pub in_force: InForce,
 }
 
-// Why: which of core's merged sections this row supplies; its own struct so
-// the policy view stays under the struct-bool ceiling.
 #[derive(Debug, Clone, Copy, Default, Serialize)]
 pub(crate) struct InForce {
     pub windows: bool,
@@ -145,10 +145,10 @@ const fn history(mode: SafetyHistoryMode) -> &'static str {
     }
 }
 
-// Why: the form always shows two spare window rows so a ceiling can be added
-// without a "new window" control, capped at what the parser will read.
+const RESERVED_WINDOW_ROWS: usize = 2;
+
 fn with_blanks(mut windows: Vec<WindowView>) -> Vec<WindowView> {
-    let target = (windows.len() + 2).min(MAX_WINDOWS);
+    let target = (windows.len() + RESERVED_WINDOW_ROWS).min(MAX_WINDOWS);
     while windows.len() < target {
         windows.push(blank_window(windows.len()));
     }
@@ -216,7 +216,6 @@ pub(crate) struct GatewayPoliciesPageData {
     pub page: &'static str,
     pub title: &'static str,
     pub tabs: Vec<TabLinkView>,
-    // Why: set on the Sync tab — `policies.yaml` against `ai_gateway_policies`.
     pub sync: Option<PlaneCardView>,
     pub breadcrumbs: Vec<BreadcrumbView>,
     pub can_write: bool,

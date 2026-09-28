@@ -4,6 +4,10 @@
 //! answer whenever membership moves. Writing here marks the row `manual`,
 //! which is what stops the job from overwriting it again — so an operator's
 //! choice is permanent until they change it, not until the next run.
+//!
+//! Directory sign-ins, restores and imports write membership without passing
+//! through this API, so `auto` attribution keys drift; the recompute endpoint
+//! is the way back and leaves `manual` rows alone.
 
 use std::sync::Arc;
 
@@ -63,14 +67,6 @@ pub(crate) async fn set_user_scope_defaults_handler(
     Ok(Json(written).into_response())
 }
 
-// Why: Recompute every `auto` attribution key from current membership.
-//
-// The keys are only rewritten where membership is written through this API.
-// The directory replaces a signer-in's whole `adfs` membership set at each
-// sign-in without passing through it, and a restore or an import writes the
-// tables directly, so an estate drifts: people keep their groups and lose
-// their primary group, and their spend silently becomes unattributed. This is
-// the operator's way back, and it leaves `manual` rows alone.
 pub(crate) async fn recompute_scope_defaults_handler(
     State(pool): State<Arc<PgPool>>,
     Extension(user_ctx): Extension<UserContext>,
@@ -84,8 +80,6 @@ pub(crate) async fn recompute_scope_defaults_handler(
     Ok(Json(serde_json::json!({ "recomputed": written })).into_response())
 }
 
-// Why: without this the insert fails on the foreign key and the caller is told
-// the server broke, when what happened is that they named a user who is gone.
 async fn require_user(pool: &PgPool, user_id: &UserId) -> AdminResult<()> {
     sqlx::query_scalar!("SELECT id FROM users WHERE id = $1", user_id.as_str())
         .fetch_optional(pool)

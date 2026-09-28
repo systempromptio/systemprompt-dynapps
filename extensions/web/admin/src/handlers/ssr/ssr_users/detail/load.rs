@@ -18,18 +18,13 @@ use crate::repositories::analytics::conversations::{
 use crate::repositories::users::enrolment::UserDeviceRow;
 use crate::repositories::users::sessions::SigninSessionRow;
 
-// Why: how many conversations one page of the Conversations tab carries.
 pub(super) const CONVERSATION_PAGE_SIZE: i64 = 25;
 
-// Why: one page of this account's conversations, plus the unpaged total.
 pub(super) struct UserConversationsData {
     pub items: Vec<HistoryItem>,
     pub total: i64,
 }
 
-// Why: the same query the two conversation listings run, with the scope pinned
-// to this one account — so a conversation reads the same here as it does under
-// AI activity, and a fix to the listing reaches all three surfaces at once.
 pub(super) async fn load_conversations(
     pool: &PgPool,
     user_id: &UserId,
@@ -122,10 +117,6 @@ pub(super) struct AccessData {
     pub rules: Vec<crate::types::access_control::AccessControlRule>,
 }
 
-// Why: the same catalogue and the same resolver the group Access tab and the
-// enforcement webhook use, so a cell here is the decision the gateway makes.
-// The rule list is read a second time to find this person's own rule per
-// entity, which the resolved matrix reports only as "decided by user".
 pub(super) async fn load_access(pool: &PgPool, user_id: &UserId) -> AccessData {
     let overview = super::access_overview::load(pool, user_id).await;
     let Ok(services_path) = crate::handlers::shared::get_services_path() else {
@@ -175,9 +166,6 @@ pub(super) struct UsageData {
 }
 
 
-// Why: no project filter — this is the admin's view of one named account, so
-// the project scoping that guards the cross-user list has nothing to add and
-// would only hide rows from an admin who asked for them by id.
 pub(super) async fn load_usage(pool: &PgPool, user_id: &UserId) -> UsageData {
     let filter = ConversationFilter {
         user_id: Some(user_id.clone()),
@@ -215,8 +203,6 @@ pub(super) struct Headline {
     pub(super) defaults: Option<repositories::scope::defaults::ScopeDefaults>,
 }
 
-// Why: the three headline reads are independent and each degrades to an
-// empty panel on its own rather than failing the page.
 pub(super) async fn load_headline(pool: &PgPool, user_id: &UserId) -> Headline {
     let (profile, summary, defaults) = tokio::join!(
         repositories::users::queries::find_user_access_profile(pool, user_id),

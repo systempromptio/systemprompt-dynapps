@@ -28,9 +28,6 @@ use super::{
     sanitize_redirect, use_https,
 };
 
-// Why: an assertion presented twice inside its validity window is a replay,
-// whatever else is right about it. In-process is enough for a single
-// instance; a multi-instance deploy would move this to Postgres.
 static REPLAY_CACHE: LazyLock<InMemoryReplayCache> = LazyLock::new(InMemoryReplayCache::default);
 
 #[derive(Deserialize)]
@@ -81,11 +78,6 @@ async fn run_callback(
                 AdfsError::Assertion(saml::Error::XmlParse(m)) if m.contains("NameID") => {
                     LoginRedirect("no_subject")
                 },
-                // Why: the farm answered an AuthnRequest we started, but we
-                // reached the verifier with no tracker — the state cookie did
-                // not come back — so the SP had to treat a solicited response
-                // as unsolicited. That is a cookie fault, not a bad assertion,
-                // and it gets its own reason so it never again reads as one.
                 AdfsError::Assertion(saml::Error::UnsolicitedNotAllowed) => {
                     LoginRedirect("correlation_lost")
                 },
@@ -123,10 +115,6 @@ async fn run_callback(
     })
 }
 
-// Why: A solicited response must echo the RelayState the start handler
-// minted, and the cookie must be present to compare it against. With no
-// cookie at all this is an IdP-initiated sign-in, allowed only when
-// configured; a cookie whose nonce disagrees is a forged or replayed return.
 fn correlate(
     allow_idp_initiated: bool,
     headers: &HeaderMap,

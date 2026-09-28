@@ -3,16 +3,13 @@
 use chrono::Utc;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-// JSON: upstream report envelopes carry heterogeneous table cells.
+// JSON: variable-shape report table cells
 use serde_json::Value;
 use std::collections::BTreeMap;
 use systemprompt::mcp::McpOutputSchema;
 
-// Why: a FLAT struct with a string discriminator, not a serde-tagged enum. A
-// tagged enum emits a top-level `oneOf` with no `properties`, and Claude Code
-// drops any tool whose inputSchema is shaped that way — `admin_report` was
-// invisible to the CLI client for exactly that reason while the sibling tool,
-// a plain struct, came through fine.
+// Why: Claude Code drops a tool whose inputSchema is a top-level `oneOf` with
+// no `properties`, which a serde-tagged enum emits; keep this a flat struct.
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ReportInput {
@@ -20,17 +17,15 @@ pub struct ReportInput {
         description = "Which report to run. `costs` is the only kind: AI usage, spend, models and sessions from this platform's own audit tables."
     )]
     pub report: ReportKind,
-    // Why: a plain `u16` with a serde default, not `Option<u16>`. schemars
-    // renders an `Option` as `type: ["integer", "null"]`, and Gemini/Vertex
-    // rejects a type list in a function declaration — the whole server's
-    // tool list was refused for this one field.
+    // Why: schemars renders `Option<u16>` as a type list, which Gemini/Vertex
+    // rejects in a function declaration, refusing the whole server's tools.
     #[schemars(description = "Lookback window in days, 1-90. Defaults to 7.")]
     #[serde(default = "seven_days")]
     pub days: u16,
 }
 
-// Why: `inline` keeps the enum out of `$defs`. A `$ref` into `$defs` is a
-// keyword Gemini names as unknown, so the kind must be spelled out in place.
+// Why: schemars `inline` keeps the enum out of `$defs`; Gemini rejects a `$ref`
+// into `$defs` as an unknown keyword.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 #[schemars(inline)]
@@ -53,7 +48,7 @@ pub struct SourceStatus {
 pub struct ReportTable {
     pub title: String,
     pub columns: Vec<String>,
-    // JSON: upstream CLI and Atlassian table cells are heterogeneous protocol values.
+    // JSON: variable-shape CLI and Atlassian table cells
     pub rows: Vec<BTreeMap<String, Value>>,
 }
 
@@ -69,10 +64,8 @@ pub struct ReportOutput {
     #[serde(default)]
     pub highlights: BTreeMap<String, String>,
     pub tables: Vec<ReportTable>,
-    // Why: `default` so a stored artifact written before this field existed —
-    // or by a version that omitted it — still deserialises. The renderer reads
-    // this back out of the A2A data part, and a hard failure there costs the
-    // whole dashboard.
+    // Why: serde `default` lets a stored artifact without this field still
+    // deserialise; a failure in the renderer's read-back costs the dashboard.
     #[serde(default)]
     pub request: Option<ReportInput>,
 }
@@ -104,10 +97,8 @@ impl ReportOutput {
 }
 
 impl McpOutputSchema for ReportOutput {
-    // Why: a report is its own shape (`metrics` + `tables`), not the core
-    // `dashboard` model with `sections`; declaring the built-in type made the
-    // ingest wrap it in a `tool_result` envelope that failed the schema the
-    // tool advertises.
+    // Why: core's ingest wraps a built-in `dashboard` type in a `tool_result`
+    // envelope that fails this tool's advertised schema; a report is its own shape.
     fn artifact_type() -> &'static str {
         "report"
     }

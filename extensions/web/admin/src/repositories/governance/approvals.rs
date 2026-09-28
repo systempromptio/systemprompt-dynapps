@@ -8,12 +8,13 @@
 //! Expiry is a lapsed decision rather than a stored one: the writer never comes
 //! back to restamp a row nobody answered, so a `pending` row past `expires_at`
 //! is read as expired here and by the predicate the queue filters on.
+//!
+//! The decision write's `status = 'pending'` predicate is the concurrency
+//! control: of two approvers on the same row, the second write must lose
+//! rather than silently replace the first decision.
 
 use chrono::{DateTime, Utc};
-// JSON: the tool arguments verbatim, as the enforcement point parked them.
-// An approver authorises exactly the payload that will run, and `args_digest`
-// binds the decision to it — re-rendering them through a typed struct would
-// change what was authorised.
+// JSON: variable-shape tool arguments, authorised verbatim via `args_digest`
 use serde_json::Value;
 use sqlx::PgPool;
 use systemprompt::identifiers::{CallId, SessionId, UserId};
@@ -40,7 +41,6 @@ pub struct ApprovalRow {
 }
 
 impl ApprovalRow {
-    // Why: The status a reader sees, with an unanswered expiry counted as expired.
     #[must_use]
     pub fn effective_status(&self) -> &str {
         if self.status == "pending" && self.expires_at <= Utc::now() {
@@ -153,10 +153,6 @@ pub async fn get_approval_stats(pool: &PgPool) -> Result<ApprovalStats, sqlx::Er
     .await
 }
 
-// Why: the `status = 'pending'` predicate is the concurrency control. Two
-// approvers looking at the same queue is the normal case, and the second write
-// must lose rather than overwrite the first decision — an approval that
-// silently replaced a deny would be the one bug this table exists to prevent.
 /// Who decided a held call, and what they said about it.
 #[derive(Debug, Clone, Copy)]
 pub struct ApprovalVerdict<'a> {

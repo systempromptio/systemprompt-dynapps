@@ -16,8 +16,6 @@ use crate::handlers::ssr::list_view::{DEFAULT_PAGE_SIZE, PageWindow, Pagination,
 use crate::repositories::roles::members::RoleHolderRow;
 
 pub(super) const BASE_URL: &str = "/admin/roles";
-// Why: one row per person, so the ceiling is the number of accounts that hold
-// any role at all.
 pub(super) const MEMBER_CAP: i64 = 2000;
 pub(super) const ENTITLEMENT_CAP: i64 = 1000;
 
@@ -66,8 +64,6 @@ impl RolesQuery {
         self.dir.as_deref() == Some("desc")
     }
 
-    // Why: every URL the page emits carries the filters that are set and
-    // nothing else, so a link never resurrects a filter the operator cleared.
     pub(super) fn url_with(&self, overrides: &[(&str, &str)]) -> String {
         let mut parts: Vec<(String, String)> = Vec::new();
         if self.on_entitlements() {
@@ -109,9 +105,6 @@ impl RolesQuery {
     }
 }
 
-// Why: a person holds a role from the directory when the role is in their set
-// but not in the manual subset; the two filters ask about the person, not
-// about one grant, so "from directory" means at least one such role.
 fn holds_directory_role(row: &RoleHolderRow) -> bool {
     row.roles.iter().any(|r| !row.manual_roles.contains(r))
 }

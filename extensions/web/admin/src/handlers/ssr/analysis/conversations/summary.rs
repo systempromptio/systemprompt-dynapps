@@ -42,8 +42,6 @@ pub(crate) fn outcome_label(value: &str) -> &'static str {
         .map_or("Unclear", |(_, label)| label)
 }
 
-// Why: the badge tones the console already defines; an outcome reads at a
-// glance without a legend.
 pub(crate) fn outcome_tone(value: &str) -> &'static str {
     match value {
         "achieved" => "ok",
@@ -70,7 +68,6 @@ pub(crate) struct ConversationAnalysisFilterView {
     pub by: &'static str,
     pub sort: &'static str,
     pub dir: &'static str,
-    // Why: the whole query string, for the judge-all form to carry back.
     pub query: String,
 }
 
@@ -79,8 +76,6 @@ pub(crate) struct ConversationBucketView {
     pub label: String,
     pub href: Option<String>,
     pub export_href: Option<String>,
-    // Why: the bucket's own query for the export dialog, so the icon opens on
-    // this bucket's rows rather than the page's whole filter set.
     pub export_query: Option<String>,
     pub conversations: i64,
     pub users: i64,

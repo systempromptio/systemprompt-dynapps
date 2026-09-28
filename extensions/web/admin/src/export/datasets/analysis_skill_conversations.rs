@@ -13,9 +13,6 @@ use crate::types::UserContext;
 
 pub(crate) struct SkillConversations;
 
-// Why: the export dialog is opened from the page, so the request's query
-// carries `format=`, `columns=` and the window beside the drill-down;
-// `skill` is the `plugin:skill` key the page carries in its path.
 #[derive(Debug, Default, Deserialize)]
 struct Drilldown {
     skill: Option<String>,

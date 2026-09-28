@@ -181,8 +181,6 @@ pub(crate) fn valid_tier(tier: &str) -> bool {
 pub(crate) fn valid_period(period: &str) -> bool {
     let b = period.as_bytes();
     let year = b.len() >= 5 && b[..4].iter().all(u8::is_ascii_digit) && b[4] == b'-';
-    // Why: `2026-W38` and `2026-09` differ only by the week marker; both end
-    // in two digits, which is all that is being checked here.
     year && match &b[5..] {
         [b'W', a, c] | [a, c] => a.is_ascii_digit() && c.is_ascii_digit(),
         _ => false,

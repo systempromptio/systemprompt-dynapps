@@ -49,8 +49,6 @@ impl HelpView {
     }
 }
 
-// Why: the figures the conversation record carries, worded once for the
-// Conversations list, the conversation detail and the Skills rows.
 pub(crate) fn record_items() -> Vec<HelpItem> {
     vec![
         item(

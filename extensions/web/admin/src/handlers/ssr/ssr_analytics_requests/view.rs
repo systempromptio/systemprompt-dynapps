@@ -20,10 +20,6 @@ use super::{BASE_URL, RequestsQuery};
 
 const EM_DASH: &str = "\u{2014}";
 
-// Why: `scope` is the caller's resolved user set — a console role's pick or
-// everything, everyone else's own groups whatever the query said. The group
-// and project on the filter are the narrower, exclusive attribution key, so a
-// person counts against one container rather than every one they belong to.
 pub(crate) fn filter_from_query(query: &RequestsQuery, scope: SubjectScope) -> RequestFilter {
     RequestFilter {
         scope,
@@ -87,8 +83,6 @@ pub(super) fn row_count_label(total: i64) -> String {
     }
 }
 
-// Why: a request rejected before route resolution carries no provider or
-// model; the cell reads as an em dash rather than a blank the eye skips.
 fn dash_if_empty(value: &str) -> String {
     if value.is_empty() {
         EM_DASH.to_owned()

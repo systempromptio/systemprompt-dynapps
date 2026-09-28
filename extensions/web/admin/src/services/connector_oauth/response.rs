@@ -38,26 +38,29 @@ pub(super) async fn body(response: reqwest::Response) -> AdminResult<Value> {
         if let Ok(value) = serde_json::from_slice::<Value>(&bytes) {
             return Ok(value);
         }
-        // Why: Streamable HTTP can answer a request on an SSE stream that remains
-        // open. Return when its JSON-RPC response arrives, not at stream EOF.
-        if let Ok(text) = std::str::from_utf8(&bytes) {
-            for frame in text.split("\n\n") {
-                let data = frame
-                    .lines()
-                    .filter_map(|l| l.strip_prefix("data:"))
-                    .collect::<Vec<_>>()
-                    .join("\n");
-                if let Ok(value) = serde_json::from_str::<Value>(&data)
-                    && value.get("id").is_some()
-                {
-                    return Ok(value);
-                }
-            }
+        if let Some(value) = sse_json_rpc_response(&bytes) {
+            return Ok(value);
         }
     }
     Err(AdminError::Upstream(
         "Provider returned an invalid response".into(),
     ))
+}
+
+// Why: MCP Streamable HTTP can answer on an SSE stream that stays open, so the
+// JSON-RPC response is taken from the frames read so far, not at stream EOF.
+fn sse_json_rpc_response(bytes: &[u8]) -> Option<Value> {
+    let text = std::str::from_utf8(bytes).ok()?;
+    text.split("\n\n").find_map(|frame| {
+        let data = frame
+            .lines()
+            .filter_map(|l| l.strip_prefix("data:"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        serde_json::from_str::<Value>(&data)
+            .ok()
+            .filter(|value| value.get("id").is_some())
+    })
 }
 
 pub(super) fn tool_error(grant: &Grant, payload: &Value, value: &Value) -> AdminError {

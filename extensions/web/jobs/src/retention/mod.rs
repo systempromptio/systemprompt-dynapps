@@ -9,12 +9,13 @@
 //! tables for the previous ISO week to `storage/exports/weekly/`; the monthly
 //! job archives the rollups that are kept indefinitely, runs the health
 //! check and vacuums the managed tables. Every archive is one gzipped JSON
-//! Lines file per table written by `COPY … TO STDOUT` with `row_to_json`, so
-//! it is complete, typed, and restorable with `COPY … FROM`.
+//! Lines file per table, streamed from `row_to_json`, so it is complete and
+//! typed. A table with no `window_days` is kept indefinitely or bounded by
+//! something other than age; the health check judges only dated windows.
 //!
-//! The SQL here is dynamic by nature — `COPY`, `VACUUM` and catalog lookups
-//! over a static table registry — so this module is the one allow-listed
-//! path in `scripts/check-sqlx.sh`; no statement takes user input.
+//! The SQL here is dynamic by nature — export `SELECT`s, `VACUUM`, catalog
+//! lookups over a static table registry — so this module is the one
+//! allow-listed path in `scripts/check-sqlx.sh`; no statement takes user input.
 
 mod archive;
 mod daily_report;
@@ -27,14 +28,10 @@ pub use daily_report::RetentionDailyReportJob;
 pub use export_monthly::RetentionExportMonthlyJob;
 pub use export_weekly::RetentionExportWeeklyJob;
 
-// Why: a table the lifecycle manages — its name and the column its age is
-// read from.
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct ManagedTable {
     pub name: &'static str,
     pub time_column: &'static str,
-    // Why: `None` is kept indefinitely (a rollup) or bounded by something
-    // other than age (an outbox); the health check only judges dated windows.
     pub window_days: Option<i32>,
 }
 
@@ -50,7 +47,6 @@ const fn managed(
     }
 }
 
-// Why: raw tables are bounded by age and archived weekly before they expire.
 pub(crate) const RAW_TABLES: &[ManagedTable] = &[
     managed("ai_requests", "created_at", Some(90)),
     managed("ai_request_messages", "created_at", Some(30)),
@@ -67,8 +63,6 @@ pub(crate) const RAW_TABLES: &[ManagedTable] = &[
     managed("engagement_events", "created_at", Some(90)),
 ];
 
-// Why: rollups are kept indefinitely and archived monthly as the durable
-// record.
 pub(crate) const ROLLUP_TABLES: &[ManagedTable] = &[
     managed("admin_usage_daily_rollups", "date", None),
     managed("plugin_usage_daily", "date", None),
@@ -79,7 +73,6 @@ pub(crate) const ROLLUP_TABLES: &[ManagedTable] = &[
     managed("retention_runs", "run_at", None),
 ];
 
-// Why: queues and buckets are measured for growth, never archived.
 pub(crate) const TRANSIENT_TABLES: &[ManagedTable] = &[
     managed("event_outbox", "created_at", None),
     managed("ai_quota_buckets", "window_start", None),

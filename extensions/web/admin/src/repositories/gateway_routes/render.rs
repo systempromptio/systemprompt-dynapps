@@ -21,9 +21,8 @@ fn views(rows: &[RouteRow]) -> Vec<GatewayRouteView> {
     rows.iter().map(|r| r.route.clone()).collect()
 }
 
-// Why: the comment block above `gateway:` is the one the value round-trip
-// can keep, because nothing above it moves; the inline comments beside
-// routes are lost, as they are on every editor write.
+// Why: a serde_yaml `Value` round-trip drops every comment; only the block
+// above `gateway:` can be re-attached, because nothing above it moves.
 fn leading_comment_header(yaml: &str) -> String {
     yaml.lines()
         .take_while(|line| line.trim_start().starts_with('#'))
@@ -34,8 +33,6 @@ fn leading_comment_header(yaml: &str) -> String {
         })
 }
 
-// Why: the file as it would be after `regenerate_gateway_file`, from its
-// current text and the rows, without writing it.
 pub fn render_routes_export(file_yaml: &str, rows: &[RouteRow]) -> Result<String, String> {
     let mut doc: Value = serde_yaml::from_str(file_yaml).map_err(|e| e.to_string())?;
     let root = doc

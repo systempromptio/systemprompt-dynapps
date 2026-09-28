@@ -15,10 +15,6 @@ pub struct UserSummary {
     pub email: Option<Email>,
     pub roles: Vec<String>,
     pub is_active: bool,
-    // Why: `None` means never active — not "active when they joined". The
-    // query takes GREATEST over the activity timestamps with no COALESCE to
-    // `created_at`, so a provisioned-but-unused seat stays distinguishable
-    // from one used on the day it was created.
     pub last_active: Option<DateTime<Utc>>,
     pub total_events: i64,
     pub last_tool: Option<String>,
@@ -37,9 +33,6 @@ pub struct UserDetail {
     pub email: Option<Email>,
     pub roles: Vec<String>,
     pub is_active: bool,
-    // Why: `None` means never active. The user-detail template already renders a
-    // "Last Active" card only `{{#if user.last_active}}`, so an absent value
-    // simply drops the card rather than showing a fabricated date.
     pub last_active: Option<DateTime<Utc>>,
     pub total_events: i64,
     pub custom_skills_count: i64,
@@ -135,9 +128,6 @@ pub struct CreateUserRequest {
     pub roles: Vec<String>,
     #[serde(default)]
     pub status: Option<String>,
-    // Why: the memberships the operator picks in the drawer. They are written
-    // as `manual` grants, the same rows the detail page's Membership tab
-    // writes one click at a time.
     #[serde(default)]
     pub group_ids: Vec<GroupId>,
     #[serde(default)]
@@ -181,8 +171,6 @@ pub struct UsersQuery {
 #[derive(Debug, Clone, Deserialize)]
 pub struct SetUserRolesRequest {
     pub roles: Vec<String>,
-    // Why: one window for every manual grant in this save. None keeps them
-    // open-ended; a directory role is never bounded here.
     #[serde(default)]
     pub valid_until: Option<DateTime<Utc>>,
 }

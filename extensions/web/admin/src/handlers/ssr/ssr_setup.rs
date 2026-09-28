@@ -23,9 +23,8 @@ struct SetupPageContext {
 }
 
 #[derive(Debug, Serialize)]
-// Why: `phase_title`, not `title` — the layout partial is invoked with a
-// `title=` hash, which shadows a field of that name inside every block, so the
-// phase rows all printed the page title.
+// Why: Handlebars — the layout partial's `title=` hash shadows a `title` field
+// inside every block, hence `phase_title`.
 struct SetupPhase {
     number: u8,
     phase_title: String,
@@ -45,9 +44,6 @@ pub(crate) struct SetupQuery {
     verified: Option<String>,
 }
 
-// Why: the marketplace counters are the only completion signal this page
-// has. Phase 2 was `phase1 && total_plugins > 0`, which is phase 1 restated
-// — the same condition twice, so the two steps could never disagree.
 fn setup_phases(mkt_ctx: &MarketplaceContext) -> Vec<SetupPhase> {
     let phase1_complete = mkt_ctx.total_plugins > 0;
     let phase2_complete = phase1_complete;

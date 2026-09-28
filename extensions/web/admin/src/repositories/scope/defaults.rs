@@ -73,9 +73,6 @@ pub async fn recompute_scope_defaults(pool: &PgPool) -> Result<u64, sqlx::Error>
     recompute(pool, None).await
 }
 
-// Why: a directory sign-in rewrites one person's memberships, and waiting for
-// the hourly pass would leave them unattributed until it runs — on a fresh
-// install, that is an estate reading zero for an hour.
 pub async fn recompute_scope_defaults_for_user(
     pool: &PgPool,
     user_id: &UserId,

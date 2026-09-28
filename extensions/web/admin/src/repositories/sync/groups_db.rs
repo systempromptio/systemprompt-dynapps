@@ -59,8 +59,6 @@ pub struct InsertOnlyOutcome {
     pub mappings: usize,
 }
 
-// Why: `ON CONFLICT DO NOTHING` throughout — insert-only means a row that
-// exists is not so much as touched, whatever its name or source says.
 pub async fn insert_missing(
     pool: &PgPool,
     doc: &GroupsDoc,
@@ -156,21 +154,17 @@ const EXPORT_HEADER: &str = "# The groups and projects this installation ships w
 # every mapping whatever wrote it. Seeds an empty database at boot and is\n\
 # otherwise compared on /admin/sync (groups plane).\n\n";
 
-// Why: The database as `groups.yaml`, in the shape the loader reads.
 #[must_use]
 pub fn render_groups_export(sets: &[MemberSetRow], mappings: &[MappingRow]) -> String {
     let doc = ExportDoc {
         groups: export_sets("group", sets, mappings),
         projects: export_sets("project", sets, mappings),
     };
-    // Why: discard-ok: the export types are plain strings and lists, which
-    // cannot fail to serialise; an empty body is the visible fallback
+    // Why: discard-ok: plain-string export types cannot fail to serialise
     let body = serde_yaml::to_string(&doc).unwrap_or_default();
     format!("{EXPORT_HEADER}{body}")
 }
 
-// Why: The loader's own parse of a file body, for the export round-trip and
-// the declaration read.
 pub fn parse_groups_doc(yaml: &str) -> Result<GroupsDoc, String> {
     if yaml.trim().is_empty() {
         return Ok(GroupsDoc::default());

@@ -144,8 +144,6 @@ pub async fn get_last_message(pool: &PgPool, session_id: &SessionId, user_id: &U
     .unwrap_or_else(String::new)
 }
 
-// Why: the skill most recently invoked in a session, as `plugin:skill`,
-// attributes the tool results that follow it.
 pub async fn find_latest_skill_invocation(
     pool: &PgPool,
     session_id: &SessionId,

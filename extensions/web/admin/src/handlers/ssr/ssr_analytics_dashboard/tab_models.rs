@@ -30,8 +30,6 @@ fn model_row(r: &ModelStatsRow, max: i64, query: &AnalyticsDashboardQuery) -> Mo
     ModelUsageRowView {
         model: r.model.clone(),
         name_display: short_name(&r.model, '/'),
-        // Why: a rejected request never reached a provider, so the cell says
-        // so rather than borrowing the provider of the route it never took.
         qualifier_display: qualifier(&r.model, '/', r.provider.as_deref()),
         requests: r.requests,
         share_pct: share(r.requests, max),
@@ -91,9 +89,6 @@ fn kpis(rows: &[ModelStatsRow], total: i64) -> Vec<KpiTile> {
     ]
 }
 
-// Why: `bar_pct` floors a small share to a bar too thin to see, so a model
-// with real traffic renders identically to one with none. Anything non-zero
-// gets at least a visible sliver; only a true zero draws nothing.
 const MIN_VISIBLE_BAR_PCT: i64 = 4;
 
 pub(super) fn share(value: i64, max: i64) -> i64 {
@@ -103,10 +98,6 @@ pub(super) fn share(value: i64, max: i64) -> i64 {
     bar_pct(value, max).max(MIN_VISIBLE_BAR_PCT)
 }
 
-// Why: model and skill ids carry a namespace prefix — `deepseek-ai/` on a
-// model, `astound-cowork-deliverables:` on a skill — that repeats down the
-// whole column and pushes the distinguishing half out of view. The name cell
-// shows what differs; the prefix goes to the muted line under it.
 pub(crate) fn short_name(id: &str, sep: char) -> String {
     id.rsplit_once(sep)
         .map_or_else(|| id.to_owned(), |(_, tail)| tail.to_owned())
@@ -134,8 +125,6 @@ pub(super) const fn per(total: i64, count: i64) -> i64 {
     if count > 0 { total / count } else { 0 }
 }
 
-// Why: the same three bands everywhere a rate is shown, so a red cell means
-// the same thing on the Models tab as it does on Tools.
 pub(super) fn tone(error_pct: f64) -> &'static str {
     if error_pct >= 10.0 {
         "err"

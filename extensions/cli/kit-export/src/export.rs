@@ -21,8 +21,6 @@ use systemprompt::models::services::{
     ServicesConfig,
 };
 
-// Why: the catalog loader wants an API URL for agent cards and managed MCP
-// entries; neither reaches the kit, so any syntactically valid URL will do.
 const PLACEHOLDER_API_URL: &str = "https://kit.invalid";
 const MCP_FILE: &str = ".mcp.json";
 const PLUGIN_MANIFEST: &str = ".claude-plugin/plugin.json";
@@ -65,11 +63,8 @@ impl From<&PluginComponentRef> for ComponentRefOut {
     }
 }
 
-// Why: `schema: 1` and the sidecar's own key names, and nothing that
-// `marketplace.json` already carries — core's import refuses `id`, `name`,
-// `description`, `version`, `author`, `keywords`, `license`, `plugins` and
-// `skills` in a sidecar. No `access`: who reaches a kit is declared in this
-// repository's rules.yaml, never in the kit.
+// Why: core's import refuses any key `marketplace.json` already carries (`id`,
+// `name`, `version`, `plugins`, …) in a sidecar; `access` lives in rules.yaml.
 #[derive(Debug, Serialize)]
 struct MarketplaceSidecarOut {
     schema: u32,
@@ -177,7 +172,7 @@ pub fn export_kit(
     Ok(report)
 }
 
-// JSON: the marketplace.json plugin entries, Anthropic's outgoing shape.
+// JSON: outgoing fixed-shape
 fn write_marketplace_files(
     out: &Path,
     id: &str,
@@ -209,7 +204,7 @@ fn skill_id_of(rel: &str) -> Option<(String, String)> {
     (file == "SKILL.md").then(|| (kebab.replace('-', "_"), kebab.to_owned()))
 }
 
-// JSON: `plugin.json` is Anthropic's format; only its `version` is touched.
+// JSON: variable-shape plugin.json
 fn authored_version(manifest: &[u8], version: &str) -> Result<Vec<u8>> {
     let mut doc: serde_json::Value = serde_json::from_slice(manifest)?;
     if let Some(obj) = doc.as_object_mut() {
@@ -221,8 +216,7 @@ fn authored_version(manifest: &[u8], version: &str) -> Result<Vec<u8>> {
     Ok(serde_json::to_vec_pretty(&doc)?)
 }
 
-// JSON: `.claude-plugin/marketplace.json` is Anthropic's format — an outgoing
-// fixed shape with no Rust type of its own on this side.
+// JSON: outgoing fixed-shape
 fn manifest_entry(config: &PluginConfig) -> serde_json::Value {
     serde_json::json!({
         "name": config.id.as_str(),

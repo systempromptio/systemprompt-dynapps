@@ -22,9 +22,6 @@ pub(crate) async fn list_agents_handler(
     let services_path = shared::get_services_path()?;
     let agents = repositories::config::agents::list_configured_agents(&services_path)
         .map_err(AdminError::internal)?;
-    // Why: `admin`, not `is_console`. The unfiltered list includes
-    // `admin_console`, which a project manager is deliberately not granted;
-    // they get the plugin-filtered view like every other role.
     if user_ctx.is_admin {
         return Ok(Json(AgentsListResponse { agents }).into_response());
     }

@@ -57,10 +57,8 @@ async fn main() -> Result<()> {
     systemprompt::logging::init_console_logging();
 
     let addr = format!("0.0.0.0:{}", port());
-    // Why: the supervisor judges this process by pid liveness and its port. The
-    // port is claimed before the slow profile/secrets/database bring-up so a
-    // clash fails at once, and the bring-up itself is bounded so a hang exits
-    // non-zero instead of lingering alive with nothing listening.
+    // Why: core's supervisor judges this process by pid and port, so the port
+    // is claimed before the slow, bounded bring-up and a clash fails at once.
     let listener = TcpListener::bind(&addr)
         .await
         .with_context(|| format!("Failed to bind {addr}"))?;

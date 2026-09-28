@@ -3,8 +3,6 @@
 use systemprompt::loader::ConfigLoader;
 use systemprompt::models::services::MarketplaceConfig;
 
-// Why: a config that fails to load yields an empty list rather than an error —
-// admin pages must still render.
 pub(crate) fn load_marketplaces() -> Vec<MarketplaceConfig> {
     let Ok(services) = ConfigLoader::load() else {
         return Vec::new();

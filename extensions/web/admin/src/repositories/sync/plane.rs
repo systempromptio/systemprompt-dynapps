@@ -16,7 +16,10 @@
 //! preview hands the plane the text of one uploaded file instead
 //! ([`DeclarationSource::Text`]). The `_from` methods take that choice and
 //! default to refusing text, so a plane that has not opted in still
-//! compiles and still syncs from disk.
+//! compiles and still syncs from disk. A `Text` preview must leave no trace
+//! in `sync_state`, and `apply_scoped` defaults to refusing so a scoped
+//! caller can never reach a plane-wide write. A plane `id` is a URL segment
+//! and the `sync_state.plane` key, so it is a stable token.
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
@@ -89,8 +92,6 @@ impl Actor<'_> {
         }
     }
 
-    // Why: `None` is what `sync_state` records as `seed`; a person's apply
-    // keeps the direction they chose.
     #[must_use]
     pub const fn recorded_mode(&self, mode: SyncMode) -> Option<SyncMode> {
         match self {
@@ -146,16 +147,10 @@ pub struct ApplyOutcome {
 
 #[async_trait]
 pub trait SyncPlane: Send + Sync {
-    // Why: `id` is a URL segment and the `sync_state.plane` key, so it is a
-    // stable token; `source_file` is relative to `services/`; `projection`
-    // names the table(s) for the card.
     fn id(&self) -> &'static str;
     fn label(&self) -> &'static str;
     fn source_file(&self) -> &'static str;
     fn projection(&self) -> &'static str;
-    // Why: a plane whose runtime input is a file core reads at boot says so
-    // here; the card prints it beside the actions so nobody applies a change
-    // and waits for it to take effect.
     fn runtime_note(&self) -> Option<&'static str> {
         None
     }
@@ -166,9 +161,6 @@ pub trait SyncPlane: Send + Sync {
         mode: SyncMode,
         actor: Actor<'_>,
     ) -> AdminResult<ApplyOutcome>;
-    // Why: the same apply narrowed to named entities. Only a plane whose
-    // rows carry an entity dimension opts in; the default refuses so a
-    // scoped caller can never reach a plane-wide write by accident.
     async fn apply_scoped(
         &self,
         pool: &PgPool,
@@ -184,18 +176,12 @@ pub trait SyncPlane: Send + Sync {
             ))),
         }
     }
-    // Why: `None` for a plane whose declaration has no file form.
     async fn export(&self, pool: &PgPool) -> AdminResult<Option<Export>>;
 
-    // Why: the page the plane's data lives on — where its Sync tab is. The
-    // configuration page and an import preview link there.
     fn owner_url(&self) -> &'static str {
         "/admin/sync"
     }
 
-    // Why: the same drift, read from an uploaded file instead of disk. A
-    // preview must leave no trace, so an implementation records nothing in
-    // `sync_state` for `Text`.
     async fn drift_from(
         &self,
         pool: &PgPool,

@@ -108,8 +108,6 @@ pub struct MarketplaceAdoptionRow {
     pub skills: i64,
     pub plugins: i64,
     pub installed: i64,
-    // Why: entitlement is resolved in Rust; the ids let the page count the
-    // installed who are entitled, so a rate never exceeds its denominator.
     pub installed_consumers: Vec<String>,
     pub installed_claude_code: i64,
     pub installed_opencode: i64,

@@ -6,17 +6,16 @@
 //! audit payload cap. The page pairs the arrays itself
 //! (`types::tool_schema_diff`).
 
-// JSON: both arrays are protocol-boundary tool schemas in a provider's own
-// wire shape; there is no one typed form they all share.
+// JSON: protocol boundary
 use serde_json::Value;
 use sqlx::PgPool;
 
 /// What `ai_request_payloads` keeps of one request's schemas.
 #[derive(Debug, Clone)]
 pub struct RequestSchemaRow {
-    // JSON: the client's `tools` array, in the shape it sent.
+    // JSON: protocol boundary
     pub offered_tools: Option<Value>,
-    // JSON: the `tools` array the gateway put upstream, provider-shaped.
+    // JSON: protocol boundary
     pub prepared_tools: Option<Value>,
     pub request_body_sha256: Option<String>,
     pub prepared_body_sha256: Option<String>,

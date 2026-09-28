@@ -16,10 +16,6 @@ use super::super::view::assignment_counts_by_type;
 use super::rows::{self, RowInputs, Runtime};
 use super::view::McpServerRow;
 
-// Why: both reads are best-effort. A runtime table that will not answer
-// must not take the page down with it — the declaration alone is still worth
-// rendering, and the status column then says "Idle" rather than inventing a
-// liveness it could not read.
 pub(super) async fn load_runtime(pool: &PgPool, range: TimeRange) -> Runtime {
     let connections = runtime::list_mcp_connections(pool)
         .await
@@ -37,9 +33,6 @@ pub(crate) struct Fleet {
     pub builtin_calls: i64,
 }
 
-// Why: the fleet as one list — every declared server plus every name the
-// runtime served under — assembled once for the page and the export alike, so
-// the CSV can never disagree with the table it was downloaded from.
 pub(crate) async fn fleet_rows(
     pool: &PgPool,
     roles: &[String],

@@ -108,8 +108,6 @@ pub(super) async fn load_cost(pool: &PgPool, plan: &TabPlan<'_>) -> TabData {
     TabData {
         cost_days: unwrap_or_empty(days, "list_provider_cost_by_day"),
         cost_providers: unwrap_or_empty(providers, "list_provider_costs"),
-        // Why: the model split is the same distribution the Overview pie
-        // reads, re-labelled as a supplier line rather than queried twice.
         cost_models: unwrap_or_empty(models, "list_model_distribution")
             .into_iter()
             .map(|m| SupplierCostRow {

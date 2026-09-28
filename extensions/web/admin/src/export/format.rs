@@ -80,9 +80,6 @@ impl Format {
     }
 }
 
-// Why: integer formatting, not f64 — these files feed finance spreadsheets,
-// and the microdollar ledger must survive the export exactly. Six decimals is
-// the full stored precision.
 pub(crate) fn usd(microdollars: i64) -> String {
     let sign = if microdollars < 0 { "-" } else { "" };
     let abs = microdollars.unsigned_abs();

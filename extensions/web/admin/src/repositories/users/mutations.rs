@@ -3,7 +3,8 @@
 //! Neither door touches group or project membership here: the create handler
 //! writes the drawer's picks as manual grants through the membership
 //! repositories, and directory-owned memberships are what the assertion says
-//! at SSO sign-in (see [`super::federated`]).
+//! at SSO sign-in (see [`super::federated`]). Roles are left unchanged by an
+//! update; only the role route writes them.
 
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
@@ -69,10 +70,7 @@ pub async fn update_user(
         }
     });
     let set_email_verified = req.is_active == Some(true);
-    // Why: roles moved to their own route, which is the only place the
-    // platform-admin and directory rules can be applied. The bind stays so the
-    // statement is untouched; B3 removes it with the column from the UPDATE.
-    let roles_update: Option<&[String]> = None;
+    let unchanged_roles: Option<&[String]> = None;
 
     sqlx::query_as!(
         UserSummary,
@@ -105,7 +103,7 @@ pub async fn update_user(
         user_id.as_str(),
         req.display_name.as_deref(),
         req.email.as_deref(),
-        roles_update,
+        unchanged_roles,
         status.as_deref(),
         set_email_verified,
     )

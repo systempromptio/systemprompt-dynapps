@@ -73,9 +73,6 @@ fn figures(row: Option<&MarketplaceVersionSkillRow>) -> SkillFigures {
     })
 }
 
-// Why: `a` is the older side and `b` the newer. With neither named, the
-// two newest versions are compared, which is the question a reader most
-// often arrives with: did the latest change help.
 fn pick(
     rows: &[MarketplaceVersionMetricsRow],
     (a, b): (Option<String>, Option<String>),
@@ -97,9 +94,6 @@ fn pick(
 
 type ByKey<'a> = BTreeMap<(&'a str, &'a str, &'a str), &'a MarketplaceVersionSkillRow>;
 
-// Why: a skill is listed if either manifest names it or either version has
-// facts for it — a legacy version has no manifest, so its skills are known
-// only from its facts.
 fn skill_rows_for(
     manifest_diff: Option<&super::diff::ManifestDiff>,
     skill_rows: &[MarketplaceVersionSkillRow],
@@ -144,8 +138,6 @@ fn skill_rows_for(
         .collect()
 }
 
-// Why: every version of one marketplace with the judge's scores beside it —
-// what the detail page has already read once and every tab reads from.
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct Recorded<'a> {
     pub rows: &'a [MarketplaceVersionMetricsRow],

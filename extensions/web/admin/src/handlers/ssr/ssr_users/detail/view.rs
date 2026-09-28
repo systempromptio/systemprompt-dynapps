@@ -26,8 +26,6 @@ use crate::handlers::ssr::list_view::paginate_prefixed;
 
 const SLACK_ISSUER: &str = "https://slack.com";
 
-// Why: the export datasets are console-only; a plain user on their own page
-// gets no button rather than one that answers 403.
 pub(super) fn export(user_id: &UserId, viewer: &UserContext) -> Option<crate::export::ExportView> {
     viewer.is_console.then(|| {
         let query = crate::export::view::query_string(&[("user_id", Some(user_id.as_str()))]);
@@ -105,9 +103,6 @@ pub(super) fn membership_tab(data: MembershipData) -> MembershipTabView {
     }
 }
 
-// Why: only a container this person actually belongs to may be their primary
-// one — attributing their spend to a group they are not in would put a cost on
-// a page whose member list cannot explain it.
 fn scope_options(
     choices: &[crate::handlers::ssr::types::MembershipChoiceView],
     selected: Option<&str>,
@@ -131,10 +126,6 @@ fn scope_options(
     out
 }
 
-// Why: a bridge row is a heartbeat, not a credential — it is never revoked,
-// so its state is presence (online / idle / stale by the fleet rule); a
-// certificate or token is active until revoked. "Active" on the tab counts
-// bridges online now plus credentials still valid.
 pub(super) fn devices_tab(rows: Vec<UserDeviceRow>) -> DevicesTabView {
     let now = Utc::now();
     let rows: Vec<DeviceRowView> = rows.into_iter().map(|r| device_row(r, now)).collect();
@@ -188,8 +179,6 @@ pub(super) fn sessions_tab(
     page: i64,
     page_size: i64,
 ) -> UserSessionsTabView {
-    // Why: the row badge says Live only when the session is neither revoked
-    // nor past its expiry; the count must agree with the badges beneath it.
     let now = Utc::now();
     let live_count = rows
         .iter()
@@ -279,8 +268,6 @@ fn tab_pagination(user_id: &UserId, tab: &str, window: PageWindow) -> Pagination
     paginate_prefixed(window, &prefix)
 }
 
-// Why: one date format across every tab. An absent timestamp renders as an
-// em dash, never as the epoch or as "now".
 pub(super) fn stamp(value: Option<DateTime<Utc>>) -> String {
     value.map_or_else(
         || "—".to_owned(),

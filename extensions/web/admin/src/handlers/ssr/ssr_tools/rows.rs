@@ -113,11 +113,6 @@ fn decision_tone(decision: Option<&str>) -> &'static str {
     }
 }
 
-// Why: the five places a call links out to — person, harness session,
-// conversation, request and trace — resolved together so the row stays
-// readable. The session page only answers to a session id, never a trace
-// id; the trace page resolves an execution by its trace id or by its own id,
-// so a call with no gateway trace still links by execution id.
 struct EntityLinks {
     user: Option<String>,
     session: Option<String>,
@@ -150,8 +145,6 @@ fn entity_links(r: &ToolActivityRow, context_key: Option<&str>) -> EntityLinks {
     }
 }
 
-// Why: the artifact's own title when it has one, else what the call was
-// about, else the tool — never an empty cell.
 fn artifact_title(r: &ToolActivityRow, tool_name: &str, input: String) -> String {
     r.artifact_title
         .clone()

@@ -6,19 +6,9 @@
 //! adding a column to a page is naming it, not re-deriving the link, the
 //! indicator glyph and the `aria-sort` value a fourth time.
 
-// Why: re-exported rather than merely imported — this module is the catalog's
-// sort-header builder, and `lib.rs` and the catalog views name the type
-// through it.
 pub(crate) use crate::handlers::ssr::types::SortHeaderView;
 pub use crate::handlers::ssr::types::table::SortColumn;
 
-// Why: The header row for `columns`, given the base path and the applied order.
-//
-// An inactive column opens descending, because every numeric column on these
-// pages is scanned for its largest values and every date column for its most
-// recent; an active one flips. `preserved` is the rest of the query string —
-// a sort link that dropped the active filter would silently widen the list
-// the operator is looking at.
 pub fn sort_headers(
     base_url: &str,
     columns: &[SortColumn],
@@ -47,12 +37,10 @@ pub fn sort_headers(
         .collect()
 }
 
-// Why: Normalise `?dir=` to the two values the headers understand.
 pub fn direction(raw: Option<&str>) -> &'static str {
     if raw == Some("asc") { "asc" } else { "desc" }
 }
 
-// Why: The `q=` filter, url-encoded for a link, or an empty string.
 pub fn preserved_search(q: &str) -> String {
     if q.is_empty() {
         return String::new();
@@ -60,7 +48,6 @@ pub fn preserved_search(q: &str) -> String {
     format!("q={}", urlencoding::encode(q))
 }
 
-// Why: Case-insensitive substring match over a row's searchable text.
 pub fn matches(haystack: &[&str], needle: &str) -> bool {
     if needle.is_empty() {
         return true;
@@ -71,7 +58,6 @@ pub fn matches(haystack: &[&str], needle: &str) -> bool {
         .any(|field| field.to_lowercase().contains(&needle))
 }
 
-// Why: Apply `dir` to a comparator that always orders ascending.
 pub(crate) fn apply_direction<T>(
     rows: &mut [T],
     dir: &str,

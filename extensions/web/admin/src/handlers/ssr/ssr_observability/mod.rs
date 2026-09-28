@@ -40,8 +40,6 @@ pub(crate) struct ObservabilityQuery {
     detail: Option<String>,
 }
 
-// Why: the notice the redirect carries — a fixed code picks the tone and
-// title, the detail is the one free-text line and is printed escaped.
 #[derive(Debug, Clone, Serialize)]
 struct OutcomeView {
     tone: &'static str,

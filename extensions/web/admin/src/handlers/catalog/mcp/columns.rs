@@ -11,7 +11,6 @@ use crate::handlers::ssr::format::short_num;
 use super::rows::{delta, error_rate, ms_display};
 use super::view::{McpKpiView, McpServerRow};
 
-// Why: The columns `/admin/mcp` can be ordered by.
 pub(super) fn columns() -> Vec<SortColumn> {
     vec![
         SortColumn {
@@ -83,8 +82,6 @@ pub(super) fn columns() -> Vec<SortColumn> {
     ]
 }
 
-// Why: The five headline facts, plus the one that only matters when it is
-// wrong.
 pub(super) fn kpis(rows: &[McpServerRow]) -> Vec<McpKpiView> {
     let configured = rows.iter().filter(|r| r.configured).count();
     let alive = rows.iter().filter(|r| r.alive).count();
@@ -97,8 +94,6 @@ pub(super) fn kpis(rows: &[McpServerRow]) -> Vec<McpKpiView> {
     let (rate, rate_tone) = error_rate(calls, errors);
     let (delta_display, _) = delta(calls, prior);
 
-    // Why: one server's p95 is its own; the fleet's is the worst server's,
-    // because the tile answers "how slow can a call get".
     let p95 = rows
         .iter()
         .filter_map(|r| r.p95_ms)

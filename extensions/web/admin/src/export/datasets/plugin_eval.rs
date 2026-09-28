@@ -5,12 +5,11 @@
 //! the file and a run's report are one set of numbers.
 
 use async_trait::async_trait;
-use serde::Deserialize;
 use systemprompt::identifiers::MarketplaceId;
 
-use crate::error::{AdminError, AdminResult};
+use super::versions::readable_marketplace;
+use crate::error::AdminResult;
 use crate::export::model::{Cell, CellKind, Column, DataSet, ExportContext, Table, Window};
-use crate::handlers::ssr::analysis::marketplace_versions::may_read_marketplace;
 use crate::repositories::analysis::marketplace_versions::VersionWindow;
 use crate::repositories::analysis::plugin_eval::{
     PluginEvalRow, PluginEvalToolRow, list_plugin_eval_runs, list_plugin_eval_tools,
@@ -19,11 +18,6 @@ use crate::types::UserContext;
 
 pub(crate) struct PluginEval;
 pub(crate) struct PluginEvalTools;
-
-#[derive(Debug, Default, Deserialize)]
-struct Target {
-    marketplace: Option<String>,
-}
 
 const COLUMNS: &[Column] = &[
     Column::new("context_id", "Conversation", CellKind::Text),
@@ -139,19 +133,7 @@ impl DataSet for PluginEval {
 }
 
 fn target(ctx: &ExportContext<'_>) -> AdminResult<(MarketplaceId, VersionWindow)> {
-    let target: Target = ctx.query()?;
-    let id = target
-        .marketplace
-        .filter(|m| !m.is_empty() && m.len() <= 128 && !m.chars().any(char::is_control))
-        .ok_or_else(|| AdminError::BadRequest("Name a marketplace".to_owned()))?;
-    let id = MarketplaceId::new(id);
-    // Why: the same not-found the page answers, so the export is no
-    // oracle for marketplaces outside the caller's participation.
-    if !may_read_marketplace(ctx.user, &id) {
-        return Err(AdminError::NotFound(format!(
-            "No version of marketplace '{id}' has been recorded"
-        )));
-    }
+    let id = readable_marketplace(ctx)?;
     let w = ctx.window()?;
     Ok((
         id,

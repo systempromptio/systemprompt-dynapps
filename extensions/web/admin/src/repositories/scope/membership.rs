@@ -22,15 +22,20 @@
 //! unattributed bucket, which every instance-wide breakdown reports rather
 //! than drops. Under member attribution it is the request joined to full
 //! membership, the overlapping view, and its `source` is `'member'`.
+//!
+//! Resolving a subject scope: a scoped caller naming one container asks about
+//! that container alone, so the other dimension never intersects it away. An
+//! explicit `?group=` / `?project=` is a question about the container's spend,
+//! so it also admits anyone with a request stamped to it; the narrowing a
+//! scoped caller gets without asking stays on current membership, and is a
+//! union of their containers where a console caller's two filters intersect.
+//! A scoped caller's own id is always admitted.
 
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 
 use super::{Attribution, ScopeTarget};
 
-// Why: the id every instance-wide breakdown files traffic under when it
-// attributes to nobody — a rejected request with no user, a non-user actor, or
-// a person no primary container covers.
 pub const UNATTRIBUTED: &str = "unattributed";
 
 #[macro_export]
@@ -106,31 +111,13 @@ async fn resolve_subject_scope(
     pool: &PgPool,
     request: &super::ScopeRequest,
 ) -> Result<super::SubjectScope, sqlx::Error> {
-    let explicit_group = request.group.is_some();
-    let explicit_project = request.project.is_some();
-    // Why: a scoped caller naming one container asks about that container
-    // alone; the other dimension must not silently intersect it away.
-    let (groups, projects) = match (request.is_scoped(), explicit_group, explicit_project) {
-        (true, true, false) => (request.group_filter(), None),
-        (true, false, true) => (None, request.project_filter()),
-        _ => (request.group_filter(), request.project_filter()),
-    };
+    let admit_group_history = request.group.is_some();
+    let admit_project_history = request.project.is_some();
+    let (groups, projects) = named_container_filters(request);
     if groups.is_none() && projects.is_none() {
         return Ok(super::SubjectScope::All);
     }
-
-    // Why: an explicit `?group=` / `?project=` filter is a question about the
-    // container's spend, so it also admits anyone with a request stamped to
-    // it — a person who has since moved keeps showing under the container
-    // their history was attributed to. The visibility narrowing a scoped
-    // caller gets without asking stays on current membership, so leaving a
-    // group ends what its peers can see of you. A scoped caller's own id is
-    // always admitted: their view can narrow to nothing but themselves.
-    //
-    // A console caller filtering on both containers asks for their
-    // intersection; a scoped caller's containers are a union — every person
-    // their marketplaces reach, by whichever container reaches them.
-    let union = request.is_scoped() && !explicit_group && !explicit_project;
+    let union_of_containers = request.is_scoped() && !admit_group_history && !admit_project_history;
     let ids = sqlx::query_scalar!(
         r#"WITH in_groups AS (
                SELECT u.id
@@ -165,13 +152,24 @@ async fn resolve_subject_scope(
                  END"#,
         groups.as_deref(),
         projects.as_deref(),
-        explicit_group,
-        explicit_project,
-        union,
+        admit_group_history,
+        admit_project_history,
+        union_of_containers,
         request.self_id()
     )
     .fetch_all(pool)
     .await?;
 
     Ok(super::SubjectScope::Users(ids))
+}
+
+fn named_container_filters(
+    request: &super::ScopeRequest,
+) -> (Option<Vec<String>>, Option<Vec<String>>) {
+    let named = (request.group.is_some(), request.project.is_some());
+    match (request.is_scoped(), named) {
+        (true, (true, false)) => (request.group_filter(), None),
+        (true, (false, true)) => (None, request.project_filter()),
+        _ => (request.group_filter(), request.project_filter()),
+    }
 }

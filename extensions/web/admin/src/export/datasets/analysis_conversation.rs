@@ -127,8 +127,6 @@ impl DataSet for ConversationTurns {
     fn allows(&self, user: &UserContext) -> bool {
         user.has_scoped_console()
     }
-    // Why: the same 404-not-403 rule as the page — a context outside the
-    // caller's view is indistinguishable from a missing one.
     async fn load(&self, ctx: &ExportContext<'_>) -> AdminResult<Table> {
         let query: ConversationQuery = ctx.query()?;
         let raw = query

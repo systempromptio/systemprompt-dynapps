@@ -73,6 +73,13 @@ pub async fn delete(
     Ok(())
 }
 
+async fn purge_expired_consent_credentials(pool: &PgPool) -> Result<(), sqlx::Error> {
+    sqlx::query!("DELETE FROM mcp_connector_oauth_states WHERE expires_at <= NOW()")
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
 pub async fn save_state(
     pool: &PgPool,
     user: &UserId,
@@ -80,10 +87,7 @@ pub async fn save_state(
     state: &str,
     grant: &EncryptedGrant,
 ) -> Result<(), sqlx::Error> {
-    // Why: Expired consent attempts hold encrypted transient client credentials.
-    sqlx::query!("DELETE FROM mcp_connector_oauth_states WHERE expires_at <= NOW()")
-        .execute(pool)
-        .await?;
+    purge_expired_consent_credentials(pool).await?;
     sqlx::query!(
         "INSERT INTO mcp_connector_oauth_states (state, user_id, provider, ciphertext, nonce) \
          VALUES ($1, $2, $3, $4, $5)",
@@ -98,13 +102,15 @@ pub async fn save_state(
     Ok(())
 }
 
+// Why: Postgres `DELETE … RETURNING` is atomic, so each OAuth state is
+// redeemable once even across processes; a SELECT-then-DELETE would allow
+// replay.
 pub async fn consume_state(
     pool: &PgPool,
     user: &UserId,
     provider: &str,
     state: &str,
 ) -> Result<Option<EncryptedGrant>, sqlx::Error> {
-    // Why: DELETE RETURNING makes callback replay impossible across processes.
     sqlx::query_as!(
         EncryptedGrant,
         "DELETE FROM mcp_connector_oauth_states \

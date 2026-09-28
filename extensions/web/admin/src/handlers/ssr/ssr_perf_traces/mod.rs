@@ -101,15 +101,11 @@ pub(crate) async fn perf_traces_page(
     ))
 }
 
-// Why: which slice of the timeline the reader asked for: the time range and
-// the page within it. Zero pages are a whole-range query.
 struct TraceWindow {
     range: TimeRange,
     page: i64,
 }
 
-// Why: the resolved user set and the request that produced it travel together —
-// the queries bind the first, the filter form re-renders the second.
 struct TraceScope<'a> {
     request: &'a ScopeRequest,
     subjects: SubjectScope,
@@ -224,8 +220,6 @@ async fn load_traces_data(
     }
 }
 
-// Why: the query string is the only source of every filter column, so the
-// mapping lives in one place rather than inline in the page assembly.
 pub(super) fn build_filter<'a>(
     query: &'a TraceListQuery,
     subject_ids: Option<&'a [String]>,

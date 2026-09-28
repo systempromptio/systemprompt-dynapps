@@ -12,9 +12,6 @@
 //! unit suite walks the help table and fails if a topic is missing from here or
 //! names a file that is not in `services/content/documentation/`.
 
-// Why: every topic the help table emits, against the documentation this
-// instance ships. `None` means "written about nowhere yet" — the icon is then
-// not drawn, which is honest, where a link to a missing page is not.
 #[must_use]
 pub const fn doc_slug_for(topic: &str) -> Option<&'static str> {
     Some(match topic.as_bytes() {
@@ -34,8 +31,6 @@ pub const fn doc_slug_for(topic: &str) -> Option<&'static str> {
         | b"skills" | b"browse-plugins" => "enterprise-tool-governance",
         b"authentication" | b"secrets" => "authentication",
         b"downloads" => "downloads",
-        // Why: no page covers these yet. Listed rather than left to a catch-all
-        // so that adding documentation is a change here and not a discovery.
         b"achievements" | b"gamification" | b"agents" | b"jobs" | b"profile" | b"settings" => {
             return None;
         },
@@ -43,8 +38,6 @@ pub const fn doc_slug_for(topic: &str) -> Option<&'static str> {
     })
 }
 
-// Why: the URL the console links, or nothing. Kept beside the table so a caller
-// cannot build the path from a topic that has no page.
 #[must_use]
 pub fn documentation_url(topic: &str) -> Option<String> {
     doc_slug_for(topic).map(|slug| format!("/documentation/{slug}"))

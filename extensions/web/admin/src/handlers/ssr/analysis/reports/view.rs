@@ -77,7 +77,6 @@ pub(super) struct ReportPageContext {
     pub title: String,
     pub breadcrumbs: Vec<BreadcrumbView>,
     pub report_id: String,
-    // Why: what the loading widget says while the model reads the digest.
     pub digest_summary: String,
     pub status_url: String,
     pub scope_label: String,

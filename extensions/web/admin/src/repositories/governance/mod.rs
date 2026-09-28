@@ -6,6 +6,10 @@
 //!
 //! The configured side of that pairing — gateway routes, agent definitions,
 //! the access-control YAML — lives in [`super::config`].
+//!
+//! The `governance-ssr` feature compiles out queries this fork does not
+//! serve. `rankings` and `warnings` are exported ungated: the hooks and
+//! warnings tabs of `/admin/governance` are this fork's own surface.
 
 /// The window of a paged read: how many rows, starting where.
 #[derive(Debug, Clone, Copy)]
@@ -50,13 +54,7 @@ pub use counts::{
 };
 #[cfg(feature = "governance-ssr")]
 pub use decisions::list_decisions_for_policy;
-// Why: ungated beside `warnings`. The hooks tab of `/admin/governance` renders
-// both rankings and the recent hook events, so these are the fork's own
-// surface rather than the upstream one the feature compiles out.
 pub use rankings::{list_top_actors, list_top_policies};
-// Why: not behind `governance-ssr` like its neighbours. That feature exists to
-// compile out queries this fork does not serve; the warnings page is a surface
-// this fork does ship, and gating it would leave warn mode with no reader.
 pub use warnings::{WarningGroup, WarningGroupBy, WarningRollupRow, group_warning_rollup};
 
 #[derive(Debug, Clone, Copy, Default)]

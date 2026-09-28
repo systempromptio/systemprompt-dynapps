@@ -52,11 +52,6 @@ struct ContainerRule {
     rule_value: String,
 }
 
-// Why: the candidate set is read from the rule table by the caller's own
-// memberships, then confirmed through the same resolver the gateway uses, so
-// a `deny` rule or a parent chain that would refuse them at the enforcement
-// point refuses them here too. Only the confirmed marketplaces contribute
-// their containers.
 pub async fn get_participation(
     pool: &PgPool,
     user_id: &UserId,
@@ -91,9 +86,6 @@ pub async fn get_participation(
     })
 }
 
-// Why: every group/project allow row of every marketplace that has at least
-// one such row matching the caller. The outer rows are the containers a
-// participant may see; the inner match is what makes them a participant.
 async fn list_candidate_container_rules(
     pool: &PgPool,
     group_ids: &[String],

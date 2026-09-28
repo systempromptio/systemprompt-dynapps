@@ -14,8 +14,6 @@ use crate::error::{AdminError, AdminResult};
 
 pub const GOVERNANCE_FILE: &str = "governance/config.yaml";
 
-// Why: one policy of the chain: its switch, its effective mode and the whole
-// entry as written, which is what core hands the policy's factory.
 #[derive(Debug, Clone)]
 pub struct DeclaredPolicy {
     pub id: String,
@@ -41,10 +39,9 @@ impl Default for DeclaredChain {
     }
 }
 
-// Why: the entry as canonical JSON (RFC 8785, keys sorted) — key order is
-// the operator's in YAML and `serde_json` preserves it, so a plain dump
-// would call a reordered mapping a drift.
-// JSON: a comparison key only; the value never leaves the hash
+// Why: `serde_json` preserves the operator's YAML key order, so a plain dump
+// would call a reordered mapping drift; RFC 8785 (`serde_jcs`) sorts keys.
+// JSON: variable-shape governance policy entry
 #[must_use]
 pub fn entry_fingerprint(entry: &serde_yaml::Value) -> String {
     serde_json::to_value(entry)
@@ -80,8 +77,8 @@ impl DeclaredChain {
 }
 
 // Why: core keeps the whole entry as `params`, id and switches included; the
-// switches are hashed as fields, so an inherited mode that an export spells
-// out must not read as a different declaration.
+// switches are hashed as fields, so an export spelling out an inherited mode
+// must not read as a different declaration.
 fn params_only(mut entry: serde_yaml::Value) -> serde_yaml::Value {
     if let Some(map) = entry.as_mapping_mut() {
         for key in ["id", "enabled", "mode"] {

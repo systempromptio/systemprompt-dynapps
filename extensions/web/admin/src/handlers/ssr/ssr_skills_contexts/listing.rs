@@ -17,8 +17,6 @@ pub(super) struct ContextsListing {
     pub(super) noun: &'static str,
 }
 
-// Why: the users view groups conversations per person and the all view
-// lists them flat; only the active view's rows are shaped.
 pub(super) fn listing(
     inputs: &ContextsPageInputs,
     data: &ContextsPageData,

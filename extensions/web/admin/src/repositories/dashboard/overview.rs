@@ -122,6 +122,14 @@ async fn get_traffic_section(
     )
 }
 
+const MAX_EVENTS_PAGE: i64 = 500;
+
+// Why: Postgres rejects a negative LIMIT/OFFSET outright, so an unclamped
+// `?limit=-1` query param becomes a 500.
+fn postgres_page_bounds(limit: i64, offset: i64) -> (i64, i64) {
+    (limit.clamp(1, MAX_EVENTS_PAGE), offset.max(0))
+}
+
 pub async fn get_events_page(
     pool: &PgPool,
     query: &EventsQuery,
@@ -132,10 +140,7 @@ pub async fn get_events_page(
         .filter(|s| !s.is_empty())
         .map(|s| format!("%{s}%"));
     let event_type = query.event_type.as_deref();
-    // Why: limit/offset arrive as raw i64 query params; Postgres rejects a
-    // negative LIMIT outright, turning ?limit=-1 into a 500.
-    let limit = query.limit.clamp(1, 500);
-    let offset = query.offset.max(0);
+    let (limit, offset) = postgres_page_bounds(query.limit, query.offset);
 
     let total = sqlx::query_scalar!(
         r#"SELECT COALESCE(COUNT(*), 0)::BIGINT AS "count!"

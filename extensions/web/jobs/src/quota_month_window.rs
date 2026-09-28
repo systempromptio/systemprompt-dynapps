@@ -56,9 +56,6 @@ impl Job for QuotaMonthWindowJob {
          yesterday's usage into today's bucket"
     }
 
-    // Why: five minutes past UTC midnight — after the day has turned, before
-    // anyone's morning; a window still on yesterday's value until then is
-    // one bucket that carries forward, not usage lost.
     fn schedule(&self) -> &'static str {
         "0 5 0 * * *"
     }

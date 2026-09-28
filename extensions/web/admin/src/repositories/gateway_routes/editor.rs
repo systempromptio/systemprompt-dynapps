@@ -7,6 +7,7 @@
 //! loader synthesises from its pattern and provider; editing either re-keys
 //! the row the way the loader would, so the file and the table agree on
 //! what the route is called and the access rules that name it still match.
+//! An update preserves the fields the form does not render.
 
 use std::path::Path;
 
@@ -72,6 +73,23 @@ pub async fn create_route_entry(
     Ok(rows.len())
 }
 
+fn preserve_hidden_fields(merged: &mut GatewayRouteView, keep: &GatewayRouteView) {
+    merged.pricing = merged.pricing.take().or_else(|| keep.pricing.clone());
+    merged.when = merged.when.take().or_else(|| keep.when.clone());
+    merged.requires = merged.requires.take().or_else(|| keep.requires.clone());
+    merged.fallback_provider = merged
+        .fallback_provider
+        .take()
+        .or_else(|| keep.fallback_provider.clone());
+    merged.fallback_upstream_model = merged
+        .fallback_upstream_model
+        .take()
+        .or_else(|| keep.fallback_upstream_model.clone());
+    if merged.extra_headers.is_empty() {
+        merged.extra_headers.clone_from(&keep.extra_headers);
+    }
+}
+
 pub async fn update_route_at(
     pool: &PgPool,
     gateway_path: &Path,
@@ -83,24 +101,8 @@ pub async fn update_route_at(
     let existing = at(&rows, index)?;
     let mut merged = route.clone();
     normalise_metadata(&mut merged);
-    // Why: an update body that omits the blocks the form does not render
-    // must keep them — dropping pricing/when/requires on a save would
-    // silently rewrite routing policy.
     let keep = &existing.route;
-    merged.pricing = merged.pricing.or_else(|| keep.pricing.clone());
-    merged.when = merged.when.or_else(|| keep.when.clone());
-    merged.requires = merged.requires.or_else(|| keep.requires.clone());
-    // Why: the form renders no failover fields either; a save that omits
-    // them must not silently strip a route's fallback.
-    merged.fallback_provider = merged
-        .fallback_provider
-        .or_else(|| keep.fallback_provider.clone());
-    merged.fallback_upstream_model = merged
-        .fallback_upstream_model
-        .or_else(|| keep.fallback_upstream_model.clone());
-    if merged.extra_headers.is_empty() {
-        merged.extra_headers = keep.extra_headers.clone();
-    }
+    preserve_hidden_fields(&mut merged, keep);
     let derived = synthesize_route_id(&merged.model_pattern, &merged.provider);
     let body_id = merged.id.trim().to_owned();
     let explicit_id =

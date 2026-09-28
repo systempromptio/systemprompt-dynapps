@@ -14,7 +14,9 @@
 //! themselves are only ever upserted: they own membership, usage history and
 //! access rules, and deleting one because an editor removed six lines from a
 //! YAML file would cascade all of that away. Removing a group is a dashboard
-//! act, taken deliberately, with the member list in front of you.
+//! act, taken deliberately, with the member list in front of you. An upsert
+//! writes `source` only on insert, so a dashboard group later added to the
+//! file keeps its dashboard provenance.
 
 use std::path::Path;
 
@@ -35,8 +37,6 @@ pub async fn load_groups_from_yaml(
     apply_groups_doc(pool, &doc).await
 }
 
-// Why: the projection on its own, so an uploaded `groups.yaml` (an import
-// preview's overwrite) lands exactly as the file on disk would.
 pub async fn apply_groups_doc(
     pool: &PgPool,
     doc: &GroupsDoc,
@@ -78,15 +78,8 @@ async fn read_doc(services_path: &Path) -> Result<Option<GroupsDoc>, Marketplace
     }
 }
 
-// Why: name and description only. `source` is set on insert and left alone on
-// conflict, so a group an operator created in the dashboard and later added to
-// the file keeps its dashboard provenance rather than becoming YAML-owned and
-// exposed to the mapping reconciliation below.
-//
-// Why: groups and projects get one function each rather than one function
-// taking the table name. A statement the `sqlx` macros verify has to be a
-// literal, and a table name threaded through a parameter is exactly the shape
-// that keeps a query out of the compiler's reach.
+// Why: `sqlx` macros verify only literal statements, so groups and projects
+// get one function each rather than one taking the table name.
 async fn upsert_group(pool: &PgPool, def: &MemberSetDef) -> Result<(), MarketplaceError> {
     sqlx::query!(
         "INSERT INTO groups (id, name, description, source)
@@ -115,9 +108,6 @@ async fn upsert_project(pool: &PgPool, def: &MemberSetDef) -> Result<(), Marketp
     Ok(())
 }
 
-// Why: the mappings arrive as one row per AD group per member set, so the
-// pairs are flattened into two parallel arrays and unnested back into rows.
-// One round trip whatever the file's size.
 fn mapping_pairs(defs: &[MemberSetDef]) -> (Vec<String>, Vec<String>) {
     let mut ad_groups = Vec::new();
     let mut ids = Vec::new();

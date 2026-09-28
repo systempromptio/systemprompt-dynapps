@@ -129,9 +129,6 @@ fn truncate_json_value(value: &serde_json::Value, max_chars: usize) -> serde_jso
     }
 }
 
-// Why: the `[truncated]` marker is a claim about what happened, so it is
-// appended only when the character budget actually cut something — the
-// character count is what `truncate_chars` measures, not the byte length.
 fn capped(s: &str, max_chars: usize) -> serde_json::Value {
     let head = truncate_chars(s, max_chars);
     if head.len() == s.len() {

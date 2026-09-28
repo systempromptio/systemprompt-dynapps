@@ -17,9 +17,6 @@ pub struct SupplierMonthCost {
     pub cost_microdollars: i64,
 }
 
-// Why: The supplier bill, by provider. Rejected requests never reached an
-// upstream and carry no provider, so they are excluded rather than grouped as
-// blank.
 pub async fn list_provider_month_costs(
     pool: &PgPool,
     from: DateTime<Utc>,

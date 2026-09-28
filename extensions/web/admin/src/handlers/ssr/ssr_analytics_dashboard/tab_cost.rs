@@ -11,6 +11,7 @@ use crate::handlers::ssr::types::{Plot, SvgLineChartView, SvgSeriesInput, chart_
 use crate::repositories::analytics::site::cost::{
     ContainerAxis, ContainerUsageRow, CostDayRow, SupplierCostRow,
 };
+use crate::repositories::scope::membership::UNATTRIBUTED;
 
 use super::context::{ContainerRowView, CostTabView, KpiTile, SupplierRowView};
 use super::tab_models::{per, share};
@@ -98,9 +99,7 @@ fn supplier_row(row: &SupplierCostRow, max: i64, drill_url: String) -> SupplierR
 }
 
 fn container_row(row: &ContainerUsageRow, max: i64, axis: ContainerAxis) -> ContainerRowView {
-    // Why: the bucket for rollup rows whose owner had no primary container —
-    // it is a row on the table, never a silent omission from the totals.
-    let is_unattributed = row.container_id == "unattributed";
+    let is_unattributed = row.container_id == UNATTRIBUTED;
     let param = match axis {
         ContainerAxis::Group => "group",
         ContainerAxis::Project => "project",
@@ -188,7 +187,7 @@ fn kpis(input: &CostInput<'_>) -> Vec<KpiTile> {
     let unattributed: i64 = input
         .containers
         .iter()
-        .filter(|c| c.container_id == "unattributed")
+        .filter(|c| c.container_id == UNATTRIBUTED)
         .map(|c| c.requests)
         .sum();
 

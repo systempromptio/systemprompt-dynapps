@@ -4,6 +4,14 @@
 //! [`UserContext`] they read. They are separated from page context because
 //! they answer a different question: context decides what a page renders,
 //! these decide whether the request is allowed to reach one at all.
+//!
+//! The JSON API has three tiers: any signed-in user, the scoped console (an
+//! admin or a marketplace participant, with each handler narrowing writes to
+//! the caller's participation), and role-gated routes whose accepted roles the
+//! router names at the mount point. A signed-in non-admin browsing the SSR
+//! console reaches only their own account pages, plus — as a participant — the
+//! per-person analysis tabs and the detail pages under a listing, each of
+//! which 404s an owner outside scope.
 
 use axum::extract::{Request, State};
 use axum::http::StatusCode;
@@ -13,9 +21,9 @@ use axum::response::{IntoResponse, Response};
 use crate::handlers::shared::ErrorBody;
 use crate::types::{Role, UserContext, has_any};
 
-// Why: `nest_service` strips its prefix from `request.uri()`, so a layer
-// inside the admin SSR router sees `/profile` for a request to
-// `/admin/profile`; matching user-facing paths requires `OriginalUri`.
+// Why: axum `nest_service` strips its prefix from `request.uri()`, so a layer
+// inside the admin SSR router sees `/profile` for `/admin/profile`; matching
+// user-facing paths requires `OriginalUri`.
 fn original_path(request: &Request) -> String {
     request
         .extensions()
@@ -26,7 +34,7 @@ fn original_path(request: &Request) -> String {
         )
 }
 
-// Why: `/bridge/device-link` carries the bridge's loopback callback in
+// Why: the bridge CLI's `/bridge/device-link` carries its loopback callback in
 // `?redirect=`; dropping the query strands the CLI on a callback that never
 // arrives.
 fn original_target(request: &Request) -> String {
@@ -66,9 +74,6 @@ pub(crate) async fn require_auth_middleware(request: Request, next: Next) -> Res
     }
 }
 
-// Why: the scoped-console tier of the JSON API — an admin, or a marketplace
-// participant. The handlers behind it narrow every write to the caller's
-// participation themselves; this layer only keeps out a caller with neither.
 pub(crate) async fn require_scoped_console_middleware(request: Request, next: Next) -> Response {
     let allowed = request
         .extensions()
@@ -86,10 +91,6 @@ pub(crate) async fn require_scoped_console_middleware(request: Request, next: Ne
         .into_response()
 }
 
-// Why: one gate for all three tiers, taking the accepted roles as state, so
-// the router names the tier at the mount point and this file holds no list.
-// The message names the roles rather than saying "admin": a project manager
-// refused a write route otherwise reads it as a bug in their session.
 pub(crate) async fn require_roles_middleware(
     State(accepted): State<&'static [Role]>,
     request: Request,
@@ -114,11 +115,6 @@ pub(crate) async fn require_roles_middleware(
         .into_response()
 }
 
-// Why: anonymous users are deliberately not handled here —
-// `require_user_middleware` runs after this layer and owns that case. The path
-// must come from `OriginalUri`: this layer sits inside a
-// `nest_service("/admin", …)`, which strips the prefix, and every arm of the
-// allowlist matches on the full path.
 pub(crate) async fn non_admin_gate_middleware(request: Request, next: Next) -> Response {
     let path = original_path(&request);
     let path = path.as_str();
@@ -142,25 +138,13 @@ pub(crate) async fn non_admin_gate_middleware(request: Request, next: Next) -> R
 enum PathMatch {
     Exact,
     Prefix,
-    // Why: the detail page under a listing, never the listing itself —
-    // `/admin/sessions/<id>` opens for a scoped caller (the page decides
-    // whether the owner is inside their view), `/admin/sessions` does not.
     Child,
 }
 
-// Why: the console a signed-in non-admin may reach. Account pages are theirs
-// by identity; the rest is the scoped console, open only to a marketplace
-// participant and narrowed by that participation inside each handler.
 const ACCOUNT_PATHS: &[(PathMatch, &str)] = &[
     (PathMatch::Prefix, "/admin/profile"),
     (PathMatch::Prefix, "/admin/history"),
-    // Why: the export of "My conversations" is identity-scoped like the page;
-    // every other dataset refuses a caller itself (`export::model::DataSet::allows`).
     (PathMatch::Prefix, "/admin/export/history"),
-    // Why: transcripts — one conversation, a set, and the set's count. The
-    // one-conversation handler 404s any context the caller may not see; the
-    // set handlers refuse a caller without a console seat unless the set is
-    // their own history.
     (PathMatch::Prefix, "/admin/export/transcripts"),
     (PathMatch::Exact, "/admin/connect"),
     (PathMatch::Exact, "/admin/connectors"),
@@ -174,10 +158,6 @@ const ACCOUNT_PATHS: &[(PathMatch, &str)] = &[
     (PathMatch::Exact, "/admin"),
 ];
 
-// Why: only the analysis tabs with a per-person dimension and the code sync of
-// a participant's own marketplaces; Skills/Usage, Evaluation and Portfolio read
-// instance-wide facts and stay admin-only. The `Child` entries are where the
-// header id lookup lands, and each 404s an owner outside scope.
 const PARTICIPANT_PATHS: &[(PathMatch, &str)] = &[
     (PathMatch::Exact, "/admin/analysis/conversations"),
     (PathMatch::Prefix, "/admin/analysis/versions"),

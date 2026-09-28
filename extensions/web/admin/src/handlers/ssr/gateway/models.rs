@@ -32,8 +32,6 @@ pub(crate) struct ProviderRouteView {
     pub matrix_url: String,
 }
 
-// Why: the overview's dispatch table — a resolved route with the provider it
-// lands on, so the whole chain from pattern to upstream reads on one line.
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct DispatchRow {
     pub route: ProviderRouteView,
@@ -66,8 +64,6 @@ pub(crate) struct ProviderCardView {
     pub reached_by_url: String,
 }
 
-// Why: a route's access is read and edited on its own page, in the shared
-// "Who gets this" panel.
 pub(super) fn matrix_url(route: &str) -> String {
     format!(
         "{}/{}#access",

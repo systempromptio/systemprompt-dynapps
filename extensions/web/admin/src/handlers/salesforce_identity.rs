@@ -52,8 +52,6 @@ pub(crate) struct UnlinkSalesforceIdentityResponse {
     pub unlinked: bool,
 }
 
-// Why: a username for an org this instance does not declare would sign
-// assertions nobody can redeem; refuse it at the door.
 fn validated_provider(raw: String) -> AdminResult<Provider> {
     let provider = Provider::try_from(raw).map_err(AdminError::BadRequest)?;
     if !provider.is_salesforce() {
@@ -65,10 +63,8 @@ fn validated_provider(raw: String) -> AdminResult<Provider> {
     Ok(provider)
 }
 
-// Why: Salesforce Usernames are formatted as email addresses but are not
-// deliverable addresses, so the only checks worth making are that one was sent
-// and that it looks like the Username form. An empty value would sign
-// assertions with an empty `sub` and fail opaquely at Salesforce.
+// Why: Salesforce Usernames look like email addresses but are not deliverable,
+// so only presence and shape are checked; an empty `sub` fails opaquely there.
 fn validated_sf_username(raw: &str) -> AdminResult<&str> {
     let trimmed = raw.trim();
     if trimmed.is_empty() {

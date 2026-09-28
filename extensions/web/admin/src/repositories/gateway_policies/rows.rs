@@ -4,7 +4,9 @@
 //! `DbPool` the admin handlers do not hold; these are the same statements
 //! over the request's `PgPool`. `effective_spec` reproduces core's merge
 //! (`PolicyResolver::merge`) so the quota page shows the windows the
-//! gateway is actually enforcing, not one row's view of them.
+//! gateway is actually enforcing, not one row's view of them: each non-empty
+//! section of a later enabled row replaces the one before it outright, so
+//! windows are never unioned across rows.
 
 use chrono::{DateTime, Utc};
 use serde::Serialize;
@@ -23,9 +25,8 @@ pub struct PolicyRow {
     pub updated_at: DateTime<Utc>,
 }
 
-// Why: a row whose JSON does not parse as a spec is skipped by core's
-// resolver; surfacing it as an error here would take the whole page down
-// for one bad row. It is logged and dropped, as core does.
+// Why: core's policy resolver skips a row whose spec does not parse; erroring
+// here instead would take the whole page down for one bad row.
 // JSON: JSONB column — the spec as core stored it, parsed into its type here
 fn parse_row(
     name: String,
@@ -108,9 +109,6 @@ pub async fn delete_policy(pool: &PgPool, name: &str) -> Result<u64, sqlx::Error
     Ok(done.rows_affected())
 }
 
-// Why: Core's merge: enabled rows in `(priority, name)` order, each non-empty
-// section replacing the one before it, so the highest-priority row wins a
-// section outright — windows are never unioned across rows.
 #[must_use]
 pub fn effective_spec(rows: &[PolicyRow]) -> GatewayPolicySpec {
     let mut merged = GatewayPolicySpec::permissive();

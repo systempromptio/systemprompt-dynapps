@@ -21,9 +21,6 @@ pub(super) struct SecretAuditRowView {
     pub(super) ip_address: String,
 }
 
-// Why: `accessed` is toned as a warning and `deleted` as an error, not because
-// either is wrong, but because those are the two rows an auditor scans for. A
-// creation or an update is the system working.
 const fn tone_of(action: &str) -> &'static str {
     match action.as_bytes() {
         b"accessed" => "warn",

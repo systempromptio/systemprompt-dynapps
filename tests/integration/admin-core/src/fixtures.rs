@@ -1,14 +1,8 @@
 //! Row builders for the admin repository suite.
 //!
-//! IMPORTANT: the throwaway database is **not empty**.
-//! `install_extension_schemas` runs the web extension's schema and seeds, so
-//! tests assert on *their own* rows and on deltas, never on absolute table
-//! counts or on a list being empty.
-//!
-//! Every id is suffixed with a fresh UUID so two tests sharing a database
-//! (they do not today, but the fixtures must not depend on that) cannot
-//! collide, and so a `find_`/`get_` miss is genuinely a miss rather than a
-//! collision with seeded data.
+//! The throwaway database is **not empty**: `install_extension_schemas` runs
+//! the web extension's seeds, so tests assert on their own UUID-suffixed rows
+//! and on deltas, never on absolute counts or empty lists.
 
 use chrono::{DateTime, Duration, Utc};
 use sqlx::PgPool;
@@ -17,8 +11,8 @@ use systemprompt_web_admin::repositories::scope::SubjectScope;
 use systemprompt_web_admin::util::time_range::{TimeRange, TimeRangePreset};
 use systemprompt_web_shared::{GroupId, ProjectId};
 
-// A window that starts after any seeded `ai_requests` row and runs into the
-// future, so a windowed query sees only what the test inserted.
+// Starts after any seeded `ai_requests` row, so a windowed query sees only
+// what the test inserted.
 pub(crate) fn narrow_window() -> TimeRange {
     let now = Utc::now();
     TimeRange {
@@ -29,7 +23,6 @@ pub(crate) fn narrow_window() -> TimeRange {
     }
 }
 
-// An hour either side of now, for tables with no seeded rows at all.
 pub(crate) fn wide_window() -> TimeRange {
     let now = Utc::now();
     TimeRange {
@@ -40,7 +33,6 @@ pub(crate) fn wide_window() -> TimeRange {
     }
 }
 
-// A fresh, collision-proof id fragment.
 pub(crate) fn unique_group(prefix: &str) -> GroupId {
     GroupId::new(unique(prefix))
 }
@@ -53,22 +45,17 @@ pub(crate) fn unique(prefix: &str) -> String {
     format!("{prefix}-{}", uuid::Uuid::new_v4().simple())
 }
 
-// `ContextId::new` panics on anything that is not a UUID v4, so context ids
-// are minted as UUIDs rather than with the readable `unique`.
+// `ContextId::new` panics on anything that is not a UUID v4.
 pub(crate) fn new_context_id() -> String {
     ContextId::generate().to_string()
 }
 
-// An email in a domain nothing else in the suite uses.
 pub(crate) fn unclaimed_email(local: &str) -> String {
     format!("{local}@{}.example", uuid::Uuid::new_v4().simple())
 }
 
-// Insert an active user with the `user` role.
-//
-// `users.name` is unique and `users.email` must already be lowercase and
-// trimmed, so the email doubles as the name exactly as the production
-// provisioning paths do.
+// `users.name` is unique and `users.email` must be lowercase and trimmed, so
+// the email doubles as the name.
 pub(crate) async fn insert_user(pool: &PgPool, id: &str, email: &str) -> UserId {
     insert_user_full(pool, id, email, Some(email), &["user".to_owned()], "active").await
 }
@@ -113,12 +100,7 @@ pub(crate) async fn insert_user_full(
     UserId::new(id.to_owned())
 }
 
-// Put `user_id` in `project` (creating the project and the identically named
-// group), or, with `None`, take them out of every group and project.
-//
-// Why: the tests that call this are about scoping, and scoping is now a
-// membership question rather than a column on the profile. Creating a group
-// beside the project keeps the two filters exercisable from one fixture.
+// `None` removes the user from every group and project.
 pub(crate) async fn set_project<S: AsRef<str> + Sync + ?Sized>(
     pool: &PgPool,
     user_id: &UserId,
@@ -144,7 +126,6 @@ pub(crate) async fn set_project<S: AsRef<str> + Sync + ?Sized>(
     insert_group_member(pool, project, user_id, "manual").await;
 }
 
-// The users in one project, as a bound scope.
 pub(crate) async fn project_scope(pool: &PgPool, project: impl AsRef<str>) -> SubjectScope {
     let ids: Vec<String> =
         sqlx::query_scalar("SELECT user_id FROM project_members WHERE project_id = $1")
@@ -155,7 +136,6 @@ pub(crate) async fn project_scope(pool: &PgPool, project: impl AsRef<str>) -> Su
     SubjectScope::Users(ids)
 }
 
-// The users in one group, as a bound scope.
 pub(crate) async fn group_scope(pool: &PgPool, group: impl AsRef<str>) -> SubjectScope {
     let ids: Vec<String> =
         sqlx::query_scalar("SELECT user_id FROM user_groups WHERE group_id = $1")
@@ -166,10 +146,8 @@ pub(crate) async fn group_scope(pool: &PgPool, group: impl AsRef<str>) -> Subjec
     SubjectScope::Users(ids)
 }
 
-// Insert a `user_contexts` row.
-//
-// `session_id` carries a foreign key to `user_sessions`, so pass `None`
-// unless that session row already exists.
+// `session_id` is a foreign key to `user_sessions`: pass `None` unless that
+// row exists.
 pub(crate) async fn insert_context(
     pool: &PgPool,
     context_id: &str,
@@ -189,8 +167,6 @@ pub(crate) async fn insert_context(
     .expect("insert user context");
 }
 
-// A `plugin_session_summaries` row — the hook-side half of a session, which
-// `find_session_header` full-outer-joins against the `ai_requests` rollup.
 pub(crate) struct SummarySpec<'a> {
     pub session_id: &'a str,
     pub user_id: &'a UserId,
@@ -205,7 +181,6 @@ pub(crate) struct SummarySpec<'a> {
 }
 
 impl<'a> SummarySpec<'a> {
-    // A summary that started an hour ago and has not ended.
     pub(crate) fn open(session_id: &'a str, user_id: &'a UserId) -> Self {
         Self {
             session_id,
@@ -245,8 +220,7 @@ pub(crate) async fn insert_summary(pool: &PgPool, spec: &SummarySpec<'_>) {
     .expect("insert session summary");
 }
 
-// `ai_requests.session_id` carries a foreign key to `user_sessions`, so a
-// request with a session needs the session row first.
+// `ai_requests.session_id` is a foreign key to `user_sessions`.
 pub(crate) async fn insert_session(pool: &PgPool, session_id: &str, user_id: &UserId) {
     sqlx::query("INSERT INTO user_sessions (session_id, user_id) VALUES ($1, $2)")
         .bind(session_id)
@@ -259,13 +233,9 @@ pub(crate) async fn insert_session(pool: &PgPool, session_id: &str, user_id: &Us
 pub(crate) const LEGACY_CONTEXT_ID: &str = "00000000-0000-0000-0000-4c4547414359";
 
 pub(crate) struct RequestSpec<'a> {
-    // Owned so a caller may pass `&unique("req")` directly: a borrowed id would
-    // dangle the moment the `let` binding holding the spec ended.
     pub id: String,
     pub user_id: &'a UserId,
     pub session_id: Option<&'a str>,
-    // The client's own session id (Claude Code's uuid) that a gateway row
-    // carries beside the bridge session; the trace queries fold on it.
     pub client_session_id: Option<&'a str>,
     pub trace_id: Option<&'a str>,
     pub context_id: Option<&'a str>,
@@ -274,15 +244,9 @@ pub(crate) struct RequestSpec<'a> {
     pub status: &'a str,
     pub input_tokens: i32,
     pub output_tokens: i32,
-    // The provider's own total. Settable rather than derived because it is not
-    // always `input + output`: it counts cache reads too, and a provider that
-    // reported no total at all leaves it NULL. Both shapes are what made the
-    // profile pane and the analytics dashboard disagree, so a fixture that can
-    // only produce the agreeable shape cannot test the disagreement.
+    // Not always `input + output`: it counts cache reads, and a provider with
+    // no total leaves it NULL. Both shapes must be seedable.
     pub tokens_used: Option<i32>,
-    // Reasoning is billed inside `output_tokens`, and the cache counts are
-    // disjoint from `input_tokens`. A fixture that cannot set them cannot
-    // prove a reader reports them beside the total rather than into it.
     pub reasoning_tokens: Option<i32>,
     pub cache_read_tokens: Option<i32>,
     pub cache_creation_tokens: Option<i32>,
@@ -299,8 +263,7 @@ impl<'a> RequestSpec<'a> {
             session_id: None,
             client_session_id: None,
             trace_id: None,
-            // ai_requests.context_id is NOT NULL; this is core's own sentinel
-            // for a row that belongs to no known context.
+            // ai_requests.context_id is NOT NULL; core's sentinel for no context.
             context_id: Some(LEGACY_CONTEXT_ID),
             provider: "anthropic",
             model: "claude-test-model",
@@ -318,13 +281,9 @@ impl<'a> RequestSpec<'a> {
     }
 }
 
-// A payload row offering tools: the conversation view classifies a lone
-// request with no tools as a side call, so a test that wants a real turn
-// (opening prompt, search) inserts this beside the request.
-//
-// Core 0.59.0 stores a tool list once in `ai_tool_catalogs` and has the
-// payload reference its digest, so the catalogue row comes first and the
-// payload names it.
+// The conversation view treats a lone request with no offered tools as a
+// side call. Core stores the tool list in `ai_tool_catalogs` by digest, so
+// the catalogue row comes first.
 pub(crate) async fn insert_offered_tools(pool: &PgPool, request_id: &str) {
     let tools = serde_json::json!([{"name": "bash"}]);
     let sha256 = format!("{:064x}", 0xba5e_ba11u64);
@@ -506,7 +465,6 @@ pub(crate) async fn insert_activity(
     .expect("insert user activity");
 }
 
-// Insert an access-control grant, creating the catalog row the FK requires.
 #[expect(
     clippy::too_many_arguments,
     reason = "one parameter per column of the row being seeded; a params struct would churn 42 call sites to say the same thing"
@@ -563,8 +521,6 @@ pub(crate) async fn insert_federated_identity(
     .expect("insert federated identity");
 }
 
-// One `ai_request_messages` row — the prompt/response bodies the context
-// transcript and the unified history preview are built from.
 pub(crate) async fn insert_message(
     pool: &PgPool,
     request_id: &str,
@@ -586,9 +542,6 @@ pub(crate) async fn insert_message(
     .expect("insert ai request message");
 }
 
-// Insert a group row. Appended at the end of the file deliberately: several
-// slices seed groups, and a helper at the tail is the one place two of them
-// can add without landing on the same lines.
 pub(crate) async fn insert_group(pool: &PgPool, id: impl AsRef<str>, name: &str) {
     sqlx::query(
         "INSERT INTO groups (id, name, source) VALUES ($1, $2, 'dashboard')
@@ -601,9 +554,8 @@ pub(crate) async fn insert_group(pool: &PgPool, id: impl AsRef<str>, name: &str)
     .expect("insert group");
 }
 
-// Place a user in a group. `source` is 'adfs' for a directory-written row and
-// 'manual' for a dashboard grant; the two are separate rows by primary key,
-// which is what lets a manual membership survive the directory's replace.
+// 'adfs' and 'manual' rows are separate by primary key, which is what lets a
+// manual membership survive the directory's replace.
 pub(crate) async fn insert_group_member(
     pool: &PgPool,
     group_id: impl AsRef<str>,

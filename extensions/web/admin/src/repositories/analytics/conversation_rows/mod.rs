@@ -36,9 +36,6 @@ pub struct ConversationRow<Id = ContextId> {
     pub group_name: Option<String>,
     pub project_name: Option<String>,
     pub model: Option<String>,
-    // Why: `ai_requests.client_kind` / `client_attestation` of the latest
-    // request — which harness or API client recorded this conversation, and
-    // how strongly that is evidenced.
     pub client_kind: String,
     pub client_attestation: String,
     pub turn_count: i64,
@@ -58,13 +55,11 @@ pub struct ConversationRow<Id = ContextId> {
 #[derive(Debug, Clone, Default)]
 pub struct ConversationFilter {
     pub user_id: Option<UserId>,
-    // Why: the caller's resolved `SubjectScope::as_sql()`; `None` = every user.
     pub subject_ids: Option<Vec<String>>,
     pub model: Option<String>,
     pub free_text: Option<String>,
     pub since: Option<DateTime<Utc>>,
     pub until: Option<DateTime<Utc>>,
-    // Why: `false` hides conversations made only of probes and utility calls.
     pub include_side_calls: bool,
     pub error_only: bool,
 }

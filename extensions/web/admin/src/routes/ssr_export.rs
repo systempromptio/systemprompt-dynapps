@@ -19,10 +19,8 @@ pub(super) fn routes() -> Router<Arc<PgPool>> {
             "/export/{dataset}/preview",
             get(export::handler::export_preview),
         )
-        // Why: static segments win over `{dataset}`, so the transcript
-        // routes sit beside the table route; no dataset may be named
-        // `transcripts`. (They were `/export/conversation(s)`, which shadowed
-        // the `conversations` table and served JSON Lines in its place.)
+        // Why: axum routes a static segment ahead of `{dataset}`, so no
+        // dataset may be named `transcripts` or it is shadowed.
         .route(
             "/export/transcripts",
             get(export::document::handler::export_conversations),

@@ -3,7 +3,8 @@
 //! `unassigned` is a real row rather than a special case in every query, so
 //! deleting it is refused here as well as by the database trigger: the repo
 //! answers with a 409 a handler can return, the trigger is the backstop for
-//! anything that bypasses this path.
+//! anything that bypasses this path. Member counts read the `user_groups`
+//! view, so derived `unassigned` members count like everyone else.
 
 use sqlx::PgPool;
 use systemprompt_web_shared::GroupId;
@@ -33,13 +34,6 @@ pub async fn find_group(
     .await
 }
 
-// Why: membership counts come from the `user_groups` view, so the derived
-// `unassigned` members are counted the same way as everyone else and the
-// listing does not have to special-case the system row.
-//
-// Why: the thirty-day figures are joined here rather than fetched beside the
-// listing, so the JSON endpoint and the groups page cannot disagree about a
-// number they both put on the same row.
 pub async fn list_group_summaries(pool: &PgPool) -> Result<Vec<GroupSummary>, sqlx::Error> {
     sqlx::query_as!(
         GroupSummary,

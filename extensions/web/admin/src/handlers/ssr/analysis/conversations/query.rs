@@ -11,8 +11,6 @@ use crate::repositories::analysis::conversations::{
 };
 
 pub(crate) const BASE_URL: &str = "/admin/analysis/conversations";
-// Why: this page's `all` reaches past the live window contract, whose widest
-// preset is 90 days; the export offers that nearest window.
 pub(crate) fn export_preset(params: &ConversationAnalysisQuery) -> &'static str {
     match params.since_label() {
         "24h" => "24h",
@@ -36,17 +34,12 @@ pub(crate) struct ConversationAnalysisQuery {
     pub flag: Option<String>,
     pub q: Option<String>,
     pub since: Option<String>,
-    // Why: the shell's scope bar emits `?preset=`; read as a fallback so it
-    // is not silently ignored.
     pub preset: Option<String>,
     pub by: Option<String>,
     pub sort: Option<String>,
     pub dir: Option<String>,
     pub page: Option<i64>,
-    // Why: a comma-joined selection of context ids from the bulk bar; the
-    // export dialog appends it so a download holds exactly the ticked rows.
     pub ids: Option<String>,
-    // Why: `all` lists conversations with no turn too; hidden by default.
     pub show: Option<String>,
 }
 
@@ -165,8 +158,6 @@ impl ConversationAnalysisQuery {
         ]
     }
 
-    // Why: the filters alone as a query string — what a judge-all or a
-    // report request carries so the server re-reads the same set.
     pub(crate) fn query_string(&self) -> String {
         self.link_prefix(&["page", "ids"])
             .split_once('?')
@@ -174,8 +165,6 @@ impl ConversationAnalysisQuery {
             .unwrap_or_default()
     }
 
-    // Why: the page as the reader has it, page number included, for the
-    // `back=` a judge POST returns to.
     pub(crate) fn current_url(&self) -> String {
         let mut url = self
             .link_prefix(&["ids"])
@@ -188,10 +177,6 @@ impl ConversationAnalysisQuery {
         url
     }
 
-    // Why: the page's filters narrowed by one breakdown bucket or facet, as
-    // the export dialog's query; `export_href` is its no-script CSV link. The
-    // page's `preset` and ticked `ids` are dropped: the window is stated
-    // once, and a bucket is every row in it, not the selection.
     pub(crate) fn export_query(&self, name: &str, value: &str) -> String {
         let prefix = self.link_prefix(&[name, "page", "preset", "ids"]);
         let kept = prefix.split_once('?').map_or("", |(_, q)| q);
@@ -209,8 +194,6 @@ impl ConversationAnalysisQuery {
         )
     }
 
-    // Why: the raw query value behind one filter name, for the chip that
-    // removes it and the export that keeps only it.
     pub(crate) fn pair_value(&self, name: &str) -> Option<String> {
         self.pairs()
             .iter()
@@ -245,8 +228,6 @@ impl ConversationAnalysisQuery {
         }
     }
 
-    // Why: the link a breakdown row or a facet offers — the current filters
-    // narrowed by one more `name=value`, back on page one.
     pub(crate) fn narrowed(&self, name: &str, value: &str) -> String {
         format!(
             "{}{name}={}",

@@ -18,10 +18,6 @@ use super::panels_view::{
     BoardSpec, ModelsBoardView, QueuesView, ScopeBoardView, models_board, queues, scope_board,
 };
 
-// Why: three windows, not the audit pages' six. The overview answers a question
-// about now, and a fifteen-minute window is noise rather than signal at the
-// scale it reads. It carries the same `?preset=` name those pages use, so a
-// window chosen here survives the hop to the detail.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum OverviewRange {
     Day,
@@ -30,8 +26,6 @@ pub(crate) enum OverviewRange {
 }
 
 impl OverviewRange {
-    // Why: anything unrecognised lands on 24 hours rather than 400ing — a
-    // mistyped preset in a shared link should still show the page.
     pub(crate) fn from_query(raw: Option<&str>) -> Self {
         match raw {
             Some("7d") => Self::Week,

@@ -12,8 +12,6 @@ use super::plane::DeclarationSource;
 use crate::error::{AdminError, AdminResult};
 use crate::repositories::gateway_policies::declared::services_root;
 
-// Why: `None` only for an absent file on disk; uploaded text is always the
-// whole declaration.
 pub fn read_or_text(
     from: DeclarationSource<'_>,
     source_file: &'static str,

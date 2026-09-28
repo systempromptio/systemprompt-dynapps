@@ -14,10 +14,6 @@ use super::context::AttributionLink;
 use super::urls::{preserved_query_string, with_qs};
 use super::{AnalyticsDashboardQuery, BASE_URL};
 
-// Why: the request log is the one listing every drill lands on, and it reads
-// `model`, `skill`, `tool` and `provider` beside the shared `group`,
-// `project`, `user_id` and `preset` scope parameters. Carrying the scope is
-// what stops a drill silently widening what the reader was looking at.
 pub(super) fn drill_url(query: &AnalyticsDashboardQuery, dimension: &str, value: &str) -> String {
     let mut parts = vec![format!("{dimension}={}", urlencode(value))];
     let scope: [(&str, Option<&str>); 4] = [
@@ -40,9 +36,6 @@ pub(super) fn drill_url(query: &AnalyticsDashboardQuery, dimension: &str, value:
     format!("/admin/requests?{}", parts.join("&"))
 }
 
-// Why: attribution is a claim about the numbers, not a filter on them, so it
-// is offered as two named readings rather than a checkbox. Exclusive is the
-// default and the only one whose rows sum back to the instance total.
 pub(super) fn attribution_links(
     query: &AnalyticsDashboardQuery,
     member: bool,

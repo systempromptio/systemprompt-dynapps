@@ -48,9 +48,6 @@ pub(super) fn ids(users: impl Iterator<Item = UserId>) -> Vec<String> {
     users.map(|id| id.as_str().to_owned()).collect()
 }
 
-// Why: the person's row is built once and the tab fills in the rest. The
-// four tabs agree on who a person is and disagree on everything else, so
-// the shared part is exactly the part that is shared.
 pub(super) fn group(user_id: &UserId, user_name: &str, tab: &str) -> UserGroupView {
     let id = user_id.as_str();
     UserGroupView {
@@ -80,9 +77,6 @@ pub(super) fn credential_summary(total: i64, active: i64) -> String {
     }
 }
 
-// Why: revoked outranks expired. A revoked credential that later passes its
-// own expiry is still revoked, and labelling it "Expired" would read as
-// having lapsed on its own rather than having been taken away.
 pub(super) const fn credential_state(revoked: bool, expired: bool) -> (&'static str, &'static str) {
     if revoked {
         ("Revoked", "muted")
@@ -93,9 +87,6 @@ pub(super) const fn credential_state(revoked: bool, expired: bool) -> (&'static 
     }
 }
 
-// Why: a person's badge is their best credential. One live token among four
-// revoked ones is a person who can still get in, and "Revoked" on that row
-// would be read as the opposite.
 pub(super) const fn rollup_state(active: i64, any_revoked: bool) -> (&'static str, &'static str) {
     if active > 0 {
         ("Active", "ok")

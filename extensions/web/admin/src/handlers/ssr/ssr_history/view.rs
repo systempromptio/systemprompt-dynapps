@@ -26,14 +26,7 @@ pub(super) fn scope_label(scope: &HistoryScope) -> String {
     }
 }
 
-// Why: the org-wide listing at `/admin/conversations` is this page with a
-// wider scope, so every query link takes the base url of whichever of the two
-// is rendering rather than assuming `/admin/history`.
 
-// Why: a conversation has an owner-facing detail page, so every viewer gets
-// the link. The org-wide listing sends its rows to the admin context view
-// instead: it is already admin-gated and carries the operational identifiers
-// an admin came to that page for.
 pub(crate) fn detail_url(item: &HistoryItem, view: HistoryView) -> String {
     match view {
         HistoryView::Org => context_detail_url(&item.context_id),
@@ -44,8 +37,6 @@ pub(crate) fn detail_url(item: &HistoryItem, view: HistoryView) -> String {
     }
 }
 
-// Why: the client session is the admin session view's key, so an admin gets
-// a second link to the session the conversation ran in when one is known.
 pub(crate) fn session_url(item: &HistoryItem, viewer: &UserContext) -> Option<String> {
     viewer
         .is_admin
@@ -53,9 +44,8 @@ pub(crate) fn session_url(item: &HistoryItem, viewer: &UserContext) -> Option<St
         .flatten()
 }
 
-// Why: a slash command's opening prompt is the client's XML envelope, not
-// anything a person typed — whole screens of `<command-message>` wrappers that
-// tell a reader nothing and are identical across rows. Name such a row by the
+// Why: Claude Code sends a slash command's opening prompt as an XML
+// `<command-message>` envelope, not typed words; the row is named by the
 // command it ran instead.
 pub fn command_name(prompt: &str) -> Option<String> {
     let open = "<command-name>";
@@ -66,8 +56,6 @@ pub fn command_name(prompt: &str) -> Option<String> {
     (!name.is_empty()).then(|| format!("/{name}"))
 }
 
-// Why: a conversation without a recorded title is named by its opening
-// prompt, so a row never shows a bare id where words exist.
 fn conversation_title(item: &HistoryItem, short: &str) -> String {
     item.title
         .clone()
@@ -161,8 +149,6 @@ pub(super) fn build_pagination(query: &HistoryQuery, window: PageWindow, base: &
     paginate_prefixed(window, &prefix)
 }
 
-// Why: a new window starts from the first page, so the tabs carry every
-// filter but the window itself and the page.
 pub(super) fn window_links(query: &HistoryQuery, base: &str) -> Vec<TabLinkView> {
     let parts = filter_parts(query, true);
     let prefix = if parts.is_empty() {

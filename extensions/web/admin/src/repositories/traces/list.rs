@@ -1,8 +1,6 @@
 //! Trace list query: one aggregated summary row per session in the window.
 
 use sqlx::PgPool;
-// Why: the `query_as!` column overrides below name these types, so they must be
-// in scope here even though the row struct itself lives in `list_row`.
 use systemprompt::identifiers::{AgentId, SessionId, TraceId, UserId};
 
 use super::list_row::TraceListRow;
@@ -16,11 +14,9 @@ pub struct TracePage {
     pub offset: i64,
 }
 
-// Why: The sort is a closed `TraceSort` (five columns × two directions).
-//
-// Each `(column, dir)` pair is bound as text and selected by a per-key `CASE`
-// in the `ORDER BY`, so the whole statement stays a single compile-time
-// `query_as!` rather than an interpolated string.
+// Why: sqlx `query_file_as!` checks one fixed statement at compile time, so
+// each `(column, dir)` is bound as text and picked by a `CASE` in `ORDER BY`
+// rather than interpolated into the SQL.
 pub async fn list_traces(
     pool: &PgPool,
     filter: TraceFilter<'_>,

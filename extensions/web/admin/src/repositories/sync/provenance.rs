@@ -79,8 +79,6 @@ fn under(path: &str, rel: &str, is_dir: bool) -> bool {
     }
 }
 
-// Why: `base_has` is whether the baked tree holds the path; a kind only a
-// bundle ships is that bundle's, one both ship is mixed.
 #[must_use]
 pub fn source_for_path(
     bundles: &[BundleFiles],

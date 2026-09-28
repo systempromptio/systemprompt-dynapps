@@ -25,7 +25,6 @@ pub struct ChainSettingsRow {
     pub mode: String,
 }
 
-// Why: the staged chain as a declaration, for drift and export.
 #[must_use]
 pub fn staged_chain(settings: Option<&ChainSettingsRow>, rows: &[ChainPolicyRow]) -> DeclaredChain {
     let defaults = DeclaredChain::default();

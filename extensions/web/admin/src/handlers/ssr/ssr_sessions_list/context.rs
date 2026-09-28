@@ -32,8 +32,6 @@ pub(super) struct SessionsListPageContext {
     pub(super) export: crate::export::ExportView,
 }
 
-// Why: The "you are here" strip: who this browser is signed in as, and a way
-// into that session's own detail page.
 #[derive(Debug, Serialize)]
 pub(super) struct CurrentSessionView {
     pub(super) username: String,
@@ -86,15 +84,13 @@ pub(super) struct SessionsSortHeaders {
 pub(super) struct SessionRowView {
     pub(super) context_id: ContextId,
     pub(super) detail_url: String,
-    // Why: not `title` — the layout's `title=` hash parameter shadows a field
-    // of that name at every depth of the template.
+    // Why: Handlebars — the layout's `title=` hash parameter shadows a field
+    // named `title` at every depth of the template.
     pub(super) conversation_title: String,
     pub(super) session_id: Option<SessionId>,
     pub(super) user_id: Option<UserId>,
     pub(super) user_label: String,
     pub(super) user_url: Option<String>,
-    // Why: "unattributed" when no default row covers the person — a bucket
-    // the page shows rather than a blank it hides.
     pub(super) group_label: String,
     pub(super) project_label: String,
     pub(super) model: Option<String>,

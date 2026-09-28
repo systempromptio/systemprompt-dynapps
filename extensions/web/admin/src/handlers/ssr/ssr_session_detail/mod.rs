@@ -3,6 +3,8 @@
 //! Renders the header, KPI strip, and three linked tables (contexts, traces,
 //! requests) for one `session_id`, mirroring `analytics sessions stats` plus
 //! `analytics conversations list` with cross-links to the other entity pages.
+//! An owner outside the caller's view answers 404 exactly like a missing id,
+//! so the URL is no oracle for other people's session ids.
 
 mod context;
 mod rows;
@@ -41,8 +43,6 @@ struct SessionRead {
     requests: Vec<SessionRequestRow>,
 }
 
-// Why: every section is best-effort once the header has resolved — a panel
-// that cannot load renders empty rather than taking the page down.
 async fn load_session(pool: &PgPool, session_id: &SessionId) -> SessionRead {
     let (kpis, contexts, traces, requests) = tokio::join!(
         get_session_kpis(pool, session_id),
@@ -77,8 +77,6 @@ pub(crate) async fn session_detail_page(
     } else {
         find_session_header(&pool, &session_id).await?
     };
-    // Why: 404, not 403, for an owner outside the caller's view — the same
-    // answer as a missing id, so the URL is no oracle for other people's ids.
     let visible = match &header {
         Some(h) => may_view(&pool, &shell.user, h.user_id.as_ref()).await?,
         None => false,
@@ -184,9 +182,6 @@ fn kpis_view(k: &SessionKpis, session_id: &SessionId) -> SessionKpisView {
     }
 }
 
-// Why: the cached share is what explains a large input total — see
-// `conversation_header::tokens_note`, which the context reader uses for the
-// same strip.
 fn tokens_note(wire_input: i64, cached: i64, output: i64) -> String {
     let cached_note = if wire_input > 0 && cached > 0 {
         format!(

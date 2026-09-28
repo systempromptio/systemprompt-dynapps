@@ -35,9 +35,6 @@ pub use markers::{
 
 const TRANSCRIPT_PREVIEW_CHARS: usize = 4000;
 
-// Why: The per-turn telemetry rail: how the turn was served and what it cost.
-// Cloned onto every turn of the same request, so all of a request's messages
-// state the same numbers rather than only the last one.
 #[derive(Debug, Clone, Serialize)]
 pub struct TranscriptMetaView {
     pub model: String,
@@ -49,18 +46,13 @@ pub struct TranscriptMetaView {
     pub cost_display: String,
 }
 
-// Why: how message bodies are treated on the way into the view.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct TranscriptOptions {
-    // Why: cut the gateway's `=== USER PROMPT ===` /
-    // Why: `=== ASSISTANT ANSWER ===` framing out of user turns before display.
     pub strip_markers: bool,
-    // Why: run every body through the credential redactor.
     pub redact: bool,
 }
 
 impl TranscriptOptions {
-    // Why: what the owner-facing conversation page uses.
     pub const fn owner_facing() -> Self {
         Self {
             strip_markers: true,

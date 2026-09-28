@@ -1,7 +1,9 @@
 //! The enumerated narrowings of the conversations page: the judge-verdict
 //! band a row must fall in, the deterministic flag it must carry, the column
 //! it sorts by and the dimension the breakdown groups by. Each is a closed
-//! vocabulary bound as text and matched by a `CASE` arm in `page.sql`.
+//! vocabulary bound as text and matched by a `CASE` arm in `page.sql`. The
+//! breakdown defaults to model, not category: category needs a judge label,
+//! and unjudged rows would all share one bucket.
 
 /// Narrowing by the judge's single completion score.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -139,8 +141,6 @@ impl FactSort {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum BreakdownBy {
     Category,
-    // Why: the default while no judge labels conversations — every row
-    // would otherwise sit in one "unjudged" intent bucket.
     #[default]
     Model,
     Client,

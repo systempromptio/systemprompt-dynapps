@@ -41,10 +41,6 @@ impl std::fmt::Display for NotReady {
 }
 
 impl Connection {
-    // Why: the one answer to "will this person's calls to the server work".
-    // The manifest gate and the `connector` authorization band both ask it,
-    // so a rule written at a server id and the manifest that carries the
-    // server can never disagree about who holds it.
     pub fn readiness(&self) -> Result<(), NotReady> {
         if !self.configured {
             return Err(NotReady::NotConfigured);
@@ -72,9 +68,6 @@ impl Connection {
     }
 }
 
-// Why: a session-attested connector has no grant to open. Its check is the
-// scope the caller signed in with and whether the server answers, reported in
-// the same steps the Connectors page draws for an OAuth probe.
 pub(crate) async fn probe_session_connection(
     pool: &PgPool,
     user: &UserId,

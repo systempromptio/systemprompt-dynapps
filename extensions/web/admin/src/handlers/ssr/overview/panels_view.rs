@@ -140,8 +140,6 @@ fn severity_display(observed: i64, baseline: i64) -> String {
     format!("{:.1}\u{d7} baseline", observed as f64 / baseline as f64)
 }
 
-// Why: the tile above the table carries the worst row's colour, so an
-// operator sees red before they read a row.
 fn worst_tone(rows: &[OverviewAnomalyRowView]) -> &'static str {
     if rows.iter().any(|r| r.severity_tone == "err") {
         "err"
@@ -152,9 +150,6 @@ fn worst_tone(rows: &[OverviewAnomalyRowView]) -> &'static str {
     }
 }
 
-// Why: the models the window actually ran, in the order the Models tab lists
-// them. Share is of every request the window carried, so the five rows shown
-// tell the reader how much of the traffic they are looking at.
 pub(super) fn models_board(range: OverviewRange, data: &OverviewData) -> ModelsBoardView {
     let rows = data.models.as_deref().unwrap_or(&[]);
     let total: i64 = rows.iter().map(|r| r.requests).sum();
@@ -224,9 +219,6 @@ pub(super) fn scope_board(
     }
 }
 
-// Why: the unattributed bucket is a real row with no page behind it — traffic
-// with no user, a job or MCP actor, or a person no primary container covers.
-// It is listed rather than dropped so the board sums back to the spend tile.
 fn scope_row(row: &ScopeCostRow, total: i64, base: &str, absent: &str) -> ScopeRowView {
     let unattributed = row.is_unattributed();
     ScopeRowView {
@@ -250,8 +242,6 @@ fn share_display(part: i64, total: i64) -> String {
     format!("{:.0}%", part as f64 / total as f64 * 100.0)
 }
 
-// Why: an absolute timestamp makes a reader do the subtraction the state badge
-// already did. The elapsed time is the fact the row is about.
 fn ago_display(now: DateTime<Utc>, ts: DateTime<Utc>) -> String {
     systemprompt_web_shared::format::relative_time((now - ts).num_seconds())
 }

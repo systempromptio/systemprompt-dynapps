@@ -31,7 +31,6 @@ const NOTE_LIMIT: usize = 500;
 
 #[derive(Debug, Default, Deserialize)]
 pub(crate) struct DecideQuery {
-    // Why: Free-text reason, recorded on the row beside the verdict.
     pub note: Option<String>,
 }
 
@@ -102,9 +101,6 @@ async fn decide(
     )
     .await?;
 
-    // Why: zero rows means another approver decided it between the read above
-    // and this write. The loser is told so rather than being shown a success
-    // for a decision that is not theirs.
     if changed == 0 {
         return Err(AdminError::Conflict(format!(
             "Request {call_id} was decided by someone else"

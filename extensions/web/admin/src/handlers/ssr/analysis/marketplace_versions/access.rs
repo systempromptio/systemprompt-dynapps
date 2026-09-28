@@ -9,9 +9,6 @@ use crate::repositories::analysis::marketplace_versions::{
 };
 use crate::types::UserContext;
 
-// Why: an admin sees every marketplace's history; a participant sees the
-// marketplaces their participation names and nothing else. A caller with
-// neither has no version history to look at.
 pub(crate) fn require_versions_reader(user: &UserContext) -> AdminResult<()> {
     if !user.has_scoped_console() {
         return Err(AdminError::Forbidden(
@@ -21,9 +18,6 @@ pub(crate) fn require_versions_reader(user: &UserContext) -> AdminResult<()> {
     Ok(())
 }
 
-// Why: a participant asking for a marketplace outside their participation
-// gets the same answer as for one that was never recorded, so the URL says
-// nothing about which marketplaces exist.
 pub(crate) fn may_read_marketplace(user: &UserContext, marketplace_id: &MarketplaceId) -> bool {
     user.is_console
         || user
@@ -31,8 +25,6 @@ pub(crate) fn may_read_marketplace(user: &UserContext, marketplace_id: &Marketpl
             .includes_marketplace(marketplace_id.as_str())
 }
 
-// Why: a participant asking outside their participation gets the same
-// not-found as a marketplace that was never recorded.
 pub(super) async fn readable_versions(
     pool: &PgPool,
     window: VersionWindow,

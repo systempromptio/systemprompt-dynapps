@@ -12,9 +12,6 @@ use crate::repositories::analysis::tools::{
 };
 use crate::util::time_range::{TimeRange, TimeRangeQuery, parse_time_range};
 
-// Why: which page is asking — the Artifacts page is the Tools page narrowed
-// to rows with an artifact kind, so one query type serves both and only the
-// base URL and the default breakdown differ.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Lens {
     Tools,
@@ -148,9 +145,6 @@ impl ToolsQuery {
         self.page.unwrap_or(0).max(0)
     }
 
-    // Why: the repository filter from the query, the resolved window and the
-    // caller's scope; the Artifacts lens adds the one narrowing that makes
-    // it that page.
     pub(crate) fn filter(
         &self,
         lens: Lens,
@@ -229,8 +223,6 @@ impl ToolsQuery {
         }
     }
 
-    // Why: the current filters narrowed by one more `name=value`, back on
-    // page one — what a breakdown row, a facet and a chip's export offer.
     pub(crate) fn narrowed(&self, lens: Lens, name: &str, value: &str) -> String {
         format!(
             "{}{name}={}",

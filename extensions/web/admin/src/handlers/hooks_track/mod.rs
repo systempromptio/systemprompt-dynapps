@@ -28,8 +28,6 @@ use sqlx::PgPool;
 use std::sync::Arc;
 use systemprompt::identifiers::{PluginId, SessionId, UserId};
 
-// Why: The two services a tracked hook event is handed to, taken as one
-// extractor so the handler's arguments are the request's own parts.
 #[derive(Debug, Clone)]
 pub(crate) struct TrackDeps {
     managed: systemprompt::marketplace::managed::ManagedRepository,

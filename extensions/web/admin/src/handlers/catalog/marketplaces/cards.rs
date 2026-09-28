@@ -47,9 +47,6 @@ pub(super) fn card_views(inputs: &CardInputs<'_>) -> Vec<MarketplaceCardView> {
                 owned_by(s, OwnedKind::Marketplace, m.id.as_str())
             });
             let assigned_groups = inputs.grants.get(&m.id).cloned().unwrap_or_default();
-            // Why: the resolved count, not the declared one. A group listed in
-            // the manifest that a deny rule closes is not an audience, and the
-            // two numbers side by side are how that shows up.
             let allowed_subjects = inputs
                 .audience
                 .rows

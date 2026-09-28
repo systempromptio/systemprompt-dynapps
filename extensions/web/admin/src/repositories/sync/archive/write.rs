@@ -31,7 +31,6 @@ pub async fn build_export_zip(pool: &PgPool, actor: &str) -> AdminResult<ExportZ
     let mut exported = Vec::new();
     let mut rows = 0usize;
     for plane in &registry {
-        // Why: a plane with no file form has nothing to put in the tree.
         let Some(export) = plane.export(pool).await? else {
             continue;
         };

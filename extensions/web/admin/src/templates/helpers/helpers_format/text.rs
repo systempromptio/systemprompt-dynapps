@@ -1,4 +1,8 @@
 //! String and text manipulation helpers.
+//!
+//! Avatar tones hash the normalised name (FNV-1a), so a person keeps one colour
+//! across pages with no state; the modulus is the number of
+//! `--sp-avatar-tone-N` tokens the avatar stylesheet defines.
 
 use handlebars::{Context, Handlebars, Helper, HelperDef, HelperResult, Output, RenderContext};
 
@@ -30,12 +34,8 @@ impl HelperDef for InitialsHelper {
     }
 }
 
-// Why: the avatar stylesheet defines exactly this many `--sp-avatar-tone-N`
-// tokens.
-const AVATAR_TONES: u64 = 12;
+const AVATAR_TONE_CSS_TOKENS: u64 = 12;
 
-// Why: FNV-1a over the normalised name is stable across pages and renders, so
-// the same person always gets the same colour with no state to keep.
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct AvatarToneHelper;
 impl HelperDef for AvatarToneHelper {
@@ -55,7 +55,7 @@ impl HelperDef for AvatarToneHelper {
             .fold(0xcbf2_9ce4_8422_2325u64, |acc, b| {
                 (acc ^ u64::from(b)).wrapping_mul(0x0100_0000_01b3)
             });
-        out.write(&(hash % AVATAR_TONES).to_string())?;
+        out.write(&(hash % AVATAR_TONE_CSS_TOKENS).to_string())?;
         Ok(())
     }
 }

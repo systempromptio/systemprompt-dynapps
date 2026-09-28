@@ -34,8 +34,8 @@ impl HistoryScope {
         }
     }
 
-    // Why: `None`, not an empty Vec, is the unrestricted case — the SQL layer
-    // binds it as a NULL text[] and skips the scope predicate entirely.
+    // Why: Postgres binds `None` as a NULL text[] and the query skips the scope
+    // predicate; an empty Vec would instead match nobody.
     #[must_use]
     pub fn user_ids(&self) -> Option<Vec<String>> {
         match self {
@@ -66,13 +66,11 @@ pub fn has_full_history_view(ctx: &UserContext) -> bool {
     ctx.is_console || ctx.roles.iter().any(|r| r.eq_ignore_ascii_case("auditor"))
 }
 
-// Why: no manager edge exists any more — a non-admin sees exactly themselves.
 #[must_use]
 pub fn history_scope_for(ctx: &UserContext) -> HistoryScope {
     resolve_history_scope(&ctx.user_id, has_full_history_view(ctx), Vec::new())
 }
 
-// Why: the viewer and nobody else, whatever roles they hold.
 #[must_use]
 pub fn own_history_scope(ctx: &UserContext) -> HistoryScope {
     HistoryScope::Users(vec![ctx.user_id.clone()])

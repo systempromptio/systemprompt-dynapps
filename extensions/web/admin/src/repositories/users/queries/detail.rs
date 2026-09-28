@@ -99,10 +99,6 @@ async fn build_user_detail(
             Vec::new()
         });
 
-    // Why: Ok(None) rather than a fallback date. The summary above proves the
-    // row existed a moment ago, so its absence here means the account was
-    // deleted mid-request; inventing a join date would render a detail page
-    // for an account that is gone.
     let Some(created_at) = sqlx::query_scalar!(
         "SELECT created_at FROM users WHERE id = $1",
         user_id.as_str()

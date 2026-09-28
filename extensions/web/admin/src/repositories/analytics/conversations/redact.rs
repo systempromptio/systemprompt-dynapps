@@ -1,12 +1,10 @@
 //! Credential redactor for transcript bodies heading to the DOM.
-
-// Why: Defense-in-depth text redactor for prompts/responses heading to the DOM.
-//
-// Catches the common high-entropy / well-prefixed credential shapes; not a
-// substitute for the structural `secret_scan` policy run at webhook time.
-//
-// The count accompanying the redacted text is how many replacements were
-// made, so a caller can surface that redaction occurred at all.
+//!
+//! Defense in depth: it catches the common high-entropy and well-prefixed
+//! credential shapes, and is no substitute for the structural `secret_scan`
+//! policy run at webhook time. A second pass masks digit-bounded
+//! `AAA-GG-SSSS` SSNs, keeping the last four. The returned count is the
+//! number of replacements made, so a caller can say redaction happened.
 pub fn redact_text(input: &str) -> (String, u32) {
     const PREFIX_PATTERNS: &[(&str, &str)] = &[
         ("AKIA", "aws_access_key"),
@@ -61,9 +59,6 @@ pub fn redact_text(input: &str) -> (String, u32) {
     redact_ssn(&out, count)
 }
 
-// Why: a second pass for the one PII shape worth masking in a transcript view
-// — the canonical AAA-GG-SSSS SSN, digit-bounded so ids and hashes pass
-// through. Last four kept, the convention SSNs are displayed with everywhere.
 fn redact_ssn(input: &str, mut count: u32) -> (String, u32) {
     let bytes = input.as_bytes();
     let mut out = String::with_capacity(input.len());

@@ -34,9 +34,6 @@ pub struct IdentityEnvelope {
     pub last_seen_at: Option<DateTime<Utc>>,
 }
 
-// Why: the query shape as Postgres returns it. Kept separate from
-// `IdentityEnvelope` so the public type does not have to carry column names in
-// its field names.
 struct EnvelopeRow {
     id: String,
     username: String,
@@ -54,11 +51,9 @@ struct EnvelopeRow {
     last_seen_at: Option<DateTime<Utc>>,
 }
 
-// Why: A user may hold several federated mappings (one per IdP). The bridge
-// asks which identity this session came from, and the closest honest answer
-// from a row alone is the most recently used one — hence ORDER BY
-// last_seen_at DESC and a LATERAL join rather than a plain LEFT JOIN, which
-// would multiply the result row per mapping.
+// Why: Postgres `LEFT JOIN LATERAL … LIMIT 1` — a plain LEFT JOIN would repeat
+// the user once per IdP mapping; the bridge wants only the most recently seen
+// one.
 pub async fn find_identity_envelope(
     pool: &PgPool,
     user_id: &UserId,

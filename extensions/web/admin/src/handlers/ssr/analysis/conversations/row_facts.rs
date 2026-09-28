@@ -9,7 +9,6 @@ use super::view::ConversationRowView;
 use crate::repositories::analysis::conversations::ConversationFactRow;
 use crate::repositories::analysis::skills::SkillConversationRow;
 
-// Why: what every conversation table needs to draw one row.
 pub(crate) struct RowFacts<'a> {
     pub context_id: &'a ContextId,
     pub title: &'a str,
@@ -39,7 +38,6 @@ pub(crate) struct RowFacts<'a> {
     pub cost_microdollars: i64,
     pub p95_latency_ms: Option<i32>,
     pub duration_seconds: i64,
-    // Why: summed turn latency; only the fact row carries it.
     pub active_ms: Option<i64>,
     pub is_continuation: bool,
     pub prev_context_id: Option<&'a str>,

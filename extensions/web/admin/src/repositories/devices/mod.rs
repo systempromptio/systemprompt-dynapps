@@ -23,15 +23,10 @@ use chrono::{DateTime, Utc};
 
 use crate::repositories::overview::liveness::liveness_state;
 
-// Why: a bridge that has not called home in a week is not a bridge anyone is
-// using; it is a credential still valid on a machine nobody is watching. Seven
-// days is a working week, so a laptop closed on Friday is not reported as
-// abandoned on Monday.
 pub const STALE_AFTER_DAYS: i64 = 7;
 
-// Why: the desktop bridge beats every 30 s while it runs (its
-// `HEARTBEAT_INTERVAL`), so "online now" is a beat inside two of those; the
-// window is the liveness rule's, stated here in the bridge's interval.
+// Why: the desktop bridge's own `HEARTBEAT_INTERVAL` is 30 s; this must track
+// it, since "online now" is a beat inside two of those intervals.
 pub const BRIDGE_HEARTBEAT_SECS: i64 = 30;
 
 /// What a bridge's last heartbeat says: beating now, quiet for less than a

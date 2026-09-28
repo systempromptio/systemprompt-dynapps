@@ -49,8 +49,8 @@ pub(super) struct ContextsSortHeaders {
 pub(super) struct ConversationItemView {
     pub(super) context_id: ContextId,
     pub(super) detail_url: String,
-    // Why: not `title` — the layout's `title=` hash parameter shadows a field
-    // of that name at every depth of the template.
+    // Why: Handlebars — the layout's `title=` hash shadows a `title` field at
+    // every template depth.
     pub(super) conversation_title: String,
     pub(super) user_id: Option<UserId>,
     pub(super) user_label: String,
@@ -82,9 +82,6 @@ pub(super) struct UserSummaryView {
     pub(super) last_at: Option<String>,
     pub(super) last_relative: Option<String>,
     pub(super) latest: Option<ConversationItemView>,
-    // Why: the busiest model or two as chips, the rest folded into a `+N`
-    // chip whose title lists them — a person who touched eleven models in a
-    // month still gets a one-line row.
     pub(super) models_primary: Vec<ModelChipView>,
     pub(super) models_more: usize,
     pub(super) models_more_list: String,
@@ -124,9 +121,8 @@ pub(super) struct PageKpisView {
     pub(super) cost_display: String,
 }
 
-// Why: every field must serialize (empty string when unset) — the template
-// reads `{{filter.q}}` etc. directly under Handlebars strict mode, which
-// errors on an absent key.
+// Why: Handlebars strict mode errors on an absent key, so every field
+// serializes (empty string when unset) for `{{filter.q}}` and siblings.
 #[derive(Debug, Serialize)]
 pub(super) struct FilterView {
     pub(super) q: String,

@@ -36,9 +36,6 @@ pub async fn load_declared_set(
     build_declared_from_doc(&doc, marketplace_ids, registered)
 }
 
-// Why: the projection half on its own, so an uploaded `rules.yaml` (an
-// import preview) is declared exactly as the file on disk would be — same
-// route catalog, same marketplace ids, same expiry pass.
 pub fn build_declared_from_doc(
     doc: &RulesDoc,
     marketplace_ids: &[String],
@@ -62,10 +59,6 @@ pub fn build_declared_from_doc(
     Ok(set)
 }
 
-// Why: the marketplace ids the composed tree defines — the same root
-// `rules.yaml` is read from, so a kit's marketplace validates the moment its
-// bundle is active, without a restart. The loader's cache is keyed by root,
-// so this is a read of the composition, not a parse per request.
 pub fn marketplace_ids_from_services() -> Result<Vec<String>, MarketplaceError> {
     let services = ConfigLoader::load()?;
     Ok(services

@@ -34,7 +34,6 @@ pub const PLANE_ID: &str = "groups";
 pub struct GroupsPlane;
 
 fn declared_groups_from(from: DeclarationSource<'_>) -> AdminResult<GroupsDoc> {
-    // Why: no file declares nothing — the loader treats it the same way.
     let Some(yaml) = read_or_text(from, GROUPS_FILE)? else {
         return Ok(GroupsDoc::default());
     };

@@ -50,7 +50,7 @@ pub struct ArtifactDetail {
     pub payload_bytes: Option<i32>,
     pub payload_sha256: Option<String>,
     pub secret_redactions: i32,
-    // JSON: the stored artifact body, typed per `artifact_type`.
+    // JSON: variable-shape artifact body
     pub body: Option<serde_json::Value>,
     pub execution_status: Option<String>,
     pub execution_time_ms: Option<i32>,
@@ -66,8 +66,6 @@ pub struct ArtifactDetail {
     pub findings: Vec<ArtifactFindingRow>,
 }
 
-// Why: the statement's own row; `body` arrives as `Json` and is unwrapped
-// into the detail so callers see one plain struct.
 struct DetailRecord {
     artifact_id: ArtifactId,
     mcp_execution_id: McpExecutionId,
@@ -92,7 +90,7 @@ struct DetailRecord {
     payload_bytes: Option<i32>,
     payload_sha256: Option<String>,
     secret_redactions: i32,
-    // JSON: the stored artifact body as the driver hands it over.
+    // JSON: variable-shape stored artifact body
     body: Option<Json<serde_json::Value>>,
     execution_status: Option<String>,
     execution_time_ms: Option<i32>,

@@ -5,6 +5,10 @@
 //! `services/plugins`), so the index is rebuilt per request rather than
 //! persisted. It describes the catalog as placed today; historical placement is
 //! not a retained dimension.
+//!
+//! A marketplace's audience is every signed-in person resolved as the subject
+//! the gateway's enforcement point sees (roles plus every registered
+//! dimension), so a count here and a decision at the gateway cannot disagree.
 
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
@@ -96,9 +100,6 @@ impl MarketplaceAudience {
             .map_or(0, HashSet::len)
     }
 
-    // Why: installs are receipts from anyone who ever installed; a rate over
-    // the entitled must count only the installed who are entitled, or one
-    // extra consumer reads as 200%.
     #[must_use]
     pub fn entitled_among(&self, marketplace: &str, consumers: &[String]) -> usize {
         self.users_by_marketplace.get(marketplace).map_or(0, |set| {
@@ -140,16 +141,10 @@ struct MembershipRow {
     roles: Vec<String>,
 }
 
-// Why: bounded so a large roster does not open one attribute lookup per
-// user at once against the pool; the audience is read per page render.
+// Why: sqlx pool — bounds concurrent per-user attribute lookups so a large
+// roster cannot drain the pool on a page render.
 const AUDIENCE_CONCURRENCY: usize = 8;
 
-// Why: audience is every signed-in person resolved as the subject the
-// enforcement point sees — own roles plus every registered dimension
-// (groups, projects, connectors, linked Salesforce identities) — so a count
-// here and a decision at the gateway cannot disagree. A marketplace opened by
-// a connected server reaches exactly the people holding that connection;
-// group and role bands alone would count it as reaching nobody.
 pub async fn get_marketplace_audience(
     pool: &PgPool,
     manifests: &[MarketplaceConfigSummary],

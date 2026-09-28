@@ -19,8 +19,6 @@ pub struct McpCallerRow {
     pub last_call_at: Option<DateTime<Utc>>,
 }
 
-// Why: Who has been using one server in the window, heaviest first; a row
-// is a call, so the figure agrees with the Calls tile.
 pub async fn list_mcp_callers(
     pool: &PgPool,
     server_name: &str,
@@ -87,8 +85,6 @@ pub struct McpExecutionRow {
     pub secret_redactions: Option<i64>,
 }
 
-// Why: one call log ask — which server (`None` is the fleet, which only the
-// export asks for), which window, and which page of it.
 #[derive(Debug, Clone, Copy)]
 pub struct CallLogQuery<'a> {
     pub server_name: Option<&'a str>,
@@ -98,9 +94,6 @@ pub struct CallLogQuery<'a> {
     pub offset: i64,
 }
 
-// Why: The raw call log in the window, newest first — the `source` column
-// says which vantage point recorded the call, and `ai_tool_call_id` whether
-// the client attested it.
 pub async fn list_mcp_executions_paged(
     pool: &PgPool,
     q: CallLogQuery<'_>,

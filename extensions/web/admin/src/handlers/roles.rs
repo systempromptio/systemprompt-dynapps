@@ -63,9 +63,6 @@ pub(crate) async fn set_user_roles_handler(
     )
     .map_err(AdminError::Refused)?;
 
-    // Why: the manual half is the difference. Storing the whole requested set
-    // would turn a directory-held role into a manual grant, and it would then
-    // survive the member leaving the AD group.
     let manual: Vec<String> = after
         .iter()
         .filter(|role| !directory_roles.contains(role))
@@ -81,10 +78,6 @@ pub(crate) async fn set_user_roles_handler(
     .await?;
     let roles = repo::recompute_roles(&pool, &user_id, None).await?;
 
-    // Why: losing admin or executive access must revoke live credentials too.
-    // A session minted while they were an admin carries that claim until it
-    // expires, so demotion without revocation is a demotion that does not
-    // take effect until tomorrow.
     let lost_executive =
         has_any(&before, &[Role::SuperAdmin]) && !has_any(&roles, &[Role::SuperAdmin]);
     if (has_any(&before, ROLES_MANAGE) && !has_any(&roles, ROLES_MANAGE)) || lost_executive {
@@ -103,9 +96,6 @@ pub(crate) async fn set_user_roles_handler(
     .into_response())
 }
 
-// Why: duplicates and surrounding space come from a form, not from a rule, so
-// they are cleaned here rather than refused. An unknown role is a rule and is
-// refused by `authorize_role_change`.
 fn normalized(roles: &[String]) -> Vec<String> {
     let mut out: Vec<String> = roles
         .iter()

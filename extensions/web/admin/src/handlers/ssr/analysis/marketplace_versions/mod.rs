@@ -63,8 +63,6 @@ pub(crate) enum Tab {
 }
 
 impl Tab {
-    // Why: the Evaluation tab's figures are its own export's rows, so its
-    // button downloads them; every other view exports the version history.
     const fn dataset(self) -> &'static str {
         match self {
             Self::Evaluation => "analysis-plugin-eval",

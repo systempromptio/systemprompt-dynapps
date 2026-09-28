@@ -12,8 +12,6 @@ use sqlx::PgPool;
 
 use super::plane::SyncMode;
 
-// Why: the boot seed is the one write nobody presses, so it carries a fixed
-// actor rather than a person.
 pub const BOOT_ACTOR: &str = "boot";
 
 #[derive(Debug, Clone, Serialize)]
@@ -52,7 +50,6 @@ pub struct AppliedFrom {
     pub composed_hash: Option<String>,
 }
 
-// Why: the seed is its own mode because it is the one write nobody chose.
 #[must_use]
 pub fn applied_mode_label(mode: Option<SyncMode>) -> &'static str {
     mode.map_or("seed", SyncMode::label)
@@ -105,9 +102,6 @@ pub async fn record_applied(pool: &PgPool, applied: &Applied<'_>) -> Result<(), 
     Ok(())
 }
 
-// Why: the declared hash is refreshed on every read so "declared changed
-// since last apply" is answered from the row alone; the applied columns are
-// untouched, and a missing row is created with no apply on it.
 pub async fn record_declared(
     pool: &PgPool,
     plane: &str,

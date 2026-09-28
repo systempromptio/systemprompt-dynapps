@@ -13,7 +13,6 @@ use crate::repositories::analysis::conversations::{
     ConversationAnalysisTotals, ConversationSeriesPoint,
 };
 
-// Why: one KPI tile — value, supporting line, tone and the window's sparkline.
 #[derive(Debug, Serialize)]
 pub(crate) struct ConversationTileView {
     pub label: &'static str,
@@ -25,7 +24,6 @@ pub(crate) struct ConversationTileView {
     pub spark: SparklineView,
 }
 
-// Why: the words of a tile before its sparkline is drawn.
 struct Tile {
     label: &'static str,
     icon: &'static str,

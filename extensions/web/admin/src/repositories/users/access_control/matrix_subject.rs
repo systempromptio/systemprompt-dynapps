@@ -40,19 +40,16 @@ fn banded_subject(prefix: &str, band: &str, value: &str) -> MatrixSubject {
     }
 }
 
-// Why: A subject that holds one group membership and nothing else.
 #[must_use]
 pub fn group_subject(slug: &str) -> MatrixSubject {
     banded_subject("group", "group", slug)
 }
 
-// Why: A subject that is on one project and nothing else.
 #[must_use]
 pub fn project_subject(slug: &str) -> MatrixSubject {
     banded_subject("project", "project", slug)
 }
 
-// Why: A subject that holds exactly one role and no attributes.
 #[must_use]
 pub fn role_subject(role: &str) -> MatrixSubject {
     MatrixSubject {
@@ -62,8 +59,6 @@ pub fn role_subject(role: &str) -> MatrixSubject {
     }
 }
 
-// Why: The real subject behind a signed-in account: its own id, roles, and
-// every registered dimension's values gathered from the database.
 pub async fn user_subject(
     pool: &PgPool,
     user_id: &UserId,
@@ -76,7 +71,6 @@ pub async fn user_subject(
     })
 }
 
-// Why: Resolve one subject against the supplied entity sections.
 pub async fn resolve_subject_matrix(
     pool: &PgPool,
     subject: &MatrixSubject,
@@ -85,10 +79,6 @@ pub async fn resolve_subject_matrix(
     resolve_sections_for(pool, subject, sections).await
 }
 
-// Why: Resolve many subjects against the same sections, reading the rule table
-// and the entity defaults once for the whole batch. The audience matrix asks
-// the same question of every group and every role, so the single-subject call
-// in a loop would re-read both tables for each row.
 pub async fn resolve_subject_matrices(
     pool: &PgPool,
     subjects: &[MatrixSubject],

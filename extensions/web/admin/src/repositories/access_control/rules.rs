@@ -4,6 +4,9 @@
 //! offers are over four columns, and a rule set that outgrows [`RULE_CAP`]
 //! is a configuration to fix rather than a page to scroll. The cap is
 //! reported to the caller so the page can say the listing is short.
+//!
+//! The drift engine's reads ([`list_band_rules`], [`list_entity_defaults`])
+//! are uncapped: a row missing from a capped read would look like a deletion.
 
 use chrono::{DateTime, Utc};
 use sqlx::{PgExecutor, PgPool};
@@ -12,7 +15,6 @@ use systemprompt_security::authz::Access;
 use super::drift::{BandRuleRow, EntityDefaultRow};
 use crate::types::access_control::AccessDecision;
 
-// Why: Every rule the page will ever render in one read.
 pub const RULE_CAP: i64 = 1000;
 
 /// One `access_control_rules` row with the entity context it needs.
@@ -58,7 +60,6 @@ pub async fn list_ledger_rules(pool: &PgPool) -> Result<Vec<LedgerRuleRow>, sqlx
     .await
 }
 
-// Why: Entities that grant everyone whatever no rule denies.
 pub async fn count_open_entities(pool: &PgPool) -> Result<i64, sqlx::Error> {
     sqlx::query_scalar!(
         r#"SELECT COUNT(*)::BIGINT AS "count!"
@@ -69,9 +70,6 @@ pub async fn count_open_entities(pool: &PgPool) -> Result<i64, sqlx::Error> {
     .await
 }
 
-// Why: Every non-user rule, uncapped: the drift engine must see the whole
-// table or a missing row looks like a deletion. Generic over the executor so
-// the sync can re-read inside its own transaction.
 pub async fn list_band_rules<'e, E: PgExecutor<'e>>(
     exec: E,
 ) -> Result<Vec<BandRuleRow>, sqlx::Error> {
@@ -95,7 +93,6 @@ pub async fn list_band_rules<'e, E: PgExecutor<'e>>(
     .await
 }
 
-// Why: Every catalogued entity with its default, for the drift engine.
 pub async fn list_entity_defaults<'e, E: PgExecutor<'e>>(
     exec: E,
 ) -> Result<Vec<EntityDefaultRow>, sqlx::Error> {
@@ -112,8 +109,6 @@ pub async fn list_entity_defaults<'e, E: PgExecutor<'e>>(
     .await
 }
 
-// Why: Whether the seed has anything to seed. Per-person overrides do not
-// count: a fresh install with one user override is still an unseeded install.
 pub async fn count_band_rules(pool: &PgPool) -> Result<i64, sqlx::Error> {
     sqlx::query_scalar!(
         r#"SELECT COUNT(*)::BIGINT AS "count!"

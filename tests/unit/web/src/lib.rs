@@ -44,7 +44,6 @@
 #[cfg(test)]
 mod agents_ingestion;
 #[cfg(test)]
-#[cfg(test)]
 mod analysis_skills;
 #[cfg(test)]
 mod builders;
@@ -201,15 +200,12 @@ mod site_skills_grouping;
 #[cfg(test)]
 mod site_skills_prerenderer;
 #[cfg(test)]
-#[cfg(test)]
 mod web_extension_providers;
 #[cfg(test)]
 mod web_extension_wiring;
 #[cfg(test)]
 mod web_schemas;
 
-// Migrated from the former in-crate `extensions/web/admin/tests/` and
-// `extensions/web/tests/` directories: the tests workspace is the only home.
 #[cfg(test)]
 mod access_control_drift;
 #[cfg(test)]
@@ -243,11 +239,9 @@ mod analytics_conversations_redact;
 #[cfg(test)]
 mod asset_manifest;
 #[cfg(test)]
-#[cfg(test)]
 mod authz_marketplace_pure;
 #[cfg(test)]
 mod authz_quota_subjects;
-#[cfg(test)]
 #[cfg(test)]
 mod config_gateway_pure;
 #[cfg(test)]
@@ -278,7 +272,6 @@ mod route_labels_pure;
 mod secrets_crypto_pure;
 #[cfg(test)]
 mod services_tree_declarations;
-#[cfg(test)]
 #[cfg(test)]
 mod support;
 #[cfg(test)]

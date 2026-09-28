@@ -13,8 +13,6 @@ use crate::handlers::ssr::types::table::SortColumn;
 
 pub(super) const BASE_URL: &str = "/admin/groups";
 
-// Why: the window every figure on the page is measured over. Ninety days is
-// offered because a quarter is the unit a spend conversation happens in.
 pub(super) const RANGES: [(&str, &str, i32); 3] = [
     ("7d", "7 days", 7),
     ("30d", "30 days", 30),
@@ -115,9 +113,6 @@ pub(super) fn range_links(days: i32, source: &str) -> Vec<FilterLinkView> {
         .collect()
 }
 
-// Why: the source filter is the page's second dimension — who created the
-// group. It is a link like every other control here, so a filtered view is a
-// URL somebody can send.
 pub(super) fn source_query(source: &str) -> String {
     if source.is_empty() {
         String::new()
@@ -143,9 +138,6 @@ pub(super) fn source_links(selected: &str, range: &str) -> Vec<FilterLinkView> {
     .collect()
 }
 
-// Why: only the four labels the listing renders are accepted, so a hand-typed
-// `?source=` narrows to nothing rather than being ignored — a filter that
-// silently widens is worse than one that shows an empty table.
 pub(super) fn source_filter(raw: Option<&str>) -> String {
     match raw {
         Some(v @ ("Directory" | "Dashboard" | "System")) => v.to_owned(),
@@ -153,13 +145,7 @@ pub(super) fn source_filter(raw: Option<&str>) -> String {
     }
 }
 
-// Why: an inactive column opens descending. Every numeric column here is
-// scanned for its largest values, and the name column is the only one anyone
-// reads upward — which is what `dir=asc` on a second click is for.
 pub(super) fn sort_headers(key: &str, dir: &str, range: &str, source: &str) -> GroupSortHeaders {
-    // Why: destructuring the fixed-size array binds each column by position,
-    // so a column added to COLUMNS without a struct field (or vice versa) is a
-    // compile error rather than an empty `th`.
     let [
         name,
         source,
@@ -202,9 +188,6 @@ fn header(col: &SortColumn, key: &str, dir: &str, range: &str, source: &str) -> 
     )
 }
 
-// Why: the derived Unassigned bucket sorts to the end whatever the column,
-// because it is not a group anyone created and letting it win a spend sort
-// would put a bucket at the top of a list of teams.
 pub(super) fn apply(rows: &mut [GroupRowView], key: &str, dir: &str) {
     rows.sort_by(|a, b| {
         a.is_unassigned

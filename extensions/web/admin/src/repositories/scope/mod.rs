@@ -41,8 +41,6 @@ impl ScopeKind {
         }
     }
 
-    // Why: the overlap question is symmetric — a group's projects and a
-    // project's groups are the same join read from either side.
     #[must_use]
     pub const fn linked(self) -> Self {
         match self {

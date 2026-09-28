@@ -9,6 +9,10 @@
 //! Operational identifiers — trace, request, provider request, route match —
 //! are deliberately absent; an admin follows the link to the full context view
 //! for those.
+//!
+//! A conversation outside the viewer's scope answers 404 with the same message
+//! as a missing id, so the URL is no oracle for other people's conversation
+//! ids.
 
 use std::sync::Arc;
 
@@ -57,8 +61,6 @@ pub(crate) async fn history_conversation_page(
     State(pool): State<Arc<PgPool>>,
     Path(context_id): Path<String>,
 ) -> AdminHtmlResult<Response> {
-    // Why: `ContextId::new` panics on anything that is not a UUID, and this
-    // segment comes straight off the URL.
     let Ok(context_id) = ContextId::try_new(context_id.trim()) else {
         return Err(not_found().into());
     };
@@ -67,10 +69,6 @@ pub(crate) async fn history_conversation_page(
         return Err(not_found().into());
     };
 
-    // Why: 404, not 403, and the same message as a missing id. A 403 would
-    // confirm that a context with this id exists and say whose it is not,
-    // which turns the URL into an oracle for enumerating other people's
-    // conversation ids.
     let scope = history_scope_for(&shell.user);
     let owned = header
         .user_id
@@ -80,10 +78,6 @@ pub(crate) async fn history_conversation_page(
         return Err(not_found().into());
     }
 
-    // Why: two phases, because the bodies are fetched by request id. The
-    // request list decides which handful of requests the transcript is built
-    // from; asking for a context's bodies wholesale needs a cap, and any cap
-    // on it drops the newest rows — which is exactly the transcript.
     let (kpis_res, requests_res) = tokio::join!(
         get_context_kpis(&pool, &context_id),
         list_context_requests(&pool, &context_id),
@@ -97,9 +91,6 @@ pub(crate) async fn history_conversation_page(
         list_tool_calls_for_requests(&pool, &ids.tool_calls),
     );
     let messages = messages_res?;
-    // Why: same reasoning as the admin reader — a transcript that silently
-    // drops its tool calls reads as a complete conversation in which the
-    // agent did nothing, and nothing on the page says otherwise.
     let tool_calls = tool_calls_res?;
 
     let conversation = build_conversation(

@@ -23,9 +23,6 @@ use super::view::ConversationRowView;
 use crate::handlers::ssr::list_view::DEFAULT_PAGE_SIZE;
 
 
-// Why: the breakdown dimension's query parameter — the key a bucket row's
-// link and export narrow by; groups and projects narrow through the scope
-// bar instead.
 const fn bucket_param(by: BreakdownBy) -> Option<&'static str> {
     match by {
         BreakdownBy::Category => Some("category"),
@@ -73,8 +70,6 @@ fn breakdown_rows(
         .collect()
 }
 
-// Why: a chip per active filter, each removable and each downloadable as
-// exactly the rows it selects.
 fn chips(params: &ConversationAnalysisQuery, mut ribbon: RibbonView) -> RibbonView {
     let active: [(&'static str, &'static str, Option<String>); 9] = [
         ("Model", "model", params.model()),
@@ -120,8 +115,6 @@ const RIBBON_PARAMS: [&str; 10] = [
     "model", "client", "flag", "skill", "user_id", "category", "outcome", "judged", "q", "page",
 ];
 
-// Why: the pills fed by the filtered set's own facets, each listing only the
-// values present, with counts.
 fn facet_groups(
     params: &ConversationAnalysisQuery,
     data: &ConversationAnalysisResult,
@@ -177,8 +170,6 @@ fn facet_groups(
     ]
 }
 
-// Why: the pills over closed vocabularies — the record flags and the
-// judge's own words.
 fn fixed_groups(params: &ConversationAnalysisQuery) -> Vec<RibbonGroupView> {
     vec![
         RibbonGroupView::fixed(
@@ -225,7 +216,6 @@ fn ribbon(params: &ConversationAnalysisQuery, data: &ConversationAnalysisResult)
     chips(params, ribbon)
 }
 
-// Why: what the handler read besides the repository result.
 pub(super) struct ConversationsPageInputs {
     pub(super) scope_filter: ScopeFilterView,
     pub(super) report_banner: ReportBannerView,

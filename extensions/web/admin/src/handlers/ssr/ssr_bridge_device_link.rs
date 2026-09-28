@@ -36,9 +36,8 @@ pub(crate) struct DeviceLinkApproveForm {
     pub redirect: Option<String>,
 }
 
-// Why: unconfigured branding must stay a missing key rather than a null, so
-// the template's `{{#if}}` guard behaves. `redirect`/`redirect_host` follow the
-// same rule: absent, not empty, when there is no callback to return to.
+// Why: Handlebars `{{#if}}` guards need a missing key, not a null, so unset
+// branding and redirect fields are skipped rather than serialized.
 #[derive(Debug, Serialize)]
 struct DeviceLinkContext<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -169,8 +168,6 @@ fn render_code_page(
     Ok(Html(html).into_response())
 }
 
-// Why: `--gateway` is only worth printing when the server knows its own
-// external URL; a wrong one is worse than the CLI's configured default.
 fn gateway_suffix() -> String {
     systemprompt::models::Config::get().map_or_else(
         |_| String::new(),
@@ -192,8 +189,6 @@ fn validate_loopback_redirect(redirect: &str) -> Option<String> {
 }
 
 fn bad_redirect_response(redirect: &str) -> Response {
-    // Why: names the accepted redirect forms, which the generic error page
-    // cannot.
     tracing::warn!(
         redirect,
         "Rejected bridge device-link redirect (non-loopback)"

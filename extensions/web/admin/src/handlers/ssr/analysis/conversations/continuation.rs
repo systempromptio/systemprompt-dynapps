@@ -24,8 +24,6 @@ impl ContinuationView {
     }
 }
 
-// Why: the preamble is the same for every continuation, so it names none;
-// the judge's title wins, then the previous conversation's.
 pub(crate) fn row_title(f: &RowFacts<'_>) -> String {
     if let Some(judged) = f.judge_title.filter(|t| !t.is_empty()) {
         return judged.to_owned();

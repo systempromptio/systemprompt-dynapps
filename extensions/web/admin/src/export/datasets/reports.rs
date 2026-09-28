@@ -67,9 +67,6 @@ macro_rules! dataset {
             fn columns(&self) -> &'static [Column] {
                 $columns
             }
-            // Why: the dialog's month picker writes the same `?month=` the
-            // loaders parse, so declaring the window changes the control and
-            // nothing the files contain.
             fn window(&self) -> Window {
                 Window::Month
             }

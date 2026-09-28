@@ -6,7 +6,8 @@
 //! trace id reaches no other row. The ledger coalesces the trace id across
 //! intent, execution and result, and the query below accepts a session, a
 //! trace id or an execution id as its key so that every id the MCP server
-//! page links resolves to these spans.
+//! page links resolves to these spans. Hook-sourced executions are the calls
+//! `list_event_spans` already renders, so they are left out here.
 
 use sqlx::PgPool;
 use systemprompt::identifiers::{ArtifactId, ContextId, SessionId, UserId};
@@ -14,12 +15,6 @@ use systemprompt::identifiers::{ArtifactId, ContextId, SessionId, UserId};
 use super::spans::format_identity;
 use super::{Span, SpanKind, SpanStatus};
 
-// Why: in-process and proxied tool calls are never reported by a hook, so
-// they exist only in `mcp_tool_executions`; the ledger joins each to its
-// artifact and coalesces the trace id across intent, execution and result.
-// Hook-sourced executions are the same calls `list_event_spans` already
-// renders and are left out rather than shown twice. The key may be a session,
-// a trace id or an execution id (see `resolve::execution_trace_key`).
 pub(super) async fn list_ledger_spans(
     pool: &PgPool,
     session_id: &SessionId,
@@ -98,8 +93,6 @@ pub(super) async fn list_ledger_spans(
         .collect())
 }
 
-// Why: the execution's own verdict, except that a tool which ran to
-// completion and returned an error result is an error.
 pub fn execution_status(status: &str, artifact_is_error: bool) -> SpanStatus {
     match status {
         "pending" => SpanStatus::Pending,
@@ -108,8 +101,6 @@ pub fn execution_status(status: &str, artifact_is_error: bool) -> SpanStatus {
     }
 }
 
-// Why: the second line under an execution span — the server that ran it and
-// where the platform saw it (`in_process`, `proxy`, `gateway`).
 pub fn execution_label(server_name: &str, source: &str) -> String {
     format!("{server_name} · {source}")
 }

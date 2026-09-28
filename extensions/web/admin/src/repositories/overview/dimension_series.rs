@@ -22,8 +22,6 @@ pub enum OverviewDimension {
 }
 
 impl OverviewDimension {
-    // Why: the SQL branches on this literal in a CASE, never on interpolated
-    // text, so the dimension cannot become an injection surface.
     const fn as_sql(self) -> &'static str {
         match self {
             Self::Model => "model",

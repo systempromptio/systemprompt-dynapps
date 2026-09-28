@@ -22,17 +22,12 @@ use crate::repositories::people_usage::{MemberUsageRow, ScopeUsageRow};
 
 pub(crate) const DIRECTORY_SOURCE: &str = "adfs";
 
-// Why: the pages render a partial screen rather than an error page when one
-// rollup fails, so every read here collapses to its empty shape and says so
-// in the log.
 pub(crate) fn or_default<T: Default>(what: &'static str, result: Result<T, sqlx::Error>) -> T {
     result
         .inspect_err(|e| tracing::warn!(error = %e, what, "people usage query failed"))
         .unwrap_or_default()
 }
 
-// Why: A membership row from either container — the two tables carry identical
-// shapes, so the view borrows rather than owning a third copy of them.
 pub(crate) struct MemberInput<'a> {
     pub user_id: &'a str,
     pub display_name: Option<&'a str>,
@@ -42,9 +37,6 @@ pub(crate) struct MemberInput<'a> {
     pub valid_until: Option<DateTime<Utc>>,
 }
 
-// Why: the window inside which a membership counts as "expiring soon" on the
-// member tables and the access-control ledger — one working week, long enough
-// to renew before the sweep acts.
 pub(crate) const EXPIRING_SOON_DAYS: i64 = 7;
 
 #[must_use]
@@ -60,10 +52,6 @@ pub(crate) struct MemberContext<'a> {
 }
 
 #[must_use]
-// Why: the listings have ten columns at 1440px and the model name is the
-// widest thing that is not a sentence. The vendor prefix is the same on every
-// row of an Anthropic estate, so it carries no information there; the cell
-// keeps the full id on its title.
 pub(crate) fn short_model(model: &str) -> String {
     let tail = model.rsplit('/').next().unwrap_or(model);
     tail.strip_prefix("claude-").unwrap_or(tail).to_owned()
@@ -93,10 +81,6 @@ pub(crate) fn stat_tiles(usage: &ScopeUsageRow, member_count: i64) -> Vec<StatTi
             label: "Requests 30d",
             value: short_num(usage.requests),
         },
-        // Why: token counts run to seven figures, and a tile is read at a
-        // glance rather than compared digit by digit. `short_num` is the same
-        // banding the `formatNumber` helper applies everywhere else, so the
-        // tile and the table column beneath it agree.
         StatTileView {
             label: "Tokens in / out",
             value: format!(
@@ -112,8 +96,6 @@ pub(crate) fn stat_tiles(usage: &ScopeUsageRow, member_count: i64) -> Vec<StatTi
     ]
 }
 
-// Why: the source column is the stamp's own vocabulary; the label says what
-// each value meant for the request it was written on.
 pub(crate) fn attribution_rows(rows: &[AttributionSourceRow]) -> Vec<AttributionSourceRowView> {
     let total: i64 = rows.iter().map(|r| r.requests).sum();
     rows.iter()
@@ -147,9 +129,6 @@ pub(crate) fn model_rows(models: &[ModelUsageRow]) -> Vec<ModelMixRowView> {
         .collect()
 }
 
-// Why: the share bar is relative to the top row, not to the total. These are
-// truncated top-ten lists, so a percentage of their own sum would claim the
-// eleventh entry does not exist.
 pub(crate) fn name_count_rows(rows: &[(String, i64)]) -> Vec<NameCountRowView> {
     let top = rows.first().map_or(0, |r| r.1);
     rows.iter()
@@ -186,9 +165,9 @@ pub(crate) fn chips(rows: &[LinkedScopeRow]) -> Vec<MemberSetChipView> {
         .collect()
 }
 
-// Why: Why: a directory-sourced row cannot be removed by hand — the next
-// sign-in replaces the whole `adfs` set and would write it straight back, so a
-// Remove button on it would look like it had failed.
+// Why: AD FS sign-in replaces a user's whole `adfs` membership set, so a
+// directory-sourced row gets no Remove button — the next sign-in would write
+// it straight back.
 pub(crate) fn member_rows(
     members: &[MemberInput<'_>],
     ctx: &MemberContext<'_>,

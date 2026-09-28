@@ -21,12 +21,9 @@ pub struct RoleHolderRow {
     pub cost_30d_microdollars: i64,
 }
 
-// Why: the caller passes the role vocabulary rather than the query hardcoding
-// it, because `users.roles` is a free-text array an older release may have
-// written into and a stale value must not invent a role card.
 pub async fn list_role_holders(
     pool: &PgPool,
-    roles: &[String],
+    known_roles: &[String],
     limit: i64,
 ) -> Result<Vec<RoleHolderRow>, sqlx::Error> {
     sqlx::query_as!(
@@ -61,7 +58,7 @@ pub async fn list_role_holders(
            WHERE r.roles IS NOT NULL
            ORDER BY LOWER(COALESCE(u.email, u.id))
            LIMIT $2"#,
-        roles,
+        known_roles,
         limit,
     )
     .fetch_all(pool)

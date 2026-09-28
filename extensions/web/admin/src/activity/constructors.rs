@@ -7,8 +7,9 @@ pub(super) fn truncate(s: &str, max: usize) -> String {
     if head.len() == s.len() {
         return s.to_owned();
     }
-    // Why: a description is prose, so the cut lands on the last word boundary
-    // inside the budget rather than mid-word.
-    let head = head.rfind(' ').map_or(head, |pos| &head[..pos]);
-    format!("{head}\u{2026}")
+    format!("{}\u{2026}", back_to_last_word_boundary(head))
+}
+
+fn back_to_last_word_boundary(head: &str) -> &str {
+    head.rfind(' ').map_or(head, |pos| &head[..pos])
 }

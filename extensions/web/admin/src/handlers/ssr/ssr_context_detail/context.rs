@@ -30,9 +30,6 @@ pub(super) struct ContextDetailPageContext {
     pub(super) back_url: String,
     pub(super) back_label: String,
     pub(super) breadcrumbs: Vec<BreadcrumbView>,
-    // Why: what the session this context belongs to actually touched — the
-    // files, tools and repositories the hooks pipeline recorded. Empty for a
-    // context with no session, which is the gateway-only case.
     pub(super) entity_links: Vec<EntityLinkView>,
     pub(super) has_entity_links: bool,
     pub(super) entity_link_count: usize,
@@ -44,9 +41,6 @@ pub(super) struct EntityLinkView {
     pub(super) entity_type: String,
     pub(super) entity_name: String,
     pub(super) usage_count: i32,
-    // Why: the width of the bar in the usage column, as a percentage of the
-    // most-used entity on this context — a table of bare counts hides which
-    // one dominated.
     pub(super) share_pct: f64,
 }
 
@@ -89,8 +83,6 @@ pub(super) struct ContextRequestRowView {
     pub(super) model: String,
     pub(super) status: String,
     pub(super) is_error: bool,
-    // Why: the per-request figures the page totals are summed from — the
-    // export's evidence when a total looks wrong.
     pub(super) input_tokens: Option<i32>,
     pub(super) cache_read_tokens: Option<i32>,
     pub(super) cache_creation_tokens: Option<i32>,

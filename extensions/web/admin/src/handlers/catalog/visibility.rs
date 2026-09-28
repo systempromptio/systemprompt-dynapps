@@ -107,8 +107,6 @@ fn to_view(bands: Bands) -> VisibilityView {
     }
 }
 
-// Why: The badge for one entity. `carriers` are the marketplaces that ship it,
-// consulted only when nothing is declared against the entity itself.
 pub(crate) fn visibility_for(
     rules: &[AccessControlRule],
     entity_type: &str,
@@ -122,7 +120,6 @@ pub(crate) fn visibility_for(
     to_view(direct)
 }
 
-// Why: The marketplaces that carry a given plugin.
 pub(crate) fn carriers_of_plugin<'a>(
     manifests: &'a [MarketplaceConfigSummary],
     plugin_id: &PluginId,
@@ -133,7 +130,6 @@ pub(crate) fn carriers_of_plugin<'a>(
         .collect()
 }
 
-// Why: The marketplaces that carry a skill, via the plugins that ship it.
 pub(crate) fn carriers_of_skill<'a>(
     manifests: &'a [MarketplaceConfigSummary],
     plugin_ids: &[String],
@@ -144,9 +140,6 @@ pub(crate) fn carriers_of_skill<'a>(
         .collect()
 }
 
-// Why: two cheap reads the badge needs on every catalog page. Both are
-// best-effort: a badge that cannot be computed renders as restricted, which is
-// the safe reading, rather than failing the page.
 pub(super) async fn visibility_inputs(
     pool: &sqlx::PgPool,
     services_path: &std::path::Path,

@@ -109,9 +109,8 @@ pub fn hooks_webhook_router(
         .with_state(pool))
 }
 
-// Why: the desktop bridge's identity endpoint. Mounted under `/api/public` and
-// authenticated by the caller's own bridge token, not by the admin session
-// cookie — the bridge has no cookie jar.
+// Why: the desktop bridge has no cookie jar, so this route authenticates the
+// bridge token itself and must stay outside the admin session-cookie layers.
 pub fn bridge_identity_router(pool: Arc<PgPool>) -> Router {
     Router::new()
         .route(
@@ -121,10 +120,8 @@ pub fn bridge_identity_router(pool: Arc<PgPool>) -> Router {
         .with_state(pool)
 }
 
-// Why: the per-user Salesforce bearer accessor core's external-MCP client GETs
-// at tool-call time. Mounted under `/api/public` and deliberately NOT behind
-// `require_auth_middleware`: the caller is core carrying the user's own bridge
-// token, which has no session cookie, so the handler authenticates it itself.
+// Why: core's external-MCP client GETs this with the user's bridge token and no
+// session cookie, so it must not sit behind `require_auth_middleware`.
 pub fn salesforce_api_router(deps: SalesforceDeps) -> Router {
     Router::new()
         .route(

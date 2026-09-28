@@ -14,6 +14,9 @@
 //! "Clients" is the coding agent that made the request (`client_kind`) —
 //! this instance ships no A2A agents, so the agents a project uses are its
 //! Claude Code, Codex and desktop sessions, and the rollup names the busiest.
+//!
+//! The listing orders in Rust after one pass, so `LISTING_CAP` bounds it; an
+//! instance past the cap wants a filter, not a taller page.
 
 use std::collections::HashMap;
 
@@ -23,9 +26,6 @@ use systemprompt_web_shared::ProjectId;
 
 use crate::repositories::scope::{Attribution, ScopeKind};
 
-// Why: the listing reads every project in one pass and orders in Rust, so the
-// cap is what keeps that honest. An instance past it has outgrown a flat
-// listing and wants a filter, not a taller page.
 pub const LISTING_CAP: i64 = 500;
 
 /// One project's row on the listing: membership, the groups feeding it, and
@@ -77,9 +77,6 @@ pub async fn list_project_rollups(
         .collect())
 }
 
-// Why: the hook plane has no request to stamp, so tool calls, skills and
-// artifacts read membership; they are one statement keyed on the project so
-// the request-plane statement stays a plain listing.
 struct HookPlaneRow {
     scope_id: String,
     tool_calls: i64,

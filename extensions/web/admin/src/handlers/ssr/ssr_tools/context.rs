@@ -54,8 +54,6 @@ pub(crate) struct ToolsPageContext {
     pub breadcrumbs: Vec<BreadcrumbView>,
     pub range_links: Vec<TabLinkView>,
     pub range_rejected: bool,
-    // Why: a link from a conversation or skill row pins the window to that
-    // row's span; the page says so and offers the way out.
     pub window_pinned: bool,
     pub window_display: String,
     pub widen_href: String,

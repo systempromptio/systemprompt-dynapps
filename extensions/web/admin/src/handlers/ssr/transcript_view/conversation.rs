@@ -35,8 +35,6 @@ pub struct ConversationView {
     pub side_calls: SideCallsView,
     pub redaction_count: u32,
     pub has_content: bool,
-    // Why: an empty transcript has three quite different causes and the reader
-    // used to state only one of them. See [`EmptyReason`].
     pub empty_reason: EmptyReason,
 }
 
@@ -120,8 +118,6 @@ pub struct SideCallRowView {
     pub request_url: String,
 }
 
-// Why: the running counters every thread shares — turn numbers and anchors
-// are global across threads, and one redaction tally covers the whole page.
 pub(super) struct Counters {
     pub(super) opts: TranscriptOptions,
     pub(super) turn_number: usize,
@@ -239,8 +235,6 @@ pub(super) fn is_long(text: &str) -> bool {
     text.chars().count() > LONG_TEXT_CHARS || text.lines().count() > LONG_TEXT_LINES
 }
 
-// Why: one line, whitespace collapsed, cut at `max` chars with an ellipsis —
-// the shape a nav rail or thread tab can hold.
 pub(super) fn single_line(text: &str, max: usize) -> String {
     let collapsed: String = text.split_whitespace().collect::<Vec<_>>().join(" ");
     if collapsed.chars().count() > max {

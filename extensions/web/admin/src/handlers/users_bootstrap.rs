@@ -20,8 +20,6 @@ use crate::error::{AdminError, AdminResult};
 use crate::repositories;
 use crate::types::{CreateUserRequest, UserContext};
 
-// Why: there is no link to hand back — the note tells the operator what to say
-// instead.
 #[derive(Debug, serde::Serialize)]
 pub(crate) struct CreatedUserResponse {
     pub user: crate::types::UserSummary,
@@ -62,9 +60,6 @@ pub(crate) async fn create_user_handler(
         .into_response())
 }
 
-// Why: the create is an upsert on email, so re-creating an account that
-// already holds one of the picked memberships is not a failure — the
-// membership is simply already there.
 async fn grant_memberships(
     pool: &PgPool,
     body: &CreateUserRequest,
@@ -102,11 +97,6 @@ fn already_held_is_fine(res: AdminResult<()>) -> AdminResult<()> {
     }
 }
 
-// Why: an admin-created row needs no sign-in link. Astound SSO is the only
-// door, and with `auto_provision` on the AD group is the invitation — the
-// account created here is adopted by the first assertion carrying a mapped
-// group and the matching email, which is also what places them in their
-// groups and projects.
 fn sign_in_note() -> String {
     "User created. They sign in with Astound SSO — there is no link to send. The groups and \
      projects chosen here are manual grants; any their Active Directory group maps to are \

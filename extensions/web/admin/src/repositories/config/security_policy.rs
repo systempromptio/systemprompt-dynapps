@@ -4,7 +4,10 @@
 //! token may live from issuance. The bound is applied by [`bound_pat_expiry`],
 //! which is pure so the arithmetic is pinned by a unit test, and read once
 //! per process because the file is implementation configuration shipped
-//! with the image, not something the console edits.
+//! with the image, not something the console edits. An unparseable file is
+//! logged and served as the default (the safe direction). No requested expiry
+//! means the maximum, never "forever"; more than the maximum is refused, not
+//! clamped.
 
 use std::sync::OnceLock;
 
@@ -43,9 +46,6 @@ struct SecurityDoc {
 }
 
 impl SecurityPolicy {
-    // Why: parsed once and cached. A file that fails to parse is logged and
-    // served as the default rather than refused: a typo in a lifetime knob
-    // must not take the console down, and 90 days is the safe direction.
     #[must_use]
     pub fn get() -> Self {
         static POLICY: OnceLock<SecurityPolicy> = OnceLock::new();
@@ -103,9 +103,6 @@ impl std::fmt::Display for PatExpiryError {
     }
 }
 
-// Why: the one decision every issuance path makes. No expiry asked for means
-// the policy maximum, never "forever"; more than the maximum is refused
-// rather than clamped, so the caller learns the policy said no.
 pub fn bound_pat_expiry(
     requested: Option<DateTime<Utc>>,
     now: DateTime<Utc>,

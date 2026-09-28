@@ -21,8 +21,6 @@ pub struct RosterStats {
     pub inactive_30d: i64,
     pub requests: i64,
     pub cost_microdollars: i64,
-    // Why: the previous window, so the two spend KPIs can carry a delta rather
-    // than a bare number the reader has nothing to compare against.
     pub prior_cost_microdollars: i64,
     pub prior_requests: i64,
 }
@@ -93,8 +91,6 @@ pub async fn get_roster_stats(
     })
 }
 
-// Why: empty deep pages still need the filtered total, without spending/row
-// enrichment.
 pub(super) async fn count_filtered_users(
     pool: &PgPool,
     scope: &SubjectScope,

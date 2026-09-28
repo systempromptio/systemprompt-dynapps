@@ -94,7 +94,6 @@ fn describe(name: &str, description: Option<&str>) -> String {
     }
 }
 
-// Why: One difference, before it becomes a row of the generic table.
 struct Line<'a> {
     kind: &'static str,
     entity_kind: &'a str,

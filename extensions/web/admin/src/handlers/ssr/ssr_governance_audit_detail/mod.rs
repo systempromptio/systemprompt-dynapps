@@ -5,7 +5,9 @@
 //! Renders the full chain (identity, policy evaluations, prompt/response
 //! preview, cost, latency, linked trace) using the existing
 //! `find_decision_chain` envelope, the client and provider tool schemas the
-//! request carried, and the session's stored artifacts.
+//! request carried, and the session's stored artifacts. An owner outside the
+//! caller's view answers 404 exactly like a missing id, so the URL is no
+//! oracle for other people's request ids.
 
 use crate::error::AdminError;
 use std::sync::Arc;
@@ -113,8 +115,6 @@ pub(crate) async fn governance_audit_detail_page(
     let Some(envelope) = find_decision_chain(&pool, &id).await? else {
         return Err(AdminError::NotFound("No audit chain found for that id.".to_owned()).into());
     };
-    // Why: 404, not 403, for an owner outside the caller's view — the same
-    // answer as a missing id, so the URL is no oracle for other people's ids.
     if !may_view(&pool, &shell.user, Some(&envelope.identity.user_id)).await? {
         return Err(AdminError::NotFound("No audit chain found for that id.".to_owned()).into());
     }
@@ -161,9 +161,6 @@ pub(crate) async fn governance_audit_detail_page(
             .collect(),
         events: &envelope.events,
         session_summary: &envelope.summary,
-        // Why: the log this page is reached from. `/admin/governance` was the
-        // old answer and is still mounted, but a reader who clicked a request
-        // row expects the row list back, not the policy console.
         back_url: "/admin/requests",
     };
 

@@ -2,7 +2,8 @@
 //!
 //! A plain HTML form with no JavaScript in the path: fields arrive as
 //! repeated `(name, value)` pairs, windows as `w<i>_<field>`, list fields
-//! (scanners, block categories) as one pair per checked box. Everything
+//! (scanners, block categories) as one pair per checked box; a window length
+//! is the first value that is not the `custom` select option. Everything
 //! here is a pure function of those pairs so the parsing is tested without
 //! a request. The result is validated the way core validates the file, so
 //! a spec that saves is a spec the gateway will read.
@@ -15,11 +16,8 @@ use systemprompt::ai::{
 pub use super::form_error::FormError;
 use super::month_window::MONTH_WINDOW_SECONDS;
 
-// Why: The bound on window rows the form renders and the parser reads.
 pub const MAX_WINDOWS: usize = 8;
 
-// Why: The subject kinds a window may name: core's `user` plus every dimension
-// this extension registers a quota subject provider for.
 pub const SUBJECTS: [&str; 7] = [
     "user",
     "group",
@@ -30,10 +28,8 @@ pub const SUBJECTS: [&str; 7] = [
     "organization",
 ];
 
-// Why: The scanners the gateway's registry resolves on this instance.
 pub const SCANNERS: [&str; 3] = ["heuristic", "secrets", "pii_extended"];
 
-// Why: Every finding category a scanner above can produce.
 pub const CATEGORIES: [&str; 6] = [
     "jailbreak",
     "secret",
@@ -42,6 +38,10 @@ pub const CATEGORIES: [&str; 6] = [
     "pii_email",
     "pii_phone",
 ];
+
+const MICRODOLLARS_PER_DOLLAR: f64 = 1_000_000.0;
+
+const CUSTOM_WINDOW_SELECT: &str = "custom";
 
 #[derive(Debug, Clone)]
 pub struct ParsedPolicy {
@@ -90,9 +90,10 @@ fn optional_i64(fields: &[(String, String)], name: &str) -> Result<Option<i64>, 
         .transpose()
 }
 
-// Why: dollars in the form, microdollars in the spec — a ceiling is written
-// as "$200", never as 200000000.
-fn optional_dollars(fields: &[(String, String)], name: &str) -> Result<Option<i64>, FormError> {
+fn optional_dollars_as_microdollars(
+    fields: &[(String, String)],
+    name: &str,
+) -> Result<Option<i64>, FormError> {
     first(fields, name)
         .map(|v| {
             v.trim_start_matches('$')
@@ -108,7 +109,7 @@ fn optional_dollars(fields: &[(String, String)], name: &str) -> Result<Option<i6
                             field: name.to_owned(),
                         })
                     } else {
-                        Ok((d * 1_000_000.0).round() as i64)
+                        Ok((d * MICRODOLLARS_PER_DOLLAR).round() as i64)
                     }
                 })
         })
@@ -129,6 +130,12 @@ fn window_seconds(raw: &str, index: usize) -> Result<i32, FormError> {
     }
 }
 
+fn selected_window_value(fields: &[(String, String)], name: &str) -> Option<String> {
+    all(fields, name)
+        .into_iter()
+        .find(|v| v != CUSTOM_WINDOW_SELECT)
+}
+
 fn parse_window(
     fields: &[(String, String)],
     index: usize,
@@ -143,12 +150,7 @@ fn parse_window(
             subject: subject.to_owned(),
         });
     }
-    // Why: the period arrives twice — the select and, behind it, the custom
-    // seconds field of the same name. "custom" is the select saying "read
-    // the next one".
-    let raw = all(fields, &key("window"))
-        .into_iter()
-        .find(|v| v != "custom")
+    let raw = selected_window_value(fields, &key("window"))
         .ok_or(FormError::NoLength { index: index + 1 })?;
     let window = QuotaWindow {
         window_seconds: window_seconds(&raw, index)?,
@@ -156,7 +158,7 @@ fn parse_window(
         max_requests: optional_i64(fields, &key("max_requests"))?,
         max_input_tokens: optional_i64(fields, &key("max_input_tokens"))?,
         max_output_tokens: optional_i64(fields, &key("max_output_tokens"))?,
-        max_cost_microdollars: optional_dollars(fields, &key("max_cost"))?,
+        max_cost_microdollars: optional_dollars_as_microdollars(fields, &key("max_cost"))?,
     };
     if window.max_requests.is_none()
         && window.max_input_tokens.is_none()
@@ -200,8 +202,6 @@ fn parse_phrases(raw: Option<&str>) -> Option<Vec<String>> {
     (!lines.is_empty()).then_some(lines)
 }
 
-// Why: The form as a policy, or the first thing wrong with it in the operator's
-// words.
 pub fn parse_policy_form(fields: &[(String, String)]) -> Result<ParsedPolicy, FormError> {
     let name = first(fields, "name").ok_or(FormError::MissingName)?;
     if !name
@@ -261,8 +261,11 @@ pub fn parse_policy_form(fields: &[(String, String)]) -> Result<ParsedPolicy, Fo
         priority,
         spec,
     };
-    // Why: the same validation the sync apply runs, so a save never writes a
-    // row the file form would have refused.
+    validate_policy_config(&parsed)?;
+    Ok(parsed)
+}
+
+fn validate_policy_config(parsed: &ParsedPolicy) -> Result<(), FormError> {
     GatewayPolicyConfig {
         policies: vec![GatewayPolicyEntry {
             name: parsed.name.clone(),
@@ -272,6 +275,5 @@ pub fn parse_policy_form(fields: &[(String, String)]) -> Result<ParsedPolicy, Fo
         }],
     }
     .validate()
-    .map_err(FormError::Invalid)?;
-    Ok(parsed)
+    .map_err(FormError::Invalid)
 }

@@ -6,7 +6,6 @@ use super::retention::RetentionView;
 use crate::handlers::ssr::sync_plane::{AppliedView, HashView};
 use crate::handlers::ssr::types::{BreadcrumbView, TabLinkView};
 
-// Why: one kind of configuration as the table prints it.
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct ConfigRowView {
     pub id: &'static str,

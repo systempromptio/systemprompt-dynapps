@@ -34,8 +34,6 @@ use super::super::ssr::ssr_helpers::render_typed_page;
 use super::view::{PanelQuery, mcp_url, plugin_url, skill_url};
 use crate::handlers::ssr::types::BreadcrumbView;
 
-// Why: the two views the listing offers. Links, not script, so a matrix an
-// operator wants to send someone is a URL.
 fn audience_tabs(show_audience: bool) -> Vec<crate::handlers::ssr::types::TabLinkView> {
     vec![
         crate::handlers::ssr::types::TabLinkView {
@@ -90,10 +88,6 @@ pub(crate) async fn marketplaces_page(
         versions: &versions,
     });
 
-    // Why: two views rather than two tables stacked. The estate-wide matrix is
-    // a different question from the listing — "who reaches what across all of
-    // them" against "what is each one" — and stacking it pushed the listing's
-    // own rows off the fold on a 900px screen.
     let show_audience = query.tab.as_deref() == Some("audience");
     let search = query.q.unwrap_or_default();
     let kpis = list_kpis(&marketplaces, &audience);
@@ -107,8 +101,6 @@ pub(crate) async fn marketplaces_page(
         title: "Marketplaces",
         subtitle: "The unit entitlement is granted on. Each one names plugins and MCP servers, and each group holds a set of them.",
         breadcrumbs: vec![BreadcrumbView::current("Marketplaces")],
-        // Why: the tiles count every marketplace, not the filtered view — a
-        // total that moved with the search box would mean two different things.
         kpis,
         marketplaces_count: marketplaces.len(),
         marketplaces,
@@ -137,11 +129,6 @@ fn member_links(ids: &[String], url: fn(&str) -> String) -> Vec<MemberLinkView> 
         .collect()
 }
 
-// Why: a marketplace names plugins, and skills follow the plugins that ship
-// them — there is no marketplace-level skill list to read, so the skills shown
-// here are derived from the member plugins rather than declared. The catalog
-// is passed in because the list page needs this once per marketplace and
-// re-reading the plugin tree each time made one page render walk it four times.
 pub(super) fn skills_of(
     catalog: &[crate::types::PluginDetail],
     plugin_ids: &[String],

@@ -63,15 +63,7 @@ pub async fn list_top_users_by_requests(
     scope: &SiteScope,
     page: LeaderboardPage,
 ) -> Result<(Vec<UserUsageRow>, i64), sqlx::Error> {
-    // Why: the sort key is compiled into one static query per variant rather
-    // than interpolated — sqlx macros check each, and a query string never
-    // carries user input.
-    let sort_key: i32 = match page.sort {
-        LeaderboardSort::Requests => 0,
-        LeaderboardSort::Cost => 1,
-        LeaderboardSort::Tokens => 2,
-        LeaderboardSort::LastActive => 3,
-    };
+    let sort_key = sql_order_by_ordinal(page.sort);
     let rows = sqlx::query!(
         r#"
         SELECT
@@ -123,4 +115,13 @@ pub async fn list_top_users_by_requests(
         })
         .collect();
     Ok((users, total))
+}
+
+const fn sql_order_by_ordinal(sort: LeaderboardSort) -> i32 {
+    match sort {
+        LeaderboardSort::Requests => 0,
+        LeaderboardSort::Cost => 1,
+        LeaderboardSort::Tokens => 2,
+        LeaderboardSort::LastActive => 3,
+    }
 }

@@ -40,12 +40,8 @@ use crate::types::UserContext;
 #[derive(Debug, Deserialize)]
 pub(crate) struct ApplyRequest {
     pub mode: SyncMode,
-    // Why: `<kind>/<id>` keys the apply is narrowed to. Required from a
-    // participant, optional from an administrator.
     #[serde(default)]
     pub entities: Vec<String>,
-    // Why: every apply is a person's decision to overwrite what the
-    // database holds, and the trail records why they took it.
     #[serde(default)]
     pub reason: Option<String>,
 }
@@ -64,10 +60,6 @@ fn required_reason(reason: Option<&str>) -> AdminResult<&str> {
         .ok_or_else(|| AdminError::BadRequest("a reason is required to apply a sync".to_owned()))
 }
 
-// Why: the rule that makes a participant's apply safe: every key must be a
-// marketplace inside their participation. Anything else — another kind, a
-// marketplace they do not reach, or no scope at all — is refused before the
-// plane is touched. An administrator's request passes through unchanged.
 fn authorise_scope<'a>(
     user_ctx: &UserContext,
     entities: &'a [String],
@@ -198,9 +190,6 @@ pub(crate) async fn apply_handler(
     .into_response())
 }
 
-// Why: "keep the database" writes no rule — the activity row is the whole
-// decision, and the review holds the entity out of the to-do list for as
-// long as its diff stays the one the decision was taken against.
 pub(crate) async fn keep_handler(
     State(pool): State<Arc<PgPool>>,
     Extension(user_ctx): Extension<UserContext>,

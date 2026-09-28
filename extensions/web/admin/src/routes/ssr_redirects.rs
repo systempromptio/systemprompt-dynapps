@@ -10,6 +10,8 @@
 //! bookmark or a stale link lands on the new page rather than on a second copy
 //! of it that could drift. They are a one-release courtesy and are expected to
 //! be deleted, which is why they are one table rather than scattered.
+//! Pages folded into a tab drop their query string: their filters do not exist
+//! on the tab.
 
 use std::sync::Arc;
 
@@ -19,9 +21,8 @@ use axum::response::Redirect;
 use axum::routing::get;
 use sqlx::PgPool;
 
-// Why: `Redirect::permanent` is a 308, which preserves the method and the
-// body. A 301 would let an intermediary rewrite a POST into a GET, and the
-// device endpoints under these prefixes are POSTs.
+// Why: HTTP 301 lets intermediaries rewrite POST to GET; `Redirect::permanent`
+// is a 308, which keeps the method for the device POSTs under these prefixes.
 fn moved(target: &str) -> Redirect {
     Redirect::permanent(target)
 }
@@ -33,14 +34,10 @@ fn with_query(base: &str, query: Option<String>) -> Redirect {
     }
 }
 
-// Why: the analytics dashboard's tabs absorbed four standalone pages, so their
-// redirect target is a tab rather than a path. An existing query string is
-// dropped here on purpose: those pages' filters do not exist on the tab.
 fn to_tab(tab: &str) -> Redirect {
     moved(&format!("/admin/analytics?tab={tab}"))
 }
 
-// Why: the old paths, each 308ing to its new home.
 pub(super) fn legacy_routes() -> Router<Arc<PgPool>> {
     people_redirects().merge(catalog_redirects()).merge(
         entity_redirects()
@@ -54,9 +51,6 @@ fn people_redirects() -> Router<Arc<PgPool>> {
     Router::new()
         .route("/access/users", get(access_users))
         .route("/access/user", get(access_user))
-        // Why: mounted before the `{group_id}` form below reads it as an id.
-        // Axum gives a static segment priority over a dynamic one, so the
-        // order here is documentation rather than load-bearing.
         .route("/access/groups/unassigned", get(access_unassigned))
         .route("/access/groups", get(access_groups))
         .route("/access/groups/{group_id}", get(access_group_detail))
@@ -110,10 +104,6 @@ fn governance_redirects() -> Router<Arc<PgPool>> {
     Router::new().route("/governance/warnings", get(governance_warnings))
 }
 
-// Why: Impact and Publication folded into Versions — per-version figures
-// replaced revision cohorts, and delivery evidence became a marketplace's
-// Distribution view. Their filters do not exist there, so the query is
-// dropped.
 fn analysis_redirects() -> Router<Arc<PgPool>> {
     Router::new()
         .route("/analysis/impact", get(analysis_versions))
@@ -133,8 +123,6 @@ async fn access_user(RawQuery(q): RawQuery) -> Redirect {
     with_query("/admin/user", q)
 }
 
-// Why: "unassigned" stopped being a group and became a filter on the roster —
-// there was never a group row behind it, only a query that read one.
 async fn access_unassigned() -> Redirect {
     moved("/admin/users?filter=unassigned")
 }
@@ -159,8 +147,6 @@ async fn access_control(RawQuery(q): RawQuery) -> Redirect {
     with_query("/admin/access-control", q)
 }
 
-// Why: the access-control plane is reconciled on Code sync's Access review,
-// entity by entity; the old sync view's links land there.
 async fn access_control_sync(RawQuery(q): RawQuery) -> Redirect {
     let q = Some(match q {
         Some(q) if !q.is_empty() => format!("tab=access&{q}"),
@@ -253,8 +239,6 @@ async fn reports() -> Redirect {
     to_tab("cost")
 }
 
-// Why: per-user analytics became a tab on the user's own detail page — the
-// question "what has this person spent" belongs beside who they are.
 async fn analytics_user(Path(user_id): Path<String>) -> Redirect {
     moved(&format!("/admin/users/{user_id}?tab=usage"))
 }

@@ -15,8 +15,6 @@ fn bucket_label(t: DateTime<Utc>, hourly: bool) -> String {
     }
 }
 
-// Why: the shared x axis: one label per bucket and the three the gutters
-// print, built once and handed to each chart.
 struct Axis {
     labels: Vec<String>,
 }

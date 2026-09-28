@@ -18,17 +18,15 @@ impl UiRenderer for AdminRenderer {
     }
 
     fn render(&self, artifact: &Artifact) -> McpDomainResult<UiResource> {
-        // Why: report the deserialisation failure instead of swallowing it.
-        // Falling through to DashboardRenderer looked like a safe default, but
-        // that renderer expects a DashboardArtifact and cannot read a
-        // ReportOutput — so it errored, core dropped the embedded resource, and
-        // the tool returned success with no artifact and nothing to say why.
+        // Why: core drops the embedded resource when a renderer errors, and
+        // DashboardRenderer cannot read a ReportOutput, so a parse failure is
+        // surfaced here instead of falling through to it.
         let mut failure: Option<String> = None;
         let report = artifact.parts.iter().find_map(|part| {
             let Part::Data(data) = part else {
                 return None;
             };
-            // JSON: A2A data parts carry the serialized report protocol object.
+            // JSON: protocol boundary
             match serde_json::from_value::<super::ReportOutput>(serde_json::Value::Object(
                 data.data.clone(),
             )) {

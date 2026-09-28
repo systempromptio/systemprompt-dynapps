@@ -15,15 +15,8 @@ use crate::repositories::governance::decision_calls::{ChainEvaluation, DecisionC
 use crate::repositories::governance::findings::SafetyFindingLogRow;
 use crate::repositories::governance::hook_events::RecentHookEvent;
 
-// Why: the reason column is free text a policy wrote, and one long reason used
-// to widen the table until the row count fell from 20 to 11. Truncating to a
-// readable clause and carrying the full text in `title` keeps the density and
-// loses nothing.
 const REASON_CHARS: usize = 90;
 
-// Why: one policy evaluation, as a pill in the row's chain. The pill is what
-// makes the folded row lossless — every evaluation the group swallowed is still
-// on the page, named, toned and one click from its own audit detail.
 #[derive(Debug, Serialize)]
 pub(super) struct ChainPill {
     pub(super) policy: String,
@@ -80,10 +73,6 @@ pub(super) struct HookRow {
     pub(super) tone: &'static str,
 }
 
-// Why: re-exported rather than defined here. Both were private to this module
-// and both had failed silently on the live console for want of a test that
-// could reach them; they live in `types::governance_labels` now, where the unit
-// suite pins them, and the page reads them from their old names.
 pub(super) use crate::types::governance_labels::{plane_of, target_label};
 
 pub(super) const fn decision_tone(decision: &str) -> &'static str {
@@ -109,13 +98,8 @@ fn dash(value: Option<&str>) -> String {
         .map_or_else(|| "\u{2014}".to_owned(), ToOwned::to_owned)
 }
 
-// Why: a chain longer than this stops being readable as a strip and starts
-// being a paragraph. Six covers every ordinary call — the common shape is three
-// — and the overflow marker plus `eval_count` say what was left off.
 const CHAIN_PILLS: usize = 6;
 
-// Why: adjacent evaluations that agree on both policy and decision are the same
-// fact recorded twice, and two identical pills side by side read as two events.
 fn pills(chain: &[ChainEvaluation]) -> Vec<ChainPill> {
     let mut out: Vec<ChainPill> = Vec::new();
     let mut last: Option<(&str, &str)> = None;
@@ -146,10 +130,6 @@ fn pills(chain: &[ChainEvaluation]) -> Vec<ChainPill> {
     out
 }
 
-// Why: every distinct thing the call touched, for the cell's tooltip. The cell
-// itself shows the target of the evaluation the row speaks for; a call that
-// governed a prompt and a route has both, and hiding the second would make the
-// visible one look like the whole story.
 fn target_title(chain: &[ChainEvaluation]) -> String {
     let mut seen: Vec<String> = Vec::new();
     for step in chain {
@@ -180,9 +160,6 @@ pub(super) fn decision_rows(rows: &[DecisionCallRow]) -> Vec<DecisionRow> {
                 user_label: r.user_label.clone(),
                 user_id: r.user_id.clone(),
                 user_url: format!("/admin/users/{}", urlencoding::encode(r.user_id.as_str())),
-                // Why: an allow has nothing to explain, and the producers write
-                // an empty reason for one anyway. Showing the worst evaluation's
-                // reason means the column carries the objection or nothing.
                 reason: truncate_ellipsis(&r.worst_reason, REASON_CHARS),
                 reason_full: r.worst_reason.clone(),
                 chain: shown,
@@ -206,9 +183,6 @@ pub(super) fn decision_rows(rows: &[DecisionCallRow]) -> Vec<DecisionRow> {
         .collect()
 }
 
-// Why: how long the call's evaluations were spread over. Ordinarily
-// milliseconds and not worth the ink, but it is the tell that a trace covered a
-// burst of calls rather than one, which is the failure mode of grouping on it.
 fn span_of(row: &DecisionCallRow) -> String {
     let ms = (row.ended_at - row.started_at).num_milliseconds();
     if ms < 1000 {
@@ -243,10 +217,6 @@ pub(super) fn finding_rows(rows: &[SafetyFindingLogRow]) -> Vec<FindingRow> {
         .collect()
 }
 
-// Why: the shared `short_id` rule — a fixed head plus an ellipsis. Taking the
-// last dash-separated segment instead rendered `e2e-dreq-000` as "000" beside a
-// UUID's twelve-character tail, so two ids in the same column had nothing in
-// common to compare.
 fn short(id: &str) -> String {
     if id.is_empty() {
         return "\u{2014}".to_owned();

@@ -34,8 +34,6 @@ pub(crate) struct WeeklyParams {
     pub keep_weeks: i64,
 }
 
-// Why: the ISO week containing `day`, as a `[monday, next monday)` window
-// and its `yyyy-Www` label.
 pub(crate) fn iso_week(day: NaiveDate) -> (Window, String) {
     let monday = day - Duration::days(i64::from(day.weekday().num_days_from_monday()));
     let from = monday.and_time(NaiveTime::MIN).and_utc();
@@ -92,9 +90,6 @@ impl RetentionExportWeeklyJob {
             )))
     }
 
-    // Why: the cut-off week is only pruned once the monthly archive for the
-    // month it starts in exists, so a raw week never disappears before its
-    // rollups are on disk.
     async fn prune(
         pool: &PgPool,
         exports_root: &Path,

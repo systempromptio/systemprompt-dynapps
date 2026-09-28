@@ -19,8 +19,6 @@ pub enum StateError {
 pub(crate) struct ManagedState {
     pub(crate) owner: systemprompt::identifiers::UserId,
     pub(crate) repository: ManagedRepository,
-    // Why: core's ledger of the `otlp_export` job, read by the observability
-    // page; the job itself writes it.
     pub(crate) otlp_export: systemprompt::scheduler::OtlpExportStateRepository,
 }
 

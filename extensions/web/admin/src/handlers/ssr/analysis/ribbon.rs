@@ -59,9 +59,6 @@ pub(crate) struct RibbonView {
 }
 
 impl RibbonGroupView {
-    // Why: one group from a facet list — `(value, label, count)` triples —
-    // with the current choice marked; `selected` is the raw query value so a
-    // choice outside the facet list still shows as active on its chip.
     pub(crate) fn single<'a, I>(
         param: &'static str,
         label: &'static str,
@@ -150,9 +147,6 @@ impl RibbonView {
         self
     }
 
-    // Why: a chip per active filter, in the order the groups are drawn, each
-    // with the page minus that one filter and, when the page offers one, the
-    // export of exactly the rows it selects.
     pub(crate) fn chip(
         mut self,
         group_label: &'static str,

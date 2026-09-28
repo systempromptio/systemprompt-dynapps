@@ -22,8 +22,6 @@ use super::SiteScope;
 #[derive(Debug, Clone)]
 pub struct SkillStatsRow {
     pub skill: String,
-    // Why: the managed resource this skill resolved to through a verified
-    // installation receipt, when it did — the key the Analysis pages use.
     pub resource_id: Option<String>,
     pub invocations: i64,
     pub slash_invocations: i64,

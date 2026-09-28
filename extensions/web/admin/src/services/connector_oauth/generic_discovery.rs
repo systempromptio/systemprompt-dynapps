@@ -21,11 +21,9 @@ pub(super) struct AuthorizationMetadata {
     #[serde(default)]
     pub(super) token_endpoint_auth_methods_supported: Vec<String>,
 }
-// Why: RFC 8414 §2 issuer identity is scheme, host, port and path with a
-// single trailing slash not significant. Google advertises
-// `https://accounts.google.com/` in protected-resource metadata and
-// `https://accounts.google.com` in its OpenID metadata; a byte comparison
-// rejects that pairing.
+// Why: RFC 8414 §2 ignores a single trailing slash in an issuer, and Google
+// advertises `https://accounts.google.com/` in resource metadata but no slash
+// in its OpenID metadata, so a byte comparison rejects a valid pairing.
 pub fn same_issuer(advertised: &str, declared: &str) -> bool {
     let Some((a, b)) = Url::parse(advertised).ok().zip(Url::parse(declared).ok()) else {
         return false;

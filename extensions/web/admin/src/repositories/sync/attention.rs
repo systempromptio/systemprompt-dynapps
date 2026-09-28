@@ -5,6 +5,7 @@
 //! read from disk — at boot, on every access-control or sync page, and after
 //! every apply — so the shell can print it without a query per page. It can
 //! lag a console edit made on another node until that node reads the drift.
+//! A kept decision holds only for the diff fingerprint it was taken against.
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -56,8 +57,6 @@ pub struct ReviewSplit {
     pub kept: Vec<ReviewedEntity>,
 }
 
-// Why: a decision holds only for the diff it was taken against. When either
-// side moves the fingerprint changes and the entity is back on the list.
 #[must_use]
 pub fn split_reviews(reviews: Vec<EntityReview>, kept: &[KeptReview]) -> ReviewSplit {
     let mut split = ReviewSplit::default();

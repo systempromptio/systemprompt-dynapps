@@ -19,7 +19,6 @@ use super::sort::{page_url, sort_headers, sort_key, sort_rows};
 use super::{PageCounts, WINDOW_LABEL, pagination, pct};
 use crate::handlers::ssr::list_view::DEFAULT_PAGE_SIZE;
 
-// Why: what the query string may ask of the listing.
 #[derive(Debug, Clone, serde::Deserialize)]
 pub(crate) struct ListQuery {
     pub sort: Option<String>,
@@ -177,8 +176,6 @@ fn tile(label: &str, value: String, note: impl Into<String>, tone: &'static str)
     }
 }
 
-// Why: a success rate is only a signal once there are calls behind it; a
-// project with none reads as neutral rather than as a perfect score.
 const fn tool_tone(success: i64, calls: i64) -> &'static str {
     if calls == 0 {
         "accent"

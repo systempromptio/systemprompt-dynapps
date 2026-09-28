@@ -6,6 +6,9 @@
 //! with their digests and a download link, and the last monthly health
 //! report's ranked findings. Deletion itself is core's `database_cleanup`;
 //! its windows and last run are shown on `/admin/configuration`.
+//!
+//! The download route checks every path segment against the exact shapes the
+//! jobs write before any filesystem read, so it cannot leave the exports dir.
 
 mod view;
 
@@ -97,10 +100,6 @@ pub(crate) async fn lifecycle_page(
     ))
 }
 
-// Why: the three path segments are validated against the exact shapes the
-// jobs write (`weekly|monthly`, `yyyy-Www|yyyy-mm`, `<table>.jsonl.gz` or
-// `manifest.json`) before any filesystem read, so the route can never be
-// steered outside the exports directory.
 pub(crate) async fn lifecycle_archive_download(
     Extension(user_ctx): Extension<UserContext>,
     Path((tier, period, file)): Path<(String, String, String)>,
@@ -124,9 +123,6 @@ pub(crate) async fn lifecycle_archive_download(
         .join(&tier)
         .join(&period)
         .join(&file);
-    // Why: the cause is logged in full and the client is told only that the
-    // archive is not there. The path is a server-side detail, and a read that
-    // failed for any other reason is still nothing this caller can fetch.
     let bytes = tokio::fs::read(&path).await.map_err(|error| {
         tracing::warn!(path = %path.display(), %error, "lifecycle archive unreadable");
         AdminError::NotFound("No such archive".to_owned())

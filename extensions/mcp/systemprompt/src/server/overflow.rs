@@ -25,8 +25,6 @@ pub(super) struct OverflowStore<'a> {
     pub server_name: &'a str,
     pub ctx: &'a RequestContext,
     pub command: &'a str,
-    // Why: the execution whose result overflowed, recorded on the stored
-    // artifact's input so the two rows can be read as one call.
     pub exec_id: &'a McpExecutionId,
 }
 
@@ -65,10 +63,9 @@ impl OverflowStore<'_> {
     }
 }
 
-// Why: the ingest types a structured body by its `x-artifact-type`, exactly as
-// the in-process builder does, so a stored table is a table on the artifact
-// page and not a generic tool result.
-// JSON: the serialized `CliArtifact` with its variant tag surfaced.
+// Why: core's ingest types a stored body by its `x-artifact-type`; without it a
+// table lands as a generic tool result.
+// JSON: variable-shape serialized CliArtifact
 fn typed_body(artifact: &CliArtifact) -> Result<JsonValue, SystempromptToolError> {
     let mut value = serde_json::to_value(artifact)?;
     if let Some(map) = value.as_object_mut()

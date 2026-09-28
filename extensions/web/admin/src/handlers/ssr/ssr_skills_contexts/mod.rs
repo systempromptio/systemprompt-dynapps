@@ -55,9 +55,6 @@ pub(crate) struct ContextsListQuery {
     pub sort: Option<String>,
     pub dir: Option<String>,
     pub page: Option<i64>,
-    // Why: the shell's scope bar is the one window control on every AI-activity
-    // page and it emits `?preset=`. This page's own parameter is `since`, so
-    // the preset is read as a fallback rather than silently ignored.
     pub preset: Option<String>,
 }
 

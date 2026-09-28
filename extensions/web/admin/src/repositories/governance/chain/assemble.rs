@@ -1,7 +1,12 @@
 //! Top-level chain assembly: resolve the id, fan out the per-table fetches, and
 //! roll the parts up into a single [`ChainEnvelope`].
+//!
+//! The id may be a decision, request, trace or session id. A gateway-only
+//! session has no governance decision to name its user, so the identity falls
+//! back to the user the request itself was audited under.
 
 use sqlx::PgPool;
+use systemprompt::identifiers::UserId;
 
 use super::fetch::{find_summary, list_decisions, list_events, list_requests};
 use super::resolve::resolve_session_id;
@@ -29,9 +34,14 @@ fn compute_totals(
     totals
 }
 
-// Why: `id` may be a `decision_id`, `request_id`, `trace_id`, or `session_id`.
-// An id that resolves to no session yields `Ok(None)`; only a query failure is
-// an `Err`.
+fn chain_user(decision_user: UserId, request_user: Option<UserId>) -> UserId {
+    if decision_user.as_str().is_empty() {
+        request_user.unwrap_or(decision_user)
+    } else {
+        decision_user
+    }
+}
+
 pub async fn find_decision_chain(
     pool: &PgPool,
     id: &str,
@@ -46,14 +56,8 @@ pub async fn find_decision_chain(
     let events = list_events(pool, &session_id).await?;
     let summary = find_summary(pool, &session_id).await?;
 
-    // Why: a gateway-only session has no governance decision to name its user,
-    // so the identity falls back to the row the request itself was audited under.
     let identity = ChainIdentity {
-        user_id: if slots.user_id.as_str().is_empty() {
-            request_slots.user_id.unwrap_or(slots.user_id)
-        } else {
-            slots.user_id
-        },
+        user_id: chain_user(slots.user_id, request_slots.user_id),
         agent_id: slots.agent_id,
         agent_scope: slots.agent_scope,
     };

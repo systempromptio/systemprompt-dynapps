@@ -5,8 +5,6 @@
 
 use urlencoding::encode;
 
-// Why: one href per evidence kind; an unknown kind links nowhere rather than
-// guessing a page.
 #[must_use]
 pub fn evidence_href(kind: &str, id: &str) -> Option<String> {
     let id = id.trim();

@@ -6,7 +6,8 @@
 //! and is caller-configurable (`?slo_ms=`) so an SLO target other than 5s can
 //! be reported against without a deploy. It is never derived from
 //! percentiles, so period-over-period comparisons keep their meaning. Untimed
-//! requests (NULL latency) are surfaced, not hidden.
+//! requests (NULL latency) are surfaced, not hidden. An out-of-range
+//! `slo_ms` is clamped rather than rejected, so an edited URL still renders.
 
 use sqlx::PgPool;
 
@@ -14,15 +15,12 @@ use crate::util::time_range::TimeRange;
 
 use super::SiteScope;
 
-// Why: Default boundary between "fast" and "slow", in milliseconds. Matches
-// the 5s bin edge in `analytics::request_stats::LATENCY_BIN_EDGES_MS`.
 pub const FAST_THRESHOLD_MS: i32 = 5_000;
+const MIN_SLO_MS: i32 = 500;
+const MAX_SLO_MS: i32 = 60_000;
 
-// Why: a caller-supplied SLO is clamped rather than rejected — an edited URL
-// shows the nearest sane threshold, not an error page. The floor keeps the
-// split from declaring every request slow; the ceiling keeps it meaningful.
 pub fn resolve_slo_ms(requested: Option<i32>) -> i32 {
-    requested.map_or(FAST_THRESHOLD_MS, |ms| ms.clamp(500, 60_000))
+    requested.map_or(FAST_THRESHOLD_MS, |ms| ms.clamp(MIN_SLO_MS, MAX_SLO_MS))
 }
 
 #[derive(Debug, Default, Clone, Copy)]

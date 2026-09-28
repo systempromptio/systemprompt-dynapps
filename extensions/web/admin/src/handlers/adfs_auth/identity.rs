@@ -36,8 +36,6 @@ impl AssertionClaims {
         }
     }
 
-    // Why: AD FS emits one `<AttributeValue>` per group, so values are
-    // flattened across every matching attribute, in assertion order.
     #[must_use]
     pub fn values(&self, attribute: &str) -> Vec<String> {
         self.attributes

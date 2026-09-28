@@ -4,6 +4,9 @@
 //! request so the layout can show plugin / skill / MCP counts. The counts are
 //! resolved from `services/` on disk and cached process-wide for
 //! `MARKETPLACE_CACHE_TTL` to keep the filesystem walk off the hot path.
+//!
+//! A session refused for its own account state keeps that status; only a
+//! failure to evaluate entitlement for a real account is `Unavailable`.
 
 use super::error::AdminError;
 use super::types::{MarketplaceContext, UserContext};
@@ -13,6 +16,7 @@ use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
 use sqlx::PgPool;
 use std::sync::Arc;
+use systemprompt::identifiers::UserId;
 
 pub(crate) async fn marketplace_context_middleware(
     State(pool): State<Arc<PgPool>>,
@@ -35,19 +39,7 @@ pub(crate) async fn marketplace_context_middleware(
     .await;
     let counts = match result {
         Ok(counts) => counts,
-        // Why: a session whose account is missing or not active is the
-        // caller's problem, and its own status says so; only a failure to
-        // evaluate entitlement for a real account is the service being
-        // unavailable.
-        Err(error @ (AdminError::Unauthorized(_) | AdminError::Forbidden(_))) => {
-            tracing::warn!(%error, user_id = %user_ctx.user_id, "catalog authorization refused");
-            return error.into_response();
-        },
-        Err(error) => {
-            tracing::error!(%error, user_id = %user_ctx.user_id, "catalog authorization unavailable");
-            return AdminError::Unavailable("Catalog authorization unavailable".into())
-                .into_response();
-        },
+        Err(error) => return catalog_failure_response(error, &user_ctx.user_id),
     };
     let site_url = systemprompt::models::Config::get().map_or_else(
         |_| String::new(),
@@ -75,4 +67,17 @@ pub(crate) async fn marketplace_context_middleware(
 
     request.extensions_mut().insert(ctx);
     next.run(request).await
+}
+
+fn catalog_failure_response(error: AdminError, user_id: &UserId) -> Response {
+    match error {
+        caller_refusal @ (AdminError::Unauthorized(_) | AdminError::Forbidden(_)) => {
+            tracing::warn!(error = %caller_refusal, user_id = %user_id, "catalog authorization refused");
+            caller_refusal.into_response()
+        },
+        error => {
+            tracing::error!(%error, user_id = %user_id, "catalog authorization unavailable");
+            AdminError::Unavailable("Catalog authorization unavailable".into()).into_response()
+        },
+    }
 }

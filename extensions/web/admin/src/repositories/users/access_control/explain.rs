@@ -19,10 +19,7 @@ use super::matrix_resolution::{MatrixCell, resolve_effective_with};
 use super::matrix_subject::MatrixSubject;
 use crate::types::access_control::AccessControlRule;
 
-// Why: never a real account id — `explain:` is not a legal prefix for an
-// email or a directory id — so a user-band rule cannot fire for a band
-// evaluated in isolation.
-const PLACEHOLDER_ID: &str = "explain:band";
+const UNMATCHABLE_SUBJECT_ID: &str = "explain:band";
 
 #[derive(Debug, Clone, Serialize)]
 pub struct BandExplanation {
@@ -105,10 +102,10 @@ fn isolated(band: &Band, subject: &MatrixSubject, values: Vec<String>) -> Matrix
     let (id, roles) = if band.rule_type == RuleType::USER {
         (subject.id.clone(), Vec::new())
     } else if band.rule_type == RuleType::ROLE {
-        (UserId::new(PLACEHOLDER_ID), values)
+        (UserId::new(UNMATCHABLE_SUBJECT_ID), values)
     } else {
         attributes.insert(band.rule_type.clone(), values);
-        (UserId::new(PLACEHOLDER_ID), Vec::new())
+        (UserId::new(UNMATCHABLE_SUBJECT_ID), Vec::new())
     };
     MatrixSubject {
         id,
@@ -183,8 +180,6 @@ pub fn explain(input: &ExplainInput<'_>) -> Explanation {
     }
 }
 
-// Why: `None` when the account does not exist — the panel says so rather
-// than explaining a subject nobody holds.
 pub async fn explain_for_user(
     pool: &sqlx::PgPool,
     user_id: &UserId,

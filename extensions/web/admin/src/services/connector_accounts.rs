@@ -17,9 +17,6 @@ pub struct Connection {
     pub provider: String,
     pub display_name: String,
     pub requires_auth: bool,
-    // Why: the connection is the caller's own signed-in session checked
-    // against the server's `oauth.scopes`, not a grant they can connect or
-    // disconnect. The card and the bridge render it as a live check.
     pub session_attested: bool,
     pub configured: bool,
     pub entitled: bool,
@@ -40,8 +37,6 @@ pub struct ConnectionSnapshot {
     pub user_id: UserId,
     pub revision: i64,
     pub connections: Vec<Connection>,
-    // Why: only a probe response carries a report; the bridge reads the same
-    // snapshot and ignores the field.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub verification: Option<VerificationReport>,
 }
@@ -52,8 +47,6 @@ pub(super) struct Entitlement {
     groups: Vec<String>,
 }
 
-// Why: `oauth.scopes` on a service is the permission tier its calls demand;
-// the admin tier is the manage roles, the user tier is any active account.
 pub(super) fn scopes_granted(roles: &[String], scopes: &[Permission]) -> bool {
     scopes.iter().all(|scope| match scope {
         Permission::Admin => crate::types::roles_grant_manage(roles),
@@ -79,9 +72,6 @@ pub(super) async fn load_entitlement(pool: &PgPool, user: &UserId) -> AdminResul
 }
 
 impl Entitlement {
-    // Why: a Salesforce org lists the groups allowed to connect to it and a
-    // session-attested server lists the scopes; every other provider is open
-    // to any active account.
     fn permits(&self, provider: &Provider) -> bool {
         self.active
             && match provider {
@@ -164,6 +154,7 @@ fn describe(
     let configured = provider.configured();
     let entitled = entitlement.permits(provider);
     let session_attested = provider.is_session_attested();
+    let attested_by_this_request = session_attested && entitled;
     let status = if configured && !provider.requires_auth() {
         "no_auth_required"
     } else if configured && session_attested {
@@ -197,10 +188,7 @@ fn describe(
         resource_id: row.and_then(|r| r.resource_id.clone()),
         resource_name: row.and_then(|r| r.resource_name.clone()),
         error_code: row.and_then(|r| r.error_code.clone()),
-        // Why: the attestation is this request's own session check, so its
-        // verification time is now; the bridge and the readiness gate read
-        // `verified_at` alike for every connector.
-        verified_at: if session_attested && entitled {
+        verified_at: if attested_by_this_request {
             Some(Utc::now().to_rfc3339())
         } else {
             row.and_then(|r| r.verified_at.map(|t| t.to_rfc3339()))

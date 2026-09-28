@@ -94,17 +94,19 @@ async fn carry_forward(
     Ok(done.rows_affected())
 }
 
+const fn has_bucket_to_carry(window_seconds: i32, same_month: bool) -> bool {
+    let sentinel_was_never_live = window_seconds == MONTH_WINDOW_SECONDS;
+    same_month && !sentinel_was_never_live
+}
+
 pub async fn refresh_month_windows(
     pool: &PgPool,
     now: DateTime<Utc>,
 ) -> AdminResult<MonthWindowReport> {
     let today = now.date_naive();
     let target = month_window_seconds(today);
-    // Why: discard-ok: midnight and noon exist on every date
     let today_start = today.and_time(NaiveTime::default()).and_utc();
-    let yesterday_noon = (today - Duration::days(1))
-        .and_time(NaiveTime::from_hms_opt(12, 0, 0).unwrap_or_default())
-        .and_utc();
+    let yesterday_noon = today_start - Duration::hours(12);
     let same_month = yesterday_noon.month() == now.month();
 
     let mut report = MonthWindowReport::default();
@@ -123,10 +125,7 @@ pub async fn refresh_month_windows(
             if row.enabled && carried.insert(window.subject.clone()) {
                 report.buckets_purged +=
                     purge_stale(pool, &window.subject, &to, today_start).await?;
-                // Why: the sentinel is a declaration that was never live, so
-                // there is no bucket behind it to carry; a live value from
-                // last month is a period that has ended.
-                if same_month && window.window_seconds != MONTH_WINDOW_SECONDS {
+                if has_bucket_to_carry(window.window_seconds, same_month) {
                     let from = BucketKey {
                         window_seconds: window.window_seconds,
                         window_start: align_window(yesterday_noon, window.window_seconds),

@@ -16,9 +16,6 @@ use systemprompt::identifiers::{MarketplaceId, PluginId};
 
 pub(crate) struct Skills;
 
-// Why: the ticked rows' keys, comma-joined by the export dialog, and the
-// page's filters — the marketplace, client and search the rows were
-// narrowed by. `skill` is the page's alias for `search`.
 #[derive(Debug, Default, Deserialize)]
 struct SkillIdsQuery {
     ids: Option<String>,
@@ -28,16 +25,13 @@ struct SkillIdsQuery {
     skill: Option<String>,
 }
 
-// Why: the page's group and project scope, read by every skills dataset so a
-// file covers the people the page counted.
 #[derive(Debug, Default, Deserialize)]
 struct ScopeQuery {
     group: Option<String>,
     project: Option<String>,
 }
 
-// Why: `list_skill_facts` returns at most 1,000 skills.
-const SKILL_CAP: i64 = 1_000;
+const LIST_SKILL_FACTS_MAX: i64 = 1_000;
 
 impl SkillIdsQuery {
     fn skills(&self) -> Option<Vec<String>> {
@@ -180,7 +174,7 @@ impl DataSet for Skills {
         Window::Retained
     }
     fn cap(&self) -> i64 {
-        SKILL_CAP
+        LIST_SKILL_FACTS_MAX
     }
     fn allows(&self, user: &UserContext) -> bool {
         user.is_console

@@ -16,8 +16,6 @@ const VIEW_WIDTH: f64 = 1000.0;
 const LANE_HEIGHT: f64 = 18.0;
 const LANE_GAP: f64 = 6.0;
 const VIEW_HEIGHT: f64 = LANE_HEIGHT * 2.0 + LANE_GAP;
-// Why: a 3 s call in a 13 min window is a fifth of a unit wide; it is drawn
-// as a mark the eye can find, never widened into a claim about latency.
 const MIN_MARK_WIDTH: f64 = 3.0;
 const TICK_WIDTH: f64 = 2.0;
 
@@ -53,8 +51,6 @@ pub(super) fn build_timeline(spans: &[Span], total_ms: i64) -> TimelineView {
     let start = spans.iter().map(|s| s.started_at).min();
     let marks: Vec<TimelineMark> = spans
         .iter()
-        // Why: a request's own governance decisions sit inside its mark; a
-        // second tick a few pixels left of every bar is noise, not signal.
         .filter(|s| !(matches!(s.kind, SpanKind::Governance) && s.trace_id.is_some()))
         .map(|s| {
             let offset_ms = start.map_or(0, |a| (s.started_at - a).num_milliseconds().max(0));
@@ -103,9 +99,6 @@ pub(super) fn build_timeline(spans: &[Span], total_ms: i64) -> TimelineView {
     }
 }
 
-// Why: five gridlines, labelled in the trace's own elapsed time. A wall-clock
-// axis would be unreadable on a trace that lasted 40 ms and useless on one
-// that lasted an hour.
 fn build_ticks(total_ms: i64) -> Vec<TimelineTick> {
     (0..=4)
         .map(|i| {

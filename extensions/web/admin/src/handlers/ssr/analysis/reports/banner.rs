@@ -50,8 +50,6 @@ impl ReportBannerView {
     }
 }
 
-// Why: a failed read degrades to the empty banner — the page's own data is
-// what the reader came for, and the report strip must never take it down.
 pub(crate) async fn report_banner(
     pool: &PgPool,
     scope_kind: &str,

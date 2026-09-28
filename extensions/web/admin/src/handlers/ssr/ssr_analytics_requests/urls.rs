@@ -15,8 +15,6 @@ use super::context::{RequestsTab, TabLinkView};
 use super::{BASE_URL, RequestsQuery};
 use crate::handlers::ssr::list_view::{paginate_prefixed, query_string_dropping};
 
-// Why: a breakdown row drills into the Log tab carrying its own dimension as a
-// filter, on top of whatever filters and window are already active.
 pub(super) fn log_filter_url(query: &RequestsQuery, param: &str, value: &str) -> String {
     let qs = preserved_query_string(query, &[param, "page", "tab"]);
     let mut url = format!("{BASE_URL}?tab=log&{param}={}", urlencode(value));
@@ -27,9 +25,6 @@ pub(super) fn log_filter_url(query: &RequestsQuery, param: &str, value: &str) ->
     url
 }
 
-// Why: every tab link carries the current window and the active filters so
-// switching tabs never silently resets what the reader chose, but drops the
-// page number, which means nothing on another tab.
 pub(super) fn tab_links(
     active: RequestsTab,
     query: &RequestsQuery,
@@ -62,8 +57,6 @@ pub(super) fn tab_links(
         .collect()
 }
 
-// Why: removing a chip drops just that parameter and keeps the tab, window,
-// and every other filter intact.
 pub(super) fn active_chips(query: &RequestsQuery) -> Vec<Chip> {
     let mut chips = Vec::new();
     for (param, group_label, value) in [
@@ -93,8 +86,6 @@ pub(super) fn active_chips(query: &RequestsQuery) -> Vec<Chip> {
     chips
 }
 
-// Why: Clear drops every filter but keeps the reader on the tab and window
-// they are looking at.
 pub(super) fn clear_url(query: &RequestsQuery) -> String {
     let qs = preserved_query_string(
         query,
@@ -143,9 +134,6 @@ pub(super) fn preserved_query_string(query: &RequestsQuery, drop: &[&str]) -> St
     query_string_dropping(&pairs_str, &extra, drop)
 }
 
-// Why: a sortable header keeps every filter and the window, and drops the page
-// — re-sorting a list puts different rows on page one, so staying on page 7
-// would land the reader somewhere they did not choose.
 pub(super) fn sort_url_prefix(query: &RequestsQuery) -> String {
     let qs = preserved_query_string(query, &["sort", "dir", "page"]);
     if qs.is_empty() {

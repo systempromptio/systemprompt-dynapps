@@ -7,6 +7,13 @@
 //! against the database; the sync applies it; the export renders the database
 //! back into the document the other way round. Nothing here touches a pool,
 //! which is what lets a unit test pin every projection rule.
+//!
+//! A declared entity owns every non-user band on it: a database row at one of
+//! those bands the file does not list is drift. An undeclared entity's rows
+//! are the dashboard's alone — reported, never deleted. An id owned by a
+//! bundle that is not active yet is parked in `awaiting` rather than failing
+//! the boot, and expired declarations are dropped by the loader
+//! ([`DeclaredSet::drop_expired`]) so the projection itself stays clock-free.
 
 use std::collections::BTreeMap;
 use std::fmt;
@@ -67,10 +74,6 @@ pub struct DeclaredSet {
 }
 
 impl DeclaredSet {
-    // Why: the hash of what the file says, independent of formatting and of
-    // the catalog it was expanded against. Two operators editing whitespace
-    // produce the same hash; a changed reason or subject does not. This is
-    // the `declared_hash` the sync state records against every apply.
     #[must_use]
     pub fn declared_hash(&self) -> String {
         let mut hasher = Sha256::new();
@@ -107,10 +110,6 @@ impl DeclaredSet {
         hex::encode(hasher.finalize())
     }
 
-    // Why: Whether the file speaks for this entity at all. A declared entity
-    // owns every non-user band on it, so a database row at any of those bands
-    // that the file does not list is drift; an undeclared entity's rows are
-    // the dashboard's alone and are only ever reported, never deleted.
     #[must_use]
     pub fn governs(&self, entity_type: &str, entity_id: &str) -> bool {
         self.entities
@@ -122,10 +121,6 @@ impl DeclaredSet {
         self.rules.len()
     }
 
-    // Why: a declaration whose window has closed is not a declaration. Kept
-    // out of the pure projection so a test can pin what the file says; the
-    // loader applies it once with the clock it has, and the entity stays
-    // governed so the rows the sweep removes are never reported as drift.
     pub fn drop_expired(&mut self, now: DateTime<Utc>) {
         self.rules
             .retain(|_, rule| rule.valid_until.is_none_or(|until| until > now));
@@ -136,9 +131,6 @@ impl DeclaredSet {
 pub enum DeclaredError {
     UnknownMarketplace(String),
     UnregisteredEntity(String),
-    // Why: a glob that names no entity declares nothing — applied, it would
-    // write no rule and report no drift, and the routes it meant to open stay
-    // closed behind a clean sync card.
     EmptyGlob(String),
     Invalid(String),
 }
@@ -189,13 +181,7 @@ pub fn build_declared_set(
         }
         let ids = match expand_ids(&entity, inputs) {
             Ok(ids) => ids,
-            // Why: an id a bundle owns is allowed to be missing until that
-            // bundle is active — access for a kit's marketplace is declared
-            // before its digest is pinned, and the page says so instead of
-            // the boot failing.
-            Err(DeclaredError::UnknownMarketplace(_) | DeclaredError::UnregisteredEntity(_))
-                if decl.owner.is_some() =>
-            {
+            Err(e) if awaits_inactive_bundle(&e, decl) => {
                 set.awaiting.push(AwaitingEntity {
                     entity_type: entity.kind.as_str().to_owned(),
                     entity_id: entity.id.clone(),
@@ -210,6 +196,14 @@ pub fn build_declared_set(
         }
     }
     Ok(set)
+}
+
+const fn awaits_inactive_bundle(err: &DeclaredError, decl: &EntityDecl) -> bool {
+    decl.owner.is_some()
+        && matches!(
+            err,
+            DeclaredError::UnknownMarketplace(_) | DeclaredError::UnregisteredEntity(_)
+        )
 }
 
 fn expand_ids(

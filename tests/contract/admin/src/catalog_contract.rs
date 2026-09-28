@@ -1,18 +1,8 @@
 //! The catalog pages and the access-control JSON API behind them.
 //!
-//! The catalog is the one part of the admin plane whose *entities* come from
-//! the on-disk profile — `services/skills/*.yaml`, `services/mcp/*.yaml`,
-//! `services/plugins/*.yaml` — while their *access rules* come from the
-//! database. Both sides therefore have to be driven: a page that lists the
-//! right entities and resolves their grants against the wrong table looks
-//! correct until someone is granted something they should not have.
-//!
-//! The API half is a CRUD surface, so each endpoint is driven three ways: the
-//! call that works, the call whose body is the wrong shape, and the call whose
-//! path names something that does not exist. The middle case is the one that
-//! matters most — every one of these handlers parses a string into a typed
-//! enum, and a handler that mints an unrecognised value rather than rejecting
-//! it creates a rule dimension nothing ever resolves.
+//! Catalog entities come from `services/` on disk while their access rules
+//! come from the database, so both sides are driven. Each API endpoint is
+//! driven with a valid call, a wrong-shaped body, and an unknown path.
 
 use axum::http::StatusCode;
 
@@ -25,8 +15,6 @@ fn api(path: &str) -> String {
     format!("{ADMIN_API_PREFIX}{path}")
 }
 
-// The catalog pages, including the per-entity detail pages that the status
-// contract only ever drives with an id matching nothing.
 #[tokio::test(flavor = "multi_thread")]
 async fn catalog_pages_render_entities_from_the_profile() {
     if !globals::init() {
@@ -41,9 +29,6 @@ async fn catalog_pages_render_entities_from_the_profile() {
     let app = App::new(&db.pool, credentials);
 
     let mut failures = Vec::new();
-    // The catalog root redirects onto the plugins listing and the singular
-    // marketplace alias onto the marketplaces page, so a bookmark from either
-    // survives.
     for (path, expected) in [
         ("/admin/catalog", "/admin/plugins"),
         ("/admin/catalog/marketplace", "/admin/marketplaces"),
@@ -77,9 +62,7 @@ async fn catalog_pages_render_entities_from_the_profile() {
         }
     }
 
-    // The detail pages are driven with an id taken from the listing itself, so
-    // the case survives a profile whose contents change. An id nobody ships is
-    // a miss, which must be a 404 rather than a rendered shell.
+    // Ids are read from the listing so the case survives a changed profile.
     for (listing, prefix) in [
         ("/admin/skills", "/admin/skills/"),
         ("/admin/mcp", "/admin/mcp/"),
@@ -87,8 +70,6 @@ async fn catalog_pages_render_entities_from_the_profile() {
     ] {
         let (_, body) = app.call(Call::get(listing, Principal::Admin)).await;
         let Some(id) = first_detail_id(&body, prefix) else {
-            // A profile with nothing of this kind is a legitimate state; the
-            // miss case below still runs.
             continue;
         };
         let path = format!("{prefix}{id}");
@@ -127,8 +108,6 @@ async fn catalog_pages_render_entities_from_the_profile() {
     );
 }
 
-// The first entity id the listing page links to, read out of its own markup so
-// the case never hard-codes a profile's contents.
 fn first_detail_id(body: &str, prefix: &str) -> Option<String> {
     let needle = format!("href=\"{prefix}");
     let start = body.find(&needle)? + needle.len();
@@ -138,7 +117,6 @@ fn first_detail_id(body: &str, prefix: &str) -> Option<String> {
     (!id.is_empty() && !id.contains('/')).then(|| id.to_owned())
 }
 
-// The generic entity-access API: read, grant, flip the default, delete.
 #[tokio::test(flavor = "multi_thread")]
 async fn entity_access_api_round_trips_a_grant() {
     if !globals::init() {
@@ -156,9 +134,6 @@ async fn entity_access_api_round_trips_a_grant() {
 
     let mut failures = Vec::new();
 
-    // An entity with no rows reads back as "no rules, not included by
-    // default" rather than 404 — the catalog entry exists on disk whether or
-    // not anyone has ever written a grant for it.
     let read = api(&format!("/access-control/entity/skill/{entity}/access"));
     let (status, body) = app.call(Call::get(&read, Principal::Admin)).await;
     if status != StatusCode::OK || !body.contains(r#""rules":[]"#) {
@@ -169,10 +144,8 @@ async fn entity_access_api_round_trips_a_grant() {
         ));
     }
 
-    // Register the entity before granting on it. A rule carries a foreign key
-    // to `access_control_entities`, and the default endpoint is what creates
-    // that row — this is the order the dashboard writes in, not a fixture
-    // convenience.
+    // A rule has a foreign key to `access_control_entities`; the default
+    // endpoint creates that row, so it must run before the grant.
     let default_path = api(&format!("/access-control/entity/skill/{entity}/default"));
     let (status, _) = app
         .call(Call::json(
@@ -189,7 +162,6 @@ async fn entity_access_api_round_trips_a_grant() {
         ));
     }
 
-    // Grant.
     let rules_path = api(&format!("/access-control/entity/skill/{entity}/rules"));
     let grant = format!(
         r#"{{"rule_type":"user","rule_value":"{user_id}","access":"allow","justification":"contract fixture"}}"#
@@ -208,13 +180,11 @@ async fn entity_access_api_round_trips_a_grant() {
         None
     };
 
-    // Read back: the grant must be visible on the same entity.
     let (_, body) = app.call(Call::get(&read, Principal::Admin)).await;
     if !body.contains(&user_id) {
         failures.push("  a granted rule did not read back on the entity".to_owned());
     }
 
-    // Flip the default.
     let (status, body) = app
         .call(Call::json(
             "patch",
@@ -231,8 +201,6 @@ async fn entity_access_api_round_trips_a_grant() {
         ));
     }
 
-    // Delete, then delete again: the second call is a 404, which is what makes
-    // the first one meaningful.
     if let Some(id) = rule_id {
         let delete_path = api(&format!("/access-control/entity/skill/{entity}/rules/{id}"));
         let (status, _) = app
@@ -255,8 +223,6 @@ async fn entity_access_api_round_trips_a_grant() {
         }
     }
 
-    // The rejection ladder. Each body is wrong in exactly one field, so a 400
-    // names the check that caught it.
     let rejected: [(&str, String, &str); 5] = [
         (
             "an unrecognised entity type",
@@ -293,8 +259,6 @@ async fn entity_access_api_round_trips_a_grant() {
         }
     }
 
-    // The bulk listing is parameterised on an entity type read off the disk
-    // profile, so both the known and the unknown kind are worth driving.
     for (label, path, want_ok) in [
         (
             "listing every gateway route's access",
@@ -346,8 +310,6 @@ fn extract_json_string(body: &str, key: &str) -> Option<String> {
     Some(rest[..end].to_owned())
 }
 
-// The older, entity-type-specific access-control surface: whole-set rule
-// replacement, the bulk assign, the per-user matrix, and the YAML snapshot.
 #[tokio::test(flavor = "multi_thread")]
 async fn access_control_api_replaces_rules_and_projects_a_matrix() {
     if !globals::init() {
@@ -365,8 +327,6 @@ async fn access_control_api_replaces_rules_and_projects_a_matrix() {
 
     let mut failures = Vec::new();
 
-    // Replace the rule set on one entity. This endpoint is a whole-set write:
-    // the rules sent become the rules stored, so the read-back is the assertion.
     let put_path = api(&format!("/access-control/entity/plugin/{plugin}"));
     let body = format!(
         r#"{{"rules":[{{"rule_type":"user","rule_value":"{user_id}","access":"allow"}},{{"rule_type":"role","rule_value":"user","access":"deny","justification":"contract fixture"}}]}}"#
@@ -384,8 +344,6 @@ async fn access_control_api_replaces_rules_and_projects_a_matrix() {
         failures.push("  the replaced rule set did not include the rule just written".to_owned());
     }
 
-    // Replacing with an empty set clears them, which is the branch a UI hits
-    // when the last grant is removed.
     let (status, _) = app
         .call(Call::json(
             "put",
@@ -401,8 +359,6 @@ async fn access_control_api_replaces_rules_and_projects_a_matrix() {
         ));
     }
 
-    // The entity-type allowlist on this endpoint is narrower than the generic
-    // one; a kind outside it is refused rather than written.
     let (status, _) = app
         .call(Call::json(
             "put",
@@ -418,7 +374,6 @@ async fn access_control_api_replaces_rules_and_projects_a_matrix() {
         ));
     }
 
-    // The bulk assign writes the same rule set across several entities at once.
     let bulk = format!(
         r#"{{"entities":[{{"entity_type":"plugin","entity_id":"{plugin}"}},{{"entity_type":"agent","entity_id":"{}"}}],"rules":[{{"rule_type":"role","rule_value":"admin","access":"allow","justification":"contract fixture"}}]}}"#,
         seed::unique("bulk-agent")
@@ -439,10 +394,6 @@ async fn access_control_api_replaces_rules_and_projects_a_matrix() {
         ));
     }
 
-    // Reads: the whole rule table, one entity's slice of it, the per-user
-    // matrix, the project projection, and the YAML snapshot.
-    // The matrix is projected per user, so a user id in no table is a miss
-    // rather than an empty matrix that reads as "this person has no access".
     let (status, _) = app
         .call(Call::get(
             &api("/access-control/users/no-such-user/matrix"),
@@ -485,8 +436,6 @@ async fn access_control_api_replaces_rules_and_projects_a_matrix() {
         }
     }
 
-    // The export serialises the whole access plane as rules.yaml; it is the
-    // one read that can fault on a row the serialiser has no shape for.
     let (status, body) = app
         .call(Call::get(
             &api("/sync/planes/access_control/export"),
@@ -500,8 +449,6 @@ async fn access_control_api_replaces_rules_and_projects_a_matrix() {
         ));
     }
 
-    // Every one of these is admin-only; a non-admin session must be refused
-    // rather than served another customer's access matrix.
     for path in [
         api("/access-control"),
         api(&format!("/access-control/users/{user_id}/matrix")),
@@ -529,10 +476,6 @@ async fn access_control_api_replaces_rules_and_projects_a_matrix() {
     );
 }
 
-// A marketplace granted by ROLE rather than by group must resolve in the
-// per-user matrix as an allow decided at the ROLE layer for a user holding that
-// role and nothing else — and as a deny at the default layer for a plain user,
-// so the grant reads as a narrowing and not a widening.
 #[tokio::test(flavor = "multi_thread")]
 async fn the_matrix_resolves_a_role_granted_marketplace_at_the_role_layer() {
     const MARKETPLACE: &str = "astound-super-admin";

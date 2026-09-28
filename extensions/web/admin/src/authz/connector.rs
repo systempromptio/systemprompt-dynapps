@@ -23,9 +23,6 @@ use crate::services::connector_accounts::Connection;
 
 const CONNECTOR_SLUG: ExtensionSlug = ExtensionSlug::new("connector");
 
-// Why: above `group` (150) and below `salesforce` (170). A connection rule is
-// narrower than group membership — it names people, not a team — but a linked
-// Salesforce Username is a stronger, admin-vouched identity, so it still wins.
 const CONNECTOR_PRECEDENCE: u16 = 160;
 
 #[must_use]

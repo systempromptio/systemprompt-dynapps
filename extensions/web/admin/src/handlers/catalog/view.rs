@@ -46,13 +46,10 @@ pub(super) struct PluginListRow {
     pub(super) detail_url: String,
     pub(super) access_url: String,
     pub(super) visibility: super::visibility::VisibilityView,
-    // Why: which source ships it — `base` or `bundle:<name>` — decided at
-    // composition and filled after the rows are built.
     pub(super) source: String,
     pub(super) source_tone: &'static str,
 }
 
-// Why: A headline figure on a catalog list page.
 #[derive(Debug, Clone, Serialize)]
 pub(super) struct CatalogKpiView {
     pub(super) label: &'static str,
@@ -151,15 +148,12 @@ pub(super) struct SkillDetailData {
     pub(super) access: Option<EntityAccessView>,
 }
 
-// Why: every "access" link lands on the entity's own "Who gets this"
-// panel, where the rules are read and edited, never on a ledger elsewhere.
 pub(super) fn access_url(detail_url: &str) -> String {
     format!("{detail_url}#access")
 }
 
 #[derive(Debug, Default, serde::Deserialize)]
 pub(crate) struct PanelQuery {
-    // Why: the "Why?" explainer's person — an account id or an email.
     pub why: Option<String>,
 }
 

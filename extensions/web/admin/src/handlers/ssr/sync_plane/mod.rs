@@ -22,11 +22,8 @@ use crate::repositories::sync::state::{SyncStateRow, find_sync_state};
 
 pub(crate) const SYNC_TAB: &str = "sync";
 
-// Why: how a page wants the component built.
 #[derive(Debug, Clone, Default)]
 pub(crate) struct PlaneCardOpts<'a> {
-    // Why: `<kind>/<id>` narrows the diff table to one entity — the
-    // access-control ledger's deep link.
     pub entity_filter: &'a str,
     pub apply_url: Option<String>,
     pub show_export: bool,
@@ -94,8 +91,6 @@ pub(crate) async fn plane_card(
     })
 }
 
-// Why: the owner-page case — disk declaration, the plane's own apply, export
-// offered.
 pub(crate) async fn plane_card_by_id(
     pool: &PgPool,
     plane_id: &str,

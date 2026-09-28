@@ -8,8 +8,6 @@ pub(crate) mod detail;
 mod roster;
 mod scope_data;
 
-// Why: the roster's own URL, which every link on both pages is built relative
-// to.
 pub(super) const BASE_URL: &str = "/admin/users";
 
 pub(crate) use detail::user_detail_page as user_detail_by_id_page;
@@ -20,9 +18,6 @@ use axum::response::Redirect;
 
 use crate::types::IdQuery;
 
-// Why: the header search and a few older links still resolve a user as
-// `?id=`. There is one canonical URL for a person now, so this form redirects
-// to it rather than rendering a second copy of the page at a second address.
 pub(crate) async fn user_detail_page(Query(params): Query<IdQuery>) -> Redirect {
     params.id().map_or_else(
         || Redirect::permanent(BASE_URL),

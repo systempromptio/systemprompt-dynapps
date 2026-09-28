@@ -30,8 +30,6 @@ pub const fn role_dimension() -> SubjectDimension {
     }
 }
 
-// Why: manual grants lead and a role held both ways is listed once, in the
-// manual position — the same reading `users::roles` gives the role editor.
 #[must_use]
 pub fn effective_roles(manual: Vec<String>, directory: Vec<String>) -> Vec<String> {
     let mut roles = manual;

@@ -9,8 +9,8 @@ use super::bundle::ConversationBundle;
 use crate::export::format::usd;
 use crate::handlers::ssr::transcript_view::{StepView, ThreadView};
 
-// Why: `std::fmt::Write` into a `String` cannot fail, yet `writeln!` would
-// make every line a discarded `Result`; one line, one call.
+// Why: `std::fmt::Write` into a `String` cannot fail, but `writeln!` still
+// returns a `Result` that every line would have to discard.
 macro_rules! line {
     ($out:expr, $($arg:tt)*) => {{
         $out.push_str(&format!($($arg)*));

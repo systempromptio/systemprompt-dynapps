@@ -50,9 +50,6 @@ pub struct DecisionCallRow {
     pub eval_count: i64,
     pub deny_count: i64,
     pub warn_count: i64,
-    // Why: `MIN(user_id)` over the group. All three producers write the calling
-    // identity, so a trace has one caller; if that ever stopped being true the
-    // group would show one of them and hide the rest.
     pub user_id: UserId,
     pub user_label: String,
     pub trace_id: Option<String>,
@@ -66,10 +63,6 @@ pub struct DecisionCallRow {
     pub chain: Json<Vec<ChainEvaluation>>,
 }
 
-// Why: calls in the window, newest first, and how many the filter selected.
-// The filter selects a call that *contains* a matching evaluation and still
-// returns the whole chain, so narrowing to one policy shows the call that
-// policy ran in rather than a fragment of it.
 pub async fn list_decision_calls_paged(
     pool: &PgPool,
     range: TimeRange,

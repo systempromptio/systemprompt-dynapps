@@ -44,10 +44,11 @@ pub(crate) use session::{SessionSubject, mint_session, record_login, session_coo
 pub(crate) use start::adfs_start;
 
 pub(super) const STATE_COOKIE: &str = "adfs_saml_state";
+const STATE_COOKIE_SCOPE: &str = "Path=/admin/auth/adfs; HttpOnly";
 const DEFAULT_REDIRECT: &str = "/admin";
 
-// Why: Errors from the SAML plumbing. Logged once at the HTTP boundary; the
-// browser only ever sees an opaque `?sso=<reason>`.
+/// SAML plumbing errors: logged once at the HTTP boundary, surfaced to the
+/// browser only as an opaque `?sso=<reason>`.
 #[derive(Debug, thiserror::Error)]
 pub enum AdfsError {
     #[error("IdP federation metadata is unusable: {0}")]
@@ -77,9 +78,6 @@ impl std::fmt::Debug for AdfsDeps {
     }
 }
 
-// Why: Whether this instance is served over https, which decides both the
-// `Secure` attribute and the `SameSite` value below. Unreadable config fails
-// closed to `true`: a cookie the browser drops is safer than one sent in clear.
 pub(crate) fn use_https() -> bool {
     match Config::get() {
         Ok(c) => c.use_https,
@@ -97,8 +95,6 @@ pub(crate) fn secure_flag() -> &'static str {
     if use_https() { "; Secure" } else { "" }
 }
 
-// Why: Reject anything that isn't a same-site absolute path, to avoid
-// open-redirect.
 pub(super) fn sanitize_redirect(raw: Option<String>) -> String {
     match raw {
         Some(r) if r.starts_with('/') && !r.starts_with("//") => r,
@@ -106,9 +102,6 @@ pub(super) fn sanitize_redirect(raw: Option<String>) -> String {
     }
 }
 
-// Why: The failure channel of an SSO flow: a redirect back to the login page
-// carrying the reason. An error status here would strand the browser on a
-// dead end instead of returning the person to a usable page.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct LoginRedirect(pub(super) &'static str);
 
@@ -118,16 +111,11 @@ impl IntoResponse for LoginRedirect {
     }
 }
 
-// Why: 32 random bytes as base64url-no-pad (43 chars) — a fine CSRF nonce for
-// `RelayState`.
 pub(super) fn random_url_safe() -> String {
     let bytes: [u8; 32] = rand::rng().random();
     URL_SAFE_NO_PAD.encode(bytes)
 }
 
-// Why: What the start handler stashed and the callback reads back: the
-// RelayState nonce, the AuthnRequest id the assertion must answer, when it
-// was issued, and the post-login target.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FlowState {
     pub state: String,
@@ -136,8 +124,6 @@ pub struct FlowState {
     pub redirect_to: String,
 }
 
-// Why: Parse the state cookie. The segments are base64url values, a SAML id,
-// a number, and a same-site path — none contain '|'.
 pub fn read_state_cookie(headers: &HeaderMap) -> Option<FlowState> {
     let raw = headers
         .get_all("cookie")
@@ -159,15 +145,9 @@ pub fn read_state_cookie(headers: &HeaderMap) -> Option<FlowState> {
     })
 }
 
-// Why: The assertion consumer service is reached by a cross-site form POST
-// from the AD FS farm, and a `SameSite=Lax` cookie is NOT sent on one — Lax
-// covers top-level GET navigations only. Without the cookie the solicited
-// response is read as unsolicited, and the `saml` crate rejects a response
-// that carries `InResponseTo` when it holds no `LoginTracker`, so every
-// sign-in fails as `invalid_assertion`. `None` requires `Secure`, and browsers
-// drop the pair on plain http, so http falls back to `Lax` — local dev only,
-// where the round-trip cannot complete anyway because the trust's registered
-// ACS is the deployed URL.
+// Why: AD FS posts the ACS cross-site and browsers withhold `SameSite=Lax`
+// cookies on that POST, so the `saml` crate would reject `InResponseTo` with no
+// tracker. `None` needs `Secure`, hence `Lax` on plain-http local dev only.
 const fn same_site_attrs(secure: bool) -> &'static str {
     if secure {
         "SameSite=None; Secure"
@@ -176,13 +156,10 @@ const fn same_site_attrs(secure: bool) -> &'static str {
     }
 }
 
-// Why: The `Set-Cookie` value carrying the flow state across the AD FS
-// round-trip: the RelayState nonce, the AuthnRequest id the assertion must
-// answer, its issue time, and the post-login target, '|'-separated.
 #[must_use]
 pub fn state_cookie(flow: &FlowState, secure: bool) -> String {
     format!(
-        "{STATE_COOKIE}={}|{}|{}|{}; Path=/admin/auth/adfs; HttpOnly; {}; Max-Age=600",
+        "{STATE_COOKIE}={}|{}|{}|{}; {STATE_COOKIE_SCOPE}; {}; Max-Age=600",
         flow.state,
         flow.request_id,
         flow.issued_at_unix,
@@ -191,13 +168,10 @@ pub fn state_cookie(flow: &FlowState, secure: bool) -> String {
     )
 }
 
-// Why: The `Set-Cookie` value that clears the spent state cookie. Its
-// attributes must match `state_cookie` exactly or the browser keeps the
-// original — which is why both are built here, not formatted at each call site.
 #[must_use]
 pub fn clear_state_cookie(secure: bool) -> String {
     format!(
-        "{STATE_COOKIE}=; Path=/admin/auth/adfs; HttpOnly; {}; Max-Age=0",
+        "{STATE_COOKIE}=; {STATE_COOKIE_SCOPE}; {}; Max-Age=0",
         same_site_attrs(secure)
     )
 }

@@ -93,23 +93,19 @@ impl DataSet for Projects {
     async fn load(&self, ctx: &ExportContext<'_>) -> AdminResult<Table> {
         let query: ProjectsQuery = ctx.query()?;
         let window = ctx.window()?;
-        // Why: the rollup counts back from now in whole days, so the dialog's
-        // day preset is the number of days it spans.
-        let days = i32::try_from((window.to - window.from).num_days().max(1)).unwrap_or(30);
+        let days = window.whole_days_back_from_now();
         let needle = query.q.unwrap_or_default().trim().to_lowercase();
-        // Why: the rollup stops at `LISTING_CAP` projects by name; the plain
-        // project list is what says how many the search matched, so a cut
-        // file reads as capped rather than complete.
-        let (rows, all) = tokio::try_join!(
+        let (capped_rollups, uncapped_projects) = tokio::try_join!(
             list_project_rollups(ctx.pool, days, LISTING_CAP),
             list_projects(ctx.pool),
         )?;
-        let total = all
+        let total = uncapped_projects
             .iter()
             .filter(|p| matches_search(&needle, p.id.as_str(), &p.name))
             .count();
         Ok(Table::capped_at(
-            rows.iter()
+            capped_rollups
+                .iter()
                 .filter(|p| matches_search(&needle, p.id.as_str(), &p.name))
                 .map(row)
                 .collect(),

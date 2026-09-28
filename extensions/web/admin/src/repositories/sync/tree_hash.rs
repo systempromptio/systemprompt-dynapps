@@ -16,9 +16,6 @@ use systemprompt::models::services::bundle::{
     BUNDLE_ALLOWED_DIRS, FileEntry, ServicesBundleManifest,
 };
 
-// Why: hashing the tree reads every file, so the result is cached per
-// process and recomputed only when the tree's newest mtime or file count
-// moves — a `just publish` or a deploy, not a page view.
 pub(super) type Fingerprint = (SystemTime, usize);
 type Cached = Option<(Fingerprint, String)>;
 
@@ -47,9 +44,6 @@ pub struct SubtreeHash {
     pub files: usize,
 }
 
-// Why: the same walk and digest as the whole tree, narrowed to one path, so
-// a kind's hash on the configuration page is comparable with the hash a
-// bundle carrying only that kind would declare.
 #[must_use]
 pub fn subtree_hash(root: &Path, rel: &str, is_dir: bool) -> Option<SubtreeHash> {
     let files = if is_dir {

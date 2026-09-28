@@ -12,9 +12,6 @@ use crate::handlers::ssr::types::{BreadcrumbView, ChartView, HistogramView, Sort
 
 pub(super) use crate::handlers::ssr::types::TabLinkView;
 
-// Why: the log is the page. The rollups stay as sibling tabs because they are
-// the fastest way to pick a filter, but a reader who opens `/admin/requests`
-// wants rows, not a chart, so Log is what an unrecognised tab falls back to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum RequestsTab {
     Log,
@@ -45,15 +42,11 @@ impl RequestsTab {
         }
     }
 
-    // Why: the three rollup tabs share one template branch; the log and the
-    // overview each have their own.
     const fn is_breakdown(self) -> bool {
         matches!(self, Self::Models | Self::Providers | Self::Status)
     }
 }
 
-// Why: The active tab, projected onto the `is_overview` / `is_breakdown` /
-// `is_log` flags the template branches on and flattened into the page.
 #[derive(Debug, Clone, Copy)]
 pub(super) struct ActiveRequestsTab(pub(super) RequestsTab);
 
@@ -99,8 +92,6 @@ pub(super) struct AnalyticsRequestsPageContext {
     pub scope_filter: ScopeFilterView,
 }
 
-// Why: the toolbar's five `<select>` facets, plus the hidden fields that keep
-// the window and the sort when the form submits.
 #[derive(Debug, Default, Serialize)]
 pub(super) struct FilterOptionsView {
     pub models: Vec<SelectOptionView>,
@@ -110,8 +101,6 @@ pub(super) struct FilterOptionsView {
     pub hidden: Vec<crate::handlers::ssr::list_view::HiddenFieldView>,
 }
 
-// Why: named fields rather than a Vec so the template addresses each header by
-// name and the column set is checked at compile time.
 #[derive(Debug, Serialize)]
 pub(super) struct RequestsSortHeaders {
     pub time: SortHeaderView,
@@ -120,8 +109,6 @@ pub(super) struct RequestsSortHeaders {
     pub latency: SortHeaderView,
 }
 
-// Why: every number is over the filtered set rather than the raw window, so
-// the tiles name what the table below them holds.
 #[derive(Debug, Default, Serialize)]
 pub(super) struct RequestKpiView {
     pub total: i64,
@@ -144,8 +131,6 @@ pub(super) struct RequestKpiView {
     pub tool_calls_sub: String,
 }
 
-// Why: one shape for all three breakdown tabs, so Models, Providers, and
-// Status cannot drift apart.
 #[derive(Debug, Serialize)]
 pub(super) struct BreakdownView {
     pub dimension_label: &'static str,
@@ -195,9 +180,6 @@ pub(super) struct RequestListRowView {
     pub user_id: UserId,
     pub user_url: String,
     pub user_label: String,
-    // Why: exclusive attribution, so a row belongs to exactly one project and
-    // one group. A row with neither is shown as "Unattributed" rather than
-    // blank — the bucket is a fact about the data, not a gap in the page.
     pub project_id: Option<ProjectId>,
     pub project_label: String,
     pub project_url: Option<String>,
@@ -236,14 +218,9 @@ pub(super) struct TimeRangeView {
     pub to: String,
     pub base_url: &'static str,
     pub query: String,
-    // Why: Only meaningful when the requested window had to be widened; the
-    // template gates its notice banner on `{{#if time_range.auto_widened}}`,
-    // so an *absent* key (not `null`) must mean "not widened".
+    // Why: Handlebars `{{#if time_range.auto_widened}}` gates the notice, so
+    // "not widened" must be an absent key, not `null`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub auto_widened: Option<&'static str>,
-    // Why: the sibling of `auto_widened` for the other way a page can answer
-    // for a window nobody asked for — the URL named one and it could not be
-    // read. Widening is a helpful choice; this is a rejection, and the reader
-    // is owed both.
     pub rejected: bool,
 }

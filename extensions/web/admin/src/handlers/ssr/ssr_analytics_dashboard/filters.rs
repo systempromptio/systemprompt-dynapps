@@ -19,10 +19,7 @@ pub(super) async fn build_filters(
     request: &ScopeRequest,
     bucket: SeriesBucket,
 ) -> FiltersView {
-    // Why: the filter form is a plain GET, so everything not expressed by its
-    // select must ride along as hidden fields or submitting it would reset
-    // the tab and window.
-    let hidden = vec![
+    let carried_by_get_form = vec![
         (
             "tab".to_owned(),
             DashboardTab::from_query(query.tab.as_deref())
@@ -42,7 +39,7 @@ pub(super) async fn build_filters(
     ];
 
     FiltersView {
-        scope: scope_filter_view(pool, user_ctx, request, BASE_URL, hidden).await,
+        scope: scope_filter_view(pool, user_ctx, request, BASE_URL, carried_by_get_form).await,
         bucket_links: urls::bucket_links(query, bucket == SeriesBucket::Week),
     }
 }

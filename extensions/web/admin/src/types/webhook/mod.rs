@@ -72,8 +72,6 @@ impl HookEventPayload {
         }
     }
 
-    // Why: the client's tool_use_id is the key that joins the decision, the
-    // execution and the artifact of one call.
     #[must_use]
     pub fn tool_use_id(&self) -> Option<&str> {
         let id = match &self.event {
@@ -96,10 +94,6 @@ impl HookEventPayload {
         }
     }
 
-    // Why: Tool inputs are authored by the model; a prompt is authored by the
-    // human. Governing both means the secret scanner sees a credential the
-    // user pasted *before* it is serialized into a provider request, not
-    // merely after the model has echoed it back into a tool call.
     #[must_use]
     pub fn prompt(&self) -> Option<&str> {
         match &self.event {
@@ -224,8 +218,6 @@ fn dispatch_event(
             HookEvent::Unknown(other.to_owned())
         },
     };
-    // Why: `agent_id` is a common field rather than part of either variant, so
-    // the subagent events can only be checked for it out here.
     if matches!(
         event,
         HookEvent::SubagentStart(_) | HookEvent::SubagentStop(_)

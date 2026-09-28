@@ -39,8 +39,6 @@ pub struct DecisionLogRow {
 #[derive(Debug, Clone, Copy, Default)]
 pub struct DecisionStats {
     pub evaluated: i64,
-    // Why: the table counts calls, so the header must too, or the page
-    // contradicts itself on screen.
     pub calls: i64,
     pub attention_calls: i64,
     pub allowed: i64,
@@ -59,9 +57,6 @@ pub struct DecisionFilter {
     pub policy: Option<String>,
     pub decision: Option<String>,
     pub search: Option<String>,
-    // Why: narrow to calls that *contain* a deny or a warn. Distinct from
-    // `decision`, which asks what the call's worst evaluation was — a call can
-    // hold a warn and still end up allowed.
     pub attention: bool,
 }
 
@@ -158,10 +153,6 @@ pub async fn list_governance_decisions_paged(
     Ok((rows, total))
 }
 
-// Why: the four per-policy counts are the four synchronous chain stages, named
-// as the policy writes them. They are counted here rather than derived from the
-// page of rows because a page is fifty rows and the deny rate is a property of
-// the window.
 pub async fn get_decision_stats(
     pool: &PgPool,
     range: TimeRange,
@@ -207,11 +198,6 @@ pub struct PolicyCount {
     pub warned: i64,
 }
 
-// Why: the chip strip used to name the four synchronous chain stages and count
-// only those, so on an instance whose traffic is authz and gateway decisions it
-// showed four zeroes beside a full log. Counting what the window actually holds
-// means a chip appears because a policy fired, and a producer nobody knew about
-// announces itself instead of hiding behind an em-dash.
 pub async fn list_decision_policy_counts(
     pool: &PgPool,
     range: TimeRange,
@@ -237,8 +223,6 @@ pub async fn list_decision_policy_counts(
     .await
 }
 
-// Why: built from the window rather than from a fixed list, so a policy
-// that stops firing stops being offered as a filter.
 pub async fn list_decision_policies(
     pool: &PgPool,
     range: TimeRange,

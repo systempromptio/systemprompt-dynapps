@@ -65,9 +65,6 @@ pub(super) fn tools_tab(
 }
 
 fn tool_row(r: &ToolStatsRow, max: i64, query: &AnalyticsDashboardQuery) -> ToolRowView {
-    // Why: pending calls have not succeeded or failed yet, so the rate is over
-    // what has settled — counting them as failures would make a slow tool look
-    // like a broken one.
     let settled = r.succeeded + r.failed;
     let success = pct(r.succeeded, settled);
     ToolRowView {

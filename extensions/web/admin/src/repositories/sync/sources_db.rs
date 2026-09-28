@@ -41,9 +41,6 @@ pub async fn record_service_sources(pool: &PgPool) -> Result<SourcesRecorded, Ma
     let sources = build_sources().map_err(|e| MarketplaceError::Internal(e.to_string()))?;
     let services = ConfigLoader::load().map_err(|e| MarketplaceError::Internal(e.to_string()))?;
     let owned = owned_ids(&sources, &services);
-    // Why: the composed root is what consumers are served, so it is what a
-    // version hashes — the baked tree alone would miss every bundled
-    // marketplace.
     let root = ServicesRootBootstrap::active_root_or(
         &ProfileBootstrap::get()
             .map_err(|e| MarketplaceError::Internal(e.to_string()))?
@@ -135,10 +132,6 @@ async fn insert_source(
     Ok(())
 }
 
-// Why: a bundle's manifest lists what it owns; everything the composed
-// config defines that no bundle claims is the base's. Marketplace membership
-// comes from the composed config so a bundled plugin is filed under the
-// marketplace that includes it, wherever that marketplace came from.
 fn owned_ids(sources: &SourcesView, services: &ServicesConfig) -> Vec<Owned> {
     let mut source_of: BTreeMap<(&str, &str), &str> = BTreeMap::new();
     for b in &sources.bundles {

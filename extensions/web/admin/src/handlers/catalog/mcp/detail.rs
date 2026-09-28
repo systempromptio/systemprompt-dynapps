@@ -89,9 +89,6 @@ pub(super) fn caller_rows(rows: Vec<McpCallerRow>) -> Vec<McpCallerRowView> {
         .collect()
 }
 
-// Why: the badge says which vantage point recorded the call. A hook-only
-// row is a call the client attested and no server observed (an in-process
-// tool a hook alone reported), which is its own finding.
 fn source_badge(source: &str) -> (&'static str, &'static str) {
     match ExecutionSource::parse(source) {
         Some(ExecutionSource::InProcess) => ("server", "ok"),
@@ -113,9 +110,6 @@ fn execution_tone(status: &str) -> &'static str {
     }
 }
 
-// Why: the trace page resolves an execution by its trace id or by its own
-// id, so a call with no gateway trace still links — by execution id — rather
-// than emitting a trace link that answers 404 or none at all.
 fn execution_trace_url(trace_id: Option<&str>, execution: &McpExecutionId) -> String {
     format!(
         "/admin/traces/{}",
@@ -163,8 +157,6 @@ pub(super) fn connection_rows(rows: Vec<McpConnectionRow>) -> Vec<McpConnectionR
     let now = chrono::Utc::now();
     rows.into_iter()
         .map(|r| {
-            // Why: an expired attachment is gone however recently it spoke; a
-            // live one that has not spoken lately is still attached but idle.
             let (status_label, status_tone) = if !r.connected {
                 ("Expired", "muted")
             } else if liveness_state(now, r.last_seen, HEARTBEAT_INTERVAL_SECS).is_alive() {
@@ -202,7 +194,6 @@ pub(super) fn connection_rows(rows: Vec<McpConnectionRow>) -> Vec<McpConnectionR
         .collect()
 }
 
-// Why: The declaration, flattened into the lines the summary renders.
 pub(super) fn config_facts(server: Option<&McpServerDetail>) -> Vec<ConfigFactView> {
     let Some(s) = server else {
         return vec![ConfigFactView {

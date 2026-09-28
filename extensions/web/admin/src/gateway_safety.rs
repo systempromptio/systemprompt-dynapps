@@ -15,6 +15,11 @@
 //! whichever plane the operator had not thought to configure. Responses have
 //! no such overlap: the governance chain is request-only, so this is the sole
 //! thing standing between a model that echoes a credential and the client.
+//!
+//! The catalog is compiled once from the same `secret_scan` block the chain
+//! reads, never through a second governance engine: an inventory-built scanner
+//! cannot reach the injected one, and a second engine's rate limiter would
+//! double every budget.
 
 use systemprompt::ai::{Finding, SafetyScanner, Severity, register_safety_scanner};
 use systemprompt::models::wire::canonical::{CanonicalRequest, CanonicalResponse};
@@ -23,11 +28,6 @@ use std::sync::LazyLock;
 
 use systemprompt_security::policy::{GovernanceConfig, GovernedInput, SecretScanner};
 
-// Why: the governance engine is injected into routers, not reachable from an
-// inventory-built scanner, and this plane must not own a second engine (its
-// rate limiter would double every budget). The secret catalog is stateless,
-// so it is compiled once here from the same `secret_scan` block the chain
-// reads — one configuration, two consumers, no second budget.
 static CONFIGURED_SCANNER: LazyLock<Option<SecretScanner>> = LazyLock::new(|| {
     let profile = systemprompt::config::ProfileBootstrap::get()
         .inspect_err(|error| tracing::error!(%error, "response secret scanner: no profile"))
@@ -117,7 +117,7 @@ impl SecretsScanner {
 register_safety_scanner!(SecretsScanner::new, name = "secrets");
 
 /// PII scanner for the categories core's heuristic does not carry: formatted
-/// US SSNs and international-format phone numbers.
+/// US SSNs (SSA never-issued ranges excluded) and E.164 phone numbers.
 ///
 /// Both directions, unlike [`SecretsScanner`]: the governance `secret_scan`
 /// stage owns request-side *credentials*, but no ingress plane scans for PII,
@@ -175,7 +175,7 @@ fn pii_findings(text: &str, phase: &'static str) -> Vec<Finding> {
             scanner: "pii_extended",
         });
     }
-    if let Some(excerpt) = find_phone(text) {
+    if let Some(excerpt) = find_e164_phone(text) {
         findings.push(Finding {
             phase,
             severity: Severity::Medium,
@@ -187,10 +187,6 @@ fn pii_findings(text: &str, phase: &'static str) -> Vec<Finding> {
     findings
 }
 
-// Why: only the canonical AAA-GG-SSSS shape with digit-boundary checks, and
-// the SSA's never-issued ranges excluded — 000/666/9xx areas, 00 group, 0000
-// serial. An excerpt masks all but the last four, the convention SSNs are
-// displayed with everywhere else.
 fn find_ssn(text: &str) -> Option<String> {
     let bytes = text.as_bytes();
     for i in 0..bytes.len().saturating_sub(10) {
@@ -203,24 +199,21 @@ fn find_ssn(text: &str) -> Option<String> {
         if !shape_ok || digit_adjacent(bytes, i, i + 11) {
             continue;
         }
-        let area = &text[i..i + 3];
-        let group = &text[i + 4..i + 6];
-        let serial = &text[i + 7..i + 11];
-        if area == "000" || area == "666" || area.starts_with('9') {
-            continue;
+        let (area, group, serial) = (&text[i..i + 3], &text[i + 4..i + 6], &text[i + 7..i + 11]);
+        if !ssa_never_issued(area, group, serial) {
+            return Some(format!("***-**-{serial}"));
         }
-        if group == "00" || serial == "0000" {
-            continue;
-        }
-        return Some(format!("***-**-{serial}"));
     }
     None
 }
 
-// Why: E.164-style only — a `+` followed by 8..15 digits with optional
-// space/dash/paren separators. Bare ten-digit runs are not matched: order
-// ids, timestamps, and token counts all look like them.
-fn find_phone(text: &str) -> Option<String> {
+fn ssa_never_issued(area: &str, group: &str, serial: &str) -> bool {
+    area == "000" || area == "666" || area.starts_with('9') || group == "00" || serial == "0000"
+}
+
+const E164_DIGITS: std::ops::RangeInclusive<usize> = 8..=15;
+
+fn find_e164_phone(text: &str) -> Option<String> {
     let bytes = text.as_bytes();
     for (i, _) in bytes.iter().enumerate().filter(|&(_, &b)| b == b'+') {
         let mut digits = 0usize;
@@ -234,11 +227,11 @@ fn find_phone(text: &str) -> Option<String> {
                 b' ' | b'-' | b'(' | b')' | b'.' => {},
                 _ => break,
             }
-            if digits > 15 {
+            if digits > *E164_DIGITS.end() {
                 break;
             }
         }
-        if (8..=15).contains(&digits) && !digit_adjacent(bytes, i, end) {
+        if E164_DIGITS.contains(&digits) && !digit_adjacent(bytes, i, end) {
             let tail: String = text[i..end]
                 .chars()
                 .filter(char::is_ascii_digit)
@@ -250,8 +243,6 @@ fn find_phone(text: &str) -> Option<String> {
     None
 }
 
-// Why: a match butted against more digits is part of a longer number — an id,
-// a hash, a timestamp — not the entity being looked for.
 fn digit_adjacent(bytes: &[u8], start: usize, end: usize) -> bool {
     let before = start.checked_sub(1).map(|i| bytes[i]);
     let after = bytes.get(end).copied();

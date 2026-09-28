@@ -11,9 +11,6 @@ use crate::repositories::analytics::conversations::{
 };
 use crate::types::UserContext;
 
-// Why: which of the two listings is rendering, and everything that differs
-// between them — `Own` is `/admin/history`, `Org` the admin-gated
-// `/admin/conversations`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum HistoryView {
     Own,

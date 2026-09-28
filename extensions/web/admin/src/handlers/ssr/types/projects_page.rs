@@ -19,7 +19,6 @@ use super::{
     MemberSetChipView, ModelMixRowView, SvgLineChartView, TabLinkView, UserOptionView,
 };
 
-// Why: one KPI tile: a number, its unit, and the sentence under it.
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct ProjectKpiView {
     pub label: String,
@@ -32,7 +31,6 @@ pub(crate) struct ProjectKpiView {
     pub href: Option<String>,
 }
 
-// Why: one project on the listing.
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct ProjectListRowView {
     pub id: ProjectId,
@@ -47,8 +45,6 @@ pub(crate) struct ProjectListRowView {
     pub tokens_display: String,
     pub cost_display: String,
     pub models_used: i64,
-    // Why: the vendor prefix repeats on every row of a single-vendor estate,
-    // so the cell shows the tail and keeps the full id on its title.
     pub top_model: Option<String>,
     pub top_model_short: Option<String>,
     pub clients_used: i64,
@@ -79,8 +75,6 @@ pub(crate) struct ProjectsPageData {
     pub export: crate::export::ExportView,
 }
 
-// Why: named fields rather than a Vec so the template addresses each header by
-// name and the column set is checked when the page compiles.
 #[derive(Debug, Serialize)]
 pub(crate) struct ProjectSortHeaders {
     pub name: SortHeaderView,
@@ -96,7 +90,6 @@ pub(crate) struct ProjectSortHeaders {
     pub artifacts: SortHeaderView,
 }
 
-// Why: one tool the project ran, with the share that did not succeed.
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct ProjectToolRowView {
     pub server_name: String,
@@ -109,7 +102,6 @@ pub(crate) struct ProjectToolRowView {
     pub p95_display: String,
 }
 
-// Why: one skill the project leant on and how many of its people used it.
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct ProjectSkillRowView {
     pub skill: String,
@@ -117,15 +109,12 @@ pub(crate) struct ProjectSkillRowView {
     pub users: i64,
 }
 
-// Why: one session the project's people ran.
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct ProjectSessionRowView {
     pub session_id: SessionId,
     pub session_short: String,
     pub href: String,
     pub user_id: UserId,
-    // Why: the name a reader knows the person by; the id when no member row
-    // carries one, so a printed report never shows an empty cell.
     pub person: String,
     pub requests: i64,
     pub models: i64,
@@ -133,7 +122,6 @@ pub(crate) struct ProjectSessionRowView {
     pub last_activity: String,
 }
 
-// Why: the Usage tab's body.
 #[derive(Debug, Serialize)]
 pub(crate) struct ProjectUsageTabView {
     pub attribution: Vec<AttributionSourceRowView>,
@@ -149,7 +137,6 @@ pub(crate) struct ProjectUsageTabView {
     pub sessions: Vec<ProjectSessionRowView>,
 }
 
-// Why: the Members tab's body.
 #[derive(Debug, Serialize)]
 pub(crate) struct ProjectMembersTabView {
     pub count: i64,
@@ -157,7 +144,6 @@ pub(crate) struct ProjectMembersTabView {
     pub addable_users: Vec<UserOptionView>,
 }
 
-// Why: the Settings tab's body.
 #[derive(Debug, Serialize)]
 pub(crate) struct ProjectSettingsTabView {
     pub name: String,

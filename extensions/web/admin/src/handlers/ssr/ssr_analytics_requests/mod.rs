@@ -50,10 +50,6 @@ pub(crate) struct RequestsQuery {
     pub page: Option<i64>,
     pub group: Option<String>,
     pub project: Option<String>,
-    // Why: the shorter spellings the analytics drill-downs emit. They are read
-    // once, folded into the canonical parameter, and never serialised again —
-    // so every link this page builds speaks one vocabulary and a shared URL
-    // does not depend on which page produced it.
     pub user: Option<systemprompt::identifiers::UserId>,
     pub range: Option<String>,
     pub scope: Option<String>,
@@ -67,9 +63,6 @@ impl RequestsQuery {
         if self.preset.is_none() {
             self.preset = self.range.take().filter(|s| !s.is_empty());
         }
-        // Why: `scope=group:commerce-devs` / `scope=project:checkout`. A bare
-        // or unprefixed value names nothing this page can resolve, so it is
-        // ignored rather than guessed at.
         if let Some(raw) = self.scope.take() {
             match raw.split_once(':') {
                 Some(("group", id)) if self.group.is_none() => {
@@ -142,8 +135,6 @@ pub(crate) async fn analytics_requests_page(
     ))
 }
 
-// Why: the export is the table the log shows — same scope, filter and sort —
-// so the dataset reads the page's own query type rather than a second one.
 pub(crate) async fn export_rows(
     pool: &PgPool,
     user_ctx: &UserContext,
@@ -173,9 +164,6 @@ pub(crate) async fn export_rows(
     )
 }
 
-// Why: with no range in the URL the page shows the window `resolve_range`
-// widened to, so the export names that preset rather than letting the dialog
-// open on its own default.
 fn export_query(query: &RequestsQuery, auto_widened: Option<&'static str>) -> String {
     let qs = urls::preserved_query_string(query, &["tab", "page"]);
     if query.preset.is_some() || (query.from.is_some() && query.to.is_some()) {
@@ -189,8 +177,6 @@ fn export_query(query: &RequestsQuery, auto_widened: Option<&'static str>) -> St
     }
 }
 
-// Why: the handler owns auth and I/O; assembling the template context is a pure
-// function of what came back, and keeps either half readable on its own.
 struct PageInput<'a> {
     scope_filter: crate::handlers::ssr::list_view::ScopeFilterView,
     query: &'a RequestsQuery,

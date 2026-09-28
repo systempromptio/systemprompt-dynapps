@@ -26,11 +26,8 @@ use systemprompt::identifiers::{ContextId, Email, UserId};
 
 use crate::repositories::scope::SubjectScope;
 
-// Why: how many rows a roster page carries unless the reader asks for another
-// size.
 pub const DEFAULT_PAGE_SIZE: i64 = 50;
 
-// Why: the window every cost and request figure on the roster is measured over.
 pub const WINDOW_DAYS: i32 = 30;
 
 /// One roster row: who they are, what they belong to, what they spent.
@@ -44,15 +41,8 @@ pub struct RosterRow {
     pub project_ids: Vec<String>,
     pub is_active: bool,
     pub created_at: DateTime<Utc>,
-    // Why: `None` is "never seen", not "seen when they joined" — the wasted-seat
-    // question the roster exists to answer needs those two apart. It is the
-    // latest of gateway traffic, session activity, and console activity —
-    // the same three terms `stats.rs` uses for the inactive-30d chip.
     pub last_active: Option<DateTime<Utc>>,
-    // Why: "gateway" | "session" | "console" — which of the three terms won.
     pub last_active_source: Option<String>,
-    // Why: the conversation of the user's latest turn, so the row can link to
-    // what they were last doing rather than to a bare timestamp.
     pub last_context_id: Option<ContextId>,
     pub requests: i64,
     pub tokens: i64,
@@ -99,7 +89,6 @@ pub struct RosterSort {
 }
 
 impl RosterSort {
-    // Why: every column the header row offers, in table order.
     pub const COLUMNS: [&'static str; 9] = [
         "name", "email", "roles", "groups", "projects", "seen", "cost", "requests", "status",
     ];
@@ -137,9 +126,6 @@ pub struct RosterQuery {
     pub offset: i64,
 }
 
-// Why: The window function carries the filtered total on every row, so the
-// count and the page come from one scan of one predicate — there is no second
-// statement to drift out of step with the first.
 pub async fn list_users_paged(
     pool: &PgPool,
     scope: &SubjectScope,

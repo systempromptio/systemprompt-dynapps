@@ -4,7 +4,10 @@
 //! is not a date, one end of a custom range without the other — is a 400
 //! that names the problem, never a silent fall back to a default the reader
 //! did not pick. A range wider than the contract allows is narrowed and
-//! flagged `clamped`, so the preview can say the file covers less.
+//! flagged `clamped`, so the preview can say the file covers less; the
+//! narrowing keeps the end, since the recent part is what a reader wants.
+//! Day windows end at the next UTC midnight because the snapshot pipeline
+//! buckets facts under UTC days and the current day is still filling.
 
 use chrono::{DateTime, Duration, NaiveTime, Utc};
 use serde::Deserialize;
@@ -18,10 +21,6 @@ use crate::util::time_range::TimeRangePreset;
 pub(crate) const RETAINED_DAYS: [u32; 5] = [1, 7, 30, 90, 365];
 const MAX_RETAINED_DAYS: i64 = 366;
 
-// Why: the export's own ceiling on a live custom range, matching the widest
-// live preset (90d). The pages keep their tighter
-// `time_range::MAX_CUSTOM_WINDOW_DAYS`, which guards percentile scans an
-// export never runs; a file is already bounded by the dataset's row cap.
 const MAX_LIVE_EXPORT_DAYS: i64 = 90;
 const DEFAULT_LIVE_HOURS: i64 = 24;
 
@@ -50,8 +49,6 @@ fn bad(message: &str) -> AdminError {
     AdminError::BadRequest(message.to_owned())
 }
 
-// Why: the dialog's `datetime-local` controls send `%Y-%m-%dT%H:%M`; every
-// spelling `time::parse` accepts is a valid bound.
 fn bound(value: Option<&str>, name: &str) -> AdminResult<Option<DateTime<Utc>>> {
     value.map(str::trim).filter(|v| !v.is_empty()).map_or_else(
         || Ok(None),
@@ -87,7 +84,11 @@ fn live(query: &WindowQuery) -> AdminResult<ExportWindow> {
     let from = bound(query.from.as_deref(), "start")?;
     let to = bound(query.to.as_deref(), "end")?;
     match (from, to) {
-        (Some(from), Some(to)) => Ok(clamp(from, to, Duration::days(MAX_LIVE_EXPORT_DAYS))),
+        (Some(from), Some(to)) => Ok(clamp_keeping_end(
+            from,
+            to,
+            Duration::days(MAX_LIVE_EXPORT_DAYS),
+        )),
         (None, None) if preset.is_none() => Ok(ExportWindow {
             from: now - Duration::hours(DEFAULT_LIVE_HOURS),
             to: now,
@@ -97,9 +98,7 @@ fn live(query: &WindowQuery) -> AdminResult<ExportWindow> {
     }
 }
 
-// Why: an inverted range is swapped, and an over-wide one keeps its end and
-// pulls its start up to the cap — the recent half is the half a reader wants.
-fn clamp(from: DateTime<Utc>, to: DateTime<Utc>, max: Duration) -> ExportWindow {
+fn clamp_keeping_end(from: DateTime<Utc>, to: DateTime<Utc>, max: Duration) -> ExportWindow {
     let (from, to) = if from <= to { (from, to) } else { (to, from) };
     if to - from > max {
         ExportWindow {
@@ -116,9 +115,6 @@ fn clamp(from: DateTime<Utc>, to: DateTime<Utc>, max: Duration) -> ExportWindow 
     }
 }
 
-// Why: the snapshot pipeline buckets facts under UTC days and the current day
-// is still filling, so a day window ends at the next midnight — the same
-// boundary the analysis pages use.
 pub(crate) fn next_midnight() -> DateTime<Utc> {
     (Utc::now().date_naive() + Duration::days(1))
         .and_time(NaiveTime::MIN)
@@ -138,9 +134,6 @@ fn days_only(query: &WindowQuery) -> AdminResult<ExportWindow> {
     })
 }
 
-// Why: the dialog's end control is a date, and a reader who picks 1–30
-// September means to include the 30th; a date-only end therefore closes at
-// the following midnight. An end with a time is taken as given.
 fn inclusive_end(value: Option<&str>) -> AdminResult<Option<DateTime<Utc>>> {
     let end = bound(value, "end")?;
     let date_only = value.is_some_and(|v| v.trim().len() == "YYYY-MM-DD".len());
@@ -158,11 +151,13 @@ fn retained(query: &WindowQuery) -> AdminResult<ExportWindow> {
     if from >= to {
         return Err(bad("The window's end must be after its start."));
     }
-    Ok(clamp(from, to, Duration::days(MAX_RETAINED_DAYS)))
+    Ok(clamp_keeping_end(
+        from,
+        to,
+        Duration::days(MAX_RETAINED_DAYS),
+    ))
 }
 
-// Why: the reports' own month rule — absent or unparseable is the last
-// complete month — so the dialog and the report page agree on the default.
 fn month(query: &WindowQuery) -> ExportWindow {
     let range = parse_month_range(&MonthQuery {
         month: query.month.clone(),

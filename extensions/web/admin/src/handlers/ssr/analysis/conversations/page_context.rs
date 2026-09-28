@@ -46,19 +46,13 @@ pub(crate) struct ConversationsPageContext {
     pub export: crate::export::ExportView,
     pub help: HelpView,
     pub report_banner: ReportBannerView,
-    // Why: the page's own URL, so a row's Judge button and the bulk bar
-    // return here after the POST.
     pub current_url: String,
     pub judge_all_url: &'static str,
     pub can_judge: bool,
-    // Why: the profile's `judge.automatic` is off — verdicts arrive
-    // only when a person asks, so the page shows the buttons that ask.
     pub manual_judge: bool,
     pub unjudged_in_view: i64,
 }
 
-// Why: conversations with no turn are hidden by default; the toggle says how
-// many and links to the other view.
 #[derive(Debug, Serialize)]
 pub(crate) struct TurnsToggleView {
     pub show_all: bool,

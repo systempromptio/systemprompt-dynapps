@@ -77,8 +77,6 @@ pub(crate) async fn user_context_middleware(
         |p| (p.roles, p.group_ids, p.project_ids),
     );
 
-    // Why: only a non-console caller pays for participation; an admin sees the
-    // instance unscoped and never reads it.
     let is_console = roles_grant_console(&roles);
     let participation = if is_console {
         Participation::default()
@@ -119,8 +117,6 @@ async fn find_access_profile(
         .flatten()
 }
 
-// Why: a failed lookup yields no participation rather than an error — the
-// caller lands on their Account pages, never on someone else's data.
 async fn find_participation(
     pool: &PgPool,
     user_id: &UserId,

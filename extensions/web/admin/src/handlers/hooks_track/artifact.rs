@@ -64,9 +64,6 @@ pub(super) async fn ingest_tool_result(params: ToolResultIngestion<'_>) {
         .await
         .map(|reference| (SkillId::new(reference.clone()), reference));
 
-    // Why: the in-process execution of an MCP tool is recorded under its bare
-    // tool and server names; the host's `mcp__…__` namespace must come off
-    // here or the two vantage points can never fingerprint as one call.
     let (tool_name, server_name) = match crate::util::mcp_tool_name::parse_mcp_tool_name(&tool_name)
     {
         Some(mcp) => (mcp.tool, Some(mcp.server)),

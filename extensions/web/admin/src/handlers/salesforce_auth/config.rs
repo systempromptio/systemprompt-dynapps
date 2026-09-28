@@ -7,8 +7,6 @@
 
 use serde::Deserialize;
 
-// Why: env var first, then the encrypted secrets store. Never persisted in
-// `salesforce.yaml`, which is a tracked file.
 pub(crate) fn salesforce_private_key() -> Option<String> {
     std::env::var("SALESFORCE_PRIVATE_KEY").ok().or_else(|| {
         systemprompt::config::SecretsBootstrap::get()
@@ -23,17 +21,14 @@ pub(crate) fn salesforce_private_key() -> Option<String> {
 pub struct SalesforceConfig {
     #[serde(default)]
     pub enabled: bool,
-    // Why: the org's My Domain base URL, e.g.
-    // `https://astound.my.salesforce.com`. Doubles as the JWT-bearer audience.
+    // Why: Salesforce's JWT-bearer flow uses the org's My Domain base URL
+    // (`https://astound.my.salesforce.com`) as the assertion audience.
     pub my_domain: String,
     #[serde(alias = "client_id")]
     pub consumer_key: String,
 }
 
 impl SalesforceConfig {
-    // Why: the placeholder used when no `salesforce.yaml` is present, so the
-    // accessor still registers and reports "unavailable" cleanly rather than
-    // 404ing and looking like a deployment bug.
     #[must_use]
     pub const fn disabled() -> Self {
         Self {

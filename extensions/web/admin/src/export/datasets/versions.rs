@@ -1,5 +1,6 @@
 //! `/admin/analysis/versions` — every marketplace's rollup, and the version
-//! history of one marketplace.
+//! history of one marketplace. A marketplace the caller may not read is
+//! reported as not found.
 
 use async_trait::async_trait;
 use serde::Deserialize;
@@ -20,6 +21,21 @@ pub(crate) struct Versions;
 #[derive(Debug, Default, Deserialize)]
 struct Target {
     marketplace: Option<String>,
+}
+
+pub(super) fn readable_marketplace(ctx: &ExportContext<'_>) -> AdminResult<MarketplaceId> {
+    let target: Target = ctx.query()?;
+    let id = target
+        .marketplace
+        .filter(|m| !m.is_empty() && m.len() <= 128 && !m.chars().any(char::is_control))
+        .ok_or_else(|| AdminError::BadRequest("Name a marketplace".to_owned()))?;
+    let id = MarketplaceId::new(id);
+    if !may_read_marketplace(ctx.user, &id) {
+        return Err(AdminError::NotFound(format!(
+            "No version of marketplace '{id}' has been recorded"
+        )));
+    }
+    Ok(id)
 }
 
 fn window(ctx: &ExportContext<'_>) -> AdminResult<VersionWindow> {
@@ -146,8 +162,6 @@ impl DataSet for Marketplaces {
     fn allows(&self, user: &UserContext) -> bool {
         user.has_scoped_console()
     }
-    // Why: a participant's export carries the marketplaces the page shows
-    // them, filtered by the same rule.
     async fn load(&self, ctx: &ExportContext<'_>) -> AdminResult<Table> {
         let rows = list_marketplace_rollups(ctx.pool, window(ctx)?).await?;
         Ok(Table::complete(
@@ -180,19 +194,7 @@ impl DataSet for Versions {
         user.has_scoped_console()
     }
     async fn load(&self, ctx: &ExportContext<'_>) -> AdminResult<Table> {
-        let target: Target = ctx.query()?;
-        let id = target
-            .marketplace
-            .filter(|m| !m.is_empty() && m.len() <= 128 && !m.chars().any(char::is_control))
-            .ok_or_else(|| AdminError::BadRequest("Name a marketplace".to_owned()))?;
-        let id = MarketplaceId::new(id);
-        // Why: the same not-found the page answers, so the export is no
-        // oracle for marketplaces outside the caller's participation.
-        if !may_read_marketplace(ctx.user, &id) {
-            return Err(AdminError::NotFound(format!(
-                "No version of marketplace '{id}' has been recorded"
-            )));
-        }
+        let id = readable_marketplace(ctx)?;
         let rows = list_marketplace_version_metrics(ctx.pool, window(ctx)?, &id).await?;
         Ok(Table::complete(rows.iter().map(version_row).collect()))
     }

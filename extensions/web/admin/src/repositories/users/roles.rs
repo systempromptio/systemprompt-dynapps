@@ -14,6 +14,12 @@
 //! manual grant is still not something the directory said. The hourly sweep
 //! deletes expired rows and rewrites `users.roles` from what is left
 //! (`expire_manual_roles`).
+//!
+//! The directory half is derived, never stored: the directory rewrites
+//! `users.roles` at every sign-in, so a stored copy could only go stale. Every
+//! write that removes manual rows snapshots the directory half first, inside
+//! the same transaction — otherwise "effective minus manual" would absorb the
+//! removed grant and keep it alive.
 
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
@@ -36,9 +42,6 @@ pub async fn list_manual_roles(
     .await
 }
 
-// Why: the earliest expiry across the manual grants, which is what the role
-// editor shows as "manual grants expire" — one window per save, so the rows
-// agree unless an older save set a different one.
 pub async fn find_manual_roles_valid_until(
     pool: &PgPool,
     user_id: &UserId,
@@ -51,14 +54,6 @@ pub async fn find_manual_roles_valid_until(
     .await
 }
 
-// Why: The roles the directory holds for this user: the effective set minus
-// what was granted by hand.
-//
-// Why derived rather than stored: the directory rewrites `users.roles` at
-// every sign-in from the assertion alone, so a stored copy would be a second
-// truth that can only go stale. A role held both ways counts as manual here,
-// which is the safe direction — revoking it is refused by no rule, and the
-// next sign-in restores it.
 pub async fn list_directory_roles(
     pool: &PgPool,
     user_id: &UserId,
@@ -97,15 +92,6 @@ pub async fn count_platform_admins(pool: &PgPool) -> Result<i64, sqlx::Error> {
     .await
 }
 
-// Why: Replace this user's manual grants with `roles`.
-//
-// Why replace: the role editor sends the whole set it wants, so a diff here
-// would only be a second place for the two to disagree.
-//
-// Why the directory half is read first: it is derived as "effective minus
-// manual", so once the manual rows change the derivation would count a
-// revoked manual grant as directory-held and keep it. Snapshotting it before
-// the rewrite, inside the same transaction, is what makes a revoke stick.
 pub async fn set_manual_roles(
     pool: &PgPool,
     user_id: &UserId,
@@ -135,12 +121,6 @@ pub async fn set_manual_roles(
     tx.commit().await
 }
 
-// Why: Rewrite `users.roles` as the union of what the directory grants and what
-// was granted by hand, and return the result.
-//
-// `directory_roles` is `Some` at sign-in, where the assertion is the whole
-// truth about the directory half; `None` everywhere else, where the current
-// effective set already carries it and only the manual half has moved.
 pub async fn recompute_roles(
     pool: &PgPool,
     user_id: &UserId,
@@ -183,12 +163,6 @@ where
     .await
 }
 
-// Why: Delete this user's expired manual grants and rewrite the effective set
-// without them. The directory half is snapshotted before the delete for the
-// same reason `set_manual_roles` does it: derived as "effective minus manual",
-// it would otherwise absorb the expired role and keep it alive. Returns the
-// effective roles before and after so the caller can tell whether a manage
-// role was lost.
 pub async fn expire_manual_roles(
     pool: &PgPool,
     user_id: &UserId,
@@ -213,8 +187,6 @@ pub async fn expire_manual_roles(
     Ok((before, after))
 }
 
-// Why: the people the sweep has to visit — anyone holding a manual grant whose
-// window has closed.
 pub async fn list_users_with_expired_manual_roles(
     pool: &PgPool,
 ) -> Result<Vec<UserId>, sqlx::Error> {

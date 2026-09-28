@@ -41,9 +41,6 @@ pub struct DriftRow {
     pub resolve_tone: &'static str,
 }
 
-// Why: the "Resolves with" badge for a line, from what the two writing
-// directions would do to it. One badge per line, so the reader learns
-// which button to press without weighing two columns against each other.
 #[must_use]
 pub fn resolution(
     insert_applies: bool,
@@ -78,7 +75,6 @@ pub struct ActionCounts {
 }
 
 impl ActionCounts {
-    // Why: whether *Overwrite from code* would move anything.
     #[must_use]
     pub const fn code_side(&self) -> bool {
         self.insert + self.insert_entities + self.update + self.delete > 0

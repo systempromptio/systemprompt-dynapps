@@ -216,8 +216,6 @@ pub(super) fn skill_rows(
         .collect()
 }
 
-// Why: analysis facts key a skill as `plugin:skill` with hyphens, so the
-// Analysis link hops through the first carrying plugin, else the list.
 fn skill_activity_url(included_by: &[LinkedEntity], skill: &SkillId) -> String {
     included_by.first().map_or_else(
         || ANALYSIS_SKILLS_URL.to_owned(),

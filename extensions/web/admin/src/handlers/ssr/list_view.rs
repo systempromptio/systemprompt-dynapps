@@ -7,13 +7,16 @@
 //! the functions build them from a page's own query parameters expressed as a
 //! `(name, value)` slice, so a list page supplies its parameter list and
 //! inherits the behaviour rather than copying it.
+//!
+//! The `components/scope-filter` selects (`group`, `project`) are shown to
+//! console admins only, and their option lists are read inside
+//! [`scope_filter_view`] so every list page inherits the same filter from one
+//! call. A scoped caller is offered only the containers their participation
+//! names, and a failed read degrades to the "all" option rather than failing
+//! the page.
 
 pub(crate) use systemprompt_web_shared::pagination::PageWindow;
 
-// Why: what a page of anything holds on this console. Fifteen files declared
-// their own `const PAGE_SIZE: i64 = 50`, so "the page size" was fifteen facts
-// that happened to agree. The two deliberate 25s (a user's conversations, a
-// skill's conversations) keep their own constant and say why.
 pub(crate) const DEFAULT_PAGE_SIZE: i64 = 50;
 
 use serde::Serialize;
@@ -38,10 +41,6 @@ pub(crate) struct HiddenFieldView {
     pub value: String,
 }
 
-// Why: The `components/scope-filter` partial's context: the two selects an
-// admin narrows a listing with, `group` and `project`. Hidden for everyone
-// else — a non-console caller's scope is their own groups and nothing on the
-// page can widen it.
 #[derive(Debug, Clone, Default, Serialize)]
 pub(crate) struct ScopeFilterView {
     pub show: bool,
@@ -51,10 +50,6 @@ pub(crate) struct ScopeFilterView {
     pub hidden: Vec<HiddenFieldView>,
 }
 
-// Why: Why: the option lists are read here rather than passed in so that every
-// list page inherits the same filter by calling one function, and a group
-// created in the dashboard appears on all of them at once. A failed read
-// degrades to the "all" option alone rather than failing the page.
 pub(crate) async fn scope_filter_view(
     pool: &PgPool,
     user_ctx: &UserContext,
@@ -69,19 +64,18 @@ pub(crate) async fn scope_filter_view(
         groups::crud::list_groups(pool),
         projects::crud::list_projects(pool)
     );
-    // Why: a scoped caller is offered only the containers their participation
-    // names; the full list would advertise groups they cannot see into.
-    let visible = |ids: &[String], id: &str| user_ctx.is_console || ids.iter().any(|v| v == id);
+    let may_see_container =
+        |ids: &[String], id: &str| user_ctx.is_console || ids.iter().any(|v| v == id);
     let groups = group_rows
         .unwrap_or_default()
         .into_iter()
-        .filter(|g| visible(&user_ctx.participation.groups, g.id.as_str()))
+        .filter(|g| may_see_container(&user_ctx.participation.groups, g.id.as_str()))
         .map(|g| (g.id.as_str().to_owned(), g.name))
         .collect();
     let projects = project_rows
         .unwrap_or_default()
         .into_iter()
-        .filter(|p| visible(&user_ctx.participation.projects, p.id.as_str()))
+        .filter(|p| may_see_container(&user_ctx.participation.projects, p.id.as_str()))
         .map(|p| (p.id.as_str().to_owned(), p.name))
         .collect();
     scope_filter_from_names(
@@ -96,7 +90,6 @@ pub(crate) async fn scope_filter_view(
     )
 }
 
-// Why: Carries display names for the containers a scope filter can select.
 #[derive(Clone, Copy)]
 pub(crate) struct ScopeNames<'a> {
     pub(crate) groups: &'a BTreeMap<String, String>,
@@ -157,10 +150,6 @@ pub(crate) struct TimeRangeContext {
     pub(crate) to: String,
     pub(crate) base_url: &'static str,
     pub(crate) query: &'static str,
-    // Why: carried from `TimeRange::rejected_bounds` so the partial can say
-    // the window is the default rather than the one the URL asked for. A
-    // listing that answers for a different window without saying so is read as
-    // the answer to the question that was asked.
     pub(crate) rejected: bool,
 }
 
@@ -186,12 +175,6 @@ pub(crate) struct Chip {
     pub(crate) remove_url: String,
 }
 
-// Why: five pages each wrote their own loop over their own `(name, value)`
-// pairs, dropping the ones a link replaces and URL-encoding the rest. The
-// pairs are the only part a page owns; the filtering and the encoding are not.
-// `extra` carries the numeric parameters that are not `Option<&str>` — a page
-// number, an SLO threshold — which is why two of the five were for-loops
-// rather than iterator chains.
 pub(crate) fn query_string_dropping(
     pairs: &[(&str, Option<&str>)],
     extra: &[(&str, Option<i64>)],
@@ -215,12 +198,6 @@ pub(crate) fn query_string_dropping(
     parts.join("&")
 }
 
-// Why: every list page computed the same two URLs, the same two booleans
-// derived from them and the same 1-based `current_page` off a zero-based
-// window. Nineteen copies drifted: some used `page - 1` where others used
-// `saturating_sub(1)`, and one page counted from 1 against sixteen counting
-// from 0. `page_url` is the one thing a page genuinely owns — its own URL
-// shape — so it is all a page supplies.
 pub(crate) fn paginate(window: PageWindow, page_url: impl Fn(i64) -> String) -> Pagination {
     let page = window.index;
     let prev_url = (page > 0).then(|| page_url(page - 1));
@@ -240,8 +217,6 @@ pub(crate) fn paginate(window: PageWindow, page_url: impl Fn(i64) -> String) -> 
     }
 }
 
-// Why: the common case — a prefix already ending in `?` or `&`, with the page
-// number last.
 pub(crate) fn paginate_prefixed(window: PageWindow, prefix: &str) -> Pagination {
     paginate(window, |page| format!("{prefix}page={page}"))
 }
@@ -250,8 +225,6 @@ pub(crate) fn paginate_prefixed(window: PageWindow, prefix: &str) -> Pagination 
 pub(crate) struct Pagination {
     pub(crate) current_page: i64,
     pub(crate) total_pages: i64,
-    // Why: 1-based row range for "Showing 1-50 of 54"; `first_row` is 0 only
-    // when the page is empty.
     pub(crate) first_row: i64,
     pub(crate) last_row: i64,
     pub(crate) total_rows: i64,

@@ -3,7 +3,9 @@
 //! The detector re-runs the ACL resolver over recent `/v1/messages` requests
 //! and records a `governance_decisions` row for any that should have been
 //! denied. Both the scan query and the decision insert live here so the
-//! handler depends on named repository methods rather than inline SQL.
+//! handler depends on named repository methods rather than inline SQL. A
+//! decision is accountable to the request's user but acted by the `system`
+//! actor `gateway_acl_detector`, since the scan is not a person.
 
 // JSON: governance audit payload; each policy stage writes its own shape.
 use serde_json::Value;
@@ -55,8 +57,6 @@ pub async fn insert_gateway_acl_decision(
 ) -> Result<(), sqlx::Error> {
     let context_id = ContextId::derived_from_session(&SessionId::new(decision.session_id));
     sqlx::query!(
-        // Why: the accountable party is the request's user; the actor is this
-        // after-the-fact scan, which is a system surface rather than a person.
         "INSERT INTO governance_decisions \
          (id, user_id, session_id, context_id, tool_name, agent_id, agent_scope, \
           decision, policy, reason, evaluated_rules, plugin_id, \

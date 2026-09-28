@@ -60,8 +60,6 @@ pub(super) fn awaiting_rows(declared: &DeclaredSet) -> Vec<DriftRow> {
         .collect()
 }
 
-// Why: label, tone and provenance badge for a database-only row, by who
-// wrote it. The label is the cause in plain words; `stale` never appears.
 const fn orphan_words(
     orphan: &OrphanRule,
 ) -> (&'static str, &'static str, &'static str, &'static str) {

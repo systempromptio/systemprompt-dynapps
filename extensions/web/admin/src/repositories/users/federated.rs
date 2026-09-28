@@ -29,8 +29,6 @@ pub struct ResolvedFederatedUser {
     pub email: String,
     pub display_name: String,
     pub roles: Vec<String>,
-    // Why: the directory took `admin` away on this login. The caller must
-    // revoke what was minted while the user still held it.
     pub lost_admin: bool,
 }
 
@@ -42,9 +40,6 @@ pub struct FederatedClaims<'a> {
     pub external_sub: &'a str,
     pub email: &'a str,
     pub display_name: &'a str,
-    // Why: the roles the IdP's group claim maps to. Written on create and
-    // re-projected onto `users.roles` on every returning login (replace, not
-    // union), so the directory — not a stale row — decides what a user holds.
     pub roles: &'a [String],
 }
 
@@ -133,9 +128,6 @@ pub enum LinkOutcome {
     AlreadyLinkedElsewhere,
 }
 
-// Why: Attach an external identity to `user_id` (the profile "Connect" flow).
-// Idempotent when the pair already points at this user; refuses to steal a
-// mapping owned by another user.
 pub async fn link_identity_to_user(
     pool: &PgPool,
     issuer: &str,
@@ -177,14 +169,6 @@ pub async fn delete_federated_identities_for_issuer(
     Ok(deleted)
 }
 
-// Why: `email` / `display_name` come from the verified `IdP` claims. The caller
-// is responsible for the upstream gate (`email_verified == true` and an
-// allow-listed domain) before invoking this.
-//
-// When `auto_provision` is `false` and the identity matches neither an
-// existing mapping nor an active local account, returns `Ok(None)` — the
-// caller should surface "this account must be created by an admin first"
-// rather than minting a session.
 pub async fn resolve_federated_user(
     pool: &PgPool,
     claims: &FederatedClaims<'_>,
@@ -238,9 +222,6 @@ pub struct LinkedIdentityRow {
     pub last_seen_at: chrono::DateTime<chrono::Utc>,
 }
 
-// Why: the Identity tab lists every provider that vouches for this account, not
-// just the most recent one `find_identity_envelope` returns — an admin
-// unlinking Slack needs to see that Slack is linked while ADFS also is.
 pub async fn list_linked_identities(
     pool: &PgPool,
     user_id: &UserId,

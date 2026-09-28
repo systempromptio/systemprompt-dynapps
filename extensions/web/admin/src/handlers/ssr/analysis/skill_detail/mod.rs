@@ -38,9 +38,7 @@ use crate::repositories::scope::ScopeRequest;
 use context::{SkillRead, build_context};
 
 pub(super) const PAGE_SIZE: i64 = 25;
-// Why: the release figures are medians over every run read, so the page reads
-// far more runs than it lists; the export has no such cap below its own.
-const RUNS_READ: i64 = 1_000;
+const RUNS_READ_FOR_MEDIANS: i64 = 1_000;
 
 /// The skill identity the hook events key on, parsed from a `plugin:skill`
 /// path segment: the plugin is the prefix, the key is kept whole.
@@ -182,7 +180,7 @@ pub(crate) async fn skill_page(
             query.page() * PAGE_SIZE
         ),
         get_marketplace_audience(&pool, &index.marketplaces),
-        list_skill_runs(&pool, &window, &run_filter, RUNS_READ),
+        list_skill_runs(&pool, &window, &run_filter, RUNS_READ_FOR_MEDIANS),
     );
     let (facts, daily, breakdown, (conversations, total), audience, runs) =
         (facts?, daily?, breakdown?, conversations?, audience?, runs?);

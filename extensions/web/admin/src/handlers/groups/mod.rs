@@ -106,9 +106,6 @@ pub(crate) async fn delete_group_handler(
     Ok((StatusCode::NO_CONTENT, ()).into_response())
 }
 
-// Why: the same shape the `groups.id` CHECK enforces, applied before the
-// insert so a bad id is a 400 naming the field rather than a 500 carrying a
-// constraint name.
 pub(crate) fn validated_id(id: &str) -> AdminResult<()> {
     let shaped = !id.is_empty()
         && id.len() <= 64
@@ -128,9 +125,6 @@ pub(crate) fn validated_id(id: &str) -> AdminResult<()> {
     }
 }
 
-// Why: entitlement is meaningful for `unassigned` — a user the directory
-// placed nowhere still needs a catalogue — so this only asserts the group
-// exists, where [`refuse_system_write`] also refuses the derived one.
 pub(crate) async fn refuse_missing_group(pool: &PgPool, group_id: &GroupId) -> AdminResult<()> {
     if crud::find_group(pool, group_id).await?.is_none() {
         return Err(AdminError::NotFound(format!("Group {group_id} not found")));

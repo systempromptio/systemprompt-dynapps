@@ -24,8 +24,6 @@ use super::view::{AudienceCellView, AudienceColumnView, AudienceMatrixView, Audi
 
 pub(crate) const MARKETPLACE_ENTITY: &str = "marketplace";
 
-// Why: the manifests name the marketplaces; the database says who reaches
-// them. Both are needed for every card and every audience cell.
 pub(super) async fn load_manifests(
     pool: &PgPool,
     services_path: &Path,
@@ -73,10 +71,6 @@ fn cells_of(sections: Vec<MatrixSection>) -> Vec<AudienceCellView> {
         })
 }
 
-// Why: The full audience matrix: every group, then every role, against every
-// marketplace. Groups come first because entitlement is granted on groups
-// here; the role rows are the baseline that a group row either widens or
-// leaves alone.
 pub(super) async fn audience_matrix(
     pool: &PgPool,
     manifests: &[MarketplaceConfigSummary],
@@ -128,12 +122,6 @@ pub(super) async fn audience_matrix(
     }
 }
 
-// Why: Which groups hold an explicit `allow` rule on each marketplace.
-//
-// This is the *declared* half of entitlement — the rule a person clicked into
-// existence. The resolved half is the audience matrix, and the list page shows
-// both because a deny written elsewhere can close a marketplace this map says
-// is open.
 pub(super) async fn group_grants(pool: &PgPool) -> HashMap<MarketplaceId, Vec<GroupId>> {
     let rules = repositories::users::access_control::list_all_rules(pool)
         .await

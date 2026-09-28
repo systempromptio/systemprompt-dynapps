@@ -1,4 +1,9 @@
 //! Server-owned connection metadata, generations and device-visible revisions.
+//!
+//! Session liveness is read from the primary database on every action — UI
+//! polling and JWT expiry never enforce revocation, and `ended_at` (analytics
+//! inactivity) does not end authorisation. A provider-wide reprovision is one
+//! statement so every affected user is told before any tool call finds out.
 
 use chrono::{DateTime, Utc};
 use sqlx::{PgPool, Postgres, Transaction};
@@ -34,9 +39,9 @@ pub async fn list_accounts(
     .await
 }
 
-// Why: All mutations take this lock before touching credentials, including
-// disconnect and callbacks. A callback cannot resurrect a connection
-// disconnected in flight.
+// Why: Postgres `FOR UPDATE` row lock — every mutation, disconnect and OAuth
+// callback included, takes it first, so a callback cannot resurrect a
+// connection disconnected in flight.
 pub async fn get_locked_account(
     tx: &mut Transaction<'_, Postgres>,
     user: &UserId,
@@ -104,16 +109,11 @@ pub async fn delete_pending(
     Ok(())
 }
 
-// Why: Session revocation is checked against the primary database on every
-// action; UI polling and JWT expiry are never the revocation enforcement
-// mechanism.
 pub async fn is_live_session(
     pool: &PgPool,
     user: &UserId,
     session: &str,
 ) -> Result<bool, sqlx::Error> {
-    // Why: ended_at tracks analytics inactivity; only revocation and expiry end
-    // authorization.
     sqlx::query_scalar!(
         r#"SELECT EXISTS(SELECT 1 FROM user_sessions s JOIN users u ON u.id = s.user_id
         WHERE s.session_id = $1 AND s.user_id = $2 AND s.revoked_at IS NULL
@@ -125,9 +125,6 @@ pub async fn is_live_session(
     .await
 }
 
-// Why: one statement for every user on the provider, not a per-user loop —
-// a sandbox refresh invalidates everyone at once and the profile page must
-// tell them all before any tool call discovers it.
 pub async fn reprovision_provider(
     tx: &mut Transaction<'_, Postgres>,
     provider: &str,

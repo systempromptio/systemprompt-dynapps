@@ -14,8 +14,6 @@ pub(crate) const fn branding_context(engine: &AdminTemplateEngine) -> BrandingSh
     }
 }
 
-// Why: who is looking — the two per-request contexts every shell render
-// reads, one value because they are never meaningful apart.
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct Viewer<'a> {
     pub(crate) user: &'a UserContext,

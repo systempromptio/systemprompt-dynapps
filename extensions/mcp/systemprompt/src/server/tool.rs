@@ -63,12 +63,6 @@ impl McpToolHandler for SystempromptToolHandler<'_> {
                 CliArtifact::text(TextArtifact::new(&output.stdout).with_title("Command Output"))
             },
         };
-        // Why: the response builder pairs the summary with the artifact's text
-        // body on the wire, so echoing stdout as the summary would print the
-        // whole output twice for structured clients — and an unbounded body
-        // is what a host spills to a file the model cannot read back. An
-        // oversize result is kept whole as its own artifact and the model gets
-        // a pointer; trimming is only what happens when that store fails.
         if let Some(bytes) = crate::bounds::oversize_bytes(&artifact) {
             let store = super::overflow::OverflowStore {
                 ingest: self.ingest,
@@ -174,8 +168,6 @@ async fn run_typed<H: McpToolHandler>(
         .await
 }
 
-// Why: the typed tools share one constructor shape; matching them here
-// keeps `dispatch_tool` a flat name table.
 async fn dispatch_typed(
     ctx: &Dispatch<'_>,
     tool_name: &str,
@@ -197,9 +189,8 @@ async fn dispatch_typed(
     })
 }
 
-// Why: Exposed (behind `#[doc(hidden)]`) so the external test workspace can
-// assert the unknown-tool arm without an rmcp `Peer`, which only exists once a
-// transport is serving. Not part of the public API.
+// Why: `#[doc(hidden)]` so the external test workspace can assert the
+// unknown-tool arm without an rmcp `Peer`, which exists only once serving.
 #[doc(hidden)]
 pub async fn dispatch_tool(
     ctx: &Dispatch<'_>,

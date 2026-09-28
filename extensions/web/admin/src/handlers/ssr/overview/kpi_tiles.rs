@@ -199,9 +199,6 @@ pub(super) fn health_tiles(k: &OverviewKpis, i: &TileInputs<'_>) -> Vec<KpiTileV
     ]
 }
 
-// Why: the same thresholds the conversations page tones its cache bar on —
-// half of what the models read from cache is healthy, a fifth is worth a
-// look, less is money left on the table. An empty window is untoned.
 const fn cache_tone(k: &OverviewKpis) -> &'static str {
     let total = k.input_tokens + k.cache_tokens;
     if total == 0 {
@@ -215,13 +212,14 @@ const fn cache_tone(k: &OverviewKpis) -> &'static str {
     }
 }
 
-// Why: p95 against the gateway's 20 s target, the same bands the analysis
-// pages use, so a tile that turns amber here is amber there too.
+const LATENCY_OK_P95_MS: i64 = 8_000;
+const GATEWAY_P95_TARGET_MS: i64 = 20_000;
+
 const fn latency_tone(p95_ms: i64) -> &'static str {
     match p95_ms {
         0 => "",
-        ms if ms <= 8_000 => "ok",
-        ms if ms <= 20_000 => "warn",
+        ms if ms <= LATENCY_OK_P95_MS => "ok",
+        ms if ms <= GATEWAY_P95_TARGET_MS => "warn",
         _ => "err",
     }
 }

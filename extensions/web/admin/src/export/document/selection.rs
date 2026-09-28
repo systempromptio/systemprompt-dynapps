@@ -15,9 +15,6 @@ use crate::repositories::analytics::session_detail::list_session_contexts;
 use crate::types::UserContext;
 use crate::util::time_range::{TimeRange, TimeRangePreset};
 
-// Why: a bundle carries every body of a conversation; five hundred of them is
-// already a file in the tens of megabytes, and the page's filters narrow the
-// set further before anyone reaches that.
 pub(crate) const MAX_CONVERSATIONS: i64 = 500;
 
 #[derive(Debug, Default, Deserialize)]
@@ -40,9 +37,6 @@ impl Selection {
     }
 }
 
-// Why: the list page a set comes from — its query type is the filter
-// contract and its window kind is the window contract, so the file is the
-// page's own answer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum TranscriptSource {
     Sessions,
@@ -97,7 +91,7 @@ pub(crate) async fn resolve_selection(
 ) -> AdminResult<Selection> {
     let query: SelectionQuery = ctx.query()?;
     if let Some(ids) = query.ids.as_deref().filter(|s| !s.trim().is_empty()) {
-        return Ok(ticked(ids));
+        return Ok(ticked_valid_ids(ids));
     }
     if let Some(session) = query.session.as_deref().filter(|s| !s.trim().is_empty()) {
         return session_contexts(pool, session).await;
@@ -117,9 +111,7 @@ pub(crate) async fn resolve_selection(
     Ok(selection)
 }
 
-// Why: the total counts the ids that name a conversation at all, so a
-// malformed id never makes a short selection look capped.
-fn ticked(ids: &str) -> Selection {
+fn ticked_valid_ids(ids: &str) -> Selection {
     let valid: Vec<ContextId> = ids
         .split(',')
         .map(str::trim)

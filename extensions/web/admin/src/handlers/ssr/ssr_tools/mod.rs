@@ -39,8 +39,6 @@ use crate::handlers::ssr::list_view::DEFAULT_PAGE_SIZE;
 pub(crate) use context::{Frame, build_context};
 pub(crate) use query::{Lens, ToolsQuery};
 
-// Why: what a lens page reads before it builds its context — the data and
-// the scope form, resolved against the caller's visibility.
 pub(crate) struct LensRead {
     pub data: ToolActivityResult,
     pub scope_filter: ScopeFilterView,
@@ -119,9 +117,6 @@ pub(crate) async fn tools_page(
     ))
 }
 
-// Why: the export reads the rows the page shows — same scope, window and
-// filters — through the page's own query type, with `ids=` narrowing to a
-// selection when the dialog was opened from the bulk bar.
 pub(crate) async fn export_rows(
     pool: &PgPool,
     user: &UserContext,

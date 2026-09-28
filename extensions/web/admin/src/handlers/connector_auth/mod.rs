@@ -41,7 +41,6 @@ pub fn router(pool: Arc<PgPool>) -> Router {
         .with_state(pool)
 }
 
-// Why: only the gateway's credential broker may read a per-user bearer.
 fn require_broker(headers: &HeaderMap) -> AdminResult<()> {
     use sha2::{Digest, Sha256};
     let expected = oauth::config::secret("mcp_credential_broker_secret")?;
@@ -62,9 +61,8 @@ async fn live_user(
     headers: &HeaderMap,
     mutation: bool,
 ) -> AdminResult<crate::types::CookieSession> {
-    // Why: Cookie mutations require an exact same-origin browser request. Bridge
-    // bearer requests do not use ambient cookies and are not subject to CSRF.
-    if mutation && !headers.contains_key("authorization") {
+    let rides_ambient_cookies = !headers.contains_key("authorization");
+    if mutation && rides_ambient_cookies {
         let origin = headers
             .get("origin")
             .and_then(|h| h.to_str().ok())

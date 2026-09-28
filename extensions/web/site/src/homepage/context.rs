@@ -4,9 +4,6 @@ use serde::Serialize;
 
 use super::config::HomepageConfig;
 
-// Why: one context type feeds both the runtime provider and the build-time
-// prerenderer, so the two render paths cannot drift apart; the template reads
-// it under `site.homepage.*`.
 #[derive(Debug, Serialize)]
 pub(super) struct HomepageContext<'a> {
     site: HomepageSite<'a>,

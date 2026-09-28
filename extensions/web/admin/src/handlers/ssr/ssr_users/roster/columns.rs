@@ -9,9 +9,6 @@ use crate::repositories::users::roster::RosterSort;
 use super::RosterUrlState;
 use crate::handlers::ssr::types::SortHeaderView;
 
-// Why: the column set, its labels, its alignment class and the one-line
-// explanation each header carries. One list so the header row and the sort
-// contract cannot drift apart.
 const COLUMNS: [(&str, &str, &str, &str); 8] = [
     (
         "name",
@@ -69,8 +66,6 @@ pub(super) fn build_sort_headers(url: &RosterUrlState, sort: RosterSort) -> Vec<
         .into_iter()
         .map(|(key, label, class, hint)| {
             let active = key == sort.column;
-            // Why: an active column toggles; an inactive one opens largest-first
-            // (and newest-first for a date), which is what an operator scans for.
             let next_dir = SortHeaderView::next_dir(active, sort.descending);
             SortHeaderView::new(
                 (label, class, hint),

@@ -2,14 +2,14 @@
 //! sequence projected into `gateway_routes`.
 //!
 //! The one plane whose declaration is also its runtime input. Core boots
-//! the dispatcher from the file and never reads the table, so every apply
-//! ends by regenerating the file from the rows — after *Overwrite* the two
-//! are equal by construction; after *Insert only* the file gains the rows
-//! the console added, which the next restart dispatches. The boot job seeds
-//! an empty table from the file and otherwise only reports; a fresh image
-//! whose file moved on shows here as drift until an administrator chooses a
-//! direction, and a console route from the previous image is *In database,
-//! not in code* until it is applied or exported.
+//! the dispatcher from the file and never reads the table, so every
+//! user-initiated apply ends by regenerating the file from the rows — after
+//! *Overwrite* the two are equal by construction; after *Insert only* the file
+//! gains the rows the console added, which the next restart dispatches. The
+//! boot job seeds an empty table from the file and otherwise only reports; a
+//! fresh image whose file moved on shows here as drift until an administrator
+//! chooses a direction, and a console route from the previous image is *In
+//! database, not in code* until it is applied or exported.
 
 use async_trait::async_trait;
 use sqlx::PgPool;
@@ -129,9 +129,6 @@ async fn write_declared(
         if present && mode == SyncMode::InsertOnly {
             continue;
         }
-        // Why: insert-only appends after the rows already there — the file's
-        // order is only imposed by an overwrite, which is the mode that
-        // promises the table equals the file.
         let position = match mode {
             SyncMode::Overwrite => i,
             SyncMode::InsertOnly => existing.len() + i,
@@ -247,11 +244,8 @@ impl SyncPlane for GatewayRoutesPlane {
     ) -> AdminResult<ApplyOutcome> {
         let declared = declared_routes_now()?;
         let outcome = write_declared(pool, &declared, mode).await?;
-        // Why: the boot seed came from the file, so the file already says
-        // what the rows say; rewriting it would only strip its inline
-        // comments. A person's apply may have kept console rows the file
-        // lacks, and those must reach the file core boots from.
-        if matches!(actor, Actor::User(_)) {
+        let user_initiated = matches!(actor, Actor::User(_));
+        if user_initiated {
             regenerate_gateway_file(pool, &gateway_file_path()?).await?;
         }
         record_applied(

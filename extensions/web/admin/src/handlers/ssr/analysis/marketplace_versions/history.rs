@@ -64,8 +64,6 @@ pub(crate) struct VersionView {
     pub compare_href: Option<String>,
 }
 
-// Why: the judge's mean completion over the conversations a version served,
-// or a dash when no judged conversation invoked a skill served by that hash.
 fn completion_for(scores: &[VersionCompletionRow], hash: &str) -> (String, &'static str, i64) {
     let row = scores.iter().find(|s| s.content_hash == hash);
     let avg = row.and_then(|r| r.completion_avg);
@@ -76,9 +74,6 @@ fn completion_for(scores: &[VersionCompletionRow], hash: &str) -> (String, &'sta
     )
 }
 
-// Why: rows arrive newest first; the diff for a row is against the row
-// *after* it in that order, which is the version it replaced. The oldest
-// row diffs against nothing and reads as the first version.
 pub(crate) fn views(
     rows: &[MarketplaceVersionMetricsRow],
     scores: &[VersionCompletionRow],
@@ -125,8 +120,6 @@ pub(crate) fn views(
                 completion_display,
                 completion_tone,
                 scored_sessions,
-                // Why: appended to `base_href`, which already carries
-                // `?days=`, so this must continue the query, not start one.
                 compare_href: previous.map(|p| {
                     format!(
                         "&tab=compare&a={}&b={}",

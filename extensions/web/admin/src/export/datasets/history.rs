@@ -90,8 +90,6 @@ impl DataSet for History {
     fn window(&self) -> Window {
         Window::Retained
     }
-    // Why: identity-scoped like the page — every signed-in user may export
-    // their own history; the handler narrows the rows to their scope.
     fn allows(&self, _user: &UserContext) -> bool {
         true
     }

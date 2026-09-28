@@ -4,9 +4,6 @@
 use sqlx::PgPool;
 use systemprompt::identifiers::{SessionId, UserId};
 
-// Why: binds the session to the authenticated principal before anything is
-// recorded against it, so a hook carrying someone else's session id is
-// refused by the database rather than trusted by the handler.
 pub(crate) async fn assert_ingestion_owner(
     pool: &PgPool,
     session_id: &SessionId,

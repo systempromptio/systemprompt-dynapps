@@ -107,7 +107,6 @@ fn served_row(
     }
 }
 
-// Why: every row, projected kinds first, in inventory order.
 pub(super) async fn build_rows(
     pool: &PgPool,
     active_root: &Path,
@@ -117,9 +116,6 @@ pub(super) async fn build_rows(
     let registry = planes();
     let mut rows = Vec::with_capacity(CONFIG_KINDS.len());
     for kind in CONFIG_KINDS {
-        // Why: a plane is the authority on its own kind; the inventory only
-        // knows the kind exists. A registered plane the inventory does not
-        // list is added below so a new plane shows up with no page change.
         if let Some(plane_id) = kind.plane {
             if let Some(card) = plane_card_by_id(pool, plane_id, "").await? {
                 rows.push(projected_row(kind, &card));

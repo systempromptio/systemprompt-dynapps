@@ -30,11 +30,7 @@ pub struct ToolSchemaPair {
     pub name: String,
     pub client: Option<WireTool>,
     pub provider: Option<WireTool>,
-    // Why: the whole point of the view — a schema the sanitizer rewrote.
     pub changed: bool,
-    // Why: the Gemini declaration rules the client schema breaks; empty for
-    // a schema Gemini would take as sent, and only meaningful on a Gemini or
-    // Vertex request.
     pub rule_hits: Vec<String>,
 }
 
@@ -83,16 +79,12 @@ fn wire_tool(entry: &Value, schema_key: &str) -> Option<WireTool> {
     })
 }
 
-// Why: Whether the served provider's declarations are checked by the Gemini
-// rules.
 #[must_use]
 pub fn gemini_rules_apply(provider: &str) -> bool {
     let provider = provider.to_ascii_lowercase();
     provider.contains("gemini") || provider.contains("vertex") || provider.contains("google")
 }
 
-// Why: Pairs the client's tools with the provider's by name, in the client's
-// order, with provider-only tools appended.
 #[must_use]
 pub fn pair_tools(
     client: &[WireTool],

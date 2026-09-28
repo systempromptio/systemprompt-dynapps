@@ -9,6 +9,10 @@
 //! `default_included` is never touched. It is the marketplace's own answer
 //! about the estate, set in its YAML, and flipping it from a group screen
 //! would silently re-entitle every other group.
+//!
+//! Setting a group's marketplaces reconciles against the whole submitted set:
+//! listed ones are upserted to allow and the group's rules on unlisted ones are
+//! deleted, so no entitlement survives that the screen shows as absent.
 
 use std::sync::Arc;
 
@@ -43,10 +47,23 @@ pub async fn list_group_marketplace_ids(
     .await
 }
 
-// Why: the caller sends the whole set it wants, so this reconciles rather
-// than diffs — listed marketplaces are upserted to allow, and this group's
-// rules on unlisted ones are deleted. Keeping one would leave an entitlement
-// the screen shows as absent.
+// Why: core's rules FK onto its entity catalogue; `ensure_entity` inserts at
+// `default_included = false` and never overwrites the flag, so it anchors a
+// grant on an untouched marketplace without widening anything.
+async fn anchor_marketplace_entity(
+    repo: &AccessControlRepository,
+    marketplace_id: &MarketplaceId,
+) -> AdminResult<()> {
+    repo.ensure_entity(
+        EntityKind::Marketplace,
+        marketplace_id.as_str(),
+        JUSTIFICATION,
+    )
+    .await
+    .map_err(AdminError::internal)?;
+    Ok(())
+}
+
 pub async fn set_group_marketplaces(
     pool: &PgPool,
     group_id: &GroupId,
@@ -56,17 +73,7 @@ pub async fn set_group_marketplaces(
     let repo = AccessControlRepository::from_pool(Arc::new(pool.clone()));
 
     for marketplace_id in marketplace_ids {
-        // Why: rules FK onto the entity catalogue, so a marketplace nobody
-        // has touched yet has no row to hang a grant on. `ensure_entity`
-        // inserts one at `default_included = false` and never overwrites an
-        // existing flag, so it anchors the grant without widening anything.
-        repo.ensure_entity(
-            EntityKind::Marketplace,
-            marketplace_id.as_str(),
-            JUSTIFICATION,
-        )
-        .await
-        .map_err(AdminError::internal)?;
+        anchor_marketplace_entity(&repo, marketplace_id).await?;
         repo.upsert_rule(UpsertRuleParams {
             entity_type: EntityKind::Marketplace,
             entity_id: marketplace_id.as_str(),

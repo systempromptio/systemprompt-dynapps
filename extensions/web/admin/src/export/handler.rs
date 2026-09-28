@@ -20,6 +20,8 @@ use super::{registry, window};
 use crate::error::{AdminError, AdminResult};
 use crate::types::UserContext;
 
+const PREVIEW_COUNT_ONLY_LIMIT: i64 = 1;
+
 #[derive(Debug, Default, Deserialize)]
 struct ExportQuery {
     format: Option<Format>,
@@ -59,7 +61,7 @@ fn prepare<'a>(
     ctx.window = window::resolve(dataset.window(), &ctx.query::<window::WindowQuery>()?)?;
     ctx.limit = dataset.cap();
     let query: ExportQuery = ctx.query()?;
-    let columns = select_columns(dataset.columns(), query.columns.as_deref());
+    let columns = select_columns_in_dataset_order(dataset.columns(), query.columns.as_deref());
     Ok(Prepared {
         dataset,
         columns,
@@ -67,9 +69,7 @@ fn prepare<'a>(
     })
 }
 
-// Why: the selection is applied in the dataset's own column order, whatever
-// order the dialog sent, so two exports of the same table always line up.
-fn select_columns(all: &'static [Column], picked: Option<&str>) -> Vec<Column> {
+fn select_columns_in_dataset_order(all: &'static [Column], picked: Option<&str>) -> Vec<Column> {
     let picked: Vec<&str> = picked
         .unwrap_or_default()
         .split(',')
@@ -134,10 +134,7 @@ pub(crate) async fn export_preview(
     OriginalUri(uri): OriginalUri,
 ) -> AdminResult<Json<ExportPreview>> {
     let mut prepared = prepare(&id, &uri, &pool, &user)?;
-    // Why: one row is enough — every loader reports the filter's total beside
-    // whatever slice it returns, and a preview must not pay for the file. A
-    // loader that cannot count without loading ignores the limit instead.
-    prepared.ctx.limit = 1;
+    prepared.ctx.limit = PREVIEW_COUNT_ONLY_LIMIT;
     let table = prepared.dataset.load(&prepared.ctx).await?;
     let cap = prepared.dataset.cap();
     let rows = table.total.min(cap);
@@ -154,9 +151,6 @@ pub(crate) async fn export_preview(
     }))
 }
 
-// Why: named for the table and its window, so a folder of exports stays
-// legible — `requests-20260910-20260917.csv` rather than a row of
-// `export.csv`s.
 fn filename(prepared: &Prepared<'_>, format: Format) -> String {
     let id = prepared.dataset.id();
     let ext = format.extension();

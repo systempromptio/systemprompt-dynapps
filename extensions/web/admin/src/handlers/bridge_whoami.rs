@@ -31,15 +31,12 @@ use crate::repositories;
 
 use super::users::extract_token_from_headers;
 
-// Why: a device-link token is minted `[bridge, mcp]` and a PAT-backed session
-// is `api`, so all three are accepted; a token for none of them is not a
-// bridge and is refused.
+const SIGN_IN_MECHANISM_ADFS: &str = "adfs";
 const BRIDGE_AUDIENCES: &[JwtAudience] = &[JwtAudience::Bridge, JwtAudience::Api, JwtAudience::Mcp];
 
-// Why: flat on purpose. Core types the fields it knows and forwards the rest
-// verbatim to the profile card, which humanises each key into a label — so a
-// key here *is* a label, and a nested object would render as one unreadable
-// row. `*_unix` is the suffix core reads as "format this as a date".
+// Why: core forwards unknown keys verbatim to the bridge profile card, which
+// humanises each key into a label and formats `*_unix` as a date — so this
+// stays flat and every key is a label.
 #[derive(Debug, Serialize)]
 pub(crate) struct BridgeWhoamiResponse {
     connections: crate::services::connector_accounts::ConnectionSnapshot,
@@ -48,16 +45,12 @@ pub(crate) struct BridgeWhoamiResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     display_name: Option<String>,
     roles: Vec<String>,
-    // Why: `None` for a local account; the bridge renders "Signed in with".
     #[serde(skip_serializing_if = "Option::is_none")]
     provider: Option<String>,
 
     username: String,
     status: String,
     email_verified: bool,
-    // Why: the groups carry entitlement and the projects carry work
-    // attribution; both are shown so a person can see why a plugin is or is
-    // not on their machine.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     groups: Vec<String>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
@@ -73,13 +66,9 @@ pub(crate) struct BridgeWhoamiResponse {
     directory_linked_unix: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     directory_last_seen_unix: Option<i64>,
-    // Why: mapped AD groups as of this user's most recent ADFS sign-in.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     directory_groups: Vec<String>,
 
-    // Why: what the presented token itself says, as opposed to what the
-    // database says. Shown so a stale or wrongly-scoped token is diagnosable
-    // from the desktop instead of from the server logs.
     token_issuer: String,
     token_audiences: Vec<String>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
@@ -110,8 +99,6 @@ pub(crate) async fn bridge_whoami_handler(
         .await?
         .ok_or_else(|| AdminError::NotFound(format!("User not found: {}", user_id.as_str())))?;
 
-    // Why: a group read that fails must not fail the sign-in card. The rest of
-    // the identity is still true and still worth showing.
     let adfs_groups = repositories::groups::members::list_source_ad_groups(&pool, &user_id)
         .await
         .inspect_err(|e| tracing::warn!(error = %e, "bridge whoami: AD group lookup failed"))
@@ -122,10 +109,10 @@ pub(crate) async fn bridge_whoami_handler(
     let connections = crate::services::connector_accounts::get_connections(&pool, &user_id).await?;
     Ok(Json(BridgeWhoamiResponse {
         connections,
-        // Why: named for the mechanism that authenticated them, not for the
-        // directory product — a rename of the IdP must not rewrite the string
-        // this feeds into the audit trail.
-        provider: envelope.idp_issuer.as_ref().map(|_| "adfs".to_owned()),
+        provider: envelope
+            .idp_issuer
+            .as_ref()
+            .map(|_| SIGN_IN_MECHANISM_ADFS.to_owned()),
         user_id: envelope.user_id,
         email: envelope.email,
         display_name: envelope.display_name,

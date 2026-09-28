@@ -18,19 +18,13 @@ pub struct RouteRow {
     pub updated_at: DateTime<Utc>,
 }
 
-// JSON: JSONB columns — the passthrough blocks (pricing/when/requires) and
-// the header map, stored as the operator wrote them and read back as YAML
-// values for the file renderer
+// JSON: variable-shape route blocks (pricing/when/requires) as stored
 fn yaml_of(value: Option<serde_json::Value>) -> Option<serde_yaml::Value> {
-    // Why: discard-ok: a JSON value is always a YAML value; None is the only
-    // honest answer if it somehow is not
     value.and_then(|v| serde_yaml::to_value(v).ok())
 }
 
-// JSON: JSONB column — a YAML block written as JSON for storage
+// JSON: variable-shape route block written for storage
 fn json_of(value: Option<&serde_yaml::Value>) -> Option<serde_json::Value> {
-    // Why: discard-ok: the block already parsed as YAML; a value JSON cannot
-    // carry (a non-string key) is dropped rather than failing the write
     value.and_then(|v| serde_json::to_value(v).ok())
 }
 
@@ -46,8 +40,7 @@ pub async fn list_gateway_routes(pool: &PgPool) -> Result<Vec<RouteRow>, sqlx::E
     .await?;
     rows.into_iter()
         .map(|r| {
-            // JSON: JSONB column — a flat string map; a row that does not
-            // decode is a decode error, not a route with no headers
+            // JSON: variable-shape header map column
             let extra_headers =
                 serde_json::from_value(r.extra_headers).map_err(|e| sqlx::Error::ColumnDecode {
                     index: "extra_headers".to_owned(),
@@ -83,7 +76,6 @@ pub async fn count_gateway_routes(pool: &PgPool) -> Result<i64, sqlx::Error> {
         .await
 }
 
-// Why: one route to write, keyed on its effective id.
 #[derive(Debug, Clone)]
 pub struct RouteWrite<'a> {
     pub route: &'a GatewayRouteView,
@@ -97,7 +89,7 @@ pub async fn upsert_gateway_route(
     write: &RouteWrite<'_>,
 ) -> Result<(), sqlx::Error> {
     let r = write.route;
-    // JSON: JSONB column — the header map as a JSON object
+    // JSON: outgoing fixed-shape
     // Why: discard-ok: a string-keyed map of strings always serialises
     let headers = serde_json::to_value(&r.extra_headers).unwrap_or_default();
     sqlx::query!(

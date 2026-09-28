@@ -8,13 +8,11 @@
 //! all agree on it — and anything that starts from a services id must go
 //! through here rather than compare the two spellings.
 
-// Why: `plugin:skill` as the hosts and the analytics tables spell it.
 #[must_use]
 pub fn skill_ref(plugin: &str, skill: &str) -> String {
     format!("{plugin}:{}", host_skill_name(skill))
 }
 
-// Why: the skill's name on a host — the services id with `_` as `-`.
 #[must_use]
 pub fn host_skill_name(skill: &str) -> String {
     skill.replace('_', "-")

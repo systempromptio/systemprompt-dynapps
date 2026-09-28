@@ -7,6 +7,11 @@
 //! live in `breakdown`, the per-request safety findings and tool calls the
 //! detail page shows live in `detail`, and the stored tool schemas it compares
 //! live in `schemas`.
+//!
+//! A filter's `scope` is only the visibility floor; `group` and `project`
+//! narrow by exclusive attribution, the person's primary container. The
+//! default filter names `SubjectScope::All` explicitly, because the scope type
+//! deliberately has no default of its own.
 
 use chrono::{DateTime, Utc};
 use serde::Serialize;
@@ -35,8 +40,6 @@ pub use schemas::{RequestSchemaRow, find_request_schemas};
 
 #[derive(Debug, Clone)]
 pub struct RequestFilter {
-    // Why: Resolved by the caller from their identity and the page query,
-    // exactly as the analytics dashboard scopes.
     pub scope: SubjectScope,
     pub user_id: Option<UserId>,
     pub agent_id: Option<AgentId>,
@@ -44,18 +47,11 @@ pub struct RequestFilter {
     pub provider: Option<String>,
     pub status: Option<String>,
     pub search: Option<String>,
-    // Why: one tool name the request itself asked for.
     pub tool: Option<String>,
-    // Why: exclusive attribution — the person's primary group from
-    // `user_scope_defaults`, narrower than the `scope` id list above, which is
-    // only the visibility floor.
     pub group: Option<String>,
-    // Why: exclusive attribution, the person's primary project.
     pub project: Option<String>,
 }
 
-// Why: Written out because `SubjectScope` deliberately has no default — the
-// every-user view must be named, never reached by naming nothing.
 impl Default for RequestFilter {
     fn default() -> Self {
         Self {

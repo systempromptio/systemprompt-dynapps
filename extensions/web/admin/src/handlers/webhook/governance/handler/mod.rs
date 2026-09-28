@@ -58,8 +58,6 @@ fn response_event(payload: &HookEventPayload) -> &'static str {
     }
 }
 
-// Why: the access scope must resolve to a live account before the chain
-// runs; an unavailable answer is a denial, never a default.
 async fn resolve_access_scope(
     pool: &PgPool,
     user_id: &UserId,
@@ -87,8 +85,6 @@ struct Governed<'a> {
     tool_use_id: Option<&'a str>,
 }
 
-// Why: one POST is one call, and this hook is the only point that sees it —
-// an out-of-process agent has no second enforcement point to inherit from.
 async fn evaluate_and_record(
     pool: &PgPool,
     engine: &GovernanceEngine,
@@ -125,13 +121,9 @@ async fn evaluate_and_record(
         chain: evaluation.chain,
         approver: None,
         act_chain: Vec::new(),
-        // Why: the tool-call webhook carries no conversational context; only
-        // the gateway path knows one.
         context_id: Some(systemprompt::identifiers::ContextId::derived_from_session(
             governed.session_id,
         )),
-        // Why: the trace pages resolve everything by session, and the hook
-        // has no request-plane trace of its own — the session is the trace.
         trace_id: Some(governed.session_id.to_string()),
     };
     record_decision(pool, &audit).await.map_err(|error| {
@@ -141,10 +133,8 @@ async fn evaluate_and_record(
     Ok(evaluation.decision)
 }
 
-// Why: The gateway's own governance engine and session service, injected by
-// core onto every extension router. Taking the engine from the request rather
-// than building one means this hook charges the same rate-limiter budget as
-// the gateway instead of a second chain's.
+// Why: core injects the gateway's own engine onto every extension router;
+// building a second one would give this hook a separate rate-limiter budget.
 #[derive(Debug, Clone)]
 pub(crate) struct GovernDeps {
     engine: Arc<GovernanceEngine>,
@@ -185,8 +175,6 @@ pub(crate) async fn govern_tool_use(
         );
     };
     let input = governed_input(&payload);
-    // Why: echo the caller's event back so a `UserPromptSubmit` gate is not handed
-    // a `PreToolUse` envelope it would have to ignore.
     let response_event = response_event(&payload);
     let session_id = SessionId::new(payload.session_id());
     let plugin_id = query.plugin_id.as_ref();

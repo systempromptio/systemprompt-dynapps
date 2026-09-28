@@ -40,7 +40,6 @@ mod view;
 
 
 pub(crate) const BASE_URL: &str = "/admin/governance";
-// Why: Which log the URL asked for.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum GovernanceTab {
     Decisions,
@@ -87,15 +86,12 @@ pub(crate) struct GovernanceQuery {
     pub category: Option<String>,
     pub blocked: Option<String>,
     pub q: Option<String>,
-    // Why: a string, not a bool, so it round-trips through `params()` with
-    // every other filter and an absent value is simply absent from the URL.
     pub attention: Option<String>,
     pub sort: Option<String>,
     pub dir: Option<String>,
     pub page: Option<i64>,
 }
 
-// Why: One tab's link, as `components/tabs` reads it.
 #[derive(Debug, Serialize)]
 pub(super) struct TabLink {
     label: &'static str,
@@ -104,9 +100,6 @@ pub(super) struct TabLink {
     count: i64,
 }
 
-// Why: a read surface, so the console predicate applies — a project manager
-// reads the governance posture they are accountable for without holding the
-// admin role. Their scope narrows the rows; it does not gate the page.
 fn require_console(user_ctx: &UserContext) -> Result<(), AdminError> {
     if user_ctx.is_console {
         return Ok(());
@@ -137,9 +130,6 @@ fn decision_filter(query: &GovernanceQuery) -> DecisionFilter {
     }
 }
 
-// Why: any non-empty value turns it on. The link the chip renders sets "1"; a
-// hand-edited "true" or "yes" ought to behave the same rather than silently
-// showing the unfiltered log.
 fn attention_on(query: &GovernanceQuery) -> bool {
     non_empty(query.attention.as_deref()).is_some_and(|v| v != "0")
 }
@@ -179,8 +169,6 @@ async fn resolve_scope(
     Ok((request, scope))
 }
 
-// Why: the exports read the same window, scope and filters the page shows,
-// through the page's own query type — one per plane.
 pub(crate) async fn export_decisions(
     pool: &PgPool,
     user_ctx: &UserContext,
@@ -283,8 +271,3 @@ pub(crate) async fn governance_page(
         &mkt_ctx,
     ))
 }
-
-// Why: one file carrying both planes rather than two downloads. The window is
-// the whole point of the export — a reviewer comparing what the chain refused
-// with what the scanners saw needs the two sets to be provably the same window,
-// and two files lose that.

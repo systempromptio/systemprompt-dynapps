@@ -97,8 +97,6 @@ fn monogram(glyph: &str, name: &str) -> String {
     }
 }
 
-// Why: the card says what the person gets, in their words; the service YAML
-// carries no user-facing description to fall back on.
 fn blurb(glyph: &str, c: &Connection) -> String {
     match glyph {
         "atlassian" => "Jira issues and Confluence pages, read and written as you.".into(),
@@ -175,8 +173,6 @@ pub(super) fn note(c: &Connection) -> Option<String> {
     }
 }
 
-// Why: one primary per card, and it is the thing to do next — connect when
-// nothing is saved, test when something is, reconnect only after a failure.
 fn actions(c: &Connection) -> Vec<ActionView> {
     let connected = c.status == "connected";
     let order = ["test", "connect", "reconnect", "disconnect", "manual_token"];

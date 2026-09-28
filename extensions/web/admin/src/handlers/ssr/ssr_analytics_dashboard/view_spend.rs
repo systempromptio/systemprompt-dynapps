@@ -8,11 +8,6 @@ use crate::repositories::analytics::site::latency::LatencySplit;
 
 use super::context::FastSlowView;
 
-// Why: this platform has no fast/slow request pools, so the split is stated
-// as what it actually is — a latency bucket at the caller's SLO threshold —
-// with the percentiles and breach share beside it and untimed requests shown
-// rather than folded away. The displays derive from the threshold the query
-// actually bound, so the caption can never contradict the split.
 pub(super) fn fast_slow(split: &LatencySplit) -> FastSlowView {
     let timed = split.fast + split.slow;
     let threshold = format_duration_ms(i64::from(split.threshold_ms));

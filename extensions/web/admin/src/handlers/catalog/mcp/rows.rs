@@ -29,15 +29,9 @@ use crate::numeric::{percentage, round_to_i64};
 
 pub(super) const BASE_URL: &str = "/admin/mcp";
 
-// Why: the runtime facts for one server, keyed by the name the runtime used.
-// Two sources, deliberately separate: who is attached comes from the session
-// tables, what happened from the executions table.
 pub(crate) struct Runtime {
     pub connections: HashMap<String, McpConnectionCount>,
     pub activity: HashMap<String, McpServerActivity>,
-    // Why: calls recorded under a source name rather than a server name —
-    // builtin tools the client or gateway executed. Set aside so the fleet
-    // rows, tiles and error rate describe servers only.
     pub builtin_calls: i64,
 }
 
@@ -62,8 +56,6 @@ impl Runtime {
         }
     }
 
-    // Why: every name any runtime table knows, so a server serving under a
-    // name the catalog never declared is still listed rather than dropped.
     pub(crate) fn names(&self) -> Vec<String> {
         let mut out: Vec<String> = self
             .connections
@@ -81,13 +73,6 @@ impl Runtime {
     }
 }
 
-// Why: the declaration decides the first two answers and the traffic decides
-// the rest. A server nothing declares, or one declared and switched off, is not
-// a liveness question at all — asking the heartbeat about it would report
-// "Idle" for a server that is off on purpose.
-//
-// The liveness third is `overview::liveness`'s rule verbatim, interval and all,
-// so the dashboard strip and this table cannot disagree about the same server.
 pub fn status_of(
     configured: bool,
     enabled: bool,
@@ -144,8 +129,6 @@ pub(super) fn when_display(t: Option<DateTime<Utc>>) -> String {
     )
 }
 
-// Why: "12/13" reads as the share of calls the client's hook also
-// confirmed; attested is a subset of calls, so no calls means no figure.
 pub(super) fn attested_display(attested: i64, calls: i64) -> String {
     if calls == 0 {
         return "\u{2014}".to_owned();
@@ -193,8 +176,6 @@ pub(crate) fn build_row(input: &RowInputs<'_>) -> McpServerRow {
     let configured = input.server.is_some();
     let enabled = input.server.is_some_and(|s| s.enabled);
 
-    // Why: the last time anything got through — a connection touch or an
-    // observed call, whichever is later. Either one proves the server answered.
     let last_seen = connection.and_then(|c| c.last_seen);
     let last_call_at = activity.and_then(|a| a.last_call_at);
     let last_spoke = last_seen.max(last_call_at);
@@ -266,7 +247,6 @@ pub(crate) fn build_row(input: &RowInputs<'_>) -> McpServerRow {
     }
 }
 
-// Why: Order the assembled rows by the requested column.
 pub(super) fn sort_rows(rows: &mut [McpServerRow], key: &str, dir: &str) {
     match key {
         "status" => apply_direction(rows, dir, |a, b| {

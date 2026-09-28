@@ -1,4 +1,7 @@
 //! The user index listing and its filter options.
+//!
+//! The role filter always offers the built-in assignable roles, even before
+//! anyone holds them.
 
 use sqlx::PgPool;
 use systemprompt::identifiers::{Email, UserId};
@@ -6,9 +9,6 @@ use systemprompt::identifiers::{Email, UserId};
 use crate::repositories::scope::SubjectScope;
 use crate::types::UserSummary;
 
-// Why: The scope is a parameter rather than a filter the caller applies
-// afterwards, so a non-console caller can never be handed the every-user
-// listing.
 pub async fn list_users(
     pool: &PgPool,
     scope: &SubjectScope,
@@ -80,6 +80,14 @@ pub async fn list_users(
     .await
 }
 
+const SYSTEM_ROLES: [&str; 4] = ["anonymous", "a2a", "mcp", "service"];
+
+const ASSIGNABLE_ROLES: [&str; 3] = [
+    crate::types::ROLE_ADMIN,
+    crate::types::ROLE_USER,
+    crate::types::ROLE_PROJECT_MANAGER,
+];
+
 pub async fn list_distinct_roles(pool: &PgPool) -> Result<Vec<String>, sqlx::Error> {
     let rows = sqlx::query!(
         r#"SELECT DISTINCT unnest(roles) AS "role!" FROM users
@@ -91,17 +99,9 @@ pub async fn list_distinct_roles(pool: &PgPool) -> Result<Vec<String>, sqlx::Err
     let mut roles: Vec<String> = rows
         .into_iter()
         .map(|r| r.role)
-        .filter(|r| !["anonymous", "a2a", "mcp", "service"].contains(&r.as_str()))
+        .filter(|r| !SYSTEM_ROLES.contains(&r.as_str()))
         .collect();
-    // Why: the user-detail role picker is built from this list, so a role
-    // nobody holds yet would be unassignable — which is exactly the state a
-    // fresh instance is in for `project_manager`. The three roles this
-    // installation defines are always offered.
-    for known in [
-        crate::types::ROLE_ADMIN,
-        crate::types::ROLE_USER,
-        crate::types::ROLE_PROJECT_MANAGER,
-    ] {
+    for known in ASSIGNABLE_ROLES {
         if !roles.iter().any(|r| r == known) {
             roles.push(known.to_owned());
         }

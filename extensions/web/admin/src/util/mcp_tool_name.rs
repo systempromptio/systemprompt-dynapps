@@ -17,7 +17,6 @@ pub struct McpToolName {
     pub tool: String,
 }
 
-// Why: resolves against the servers this instance declares.
 #[must_use]
 pub fn parse_mcp_tool_name(tool_name: &str) -> Option<McpToolName> {
     let known: Vec<String> = ServicesBootstrap::get().map_or_else(
@@ -27,8 +26,6 @@ pub fn parse_mcp_tool_name(tool_name: &str) -> Option<McpToolName> {
     parse_mcp_tool_name_with(tool_name, &known)
 }
 
-// Why: the pure form — `known` is the set of server ids a plugin namespace
-// may end in — so a test needs no services tree.
 #[must_use]
 pub fn parse_mcp_tool_name_with(tool_name: &str, known: &[String]) -> Option<McpToolName> {
     let rest = tool_name.strip_prefix("mcp__")?;

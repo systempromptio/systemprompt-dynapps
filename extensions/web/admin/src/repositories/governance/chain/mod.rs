@@ -42,7 +42,6 @@ pub struct AiRequestSummary {
     pub id: String,
     pub request_id: AiRequestId,
     pub trace_id: Option<TraceId>,
-    // Why: NULL for a gateway-rejected request, which never reached a provider.
     pub provider: Option<String>,
     pub model: Option<String>,
     pub status: String,

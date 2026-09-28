@@ -28,8 +28,6 @@ pub struct HistoryItem<Id = ContextId> {
     pub title: Option<String>,
     pub preview: Option<String>,
     pub model: Option<String>,
-    // Why: `ai_requests.client_kind` / `client_attestation` of the latest
-    // request.
     pub client_kind: String,
     pub client_attestation: String,
     pub started_at: Option<DateTime<Utc>>,

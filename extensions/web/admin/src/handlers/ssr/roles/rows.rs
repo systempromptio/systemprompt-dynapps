@@ -15,6 +15,8 @@ use crate::types::Role;
 use crate::types::access_control::AccessDecision;
 
 use super::data::RolesQuery;
+
+const PARSER_DEFAULT_ASCENDING: &str = "";
 use super::view::{RoleCardView, RoleEntitlementView, RoleHolderView, RolePillView, SelectOption};
 
 fn label_for(role: &str) -> String {
@@ -194,9 +196,11 @@ pub(super) fn sort_headers(query: &RolesQuery) -> Vec<SortHeaderView> {
     .into_iter()
     .map(|(key, label, class, hint)| {
         let active = current == key;
-        // Why: an empty `dir` is this page's "default direction", not a third
-        // value — it is what the query parser reads as ascending.
-        let next_dir = if active && !descending { "desc" } else { "" };
+        let next_dir = if active && !descending {
+            "desc"
+        } else {
+            PARSER_DEFAULT_ASCENDING
+        };
         SortHeaderView::new(
             (label, class, hint),
             query.url_with(&[("sort", key), ("dir", next_dir)]),

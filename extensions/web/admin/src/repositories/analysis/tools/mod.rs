@@ -19,17 +19,17 @@ use systemprompt::identifiers::UserId;
 
 pub use filter::{ArtifactKind, ToolBreakdownBy, ToolSort, ToolState};
 
+const HOURLY_BUCKET_MAX_WINDOW_HOURS: i64 = 48;
+
 /// Narrowing applied to the rows, totals, series and breakdown alike.
 #[derive(Debug, Clone, Default)]
 pub struct ToolActivityFilter {
     pub since: Option<DateTime<Utc>>,
     pub until: Option<DateTime<Utc>>,
-    // Why: the caller's resolved `SubjectScope::as_sql()`; `None` = every user.
     pub subject_ids: Option<Vec<String>>,
     pub user_id: Option<UserId>,
     pub tool: Option<String>,
     pub server: Option<String>,
-    // Why: `Some(true)` = builtin harness tools only, `Some(false)` = MCP only.
     pub builtin: Option<bool>,
     pub state: Option<ToolState>,
     pub decision: Option<String>,
@@ -40,7 +40,6 @@ pub struct ToolActivityFilter {
     pub artifact_kind: Option<ArtifactKind>,
     pub artifacts_only: bool,
     pub free_text: Option<String>,
-    // Why: row keys ticked on the page; an export of a selection.
     pub ids: Option<Vec<String>>,
 }
 
@@ -52,10 +51,13 @@ impl ToolActivityFilter {
             .map(|s| format!("%{}%", s.replace('\\', "\\\\").replace('%', "\\%")))
     }
 
-    // Why: a window of two days or less buckets by hour; longer by day.
     fn bucket(&self) -> &'static str {
         match (self.since, self.until) {
-            (Some(since), Some(until)) if (until - since).num_hours() <= 48 => "hour",
+            (Some(since), Some(until))
+                if (until - since).num_hours() <= HOURLY_BUCKET_MAX_WINDOW_HOURS =>
+            {
+                "hour"
+            },
             _ => "day",
         }
     }
@@ -79,8 +81,6 @@ pub struct ToolActivityRow {
     pub intent_id: Option<String>,
     pub request_id: Option<String>,
     pub mcp_execution_id: Option<String>,
-    // Why: the view's id columns arrive as opaque link keys — the pages only
-    // ever put them in a URL and never construct a typed id from them.
     #[serde(rename = "artifact_id")]
     pub artifact_key: Option<String>,
     pub user_id: Option<UserId>,

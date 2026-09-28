@@ -1,5 +1,9 @@
 //! `content_ingestion` job: parses the `services/content/` markdown tree into
 //! the database.
+//!
+//! The blog config and `delete_orphans` come from this job's own context, never
+//! process-wide state: `BlogConfigValidated::cached()` pins the first caller's
+//! profile in a `OnceLock`, and an environment variable would reach every job.
 
 use std::sync::Arc;
 
@@ -109,6 +113,15 @@ fn load_blog_config(
     BlogConfigValidated::load_from_file(path).map(|c| Some(Arc::new(c)))
 }
 
+fn job_scoped_blog_config_path(ctx: &JobContext) -> Result<std::path::PathBuf, JobError> {
+    Ok(ctx
+        .app_paths::<Arc<AppPaths>>()
+        .ok_or(JobError::MissingContext("AppPaths"))?
+        .system()
+        .services()
+        .join("config/blog.yaml"))
+}
+
 async fn execute_inner(ctx: &JobContext) -> Result<JobResult, JobError> {
     let db = ctx.db_pool::<DbPool>().ok_or(MarketplaceError::Internal(
         "Database not available in job context".to_owned(),
@@ -116,16 +129,7 @@ async fn execute_inner(ctx: &JobContext) -> Result<JobResult, JobError> {
 
     let pool = db.write_pool();
 
-    // Why: resolved from this job's own paths rather than the process-wide
-    // `cached()`, whose OnceLock fixes the answer for the whole process the
-    // first time any caller asks -- so a second profile, or a second test,
-    // silently got the first one's config.
-    let config_path = ctx
-        .app_paths::<Arc<AppPaths>>()
-        .ok_or(JobError::MissingContext("AppPaths"))?
-        .system()
-        .services()
-        .join("config/blog.yaml");
+    let config_path = job_scoped_blog_config_path(ctx)?;
 
     let Some(config) = load_blog_config(&config_path)? else {
         tracing::debug!(
@@ -134,9 +138,6 @@ async fn execute_inner(ctx: &JobContext) -> Result<JobResult, JobError> {
         return Ok(JobResult::success().with_message("skipped: no blog config"));
     };
 
-    // Why: a job parameter rather than an environment variable, because the
-    // environment is process-global -- one job asking for a prune turned it on
-    // for every other job in the process, and tests could not vary it at all.
     let delete_orphans = ctx
         .get_parameter("delete_orphans")
         .is_some_and(|v| v.eq_ignore_ascii_case("true") || v == "1");

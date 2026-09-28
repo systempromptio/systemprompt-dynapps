@@ -11,9 +11,6 @@ use serde::Serialize;
 use systemprompt::models::profile::{OtlpExportConfig, OtlpSignal};
 use systemprompt::scheduler::OtlpExportState;
 
-// Why: a lag under the job's own cadence is the exporter idling behind the
-// settle window; past a minute it is falling behind; past an hour the
-// collector has been unreachable for a while.
 const LAG_WARN_SECONDS: i64 = 60;
 const LAG_ERR_SECONDS: i64 = 3600;
 
@@ -23,8 +20,6 @@ pub struct ExporterView {
     pub protocol: &'static str,
     pub batch_seconds: u64,
     pub signals: Vec<&'static str>,
-    // Why: header names only. The values are the collector's credentials
-    // and never reach a page.
     pub header_names: Vec<String>,
     pub traces_url: String,
     pub logs_url: String,
@@ -112,8 +107,6 @@ pub fn lag_view(seconds: i64) -> LagView {
     }
 }
 
-// Why: one word for the row, in the order an operator cares: off, never
-// ran, failing, healthy.
 #[must_use]
 pub const fn signal_status(
     enabled: bool,

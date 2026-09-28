@@ -6,7 +6,8 @@
 //! that was on screen. The call log is every `mcp_tool_executions` row in the
 //! window with its `source`, because a data dump must let the reader tell a
 //! server-observed run from the client's attestation of it; `?server=` narrows
-//! either to one server, as the detail page's export does.
+//! either to one server, as the detail page's export does. The per-tool split
+//! always loads the whole aggregate up to its cap, ignoring the preview limit.
 
 use async_trait::async_trait;
 use serde::Deserialize;
@@ -256,14 +257,13 @@ impl DataSet for McpTools {
     async fn load(&self, ctx: &ExportContext<'_>) -> AdminResult<Table> {
         let query: ServerQuery = ctx.query()?;
         let range = time_range(ctx)?;
+        let row_cap = self.cap();
         let rows = list_mcp_tool_stats(
             ctx.pool,
             query.server.as_deref().filter(|s| !s.is_empty()),
             range.from,
             range.to,
-            // Why: one row per server and tool, so the preview's one-row
-            // `ctx.limit` would count one tool; the aggregate is read whole.
-            self.cap(),
+            row_cap,
         )
         .await?;
         Ok(Table::complete(rows.iter().map(tool_row).collect()))

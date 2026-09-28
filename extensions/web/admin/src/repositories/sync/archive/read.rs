@@ -32,8 +32,8 @@ fn refuse(path: &str, why: &str) -> AdminError {
 }
 
 fn check_path(name: &str, enclosed: Option<&std::path::Path>) -> AdminResult<()> {
-    // Why: `enclosed_name` relativises a leading `/` rather than rejecting
-    // it, so the raw name is checked as well.
+    // Why: zip's `enclosed_name` relativises a leading `/` rather than
+    // rejecting it, so the raw name is checked as well.
     if enclosed.is_none() || name.starts_with('/') {
         return Err(refuse(name, "absolute or parent path"));
     }
@@ -77,8 +77,8 @@ pub fn unpack_zip(bytes: &[u8]) -> AdminResult<Unpacked> {
             return Err(refuse(&name, "larger than an entry may be"));
         }
         let mut buf = Vec::new();
-        // Why: `take` one byte past the cap so an entry lying about its size
-        // is caught by what it delivers, not what it declares.
+        // Why: a zip header can lie about an entry's size; `take` one byte past
+        // the cap so the entry is judged by what it delivers.
         (&mut file)
             .take(MAX_ENTRY_BYTES + 1)
             .read_to_end(&mut buf)
@@ -112,8 +112,6 @@ fn short_hash(bytes: &[u8]) -> String {
     full.chars().take(12).collect()
 }
 
-// Why: every plane file must be text — it is parsed as its declaration —
-// but any other entry is only described, so it may be anything.
 pub fn classify(
     unpacked: Unpacked,
     registry: &[Box<dyn SyncPlane>],

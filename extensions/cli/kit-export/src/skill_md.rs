@@ -56,8 +56,6 @@ pub(crate) fn render(skill_dir: &Path, kebab: &str) -> Result<String> {
     .with_context(|| config_path.display().to_string())?;
     let md_path = skill_dir.join("SKILL.md");
     let raw = std::fs::read_to_string(&md_path).with_context(|| md_path.display().to_string())?;
-    // Why: a frontmatter that does not parse as the fields carried over (hosts)
-    // simply carries none; the body is still exported verbatim.
     let (existing, body) = split_frontmatter(&raw).map_or_else(
         || (ExistingFront::default(), raw.as_str()),
         |f| {

@@ -15,9 +15,6 @@ use systemprompt::scheduler::{OtlpExportState, OtlpExportStateRepository};
 
 use crate::error::AdminError;
 
-// Why: the `observability.otlp` block of the active profile; `None` is a
-// profile that declares no collector, which is a state the page names, not
-// an error.
 pub fn find_declared_export() -> Result<Option<OtlpExportConfig>, AdminError> {
     Ok(ProfileBootstrap::get()?.observability.otlp().cloned())
 }

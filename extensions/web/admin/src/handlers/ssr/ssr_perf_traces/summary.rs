@@ -34,9 +34,6 @@ pub(super) fn serde_stats(query: &TraceListQuery, s: &TraceStats) -> TraceStatsV
     }
 }
 
-// Why: the cards count the traces the table lists. Saying how many were left
-// out — and that they were lifecycle-only — keeps the number honest without
-// putting thirty empty rows back on the page.
 fn traces_note(query: &TraceListQuery, s: &TraceStats) -> String {
     if query.include_lifecycle.as_deref() == Some("true") {
         return "in window · lifecycle-only shown".to_owned();
@@ -68,16 +65,11 @@ fn toggle_flag_url(query: &TraceListQuery, flag: &str) -> String {
     }
 }
 
-// Why: The five columns the list query can actually order by. Each header
-// renders as a link that flips direction when it is already active, so the
-// `cursor:pointer` the table CSS has always shown finally does something.
 pub(super) fn build_sort_headers(
     query: &TraceListQuery,
     active_col: &str,
     active_dir: &str,
 ) -> TracesSortHeaders {
-    // Why: Every sort link carries the current filters and time range, minus the
-    // sort state it is replacing and the page it would invalidate.
     let qs = preserved_query_string(query, &["sort", "dir", "page"]);
     let prefix = if qs.is_empty() {
         format!("{BASE_URL}?")
@@ -86,8 +78,6 @@ pub(super) fn build_sort_headers(
     };
     let header = |key: &str, label: &'static str, class: &'static str, hint: &'static str| {
         let active = key == active_col;
-        // Why: An active column toggles; an inactive one opens largest-first (and
-        // newest-first for time), which is what an operator scans for.
         let descending = active_dir != "asc";
         let next_dir = SortHeaderView::next_dir(active, descending);
         SortHeaderView::new(
@@ -116,9 +106,6 @@ pub(super) fn build_sort_headers(
             "sp-col-tokens",
             "Total tokens, split input / output",
         ),
-        // Why: most traces route to a model with no price in the catalog, so the
-        // column is empty for them while the KPI still totals what was measured.
-        // Naming it plainly "Cost" reads as "this trace was free".
         cost: header(
             "cost",
             "Cost (measured)",

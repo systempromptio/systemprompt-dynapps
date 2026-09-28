@@ -32,8 +32,6 @@ pub fn accessor_path(server: &str) -> String {
     format!("/api/public/identity/{server}/token")
 }
 
-// Why: `None` unless the server is enabled, external and names this accessor,
-// so the accessor cannot sign for an id that never opted in or is switched off.
 #[must_use]
 pub fn audience_for(services: &ServicesConfig, server: &str) -> Option<String> {
     let deployment = services.mcp_servers.get(server)?;

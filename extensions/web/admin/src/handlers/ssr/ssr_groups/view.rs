@@ -103,10 +103,7 @@ pub(super) fn paginate(
         source,
     } = facets;
     let total_rows = rows.len() as i64;
-    // Why: rustc's signed `i64::div_ceil` is unstable on the pinned toolchain,
-    // and clippy rejects the `(n + size - 1) / size` spelling in its favour.
-    let total_pages =
-        (total_rows / DEFAULT_PAGE_SIZE + i64::from(total_rows % DEFAULT_PAGE_SIZE != 0)).max(1);
+    let total_pages = page_count(total_rows);
     let current_page = page.clamp(1, total_pages);
     let start = (current_page - 1) * DEFAULT_PAGE_SIZE;
     let window: Vec<GroupRowView> = rows
@@ -131,6 +128,13 @@ pub(super) fn paginate(
     );
     (window, pagination)
 }
+
+// Why: rustc's signed `i64::div_ceil` is unstable on the pinned toolchain, and
+// clippy rejects the `(n + size - 1) / size` spelling in its favour.
+fn page_count(total_rows: i64) -> i64 {
+    (total_rows / DEFAULT_PAGE_SIZE + i64::from(total_rows % DEFAULT_PAGE_SIZE != 0)).max(1)
+}
+
 
 pub(super) struct GroupsPageInput<'a> {
     pub listing: Listing,

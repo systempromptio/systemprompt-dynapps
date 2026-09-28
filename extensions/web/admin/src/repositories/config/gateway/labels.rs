@@ -34,7 +34,6 @@ pub struct RouteLabel {
 }
 
 impl RouteLabel {
-    // Why: One line under the label: what the route matches and where it goes.
     #[must_use]
     pub fn subtitle(&self) -> String {
         let mut s = format!("{} → {}", self.model_pattern, self.provider_label);
@@ -71,8 +70,6 @@ impl RouteLabels {
         self.by_id.get(id)
     }
 
-    // Why: The label for a route id, or the id itself for one this catalog does
-    // not know — never an empty string.
     #[must_use]
     pub fn label_of(&self, id: &str) -> String {
         self.find(id)
@@ -160,8 +157,6 @@ fn provider_label(entry: &ProviderEntry) -> ProviderLabel {
     }
 }
 
-// Why: The provider's display name, falling back to a known spelling of the id
-// and then to the id title-cased.
 #[must_use]
 pub fn derive_provider_label(id: &str, entry: Option<&ProviderEntry>) -> String {
     if let Some(name) = entry
@@ -183,8 +178,6 @@ pub fn derive_provider_label(id: &str, entry: Option<&ProviderEntry>) -> String 
     }
 }
 
-// Why: A label for a route with no declared name: the model family the pattern
-// names, then the provider it reaches.
 #[must_use]
 pub fn derive_route_label(model_pattern: &str, provider_label: &str) -> String {
     let pattern = model_pattern.trim();

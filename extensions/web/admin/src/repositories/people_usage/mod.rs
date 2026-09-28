@@ -8,7 +8,10 @@
 //! landed; membership is only what puts a person with no traffic on the list.
 //!
 //! Group membership reads the `user_groups` view, so the derived `unassigned`
-//! bucket rolls up exactly like a real group.
+//! bucket rolls up exactly like a real group. A container's people are its
+//! current members plus anyone whose requests were stamped to it, so a person
+//! who has since moved still accounts for their spend and rows sum to the
+//! total.
 //!
 //! `tokens` is the provider's own count when it reported one; the four
 //! component columns are the fallback for rows written before it existed.
@@ -26,10 +29,8 @@ use systemprompt::identifiers::UserId;
 
 use crate::repositories::scope::ScopeQuery;
 
-// Why: The window every page and endpoint defaults to.
 pub const DEFAULT_WINDOW_DAYS: i32 = 30;
 
-// Why: How many rows a leaderboard carries. Ten is what the screens draw.
 pub const LEADERBOARD_LIMIT: i64 = 10;
 
 /// One container's thirty-day totals, keyed back to the container.
@@ -101,9 +102,6 @@ pub async fn list_member_usage(
     pool: &PgPool,
     q: &ScopeQuery<'_>,
 ) -> Result<HashMap<String, MemberUsageRow>, sqlx::Error> {
-    // Why: the people are the current members plus anyone whose requests were
-    // stamped to this container, so a person who has since moved still
-    // accounts for the spend they left behind and the rows sum to the total.
     let rows = crate::scoped_query!(
         r#", spent AS (
                SELECT r.id, r.user_id, r.input_tokens, r.output_tokens,

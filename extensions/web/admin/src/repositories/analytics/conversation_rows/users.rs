@@ -19,9 +19,6 @@ pub struct UserConversationSummary<Id = ContextId> {
     pub total_cost_microdollars: i64,
     pub last_at: Option<DateTime<Utc>>,
     pub latest: Option<ConversationRow<Id>>,
-    // Why: busiest first, so a row can show the primary model and fold the
-    // rest; `clients` is the distinct client_kinds over the same rows, each
-    // with the strongest attestation tier seen for it.
     pub models: Vec<ModelRequestShare>,
     pub clients: Vec<ClientShare>,
 }

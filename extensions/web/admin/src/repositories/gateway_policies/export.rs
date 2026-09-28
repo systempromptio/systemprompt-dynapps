@@ -44,9 +44,6 @@ pub fn render_policies_export(rows: &[PolicyRow], exported_at: DateTime<Utc>) ->
             })
             .collect(),
     };
-    // Why: discard-ok: the config is built from rows that already parsed as
-    // the same types, so serialising cannot fail; an empty body is the
-    // visible sign if it somehow does
     let body = serde_yaml::to_string(&cfg).unwrap_or_default();
     format!("{}{body}", header(exported_at))
 }

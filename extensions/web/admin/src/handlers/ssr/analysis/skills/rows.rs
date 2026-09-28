@@ -16,8 +16,6 @@ use crate::handlers::ssr::types::sparkline_toned;
 use crate::repositories::analysis::inventory_index::{InventoryIndex, MarketplaceAudience};
 use crate::repositories::analysis::skills::SkillFactRow;
 
-// Why: the row's `spark_days` are only the days with an invocation; the
-// sparkline wants every one of the last fourteen, zeros included.
 pub(super) fn spark_values(row: &SkillFactRow, end: NaiveDate) -> Vec<i64> {
     let by_day: HashMap<NaiveDate, i64> = row
         .spark_days
@@ -36,8 +34,6 @@ pub(super) fn spark_values(row: &SkillFactRow, end: NaiveDate) -> Vec<i64> {
         .collect()
 }
 
-// Why: the Tools / Artifacts pages default to the last 24 hours; a link from
-// a skill row spans the skill's own use in this window.
 fn activity_href(base: &str, skill: &str, first_used: chrono::DateTime<chrono::Utc>) -> String {
     let from = first_used - Duration::hours(1);
     format!(

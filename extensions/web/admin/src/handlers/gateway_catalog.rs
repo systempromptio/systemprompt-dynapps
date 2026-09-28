@@ -52,9 +52,6 @@ pub(crate) async fn for_user_handler(
     if !user_ctx.is_console && user_ctx.user_id != user_id {
         return Err(AdminError::Forbidden("Forbidden".to_owned()));
     }
-    // Why: the per-user catalog is what a client UI renders, so it lists only
-    // routes whose provider is advertised. A `surface: backend` provider is
-    // reachable through an upstream rewrite and never by name.
     let routes = repositories::config::gateway::client_facing_routes_from_services()
         .map_err(AdminError::internal)?;
 
@@ -86,10 +83,6 @@ async fn collect_allowed_routes(
             })
             .map(|e| e.default_included);
         let entity = EntityRef::GatewayRoute(route_id);
-        // Why: `permits` rather than a match on `Allow`, so a warn-mode verdict
-        // shows the route instead of silently hiding it. The rule resolver does
-        // not warn today, but a catalog that disagreed with what the gateway
-        // will actually serve is the worst failure this listing can have.
         if gateway_acl::resolve(ResolveInput {
             entity: &entity,
             rules: &rules,
@@ -129,15 +122,11 @@ pub(crate) struct DetectResponse {
     pub since_minutes: i64,
 }
 
-// Why: detection is admin-triggered rather than scheduled, so decisions for
-// denied combinations only appear once someone runs it.
 pub(crate) async fn detect_handler(
     State(pool): State<Arc<PgPool>>,
     Extension(user_ctx): Extension<UserContext>,
     axum::extract::Query(query): axum::extract::Query<DetectQuery>,
 ) -> AdminResult<Response> {
-    // Why: `admin`, not `is_console`. Detection writes governance decision
-    // rows; it is a mutation wearing a GET.
     if !user_ctx.is_admin {
         return Err(AdminError::Forbidden("Admin only".to_owned()));
     }
@@ -220,10 +209,6 @@ pub(crate) async fn detect_after_the_fact(
                     session_id: &session_id,
                     model: &row.model,
                     agent_scope: "inference",
-                    // Why: `governance_decisions.decision` is constrained to
-                    // `allow`/`deny`. What makes this row a redundancy check
-                    // rather than live enforcement is `policy = gateway_acl`
-                    // and `actor_id = gateway_acl_detector`, both set below.
                     decision: "deny",
                     reason: &reason_str,
                     evaluated_rules: &evaluated,

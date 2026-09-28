@@ -8,7 +8,7 @@
 //!
 //! The scope is a [`SubjectScope`]: every user, or the id list the caller may
 //! see. A user in no project folds into `unassigned` rather than dropping out
-//! of the totals.
+//! of the totals. Users with no activity in the month are omitted.
 
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
@@ -19,18 +19,16 @@ use crate::repositories::scope::SubjectScope;
 /// The header figures: who was active and what they used.
 #[derive(Debug, Clone, Copy)]
 pub struct CustomerMonthSummary {
-    // Why: Users that actually made a request in the month.
     pub active_users: i64,
     pub requests: i64,
     pub input_tokens: i64,
     pub output_tokens: i64,
     pub cache_read_tokens: i64,
-    // Why: reasoning tokens are billed inside `output_tokens`, so this is a
-    // share of that column, never an addition to it.
+    // Why: providers bill reasoning inside `output_tokens`; this is a share of
+    // that column, never an addition to it.
     pub reasoning_tokens: i64,
-    // Why: `tokens_used` as written by `CanonicalUsage::billable_total()` --
-    // the one definition of a request's billable total. Summing the component
-    // columns here would double-count the cached slice.
+    // Why: core's `CanonicalUsage::billable_total()` writes `tokens_used`;
+    // summing the component columns would double-count the cached slice.
     pub total_tokens: i64,
     pub error_count: i64,
 }
@@ -91,8 +89,6 @@ pub struct CustomerUserUsage {
     pub distinct_models: i64,
 }
 
-// Why: Users with no activity are omitted: their row would be a line of
-// zeroes, and on a busy month that is most of the table.
 pub async fn list_customer_month_users(
     pool: &PgPool,
     scope: &SubjectScope,

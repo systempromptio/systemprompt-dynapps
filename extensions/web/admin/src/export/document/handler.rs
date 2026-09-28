@@ -46,8 +46,6 @@ fn not_found() -> AdminError {
     AdminError::NotFound("No conversation matches that id.".to_owned())
 }
 
-// Why: console readers see the stored text as it is; everyone else is an
-// owner reading their own conversation and gets the owner-facing treatment.
 fn options_for(user: &UserContext) -> TranscriptOptions {
     if user.has_scoped_console() {
         TranscriptOptions::default()
@@ -111,8 +109,6 @@ pub(crate) async fn export_conversation(
     })
 }
 
-// Why: a set is read through a list page's scoped query; the console pages
-// need a console seat, and "My conversations" is every signed-in user's own.
 fn may_export_set(user: &UserContext, ctx: &ExportContext<'_>) -> AdminResult<()> {
     let own_history = matches!(source_of(ctx), Ok(TranscriptSource::History));
     if user.has_scoped_console() || own_history {
@@ -180,8 +176,6 @@ pub(crate) struct TranscriptsPreview {
     clamped: bool,
 }
 
-// Why: the dialog's count for a transcript set — how many conversations the
-// file will hold, whether the 500 ceiling bit, and the window it resolved.
 pub(crate) async fn export_conversations_preview(
     Extension(user): Extension<UserContext>,
     State(pool): State<Arc<PgPool>>,

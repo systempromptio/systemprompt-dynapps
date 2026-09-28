@@ -25,9 +25,8 @@ pub struct McpConnectionCount {
     pub last_seen: Option<DateTime<Utc>>,
 }
 
-// Why: Unexpired attachments per server, from both session tables at once.
-// The external table has no activity column of its own, but every touch
-// resets its expiry to exactly one hour out, so expiry minus that hour is the
+// Why: core's external MCP session table has no activity column, but every
+// touch resets its expiry to one hour out, so expiry minus an hour is the
 // last touch.
 pub async fn list_mcp_connections(pool: &PgPool) -> Result<Vec<McpConnectionCount>, sqlx::Error> {
     let rows = sqlx::query!(
@@ -71,8 +70,6 @@ pub struct McpConnectionRow {
     pub session_id: SessionId,
     pub user_id: Option<UserId>,
     pub user_label: Option<String>,
-    // Why: `external` for a relayed upstream session, `in_process` for a
-    // server's own transport session — the two tables the row came from.
     pub kind: String,
     pub client_name: Option<String>,
     pub last_seen: Option<DateTime<Utc>>,
@@ -80,8 +77,6 @@ pub struct McpConnectionRow {
     pub connected: bool,
 }
 
-// Why: The attachments one server has held, live ones first and then the most
-// recently active, so an operator sees who is on it now and who just left.
 pub async fn list_mcp_connections_for_server(
     pool: &PgPool,
     server_name: &str,

@@ -19,22 +19,19 @@ use crate::services::bridge_profile::{self, BridgeProfilePageData};
 use crate::templates::AdminTemplateEngine;
 use crate::types::{MarketplaceContext, UserContext};
 
-// Why: the bridge payload is a wire shape shared with the bridge GUI, so the
-// trail the console draws around it is added here rather than grown onto it.
-// Fields may be added to `BridgeProfilePageData`; nothing is removed from it.
+// Why: the bridge GUI shares `BridgeProfilePageData` as a wire shape, so the
+// console's extras wrap it here; fields may be added to it, never removed.
 #[derive(Debug, Serialize)]
 struct ProfilePageView {
     #[serde(flatten)]
     data: BridgeProfilePageData,
     breadcrumbs: Vec<BreadcrumbView>,
-    // Why: handlebars-rust has no `.length`, so every count a section header
-    // shows has to be counted here rather than in the template.
+    // Why: handlebars-rust has no `.length`, so section counts are fields.
     models_count: usize,
     latest_conversation: Option<ProfileConversationView>,
     recent_conversations: Vec<ProfileConversationView>,
     recent_count: usize,
     has_recent: bool,
-    // Why: side calls stay out of the table; one muted line says they exist.
     side_call_note: Option<String>,
     settings: SettingsView,
     username: String,
@@ -90,9 +87,6 @@ pub(crate) async fn profile_page(
     Extension(engine): Extension<AdminTemplateEngine>,
     State(pool): State<Arc<PgPool>>,
 ) -> AdminHtmlResult<Response> {
-    // Why: the settings row propagates rather than degrading: the form is
-    // bound to these values and the save PUTs the whole object back, so
-    // rendering defaults would invite the user to overwrite the real row.
     let settings = repositories::users::user_settings::find_user_settings(&pool, &user_ctx.user_id)
         .await?
         .map_or_else(
@@ -130,10 +124,6 @@ pub(crate) async fn profile_page(
     ))
 }
 
-// Why: scoped to the caller and nobody else — the code is minted for
-// `user_ctx.user_id` from the validated session, so there is no target-user
-// parameter to tamper with. Redeeming it yields a durable PAT signing in as
-// that user, so it is issued only on an explicit request.
 pub(crate) async fn issue_bridge_code(
     Extension(user_ctx): Extension<UserContext>,
     State(pool): State<Arc<PgPool>>,
@@ -141,9 +131,6 @@ pub(crate) async fn issue_bridge_code(
     let (_, gateway_url) = bridge_profile::read_config_strings();
     let block = bridge_profile::issue_bridge_connect(&pool, &user_ctx, gateway_url.as_deref())
         .await
-        // Why: Unavailable, not Internal — the usual cause is no configured
-        // gateway URL, a deployment state rather than a server fault, and the
-        // caller can sensibly retry once one is set.
         .ok_or_else(|| {
             AdminError::Unavailable("Could not mint a connect code just now.".to_owned())
         })?;

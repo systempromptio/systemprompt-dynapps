@@ -10,10 +10,6 @@ use crate::handlers::ssr::format::short_num;
 
 use super::svg_line::CHART_COLOR_TOKENS;
 
-// Why: the ring is drawn as one annular path per slice in a 100×100 space,
-// so it scales to whatever the panel gives it and every slice can carry its
-// own tooltip and hover state — a conic-gradient disc could do neither. The
-// legend stays the accessible representation.
 #[derive(Debug, Serialize)]
 pub(crate) struct PieView {
     // Why: serialized as chart_title — the layout partial's `title=` hash
@@ -48,8 +44,6 @@ pub(crate) struct PieSliceView {
     pub filter_url: Option<String>,
 }
 
-// Why: one slice's inputs before percentage math — a label, its magnitude,
-// the legend detail line, and an optional drill-down link.
 pub(crate) struct PieSliceInput {
     pub label: String,
     pub value: i64,
@@ -64,10 +58,6 @@ const INNER_R: f64 = 31.0;
 // slice stops a hair short of 360° and reads as a ring with a seam.
 const FULL_TURN: f64 = 0.9999;
 
-// Why: slices arrive sorted descending; everything past the sixth folds into
-// "Other" so the ring stays readable and the seven colour tokens always
-// suffice. The last slice's end is pinned to the full turn so rounding can
-// never leave a sliver.
 pub(crate) fn pie_view(
     title: &'static str,
     subtitle: String,
@@ -90,7 +80,7 @@ pub(crate) fn pie_view(
         };
     }
 
-    let kept = fold_tail(slices);
+    let kept = fold_overflow_into_other(slices);
     let count = kept.len();
     let mut arcs = Vec::with_capacity(count);
     let mut legend = Vec::with_capacity(count);
@@ -142,7 +132,7 @@ pub(crate) fn pie_view(
     }
 }
 
-fn fold_tail(slices: Vec<PieSliceInput>) -> Vec<PieSliceInput> {
+fn fold_overflow_into_other(slices: Vec<PieSliceInput>) -> Vec<PieSliceInput> {
     let mut kept: Vec<PieSliceInput> = Vec::new();
     for (i, slice) in slices.into_iter().enumerate() {
         if i < PIE_COLORS - 1 {
@@ -161,8 +151,6 @@ fn fold_tail(slices: Vec<PieSliceInput>) -> Vec<PieSliceInput> {
     kept
 }
 
-// Why: one annular sector from `from` to `to` (fractions of a turn, clockwise
-// from twelve o'clock): outer arc forward, inner arc back, closed.
 fn arc_path(from: f64, to: f64) -> String {
     let to = to.min(from + FULL_TURN);
     let angle = |f: f64| f.mul_add(std::f64::consts::TAU, -std::f64::consts::FRAC_PI_2);

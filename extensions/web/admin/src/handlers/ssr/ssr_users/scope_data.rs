@@ -22,9 +22,6 @@ fn membership_source(sources: &[String]) -> &'static str {
     }
 }
 
-// Why: Every group as a checkbox, with the source of the membership the user
-// already holds. A directory-sourced membership is reported so the template
-// can render it read-only.
 pub(super) async fn group_choices(pool: &PgPool, user_id: &UserId) -> Vec<MembershipChoiceView> {
     let held = repositories::groups::members::list_group_ids_for_user(pool, user_id)
         .await
@@ -85,9 +82,6 @@ pub(super) async fn project_choices(pool: &PgPool, user_id: &UserId) -> Vec<Memb
         .collect()
 }
 
-// Why: The six flat roles as checkboxes. `platform_admin` is marked rather
-// than filtered here so the template can decide whether to render it at all —
-// only a platform admin may see or grant it.
 pub(super) fn role_choices(held: &[String]) -> Vec<RoleChoiceView> {
     crate::types::Role::ALL
         .iter()

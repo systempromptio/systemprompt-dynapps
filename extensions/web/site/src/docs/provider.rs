@@ -4,7 +4,7 @@
 use crate::format::format_date;
 use async_trait::async_trait;
 use serde::Serialize;
-// JSON: content items and page data cross the provider trait as Values.
+// JSON: required by trait contract
 use serde_json::Value;
 use systemprompt::extension::prelude::*;
 
@@ -41,8 +41,7 @@ struct DocsPageContext {
     learning: DocsLearningTemplateData,
 }
 
-// JSON: the helpers below read the content item the provider trait hands over
-// as a Value; typed views are carved out field by field.
+// JSON: required by trait contract
 #[doc(hidden)]
 pub fn str_field(item: &Value, field: &str) -> Option<String> {
     item.get(field).and_then(|v| v.as_str()).map(str::to_owned)

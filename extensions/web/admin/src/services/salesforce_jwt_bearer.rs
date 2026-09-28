@@ -35,9 +35,8 @@ struct Assertion {
     exp: u64,
 }
 
-// Why: `username` is the Salesforce Username to act as (e.g.
-// `ed.aa…@agentforce.com`), NOT the login email — the two differ and Salesforce
-// matches `sub` on the Username.
+// Why: Salesforce matches the assertion `sub` on the org Username, which is not
+// the person's login email.
 pub(crate) async fn get_token(
     cfg: &SalesforceConfig,
     username: &str,
@@ -60,8 +59,6 @@ pub(crate) async fn get_token(
 
     let resp = post_token_request(&cfg.token_url(), assertion_form_body(&signed)).await?;
 
-    // Why: the grant returns the instance the token is scoped to; fall back to
-    // the org base if Salesforce omits it.
     let instance_url = resp
         .instance_url
         .filter(|u| !u.is_empty())

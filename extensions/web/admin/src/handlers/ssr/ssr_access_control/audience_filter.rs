@@ -108,8 +108,6 @@ pub(super) fn narrow(
         })
         .collect();
 
-    // Why: with a decision or band applied, a column no visible row carries
-    // it in is noise — every cell in it would be the other kind.
     if decision.is_some() || band.is_some() {
         columns.retain(|col| {
             rows.iter().any(|r| {

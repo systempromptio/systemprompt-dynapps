@@ -171,10 +171,7 @@ impl DataSet for Groups {
         Window::Days
     }
     async fn load(&self, ctx: &ExportContext<'_>) -> AdminResult<Table> {
-        let window = ctx.window()?;
-        // Why: the rollup counts back from now in whole days, so the dialog's
-        // day preset is the number of days it spans.
-        let days = i32::try_from((window.to - window.from).num_days().max(1)).unwrap_or(30);
+        let days = ctx.window()?.whole_days_back_from_now();
         let rows = list_groups_with_usage(ctx.pool, days).await?;
         Ok(Table::complete(rows.iter().map(group_row).collect()))
     }

@@ -106,15 +106,12 @@ pub(crate) async fn sessions_list_page(
     ))
 }
 
-// Why: the resolved window and page travel together.
 #[derive(Clone, Copy)]
 struct SessionWindow {
     range: TimeRange,
     page: i64,
 }
 
-// Why: the resolved user set and the request that produced it travel together —
-// the queries bind the first, the scope form re-renders the second.
 struct SessionScope<'a> {
     request: &'a ScopeRequest,
     subjects: SubjectScope,
@@ -129,8 +126,6 @@ struct LoadedSessions {
     descending: bool,
 }
 
-// Why: the windowed totals apply the range themselves, to this window and
-// the one before it, so the filter they take carries no bounds of its own.
 async fn load_sessions(
     pool: &PgPool,
     scope: &SessionScope<'_>,

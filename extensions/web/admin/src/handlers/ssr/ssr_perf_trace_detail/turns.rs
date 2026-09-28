@@ -17,8 +17,6 @@ use crate::handlers::ssr::format::{
 };
 use crate::repositories::traces::{PolicyStage, Span, SpanKind, SpanStatus};
 
-// Why: a pause longer than this between rows is shown as a gap, so the
-// bursts a person's session naturally falls into read as bursts.
 const GAP_THRESHOLD_MS: i64 = 30_000;
 
 #[derive(Debug, Serialize)]
@@ -81,7 +79,6 @@ pub(super) fn build_turns(spans: &[Span]) -> Vec<TraceTurnView> {
     let start = spans.iter().map(|s| s.started_at).min();
     let offset_of = |s: &Span| start.map_or(0, |a| (s.started_at - a).num_milliseconds().max(0));
 
-    // Why: the request that owns a trace id, so its decisions fold under it.
     let mut owners: BTreeMap<&str, &str> = BTreeMap::new();
     for s in spans {
         if let (SpanKind::Model, Some(t)) = (s.kind, s.trace_id.as_deref()) {
@@ -138,8 +135,6 @@ fn build_turn(
             .map(|id| format!("/admin/artifacts/{}", urlencoding::encode(id.as_str()))),
         SpanKind::Gateway => None,
     };
-    // Why: under a model the second line names the client; under a decision
-    // or hook event it names the policy or event type.
     let note = match s.kind {
         SpanKind::Model => s
             .client_kind
@@ -184,8 +179,6 @@ fn build_turn(
     }
 }
 
-// Why: a standalone decision row is its own check, so the expanded panel
-// shows its stages exactly as it would under a request.
 fn build_checks(s: &Span, folded: &[&Span], offset_of: &dyn Fn(&Span) -> i64) -> ChecksView {
     let sources: Vec<&Span> = if matches!(s.kind, SpanKind::Governance) {
         vec![s]

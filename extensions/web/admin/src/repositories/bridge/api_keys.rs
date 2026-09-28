@@ -25,9 +25,6 @@ pub struct ApiKeyRow {
     pub revoked_at: Option<DateTime<Utc>>,
 }
 
-// Why: `Serialize` here rather than a mirror type in the handler. The two
-// were the same six fields and the same ten, with a `From` copying each one
-// across; the response body is this record.
 #[derive(Debug, Serialize)]
 pub struct IssuedApiKey {
     pub id: String,
@@ -218,11 +215,9 @@ pub struct ApiKeyUser {
     pub email: String,
 }
 
-// Why: the same acceptance rule as core's `ApiKeyService::verify` — an
-// unrevoked, unexpired key whose stored hash matches — plus an active owner,
-// so a PAT reads identically on the gateway and here. The hash is compared in
-// the database, never in Rust. `last_used_at` is not touched: the admin
-// middleware holds the read pool, and the gateway's own use keeps it current.
+// Why: mirrors core's `ApiKeyService::verify` (unrevoked, unexpired, hash
+// matched in SQL) plus an active owner, so a PAT reads the same as on the
+// gateway; `last_used_at` is left to the gateway, as this holds the read pool.
 pub async fn find_api_key_user(pool: &PgPool, presented: &str) -> Result<Option<ApiKeyUser>> {
     let Some(key_prefix) = presented
         .strip_prefix(API_KEY_PREFIX)

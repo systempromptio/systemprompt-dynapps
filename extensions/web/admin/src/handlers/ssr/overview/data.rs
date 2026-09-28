@@ -22,16 +22,10 @@ use crate::repositories::scope::{ScopeKind, SubjectScope};
 
 use super::view::OverviewRange;
 
-// Why: how many containers each leaderboard carries. Five is what fits beside
-// the other board without either one scrolling.
 pub(super) const TOP_SCOPES: i64 = 5;
 
-// Why: how many models the usage board lists before pointing at the Models
-// tab that owns the full table.
 pub(super) const TOP_MODELS: usize = 5;
 
-// Why: how many open anomalies the page lists before pointing at the page that
-// owns them.
 const TOP_ANOMALIES: i64 = 5;
 
 type Loaded<T> = Result<T, sqlx::Error>;
@@ -50,8 +44,6 @@ pub(super) struct OverviewData {
 
 pub(super) async fn load_overview(pool: &Arc<PgPool>, range: OverviewRange) -> OverviewData {
     let window = range.time_range();
-    // Why: the overview is instance-wide, so the model board reads the same
-    // unscoped window every tile above it reads.
     let scope = SiteScope::new(SubjectScope::All);
     let (
         kpis,

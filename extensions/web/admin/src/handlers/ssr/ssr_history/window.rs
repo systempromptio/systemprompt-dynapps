@@ -17,6 +17,8 @@ use crate::handlers::ssr::types::TabLinkView;
 
 use super::HistoryQuery;
 
+const EXPORT_WIDEST_DAYS: &str = "365";
+
 const PRESETS: [(u32, &str, &str); 4] = [
     (7, "7", "7 days"),
     (30, "30", "30 days"),
@@ -38,9 +40,6 @@ pub(super) enum HistoryWindow {
 }
 
 impl HistoryWindow {
-    // Why: the page is a browse surface, so a half-given or unparseable range
-    // falls back to the preset (or all time) rather than failing the page;
-    // the export resolves its own window strictly.
     pub(super) fn of(query: &HistoryQuery) -> Self {
         let parsed = |v: Option<&str>| {
             v.map(str::trim)
@@ -104,11 +103,9 @@ impl HistoryWindow {
             .collect()
     }
 
-    // Why: the export dialog has no "all time" — its retained contract tops
-    // out at a year — so an unbounded page opens the dialog on its widest.
     pub(super) fn export_pairs(&self) -> Vec<(&'static str, String)> {
         match self {
-            Self::All => vec![("days", "365".to_owned())],
+            Self::All => vec![("days", EXPORT_WIDEST_DAYS.to_owned())],
             Self::Days(_) | Self::Custom(_) => self.pairs(),
         }
     }

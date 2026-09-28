@@ -14,9 +14,6 @@ use crate::authz::rule_type::{ExtensionSlug, extension_rule_type};
 
 const GROUP_SLUG: ExtensionSlug = ExtensionSlug::new("group");
 
-// Why: below core's `ROLE` (200) so a group rule out-ranks the role band that
-// grants a marketplace to every user, and above `project` (140) so a project
-// rule stays the narrower of the two.
 const GROUP_PRECEDENCE: u16 = 150;
 
 #[must_use]
@@ -51,8 +48,6 @@ impl SubjectAttributeProvider for GroupAttributeProvider {
         group_dimension()
     }
 
-    // Why: the primary group leads so the quota bucket and the cost
-    // attribution key are the same group — see `authz::primary`.
     async fn values_for(&self, user_id: &UserId) -> Result<Vec<String>, AuthzError> {
         let ids: Vec<String> =
             crate::repositories::groups::members::list_group_ids_for_user(&self.pool, user_id)

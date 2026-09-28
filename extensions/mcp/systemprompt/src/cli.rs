@@ -65,12 +65,8 @@ impl CliLocation {
     }
 }
 
-// Why: Strip CLI flags that models routinely hallucinate onto `systemprompt`
-// invocations: output-format toggles the gateway sets itself, and `--export`,
-// which writes a CSV on the server's disk where no MCP client can read it,
-// and takes a path argument the model would have to invent. Exposed behind
-// `#[doc(hidden)]` so the external test workspace can assert the filter set;
-// not part of the public API.
+// Why: `#[doc(hidden)]` so the external test workspace can assert the filter
+// set; `--export` writes a CSV on the server's disk no MCP client can read.
 #[doc(hidden)]
 pub fn filter_hallucinated_args(args: Vec<String>) -> Vec<String> {
     const HALLUCINATED_ARGS: &[&str] = &["--json", "--output-format", "--format"];
@@ -103,8 +99,6 @@ pub fn filter_hallucinated_args(args: Vec<String>) -> Vec<String> {
     out
 }
 
-// Why: a CLI call that never returns would hang the client's tool call; a
-// bounded failure names the remedy (narrow the query) instead.
 const CLI_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(120);
 
 pub(crate) async fn execute(

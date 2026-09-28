@@ -157,8 +157,6 @@ pub(super) fn annotate_options(
     }
 }
 
-// Why: The errors-only card is a toggle: clicking it narrows to the sessions it
-// counts, clicking it again clears the flag.
 pub(super) fn error_toggle_url(query: &SessionListQuery, active: bool) -> String {
     if active {
         url_with(query, &["error_only", "page"], "")
@@ -167,9 +165,6 @@ pub(super) fn error_toggle_url(query: &SessionListQuery, active: bool) -> String
     }
 }
 
-// Why: side calls are hidden by default because a probe-only conversation is
-// noise to the person asking "what did people talk about"; the toggle shows
-// them for the person asking "what did we pay for".
 pub(super) fn side_toggle_url(query: &SessionListQuery, active: bool) -> String {
     if active {
         url_with(query, &["side", "page"], "")

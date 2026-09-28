@@ -18,8 +18,6 @@ pub struct SalesforceIdentity {
     pub sf_username: String,
 }
 
-// Why: idempotent — re-linking overwrites the stored Username and bumps
-// `updated_at` rather than erroring, so correcting a typo is one call.
 pub async fn upsert_identity(
     pool: &PgPool,
     user_id: &UserId,
@@ -40,7 +38,6 @@ pub async fn upsert_identity(
     Ok(())
 }
 
-// Why: absent row is fine — the state is already what the caller asked for.
 pub async fn delete_identity(
     pool: &PgPool,
     user_id: &UserId,
@@ -66,9 +63,6 @@ pub async fn delete_all_identities(pool: &PgPool, user_id: &UserId) -> Result<()
     Ok(())
 }
 
-// Why: `None` means this user was never linked for that org. The accessor
-// treats that as a clean "not linked" denial rather than attempting a mint
-// that cannot succeed.
 pub async fn find_username(
     pool: &PgPool,
     user_id: &UserId,
@@ -99,8 +93,6 @@ pub async fn list_identities(
     .await
 }
 
-// Why: the authz dimension's only question. Separate from `list_identities`
-// so the gate never pulls usernames it has no use for.
 pub async fn list_linked_providers(
     pool: &PgPool,
     user_id: &UserId,

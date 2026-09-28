@@ -13,6 +13,10 @@
 //!
 //! Everything happens in one transaction that re-reads the tables first, so
 //! the picture it acts on is the one it commits against.
+//! A scoped apply narrows both sides to the scope before drift is computed,
+//! so it cannot see a row on any other entity as an orphan. The delete repeats
+//! the `rule_type <> 'user'` guard in SQL rather than trusting the drift
+//! filter.
 
 use sqlx::{PgPool, Postgres, Transaction};
 use systemprompt_security::authz::YAML_SOURCE;
@@ -23,7 +27,6 @@ use super::rules::{list_band_rules, list_entity_defaults};
 use super::validity::set_rule_validity;
 pub use crate::repositories::sync::plane::{ApplyOutcome, EntityScope, SyncMode};
 
-// Why: the `source` stamped on entity rows this module writes.
 pub const RULES_SOURCE: &str = "services/access-control/rules.yaml";
 
 
@@ -35,9 +38,6 @@ pub async fn apply_sync(
     apply_sync_scoped(pool, declared, mode, EntityScope::All).await
 }
 
-// Why: both sides of the diff are narrowed to the scope before drift is
-// computed, so an overwrite scoped to one marketplace cannot see — let alone
-// delete — a row on any other entity as an orphan.
 pub async fn apply_sync_scoped(
     pool: &PgPool,
     declared: &DeclaredSet,
@@ -86,8 +86,6 @@ pub async fn apply_sync_scoped(
     Ok(outcome)
 }
 
-// Why: a scoped apply reads the file's declaration for the admitted entities
-// alone; `awaiting` and `owners` are decoration the write never reads.
 fn scoped_declared(declared: &DeclaredSet, scope: EntityScope<'_>) -> DeclaredSet {
     DeclaredSet {
         entities: declared
@@ -158,9 +156,8 @@ async fn insert_rule(
     set_rule_validity(&mut **tx, &written, rule.valid_until).await
 }
 
-// Why: `updated_at` is set explicitly — core's parent-chain cache keys on
-// COUNT + MAX(updated_at), and an update that left the stamp alone would keep
-// serving the old decision until the next insert or delete.
+// Why: core's parent-chain cache keys on COUNT + MAX(updated_at); an UPDATE
+// that left `updated_at` alone would keep serving the old decision.
 async fn update_changed(
     tx: &mut Transaction<'_, Postgres>,
     drift: &DriftReport,
@@ -183,9 +180,6 @@ async fn update_changed(
     Ok(drift.changed.len())
 }
 
-// Why: the `rule_type <> 'user'` guard is redundant with the drift engine's
-// filter and stays anyway. A per-person override is the one thing this module
-// must never delete, and one predicate in SQL is cheaper than trusting two.
 async fn delete_retired_orphans(
     tx: &mut Transaction<'_, Postgres>,
     drift: &DriftReport,
@@ -208,11 +202,6 @@ async fn delete_retired_orphans(
     Ok(usize::try_from(result.rows_affected()).unwrap_or(usize::MAX))
 }
 
-// Why: an entity default this file wrote for an entity it does not name
-// would otherwise outlive every rule on it and keep the entity catalogued.
-// Only rows stamped with this file go; a console- or bundle-catalogued
-// entity is somebody else's. The rule count is checked in SQL so a console
-// row that survived the delete above keeps its entity.
 async fn retire_entities(
     tx: &mut Transaction<'_, Postgres>,
     declared: &DeclaredSet,

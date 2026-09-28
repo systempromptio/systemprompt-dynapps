@@ -72,9 +72,6 @@ pub(super) fn page_url(query: &ListQuery) -> String {
     )
 }
 
-// Why: one column's static half — the key the URL carries, the words on the
-// header, the class that sizes it, and the sentence its title explains it
-// with. The dynamic half (url, active, indicator) is computed per request.
 const NUM: &str = "sp-table__cell--num";
 const MIX: &str = "sp-p-projects__col-mix";
 

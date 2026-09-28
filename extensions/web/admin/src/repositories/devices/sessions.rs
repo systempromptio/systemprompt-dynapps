@@ -123,10 +123,6 @@ pub async fn list_bridge_users_paged(
     Ok((rows, total))
 }
 
-// Why: one row per machine, not per session. The machine's identity is the
-// most recent session's (version, OS, heartbeat), because that is the state
-// the bridge is in now; the totals are summed over every session, because a
-// restart does not un-forward the requests that went before it.
 pub async fn list_bridge_hosts_for_users(
     pool: &PgPool,
     user_ids: &[String],
@@ -171,10 +167,6 @@ pub struct VersionCount {
     pub devices: i64,
 }
 
-// Why: the histogram counts machines, not sessions, for the same reason the
-// table does — a laptop restarted three times is one machine to upgrade. It
-// is capped because it is a shape, not an inventory: a fleet mid-rollout has
-// two or three versions that matter and a long tail nobody has touched.
 pub async fn list_version_counts(pool: &PgPool) -> Result<Vec<VersionCount>, sqlx::Error> {
     sqlx::query_as!(
         VersionCount,

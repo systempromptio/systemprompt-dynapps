@@ -1,5 +1,11 @@
 //! Route CRUD against the services YAML's `gateway.routes` sequence, and the
 //! whole-sequence replace the `gateway_routes` table uses to regenerate it.
+//!
+//! Ids are compared by their effective value, so a route without an `id:` key
+//! still owns its synthesized id. An edit adds no field the operator did not
+//! write: an implicit id stays implicit, and pricing/when/requires blocks the
+//! form never round-trips are kept from disk. A cleared name posts as `""`
+//! and is stored as absent.
 
 use std::collections::BTreeMap;
 use std::path::Path;
@@ -26,8 +32,6 @@ pub fn validate_route(route: &GatewayRouteView) -> Result<(), MarketplaceError> 
     Ok(())
 }
 
-// Why: the form posts every field, so a cleared name arrives as `""`; the
-// file and the mirror should carry an absent name, not an empty one.
 pub fn normalise_metadata(route: &mut GatewayRouteView) {
     let clean = |v: &mut Option<String>| {
         *v = v
@@ -54,10 +58,9 @@ pub fn create_route(
     let new_index = {
         let routes = routes_seq_mut(&mut doc)?;
         for existing in routes.iter() {
-            // Why: the effective id, not the literal `id:` key — a route that
-            // omits it still owns its synthesized id, and a create that reused
-            // it would mint two routes the ACL cannot tell apart.
-            if route_from_yaml(existing).is_some_and(|r| r.id == to_insert.id) {
+            let effective_id_taken =
+                route_from_yaml(existing).is_some_and(|r| r.id == to_insert.id);
+            if effective_id_taken {
                 return Err(MarketplaceError::BadRequest(format!(
                     "route id `{}` already exists",
                     to_insert.id
@@ -89,8 +92,6 @@ pub fn update_route(
             .as_mapping()
             .is_some_and(|m| m.contains_key(Value::from("id")));
         if let Some(existing) = routes[index].as_mapping() {
-            // Why: an update body that omits pricing/when/requires must keep
-            // the on-disk blocks — the admin UI never round-trips them.
             merged.pricing = merged
                 .pricing
                 .or_else(|| existing.get(Value::from("pricing")).cloned());
@@ -114,9 +115,6 @@ pub fn update_route(
                 .or_else(|| text("fallback_upstream_model"));
         }
         routes[index] = route_to_yaml(&merged);
-        // Why: an edit adds no field the operator did not write. A route that
-        // carried no `id:` keeps carrying none even when the edit changes the
-        // id it synthesizes to, which is what changing `provider` does.
         if !had_explicit_id && let Some(map) = routes[index].as_mapping_mut() {
             map.shift_remove(Value::from("id"));
         }
@@ -170,11 +168,6 @@ pub fn reorder_routes(gateway_path: &Path, order: &[usize]) -> Result<(), Market
     Ok(())
 }
 
-// Why: the database → file direction. Every other function here edits one
-// route of the file in place; this one makes the file's `routes:` sequence
-// equal the given list, which is what the `gateway_routes` table does after
-// each console write so the next restart dispatches what the table says.
-// The settings above the sequence and the header comment are untouched.
 pub fn replace_routes(
     gateway_path: &Path,
     routes: &[GatewayRouteView],

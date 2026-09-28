@@ -11,8 +11,6 @@ use crate::repositories::access_control::rules::LedgerRuleRow;
 use crate::repositories::sync::access_control_rows::band_label;
 use crate::types::access_control::AccessDecision;
 
-// Why: the resolver's ladder, narrowest first — the order a reader walks to
-// find which rule decides.
 const BAND_ORDER: [&str; 7] = [
     "user",
     "project",

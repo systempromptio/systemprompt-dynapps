@@ -25,8 +25,6 @@ fn empty_to_none(v: Option<&String>) -> Option<String> {
         .map(str::to_owned)
 }
 
-// Why: an active column toggles direction; an inactive one opens largest-first
-// (newest-first for time), which is what an operator scans a log for.
 pub(super) fn sort_headers(query: &RequestsQuery) -> RequestsSortHeaders {
     let active_col = query.sort.as_deref().unwrap_or("created_at");
     let active_dir = if query.dir.as_deref() == Some("asc") {
@@ -187,9 +185,6 @@ pub(super) fn stats_to_json(s: &RequestStats) -> RequestStatsView {
     }
 }
 
-// Why: share_pct is against the busiest row rather than the window total, so
-// the bars use the full width even when one dimension has a long tail. The
-// printed percentage is still share-of-total.
 pub(super) fn breakdown_view(
     tab: RequestsTab,
     rows: &[BreakdownRow],
@@ -250,8 +245,6 @@ fn pct_of(part: i64, whole: i64) -> f64 {
 
 use systemprompt_web_shared::format::compact_num as compact_int;
 
-// Why: a four-digit request count read as a bare number is easy to misread by
-// an order of magnitude in a dense grid of tiles.
 pub(super) fn group_digits(v: i64) -> String {
     let digits = v.abs().to_string();
     let mut out = String::with_capacity(digits.len() + digits.len() / 3);

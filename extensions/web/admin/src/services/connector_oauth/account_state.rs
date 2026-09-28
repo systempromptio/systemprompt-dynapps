@@ -1,5 +1,7 @@
 //! Account-row state transitions for a connector: how a failure, a rejected
 //! grant or a successful probe is written back to `mcp_connector_accounts`.
+//! Only a rejected grant is deleted; after an outage the account is held for
+//! `OUTAGE_HOLD_SECONDS` so accessor calls do not refresh once per MCP request.
 
 use super::{Grant, Provider, seal};
 use crate::error::{AdminError, AdminResult};
@@ -8,8 +10,6 @@ use crate::repositories::users::connector_credentials::{self as repo, EncryptedG
 use chrono::Utc;
 use systemprompt::identifiers::UserId;
 
-// Why: an outage or permission problem must not destroy a refresh grant; only
-// a rejected grant is deleted and the generation bumped.
 pub(super) async fn record_grant_failure(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     user: &UserId,
@@ -33,9 +33,8 @@ pub(super) async fn record_grant_failure(
             }
             .into(),
         );
-        // Why: A successful refresh followed by a failed probe still rotates the
-        // grant. Persist it before returning the probe error.
-        repo::store(tx, user, provider.slug(), &seal(grant)?).await?;
+        let possibly_rotated_grant = seal(grant)?;
+        repo::store(tx, user, provider.slug(), &possibly_rotated_grant).await?;
     }
     update_account(tx, user, account).await?;
     tracing::warn!(
@@ -50,8 +49,6 @@ pub(super) async fn record_grant_failure(
     Ok(())
 }
 
-// Why: A grant that cannot be opened under the current configuration flags the
-// account for reconnection before the error propagates.
 pub(super) async fn open_or_flag(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     user: &UserId,
@@ -72,11 +69,6 @@ pub(super) async fn open_or_flag(
     }
 }
 
-// Why: every accessor call retries the provider, and during a provider
-// outage that is one refresh per MCP request. The failure store bumps the
-// credential row, so its timestamp is the last attempt; a fresh failure holds
-// the account without a provider call. A probe (Test connection) always goes
-// through — it is the user asking.
 pub(super) const OUTAGE_HOLD_SECONDS: i64 = 30;
 
 pub(super) fn in_outage_hold(

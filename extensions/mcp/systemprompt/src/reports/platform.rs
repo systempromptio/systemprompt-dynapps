@@ -1,11 +1,15 @@
 //! Fixed read-only CLI adapters; no caller-controlled commands or connection
 //! flags.
+//!
+//! Every microdollar cell, keyed or a heading/content pair, gains a `_usd`
+//! sibling so one report never mixes units and the dollar figure is the one to
+//! quote. Only the whole-period totals in `METRIC_HEADINGS` become KPI tiles.
 
 use super::shape::table;
 use super::{ReportInput, ReportOutput, failure, invalid};
 use crate::cli::{self, CliLocation};
 use chrono::{Duration, Utc};
-// JSON: upstream report envelopes carry heterogeneous table cells.
+// JSON: variable-shape report table cells
 use serde_json::{Value, json};
 use systemprompt::models::artifacts::ChartArtifact;
 
@@ -158,10 +162,6 @@ pub(crate) async fn run(
     Ok(report)
 }
 
-// Why: the KPI row of the dashboard is fed from `metrics`, and the CLI's
-// spend summary arrives as heading/content pairs rather than a keyed object.
-// These four are the whole-period totals; everything else in that table is a
-// rate or a label and belongs in the tables, not the tiles.
 const METRIC_HEADINGS: [&str; 4] = [
     "total_cost_microdollars",
     "total_requests",
@@ -172,11 +172,6 @@ const METRIC_HEADINGS: [&str; 4] = [
 const MICRODOLLARS_SUFFIX: &str = "_microdollars";
 const MICRODOLLARS_PER_DOLLAR: f64 = 1_000_000.0;
 
-// Why: the CLI stores money in microdollars while `costs trends` already
-// reports `cost_usd`, and a reader handed both units in one report divided
-// once too often ("$12.11 millicents"). Every microdollar cell — keyed, or a
-// heading/content pair — gains a `_usd` sibling so the converted figure is
-// the one to quote and the raw store stays visible for reconciliation.
 pub fn with_dollar_siblings(rows: Vec<Value>) -> Vec<Value> {
     let mut out = Vec::with_capacity(rows.len());
     for row in rows {

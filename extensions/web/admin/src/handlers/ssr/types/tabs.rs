@@ -11,8 +11,6 @@ pub(crate) struct TabLinkView {
     pub label: &'static str,
     pub href: String,
     pub is_active: bool,
-    // Why: Shown as a count pill next to the label. A tab omits it when the
-    // number the reader wants is already in the body it leads to.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub count: Option<i64>,
 }

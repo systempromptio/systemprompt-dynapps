@@ -46,8 +46,6 @@ mod filters;
 mod page;
 mod tab_cost;
 mod tab_models;
-// Why: the overview's model board names models the way the Models tab does,
-// so a prefix shortened here is shortened the same one click deeper.
 pub(crate) use tab_models::{ms, qualifier, short_name};
 mod tab_sessions;
 mod tab_skills;
@@ -65,6 +63,7 @@ use context::DashboardTab;
 use page::{PageInput, page_context};
 
 const BASE_URL: &str = "/admin/analytics";
+const TRENDS_DEFAULT_PRESET: TimeRangePreset = TimeRangePreset::Days7;
 #[derive(Debug, Deserialize)]
 pub(crate) struct AnalyticsDashboardQuery {
     pub tab: Option<String>,
@@ -78,19 +77,12 @@ pub(crate) struct AnalyticsDashboardQuery {
     pub sort: Option<String>,
     pub page: Option<i64>,
     pub slo_ms: Option<i32>,
-    // Why: `exclusive` (default) or `member` — how a person in more than one
-    // container is counted.
     pub attr: Option<String>,
-    // Why: Cost tab only — `internal` (default) or `customer`.
     pub audience: Option<String>,
-    // Why: Cost tab only — `group` (default) or `project`.
     pub axis: Option<String>,
 }
 
 impl AnalyticsDashboardQuery {
-    // Why: the container the reader named, most specific first. A user id is
-    // the narrowest scope there is, so it wins over the project and group that
-    // may still be riding along in the query string.
     pub(crate) fn scope(&self) -> Scope {
         if let Some(user_id) = self.user_id.clone().filter(|u| !u.as_str().is_empty()) {
             return Scope::User(user_id);
@@ -184,8 +176,6 @@ pub(crate) async fn analytics_dashboard_page(
     ))
 }
 
-// Why: a trends page defaults to a week, not the request log's 24h — daily
-// buckets need more than one of them to read as a trend.
 pub(super) fn resolve_range(query: &AnalyticsDashboardQuery) -> TimeRange {
     let user_picked = query.preset.is_some() || (query.from.is_some() && query.to.is_some());
     if user_picked {
@@ -195,6 +185,6 @@ pub(super) fn resolve_range(query: &AnalyticsDashboardQuery) -> TimeRange {
             preset: query.preset.clone(),
         })
     } else {
-        preset_to_range(TimeRangePreset::Days7)
+        preset_to_range(TRENDS_DEFAULT_PRESET)
     }
 }

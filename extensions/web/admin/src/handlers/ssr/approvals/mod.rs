@@ -167,9 +167,6 @@ fn status_tabs(active: Option<&str>) -> Vec<StatusTab> {
     tabs
 }
 
-// Why: the oldest pending age is the queue's service-level number and the only
-// tile that is not a count — an approver arriving at the page needs to know
-// whether anyone has been waiting past the point of usefulness.
 fn kpis(stats: &ApprovalStats, active: Option<&str>) -> Vec<ApprovalKpiView> {
     vec![
         ApprovalKpiView {

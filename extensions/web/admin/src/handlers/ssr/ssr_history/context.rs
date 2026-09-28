@@ -20,8 +20,6 @@ pub(super) struct HistoryPageContext {
     pub side_toggle_url: String,
     pub window_links: Vec<TabLinkView>,
     pub window_label: String,
-    // Why: the search forms submit with GET, so the window rides along as
-    // hidden inputs or a search would silently widen to all time.
     pub window_inputs: Vec<HiddenInputView>,
     pub base_url: &'static str,
     pub pagination: Pagination,
@@ -37,18 +35,12 @@ pub(super) struct HiddenInputView {
 
 #[derive(Debug, Serialize)]
 pub(crate) struct HistoryRowView {
-    // Why: the chip names the client that recorded the conversation
-    // (Claude Code, OpenCode, an API client…) and its tone says how strongly
-    // the gateway evidenced it.
     pub source: ClientChipView,
     pub source_title: String,
     pub short_id: String,
-    // Why: the row's selection key — the id the bulk bar's export and
-    // full-record download read.
     pub context_id: ContextId,
-    // Why: named for what it is. A partial hash parameter shadows a field of
-    // the same name at every depth (the layout now takes `page_title`, but
-    // the row name stays specific so no later hash can collide with it).
+    // Why: a Handlebars partial hash parameter shadows a same-named field at
+    // every depth, so this row field keeps a name no hash will reuse.
     pub conversation_title: String,
     pub user_id: UserId,
     pub user_label: String,
@@ -62,7 +54,5 @@ pub(crate) struct HistoryRowView {
     pub tokens_title: String,
     pub cost_display: String,
     pub detail_url: String,
-    // Why: the session view is admin-gated, so only an admin gets the link
-    // to the client session the conversation ran in.
     pub session_url: Option<String>,
 }

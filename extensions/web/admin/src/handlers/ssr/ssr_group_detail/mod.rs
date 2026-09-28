@@ -48,8 +48,6 @@ pub(crate) async fn group_detail_page(
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
     }
 
-    // Why: a group's marketplaces are rows of its Access tab now; the old
-    // tab's links land there.
     if query.tab.as_deref() == Some("marketplaces") {
         return Ok(Redirect::to(&format!("/admin/groups/{group_id}?tab=access")).into_response());
     }
@@ -161,7 +159,6 @@ async fn load_members(
     })
 }
 
-// Why: Destinations for the Unassigned page's assign control: every real group.
 async fn assign_targets(pool: &PgPool) -> Vec<MemberSetChipView> {
     repositories::groups::crud::list_groups(pool)
         .await
@@ -215,9 +212,6 @@ async fn load_mappings(
     ))
 }
 
-// Why: the group's own traffic, keyed by `group` the way every scoped
-// dataset reads it. Unassigned is membership by absence, which no `group`
-// filter can name, so it offers no export.
 fn export_view(group_id: &GroupId) -> crate::export::ExportView {
     let query = crate::export::view::query_string(&[("group", Some(group_id.as_str()))]);
     crate::export::ExportView::new(&["requests", "sessions", "analysis-conversations"], &query)

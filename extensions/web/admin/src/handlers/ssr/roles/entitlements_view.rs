@@ -97,7 +97,6 @@ pub(super) fn groups(
             .find(|(k, _, _)| k == kind)
             .map_or(0, |(_, _, entities)| entities.len())
     };
-    // Why: role → kind → rows, in first-seen order; sorted once below.
     let mut groups: Vec<(String, KindBuckets)> = Vec::new();
     for row in rows {
         let at = groups.iter().position(|(r, _)| *r == row.role);

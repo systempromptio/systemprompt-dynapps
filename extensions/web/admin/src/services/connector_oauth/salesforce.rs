@@ -71,20 +71,16 @@ pub(super) fn bind_org(grant: &mut Grant, info: &Value) -> AdminResult<()> {
         .get("organization_id")
         .and_then(Value::as_str)
         .ok_or_else(|| AdminError::Upstream("Salesforce returned no organization ID".into()))?;
-    // Why: Unauthorized, not Forbidden — a grant minted against the wrong org
-    // must be discarded and reconnected, not retried later.
-    if org
+    let signed_into_wrong_org = org
         .org_id
         .as_deref()
-        .is_some_and(|expected| expected != organization_id)
-    {
+        .is_some_and(|expected| expected != organization_id);
+    if signed_into_wrong_org {
         return Err(AdminError::Unauthorized(
             "Signed in to a different Salesforce org than this connector expects".into(),
         ));
     }
     grant.resource_id = organization_id.into();
-    // Why: The instance URL Salesforce reports is what a one-to-many client
-    // connector will key on later; the declared domain is only the fallback.
     grant.resource_name = info
         .pointer("/urls/custom_domain")
         .and_then(Value::as_str)

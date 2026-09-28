@@ -18,8 +18,6 @@ struct ConnectPageView {
     title: &'static str,
     user_email: String,
     gateway: Option<String>,
-    // Why: whether a gateway is configured, and so whether the page may offer
-    // to issue a connect code. The code itself is never part of page data.
     bridge_connect_available: bool,
     breadcrumbs: Vec<BreadcrumbView>,
 }

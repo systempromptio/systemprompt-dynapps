@@ -14,13 +14,11 @@ use systemprompt::identifiers::{MarketplaceId, TenantId, UserId};
 
 use crate::types::UserContext;
 
+pub(crate) use assemble::read_config_strings;
 use assemble::{
-    build_agents_block, build_bridge_profile_block, build_marketplaces, build_usage,
+    build_agents_block, build_bridge_profile_block, build_reachable_marketplaces, build_usage,
     load_usage_sections, read_tenant_id,
 };
-// Why: re-exported because the profile page's on-demand connect-code endpoint
-// needs the gateway URL, which lives one module over.
-pub(crate) use assemble::read_config_strings;
 
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct ProfileIdentity {
@@ -55,8 +53,6 @@ pub(crate) struct BridgeProfileBlock {
     pub organization_uuid: Option<String>,
 }
 
-// Why: One marketplace this account actually reaches, with the band that
-// granted it — a person reading their own profile can see *why* they have it.
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct ProfileMarketplaceView {
     pub id: MarketplaceId,
@@ -94,16 +90,11 @@ pub(crate) struct BridgeConnectBlock {
     pub just_login_command: String,
 }
 
-// Why: not derivable here — `brand()` lives in the bridge crate, which the
-// admin extension does not depend on.
 pub(crate) const BRIDGE_BINARY: &str = "astound-bridge";
 
-// Why: the host is named rather than left to `install.sh`'s PATH probe, which
-// enrols `opencode` only when its binary already exists. A user who installs
-// OpenCode later would get no provider block and every prompt fails with
-// `403 no loopback credential presented`, so each tab on the profile page says
-// exactly which client its command enrols. `--hosts all` is a bridge-binary
-// flag and is rejected by `install.sh`.
+// Why: `install.sh` enrols a host only if its binary already exists and rejects
+// `--hosts all`, so each command names its host; an unenrolled OpenCode fails
+// every prompt with `403 no loopback credential presented`.
 fn install_command(gateway: &str, code: &str, host: &str) -> String {
     format!(
         "curl -fsSL {gateway}/files/downloads/install.sh | sh -s -- \
@@ -116,8 +107,6 @@ pub(crate) struct BridgeProfilePageData {
     pub page: &'static str,
     pub title: &'static str,
     pub identity: ProfileIdentity,
-    // Why: Whether a gateway is configured, and so whether the page may offer to
-    // issue a connect code. The code itself is never part of page data.
     pub bridge_connect_available: bool,
     pub bridge_profile: Option<BridgeProfileBlock>,
     pub usage: ProfileUsage,
@@ -126,12 +115,9 @@ pub(crate) struct BridgeProfilePageData {
     pub marketplaces_count: usize,
 }
 
-// Why: not called while assembling the page. A connect code is a bearer
-// credential — redeeming one yields a durable PAT that signs in as its owner.
-// Minting on every render printed a fresh one into the HTML of a page people
-// leave open, screen-share and reload, and burned a code per view for the
-// majority of views that never connect anything. Issuing is an explicit act,
-// so a code exists because someone asked for one.
+// Why: a connect code is a bearer credential that redeems for a durable PAT
+// signing in as its owner, so it is minted only on an explicit request and
+// never rendered into page HTML.
 pub(crate) async fn issue_bridge_connect(
     pool: &PgPool,
     user_ctx: &UserContext,
@@ -172,9 +158,6 @@ pub(crate) async fn issue_bridge_connect(
     })
 }
 
-// Why: Build the full payload. Falls back gracefully when individual sections
-// fail — the bridge does the same so missing data renders as empty cards rather
-// than a page-level error.
 pub(crate) async fn build_bridge_profile_data(
     pool: Arc<PgPool>,
     user_ctx: &UserContext,
@@ -187,20 +170,16 @@ pub(crate) async fn build_bridge_profile_data(
         .as_ref()
         .and_then(|u| u.display_name.clone());
 
-    // Why: the field existed and was always `None`, so the profile page said
-    // nothing about how the account authenticates. A federated mapping is the
-    // answer: its presence *is* the provider.
-    let provider = crate::repositories::users::queries::find_identity_envelope(&pool, &user_id)
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, "profile: identity provider lookup failed"))
-        .ok()
-        .flatten()
-        .and_then(|env| env.idp_issuer.map(|_| "adfs".to_owned()));
+    let federated_provider =
+        crate::repositories::users::queries::find_identity_envelope(&pool, &user_id)
+            .await
+            .inspect_err(|e| tracing::warn!(error = %e, "profile: identity provider lookup failed"))
+            .ok()
+            .flatten()
+            .and_then(|env| env.idp_issuer.map(|_| "adfs".to_owned()));
 
     let (jwt_issuer, gateway_url) = read_config_strings();
     let bridge_profile = build_bridge_profile_block();
-    // Why: the page only offers the button; `issue_bridge_connect` answers it,
-    // so no credential is assembled into page data.
     let bridge_connect_available = gateway_url.is_some();
 
     let identity = ProfileIdentity {
@@ -208,7 +187,7 @@ pub(crate) async fn build_bridge_profile_data(
         display_name,
         user_id: user_ctx.user_id.clone(),
         tenant_id: read_tenant_id(),
-        provider,
+        provider: federated_provider,
         roles: user_ctx.roles.clone(),
         jwt_issuer,
         gateway: gateway_url,
@@ -232,7 +211,8 @@ pub(crate) async fn build_bridge_profile_data(
         .retain(|a| a.enabled && allowed.contains(&a.id));
     agents.total = agents.items.len() as i64;
     agents.enabled = agents.total;
-    let marketplaces = build_marketplaces(&pool, &user_id, user_ctx.roles.clone()).await?;
+    let marketplaces =
+        build_reachable_marketplaces(&pool, &user_id, user_ctx.roles.clone()).await?;
 
     Ok(BridgeProfilePageData {
         marketplaces_count: marketplaces.len(),

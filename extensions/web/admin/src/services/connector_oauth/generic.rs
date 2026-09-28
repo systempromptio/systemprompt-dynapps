@@ -54,8 +54,6 @@ pub async fn authorize(consent: Consent<'_>, provider: Provider) -> AdminResult<
     authorize_with_client(consent, provider, &callback, &client()?).await
 }
 
-// Why: the callback and transport are injectable so the OAuth boundary can be
-// exercised against a local server in tests.
 pub async fn authorize_with_client(
     consent: Consent<'_>,
     provider: Provider,

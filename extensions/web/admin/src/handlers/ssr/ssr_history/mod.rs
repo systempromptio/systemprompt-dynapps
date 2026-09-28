@@ -60,8 +60,6 @@ pub(crate) struct HistoryQuery {
     user_id: Option<UserId>,
     page: Option<i64>,
     side: Option<String>,
-    // Why: the window — a preset `days`, or a custom `start`/`end` — bounds a
-    // conversation's last activity; none of them means all time.
     days: Option<u32>,
     start: Option<String>,
     end: Option<String>,
@@ -80,8 +78,6 @@ struct HistorySlice {
     page: i64,
 }
 
-// Why: the viewer's scope, narrowed to one user when the query names one they
-// may see; naming one outside it is a 403 on the page and the export alike.
 fn scope_user_ids(
     scope: &HistoryScope,
     query: &HistoryQuery,
@@ -133,10 +129,6 @@ async fn fetch_history_slice(
     })
 }
 
-// Why: the export is the listing the reader sees — their own scope, the same
-// search — through the page's own query type. The dialog's resolved window
-// wins; without one the rows follow the page's own window.
-// What an export asks of the history listing, as opposed to who is asking.
 pub(crate) struct ExportRequest {
     pub query: HistoryQuery,
     pub view: HistoryView,
@@ -247,9 +239,6 @@ async fn render_listing(
     ))
 }
 
-// Why: the export opens on the listing the reader is looking at — the same
-// search, user, side calls and window — and offers the full record of every
-// conversation it selects.
 fn export_view(
     query: &HistoryQuery,
     view: HistoryView,

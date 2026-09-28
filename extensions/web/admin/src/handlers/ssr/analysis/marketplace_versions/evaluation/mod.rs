@@ -53,8 +53,6 @@ struct Totals<'a> {
     last_context: BTreeMap<(&'a str, &'a str), &'a str>,
 }
 
-// Why: rows arrive newest first, so the first context seen for a skill is
-// its latest run.
 fn totals(rows: &[PluginEvalRow]) -> Totals<'_> {
     let mut t = Totals {
         by_version: BTreeMap::new(),
@@ -70,10 +68,6 @@ fn totals(rows: &[PluginEvalRow]) -> Totals<'_> {
     t
 }
 
-// Why: `b` names the version to read and `a` its baseline. With neither, the
-// newest version with conversations is read against the one before it that
-// has conversations, which is the question a reader arrives with: did the
-// latest change help.
 fn pick(
     with_runs: &[&VersionView],
     (a, b): (Option<String>, Option<String>),
@@ -96,8 +90,6 @@ fn pick(
     (selected, baseline)
 }
 
-// Why: oldest first, so the table reads as the plugin's history; each
-// version is compared with the one before it that had conversations.
 fn version_rows(
     with_runs: &[&VersionView],
     t: &Totals<'_>,
@@ -152,8 +144,6 @@ pub(crate) fn build(
     let (selected, baseline) = pick(&with_runs, wanted);
     let (sel, base) = (selected.as_deref(), baseline.as_deref());
     let versions = version_rows(&with_runs, &t, (sel, base));
-    // Why: the headline reads the selected version against the chosen
-    // baseline, which need not be the version immediately before it.
     let selected_view = versions
         .iter()
         .find(|v| v.is_selected)

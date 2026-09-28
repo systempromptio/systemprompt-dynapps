@@ -5,8 +5,6 @@ use systemprompt_security::authz::{
     Access, AccessControlRepository, DASHBOARD_SOURCE, EntityKind, RuleType, UpsertRuleParams,
 };
 
-// Why: the subject a template writes for, the same for every entity it
-// touches.
 pub(super) struct TemplateSubject<'a> {
     pub(super) kind: EntityKind,
     pub(super) rule_type: &'a RuleType,

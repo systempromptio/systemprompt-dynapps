@@ -26,16 +26,10 @@ use crate::repositories::dev_login::consume_dev_login_code;
 pub const DEV_LOGIN_PATH: &str = "/admin/auth/dev/login";
 const INVALID_REDIRECT: &str = "/admin/login?dev=invalid";
 
-// Why: the one predicate behind the route, the login-page hint and the CLI.
-// Development alone is not enough — a cloud profile can carry any
-// environment label, and a link that signs someone in without a directory
-// must never exist off a developer's own machine.
 pub const fn dev_login_allowed(environment: Environment, target: ProfileType) -> bool {
     environment.is_development() && !target.is_cloud()
 }
 
-// Why: fails closed. A process that cannot read its profile does not get a
-// password-free door on the strength of a default.
 pub fn dev_login_enabled() -> bool {
     ProfileBootstrap::get()
         .is_ok_and(|profile| dev_login_allowed(profile.runtime.environment, profile.target))
@@ -53,8 +47,6 @@ pub(crate) struct DevLoginParams {
     code: Option<String>,
 }
 
-// Why: every outcome is a redirect, success and failure alike; the login page
-// is the only place the browser can usefully land.
 pub(crate) async fn dev_login_redeem(
     Extension(deps): Extension<AdfsDeps>,
     headers: HeaderMap,
@@ -94,9 +86,6 @@ pub(crate) async fn dev_login_redeem(
     Ok((out, Redirect::to("/admin")).into_response())
 }
 
-// Why: The failure channel of a dev-login redemption: back to the login page
-// with `?dev=invalid`, whichever step refused. The reason stays in the log;
-// a code that could be probed for why it failed would be a weaker one.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct DevLoginRejected;
 

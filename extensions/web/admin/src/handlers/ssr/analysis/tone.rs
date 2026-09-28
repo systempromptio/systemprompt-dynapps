@@ -2,7 +2,6 @@
 //! number is the same colour wherever it appears. Tones are the console's
 //! four badge tones: `ok`, `warn`, `err`, `muted`.
 
-// Why: The judge's completion score, 0–100.
 #[must_use]
 pub(crate) const fn score_tone(score: i16) -> &'static str {
     if score >= 80 {
@@ -19,7 +18,6 @@ pub(crate) fn completion_tone(score: Option<f64>) -> &'static str {
     score.map_or("muted", |s| score_tone(s.round() as i16))
 }
 
-// Why: Failed requests as a share of all requests.
 #[must_use]
 pub(crate) const fn error_rate_tone(errors: i64, total: i64) -> &'static str {
     if total == 0 || errors == 0 {
@@ -31,7 +29,6 @@ pub(crate) const fn error_rate_tone(errors: i64, total: i64) -> &'static str {
     }
 }
 
-// Why: Denied tool calls: one is already worth a look.
 #[must_use]
 pub(crate) const fn deny_tone(denied: i64) -> &'static str {
     if denied == 0 {
@@ -43,19 +40,19 @@ pub(crate) const fn deny_tone(denied: i64) -> &'static str {
     }
 }
 
-// Why: p95 latency in milliseconds against the gateway's 20 s target.
+const P95_HEALTHY_MS: f64 = 8_000.0;
+const GATEWAY_P95_TARGET_MS: f64 = 20_000.0;
+
 #[must_use]
 pub(crate) fn latency_tone(p95_ms: Option<f64>) -> &'static str {
     match p95_ms {
         None => "muted",
-        Some(ms) if ms <= 8_000.0 => "ok",
-        Some(ms) if ms <= 20_000.0 => "warn",
+        Some(ms) if ms <= P95_HEALTHY_MS => "ok",
+        Some(ms) if ms <= GATEWAY_P95_TARGET_MS => "warn",
         Some(_) => "err",
     }
 }
 
-// Why: Cache reads as a share of all input tokens; a cold conversation is the
-// Why: expensive one.
 #[must_use]
 pub(crate) const fn cache_tone(cache_tokens: i64, input_tokens: i64) -> &'static str {
     let total = cache_tokens + input_tokens;
@@ -70,7 +67,6 @@ pub(crate) const fn cache_tone(cache_tokens: i64, input_tokens: i64) -> &'static
     }
 }
 
-// Why: Safety findings: a blocked one is an error, an audited one a warning.
 #[must_use]
 pub(crate) const fn safety_tone(findings: i64, blocked: i64) -> &'static str {
     if blocked > 0 {
@@ -82,7 +78,6 @@ pub(crate) const fn safety_tone(findings: i64, blocked: i64) -> &'static str {
     }
 }
 
-// Why: Whole-number percentage, or a dash when there is nothing to divide by.
 #[must_use]
 pub(crate) fn percent(part: i64, whole: i64) -> String {
     if whole == 0 {

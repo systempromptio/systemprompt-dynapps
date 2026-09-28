@@ -118,9 +118,6 @@ fn clip(value: &str, max_chars: usize) -> String {
     value.trim().chars().take(max_chars).collect()
 }
 
-// Why: clamps every list and text into the bounds the page expects and drops
-// evidence whose id maps to no console page, so a hallucinated id becomes a
-// missing chip rather than a dead link.
 pub(crate) fn parse_findings(content: &str) -> Result<ReportFindings, serde_json::Error> {
     let raw: RawFindings = serde_json::from_str(content)?;
     let themes = raw

@@ -17,6 +17,9 @@ use crate::util::time_range::TimeRange;
 use super::context::{DashboardTimeRange, KpiStripView};
 use super::{AnalyticsDashboardQuery, BASE_URL, urls};
 
+const UP_IS_GOOD: bool = true;
+const UP_IS_BAD: bool = false;
+
 pub(super) fn time_range_view(
     query: &AnalyticsDashboardQuery,
     range: &TimeRange,
@@ -74,22 +77,18 @@ pub(super) fn kpi_strip(
         active_users: kpis.active_users,
         requests_per_user_day_display: format!("{per_user_day:.1}"),
         tokens_display: compact(kpis.total_tokens),
-        // Why: polarity is stated per metric — more requests and more active
-        // users read as good, more spend does not.
-        requests_delta: delta_view(kpis.total_requests, kpis.prev_total_requests, true),
+        requests_delta: delta_view(kpis.total_requests, kpis.prev_total_requests, UP_IS_GOOD),
         cost_delta: delta_view(
             kpis.total_cost_microdollars,
             kpis.prev_total_cost_microdollars,
-            false,
+            UP_IS_BAD,
         ),
         wau_delta: delta_view(
             kpis.weekly_active_users,
             kpis.prev_weekly_active_users,
-            true,
+            UP_IS_GOOD,
         ),
-        tokens_delta: delta_view(kpis.total_tokens, kpis.prev_total_tokens, true),
-        // Why: built from the series the page already loaded — a sparkline
-        // never costs an extra query, so tabs without one simply omit it.
+        tokens_delta: delta_view(kpis.total_tokens, kpis.prev_total_tokens, UP_IS_GOOD),
         requests_spark: series
             .map(|b| sparkline(&b.iter().map(|x| x.requests).collect::<Vec<_>>())),
         cost_spark: series
@@ -102,8 +101,6 @@ pub(super) fn window_days(range: &TimeRange) -> f64 {
     (secs / 86_400.0).max(1.0)
 }
 
-// Why: the two lines share the stacked chart's bucket labels, so the hover
-// crosshair names the same day on all three.
 fn labels(buckets: &[UsageBucket], weekly: bool) -> Vec<String> {
     buckets
         .iter()

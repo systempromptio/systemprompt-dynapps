@@ -11,8 +11,6 @@ use systemprompt::identifiers::{ContextId, PluginId};
 use super::figures::{Figures, Summary, summary};
 use crate::repositories::analysis::plugin_eval::{PluginEvalRow, PluginEvalToolRow};
 
-// Why: the thresholds a reader can quote back; changing one changes what the
-// page calls a problem, so they live together and the docs list them.
 const TOOL_FAILURE_SHARE: f64 = 0.2;
 const TOOL_MIN_CALLS: i64 = 3;
 const REPEATED_CALLS_PER_RUN: i64 = 3;
@@ -71,8 +69,6 @@ pub(super) fn plugins(rows: &[&PluginEvalRow], base: &[&PluginEvalRow]) -> Vec<P
         .collect()
 }
 
-// Why: day by day within the selected version, each day read against the
-// day before it, so a bad afternoon shows without waiting for a new version.
 pub(super) fn days(rows: &[&PluginEvalRow]) -> Vec<DayEval> {
     let mut by_day: BTreeMap<String, Figures> = BTreeMap::new();
     for r in rows {
@@ -149,8 +145,6 @@ fn latest<'a>(
     rows.iter().copied().find(|r| r.skill == skill && hit(r))
 }
 
-// Why: rows arrive newest first, so the first match is the latest
-// conversation that shows the problem.
 pub(super) fn attention(
     rows: &[&PluginEvalRow],
     base: &[&PluginEvalRow],

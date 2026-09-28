@@ -1,6 +1,7 @@
 //! The `analysis_reports` queue: a request from the console, a fenced lease
 //! for the job, completion with the model's findings, and retry. Every
-//! statement is bound; the job never interpolates.
+//! statement is bound; the job never interpolates. A failure is recorded
+//! once with its reason; Retry is a fresh request, never a hidden loop.
 
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
@@ -18,8 +19,6 @@ pub struct NewReport {
     pub window_end: DateTime<Utc>,
     pub requested_by: String,
     pub inputs: ReportDigestInputs,
-    // Why: the generation task holds this lease from the insert, so the one
-    // completion path (`update_report_completion`) stays fenced.
     pub lease_token: String,
 }
 
@@ -61,8 +60,8 @@ pub async fn insert_report_request(
     Ok(id)
 }
 
-// Why: the call's cost is settled by the gateway after the response returns,
-// so it is read from ai_requests here; a later run may re-read it.
+// Why: the AI gateway settles cost into `ai_requests` after the response
+// returns, so it is read from there, never passed in by the job.
 pub async fn update_report_completion(
     pool: &PgPool,
     done: ReportCompletion<'_>,
@@ -89,9 +88,6 @@ pub async fn update_report_completion(
     Ok(result.rows_affected() > 0)
 }
 
-// Why: a report is written once, in the moment it was asked for; a failure
-// is recorded with its reason and the page offers Retry, which is a fresh
-// request rather than a hidden retry loop.
 pub async fn fail_report(
     pool: &PgPool,
     id: &str,

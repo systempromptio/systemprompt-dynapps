@@ -68,9 +68,6 @@ pub(super) fn request_view(r: &SessionRequestRow) -> SessionRequestRowView {
         model: r.model.clone().unwrap_or_else(|| "—".to_owned()),
         status: r.status.clone(),
         is_error: r.status == "failed",
-        // Why: a rejected request never reached a provider, so it has no model
-        // to name. Showing it as an error would report a policy refusal as a
-        // fault to chase upstream.
         is_rejected: r.status == "rejected",
         latency_ms: r.latency_ms,
         input_tokens: r.input_tokens,

@@ -18,9 +18,6 @@ const ORGANIZATION_SLUG: ExtensionSlug = ExtensionSlug::new("organization");
 
 pub const ORGANIZATION_DEFAULT: &str = "default";
 
-// Why: the widest band there is — everyone holds it — so it sits above
-// core's `ROLE` (200). A rule written against it is a rule about the whole
-// installation and must lose to every narrower statement.
 const ORGANIZATION_PRECEDENCE: u16 = 300;
 
 #[must_use]

@@ -20,9 +20,6 @@ fn as_access_rule(row: &AccessControlRule) -> AccessRule {
     }
 }
 
-// Why: the cell names a *subject*, not a user — the group and role rows of the
-// audience matrix resolve through the same resolver call as a person does, and
-// only the id and the role list differ between them.
 pub(crate) struct MatrixCell<'a> {
     pub all_rules: &'a [AccessControlRule],
     pub entity_type: &'a str,
@@ -75,9 +72,6 @@ pub(super) fn resolve_effective_with(
 
     match decision {
         Decision::Allow { matched_by } => ("allow".to_owned(), allow_source(uid, &matched_by)),
-        // Why: a warning is a reach, but not a clean one. The cell names it so
-        // an operator reading the matrix under warn mode sees which cells are
-        // only open because enforcement is currently off.
         Decision::Warn { reason } => (
             "warn".to_owned(),
             MatrixSource {
@@ -86,8 +80,6 @@ pub(super) fn resolve_effective_with(
             },
         ),
         Decision::Deny { reason } => ("deny".to_owned(), deny_source(uid, &reason)),
-        // Why: a hold is neither reach nor refusal, and flattening it into
-        // either would misreport the matrix. The cell names it.
         Decision::Pending { reason } => (
             "pending".to_owned(),
             MatrixSource {

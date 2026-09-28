@@ -80,7 +80,6 @@ impl Encode<'_, Postgres> for AccessDecision {
 pub struct AccessControlRule {
     pub id: String,
     pub entity_type: String,
-    // Why: polymorphic entity reference (role/department/user), no single typed-ID equivalent
     pub entity_id: String,
     pub rule_type: RuleType,
     pub rule_value: String,
@@ -95,8 +94,6 @@ pub struct AccessControlRuleInput {
     pub rule_type: RuleType,
     pub rule_value: String,
     pub access: AccessDecision,
-    // Why: the reason a rule exists is required for every band but `user`;
-    // the handler enforces that, the repository just carries it to the row.
     #[serde(default)]
     pub justification: Option<String>,
 }
@@ -111,7 +108,6 @@ pub struct UpdateEntityRulesRequest {
 #[derive(Debug, Deserialize)]
 pub struct BulkEntityRef {
     pub entity_type: String,
-    // Why: polymorphic entity reference (role/department/user), no single typed-ID equivalent
     pub entity_id: String,
 }
 
@@ -126,6 +122,5 @@ pub struct BulkAssignRequest {
 #[derive(Debug, Deserialize)]
 pub struct AccessControlQuery {
     pub entity_type: Option<String>,
-    // Why: polymorphic entity reference (role/department/user), no single typed-ID equivalent
     pub entity_id: Option<String>,
 }

@@ -69,10 +69,9 @@ pub(super) async fn start(
     Ok(([(CACHE_CONTROL, "no-store")], Redirect::to(&url)).into_response())
 }
 
-// Why: Salesforce orgs share one callback URL, so their state carries the
-// server id as a prefix (`salesforce-uk.<random>`): the provider echoes it
-// verbatim and the shared callback reads the org back from it. The random part
-// is what binds the row; the prefix only selects which row to look for.
+// Why: Salesforce orgs share one OAuth callback URL and the provider echoes
+// `state` verbatim, so the server id prefixes it (`salesforce-uk.<random>`);
+// only the random part binds the row.
 fn consent_state(provider: &Provider) -> String {
     let random = URL_SAFE_NO_PAD.encode(rand::rng().random::<[u8; 32]>());
     if provider.is_salesforce() {
@@ -146,8 +145,6 @@ async fn complete(
         }
         return Err(error);
     }
-    // Why: Recheck revocation after the network exchange, before persisting a
-    // grant.
     live_user(pool, headers, false).await?;
     super::store_verified(pool, &user.user_id, &grant).await?;
     tracing::info!(user_id = %user.user_id, provider = provider.slug(), "connector_connected");
@@ -167,8 +164,8 @@ pub(super) async fn token(
     let user = live_user(&pool, &headers, false).await?;
     service::require_entitlement(&pool, &user.user_id, provider.clone()).await?;
     let access_token = oauth::verified_token(&pool, &user.user_id, provider.clone(), false).await?;
-    // Why: The descriptor uses an empty scheme: the trusted adapter supplies the
-    // complete header so personal Atlassian tokens can use Basic authentication.
+    // Why: Atlassian personal tokens use Basic auth, so the descriptor's scheme
+    // is empty and the trusted adapter supplies the complete header.
     Ok((
         [(CACHE_CONTROL, "no-store")],
         Json(serde_json::json!({"access_token": access_token})),

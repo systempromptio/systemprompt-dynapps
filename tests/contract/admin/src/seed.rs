@@ -1,15 +1,7 @@
 //! Row builders and non-session token minters shared by the seeded suites.
 //!
-//! [`crate::handler_variants`] drives every page against a database holding
-//! nothing but the two principals, which pins the *empty* branch of each
-//! template. The suites in this half need the opposite: a session that exists,
-//! a context with messages, a trace with decisions. A page that renders its
-//! empty state correctly and its populated state not at all passes the first
-//! and fails here, which is the split worth having.
-//!
-//! Ids are UUID-suffixed so a fixture can never collide with whatever rows a
-//! database already holds — this suite asserts against what it inserted, never
-//! against ambient data.
+//! Ids are UUID-suffixed so suites assert against what they inserted, never
+//! against ambient rows.
 
 use std::collections::BTreeMap;
 
@@ -23,18 +15,12 @@ use systemprompt::models::auth::{
 
 use crate::globals;
 
-// A fresh, collision-proof id fragment.
 pub(crate) fn unique(prefix: &str) -> String {
     format!("{prefix}-{}", uuid::Uuid::new_v4().simple())
 }
 
-// Mint a token for an arbitrary audience / scope / `plugin_id` triple.
-//
-// The hook endpoints validate against `aud=hook` and `scope=hook:*`, which
-// neither [`crate::principal`]'s admin token nor any core minter produces —
-// `JwtService::generate_admin_token` hard-codes the standard audiences. The
-// claims are therefore assembled here so a case can also mint the *wrong*
-// token on purpose and prove the validator rejects it.
+// Core's `JwtService::generate_admin_token` hard-codes the standard audiences,
+// so hook (`aud=hook`) and plugin tokens are assembled here.
 pub(crate) struct TokenSpec<'a> {
     pub subject: &'a str,
     pub audiences: Vec<JwtAudience>,
@@ -43,7 +29,6 @@ pub(crate) struct TokenSpec<'a> {
 }
 
 impl<'a> TokenSpec<'a> {
-    // A well-formed hook token: `aud=hook`, both hook scopes, a plugin id.
     pub(crate) fn hook(subject: &'a str) -> Self {
         Self {
             subject,
@@ -53,11 +38,6 @@ impl<'a> TokenSpec<'a> {
         }
     }
 
-    // A token the secrets endpoints accept: `aud=plugin`, no scopes.
-    //
-    // `validate_plugin_jwt` checks the audience and nothing else, and the
-    // resource audience is one no minter in core produces — the admin session
-    // token carries the standard set, which is why it is rejected there.
     pub(crate) fn plugin(subject: &'a str) -> Self {
         Self {
             subject,
@@ -101,8 +81,7 @@ pub(crate) fn mint(spec: &TokenSpec<'_>) -> String {
     encode(&header, &claims, key).expect("sign the token")
 }
 
-// Insert a user with the `user` role. `users.name` is unique, so the email
-// doubles as the name exactly as the production provisioning paths do.
+// `users.name` is unique, so the email doubles as the name.
 pub(crate) async fn insert_user(pool: &PgPool, id: &str, email: &str) -> UserId {
     sqlx::query(
         "INSERT INTO users (id, name, email, display_name, status, email_verified, roles)
@@ -117,12 +96,7 @@ pub(crate) async fn insert_user(pool: &PgPool, id: &str, email: &str) -> UserId 
     UserId::new(id.to_owned())
 }
 
-// Give a user a `user_profile_ext` row at a chosen share-token version.
-//
-// Users are provisioned without one, and `find_share_token_version` reports
-// that absence as `Ok(None)` — which the public manifest endpoint answers the
-// same way it answers a forged token. A share token is therefore only
-// verifiable once this row exists.
+// Without this row the manifest endpoint treats a share token as forged.
 pub(crate) async fn insert_profile_ext(pool: &PgPool, user_id: &UserId, version: i32) {
     sqlx::query(
         "INSERT INTO user_profile_ext (user_id, share_token_version) VALUES ($1, $2)
@@ -135,8 +109,7 @@ pub(crate) async fn insert_profile_ext(pool: &PgPool, user_id: &UserId, version:
     .expect("insert user_profile_ext");
 }
 
-// `ai_requests.session_id` carries a foreign key to `user_sessions`, so a
-// request with a session needs the session row first.
+// `ai_requests.session_id` is a foreign key to `user_sessions`.
 pub(crate) async fn insert_session(pool: &PgPool, session_id: &str, user_id: &UserId) {
     sqlx::query("INSERT INTO user_sessions (session_id, user_id) VALUES ($1, $2)")
         .bind(session_id)
@@ -165,8 +138,7 @@ pub(crate) async fn insert_context(
     .expect("insert user context");
 }
 
-// `ai_requests.context_id` is NOT NULL; core's sentinel stands in for a row
-// that belongs to no known context.
+// `ai_requests.context_id` is NOT NULL; core's sentinel for no context.
 pub(crate) const LEGACY_CONTEXT_ID: &str = "00000000-0000-0000-0000-4c4547414359";
 
 pub(crate) struct RequestSpec<'a> {
@@ -178,9 +150,8 @@ pub(crate) struct RequestSpec<'a> {
     pub status: &'a str,
 }
 
-// A payload row offering tools. The conversation view classifies a lone
-// request with no tools as a side call, which the conversation page hides, so
-// a case that reads the page's prompt seeds this beside the request.
+// The conversation page hides a lone request with no offered tools as a side
+// call, so a case reading its prompt seeds this row.
 pub(crate) async fn insert_offered_tools(pool: &PgPool, request_id: &str) {
     sqlx::query(
         "WITH catalog AS (
@@ -220,11 +191,8 @@ pub(crate) async fn insert_request(pool: &PgPool, spec: &RequestSpec<'_>) {
     .expect("insert ai_request");
 }
 
-// An `ai_requests` row for a request the gateway refused before routing.
-//
-// `provider` and `model` are NULL, which the table's CHECK constraint permits
-// only for this status. Any reader that overrides those columns to non-null
-// fails to decode the row rather than rendering the refusal.
+// NULL `provider`/`model` is permitted only for `rejected`; a reader that
+// overrides them to non-null fails to decode this row.
 pub(crate) async fn insert_rejected_request(pool: &PgPool, spec: &RequestSpec<'_>) {
     sqlx::query(
         "INSERT INTO ai_requests (
@@ -245,8 +213,6 @@ pub(crate) async fn insert_rejected_request(pool: &PgPool, spec: &RequestSpec<'_
     .expect("insert rejected ai_request");
 }
 
-// A `governance_decisions` row. `trace_id` is what the trace explorer groups
-// on, so a decision without one is invisible to the pages under test.
 pub(crate) struct DecisionSpec<'a> {
     pub id: String,
     pub user_id: &'a UserId,
@@ -307,7 +273,6 @@ pub(crate) async fn insert_event(pool: &PgPool, user_id: &UserId, session_id: &s
     .expect("insert plugin usage event");
 }
 
-// Insert an access-control grant, creating the catalog row the FK requires.
 #[expect(
     clippy::too_many_arguments,
     reason = "one parameter per column of the row being seeded; a params struct would churn 43 call sites to say the same thing"

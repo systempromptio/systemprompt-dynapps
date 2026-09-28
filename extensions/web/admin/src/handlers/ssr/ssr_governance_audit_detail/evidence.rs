@@ -33,8 +33,6 @@ pub(super) struct FindingView {
     pub scanner: String,
     pub excerpt: String,
     pub blocked: bool,
-    // Why: `warn` mode audits a finding without acting on it, and the two are
-    // read very differently — the badge has to say which one this row is.
     pub outcome: &'static str,
     pub tone: &'static str,
     pub created_at: String,
@@ -52,8 +50,6 @@ pub(super) struct ToolCallView {
     pub created_at: String,
 }
 
-// Why: a failed evidence read degrades to an empty section rather than taking
-// the audit page with it — the chain above it is the part an operator came for.
 pub(super) async fn load(pool: &PgPool, request_ids: &[String]) -> EvidenceView {
     if request_ids.is_empty() {
         return EvidenceView::default();

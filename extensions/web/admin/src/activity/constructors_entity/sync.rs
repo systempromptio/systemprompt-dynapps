@@ -1,5 +1,9 @@
 //! Activity constructors for `/admin/sync`: each apply, export and source
 //! refresh leaves a row saying who, which plane, which mode, and what moved.
+//!
+//! `metadata.marketplaces` is what the sync history filters a participant's
+//! view by; `kept_entity` and `fingerprint` on a keep-the-database row are
+//! what the review reads back to hold that entity out of the to-do list.
 
 use systemprompt::identifiers::UserId;
 
@@ -7,8 +11,6 @@ use super::super::enums::{ActivityAction, ActivityCategory, ActivityEntity};
 use super::super::types::{ActivityEntityRef, NewActivity};
 use crate::repositories::sync::plane::{ApplyOutcome, EntityScope, SyncMode};
 
-// Why: one apply as the trail records it — the plane, its label, the mode
-// and what moved — shared by the disk and archive constructors.
 #[derive(Debug, Clone, Copy)]
 pub struct PlaneApply<'a> {
     pub plane: &'a str,
@@ -27,9 +29,6 @@ fn plane_ref(plane: &str, label: &str) -> ActivityEntityRef {
 }
 
 impl NewActivity {
-    // Why: a scoped apply names the marketplaces it was narrowed to, both in
-    // the sentence and in `metadata.marketplaces`, which is what the sync
-    // history filters a participant's view by.
     #[must_use]
     pub fn sync_applied(user_id: &UserId, apply: PlaneApply<'_>, scope: EntityScope<'_>) -> Self {
         let PlaneApply {
@@ -82,9 +81,6 @@ impl NewActivity {
         }
     }
 
-    // Why: "keep the database" writes no rule, so this row is the whole
-    // decision. `kept_entity` and `fingerprint` are what the review reads
-    // back to hold the entity out of the to-do list until its diff moves.
     #[must_use]
     pub fn sync_kept(user_id: &UserId, key: &str, fingerprint: &str, reason: &str) -> Self {
         Self {
@@ -116,9 +112,6 @@ impl NewActivity {
         }
     }
 
-    // Why: a console edit to `ai_gateway_policies` is a write to the
-    // gateway_policies plane by another door; it is filed under the plane so
-    // the sync page's history and this row read as one story.
     #[must_use]
     pub fn gateway_policy_saved(user_id: &UserId, policy: &str, deleted: bool) -> Self {
         Self {
@@ -155,8 +148,6 @@ impl NewActivity {
         }
     }
 
-    // Why: an apply from an uploaded archive is filed under the plane like a
-    // disk apply, with the stage id so the trail says which upload it was.
     #[must_use]
     pub fn configuration_imported(user_id: &UserId, stage_id: &str, apply: PlaneApply<'_>) -> Self {
         let PlaneApply {

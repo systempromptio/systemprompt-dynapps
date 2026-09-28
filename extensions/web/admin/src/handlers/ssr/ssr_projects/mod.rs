@@ -32,14 +32,11 @@ mod sort;
 pub(super) const BASE_URL: &str = "/admin/projects";
 pub(super) const WINDOW_LABEL: &str = "Last 30 days · attributed at request time";
 
-// Why: which tab of the detail page a request asked for.
 #[derive(Debug, Default, serde::Deserialize)]
 pub(crate) struct ProjectTabQuery {
     tab: Option<String>,
 }
 
-// Why: `?print=1` opens the browser's print dialog as soon as the report has
-// rendered, which is what the listing's Report action links to.
 #[derive(Debug, Default, serde::Deserialize)]
 pub(crate) struct ProjectReportQuery {
     print: Option<String>,
@@ -157,10 +154,6 @@ fn active_tab(requested: Option<&str>) -> &'static str {
     }
 }
 
-// Why: only the rules whose subject is this project are shown, and the page
-// says so — a project is an ACL subject, not a container of entitlement, so
-// listing everything a member happens to reach would misattribute grants that
-// came from their group.
 async fn settings_reads(
     pool: &PgPool,
     project_id: &ProjectId,
@@ -186,8 +179,6 @@ fn project_query(project_id: &ProjectId) -> String {
     crate::export::view::query_string(&[("project", Some(project_id.as_str()))])
 }
 
-// Why: the project's own traffic, keyed by `project` the way every scoped
-// dataset reads it, with every conversation's full record beside the tables.
 pub(super) fn export_view(project_id: &ProjectId) -> crate::export::ExportView {
     crate::export::ExportView::new(
         &["requests", "sessions", "analysis-conversations"],
@@ -196,8 +187,6 @@ pub(super) fn export_view(project_id: &ProjectId) -> crate::export::ExportView {
     .with_transcripts(crate::export::view::TranscriptSource::Sessions)
 }
 
-// Why: the report is a rolling window but the customer hand-off is a calendar
-// month, so the dialog's month picker chooses which one the files cover.
 pub(super) fn report_export_view(project_id: &ProjectId) -> crate::export::ExportView {
     crate::export::ExportView::new(
         &[
@@ -216,8 +205,6 @@ pub(super) fn breadcrumbs(name: &str) -> Vec<BreadcrumbView> {
     ]
 }
 
-// Why: an integer percentage with the zero-denominator case decided once, so
-// no caller invents its own answer for "no calls at all".
 pub(super) fn pct(part: i64, whole: i64) -> i64 {
     if whole <= 0 {
         return 0;
@@ -233,9 +220,6 @@ pub(super) struct PageCounts {
     pub(super) shown: i64,
 }
 
-// Why: this page's `?page=` is 1-based where every other list page counts
-// from 0, so the window is built on the zero-based index and the link adds the
-// one back. The arithmetic is then the same everywhere; only the URL differs.
 pub(super) fn pagination(counts: PageCounts, noun: &'static str, base: &str) -> Pagination {
     let PageCounts {
         page,

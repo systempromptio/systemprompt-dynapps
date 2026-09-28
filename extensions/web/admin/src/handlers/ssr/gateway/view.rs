@@ -15,14 +15,10 @@ use crate::handlers::ssr::types::{BreadcrumbView, PickableUserView, TabLinkView}
 
 #[derive(Debug, Clone, Serialize)]
 pub(super) struct GatewayRouteRow {
-    // Why: the position in the YAML sequence, which is what every write
-    // endpoint addresses and what reordering permutes. Not a display detail.
     pub index: usize,
     pub id: String,
     pub name: String,
     pub description: String,
-    // Why: the declared name, or the label derived from pattern and
-    // provider — the same string access control shows for this route.
     pub label: String,
     pub provider_label: String,
     pub model_pattern: String,
@@ -41,7 +37,6 @@ pub(super) struct GatewayRouteRow {
     pub matrix_url: String,
 }
 
-// Why: A route the dispatcher will match that the file does not list.
 #[derive(Debug, Clone, Serialize)]
 pub(super) struct ResolvedOnlyRow {
     pub id: String,
@@ -90,13 +85,8 @@ pub(super) struct GatewayPageData {
     pub provider_cards: Vec<ProviderCardView>,
     pub dispatch: Vec<DispatchRow>,
     pub dispatch_count: usize,
-    // Why: the page cannot mutate a file it could not read. The banner carries
-    // the loader's own message rather than an empty table, because "no routes"
-    // and "the gateway file is unreadable" are opposite operator situations.
     pub load_error: String,
     pub catalog_error: String,
-    // Why: the table is what the editor writes and the file is what core
-    // boots from; the page prints the one sentence that reconciles them.
     pub runtime_note: &'static str,
     pub sync_url: &'static str,
     pub names_note: &'static str,

@@ -35,8 +35,6 @@ pub struct McpServerActivity {
     pub prior_calls: i64,
 }
 
-// Why: Per-server call volume over a window, with the preceding window of equal
-// length beside it so every headline number can carry a delta.
 pub async fn list_mcp_server_activity(
     pool: &PgPool,
     from: DateTime<Utc>,
@@ -119,8 +117,6 @@ pub struct McpToolStat {
     pub last_call_at: Option<DateTime<Utc>>,
 }
 
-// Why: The tools served in the window, busiest first — for one server, or for
-// the whole fleet when `server_name` is `None` (the export).
 pub async fn list_mcp_tool_stats(
     pool: &PgPool,
     server_name: Option<&str>,

@@ -44,11 +44,9 @@ struct Tenant {
 pub(super) async fn select(grant: &mut Grant, sites: &[Value]) -> AdminResult<()> {
     let selected = grant.resource_id.clone();
     let cloud_id = if selected.starts_with("https://") {
-        let endpoint = tenant_metadata_url(&selected)?;
-        // Why: tenant metadata is public; never send the user's grant to a site
-        // hostname.
+        let public_tenant_endpoint = tenant_metadata_url(&selected)?;
         client()?
-            .get(endpoint)
+            .get(public_tenant_endpoint)
             .send()
             .await
             .map_err(|_redacted_error| {

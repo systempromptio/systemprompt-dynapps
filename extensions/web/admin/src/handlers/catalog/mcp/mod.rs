@@ -48,13 +48,12 @@ use rows::{BASE_URL, RowInputs};
 use view::{McpDetailData, McpPageData};
 use window::{pairs_to_query, time_range_context, window_label, window_of, window_pairs};
 
+const RELATIVE_TO_DETAIL_PAGE: &str = "";
+
 #[derive(Debug, Default, Deserialize)]
 pub(crate) struct McpListQuery {
     pub sort: Option<String>,
     pub dir: Option<String>,
-    // Why: filtering is a server round trip, not a class toggle — the count in
-    // the toolbar, the empty state and the URL then cannot disagree with the
-    // rows on screen.
     pub q: Option<String>,
     pub preset: Option<String>,
     pub from: Option<String>,
@@ -67,7 +66,6 @@ pub(crate) struct McpDetailQuery {
     pub preset: Option<String>,
     pub from: Option<String>,
     pub to: Option<String>,
-    // Why: the "Who gets this" panel's "Why?" person.
     pub why: Option<String>,
 }
 
@@ -91,9 +89,6 @@ pub(crate) async fn mcp_servers_page(
     let mut servers = fleet.rows;
 
     let search = query.q.unwrap_or_default();
-    // Why: the tiles count the fleet, not the filtered view. A filter that
-    // moved "alive now" would make the number mean two different things
-    // depending on what was typed in the box above it.
     let kpis = columns::kpis(&servers);
     servers.retain(|s| matches(&[&s.id, &s.description, &s.server_type], &search));
     let sort_key = query.sort.unwrap_or_else(|| "calls".to_owned());
@@ -160,9 +155,6 @@ pub(crate) async fn mcp_detail_page(
     let server = catalog.mcp.iter().find(|s| s.id == mcp_id);
     let rt = load_runtime(&pool, range).await;
 
-    // Why: a server the catalog does not declare but the runtime has served is
-    // a real page, because the list links to it. Only a name neither half knows
-    // is a 404.
     if server.is_none() && !rt.knows(mcp_id.as_str()) {
         return Err(AdminError::NotFound("No such MCP server.".to_owned()).into());
     }
@@ -253,10 +245,8 @@ fn detail_page_data(input: DetailInputs<'_>) -> McpDetailData {
         status_label: row.status_label,
         status_tone: row.status_tone,
         window_label: window_label(&range),
-        // Why: an empty base keeps the picker's links relative, so they stay
-        // on this server's page rather than naming a path the id must escape.
         time_range: TimeRangeContext {
-            base_url: "",
+            base_url: RELATIVE_TO_DETAIL_PAGE,
             ..time_range_context(&range, BASE_URL)
         },
         export: ExportView::new(&["mcp-calls", "mcp-tools"], &pairs_to_query(&export_pairs)),

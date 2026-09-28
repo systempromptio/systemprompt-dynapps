@@ -29,8 +29,6 @@ use super::query::{BASE_URL, ConversationAnalysisQuery};
 
 pub(crate) const JUDGE_ALL_URL: &str = "/admin/analysis/conversations/judge";
 
-// Why: one click may queue at most this many; the judge's daily cost cap is
-// the other guard, and a backlog past this is a scheduling decision.
 const MAX_PER_CLICK: i64 = 200;
 
 #[derive(Debug, Deserialize)]
@@ -48,8 +46,6 @@ fn back_url(form: &JudgeAllForm) -> String {
         .to_owned()
 }
 
-// Why: the page's own filters, re-read from the query string the form
-// carried, narrowed to unjudged rows.
 fn params_from(form: &JudgeAllForm) -> Result<ConversationAnalysisQuery, AdminError> {
     let query = form
         .query
@@ -86,6 +82,7 @@ pub(crate) async fn judge_all(
     );
     let scope = repositories::scope::membership::get_subject_scope(&pool, &request).await?;
     let selected = params.context_ids();
+    let rejudge_ticked_rows = selected.is_some();
     let filter = ConversationAnalysisFilter {
         subject_ids: scope.as_sql().map(<[String]>::to_vec),
         user_id: params.user_id(),
@@ -95,9 +92,7 @@ pub(crate) async fn judge_all(
         free_text: params.free_text(),
         since: params.since_datetime(),
         until: None,
-        // Why: a ticked row is re-judged even when it already has a verdict;
-        // the filtered set only ever adds what has none.
-        judged: if selected.is_some() {
+        judged: if rejudge_ticked_rows {
             None
         } else {
             Some(JudgedFilter::Unjudged)

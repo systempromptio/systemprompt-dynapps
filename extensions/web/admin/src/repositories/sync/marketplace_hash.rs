@@ -83,8 +83,6 @@ pub struct SourceOf {
 
 type Cached = Option<(Fingerprint, Vec<MarketplaceVersion>)>;
 
-// Why: hashing reads every file under three directories, so the result is
-// cached per process and recomputed only when those directories move.
 pub fn compute_marketplace_versions(
     root: &Path,
     services: &ServicesConfig,
@@ -185,10 +183,7 @@ fn hash_one(files: &[FileEntry], spec: &MarketplaceSpec, owner: SourceOf) -> Mar
             manifest
         })
         .collect();
-    // Why: a skill two plugins share is one set of bytes; hashing it twice
-    // would make the hash depend on plugin count, not content.
-    selected.sort_by(|a, b| a.path.cmp(&b.path));
-    selected.dedup_by(|a, b| a.path == b.path);
+    dedup_skills_shared_across_plugins(&mut selected);
     let skill_count = plugins.iter().map(|p| p.skills.len()).sum::<usize>();
     MarketplaceVersion {
         marketplace_id: spec.id.clone(),
@@ -215,9 +210,11 @@ fn under(files: &[FileEntry], prefix: &str) -> Vec<FileEntry> {
         .collect()
 }
 
-// Why: an included id whose directory is missing still shapes the version —
-// the reference is broken — so it hashes as a single empty entry rather
-// than vanishing.
+fn dedup_skills_shared_across_plugins(files: &mut Vec<FileEntry>) {
+    files.sort_by(|a, b| a.path.cmp(&b.path));
+    files.dedup_by(|a, b| a.path == b.path);
+}
+
 fn digest_of(files: &[FileEntry], missing_path: &str) -> String {
     if files.is_empty() {
         return ServicesBundleManifest::compute_content_hash(&[FileEntry {

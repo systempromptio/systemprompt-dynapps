@@ -1,4 +1,7 @@
 //! Day/week-bucketed usage series feeding the volume and cost trend charts.
+//!
+//! The aggregate is joined onto a zero-filled calendar spine, so quiet days
+//! render as gaps instead of vanishing and compressing the x-axis.
 
 use sqlx::PgPool;
 
@@ -42,8 +45,6 @@ pub struct UsageBucket {
     pub active_users: i64,
 }
 
-// Why: Zero-filled calendar spine `LEFT JOIN`ed to the aggregate, so quiet days
-// render as gaps rather than disappearing and compressing the x-axis.
 pub async fn list_daily_usage_series(
     pool: &PgPool,
     range: TimeRange,

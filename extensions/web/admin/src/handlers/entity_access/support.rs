@@ -24,30 +24,22 @@ pub(super) fn validate_entity_type(entity_type: &str) -> AdminResult<EntityKind>
         .map_err(|source| AdminError::invalid("invalid entity_type", source))
 }
 
+fn is_rule_key_safe_user_id(value: &str) -> bool {
+    !value.is_empty() && !value.contains(':')
+}
+
 pub(super) fn repo(pool: &PgPool) -> AccessControlRepository {
     AccessControlRepository::from_pool(Arc::new(pool.clone()))
 }
 
-// Why: Resolve a rule subject to the `(rule_type, rule_value)` pair the
-// access-control table stores.
-//
-// Why not `SubjectRef`: core's subject enum has no arm for an extension
-// dimension, and `group` and `project` are exactly that — minted here with
-// [`RuleType::extension`] and taught to the resolver by this crate's
-// providers. Routing them through `SubjectRef` would mean widening a core
-// type to carry a slug core never interprets.
-//
-// A group or project value is checked against its table: unlike a user id or
-// a role name, a mistyped one would sit in the rules table matching nothing
-// and looking granted.
+// Why: core's `SubjectRef` has no arm for extension dimensions, so `group` and
+// `project` are minted with `RuleType::extension` and checked against their
+// tables — a mistyped one would otherwise match nothing and look granted.
 pub(super) async fn parse_subject(
     pool: &PgPool,
     rule_type: &str,
     rule_value: &str,
 ) -> AdminResult<(RuleType, String)> {
-    // Why: the rules body spells the field `rule_type` and the bulk template
-    // spells it `subject_type`; one message names both so either caller is
-    // pointed at their own field.
     let invalid = || {
         AdminError::BadRequest(
             "invalid rule_type (invalid subject_type): must be user, role, group or project"
@@ -55,12 +47,8 @@ pub(super) async fn parse_subject(
         )
     };
     match rule_type {
-        // Why: `UserId` is a plain id with no validator, and on this instance
-        // user ids are not UUIDs — invite- and SSO-provisioned accounts carry
-        // slug/email-derived ids — so the boundary check is shape-light:
-        // non-empty and colon-free (a colon would corrupt the rule key).
         "user" => {
-            if rule_value.is_empty() || rule_value.contains(':') {
+            if !is_rule_key_safe_user_id(rule_value) {
                 return Err(invalid());
             }
             Ok((RuleType::USER, rule_value.to_owned()))
@@ -118,8 +106,6 @@ pub(super) fn collect_entity_ids(entity_type: &str) -> AdminResult<Vec<String>> 
     }
 }
 
-// Why: the trail names the subject a removal took away, which is only
-// readable before the row is gone. An unreadable listing names the id.
 pub(super) async fn rule_subject(
     pool: &PgPool,
     kind: EntityKind,

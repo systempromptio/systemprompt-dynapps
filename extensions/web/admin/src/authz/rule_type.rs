@@ -52,8 +52,6 @@ const fn bytes_eq(a: &[u8], b: &[u8]) -> bool {
 }
 
 pub(crate) fn extension_rule_type(slug: ExtensionSlug) -> RuleType {
-    // Why: `ExtensionSlug::new` proved the slug at compile time, and
-    // `RuleType`'s field is private, so no const construction exists.
     RuleType::extension(slug.0)
         .unwrap_or_else(|e| unreachable!("`{}` is a well-formed slug: {e}", slug.0))
 }

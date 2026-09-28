@@ -10,6 +10,17 @@
 //! ledger integer, a timestamp is a `DateTime`, and each format decides how
 //! to write them. CSV writes cost as an exact six-decimal decimal because
 //! these files feed finance spreadsheets, where a rounded `f64` would drift.
+//!
+//! A dataset reads the page's own query type back out of the request
+//! ([`ExportContext::query`]), so the filters a page understands are exactly
+//! the filters its export understands — there is no second parameter list.
+//! A [`Table`]'s `total` counts every row the filter matched, so it exceeds
+//! `rows.len()` when a cap cut the file and the preview can say so.
+//!
+//! [`Window`] names the contract a dataset reads under: `Live` is
+//! `?preset=&from=&to=` (up to 90 days), `Retained` the snapshot pipeline's
+//! UTC days (up to a year), `Days` a fixed preset only, `Month` is
+//! `?month=YYYY-MM`.
 
 use async_trait::async_trait;
 use axum::http::Uri;
@@ -39,9 +50,6 @@ pub(crate) struct Column {
     pub label: &'static str,
     pub kind: CellKind,
     pub default: bool,
-    // Why: the heading the dialog files the column under (Identity, Tokens,
-    // Judge …) so a fifty-column table reads as seven short lists; a dataset
-    // that declares no groups lands everything under "Other".
     pub group: &'static str,
 }
 
@@ -150,9 +158,6 @@ impl From<DateTime<Utc>> for Cell {
     }
 }
 
-// Why: `total` is the count the filter matches, which is more than `rows`
-// holds when the cap bit — the preview says so instead of letting a file that
-// stops at 50,000 rows pass for the whole answer.
 #[derive(Debug, Default)]
 pub(crate) struct Table {
     pub rows: Vec<Vec<Cell>>,
@@ -165,21 +170,11 @@ impl Table {
         Self { rows, total }
     }
 
-    // Why: a loader whose repository stops at its own ceiling (below
-    // `HARD_CAP`) still knows how many rows the filter matched; reporting that
-    // total beside the rows is what lets the preview say the file is cut.
     pub(crate) const fn capped_at(rows: Vec<Vec<Cell>>, total: i64) -> Self {
         Self { rows, total }
     }
 }
 
-// Why: four window contracts exist across the console and each dataset
-// names its own. `Live` is the AI-activity `?preset=&from=&to=` contract
-// (minutes to 90 days); `Retained` is the snapshot pipeline's UTC-day window
-// (up to a year); `Days` is a fixed-size preset only, for tables whose
-// custom ranges schedule work rather than read it; `Month` is one calendar
-// month (`?month=YYYY-MM`), for the billing reports; `None` for tables with
-// no time axis.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
 #[serde(rename_all = "snake_case")]
 pub(crate) enum Window {
@@ -190,14 +185,17 @@ pub(crate) enum Window {
     None,
 }
 
-// Why: `clamped` is true when the range asked for was wider than the
-// contract allows and was narrowed, so the preview can say the file covers
-// less than the reader picked.
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct ExportWindow {
     pub from: DateTime<Utc>,
     pub to: DateTime<Utc>,
     pub clamped: bool,
+}
+
+impl ExportWindow {
+    pub(crate) fn whole_days_back_from_now(&self) -> i32 {
+        i32::try_from((self.to - self.from).num_days().max(1)).unwrap_or(30)
+    }
 }
 
 pub(crate) struct ExportContext<'a> {
@@ -219,9 +217,6 @@ impl<'a> ExportContext<'a> {
         }
     }
 
-    // Why: each dataset reads the page's own query type back out of the
-    // request, so the filters a page understands are exactly the filters its
-    // export understands — there is no second, hand-maintained parameter list.
     pub(crate) fn query<T: DeserializeOwned>(&self) -> AdminResult<T> {
         axum::extract::Query::<T>::try_from_uri(&self.uri)
             .map(|q| q.0)
@@ -234,21 +229,17 @@ impl<'a> ExportContext<'a> {
     }
 }
 
-// Why: `async_trait` because the registry holds datasets as `&dyn DataSet`;
-// a native async trait method is not object-safe.
+// Why: Rust native async trait methods are not dyn-compatible, and the
+// registry holds datasets as `&dyn DataSet`.
 #[async_trait]
 pub(crate) trait DataSet: Send + Sync {
     fn id(&self) -> &'static str;
     fn title(&self) -> &'static str;
-    // Why: one line under the Data select saying what a row of this table
-    // is; the default keeps datasets that never wrote one compiling.
     fn description(&self) -> &'static str {
         ""
     }
     fn columns(&self) -> &'static [Column];
     fn window(&self) -> Window;
-    // Why: the most rows one file of this table holds. A repository with its
-    // own lower ceiling declares it, so the preview's "capped" is honest.
     fn cap(&self) -> i64 {
         HARD_CAP
     }

@@ -3,9 +3,6 @@
 
 use super::view::{AudienceMatrixView, MarketplaceCardView, MarketplaceKpiView};
 
-// Why: the six facts an operator scans before opening any one marketplace.
-// "Reachable" is the resolved count, so a manifest that grants a group nothing
-// can reach reads as zero here rather than as its declared list.
 pub(super) fn list_kpis(
     cards: &[MarketplaceCardView],
     audience: &AudienceMatrixView,

@@ -114,9 +114,6 @@ fn header(exported_at: chrono::DateTime<chrono::Utc>) -> String {
     )
 }
 
-// Why: `enabled`/`mode` are written back into each entry from the row's
-// columns, so a console edit to either lands in the file even though the
-// stored entry still carries the value it was declared with.
 #[must_use]
 pub fn render_chain_export(
     chain: &DeclaredChain,

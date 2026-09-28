@@ -18,10 +18,8 @@ use super::urls::filter_url;
 use crate::repositories::governance::decision_log::DecisionStats;
 use crate::repositories::governance::findings::SafetyStats;
 
-// Why: One KPI tile, as `components/kpi` reads it. The supporting line is
-// `note` on the partial, and the field is named `note` too: a bare `sub`
-// mustache resolves to the registered helper of that name rather than to a
-// field, so no view struct here carries a field called `sub`.
+// Why: Handlebars resolves a bare `sub` mustache to the registered helper, not
+// a field, so the tile's supporting line is `note` here and on the partial.
 #[derive(Debug, Serialize)]
 pub(super) struct GovernanceKpiView {
     label: &'static str,
@@ -108,7 +106,6 @@ fn safety_tiles(f: SafetyStats) -> Vec<Tile> {
     ]
 }
 
-// Why: One policy's showing in the window, as a filter link.
 #[derive(Debug, Serialize)]
 pub(super) struct StageFilterView {
     label: String,
@@ -118,17 +115,6 @@ pub(super) struct StageFilterView {
     tone: &'static str,
 }
 
-// Why: the strip used to name the four synchronous chain stages and count only
-// those. On an instance whose traffic is `authz`, `default_allow` and
-// `authentication` that is four zeroes sitting above a log of twenty thousand
-// rows, which reads as "nothing is happening" — the exact opposite of the
-// truth.
-//
-// It is built from what the window actually holds instead, ordered so the
-// policies that denied or warned come first. A chip exists because a policy
-// fired; its count is the attention it drew, and a policy that only ever allows
-// is muted rather than absent, because "this ran and objected to nothing" is
-// also worth reading.
 pub(super) fn stage_filters(
     query: &GovernanceQuery,
     data: &GovernanceData,

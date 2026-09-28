@@ -4,9 +4,6 @@
 use super::RosterUrlState;
 use super::context::RoleOptionView;
 
-// Why: the scope-filter form posts as a GET, so everything the reader had
-// selected outside the two scope selects has to ride along as a hidden field
-// or submitting the form would silently clear it.
 pub(super) fn preserved_hidden(url: &RosterUrlState) -> Vec<(String, String)> {
     vec![
         ("filter".to_owned(), url.filter.as_str().to_owned()),

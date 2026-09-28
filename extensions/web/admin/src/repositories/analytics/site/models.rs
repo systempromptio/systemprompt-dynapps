@@ -8,7 +8,8 @@
 //! `requested_model` is what the client asked for and `model` is what the
 //! route resolved to, so the two differing is a redirect. The count is
 //! reported per model rather than summed, because a redirect only means
-//! anything beside the model it landed on.
+//! anything beside the model it landed on. A `success` status is a completed
+//! request under the MCP-side naming, never an error.
 
 use sqlx::PgPool;
 
@@ -16,9 +17,6 @@ use crate::util::time_range::TimeRange;
 
 use super::SiteScope;
 
-// Why: the statuses that mean the request produced no answer. `success` is a
-// completed request under the MCP-side naming, so excluding it here is what
-// stops two thirds of healthy traffic being counted as failures.
 pub const ERROR_STATUSES: [&str; 4] = ["failed", "rejected", "timeout", "error"];
 
 #[derive(Debug, Clone)]
@@ -34,11 +32,7 @@ pub struct ModelStatsRow {
     pub p50_latency_ms: Option<f64>,
     pub p95_latency_ms: Option<f64>,
     pub errors: i64,
-    // Why: requests whose `requested_model` differs from the model that served
-    // them — the gateway route rewrote the target.
     pub redirected: i64,
-    // Why: the bucket for requests with no model at all, which are the ones
-    // rejected before a route was chosen.
     pub is_unrouted: bool,
 }
 

@@ -4,6 +4,8 @@
 //! fan-out, the usage view-model, config/identity strings, the bridge gateway
 //! block, and the agents block. Falls back to empty defaults on failure so a
 //! missing section renders as an empty card rather than a page-level error.
+//! Marketplaces resolve through the admin subject matrix, not the manifest
+//! audience, so a per-user deny hides one that a group grants.
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -213,11 +215,7 @@ pub(super) fn build_agents_block() -> AgentsBlock {
     }
 }
 
-// Why: the card answers "what do I actually reach", not "what does the manifest
-// offer", so it resolves through the same subject matrix the admin pages use
-// rather than reading the YAML audience. A user whose group grants a
-// marketplace and whose per-user rule denies it must see it absent here.
-pub(super) async fn build_marketplaces(
+pub(super) async fn build_reachable_marketplaces(
     pool: &PgPool,
     user_id: &UserId,
     roles: Vec<String>,

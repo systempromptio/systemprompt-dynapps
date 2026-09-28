@@ -34,10 +34,6 @@ fn as_member_input(row: &GroupMemberRow) -> MemberInput<'_> {
     }
 }
 
-// Why: A cell's toggle state: `allow` or `deny` when this group's own band
-// holds a rule, `inherit` when it does not and the effective value came from a
-// wider band. Clearing a rule returns the cell to `inherit`, which is why the
-// editor needs all three states and not a checkbox.
 pub(super) fn access_sections(
     resolved: Vec<crate::repositories::users::access_control::MatrixSection>,
     rules: &[AccessControlRule],

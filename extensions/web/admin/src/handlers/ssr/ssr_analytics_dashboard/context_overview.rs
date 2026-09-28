@@ -13,8 +13,6 @@ use crate::handlers::ssr::types::{DeltaView, SparklineView};
 
 #[derive(Debug, Serialize)]
 pub(super) struct FastSlowView {
-    // Why: the threshold belongs in the KPI label, not a footnote — "Within
-    // SLO" alone is a number nobody can check without knowing what the SLO is.
     pub within_label: String,
     pub breach_label: String,
     pub fast: i64,
@@ -41,10 +39,6 @@ pub(super) struct DashboardTimeRange {
     pub to: String,
     pub base_url: &'static str,
     pub query: String,
-    // Why: carried from `TimeRange::rejected_bounds`; the shared
-    // `components/time-range` partial raises its notice on this, and the
-    // dashboard is the page most likely to be reached by a pasted link
-    // carrying someone else's window.
     pub rejected: bool,
 }
 
@@ -98,10 +92,6 @@ pub(super) struct KpiStripView {
 
 #[derive(Debug, Serialize)]
 pub(super) struct LeaderboardView {
-    // Why: which column the rows are actually ordered by, so the header can
-    // carry `aria-sort` on that one column and on no other. A table that tells
-    // a screen reader every column is sortable when only four links change the
-    // order is worse than one that says nothing.
     pub sorted_key: &'static str,
     pub rows: Vec<LeaderRowView>,
     pub has_rows: bool,

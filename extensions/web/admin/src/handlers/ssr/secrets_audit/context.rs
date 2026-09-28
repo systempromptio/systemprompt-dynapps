@@ -43,9 +43,6 @@ pub(super) fn url_for(query: &SecretsQuery, action: Option<&str>, page: i64) -> 
     }
 }
 
-// Why: `third_party` is the tile that earns the page. Every other number can be
-// counted off the table; "an administrator read someone else's credential"
-// cannot, and it is the row an auditor came here to find.
 pub(super) fn kpis(stats: &SecretAuditStats, query: &SecretsQuery) -> Vec<SecretAuditKpiView> {
     vec![
         SecretAuditKpiView {

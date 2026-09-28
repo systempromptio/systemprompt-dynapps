@@ -59,9 +59,6 @@ pub(super) async fn load_counts(pool: &PgPool, group_id: &GroupId) -> TabCounts 
     }
 }
 
-// Why: "who is in this group" is full membership — a person in two groups is
-// in both — so every listing and breakdown binds this. It deliberately
-// overlaps with the other groups, and the screens that use it say so.
 const fn member_query(group_id: &GroupId) -> ScopeQuery<'_> {
     ScopeQuery::new(
         ScopeTarget::Group(group_id),
@@ -70,10 +67,6 @@ const fn member_query(group_id: &GroupId) -> ScopeQuery<'_> {
     )
 }
 
-// Why: every headline total is exclusive, so this group's figures are its
-// slice of an instance the group totals partition. Reading a member-attributed
-// total beside the other groups' would double-count anyone in two of them and
-// leave a KPI row that adds up to more than the estate spent.
 const fn exclusive_query(group_id: &GroupId) -> ScopeQuery<'_> {
     ScopeQuery::new(
         ScopeTarget::Group(group_id),
@@ -160,10 +153,9 @@ pub(super) async fn load_members(
     }
 }
 
-// Why: the macro form, so a column this query names but the schema lacks is
-// a build error. A runtime `query_scalar` would have its error swallowed by
-// `unwrap_or_default`, the set would come back empty, and every member on the
-// tab would render as disabled.
+// Why: sqlx's macro form makes a missing column a build error; a runtime
+// `query_scalar` failure is swallowed by `unwrap_or_default` and every member
+// would render as disabled.
 async fn load_enabled_user_ids(pool: &PgPool) -> std::collections::HashSet<String> {
     sqlx::query_scalar!("SELECT id FROM users WHERE status = 'active'")
         .fetch_all(pool)
@@ -174,15 +166,9 @@ async fn load_enabled_user_ids(pool: &PgPool) -> std::collections::HashSet<Strin
         .collect()
 }
 
-// Why: Candidates for the Add member dialog: every account not already in the
-// group. Rendered server-side as `<option>` rows so the dialog needs no
-// search endpoint of its own.
 async fn load_addable_users(pool: &PgPool, members: &[GroupMemberRow]) -> Vec<UserOptionView> {
     let existing: std::collections::HashSet<&str> =
         members.iter().map(|m| m.user_id.as_str()).collect();
-    // Why: the macro form for the same reason as the enabled-account set
-    // above — this is a raw query over four columns of `users`, and a rename
-    // in any of them would empty the dialog rather than fail the build.
     sqlx::query!(
         r#"SELECT id AS "id!",
                   COALESCE(display_name, full_name, name) AS "name?",
@@ -220,9 +206,6 @@ pub(super) async fn load_mappings(pool: &PgPool, group_id: &GroupId) -> Vec<Grou
         .unwrap_or_default()
 }
 
-// Why: The Access tab: every catalog entity resolved for a subject holding only
-// this group's membership, plus the group's own rules so the toggles can
-// show `inherit` where no rule of its own exists.
 pub(super) async fn load_access(pool: &PgPool, group_id: &GroupId) -> Vec<AccessSectionView> {
     let Ok(services_path) = crate::handlers::shared::get_services_path() else {
         tracing::warn!("services path unavailable; group access matrix skipped");

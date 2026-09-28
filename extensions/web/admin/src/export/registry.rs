@@ -3,10 +3,8 @@
 use super::datasets;
 use super::model::DataSet;
 
-// Why: a static slice rather than `inventory` — the set is closed, small, and
-// a reader should be able to see every export the console offers in one
-// place. Order is the order the dialog lists them in when a page offers more
-// than one.
+// Why: a closed static slice, not `inventory` registration, so every export
+// is visible in one place; order is the dialog's listing order.
 pub(crate) const ALL: &[&dyn DataSet] = &[
     &datasets::requests::Requests,
     &datasets::sessions::Sessions,

@@ -15,9 +15,8 @@ pub struct UserSettingsRow {
     pub updated_at: DateTime<Utc>,
 }
 
-// Why: the write shape, separate from the row. It carries no `user_id` — the
-// handler takes that from the validated session, so there is no field a caller
-// could set to write somebody else's settings.
+/// Deliberately has no `user_id`: the handler takes it from the validated
+/// session, so no field lets a caller write somebody else's settings.
 #[derive(Debug, Clone, Deserialize)]
 pub struct UserSettingsInput {
     #[serde(default)]
@@ -53,9 +52,6 @@ pub async fn find_user_settings(
     .await
 }
 
-// Why: an upsert rather than an update. The row is created lazily — a person
-// who has never saved has no `user_settings` row at all, which is why the page
-// renders defaults — so the first save has nothing to update.
 pub async fn update_user_settings(
     pool: &PgPool,
     user_id: &UserId,
@@ -86,8 +82,8 @@ pub async fn update_user_settings(
     .await
 }
 
-// Why: `user_settings.user_id` carries no foreign key to `users`, so deleting
-// an account leaves this row behind unless it is removed explicitly.
+// Why: Postgres schema — `user_settings.user_id` has no foreign key to
+// `users`, so nothing cascades; deleting an account must remove this row.
 pub async fn delete_user_settings(pool: &PgPool, user_id: &UserId) -> Result<(), sqlx::Error> {
     sqlx::query!(
         "DELETE FROM user_settings WHERE user_id = $1",

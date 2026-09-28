@@ -9,6 +9,10 @@
 //! Narrowing to a user id list rather than to a column keeps the rule in one
 //! place: a listing joins whatever it likes and adds one `user_id = ANY($n)`,
 //! instead of every query restating what membership means.
+//!
+//! A requested container the caller may not see is dropped, never refused:
+//! the query string is not an authorisation surface, and an error would tell
+//! a scoped caller that someone else's group or project exists.
 
 use crate::types::UserContext;
 
@@ -52,11 +56,7 @@ pub struct ScopeRequest {
     pub project: Option<String>,
 }
 
-// Why: a requested container the caller may not see is ignored rather than
-// refused. The query string is not an authorisation surface, so a scoped
-// caller asking for someone else's group or project gets their own view
-// back, never an error that would tell them the container exists.
-fn narrow(visible: Option<&[String]>, asked: Option<&str>) -> Option<String> {
+fn drop_unseen_container(visible: Option<&[String]>, asked: Option<&str>) -> Option<String> {
     match (visible, asked) {
         (_, None) => None,
         (None, Some(v)) => Some(v.to_owned()),
@@ -69,10 +69,16 @@ impl ScopeRequest {
     pub fn from_query(user_ctx: &UserContext, group: Option<&str>, project: Option<&str>) -> Self {
         let visibility = Visibility::for_user(user_ctx);
         let (group, project) = match &visibility {
-            Visibility::All => (narrow(None, group), narrow(None, project)),
+            Visibility::All => (
+                drop_unseen_container(None, group),
+                drop_unseen_container(None, project),
+            ),
             Visibility::Scoped {
                 groups, projects, ..
-            } => (narrow(Some(groups), group), narrow(Some(projects), project)),
+            } => (
+                drop_unseen_container(Some(groups), group),
+                drop_unseen_container(Some(projects), project),
+            ),
         };
         Self {
             visibility,
@@ -81,7 +87,6 @@ impl ScopeRequest {
         }
     }
 
-    // Why: The group ids a query must narrow to, or `None` for every group.
     #[must_use]
     pub fn group_filter(&self) -> Option<Vec<String>> {
         match (&self.visibility, self.group.as_ref()) {
@@ -94,7 +99,6 @@ impl ScopeRequest {
         }
     }
 
-    // Why: The project ids a query must narrow to, or `None` for every project.
     #[must_use]
     pub fn project_filter(&self) -> Option<Vec<String>> {
         match (&self.visibility, self.project.as_ref()) {
@@ -107,8 +111,6 @@ impl ScopeRequest {
         }
     }
 
-    // Why: the caller's own id when their view is scoped, so their own rows
-    // are always inside it; `None` for a console caller who sees everyone.
     #[must_use]
     pub const fn self_id(&self) -> Option<&str> {
         match &self.visibility {
@@ -144,11 +146,6 @@ impl SubjectScope {
     }
 }
 
-// Why: whether one owner's rows are inside the caller's view — the question a
-// detail page asks before rendering a session, context, trace or request the
-// header lookup landed on. A console caller sees every owner; a scoped caller
-// resolves their unfiltered view once and checks membership. An unknown owner
-// is outside every scoped view.
 pub async fn may_view(
     pool: &sqlx::PgPool,
     user_ctx: &UserContext,

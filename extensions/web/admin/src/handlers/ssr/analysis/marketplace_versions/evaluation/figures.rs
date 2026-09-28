@@ -70,8 +70,6 @@ impl Figures {
     }
 }
 
-// Why: a figure is read with its change from the baseline; `tone` says
-// whether that change is an improvement.
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct Measure {
     pub value: String,
@@ -111,7 +109,6 @@ fn pct(n: i64, d: i64) -> f64 {
     }
 }
 
-// Why: lower is better for spend, size and errors; higher for success.
 fn measure(
     value: f64,
     base: Option<f64>,
@@ -147,8 +144,6 @@ fn measure(
     }
 }
 
-// Why: what a successful run costs once the failed runs' spend is counted
-// against it; a plugin that fails half its runs doubles this figure.
 fn per_success(f: &Figures) -> f64 {
     if f.success == 0 {
         0.0

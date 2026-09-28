@@ -29,8 +29,6 @@ use crate::types::Role;
 
 pub(crate) const SYNC_URL: &str = "/admin/sync?tab=access";
 
-// Why: the page every "access" link lands on — the entity's own panel. A
-// kind with no catalog detail page (a gateway route, say) has none.
 #[must_use]
 pub(crate) fn entity_access_url(entity_type: &str, entity_id: &str) -> Option<String> {
     let base = match entity_type {
@@ -51,8 +49,6 @@ pub(crate) struct PanelRequest<'a> {
     pub page_url: &'a str,
     pub why: Option<&'a str>,
     pub can_write: bool,
-    // Why: a kind whose declaration is not per entity says so above its rules
-    // — a gateway route's code rules are the `*` glob, not its own.
     pub note: Option<&'static str>,
 }
 
@@ -104,8 +100,6 @@ fn subject_names(options: &SubjectOptions) -> HashMap<(String, String), String> 
     names
 }
 
-// Why: the file failing to load is the panel's own notice, not a 500 — the
-// rules that are enforced are still worth reading while someone fixes it.
 async fn review_for(pool: &PgPool, key: &str) -> Result<Option<ReviewedEntity>, String> {
     let declared = declared_now().await.map_err(|e| e.to_string())?;
     let drift = drift_now(pool, &declared)

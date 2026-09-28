@@ -53,8 +53,6 @@ pub(super) async fn load_dashboard_data(
     pool: &Arc<PgPool>,
     plan: DashboardQueryPlan<'_>,
 ) -> AnalyticsDashboardData {
-    // Why: loaded for every tab — the strip renders on Overview and Usage,
-    // and the other tabs share its deltas.
     let kpis = kpis::get_site_kpis(pool, plan.range, plan.scope)
         .await
         .unwrap_or_else(|e| {
@@ -85,9 +83,6 @@ pub(super) async fn load_dashboard_data(
     data
 }
 
-// Why: the Overview is the one screen that must answer "how is the instance
-// doing" without a click, so it pays for every aggregate at once. The tabs
-// below it exist precisely so that cost is not paid twice.
 async fn load_overview(
     pool: &PgPool,
     plan: &DashboardQueryPlan<'_>,

@@ -47,8 +47,6 @@ pub struct OverviewKpis {
 }
 
 impl OverviewKpis {
-    // Why: tenths of a percent rather than a float, so the tile and its delta
-    // are derived from one integer and cannot round apart.
     #[must_use]
     pub const fn error_rate_tenths(&self) -> i64 {
         rate_tenths(self.errors, self.requests)
@@ -59,17 +57,12 @@ impl OverviewKpis {
         rate_tenths(self.prev_errors, self.prev_requests)
     }
 
-    // Why: the share of everything the models read that came back from cache,
-    // in whole percent — the figure that says whether prompt caching is
-    // earning its keep, and the one the Tokens tile is toned on.
     #[must_use]
     pub const fn cache_share_percent(&self) -> i64 {
         rate_tenths(self.cache_tokens, self.input_tokens + self.cache_tokens) / 10
     }
 }
 
-// Why: an empty window has no rate rather than a rate of zero, and the caller
-// renders that as an em dash. Zero would claim a measurement nobody took.
 const fn rate_tenths(part: i64, whole: i64) -> i64 {
     if whole <= 0 {
         return 0;
@@ -81,9 +74,8 @@ pub async fn get_overview_kpis(
     pool: &PgPool,
     range: TimeRange,
 ) -> Result<OverviewKpis, sqlx::Error> {
-    // Why: the previous window's edge is computed here rather than in SQL so
-    // the two windows are the same width to the microsecond.
-    let prev_from = range.from - (range.to - range.from);
+    let window_width = range.to - range.from;
+    let prev_from = range.from - window_width;
     let row = sqlx::query_file!(
         "src/repositories/overview/kpis.sql",
         range.from,

@@ -1,13 +1,13 @@
 //! Per-session percentile stats over the same window as the trace list.
+//!
+//! Every source of a session (tool events, governance decisions, requests)
+//! carries a user id, so the one `subject_ids` predicate scopes all three.
 
 use sqlx::PgPool;
 
 use super::TraceStats;
 use crate::util::time_range::TimeRange;
 
-// Why: `subject_ids` is the caller's `SubjectScope::as_sql()`; every source of
-// a session (tool events, governance decisions, requests) carries a user id, so
-// the same predicate scopes all three.
 pub async fn get_trace_stats(
     pool: &PgPool,
     range: TimeRange,

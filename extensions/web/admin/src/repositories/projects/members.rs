@@ -66,7 +66,6 @@ pub async fn count_project_members(
     .await
 }
 
-// Why: same revive-on-conflict rule as `groups::members::insert_group_member`.
 pub async fn insert_project_member(
     pool: &PgPool,
     project_id: &ProjectId,

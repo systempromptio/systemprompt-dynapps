@@ -22,8 +22,6 @@ const TOOL_LIMIT: i64 = 50;
 const CALLER_LIMIT: i64 = 25;
 const CONNECTION_LIMIT: i64 = 50;
 
-// Why: the page links carry the window, or turning a page would silently
-// reset the log to the default 24 hours.
 fn build_pagination(window: PageWindow, base: &str, window_query: &str) -> Pagination {
     let suffix = if window_query.is_empty() {
         String::new()
@@ -33,9 +31,6 @@ fn build_pagination(window: PageWindow, base: &str, window_query: &str) -> Pagin
     paginate(window, |page| format!("{base}?page={page}{suffix}"))
 }
 
-// Why: everything below the header on the detail page, in one read. It is a
-// struct rather than a tuple because seven loosely related lists returned
-// positionally is how the wrong one ends up rendered in the wrong section.
 pub(super) struct DetailSections {
     pub tools: Vec<view::McpToolRow>,
     pub callers: Vec<view::McpCallerRowView>,
@@ -45,9 +40,6 @@ pub(super) struct DetailSections {
     pub connections: Vec<view::McpConnectionRowView>,
 }
 
-// Why: every read is best-effort for the same reason the fleet reads are — a
-// section that will not load renders its own empty state rather than taking
-// the page down with it.
 pub(super) async fn detail_sections(
     pool: &Arc<PgPool>,
     mcp_id: &McpServerId,

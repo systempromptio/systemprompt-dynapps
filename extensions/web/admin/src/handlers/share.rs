@@ -11,6 +11,10 @@
 //! middleware). The token is validated, the version is rechecked against the
 //! database, and the user's permissioned catalog is returned as JSON. The
 //! filtering reuses `repositories::users::access_control::resolve_user_matrix`.
+//!
+//! Expiry is checked after the MAC, so a forged expiry buys no time, and every
+//! verification or lookup failure answers identically so an anonymous caller
+//! cannot tell tampered, expired and unknown apart.
 
 use std::sync::Arc;
 
@@ -29,8 +33,6 @@ use crate::handlers::shared;
 use crate::repositories;
 use crate::types::UserContext;
 
-// Why: thirty days — long enough that a shared catalog link survives a
-// procurement cycle, short enough that a forgotten one dies on its own.
 const SHARE_TOKEN_TTL_DAYS: i64 = 30;
 
 fn sign(secret: &[u8], user_id: &UserId, version: i32, expires_unix: i64) -> String {
@@ -70,9 +72,6 @@ fn sign(secret: &[u8], user_id: &UserId, version: i32, expires_unix: i64) -> Str
     format!("{uid_b64}:{ver_b64}:{exp_b64}:{mac_hex}")
 }
 
-// Why: expiry is checked *after* the MAC, so a forged expiry can never buy
-// time, and an expired-but-genuine token fails exactly like a tampered one —
-// the public endpoint gives an anonymous caller one answer, not three.
 fn verify(secret: &[u8], token: &str) -> Option<(UserId, i32)> {
     let parts: Vec<&str> = token.split(':').collect();
     if parts.len() != 4 {
@@ -109,8 +108,6 @@ pub(crate) async fn issue_share_token_handler(
     State(pool): State<Arc<PgPool>>,
     Path(target_user_id): Path<String>,
 ) -> AdminResult<Response> {
-    // Why: `admin`, not `is_console`. A share token is a signed bearer for
-    // someone else's manifest, so issuing one is credential minting.
     if !user_ctx.is_admin {
         return Err(AdminError::Forbidden("Admin access required".to_owned()));
     }
@@ -157,9 +154,6 @@ pub(crate) async fn public_manifest_handler(
         ));
     };
 
-    // Why: this endpoint is unauthenticated, so a lookup failure of any kind —
-    // missing row or database fault — answers the same way. Distinguishing them
-    // would tell an anonymous caller which user ids exist.
     let current_version = match repositories::users::find_share_token_version(&pool, &user_id).await
     {
         Ok(Some(v)) => v,

@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use serde::Serialize;
-// JSON: page data crosses the provider trait as a Value.
+// JSON: required by trait contract
 use serde_json::Value;
 use systemprompt::extension::prelude::*;
 

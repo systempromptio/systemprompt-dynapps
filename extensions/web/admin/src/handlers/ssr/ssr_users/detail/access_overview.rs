@@ -209,8 +209,8 @@ async fn included_content(pool: &PgPool, user_id: &UserId) -> Result<Vec<Workspa
     Ok(workspaces)
 }
 
-// Why: core keeps the marketplace cache on its application context, which the
-// admin plane never receives; one user-detail render reloads it once.
+// Why: systemprompt core keeps the marketplace cache on its application
+// context, which the admin plane never receives; one render reloads it once.
 fn uncached_marketplace() -> MarketplaceCache {
     MarketplaceCache::default()
 }

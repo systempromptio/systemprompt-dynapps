@@ -127,8 +127,6 @@ pub async fn list_marketplace_version_metrics(
     .await
 }
 
-// Why: every skill of one marketplace under each of the named versions — the
-// compare view names exactly two.
 pub async fn list_marketplace_version_skills(
     pool: &PgPool,
     window: VersionWindow,

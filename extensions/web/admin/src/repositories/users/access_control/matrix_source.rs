@@ -51,9 +51,6 @@ pub(super) fn deny_source(user_id: &UserId, reason: &DenyReason) -> MatrixSource
             layer: rule_type.to_string(),
             detail: format!("{rule_type}:{value} deny"),
         },
-        // Why: everything else is the resolver closing the default rather than
-        // a rule firing, so the cell reports the default layer and lets the
-        // reason speak for itself.
         other => MatrixSource {
             layer: "default".into(),
             detail: other.to_string(),

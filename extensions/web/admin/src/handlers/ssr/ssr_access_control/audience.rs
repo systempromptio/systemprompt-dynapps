@@ -73,8 +73,6 @@ fn column(subject: &str, label: String, kind: &'static str) -> AcAudienceColumnV
     }
 }
 
-// Why: roles first as the baseline every person carries, then groups (where
-// entitlement is granted here), then projects (the narrowest band).
 pub(super) async fn audience(pool: &PgPool) -> Audience {
     let mut subjects = Vec::new();
     let mut columns = Vec::new();
@@ -101,9 +99,6 @@ pub(super) async fn audience(pool: &PgPool) -> Audience {
     Audience { subjects, columns }
 }
 
-// Why: the resolver reports both outcomes of the default as the same layer;
-// to a reader "✕ open" is a contradiction, so a refusal by default is worded
-// as the closed default it is.
 pub(super) fn short_layer(layer: &str, effective: &str) -> String {
     match layer {
         "user" => "person".to_owned(),
@@ -114,8 +109,6 @@ pub(super) fn short_layer(layer: &str, effective: &str) -> String {
     }
 }
 
-// Why: the inverse of `short_layer`, so an inspector row can find the ledger
-// rule that produced a cell by the ledger's own band name.
 pub(super) fn rule_type_of(short: &str) -> String {
     match short {
         "person" => "user".to_owned(),
@@ -154,19 +147,24 @@ pub(super) fn legend() -> Vec<AcAudienceLegendView> {
     .collect()
 }
 
+fn route_pattern_line(entity_type: &str, description: Option<&str>) -> Option<String> {
+    (entity_type == "gateway_route")
+        .then_some(description)
+        .flatten()
+        .map(str::to_owned)
+}
+
 fn resolved_rows(
     resolved: &[Vec<repositories::users::access_control::MatrixSection>],
     columns: &[AcAudienceColumnView],
     sections: &[SectionInput],
 ) -> Vec<AcAudienceRowView> {
-    // Why: the resolver answers per subject; the grid reads per entity, so the
-    // answers are transposed through one map keyed on the entity.
-    let mut cells: HashMap<(String, String), Vec<AcAudienceCellView>> = HashMap::new();
+    let mut cells_by_entity: HashMap<(String, String), Vec<AcAudienceCellView>> = HashMap::new();
     for (matrix, col) in resolved.iter().zip(columns) {
         for section in matrix {
             for row in &section.rows {
                 let (decision, glyph, tone) = decision_of(&row.effective);
-                cells
+                cells_by_entity
                     .entry((section.entity_type.clone(), row.entity_id.clone()))
                     .or_default()
                     .push(AcAudienceCellView {
@@ -183,7 +181,8 @@ fn resolved_rows(
     let mut rows = Vec::new();
     for (entity_type, _, entities) in sections {
         for (entity_id, name, description) in entities {
-            let Some(cells) = cells.remove(&(entity_type.clone(), entity_id.clone())) else {
+            let Some(cells) = cells_by_entity.remove(&(entity_type.clone(), entity_id.clone()))
+            else {
                 continue;
             };
             let entity_ref = format!("{entity_type}/{entity_id}");
@@ -192,14 +191,7 @@ fn resolved_rows(
                 entity_type: entity_type.clone(),
                 entity_id: entity_id.clone(),
                 entity_name: name.clone(),
-                // Why: the matrix section carries a route's "pattern →
-                // provider" line as its description; other kinds' prose
-                // descriptions are too long for a grid row.
-                entity_sub: if entity_type == "gateway_route" {
-                    description.clone()
-                } else {
-                    None
-                },
+                entity_sub: route_pattern_line(entity_type, description.as_deref()),
                 drill_url: audience_url(&[("entity", &entity_ref)]),
                 allowed: 0,
                 denied: 0,

@@ -6,15 +6,12 @@
 //! months precisely because nothing could assert on them. They are pure string
 //! functions over values the database hands back, so they live here, beside the
 //! other display types, and the unit suite pins them.
+//!
+//! An unrecognised policy names itself rather than rendering a dash, so a new
+//! producer is visible. `tool_name` is overloaded — the gateway's `user_prompt`
+//! sentinel, an MCP tool, or an authz entity id whose kind is in
+//! `evaluated_rules` — so the target label says which.
 
-// Why: where a policy comes from, for every policy that is actually written.
-// The predecessor knew only the four synchronous chain stages and answered an
-// em-dash for anything else, which on an instance whose traffic is `authz`,
-// `default_allow` and `authentication` meant an em-dash on every row.
-//
-// The final arm is the load-bearing one: an unrecognised policy names itself,
-// so a producer nobody knew about announces its arrival instead of vanishing
-// into a dash.
 #[must_use]
 pub fn plane_of(policy: &str) -> String {
     let known = match policy {
@@ -38,12 +35,6 @@ pub fn plane_of(policy: &str) -> String {
     known.to_owned()
 }
 
-// Why: what a decision was about, from the overloaded `tool_name` column.
-// That column carries three different things depending on which producer wrote
-// the row: the gateway gate's `user_prompt` sentinel, a real MCP tool name, or
-// an authorization entity id whose kind lives in `evaluated_rules`. Rendered
-// raw, `user_prompt` and `claude-star-4203d1` sat under a heading that said
-// "Tool" and neither of them was one.
 #[must_use]
 pub fn target_label(tool_name: &str, entity_type: Option<&str>) -> String {
     if let Some(kind) = entity_type.filter(|k| !k.is_empty()) {

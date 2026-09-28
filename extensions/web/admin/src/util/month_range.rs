@@ -7,6 +7,10 @@
 //!
 //! The window is half-open (`>= from AND < to`) so a request at the last
 //! microsecond of a month is counted exactly once, in that month.
+//!
+//! `is_complete` is false for the month in progress so a report can say it is
+//! partial. An absent or unparseable `?month=` falls back to the last
+//! *complete* month, so a report opened on the 2nd does not read as a collapse.
 
 use chrono::{DateTime, Datelike, Months, NaiveDate, TimeZone, Utc};
 use serde::{Deserialize, Serialize};
@@ -28,9 +32,6 @@ pub struct MonthRange {
     pub label: String,
     pub from: DateTime<Utc>,
     pub to: DateTime<Utc>,
-    // Why: False for the month currently in progress. A report over a partial
-    // month is still useful, but it must say so — a half-month of cost read
-    // as a full month makes every margin look twice as good as it is.
     pub is_complete: bool,
 }
 
@@ -43,8 +44,6 @@ pub struct MonthOption {
 }
 
 impl MonthRange {
-    // Why: The equivalent rolling-window type, so repositories already written
-    // against [`TimeRange`] can be reused for a month unchanged.
     #[must_use]
     pub const fn as_time_range(&self) -> TimeRange {
         TimeRange {
@@ -67,10 +66,6 @@ impl MonthRange {
     }
 }
 
-// Why: Anything absent or unparseable falls back to the last *complete* month.
-// These are end-of-month reports, and opening one on the 2nd to a
-// two-days-of-data month reads as a collapse in usage rather than as a
-// month that has barely started.
 #[must_use]
 pub fn parse_month_range(query: &MonthQuery) -> MonthRange {
     query
@@ -121,9 +116,6 @@ fn from_start(instant: DateTime<Utc>) -> MonthRange {
 }
 
 pub(crate) fn month_start(instant: DateTime<Utc>) -> DateTime<Utc> {
-    // Why: the first of the month at midnight always exists, so the fallible
-    // constructors cannot fail here; returning the input unchanged rather than
-    // panicking keeps a report renderable in the impossible case.
     NaiveDate::from_ymd_opt(instant.year(), instant.month(), 1)
         .and_then(|d| d.and_hms_opt(0, 0, 0))
         .and_then(|dt| Utc.from_local_datetime(&dt).single())

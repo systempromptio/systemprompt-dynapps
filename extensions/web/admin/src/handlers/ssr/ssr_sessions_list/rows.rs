@@ -57,10 +57,6 @@ pub(super) fn session_row(c: &ConversationRow) -> SessionRowView {
     }
 }
 
-// Why: errors outrank liveness — a conversation that failed is reported as
-// failed however recently it ran. Otherwise the badge reads the same three
-// states as the session page: completed when the hook saw the end, live
-// when something happened inside the heartbeat window, stale when not.
 fn status_label(c: &ConversationRow) -> String {
     if c.error_count > 0 {
         let noun = if c.error_count == 1 {

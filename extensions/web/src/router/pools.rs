@@ -11,8 +11,6 @@ pub(crate) struct DbHandles {
     pub owner: systemprompt::identifiers::UserId,
     pub read: Arc<PgPool>,
     pub write: Arc<PgPool>,
-    // Why: core repositories open their own handles from the shared database,
-    // so the routers receive it alongside the raw pools the handlers still use.
     pub db: DbPool,
 }
 

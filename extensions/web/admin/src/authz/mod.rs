@@ -97,9 +97,6 @@ struct Registry {
 
 static REGISTRIES: OnceLock<Mutex<HashMap<String, &'static Registry>>> = OnceLock::new();
 
-// Why: providers capture the pool they are built with, so the registry is
-// keyed per database; a process that opens several (the integration suite's
-// throwaway databases) would otherwise bind every caller to the first pool.
 pub(crate) fn database_key(pool: &PgPool) -> String {
     let options = pool.connect_options();
     format!(

@@ -27,6 +27,9 @@
 //! `tests/integration/admin-core/src/usage_reconciliation.rs`, which asserts
 //! this module and the dashboard return the same totals for the same user and
 //! window — a test that fails the moment the two drift again.
+//!
+//! The legacy sentinel context is excluded from conversation counts only; its
+//! requests are real traffic and stay in the request, token and cost totals.
 
 use chrono::{DateTime, Utc};
 use serde::Serialize;
@@ -67,8 +70,6 @@ pub struct RecentConversation {
     pub context_name: Option<String>,
     pub title: String,
     pub last_activity: DateTime<Utc>,
-    // Why: every request in the conversation, side calls included; `turn_count`
-    // is the number the pane leads with.
     pub ai_requests: i64,
     pub turn_count: i64,
     pub side_call_count: i64,
@@ -77,18 +78,11 @@ pub struct RecentConversation {
     pub agent_name: Option<String>,
 }
 
-// Why: the trailing window every conversation rollup on the profile pane is
-// Why: computed over. Carried on the summary so the template can label the
-// Why: figures with the window they were actually measured across — the label
-// Why: used to read "all time" over a 30-day count.
 pub const CONVERSATION_WINDOW_DAYS: i32 = 30;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct ConversationSummary {
     pub window_days: i32,
-    // Why: conversations with at least one turn; probes and utility calls are
-    // counted apart in `side_call_count`. `total_ai_requests` alone is every
-    // request of every kind.
     pub total_conversations: i64,
     pub total_ai_requests: i64,
     pub side_call_count: i64,
@@ -127,8 +121,6 @@ pub struct UserGatewayUsage {
     pub last_request_at: Option<DateTime<Utc>>,
 }
 
-// Why: `window_days` is the trailing window; `previous` covers the equivalent
-// prior window so the caller can compute a delta.
 pub async fn get_usage_window(
     pool: &PgPool,
     user_id: &UserId,
@@ -168,8 +160,6 @@ pub async fn get_usage_window(
     })
 }
 
-// Why: `window_days: None` is the lifetime view the admin user-detail page
-// wants; `Some(n)` is the trailing window the profile pane reports.
 pub async fn list_top_models(
     pool: &PgPool,
     user_id: &UserId,
@@ -226,10 +216,6 @@ pub async fn list_top_models(
         .collect())
 }
 
-// Why: the admin user-detail page needs a lifetime rollup, not the profile
-// pane's trailing window — so no interval predicate here at all. The legacy
-// sentinel is filtered out of the conversation count only: its requests are
-// real traffic and still belong in the request, token, and cost totals.
 pub async fn get_ai_request_summary(
     pool: &PgPool,
     user_id: &UserId,

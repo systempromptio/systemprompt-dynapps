@@ -1,4 +1,7 @@
 //! What a page hands its template so the export button and dialog can render.
+//!
+//! The button is a plain link that works without JavaScript (default columns,
+//! the page's own window, CSV); the dialog reads the rest of this context.
 
 use serde::Serialize;
 use systemprompt::identifiers::ContextId;
@@ -31,10 +34,7 @@ pub(crate) struct ExportDatasetView {
     groups: Vec<ExportColumnGroupView>,
 }
 
-// Why: groups keep the dataset's own column order inside each heading and
-// appear in the order their first column does, so the checklist reads like
-// the table it exports.
-fn group_columns(columns: &'static [Column]) -> Vec<ExportColumnGroupView> {
+fn group_columns_in_table_order(columns: &'static [Column]) -> Vec<ExportColumnGroupView> {
     let mut groups: Vec<ExportColumnGroupView> = Vec::new();
     for column in columns {
         match groups.iter_mut().find(|g| g.name == column.group) {
@@ -48,9 +48,6 @@ fn group_columns(columns: &'static [Column]) -> Vec<ExportColumnGroupView> {
     groups
 }
 
-// Why: the button is a plain link that works without JavaScript — default
-// columns, the page's own window, CSV — and the dialog reads the rest from
-// this same context to offer everything else.
 #[derive(Debug, Serialize)]
 pub(crate) struct ExportView {
     href: String,
@@ -58,12 +55,8 @@ pub(crate) struct ExportView {
     multiple: bool,
     datasets: Vec<ExportDatasetView>,
     formats: Vec<ExportFormatView>,
-    // Why: a conversation page offers its whole record beside its tables, as
-    // the first choice in the same dialog rather than a second set of buttons.
     #[serde(skip_serializing_if = "Option::is_none")]
     document: Option<DocumentExportView>,
-    // Why: a list of conversations offers the full record of every row it
-    // selects — one JSON object per conversation — as one more Data choice.
     #[serde(skip_serializing_if = "Option::is_none")]
     transcripts: Option<TranscriptsView>,
     filters: Vec<ExportFilterView>,
@@ -76,9 +69,6 @@ pub(crate) struct TranscriptsView {
     cap: i64,
 }
 
-// Why: the page filters a download carries, shown as chips the reader can
-// drop for this one file; `pinned` ones name what the page is *about* (one
-// conversation, one session, one skill) and cannot be dropped.
 #[derive(Debug, Serialize)]
 pub(crate) struct ExportFilterView {
     key: String,
@@ -87,13 +77,11 @@ pub(crate) struct ExportFilterView {
     pinned: bool,
 }
 
-// Why: keys the dialog owns (window, format, columns, selection) or that only
-// order the rows; they are never a filter the reader chose.
-const NOT_FILTERS: &[&str] = &[
+const DIALOG_AND_ORDERING_KEYS: &[&str] = &[
     "preset", "from", "to", "days", "start", "end", "month", "since", "range", "format", "columns",
     "ids", "page", "sort", "dir", "tab", "source",
 ];
-const PINNED: &[&str] = &["context_id", "session_id", "skill", "marketplace", "server"];
+const PAGE_SUBJECT_KEYS: &[&str] = &["context_id", "session_id", "skill", "marketplace", "server"];
 
 fn filter_label(key: &str) -> &str {
     match key {
@@ -144,10 +132,10 @@ fn filter_label(key: &str) -> &str {
 
 fn filter_chips(query: &str) -> Vec<ExportFilterView> {
     url::form_urlencoded::parse(query.as_bytes())
-        .filter(|(k, v)| !v.trim().is_empty() && !NOT_FILTERS.contains(&k.as_ref()))
+        .filter(|(k, v)| !v.trim().is_empty() && !DIALOG_AND_ORDERING_KEYS.contains(&k.as_ref()))
         .map(|(k, v)| ExportFilterView {
             label: filter_label(&k).to_owned(),
-            pinned: PINNED.contains(&k.as_ref()),
+            pinned: PAGE_SUBJECT_KEYS.contains(&k.as_ref()),
             key: k.into_owned(),
             value: v.into_owned(),
         })
@@ -165,7 +153,7 @@ impl ExportView {
                 description: d.description(),
                 window: d.window(),
                 columns: d.columns(),
-                groups: group_columns(d.columns()),
+                groups: group_columns_in_table_order(d.columns()),
             })
             .collect();
         let first = datasets.first().map_or("", |d| d.id);
@@ -193,8 +181,6 @@ impl ExportView {
         }
     }
 
-    // Why: the full record of every conversation the page's filters (or the
-    // ticked rows) select, read through `source`'s own query type and window.
     #[must_use]
     pub(crate) fn with_transcripts(mut self, source: TranscriptSource) -> Self {
         if self.datasets.is_empty() {
@@ -205,12 +191,11 @@ impl ExportView {
                 self.query
             );
         }
-        // Why: a session pins its conversations, so no window applies.
-        let pinned = self.filters.iter().any(|f| f.key == "session_id");
+        let session_pins_conversations = self.filters.iter().any(|f| f.key == "session_id");
         self.multiple = true;
         self.transcripts = Some(TranscriptsView {
             source: source.as_str(),
-            window: if pinned {
+            window: if session_pins_conversations {
                 Window::None
             } else {
                 source.window()
@@ -220,9 +205,6 @@ impl ExportView {
         self
     }
 
-    // Why: one conversation's Export dialog, the same on the Analysis page,
-    // the AI activity page and the owner's history — the whole record first,
-    // then (for a console reader) the ledger table of its turns.
     pub(crate) fn conversation(context_id: &ContextId, with_ledger: bool) -> Self {
         let query = format!("context_id={}", urlencoding::encode(context_id.as_str()));
         let ids: &[&str] = if with_ledger {
@@ -245,8 +227,6 @@ impl ExportView {
     }
 }
 
-// Why: every list page keeps its filters as `(name, value)` pairs; the export
-// carries the same pairs so the file answers the question the page was asked.
 pub(crate) fn query_string(pairs: &[(&str, Option<&str>)]) -> String {
     crate::handlers::ssr::list_view::query_string_dropping(pairs, &[], &[])
 }

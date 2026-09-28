@@ -1,13 +1,16 @@
 //! View types for the sync-plane component, shared by every page that
 //! renders one: an owner page's Sync tab, the import preview, and the
 //! configuration page's state column.
+//!
+//! Boot seeds a plane only while its projection is empty, and access control
+//! counts band rules rather than entities, so entities a later release declares
+//! never reach an existing database by themselves; the recommendation names
+//! "Apply all new" first for them, since it adds without overwriting.
 
 use serde::Serialize;
 
 use crate::repositories::sync::plane::{ActionCounts, DriftKpi, DriftRow};
 
-// Why: A hash as the page prints it: the first twelve characters, with the full
-// value in a title attribute.
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct HashView {
     pub short: String,
@@ -23,8 +26,6 @@ impl HashView {
     }
 }
 
-// Why: "last applied ab12… by Ed on 16 Sep (overwrite)"; `declared_changed`
-// says the declaration's hash differs from the one last applied.
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct AppliedView {
     pub hash: Option<HashView>,
@@ -36,9 +37,6 @@ pub(crate) struct AppliedView {
     pub declared_changed: bool,
 }
 
-// Why: the one line under the tiles that says what to press. `card` names
-// the direction card it points at (`overwrite` or `export`) so the template
-// can highlight it; a clean plane has none.
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct SyncRecommendation {
     pub text: String,
@@ -52,31 +50,8 @@ impl SyncRecommendation {
         }
         let code = actions.code_side();
         let console = actions.kept + actions.delete_console;
-        // Why: an entity the file declares and the database has never heard of
-        // is the one drift boot cannot settle by itself. Boot seeds a plane
-        // only when its projection is empty, and for access control "empty"
-        // counts band rules, not entities — a database with 63 entities and
-        // 159 rules can never seed, so entities added by a later release stay
-        // absent and the console is the only route in. Apply all new adds them
-        // without touching anything written here, so it is named first and
-        // separately from the general code-side wording, which reads as an
-        // Overwrite recommendation.
-        if actions.insert_entities > 0 {
-            let deletes = if actions.delete > 0 {
-                format!(
-                    " Replace database with code would also delete {} row(s), so use it only if that is what you want.",
-                    actions.delete
-                )
-            } else {
-                String::new()
-            };
-            return Some(Self {
-                text: format!(
-                    "{} entity(s) declared in code are absent from this database; Apply all new adds them, with {} row(s), and changes nothing written here.{deletes}",
-                    actions.insert_entities, actions.insert
-                ),
-                card: "insert",
-            });
+        if let Some(rec) = Self::for_unseedable_entities(actions) {
+            return Some(rec);
         }
         let moves = format!(
             "+{} · ~{} · −{}",
@@ -104,11 +79,29 @@ impl SyncRecommendation {
             },
         })
     }
+
+    fn for_unseedable_entities(actions: &ActionCounts) -> Option<Self> {
+        if actions.insert_entities == 0 {
+            return None;
+        }
+        let deletes = if actions.delete > 0 {
+            format!(
+                " Replace database with code would also delete {} row(s), so use it only if that is what you want.",
+                actions.delete
+            )
+        } else {
+            String::new()
+        };
+        Some(Self {
+            text: format!(
+                "{} entity(s) declared in code are absent from this database; Apply all new adds them, with {} row(s), and changes nothing written here.{deletes}",
+                actions.insert_entities, actions.insert
+            ),
+            card: "insert",
+        })
+    }
 }
 
-// Why: `apply_url` is where the buttons post — the plane's own apply, or a
-// staged import's — and `show_export` is off on a preview, where the
-// database is not the thing being read.
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct PlaneCardView {
     pub id: &'static str,

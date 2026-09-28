@@ -22,7 +22,6 @@ impl BreadcrumbView {
         }
     }
 
-    // Why: the page the reader is on — the last crumb, which is never a link.
     pub(crate) fn current(label: impl Into<String>) -> Self {
         Self {
             label: label.into(),

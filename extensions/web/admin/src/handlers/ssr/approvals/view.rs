@@ -76,10 +76,6 @@ pub(super) fn rows(rows: &[ApprovalRow]) -> Vec<ApprovalRowView> {
         .collect()
 }
 
-// Why: the age of a pending row counts from when it was parked; a decided row's
-// age is how long the caller actually waited. Two different questions, one
-// column, because a queue that showed only one of them would be misleading in
-// whichever state the reader happened to be looking at.
 fn age_of(row: &ApprovalRow) -> String {
     let end = row.decided_at.unwrap_or_else(Utc::now);
     let minutes = (end - row.created_at).num_minutes().max(0);

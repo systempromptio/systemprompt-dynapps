@@ -173,9 +173,6 @@ pub(super) fn page_context(input: PageInput<'_>) -> AnalyticsDashboardContext {
     }
 }
 
-// Why: a tab is a view of one page, not a page of its own, so the trail names
-// the tab rather than pretending `/admin/analytics?tab=models` is a child
-// route. The section root is always reachable from the second crumb.
 fn breadcrumbs(tab: DashboardTab) -> Vec<Crumb> {
     let mut crumbs = vec![
         Crumb {
@@ -207,8 +204,6 @@ const fn tab_label(tab: DashboardTab) -> &'static str {
     }
 }
 
-// Why: the tab decides which tables the export offers, the active tab's
-// first, so the dialog opens on the table the reader is looking at.
 const fn export_datasets(tab: DashboardTab) -> &'static [&'static str] {
     match tab {
         DashboardTab::Overview | DashboardTab::Models => &["analytics-models"],

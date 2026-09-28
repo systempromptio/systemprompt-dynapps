@@ -13,24 +13,18 @@ use systemprompt_web_shared::GroupId;
 use super::super::types::SvgLineChartView;
 use super::{BreadcrumbView, TabLinkView};
 
-// Why: A label / value tile in a page's stat row.
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct StatTileView {
     pub label: &'static str,
     pub value: String,
 }
 
-// Why: A small named pill: a marketplace on a group row, a group on a member
-// row.
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct MemberSetChipView {
     pub id: String,
     pub label: String,
 }
 
-// Why: The membership source badge. `adfs` rows are replaced wholesale at every
-// sign-in, so an operator may not remove one by hand — the badge is what
-// tells them why the Remove button is missing.
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct SourceBadgeView {
     pub source: String,
@@ -39,7 +33,6 @@ pub(crate) struct SourceBadgeView {
     pub title: String,
 }
 
-// Why: One row of the model-mix table: a share bar plus the numbers behind it.
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct ModelMixRowView {
     pub model: String,
@@ -51,8 +44,6 @@ pub(crate) struct ModelMixRowView {
     pub share_pct: i64,
 }
 
-// Why: One row of the attribution table: who decided where a request was
-// filed, and how much of the window that source accounts for.
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct AttributionSourceRowView {
     pub source: String,
@@ -69,9 +60,6 @@ pub(crate) struct NameCountRowView {
     pub share_pct: i64,
 }
 
-// Why: One person on the group's spend leaderboard. It is a member-attributed
-// view — a person in two groups appears on both boards in full — which is why
-// the section carrying it is labelled as overlapping.
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct UsageLeaderRowView {
     pub user_id: UserId,
@@ -98,10 +86,6 @@ pub(crate) struct MemberRowView {
     pub display_name: String,
     pub email: Option<String>,
     pub detail_href: String,
-    // Why: whether the account is enabled, not whether the person used it. The
-    // row renders Disabled from this, and Active or Idle from the request
-    // count beside it — an account nobody switched off but nobody used is a
-    // different fact from one an administrator suspended.
     pub is_active: bool,
     pub requests_30d: i64,
     pub tokens_30d: i64,
@@ -109,11 +93,7 @@ pub(crate) struct MemberRowView {
     pub last_active: Option<String>,
     pub sources: Vec<SourceBadgeView>,
     pub source_ad_groups: Vec<String>,
-    // Why: a member the directory put here cannot be removed by hand — the
-    // next sign-in would write the row straight back.
     pub can_remove: bool,
-    // Why: the manual membership's expiry, RFC 3339, or None for open-ended;
-    // `expires_soon` is the one-week warning the row badges.
     pub expires_at: Option<String>,
     pub expires_soon: bool,
 }
@@ -128,8 +108,6 @@ pub(crate) struct UserOptionView {
 pub(crate) struct MembersTabView {
     pub rows: Vec<MemberRowView>,
     pub addable_users: Vec<UserOptionView>,
-    // Why: only the Unassigned page offers a destination select; every other
-    // group page moves people with the Add member dialog instead.
     pub assign_targets: Vec<MemberSetChipView>,
 }
 
@@ -182,8 +160,6 @@ pub(crate) struct GroupDetailPageData {
     pub export: Option<crate::export::ExportView>,
 }
 
-// Why: One entity's effective grant for a group subject, plus the toggle state
-// the editor writes back through the ACL rules API.
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct AccessRowView {
     pub entity_type: String,
@@ -192,8 +168,6 @@ pub(crate) struct AccessRowView {
     pub effective: String,
     pub layer: String,
     pub detail: String,
-    // Why: `inherit` means no rule at this group's own band — the cell is
-    // whatever the wider bands decided, and clearing a rule returns to it.
     pub state: &'static str,
 }
 

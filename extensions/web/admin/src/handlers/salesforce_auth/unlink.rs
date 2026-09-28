@@ -14,8 +14,6 @@ pub(crate) async fn salesforce_unlink(
     Extension(user_ctx): Extension<UserContext>,
     State(pool): State<Arc<sqlx::PgPool>>,
 ) -> AdminResult<Response> {
-    // Why: an absent mapping is not an error — the caller asked for it gone and
-    // it is gone.
     salesforce_identity::delete_all_identities(&pool, &user_ctx.user_id).await?;
     tracing::info!(user_id = %user_ctx.user_id, "Salesforce identity unlinked");
     Ok(Json(serde_json::json!({ "unlinked": true })).into_response())

@@ -121,10 +121,6 @@ fn classify(before: Option<&str>, after: Option<&str>) -> Change {
     }
 }
 
-// Why: `before` is the older version. A skill present in both with a
-// different digest is *changed*; a plugin whose own files are unchanged but
-// whose skills moved is reported through those skills, not as a changed
-// plugin, so the counts name what actually moved.
 #[must_use]
 pub fn diff(before: Option<&MarketplaceManifest>, after: &MarketplaceManifest) -> ManifestDiff {
     let empty = MarketplaceManifest {

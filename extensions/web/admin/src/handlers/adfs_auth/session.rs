@@ -3,6 +3,9 @@
 //! carries it. ADFS and the development login link both land here, so the
 //! two can never drift on what a session is — and both record the sign-in
 //! as a `login` activity, the row every "Logins" figure counts.
+//!
+//! A JWT is checked on `permissions`, not roles, so a subject whose roles
+//! grant manage is minted `Admin` in addition to (never instead of) `User`.
 
 use axum::http::HeaderMap;
 use sqlx::PgPool;
@@ -24,9 +27,6 @@ use crate::repositories::dev_login::DevLoginUser;
 use crate::repositories::users::activity::record;
 use crate::repositories::users::federated;
 
-// Why: the account a session is minted for, reduced to what the mint needs.
-// Each sign-in path resolves an identity its own way and carries its own
-// side facts; none of those belong in the JWT.
 #[derive(Debug, Clone)]
 pub(crate) struct SessionSubject {
     pub user_id: UserId,
@@ -57,8 +57,6 @@ impl From<DevLoginUser> for SessionSubject {
     }
 }
 
-// Why: the activity timeline is the only record of a sign-in as an event;
-// the session row says a session exists, not that a person arrived.
 pub(crate) async fn record_login(pool: &PgPool, subject: &SessionSubject) {
     record(
         pool,
@@ -74,14 +72,6 @@ pub(crate) fn session_cookie(jwt: &str, max_age: i64) -> String {
     )
 }
 
-// Why: the permissions an assertion's mapped roles carry. The roles the AD
-// group map produces are stored on the user row, but a JWT is checked on
-// `permissions`, not on roles —
-// `handlers/webhook/governance/scope.rs` grants admin scope on
-// `Permission::Admin`, so a session minted as `User` for someone in the admins
-// group signs a token that disagrees with the account it was issued for. `User`
-// is always present: holding `admin` is an addition to being a signed-in user,
-// never a replacement.
 pub fn permissions_for_roles(roles: &[String]) -> Vec<Permission> {
     if crate::types::roles_grant_manage(roles) {
         vec![Permission::Admin, Permission::User]
@@ -105,17 +95,7 @@ pub(crate) async fn mint_session(
         .map_err(|e| e.to_string())?;
 
     let cfg = Config::get().map_err(|e| e.to_string())?;
-    // Why: the token's subject is a UUID, so an account whose id is not one
-    // cannot hold a browser session. Minting it for the nil UUID instead —
-    // which this once did — signed the person in as nobody, and every page
-    // then failed with "catalog authorization unavailable" for an account
-    // that did not exist.
-    let uuid: uuid::Uuid = subject.user_id.as_str().parse().map_err(|e| {
-        format!(
-            "account id {} is not a UUID ({e}); a browser session cannot be minted for it",
-            subject.user_id
-        )
-    })?;
+    let uuid = jwt_subject_uuid(&subject.user_id)?;
     let permissions = permissions_for_roles(&subject.roles);
     let user = AuthenticatedUser::new_with_roles(
         uuid,
@@ -131,8 +111,6 @@ pub(crate) async fn mint_session(
         expires_in: chrono::Duration::seconds(cfg.jwt_access_token_expiration),
         resource: None,
         plugin_id: None,
-        // Why: a browser session is minted for a person, not for a registered
-        // OAuth client, so there is no client to name.
         client_id: None,
     };
     let signing = JwtSigningParams {
@@ -143,4 +121,12 @@ pub(crate) async fn mint_session(
         generate_jwt(&user, jwt_config, jti, &session_id, &signing).map_err(|e| e.to_string())?;
 
     Ok((token, cfg.jwt_access_token_expiration))
+}
+
+fn jwt_subject_uuid(user_id: &UserId) -> Result<uuid::Uuid, String> {
+    user_id.as_str().parse().map_err(|e| {
+        format!(
+            "account id {user_id} is not a UUID ({e}); a browser session cannot be minted for it"
+        )
+    })
 }

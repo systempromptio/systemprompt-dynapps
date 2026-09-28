@@ -18,8 +18,6 @@ const GATEWAY_DEFAULT_NAME: &str = "Gateway conversation";
 pub(crate) struct ConversationStatsView {
     pub turn_count: i64,
     pub tool_call_count: i64,
-    // Why: the raw totals the strings below are rendered from, so a JSON
-    // export of the page carries the number and not only "18.0M".
     pub request_count: i64,
     pub total_input_tokens: i64,
     pub total_cache_read_tokens: i64,
@@ -42,8 +40,6 @@ pub(crate) struct StatusBadgeView {
     pub tone: &'static str,
 }
 
-// Why: the hooks pipeline's own title beats the context name, which is the
-// gateway's placeholder for most rows; the first prompt beats a bare id.
 pub(crate) fn resolve_title(header: &ContextHeader, view: &ConversationView) -> String {
     if let Some(t) = header
         .ai_title
@@ -82,9 +78,6 @@ fn first_prompt(view: &ConversationView) -> Option<String> {
     })
 }
 
-// Why: "Mon 8 Sep, 12:02 · 25 min" — when it started and how long it ran,
-// which is what a reader scanning a list of conversations asked for; the full
-// timestamps sit in the ids row for anyone who needs the second.
 pub(crate) fn timeline_display(
     first: Option<DateTime<Utc>>,
     last: Option<DateTime<Utc>>,
@@ -127,10 +120,6 @@ const fn wire_input(kpis: &ContextKpis) -> i64 {
     kpis.total_input_tokens + kpis.total_cache_read_tokens + kpis.total_cache_creation_tokens
 }
 
-// Why: the cached share is the figure that explains a large input total: a
-// session that re-sends a 180k context a hundred times is cheap when the
-// cache hits and expensive when it never does, and the total alone cannot
-// tell the two apart.
 fn tokens_note(kpis: &ContextKpis) -> String {
     let input = wire_input(kpis);
     let cached = kpis.total_cache_read_tokens;

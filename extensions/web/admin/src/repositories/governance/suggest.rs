@@ -10,8 +10,6 @@ use sqlx::PgPool;
 
 use super::resolve::{ResolvedId, ResolvedKind};
 
-// Why: short of this a prefix is a single hex character matching every row in
-// the table; the box asks for nothing shorter.
 pub const MIN_PREFIX_LEN: usize = 4;
 
 pub async fn list_id_matches(
@@ -77,8 +75,6 @@ pub async fn list_id_matches(
         .collect())
 }
 
-// Why: `_` and `%` are LIKE wildcards, and ids legitimately contain `_`
-// (`sess_…`); a raw prefix would match far more than it reads.
 fn escape_like(raw: &str) -> String {
     raw.replace('\\', "\\\\")
         .replace('%', "\\%")

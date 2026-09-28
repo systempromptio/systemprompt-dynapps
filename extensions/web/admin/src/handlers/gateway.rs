@@ -27,7 +27,6 @@ pub(crate) struct CreateRouteResponse {
     pub index: usize,
 }
 
-// Why: the settings from the file with the routes from the table.
 pub(crate) async fn gateway_config_view(pool: &PgPool) -> AdminResult<GatewayConfigView> {
     let gateway_path = shared::get_gateway_file_path()?;
     let mut config = repositories::config::gateway::get_gateway_config(&gateway_path)

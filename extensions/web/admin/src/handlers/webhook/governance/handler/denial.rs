@@ -1,4 +1,10 @@
 //! The audit row for a call refused before authentication resolved a user.
+//!
+//! It is spawned rather than awaited: provisioning the anonymous principal is
+//! an upsert plus fingerprint work, and awaiting it on every unauthenticated
+//! probe would hand anonymous callers a write-amplification lever. The denial
+//! is enforced regardless; write failures log under
+//! `governance.audit.write_failed`.
 
 use std::sync::Arc;
 
@@ -22,12 +28,16 @@ fn header_str(headers: &HeaderMap, name: header::HeaderName) -> Option<String> {
         .map(ToOwned::to_owned)
 }
 
-// Why: this path stays spawned, unlike the governed-decision audit above —
-// it runs `ensure_anonymous_user` (an upsert plus fingerprint work) before
-// the insert, and awaiting that on the response path of every unauthenticated
-// probe would hand anonymous callers a write-amplification lever. The loss
-// window is process shutdown only, the denial itself was still enforced, and
-// failures are logged under `governance.audit.write_failed`.
+// Why: core's `compute_fingerprint` falls back to exactly user agent + locale,
+// so those are the only signals the anonymous principal is keyed on.
+fn anonymous_fingerprint_signals(headers: &HeaderMap) -> SessionAnalytics {
+    SessionAnalytics {
+        user_agent: header_str(headers, header::USER_AGENT),
+        preferred_locale: header_str(headers, header::ACCEPT_LANGUAGE),
+        ..SessionAnalytics::default()
+    }
+}
+
 pub(super) fn spawn_auth_denial(params: &AuthDenialParams<'_>, reason: &str) {
     let pool = Arc::<sqlx::Pool<sqlx::Postgres>>::clone(params.pool);
     let reason = reason.to_owned();
@@ -38,16 +48,7 @@ pub(super) fn spawn_auth_denial(params: &AuthDenialParams<'_>, reason: &str) {
     let headers = params.headers.clone();
 
     tokio::spawn(async move {
-        // Why: authentication failed before any real user was resolved. Every UserId
-        // must be a real `users` row, so provision the anonymous principal for
-        // this fingerprint (idempotent upsert) to carry the audit's foreign key.
-        // Only user agent + locale are set because `compute_fingerprint` falls
-        // back to exactly those two signals.
-        let analytics = SessionAnalytics {
-            user_agent: header_str(&headers, header::USER_AGENT),
-            preferred_locale: header_str(&headers, header::ACCEPT_LANGUAGE),
-            ..SessionAnalytics::default()
-        };
+        let analytics = anonymous_fingerprint_signals(&headers);
         let user_id = match session_service.ensure_anonymous_user(&analytics).await {
             Ok((uid, _fingerprint)) => uid,
             Err(e) => {
@@ -62,13 +63,9 @@ pub(super) fn spawn_auth_denial(params: &AuthDenialParams<'_>, reason: &str) {
         };
         let audit = DecisionAudit {
             id: uuid::Uuid::new_v4().to_string(),
-            // Why: refused before the chain ran, so no call identity was ever
-            // minted for it — this denial is the whole of the call's history.
             call_id: CallId::generate(),
             origin: AuditOrigin::Governed,
             decision: deny_for_auth_failure(&reason),
-            // Why: authentication is what failed, so nothing about this caller
-            // was verified — no scope, client, or agent identity.
             principal: principal_snapshot(user_id, session_id.clone(), AccessScope::Unknown, None),
             target: AuditTarget {
                 tool_name,

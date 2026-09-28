@@ -40,8 +40,6 @@ pub struct ApiKeyUserRow {
 
 #[derive(Debug, Clone, Copy)]
 pub struct CredentialQuery<'a> {
-    // Why: `all`, `active` or `revoked`. Matched in SQL rather than branched
-    // in Rust so the count and the page come from one predicate.
     pub state: &'a str,
     pub sort: &'a str,
     pub dir: &'a str,
@@ -129,10 +127,6 @@ pub async fn list_api_keys_for_users(
     .await
 }
 
-// Why: an admin revoking someone else's token is a different act from a user
-// revoking their own, and it is a different statement: there is no `user_id`
-// in the predicate. The route that reaches it is gated on the admin roles,
-// which is where that authority is granted and the only place it is.
 pub async fn revoke_any_api_key(pool: &PgPool, id: &str) -> Result<bool, sqlx::Error> {
     let result = sqlx::query!(
         r#"UPDATE user_api_keys

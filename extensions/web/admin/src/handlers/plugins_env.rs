@@ -1,4 +1,8 @@
 //! HTTP handlers for plugin environment variables.
+//!
+//! A `config.yaml` that fails to parse is an error, never an empty definition
+//! list: the definitions decide `valid`, which unlocks export, so degrading
+//! would fail open.
 
 use std::sync::Arc;
 
@@ -24,9 +28,6 @@ pub(crate) async fn list_plugin_env_handler(
     headers: HeaderMap,
     Query(query): Query<UserQuery>,
 ) -> AdminResult<Response> {
-    // Why: cookie absence is the "logged-out" branch, not an error — the
-    // handler falls through to `resolve_principal` to honour the explicit
-    // `user_id` query parameter.
     let cookie_uid = super::extract_user_from_cookie(&headers)
         .ok()
         .map(|s| s.user_id);
@@ -37,13 +38,6 @@ pub(crate) async fn list_plugin_env_handler(
         return Err(AdminError::Unauthorized("missing principal".to_owned()));
     };
 
-    // Why: this must not degrade to an empty list — `definitions` decides
-    // `missing_required`, which decides `valid`, which is the flag the UI uses
-    // to enable "Generate/Export". A `config.yaml` that fails to parse would
-    // otherwise read as "this plugin needs no configuration" and unlock the
-    // export of a bundle whose required secrets were never collected — a gate
-    // failing open. A genuinely absent config is a different thing and still
-    // answers `Ok(vec![])` below, so the no-configuration case is untouched.
     let definitions = load_plugin_variable_defs(&plugin_id)?;
 
     let stored =
@@ -70,9 +64,6 @@ pub(crate) async fn list_plugin_env_handler(
     .into_response())
 }
 
-// Why: A principal resolves only from an authenticated cookie session or an
-// explicit `user_id` query parameter. Absent both, the request has no
-// principal — one is never synthesized to make the call succeed.
 pub fn resolve_principal(
     cookie_user_id: Option<&str>,
     query_user_id: Option<&str>,

@@ -75,9 +75,6 @@ pub(crate) struct ReleaseImpact {
     pub(crate) abandoned: i64,
 }
 
-// Why: grouped by (version, skill) when `per_skill`, else by version alone;
-// newest release first, so a reader compares each row with the one below it.
-// The version label, and the skill as well when grouping per skill.
 type GroupKey = (String, Option<String>);
 
 pub(crate) fn release_impact(
@@ -128,12 +125,12 @@ fn summarise(
         failed: count(failed),
         unknown: count(list.len() - decided),
         success_rate: (decided > 0).then(|| ratio(succeeded, decided)),
-        median_wall_s: percentile(list.iter().map(|r| r.wall_s), 0.5),
-        p90_wall_s: percentile(list.iter().map(|r| r.wall_s), 0.9),
-        median_agent_s: percentile(list.iter().map(|r| agent_s(r)), 0.5),
-        median_wait_s: percentile(list.iter().map(|r| human_wait_s(r)), 0.5),
-        median_prompts: percentile(list.iter().map(|r| r.prompts as f64), 0.5),
-        median_questions: percentile(list.iter().map(|r| r.questions as f64), 0.5),
+        median_wall_s: nearest_rank_percentile(list.iter().map(|r| r.wall_s), 0.5),
+        p90_wall_s: nearest_rank_percentile(list.iter().map(|r| r.wall_s), 0.9),
+        median_agent_s: nearest_rank_percentile(list.iter().map(|r| agent_s(r)), 0.5),
+        median_wait_s: nearest_rank_percentile(list.iter().map(|r| human_wait_s(r)), 0.5),
+        median_prompts: nearest_rank_percentile(list.iter().map(|r| r.prompts as f64), 0.5),
+        median_questions: nearest_rank_percentile(list.iter().map(|r| r.questions as f64), 0.5),
         tool_failure_rate: (tool_calls > 0).then(|| tool_failures as f64 / tool_calls as f64),
         cost_per_run_microdollars: if runs > 0 { cost / runs } else { 0 },
         abandoned: count(
@@ -152,9 +149,7 @@ fn ratio(part: usize, whole: usize) -> f64 {
     part as f64 / whole as f64
 }
 
-// Why: nearest-rank on the sorted values — the figures are shown rounded to
-// the minute or the whole prompt, so interpolation would only add noise.
-fn percentile(values: impl Iterator<Item = f64>, p: f64) -> f64 {
+fn nearest_rank_percentile(values: impl Iterator<Item = f64>, p: f64) -> f64 {
     let mut sorted: Vec<f64> = values.filter(|v| v.is_finite()).collect();
     if sorted.is_empty() {
         return 0.0;

@@ -39,8 +39,6 @@ pub async fn list_top_scopes_by_cost(
     range: TimeRange,
     limit: i64,
 ) -> Result<Vec<ScopeCostRow>, sqlx::Error> {
-    // Why: the flag is derived outside the statement so the attribution mode
-    // is named once, in code, rather than buried in a macro argument list.
     let exclusive = Attribution::Exclusive.is_exclusive();
     let rows = crate::scoped_query!(
         r#"SELECT COALESCE(rs.scope_id, $3) AS "scope_id!",

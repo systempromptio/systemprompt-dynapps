@@ -54,8 +54,6 @@ impl AdminHtmlError {
     }
 }
 
-// Why: `?` in an SSR handler goes through whatever `AdminError` already knows
-// how to absorb, so the two faces stay in step by construction.
 impl<E: Into<AdminError>> From<E> for AdminHtmlError {
     fn from(value: E) -> Self {
         Self(value.into())

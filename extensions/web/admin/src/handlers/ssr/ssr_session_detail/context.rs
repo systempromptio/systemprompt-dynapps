@@ -57,8 +57,6 @@ pub(super) struct SessionKpisView {
     pub(super) context_count: i64,
     pub(super) trace_count: i64,
     pub(super) error_count: i64,
-    // Why: `total_input_tokens` is the uncached part only; `total_tokens`
-    // is the wire total (input + cache read + cache creation + output).
     pub(super) total_input_tokens: i64,
     pub(super) total_cache_read_tokens: i64,
     pub(super) total_cache_creation_tokens: i64,

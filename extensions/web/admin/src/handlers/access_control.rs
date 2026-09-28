@@ -78,8 +78,6 @@ pub(crate) async fn bulk_assign_handler(
     State(pool): State<Arc<PgPool>>,
     Json(body): Json<BulkAssignRequest>,
 ) -> AdminResult<Response> {
-    // Why: every entity is checked before any is written, so a bad id in the
-    // batch rejects the whole request rather than half-applying it.
     let registered = registered_routes_from_services()?;
     let entities = body
         .entities
@@ -98,10 +96,6 @@ pub(crate) async fn bulk_assign_handler(
     .into_response())
 }
 
-// Why: every band but `user` is a shared decision — a group, a role, a project
-// — and a shared decision with no stated reason is how the ledger's "why"
-// column ended up blank. A per-person override may stay unexplained; it is
-// usually temporary and belongs to one account.
 pub(crate) fn require_band_justification(
     rules: &[crate::types::access_control::AccessControlRuleInput],
 ) -> AdminResult<()> {
@@ -169,8 +163,6 @@ pub(crate) async fn user_matrix_handler(
 pub(crate) fn build_matrix_sections(
     services_path: &std::path::Path,
 ) -> Vec<repositories::users::access_control::SectionInput> {
-    // Why: each source is best-effort — a config that fails to load is skipped
-    // so the matrix renders whatever resolved instead of failing the whole view.
     let mut sections: Vec<repositories::users::access_control::SectionInput> = Vec::new();
 
     let marketplace_rows: Vec<(String, String, Option<String>)> =
@@ -188,15 +180,9 @@ pub(crate) fn build_matrix_sections(
 
     match repositories::config::gateway::get_route_labels_from_services() {
         Err(e) => {
-            // Why: skipping the section keeps the rest of the matrix rendering,
-            // but a dropped gateway section is indistinguishable from a
-            // deployment with no routes, so it may not go unrecorded.
             tracing::error!(error = %e, "gateway routes unavailable for the access-control matrix");
         },
         Ok(labels) => {
-            // Why: the row's name is the route's label and its description
-            // the one-line "pattern → provider", so every matrix reader
-            // shows a route the way the gateway page does.
             let rows = labels
                 .routes
                 .iter()
@@ -210,8 +196,6 @@ pub(crate) fn build_matrix_sections(
     sections
 }
 
-// Why: the four catalog-backed sections split off so each half of the matrix
-// stays inside the line budget; the best-effort skip rule is unchanged.
 fn push_catalog_sections(
     services_path: &std::path::Path,
     sections: &mut Vec<repositories::users::access_control::SectionInput>,

@@ -141,10 +141,9 @@ pub async fn verify_reporting(
     http: &reqwest::Client,
     report: &mut VerificationReport,
 ) -> AdminResult<()> {
-    let mut session = None;
-    let result = handshake(grant, http, &mut session, report).await;
-    // Why: The probe uses a private session, never a user's active Claude session.
-    if let Some(session) = session {
+    let mut probe_session = None;
+    let result = handshake(grant, http, &mut probe_session, report).await;
+    if let Some(session) = probe_session {
         let _cleanup_result = http
             .delete(grant.provider.endpoint())
             .header("Mcp-Session-Id", session)

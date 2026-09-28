@@ -103,8 +103,6 @@ pub(super) fn page_offset(page: i64) -> i64 {
     page.max(0) * DEFAULT_PAGE_SIZE
 }
 
-// Why: links, not buttons, so a view is bookmarkable and survives a reload
-// without JavaScript.
 pub(super) fn view_tabs(query: &ContextsListQuery, active: &str) -> Vec<TabLinkView> {
     let prefix = link_prefix(query, &["view", "page"]);
     [("users", "By user"), ("all", "All")]

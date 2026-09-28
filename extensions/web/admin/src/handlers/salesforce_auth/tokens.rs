@@ -12,8 +12,6 @@ use crate::handlers::users::extract_mcp_accessor_user;
 use crate::repositories::users::salesforce_identity;
 use crate::services::salesforce_jwt_bearer;
 
-// Why: only the fields the JWT-bearer flow consumes are modelled; Salesforce
-// returns several more.
 #[derive(Debug, Deserialize)]
 pub(crate) struct SalesforceTokenResponse {
     pub access_token: String,
@@ -21,8 +19,6 @@ pub(crate) struct SalesforceTokenResponse {
     pub instance_url: Option<String>,
 }
 
-// Why: shared `application/x-www-form-urlencoded` POST against the Salesforce
-// token endpoint.
 pub(crate) async fn post_token_request(
     token_url: &str,
     body: String,
@@ -51,8 +47,8 @@ pub(crate) async fn post_token_request(
 #[derive(Debug, Serialize)]
 struct TokenResponse {
     access_token: String,
-    // Why: core deserializes only `access_token` and ignores the rest. Kept
-    // because the Hosted MCP host is addressed per-instance.
+    // Why: core reads only `access_token`, but Salesforce Hosted MCP is
+    // addressed per-instance, so the instance URL must travel with it.
     instance_url: String,
 }
 
@@ -67,9 +63,8 @@ pub(crate) async fn salesforce_token_handler(
         ));
     }
 
-    // Why: no identity row means the caller was never linked. Core turns a 404
-    // into "connect the provider account first", which is the actionable
-    // message; a mint attempt with the wrong `sub` would fail opaquely instead.
+    // Why: core's external-MCP client turns a 404 into "connect the provider
+    // account first"; minting with no linked `sub` would fail opaquely.
     let Some(username) =
         salesforce_identity::find_username(&deps.write_pool, &session.user_id, "salesforce")
             .await?
@@ -79,8 +74,6 @@ pub(crate) async fn salesforce_token_handler(
         ));
     };
 
-    // Why: not `?` — a mint failure is an upstream fault. 502 says Salesforce
-    // refused, where a 500 would blame this server for Salesforce being down.
     let private_key = salesforce_private_key().ok_or_else(|| {
         AdminError::Unavailable("Salesforce signing key not configured".to_owned())
     })?;

@@ -20,33 +20,22 @@ pub(crate) struct GroupRowView {
     pub description: Option<String>,
     pub member_count: i64,
     pub active_members_30d: i64,
-    // Why: the chips are clipped to one line so the row stays 32px, so the
-    // full list has to live somewhere the mouse can reach it.
     pub marketplaces_title: String,
     pub marketplace_count: i64,
     pub project_count: i64,
     pub requests: i64,
     pub tokens: i64,
     pub cost_microdollars: i64,
-    // Why: the busiest model a group's own traffic used, which is the one
-    // question a cost column always provokes and would otherwise cost a click.
     pub top_model: Option<String>,
-    // Why: the vendor prefix repeats on every row of a single-vendor estate,
-    // so the cell shows the tail and keeps the full id on its title.
     pub top_model_short: Option<String>,
     pub top_model_requests: i64,
     pub source: String,
-    // Why: `source_label` is the filter value the URL carries, `source_display`
-    // the words in the cell, and `source_abbrev` the sentence on its title.
     pub source_label: &'static str,
     pub source_display: &'static str,
     pub source_abbrev: &'static str,
     pub is_unassigned: bool,
 }
 
-// Why: The remainder row. Under exclusive attribution every group's traffic
-// plus this equals the instance, so it is a row of the same table rather than
-// a footnote: dropping it would leave a listing that silently fails to add up.
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct UnattributedRowView {
     pub requests: i64,
@@ -56,9 +45,6 @@ pub(crate) struct UnattributedRowView {
     pub people: i64,
 }
 
-// Why: One header tile. Named for the page rather than shared, because two
-// other pages already define a `KpiView` of their own and the duplicate-type
-// gate reads names, not shapes.
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct GroupKpiView {
     pub label: &'static str,
@@ -70,13 +56,6 @@ pub(crate) struct GroupKpiView {
     pub tone: &'static str,
 }
 
-// Why: One entry of a link-shaped filter: the time window and the source
-// picker both render as these.
-//
-// It carries `value` as well as a label because the control's machine-readable
-// identity is what the `data-scope-range` and `data-source-filter` hooks bind,
-// and that is what distinguishes it from `FilterChipView`, which carries a
-// count instead.
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct FilterLinkView {
     pub label: &'static str,
@@ -85,11 +64,6 @@ pub(crate) struct FilterLinkView {
     pub active: bool,
 }
 
-// Why: the header set is named rather than a positional list. Two columns of
-// the listing are not sortable and sit between ones that are, so a template
-// reading a Vec has to index around them — and every index shifts the day a
-// column is added. Naming them makes the template say which column it is
-// drawing, and makes a missing one a compile error rather than a blank cell.
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct GroupSortHeaders {
     pub name: SortHeaderView,
@@ -109,7 +83,6 @@ pub(crate) struct GroupsPageData {
     pub title: &'static str,
     pub breadcrumbs: Vec<BreadcrumbView>,
     pub tabs: Vec<TabLinkView>,
-    // Why: set on the Sync tab — `groups.yaml` against this database.
     pub sync: Option<PlaneCardView>,
     pub kpis: Vec<GroupKpiView>,
     pub sort_headers: GroupSortHeaders,
@@ -125,13 +98,7 @@ pub(crate) struct GroupsPageData {
     pub total_groups: i64,
     pub can_manage: bool,
     pub can_map: bool,
-    // Why: destinations for the header's "Map a directory group" dialog, which
-    // is where a mapping is created from — the group it lands in is a field of
-    // the form rather than a page you must first navigate to.
     pub group_options: Vec<MemberSetChipView>,
-    // Why: people with no primary group at all. Exclusive attribution has
-    // nowhere to file their spend, so the page says how many there are and
-    // offers the recompute rather than quietly reporting a smaller instance.
     pub unkeyed_people: i64,
     pub export: crate::export::ExportView,
 }

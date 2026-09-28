@@ -6,9 +6,6 @@ use super::types::{LineChartSpec, SvgLineChartView, SvgSeriesInput, line_chart};
 pub(crate) fn daily_requests_chart(daily: &[i64]) -> SvgLineChartView {
     let total: i64 = daily.iter().sum();
     line_chart(LineChartSpec {
-        // Why: the caption says what the series is, not what the section is.
-        // The section heading above it already carries "Requests, last 30
-        // days", and repeating that here read as a stutter on the page.
         title: "Daily volume",
         subtitle: format!("{} requests", short_num(total)),
         empty_message: "No gateway traffic in the last 30 days.",

@@ -14,9 +14,6 @@ use crate::authz::rule_type::{ExtensionSlug, extension_rule_type};
 
 const PROJECT_SLUG: ExtensionSlug = ExtensionSlug::new("project");
 
-// Why: the narrowest of the tenant dimensions — a project rule is the most
-// specific statement an operator can make about who a user is, so it out-ranks
-// their group (150) and every band above it.
 const PROJECT_PRECEDENCE: u16 = 140;
 
 #[must_use]
@@ -51,8 +48,6 @@ impl SubjectAttributeProvider for ProjectAttributeProvider {
         project_dimension()
     }
 
-    // Why: the primary project leads so the quota bucket and the cost
-    // attribution key are the same project — see `authz::primary`.
     async fn values_for(&self, user_id: &UserId) -> Result<Vec<String>, AuthzError> {
         let ids: Vec<String> =
             crate::repositories::projects::members::list_project_ids_for_user(&self.pool, user_id)

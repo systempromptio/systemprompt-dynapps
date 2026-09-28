@@ -49,8 +49,6 @@ pub(super) fn leaderboard_rows(
         .collect()
 }
 
-// Why: the same four keys the sort links offer, resolved through the same
-// parser, so the header and the link bar can never disagree about the order.
 fn sorted_key(query: &AnalyticsDashboardQuery) -> &'static str {
     let active = LeaderboardSort::from_sort_param(query.sort.as_deref());
     ["requests", "cost", "tokens", "last_active"]

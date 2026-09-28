@@ -1,20 +1,8 @@
 //! The server-rendered pages, driven against a database that has rows in it.
 //!
-//! [`crate::handler_variants`] runs every page over a database seeded with
-//! nothing but the two principals, which pins each template's *empty* branch.
-//! That is half the contract. The other half — the branch that renders a row —
-//! is where the joins, the formatters, and the per-row partials live, and a
-//! page can render its empty state perfectly while the populated one has been
-//! broken since a column was renamed.
-//!
-//! Two shapes of case:
-//!
-//! - **Detail pages**, which are a lookup and therefore have exactly two
-//!   outcomes. A seeded id must render and carry that id in the body; an id
-//!   that matches nothing must be a `404` naming what was not found, not a
-//!   `500` and not a blank page that reads as "this record was deleted".
-//! - **List pages**, driven again now that their lists are non-empty, so the
-//!   row markup is asserted rather than the "nothing here" message.
+//! Detail pages must render a seeded id and 404 an unknown one; list pages
+//! are re-driven with rows so the row markup, not the empty state, is
+//! asserted.
 
 use axum::http::StatusCode;
 use sqlx::PgPool;
@@ -25,9 +13,7 @@ use crate::principal::Principal;
 use crate::tempdb::TempDb;
 use crate::{globals, principal, seed};
 
-// Everything one seeded activity trail is keyed on. The pages cross-link, so
-// the same session must carry the requests, the decisions, the context, and
-// the hook events for the joins to have anything to join.
+// The pages cross-link, so one session carries every seeded row.
 #[expect(
     clippy::struct_field_names,
     reason = "each field is named for the id column it seeds"
@@ -48,9 +34,7 @@ async fn seed_trail(pool: &PgPool) -> Trail {
     let session_id = seed::unique("trail-session");
     seed::insert_session(pool, &session_id, &user_id).await;
 
-    // `ContextId` parses as a UUID and the detail page rejects anything else
-    // before it reaches the database, so this id cannot use the `unique`
-    // prefix form the others do.
+    // `ContextId` must parse as a UUID, so no `unique` prefix here.
     let context_id = uuid::Uuid::new_v4().to_string();
     seed::insert_context(
         pool,
@@ -75,8 +59,6 @@ async fn seed_trail(pool: &PgPool) -> Trail {
         },
     )
     .await;
-    // A second request in the same trail, failed, so the error-count and
-    // failed-status branches of every rollup have something to count.
     seed::insert_request(
         pool,
         &seed::RequestSpec {
@@ -128,8 +110,6 @@ async fn seed_trail(pool: &PgPool) -> Trail {
     }
 }
 
-// A detail page for a record that exists renders it; one for a record that
-// does not is a 404 that says so.
 #[tokio::test(flavor = "multi_thread")]
 async fn seeded_detail_pages_render_the_record_and_miss_cleanly() {
     if !globals::init() {
@@ -144,7 +124,6 @@ async fn seeded_detail_pages_render_the_record_and_miss_cleanly() {
     let app = App::new(&db.pool, credentials);
     let trail = seed_trail(&db.pool).await;
 
-    // (label, path, a substring the rendered page must carry)
     let found: [(&str, String, String); 6] = [
         (
             "the session detail page",
@@ -161,8 +140,6 @@ async fn seeded_detail_pages_render_the_record_and_miss_cleanly() {
             format!("/admin/traces/{}", trail.trace_id),
             "Timeline".to_owned(),
         ),
-        // The same page resolves a session id too — a caller holding either
-        // half of the pair must land somewhere useful.
         (
             "the trace detail page, addressed by session id",
             format!("/admin/traces/{}", trail.session_id),
@@ -199,8 +176,6 @@ async fn seeded_detail_pages_render_the_record_and_miss_cleanly() {
         }
     }
 
-    // The miss half. A detail page for an id in no table owes a 404: a 200 with
-    // an empty shell is indistinguishable from a record that was deleted.
     let missing: [(&str, String); 5] = [
         (
             "a session id in no table",
@@ -210,8 +185,6 @@ async fn seeded_detail_pages_render_the_record_and_miss_cleanly() {
             "a context id that is a well-formed UUID but matches nothing",
             format!("/admin/contexts/{}", uuid::Uuid::new_v4()),
         ),
-        // The context id segment is parsed as a UUID before any query runs, so
-        // a non-UUID is a miss rather than a parser panic.
         (
             "a context id that is not a UUID at all",
             "/admin/contexts/not-a-uuid".to_owned(),
@@ -236,8 +209,6 @@ async fn seeded_detail_pages_render_the_record_and_miss_cleanly() {
         }
     }
 
-    // The same pages under a non-admin principal are refused rather than
-    // rendered — these carry another customer's conversation content.
     for path in [
         format!("/admin/sessions/{}", trail.session_id),
         format!("/admin/contexts/{}", trail.context_id),
@@ -262,7 +233,6 @@ async fn seeded_detail_pages_render_the_record_and_miss_cleanly() {
     );
 }
 
-// The list pages, re-driven now that their lists have rows.
 #[tokio::test(flavor = "multi_thread")]
 async fn seeded_list_pages_render_rows_rather_than_the_empty_state() {
     if !globals::init() {
@@ -328,8 +298,6 @@ async fn seeded_list_pages_render_rows_rather_than_the_empty_state() {
             "Contract conversation".to_owned(),
             None,
         ),
-        // Why: the list names a row by its conversation, so the full context id
-        // is asserted through the title attribute the cell carries for that.
         (
             "the sessions list",
             "/admin/sessions".to_owned(),
@@ -379,7 +347,6 @@ async fn seeded_list_pages_render_rows_rather_than_the_empty_state() {
     );
 }
 
-// The analytics pages, driven over a window that contains the seeded trail.
 #[tokio::test(flavor = "multi_thread")]
 async fn analytics_pages_aggregate_the_seeded_trail() {
     if !globals::init() {
@@ -436,8 +403,6 @@ async fn analytics_pages_aggregate_the_seeded_trail() {
         }
     }
 
-    // The one assertion that proves an aggregate ran rather than merely
-    // rendering: the seeded model must appear in the model breakdown.
     let (_, body) = app
         .call(Call::get("/admin/requests?tab=models", Principal::Admin))
         .await;
@@ -458,9 +423,6 @@ async fn analytics_pages_aggregate_the_seeded_trail() {
     );
 }
 
-// The owner-facing conversation page. This is the one page under `/admin` a
-// non-admin may read another kind of record on — their own gateway
-// conversation — so its three outcomes are worth pinning exactly.
 #[tokio::test(flavor = "multi_thread")]
 async fn a_gateway_conversation_is_readable_by_its_owner_and_invisible_to_everyone_else() {
     if !globals::init() {
@@ -501,8 +463,6 @@ async fn a_gateway_conversation_is_readable_by_its_owner_and_invisible_to_everyo
     .await
     .expect("seed the owner's prompt");
 
-    // Another user's conversation, to drive the non-owner case against a
-    // record that genuinely exists.
     let stranger_id = seed::unique("stranger");
     let stranger = seed::insert_user(
         &db.pool,
@@ -555,8 +515,7 @@ async fn a_gateway_conversation_is_readable_by_its_owner_and_invisible_to_everyo
         ));
     }
 
-    // A conversation belonging to someone else answers exactly as a
-    // non-existent one does, so the URL cannot be used to enumerate ids.
+    // Answers exactly as a non-existent id, so ids cannot be enumerated.
     let cases = [
         (
             "a conversation owned by another user",
@@ -582,8 +541,6 @@ async fn a_gateway_conversation_is_readable_by_its_owner_and_invisible_to_everyo
         }
     }
 
-    // An admin holds the unrestricted history scope, so the same page renders
-    // for them and offers the link on to the full context view.
     let (status, body) = app.call(Call::get(&own_url, Principal::Admin)).await;
     if status != StatusCode::OK {
         failures.push(format!(

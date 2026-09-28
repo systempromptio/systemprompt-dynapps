@@ -5,7 +5,9 @@
 //! different question — not "what did this account spend" but "what did it
 //! talk about". Every count here reads `conversation_requests`, so probes and
 //! utility calls are counted as side calls rather than as conversations, and
-//! the legacy sentinel context is already excluded by the view.
+//! the legacy sentinel context is already excluded by the view. The request
+//! total alone reads `ai_requests`, so sentinel traffic still counts as sent.
+//! `by_agent` stays empty: `ai_requests` has no agent column.
 
 use sqlx::PgPool;
 use systemprompt::identifiers::{ContextId, UserId};
@@ -14,8 +16,6 @@ use super::{CONVERSATION_WINDOW_DAYS, ConversationGroup, ConversationSummary, Re
 
 const RECENT_LIMIT: i64 = 10;
 
-// Why: `ai_requests` has no agent column today; the existing analytics surface
-// reads agent ids from `plugin_usage_events`, which is keyed differently.
 pub async fn get_conversation_summary(
     pool: &PgPool,
     user_id: &UserId,
@@ -43,9 +43,6 @@ struct Totals {
 }
 
 async fn get_conversation_totals(pool: &PgPool, user_id: &UserId) -> Result<Totals, sqlx::Error> {
-    // Why: `ai_requests` counts every request, sentinel context included; the
-    // view already drops the sentinel, which is right for conversations and
-    // side calls but would under-report what the account actually sent.
     let row = sqlx::query!(
         r#"SELECT
             (SELECT COUNT(DISTINCT context_id) FILTER (WHERE effective_kind = 'turn')::bigint

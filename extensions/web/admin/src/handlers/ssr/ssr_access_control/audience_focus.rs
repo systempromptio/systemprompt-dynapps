@@ -33,9 +33,6 @@ fn rules_url(row: &AcAudienceRowView) -> String {
     )
 }
 
-// Why: a cell names the band and the subject it matched; the ledger row
-// behind it is the one on the same entity with that band and subject, and
-// only it carries the operator's `why` and the expiry.
 fn ledger_rule<'a>(
     ledger: &'a [LedgerRuleRow],
     row: &AcAudienceRowView,
@@ -51,9 +48,6 @@ fn ledger_rule<'a>(
     })
 }
 
-// Why: when the default decided, the resolver's detail is a paragraph of
-// remediation advice; in a list of eighty such lines the band word already
-// says it, so the line states the fact in one sentence.
 fn default_detail(layer: &str) -> Option<String> {
     match layer {
         "closed" => Some("no rule names this subject; the entity is closed".to_owned()),

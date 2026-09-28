@@ -11,9 +11,6 @@ use crate::repositories::analytics::site::series::UsageBucket;
 
 use super::view::{self, bucket_label};
 
-// Why: pivots the sparse per-model rows onto the spine the usage series
-// already established, so the stacked bars line up bucket-for-bucket with the
-// volume and cost lines instead of inventing a second calendar.
 pub(super) fn model_cost_stack(
     rows: &[ModelCostBucket],
     spine: &[UsageBucket],
@@ -36,8 +33,6 @@ pub(super) fn model_cost_stack(
             totals.push(row.cost_microdollars);
         }
     }
-    // Why: ranked descending so the color order matches the pie's for the
-    // same window; "Other" sorts by its own total like any other series.
     let mut order: Vec<usize> = (0..models.len()).collect();
     order.sort_by_key(|&i| std::cmp::Reverse(totals[i]));
 
@@ -59,8 +54,6 @@ pub(super) fn model_cost_stack(
         .collect();
 
     let grand_total: i64 = totals.iter().sum();
-    // Why: drawn as stacked columns in the live layer — per-bucket magnitude
-    // is a column's job, and the columns share the lines' bucket spine.
     chart_on_axis(
         &bucket_labels,
         "No billed requests in this window.",
@@ -81,9 +74,6 @@ pub(super) fn model_cost_stack(
     .into_columns()
 }
 
-// Why: the four Overview visuals are built together because they share one
-// window and one bucket spine — keeping them in one place is what stops the
-// stacked cost chart from drifting onto a different calendar than the lines.
 pub(super) struct OverviewCharts {
     pub volume: SvgLineChartView,
     pub cost: SvgLineChartView,

@@ -28,9 +28,6 @@ pub(crate) struct RoleCardView {
     pub note: String,
 }
 
-// Why: the pill's tone is the grant source. A role granted by hand takes the
-// role's own colour and offers a revoke; one the directory projected is grey
-// and is withdrawn in the directory, so the table needs no source column.
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct RolePillView {
     pub role: String,
@@ -64,8 +61,6 @@ pub(crate) struct RoleEntitlementView {
     pub entity_type: String,
     pub entity_type_label: &'static str,
     pub entity_id: String,
-    // Why: a route's declared name with the id demoted; other kinds are
-    // named by their id already.
     pub entity_label: String,
     pub entity_sub: Option<String>,
     pub labelled: bool,
@@ -83,9 +78,6 @@ pub(crate) struct SelectOption {
     pub selected: bool,
 }
 
-// Why: the estate totals ride in the header's meta line rather than in a KPI
-// band of their own. The band an operator acts on is the role tiles, and two
-// stacked bands pushed the assignment table below the fold.
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct HeaderFactView {
     pub value: String,

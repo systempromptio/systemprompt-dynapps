@@ -134,8 +134,6 @@ pub(crate) async fn roles_page(
     ))
 }
 
-// Why: labels and the catalog are only read for the tab that groups by
-// them; the members tab never names an entity.
 fn entitlement_groups(
     on_entitlements: bool,
     entitlement_rows: &[entitlements::RoleEntitlementRow],
@@ -155,11 +153,6 @@ fn entitlement_groups(
     )
 }
 
-// Why: the five facts an operator checks before touching anyone's roles —
-// how much admin there is, how much of it was granted by hand rather than by
-// the directory, and whether the estate has the one platform admin it must
-// never drop below. They sit on the header's meta line, not in a KPI band:
-// the band worth the vertical space is the role tiles, which filter the table.
 fn facts(
     cards: &[view::RoleCardView],
     entitlements: &[entitlements::RoleEntitlementRow],

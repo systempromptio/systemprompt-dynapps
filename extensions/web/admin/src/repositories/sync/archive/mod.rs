@@ -15,6 +15,8 @@
 //! explicit apply, per plane and per mode, reaches the database. Entries
 //! the instance does not project — skills, marketplaces, providers — are
 //! reported for what they are: things to commit or to publish as a bundle.
+//! The size caps refuse a hostile upload before it allocates its declared
+//! size; the total is checked as bytes are read, not from headers.
 
 pub mod manifest;
 pub mod read;
@@ -24,9 +26,6 @@ pub mod write;
 pub const MANIFEST_FILE: &str = "MANIFEST.yaml";
 pub const TREE_PREFIX: &str = "services/";
 
-// Why: an archive of declarations is kilobytes; the caps exist so a
-// malformed or hostile upload is refused early and never allocates its
-// declared size. Total is checked as bytes are read, not from headers.
 pub const MAX_UPLOAD_BYTES: usize = 8 * 1024 * 1024;
 pub const MAX_ENTRY_BYTES: u64 = 2 * 1024 * 1024;
 pub const MAX_TOTAL_BYTES: u64 = 16 * 1024 * 1024;

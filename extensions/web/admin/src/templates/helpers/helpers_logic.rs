@@ -1,4 +1,9 @@
 //! Comparison and conditional Handlebars helpers.
+//!
+//! `navActive` and `navState` take the page id then the ids a sidebar link
+//! owns: `{{navState page "users" "user-detail"}}` reads the first as the leaf
+//! and the rest as children, so a link over sub-pages is leaf, expanded
+//! ancestor, or inactive.
 
 use handlebars::{
     Context, Handlebars, Helper, HelperDef, HelperResult, Output, RenderContext, RenderError,
@@ -109,11 +114,6 @@ impl HelperDef for SubHelper {
     }
 }
 
-// Why: the sidebar marks one link per section active, and several links stand
-// for more than one page id — Requests owns both the list and the detail. Done
-// with `eq` that is a nest of three `{{#if}}` blocks per link, which is what
-// made the old sidebar unreadable. `{{navActive page "requests"
-// "request-detail"}}` emits the whole attribute pair, or nothing.
 #[derive(Debug, Clone, Copy)]
 pub(super) struct NavActiveHelper;
 impl HelperDef for NavActiveHelper {
@@ -140,10 +140,6 @@ impl HelperDef for NavActiveHelper {
     }
 }
 
-// Why: a sidebar link that owns sub-pages has three states, not two. On its
-// own page it is the active leaf; on a record it owns it is the expanded
-// ancestor, and the record itself is drawn beneath it. `{{navState page "users"
-// "user-detail"}}` reads the first id as the leaf and the rest as children.
 #[derive(Debug, Clone, Copy)]
 pub(super) struct NavStateHelper;
 impl HelperDef for NavStateHelper {

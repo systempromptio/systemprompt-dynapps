@@ -82,10 +82,6 @@ pub(super) fn build_preserved(
     out
 }
 
-// Why: the scope selects are their own GET form beside the identity ribbon, so
-// they carry the same preserved window and flags the ribbon does, and the group
-// and project chosen in the ribbon's own preserved set are dropped in favour of
-// the selects' values.
 pub(super) struct TraceScopeFilterArgs<'a> {
     pub request: &'a ScopeRequest,
     pub query: &'a TraceListQuery,

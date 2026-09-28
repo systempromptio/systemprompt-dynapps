@@ -11,20 +11,13 @@ use systemprompt::identifiers::GatewayConversationId;
 
 use crate::repositories::analytics::context_detail::ContextRequestRow;
 
-// Why: `effective_kind` is decided by `conversation_request_kind`, which calls
-// a request a utility call when it offered no tools — and whether tools were
-// offered depends on a best-effort payload write. A conversation whose whole
-// classification came out that way has a real transcript with nothing marked
-// `turn`; rendering it is far better than an empty page beside a side-calls
-// table holding the entire conversation.
+// Why: the Postgres fn `conversation_request_kind` calls a request `utility`
+// when its best-effort tool payload write was lost, so a context with no
+// `turn` row still has a real transcript; callers then fall back to every row.
 pub(super) fn has_turns(requests: &[ContextRequestRow]) -> bool {
     requests.iter().any(|r| r.effective_kind == "turn")
 }
 
-// Why: threads are keyed on the client-supplied `gateway_conversation_id`;
-// rows without one all collapse into a single thread rather than each becoming
-// one of their own. Shared with [`transcript_request_ids`] so the ids a caller
-// fetches bodies for are exactly the ones the builder goes looking for.
 pub(super) fn group_threads(requests: &[ContextRequestRow]) -> Vec<Vec<&ContextRequestRow>> {
     let mut turns: Vec<&ContextRequestRow> = requests
         .iter()
@@ -48,16 +41,8 @@ pub(super) fn group_threads(requests: &[ContextRequestRow]) -> Vec<Vec<&ContextR
     groups
 }
 
-// Why: the transcript of a thread is the stored history of its latest request,
-// so only a few requests per thread ever have their bodies read. The lookback
-// covers the common case where that latest request never persisted its
-// messages — a request that failed, or whose best-effort inserts errored —
-// which would otherwise blank the whole thread.
 const CANONICAL_LOOKBACK: usize = 5;
 
-// Why: tool calls are bound to whichever request produced each assistant step,
-// so every turn request contributes them; message bodies are only read from
-// the tail of each thread.
 #[must_use]
 pub fn transcript_request_ids(requests: &[ContextRequestRow]) -> TranscriptRequestIds {
     let groups = group_threads(requests);

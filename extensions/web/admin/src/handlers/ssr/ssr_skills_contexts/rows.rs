@@ -17,8 +17,6 @@ use super::ContextsListQuery;
 use super::context::{ConversationItemView, ModelChipView, UserSummaryView};
 use super::view::link_prefix;
 
-// Why: two chips fit the column at the narrowest supported width; the rest
-// fold into the `+N` chip.
 const PRIMARY_MODEL_CHIPS: usize = 2;
 
 

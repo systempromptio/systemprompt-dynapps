@@ -28,8 +28,6 @@ pub(super) fn window_label(range: &TimeRange) -> String {
     }
 }
 
-// Why: the `(name, value)` pairs that name a window in a URL, shared by the
-// sort links, the pagination and the export so none of them can drop it.
 pub(super) fn window_pairs(range: &TimeRange) -> Vec<(&'static str, Option<String>)> {
     match range.preset {
         TimeRangePreset::Custom => vec![

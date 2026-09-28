@@ -20,8 +20,6 @@ pub(crate) struct RetentionRowView {
     pub purpose: &'static str,
     pub days: u32,
     pub days_source: &'static str,
-    // Why: None until a run has reported; the job's `+` suffix survives to say
-    // it stopped at its time budget with more to do.
     pub deleted_last_run: Option<String>,
 }
 
@@ -67,9 +65,6 @@ pub(crate) async fn retention_view(
     })
 }
 
-// Why: the row list is the bulk of the page and is pure formatting over the
-// config and the last run's counts, so it is built apart from the query that
-// fetches them.
 fn retention_rows(
     retention: &RetentionConfig,
     ai_history_days: u32,
@@ -140,7 +135,6 @@ fn retention_rows(
     ]
 }
 
-// Why: what the last run deleted from one table, as the job reported it.
 fn deleted_count(counts: &[(String, String)], table: &str) -> Option<String> {
     counts
         .iter()
@@ -148,7 +142,6 @@ fn deleted_count(counts: &[(String, String)], table: &str) -> Option<String> {
         .map(|(_, value)| value.clone())
 }
 
-// Why: `table=count` pairs, the shape of the job's success message.
 fn parse_counts(message: &str) -> Vec<(String, String)> {
     message
         .split_whitespace()

@@ -18,7 +18,6 @@ use crate::handlers::ssr::types::BreadcrumbView;
 use crate::repositories::governance::decision_log::DecisionSort;
 use crate::util::time_range::TimeRange;
 
-// Why: One entry in a ranking list on the hooks tab.
 #[derive(Debug, Serialize)]
 pub(super) struct RankView {
     name: String,
@@ -43,10 +42,6 @@ pub(super) struct GovernancePageContext {
     pub(super) stage_filters: Vec<StageFilterView>,
     pub(super) attention: Vec<view::DecisionRow>,
     pub(super) attention_total: i64,
-    // Why: empty when the band already shows every call that objected. The
-    // template tests it for emptiness rather than carrying a second bool —
-    // `GovernancePageContext` is at its bool ceiling and a URL that is only
-    // sometimes there says the same thing.
     pub(super) attention_more_url: String,
     pub(super) columns: Vec<ColumnHeader>,
     pub(super) decisions: Vec<view::DecisionRow>,
@@ -70,7 +65,6 @@ pub(super) struct GovernancePageContext {
     pub(super) top_actors: Vec<RankView>,
 }
 
-// Why: What one context build is derived from.
 pub(super) struct Build<'a> {
     pub(super) query: &'a GovernanceQuery,
     pub(super) tab: GovernanceTab,
@@ -270,9 +264,6 @@ fn time_range_context(query: &GovernanceQuery, range: TimeRange) -> TimeRangeCon
     }
 }
 
-// Why: the export stays one row per evaluation while the console folds them
-// into calls — evidence wants everything that was decided. The active tab's
-// plane leads; the other is a pick away.
 fn export_view(query: &GovernanceQuery, tab: GovernanceTab) -> crate::export::ExportView {
     let query = url_with(query, &[("page", ""), ("tab", "")]);
     let query = query.split_once('?').map_or("", |(_, q)| q);

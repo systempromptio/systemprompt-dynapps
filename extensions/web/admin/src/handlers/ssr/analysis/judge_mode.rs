@@ -6,8 +6,6 @@
 
 use systemprompt::config::ProfileBootstrap;
 
-// Why: a profile that cannot be read is treated as manual, so the buttons
-// are there rather than a page that can never request a verdict.
 pub(crate) fn automatic() -> bool {
     ProfileBootstrap::get().is_ok_and(|p| p.judge.automatic)
 }

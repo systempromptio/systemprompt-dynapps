@@ -100,9 +100,6 @@ pub async fn list_secret_audit_paged(
     Ok((rows, total))
 }
 
-// Why: `third_party` counts the rows where the actor is not the owner. It is
-// the one number on the page that cannot be read off the table at a glance and
-// the one an auditor asks for first.
 pub async fn get_secret_audit_stats(
     pool: &PgPool,
     range: TimeRange,
@@ -125,8 +122,6 @@ pub async fn get_secret_audit_stats(
     .await
 }
 
-// Why: as with the categories above, the select lists the actions this
-// window recorded rather than every action the column may hold.
 pub async fn list_secret_audit_actions(
     pool: &PgPool,
     range: TimeRange,

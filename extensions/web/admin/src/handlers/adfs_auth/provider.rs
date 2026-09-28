@@ -28,9 +28,8 @@ pub(super) fn service_provider(cfg: &AdfsConfig) -> Result<ServiceProvider, Adfs
         signing_key: None,
         decryption_key: None,
         sign_authn_requests: false,
-        // Why: the assertion is what carries the claims, so the assertion must
-        // be signed; AD FS signs it by default and does not sign the outer
-        // Response unless asked.
+        // Why: AD FS signs the assertion by default but not the outer Response,
+        // so requiring a signed Response would reject every login.
         want_signed: SpWantSigned {
             response: false,
             assertions: true,
@@ -43,8 +42,6 @@ pub(super) fn service_provider(cfg: &AdfsConfig) -> Result<ServiceProvider, Adfs
     .map_err(|e| AdfsError::ServiceProvider(e.to_string()))
 }
 
-// Why: keyed on the metadata text itself, so a re-vendored metadata file is
-// a new cache entry rather than a stale descriptor.
 pub(super) async fn idp_descriptor(cfg: &AdfsConfig) -> Result<Arc<IdpDescriptor>, AdfsError> {
     if let Some(idp) = IDP_CACHE.read().await.get(&cfg.idp_metadata_xml) {
         return Ok(Arc::clone(idp));

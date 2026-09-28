@@ -113,8 +113,6 @@ pub fn build_sources() -> AdminResult<SourcesView> {
             provenance_error,
         },
         bundles,
-        // Why: the boot-time provenance is a static; after an in-place import
-        // the cache state is what names the composition being served.
         composed_hash: (!state.composed_hash.is_empty())
             .then(|| state.composed_hash.clone())
             .or(composed_hash),
@@ -236,10 +234,6 @@ fn owns_view(manifest: &ServicesBundleManifest) -> OwnsView {
     }
 }
 
-// Why: a kit that ships its own `access:` is a second truth for who reaches
-// it. Core still ingests it at reconcile (source `bundle:<name>`), so the
-// panel names it and the access-control drift shows those rows as bundle
-// orphans that an overwrite deletes.
 fn marketplaces_declaring_access() -> Vec<String> {
     ConfigLoader::load().map_or_else(
         |_| Vec::new(),

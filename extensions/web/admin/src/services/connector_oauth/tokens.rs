@@ -14,9 +14,7 @@ struct JwtExpiry {
     exp: i64,
 }
 
-// Why: the payload is read for its expiry only; the signature is Salesforce's
-// business and the token is never trusted for anything on this side.
-fn jwt_exp(token: &str) -> Option<i64> {
+fn unverified_jwt_exp(token: &str) -> Option<i64> {
     let payload = token.split('.').nth(1)?;
     let bytes = URL_SAFE_NO_PAD.decode(payload).ok()?;
     serde_json::from_slice::<JwtExpiry>(&bytes)
@@ -94,6 +92,9 @@ async fn request_with_client(
     apply_tokens(grant, tokens)
 }
 
+// Why: RFC 6749 §5.2 — a token endpoint's 4xx error (invalid_grant,
+// invalid_client …) is final for the grant, so it is retired; only a 5xx, a 429
+// or a transport failure is an outage worth retrying.
 async fn accepted_tokens(provider: &str, response: reqwest::Response) -> AdminResult<Tokens> {
     let status = response.status();
     if status.is_server_error() || status.as_u16() == 429 {
@@ -108,10 +109,6 @@ async fn accepted_tokens(provider: &str, response: reqwest::Response) -> AdminRe
         ));
     }
     let tokens: Tokens = super::generic_discovery::bounded_json(response).await?;
-    // Why: RFC 6749 §5.2 — every error a token endpoint answers with a 4xx
-    // (invalid_grant, unauthorized_client, invalid_client, invalid_scope …)
-    // is final for this grant; retrying it is a loop, not resilience. Only a
-    // 5xx, a 429 or a transport failure is an outage.
     if !status.is_success() || tokens.error.is_some() {
         let code = tokens.error.as_deref().unwrap_or("none");
         tracing::warn!(
@@ -137,25 +134,10 @@ fn apply_tokens(grant: &mut Grant, tokens: Tokens) -> AdminResult<()> {
     if let Some(refresh) = tokens.refresh_token {
         grant.refresh_token = Some(refresh);
     }
-    // Why: Salesforce omits expires_in. Its named-user access tokens are JWTs
-    // that carry `exp`, so read that; an opaque one gets a short fixed life.
-    // Treating it as already expired would refresh on every broker call, and
-    // with refresh-token rotation each call would carry a different bearer —
-    // which breaks the proxy's session binding after `initialize`.
     let seconds = tokens
         .expires_in
         .filter(|n| *n > 0 && *n <= 31_536_000)
-        .or_else(|| match grant.provider {
-            Provider::Salesforce(_) => Some(
-                jwt_exp(&grant.access_token)
-                    .map_or(SALESFORCE_OPAQUE_TOKEN_SECONDS, |exp| {
-                        exp - Utc::now().timestamp()
-                    })
-                    .clamp(60, 31_536_000),
-            ),
-            Provider::Generic(_) => Some(0),
-            Provider::Atlassian => None,
-        })
+        .or_else(|| undeclared_expiry_seconds(&grant.provider, &grant.access_token))
         .ok_or_else(|| AdminError::Upstream("Connector returned no valid token expiry".into()))?;
     grant.expires_at = if seconds == 0 && matches!(grant.provider, Provider::Generic(_)) {
         i64::MAX
@@ -168,6 +150,24 @@ fn apply_tokens(grant: &mut Grant, tokens: Tokens) -> AdminResult<()> {
         ));
     }
     Ok(())
+}
+
+// Why: Salesforce omits `expires_in`; treating its token as expired would
+// rotate the refresh token on every broker call and break the MCP proxy's
+// session binding after `initialize`, so read the JWT `exp` or assume a short
+// life.
+fn undeclared_expiry_seconds(provider: &Provider, access_token: &str) -> Option<i64> {
+    match provider {
+        Provider::Salesforce(_) => Some(
+            unverified_jwt_exp(access_token)
+                .map_or(SALESFORCE_OPAQUE_TOKEN_SECONDS, |exp| {
+                    exp - Utc::now().timestamp()
+                })
+                .clamp(60, 31_536_000),
+        ),
+        Provider::Generic(_) => Some(0),
+        Provider::Atlassian => None,
+    }
 }
 
 pub async fn exchange(grant: &mut Grant, code: &str) -> AdminResult<()> {

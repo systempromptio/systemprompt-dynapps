@@ -22,12 +22,7 @@ pub(crate) struct UserDetailContext {
     pub header: UserHeaderView,
     pub kpis: DetailKpiView,
 
-    // Why: the write controls. A project manager reads this page; only an admin
-    // may change what it shows.
     pub can_write: bool,
-    // Why: an admin must not drop their own last role from this form — the API
-    // refuses it, and offering the control anyway turns a guardrail into an
-    // error toast.
     pub is_self: bool,
 
     pub identity: Option<IdentityTabView>,
@@ -38,8 +33,6 @@ pub(crate) struct UserDetailContext {
     pub sessions: Option<UserSessionsTabView>,
     pub usage: Option<UsageTabView>,
 
-    // Why: the person's requests, sessions and conversations, and every
-    // transcript, in one dialog. `None` for a reader the datasets refuse.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub export: Option<crate::export::ExportView>,
 }
@@ -78,9 +71,6 @@ pub(crate) struct DetailKpiView {
     pub devices: i64,
     pub groups: usize,
     pub projects: usize,
-    // Why: the two scope tiles open the Membership tab. The count alone told
-    // an operator a fresh account was in no group and nothing else — where to
-    // put it in one is the tab they were not on.
     pub membership_url: String,
 }
 
@@ -91,8 +81,6 @@ pub(crate) struct IdentityTabView {
     pub is_active: bool,
     pub created_at: String,
     pub role_choices: Vec<RoleChoiceView>,
-    // Why: the calendar day the manual grants expire (`YYYY-MM-DD`, for the
-    // date picker), empty for open-ended.
     pub roles_valid_until_day: String,
     pub adfs_groups: Vec<String>,
     pub has_adfs_groups: bool,
@@ -115,9 +103,6 @@ pub(crate) struct SalesforceIdentityView {
 pub(crate) struct MembershipTabView {
     pub group_choices: Vec<MembershipChoiceView>,
     pub project_choices: Vec<MembershipChoiceView>,
-    // Why: the exclusive-attribution key. Every cost total on the group and
-    // project pages counts this person exactly once, under these two ids, so
-    // this editor is the only place that number can be moved.
     pub primary_group_options: Vec<ScopeDefaultOptionView>,
     pub primary_project_options: Vec<ScopeDefaultOptionView>,
     pub scope_source: String,
@@ -131,10 +116,6 @@ pub(crate) struct ScopeDefaultOptionView {
     pub selected: bool,
 }
 
-// Why: the per-person side of the grant model. Every entity on the instance,
-// resolved through the same resolver the enforcement point calls, plus the
-// state of this person's own rule so the editor can offer inherit, allow and
-// deny rather than a checkbox.
 #[derive(Debug, Serialize)]
 pub(crate) struct AccessTabView {
     pub available: bool,
@@ -212,9 +193,6 @@ pub(crate) struct UserSessionRowView {
     pub revocable: bool,
 }
 
-// Why: the same rows the conversation listings render, scoped to one account.
-// Reusing `HistoryRowView` keeps a conversation looking identical wherever it
-// is listed, rather than drifting into a third shape.
 #[derive(Debug, Serialize)]
 pub(crate) struct UserConversationsTabView {
     pub rows: Vec<HistoryRowView>,
@@ -251,8 +229,6 @@ pub(crate) struct UserModelRowView {
     pub cost_display: String,
 }
 
-// Why: the card at the top of the tab — the one conversation an admin opening
-// this account most often wants, without scanning the table for it.
 #[derive(Debug, Serialize)]
 pub(crate) struct LatestConversationView {
     pub conversation_title: String,

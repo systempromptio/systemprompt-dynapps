@@ -44,8 +44,6 @@ impl ExpirySweep {
     }
 }
 
-// Why: whether losing these roles took a manage role away — the same test the
-// role editor applies before it revokes live credentials.
 #[must_use]
 pub fn lost_manage_role(before: &[String], after: &[String]) -> bool {
     has_any(before, ROLES_MANAGE) && !has_any(after, ROLES_MANAGE)

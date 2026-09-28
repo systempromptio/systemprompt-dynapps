@@ -78,9 +78,6 @@ pub struct WarningGroup {
     pub example_reason: String,
 }
 
-// Why: distinct tool and user counts accumulate into sets rather than summing
-// the SQL rollup's per-combination counts. Summing would report one tool used
-// by two users as two tools, which is the number an operator would act on.
 #[derive(Default)]
 struct Accumulator {
     warnings: i64,

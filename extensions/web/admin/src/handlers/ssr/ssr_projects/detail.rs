@@ -40,11 +40,8 @@ use super::super::types::{
 use super::WINDOW_LABEL;
 use super::detail_view::{gated_rows, kpis, tabs, usage_tab};
 
-// Why: how many rows each detail-page section carries. Deeper questions belong
-// on the pages that own them — this page's job is the shape, not the archive.
 const SECTION_LIMIT: i64 = 25;
 
-// Why: everything the three tabs read, loaded once so a tab switch is a render.
 pub(super) struct DetailData {
     pub(super) usage: ScopeUsageRow,
     pub(super) members: Vec<ProjectMemberRow>,
@@ -57,7 +54,6 @@ pub(super) struct DetailData {
     pub(super) skills: Vec<SkillEffectivenessRow>,
 }
 
-// Why: the Usage tab's reads, taken only when that tab is the one being drawn.
 pub(super) struct ProjectUsageData {
     pub(super) attribution: Vec<AttributionSourceRow>,
     pub(super) daily: Vec<DailyRequests>,
@@ -138,8 +134,6 @@ pub(super) async fn load_usage(pool: &PgPool, project_id: &ProjectId) -> Project
     }
 }
 
-// Why: only the active tab's reads are loaded — the usage tab's rollups and
-// the settings tab's mappings and rules are empty on every other tab.
 pub(super) struct TabReads<'a> {
     pub(super) tab: &'a str,
     pub(super) usage: Option<&'a ProjectUsageData>,
@@ -222,10 +216,10 @@ fn as_member_input(row: &ProjectMemberRow) -> MemberInput<'_> {
     }
 }
 
+// Why: sqlx's macro form makes a column rename a build error; a runtime query
+// failure is swallowed by `unwrap_or_default` and reports every member
+// disabled.
 async fn load_active_user_ids(pool: &PgPool) -> HashSet<String> {
-    // Why: `status = 'active'` is how the rest of the crate reads an enabled
-    // account, and the macro form means a column rename breaks the build
-    // rather than quietly reporting every member as disabled.
     sqlx::query_scalar!(r#"SELECT id AS "id!" FROM users WHERE status = 'active'"#)
         .fetch_all(pool)
         .await

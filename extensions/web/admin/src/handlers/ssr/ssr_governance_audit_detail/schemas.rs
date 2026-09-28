@@ -83,8 +83,6 @@ pub(super) struct ArtifactLinkView {
     pub created_at: String,
 }
 
-// Why: a failed read degrades to an unavailable section rather than taking
-// the audit page with it.
 pub(super) async fn load_schemas(pool: &PgPool, ai_request_id: &str, provider: &str) -> SchemaView {
     match find_request_schemas(pool, ai_request_id).await {
         Ok(Some(row)) => schema_view(&row, provider),
@@ -201,8 +199,6 @@ fn schema_json(tool: &WireTool) -> String {
 
 // JSON: any stored payload, rendered for a `<pre>`.
 fn pretty(value: &serde_json::Value) -> String {
-    // Why: a Value always serializes; if it ever did not, the page says so
-    // in the block rather than showing an empty one.
     serde_json::to_string_pretty(value).unwrap_or_else(|e| format!("<unserializable: {e}>"))
 }
 
