@@ -5,7 +5,12 @@
 //! same endpoint shape the gateway-specific handlers use, but parameterized on
 //! `entity_type`. Allowed values mirror the Postgres CHECK constraint on
 //! `access_control_rules.entity_type`.
+//!
+//! A blank subject value is rejected before the subject is parsed, so the
+//! error names the value field rather than the rule type. A shared band needs
+//! a stated reason; a per-person override, and any removal, may go without.
 
+mod bulk;
 mod support;
 mod template;
 mod types;
@@ -18,9 +23,7 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use sqlx::PgPool;
 use systemprompt::identifiers::RuleId;
-use systemprompt_security::authz::{
-    Access, AccessRule, DASHBOARD_SOURCE, EntityRef, RuleType, UpsertRuleParams,
-};
+use systemprompt_security::authz::{DASHBOARD_SOURCE, EntityRef, RuleType, UpsertRuleParams};
 
 use crate::activity::RuleChange;
 use crate::error::{AdminError, AdminResult};
@@ -28,15 +31,29 @@ use crate::repositories::config::gateway::registered_routes_from_services;
 use crate::types::UserContext;
 
 use support::{
-    collect_entity_ids, parse_access, parse_subject, record_change, repo, rule_subject,
-    validate_entity_type,
+    parse_access, parse_subject, record_change, repo, rule_subject, validate_entity_type,
 };
-use template::{Tally, TemplateSubject, clear_subject_rules, upsert_subject_rule};
 use types::{
-    AllAccessQuery, ApplyTemplateBody, ApplyTemplateResponse, DefaultIncludedBody,
-    EntityAccessEntry, EntityAccessResponse, EntityDefaultResponse, ListAllEntityAccessResponse,
-    RemoveRuleQuery, UpsertRuleBody, UpsertRuleResponse,
+    DefaultIncludedBody, EntityAccessResponse, EntityDefaultResponse, RemoveRuleQuery,
+    UpsertRuleBody, UpsertRuleResponse,
 };
+
+pub(crate) use bulk::{apply_template_handler, list_all_entity_access_handler};
+
+fn require_non_blank(value: &str, field: &str) -> AdminResult<()> {
+    if value.trim().is_empty() {
+        return Err(AdminError::BadRequest(format!("{field} required")));
+    }
+    Ok(())
+}
+
+fn trimmed_reason(raw: Option<&str>) -> Option<&str> {
+    raw.map(str::trim).filter(|r| !r.is_empty())
+}
+
+fn shared_band_lacks_reason(rule_type: &RuleType, justification: Option<&str>) -> bool {
+    *rule_type != RuleType::USER && justification.is_none()
+}
 
 pub(crate) async fn list_entity_access_handler(
     State(pool): State<Arc<PgPool>>,
@@ -71,23 +88,12 @@ pub(crate) async fn upsert_entity_rule_handler(
     Json(body): Json<UpsertRuleBody>,
 ) -> AdminResult<Response> {
     let kind = validate_entity_type(&entity_type)?;
-    // Why: the emptiness check precedes subject parsing — a blank value would
-    // fail the parse too, and "invalid rule_type" for a missing value points
-    // the caller at the wrong field.
-    if body.rule_value.trim().is_empty() {
-        return Err(AdminError::BadRequest("rule_value required".to_owned()));
-    }
+    require_non_blank(&body.rule_value, "rule_value")?;
     let (rule_type, rule_value) = parse_subject(&pool, &body.rule_type, &body.rule_value).await?;
     let access = parse_access(&body.access)
         .ok_or_else(|| AdminError::BadRequest("invalid access".to_owned()))?;
-    // Why: a shared band needs a stated reason; a per-person override may go
-    // without one. Same rule as the replace-all path in `access_control.rs`.
-    let justification = body
-        .justification
-        .as_deref()
-        .map(str::trim)
-        .filter(|j| !j.is_empty());
-    if rule_type != RuleType::USER && justification.is_none() {
+    let justification = trimmed_reason(body.justification.as_deref());
+    if shared_band_lacks_reason(&rule_type, justification) {
         return Err(AdminError::BadRequest(format!(
             "a reason (justification) is required for the {rule_type} rule on '{rule_value}'"
         )));
@@ -137,8 +143,6 @@ pub(crate) async fn upsert_entity_rule_handler(
     .into_response())
 }
 
-// Why: the reason is optional here — a subject page removing its own
-// override has nothing to explain — and recorded whenever it is given.
 pub(crate) async fn delete_entity_rule_handler(
     State(pool): State<Arc<PgPool>>,
     Extension(user_ctx): Extension<UserContext>,
@@ -154,11 +158,7 @@ pub(crate) async fn delete_entity_rule_handler(
     {
         return Err(AdminError::NotFound("rule not found".to_owned()));
     }
-    let reason = query
-        .reason
-        .as_deref()
-        .map(str::trim)
-        .filter(|r| !r.is_empty());
+    let reason = trimmed_reason(query.reason.as_deref());
     record_change(
         &pool,
         &user_ctx.user_id,
@@ -196,103 +196,6 @@ pub(crate) async fn set_entity_default_handler(
         entity_type: entity.kind().as_str().to_owned(),
         entity_id: entity.id_str().to_owned(),
         default_included: body.default_included,
-    })
-    .into_response())
-}
-
-// Why: entity ids come from the profile's dispatchable routes (`gateway_route`)
-// or `services/mcp/*.yaml` (`mcp_server`), not from the database.
-pub(crate) async fn list_all_entity_access_handler(
-    State(pool): State<Arc<PgPool>>,
-    Query(query): Query<AllAccessQuery>,
-) -> AdminResult<Response> {
-    let kind = validate_entity_type(&query.entity_type)?;
-    let entity_ids = collect_entity_ids(&query.entity_type)?;
-    let r = repo(&pool);
-    let bulk = r
-        .list_rules_bulk(kind, &entity_ids)
-        .await
-        .map_err(AdminError::internal)?;
-    let mut entries: Vec<EntityAccessEntry> = Vec::with_capacity(entity_ids.len());
-    for eid in &entity_ids {
-        let entity = EntityRef::from_kind_and_id(kind, eid).map_err(AdminError::internal)?;
-        let default_included = r
-            .get_entity(entity.kind(), entity.id_str())
-            .await
-            .inspect_err(
-                |e| tracing::warn!(error = %e, eid = %eid, "entity_access: get_entity failed"),
-            )
-            .ok()
-            .flatten()
-            .is_some_and(|e| e.default_included);
-        let rules: Vec<AccessRule> = bulk.get(eid).cloned().unwrap_or_default();
-        entries.push(EntityAccessEntry {
-            entity_id: entity.id_str().to_owned(),
-            default_included,
-            rules,
-        });
-    }
-    Ok(Json(ListAllEntityAccessResponse {
-        entity_type: query.entity_type,
-        entities: entries,
-    })
-    .into_response())
-}
-
-pub(crate) async fn apply_template_handler(
-    State(pool): State<Arc<PgPool>>,
-    Json(body): Json<ApplyTemplateBody>,
-) -> AdminResult<Response> {
-    let kind = validate_entity_type(&body.entity_type)?;
-    if body.subject_value.trim().is_empty() {
-        return Err(AdminError::BadRequest("subject_value required".to_owned()));
-    }
-    let (rule_type, rule_value) =
-        parse_subject(&pool, &body.subject_type, &body.subject_value).await?;
-    if !["allow", "deny", "clear"].contains(&body.action.as_str()) {
-        return Err(AdminError::BadRequest(
-            "action must be allow|deny|clear".to_owned(),
-        ));
-    }
-    let justification = body
-        .justification
-        .as_deref()
-        .map(str::trim)
-        .filter(|j| !j.is_empty());
-    if body.action != "clear" && rule_type != RuleType::USER && justification.is_none() {
-        return Err(AdminError::BadRequest(
-            "a reason (justification) is required when granting or denying a shared band"
-                .to_owned(),
-        ));
-    }
-
-    let entity_ids = collect_entity_ids(&body.entity_type)?;
-    let r = repo(&pool);
-    let subject = TemplateSubject {
-        kind,
-        rule_type: &rule_type,
-        rule_value: &rule_value,
-        justification,
-    };
-    let mut tally = Tally::default();
-
-    for eid in &entity_ids {
-        if body.action == "clear" {
-            tally += clear_subject_rules(&r, &subject, eid).await;
-        } else {
-            let access = if body.action == "deny" {
-                Access::Deny
-            } else {
-                Access::Allow
-            };
-            tally += upsert_subject_rule(&r, &subject, eid, access).await;
-        }
-    }
-
-    Ok(Json(ApplyTemplateResponse {
-        applied: tally.applied,
-        failed: tally.failed,
-        entity_count: entity_ids.len(),
     })
     .into_response())
 }

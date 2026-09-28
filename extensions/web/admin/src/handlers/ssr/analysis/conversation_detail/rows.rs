@@ -20,12 +20,12 @@ use crate::repositories::analysis::conversations::planes::{
     ConversationTurnRow,
 };
 
-pub(super) fn turn_view((index, t): (usize, &ConversationTurnRow)) -> LedgerTurnView {
+pub(super) fn turn_view((index, t): (usize, ConversationTurnRow)) -> LedgerTurnView {
     let is_turn = t.effective_kind == "turn";
+    let routed = t.requested_model.filter(|m| Some(m) != t.model.as_ref());
     LedgerTurnView {
         index: index + 1,
         href: format!("/admin/requests/{}", urlencoding::encode(&t.request_id)),
-        request_id: t.request_id.clone(),
         at: t.created_at.format("%H:%M:%S").to_string(),
         kind: match t.effective_kind.as_str() {
             "turn" => "turn",
@@ -33,19 +33,12 @@ pub(super) fn turn_view((index, t): (usize, &ConversationTurnRow)) -> LedgerTurn
             _ => "side call",
         },
         is_turn,
-        model: t.model.clone().unwrap_or_else(|| "—".to_owned()),
-        routed: t
-            .requested_model
-            .clone()
-            .filter(|m| Some(m) != t.model.as_ref()),
         status_tone: match t.status.as_str() {
             "completed" => "ok",
             "failed" => "err",
             "rejected" => "warn",
             _ => "muted",
         },
-        status: t.status.clone(),
-        finish_reason: t.finish_reason.clone().unwrap_or_default(),
         input_display: format_token_total(t.input_tokens),
         output_display: format_token_total(t.output_tokens),
         cache_display: format_token_total(t.cache_read_tokens + t.cache_creation_tokens),
@@ -60,136 +53,139 @@ pub(super) fn turn_view((index, t): (usize, &ConversationTurnRow)) -> LedgerTurn
         tool_names: t.tool_names.join(", "),
         safety: t.safety_findings,
         safety_tone: safety_tone(t.safety_findings, t.safety_blocked),
-        error_message: t.error_message.clone().filter(|m| !m.is_empty()),
+        request_id: t.request_id,
+        model: t.model.unwrap_or_else(|| "—".to_owned()),
+        routed,
+        status: t.status,
+        finish_reason: t.finish_reason.unwrap_or_default(),
+        error_message: t.error_message.filter(|m| !m.is_empty()),
     }
 }
 
-pub(super) fn tool_view(t: &ConversationToolCallRow) -> LedgerCallView {
-    let tool_name = t.tool_name.clone().unwrap_or_else(|| "—".to_owned());
-    let input = t.input_summary.clone().unwrap_or_default();
+fn call_state_tone(failed: bool, state: &str) -> &'static str {
+    match (failed, state) {
+        (true, _) => "err",
+        (_, "executed") => "ok",
+        (_, "intended") => "warn",
+        _ => "muted",
+    }
+}
+
+pub(super) fn tool_view(t: ConversationToolCallRow) -> LedgerCallView {
+    let tool_name = t.tool_name.unwrap_or_else(|| "—".to_owned());
+    let input = t.input_summary.unwrap_or_default();
+    let kind = t.artifact_kind.as_deref();
     let failed = t.is_error == Some(true)
         || matches!(t.execution_status.as_deref(), Some("failed" | "timeout"));
-    let previewable = matches!(t.artifact_kind.as_deref(), Some("card" | "ui" | "body"))
-        && t.is_structured
-        && !failed;
+    let previewable = matches!(kind, Some("card" | "ui" | "body")) && t.is_structured && !failed;
     let artifact_href = t
         .artifact_id
         .as_ref()
-        .filter(|_| t.artifact_kind.is_some())
+        .filter(|_| kind.is_some())
         .map(|id| format!("/admin/artifacts/{}", urlencoding::encode(id.as_str())));
+    let preview_href = t.artifact_id.as_ref().filter(|_| previewable).map(|id| {
+        format!(
+            "/admin/artifacts/{}/preview",
+            urlencoding::encode(id.as_str())
+        )
+    });
+    let is_path = kind == Some("file") || input.starts_with('/');
+    let (artifact_icon, artifact_label) = (kind_icon(kind), kind_label(kind));
+    let state_tone = call_state_tone(failed, &t.state);
+    let artifact_title = t
+        .artifact_title
+        .filter(|title| !title.is_empty() && title != &tool_name)
+        .or_else(|| (!input.is_empty()).then(|| input.clone()))
+        .or(t.artifact_type);
     LedgerCallView {
         tool_icon: if t.is_builtin { "terminal" } else { "plug" },
         is_builtin: t.is_builtin,
-        server_name: t.server_name.clone().unwrap_or_default(),
-        is_path: t.artifact_kind.as_deref() == Some("file") || input.starts_with('/'),
-        state_tone: if failed {
-            "err"
-        } else {
-            match t.state.as_str() {
-                "executed" => "ok",
-                "intended" => "warn",
-                _ => "muted",
-            }
-        },
-        state: if failed {
-            "failed".to_owned()
-        } else {
-            t.state.clone()
-        },
-        source: t.source.clone().unwrap_or_default(),
-        status: t.execution_status.clone().unwrap_or_default(),
+        server_name: t.server_name.unwrap_or_default(),
+        is_path,
+        state_tone,
+        state: if failed { "failed".to_owned() } else { t.state },
+        source: t.source.unwrap_or_default(),
+        status: t.execution_status.unwrap_or_default(),
         duration_display: t
             .execution_time_ms
             .map_or_else(|| "—".to_owned(), format_duration_ms),
         at: t.occurred_at.map(local_time).unwrap_or_default(),
-        artifact_icon: kind_icon(t.artifact_kind.as_deref()),
-        artifact_label: kind_label(t.artifact_kind.as_deref()),
-        artifact_title: t
-            .artifact_title
-            .clone()
-            .filter(|title| !title.is_empty() && title != &tool_name)
-            .or_else(|| (!input.is_empty()).then(|| input.clone()))
-            .or_else(|| t.artifact_type.clone()),
-        preview_href: t.artifact_id.as_ref().filter(|_| previewable).map(|id| {
-            format!(
-                "/admin/artifacts/{}/preview",
-                urlencoding::encode(id.as_str())
-            )
-        }),
+        artifact_icon,
+        artifact_label,
+        artifact_title,
+        preview_href,
         artifact_href,
-        artifact_kind: t.artifact_kind.clone(),
+        artifact_kind: t.artifact_kind,
         bytes_display: format_bytes(i64::from(t.payload_bytes.unwrap_or(0))),
-        error_message: t.error_message.clone().filter(|m| !m.is_empty()),
+        error_message: t.error_message.filter(|m| !m.is_empty()),
         input_summary: input,
         tool_name,
     }
 }
 
-pub(super) fn decision_view(d: &ConversationDecisionRow) -> DecisionView {
+pub(super) fn decision_view(d: ConversationDecisionRow) -> DecisionView {
     DecisionView {
-        tool_name: d.tool_name.clone(),
         tone: match d.decision.as_str() {
             "allow" => "ok",
             "warn" => "warn",
             "deny" => "err",
             _ => "muted",
         },
-        decision: d.decision.clone(),
-        policy: d.policy.clone(),
-        reason: d.reason.clone(),
+        tool_name: d.tool_name,
+        decision: d.decision,
+        policy: d.policy,
+        reason: d.reason,
         plugin: d
             .plugin_id
-            .as_ref()
             .map(|p| p.as_str().to_owned())
             .unwrap_or_default(),
         at: local_time(d.created_at),
     }
 }
 
-pub(super) fn skill_view(s: &ConversationSkillRow) -> ConversationSkillView {
+pub(super) fn skill_view(s: ConversationSkillRow) -> ConversationSkillView {
+    let version_href = s
+        .marketplace_id
+        .as_ref()
+        .map(|m| analysis_version_url(m, s.marketplace_hash.as_deref()));
     ConversationSkillView {
         chip: SkillChipView {
             href: analysis_skill_url(&s.skill),
-            name: s.skill.clone(),
+            name: s.skill,
             hooked: true,
         },
         plugin: s
             .plugin_id
-            .as_ref()
             .map(|p| p.as_str().to_owned())
             .unwrap_or_default(),
         marketplace: s
             .marketplace_id
-            .as_ref()
             .map(|m| m.as_str().to_owned())
             .unwrap_or_default(),
         version_short: s
             .marketplace_hash
             .as_deref()
             .map_or_else(|| "—".to_owned(), |h| h[..h.len().min(12)].to_owned()),
-        version_href: s
-            .marketplace_id
-            .as_ref()
-            .map(|m| analysis_version_url(m, s.marketplace_hash.as_deref())),
+        version_href,
         invocations: s.invocations,
         first_at: local_time(s.first_invoked_at),
     }
 }
 
-pub(super) fn safety_view(s: &ConversationSafetyRow) -> SafetyView {
+pub(super) fn safety_view(s: ConversationSafetyRow) -> SafetyView {
     SafetyView {
-        phase: s.phase.clone(),
-        category: s.category.clone(),
         tone: match (s.blocked, s.severity.as_str()) {
             (true, _) | (_, "critical") => "err",
             (_, "high" | "medium") => "warn",
             _ => "muted",
         },
-        severity: s.severity.clone(),
-        scanner: s.scanner.clone(),
+        request_href: format!("/admin/requests/{}", urlencoding::encode(&s.request_id)),
+        phase: s.phase,
+        category: s.category,
+        severity: s.severity,
+        scanner: s.scanner,
         blocked: s.blocked,
         at: local_time(s.created_at),
-        request_href: format!("/admin/requests/{}", urlencoding::encode(&s.request_id)),
     }
 }
 

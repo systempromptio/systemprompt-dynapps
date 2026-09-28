@@ -20,7 +20,11 @@ const MANAGED_SRC: &str =
     include_str!("../../../../extensions/web/admin/src/routes/managed_resources.rs");
 const ANALYSIS_SRC: &str =
     include_str!("../../../../extensions/web/admin/src/routes/ssr_analysis.rs");
-const SSR_SRC: &str = include_str!("../../../../extensions/web/admin/src/routes/ssr.rs");
+const SSR_SRC: &str = include_str!("../../../../extensions/web/admin/src/routes/ssr/mod.rs");
+const SSR_PLATFORM_SRC: &str =
+    include_str!("../../../../extensions/web/admin/src/routes/ssr/platform.rs");
+const SSR_ACTIVITY_SRC: &str =
+    include_str!("../../../../extensions/web/admin/src/routes/ssr/activity.rs");
 // Merged into the SSR router from its own module, so it is read on its own:
 // without it every export route — the PAT surface included — drops out of the
 // table and out of the contract.
@@ -80,6 +84,8 @@ pub(crate) fn mounted_routes() -> Vec<MountedRoute> {
         (ADMIN_GROUPS_SRC, ADMIN_API_PREFIX),
         (MANAGED_SRC, ADMIN_API_PREFIX),
         (SSR_SRC, SSR_PREFIX),
+        (SSR_PLATFORM_SRC, SSR_PREFIX),
+        (SSR_ACTIVITY_SRC, SSR_PREFIX),
         (ANALYSIS_SRC, SSR_PREFIX),
         (EXPORT_SRC, SSR_PREFIX),
         (GOVERNANCE_SRC, SSR_PREFIX),

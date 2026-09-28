@@ -10,7 +10,7 @@ use urlencoding::encode as urlencode;
 use crate::handlers::ssr::format::{
     format_cost, format_duration_ms, format_token_total, short_num,
 };
-use crate::repositories::traces::TraceSummary;
+use crate::repositories::traces::{TraceKind, TraceSummary};
 
 use super::BASE_URL;
 
@@ -49,7 +49,7 @@ pub(super) struct TraceRow {
     has_error: bool,
     error_count: i64,
     has_deny: bool,
-    kind: String,
+    kind: TraceKind,
     is_hook_only: bool,
     detail_url: String,
 }
@@ -94,8 +94,8 @@ pub(super) fn trace_to_json(t: &TraceSummary) -> TraceRow {
         has_error: t.has_error,
         error_count: t.error_count,
         has_deny: t.has_deny,
-        kind: t.kind.clone(),
-        is_hook_only: t.kind == "hook",
+        kind: t.kind,
+        is_hook_only: t.kind == TraceKind::Hook,
         detail_url: format!("{BASE_URL}/{}", urlencode(t.session_id.as_str())),
     }
 }

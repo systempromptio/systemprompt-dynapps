@@ -10,15 +10,16 @@ use std::sync::Arc;
 use systemprompt::config::AppPaths;
 use systemprompt::content::ContentRepository;
 use systemprompt::database::DbPool;
-use systemprompt::generator::{generate_feed, organize_dist_assets, prerender_pages};
+use systemprompt::generator::{organize_dist_assets, prerender_pages};
 use systemprompt::traits::{Job, JobContext, JobResult};
 
 use super::{
-    BundleAdminCssJob, ContentIngestionJob, CopyExtensionAssetsJob, LlmsTxtGenerationJob,
-    RobotsTxtGenerationJob, SiteContentPrerenderJob, SitemapGenerationJob,
+    BundleAdminCssJob, ContentIngestionJob, CopyExtensionAssetsJob, SiteContentPrerenderJob,
 };
 use crate::error::JobError;
 use systemprompt_web_shared::error::MarketplaceError;
+
+mod derived;
 
 #[doc(hidden)]
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -125,66 +126,6 @@ impl PublishPipelineJob {
         }
     }
 
-    async fn run_sitemap(&self, ctx: &JobContext, stats: &mut PipelineStats) {
-        match SitemapGenerationJob.execute(ctx).await {
-            Ok(_result) => {
-                tracing::debug!("Sitemap generation completed");
-                stats.record_success();
-            },
-            Err(e) => {
-                tracing::error!(error = %e, "Sitemap generation failed");
-                stats.record_failure();
-            },
-        }
-    }
-
-    async fn run_llms_txt(&self, ctx: &JobContext, stats: &mut PipelineStats) {
-        match LlmsTxtGenerationJob.execute(ctx).await {
-            Ok(_result) => {
-                tracing::debug!("llms.txt generation completed");
-                stats.record_success();
-            },
-            Err(e) => {
-                tracing::error!(error = %e, "llms.txt generation failed");
-                stats.record_failure();
-            },
-        }
-    }
-
-    async fn run_feed(&self, paths: &AppPaths, db_pool: &DbPool, stats: &mut PipelineStats) {
-        let Some(content_repo) = open_content_repo(db_pool, stats) else {
-            return;
-        };
-        let outcome = generate_feed(content_repo, paths).await;
-        record_feed_outcome(outcome, stats);
-    }
-
-    async fn run_robots_txt(&self, ctx: &JobContext, stats: &mut PipelineStats) {
-        match RobotsTxtGenerationJob.execute(ctx).await {
-            Ok(_result) => {
-                tracing::debug!("robots.txt generation completed");
-                stats.record_success();
-            },
-            Err(e) => {
-                tracing::error!(error = %e, "robots.txt generation failed");
-                stats.record_failure();
-            },
-        }
-    }
-
-    async fn run_derived_files(
-        &self,
-        ctx: &JobContext,
-        paths: &AppPaths,
-        db_pool: &DbPool,
-        stats: &mut PipelineStats,
-    ) {
-        self.run_sitemap(ctx, stats).await;
-        self.run_llms_txt(ctx, stats).await;
-        self.run_robots_txt(ctx, stats).await;
-        self.run_feed(paths, db_pool, stats).await;
-    }
-
     async fn run_asset_organization(&self, paths: &AppPaths, stats: &mut PipelineStats) {
         let dist_dir = paths.web().dist().to_path_buf();
         match organize_dist_assets(&dist_dir).await {
@@ -275,23 +216,6 @@ fn open_content_repo(db_pool: &DbPool, stats: &mut PipelineStats) -> Option<Cont
             tracing::error!(error = %e, "Content repository init failed");
             stats.record_failure();
             None
-        },
-    }
-}
-
-fn record_feed_outcome<E: std::fmt::Display>(outcome: Result<(), E>, stats: &mut PipelineStats) {
-    match outcome {
-        Ok(()) => {
-            tracing::debug!("RSS feed generation completed");
-            stats.record_success();
-        },
-        Err(e) if e.to_string().contains("No RSS feeds generated") => {
-            tracing::debug!("RSS feed generation skipped: no RssFeedProvider registered");
-            stats.record_success();
-        },
-        Err(e) => {
-            tracing::error!(error = %e, "RSS feed generation failed");
-            stats.record_failure();
         },
     }
 }

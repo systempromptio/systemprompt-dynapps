@@ -22,6 +22,7 @@ mod audience_focus;
 mod bands;
 mod data;
 pub(crate) mod entities;
+mod entity_row;
 mod page;
 mod person;
 mod summary;

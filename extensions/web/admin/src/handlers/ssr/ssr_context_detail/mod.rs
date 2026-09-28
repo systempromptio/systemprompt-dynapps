@@ -9,6 +9,7 @@
 
 mod context;
 mod data;
+mod view;
 
 use crate::error::AdminError;
 use std::sync::Arc;
@@ -24,7 +25,8 @@ use crate::repositories::analytics::context_detail::find_context_header;
 use crate::repositories::scope::may_view;
 
 use crate::handlers::ssr::page::Page;
-use data::{build_detail_data, load_transcript, resolve_tab};
+use data::load_transcript;
+use view::{build_detail_data, resolve_tab};
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct ContextTabQuery {

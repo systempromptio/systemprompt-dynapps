@@ -1,5 +1,8 @@
 //! The document a conversation leaves the console as, and the reads that
 //! assemble it from the planes the detail pages already show separately.
+//! Bundle field order is reading order: who and what, the judge, the ledger,
+//! the bodies, then the planes around them. The caller has already authorised
+//! the viewer for this owner; loading only answers whether a record exists.
 
 use chrono::{DateTime, Utc};
 use serde::Serialize;
@@ -33,9 +36,6 @@ use super::view::{
 
 pub(crate) const SCHEMA_VERSION: u32 = 1;
 
-// Why: the whole record of one conversation. Field order is the order a
-// reader wants it in: who and what, then the judge, then the ledger, then the
-// bodies, then the planes around them.
 #[derive(Debug, Serialize)]
 pub(crate) struct ConversationBundle {
     pub schema_version: u32,
@@ -67,27 +67,24 @@ pub(crate) struct HeaderDoc {
     pub hook_status: Option<String>,
 }
 
-fn header_doc(h: &ContextHeader) -> HeaderDoc {
+fn header_doc(h: ContextHeader) -> HeaderDoc {
     HeaderDoc {
-        user_id: h.user_id.clone(),
-        display_name: h.display_name.clone(),
-        session_id: h.session_id.clone(),
-        client_session_id: h.client_session_id.clone(),
+        user_id: h.user_id,
+        display_name: h.display_name,
+        session_id: h.session_id,
+        client_session_id: h.client_session_id,
         created_at: h.created_at,
         updated_at: h.updated_at,
-        hook_status: h.hook_status.clone(),
+        hook_status: h.hook_status,
     }
 }
 
-// Why: the reads the two detail pages perform, gathered once. The caller has
-// already decided the viewer may see this owner's conversations; this only
-// answers "is there a record" (`None`) and assembles it.
 pub(crate) async fn load_conversation_bundle(
     pool: &PgPool,
     context_id: &ContextId,
     opts: TranscriptOptions,
 ) -> AdminResult<Option<ConversationBundle>> {
-    let Some(header) = find_context_header(pool, context_id).await? else {
+    let Some(mut header) = find_context_header(pool, context_id).await? else {
         return Ok(None);
     };
     let client_session = header.client_session_id.as_deref();
@@ -117,22 +114,22 @@ pub(crate) async fn load_conversation_bundle(
         title: facts
             .as_ref()
             .map(|f| f.title.clone())
-            .or_else(|| header.ai_title.clone())
-            .or_else(|| header.name.clone()),
-        header: header_doc(&header),
+            .or_else(|| header.ai_title.take())
+            .or_else(|| header.name.take()),
+        header: header_doc(header),
         facts,
-        requests: request_docs(&requests, &turns),
+        requests: request_docs(requests, &turns),
         transcript,
         messages: messages
-            .iter()
+            .into_iter()
             .map(|m| message_doc(m, |body| display_body(body, opts).0))
             .collect(),
-        tool_calls: tool_calls.iter().map(tool_call_doc).collect(),
-        tool_ledger: ledger.iter().map(tool_ledger_doc).collect(),
-        decisions: decisions.iter().map(decision_doc).collect(),
-        skills: skills.iter().map(skill_doc).collect(),
-        safety_findings: safety.iter().map(safety_doc).collect(),
-        hook_events: hook_events.iter().map(hook_event_doc).collect(),
+        tool_calls: tool_calls.into_iter().map(tool_call_doc).collect(),
+        tool_ledger: ledger.into_iter().map(tool_ledger_doc).collect(),
+        decisions: decisions.into_iter().map(decision_doc).collect(),
+        skills: skills.into_iter().map(skill_doc).collect(),
+        safety_findings: safety.into_iter().map(safety_doc).collect(),
+        hook_events: hook_events.into_iter().map(hook_event_doc).collect(),
     }))
 }
 
@@ -146,12 +143,12 @@ async fn hook_events(
     }
 }
 
-// Why: the reader's request list carries the transcript bookkeeping and the
-// analysis ledger carries routing, finish reasons and safety counts for the
-// same rows; one document row joins them by request id.
-fn request_docs(requests: &[ContextRequestRow], turns: &[ConversationTurnRow]) -> Vec<RequestDoc> {
+fn request_docs(
+    requests: Vec<ContextRequestRow>,
+    turns: &[ConversationTurnRow],
+) -> Vec<RequestDoc> {
     requests
-        .iter()
+        .into_iter()
         .map(|r| {
             let turn = turns.iter().find(|t| t.request_id == r.id.as_str());
             request_doc(r, turn)

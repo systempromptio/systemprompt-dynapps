@@ -11,11 +11,13 @@
 //! The queue functions are fenced by a lease token exactly like the judge's.
 
 mod digest;
+mod digest_text;
 mod links;
 mod queue;
 mod reads;
 
-pub use digest::{DigestScope, DigestTotals, ReportDigest, get_report_digest, render_digest_text};
+pub use digest::{DigestScope, DigestTotals, ReportDigest, get_report_digest};
+pub use digest_text::render_digest_text;
 pub use links::evidence_href;
 pub use queue::{
     NewReport, ReportCompletion, fail_report, insert_report_request, update_report_completion,

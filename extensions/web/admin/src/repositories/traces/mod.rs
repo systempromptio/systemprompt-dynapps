@@ -11,6 +11,13 @@
 //! `ai_requests.client_session_id` holds the uuid beside the bridge session,
 //! so every query here folds uuid-keyed rows into the bridge session; a
 //! hook-only session with no gateway row keeps the uuid as its key.
+//!
+//! Lifecycle-only sessions (opened and closed, nothing else) are hidden from
+//! the list by default and counted in [`TraceStats::lifecycle_count`]; the
+//! latency percentiles cover only traces that issued a request, since a
+//! governance-only trace has no latency and would drag them to zero. On a
+//! [`Span`], only a model span carries provider, cost and tokens, so every
+//! other span renders an em dash rather than a zero that reads as "free".
 
 use chrono::{DateTime, Utc};
 use serde::Serialize;
@@ -36,8 +43,6 @@ pub struct TraceSummary {
     pub started_at: DateTime<Utc>,
     pub ended_at: DateTime<Utc>,
     pub active_ms: i64,
-    // Why: First-to-last event span. A client may reuse a session id for hours, so
-    // this is context for `active_ms`, never a substitute for it.
     pub window_ms: i64,
     pub user_id: Option<UserId>,
     pub user_label: Option<String>,
@@ -58,19 +63,42 @@ pub struct TraceSummary {
     pub cache_hit_any: bool,
     pub top_tool: Option<String>,
     pub has_error: bool,
-    // Why: Failed gateway requests on the trace — the count behind `has_error`.
     pub error_count: i64,
     pub has_deny: bool,
-    // Why: `gateway`, `hook` or `lifecycle` — what the trace is evidence of.
-    // A `hook` trace has no model, tokens, cost or latency because it never
-    // reached the gateway, not because the numbers went missing.
-    pub kind: String,
+    pub kind: TraceKind,
+}
+
+/// What a trace is evidence of. A `Hook` trace has no model, tokens, cost or
+/// latency because it never reached the gateway, not because they went missing.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TraceKind {
+    Gateway,
+    Hook,
+    Lifecycle,
+}
+
+impl TraceKind {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Gateway => "gateway",
+            Self::Hook => "hook",
+            Self::Lifecycle => "lifecycle",
+        }
+    }
+
+    fn from_sql(kind: &str) -> Self {
+        match kind {
+            "gateway" => Self::Gateway,
+            "hook" => Self::Hook,
+            _ => Self::Lifecycle,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct TraceFilter<'a> {
     pub user_id: Option<&'a str>,
-    // Why: the caller's resolved `SubjectScope::as_sql()`; NULL = every user.
     pub subject_ids: Option<&'a [String]>,
     pub agent_id: Option<&'a str>,
     pub agent_scope: Option<&'a str>,
@@ -78,9 +106,6 @@ pub struct TraceFilter<'a> {
     pub decision: Option<&'a str>,
     pub error_only: bool,
     pub deny_only: bool,
-    // Why: Claude Code sessions that only opened and closed are hidden by
-    // default; they carry no model, cost or duration and would otherwise be
-    // most of the page.
     pub include_lifecycle: bool,
 }
 
@@ -140,15 +165,8 @@ pub struct TraceStats {
     pub total_traces: i64,
     pub error_count: i64,
     pub deny_count: i64,
-    // Why: the traces that issued at least one request — the population the
-    // cost, token and percentile figures below are drawn from.
     pub active_traces: i64,
-    // Why: the lifecycle-only sessions the list suppressed, so the page can
-    // say how many rows it is not showing.
     pub lifecycle_count: i64,
-    // Why: Percentiles over `active_ms` of the traces that issued at least one
-    // request; governance-only traces have no latency to contribute and would
-    // otherwise drag every percentile to zero.
     pub p50_active_ms: i64,
     pub p95_active_ms: i64,
     pub p99_active_ms: i64,
@@ -167,9 +185,6 @@ pub struct Span {
     pub duration_ms: i64,
     pub status: SpanStatus,
     pub identity_label: Option<String>,
-    // Why: only a model span carries these; a governance or tool span has no
-    // provider to name and no cost of its own, so the waterfall table renders
-    // an em dash rather than a zero that reads as "free".
     pub provider: Option<String>,
     pub model: Option<String>,
     pub cost_microdollars: Option<i64>,
@@ -178,20 +193,14 @@ pub struct Span {
     pub output_tokens: Option<i64>,
     pub cache_read_tokens: Option<i64>,
     pub error_message: Option<String>,
-    // Why: the gateway stamps one `trace_id` on a request and on every
-    // governance decision it took for that request, so it is the key that
-    // folds a turn's checks back under the turn.
     pub trace_id: Option<String>,
     pub context_id: Option<ContextId>,
     pub user_id: UserId,
     pub client_kind: Option<String>,
-    // Why: a governance span's policy and verdict; the name carries the tool.
     pub policy: Option<String>,
     pub decision: Option<String>,
     pub reason: Option<String>,
     pub stages: Vec<PolicyStage>,
-    // Why: a hook event or ledger execution that produced a tool result links
-    // to the artifact the ingest stored for it; every other span has none.
     pub artifact_id: Option<ArtifactId>,
 }
 
@@ -231,14 +240,9 @@ impl SpanKind {
 pub enum SpanStatus {
     Ok,
     Deny,
-    // Why: a policy that let the call through while flagging it; the row
-    // reads as a caution, not a refusal and not a clean pass.
     Warn,
     Error,
     Pending,
-    // Why: a gateway-rejected request never reached a provider, so it has no
-    // provider or model to name; conflating it with Error would report a
-    // policy refusal as a fault the operator should chase upstream.
     Rejected,
 }
 

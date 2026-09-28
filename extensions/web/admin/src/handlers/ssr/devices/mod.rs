@@ -13,7 +13,8 @@
 //!
 //! Every control is a link. Tab, filter, sort and page are all query
 //! parameters, so a view is bookmarkable, the back button works, and the
-//! server renders exactly one tab's rows rather than four.
+//! server renders exactly one tab's rows rather than four. The links tab has
+//! no filter chips: a pending link is waiting or expired, and both are listed.
 
 use std::sync::Arc;
 
@@ -37,14 +38,15 @@ mod columns;
 mod context;
 mod credentials;
 mod data;
+mod tabs;
 mod view;
 
 use crate::handlers::ssr::list_view::DEFAULT_PAGE_SIZE;
-use crate::handlers::ssr::types::table::SortColumn;
-use columns::{BRIDGE_COLUMNS, CERT_COLUMNS, LINK_COLUMNS, PAT_COLUMNS};
 use context::{DevicesPageContext, UserGroupView};
+use tabs::{DeviceTab, resolve_sort};
 
 pub(crate) const BASE_URL: &str = "/admin/devices";
+
 #[derive(Debug, Deserialize)]
 pub(crate) struct DevicesQuery {
     tab: Option<String>,
@@ -55,93 +57,6 @@ pub(crate) struct DevicesQuery {
     page: Option<i64>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Tab {
-    Bridges,
-    Pats,
-    Certs,
-    Links,
-}
-
-impl Tab {
-    fn parse(raw: Option<&str>) -> Self {
-        match raw {
-            Some("pats") => Self::Pats,
-            Some("certs") => Self::Certs,
-            Some("links") => Self::Links,
-            _ => Self::Bridges,
-        }
-    }
-
-    const fn slug(self) -> &'static str {
-        match self {
-            Self::Bridges => "bridges",
-            Self::Pats => "pats",
-            Self::Certs => "certs",
-            Self::Links => "links",
-        }
-    }
-
-    const fn items_label(self) -> &'static str {
-        match self {
-            Self::Bridges => "Machines",
-            Self::Pats => "Tokens",
-            Self::Certs => "Certificates",
-            Self::Links => "Codes",
-        }
-    }
-
-    const fn empty_message(self) -> &'static str {
-        match self {
-            Self::Bridges => {
-                "No bridge has called home under this filter. Every desktop \
-                 client writes a session on its first heartbeat."
-            },
-            Self::Pats => {
-                "No access token matches this filter. Tokens are minted from \
-                 the bridge setup page and from the profile page."
-            },
-            Self::Certs => {
-                "No device certificate matches this filter. A certificate is \
-                 enrolled when a machine completes the device-link flow."
-            },
-            Self::Links => {
-                "Nothing is waiting to be linked. A connect code appears here \
-                 for the ten minutes between issue and enrolment."
-            },
-        }
-    }
-
-    // Why: the sort key is matched against this list before it reaches SQL.
-    // The statement binds it as a parameter rather than interpolating it, so
-    // an unknown key is harmless — but falling back to the tab's default is
-    // still the honest answer, because a header the reader cannot see cannot
-    // be the one they clicked.
-    const fn columns(self) -> &'static [SortColumn] {
-        match self {
-            Self::Bridges => BRIDGE_COLUMNS,
-            Self::Pats => PAT_COLUMNS,
-            Self::Certs => CERT_COLUMNS,
-            Self::Links => LINK_COLUMNS,
-        }
-    }
-
-    const fn default_sort(self) -> &'static str {
-        match self {
-            Self::Bridges => "heartbeat",
-            Self::Pats | Self::Links => "created",
-            Self::Certs => "enrolled",
-        }
-    }
-}
-
-fn resolve_sort(tab: Tab, raw: Option<&str>) -> &'static str {
-    tab.columns()
-        .iter()
-        .find(|c| Some(c.key) == raw)
-        .map_or_else(|| tab.default_sort(), |c| c.key)
-}
-
 fn resolve_state(raw: Option<&str>) -> &'static str {
     match raw {
         Some("active") => "active",
@@ -150,11 +65,9 @@ fn resolve_state(raw: Option<&str>) -> &'static str {
     }
 }
 
-// Why: the listing columns are decided by the tab, so the page reads one tab's
-// rows and never pays for the other three.
 async fn load_tab_rows(
     pool: &PgPool,
-    tab: Tab,
+    tab: DeviceTab,
     query: &DevicesQuery,
     listing: Listing,
 ) -> (Vec<UserGroupView>, i64) {
@@ -166,7 +79,7 @@ async fn load_tab_rows(
         can_manage,
     } = listing;
     match tab {
-        Tab::Bridges => {
+        DeviceTab::Bridges => {
             data::load_sessions(
                 pool,
                 SessionQuery {
@@ -179,7 +92,7 @@ async fn load_tab_rows(
             )
             .await
         },
-        Tab::Pats | Tab::Certs => {
+        DeviceTab::Pats | DeviceTab::Certs => {
             let credentials = CredentialQuery {
                 state,
                 sort,
@@ -187,29 +100,31 @@ async fn load_tab_rows(
                 limit: DEFAULT_PAGE_SIZE,
                 offset,
             };
-            if tab == Tab::Pats {
+            if tab == DeviceTab::Pats {
                 credentials::load_pats(pool, credentials, can_manage).await
             } else {
                 credentials::load_certs(pool, credentials, can_manage).await
             }
         },
-        Tab::Links => credentials::load_links(pool, sort, dir, DEFAULT_PAGE_SIZE, offset).await,
+        DeviceTab::Links => {
+            credentials::load_links(pool, sort, dir, DEFAULT_PAGE_SIZE, offset).await
+        },
     }
 }
 
-// Why: a pending link has no state to filter on. It is waiting or it has
-// expired, and both are already listed.
 fn filter_chips(
     query: &DevicesQuery,
-    tab: Tab,
+    tab: DeviceTab,
     state: &'static str,
     fleet: &FleetStats,
 ) -> Vec<FilterChipView> {
     match tab {
-        Tab::Bridges => view::build_stale_chips(query, fleet),
-        Tab::Links => Vec::new(),
-        Tab::Pats => view::build_state_chips(query, state, (fleet.pats_total, fleet.pats_active)),
-        Tab::Certs => {
+        DeviceTab::Bridges => view::build_stale_chips(query, fleet),
+        DeviceTab::Links => Vec::new(),
+        DeviceTab::Pats => {
+            view::build_state_chips(query, state, (fleet.pats_total, fleet.pats_active))
+        },
+        DeviceTab::Certs => {
             view::build_state_chips(query, state, (fleet.certs_total, fleet.certs_active))
         },
     }
@@ -235,7 +150,7 @@ pub(crate) async fn devices_page(
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
     }
 
-    let tab = Tab::parse(query.tab.as_deref());
+    let tab = DeviceTab::parse(query.tab.as_deref());
     let sort = resolve_sort(tab, query.sort.as_deref());
     let dir = if query.dir.as_deref() == Some("asc") {
         "asc"
@@ -293,7 +208,7 @@ pub(crate) async fn devices_page(
         groups,
         pagination: view::build_pagination(&query, window),
         can_manage: listing.can_manage,
-        has_row_actions: listing.can_manage && matches!(tab, Tab::Pats | Tab::Certs),
+        has_row_actions: listing.can_manage && matches!(tab, DeviceTab::Pats | DeviceTab::Certs),
         max_pat_lifetime_days: SecurityPolicy::get().max_pat_lifetime_days,
     };
 

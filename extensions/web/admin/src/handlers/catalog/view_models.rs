@@ -7,15 +7,19 @@ use std::collections::HashMap;
 
 use systemprompt::identifiers::{PluginId, SkillId};
 
-use crate::types::{ConfiguredHook, ENTITY_PLUGIN, ENTITY_SKILL};
+use crate::types::{ConfiguredHook, ENTITY_PLUGIN, ENTITY_SKILL, PluginDetail, SkillCatalogEntry};
 
 use super::data::Catalog;
+use super::view::{
+    HookRef, LinkedEntity, PluginDetailData, PluginListRow, SkillDetailData, SkillListRow,
+    access_url, mcp_url, plugin_url, skill_url,
+};
 use super::visibility::{VisibilityView, carriers_of_plugin, carriers_of_skill, visibility_for};
+use crate::handlers::ssr::analysis_urls::{ANALYSIS_SKILLS_URL, analysis_skill_url};
+use crate::handlers::ssr::types::BreadcrumbView;
 use crate::repositories::marketplace::manifests::MarketplaceConfigSummary;
 use crate::types::access_control::AccessControlRule;
 
-// Why: What the visibility badge needs that the catalog walk does not carry:
-// the declared marketplace audiences and the rules written against entities.
 pub(super) struct VisibilityInput<'a> {
     pub(super) manifests: &'a [MarketplaceConfigSummary],
     pub(super) rules: &'a [AccessControlRule],
@@ -32,21 +36,11 @@ impl VisibilityInput<'_> {
         visibility_for(self.rules, ENTITY_SKILL, skill_id.as_str(), &carriers)
     }
 }
-use super::view::{
-    HookRef, LinkedEntity, PluginDetailData, PluginListRow, SkillDetailData, SkillListRow,
-    access_url, mcp_url, plugin_url, skill_url,
-};
 
-// Why: the two-crumb trail every catalog detail page carries — the listing it
-// came from, then itself. Shared so a rename of a listing is one edit.
-fn trail(
-    listing: &'static str,
-    href: &'static str,
-    current: &str,
-) -> Vec<crate::handlers::ssr::types::BreadcrumbView> {
+fn trail(listing: &'static str, href: &'static str, current: &str) -> Vec<BreadcrumbView> {
     vec![
-        crate::handlers::ssr::types::BreadcrumbView::link(listing, href),
-        crate::handlers::ssr::types::BreadcrumbView::current(current.to_owned()),
+        BreadcrumbView::link(listing, href),
+        BreadcrumbView::current(current.to_owned()),
     ]
 }
 
@@ -79,68 +73,76 @@ pub(super) fn plugin_rows(
         .collect()
 }
 
-// Why: a plugin names its skills by id; the catalog is what knows their
-// display names, and a skill a plugin names but the catalog has lost falls
-// back to its id rather than disappearing from the plugin's member list.
-fn plugin_skills(catalog: &Catalog, plugin: &crate::types::PluginDetail) -> Vec<LinkedEntity> {
-    let names: HashMap<String, String> = catalog
-        .skills
+fn name_or_id(names: &HashMap<&str, &str>, id: &str) -> String {
+    names
+        .get(id)
+        .map_or_else(|| id.to_owned(), |n| (*n).to_owned())
+}
+
+fn plugin_skills(skills: &[SkillCatalogEntry], plugin: &PluginDetail) -> Vec<LinkedEntity> {
+    let names: HashMap<&str, &str> = skills
         .iter()
-        .map(|s| (s.id.as_str().to_owned(), s.name.clone()))
+        .map(|s| (s.id.as_str(), s.name.as_str()))
         .collect();
     plugin
         .skills
         .iter()
-        .map(|s| {
-            let id = s.as_str().to_owned();
-            LinkedEntity {
-                name: names.get(&id).cloned().unwrap_or_else(|| id.clone()),
-                url: skill_url(&id),
-                id,
-            }
+        .map(|s| LinkedEntity {
+            name: name_or_id(&names, s.as_str()),
+            url: skill_url(s.as_str()),
+            id: s.as_str().to_owned(),
+        })
+        .collect()
+}
+
+fn plugin_agents(
+    agent_names: &HashMap<String, String>,
+    plugin: &PluginDetail,
+) -> Vec<LinkedEntity> {
+    plugin
+        .agents
+        .iter()
+        .map(|a| LinkedEntity {
+            name: agent_names
+                .get(a.as_str())
+                .map_or_else(|| a.as_str().to_owned(), String::clone),
+            url: String::new(),
+            id: a.as_str().to_owned(),
+        })
+        .collect()
+}
+
+fn plugin_mcp_servers(plugin: &PluginDetail) -> Vec<LinkedEntity> {
+    plugin
+        .mcp_servers
+        .iter()
+        .map(|m| LinkedEntity {
+            name: m.as_str().to_owned(),
+            url: mcp_url(m.as_str()),
+            id: m.as_str().to_owned(),
         })
         .collect()
 }
 
 pub(super) fn plugin_detail(
-    catalog: &Catalog,
+    catalog: Catalog,
     plugin_id: &PluginId,
     assignment_count: i64,
 ) -> Option<PluginDetailData> {
-    let plugin = catalog.plugins.iter().find(|p| &p.id == plugin_id)?;
-    let skills = plugin_skills(catalog, plugin);
-    let mcp_servers = plugin
-        .mcp_servers
-        .iter()
-        .map(|m| {
-            let id = m.as_str().to_owned();
-            LinkedEntity {
-                name: id.clone(),
-                url: mcp_url(&id),
-                id,
-            }
-        })
-        .collect::<Vec<_>>();
-    let agents = plugin
-        .agents
-        .iter()
-        .map(|a| {
-            let id = a.as_str().to_owned();
-            LinkedEntity {
-                name: catalog
-                    .agent_names
-                    .get(&id)
-                    .cloned()
-                    .unwrap_or_else(|| id.clone()),
-                url: String::new(),
-                id,
-            }
-        })
-        .collect::<Vec<_>>();
-    let hooks: Vec<HookRef> = catalog
-        .hooks_by_plugin
-        .get(plugin.id.as_str())
-        .map(|hs| hs.iter().map(hook_ref).collect())
+    let Catalog {
+        plugins,
+        skills: catalog_skills,
+        agent_names,
+        mut hooks_by_plugin,
+        ..
+    } = catalog;
+    let plugin = plugins.into_iter().find(|p| &p.id == plugin_id)?;
+    let skills = plugin_skills(&catalog_skills, &plugin);
+    let mcp_servers = plugin_mcp_servers(&plugin);
+    let agents = plugin_agents(&agent_names, &plugin);
+    let hooks: Vec<HookRef> = hooks_by_plugin
+        .remove(plugin.id.as_str())
+        .map(|hs| hs.into_iter().map(hook_ref).collect())
         .unwrap_or_default();
 
     Some(PluginDetailData {
@@ -158,25 +160,25 @@ pub(super) fn plugin_detail(
         agents,
         hooks,
         access: None,
-        id: plugin.id.clone(),
-        name: plugin.name.clone(),
-        description: plugin.description.clone(),
-        version: plugin.version.clone(),
-        category: plugin.category.clone(),
+        id: plugin.id,
+        name: plugin.name,
+        description: plugin.description,
+        version: plugin.version,
+        category: plugin.category,
         enabled: plugin.enabled,
-        author_name: plugin.author_name.clone(),
-        keywords: plugin.keywords.clone(),
-        roles: plugin.roles.clone(),
-        source_path: plugin.source_path.clone(),
+        author_name: plugin.author_name,
+        keywords: plugin.keywords,
+        roles: plugin.roles,
+        source_path: plugin.source_path,
     })
 }
 
-fn hook_ref(h: &ConfiguredHook) -> HookRef {
+fn hook_ref(h: ConfiguredHook) -> HookRef {
     HookRef {
-        id: h.id.clone(),
-        event: h.event.clone(),
-        matcher: h.matcher.clone(),
-        command: h.command.clone(),
+        id: h.id,
+        event: h.event,
+        matcher: h.matcher,
+        command: h.command,
         is_async: h.is_async,
     }
 }
@@ -214,34 +216,37 @@ pub(super) fn skill_rows(
         .collect()
 }
 
+// Why: analysis facts key a skill as `plugin:skill` with hyphens, so the
+// Analysis link hops through the first carrying plugin, else the list.
+fn skill_activity_url(included_by: &[LinkedEntity], skill: &SkillId) -> String {
+    included_by.first().map_or_else(
+        || ANALYSIS_SKILLS_URL.to_owned(),
+        |plugin| {
+            analysis_skill_url(&format!(
+                "{}:{}",
+                plugin.id,
+                skill.as_str().replace('_', "-")
+            ))
+        },
+    )
+}
+
 pub(super) fn skill_detail(
-    catalog: &Catalog,
+    catalog: Catalog,
     skill: &SkillId,
     assignment_count: i64,
 ) -> Option<SkillDetailData> {
+    let Catalog {
+        skills,
+        mut plugins_by_skill,
+        ..
+    } = catalog;
     let id = skill.as_str();
-    let entry = catalog.skills.iter().find(|s| s.id == *skill)?;
-    let included_by = catalog
-        .plugins_by_skill
-        .get(id)
-        .cloned()
-        .unwrap_or_default();
+    let entry = skills.into_iter().find(|s| s.id == *skill)?;
+    let included_by = plugins_by_skill.remove(id).unwrap_or_default();
     Some(SkillDetailData {
         breadcrumbs: trail("Skills", "/admin/skills", &entry.name),
-        // Why: the catalog page defines the skill; its Analysis page says how
-        // it performs. The facts key a skill as `plugin:skill`, so the hop
-        // goes through the first plugin that carries it, or to the list
-        // when none does.
-        activity_url: included_by.first().map_or_else(
-            || crate::handlers::ssr::analysis_urls::ANALYSIS_SKILLS_URL.to_owned(),
-            |plugin| {
-                crate::handlers::ssr::analysis_urls::analysis_skill_url(&format!(
-                    "{}:{}",
-                    plugin.id,
-                    id.replace('_', "-")
-                ))
-            },
-        ),
+        activity_url: skill_activity_url(&included_by, skill),
         page: "skill-detail",
         title: entry.name.clone(),
         access_url: access_url(&skill_url(id)),
@@ -250,9 +255,9 @@ pub(super) fn skill_detail(
         included_by,
         access: None,
         id: id.to_owned(),
-        name: entry.name.clone(),
-        description: entry.description.clone(),
+        name: entry.name,
+        description: entry.description,
         enabled: entry.enabled,
-        source_path: entry.source_path.clone(),
+        source_path: entry.source_path,
     })
 }

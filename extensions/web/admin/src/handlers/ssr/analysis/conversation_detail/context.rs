@@ -12,19 +12,19 @@ use crate::repositories::analysis::conversations::planes::{
     ConversationTurnRow,
 };
 
-// Why: everything read beside the fact row, handed to the builder as one.
-pub(super) struct Planes<'a> {
-    pub(super) turns: &'a [ConversationTurnRow],
-    pub(super) tools: &'a [ConversationToolCallRow],
-    pub(super) decisions: &'a [ConversationDecisionRow],
-    pub(super) skills: &'a [ConversationSkillRow],
-    pub(super) safety: &'a [ConversationSafetyRow],
+pub(super) struct Planes {
+    pub(super) turns: Vec<ConversationTurnRow>,
+    pub(super) tools: Vec<ConversationToolCallRow>,
+    pub(super) decisions: Vec<ConversationDecisionRow>,
+    pub(super) skills: Vec<ConversationSkillRow>,
+    pub(super) safety: Vec<ConversationSafetyRow>,
 }
 
 fn artifact_views(tools: &[ConversationToolCallRow]) -> Vec<LedgerCallView> {
     tools
         .iter()
         .filter(|t| t.artifact_kind.is_some())
+        .cloned()
         .map(tool_view)
         .collect()
 }
@@ -38,7 +38,7 @@ fn display_name(f: &ConversationFactRow) -> String {
 
 pub(super) fn build_context(
     f: &ConversationFactRow,
-    planes: &Planes<'_>,
+    planes: Planes,
     can_judge: bool,
 ) -> ConversationDetailContext {
     let Planes {
@@ -47,7 +47,11 @@ pub(super) fn build_context(
         decisions,
         skills,
         safety,
-    } = *planes;
+    } = planes;
+    let (turn_count, tool_count) = (turns.len(), tools.len());
+    let (decision_count, skill_count, safety_count) = (decisions.len(), skills.len(), safety.len());
+    let artifacts = artifact_views(&tools);
+    let turn_charts = charts(&turns);
     let heading = f
         .judge_title
         .clone()
@@ -97,18 +101,18 @@ pub(super) fn build_context(
         ),
         can_judge,
         kpis: kpis(f),
-        charts: charts(turns),
-        turns: turns.iter().enumerate().map(turn_view).collect(),
-        turn_count: turns.len(),
-        tool_count: tools.len(),
-        artifact_count: tools.iter().filter(|t| t.artifact_kind.is_some()).count(),
-        artifacts: artifact_views(tools),
-        tool_calls: tools.iter().map(tool_view).collect(),
-        decisions: decisions.iter().map(decision_view).collect(),
-        decision_count: decisions.len(),
-        skills: skills.iter().map(skill_view).collect(),
-        skill_count: skills.len(),
-        safety: safety.iter().map(safety_view).collect(),
-        safety_count: safety.len(),
+        charts: turn_charts,
+        turns: turns.into_iter().enumerate().map(turn_view).collect(),
+        turn_count,
+        tool_count,
+        artifact_count: artifacts.len(),
+        artifacts,
+        tool_calls: tools.into_iter().map(tool_view).collect(),
+        decisions: decisions.into_iter().map(decision_view).collect(),
+        decision_count,
+        skills: skills.into_iter().map(skill_view).collect(),
+        skill_count,
+        safety: safety.into_iter().map(safety_view).collect(),
+        safety_count,
     }
 }

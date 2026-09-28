@@ -86,12 +86,12 @@ pub(crate) async fn page(
     let (turns, tools, decisions, skills, safety) = (turns?, tools?, decisions?, skills?, safety?);
     let context = build_context(
         &facts,
-        &Planes {
-            turns: &turns,
-            tools: &tools,
-            decisions: &decisions,
-            skills: &skills,
-            safety: &safety,
+        Planes {
+            turns,
+            tools,
+            decisions,
+            skills,
+            safety,
         },
         shell.user.is_console,
     );

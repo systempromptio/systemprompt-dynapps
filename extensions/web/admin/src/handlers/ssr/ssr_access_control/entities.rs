@@ -6,20 +6,22 @@
 //! shows forty-odd facts instead of a hundred and fifty rows. The plain-
 //! English resolution under each row is derived from the same bands the
 //! resolver reads, in the resolver's own order.
+//!
+//! `AcQuery` is shared by every tab. `?user=` and `?tab=sync` are legacy
+//! links answered by redirects; `expiring` keeps entities with a rule lapsing
+//! inside the next week; `subject` (`<kind>:<id>`), `subject_kind` and
+//! `decision` are the audience grid's axes, and `entity` its row drill.
 
-use chrono::Utc;
 use serde::Deserialize;
-use systemprompt_security::authz::DASHBOARD_SOURCE;
 
-use super::bands::{band_label, band_rank, chips, resolution};
+use super::bands::{band_label, band_rank};
+use super::entity_row::entity_view;
 use super::summary::{self, options};
-use super::view::{AcEntitiesView, AcEntityGroupView, AcEntityView, AcRuleView};
-use crate::handlers::ssr::entity_kind::{entity_kind_label, entity_kind_plural, entity_kind_rank};
-use crate::handlers::ssr::people_view::expires_soon;
-use crate::repositories::access_control::drift::{DriftReport, EntityState};
+use super::view::{AcEntitiesView, AcEntityGroupView, AcEntityView};
+use crate::handlers::ssr::entity_kind::{entity_kind_plural, entity_kind_rank};
+use crate::repositories::access_control::drift::DriftReport;
 use crate::repositories::access_control::rules::LedgerRuleRow;
 use crate::repositories::config::gateway::RouteLabels;
-use crate::types::access_control::AccessDecision;
 
 pub(super) const BASE_URL: &str = "/admin/access-control";
 pub(super) const SYNC_URL: &str = "/admin/sync?tab=access";
@@ -27,22 +29,14 @@ pub(super) const DOCS_URL: &str = "/documentation/access-control";
 
 #[derive(Debug, Default, Deserialize)]
 pub(crate) struct AcQuery {
-    // Why: the editor's old deep link. A `?user=` on this page is answered by
-    // a redirect to that person's Access tab, where the matrix now lives.
     pub user: Option<String>,
     pub entity_kind: Option<String>,
     pub band: Option<String>,
     pub state: Option<String>,
-    // Why: `expiring` narrows to entities with a rule that lapses inside the
-    // next week — the list an operator renews from.
     pub expiring: Option<String>,
     pub q: Option<String>,
-    // Why: `tab=sync` is an old link, redirected to Code sync's Access
-    // review; `entity` is the audience grid's row drill.
     pub tab: Option<String>,
     pub entity: Option<String>,
-    // Why: the audience grid's own axes. `subject` is one column in focus
-    // as `<kind>:<id>`; `entity` doubles as the row drill on that tab.
     pub subject_kind: Option<String>,
     pub subject: Option<String>,
     pub decision: Option<String>,
@@ -69,93 +63,6 @@ impl AcQuery {
             || Self::pick(self.state.as_ref()).is_some()
             || Self::pick(self.expiring.as_ref()).is_some()
             || Self::pick(self.q.as_ref()).is_some()
-    }
-}
-
-fn rule_view(row: &LedgerRuleRow) -> AcRuleView {
-    let dashboard = row.source == DASHBOARD_SOURCE;
-    AcRuleView {
-        band: row.rule_type.clone(),
-        band_label: band_label(&row.rule_type),
-        subject: row.rule_value.clone(),
-        access: row.access.to_string(),
-        access_tone: match row.access {
-            AccessDecision::Allow => "ok",
-            AccessDecision::Deny => "err",
-        },
-        source: if dashboard {
-            "console".to_owned()
-        } else {
-            "code".to_owned()
-        },
-        source_tone: if dashboard { "warn" } else { "muted" },
-        justification: row.justification.clone().unwrap_or_default(),
-        expires_at: row.valid_until.map(|t| t.to_rfc3339()),
-        expires_soon: expires_soon(row.valid_until, Utc::now()),
-    }
-}
-
-// Why: a model route is the one kind whose id says nothing; every other
-// kind is addressed by a name an operator chose.
-fn label_of(kind: &str, id: &str, labels: &RouteLabels) -> (String, Option<String>, bool) {
-    if kind != "gateway_route" {
-        return (id.to_owned(), None, false);
-    }
-    labels.find(id).map_or_else(
-        || (id.to_owned(), None, false),
-        |l| (l.label.clone(), Some(l.subtitle()), true),
-    )
-}
-
-fn entity_view(
-    rows: &[&LedgerRuleRow],
-    drift: Option<&DriftReport>,
-    labels: &RouteLabels,
-) -> AcEntityView {
-    let first = rows[0];
-    let (entity_label, entity_sub, labelled) =
-        label_of(&first.entity_type, &first.entity_id, labels);
-    let allow = chips(rows, AccessDecision::Allow);
-    let deny = chips(rows, AccessDecision::Deny);
-    let open = first.default_included;
-    let state = EntityState::for_entity(drift, &first.entity_type, &first.entity_id);
-    let mut why: Vec<&str> = rows
-        .iter()
-        .filter_map(|r| r.justification.as_deref())
-        .filter(|w| !w.trim().is_empty())
-        .collect();
-    why.sort_unstable();
-    why.dedup();
-    let mut rules: Vec<AcRuleView> = rows.iter().map(|r| rule_view(r)).collect();
-    rules.sort_by(|a, b| {
-        band_rank(&a.band)
-            .cmp(&band_rank(&b.band))
-            .then(a.subject.cmp(&b.subject))
-    });
-    AcEntityView {
-        entity_type_label: entity_kind_label(&first.entity_type),
-        entity_type: first.entity_type.clone(),
-        entity_id: first.entity_id.clone(),
-        entity_label,
-        entity_sub,
-        labelled,
-        default_open: open,
-        default_label: if open { "open" } else { "closed" },
-        resolution: resolution(&allow, &deny, open),
-        allow,
-        deny,
-        has_why: !why.is_empty(),
-        why: why.join(" · "),
-        state: state.label(),
-        state_tone: state.tone(),
-        in_sync: state == EntityState::InSync,
-        sync_url: format!(
-            "{SYNC_URL}&entity={}",
-            urlencoding::encode(&format!("{}/{}", first.entity_type, first.entity_id))
-        ),
-        rule_count: rules.len(),
-        expiring_soon: rules.iter().any(|r| r.expires_soon),
-        rules,
     }
 }
 

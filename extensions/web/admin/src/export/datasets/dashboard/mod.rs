@@ -1,5 +1,7 @@
 //! `/admin/analytics` — the tables behind the dashboard's Models, Skills,
 //! Tools and Sessions tabs; the Cost tab's tables are `dashboard_cost`.
+//! Every table is a `live_dataset!` — the trait boilerplate is one macro, so
+//! each table is only its column list and the read behind it.
 
 use async_trait::async_trait;
 use systemprompt::models::SessionId;
@@ -11,14 +13,15 @@ use crate::handlers::ssr::ssr_analytics_dashboard::AnalyticsDashboardQuery;
 use crate::repositories::analytics::site::models::list_model_stats;
 use crate::repositories::analytics::site::sessions::list_session_costs_paged;
 use crate::repositories::analytics::site::skills::list_skill_stats;
-use crate::repositories::analytics::site::tools::{list_tool_servers, list_tool_stats};
 use crate::repositories::analytics::site::{SiteScope, resolve_site_scope};
 use crate::util::time_range::TimeRange;
 
+mod tools;
+
+pub(crate) use tools::{ToolServers, ToolStats};
+
 pub(crate) struct ModelStats;
 pub(crate) struct SkillStats;
-pub(crate) struct ToolStats;
-pub(crate) struct ToolServers;
 pub(crate) struct SessionCosts;
 
 pub(super) struct DashboardRead {
@@ -37,9 +40,6 @@ pub(super) async fn plan(ctx: &ExportContext<'_>) -> AdminResult<DashboardRead> 
     })
 }
 
-// Why: the five tab tables and the three cost tables differ only in their
-// columns and the read behind them; the trait boilerplate is one macro so
-// each table is its column list and its query.
 macro_rules! live_dataset {
     ($ty:ident, $id:literal, $title:literal, $description:literal, $columns:ident,
      |$ctx:ident| $load:expr) => {
@@ -171,82 +171,6 @@ live_dataset!(
                 .collect(),
             total,
         })
-    }
-);
-
-const TOOL_COLUMNS: &[Column] = &[
-    Column::new("server", "Server", CellKind::Text),
-    Column::new("tool", "Tool", CellKind::Text),
-    Column::new("executions", "Executions", CellKind::Integer),
-    Column::new("succeeded", "Succeeded", CellKind::Integer),
-    Column::new("failed", "Failed", CellKind::Integer),
-    Column::new("pending", "Pending", CellKind::Integer).optional(),
-    Column::new("p50_ms", "p50 (ms)", CellKind::Decimal),
-    Column::new("p95_ms", "p95 (ms)", CellKind::Decimal),
-    Column::new("distinct_users", "Users", CellKind::Integer),
-];
-
-live_dataset!(
-    ToolStats,
-    "analytics-tools",
-    "Tools",
-    "One row per server and tool: executions, outcomes, latency and people over the window.",
-    TOOL_COLUMNS,
-    |ctx| {
-        let p = plan(ctx).await?;
-        let (rows, total) = list_tool_stats(ctx.pool, p.range, &p.scope, ctx.limit, 0).await?;
-        Ok(Table {
-            rows: rows
-                .iter()
-                .map(|r| {
-                    vec![
-                        r.server_name.as_str().into(),
-                        r.tool_name.as_str().into(),
-                        r.executions.into(),
-                        r.succeeded.into(),
-                        r.failed.into(),
-                        r.pending.into(),
-                        Cell::opt_decimal(r.p50_ms),
-                        Cell::opt_decimal(r.p95_ms),
-                        r.distinct_users.into(),
-                    ]
-                })
-                .collect(),
-            total,
-        })
-    }
-);
-
-const SERVER_COLUMNS: &[Column] = &[
-    Column::new("server", "Server", CellKind::Text),
-    Column::new("executions", "Executions", CellKind::Integer),
-    Column::new("succeeded", "Succeeded", CellKind::Integer),
-    Column::new("tools", "Tools", CellKind::Integer),
-    Column::new("distinct_users", "Users", CellKind::Integer),
-];
-
-live_dataset!(
-    ToolServers,
-    "analytics-tool-servers",
-    "Tool servers",
-    "One row per tool server: executions, successes, tools used and people over the window.",
-    SERVER_COLUMNS,
-    |ctx| {
-        let p = plan(ctx).await?;
-        let rows = list_tool_servers(ctx.pool, p.range, &p.scope).await?;
-        Ok(Table::complete(
-            rows.iter()
-                .map(|r| {
-                    vec![
-                        r.server_name.as_str().into(),
-                        r.executions.into(),
-                        r.succeeded.into(),
-                        r.tools.into(),
-                        r.distinct_users.into(),
-                    ]
-                })
-                .collect(),
-        ))
     }
 );
 

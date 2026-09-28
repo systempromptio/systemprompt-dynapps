@@ -12,7 +12,7 @@ use crate::repositories::devices::sessions::VersionCount;
 use crate::repositories::devices::stats::FleetStats;
 
 use super::context::{FleetStatsView, VersionBarView};
-use super::{BASE_URL, DevicesQuery, Tab};
+use super::{BASE_URL, DeviceTab, DevicesQuery};
 use crate::handlers::ssr::list_view::paginate;
 use crate::handlers::ssr::types::table::SortColumn;
 
@@ -51,24 +51,29 @@ pub(super) fn url_with(query: &DevicesQuery, overrides: &[(&str, &str)]) -> Stri
 
 pub(super) fn build_tabs(
     query: &DevicesQuery,
-    active: Tab,
+    active: DeviceTab,
     stats: &FleetStats,
 ) -> Vec<TabLinkView> {
-    let rows: [(Tab, &'static str, &'static str, i64); 4] = [
+    let rows: [(DeviceTab, &'static str, &'static str, i64); 4] = [
         (
-            Tab::Bridges,
+            DeviceTab::Bridges,
             "bridges",
             "Bridge sessions",
             stats.bridges_total,
         ),
-        (Tab::Pats, "pats", "Access tokens", stats.pats_total),
+        (DeviceTab::Pats, "pats", "Access tokens", stats.pats_total),
         (
-            Tab::Certs,
+            DeviceTab::Certs,
             "certs",
             "Device certificates",
             stats.certs_total,
         ),
-        (Tab::Links, "links", "Pending links", stats.links_pending),
+        (
+            DeviceTab::Links,
+            "links",
+            "Pending links",
+            stats.links_pending,
+        ),
     ];
     rows.into_iter()
         .map(|(tab, slug, label, count)| TabLinkView {

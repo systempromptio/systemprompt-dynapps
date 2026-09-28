@@ -73,9 +73,6 @@ struct ArtifactView {
     skill_url: Option<String>,
 }
 
-// Why: the strip that answers "how do we know this row is this call": the
-// vantage point, the join quality, and a link to each of the other rows of
-// the same call — intent, execution, decision, session.
 #[derive(Debug, Serialize)]
 struct ProvenanceView {
     source: String,
@@ -131,7 +128,7 @@ pub(crate) async fn artifact_detail_page(
         .map_err(AdminError::from)?
         .ok_or_else(|| AdminError::NotFound(format!("Artifact {artifact_id} not found")))?;
 
-    let ctx = build_context(&detail);
+    let ctx = build_context(detail);
     Ok(render_typed_page(
         &shell.engine,
         "artifact-detail",
@@ -141,30 +138,32 @@ pub(crate) async fn artifact_detail_page(
     ))
 }
 
-fn build_context(detail: &ArtifactDetail) -> ArtifactDetailContext {
-    let row = detail;
-    let body_pretty = detail
-        .body
+fn build_context(mut detail: ArtifactDetail) -> ArtifactDetailContext {
+    let id_short = short_id(detail.artifact_id.as_str());
+    let findings = std::mem::take(&mut detail.findings);
+    let body = detail.body.take();
+    let body_pretty = body
         .as_ref()
         .and_then(|body| serde_json::to_string_pretty(body).ok());
-    let preview_url = (row.is_structured && detail.body.is_some())
-        .then(|| format!("/admin/artifacts/{}/preview", row.artifact_id));
+    let preview_url = (detail.is_structured && body.is_some())
+        .then(|| format!("/admin/artifacts/{}/preview", detail.artifact_id));
+    let provenance = provenance_view(&mut detail);
 
     ArtifactDetailContext {
         page: "artifact-detail",
-        title: format!("Artifact {}", short_id(row.artifact_id.as_str())),
+        title: format!("Artifact {id_short}"),
         breadcrumbs: vec![
             BreadcrumbView::link("AI activity", "/admin/analytics"),
             BreadcrumbView::link("Tools & artifacts", "/admin/tools"),
             BreadcrumbView::link("Artifacts", "/admin/artifacts"),
-            BreadcrumbView::current(short_id(row.artifact_id.as_str())),
+            BreadcrumbView::current(id_short),
         ],
         artifact: artifact_view(detail),
-        provenance: provenance_view(detail),
-        findings: detail.findings.iter().map(finding_view).collect(),
-        finding_count: detail.findings.len(),
-        has_findings: !detail.findings.is_empty(),
-        body_missing: detail.body.is_none(),
+        provenance,
+        finding_count: findings.len(),
+        has_findings: !findings.is_empty(),
+        findings: findings.into_iter().map(finding_view).collect(),
+        body_missing: body.is_none(),
         body_pretty,
         preview_url,
         back_url: "/admin/artifacts",
@@ -172,48 +171,56 @@ fn build_context(detail: &ArtifactDetail) -> ArtifactDetailContext {
     }
 }
 
-fn artifact_view(detail: &ArtifactDetail) -> ArtifactView {
-    let row = detail;
-    let tool_name = row
-        .tool_name
-        .clone()
-        .unwrap_or_else(|| "unknown".to_owned());
+fn artifact_view(detail: ArtifactDetail) -> ArtifactView {
+    let ArtifactDetail {
+        artifact_id,
+        tool_name,
+        artifact_title,
+        input_summary,
+        server_name,
+        artifact_type,
+        artifact_kind,
+        is_builtin,
+        is_structured,
+        has_ui_resource,
+        is_error,
+        payload_bytes,
+        payload_sha256,
+        secret_redactions,
+        created_at,
+        skill,
+        ..
+    } = detail;
+    let tool_name = tool_name.unwrap_or_else(|| "unknown".to_owned());
     ArtifactView {
-        artifact_id: row.artifact_id.clone(),
-        artifact_id_short: short_id(row.artifact_id.as_str()),
-        artifact_title: row
-            .artifact_title
-            .clone()
-            .or_else(|| row.input_summary.clone())
+        artifact_id_short: short_id(artifact_id.as_str()),
+        artifact_id,
+        artifact_title: artifact_title
+            .or_else(|| input_summary.clone())
             .unwrap_or_else(|| tool_name.clone()),
         tool_name,
-        server_name: row.server_name.clone(),
-        artifact_type: row.artifact_type.clone(),
-        kind_label: kind_label(row.artifact_kind.as_deref()),
-        kind_icon: kind_icon(row.artifact_kind.as_deref()),
-        input_summary: row.input_summary.clone(),
-        is_builtin: row.is_builtin,
-        is_structured: row.is_structured,
-        has_ui_resource: row.has_ui_resource,
-        is_error: row.is_error,
-        bytes_display: format_bytes(i64::from(row.payload_bytes.unwrap_or(0))),
-        payload_sha256: detail.payload_sha256.clone(),
-        secret_redactions: row.secret_redactions,
-        created_at: local_time(row.created_at),
-        skill: row.skill.clone(),
-        skill_url: row
-            .skill
+        server_name,
+        artifact_type,
+        kind_label: kind_label(artifact_kind.as_deref()),
+        kind_icon: kind_icon(artifact_kind.as_deref()),
+        input_summary,
+        is_builtin,
+        is_structured,
+        has_ui_resource,
+        is_error,
+        bytes_display: format_bytes(i64::from(payload_bytes.unwrap_or(0))),
+        payload_sha256,
+        secret_redactions,
+        created_at: local_time(created_at),
+        skill_url: skill
             .as_ref()
             .map(|s| format!("/admin/artifacts?skill={}", urlencoding::encode(s))),
+        skill,
     }
 }
 
-fn provenance_view(detail: &ArtifactDetail) -> ProvenanceView {
-    let row = detail;
-    let correlation = row
-        .correlation
-        .clone()
-        .unwrap_or_else(|| "exact".to_owned());
+fn provenance_view(row: &mut ArtifactDetail) -> ProvenanceView {
+    let correlation = row.correlation.take().unwrap_or_else(|| "exact".to_owned());
     let (state_label, state_tone) = if row.is_error {
         ("failed".to_owned(), "err")
     } else if row.request_id.is_some() {
@@ -221,11 +228,21 @@ fn provenance_view(detail: &ArtifactDetail) -> ProvenanceView {
     } else {
         ("unattested".to_owned(), "warn")
     };
+    let user_label = row
+        .user_label
+        .take()
+        .or_else(|| row.user_id.as_ref().map(|u| short_id(u.as_str())))
+        .unwrap_or_else(|| "\u{2014}".to_owned());
+    let source = std::mem::take(&mut row.source);
+    let last_seen_source = row.last_seen_source.take();
+    let request_id = row.request_id.take();
+    let session_id = row.session_id.take();
+    let governance_decision_id = row.governance_decision_id.take();
     ProvenanceView {
-        source: row.source.clone(),
-        source_label: source_label(&row.source),
-        last_seen_source: detail.last_seen_source.clone(),
-        last_seen_label: detail.last_seen_source.as_deref().map(source_label),
+        source_label: source_label(&source),
+        source,
+        last_seen_label: last_seen_source.as_deref().map(source_label),
+        last_seen_source,
         correlation_tone: if correlation == "inferred" {
             "warn"
         } else {
@@ -235,50 +252,44 @@ fn provenance_view(detail: &ArtifactDetail) -> ProvenanceView {
         state_label,
         state_tone,
         client_label: row.client_kind.as_deref().map(client_label),
-        ai_tool_call_id: row.ai_tool_call_id.clone(),
+        ai_tool_call_id: row.ai_tool_call_id.take(),
         mcp_execution_id: row.mcp_execution_id.to_string(),
-        execution_status: detail.execution_status.clone(),
-        execution_time_display: detail
+        execution_status: row.execution_status.take(),
+        execution_time_display: row
             .execution_time_ms
             .map(|ms| format_duration_ms(i64::from(ms))),
-        error_message: detail.error_message.clone(),
-        intended_at: detail.intended_at.map(local_time),
-        request_id: row.request_id.clone(),
-        request_url: row
-            .request_id
+        error_message: row.error_message.take(),
+        intended_at: row.intended_at.map(local_time),
+        request_url: request_id
             .as_deref()
             .map(|id| request_detail_url(&systemprompt::identifiers::AiRequestId::new(id))),
-        session_id: row.session_id.clone(),
-        session_url: row.session_id.as_ref().map(session_detail_url),
-        trace_id: detail.trace_id.clone(),
-        user_id: row.user_id.clone(),
-        user_label: row
-            .user_label
-            .clone()
-            .or_else(|| row.user_id.as_ref().map(|u| short_id(u.as_str())))
-            .unwrap_or_else(|| "\u{2014}".to_owned()),
-        governance_decision_id: detail.governance_decision_id.clone(),
-        governance_decision: detail.governance_decision.clone(),
-        governance_url: detail
-            .governance_decision_id
+        request_id,
+        session_url: session_id.as_ref().map(session_detail_url),
+        session_id,
+        trace_id: row.trace_id.take(),
+        user_id: row.user_id.take(),
+        user_label,
+        governance_decision: row.governance_decision.take(),
+        governance_url: governance_decision_id
             .as_ref()
             .map(|id| format!("/admin/governance/decisions/{id}")),
+        governance_decision_id,
     }
 }
 
-fn finding_view(f: &ArtifactFindingRow) -> FindingView {
+fn finding_view(f: ArtifactFindingRow) -> FindingView {
     FindingView {
-        phase: f.phase.clone(),
         severity_tone: match f.severity.as_str() {
             "high" => "err",
             "medium" => "warn",
             _ => "info",
         },
-        severity: f.severity.clone(),
-        category: f.category.clone(),
-        scanner: f.scanner.clone(),
-        path: f.path.clone(),
-        excerpt: f.excerpt.clone(),
+        phase: f.phase,
+        severity: f.severity,
+        category: f.category,
+        scanner: f.scanner,
+        path: f.path,
+        excerpt: f.excerpt,
         redacted: f.redacted,
         created_at: local_time(f.created_at),
     }

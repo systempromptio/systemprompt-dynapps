@@ -11,6 +11,15 @@
 //! the semi-admin role would have handed a project manager the whole control
 //! plane. The boundary lives in the router where it can be read off in one
 //! place rather than in thirty handler bodies.
+//!
+//! Two narrower tiers sit beside those. A participant tier admits any
+//! scoped-console caller to the plane apply and the source refresh; the
+//! handlers narrow a non-admin's apply to their own marketplaces. The archive
+//! import stays in the manage tier because a staged archive can rewrite every
+//! plane at once. A self-service tier carries the two writes that touch only
+//! the caller's own account, targeted from the validated session, so they are
+//! not admin-gated. Approval verdicts are one route per verb, so a mistyped
+//! verdict 404s at the router before any row is touched.
 
 use std::sync::Arc;
 
@@ -35,13 +44,6 @@ pub(crate) fn build_admin_only_routes(
     write_pool: &Arc<PgPool>,
     owner: systemprompt::identifiers::UserId,
 ) -> Result<Router, StateError> {
-    // Why: reads are the admin dashboard's data and open to the console tier;
-    // every ordinary write mutates an identity, a role, an ACL rule or the
-    // gateway config, so it stays with the admin roles. The platform tier is
-    // narrower still: an AD mapping decides what the directory grants
-    // everyone, so only `platform_admin` may move one. Below these, one
-    // participant tier carries the two sync writes a marketplace participant
-    // may press.
     let reads = build_admin_read_routes_inner(read_pool)
         .merge(super::managed_resources::reads())
         .layer(axum_middleware::from_fn_with_state(
@@ -57,9 +59,6 @@ pub(crate) fn build_admin_only_routes(
     let platform = build_admin_platform_routes(write_pool).layer(
         axum_middleware::from_fn_with_state(ROLES_PLATFORM, middleware::require_roles_middleware),
     );
-    // Why: the two sync writes a marketplace participant may press. The
-    // layer admits any scoped-console caller; the handlers narrow a
-    // non-admin's apply to their own marketplaces and refuse anything wider.
     let participant = build_sync_participant_routes()
         .with_state(Arc::clone(write_pool))
         .layer(axum_middleware::from_fn(
@@ -74,8 +73,6 @@ pub(crate) fn build_admin_only_routes(
         .layer(axum::Extension(managed)))
 }
 
-// Why: the access-control writes are their own table — every route here edits
-// a rule row, and none of them is reachable without the console role.
 fn build_access_control_write_routes() -> Router<Arc<PgPool>> {
     Router::new()
         .route(
@@ -104,13 +101,8 @@ fn build_access_control_write_routes() -> Router<Arc<PgPool>> {
         )
 }
 
-// Why: the plane apply and the source refresh sit in the participant tier
-// (`build_sync_participant_routes`); the archive import stays here in the
-// manage tier because a staged archive can rewrite every plane at once.
 fn build_sync_write_routes() -> Router<Arc<PgPool>> {
     Router::new()
-        // Why: the upload is the raw zip as the body; the limit is the
-        // archive cap, not the router's default.
         .route(
             "/sync/import",
             post(handlers::sync::stage_import_handler)
@@ -170,9 +162,6 @@ fn build_admin_write_routes(write_pool: &Arc<PgPool>) -> Router {
             "/users/{user_id}/share-token",
             post(handlers::share::issue_share_token_handler),
         )
-        // Why: set administratively because ADFS replaced the Salesforce SSO
-        // login that used to capture the Username from a `preferred_username`
-        // claim. Nothing derives it now, so someone has to state it.
         .route(
             "/users/{user_id}/salesforce-identity",
             post(handlers::salesforce_identity::link_salesforce_identity_handler)
@@ -212,9 +201,6 @@ fn build_admin_write_routes(write_pool: &Arc<PgPool>) -> Router {
         .with_state(Arc::clone(write_pool))
 }
 
-// Why: the platform tier is empty of ordinary routes on purpose. It carries
-// only the directory-shaped controls, which are the AD mappings; everything
-// else an admin may drive belongs one tier down.
 fn build_admin_platform_routes(write_pool: &Arc<PgPool>) -> Router {
     Router::new()
         .merge(admin_groups::group_platform_routes())
@@ -222,36 +208,22 @@ fn build_admin_platform_routes(write_pool: &Arc<PgPool>) -> Router {
         .with_state(Arc::clone(write_pool))
 }
 
-// Why: the management surface (devices) is split out so the
-// gateway/user/access-control routes above stay readable as one list; both
-// halves are mounted on the same write pool. A user's group and project
-// membership is not settable here: the directory-sourced half is the AD
-// group, re-projected at every sign-in, and the manual half has its own
-// routes.
 fn build_management_write_routes() -> Router<Arc<PgPool>> {
     Router::new()
         .route(
             "/management/devices",
             post(handlers::devices::enroll_device),
         )
-        // Why: `{kind}` rather than two routes because the two credentials
-        // differ only in which table holds them; the fleet page revokes both
-        // through one button and one confirmation.
         .route(
             "/devices/{kind}/{id}",
             delete(handlers::devices::admin_revoke_credential),
         )
-        // Why: a certificate's expiry is a side row this extension owns; the
-        // hourly sweep turns it into the revocation core's gate reads.
         .route(
             "/devices/certs/{id}/expiry",
             put(handlers::devices::admin_set_cert_expiry),
         )
 }
 
-// Why: two routes rather than one taking a verdict in the body. The verb is the
-// entire payload of an approval decision, and a route per verb means a typo
-// cannot reach a 200 — it 404s at the router before any row is touched.
 fn build_approval_write_routes() -> Router<Arc<PgPool>> {
     Router::new()
         .route(
@@ -264,13 +236,6 @@ fn build_approval_write_routes() -> Router<Arc<PgPool>> {
         )
 }
 
-// Why: a tier of its own. Every other write under `/api/public/admin` is
-// behind `ROLES_MANAGE` because it mutates somebody else's identity or the
-// instance's configuration; these two mutate only the caller's own account and
-// take their target from the validated session, so gating them on an admin
-// role would mean the settings form worked for nobody but administrators.
-// They need the write pool, which is why they are not in
-// `build_auth_read_routes`.
 pub(crate) fn build_self_service_routes(write_pool: &Arc<PgPool>) -> Router {
     Router::new()
         .route(

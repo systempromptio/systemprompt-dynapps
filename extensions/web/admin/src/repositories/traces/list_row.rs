@@ -4,7 +4,7 @@
 
 use systemprompt::identifiers::{AgentId, SessionId, TraceId, UserId};
 
-use super::TraceSummary;
+use super::{TraceKind, TraceSummary};
 
 #[derive(Debug)]
 pub(super) struct TraceListRow {
@@ -72,7 +72,7 @@ impl From<TraceListRow> for TraceSummary {
             has_error: r.has_error,
             error_count: r.error_count,
             has_deny: r.has_deny,
-            kind: r.kind,
+            kind: TraceKind::from_sql(&r.kind),
         }
     }
 }

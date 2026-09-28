@@ -8,7 +8,9 @@
 # it does not match a route registered in the admin route modules.
 #
 # The route corpus is every `.route("...")` literal under
-# extensions/web/admin/src/routes/*.rs. Those routers are nested under an
+# extensions/web/admin/src/routes/*.rs plus routes/ssr/*.rs, where the SSR
+# page route groups live; a new route subdirectory must be added to the glob
+# below or its routes silently drop out of the corpus. Those routers are nested under an
 # `/admin` prefix, so a literal `/governance/policies` serves
 # `/admin/governance/policies`. A `{param}` segment matches any single path
 # segment. Query strings and fragments are ignored, and any href containing
@@ -44,7 +46,7 @@ if p.exists():
 # one segment. A handful of alias/redirect targets exist without their own
 # `.route(...)` literal, so they are seeded explicitly.
 route_literals = set()
-for f in sorted(pathlib.Path(route_dir).glob('*.rs')):
+for f in sorted(pathlib.Path(route_dir).glob('*.rs')) + sorted(pathlib.Path(route_dir).glob('ssr/*.rs')):
     for m in re.finditer(r'\.route\(\s*"([^"]*)"', f.read_text()):
         route_literals.add(m.group(1))
 

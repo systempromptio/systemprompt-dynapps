@@ -16,6 +16,7 @@ mod adoption;
 mod context;
 mod rows;
 mod summary;
+mod tabs;
 mod views;
 
 use std::sync::Arc;

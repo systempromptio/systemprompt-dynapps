@@ -33,7 +33,7 @@ pub(crate) async fn plugin_detail_page(
     let catalog = data::load_catalog(&path, &user_ctx.roles);
     let counts = assignment_counts_by_type(&pool, ENTITY_PLUGIN).await;
     let assignment_count = counts.get(plugin_id.as_str()).copied().unwrap_or(0);
-    let mut page = view_models::plugin_detail(&catalog, &plugin_id, assignment_count)
+    let mut page = view_models::plugin_detail(catalog, &plugin_id, assignment_count)
         .ok_or_else(|| AdminError::NotFound("No such plugin.".to_owned()))?;
     page.access = Some(
         access::panel(
@@ -71,7 +71,7 @@ pub(crate) async fn skill_detail_page(
     let counts = assignment_counts_by_type(&pool, ENTITY_SKILL).await;
     let assignment_count = counts.get(&skill_id).copied().unwrap_or(0);
     let skill = systemprompt::identifiers::SkillId::new(&skill_id);
-    let mut page = view_models::skill_detail(&catalog, &skill, assignment_count)
+    let mut page = view_models::skill_detail(catalog, &skill, assignment_count)
         .ok_or_else(|| AdminError::NotFound("No such skill.".to_owned()))?;
     page.access = Some(
         access::panel(

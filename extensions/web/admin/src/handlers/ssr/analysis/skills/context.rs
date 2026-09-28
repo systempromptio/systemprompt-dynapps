@@ -2,22 +2,18 @@
 //! the active tab's body. The ribbon carries only the table's own filters;
 //! the scope (window and marketplace) travels through it as preserved fields.
 
-use chrono::{NaiveDate, Utc};
+use chrono::Utc;
 
-use super::activity::{chart, top_skills};
 use super::adoption::adoption_view;
-use super::rows::{group_rows, marketplace_name, skill_row_view};
-use super::summary::{kpis, unused};
-use super::views::{
-    MarketplaceGroupView, ScopeLinkView, SkillFactView, SkillsKpiView, SkillsPageContext,
-    TopSkillView, UnusedSkillView,
-};
+use super::rows::marketplace_name;
+use super::tabs::{TabInputs, active_tab_body};
+use super::views::{ScopeLinkView, SkillsPageContext};
 use super::{SkillsQuery, SkillsTab};
 use crate::handlers::ssr::analysis::help::skills_help;
 use crate::handlers::ssr::analysis::reports::banner::ReportBannerView;
 use crate::handlers::ssr::analysis::ribbon::{RibbonGroupView, RibbonView};
 use crate::handlers::ssr::analysis_urls::ANALYSIS_SKILLS_URL;
-use crate::handlers::ssr::types::{SvgLineChartView, TabLinkView};
+use crate::handlers::ssr::types::TabLinkView;
 use crate::repositories::analysis::inventory_index::{InventoryIndex, MarketplaceAudience};
 use crate::repositories::analysis::skills::{MarketplaceAdoptionRow, SkillFactRow, SkillSort};
 
@@ -175,61 +171,6 @@ fn export_query(query: &SkillsQuery, tab: SkillsTab) -> String {
 pub(super) struct SkillsPageInputs {
     pub(super) is_admin: bool,
     pub(super) report_banner: ReportBannerView,
-}
-
-struct TabInputs<'a> {
-    query: &'a SkillsQuery,
-    tab: SkillsTab,
-    read: &'a SkillsRead<'a>,
-    scoped_adoption: &'a [&'a MarketplaceAdoptionRow],
-    marketplace: Option<&'a str>,
-    today: NaiveDate,
-}
-
-#[derive(Default)]
-struct ActiveTabBody {
-    groups: Vec<MarketplaceGroupView>,
-    unused: Vec<UnusedSkillView>,
-    kpis: Vec<SkillsKpiView>,
-    chart: Option<SvgLineChartView>,
-    top_skills: Vec<TopSkillView>,
-}
-
-fn active_tab_body(input: &TabInputs<'_>) -> ActiveTabBody {
-    let SkillsRead {
-        rows,
-        audience,
-        index,
-        ..
-    } = *input.read;
-    match input.tab {
-        SkillsTab::Overview => ActiveTabBody {
-            kpis: kpis(
-                rows,
-                input.scoped_adoption,
-                audience,
-                input.marketplace,
-                input.today,
-            ),
-            ..ActiveTabBody::default()
-        },
-        SkillsTab::Activity => ActiveTabBody {
-            chart: Some(chart(rows, input.today, input.query.days())),
-            top_skills: top_skills(input.query, rows, index),
-            ..ActiveTabBody::default()
-        },
-        SkillsTab::Skills => {
-            let views: Vec<SkillFactView> = rows
-                .iter()
-                .map(|r| skill_row_view(r, audience, index, input.today))
-                .collect();
-            ActiveTabBody {
-                groups: group_rows(views, index),
-                unused: unused(rows, index, audience, input.marketplace),
-                ..ActiveTabBody::default()
-            }
-        },
-    }
 }
 
 pub(super) fn build_context(
