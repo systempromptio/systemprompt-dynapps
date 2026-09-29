@@ -3,6 +3,7 @@
 //! it stops applying.
 
 use std::collections::HashMap;
+use std::hash::BuildHasher;
 
 use systemprompt_security::authz::{DASHBOARD_SOURCE, YAML_SOURCE};
 
@@ -40,9 +41,9 @@ pub fn source_words(source: &str) -> (String, &'static str) {
     }
 }
 
-pub fn band_rules(
+pub fn band_rules<S: BuildHasher>(
     rows: &[&LedgerRuleRow],
-    names: &HashMap<(String, String), String>,
+    names: &HashMap<(String, String), String, S>,
 ) -> Vec<BandRulesView> {
     let mut bands: Vec<BandRulesView> = Vec::new();
     let mut sorted: Vec<&&LedgerRuleRow> = rows.iter().collect();

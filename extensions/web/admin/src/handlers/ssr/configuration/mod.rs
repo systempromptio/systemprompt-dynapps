@@ -9,7 +9,6 @@
 //! Platform group's home because it is the one honest answer to "what is
 //! configured here".
 
-pub(crate) mod retention;
 mod rows;
 mod view;
 
@@ -23,13 +22,13 @@ use sqlx::PgPool;
 use systemprompt::config::ProfileBootstrap;
 use systemprompt::loader::ServicesBootstrap;
 
-use self::retention::RetentionView;
 use self::view::{ConfigKpiView, ConfigRowView, ConfigurationPageData};
 use crate::handlers::ssr::ssr_sync::{DOCS_URL, EXPORT_ZIP_URL, empty_sources};
 use crate::repositories::gateway_policies::declared::services_root;
 use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
 use systemprompt_web_admin_core::repositories::sync::provenance::active_bundle_files;
 use systemprompt_web_admin_core::repositories::sync::sources::build_sources;
+use systemprompt_web_admin_core::ssr::retention::{self, RetentionView};
 use systemprompt_web_admin_core::ssr::sync_plane::HashView;
 use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;

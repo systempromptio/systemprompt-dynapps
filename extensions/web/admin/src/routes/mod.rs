@@ -2,7 +2,6 @@
 
 mod admin;
 mod admin_groups;
-mod managed_resources;
 mod ssr;
 mod ssr_analysis;
 mod ssr_bridge;

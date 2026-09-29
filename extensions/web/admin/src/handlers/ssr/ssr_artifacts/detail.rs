@@ -11,14 +11,14 @@ use systemprompt::identifiers::{ArtifactId, SessionId, UserId};
 
 use crate::handlers::ssr::analysis::help::HelpView;
 use crate::handlers::ssr::ssr_tools::help::artifacts_help;
-use crate::handlers::ssr::ssr_tools::rows::{format_bytes, kind_icon, kind_label};
+use crate::handlers::ssr::ssr_tools::rows::{kind_icon, kind_label};
 use crate::repositories::analytics::artifacts::{
     ArtifactDetail, ArtifactFindingRow, find_artifact,
 };
 use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
 use systemprompt_web_admin_core::ssr::entity_urls::{request_detail_url, session_detail_url};
 use systemprompt_web_admin_core::ssr::format::{
-    client_label, format_duration_ms, local_time, short_id,
+    client_label, format_bytes, format_duration_ms, local_time, short_id,
 };
 use systemprompt_web_admin_core::ssr::helpers::render_typed_page;
 use systemprompt_web_admin_core::ssr::page::Page;

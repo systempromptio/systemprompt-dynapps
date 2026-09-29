@@ -7,7 +7,12 @@ kind: "guide"
 public: true
 tags: ["documentation", "getting-started", "bridge"]
 published_at: "2026-08-19"
-updated_at: "2026-09-11"
+updated_at: "2026-09-29"
+keywords: "bridge, astound-bridge, install, sign in, macos, windows, linux, wsl, sync, doctor"
+after_reading_this:
+  - "Install Astound Bridge with trusted gateway and signing configuration"
+  - "Sign in and sync your plugins, skills and MCP servers"
+  - "Diagnose a bridge with whoami, status and doctor"
 related_playbooks:
   - title: "Connect Claude Code"
     url: "/documentation/connect-claude-code"

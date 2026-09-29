@@ -1,4 +1,6 @@
-//! Presence is one rule applied to a bridge heartbeat. It lives beside the
+//! Presence is one rule applied to a bridge heartbeat.
+//!
+//! It lives beside the
 //! bridge tables rather than in any page so the count on the devices KPI
 //! tile, the badge on the row and the user page can never disagree about
 //! what online or stale means.

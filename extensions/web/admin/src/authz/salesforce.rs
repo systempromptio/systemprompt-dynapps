@@ -18,12 +18,12 @@ const SALESFORCE_RULE_TYPE: RuleType = RuleType::extension_static("salesforce");
 const SALESFORCE_PRECEDENCE: u16 = 170;
 
 #[must_use]
-pub fn salesforce_rule_type() -> RuleType {
+pub const fn salesforce_rule_type() -> RuleType {
     SALESFORCE_RULE_TYPE
 }
 
 #[must_use]
-pub fn salesforce_dimension() -> SubjectDimension {
+pub const fn salesforce_dimension() -> SubjectDimension {
     SubjectDimension {
         rule_type: salesforce_rule_type(),
         label: "Salesforce link",

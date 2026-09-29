@@ -7,7 +7,12 @@ kind: "guide"
 public: true
 tags: ["documentation", "getting-started", "bridge"]
 published_at: "2026-08-06"
-updated_at: "2026-09-15"
+updated_at: "2026-09-29"
+keywords: "claude code, gateway, bridge, settings.json, model routing, gemini, sonnet, verify"
+after_reading_this:
+  - "Configure Claude Code to route through the Astound gateway"
+  - "Find the settings file the bridge installed"
+  - "Pick a Claude or Gemini model and verify routing and tools separately"
 related_playbooks:
   - title: "Install the Desktop Bridge"
     url: "/documentation/bridge-install"

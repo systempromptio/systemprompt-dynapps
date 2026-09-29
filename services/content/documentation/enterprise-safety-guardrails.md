@@ -1,75 +1,120 @@
 ---
 title: "Content Safety, PII & Guardrails"
-description: "Run every request through the enabled governance chain and safety scanners: jailbreak heuristics, credential patterns plus entropy, PII detection, and redaction."
+description: "What the gateway safety scanners and the governance chain detect on every request, what they would block under enforce, and why both currently run in warn mode."
 author: "Astound Digital"
 slug: "enterprise-safety-guardrails"
-keywords: "safety, guardrails, pii, secrets, jailbreak, redaction, governance, scanners"
+keywords: "safety, guardrails, pii, ssn, secrets, jailbreak, redaction, scanners, warn mode, block list, phi"
 kind: "guide"
 public: true
 tags: ["enterprise", "safety", "admin"]
 published_at: "2026-08-25"
-updated_at: "2026-09-11"
+updated_at: "2026-09-29"
 after_reading_this:
-  - "Understand what the enabled four-stage governance chain checks on every call"
-  - "Know which scanner categories ship in the default set and what each catches"
-  - "Distinguish buffered-response blocking from streamed audit-only enforcement"
-  - "See how transcripts redact detected sensitive values at the display layer"
+  - "Know which categories the scanners detect and which would block under enforce"
+  - "Understand that nothing on this plane refuses traffic today, and why"
+  - "Distinguish buffered-response blocking from streamed audit-only scanning"
+  - "Know what the console masks when it displays a transcript"
 related_docs:
+  - title: "Governance Modes: Warn and Enforce"
+    url: "/documentation/governance-modes"
   - title: "MCP, Tool Governance & Distribution"
     url: "/documentation/enterprise-tool-governance"
   - title: "Audit Trail, Traceability & Observability"
     url: "/documentation/enterprise-audit-observability"
-  - title: "Enterprise Roadmap & Known Limitations"
-    url: "/documentation/enterprise-roadmap"
 ---
 
 # Content Safety, PII & Guardrails
 
-**TL;DR:** The four-stage governance chain and the gateway safety scanners are **enabled in warn mode** in this repository's configuration. Authentication and authorization remain enforced. Requests pass jailbreak heuristics, credential patterns with an entropy backstop, and PII detection (email, credit card, SSN, phone). In enforce mode, configured categories can block buffered responses; streamed responses are scanned audit-only; transcripts redact detected values at display time. The category set and each category's block-vs-audit disposition are configurable per deployment, and the whole plane can be run in warn mode, which records what each category would have blocked without blocking it.
+**TL;DR:** Every gateway request goes through the governance chain first and
+the safety scanners after it. The scanners check the request and any buffered
+response for jailbreak phrases, credentials and PII (email, card number, US
+SSN, phone), and every finding is recorded. **Both planes have run in warn
+mode since 2026-09-04**, so nothing on this page refuses traffic today. The
+block lists stay configured so the warnings report can count what enforce
+mode *would* refuse: SSNs in either direction, and secrets in responses.
+Transcripts in the console mask credentials and SSNs when displayed. See
+[Governance Modes](/documentation/governance-modes) for why warn mode is on
+and how to switch it off.
 
-## The governance chain is on
+## Two planes, one request
 
-Calls routed through the governed integration run the four-stage synchronous chain — **scope check → secret scan → blocklist → rate limit** — with every decision audited with trace linkage. In this configuration stages warn and continue; an enforcing denial stops execution. The chain itself is covered in depth in [MCP, Tool Governance & Distribution](/documentation/enterprise-tool-governance); this page covers the content-safety scanners layered on the gateway.
+1. **Governance chain** (`services/governance/config.yaml`): scope check →
+   secret scan → blocklist → rate limit. It runs on governed tool calls and on
+   gateway prompts, and it covers credentials on the way in. Details are in
+   [MCP, Tool Governance & Distribution](/documentation/enterprise-tool-governance).
+2. **Safety scanners** (`services/gateway/policies.yaml`): run after the
+   chain, on the request and on the response.
 
-## What the scanners check
+## What the scanners detect
 
-The shipped default category set:
+| Category | Scanner | Direction | Would block under enforce |
+|---|---|---|---|
+| `jailbreak` | `heuristic`, with a phrase list pinned in `policies.yaml` ("ignore previous instructions", "act as dan", …) | both | no, audit-only since 2026-08-31 |
+| `pii_email` | `heuristic` | both | no |
+| `pii_credit_card` | `heuristic` | both | no, audit-only since 2026-08-31 |
+| `pii_ssn` | `pii_extended` | both | **yes** |
+| `pii_phone` | `pii_extended` | both | no |
+| `secret` | `secrets`: the chain's credential patterns applied to replies | response | **yes** |
 
-| Category | What it catches |
-|---|---|
-| **Jailbreak heuristics** | Prompt patterns attempting to subvert model instructions |
-| **Secrets** | Known credential patterns (API keys, tokens, private keys) plus a high-entropy-string backstop for secrets no pattern names |
-| **PII** | Email addresses, credit card numbers, US Social Security numbers, phone numbers |
+`jailbreak` and `pii_credit_card` were removed from the block list after both
+refused real developer traffic in production. The chain's `secret_scan`
+covers credentials on requests, which is why the `secrets` scanner only reads
+responses.
 
-This set is the **sensible default, not a fixed contract** — categories and their block-vs-audit disposition are configurable, so a deployment enforces exactly the policy its owners require. A PHI taxonomy (health identifiers) is not yet part of the set — see the [roadmap](/documentation/enterprise-roadmap).
+History rescanning (`history: off`) is off: each turn gets its own PII and
+phrase scan when it is sent, and earlier turns are not scanned again. The
+credential scan still reads the whole provider-bound body.
 
-## Blocking vs. auditing: why streaming differs
+**Not detected:** health identifiers (PHI), toxicity or brand-risk content,
+and anything that needs a trained classifier rather than a pattern. Those are
+listed on the [roadmap](/documentation/enterprise-roadmap).
 
-The current `safety.mode: warn` records findings without blocking. When `safety.mode: enforce` is configured, enforcement depends on how the response is delivered:
+## Blocking vs. auditing under enforce
 
-- **Buffered responses** are held until scanning completes, so a detection can **block the response** before the caller sees a byte.
-- **Streamed responses** are scanned **audit-only**: tokens are already on the wire as they are generated, so retroactively blocking them is impossible without breaking streaming entirely. Detections are recorded and alertable, but the stream completes.
+These rules apply once `safety.mode` is set back to `enforce`:
 
-This is a deliberate design, not a gap: the alternative — buffering every stream — would destroy the latency profile streaming exists to provide. Where blocking matters more than latency, use non-streaming calls.
+- **Requests:** a finding in `block_categories` is refused before the
+  upstream call.
+- **Buffered responses:** held until the scan finishes, so a finding in
+  `block_response_categories` refuses the whole response.
+- **Streamed responses:** audit-only. The tokens are already on the wire when
+  the scan runs, so findings are recorded and the stream completes. Where
+  blocking matters more than latency, use non-streaming calls.
 
-There is a third posture beside block and audit-only. `safety.mode: warn` in `services/gateway/policies.yaml` leaves every scanner running and every finding persisted and drops only the refusal, so findings written under it carry `blocked = false`. The quota windows in the same file have the matching switch, `quota_mode: warn`: an exhausted window is recorded as a `governance_decisions` warn under policy `quota` instead of answering 429, so all three planes on an inference request can be run non-blocking together. That is how you find out what a block list costs before you enforce it: a category with many findings and no blocks is one warn mode is absorbing. Read it back at `/admin/governance/warnings` or with `systemprompt infra logs governance report`, and see [MCP, Tool Governance & Distribution](/documentation/enterprise-tool-governance) for the governance chain's matching switch.
-
-Note also that in-flight enforcement **blocks rather than redacts** — a flagged buffered response is refused whole, not rewritten with masked values. In-flight redaction (masking values instead of refusing the response) is planned — see the [roadmap](/documentation/enterprise-roadmap).
+Enforcement **refuses rather than redacts**. A flagged response is rejected
+whole, not rewritten with the values masked. In-flight redaction is on the
+[roadmap](/documentation/enterprise-roadmap).
 
 ## Display-layer redaction
 
-Transcripts shown in the admin UI apply **display-layer redaction**: values the scanners flagged (secrets, PII) are masked when a conversation is rendered, so reviewing an audit trail does not itself re-expose the sensitive data that triggered the detection.
+Transcript text shown in the console (conversation history and search,
+artifacts, tool-call and context views) passes through a redactor before it
+reaches the page. It masks well-known credential shapes (AWS, GitHub, GitLab,
+Slack, Anthropic, OpenAI, Stripe and Google keys, among others) and
+high-entropy tokens, and it masks US SSNs down to the last four digits.
+Reviewing an audit trail therefore does not expose those values again. It
+does not mask email addresses, phone numbers or card numbers. The stored
+payload is unchanged and expires under the
+[retention windows](/documentation/data-retention).
 
-## Where detections go
+## Where findings go
 
-Every scanner decision is an audit row on the same spine as everything else — reachable from `/admin/entities/traces` and `systemprompt infra logs trace list`, attributable to the actor via the trace chain described in [Audit Trail, Traceability & Observability](/documentation/enterprise-audit-observability).
+Every finding is a row in `ai_safety_findings` with its category, scanner,
+phase and `blocked` flag. Under warn, `blocked` is always `false`. Findings
+are linked to the request and its trace, so each one can be attributed to a
+person through the chain described in
+[Audit Trail, Traceability & Observability](/documentation/enterprise-audit-observability).
 
-## Verification
+## Check it yourself
 
-Use the commands and UI checks above against the configured instance. Repository maintainers can run `just test-unit` and `just test-integration`; a passing fixture test does not establish that a deployed integration is configured. Screenshots below are illustrative and may show an earlier configuration.
+- `/admin/governance?tab=safety`: findings by category, with the blocked
+  count beside each.
+- `/admin/requests`: open a request to see its findings and the policy that
+  judged it.
+- `/admin/gateway/policies`: the live `safety` block (mode, scanners, block
+  lists).
+- The CLI safety table, with a findings and a blocked column per category:
 
-### Screenshots
-
-![A policy denial landing in the same audit chain as the request, with the policy named](/files/images/evidence/req-026-requests-audit.png)
-
-![The governed request status log the quota guard reads](/files/images/evidence/req-033-requests-log.png)
+  ```bash
+  systemprompt infra logs governance report --since 7d
+  ```

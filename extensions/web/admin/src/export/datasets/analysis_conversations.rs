@@ -3,7 +3,6 @@
 
 use async_trait::async_trait;
 
-use super::requests::time_range;
 use crate::handlers::ssr::analysis::conversations::export::export_rows;
 use crate::repositories::analysis::conversations::{ConversationBucketRow, ConversationFactRow};
 use systemprompt::identifiers::{SessionId, UserId};
@@ -12,6 +11,7 @@ use systemprompt_web_admin_core::export::model::{
     Cell, CellKind, Column, DataSet, ExportContext, Table, Window,
 };
 use systemprompt_web_admin_core::export::registry::DataSetRegistration;
+use systemprompt_web_admin_core::export::window::time_range;
 use systemprompt_web_admin_core::types::UserContext;
 
 pub(crate) struct ClassifiedConversations;

@@ -26,6 +26,8 @@ use super::ssr_groups::UNASSIGNED_GROUP;
 use super::types::{
     GroupDetailPageData, GroupOverviewView, MemberSetChipView, MembersTabView, UsageLeaderRowView,
 };
+use systemprompt_web_admin_core::ssr::faults::Faults;
+use systemprompt_web_admin_core::ssr::helpers::Viewer;
 use systemprompt_web_admin_core::ssr::page::Page;
 use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 
@@ -65,8 +67,9 @@ pub(crate) async fn group_detail_page(
     };
 
     let active = tabs::resolve_tab(query.tab.as_deref(), is_unassigned);
-    let counts = data::load_counts(&pool, &group_id).await;
-    let usage = data::load_usage(&pool, &group_id).await;
+    let mut faults = Faults::new();
+    let counts = data::load_counts(&pool, &group_id, &mut faults).await;
+    let usage = data::load_usage(&pool, &group_id, &mut faults).await;
 
     let data = GroupDetailPageData {
         page,
@@ -78,11 +81,11 @@ pub(crate) async fn group_detail_page(
         } else {
             people_view::stat_tiles(&usage, counts.members)
         },
-        overview: load_overview(&pool, &group_id, active).await,
-        members: load_members(&pool, &group_id, active, &shell.user).await,
-        access: load_access(&pool, &group_id, active).await,
-        projects: load_projects(&pool, &group_id, active).await,
-        mappings: load_mappings(&pool, &group_id, active, &shell.user).await,
+        overview: load_overview(&pool, &group_id, active, &mut faults).await,
+        members: load_members(&pool, &group_id, active, &shell.user, &mut faults).await,
+        access: load_access(&pool, &group_id, active, &mut faults).await,
+        projects: load_projects(&pool, &group_id, active, &mut faults).await,
+        mappings: load_mappings(&pool, &group_id, active, &shell.user, &mut faults).await,
         active_tab: active.to_owned(),
         group_name: group.name,
         description: group.description,
@@ -95,12 +98,12 @@ pub(crate) async fn group_detail_page(
     };
 
     Ok(
-        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+        systemprompt_web_admin_core::ssr::helpers::render_page_with_faults(
             &shell.engine,
             "group-detail",
             &data,
-            &shell.user,
-            &shell.marketplace,
+            Viewer::new(&shell.user, &shell.marketplace),
+            &faults,
         ),
     )
 }
@@ -109,11 +112,12 @@ async fn load_overview(
     pool: &PgPool,
     group_id: &GroupId,
     active: &str,
+    faults: &mut Faults,
 ) -> Option<GroupOverviewView> {
     if active != tabs::USAGE {
         return None;
     }
-    let loaded = data::load_usage_tab(pool, group_id).await;
+    let loaded = data::load_usage_tab(pool, group_id, faults).await;
     let top = loaded
         .leaderboard
         .first()
@@ -144,13 +148,14 @@ async fn load_members(
     group_id: &GroupId,
     active: &str,
     user_ctx: &UserContext,
+    faults: &mut Faults,
 ) -> Option<MembersTabView> {
     if active != tabs::MEMBERS {
         return None;
     }
-    let loaded = data::load_members(pool, group_id, user_ctx.is_admin).await;
+    let loaded = data::load_members(pool, group_id, user_ctx.is_admin, faults).await;
     let assign_targets = if group_id.as_str() == UNASSIGNED_GROUP && user_ctx.is_admin {
-        assign_targets(pool).await
+        assign_targets(pool, faults).await
     } else {
         Vec::new()
     };
@@ -161,11 +166,13 @@ async fn load_members(
     })
 }
 
-async fn assign_targets(pool: &PgPool) -> Vec<MemberSetChipView> {
-    systemprompt_web_admin_core::repositories::scope::containers::list_group_options(pool)
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, "assign target list failed"))
-        .unwrap_or_default()
+async fn assign_targets(pool: &PgPool, faults: &mut Faults) -> Vec<MemberSetChipView> {
+    faults
+        .take(
+            "assign targets",
+            systemprompt_web_admin_core::repositories::scope::containers::list_group_options(pool)
+                .await,
+        )
         .into_iter()
         .filter(|g| g.id != UNASSIGNED_GROUP)
         .map(|g| MemberSetChipView {
@@ -179,22 +186,24 @@ async fn load_access(
     pool: &PgPool,
     group_id: &GroupId,
     active: &str,
+    faults: &mut Faults,
 ) -> Option<Vec<super::types::AccessSectionView>> {
     if active != tabs::ACCESS {
         return None;
     }
-    Some(data::load_access(pool, group_id).await)
+    Some(data::load_access(pool, group_id, faults).await)
 }
 
 async fn load_projects(
     pool: &PgPool,
     group_id: &GroupId,
     active: &str,
+    faults: &mut Faults,
 ) -> Option<Vec<super::types::ProjectRowView>> {
     if active != tabs::PROJECTS {
         return None;
     }
-    let rows = data::load_projects(pool, group_id).await;
+    let rows = data::load_projects(pool, group_id, faults).await;
     Some(people_view::linked_rows(&rows, "projects"))
 }
 
@@ -203,11 +212,12 @@ async fn load_mappings(
     group_id: &GroupId,
     active: &str,
     user_ctx: &UserContext,
+    faults: &mut Faults,
 ) -> Option<Vec<super::types::MappingRowView>> {
     if active != tabs::MAPPINGS {
         return None;
     }
-    let rows = data::load_mappings(pool, group_id).await;
+    let rows = data::load_mappings(pool, group_id, faults).await;
     Some(people_view::mapping_rows(
         rows.into_iter().map(|r| (r.ad_group, r.source)),
         user_ctx.is_platform_admin,

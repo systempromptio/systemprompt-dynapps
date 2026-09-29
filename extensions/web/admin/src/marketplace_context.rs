@@ -26,14 +26,14 @@ pub(crate) async fn marketplace_context_middleware(
 ) -> Response {
     let result = async {
         let path = systemprompt_web_admin_core::request::get_services_path()?;
-        let plugins = crate::repositories::marketplace::plugins::list_plugins_for_user(
+        let plugins = systemprompt_web_admin_catalog::repositories::marketplace::plugins::list_plugins_for_user(
             &pool,
             &path,
             &user_ctx.user_id,
         )
         .await?;
         Ok::<_, AdminError>(
-            crate::repositories::marketplace::plugins::count_visible_items(&plugins),
+            systemprompt_web_admin_catalog::repositories::marketplace::plugins::count_visible_items(&plugins),
         )
     }
     .await;

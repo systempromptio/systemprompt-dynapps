@@ -1,8 +1,8 @@
 // Tweening the text of a figure from what it shows to what it should show:
 // "$1,204.50" to "$1,310.20" counts up through the same prefix, grouping and
 // decimals. Anything the pattern cannot read — an em-dash, a percentage with
-// two numbers — snaps straight to the new text, as does everything under
-// reduced motion.
+// two numbers — snaps straight to the new text, as does everything under a
+// reduced-motion preference, where animation would only get in the way.
 
 const NUMBER_PATTERN = /^([^\d−-]*)(-?[\d,]*\.?\d+)(.*)$/;
 const DEFAULT_MS = 300;

@@ -30,6 +30,7 @@ use systemprompt_web_admin_core::repositories::entitlement::{
 use systemprompt_web_admin_core::ssr::entity_kind::{
     entity_kind_label, entity_kind_plural, entity_kind_rank,
 };
+use systemprompt_web_admin_core::ssr::faults::Faults;
 use systemprompt_web_admin_core::types::Role;
 
 pub(super) const AUDIENCE_URL: &str = "/admin/access-control?tab=audience";
@@ -74,27 +75,27 @@ fn column(subject: &str, label: String, kind: &'static str) -> AcAudienceColumnV
     }
 }
 
-pub(super) async fn audience(pool: &PgPool) -> Audience {
+pub(super) async fn audience(pool: &PgPool, faults: &mut Faults) -> Audience {
     let mut subjects = Vec::new();
     let mut columns = Vec::new();
     for role in Role::ALL {
         subjects.push(role_subject(role.as_str()));
         columns.push(column(role.as_str(), role.as_str().to_owned(), "role"));
     }
-    let groups =
+    let groups = faults.take(
+        "groups",
         systemprompt_web_admin_core::repositories::scope::containers::list_group_summaries(pool)
-            .await
-            .inspect_err(|e| tracing::warn!(error = %e, "access-control: group listing failed"))
-            .unwrap_or_default();
+            .await,
+    );
     for group in groups {
         subjects.push(group_subject(group.id.as_str()));
         columns.push(column(group.id.as_str(), group.name, "group"));
     }
-    let projects =
+    let projects = faults.take(
+        "projects",
         systemprompt_web_admin_core::repositories::scope::containers::list_project_summaries(pool)
-            .await
-            .inspect_err(|e| tracing::warn!(error = %e, "access-control: project listing failed"))
-            .unwrap_or_default();
+            .await,
+    );
     for project in projects {
         subjects.push(project_subject(project.id.as_str()));
         columns.push(column(project.id.as_str(), project.name, "project"));
@@ -245,20 +246,27 @@ fn row_groups(rows: Vec<AcAudienceRowView>) -> Vec<AcAudienceRowGroupView> {
     groups
 }
 
+#[derive(Clone, Copy)]
+pub(super) struct GridRead<'a> {
+    pub(super) query: &'a AcQuery,
+    pub(super) ledger: &'a [LedgerRuleRow],
+}
+
 pub(super) async fn grid(
     pool: &PgPool,
     audience: Audience,
     sections: &[SectionInput],
-    query: &AcQuery,
-    ledger: &[LedgerRuleRow],
+    read: GridRead<'_>,
+    faults: &mut Faults,
 ) -> AudienceGridView {
+    let GridRead { query, ledger } = read;
     if audience.subjects.is_empty() || sections.is_empty() {
         return AudienceGridView::default();
     }
-    let resolved = resolve_subject_matrices(pool, &audience.subjects, sections)
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, "access-control: audience grid failed"))
-        .unwrap_or_default();
+    let resolved = faults.take(
+        "audience grid",
+        resolve_subject_matrices(pool, &audience.subjects, sections).await,
+    );
     if resolved.len() != audience.subjects.len() {
         return AudienceGridView::default();
     }

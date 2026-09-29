@@ -17,7 +17,11 @@ const ADMIN_API_READ_SRC: &str =
 const ADMIN_GROUPS_SRC: &str =
     include_str!("../../../../extensions/web/admin/src/routes/admin_groups.rs");
 const MANAGED_SRC: &str =
-    include_str!("../../../../extensions/web/admin/src/routes/managed_resources.rs");
+    include_str!("../../../../extensions/web/admin/catalog/src/routes/managed_resources.rs");
+const CATALOG_API_SRC: &str =
+    include_str!("../../../../extensions/web/admin/catalog/src/routes/api.rs");
+const CATALOG_SSR_SRC: &str =
+    include_str!("../../../../extensions/web/admin/catalog/src/routes/ssr.rs");
 const ANALYSIS_SRC: &str =
     include_str!("../../../../extensions/web/admin/src/routes/ssr_analysis.rs");
 const SSR_SRC: &str = include_str!("../../../../extensions/web/admin/src/routes/ssr/mod.rs");
@@ -83,6 +87,8 @@ pub(crate) fn mounted_routes() -> Vec<MountedRoute> {
         (ADMIN_API_READ_SRC, ADMIN_API_PREFIX),
         (ADMIN_GROUPS_SRC, ADMIN_API_PREFIX),
         (MANAGED_SRC, ADMIN_API_PREFIX),
+        (CATALOG_API_SRC, ADMIN_API_PREFIX),
+        (CATALOG_SSR_SRC, SSR_PREFIX),
         (SSR_SRC, SSR_PREFIX),
         (SSR_PLATFORM_SRC, SSR_PREFIX),
         (SSR_ACTIVITY_SRC, SSR_PREFIX),

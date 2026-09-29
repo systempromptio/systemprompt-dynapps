@@ -1,8 +1,9 @@
 //! Per-tab loading for the user detail page.
 //!
-//! Every function here loads exactly one tab. A failed read degrades to an
-//! empty panel rather than taking the page down: the header already answers
-//! "who is this account", which is most of why the page was opened.
+//! Every function here loads exactly one tab. A failed read is recorded on
+//! the page's `Faults` and its panel renders empty rather than taking the
+//! page down: the header already answers "who is this account", which is
+//! most of why the page was opened.
 
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
@@ -17,6 +18,7 @@ use systemprompt_web_admin_core::repositories::conversations::rows::{
 use systemprompt_web_admin_core::repositories::conversations::{
     HistoryFilter, HistoryItem, list_history_items,
 };
+use systemprompt_web_admin_core::ssr::faults::Faults;
 
 pub(super) const CONVERSATION_PAGE_SIZE: i64 = 25;
 
@@ -29,9 +31,10 @@ pub(super) async fn load_conversations(
     pool: &PgPool,
     user_id: &UserId,
     page: i64,
+    faults: &mut Faults,
 ) -> UserConversationsData {
     let scope = [user_id.as_str().to_owned()];
-    match list_history_items(
+    let listed = list_history_items(
         pool,
         HistoryFilter {
             scope_user_ids: Some(&scope),
@@ -43,17 +46,9 @@ pub(super) async fn load_conversations(
         CONVERSATION_PAGE_SIZE,
         page * CONVERSATION_PAGE_SIZE,
     )
-    .await
-    {
-        Ok((items, total)) => UserConversationsData { items, total },
-        Err(e) => {
-            tracing::warn!(error = %e, "user detail: conversations unavailable");
-            UserConversationsData {
-                items: Vec::new(),
-                total: 0,
-            }
-        },
-    }
+    .await;
+    let (items, total) = faults.take("conversations", listed);
+    UserConversationsData { items, total }
 }
 
 pub(super) struct IdentityData {
@@ -69,23 +64,24 @@ pub(super) async fn load_identity(
     pool: &PgPool,
     user_id: &UserId,
     roles: &[String],
+    faults: &mut Faults,
 ) -> IdentityData {
     let (adfs, identities, salesforce, share, until) = tokio::join!(
         repositories::groups::members::list_source_ad_groups(pool, user_id),
         repositories::users::federated::list_linked_identities(pool, user_id),
         repositories::users::salesforce_identity::list_identities(pool, user_id),
-        repositories::users::share_token::find_share_token_version(pool, user_id),
+        systemprompt_web_admin_core::repositories::share_token::find_share_token_version(
+            pool, user_id
+        ),
         repositories::users::roles::find_manual_roles_valid_until(pool, user_id),
     );
     IdentityData {
         roles: roles.to_vec(),
-        adfs_groups: warn_empty(adfs, "AD groups"),
-        identities: warn_empty(identities, "federated identities"),
-        salesforce_identities: warn_empty(salesforce, "Salesforce identities"),
-        share_token_version: share.unwrap_or_default().unwrap_or(0),
-        manual_roles_valid_until: until
-            .inspect_err(|e| tracing::warn!(error = %e, "user detail: role expiry unavailable"))
-            .unwrap_or_default(),
+        adfs_groups: faults.take("AD groups", adfs),
+        identities: faults.take("federated identities", identities),
+        salesforce_identities: faults.take("Salesforce identities", salesforce),
+        share_token_version: faults.take("share token", share).unwrap_or(0),
+        manual_roles_valid_until: faults.take("role expiry", until),
     }
 }
 
@@ -95,20 +91,21 @@ pub(super) struct MembershipData {
     pub defaults: Option<systemprompt_web_admin_core::repositories::scope::defaults::ScopeDefaults>,
 }
 
-pub(super) async fn load_membership(pool: &PgPool, user_id: &UserId) -> MembershipData {
-    let (groups, projects, defaults) = tokio::join!(
-        super::super::scope_data::group_choices(pool, user_id),
-        super::super::scope_data::project_choices(pool, user_id),
-        systemprompt_web_admin_core::repositories::scope::defaults::find_scope_defaults(
-            pool, user_id
-        ),
-    );
+pub(super) async fn load_membership(
+    pool: &PgPool,
+    user_id: &UserId,
+    faults: &mut Faults,
+) -> MembershipData {
+    let groups = super::super::scope_data::group_choices(pool, user_id, faults).await;
+    let projects = super::super::scope_data::project_choices(pool, user_id, faults).await;
+    let defaults = systemprompt_web_admin_core::repositories::scope::defaults::find_scope_defaults(
+        pool, user_id,
+    )
+    .await;
     MembershipData {
         groups,
         projects,
-        defaults: defaults
-            .inspect_err(|e| tracing::warn!(error = %e, "user detail: scope defaults unavailable"))
-            .unwrap_or_default(),
+        defaults: faults.take("scope defaults", defaults),
     }
 }
 
@@ -119,16 +116,23 @@ pub(super) struct AccessData {
     pub rules: Vec<systemprompt_web_admin_core::types::access_control::AccessControlRule>,
 }
 
-pub(super) async fn load_access(pool: &PgPool, user_id: &UserId) -> AccessData {
+pub(super) async fn load_access(
+    pool: &PgPool,
+    user_id: &UserId,
+    faults: &mut Faults,
+) -> AccessData {
     let overview = super::access_overview::load(pool, user_id).await;
-    let Ok(services_path) = systemprompt_web_admin_core::request::get_services_path() else {
-        tracing::warn!("services path unavailable; user access matrix skipped");
-        return AccessData {
-            overview,
-            rules_available: false,
-            matrix: None,
-            rules: Vec::new(),
-        };
+    let services_path = match systemprompt_web_admin_core::request::get_services_path() {
+        Ok(path) => path,
+        Err(error) => {
+            faults.record("access matrix", &error);
+            return AccessData {
+                overview,
+                rules_available: false,
+                matrix: None,
+                rules: Vec::new(),
+            };
+        },
     };
     let sections = crate::handlers::access_control::build_matrix_sections(&services_path);
     let (matrix, rules) = tokio::join!(
@@ -140,25 +144,30 @@ pub(super) async fn load_access(pool: &PgPool, user_id: &UserId) -> AccessData {
     AccessData {
         overview,
         rules_available: rules.is_ok(),
-        matrix: matrix
-            .inspect_err(|e| tracing::warn!(error = %e, "user detail: access matrix failed"))
-            .ok()
-            .flatten(),
-        rules: warn_empty(rules, "access rules"),
+        matrix: faults.take("access matrix", matrix),
+        rules: faults.take("access rules", rules),
     }
 }
 
-pub(super) async fn load_devices(pool: &PgPool, user_id: &UserId) -> Vec<UserDeviceRow> {
-    warn_empty(
-        repositories::users::enrolment::list_user_devices(pool, user_id).await,
+pub(super) async fn load_devices(
+    pool: &PgPool,
+    user_id: &UserId,
+    faults: &mut Faults,
+) -> Vec<UserDeviceRow> {
+    faults.take(
         "devices",
+        repositories::users::enrolment::list_user_devices(pool, user_id).await,
     )
 }
 
-pub(super) async fn load_sessions(pool: &PgPool, user_id: &UserId) -> Vec<SigninSessionRow> {
-    warn_empty(
-        repositories::users::sessions::list_signin_sessions(pool, user_id).await,
+pub(super) async fn load_sessions(
+    pool: &PgPool,
+    user_id: &UserId,
+    faults: &mut Faults,
+) -> Vec<SigninSessionRow> {
+    faults.take(
         "sign-in sessions",
+        repositories::users::sessions::list_signin_sessions(pool, user_id).await,
     )
 }
 
@@ -170,7 +179,7 @@ pub(super) struct UsageData {
 }
 
 
-pub(super) async fn load_usage(pool: &PgPool, user_id: &UserId) -> UsageData {
+pub(super) async fn load_usage(pool: &PgPool, user_id: &UserId, faults: &mut Faults) -> UsageData {
     let filter = ConversationFilter {
         user_id: Some(user_id.clone()),
         include_side_calls: true,
@@ -187,22 +196,11 @@ pub(super) async fn load_usage(pool: &PgPool, user_id: &UserId) -> UsageData {
         get_conversation_totals(pool, &filter),
     );
     UsageData {
-        summary: summary
-            .inspect_err(|e| tracing::warn!(error = %e, "user detail: usage summary failed"))
-            .unwrap_or_default(),
-        models: warn_empty(models, "top models"),
-        latest: latest
-            .inspect_err(|e| tracing::warn!(error = %e, "user detail: latest conversation failed"))
-            .unwrap_or_default(),
-        totals: totals
-            .inspect_err(|e| tracing::warn!(error = %e, "user detail: conversation totals failed"))
-            .unwrap_or_default(),
+        summary: faults.take("usage summary", summary),
+        models: faults.take("top models", models),
+        latest: faults.take("latest conversation", latest),
+        totals: faults.take("conversation totals", totals),
     }
-}
-
-fn warn_empty<T>(res: Result<Vec<T>, sqlx::Error>, what: &'static str) -> Vec<T> {
-    res.inspect_err(|e| tracing::warn!(error = %e, panel = what, "user detail: panel unavailable"))
-        .unwrap_or_default()
 }
 
 pub(super) struct Headline {
@@ -213,7 +211,11 @@ pub(super) struct Headline {
         Option<systemprompt_web_admin_core::repositories::scope::defaults::ScopeDefaults>,
 }
 
-pub(super) async fn load_headline(pool: &PgPool, user_id: &UserId) -> Headline {
+pub(super) async fn load_headline(
+    pool: &PgPool,
+    user_id: &UserId,
+    faults: &mut Faults,
+) -> Headline {
     let (profile, summary, defaults) = tokio::join!(
         systemprompt_web_admin_core::repositories::principal::role::find_user_access_profile(
             pool, user_id
@@ -226,16 +228,8 @@ pub(super) async fn load_headline(pool: &PgPool, user_id: &UserId) -> Headline {
         ),
     );
     Headline {
-        profile: profile
-            .inspect_err(|e| tracing::warn!(error = %e, "user detail: access profile unavailable"))
-            .ok()
-            .flatten(),
-        summary: summary
-            .inspect_err(|e| tracing::warn!(error = %e, "user detail: request summary unavailable"))
-            .unwrap_or_default(),
-        defaults: defaults
-            .inspect_err(|e| tracing::warn!(error = %e, "user detail: scope defaults unavailable"))
-            .ok()
-            .flatten(),
+        profile: faults.take("access profile", profile),
+        summary: faults.take("request summary", summary),
+        defaults: faults.take("scope defaults", defaults),
     }
 }

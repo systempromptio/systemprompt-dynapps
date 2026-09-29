@@ -10,6 +10,7 @@ use crate::repositories::analytics::requests::{
 use systemprompt_web_admin_core::repositories::scope::{ScopeRequest, SubjectScope};
 use systemprompt_web_admin_core::ssr::format::{format_cost, format_duration_ms};
 use systemprompt_web_admin_core::ssr::list_view::{ScopeFilterView, scope_filter_view};
+use systemprompt_web_admin_core::ssr::viewer_tz::viewer_tz;
 use systemprompt_web_admin_core::types::UserContext;
 use systemprompt_web_admin_core::util::time_range::TimeRange;
 
@@ -165,12 +166,12 @@ pub(super) fn request_row_to_json(r: &RequestRow) -> RequestListRowView {
         created_at: r.created_at.to_rfc3339(),
         created_at_time: r
             .created_at
-            .with_timezone(&chrono::Local)
+            .with_timezone(&viewer_tz())
             .format("%H:%M:%S")
             .to_string(),
         created_at_day: r
             .created_at
-            .with_timezone(&chrono::Local)
+            .with_timezone(&viewer_tz())
             .format("%Y-%m-%d")
             .to_string(),
     }

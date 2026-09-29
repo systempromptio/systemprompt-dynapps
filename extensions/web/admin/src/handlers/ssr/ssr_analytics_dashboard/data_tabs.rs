@@ -1,8 +1,9 @@
 //! Data collection for the five entity tabs.
 //!
 //! Each tab loads only its own queries, so opening Models never pays for the
-//! skill view. Every `Result` collapses into a logged empty default: one
-//! failing aggregate must degrade its own table, not take the page down.
+//! skill view. Every failed `Result` goes to the page's fault collector: one
+//! failing aggregate degrades its own table and is named on the page, rather
+//! than taking the page down.
 
 use sqlx::PgPool;
 
@@ -19,9 +20,8 @@ use crate::repositories::analytics::site::tools::{
     ToolServerRow, ToolStatsRow, list_tool_servers, list_tool_stats,
 };
 use crate::repositories::analytics::site::{SiteScope, distribution};
+use systemprompt_web_admin_core::ssr::faults::Faults;
 use systemprompt_web_admin_core::util::time_range::TimeRange;
-
-use super::data::unwrap_or_empty;
 
 #[derive(Default)]
 pub(super) struct TabData {
@@ -48,49 +48,50 @@ pub(super) struct TabPlan<'a> {
     pub axis: ContainerAxis,
 }
 
-pub(super) async fn load_models(pool: &PgPool, plan: &TabPlan<'_>) -> TabData {
+pub(super) async fn load_models(pool: &PgPool, plan: &TabPlan<'_>, faults: &mut Faults) -> TabData {
     let stats = list_model_stats(pool, plan.range, plan.scope).await;
     TabData {
-        models: unwrap_or_empty(stats, "list_model_stats"),
+        models: faults.take("model stats", stats),
         ..TabData::default()
     }
 }
 
-pub(super) async fn load_skills(pool: &PgPool, plan: &TabPlan<'_>) -> TabData {
+pub(super) async fn load_skills(pool: &PgPool, plan: &TabPlan<'_>, faults: &mut Faults) -> TabData {
     let (paged, totals) = tokio::join!(
         list_skill_stats(pool, plan.range, plan.scope, plan.limit, plan.offset),
         get_skill_totals(pool, plan.range, plan.scope),
     );
-    let (skills, skills_total) = unwrap_paged(paged, "list_skill_stats");
+    let (skills, skills_total) = faults.take("skill stats", paged);
     TabData {
         skills,
         skills_total,
-        skill_totals: totals.unwrap_or_else(|e| {
-            tracing::warn!(error = %e, "get_skill_totals failed");
-            SkillTotals::default()
-        }),
+        skill_totals: faults.take("skill totals", totals),
         ..TabData::default()
     }
 }
 
-pub(super) async fn load_tools(pool: &PgPool, plan: &TabPlan<'_>) -> TabData {
+pub(super) async fn load_tools(pool: &PgPool, plan: &TabPlan<'_>, faults: &mut Faults) -> TabData {
     let (servers, paged) = tokio::join!(
         list_tool_servers(pool, plan.range, plan.scope),
         list_tool_stats(pool, plan.range, plan.scope, plan.limit, plan.offset),
     );
-    let (tools, tools_total) = unwrap_paged(paged, "list_tool_stats");
+    let (tools, tools_total) = faults.take("tool stats", paged);
     TabData {
-        tool_servers: unwrap_or_empty(servers, "list_tool_servers"),
+        tool_servers: faults.take("tool servers", servers),
         tools,
         tools_total,
         ..TabData::default()
     }
 }
 
-pub(super) async fn load_sessions(pool: &PgPool, plan: &TabPlan<'_>) -> TabData {
+pub(super) async fn load_sessions(
+    pool: &PgPool,
+    plan: &TabPlan<'_>,
+    faults: &mut Faults,
+) -> TabData {
     let paged =
         list_session_costs_paged(pool, plan.range, plan.scope, plan.limit, plan.offset).await;
-    let (sessions, sessions_total) = unwrap_paged(paged, "list_session_costs_paged");
+    let (sessions, sessions_total) = faults.take("session costs", paged);
     TabData {
         sessions,
         sessions_total,
@@ -98,7 +99,7 @@ pub(super) async fn load_sessions(pool: &PgPool, plan: &TabPlan<'_>) -> TabData 
     }
 }
 
-pub(super) async fn load_cost(pool: &PgPool, plan: &TabPlan<'_>) -> TabData {
+pub(super) async fn load_cost(pool: &PgPool, plan: &TabPlan<'_>, faults: &mut Faults) -> TabData {
     let (days, providers, models, containers) = tokio::join!(
         list_provider_cost_by_day(pool, plan.range, plan.scope),
         list_provider_costs(pool, plan.range, plan.scope),
@@ -106,9 +107,10 @@ pub(super) async fn load_cost(pool: &PgPool, plan: &TabPlan<'_>) -> TabData {
         list_container_usage(pool, plan.range, plan.scope, plan.axis),
     );
     TabData {
-        cost_days: unwrap_or_empty(days, "list_provider_cost_by_day"),
-        cost_providers: unwrap_or_empty(providers, "list_provider_costs"),
-        cost_models: unwrap_or_empty(models, "list_model_distribution")
+        cost_days: faults.take("cost by day", days),
+        cost_providers: faults.take("cost by provider", providers),
+        cost_models: faults
+            .take("cost by model", models)
             .into_iter()
             .map(|m| SupplierCostRow {
                 label: m.model,
@@ -117,14 +119,7 @@ pub(super) async fn load_cost(pool: &PgPool, plan: &TabPlan<'_>) -> TabData {
                 cost_microdollars: m.cost_microdollars,
             })
             .collect(),
-        cost_containers: unwrap_or_empty(containers, "list_container_usage"),
+        cost_containers: faults.take("cost by container", containers),
         ..TabData::default()
     }
-}
-
-fn unwrap_paged<T>(res: Result<(Vec<T>, i64), sqlx::Error>, what: &'static str) -> (Vec<T>, i64) {
-    res.unwrap_or_else(|e| {
-        tracing::warn!(error = %e, query = what, "paged dashboard query failed");
-        (Vec::new(), 0)
-    })
 }

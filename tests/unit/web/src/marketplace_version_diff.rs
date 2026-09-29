@@ -3,7 +3,7 @@
 //! plugins likewise; a first version diffs against nothing.
 
 use systemprompt::identifiers::{MarketplaceId, PluginId, SkillId};
-use systemprompt_web_admin::test_support::{Change, manifest_diff};
+use systemprompt_web_admin_catalog::test_support::{Change, manifest_diff};
 use systemprompt_web_admin_core::repositories::sync::marketplace_hash::{
     MarketplaceManifest, PluginManifest, SkillManifest,
 };

@@ -6,12 +6,12 @@ use serde::Serialize;
 use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 
 use crate::handlers::ssr::analysis::help::HelpView;
-use crate::handlers::ssr::analysis::tone::{completion_tone, score_display};
 use crate::repositories::analysis::reports::{AnalysisReportRow, DigestTotals, Evidence};
 use systemprompt_web_admin_core::ssr::format::{
     format_cost, format_token_total, local_time, relative_time,
 };
 use systemprompt_web_admin_core::ssr::list_view::SelectOptionView;
+use systemprompt_web_admin_core::ssr::tone::{completion_tone, score_display};
 
 use super::REPORTS_URL;
 

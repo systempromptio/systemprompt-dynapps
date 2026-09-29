@@ -7,7 +7,12 @@ kind: "guide"
 public: true
 tags: ["documentation", "getting-started", "bridge"]
 published_at: "2026-09-09"
-updated_at: "2026-09-09"
+updated_at: "2026-09-29"
+keywords: "cowork, claude desktop, bridge, gateway, desktop profile, connectors, google workspace, agent search"
+after_reading_this:
+  - "Install the Desktop profile that points Cowork at the Astound gateway"
+  - "Verify a Cowork request reached the gateway"
+  - "Connect Google Workspace and other personal connectors"
 related_playbooks:
   - title: "Connect Claude Code"
     url: "/documentation/connect-claude-code"
@@ -92,6 +97,26 @@ astound-bridge doctor
 ```
 
 A connected bridge or visible plugin does not, by itself, prove that a Cowork model request reached the gateway. Initial session-dependent checks may need a Cowork session before they can report useful results.
+
+## 4. Connect your own accounts (optional)
+
+Some tools act as *you* against another system, so they need your own
+authorization, once, on [Connectors](/admin/connectors). Each row shows
+whether it is connected, the account it is connected as, and a **Test**
+button that lists the tools you can call. Disconnecting removes the
+credential from every enrolled device.
+
+**Google Workspace** (`google_workspace`) searches Google Drive, Gmail and
+Calendar live through Google Agent Search. Nothing is copied into the
+platform: Google filters every result to what your own Google account can
+already open, so two people asking the same question can get different
+answers. The connector appears for the `uk` and `business-users` groups;
+if you do not see it, ask your administrator. Connect it with your
+Astound Google account and accept the consent screen — the row then reads
+*Google Workspace · Connected* with your address.
+
+Atlassian (Jira and Confluence) and Salesforce connect the same way; see
+[Salesforce](/documentation/salesforce) for the Salesforce specifics.
 
 ## Troubleshooting
 

@@ -25,6 +25,7 @@ mod middleware;
 pub mod repositories;
 mod routes;
 pub(crate) mod services;
+pub mod sign_out;
 
 use std::sync::Arc;
 
@@ -45,18 +46,10 @@ pub use handlers::salesforce_auth::{SalesforceConfig, SalesforceDeps, Salesforce
 pub use routes::{admin_ssr_router, bridge_auth_ssr_router};
 pub use services::salesforce_orgs::salesforce_orgs_boot_check;
 pub use services::{connector_oauth, identity_token, salesforce_orgs};
+pub use systemprompt_web_admin_catalog::routes::share::share_manifest_router;
 use systemprompt_web_admin_core::state::StateError;
 
 pub mod test_support {
-    pub use crate::handlers::catalog::mcp::status_of;
-    pub use crate::handlers::catalog::sorting::{
-        direction, matches, preserved_search, sort_headers,
-    };
-
-    pub use crate::handlers::ssr::analysis::marketplace_versions::diff::{
-        Change, ManifestDiff, SkillChange, diff as manifest_diff,
-    };
-
     pub use crate::handlers::ssr::analysis::{SkillRef, parse_skill_key};
     pub use crate::handlers::ssr::ssr_connectors_cards::{
         ConnectorCardView, card as connector_card,
@@ -110,15 +103,6 @@ pub fn salesforce_api_router(deps: SalesforceDeps) -> Router {
             get(handlers::salesforce_auth::salesforce_token_handler),
         )
         .layer(Extension(deps))
-}
-
-pub fn share_manifest_router(pool: Arc<PgPool>) -> Router {
-    Router::new()
-        .route(
-            "/share/manifest/{token}",
-            get(handlers::share::public_manifest_handler),
-        )
-        .with_state(pool)
 }
 
 pub fn secrets_router(pool: Arc<PgPool>) -> Router {

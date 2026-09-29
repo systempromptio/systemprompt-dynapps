@@ -68,4 +68,12 @@
     font-weight: 600;
 }
 
+.sp-p-connect__section .sp-table__el tbody tr.is-active {
+    background: var(--sp-bg-accent-wash);
+}
+
+.sp-p-connect__section .sp-table__el tbody tr.is-active td:first-child {
+    box-shadow: inset 2px 0 0 var(--sp-accent);
+}
+
 }

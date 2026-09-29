@@ -7,7 +7,11 @@ kind: "reference"
 public: true
 tags: ["documentation", "getting-started", "bridge"]
 published_at: "2026-09-02"
-updated_at: "2026-09-11"
+updated_at: "2026-09-29"
+keywords: "downloads, bridge, checksum, sha-256, release, macos, windows, linux"
+after_reading_this:
+  - "Download the right bridge build for your platform"
+  - "Verify its SHA-256 checksum before installing"
 related_playbooks:
   - title: "Connect Claude Code"
     url: "/documentation/connect-claude-code"

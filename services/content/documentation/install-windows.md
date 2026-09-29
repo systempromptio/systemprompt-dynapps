@@ -7,7 +7,12 @@ kind: "guide"
 public: true
 tags: ["documentation", "getting-started", "bridge"]
 published_at: "2026-09-09"
-updated_at: "2026-09-11"
+updated_at: "2026-09-29"
+keywords: "windows, powershell, claude code, bridge, install, cowork, wsl"
+after_reading_this:
+  - "Install Claude Code and the bridge on native Windows"
+  - "Enrol Claude Code and verify routing and tools"
+  - "Know when to use Cowork or WSL instead"
 related_playbooks:
   - title: "Connect Claude Code"
     url: "/documentation/connect-claude-code"

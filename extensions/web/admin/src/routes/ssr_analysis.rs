@@ -12,10 +12,7 @@ use std::sync::Arc;
 
 pub(super) fn routes() -> Router<Arc<PgPool>> {
     Router::new()
-        .route(
-            "/analysis/inventory/sync",
-            post(handlers::ssr::analysis::inventory_actions::sync_inventory),
-        )
+        .merge(systemprompt_web_admin_catalog::routes::ssr::analysis_routes())
         .route(
             "/analysis/skills",
             get(handlers::ssr::analysis::skills::page),
@@ -23,22 +20,6 @@ pub(super) fn routes() -> Router<Arc<PgPool>> {
         .route(
             "/analysis/skills/{skill}",
             get(handlers::ssr::analysis::skill_page),
-        )
-        .route(
-            "/analysis/inventory/{entry_id}/bind",
-            post(handlers::ssr::analysis::inventory_actions::bind),
-        )
-        .route(
-            "/analysis/versions",
-            get(handlers::ssr::analysis::marketplace_versions::landing_page),
-        )
-        .route(
-            "/analysis/versions/{marketplace_id}",
-            get(handlers::ssr::analysis::marketplace_versions::detail_page),
-        )
-        .route(
-            "/analysis/revisions/{id}",
-            get(handlers::ssr::analysis::revisions::revision_page),
         )
         .route(
             "/analysis/conversations",
@@ -72,13 +53,5 @@ pub(super) fn routes() -> Router<Arc<PgPool>> {
         .route(
             "/analysis/conversations/{context_id}/judge",
             post(handlers::ssr::analysis::conversation_detail::judge_now),
-        )
-        .route(
-            "/analysis/publications/review",
-            post(handlers::ssr::analysis::lifecycle::review),
-        )
-        .route(
-            "/analysis/publications/withdrawals",
-            post(handlers::ssr::analysis::lifecycle::decide_withdrawal),
         )
 }

@@ -22,7 +22,7 @@
                 {{#each window_inputs}}<input type="hidden" name="{{this.name}}" value="{{this.value}}">{{/each}}
                 <label class="sp-u-sr-only" for="history-q">Search conversation history</label>
                 <input type="search" id="history-q" name="q" value="{{search_query}}" class="sp-search-input"
-                       placeholder="Search prompts and responses…">
+                       placeholder="Search titles, prompts, ids and models…">
                 <button type="submit" class="sp-btn sp-btn--sm sp-btn--primary">Search</button>
                 {{#if search_query}}<a href="{{base_url}}" class="sp-btn sp-btn--sm sp-btn--outline">Clear</a>{{/if}}
             </form>

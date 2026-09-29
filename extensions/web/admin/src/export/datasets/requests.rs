@@ -11,7 +11,7 @@ use systemprompt_web_admin_core::export::model::{
     Cell, CellKind, Column, DataSet, ExportContext, Table, Window,
 };
 use systemprompt_web_admin_core::export::registry::DataSetRegistration;
-use systemprompt_web_admin_core::util::time_range::{TimeRange, TimeRangePreset};
+use systemprompt_web_admin_core::export::window::time_range;
 
 pub(crate) struct Requests;
 
@@ -76,16 +76,6 @@ fn row(r: &RequestRow) -> Vec<Cell> {
         Cell::opt_text(r.trace_id.as_ref().map(TraceId::as_str)),
         Cell::opt_text(r.error_message.as_deref()),
     ]
-}
-
-pub(crate) fn time_range(ctx: &ExportContext<'_>) -> AdminResult<TimeRange> {
-    let w = ctx.window()?;
-    Ok(TimeRange {
-        from: w.from,
-        to: w.to,
-        preset: TimeRangePreset::Custom,
-        rejected_bounds: false,
-    })
 }
 
 #[async_trait]

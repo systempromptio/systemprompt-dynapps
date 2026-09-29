@@ -70,7 +70,7 @@ impl App {
         // Handlebars strict mode: templates read `branding.*`, so an engine
         // without branding 500s on every page the server renders fine.
         let branding = systemprompt_web_extension::branding_config();
-        let engine = admin::templates::AdminTemplateEngine::new(&admin_dir)
+        let engine = systemprompt_web_admin_core::templates::AdminTemplateEngine::new(&admin_dir)
             .expect("build the admin template engine from storage/files/admin")
             .with_branding(branding);
 

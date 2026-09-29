@@ -32,7 +32,9 @@ use systemprompt_web_admin_core::repositories::filter_options::{
 };
 use systemprompt_web_admin_core::repositories::scope::{ScopeRequest, SubjectScope};
 use systemprompt_web_admin_core::ssr::entity_urls::session_detail_url;
+use systemprompt_web_admin_core::ssr::faults::Faults;
 use systemprompt_web_admin_core::ssr::format::short_id;
+use systemprompt_web_admin_core::ssr::helpers::Viewer;
 use systemprompt_web_admin_core::ssr::list_view::PageWindow;
 use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 use systemprompt_web_admin_core::types::UserContext;
@@ -90,24 +92,26 @@ pub(crate) async fn sessions_list_page(
     )
     .await?;
 
+    let mut faults = Faults::new();
     let ctx = load_sessions_data(
         &pool,
-        &shell.user,
         SessionScope {
+            user: &shell.user,
             request: &request,
             subjects,
         },
         &query,
         SessionWindow { range, page },
+        &mut faults,
     )
     .await;
     Ok(
-        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+        systemprompt_web_admin_core::ssr::helpers::render_page_with_faults(
             &shell.engine,
             "sessions",
             &ctx,
-            &shell.user,
-            &shell.marketplace,
+            Viewer::new(&shell.user, &shell.marketplace),
+            &faults,
         ),
     )
 }
@@ -119,6 +123,7 @@ struct SessionWindow {
 }
 
 struct SessionScope<'a> {
+    user: &'a UserContext,
     request: &'a ScopeRequest,
     subjects: SubjectScope,
 }
@@ -137,6 +142,7 @@ async fn load_sessions(
     scope: &SessionScope<'_>,
     query: &SessionListQuery,
     window: SessionWindow,
+    faults: &mut Faults,
 ) -> LoadedSessions {
     let SessionWindow { range, page } = window;
     let filter = ConversationFilter {
@@ -169,17 +175,9 @@ async fn load_sessions(
         get_filter_options(pool, range),
     );
     LoadedSessions {
-        result: list_res.unwrap_or_else(|e| {
-            tracing::warn!(error = %e, "load_conversation_page failed");
-            ConversationPageResult::default()
-        }),
-        previous: totals_res.unwrap_or_else(|e| {
-            tracing::warn!(error = %e, "get_conversation_totals failed");
-            ConversationTotals::default()
-        }),
-        options: options_res
-            .inspect_err(|e| tracing::warn!(error = %e, "get_filter_options failed"))
-            .unwrap_or_default(),
+        result: faults.take("conversation page", list_res),
+        previous: faults.take("previous-window totals", totals_res),
+        options: faults.take("filter options", options_res),
         filter,
         sort,
         descending,
@@ -188,13 +186,13 @@ async fn load_sessions(
 
 async fn load_sessions_data(
     pool: &PgPool,
-    user_ctx: &UserContext,
     scope: SessionScope<'_>,
     query: &SessionListQuery,
     window: SessionWindow,
+    faults: &mut Faults,
 ) -> SessionsListPageContext {
     let SessionWindow { range, page } = window;
-    let loaded = load_sessions(pool, &scope, query, window).await;
+    let loaded = load_sessions(pool, &scope, query, window, faults).await;
     let items = loaded.result.conversations;
     let current = loaded.result.totals;
     let total = current.conversations;
@@ -226,7 +224,7 @@ async fn load_sessions_data(
             BreadcrumbView::link("AI activity", "/admin/analytics"),
             BreadcrumbView::current("Sessions"),
         ],
-        current: current_session_view(user_ctx),
+        current: current_session_view(scope.user),
         time_range: view::time_range_context(range, &preset),
         filter_ribbon: FilterRibbon {
             base_url: BASE_URL,
@@ -239,7 +237,7 @@ async fn load_sessions_data(
         },
         scope_filter: view::scope_filter(
             pool,
-            user_ctx,
+            scope.user,
             &view::SessionScopeFilterArgs {
                 request: scope.request,
                 query,

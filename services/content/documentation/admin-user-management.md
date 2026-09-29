@@ -3,16 +3,17 @@ title: "Create & Manage Users"
 description: "Every way to create and manage users beyond SSO: admin CLI, bulk creation, operator provisioning, roles, and conversational admin via the systemprompt MCP server."
 author: "Astound Digital"
 slug: "admin-user-management"
-keywords: "users, create user, bulk users, roles, promote, admin, user management, passkey, registration, systemprompt mcp, csv"
+keywords: "users, create user, bulk users, roles, role table, entitlement roles, marketplace participation, promote, admin, user management, systemprompt mcp, csv"
 kind: "guide"
 public: true
 tags: ["documentation", "admin", "users"]
 published_at: "2026-08-19"
-updated_at: "2026-09-11"
+updated_at: "2026-09-29"
 after_reading_this:
   - "Create a user from the CLI and get them connected"
   - "Bulk-create users from a CSV"
   - "Grant and revoke the admin role"
+  - "Tell console roles from entitlement roles, and what marketplace participation opens"
   - "Manage users conversationally through the systemprompt MCP server"
 related_playbooks:
   - title: "Authentication"
@@ -92,47 +93,81 @@ per user as they onboard.
 
 ## Roles
 
-Six roles ship.
+This is the one role table for the installation; other pages link here. The
+set is closed — `Role` in `extensions/web/shared/admin-core/src/types/role.rs`
+owns the spelling — and seven roles ship.
 
-| Role | Sees | Can change |
-|---|---|---|
-| `user` | Their own profile, conversations and connected clients | Their own settings |
-| `developer` | Everything `user` sees; marks the account as an engineer | Their own settings |
-| `knowledge_worker` | Everything `user` sees, plus the Cowork workspace and the Salesforce MCP server | Their own settings |
-| `project_manager` | Every page of the admin dashboard, across every project | Nothing |
-| `admin` | Everything, plus the admin console and the `systemprompt` MCP server | Everything |
-| `platform_admin` | Everything `admin` sees | Everything, plus AD mappings and `platform_admin` itself |
+| Role | Kind | Admin console | What it opens |
+|---|---|---|---|
+| `user` | baseline | No (participation only) | Own profile, history, connectors and connected clients |
+| `developer` | entitlement | No (participation only) | Whatever `rules.yaml` allows to `role: [developer]` — engineering marketplaces and MCP servers |
+| `knowledge_worker` | entitlement | No (participation only) | Whatever `rules.yaml` allows to `role: [knowledge_worker]` — the Cowork workspace, business skills |
+| `project_manager` | entitlement | No (participation only) | Whatever `rules.yaml` allows to `role: [project_manager]`; nothing on the admin plane |
+| `super_admin` | entitlement | No | The `astound-super-admin` marketplace, its plugin, the admin skills and the `systemprompt` MCP server |
+| `admin` | console | Yes, unscoped | Every admin page and write action |
+| `platform_admin` | console | Yes, unscoped | Everything `admin` has, plus moving `platform_admin` / `super_admin` |
 
-`developer` and `knowledge_worker` are entitlement roles: they decide which
-marketplace workspace and MCP servers reach a person, and open nothing on the
-admin dashboard. The directory grants them — `Systemprompt-Commerce` and
-`Systemprompt-Core` map to `developer`, `Systemprompt-Business` to
-`knowledge_worker` — and an admin can also grant them by hand.
+Only `admin` and `platform_admin` are console roles (`ROLES_CONSOLE`). They
+see the whole instance, unscoped. Every other role is an **entitlement role**:
+it decides which marketplaces, plugins, skills and MCP servers reach a person
+through [Access Control](/documentation/access-control), and opens nothing on
+the admin dashboard by itself.
 
-`project_manager` is the semi-admin role for people who need the whole picture
-without the controls. They reach users, access, analytics, conversations,
-traces, reports and the catalog for every project, and every write action is
-refused: no user or role edit, no access-control rule change, no gateway
-configuration, no device enrolment. They are also outside the admin control
-plane, so they get neither the `systemprompt` MCP server, nor the
-`astound-admin` plugin, nor the admin skills.
+### Console access by marketplace participation
+
+Anyone else reaches the console through **marketplace participation**: when a
+marketplace's allow rule in `services/access-control/rules.yaml` names a group
+or project the person belongs to, they participate in that marketplace. A
+participant gets a scoped console:
+
+- **Analysis → Conversations** and **Analysis → Versions**, narrowed to the
+  people in the groups and projects their marketplaces name, and to those
+  marketplaces' versions.
+- **Code sync** (`/admin/sync`) for the bundles that own their marketplaces,
+  with each apply scoped to that marketplace.
+- The session, request, trace and conversation detail pages those views link
+  to. A detail page outside their view returns 404.
+
+Every other admin route redirects a participant to their profile. A person
+who participates in no marketplace sees only their account pages (`/admin/profile`,
+`/admin/history`, `/admin/connect`, `/admin/connectors`). The allowlists are
+`ACCOUNT_PATHS` and `PARTICIPANT_PATHS` in
+`extensions/web/shared/admin-core/src/middleware/gates.rs`.
+
+So a project manager sees the conversations and versions of the marketplaces
+their groups and projects participate in — not every project, and never a
+write action on users, roles, access rules or gateway configuration. They do
+not get the `systemprompt` MCP server, the `astound-super-admin` plugin or the
+admin skills.
+
+### Where roles come from
+
+Roles have two halves, recomputed together on `users.roles`:
+
+- **Directory half** — projected from AD groups on **every** sign-in
+  (replace, not union). `Systemprompt-Admins` → `platform_admin, admin`;
+  `Systemprompt-Commerce` and `Systemprompt-Core` → `developer`;
+  `Systemprompt-Business` → `knowledge_worker`; `Systemprompt-ProjectManagers-*`
+  → `project_manager`. Everyone also gets `user`. The map is `group_roles` and
+  `group_role_patterns` in `services/web/config/adfs.yaml`; see
+  [Set Up Astound SSO (AD FS)](/documentation/adfs-sso-setup).
+- **Manual half** — granted by an admin on `/admin/roles`, on a user's detail
+  page (`/admin/users/<id>`), or from the CLI. A manual grant survives sign-in;
+  a directory role cannot be revoked by hand — remove the AD group instead.
 
 ```bash
 systemprompt admin users role promote jane@example.com   # grant admin
 systemprompt admin users role demote jane@example.com    # revoke admin
-systemprompt admin users role assign jane@example.com project_manager
+systemprompt admin users role assign jane@example.com knowledge_worker
 ```
 
-Roles are also assignable from the checkbox picker on a user's detail page at
-`/admin/access/users`, and each role a user holds shows as a badge on the
-roster. Where Astound SSO is the login, directory-sourced roles are replaced at every sign-in while manual grants survive: `Systemprompt-ProjectManagers-*`
-grants `project_manager`. See
-[Set Up Astound SSO (AD FS)](/documentation/adfs-sso-setup).
+Only a platform admin may grant or remove `platform_admin` or `super_admin`,
+and the last platform admin cannot be demoted (`handlers/roles.rs`).
 
-Role checks are read from the user record per request, so revocation is
-immediate. The OAuth *scope* in a session token, however, is fixed when the
-token is issued — a freshly promoted admin must **sign out and back in** (and
-re-link the bridge) before admin surfaces appear.
+Role checks read the user record on every request, so revocation is
+immediate. The OAuth *scope* in a session token is fixed when the token is
+issued — a freshly promoted admin must **sign out and back in** (and re-link
+the bridge) before admin surfaces appear.
 
 ## Conversational admin: the systemprompt MCP server
 
@@ -154,10 +189,19 @@ Three properties make this safe:
 
 For non-admins the server is simply absent — nothing to misconfigure.
 
-## Where's the web UI for this?
+## The users page
 
-User *creation* is CLI-first (and MCP-conversational) by design; the admin
-dashboard shows users, sessions, activity, and costs. See
-[Dashboard Usage](/documentation/dashboard). If your team prefers clicking to
-typing, the MCP route above is the practical middle ground: type what you
-want, review, done.
+`/admin/users` is the roster. The KPI strip across the top doubles as filters:
+**Accounts**, **Enabled**, **Unassigned** (no group), **No role** (no grant
+beyond `user`), **Idle 30d** (not seen by any signal — provisioned but unused),
+plus 30-day gateway cost and request counts. Every filter exports to CSV.
+
+A user's detail page (`/admin/users/<id>`) holds their roles, groups and
+projects, sessions (revoke from here), and a **Usage** tab with their
+requests, cost and conversations.
+
+**New user** creates an account from the browser only when
+`auto_provision: false` in `services/web/config/adfs.yaml`. This installation
+runs with `auto_provision: true` — the AD group is the invitation — so the
+button is disabled and explains why. The CLI and the MCP route above work
+either way.

@@ -22,10 +22,11 @@ use systemprompt_web_admin_core::repositories::filter_options::{
     FilterOptions, get_filter_options,
 };
 use systemprompt_web_admin_core::repositories::scope::{ScopeRequest, SubjectScope};
+use systemprompt_web_admin_core::ssr::faults::Faults;
+use systemprompt_web_admin_core::ssr::helpers::Viewer;
 use systemprompt_web_admin_core::ssr::list_view;
 use systemprompt_web_admin_core::types::UserContext;
 use systemprompt_web_admin_core::util::time_range::{TimeRange, TimeRangeQuery, parse_time_range};
-
 
 mod context;
 pub(crate) mod export;
@@ -86,24 +87,26 @@ pub(crate) async fn perf_traces_page(
         &pool, &request,
     )
     .await?;
+    let mut faults = Faults::new();
     let ctx = load_traces_data(
         &pool,
-        &shell.user,
         TraceScope {
+            user: &shell.user,
             request: &request,
             subjects: scope,
         },
         &query,
         window,
+        &mut faults,
     )
     .await;
     Ok(
-        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+        systemprompt_web_admin_core::ssr::helpers::render_page_with_faults(
             &shell.engine,
             "perf-traces",
             &ctx,
-            &shell.user,
-            &shell.marketplace,
+            Viewer::new(&shell.user, &shell.marketplace),
+            &faults,
         ),
     )
 }
@@ -114,6 +117,7 @@ struct TraceWindow {
 }
 
 struct TraceScope<'a> {
+    user: &'a UserContext,
     request: &'a ScopeRequest,
     subjects: SubjectScope,
 }
@@ -128,38 +132,30 @@ struct TraceRead {
 async fn load_traces(
     pool: &PgPool,
     filter: TraceFilter<'_>,
-    subject_ids: Option<&[String]>,
     range: TimeRange,
     trace_page: TracePage,
+    faults: &mut Faults,
 ) -> TraceRead {
     let (list_res, stats_res, options_res) = tokio::join!(
         list_traces(pool, filter, range, trace_page),
-        get_trace_stats(pool, range, subject_ids, filter.include_lifecycle),
+        get_trace_stats(pool, range, filter.subject_ids, filter.include_lifecycle),
         get_filter_options(pool, range),
     );
-    let (rows, total) = list_res.unwrap_or_else(|e| {
-        tracing::warn!(error = %e, "list_traces failed");
-        (Vec::new(), 0)
-    });
+    let (rows, total) = faults.take("trace list", list_res);
     TraceRead {
         rows,
         total,
-        stats: stats_res.unwrap_or_else(|e| {
-            tracing::warn!(error = %e, "get_trace_stats failed");
-            TraceStats::default()
-        }),
-        options: options_res
-            .inspect_err(|e| tracing::warn!(error = %e, "get_filter_options failed"))
-            .unwrap_or_default(),
+        stats: faults.take("trace stats", stats_res),
+        options: faults.take("filter options", options_res),
     }
 }
 
 async fn load_traces_data(
     pool: &PgPool,
-    user_ctx: &UserContext,
     scope: TraceScope<'_>,
     query: &TraceListQuery,
     window: TraceWindow,
+    faults: &mut Faults,
 ) -> PerfTracesPageContext {
     let TraceWindow { range, page } = window;
     let preset = preset_str(query, range);
@@ -170,7 +166,7 @@ async fn load_traces_data(
         limit: DEFAULT_PAGE_SIZE,
         offset: page * DEFAULT_PAGE_SIZE,
     };
-    let read = load_traces(pool, filter, scope.subjects.as_sql(), range, trace_page).await;
+    let read = load_traces(pool, filter, range, trace_page, faults).await;
 
     let trace_rows: Vec<rows::TraceRow> = read.rows.iter().map(rows::trace_to_json).collect();
     let has_traces = !trace_rows.is_empty();
@@ -185,7 +181,7 @@ async fn load_traces_data(
     let sort_dir = view::sort_dir_to_str(sort.dir);
     let scope_filter = view::scope_filter(
         pool,
-        user_ctx,
+        scope.user,
         &view::TraceScopeFilterArgs {
             request: scope.request,
             query,

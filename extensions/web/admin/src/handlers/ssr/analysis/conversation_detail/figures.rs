@@ -1,13 +1,13 @@
 //! The KPI tiles and the per-turn charts of the conversation detail page.
 
 use super::views::ConversationKpiView;
-use crate::handlers::ssr::analysis::tone::{
-    cache_tone, deny_tone, error_rate_tone, latency_tone, percent, safety_tone,
-};
 use crate::repositories::analysis::conversations::ConversationFacts;
 use crate::repositories::analysis::conversations::planes::ConversationTurnRow;
 use systemprompt_web_admin_core::ssr::format::{
     format_cost, format_duration_ms, format_token_total,
+};
+use systemprompt_web_admin_core::ssr::tone::{
+    cache_tone, deny_tone, error_rate_tone, latency_tone, percent, safety_tone,
 };
 use systemprompt_web_admin_core::ssr::types::svg_line::{
     Plot, SvgLineChartView, SvgSeriesInput, chart_on_axis,

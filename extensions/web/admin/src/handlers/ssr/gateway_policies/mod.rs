@@ -29,6 +29,7 @@ use systemprompt_web_admin_core::activity;
 use systemprompt_web_admin_core::activity::NewActivity;
 use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
 use systemprompt_web_admin_core::request::require_write_origin;
+use systemprompt_web_admin_core::ssr::flash::{FlashTone, redirect_with_flash};
 use systemprompt_web_admin_core::ssr::page::Page;
 use systemprompt_web_admin_core::ssr::sync_plane::{is_sync_tab, plane_card_by_id, sync_tab};
 use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
@@ -38,8 +39,6 @@ pub(crate) const BASE_URL: &str = "/admin/gateway/policies";
 
 #[derive(Debug, Default, Deserialize)]
 pub(crate) struct PoliciesQuery {
-    pub saved: Option<String>,
-    pub error: Option<String>,
     pub tab: Option<String>,
 }
 
@@ -139,8 +138,6 @@ pub(crate) async fn gateway_policies_page(
         can_write: page.user.is_admin,
         policies,
         new_policy: new_policy_view(),
-        saved: query.saved,
-        error: query.error,
         month_sentinel: GatewayPoliciesPageData::month_sentinel(),
         quotas_url: "/admin/governance/quotas",
         sync_url: "/admin/gateway/policies?tab=sync",
@@ -157,11 +154,18 @@ pub(crate) async fn gateway_policies_page(
     )
 }
 
-fn back_with(param: &str, value: &str) -> Redirect {
-    Redirect::to(&format!(
-        "{BASE_URL}?{param}={}",
-        urlencoding::encode(value)
-    ))
+fn saved(name: &str) -> Redirect {
+    redirect_with_flash(
+        BASE_URL,
+        FlashTone::Ok,
+        &format!(
+            "Policy '{name}' is written. The gateway reads it on the next request; a cached policy lasts at most sixty seconds."
+        ),
+    )
+}
+
+fn not_saved(reason: &str) -> Redirect {
+    redirect_with_flash(BASE_URL, FlashTone::Err, &format!("Not saved: {reason}"))
 }
 
 pub(crate) async fn save_gateway_policy(
@@ -173,7 +177,7 @@ pub(crate) async fn save_gateway_policy(
     require_admin_write(&page, &headers)?;
     let parsed = match parse_policy_form(&fields) {
         Ok(p) => p,
-        Err(e) => return Ok(back_with("error", &e.to_string())),
+        Err(e) => return Ok(not_saved(&e.to_string())),
     };
     upsert_policy(
         &pool,
@@ -191,7 +195,7 @@ pub(crate) async fn save_gateway_policy(
         NewActivity::gateway_policy_saved(&page.user.user_id, &parsed.name, false),
     )
     .await;
-    Ok(back_with("saved", &parsed.name))
+    Ok(saved(&parsed.name))
 }
 
 #[derive(Debug, Deserialize)]
@@ -209,18 +213,22 @@ pub(crate) async fn delete_gateway_policy(
     require_admin_write(&page, &headers)?;
     let name = form.name.trim();
     if name.is_empty() {
-        return Ok(back_with("error", "a policy name is required to delete"));
+        return Ok(not_saved("a policy name is required to delete"));
     }
     let deleted = delete_policy(&pool, name)
         .await
         .map_err(AdminError::Database)?;
     if deleted == 0 {
-        return Ok(back_with("error", &format!("no policy named '{name}'")));
+        return Ok(not_saved(&format!("no policy named '{name}'")));
     }
     activity::record(
         &pool,
         NewActivity::gateway_policy_saved(&page.user.user_id, name, true),
     )
     .await;
-    Ok(back_with("saved", name))
+    Ok(redirect_with_flash(
+        BASE_URL,
+        FlashTone::Ok,
+        &format!("Policy '{name}' deleted. The gateway stops applying it within a minute."),
+    ))
 }

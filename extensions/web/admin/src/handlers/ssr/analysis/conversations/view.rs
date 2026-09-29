@@ -9,14 +9,14 @@ use serde::Serialize;
 use super::continuation::{ContinuationView, row_title};
 use super::row_facts::RowFacts;
 use super::summary::{category_label, outcome_label, outcome_tone};
-use crate::handlers::ssr::analysis::tone::{
-    cache_tone, deny_tone, error_rate_tone, latency_tone, safety_tone, score_tone,
-};
 use systemprompt_web_admin_core::ssr::analysis_urls::{
     analysis_conversation_url, analysis_skill_url,
 };
 use systemprompt_web_admin_core::ssr::format::{
     ClientChipView, client_chip, format_cost, format_duration_ms, format_token_total,
+};
+use systemprompt_web_admin_core::ssr::tone::{
+    cache_tone, deny_tone, error_rate_tone, latency_tone, safety_tone, score_tone,
 };
 use systemprompt_web_admin_core::ssr::types::sparkline::{SparklineView, sparkline_toned};
 

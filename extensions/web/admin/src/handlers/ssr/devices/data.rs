@@ -4,10 +4,11 @@
 //! credential tabs are in `credentials.rs` and use the same helpers.
 //! Every loader reads twice: a page of people with their totals, then the
 //! items belonging to the people on that page, stitched back under them in
-//! order. A read that fails degrades to an empty tab rather than an error
-//! page: the KPI strip above it comes from different statements and is still
-//! worth showing, and a fleet page that refuses to render because one of four
-//! tables was slow is worse than one that says a tab is empty.
+//! order. A read that fails renders an empty tab and is listed on the page
+//! as unavailable rather than becoming an error page: the KPI strip above it
+//! comes from different statements and is still worth showing, and a fleet
+//! page that refuses to render because one of four tables was slow is worse
+//! than one that says which tab could not be read.
 
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
@@ -17,6 +18,7 @@ use crate::repositories::devices::sessions::{
     self, BridgeHostRow, BridgeUserSessionsRow, SessionQuery,
 };
 use systemprompt_web_admin_core::repositories::bridge::presence::bridge_presence;
+use systemprompt_web_admin_core::ssr::faults::Faults;
 use systemprompt_web_admin_core::ssr::format::{format_token_total, short_num};
 
 use super::context::{BridgeHostRowView, CellView, UserGroupView};
@@ -100,16 +102,17 @@ pub(super) const fn rollup_state(active: i64, any_revoked: bool) -> (&'static st
 pub(super) async fn load_sessions(
     pool: &PgPool,
     query: SessionQuery<'_>,
+    faults: &mut Faults,
 ) -> (Vec<UserGroupView>, i64) {
-    let (users, total) = sessions::list_bridge_users_paged(pool, query)
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, "bridge user listing failed"))
-        .unwrap_or_default();
+    let (users, total) = faults.take(
+        "bridge users",
+        sessions::list_bridge_users_paged(pool, query).await,
+    );
     let user_ids = ids(users.iter().map(|u| u.user_id.clone()));
-    let hosts = sessions::list_bridge_hosts_for_users(pool, &user_ids, query.stale_only)
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, "bridge host listing failed"))
-        .unwrap_or_default();
+    let hosts = faults.take(
+        "bridge hosts",
+        sessions::list_bridge_hosts_for_users(pool, &user_ids, query.stale_only).await,
+    );
     let groups = users
         .iter()
         .map(|user| session_group(user, &hosts))

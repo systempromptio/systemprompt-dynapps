@@ -222,8 +222,6 @@ pub(crate) struct GatewayPoliciesPageData {
     pub can_write: bool,
     pub policies: Vec<PolicyView>,
     pub new_policy: PolicyView,
-    pub saved: Option<String>,
-    pub error: Option<String>,
     pub month_sentinel: i32,
     pub quotas_url: &'static str,
     pub sync_url: &'static str,

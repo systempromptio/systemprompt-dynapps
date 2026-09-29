@@ -15,6 +15,7 @@ use crate::repositories::entitlement::{
     role_subject,
 };
 use crate::repositories::sync::access_control_rows::band_label;
+use crate::ssr::faults::Faults;
 use crate::types::access_control::AccessDecision;
 
 const RESOLVED_BANDS: [&str; 3] = ["group", "project", "role"];
@@ -23,6 +24,7 @@ pub async fn resolved_reach(
     pool: &PgPool,
     entity: (&str, &str),
     subjects: &SubjectOptions,
+    faults: &mut Faults,
 ) -> Vec<ReachView> {
     let mut asked: Vec<(MatrixSubject, &OptionView, &'static str)> = Vec::new();
     for g in &subjects.groups {
@@ -40,10 +42,10 @@ pub async fn resolved_reach(
         entity.0.to_owned(),
         vec![(entity.1.to_owned(), entity.1.to_owned(), None)],
     );
-    let resolved = resolve_subject_matrices(pool, &only, &[section])
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, "entity panel: reach failed to resolve"))
-        .unwrap_or_default();
+    let resolved = faults.take(
+        "resolved reach",
+        resolve_subject_matrices(pool, &only, &[section]).await,
+    );
     asked
         .iter()
         .zip(resolved)

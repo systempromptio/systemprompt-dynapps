@@ -17,10 +17,11 @@ use crate::repositories::projects::output::{
     ProjectAgentRow, ProjectArtifactRow, list_project_agents, list_project_artifacts,
 };
 use systemprompt_web_admin_core::repositories::scope::{Attribution, ScopeQuery, ScopeTarget};
+use systemprompt_web_admin_core::ssr::faults::Faults;
 use systemprompt_web_admin_core::types::UserContext;
 use systemprompt_web_admin_core::types::projects::ProjectRow;
 
-use super::super::people_view::{attribution_rows, chips, format_usd, model_rows, or_default};
+use super::super::people_view::{attribution_rows, chips, format_usd, model_rows};
 use super::super::types::{
     ProjectAgentRowView, ProjectArtifactRowView, ProjectReportFactView, ProjectReportPageData,
 };
@@ -37,7 +38,7 @@ pub(super) struct ReportData {
     pub(super) artifacts: Vec<ProjectArtifactRow>,
 }
 
-pub(super) async fn load(pool: &PgPool, project_id: &ProjectId) -> ReportData {
+pub(super) async fn load(pool: &PgPool, project_id: &ProjectId, faults: &mut Faults) -> ReportData {
     let q = ScopeQuery::new(
         ScopeTarget::Project(project_id),
         Attribution::Exclusive,
@@ -48,8 +49,8 @@ pub(super) async fn load(pool: &PgPool, project_id: &ProjectId) -> ReportData {
         list_project_artifacts(pool, &q, ARTIFACT_LIMIT),
     );
     ReportData {
-        agents: or_default("project agents", agents),
-        artifacts: or_default("project artifacts", artifacts),
+        agents: faults.take("project agents", agents),
+        artifacts: faults.take("project artifacts", artifacts),
     }
 }
 

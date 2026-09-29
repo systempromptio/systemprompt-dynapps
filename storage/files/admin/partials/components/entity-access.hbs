@@ -23,6 +23,12 @@
     {{#if panel.not_live}}
     {{> components/notice tone="err" title="Declared in code, not live — nobody reaches this" message=panel.review.advice}}
     {{/if}}
+    {{#if panel.unavailable}}
+    <div class="sp-notice sp-notice--err" role="alert">
+      <p class="sp-notice__title">Part of this panel could not be read</p>
+      <ul class="sp-notice__list">{{#each panel.unavailable}}<li><strong>{{this.what}}</strong> — {{this.error}}</li>{{/each}}</ul>
+    </div>
+    {{/if}}
     <p class="sp-entity-access__headline{{#if panel.nobody}} sp-entity-access__headline--nobody{{/if}}"{{#if panel.nobody}} role="alert"{{/if}}>{{panel.headline}}</p>
 
     {{#if panel.drift_unreadable}}

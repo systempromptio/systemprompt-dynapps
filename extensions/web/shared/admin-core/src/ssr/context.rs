@@ -6,6 +6,7 @@ use serde::Serialize;
 use systemprompt_web_shared::{BrandingConfig, RankTier, UserId};
 
 use crate::numeric;
+use crate::ssr::faults::Fault;
 use crate::ssr::helpers::Viewer;
 use crate::types::{MarketplaceContext, UserContext};
 
@@ -101,6 +102,7 @@ pub(crate) struct PageShell<'a, T> {
     scope_selector: bool,
     app_version: &'static str,
     access_attention: usize,
+    unavailable: &'a [Fault],
     #[serde(flatten)]
     page: &'a T,
 }
@@ -108,6 +110,7 @@ pub(crate) struct PageShell<'a, T> {
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct PageChrome<'a> {
     pub(crate) page_id: Option<&'a str>,
+    pub(crate) unavailable: &'a [Fault],
 }
 
 impl<'a, T: Serialize> PageShell<'a, T> {
@@ -117,7 +120,10 @@ impl<'a, T: Serialize> PageShell<'a, T> {
         chrome: PageChrome<'a>,
         page: &'a T,
     ) -> Self {
-        let PageChrome { page_id } = chrome;
+        let PageChrome {
+            page_id,
+            unavailable,
+        } = chrome;
         let help = page_id.map(demo_help_text);
         Self {
             branding,
@@ -134,6 +140,7 @@ impl<'a, T: Serialize> PageShell<'a, T> {
             } else {
                 0
             },
+            unavailable,
             page,
         }
     }

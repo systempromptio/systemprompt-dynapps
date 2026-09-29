@@ -1,12 +1,15 @@
-//! The "Who gets this" panel every catalog detail page carries: who reaches
-//! the entity, the rules that decide it, whether code and this database
-//! agree about it, and why one named person does or does not reach it.
+//! The "Who gets this" panel every catalog detail page carries.
+//!
+//! It shows who reaches the entity, the rules that decide it, whether code
+//! and this database agree about it, and why one named person does or does
+//! not reach it.
 //!
 //! One builder, one partial (`components/entity-access`) and one script
 //! (`pages/admin-entity-access.js`), so a marketplace, a plugin, a skill and
 //! an MCP server answer the question in the same words and edit it the same
 //! way. Every read is best-effort: a part that cannot load leaves its own
-//! empty state instead of failing the page it sits on.
+//! empty state instead of failing the page it sits on, and the panel names
+//! each such part in its own `unavailable` list.
 
 pub mod reach;
 pub mod rules;
@@ -24,6 +27,7 @@ use crate::repositories::access_rules::rules::{list_entity_defaults, list_ledger
 use crate::repositories::scope::containers::{list_group_summaries, list_project_summaries};
 use crate::repositories::sync::access_control::{declared_now, drift_now};
 use crate::repositories::sync::attention::{ReviewedEntity, reviews_for};
+use crate::ssr::faults::Faults;
 use crate::ssr::pickable_users::list_pickable_users;
 use crate::types::Role;
 
@@ -52,15 +56,9 @@ pub struct PanelRequest<'a> {
     pub note: Option<&'static str>,
 }
 
-async fn subject_options(pool: &PgPool) -> SubjectOptions {
-    let groups = list_group_summaries(pool)
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, "entity panel: group listing failed"))
-        .unwrap_or_default();
-    let projects = list_project_summaries(pool)
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, "entity panel: project listing failed"))
-        .unwrap_or_default();
+async fn subject_options(pool: &PgPool, faults: &mut Faults) -> SubjectOptions {
+    let groups = faults.take("groups", list_group_summaries(pool).await);
+    let projects = faults.take("projects", list_project_summaries(pool).await);
     SubjectOptions {
         roles: Role::ALL
             .iter()
@@ -115,34 +113,31 @@ async fn review_for(pool: &PgPool, key: &str) -> Result<Option<ReviewedEntity>, 
 
 pub async fn build_entity_panel(pool: &PgPool, req: PanelRequest<'_>) -> EntityAccessView {
     let key = format!("{}/{}", req.entity_type, req.entity_id);
-    let ledger = list_ledger_rules(pool)
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, "entity panel: rule listing failed"))
-        .unwrap_or_default();
+    let mut faults = Faults::new();
+    let ledger = faults.take("access rules", list_ledger_rules(pool).await);
     let rows: Vec<_> = ledger
         .iter()
         .filter(|r| r.entity_type == req.entity_type && r.entity_id == req.entity_id)
         .collect();
-    let open = list_entity_defaults(pool)
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, "entity panel: default read failed"))
-        .unwrap_or_default()
+    let open = faults
+        .take("entity defaults", list_entity_defaults(pool).await)
         .into_iter()
         .any(|e| {
             e.entity_type == req.entity_type && e.entity_id == req.entity_id && e.default_included
         });
-    let subjects = subject_options(pool).await;
-    let mut reaches =
-        reach::resolved_reach(pool, (req.entity_type, req.entity_id), &subjects).await;
+    let subjects = subject_options(pool, &mut faults).await;
+    let entity = (req.entity_type, req.entity_id);
+    let mut reaches = reach::resolved_reach(pool, entity, &subjects, &mut faults).await;
     reaches.extend(reach::ruled_reach(&rows));
     let (review, drift_unreadable) = match review_for(pool, &key).await {
         Ok(review) => (review, None),
         Err(e) => (None, Some(e)),
     };
     let why = match req.why.map(str::trim).filter(|w| !w.is_empty()) {
-        Some(q) => Some(why::why(pool, q, (req.entity_type, req.entity_id)).await),
+        Some(q) => Some(why::why(pool, q, entity, &mut faults).await),
         None => None,
     };
+    let people = faults.take("people", list_pickable_users(pool, None).await);
     EntityAccessView {
         entity_type: req.entity_type.to_owned(),
         entity_id: req.entity_id.to_owned(),
@@ -156,12 +151,13 @@ pub async fn build_entity_panel(pool: &PgPool, req: PanelRequest<'_>) -> EntityA
         review,
         drift_unreadable,
         subjects,
-        people: list_pickable_users(pool, None).await,
+        people,
         can_write: req.can_write,
         note: req.note,
         why,
         page_url: req.page_url.to_owned(),
         sync_url: SYNC_URL,
         key,
+        unavailable: faults.into_vec(),
     }
 }

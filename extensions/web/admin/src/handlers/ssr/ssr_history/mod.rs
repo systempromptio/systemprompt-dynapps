@@ -7,14 +7,13 @@
 //! search, one pagination; [`HistoryView`] is the whole of the difference.
 //!
 //! The one analytics surface a non-admin may reach: every viewer sees their
-//! own conversations, and admin/auditor keep the unrestricted view. Both ways
-//! a conversation gets recorded are listed — the Claude Code session
-//! transcript written by the stop hook, and the gateway conversation grouped
-//! out of `ai_requests` — because a user who only ever calls `/v1/messages`
-//! has no transcript rows at all and used to be shown an empty page. The scope
-//! is resolved server-side per request; asking for a `user_id` outside it is a
-//! 403. Snippets pass through the transcript redactor before rendering, and
-//! raw bodies stay on the existing admin/auditor-gated endpoint. Side calls
+//! own conversations here; only the console roles reach the org-wide list.
+//! Rows are gateway conversations grouped out of `ai_requests`; the Source
+//! column is the client that sent them (Claude Code, Claude Desktop,
+//! `OpenCode`, …), so a conversation appears once whichever client made it. The
+//! scope is resolved server-side per request; asking for a `user_id` outside it
+//! is a 403. Snippets pass through the transcript redactor before rendering,
+//! and raw bodies stay on the existing admin/auditor-gated endpoint. Side calls
 //! — cache probes and utility calls — are hidden unless `?side=1`.
 
 mod context;

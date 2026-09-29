@@ -17,12 +17,12 @@ const PROJECT_RULE_TYPE: RuleType = RuleType::extension_static("project");
 const PROJECT_PRECEDENCE: u16 = 140;
 
 #[must_use]
-pub fn project_rule_type() -> RuleType {
+pub const fn project_rule_type() -> RuleType {
     PROJECT_RULE_TYPE
 }
 
 #[must_use]
-pub fn project_dimension() -> SubjectDimension {
+pub const fn project_dimension() -> SubjectDimension {
     SubjectDimension {
         rule_type: project_rule_type(),
         label: "Project",

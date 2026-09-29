@@ -31,7 +31,7 @@ bundle with the bundled database and one compose file.
 | Image access | a GitHub personal access token with `read:packages` issued by Astound (the package is private); `docker login ghcr.io` on each node |
 | Database | PostgreSQL **16** (tested floor for this deployment; 18 is the general floor) reachable from all three regions on 5432 with TLS, with the `vector`, `uuid-ossp` and `pgcrypto` extensions available |
 | Model provider | a Google service-account JSON for Vertex AI (the gateway routes `claude-*` to Vertex, failing over to Anthropic), plus an Anthropic API key |
-| Public entry | one hostname (for example `ai.example.com`) with TLS terminated at the load balancer in each region, all three forwarding to their local node. HTTPS is mandatory: the sign-in cookie is `Secure` and passkeys need a secure context |
+| Public entry | one hostname (for example `ai.example.com`) with TLS terminated at the load balancer in each region, all three forwarding to their local node. HTTPS is mandatory: the sign-in cookie is `Secure` and the SAML assertion is posted back to an `https` ACS URL |
 
 ## 2. Database
 
@@ -163,8 +163,9 @@ calls, the binary version, the MCP child server, the migration ledger and the bo
 and after every upgrade.
 
 First sign-in: `https://ai.example.com/admin/login`. The bootstrap admin is
-the `admin` user with the e-mail given to `--admin-email`; passkey registration and the SSO configuration are in the
-documentation site the node serves at `/documentation/`.
+the `admin` user with the e-mail given to `--admin-email`, and sign-in is AD FS SSO only, so configure the relying party
+first (`/documentation/adfs-sso-setup` on the node's own documentation site). With SSO down, use the CLI break-glass
+session described in `/documentation/authentication`.
 
 ## 6. Upgrade and roll back
 
@@ -190,7 +191,7 @@ forward — restore the pre-upgrade base backup otherwise.
 The gateway serves its own client binaries, so users never need GitHub
 access: `https://ai.example.com/documentation/downloads` lists Windows,
 macOS, Linux x86_64 and aarch64 builds with checksums, and the Linux
-installer one-liner. Linking a client is `https://ai.example.com/bridge-auth/setup`
+installer one-liner. Linking a client is `https://ai.example.com/admin/connect`
 after sign-in, or `systemprompt admin bridge issue-code --user-id <email>`
 inside a node container for headless onboarding.
 
@@ -208,6 +209,5 @@ inside a node container for headless onboarding.
 | 8 | Rendered `profile/` in the vault, copied to `/etc/astound/profile` on all nodes | customer ops | bind mount |
 | 9 | Security groups per §4 | customer network | — |
 | 10 | Node 1 booted and `verify-node.sh` green, then nodes 2 and 3 | customer ops | — |
-| 11 | First admin signed in, passkey registered, SSO configured | customer admin | `/admin` |
+| 11 | AD FS relying party configured, first admin signed in through SSO | customer admin | `/admin` |
 | 12 | Base backup schedule and restore test | customer DBA | — |
-| 13 | Optional: SMTP, Slack | customer | `SECRETS.md` |

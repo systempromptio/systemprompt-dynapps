@@ -9,10 +9,12 @@
 
 use serde::Serialize;
 use sqlx::PgPool;
+use systemprompt_web_admin_core::ssr::viewer_tz::viewer_tz;
 
 use crate::repositories::analytics::requests::{
     list_request_safety_findings, list_request_tool_calls,
 };
+use systemprompt_web_admin_core::ssr::faults::Faults;
 
 #[derive(Debug, Default, Serialize)]
 pub(super) struct EvidenceView {
@@ -50,7 +52,11 @@ pub(super) struct ToolCallView {
     pub created_at: String,
 }
 
-pub(super) async fn load(pool: &PgPool, request_ids: &[String]) -> EvidenceView {
+pub(super) async fn load(
+    pool: &PgPool,
+    request_ids: &[String],
+    faults: &mut Faults,
+) -> EvidenceView {
     if request_ids.is_empty() {
         return EvidenceView::default();
     }
@@ -59,11 +65,8 @@ pub(super) async fn load(pool: &PgPool, request_ids: &[String]) -> EvidenceView 
         list_request_tool_calls(pool, request_ids),
     );
 
-    let findings: Vec<FindingView> = findings_res
-        .unwrap_or_else(|e| {
-            tracing::warn!(error = %e, "list_request_safety_findings failed");
-            Vec::new()
-        })
+    let findings: Vec<FindingView> = faults
+        .take("safety findings", findings_res)
         .into_iter()
         .map(|f| FindingView {
             phase: f.phase,
@@ -78,11 +81,8 @@ pub(super) async fn load(pool: &PgPool, request_ids: &[String]) -> EvidenceView 
         })
         .collect();
 
-    let tool_calls: Vec<ToolCallView> = calls_res
-        .unwrap_or_else(|e| {
-            tracing::warn!(error = %e, "list_request_tool_calls failed");
-            Vec::new()
-        })
+    let tool_calls: Vec<ToolCallView> = faults
+        .take("tool calls", calls_res)
         .into_iter()
         .map(|t| ToolCallView {
             tool_name: t.tool_name,
@@ -116,7 +116,7 @@ pub(super) async fn load(pool: &PgPool, request_ids: &[String]) -> EvidenceView 
 }
 
 fn local_time(at: chrono::DateTime<chrono::Utc>) -> String {
-    at.with_timezone(&chrono::Local)
+    at.with_timezone(&viewer_tz())
         .format("%Y-%m-%d %H:%M:%S")
         .to_string()
 }

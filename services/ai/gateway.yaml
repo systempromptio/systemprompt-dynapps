@@ -79,7 +79,8 @@ gateway:
       MiniMax open models on Vertex AI Model-as-a-Service.
     model_pattern: minimax.*
     provider: vertex-maas
-  # Every Qwen, Kimi, DeepSeek and MiniMax endpoint retires 2026-10-21. After
+  # Every Qwen, Kimi, DeepSeek and MiniMax endpoint retires 2026-10-21, as do
+  # zai.glm-5, zai.glm-4.7 and openai.gpt-oss-20b (providers.yaml). After
   # that core hides the retired models, so these routes stop being offered in
   # any model list without failing boot; remove them with the entries.
   - id: vertex-gpt-oss

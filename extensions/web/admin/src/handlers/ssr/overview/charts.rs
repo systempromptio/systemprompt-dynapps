@@ -7,6 +7,7 @@
 //! so the shape of the day reads the same here as it does one click deeper.
 
 use chrono::{DateTime, Utc};
+use systemprompt_web_admin_core::ssr::viewer_tz::viewer_tz;
 
 use crate::handlers::ssr::ssr_analytics_dashboard::short_name;
 use crate::repositories::overview::dimension_series::{DimensionBucket, OverviewDimension};
@@ -44,7 +45,7 @@ impl Axis {
 }
 
 fn bucket_label(t: DateTime<Utc>, range: OverviewRange) -> String {
-    let local = t.with_timezone(&chrono::Local);
+    let local = t.with_timezone(&viewer_tz());
     match range {
         OverviewRange::Day => local.format("%H:%M").to_string(),
         OverviewRange::Week | OverviewRange::Month => local.format("%b %-d %H:%M").to_string(),

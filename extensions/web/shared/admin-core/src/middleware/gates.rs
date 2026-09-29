@@ -148,7 +148,6 @@ const ACCOUNT_PATHS: &[(PathMatch, &str)] = &[
     (PathMatch::Prefix, "/admin/export/transcripts"),
     (PathMatch::Exact, "/admin/connect"),
     (PathMatch::Exact, "/admin/connectors"),
-    (PathMatch::Prefix, "/admin/requirements/"),
     (PathMatch::Prefix, "/admin/auth/"),
     (PathMatch::Prefix, "/admin/api/"),
     (PathMatch::Exact, "/admin/logout"),

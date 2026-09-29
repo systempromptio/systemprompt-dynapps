@@ -44,12 +44,37 @@ use systemprompt_web_admin_core::ssr::page::Page;
 use crate::repositories::analysis::conversations::{
     ConversationAnalysisFilter, ConversationAnalysisPage, load_conversation_analysis_page,
 };
-use systemprompt_web_admin_core::repositories::scope::ScopeRequest;
+use systemprompt_web_admin_core::repositories::scope::{ScopeRequest, SubjectScope};
 
 use context::{ConversationsPageInputs, build_context};
 pub(crate) use judge_all::judge_all;
 use query::{BASE_URL, ConversationAnalysisQuery};
 use systemprompt_web_admin_core::ssr::list_view::DEFAULT_PAGE_SIZE;
+
+fn analysis_filter(
+    params: &ConversationAnalysisQuery,
+    request: &ScopeRequest,
+    scope: &SubjectScope,
+) -> ConversationAnalysisFilter {
+    ConversationAnalysisFilter {
+        subject_ids: scope.as_sql().map(<[String]>::to_vec),
+        user_id: params.user_id(),
+        category: params.category(),
+        outcome: params.outcome(),
+        skill: params.skill(),
+        free_text: params.free_text(),
+        since: params.since_datetime(),
+        until: None,
+        judged: params.judged(),
+        model: params.model(),
+        client_kind: params.client(),
+        group_id: request.group.as_deref().map(GroupId::new),
+        project_id: request.project.as_deref().map(ProjectId::new),
+        flag: params.flag(),
+        context_ids: params.context_ids(),
+        include_without_turns: params.show_all(),
+    }
+}
 
 pub(crate) async fn page(
     shell: Page,
@@ -68,24 +93,7 @@ pub(crate) async fn page(
         &pool, &request,
     )
     .await?;
-    let filter = ConversationAnalysisFilter {
-        subject_ids: scope.as_sql().map(<[String]>::to_vec),
-        user_id: params.user_id(),
-        category: params.category(),
-        outcome: params.outcome(),
-        skill: params.skill(),
-        free_text: params.free_text(),
-        since: params.since_datetime(),
-        until: None,
-        judged: params.judged(),
-        model: params.model(),
-        client_kind: params.client(),
-        group_id: request.group.as_deref().map(GroupId::new),
-        project_id: request.project.as_deref().map(ProjectId::new),
-        flag: params.flag(),
-        context_ids: params.context_ids(),
-        include_without_turns: params.show_all(),
-    };
+    let filter = analysis_filter(&params, &request, &scope);
     let data = load_conversation_analysis_page(
         &pool,
         &filter,

@@ -23,7 +23,7 @@ impl HelperDef for FormatDateHelper {
                 .map(|dt| dt.and_utc().fixed_offset())
         }) {
             Ok(dt) => {
-                let local_dt = dt.with_timezone(&chrono::Local);
+                let local_dt = crate::ssr::viewer_tz::in_viewer_tz(&dt);
                 let formatted = local_dt.format("%b %d, %Y %I:%M %p").to_string();
                 out.write(&formatted)?;
             },

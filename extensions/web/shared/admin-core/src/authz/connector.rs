@@ -27,12 +27,12 @@ const CONNECTOR_RULE_TYPE: RuleType = RuleType::extension_static("connector");
 const CONNECTOR_PRECEDENCE: u16 = 160;
 
 #[must_use]
-pub fn connector_rule_type() -> RuleType {
+pub const fn connector_rule_type() -> RuleType {
     CONNECTOR_RULE_TYPE
 }
 
 #[must_use]
-pub fn connector_dimension() -> SubjectDimension {
+pub const fn connector_dimension() -> SubjectDimension {
     SubjectDimension {
         rule_type: connector_rule_type(),
         label: "Connected server",

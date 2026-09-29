@@ -12,13 +12,12 @@ use super::view::{WhyBandView, WhyView};
 use crate::repositories::entitlement::explain::{Explanation, explain_for_user};
 use crate::repositories::principal::listing::list_users;
 use crate::repositories::scope::SubjectScope;
+use crate::ssr::faults::Faults;
 
-async fn find_person(pool: &PgPool, query: &str) -> Option<(UserId, String)> {
+async fn find_person(pool: &PgPool, query: &str, faults: &mut Faults) -> Option<(UserId, String)> {
     let wanted = query.trim().to_lowercase();
-    list_users(pool, &SubjectScope::All)
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, "entity panel: user listing failed"))
-        .unwrap_or_default()
+    faults
+        .take("people", list_users(pool, &SubjectScope::All).await)
         .into_iter()
         .find(|u| {
             u.user_id.as_str().to_lowercase() == wanted
@@ -69,7 +68,7 @@ fn bands_of(explanation: &Explanation) -> Vec<WhyBandView> {
         .collect()
 }
 
-pub async fn why(pool: &PgPool, query: &str, entity: (&str, &str)) -> WhyView {
+pub async fn why(pool: &PgPool, query: &str, entity: (&str, &str), faults: &mut Faults) -> WhyView {
     let mut view = WhyView {
         query: query.to_owned(),
         found: false,
@@ -79,14 +78,13 @@ pub async fn why(pool: &PgPool, query: &str, entity: (&str, &str)) -> WhyView {
         detail: String::new(),
         bands: Vec::new(),
     };
-    let Some((user_id, label)) = find_person(pool, query).await else {
+    let Some((user_id, label)) = find_person(pool, query, faults).await else {
         return view;
     };
-    let explained = explain_for_user(pool, &user_id, entity.0, entity.1)
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, "entity panel: explanation failed"))
-        .ok()
-        .flatten();
+    let explained = faults.take(
+        "access explanation",
+        explain_for_user(pool, &user_id, entity.0, entity.1).await,
+    );
     let Some(explanation) = explained else {
         return view;
     };

@@ -22,8 +22,11 @@ use serde::Serialize;
 use sqlx::PgPool;
 use systemprompt::identifiers::{Email, UserId};
 
+use crate::repositories::users::user_settings::find_user_settings;
+
 use systemprompt_web_admin_core::auth::session::extract_user_from_cookie;
 use systemprompt_web_admin_core::repositories::scope::Participation;
+use systemprompt_web_admin_core::ssr::viewer_tz::{Tz, parse_tz, with_viewer_tz};
 use systemprompt_web_admin_core::types::{
     UserContext, roles_grant_console, roles_grant_developer, roles_grant_manage,
     roles_grant_platform,
@@ -95,8 +98,19 @@ pub(crate) async fn user_context_middleware(
         session_id: session.session_id,
     };
 
+    let tz = find_viewer_tz(&pool, &ctx.user_id).await;
     request.extensions_mut().insert(ctx);
-    next.run(request).await
+    with_viewer_tz(tz, next.run(request)).await
+}
+
+async fn find_viewer_tz(pool: &PgPool, user_id: &UserId) -> Tz {
+    match find_user_settings(pool, user_id).await {
+        Ok(row) => row.map_or(Tz::UTC, |r| parse_tz(&r.timezone)),
+        Err(e) => {
+            tracing::warn!(error = %e, "user settings read failed; rendering times in UTC");
+            Tz::UTC
+        },
+    }
 }
 
 async fn find_access_profile(

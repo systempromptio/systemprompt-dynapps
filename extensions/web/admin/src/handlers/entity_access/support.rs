@@ -13,7 +13,7 @@ use systemprompt_security::authz::{Access, AccessControlRepository, EntityKind, 
 use systemprompt_web_shared::{GroupId, ProjectId};
 
 use crate::repositories;
-use crate::repositories::mcp::mcp_servers;
+use systemprompt_web_admin_catalog::repositories::mcp::mcp_servers;
 use systemprompt_web_admin_core::activity::{NewActivity, RuleChange};
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 use systemprompt_web_admin_core::{activity, request as shared};

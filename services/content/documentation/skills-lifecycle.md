@@ -8,7 +8,7 @@ kind: "guide"
 public: true
 tags: ["documentation", "development", "skills"]
 published_at: "2026-09-13"
-updated_at: "2026-09-22"
+updated_at: "2026-09-29"
 after_reading_this:
   - "Trace a skill from its services-tree source through discovery, distribution, loading, and invocation analytics"
   - "Tell a disk skill, a managed revision, a bundle digest and a publication generation apart"
@@ -124,7 +124,7 @@ instruction preview. These commands are inspection tools: they do not install,
 invoke, or publish a skill.
 
 The public `/skills/` page independently reads enabled skill descriptors to render
-the human catalog. The admin catalog at `/admin/catalog/skills` is also read-only and
+the human catalog. The admin catalog at `/admin/skills` is also read-only and
 identifies the source as `services/skills/<id>/config.yaml`.
 
 ### Selection and signed distribution

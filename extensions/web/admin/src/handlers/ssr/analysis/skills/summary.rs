@@ -5,14 +5,14 @@ use chrono::NaiveDate;
 
 use super::rows::spark_values;
 use super::views::{SkillsKpiView, UnusedSkillView};
-use crate::handlers::ssr::analysis::tone::{
-    completion_tone, error_rate_tone, percent, score_display,
-};
 use crate::repositories::analysis::skills::{MarketplaceAdoptionRow, SkillFactRow};
 use systemprompt_web_admin_core::catalog_index::inventory_index::{
     InventoryIndex, MarketplaceAudience,
 };
 use systemprompt_web_admin_core::ssr::format::format_cost;
+use systemprompt_web_admin_core::ssr::tone::{
+    completion_tone, error_rate_tone, percent, score_display,
+};
 use systemprompt_web_admin_core::ssr::types::sparkline::sparkline_toned;
 
 struct Figures {

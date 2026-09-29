@@ -11,7 +11,7 @@ use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 use systemprompt::security::authz::{EntityKind, RegisteredEntities};
 
-use crate::repositories;
+use systemprompt_web_admin_catalog::repositories as catalog_repositories;
 use systemprompt_web_admin_core::activity::{ActivityEntity, NewActivity};
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 use systemprompt_web_admin_core::repositories::gateway_catalog::registered_routes_from_services;
@@ -214,7 +214,7 @@ fn push_catalog_sections(
     services_path: &std::path::Path,
     sections: &mut Vec<systemprompt_web_admin_core::repositories::entitlement::SectionInput>,
 ) {
-    if let Ok(servers) = repositories::mcp::mcp_servers::list_mcp_servers(services_path) {
+    if let Ok(servers) = catalog_repositories::mcp::mcp_servers::list_mcp_servers(services_path) {
         let rows: Vec<(String, String, Option<String>)> = servers
             .into_iter()
             .map(|s| {
@@ -230,16 +230,17 @@ fn push_catalog_sections(
         sections.push(("mcp_server".to_owned(), "MCP servers".to_owned(), rows));
     }
     let admin_roles = vec!["admin".to_owned()];
-    if let Ok(plugins) =
-        repositories::marketplace::plugins::list_plugins_for_roles(services_path, &admin_roles)
-    {
+    if let Ok(plugins) = catalog_repositories::marketplace::plugins::list_plugins_for_roles(
+        services_path,
+        &admin_roles,
+    ) {
         let rows: Vec<(String, String, Option<String>)> = plugins
             .into_iter()
             .map(|p| (p.id, p.name, Some(p.description)))
             .collect();
         sections.push(("plugin".to_owned(), "Plugins".to_owned(), rows));
     }
-    if let Ok(agents) = repositories::config::agents::list_configured_agents(services_path) {
+    if let Ok(agents) = catalog_repositories::agents::list_configured_agents(services_path) {
         let rows: Vec<(String, String, Option<String>)> = agents
             .into_iter()
             .map(|a| {
@@ -252,7 +253,9 @@ fn push_catalog_sections(
             .collect();
         sections.push(("agent".to_owned(), "Agents".to_owned(), rows));
     }
-    if let Ok(skills) = repositories::marketplace::plugins::list_skill_catalog(services_path) {
+    if let Ok(skills) =
+        catalog_repositories::marketplace::plugins::list_skill_catalog(services_path)
+    {
         let rows: Vec<(String, String, Option<String>)> = skills
             .into_iter()
             .map(|s| {

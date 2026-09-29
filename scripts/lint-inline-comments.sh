@@ -34,7 +34,7 @@ set -uo pipefail
 #     block; continuation lines do not count). A file that needs more is
 #     explaining a design its names should carry.
 #   * no `// Why:` inside a function body (indent >= 8) unless it is a marker
-#     block (`// Why: discard-ok:` / `// Why: lint-ok:`) or its first line names
+#     block (`// Why: discard-ok:` / `// Why: lint-ok:` / `// Why: fail-soft-ok:`) or its first line names
 #     an external system on the WHY_EXTERNAL allowlist below. Anything else in a
 #     body is extracted into a named `let`, helper fn, or enum instead.
 #
@@ -69,7 +69,7 @@ while IFS= read -r file; do
             if (RLENGTH >= 8) {
                 body = $0
                 sub(/^[[:space:]]*\/\/ Why:[[:space:]]*/, "", body)
-                if (body !~ /^(discard-ok|lint-ok):/ && body !~ why_ext_re) {
+                if (body !~ /^(discard-ok|lint-ok|fail-soft-ok):/ && body !~ why_ext_re) {
                     print FILENAME ":" FNR ": // Why: inside a function body — extract a named let/fn/enum, or lead with the external system that forces it"
                 }
             }

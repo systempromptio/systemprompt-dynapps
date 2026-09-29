@@ -9,6 +9,7 @@
 use serde::Serialize;
 
 use crate::repositories::sync::attention::ReviewedEntity;
+use crate::ssr::faults::Fault;
 use crate::ssr::types::pickable_user::PickableUserView;
 
 #[derive(Debug, Clone, Serialize)]
@@ -93,4 +94,5 @@ pub struct EntityAccessView {
     pub why: Option<WhyView>,
     pub page_url: String,
     pub sync_url: &'static str,
+    pub unavailable: Vec<Fault>,
 }

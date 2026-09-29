@@ -12,6 +12,7 @@
 use serde::Serialize;
 use sqlx::PgPool;
 use systemprompt::identifiers::SessionId;
+use systemprompt_web_admin_core::ssr::viewer_tz::viewer_tz;
 
 use crate::repositories::analysis::tools::{
     ToolActivityFilter, ToolActivityPage, ToolActivityRow, ToolBreakdownBy, ToolSort,
@@ -199,6 +200,7 @@ fn schema_json(tool: &WireTool) -> String {
 
 // JSON: any stored payload, rendered for a `<pre>`.
 fn pretty(value: &serde_json::Value) -> String {
+    // Why: fail-soft-ok: not a read; the failure text is itself what renders.
     serde_json::to_string_pretty(value).unwrap_or_else(|e| format!("<unserializable: {e}>"))
 }
 
@@ -224,7 +226,7 @@ fn artifact_link(
         created_at: r
             .occurred_at
             .map(|t| {
-                t.with_timezone(&chrono::Local)
+                t.with_timezone(&viewer_tz())
                     .format("%Y-%m-%d %H:%M:%S")
                     .to_string()
             })

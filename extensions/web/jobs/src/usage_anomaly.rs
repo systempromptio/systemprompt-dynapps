@@ -186,7 +186,7 @@ fn alert(finding: Finding, obs: &HourlyObservation) {
         window_start = %obs.window_start.format("%Y-%m-%d %H:%M UTC"),
         %observed,
         %baseline,
-        "usage anomaly: check /admin/analytics?tab=spend and the request log"
+        "usage anomaly: check /admin/analytics?tab=cost and the request log"
     );
 }
 
@@ -208,7 +208,7 @@ impl Job for UsageAnomalyJob {
     }
 
     fn description(&self) -> &'static str {
-        "Hourly spike detection over gateway requests/cost/errors, persisted and Slack-alerted"
+        "Hourly spike detection over gateway requests/cost/errors, persisted and logged"
     }
 
     fn schedule(&self) -> &'static str {

@@ -27,6 +27,8 @@ use systemprompt_web_admin_core::templates::AdminTemplateEngine;
 use systemprompt_web_admin_core::types::{MarketplaceContext, UserContext};
 
 use super::types::MemberSetChipView;
+use systemprompt_web_admin_core::ssr::faults::Faults;
+use systemprompt_web_admin_core::ssr::helpers::Viewer;
 use systemprompt_web_admin_core::ssr::sync_plane::{is_sync_tab, plane_card_by_id, sync_tab};
 use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;
 
@@ -83,7 +85,8 @@ pub(crate) async fn groups_page(
     };
 
     let source = sorting::source_filter(query.source.as_deref());
-    let mut listing = data::load_listing(&pool, window_days).await;
+    let mut faults = Faults::new();
+    let mut listing = data::load_listing(&pool, window_days, &mut faults).await;
     sorting::apply(&mut listing.rows, sort, dir);
 
     let data = view::page_data(view::GroupsPageInput {
@@ -100,21 +103,27 @@ pub(crate) async fn groups_page(
         on_sync,
         can_manage: user_ctx.is_admin,
         can_map: user_ctx.is_platform_admin,
-        group_options: group_options(&pool).await,
+        group_options: group_options(&pool, &mut faults).await,
     });
 
     Ok(
-        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
-            &engine, "groups", &data, &user_ctx, &mkt_ctx,
+        systemprompt_web_admin_core::ssr::helpers::render_page_with_faults(
+            &engine,
+            "groups",
+            &data,
+            Viewer::new(&user_ctx, &mkt_ctx),
+            &faults,
         ),
     )
 }
 
-async fn group_options(pool: &PgPool) -> Vec<MemberSetChipView> {
-    systemprompt_web_admin_core::repositories::scope::containers::list_group_options(pool)
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, "group option list failed"))
-        .unwrap_or_default()
+async fn group_options(pool: &PgPool, faults: &mut Faults) -> Vec<MemberSetChipView> {
+    faults
+        .take(
+            "group options",
+            systemprompt_web_admin_core::repositories::scope::containers::list_group_options(pool)
+                .await,
+        )
         .into_iter()
         .filter(|g| g.id != UNASSIGNED_GROUP)
         .map(|g| MemberSetChipView {

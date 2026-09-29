@@ -6,7 +6,7 @@
 use std::path::Path;
 
 use systemprompt::identifiers::AgentId;
-use systemprompt_web_admin::repositories::config::agents::{find_agent, list_configured_agents};
+use systemprompt_web_admin_catalog::repositories::agents::{find_agent, list_configured_agents};
 
 fn write(root: &Path, relative: &str, body: &str) {
     let path = root.join(relative);

@@ -2,8 +2,9 @@
 //!
 //! Resolves the effective time range (honouring an explicit user pick, else
 //! auto-widening 24h -> 7d -> 30d until a window has rows), then runs only the
-//! queries the active tab actually renders. Every `Result` collapses into a
-//! logged default so a single failed query never takes the whole page down.
+//! queries the active tab actually renders. Every failed `Result` is handed to
+//! the page's fault collector, so a single failed query degrades its own panel
+//! and is named on the page rather than taking the whole page down.
 
 use std::sync::Arc;
 
@@ -18,6 +19,7 @@ use crate::repositories::analytics::requests::{
     get_request_kpis, list_request_facets, list_requests_by_model, list_requests_by_provider,
     list_requests_by_status, list_requests_paged,
 };
+use systemprompt_web_admin_core::ssr::faults::Faults;
 use systemprompt_web_admin_core::util::time_range::{
     TimeRange, TimeRangePreset, TimeRangeQuery, count_requests_in_range, parse_time_range,
     preset_to_range,
@@ -29,6 +31,7 @@ use super::context::RequestsTab;
 pub(super) async fn resolve_range(
     pool: &PgPool,
     query: &RequestsQuery,
+    faults: &mut Faults,
 ) -> (TimeRange, Option<&'static str>) {
     let user_picked_range = query.preset.is_some() || (query.from.is_some() && query.to.is_some());
     let initial_range = parse_time_range(&TimeRangeQuery {
@@ -49,11 +52,17 @@ pub(super) async fn resolve_range(
         ("30d", TimeRangePreset::Days30),
     ] {
         let candidate = preset_to_range(preset);
-        let count = count_requests_in_range(pool, candidate).await.unwrap_or(0);
-        if count > 0 {
-            chosen = candidate;
-            widened = if label == "24h" { None } else { Some(label) };
-            break;
+        match count_requests_in_range(pool, candidate).await {
+            Ok(count) if count > 0 => {
+                chosen = candidate;
+                widened = if label == "24h" { None } else { Some(label) };
+                break;
+            },
+            Ok(_) => {},
+            Err(e) => {
+                faults.record("request count for the time range", &e);
+                break;
+            },
         }
     }
     (chosen, widened)
@@ -72,6 +81,7 @@ pub(super) struct RequestsData {
     pub breakdown: Vec<BreakdownRow>,
 }
 
+#[derive(Clone, Copy)]
 pub(super) struct RequestsPageQuery<'a> {
     pub tab: RequestsTab,
     pub filter: &'a RequestFilter,
@@ -84,22 +94,15 @@ pub(super) struct RequestsPageQuery<'a> {
 pub(super) async fn load_requests_data(
     pool: &Arc<PgPool>,
     query: RequestsPageQuery<'_>,
+    faults: &mut Faults,
 ) -> RequestsData {
-    let RequestsPageQuery {
-        tab,
-        filter,
-        range,
-        sort,
-        page_size,
-        offset,
-    } = query;
     let page = RequestPage {
-        sort,
-        limit: page_size,
-        offset,
+        sort: query.sort,
+        limit: query.page_size,
+        offset: query.offset,
     };
-    let mut data = load_every_tab(pool, filter, range, page).await;
-    load_active_tab_only(pool, tab, filter, range, &mut data).await;
+    let mut data = load_every_tab(pool, query.filter, query.range, page, faults).await;
+    load_active_tab_only(pool, query, &mut data, faults).await;
     data
 }
 
@@ -108,6 +111,7 @@ async fn load_every_tab(
     filter: &RequestFilter,
     range: TimeRange,
     page: RequestPage,
+    faults: &mut Faults,
 ) -> RequestsData {
     let (paged, stats_res, kpis_res, facets_res) = tokio::join!(
         list_requests_paged(pool, filter, range, page),
@@ -117,25 +121,17 @@ async fn load_every_tab(
     );
 
     let rows_unavailable = paged.is_err();
-    let (rows, total_count) = paged.unwrap_or_else(|e| {
-        tracing::warn!(error = %e, "list_requests_paged failed");
-        (Vec::new(), 0)
-    });
-    let stats = stats_res.unwrap_or_else(|e| {
-        tracing::warn!(error = %e, "get_request_stats failed");
-        RequestStats::default()
-    });
-    let kpis = kpis_res.unwrap_or_else(|e| {
-        tracing::warn!(error = %e, "get_request_kpis failed");
-        RequestKpis::default()
-    });
+    let (rows, total_count) = faults.take("request rows", paged);
+    let stats = faults.take("request stats", stats_res);
+    let kpis = faults.take("request kpis", kpis_res);
+    let facets = faults.take("request facets", facets_res);
 
     RequestsData {
         rows,
         total_count,
         rows_unavailable,
         kpis,
-        facets: unwrap_or_empty(facets_res, "list_request_facets"),
+        facets,
         stats,
         ..RequestsData::default()
     }
@@ -143,45 +139,40 @@ async fn load_every_tab(
 
 async fn load_active_tab_only(
     pool: &PgPool,
-    tab: RequestsTab,
-    filter: &RequestFilter,
-    range: TimeRange,
+    query: RequestsPageQuery<'_>,
     data: &mut RequestsData,
+    faults: &mut Faults,
 ) {
+    let RequestsPageQuery {
+        tab, filter, range, ..
+    } = query;
     match tab {
         RequestsTab::Overview => {
             let (hist_res, series_res) = tokio::join!(
                 list_latency_histogram(pool, range, &filter.scope),
                 list_request_timeseries(pool, range, &filter.scope),
             );
-            data.hist = unwrap_or_empty(hist_res, "list_latency_histogram");
-            data.series = unwrap_or_empty(series_res, "list_request_timeseries");
+            data.hist = faults.take("latency histogram", hist_res);
+            data.series = faults.take("request timeseries", series_res);
         },
         RequestsTab::Models => {
-            data.breakdown = unwrap_or_empty(
+            data.breakdown = faults.take(
+                "requests by model",
                 list_requests_by_model(pool, range, &filter.scope).await,
-                "list_requests_by_model",
             );
         },
         RequestsTab::Providers => {
-            data.breakdown = unwrap_or_empty(
+            data.breakdown = faults.take(
+                "requests by provider",
                 list_requests_by_provider(pool, range, &filter.scope).await,
-                "list_requests_by_provider",
             );
         },
         RequestsTab::Status => {
-            data.breakdown = unwrap_or_empty(
+            data.breakdown = faults.take(
+                "requests by status",
                 list_requests_by_status(pool, range, &filter.scope).await,
-                "list_requests_by_status",
             );
         },
         RequestsTab::Log => {},
     }
-}
-
-fn unwrap_or_empty<T>(res: Result<Vec<T>, sqlx::Error>, what: &'static str) -> Vec<T> {
-    res.unwrap_or_else(|e| {
-        tracing::warn!(error = %e, query = what, "requests page query failed");
-        Vec::new()
-    })
 }

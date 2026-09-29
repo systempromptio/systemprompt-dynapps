@@ -8,6 +8,7 @@
 use serde::Serialize;
 use sqlx::PgPool;
 
+use systemprompt_web_admin_core::ssr::faults::Faults;
 
 const HIT_LIMIT: usize = 25;
 
@@ -26,19 +27,24 @@ pub(crate) struct PersonCheckView {
     pub more: bool,
 }
 
-pub(super) async fn build(pool: &PgPool, query: Option<&str>) -> PersonCheckView {
+pub(super) async fn build(
+    pool: &PgPool,
+    query: Option<&str>,
+    faults: &mut Faults,
+) -> PersonCheckView {
     let Some(query) = query.map(str::trim).filter(|q| !q.is_empty()) else {
         return PersonCheckView::default();
     };
     let wanted = query.to_lowercase();
-    let matches: Vec<PersonHitView> =
+    let users = faults.take(
+        "people",
         systemprompt_web_admin_core::repositories::principal::listing::list_users(
             pool,
             &systemprompt_web_admin_core::repositories::scope::SubjectScope::All,
         )
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, "find a person: user listing failed"))
-        .unwrap_or_default()
+        .await,
+    );
+    let matches: Vec<PersonHitView> = users
         .into_iter()
         .filter_map(|u| {
             let id = u.user_id.as_str().to_owned();

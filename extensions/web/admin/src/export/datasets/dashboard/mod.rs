@@ -6,7 +6,6 @@
 use async_trait::async_trait;
 use systemprompt::models::SessionId;
 
-use super::requests::time_range;
 use crate::handlers::ssr::ssr_analytics_dashboard::AnalyticsDashboardQuery;
 use crate::repositories::analytics::site::models::list_model_stats;
 use crate::repositories::analytics::site::sessions::list_session_costs_paged;
@@ -17,6 +16,7 @@ use systemprompt_web_admin_core::export::model::{
     Cell, CellKind, Column, DataSet, ExportContext, Table, Window,
 };
 use systemprompt_web_admin_core::export::registry::DataSetRegistration;
+use systemprompt_web_admin_core::export::window::time_range;
 use systemprompt_web_admin_core::util::time_range::TimeRange;
 
 mod tools;

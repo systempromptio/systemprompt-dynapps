@@ -147,6 +147,7 @@ systemprompt-mcp-agent = { path = "../extensions/mcp/systemprompt" }
 systemprompt-web-shared = { path = "../extensions/web/shared" }
 systemprompt-web-admin-core = { path = "../extensions/web/shared/admin-core" }
 systemprompt-web-admin = { path = "../extensions/web/admin", features = ["governance-ssr"] }
+systemprompt-web-admin-catalog = { path = "../extensions/web/admin/catalog" }
 systemprompt-web-content = { path = "../extensions/web/content" }
 systemprompt-web-jobs = { path = "../extensions/web/jobs" }
 systemprompt-web-extension = { path = "../extensions/web" }

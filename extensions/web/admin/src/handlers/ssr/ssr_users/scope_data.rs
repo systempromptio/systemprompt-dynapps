@@ -9,6 +9,7 @@ use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 
 use crate::repositories;
+use systemprompt_web_admin_core::ssr::faults::Faults;
 
 use super::super::types::{MembershipChoiceView, RoleChoiceView};
 
@@ -22,26 +23,28 @@ fn membership_source(sources: &[String]) -> &'static str {
     }
 }
 
-pub(super) async fn group_choices(pool: &PgPool, user_id: &UserId) -> Vec<MembershipChoiceView> {
-    let held = repositories::groups::members::list_group_ids_for_user(pool, user_id)
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, "user detail: group ids unavailable"))
-        .unwrap_or_default();
-    let mut out = Vec::new();
-    for group in
+pub(super) async fn group_choices(
+    pool: &PgPool,
+    user_id: &UserId,
+    faults: &mut Faults,
+) -> Vec<MembershipChoiceView> {
+    let held = faults.take(
+        "group memberships",
+        repositories::groups::members::list_group_ids_for_user(pool, user_id).await,
+    );
+    let groups = faults.take(
+        "groups",
         systemprompt_web_admin_core::repositories::scope::containers::list_group_options(pool)
-            .await
-            .inspect_err(|e| tracing::warn!(error = %e, "user detail: group listing failed"))
-            .unwrap_or_default()
-    {
+            .await,
+    );
+    let mut out = Vec::new();
+    for group in groups {
         let is_held = held.iter().any(|id| id == &group.id);
         let source = if is_held {
-            let members = repositories::groups::members::list_group_members(pool, &group.id)
-                .await
-                .inspect_err(
-                    |e| tracing::warn!(error = %e, "user detail: group members unavailable"),
-                )
-                .unwrap_or_default();
+            let members = faults.take(
+                "group members",
+                repositories::groups::members::list_group_members(pool, &group.id).await,
+            );
             members
                 .iter()
                 .find(|m| m.user_id == user_id.as_str())
@@ -60,15 +63,23 @@ pub(super) async fn group_choices(pool: &PgPool, user_id: &UserId) -> Vec<Member
     out
 }
 
-pub(super) async fn project_choices(pool: &PgPool, user_id: &UserId) -> Vec<MembershipChoiceView> {
-    let held = repositories::projects::members::list_project_ids_for_user(pool, user_id)
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, "user detail: project ids unavailable"))
-        .unwrap_or_default();
-    systemprompt_web_admin_core::repositories::scope::containers::list_project_options(pool)
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, "user detail: project listing failed"))
-        .unwrap_or_default()
+pub(super) async fn project_choices(
+    pool: &PgPool,
+    user_id: &UserId,
+    faults: &mut Faults,
+) -> Vec<MembershipChoiceView> {
+    let held = faults.take(
+        "project memberships",
+        repositories::projects::members::list_project_ids_for_user(pool, user_id).await,
+    );
+    faults
+        .take(
+            "projects",
+            systemprompt_web_admin_core::repositories::scope::containers::list_project_options(
+                pool,
+            )
+            .await,
+        )
         .into_iter()
         .map(|project| {
             let is_held = held.iter().any(|id| id == &project.id);

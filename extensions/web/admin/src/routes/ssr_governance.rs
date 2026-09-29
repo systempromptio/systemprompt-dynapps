@@ -21,6 +21,10 @@ pub(super) fn routes() -> Router<Arc<PgPool>> {
         )
         .route("/governance/approvals", get(handlers::ssr::approvals_page))
         .route(
+            "/governance/attention",
+            get(handlers::ssr::attention_counts),
+        )
+        .route(
             "/governance/secrets",
             get(handlers::ssr::secrets_audit_page),
         )

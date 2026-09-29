@@ -1,18 +1,17 @@
 ---
 title: "Measure Which Skills Are Used"
-description: "Step-by-step: sync the skill inventory, resolve name collisions, wait for the first snapshot, and read every column of the Analysis Skills table."
+description: "Step-by-step: pick a window and marketplace, sync the skill inventory, and read every column of the Analysis Skills table."
 author: "Astound Digital"
 slug: "analysis-measure-skills"
-keywords: "skill usage, inventory sync, name collision, binding, attributed use, version hash, p95, marketplace, retained snapshot"
+keywords: "skill usage, inventory sync, invocations, adoption, installs, attributed use, p95, marketplace, conversation rollup, ai judge"
 kind: "guide"
 public: true
 tags: ["enterprise", "admin", "analytics"]
 published_at: "2026-09-16"
-updated_at: "2026-09-16"
+updated_at: "2026-09-29"
 after_reading_this:
   - "Sync the skill inventory and confirm it landed"
-  - "Resolve a name collision by binding an entry to the right managed resource"
-  - "Read every KPI and every column on the Skills table without guessing"
+  - "Read every column on the Skills table without guessing"
   - "Open the conversations behind one skill"
 related_docs:
   - title: "Analysis: Measure, Improve and Publish a Skill"
@@ -29,14 +28,14 @@ related_docs:
 
 ## Prerequisites
 
-- An administrative account on the admin console.
-- At least one marketplace imported or pinned. If the Skills page shows an onboarding strip with **Import or pin a marketplace** unticked, start at [Code ↔ Instance](/documentation/services-sync).
+- An administrator account. Marketplace participants reach Conversations and Versions but not Skills; see [Roles](/documentation/admin-user-management#roles).
+- At least one marketplace imported or pinned. If none is, start at [Code ↔ Instance](/documentation/services-sync).
 
 ## Step 1: Open Skills and pick a marketplace
 
 Go to `/admin/analysis/skills`. The page opens on the **Overview** tab with **All marketplaces** in scope.
 
-The scope strip above the tabs holds two choices — the **window** (7, 30, 90 days or a year) and the **marketplace**. Both are links, so a choice is bookmarkable, and both survive a change of tab: pick a marketplace on Overview and the Activity chart and the Skills table show only its skills. The tabs are:
+The scope strip above the tabs holds two choices — the **window** (7, 30 (default), 90 days or a year) and the **marketplace**. Both are links, so a choice is bookmarkable, and both survive a change of tab: pick a marketplace on Overview and the Activity chart and the Skills table show only its skills. The tabs are:
 
 - **Overview** — one row per marketplace: people entitled, consumers holding a verified receipt (with the install rate over the entitled), people active in the window, skills used of those declared, invocations, conversations, cost and the judge's mean. The marketplace name opens its Skills table; the invocation count opens its Activity chart.
 - **Activity** — invocations over the window as one chart (per day, per week for a year), with the skills it draws beneath it.
@@ -44,90 +43,93 @@ The scope strip above the tabs holds two choices — the **window** (7, 30, 90 d
 
 ## Step 2: Sync the inventory
 
-Press **Sync inventory** in the toolbar of the Skills tab. It captures every configured skill and publishes the latest revision immediately, instead of waiting for the scheduled pass.
+Press **Sync inventory** in the toolbar of the Skills tab (administrators
+only). It publishes every configured skill into the managed inventory now,
+instead of waiting for `managed_inventory_refresh`, which runs every minute.
+Versions are also recorded at boot, so a marketplace imported while the
+server was down appears after a restart.
 
-**Expected result:** the meta line reads `… · synced a few seconds ago`. If no marketplace caption's version chip changed, nothing on disk changed, which is the correct outcome for a repeat sync.
+**Expected result:** the marketplace's version on
+[Versions](/documentation/analysis-versions) is current. A repeat sync with
+nothing changed on disk records nothing new, which is correct.
 
-## Step 3: Resolve name collisions
+## Step 3: Give it a minute
 
-If a red **Name collisions** notice appears, some skills exist both as files in `services/` and as an imported managed resource with the same id. Metrics cannot attach until you choose which one counts.
+Nothing on the Analysis pages is computed live from raw events. The
+`conversation_rollup` job re-derives, every minute, each conversation touched
+on any plane (gateway, hooks, governance, tools, artifacts) since its last
+run, into `conversation_facts` and the per-skill `conversation_skill_facts`.
+A skill invoked a moment ago appears on the next pass. If the page still
+shows nothing after two minutes, follow
+[Create a Conversation and See It Land](/documentation/analysis-test-conversation).
 
-1. Expand **Resolve**.
-2. For each row, pick the managed resource in the dropdown.
-3. Press **Bind**.
+Skills that are configured but were not invoked in the window are not rows.
+They are counted on the **unused** button in the toolbar, which lists each one
+with its marketplace and how many people are entitled to it.
 
-A row with `no imported resource to bind to` has nothing to choose from yet; sync again after the resource is imported.
+## Step 4: Read the table
 
-## Step 4: Wait for the first snapshot
-
-Figures appear once a snapshot exists for the bound resource. The inventory refresh runs every minute; the feedback fact and snapshot passes run every five seconds. Give it a minute or two, then reload.
-
-Until then the Invocations column shows one of three words:
-
-| Word | Meaning |
-|---|---|
-| `unbound` | The entry is not bound to a managed resource, so nothing can attach to it. |
-| `pending` | Bound, waiting for its first snapshot. |
-| `suppressed` | The entry is excluded from measurement. |
-
-## Step 5: Read the KPI tiles
-
-| Tile | What it counts |
-|---|---|
-| **Skills** | Skills in this marketplace, with how many are measured. |
-| **Attributed use** | Invocations carrying verified evidence. |
-| **Failing** | Skills with a name collision or more than 10% failed requests. |
-| **Requests** | Attributed requests, with the failed count beside it. |
-| **Spend** | Related spend. It overlaps across skills and must never be summed. |
-
-The tiles are organisation-wide for the window and include traffic not yet attributed to any skill, so they will not add up to the sum of the rows. That is intended.
-
-## Step 6: Read the columns
-
-The page opens on every marketplace, each under its own caption with the version chip it serves. Use the **Marketplace** field to narrow to one, **Window** for 7, 30, 90 or 365 days, and **Skill** to search. **All columns** reveals three extra columns; **Fewer columns** hides them again. **Export** opens the export dialog: pick the window, the format (CSV, JSON, JSON Lines or Markdown) and the columns, and the dialog counts the rows and cells before you download. Every table page in the console carries the same button.
+The table is grouped by marketplace, then by plugin. Each marketplace header
+shows its skills, its invocations and the most people on any one skill; the
+marketplace name opens its history on Versions. The filter ribbon narrows by
+**Client**, **Sort** and search, and **Export** downloads the rows in CSV,
+JSON, JSON Lines or Markdown with the columns you pick. Every table page in
+the console carries the same button.
 
 | Column | Definition |
 |---|---|
-| **Skill** | The skill's resource key, and the link to its conversations. Hovering it reads "<name> — conversations that used this skill". |
-| **Health** | Red for a name collision, an unavailable or withdrawn entry, or more than 10% failed requests. Amber for unbound or audience-less skills, and for measured skills with no attributed use. Grey while a bound resource waits for its first snapshot. |
-| **Invocations** | Invocations attributed to this skill, with the share carrying verified evidence as a percentage beside it. |
-| **Users** | Distinct people who invoked the skill in the window, from the retained facts. An em-dash means identity was never available. The people *entitled* to a marketplace are on its caption, not on the row. |
-| **Requests** | Attributed requests, with failures in red. |
-| **Tokens** | Input and output tokens on attributed requests. Behind **All columns**. |
-| **Cost** | Related spend on this skill's attributed requests. Overlaps across skills. |
-| **p95** | 95th percentile latency, measured over the requests related to the skill in this window. A value marked `≤` is the snapshot histogram's upper bound, shown only when no request latency exists. |
-| **Assessed** | Scored conversations over assessed conversations. Behind **All columns**. |
-| **Revision** | The revision the inventory last captured for this skill. Behind **All columns**. |
-| **Version** | The content hash of the marketplace version serving this skill. Opens that marketplace's history on Versions. |
-| **Actions** | **Catalog** opens the skill in the marketplace catalog, where its contents and entitlement live. The conversations link is the skill name itself, in the first column, not an action here. |
+| **Skill** | The skill's name, opening its page. Beneath it: the share of invocations attributed with evidence, and the date first used. |
+| **Invoked** | Invocations reported by the harness hooks — slash command and Skill tool. |
+| **14 days** | Invocations per day over the last 14 days. |
+| **People** | Distinct people who invoked it, over the people entitled to its marketplace. |
+| **Installs** | Consumers holding a verified installation receipt. |
+| **Conv.** | Gateway conversations whose session invoked the skill; hover for turns. |
+| **Tokens** / **Cost** | Tokens and spend in those conversations. Spend overlaps when several skills run in one conversation, so never sum the column. |
+| **/inv** | Cost per invocation. |
+| Wrench | Tool calls in those conversations, failed calls in brackets. Opens them. |
+| File | Artifacts those conversations produced. Opens them. See [Artifacts and the Tool-Call Ledger](/documentation/artifacts-and-tool-calls). |
+| **Err** | Failed requests, and denied tool calls behind ⛔. |
+| **p95** | 95th percentile turn latency. |
+| **Models** / **Agents** | Models and clients seen. |
+| **Last** | Last invocation. |
+| Sparkle **AI** | The AI judge's mean completion score over judged conversations, with judged / total beside it. |
 
-A skill carried by two plugins appears under each one. Group rollups count it once.
+A skill carried by two plugins appears under each one; the marketplace
+header counts it once.
 
-## Step 7: Open one skill's conversations
+## Step 5: Open one skill
 
-Click the skill name in the Skills table. The skill's page opens at `/admin/analysis/skills/<plugin:skill>` and lists every conversation with an attributed invocation: listing every session with an attributed invocation: session, consumer, first and last seen, invocations, requests, tokens, cost and the latest retained assessment.
+Click the skill name. Its page (`/admin/analysis/skills/<plugin:skill>`)
+breaks the same figures down (by client, model or kit version), lists its
+workflow runs where the skill keeps a workflow log — succeeded, median and
+p90 time, agent time against human wait, cost per run — and lists every
+conversation that invoked it, with person, client and model, turns, tool
+calls, artifacts, errors, cost and the judge's score.
 
-**Verification:** the conversation count on that page should be consistent with the Users column you just read for the same window. If the skill link lands on an empty table, see [Create a Conversation and See It Land](/documentation/analysis-test-conversation).
+**Check:** the conversation count on the skill's page matches **Conv.** in
+the table for the same window.
 
 ## Troubleshooting
 
-### The table is empty for this marketplace
+### A skill I just used is not in the table
 
-**Symptom:** "No skills here".
-**Cause:** No skill matches the current marketplace and search.
-**Solution:** Press **Clear** to drop the search, change the **Marketplace** field, or sync the inventory.
+**Cause:** the rollup has not passed yet, the window or marketplace excludes
+it, or the plugin carrying the governance hooks is not installed on that
+client — without the hooks, no invocation is reported.
+**Solution:** wait a minute and reload, widen the window, clear the search,
+then check the client with `astound-bridge status`.
 
-### Every p95 reads the same value with a ≤
+### Invoked is high but Conv. is zero
 
-**Symptom:** The p95 column shows `≤ 16.78 s` on many rows.
-**Cause:** No request latency exists for those skills in the window, so the snapshot histogram's power-of-two bucket bound is shown.
-**Solution:** Nothing to fix; once requests related to the skill carry latency, a measured percentile replaces the bound.
+**Cause:** the client's model traffic does not go through the gateway, so
+there is no gateway conversation to join. Hook reports still arrive.
+**Solution:** route the client through the gateway; see
+[Connect Claude Code](/documentation/connect-claude-code).
 
 ### Spend looks too high across the page
 
-**Symptom:** Adding the Cost column gives a larger number than the Spend tile.
-**Cause:** Related spend overlaps when several skills run in one conversation.
-**Solution:** Read costs per skill and never sum the column.
+**Cause:** spend overlaps when several skills run in one conversation.
+**Solution:** read cost per skill and never sum the column.
 
 ## Related pages
 

@@ -3,15 +3,15 @@ title: "Deploy: One Node and PostgreSQL"
 description: "Run the published Astound Digital gateway image on one Linux machine against PostgreSQL, from pulling the image to the first admin sign-in."
 author: "Astound Digital"
 slug: "deploy"
-keywords: "deploy, self-host, docker, docker compose, postgresql, ghcr, image, profile, secrets, single node, install"
+keywords: "deploy, self-host, docker, docker compose, postgresql, ghcr, image, profile, secrets, vertex ai, service account, single node, install, upgrade"
 kind: "guide"
 public: true
 tags: ["documentation", "deployment", "configuration"]
 published_at: "2026-09-02"
-updated_at: "2026-09-11"
+updated_at: "2026-09-29"
 after_reading_this:
   - "Pull and verify the published image"
-  - "Provision PostgreSQL with the three required extensions"
+  - "Provision PostgreSQL with the two required extensions"
   - "Render the profile and secrets once and start the node"
   - "Verify the node and sign in as the first admin"
 related_playbooks:
@@ -44,10 +44,10 @@ name a release the gateway is not on.
 
 | Item | Requirement |
 |------|-------------|
-| Machine | Linux (amd64 or arm64), Docker Engine 24+ with Compose v2, 2 vCPU and 4 GB RAM minimum, outbound HTTPS |
+| Machine | Linux (amd64 or arm64), Docker Engine 24+ with Compose v2, 2 vCPU and 4 GB RAM minimum, outbound HTTPS to `ghcr.io`, `aiplatform.googleapis.com`, `oauth2.googleapis.com` and `api.anthropic.com` |
 | Image access | a GitHub token with `read:packages`, issued by Astound. The image is private |
 | PostgreSQL | version 16 or newer, reachable from the machine on 5432 with TLS. The `uuid-ossp` and `pgcrypto` extensions must be available. The bundled option runs PostgreSQL 18 beside the app |
-| Model provider | a Google service-account JSON for Vertex AI (`claude-*` models route to Vertex, failing over to Anthropic), plus an Anthropic API key |
+| Model provider | a Google service-account JSON with `roles/aiplatform.user` on one GCP project (every `claude-*` request is served from Vertex AI), plus an Anthropic API key for the failover |
 | Public hostname | an HTTPS address with TLS terminated by nginx on the machine or by a load balancer in front of it. HTTPS is mandatory: the sign-in cookie is `Secure` and SSO callbacks must match the public HTTPS URL |
 
 ## 1. Get the bundle and the image
@@ -76,8 +76,9 @@ Skip this step if you use the bundled PostgreSQL: its first start installs
 the extensions itself.
 
 For a database you manage, run `provision.sql` once as the administrative
-user. It creates the `systemprompt` role and database and installs the three
-extensions, which need rights the application role never gets:
+user. It creates the `systemprompt` role and database and installs the two
+extensions (`uuid-ossp`, `pgcrypto`), which need rights the application role
+never gets. pgvector is not required:
 
 ```bash
 psql "postgres://<admin>:<pw>@<db-host>:5432/postgres?sslmode=require" \
@@ -108,6 +109,7 @@ line pins it to the image release, which `--image` and `preflight.sh` check.
   --trusted-proxies 127.0.0.0/8 \
   --database-url 'postgres://systemprompt:<pw>@<db-host>:5432/systemprompt?sslmode=require' \
   --anthropic-key sk-ant-... \
+  --secret "vertex=$(cat vertex-sa.json)" \
   --image ghcr.io/astound-digital/systemprompt-astound:@RELEASE_VERSION@
 ```
 
@@ -117,13 +119,15 @@ line pins it to the image release, which `--image` and `preflight.sh` check.
 | `--admin-email` | the first admin account, created at boot as user `admin` |
 | `--trusted-proxies` | the address your TLS proxy or load balancer connects from. nginx on the same machine: `127.0.0.0/8`. Without it forwarded headers are ignored and rate limiting can refuse callers |
 | `--database-url` | from step 2, or `postgres://systemprompt:<pw>@postgres:5432/systemprompt` for the bundled database |
+| `--anthropic-key` | the Anthropic API key, stored as the `anthropic` secret. The `claude-*` route fails over to it when Vertex is out of capacity or unreachable |
+| `--secret name=value` | any other secret, repeatable. `vertex=<service-account JSON>` is the one every deployment needs: one key serves Claude, Gemini and the open models on Vertex. Optional ones (`gemini`, `astound_release_token`, `ghcr_pull_token`) are listed in `SECRETS.md` |
 | `--image` | optional; validates the rendered profile inside the image before you start anything |
 
 **Settle the hostname before the first boot.** Changing `--external-url` later
 is not a re-render and a restart: the JWT issuer moves with it, so every issued
-session and bridge token stops validating, and passkeys are bound to the origin
-they were registered on, so those users enrol again. If SAML SSO is configured,
-the relying-party trust is registered against this host too — see
+session and bridge token stops validating, and every bridge has to be
+connected again. The AD FS relying-party trust is registered against this host
+too, so IT has to update it — see
 [ADFS SSO setup](/documentation/adfs-sso-setup).
 
 `render-profile.sh` also generates the three secrets that form the
@@ -178,9 +182,10 @@ forward these headers; the full nginx block is in
 ```
 
 The checklist covers health, the admin login page, the public site, every
-client download against its checksum, anonymous rejection on `/v1/messages`,
-the binary version, both MCP servers, the
-migration ledger and the admin user. Resolve failures for the configured resources before continuing.
+client download against its checksum, anonymous rejection (`401`) on
+`/v1/messages`, the binary version, the `systemprompt` MCP server on port
+5010, the migration ledger and the admin user. It exits 0 only when every
+check passes; resolve each failure before continuing.
 
 Configure [Astound SSO](/documentation/adfs-sso-setup) for the public hostname, sign in at `https://ai.example.com/admin/login`, and hand users the
 [Downloads](/documentation/downloads) page, which your own gateway serves.

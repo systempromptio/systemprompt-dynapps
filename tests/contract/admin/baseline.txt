@@ -45,6 +45,7 @@ GET    /admin/analytics                                      anonymous=307 non-a
 GET    /admin/analytics/users/{user_id}                      anonymous=307 non-admin=303 developer=303 admin=308 platform-admin=308 project-manager=303 knowledge-worker=303
 GET    /admin/api/chain/{id}                                 anonymous=307 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=403 knowledge-worker=403
 GET    /admin/api/history/search                             anonymous=307 non-admin=200 developer=200 admin=200 platform-admin=200 project-manager=200 knowledge-worker=200
+GET    /admin/api/overview                                   anonymous=307 non-admin=403 developer=403 admin=200 platform-admin=200 project-manager=403 knowledge-worker=403
 GET    /admin/api/search/resolve                             anonymous=307 non-admin=403 developer=403 admin=200 platform-admin=200 project-manager=403 knowledge-worker=403
 GET    /admin/artifacts                                      anonymous=307 non-admin=303 developer=303 admin=200 platform-admin=200 project-manager=303 knowledge-worker=303
 GET    /admin/artifacts/{artifact_id}                        anonymous=307 non-admin=303 developer=303 admin=404 platform-admin=404 project-manager=303 knowledge-worker=303
@@ -91,6 +92,7 @@ GET    /admin/gateway/policies                               anonymous=307 non-a
 GET    /admin/gateway/routes/{route_id}                      anonymous=307 non-admin=303 developer=303 admin=404 platform-admin=404 project-manager=303 knowledge-worker=303
 GET    /admin/governance                                     anonymous=307 non-admin=303 developer=303 admin=200 platform-admin=200 project-manager=303 knowledge-worker=303
 GET    /admin/governance/approvals                           anonymous=307 non-admin=303 developer=303 admin=200 platform-admin=200 project-manager=303 knowledge-worker=303
+GET    /admin/governance/attention                           anonymous=307 non-admin=303 developer=303 admin=200 platform-admin=200 project-manager=303 knowledge-worker=303
 GET    /admin/governance/decisions/{decision_id}             anonymous=307 non-admin=303 developer=303 admin=404 platform-admin=404 project-manager=303 knowledge-worker=303
 GET    /admin/governance/quotas                              anonymous=307 non-admin=303 developer=303 admin=200 platform-admin=200 project-manager=303 knowledge-worker=303
 GET    /admin/governance/secrets                             anonymous=307 non-admin=303 developer=303 admin=200 platform-admin=200 project-manager=303 knowledge-worker=303
@@ -119,7 +121,7 @@ GET    /admin/requests/{request_id}                          anonymous=307 non-a
 GET    /admin/roles                                          anonymous=307 non-admin=303 developer=303 admin=200 platform-admin=200 project-manager=303 knowledge-worker=303
 GET    /admin/sessions                                       anonymous=307 non-admin=303 developer=303 admin=200 platform-admin=200 project-manager=303 knowledge-worker=303
 GET    /admin/sessions/{session_id}                          anonymous=307 non-admin=303 developer=303 admin=404 platform-admin=404 project-manager=303 knowledge-worker=303
-GET    /admin/setup                                          anonymous=307 non-admin=200 developer=200 admin=200 platform-admin=200 project-manager=200 knowledge-worker=200
+GET    /admin/setup                                          anonymous=307 non-admin=308 developer=308 admin=308 platform-admin=308 project-manager=308 knowledge-worker=308
 GET    /admin/skills                                         anonymous=307 non-admin=303 developer=303 admin=200 platform-admin=200 project-manager=303 knowledge-worker=303
 GET    /admin/skills/{skill_id}                              anonymous=307 non-admin=303 developer=303 admin=404 platform-admin=404 project-manager=303 knowledge-worker=303
 GET    /admin/sync                                           anonymous=307 non-admin=303 developer=303 admin=200 platform-admin=200 project-manager=303 knowledge-worker=303

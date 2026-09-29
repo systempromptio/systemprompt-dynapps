@@ -17,12 +17,12 @@ const GROUP_RULE_TYPE: RuleType = RuleType::extension_static("group");
 const GROUP_PRECEDENCE: u16 = 150;
 
 #[must_use]
-pub fn group_rule_type() -> RuleType {
+pub const fn group_rule_type() -> RuleType {
     GROUP_RULE_TYPE
 }
 
 #[must_use]
-pub fn group_dimension() -> SubjectDimension {
+pub const fn group_dimension() -> SubjectDimension {
     SubjectDimension {
         rule_type: group_rule_type(),
         label: "Group",

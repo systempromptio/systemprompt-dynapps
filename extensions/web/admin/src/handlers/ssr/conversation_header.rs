@@ -6,6 +6,7 @@
 
 use chrono::{DateTime, Utc};
 use serde::Serialize;
+use systemprompt_web_admin_core::ssr::viewer_tz::viewer_tz;
 
 use crate::handlers::ssr::transcript_view::ConversationView;
 use crate::repositories::analytics::context_detail::{ContextHeader, ContextKpis};
@@ -86,7 +87,7 @@ pub(crate) fn timeline_display(
 ) -> Option<String> {
     let start = first?;
     let started = start
-        .with_timezone(&chrono::Local)
+        .with_timezone(&viewer_tz())
         .format("%a %-d %b, %H:%M")
         .to_string();
     Some(match last {

@@ -59,6 +59,8 @@ mod view_tables;
 
 use context::DashboardTab;
 use page::{PageInput, page_context};
+use systemprompt_web_admin_core::ssr::faults::Faults;
+use systemprompt_web_admin_core::ssr::helpers::Viewer;
 use systemprompt_web_admin_core::ssr::list_view::DEFAULT_PAGE_SIZE;
 use systemprompt_web_admin_core::ssr::page::Page;
 
@@ -140,6 +142,7 @@ pub(crate) async fn analytics_dashboard_page(
     let scope = resolve_site_scope(&pool, &query.scope(), query.attribution()).await?;
     let slo_ms = crate::repositories::analytics::site::latency::resolve_slo_ms(query.slo_ms);
 
+    let mut faults = Faults::new();
     let fetched = data::load_dashboard_data(
         &pool,
         data::DashboardQueryPlan {
@@ -153,6 +156,7 @@ pub(crate) async fn analytics_dashboard_page(
             slo_ms,
             axis: query.container_axis(),
         },
+        &mut faults,
     )
     .await;
     let filters = filters::build_filters(&pool, &shell.user, &query, &request, bucket).await;
@@ -168,12 +172,12 @@ pub(crate) async fn analytics_dashboard_page(
     });
 
     Ok(
-        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+        systemprompt_web_admin_core::ssr::helpers::render_page_with_faults(
             &shell.engine,
             "analytics-dashboard",
             &ctx,
-            &shell.user,
-            &shell.marketplace,
+            Viewer::new(&shell.user, &shell.marketplace),
+            &faults,
         ),
     )
 }

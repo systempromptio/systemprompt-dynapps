@@ -10,6 +10,7 @@
 //! tool-call rows without rendering any history twice.
 
 use std::collections::HashMap;
+use systemprompt_web_admin_core::ssr::viewer_tz::viewer_tz;
 
 use chrono::{DateTime, Utc};
 use serde::Serialize;
@@ -226,7 +227,7 @@ fn side_calls_view(side: &[&ContextRequestRow]) -> SideCallsView {
 }
 
 pub(super) fn local_time(ts: DateTime<Utc>) -> String {
-    ts.with_timezone(&chrono::Local)
+    ts.with_timezone(&viewer_tz())
         .format("%H:%M:%S")
         .to_string()
 }

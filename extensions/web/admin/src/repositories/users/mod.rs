@@ -10,11 +10,9 @@ pub mod roles;
 pub mod roster;
 pub mod salesforce_identity;
 pub mod sessions;
-pub mod share_token;
 pub mod user_settings;
 
 pub use mutations::{create_user, delete_user, update_user};
-pub use share_token::find_share_token_version;
 
 pub mod connector_credentials;
 

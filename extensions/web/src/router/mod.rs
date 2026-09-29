@@ -11,6 +11,7 @@
 mod admin_ssr;
 mod api;
 mod pools;
+mod sign_out;
 
 use std::sync::Arc;
 

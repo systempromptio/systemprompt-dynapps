@@ -12,11 +12,11 @@
 use chrono::{DateTime, Duration, NaiveTime, Utc};
 use serde::Deserialize;
 
-use super::model::{ExportWindow, Window};
+use super::model::{ExportContext, ExportWindow, Window};
 use crate::error::{AdminError, AdminResult};
 use crate::ssr::time_window as time;
 use crate::util::month_range::{MonthQuery, parse_month_range};
-use crate::util::time_range::TimeRangePreset;
+use crate::util::time_range::{TimeRange, TimeRangePreset};
 
 pub(crate) const RETAINED_DAYS: [u32; 5] = [1, 7, 30, 90, 365];
 const MAX_RETAINED_DAYS: i64 = 366;
@@ -167,4 +167,14 @@ fn month(query: &WindowQuery) -> ExportWindow {
         to: range.to,
         clamped: false,
     }
+}
+
+pub fn time_range(ctx: &ExportContext<'_>) -> AdminResult<TimeRange> {
+    let w = ctx.window()?;
+    Ok(TimeRange {
+        from: w.from,
+        to: w.to,
+        preset: TimeRangePreset::Custom,
+        rejected_bounds: false,
+    })
 }

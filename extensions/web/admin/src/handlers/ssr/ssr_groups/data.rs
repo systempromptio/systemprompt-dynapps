@@ -10,10 +10,10 @@ use std::collections::HashMap;
 
 use sqlx::PgPool;
 
-
 use crate::repositories::groups::usage::{GroupUsageRow, list_groups_with_usage};
 use systemprompt_web_admin_core::catalog_index::marketplaces::load_marketplaces;
 use systemprompt_web_admin_core::repositories::scope::membership::UNATTRIBUTED as UNATTRIBUTED_ROW;
+use systemprompt_web_admin_core::ssr::faults::Faults;
 
 use super::super::people_view::{share, short_model};
 use super::super::types::{GroupRowView, MemberSetChipView, UnattributedRowView};
@@ -25,18 +25,18 @@ pub(super) struct Listing {
     pub unkeyed_people: i64,
 }
 
-pub(super) async fn load_listing(pool: &PgPool, window_days: i32) -> Listing {
-    let loaded: Vec<GroupUsageRow> = list_groups_with_usage(pool, window_days)
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, "group usage listing failed"))
-        .unwrap_or_default();
+pub(super) async fn load_listing(pool: &PgPool, window_days: i32, faults: &mut Faults) -> Listing {
+    let loaded: Vec<GroupUsageRow> = faults.take(
+        "group usage",
+        list_groups_with_usage(pool, window_days).await,
+    );
 
     let (remainder, groups): (Vec<GroupUsageRow>, Vec<GroupUsageRow>) =
         loaded.into_iter().partition(|g| g.id == UNATTRIBUTED_ROW);
     let remainder = remainder.into_iter().next();
 
-    let marketplaces = load_group_marketplaces(pool, &groups).await;
-    let unkeyed_people = count_unkeyed_people(pool).await;
+    let marketplaces = load_group_marketplaces(pool, &groups, faults).await;
+    let unkeyed_people = faults.take("unkeyed people count", count_unkeyed_people(pool).await);
     let remainder_requests = remainder.as_ref().map_or(0, |r| r.requests);
     let instance_requests: i64 =
         groups.iter().map(|g| g.requests).sum::<i64>() + remainder_requests;
@@ -114,7 +114,7 @@ fn source_display(label: &str) -> &'static str {
     }
 }
 
-async fn count_unkeyed_people(pool: &PgPool) -> i64 {
+async fn count_unkeyed_people(pool: &PgPool) -> Result<i64, sqlx::Error> {
     sqlx::query_scalar!(
         r#"SELECT COUNT(*)::BIGINT AS "count!"
            FROM users u
@@ -125,13 +125,12 @@ async fn count_unkeyed_people(pool: &PgPool) -> i64 {
     )
     .fetch_one(pool)
     .await
-    .inspect_err(|e| tracing::warn!(error = %e, "unkeyed people count failed"))
-    .unwrap_or_default()
 }
 
 async fn load_group_marketplaces(
     pool: &PgPool,
     groups: &[GroupUsageRow],
+    faults: &mut Faults,
 ) -> HashMap<String, Vec<MemberSetChipView>> {
     let section: Vec<(String, String, Option<String>)> = load_marketplaces()
         .into_iter()
@@ -146,13 +145,13 @@ async fn load_group_marketplaces(
         .map(|g| systemprompt_web_admin_core::repositories::entitlement::group_subject(&g.id))
         .collect();
     let sections = vec![("marketplace".to_owned(), "Marketplaces".to_owned(), section)];
-    let matrices =
+    let matrices = faults.take(
+        "group marketplaces",
         systemprompt_web_admin_core::repositories::entitlement::resolve_subject_matrices(
             pool, &subjects, &sections,
         )
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, "group marketplace resolve failed"))
-        .unwrap_or_default();
+        .await,
+    );
     groups
         .iter()
         .zip(matrices)

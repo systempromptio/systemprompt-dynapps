@@ -6,7 +6,7 @@ use serde::Serialize;
 use crate::repositories::analysis::tools::ToolActivityRow;
 use systemprompt_web_admin_core::ssr::analysis_urls::analysis_skill_url;
 use systemprompt_web_admin_core::ssr::format::{
-    format_duration_ms, local_time, relative_time, short_num,
+    format_bytes, format_duration_ms, local_time, relative_time,
 };
 
 const INPUT_CLIP: usize = 72;
@@ -70,20 +70,6 @@ pub(crate) fn kind_label(kind: Option<&str>) -> &'static str {
         Some("body") => "Body",
         _ => "Tool call",
     }
-}
-
-pub(crate) fn format_bytes(bytes: i64) -> String {
-    if bytes <= 0 {
-        return "\u{2014}".to_owned();
-    }
-    if bytes < 1024 {
-        return format!("{bytes} B");
-    }
-    let kib = bytes / 1024;
-    if kib < 1024 {
-        return format!("{kib} KiB");
-    }
-    format!("{} MiB", short_num(kib / 1024))
 }
 
 fn clip(text: &str, max: usize) -> String {

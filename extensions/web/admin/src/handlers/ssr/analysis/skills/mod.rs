@@ -205,6 +205,20 @@ impl SkillsQuery {
     }
 }
 
+fn list_filter(query: &SkillsQuery, tab: SkillsTab) -> SkillListFilter {
+    SkillListFilter {
+        marketplace_id: query.marketplace().map(MarketplaceId::new),
+        search: (tab == SkillsTab::Skills).then(|| query.search()).flatten(),
+        client_kind: (tab == SkillsTab::Skills)
+            .then(|| SkillsQuery::trimmed(query.client.as_deref()))
+            .flatten(),
+        sort: query.sort(),
+        limit: ROW_LIMIT,
+        offset: 0,
+        skills: None,
+    }
+}
+
 pub(crate) async fn page(
     shell: Page,
     State(pool): State<Arc<PgPool>>,
@@ -229,17 +243,7 @@ pub(crate) async fn page(
         end,
         subject_ids: scope.as_sql().map(<[String]>::to_vec),
     };
-    let filter = SkillListFilter {
-        marketplace_id: query.marketplace().map(MarketplaceId::new),
-        search: (tab == SkillsTab::Skills).then(|| query.search()).flatten(),
-        client_kind: (tab == SkillsTab::Skills)
-            .then(|| SkillsQuery::trimmed(query.client.as_deref()))
-            .flatten(),
-        sort: query.sort(),
-        limit: ROW_LIMIT,
-        offset: 0,
-        skills: None,
-    };
+    let filter = list_filter(&query, tab);
     let index = InventoryIndex::build(&systemprompt_web_admin_core::request::get_services_path()?);
     let (rows, adoption, audience) = tokio::join!(
         list_skill_facts(&pool, &window, &filter),

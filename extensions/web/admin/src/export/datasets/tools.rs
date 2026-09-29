@@ -5,7 +5,6 @@
 
 use async_trait::async_trait;
 
-use super::requests::time_range;
 use crate::handlers::ssr::ssr_tools::{Lens, export_rows};
 use crate::repositories::analysis::tools::{ToolActivityRow, ToolBucketRow};
 use systemprompt::identifiers::UserId;
@@ -14,6 +13,7 @@ use systemprompt_web_admin_core::export::model::{
     Cell, CellKind, Column, DataSet, ExportContext, Table, Window,
 };
 use systemprompt_web_admin_core::export::registry::DataSetRegistration;
+use systemprompt_web_admin_core::export::window::time_range;
 
 pub(crate) struct Tools;
 pub(crate) struct ToolsBreakdown;

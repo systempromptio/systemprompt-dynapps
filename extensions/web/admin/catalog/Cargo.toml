@@ -1,0 +1,48 @@
+[package]
+name = "systemprompt-web-admin-catalog"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "Catalog domain of the admin dashboard for the systemprompt.io template: marketplaces, plugins, skills, MCP servers, managed resources, versions and the lifecycle ledger."
+repository.workspace = true
+homepage.workspace = true
+publish = false
+
+[dependencies]
+# Foundation
+systemprompt-web-shared = { workspace = true }
+systemprompt-web-admin-core = { workspace = true }
+# Audit: uses identifiers, marketplace, models, security — requires `full`.
+systemprompt = { workspace = true, features = ["full"] }
+systemprompt-security = { workspace = true }
+
+# Database
+sqlx = { workspace = true }
+
+# Web framework
+axum = { workspace = true }
+
+# Async runtime
+tokio = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+
+# Logging
+tracing = { workspace = true }
+
+# Crypto & encoding (share-token signing)
+sha2 = { workspace = true }
+base64 = { workspace = true }
+
+# Utilities
+urlencoding = { workspace = true }
+inventory = { workspace = true }
+async-trait = { workspace = true }
+
+[lints]
+workspace = true

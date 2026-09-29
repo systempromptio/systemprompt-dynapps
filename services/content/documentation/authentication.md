@@ -8,7 +8,7 @@ kind: "guide"
 public: true
 tags: ["authentication", "security", "login"]
 published_at: "2026-03-02"
-updated_at: "2026-09-11"
+updated_at: "2026-09-29"
 after_reading_this:
   - "Sign in as an Astound user with Astound SSO"
   - "Understand how Active Directory groups become platform roles and entitlements"
@@ -98,8 +98,11 @@ Failures return to `/admin/login?sso=<reason>`:
 Two things read the AD groups:
 
 - **Roles** — `group_roles` in `adfs.yaml` maps a group to `platform_admin`,
-  `admin`, `project_manager`, `developer`, `knowledge_worker` and/or `user`. The directory half of the role set
-  is re-projected on every sign-in.
+  `admin`, `project_manager`, `developer`, `knowledge_worker` and/or `user`
+  (`group_role_patterns` adds glob matches such as
+  `Systemprompt-ProjectManagers-*`). The directory half of the role set is
+  re-projected on every sign-in. What each role opens is on
+  [Create & Manage Users → Roles](/documentation/admin-user-management#roles).
 - **Membership** — `services/web/config/groups.yaml` maps a group onto a
   platform *group* (who someone is, and what workspace they reach) and a
   *project* (what work their usage is attributed to). Both are database rows
@@ -236,8 +239,9 @@ middleware** extracts and validates the JWT, then loads the user's roles and
 project into a `UserContext`. **Auth check middleware** rejects protected
 routes without a valid user ID, returning HTTP 401.
 
-`UserContext` carries `user_id`, `username`, `email`, `roles`, `project`, and
-`is_admin`.
+`UserContext` carries `user_id`, `username`, `email`, `roles`, `group_ids`,
+`project_ids`, the caller's marketplace `participation`, and the derived flags
+`is_admin`, `is_console`, `is_platform_admin` and `is_developer`.
 
 To sign out, clear the `access_token` cookie.
 
@@ -247,9 +251,11 @@ To sign out, clear the `access_token` cookie.
 |-------|--------|
 | `/admin/login` | Public |
 | `/admin/auth/adfs/*` | Public — the SSO start and callback |
-| `/admin/profile`, `/admin/connect`, `/admin/connectors`, `/admin/setup` | Any valid session, including a plain `user` |
-| `/admin/*` (everything else) | Requires a valid session **and** the `admin` role |
-| `/admin/enterprises*`, `/admin/reports/internal` | Requires platform admin |
+| `/admin/profile`, `/admin/history`, `/admin/connect`, `/admin/connectors` | Any valid session, including a plain `user` |
+| `/admin/analysis/conversations`, `/admin/analysis/versions`, `/admin/sync` and the session, request, trace and context detail pages | A valid session with `admin` / `platform_admin`, **or** marketplace participation — scoped to the participant's marketplaces |
+| `/admin/*` (everything else) | A valid session **and** a console role (`admin` or `platform_admin`) |
+| Admin JSON writes (`/api/public/admin/*` mutations) | `admin` or `platform_admin` |
+| Adding or removing AD-group mappings on groups and projects (`POST`/`DELETE /api/public/admin/{groups,projects}/{id}/ad-mappings`) | `platform_admin` only |
 | `/bridge-auth/*` | Requires a valid session — the desktop link runs through SSO |
 
 `/admin/login` and the two SSO routes are the *entire* public surface. There is
@@ -257,10 +263,11 @@ no public registration, credential-enrolment, or invite-redemption route; if you
 are adding one, you are adding a second way in.
 
 Anonymous requests to a protected route are redirected to
-`/admin/login?redirect=…`. A signed-in user **without** the `admin` role is not
-shown a 403 for console pages — they are redirected to `/admin/profile`, which
-is the only part of the console addressed to them. JSON admin API routes return
-HTTP 403 instead, and the platform-admin routes return an HTML 403.
+`/admin/login?redirect=…`. A signed-in user **without** a console role is not
+shown a 403 for console pages — they are redirected to `/admin/profile`, unless
+the page is one their marketplace participation opens. JSON admin API routes
+return HTTP 403 instead. The role model, including participation, is on
+[Create & Manage Users → Roles](/documentation/admin-user-management#roles).
 
 ## System-originated actions
 

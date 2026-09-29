@@ -6,7 +6,8 @@
 //! by request id: the request rollup names the handful of requests the
 //! transcript is built from. Tool calls are the one load that fails the page
 //! instead of degrading to empty — no KPI counts them, so an empty list would
-//! silently redact every tool invocation from the evidence.
+//! silently redact every tool invocation from the evidence. Every other read
+//! that fails is recorded on the page's fault list.
 
 use sqlx::PgPool;
 use systemprompt::identifiers::ContextId;
@@ -20,30 +21,10 @@ use crate::repositories::analytics::context_tool_calls::{
 };
 use crate::repositories::dashboard::conversation_analytics::list_session_entity_links;
 
+use systemprompt_web_admin_core::ssr::faults::Faults;
 use systemprompt_web_admin_core::types::conversation_analytics::SessionEntityLink;
 
 use crate::handlers::ssr::transcript_view::transcript_request_ids;
-
-const fn default_kpis() -> ContextKpis {
-    ContextKpis {
-        request_count: 0,
-        trace_count: 0,
-        error_count: 0,
-        total_input_tokens: 0,
-        total_cache_read_tokens: 0,
-        total_cache_creation_tokens: 0,
-        total_output_tokens: 0,
-        total_cost_microdollars: 0,
-        first_request_at: None,
-        last_request_at: None,
-        model: None,
-        turn_count: 0,
-        side_call_count: 0,
-        side_call_cost_microdollars: 0,
-        tool_call_count: 0,
-        models: Vec::new(),
-    }
-}
 
 pub(super) struct TranscriptRead {
     pub(super) kpis: ContextKpis,
@@ -57,19 +38,17 @@ pub(super) async fn load_transcript(
     pool: &PgPool,
     header: &ContextHeader,
     context_id: &ContextId,
+    faults: &mut Faults,
 ) -> Result<TranscriptRead, sqlx::Error> {
-    let (kpis, requests) = load_request_rollup(pool, context_id).await;
+    let (kpis, requests) = load_request_rollup(pool, context_id, faults).await;
     let ids = transcript_request_ids(&requests);
     let (messages_res, tool_calls_res) = tokio::join!(
         list_messages_for_requests(pool, &ids.messages),
         list_tool_calls_for_requests(pool, &ids.tool_calls),
     );
-    let messages = messages_res.unwrap_or_else(|e| {
-        tracing::warn!(error = %e, "list_messages_for_requests failed");
-        Vec::new()
-    });
+    let messages = faults.take("messages", messages_res);
     let tool_calls = tool_calls_res?;
-    let entity_links = load_session_entity_links(pool, header).await;
+    let entity_links = load_session_entity_links(pool, header, faults).await;
     Ok(TranscriptRead {
         kpis,
         requests,
@@ -82,33 +61,28 @@ pub(super) async fn load_transcript(
 async fn load_request_rollup(
     pool: &PgPool,
     context_id: &ContextId,
+    faults: &mut Faults,
 ) -> (ContextKpis, Vec<ContextRequestRow>) {
     let (kpis_res, requests_res) = tokio::join!(
         get_context_kpis(pool, context_id),
         list_context_requests(pool, context_id),
     );
-    let kpis = kpis_res.unwrap_or_else(|e| {
-        tracing::warn!(error = %e, "get_context_kpis failed");
-        default_kpis()
-    });
-    let requests = requests_res.unwrap_or_else(|e| {
-        tracing::warn!(error = %e, "list_context_requests failed");
-        Vec::new()
-    });
-    (kpis, requests)
+    (
+        faults.take("conversation totals", kpis_res),
+        faults.take("request rollup", requests_res),
+    )
 }
 
 async fn load_session_entity_links(
     pool: &PgPool,
     header: &ContextHeader,
+    faults: &mut Faults,
 ) -> Vec<SessionEntityLink> {
     let Some(session_id) = header.session_id.as_ref() else {
         return Vec::new();
     };
-    list_session_entity_links(pool, session_id)
-        .await
-        .unwrap_or_else(|e| {
-            tracing::warn!(error = %e, "list_session_entity_links failed");
-            Vec::new()
-        })
+    faults.take(
+        "touched entities",
+        list_session_entity_links(pool, session_id).await,
+    )
 }

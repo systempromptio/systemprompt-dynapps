@@ -2,7 +2,7 @@
 
 use serde::Serialize;
 
-use super::retention::RetentionView;
+use systemprompt_web_admin_core::ssr::retention::RetentionView;
 use systemprompt_web_admin_core::ssr::sync_plane::{AppliedView, HashView};
 use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;

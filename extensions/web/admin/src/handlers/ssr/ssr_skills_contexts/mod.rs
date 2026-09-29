@@ -27,7 +27,9 @@ use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 
 use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
+use systemprompt_web_admin_core::ssr::faults::Faults;
 use systemprompt_web_admin_core::ssr::format::{format_cost, format_token_total};
+use systemprompt_web_admin_core::ssr::helpers::Viewer;
 use systemprompt_web_admin_core::ssr::list_view::PageWindow;
 use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 
@@ -235,7 +237,8 @@ pub(crate) async fn skills_contexts_page(
     )
     .await?;
     let inputs = parse_inputs(&params, &scope);
-    let data = load_page_data(&pool, &inputs, &scope).await?;
+    let mut faults = Faults::new();
+    let data = load_page_data(&pool, &inputs, &scope, &mut faults).await?;
     let payload = build_page_context(PageBuild {
         pool: &pool,
         user_ctx: &shell.user,
@@ -246,12 +249,12 @@ pub(crate) async fn skills_contexts_page(
     })
     .await;
     Ok(
-        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+        systemprompt_web_admin_core::ssr::helpers::render_page_with_faults(
             &shell.engine,
             "skills-contexts",
             &payload,
-            &shell.user,
-            &shell.marketplace,
+            Viewer::new(&shell.user, &shell.marketplace),
+            &faults,
         ),
     )
 }

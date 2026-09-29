@@ -10,6 +10,7 @@
 //! chart reads lands on both at once.
 
 use serde::Serialize;
+use systemprompt_web_admin_core::ssr::viewer_tz::viewer_tz;
 
 use crate::repositories::analytics::request_stats::{LatencyBucket, RequestStats, TimeBucket};
 use systemprompt_web_admin_core::ssr::format::{format_cost, format_duration_ms};
@@ -159,7 +160,7 @@ fn midpoint(range: &TimeRange) -> chrono::DateTime<chrono::Utc> {
 }
 
 fn format_bucket_time(ts: &chrono::DateTime<chrono::Utc>) -> String {
-    ts.with_timezone(&chrono::Local)
+    ts.with_timezone(&viewer_tz())
         .format("%b %d %H:%M")
         .to_string()
 }

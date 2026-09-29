@@ -5914,6 +5914,7 @@ dependencies = [
  "sqlx",
  "systemprompt",
  "systemprompt-security",
+ "systemprompt-web-admin-catalog",
  "systemprompt-web-admin-core",
  "systemprompt-web-shared",
  "tempfile",
@@ -5929,6 +5930,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "systemprompt-web-admin-catalog"
+version = "0.62.0"
+dependencies = [
+ "async-trait",
+ "axum",
+ "base64 0.22.1",
+ "chrono",
+ "inventory",
+ "serde",
+ "serde_json",
+ "serde_yaml_ng",
+ "sha2 0.10.9",
+ "sqlx",
+ "systemprompt",
+ "systemprompt-security",
+ "systemprompt-web-admin-core",
+ "systemprompt-web-shared",
+ "tokio",
+ "tracing",
+ "urlencoding",
+ "uuid",
+]
+
+[[package]]
 name = "systemprompt-web-admin-core"
 version = "0.62.0"
 dependencies = [
@@ -5936,6 +5961,7 @@ dependencies = [
  "axum",
  "chacha20poly1305 0.10.1",
  "chrono",
+ "chrono-tz",
  "handlebars",
  "hex",
  "inventory",

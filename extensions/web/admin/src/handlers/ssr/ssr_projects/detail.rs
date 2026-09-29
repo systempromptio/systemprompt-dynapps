@@ -26,13 +26,12 @@ use crate::repositories::projects::activity::{
     list_project_skill_effectiveness, list_project_tool_health,
 };
 use systemprompt_web_admin_core::repositories::scope::{Attribution, ScopeQuery, ScopeTarget};
+use systemprompt_web_admin_core::ssr::faults::Faults;
 use systemprompt_web_admin_core::types::UserContext;
 use systemprompt_web_admin_core::types::projects::{ProjectMemberRow, ProjectRow};
 use systemprompt_web_shared::ProjectId;
 
-use super::super::people_view::{
-    MemberContext, MemberInput, chips, mapping_rows, member_rows, or_default,
-};
+use super::super::people_view::{MemberContext, MemberInput, chips, mapping_rows, member_rows};
 use super::super::types::{
     MemberRowView, ProjectDetailPageData, ProjectMembersTabView, ProjectSettingsTabView,
     UserOptionView,
@@ -82,13 +81,14 @@ pub(super) async fn load(
     pool: &PgPool,
     project_id: &ProjectId,
     user_ctx: &UserContext,
+    faults: &mut Faults,
 ) -> DetailData {
     let q = exclusive(project_id);
     let members_q = member_view(project_id);
-    let members = repositories::projects::members::list_project_members(pool, project_id)
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, "project members failed"))
-        .unwrap_or_default();
+    let members = faults.take(
+        "project members",
+        repositories::projects::members::list_project_members(pool, project_id).await,
+    );
 
     let (usage, member_usage, groups, tools, skills) = tokio::join!(
         get_scope_usage(pool, &q),
@@ -97,26 +97,35 @@ pub(super) async fn load(
         list_project_tool_health(pool, &q, SECTION_LIMIT),
         list_project_skill_effectiveness(pool, &q, LEADERBOARD_LIMIT),
     );
-    let tools = or_default("project tool health", tools);
+    let tools = faults.take("tool health", tools);
+    let active = faults
+        .take("active user ids", load_active_user_ids(pool).await)
+        .into_iter()
+        .collect();
+    let addable = if user_ctx.is_admin {
+        faults.take("addable users", load_addable_users(pool, &members).await)
+    } else {
+        Vec::new()
+    };
 
     DetailData {
-        usage: or_default("project usage", usage),
-        member_usage: or_default("project member usage", member_usage),
-        groups: or_default("project groups", groups),
-        skills: or_default("project skills", skills),
+        usage: faults.take("project usage", usage),
+        member_usage: faults.take("member usage", member_usage),
+        groups: faults.take("project groups", groups),
+        skills: faults.take("skill effectiveness", skills),
         tool_calls: tools.iter().map(|t| t.calls).sum(),
         tool_success: tools.iter().map(|t| t.calls - t.failures).sum(),
-        active: load_active_user_ids(pool).await,
-        addable: if user_ctx.is_admin {
-            load_addable_users(pool, &members).await
-        } else {
-            Vec::new()
-        },
+        active,
+        addable,
         members,
     }
 }
 
-pub(super) async fn load_usage(pool: &PgPool, project_id: &ProjectId) -> ProjectUsageData {
+pub(super) async fn load_usage(
+    pool: &PgPool,
+    project_id: &ProjectId,
+    faults: &mut Faults,
+) -> ProjectUsageData {
     let q = exclusive(project_id);
     let (attribution, daily, models, tools, sessions) = tokio::join!(
         list_scope_attribution_sources(pool, &q),
@@ -126,11 +135,11 @@ pub(super) async fn load_usage(pool: &PgPool, project_id: &ProjectId) -> Project
         list_project_sessions(pool, &q, SECTION_LIMIT),
     );
     ProjectUsageData {
-        attribution: or_default("project attribution", attribution),
-        daily: or_default("project daily requests", daily),
-        models: or_default("project model mix", models),
-        tools: or_default("project tool health", tools),
-        sessions: or_default("project sessions", sessions),
+        attribution: faults.take("attribution sources", attribution),
+        daily: faults.take("daily requests", daily),
+        models: faults.take("model mix", models),
+        tools: faults.take("tool health", tools),
+        sessions: faults.take("project sessions", sessions),
     }
 }
 
@@ -216,36 +225,31 @@ fn as_member_input(row: &ProjectMemberRow) -> MemberInput<'_> {
     }
 }
 
-// Why: sqlx's macro form makes a column rename a build error; a runtime query
-// failure is swallowed by `unwrap_or_default` and reports every member
-// disabled.
-async fn load_active_user_ids(pool: &PgPool) -> HashSet<String> {
+async fn load_active_user_ids(pool: &PgPool) -> Result<Vec<String>, sqlx::Error> {
     sqlx::query_scalar!(r#"SELECT id AS "id!" FROM users WHERE status = 'active'"#)
         .fetch_all(pool)
         .await
-        .inspect_err(|e| tracing::warn!(error = %e, "active user ids failed"))
-        .unwrap_or_default()
-        .into_iter()
-        .collect()
 }
 
-async fn load_addable_users(pool: &PgPool, members: &[ProjectMemberRow]) -> Vec<UserOptionView> {
+async fn load_addable_users(
+    pool: &PgPool,
+    members: &[ProjectMemberRow],
+) -> Result<Vec<UserOptionView>, sqlx::Error> {
     let existing: HashSet<&str> = members.iter().map(|m| m.user_id.as_str()).collect();
-    sqlx::query_as::<_, (String, Option<String>, String)>(
+    let rows = sqlx::query_as::<_, (String, Option<String>, String)>(
         "SELECT id, COALESCE(display_name, full_name, name), email
          FROM users
          WHERE NOT ('anonymous' = ANY(roles))
          ORDER BY COALESCE(display_name, full_name, name, id)",
     )
     .fetch_all(pool)
-    .await
-    .inspect_err(|e| tracing::warn!(error = %e, "addable user list failed"))
-    .unwrap_or_default()
-    .into_iter()
-    .filter(|(id, _, _)| !existing.contains(id.as_str()))
-    .map(|(id, name, email)| UserOptionView {
-        label: name.map_or_else(|| email.clone(), |n| format!("{n} ({email})")),
-        user_id: UserId::new(id),
-    })
-    .collect()
+    .await?;
+    Ok(rows
+        .into_iter()
+        .filter(|(id, _, _)| !existing.contains(id.as_str()))
+        .map(|(id, name, email)| UserOptionView {
+            label: name.map_or_else(|| email.clone(), |n| format!("{n} ({email})")),
+            user_id: UserId::new(id),
+        })
+        .collect())
 }

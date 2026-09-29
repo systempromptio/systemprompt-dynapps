@@ -4,6 +4,8 @@
 //! up here as a mismatch against the list the dialog has always shown.
 
 use systemprompt_web_admin as _;
+use systemprompt_web_admin_catalog as _;
+use systemprompt_web_admin_core::export::model::DataSet;
 use systemprompt_web_admin_core::export::registry;
 
 const EXPECTED_DIALOG_ORDER: &[&str] = &[
@@ -70,7 +72,7 @@ fn registry_orders_are_unique() {
 #[test]
 fn find_resolves_every_listed_id() {
     for id in EXPECTED_DIALOG_ORDER {
-        let found = registry::find(id).map(|d| d.id());
+        let found = registry::find(id).map(DataSet::id);
         assert_eq!(found, Some(*id));
     }
 }

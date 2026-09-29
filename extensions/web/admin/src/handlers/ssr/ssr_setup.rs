@@ -1,41 +1,35 @@
-//! SSR page driving first-run instance setup.
+//! The four setup phases the Connect page draws, and the redirects that
+//! fold the two older onboarding pages into it.
+//!
+//! `/admin/setup` and `/bridge-auth/setup` each used to be a third way of
+//! telling someone how to connect, with their own step markup. Both now land
+//! on `/admin/connect`; the phase list — whose completion is derived from
+//! what actually reaches the account, plugin and skill counts, not from a
+//! checkbox — is what this module still owns.
 
-use axum::extract::{Extension, Query};
-use axum::response::Response;
+use axum::extract::Query;
+use axum::response::{IntoResponse, Redirect, Response};
 use serde::{Deserialize, Serialize};
 use systemprompt_web_admin_core::error::AdminHtmlResult;
-use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
-use systemprompt_web_admin_core::templates::AdminTemplateEngine;
-use systemprompt_web_admin_core::types::{MarketplaceContext, UserContext};
+use systemprompt_web_admin_core::ssr::flash::{FlashTone, redirect_with_flash};
+use systemprompt_web_admin_core::types::MarketplaceContext;
 
-#[derive(Debug, Serialize)]
-struct SetupPageContext {
-    page: &'static str,
-    title: &'static str,
-    phases: Vec<SetupPhase>,
-    all_phases_started: bool,
-    just_verified: bool,
-    total_plugins: usize,
-    total_skills: usize,
-    complete_count: usize,
-    phase_count: usize,
-    breadcrumbs: Vec<BreadcrumbView>,
-}
+pub(crate) const CONNECT_URL: &str = "/admin/connect";
 
 #[derive(Debug, Serialize)]
 // Why: Handlebars — the layout partial's `title=` hash shadows a `title` field
 // inside every block, hence `phase_title`.
-struct SetupPhase {
-    number: u8,
-    phase_title: String,
-    description: &'static str,
-    guide_url: &'static str,
-    action_url: &'static str,
-    action_label: &'static str,
-    complete: bool,
-    current: bool,
-    status_label: &'static str,
-    status_tone: &'static str,
+pub(super) struct SetupPhase {
+    pub number: u8,
+    pub phase_title: String,
+    pub description: &'static str,
+    pub guide_url: &'static str,
+    pub action_url: &'static str,
+    pub action_label: &'static str,
+    pub complete: bool,
+    pub current: bool,
+    pub status_label: &'static str,
+    pub status_tone: &'static str,
 }
 
 #[derive(Deserialize, Debug)]
@@ -44,7 +38,7 @@ pub(crate) struct SetupQuery {
     verified: Option<String>,
 }
 
-fn setup_phases(mkt_ctx: &MarketplaceContext) -> Vec<SetupPhase> {
+pub(super) fn setup_phases(mkt_ctx: &MarketplaceContext) -> Vec<SetupPhase> {
     let phase1_complete = mkt_ctx.total_plugins > 0;
     let phase2_complete = phase1_complete;
     let phase3_complete = phase2_complete && mkt_ctx.total_skills > 0;
@@ -77,7 +71,7 @@ fn setup_phases(mkt_ctx: &MarketplaceContext) -> Vec<SetupPhase> {
             number: 3,
             phase_title: String::from("Customize Your Skills"),
             description: "Use the Skill Manager MCP server to edit forked skills, create new ones, and build a library that matches how your team works.",
-            guide_url: "/documentation/skills",
+            guide_url: "/documentation/skills-lifecycle",
             action_url: "/admin/skills",
             action_label: "My Skills",
             complete: phase3_complete,
@@ -110,33 +104,18 @@ fn setup_phases(mkt_ctx: &MarketplaceContext) -> Vec<SetupPhase> {
     phases
 }
 
-pub(crate) async fn setup_page(
-    Extension(user_ctx): Extension<UserContext>,
-    Extension(mkt_ctx): Extension<MarketplaceContext>,
-    Extension(engine): Extension<AdminTemplateEngine>,
-    Query(query): Query<SetupQuery>,
-) -> AdminHtmlResult<Response> {
-    let phases = setup_phases(&mkt_ctx);
-    let complete_count = phases.iter().filter(|p| p.complete).count();
-    let ctx = SetupPageContext {
-        page: "setup",
-        total_plugins: mkt_ctx.total_plugins,
-        total_skills: mkt_ctx.total_skills,
-        complete_count,
-        phase_count: phases.len(),
-        breadcrumbs: vec![
-            BreadcrumbView::link("Account", "/admin/profile"),
-            BreadcrumbView::current("Setup guide"),
-        ],
-        title: "Setup guide",
-        all_phases_started: phases.first().is_some_and(|p| p.complete),
-        phases,
-        just_verified: query.verified.is_some(),
-    };
+pub(crate) async fn setup_page(Query(query): Query<SetupQuery>) -> AdminHtmlResult<Response> {
+    if query.verified.is_some() {
+        return Ok(redirect_with_flash(
+            CONNECT_URL,
+            FlashTone::Ok,
+            "Connected: this machine is signed in to the gateway. Phase 1 is done.",
+        )
+        .into_response());
+    }
+    Ok(Redirect::permanent(CONNECT_URL).into_response())
+}
 
-    Ok(
-        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
-            &engine, "setup", &ctx, &user_ctx, &mkt_ctx,
-        ),
-    )
+pub(crate) async fn bridge_setup_page() -> Redirect {
+    Redirect::permanent(CONNECT_URL)
 }

@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use systemprompt_web_admin::repositories::marketplace::plugins::{
+use systemprompt_web_admin_catalog::repositories::marketplace::plugins::{
     list_agent_catalog, list_skill_catalog,
 };
 

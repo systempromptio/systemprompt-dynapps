@@ -6,9 +6,9 @@
         {{#*inline "header_meta"}}
             <span class="sp-u-mono">{{user_email}}</span>
             {{#if gateway}}<span>gateway <code class="sp-u-mono">{{gateway}}</code></span>{{/if}}
+            <span><span class="sp-u-num">{{complete_count}}</span> of <span class="sp-u-num">{{phase_count}}</span> phases complete</span>
         {{/inline}}
         {{#*inline "header_actions"}}
-            <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/setup">Setup guide</a>
             <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/devices">Devices &amp; enrolments</a>
         {{/inline}}
     {{/components/page-header}}
@@ -125,11 +125,44 @@
                             </div>
                         </div>
                         <p class="sp-p-connect__pending" data-connect-pending>Your install command will appear here once you create a connection code in step 2.</p>
+                        <details class="sp-p-connect__advanced">
+                            <summary>Sign in with a device token instead of a code</summary>
+                            <p class="sp-p-connect__lede">Open <a href="/bridge-auth/device-link">the device link page</a>, approve the request and copy the <code class="sp-u-mono">sp-live-…</code> token; it is shown once. Then, in a terminal or the tray app's sign-in box:</p>
+                            <pre class="sp-connect__cmd"><code>astound-bridge login sp-live-YOUR_TOKEN --gateway {{gateway_url}}</code></pre>
+                            <p class="sp-p-connect__lede">The bridge keeps its configuration at <code class="sp-u-mono">$XDG_CONFIG_HOME/astound/</code> on Linux, <code class="sp-u-mono">~/Library/Application Support/astound/</code> on macOS and <code class="sp-u-mono">%APPDATA%\astound\</code> on Windows. Session and certificate (mTLS) sign-in, and revoking a token, are covered in <a href="/documentation/bridge-install">the desktop bridge guide</a>; a certificate is issued with <code class="sp-u-mono">systemprompt admin bridge enroll-cert</code>.</p>
+                        </details>
                     </div>
                 </div>
 
             </div>
         </div>
+    </section>
+
+    <section class="sp-p-connect__section" aria-label="After you connect">
+        {{> components/section title="After you connect" count=phase_count note="Completion is derived from what actually reaches this account — plugin and skill counts — not from a checkbox you tick."}}
+        {{#> components/table caption="The four setup phases, in order"}}
+            <thead><tr>
+                <th scope="col" class="sp-table__cell--num">#</th>
+                <th scope="col">Phase</th>
+                <th scope="col">Why it matters</th>
+                <th scope="col">Status</th>
+                <th scope="col" class="sp-table__cell--actions">Go</th>
+            </tr></thead>
+            <tbody>
+            {{#each phases}}
+            <tr{{#if current}} class="is-active"{{/if}}>
+                <td class="sp-table__cell--num sp-u-num">{{number}}</td>
+                <td>{{this.phase_title}}</td>
+                <td>{{description}}</td>
+                <td>{{> components/badge tone=status_tone text=status_label}}</td>
+                <td class="sp-table__cell--actions">
+                    <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{guide_url}}" target="_blank" rel="noopener noreferrer">Guide</a>
+                    {{#if action_url}}<a class="sp-btn sp-btn--sm sp-btn--primary" href="{{action_url}}">{{action_label}}</a>{{/if}}
+                </td>
+            </tr>
+            {{/each}}
+            </tbody>
+        {{/components/table}}
     </section>
 
     <section class="sp-p-connect__section" aria-label="Downloads">

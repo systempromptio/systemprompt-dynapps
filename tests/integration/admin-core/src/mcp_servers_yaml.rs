@@ -10,7 +10,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use systemprompt_web_admin::repositories::mcp::mcp_servers::list_mcp_servers;
+use systemprompt_web_admin_catalog::repositories::mcp::mcp_servers::list_mcp_servers;
 
 use crate::fixtures::unique;
 

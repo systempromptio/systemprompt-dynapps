@@ -8,16 +8,16 @@
 //! now** runs the job's batch out of turn through core's `otlp_export_now`,
 //! and **Test connection** posts an empty envelope to the collector
 //! ([`probe`]). Neither action exports anything of its own; the outcome comes
-//! back as a query string and is read once, on the redirect.
+//! back on the redirect as the shell's flash notice.
 
 mod probe;
 
 use std::sync::Arc;
 
-use axum::extract::{Extension, Query, State};
+use axum::extract::{Extension, State};
 use axum::http::HeaderMap;
 use axum::response::{Redirect, Response};
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use sqlx::PgPool;
 use systemprompt::models::profile::OtlpExportConfig;
 
@@ -25,6 +25,7 @@ use crate::repositories::observability::view::{ObservabilityView, build_view};
 use crate::repositories::observability::{find_declared_export, list_export_states};
 use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
 use systemprompt_web_admin_core::request::require_write_origin;
+use systemprompt_web_admin_core::ssr::flash::{FlashTone, redirect_with_flash};
 use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 use systemprompt_web_admin_core::state::ManagedState;
 use systemprompt_web_admin_core::templates::AdminTemplateEngine;
@@ -33,43 +34,6 @@ use systemprompt_web_admin_core::types::{MarketplaceContext, UserContext};
 pub(crate) const PAGE_URL: &str = "/admin/system/observability";
 const DOCS_URL: &str = "/documentation/enterprise-audit-observability";
 const DETAIL_MAX: usize = 240;
-
-#[derive(Debug, Default, Deserialize)]
-pub(crate) struct ObservabilityQuery {
-    outcome: Option<String>,
-    detail: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize)]
-struct OutcomeView {
-    tone: &'static str,
-    title: &'static str,
-    detail: String,
-}
-
-impl OutcomeView {
-    fn from_query(query: &ObservabilityQuery) -> Option<Self> {
-        let (tone, title) = match query.outcome.as_deref()? {
-            "exported" => ("ok", "Export ran"),
-            "export_failed" => ("err", "Export failed"),
-            "probe_ok" => ("ok", "Collector reachable"),
-            "probe_failed" => ("err", "Collector refused the probe"),
-            "unconfigured" => ("warn", "Nothing to export"),
-            _ => return None,
-        };
-        Some(Self {
-            tone,
-            title,
-            detail: query
-                .detail
-                .as_deref()
-                .unwrap_or_default()
-                .chars()
-                .take(DETAIL_MAX)
-                .collect(),
-        })
-    }
-}
 
 #[derive(Debug, Serialize)]
 struct ObservabilityPageData {
@@ -82,7 +46,6 @@ struct ObservabilityPageData {
     export_url: String,
     test_url: String,
     job_name: &'static str,
-    outcome: Option<OutcomeView>,
     #[serde(flatten)]
     view: ObservabilityView,
 }
@@ -92,7 +55,6 @@ pub(crate) async fn observability_page(
     Extension(mkt_ctx): Extension<MarketplaceContext>,
     Extension(engine): Extension<AdminTemplateEngine>,
     Extension(state): Extension<Arc<ManagedState>>,
-    Query(query): Query<ObservabilityQuery>,
 ) -> AdminHtmlResult<Response> {
     if !user_ctx.is_console {
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
@@ -113,7 +75,6 @@ pub(crate) async fn observability_page(
         export_url: format!("{PAGE_URL}/export"),
         test_url: format!("{PAGE_URL}/test"),
         job_name: systemprompt::scheduler::jobs::otlp_export::JOB_NAME,
-        outcome: OutcomeView::from_query(&query),
         view: build_view(config.as_ref(), &states),
     };
     Ok(
@@ -127,12 +88,9 @@ pub(crate) async fn observability_page(
     )
 }
 
-fn redirect(outcome: &str, detail: &str) -> Redirect {
+fn redirect(tone: FlashTone, title: &str, detail: &str) -> Redirect {
     let detail: String = detail.chars().take(DETAIL_MAX).collect();
-    Redirect::to(&format!(
-        "{PAGE_URL}?outcome={outcome}&detail={}",
-        urlencoding::encode(&detail)
-    ))
+    redirect_with_flash(PAGE_URL, tone, &format!("{title}: {detail}"))
 }
 
 fn write_gate(user_ctx: &UserContext, headers: &HeaderMap) -> AdminHtmlResult<()> {
@@ -146,7 +104,8 @@ fn write_gate(user_ctx: &UserContext, headers: &HeaderMap) -> AdminHtmlResult<()
 fn configured_or_redirect(config: Option<OtlpExportConfig>) -> Result<OtlpExportConfig, Redirect> {
     config.ok_or_else(|| {
         redirect(
-            "unconfigured",
+            FlashTone::Warn,
+            "Nothing to export",
             "The profile declares no observability.otlp block.",
         )
     })
@@ -181,7 +140,8 @@ pub(crate) async fn export_now(
         .collect();
     Ok(if failed.is_empty() {
         redirect(
-            "exported",
+            FlashTone::Ok,
+            "Export ran",
             &format!(
                 "{} rows across {} signal(s).",
                 report.rows(),
@@ -189,7 +149,7 @@ pub(crate) async fn export_now(
             ),
         )
     } else {
-        redirect("export_failed", &failed.join("; "))
+        redirect(FlashTone::Err, "Export failed", &failed.join("; "))
     })
 }
 
@@ -206,7 +166,8 @@ pub(crate) async fn test_connection(
         Ok(outcome) => {
             tracing::info!(requested_by = %user_ctx.user_id, url = %outcome.url, status = %outcome.status, "OTLP collector probe succeeded");
             redirect(
-                "probe_ok",
+                FlashTone::Ok,
+                "Collector reachable",
                 &format!(
                     "{} answered {} in {} ms.",
                     outcome.url, outcome.status, outcome.elapsed_ms
@@ -215,7 +176,11 @@ pub(crate) async fn test_connection(
         },
         Err(error) => {
             tracing::warn!(requested_by = %user_ctx.user_id, error = %error, "OTLP collector probe failed");
-            redirect("probe_failed", &error.to_string())
+            redirect(
+                FlashTone::Err,
+                "Collector refused the probe",
+                &error.to_string(),
+            )
         },
     })
 }

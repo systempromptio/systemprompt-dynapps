@@ -6,6 +6,7 @@ use systemprompt_web_admin_core::repositories::conversations::rows::{
     UserConversationSummary, list_distinct_models, load_conversation_page,
 };
 use systemprompt_web_admin_core::repositories::scope::SubjectScope;
+use systemprompt_web_admin_core::ssr::faults::Faults;
 use systemprompt_web_admin_core::ssr::list_view::DEFAULT_PAGE_SIZE;
 
 pub(super) struct ContextsPageData {
@@ -21,6 +22,7 @@ pub(super) async fn load_page_data(
     pool: &PgPool,
     inputs: &ContextsPageInputs,
     user_scope: &SubjectScope,
+    faults: &mut Faults,
 ) -> Result<ContextsPageData, sqlx::Error> {
     let page = ConversationPage {
         sort: inputs.sort,
@@ -44,12 +46,7 @@ pub(super) async fn load_page_data(
         conversations: result.conversations,
         user_summaries: result.user_summaries,
         totals: result.totals,
-        models: warn_empty(models, "models"),
-        users_for_filter: warn_empty(users, "users"),
+        models: faults.take("model filter", models),
+        users_for_filter: faults.take("person filter", users),
     })
-}
-
-fn warn_empty<T>(res: Result<Vec<T>, sqlx::Error>, what: &'static str) -> Vec<T> {
-    res.inspect_err(|e| tracing::warn!(error = %e, facet = what, "conversations list: read failed"))
-        .unwrap_or_default()
 }

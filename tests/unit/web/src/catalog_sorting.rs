@@ -2,7 +2,7 @@
 //! server-side text filter, and the MCP status a declaration plus a heartbeat
 //! resolve to.
 
-use systemprompt_web_admin::test_support::{
+use systemprompt_web_admin_catalog::test_support::{
     direction, matches, preserved_search, sort_headers, status_of,
 };
 use systemprompt_web_admin_core::repositories::liveness::HEARTBEAT_INTERVAL_SECS;

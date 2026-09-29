@@ -13,6 +13,7 @@ use sqlx::PgPool;
 use crate::repositories::devices::certs::{self, CertUserRow, FleetCertRow};
 use crate::repositories::devices::links::{self, LinkUserRow, PendingLinkRow};
 use crate::repositories::devices::pats::{self, ApiKeyUserRow, CredentialQuery, FleetApiKeyRow};
+use systemprompt_web_admin_core::ssr::faults::Faults;
 
 use super::context::{ApiKeyRowView, CertRowView, LinkRowView, UserGroupView};
 use super::data::{
@@ -24,16 +25,17 @@ pub(super) async fn load_pats(
     pool: &PgPool,
     query: CredentialQuery<'_>,
     can_manage: bool,
+    faults: &mut Faults,
 ) -> (Vec<UserGroupView>, i64) {
-    let (users, total) = pats::list_api_key_users_paged(pool, query)
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, "access token holder listing failed"))
-        .unwrap_or_default();
+    let (users, total) = faults.take(
+        "access token holders",
+        pats::list_api_key_users_paged(pool, query).await,
+    );
     let user_ids = ids(users.iter().map(|u| u.user_id.clone()));
-    let keys = pats::list_api_keys_for_users(pool, &user_ids, query.state)
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, "access token listing failed"))
-        .unwrap_or_default();
+    let keys = faults.take(
+        "access tokens",
+        pats::list_api_keys_for_users(pool, &user_ids, query.state).await,
+    );
     let groups = users
         .iter()
         .map(|user| pat_group(user, &keys, can_manage))
@@ -84,16 +86,17 @@ pub(super) async fn load_certs(
     pool: &PgPool,
     query: CredentialQuery<'_>,
     can_manage: bool,
+    faults: &mut Faults,
 ) -> (Vec<UserGroupView>, i64) {
-    let (users, total) = certs::list_device_cert_users_paged(pool, query)
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, "device certificate holder listing failed"))
-        .unwrap_or_default();
+    let (users, total) = faults.take(
+        "device certificate holders",
+        certs::list_device_cert_users_paged(pool, query).await,
+    );
     let user_ids = ids(users.iter().map(|u| u.user_id.clone()));
-    let rows = certs::list_device_certs_for_users(pool, &user_ids, query.state)
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, "device certificate listing failed"))
-        .unwrap_or_default();
+    let rows = faults.take(
+        "device certificates",
+        certs::list_device_certs_for_users(pool, &user_ids, query.state).await,
+    );
     let groups = users
         .iter()
         .map(|user| cert_group(user, &rows, can_manage))
@@ -135,20 +138,25 @@ fn cert_row(row: &FleetCertRow, can_manage: bool) -> CertRowView {
 
 pub(super) async fn load_links(
     pool: &PgPool,
-    sort: &str,
-    dir: &str,
-    limit: i64,
-    offset: i64,
+    query: CredentialQuery<'_>,
+    faults: &mut Faults,
 ) -> (Vec<UserGroupView>, i64) {
-    let (users, total) = links::list_pending_link_users_paged(pool, sort, dir, limit, offset)
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, "pending link holder listing failed"))
-        .unwrap_or_default();
+    let (users, total) = faults.take(
+        "enrolment link holders",
+        links::list_pending_link_users_paged(
+            pool,
+            query.sort,
+            query.dir,
+            query.limit,
+            query.offset,
+        )
+        .await,
+    );
     let user_ids = ids(users.iter().map(|u| u.user_id.clone()));
-    let rows = links::list_pending_links_for_users(pool, &user_ids)
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, "pending link listing failed"))
-        .unwrap_or_default();
+    let rows = faults.take(
+        "enrolment links",
+        links::list_pending_links_for_users(pool, &user_ids).await,
+    );
     let groups = users.iter().map(|user| link_group(user, &rows)).collect();
     (groups, total)
 }

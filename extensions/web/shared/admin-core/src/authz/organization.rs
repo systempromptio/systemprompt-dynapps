@@ -23,12 +23,12 @@ pub const ORGANIZATION_DEFAULT: &str = "default";
 const ORGANIZATION_PRECEDENCE: u16 = 300;
 
 #[must_use]
-pub fn organization_rule_type() -> RuleType {
+pub const fn organization_rule_type() -> RuleType {
     ORGANIZATION_RULE_TYPE
 }
 
 #[must_use]
-pub fn organization_dimension() -> SubjectDimension {
+pub const fn organization_dimension() -> SubjectDimension {
     SubjectDimension {
         rule_type: organization_rule_type(),
         label: "Organization",

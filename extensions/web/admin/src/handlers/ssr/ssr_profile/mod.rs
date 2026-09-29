@@ -10,7 +10,7 @@ use sqlx::PgPool;
 use systemprompt::identifiers::ContextId;
 
 use crate::repositories;
-use crate::services::bridge_profile::{self, BridgeProfilePageData};
+use systemprompt_web_admin_catalog::services::bridge_profile::{self, BridgeProfilePageData};
 use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult, AdminResult};
 use systemprompt_web_admin_core::repositories::user_usage::{
     ConversationSummary, RecentConversation,

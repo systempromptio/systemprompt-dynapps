@@ -17,10 +17,12 @@ use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 
 use crate::repositories::governance::secret_audit_log::{
-    SecretAuditFilter, SecretAuditRow, SecretAuditStats, get_secret_audit_stats,
-    list_secret_audit_actions, list_secret_audit_paged,
+    SecretAuditFilter, SecretAuditRow, get_secret_audit_stats, list_secret_audit_actions,
+    list_secret_audit_paged,
 };
 use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult, AdminResult};
+use systemprompt_web_admin_core::ssr::faults::Faults;
+use systemprompt_web_admin_core::ssr::helpers::Viewer;
 use systemprompt_web_admin_core::ssr::list_view::{
     PageWindow, Pagination, SelectOptionView, TimeRangeContext,
 };
@@ -124,28 +126,26 @@ pub(crate) async fn secrets_audit_page(
     let filter = filter_of(&query);
     let page = query.page.unwrap_or(0).max(0);
 
-    let stats = get_secret_audit_stats(&pool, range)
-        .await
-        .unwrap_or_else(|e| {
-            tracing::warn!(error = %e, "secret audit stats failed");
-            SecretAuditStats::default()
-        });
-    let (rows, total) = list_secret_audit_paged(
-        &pool,
-        range,
-        &filter,
-        DEFAULT_PAGE_SIZE,
-        page * DEFAULT_PAGE_SIZE,
-    )
-    .await
-    .unwrap_or_else(|e| {
-        tracing::warn!(error = %e, "secret audit log failed");
-        (Vec::new(), 0)
-    });
-    let actions = list_secret_audit_actions(&pool, range)
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, "secrets audit: action listing failed"))
-        .unwrap_or_default();
+    let mut faults = Faults::new();
+    let stats = faults.take(
+        "secret audit stats",
+        get_secret_audit_stats(&pool, range).await,
+    );
+    let (rows, total) = faults.take(
+        "secret audit log",
+        list_secret_audit_paged(
+            &pool,
+            range,
+            &filter,
+            DEFAULT_PAGE_SIZE,
+            page * DEFAULT_PAGE_SIZE,
+        )
+        .await,
+    );
+    let actions = faults.take(
+        "secret audit actions",
+        list_secret_audit_actions(&pool, range).await,
+    );
 
     let shown = i64::try_from(rows.len()).unwrap_or(0);
     let window = PageWindow::new(page, DEFAULT_PAGE_SIZE, total, shown, "entries");
@@ -183,12 +183,12 @@ pub(crate) async fn secrets_audit_page(
     };
 
     Ok(
-        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+        systemprompt_web_admin_core::ssr::helpers::render_page_with_faults(
             &engine,
             "governance-secrets",
             &ctx,
-            &user_ctx,
-            &mkt_ctx,
+            Viewer::new(&user_ctx, &mkt_ctx),
+            &faults,
         ),
     )
 }

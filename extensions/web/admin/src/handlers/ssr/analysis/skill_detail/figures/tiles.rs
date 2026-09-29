@@ -3,12 +3,12 @@
 //! score).
 
 use crate::handlers::ssr::analysis::skill_detail::views::SkillKpiView;
-use crate::handlers::ssr::analysis::tone::{
-    completion_tone, deny_tone, error_rate_tone, latency_tone, percent, score_display,
-};
 use crate::repositories::analysis::skills::SkillFactRow;
 use systemprompt_web_admin_core::ssr::format::{
     format_cost, format_duration_ms, format_token_total,
+};
+use systemprompt_web_admin_core::ssr::tone::{
+    completion_tone, deny_tone, error_rate_tone, latency_tone, percent, score_display,
 };
 
 fn usage_kpis(f: &SkillFactRow, entitled: usize) -> Vec<SkillKpiView> {

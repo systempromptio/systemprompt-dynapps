@@ -18,7 +18,8 @@ use systemprompt_web_admin_core::repositories::gateway_catalog::get_route_labels
 use systemprompt_web_admin_core::ssr::entity_panel::{
     EntityAccessView, PanelRequest, build_entity_panel,
 };
-use systemprompt_web_admin_core::ssr::helpers::render_typed_page;
+use systemprompt_web_admin_core::ssr::faults::Faults;
+use systemprompt_web_admin_core::ssr::helpers::{Viewer, render_page_with_faults};
 use systemprompt_web_admin_core::ssr::page::Page;
 use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 
@@ -59,9 +60,8 @@ pub(crate) async fn gateway_route_page(
     if !shell.user.is_console {
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
     }
-    let labels = get_route_labels_from_services()
-        .inspect_err(|e| tracing::warn!(error = %e, "gateway route: labels unavailable"))
-        .unwrap_or_default();
+    let mut faults = Faults::new();
+    let labels = faults.take("route labels", get_route_labels_from_services());
     let route = labels
         .routes
         .iter()
@@ -105,11 +105,11 @@ pub(crate) async fn gateway_route_page(
         facts,
         access,
     };
-    Ok(render_typed_page(
+    Ok(render_page_with_faults(
         &shell.engine,
         "gateway-route",
         &page,
-        &shell.user,
-        &shell.marketplace,
+        Viewer::new(&shell.user, &shell.marketplace),
+        &faults,
     ))
 }

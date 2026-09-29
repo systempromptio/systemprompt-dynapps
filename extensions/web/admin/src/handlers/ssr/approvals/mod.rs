@@ -21,6 +21,8 @@ use crate::repositories::governance::approvals::{
     ApprovalStats, get_approval_stats, list_approvals_paged,
 };
 use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
+use systemprompt_web_admin_core::ssr::faults::Faults;
+use systemprompt_web_admin_core::ssr::helpers::Viewer;
 use systemprompt_web_admin_core::ssr::list_view::{
     DEFAULT_PAGE_SIZE, PageWindow, Pagination, SelectOptionView, paginate,
 };
@@ -92,21 +94,18 @@ pub(crate) async fn approvals_page(
         .map(str::to_owned);
     let page = query.page.unwrap_or(0).max(0);
 
-    let stats = get_approval_stats(&pool).await.unwrap_or_else(|e| {
-        tracing::warn!(error = %e, "approval stats failed");
-        ApprovalStats::default()
-    });
-    let (rows, total) = list_approvals_paged(
-        &pool,
-        status_filter.as_deref(),
-        DEFAULT_PAGE_SIZE,
-        page * DEFAULT_PAGE_SIZE,
-    )
-    .await
-    .unwrap_or_else(|e| {
-        tracing::warn!(error = %e, "approval queue failed");
-        (Vec::new(), 0)
-    });
+    let mut faults = Faults::new();
+    let stats = faults.take("approval stats", get_approval_stats(&pool).await);
+    let (rows, total) = faults.take(
+        "approval queue",
+        list_approvals_paged(
+            &pool,
+            status_filter.as_deref(),
+            DEFAULT_PAGE_SIZE,
+            page * DEFAULT_PAGE_SIZE,
+        )
+        .await,
+    );
 
     let shown = i64::try_from(rows.len()).unwrap_or(0);
     let ctx = ApprovalsPageContext {
@@ -130,12 +129,12 @@ pub(crate) async fn approvals_page(
     };
 
     Ok(
-        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+        systemprompt_web_admin_core::ssr::helpers::render_page_with_faults(
             &engine,
             "governance-approvals",
             &ctx,
-            &user_ctx,
-            &mkt_ctx,
+            Viewer::new(&user_ctx, &mkt_ctx),
+            &faults,
         ),
     )
 }

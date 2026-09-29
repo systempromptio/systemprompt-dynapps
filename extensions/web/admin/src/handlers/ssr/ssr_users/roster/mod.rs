@@ -33,6 +33,8 @@ use form::{preserved_hidden, role_options};
 use load::{create_user_panel, load_roster};
 
 use super::BASE_URL;
+use systemprompt_web_admin_core::ssr::faults::Faults;
+use systemprompt_web_admin_core::ssr::helpers::Viewer;
 use systemprompt_web_admin_core::ssr::page::Page;
 
 pub(super) struct RosterUrlState {
@@ -121,7 +123,8 @@ pub(crate) async fn users_page(
         &pool, &request,
     )
     .await?;
-    let read = load_roster(&pool, &scope, &url).await?;
+    let mut faults = Faults::new();
+    let read = load_roster(&pool, &scope, &url, &mut faults).await?;
 
     let shown = i64::try_from(read.rows.len()).unwrap_or(DEFAULT_PAGE_SIZE);
     let window = PageWindow::new(url.page, DEFAULT_PAGE_SIZE, read.total, shown, "users");
@@ -156,17 +159,17 @@ pub(crate) async fn users_page(
         pagination: view::build_pagination(&url, window),
         can_write: shell.user.is_admin,
         role_choices: read.roles,
-        create_user: create_user_panel(&pool, &sso.config, shell.user.is_admin).await,
+        create_user: create_user_panel(&pool, &sso.config, shell.user.is_admin, &mut faults).await,
         export: export_view(&url),
     };
 
     Ok(
-        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+        systemprompt_web_admin_core::ssr::helpers::render_page_with_faults(
             &shell.engine,
             "users",
             &data,
-            &shell.user,
-            &shell.marketplace,
+            Viewer::new(&shell.user, &shell.marketplace),
+            &faults,
         ),
     )
 }

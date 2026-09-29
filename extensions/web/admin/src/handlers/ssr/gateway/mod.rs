@@ -37,7 +37,8 @@ use systemprompt_web_admin_core::error::AdminHtmlResult;
 use systemprompt_web_admin_core::repositories::gateway_catalog::{
     RouteLabels, get_route_labels_from_services,
 };
-use systemprompt_web_admin_core::ssr::helpers::render_typed_page;
+use systemprompt_web_admin_core::ssr::faults::Faults;
+use systemprompt_web_admin_core::ssr::helpers::{Viewer, render_page_with_faults};
 use systemprompt_web_admin_core::ssr::pickable_users::list_pickable_users;
 use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;
@@ -47,7 +48,7 @@ use systemprompt_web_admin_core::types::{
 };
 
 pub(crate) use route_detail::gateway_route_page;
-use rows::{Surfaces, kpis, load_surfaces, resolved_only, route_rows};
+use rows::{RouteRowInputs, Surfaces, kpis, load_surfaces, resolved_only, route_rows};
 use view::GatewayPageData;
 
 const ENTITY_GATEWAY_ROUTE: &str = "gateway_route";
@@ -145,7 +146,7 @@ struct GatewayRead {
     grants_by_route: HashMap<String, i64>,
 }
 
-async fn load_gateway(pool: &PgPool) -> GatewayRead {
+async fn load_gateway(pool: &PgPool, faults: &mut Faults) -> GatewayRead {
     let (config, config_error) = match super::super::gateway_config_view(pool).await {
         Ok(config) => (config, String::new()),
         Err(e) => (GatewayConfigView::default(), e.to_string()),
@@ -155,18 +156,16 @@ async fn load_gateway(pool: &PgPool) -> GatewayRead {
             Ok(routes) => (routes, String::new()),
             Err(e) => (Vec::new(), e.to_string()),
         };
-    let labels: RouteLabels = get_route_labels_from_services()
-        .inspect_err(|e| tracing::warn!(error = %e, "gateway: route labels unavailable"))
-        .unwrap_or_default();
+    let labels: RouteLabels = faults.take("route labels", get_route_labels_from_services());
     let surfaces = load_surfaces(&labels);
-    let grants_by_route =
+    let grants_by_route = faults.take(
+        "route grants",
         systemprompt_web_admin_core::repositories::entitlement::count_assignments_by_entity_type(
             pool,
             ENTITY_GATEWAY_ROUTE,
         )
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, "gateway: route rule listing failed"))
-        .unwrap_or_default();
+        .await,
+    );
     GatewayRead {
         config,
         config_error,
@@ -178,7 +177,12 @@ async fn load_gateway(pool: &PgPool) -> GatewayRead {
     }
 }
 
-async fn gateway_view(pool: &PgPool, read: GatewayRead, tab: GatewayTab) -> GatewayPageData {
+async fn gateway_view(
+    pool: &PgPool,
+    read: GatewayRead,
+    tab: GatewayTab,
+    faults: &mut Faults,
+) -> GatewayPageData {
     let GatewayRead {
         config,
         config_error,
@@ -189,7 +193,16 @@ async fn gateway_view(pool: &PgPool, read: GatewayRead, tab: GatewayTab) -> Gate
         grants_by_route: grants,
     } = read;
     let dispatchable: Vec<String> = resolved.iter().map(|r| r.id.clone()).collect();
-    let routes = route_rows(&config, &surfaces, &grants, &dispatchable, &labels);
+    let routes = route_rows(
+        RouteRowInputs {
+            config: &config,
+            surfaces: &surfaces,
+            grants: &grants,
+            dispatchable: &dispatchable,
+            labels: &labels,
+        },
+        faults,
+    );
     let extra = resolved_only(&routes, &resolved, &labels);
     let provider_cards = if matches!(tab, GatewayTab::Overview | GatewayTab::Providers) {
         models::provider_cards(&labels, &routes, &grants)
@@ -220,7 +233,7 @@ async fn gateway_view(pool: &PgPool, read: GatewayRead, tab: GatewayTab) -> Gate
         resolved_only: extra,
         providers_count,
         providers: surfaces.providers,
-        probe_users: list_pickable_users(pool, None).await,
+        probe_users: faults.take("probe users", list_pickable_users(pool, None).await),
         provider_cards,
         dispatch_count: dispatch.len(),
         dispatch,
@@ -245,9 +258,15 @@ pub(crate) async fn gateway_page(
     Query(query): Query<GatewayQuery>,
 ) -> AdminHtmlResult<Response> {
     console_only(&user_ctx)?;
-    let read = load_gateway(&pool).await;
-    let page = gateway_view(&pool, read, GatewayTab::parse(query.tab.as_deref())).await;
-    Ok(render_typed_page(
-        &engine, "gateway", &page, &user_ctx, &mkt_ctx,
+    let mut faults = Faults::new();
+    let read = load_gateway(&pool, &mut faults).await;
+    let tab = GatewayTab::parse(query.tab.as_deref());
+    let page = gateway_view(&pool, read, tab, &mut faults).await;
+    Ok(render_page_with_faults(
+        &engine,
+        "gateway",
+        &page,
+        Viewer::new(&user_ctx, &mkt_ctx),
+        &faults,
     ))
 }

@@ -1,115 +1,149 @@
 ---
 title: "MCP, Tool Governance & Distribution"
-description: "Govern integrated tool calls with a four-stage pre-execution chain, run a declarative MCP server registry with instant revocation, and ship signed skills and plugins."
+description: "Govern tool calls with the four-stage pre-execution chain, run a declarative MCP server registry with instant revocation, and distribute, version and roll back skills and plugins through signed catalogs."
 author: "Astound Digital"
 slug: "enterprise-tool-governance"
-keywords: "mcp, tools, governance, registry, revocation, signing, plugins, skills, blocklist, warn mode"
+keywords: "mcp, tools, governance, registry, revocation, signing, plugins, skills, blocklist, warn mode, versions, rollback, tool schema"
 kind: "guide"
 public: true
 tags: ["enterprise", "mcp", "admin"]
 published_at: "2026-08-25"
-updated_at: "2026-09-11"
+updated_at: "2026-09-29"
 after_reading_this:
   - "Trace a tool call through the four-stage pre-execution governance chain"
-  - "Administer MCP servers, auth scopes, and entitlements at /admin/catalog/mcp"
-  - "Run a stage in warn mode to measure what enforcement would cost before turning it on"
+  - "Know that the chain records but does not refuse today, and where to read what it would have refused"
+  - "Administer MCP servers, auth scopes and entitlements at /admin/mcp"
   - "Revoke a server or a token and see it take effect immediately"
-  - "Distribute skills and plugins through the Ed25519-signed catalog"
+  - "Distribute, version and roll back skills through signed catalogs and kits"
 related_docs:
+  - title: "Governance Modes: Warn and Enforce"
+    url: "/documentation/governance-modes"
   - title: "Content Safety, PII & Guardrails"
     url: "/documentation/enterprise-safety-guardrails"
-  - title: "Audit Trail, Traceability & Observability"
-    url: "/documentation/enterprise-audit-observability"
-  - title: "Enterprise Roadmap & Known Limitations"
-    url: "/documentation/enterprise-roadmap"
+  - title: "Access Control: Who Reaches What, and Why"
+    url: "/documentation/access-control"
 ---
 
 # MCP, Tool Governance & Distribution
 
-**TL;DR:** MCP tool calls routed through platform governance pass a synchronous four-stage chain — scope check, secret scan, blocklist, rate limit — before the tool runs, with every decision audited under a trace id. The shipped stages run in warn mode, recording findings without refusing calls. An enforcing stage stops dispatch on denial. Authentication and authorization are still enforced. MCP servers live in a declarative registry at `/admin/catalog/mcp` with per-server auth, role and AD-group entitlement, and immediate revocation; skills and plugins ship through Ed25519-signed manifests.
+**TL;DR:** A governed tool call passes a synchronous four-stage chain
+before it runs: scope check, secret scan, blocklist, rate limit. Every
+decision is audited under a trace id. **The chain has run in warn mode since
+2026-09-04.** It records what it would have refused and lets the call
+continue. Authentication and access-control entitlements are still enforced.
+MCP servers are declared in `services/mcp/` and administered at `/admin/mcp`,
+with per-server OAuth scopes, entitlement by role or AD group, and immediate
+revocation. Skills and plugins are delivered through signed manifests. Each
+marketplace version is a content hash that can be compared and rolled back.
 
 ## Pre-execution governance
 
-The chain runs **before the tool executes**, synchronously, on governed calls. Client-local actions require the appropriate bridge/plugin hooks; merely routing model inference does not govern every local tool. The stages evaluate:
+The chain runs **before the tool executes**, synchronously, on every
+governed call. Local tools in Claude Code are governed through the hooks that
+the `astound-commons` plugin installs. Routing model inference alone does not
+govern local tools. The stages, as configured in
+`services/governance/config.yaml`:
 
-1. **Scope check** — does the caller's token carry the scope and audience this server demands?
-2. **Secret scan** — do the tool arguments carry credentials that must not leave the boundary?
-3. **Blocklist** — is this tool or pattern explicitly denied?
-4. **Rate limit** — is the caller within their quota window?
+1. **Scope check.** Tools prefixed `mcp__systemprompt__` (the admin MCP
+   server) need an admin caller.
+2. **Secret scan.** The tool arguments are checked against credential
+   patterns owned by Astound (GitHub, Anthropic, OpenAI and Google keys, PEM
+   keys, JWTs, database URLs that embed a password, structured
+   `password`/`secret` fields). A high-entropy check runs alongside and only
+   observes.
+3. **Blocklist.** Tool names containing `delete`, `drop` or `destroy`.
+4. **Rate limit.** 300 calls per 60 seconds for each session and user.
 
-In enforce mode, evaluation is **first-deny-wins**: the first denying stage stops the call. Warn-mode findings are recorded and execution continues. Every decision — allow or deny — is audited with trace linkage, so a denied call is as visible as an executed one:
+Under enforce, the **first deny wins** and the call stops. Under warn, which
+is how the instance runs today, each stage that would have denied writes a
+`decision = 'warn'` row and the call proceeds, so a call can be recorded
+against several stages at once. [Governance Modes](/documentation/governance-modes)
+explains the measurement window and how to switch each stage back to enforce.
 
 ```bash
 systemprompt infra logs trace list --limit 20
-systemprompt infra logs trace show <trace-id>
-```
-
-The chain's content-safety companion (what the secret and PII scanners actually detect) is covered in [Content Safety, PII & Guardrails](/documentation/enterprise-safety-guardrails).
-
-## Warn mode
-
-A stage that is misfiring leaves you two bad options. Retune a threshold you have no data for, or switch the stage off and lose the evidence along with the denials. Warn mode is the third: the stage runs, evaluates, and records exactly what it would have refused, and the call proceeds.
-
-Set it per policy, or once for the whole chain, in `services/governance/config.yaml`:
-
-```yaml
-governance:
-  mode: warn            # the default for every policy below
-  policies:
-  - id: secret_scan
-    enabled: true
-  - id: scope_check
-    enabled: true
-    mode: enforce       # this one still refuses
-```
-
-`mode` is inherited: the top-level value applies to any policy that does not name its own. An unrecognised value fails the boot job rather than falling back, because reading `warnn` as `enforce` would block traffic you believed you had unblocked, and reading it as `warn` would disable enforcement nobody asked to disable.
-
-Warn mode is **not** the same as `enabled: false`. A disabled stage does not run and writes nothing. A warning stage runs and writes a `governance_decisions` row with `decision = 'warn'` carrying the reason it would have denied on, so a warn row and a deny row are directly comparable. It also does not halt the chain, so a call that trips three warning stages is recorded against all three rather than only the first.
-
-The gateway safety scanners are a separate plane with its own switch, `safety.mode: warn` in `services/gateway/policies.yaml`. It leaves every scanner running and every finding persisted, and only drops the refusal — findings written under it carry `blocked = false`, which is what lets a report say how many calls a block list would have cost.
-
-Read both planes back over one window:
-
-```bash
-systemprompt infra logs governance report --since 7d
-systemprompt infra logs governance report --since 7d --group-by tool
-systemprompt infra logs governance report --group-by user --format csv > warnings.csv
 systemprompt infra logs trace list --decision warn --since 24h
+systemprompt infra logs trace show <trace-id>
+systemprompt infra logs governance report --since 7d --group-by tool
 ```
 
-The same window is on the dashboard at `/admin/governance/warnings`, grouped by policy, tool or user, with a CSV export. The two numbers to read there are a category's **findings** count beside its **blocked** count: many findings and no blocks is a rule warn mode is currently absorbing, and no findings at all is a scanner earning nothing.
-
-Warn mode is a measurement window, not a posture. Once the report shows which tunables are wrong, fix those and return the stages that no longer misfire to `mode: enforce`, one at a time.
+What the secret and PII scanners detect on the gateway is covered in
+[Content Safety, PII & Guardrails](/documentation/enterprise-safety-guardrails).
 
 ## The MCP server registry
 
-`/admin/catalog/mcp` administers the declarative registry. Each server declares:
+Each server is one YAML file under `services/mcp/`. This instance declares
+five:
 
-- **Auth requirements** — the token audience and scopes a caller must hold (for example, audience `mcp` with scope `admin` for the administrative server).
-- **Entitlement** — which roles or AD groups (the project groups included) may reach the server, so access follows the directory automatically.
-- **Revocation** — a server can be disabled with immediate effect, and **JTI-based token revocation** kills individual issued tokens without waiting for expiry.
+| Server | What it reaches |
+|---|---|
+| `systemprompt` | this platform's admin CLI. It cannot be removed and is admin-only |
+| `atlassian` | Jira and Confluence, under each person's own Atlassian account |
+| `google_workspace` | Google Agent Search over Drive, Gmail and Calendar, searched live and filtered to what the signed-in person can already open |
+| `salesforce` | Salesforce's hosted MCP, authenticated as the signed-in person |
+| `sfcore_dev` | the SFCore team's development-workflow server, called with a short-lived token this instance signs |
 
-## Fail-fast schema validation
+Each server declares:
 
-Registration validates up front: a server with a **missing or invalid manifest**, or whose declared schema fails to sync to the database, is **refused at registration** rather than discovered broken at call time. Tool input schemas are captured at discovery, so what a tool accepts is on record. (One caveat: captured schemas are not meta-validated against the JSON-Schema spec itself — see the [roadmap](/documentation/enterprise-roadmap).)
+- **Auth requirements:** the OAuth audience (`mcp`) and the scopes a caller's
+  token must carry.
+- **Entitlement:** which roles, groups and projects reach it, declared in
+  `services/access-control/rules.yaml`. A person outside those bands sees no
+  server at all, rather than an error on every call.
+- **Revocation:** `enabled: false` takes a server out of service, and an
+  entitlement can be removed or given an expiry in the console. Issued tokens
+  are revoked one by one through **JTI-based revocation**, without waiting for
+  them to expire.
 
-## Signed distribution of skills and plugins
+`/admin/mcp` lists the fleet. `/admin/mcp/<id>` shows one server's tools,
+callers, call log, connections, declaration, and who may reach it.
 
-Skills and plugins are distributed through `/admin/catalog/plugins` and `/admin/catalog/skills`, carried by **Ed25519-signed manifests**: a client verifies the signature before installing, so nothing unsigned or tampered-with reaches a workstation, and central revocation removes an artifact from circulation immediately.
+## Tool schemas
 
-Signed manifests can carry prompt content, but there is no first-class **versioned prompt-template object** with parameters, pinning, and rollback yet — that lifecycle is on the [Enterprise Roadmap](/documentation/enterprise-roadmap).
+A server with a missing or invalid manifest, or one whose declared database
+schema fails to sync, is **refused at registration**, so a broken server is
+caught before anyone calls it. Tool input schemas are captured at discovery.
+On a gateway request, the request detail page puts the client's `tools` array
+beside the one the gateway sent upstream, paired by name, so you can see what
+the model was actually given.
 
-## Verification
+Captured schemas are **not** meta-validated against the JSON-Schema
+specification. See the [roadmap](/documentation/enterprise-roadmap).
 
-Use the commands and UI checks above against the configured instance. Repository maintainers can run `just test-unit` and `just test-integration`; a passing fixture test does not establish that a deployed integration is configured. Screenshots below are illustrative and may show an earlier configuration.
+## Signed distribution, versions and rollback
 
-### Screenshots
+Skills and plugins reach workstations through marketplaces, administered at
+`/admin/marketplaces`, `/admin/plugins` and `/admin/skills`. The bridge
+manifest records each skill's SHA-256 and is **Ed25519-signed**. A client
+verifies the signature before installing, so nothing unsigned or tampered
+with reaches a workstation. A signature proves integrity and origin; it
+grants no model, MCP or tool access, which stays governed by access control.
 
-![The MCP server catalog with the systemprompt server registered and its admin scope visible](/files/images/evidence/req-042-mcp-catalog.png)
+Skills are the unit of prompt distribution, and they carry their own version
+lifecycle:
 
-![The plugin catalog listing centrally-managed bundles](/files/images/evidence/req-040-plugin-catalog.png)
+- **Versions.** A marketplace version *is* the content hash of what it
+  serves. `/admin/analysis/versions` shows each marketplace's history,
+  compares two versions skill by skill, and shows which devices received
+  which version. See [Versions](/documentation/analysis-versions).
+- **Updates.** Content kept in an external kit is published by the kit's CI
+  and made live with **Import** on `/admin/sync`, with no restart. See
+  [Update a Skill](/documentation/update-a-skill) and
+  [Code ↔ Instance](/documentation/services-sync).
+- **Revocation.** A disabled skill is left out of every bundle, and a managed
+  revision can be withdrawn. See [Skills lifecycle](/documentation/skills-lifecycle).
+- **Rollback.** Re-pin the kit to its previous digest and import it again. The
+  cache keeps the last two trees, so a rollback is a re-point, not a download.
 
-![The skills catalog listing distributable skill entries](/files/images/evidence/req-040-skills-catalog.png)
+There is no separate parameterised prompt-template object. Prompts ship as
+skills.
 
-![A denied tool call surfacing as a DENY with its governing policy and tool named](/files/images/evidence/req-026-requests-audit.png)
+## Check it yourself
+
+- `/admin/governance`: the **Decisions** tab lists each chain stage's rows;
+  under warn they are all `warn`.
+- `/admin/mcp`: the five servers, each with its entitlement.
+- `/admin/analysis/versions`: marketplace versions by hash, with history and
+  compare.
+- `systemprompt infra logs governance report --since 7d --group-by policy`
+- `systemprompt core skills list`

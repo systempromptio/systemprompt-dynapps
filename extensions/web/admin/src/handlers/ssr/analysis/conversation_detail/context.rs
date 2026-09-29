@@ -38,6 +38,19 @@ fn display_name(f: &ConversationFacts) -> String {
         .unwrap_or_else(|| f.user_id.as_str().to_owned())
 }
 
+fn heading(f: &ConversationFacts) -> String {
+    f.judge_title
+        .clone()
+        .filter(|t| !t.is_empty())
+        .unwrap_or_else(|| f.title.clone())
+}
+
+fn session_href(f: &ConversationFacts) -> Option<String> {
+    f.client_session_id
+        .as_deref()
+        .map(|s| format!("/admin/sessions/{}", urlencoding::encode(s)))
+}
+
 pub(super) fn build_context(
     row: &ConversationFactRow,
     planes: Planes,
@@ -55,11 +68,7 @@ pub(super) fn build_context(
     let (decision_count, skill_count, safety_count) = (decisions.len(), skills.len(), safety.len());
     let artifacts = artifact_views(&tools);
     let turn_charts = charts(&turns);
-    let heading = f
-        .judge_title
-        .clone()
-        .filter(|t| !t.is_empty())
-        .unwrap_or_else(|| f.title.clone());
+    let heading = heading(f);
     let short = context_id.as_str()[..context_id.as_str().len().min(8)].to_owned();
     ConversationDetailContext {
         page: "analysis-conversation",
@@ -87,10 +96,7 @@ pub(super) fn build_context(
             .hook_status
             .clone()
             .unwrap_or_else(|| "no hooks".to_owned()),
-        session_href: f
-            .client_session_id
-            .as_deref()
-            .map(|s| format!("/admin/sessions/{}", urlencoding::encode(s))),
+        session_href: session_href(f),
         context_href: format!(
             "/admin/contexts/{}",
             urlencoding::encode(context_id.as_str())

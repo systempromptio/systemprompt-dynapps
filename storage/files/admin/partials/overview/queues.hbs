@@ -14,7 +14,7 @@
         {{> components/kpi key="pending-approvals" label="Pending approvals" value=queues.approvals tone=queues.approvals_tone
             note="calls held by require_approval" href="/admin/governance/approvals"}}
         {{> components/kpi key="open-anomalies" label="Open anomalies" value=queues.anomaly_count tone=queues.anomalies_tone
-            note="detected in the last 24 hours" href="/admin/analytics?tab=spend"}}
+            note="detected in the last 24 hours" href="/admin/analytics?tab=cost"}}
     </div>
     {{#if queues.anomalies_error}}{{> components/notice tone="err" title="Anomalies unavailable" message=queues.anomalies_error}}{{/if}}
     {{#if queues.has_anomalies}}

@@ -1,4 +1,4 @@
-// The overview as a live instrument. The server renders the page complete;
+// The overview as a live instrument. The server renders the page complete, and
 // this module fetches the same body again — on a range click without a page
 // load, and every half minute while the tab is visible — and morphs it over
 // what is on screen: tiles in place, charts through their live handles,

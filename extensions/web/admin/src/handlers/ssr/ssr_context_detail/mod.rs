@@ -25,6 +25,8 @@ use systemprompt_web_admin_core::error::AdminHtmlResult;
 use systemprompt_web_admin_core::repositories::scope::may_view;
 
 use data::load_transcript;
+use systemprompt_web_admin_core::ssr::faults::Faults;
+use systemprompt_web_admin_core::ssr::helpers::Viewer;
 use systemprompt_web_admin_core::ssr::page::Page;
 use view::{build_detail_data, resolve_tab};
 
@@ -65,16 +67,17 @@ pub(crate) async fn context_detail_page(
         return Err(context_not_found().into());
     };
 
-    let transcript = load_transcript(&pool, &header, &context_id).await?;
+    let mut faults = Faults::new();
+    let transcript = load_transcript(&pool, &header, &context_id, &mut faults).await?;
     let data = build_detail_data(&header, &transcript, resolve_tab(query.tab.as_deref()));
 
     Ok(
-        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+        systemprompt_web_admin_core::ssr::helpers::render_page_with_faults(
             &shell.engine,
             "context-detail",
             &data,
-            &shell.user,
-            &shell.marketplace,
+            Viewer::new(&shell.user, &shell.marketplace),
+            &faults,
         ),
     )
 }

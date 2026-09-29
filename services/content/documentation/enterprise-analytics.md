@@ -1,88 +1,112 @@
 ---
 title: "Usage, Adoption & Productivity Analytics"
-description: "Track AI usage, adoption, and productivity in the admin analytics tabs: request volume, weekly active users, and honestly labelled code metrics, split by project."
+description: "Track AI usage and adoption in /admin/analytics — requests, spend, weekly active users, models, skills, tools and sessions — scoped to the whole instance, one group, one project or one person."
 author: "Astound Digital"
 slug: "enterprise-analytics"
-keywords: "analytics, usage, adoption, productivity, wau, projects, code metrics, dashboards"
+keywords: "analytics, usage, adoption, wau, groups, projects, inactive users, skills, tools, models, dashboards"
 kind: "guide"
 public: true
 tags: ["enterprise", "analytics", "admin"]
 published_at: "2026-08-25"
-updated_at: "2026-09-11"
+updated_at: "2026-09-29"
 after_reading_this:
-  - "Navigate the Overview, Usage, and Code analytics tabs"
-  - "Switch between period presets from 15 minutes to 30 days, or set a custom range"
-  - "Read WAU and requests per user per day, per project"
-  - "Interpret the Code tab's productivity proxies for what they are"
-  - "Understand what stands between usage data and an outcome metric"
+  - "Navigate the Overview, Models, Skills, Tools, Sessions and Cost tabs"
+  - "Scope any view to a group, a project or one person, and pick a window from 15 minutes to 90 days"
+  - "Drill from a group or project page into its usage"
+  - "Find people who were provisioned but have not used the platform in 30 days"
+  - "Know what is not measured: code output, commits, and business outcomes"
 related_docs:
-  - title: "Cost Management, Budgets & FinOps"
+  - title: "Cost Management & FinOps"
     url: "/documentation/enterprise-cost-management"
+  - title: "Conversation History & Search"
+    url: "/documentation/enterprise-conversation-history"
+  - title: "Data Retention & Archives"
+    url: "/documentation/data-retention"
   - title: "Dashboard"
     url: "/documentation/dashboard"
 ---
 
 # Usage, Adoption & Productivity Analytics
 
-**TL;DR:** `/admin/analytics` is a server-rendered dashboard with tabs for Overview, Usage, and Code (plus Spend, covered in [Cost Management](/documentation/enterprise-cost-management)). It answers who is using the platform, how much, and what they produce — with selectable periods from 15 minutes to 30 days, and every view filterable by project (Commerce or Core) or user.
+**TL;DR:** `/admin/analytics` answers "what did the AI do?" across six tabs: **Overview, Models, Skills, Tools, Sessions** and **Cost**.
 
-## Periods and filters
+- **Window:** presets from 15 minutes to 90 days, or a custom range of up to 30 days.
+- **Scope:** everyone, one group, one project or one person.
+- **Drill-down:** group and project pages carry their own usage tabs, and `/admin/users` has a filter for people who have not used the platform in 30 days.
+- **Not measured:** code output and commits (those metrics were withdrawn), and business outcomes (never measured).
 
-Every tab shares the same controls: period presets from **15 minutes up to 30 days**, plus a **custom range** picker, and a **Project** selector (All / Commerce / Core). The project comes from the user's Active Directory group at sign-in — see [User & Access Management](/documentation/enterprise-user-access) — and an admin can narrow any page to one; a plain user only ever sees their own.
+The analytics pages are for console roles. A signed-in user without console access sees only their own conversations, on [Conversation History](/documentation/enterprise-conversation-history).
 
-## Overview and Usage tabs
+## Window, scope and attribution
 
-The Overview and Usage tabs cover platform utilization:
+Every tab shares the same controls, carried in the query string, so a view can be bookmarked:
 
-- **Request volume** — total requests over the period, with daily and weekly series and historical trend.
-- **Error rate** — failed requests as a share of total.
-- **Active users** — distinct users per bucket, charted over time.
+- **Window:** presets of 15 minutes, 1 hour, 24 hours, 7 days, 30 days and 90 days, plus a custom range capped at 30 days for query cost. Raw requests are kept for 90 days ([Data Retention](/documentation/data-retention)), so the 90-day preset is also the longest reach into raw history.
+- **Scope:** everyone, one **group** (`?group=`), one **project** (`?project=`), or one **person** (`?user_id=`). Groups and projects come from Active Directory at sign-in or from console membership. See [User & Access Management](/documentation/enterprise-user-access).
+- **Attribution:** **Exclusive** by default. Each person's usage counts once, against their primary group or project, so container totals add up to the instance total. **Member** (`?attr=member`) counts a person in every group they belong to, which answers "who uses what". The page says on screen that those totals overlap.
 
-For CLI cross-checks and scripted reporting:
+## The tabs
+
+| Tab | What it answers |
+|---|---|
+| **Overview** | KPIs: requests, total spend, weekly active users, tokens. Request and cost trends, the model mix, a **top-users** leaderboard (requests, share, requests per day, tokens, last active, groups), and the split of requests either side of a latency SLO threshold you set on the page (`?slo_ms=`, default 5 s). |
+| **Models** | Per model: requests, share, prompt and completion tokens, median and p95 latency, errors, and **redirects** (requests where the model asked for differs from the model that served). Unrouted requests have their own bucket. |
+| **Skills** | Skill adoption. Per skill: invocations, split into typed `/plugin:skill` commands and ones the model dispatched itself, plus users, conversations reached, requests and conversation spend, and how many invocations resolved to a published version. |
+| **Tools** | MCP health. Per server and per tool: executions, share, success, failed, pending, and users. |
+| **Sessions** | Conversation cost: per conversation, the model, requests, tokens and last activity. |
+| **Cost** | The supplier bill and consumption by group or project. See [Cost Management](/documentation/enterprise-cost-management). |
+
+Every row drills into `/admin/requests` with the dimension it names, plus the scope and window already on screen. Every table exports as CSV, JSON, JSON Lines or Markdown.
+
+For the analysis of individual conversations and skill runs (outcomes, judge scores, versions), see [Analysis](/documentation/analysis).
 
 ```bash
 systemprompt analytics overview
 systemprompt analytics requests stats
 systemprompt analytics costs breakdown --by user --since 7d
 systemprompt analytics conversations list --since 7d --source gateway
+systemprompt analytics tools list
 ```
+
+## Groups, projects and people
+
+The org drill-down uses two flat containers, not a hierarchy:
+
+- A **group** is people and entitlement.
+- A **project** is work attribution and an access subject.
+
+There is no layer above them (no hub or division).
+
+- **`/admin/groups`** lists every group. **`/admin/groups/{id}`** has the tabs **Usage**, **Members**, **Access**, **Projects** and **Mappings** (the directory groups that feed it). The **Unassigned** bucket collects everyone with no group, so gaps in directory mapping are visible.
+- **`/admin/projects`** lists projects with their spend and tooling health. **`/admin/projects/{id}`** has **Members**, **Usage** and **Settings** tabs, and **`/admin/projects/{id}/report`** lays all of it out on one printable page.
+- **`/admin/users/{id}?tab=usage`** is one person's usage. The older `/admin/analytics/users/{id}` link redirects there.
 
 ## Adoption
 
-The Usage tab also measures adoption rather than raw traffic:
+- **Weekly active users** on the Overview tab, with the change against the previous period.
+- **Requests per user per day** on the top-users leaderboard: is usage broad and shallow, or concentrated in a few people?
+- **Provisioned but not using it:** `/admin/users?filter=inactive-30d` lists everyone with no gateway request, no browser session activity and no recorded activity in the last 30 days. A person who has never been active has no last-active date at all, so "never used it" is distinguishable from "used it on day one".
 
-- **Weekly active users (WAU)** with period-over-period deltas.
-- **Requests per user per day** — the intensity metric: is usage broad and shallow, or concentrated?
-- **Top users** — a leaderboard of the heaviest users in the period.
+## What is not measured
 
-## Code tab: productivity proxies
+- **Code output.** AI-authored lines, applied edits, permission-grant rate and commit lines were withdrawn in September 2026, and their tables were dropped. Those numbers were proxies too weak to report.
+- **Commits made outside Claude Code** have never been visible. Measuring them needs an authoritative source-control host and an identity mapping into it, which is still awaiting a decision.
+- **Tab-acceptance rate.** Claude Code emits no accept/reject signal for completions, so an acceptance metric would need an IDE-level integration that does not exist.
 
-The Code tab reports what Claude Code sessions produce. These metrics are **proxies, and are labelled as such in the UI** — they indicate direction, not ground truth:
+These gaps are also listed on the [Enterprise Roadmap](/documentation/enterprise-roadmap#known-limitations).
 
-- **AI-authored lines of code** — LOC written by the model in observed sessions.
-- **Applied edits** — edits the model proposed that were applied.
-- **Permission-grant rate** — how often users approve the tool actions the model requests; a rough trust signal.
-- **Commit lines** — lines landing in commits observed through Claude Code sessions, deduplicated and rolled up daily beside AI usage.
+## Check it yourself
 
-Two limits are worth stating plainly:
+- `/admin/analytics?preset=7d`: the Overview for the last week.
+- `/admin/analytics?tab=skills&preset=30d`: skill adoption for the month.
+- `/admin/groups` and `/admin/projects`: open one and read its **Usage** tab.
+- `/admin/users?filter=inactive-30d`: who has not used the platform in 30 days.
+- From the CLI:
 
-- **Tab-acceptance rate is not measurable.** Claude Code emits no accept/reject signal for completions, and no manual-LOC baseline exists, so a true acceptance metric would require an IDE-level integration that does not exist today.
-- **Commits made outside Claude Code are invisible.** Full commit analytics require nominating an authoritative SCM and an identity mapping into it.
-
-Both limitations have their canonical home on the [Enterprise Roadmap](/documentation/enterprise-roadmap).
-
-## Verification
-
-Use the commands and UI checks above against the configured instance. Repository maintainers can run `just test-unit` and `just test-integration`; a passing fixture test does not establish that a deployed integration is configured. Screenshots below are illustrative and may show an earlier configuration.
-
-![The analytics Overview tab with volume, errors, and active users](/files/images/evidence/req-003-overview.png)
-*The Overview tab: request volume, error rate, and active users for the selected period.*
-
-![Daily and weekly usage trend charts](/files/images/evidence/req-003-usage-trends.png)
-*Daily/weekly usage trends with the period selector.*
-
-![The Code tab showing productivity proxy metrics](/files/images/evidence/req-007-008-code-tab.png)
-*The Code tab: AI-authored LOC, applied edits, permission-grant rate, and commit lines.*
+  ```bash
+  systemprompt analytics overview
+  systemprompt analytics requests stats
+  ```
 
 ## From usage to outcomes
 
@@ -90,28 +114,39 @@ Everything above measures **consumption**. Mapping consumption to **outcomes** i
 
 ### What is measured today
 
-Every request through the gateway records input tokens, output tokens, cache-read and cache-creation tokens, cost, latency, model, provider, and the user, session and trace it belongs to. Those rows roll up per user per day, which is what the dashboards and the per-user page at `/admin/analytics/users/{user_id}` read.
+Every request through the gateway records:
+- input, output, cache-read and cache-creation tokens;
+- cost and latency;
+- model and provider;
+- the user, session and trace it belongs to.
 
-Two honest caveats. **Cost is computed, not billed** — it comes from a model price catalogue applied to observed token counts, so it is an accurate estimate rather than an invoice. And the customer-facing report deliberately omits cost entirely; spend lives in the internal report, so that a report shared with a team shows usage without exposing budget.
+Those rows roll up per user per day. The dashboards and each person's Usage tab read those rollups.
+
+**Cost is computed, not billed.** It comes from a model price catalogue applied to observed token counts, so it is an accurate estimate rather than an invoice. The customer view of the Cost tab (`?audience=customer`) deliberately carries no cost at all, so a report shared with a team shows usage without exposing spend.
 
 ### The limit worth stating
 
-The only outcome-shaped data captured today is **self-reported by the model**: at the end of a Claude Code session a summariser records whether the stated goal was achieved, a quality score, and a goal-to-outcome mapping. It is a useful coaching signal and a reasonable way to spot sessions that went badly. It is not a business metric, and it should not be presented as one — it is a model's opinion of its own work, not an observed result in a system of record.
+The only outcome-shaped data captured today is **a model's judgement**. The `conversation_judge` job reads each finished conversation and records:
+- a title, a summary and an intent;
+- an outcome;
+- a 0–100 completion score for whether the assistant delivered what was originally asked.
 
-Nothing today joins AI usage to a ticket being closed, a deal advancing, an incident being resolved, or a release shipping.
+This is a useful coaching signal and a reasonable way to spot conversations that went badly; see [Analysis](/documentation/analysis). It is not a business metric and should not be presented as one: it is a model's opinion of the work, not an observed result in a system of record.
+
+Nothing today joins AI usage to a ticket closing, a deal advancing, an incident being resolved, or a release shipping.
 
 ### The decision required
 
-To map usage to outcomes we first have to agree what an outcome *is*. The candidates, in rough order of how directly they are observable:
+To map usage to outcomes, we first have to agree what an outcome *is*. The candidates, roughly in order of how directly they can be observed:
 
-- **Jira issue transitions** — cycle time from in-progress to done, reopen rate, throughput per person per sprint. The most concrete option for engineering work, and the easiest to game if it becomes a target.
-- **Source control** — pull requests merged, review turnaround, change failure rate. Closest to delivery, but only meaningful once commits made outside Claude Code are visible.
-- **Salesforce records** — opportunities advanced, cases resolved. The right measure for commercial rather than engineering usage.
-- **Ratified self-report** — keep the session goal signal, but have a human confirm or reject it, converting an opinion into a label.
+- **Jira issue transitions:** cycle time from in-progress to done, reopen rate, throughput per person per sprint. This is the most concrete option for engineering work, and the easiest to game if it becomes a target.
+- **Source control:** pull requests merged, review turnaround, change failure rate. This is closest to delivery, but only meaningful once commits made outside Claude Code are visible.
+- **Salesforce records:** opportunities advanced, cases resolved. This is the right measure for commercial rather than engineering usage.
+- **Ratified judgement:** keep the judge's outcome, but have a human confirm or reject it, which turns an opinion into a label.
 
-Whichever is chosen, two dependencies follow and neither is optional:
+Whichever is chosen, two dependencies follow, and neither is optional:
 
-1. **An API key to sync that system into systemprompt.** Jira, Confluence and Salesforce each need credentials before their data can be correlated with anything. Without them there is no outcome side of the join.
-2. **An identity mapping rule** from the external account to a platform user — a Jira account id, a Salesforce username, a commit-author email. This is the harder half. The equivalent question for source control is already open as DEC-002 in the requirements register and is still awaiting a decision.
+1. **A sync of that system's records into the platform.** The Atlassian and Salesforce connectors let each person *query* those systems under their own permissions. Nothing yet copies their records into analytics, where they could be joined with usage.
+2. **An identity-mapping rule** from the external account to a platform user: a Jira account id, a Salesforce username, a commit-author email. This is the harder half, and the equivalent source-control question is still open.
 
-Until an outcome is defined and its source system connected, the platform can report what AI cost and what it produced in code, and it should not claim more than that.
+Until an outcome is defined and its source system connected, the platform can report what AI cost and what it was used for. It should not claim more than that.

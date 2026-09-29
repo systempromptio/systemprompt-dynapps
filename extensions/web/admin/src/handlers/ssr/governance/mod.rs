@@ -26,6 +26,8 @@ use crate::repositories::governance::findings::{FindingFilter, SafetyFindingLogR
 use crate::repositories::governance::{DecisionPage, PageSlice};
 use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
 use systemprompt_web_admin_core::repositories::scope::{ScopeRequest, SubjectScope, membership};
+use systemprompt_web_admin_core::ssr::faults::Faults;
+use systemprompt_web_admin_core::ssr::helpers::Viewer;
 use systemprompt_web_admin_core::ssr::list_view::{DEFAULT_PAGE_SIZE, scope_filter_view};
 use systemprompt_web_admin_core::templates::AdminTemplateEngine;
 use systemprompt_web_admin_core::types::{MarketplaceContext, UserContext};
@@ -229,6 +231,7 @@ pub(crate) async fn governance_page(
     let sort = sort_from(&query);
     let page = query.page.unwrap_or(0).max(0);
 
+    let mut faults = Faults::new();
     let loaded = data::load(
         &pool,
         data::GovernanceRead {
@@ -241,6 +244,7 @@ pub(crate) async fn governance_page(
             page_size: DEFAULT_PAGE_SIZE,
             offset: page * DEFAULT_PAGE_SIZE,
         },
+        &mut faults,
     )
     .await;
 
@@ -264,12 +268,12 @@ pub(crate) async fn governance_page(
     });
 
     Ok(
-        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+        systemprompt_web_admin_core::ssr::helpers::render_page_with_faults(
             &engine,
             "governance-warnings",
             &ctx,
-            &user_ctx,
-            &mkt_ctx,
+            Viewer::new(&user_ctx, &mkt_ctx),
+            &faults,
         ),
     )
 }

@@ -18,6 +18,8 @@ use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
 use systemprompt_web_admin_core::templates::AdminTemplateEngine;
 use systemprompt_web_admin_core::types::{MarketplaceContext, UserContext};
 
+use systemprompt_web_admin_core::ssr::faults::Faults;
+use systemprompt_web_admin_core::ssr::helpers::Viewer;
 use systemprompt_web_admin_core::ssr::list_view::{
     DEFAULT_PAGE_SIZE, PageWindow, Pagination, paginate,
 };
@@ -54,10 +56,15 @@ pub(crate) async fn projects_page(
         return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
     }
 
-    let data = list::page_data(&pool, &query, user_ctx.is_admin).await;
+    let mut faults = Faults::new();
+    let data = list::page_data(&pool, &query, user_ctx.is_admin, &mut faults).await;
     Ok(
-        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
-            &engine, "projects", &data, &user_ctx, &mkt_ctx,
+        systemprompt_web_admin_core::ssr::helpers::render_page_with_faults(
+            &engine,
+            "projects",
+            &data,
+            Viewer::new(&user_ctx, &mkt_ctx),
+            &faults,
         ),
     )
 }
@@ -78,14 +85,15 @@ pub(crate) async fn project_detail_page(
     };
 
     let tab = active_tab(query.tab.as_deref());
-    let loaded = detail::load(&pool, &project_id, &shell.user).await;
+    let mut faults = Faults::new();
+    let loaded = detail::load(&pool, &project_id, &shell.user, &mut faults).await;
     let usage = if tab == "usage" {
-        Some(detail::load_usage(&pool, &project_id).await)
+        Some(detail::load_usage(&pool, &project_id, &mut faults).await)
     } else {
         None
     };
     let (mappings, rules) = if tab == "settings" {
-        settings_reads(&pool, &project_id).await
+        settings_reads(&pool, &project_id, &mut faults).await
     } else {
         (Vec::new(), Vec::new())
     };
@@ -102,12 +110,12 @@ pub(crate) async fn project_detail_page(
         },
     );
     Ok(
-        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+        systemprompt_web_admin_core::ssr::helpers::render_page_with_faults(
             &shell.engine,
             "project-detail",
             &data,
-            &shell.user,
-            &shell.marketplace,
+            Viewer::new(&shell.user, &shell.marketplace),
+            &faults,
         ),
     )
 }
@@ -127,11 +135,16 @@ pub(crate) async fn project_report_page(
         return Err(AdminError::NotFound("No such project.".to_owned()).into());
     };
 
+    let mut faults = Faults::new();
+    let mut usage_faults = Faults::new();
+    let mut report_faults = Faults::new();
     let (detail, usage, extra) = tokio::join!(
-        detail::load(&pool, &project_id, &shell.user),
-        detail::load_usage(&pool, &project_id),
-        report::load(&pool, &project_id),
+        detail::load(&pool, &project_id, &shell.user, &mut faults),
+        detail::load_usage(&pool, &project_id, &mut usage_faults),
+        report::load(&pool, &project_id, &mut report_faults),
     );
+    faults.extend(usage_faults.into_vec());
+    faults.extend(report_faults.into_vec());
     let data = report::page_data(
         report::ReportInputs {
             project: &project,
@@ -143,12 +156,12 @@ pub(crate) async fn project_report_page(
         &shell.user,
     );
     Ok(
-        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+        systemprompt_web_admin_core::ssr::helpers::render_page_with_faults(
             &shell.engine,
             "project-report",
             &data,
-            &shell.user,
-            &shell.marketplace,
+            Viewer::new(&shell.user, &shell.marketplace),
+            &faults,
         ),
     )
 }
@@ -164,18 +177,20 @@ fn active_tab(requested: Option<&str>) -> &'static str {
 async fn settings_reads(
     pool: &PgPool,
     project_id: &ProjectId,
+    faults: &mut Faults,
 ) -> (
     Vec<systemprompt_web_admin_core::types::projects::ProjectAdMappingRow>,
     Vec<systemprompt_web_admin_core::types::access_control::AccessControlRule>,
 ) {
-    let mappings = repositories::projects::mappings::list_project_ad_mappings(pool, project_id)
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, "project AD mappings failed"))
-        .unwrap_or_default();
-    let rules = systemprompt_web_admin_core::repositories::entitlement::list_all_rules(pool)
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, "access rules failed"))
-        .unwrap_or_default()
+    let mappings = faults.take(
+        "directory mappings",
+        repositories::projects::mappings::list_project_ad_mappings(pool, project_id).await,
+    );
+    let rules = faults
+        .take(
+            "access rules",
+            systemprompt_web_admin_core::repositories::entitlement::list_all_rules(pool).await,
+        )
         .into_iter()
         .filter(|r| r.rule_type.as_str() == "project" && r.rule_value == project_id.as_str())
         .collect();

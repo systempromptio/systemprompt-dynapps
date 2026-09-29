@@ -28,6 +28,8 @@ mod urls;
 mod view;
 
 use context::{ActiveRequestsTab, AnalyticsRequestsPageContext, RequestsTab};
+use systemprompt_web_admin_core::ssr::faults::Faults;
+use systemprompt_web_admin_core::ssr::helpers::Viewer;
 use systemprompt_web_admin_core::ssr::list_view::DEFAULT_PAGE_SIZE;
 use systemprompt_web_admin_core::ssr::page::Page;
 
@@ -102,7 +104,8 @@ pub(crate) async fn analytics_requests_page(
     let page = query.page.unwrap_or(0).max(0);
     let offset = page * DEFAULT_PAGE_SIZE;
 
-    let (range, auto_widened) = data::resolve_range(&pool, &query).await;
+    let mut faults = Faults::new();
+    let (range, auto_widened) = data::resolve_range(&pool, &query, &mut faults).await;
 
     let fetched = data::load_requests_data(
         &pool,
@@ -114,6 +117,7 @@ pub(crate) async fn analytics_requests_page(
             page_size: DEFAULT_PAGE_SIZE,
             offset,
         },
+        &mut faults,
     )
     .await;
 
@@ -130,12 +134,12 @@ pub(crate) async fn analytics_requests_page(
     });
 
     Ok(
-        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+        systemprompt_web_admin_core::ssr::helpers::render_page_with_faults(
             &shell.engine,
             "analytics-requests",
             &ctx,
-            &shell.user,
-            &shell.marketplace,
+            Viewer::new(&shell.user, &shell.marketplace),
+            &faults,
         ),
     )
 }

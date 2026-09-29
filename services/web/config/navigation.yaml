@@ -104,9 +104,6 @@ docs_sidebar:
         href: "/documentation/install-windows"
       - label: "Downloads"
         href: "/documentation/downloads"
-
-  - title: "Using It Day to Day"
-    links:
       - label: "Connect Salesforce"
         href: "/documentation/salesforce"
 
@@ -118,11 +115,19 @@ docs_sidebar:
         href: "/documentation/skills-lifecycle"
       - label: "Analysis Overview"
         href: "/documentation/analysis"
+      - label: "Measure Which Skills Are Used"
+        href: "/documentation/analysis-measure-skills"
+      - label: "Evaluate a Plugin"
+        href: "/documentation/analysis-evaluate-plugins"
+      - label: "Create a Conversation and See It Land"
+        href: "/documentation/analysis-test-conversation"
+      - label: "Versions: Hashes, History and Compare"
+        href: "/documentation/analysis-versions"
+      - label: "Artifacts and the Tool-Call Ledger"
+        href: "/documentation/artifacts-and-tool-calls"
 
   - title: "Sync: Code and Instance"
     links:
-      - label: "Update a Skill and Ship It"
-        href: "/documentation/update-a-skill"
       - label: "Sources, Planes and Sync"
         href: "/documentation/services-sync"
       - label: "Access Control"
@@ -138,6 +143,8 @@ docs_sidebar:
         href: "/documentation/deploy-troubleshooting"
       - label: "Expose Your Instance Remotely"
         href: "/documentation/remote-access"
+      - label: "Target Deployment Architecture"
+        href: "/documentation/deploy-target-architecture"
 
   - title: "Advanced — Running & Developing"
     links:
@@ -156,6 +163,8 @@ docs_sidebar:
     links:
       - label: "User & Access Management"
         href: "/documentation/enterprise-user-access"
+      - label: "Set Up SSO (AD FS)"
+        href: "/documentation/adfs-sso-setup"
       - label: "Usage & Productivity Analytics"
         href: "/documentation/enterprise-analytics"
       - label: "Cost Management & FinOps"
@@ -164,8 +173,14 @@ docs_sidebar:
         href: "/documentation/enterprise-model-routing"
       - label: "Audit & Observability"
         href: "/documentation/enterprise-audit-observability"
+      - label: "Export Telemetry (OTLP)"
+        href: "/documentation/observability-export"
+      - label: "Data Retention"
+        href: "/documentation/data-retention"
       - label: "Conversation History & Search"
         href: "/documentation/enterprise-conversation-history"
+      - label: "Governance Modes: Warn and Enforce"
+        href: "/documentation/governance-modes"
       - label: "Content Safety & Guardrails"
         href: "/documentation/enterprise-safety-guardrails"
       - label: "MCP & Tool Governance"

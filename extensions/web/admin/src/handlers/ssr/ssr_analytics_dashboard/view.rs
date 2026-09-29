@@ -13,6 +13,7 @@ use systemprompt_web_admin_core::ssr::types::sparkline::{delta_view, sparkline};
 use systemprompt_web_admin_core::ssr::types::svg_line::{
     Plot, SvgLineChartView, SvgSeriesInput, chart_on_axis,
 };
+use systemprompt_web_admin_core::ssr::viewer_tz::viewer_tz;
 use systemprompt_web_admin_core::util::time_range::TimeRange;
 
 use super::context::{DashboardTimeRange, KpiStripView};
@@ -209,13 +210,13 @@ fn model_log_url(query: &AnalyticsDashboardQuery, model: &str) -> String {
 pub(super) use systemprompt_web_shared::format::compact_num as compact;
 
 pub(super) fn format_date(ts: chrono::DateTime<chrono::Utc>) -> String {
-    ts.with_timezone(&chrono::Local)
+    ts.with_timezone(&viewer_tz())
         .format("%Y-%m-%d")
         .to_string()
 }
 
 pub(super) fn bucket_label(ts: chrono::DateTime<chrono::Utc>, weekly: bool) -> String {
-    let local = ts.with_timezone(&chrono::Local);
+    let local = ts.with_timezone(&viewer_tz());
     if weekly {
         format!("week of {}", local.format("%b %d"))
     } else {

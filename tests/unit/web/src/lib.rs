@@ -306,6 +306,8 @@ mod users_page;
 mod util_ranges;
 #[cfg(test)]
 mod util_svg_pure;
+#[cfg(test)]
+mod viewer_timezone;
 
 #[cfg(test)]
 mod connector_cards;

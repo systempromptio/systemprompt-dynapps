@@ -4,14 +4,14 @@
 
 use serde::Serialize;
 
-use crate::handlers::ssr::analysis::tone::{
-    cache_tone, completion_tone, deny_tone, error_rate_tone, percent, safety_tone, score_display,
-};
 use crate::repositories::analysis::conversations::{
     ConversationAnalysisTotals, ConversationSeriesPoint,
 };
 use systemprompt_web_admin_core::ssr::format::{
     format_cost, format_duration_ms, format_token_total,
+};
+use systemprompt_web_admin_core::ssr::tone::{
+    cache_tone, completion_tone, deny_tone, error_rate_tone, percent, safety_tone, score_display,
 };
 use systemprompt_web_admin_core::ssr::types::sparkline::{SparklineView, sparkline_toned};
 

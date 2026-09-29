@@ -2,7 +2,6 @@
 
 use async_trait::async_trait;
 
-use super::requests::time_range;
 use crate::handlers::ssr::ssr_perf_traces::export::export_rows;
 use crate::repositories::traces::TraceSummary;
 use systemprompt::identifiers::{AgentId, TraceId, UserId};
@@ -11,6 +10,7 @@ use systemprompt_web_admin_core::export::model::{
     Cell, CellKind, Column, DataSet, ExportContext, Table, Window,
 };
 use systemprompt_web_admin_core::export::registry::DataSetRegistration;
+use systemprompt_web_admin_core::export::window::time_range;
 
 pub(crate) struct Traces;
 

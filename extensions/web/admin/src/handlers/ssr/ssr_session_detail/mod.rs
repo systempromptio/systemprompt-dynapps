@@ -26,9 +26,11 @@ use crate::repositories::analytics::session_detail::{
 use crate::repositories::session_state::session_state;
 use systemprompt_web_admin_core::error::AdminHtmlResult;
 use systemprompt_web_admin_core::repositories::scope::may_view;
+use systemprompt_web_admin_core::ssr::faults::Faults;
 use systemprompt_web_admin_core::ssr::format::{
     format_cost, format_duration_ms, format_token_total, local_time, short_id,
 };
+use systemprompt_web_admin_core::ssr::helpers::Viewer;
 use systemprompt_web_admin_core::ssr::page::Page;
 
 use rows::{context_view, request_view, trace_view};
@@ -44,7 +46,7 @@ struct SessionRead {
     requests: Vec<SessionRequestRow>,
 }
 
-async fn load_session(pool: &PgPool, session_id: &SessionId) -> SessionRead {
+async fn load_session(pool: &PgPool, session_id: &SessionId, faults: &mut Faults) -> SessionRead {
     let (kpis, contexts, traces, requests) = tokio::join!(
         get_session_kpis(pool, session_id),
         list_session_contexts(pool, session_id),
@@ -52,18 +54,10 @@ async fn load_session(pool: &PgPool, session_id: &SessionId) -> SessionRead {
         list_session_requests(pool, session_id),
     );
     SessionRead {
-        kpis: kpis
-            .inspect_err(|e| tracing::warn!(error = %e, "get_session_kpis failed"))
-            .unwrap_or_default(),
-        contexts: contexts
-            .inspect_err(|e| tracing::warn!(error = %e, "list_session_contexts failed"))
-            .unwrap_or_default(),
-        traces: traces
-            .inspect_err(|e| tracing::warn!(error = %e, "list_session_traces failed"))
-            .unwrap_or_default(),
-        requests: requests
-            .inspect_err(|e| tracing::warn!(error = %e, "list_session_requests failed"))
-            .unwrap_or_default(),
+        kpis: faults.take("session totals", kpis),
+        contexts: faults.take("session contexts", contexts),
+        traces: faults.take("session traces", traces),
+        requests: faults.take("session requests", requests),
     }
 }
 
@@ -89,7 +83,8 @@ pub(crate) async fn session_detail_page(
         .into());
     };
 
-    let read = load_session(&pool, &session_id).await;
+    let mut faults = Faults::new();
+    let read = load_session(&pool, &session_id, &mut faults).await;
 
     let data = SessionDetailPageContext {
         page: "session-detail",
@@ -117,12 +112,12 @@ pub(crate) async fn session_detail_page(
     };
 
     Ok(
-        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+        systemprompt_web_admin_core::ssr::helpers::render_page_with_faults(
             &shell.engine,
             "session-detail",
             &data,
-            &shell.user,
-            &shell.marketplace,
+            Viewer::new(&shell.user, &shell.marketplace),
+            &faults,
         ),
     )
 }

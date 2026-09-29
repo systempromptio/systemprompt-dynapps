@@ -31,6 +31,7 @@ use sqlx::PgPool;
 use super::super::handlers;
 use super::admin_groups;
 use systemprompt::database::DbPool;
+use systemprompt_web_admin_catalog::routes as catalog_routes;
 use systemprompt_web_admin_core::repositories::sync::archive::MAX_UPLOAD_BYTES;
 use systemprompt_web_admin_core::state::StateError;
 use systemprompt_web_admin_core::types::{ROLES_CONSOLE, ROLES_MANAGE, ROLES_PLATFORM};
@@ -45,13 +46,13 @@ pub(crate) fn build_admin_only_routes(
     owner: systemprompt::identifiers::UserId,
 ) -> Result<Router, StateError> {
     let reads = build_admin_read_routes_inner(read_pool)
-        .merge(super::managed_resources::reads())
+        .merge(catalog_routes::managed_resources::reads())
         .layer(axum_middleware::from_fn_with_state(
             ROLES_CONSOLE,
             systemprompt_web_admin_core::middleware::gates::require_roles_middleware,
         ));
     let writes = build_admin_write_routes(write_pool)
-        .merge(super::managed_resources::writes())
+        .merge(catalog_routes::managed_resources::writes())
         .layer(axum_middleware::from_fn_with_state(
             ROLES_MANAGE,
             systemprompt_web_admin_core::middleware::gates::require_roles_middleware,
@@ -162,10 +163,7 @@ fn build_admin_write_routes(write_pool: &Arc<PgPool>) -> Router {
             "/users/{user_id}",
             put(handlers::update_user_handler).delete(handlers::delete_user_handler),
         )
-        .route(
-            "/users/{user_id}/share-token",
-            post(handlers::share::issue_share_token_handler),
-        )
+        .merge(catalog_routes::api::share_token_routes())
         .route(
             "/users/{user_id}/salesforce-identity",
             post(handlers::salesforce_identity::link_salesforce_identity_handler)
@@ -256,12 +254,10 @@ pub(crate) fn build_self_service_routes(write_pool: &Arc<PgPool>) -> Router {
 pub(crate) fn build_auth_read_routes(read_pool: &Arc<PgPool>) -> Router {
     Router::new()
         .route("/dashboard", get(handlers::dashboard_handler))
-        .route("/plugins", get(handlers::list_plugins_handler))
+        .merge(catalog_routes::api::listing_routes())
         .route(
             "/plugins/{plugin_id}/env",
             get(handlers::list_plugin_env_handler),
         )
-        .route("/agents", get(handlers::list_agents_handler))
-        .route("/agents/{agent_id}", get(handlers::get_agent_handler))
         .with_state(Arc::clone(read_pool))
 }

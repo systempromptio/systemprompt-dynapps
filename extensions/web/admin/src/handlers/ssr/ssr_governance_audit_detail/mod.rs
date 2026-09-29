@@ -11,6 +11,7 @@
 
 use std::sync::Arc;
 use systemprompt_web_admin_core::error::AdminError;
+use systemprompt_web_admin_core::ssr::viewer_tz::viewer_tz;
 
 use systemprompt::identifiers::{AgentId, AiRequestId, SessionId, TraceId, UserId};
 
@@ -25,6 +26,8 @@ use crate::repositories::governance::chain::{
 use systemprompt_web_admin_core::error::AdminHtmlResult;
 use systemprompt_web_admin_core::repositories::scope::may_view;
 use systemprompt_web_admin_core::ssr::entity_urls::{session_detail_url, trace_detail_url};
+use systemprompt_web_admin_core::ssr::faults::Faults;
+use systemprompt_web_admin_core::ssr::helpers::Viewer;
 use systemprompt_web_admin_core::ssr::page::Page;
 use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 
@@ -130,8 +133,9 @@ pub(crate) async fn governance_audit_detail_page(
     let primary_provider = primary
         .and_then(|r| r.provider.as_deref())
         .unwrap_or_default();
+    let mut faults = Faults::new();
     let (evidence, schemas, artifacts) = tokio::join!(
-        evidence::load(&pool, &request_ids),
+        evidence::load(&pool, &request_ids, &mut faults),
         schemas::load_schemas(&pool, primary_id.unwrap_or_default(), primary_provider),
         schemas::load_artifacts(&pool, &envelope.session_id, primary_id),
     );
@@ -165,12 +169,12 @@ pub(crate) async fn governance_audit_detail_page(
     };
 
     Ok(
-        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+        systemprompt_web_admin_core::ssr::helpers::render_page_with_faults(
             &shell.engine,
             "governance-audit-detail",
             &ctx,
-            &shell.user,
-            &shell.marketplace,
+            Viewer::new(&shell.user, &shell.marketplace),
+            &faults,
         ),
     )
 }
@@ -233,7 +237,7 @@ fn build_primary_json(r: &AiRequestSummary) -> PrimaryRequest {
         cost_microdollars: r.cost_microdollars,
         created_at_local: r
             .created_at
-            .with_timezone(&chrono::Local)
+            .with_timezone(&viewer_tz())
             .format("%Y-%m-%d %H:%M:%S")
             .to_string(),
     }

@@ -3,17 +3,18 @@ title: "Model Gateway, Routing & Data Residency"
 description: "Route all AI traffic through one provider-neutral gateway with ACL-enforced model access, quotas, latency SLOs, private endpoints, and declared residency requirements."
 author: "Astound Digital"
 slug: "enterprise-model-routing"
-keywords: "gateway, routing, models, providers, acl, quotas, residency, no-retain, shadow ai, slo"
+keywords: "gateway, routing, models, providers, vertex ai, failover, acl, quotas, residency, no-retain, shadow ai, slo, chat completions, retirement"
 kind: "guide"
 public: true
 tags: ["enterprise", "gateway", "admin"]
 published_at: "2026-08-25"
-updated_at: "2026-09-17"
+updated_at: "2026-09-29"
 after_reading_this:
   - "Route any Anthropic- or OpenAI-compatible client through the provider-neutral gateway"
-  - "Grant and revoke model access per role or AD group via gateway_route ACLs"
-  - "Enforce data-residency and no-retain requirements declaratively on routes"
-  - "Set quota windows and latency SLO thresholds and read the breach reporting"
+  - "Know which models this instance serves, from which provider, and which retire soon"
+  - "Understand how model access is granted, and that every route is open to every role today"
+  - "Know which residency and no-retain requirements are declared (none today) and how to add one"
+  - "Read latency against an SLO threshold on the analytics dashboard"
   - "Add a private or self-hosted endpoint as a configuration entry"
   - "Name a fallback provider on a route and read a failover back off the audit row"
 related_docs:
@@ -27,17 +28,50 @@ related_docs:
 
 # Model Gateway, Routing & Data Residency
 
-**TL;DR:** Configured clients send AI traffic through the provider-neutral gateway (`/v1/messages`, `/v1/responses`, four wire protocols) that rewrites models, enforces per-role access with 403s, refuses unlisted models, applies quota windows, tracks latency against an SLO, and — via governance metadata on providers and routes — refuses to send classified traffic to a provider that retains data.
+**TL;DR:** Configured clients send AI traffic through one provider-neutral
+gateway, on `/v1/messages` (Anthropic Messages), `/v1/chat/completions`
+(OpenAI Chat) and `/v1/responses` (OpenAI Responses). Routes map a requested
+model pattern onto a provider. **Claude is served from Google Vertex AI and
+fails over to Anthropic's own API**, and every request records which provider
+actually answered. A model that no route or catalog entry names is refused.
+Every route is currently open to every signed-in role. The residency and
+no-retain requirements are a working mechanism, but no route declares one
+today.
 
 ## One gateway, any provider
 
-The gateway speaks **four wire protocols** behind `/v1/messages` and `/v1/responses`, so any Anthropic-SDK or OpenAI-compatible client points at it unchanged. Routes match on model pattern and can rewrite via `upstream_model` — a client asking for `claude-*` can be transparently served by a different backend without any application change. Substitution across Vertex AI (Claude, Gemini and the open models) and Anthropic's own API is proven in live deployments.
+The gateway accepts three client wire formats and sends to each provider in
+that provider's own format:
 
-## The shipped Anthropic lineup
+| Endpoint | Client format | Typical client |
+|---|---|---|
+| `POST /v1/messages` | Anthropic Messages | Claude Code, the Anthropic SDKs |
+| `POST /v1/chat/completions` | OpenAI Chat Completions | OpenCode, OpenAI-compatible tools |
+| `POST /v1/responses` | OpenAI Responses | Responses-API clients |
 
-The catalog (`services/ai/providers.yaml`) is implementation configuration
-shipped in the image, so every environment boots the same model set. The
-Anthropic entries, in listing order, are:
+The providers this instance declares speak three upstream formats:
+`anthropic` (Anthropic and Claude on Vertex), `gemini` (Gemini by API key and
+on Vertex) and `openai-chat` (Vertex Model-as-a-Service). A route matches on
+model pattern, and **first match wins**. A route can rewrite the model with
+`upstream_model`, so the backend can change without any change to the
+client. Request and wire details are in the [Gateway API](/documentation/gateway-api).
+
+## What this instance serves
+
+The catalog (`services/ai/providers.yaml`) and the routes
+(`services/ai/gateway.yaml`) ship inside the image, so every environment
+boots the same set.
+
+| Requested id | Provider | Models |
+|---|---|---|
+| `claude-*` | `vertex-anthropic` (Vertex AI, `global`), failing over to `anthropic` | Opus 5.5, Opus 5, Sonnet 5, Fable 5.1, Fable 5, Haiku 4.5 |
+| `anthropic-claude-*` | `anthropic` (Anthropic's API) | the same Claude models, hidden from every model list |
+| `vertex-gemini-*` | `vertex` (Vertex AI, `global`) | Gemini 3.8 Flash, 3.5 Flash, 3.5 Flash-Lite |
+| `gemini-*` | `gemini` (public API, by key) | Gemini 3.8 Flash; also used by the classifier job |
+| `qwen.*`, `zai.*`, `moonshotai.*`, `deepseek.*`, `minimax.*`, `openai.gpt-oss-*` | `vertex-maas` (Vertex Model-as-a-Service) | the open models |
+| `deepseek.r1-*` | `vertex-maas-us-central1` | DeepSeek R1, served only from `us-central1` |
+
+The Claude models, at Vertex's global rates:
 
 | Model | Input / output per million | Context | Max output |
 |---|---|---|---|
@@ -48,43 +82,29 @@ Anthropic entries, in listing order, are:
 | `claude-fable-5` | $10.00 / $50.00 | 1M | 128k |
 | `claude-haiku-4-5` | $1.00 / $5.00 | 200k | 64k |
 
-`claude-haiku-4-5` carries its dated id as an alias, so an existing client pinned to
-`claude-haiku-4-5-20251001` keeps working. The Claude 4.x Opus and Sonnet models
-were removed when Opus 5.5 was added. `gateway.default_model` is
-`claude-sonnet-5[1m]`: the `[1m]` suffix is Claude Code's 1M-context marker, which
-the bridge seeds into Claude Code and the gateway strips before routing, so the
-request reaches Anthropic as `claude-sonnet-5`. Without it Claude Code budgets
-200k for every gateway model. Retired dated ids are no longer served: because
-`allow_unlisted_models` is `false`, a request naming one is refused rather than
-silently forwarded.
+`gateway.default_model` is `claude-sonnet-5[1m]`. The `[1m]` suffix is Claude
+Code's 1M-context marker: the bridge seeds it into Claude Code, and the
+gateway strips it before routing, so the request reaches Vertex as
+`claude-sonnet-5`. Without the marker, Claude Code budgets 200k for every
+gateway model. `claude-haiku-4-5` also answers to its dated id,
+`claude-haiku-4-5-20251001`. The Claude 4.x Opus and Sonnet models were
+removed on 2026-09-24. With `allow_unlisted_models: false`, a request for a
+retired id is refused rather than forwarded.
 
-## Model access control
+### Retirement dates
 
-Access to models is a **`gateway_route` ACL matrix**, administered in the admin UI and granted per role or per AD group (which is how a project is named). A request for a route the caller is not entitled to is refused with **HTTP 403**, the denial is audited, and grants are revocable with immediate effect.
+| Date | What stops |
+|---|---|
+| **2026-10-15** | Vertex guarantees `claude-haiku-4-5` only until this date |
+| **2026-10-21** | Google turns off every Qwen, Kimi, DeepSeek and MiniMax Model-as-a-Service endpoint, plus `zai.glm-5`, `zai.glm-4.7` and `openai.gpt-oss-20b`. After this date, core hides the retired entries from every model list |
 
-Route ids are generated (`slug + fnv1a6`), so every console surface names a route by the optional `name:` its declaration carries — `name: Claude (Vertex AI)` beside `model_pattern` in `services/ai/gateway.yaml`, with a `description:` for the longer story — and derives "Claude models · Anthropic" from the pattern and provider when none is declared. A provider carries `display_name:` and `description:` in `services/ai/providers.yaml` the same way (`name` stays the id). The `/admin/gateway` **Models** tab is the picture by provider: endpoint, surface, wire, the models it serves and the routes that reach it; the route editor there writes `name` and `description` back to the file.
-
-## Credentials
-
-Personal access tokens carry an optional **expiry**, a **prefix** (identify a leaked token without exposing it), and immediate **revocation** from `/admin/devices/pats`. Note that a key is not its own governance subject — budgets and quotas bind to the owning user and the instance, not to the individual key (see the [roadmap](/documentation/enterprise-roadmap)).
-
-## Shadow-AI posture
-
-The gateway runs with **`allow_unlisted_models: false`**: a model that is not explicitly configured cannot be called, whoever asks. Combined with route entitlements and the full audit trail, everything that touches the gateway is governed. Traffic that never touches the gateway — someone calling a provider directly from their laptop — is a network-control matter for corporate IT, outside any application platform's reach.
-
-## Latency SLOs
-
-A **configurable latency SLO threshold** is tracked per the reporting views: breach percentage over the period, alongside **p50 and p95** latency and per-model latency data. Per-use-case SLO taxonomies and error-budget alerting are planned — see the [roadmap](/documentation/enterprise-roadmap).
-
-## Quota windows
-
-Quota windows are configured per user and instance-wide in `services/gateway/policies.yaml`. The shipped `quota_mode: warn` records breaches without refusing requests; it does not impose a hard spend cap. See [Cost Management](/documentation/enterprise-cost-management) for the active thresholds and enforcement option.
+`openai.gpt-oss-120b` and `zai.glm-5.2` are not retiring. `zai.glm-5.2` is a
+preview, guaranteed until at least 2026-10-08.
 
 ## Claude on Vertex AI
 
-Claude is served from **Google Vertex AI**, not from Anthropic's API. The
-`claude-*` route points at the `vertex-anthropic` provider, which uses the same
-Google service account as the Gemini-on-Vertex provider:
+The `vertex-anthropic` provider uses the same Google service account (the
+`vertex` secret) as every other Vertex provider:
 
 ```yaml
 providers:
@@ -95,110 +115,159 @@ providers:
   api_key_secret: vertex
 ```
 
-Clients call it the same way. The gateway speaks the Anthropic Messages wire
-unchanged, and only the envelope differs:
+Clients call it exactly as they would call Anthropic. The gateway sends the
+Anthropic Messages format unchanged; only the envelope around it differs:
 
 - The gateway mints an OAuth token from the service account and fills
   `{project}` from its key.
 - Requests go to the model's own `:rawPredict` or `:streamRawPredict` path.
-- The API version travels in the body as `anthropic_version`, not as a header.
+- The API version travels in the body as `anthropic_version`, not in a header.
+- Only the `anthropic-beta` flags listed in the provider's `accepted_betas`
+  are forwarded. A flag Vertex still refuses is learned at runtime and dropped,
+  together with any body field it gates, and the request is re-sent once.
 
-Whether a provider is Vertex-hosted is read from the endpoint host, so the
-catalog cannot claim one platform while pointing at another. The in-process AI
-service (agents and jobs) reaches the same provider in the same way.
-
-Anthropic's own API stays configured as the `anthropic` provider. Its models
-are addressed by `anthropic-claude-*` ids, because a model id must be unique
-across the catalog. It is the `claude-*` route's failover target: when Vertex is
-out of capacity or unreachable, the gateway re-sends the request to Anthropic
-and serves the same model. It finds that model through the upstream name the
-two entries share. Those ids are `hidden`, so no client lists them and nobody
-picks one: Anthropic's API is reached only through the failover.
+Whether a provider is hosted on Vertex is read from the endpoint host, so the
+catalog cannot claim one platform while pointing at another.
 
 ## Provider failover
 
-A route may name a **`fallback_provider`**, optionally with a
-**`fallback_upstream_model`** when the fallback's model id differs from the
-requested one. The shipped `claude-*` route fails over from Claude on Vertex AI
-to Anthropic's API. It needs no `fallback_upstream_model`, because the fallback
-provider serves the requested model under an id whose upstream name matches:
+A route may name a **`fallback_provider`**, and optionally a
+**`fallback_upstream_model`** when the fallback's model id differs. The
+shipped `claude-*` route fails over from Vertex to Anthropic's API:
 
 ```yaml
 gateway:
   routes:
   - id: claude-star-4203d1
+    name: Claude (Vertex AI)
     model_pattern: claude-*
     provider: vertex-anthropic
     fallback_provider: anthropic
 ```
 
 **When it triggers.** The primary keeps its bounded retry budget for
-transient answers (429, 503). Once that budget is spent, or the primary
-answers any other **5xx**, or the **connection itself fails** (DNS, TLS,
-timeout), the same governed request is re-bound to the fallback provider and
-sent once more under the same retry policy. A 4xx other than 429 — a
-malformed request, a refused key — never fails over: it is the request that
-is wrong, not the provider. A per-provider **circuit breaker** records the
-outcomes, so a primary that keeps failing is skipped outright and the
-fallback tried first, without spending the retry budget on a dead upstream.
+transient answers (429, 503). Failover happens when that budget is spent,
+when the primary answers any other **5xx**, or when the **connection fails**
+(DNS, TLS, timeout). The same governed request is then re-sent to the
+fallback once, under the same retry policy. A 4xx other than 429 never fails
+over, because the fault is in the request, not the provider. A per-provider
+**circuit breaker** skips a primary that keeps failing and tries the fallback
+first.
 
-**What is re-sent.** The canonical request that governance and the safety
-scanners already judged is rebuilt for the fallback's wire protocol; neither
-runs again, because the content they judged is unchanged. The raw passthrough
-lane is never re-sent — it is bound to the wire the client spoke.
+**What is re-sent.** The request that governance and the safety scanners
+already judged is rebuilt in the fallback's wire format. Neither plane runs
+again, because the content has not changed.
 
 **What the audit shows.** The `ai_requests` row keeps `provider` as the
-route's primary and records the provider that actually answered in
-**`served_provider`**, with the request repriced at the serving provider's
-catalog rate. The route-match descriptor gains a `failover:<primary>-><fallback>`
-segment. `systemprompt infra logs audit <request-id>` prints both; the
-Prometheus counter **`gateway_upstream_failovers_total{from,to,reason}`**
-(`reason` is `status_<code>`, `transport` or `circuit_open`) is on
-`/metrics` for alerting.
+route's primary and records the provider that answered in
+**`served_provider`**. The request is repriced at that provider's rate, and
+the route-match descriptor gains a `failover:<primary>-><fallback>` segment.
+`systemprompt infra logs audit <request-id>` prints both. The Prometheus
+counter **`gateway_upstream_failovers_total{from,to,reason}`** (`reason` is
+`status_<code>`, `transport` or `circuit_open`) is on `/metrics`.
 
-**What is validated at boot.** The fallback is validated as the route the
-fallback provider will actually serve: it must exist in the registry, differ
-from the primary, reach a priced model (with a declared cache rate), and
-satisfy the route's `requires:` block. A fallback that cannot be bound at
-request time — credential, adapter, governance, pricing — never makes a
-request worse off: the client sees the primary's own error, exactly as it
-would without a fallback.
+**What boot checks.** The fallback must exist, differ from the primary, serve
+a priced model, and satisfy the route's `requires:` block. If a fallback
+cannot be used at request time, the client gets the primary's own error, as
+it would with no fallback declared.
+
+## Model access control
+
+Model access is an access-control entity, `gateway_route/*`, declared in
+`services/access-control/rules.yaml` and administered at `/admin/access-control`.
+The mechanism grants or denies routes per role, group or project, and a
+request for a route the caller is not entitled to gets **HTTP 403**
+(`authz denied [<policy>]: <reason>`), and the denial is audited.
+
+**As configured, every route is open to every signed-in role.** Usage is
+shaped by governance and quota windows, not by entitlement. To restrict a
+model, declare a rule for its route with an allow band and a reason. Route
+ids are generated (`slug + fnv1a6`), so the console names each route by the
+`name:` its declaration carries.
+
+`/admin/gateway` has four tabs: **Overview** (dispatch order and provider
+health), **Providers** (each upstream with its models and routes),
+**Routes** (the ordered dispatch table) and **Settings**. **Policies** is a
+fifth tab that opens its own page. The route editor there writes back to
+`gateway.yaml`, and a saved route is dispatched after the next restart.
+
+## Shadow-AI posture
+
+The gateway runs with **`allow_unlisted_models: false`**, so a model that is
+not configured cannot be called by anyone. Traffic that never reaches the
+gateway, such as someone calling a provider directly from a laptop, is a
+network-control matter for corporate IT. The usual control is an egress
+allow-list that lets only the gateway reach provider APIs.
+
+## Latency SLOs
+
+The analytics **Overview** tab reports **p50 and p95** latency and the share
+of requests over an SLO threshold, per model. The threshold is a view setting
+(`?slo_ms=`, 5 s by default, clamped to 500 ms–60 s) and is not stored
+anywhere. There is no SLO alerting. Per-use-case SLO targets and error-budget
+alerts are on the [roadmap](/documentation/enterprise-roadmap).
+
+## Quota windows
+
+Quota windows are warning thresholds on this instance (`quota_mode: warn`).
+They record breaches and never refuse. See
+[Cost Management](/documentation/enterprise-cost-management) and
+[Governance Modes](/documentation/governance-modes).
 
 ## Private and self-hosted endpoints
 
-Any OpenAI- or Anthropic-compatible private endpoint is **a configuration entry, not a code change**. Declaring a provider with the `Backend` surface keeps it un-advertised — it serves routes without appearing in any public model listing — and every route is validated at boot.
+A private endpoint that speaks the OpenAI or Anthropic format is **a
+configuration entry, not a code change**. A provider declared with the
+`backend` surface serves routes without appearing in any model list, and
+every route is validated at boot. **None is configured on this instance.**
 
 ## Data classification & residency
 
-Provider and model YAML carries a **`governance:` block** with two booleans: `european` (data stays in the EU) and `no_retain` (the provider contractually does not retain prompts or completions). Routes declare what they demand via a **`requires:` block**:
+Each provider, and optionally each model, carries a **`governance:`** block
+with two booleans: `european` (data stays in the EU) and `no_retain` (the
+provider contractually does not retain prompts or completions). A route
+states what it requires with a **`requires:`** block. The following is an
+**illustration**, not the shipped configuration:
 
 ```yaml
-providers:
-- name: anthropic
-  governance:
-    european: false
-    no_retain: true
 gateway:
   routes:
   - model_pattern: claude-*
-    provider: anthropic
+    provider: vertex-anthropic
     requires:
       no_retain: true
 ```
 
 Enforcement happens twice:
 
-- **At boot** — the server refuses to start a route whose provider or model does not satisfy the route's `requires:` block. A misconfiguration is caught before any traffic flows.
-- **At dispatch** — a request that would land on a non-satisfying provider is denied, with a policy audit row whose descriptor records the failed `requires:` condition, so the denial is explainable after the fact.
+- **At boot:** the server refuses to start a route whose provider or model
+  does not satisfy its `requires:` block.
+- **At dispatch:** a request that would reach a provider that does not
+  satisfy the block is denied and audited, with the failed condition named in
+  the route-match descriptor.
 
-The gateway checks the declared metadata; operators must verify that endpoint configuration and provider terms justify those declarations. These booleans do not independently prove physical residency or contractual retention behavior. Classifying *data* (rather than routes) is planned — see the [roadmap](/documentation/enterprise-roadmap).
+**What is declared today:**
 
-## Verification
+- Every provider is `no_retain: true` and `european: false`.
+- Every Vertex endpoint uses the `global` location (or `us-central1` for
+  DeepSeek R1).
+- **No route declares `requires:`**, so neither flag is enforced at dispatch,
+  and there is **no EU route**.
 
-Use the commands and UI checks above against the configured instance. Repository maintainers can run `just test-unit` and `just test-integration`; a passing fixture test does not establish that a deployed integration is configured. Screenshots below are illustrative and may show an earlier configuration.
+To enforce no-retain, add `requires: {no_retain: true}` to a route. An EU
+guarantee needs an EU-located provider entry first. The flags are
+declarations, so keep them in step with the provider agreements; they do not
+prove physical residency on their own. Classifying the *data* itself, rather
+than the route, is on the [roadmap](/documentation/enterprise-roadmap).
 
-### Screenshots
+## Check it yourself
 
-![The gateway routing configuration, including the requires/no_retain policy block](/files/images/evidence/req-037-gateway-routes.png)
-
-![Per-model latency and spend reported for the same period](/files/images/evidence/req-018-models-latency.png)
+- `/admin/gateway?tab=routes`: the dispatch order, with each route's provider
+  and fallback.
+- `/admin/gateway?tab=providers`: each provider's endpoint, wire and models.
+- `/admin/analytics`: the Overview tab's latency and SLO breach share, and
+  the Models tab.
+- `/admin/requests`: open a request to see `provider` and `served_provider`.
+- `systemprompt infra logs request list --since 1h`
+- `systemprompt admin config catalog discovery` shows what the last Vertex
+  discovery pass found.

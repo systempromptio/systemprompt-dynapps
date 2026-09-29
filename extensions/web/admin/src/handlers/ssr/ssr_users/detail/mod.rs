@@ -24,6 +24,8 @@ use systemprompt::identifiers::UserId;
 
 use crate::repositories;
 use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
+use systemprompt_web_admin_core::ssr::faults::Faults;
+use systemprompt_web_admin_core::ssr::helpers::Viewer;
 use systemprompt_web_admin_core::types::UserContext;
 
 use context::{DetailTabView, UserDetailContext};
@@ -70,7 +72,8 @@ pub(crate) async fn user_detail_page(
 
     let tab = resolve_tab(query.tab.as_deref());
     let page = query.page.unwrap_or(0).max(0);
-    let headline = load::load_headline(&pool, &user_id).await;
+    let mut faults = Faults::new();
+    let headline = load::load_headline(&pool, &user_id, &mut faults).await;
     let data = base_context(BaseInputs {
         user_id: &user_id,
         detail: &detail,
@@ -89,16 +92,17 @@ pub(crate) async fn user_detail_page(
             viewer: &shell.user,
         },
         data,
+        &mut faults,
     ))
     .await;
 
     Ok(
-        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+        systemprompt_web_admin_core::ssr::helpers::render_page_with_faults(
             &shell.engine,
             "user-detail",
             &data,
-            &shell.user,
-            &shell.marketplace,
+            Viewer::new(&shell.user, &shell.marketplace),
+            &faults,
         ),
     )
 }
@@ -115,6 +119,7 @@ struct ActiveTabRead<'a> {
 async fn fill_active_tab(
     read: ActiveTabRead<'_>,
     mut data: UserDetailContext,
+    faults: &mut Faults,
 ) -> UserDetailContext {
     let ActiveTabRead {
         pool,
@@ -127,7 +132,7 @@ async fn fill_active_tab(
     match tab {
         "conversations" => {
             data.conversations = Some(view::conversations_tab(
-                &load::load_conversations(pool, user_id, page).await,
+                &load::load_conversations(pool, user_id, page, faults).await,
                 user_id,
                 viewer,
                 page,
@@ -136,33 +141,33 @@ async fn fill_active_tab(
         },
         "membership" => {
             data.membership = Some(view::membership_tab(
-                load::load_membership(pool, user_id).await,
+                load::load_membership(pool, user_id, faults).await,
             ));
         },
         "access" => {
             data.access = Some(view::access_tab(
-                load::load_access(pool, user_id).await,
+                load::load_access(pool, user_id, faults).await,
                 user_id,
             ));
         },
         "devices" => {
-            let rows = load::load_devices(pool, user_id).await;
+            let rows = load::load_devices(pool, user_id, faults).await;
             let tab_view = view::devices_tab(rows);
             data.kpis.devices = i64::try_from(tab_view.count).unwrap_or(0);
             data.devices = Some(tab_view);
         },
         "sessions" => {
-            let rows = load::load_sessions(pool, user_id).await;
+            let rows = load::load_sessions(pool, user_id, faults).await;
             data.sessions = Some(view::sessions_tab(&rows, user_id, page, DEFAULT_PAGE_SIZE));
         },
         "usage" => {
             data.usage = Some(view::usage_tab(
-                load::load_usage(pool, user_id).await,
+                load::load_usage(pool, user_id, faults).await,
                 user_id,
             ));
         },
         _ => {
-            let identity = load::load_identity(pool, user_id, &detail.roles).await;
+            let identity = load::load_identity(pool, user_id, &detail.roles, faults).await;
             let choices = super::scope_data::role_choices(&identity.roles);
             data.identity = Some(view::identity_tab(detail, &identity, choices));
         },

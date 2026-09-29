@@ -53,7 +53,7 @@ jq -r '.body' original/release-metadata.json | \
     printf '\n### macOS packaging repair\n\n'
     printf 'Repaired %s from source `%s`, retaining core v0.47.0.\n\n' "$(date -u +%FT%TZ)" "${REPAIR_SOURCE_SHA:?}"
     printf 'DMG SHA-256: `%s`. Image digest: `%s`. Original release tag retained.\n\n' "$EXPECTED_SHA" "$CANDIDATE_DIGEST"
-    printf 'Download through https://sp-dev.astound.digital/bridge-auth/setup on the Astound network. '
+    printf 'Download through https://sp-dev.astound.digital/admin/connect on the Astound network. '
     printf 'Drag to Applications, eject the DMG and launch. Both app and DMG are signed, notarized and stapled. '
     printf 'For another gateway use `astound-bridge login --gateway <URL>`.\n'
 } >> repaired/notes.md

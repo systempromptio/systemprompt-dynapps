@@ -12,10 +12,11 @@ use crate::repositories::projects::usage::{LISTING_CAP, ProjectRollup, list_proj
 use systemprompt_web_admin_core::repositories::scope::membership::UNATTRIBUTED;
 use systemprompt_web_admin_core::repositories::scope::{Attribution, ScopeKind};
 
-use super::super::people_view::{format_usd, or_default, short_model};
+use super::super::people_view::{format_usd, short_model};
 use super::super::types::{ProjectKpiView, ProjectListRowView, ProjectsPageData};
 use super::sort::{page_url, sort_headers, sort_key, sort_rows};
 use super::{PageCounts, WINDOW_LABEL, pagination, pct};
+use systemprompt_web_admin_core::ssr::faults::Faults;
 use systemprompt_web_admin_core::ssr::format::short_num;
 use systemprompt_web_admin_core::ssr::list_view::DEFAULT_PAGE_SIZE;
 use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
@@ -32,12 +33,13 @@ pub(super) async fn page_data(
     pool: &PgPool,
     query: &ListQuery,
     can_manage: bool,
+    faults: &mut Faults,
 ) -> ProjectsPageData {
-    let all = or_default(
+    let all = faults.take(
         "project rollups",
         list_project_rollups(pool, DEFAULT_WINDOW_DAYS, LISTING_CAP).await,
     );
-    let unattributed = unattributed_requests(pool).await;
+    let unattributed = unattributed_requests(pool, faults).await;
     let kpis = kpis(&all, unattributed);
     let truncated = all.len() as i64 >= LISTING_CAP;
 
@@ -95,20 +97,21 @@ pub(super) async fn page_data(
     }
 }
 
-async fn unattributed_requests(pool: &PgPool) -> i64 {
-    or_default(
-        "project scope totals",
-        totals::list_scope_totals(
-            pool,
-            ScopeKind::Project,
-            Attribution::Exclusive,
-            DEFAULT_WINDOW_DAYS,
+async fn unattributed_requests(pool: &PgPool, faults: &mut Faults) -> i64 {
+    faults
+        .take(
+            "project scope totals",
+            totals::list_scope_totals(
+                pool,
+                ScopeKind::Project,
+                Attribution::Exclusive,
+                DEFAULT_WINDOW_DAYS,
+            )
+            .await,
         )
-        .await,
-    )
-    .into_iter()
-    .find(|row| row.scope_id == UNATTRIBUTED)
-    .map_or(0, |row| row.requests)
+        .into_iter()
+        .find(|row| row.scope_id == UNATTRIBUTED)
+        .map_or(0, |row| row.requests)
 }
 
 fn count_label(total: i64, needle: &str) -> String {

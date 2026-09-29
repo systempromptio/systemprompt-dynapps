@@ -11,6 +11,7 @@ use systemprompt_web_admin_core::templates::AdminTemplateEngine;
 use systemprompt_web_admin_core::types::UserContext;
 
 mod approvals;
+mod attention;
 mod configuration;
 pub(crate) mod conversation_header;
 mod devices;
@@ -28,7 +29,6 @@ pub(crate) mod ssr_analytics_dashboard;
 pub(crate) mod ssr_analytics_requests;
 pub(crate) mod ssr_artifacts;
 mod ssr_bridge_device_link;
-mod ssr_bridge_setup;
 mod ssr_chain;
 mod ssr_connect;
 mod ssr_connectors;
@@ -38,7 +38,6 @@ mod ssr_governance_audit_detail;
 mod ssr_group_detail;
 mod ssr_groups;
 pub(crate) mod ssr_history;
-mod ssr_lifecycle;
 mod ssr_observability;
 mod ssr_perf_trace_detail;
 pub(crate) mod ssr_perf_traces;
@@ -57,6 +56,7 @@ pub(crate) mod transcript_view;
 pub(crate) mod types;
 
 pub(crate) use approvals::approvals_page;
+pub(crate) use attention::attention_counts;
 pub(crate) use configuration::configuration_page;
 pub(crate) use devices::devices_page;
 pub(crate) use gateway::{gateway_page, gateway_route_page};
@@ -73,7 +73,6 @@ pub(crate) use ssr_analytics_dashboard::analytics_dashboard_page;
 pub(crate) use ssr_analytics_requests::analytics_requests_page;
 pub(crate) use ssr_artifacts::{artifact_detail_page, artifact_preview, artifacts_page};
 pub(crate) use ssr_bridge_device_link::{device_link_approve, device_link_deny, device_link_page};
-pub(crate) use ssr_bridge_setup::bridge_setup_page;
 pub(crate) use ssr_chain::chain_envelope;
 pub(crate) use ssr_connect::connect_page;
 pub(crate) use ssr_connectors::connectors_page;
@@ -84,7 +83,6 @@ pub(crate) use ssr_groups::groups_page;
 pub(crate) use ssr_history::{
     conversations_page, history_conversation_page, history_page, history_search,
 };
-pub(crate) use ssr_lifecycle::{lifecycle_archive_download, lifecycle_page};
 pub(crate) use ssr_observability::{
     export_now as observability_export_now, observability_page,
     test_connection as observability_test_connection,
@@ -96,7 +94,7 @@ pub(crate) use ssr_projects::{project_detail_page, project_report_page, projects
 pub(crate) use ssr_search_resolve::search_resolve;
 pub(crate) use ssr_session_detail::session_detail_page;
 pub(crate) use ssr_sessions_list::sessions_list_page;
-pub(crate) use ssr_setup::setup_page;
+pub(crate) use ssr_setup::{bridge_setup_page, setup_page};
 pub(crate) use ssr_skills_contexts::skills_contexts_page;
 pub(crate) use ssr_sync::sync_page;
 pub(crate) use ssr_sync_import::import_preview_page;

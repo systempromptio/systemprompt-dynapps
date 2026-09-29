@@ -82,8 +82,6 @@ pub async fn update_user_settings(
     .await
 }
 
-// Why: Postgres schema — `user_settings.user_id` has no foreign key to
-// `users`, so nothing cascades; deleting an account must remove this row.
 pub async fn delete_user_settings(pool: &PgPool, user_id: &UserId) -> Result<(), sqlx::Error> {
     sqlx::query!(
         "DELETE FROM user_settings WHERE user_id = $1",

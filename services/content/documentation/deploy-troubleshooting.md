@@ -203,13 +203,13 @@ dig +short ai.example.com                                              # the loa
 echo | openssl s_client -connect ai.example.com:443 -servername ai.example.com 2>/dev/null | grep 'Verify return code'   # 0 (ok)
 curl -fsS https://ai.example.com/api/v1/health                         # {"status":"healthy",...}
 curl -s -o /dev/null -w '%{http_code}\n' https://ai.example.com/metrics # 403
-curl -s https://ai.example.com/bridge-auth/setup -o /dev/null -w '%{redirect_url}\n'  # https://..., never http://
+curl -s https://ai.example.com/admin/connect -o /dev/null -w '%{redirect_url}\n'  # https://..., never http://
 ```
 
 | Signature | Meaning | Fix |
 |-----------|---------|-----|
 | balancer marks the backend unhealthy while `docker compose ps` says healthy | the check watches status only and read `starting`, or checks a path other than `/api/v1/health` | health check path `/api/v1/health`, match body `healthy` |
-| install commands on the setup page start with `http://` | `X-Forwarded-Proto` not forwarded | forward it, and confirm the balancer CIDR is in `trusted_proxies` |
+| install commands on the Connect page start with `http://` | `X-Forwarded-Proto` not forwarded | forward it, and confirm the balancer CIDR is in `trusted_proxies` |
 | every request appears to come from the balancer's address; rate limits trip | balancer CIDR missing from `trusted_proxies` | re-render with `--trusted-proxies`, restart |
 | streamed answers stall or cut off | response buffering on, idle timeout too short | buffering off, idle timeout ≥ 300 s |
 | `/metrics` returns 200 publicly | rule missing | return 403 for `/metrics` and `/api/v1/health/detail` |

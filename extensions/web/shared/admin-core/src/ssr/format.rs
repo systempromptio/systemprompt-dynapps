@@ -20,7 +20,7 @@ pub fn format_token_total(total: i64) -> String {
 }
 
 pub fn local_time(t: chrono::DateTime<chrono::Utc>) -> String {
-    t.with_timezone(&chrono::Local)
+    super::viewer_tz::in_viewer_tz(&t)
         .format("%Y-%m-%d %H:%M:%S")
         .to_string()
 }
@@ -72,6 +72,20 @@ pub fn attestation_title(attestation: &str) -> String {
         |_| format!("Attestation: {attestation}"),
         |tier| tier.label().to_owned(),
     )
+}
+
+pub fn format_bytes(bytes: i64) -> String {
+    if bytes <= 0 {
+        return "\u{2014}".to_owned();
+    }
+    if bytes < 1024 {
+        return format!("{bytes} B");
+    }
+    let kib = bytes / 1024;
+    if kib < 1024 {
+        return format!("{kib} KiB");
+    }
+    format!("{} MiB", short_num(kib / 1024))
 }
 
 pub fn key_slug(label: &str) -> String {

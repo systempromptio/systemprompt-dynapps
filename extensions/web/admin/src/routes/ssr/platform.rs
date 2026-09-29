@@ -11,32 +11,11 @@ use axum::routing::{get, post};
 use sqlx::PgPool;
 
 use crate::handlers;
+use systemprompt_web_admin_catalog::routes::ssr as catalog_routes;
 
 pub(super) fn platform_routes() -> Router<Arc<PgPool>> {
     Router::new()
-        .route("/mcp", get(handlers::catalog::mcp::mcp_servers_page))
-        .route(
-            "/mcp/{mcp_id}",
-            get(handlers::catalog::mcp::mcp_detail_page),
-        )
-        .route(
-            "/marketplaces",
-            get(handlers::catalog::marketplaces::marketplaces_page),
-        )
-        .route(
-            "/marketplaces/{marketplace_id}",
-            get(handlers::catalog::marketplaces::marketplace_detail_page),
-        )
-        .route("/plugins", get(handlers::catalog::plugins_page))
-        .route(
-            "/plugins/{plugin_id}",
-            get(handlers::catalog::plugin_detail_page),
-        )
-        .route("/skills", get(handlers::catalog::skills_page))
-        .route(
-            "/skills/{skill_id}",
-            get(handlers::catalog::skill_detail_page),
-        )
+        .merge(catalog_routes::platform_routes())
         .route("/gateway", get(handlers::ssr::gateway_page))
         .route(
             "/gateway/routes/{route_id}",
@@ -51,11 +30,7 @@ pub(super) fn platform_routes() -> Router<Arc<PgPool>> {
             post(handlers::ssr::delete_gateway_policy),
         )
         .route("/configuration", get(handlers::ssr::configuration_page))
-        .route("/lifecycle", get(handlers::ssr::lifecycle_page))
-        .route(
-            "/lifecycle/archive/{tier}/{period}/{file}",
-            get(handlers::ssr::lifecycle_archive_download),
-        )
+        .merge(catalog_routes::lifecycle_routes())
         .route("/sync", get(handlers::ssr::sync_page))
         .route(
             "/sync/import/{stage_id}",

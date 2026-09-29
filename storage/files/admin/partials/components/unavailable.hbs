@@ -1,0 +1,13 @@
+{{!--
+  What this page could not load. `unavailable` is set by the shell from the
+  page's Faults; nothing renders when the list is empty.
+--}}
+{{#if unavailable}}
+<div class="sp-notice sp-notice--err" role="alert">
+  <p class="sp-notice__title">Some of this page could not be loaded</p>
+  <p>The figures below leave these out. Reload to try again; if it persists, check the server log.</p>
+  <ul class="sp-notice__list">
+    {{#each unavailable}}<li><strong>{{this.what}}</strong> — {{this.error}}</li>{{/each}}
+  </ul>
+</div>
+{{/if}}

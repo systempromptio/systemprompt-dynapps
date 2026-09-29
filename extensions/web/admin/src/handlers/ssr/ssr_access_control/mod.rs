@@ -38,7 +38,7 @@ use crate::handlers::access_control::build_matrix_sections;
 use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
 use systemprompt_web_admin_core::repositories::access_rules::drift::DriftReport;
 use systemprompt_web_admin_core::repositories::access_rules::rules::{
-    LedgerRuleRow, RULE_CAP, count_open_entities, list_ledger_rules,
+    RULE_CAP, count_open_entities, list_ledger_rules,
 };
 use systemprompt_web_admin_core::repositories::gateway_catalog::{
     RouteLabels, get_route_labels_from_services,
@@ -46,10 +46,13 @@ use systemprompt_web_admin_core::repositories::gateway_catalog::{
 use systemprompt_web_admin_core::repositories::sync::access_control::{declared_now, drift_now};
 use systemprompt_web_admin_core::repositories::sync::attention::access_attention;
 use systemprompt_web_admin_core::request as shared;
+use systemprompt_web_admin_core::ssr::faults::Faults;
+use systemprompt_web_admin_core::ssr::helpers::Viewer;
 use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;
 use systemprompt_web_admin_core::templates::AdminTemplateEngine;
 use systemprompt_web_admin_core::types::{MarketplaceContext, UserContext};
 
+use audience::GridRead;
 use entities::{AcQuery, BASE_URL, EntitiesInput, SYNC_URL};
 use page::AcPageParts;
 use person::PersonCheckView;
@@ -104,10 +107,8 @@ struct TabBody {
     person: Option<PersonCheckView>,
 }
 
-fn route_labels() -> RouteLabels {
-    get_route_labels_from_services()
-        .inspect_err(|e| tracing::warn!(error = %e, "access-control: route labels unavailable"))
-        .unwrap_or_default()
+fn route_labels(faults: &mut Faults) -> RouteLabels {
+    faults.take("route labels", get_route_labels_from_services())
 }
 
 async fn declared_drift(pool: &PgPool) -> (Option<DriftReport>, usize, Option<String>) {
@@ -124,22 +125,22 @@ async fn tab_body(
     pool: &PgPool,
     services_path: &std::path::Path,
     tab: AcTab,
-    query: &AcQuery,
-    ledger: &[LedgerRuleRow],
+    read: GridRead<'_>,
+    faults: &mut Faults,
 ) -> AdminHtmlResult<TabBody> {
     let mut body = TabBody::default();
     match tab {
         AcTab::Audience => {
-            let audience = audience::audience(pool).await;
+            let audience = audience::audience(pool, faults).await;
             body.audiences = audience.columns.len();
             let sections = build_matrix_sections(services_path);
-            body.audience = audience::grid(pool, audience, &sections, query, ledger).await;
+            body.audience = audience::grid(pool, audience, &sections, read, faults).await;
         },
         AcTab::Person => {
-            body.person = Some(person::build(pool, query.q.as_deref()).await);
+            body.person = Some(person::build(pool, read.query.q.as_deref(), faults).await);
         },
         AcTab::Rules => {
-            body.audiences = audience::audience(pool).await.columns.len();
+            body.audiences = audience::audience(pool, faults).await.columns.len();
         },
     }
     Ok(body)
@@ -173,16 +174,24 @@ pub(crate) async fn access_control_page(
     let tab = AcTab::parse(query.tab.as_deref());
     let services_path = shared::get_services_path()?;
 
-    let stats = data::load_stats(&pool).await;
-    let ledger_rows = list_ledger_rules(&pool)
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, "access-control: rule listing failed"))
-        .unwrap_or_default();
+    let mut faults = Faults::new();
+    let stats = data::load_stats(&pool, &mut faults).await;
+    let ledger_rows = faults.take("access rules", list_ledger_rules(&pool).await);
     let open_entities = count_open_entities(&pool).await?;
 
     let (drift, declared_count, declared_unreadable) = declared_drift(&pool).await;
-    let body = tab_body(&pool, &services_path, tab, &query, &ledger_rows).await?;
-    let labels = route_labels();
+    let body = tab_body(
+        &pool,
+        &services_path,
+        tab,
+        GridRead {
+            query: &query,
+            ledger: &ledger_rows,
+        },
+        &mut faults,
+    )
+    .await?;
+    let labels = route_labels(&mut faults);
 
     let capped = i64::try_from(ledger_rows.len()).unwrap_or(i64::MAX) >= RULE_CAP;
     let entities = entities::build(
@@ -208,12 +217,12 @@ pub(crate) async fn access_control_page(
     });
 
     Ok(
-        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
+        systemprompt_web_admin_core::ssr::helpers::render_page_with_faults(
             &engine,
             "access-control",
             &page,
-            &user_ctx,
-            &mkt_ctx,
+            Viewer::new(&user_ctx, &mkt_ctx),
+            &faults,
         ),
     )
 }

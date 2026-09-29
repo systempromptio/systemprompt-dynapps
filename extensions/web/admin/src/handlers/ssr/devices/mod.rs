@@ -29,6 +29,8 @@ use crate::repositories::devices::sessions::SessionQuery;
 use crate::repositories::devices::stats::FleetStats;
 use crate::repositories::devices::{sessions, stats};
 use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
+use systemprompt_web_admin_core::ssr::faults::Faults;
+use systemprompt_web_admin_core::ssr::helpers::Viewer;
 use systemprompt_web_admin_core::ssr::list_view::PageWindow;
 use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 use systemprompt_web_admin_core::ssr::types::table::FilterChipView;
@@ -71,6 +73,7 @@ async fn load_tab_rows(
     tab: DeviceTab,
     query: &DevicesQuery,
     listing: Listing,
+    faults: &mut Faults,
 ) -> (Vec<UserGroupView>, i64) {
     let Listing {
         state,
@@ -79,6 +82,13 @@ async fn load_tab_rows(
         offset,
         can_manage,
     } = listing;
+    let credentials = CredentialQuery {
+        state,
+        sort,
+        dir,
+        limit: DEFAULT_PAGE_SIZE,
+        offset,
+    };
     match tab {
         DeviceTab::Bridges => {
             data::load_sessions(
@@ -90,26 +100,13 @@ async fn load_tab_rows(
                     limit: DEFAULT_PAGE_SIZE,
                     offset,
                 },
+                faults,
             )
             .await
         },
-        DeviceTab::Pats | DeviceTab::Certs => {
-            let credentials = CredentialQuery {
-                state,
-                sort,
-                dir,
-                limit: DEFAULT_PAGE_SIZE,
-                offset,
-            };
-            if tab == DeviceTab::Pats {
-                credentials::load_pats(pool, credentials, can_manage).await
-            } else {
-                credentials::load_certs(pool, credentials, can_manage).await
-            }
-        },
-        DeviceTab::Links => {
-            credentials::load_links(pool, sort, dir, DEFAULT_PAGE_SIZE, offset).await
-        },
+        DeviceTab::Pats => credentials::load_pats(pool, credentials, can_manage, faults).await,
+        DeviceTab::Certs => credentials::load_certs(pool, credentials, can_manage, faults).await,
+        DeviceTab::Links => credentials::load_links(pool, credentials, faults).await,
     }
 }
 
@@ -168,15 +165,13 @@ pub(crate) async fn devices_page(
         can_manage: user_ctx.is_admin,
     };
 
-    let fleet = stats::get_fleet_stats(&pool)
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, "device fleet stats failed"))
-        .unwrap_or_default();
-    let versions = sessions::list_version_counts(&pool)
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, "bridge version histogram failed"))
-        .unwrap_or_default();
-    let (groups, users_total) = load_tab_rows(&pool, tab, &query, listing).await;
+    let mut faults = Faults::new();
+    let fleet = faults.take("fleet stats", stats::get_fleet_stats(&pool).await);
+    let versions = faults.take(
+        "bridge versions",
+        sessions::list_version_counts(&pool).await,
+    );
+    let (groups, users_total) = load_tab_rows(&pool, tab, &query, listing, &mut faults).await;
 
     let shown = groups.len();
     let window = PageWindow::new(
@@ -214,8 +209,12 @@ pub(crate) async fn devices_page(
     };
 
     Ok(
-        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
-            &engine, "devices", &ctx, &user_ctx, &mkt_ctx,
+        systemprompt_web_admin_core::ssr::helpers::render_page_with_faults(
+            &engine,
+            "devices",
+            &ctx,
+            Viewer::new(&user_ctx, &mkt_ctx),
+            &faults,
         ),
     )
 }

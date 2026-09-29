@@ -26,6 +26,8 @@ use crate::repositories::roles::{entitlements, members};
 use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
 use systemprompt_web_admin_core::repositories::gateway_catalog::get_route_labels_from_services;
 use systemprompt_web_admin_core::request as shared;
+use systemprompt_web_admin_core::ssr::faults::Faults;
+use systemprompt_web_admin_core::ssr::helpers::Viewer;
 use systemprompt_web_admin_core::ssr::list_view::PageWindow;
 use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;
@@ -70,14 +72,15 @@ pub(crate) async fn roles_page(
     }
 
     let known: Vec<String> = Role::ALL.iter().map(|r| r.as_str().to_owned()).collect();
-    let member_rows = members::list_role_holders(&pool, &known, data::MEMBER_CAP)
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, "roles: member listing failed"))
-        .unwrap_or_default();
-    let entitlement_rows = entitlements::list_role_entitlements(&pool, data::ENTITLEMENT_CAP)
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, "roles: entitlement listing failed"))
-        .unwrap_or_default();
+    let mut faults = Faults::new();
+    let member_rows = faults.take(
+        "role members",
+        members::list_role_holders(&pool, &known, data::MEMBER_CAP).await,
+    );
+    let entitlement_rows = faults.take(
+        "role entitlements",
+        entitlements::list_role_entitlements(&pool, data::ENTITLEMENT_CAP).await,
+    );
 
     let cards = rows::cards(&member_rows, &entitlement_rows, &query);
     let matching = data::filtered_sorted(&member_rows, &query);
@@ -99,7 +102,7 @@ pub(crate) async fn roles_page(
     );
 
     let on_entitlements = query.on_entitlements();
-    let entitlement_groups = entitlement_groups(on_entitlements, &entitlement_rows);
+    let entitlement_groups = entitlement_groups(on_entitlements, &entitlement_rows, &mut faults);
 
     let page = RolesPageData {
         page: "roles",
@@ -131,8 +134,12 @@ pub(crate) async fn roles_page(
     };
 
     Ok(
-        systemprompt_web_admin_core::ssr::helpers::render_typed_page(
-            &engine, "roles", &page, &user_ctx, &mkt_ctx,
+        systemprompt_web_admin_core::ssr::helpers::render_page_with_faults(
+            &engine,
+            "roles",
+            &page,
+            Viewer::new(&user_ctx, &mkt_ctx),
+            &faults,
         ),
     )
 }
@@ -140,16 +147,16 @@ pub(crate) async fn roles_page(
 fn entitlement_groups(
     on_entitlements: bool,
     entitlement_rows: &[entitlements::RoleEntitlementRow],
+    faults: &mut Faults,
 ) -> Vec<entitlements_view::RoleEntitlementGroupView> {
     if !on_entitlements {
         return Vec::new();
     }
-    let labels = get_route_labels_from_services()
-        .inspect_err(|e| tracing::warn!(error = %e, "roles: route labels unavailable"))
-        .unwrap_or_default();
-    let sections = shared::get_services_path()
-        .map(|p| build_matrix_sections(&p))
-        .unwrap_or_default();
+    let labels = faults.take("route labels", get_route_labels_from_services());
+    let sections = faults.take(
+        "services catalog",
+        shared::get_services_path().map(|p| build_matrix_sections(&p)),
+    );
     entitlements_view::groups(
         rows::entitlement_views(entitlement_rows, &labels),
         &sections,

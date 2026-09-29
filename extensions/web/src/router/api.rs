@@ -3,11 +3,13 @@
 use std::sync::Arc;
 
 use axum::Router;
+use axum::http::HeaderMap;
 use axum::routing::post;
 
 use systemprompt::oauth::SessionCreationService;
 
 use super::pools::DbHandles;
+use super::sign_out;
 use crate::extension::WebExtension;
 use crate::{admin, api};
 
@@ -30,7 +32,10 @@ pub(crate) fn build(
     Ok(Router::new()
         .route(
             "/auth/session",
-            post(api::auth::set_session).delete(api::auth::clear_session),
+            post(api::auth::set_session).delete({
+                let pool = Arc::clone(&db.write);
+                move |headers: HeaderMap| sign_out::sign_out(Arc::clone(&pool), headers)
+            }),
         )
         .merge(links_router)
         .merge(bridge_identity)

@@ -10,6 +10,9 @@ import { initLogout, initUserDisplay, getUserContext } from './auth.js';
 import { initFilterRibbon } from './filter-ribbon.js';
 import { initScope } from './scope.js';
 import { initExport } from './export.js';
+import { initAttention } from './attention.js';
+import { initFlash } from './flash.js';
+import { initFormConfirm } from './form-confirm.js';
 import { showToast } from './toast.js';
 import { initHelp } from '../components/sp-help.js';
 
@@ -38,6 +41,9 @@ for (const init of [
   initFilterRibbon,
   initScope,
   initExport,
+  initAttention,
+  initFlash,
+  initFormConfirm,
   initHelp,
   initLogout,
   initUserDisplay,

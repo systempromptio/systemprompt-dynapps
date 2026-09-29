@@ -23,9 +23,9 @@ use crate::repositories::people_usage::{
     list_daily_requests, list_member_usage,
 };
 use systemprompt_web_admin_core::repositories::scope::{Attribution, ScopeQuery, ScopeTarget};
+use systemprompt_web_admin_core::ssr::faults::Faults;
 use systemprompt_web_shared::GroupId;
 
-use super::super::people_view::or_default;
 use super::super::types::{AccessSectionView, UserOptionView};
 use super::tabs::TabCounts;
 
@@ -45,7 +45,11 @@ pub(super) struct UsageTabData {
     pub leaderboard: Vec<MemberUsageRow>,
 }
 
-pub(super) async fn load_counts(pool: &PgPool, group_id: &GroupId) -> TabCounts {
+pub(super) async fn load_counts(
+    pool: &PgPool,
+    group_id: &GroupId,
+    faults: &mut Faults,
+) -> TabCounts {
     let q = member_query(group_id);
     let (members, projects, mappings) = tokio::join!(
         repositories::groups::members::list_group_members(pool, group_id),
@@ -53,9 +57,9 @@ pub(super) async fn load_counts(pool: &PgPool, group_id: &GroupId) -> TabCounts 
         repositories::groups::mappings::list_group_ad_mappings(pool, group_id),
     );
     TabCounts {
-        members: members.map(|m| m.len() as i64).unwrap_or_default(),
-        projects: projects.map(|p| p.len() as i64).unwrap_or_default(),
-        mappings: mappings.map(|m| m.len() as i64).unwrap_or_default(),
+        members: faults.take("member count", members.map(|m| m.len() as i64)),
+        projects: faults.take("project count", projects.map(|p| p.len() as i64)),
+        mappings: faults.take("mapping count", mappings.map(|m| m.len() as i64)),
     }
 }
 
@@ -75,12 +79,20 @@ const fn exclusive_query(group_id: &GroupId) -> ScopeQuery<'_> {
     )
 }
 
-pub(super) async fn load_usage(pool: &PgPool, group_id: &GroupId) -> ScopeUsageRow {
+pub(super) async fn load_usage(
+    pool: &PgPool,
+    group_id: &GroupId,
+    faults: &mut Faults,
+) -> ScopeUsageRow {
     let q = exclusive_query(group_id);
-    or_default("group usage", get_scope_usage(pool, &q).await)
+    faults.take("group usage", get_scope_usage(pool, &q).await)
 }
 
-pub(super) async fn load_usage_tab(pool: &PgPool, group_id: &GroupId) -> UsageTabData {
+pub(super) async fn load_usage_tab(
+    pool: &PgPool,
+    group_id: &GroupId,
+    faults: &mut Faults,
+) -> UsageTabData {
     let q = member_query(group_id);
     let exclusive = exclusive_query(group_id);
     let (attribution, models, daily, skills, tools, members) = tokio::join!(
@@ -91,7 +103,8 @@ pub(super) async fn load_usage_tab(pool: &PgPool, group_id: &GroupId) -> UsageTa
         list_scope_top_tools(pool, &q, LEADERBOARD_LIMIT),
         list_member_usage(pool, &q),
     );
-    let mut leaderboard: Vec<MemberUsageRow> = or_default("group member leaderboard", members)
+    let mut leaderboard: Vec<MemberUsageRow> = faults
+        .take("member leaderboard", members)
         .into_values()
         .collect();
     leaderboard.sort_by(|a, b| {
@@ -100,16 +113,19 @@ pub(super) async fn load_usage_tab(pool: &PgPool, group_id: &GroupId) -> UsageTa
             .then_with(|| b.requests.cmp(&a.requests))
     });
     leaderboard.truncate(LEADERBOARD_LIMIT as usize);
-    let models = or_default("group model mix", models);
-    let daily = or_default("group daily requests", daily)
+    let models = faults.take("model mix", models);
+    let daily = faults
+        .take("daily requests", daily)
         .into_iter()
         .map(|d| d.requests)
         .collect();
-    let skills = or_default("group top skills", skills)
+    let skills = faults
+        .take("top skills", skills)
         .into_iter()
         .map(|s| (s.skill, s.invocations))
         .collect();
-    let tools = or_default("group top tools", tools)
+    let tools = faults
+        .take("top tools", tools)
         .into_iter()
         .map(|t| {
             (
@@ -119,7 +135,7 @@ pub(super) async fn load_usage_tab(pool: &PgPool, group_id: &GroupId) -> UsageTa
         })
         .collect();
     UsageTabData {
-        attribution: or_default("group attribution", attribution),
+        attribution: faults.take("attribution sources", attribution),
         models,
         daily,
         skills,
@@ -132,16 +148,20 @@ pub(super) async fn load_members(
     pool: &PgPool,
     group_id: &GroupId,
     can_manage: bool,
+    faults: &mut Faults,
 ) -> MembersData {
-    let rows = repositories::groups::members::list_group_members(pool, group_id)
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, "group members failed"))
-        .unwrap_or_default();
+    let rows = faults.take(
+        "group members",
+        repositories::groups::members::list_group_members(pool, group_id).await,
+    );
     let q = member_query(group_id);
-    let usage = or_default("group member usage", list_member_usage(pool, &q).await);
-    let active = load_enabled_user_ids(pool).await;
+    let usage = faults.take("member usage", list_member_usage(pool, &q).await);
+    let active = faults
+        .take("enabled user ids", load_enabled_user_ids(pool).await)
+        .into_iter()
+        .collect();
     let addable = if can_manage {
-        load_addable_users(pool, &rows).await
+        faults.take("addable users", load_addable_users(pool, &rows).await)
     } else {
         Vec::new()
     };
@@ -153,23 +173,19 @@ pub(super) async fn load_members(
     }
 }
 
-// Why: sqlx's macro form makes a missing column a build error; a runtime
-// `query_scalar` failure is swallowed by `unwrap_or_default` and every member
-// would render as disabled.
-async fn load_enabled_user_ids(pool: &PgPool) -> std::collections::HashSet<String> {
+async fn load_enabled_user_ids(pool: &PgPool) -> Result<Vec<String>, sqlx::Error> {
     sqlx::query_scalar!("SELECT id FROM users WHERE status = 'active'")
         .fetch_all(pool)
         .await
-        .inspect_err(|e| tracing::warn!(error = %e, "enabled user ids failed"))
-        .unwrap_or_default()
-        .into_iter()
-        .collect()
 }
 
-async fn load_addable_users(pool: &PgPool, members: &[GroupMemberRow]) -> Vec<UserOptionView> {
+async fn load_addable_users(
+    pool: &PgPool,
+    members: &[GroupMemberRow],
+) -> Result<Vec<UserOptionView>, sqlx::Error> {
     let existing: std::collections::HashSet<&str> =
         members.iter().map(|m| m.user_id.as_str()).collect();
-    sqlx::query!(
+    let rows = sqlx::query!(
         r#"SELECT id AS "id!",
                   COALESCE(display_name, full_name, name) AS "name?",
                   email AS "email!"
@@ -178,38 +194,52 @@ async fn load_addable_users(pool: &PgPool, members: &[GroupMemberRow]) -> Vec<Us
            ORDER BY COALESCE(display_name, full_name, name, id)"#
     )
     .fetch_all(pool)
-    .await
-    .inspect_err(|e| tracing::warn!(error = %e, "addable user list failed"))
-    .unwrap_or_default()
-    .into_iter()
-    .filter(|row| !existing.contains(row.id.as_str()))
-    .map(|row| UserOptionView {
-        label: row
-            .name
-            .map_or_else(|| row.email.clone(), |n| format!("{n} ({})", row.email)),
-        user_id: UserId::new(row.id),
-    })
-    .collect()
+    .await?;
+    Ok(rows
+        .into_iter()
+        .filter(|row| !existing.contains(row.id.as_str()))
+        .map(|row| UserOptionView {
+            label: row
+                .name
+                .map_or_else(|| row.email.clone(), |n| format!("{n} ({})", row.email)),
+            user_id: UserId::new(row.id),
+        })
+        .collect())
 }
 
-pub(super) async fn load_projects(pool: &PgPool, group_id: &GroupId) -> Vec<LinkedScopeRow> {
-    or_default(
+pub(super) async fn load_projects(
+    pool: &PgPool,
+    group_id: &GroupId,
+    faults: &mut Faults,
+) -> Vec<LinkedScopeRow> {
+    faults.take(
         "group projects",
         list_linked_scopes(pool, &member_query(group_id)).await,
     )
 }
 
-pub(super) async fn load_mappings(pool: &PgPool, group_id: &GroupId) -> Vec<GroupAdMappingRow> {
-    repositories::groups::mappings::list_group_ad_mappings(pool, group_id)
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, "group AD mappings failed"))
-        .unwrap_or_default()
+pub(super) async fn load_mappings(
+    pool: &PgPool,
+    group_id: &GroupId,
+    faults: &mut Faults,
+) -> Vec<GroupAdMappingRow> {
+    faults.take(
+        "directory mappings",
+        repositories::groups::mappings::list_group_ad_mappings(pool, group_id).await,
+    )
 }
 
-pub(super) async fn load_access(pool: &PgPool, group_id: &GroupId) -> Vec<AccessSectionView> {
-    let Ok(services_path) = systemprompt_web_admin_core::request::get_services_path() else {
-        tracing::warn!("services path unavailable; group access matrix skipped");
-        return Vec::new();
+pub(super) async fn load_access(
+    pool: &PgPool,
+    group_id: &GroupId,
+    faults: &mut Faults,
+) -> Vec<AccessSectionView> {
+    let services_path = match systemprompt_web_admin_core::request::get_services_path() {
+        Ok(path) => path,
+        Err(error) => {
+            faults.record("access matrix", &error);
+            return Vec::new();
+        },
     };
     let mut sections = crate::handlers::access_control::build_matrix_sections(&services_path);
     if !sections.iter().any(|(kind, _, _)| kind == "marketplace") {
@@ -225,17 +255,18 @@ pub(super) async fn load_access(pool: &PgPool, group_id: &GroupId) -> Vec<Access
 
     let subject =
         systemprompt_web_admin_core::repositories::entitlement::group_subject(group_id.as_str());
-    let resolved = systemprompt_web_admin_core::repositories::entitlement::resolve_subject_matrix(
-        pool, &subject, sections,
-    )
-    .await
-    .inspect_err(|e| tracing::warn!(error = %e, "group access matrix failed"))
-    .unwrap_or_default();
+    let resolved = faults.take(
+        "access matrix",
+        systemprompt_web_admin_core::repositories::entitlement::resolve_subject_matrix(
+            pool, &subject, sections,
+        )
+        .await,
+    );
 
-    let own_rules = systemprompt_web_admin_core::repositories::entitlement::list_all_rules(pool)
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, "access rules failed"))
-        .unwrap_or_default();
+    let own_rules = faults.take(
+        "access rules",
+        systemprompt_web_admin_core::repositories::entitlement::list_all_rules(pool).await,
+    );
 
     super::view::access_sections(resolved, &own_rules, group_id)
 }

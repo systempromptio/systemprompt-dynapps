@@ -378,6 +378,7 @@ _lint-gates-uncoordinated:
         check-bridge-lifecycle.sh
         check-discarded-results.sh
         check-fail-open.sh
+        check-fail-soft.sh
         lint-schema.sh
         lint-extensions.sh
         check-migration-numbers.sh
@@ -398,7 +399,7 @@ _lint-gates-uncoordinated:
         check-admin-template-links.sh
         check-admin-template-assets.sh
         # admin-css-classes + frontend-standards now run as cargo tests in
-        # extensions/web/tests/ (admin_css_classes.rs, frontend_standards.rs).
+        # tests/unit/web/src/ (admin_css_classes.rs, frontend_standards.rs).
         check-dead-repository-code.sh
         check-file-headers.sh
         check-file-size.sh
@@ -415,6 +416,12 @@ _lint-gates-uncoordinated:
         check-docs-version.sh
         check-template-fields.sh
     )
+    # Why: cargo replaces the rust-contracts scanner binary while another gate
+    # is exec'ing it ("never executed"), so build it once here, before the fan-out.
+    contracts="{{justfile_directory()}}/../systemprompt-core/scripts/rust-contracts/Cargo.toml"
+    if [ -f "$contracts" ]; then
+        cargo build --quiet --locked --manifest-path "$contracts" || { echo "rust-contracts scanner failed to build" >&2; exit 1; }
+    fi
     logdir=$(mktemp -d)
     trap 'rm -rf "$logdir"' EXIT
     pids=()

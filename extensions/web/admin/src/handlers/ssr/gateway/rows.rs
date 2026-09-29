@@ -7,15 +7,15 @@
 use super::models::matrix_url;
 use super::view::{GatewayKpiView, GatewayRouteRow, ProviderOptionView, ResolvedOnlyRow};
 use systemprompt_web_admin_core::repositories::gateway_catalog::{RouteLabels, derive_route_label};
+use systemprompt_web_admin_core::ssr::faults::Faults;
 use systemprompt_web_admin_core::types::{GatewayConfigView, GatewayRouteView};
 
-fn yaml_summary(value: Option<&serde_yaml::Value>) -> String {
+fn yaml_summary(value: Option<&serde_yaml::Value>, faults: &mut Faults) -> String {
     let Some(value) = value else {
         return String::new();
     };
-    serde_yaml::to_string(value)
-        .inspect_err(|e| tracing::warn!(error = %e, "gateway: yaml render failed"))
-        .unwrap_or_default()
+    faults
+        .take("route yaml", serde_yaml::to_string(value))
         .lines()
         .map(str::trim)
         .filter(|l| !l.is_empty() && *l != "---")
@@ -52,13 +52,23 @@ pub(super) fn load_surfaces(labels: &RouteLabels) -> Surfaces {
     Surfaces { providers }
 }
 
-pub(super) fn route_rows(
-    config: &GatewayConfigView,
-    surfaces: &Surfaces,
-    grants: &std::collections::HashMap<String, i64>,
-    dispatchable: &[String],
-    labels: &RouteLabels,
-) -> Vec<GatewayRouteRow> {
+#[derive(Clone, Copy)]
+pub(super) struct RouteRowInputs<'a> {
+    pub(super) config: &'a GatewayConfigView,
+    pub(super) surfaces: &'a Surfaces,
+    pub(super) grants: &'a std::collections::HashMap<String, i64>,
+    pub(super) dispatchable: &'a [String],
+    pub(super) labels: &'a RouteLabels,
+}
+
+pub(super) fn route_rows(inputs: RouteRowInputs<'_>, faults: &mut Faults) -> Vec<GatewayRouteRow> {
+    let RouteRowInputs {
+        config,
+        surfaces,
+        grants,
+        dispatchable,
+        labels,
+    } = inputs;
     let last = config.routes.len().saturating_sub(1);
     config
         .routes
@@ -87,8 +97,8 @@ pub(super) fn route_rows(
                 label,
                 provider_label,
                 upstream_model: route.upstream_model.clone().unwrap_or_default(),
-                requires: yaml_summary(route.requires.as_ref()),
-                when: yaml_summary(route.when.as_ref()),
+                requires: yaml_summary(route.requires.as_ref(), faults),
+                when: yaml_summary(route.when.as_ref(), faults),
                 has_pricing: route.pricing.is_some(),
                 header_count: route.extra_headers.len(),
                 grants: grants.get(&route.id).copied().unwrap_or(0),

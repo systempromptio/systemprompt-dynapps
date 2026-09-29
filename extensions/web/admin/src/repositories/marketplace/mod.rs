@@ -1,5 +1,3 @@
-//! Plugin marketplace: installed plugin config, hooks, and usage events.
+//! Per-plugin environment variables the governance pages read.
 
-pub mod hooks;
 pub mod plugin_env;
-pub mod plugins;

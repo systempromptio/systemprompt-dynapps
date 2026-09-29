@@ -3,7 +3,6 @@
 
 use async_trait::async_trait;
 
-use super::requests::time_range;
 use crate::handlers::ssr::governance::{export_decisions, export_findings};
 use crate::handlers::ssr::secrets_audit;
 use crate::repositories::governance::decision_log::DecisionLogRow;
@@ -15,6 +14,7 @@ use systemprompt_web_admin_core::export::model::{
     Cell, CellKind, Column, DataSet, ExportContext, Table, Window,
 };
 use systemprompt_web_admin_core::export::registry::DataSetRegistration;
+use systemprompt_web_admin_core::export::window::time_range;
 use systemprompt_web_admin_core::types::governance_labels::plane_of;
 
 pub(crate) struct Decisions;

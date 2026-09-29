@@ -5,9 +5,6 @@ use super::views::{BucketView, SkillDetailContext};
 use super::{PAGE_SIZE, SkillDetailQuery, SkillRef};
 use crate::handlers::ssr::analysis::conversations::view::ConversationRowView;
 use crate::handlers::ssr::analysis::skills::SkillFactView;
-use crate::handlers::ssr::analysis::tone::{
-    completion_tone, error_rate_tone, latency_tone, score_display,
-};
 use crate::repositories::analysis::skills::{
     SkillBreakdownBy, SkillBucketRow, SkillConversationRow, SkillDayRow, SkillFactRow, SkillRunRow,
 };
@@ -17,6 +14,9 @@ use systemprompt_web_admin_core::ssr::format::{
     format_cost, format_duration_ms, format_token_total,
 };
 use systemprompt_web_admin_core::ssr::list_view::{PageWindow, Pagination, paginate};
+use systemprompt_web_admin_core::ssr::tone::{
+    completion_tone, error_rate_tone, latency_tone, score_display,
+};
 use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;
 

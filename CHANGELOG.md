@@ -22,6 +22,22 @@ Conventions (strict — hold every entry to them):
 
 ### Changed
 
+- **Admin crate split, stage 1.** The catalog domain — marketplaces, plugins, skills, agents, MCP
+  servers, managed resources, the retention lifecycle page and the marketplace-version analysis —
+  is its own domain crate, `systemprompt-web-admin-catalog` (`extensions/web/admin/catalog`), mounted
+  by the residual admin crate at the same paths; `systemprompt_web_admin::repositories::{marketplace,
+  mcp, lifecycle}` readers import `systemprompt_web_admin_catalog::…` instead. The shared pieces the
+  split surfaced (tone tokens, retention view, byte formatting, the scheduled-jobs and share-token
+  readers) moved into `systemprompt-web-admin-core`. The contract route parser and the template-link
+  gate read the catalog crate's `routes/` too.
+- **Page loads fail soft.** Every admin page collects the panels its loaders could not read into a
+  `Faults` list (`systemprompt_web_admin_core::ssr::faults`) and renders the rest, listing the
+  unavailable panels above the content instead of answering 500; `scripts/check-fail-soft.sh` fails
+  a page handler that still discards a read error. `/admin/setup` now redirects (308) to the connect
+  page, and `/admin/governance/attention` serves the attention counts the sidebar polls.
+- **Admin times are shown in the viewer's timezone** (`systemprompt_web_admin_core::ssr::viewer_tz`,
+  from the browser's IANA zone cookie, UTC when absent), and signing out revokes the session
+  server-side (`/admin/sign-out`) rather than only clearing the cookie.
 - **Admin console on phones.** Below 48rem every admin data table is drawn as a stack of cards
   instead of a squashed, sideways-scrolling grid: `storage/files/js/services/table-cards.js`
   copies each column's header text onto its cells as `data-label` (no template changes across

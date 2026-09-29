@@ -7,7 +7,7 @@
 //! the enforcement path recording an outcome.
 //!
 //! Most of this is not Postgres at all. The gateway routes live in the
-//! profile YAML, agent definitions in `services/agents/`, and access-control
+//! profile YAML and access-control
 //! rules are declared in `services/access-control/rules.yaml` — read here,
 //! seeded once at boot by `repositories::sync::boot`, and otherwise only
 //! compared against the database. The exception is [`acl_detect`], which is
@@ -15,7 +15,6 @@
 //! traffic that already went through.
 
 pub mod acl_detect;
-pub mod agents;
 pub mod gateway_acl;
 pub mod groups_yaml_loader;
 pub mod groups_yaml_types;

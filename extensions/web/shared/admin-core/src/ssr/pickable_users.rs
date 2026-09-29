@@ -2,7 +2,8 @@
 //!
 //! A `<select>` of every account works without JavaScript and is enough at
 //! this instance's size; the list is capped so a large directory renders a
-//! page rather than a stall, and the cap is reported by the caller.
+//! page rather than a stall, and the cap is reported by the caller. A failed
+//! listing is returned to the caller, which records it on its page.
 
 use sqlx::PgPool;
 
@@ -12,11 +13,12 @@ use crate::ssr::types::pickable_user::PickableUserView;
 
 const PICKABLE_USER_LIMIT: usize = 200;
 
-pub async fn list_pickable_users(pool: &PgPool, selected: Option<&str>) -> Vec<PickableUserView> {
-    list_users(pool, &SubjectScope::All)
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, "person picker: user listing failed"))
-        .unwrap_or_default()
+pub async fn list_pickable_users(
+    pool: &PgPool,
+    selected: Option<&str>,
+) -> Result<Vec<PickableUserView>, sqlx::Error> {
+    let users = list_users(pool, &SubjectScope::All).await?;
+    let picked = users
         .into_iter()
         .take(PICKABLE_USER_LIMIT)
         .map(|u| {
@@ -32,5 +34,6 @@ pub async fn list_pickable_users(pool: &PgPool, selected: Option<&str>) -> Vec<P
                 id,
             }
         })
-        .collect()
+        .collect();
+    Ok(picked)
 }

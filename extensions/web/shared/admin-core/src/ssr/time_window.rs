@@ -1,3 +1,5 @@
+//! Parses and renders the time-window bounds an admin page carries.
+//!
 //! Window bounds arrive as HTML date controls (`%Y-%m-%d`), datetime controls
 //! (UTC without an offset) or RFC3339 from shared links; they render back as a
 //! date whenever they sit on a UTC midnight so the date control round-trips.

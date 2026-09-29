@@ -5,6 +5,7 @@
 
 use serde::Serialize;
 use systemprompt::identifiers::{AgentId, SessionId, TraceId, UserId};
+use systemprompt_web_admin_core::ssr::viewer_tz::viewer_tz;
 use urlencoding::encode as urlencode;
 
 use crate::repositories::traces::{TraceKind, TraceSummary};
@@ -55,7 +56,7 @@ pub(super) struct TraceRow {
 }
 
 pub(super) fn trace_to_json(t: &TraceSummary) -> TraceRow {
-    let started_local = t.started_at.with_timezone(&chrono::Local);
+    let started_local = t.started_at.with_timezone(&viewer_tz());
     TraceRow {
         session_id: t.session_id.clone(),
         session_id_short: ellipsize(t.session_id.as_str(), 14),

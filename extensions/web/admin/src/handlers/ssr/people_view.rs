@@ -22,12 +22,6 @@ use systemprompt_web_admin_core::ssr::format::short_num;
 
 pub(crate) const DIRECTORY_SOURCE: &str = "adfs";
 
-pub(crate) fn or_default<T: Default>(what: &'static str, result: Result<T, sqlx::Error>) -> T {
-    result
-        .inspect_err(|e| tracing::warn!(error = %e, what, "people usage query failed"))
-        .unwrap_or_default()
-}
-
 pub(crate) struct MemberInput<'a> {
     pub user_id: &'a str,
     pub display_name: Option<&'a str>,

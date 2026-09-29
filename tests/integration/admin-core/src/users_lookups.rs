@@ -3,6 +3,7 @@
 
 use systemprompt_web_admin::repositories::users;
 use systemprompt_web_admin_core::repositories::scope::SubjectScope;
+use systemprompt_web_admin_core::repositories::share_token;
 
 use crate::fixtures::{
     group_scope, insert_user, insert_user_full, project_scope, set_project, unclaimed_email, unique,
@@ -105,7 +106,7 @@ async fn find_share_token_version_returns_none_without_a_profile_row() {
     };
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("share")).await;
 
-    let version = users::find_share_token_version(&db.pool, &user)
+    let version = share_token::find_share_token_version(&db.pool, &user)
         .await
         .expect("lookup succeeds");
 
@@ -130,7 +131,7 @@ async fn find_share_token_version_starts_at_one() {
         .await
         .expect("profile row");
 
-    let version = users::find_share_token_version(&db.pool, &user)
+    let version = share_token::find_share_token_version(&db.pool, &user)
         .await
         .expect("lookup succeeds");
 

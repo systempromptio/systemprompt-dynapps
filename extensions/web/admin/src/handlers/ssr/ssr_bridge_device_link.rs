@@ -17,7 +17,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use systemprompt_web_shared::html_escape;
 
-use crate::services::bridge_profile::BRIDGE_BINARY;
+use systemprompt_web_admin_catalog::services::bridge_profile::BRIDGE_BINARY;
 use systemprompt_web_admin_core::error::{AdminHtmlError, AdminHtmlResult};
 use systemprompt_web_admin_core::repositories::bridge;
 use systemprompt_web_admin_core::templates::AdminTemplateEngine;

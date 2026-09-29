@@ -2,9 +2,10 @@
 //! the group and project name maps, and the create-user drawer's choices.
 //!
 //! The page and its facets are independent reads joined into one round of
-//! latency. A failed name-map read degrades to showing the id, which is still a
-//! working link; the drawer's listings are read only for someone who can open
-//! it.
+//! latency. Only the page itself fails the request; a failed facet or name-map
+//! read is recorded on the page's fault list and degrades to its empty value
+//! (a name map falls back to showing the id, which is still a working link).
+//! The drawer's listings are read only for someone who can open it.
 
 use std::collections::BTreeMap;
 
@@ -13,6 +14,7 @@ use sqlx::PgPool;
 use crate::repositories;
 use crate::repositories::users::roster::{DEFAULT_PAGE_SIZE, RosterQuery};
 use systemprompt_web_admin_core::error::AdminResult;
+use systemprompt_web_admin_core::ssr::faults::Faults;
 
 use super::RosterUrlState;
 use super::context::{CreateUserChoiceView, CreateUserPanelView};
@@ -30,6 +32,7 @@ pub(super) async fn load_roster(
     pool: &PgPool,
     scope: &systemprompt_web_admin_core::repositories::scope::SubjectScope,
     url: &RosterUrlState,
+    faults: &mut Faults,
 ) -> AdminResult<RosterRead> {
     let query = RosterQuery {
         filter: url.filter,
@@ -39,26 +42,29 @@ pub(super) async fn load_roster(
         limit: DEFAULT_PAGE_SIZE,
         offset: url.page.saturating_mul(DEFAULT_PAGE_SIZE),
     };
-    let (page_res, stats_res, roles_res, (group_names, project_names)) = tokio::join!(
+    let (page_res, stats_res, roles_res, groups_res, projects_res) = tokio::join!(
         repositories::users::roster::list_users_paged(pool, scope, &query),
         repositories::users::roster::get_roster_stats(pool, scope),
         repositories::users::queries::list_distinct_roles(pool),
-        load_scope_names(pool),
+        systemprompt_web_admin_core::repositories::scope::containers::list_group_options(pool),
+        systemprompt_web_admin_core::repositories::scope::containers::list_project_options(pool),
     );
-    let (rows, total) =
-        page_res.inspect_err(|e| tracing::warn!(error = %e, "roster page query failed"))?;
+    let (rows, total) = page_res?;
     Ok(RosterRead {
         rows,
         total,
-        totals: stats_res.unwrap_or_else(|e| {
-            tracing::warn!(error = %e, "roster totals query failed");
-            repositories::users::roster::RosterStats::default()
-        }),
-        roles: roles_res
-            .inspect_err(|e| tracing::warn!(error = %e, "roster role facet failed"))
-            .unwrap_or_default(),
-        group_names,
-        project_names,
+        totals: faults.take("roster totals", stats_res),
+        roles: faults.take("role facet", roles_res),
+        group_names: faults
+            .take("group names", groups_res)
+            .into_iter()
+            .map(|g| (g.id.as_str().to_owned(), g.name))
+            .collect(),
+        project_names: faults
+            .take("project names", projects_res)
+            .into_iter()
+            .map(|p| (p.id.as_str().to_owned(), p.name))
+            .collect(),
     })
 }
 
@@ -66,6 +72,7 @@ pub(super) async fn create_user_panel(
     pool: &PgPool,
     sso: &crate::handlers::adfs_auth::AdfsConfig,
     can_write: bool,
+    faults: &mut Faults,
 ) -> CreateUserPanelView {
     let sso_provisions = sso.enabled && sso.auto_provision;
     if !can_write || sso_provisions {
@@ -75,51 +82,36 @@ pub(super) async fn create_user_panel(
             projects: Vec::new(),
         };
     }
-    let groups =
-        systemprompt_web_admin_core::repositories::scope::containers::list_group_options(pool)
-            .await
-            .inspect_err(|e| tracing::warn!(error = %e, "roster: group choices unavailable"))
-            .unwrap_or_default()
-            .into_iter()
-            .filter(|g| !g.is_system)
-            .map(|g| CreateUserChoiceView {
-                id: g.id.into_inner(),
-                name: g.name,
-            })
-            .collect();
-    let projects =
-        systemprompt_web_admin_core::repositories::scope::containers::list_project_options(pool)
-            .await
-            .inspect_err(|e| tracing::warn!(error = %e, "roster: project choices unavailable"))
-            .unwrap_or_default()
-            .into_iter()
-            .map(|p| CreateUserChoiceView {
-                id: p.id.into_inner(),
-                name: p.name,
-            })
-            .collect();
+    let groups = faults
+        .take(
+            "group choices",
+            systemprompt_web_admin_core::repositories::scope::containers::list_group_options(pool)
+                .await,
+        )
+        .into_iter()
+        .filter(|g| !g.is_system)
+        .map(|g| CreateUserChoiceView {
+            id: g.id.into_inner(),
+            name: g.name,
+        })
+        .collect();
+    let projects = faults
+        .take(
+            "project choices",
+            systemprompt_web_admin_core::repositories::scope::containers::list_project_options(
+                pool,
+            )
+            .await,
+        )
+        .into_iter()
+        .map(|p| CreateUserChoiceView {
+            id: p.id.into_inner(),
+            name: p.name,
+        })
+        .collect();
     CreateUserPanelView {
         sso_provisions,
         groups,
         projects,
     }
-}
-
-async fn load_scope_names(pool: &PgPool) -> (BTreeMap<String, String>, BTreeMap<String, String>) {
-    let (groups, projects) = tokio::join!(
-        systemprompt_web_admin_core::repositories::scope::containers::list_group_options(pool),
-        systemprompt_web_admin_core::repositories::scope::containers::list_project_options(pool),
-    );
-    (
-        groups
-            .unwrap_or_default()
-            .into_iter()
-            .map(|g| (g.id.as_str().to_owned(), g.name))
-            .collect(),
-        projects
-            .unwrap_or_default()
-            .into_iter()
-            .map(|p| (p.id.as_str().to_owned(), p.name))
-            .collect(),
-    )
 }
