@@ -34,9 +34,12 @@ on:
   workflow_dispatch:
 
 env:
-  # The systemprompt-astound release whose server binary (and, once released,
-  # base bundle) this kit validates against. Bump deliberately.
-  ASTOUND_RELEASE: v0.56.0
+  # The systemprompt-astound release whose server binary and base bundle this
+  # kit validates against. `latest` is the newest published release (drafts
+  # and pre-releases excluded), resolved once per run by the validate job and
+  # handed to publish, so the kit follows the base without a hand-kept pin.
+  # A `vX.Y.Z` tag pins it deliberately.
+  ASTOUND_RELEASE: latest
   ASTOUND_REPO: Astound-Digital/systemprompt-astound
   # Empty: validate against the base-bundle asset of ASTOUND_RELEASE. A git
   # ref (e.g. `next`): pack the base from the Astound repository's services/
@@ -61,10 +64,25 @@ jobs:
   # request is refused before it is merged rather than at release time.
   validate:
     runs-on: ubuntu-latest
+    outputs:
+      astound_release: ${{ steps.astound.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Resolve the Astound release
+        id: astound
+        env:
+          GH_TOKEN: ${{ secrets.ASTOUND_RELEASE_TOKEN || github.token }}
+        run: |
+          tag="$ASTOUND_RELEASE"
+          if [ "$tag" = latest ]; then
+            tag=$(gh release view --repo "$ASTOUND_REPO" --json tagName -q .tagName)
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "ASTOUND_RELEASE=$tag" >> "$GITHUB_ENV"
+          echo "::notice title=Astound base::validating against $ASTOUND_REPO $tag"
 
       - name: Fetch the server binary and the base bundle
         env:
@@ -110,7 +128,7 @@ jobs:
       - name: Validate against the base
         run: |
           systemprompt core services validate --root ./services --base ./base.tar.gz --strict || {
-            echo "::error::this kit does not compose with the instance's services/ tree — most often an id the base already owns"
+            echo "::error::this kit does not compose with the instance's services/ tree — an id the base already owns, or one this kit references that the base does not define (check ASTOUND_RELEASE / ASTOUND_BASE_REF)"
             exit 1
           }
 
@@ -123,6 +141,7 @@ jobs:
     # workflow fails to parse. Expose the optional secrets as job env and test
     # the env instead.
     env:
+      ASTOUND_RELEASE: ${{ needs.validate.outputs.astound_release }}
       ADMIN_TOKEN: ${{ secrets.SYSTEMPROMPT_ADMIN_TOKEN }}
       API_URL: ${{ secrets.SYSTEMPROMPT_API_URL }}
       STATS_PAT: ${{ secrets.ASTOUND_STATS_PAT }}
