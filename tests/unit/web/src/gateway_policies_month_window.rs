@@ -5,7 +5,7 @@
 
 use chrono::{NaiveDate, TimeZone, Utc};
 use systemprompt::ai::{GatewayPolicySpec, QuotaWindow};
-use systemprompt_web_admin::repositories::gateway_policies::month_window::{
+use systemprompt_web_admin_governance::repositories::gateway_policies::month_window::{
     DAY_SECONDS, MONTH_WINDOW_SECONDS, align_window, days_remaining, declared_window_seconds,
     has_month_window, is_month_window, live_window_seconds, month_window_seconds, normalise_spec,
     window_label,

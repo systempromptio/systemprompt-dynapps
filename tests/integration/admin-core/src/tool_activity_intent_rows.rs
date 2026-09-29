@@ -10,7 +10,7 @@
 
 use chrono::Utc;
 
-use systemprompt_web_admin::repositories::analysis::tools::{
+use systemprompt_web_admin_core::repositories::tool_activity::{
     ToolActivityFilter, ToolActivityPage, ToolBreakdownBy, ToolSort, ToolState,
     load_tool_activity_page,
 };

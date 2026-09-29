@@ -5,7 +5,7 @@
 
 use systemprompt::ai::SafetyScanner;
 use systemprompt::models::wire::canonical::{CanonicalContent, CanonicalResponse};
-use systemprompt_web_admin::gateway_safety::PiiScanner;
+use systemprompt_web_admin_governance::gateway_safety::PiiScanner;
 
 fn response(text: &str) -> CanonicalResponse {
     CanonicalResponse {

@@ -7,6 +7,7 @@ use systemprompt_web_admin as _;
 use systemprompt_web_admin_catalog as _;
 use systemprompt_web_admin_core::export::model::DataSet;
 use systemprompt_web_admin_core::export::registry;
+use systemprompt_web_admin_governance as _;
 
 const EXPECTED_DIALOG_ORDER: &[&str] = &[
     "requests",

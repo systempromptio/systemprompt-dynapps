@@ -102,7 +102,7 @@ pub(crate) async fn gateway_policies_page(
     let sync = if on_sync {
         plane_card_by_id(
             &pool,
-            crate::repositories::sync::gateway_policies::PLANE_ID,
+            crate::repositories::sync_planes::gateway_policies::PLANE_ID,
             "",
         )
         .await?

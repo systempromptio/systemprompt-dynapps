@@ -9,7 +9,7 @@ use systemprompt::models::wire::canonical::{
 };
 use systemprompt::models::wire::inspect::{SurfaceBudget, string_leaves};
 use systemprompt_security::policy::{GovernanceConfig, GovernanceEngine};
-use systemprompt_web_admin::gateway_safety::SecretsScanner;
+use systemprompt_web_admin_governance::gateway_safety::SecretsScanner;
 
 const TOKEN: &str = "ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 const AWS_SHAPED: &str = "AKIAIOSFODNN7EXAMPLE";

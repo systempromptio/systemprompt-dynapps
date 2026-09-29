@@ -9,10 +9,11 @@
 //! `infra logs audit` can correlate gateway and MCP decisions in one stream.
 //!
 //! The resolver runs over core's `user` / `role` dimensions plus every subject
-//! dimension this extension declares in [`crate::authz`] — today that means a
-//! `group` rule binds here, not just in the access matrix. Subject attributes
-//! and roles are looked up per call rather than read off the request, so a
-//! group change or a revocation binds on the next call, not on token refresh.
+//! dimension this extension declares in [`systemprompt_web_admin_core::authz`]
+//! — today that means a `group` rule binds here, not just in the access matrix.
+//! Subject attributes and roles are looked up per call rather than read off the
+//! request, so a group change or a revocation binds on the next call, not on
+//! token refresh.
 //!
 //! Core composes its own `RuleBasedHook` ahead of this one and that hook
 //! audits every evaluation as `authz_rule_based`, over the same

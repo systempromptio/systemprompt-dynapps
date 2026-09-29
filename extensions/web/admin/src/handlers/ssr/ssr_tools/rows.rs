@@ -3,7 +3,7 @@
 
 use serde::Serialize;
 
-use crate::repositories::analysis::tools::ToolActivityRow;
+use systemprompt_web_admin_core::repositories::tool_activity::ToolActivityRow;
 use systemprompt_web_admin_core::ssr::analysis_urls::analysis_skill_url;
 use systemprompt_web_admin_core::ssr::format::{
     format_bytes, format_duration_ms, local_time, relative_time,

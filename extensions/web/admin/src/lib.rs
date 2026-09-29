@@ -17,8 +17,6 @@
 
 pub mod authz;
 pub(crate) mod export;
-pub mod gateway_entitlement;
-pub mod gateway_safety;
 pub(crate) mod handlers;
 mod marketplace_context;
 mod middleware;
@@ -48,6 +46,7 @@ pub use services::salesforce_orgs::salesforce_orgs_boot_check;
 pub use services::{connector_oauth, identity_token, salesforce_orgs};
 pub use systemprompt_web_admin_catalog::routes::share::share_manifest_router;
 use systemprompt_web_admin_core::state::StateError;
+pub use systemprompt_web_admin_governance::routes::secrets::secrets_router;
 
 pub mod test_support {
     pub use crate::handlers::ssr::analysis::{SkillRef, parse_skill_key};
@@ -73,8 +72,7 @@ pub fn hooks_webhook_router(
             "/hooks/track",
             post(handlers::hooks_track::handle_hook_track),
         )
-        .route("/hooks/govern", post(handlers::govern_tool_use))
-        .route("/govern/authz", post(handlers::govern_authz))
+        .merge(systemprompt_web_admin_governance::routes::webhooks::govern_routes())
         .layer(Extension(
             systemprompt_web_admin_core::event_hub::EventHub::default(),
         ))
@@ -105,26 +103,6 @@ pub fn salesforce_api_router(deps: SalesforceDeps) -> Router {
         .layer(Extension(deps))
 }
 
-pub fn secrets_router(pool: Arc<PgPool>) -> Router {
-    Router::new()
-        .route(
-            "/api/v1/secrets/{plugin_id}/token",
-            post(handlers::secrets::create_resolution_token_handler),
-        )
-        .route(
-            "/api/v1/secrets/{plugin_id}/resolve",
-            get(handlers::secrets::resolve_secrets_handler),
-        )
-        .route(
-            "/admin/api/secrets/{plugin_id}/audit",
-            get(handlers::secrets::audit_log_handler),
-        )
-        .route(
-            "/admin/api/secrets/{plugin_id}/rotate",
-            post(handlers::secrets::rotate_handler),
-        )
-        .with_state(pool)
-}
 
 pub fn admin_router(
     db: &systemprompt::database::DbPool,

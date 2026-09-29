@@ -3,10 +3,6 @@
 //! rows it was rendered from.
 
 use chrono::Utc;
-use systemprompt_web_admin::repositories::gateway_policies::declared::parse_declared_policies;
-use systemprompt_web_admin::repositories::gateway_policies::drift::compute_policy_drift;
-use systemprompt_web_admin::repositories::gateway_policies::export::render_policies_export;
-use systemprompt_web_admin::repositories::gateway_policies::rows::PolicyRow;
 use systemprompt_web_admin::repositories::sync::groups_db::{
     parse_groups_doc, render_groups_export,
 };
@@ -14,6 +10,10 @@ use systemprompt_web_admin::repositories::sync::groups_drift::{
     MappingRow, MemberSetRow, compute_groups_drift,
 };
 use systemprompt_web_admin_core::repositories::sync::plane::DeclarationSource;
+use systemprompt_web_admin_governance::repositories::gateway_policies::declared::parse_declared_policies;
+use systemprompt_web_admin_governance::repositories::gateway_policies::drift::compute_policy_drift;
+use systemprompt_web_admin_governance::repositories::gateway_policies::export::render_policies_export;
+use systemprompt_web_admin_governance::repositories::gateway_policies::rows::PolicyRow;
 
 const POLICIES: &str = r"
 policies:

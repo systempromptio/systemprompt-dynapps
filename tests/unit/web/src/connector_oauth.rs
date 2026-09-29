@@ -331,7 +331,7 @@ fn generic_oauth_cannot_send_credentials_outside_approved_origins() {
 #[tokio::test]
 async fn gateway_does_not_allow_a_request_when_its_policy_database_is_unavailable() {
     use systemprompt::extension::{GatewayDenyKind, GatewayGuardRequest, GatewayRequestGuard};
-    use systemprompt_web_admin::gateway_entitlement::RouteEntitlementGuard;
+    use systemprompt_web_admin_governance::gateway_entitlement::RouteEntitlementGuard;
     let pool = sqlx::postgres::PgPoolOptions::new()
         .connect_lazy("postgres://test:test@localhost:1/test")
         .unwrap();
@@ -577,7 +577,7 @@ async fn gateway_rejects_incompatible_database_handles_even_when_reported_connec
     use systemprompt::extension::{GatewayDenyKind, GatewayGuardRequest, GatewayRequestGuard};
     use systemprompt::identifiers::{ModelId, ProviderId, RouteId, UserId};
     use systemprompt::traits::DatabaseHandle;
-    use systemprompt_web_admin::gateway_entitlement::RouteEntitlementGuard;
+    use systemprompt_web_admin_governance::gateway_entitlement::RouteEntitlementGuard;
 
     struct ForeignDatabase;
     impl DatabaseHandle for ForeignDatabase {

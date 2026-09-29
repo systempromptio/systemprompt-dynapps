@@ -15,10 +15,7 @@ pub(super) fn ai_activity_routes() -> Router<Arc<PgPool>> {
         .route("/analytics", get(handlers::ssr::analytics_dashboard_page))
         .merge(crate::routes::ssr_export::routes())
         .route("/requests", get(handlers::ssr::analytics_requests_page))
-        .route(
-            "/requests/{request_id}",
-            get(handlers::ssr::governance_audit_detail_page),
-        )
+        .merge(systemprompt_web_admin_governance::routes::ssr_governance::request_detail_routes())
         .route("/sessions", get(handlers::ssr::sessions_list_page))
         .route(
             "/sessions/{session_id}",

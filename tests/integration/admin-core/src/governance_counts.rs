@@ -5,7 +5,7 @@
 //! absolute counts.
 
 use chrono::{Duration, Utc};
-use systemprompt_web_admin::repositories::governance::{
+use systemprompt_web_admin_governance::repositories::governance::{
     get_governance_counts, get_governance_counts_windowed, list_decisions_for_policy,
     list_per_policy_counts, list_per_policy_counts_windowed, list_top_actors, list_top_policies,
 };

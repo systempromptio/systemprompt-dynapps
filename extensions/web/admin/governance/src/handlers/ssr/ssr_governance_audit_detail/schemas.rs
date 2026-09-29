@@ -14,11 +14,11 @@ use sqlx::PgPool;
 use systemprompt::identifiers::SessionId;
 use systemprompt_web_admin_core::ssr::viewer_tz::viewer_tz;
 
-use crate::repositories::analysis::tools::{
+use crate::repositories::governance::request_schemas::{RequestSchemaRow, find_request_schemas};
+use systemprompt_web_admin_core::repositories::tool_activity::{
     ToolActivityFilter, ToolActivityPage, ToolActivityRow, ToolBreakdownBy, ToolSort,
     load_tool_activity_page,
 };
-use crate::repositories::analytics::requests::{RequestSchemaRow, find_request_schemas};
 use systemprompt_web_admin_core::types::tool_schema_diff::{
     ToolSchemaPair, WireTool, gemini_rules_apply, pair_tools, wire_tools,
 };

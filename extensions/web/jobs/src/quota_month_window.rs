@@ -17,7 +17,7 @@
 use sqlx::PgPool;
 use systemprompt::database::DbPool;
 use systemprompt::traits::{Job, JobContext, JobResult};
-use systemprompt_web_admin::repositories::gateway_policies::month_window_db::refresh_month_windows;
+use systemprompt_web_admin_governance::repositories::gateway_policies::month_window_db::refresh_month_windows;
 
 use crate::error::JobError;
 

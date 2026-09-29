@@ -2,7 +2,7 @@
 //! window tabs, the breakdown tabs, the pager and the sortable headers.
 
 use super::query::{Lens, ToolsQuery};
-use crate::repositories::analysis::tools::{ToolBreakdownBy, ToolSort};
+use systemprompt_web_admin_core::repositories::tool_activity::{ToolBreakdownBy, ToolSort};
 use systemprompt_web_admin_core::ssr::list_view::{PageWindow, Pagination, paginate_prefixed};
 use systemprompt_web_admin_core::ssr::types::table::SortHeaderView;
 use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;

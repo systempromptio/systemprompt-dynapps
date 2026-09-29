@@ -10,7 +10,6 @@ pub(crate) mod analysis_skills;
 pub(crate) mod contexts;
 pub(crate) mod dashboard;
 pub(crate) mod dashboard_cost;
-pub(crate) mod governance;
 pub(crate) mod history;
 pub(crate) mod people;
 pub(crate) mod projects;

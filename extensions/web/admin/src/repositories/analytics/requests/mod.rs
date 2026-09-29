@@ -21,22 +21,16 @@ use systemprompt_web_shared::{GroupId, ProjectId};
 use systemprompt_web_admin_core::repositories::scope::SubjectScope;
 
 mod breakdown;
-mod detail;
 mod facets;
 mod kpis;
 mod paged;
-mod schemas;
 
 pub use breakdown::{
     BreakdownRow, list_requests_by_model, list_requests_by_provider, list_requests_by_status,
 };
-pub use detail::{
-    RequestToolCallRow, SafetyFindingRow, list_request_safety_findings, list_request_tool_calls,
-};
 pub use facets::{FacetValue, list_request_facets};
 pub use kpis::{RequestKpis, get_request_kpis};
 pub use paged::{RequestPage, list_requests_paged};
-pub use schemas::{RequestSchemaRow, find_request_schemas};
 
 #[derive(Debug, Clone)]
 pub struct RequestFilter {

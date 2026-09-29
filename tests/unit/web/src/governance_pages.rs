@@ -10,7 +10,7 @@
 use chrono::{Duration, Utc};
 use serde_json::json;
 use systemprompt::identifiers::{CallId, UserId};
-use systemprompt_web_admin::repositories::governance::approvals::ApprovalRow;
+use systemprompt_web_admin_governance::repositories::governance::approvals::ApprovalRow;
 
 use crate::support::repo_root;
 

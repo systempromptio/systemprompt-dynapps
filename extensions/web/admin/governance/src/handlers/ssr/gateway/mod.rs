@@ -239,7 +239,7 @@ async fn gateway_view(
         dispatch,
         load_error: config_error,
         catalog_error,
-        runtime_note: repositories::sync::gateway_routes::RUNTIME_NOTE,
+        runtime_note: repositories::sync_planes::gateway_routes::RUNTIME_NOTE,
         sync_url: "/admin/sync?entity=gateway_route",
         names_note: NAMES_NOTE,
         tabs: view_tabs(tab, routes_count, providers_count),

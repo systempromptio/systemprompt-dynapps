@@ -1,7 +1,7 @@
 //! `repositories::marketplace::plugin_env` — per-plugin environment records.
 
 use systemprompt::identifiers::PluginId;
-use systemprompt_web_admin::repositories::marketplace::plugin_env::list_plugin_env_vars;
+use systemprompt_web_admin_governance::repositories::marketplace::plugin_env::list_plugin_env_vars;
 
 fn plug() -> PluginId {
     PluginId::new("plug")

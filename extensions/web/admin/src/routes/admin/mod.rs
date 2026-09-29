@@ -35,6 +35,7 @@ use systemprompt_web_admin_catalog::routes as catalog_routes;
 use systemprompt_web_admin_core::repositories::sync::archive::MAX_UPLOAD_BYTES;
 use systemprompt_web_admin_core::state::StateError;
 use systemprompt_web_admin_core::types::{ROLES_CONSOLE, ROLES_MANAGE, ROLES_PLATFORM};
+use systemprompt_web_admin_governance::routes::api as governance_routes;
 
 mod read;
 use read::build_admin_read_routes_inner;
@@ -141,20 +142,7 @@ fn build_sync_participant_routes() -> Router<Arc<PgPool>> {
 
 fn build_admin_write_routes(write_pool: &Arc<PgPool>) -> Router {
     Router::new()
-        .route("/gateway", patch(handlers::update_gateway_settings_handler))
-        .route(
-            "/gateway/routes",
-            post(handlers::create_gateway_route_handler),
-        )
-        .route(
-            "/gateway/routes/{idx}",
-            patch(handlers::update_gateway_route_handler)
-                .delete(handlers::delete_gateway_route_handler),
-        )
-        .route(
-            "/gateway/routes/reorder",
-            post(handlers::reorder_gateway_routes_handler),
-        )
+        .merge(governance_routes::gateway_write_routes())
         .route(
             "/users",
             post(handlers::users_bootstrap::create_user_handler),
@@ -199,7 +187,7 @@ fn build_admin_write_routes(write_pool: &Arc<PgPool>) -> Router {
         .merge(admin_groups::group_write_routes())
         .merge(admin_groups::project_write_routes())
         .merge(build_management_write_routes())
-        .merge(build_approval_write_routes())
+        .merge(governance_routes::approval_write_routes())
         .with_state(Arc::clone(write_pool))
 }
 
@@ -226,18 +214,6 @@ fn build_management_write_routes() -> Router<Arc<PgPool>> {
         )
 }
 
-fn build_approval_write_routes() -> Router<Arc<PgPool>> {
-    Router::new()
-        .route(
-            "/approvals/{call_id}/approve",
-            post(handlers::approvals::approve_handler),
-        )
-        .route(
-            "/approvals/{call_id}/deny",
-            post(handlers::approvals::deny_handler),
-        )
-}
-
 pub(crate) fn build_self_service_routes(write_pool: &Arc<PgPool>) -> Router {
     Router::new()
         .route(
@@ -255,9 +231,6 @@ pub(crate) fn build_auth_read_routes(read_pool: &Arc<PgPool>) -> Router {
     Router::new()
         .route("/dashboard", get(handlers::dashboard_handler))
         .merge(catalog_routes::api::listing_routes())
-        .route(
-            "/plugins/{plugin_id}/env",
-            get(handlers::list_plugin_env_handler),
-        )
+        .merge(governance_routes::plugin_env_routes())
         .with_state(Arc::clone(read_pool))
 }

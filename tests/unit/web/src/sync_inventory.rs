@@ -7,6 +7,7 @@ use systemprompt_web_admin_core::repositories::sync::inventory::{
     CONFIG_KINDS, kind_by_id, kind_for_path,
 };
 use systemprompt_web_admin_core::repositories::sync::registry::planes;
+use systemprompt_web_admin_governance as _;
 
 use crate::support::repo_root;
 

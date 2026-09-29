@@ -906,10 +906,10 @@ _prepare-uncoordinated:
     done
     # Workspace-level prepare (catches lib crates)
     root_pass
-    # Second pass: the tests workspace builds systemprompt-web-admin with
+    # Second pass: the tests workspace builds systemprompt-web-admin-governance with
     # `governance-ssr`, whose queries a default-feature prepare never expands
     # (and therefore prunes). The union with the first pass happens in $NEW.
-    root_pass -- --package systemprompt-web-admin --features systemprompt-web-admin/governance-ssr
+    root_pass -- --package systemprompt-web-admin-governance --features systemprompt-web-admin-governance/governance-ssr
     # Per-crate prepare for binary/extension crates that cargo sqlx skips.
     #
     # These caches are SCRATCH, not artefacts: each crate's queries are copied

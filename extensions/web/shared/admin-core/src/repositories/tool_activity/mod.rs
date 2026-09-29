@@ -206,11 +206,10 @@ pub async fn load_tool_activity_page(
     filter: &ToolActivityFilter,
     page: ToolActivityPage,
 ) -> Result<ToolActivityResult, sqlx::Error> {
-    let mut connection =
-        systemprompt_web_admin_core::repositories::dashboard_read::begin(pool).await?;
+    let mut connection = crate::repositories::dashboard_read::begin(pool).await?;
     let pattern = filter.free_text_pattern();
     let result = sqlx::query_file!(
-        "src/repositories/analysis/tools/page.sql",
+        "src/repositories/tool_activity/page.sql",
         filter.since,
         filter.until,
         filter.subject_ids.as_deref(),

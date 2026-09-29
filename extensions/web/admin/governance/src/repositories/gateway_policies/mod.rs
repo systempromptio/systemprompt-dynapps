@@ -6,7 +6,7 @@
 //! this is the one governance plane the console can change in place. The
 //! declaration stays the file: [`declared`] reads it, [`drift`] compares it
 //! with the rows, [`export`] renders the rows back as the file, and
-//! [`sync::gateway_policies`](crate::repositories::sync::gateway_policies)
+//! [`sync::gateway_policies`](crate::repositories::sync_planes::gateway_policies)
 //! is the plane the sync page drives.
 //!
 //! Calendar-month quota windows are an extension-side interim over core's

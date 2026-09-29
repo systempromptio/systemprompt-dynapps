@@ -7,7 +7,7 @@ use serde::Deserialize;
 use systemprompt::identifiers::UserId;
 use urlencoding::encode as urlencode;
 
-use crate::repositories::analysis::tools::{
+use systemprompt_web_admin_core::repositories::tool_activity::{
     ArtifactKind, ToolActivityFilter, ToolBreakdownBy, ToolSort, ToolState,
 };
 use systemprompt_web_admin_core::util::time_range::{TimeRange, TimeRangeQuery, parse_time_range};

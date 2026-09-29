@@ -24,7 +24,6 @@ use systemprompt::loader::ServicesBootstrap;
 
 use self::view::{ConfigKpiView, ConfigRowView, ConfigurationPageData};
 use crate::handlers::ssr::ssr_sync::{DOCS_URL, EXPORT_ZIP_URL, empty_sources};
-use crate::repositories::gateway_policies::declared::services_root;
 use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
 use systemprompt_web_admin_core::repositories::sync::provenance::active_bundle_files;
 use systemprompt_web_admin_core::repositories::sync::sources::build_sources;
@@ -34,6 +33,7 @@ use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;
 use systemprompt_web_admin_core::templates::AdminTemplateEngine;
 use systemprompt_web_admin_core::types::{MarketplaceContext, UserContext};
+use systemprompt_web_admin_governance::repositories::gateway_policies::declared::services_root;
 
 pub(crate) const BASE_URL: &str = "/admin/configuration";
 

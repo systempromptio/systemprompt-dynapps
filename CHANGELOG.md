@@ -22,6 +22,12 @@ Conventions (strict — hold every entry to them):
 
 ### Changed
 
+- **Admin crate split, stage 2.** The governance domain — governance decisions and chain, gateway
+  routes and policies, approvals, secrets, plugin environment variables, the governance and authz
+  webhooks and the request audit record — is `systemprompt-web-admin-governance`
+  (`extensions/web/admin/governance`), mounted at the same paths; the `governance-ssr` cargo
+  feature lives only there. Tool-activity reads shared with analytics moved into
+  `systemprompt-web-admin-core::repositories::tool_activity`.
 - **Admin crate split, stage 1.** The catalog domain — marketplaces, plugins, skills, agents, MCP
   servers, managed resources, the retention lifecycle page and the marketplace-version analysis —
   is its own domain crate, `systemprompt-web-admin-catalog` (`extensions/web/admin/catalog`), mounted

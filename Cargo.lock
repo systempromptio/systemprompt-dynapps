@@ -5907,7 +5907,6 @@ dependencies = [
  "saml",
  "semver",
  "serde",
- "serde_jcs 0.1.0",
  "serde_json",
  "serde_yaml_ng",
  "sha2 0.10.9",
@@ -5916,6 +5915,7 @@ dependencies = [
  "systemprompt-security",
  "systemprompt-web-admin-catalog",
  "systemprompt-web-admin-core",
+ "systemprompt-web-admin-governance",
  "systemprompt-web-shared",
  "tempfile",
  "thiserror 2.0.21",
@@ -5985,6 +5985,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "systemprompt-web-admin-governance"
+version = "0.62.0"
+dependencies = [
+ "async-trait",
+ "axum",
+ "chrono",
+ "hex",
+ "inventory",
+ "serde",
+ "serde_jcs 0.1.0",
+ "serde_json",
+ "serde_yaml_ng",
+ "sha2 0.10.9",
+ "sqlx",
+ "systemprompt",
+ "systemprompt-security",
+ "systemprompt-web-admin-core",
+ "systemprompt-web-shared",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
+ "urlencoding",
+ "uuid",
+]
+
+[[package]]
 name = "systemprompt-web-content"
 version = "0.62.0"
 dependencies = [
@@ -6039,6 +6065,7 @@ dependencies = [
  "systemprompt-mcp-shared",
  "systemprompt-web-admin",
  "systemprompt-web-admin-core",
+ "systemprompt-web-admin-governance",
  "systemprompt-web-content",
  "systemprompt-web-shared",
  "thiserror 2.0.21",

@@ -15,14 +15,6 @@ use std::path::PathBuf;
 use systemprompt::loader::ConfigLoader;
 use systemprompt::models::services::ServicesConfig;
 use systemprompt_security::authz::{EntityKind, RegisteredEntities};
-use systemprompt_web_admin::repositories::gateway_policies::declared::{
-    POLICIES_FILE, parse_declared_policies,
-};
-use systemprompt_web_admin::repositories::gateway_policies::export::render_policies_export;
-use systemprompt_web_admin::repositories::gateway_policies::month_window::{
-    MONTH_WINDOW_SECONDS, normalise_spec,
-};
-use systemprompt_web_admin::repositories::gateway_policies::rows::PolicyRow;
 use systemprompt_web_admin::repositories::sync::groups_db::{
     parse_groups_doc, render_groups_export,
 };
@@ -39,6 +31,14 @@ use systemprompt_web_admin_core::repositories::access_rules::rules_yaml_loader::
 };
 use systemprompt_web_admin_core::repositories::access_rules::rules_yaml_types::RulesDoc;
 use systemprompt_web_admin_core::repositories::gateway_catalog::dispatchable_route_ids;
+use systemprompt_web_admin_governance::repositories::gateway_policies::declared::{
+    POLICIES_FILE, parse_declared_policies,
+};
+use systemprompt_web_admin_governance::repositories::gateway_policies::export::render_policies_export;
+use systemprompt_web_admin_governance::repositories::gateway_policies::month_window::{
+    MONTH_WINDOW_SECONDS, normalise_spec,
+};
+use systemprompt_web_admin_governance::repositories::gateway_policies::rows::PolicyRow;
 
 use crate::support::repo_root;
 

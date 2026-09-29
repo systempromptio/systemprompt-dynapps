@@ -5,7 +5,9 @@ use chrono::{DateTime, Utc};
 use serde::Serialize;
 
 use super::query::Lens;
-use crate::repositories::analysis::tools::{ToolActivityTotals, ToolSeriesPoint};
+use systemprompt_web_admin_core::repositories::tool_activity::{
+    ToolActivityTotals, ToolSeriesPoint,
+};
 use systemprompt_web_admin_core::ssr::format::{format_bytes, format_duration_ms};
 use systemprompt_web_admin_core::ssr::tone::{deny_tone, error_rate_tone, latency_tone, percent};
 use systemprompt_web_admin_core::ssr::types::sparkline::{SparklineView, sparkline_toned};

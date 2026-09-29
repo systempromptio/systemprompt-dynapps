@@ -1,11 +1,11 @@
 //! `repositories::secrets::secret_migration` — re-encryption of legacy
 //! plaintext secrets, driven by the migration job.
 
-use systemprompt_web_admin::repositories::secrets::secret_keys::get_or_create_user_dek;
-use systemprompt_web_admin::repositories::secrets::secret_migration::{
+use systemprompt_web_admin_core::crypto::secret_crypto::{encrypt, generate_nonce};
+use systemprompt_web_admin_governance::repositories::secrets::secret_keys::get_or_create_user_dek;
+use systemprompt_web_admin_governance::repositories::secrets::secret_migration::{
     get_key_version, insert_migration_audit, list_unencrypted_secrets, update_encrypted_value,
 };
-use systemprompt_web_admin_core::crypto::secret_crypto::{encrypt, generate_nonce};
 
 use crate::fixtures::{insert_env_var, insert_user, unique, user_id};
 use crate::tempdb::TempDb;

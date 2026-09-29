@@ -7,7 +7,7 @@ use systemprompt::identifiers::UserId;
 
 use super::query::{Lens, ToolsQuery};
 use crate::handlers::ssr::analysis::ribbon::{RibbonGroupView, RibbonView};
-use crate::repositories::analysis::tools::{
+use systemprompt_web_admin_core::repositories::tool_activity::{
     ArtifactKind, ToolActivityResult, ToolFacet, ToolState,
 };
 

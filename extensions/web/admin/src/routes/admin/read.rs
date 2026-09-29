@@ -11,15 +11,7 @@ use crate::routes::admin_groups;
 
 pub(super) fn build_admin_read_routes_inner(read_pool: &Arc<PgPool>) -> Router {
     Router::new()
-        .route("/gateway", get(handlers::get_gateway_handler))
-        .route(
-            "/gateway/catalog/for-user/{user_id}",
-            get(handlers::gateway_catalog::for_user_handler),
-        )
-        .route(
-            "/gateway/acl/detect",
-            get(handlers::gateway_catalog::detect_handler),
-        )
+        .merge(systemprompt_web_admin_governance::routes::api::gateway_read_routes())
         .route("/users", get(handlers::list_users_handler))
         .route(
             "/users/{user_id}/detail",

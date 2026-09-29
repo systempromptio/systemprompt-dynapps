@@ -1,6 +1,6 @@
 use chrono::{DateTime, TimeZone, Utc};
 use systemprompt::identifiers::UserId;
-use systemprompt_web_admin::repositories::governance::warnings::{
+use systemprompt_web_admin_governance::repositories::governance::warnings::{
     WarningGroupBy, WarningRollupRow, group_warning_rollup,
 };
 

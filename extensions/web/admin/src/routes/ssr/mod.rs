@@ -151,10 +151,9 @@ fn account_routes() -> Router<Arc<PgPool>> {
 fn api_routes() -> Router<Arc<PgPool>> {
     Router::new()
         .route("/auth/me", get(middleware::auth_me_handler))
-        .route("/api/chain/{id}", get(handlers::ssr::chain_envelope))
+        .merge(systemprompt_web_admin_governance::routes::ssr_governance::api_routes())
         .route("/api/history/search", get(handlers::ssr::history_search))
         .route("/api/overview", get(handlers::ssr::overview_fragment))
-        .route("/api/search/resolve", get(handlers::ssr::search_resolve))
         .route(
             "/api/profile/bridge-code",
             post(handlers::ssr::issue_bridge_code),

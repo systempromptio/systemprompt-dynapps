@@ -10,12 +10,9 @@
 //! profile YAML and access-control
 //! rules are declared in `services/access-control/rules.yaml` — read here,
 //! seeded once at boot by `repositories::sync::boot`, and otherwise only
-//! compared against the database. The exception is [`acl_detect`], which is
-//! DB-backed but belongs to this domain: it re-runs the configured ACL over
-//! traffic that already went through.
+//! compared against the database. The gateway ACL and its after-the-fact
+//! detector live in the governance crate beside the routes they guard.
 
-pub mod acl_detect;
-pub mod gateway_acl;
 pub mod groups_yaml_loader;
 pub mod groups_yaml_types;
 pub mod security_policy;

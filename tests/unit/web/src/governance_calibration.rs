@@ -11,7 +11,7 @@ use systemprompt_security::policy::{
     AgentScope, GovernanceConfig, GovernanceEngine, GovernedInput, GovernedTarget, McpToolInput,
     PolicyContext,
 };
-use systemprompt_web_admin::gateway_safety::PiiScanner;
+use systemprompt_web_admin_governance::gateway_safety::PiiScanner;
 
 fn engine(mode: &str) -> GovernanceEngine {
     GovernanceEngine::from_config(

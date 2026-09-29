@@ -41,6 +41,8 @@ pub mod decisions;
 pub mod findings;
 pub mod hook_events;
 pub mod rankings;
+pub mod request_evidence;
+pub mod request_schemas;
 pub mod resolve;
 pub mod secret_audit_log;
 pub mod suggest;

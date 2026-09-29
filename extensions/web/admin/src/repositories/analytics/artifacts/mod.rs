@@ -1,10 +1,10 @@
 //! One artifact, read for `/admin/artifacts/{artifact_id}` and its preview.
 //!
-//! The list pages read `repositories::analysis::tools` (the `tool_activity`
-//! view); this module reads the one row `mcp_artifacts` holds for an
-//! artifact with its stored body, the execution and ledger rows of the same
-//! call, the one artifact rule's verdict on it, the scanner findings and the
-//! governance decision keyed to the call.
+//! The list pages read admin-core's `repositories::tool_activity` (the
+//! `tool_activity` view); this module reads the one row `mcp_artifacts` holds
+//! for an artifact with its stored body, the execution and ledger rows of the
+//! same call, the one artifact rule's verdict on it, the scanner findings and
+//! the governance decision keyed to the call.
 
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;

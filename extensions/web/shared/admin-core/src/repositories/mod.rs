@@ -18,5 +18,6 @@ pub mod scheduled_jobs;
 pub mod scope;
 pub mod share_token;
 pub mod sync;
+pub mod tool_activity;
 pub mod user_activity;
 pub mod user_usage;

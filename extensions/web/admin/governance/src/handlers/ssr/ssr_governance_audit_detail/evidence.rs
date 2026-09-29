@@ -11,7 +11,7 @@ use serde::Serialize;
 use sqlx::PgPool;
 use systemprompt_web_admin_core::ssr::viewer_tz::viewer_tz;
 
-use crate::repositories::analytics::requests::{
+use crate::repositories::governance::request_evidence::{
     list_request_safety_findings, list_request_tool_calls,
 };
 use systemprompt_web_admin_core::ssr::faults::Faults;

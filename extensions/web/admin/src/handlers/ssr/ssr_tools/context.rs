@@ -9,7 +9,7 @@ use super::ribbon::ribbon;
 use super::rows::{ToolActivityRowView, kind_icon, kind_label, tool_row};
 use crate::handlers::ssr::analysis::help::HelpView;
 use crate::handlers::ssr::analysis::ribbon::RibbonView;
-use crate::repositories::analysis::tools::{
+use systemprompt_web_admin_core::repositories::tool_activity::{
     ToolActivityResult, ToolBreakdownBy, ToolBucketRow, ToolSort,
 };
 use systemprompt_web_admin_core::ssr::format::{format_bytes, format_duration_ms};

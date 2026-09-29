@@ -6,9 +6,6 @@
 //! sources, state, provenance and the access-control plane — lives in
 //! `systemprompt_web_admin_core::repositories::sync`.
 
-pub mod gateway_policies;
-pub mod gateway_routes;
-pub mod governance;
 pub mod groups;
 pub mod groups_db;
 pub mod groups_drift;

@@ -28,10 +28,10 @@ use systemprompt_web_admin_core::ssr::list_view::{ScopeFilterView, scope_filter_
 use systemprompt_web_admin_core::ssr::page::Page;
 use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 
-use crate::repositories::analysis::tools::{
+use systemprompt_web_admin_core::repositories::scope::ScopeRequest;
+use systemprompt_web_admin_core::repositories::tool_activity::{
     ToolActivityPage, ToolActivityResult, load_tool_activity_page,
 };
-use systemprompt_web_admin_core::repositories::scope::ScopeRequest;
 use systemprompt_web_admin_core::types::UserContext;
 use systemprompt_web_admin_core::util::time_range::TimeRange;
 

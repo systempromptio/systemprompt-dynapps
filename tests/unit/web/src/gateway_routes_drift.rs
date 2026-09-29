@@ -4,12 +4,12 @@
 //! touching the settings above them.
 
 use chrono::Utc;
-use systemprompt_web_admin::repositories::gateway_routes::declared::{
+use systemprompt_web_admin_governance::repositories::gateway_routes::declared::{
     DeclaredRoutes, parse_declared_routes,
 };
-use systemprompt_web_admin::repositories::gateway_routes::drift::compute_route_drift;
-use systemprompt_web_admin::repositories::gateway_routes::render::render_routes_export;
-use systemprompt_web_admin::repositories::gateway_routes::rows::{
+use systemprompt_web_admin_governance::repositories::gateway_routes::drift::compute_route_drift;
+use systemprompt_web_admin_governance::repositories::gateway_routes::render::render_routes_export;
+use systemprompt_web_admin_governance::repositories::gateway_routes::rows::{
     RouteRow, SOURCE_CODE, SOURCE_DASHBOARD,
 };
 

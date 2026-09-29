@@ -4,13 +4,15 @@
 
 use chrono::{NaiveDate, Utc};
 use systemprompt::ai::{GatewayPolicyConfig, QuotaMode, SafetyMode};
-use systemprompt_web_admin::repositories::gateway_policies::declared::parse_declared_policies;
-use systemprompt_web_admin::repositories::gateway_policies::drift::compute_policy_drift;
-use systemprompt_web_admin::repositories::gateway_policies::export::render_policies_export;
-use systemprompt_web_admin::repositories::gateway_policies::month_window::{
+use systemprompt_web_admin_governance::repositories::gateway_policies::declared::parse_declared_policies;
+use systemprompt_web_admin_governance::repositories::gateway_policies::drift::compute_policy_drift;
+use systemprompt_web_admin_governance::repositories::gateway_policies::export::render_policies_export;
+use systemprompt_web_admin_governance::repositories::gateway_policies::month_window::{
     MONTH_WINDOW_SECONDS, month_window_seconds,
 };
-use systemprompt_web_admin::repositories::gateway_policies::rows::{PolicyRow, effective_spec};
+use systemprompt_web_admin_governance::repositories::gateway_policies::rows::{
+    PolicyRow, effective_spec,
+};
 
 const DECLARED: &str = r"
 policies:
