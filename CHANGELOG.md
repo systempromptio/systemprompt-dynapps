@@ -22,6 +22,16 @@ Conventions (strict — hold every entry to them):
 
 ### Changed
 
+- **Core pin moved to core `next` at `4d166edb7`.** Core's MCP executor now claims tool-call
+  intents through the `ToolCallIntentClaims` trait instead of reading `ai_requests` itself.
+  The bundled `systemprompt` MCP server (`extensions/mcp/systemprompt/src/server/mod.rs`) and
+  the two MCP integration suites now pass it an `AiRequestRepository`. Core also ranks popular
+  content over the analytics report views, so the `site_content_prerender` job
+  (`extensions/web/jobs/src/prerender.rs`) hands `prerender_content` a
+  `ContentAnalyticsRepository`. A local database whose `web` migrations stopped at 55 cannot
+  upgrade past 56 (`skill_version_impact` reads the `managed_invocation_attributions` table that
+  core dropped). It predates the 0.56.0 schema-upgrade floor, so recreate it and run
+  `systemprompt admin bootstrap`.
 - **Admin crate split, stage 6.** The residual `systemprompt-web-admin` crate is gone. Its
   composition root — the admin API, SSR, bridge sign-in, webhook, secrets and share routers, the
   session and personal-access-token middleware, the sidebar marketplace context, the login page

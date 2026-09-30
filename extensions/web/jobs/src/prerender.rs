@@ -3,6 +3,7 @@
 //! never collide in the scheduler.
 
 use std::sync::Arc;
+use systemprompt::analytics::ContentAnalyticsRepository;
 use systemprompt::config::AppPaths;
 use systemprompt::database::DbPool;
 use systemprompt::generator::prerender_content;
@@ -53,7 +54,16 @@ async fn execute_inner(ctx: &JobContext) -> Result<JobResult, JobError> {
 
     let content_repo = systemprompt::content::ContentRepository::new(db_pool)?;
 
-    prerender_content(DbPool::clone(db_pool), content_repo, paths).await?;
+    let content_analytics = ContentAnalyticsRepository::new(db_pool)
+        .map_err(|e| JobError::Other(e.to_string()))?;
+
+    prerender_content(
+        DbPool::clone(db_pool),
+        content_repo,
+        content_analytics,
+        paths,
+    )
+    .await?;
 
     let duration_ms = u64::try_from(start.elapsed().as_millis()).unwrap_or(u64::MAX);
 

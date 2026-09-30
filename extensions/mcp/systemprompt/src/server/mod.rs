@@ -20,9 +20,11 @@ use rmcp::service::{MaybeSendFuture, RequestContext, RoleServer};
 use rmcp::{ErrorData as McpError, ServerHandler};
 use std::future::Future;
 use std::sync::Arc;
+use systemprompt::ai::AiRequestRepository;
 use systemprompt::database::DbPool;
 use systemprompt::identifiers::McpServerId;
 use systemprompt::mcp::repository::ToolUsageRepository;
+use systemprompt::traits::DynToolCallIntentClaims;
 use systemprompt::mcp::{
     ArtifactIngest, ArtifactViewerConfig, McpArtifactRepository, McpToolExecutor, WEBSITE_URL,
     build_artifact_viewer_resource, build_extension_capabilities,
@@ -55,8 +57,13 @@ impl SystempromptServer {
             ToolUsageRepository::new(&db_pool)
                 .map_err(|e| SystempromptToolError::Internal(e.to_string()))?,
         );
+        let intent_claims: DynToolCallIntentClaims = Arc::new(
+            AiRequestRepository::new(&db_pool)
+                .map_err(|e| SystempromptToolError::Internal(e.to_string()))?,
+        );
         let executor = McpToolExecutor::new(
             tool_usage_repo,
+            intent_claims,
             Arc::clone(&artifact_ingest),
             service_id.as_str(),
         );

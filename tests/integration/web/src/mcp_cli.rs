@@ -16,10 +16,12 @@ use std::sync::Arc;
 
 use rmcp::model::CallToolRequestParams;
 use sqlx::PgPool;
+use systemprompt::ai::AiRequestRepository;
 use systemprompt::database::Database;
 use systemprompt::identifiers::{AgentName, ContextId, SessionId, TraceId};
 use systemprompt::mcp::repository::ToolUsageRepository;
 use systemprompt::mcp::{ArtifactIngest, McpToolExecutor};
+use systemprompt::traits::DynToolCallIntentClaims;
 use systemprompt::models::artifacts::{
     CliArtifact, Column, ColumnType, TableArtifact, TextArtifact,
 };
@@ -38,7 +40,9 @@ fn db_pool(pool: &Arc<PgPool>) -> systemprompt::database::DbPool {
 fn executor(db_pool: &systemprompt::database::DbPool) -> McpToolExecutor {
     let usage = Arc::new(ToolUsageRepository::new(db_pool).expect("tool usage repository"));
     let ingest = Arc::new(ArtifactIngest::from_db(db_pool, None).expect("artifact ingest"));
-    McpToolExecutor::new(usage, ingest, "systemprompt")
+    let intents: DynToolCallIntentClaims =
+        Arc::new(AiRequestRepository::new(db_pool).expect("ai request repository"));
+    McpToolExecutor::new(usage, intents, ingest, "systemprompt")
 }
 
 fn request_context() -> SysRequestContext {
