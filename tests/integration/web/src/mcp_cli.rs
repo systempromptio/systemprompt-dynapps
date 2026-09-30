@@ -21,11 +21,11 @@ use systemprompt::database::Database;
 use systemprompt::identifiers::{AgentName, ContextId, SessionId, TraceId};
 use systemprompt::mcp::repository::ToolUsageRepository;
 use systemprompt::mcp::{ArtifactIngest, McpToolExecutor};
-use systemprompt::traits::DynToolCallIntentClaims;
 use systemprompt::models::artifacts::{
     CliArtifact, Column, ColumnType, TableArtifact, TextArtifact,
 };
 use systemprompt::models::execution::context::RequestContext as SysRequestContext;
+use systemprompt::traits::DynToolCallIntentClaims;
 use systemprompt_mcp_agent::{CliError, CliLocation, filter_hallucinated_args};
 
 use crate::tempdb::TempDb;

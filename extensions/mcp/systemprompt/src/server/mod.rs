@@ -24,7 +24,6 @@ use systemprompt::ai::AiRequestRepository;
 use systemprompt::database::DbPool;
 use systemprompt::identifiers::McpServerId;
 use systemprompt::mcp::repository::ToolUsageRepository;
-use systemprompt::traits::DynToolCallIntentClaims;
 use systemprompt::mcp::{
     ArtifactIngest, ArtifactViewerConfig, McpArtifactRepository, McpToolExecutor, WEBSITE_URL,
     build_artifact_viewer_resource, build_extension_capabilities,
@@ -32,6 +31,7 @@ use systemprompt::mcp::{
     read_artifact_resource, read_artifact_viewer_resource,
 };
 use systemprompt::security::authz::SharedAuthzHook;
+use systemprompt::traits::DynToolCallIntentClaims;
 use systemprompt_mcp_shared::record_mcp_access;
 
 use systemprompt::mcp::client_profile_from_peer;

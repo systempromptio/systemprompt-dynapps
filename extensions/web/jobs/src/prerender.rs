@@ -54,8 +54,8 @@ async fn execute_inner(ctx: &JobContext) -> Result<JobResult, JobError> {
 
     let content_repo = systemprompt::content::ContentRepository::new(db_pool)?;
 
-    let content_analytics = ContentAnalyticsRepository::new(db_pool)
-        .map_err(|e| JobError::Other(e.to_string()))?;
+    let content_analytics =
+        ContentAnalyticsRepository::new(db_pool).map_err(|e| JobError::Other(e.to_string()))?;
 
     prerender_content(
         DbPool::clone(db_pool),
