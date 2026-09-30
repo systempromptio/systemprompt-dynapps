@@ -7,8 +7,10 @@ use systemprompt_web_admin::repositories::groups::mappings::{
     delete_group_ad_mapping, insert_group_ad_mapping, list_group_ad_mappings,
 };
 use systemprompt_web_admin::repositories::groups::members::{
-    insert_group_member, list_group_ids_for_user, list_source_ad_groups,
-    replace_directory_group_memberships,
+    insert_group_member, replace_directory_group_memberships,
+};
+use systemprompt_web_admin_core::repositories::principal::group_membership::{
+    list_group_ids_for_user, list_source_ad_groups,
 };
 use systemprompt_web_admin_core::types::groups::CreateGroupRequest;
 use systemprompt_web_shared::GroupId;

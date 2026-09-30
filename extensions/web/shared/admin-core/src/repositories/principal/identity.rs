@@ -14,8 +14,8 @@ use systemprompt::identifiers::UserId;
 /// directory asserted.
 ///
 /// Those live on the `group_members.source_ad_group` column and are read by
-/// `repositories::groups::members::list_source_ad_groups`; the group
-/// and project ids they resolved to come back here.
+/// `repositories::principal::group_membership::list_source_ad_groups`; the
+/// group and project ids they resolved to come back here.
 #[derive(Debug, Clone)]
 pub struct IdentityEnvelope {
     pub user_id: UserId,

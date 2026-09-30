@@ -22,6 +22,12 @@ Conventions (strict — hold every entry to them):
 
 ### Changed
 
+- **Admin crate split, stage 3.** The platform domain — sync, devices, the bridge identity and
+  device link, connectors and connector OAuth, Salesforce identity and orgs, jobs and the
+  configuration page — is `systemprompt-web-admin-platform` (`extensions/web/admin/platform`),
+  mounted at the same paths. `SalesforceConfig` and the connector OAuth flows import from there;
+  group-membership reads shared with identity and the bridge client constants moved into
+  `systemprompt-web-admin-core`.
 - **Admin crate split, stage 2.** The governance domain — governance decisions and chain, gateway
   routes and policies, approvals, secrets, plugin environment variables, the governance and authz
   webhooks and the request audit record — is `systemprompt-web-admin-governance`

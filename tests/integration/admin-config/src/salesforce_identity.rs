@@ -3,7 +3,7 @@
 
 use crate::fixtures::{insert_user, unique, user_id};
 use crate::tempdb::TempDb;
-use systemprompt_web_admin::repositories::users::salesforce_identity as repo;
+use systemprompt_web_admin_platform::repositories::connectors::salesforce_identity as repo;
 
 #[tokio::test]
 async fn identities_are_keyed_per_org_and_listed_for_authz() {

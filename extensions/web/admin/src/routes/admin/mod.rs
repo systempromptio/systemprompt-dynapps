@@ -23,7 +23,6 @@
 
 use std::sync::Arc;
 
-use axum::extract::DefaultBodyLimit;
 use axum::routing::{delete, get, patch, post, put};
 use axum::{Router, middleware as axum_middleware};
 use sqlx::PgPool;
@@ -32,10 +31,10 @@ use super::super::handlers;
 use super::admin_groups;
 use systemprompt::database::DbPool;
 use systemprompt_web_admin_catalog::routes as catalog_routes;
-use systemprompt_web_admin_core::repositories::sync::archive::MAX_UPLOAD_BYTES;
 use systemprompt_web_admin_core::state::StateError;
 use systemprompt_web_admin_core::types::{ROLES_CONSOLE, ROLES_MANAGE, ROLES_PLATFORM};
 use systemprompt_web_admin_governance::routes::api as governance_routes;
+use systemprompt_web_admin_platform::routes::api as platform_routes;
 
 mod read;
 use read::build_admin_read_routes_inner;
@@ -63,7 +62,7 @@ pub(crate) fn build_admin_only_routes(
             ROLES_PLATFORM,
             systemprompt_web_admin_core::middleware::gates::require_roles_middleware,
         ));
-    let participant = build_sync_participant_routes()
+    let participant = platform_routes::sync_participant_routes()
         .with_state(Arc::clone(write_pool))
         .layer(axum_middleware::from_fn(
             systemprompt_web_admin_core::middleware::gates::require_scoped_console_middleware,
@@ -107,39 +106,6 @@ fn build_access_control_write_routes() -> Router<Arc<PgPool>> {
         )
 }
 
-fn build_sync_write_routes() -> Router<Arc<PgPool>> {
-    Router::new()
-        .route(
-            "/sync/import",
-            post(handlers::sync::stage_import_handler)
-                .layer(DefaultBodyLimit::max(MAX_UPLOAD_BYTES)),
-        )
-        .route(
-            "/sync/import/{stage_id}/apply",
-            post(handlers::sync::apply_import_handler),
-        )
-        .route(
-            "/sync/import/{stage_id}",
-            delete(handlers::sync::discard_import_handler),
-        )
-}
-
-fn build_sync_participant_routes() -> Router<Arc<PgPool>> {
-    Router::new()
-        .route(
-            "/sync/planes/{plane}/apply",
-            post(handlers::sync::apply_handler),
-        )
-        .route(
-            "/sync/access-control/keep",
-            post(handlers::sync::keep_handler),
-        )
-        .route(
-            "/sync/sources/refresh",
-            post(handlers::sync::refresh_sources_handler),
-        )
-}
-
 fn build_admin_write_routes(write_pool: &Arc<PgPool>) -> Router {
     Router::new()
         .merge(governance_routes::gateway_write_routes())
@@ -152,15 +118,7 @@ fn build_admin_write_routes(write_pool: &Arc<PgPool>) -> Router {
             put(handlers::update_user_handler).delete(handlers::delete_user_handler),
         )
         .merge(catalog_routes::api::share_token_routes())
-        .route(
-            "/users/{user_id}/salesforce-identity",
-            post(handlers::salesforce_identity::link_salesforce_identity_handler)
-                .delete(handlers::salesforce_identity::unlink_salesforce_identity_handler),
-        )
-        .route(
-            "/connectors/{provider}/reprovision",
-            post(handlers::connector_reprovision::reprovision_connector_handler),
-        )
+        .merge(platform_routes::connector_write_routes())
         .route(
             "/users/{user_id}/sessions",
             get(handlers::list_user_sessions_handler)
@@ -171,7 +129,7 @@ fn build_admin_write_routes(write_pool: &Arc<PgPool>) -> Router {
             delete(handlers::revoke_user_session_handler),
         )
         .merge(build_access_control_write_routes())
-        .merge(build_sync_write_routes())
+        .merge(platform_routes::sync_write_routes())
         .route(
             "/users/{user_id}/roles",
             put(handlers::roles::set_user_roles_handler),
@@ -186,7 +144,7 @@ fn build_admin_write_routes(write_pool: &Arc<PgPool>) -> Router {
         )
         .merge(admin_groups::group_write_routes())
         .merge(admin_groups::project_write_routes())
-        .merge(build_management_write_routes())
+        .merge(platform_routes::device_write_routes())
         .merge(governance_routes::approval_write_routes())
         .with_state(Arc::clone(write_pool))
 }
@@ -196,22 +154,6 @@ fn build_admin_platform_routes(write_pool: &Arc<PgPool>) -> Router {
         .merge(admin_groups::group_platform_routes())
         .merge(admin_groups::project_platform_routes())
         .with_state(Arc::clone(write_pool))
-}
-
-fn build_management_write_routes() -> Router<Arc<PgPool>> {
-    Router::new()
-        .route(
-            "/management/devices",
-            post(handlers::devices::enroll_device),
-        )
-        .route(
-            "/devices/{kind}/{id}",
-            delete(handlers::devices::admin_revoke_credential),
-        )
-        .route(
-            "/devices/certs/{id}/expiry",
-            put(handlers::devices::admin_set_cert_expiry),
-        )
 }
 
 pub(crate) fn build_self_service_routes(write_pool: &Arc<PgPool>) -> Router {

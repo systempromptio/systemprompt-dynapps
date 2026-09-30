@@ -2,7 +2,7 @@
 
 use crate::fixtures::{insert_user, unique, user_id};
 use crate::tempdb::TempDb;
-use systemprompt_web_admin::repositories::users::connector_credentials::{
+use systemprompt_web_admin_platform::repositories::connectors::connector_credentials::{
     self as repo, EncryptedGrant,
 };
 
@@ -76,7 +76,7 @@ async fn consent_is_single_use_and_bound_to_the_user_and_provider() {
 
 #[tokio::test]
 async fn account_revisions_survive_disconnect_and_are_isolated_per_user() {
-    use systemprompt_web_admin::repositories::users::connector_accounts as accounts;
+    use systemprompt_web_admin_platform::repositories::connectors::connector_accounts as accounts;
     let Some(db) = TempDb::create().await else {
         return;
     };
@@ -123,7 +123,7 @@ async fn account_revisions_survive_disconnect_and_are_isolated_per_user() {
 #[tokio::test]
 async fn refresh_and_disconnect_serialize_on_the_account_generation() {
     use std::time::Duration;
-    use systemprompt_web_admin::repositories::users::connector_accounts as accounts;
+    use systemprompt_web_admin_platform::repositories::connectors::connector_accounts as accounts;
     let Some(db) = TempDb::create().await else {
         return;
     };
@@ -162,7 +162,7 @@ async fn refresh_and_disconnect_serialize_on_the_account_generation() {
 
 #[tokio::test]
 async fn connector_login_ignores_analytics_end_but_rejects_revocation_and_expiry() {
-    use systemprompt_web_admin::repositories::users::connector_accounts as accounts;
+    use systemprompt_web_admin_platform::repositories::connectors::connector_accounts as accounts;
     let Some(db) = TempDb::create().await else {
         return;
     };
@@ -204,7 +204,7 @@ async fn connector_login_ignores_analytics_end_but_rejects_revocation_and_expiry
 
 #[tokio::test]
 async fn configured_provider_ids_preserve_accounts_and_single_use_consent() {
-    use systemprompt_web_admin::repositories::users::connector_accounts as accounts;
+    use systemprompt_web_admin_platform::repositories::connectors::connector_accounts as accounts;
     let Some(db) = TempDb::create().await else {
         return;
     };

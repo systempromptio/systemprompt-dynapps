@@ -50,6 +50,7 @@ dependencies = [
  "systemprompt-security",
  "systemprompt-web-admin",
  "systemprompt-web-admin-core",
+ "systemprompt-web-admin-platform",
  "systemprompt-web-extension",
  "systemprompt-web-jobs",
  "systemprompt-web-shared",
@@ -74,6 +75,7 @@ dependencies = [
  "systemprompt-web-admin-catalog",
  "systemprompt-web-admin-core",
  "systemprompt-web-admin-governance",
+ "systemprompt-web-admin-platform",
  "systemprompt-web-extension",
  "tempfile",
  "tokio",
@@ -7868,11 +7870,9 @@ dependencies = [
  "chrono",
  "hex",
  "inventory",
- "jsonwebtoken",
  "rand 0.9.5",
  "reqwest 0.13.5",
  "saml",
- "semver",
  "serde",
  "serde_json",
  "serde_yaml_ng",
@@ -7883,6 +7883,7 @@ dependencies = [
  "systemprompt-web-admin-catalog",
  "systemprompt-web-admin-core",
  "systemprompt-web-admin-governance",
+ "systemprompt-web-admin-platform",
  "systemprompt-web-shared",
  "tempfile",
  "thiserror 2.0.21",
@@ -7890,7 +7891,6 @@ dependencies = [
  "tower",
  "tower-http 0.7.1",
  "tracing",
- "url",
  "urlencoding",
  "uuid",
  "zip",
@@ -7978,6 +7978,36 @@ dependencies = [
 ]
 
 [[package]]
+name = "systemprompt-web-admin-platform"
+version = "0.62.0"
+dependencies = [
+ "async-trait",
+ "axum",
+ "base64 0.22.1",
+ "chrono",
+ "inventory",
+ "jsonwebtoken",
+ "rand 0.9.5",
+ "reqwest 0.13.5",
+ "semver",
+ "serde",
+ "serde_json",
+ "serde_yaml_ng",
+ "sha2 0.10.9",
+ "sqlx",
+ "systemprompt",
+ "systemprompt-security",
+ "systemprompt-web-admin-core",
+ "systemprompt-web-shared",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
+ "url",
+ "urlencoding",
+ "uuid",
+]
+
+[[package]]
 name = "systemprompt-web-content"
 version = "0.62.0"
 dependencies = [
@@ -8006,6 +8036,7 @@ dependencies = [
  "systemprompt-extension",
  "systemprompt-web-admin",
  "systemprompt-web-admin-core",
+ "systemprompt-web-admin-platform",
  "systemprompt-web-content",
  "systemprompt-web-jobs",
  "systemprompt-web-shared",
@@ -8033,6 +8064,7 @@ dependencies = [
  "systemprompt-web-admin",
  "systemprompt-web-admin-core",
  "systemprompt-web-admin-governance",
+ "systemprompt-web-admin-platform",
  "systemprompt-web-content",
  "systemprompt-web-shared",
  "thiserror 2.0.21",
@@ -8072,6 +8104,7 @@ dependencies = [
  "sqlx",
  "systemprompt",
  "systemprompt-web-admin",
+ "systemprompt-web-admin-platform",
  "systemprompt-web-shared",
  "thiserror 2.0.21",
  "tracing",
@@ -9279,6 +9312,7 @@ dependencies = [
  "systemprompt-web-admin-catalog",
  "systemprompt-web-admin-core",
  "systemprompt-web-admin-governance",
+ "systemprompt-web-admin-platform",
  "systemprompt-web-extension",
  "systemprompt-web-jobs",
  "systemprompt-web-shared",

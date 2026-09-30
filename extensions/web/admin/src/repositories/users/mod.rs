@@ -8,12 +8,7 @@ pub mod queries;
 pub mod revocation;
 pub mod roles;
 pub mod roster;
-pub mod salesforce_identity;
 pub mod sessions;
 pub mod user_settings;
 
 pub use mutations::{create_user, delete_user, update_user};
-
-pub mod connector_credentials;
-
-pub mod connector_accounts;

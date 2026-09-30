@@ -7,7 +7,7 @@ use base64::Engine;
 use jsonwebtoken::{Algorithm, Validation, decode};
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
-use systemprompt_web_admin::identity_token::{IdentityClaims, TOKEN_TTL_SECS};
+use systemprompt_web_admin_platform::identity_token::{IdentityClaims, TOKEN_TTL_SECS};
 
 use crate::app::{App, Call};
 use crate::principal::Principal;

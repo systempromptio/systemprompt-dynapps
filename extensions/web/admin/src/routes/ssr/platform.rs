@@ -13,18 +13,15 @@ use sqlx::PgPool;
 use crate::handlers;
 use systemprompt_web_admin_catalog::routes::ssr as catalog_routes;
 use systemprompt_web_admin_governance::routes::ssr_governance as governance_routes;
+use systemprompt_web_admin_platform::routes::platform_ssr as platform_ssr_routes;
 
 pub(super) fn platform_routes() -> Router<Arc<PgPool>> {
     Router::new()
         .merge(catalog_routes::platform_routes())
         .merge(governance_routes::gateway_routes())
-        .route("/configuration", get(handlers::ssr::configuration_page))
+        .merge(platform_ssr_routes::configuration_routes())
         .merge(catalog_routes::lifecycle_routes())
-        .route("/sync", get(handlers::ssr::sync_page))
-        .route(
-            "/sync/import/{stage_id}",
-            get(handlers::ssr::import_preview_page),
-        )
+        .merge(platform_ssr_routes::sync_routes())
         .route(
             "/system/observability",
             get(handlers::ssr::observability_page),

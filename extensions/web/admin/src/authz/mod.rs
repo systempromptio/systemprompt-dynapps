@@ -8,4 +8,3 @@
 pub mod group;
 pub mod project;
 pub mod role;
-pub mod salesforce;

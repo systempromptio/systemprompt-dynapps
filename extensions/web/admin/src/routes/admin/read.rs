@@ -19,7 +19,7 @@ pub(super) fn build_admin_read_routes_inner(read_pool: &Arc<PgPool>) -> Router {
         )
         .route("/users/{user_id}/usage", get(handlers::user_usage_handler))
         .route("/events", get(handlers::list_events_handler))
-        .route("/jobs", get(handlers::list_jobs_handler))
+        .merge(systemprompt_web_admin_platform::routes::api::jobs_read_routes())
         .route(
             "/access-control",
             get(handlers::access_control::list_access_rules_handler),
@@ -28,16 +28,7 @@ pub(super) fn build_admin_read_routes_inner(read_pool: &Arc<PgPool>) -> Router {
             "/access-control/users/{user_id}/matrix",
             get(handlers::access_control::user_matrix_handler),
         )
-        .route("/sync/status", get(handlers::sync::status_handler))
-        .route(
-            "/sync/planes/{plane}/drift",
-            get(handlers::sync::drift_handler),
-        )
-        .route(
-            "/sync/planes/{plane}/export",
-            get(handlers::sync::export_handler),
-        )
-        .route("/sync/export.zip", get(handlers::sync::export_zip_handler))
+        .merge(systemprompt_web_admin_platform::routes::api::sync_read_routes())
         .route(
             "/users/roles",
             get(handlers::gateway_access::list_distinct_roles_handler),

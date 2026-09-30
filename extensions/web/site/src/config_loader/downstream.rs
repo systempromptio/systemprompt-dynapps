@@ -26,6 +26,6 @@ fn load_downstream_config<T: serde::de::DeserializeOwned>(
 }
 
 pub(super) fn load_salesforce_config()
--> Result<Option<Arc<systemprompt_web_admin::SalesforceConfig>>, ConfigError> {
+-> Result<Option<Arc<systemprompt_web_admin_platform::SalesforceConfig>>, ConfigError> {
     load_downstream_config("salesforce.yaml", "Salesforce")
 }

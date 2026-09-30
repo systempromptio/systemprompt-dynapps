@@ -130,7 +130,7 @@ pub(crate) async fn issue_bridge_code(
     Extension(user_ctx): Extension<UserContext>,
     State(pool): State<Arc<PgPool>>,
 ) -> AdminResult<Response> {
-    let (_, gateway_url) = bridge_profile::read_config_strings();
+    let (_, gateway_url) = systemprompt_web_admin_core::bridge_client::read_config_strings();
     let block = bridge_profile::issue_bridge_connect(&pool, &user_ctx, gateway_url.as_deref())
         .await
         .ok_or_else(|| {

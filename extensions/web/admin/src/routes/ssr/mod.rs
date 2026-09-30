@@ -23,6 +23,7 @@ use platform::platform_routes;
 use systemprompt::database::DbPool;
 use systemprompt_web_admin_core::state::StateError;
 use systemprompt_web_admin_core::templates::AdminTemplateEngine;
+use systemprompt_web_admin_platform::routes::platform_ssr;
 
 pub fn admin_ssr_router(
     db: &DbPool,
@@ -122,17 +123,8 @@ fn people_routes() -> Router<Arc<PgPool>> {
             get(handlers::ssr::project_report_page),
         )
         .route("/roles", get(handlers::ssr::roles_page))
-        .route("/devices", get(handlers::ssr::devices_page))
+        .merge(platform_ssr::device_routes())
         .route("/access-control", get(handlers::ssr::access_control_page))
-        .route("/devices/pats", post(handlers::devices::issue_pat))
-        .route(
-            "/devices/pats/{id}",
-            axum::routing::delete(handlers::devices::revoke_pat),
-        )
-        .route(
-            "/devices/certs/{id}",
-            axum::routing::delete(handlers::devices::revoke_cert),
-        )
 }
 
 fn account_routes() -> Router<Arc<PgPool>> {
@@ -143,9 +135,7 @@ fn account_routes() -> Router<Arc<PgPool>> {
             "/history/conversations/{context_id}",
             get(handlers::ssr::history_conversation_page),
         )
-        .route("/connect", get(handlers::ssr::connect_page))
-        .route("/connectors", get(handlers::ssr::connectors_page))
-        .route("/setup", get(handlers::ssr::setup_page))
+        .merge(platform_ssr::account_routes())
 }
 
 fn api_routes() -> Router<Arc<PgPool>> {
@@ -158,8 +148,5 @@ fn api_routes() -> Router<Arc<PgPool>> {
             "/api/profile/bridge-code",
             post(handlers::ssr::issue_bridge_code),
         )
-        .route(
-            "/api/profile/salesforce/unlink",
-            post(handlers::salesforce_auth::salesforce_unlink),
-        )
+        .merge(platform_ssr::api_routes())
 }

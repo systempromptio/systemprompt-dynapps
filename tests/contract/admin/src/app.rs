@@ -18,6 +18,7 @@ use axum::http::{Request, StatusCode};
 use http_body_util::BodyExt as _;
 use sqlx::PgPool;
 use systemprompt_web_admin as admin;
+use systemprompt_web_admin_platform as platform;
 use tower::ServiceExt;
 
 use crate::globals;
@@ -85,10 +86,10 @@ impl App {
                 )
                 .expect("build the admin API router"),
             )
-            .merge(admin::connector_api_router(Arc::clone(pool)))
-            .merge(admin::bridge_identity_router(Arc::clone(pool)))
-            .merge(admin::salesforce_api_router(admin::SalesforceDeps {
-                config: Arc::new(admin::SalesforceConfig::disabled()),
+            .merge(platform::connector_api_router(Arc::clone(pool)))
+            .merge(platform::bridge_identity_router(Arc::clone(pool)))
+            .merge(platform::salesforce_api_router(platform::SalesforceDeps {
+                config: Arc::new(platform::SalesforceConfig::disabled()),
                 write_pool: Arc::clone(pool),
             }));
         let sso_deps = admin::AdfsDeps {

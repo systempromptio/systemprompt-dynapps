@@ -1,11 +1,11 @@
 //! The pure half of connector token resolution: who may use a saved grant,
 //! and when a grant is re-minted, refreshed, verified or re-sealed.
 
-use systemprompt_web_admin::connector_oauth::token_plan::{
+use systemprompt_web_admin_core::error::AdminError;
+use systemprompt_web_admin_platform::connector_oauth::token_plan::{
     AccessMode, Admission, REFRESH_LEEWAY_SECONDS, TokenPlan, needs_refresh, needs_remint,
 };
-use systemprompt_web_admin::connector_oauth::{Grant, Provider};
-use systemprompt_web_admin_core::error::AdminError;
+use systemprompt_web_admin_platform::connector_oauth::{Grant, Provider};
 
 const NOW: i64 = 1_800_000_000;
 

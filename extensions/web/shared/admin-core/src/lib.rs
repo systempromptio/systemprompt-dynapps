@@ -13,6 +13,8 @@
 //! - [`connections`], [`marketplace_filter`] — the connection model and its
 //!   registered snapshot source, and the marketplace filter that gates on it.
 //! - [`activity`], [`event_hub`] — the activity log and the live event fan-out.
+//! - [`bridge_client`] — the desktop bridge's binary name and the gateway URL
+//!   its install and login commands point at.
 //! - [`repositories`] — data access shared across domains: scope, principal,
 //!   entitlement, access rules, the sync engine, bridge credentials, the
 //!   gateway route catalog, conversations and usage ingestion.
@@ -26,6 +28,7 @@ pub mod activity;
 pub mod assets;
 pub mod auth;
 pub mod authz;
+pub mod bridge_client;
 pub mod catalog_index;
 pub mod connections;
 pub mod crypto;

@@ -9,9 +9,8 @@ use std::sync::Arc;
 
 use systemprompt_security::authz::SubjectAttributeProvider;
 use systemprompt_web_admin::authz::group::GroupAttributeProvider;
-use systemprompt_web_admin::repositories::groups::members::{
-    list_group_ids_for_user, list_group_members,
-};
+use systemprompt_web_admin::repositories::groups::members::list_group_members;
+use systemprompt_web_admin_core::repositories::principal::group_membership::list_group_ids_for_user;
 use systemprompt_web_admin_core::repositories::scope::expiry::revoke_expired_memberships;
 
 use crate::fixtures::{

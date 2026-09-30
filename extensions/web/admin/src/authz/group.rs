@@ -50,7 +50,7 @@ impl SubjectAttributeProvider for GroupAttributeProvider {
 
     async fn values_for(&self, user_id: &UserId) -> Result<Vec<String>, AuthzError> {
         let ids: Vec<String> =
-            crate::repositories::groups::members::list_group_ids_for_user(&self.pool, user_id)
+            systemprompt_web_admin_core::repositories::principal::group_membership::list_group_ids_for_user(&self.pool, user_id)
                 .await?
                 .into_iter()
                 .map(|id| id.as_str().to_owned())

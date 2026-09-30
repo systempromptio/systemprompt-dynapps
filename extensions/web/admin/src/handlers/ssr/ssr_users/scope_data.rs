@@ -30,7 +30,7 @@ pub(super) async fn group_choices(
 ) -> Vec<MembershipChoiceView> {
     let held = faults.take(
         "group memberships",
-        repositories::groups::members::list_group_ids_for_user(pool, user_id).await,
+        systemprompt_web_admin_core::repositories::principal::group_membership::list_group_ids_for_user(pool, user_id).await,
     );
     let groups = faults.take(
         "groups",

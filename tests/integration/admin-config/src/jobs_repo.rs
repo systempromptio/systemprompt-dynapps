@@ -1,6 +1,6 @@
 //! `repositories::jobs` — the scheduled-job rows the governance pages show.
 
-use systemprompt_web_admin::repositories::jobs::list_jobs;
+use systemprompt_web_admin_platform::repositories::jobs::list_jobs;
 
 use crate::fixtures::unique;
 use crate::tempdb::TempDb;

@@ -10,14 +10,14 @@ use systemprompt_security::authz::{
     AccessControlRepository, BulkKeepQuery, ChainSources, EntityKind, ParentChainIndex, allowed_ids,
 };
 use systemprompt_web_admin::repositories::config::groups_yaml_loader;
-use systemprompt_web_admin::repositories::users::connector_accounts as accounts;
-use systemprompt_web_admin::salesforce_orgs;
 use systemprompt_web_admin_core::authz::{dimensions, subject_attributes_for};
 use systemprompt_web_admin_core::repositories::access_rules::declared_load::load_declared_set;
 use systemprompt_web_admin_core::repositories::access_rules::sync::{SyncMode, apply_sync};
 use systemprompt_web_admin_core::repositories::gateway_catalog::{
     dispatchable_route_ids, registered_routes,
 };
+use systemprompt_web_admin_platform::repositories::connectors::connector_accounts as accounts;
+use systemprompt_web_admin_platform::salesforce_orgs;
 
 use crate::fixtures::{insert_user_with_roles, set_project, unique};
 use crate::tempdb::TempDb;

@@ -3,8 +3,8 @@
 use std::collections::HashMap;
 use systemprompt::identifiers::McpServerId;
 use systemprompt::models::mcp::{Deployment, McpServerType};
-use systemprompt_web_admin::connector_oauth::Provider;
-use systemprompt_web_admin::salesforce_orgs::{
+use systemprompt_web_admin_platform::connector_oauth::Provider;
+use systemprompt_web_admin_platform::salesforce_orgs::{
     SHARED_CLIENT_ID_SECRET, SHARED_CLIENT_SECRET, SalesforceEnvironment, SalesforceOrgRegistry,
     SalesforceServerKind, is_salesforce_server_id,
 };

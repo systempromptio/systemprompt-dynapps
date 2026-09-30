@@ -5,9 +5,6 @@
 
 use chrono::{DateTime, Duration, TimeZone, Utc};
 use systemprompt_security::authz::{Access, RegisteredEntities};
-use systemprompt_web_admin::repositories::config::security_policy::{
-    DEFAULT_MAX_PAT_LIFETIME_DAYS, PatExpiryError, SecurityPolicy, bound_pat_expiry,
-};
 use systemprompt_web_admin_core::repositories::access_rules::declared::{
     DeclaredInputs, DeclaredKey, DeclaredSet, build_declared_set,
 };
@@ -16,6 +13,9 @@ use systemprompt_web_admin_core::repositories::access_rules::drift::{
 };
 use systemprompt_web_admin_core::repositories::access_rules::export::{Owners, render_export};
 use systemprompt_web_admin_core::repositories::access_rules::rules_yaml_loader::parse_rules_doc;
+use systemprompt_web_admin_platform::repositories::security_policy::{
+    DEFAULT_MAX_PAT_LIFETIME_DAYS, PatExpiryError, SecurityPolicy, bound_pat_expiry,
+};
 use systemprompt_web_extension::jobs::lost_manage_role;
 
 fn at(rfc3339: &str) -> DateTime<Utc> {

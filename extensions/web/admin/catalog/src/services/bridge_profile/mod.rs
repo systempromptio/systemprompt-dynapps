@@ -12,9 +12,9 @@ use serde::Serialize;
 use sqlx::PgPool;
 use systemprompt::identifiers::{MarketplaceId, TenantId, UserId};
 
+use systemprompt_web_admin_core::bridge_client::{BRIDGE_BINARY, read_config_strings};
 use systemprompt_web_admin_core::types::UserContext;
 
-pub use assemble::read_config_strings;
 use assemble::{
     build_agents_block, build_bridge_profile_block, build_reachable_marketplaces, build_usage,
     load_usage_sections, read_tenant_id,
@@ -91,8 +91,6 @@ pub struct BridgeConnectBlock {
     pub just_install_command: String,
     pub just_login_command: String,
 }
-
-pub const BRIDGE_BINARY: &str = "astound-bridge";
 
 // Why: `install.sh` enrols a host only if its binary already exists and rejects
 // `--hosts all`, so each command names its host; an unenrolled OpenCode fails

@@ -59,32 +59,6 @@ pub async fn list_group_members(
     .await
 }
 
-pub async fn list_group_ids_for_user(
-    pool: &PgPool,
-    user_id: &UserId,
-) -> Result<Vec<GroupId>, sqlx::Error> {
-    sqlx::query_scalar!(
-        r#"SELECT group_id AS "group_id!: GroupId" FROM user_groups WHERE user_id = $1 ORDER BY group_id"#,
-        user_id.as_str()
-    )
-    .fetch_all(pool)
-    .await
-}
-
-pub async fn list_source_ad_groups(
-    pool: &PgPool,
-    user_id: &UserId,
-) -> Result<Vec<String>, sqlx::Error> {
-    sqlx::query_scalar!(
-        r#"SELECT DISTINCT source_ad_group AS "source_ad_group!" FROM group_members
-           WHERE user_id = $1 AND source = 'adfs' AND source_ad_group IS NOT NULL
-           ORDER BY 1"#,
-        user_id.as_str()
-    )
-    .fetch_all(pool)
-    .await
-}
-
 pub async fn list_unassigned_users(pool: &PgPool) -> Result<Vec<UserId>, sqlx::Error> {
     sqlx::query_scalar!(
         r#"SELECT user_id AS "user_id!: UserId" FROM user_groups

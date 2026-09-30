@@ -18,8 +18,8 @@ use super::context::{
     ScopeDefaultOptionView, UserConversationsTabView, UserSessionRowView, UserSessionsTabView,
 };
 use super::load::{IdentityData, MembershipData, UserConversationsData};
-use crate::services::connector_oauth::Provider;
 use systemprompt_web_admin_core::types::UserContext;
+use systemprompt_web_admin_platform::connector_oauth::Provider;
 
 pub(super) use super::usage::usage_tab;
 use systemprompt_web_admin_core::ssr::list_view::paginate_prefixed;

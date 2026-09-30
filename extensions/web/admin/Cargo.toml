@@ -9,12 +9,12 @@ homepage.workspace = true
 publish = false
 
 [dependencies]
-semver = "1"
 # Foundation
 systemprompt-web-shared = { workspace = true }
 systemprompt-web-admin-core = { workspace = true }
 systemprompt-web-admin-catalog = { workspace = true }
 systemprompt-web-admin-governance = { workspace = true }
+systemprompt-web-admin-platform = { workspace = true }
 # Audit: uses ai, identifiers, models, oauth, security — requires `full`.
 systemprompt = { workspace = true, features = ["full"] }
 systemprompt-security = { workspace = true }
@@ -46,7 +46,6 @@ tracing = { workspace = true }
 # Crypto & encoding
 sha2 = { workspace = true }
 hex = { workspace = true }
-jsonwebtoken = { workspace = true }
 base64 = { workspace = true }
 rand = { workspace = true }
 
@@ -61,7 +60,6 @@ reqwest = { workspace = true }
 saml = { workspace = true }
 
 # Utilities
-url = { workspace = true }
 urlencoding = { workspace = true }
 inventory = { workspace = true }
 async-trait = { workspace = true }

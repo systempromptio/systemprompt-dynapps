@@ -1,6 +1,6 @@
 //! Hosted connector refresh uses provider credentials and fails closed.
 
-use systemprompt_web_admin::connector_oauth::{Grant, Provider, refresh_at};
+use systemprompt_web_admin_platform::connector_oauth::{Grant, Provider, refresh_at};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 fn grant() -> Grant {
@@ -211,7 +211,7 @@ async fn empty_access_tokens_cannot_pass_refresh() {
 #[test]
 fn atlassian_identity_accepts_wrapped_and_text_tool_results() {
     use serde_json::json;
-    use systemprompt_web_admin::connector_oauth::payload::atlassian_user;
+    use systemprompt_web_admin_platform::connector_oauth::payload::atlassian_user;
     let user = json!({"account_id":"account-123","displayName":"Pilot user"});
     for response in [
         json!({"structuredContent":user}),
@@ -237,7 +237,7 @@ fn atlassian_identity_accepts_wrapped_and_text_tool_results() {
 #[test]
 fn atlassian_sites_accepts_wrapped_array_and_ignores_empty_structured_content() {
     use serde_json::json;
-    use systemprompt_web_admin::connector_oauth::payload::atlassian_sites;
+    use systemprompt_web_admin_platform::connector_oauth::payload::atlassian_sites;
     let sites = json!([{"id":"cloud-123","url":"https://astounddigital.atlassian.net"}]);
     for response in [
         json!({"structuredContent":{"result":sites}}),
@@ -251,7 +251,7 @@ fn atlassian_sites_accepts_wrapped_array_and_ignores_empty_structured_content() 
 #[test]
 fn atlassian_v2_resources_use_cloud_id_without_url() {
     use serde_json::json;
-    use systemprompt_web_admin::connector_oauth::payload::atlassian_sites;
+    use systemprompt_web_admin_platform::connector_oauth::payload::atlassian_sites;
     let response = json!({"content":[{"type":"text","text":json!({"data":{"resources":[
         {"cloudId":"cloud-123","products":[{"id":"jira","access":"read"}]}
     ]}}).to_string()}],"isError":false});
@@ -261,7 +261,7 @@ fn atlassian_v2_resources_use_cloud_id_without_url() {
 
 #[test]
 fn atlassian_site_lookup_cannot_target_arbitrary_hosts() {
-    use systemprompt_web_admin::connector_oauth::site::tenant_metadata_url;
+    use systemprompt_web_admin_platform::connector_oauth::site::tenant_metadata_url;
     assert_eq!(
         tenant_metadata_url("https://astounddigital.atlassian.net")
             .unwrap()
@@ -303,7 +303,7 @@ fn configured_provider_ids_preserve_legacy_wire_names() {
 
 #[test]
 fn generic_oauth_cannot_send_credentials_outside_approved_origins() {
-    use systemprompt_web_admin::connector_oauth::generic::validate_endpoint;
+    use systemprompt_web_admin_platform::connector_oauth::generic::validate_endpoint;
     let resource = "https://mcp.example.test/resource";
     let origins = vec!["https://login.example.test".to_owned()];
     for endpoint in [
@@ -370,7 +370,7 @@ async fn gateway_does_not_allow_a_request_when_its_policy_database_is_unavailabl
 async fn fourth_configured_connector_completes_oauth_and_mcp_verification() {
     use std::io::{BufRead, BufReader};
     use std::process::{Command, Stdio};
-    use systemprompt_web_admin::connector_oauth::{exchange_with_client, generic, verify};
+    use systemprompt_web_admin_platform::connector_oauth::{exchange_with_client, generic, verify};
     struct Server(std::process::Child);
     impl Drop for Server {
         fn drop(&mut self) {
@@ -438,7 +438,7 @@ async fn fourth_configured_connector_completes_oauth_and_mcp_verification() {
         .unwrap();
     assert_eq!(grant.access_token, "access-token");
     assert!(grant.verifier.is_empty());
-    systemprompt_web_admin::connector_oauth::refresh_with_client(&mut grant, &http)
+    systemprompt_web_admin_platform::connector_oauth::refresh_with_client(&mut grant, &http)
         .await
         .unwrap();
     assert_eq!(grant.refresh_token.as_deref(), Some("refresh-token"));
@@ -451,7 +451,7 @@ async fn fourth_configured_connector_completes_oauth_and_mcp_verification() {
 
 #[test]
 fn issuer_comparison_ignores_a_single_trailing_slash_and_nothing_else() {
-    use systemprompt_web_admin::connector_oauth::generic::same_issuer;
+    use systemprompt_web_admin_platform::connector_oauth::generic::same_issuer;
     assert!(same_issuer(
         "https://accounts.google.com",
         "https://accounts.google.com/"
@@ -483,7 +483,7 @@ fn issuer_comparison_ignores_a_single_trailing_slash_and_nothing_else() {
 async fn google_shaped_connector_sends_offline_params_and_reads_userinfo() {
     use std::io::{BufRead, BufReader};
     use std::process::{Command, Stdio};
-    use systemprompt_web_admin::connector_oauth::{exchange_with_client, generic, verify};
+    use systemprompt_web_admin_platform::connector_oauth::{exchange_with_client, generic, verify};
     struct Server(std::process::Child);
     impl Drop for Server {
         fn drop(&mut self) {

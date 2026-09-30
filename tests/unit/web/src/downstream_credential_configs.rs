@@ -11,7 +11,7 @@
 
 use std::path::PathBuf;
 
-use systemprompt_web_admin::SalesforceConfig;
+use systemprompt_web_admin_platform::SalesforceConfig;
 
 use crate::support::repo_root;
 
@@ -97,7 +97,7 @@ fn every_external_server_points_at_the_accessor_that_serves_it() {
         (
             format!("{name}.yaml"),
             name,
-            systemprompt_web_admin::identity_token::accessor_path(name),
+            systemprompt_web_admin_platform::identity_token::accessor_path(name),
         )
     }));
     for (file, name, accessor) in servers {

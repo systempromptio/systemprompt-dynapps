@@ -121,7 +121,7 @@ static SKILLS_PAGE_CONFIG: OnceLock<Result<Option<Arc<SkillsPageConfig>>, String
 static ADFS_CONFIG: OnceLock<Result<Option<Arc<systemprompt_web_admin::AdfsConfig>>, String>> =
     OnceLock::new();
 static SALESFORCE_CONFIG: OnceLock<
-    Result<Option<Arc<systemprompt_web_admin::SalesforceConfig>>, String>,
+    Result<Option<Arc<systemprompt_web_admin_platform::SalesforceConfig>>, String>,
 > = OnceLock::new();
 
 #[must_use]
@@ -157,7 +157,7 @@ pub fn adfs_config() -> Option<Arc<systemprompt_web_admin::AdfsConfig>> {
 }
 
 #[must_use]
-pub fn salesforce_config() -> Option<Arc<systemprompt_web_admin::SalesforceConfig>> {
+pub fn salesforce_config() -> Option<Arc<systemprompt_web_admin_platform::SalesforceConfig>> {
     log_and_discard_err(
         &SALESFORCE_CONFIG,
         load_salesforce_config,

@@ -25,6 +25,7 @@ systemprompt = { workspace = true, features = ["full"] }
 # Local sub-crates
 systemprompt-web-shared = { workspace = true }
 systemprompt-web-admin = { workspace = true }
+systemprompt-web-admin-platform = { workspace = true }
 systemprompt-web-admin-core = { workspace = true }
 systemprompt-web-content = { workspace = true }
 systemprompt-web-site = { workspace = true }

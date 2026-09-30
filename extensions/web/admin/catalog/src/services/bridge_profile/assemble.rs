@@ -1,11 +1,11 @@
 //! Per-section assembly for the bridge profile payload.
 //!
 //! Each function owns one card on the profile pane: the concurrent usage
-//! fan-out, the usage view-model, config/identity strings, the bridge gateway
-//! block, and the agents block. Falls back to empty defaults on failure so a
-//! missing section renders as an empty card rather than a page-level error.
-//! Marketplaces resolve through the admin subject matrix, not the manifest
-//! audience, so a per-user deny hides one that a group grants.
+//! fan-out, the usage view-model, the bridge gateway block, and the agents
+//! block. Falls back to empty defaults on failure so a missing section renders
+//! as an empty card rather than a page-level error. Marketplaces resolve
+//! through the admin subject matrix, not the manifest audience, so a per-user
+//! deny hides one that a group grants.
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -13,7 +13,6 @@ use std::sync::Arc;
 use sqlx::PgPool;
 use systemprompt::config::ProfileBootstrap;
 use systemprompt::identifiers::{TenantId, UserId};
-use systemprompt::models::Config;
 use uuid::Uuid;
 
 use systemprompt_web_admin_core::repositories::bridge::{BridgeIdentityRow, find_bridge_user};
@@ -116,15 +115,6 @@ pub(super) fn build_usage(sections: UsageSections) -> ProfileUsage {
         top_models: sections.top_models,
         conversations: sections.conversations,
     }
-}
-
-pub fn read_config_strings() -> (Option<String>, Option<String>) {
-    Config::get().map_or((None, None), |c| {
-        (
-            Some(c.jwt_issuer.clone()),
-            Some(c.api_external_url.trim_end_matches('/').to_owned()),
-        )
-    })
 }
 
 pub(super) fn read_tenant_id() -> Option<TenantId> {

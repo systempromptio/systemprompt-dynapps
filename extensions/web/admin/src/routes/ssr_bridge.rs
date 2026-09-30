@@ -2,23 +2,15 @@
 
 use std::sync::Arc;
 
-use axum::routing::{get, post};
 use axum::{Extension, Router, middleware as axum_middleware};
 use sqlx::PgPool;
 use tower_http::normalize_path::NormalizePathLayer;
 
-use super::super::{handlers, middleware};
+use super::super::middleware;
 use systemprompt_web_admin_core::templates::AdminTemplateEngine;
 
 pub fn bridge_auth_ssr_router(pool: Arc<PgPool>, engine: AdminTemplateEngine) -> Router {
-    let inner = Router::new()
-        .route("/setup", get(handlers::ssr::bridge_setup_page))
-        .route("/device-link", get(handlers::ssr::device_link_page))
-        .route(
-            "/device-link/approve",
-            post(handlers::ssr::device_link_approve),
-        )
-        .route("/device-link/deny", post(handlers::ssr::device_link_deny))
+    let inner = systemprompt_web_admin_platform::routes::ssr_bridge::routes()
         .layer(Extension(engine))
         .layer(axum_middleware::from_fn_with_state(
             Arc::clone(&pool),
