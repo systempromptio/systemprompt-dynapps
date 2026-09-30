@@ -23,12 +23,11 @@
 
 use std::sync::Arc;
 
-use axum::routing::get;
 use axum::{Router, middleware as axum_middleware};
 use sqlx::PgPool;
 
-use super::super::handlers;
 use systemprompt::database::DbPool;
+use systemprompt_web_admin_analytics::routes::api as analytics_routes;
 use systemprompt_web_admin_catalog::routes as catalog_routes;
 use systemprompt_web_admin_core::state::StateError;
 use systemprompt_web_admin_core::types::{ROLES_CONSOLE, ROLES_MANAGE, ROLES_PLATFORM};
@@ -105,7 +104,7 @@ pub(crate) fn build_self_service_routes(write_pool: &Arc<PgPool>) -> Router {
 
 pub(crate) fn build_auth_read_routes(read_pool: &Arc<PgPool>) -> Router {
     Router::new()
-        .route("/dashboard", get(handlers::dashboard_handler))
+        .merge(analytics_routes::dashboard_routes())
         .merge(catalog_routes::api::listing_routes())
         .merge(governance_routes::plugin_env_routes())
         .with_state(Arc::clone(read_pool))

@@ -1,5 +1,6 @@
-//! Analysis routes: conversations, skills, marketplace versions and the
-//! publication decisions taken from a marketplace's Distribution view.
+//! Analysis routes: conversations, skills and the reports built from them.
+//! The composition root merges the catalog's marketplace-version and
+//! publication routes beside them.
 //!
 //! Every page is `/analysis/<noun>` with the entity's identity as the next
 //! segment — the Platform section's `/<noun>/{id}` shape, one level in.
@@ -10,9 +11,8 @@ use axum::routing::{get, post};
 use sqlx::PgPool;
 use std::sync::Arc;
 
-pub(super) fn routes() -> Router<Arc<PgPool>> {
+pub fn routes() -> Router<Arc<PgPool>> {
     Router::new()
-        .merge(systemprompt_web_admin_catalog::routes::ssr::analysis_routes())
         .route(
             "/analysis/skills",
             get(handlers::ssr::analysis::skills::page),

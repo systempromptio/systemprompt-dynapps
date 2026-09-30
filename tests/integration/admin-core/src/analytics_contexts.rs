@@ -6,7 +6,7 @@
 //! want one to be listed ask for side calls explicitly.
 
 use systemprompt::identifiers::{ContextId, UserId};
-use systemprompt_web_admin::repositories::analytics::{list_agents, list_tools};
+use systemprompt_web_admin_analytics::repositories::analytics::{list_agents, list_tools};
 use systemprompt_web_admin_core::repositories::conversations::rows::{
     ConversationFilter, ConversationPage, get_conversation_totals, list_conversations_paged,
     list_distinct_models,

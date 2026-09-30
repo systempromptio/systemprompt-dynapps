@@ -4,6 +4,7 @@
 //! up here as a mismatch against the list the dialog has always shown.
 
 use systemprompt_web_admin as _;
+use systemprompt_web_admin_analytics as _;
 use systemprompt_web_admin_catalog as _;
 use systemprompt_web_admin_core::export::model::DataSet;
 use systemprompt_web_admin_core::export::registry;

@@ -5,7 +5,6 @@
 //! do not own. The AD FS and developer sign-in routes answer before any
 //! session exists, beside the login page.
 
-mod activity;
 mod platform;
 
 use std::sync::Arc;
@@ -17,11 +16,13 @@ use tower_http::normalize_path::NormalizePathLayer;
 
 use super::super::{handlers, middleware};
 use super::ssr_redirects;
-use activity::ai_activity_routes;
 use platform::platform_routes;
 use systemprompt::database::DbPool;
+use systemprompt_web_admin_analytics::routes::{activity_ssr, analysis_ssr, export_ssr, overview};
+use systemprompt_web_admin_catalog::routes::ssr as catalog_ssr;
 use systemprompt_web_admin_core::state::StateError;
 use systemprompt_web_admin_core::templates::AdminTemplateEngine;
+use systemprompt_web_admin_governance::routes::ssr_governance;
 use systemprompt_web_admin_identity::AdfsDeps;
 use systemprompt_web_admin_identity::routes::{account_ssr, people_ssr, public as sign_in};
 use systemprompt_web_admin_platform::routes::platform_ssr;
@@ -36,11 +37,11 @@ pub fn admin_ssr_router(
     let managed = Arc::new(systemprompt_web_admin_core::state::ManagedState::new(
         db, owner,
     )?);
-    let inner = overview_routes()
+    let inner = overview::routes()
         .merge(people_routes())
         .merge(ai_activity_routes())
-        .merge(super::ssr_analysis::routes())
-        .merge(super::ssr_governance::routes())
+        .merge(analysis_routes())
+        .merge(governance_routes())
         .merge(platform_routes())
         .merge(account_routes())
         .merge(api_routes())
@@ -79,7 +80,7 @@ pub fn admin_ssr_router(
 
 fn public_routes(pool: Arc<PgPool>) -> Router<Arc<PgPool>> {
     let login = Router::new()
-        .route("/login", get(handlers::ssr::login_page))
+        .route("/login", get(handlers::login_page))
         .layer(axum_middleware::from_fn_with_state(
             pool,
             middleware::user_context_middleware,
@@ -87,8 +88,18 @@ fn public_routes(pool: Arc<PgPool>) -> Router<Arc<PgPool>> {
     login.merge(sign_in::sign_in_routes())
 }
 
-fn overview_routes() -> Router<Arc<PgPool>> {
-    Router::new().route("/", get(handlers::ssr::overview_page))
+fn ai_activity_routes() -> Router<Arc<PgPool>> {
+    activity_ssr::routes()
+        .merge(export_ssr::routes())
+        .merge(ssr_governance::request_detail_routes())
+}
+
+fn analysis_routes() -> Router<Arc<PgPool>> {
+    catalog_ssr::analysis_routes().merge(analysis_ssr::routes())
+}
+
+fn governance_routes() -> Router<Arc<PgPool>> {
+    ssr_governance::routes().merge(overview::attention_routes())
 }
 
 fn people_routes() -> Router<Arc<PgPool>> {
@@ -99,20 +110,16 @@ fn people_routes() -> Router<Arc<PgPool>> {
 
 fn account_routes() -> Router<Arc<PgPool>> {
     account_ssr::profile_routes()
-        .route("/history", get(handlers::ssr::history_page))
-        .route(
-            "/history/conversations/{context_id}",
-            get(handlers::ssr::history_conversation_page),
-        )
+        .merge(activity_ssr::history_routes())
         .merge(platform_ssr::account_routes())
 }
 
 fn api_routes() -> Router<Arc<PgPool>> {
     Router::new()
         .route("/auth/me", get(middleware::auth_me_handler))
-        .merge(systemprompt_web_admin_governance::routes::ssr_governance::api_routes())
-        .route("/api/history/search", get(handlers::ssr::history_search))
-        .route("/api/overview", get(handlers::ssr::overview_fragment))
+        .merge(ssr_governance::api_routes())
+        .merge(activity_ssr::history_api_routes())
+        .merge(overview::api_routes())
         .merge(account_ssr::profile_api_routes())
         .merge(platform_ssr::api_routes())
 }

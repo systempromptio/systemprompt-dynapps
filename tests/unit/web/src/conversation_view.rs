@@ -6,11 +6,11 @@
 
 use chrono::{DateTime, TimeZone, Utc};
 use systemprompt::identifiers::{AiRequestId, AiToolCallId, GatewayConversationId};
-use systemprompt_web_admin::repositories::analytics::context_detail::{
+use systemprompt_web_admin_analytics::repositories::analytics::context_detail::{
     ContextMessageRow, ContextRequestRow,
 };
-use systemprompt_web_admin::repositories::analytics::context_tool_calls::ContextToolCallRow;
-use systemprompt_web_admin::test_support::{
+use systemprompt_web_admin_analytics::repositories::analytics::context_tool_calls::ContextToolCallRow;
+use systemprompt_web_admin_analytics::test_support::{
     ConversationView, EmptyReason, TranscriptOptions, build_conversation, parse_assistant, short_id,
 };
 
@@ -329,7 +329,7 @@ fn marker_parsing_handles_nested_brackets_inside_strings() {
 
 #[test]
 fn system_reminder_blocks_are_cut_from_a_prompt() {
-    use systemprompt_web_admin::test_support::strip_system_reminders;
+    use systemprompt_web_admin_analytics::test_support::strip_system_reminders;
     let body = "<system-reminder>\nhousekeeping\n</system-reminder>\n\n//astound-admin:demonstrate-rag <system-reminder>more</system-reminder>";
     assert_eq!(
         strip_system_reminders(body),
@@ -343,7 +343,7 @@ fn system_reminder_blocks_are_cut_from_a_prompt() {
 
 #[test]
 fn tidy_lines_drops_indentation_and_collapses_blank_runs() {
-    use systemprompt_web_admin::test_support::tidy_lines;
+    use systemprompt_web_admin_analytics::test_support::tidy_lines;
     assert_eq!(tidy_lines("  a\n\n\n\n      b\n   \n"), "a\n\nb");
 }
 
@@ -356,7 +356,7 @@ fn tidy_lines_drops_indentation_and_collapses_blank_runs() {
 
 #[test]
 fn only_the_tail_of_each_thread_needs_its_message_bodies() {
-    use systemprompt_web_admin::test_support::transcript_request_ids;
+    use systemprompt_web_admin_analytics::test_support::transcript_request_ids;
     let requests: Vec<ContextRequestRow> = (0..8)
         .map(|i| req(&format!("r{i}"), i, "turn", Some(MAIN), "completed", 2))
         .collect();

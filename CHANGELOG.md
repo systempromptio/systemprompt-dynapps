@@ -22,6 +22,11 @@ Conventions (strict — hold every entry to them):
 
 ### Changed
 
+- **Admin crate split, stage 5.** The analytics domain — the dashboards, requests, sessions,
+  traces, conversations, history, tools, artifacts, skills, reports, overview, observability, the
+  hook-tracking ingestion and every table and document export — is `systemprompt-web-admin-analytics`
+  (`extensions/web/admin/analytics`), mounted at the same paths; `web/jobs` reads its rollups from
+  there. Only the composition root (routers, middleware, login) remains in `extensions/web/admin`.
 - **Admin crate split, stage 4.** The identity domain — users, groups, projects, roles, access
   control and entity access, the AD FS sign-in, dev login, sign-out, the people and account pages
   and the authz subject-attribute providers — is `systemprompt-web-admin-identity`

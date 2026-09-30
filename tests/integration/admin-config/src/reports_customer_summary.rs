@@ -1,7 +1,7 @@
 //! `repositories::reports::customer` — the header figures on a month, for
 //! the whole instance or one project.
 
-use systemprompt_web_admin::repositories::reports::customer::get_customer_month_summary;
+use systemprompt_web_admin_analytics::repositories::reports::customer::get_customer_month_summary;
 
 use systemprompt_web_admin_core::repositories::scope::SubjectScope;
 

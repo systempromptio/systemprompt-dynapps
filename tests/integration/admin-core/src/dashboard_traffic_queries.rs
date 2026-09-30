@@ -8,7 +8,7 @@
 //! `request_count > 0`) is restated in every one of these queries rather than
 //! being read from `v_clean_traffic`, so it is pinned per query.
 
-use systemprompt_web_admin::repositories::dashboard::traffic::{
+use systemprompt_web_admin_analytics::repositories::dashboard::traffic::{
     get_realtime_pulse, list_top_pages_today,
 };
 

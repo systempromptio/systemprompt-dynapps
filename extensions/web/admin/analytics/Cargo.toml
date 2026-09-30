@@ -1,0 +1,54 @@
+[package]
+name = "systemprompt-web-admin-analytics"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "Analytics domain of the admin dashboard for the systemprompt.io template: the requests, sessions, traces and conversations the AI produced, their analysis and reports, the overview and dashboard rollups, exports, and the Claude Code hook intake."
+repository.workspace = true
+homepage.workspace = true
+publish = false
+
+[dependencies]
+# Foundation
+systemprompt-web-shared = { workspace = true }
+systemprompt-web-admin-core = { workspace = true }
+# Audit: uses ai, identifiers, marketplace, mcp, models, oauth, security —
+# requires `full`.
+systemprompt = { workspace = true, features = ["full"] }
+systemprompt-security = { workspace = true }
+
+# Database
+sqlx = { workspace = true }
+
+# Web framework
+axum = { workspace = true }
+
+# Async runtime
+tokio = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+
+# Logging
+tracing = { workspace = true }
+
+# Crypto & encoding (hook event dedup keys)
+sha2 = { workspace = true }
+hex = { workspace = true }
+
+# HTTP client (observability exporter probe)
+reqwest = { workspace = true }
+
+# Utilities
+urlencoding = { workspace = true }
+inventory = { workspace = true }
+async-trait = { workspace = true }
+
+[lints]
+workspace = true

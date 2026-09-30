@@ -8,7 +8,7 @@
 
 use chrono::{Duration, Utc};
 use systemprompt::identifiers::{ContextId, SessionId};
-use systemprompt_web_admin::repositories::analytics::session_detail as repo;
+use systemprompt_web_admin_analytics::repositories::analytics::session_detail as repo;
 
 use crate::fixtures::{
     RequestSpec, insert_context, insert_request, insert_session, insert_user, new_context_id,

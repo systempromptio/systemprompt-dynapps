@@ -1,6 +1,7 @@
-//! Export routes: one surface for every table the console renders — the
-//! file in any format and column selection, and the preview the dialog
-//! counts from (`export::registry` says which tables exist) — and the
+//! Export routes: one surface for every table the console renders.
+//!
+//! They serve the file in any format and column selection, and the preview the
+//! dialog counts from (`export::registry` says which tables exist) — and the
 //! document shape, one conversation with every message body, tool call,
 //! decision, finding and hook event, alone or as JSON Lines for a set.
 
@@ -13,7 +14,7 @@ use sqlx::PgPool;
 use crate::export;
 use systemprompt_web_admin_core::export::handler as table_export;
 
-pub(super) fn routes() -> Router<Arc<PgPool>> {
+pub fn routes() -> Router<Arc<PgPool>> {
     Router::new()
         .route("/export/{dataset}", get(table_export::export_file))
         .route(

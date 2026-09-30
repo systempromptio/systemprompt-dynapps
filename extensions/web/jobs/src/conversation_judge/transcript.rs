@@ -2,7 +2,7 @@
 //! character budget: the opening turns say what was wanted, the closing turns
 //! say how it ended, and the middle is elided when it does not fit.
 
-use systemprompt_web_admin::test_support::{ConversationView, StepView, TurnView};
+use systemprompt_web_admin_analytics::test_support::{ConversationView, StepView, TurnView};
 
 const CHARS_PER_TOKEN: usize = 4;
 const HEAD_TURNS: usize = 6;

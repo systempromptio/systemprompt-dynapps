@@ -1,7 +1,7 @@
 //! `repositories::reports::customer` — the per-user, per-project, and
 //! per-model tables under the header figures.
 
-use systemprompt_web_admin::repositories::reports::customer::{
+use systemprompt_web_admin_analytics::repositories::reports::customer::{
     list_customer_month_models, list_customer_month_projects, list_customer_month_users,
 };
 

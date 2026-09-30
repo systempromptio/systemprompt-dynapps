@@ -5895,6 +5895,28 @@ dependencies = [
 name = "systemprompt-web-admin"
 version = "0.62.0"
 dependencies = [
+ "axum",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "systemprompt",
+ "systemprompt-web-admin-analytics",
+ "systemprompt-web-admin-catalog",
+ "systemprompt-web-admin-core",
+ "systemprompt-web-admin-governance",
+ "systemprompt-web-admin-identity",
+ "systemprompt-web-admin-platform",
+ "systemprompt-web-shared",
+ "tower",
+ "tower-http 0.7.1",
+ "tracing",
+ "urlencoding",
+]
+
+[[package]]
+name = "systemprompt-web-admin-analytics"
+version = "0.62.0"
+dependencies = [
  "async-trait",
  "axum",
  "chrono",
@@ -5907,21 +5929,13 @@ dependencies = [
  "sqlx",
  "systemprompt",
  "systemprompt-security",
- "systemprompt-web-admin-catalog",
  "systemprompt-web-admin-core",
- "systemprompt-web-admin-governance",
- "systemprompt-web-admin-identity",
- "systemprompt-web-admin-platform",
  "systemprompt-web-shared",
- "tempfile",
  "thiserror 2.0.21",
  "tokio",
- "tower",
- "tower-http 0.7.1",
  "tracing",
  "urlencoding",
  "uuid",
- "zip",
 ]
 
 [[package]]
@@ -6117,7 +6131,7 @@ dependencies = [
  "sqlx",
  "systemprompt",
  "systemprompt-mcp-shared",
- "systemprompt-web-admin",
+ "systemprompt-web-admin-analytics",
  "systemprompt-web-admin-core",
  "systemprompt-web-admin-governance",
  "systemprompt-web-admin-identity",

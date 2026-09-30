@@ -14,6 +14,16 @@ const ADMIN_API_SRC: &str =
     include_str!("../../../../extensions/web/admin/src/routes/admin/mod.rs");
 const ADMIN_API_READ_SRC: &str =
     include_str!("../../../../extensions/web/admin/src/routes/admin/read.rs");
+const ANALYTICS_API_SRC: &str =
+    include_str!("../../../../extensions/web/admin/analytics/src/routes/api.rs");
+const ANALYTICS_OVERVIEW_SRC: &str =
+    include_str!("../../../../extensions/web/admin/analytics/src/routes/overview.rs");
+const ANALYTICS_ACTIVITY_SRC: &str =
+    include_str!("../../../../extensions/web/admin/analytics/src/routes/activity_ssr.rs");
+const ANALYTICS_ANALYSIS_SRC: &str =
+    include_str!("../../../../extensions/web/admin/analytics/src/routes/analysis_ssr.rs");
+const ANALYTICS_OBSERVABILITY_SRC: &str =
+    include_str!("../../../../extensions/web/admin/analytics/src/routes/observability_ssr.rs");
 const IDENTITY_API_SRC: &str =
     include_str!("../../../../extensions/web/admin/identity/src/routes/api.rs");
 const IDENTITY_GROUPS_SRC: &str =
@@ -38,19 +48,14 @@ const PLATFORM_API_SRC: &str =
     include_str!("../../../../extensions/web/admin/platform/src/routes/api.rs");
 const PLATFORM_SSR_SRC: &str =
     include_str!("../../../../extensions/web/admin/platform/src/routes/platform_ssr.rs");
-const ANALYSIS_SRC: &str =
-    include_str!("../../../../extensions/web/admin/src/routes/ssr_analysis.rs");
 const SSR_SRC: &str = include_str!("../../../../extensions/web/admin/src/routes/ssr/mod.rs");
 const SSR_PLATFORM_SRC: &str =
     include_str!("../../../../extensions/web/admin/src/routes/ssr/platform.rs");
-const SSR_ACTIVITY_SRC: &str =
-    include_str!("../../../../extensions/web/admin/src/routes/ssr/activity.rs");
 // Merged into the SSR router from its own module, so it is read on its own:
 // without it every export route — the PAT surface included — drops out of the
 // table and out of the contract.
-const EXPORT_SRC: &str = include_str!("../../../../extensions/web/admin/src/routes/ssr_export.rs");
-const GOVERNANCE_SRC: &str =
-    include_str!("../../../../extensions/web/admin/src/routes/ssr_governance.rs");
+const EXPORT_SRC: &str =
+    include_str!("../../../../extensions/web/admin/analytics/src/routes/export_ssr.rs");
 // The legacy paths, which answer 308 rather than HTML. They are a route table
 // like any other and are exercised like one: a redirect that stops redirecting
 // is exactly as much a contract change as a page that stops rendering.
@@ -101,6 +106,7 @@ pub(crate) fn mounted_routes() -> Vec<MountedRoute> {
     for (src, prefix) in [
         (ADMIN_API_SRC, ADMIN_API_PREFIX),
         (ADMIN_API_READ_SRC, ADMIN_API_PREFIX),
+        (ANALYTICS_API_SRC, ADMIN_API_PREFIX),
         (IDENTITY_API_SRC, ADMIN_API_PREFIX),
         (IDENTITY_GROUPS_SRC, ADMIN_API_PREFIX),
         (MANAGED_SRC, ADMIN_API_PREFIX),
@@ -115,10 +121,11 @@ pub(crate) fn mounted_routes() -> Vec<MountedRoute> {
         (IDENTITY_PUBLIC_SRC, SSR_PREFIX),
         (SSR_SRC, SSR_PREFIX),
         (SSR_PLATFORM_SRC, SSR_PREFIX),
-        (SSR_ACTIVITY_SRC, SSR_PREFIX),
-        (ANALYSIS_SRC, SSR_PREFIX),
+        (ANALYTICS_OVERVIEW_SRC, SSR_PREFIX),
+        (ANALYTICS_ACTIVITY_SRC, SSR_PREFIX),
+        (ANALYTICS_ANALYSIS_SRC, SSR_PREFIX),
+        (ANALYTICS_OBSERVABILITY_SRC, SSR_PREFIX),
         (EXPORT_SRC, SSR_PREFIX),
-        (GOVERNANCE_SRC, SSR_PREFIX),
         (SSR_REDIRECT_SRC, SSR_PREFIX),
     ] {
         parse(src, prefix, &mut routes);

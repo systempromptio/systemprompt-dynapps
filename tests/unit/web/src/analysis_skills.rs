@@ -6,7 +6,7 @@ use std::collections::{HashMap, HashSet};
 
 use chrono::{DateTime, TimeZone, Utc};
 use systemprompt::identifiers::UserId;
-use systemprompt_web_admin::test_support::parse_skill_key;
+use systemprompt_web_admin_analytics::test_support::parse_skill_key;
 use systemprompt_web_admin_core::catalog_index::inventory_index::MarketplaceAudience;
 use systemprompt_web_admin_core::ssr::time_window::{
     parse as parse_window_bound, render as render_window_bound,

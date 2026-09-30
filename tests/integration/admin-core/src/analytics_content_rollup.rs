@@ -8,7 +8,7 @@
 //! migration, so these tests own the whole result set.
 
 use chrono::{Duration, Utc};
-use systemprompt_web_admin::repositories::analytics::content_rollup::aggregate_engagement_stats;
+use systemprompt_web_admin_analytics::repositories::analytics::content_rollup::aggregate_engagement_stats;
 
 use crate::fixtures::unique;
 use crate::tempdb::TempDb;

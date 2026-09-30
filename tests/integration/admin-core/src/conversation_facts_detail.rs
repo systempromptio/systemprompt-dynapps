@@ -4,7 +4,7 @@
 
 use chrono::{Duration, Utc};
 use systemprompt::identifiers::{ContextId, UserId};
-use systemprompt_web_admin::repositories::analysis::conversations::detail::find_conversation_facts;
+use systemprompt_web_admin_analytics::repositories::analysis::conversations::detail::find_conversation_facts;
 
 use crate::fixtures::{new_context_id, unique};
 use crate::tempdb::TempDb;

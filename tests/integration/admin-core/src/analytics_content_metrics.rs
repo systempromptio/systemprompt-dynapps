@@ -5,7 +5,7 @@
 //! second run with a freshly minted `id` must update rather than insert. That
 //! asymmetry is the whole reason this function has its own tests.
 
-use systemprompt_web_admin::repositories::analytics::content_rollup::{
+use systemprompt_web_admin_analytics::repositories::analytics::content_rollup::{
     UpsertMetricsParams, upsert_metrics,
 };
 

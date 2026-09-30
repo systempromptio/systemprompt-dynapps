@@ -10,7 +10,7 @@
 
 use chrono::Utc;
 use systemprompt::identifiers::{PluginId, UserId};
-use systemprompt_web_admin::repositories::dashboard::usage_aggregations::{
+use systemprompt_web_admin_analytics::repositories::dashboard::usage_aggregations::{
     DailyAggregationParams, upsert_daily_aggregation,
 };
 use systemprompt_web_admin_core::types::{EVENT_POST_TOOL_USE, EVENT_POST_TOOL_USE_FAILURE};

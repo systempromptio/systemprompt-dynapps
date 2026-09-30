@@ -5,11 +5,11 @@
 
 use sqlx::PgPool;
 use systemprompt::identifiers::ContextId;
-use systemprompt_web_admin::repositories::analytics::context_detail::{
+use systemprompt_web_admin_analytics::repositories::analytics::context_detail::{
     list_context_requests, list_messages_for_requests,
 };
-use systemprompt_web_admin::repositories::analytics::context_tool_calls::list_tool_calls_for_requests;
-use systemprompt_web_admin::test_support::{
+use systemprompt_web_admin_analytics::repositories::analytics::context_tool_calls::list_tool_calls_for_requests;
+use systemprompt_web_admin_analytics::test_support::{
     ConversationView, TranscriptOptions, build_conversation, transcript_request_ids,
 };
 

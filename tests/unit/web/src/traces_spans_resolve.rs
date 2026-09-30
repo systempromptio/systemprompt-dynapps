@@ -5,7 +5,7 @@
 
 
 use systemprompt::identifiers::{McpExecutionId, SessionId, TraceId};
-use systemprompt_web_admin::repositories::traces::{
+use systemprompt_web_admin_analytics::repositories::traces::{
     execution_label, execution_status, execution_trace_key,
 };
 

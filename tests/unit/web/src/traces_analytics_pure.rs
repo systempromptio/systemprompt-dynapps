@@ -1,7 +1,7 @@
-use systemprompt_web_admin::repositories::analytics::requests::{
+use systemprompt_web_admin_analytics::repositories::analytics::requests::{
     RequestFilter, RequestSortColumn, RequestSortSpec, SortDir,
 };
-use systemprompt_web_admin::repositories::traces::{
+use systemprompt_web_admin_analytics::repositories::traces::{
     SpanKind, SpanStatus, TraceFilter, TraceSort, TraceSortColumn, TraceSortDir, TraceStats,
 };
 use systemprompt_web_admin_core::repositories::conversations::rows::ConversationFilter;

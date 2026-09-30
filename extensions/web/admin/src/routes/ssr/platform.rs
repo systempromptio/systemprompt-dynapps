@@ -7,10 +7,9 @@
 use std::sync::Arc;
 
 use axum::Router;
-use axum::routing::{get, post};
 use sqlx::PgPool;
 
-use crate::handlers;
+use systemprompt_web_admin_analytics::routes::observability_ssr;
 use systemprompt_web_admin_catalog::routes::ssr as catalog_routes;
 use systemprompt_web_admin_governance::routes::ssr_governance as governance_routes;
 use systemprompt_web_admin_platform::routes::platform_ssr as platform_ssr_routes;
@@ -22,16 +21,5 @@ pub(super) fn platform_routes() -> Router<Arc<PgPool>> {
         .merge(platform_ssr_routes::configuration_routes())
         .merge(catalog_routes::lifecycle_routes())
         .merge(platform_ssr_routes::sync_routes())
-        .route(
-            "/system/observability",
-            get(handlers::ssr::observability_page),
-        )
-        .route(
-            "/system/observability/export",
-            post(handlers::ssr::observability_export_now),
-        )
-        .route(
-            "/system/observability/test",
-            post(handlers::ssr::observability_test_connection),
-        )
+        .merge(observability_ssr::routes())
 }

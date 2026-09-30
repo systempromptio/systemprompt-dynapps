@@ -2,10 +2,7 @@
 
 mod admin;
 mod ssr;
-mod ssr_analysis;
 mod ssr_bridge;
-mod ssr_export;
-mod ssr_governance;
 mod ssr_redirects;
 
 pub(crate) use admin::{

@@ -17,8 +17,8 @@
 //! is always per-user, the dashboard is per-scope.
 
 use chrono::{Duration, Utc};
-use systemprompt_web_admin::repositories::analytics::site::SiteScope;
-use systemprompt_web_admin::repositories::analytics::site::kpis::get_site_kpis;
+use systemprompt_web_admin_analytics::repositories::analytics::site::SiteScope;
+use systemprompt_web_admin_analytics::repositories::analytics::site::kpis::get_site_kpis;
 use systemprompt_web_admin_core::repositories::scope::{Attribution, SubjectScope};
 use systemprompt_web_admin_core::repositories::user_usage::get_usage_window;
 use systemprompt_web_admin_core::util::time_range::{TimeRange, TimeRangePreset};

@@ -1,6 +1,10 @@
 //! AI-activity page routes: everything that reads what the AI actually did.
+//!
 //! They share one scope contract (`?scope=`/`?range=`), which is why they are
-//! one group rather than filed under the entity each happens to list.
+//! one group rather than filed under the entity each happens to list. The
+//! composition root merges the table exports and the governance request
+//! detail page into the same group. The account history pages read the same
+//! conversations under the viewer's own scope.
 
 use std::sync::Arc;
 
@@ -10,12 +14,10 @@ use sqlx::PgPool;
 
 use crate::handlers;
 
-pub(super) fn ai_activity_routes() -> Router<Arc<PgPool>> {
+pub fn routes() -> Router<Arc<PgPool>> {
     Router::new()
         .route("/analytics", get(handlers::ssr::analytics_dashboard_page))
-        .merge(crate::routes::ssr_export::routes())
         .route("/requests", get(handlers::ssr::analytics_requests_page))
-        .merge(systemprompt_web_admin_governance::routes::ssr_governance::request_detail_routes())
         .route("/sessions", get(handlers::ssr::sessions_list_page))
         .route(
             "/sessions/{session_id}",
@@ -42,4 +44,17 @@ pub(super) fn ai_activity_routes() -> Router<Arc<PgPool>> {
             "/contexts/{context_id}",
             get(handlers::ssr::context_detail_page),
         )
+}
+
+pub fn history_routes() -> Router<Arc<PgPool>> {
+    Router::new()
+        .route("/history", get(handlers::ssr::history_page))
+        .route(
+            "/history/conversations/{context_id}",
+            get(handlers::ssr::history_conversation_page),
+        )
+}
+
+pub fn history_api_routes() -> Router<Arc<PgPool>> {
+    Router::new().route("/api/history/search", get(handlers::ssr::history_search))
 }

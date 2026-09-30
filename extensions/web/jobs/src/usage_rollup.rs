@@ -10,7 +10,7 @@ use systemprompt::database::DbPool;
 use systemprompt::traits::{Job, JobContext, JobResult};
 
 use crate::error::JobError;
-use systemprompt_web_admin::repositories::dashboard::usage_rollups;
+use systemprompt_web_admin_analytics::repositories::dashboard::usage_rollups;
 
 const WINDOW_DAYS_BACK: i32 = 1;
 

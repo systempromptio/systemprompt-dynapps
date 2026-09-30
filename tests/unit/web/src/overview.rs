@@ -7,8 +7,8 @@
 
 use chrono::{DateTime, Duration, Utc};
 
-use systemprompt_web_admin::repositories::overview::kpis::OverviewKpis;
-use systemprompt_web_admin::repositories::overview::queues::anomaly_tone;
+use systemprompt_web_admin_analytics::repositories::overview::kpis::OverviewKpis;
+use systemprompt_web_admin_analytics::repositories::overview::queues::anomaly_tone;
 use systemprompt_web_admin_core::repositories::liveness::{
     HEARTBEAT_INTERVAL_SECS, Liveness, liveness_state,
 };

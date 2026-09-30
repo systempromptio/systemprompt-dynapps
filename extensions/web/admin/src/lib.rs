@@ -11,21 +11,18 @@
 //! - [`secrets_router`], [`share_manifest_router`] — per-plugin secret
 //!   resolution and public manifest sharing.
 //!
-//! [`repositories`] owns every `sqlx` call; handlers/services never touch
-//! the DB directly. Errors normalise on `error::MarketplaceError` via the
-//! `MarketplaceError` re-export in [`systemprompt_web_shared`].
+//! This crate is the composition root only: every `sqlx` call, handler and
+//! route table lives in the admin domain crate that owns the data (catalog,
+//! governance, identity, platform, analytics), and the routers here merge
+//! their fragments behind the session middleware and the role gates.
 
-pub(crate) mod export;
 pub(crate) mod handlers;
 mod marketplace_context;
 mod middleware;
-pub mod repositories;
 mod routes;
-pub(crate) mod services;
 
 use std::sync::Arc;
 
-use axum::routing::post;
 use axum::{Extension, Router, middleware as axum_middleware};
 use sqlx::PgPool;
 
@@ -34,34 +31,22 @@ pub use systemprompt_web_admin_catalog::routes::share::share_manifest_router;
 use systemprompt_web_admin_core::state::StateError;
 pub use systemprompt_web_admin_governance::routes::secrets::secrets_router;
 
-pub mod test_support {
-    pub use crate::handlers::ssr::analysis::{SkillRef, parse_skill_key};
-    pub use crate::handlers::ssr::transcript_view::{
-        ConversationView, EmptyReason, ParsedAssistant, SideCallRowView, SideCallsView, StepView,
-        ThreadView, ToolChipView, ToolUseMarker, TranscriptMetaView, TranscriptOptions,
-        TranscriptRequestIds, TurnView, build_conversation, meta_view, parse_assistant, preview,
-        short_id, strip_system_reminders, tidy_lines, transcript_request_ids,
-    };
-}
-
 pub fn hooks_webhook_router(
     db: &systemprompt::database::DbPool,
     pool: Arc<PgPool>,
     session_service: Arc<systemprompt::oauth::SessionCreationService>,
 ) -> Result<Router, StateError> {
     let managed = systemprompt::marketplace::managed::ManagedRepository::new(db)?;
-    Ok(Router::new()
-        .route(
-            "/hooks/track",
-            post(handlers::hooks_track::handle_hook_track),
-        )
-        .merge(systemprompt_web_admin_governance::routes::webhooks::govern_routes())
-        .layer(Extension(
-            systemprompt_web_admin_core::event_hub::EventHub::default(),
-        ))
-        .layer(Extension(session_service))
-        .layer(Extension(managed))
-        .with_state(pool))
+    Ok(
+        systemprompt_web_admin_analytics::routes::hooks_track::track_routes()
+            .merge(systemprompt_web_admin_governance::routes::webhooks::govern_routes())
+            .layer(Extension(
+                systemprompt_web_admin_core::event_hub::EventHub::default(),
+            ))
+            .layer(Extension(session_service))
+            .layer(Extension(managed))
+            .with_state(pool),
+    )
 }
 
 pub fn admin_router(

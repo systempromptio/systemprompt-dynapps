@@ -2,7 +2,7 @@
 //! and its sorts. The window starts after the newest seeded `ai_requests` row.
 
 use chrono::{Duration, Utc};
-use systemprompt_web_admin::repositories::traces::{
+use systemprompt_web_admin_analytics::repositories::traces::{
     TraceFilter, TracePage, TraceSort, TraceSortColumn, TraceSortDir, list_traces,
 };
 

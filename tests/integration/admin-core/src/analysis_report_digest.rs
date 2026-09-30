@@ -2,11 +2,11 @@
 //! the report job receives this text instead of raw conversation transcripts.
 
 use chrono::{Duration, Utc};
-use systemprompt_web_admin::repositories::analysis::conversations::{
+use systemprompt_web_admin_analytics::repositories::analysis::conversations::{
     BreakdownBy, ConversationAnalysisFilter, ConversationAnalysisPage, FactSort,
     load_conversation_analysis_page,
 };
-use systemprompt_web_admin::repositories::analysis::reports::{
+use systemprompt_web_admin_analytics::repositories::analysis::reports::{
     Assessment, DigestScope, NewReport, ReportCompletion, ReportDigest, ReportDigestInputs,
     ReportFindings, fail_report, find_report, get_report_digest, insert_report_request,
     render_digest_text, update_report_completion,

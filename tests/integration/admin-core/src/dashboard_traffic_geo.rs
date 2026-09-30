@@ -6,7 +6,7 @@
 //! long the tail is. That cut, and the `Unknown` label a blank country gets,
 //! are the two behaviours worth pinning.
 
-use systemprompt_web_admin::repositories::dashboard::traffic::list_traffic_country_timeseries;
+use systemprompt_web_admin_analytics::repositories::dashboard::traffic::list_traffic_country_timeseries;
 
 use crate::dashboard_traffic_queries::{SessionSpec, insert_traffic_session};
 use crate::tempdb::TempDb;

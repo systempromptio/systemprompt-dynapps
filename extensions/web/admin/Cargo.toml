@@ -3,7 +3,7 @@ name = "systemprompt-web-admin"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
-description = "Admin dashboard extension for the systemprompt.io template: governed operations UI over agents, MCP servers, users, and analytics."
+description = "Admin dashboard composition root for the systemprompt.io template: merges the catalog, governance, identity, platform and analytics route fragments behind the session middleware and role gates."
 repository.workspace = true
 homepage.workspace = true
 publish = false
@@ -12,13 +12,13 @@ publish = false
 # Foundation
 systemprompt-web-shared = { workspace = true }
 systemprompt-web-admin-core = { workspace = true }
+systemprompt-web-admin-analytics = { workspace = true }
 systemprompt-web-admin-catalog = { workspace = true }
 systemprompt-web-admin-governance = { workspace = true }
 systemprompt-web-admin-identity = { workspace = true }
 systemprompt-web-admin-platform = { workspace = true }
-# Audit: uses ai, identifiers, models, oauth, security — requires `full`.
+# Uses database, identifiers, marketplace, oauth — requires `full`.
 systemprompt = { workspace = true, features = ["full"] }
-systemprompt-security = { workspace = true }
 
 # Database
 sqlx = { workspace = true }
@@ -28,36 +28,15 @@ axum = { workspace = true }
 tower = { workspace = true }
 tower-http = { workspace = true }
 
-# Async runtime
-tokio = { workspace = true }
-
 # Serialization
 serde = { workspace = true }
 serde_json = { workspace = true }
-chrono = { workspace = true }
-uuid = { workspace = true }
-
-# Error handling
-thiserror = { workspace = true }
 
 # Logging
 tracing = { workspace = true }
 
-# Crypto & encoding
-sha2 = { workspace = true }
-hex = { workspace = true }
-
-# Archive
-tempfile = { workspace = true }
-zip = { workspace = true }
-
-# HTTP client
-reqwest = { workspace = true }
-
 # Utilities
 urlencoding = { workspace = true }
-inventory = { workspace = true }
-async-trait = { workspace = true }
 
 [lints]
 workspace = true
