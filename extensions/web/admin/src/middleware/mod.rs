@@ -22,7 +22,7 @@ use serde::Serialize;
 use sqlx::PgPool;
 use systemprompt::identifiers::{Email, UserId};
 
-use crate::repositories::users::user_settings::find_user_settings;
+use systemprompt_web_admin_identity::repositories::users::user_settings::find_user_settings;
 
 use systemprompt_web_admin_core::auth::session::extract_user_from_cookie;
 use systemprompt_web_admin_core::repositories::scope::Participation;

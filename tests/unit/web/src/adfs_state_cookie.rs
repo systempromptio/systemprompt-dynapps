@@ -4,7 +4,9 @@
 
 use axum::http::HeaderMap;
 use axum::http::header::COOKIE;
-use systemprompt_web_admin::{FlowState, clear_state_cookie, read_state_cookie, state_cookie};
+use systemprompt_web_admin_identity::{
+    FlowState, clear_state_cookie, read_state_cookie, state_cookie,
+};
 
 fn flow() -> FlowState {
     FlowState {

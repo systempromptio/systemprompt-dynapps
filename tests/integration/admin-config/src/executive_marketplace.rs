@@ -9,13 +9,13 @@ use systemprompt::loader::ConfigLoader;
 use systemprompt_security::authz::{
     AccessControlRepository, BulkKeepQuery, ChainSources, EntityKind, ParentChainIndex, allowed_ids,
 };
-use systemprompt_web_admin::repositories::config::groups_yaml_loader;
 use systemprompt_web_admin_core::authz::{dimensions, subject_attributes_for};
 use systemprompt_web_admin_core::repositories::access_rules::declared_load::load_declared_set;
 use systemprompt_web_admin_core::repositories::access_rules::sync::{SyncMode, apply_sync};
 use systemprompt_web_admin_core::repositories::gateway_catalog::{
     dispatchable_route_ids, registered_routes,
 };
+use systemprompt_web_admin_identity::repositories::config::groups_yaml_loader;
 use systemprompt_web_admin_platform::repositories::connectors::connector_accounts as accounts;
 use systemprompt_web_admin_platform::salesforce_orgs;
 
@@ -292,7 +292,7 @@ async fn executive_and_salesforce_connection_grant_only_the_intended_resources()
 
 #[tokio::test]
 async fn executive_manual_role_can_be_saved_and_survives_directory_recomputation() {
-    use systemprompt_web_admin::repositories::users::roles;
+    use systemprompt_web_admin_identity::repositories::users::roles;
     let Some(db) = TempDb::create().await else {
         return;
     };

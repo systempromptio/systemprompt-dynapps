@@ -1,7 +1,6 @@
 //! Router construction for the admin plane.
 
 mod admin;
-mod admin_groups;
 mod ssr;
 mod ssr_analysis;
 mod ssr_bridge;

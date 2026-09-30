@@ -18,6 +18,7 @@ use axum::http::{Request, StatusCode};
 use http_body_util::BodyExt as _;
 use sqlx::PgPool;
 use systemprompt_web_admin as admin;
+use systemprompt_web_admin_identity as identity;
 use systemprompt_web_admin_platform as platform;
 use tower::ServiceExt;
 
@@ -49,7 +50,7 @@ fn session_service(pool: &Arc<PgPool>) -> Arc<SessionCreationService> {
 
 impl App {
     pub(crate) fn new(pool: &Arc<PgPool>, credentials: Credentials) -> Self {
-        Self::build(pool, credentials, admin::AdfsConfig::disabled())
+        Self::build(pool, credentials, identity::AdfsConfig::disabled())
     }
 
     // Pass a config pointing at an address that refuses connections: the SSO
@@ -57,12 +58,12 @@ impl App {
     pub(crate) fn with_adfs(
         pool: &Arc<PgPool>,
         credentials: Credentials,
-        config: admin::AdfsConfig,
+        config: identity::AdfsConfig,
     ) -> Self {
         Self::build(pool, credentials, config)
     }
 
-    fn build(pool: &Arc<PgPool>, credentials: Credentials, adfs: admin::AdfsConfig) -> Self {
+    fn build(pool: &Arc<PgPool>, credentials: Credentials, adfs: identity::AdfsConfig) -> Self {
         let database = Arc::new(Database::from_pools(
             Arc::clone(pool),
             Some(Arc::clone(pool)),
@@ -92,7 +93,7 @@ impl App {
                 config: Arc::new(platform::SalesforceConfig::disabled()),
                 write_pool: Arc::clone(pool),
             }));
-        let sso_deps = admin::AdfsDeps {
+        let sso_deps = identity::AdfsDeps {
             config: Arc::new(adfs),
             write_pool: Arc::clone(pool),
             session_service: session_service(pool),

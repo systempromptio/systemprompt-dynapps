@@ -19,16 +19,15 @@ use axum::Router;
 
 use systemprompt::extension::prelude::{ExtensionContext, ExtensionRouter};
 
-use crate::admin;
 use pools::DbHandles;
 
 pub(crate) fn build(ctx: &dyn ExtensionContext) -> Option<ExtensionRouter> {
     let db = DbHandles::from_context(ctx)?;
     let session_service = pools::build_session_service(&db)?;
 
-    let sso_deps = admin::AdfsDeps {
+    let sso_deps = systemprompt_web_admin_identity::AdfsDeps {
         config: crate::extension::WebExtension::adfs_config()
-            .unwrap_or_else(|| Arc::new(admin::AdfsConfig::disabled())),
+            .unwrap_or_else(|| Arc::new(systemprompt_web_admin_identity::AdfsConfig::disabled())),
         write_pool: Arc::clone(&db.write),
         session_service: Arc::clone(&session_service),
     };

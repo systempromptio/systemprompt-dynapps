@@ -22,6 +22,13 @@ Conventions (strict — hold every entry to them):
 
 ### Changed
 
+- **Admin crate split, stage 4.** The identity domain — users, groups, projects, roles, access
+  control and entity access, the AD FS sign-in, dev login, sign-out, the people and account pages
+  and the authz subject-attribute providers — is `systemprompt-web-admin-identity`
+  (`extensions/web/admin/identity`), mounted at the same paths. `AdfsConfig`, the dev-login CLI
+  entry points and `permissions_for_roles` import from there; the `services/` catalog readers the
+  access matrix shares with the catalog pages, and the Salesforce identity read, moved into
+  `systemprompt-web-admin-core`.
 - **Admin crate split, stage 3.** The platform domain — sync, devices, the bridge identity and
   device link, connectors and connector OAuth, Salesforce identity and orgs, jobs and the
   configuration page — is `systemprompt-web-admin-platform` (`extensions/web/admin/platform`),

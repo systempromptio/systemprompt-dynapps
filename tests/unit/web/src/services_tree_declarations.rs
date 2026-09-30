@@ -15,10 +15,6 @@ use std::path::PathBuf;
 use systemprompt::loader::ConfigLoader;
 use systemprompt::models::services::ServicesConfig;
 use systemprompt_security::authz::{EntityKind, RegisteredEntities};
-use systemprompt_web_admin::repositories::sync::groups_db::{
-    parse_groups_doc, render_groups_export,
-};
-use systemprompt_web_admin::repositories::sync::groups_drift::{MappingRow, MemberSetRow};
 use systemprompt_web_admin_core::repositories::access_rules::declared::{
     DeclaredInputs, DeclaredSet, build_declared_set,
 };
@@ -39,6 +35,12 @@ use systemprompt_web_admin_governance::repositories::gateway_policies::month_win
     MONTH_WINDOW_SECONDS, normalise_spec,
 };
 use systemprompt_web_admin_governance::repositories::gateway_policies::rows::PolicyRow;
+use systemprompt_web_admin_identity::repositories::sync_planes::groups_db::{
+    parse_groups_doc, render_groups_export,
+};
+use systemprompt_web_admin_identity::repositories::sync_planes::groups_drift::{
+    MappingRow, MemberSetRow,
+};
 
 use crate::support::repo_root;
 
@@ -174,7 +176,7 @@ fn groups_yaml_round_trips_through_the_export() {
     }
     let exported = render_groups_export(&sets, &mappings);
     let back = parse_groups_doc(&exported).expect("the export parses as the file");
-    let shape = |d: &systemprompt_web_admin::repositories::config::groups_yaml_types::GroupsDoc| {
+    let shape = |d: &systemprompt_web_admin_identity::repositories::config::groups_yaml_types::GroupsDoc| {
         let mut out: Vec<(String, String, String, Vec<String>)> = Vec::new();
         for (kind, defs) in [("group", &d.groups), ("project", &d.projects)] {
             for def in defs {

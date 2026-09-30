@@ -55,7 +55,7 @@ impl WebExtension {
     }
 
     #[must_use]
-    pub fn adfs_config() -> Option<Arc<systemprompt_web_admin::AdfsConfig>> {
+    pub fn adfs_config() -> Option<Arc<systemprompt_web_admin_identity::AdfsConfig>> {
         config_loader::adfs_config()
     }
 

@@ -14,12 +14,12 @@ use sqlx::PgPool;
 use systemprompt::database::DbPool;
 use systemprompt::identifiers::UserId;
 use systemprompt::traits::{Job, JobContext, JobResult};
-use systemprompt_web_admin::repositories::users::revocation::revoke_user_access;
-use systemprompt_web_admin::repositories::users::roles;
 use systemprompt_web_admin_core::repositories::access_rules::validity::delete_expired_rules;
 use systemprompt_web_admin_core::repositories::scope::defaults::recompute_scope_defaults_for_user;
 use systemprompt_web_admin_core::repositories::scope::expiry::revoke_expired_memberships;
 use systemprompt_web_admin_core::types::{ROLES_MANAGE, has_any};
+use systemprompt_web_admin_identity::repositories::users::revocation::revoke_user_access;
+use systemprompt_web_admin_identity::repositories::users::roles;
 use systemprompt_web_admin_platform::repositories::devices::certs::revoke_expired_device_certs;
 
 use crate::error::JobError;

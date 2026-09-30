@@ -15,7 +15,6 @@
 //! the DB directly. Errors normalise on `error::MarketplaceError` via the
 //! `MarketplaceError` re-export in [`systemprompt_web_shared`].
 
-pub mod authz;
 pub(crate) mod export;
 pub(crate) mod handlers;
 mod marketplace_context;
@@ -23,7 +22,6 @@ mod middleware;
 pub mod repositories;
 mod routes;
 pub(crate) mod services;
-pub mod sign_out;
 
 use std::sync::Arc;
 
@@ -31,14 +29,6 @@ use axum::routing::post;
 use axum::{Extension, Router, middleware as axum_middleware};
 use sqlx::PgPool;
 
-pub use handlers::adfs_auth::{
-    ADFS_ACS_PATH, ADFS_METADATA_PATH, AdfsConfig, AdfsDeps, AdfsError, AssertionClaims, FlowState,
-    clear_state_cookie, group_matches_pattern, permissions_for_roles, read_state_cookie,
-    state_cookie,
-};
-pub use handlers::dev_login::{
-    DEV_LOGIN_PATH, dev_login_allowed, dev_login_enabled, dev_login_url,
-};
 pub use routes::{admin_ssr_router, bridge_auth_ssr_router};
 pub use systemprompt_web_admin_catalog::routes::share::share_manifest_router;
 use systemprompt_web_admin_core::state::StateError;

@@ -7,8 +7,6 @@
 //! - [`routes`] — the route fragments the admin composition root merges: the
 //!   catalog and lifecycle pages, the versions Analysis pages, the managed
 //!   authoring API, the plugin and agent listings, and manifest sharing.
-//! - [`services`] — the bridge profile the desktop client and the profile page
-//!   both render.
 //! - [`test_support`] — the pure helpers the test workspace exercises.
 //!
 //! The MCP, versions and plugin-evaluation export datasets register with the
@@ -19,7 +17,6 @@ mod export;
 pub(crate) mod handlers;
 pub mod repositories;
 pub mod routes;
-pub mod services;
 
 pub mod test_support {
     pub use crate::handlers::catalog::mcp::status_of;

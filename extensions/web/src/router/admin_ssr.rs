@@ -17,7 +17,10 @@ pub(crate) struct SsrRouters {
     pub bridge_auth: Router,
 }
 
-pub(crate) fn build(db: &DbHandles, sso_deps: admin::AdfsDeps) -> Option<SsrRouters> {
+pub(crate) fn build(
+    db: &DbHandles,
+    sso_deps: systemprompt_web_admin_identity::AdfsDeps,
+) -> Option<SsrRouters> {
     let admin_dir = admin_template_dir()?;
     let branding = config_loader::branding_config();
     let engine = systemprompt_web_admin_core::templates::AdminTemplateEngine::new(&admin_dir)

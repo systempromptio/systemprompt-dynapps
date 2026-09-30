@@ -2,8 +2,8 @@
 //! listing, and the per-user side tables.
 
 use systemprompt::identifiers::{Email, UserId};
-use systemprompt_web_admin::repositories::users;
 use systemprompt_web_admin_core::types::{CreateUserRequest, UpdateUserRequest};
+use systemprompt_web_admin_identity::repositories::users;
 
 use crate::fixtures::{
     insert_group, insert_group_member, insert_project, insert_project_member, insert_user,

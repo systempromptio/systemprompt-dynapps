@@ -1,9 +1,9 @@
 //! `repositories::users` read models — the user index, its filter options, and
 //! the per-user side tables the detail page renders.
 
-use systemprompt_web_admin::repositories::users;
 use systemprompt_web_admin_core::repositories::scope::SubjectScope;
 use systemprompt_web_admin_core::repositories::share_token;
+use systemprompt_web_admin_identity::repositories::users;
 
 use crate::fixtures::{
     group_scope, insert_user, insert_user_full, project_scope, set_project, unclaimed_email, unique,

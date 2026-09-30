@@ -1,28 +1,29 @@
 //! Server-rendered admin page routes, grouped by dashboard section.
 //!
-//! The developer login link is mounted only on a development non-cloud
-//! profile, so production has no route to misconfigure open. Account routes
-//! are identity-scoped rather than admin-gated: each handler resolves per
-//! request what the viewer may see, and 404s a conversation they do not own.
+//! Account routes are identity-scoped rather than admin-gated: each handler
+//! resolves per request what the viewer may see, and 404s a conversation they
+//! do not own. The AD FS and developer sign-in routes answer before any
+//! session exists, beside the login page.
 
 mod activity;
 mod platform;
 
 use std::sync::Arc;
 
-use axum::routing::{get, post};
+use axum::routing::get;
 use axum::{Extension, Router, middleware as axum_middleware};
 use sqlx::PgPool;
 use tower_http::normalize_path::NormalizePathLayer;
 
 use super::super::{handlers, middleware};
 use super::ssr_redirects;
-use crate::handlers::adfs_auth::AdfsDeps;
 use activity::ai_activity_routes;
 use platform::platform_routes;
 use systemprompt::database::DbPool;
 use systemprompt_web_admin_core::state::StateError;
 use systemprompt_web_admin_core::templates::AdminTemplateEngine;
+use systemprompt_web_admin_identity::AdfsDeps;
+use systemprompt_web_admin_identity::routes::{account_ssr, people_ssr, public as sign_in};
 use systemprompt_web_admin_platform::routes::platform_ssr;
 
 pub fn admin_ssr_router(
@@ -83,20 +84,7 @@ fn public_routes(pool: Arc<PgPool>) -> Router<Arc<PgPool>> {
             pool,
             middleware::user_context_middleware,
         ));
-    let routes = login
-        .route("/auth/adfs/start", get(handlers::adfs_auth::adfs_start))
-        .route("/auth/adfs/acs", post(handlers::adfs_auth::adfs_callback));
-    dev_login_routes(routes)
-}
-
-fn dev_login_routes(router: Router<Arc<PgPool>>) -> Router<Arc<PgPool>> {
-    if !handlers::dev_login::dev_login_enabled() {
-        return router;
-    }
-    router.route(
-        "/auth/dev/login",
-        get(handlers::dev_login::dev_login_redeem),
-    )
+    login.merge(sign_in::sign_in_routes())
 }
 
 fn overview_routes() -> Router<Arc<PgPool>> {
@@ -104,32 +92,13 @@ fn overview_routes() -> Router<Arc<PgPool>> {
 }
 
 fn people_routes() -> Router<Arc<PgPool>> {
-    Router::new()
-        .route("/users", get(handlers::ssr::users_page))
-        .route(
-            "/users/{user_id}",
-            get(handlers::ssr::user_detail_by_id_page),
-        )
-        .route("/user", get(handlers::ssr::user_detail_page))
-        .route("/groups", get(handlers::ssr::groups_page))
-        .route("/groups/{group_id}", get(handlers::ssr::group_detail_page))
-        .route("/projects", get(handlers::ssr::projects_page))
-        .route(
-            "/projects/{project_id}",
-            get(handlers::ssr::project_detail_page),
-        )
-        .route(
-            "/projects/{project_id}/report",
-            get(handlers::ssr::project_report_page),
-        )
-        .route("/roles", get(handlers::ssr::roles_page))
+    people_ssr::directory_routes()
         .merge(platform_ssr::device_routes())
-        .route("/access-control", get(handlers::ssr::access_control_page))
+        .merge(people_ssr::access_control_routes())
 }
 
 fn account_routes() -> Router<Arc<PgPool>> {
-    Router::new()
-        .route("/profile", get(handlers::ssr::profile_page))
+    account_ssr::profile_routes()
         .route("/history", get(handlers::ssr::history_page))
         .route(
             "/history/conversations/{context_id}",
@@ -144,9 +113,6 @@ fn api_routes() -> Router<Arc<PgPool>> {
         .merge(systemprompt_web_admin_governance::routes::ssr_governance::api_routes())
         .route("/api/history/search", get(handlers::ssr::history_search))
         .route("/api/overview", get(handlers::ssr::overview_fragment))
-        .route(
-            "/api/profile/bridge-code",
-            post(handlers::ssr::issue_bridge_code),
-        )
+        .merge(account_ssr::profile_api_routes())
         .merge(platform_ssr::api_routes())
 }

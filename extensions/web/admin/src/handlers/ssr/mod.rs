@@ -13,40 +13,27 @@ use systemprompt_web_admin_core::types::UserContext;
 mod attention;
 pub(crate) mod conversation_header;
 mod overview;
-pub(crate) mod people_chart;
-pub(crate) mod people_view;
-mod roles;
-mod ssr_access_control;
 pub(crate) mod ssr_analytics_dashboard;
 pub(crate) mod ssr_analytics_requests;
 pub(crate) mod ssr_artifacts;
 mod ssr_context_detail;
-mod ssr_group_detail;
-mod ssr_groups;
 pub(crate) mod ssr_history;
 mod ssr_observability;
 mod ssr_perf_trace_detail;
 pub(crate) mod ssr_perf_traces;
-mod ssr_profile;
-mod ssr_projects;
 mod ssr_session_detail;
 pub(crate) mod ssr_sessions_list;
 pub(crate) mod ssr_skills_contexts;
 pub(crate) mod ssr_tools;
-mod ssr_users;
 pub(crate) mod transcript_view;
 pub(crate) mod types;
 
 pub(crate) use attention::attention_counts;
 pub(crate) use overview::{overview_fragment, overview_page};
-pub(crate) use roles::roles_page;
-pub(crate) use ssr_access_control::access_control_page;
 pub(crate) use ssr_analytics_dashboard::analytics_dashboard_page;
 pub(crate) use ssr_analytics_requests::analytics_requests_page;
 pub(crate) use ssr_artifacts::{artifact_detail_page, artifact_preview, artifacts_page};
 pub(crate) use ssr_context_detail::context_detail_page;
-pub(crate) use ssr_group_detail::group_detail_page;
-pub(crate) use ssr_groups::groups_page;
 pub(crate) use ssr_history::{
     conversations_page, history_conversation_page, history_page, history_search,
 };
@@ -56,13 +43,10 @@ pub(crate) use ssr_observability::{
 };
 pub(crate) use ssr_perf_trace_detail::perf_trace_detail_page;
 pub(crate) use ssr_perf_traces::perf_traces_page;
-pub(crate) use ssr_profile::{issue_bridge_code, profile_page};
-pub(crate) use ssr_projects::{project_detail_page, project_report_page, projects_page};
 pub(crate) use ssr_session_detail::session_detail_page;
 pub(crate) use ssr_sessions_list::sessions_list_page;
 pub(crate) use ssr_skills_contexts::skills_contexts_page;
 pub(crate) use ssr_tools::tools_page;
-pub(crate) use ssr_users::{user_detail_by_id_page, user_detail_page, users_page};
 use systemprompt_web_admin_core::ssr::helpers::branding_context;
 
 #[derive(serde::Deserialize)]
@@ -83,7 +67,7 @@ struct LoginContext<'a> {
 pub(crate) async fn login_page(
     user_ctx: Option<Extension<UserContext>>,
     Extension(engine): Extension<AdminTemplateEngine>,
-    Extension(sso_deps): Extension<crate::handlers::adfs_auth::AdfsDeps>,
+    Extension(sso_deps): Extension<systemprompt_web_admin_identity::AdfsDeps>,
     Query(params): Query<LoginParams>,
 ) -> AdminHtmlResult<Response> {
     if let Some(Extension(user_ctx)) = user_ctx {
@@ -102,7 +86,7 @@ pub(crate) async fn login_page(
         shell: branding_context(&engine),
         redirect_encoded,
         sso_enabled: sso_deps.config.is_usable(),
-        dev_login_enabled: crate::handlers::dev_login::dev_login_enabled(),
+        dev_login_enabled: systemprompt_web_admin_identity::dev_login_enabled(),
     };
     let html = engine.render("login", &ctx)?;
     Ok(Html(html).into_response())

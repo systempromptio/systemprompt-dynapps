@@ -182,6 +182,11 @@ impl ConnectionSnapshotSource for AccountConnectionSource {
     async fn snapshot(&self, pool: &PgPool, user: &UserId) -> AdminResult<ConnectionSnapshot> {
         build_snapshot(pool, user).await
     }
+
+    fn display_name(&self, provider: &str) -> String {
+        Provider::try_from(provider.to_owned())
+            .map_or_else(|_| provider.to_owned(), |p| p.display_name())
+    }
 }
 
 inventory::submit! { ConnectionSourceRegistration(&AccountConnectionSource) }

@@ -12,8 +12,8 @@ use systemprompt::models::bridge::manifest::{
 };
 use systemprompt::models::services::MarketplaceAccess;
 use systemprompt_security::authz::{EntityKind, EntityRef};
-use systemprompt_web_admin::authz::group::{group_dimension, group_rule_type};
-use systemprompt_web_admin::authz::project::{project_dimension, project_rule_type};
+use systemprompt_web_admin_identity::authz::group::{group_dimension, group_rule_type};
+use systemprompt_web_admin_identity::authz::project::{project_dimension, project_rule_type};
 use systemprompt_web_admin_platform::authz::salesforce::salesforce_dimension;
 
 #[test]

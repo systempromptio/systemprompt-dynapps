@@ -4,14 +4,14 @@ use crate::fixtures::{
 };
 use crate::tempdb::TempDb;
 use chrono::{Duration, Utc};
-use systemprompt_web_admin::repositories::users::roster::{
-    RosterFilter, RosterQuery, RosterSort, get_roster_stats, list_users_paged,
-};
 use systemprompt_web_admin_core::repositories::conversations::rows::{
     ConversationFilter, ConversationPage, ConversationPageMode, ConversationSort,
     load_conversation_page,
 };
 use systemprompt_web_admin_core::repositories::scope::SubjectScope;
+use systemprompt_web_admin_identity::repositories::users::roster::{
+    RosterFilter, RosterQuery, RosterSort, get_roster_stats, list_users_paged,
+};
 
 #[tokio::test]
 async fn user_pages_have_three_previews_and_stable_complete_totals() {

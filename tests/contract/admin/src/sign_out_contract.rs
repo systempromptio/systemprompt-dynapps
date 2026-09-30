@@ -9,7 +9,7 @@ use axum::http::{HeaderMap, HeaderValue, header};
 use sqlx::PgPool;
 use systemprompt::identifiers::{SessionId, UserId};
 use systemprompt_security::{AdminTokenParams, JwtService};
-use systemprompt_web_admin::sign_out::revoke_cookie_session;
+use systemprompt_web_admin_identity::sign_out::revoke_cookie_session;
 
 use crate::tempdb::TempDb;
 use crate::{globals, principal};

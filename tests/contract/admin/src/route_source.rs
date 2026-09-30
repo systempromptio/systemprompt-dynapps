@@ -14,8 +14,16 @@ const ADMIN_API_SRC: &str =
     include_str!("../../../../extensions/web/admin/src/routes/admin/mod.rs");
 const ADMIN_API_READ_SRC: &str =
     include_str!("../../../../extensions/web/admin/src/routes/admin/read.rs");
-const ADMIN_GROUPS_SRC: &str =
-    include_str!("../../../../extensions/web/admin/src/routes/admin_groups.rs");
+const IDENTITY_API_SRC: &str =
+    include_str!("../../../../extensions/web/admin/identity/src/routes/api.rs");
+const IDENTITY_GROUPS_SRC: &str =
+    include_str!("../../../../extensions/web/admin/identity/src/routes/admin_groups.rs");
+const IDENTITY_PEOPLE_SRC: &str =
+    include_str!("../../../../extensions/web/admin/identity/src/routes/people_ssr.rs");
+const IDENTITY_ACCOUNT_SRC: &str =
+    include_str!("../../../../extensions/web/admin/identity/src/routes/account_ssr.rs");
+const IDENTITY_PUBLIC_SRC: &str =
+    include_str!("../../../../extensions/web/admin/identity/src/routes/public.rs");
 const MANAGED_SRC: &str =
     include_str!("../../../../extensions/web/admin/catalog/src/routes/managed_resources.rs");
 const CATALOG_API_SRC: &str =
@@ -93,7 +101,8 @@ pub(crate) fn mounted_routes() -> Vec<MountedRoute> {
     for (src, prefix) in [
         (ADMIN_API_SRC, ADMIN_API_PREFIX),
         (ADMIN_API_READ_SRC, ADMIN_API_PREFIX),
-        (ADMIN_GROUPS_SRC, ADMIN_API_PREFIX),
+        (IDENTITY_API_SRC, ADMIN_API_PREFIX),
+        (IDENTITY_GROUPS_SRC, ADMIN_API_PREFIX),
         (MANAGED_SRC, ADMIN_API_PREFIX),
         (CATALOG_API_SRC, ADMIN_API_PREFIX),
         (CATALOG_SSR_SRC, SSR_PREFIX),
@@ -101,6 +110,9 @@ pub(crate) fn mounted_routes() -> Vec<MountedRoute> {
         (GOVERNANCE_SSR_SRC, SSR_PREFIX),
         (PLATFORM_API_SRC, ADMIN_API_PREFIX),
         (PLATFORM_SSR_SRC, SSR_PREFIX),
+        (IDENTITY_PEOPLE_SRC, SSR_PREFIX),
+        (IDENTITY_ACCOUNT_SRC, SSR_PREFIX),
+        (IDENTITY_PUBLIC_SRC, SSR_PREFIX),
         (SSR_SRC, SSR_PREFIX),
         (SSR_PLATFORM_SRC, SSR_PREFIX),
         (SSR_ACTIVITY_SRC, SSR_PREFIX),

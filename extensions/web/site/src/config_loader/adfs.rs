@@ -23,7 +23,7 @@ fn adfs_config_filename() -> String {
 // Why: AD FS answers `MSIS7007` when the relying-party id or ACS is not this
 // host's own URL, so both derive from `api_external_url`; an explicit value
 // still wins for a trust registered under another URL.
-fn derive_saml_urls(config: &mut systemprompt_web_admin::AdfsConfig) {
+fn derive_saml_urls(config: &mut systemprompt_web_admin_identity::AdfsConfig) {
     if !config.entity_id.is_empty() && !config.acs_url.is_empty() {
         return;
     }
@@ -37,10 +37,13 @@ fn derive_saml_urls(config: &mut systemprompt_web_admin::AdfsConfig) {
         return;
     }
     if config.entity_id.is_empty() {
-        config.entity_id = format!("{base}{}", systemprompt_web_admin::ADFS_METADATA_PATH);
+        config.entity_id = format!(
+            "{base}{}",
+            systemprompt_web_admin_identity::ADFS_METADATA_PATH
+        );
     }
     if config.acs_url.is_empty() {
-        config.acs_url = format!("{base}{}", systemprompt_web_admin::ADFS_ACS_PATH);
+        config.acs_url = format!("{base}{}", systemprompt_web_admin_identity::ADFS_ACS_PATH);
     }
     tracing::info!(
         entity_id = %config.entity_id,
@@ -50,7 +53,7 @@ fn derive_saml_urls(config: &mut systemprompt_web_admin::AdfsConfig) {
 }
 
 pub(super) fn load_adfs_config()
--> Result<Option<Arc<systemprompt_web_admin::AdfsConfig>>, ConfigError> {
+-> Result<Option<Arc<systemprompt_web_admin_identity::AdfsConfig>>, ConfigError> {
     let profile_filename = adfs_config_filename();
     let (filename, value) = match load_config_section(&profile_filename)? {
         Some(value) => (profile_filename, value),
@@ -60,8 +63,8 @@ pub(super) fn load_adfs_config()
         },
     };
 
-    let mut config: systemprompt_web_admin::AdfsConfig =
-        serde_yaml::from_value(value).map_err(|e| ConfigError::Parse {
+    let mut config: systemprompt_web_admin_identity::AdfsConfig = serde_yaml::from_value(value)
+        .map_err(|e| ConfigError::Parse {
             config_name: filename.clone(),
             message: e.to_string(),
         })?;

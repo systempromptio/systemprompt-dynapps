@@ -1,23 +1,15 @@
 //! Data access for the admin surface, one module per domain.
 //!
-//! Callers path-qualify (`repositories::config::gateway::create_route`);
+//! Callers path-qualify (`repositories::dashboard::get_dashboard_data`);
 //! this module re-exports nothing, so the module path is the only name a
 //! symbol has and collisions between domains cannot arise.
 
 pub mod analytics;
-pub mod config;
 pub mod dashboard;
-pub mod dev_login;
-pub mod groups;
 pub mod observability;
 pub mod overview;
-pub mod people_usage;
-pub mod projects;
 pub mod reports;
-pub mod roles;
 pub mod session_state;
-pub mod sync;
 pub mod traces;
-pub mod users;
 
 pub mod analysis;

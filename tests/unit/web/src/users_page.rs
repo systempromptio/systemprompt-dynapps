@@ -6,7 +6,7 @@
 //! rewrite quietly loses — a write control drifting outside its authorisation
 //! guard, and a table losing its empty state.
 
-use systemprompt_web_admin::repositories::users::roster::{RosterFilter, RosterSort};
+use systemprompt_web_admin_identity::repositories::users::roster::{RosterFilter, RosterSort};
 
 use crate::support::repo_root;
 

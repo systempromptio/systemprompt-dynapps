@@ -11,8 +11,6 @@ pub(crate) mod contexts;
 pub(crate) mod dashboard;
 pub(crate) mod dashboard_cost;
 pub(crate) mod history;
-pub(crate) mod people;
-pub(crate) mod projects;
 pub(crate) mod reports;
 pub(crate) mod requests;
 pub(crate) mod sessions;

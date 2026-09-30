@@ -22,9 +22,9 @@ use systemprompt_security::authz::{
     Access, AccessControlRepository, EntityKind, RuleType, UpsertRuleParams,
 };
 // Why: the filter reads connection snapshots through an `inventory`
-// registration submitted by the residual admin crate, which must be linked.
-use systemprompt_web_admin as _;
+// registration submitted by the platform admin crate, which must be linked.
 use systemprompt_web_admin_core::marketplace_filter::TemplateMarketplaceFilter;
+use systemprompt_web_admin_platform as _;
 
 use crate::fixtures::{insert_user_with_roles, unique};
 
@@ -459,7 +459,7 @@ async fn a_group_rule_admits_only_members_of_that_group() {
         .upsert_rule(UpsertRuleParams {
             entity_type: EntityKind::McpServer,
             entity_id: &mcp,
-            rule_type: systemprompt_web_admin::authz::group::group_rule_type(),
+            rule_type: systemprompt_web_admin_identity::authz::group::group_rule_type(),
             rule_value: &group,
             access: Access::Allow,
             justification: None,

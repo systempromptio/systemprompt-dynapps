@@ -8,6 +8,7 @@ use systemprompt_web_admin_core::repositories::sync::inventory::{
 };
 use systemprompt_web_admin_core::repositories::sync::registry::planes;
 use systemprompt_web_admin_governance as _;
+use systemprompt_web_admin_identity as _;
 
 use crate::support::repo_root;
 

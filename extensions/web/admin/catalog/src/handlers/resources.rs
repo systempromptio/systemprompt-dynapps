@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 use systemprompt::identifiers::AgentId;
 
-use crate::repositories;
+use systemprompt_web_admin_core::catalog_index::agents;
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 use systemprompt_web_admin_core::request as shared;
 use systemprompt_web_admin_core::types::UserContext;
@@ -20,8 +20,7 @@ pub(crate) async fn list_agents_handler(
     Extension(user_ctx): Extension<UserContext>,
 ) -> AdminResult<Response> {
     let services_path = shared::get_services_path()?;
-    let agents = repositories::agents::list_configured_agents(&services_path)
-        .map_err(AdminError::internal)?;
+    let agents = agents::list_configured_agents(&services_path).map_err(AdminError::internal)?;
     if user_ctx.is_admin {
         return Ok(Json(AgentsListResponse { agents }).into_response());
     }
@@ -45,7 +44,7 @@ pub(crate) async fn list_agents_handler(
 
 pub(crate) async fn get_agent_handler(Path(agent_id): Path<String>) -> AdminResult<Response> {
     let services_path = shared::get_services_path()?;
-    let agent = repositories::agents::find_agent(&services_path, &AgentId::new(agent_id))
+    let agent = agents::find_agent(&services_path, &AgentId::new(agent_id))
         .map_err(AdminError::internal)?
         .ok_or_else(|| AdminError::NotFound("Agent not found".to_owned()))?;
     Ok(Json(agent).into_response())

@@ -118,8 +118,9 @@ static NAVIGATION_CONFIG: OnceLock<Result<Option<Arc<NavigationConfig>>, String>
 static HOMEPAGE_CONFIG: OnceLock<Result<Option<Arc<HomepageConfig>>, String>> = OnceLock::new();
 static SKILLS_PAGE_CONFIG: OnceLock<Result<Option<Arc<SkillsPageConfig>>, String>> =
     OnceLock::new();
-static ADFS_CONFIG: OnceLock<Result<Option<Arc<systemprompt_web_admin::AdfsConfig>>, String>> =
-    OnceLock::new();
+static ADFS_CONFIG: OnceLock<
+    Result<Option<Arc<systemprompt_web_admin_identity::AdfsConfig>>, String>,
+> = OnceLock::new();
 static SALESFORCE_CONFIG: OnceLock<
     Result<Option<Arc<systemprompt_web_admin_platform::SalesforceConfig>>, String>,
 > = OnceLock::new();
@@ -152,7 +153,7 @@ pub fn skills_page_config() -> Option<Arc<SkillsPageConfig>> {
 }
 
 #[must_use]
-pub fn adfs_config() -> Option<Arc<systemprompt_web_admin::AdfsConfig>> {
+pub fn adfs_config() -> Option<Arc<systemprompt_web_admin_identity::AdfsConfig>> {
     log_and_discard_err(&ADFS_CONFIG, load_adfs_config, "ADFS config error")
 }
 

@@ -4,12 +4,12 @@
 
 
 use systemprompt_security::authz::{ROLE_PRECEDENCE, RuleType};
-use systemprompt_web_admin::authz::group::group_dimension;
-use systemprompt_web_admin::authz::role::{effective_roles, role_dimension};
 use systemprompt_web_admin_core::authz::organization::{
     ORGANIZATION_DEFAULT, organization_dimension, organization_rule_type,
 };
 use systemprompt_web_admin_core::authz::primary::lead_with_primary;
+use systemprompt_web_admin_identity::authz::group::group_dimension;
+use systemprompt_web_admin_identity::authz::role::{effective_roles, role_dimension};
 
 fn ids(values: &[&str]) -> Vec<String> {
     values.iter().map(|v| (*v).to_owned()).collect()

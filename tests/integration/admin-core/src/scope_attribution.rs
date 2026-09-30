@@ -7,15 +7,15 @@
 //! that arrives before the person has a primary is unattributed for good,
 //! which `request_scopes` covers on its own.
 
-use systemprompt_web_admin::repositories::groups::members::replace_directory_group_memberships;
-use systemprompt_web_admin::repositories::people_usage::get_scope_usage;
-use systemprompt_web_admin::repositories::people_usage::totals::list_scope_totals;
 use systemprompt_web_admin_core::repositories::scope::defaults::{
     find_scope_defaults, recompute_scope_defaults, set_scope_defaults,
 };
 use systemprompt_web_admin_core::repositories::scope::{
     Attribution, ScopeKind, ScopeQuery, ScopeTarget,
 };
+use systemprompt_web_admin_identity::repositories::groups::members::replace_directory_group_memberships;
+use systemprompt_web_admin_identity::repositories::people_usage::get_scope_usage;
+use systemprompt_web_admin_identity::repositories::people_usage::totals::list_scope_totals;
 
 use crate::fixtures::{
     RequestSpec, insert_group, insert_group_member, insert_request, insert_user, unclaimed_email,

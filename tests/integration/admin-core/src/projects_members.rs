@@ -1,12 +1,12 @@
 //! `repositories::projects::members` — attribution membership, and the same
 //! two-writer rule groups carry.
 
-use systemprompt_web_admin::repositories::projects::activity::list_project_sessions;
-use systemprompt_web_admin::repositories::projects::members::{
+use systemprompt_web_admin_core::repositories::scope::{Attribution, ScopeQuery, ScopeTarget};
+use systemprompt_web_admin_identity::repositories::projects::activity::list_project_sessions;
+use systemprompt_web_admin_identity::repositories::projects::members::{
     delete_project_member, insert_project_member, list_project_ids_for_user, list_project_members,
     replace_directory_project_memberships,
 };
-use systemprompt_web_admin_core::repositories::scope::{Attribution, ScopeQuery, ScopeTarget};
 
 use crate::fixtures::{
     RequestSpec, insert_request, insert_session, insert_user, unclaimed_email, unique,

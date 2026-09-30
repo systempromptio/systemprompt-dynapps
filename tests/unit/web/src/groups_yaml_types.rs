@@ -5,7 +5,9 @@
 //! violation or — worse for a duplicate — as the later definition silently
 //! winning.
 
-use systemprompt_web_admin::repositories::config::groups_yaml_types::{GroupsDoc, is_valid_id};
+use systemprompt_web_admin_identity::repositories::config::groups_yaml_types::{
+    GroupsDoc, is_valid_id,
+};
 
 fn doc(yaml: &str) -> GroupsDoc {
     serde_yaml::from_str(yaml).expect("document parses")

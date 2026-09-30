@@ -1,13 +1,13 @@
 //! `repositories::groups::crud` — the group rows, and the one row that cannot
 //! be deleted.
 
-use systemprompt_web_admin::repositories::groups::crud::{
-    delete_group, find_group, insert_group, update_group,
-};
 use systemprompt_web_admin_core::repositories::scope::containers::{
     list_group_options, list_group_summaries,
 };
 use systemprompt_web_admin_core::types::groups::{CreateGroupRequest, UpdateGroupRequest};
+use systemprompt_web_admin_identity::repositories::groups::crud::{
+    delete_group, find_group, insert_group, update_group,
+};
 use systemprompt_web_shared::GroupId;
 
 use crate::fixtures::{insert_user, unclaimed_email, unique, unique_group};

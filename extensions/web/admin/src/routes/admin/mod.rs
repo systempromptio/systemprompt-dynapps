@@ -23,17 +23,17 @@
 
 use std::sync::Arc;
 
-use axum::routing::{delete, get, patch, post, put};
+use axum::routing::get;
 use axum::{Router, middleware as axum_middleware};
 use sqlx::PgPool;
 
 use super::super::handlers;
-use super::admin_groups;
 use systemprompt::database::DbPool;
 use systemprompt_web_admin_catalog::routes as catalog_routes;
 use systemprompt_web_admin_core::state::StateError;
 use systemprompt_web_admin_core::types::{ROLES_CONSOLE, ROLES_MANAGE, ROLES_PLATFORM};
 use systemprompt_web_admin_governance::routes::api as governance_routes;
+use systemprompt_web_admin_identity::routes::api as identity_routes;
 use systemprompt_web_admin_platform::routes::api as platform_routes;
 
 mod read;
@@ -78,72 +78,16 @@ pub(crate) fn build_admin_only_routes(
         .layer(axum::Extension(managed)))
 }
 
-fn build_access_control_write_routes() -> Router<Arc<PgPool>> {
-    Router::new()
-        .route(
-            "/access-control/entity/{entity_type}/{entity_id}",
-            put(handlers::access_control::update_entity_rules_handler),
-        )
-        .route(
-            "/access-control/bulk",
-            put(handlers::access_control::bulk_assign_handler),
-        )
-        .route(
-            "/access-control/entity/{entity_type}/{entity_id}/rules",
-            post(handlers::entity_access::upsert_entity_rule_handler),
-        )
-        .route(
-            "/access-control/entity/{entity_type}/{entity_id}/rules/{rule_id}",
-            delete(handlers::entity_access::delete_entity_rule_handler),
-        )
-        .route(
-            "/access-control/entity/{entity_type}/{entity_id}/default",
-            patch(handlers::entity_access::set_entity_default_handler),
-        )
-        .route(
-            "/access-control/bulk-template",
-            post(handlers::entity_access::apply_template_handler),
-        )
-}
-
 fn build_admin_write_routes(write_pool: &Arc<PgPool>) -> Router {
     Router::new()
         .merge(governance_routes::gateway_write_routes())
-        .route(
-            "/users",
-            post(handlers::users_bootstrap::create_user_handler),
-        )
-        .route(
-            "/users/{user_id}",
-            put(handlers::update_user_handler).delete(handlers::delete_user_handler),
-        )
+        .merge(identity_routes::user_write_routes())
         .merge(catalog_routes::api::share_token_routes())
         .merge(platform_routes::connector_write_routes())
-        .route(
-            "/users/{user_id}/sessions",
-            get(handlers::list_user_sessions_handler)
-                .delete(handlers::revoke_all_user_sessions_handler),
-        )
-        .route(
-            "/users/{user_id}/sessions/{session_id}",
-            delete(handlers::revoke_user_session_handler),
-        )
-        .merge(build_access_control_write_routes())
+        .merge(identity_routes::session_write_routes())
+        .merge(identity_routes::access_control_write_routes())
         .merge(platform_routes::sync_write_routes())
-        .route(
-            "/users/{user_id}/roles",
-            put(handlers::roles::set_user_roles_handler),
-        )
-        .route(
-            "/users/{user_id}/scope-defaults",
-            put(handlers::scope_defaults::set_user_scope_defaults_handler),
-        )
-        .route(
-            "/scope-defaults/recompute",
-            post(handlers::scope_defaults::recompute_scope_defaults_handler),
-        )
-        .merge(admin_groups::group_write_routes())
-        .merge(admin_groups::project_write_routes())
+        .merge(identity_routes::directory_write_routes())
         .merge(platform_routes::device_write_routes())
         .merge(governance_routes::approval_write_routes())
         .with_state(Arc::clone(write_pool))
@@ -151,22 +95,12 @@ fn build_admin_write_routes(write_pool: &Arc<PgPool>) -> Router {
 
 fn build_admin_platform_routes(write_pool: &Arc<PgPool>) -> Router {
     Router::new()
-        .merge(admin_groups::group_platform_routes())
-        .merge(admin_groups::project_platform_routes())
+        .merge(identity_routes::directory_platform_routes())
         .with_state(Arc::clone(write_pool))
 }
 
 pub(crate) fn build_self_service_routes(write_pool: &Arc<PgPool>) -> Router {
-    Router::new()
-        .route(
-            "/user/settings",
-            put(handlers::self_service::update_own_settings_handler),
-        )
-        .route(
-            "/user/account",
-            delete(handlers::self_service::delete_own_account_handler),
-        )
-        .with_state(Arc::clone(write_pool))
+    identity_routes::self_service_routes().with_state(Arc::clone(write_pool))
 }
 
 pub(crate) fn build_auth_read_routes(read_pool: &Arc<PgPool>) -> Router {

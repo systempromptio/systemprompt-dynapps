@@ -12,12 +12,6 @@
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 
-#[derive(Debug, Clone)]
-pub struct SalesforceIdentity {
-    pub provider: String,
-    pub sf_username: String,
-}
-
 pub async fn upsert_identity(
     pool: &PgPool,
     user_id: &UserId,
@@ -77,20 +71,6 @@ pub async fn find_username(
     .fetch_optional(pool)
     .await?;
     Ok(row.map(|r| r.sf_username))
-}
-
-pub async fn list_identities(
-    pool: &PgPool,
-    user_id: &UserId,
-) -> Result<Vec<SalesforceIdentity>, sqlx::Error> {
-    sqlx::query_as!(
-        SalesforceIdentity,
-        "SELECT provider, sf_username FROM salesforce_user_identities \
-         WHERE user_id = $1 ORDER BY provider",
-        user_id.as_str()
-    )
-    .fetch_all(pool)
-    .await
 }
 
 pub async fn list_linked_providers(

@@ -15,7 +15,7 @@
 
 use std::collections::BTreeMap;
 
-use systemprompt_web_admin::AdfsConfig;
+use systemprompt_web_admin_identity::AdfsConfig;
 
 use crate::app::{App, Call};
 use crate::principal::Principal;

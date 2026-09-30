@@ -5288,7 +5288,7 @@ dependencies = [
  "anyhow",
  "clap",
  "systemprompt",
- "systemprompt-web-admin",
+ "systemprompt-web-admin-identity",
  "tokio",
 ]
 
@@ -5897,16 +5897,12 @@ version = "0.62.0"
 dependencies = [
  "async-trait",
  "axum",
- "base64 0.22.1",
  "chrono",
  "hex",
  "inventory",
- "rand 0.9.5",
  "reqwest 0.13.5",
- "saml",
  "serde",
  "serde_json",
- "serde_yaml_ng",
  "sha2 0.10.9",
  "sqlx",
  "systemprompt",
@@ -5914,6 +5910,7 @@ dependencies = [
  "systemprompt-web-admin-catalog",
  "systemprompt-web-admin-core",
  "systemprompt-web-admin-governance",
+ "systemprompt-web-admin-identity",
  "systemprompt-web-admin-platform",
  "systemprompt-web-shared",
  "tempfile",
@@ -5948,7 +5945,6 @@ dependencies = [
  "tokio",
  "tracing",
  "urlencoding",
- "uuid",
 ]
 
 [[package]]
@@ -5993,6 +5989,34 @@ dependencies = [
  "inventory",
  "serde",
  "serde_jcs 0.1.0",
+ "serde_json",
+ "serde_yaml_ng",
+ "sha2 0.10.9",
+ "sqlx",
+ "systemprompt",
+ "systemprompt-security",
+ "systemprompt-web-admin-core",
+ "systemprompt-web-shared",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
+ "urlencoding",
+ "uuid",
+]
+
+[[package]]
+name = "systemprompt-web-admin-identity"
+version = "0.62.0"
+dependencies = [
+ "async-trait",
+ "axum",
+ "base64 0.22.1",
+ "chrono",
+ "hex",
+ "inventory",
+ "rand 0.9.5",
+ "saml",
+ "serde",
  "serde_json",
  "serde_yaml_ng",
  "sha2 0.10.9",
@@ -6067,6 +6091,7 @@ dependencies = [
  "systemprompt-extension",
  "systemprompt-web-admin",
  "systemprompt-web-admin-core",
+ "systemprompt-web-admin-identity",
  "systemprompt-web-admin-platform",
  "systemprompt-web-content",
  "systemprompt-web-jobs",
@@ -6095,6 +6120,7 @@ dependencies = [
  "systemprompt-web-admin",
  "systemprompt-web-admin-core",
  "systemprompt-web-admin-governance",
+ "systemprompt-web-admin-identity",
  "systemprompt-web-admin-platform",
  "systemprompt-web-content",
  "systemprompt-web-shared",
@@ -6134,7 +6160,7 @@ dependencies = [
  "serde_yaml_ng",
  "sqlx",
  "systemprompt",
- "systemprompt-web-admin",
+ "systemprompt-web-admin-identity",
  "systemprompt-web-admin-platform",
  "systemprompt-web-shared",
  "thiserror 2.0.21",

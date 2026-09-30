@@ -11,7 +11,7 @@ publish = false
 [dependencies]
 inventory = { workspace = true }
 systemprompt-web-shared = { workspace = true }
-systemprompt-web-admin = { workspace = true }
+systemprompt-web-admin-identity = { workspace = true }
 systemprompt-web-admin-platform = { workspace = true }
 # Audit: uses config (profile paths), database, extension, models, template_provider.
 systemprompt = { workspace = true, features = ["database", "config"] }

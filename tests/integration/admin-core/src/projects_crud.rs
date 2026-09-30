@@ -2,11 +2,11 @@
 //! independent from group lifecycle: there is no protected system project,
 //! and deleting completed work removes its attribution membership.
 
-use systemprompt_web_admin::repositories::projects::crud::{
-    delete_project, find_project, insert_project, update_project,
-};
 use systemprompt_web_admin_core::repositories::scope::containers::list_project_options;
 use systemprompt_web_admin_core::types::projects::{CreateProjectRequest, UpdateProjectRequest};
+use systemprompt_web_admin_identity::repositories::projects::crud::{
+    delete_project, find_project, insert_project, update_project,
+};
 
 use crate::fixtures::unique_project;
 use crate::tempdb::TempDb;

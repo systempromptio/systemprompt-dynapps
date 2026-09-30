@@ -9,7 +9,7 @@
 use std::collections::BTreeSet;
 use std::path::PathBuf;
 
-use systemprompt_web_admin::AdfsConfig;
+use systemprompt_web_admin_identity::AdfsConfig;
 
 use crate::support::repo_root;
 
@@ -168,7 +168,7 @@ fn every_mapped_ad_group_is_one_a_config_names() {
             for ad_group in ad_groups.iter().filter_map(serde_yaml::Value::as_str) {
                 assert!(
                     mapped.iter().any(|m| m == ad_group
-                        || systemprompt_web_admin::group_matches_pattern(m, ad_group)),
+                        || systemprompt_web_admin_identity::group_matches_pattern(m, ad_group)),
                     "groups.yaml maps {ad_group}, which no adfs config names in group_roles"
                 );
                 checked += 1;
