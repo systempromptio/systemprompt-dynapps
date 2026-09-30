@@ -24,7 +24,20 @@ use systemprompt_web_admin_core::types::CookieSession;
 pub(super) enum PatSession {
     NotApplicable,
     Accepted(CookieSession),
-    Rejected(Response),
+    Rejected(PatRejection),
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(super) struct PatRejection(&'static str);
+
+impl IntoResponse for PatRejection {
+    fn into_response(self) -> Response {
+        (
+            StatusCode::UNAUTHORIZED,
+            Json(json!({ "error": "unauthorized", "message": self.0 })),
+        )
+            .into_response()
+    }
 }
 
 fn is_export(path: &str) -> bool {
@@ -42,14 +55,8 @@ fn is_export(path: &str) -> bool {
     !dataset.is_empty() && tail_ok && parts.next().is_none()
 }
 
-fn rejected(message: &str) -> PatSession {
-    PatSession::Rejected(
-        (
-            StatusCode::UNAUTHORIZED,
-            Json(json!({ "error": "unauthorized", "message": message })),
-        )
-            .into_response(),
-    )
+const fn rejected(message: &'static str) -> PatSession {
+    PatSession::Rejected(PatRejection(message))
 }
 
 pub(super) fn pat_request(request: &Request) -> Option<PatRequest> {

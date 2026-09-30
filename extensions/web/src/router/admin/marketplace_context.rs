@@ -11,11 +11,11 @@
 use axum::Extension;
 use axum::extract::{Request, State};
 use axum::middleware::Next;
-use axum::response::{IntoResponse, Response};
+use axum::response::Response;
 use std::sync::Arc;
 use systemprompt::database::PgPool;
 use systemprompt::identifiers::UserId;
-use systemprompt_web_admin_core::error::AdminError;
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 use systemprompt_web_admin_core::types::{MarketplaceContext, UserContext};
 
 pub(super) async fn marketplace_context_middleware(
@@ -23,7 +23,7 @@ pub(super) async fn marketplace_context_middleware(
     Extension(user_ctx): Extension<UserContext>,
     mut request: Request,
     next: Next,
-) -> Response {
+) -> AdminResult<Response> {
     let result = async {
         let path = systemprompt_web_admin_core::request::get_services_path()?;
         let plugins = systemprompt_web_admin_catalog::repositories::marketplace::plugins::list_plugins_for_user(
@@ -39,7 +39,7 @@ pub(super) async fn marketplace_context_middleware(
     .await;
     let counts = match result {
         Ok(counts) => counts,
-        Err(error) => return catalog_failure_response(error, &user_ctx.user_id),
+        Err(error) => return Err(classify_catalog_failure(error, &user_ctx.user_id)),
     };
     let site_url = systemprompt::models::Config::get().map_or_else(
         |_| String::new(),
@@ -66,18 +66,18 @@ pub(super) async fn marketplace_context_middleware(
     };
 
     request.extensions_mut().insert(ctx);
-    next.run(request).await
+    Ok(next.run(request).await)
 }
 
-fn catalog_failure_response(error: AdminError, user_id: &UserId) -> Response {
+fn classify_catalog_failure(error: AdminError, user_id: &UserId) -> AdminError {
     match error {
         caller_refusal @ (AdminError::Unauthorized(_) | AdminError::Forbidden(_)) => {
             tracing::warn!(error = %caller_refusal, user_id = %user_id, "catalog authorization refused");
-            caller_refusal.into_response()
+            caller_refusal
         },
         error => {
             tracing::error!(%error, user_id = %user_id, "catalog authorization unavailable");
-            AdminError::Unavailable("Catalog authorization unavailable".into()).into_response()
+            AdminError::Unavailable("Catalog authorization unavailable".into())
         },
     }
 }

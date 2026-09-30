@@ -21,6 +21,7 @@ cd "$(dirname "$0")/.."
 roots=(
     extensions/web/admin/*/src/handlers/ssr
     extensions/web/shared/admin-core/src/ssr
+    extensions/web/src/router/admin
 )
 
 existing=()

@@ -124,7 +124,6 @@ def main():
             seed(c,args.seed); print('seeded',args.seed,flush=True)
         if not args.measure:return
         size=c.execute('SELECT COUNT(*) FROM ai_requests').fetchone()[0]
-        c.execute((ROOT/'extensions/web/schema/migrations/050_dashboard_query_scaling.sql').read_text())
         results={}
         for name,query in queries(c):
             results[name]=measure(c,name,query,size); print(name,results[name],flush=True)

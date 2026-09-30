@@ -14,7 +14,6 @@ use std::sync::Arc;
 
 use axum::Extension;
 use axum::extract::{Request, State};
-use axum::http::StatusCode;
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
 use serde::Serialize;
@@ -24,6 +23,7 @@ use systemprompt::identifiers::{Email, UserId};
 use systemprompt_web_admin_identity::repositories::users::user_settings::find_user_settings;
 
 use systemprompt_web_admin_core::auth::session::extract_user_from_cookie;
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 use systemprompt_web_admin_core::repositories::scope::Participation;
 use systemprompt_web_admin_core::ssr::viewer_tz::{Tz, parse_tz, with_viewer_tz};
 use systemprompt_web_admin_core::types::{
@@ -50,7 +50,7 @@ pub(super) async fn user_context_middleware(
     State(pool): State<Arc<PgPool>>,
     mut request: Request,
     next: Next,
-) -> Response {
+) -> Result<Response, pat::PatRejection> {
     let cookie = extract_user_from_cookie(request.headers());
     let pat = cookie
         .is_err()
@@ -60,10 +60,10 @@ pub(super) async fn user_context_middleware(
         Ok(s) => s,
         Err(reason) => match pat::pat_session(&pool, pat).await {
             pat::PatSession::Accepted(s) => s,
-            pat::PatSession::Rejected(response) => return response,
+            pat::PatSession::Rejected(rejection) => return Err(rejection),
             pat::PatSession::NotApplicable => {
                 tracing::warn!(reason = %reason, "UserContext middleware: no valid session");
-                return next.run(request).await;
+                return Ok(next.run(request).await);
             },
         },
     };
@@ -99,7 +99,7 @@ pub(super) async fn user_context_middleware(
 
     let tz = find_viewer_tz(&pool, &ctx.user_id).await;
     request.extensions_mut().insert(ctx);
-    with_viewer_tz(tz, next.run(request)).await
+    Ok(with_viewer_tz(tz, next.run(request)).await)
 }
 
 async fn find_viewer_tz(pool: &PgPool, user_id: &UserId) -> Tz {
@@ -120,6 +120,8 @@ async fn find_access_profile(
         pool, user_id,
     )
     .await
+    // Why: fail-soft-ok: an unreadable profile degrades to the plain `user`
+    // role, so the gates fail closed rather than failing every request.
     .inspect_err(|e| tracing::warn!(error = %e, user_id = %user_id, "Failed to fetch user roles"))
     .ok()
     .flatten()
@@ -135,17 +137,21 @@ async fn find_participation(
         pool, user_id, group_ids, project_ids,
     )
     .await
+    // Why: fail-soft-ok: unresolved participation grants no scoped access, so
+    // the console fails closed rather than refusing the request outright.
     .inspect_err(|e| {
         tracing::warn!(error = %e, user_id = %user_id, "Failed to resolve marketplace participation");
     })
     .unwrap_or_default()
 }
 
-pub(super) async fn auth_me_handler(Extension(user_ctx): Extension<UserContext>) -> Response {
+pub(super) async fn auth_me_handler(
+    Extension(user_ctx): Extension<UserContext>,
+) -> AdminResult<Response> {
     if user_ctx.user_id.as_str().is_empty() {
-        return (StatusCode::UNAUTHORIZED, "Not authenticated").into_response();
+        return Err(AdminError::Unauthorized("Not authenticated".into()));
     }
-    axum::Json(AuthMeResponse {
+    Ok(axum::Json(AuthMeResponse {
         user_id: user_ctx.user_id,
         username: user_ctx.username,
         email: user_ctx.email,
@@ -156,5 +162,5 @@ pub(super) async fn auth_me_handler(Extension(user_ctx): Extension<UserContext>)
         is_console: user_ctx.is_console,
         is_platform_admin: user_ctx.is_platform_admin,
     })
-    .into_response()
+    .into_response())
 }
