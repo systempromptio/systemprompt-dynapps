@@ -1,4 +1,4 @@
-//! Admin JSON API routes.
+//! Admin JSON API routes, mounted under `/api/public/admin`.
 //!
 //! Read and write routes are built against separate pools so read traffic can
 //! be directed at a replica. That split is also the authorisation boundary,
@@ -24,9 +24,8 @@
 use std::sync::Arc;
 
 use axum::{Router, middleware as axum_middleware};
-use sqlx::PgPool;
 
-use systemprompt::database::DbPool;
+use systemprompt::database::{DbPool, PgPool};
 use systemprompt_web_admin_analytics::routes::api as analytics_routes;
 use systemprompt_web_admin_catalog::routes as catalog_routes;
 use systemprompt_web_admin_core::state::StateError;
@@ -35,16 +34,13 @@ use systemprompt_web_admin_governance::routes::api as governance_routes;
 use systemprompt_web_admin_identity::routes::api as identity_routes;
 use systemprompt_web_admin_platform::routes::api as platform_routes;
 
-mod read;
-use read::build_admin_read_routes_inner;
-
-pub(crate) fn build_admin_only_routes(
+pub(super) fn build_admin_only_routes(
     db: &DbPool,
     read_pool: &Arc<PgPool>,
     write_pool: &Arc<PgPool>,
     owner: systemprompt::identifiers::UserId,
 ) -> Result<Router, StateError> {
-    let reads = build_admin_read_routes_inner(read_pool)
+    let reads = build_admin_read_routes(read_pool)
         .merge(catalog_routes::managed_resources::reads())
         .layer(axum_middleware::from_fn_with_state(
             ROLES_CONSOLE,
@@ -77,6 +73,18 @@ pub(crate) fn build_admin_only_routes(
         .layer(axum::Extension(managed)))
 }
 
+fn build_admin_read_routes(read_pool: &Arc<PgPool>) -> Router {
+    Router::new()
+        .merge(governance_routes::gateway_read_routes())
+        .merge(identity_routes::user_read_routes())
+        .merge(analytics_routes::events_routes())
+        .merge(platform_routes::jobs_read_routes())
+        .merge(identity_routes::access_read_routes())
+        .merge(platform_routes::sync_read_routes())
+        .merge(identity_routes::directory_read_routes())
+        .with_state(Arc::clone(read_pool))
+}
+
 fn build_admin_write_routes(write_pool: &Arc<PgPool>) -> Router {
     Router::new()
         .merge(governance_routes::gateway_write_routes())
@@ -98,11 +106,11 @@ fn build_admin_platform_routes(write_pool: &Arc<PgPool>) -> Router {
         .with_state(Arc::clone(write_pool))
 }
 
-pub(crate) fn build_self_service_routes(write_pool: &Arc<PgPool>) -> Router {
+pub(super) fn build_self_service_routes(write_pool: &Arc<PgPool>) -> Router {
     identity_routes::self_service_routes().with_state(Arc::clone(write_pool))
 }
 
-pub(crate) fn build_auth_read_routes(read_pool: &Arc<PgPool>) -> Router {
+pub(super) fn build_auth_read_routes(read_pool: &Arc<PgPool>) -> Router {
     Router::new()
         .merge(analytics_routes::dashboard_routes())
         .merge(catalog_routes::api::listing_routes())

@@ -3,8 +3,8 @@
 #
 # CSS and JS sources live under storage/files/ and reach web/dist/ only if they
 # are listed in the asset manifests (extensions/web/site/src/assets/ and the
-# admin `assets.rs`, in extensions/web/admin/src or
-# extensions/web/shared/admin-core/src; a missing one is skipped). That
+# admin `assets.rs` in extensions/web/shared/admin-core/src; a missing one is
+# skipped). That
 # list is hand-maintained, so a new file lands in storage, the template points at
 # it, and the browser 404s — with no build, lint, or test signal. This gate reads
 # every asset URL the templates and JS modules reference and fails if the source
@@ -28,7 +28,7 @@ TPL_DIR="${TPL_DIR:-storage/files/admin/templates}"
 PARTIAL_DIR="${PARTIAL_DIR:-storage/files/admin/partials}"
 SITE_PARTIAL_DIR="${SITE_PARTIAL_DIR:-services/web/templates/partials}"
 STORAGE_FILES="${STORAGE_FILES:-storage/files}"
-ASSET_DIRS="${ASSET_DIRS:-extensions/web/site/src/assets extensions/web/admin/src/assets.rs extensions/web/shared/admin-core/src/assets.rs}"
+ASSET_DIRS="${ASSET_DIRS:-extensions/web/site/src/assets extensions/web/shared/admin-core/src/assets.rs}"
 EXEMPT_FILE="${EXEMPT_FILE:-scripts/admin-asset-exemptions.txt}"
 
 [ -d "$TPL_DIR" ] || { echo "check-admin-template-assets: no $TPL_DIR - nothing to check"; exit 0; }

@@ -17,10 +17,7 @@
 # moved between directories is re-classified automatically. Only normal and
 # build dependencies count: dev-dependencies are not part of the shipped graph.
 #
-# RULES is ordered and the first match wins. The residual systemprompt-web-admin
-# crate (extensions/web/admin/Cargo.toml) is classified app so it may depend on
-# the domain crates under extensions/web/admin/<x>/; that rule is removed when
-# the residual crate is deleted.
+# RULES is ordered and the first match wins.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -35,7 +32,6 @@ ORDER = {"shared": 0, "domain": 1, "app": 2, "entry": 3, "facade": 4}
 
 RULES = [
     (r"/extensions/(web|mcp)/shared/", "shared"),
-    (r"/extensions/web/admin/Cargo\.toml$", "app"),
     (r"/extensions/web/(admin|content)/", "domain"),
     (r"/extensions/web/(site|jobs)/", "app"),
     (r"/extensions/web/Cargo\.toml$", "entry"),

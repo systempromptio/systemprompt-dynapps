@@ -12,7 +12,7 @@ use systemprompt_web_admin_core::templates::AdminTemplateEngine;
 use systemprompt_web_admin_core::types::UserContext;
 
 #[derive(serde::Deserialize)]
-pub(crate) struct LoginParams {
+pub(super) struct LoginParams {
     redirect: Option<String>,
 }
 
@@ -26,7 +26,7 @@ struct LoginContext<'a> {
     dev_login_enabled: bool,
 }
 
-pub(crate) async fn login_page(
+pub(super) async fn login_page(
     user_ctx: Option<Extension<UserContext>>,
     Extension(engine): Extension<AdminTemplateEngine>,
     Extension(sso_deps): Extension<systemprompt_web_admin_identity::AdfsDeps>,

@@ -88,7 +88,7 @@ A window names a **subject** (whose usage it counts) and a **period**.
 
 The subjects this instance resolves are:
 - `user` (core's own);
-- `group`, `project`, `role` and `salesforce` (the linked account), whose providers are in `extensions/web/admin/src/authz/`;
+- `group`, `project` and `role`, whose providers are in `extensions/web/admin/identity/src/authz/`, and `salesforce` (the linked account), in `extensions/web/admin/platform/src/authz/`;
 - `organization` (the whole installation, subject id `default`), whose provider is in `extensions/web/shared/admin-core/src/authz/organization.rs`.
 
 A person on several groups or projects is counted against their primary one. `quota_fault_mode: closed` means a window whose subject cannot be resolved refuses the request rather than passing it uncounted.

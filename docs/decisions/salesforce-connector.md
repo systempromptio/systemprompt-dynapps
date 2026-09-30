@@ -25,7 +25,7 @@ Orgs in scope are **both** Astound-owned (production + sandboxes) **and** client
 |------|--------|-------------|
 | An ECA with distribution state *Packaged* can ship in a 2GP managed package. A subscriber org either **references the source org's OAuth settings** (same consumer key/secret/callbacks everywhere) or generates independent global settings. Deleting the app in the source org breaks every subscriber. Requires a Dev Hub. | [Package an External Client App](https://help.salesforce.com/s/articleView?id=xcloud.configure_packageable_external_client_apps.htm), [Trailhead](https://trailhead.salesforce.com/content/learn/modules/external-client-app-basics/package-and-distribute-external-client-apps) | One consumer key can serve N orgs. The Dev Hub org becomes production infrastructure. |
 | Hosted MCP (`api.salesforce.com/platform/mcp/…/sobject-all`) accepts only authorization-code + PKCE via an ECA with scope `mcp_api`. Tokens are org-scoped. Salesforce states MCP "doesn't support multitenant systems like Salesforce", so the user must be logged into the target org before consent. | [Hosted MCP: create an ECA](https://developer.salesforce.com/docs/platform/hosted-mcp-servers/guide/create-external-client-app.html), [log into your org](https://developer.salesforce.com/docs/platform/hosted-mcp-servers/guide/log-into-org.html) | Org selection cannot be pushed past consent while we proxy the hosted server. |
-| Astound owns **no** Salesforce MCP code. `services/mcp/salesforce.yaml` is `type: external` pointing at Salesforce's hosted `sobject-all`; core's external proxy injects a per-user bearer minted by `/api/public/connectors/<id>/token`. | `extensions/web/admin/src/services/salesforce_orgs.rs`, `connector_oauth/` | The tool surface is Salesforce's. Every org is a separate MCP server id. |
+| Astound owns **no** Salesforce MCP code. `services/mcp/salesforce.yaml` is `type: external` pointing at Salesforce's hosted `sobject-all`; core's external proxy injects a per-user bearer minted by `/api/public/connectors/<id>/token`. | `extensions/web/admin/platform/src/services/salesforce_orgs.rs`, `connector_oauth/` | The tool surface is Salesforce's. Every org is a separate MCP server id. |
 | The registry only stores secret **names**; nothing rejects two orgs naming the same secret. Only one org (`salesforce`, production) is declared. | `salesforce_orgs.rs::validate` | A shared client id needs no registry change. |
 | Salesforce is not indexed for retrieval; the connector is live query only. | `services/mcp/salesforce.yaml` | "No Salesforce RAG" is a decision to record, not work to undo. |
 
@@ -202,8 +202,8 @@ surface and the governance rework, neither of which the package saves.
 
 ## References
 
-- Current implementation: `extensions/web/admin/src/services/salesforce_orgs.rs`,
-  `extensions/web/admin/src/services/connector_oauth/`, `services/config/salesforce-orgs.yaml`,
+- Current implementation: `extensions/web/admin/platform/src/services/salesforce_orgs.rs`,
+  `extensions/web/admin/platform/src/services/connector_oauth/`, `services/config/salesforce-orgs.yaml`,
   `services/mcp/salesforce.yaml`, `docs/integrations/centralized-mcp.md`,
   `services/content/documentation/salesforce.md`.
 - Salesforce: [Hosted MCP Servers guide](https://developer.salesforce.com/docs/platform/hosted-mcp-servers/guide/hosted-mcp-servers-overview.html),

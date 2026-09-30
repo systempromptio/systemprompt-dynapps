@@ -284,7 +284,7 @@ test-unit:
 #
 # Why: every tier passes --workspace and picks its crates with a nextest
 # filter rather than -p. A -p set unifies features for that set alone, so the
-# three tiers compiled systemprompt-web-admin and everything above it three
+# three tiers compiled the admin crates and everything above them three
 # times over (40 + 27 + 15 min on a cold CI runner, past the job budget);
 # --workspace unifies once and the second and third tiers reuse the build.
 _test-unit-uncoordinated:

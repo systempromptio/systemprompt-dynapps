@@ -30,11 +30,11 @@ set -uo pipefail
 
 SIBLING_REPO="${SIBLING_REPO:-}"
 
-# The repository layer is spread over the shared admin core, the residual admin
-# crate and each admin domain crate. REPO_DIR (space-separated, globs allowed)
+# The repository layer is spread over the shared admin core and each admin
+# domain crate. REPO_DIR (space-separated, globs allowed)
 # overrides the list; directories that do not exist are skipped.
 REPO_DIRS=()
-for d in ${REPO_DIR:-extensions/web/shared/admin-core/src/repositories extensions/web/admin/src/repositories extensions/web/admin/*/src/repositories}; do
+for d in ${REPO_DIR:-extensions/web/shared/admin-core/src/repositories extensions/web/admin/*/src/repositories}; do
     [ -d "$d" ] && REPO_DIRS+=("$d")
 done
 

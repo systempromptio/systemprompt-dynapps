@@ -67,8 +67,8 @@ def bind(c, query, values):
 
 
 def queries(c):
-    base = ROOT / 'extensions/web/admin/src/repositories'
-    page = (base / 'analytics/conversation_rows/page.sql').read_text()
+    core = ROOT / 'extensions/web/shared/admin-core/src/repositories'
+    page = (core / 'conversations/rows/page.sql').read_text()
     now = c.execute('SELECT NOW()').fetchone()[0]
     from datetime import timedelta
     args = [None,None,None,None,now-timedelta(days=30),None,False,False,'activity',True,50,0,False,False]
@@ -83,9 +83,9 @@ def queries(c):
     yield 'contexts-deep-page', bind(c,page,args)
     args[11],args[3] = 0,'%Question 99%'
     yield 'contexts-search', bind(c,page,args)
-    roster=(base/'users/roster/page.sql').read_text()
+    roster=(ROOT/'extensions/web/admin/identity/src/repositories/users/roster/page.sql').read_text()
     yield 'users',bind(c,roster,[None,30,'',None,None,'cost',True,50,0])
-    history=(base/'analytics/conversations/history_page.sql').read_text()
+    history=(core/'conversations/history_page.sql').read_text()
     yield 'history',bind(c,history,[None,None,50,0,'00000000-0000-0000-0000-4c4547414359',None,False])
 
 

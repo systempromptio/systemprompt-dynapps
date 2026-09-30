@@ -3,7 +3,7 @@
 #
 # Produces dist/astound-bridge-linux-x86_64.tar.gz plus a .sha256, matching the
 # asset name the admin Bridge Setup page links to. Keep the two in lockstep:
-# extensions/web/admin/src/handlers/ssr/ssr_bridge_setup.rs (DOWNLOAD_BASE_URL)
+# extensions/web/admin/platform/src/handlers/ssr/ssr_connect.rs (DOWNLOAD_BASE_URL)
 # and storage/files/admin/templates/connect.hbs (asset filenames).
 #
 # Verify the result on a machine with no config using: just clean-client

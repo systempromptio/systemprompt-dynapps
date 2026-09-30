@@ -10,10 +10,7 @@
 
 use crate::app::{ADMIN_API_PREFIX, SSR_PREFIX};
 
-const ADMIN_API_SRC: &str =
-    include_str!("../../../../extensions/web/admin/src/routes/admin/mod.rs");
-const ADMIN_API_READ_SRC: &str =
-    include_str!("../../../../extensions/web/admin/src/routes/admin/read.rs");
+const ADMIN_API_SRC: &str = include_str!("../../../../extensions/web/src/router/admin/api.rs");
 const ANALYTICS_API_SRC: &str =
     include_str!("../../../../extensions/web/admin/analytics/src/routes/api.rs");
 const ANALYTICS_OVERVIEW_SRC: &str =
@@ -48,9 +45,7 @@ const PLATFORM_API_SRC: &str =
     include_str!("../../../../extensions/web/admin/platform/src/routes/api.rs");
 const PLATFORM_SSR_SRC: &str =
     include_str!("../../../../extensions/web/admin/platform/src/routes/platform_ssr.rs");
-const SSR_SRC: &str = include_str!("../../../../extensions/web/admin/src/routes/ssr/mod.rs");
-const SSR_PLATFORM_SRC: &str =
-    include_str!("../../../../extensions/web/admin/src/routes/ssr/platform.rs");
+const SSR_SRC: &str = include_str!("../../../../extensions/web/src/router/admin/ssr.rs");
 // Merged into the SSR router from its own module, so it is read on its own:
 // without it every export route — the PAT surface included — drops out of the
 // table and out of the contract.
@@ -60,7 +55,7 @@ const EXPORT_SRC: &str =
 // like any other and are exercised like one: a redirect that stops redirecting
 // is exactly as much a contract change as a page that stops rendering.
 const SSR_REDIRECT_SRC: &str =
-    include_str!("../../../../extensions/web/admin/src/routes/ssr_redirects.rs");
+    include_str!("../../../../extensions/web/src/router/admin/redirects.rs");
 
 const METHODS: [&str; 5] = ["get", "post", "put", "patch", "delete"];
 
@@ -105,7 +100,6 @@ pub(crate) fn mounted_routes() -> Vec<MountedRoute> {
     let mut routes = Vec::new();
     for (src, prefix) in [
         (ADMIN_API_SRC, ADMIN_API_PREFIX),
-        (ADMIN_API_READ_SRC, ADMIN_API_PREFIX),
         (ANALYTICS_API_SRC, ADMIN_API_PREFIX),
         (IDENTITY_API_SRC, ADMIN_API_PREFIX),
         (IDENTITY_GROUPS_SRC, ADMIN_API_PREFIX),
@@ -120,7 +114,6 @@ pub(crate) fn mounted_routes() -> Vec<MountedRoute> {
         (IDENTITY_ACCOUNT_SRC, SSR_PREFIX),
         (IDENTITY_PUBLIC_SRC, SSR_PREFIX),
         (SSR_SRC, SSR_PREFIX),
-        (SSR_PLATFORM_SRC, SSR_PREFIX),
         (ANALYTICS_OVERVIEW_SRC, SSR_PREFIX),
         (ANALYTICS_ACTIVITY_SRC, SSR_PREFIX),
         (ANALYTICS_ANALYSIS_SRC, SSR_PREFIX),

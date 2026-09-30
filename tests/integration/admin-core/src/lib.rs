@@ -1,4 +1,4 @@
-//! Integration coverage for `systemprompt-web-admin`'s repositories against a
+//! Integration coverage for the admin crates' repositories against a
 //! live Postgres: user identity and provisioning, the project split, the
 //! analytics read models, the dashboard counters, the
 //! governance record, and the trace explorer.

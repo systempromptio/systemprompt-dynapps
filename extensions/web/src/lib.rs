@@ -1,6 +1,6 @@
 //! Web extension facade for the systemprompt template.
 //!
-//! Aggregates the five web sibling crates (`admin`, `content`, `jobs`,
+//! Aggregates the web sibling crates (the admin crates, `content`, `jobs`,
 //! `shared`, `site`) into a single `WebExtension` registered with the core
 //! runtime. Most of this crate is re-exports — the actual extension entry
 //! point is [`extension::WebExtension`], which advertises required assets,
@@ -8,7 +8,10 @@
 //!
 //! The split between siblings is the layering boundary:
 //!
-//! - `admin` — SSR dashboard, governance webhooks, access-token plane.
+//! - `admin` — the shared admin core and the five admin domain crates (catalog,
+//!   governance, identity, platform, analytics), plus the routers this crate
+//!   composes from them: SSR dashboard, governance webhooks, access-token
+//!   plane.
 //! - `content` — content ingestion, repositories, search, link analytics.
 //! - `jobs` — `publish_pipeline` and its sub-jobs (asset copy, prerender,
 //!   sitemap, llms.txt, secret migration, content analytics).
@@ -23,7 +26,20 @@ mod router;
 #[doc(hidden)]
 pub mod schemas;
 
-pub use systemprompt_web_admin as admin;
+/// The admin plane: the shared admin core, the five domain crates, and the
+/// routers composed from their fragments in `router::admin`.
+pub mod admin {
+    pub use crate::router::admin::{
+        admin_router, admin_ssr_router, bridge_auth_ssr_router, hooks_webhook_router,
+        secrets_router, share_manifest_router,
+    };
+    pub use systemprompt_web_admin_analytics as analytics;
+    pub use systemprompt_web_admin_catalog as catalog;
+    pub use systemprompt_web_admin_core as core;
+    pub use systemprompt_web_admin_governance as governance;
+    pub use systemprompt_web_admin_identity as identity;
+    pub use systemprompt_web_admin_platform as platform;
+}
 pub use systemprompt_web_content::{api, repository, services};
 pub use systemprompt_web_jobs as jobs;
 pub use systemprompt_web_shared as shared;

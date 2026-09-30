@@ -2,7 +2,6 @@
 //! every path it names exists in this repository's `services/` tree; each
 //! registered plane is a kind the inventory marks as projected.
 
-use systemprompt_web_admin as _;
 use systemprompt_web_admin_core::repositories::sync::inventory::{
     CONFIG_KINDS, kind_by_id, kind_for_path,
 };

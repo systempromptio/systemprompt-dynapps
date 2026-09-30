@@ -9,9 +9,9 @@ use axum::routing::post;
 use systemprompt::oauth::SessionCreationService;
 
 use super::pools::DbHandles;
-use super::sign_out;
+use super::{admin, sign_out};
+use crate::api;
 use crate::extension::WebExtension;
-use crate::{admin, api};
 
 pub(crate) fn build(
     db: &DbHandles,

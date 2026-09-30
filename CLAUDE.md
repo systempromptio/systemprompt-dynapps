@@ -307,8 +307,10 @@ Membership is derived from a crate's directory, so moving a crate re-classifies
 it. Three properties are checked and must hold exactly: no dependency points
 upward, no cycles, and **no domain -> domain edges** — the admin domain crates
 and `content` are peers, so anything two of them need belongs in `shared`
-(`web/shared/admin-core` for admin code). The residual `extensions/web/admin`
-crate itself is classified app until it is deleted. `extensions/cli/*` and
+(`web/shared/admin-core` for admin code). The admin composition root — the
+routers that merge the domain crates' fragments, the session middleware and
+the login page — lives in the aggregator at `extensions/web/src/router/admin/`,
+the one tier allowed to depend on all five. `extensions/cli/*` and
 `extensions/mcp/*` sit at the entry tier beside the aggregator. Dev-dependencies
 are exempt.
 

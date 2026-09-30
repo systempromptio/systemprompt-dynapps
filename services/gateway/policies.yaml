@@ -16,7 +16,7 @@
 # extension's daily `quota_month_window` job rewrites the live row to run out
 # at the month's end and carries yesterday's bucket into today's; drift and
 # export fold the live value back to 2678400. Interim until core has calendar
-# windows — extensions/web/admin/src/repositories/gateway_policies/month_window.rs
+# windows — extensions/web/admin/governance/src/repositories/gateway_policies/month_window.rs
 # is the contract.
 #
 # Spec fields (systemprompt_ai::GatewayPolicySpec):
@@ -26,7 +26,7 @@
 # safety.scanners names resolve against the gateway's SafetyScannerRegistry:
 # the built-in `heuristic` scanner plus any extension-registered scanner. The
 # admin extension registers `secrets` and `pii_extended`
-# (extensions/web/admin/src/gateway_safety.rs). A request whose content yields
+# (extensions/web/admin/governance/src/gateway_safety.rs). A request whose content yields
 # a finding in `block_categories` is denied before the upstream call, with an
 # `ai_safety_findings` audit row.
 #

@@ -17,9 +17,9 @@ use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use http_body_util::BodyExt as _;
 use sqlx::PgPool;
-use systemprompt_web_admin as admin;
 use systemprompt_web_admin_identity as identity;
 use systemprompt_web_admin_platform as platform;
+use systemprompt_web_extension::admin;
 use tower::ServiceExt;
 
 use crate::globals;

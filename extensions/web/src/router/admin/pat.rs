@@ -14,7 +14,7 @@ use axum::extract::Request;
 use axum::http::{Method, StatusCode};
 use axum::response::{IntoResponse, Response};
 use serde_json::json;
-use sqlx::PgPool;
+use systemprompt::database::PgPool;
 use systemprompt::identifiers::Email;
 
 use systemprompt_web_admin_core::auth::session::extract_token_from_headers;

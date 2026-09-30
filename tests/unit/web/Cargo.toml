@@ -11,7 +11,6 @@ workspace = true
 reqwest = { version = "0.13", default-features = false, features = ["json", "rustls"] }
 sqlx = { workspace = true }
 systemprompt-web-shared = { workspace = true }
-systemprompt-web-admin = { workspace = true }
 systemprompt-web-admin-analytics = { workspace = true }
 systemprompt-web-admin-identity = { workspace = true }
 systemprompt-web-admin-platform = { workspace = true }

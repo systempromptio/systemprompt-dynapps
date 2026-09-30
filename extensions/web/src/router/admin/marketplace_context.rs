@@ -12,13 +12,13 @@ use axum::Extension;
 use axum::extract::{Request, State};
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
-use sqlx::PgPool;
 use std::sync::Arc;
+use systemprompt::database::PgPool;
 use systemprompt::identifiers::UserId;
 use systemprompt_web_admin_core::error::AdminError;
 use systemprompt_web_admin_core::types::{MarketplaceContext, UserContext};
 
-pub(crate) async fn marketplace_context_middleware(
+pub(super) async fn marketplace_context_middleware(
     State(pool): State<Arc<PgPool>>,
     Extension(user_ctx): Extension<UserContext>,
     mut request: Request,

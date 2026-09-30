@@ -19,7 +19,6 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 roots=(
-    extensions/web/admin/src/handlers/ssr
     extensions/web/admin/*/src/handlers/ssr
     extensions/web/shared/admin-core/src/ssr
 )

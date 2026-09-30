@@ -19,7 +19,7 @@ use axum::Router;
 use axum::extract::{Path, RawQuery};
 use axum::response::Redirect;
 use axum::routing::get;
-use sqlx::PgPool;
+use systemprompt::database::PgPool;
 
 // Why: HTTP 301 lets intermediaries rewrite POST to GET; `Redirect::permanent`
 // is a 308, which keeps the method for the device POSTs under these prefixes.
@@ -113,7 +113,6 @@ fn analysis_redirects() -> Router<Arc<PgPool>> {
 async fn analysis_versions() -> Redirect {
     moved("/admin/analysis/versions")
 }
-
 
 async fn access_users(RawQuery(q): RawQuery) -> Redirect {
     with_query("/admin/users", q)

@@ -10,7 +10,6 @@ workspace = true
 [dependencies]
 astound-test-common = { workspace = true }
 systemprompt = { workspace = true, features = ["full"] }
-systemprompt-web-admin = { workspace = true }
 systemprompt-web-admin-identity = { workspace = true }
 systemprompt-web-admin-platform = { workspace = true }
 systemprompt-web-admin-core = { workspace = true }

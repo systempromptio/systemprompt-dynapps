@@ -22,6 +22,15 @@ Conventions (strict — hold every entry to them):
 
 ### Changed
 
+- **Admin crate split, stage 6.** The residual `systemprompt-web-admin` crate is gone. Its
+  composition root — the admin API, SSR, bridge sign-in, webhook, secrets and share routers, the
+  session and personal-access-token middleware, the sidebar marketplace context, the login page
+  and the legacy-path redirects — lives in the web aggregator at `extensions/web/src/router/admin/`,
+  mounted at the same paths. `systemprompt_web_admin::{admin_router, admin_ssr_router,
+  bridge_auth_ssr_router, hooks_webhook_router, secrets_router, share_manifest_router}` import
+  from `systemprompt_web_extension::admin`, which also re-exports the six admin crates as
+  `admin::{core, analytics, catalog, governance, identity, platform}`. The temporary app-tier
+  rule in `scripts/lint-layers.sh` and the residual crate's coverage row are removed.
 - **Admin crate split, stage 5.** The analytics domain — the dashboards, requests, sessions,
   traces, conversations, history, tools, artifacts, skills, reports, overview, observability, the
   hook-tracking ingestion and every table and document export — is `systemprompt-web-admin-analytics`

@@ -25,9 +25,12 @@ async fn authz_database_failure_returns_http_200_with_an_explicit_deny() {
         Arc::new(session_repository),
         Arc::new(users),
     ));
-    let router =
-        systemprompt_web_admin::hooks_webhook_router(&database, Arc::clone(&pool), sessions)
-            .expect("build the hooks router from a connected database");
+    let router = systemprompt_web_extension::admin::hooks_webhook_router(
+        &database,
+        Arc::clone(&pool),
+        sessions,
+    )
+    .expect("build the hooks router from a connected database");
     pool.close().await;
     let payload = serde_json::json!({
         "entity": systemprompt_security::authz::EntityRef::McpServer(systemprompt::identifiers::McpServerId::try_new("atlassian").expect("valid fixture identifier")),

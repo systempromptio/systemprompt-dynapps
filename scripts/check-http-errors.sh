@@ -89,15 +89,12 @@ fi
 # A route handler is an `async fn`; a synchronous `-> Response` is a renderer
 # that never fails (a CSV body, a redirect, an `IntoResponse` impl) and has no
 # error to type. Only the async form is checked, so a renderer needs no marker.
-# Handlers, page renderers and export datasets live in the shared admin core,
-# the residual admin crate and each admin domain crate; directories that do
-# not exist are skipped.
+# Handlers, page renderers and export datasets live in the shared admin core
+# and each admin domain crate; directories that do not exist are skipped.
 HANDLER_DIRS=()
 for d in extensions/web/shared/admin-core/src/handlers \
          extensions/web/shared/admin-core/src/ssr \
          extensions/web/shared/admin-core/src/export \
-         extensions/web/admin/src/handlers \
-         extensions/web/admin/src/export \
          extensions/web/admin/*/src/handlers \
          extensions/web/admin/*/src/export; do
     [ -d "$d" ] && HANDLER_DIRS+=("$d")

@@ -193,7 +193,7 @@ A marketplace can arrive as a signed **services bundle** published by another Gi
 
 **Retire a rule — or a whole entity — cleanly.** Remove it from `rules.yaml`, deploy, Sync → Overwrite. The row is deleted whether or not the entity is still in the file, because the file wrote it. Insert only would leave it in place, listed as *removed from code* until an Overwrite.
 
-**Add a subject band.** A new dimension (cost centre, clearance, …) is a provider registered in `extensions/web/admin/src/authz/` and a new key in `BandMap`; no core change.
+**Add a subject band.** A new dimension (cost centre, clearance, …) is a provider registered in the owning admin crate's `src/authz/` (e.g. `extensions/web/admin/identity/src/authz/`) and a new key in `BandMap`; no core change.
 
 ## Glossary
 

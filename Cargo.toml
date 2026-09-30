@@ -3,7 +3,6 @@ members = [
     "extensions/web",
     "extensions/web/shared",
     "extensions/web/shared/admin-core",
-    "extensions/web/admin",
     "extensions/web/admin/analytics",
     "extensions/web/admin/catalog",
     "extensions/web/admin/governance",
@@ -56,7 +55,6 @@ systemprompt-extension = { version = "0.62.0" }
 systemprompt-web-extension = { path = "extensions/web" }
 systemprompt-web-shared = { path = "extensions/web/shared" }
 systemprompt-web-admin-core = { path = "extensions/web/shared/admin-core" }
-systemprompt-web-admin = { path = "extensions/web/admin" }
 systemprompt-web-admin-analytics = { path = "extensions/web/admin/analytics" }
 systemprompt-web-admin-catalog = { path = "extensions/web/admin/catalog" }
 systemprompt-web-admin-governance = { path = "extensions/web/admin/governance" }

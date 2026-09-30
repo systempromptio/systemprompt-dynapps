@@ -8,8 +8,7 @@
 # it does not match a route registered in the admin route modules.
 #
 # The route corpus is every `.route("...")` literal in `*.rs` and `ssr/*.rs`
-# of each route directory: the residual admin crate's and each admin domain
-# crate's `src/routes`, the shared admin core's `src/routes`, and the
+# of each route directory: each admin domain crate's `src/routes`, the shared admin core's `src/routes`, and the
 # composition root in extensions/web/src/router/admin. Missing directories are
 # skipped; a new route subdirectory must be added to the glob below or its
 # routes silently drop out of the corpus. Those routers are nested under an
@@ -28,7 +27,7 @@ PARTIAL_DIR="${PARTIAL_DIR:-storage/files/admin/partials}"
 EXEMPT_FILE="${EXEMPT_FILE:-scripts/admin-link-exemptions.txt}"
 
 ROUTE_DIRS=()
-for d in ${ROUTE_DIR:-extensions/web/admin/src/routes extensions/web/admin/*/src/routes extensions/web/shared/admin-core/src/routes extensions/web/src/router/admin}; do
+for d in ${ROUTE_DIR:-extensions/web/admin/*/src/routes extensions/web/shared/admin-core/src/routes extensions/web/src/router/admin}; do
     [ -d "$d" ] && ROUTE_DIRS+=("$d")
 done
 
@@ -101,7 +100,7 @@ if violations:
             print(f"    {h}", file=sys.stderr)
     print("", file=sys.stderr)
     print(f"{total} dead link(s) across {len(violations)} template(s).", file=sys.stderr)
-    print("Register the route in extensions/web/admin/src/routes/, fix the href,", file=sys.stderr)
+    print("Register the route in the owning crate's routes/, fix the href,", file=sys.stderr)
     print(f"or if the target is intentionally not an SSR route list it in {exempt_file}.", file=sys.stderr)
     sys.exit(1)
 

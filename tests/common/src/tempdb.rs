@@ -15,7 +15,6 @@ use systemprompt::database::{Database, DbPool, install_extension_schemas};
 use systemprompt::extension::ExtensionRegistry;
 use url::Url;
 
-use systemprompt_web_admin as _;
 use systemprompt_web_extension as _;
 
 use crate::skip::skip_or_panic;

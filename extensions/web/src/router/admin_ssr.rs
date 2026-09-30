@@ -10,7 +10,7 @@ use systemprompt::config::{AppPaths, ProfileBootstrap};
 use super::pools::DbHandles;
 use systemprompt_web_site::config_loader;
 
-use crate::admin;
+use super::admin;
 
 pub(crate) struct SsrRouters {
     pub admin: Router,

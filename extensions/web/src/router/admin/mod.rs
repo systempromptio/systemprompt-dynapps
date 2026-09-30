@@ -1,34 +1,39 @@
-//! Admin extension for the Enterprise Demo template.
+//! The admin plane's composition root.
 //!
-//! Wires the admin dashboard, governance webhooks, bridge plane, and
-//! supporting services onto a shared `PgPool`. Public surface is grouped by
-//! concern:
+//! Every router the admin plane mounts is assembled here from the route
+//! fragments of the admin domain crates (catalog, governance, identity,
+//! platform, analytics), behind the session middleware and the role gates:
 //!
-//! - [`admin_router`] — the SSR dashboard (auth-gated; admin-only and
+//! - [`admin_router`] — the JSON API (auth-gated; admin-only and
 //!   authenticated-read routes are layered together).
+//! - [`admin_ssr_router`], [`bridge_auth_ssr_router`] — the server-rendered
+//!   dashboard and the desktop-bridge sign-in flow.
 //! - [`hooks_webhook_router`] — the governance webhooks called by gateway / MCP
 //!   / Claude Code (`/hooks/track`, `/hooks/govern`, `/govern/authz`).
 //! - [`secrets_router`], [`share_manifest_router`] — per-plugin secret
 //!   resolution and public manifest sharing.
 //!
-//! This crate is the composition root only: every `sqlx` call, handler and
-//! route table lives in the admin domain crate that owns the data (catalog,
-//! governance, identity, platform, analytics), and the routers here merge
-//! their fragments behind the session middleware and the role gates.
+//! Every `sqlx` call, handler and route table lives in the domain crate that
+//! owns the data. Composing all five is what places this module in the entry
+//! tier: no domain crate may depend on another, so the one place that merges
+//! them sits above every one of them.
 
-pub(crate) mod handlers;
+mod api;
+mod login;
 mod marketplace_context;
 mod middleware;
-mod routes;
+mod pat;
+mod redirects;
+mod ssr;
 
 use std::sync::Arc;
 
 use axum::{Extension, Router, middleware as axum_middleware};
-use sqlx::PgPool;
-
-pub use routes::{admin_ssr_router, bridge_auth_ssr_router};
-pub use systemprompt_web_admin_catalog::routes::share::share_manifest_router;
+use systemprompt::database::PgPool;
 use systemprompt_web_admin_core::state::StateError;
+
+pub use ssr::{admin_ssr_router, bridge_auth_ssr_router};
+pub use systemprompt_web_admin_catalog::routes::share::share_manifest_router;
 pub use systemprompt_web_admin_governance::routes::secrets::secrets_router;
 
 pub fn hooks_webhook_router(
@@ -55,9 +60,9 @@ pub fn admin_router(
     write_pool: &Arc<PgPool>,
     owner: systemprompt::identifiers::UserId,
 ) -> Result<Router, StateError> {
-    let admin_only = routes::build_admin_only_routes(db, &read_pool, write_pool, owner)?;
-    let auth_reads = routes::build_auth_read_routes(&read_pool);
-    let self_service = routes::build_self_service_routes(write_pool);
+    let admin_only = api::build_admin_only_routes(db, &read_pool, write_pool, owner)?;
+    let auth_reads = api::build_auth_read_routes(&read_pool);
+    let self_service = api::build_self_service_routes(write_pool);
 
     Ok(admin_only
         .merge(auth_reads)

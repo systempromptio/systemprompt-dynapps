@@ -137,7 +137,7 @@ The recipe also publishes the tarball, its `.sha256`, and
 which the admin Bridge Setup page serves same-origin. The archive carries the
 binary plus an `INSTALL.md` stating the above. Asset
 names are load-bearing — they must match `DOWNLOAD_BASE_URL` in
-`extensions/web/admin/src/handlers/ssr/ssr_bridge_setup.rs`, the links in
+`extensions/web/admin/platform/src/handlers/ssr/ssr_connect.rs`, the links in
 `storage/files/admin/templates/bridge-setup.hbs`, and `ARTIFACTS` in
 `storage/files/js/pages/admin-bridge-setup.js`. Test the result on a machine
 with no config using `just clean-client` (see `deploy/clean-client/`).

@@ -1,15 +1,14 @@
 //! Admin plane request middleware: session resolution and page context.
 //!
 //! `user_context_middleware` runs first and puts a [`UserContext`] on the
-//! request; `systemprompt_web_admin_core::middleware::gates` then decides
-//! whether the request may proceed, and `marketplace_context_middleware`
-//! supplies what a page needs to render.
+//! request — from the session cookie, or from a personal access token on the
+//! export routes (`pat`); `systemprompt_web_admin_core::middleware::gates`
+//! then decides whether the request may proceed, and
+//! `marketplace_context_middleware` supplies what a page needs to render.
 //!
 //! The marketplace counts injected into every render are cached because they
 //! are derived from a remote catalog and are identical for every user holding
 //! the same role set.
-
-mod pat;
 
 use std::sync::Arc;
 
@@ -19,7 +18,7 @@ use axum::http::StatusCode;
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
 use serde::Serialize;
-use sqlx::PgPool;
+use systemprompt::database::PgPool;
 use systemprompt::identifiers::{Email, UserId};
 
 use systemprompt_web_admin_identity::repositories::users::user_settings::find_user_settings;
@@ -31,6 +30,8 @@ use systemprompt_web_admin_core::types::{
     UserContext, roles_grant_console, roles_grant_developer, roles_grant_manage,
     roles_grant_platform,
 };
+
+use super::pat;
 
 #[derive(Debug, Serialize)]
 struct AuthMeResponse {
@@ -45,9 +46,7 @@ struct AuthMeResponse {
     is_platform_admin: bool,
 }
 
-pub(crate) use super::marketplace_context::marketplace_context_middleware;
-
-pub(crate) async fn user_context_middleware(
+pub(super) async fn user_context_middleware(
     State(pool): State<Arc<PgPool>>,
     mut request: Request,
     next: Next,
@@ -142,7 +141,7 @@ async fn find_participation(
     .unwrap_or_default()
 }
 
-pub(crate) async fn auth_me_handler(Extension(user_ctx): Extension<UserContext>) -> Response {
+pub(super) async fn auth_me_handler(Extension(user_ctx): Extension<UserContext>) -> Response {
     if user_ctx.user_id.as_str().is_empty() {
         return (StatusCode::UNAUTHORIZED, "Not authenticated").into_response();
     }

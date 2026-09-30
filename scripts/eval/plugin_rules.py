@@ -2,7 +2,7 @@
 
 The console's Versions → Evaluation tab and the `analysis-plugin-eval`
 export compute every run's figures with `plugin_eval.sql`
-(extensions/web/admin/src/repositories/analysis/). `consistent_row` returns
+(extensions/web/admin/catalog/src/repositories/analysis/). `consistent_row` returns
 those figures for one run: from the downloaded dataset when the gateway
 serves it, otherwise from `score_bundle`, a line-for-line port of the SQL
 over the exported conversation bundle. When both exist they are compared,

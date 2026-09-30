@@ -1,13 +1,15 @@
 //! HTTP router assembly for the web extension.
 //!
 //! Split by concern: [`pools`] extracts the read/write database handles from
-//! the type-erased extension context, [`api`] builds the JSON/webhook plane,
-//! and [`admin_ssr`] builds the server-rendered dashboard plus the
-//! desktop-bridge sign-in flow. `build` composes them; if the admin template
-//! engine cannot initialise, the API plane still mounts at its normal prefix
-//! and only the SSR nests are skipped, so a misconfigured deploy degrades
-//! loudly instead of moving routes.
+//! the type-erased extension context, [`admin`] composes the admin domain
+//! crates' route fragments into the admin plane's routers, [`api`] mounts the
+//! JSON/webhook plane, and [`admin_ssr`] mounts the server-rendered dashboard
+//! plus the desktop-bridge sign-in flow. `build` composes them; if the admin
+//! template engine cannot initialise, the API plane still mounts at its normal
+//! prefix and only the SSR nests are skipped, so a misconfigured deploy
+//! degrades loudly instead of moving routes.
 
+pub(crate) mod admin;
 mod admin_ssr;
 mod api;
 mod pools;
