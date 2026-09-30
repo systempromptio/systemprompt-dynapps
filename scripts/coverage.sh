@@ -142,9 +142,14 @@ find "$PROFDIR" -name '*.profraw' > "$ROOT/coverage-report/profraw-list.txt"
 # function names overlap but their mapping hashes differ, so llvm-cov discards
 # profile records with "functions have mismatched data" and under-reports the
 # very tests this job is meant to measure.
+# Why: BSD find (macOS) has no -printf, so the mtime is read with stat on
+# either platform instead; GNU stat and BSD stat spell the format differently.
 collect_bin_candidates() {
-    find "$1/debug/deps" -maxdepth 1 -executable -type f ! -name '*.d' ! -name '*.so' \
-        -printf '%T@ %p\n' 2>/dev/null | sort -rn
+    find "$1/debug/deps" -maxdepth 1 -type f -perm -u+x ! -name '*.d' ! -name '*.so' \
+        ! -name '*.dylib' ! -name '*.rlib' ! -name '*.rmeta' 2>/dev/null \
+        | while IFS= read -r bin; do
+            if stat -f '%m %N' "$bin" 2>/dev/null; then :; else stat -c '%Y %n' "$bin"; fi
+          done | sort -rn
 }
 BINS="$(
     {
