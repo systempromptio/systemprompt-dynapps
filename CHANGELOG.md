@@ -22,6 +22,13 @@ Conventions (strict — hold every entry to them):
 
 ### Changed
 
+- **Core pin moved to core `next` at `239a64381`.** Core now merges user accounts through
+  injected `OwnerReassignment`s. Each owning crate moves its own rows, and the users crate no
+  longer writes other crates' tables on `admin users merge` or anonymous-user promotion.
+  `UserRepository::merge_users` is removed, and `insert_governance_decision` takes any
+  `PgExecutor`. Astound calls neither in a way that breaks, so no call sites change; only the
+  root and `tests/` lockfiles move. Core's DB-backed tests now fail rather than skip without a
+  database.
 - **Core pin moved to core `next` at `4d166edb7`.** Core's MCP executor now claims tool-call
   intents through the `ToolCallIntentClaims` trait instead of reading `ai_requests` itself.
   The bundled `systemprompt` MCP server (`extensions/mcp/systemprompt/src/server/mod.rs`) and
