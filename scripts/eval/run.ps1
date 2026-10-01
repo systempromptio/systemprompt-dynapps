@@ -3,7 +3,6 @@
 # like a user's. Reads the prompt from a file (no argv quoting) and writes the
 # claude -p JSON result next to it.
 param([string]$PromptFile, [string]$OutFile, [string]$Model)
-$env:CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS = '1'
 $env:ANTHROPIC_BASE_URL = 'http://127.0.0.1:48217'
 $env:ANTHROPIC_AUTH_TOKEN = (Get-Content "$env:APPDATA\astound\bridge-loopback.key" -Raw).Trim()
 Set-Location "$env:USERPROFILE\sp-skill-runs"

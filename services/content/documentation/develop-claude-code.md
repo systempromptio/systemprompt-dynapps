@@ -8,7 +8,7 @@ kind: "guide"
 public: true
 tags: ["documentation", "development", "claude-code"]
 published_at: "2026-08-19"
-updated_at: "2026-09-11"
+updated_at: "2026-09-30"
 after_reading_this:
   - "Stand up the gateway from an empty clone"
   - "Connect Claude Code to it with one command"
@@ -222,5 +222,6 @@ not during sync.
 | Code rejected | 10-minute TTL, single use. Open Profile and click **Generate a connect code** again. |
 | Prompted for a code on a repeat run | The stored credential did not validate against this gateway — usually a different gateway from the one that issued it. `just claude-reset`, then connect with a fresh code. |
 | Session works, audit trail empty | Not routed through the gateway. Check `ANTHROPIC_BASE_URL` points at the loopback proxy and that `astound-bridge doctor` reports it running. |
+| `400 context_management: Extra inputs are not permitted` | The gateway forwarded a beta body field without the flag that gates it. Current gateways strip the field whenever its flag is not in the provider's `accepted_betas`; a gateway older than this release does not, so upgrade it. Do not set `CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS` in the client; the fix belongs to the gateway. |
 | Container cannot reach the gateway | Inside a container `localhost` is the container. `just claude` rewrites it; by hand, use `http://host.docker.internal:8080`. |
 | 401 from a container that signed in fine | The gateway the container passes to `login --gateway` is not the gateway the PAT was issued by. The bridge follows only its config file (`login --gateway` writes it); re-run the container with the right `ASTOUND_BRIDGE_GATEWAY_URL` and reconnect. |

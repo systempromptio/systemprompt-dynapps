@@ -7,11 +7,21 @@
 //! reads `title`, `tags`, `category` and `display_category` from the
 //! frontmatter — so the export merges the two, keeps the body verbatim, and
 //! the round trip loses nothing.
+//!
+//! Every other frontmatter key (`allowed-tools`, `disable-model-invocation`,
+//! `hooks`, …) is the author's: the keys core does not own
+//! (`PLATFORM_OWNED_SKILL_KEYS`) are copied after the platform's, first from
+//! the source `SKILL.md` in authored order, then any the imported
+//! `config.yaml` `frontmatter` holds that the file does not.
 
 use std::path::Path;
 
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
+use serde_yaml::{Mapping, Value};
+use systemprompt::models::services::skill_frontmatter::{
+    authored_skill_frontmatter, split_skill_frontmatter,
+};
 use systemprompt::models::services::split_frontmatter;
 
 #[derive(Debug, Default, Deserialize)]
@@ -24,6 +34,8 @@ struct SkillConfigFields {
     category: Option<String>,
     #[serde(default)]
     display_category: Option<String>,
+    #[serde(default)]
+    frontmatter: Option<Mapping>,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -47,7 +59,7 @@ struct KitFront<'a> {
     hosts: &'a [String],
 }
 
-pub(crate) fn render(skill_dir: &Path, kebab: &str) -> Result<String> {
+pub fn render(skill_dir: &Path, kebab: &str) -> Result<String> {
     let config_path = skill_dir.join("config.yaml");
     let config: SkillConfigFields = serde_yaml::from_str(
         &std::fs::read_to_string(&config_path)
@@ -66,7 +78,10 @@ pub(crate) fn render(skill_dir: &Path, kebab: &str) -> Result<String> {
             )
         },
     );
-    let front = serde_yaml::to_string(&KitFront {
+    let authored = authored_skill_frontmatter(&raw)
+        .map_err(anyhow::Error::msg)
+        .with_context(|| md_path.display().to_string())?;
+    let front = serde_yaml::to_value(KitFront {
         name: kebab,
         title: &config.name,
         description: &config.description,
@@ -75,5 +90,20 @@ pub(crate) fn render(skill_dir: &Path, kebab: &str) -> Result<String> {
         display_category: config.display_category.as_deref(),
         hosts: &existing.hosts,
     })?;
-    Ok(format!("---\n{front}---\n{body}"))
+    let Value::Mapping(mut front) = front else {
+        anyhow::bail!("{}: kit frontmatter is not a mapping", md_path.display());
+    };
+    let passthrough = split_skill_frontmatter(authored).passthrough;
+    let recorded = config
+        .frontmatter
+        .map(|m| split_skill_frontmatter(m).passthrough);
+    for (key, value) in passthrough.into_iter().chain(recorded.flatten()).flatten() {
+        if !front.contains_key(&key) {
+            front.insert(key, value);
+        }
+    }
+    Ok(format!(
+        "---\n{}---\n{body}",
+        serde_yaml::to_string(&front)?
+    ))
 }

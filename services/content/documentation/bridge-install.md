@@ -77,6 +77,8 @@ Connect codes are single-use and expire after ten minutes. If a code expires or 
 
 Run these steps in your Linux terminal, as your normal user. For WSL, both Claude Code and the bridge must run inside the same distribution.
 
+The installer is Linux-only. On a Mac it stops before downloading anything and points you at `astound-bridge-macos.dmg`; follow [Install on macOS](/documentation/install-macos) instead.
+
 You need `curl`, `tar`, a SHA-256 utility, and a supported Linux environment. See [Downloads](/documentation/downloads) for architectures and checksum instructions. Minimal distributions may also need `libdbus-1-3`, `libcap2`, `libgcrypt20`, and `libsystemd0`.
 
 Download the installer from your gateway and inspect it before running it:

@@ -41,7 +41,7 @@ cp deploy/kit/README-INTEGRATION.md ../sfscore-claude-india-kit/
 ```
 
 The exporter writes the marketplace, its plugins and their skills in kit
-shape (no access block), then re-imports the result with core's strict
+shape (no access block) plus a starter `.systempromptignore`, then re-imports the result with core's strict
 importer and diffs it against `services/` — it fails if the round trip loses
 anything. Commit the kit, then remove the exported ids from `services/`
 **after** the first bundle is pinned (see below); until then the ids are
@@ -72,10 +72,39 @@ starts. Warnings name shape drift: a `name` that disagrees with the directory (t
 directory is the real id), missing `title`/`tags`/`category`/`display_category`, and a
 `metadata.version` that is already released.
 
+The gate also applies core's dev-file filter, so a skill that cites a file the bundle
+will not carry is an error here rather than a missing file on a client (see below).
+
 ```bash
 python3 tools/sanitize-kit.py            # report
 python3 tools/sanitize-kit.py --strict   # exit 1 on any error, as CI runs it
 ```
+
+## Dev-only files
+
+Nothing a skill's author keeps for development reaches a client. Core drops, inside
+every skill: a `README.md` at the skill root (any case), any `tests/`, `test/`,
+`fixtures/` or `__tests__/` directory, and any `*.test.*` or `*.spec.*` file. It does
+so at import, at managed capture, and again when it lays a revision out for a client.
+
+On top of those, `.systempromptignore` at the kit root names the kit's own dev-only
+paths in gitignore syntax: `#` comments, `*`/`?`/`**`, a trailing `/` for a directory,
+a pattern containing `/` anchored to the kit root, and `!` to re-include. The ignore
+file is consulted before the defaults one directory level at a time, so `!fixtures/`
+ships a skill's fixtures; nothing under an excluded directory comes back. A malformed
+pattern fails the import. `just kit-export` writes a starter file:
+
+```
+*.snap
+coverage/
+node_modules/
+__pycache__/
+.DS_Store
+```
+
+Removing dev files changes what a plugin carries, so its bundle digest (and therefore
+the stamped plugin version) moves once the first time a kit is imported by a core that
+filters them.
 
 ## Keys and secrets
 

@@ -325,6 +325,8 @@ mod authorization_failures;
 #[cfg(test)]
 mod vertex_accepted_betas;
 #[cfg(test)]
+mod vertex_gated_fields;
+#[cfg(test)]
 mod vertex_rate_card_routes;
 
 #[cfg(test)]

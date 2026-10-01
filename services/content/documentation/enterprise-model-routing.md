@@ -8,7 +8,7 @@ kind: "guide"
 public: true
 tags: ["enterprise", "gateway", "admin"]
 published_at: "2026-08-25"
-updated_at: "2026-09-29"
+updated_at: "2026-09-30"
 after_reading_this:
   - "Route any Anthropic- or OpenAI-compatible client through the provider-neutral gateway"
   - "Know which models this instance serves, from which provider, and which retire soon"
@@ -123,8 +123,13 @@ Anthropic Messages format unchanged; only the envelope around it differs:
 - Requests go to the model's own `:rawPredict` or `:streamRawPredict` path.
 - The API version travels in the body as `anthropic_version`, not in a header.
 - Only the `anthropic-beta` flags listed in the provider's `accepted_betas`
-  are forwarded. A flag Vertex still refuses is learned at runtime and dropped,
-  together with any body field it gates, and the request is re-sent once.
+  are forwarded, and a body field a dropped flag gates is removed with it
+  (`context-management-*` gates `context_management`), so Vertex never sees the
+  field without its flag. A flag or field Vertex still refuses is learned at
+  runtime and dropped, and the request is re-sent once. Clients need no setting
+  for this: `CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS` is not required, and
+  setting it turns those betas off on every route, including the ones that
+  serve them.
 
 Whether a provider is hosted on Vertex is read from the endpoint host, so the
 catalog cannot claim one platform while pointing at another.

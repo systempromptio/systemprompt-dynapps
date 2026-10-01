@@ -8,6 +8,10 @@
 //! `services/skills/<id>/` with `config.yaml` merged into its frontmatter
 //! ([`crate::skill_md`]); and `plugin.json` keeps the authored version, not
 //! the content-suffixed one the bundler stamps for the bridge.
+//!
+//! The kit root also gets a starter [`IGNORE_FILE`]: core already keeps a
+//! skill's `README.md`, tests and fixtures out of the client tree, and the
+//! file is where the kit names its own dev-only paths on top of those.
 
 use std::collections::BTreeSet;
 use std::fs;
@@ -15,7 +19,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, bail};
 use serde::Serialize;
-use systemprompt::marketplace::{CatalogContent, build_plugin_bundle};
+use systemprompt::marketplace::{CatalogContent, IGNORE_FILE, build_plugin_bundle};
 use systemprompt::models::services::{
     ComponentSource, MarketplaceConfig, PluginComponentRef, PluginConfig, PluginHooksRef,
     ServicesConfig,
@@ -26,6 +30,17 @@ const MCP_FILE: &str = ".mcp.json";
 const PLUGIN_MANIFEST: &str = ".claude-plugin/plugin.json";
 const SIDECAR: &str = ".claude-plugin/systemprompt.yaml";
 const MANIFEST: &str = ".claude-plugin/marketplace.json";
+const DEFAULT_IGNORE: &str = "\
+# Dev-only paths kept out of every client, in gitignore syntax.
+# Core already drops a skill-root README.md, any tests/, test/, fixtures/ or
+# __tests__/ directory, and any *.test.* or *.spec.* file; a `!` line here
+# re-includes one of those. A pattern with a `/` is anchored to this kit root.
+*.snap
+coverage/
+node_modules/
+__pycache__/
+.DS_Store
+";
 
 #[derive(Debug, Default)]
 pub struct ExportReport {
@@ -168,7 +183,8 @@ pub fn export_kit(
     }
 
     write_marketplace_files(out, wanted, marketplace, &entries)?;
-    report.files += 2;
+    write(&out.join(IGNORE_FILE), DEFAULT_IGNORE.as_bytes())?;
+    report.files += 3;
     Ok(report)
 }
 

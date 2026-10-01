@@ -15,6 +15,12 @@ a skill with no `title` is listed as its de-hyphenated id, one with no
 but does not carry is simply absent from the bundle. This script makes each of
 those visible, as a GitHub annotation on the file and line that causes it.
 
+Dev-only files never ship: core drops a skill-root `README.md`, any `tests/`,
+`test/`, `fixtures/` or `__tests__/` directory, any `*.test.*` / `*.spec.*` file,
+and whatever the kit's `.systempromptignore` (gitignore syntax, at the kit root)
+names. `DevFiles` mirrors that filter, so a skill citing a file the bundle will
+not carry is reported here rather than discovered on a client.
+
 Errors are release blockers; warnings are shape drift worth fixing. `--strict`
 exits 1 on any error, which is how CI consumes it.
 """
@@ -38,6 +44,95 @@ FRONTMATTER = re.compile(r"\A---\r?\n(.*?)\r?\n---\r?\n?", re.DOTALL)
 # `docs/PROJECT_SCHEMA.md`) — those are not ours to find. A `references/` path,
 # or one climbing out of the skill directory, is a claim about the bundle.
 CITATION = re.compile(r"`([^`\n]*references/[^`\n]+|\.\.\/[^`\n]+)`")
+IGNORE_FILE = ".systempromptignore"
+DEV_DIRS = {"tests", "test", "fixtures", "__tests__"}
+DEV_INFIXES = {"test", "spec"}
+
+
+def glob_regex(glob):
+    """A gitignore glob as a regex over a `/`-separated path."""
+    out, i = [], 0
+    while i < len(glob):
+        if glob.startswith("**/", i):
+            out.append("(?:.*/)?")
+            i += 3
+        elif glob.startswith("**", i):
+            out.append(".*")
+            i += 2
+        elif glob[i] == "*":
+            out.append("[^/]*")
+            i += 1
+        elif glob[i] == "?":
+            out.append("[^/]")
+            i += 1
+        elif glob[i] == "[" and "]" in glob[i + 1:]:
+            end = glob.index("]", i + 1)
+            body = glob[i + 1:end].replace("\\", "\\\\")
+            out.append("[^" + body[1:] + "]" if body.startswith("!") else "[" + body + "]")
+            i = end + 1
+        elif glob[i] == "\\" and i + 1 < len(glob):
+            out.append(re.escape(glob[i + 1]))
+            i += 2
+        else:
+            out.append(re.escape(glob[i]))
+            i += 1
+    return re.compile("".join(out) + r"\Z")
+
+
+class DevFiles:
+    """Core's dev-file filter: the defaults plus the kit's ignore file. Each
+    path is judged one directory level at a time; the last ignore pattern
+    matching a level decides it, otherwise the defaults do, and an excluded
+    directory excludes everything under it."""
+
+    def __init__(self, root):
+        self.root = root
+        self.rules = []
+        path = root / IGNORE_FILE
+        if path.is_file():
+            for raw in path.read_text(encoding="utf-8").splitlines():
+                line = raw.rstrip()
+                if not line or line.startswith("#"):
+                    continue
+                negate = line.startswith("!")
+                line = line[1:] if negate else line
+                line = line[1:] if line.startswith("\\") else line
+                dir_only = line.endswith("/")
+                line = line[:-1] if dir_only else line
+                if not line:
+                    continue
+                glob = line.lstrip("/") if "/" in line else "**/" + line
+                self.rules.append((glob_regex(glob), negate, dir_only))
+
+    def _verdict(self, candidate, is_dir):
+        for regex, negate, dir_only in reversed(self.rules):
+            if (is_dir or not dir_only) and regex.match(candidate):
+                return not negate
+        return None
+
+    @staticmethod
+    def _default(name, is_dir, at_root):
+        if is_dir:
+            return name in DEV_DIRS
+        if at_root and name.lower() == "readme.md":
+            return True
+        parts = name.split(".")
+        return len(parts) > 2 and any(p in DEV_INFIXES for p in parts[1:-1])
+
+    def excludes(self, skill_dir, path):
+        """Whether `path` (a file or directory inside `skill_dir`) is kept out
+        of the bundle."""
+        parts = path.relative_to(skill_dir).parts
+        prefix = skill_dir.relative_to(self.root).as_posix() + "/"
+        for depth in range(1, len(parts) + 1):
+            candidate = "/".join(parts[:depth])
+            is_dir = depth < len(parts) or path.is_dir()
+            verdict = self._verdict(prefix + candidate, is_dir)
+            if verdict is None:
+                verdict = self._default(parts[depth - 1], is_dir, depth == 1)
+            if verdict:
+                return True
+        return False
 
 
 class Findings:
@@ -77,7 +172,7 @@ def line_of_key(raw, key):
     return 1
 
 
-def check_skill(skill_dir, plugin_id, prefix, out):
+def check_skill(skill_dir, plugin_id, prefix, dev_files, out):
     """One skill directory: it must carry a SKILL.md, that file must parse, and
     everything it cites must sit beside it."""
     rel = skill_dir.relative_to(skill_dir.parents[3])
@@ -175,10 +270,18 @@ def check_skill(skill_dir, plugin_id, prefix, out):
                     f"cites '{cited}', which this skill does not carry",
                     f"add {cited} beside SKILL.md, or drop the citation",
                 )
+            elif dev_files.excludes(skill_dir, skill_dir / cited):
+                out.error(
+                    rel_md,
+                    offset,
+                    f"cites '{cited}', which is a dev-only file (a default exclude or "
+                    f"{IGNORE_FILE}), so the bundle never carries it",
+                    f"move it out of the excluded path, or re-include it with a ! line in {IGNORE_FILE}",
+                )
     return directory
 
 
-def check_plugin(plugin_dir, marketplace_entry, prefixes, out):
+def check_plugin(plugin_dir, marketplace_entry, prefixes, dev_files, out):
     """One plugin: a category somewhere, a manifest that matches disk, and no
     two skills covering the same topic."""
     plugin_id = plugin_dir.name
@@ -209,7 +312,7 @@ def check_plugin(plugin_dir, marketplace_entry, prefixes, out):
     prefix = prefixes.get(plugin_id, "")
     ids = []
     for skill_dir in sorted(p for p in skills_dir.iterdir() if p.is_dir()):
-        found = check_skill(skill_dir, plugin_id, prefix, out)
+        found = check_skill(skill_dir, plugin_id, prefix, dev_files, out)
         if found:
             ids.append(found)
 
@@ -329,10 +432,11 @@ def main():
     check_version(root, manifest, out)
 
     entries = {e.get("name"): e for e in (manifest or {}).get("plugins", [])}
+    dev_files = DevFiles(root)
     plugins_dir = root / "plugins"
     if plugins_dir.is_dir():
         for plugin_dir in sorted(p for p in plugins_dir.iterdir() if p.is_dir()):
-            check_plugin(plugin_dir, entries.get(plugin_dir.name), prefixes, out)
+            check_plugin(plugin_dir, entries.get(plugin_dir.name), prefixes, dev_files, out)
 
     emit(out, os.environ.get("GITHUB_STEP_SUMMARY"))
     if out.errors:

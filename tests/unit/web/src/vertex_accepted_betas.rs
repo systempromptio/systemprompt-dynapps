@@ -14,7 +14,7 @@ use systemprompt::models::wire::anthropic::AnthropicBeta;
 
 use crate::support::repo_root;
 
-fn vertex_anthropic() -> ProviderEntry {
+pub(crate) fn vertex_anthropic() -> ProviderEntry {
     let path = repo_root().join("services/ai/providers.yaml");
     let yaml = std::fs::read_to_string(&path)
         .unwrap_or_else(|e| panic!("reading {}: {e}", path.display()));

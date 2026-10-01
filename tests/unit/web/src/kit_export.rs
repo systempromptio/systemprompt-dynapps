@@ -6,7 +6,7 @@ use std::path::Path;
 
 use systemprompt::loader::ConfigLoader;
 use systemprompt::models::services::split_frontmatter;
-use systemprompt_kit_export::{export_kit, round_trip};
+use systemprompt_kit_export::{export_kit, render_skill_md, round_trip};
 
 fn services_root() -> std::path::PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -101,5 +101,60 @@ fn export_refuses_an_unknown_marketplace_without_creating_a_tree() {
             .next()
             .is_none(),
         "failed lookup writes no partial kit"
+    );
+}
+
+fn skill_dir(config: &str, skill_md: &str) -> tempfile::TempDir {
+    let dir = tempfile::tempdir().expect("skill directory");
+    std::fs::write(dir.path().join("config.yaml"), config).expect("config.yaml");
+    std::fs::write(dir.path().join("SKILL.md"), skill_md).expect("SKILL.md");
+    dir
+}
+
+#[test]
+fn exported_skill_md_passes_authored_keys_through_after_the_platform_keys() {
+    let dir = skill_dir(
+        "id: field_notes\nname: Field Notes\ndescription: Notes.\ntags: [notes]\n\
+         frontmatter:\n  model: opus\n  allowed-tools: [Write]\n",
+        "---\nname: field-notes\ndescription: stale\ntitle: stale\nallowed-tools:\n- Read\n\
+         disable-model-invocation: true\nhooks:\n  PreToolUse:\n  - matcher: Bash\n---\nBody.\n",
+    );
+    let md = render_skill_md(dir.path(), "field-notes").expect("render");
+    let front = split_frontmatter(&md).expect("frontmatter");
+    let parsed: serde_yaml::Mapping = serde_yaml::from_str(front.yaml).expect("valid yaml");
+    let keys: Vec<&str> = parsed
+        .keys()
+        .filter_map(serde_yaml::Value::as_str)
+        .collect();
+    assert_eq!(
+        keys,
+        [
+            "name",
+            "title",
+            "description",
+            "tags",
+            "allowed-tools",
+            "disable-model-invocation",
+            "hooks",
+            "model",
+        ],
+        "platform keys from config.yaml, then the SKILL.md keys, then config-only keys: {md}"
+    );
+    assert_eq!(parsed["title"], "Field Notes");
+    assert_eq!(parsed["description"], "Notes.");
+    assert_eq!(parsed["allowed-tools"][0], "Read", "the authored file wins");
+    assert_eq!(parsed["hooks"]["PreToolUse"][0]["matcher"], "Bash");
+    assert_eq!(front.body, "Body.\n");
+}
+
+#[test]
+fn exported_skill_md_without_authored_keys_is_unchanged() {
+    let dir = skill_dir(
+        "id: who_am_i\nname: Who Am I\ndescription: Who.\n",
+        "---\nname: who-am-i\ndescription: Who.\n---\nBody.\n",
+    );
+    assert_eq!(
+        render_skill_md(dir.path(), "who-am-i").expect("render"),
+        "---\nname: who-am-i\ntitle: Who Am I\ndescription: Who.\n---\nBody.\n"
     );
 }

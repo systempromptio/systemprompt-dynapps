@@ -22,6 +22,27 @@ Conventions (strict — hold every entry to them):
 
 ### Changed
 
+- **Kits: authored skill frontmatter reaches the client.** Core now keeps every `SKILL.md`
+  frontmatter key it does not own (`name`, `description`, `title`, `tags`, `category`,
+  `display_category`, `hosts`) and writes it into the client `SKILL.md`, so a kit's
+  `allowed-tools`, `disable-model-invocation`, `user-invocable` and `argument-hint` take effect
+  in Claude Code instead of being dropped. `just kit-export`
+  (`extensions/cli/kit-export/src/skill_md.rs`) now carries those keys into the exported
+  `SKILL.md` too, after the platform's: first the ones in the instance's `SKILL.md`, in
+  authored order, then any the imported `config.yaml` `frontmatter` records that the file does
+  not; a source `SKILL.md` whose frontmatter is not a YAML mapping now fails the export rather
+  than losing its keys. `systemprompt_kit_export::render_skill_md` is public so the projection
+  is testable. Skills that carry such keys re-stamp once when the new core is adopted.
+- **Kits: dev-only files stay out of the client tree.** Core now drops a skill's root
+  `README.md`, its `tests/`, `test/`, `fixtures/` and `__tests__/` directories and its
+  `*.test.*` / `*.spec.*` files on import, managed capture and client install, and honours a
+  kit-root `.systempromptignore` (gitignore syntax) for the kit's own dev paths — before, all
+  70 test and fixture files of a plugin and 11 of 20 skill READMEs reached every client.
+  `deploy/kit/tools/sanitize-kit.py` applies the same filter, so a skill citing a file the
+  bundle will not carry is a release-blocking error; `just kit-export` writes a starter
+  `.systempromptignore` (`*.snap`, `coverage/`, `node_modules/`, `__pycache__/`, `.DS_Store`)
+  into every exported kit; `deploy/kit/README-INTEGRATION.md` documents both. Each kit's
+  bundle digest, and so its stamped plugin versions, moves once on the first import.
 - **Core pin moved to core `next` at `239a64381`.** Core now merges user accounts through
   injected `OwnerReassignment`s. Each owning crate moves its own rows, and the users crate no
   longer writes other crates' tables on `admin users merge` or anonymous-user promotion.
@@ -113,8 +134,29 @@ Conventions (strict — hold every entry to them):
   now rem (30 / 48 / 64 / 80); `10-responsive.css` and `07-field-details.css` were folded into
   the files that own their rules and removed.
 
+- **Claude Code needs no beta workaround through the gateway.** The `400 context_management:
+  Extra inputs are not permitted` that sp-dev's 0.62.0 image returns to Claude Code (its
+  `vertex-anthropic` declares no `accepted_betas`, so the flag is dropped and the field sent
+  alone) is fixed on `next` twice over: the `accepted_betas` declaration (`4b95e914`) and the
+  pinned core (`65b0ba9a1`, contained in `4d166edb7`), under which a body field whose gating `anthropic-beta`
+  flag a provider's `accepted_betas` drops is removed with the flag, and a field Vertex still
+  refuses is learned and re-sent once. `vertex-anthropic` keeps `context-management-2025-06-27`
+  in `accepted_betas` because Vertex serves context editing (beta), so Claude Code keeps it there.
+  `CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS=1` is no longer needed in `~/.claude/settings.json`;
+  `scripts/eval/run.ps1` stops setting it so eval runs send what a user's session sends, and
+  `develop-claude-code` and `enterprise-model-routing` say so.
+  `tests/unit/web/src/vertex_gated_fields.rs` pins the outbound body: the field reaches Vertex
+  with its flag, and is gone when the policy drops the flag or the provider declares no list.
+
 ### Fixed
 
+- **`install.sh` refuses macOS.** The Linux installer (`scripts/install-bridge.sh`, published as
+  `/files/downloads/install.sh`) mapped an Apple Silicon Mac's `arm64` to the Linux `aarch64`
+  tarball and installed a Linux binary into `~/.local/bin/astound-bridge`, which then failed with
+  `exec format error`. It now checks `uname -s` first and, on Darwin, exits 1 naming
+  `<download base>/astound-bridge-macos.dmg` before downloading anything; Linux is unchanged.
+  `tests/release/macos-smoke.sh` pins both halves under a fake `uname`
+  (`--install-sh-only` runs just that check, on any host).
 - `07-panel.css` and `07-dialog.css` each had `transition` declarations whose property name had
   been lost, leaving orphaned continuation lines and, in the panel file, a selector list that
   swallowed the reduced-motion block; both are valid CSS again.
