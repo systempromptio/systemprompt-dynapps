@@ -66,6 +66,7 @@ impl Harness {
         std::fs::write(directory.path().join("secrets.json"), r#"{
             "database_url":"postgres://unused:unused@localhost:5432/postgres",
             "oauth_at_rest_pepper":"connector-rotation-test-pepper-not-a-real-secret",
+            "manifest_signing_secret_seed":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
             "encryption_master_key":"00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"
         }"#).unwrap();
         systemprompt::config::ProfileBootstrap::init_from_path(
