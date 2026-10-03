@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Exercise the coordinator without touching a real build or its ledger.
 set -euo pipefail
+unset BUILD_NO_COORD BUILD_COORD_ACTIVE COORD_CURRENT_KEY
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 SCRATCH="$(mktemp -d "${TMPDIR:-/tmp}/astound-coordinator.XXXXXX")"
 cleanup() {
