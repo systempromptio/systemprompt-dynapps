@@ -1,6 +1,7 @@
 //! Hosted MCP consent and account actions; credentials stay in the backend.
 
 pub(crate) mod account;
+mod completion;
 pub(crate) mod consent;
 pub(crate) mod identity;
 
@@ -40,7 +41,7 @@ async fn live_user(
             .get("origin")
             .and_then(|h| h.to_str().ok())
             .ok_or_else(|| AdminError::Forbidden("Same-origin request required".into()))?;
-        let base = systemprompt::models::Config::get()?
+        let base = systemprompt::manifest::Config::get()?
             .api_external_url
             .clone();
         let expected = url::Url::parse(&base)

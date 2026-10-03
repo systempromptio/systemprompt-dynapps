@@ -7,8 +7,10 @@
 //! the first stage (no grant, not configured).
 
 mod account_state;
+pub mod callback_notice;
 pub mod config;
 pub mod discovery;
+pub mod failure;
 pub mod generic;
 mod generic_discovery;
 pub mod payload;
@@ -26,12 +28,15 @@ use crate::repositories::connectors::connector_credentials::EncryptedGrant;
 pub use config::Provider;
 pub use generic::Consent;
 use resolve::resolve_token;
+#[doc(hidden)]
+pub use resolve::resolve_token_with_client;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 use systemprompt_web_admin_core::connections::report::VerificationReport;
 use systemprompt_web_admin_core::crypto::secret_crypto;
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+pub(crate) use tokens::exchange_classified;
 pub use transport::{authorize, exchange, exchange_with_client, refresh_with_client};
 
 /// Debug output never reveals credentials; serialization is only for the
@@ -135,7 +140,9 @@ pub async fn probe_connection(
 #[doc(hidden)]
 pub async fn refresh_at(grant: &mut Grant, endpoint: &str) -> AdminResult<()> {
     let previous = std::mem::replace(&mut grant.token_endpoint, endpoint.to_owned());
-    let result = transport::refresh(grant).await;
+    let result = transport::refresh(grant)
+        .await
+        .map_err(|failure| failure.error);
     grant.token_endpoint = previous;
     result
 }

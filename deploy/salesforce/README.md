@@ -115,12 +115,12 @@ lacks API access.
 
 ### 5. Gateway configuration
 
-`services/config/salesforce-orgs.yaml` already declares both entries against
+`services/config/salesforce-orgs.yaml` declares the Salesforce connector against
 `https://ontrq.my.salesforce.com` with `environment: production`, each with its
 `services/mcp/<id>.yaml` and an `mcp_server/<id>` block in
 `services/access-control/rules.yaml`. Store the consumer key and secret from step
 1 as `salesforce_mcp_client_id` / `salesforce_mcp_client_secret` on the target
-profile and deploy; until then both rows read "Not provisioned".
+profile and deploy; until then its row reads "Not provisioned".
 
 Users then open **Account → Connected accounts**, press **Connect** on a row,
 sign in to *that* org (log out of other Salesforce orgs first — Salesforce's
@@ -147,3 +147,68 @@ gateway so every user is told to reconnect.
 - Whether a callback URL added to the app in the source org reaches a subscriber org
   without a new package version (it should — subscribers reference the source
   settings — but test it against a scratch org before relying on it).
+
+## Connection and refresh troubleshooting
+
+This connector uses **Systemprompt in External Client App Manager**, not a
+legacy Connected App. The browser callback can fail after Salesforce has
+successfully returned an authorization code: the backend must exchange it,
+initialize Headless 360, list tools, and confirm the user's identity.
+
+The Connectors page names the failed stage and shows a reference ID. Give that
+ID, the affected user's identity and the UTC time to the server operator.
+Callback and refresh events use the `connector_oauth` target and carry user,
+provider, stage and trace fields; upstream responses carry HTTP status. OAuth
+error codes are allow-listed. Credentials, raw provider bodies and full
+callback URLs must not be copied into tickets or logs.
+
+For **all users failing together**, check shared configuration and service
+availability first. The source files are desired configuration, not proof of
+what is deployed:
+
+1. In ONTRQ's External Client App Manager, confirm the installed app is enabled
+   and references the expected source app. Compare its consumer key with the
+   gateway configuration without sharing the consumer secret.
+2. Verify the gateway's stored secret matches that app, its callback includes
+   `https://sp-dev.astound.digital/api/public/connectors/salesforce/callback`,
+   and PKCE plus named-user JWT access tokens are enabled.
+3. Check `mcp_api`, `refresh_token` and `openid` scopes, the actual refresh
+   lifetime and idle TTL, rotation, session level and permitted-user policy.
+   Checked-in policy declares a **90-day lifetime** and rotation; a failure
+   exactly 14 days after installation warrants checking for a different live
+   policy. There is no verified universal two-week expiry in this incident.
+4. Check IP policies against the server's outbound IP, including refresh-token
+   allowlists. Keep existing restrictions; correct the intended deployment or
+   assignment instead of relaxing access globally.
+5. In API Catalog, confirm **Headless 360** is active and affected users have
+   the intended app and API permissions. A code exchange can succeed while
+   MCP initialization or tools access fails.
+6. Use Salesforce Login History and Setup Audit Trail with the incident UTC
+   times, and obtain the backend callback/refresh stage from the server operator.
+   Do not attribute platform-wide errors to one user without correlation.
+
+Salesforce's [September 10, 2026 security-controls notice](https://help.salesforce.com/s/articleView?id=005433465&language=en_US&type=1)
+requires PKCE, refresh rotation and a 30-day idle TTL for locally managed apps
+created on or after July 9, 2026. This does not establish a 14-day lifetime or
+prove the cause of this incident. Hosted MCP requires an External Client App:
+see [Salesforce's MCP setup guide](https://developer.salesforce.com/docs/platform/hosted-mcp-servers/guide/create-external-client-app.html).
+
+Recovery depends on the failure:
+
+- **Expired access token:** the broker refreshes automatically under a database
+  account lock and saves the replacement refresh token before returning access.
+- **Rejected user refresh grant:** the saved grant is retired and reconnect is
+  required. This cannot be repaired by refreshing an already revoked token.
+- **App configuration or provider permission failure:** credentials are retained;
+  fix the shared settings or assignment, then use Test connection.
+- **Outage or invalid response:** credentials are retained and use is blocked;
+  test again once the provider or response issue is resolved.
+- **Lost or unusable refresh response:** the token may already have rotated.
+  The broker retains it for diagnosis but blocks further refresh attempts,
+  including Test connection. Reconnect; do not replay the old token.
+- **Authorization saved, verification failed:** Test connection retries the MCP
+  and identity checks without requiring another browser authorization.
+
+Successful tests in `astound.systemprompt.io` do not prove recovery on the
+separate live endpoint `sp-dev.astound.digital`. Close the incident only after
+verifying its deployed version, reconnect, tools access and a later refresh.

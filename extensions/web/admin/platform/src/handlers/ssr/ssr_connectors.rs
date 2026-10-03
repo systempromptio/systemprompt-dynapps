@@ -5,7 +5,8 @@
 
 use std::sync::Arc;
 
-use axum::extract::{Extension, State};
+use crate::services::connector_oauth::callback_notice::CallbackNotice;
+use axum::extract::{Extension, Query, State};
 use axum::response::Response;
 use serde::Serialize;
 use sqlx::PgPool;
@@ -50,6 +51,7 @@ struct ConnectorsPageView {
     summary: ConnectorsSummary,
     groups: Vec<GroupView>,
     has_connectors: bool,
+    callback_notice: Option<String>,
     breadcrumbs: Vec<BreadcrumbView>,
 }
 
@@ -154,11 +156,13 @@ pub(crate) async fn connectors_page(
     Extension(mkt_ctx): Extension<MarketplaceContext>,
     Extension(engine): Extension<AdminTemplateEngine>,
     State(pool): State<Arc<PgPool>>,
+    Query(notice): Query<CallbackNotice>,
 ) -> AdminHtmlResult<Response> {
     let snapshot = get_connections(&pool, &user_ctx.user_id).await?;
     let connections = snapshot.connections;
     let view = ConnectorsPageView {
         page: "connectors",
+        callback_notice: notice.message(),
         title: "Connectors",
         user_email: user_ctx.email.as_str().to_owned(),
         user_id: user_ctx.user_id.clone(),

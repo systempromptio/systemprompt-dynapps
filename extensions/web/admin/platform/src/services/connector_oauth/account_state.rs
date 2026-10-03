@@ -3,6 +3,7 @@
 //! Only a rejected grant is deleted; after an outage the account is held for
 //! `OUTAGE_HOLD_SECONDS` so accessor calls do not refresh once per MCP request.
 
+use super::failure::{FailureKind, FlowFailure};
 use super::{Grant, Provider, seal};
 use crate::repositories::connectors::connector_accounts::{ProviderConnection, update_account};
 use crate::repositories::connectors::connector_credentials::{self as repo, EncryptedGrant};
@@ -15,24 +16,24 @@ pub(super) async fn record_grant_failure(
     user: &UserId,
     account: &mut ProviderConnection,
     grant: &Grant,
-    error: &AdminError,
+    failure: &FlowFailure,
 ) -> AdminResult<()> {
     let provider = &grant.provider;
-    if matches!(error, AdminError::Unauthorized(_)) {
+    if failure.kind == FailureKind::GrantRejected {
         account.status = "reconnect_required".into();
         account.error_code = Some("grant_rejected".into());
         account.generation += 1;
         repo::delete(tx, user, provider.slug()).await?;
     } else {
         account.status = "temporarily_unavailable".into();
-        account.error_code = Some(
-            if matches!(error, AdminError::Forbidden(_)) {
-                "provider_permission_denied"
-            } else {
-                "provider_unavailable"
-            }
-            .into(),
-        );
+        account.error_code = Some(failure.kind.code().into());
+        if matches!(
+            failure.kind,
+            FailureKind::RefreshUncertain | FailureKind::InvalidResponse | FailureKind::Permission
+        ) {
+            account.status = "verification_required".into();
+            account.verified_at = None;
+        }
         let possibly_rotated_grant = seal(grant)?;
         repo::store(tx, user, provider.slug(), &possibly_rotated_grant).await?;
     }
@@ -43,7 +44,9 @@ pub(super) async fn record_grant_failure(
         status = %account.status,
         error_code = account.error_code.as_deref().unwrap_or(""),
         generation = account.generation,
-        error = %error,
+        user_id = %user,
+        classification = failure.kind.code(),
+        error = %failure.error,
         "connector grant failure recorded"
     );
     Ok(())

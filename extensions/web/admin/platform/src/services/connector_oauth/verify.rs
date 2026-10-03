@@ -31,6 +31,9 @@ async fn rpc(
         .send()
         .await
         .map_err(|_redacted_error| AdminError::Upstream("MCP verification unavailable".into()))?;
+    tracing::info!(target: "connector_oauth", user_id = %grant.user, provider = grant.provider.slug(),
+        stage = payload.get("method").and_then(|value| value.as_str()).unwrap_or("request"),
+        status = response.status().as_u16(), "MCP verification responded");
     if let Some(id) = response
         .headers()
         .get("mcp-session-id")
@@ -94,6 +97,8 @@ async fn identity(
                 .map_err(|_redacted_error| {
                     AdminError::Upstream("Provider identity unavailable".into())
                 })?;
+            tracing::info!(target: "connector_oauth", user_id = %grant.user, provider = grant.provider.slug(),
+                stage = "identity", status = response.status().as_u16(), "provider identity responded");
             body(response).await?
         },
     };

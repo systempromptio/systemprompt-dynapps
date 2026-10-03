@@ -1,11 +1,12 @@
 //! OAuth token exchange and refresh, using only bound destinations.
+use super::failure::{FailureKind, FlowFailure, FlowResult, oauth_failure, safe_oauth_code};
 use super::transport::client;
 use super::{Grant, Provider};
 use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use chrono::Utc;
 use serde::Deserialize;
-use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::error::AdminResult;
 
 const SALESFORCE_OPAQUE_TOKEN_SECONDS: i64 = 900;
 
@@ -31,14 +32,15 @@ struct Tokens {
     token_type: Option<String>,
 }
 
-use systemprompt_web_shared::format::truncate_chars as truncate;
-
 async fn request_with_client(
     grant: &mut Grant,
     fields: &[(&str, &str)],
     http: &reqwest::Client,
-) -> AdminResult<()> {
-    super::generic::validate_grant(grant)?;
+) -> FlowResult<()> {
+    super::generic::validate_grant(grant).map_err(|error| FlowFailure {
+        kind: FailureKind::Configuration,
+        error,
+    })?;
     let body = {
         let mut form = url::form_urlencoded::Serializer::new(String::new());
         form.extend_pairs(fields)
@@ -60,7 +62,10 @@ async fn request_with_client(
         };
         request = request.basic_auth(encode(&grant.client), Some(encode(&grant.client_secret)));
     }
-    let provider = grant.provider.slug().to_owned();
+    let provider = grant.provider.slug();
+    let refreshing = fields
+        .first()
+        .is_some_and(|(_, value)| *value == "refresh_token");
     let response = request
         .header("Accept", "application/json")
         .header("Content-Type", "application/x-www-form-urlencoded")
@@ -71,83 +76,111 @@ async fn request_with_client(
             tracing::warn!(
                 target: "connector_oauth",
                 provider,
+                user_id = %grant.user,
+                stage = "token",
                 grant_type = fields.first().map_or("", |(_, v)| v),
                 timeout = error.is_timeout(),
                 connect = error.is_connect(),
                 "token request failed before a response"
             );
-            AdminError::Upstream("Connector authorization service unavailable".into())
+            FlowFailure::new(if refreshing && !error.is_connect() {
+                FailureKind::RefreshUncertain
+            } else {
+                FailureKind::Outage
+            })
         })?;
-    let tokens = accepted_tokens(&provider, response).await?;
-    if matches!(grant.provider, Provider::Generic(_))
-        && !tokens
-            .token_type
-            .as_deref()
-            .is_some_and(|kind| kind.eq_ignore_ascii_case("bearer"))
-    {
-        return Err(AdminError::Upstream(
-            "Connector requires a Bearer access token".into(),
-        ));
-    }
-    apply_tokens(grant, tokens)
+    let tokens = accepted_tokens(grant, response, refreshing).await?;
+    apply_tokens(grant, tokens, refreshing)
 }
 
-// Why: RFC 6749 §5.2 — a token endpoint's 4xx error (invalid_grant,
-// invalid_client …) is final for the grant, so it is retired; only a 5xx, a 429
-// or a transport failure is an outage worth retrying.
-async fn accepted_tokens(provider: &str, response: reqwest::Response) -> AdminResult<Tokens> {
-    let status = response.status();
-    if status.is_server_error() || status.as_u16() == 429 {
-        tracing::warn!(
-            target: "connector_oauth",
-            provider,
-            status = status.as_u16(),
-            "token endpoint unavailable"
-        );
-        return Err(AdminError::Upstream(
-            "Connector authorization service unavailable".into(),
-        ));
+async fn accepted_tokens(
+    grant: &Grant,
+    response: reqwest::Response,
+    refreshing: bool,
+) -> FlowResult<Tokens> {
+    let status = response.status().as_u16();
+    tracing::info!(target: "connector_oauth", provider = grant.provider.slug(), user_id = %grant.user,
+        stage = "token", status, refreshing, "token endpoint responded");
+    if status >= 500 || status == 429 {
+        return Err(FlowFailure::new(FailureKind::Outage));
     }
-    let tokens: Tokens = super::generic_discovery::bounded_json(response).await?;
-    if !status.is_success() || tokens.error.is_some() {
-        let code = tokens.error.as_deref().unwrap_or("none");
-        tracing::warn!(
-            target: "connector_oauth",
-            provider,
-            status = status.as_u16(),
-            oauth_error = code,
-            oauth_error_description = tokens.error_description.as_deref().map(|d| truncate(d, 160)),
-            "token request rejected; grant retired"
+    let tokens: Tokens = super::generic_discovery::bounded_json(response)
+        .await
+        .map_err(|_| {
+            FlowFailure::new(if refreshing && (200..300).contains(&status) {
+                FailureKind::RefreshUncertain
+            } else {
+                FailureKind::InvalidResponse
+            })
+        })?;
+    if !(200..300).contains(&status) || tokens.error.is_some() {
+        let kind = oauth_failure(
+            &grant.provider,
+            status,
+            tokens.error.as_deref(),
+            tokens.error_description.as_deref(),
         );
-        return Err(AdminError::Unauthorized(format!(
-            "Connector grant rejected ({code}); reconnect required"
-        )));
+        let code = safe_oauth_code(tokens.error.as_deref());
+        tracing::warn!(target: "connector_oauth", provider = grant.provider.slug(), user_id = %grant.user,
+            stage = "token", status, oauth_error = code, classification = kind.code(), "token request rejected");
+        return Err(FlowFailure::new(kind));
     }
     Ok(tokens)
 }
 
-fn apply_tokens(grant: &mut Grant, tokens: Tokens) -> AdminResult<()> {
-    grant.access_token = tokens
-        .access_token
-        .filter(|t| !t.trim().is_empty())
-        .ok_or_else(|| AdminError::Upstream("Connector returned no access token".into()))?;
+fn apply_tokens(grant: &mut Grant, tokens: Tokens, refreshing: bool) -> FlowResult<()> {
+    // Why: Salesforce rotation has already occurred before response validation.
+    // Save the replacement even when the access token or its expiry is invalid.
+    let replacement_received = tokens.refresh_token.is_some();
+    let invalid = if refreshing && !replacement_received {
+        FailureKind::RefreshUncertain
+    } else {
+        FailureKind::InvalidResponse
+    };
     if let Some(refresh) = tokens.refresh_token {
+        if refresh.trim().is_empty() {
+            return Err(FlowFailure::new(if refreshing {
+                FailureKind::RefreshUncertain
+            } else {
+                FailureKind::InvalidResponse
+            }));
+        }
         grant.refresh_token = Some(refresh);
     }
-    let seconds = tokens
-        .expires_in
-        .filter(|n| *n > 0 && *n <= 31_536_000)
-        .or_else(|| undeclared_expiry_seconds(&grant.provider, &grant.access_token))
-        .ok_or_else(|| AdminError::Upstream("Connector returned no valid token expiry".into()))?;
+    grant.expires_at = 0;
+    if tokens
+        .token_type
+        .as_deref()
+        .is_some_and(|kind| !kind.eq_ignore_ascii_case("bearer"))
+        || (matches!(grant.provider, Provider::Generic(_)) && tokens.token_type.is_none())
+    {
+        return Err(FlowFailure::new(invalid));
+    }
+    grant.access_token = tokens
+        .access_token
+        .filter(|token| !token.trim().is_empty())
+        .ok_or_else(|| FlowFailure::new(invalid))?;
+    let seconds = match tokens.expires_in {
+        Some(seconds) if seconds > 0 && seconds <= 31_536_000 => Some(seconds),
+        Some(_) => None,
+        None => undeclared_expiry_seconds(&grant.provider, &grant.access_token),
+    }
+    .ok_or_else(|| FlowFailure::new(invalid))?;
     grant.expires_at = if seconds == 0 && matches!(grant.provider, Provider::Generic(_)) {
         i64::MAX
     } else {
-        Utc::now().timestamp() + seconds
+        Utc::now().timestamp().saturating_add(seconds)
     };
+    if grant.provider.is_salesforce() {
+        if let Some(expiry) = unverified_jwt_exp(&grant.access_token) {
+            grant.expires_at = grant.expires_at.min(expiry);
+        }
+    }
+    if grant.expires_at <= Utc::now().timestamp() {
+        return Err(FlowFailure::new(invalid));
+    }
     if grant.refresh_token.is_none() && !matches!(grant.provider, Provider::Generic(_)) {
-        return Err(AdminError::Unauthorized(
-            "Connector did not grant refresh authorization".into(),
-        ));
+        return Err(FlowFailure::new(FailureKind::Permission));
     }
     Ok(())
 }
@@ -161,9 +194,9 @@ fn undeclared_expiry_seconds(provider: &Provider, access_token: &str) -> Option<
         Provider::Salesforce(_) => Some(
             unverified_jwt_exp(access_token)
                 .map_or(SALESFORCE_OPAQUE_TOKEN_SECONDS, |exp| {
-                    exp - Utc::now().timestamp()
+                    exp.saturating_sub(Utc::now().timestamp())
                 })
-                .clamp(60, 31_536_000),
+                .min(31_536_000),
         ),
         Provider::Generic(_) => Some(0),
         Provider::Atlassian => None,
@@ -171,8 +204,23 @@ fn undeclared_expiry_seconds(provider: &Provider, access_token: &str) -> Option<
 }
 
 pub async fn exchange(grant: &mut Grant, code: &str) -> AdminResult<()> {
-    let callback = grant.provider.callback()?;
-    exchange_with_client(grant, code, &callback, &client()?).await
+    exchange_classified(grant, code)
+        .await
+        .map_err(|failure| failure.error)
+}
+
+pub(crate) async fn exchange_classified(grant: &mut Grant, code: &str) -> FlowResult<()> {
+    let callback = grant
+        .provider
+        .callback()
+        .map_err(FlowFailure::verification)?;
+    exchange_request(
+        grant,
+        code,
+        &callback,
+        &client().map_err(FlowFailure::verification)?,
+    )
+    .await
 }
 
 pub async fn exchange_with_client(
@@ -181,6 +229,17 @@ pub async fn exchange_with_client(
     callback: &str,
     http: &reqwest::Client,
 ) -> AdminResult<()> {
+    exchange_request(grant, code, callback, http)
+        .await
+        .map_err(|failure| failure.error)
+}
+
+async fn exchange_request(
+    grant: &mut Grant,
+    code: &str,
+    callback: &str,
+    http: &reqwest::Client,
+) -> FlowResult<()> {
     let verifier = grant.verifier.clone();
     request_with_client(
         grant,
@@ -197,17 +256,33 @@ pub async fn exchange_with_client(
     Ok(())
 }
 
-pub(super) async fn refresh(grant: &mut Grant) -> AdminResult<()> {
-    refresh_with_client(grant, &client()?).await
+pub(super) async fn refresh(grant: &mut Grant) -> FlowResult<()> {
+    refresh_classified(grant, &client().map_err(FlowFailure::verification)?).await
 }
 
 pub async fn refresh_with_client(grant: &mut Grant, http: &reqwest::Client) -> AdminResult<()> {
+    refresh_classified(grant, http)
+        .await
+        .map_err(|failure| failure.error)
+}
+
+pub(super) async fn refresh_classified(
+    grant: &mut Grant,
+    http: &reqwest::Client,
+) -> FlowResult<()> {
     if matches!(grant.provider, Provider::Generic(_)) {
-        super::generic::validate_refresh(grant, http).await?;
+        super::generic::validate_refresh(grant, http)
+            .await
+            .map_err(|error| FlowFailure {
+                kind: FailureKind::Configuration,
+                error,
+            })?;
     }
-    let token = grant.refresh_token.clone().ok_or_else(|| {
-        AdminError::Unauthorized("Connector refresh authorization missing".into())
-    })?;
+    let token = grant
+        .refresh_token
+        .clone()
+        .filter(|token| !token.trim().is_empty())
+        .ok_or_else(|| FlowFailure::new(FailureKind::Permission))?;
     request_with_client(
         grant,
         &[("grant_type", "refresh_token"), ("refresh_token", &token)],

@@ -125,7 +125,7 @@ async fn complete(
         .ok_or_else(|| {
             AdminError::Unauthorized("Connector consent expired or already consumed".into())
         })?;
-    let mut grant = oauth::open(&row, &user.user_id, &provider)?;
+    let grant = oauth::open(&row, &user.user_id, &provider)?;
     if grant.session != user.session_id.as_ref().map(ToString::to_string) {
         return Err(AdminError::Unauthorized(
             "Login changed during connector consent".into(),
@@ -137,22 +137,7 @@ async fn complete(
     let code = params
         .code
         .ok_or_else(|| AdminError::BadRequest("Consent code missing".into()))?;
-    oauth::exchange(&mut grant, &code).await?;
-    if let Err(error) = oauth::verify::verify(&mut grant).await {
-        if !matches!(error, AdminError::Unauthorized(_)) {
-            live_user(pool, headers, false).await?;
-            super::store_pending_verification(pool, &user.user_id, &grant).await?;
-        }
-        return Err(error);
-    }
-    live_user(pool, headers, false).await?;
-    super::store_verified(pool, &user.user_id, &grant).await?;
-    tracing::info!(user_id = %user.user_id, provider = provider.slug(), "connector_connected");
-    Ok((
-        [(CACHE_CONTROL, "no-store")],
-        Redirect::to(&format!("/admin/connectors#connector-{}", provider.slug())),
-    )
-        .into_response())
+    super::completion::finish(pool, &user.user_id, headers, grant, &code).await
 }
 
 pub(crate) async fn token(

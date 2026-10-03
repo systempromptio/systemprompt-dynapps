@@ -4,6 +4,7 @@ import { actionLabels, attention, groups, steps, displayName, glyph, groupOf, ho
 // Account state comes only from the server. Credentials are submitted once and
 // never kept in browser storage, URL parameters, or rendered response payloads.
 const root = document.querySelector('[data-connectors]');
+let callbackNotice = root?.querySelector('[data-connection-message]')?.textContent || '';
 let revision = -1;
 let sequence = 0;
 let pending = false;
@@ -118,7 +119,7 @@ async function refresh() {
         if (!response.ok) throw new Error(await errorMessage(response));
         const data = await response.json();
         if (request !== sequence) return;
-        render(data); lastChecked = new Date().toLocaleTimeString(); message('');
+        render(data); lastChecked = new Date().toLocaleTimeString(); message(callbackNotice, callbackNotice ? 'err' : '');
     } catch (error) { message(`Last known state${lastChecked ? ` (${lastChecked})` : ''}. ${error.message}`, 'warn'); }
 }
 function field(form, label, name, type = 'text') {
@@ -153,6 +154,7 @@ function connect(provider, user, resource = '') {
     window.location.assign(url);
 }
 async function mutate(provider, action, body) {
+    callbackNotice = '';
     pending = true; ++sequence;
     try {
         const response = await rawResponse(`/api/public/account/connections/${provider}/${action}`, {
@@ -198,7 +200,7 @@ function paint(panel, report, account, user) {
     const total = report.steps.reduce((sum, step) => sum + step.duration_ms, 0);
     const summary = panel.querySelector('.sp-connector__summary');
     summary.className = `sp-connector__summary ${report.ok ? 'is-ok' : 'is-fail'}`;
-    summary.textContent = report.ok ? `Verified${account?.account_name ? ` as ${account.account_name}` : ''} in ${(total / 1000).toFixed(1)} s. Every connected client can use this provider.` : `${report.error || 'Verification failed.'} Reconnect to authorize again.`;
+    summary.textContent = report.ok ? `Verified${account?.account_name ? ` as ${account.account_name}` : ''} in ${(total / 1000).toFixed(1)} s. Every connected client can use this provider.` : `${report.error || 'Verification failed.'} Check the failed stage before reconnecting.`;
     const actions = element('div', '', 'sp-connector__actions');
     const retry = element('button', 'Run again', 'sp-btn sp-btn--sm sp-btn--outline'); retry.type = 'button'; retry.addEventListener('click', () => test(account?.provider || report.provider, user)); actions.append(retry);
     if (!report.ok && account?.actions.some(a => ['connect', 'reconnect'].includes(a))) {
@@ -216,7 +218,7 @@ async function test(provider, user) {
         paint(live, { ok: false, steps: [{ step: 'token', ok: false, detail: text, duration_ms: 0 }], error: text, provider }, null, user);
         return;
     }
-    message('');
+    message(callbackNotice, callbackNotice ? 'err' : '');
     const account = data.connections.find(entry => entry.provider === provider);
     paint(live, data.verification || { ok: false, steps: [], error: 'The server returned no verification report.', provider }, account, user);
 }

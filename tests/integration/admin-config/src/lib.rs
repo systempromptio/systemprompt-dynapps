@@ -72,3 +72,9 @@ mod executive_marketplace;
 
 #[cfg(test)]
 mod analysis_ingestion;
+
+#[cfg(test)]
+mod connector_resolution;
+
+#[cfg(test)]
+mod connector_resolution_fixture;

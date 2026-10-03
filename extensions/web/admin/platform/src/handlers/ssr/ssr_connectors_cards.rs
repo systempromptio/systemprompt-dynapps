@@ -163,6 +163,9 @@ pub(super) fn note(c: &Connection) -> Option<String> {
         (_, Some("configuration_changed")) => {
             Some("The connector configuration changed — reconnect to authorize again".to_owned())
         },
+        (_, Some("provider_configuration")) => Some("The provider rejected the app configuration — ask the platform administrator to check its OAuth settings".into()),
+        (_, Some("provider_invalid_response")) => Some("The provider returned an invalid authorization response — test the connection before using it".into()),
+        (_, Some("refresh_outcome_unknown")) => Some("The refresh response was lost or unusable — reconnect before using this provider again".into()),
         (_, Some("provider_unavailable")) => {
             Some("The provider did not answer the last check".to_owned())
         },

@@ -353,3 +353,6 @@ mod time_bound_access;
 mod tool_schema_diff;
 #[cfg(test)]
 mod traces_spans_resolve;
+
+#[cfg(test)]
+mod connector_recovery;
