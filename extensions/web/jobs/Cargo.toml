@@ -9,7 +9,6 @@ homepage.workspace = true
 publish = false
 
 [dependencies]
-systemprompt-mcp-shared = { workspace = true }
 systemprompt-web-shared = { workspace = true }
 systemprompt-web-admin-analytics = { workspace = true }
 systemprompt-web-admin-identity = { workspace = true }
@@ -34,11 +33,6 @@ flate2 = { workspace = true }
 futures-util = { workspace = true }
 sha2 = { workspace = true }
 hex = { workspace = true }
-
-# Job registration macros expand to ::inventory::submit! paths; machete
-# cannot see macro-expansion usage.
-[package.metadata.cargo-machete]
-ignored = ["inventory"]
 
 [lints]
 workspace = true

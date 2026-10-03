@@ -93,6 +93,8 @@ async fn request_with_client(
     apply_tokens(grant, tokens, refreshing)
 }
 
+// Why: OAuth response diagnostics can contain credentials; return only the
+// safe failure classification across this boundary.
 async fn accepted_tokens(
     grant: &Grant,
     response: reqwest::Response,
@@ -106,8 +108,6 @@ async fn accepted_tokens(
     }
     let tokens: Tokens = super::generic_discovery::bounded_json(response)
         .await
-        // JSON diagnostics can contain token values. This security boundary
-        // deliberately returns only the safe, typed failure classification.
         .map_err(|_untrusted_response_error| {
             FlowFailure::new(if refreshing && (200..300).contains(&status) {
                 FailureKind::RefreshUncertain

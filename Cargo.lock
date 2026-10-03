@@ -5555,19 +5555,14 @@ name = "systemprompt-mcp-agent"
 version = "0.62.0"
 dependencies = [
  "anyhow",
- "async-trait",
  "axum",
  "chrono",
- "hex",
  "inventory",
  "rmcp",
  "schemars",
  "serde",
- "serde_jcs 0.1.0",
  "serde_json",
- "sha2 0.10.9",
  "shell-words",
- "sqlx",
  "systemprompt",
  "systemprompt-mcp-shared",
  "thiserror 2.0.21",
@@ -5579,16 +5574,9 @@ dependencies = [
 name = "systemprompt-mcp-shared"
 version = "0.62.0"
 dependencies = [
- "axum",
- "chrono",
- "glob",
- "reqwest 0.13.5",
  "serde",
- "serde_json",
- "serde_yaml_ng",
  "sqlx",
  "systemprompt",
- "thiserror 2.0.21",
  "tracing",
 ]
 
@@ -6159,7 +6147,6 @@ dependencies = [
  "sha2 0.10.9",
  "sqlx",
  "systemprompt",
- "systemprompt-mcp-shared",
  "systemprompt-web-admin-analytics",
  "systemprompt-web-admin-core",
  "systemprompt-web-admin-governance",

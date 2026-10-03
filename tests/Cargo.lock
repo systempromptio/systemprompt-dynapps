@@ -52,7 +52,6 @@ dependencies = [
  "systemprompt-web-admin-identity",
  "systemprompt-web-admin-platform",
  "systemprompt-web-extension",
- "systemprompt-web-jobs",
  "systemprompt-web-shared",
  "tokio",
  "tower",
@@ -78,10 +77,8 @@ dependencies = [
  "systemprompt-web-admin-governance",
  "systemprompt-web-admin-identity",
  "systemprompt-web-admin-platform",
- "systemprompt-web-extension",
  "tempfile",
  "tokio",
- "url",
  "uuid",
 ]
 
@@ -101,12 +98,9 @@ dependencies = [
  "systemprompt-web-admin-core",
  "systemprompt-web-admin-governance",
  "systemprompt-web-admin-identity",
- "systemprompt-web-extension",
- "systemprompt-web-jobs",
  "systemprompt-web-shared",
  "tempfile",
  "tokio",
- "url",
  "uuid",
 ]
 
@@ -3758,34 +3752,21 @@ name = "mcp-integration-tests"
 version = "0.0.0"
 dependencies = [
  "astound-test-common",
- "async-trait",
- "axum",
- "base64 0.22.1",
- "chrono",
  "serde_json",
  "sqlx",
  "systemprompt",
- "systemprompt-api",
  "systemprompt-mcp-shared",
- "tempfile",
  "tokio",
- "tower",
- "url",
- "uuid",
 ]
 
 [[package]]
 name = "mcp-unit-tests"
 version = "0.0.0"
 dependencies = [
- "astound-test-common",
- "async-trait",
  "axum",
- "chrono",
  "rmcp",
  "serde",
  "serde_json",
- "serde_yaml_ng",
  "systemprompt",
  "systemprompt-mcp-agent",
  "systemprompt-mcp-shared",
@@ -5903,7 +5884,6 @@ dependencies = [
  "astound-test-common",
  "sqlx",
  "systemprompt",
- "systemprompt-web-extension",
  "tokio",
 ]
 
@@ -7588,19 +7568,14 @@ name = "systemprompt-mcp-agent"
 version = "0.62.0"
 dependencies = [
  "anyhow",
- "async-trait",
  "axum",
  "chrono",
- "hex",
  "inventory",
  "rmcp",
  "schemars",
  "serde",
- "serde_jcs 0.1.0",
  "serde_json",
- "sha2 0.10.9",
  "shell-words",
- "sqlx",
  "systemprompt",
  "systemprompt-mcp-shared",
  "thiserror 2.0.21",
@@ -7612,16 +7587,9 @@ dependencies = [
 name = "systemprompt-mcp-shared"
 version = "0.62.0"
 dependencies = [
- "axum",
- "chrono",
- "glob",
- "reqwest 0.13.5",
  "serde",
- "serde_json",
- "serde_yaml_ng",
  "sqlx",
  "systemprompt",
- "thiserror 2.0.21",
  "tracing",
 ]
 
@@ -8192,7 +8160,6 @@ dependencies = [
  "sha2 0.10.9",
  "sqlx",
  "systemprompt",
- "systemprompt-mcp-shared",
  "systemprompt-web-admin-analytics",
  "systemprompt-web-admin-core",
  "systemprompt-web-admin-governance",
@@ -9416,7 +9383,6 @@ dependencies = [
  "tempfile",
  "tokio",
  "tower",
- "url",
  "uuid",
 ]
 

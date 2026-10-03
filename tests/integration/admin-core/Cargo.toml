@@ -11,8 +11,8 @@ workspace = true
 astound-test-common = { workspace = true }
 # `full` links the core extension crates whose `register_extension!` supplies
 # the users / ai_requests / governance migrations these repositories query;
-# `systemprompt-web-extension` pulls in the web schema (user_profile_ext,
-# adfs_group_memberships, plugin_usage_*) the admin repositories own.
+# The shared test harness links the web extension's inventory registrations
+# for user_profile_ext, adfs_group_memberships and plugin_usage_*.
 systemprompt = { workspace = true, features = ["full"] }
 systemprompt-web-admin-analytics = { workspace = true }
 systemprompt-web-admin-identity = { workspace = true }
@@ -21,14 +21,11 @@ systemprompt-web-admin-catalog = { workspace = true }
 systemprompt-web-admin-governance = { workspace = true }
 systemprompt-web-shared = { workspace = true }
 systemprompt-security = { workspace = true }
-systemprompt-web-extension = { workspace = true }
-systemprompt-web-jobs = { workspace = true }
 
 chrono = { workspace = true }
 tokio = { workspace = true }
 sqlx = { workspace = true }
 serde_json = { workspace = true }
 uuid = { workspace = true }
-url = { workspace = true }
 serde_yaml = { workspace = true }
 tempfile = { workspace = true }
