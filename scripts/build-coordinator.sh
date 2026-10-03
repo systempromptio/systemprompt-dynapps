@@ -298,7 +298,7 @@ with open(str(lock) + ".publication", "a") as guard:
             stale_owner = lock.resolve() if lock.is_symlink() else None
             if lock.is_symlink():
                 lock.unlink()
-                if stale_owner.parent == lock.parent and stale_owner.name.startswith("lock.owner."):
+                if stale_owner.parent == lock.parent.resolve() and stale_owner.name.startswith("lock.owner."):
                     shutil.rmtree(stale_owner, ignore_errors=True)
             else:
                 shutil.rmtree(lock)
