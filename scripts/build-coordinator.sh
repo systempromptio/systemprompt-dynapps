@@ -52,6 +52,8 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # COORD_STATE_DIR points the ledger and the lock somewhere else. Used by the
 # self-test so exercising the coordinator cannot disturb a real build in flight.
 STATE_DIR="${COORD_STATE_DIR:-$ROOT/.build}"
+mkdir -p "$STATE_DIR"
+STATE_DIR="$(cd "$STATE_DIR" && pwd -P)"
 LOCK="$STATE_DIR/lock"
 RUNS="$STATE_DIR/runs.jsonl"
 MAX_RUNS=200

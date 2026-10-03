@@ -98,4 +98,12 @@ actual="$(python3 -c 'import json, sys; print(json.load(open(sys.argv[1]))["tree
     "$COORD_STATE_DIR/latest/queued.json")"
 test "$actual" = "$expected"
 test ! -e "$COORD_STATE_DIR/lock"
+
+# Relative state paths must publish resolvable lock targets, too.
+(
+    cd "$SCRATCH/repo"
+    COORD_STATE_DIR=../relative-state bash "$COORD" run relative "" -- true
+) > "$SCRATCH/relative.log" 2>&1
+test ! -e "$SCRATCH/relative-state/lock"
+test -f "$SCRATCH/relative-state/latest/relative.json"
 echo 'build coordinator: contention, attachment, failure propagation, stale recovery and fresh identity passed'
