@@ -1,7 +1,3 @@
-Subject: Salesforce connector failure — administrator diagnosis and recovery
-
-Hi team,
-
 Salesforce stopped working for multiple Systemprompt users on 3 October 2026, approximately two weeks after setup. Please use the steps below to identify the actual failing stage before changing settings. The root cause is not yet confirmed.
 
 1. What we know, and which environment to investigate
@@ -9,10 +5,6 @@ Salesforce stopped working for multiple Systemprompt users on 3 October 2026, ap
 LIVE ASTOUND: https://sp-dev.astound.digital
 Connectors page: https://sp-dev.astound.digital/admin/connectors
 Callback: https://sp-dev.astound.digital/api/public/connectors/salesforce/callback
-
-TEST ENVIRONMENT: https://astound.systemprompt.io
-Fly app: sp-a2f658d8bc5f
-This is a separate environment. A successful test or deployment there does not establish that the live Astound server is fixed.
 
 Salesforce org: ONTRQ, https://ontrq.my.salesforce.com
 Configured MCP endpoint:
@@ -71,8 +63,6 @@ The token failure must be labelled as either:
 - grant_type=refresh_token / refreshing=true: renewal of an EXISTING connection failed.
 An invalid_grant on these two paths has different implications.
 
-Collect only safe evidence: UTC time, user ID, provider, trace/reference, stage, HTTP status, allow-listed error code, and a redacted reason. Do not send client secrets, access/refresh tokens, private keys, authorization codes, cookies, OAuth state, or complete token responses. The original HAR contains session and verification data; sanitize it before redistribution. Avoid full HTTP body tracing. If a detailed upstream reason is needed, inspect it privately and share only the relevant redacted wording.
-
 Salesforce administrator, during the same attempt:
 - Setup > Login History: look for the affected username and time; inspect application/login type and failure status where available. Download the relevant history if needed. Not every token/MCP rejection appears here, so absence of an entry is not proof of success.
 - Setup > View Setup Audit Trail: inspect the period from initial setup through the first failure. Look for OAuth policy, token-format, IP-range, scope, profile/permission-set, app install/uninstall, connected-app enforcement, and MCP activation changes.
@@ -80,8 +70,6 @@ Salesforce administrator, during the same attempt:
 - Use app OAuth usage/authorization records where exposed to confirm affected users' grants and revocations. Do not use a broad revoke-all operation merely to inspect usage.
 
 3. Decide which branch failed
-
-Investigation priority: because this worked days ago and failed for all users approximately two weeks after setup, first inspect the actual refresh-token lifetime/revocation policy and rotation handling (4.1–4.2). Then identify why a FRESH reconnect fails: the callback's token-exchange, MCP and identity logs should distinguish these stages. Expiry alone does not explain a failed fresh reconnect. Treat IP restrictions as a lower-priority branch unless logs or a recent egress/policy change support it. Do not change IP policy speculatively.
 
 A) No callback, or an error on Salesforce's authorization page:
    Check app installation/authorization, user eligibility, scopes, callback, PKCE and SSO policy.
@@ -186,8 +174,6 @@ Fix:
 The original HAR contains a returned code, so a blanket authorization-page block is not established for THAT attempt. A later token/MCP policy failure remains possible.
 
 4.6 IP restrictions or a changed server egress address
-
-Lower priority for this incident: it worked recently. Investigate this branch only if the error identifies an IP restriction or there is evidence of a changed backend egress address or Salesforce policy.
 
 Evidence: login/token errors identify IP restrictions, refresh works from one network but not the LIVE server, or a deployment changed egress addresses.
 
