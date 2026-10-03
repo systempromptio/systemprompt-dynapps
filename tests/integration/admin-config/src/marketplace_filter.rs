@@ -98,7 +98,7 @@ impl Harness {
             Arc::clone(&db.pool),
             Some(Arc::clone(&db.pool)),
         ));
-        let filter = TemplateMarketplaceFilter::from_db(&database).expect("build filter");
+        let filter = TemplateMarketplaceFilter::from_db(&database);
         let repo = AccessControlRepository::from_pool(Arc::clone(&db.pool));
         Some(Self { db, filter, repo })
     }

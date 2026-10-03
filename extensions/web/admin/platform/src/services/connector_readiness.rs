@@ -73,6 +73,15 @@ pub(crate) async fn probe_session_connection(
                 "Connector declares neither a port nor an endpoint".into(),
             )),
         };
+    record_reachability(&mut report, started, probe);
+    Ok(report.finish())
+}
+
+fn record_reachability(
+    report: &mut VerificationReport,
+    started: Instant,
+    probe: AdminResult<McpConnectionResult>,
+) {
     let reachable = match &probe {
         Ok(result) if result.success => Ok(format!(
             "Server answered in {} ms",
@@ -94,5 +103,4 @@ pub(crate) async fn probe_session_connection(
         );
         report.record("tools", started, &Ok(tools));
     }
-    Ok(report.finish())
 }

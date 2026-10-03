@@ -27,9 +27,9 @@ pub mod verify;
 use crate::repositories::connectors::connector_credentials::EncryptedGrant;
 pub use config::Provider;
 pub use generic::Consent;
-use resolve::resolve_token;
 #[doc(hidden)]
-pub use resolve::resolve_token_with_client;
+pub use resolve::TokenResolver;
+use resolve::resolve_token;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;

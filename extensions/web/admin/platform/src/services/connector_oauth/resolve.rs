@@ -25,6 +25,14 @@ use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
 type Tx = Transaction<'static, Postgres>;
 
+/// A user's token broker with an explicitly supplied transport.
+#[derive(Debug)]
+pub struct TokenResolver<'a> {
+    pool: &'a PgPool,
+    user: &'a UserId,
+    http: &'a reqwest::Client,
+}
+
 struct Resolution<'a> {
     pool: &'a PgPool,
     user: &'a UserId,
@@ -40,60 +48,64 @@ pub(super) async fn resolve_token(
     probe: bool,
     report: &mut VerificationReport,
 ) -> AdminResult<String> {
-    resolve_token_with_client(pool, user, provider, probe, report, &transport::client()?).await
-}
-
-#[doc(hidden)]
-pub async fn resolve_token_with_client(
-    pool: &PgPool,
-    user: &UserId,
-    provider: Provider,
-    probe: bool,
-    report: &mut VerificationReport,
-    http: &reqwest::Client,
-) -> AdminResult<String> {
-    if !provider.configured() {
-        return Err(AdminError::Unavailable("Connector not configured".into()));
-    }
-    let span = tracing::info_span!("connector_oauth", user_id = %user, provider = provider.slug(), trace_id = %uuid::Uuid::new_v4());
-    resolve_inner(pool, user, provider, probe, report, http)
-        .instrument(span)
+    TokenResolver::new(pool, user, &transport::client()?)
+        .resolve(provider, probe, report)
         .await
 }
 
-async fn resolve_inner(
-    pool: &PgPool,
-    user: &UserId,
-    provider: Provider,
-    probe: bool,
-    report: &mut VerificationReport,
-    http: &reqwest::Client,
-) -> AdminResult<String> {
-    let mut tx = pool.begin().await?;
-    let mut account = accounts::get_locked_account(&mut tx, user, provider.slug()).await?;
-    if account.error_code.as_deref() == Some(FailureKind::RefreshUncertain.code()) {
-        return Err(FlowFailure::new(FailureKind::RefreshUncertain).error);
+impl<'a> TokenResolver<'a> {
+    pub const fn new(pool: &'a PgPool, user: &'a UserId, http: &'a reqwest::Client) -> Self {
+        Self { pool, user, http }
     }
-    let row = repo::lock(&mut tx, user, provider.slug()).await?;
-    let mode = AccessMode {
-        probe,
-        preauthorize: row.is_none() && provider.is_salesforce() && account.generation == 0,
-    };
-    require_connection(&account.status, mode.preauthorize)?;
-    let outage_hold = in_outage_hold(&account, row.as_ref().map(|r| r.updated_at));
-    mode.admission(outage_hold, account.verified_at.is_some())
-        .require()?;
-    let resolution = Resolution {
-        pool,
-        user,
-        provider: &provider,
-        mode,
-        http,
-    };
-    let (tx, grant) = resolution
-        .load_grant(tx, row.map(|r| r.grant), &mut account)
-        .await?;
-    resolution.complete(tx, &mut account, grant, report).await
+
+    pub async fn resolve(
+        &self,
+        provider: Provider,
+        probe: bool,
+        report: &mut VerificationReport,
+    ) -> AdminResult<String> {
+        if !provider.configured() {
+            return Err(AdminError::Unavailable("Connector not configured".into()));
+        }
+        let span = tracing::info_span!("connector_oauth", user_id = %self.user, provider = provider.slug(), trace_id = %uuid::Uuid::new_v4());
+        self.resolve_inner(provider, probe, report)
+            .instrument(span)
+            .await
+    }
+
+    async fn resolve_inner(
+        &self,
+        provider: Provider,
+        probe: bool,
+        report: &mut VerificationReport,
+    ) -> AdminResult<String> {
+        let Self { pool, user, http } = *self;
+        let mut tx = pool.begin().await?;
+        let mut account = accounts::get_locked_account(&mut tx, user, provider.slug()).await?;
+        if account.error_code.as_deref() == Some(FailureKind::RefreshUncertain.code()) {
+            return Err(FlowFailure::new(FailureKind::RefreshUncertain).error);
+        }
+        let row = repo::lock(&mut tx, user, provider.slug()).await?;
+        let mode = AccessMode {
+            probe,
+            preauthorize: row.is_none() && provider.is_salesforce() && account.generation == 0,
+        };
+        require_connection(&account.status, mode.preauthorize)?;
+        let outage_hold = in_outage_hold(&account, row.as_ref().map(|r| r.updated_at));
+        mode.admission(outage_hold, account.verified_at.is_some())
+            .require()?;
+        let resolution = Resolution {
+            pool,
+            user,
+            provider: &provider,
+            mode,
+            http,
+        };
+        let (tx, grant) = resolution
+            .load_grant(tx, row.map(|r| r.grant), &mut account)
+            .await?;
+        resolution.complete(tx, &mut account, grant, report).await
+    }
 }
 
 impl Resolution<'_> {

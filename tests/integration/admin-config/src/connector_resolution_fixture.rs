@@ -141,15 +141,9 @@ impl Harness {
 
     pub(super) async fn resolve(&self, probe: bool) -> (AdminResult<String>, VerificationReport) {
         let mut report = VerificationReport::for_provider(self.provider.slug());
-        let result = oauth::resolve_token_with_client(
-            &self.db.pool,
-            &self.user,
-            self.provider.clone(),
-            probe,
-            &mut report,
-            &self.http,
-        )
-        .await;
+        let result = oauth::TokenResolver::new(&self.db.pool, &self.user, &self.http)
+            .resolve(self.provider.clone(), probe, &mut report)
+            .await;
         (result, report.finish())
     }
 

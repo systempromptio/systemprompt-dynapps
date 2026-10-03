@@ -8,16 +8,20 @@ use uuid::Uuid;
 
 #[derive(Debug, Deserialize, Default)]
 pub struct CallbackNotice {
-    connection_provider: Option<String>,
-    connection_stage: Option<String>,
-    connection_failure: Option<FailureKind>,
-    connection_ref: Option<Uuid>,
+    #[serde(rename = "connection_provider")]
+    provider: Option<String>,
+    #[serde(rename = "connection_stage")]
+    stage: Option<String>,
+    #[serde(rename = "connection_failure")]
+    failure: Option<FailureKind>,
+    #[serde(rename = "connection_ref")]
+    reference: Option<Uuid>,
 }
 
 impl CallbackNotice {
     pub fn message(&self) -> Option<String> {
-        let provider = Provider::try_from(self.connection_provider.clone()?).ok()?;
-        let stage = self.connection_stage.as_deref()?;
+        let provider = Provider::try_from(self.provider.clone()?).ok()?;
+        let stage = self.stage.as_deref()?;
         let title = match stage {
             "token" => "authorization exchange",
             "initialize" => "MCP initialization",
@@ -25,8 +29,8 @@ impl CallbackNotice {
             "identity" => "provider identity check",
             _ => return None,
         };
-        let kind = self.connection_failure?;
-        let reference = self.connection_ref?;
+        let kind = self.failure?;
+        let reference = self.reference?;
         Some(format!(
             "{} failed during {title}. {} Reference: {reference}",
             provider.display_name(),

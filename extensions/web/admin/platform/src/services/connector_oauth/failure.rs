@@ -72,7 +72,7 @@ impl FlowFailure {
         Self { kind, error }
     }
 
-    pub(crate) fn verification(error: AdminError) -> Self {
+    pub(crate) const fn verification(error: AdminError) -> Self {
         let kind = match error {
             AdminError::Unauthorized(_) | AdminError::Forbidden(_) => FailureKind::Permission,
             _ => FailureKind::Outage,

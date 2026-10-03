@@ -16,6 +16,12 @@ use systemprompt_web_admin_core::error::AdminResult;
 use tracing::Instrument;
 use uuid::Uuid;
 
+struct CallbackSession<'a> {
+    pool: &'a PgPool,
+    user: &'a UserId,
+    headers: &'a HeaderMap,
+}
+
 pub(super) async fn finish(
     pool: &PgPool,
     user: &UserId,
@@ -25,19 +31,31 @@ pub(super) async fn finish(
 ) -> AdminResult<Response> {
     let reference = Uuid::new_v4();
     let span = tracing::info_span!("connector_callback", user_id = %user, provider = grant.provider.slug(), trace_id = %reference);
-    complete(pool, user, headers, grant, code, reference)
-        .instrument(span)
-        .await
+    complete(
+        CallbackSession {
+            pool,
+            user,
+            headers,
+        },
+        grant,
+        code,
+        reference,
+    )
+    .instrument(span)
+    .await
 }
 
 async fn complete(
-    pool: &PgPool,
-    user: &UserId,
-    headers: &HeaderMap,
+    session: CallbackSession<'_>,
     mut grant: Grant,
     code: &str,
     reference: Uuid,
 ) -> AdminResult<Response> {
+    let CallbackSession {
+        pool,
+        user,
+        headers,
+    } = session;
     let mut report = VerificationReport::for_provider(grant.provider.slug());
     let started = Instant::now();
     let exchange = oauth::exchange_classified(&mut grant, code).await;

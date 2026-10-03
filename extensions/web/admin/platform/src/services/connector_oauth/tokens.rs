@@ -106,7 +106,9 @@ async fn accepted_tokens(
     }
     let tokens: Tokens = super::generic_discovery::bounded_json(response)
         .await
-        .map_err(|_| {
+        // JSON diagnostics can contain token values. This security boundary
+        // deliberately returns only the safe, typed failure classification.
+        .map_err(|_untrusted_response_error| {
             FlowFailure::new(if refreshing && (200..300).contains(&status) {
                 FailureKind::RefreshUncertain
             } else {
@@ -171,10 +173,10 @@ fn apply_tokens(grant: &mut Grant, tokens: Tokens, refreshing: bool) -> FlowResu
     } else {
         Utc::now().timestamp().saturating_add(seconds)
     };
-    if grant.provider.is_salesforce() {
-        if let Some(expiry) = unverified_jwt_exp(&grant.access_token) {
-            grant.expires_at = grant.expires_at.min(expiry);
-        }
+    if grant.provider.is_salesforce()
+        && let Some(expiry) = unverified_jwt_exp(&grant.access_token)
+    {
+        grant.expires_at = grant.expires_at.min(expiry);
     }
     if grant.expires_at <= Utc::now().timestamp() {
         return Err(FlowFailure::new(invalid));
