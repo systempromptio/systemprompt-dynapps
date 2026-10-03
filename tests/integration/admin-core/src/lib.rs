@@ -41,6 +41,8 @@ mod approvals;
 #[cfg(test)]
 mod conversation_facts_detail;
 #[cfg(test)]
+mod conversation_native_sessions;
+#[cfg(test)]
 #[cfg(test)]
 mod dashboard_counters;
 #[cfg(test)]

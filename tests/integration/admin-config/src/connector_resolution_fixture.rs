@@ -53,6 +53,16 @@ impl Harness {
         let config = directory.path().join("services/config/config.yaml");
         std::fs::create_dir_all(config.parent().unwrap()).unwrap();
         std::fs::create_dir(directory.path().join("bin")).unwrap();
+        std::fs::create_dir_all(directory.path().join("services/skills")).unwrap();
+        for relative in [
+            "services/web/config.yaml",
+            "services/web/metadata.yaml",
+            "services/content/config.yaml",
+        ] {
+            let destination = directory.path().join(relative);
+            std::fs::create_dir_all(destination.parent().unwrap()).unwrap();
+            std::fs::copy(astound_test_common::repo_path(relative), destination).unwrap();
+        }
         std::fs::write(&config, format!(
             "mcp_servers:\n  rotation-mcp:\n    type: external\n    endpoint: {origin}/mcp\n    enabled: true\n    display_in_web: false\n    oauth: {{required: false, scopes: [user], audience: mcp, client_id: null}}\n    connector: {{adapter: generic, scopes: [tools:read]}}\n"
         )).unwrap();
