@@ -482,6 +482,7 @@ preflight-static:
     check "fmt (bridge)" cargo fmt --manifest-path bridge/Cargo.toml --all -- --check
     check "sqlx cache" bash scripts/check-sqlx-cache.sh
     check "core crate versions" bash scripts/check-core-crate-versions.sh
+    check "build coordinator" bash tests/scripts/build-coordinator.sh
     check "deploy-release recipe present" bash -c '{{just_executable()}} --summary | tr " " "\n" | grep -qx deploy-release'
     check "source gates" {{just_executable()}} _lint-gates-uncoordinated
     if [ "${#failed[@]}" -gt 0 ]; then printf '::error::preflight-static failed: %s\n' "${failed[@]}"; exit 1; fi

@@ -211,7 +211,7 @@ fn decision_record<'a>(audit: &'a DecisionAudit<'a>) -> GovernanceDecisionRecord
         tool_use_id: None,
         act_chain: &req.act_chain,
         trace_id: Some(&req.trace_id),
-        context_id: &audit.context_id,
+        context_id: audit.context_id,
         task_id: req.task_id.as_ref(),
     }
 }
