@@ -4,7 +4,7 @@ use crate::connector_resolution_fixture::Harness;
 
 #[tokio::test]
 async fn concurrent_broker_requests_refresh_once_and_use_the_committed_replacement() {
-    let Some(h) = Harness::create("rotation").await else {
+    let Some(h) = Harness::create_or_skip("rotation").await else {
         return;
     };
     let (first, second, third) = tokio::join!(h.resolve(false), h.resolve(false), h.resolve(false));
@@ -22,7 +22,7 @@ async fn concurrent_broker_requests_refresh_once_and_use_the_committed_replaceme
 
 #[tokio::test]
 async fn rotation_survives_a_later_verification_failure() {
-    let Some(h) = Harness::create("verification-failure").await else {
+    let Some(h) = Harness::create_or_skip("verification-failure").await else {
         return;
     };
     let (result, report) = h.resolve(true).await;
@@ -49,7 +49,7 @@ async fn rotation_survives_a_later_verification_failure() {
 
 #[tokio::test]
 async fn shared_client_configuration_failure_keeps_user_credentials() {
-    let Some(h) = Harness::create("invalid-client").await else {
+    let Some(h) = Harness::create_or_skip("invalid-client").await else {
         return;
     };
     assert!(h.resolve(false).await.0.is_err());
@@ -74,7 +74,7 @@ async fn shared_client_configuration_failure_keeps_user_credentials() {
 
 #[tokio::test]
 async fn a_lost_refresh_response_is_never_replayed_even_by_a_probe() {
-    let Some(h) = Harness::create("lost-response").await else {
+    let Some(h) = Harness::create_or_skip("lost-response").await else {
         return;
     };
     assert!(h.resolve(false).await.0.is_err());

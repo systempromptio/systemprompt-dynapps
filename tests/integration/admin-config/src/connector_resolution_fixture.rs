@@ -32,7 +32,7 @@ pub(super) struct Harness {
 }
 
 impl Harness {
-    pub(super) async fn create(mode: &str) -> Option<Self> {
+    pub(super) async fn create_or_skip(mode: &str) -> Option<Self> {
         let directory = tempfile::tempdir().unwrap();
         let script = astound_test_common::repo_path("tests/fixtures/oauth/server.py");
         let mut server = Server(
