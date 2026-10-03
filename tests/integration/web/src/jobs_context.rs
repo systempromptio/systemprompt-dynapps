@@ -30,19 +30,23 @@ use crate::tempdb::TempDb;
 const PIPELINE_STAGES: u64 = 11;
 
 pub(crate) fn assert_missing_database(error: systemprompt::traits::ProviderError) {
-    let systemprompt::traits::ProviderError::Internal(source) = error else {
-        panic!("expected an internal dependency error: {error}");
-    };
-    let job_error = source
-        .downcast_ref::<systemprompt_web_jobs::JobError>()
-        .expect("the provider preserves the typed job error");
-    let systemprompt_web_jobs::JobError::Dependency(missing) = job_error else {
-        panic!("expected a missing dependency: {job_error}");
+    let missing = match error {
+        systemprompt::traits::ProviderError::MissingDependency(missing) => missing,
+        systemprompt::traits::ProviderError::Internal(source) => {
+            let job_error = source
+                .downcast_ref::<systemprompt_web_jobs::JobError>()
+                .expect("the provider preserves the typed job error");
+            let systemprompt_web_jobs::JobError::Dependency(missing) = job_error else {
+                panic!("expected a missing dependency: {job_error}");
+            };
+            *missing
+        },
+        other => panic!("expected a dependency error: {other}"),
     };
     let expected = systemprompt::traits::Dependencies::new()
         .get::<Arc<Database>>()
         .expect_err("an empty context has no database");
-    assert_eq!(*missing, expected);
+    assert_eq!(missing, expected);
 }
 
 // `load_master_key` accepts only a 32-byte hex key.
