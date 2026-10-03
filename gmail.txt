@@ -1,0 +1,342 @@
+Subject: Salesforce connector failure — administrator diagnosis and recovery
+
+Hi team,
+
+Salesforce stopped working for multiple Systemprompt users on 3 October 2026, approximately two weeks after setup. Please use the steps below to identify the actual failing stage before changing settings. The root cause is not yet confirmed.
+
+1. What we know, and which environment to investigate
+
+LIVE ASTOUND: https://sp-dev.astound.digital
+Connectors page: https://sp-dev.astound.digital/admin/connectors
+Callback: https://sp-dev.astound.digital/api/public/connectors/salesforce/callback
+
+TEST ENVIRONMENT: https://astound.systemprompt.io
+Fly app: sp-a2f658d8bc5f
+This is a separate environment. A successful test or deployment there does not establish that the live Astound server is fixed.
+
+Salesforce org: ONTRQ, https://ontrq.my.salesforce.com
+Configured MCP endpoint:
+https://api.salesforce.com/platform/mcp/v1/platform/headless-360
+
+Evidence:
+- The supplied browser capture shows Salesforce returning an authorization code to the LIVE Astound callback at 2026-10-03 19:26:25 UTC. The callback then returned HTTP 502, reported as "Upstream service error".
+- This establishes that the failure happened during or after callback processing. It does NOT show the server-to-server token exchange or establish a Salesforce outage, an app-approval failure, or a bad client secret.
+- Earlier reports mention invalid_grant during refresh and subsequently no saved token. Those logs were not conclusively attributed to one user; correlate user IDs and timestamps.
+- The supplied Salesforce account can sign in, but cannot access Login History or the app-management controls needed to inspect OAuth policy and consumer details. A Salesforce administrator is needed for those checks.
+- A read-only check of ONTRQ's MCP Servers page on 3 October showed Headless360 (H360) MCP Server ACTIVE, with five tools. Check again during reproduction, but do not assume activation is the cause or toggle an already active server.
+- The Fly TEST VM has no current salesforce_mcp_client_id / salesforce_mcp_client_secret entries and no saved Salesforce connector grants. It has older Salesforce secret/private-key entries and a placeholder legacy consumer key. This prevents a complete local test with that environment's configuration; it says nothing conclusive about LIVE credentials.
+- Checked-in app metadata enables PKCE, refresh-token rotation and named-user JWT access tokens. It disables consumer-key/consumer-secret rotation and declares a 90-day refresh-token lifetime. This is intended configuration, not proof of the actual installed app policy.
+
+2. Capture one failed attempt on the LIVE server
+
+Platform administrator:
+1) Choose one affected user. Record their Systemprompt user ID, Salesforce username, and exact UTC attempt time.
+2) Open LIVE /admin/connectors. Press Test connection once and record every stage/result it displays. If there is no saved grant, start one fresh Connect attempt instead.
+3) Record the callback HTTP status and any displayed failure stage, classification and reference ID.
+4) Inspect application/container logs, not only nginx access logs. Locate the callback and its server-to-server request to Salesforce's token endpoint, then MCP initialization, tools/list, and userinfo.
+5) Do not repeatedly disconnect everyone or retry the same refresh token while collecting evidence.
+
+The connector patch committed to next adds:
+- callback spans named connector_callback;
+- user_id, provider and trace_id;
+- token endpoint HTTP status, refreshing=true/false, allow-listed oauth_error and classification;
+- HTTP statuses for MCP verification and identity;
+- a callback notice with stage and reference ID.
+These fields are available ONLY if the updated binary is actually running on LIVE. A Git push or registry push does not establish deployment. Confirm the deployed binary/build revision through your deployment inventory and running process before relying on these messages.
+
+Useful CLI commands, executed with access to the LIVE instance:
+  systemprompt infra logs view --since '2026-10-03T19:20:00Z' --tail 2000
+  systemprompt infra logs search 'connector' --since 24h --limit 200
+  systemprompt infra logs search 'token request' --since 24h --limit 200
+  systemprompt infra logs show <reference-or-trace-id> --json
+  systemprompt infra logs stream
+
+If the structured-log store does not contain these events, inspect the running application's stdout/stderr using its actual service name:
+  docker logs --since '2026-10-03T19:20:00Z' <application-container>
+  journalctl -u <application-service> --since '2026-10-03 19:20:00 UTC'
+Use the container command OR the service command that matches the deployment. For Kubernetes, inspect the application pod logs and previous container logs if it restarted. Check all replicas.
+
+Look for these messages/fields:
+  token endpoint responded
+  token request rejected
+  token request failed before a response
+  MCP verification responded
+  provider identity responded
+  connector callback failed
+  connector grant failure recorded
+  connector_connected
+
+The token failure must be labelled as either:
+- grant_type=authorization_code / refreshing=false: a NEW connection failed;
+- grant_type=refresh_token / refreshing=true: renewal of an EXISTING connection failed.
+An invalid_grant on these two paths has different implications.
+
+Collect only safe evidence: UTC time, user ID, provider, trace/reference, stage, HTTP status, allow-listed error code, and a redacted reason. Do not send client secrets, access/refresh tokens, private keys, authorization codes, cookies, OAuth state, or complete token responses. The original HAR contains session and verification data; sanitize it before redistribution. Avoid full HTTP body tracing. If a detailed upstream reason is needed, inspect it privately and share only the relevant redacted wording.
+
+Salesforce administrator, during the same attempt:
+- Setup > Login History: look for the affected username and time; inspect application/login type and failure status where available. Download the relevant history if needed. Not every token/MCP rejection appears here, so absence of an entry is not proof of success.
+- Setup > View Setup Audit Trail: inspect the period from initial setup through the first failure. Look for OAuth policy, token-format, IP-range, scope, profile/permission-set, app install/uninstall, connected-app enforcement, and MCP activation changes.
+- Setup > External Client App Manager: find the EXACT app whose Consumer Key matches the LIVE platform's client ID. Check both Settings and Policies. Use a Connected App screen only if the installed integration is actually a legacy Connected App; Salesforce Hosted MCP requires an External Client App.
+- Use app OAuth usage/authorization records where exposed to confirm affected users' grants and revocations. Do not use a broad revoke-all operation merely to inspect usage.
+
+3. Decide which branch failed
+
+Investigation priority: because this worked days ago and failed for all users approximately two weeks after setup, first inspect the actual refresh-token lifetime/revocation policy and rotation handling (4.1–4.2). Then identify why a FRESH reconnect fails: the callback's token-exchange, MCP and identity logs should distinguish these stages. Expiry alone does not explain a failed fresh reconnect. Treat IP restrictions as a lower-priority branch unless logs or a recent egress/policy change support it. Do not change IP policy speculatively.
+
+A) No callback, or an error on Salesforce's authorization page:
+   Check app installation/authorization, user eligibility, scopes, callback, PKCE and SSO policy.
+B) Callback receives a code; token exchange fails:
+   Check the exact token endpoint error, code replay/expiry, PKCE, callback consistency, app policy, network/IP restrictions and, if indicated, app credentials.
+C) Token exchange succeeds; initialize/tools fails:
+   Check named-user JWT token format, mcp_api scope, MCP activation, endpoint/org type and user/API permissions.
+D) initialize and tools succeed; identity fails:
+   Check openid scope, the userinfo endpoint, returned org/user identity and any pinned org ID.
+E) Only refresh fails while a fresh connection succeeds:
+   Focus on refresh-token lifetime/revocation, rotation/reuse, refresh IP restrictions, and refresh-specific secret policy.
+F) Multiple applications fail together:
+   Check shared Systemprompt deployment, proxy/egress, database/encryption configuration and Salesforce login/session policies before assuming each user's grant expired independently.
+
+4. Potential breakages and their fixes
+
+4.1 Refresh-token expiry or revocation
+
+Evidence: invalid_grant on refresh; Salesforce policy/history confirms expiry, revocation, inactivity, user deactivation or session-related revocation.
+
+Check in the app's OAuth Policies:
+- Refresh Token Policy: absolute lifetime, idle lifetime, immediately expire, or valid-until-revoked.
+- The configured duration and unit. Explicitly check whether it really is 14 DAYS.
+- Last successful REFRESH, not just the last API request or interactive Salesforce login.
+- User activity/frozen status and explicit grant revocations.
+
+Fix:
+- Have the Salesforce admin select a lifetime appropriate to the approved security policy, subject to Salesforce's mandatory controls. Do not disable locked security controls.
+- After restoring user/app eligibility, affected users complete a fresh Connect flow to obtain new grants.
+- An expired refresh token cannot be repaired by rotating the platform's client secret. If policy remains an absolute 14-day lifetime, recurring user reauthorization may be expected.
+- If fresh Connect ALSO fails, investigate that new callback separately. Expiry alone does not explain failed fresh authorization.
+
+Salesforce's documented enforcement includes PKCE, refresh-token rotation and a 30-day IDLE TTL for eligible locally managed apps created on/after 9 July 2026. This is not evidence of a universal 14-day expiry or automatic client-secret replacement.
+
+4.2 Rotation, token reuse, concurrent refresh or lost responses
+
+Evidence: reuse/rotated-token rejection, "already being processed", overlapping refreshes for the SAME user/provider, or a transport timeout after Salesforce may have processed the request.
+
+Check:
+- Every refresh goes through the same account-row lock and shared primary database across replicas.
+- There is only one token accessor/broker for this grant. No second deployment, script or connector is independently refreshing a copied token.
+- A replacement refresh token is saved durably before it can be used again, including when later MCP/identity verification fails.
+- No retry middleware automatically resends the same refresh request after an ambiguous timeout or lost response.
+
+Fix:
+- Run the patched broker on all LIVE replicas; preserve the common database, existing encryption key and signing keys.
+- Remove duplicate refresh consumers. Do not disable Salesforce refresh-token rotation as a workaround.
+- For an ambiguous lost response, do not replay the old refresh token. Reconnect that affected user after fixing the transport/retry issue.
+- For Salesforce's "already being processed" response, inspect overlapping requests rather than treating that message alone as permanent revocation.
+- Validate that parallel accessor calls cause ONE refresh and that later calls use the committed replacement.
+
+Why this matters: Salesforce documents that using a rotated-out refresh token can invalidate the current refresh token and associated access tokens.
+
+4.3 Salesforce now issues opaque session tokens instead of named-user JWTs
+
+Evidence: code exchange succeeds but Hosted MCP rejects initialization with INVALID_AUTH_HEADER, INVALID_JWT_FORMAT, or an invalid-token error. The newly issued access token is not JWT-shaped.
+
+Check External Client App Manager > exact app > Settings > OAuth Settings > Security:
+  Issue JSON Web Token (JWT)-based access tokens for named users
+Also inspect changes to this setting and to the app's scopes around the incident.
+
+Fix:
+- Enable named-user JWT access tokens for the MCP External Client App.
+- Keep PKCE enabled. Keep mcp_api and refresh_token; retain openid because this connector verifies userinfo.
+- Use a separate app for Salesforce integrations that require opaque SOAP/session tokens rather than changing the MCP app for those consumers.
+- After the policy propagates, obtain a fresh grant and verify MCP initialization. Old tokens do not prove the new policy is effective.
+- Privately inspect token shape/expiry metadata only; never paste the bearer token into an online JWT decoder or a support email.
+
+Salesforce's official workshop explicitly documents OAuth succeeding while Hosted MCP fails when this JWT setting is missing.
+
+4.4 MCP endpoint, activation, API access or permissions
+
+Evidence: token exchange succeeds; initialize or tools/list fails with 403/404, no accessible tools, or an authorization/activation error.
+
+Check:
+- Setup > API Catalog > MCP Servers > Salesforce Servers.
+- Headless360 (H360) MCP Server is Active. Active SObject Reads/All does NOT establish that Headless360 is active.
+- The platform uses the production headless-360 endpoint listed above for ONTRQ, not a sandbox endpoint or a different server.
+- The user's license/permission sets permit API use and the underlying operations. Inspect expired assignments or trial entitlements if the timing is exactly two weeks.
+- The org edition and required feature entitlements support the selected server.
+
+Fix:
+- Activate the specific server only if inactive; verify any failed activation with a Salesforce admin.
+- Correct a wrong production/sandbox/server endpoint in the platform's declared MCP configuration and deploy it to LIVE.
+- Restore the required approved license/permission assignment. Grant only the access required for the intended operations; do not grant everyone System Administrator.
+- Test a read-only operation as an affected standard user. An admin's success does not establish ordinary users' entitlement.
+- Do not hard-code an expected tool count. The current UI showed five tools; the server's available surface can change.
+
+4.5 App approval, installation or permitted-user policy
+
+Evidence: Salesforce authorization/usage reports an app-approval error, the app is not installed/recognized, or affected profiles/permission sets are not authorized.
+
+Check the EXACT External Client App and its installed/provider-managed policies. Do not identify it only by display name. Inspect the app's Permitted Users policy and assigned users/profiles/permission sets.
+
+Fix:
+- Install or authorize the intended app using your organization's approved process if it is missing.
+- If "Admin approved users are pre-authorized" is required, assign the app to the intended permission sets/profiles and ensure affected users hold those assignments.
+- If your security policy explicitly allows self-authorization, an admin may choose "All users may self-authorize" for the intended app. This is a policy decision, not a mandatory universal fix.
+- Provider-managed/locked controls may require the app provider's action rather than a subscriber-side edit.
+- Reconnect one affected user after propagation and retest.
+
+The original HAR contains a returned code, so a blanket authorization-page block is not established for THAT attempt. A later token/MCP policy failure remains possible.
+
+4.6 IP restrictions or a changed server egress address
+
+Lower priority for this incident: it worked recently. Investigate this branch only if the error identifies an IP restriction or there is evidence of a changed backend egress address or Salesforce policy.
+
+Evidence: login/token errors identify IP restrictions, refresh works from one network but not the LIVE server, or a deployment changed egress addresses.
+
+Check:
+- Profile Login IP Ranges, app OAuth IP restrictions and refresh-token IP allowlist.
+- Actual PUBLIC EGRESS IP of each LIVE application replica, not nginx's incoming/server address.
+- Whether the authorization browser and backend exchange have different permitted networks.
+- Recent deployment, proxy, NAT or firewall changes.
+
+Fix:
+- Add the approved backend egress ranges to the appropriate allowlist, or establish stable approved egress and update the policy.
+- Verify every replica. Do not globally relax IP restrictions to hide the mismatch.
+- Check DNS, TLS trust, outbound HTTPS, proxy routing and timeouts to ONTRQ's token/userinfo endpoints and api.salesforce.com.
+- Respect rate limits and Retry-After. Resolve the connectivity problem before reconnecting grants whose refresh outcome is unknown.
+
+4.7 New authorization code rejected: PKCE, redirect URI, reuse or expired state
+
+Evidence: invalid_grant, invalid_request, redirect_uri_mismatch, PKCE-related rejection, or consent expired/already consumed on a NEW connection.
+
+Check:
+- The same server-generated PKCE verifier is bound to the saved consent state and used in the token exchange. Authorization uses S256.
+- Authorization and token exchange use exactly the same redirect_uri, including scheme, host, port and path.
+- LIVE api_external_url is https://sp-dev.astound.digital.
+- The app allows https://sp-dev.astound.digital/api/public/connectors/salesforce/callback.
+- Localhost is a separate registered callback; it is useful only when the browser and running local server are on the same computer.
+- The initiating Systemprompt login/session survives the redirect. The callback must return to the same user/session.
+- All replicas share the consent-state database; state is single-use and has not expired.
+- The code has not been exchanged previously. Do not refresh/replay a captured callback URL.
+
+Fix:
+- Correct the external URL/callback declaration and proxy/session configuration.
+- Preserve PKCE and the single-use state binding; deploy the corrected implementation consistently.
+- Restart the flow from Connect and complete it promptly. Do not reuse the HAR's code/state.
+- If consent was invalidated by a disconnect or reprovision during the attempt, start a fresh attempt after that operation completes.
+
+4.8 Identity/userinfo fails after MCP succeeds
+
+Evidence: initialize and tools/list succeed; the identity stage fails, userinfo is 401/403, or the returned user/org ID cannot be verified.
+
+Check:
+- The app grants openid and the authorization request includes it.
+- Userinfo is requested from https://ontrq.my.salesforce.com/services/oauth2/userinfo.
+- The grant belongs to the intended org/user, not a sandbox or a different Salesforce account already open in the browser.
+- Any configured org_id matches the returned Salesforce organization ID.
+
+Fix:
+- Restore the required openid scope and obtain a fresh consent grant.
+- Correct the declared My Domain/org pin only after verifying the intended org identity. Do not disable identity binding to make the error disappear.
+- Retry Test connection for a retained grant if the issue was a transient identity-service failure; reconnect only if new consent is needed or the grant is unusable.
+
+4.9 Expired JWT, bad clocks, invalid expiry or malformed provider response
+
+Evidence: fresh token's exp is already past, an explicit expires_in is invalid, token_type is unsupported, or the response is truncated/unparseable.
+
+Check:
+- UTC/NTP on the backend, JWT exp and expires_in without exposing the token.
+- Proxies truncating/compressing responses incorrectly, TLS errors or timeout timing.
+- Whether a replacement refresh token arrived before validation failed.
+
+Fix:
+- Correct time synchronization and transport/proxy issues.
+- Reject unusable tokens; do not extend an expired JWT's lifetime artificially.
+- Preserve a returned replacement refresh token even if access-token validation or MCP checking fails.
+- If the refresh response may have been processed but no usable replacement was obtained, stop replaying it and reconnect the affected user after fixing transport.
+
+4.10 Platform state, encryption, database or deployment mismatch
+
+Evidence: decryption errors, database errors, configuration_changed, missing grant immediately after a reported successful connect, or different behavior across replicas.
+
+Check:
+- All replicas use the same primary database and correct runtime configuration.
+- The original encryption master key is available and consistent. Check key fingerprints privately; do not print key material.
+- App/domain/configuration changes invalidated an existing grant binding intentionally.
+- The running LIVE binary contains the connector patch; test-environment success is insufficient.
+
+Fix:
+- Restore the correct existing database/key configuration using the approved secret store. Do not generate replacement encryption/signing keys as a troubleshooting shortcut.
+- Deploy consistent configuration and binary versions across replicas.
+- If the connector's bound app/org configuration genuinely changed, users must reconnect against the new intended configuration.
+- Use UI/account operations for reconnection. Do not manually mark database rows connected or copy a user's grant to another user.
+
+Optional READ-ONLY database evidence on LIVE:
+  SELECT provider, status, error_code, COUNT(*) AS accounts
+  FROM mcp_connector_accounts
+  WHERE provider LIKE 'salesforce%'
+  GROUP BY provider, status, error_code;
+
+  SELECT provider, COUNT(*) AS saved_grants, MAX(updated_at) AS latest_write
+  FROM mcp_connector_credentials
+  WHERE provider LIKE 'salesforce%'
+  GROUP BY provider;
+
+These queries show state distribution, not the root cause. A configuration error on the old implementation could have deleted otherwise recoverable grants. Do not select ciphertext, nonce or consent state for an email report.
+
+4.11 Credentials, only if the error points back to them
+
+We are prioritizing non-credential causes, but keep this branch available if the token endpoint reports invalid_client or an app-identity mismatch.
+
+Check the LIVE Consumer Key/Secret against the exact app's current details privately. Current keys are named salesforce_mcp_client_id and salesforce_mcp_client_secret unless the org registry explicitly overrides them. Older salesforce_client_secret/private-key settings belong to a separate legacy path and are not automatically a valid replacement pair.
+
+Fix only a confirmed mismatch in the LIVE secret store. Do not rotate the Salesforce app merely to test a theory. A changed consumer key/secret may revoke existing grants; plan reauthorization if rotation was intentional. A refresh-token lifetime of 14 days does not require rotating the app secret every 14 days.
+
+5. Verify recovery before asking everyone to reconnect
+
+1) Record the failing stage/code and the specific configuration correction.
+2) Allow the setting to propagate; use one fresh attempt rather than repeatedly changing policy.
+3) Connect one affected ordinary user on LIVE. Confirm token exchange, MCP initialize, tools/list and identity all succeed, then the account becomes connected.
+4) Run a read-only Salesforce operation and confirm the returned identity is the intended user/org.
+5) Confirm an actual token refresh succeeds on the next renewal and the replacement is saved. A successful initial login alone does not test refresh. Use a controlled test user/environment to force expiry if necessary, without editing production tokens or replaying old refresh tokens.
+6) Verify concurrent requests result in one serialized refresh, and no old refresh token is reused after rotation.
+7) Confirm another affected user succeeds, including one with a different intended profile/permission set.
+8) Reconnect remaining users only where their grants expired, were revoked/deleted, require new scopes, or have an uncertain refresh outcome. For retained grants after a corrected outage/permission issue, try Test connection first.
+9) Start a new client/chat if that client loads connector availability only at chat creation.
+10) Monitor LIVE for recurring grant_rejected, provider_permission_denied, provider_configuration, provider_unavailable, provider_invalid_response and refresh_outcome_unknown events. Confirm every replica is running the intended build.
+
+Please return this redacted report:
+- LIVE deployed build/revision and test UTC time.
+- Systemprompt user ID/provider and matching Salesforce username (share identity only with the incident team).
+- Failure stage, HTTP status, allow-listed provider error, classification, trace/reference.
+- Whether fresh Connect fails, refresh fails, or both.
+- Actual app type, refresh policy/duration, rotation status, named-user JWT status, scopes and relevant IP/approval policy.
+- Relevant Setup Audit Trail change and time, if found.
+- Exact change made, and results of initial connection PLUS subsequent refresh.
+
+6. Official references
+
+Salesforce OAuth control enforcement (10 September 2026):
+https://help.salesforce.com/s/articleView?id=005433465&language=en_US&type=1
+
+Salesforce refresh flow and rotation/reuse behavior:
+https://help.salesforce.com/s/articleView?id=sf.remoteaccess_oauth_refresh_token_flow.htm&language=en_US&type=5
+
+External Client App setup for Hosted MCP:
+https://developer.salesforce.com/docs/platform/hosted-mcp-servers/guide/create-external-client-app.html
+
+Named-user JWT requirement and INVALID_AUTH_HEADER / INVALID_JWT_FORMAT:
+https://developer.salesforce.com/workshops/try-headless-360/2-create-the-app
+
+Headless360 requirements, production endpoint and activation:
+https://developer.salesforce.com/docs/platform/hosted-mcp-servers/guide/headless-360-mcp.html
+
+Salesforce server-connection troubleshooting:
+https://developer.salesforce.com/docs/platform/hosted-mcp-servers/guide/connection-issues.html
+
+Relevant project declarations:
+services/config/salesforce-orgs.yaml
+services/mcp/salesforce.yaml
+deploy/salesforce/bootstrap/main/default/extlClntAppGlobalOauthSets/Systemprompt_glblOauth.ecaGlblOauth-meta.xml
+deploy/salesforce/policies/main/default/extlClntAppOauthPolicies/Systemprompt_oauthPlcy.ecaOauthPlcy-meta.xml
+
+Thanks,
+Ed
