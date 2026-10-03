@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT f.user_id AS \"user_id!\" FROM conversation_facts f WHERE f.context_id = $1",
+  "query": "SELECT f.user_id AS \"user_id!\" FROM conversation_facts f WHERE f.context_id = canonical_conversation_context($1)",
   "describe": {
     "columns": [
       {
@@ -24,5 +24,5 @@
       false
     ]
   },
-  "hash": "093d83692f5cce2a1e364da9f2285f91944e0ce5d7c0a231d96a27e03014d86a"
+  "hash": "d93e95ecf42b284874a3f39247dd4058a80345b19eebe6e108dfd60def11438a"
 }
