@@ -42,7 +42,7 @@ pub fn relative_time(t: chrono::DateTime<chrono::Utc>) -> String {
 // Why: core's `ClientKind` owns `ai_requests.client_kind`; a value a newer
 // core writes is shown as stored rather than mislabelled.
 pub fn client_label(client_kind: &str) -> String {
-    systemprompt::models::wire::origin::ClientKind::parse(client_kind)
+    systemprompt::ai::models::ClientKind::parse(client_kind)
         .map_or_else(|_| client_kind.to_owned(), |kind| kind.label().to_owned())
 }
 
@@ -54,7 +54,7 @@ pub struct ClientChipView {
 }
 
 pub fn client_chip(client_kind: &str, attestation: &str) -> ClientChipView {
-    use systemprompt::models::wire::origin::ClientAttestation;
+    use systemprompt::ai::models::ClientAttestation;
     let tone = match ClientAttestation::parse(attestation) {
         Ok(ClientAttestation::HostToken) => "accent",
         Ok(ClientAttestation::Declared) => "info",
@@ -68,7 +68,7 @@ pub fn client_chip(client_kind: &str, attestation: &str) -> ClientChipView {
 }
 
 pub fn attestation_title(attestation: &str) -> String {
-    systemprompt::models::wire::origin::ClientAttestation::parse(attestation).map_or_else(
+    systemprompt::ai::models::ClientAttestation::parse(attestation).map_or_else(
         |_| format!("Attestation: {attestation}"),
         |tier| tier.label().to_owned(),
     )

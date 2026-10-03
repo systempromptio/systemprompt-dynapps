@@ -35,9 +35,7 @@ pub(crate) fn build(
             engine,
             sso_deps,
             db.owner.clone(),
-        )
-        .map_err(|e| tracing::error!(error = %e, "Failed to build admin SSR repositories"))
-        .ok()?,
+        ),
     })
 }
 

@@ -115,7 +115,7 @@ impl<'a> Call<'a> {
                 client_id: None,
             },
             target: AuditTarget {
-                tool_name: self.target.as_str().to_owned(),
+                tool_name: McpToolName::new(self.target.as_str()),
                 plugin_id: None,
                 tool_use_id: None,
             },
@@ -123,7 +123,7 @@ impl<'a> Call<'a> {
             approver: None,
             act_chain: Vec::new(),
             context_id: None,
-            trace_id: Some(unique("trace")),
+            trace_id: Some(systemprompt::identifiers::TraceId::new(unique("trace"))),
         }
     }
 }

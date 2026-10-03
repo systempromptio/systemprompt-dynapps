@@ -13,13 +13,10 @@ use super::{admin, sign_out};
 use crate::api;
 use crate::extension::WebExtension;
 
-pub(crate) fn build(
-    db: &DbHandles,
-    session_service: &Arc<SessionCreationService>,
-) -> Result<Router, systemprompt_web_admin_core::state::StateError> {
-    let admin_api = admin::admin_router(&db.db, Arc::clone(&db.read), &db.write, db.owner.clone())?;
+pub(crate) fn build(db: &DbHandles, session_service: &Arc<SessionCreationService>) -> Router {
+    let admin_api = admin::admin_router(&db.db, Arc::clone(&db.read), &db.write, db.owner.clone());
     let webhook_api =
-        admin::hooks_webhook_router(&db.db, Arc::clone(&db.write), Arc::clone(session_service))?;
+        admin::hooks_webhook_router(&db.db, Arc::clone(&db.write), Arc::clone(session_service));
     let secrets_api = admin::secrets_router(Arc::clone(&db.write));
     let bridge_identity =
         systemprompt_web_admin_platform::bridge_identity_router(Arc::clone(&db.read));
@@ -33,7 +30,7 @@ pub(crate) fn build(
         },
     );
 
-    Ok(Router::new()
+    Router::new()
         .route(
             "/auth/session",
             post(api::auth::set_session).delete({
@@ -49,7 +46,7 @@ pub(crate) fn build(
         .merge(salesforce_api)
         .merge(webhook_api)
         .merge(secrets_api)
-        .nest("/admin", admin_api))
+        .nest("/admin", admin_api)
 }
 
 pub(crate) fn share(db: &DbHandles) -> Router {

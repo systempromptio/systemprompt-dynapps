@@ -10,11 +10,11 @@ use systemprompt::identifiers::{AgentId, SkillId};
 use crate::types::{AgentInfo, RequiredSecret, SkillInfo};
 
 pub fn resolve_all_plugin_skill_ids(
-    plugin: &systemprompt::models::PluginConfig,
+    plugin: &systemprompt::manifest::services::PluginConfig,
     skills_path: &Path,
     _agents_path: &Path,
 ) -> Vec<String> {
-    if plugin.skills.source == systemprompt::models::ComponentSource::Explicit {
+    if plugin.skills.source == systemprompt::models::plugin::ComponentSource::Explicit {
         plugin
             .skills
             .include
@@ -42,29 +42,35 @@ pub fn resolve_all_plugin_skill_ids(
 }
 
 pub fn resolve_plugin_skills(
-    plugin: &systemprompt::models::PluginConfig,
+    plugin: &systemprompt::manifest::services::PluginConfig,
     skills_path: &Path,
     agents_path: &Path,
 ) -> Vec<SkillInfo> {
     resolve_all_plugin_skill_ids(plugin, skills_path, agents_path)
         .into_iter()
-        .map(|skill_id| {
+        .filter_map(|skill_id| {
+            let id = match SkillId::try_new(skill_id.clone()) {
+                Ok(id) => id,
+                Err(error) => {
+                    tracing::warn!(%skill_id, %error, "Invalid configured skill identifier");
+                    return None;
+                },
+            };
             let skill_dir = skills_path.join(&skill_id);
-            let (name, description, required_secrets) =
-                read_skill_config(&skill_dir, &SkillId::from(skill_id.as_str()));
+            let (name, description, required_secrets) = read_skill_config(&skill_dir, &id);
             let command = format!(
                 "/{}",
                 crate::util::skill_ref::skill_ref(plugin.id.as_str(), &skill_id)
             );
-            SkillInfo {
-                id: skill_id.into(),
+            Some(SkillInfo {
+                id,
                 name,
                 description,
                 command,
                 source: "system".to_owned(),
                 enabled: true,
                 required_secrets,
-            }
+            })
         })
         .collect()
 }
@@ -115,11 +121,11 @@ fn read_skill_config(
 }
 
 pub fn resolve_plugin_agents(
-    plugin: &systemprompt::models::PluginConfig,
+    plugin: &systemprompt::manifest::services::PluginConfig,
     agents_path: &Path,
 ) -> Vec<AgentInfo> {
     let agent_ids: Vec<String> =
-        if plugin.agents.source == systemprompt::models::ComponentSource::Explicit {
+        if plugin.agents.source == systemprompt::models::plugin::ComponentSource::Explicit {
             plugin.agents.include.clone()
         } else {
             let mut ids = Vec::new();

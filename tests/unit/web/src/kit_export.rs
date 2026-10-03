@@ -5,7 +5,7 @@
 use std::path::Path;
 
 use systemprompt::loader::ConfigLoader;
-use systemprompt::models::services::split_frontmatter;
+use systemprompt::manifest::services::split_frontmatter;
 use systemprompt_kit_export::{export_kit, render_skill_md, round_trip};
 
 fn services_root() -> std::path::PathBuf {

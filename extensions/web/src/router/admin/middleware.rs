@@ -17,8 +17,8 @@ use axum::extract::{Request, State};
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
 use serde::Serialize;
-use systemprompt::database::PgPool;
 use systemprompt::identifiers::{Email, UserId};
+use systemprompt::prelude::PgPool;
 
 use systemprompt_web_admin_identity::repositories::users::user_settings::find_user_settings;
 

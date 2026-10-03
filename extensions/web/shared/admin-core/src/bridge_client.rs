@@ -4,7 +4,7 @@
 //! URL those commands point at. The profile page, the connect page and the
 //! device-link approval all print these, so they read them from one place.
 
-use systemprompt::models::Config;
+use systemprompt::manifest::Config;
 
 pub const BRIDGE_BINARY: &str = "astound-bridge";
 

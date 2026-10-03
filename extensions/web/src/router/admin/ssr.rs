@@ -18,12 +18,12 @@ use axum::{Extension, Router, middleware as axum_middleware};
 use tower_http::normalize_path::NormalizePathLayer;
 
 use super::{login, marketplace_context, middleware, redirects};
-use systemprompt::database::{DbPool, PgPool};
+use systemprompt::database::DbPool;
+use systemprompt::prelude::PgPool;
 use systemprompt_web_admin_analytics::routes::{
     activity_ssr, analysis_ssr, export_ssr, observability_ssr, overview,
 };
 use systemprompt_web_admin_catalog::routes::ssr as catalog_ssr;
-use systemprompt_web_admin_core::state::StateError;
 use systemprompt_web_admin_core::templates::AdminTemplateEngine;
 use systemprompt_web_admin_governance::routes::ssr_governance;
 use systemprompt_web_admin_identity::AdfsDeps;
@@ -36,10 +36,10 @@ pub fn admin_ssr_router(
     engine: AdminTemplateEngine,
     sso_deps: AdfsDeps,
     owner: systemprompt::identifiers::UserId,
-) -> Result<Router, StateError> {
+) -> Router {
     let managed = Arc::new(systemprompt_web_admin_core::state::ManagedState::new(
         db, owner,
-    )?);
+    ));
     let inner = overview::routes()
         .merge(people_routes())
         .merge(ai_activity_routes())
@@ -74,11 +74,11 @@ pub fn admin_ssr_router(
         .with_state(pool)
         .fallback_service(inner);
 
-    Ok(Router::new().fallback_service(
+    Router::new().fallback_service(
         tower::ServiceBuilder::new()
             .layer(NormalizePathLayer::trim_trailing_slash())
             .service(combined),
-    ))
+    )
 }
 
 fn public_routes(pool: Arc<PgPool>) -> Router<Arc<PgPool>> {

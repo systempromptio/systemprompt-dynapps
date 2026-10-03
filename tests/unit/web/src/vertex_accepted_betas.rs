@@ -9,8 +9,8 @@
 //! that Vertex serves (Anthropic's feature matrix, read 2026-09-28) are named
 //! here one by one.
 
-use systemprompt::models::services::{ProviderEntry, ProviderRegistry};
-use systemprompt::models::wire::anthropic::AnthropicBeta;
+use systemprompt::manifest::services::{ProviderEntry, ProviderRegistry};
+use systemprompt::wire::anthropic::AnthropicBeta;
 
 use crate::support::repo_root;
 

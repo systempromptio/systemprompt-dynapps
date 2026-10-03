@@ -19,10 +19,10 @@ use std::path::Path;
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use serde_yaml::{Mapping, Value};
-use systemprompt::models::services::skill_frontmatter::{
+use systemprompt::manifest::services::skill_frontmatter::{
     authored_skill_frontmatter, split_skill_frontmatter,
 };
-use systemprompt::models::services::split_frontmatter;
+use systemprompt::manifest::services::split_frontmatter;
 
 #[derive(Debug, Default, Deserialize)]
 struct SkillConfigFields {

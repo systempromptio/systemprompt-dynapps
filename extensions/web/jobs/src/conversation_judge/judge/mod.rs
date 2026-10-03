@@ -88,16 +88,14 @@ pub(super) struct Judge {
 }
 
 impl Judge {
-    // Why: an empty session id keeps core from binding the judge call to a
-    // user session; the job context id keeps it out of every conversation.
     fn request_context(&self) -> Result<RequestContext, JobError> {
         Ok(RequestContext::new(
-            SessionId::new(""),
+            SessionId::generate(),
             TraceId::new(uuid::Uuid::new_v4().to_string()),
             job_context_id(),
             AgentName::try_new(AGENT_NAME)?,
-        )
-        .with_actor(self.actor.clone()))
+            self.actor.clone(),
+        ))
     }
 }
 

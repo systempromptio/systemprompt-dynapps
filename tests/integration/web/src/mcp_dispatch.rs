@@ -31,11 +31,15 @@ fn db_pool(pool: &Arc<PgPool>) -> systemprompt::database::DbPool {
 }
 
 fn executor(db_pool: &systemprompt::database::DbPool, server_name: &str) -> McpToolExecutor {
-    let usage = Arc::new(ToolUsageRepository::new(db_pool).expect("tool usage repository"));
-    let ingest = Arc::new(ArtifactIngest::from_db(db_pool, None).expect("artifact ingest"));
-    let intents: DynToolCallIntentClaims =
-        Arc::new(AiRequestRepository::new(db_pool).expect("ai request repository"));
-    McpToolExecutor::new(usage, intents, ingest, server_name)
+    let usage = Arc::new(ToolUsageRepository::new(db_pool));
+    let ingest = Arc::new(ArtifactIngest::from_db(db_pool, None));
+    let intents: DynToolCallIntentClaims = Arc::new(AiRequestRepository::new(db_pool));
+    McpToolExecutor::new(
+        usage,
+        intents,
+        ingest,
+        systemprompt::identifiers::McpServerId::new(server_name),
+    )
 }
 
 fn request_context() -> systemprompt::models::execution::context::RequestContext {
@@ -45,6 +49,9 @@ fn request_context() -> systemprompt::models::execution::context::RequestContext
         ContextId::try_new("00000000-0000-4000-8000-00000000d15b")
             .expect("valid fixture identifier"),
         AgentName::try_new("dispatch-agent").expect("valid fixture agent name"),
+        systemprompt::identifiers::Actor::user(systemprompt::identifiers::UserId::new(
+            "00000000-0000-4000-8000-00000000a11d",
+        )),
     )
 }
 
@@ -69,13 +76,13 @@ async fn an_unknown_systemprompt_tool_points_the_caller_at_the_cli_skill() {
     };
     let db_pool = db_pool(&db.pool);
     let executor = executor(&db_pool, "systemprompt");
-    let ingest = Arc::new(ArtifactIngest::from_db(&db_pool, None).expect("artifact ingest"));
+    let ingest = Arc::new(ArtifactIngest::from_db(&db_pool, None));
 
     let request = call("not_a_tool", serde_json::json!({}));
     let profile = client();
     let error = systemprompt_mcp_agent::server::tool::dispatch_tool(
         &systemprompt_mcp_agent::server::tool::Dispatch {
-            service_id: "systemprompt",
+            service_id: &systemprompt::identifiers::McpServerId::new("systemprompt"),
             db_pool: &db_pool,
             executor: &executor,
             request: &request,

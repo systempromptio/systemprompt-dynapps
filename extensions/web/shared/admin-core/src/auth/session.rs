@@ -8,7 +8,7 @@
 
 use axum::http::HeaderMap;
 use systemprompt::identifiers::{Email, UserId};
-use systemprompt::models::Config;
+use systemprompt::manifest::Config;
 use systemprompt::models::auth::JwtAudience;
 use systemprompt::oauth::validate_jwt_token;
 

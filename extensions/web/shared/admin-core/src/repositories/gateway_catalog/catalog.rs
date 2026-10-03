@@ -11,8 +11,8 @@
 
 use systemprompt::identifiers::RouteId;
 use systemprompt::loader::ServicesBootstrap;
-use systemprompt::models::ServicesConfig;
-use systemprompt::models::services::ProviderRegistry;
+use systemprompt::manifest::ServicesConfig;
+use systemprompt::manifest::services::ProviderRegistry;
 use systemprompt::security::authz::{EntityKind, RegisteredEntities};
 use systemprompt_web_shared::error::MarketplaceError;
 
@@ -39,7 +39,7 @@ pub fn dispatchable_routes(
         .map(|route| {
             let route = route.into_owned();
             GatewayRouteView {
-                id: route.id.as_str().to_owned(),
+                id: route.effective_id().as_str().to_owned(),
                 name: route.name,
                 description: route.description,
                 model_pattern: route.model_pattern,

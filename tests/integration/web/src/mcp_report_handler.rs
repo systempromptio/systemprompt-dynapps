@@ -22,6 +22,9 @@ fn context() -> RequestContext {
         TraceId::new("report-trace"),
         ContextId::try_new("00000000-0000-4000-8000-00000000a11c").expect("context id"),
         AgentName::try_new("report-agent").expect("agent name"),
+        systemprompt::identifiers::Actor::user(systemprompt::identifiers::UserId::new(
+            "00000000-0000-4000-8000-00000000a11d",
+        )),
     )
 }
 

@@ -19,8 +19,8 @@ async fn authz_database_failure_returns_http_200_with_an_explicit_deny() {
         Arc::clone(&pool),
         Some(Arc::clone(&pool)),
     ));
-    let users = UserService::new(Arc::new(UserRepository::new(&database).unwrap()));
-    let session_repository = SessionRepository::new(&database).unwrap();
+    let users = UserService::new(Arc::new(UserRepository::new(&database)));
+    let session_repository = SessionRepository::new(&database);
     let sessions = Arc::new(SessionCreationService::new(
         Arc::new(session_repository),
         Arc::new(users),
@@ -29,8 +29,7 @@ async fn authz_database_failure_returns_http_200_with_an_explicit_deny() {
         &database,
         Arc::clone(&pool),
         sessions,
-    )
-    .expect("build the hooks router from a connected database");
+    );
     pool.close().await;
     let payload = serde_json::json!({
         "entity": systemprompt_security::authz::EntityRef::McpServer(systemprompt::identifiers::McpServerId::try_new("atlassian").expect("valid fixture identifier")),

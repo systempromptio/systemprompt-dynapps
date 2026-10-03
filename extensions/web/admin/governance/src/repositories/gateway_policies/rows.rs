@@ -11,7 +11,7 @@
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 use sqlx::PgPool;
-use systemprompt::ai::GatewayPolicySpec;
+use systemprompt::gateway::GatewayPolicySpec;
 use systemprompt::identifiers::AiGatewayPolicyId;
 
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};

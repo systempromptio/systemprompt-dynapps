@@ -5,6 +5,7 @@
 //! hooks tab renders both rankings, so they are live code in this fork.
 
 use sqlx::PgPool;
+use systemprompt::identifiers::UserId;
 
 use systemprompt_web_admin_core::types::{TopActor, TopPolicy};
 
@@ -16,7 +17,7 @@ pub async fn list_top_actors(
     sqlx::query_as!(
         TopActor,
         r#"SELECT
-            g.user_id::TEXT AS "user_id!",
+            g.user_id::TEXT AS "user_id!: UserId",
             COALESCE(u.display_name, u.full_name, u.name, u.email, g.user_id) AS "display_name!",
             u.email::TEXT AS email,
             COUNT(*) FILTER (WHERE g.decision = 'deny')::bigint AS "deny_count!",

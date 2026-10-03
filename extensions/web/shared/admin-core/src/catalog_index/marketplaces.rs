@@ -1,7 +1,7 @@
 //! Loads the configured marketplace catalog.
 
 use systemprompt::loader::ConfigLoader;
-use systemprompt::models::services::MarketplaceConfig;
+use systemprompt::manifest::services::MarketplaceConfig;
 
 pub fn load_marketplaces() -> Vec<MarketplaceConfig> {
     let Ok(services) = ConfigLoader::load() else {

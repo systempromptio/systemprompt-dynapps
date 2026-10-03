@@ -115,17 +115,14 @@ fn load_blog_config(
 
 fn job_scoped_blog_config_path(ctx: &JobContext) -> Result<std::path::PathBuf, JobError> {
     Ok(ctx
-        .app_paths::<Arc<AppPaths>>()
-        .ok_or(JobError::MissingContext("AppPaths"))?
+        .get::<Arc<AppPaths>>()?
         .system()
         .services()
         .join("config/blog.yaml"))
 }
 
 async fn execute_inner(ctx: &JobContext) -> Result<JobResult, JobError> {
-    let db = ctx.db_pool::<DbPool>().ok_or(MarketplaceError::Internal(
-        "Database not available in job context".to_owned(),
-    ))?;
+    let db = ctx.get::<DbPool>()?;
 
     let pool = db.write_pool();
 

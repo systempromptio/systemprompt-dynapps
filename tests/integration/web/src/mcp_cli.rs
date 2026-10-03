@@ -38,11 +38,15 @@ fn db_pool(pool: &Arc<PgPool>) -> systemprompt::database::DbPool {
 }
 
 fn executor(db_pool: &systemprompt::database::DbPool) -> McpToolExecutor {
-    let usage = Arc::new(ToolUsageRepository::new(db_pool).expect("tool usage repository"));
-    let ingest = Arc::new(ArtifactIngest::from_db(db_pool, None).expect("artifact ingest"));
-    let intents: DynToolCallIntentClaims =
-        Arc::new(AiRequestRepository::new(db_pool).expect("ai request repository"));
-    McpToolExecutor::new(usage, intents, ingest, "systemprompt")
+    let usage = Arc::new(ToolUsageRepository::new(db_pool));
+    let ingest = Arc::new(ArtifactIngest::from_db(db_pool, None));
+    let intents: DynToolCallIntentClaims = Arc::new(AiRequestRepository::new(db_pool));
+    McpToolExecutor::new(
+        usage,
+        intents,
+        ingest,
+        systemprompt::identifiers::McpServerId::new("systemprompt"),
+    )
 }
 
 fn request_context() -> SysRequestContext {
@@ -52,6 +56,9 @@ fn request_context() -> SysRequestContext {
         ContextId::try_new("00000000-0000-4000-8000-00000000c11e")
             .expect("valid fixture identifier"),
         AgentName::try_new("cli-agent").expect("valid fixture agent name"),
+        systemprompt::identifiers::Actor::user(systemprompt::identifiers::UserId::new(
+            "00000000-0000-4000-8000-00000000a11d",
+        )),
     )
 }
 
@@ -99,12 +106,12 @@ async fn run_tool(
 ) -> Result<rmcp::model::CallToolResult, rmcp::ErrorData> {
     let db_pool = db_pool(&db.pool);
     let executor = executor(&db_pool);
-    let ingest = Arc::new(ArtifactIngest::from_db(&db_pool, None).expect("artifact ingest"));
+    let ingest = Arc::new(ArtifactIngest::from_db(&db_pool, None));
     let profile = client();
     let tool_name = request.name.to_string();
     systemprompt_mcp_agent::server::tool::dispatch_tool(
         &systemprompt_mcp_agent::server::tool::Dispatch {
-            service_id: "systemprompt",
+            service_id: &systemprompt::identifiers::McpServerId::new("systemprompt"),
             db_pool: &db_pool,
             executor: &executor,
             request: &request,

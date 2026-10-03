@@ -5,7 +5,7 @@
 
 use astound_test_common::TempDb;
 use sqlx::PgPool;
-use systemprompt::database::install_extension_schemas;
+use systemprompt::database::{MigrationConfig, install_extension_schemas_full};
 use systemprompt::extension::ExtensionRegistry;
 
 const LEGACY: &str = include_str!("feedback_legacy.sql");
@@ -20,9 +20,14 @@ async fn execute(pool: &PgPool, sql: &str) {
 
 async fn install(db: &TempDb) {
     let registry = ExtensionRegistry::discover().expect("linked extensions");
-    install_extension_schemas(&registry, db.db_pool().write())
-        .await
-        .expect("feedback upgrade/install");
+    install_extension_schemas_full(
+        &registry,
+        db.db_pool().write(),
+        &[],
+        MigrationConfig::default(),
+    )
+    .await
+    .expect("feedback upgrade/install");
 }
 
 async fn scalar(pool: &PgPool, sql: &str) -> String {

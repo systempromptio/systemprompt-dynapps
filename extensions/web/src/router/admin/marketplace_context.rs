@@ -13,8 +13,8 @@ use axum::extract::{Request, State};
 use axum::middleware::Next;
 use axum::response::Response;
 use std::sync::Arc;
-use systemprompt::database::PgPool;
 use systemprompt::identifiers::UserId;
+use systemprompt::prelude::PgPool;
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 use systemprompt_web_admin_core::types::{MarketplaceContext, UserContext};
 
@@ -41,7 +41,7 @@ pub(super) async fn marketplace_context_middleware(
         Ok(counts) => counts,
         Err(error) => return Err(classify_catalog_failure(error, &user_ctx.user_id)),
     };
-    let site_url = systemprompt::models::Config::get().map_or_else(
+    let site_url = systemprompt::manifest::Config::get().map_or_else(
         |_| String::new(),
         |c| c.api_external_url.trim_end_matches('/').to_owned(),
     );

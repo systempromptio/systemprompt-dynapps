@@ -3,7 +3,7 @@
 use systemprompt_web_admin_platform::connector_oauth::{Grant, Provider, refresh_at};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
-fn grant() -> Grant {
+pub(super) fn grant() -> Grant {
     Grant {
         configuration_binding: String::new(),
         authorization_issuer: String::new(),
@@ -28,11 +28,11 @@ fn grant() -> Grant {
     }
 }
 
-async fn endpoint(body: &'static str) -> (String, tokio::task::JoinHandle<String>) {
+pub(super) async fn endpoint(body: &'static str) -> (String, tokio::task::JoinHandle<String>) {
     endpoint_with_status(200, "OK", body).await
 }
 
-async fn endpoint_with_status(
+pub(super) async fn endpoint_with_status(
     status: u16,
     reason: &'static str,
     body: &'static str,
@@ -167,17 +167,17 @@ async fn a_retired_refresh_token_is_an_authentication_failure_not_an_outage() {
     let error = refresh_at(&mut grant(), &url).await.unwrap_err();
     assert_eq!(error.status(), axum::http::StatusCode::UNAUTHORIZED);
     assert!(
-        error.to_string().contains("unauthorized_client"),
+        error.to_string().contains("Reconnect"),
         "the OAuth error code names the cause: {error}"
     );
     mock.await.unwrap();
 }
 
 #[tokio::test]
-async fn a_4xx_without_an_oauth_error_body_still_retires_the_grant() {
+async fn a_4xx_without_an_oauth_error_body_preserves_the_grant() {
     let (url, mock) = endpoint_with_status(400, "Bad Request", r"{}").await;
     let error = refresh_at(&mut grant(), &url).await.unwrap_err();
-    assert_eq!(error.status(), axum::http::StatusCode::UNAUTHORIZED);
+    assert_eq!(error.status(), axum::http::StatusCode::BAD_GATEWAY);
     mock.await.unwrap();
 }
 

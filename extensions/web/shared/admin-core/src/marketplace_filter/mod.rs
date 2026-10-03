@@ -38,9 +38,7 @@ pub struct TemplateMarketplaceFilter {
 
 impl TemplateMarketplaceFilter {
     pub fn from_db(db: &DbPool) -> Result<Arc<dyn MarketplaceFilter>, MarketplaceFilterError> {
-        let pool = db
-            .pool_arc()
-            .map_err(|e| MarketplaceFilterError::Backend(e.to_string()))?;
+        let pool = db.pool();
         Ok(Arc::new(Self::from_pool(pool)))
     }
 
@@ -54,8 +52,13 @@ impl TemplateMarketplaceFilter {
     async fn user_roles(&self, user_id: &UserId) -> Result<Vec<String>, MarketplaceFilterError> {
         match find_user_access_profile(self.pool.as_ref(), user_id).await {
             Ok(Some(profile)) => Ok(profile.roles),
-            Ok(None) => Err(MarketplaceFilterError::UnknownUser(user_id.to_string())),
-            Err(e) => Err(MarketplaceFilterError::Backend(e.to_string())),
+            Ok(None) => Err(MarketplaceFilterError::Backend(Box::new(
+                std::io::Error::new(
+                    std::io::ErrorKind::NotFound,
+                    format!("unknown user: {user_id}"),
+                ),
+            ))),
+            Err(e) => Err(MarketplaceFilterError::Backend(Box::new(e))),
         }
     }
 }
@@ -70,7 +73,7 @@ impl MarketplaceFilter for TemplateMarketplaceFilter {
         let roles = self.user_roles(user_id).await?;
         let attributes = subject_attributes_for(self.pool.as_ref(), user_id)
             .await
-            .map_err(|e| MarketplaceFilterError::Backend(e.to_string()))?;
+            .map_err(|e| MarketplaceFilterError::Backend(Box::new(e)))?;
         let mut keep = keep_sets(
             &self.repo,
             &candidate,
@@ -84,7 +87,7 @@ impl MarketplaceFilter for TemplateMarketplaceFilter {
         .await?;
         let connections = get_connections(&self.pool, user_id)
             .await
-            .map_err(|e| MarketplaceFilterError::Backend(e.to_string()))?;
+            .map_err(|e| MarketplaceFilterError::Backend(Box::new(e)))?;
         let diagnostics = &mut candidate.diagnostics;
         keep.mcp_servers.retain(|id| {
             keep_if_connection_ready(&connections.connections, id.as_str(), user_id, diagnostics)

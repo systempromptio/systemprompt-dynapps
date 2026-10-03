@@ -46,18 +46,17 @@ fn request_context() -> RequestContext {
         TraceId::new("protocol-trace"),
         ContextId::try_new("00000000-0000-4000-8000-00000000a11c").expect("valid fixture context"),
         AgentName::try_new("protocol-agent").expect("valid fixture agent"),
+        Actor::user(UserId::new("00000000-0000-4000-8000-00000000a11d")),
     )
 }
 
 fn http_request_context() -> RequestContext {
-    request_context().with_actor(Actor::user(UserId::new(
-        "00000000-0000-4000-8000-00000000a11d",
-    )))
+    request_context()
 }
 
 fn server(pool: &Arc<PgPool>) -> (SystempromptServer, Arc<ArtifactIngest>) {
     let db_pool = db_pool(pool);
-    let ingest = Arc::new(ArtifactIngest::from_db(&db_pool, None).expect("artifact ingest"));
+    let ingest = Arc::new(ArtifactIngest::from_db(&db_pool, None));
     let server = SystempromptServer::new(
         db_pool,
         McpServerId::try_new("systemprompt").expect("valid service id"),
@@ -213,8 +212,8 @@ async fn seed_artifact(ingest: &ArtifactIngest) -> ArtifactId {
     ingest
         .ingest(systemprompt::mcp::IngestRequest {
             result,
-            tool_name: "systemprompt".to_owned(),
-            server_name: Some("systemprompt".to_owned()),
+            tool_name: systemprompt::identifiers::McpToolName::new("systemprompt"),
+            server_name: Some(McpServerId::new("systemprompt")),
             ai_tool_call_id: None,
             mcp_execution_id: None,
             ctx: request_context(),
@@ -285,7 +284,7 @@ async fn protocol_client_initializes_discovers_resources_and_reads_stored_artifa
     assert_eq!(uri, "ui://systemprompt/artifact-viewer");
     assert_eq!(mime_type.as_deref(), Some("text/html;profile=mcp-app"));
     assert!(text.contains("Artifact Viewer"));
-    let artifact_uri = artifact_resource_uri("systemprompt", &artifact_id);
+    let artifact_uri = artifact_resource_uri(&McpServerId::new("systemprompt"), &artifact_id);
     let artifact = client
         .read_resource(ReadResourceRequestParams::new(artifact_uri))
         .await
@@ -301,7 +300,8 @@ async fn protocol_client_initializes_discovers_resources_and_reads_stored_artifa
     };
     assert_eq!(mime_type.as_deref(), Some("text/html;profile=mcp-app"));
     assert!(text.contains("protocol artifact body"));
-    let missing_artifact_uri = artifact_resource_uri("systemprompt", &ArtifactId::generate());
+    let missing_artifact_uri =
+        artifact_resource_uri(&McpServerId::new("systemprompt"), &ArtifactId::generate());
     assert!(
         client
             .read_resource(ReadResourceRequestParams::new(missing_artifact_uri))
@@ -335,10 +335,9 @@ async fn unauthenticated_http_tool_call_reaches_oauth_and_creates_no_execution()
     let db_pool = db_pool(&db.pool);
     let router = systemprompt::mcp::create_router(
         server,
-        Arc::new(
-            systemprompt::mcp::repository::McpSessionRepository::new(&db_pool)
-                .expect("MCP session repository"),
-        ),
+        Arc::new(systemprompt::mcp::repository::McpSessionRepository::new(
+            &db_pool,
+        )),
         systemprompt::mcp::McpHttpConfig::default(),
     );
     let (status, headers, initialized) = post_mcp(

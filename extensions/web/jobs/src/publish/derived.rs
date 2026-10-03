@@ -7,7 +7,7 @@ use systemprompt::database::DbPool;
 use systemprompt::generator::generate_feed;
 use systemprompt::traits::{Job, JobContext};
 
-use super::{PipelineStats, PublishPipelineJob, open_content_repo};
+use super::{PipelineStats, PublishPipelineJob};
 use crate::{LlmsTxtGenerationJob, RobotsTxtGenerationJob, SitemapGenerationJob};
 
 impl PublishPipelineJob {
@@ -38,9 +38,7 @@ impl PublishPipelineJob {
     }
 
     async fn run_feed(&self, paths: &AppPaths, db_pool: &DbPool, stats: &mut PipelineStats) {
-        let Some(content_repo) = open_content_repo(db_pool, stats) else {
-            return;
-        };
+        let content_repo = systemprompt::content::ContentRepository::new(db_pool);
         let outcome = generate_feed(content_repo, paths).await;
         record_feed_outcome(outcome, stats);
     }

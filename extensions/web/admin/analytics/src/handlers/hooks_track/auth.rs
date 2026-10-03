@@ -5,7 +5,7 @@
 
 use axum::http::HeaderMap;
 use systemprompt::identifiers::{PluginId, UserId};
-use systemprompt::models::Config;
+use systemprompt::manifest::Config;
 use systemprompt_security::HookTokenValidator;
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 

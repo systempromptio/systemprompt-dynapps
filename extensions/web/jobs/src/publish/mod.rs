@@ -17,7 +17,6 @@ use super::{
     BundleAdminCssJob, ContentIngestionJob, CopyExtensionAssetsJob, SiteContentPrerenderJob,
 };
 use crate::error::JobError;
-use systemprompt_web_shared::error::MarketplaceError;
 
 mod derived;
 
@@ -111,9 +110,7 @@ impl PublishPipelineJob {
         db_pool: &DbPool,
         stats: &mut PipelineStats,
     ) {
-        let Some(content_repo) = open_content_repo(db_pool, stats) else {
-            return;
-        };
+        let content_repo = ContentRepository::new(db_pool);
         match prerender_pages(Arc::clone(db_pool), content_repo, paths).await {
             Ok(results) => {
                 tracing::debug!(page_count = results.len(), "Page prerendering completed");
@@ -170,15 +167,8 @@ impl PublishPipelineJob {
     async fn execute_inner(&self, ctx: &JobContext) -> Result<JobResult, JobError> {
         let start_time = std::time::Instant::now();
 
-        let db_pool = ctx.db_pool::<DbPool>().ok_or(MarketplaceError::Internal(
-            "Database not available in job context".to_owned(),
-        ))?;
-        let paths = ctx
-            .app_paths::<Arc<AppPaths>>()
-            .ok_or(MarketplaceError::Internal(
-                "AppPaths not available in job context".to_owned(),
-            ))?
-            .as_ref();
+        let db_pool = ctx.get::<DbPool>()?;
+        let paths = ctx.get::<Arc<AppPaths>>()?.as_ref();
 
         tracing::debug!(actor = %ctx.actor().user_id.as_str(), "Publish pipeline started");
 
@@ -206,17 +196,6 @@ impl PublishPipelineJob {
         Ok(JobResult::success()
             .with_stats(stats.succeeded, stats.failed)
             .with_duration(duration_ms))
-    }
-}
-
-fn open_content_repo(db_pool: &DbPool, stats: &mut PipelineStats) -> Option<ContentRepository> {
-    match ContentRepository::new(db_pool) {
-        Ok(repo) => Some(repo),
-        Err(e) => {
-            tracing::error!(error = %e, "Content repository init failed");
-            stats.record_failure();
-            None
-        },
     }
 }
 

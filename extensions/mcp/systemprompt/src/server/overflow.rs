@@ -11,7 +11,7 @@
 use chrono::Utc;
 use rmcp::model::CallToolResult;
 use serde_json::{Value as JsonValue, json};
-use systemprompt::identifiers::McpExecutionId;
+use systemprompt::identifiers::{McpExecutionId, McpServerId, McpToolName};
 use systemprompt::mcp::{ArtifactIngest, IngestRequest, MAX_PAYLOAD_BYTES};
 use systemprompt::models::artifacts::CliArtifact;
 use systemprompt::models::execution::context::RequestContext;
@@ -22,7 +22,7 @@ use crate::error::SystempromptToolError;
 
 pub(super) struct OverflowStore<'a> {
     pub ingest: &'a ArtifactIngest,
-    pub server_name: &'a str,
+    pub server_name: &'a McpServerId,
     pub ctx: &'a RequestContext,
     pub command: &'a str,
     pub exec_id: &'a McpExecutionId,
@@ -40,8 +40,8 @@ impl OverflowStore<'_> {
             .ingest
             .ingest(IngestRequest {
                 result: wire,
-                tool_name: "systemprompt".to_owned(),
-                server_name: Some(self.server_name.to_owned()),
+                tool_name: McpToolName::new("systemprompt"),
+                server_name: Some(self.server_name.clone()),
                 ai_tool_call_id: None,
                 mcp_execution_id: None,
                 ctx: self.ctx.clone(),

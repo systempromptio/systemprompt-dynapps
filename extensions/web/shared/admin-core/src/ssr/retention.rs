@@ -8,7 +8,7 @@
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 use sqlx::PgPool;
-use systemprompt::models::profile::RetentionConfig;
+use systemprompt::manifest::profile::RetentionConfig;
 
 use crate::error::AdminResult;
 use crate::repositories::scheduled_jobs::find_job_run;

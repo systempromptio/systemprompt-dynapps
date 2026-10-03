@@ -6,7 +6,7 @@
 
 use chrono::{DateTime, Utc};
 use serde::Serialize;
-use systemprompt::models::services::ComponentSource;
+use systemprompt::models::plugin::ComponentSource;
 
 use systemprompt_web_admin_core::connections::Connection;
 use systemprompt_web_admin_core::ssr::format::relative_time;

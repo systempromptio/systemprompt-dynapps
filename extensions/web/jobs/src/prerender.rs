@@ -44,18 +44,12 @@ async fn execute_inner(ctx: &JobContext) -> Result<JobResult, JobError> {
 
     tracing::debug!("Content prerender started");
 
-    let db_pool = ctx
-        .db_pool::<DbPool>()
-        .ok_or(JobError::MissingContext("DbPool"))?;
-    let paths = ctx
-        .app_paths::<Arc<AppPaths>>()
-        .ok_or(JobError::MissingContext("AppPaths"))?
-        .as_ref();
+    let db_pool = ctx.get::<DbPool>()?;
+    let paths = ctx.get::<Arc<AppPaths>>()?.as_ref();
 
-    let content_repo = systemprompt::content::ContentRepository::new(db_pool)?;
+    let content_repo = systemprompt::content::ContentRepository::new(db_pool);
 
-    let content_analytics =
-        ContentAnalyticsRepository::new(db_pool).map_err(|e| JobError::Other(e.to_string()))?;
+    let content_analytics = ContentAnalyticsRepository::new(db_pool);
 
     prerender_content(
         DbPool::clone(db_pool),

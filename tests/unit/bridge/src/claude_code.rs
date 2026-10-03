@@ -106,7 +106,8 @@ fn enrolment_and_disconnect_preserve_user_settings_and_standalone_profile() {
         )
         .unwrap();
         let ctx = BridgeContext::start(ProxyMode::Attach).unwrap();
-        let selection = Selection::Ids(vec!["claude-code".into()]);
+        let selection =
+            Selection::Ids(vec![systemprompt_bridge::integration::HostKind::ClaudeCode]);
         for _ in 0..2 {
             let reports = ctx
                 .block_on(enrol::enrol_hosts(
@@ -161,7 +162,8 @@ fn enrolment_reports_invalid_settings_and_forced_login_without_overwriting_them(
         );
         std::fs::create_dir_all(settings.parent().unwrap()).unwrap();
         let ctx = BridgeContext::start(ProxyMode::Attach).unwrap();
-        let selection = Selection::Ids(vec!["claude-code".into()]);
+        let selection =
+            Selection::Ids(vec![systemprompt_bridge::integration::HostKind::ClaudeCode]);
         for body in [
             "{invalid",
             r#"{"forceLoginMethod":"claudeai"}"#,

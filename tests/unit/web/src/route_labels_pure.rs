@@ -4,8 +4,8 @@
 //! and the provider's display name, and the generated id never leaks into
 //! a label on its own.
 
-use systemprompt::models::ServicesConfig;
-use systemprompt::models::services::{GatewayConfigSpec, GatewayState, ProviderEntry};
+use systemprompt::manifest::ServicesConfig;
+use systemprompt::manifest::services::{GatewayConfigSpec, GatewayState, ProviderEntry};
 use systemprompt_web_admin_core::repositories::gateway_catalog::{
     derive_provider_label, derive_route_label, get_route_labels,
 };

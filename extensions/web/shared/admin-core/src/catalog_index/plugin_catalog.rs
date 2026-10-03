@@ -155,8 +155,9 @@ pub fn list_plugin_catalog(
         let skills: Vec<SkillId> =
             resolve_all_plugin_skill_ids(&plugin.base, &skills_path, &agents_path)
                 .into_iter()
-                .map(SkillId::from)
-                .collect();
+                .map(SkillId::try_new)
+                .collect::<Result<_, _>>()
+                .map_err(|e| MarketplaceError::Internal(e.to_string()))?;
         out.push(PluginDetail {
             id: plugin.base.id,
             name: plugin.base.name,

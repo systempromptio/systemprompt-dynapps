@@ -53,19 +53,13 @@ impl SystempromptServer {
         authz_hook: SharedAuthzHook,
         artifact_ingest: Arc<ArtifactIngest>,
     ) -> Result<Self, SystempromptToolError> {
-        let tool_usage_repo = Arc::new(
-            ToolUsageRepository::new(&db_pool)
-                .map_err(|e| SystempromptToolError::Internal(e.to_string()))?,
-        );
-        let intent_claims: DynToolCallIntentClaims = Arc::new(
-            AiRequestRepository::new(&db_pool)
-                .map_err(|e| SystempromptToolError::Internal(e.to_string()))?,
-        );
+        let tool_usage_repo = Arc::new(ToolUsageRepository::new(&db_pool));
+        let intent_claims: DynToolCallIntentClaims = Arc::new(AiRequestRepository::new(&db_pool));
         let executor = McpToolExecutor::new(
             tool_usage_repo,
             intent_claims,
             Arc::clone(&artifact_ingest),
-            service_id.as_str(),
+            service_id.clone(),
         );
 
         Ok(Self {
@@ -156,7 +150,7 @@ impl ServerHandler for SystempromptServer {
         let (request_context, auth_token) = authenticate_tool_request(
             &self.db_pool,
             &tool_name,
-            self.service_id.as_str(),
+            &self.service_id,
             &ctx,
             &self.authz_hook,
         )
@@ -175,7 +169,7 @@ impl ServerHandler for SystempromptServer {
         let cli = crate::cli::CliLocation::from_profile()?;
         dispatch_tool(
             &tool::Dispatch {
-                service_id: self.service_id.as_str(),
+                service_id: &self.service_id,
                 db_pool: &self.db_pool,
                 executor: &self.executor,
                 request: &request,
@@ -197,7 +191,7 @@ impl ServerHandler for SystempromptServer {
         _ctx: RequestContext<RoleServer>,
     ) -> impl Future<Output = Result<ListResourcesResult, McpError>> + MaybeSendFuture + '_ {
         std::future::ready(Ok(build_artifact_viewer_resource(&ArtifactViewerConfig {
-            server_name: SERVER_NAME,
+            server_name: &McpServerId::new(SERVER_NAME),
             title: "systemprompt.io Artifact Viewer",
             description: "Interactive UI viewer for systemprompt.io artifacts. Receives the tool \
                           result via the MCP Apps ui/notifications/tool-result protocol and mounts \
@@ -217,16 +211,15 @@ impl ServerHandler for SystempromptServer {
         _ctx: RequestContext<RoleServer>,
     ) -> Result<ReadResourceResponse, McpError> {
         if parse_artifact_resource_uri(&request.uri).is_some() {
-            let repo = McpArtifactRepository::new(&self.db_pool)
-                .map_err(|e| McpError::internal_error(e.to_string(), None))?;
-            return read_artifact_resource(&request, SERVER_NAME, &repo)
+            let repo = McpArtifactRepository::new(&self.db_pool);
+            return read_artifact_resource(&request, &McpServerId::new(SERVER_NAME), &repo)
                 .await
                 .map(Into::into);
         }
 
         read_artifact_viewer_resource(
             &request,
-            SERVER_NAME,
+            &McpServerId::new(SERVER_NAME),
             &crate::reports::admin_artifact_shell(),
         )
         .map(Into::into)

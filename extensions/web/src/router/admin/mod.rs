@@ -29,8 +29,7 @@ mod ssr;
 use std::sync::Arc;
 
 use axum::{Extension, Router, middleware as axum_middleware};
-use systemprompt::database::PgPool;
-use systemprompt_web_admin_core::state::StateError;
+use systemprompt::prelude::PgPool;
 
 pub use ssr::{admin_ssr_router, bridge_auth_ssr_router};
 pub use systemprompt_web_admin_catalog::routes::share::share_manifest_router;
@@ -40,18 +39,16 @@ pub fn hooks_webhook_router(
     db: &systemprompt::database::DbPool,
     pool: Arc<PgPool>,
     session_service: Arc<systemprompt::oauth::SessionCreationService>,
-) -> Result<Router, StateError> {
-    let managed = systemprompt::marketplace::managed::ManagedRepository::new(db)?;
-    Ok(
-        systemprompt_web_admin_analytics::routes::hooks_track::track_routes()
-            .merge(systemprompt_web_admin_governance::routes::webhooks::govern_routes())
-            .layer(Extension(
-                systemprompt_web_admin_core::event_hub::EventHub::default(),
-            ))
-            .layer(Extension(session_service))
-            .layer(Extension(managed))
-            .with_state(pool),
-    )
+) -> Router {
+    let managed = systemprompt::marketplace::managed::ManagedRepository::new(db);
+    systemprompt_web_admin_analytics::routes::hooks_track::track_routes()
+        .merge(systemprompt_web_admin_governance::routes::webhooks::govern_routes())
+        .layer(Extension(
+            systemprompt_web_admin_core::event_hub::EventHub::default(),
+        ))
+        .layer(Extension(session_service))
+        .layer(Extension(managed))
+        .with_state(pool)
 }
 
 pub fn admin_router(
@@ -59,12 +56,12 @@ pub fn admin_router(
     read_pool: Arc<PgPool>,
     write_pool: &Arc<PgPool>,
     owner: systemprompt::identifiers::UserId,
-) -> Result<Router, StateError> {
-    let admin_only = api::build_admin_only_routes(db, &read_pool, write_pool, owner)?;
+) -> Router {
+    let admin_only = api::build_admin_only_routes(db, &read_pool, write_pool, owner);
     let auth_reads = api::build_auth_read_routes(&read_pool);
     let self_service = api::build_self_service_routes(write_pool);
 
-    Ok(admin_only
+    admin_only
         .merge(auth_reads)
         .merge(self_service)
         .layer(axum_middleware::from_fn(
@@ -73,5 +70,5 @@ pub fn admin_router(
         .layer(axum_middleware::from_fn_with_state(
             read_pool,
             middleware::user_context_middleware,
-        )))
+        ))
 }

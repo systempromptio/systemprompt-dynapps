@@ -11,10 +11,10 @@ use systemprompt::config::AppPaths;
 use systemprompt::database::Database;
 use systemprompt::extension::{AssetDefinition, AssetType, ExtensionRegistry};
 use systemprompt::identifiers::{Actor, UserId};
-use systemprompt::models::profile::{
+use systemprompt::manifest::profile::{
     ContentNegotiationConfig, PathsConfig, RateLimitsConfig, RetentionConfig, SecurityHeadersConfig,
 };
-use systemprompt::models::{Config, PathResolution};
+use systemprompt::manifest::{Config, PathResolution};
 use systemprompt::traits::{Job, JobContext};
 use systemprompt_web_jobs::{
     BundleAdminCssJob, ContentIngestionJob, CopyExtensionAssetsJob, LlmsTxtGenerationJob,
@@ -76,7 +76,7 @@ pub(crate) fn install_config() {
         return;
     }
     let installed = Config::install(Config {
-        instance_id: "jobs-context-tests".to_owned(),
+        instance_id: systemprompt::identifiers::InstanceId::new("jobs-context-tests"),
         metrics_port: None,
         max_concurrent_streams: 16,
         sitename: "astound-test".to_owned(),
@@ -169,22 +169,18 @@ impl Harness {
             Arc::clone(&self.db.pool),
             Some(Arc::clone(&self.db.pool)),
         ));
-        // `JobContext` type-erases slots to `Arc<dyn Any>` and jobs downcast to
-        // `DbPool` / `Arc<AppPaths>`, so each value is wrapped in a second `Arc`.
         JobContext::new(
             Actor::user(UserId::new("jobs-context-test")),
-            Arc::new(database),
-            Arc::new(()),
-            Arc::new(Arc::clone(&self.paths)),
+            systemprompt::traits::Dependencies::new()
+                .with(database)
+                .with(Arc::clone(&self.paths)),
         )
     }
 
     fn empty_context() -> JobContext {
         JobContext::new(
             Actor::user(UserId::new("jobs-context-test")),
-            Arc::new(()),
-            Arc::new(()),
-            Arc::new(()),
+            systemprompt::traits::Dependencies::new(),
         )
     }
 
@@ -195,9 +191,7 @@ impl Harness {
         ));
         JobContext::new(
             Actor::user(UserId::new("jobs-context-test")),
-            Arc::new(database),
-            Arc::new(()),
-            Arc::new(()),
+            systemprompt::traits::Dependencies::new().with(database),
         )
     }
 

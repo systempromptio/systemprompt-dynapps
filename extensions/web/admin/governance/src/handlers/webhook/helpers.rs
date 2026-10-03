@@ -1,7 +1,7 @@
 //! Helpers shared by the webhook handlers.
 
 use axum::http::HeaderMap;
-use systemprompt::models::Config;
+use systemprompt::manifest::Config;
 
 #[derive(Debug, thiserror::Error)]
 pub(super) enum JwtConfigError {

@@ -12,7 +12,8 @@ use std::sync::Arc;
 
 use sqlx::PgPool;
 use systemprompt::identifiers::{
-    Actor, AgentName, AiToolCallId, ContextId, SkillId, TraceId, UserId,
+    Actor, AgentName, AiToolCallId, ContextId, McpServerId, McpToolName, SkillId, SkillName,
+    TraceId, UserId,
 };
 use systemprompt::mcp::{ArtifactIngest, IngestRequest, from_hook_failure, from_hook_response};
 use systemprompt::models::RequestContext;
@@ -55,14 +56,14 @@ pub(super) async fn ingest_tool_result(params: ToolResultIngestion<'_>) {
         session_id.clone(),
         TraceId::new(session_id.as_str()),
         ContextId::derived_from_session(&session_id),
-        AgentName::unset(),
+        AgentName::bridge(),
+        Actor::user(params.user_id.clone()),
     )
-    .with_actor(Actor::user(params.user_id.clone()))
     .with_user_type(UserType::User);
 
     let skill = find_latest_skill_invocation(params.pool, &session_id, params.user_id)
         .await
-        .map(|reference| (SkillId::new(reference.clone()), reference));
+        .map(|reference| (SkillId::new(reference.clone()), SkillName::new(reference)));
 
     let (tool_name, server_name) =
         match systemprompt_web_admin_core::util::mcp_tool_name::parse_mcp_tool_name(&tool_name) {
@@ -72,8 +73,8 @@ pub(super) async fn ingest_tool_result(params: ToolResultIngestion<'_>) {
 
     let request = IngestRequest {
         result,
-        tool_name,
-        server_name,
+        tool_name: McpToolName::new(tool_name),
+        server_name: server_name.map(McpServerId::new),
         ai_tool_call_id: (!tool_use_id.is_empty()).then(|| AiToolCallId::new(tool_use_id)),
         mcp_execution_id: None,
         ctx,

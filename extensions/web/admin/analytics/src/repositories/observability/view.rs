@@ -8,7 +8,7 @@
 
 use chrono::{DateTime, Utc};
 use serde::Serialize;
-use systemprompt::models::profile::{OtlpExportConfig, OtlpSignal};
+use systemprompt::manifest::profile::{OtlpExportConfig, OtlpSignal};
 use systemprompt::scheduler::OtlpExportState;
 
 const LAG_WARN_SECONDS: i64 = 60;

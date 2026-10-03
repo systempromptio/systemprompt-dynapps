@@ -21,7 +21,7 @@ impl ConversationJudgeRepository {
         &self,
         window: DiscoveryWindow,
     ) -> Result<u64, JobError> {
-        let legacy = ContextId::legacy();
+        let legacy = ContextId::legacy_context_row();
         let result = sqlx::query!(
             r#"
             WITH latest AS (

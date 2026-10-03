@@ -1,4 +1,4 @@
-use systemprompt::models::services::ProviderRegistry;
+use systemprompt::manifest::services::ProviderRegistry;
 use systemprompt_web_admin_core::repositories::gateway_catalog::{
     create_route, find_matching_route, find_matching_route_index, find_route_index_by_id,
     get_gateway_config, glob_match, reorder_routes, retain_client_facing, slugify_pattern,

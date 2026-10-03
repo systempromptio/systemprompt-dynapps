@@ -19,7 +19,7 @@ use axum::Router;
 use axum::extract::{Path, RawQuery};
 use axum::response::Redirect;
 use axum::routing::get;
-use systemprompt::database::PgPool;
+use systemprompt::prelude::PgPool;
 
 // Why: HTTP 301 lets intermediaries rewrite POST to GET; `Redirect::permanent`
 // is a 308, which keeps the method for the device POSTs under these prefixes.

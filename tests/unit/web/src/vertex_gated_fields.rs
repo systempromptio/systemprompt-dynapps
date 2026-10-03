@@ -12,11 +12,9 @@
 use std::collections::BTreeSet;
 
 use serde_json::{Map, Value, json};
-use systemprompt::models::services::ProviderEntry;
-use systemprompt::models::wire::anthropic::{
-    AnthropicBeta, BetaHeader, BetaPolicy, strip_fields_gated_by,
-};
-use systemprompt::models::wire::upstream::UpstreamDialect;
+use systemprompt::manifest::services::ProviderEntry;
+use systemprompt::wire::anthropic::{AnthropicBeta, BetaHeader, BetaPolicy, strip_fields_gated_by};
+use systemprompt::wire::upstream::UpstreamDialect;
 
 use crate::vertex_accepted_betas::vertex_anthropic;
 

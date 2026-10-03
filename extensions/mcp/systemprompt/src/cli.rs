@@ -14,6 +14,10 @@ use tokio::process::Command;
 /// rmcp's `ErrorData` is a variant-less wire type, so the typed cause lives
 /// here and is projected onto the wire exactly once, in `From`.
 #[derive(Debug, thiserror::Error)]
+#[expect(
+    variant_size_differences,
+    reason = "I/O failures retain their boxed source; the other error payloads are zero-sized"
+)]
 pub enum CliError {
     #[error("profile is not initialised")]
     Profile(#[from] ProfileBootstrapError),
@@ -22,7 +26,13 @@ pub enum CliError {
     #[error("CLI command did not finish within {}s; narrow the query", CLI_TIMEOUT.as_secs())]
     Timeout,
     #[error("CLI command could not be executed")]
-    Spawn(#[from] std::io::Error),
+    Spawn(#[source] Box<std::io::Error>),
+}
+
+impl From<std::io::Error> for CliError {
+    fn from(error: std::io::Error) -> Self {
+        Self::Spawn(Box::new(error))
+    }
 }
 
 impl From<CliError> for McpError {

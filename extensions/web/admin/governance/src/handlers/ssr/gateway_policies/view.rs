@@ -4,7 +4,7 @@
 
 use chrono::NaiveDate;
 use serde::Serialize;
-use systemprompt::ai::{QuotaWindow, SafetyHistoryMode};
+use systemprompt::gateway::{QuotaWindow, SafetyHistoryMode};
 
 use crate::repositories::gateway_policies::form::{CATEGORIES, MAX_WINDOWS, SCANNERS, SUBJECTS};
 use crate::repositories::gateway_policies::month_window::{

@@ -60,7 +60,7 @@ async fn publication_history_and_bundle_expose_the_reviewed_generation() {
     .expect("captured baseline revision");
     let resource = ManagedResourceId::new(resource_id.clone());
     let revision = ResourceRevisionId::new(revision_id.clone());
-    let repository = ManagedRepository::new(&db.db_pool()).expect("managed repository");
+    let repository = ManagedRepository::new(&db.db_pool());
     let publication = repository
         .review_and_publish(
             &owner,

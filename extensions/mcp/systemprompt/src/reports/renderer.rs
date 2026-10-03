@@ -21,7 +21,7 @@ impl UiRenderer for AdminRenderer {
         // Why: core drops the embedded resource when a renderer errors, and
         // DashboardRenderer cannot read a ReportOutput, so a parse failure is
         // surfaced here instead of falling through to it.
-        let mut failure: Option<String> = None;
+        let mut failure: Option<serde_json::Error> = None;
         let report = artifact.parts.iter().find_map(|part| {
             let Part::Data(data) = part else {
                 return None;
@@ -32,22 +32,23 @@ impl UiRenderer for AdminRenderer {
             )) {
                 Ok(report) => Some(report),
                 Err(error) => {
-                    failure = Some(error.to_string());
+                    failure = Some(error);
                     None
                 },
             }
         });
         let Some(report) = report else {
             if let Some(error) = failure {
-                return Err(systemprompt::mcp::McpDomainError::Internal(format!(
-                    "admin report artifact does not match the ReportOutput contract: {error}"
-                )));
+                return Err(systemprompt::mcp::McpDomainError::operation(
+                    "admin report artifact does not match the ReportOutput contract",
+                    error,
+                ));
             }
             return DashboardRenderer::new().render(artifact);
         };
         let template = include_str!("../../../../../services/artifacts/admin-ai-usage/view.html");
         let data = serde_json::to_string(&report)
-            .map_err(|e| systemprompt::mcp::McpDomainError::Internal(e.to_string()))?
+            .map_err(|e| systemprompt::mcp::McpDomainError::operation("serialize admin report", e))?
             .replace('<', "\\u003c")
             .replace('>', "\\u003e")
             .replace('&', "\\u0026");

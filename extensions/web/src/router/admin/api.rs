@@ -25,10 +25,10 @@ use std::sync::Arc;
 
 use axum::{Router, middleware as axum_middleware};
 
-use systemprompt::database::{DbPool, PgPool};
+use systemprompt::database::DbPool;
+use systemprompt::prelude::PgPool;
 use systemprompt_web_admin_analytics::routes::api as analytics_routes;
 use systemprompt_web_admin_catalog::routes as catalog_routes;
-use systemprompt_web_admin_core::state::StateError;
 use systemprompt_web_admin_core::types::{ROLES_CONSOLE, ROLES_MANAGE, ROLES_PLATFORM};
 use systemprompt_web_admin_governance::routes::api as governance_routes;
 use systemprompt_web_admin_identity::routes::api as identity_routes;
@@ -39,7 +39,7 @@ pub(super) fn build_admin_only_routes(
     read_pool: &Arc<PgPool>,
     write_pool: &Arc<PgPool>,
     owner: systemprompt::identifiers::UserId,
-) -> Result<Router, StateError> {
+) -> Router {
     let reads = build_admin_read_routes(read_pool)
         .merge(catalog_routes::managed_resources::reads())
         .layer(axum_middleware::from_fn_with_state(
@@ -65,12 +65,12 @@ pub(super) fn build_admin_only_routes(
 
     let managed = Arc::new(systemprompt_web_admin_core::state::ManagedState::new(
         db, owner,
-    )?);
-    Ok(reads
+    ));
+    reads
         .merge(writes)
         .merge(platform)
         .merge(participant)
-        .layer(axum::Extension(managed)))
+        .layer(axum::Extension(managed))
 }
 
 fn build_admin_read_routes(read_pool: &Arc<PgPool>) -> Router {

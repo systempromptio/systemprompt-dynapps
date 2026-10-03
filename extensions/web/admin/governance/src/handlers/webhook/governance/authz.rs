@@ -32,7 +32,7 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use sqlx::PgPool;
 use std::borrow::Cow;
-use systemprompt::identifiers::{Actor, ClientId, ContextId, SessionId, TaskId};
+use systemprompt::identifiers::{Actor, ContextId};
 
 use systemprompt_security::authz::{
     AccessControlRepository, AccessRule, AuthzDecision, AuthzRequest, ChainSources, Decision,
@@ -189,12 +189,8 @@ fn context_joining_session(req: &AuthzRequest) -> ContextId {
     req.context_id.clone().unwrap_or_else(|| {
         req.session_id
             .as_ref()
-            .map_or_else(ContextId::legacy, ContextId::derived_from_session)
+            .map_or_else(ContextId::generate, ContextId::derived_from_session)
     })
-}
-
-fn attested_session_or_empty(req: &AuthzRequest) -> &str {
-    req.session_id.as_ref().map_or("", SessionId::as_str)
 }
 
 fn decision_record<'a>(audit: &'a DecisionAudit<'a>) -> GovernanceDecisionRecord<'a> {
@@ -202,7 +198,7 @@ fn decision_record<'a>(audit: &'a DecisionAudit<'a>) -> GovernanceDecisionRecord
     GovernanceDecisionRecord {
         id: audit.id,
         actor: audit.actor,
-        session_id: attested_session_or_empty(req),
+        session_id: req.session_id.as_ref(),
         tool_name: req.entity.id_str(),
         agent_id: None,
         agent_scope: None,
@@ -210,13 +206,13 @@ fn decision_record<'a>(audit: &'a DecisionAudit<'a>) -> GovernanceDecisionRecord
         policy: POLICY_NAME,
         reason: audit.reason,
         evaluated_rules: audit.evaluated,
-        client_id: req.client_id.as_ref().map(ClientId::as_str),
+        client_id: req.client_id.as_ref(),
         plugin_id: None,
         tool_use_id: None,
         act_chain: &req.act_chain,
-        trace_id: Some(req.trace_id.as_str()),
-        context_id: audit.context_id.as_str(),
-        task_id: req.task_id.as_ref().map(TaskId::as_str),
+        trace_id: Some(&req.trace_id),
+        context_id: &audit.context_id,
+        task_id: req.task_id.as_ref(),
     }
 }
 

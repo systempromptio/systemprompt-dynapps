@@ -10,7 +10,7 @@ use std::sync::Arc;
 
 use axum::Json;
 use axum::http::HeaderMap;
-use systemprompt::database::PgPool;
+use systemprompt::prelude::PgPool;
 
 use crate::api::OkResponse;
 use crate::api::auth::clear_session;

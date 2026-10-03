@@ -35,10 +35,10 @@ async fn capture(_user: &UserContext, state: &ManagedState) -> AdminResult<Impor
         capture_skills(
             &root,
             &[
-                "admin_daily_brief".to_owned(),
-                "admin_critical_projects".to_owned(),
-                "admin_ai_usage".to_owned(),
-                "systemprompt_cli".to_owned(),
+                systemprompt::identifiers::SkillId::new("admin_daily_brief"),
+                systemprompt::identifiers::SkillId::new("admin_critical_projects"),
+                systemprompt::identifiers::SkillId::new("admin_ai_usage"),
+                systemprompt::identifiers::SkillId::new("systemprompt_cli"),
             ],
         )
     })

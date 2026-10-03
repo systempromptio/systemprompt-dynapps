@@ -8,12 +8,13 @@
 //! the boot-time check the register asks for is enforced by configuration the
 //! operator actually writes.
 
-use systemprompt::models::services::{
+use systemprompt::manifest::services::{
     GatewayConfigSpec, GatewayProfileError, GatewayRoute, ModelGovernance, ProviderEntry,
-    RouteRequirements, WireProtocol,
+    RouteRequirements,
 };
 
 use crate::support::{config, model, provider, registry, route};
+use systemprompt::wire::WireProtocol;
 
 fn european_route() -> GatewayRoute {
     let mut r = route("eu-classified", "classified-*", "eu-provider");

@@ -31,7 +31,7 @@
 //! deliberate, review-visible edit rather than a one-line drift.
 
 
-use systemprompt::models::services::{
+use systemprompt::manifest::services::{
     GatewayConfigSpec, ProviderEntry, ProviderModel, ProviderRegistry,
 };
 

@@ -3,7 +3,7 @@
 use std::path::Path;
 
 use systemprompt::identifiers::PluginId;
-use systemprompt::models::{DiskHookConfig, HOOK_CONFIG_FILENAME};
+use systemprompt::manifest::{DiskHookConfig, HOOK_CONFIG_FILENAME};
 use systemprompt_web_shared::error::MarketplaceError;
 
 use systemprompt_web_admin_core::types::ConfiguredHook;
@@ -60,11 +60,10 @@ pub fn list_configured_hooks(
             continue;
         }
 
-        let id_str = if config.id.as_str().is_empty() {
-            dir_name
-        } else {
-            config.id.as_str().to_owned()
-        };
+        let id_str = config
+            .id
+            .as_ref()
+            .map_or(dir_name, |id| id.as_str().to_owned());
 
         out.push(ConfiguredHook {
             id: id_str.clone(),

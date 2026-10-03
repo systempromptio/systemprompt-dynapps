@@ -38,10 +38,8 @@ fn session_service(pool: &Arc<PgPool>) -> Arc<SessionCreationService> {
         Arc::clone(pool),
         Some(Arc::clone(pool)),
     ));
-    let user = UserService::new(Arc::new(
-        UserRepository::new(&db).expect("build the user repository"),
-    ));
-    let sessions = SessionRepository::new(&db).expect("build the session repository");
+    let user = UserService::new(Arc::new(UserRepository::new(&db)));
+    let sessions = SessionRepository::new(&db);
     Arc::new(SessionCreationService::new(
         Arc::new(sessions),
         Arc::new(user),
@@ -84,8 +82,7 @@ impl App {
                     Arc::clone(pool),
                     pool,
                     credentials.admin_user_id.clone(),
-                )
-                .expect("build the admin API router"),
+                ),
             )
             .merge(platform::connector_api_router(Arc::clone(pool)))
             .merge(platform::bridge_identity_router(Arc::clone(pool)))
@@ -107,7 +104,6 @@ impl App {
             sso_deps,
             credentials.admin_user_id.clone(),
         )
-        .expect("build the admin SSR router")
         .layer(axum::Extension(None::<Arc<systemprompt::ai::AiService>>));
         let bridge_auth = admin::bridge_auth_ssr_router(Arc::clone(pool), engine);
 
@@ -120,12 +116,8 @@ impl App {
             )
             .expect("build the default governance chain"),
         );
-        let artifact_ingest = Arc::new(
-            systemprompt::mcp::ArtifactIngest::from_db(&database, None)
-                .expect("build the artifact ingest"),
-        );
+        let artifact_ingest = Arc::new(systemprompt::mcp::ArtifactIngest::from_db(&database, None));
         let hooks = admin::hooks_webhook_router(&database, Arc::clone(pool), session_service(pool))
-            .expect("build the hooks router")
             .layer(axum::Extension(governance))
             .layer(axum::Extension(artifact_ingest));
 

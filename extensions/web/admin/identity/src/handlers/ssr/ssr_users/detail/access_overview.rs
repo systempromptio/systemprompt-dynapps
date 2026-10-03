@@ -8,8 +8,8 @@ use serde::Serialize;
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 use systemprompt::loader::ConfigLoader;
+use systemprompt::manifest::Config;
 use systemprompt::marketplace::{AssembleRequest, ManifestService, MarketplaceCache};
-use systemprompt::models::Config;
 
 use crate::repositories::users::queries;
 use systemprompt_web_admin_core::connections::Connection;

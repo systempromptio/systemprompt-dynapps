@@ -37,9 +37,7 @@ fn context(pool: &Arc<PgPool>) -> JobContext {
     ));
     JobContext::new(
         Actor::user(UserId::new("jobs-usage-test")),
-        Arc::new(database),
-        Arc::new(()),
-        Arc::new(()),
+        systemprompt::traits::Dependencies::new().with(database),
     )
 }
 
@@ -263,9 +261,7 @@ async fn the_sweep_refuses_a_context_with_no_database() {
     };
     let empty = JobContext::new(
         Actor::user(UserId::new("jobs-usage-test")),
-        Arc::new(()),
-        Arc::new(()),
-        Arc::new(()),
+        systemprompt::traits::Dependencies::new(),
     );
 
     let error = job("usage_anomaly")

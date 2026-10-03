@@ -21,8 +21,8 @@
 //! cannot reach the injected one, and a second engine's rate limiter would
 //! double every budget.
 
-use systemprompt::ai::{Finding, SafetyScanner, Severity, register_safety_scanner};
-use systemprompt::models::wire::canonical::{CanonicalRequest, CanonicalResponse};
+use systemprompt::gateway::{Finding, SafetyScanner, Severity, register_safety_scanner};
+use systemprompt::wire::canonical::{CanonicalRequest, CanonicalResponse};
 
 use std::sync::LazyLock;
 
@@ -72,16 +72,22 @@ impl SafetyScanner for SecretsScanner {
         "secrets"
     }
 
-    async fn scan_request(&self, _req: &CanonicalRequest) -> Vec<Finding> {
-        Vec::new()
+    async fn scan_request(
+        &self,
+        _req: &CanonicalRequest,
+    ) -> Result<Vec<Finding>, systemprompt::gateway::ScanError> {
+        Ok(Vec::new())
     }
 
-    async fn scan_response_final(&self, response: &CanonicalResponse) -> Vec<Finding> {
+    async fn scan_response_final(
+        &self,
+        response: &CanonicalResponse,
+    ) -> Result<Vec<Finding>, systemprompt::gateway::ScanError> {
         let mut findings = Vec::new();
         for unit in response.content_units() {
             findings.extend(self.scan(&unit));
         }
-        findings
+        Ok(findings)
     }
 }
 
@@ -141,26 +147,37 @@ impl SafetyScanner for PiiScanner {
         "pii_extended"
     }
 
-    async fn scan_request(&self, req: &CanonicalRequest) -> Vec<Finding> {
-        req.safety_parts(false)
+    async fn scan_request(
+        &self,
+        req: &CanonicalRequest,
+    ) -> Result<Vec<Finding>, systemprompt::gateway::ScanError> {
+        Ok(req
+            .safety_parts(false)
             .into_iter()
             .flat_map(|(_, text)| pii_findings(&text, "request"))
-            .collect()
+            .collect())
     }
 
-    async fn scan_request_history(&self, req: &CanonicalRequest) -> Vec<Finding> {
-        req.safety_parts(true)
+    async fn scan_request_history(
+        &self,
+        req: &CanonicalRequest,
+    ) -> Result<Vec<Finding>, systemprompt::gateway::ScanError> {
+        Ok(req
+            .safety_parts(true)
             .into_iter()
             .flat_map(|(_, text)| pii_findings(&text, "request_history"))
-            .collect()
+            .collect())
     }
 
-    async fn scan_response_final(&self, response: &CanonicalResponse) -> Vec<Finding> {
-        response
+    async fn scan_response_final(
+        &self,
+        response: &CanonicalResponse,
+    ) -> Result<Vec<Finding>, systemprompt::gateway::ScanError> {
+        Ok(response
             .content_units()
             .into_iter()
             .flat_map(|unit| pii_findings(&unit, "response"))
-            .collect()
+            .collect())
     }
 }
 
