@@ -33,7 +33,6 @@ fn server(pool: &Arc<PgPool>) -> SystempromptServer {
         hook(),
         ingest,
     )
-    .expect("construct the systemprompt server against a live pool")
 }
 
 #[tokio::test]
@@ -119,8 +118,7 @@ async fn a_different_service_id_only_changes_the_server_name() {
         McpServerId::try_new("sp-staging").expect("valid fixture identifier"),
         hook(),
         ingest,
-    )
-    .expect("construct with a different service id");
+    );
 
     let info = renamed.get_info();
 

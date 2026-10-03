@@ -8,7 +8,6 @@ mod overflow;
 #[doc(hidden)]
 pub mod tool;
 
-use crate::error::SystempromptToolError;
 use crate::tools::{self, SERVER_NAME};
 use rmcp::model::{
     CallToolRequestParams, CallToolResponse, Icon, Implementation, InitializeRequestParams,
@@ -52,7 +51,7 @@ impl SystempromptServer {
         service_id: McpServerId,
         authz_hook: SharedAuthzHook,
         artifact_ingest: Arc<ArtifactIngest>,
-    ) -> Result<Self, SystempromptToolError> {
+    ) -> Self {
         let tool_usage_repo = Arc::new(ToolUsageRepository::new(&db_pool));
         let intent_claims: DynToolCallIntentClaims = Arc::new(AiRequestRepository::new(&db_pool));
         let executor = McpToolExecutor::new(
@@ -62,13 +61,13 @@ impl SystempromptServer {
             service_id.clone(),
         );
 
-        Ok(Self {
+        Self {
             service_id,
             db_pool,
             executor,
             authz_hook,
             artifact_ingest,
-        })
+        }
     }
 }
 

@@ -29,6 +29,22 @@ use crate::tempdb::TempDb;
 // the total pins that no stage is silently dropped.
 const PIPELINE_STAGES: u64 = 11;
 
+pub(crate) fn assert_missing_database(error: systemprompt::traits::ProviderError) {
+    let systemprompt::traits::ProviderError::Internal(source) = error else {
+        panic!("expected an internal dependency error: {error}");
+    };
+    let job_error = source
+        .downcast_ref::<systemprompt_web_jobs::JobError>()
+        .expect("the provider preserves the typed job error");
+    let systemprompt_web_jobs::JobError::Dependency(missing) = job_error else {
+        panic!("expected a missing dependency: {job_error}");
+    };
+    let expected = systemprompt::traits::Dependencies::new()
+        .get::<Arc<Database>>()
+        .expect_err("an empty context has no database");
+    assert_eq!(*missing, expected);
+}
+
 // `load_master_key` accepts only a 32-byte hex key.
 #[expect(
     unsafe_code,
@@ -406,10 +422,7 @@ async fn llms_txt_refuses_a_context_with_no_database() {
         .await
         .expect_err("the manifest is built from content rows");
 
-    assert!(
-        error.to_string().contains("DbPool"),
-        "the error names the missing context entry: {error}"
-    );
+    assert_missing_database(error);
 
     h.cleanup().await;
 }
@@ -425,7 +438,7 @@ async fn sitemap_generation_refuses_a_context_with_no_database() {
         .await
         .expect_err("the sitemap is built from content rows");
 
-    assert!(error.to_string().contains("DbPool"));
+    assert_missing_database(error);
 
     h.cleanup().await;
 }
@@ -642,7 +655,7 @@ async fn site_content_prerender_refuses_a_context_with_no_database() {
         .await
         .expect_err("prerendering reads content out of the database");
 
-    assert!(error.to_string().contains("DbPool"));
+    assert_missing_database(error);
 }
 
 #[tokio::test]
@@ -747,7 +760,7 @@ async fn secret_migration_refuses_a_context_with_no_database() {
         .await
         .expect_err("the migration reads and rewrites database rows");
 
-    assert!(error.to_string().contains("Database not available"));
+    assert_missing_database(error);
 }
 
 #[tokio::test]
@@ -789,7 +802,7 @@ async fn publish_pipeline_refuses_a_context_with_no_database() {
         .await
         .expect_err("the pipeline needs a database before it runs a single stage");
 
-    assert!(error.to_string().contains("Database not available"));
+    assert_missing_database(error);
 }
 
 #[tokio::test]
@@ -931,7 +944,7 @@ async fn content_ingestion_refuses_a_context_with_no_database() {
         .await
         .expect_err("ingestion writes rows and so needs a write pool");
 
-    assert!(error.to_string().contains("Database not available"));
+    assert_missing_database(error);
 }
 
 fn single_source_config(tree: &Path) -> String {

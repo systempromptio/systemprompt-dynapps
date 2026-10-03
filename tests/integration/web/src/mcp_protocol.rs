@@ -62,8 +62,7 @@ fn server(pool: &Arc<PgPool>) -> (SystempromptServer, Arc<ArtifactIngest>) {
         McpServerId::try_new("systemprompt").expect("valid service id"),
         deny_all_hook(),
         Arc::clone(&ingest),
-    )
-    .expect("server from live database");
+    );
     (server, ingest)
 }
 

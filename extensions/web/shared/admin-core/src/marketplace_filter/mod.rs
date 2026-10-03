@@ -37,9 +37,9 @@ pub struct TemplateMarketplaceFilter {
 }
 
 impl TemplateMarketplaceFilter {
-    pub fn from_db(db: &DbPool) -> Result<Arc<dyn MarketplaceFilter>, MarketplaceFilterError> {
+    pub fn from_db(db: &DbPool) -> Arc<dyn MarketplaceFilter> {
         let pool = db.pool();
-        Ok(Arc::new(Self::from_pool(pool)))
+        Arc::new(Self::from_pool(pool))
     }
 
     pub fn from_pool(pool: Arc<PgPool>) -> Self {
@@ -131,4 +131,7 @@ fn keep_if_connection_ready(
     false
 }
 
-register_marketplace_filter!(TemplateMarketplaceFilter::from_db, priority = 100);
+register_marketplace_filter!(
+    |db| Ok(TemplateMarketplaceFilter::from_db(db)),
+    priority = 100
+);

@@ -269,10 +269,7 @@ async fn the_sweep_refuses_a_context_with_no_database() {
         .await
         .expect_err("a job wired without a pool fails rather than doing nothing");
 
-    assert!(
-        error.to_string().contains("DbPool"),
-        "the failure names the missing slot: {error}"
-    );
+    crate::jobs_context::assert_missing_database(error);
 
     db.cleanup().await;
 }
