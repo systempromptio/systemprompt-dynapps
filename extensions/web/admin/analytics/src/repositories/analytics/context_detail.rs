@@ -108,8 +108,8 @@ pub async fn find_context_header(
             u.display_name                        AS "display_name?",
             COALESCE(c.session_id, r.session_id)  AS "session_id?: SessionId",
             c.name                                AS "name?",
-            c.created_at                          AS "created_at?",
-            c.updated_at                          AS "updated_at?",
+            COALESCE(c.created_at, r.created_at)    AS "created_at?",
+            COALESCE(c.updated_at, r.updated_at)    AS "updated_at?",
             r.client_session_id                   AS "client_session_id?",
             s.ai_title                            AS "ai_title?",
             s.status                              AS "hook_status?"
@@ -118,16 +118,17 @@ pub async fn find_context_header(
                 context_id,
                 MAX(user_id) AS user_id,
                 MAX(session_id) AS session_id,
-                MAX(client_session_id) AS client_session_id
-            FROM ai_requests
-            WHERE context_id = $1
+                MAX(client_session_id) AS client_session_id,
+                MIN(created_at) AS created_at, MAX(created_at) AS updated_at
+            FROM conversation_requests
+            WHERE context_id = canonical_conversation_context($1)
             GROUP BY context_id
         ) r
         FULL OUTER JOIN user_contexts c
           ON c.context_id = r.context_id
         LEFT JOIN plugin_session_summaries s ON s.session_id = r.client_session_id
         LEFT JOIN users u ON u.id = COALESCE(c.user_id, r.user_id)
-        WHERE COALESCE(c.context_id, r.context_id) = $1
+        WHERE COALESCE(c.context_id, r.context_id) = canonical_conversation_context($1)
         LIMIT 1
         "#,
         context_id.as_str()
@@ -162,13 +163,13 @@ pub async fn get_context_kpis(
                                                                AS "side_call_cost_microdollars!",
             (SELECT COUNT(*)::bigint FROM ai_request_tool_calls t
               JOIN conversation_requests tr ON tr.id = t.request_id
-             WHERE tr.context_id = $1 AND tr.effective_kind = 'turn')
+             WHERE tr.context_id = canonical_conversation_context($1) AND tr.effective_kind = 'turn')
                                                                AS "tool_call_count!",
             COALESCE(ARRAY_AGG(DISTINCT cr.model) FILTER (WHERE cr.model IS NOT NULL),
                      ARRAY[]::text[])                          AS "models!: Vec<String>"
         FROM conversation_requests cr
         JOIN ai_requests ar ON ar.id = cr.id
-        WHERE cr.context_id = $1
+        WHERE cr.context_id = canonical_conversation_context($1)
         "#,
         context_id.as_str()
     )
@@ -220,7 +221,7 @@ pub async fn list_context_requests(
               WHERE m.request_id = cr.id)       AS "message_count!"
         FROM conversation_requests cr
         JOIN ai_requests ar ON ar.id = cr.id
-        WHERE cr.context_id = $1
+        WHERE cr.context_id = canonical_conversation_context($1)
         ORDER BY cr.created_at DESC
         LIMIT $2
         "#,

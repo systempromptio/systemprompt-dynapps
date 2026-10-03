@@ -127,7 +127,7 @@ pub async fn list_conversation_safety_findings(
                   s.ai_request_id AS "request_id!", s.excerpt
            FROM ai_safety_findings s
            JOIN conversation_requests cr ON cr.id = s.ai_request_id
-           WHERE cr.context_id = $1
+           WHERE cr.context_id = canonical_conversation_context($1)
            ORDER BY s.created_at
            LIMIT 200"#,
         context_id.as_str()

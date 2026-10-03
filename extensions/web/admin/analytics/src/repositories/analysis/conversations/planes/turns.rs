@@ -57,7 +57,7 @@ pub async fn list_conversation_turns(
                   ar.error_message
            FROM conversation_requests cr
            JOIN ai_requests ar ON ar.id = cr.id
-           WHERE cr.context_id = $1
+           WHERE cr.context_id = canonical_conversation_context($1)
            ORDER BY cr.created_at, cr.id
            LIMIT 500"#,
         context_id.as_str()

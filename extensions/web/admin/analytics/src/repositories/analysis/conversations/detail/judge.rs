@@ -12,7 +12,7 @@ pub async fn insert_manual_judgement(
     requested_by: &UserId,
 ) -> Result<bool, sqlx::Error> {
     let user_id = sqlx::query_scalar!(
-        r#"SELECT f.user_id AS "user_id!" FROM conversation_facts f WHERE f.context_id = $1"#,
+        r#"SELECT f.user_id AS "user_id!" FROM conversation_facts f WHERE f.context_id = canonical_conversation_context($1)"#,
         context_id.as_str()
     )
     .fetch_optional(pool)

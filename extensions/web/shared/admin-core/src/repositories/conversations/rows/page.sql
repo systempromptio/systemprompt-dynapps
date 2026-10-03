@@ -1,17 +1,17 @@
 -- One snapshot and one numeric aggregation for rows, KPIs and pagination.
 -- Date/identity predicates select candidate contexts, never truncate their turns.
 WITH candidate_ids AS (
-    SELECT ar.context_id::text FROM ai_requests ar
+    SELECT ar.context_id::text FROM conversation_requests ar
     WHERE ar.context_id <> '00000000-0000-0000-0000-4c4547414359'
       AND ($1::text IS NULL OR ar.user_id = $1)
       AND ($2::text[] IS NULL OR ar.user_id = ANY($2))
       AND ($5::timestamptz IS NULL OR ar.created_at >= $5)
     GROUP BY ar.context_id
     UNION
-    SELECT c.context_id FROM user_contexts c
+    SELECT canonical_conversation_context(c.context_id) AS context_id FROM user_contexts c
     WHERE $5::timestamptz IS NOT NULL AND c.updated_at >= $5
       AND c.context_id <> '00000000-0000-0000-0000-4c4547414359'
-      AND EXISTS (SELECT 1 FROM ai_requests ar WHERE ar.context_id = c.context_id
+      AND EXISTS (SELECT 1 FROM conversation_requests ar WHERE ar.context_id = canonical_conversation_context(c.context_id)
           AND ($1::text IS NULL OR ar.user_id = $1)
           AND ($2::text[] IS NULL OR ar.user_id = ANY($2)))
 ), candidates AS MATERIALIZED (
@@ -90,7 +90,7 @@ WITH candidate_ids AS (
 ), enriched AS MATERIALIZED (
     SELECT s.*, conversation_title(s.context_id, s.client_session_id) AS title FROM selected s
 ), model_requests AS MATERIALIZED (
-    SELECT ar.user_id, ar.context_id, ar.model, ar.client_kind, ar.client_attestation FROM ai_requests ar
+    SELECT ar.user_id, ar.context_id, ar.model, ar.client_kind, ar.client_attestation FROM conversation_requests ar
     WHERE ar.user_id IN (SELECT user_id FROM user_page)
 ), model_counts AS (
     SELECT ar.user_id, ar.model, COUNT(*)::bigint AS requests

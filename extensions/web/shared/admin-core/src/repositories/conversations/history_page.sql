@@ -1,7 +1,7 @@
 WITH classified AS MATERIALIZED (
             SELECT cr.* FROM conversation_requests cr
             WHERE cr.context_id IN (
-                SELECT DISTINCT context_id FROM ai_requests
+                SELECT DISTINCT context_id FROM conversation_requests
                 WHERE ($1::text[] IS NULL OR user_id = ANY($1)) AND context_id <> $4
                   AND ($7::timestamptz IS NULL OR created_at >= $7)
             )

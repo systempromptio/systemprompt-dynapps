@@ -20,7 +20,7 @@ pub async fn refresh_conversation_facts(
     context_id: &ContextId,
 ) -> Result<bool, sqlx::Error> {
     let written = sqlx::query_scalar!(
-        r#"SELECT refresh_conversation_facts(ARRAY[$1::text]) AS "written!""#,
+        r#"SELECT refresh_conversation_facts(ARRAY[canonical_conversation_context($1)]) AS "written!""#,
         context_id.as_str()
     )
     .fetch_one(pool)
@@ -226,7 +226,7 @@ pub async fn find_conversation_facts(
            LEFT JOIN users u ON u.id = f.user_id
            LEFT JOIN groups g ON g.id = f.group_id
            LEFT JOIN projects p ON p.id = f.project_id
-           WHERE f.context_id = $1"#,
+           WHERE f.context_id = canonical_conversation_context($1)"#,
         context_id.as_str()
     )
     .fetch_optional(pool)
