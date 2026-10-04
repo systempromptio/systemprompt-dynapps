@@ -272,6 +272,14 @@ _clippy-uncoordinated *FLAGS: lint-no-synthesis lint-no-untyped-admin lint-gates
         cargo clippy --manifest-path bridge/Cargo.toml --all-targets --target x86_64-pc-windows-gnu {{FLAGS}} -- -D warnings
     fi
 
+# Focused Desktop/Bridge policy and protocol regression tests.
+test-bridge:
+    @scripts/build-coordinator.sh run test-bridge "" -- {{just_executable()}} _test-bridge-uncoordinated
+
+_test-bridge-uncoordinated:
+    cargo nextest run --no-fail-fast --manifest-path tests/Cargo.toml -p bridge-unit-tests
+    node --experimental-vm-modules --test tests/bridge/*.test.mjs
+
 # Unit tests: the unit crates of the tests/ workspace.
 # If sqlx offline errors appear, run `just prepare` first to refresh .sqlx.
 test-unit:

@@ -89,7 +89,7 @@ Audited 142 top-level settings against [Anthropic’s configuration reference](h
 | `builtinToolPolicy` | object | 1.8089.0 | default | Enable normal public web tools and bundled skills. |
 | `autoModeEnabled` | boolean | 1.10628.0 | operator-configurable | Explicit deployment option; preserve current behavior when unset. |
 | `disableBypassPermissionsMode` | boolean | 1.46388.1 | operator-configurable | Explicit deployment option; preserve current behavior when unset. |
-| `toolSearchEnabled` | boolean | 1.21459.0 | default | Load MCP schemas on demand; native search requests use a compatible Anthropic route. |
+| `toolSearchEnabled` | boolean | 1.21459.0 | operator-configurable | Enable through the signed fleet policy only after native-tool routing is supported. |
 | `skipWebFetchPreflight` | boolean | 1.37937.0 | operator-configurable | Explicit deployment option; preserve current behavior when unset. |
 | `allowedWorkspaceFolders` | object[] | 1.2581.0 | bridge-owned | Resolved from trusted gateway, identity, model, connector, or workspace sources. |
 | `blockReadsOutsideWorkingDirectories` | boolean | 1.46388.1 | operator-configurable | Explicit deployment option; preserve current behavior when unset. |
@@ -117,12 +117,12 @@ Audited 142 top-level settings against [Anthropic’s configuration reference](h
 | `relaunchEnforcementHours` | integer | 1.40609.0 | default | Chosen fleet default for predictable 1M operation, updates, file analysis, or metadata diagnostics. |
 | `configRecheckIntervalMinutes` | integer | 1.46388.1 | default | Chosen fleet default for predictable 1M operation, updates, file analysis, or metadata diagnostics. |
 | `disableLocalConfigCache` | boolean | 2.7032.0 | inapplicable | Not used by the Bridge gateway deployment; do not emit. |
-| `otlpEndpoint` | string | 1.2581.0 | diagnostics | Astound metadata-only diagnostics; content capture and arbitrary exporter destinations are restricted. |
-| `otlpProtocol` | enum | 1.2581.0 | diagnostics | Astound metadata-only diagnostics; content capture and arbitrary exporter destinations are restricted. |
-| `otlpHeaders` | object | 1.2581.0 | diagnostics | Astound metadata-only diagnostics; content capture and arbitrary exporter destinations are restricted. |
-| `otlpAuthMode` | enum | 1.30096.1 | diagnostics | Astound metadata-only diagnostics; content capture and arbitrary exporter destinations are restricted. |
-| `otlpHeadersHelper` | string | 1.30096.1 | diagnostics | Astound metadata-only diagnostics; content capture and arbitrary exporter destinations are restricted. |
-| `otlpResourceAttributes` | object | 1.5354.0 | diagnostics | Astound metadata-only diagnostics; content capture and arbitrary exporter destinations are restricted. |
+| `otlpEndpoint` | string | 1.2581.0 | bridge-owned | Authenticated Bridge telemetry transport and server-bound identity are authoritative. |
+| `otlpProtocol` | enum | 1.2581.0 | bridge-owned | Authenticated Bridge telemetry transport and server-bound identity are authoritative. |
+| `otlpHeaders` | object | 1.2581.0 | bridge-owned | Authenticated Bridge telemetry transport and server-bound identity are authoritative. |
+| `otlpAuthMode` | enum | 1.30096.1 | bridge-owned | Authenticated Bridge telemetry transport and server-bound identity are authoritative. |
+| `otlpHeadersHelper` | string | 1.30096.1 | bridge-owned | Authenticated Bridge telemetry transport and server-bound identity are authoritative. |
+| `otlpResourceAttributes` | object | 1.5354.0 | bridge-owned | Authenticated Bridge telemetry transport and server-bound identity are authoritative. |
 | `otlpDesktopLogLevel` | enum | 1.9255.0 | default | Chosen fleet default for predictable 1M operation, updates, file analysis, or metadata diagnostics. |
 | `otlpContentCapture` | enum[] | 1.15962.0 | default | Chosen fleet default for predictable 1M operation, updates, file analysis, or metadata diagnostics. |
 | `otlpTracesEnabled` | boolean | 1.22209.0 | default | Chosen fleet default for predictable 1M operation, updates, file analysis, or metadata diagnostics. |
@@ -133,7 +133,7 @@ Audited 142 top-level settings against [Anthropic’s configuration reference](h
 | `inferenceMaxTokensPerWindow` | integer | 1.2581.0 | operator-configurable | Explicit deployment option; preserve current behavior when unset. |
 | `inferenceTokenWindowHours` | integer | 1.2581.0 | operator-configurable | Explicit deployment option; preserve current behavior when unset. |
 | `endUserAttribution` | boolean | 1.25927.0 | operator-configurable | Explicit deployment option; preserve current behavior when unset. |
-| `deploymentDisplayName` | string | 1.24012.0 | default | Chosen fleet default for predictable 1M operation, updates, file analysis, or metadata diagnostics. |
+| `deploymentDisplayName` | string | 1.24012.0 | operator-configurable | Use the deployment name from the signed fleet policy; do not hard-code client branding in core. |
 | `deploymentDisplaySubtitle` | string | 1.24012.0 | operator-configurable | Explicit deployment option; preserve current behavior when unset. |
 | `disableConfigDeprecationWarnings` | boolean | 1.40609.0 | operator-configurable | Explicit deployment option; preserve current behavior when unset. |
 | `banner` | object | 1.7196.0 | operator-configurable | Explicit deployment option; preserve current behavior when unset. |

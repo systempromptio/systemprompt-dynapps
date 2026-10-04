@@ -235,3 +235,20 @@ async fn large_inference_body_is_accepted_and_oversize_is_reported_as_bytes() {
             .contains("serialized inference request")
     );
 }
+
+#[test]
+fn tool_search_requires_an_explicit_compatible_fleet_policy() {
+    let legacy = resolved_settings(&DesktopPolicy::default()).unwrap();
+    assert!(!legacy.iter().any(|(key, _)| *key == "toolSearchEnabled"));
+    let policy: DesktopPolicy = serde_json::from_value(json!({
+        "schema_version":1,
+        "settings":{"toolSearchEnabled":true,"deploymentDisplayName":"Astound Digital"}
+    }))
+    .unwrap();
+    let configured = resolved_settings(&policy).unwrap();
+    assert!(configured.contains(&("toolSearchEnabled", PolicyValue::Bool(true))));
+    assert!(configured.contains(&(
+        "deploymentDisplayName",
+        PolicyValue::Str("Astound Digital".to_owned())
+    )));
+}
