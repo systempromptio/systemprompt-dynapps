@@ -9,11 +9,11 @@ ai:
     # under the vertex service account.
     vertex-anthropic:
       enabled: true
-      google_search_enabled: false
+      google_search_enabled: true
       default_model: claude-sonnet-5
     anthropic:
       enabled: true
-      google_search_enabled: false
+      google_search_enabled: true
       default_model: anthropic-claude-sonnet-5
     # Why: the conversation_judge job judges through Gemini 3.8 Flash
     # (response schema enforced by the API) in-process via AiService, which
@@ -21,7 +21,7 @@ ai:
     # enough.
     gemini:
       enabled: true
-      google_search_enabled: false
+      google_search_enabled: true
       default_model: gemini-3.8-flash
   mcp:
     auto_discover: true

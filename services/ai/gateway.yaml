@@ -5,6 +5,14 @@
 gateway:
   enabled: true
   routes:
+  # Server web and deferred-tool search need Anthropic's native tool service.
+  # Keep ordinary Claude inference on Vertex, with the same gateway governance.
+  - id: claude-native-tools
+    name: Claude native web and tool search
+    model_pattern: claude-*
+    provider: anthropic
+    when:
+      tool_names_any: [WebSearch, WebFetch, web_search, web_fetch, tool_search_tool_regex, tool_search_tool_bm25]
   # Claude is served from Vertex AI under the `vertex` service account: the
   # bare claude-* ids Claude Code and the bridge ask for belong to
   # `vertex-anthropic`. Failover to Anthropic's own API covers Vertex capacity:

@@ -18,7 +18,7 @@ Failing to try first — asking the user to connect, or surfacing a "not connect
 
 # Lead Triage
 
-Resolve lead(s) → read Lead + matching Account + prior activity in one turn → score fit and intent → route. Salesforce only: no web search, email or Drive lookups (not available). All fields below are verified on this org — no `objectInfos` grounding calls.
+Resolve lead(s) → read Lead + matching Account + prior activity in one turn → score fit and intent → route. Use Salesforce for lead records; use WebSearch/WebFetch when external verification helps assess fit or intent, citing sources. Email and Drive lookups are outside this workflow. All fields below are verified on this org — no `objectInfos` grounding calls.
 
 ## 1. Read (one turn, parallel)
 
