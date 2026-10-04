@@ -182,7 +182,7 @@ fn desktop_json_logs_decode_without_exporting_content() {
     )
     .unwrap();
     let record = &decoded.resource_logs[0].scope_logs[0].log_records[0];
-    assert_eq!(record.time_unix_nano, 123456789);
+    assert_eq!(record.time_unix_nano, 123_456_789);
     assert_eq!(record.trace_id.len(), 16);
     assert!(record.body.is_none());
 }
