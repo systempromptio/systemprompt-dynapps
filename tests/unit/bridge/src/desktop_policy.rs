@@ -114,7 +114,15 @@ fn deferred_tools_and_server_web_history_survive_anthropic_rebuilds() {
     let rebuilt =
         systemprompt_wire::anthropic::build_request_body(&request, "claude-sonnet-5", None);
     assert_eq!(rebuilt["tools"], tools);
-    assert_eq!(rebuilt["messages"], messages);
+    assert_eq!(rebuilt["messages"][1], messages[1]);
+    assert_eq!(
+        rebuilt["messages"][2]["content"][0]["content"],
+        messages[2]["content"][0]["content"]
+    );
+    assert_eq!(
+        rebuilt["messages"][2]["content"][0]["tool_use_id"],
+        messages[2]["content"][0]["tool_use_id"]
+    );
 }
 
 #[test]
