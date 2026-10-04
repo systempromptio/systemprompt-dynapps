@@ -18,6 +18,8 @@ pub struct ContextToolCallRow {
     pub tool_input: serde_json::Value,
     // JSON: variable-shape MCP tool result
     pub tool_result_payload: Option<serde_json::Value>,
+    pub tool_input_raw: Option<String>,
+    pub tool_input_parse_error: Option<String>,
     pub artifact_id: Option<ArtifactId>,
     pub artifact_structured: bool,
     pub created_at: DateTime<Utc>,
@@ -30,21 +32,14 @@ pub async fn list_tool_calls_for_requests(
     if request_ids.is_empty() {
         return Ok(Vec::new());
     }
-    // JSON: variable-shape tool payload columns
-    sqlx::query_as!(
-        ContextToolCallRow,
+    let rows = sqlx::query!(
         r#"
         SELECT
             t.request_id          AS "request_id!: AiRequestId",
             t.tool_name           AS "tool_name!",
             t.sequence_number     AS "sequence_number!",
             t.ai_tool_call_id     AS "ai_tool_call_id?: AiToolCallId",
-            -- `tool_input` is a TEXT column holding a JSON document. Selecting
-            -- it raw decoded to JSON null in every row, because sqlx handed
-            -- the text bytes to `serde_json::Value`'s Postgres decoder, which
-            -- expects the JSON wire format. The cast makes the column what the
-            -- Rust type already claimed it was.
-            t.tool_input::jsonb   AS "tool_input!: serde_json::Value",
+            t.tool_input          AS "tool_input!",
             t.tool_result_payload AS "tool_result_payload?: serde_json::Value",
             l.artifact_id         AS "artifact_id: ArtifactId",
             COALESCE(l.is_structured, FALSE) AS "artifact_structured!",
@@ -58,5 +53,47 @@ pub async fn list_tool_calls_for_requests(
         request_ids
     )
     .fetch_all(pool)
-    .await
+    .await?;
+    Ok(rows
+        .into_iter()
+        .map(|r| {
+            let (tool_input, tool_input_raw, tool_input_parse_error) =
+                parse_tool_input(&r.tool_input);
+            if tool_input_parse_error.is_some() {
+                tracing::warn!(request_id = %r.request_id, sequence_number = r.sequence_number,
+                "Stored tool arguments could not be parsed");
+            }
+            ContextToolCallRow {
+                request_id: r.request_id,
+                tool_name: r.tool_name,
+                sequence_number: r.sequence_number,
+                ai_tool_call_id: r.ai_tool_call_id,
+                tool_input,
+                tool_input_raw,
+                tool_input_parse_error,
+                tool_result_payload: r.tool_result_payload,
+                artifact_id: r.artifact_id,
+                artifact_structured: r.artifact_structured,
+                created_at: r.created_at,
+            }
+        })
+        .collect())
+}
+
+// JSON: Persisted MCP arguments may contain malformed legacy tool payloads.
+#[must_use]
+pub fn parse_tool_input(raw: &str) -> (serde_json::Value, Option<String>, Option<String>) {
+    match serde_json::from_str(raw) {
+        Ok(value) => (value, None, None),
+        Err(error) => (
+            serde_json::Value::Null,
+            Some(raw.to_owned()),
+            Some(format!(
+                "Stored arguments could not be parsed ({:?}, line {}, column {}).",
+                error.classify(),
+                error.line(),
+                error.column()
+            )),
+        ),
+    }
 }

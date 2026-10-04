@@ -54,7 +54,12 @@ pub(super) fn tool_step(
         tool_name: Some(row.map_or_else(|| marker.name.clone(), |r| r.tool_name.clone())),
         tool_input_pretty: Some(row.map_or_else(
             || pretty_json_text(&marker.input_json),
-            |r| pretty_json(&r.tool_input),
+            |r| {
+                r.tool_input_raw.as_ref().map_or_else(
+                    || pretty_json(&r.tool_input),
+                    |raw| format!("Stored arguments could not be parsed.\n\n{raw}"),
+                )
+            },
         )),
         tool_result_pretty: row
             .and_then(|r| r.tool_result_payload.as_ref())

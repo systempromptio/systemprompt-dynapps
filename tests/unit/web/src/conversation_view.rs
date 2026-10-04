@@ -69,6 +69,8 @@ fn history(id: &str, secs: i64, rows: &[(&str, &str)]) -> Vec<ContextMessageRow>
 
 fn tool(id: &str, seq: i32, name: &str, input: &str) -> ContextToolCallRow {
     ContextToolCallRow {
+        tool_input_raw: None,
+        tool_input_parse_error: None,
         request_id: AiRequestId::new(id),
         tool_name: name.to_owned(),
         sequence_number: seq,

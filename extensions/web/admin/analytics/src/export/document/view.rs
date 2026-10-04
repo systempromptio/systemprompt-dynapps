@@ -109,6 +109,10 @@ pub(crate) struct ToolCallDoc {
     pub tool_name: String,
     pub tool_use_id: Option<AiToolCallId>,
     pub tool_input: serde_json::Value,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tool_input_raw: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tool_input_parse_error: Option<String>,
     pub tool_result: Option<serde_json::Value>,
     pub artifact_id: Option<ArtifactId>,
     pub artifact_structured: bool,
@@ -122,6 +126,8 @@ pub(crate) fn tool_call_doc(t: ContextToolCallRow) -> ToolCallDoc {
         tool_name: t.tool_name,
         tool_use_id: t.ai_tool_call_id,
         tool_input: t.tool_input,
+        tool_input_raw: t.tool_input_raw,
+        tool_input_parse_error: t.tool_input_parse_error,
         tool_result: t.tool_result_payload,
         artifact_id: t.artifact_id,
         artifact_structured: t.artifact_structured,
