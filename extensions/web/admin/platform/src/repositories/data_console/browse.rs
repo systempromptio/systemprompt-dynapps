@@ -103,39 +103,14 @@ pub struct BrowsePage {
     pub limited: bool,
 }
 
-pub async fn get_table_page(
-    pool: &PgPool,
-    selection: &Selection,
-    cursor: Option<&str>,
-) -> AdminResult<BrowsePage> {
-    let mut tx = transaction(pool, "3s").await?;
-    read_only(&mut tx).await?;
-    let table = get_table(&mut tx, &selection.table).await?;
-    let columns = list_columns(&mut tx, &table).await?;
-    let keys = primary_columns(&columns);
-    let logs = table.schema == "public" && table.name == "logs";
-    let order: Vec<_> = if logs {
-        vec!["timestamp", "id"]
-    } else {
-        keys.iter().map(|c| c.name.as_str()).collect()
-    };
-    let cursor = cursor.map(cursor_value).transpose()?;
-    if cursor.is_some() && order.is_empty() {
-        return Err(bad(
-            "This table has no primary key; pagination is unavailable.",
-        ));
-    }
-    let projection = super::projection::fields(&columns, (16_384 / columns.len().max(1)).min(1000));
-    let key_sql = order
-        .iter()
-        .map(|name| format!("{}, to_jsonb(t.{})", literal(name), quote_identifier(name)))
-        .collect::<Vec<_>>()
-        .join(",");
-    let mut q = QueryBuilder::new(format!(
-        "SELECT ({projection}) AS body, jsonb_build_object({key_sql}) AS key FROM {} t WHERE",
-        table.sql()
-    ));
-    predicate(&mut q, selection, &columns, "t")?;
+// JSON: Cursor fields are primary keys selected from the runtime table catalog.
+fn append_page_cursor(
+    q: &mut QueryBuilder<Postgres>,
+    table: &Table,
+    order: &[&str],
+    cursor: Option<serde_json::Value>,
+    logs: bool,
+) -> AdminResult<()> {
     if let Some(value) = cursor {
         if !order.iter().all(|k| value.get(k).is_some()) {
             return Err(bad("Cursor does not match this table."));
@@ -173,6 +148,43 @@ pub async fn get_table_page(
                 .join(","),
         );
     }
+    Ok(())
+}
+
+pub async fn get_table_page(
+    pool: &PgPool,
+    selection: &Selection,
+    cursor: Option<&str>,
+) -> AdminResult<BrowsePage> {
+    let mut tx = transaction(pool, "3s").await?;
+    read_only(&mut tx).await?;
+    let table = get_table(&mut tx, &selection.table).await?;
+    let columns = list_columns(&mut tx, &table).await?;
+    let keys = primary_columns(&columns);
+    let logs = table.schema == "public" && table.name == "logs";
+    let order: Vec<_> = if logs {
+        vec!["timestamp", "id"]
+    } else {
+        keys.iter().map(|c| c.name.as_str()).collect()
+    };
+    let cursor = cursor.map(cursor_value).transpose()?;
+    if cursor.is_some() && order.is_empty() {
+        return Err(bad(
+            "This table has no primary key; pagination is unavailable.",
+        ));
+    }
+    let projection = super::projection::fields(&columns, (16_384 / columns.len().max(1)).min(1000));
+    let key_sql = order
+        .iter()
+        .map(|name| format!("{}, to_jsonb(t.{})", literal(name), quote_identifier(name)))
+        .collect::<Vec<_>>()
+        .join(",");
+    let mut q = QueryBuilder::new(format!(
+        "SELECT ({projection}) AS body, jsonb_build_object({key_sql}) AS key FROM {} t WHERE",
+        table.sql()
+    ));
+    predicate(&mut q, selection, &columns, "t")?;
+    append_page_cursor(&mut q, &table, &order, cursor, logs)?;
     q.push(" LIMIT 51");
     let mut result = BrowsePage {
         table: table.clone(),

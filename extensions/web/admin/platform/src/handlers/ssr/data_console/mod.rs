@@ -206,8 +206,20 @@ async fn load_page(pool: &PgPool, query: &BrowseQuery, logs: bool) -> AdminResul
     } else {
         page.columns.iter().map(|c| c.name.clone()).collect()
     };
-    data.rows = page
-        .rows
+    data.rows = table_rows(&page, &names, &s, logs, data.no_primary);
+    data.columns = names;
+    data.next_url = page.next.as_deref().map(|c| url(&s, logs, Some(c)));
+    Ok(data)
+}
+
+fn table_rows(
+    page: &browse::BrowsePage,
+    names: &[String],
+    selection: &Selection,
+    logs: bool,
+    no_primary: bool,
+) -> Vec<Row> {
+    page.rows
         .iter()
         .zip(&page.row_keys)
         .map(|(row, key)| Row {
@@ -240,20 +252,17 @@ async fn load_page(pool: &PgPool, query: &BrowseQuery, logs: bool) -> AdminResul
                     }
                 })
                 .collect(),
-            detail: if data.no_primary {
+            detail: if no_primary {
                 None
             } else {
                 Some(format!(
                     "{}&key={}",
-                    url(&s, logs, None),
+                    url(selection, logs, None),
                     urlencoding::encode(key)
                 ))
             },
         })
-        .collect();
-    data.columns = names;
-    data.next_url = page.next.as_deref().map(|c| url(&s, logs, Some(c)));
-    Ok(data)
+        .collect()
 }
 
 pub(crate) async fn logs_page(
