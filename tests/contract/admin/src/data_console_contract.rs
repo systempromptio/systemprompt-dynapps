@@ -140,7 +140,7 @@ async fn platform_forms_run_queries_and_clear_only_after_confirmation() {
     assert_eq!(status, StatusCode::OK, "{body}");
     assert!(body.contains("Query completed: 1 rows displayed."));
     assert!(body.contains("42"));
-    let selection = r#"{"table":"public.dc_form"}"#;
+    let selection = r#"{"table":"public.dc_form","filters":[]}"#;
     let form = url::form_urlencoded::Serializer::new(String::new())
         .append_pair("selection", selection)
         .append_pair("mode", "all")
