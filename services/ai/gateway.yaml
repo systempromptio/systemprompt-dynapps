@@ -12,7 +12,7 @@ gateway:
     model_pattern: claude-*
     provider: anthropic
     when:
-      tool_names_any: [WebSearch, WebFetch, web_search, web_fetch, tool_search_tool_regex, tool_search_tool_bm25]
+      tool_names_any: [WebSearch, WebFetch, ToolSearch, web_search, web_fetch, tool_search, tool_search_tool_regex, tool_search_tool_bm25]
   # Claude is served from Vertex AI under the `vertex` service account: the
   # bare claude-* ids Claude Code and the bridge ask for belong to
   # `vertex-anthropic`. Failover to Anthropic's own API covers Vertex capacity:

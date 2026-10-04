@@ -847,15 +847,19 @@ dependencies = [
 name = "bridge-unit-tests"
 version = "0.0.0"
 dependencies = [
+ "axum",
  "base64 0.22.1",
  "opentelemetry-proto",
  "serde_json",
  "systemprompt-api",
  "systemprompt-bridge",
  "systemprompt-gateway",
+ "systemprompt-manifest",
+ "systemprompt-models",
  "systemprompt-wire",
  "temp-env",
  "tempfile",
+ "tokio",
 ]
 
 [[package]]
@@ -6938,6 +6942,7 @@ dependencies = [
  "futures-util",
  "hex",
  "http",
+ "http-body-util",
  "ipnet",
  "metrics",
  "metrics-exporter-prometheus",

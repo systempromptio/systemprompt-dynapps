@@ -282,13 +282,10 @@ test-unit:
 # round (the 0.54.0 pin-flip took five rounds for twenty). Every tier runs to
 # completion and the job lists every failure at once.
 #
-# Why: every tier passes --workspace and picks its crates with a nextest
-# filter rather than -p. A -p set unifies features for that set alone, so the
-# three tiers compiled the admin crates and everything above them three
-# times over (40 + 27 + 15 min on a cold CI runner, past the job budget);
-# --workspace unifies once and the second and third tiers reuse the build.
+# Unit tests select their three crates explicitly. Database tiers use
+# --workspace to unify their broader feature set and reuse it across tiers.
 _test-unit-uncoordinated:
-    cargo nextest run --no-fail-fast --manifest-path tests/Cargo.toml --workspace -E 'package(mcp-unit-tests) | package(web-unit-tests) | package(bridge-unit-tests)'
+    cargo nextest run --no-fail-fast --manifest-path tests/Cargo.toml -p mcp-unit-tests -p web-unit-tests -p bridge-unit-tests
     node --experimental-vm-modules --test tests/bridge/*.test.mjs
 
 # DB-backed integration tests. Creates/drops throwaway mcp_ext_test_*
