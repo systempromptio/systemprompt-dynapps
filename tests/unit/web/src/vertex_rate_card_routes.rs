@@ -94,7 +94,7 @@ fn native_tool_route_rejects_an_unpriced_upstream_model() {
         .iter_mut()
         .find(|model| model.upstream_model.as_deref() == Some("claude-sonnet-5"))
         .expect("Sonnet upstream model is configured");
-    model.pricing = Default::default();
+    model.pricing = systemprompt::manifest::services::ai::ModelPricing::default();
     let error = gateway()
         .resolve()
         .validate(&registry)
