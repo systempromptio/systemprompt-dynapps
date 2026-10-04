@@ -848,8 +848,12 @@ name = "bridge-unit-tests"
 version = "0.0.0"
 dependencies = [
  "base64 0.22.1",
+ "opentelemetry-proto",
  "serde_json",
+ "systemprompt-api",
  "systemprompt-bridge",
+ "systemprompt-gateway",
+ "systemprompt-wire",
  "temp-env",
  "tempfile",
 ]

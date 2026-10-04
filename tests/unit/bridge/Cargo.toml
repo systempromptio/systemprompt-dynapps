@@ -9,6 +9,14 @@ workspace = true
 
 [dependencies]
 systemprompt-bridge = { path = "../../../../systemprompt-core/bin/bridge" }
+systemprompt-wire = { path = "../../../../systemprompt-core/crates/shared/wire" }
+systemprompt-gateway = { path = "../../../../systemprompt-core/crates/app/gateway" }
+systemprompt-manifest = { path = "../../../../systemprompt-core/crates/shared/manifest" }
+systemprompt-models = { path = "../../../../systemprompt-core/crates/shared/models" }
+axum.workspace = true
+tokio.workspace = true
+systemprompt-api.workspace = true
+opentelemetry-proto = { version = "0.32", default-features = false, features = ["gen-tonic-messages", "trace", "logs", "metrics"] }
 base64.workspace = true
 serde_json.workspace = true
 tempfile.workspace = true

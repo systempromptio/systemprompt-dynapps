@@ -28,9 +28,9 @@ fn desktop_does_not_invent_context_capacity_without_gateway_limits() {
 #[test]
 fn desktop_lists_one_million_context_variant_per_supported_model() {
     let limits = serde_json::from_value(serde_json::json!({
-        "claude-sonnet-5": {"context_window": 1000000, "max_output_tokens": 128000},
-        "claude-haiku-4-5": {"context_window": 200000, "max_output_tokens": 64000},
-        "claude-fable-5-1": {"context_window": 1000000, "max_output_tokens": 128000}
+        "claude-sonnet-5": {"context_window": 1_000_000, "max_output_tokens": 128_000},
+        "claude-haiku-4-5": {"context_window": 200_000, "max_output_tokens": 64_000},
+        "claude-fable-5-1": {"context_window": 1_000_000, "max_output_tokens": 128_000}
     }))
     .unwrap();
     let models = [

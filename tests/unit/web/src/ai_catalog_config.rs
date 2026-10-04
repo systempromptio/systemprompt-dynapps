@@ -5,14 +5,15 @@
 //! pricing written beside it.
 //!
 //! Claude is served twice. The bare `claude-*` ids belong to
-//! `vertex-anthropic` (Claude on Vertex AI), which every `claude-*` request is
-//! routed to; Anthropic's own API carries the same models as
-//! `anthropic-claude-*`, each naming the bare id as its upstream model. That
-//! twin is what the route's failover lands on: core finds the requested model
-//! on the fallback provider by upstream name, so a Vertex model with no twin
-//! has nowhere to fail over to. The twins are `hidden`: they are never listed
-//! to a client, so nobody picks an `anthropic-claude-*` id, while the failover
-//! still finds them because it looks up by upstream name, not by listing.
+//! `vertex-anthropic` (Claude on Vertex AI), which ordinary `claude-*` requests
+//! use; native web and tool search route to Anthropic. Anthropic carries the
+//! models as `anthropic-claude-*`, each naming the bare id as its upstream
+//! model. That twin is what the route's failover lands on: core finds the
+//! requested model on the fallback provider by upstream name, so a Vertex model
+//! with no twin has nowhere to fail over to. The twins are `hidden`: they are
+//! never listed to a client, so nobody picks an `anthropic-claude-*` id, while
+//! the failover still finds them because it looks up by upstream name, not by
+//! listing.
 //!
 //! That makes catalog drift expensive in two directions. A missing current
 //! model is an outage for every client that names it. A stale price is a
@@ -259,7 +260,7 @@ fn the_gateway_default_model_is_a_catalog_entry() {
     let route = spec
         .routes
         .iter()
-        .find(|r| r.matches(&default_model))
+        .find(|r| r.matches(&default_model) && r.when.is_none())
         .expect("a route for the default model");
     assert_eq!(route.provider.as_str(), "vertex-anthropic");
     assert_eq!(
