@@ -88,8 +88,8 @@ fn cursor_value(cursor: &str) -> AdminResult<serde_json::Value> {
     }
     let bytes = URL_SAFE_NO_PAD
         .decode(cursor)
-        .map_err(|_| bad("Invalid cursor."))?;
-    serde_json::from_slice(&bytes).map_err(|_| bad("Invalid cursor."))
+        .map_err(|_error| bad("Invalid cursor."))?;
+    serde_json::from_slice(&bytes).map_err(|_error| bad("Invalid cursor."))
 }
 
 // JSON: The selected application table defines the row shape at runtime.

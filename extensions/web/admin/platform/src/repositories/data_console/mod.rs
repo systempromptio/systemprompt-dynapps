@@ -1,5 +1,7 @@
-//! Catalog-driven SQL for the platform data console. Identifiers come only
-//! from PostgreSQL's catalog; values are bound. Dynamic queries are necessary
+//! Catalog-driven SQL for the platform data console.
+//!
+//! Identifiers come only
+//! from `PostgreSQL`'s catalog; values are bound. Dynamic queries are necessary
 //! because operators select application tables at runtime.
 pub mod browse;
 pub mod catalog;
@@ -56,10 +58,10 @@ pub fn quote_identifier(name: &str) -> String {
 }
 
 pub(crate) fn read_error(error: sqlx::Error) -> AdminError {
-    if let sqlx::Error::Database(database) = &error {
-        if database.code().is_some_and(|code| code.starts_with("22")) {
-            return bad("A filter or cursor value is not valid for this table.");
-        }
+    if let sqlx::Error::Database(database) = &error
+        && database.code().is_some_and(|code| code.starts_with("22"))
+    {
+        return bad("A filter or cursor value is not valid for this table.");
     }
     error.into()
 }

@@ -71,7 +71,7 @@ pub(crate) async fn clear_preview(
         return Err(AdminError::BadRequest("Selection is too large.".into()).into());
     }
     let mut selection: Selection = serde_json::from_str(&form.selection)
-        .map_err(|_| AdminError::BadRequest("Invalid clearing selection.".into()))?;
+        .map_err(|_error| AdminError::BadRequest("Invalid clearing selection.".into()))?;
     let logs = form.source == "logs";
     if logs && selection.table != "public.logs" {
         return Err(AdminError::BadRequest("Logs clearing must target public.logs.".into()).into());

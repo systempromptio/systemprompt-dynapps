@@ -49,7 +49,7 @@ async fn delete_confirmed_rows_inner(
     token: &str,
     confirmation: &str,
 ) -> AdminResult<ClearPlan> {
-    let ticket = Uuid::parse_str(token).map_err(|_| bad("Invalid confirmation ticket."))?;
+    let ticket = Uuid::parse_str(token).map_err(|_error| bad("Invalid confirmation ticket."))?;
     let row = sqlx::query("SELECT selection,plan FROM platform_data_clear_previews WHERE id=$1 AND actor_id=$2 AND expires_at > now() FOR UPDATE")
         .bind(ticket).bind(actor).fetch_optional(&mut *conn).await?
         .ok_or_else(|| bad("Confirmation expired or was already used. Preview the clearing operation again."))?;
@@ -152,7 +152,9 @@ pub async fn insert_clear_preview(
         insert_clear_preview_inner(pool, actor, selection),
     )
     .await
-    .map_err(|_| bad("Preview exceeded five seconds. No data was cleared; narrow the selection."))?
+    .map_err(|_error| {
+        bad("Preview exceeded five seconds. No data was cleared; narrow the selection.")
+    })?
 }
 // Why: SQLx rolls back dropped transactions before their connections return
 // to the pool, including timeout cancellation.
@@ -170,7 +172,7 @@ pub async fn delete_confirmed_rows(
         delete_confirmed_rows_inner(&mut tx, actor, token, confirmation),
     )
     .await
-    .map_err(|_| {
+    .map_err(|_error| {
         bad("Clearing exceeded ten seconds. No changes were committed; narrow the selection.")
     })??;
     // Why: Postgres COMMIT must finish outside cancellation of the work timeout,

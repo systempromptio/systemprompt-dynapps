@@ -1,4 +1,4 @@
-//! Bounded field projections for arbitrary-width tables. PostgreSQL functions
+//! Bounded field projections for arbitrary-width tables. `PostgreSQL` functions
 //! accept at most 100 arguments, so JSON objects are assembled in chunks.
 use super::browse::literal;
 use super::catalog::Column;

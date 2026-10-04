@@ -1,4 +1,4 @@
-//! Parsed read-only queries, executed inside a PostgreSQL read-only
+//! Parsed read-only queries, executed inside a `PostgreSQL` read-only
 //! transaction.
 use super::{bad, read_only, transaction};
 use futures_util::TryStreamExt;
@@ -82,7 +82,7 @@ pub fn validate_query(input: &str) -> AdminResult<String> {
         return Err(bad("Queries are limited to 32 KiB."));
     }
     let statements = Parser::parse_sql(&PostgreSqlDialect {}, input)
-        .map_err(|_| bad("Could not parse the SQL query."))?;
+        .map_err(|_error| bad("Could not parse the SQL query."))?;
     if statements.len() != 1 {
         return Err(bad("Enter exactly one SELECT query."));
     }

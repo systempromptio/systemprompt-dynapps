@@ -45,7 +45,7 @@ fn require_admin(shell: &Page) -> AdminResult<()> {
 }
 fn date(raw: Option<&str>) -> AdminResult<Option<DateTime<Utc>>> {
     raw.filter(|s| !s.is_empty()).map(|s| DateTime::parse_from_rfc3339(s).map(|d| d.with_timezone(&Utc))
-        .map_err(|_| AdminError::BadRequest("Use an ISO timestamp including its timezone, for example 2026-10-04T02:38:26Z.".into()))).transpose()
+        .map_err(|_error| AdminError::BadRequest("Use an ISO timestamp including its timezone, for example 2026-10-04T02:38:26Z.".into()))).transpose()
 }
 fn selection(query: &BrowseQuery, logs: bool) -> AdminResult<Selection> {
     let mut s = Selection {
@@ -89,13 +89,13 @@ fn selection(query: &BrowseQuery, logs: bool) -> AdminResult<Selection> {
         }) {
             return Err(AdminError::BadRequest("Select a valid log level.".into()));
         }
-    } else if let (Some(column), Some(value)) = (&query.column, &query.value) {
-        if !column.is_empty() {
-            s.filters.push(Filter {
-                column: column.clone(),
-                value: value.clone(),
-            });
-        }
+    } else if let (Some(column), Some(value)) = (&query.column, &query.value)
+        && !column.is_empty()
+    {
+        s.filters.push(Filter {
+            column: column.clone(),
+            value: value.clone(),
+        });
     }
     Ok(s)
 }

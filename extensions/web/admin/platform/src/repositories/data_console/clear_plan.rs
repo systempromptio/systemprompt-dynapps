@@ -41,11 +41,10 @@ fn reachable(
     let mut out = BTreeSet::from([root]);
     loop {
         let mut changed = false;
-        for fk in keys
-            .iter()
-            .filter(|f| out.contains(&f.parent))
-            .collect::<Vec<_>>()
-        {
+        for fk in keys {
+            if !out.contains(&fk.parent) {
+                continue;
+            }
             if !tables.contains_key(&fk.child) {
                 return Err(bad(format!(
                     "Constraint {} reaches a table outside the application catalog.",
