@@ -82,6 +82,28 @@ fn the_full_rate_card_still_validates_against_the_gateway() {
 }
 
 #[test]
+fn native_tool_route_rejects_an_unpriced_upstream_model() {
+    let mut registry = registry();
+    let provider = registry
+        .providers
+        .iter_mut()
+        .find(|provider| provider.name.as_str() == "anthropic")
+        .expect("Anthropic provider is configured");
+    let model = provider
+        .models
+        .iter_mut()
+        .find(|model| model.upstream_model.as_deref() == Some("claude-sonnet-5"))
+        .expect("Sonnet upstream model is configured");
+    model.pricing = Default::default();
+    let error = gateway()
+        .resolve()
+        .validate(&registry)
+        .expect_err("native routing must retain the billable-model check");
+    assert!(error.to_string().contains("claude-native-tools"));
+    assert!(error.to_string().contains("anthropic-claude-sonnet-5"));
+}
+
+#[test]
 fn every_rate_card_id_matches_a_gateway_route() {
     let config = gateway().resolve();
     let unroutable: Vec<String> = card()
