@@ -49,25 +49,30 @@ pub(super) async fn prepare_tables(
     Ok((schema, triggers))
 }
 
+#[derive(Debug)]
+pub(super) struct RootSelection<'a> {
+    pub(super) table: &'a Table,
+    pub(super) columns: &'a [Column],
+    pub(super) selection: &'a Selection,
+    pub(super) ticket: uuid::Uuid,
+}
+
 pub(super) async fn populate(
     conn: &mut PgConnection,
-    root: &Table,
-    columns: &[Column],
-    selection: &Selection,
-    ticket: uuid::Uuid,
+    root: RootSelection<'_>,
     tables: &BTreeMap<i64, Table>,
     keys: &[ForeignKey],
 ) -> AdminResult<()> {
     let mut q = QueryBuilder::<Postgres>::new(format!(
         "INSERT INTO {} SELECT t.tableoid,t.ctid,true FROM {} t WHERE",
-        temp(root.oid),
-        root.sql()
+        temp(root.table.oid),
+        root.table.sql()
     ));
-    predicate(&mut q, selection, columns, "t")?;
+    predicate(&mut q, root.selection, root.columns, "t")?;
     // Why: Postgres stores the active ticket in a clearable table; excluding it
     // keeps the confirmation available until its transaction completes.
-    if root.label() == "public.platform_data_clear_previews" {
-        q.push(" AND t.id <> ").push_bind(ticket);
+    if root.table.label() == "public.platform_data_clear_previews" {
+        q.push(" AND t.id <> ").push_bind(root.ticket);
     }
     q.build().execute(&mut *conn).await?;
     loop {

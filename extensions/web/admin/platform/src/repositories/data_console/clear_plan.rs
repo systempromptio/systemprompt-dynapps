@@ -169,7 +169,18 @@ pub(crate) async fn prepare(
         .collect();
     let (mut schema, triggers) =
         clear_materialize::prepare_tables(conn, &tables, &keys, lock).await?;
-    clear_materialize::populate(conn, &root, &columns, selection, ticket, &tables, &keys).await?;
+    clear_materialize::populate(
+        conn,
+        clear_materialize::RootSelection {
+            table: &root,
+            columns: &columns,
+            selection,
+            ticket,
+        },
+        &tables,
+        &keys,
+    )
+    .await?;
     let effects = clear_materialize::effects(conn, &tables).await?;
     schema.push_str(
         &serde_json::to_string(&triggers)
