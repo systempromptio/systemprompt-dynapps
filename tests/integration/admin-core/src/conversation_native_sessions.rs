@@ -113,3 +113,82 @@ async fn ambiguous_legacy_context_never_selects_an_arbitrary_native_session() {
     assert_eq!(aliases, 2);
     db.cleanup().await;
 }
+
+// Desktop WebSearch helpers offer tools themselves, so they are real threads,
+// not title-generation utility calls. Conversation identity must still be the
+// native session, regardless of thread count, request status or tool catalogue.
+#[tokio::test]
+async fn desktop_failed_search_helpers_stay_in_one_conversation() {
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    let user = insert_user(&db.pool, &unique("desktop"), &unclaimed_email("desktop")).await;
+    let session = unique("desktop-session");
+    let contexts: Vec<String> = (0..3).map(|_| new_context_id()).collect();
+    let threads: Vec<String> = (0..3)
+        .map(|_| format!("ctx_{}", uuid::Uuid::new_v4().simple()))
+        .collect();
+    let mut ids = Vec::new();
+    for (thread, count) in [4, 1, 1].into_iter().enumerate() {
+        for _ in 0..count {
+            let id = unique("desktop-request");
+            let mut request = RequestSpec::completed(&id, &user);
+            request.context_id = Some(&contexts[thread]);
+            request.client_session_id = Some(&session);
+            if thread > 0 {
+                request.status = "failed";
+                request.cost_microdollars = 0;
+            }
+            insert_request(&db.pool, &request).await;
+            crate::fixtures::insert_offered_tools(&db.pool, &id).await;
+            sqlx::query("UPDATE ai_requests SET gateway_conversation_id = $1 WHERE id = $2")
+                .bind(&threads[thread])
+                .bind(&id)
+                .execute(&*db.pool)
+                .await
+                .expect("stamp distinct helper thread");
+            ids.push(id);
+        }
+        // Helpers arrive after the main conversation has already been listed.
+        // Repeated rollups must update that row rather than create new rows.
+        sqlx::query("SELECT refresh_conversation_facts(ARRAY[canonical_conversation_context($1)])")
+            .bind(&contexts[thread])
+            .execute(&*db.pool)
+            .await
+            .expect("incremental thread rollup");
+    }
+    let canonical: String = sqlx::query_scalar("SELECT canonical_conversation_context($1)")
+        .bind(&contexts[0])
+        .fetch_one(&*db.pool)
+        .await
+        .expect("resolve session");
+    sqlx::query("SELECT refresh_conversation_facts($1)")
+        .bind(vec![canonical.clone()])
+        .execute(&*db.pool)
+        .await
+        .expect("roll up session");
+    let facts: (i64, i64, i64, i64) = sqlx::query_as(
+        "SELECT request_count, turn_count, error_count, cost_microdollars FROM conversation_facts WHERE context_id = $1",
+    ).bind(&canonical).fetch_one(&*db.pool).await.expect("one conversation includes failed helpers");
+    assert_eq!(facts, (6, 6, 2, 20_000));
+    let grouped: (i64, i64) = sqlx::query_as(
+        "SELECT COUNT(DISTINCT context_id), COUNT(DISTINCT gateway_conversation_id) FROM conversation_requests WHERE id = ANY($1)",
+    ).bind(&ids).fetch_one(&*db.pool).await.expect("read grouped threads");
+    assert_eq!(grouped, (1, 3));
+    let ledger: (i64, i64) = sqlx::query_as(
+        "SELECT COUNT(*), COUNT(DISTINCT context_id) FROM ai_requests WHERE id = ANY($1)",
+    )
+    .bind(&ids)
+    .fetch_one(&*db.pool)
+    .await
+    .expect("audit identity retained");
+    assert_eq!(ledger, (6, 3));
+    let rows: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM conversation_facts WHERE user_id = $1")
+            .bind(user.as_str())
+            .fetch_one(&*db.pool)
+            .await
+            .expect("dashboard conversation count");
+    assert_eq!(rows, 1);
+    db.cleanup().await;
+}
