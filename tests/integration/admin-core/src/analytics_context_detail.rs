@@ -59,7 +59,10 @@ async fn find_context_header_resolves_a_context_known_only_to_requests() {
         Some(user.as_str().to_owned())
     );
     assert!(header.name.is_none(), "no user_contexts row means no name");
-    assert!(header.created_at.is_none());
+    let request_time = chrono::DateTime::from_timestamp_micros(spec.created_at.timestamp_micros())
+        .expect("fixture timestamp");
+    assert_eq!(header.created_at, Some(request_time));
+    assert_eq!(header.updated_at, Some(request_time));
     db.cleanup().await;
 }
 
