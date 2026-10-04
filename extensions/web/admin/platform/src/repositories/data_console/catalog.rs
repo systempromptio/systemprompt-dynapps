@@ -47,7 +47,7 @@ pub async fn list_tables(conn: &mut PgConnection) -> Result<Vec<Table>, AdminErr
         "SELECT c.oid::bigint AS oid, n.nspname AS schema, c.relname AS name
         FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
         WHERE c.relkind IN ('r','p') AND NOT c.relispartition
-          AND n.nspname <> 'information_schema' AND n.nspname NOT LIKE 'pg_%'
+          AND n.nspname <> 'information_schema' AND left(n.nspname,3) <> 'pg_'
         ORDER BY n.nspname, c.relname",
     )
     .fetch_all(conn)
