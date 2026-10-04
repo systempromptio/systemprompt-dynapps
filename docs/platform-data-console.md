@@ -34,3 +34,9 @@ filtered selections. The console does not bypass these protections.
 The transcript reader parses stored tool arguments individually. Malformed
 arguments preserve their raw text and parse diagnostic in the transcript and
 exports, allowing the remaining conversation to be read.
+
+Migration 112 records its index cost from an isolated PostgreSQL 18 benchmark
+with one million synthetic log rows. Timestamp/ID indexing took 4.157 seconds;
+level/timestamp/ID took 2.199 seconds. The reproducible fixture is
+`tests/fixtures/schema/platform-data-console-cost.sql`. Actual deployment time
+depends on retained rows and database storage.

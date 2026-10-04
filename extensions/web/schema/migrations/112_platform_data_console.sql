@@ -1,3 +1,8 @@
+-- @cost: rows=2000000 measured=4.157s triggers=live
+-- PostgreSQL 18 isolated benchmark: 1,000,000 synthetic log rows; fixture
+-- tests/fixtures/schema/platform-data-console-cost.sql. Two indexes write
+-- 2,000,000 keys. Timestamp/ID index: 4156.583 ms; level/timestamp/ID:
+-- 2198.939 ms. Existing database triggers remain enabled.
 -- Platform Logs / SQL console indexes and confirmation receipts.
 -- Durable deletion receipts and short-lived, actor-bound preview tickets.
 CREATE TABLE IF NOT EXISTS platform_data_clear_previews (
