@@ -124,8 +124,15 @@ fn every_served_claude_model_has_an_anthropic_api_twin_to_fail_over_to() {
         .iter()
         .map(|m| m.id.as_str().to_owned())
         .collect();
-    let expected: Vec<String> = SERVED.iter().map(|id| format!("anthropic-{id}")).collect();
+    let mut expected: Vec<String> = SERVED.iter().map(|id| format!("anthropic-{id}")).collect();
+    expected.push("anthropic-claude-haiku-4-5-20251001".to_owned());
     assert_eq!(twins, expected);
+    let dated = model(&anthropic.models, "anthropic-claude-haiku-4-5-20251001");
+    assert_eq!(
+        dated.upstream_model.as_deref(),
+        Some("claude-haiku-4-5-20251001")
+    );
+    assert!(dated.hidden);
 
     for id in SERVED {
         let twin = anthropic

@@ -7,8 +7,8 @@ async fn concurrent_broker_requests_refresh_once_and_use_the_committed_replaceme
     let Some(h) = Harness::create_or_skip("rotation").await else {
         return;
     };
-    let (first, second, third) = tokio::join!(h.resolve(false), h.resolve(false), h.resolve(false));
-    for (result, _) in [first, second, third] {
+    let results: [_; 3] = tokio::join!(h.resolve(false), h.resolve(false), h.resolve(false)).into();
+    for (result, _) in results {
         assert_eq!(result.unwrap(), "Bearer access-token");
     }
     assert_eq!(h.requests().await, 1);

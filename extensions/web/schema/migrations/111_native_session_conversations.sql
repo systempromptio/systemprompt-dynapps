@@ -1,4 +1,9 @@
 -- Group retained and future native-session requests without altering audit rows.
+-- @cost: rows=4000 measured=4.120s triggers=live
+-- PostgreSQL 18 isolated release-0.62.0 upgrade: 10,000 requests, 1,000
+-- native sessions; fixture tests/fixtures/schema/native-session-cost.sql.
+-- Wrote 1,000 session mappings, 1,000 aliases, deleted 1,000 old facts and
+-- rebuilt 1,000 canonical facts. Slowest statement: refresh, 4119.325 ms.
 -- Native sessions group request threads without rewriting the audit ledger.
 CREATE TABLE IF NOT EXISTS conversation_session_contexts (
     user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,

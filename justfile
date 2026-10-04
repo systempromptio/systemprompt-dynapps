@@ -289,7 +289,7 @@ test-unit:
 # --workspace unifies once and the second and third tiers reuse the build.
 _test-unit-uncoordinated:
     cargo nextest run --no-fail-fast --manifest-path tests/Cargo.toml --workspace -E 'package(mcp-unit-tests) | package(web-unit-tests) | package(bridge-unit-tests)'
-    node --test tests/bridge/*.test.mjs
+    node --experimental-vm-modules --test tests/bridge/*.test.mjs
 
 # DB-backed integration tests. Creates/drops throwaway mcp_ext_test_*
 # databases on the maintenance DB; the harness guard refuses any database
