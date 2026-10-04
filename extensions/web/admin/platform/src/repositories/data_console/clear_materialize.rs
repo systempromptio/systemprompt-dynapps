@@ -49,7 +49,7 @@ pub(super) async fn prepare_tables(
     Ok((schema, triggers))
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub(super) struct RootSelection<'a> {
     pub(super) table: &'a Table,
     pub(super) columns: &'a [Column],
