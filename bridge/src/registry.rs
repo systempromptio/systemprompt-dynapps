@@ -36,4 +36,4 @@ register_marketplace_source!(AstoundArtifactsSource, priority = 10);
 
 // Why: core's manifest host gate cannot apply before the first sync, so Codex
 // is suppressed here to keep it off every surface, onboarding included.
-systemprompt_bridge::suppress_host_app!("codex-cli");
+systemprompt_bridge::suppress_host_app!(systemprompt_bridge::integration::HostKind::CodexCli);
