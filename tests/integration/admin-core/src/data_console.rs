@@ -395,3 +395,23 @@ async fn data_console_wide_tables_and_composite_keys_work() {
     );
     db.cleanup().await;
 }
+
+#[tokio::test]
+async fn data_console_includes_application_schemas_with_nonreserved_pg_prefixes() {
+    let Some(db) = fixture().await else {
+        // skip-ok: fixture delegates to TempDb::create, which fails hard under CI
+        // without a database.
+        return;
+    };
+    sqlx::raw_sql("CREATE SCHEMA pgapp; CREATE TABLE pgapp.example(id integer PRIMARY KEY); INSERT INTO pgapp.example VALUES(1)")
+        .execute(&*db.pool).await.unwrap();
+    let selected = Selection {
+        table: "pgapp.example".into(),
+        ..Selection::default()
+    };
+    let page = browse::get_table_page(&db.pool, &selected, None)
+        .await
+        .unwrap();
+    assert_eq!(page.rows.len(), 1);
+    db.cleanup().await;
+}
