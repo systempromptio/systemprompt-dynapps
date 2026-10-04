@@ -64,7 +64,8 @@ pub(super) async fn populate(
         root.sql()
     ));
     predicate(&mut q, selection, columns, "t")?;
-    // Why: The active confirmation must survive until its transaction completes.
+    // Why: Postgres stores the active ticket in a clearable table; excluding it
+    // keeps the confirmation available until its transaction completes.
     if root.label() == "public.platform_data_clear_previews" {
         q.push(" AND t.id <> ").push_bind(ticket);
     }
