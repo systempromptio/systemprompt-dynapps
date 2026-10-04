@@ -2282,3 +2282,21 @@ dashboard-benchmark:
 # Selected core test packages, preserving core serial groups and Astound coordination.
 test-core-feedback PACKAGES FILTER="all()":
     @scripts/test-core-feedback.sh "$@"
+
+# Regenerate query metadata for one changed crate against the existing schema.
+# Unlike prepare, this does not run migrations or remove other cache entries;
+# useful when the installed CLI cannot yet load newly added configuration.
+prepare-query-cache package:
+    @scripts/build-coordinator.sh run prepare-query-cache "{{package}}" -- {{just_executable()}} _prepare-query-cache-uncoordinated {{package}}
+
+_prepare-query-cache-uncoordinated package:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    task_cache_dir=$(mktemp -d "{{justfile_directory()}}/.build/query-cache.XXXXXX")
+    trap 'rm -rf "$task_cache_dir"' EXIT
+    task_database_url=$(jq -er '.database_url' .systemprompt/profiles/local/secrets.json)
+    DATABASE_URL="$task_database_url" SQLX_OFFLINE=false SQLX_OFFLINE_DIR="$task_cache_dir" cargo check -p {{package}}
+    for task_query_file in "$task_cache_dir"/query-*.json; do
+        [ -f "$task_query_file" ] || continue
+        cp "$task_query_file" .sqlx/
+    done

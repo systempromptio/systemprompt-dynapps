@@ -104,6 +104,7 @@ GET    /admin/history/conversations/{context_id}             anonymous=307 non-a
 GET    /admin/lifecycle                                      anonymous=307 non-admin=303 developer=303 admin=200 platform-admin=200 project-manager=303 knowledge-worker=303
 GET    /admin/lifecycle/archive/{tier}/{period}/{file}       anonymous=307 non-admin=303 developer=303 admin=404 platform-admin=404 project-manager=303 knowledge-worker=303
 GET    /admin/login                                          anonymous=200 non-admin=303 developer=303 admin=303 platform-admin=303 project-manager=303 knowledge-worker=303
+GET    /admin/logs                                           anonymous=307 non-admin=303 developer=303 admin=403 platform-admin=200 project-manager=303 knowledge-worker=303
 GET    /admin/marketplaces                                   anonymous=307 non-admin=303 developer=303 admin=200 platform-admin=200 project-manager=303 knowledge-worker=303
 GET    /admin/marketplaces/{marketplace_id}                  anonymous=307 non-admin=303 developer=303 admin=404 platform-admin=404 project-manager=303 knowledge-worker=303
 GET    /admin/mcp                                            anonymous=307 non-admin=303 developer=303 admin=200 platform-admin=200 project-manager=303 knowledge-worker=303
@@ -124,6 +125,7 @@ GET    /admin/sessions/{session_id}                          anonymous=307 non-a
 GET    /admin/setup                                          anonymous=307 non-admin=308 developer=308 admin=308 platform-admin=308 project-manager=308 knowledge-worker=308
 GET    /admin/skills                                         anonymous=307 non-admin=303 developer=303 admin=200 platform-admin=200 project-manager=303 knowledge-worker=303
 GET    /admin/skills/{skill_id}                              anonymous=307 non-admin=303 developer=303 admin=404 platform-admin=404 project-manager=303 knowledge-worker=303
+GET    /admin/sql                                            anonymous=307 non-admin=303 developer=303 admin=403 platform-admin=200 project-manager=303 knowledge-worker=303
 GET    /admin/sync                                           anonymous=307 non-admin=303 developer=303 admin=200 platform-admin=200 project-manager=303 knowledge-worker=303
 GET    /admin/sync/import/{stage_id}                         anonymous=307 non-admin=303 developer=303 admin=404 platform-admin=404 project-manager=303 knowledge-worker=303
 GET    /admin/system/observability                           anonymous=307 non-admin=303 developer=303 admin=200 platform-admin=200 project-manager=303 knowledge-worker=303
@@ -195,9 +197,12 @@ POST   /admin/analysis/reports/{id}/regenerate               anonymous=307 non-a
 POST   /admin/api/profile/bridge-code                        anonymous=307 non-admin=200 developer=200 admin=200 platform-admin=200 project-manager=200 knowledge-worker=200
 POST   /admin/api/profile/salesforce/unlink                  anonymous=307 non-admin=200 developer=200 admin=200 platform-admin=200 project-manager=200 knowledge-worker=200
 POST   /admin/auth/adfs/acs                                  anonymous=303 non-admin=303 developer=303 admin=303 platform-admin=303 project-manager=303 knowledge-worker=303
+POST   /admin/data/clear/confirm                             anonymous=307 non-admin=303 developer=303 admin=415 platform-admin=415 project-manager=303 knowledge-worker=303
+POST   /admin/data/clear/preview                             anonymous=307 non-admin=303 developer=303 admin=415 platform-admin=415 project-manager=303 knowledge-worker=303
 POST   /admin/devices/pats                                   anonymous=307 non-admin=303 developer=303 admin=422 platform-admin=422 project-manager=303 knowledge-worker=303
 POST   /admin/gateway/policies                               anonymous=307 non-admin=303 developer=303 admin=415 platform-admin=415 project-manager=303 knowledge-worker=303
 POST   /admin/gateway/policies/delete                        anonymous=307 non-admin=303 developer=303 admin=415 platform-admin=415 project-manager=303 knowledge-worker=303
+POST   /admin/sql/query                                      anonymous=307 non-admin=303 developer=303 admin=415 platform-admin=415 project-manager=303 knowledge-worker=303
 POST   /admin/system/observability/export                    anonymous=307 non-admin=303 developer=303 admin=303 platform-admin=303 project-manager=303 knowledge-worker=303
 POST   /admin/system/observability/test                      anonymous=307 non-admin=303 developer=303 admin=303 platform-admin=303 project-manager=303 knowledge-worker=303
 POST   /api/public/admin/access-control/bulk-template        anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403

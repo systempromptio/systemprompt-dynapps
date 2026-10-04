@@ -1,0 +1,87 @@
+{{#> layout page_title=title page_id=page}}
+{{#*inline "head_extra"}}{{/inline}}
+{{#*inline "content"}}
+{{#> components/page-header title=title subtitle="Platform administrator access · bounded reads · manual refresh"}}
+{{#*inline "header_actions"}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="{{refresh_url}}">Refresh</a><a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/logs">Logs</a><a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/sql">SQL</a>{{/inline}}
+{{/components/page-header}}
+{{#if notice}}{{> components/notice tone="info" title="Operation result" message=notice}}{{/if}}
+{{#if preview}}
+<section class="sp-card">
+<h2>Confirm clearing {{preview.table}}</h2>
+<p>This permanently deletes the matching rows and affects the related tables listed below. It cannot be undone. The confirmation expires in ten minutes. If affected data changes, a new preview is required.</p>
+<p>The active confirmation ticket is consumed separately. Clearing deletion receipts creates a new receipt for this operation.</p>
+<h3>Selection</h3><pre class="sp-code-block">{{selection}}</pre>
+{{#> components/table caption="Rows affected by this operation" table_mode="scroll"}}
+<thead><tr><th>Table</th><th>Delete</th><th>Update related rows</th></tr></thead>
+<tbody>{{#each preview.plan.effects}}<tr><td>{{table}}</td><td>{{deleted}}</td><td>{{updated}}</td></tr>{{/each}}</tbody>
+{{/components/table}}
+{{#if preview.plan.triggers}}
+<h3>Database triggers</h3><p>Counts above cover selected rows and foreign-key effects. These existing database triggers also run and may maintain other data. Database protections remain active; a refusal rolls back the operation.</p>
+{{#each preview.plan.triggers}}<p><strong>{{table}} · {{name}}</strong></p><pre class="sp-code-block">{{definition}}</pre>{{/each}}
+{{/if}}
+<form method="post" action="/admin/data/clear/confirm">
+<input type="hidden" name="token" value="{{preview.token}}"><input type="hidden" name="source" value="{{page}}">
+<label>Type <strong>{{preview.table}}</strong> to confirm <input class="sp-input" name="confirmation" required autocomplete="off"></label>
+<label><input type="checkbox" name="acknowledge" value="yes" required> I acknowledge irreversible deletion and all related-table effects and database triggers shown above.</label>
+<button class="sp-btn sp-btn--primary" type="submit">Permanently clear confirmed data</button>
+<a class="sp-btn sp-btn--outline" href="{{refresh_url}}">Cancel</a>
+</form></section>
+{{else}}
+{{#if cleared}}
+{{#> components/table caption="Committed clearing operation" table_mode="scroll"}}
+<thead><tr><th>Table</th><th>Deleted</th><th>Related rows updated</th></tr></thead>
+<tbody>{{#each cleared.effects}}<tr><td>{{table}}</td><td>{{deleted}}</td><td>{{updated}}</td></tr>{{/each}}</tbody>
+{{/components/table}}
+{{else}}
+{{#if detail}}
+<section class="sp-card"><h2>{{table}} — row detail</h2><p>Fields are capped at 64 KiB, with a 1 MiB total budget for wide tables.</p>
+{{#each detail}}<h3>{{name}}</h3><pre class="sp-code-block">{{value}}</pre>{{#if limited}}<p>Field reached the display limit; additional content may be omitted.</p>{{/if}}{{/each}}
+</section>
+{{else}}
+<form method="get" action="{{#if is_logs}}/admin/logs{{else}}/admin/sql{{/if}}" class="sp-card">
+{{#if is_logs}}
+<p>Persisted application/server logs. Nginx and container stdout are not collected by this page. Dates use ISO format with a timezone; browse up to seven days.</p>
+<label>Level <select class="sp-input" name="level"><option value="{{level}}">{{#if level}}{{level}}{{else}}All levels{{/if}}</option><option value="">All levels</option><option>ERROR</option><option>WARN</option><option>INFO</option><option>DEBUG</option><option>TRACE</option></select></label>
+<label>Module (exact) <input class="sp-input" name="module" value="{{module}}"></label>
+<label>Context ID <input class="sp-input" name="context_id" value="{{context_filter}}"></label>
+<label>Session ID <input class="sp-input" name="session_id" value="{{session_filter}}"></label>
+<label>Trace ID <input class="sp-input" name="trace_id" value="{{trace_id}}"></label>
+{{else}}
+<label>Table <select class="sp-input" name="table"><option value="">Select a table</option>{{#each tables}}<option value="{{label}}"{{#if selected}} selected{{/if}}>{{label}}</option>{{/each}}</select></label>
+<label>Column (exact equality) <input class="sp-input" name="column" value="{{filter_column}}" list="data-columns"></label>
+<datalist id="data-columns">{{#each columns}}<option value="{{this}}"></option>{{/each}}</datalist>
+<label>Value <input class="sp-input" name="value" value="{{filter_value}}"></label>
+<label>Timestamp column (optional) <input class="sp-input" name="time_column" value="{{time_column}}" list="data-columns"></label>
+{{/if}}
+<label>From (ISO timestamp) <input class="sp-input" name="from" value="{{from}}" placeholder="2026-10-04T02:00:00Z"></label>
+<label>Through (ISO timestamp) <input class="sp-input" name="until" value="{{until}}" placeholder="2026-10-04T03:00:00Z"></label>
+<button class="sp-btn sp-btn--primary" type="submit">Apply filters</button><a class="sp-btn sp-btn--outline" href="{{#if is_logs}}/admin/logs{{else}}/admin/sql{{/if}}">Reset filters</a>
+</form>
+{{#if table}}
+<h2>{{table}}</h2><p>Up to 50 rows per page. Cell previews are capped at 1,000 characters; open a row for details.</p>
+{{#if no_primary}}<p>This table has no primary key. Only a bounded first page is available.</p>{{/if}}
+{{#if limited}}<p>A row or output limit was reached. Additional rows or content may be omitted.</p>{{/if}}
+{{#> components/table caption="Table rows" table_mode="scroll"}}
+<thead><tr>{{#each columns}}<th>{{this}}</th>{{/each}}<th>Details</th></tr></thead>
+<tbody>{{#each rows}}<tr>{{#each cells}}<td>{{#if href}}<a class="sp-table__link" href="{{href}}">{{value}}</a>{{else}}<span class="sp-u-mono">{{value}}</span>{{/if}}{{#if limited}}<span title="Display limit reached">…</span>{{/if}}</td>{{/each}}<td>{{#if detail}}<a class="sp-table__link" href="{{detail}}">Open row</a>{{/if}}</td></tr>{{else}}<tr><td>No rows match this selection.</td></tr>{{/each}}</tbody>
+{{/components/table}}
+{{#if next_url}}<a class="sp-btn sp-btn--outline" href="{{next_url}}">{{#if is_logs}}Older entries{{else}}Next rows{{/if}}</a>{{/if}}
+<form method="post" action="/admin/data/clear/preview" class="sp-card">
+<input type="hidden" name="selection" value="{{selection}}"><input type="hidden" name="source" value="{{page}}">
+<p>Preview before clearing. Related-table effects are included. All application tables can be cleared, including users, credentials, configuration, and audit records.</p>
+<button class="sp-btn sp-btn--outline" name="mode" value="matching" type="submit">Preview clearing matching {{#if is_logs}}logs{{else}}rows{{/if}}</button>
+<button class="sp-btn sp-btn--outline" name="mode" value="all" type="submit">{{#if is_logs}}Preview clearing all server logs{{else}}Preview clearing entire table{{/if}}</button>
+</form>
+{{/if}}
+{{#unless is_logs}}
+<section class="sp-card"><h2>Read-only SQL</h2><p>One SELECT or read-only WITH statement. Three-second query timeout; up to 200 rows and 1 MiB of displayed output.</p>
+<form method="post" action="/admin/sql/query"><label for="data-query">Query</label><textarea class="sp-input" id="data-query" name="query" rows="7" maxlength="32768" required spellcheck="false">{{query}}</textarea><button class="sp-btn sp-btn--primary" type="submit">Run query</button></form>
+{{#if limited}}<p>A row, field, or output limit was reached; additional results may be omitted.</p>{{/if}}
+{{#each query_rows}}<pre class="sp-code-block">{{this}}</pre>{{/each}}
+</section>
+{{/unless}}
+{{/if}}
+{{/if}}
+{{/if}}
+{{/inline}}
+{{/layout}}

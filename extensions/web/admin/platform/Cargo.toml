@@ -19,12 +19,14 @@ systemprompt-security = { workspace = true }
 
 # Database
 sqlx = { workspace = true }
+sqlparser = { version = "0.63", features = ["visitor"] }
 
 # Web framework
 axum = { workspace = true }
 
 # Async runtime
 tokio = { workspace = true }
+futures-util = { workspace = true }
 
 # Serialization
 serde = { workspace = true }

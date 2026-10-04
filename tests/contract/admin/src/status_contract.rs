@@ -155,4 +155,12 @@ fn check(
 // AD-group mappings that feed groups and projects from the directory.
 fn is_platform_only(template: &str) -> bool {
     template.contains("/ad-mappings")
+        || [
+            "/admin/logs",
+            "/admin/sql",
+            "/admin/sql/query",
+            "/admin/data/clear/preview",
+            "/admin/data/clear/confirm",
+        ]
+        .contains(&template)
 }

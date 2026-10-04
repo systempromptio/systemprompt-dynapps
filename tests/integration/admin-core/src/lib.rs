@@ -162,3 +162,6 @@ mod gateway_owner_isolation;
 #[cfg(test)]
 #[cfg(test)]
 mod managed_revisions;
+
+#[cfg(test)]
+mod data_console;

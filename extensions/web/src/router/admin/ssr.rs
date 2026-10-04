@@ -46,6 +46,7 @@ pub fn admin_ssr_router(
         .merge(analysis_routes())
         .merge(governance_routes())
         .merge(platform_routes())
+        .merge(platform_ssr::data_routes().with_state(db.write_pool()))
         .merge(account_routes())
         .merge(api_routes())
         .merge(redirects::legacy_routes())

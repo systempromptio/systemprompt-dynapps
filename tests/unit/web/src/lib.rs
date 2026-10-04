@@ -356,3 +356,6 @@ mod traces_spans_resolve;
 
 #[cfg(test)]
 mod connector_recovery;
+
+#[cfg(test)]
+mod data_console;

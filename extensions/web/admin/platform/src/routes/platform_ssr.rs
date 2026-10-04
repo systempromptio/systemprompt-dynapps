@@ -53,3 +53,19 @@ pub fn api_routes() -> Router<Arc<PgPool>> {
         post(handlers::salesforce_auth::salesforce_unlink),
     )
 }
+
+// Why: Instance-wide operational data; handlers enforce platform-admin access.
+pub fn data_routes() -> Router<Arc<PgPool>> {
+    Router::new()
+        .route("/logs", get(handlers::ssr::data_console::logs_page))
+        .route("/sql", get(handlers::ssr::data_console::sql_page))
+        .route("/sql/query", post(handlers::ssr::data_console::run_query))
+        .route(
+            "/data/clear/preview",
+            post(handlers::ssr::data_console::clear_preview),
+        )
+        .route(
+            "/data/clear/confirm",
+            post(handlers::ssr::data_console::clear_confirm),
+        )
+}

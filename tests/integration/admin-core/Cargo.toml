@@ -15,6 +15,7 @@ astound-test-common = { workspace = true }
 # for user_profile_ext, adfs_group_memberships and plugin_usage_*.
 systemprompt = { workspace = true, features = ["full"] }
 systemprompt-web-admin-analytics = { workspace = true }
+systemprompt-web-admin-platform = { workspace = true }
 systemprompt-web-admin-identity = { workspace = true }
 systemprompt-web-admin-core = { workspace = true }
 systemprompt-web-admin-catalog = { workspace = true }

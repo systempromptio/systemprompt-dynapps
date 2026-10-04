@@ -21,3 +21,5 @@ pub(crate) use ssr_connectors::connectors_page;
 pub(crate) use ssr_setup::{bridge_setup_page, setup_page};
 pub(crate) use ssr_sync::sync_page;
 pub(crate) use ssr_sync_import::import_preview_page;
+
+pub(crate) mod data_console;

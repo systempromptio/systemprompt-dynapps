@@ -11,3 +11,5 @@ pub mod connectors;
 pub mod devices;
 pub mod jobs;
 pub mod security_policy;
+
+pub mod data_console;

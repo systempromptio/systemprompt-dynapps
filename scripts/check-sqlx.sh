@@ -13,6 +13,9 @@ pattern='sqlx::query[a-z_]*\('
 # Enumerated exceptions, core-style: each entry is one path with its reason.
 # Empty by design — adding a path requires justification in review.
 allowlist=(
+    # Catalog-driven table browsing, read-only SQL and dependency-aware clearing.
+    # Identifiers are resolved from pg_catalog and values are bound.
+    extensions/web/admin/platform/src/repositories/data_console/
     # COPY … TO STDOUT, VACUUM and pg_catalog lookups over a static table
     # registry — statements the macros cannot express, and none takes input.
     extensions/web/jobs/src/retention/
