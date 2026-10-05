@@ -145,7 +145,7 @@ jobs:
 
   version:
     needs: [hotfix-validation]
-    if: inputs.repair_macos != true && needs.hotfix-validation.result == 'success' 
+    if: inputs.repair_macos != true && needs.hotfix-validation.result == 'success'
     name: Resolve version & release state
     runs-on: ubuntu-latest
     outputs:
