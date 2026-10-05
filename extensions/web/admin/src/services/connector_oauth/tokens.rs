@@ -111,7 +111,7 @@ async fn accepted_tokens(provider: &str, response: reqwest::Response) -> AdminRe
     // typed decoding.
     let mut value: serde_json::Value = super::generic_discovery::bounded_json(response)
         .await
-        .map_err(|_| AdminError::Upstream("Invalid OAuth token response JSON".into()))?;
+        .map_err(|err| AdminError::Upstream(format!("Invalid OAuth token response JSON: {err}")))?;
     if (provider == "salesforce" || provider.starts_with("salesforce-"))
         && let Some(seconds) = value
             .get("expires_in")
