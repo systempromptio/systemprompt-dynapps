@@ -274,7 +274,7 @@ _clippy-uncoordinated *FLAGS: lint-no-synthesis lint-no-untyped-admin lint-gates
 # If sqlx offline errors appear, run `just prepare` first to refresh .sqlx.
 # Emergency Salesforce hotfix: exact token boundary and connection regressions.
 test-hotfix:
-    @bash scripts/build-coordinator.sh test-hotfix "" -- just _test-hotfix-uncoordinated
+    @bash scripts/build-coordinator.sh run test-hotfix "" -- just _test-hotfix-uncoordinated
 
 _test-hotfix-uncoordinated:
     SQLX_OFFLINE=true cargo nextest run --no-fail-fast --manifest-path tests/Cargo.toml -p web-unit-tests -E 'test(connector_oauth::) | test(connector_token_expiry::) | test(connector_cards::) | test(salesforce_orgs::)'
