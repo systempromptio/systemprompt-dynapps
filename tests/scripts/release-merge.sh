@@ -21,11 +21,14 @@ mock_git() {
 }
 mock_gh() {
     local ref="promote/$version/$base/$head"
+    [[ "$case_name" != hotfix_* ]] || ref="hotfix/$version/$base"
     if [[ "$*" == *'/commits/'* ]]; then
         [ "$case_name" != changed_base ] || ref="promote/$version/$head/$head"
         jq -n --arg merge "$merge" --arg head "$head" --arg ref "$ref" '[{merged_at:"today",merge_commit_sha:$merge,base:{ref:"main"},head:{sha:$head,ref:$ref,repo:{full_name:"Astound-Digital/systemprompt-astound"}}}]'
     elif [[ "$*" == *'/jobs?'* ]]; then
-        if [[ "$*" == *'/runs/84/'* ]]; then
+        if [[ "$case_name" == hotfix_* ]]; then
+            echo '{"jobs":[{"name":"Gates passed","status":"completed","conclusion":"success"},{"name":"Verify frozen hotfix","status":"completed","conclusion":"success"},{"name":"Static (fmt, sqlx cache, source gates)","status":"completed","conclusion":"success"},{"name":"Lint (clippy ×3, rustdoc, MSRV)","status":"completed","conclusion":"success"},{"name":"Test (unit, integration, admin contract)","status":"completed","conclusion":"success"}]}'
+        elif [[ "$*" == *'/runs/84/'* ]]; then
             if [ "$case_name" = duplicate_aggregate ]; then
                 echo '{"jobs":[{"name":"Gates passed","status":"completed","conclusion":"success"},{"name":"Gates passed","status":"completed","conclusion":"success"}]}'
             elif [ "$case_name" = missing_promotion_job ]; then echo '{"jobs":[]}'; else
@@ -34,6 +37,11 @@ mock_gh() {
         else echo '{"jobs":[{"name":"Gates passed","status":"completed","conclusion":"success"}]}'; fi
     else
         local event=push branch=next id=42 attempt=1 conclusion=success status=completed
+        if [[ "$case_name" == hotfix_* ]]; then
+            [ "$case_name" != hotfix_red ] || conclusion=failure
+            jq -n --arg sha "$head" --arg base "$base" --arg branch "$ref" --arg conclusion "$conclusion" '{workflow_runs:[{id:84,run_attempt:1,head_sha:$sha,head_branch:$branch,event:"pull_request",status:"completed",conclusion:$conclusion,pull_requests:[{base:{ref:"main",sha:$base},head:{sha:$sha}}]}]}'
+            return
+        fi
         if [[ "$*" == *'event=pull_request'* ]]; then
             event=pull_request branch="$ref" id=84
             [ "$case_name" != pending_promotion ] || status=in_progress
@@ -50,10 +58,10 @@ mock_gh() {
 git() { mock_git "$@"; }
 gh() { mock_gh "$@"; }
 export -f git gh mock_git mock_gh
-for case_name in success single_parent changed_tree changed_base missing_promotion_job red_promotion promotion_rerun duplicate_aggregate pending_promotion missing_promotion; do
+for case_name in success hotfix_success hotfix_red single_parent changed_tree changed_base missing_promotion_job red_promotion promotion_rerun duplicate_aggregate pending_promotion missing_promotion; do
     export case_name
     expected=1
-    [ "$case_name" != success ] || expected=0
+    [[ "$case_name" != success && "$case_name" != hotfix_success ]] || expected=0
     status=0
     bash scripts/check-release-merge.sh "$merge" >/dev/null 2>&1 || status=$?
     [ "$status" -eq "$expected" ] || { echo "$case_name: expected $expected, got $status" >&2; exit 1; }

@@ -315,6 +315,8 @@ mod connector_cards;
 #[cfg(test)]
 mod connector_oauth;
 #[cfg(test)]
+mod connector_token_expiry;
+#[cfg(test)]
 #[cfg(test)]
 mod salesforce_orgs;
 

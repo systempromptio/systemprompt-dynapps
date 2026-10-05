@@ -3,7 +3,7 @@
 use systemprompt_web_admin::connector_oauth::{Grant, Provider, refresh_at};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
-fn grant() -> Grant {
+pub(super) fn grant() -> Grant {
     Grant {
         configuration_binding: String::new(),
         authorization_issuer: String::new(),
@@ -28,7 +28,7 @@ fn grant() -> Grant {
     }
 }
 
-async fn endpoint(body: &'static str) -> (String, tokio::task::JoinHandle<String>) {
+pub(super) async fn endpoint(body: &'static str) -> (String, tokio::task::JoinHandle<String>) {
     endpoint_with_status(200, "OK", body).await
 }
 
