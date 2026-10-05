@@ -27,6 +27,7 @@ mock_gh() {
         jq -n --arg merge "$merge" --arg head "$head" --arg ref "$ref" '[{merged_at:"today",merge_commit_sha:$merge,base:{ref:"main"},head:{sha:$head,ref:$ref,repo:{full_name:"Astound-Digital/systemprompt-astound"}}}]'
     elif [[ "$*" == *'/jobs?'* ]]; then
         if [[ "$case_name" == hotfix_* ]]; then
+            if [ "$case_name" = hotfix_missing_gate ]; then echo '{"jobs":[]}'; return; fi
             echo '{"jobs":[{"name":"Gates passed","status":"completed","conclusion":"success"},{"name":"Verify frozen hotfix","status":"completed","conclusion":"success"},{"name":"Static (fmt, sqlx cache, source gates)","status":"completed","conclusion":"success"},{"name":"Lint (clippy ×3, rustdoc, MSRV)","status":"completed","conclusion":"success"},{"name":"Test (unit, integration, admin contract)","status":"completed","conclusion":"success"}]}'
         elif [[ "$*" == *'/runs/84/'* ]]; then
             if [ "$case_name" = duplicate_aggregate ]; then
@@ -39,7 +40,13 @@ mock_gh() {
         local event=push branch=next id=42 attempt=1 conclusion=success status=completed
         if [[ "$case_name" == hotfix_* ]]; then
             [ "$case_name" != hotfix_red ] || conclusion=failure
-            jq -n --arg sha "$head" --arg base "$base" --arg branch "$ref" --arg conclusion "$conclusion" '{workflow_runs:[{id:84,run_attempt:1,head_sha:$sha,head_branch:$branch,event:"pull_request",status:"completed",conclusion:$conclusion,pull_requests:[{base:{ref:"main",sha:$base},head:{sha:$sha}}]}]}'
+            local proof_base="$base" proof_branch="$ref"
+            [ "$case_name" != hotfix_wrong_base ] || proof_base="$head"
+            [ "$case_name" != hotfix_wrong_branch ] || proof_branch=next
+            if [ "$case_name" = hotfix_rerun ]; then
+                if [ -f "$state_dir/hotfix-rerun" ]; then attempt=2; else touch "$state_dir/hotfix-rerun"; fi
+            fi
+            jq -n --arg sha "$head" --arg base "$proof_base" --arg branch "$proof_branch" --arg conclusion "$conclusion" --argjson attempt "$attempt" '{workflow_runs:[{id:84,run_attempt:$attempt,head_sha:$sha,head_branch:$branch,event:"pull_request",status:"completed",conclusion:$conclusion,pull_requests:[{base:{ref:"main",sha:$base},head:{sha:$sha}}]}]}'
             return
         fi
         if [[ "$*" == *'event=pull_request'* ]]; then
@@ -58,7 +65,7 @@ mock_gh() {
 git() { mock_git "$@"; }
 gh() { mock_gh "$@"; }
 export -f git gh mock_git mock_gh
-for case_name in success hotfix_success hotfix_red single_parent changed_tree changed_base missing_promotion_job red_promotion promotion_rerun duplicate_aggregate pending_promotion missing_promotion; do
+for case_name in success hotfix_success hotfix_red hotfix_wrong_base hotfix_wrong_branch hotfix_missing_gate hotfix_rerun single_parent changed_tree changed_base missing_promotion_job red_promotion promotion_rerun duplicate_aggregate pending_promotion missing_promotion; do
     export case_name
     expected=1
     [[ "$case_name" != success && "$case_name" != hotfix_success ]] || expected=0
@@ -74,4 +81,21 @@ for case_name in pending_promotion missing_promotion; do
     bash scripts/check-promotion-green.sh "$head" "promote/$version/$base/$head" >/dev/null 2>&1 || status=$?
     [ "$status" -eq 2 ] || { echo "$case_name readiness: expected 2, got $status" >&2; exit 1; }
     echo "$case_name readiness: PASS"
+done
+
+# The emergency publication path is accepted only in the exact Actions merge context.
+export HOTFIX_VALIDATE_IN_RELEASE=1 GITHUB_ACTIONS=true GITHUB_SHA="$merge"
+export GITHUB_RUN_ID=101 GITHUB_RUN_ATTEMPT=1 case_name=hotfix_actions
+bash scripts/check-release-merge.sh "$merge" >/dev/null
+echo 'hotfix Actions merge context: PASS'
+for rejected in outside_actions wrong_merge missing_run missing_attempt; do
+    status=0
+    case "$rejected" in
+        outside_actions) GITHUB_ACTIONS=false bash scripts/check-release-merge.sh "$merge" >/dev/null 2>&1 || status=$? ;;
+        wrong_merge) GITHUB_SHA="$head" bash scripts/check-release-merge.sh "$merge" >/dev/null 2>&1 || status=$? ;;
+        missing_run) GITHUB_RUN_ID="" bash scripts/check-release-merge.sh "$merge" >/dev/null 2>&1 || status=$? ;;
+        missing_attempt) GITHUB_RUN_ATTEMPT="" bash scripts/check-release-merge.sh "$merge" >/dev/null 2>&1 || status=$? ;;
+    esac
+    [ "$status" -ne 0 ] || { echo "$rejected: unexpectedly accepted" >&2; exit 1; }
+    echo "$rejected: PASS"
 done
