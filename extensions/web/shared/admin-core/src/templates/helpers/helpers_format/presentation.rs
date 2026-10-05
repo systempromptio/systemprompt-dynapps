@@ -42,23 +42,11 @@ impl HelperDef for CssVersionHelper {
         _: &mut RenderContext<'reg, 'rc>,
         out: &mut dyn Output,
     ) -> HelperResult {
-        use std::sync::OnceLock;
-        static VERSION: OnceLock<String> = OnceLock::new();
-        let v = VERSION.get_or_init(|| {
-            let path = std::env::current_dir()
-                .unwrap_or_else(|e| {
-                    tracing::debug!(error = %e, "Failed to get current directory for CSS version helper");
-                    std::path::PathBuf::from(".")
-                })
-                .join("storage/files/css/css-manifest.json");
-            std::fs::read_to_string(&path)
-                .ok()
-                // JSON: required by the handlebars HelperDef trait contract
-                .and_then(|s| serde_json::from_str::<serde_json::Value>(&s).ok())
-                .and_then(|j| j.get("version")?.as_str().map(String::from))
-                .unwrap_or_else(|| "0".to_owned())
-        });
-        out.write(v)?;
+        let dist = systemprompt::manifest::Config::get().map_or_else(
+            |_| std::path::PathBuf::from("web/dist"),
+            |config| std::path::PathBuf::from(&config.web_path).join("dist"),
+        );
+        out.write(&super::super::published_asset_version(&dist))?;
         Ok(())
     }
 }

@@ -82,3 +82,41 @@ async fn an_empty_asset_list_copies_nothing_successfully() {
     let (copied, failed) = copy_all_assets(dist.path(), Vec::new()).await.unwrap();
     assert_eq!((copied, failed), (0, 0));
 }
+
+#[test]
+fn module_versions_cover_absolute_relative_side_effect_and_multiline_imports() {
+    use systemprompt_web_extension::jobs::internals::version_module_imports;
+    let source = "import { errorMessage } from '/js/services/api.js';\nimport './widget.js';\nimport {\n  init\n} from '../services/events.js';\nconst text = \"from './unchanged.js'\";\n";
+    let versioned = version_module_imports(source, "release123");
+    assert!(versioned.contains("'/js/services/api.js?v=release123'"));
+    assert!(versioned.contains("'./widget.js?v=release123'"));
+    assert!(versioned.contains("'../services/events.js?v=release123'"));
+    assert!(versioned.contains("from './unchanged.js'"));
+}
+
+#[tokio::test]
+async fn changing_a_dependency_invalidates_every_published_importer() {
+    let src = TempDir::new().unwrap();
+    let dist = TempDir::new().unwrap();
+    let page = src.path().join("page.js");
+    let api = src.path().join("api.js");
+    std::fs::write(&page, "import { call } from './api.js';").unwrap();
+    std::fs::write(&api, "export const call = 1;").unwrap();
+    let assets = || {
+        vec![
+            ("web", AssetDefinition::js(&page, "js/page.js")),
+            ("web", AssetDefinition::js(&api, "js/api.js")),
+        ]
+    };
+    copy_all_assets(dist.path(), assets()).await.unwrap();
+    let first = std::fs::read_to_string(dist.path().join("js/page.js")).unwrap();
+    std::fs::write(&api, "export const call = 2;").unwrap();
+    copy_all_assets(dist.path(), assets()).await.unwrap();
+    let second = std::fs::read_to_string(dist.path().join("js/page.js")).unwrap();
+    assert_ne!(first, second);
+    copy_all_assets(dist.path(), assets()).await.unwrap();
+    assert_eq!(
+        second,
+        std::fs::read_to_string(dist.path().join("js/page.js")).unwrap()
+    );
+}

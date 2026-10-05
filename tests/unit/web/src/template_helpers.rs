@@ -426,3 +426,14 @@ fn nav_state_accepts_a_second_child_id() {
     let catalog = render(t, &serde_json::json!({ "page": "catalog" }));
     assert_eq!(catalog, r#"<a class="is-ancestor" aria-expanded="true">"#);
 }
+
+#[test]
+fn asset_version_changes_when_javascript_is_republished_without_a_restart() {
+    use systemprompt_web_admin_core::templates::helpers::published_asset_version;
+    let dist = tempfile::tempdir().unwrap();
+    std::fs::create_dir(dist.path().join("js")).unwrap();
+    std::fs::write(dist.path().join("js/module-version.txt"), "first").unwrap();
+    let first = published_asset_version(dist.path());
+    std::fs::write(dist.path().join("js/module-version.txt"), "second").unwrap();
+    assert_ne!(first, published_asset_version(dist.path()));
+}

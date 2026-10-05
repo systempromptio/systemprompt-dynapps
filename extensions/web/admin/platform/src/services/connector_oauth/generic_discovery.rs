@@ -104,8 +104,12 @@ pub(super) async fn bounded_json<T: serde::de::DeserializeOwned>(
         }
         bytes.extend_from_slice(&chunk);
     }
-    serde_json::from_slice(&bytes)
-        .map_err(|_redacted_error| AdminError::Upstream("Invalid OAuth metadata".into()))
+    serde_json::from_slice(&bytes).map_err(|error| {
+        tracing::warn!(target: "connector_oauth", category = ?error.classify(),
+            line = error.line(), column = error.column(),
+            "OAuth response JSON decoding failed (body omitted)");
+        AdminError::Upstream("Invalid OAuth metadata".into())
+    })
 }
 
 pub(super) async fn metadata(

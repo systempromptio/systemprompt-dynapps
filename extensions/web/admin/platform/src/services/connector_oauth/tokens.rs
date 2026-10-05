@@ -1,5 +1,6 @@
 //! OAuth token exchange and refresh, using only bound destinations.
-use super::failure::{FailureKind, FlowFailure, FlowResult, oauth_failure, safe_oauth_code};
+use super::failure::{FailureKind, FlowFailure, FlowResult};
+use super::token_response::{Tokens, accepted_tokens};
 use super::transport::client;
 use super::{Grant, Provider};
 use base64::Engine;
@@ -21,15 +22,6 @@ fn unverified_jwt_exp(token: &str) -> Option<i64> {
     serde_json::from_slice::<JwtExpiry>(&bytes)
         .ok()
         .map(|claims| claims.exp)
-}
-#[derive(Deserialize)]
-struct Tokens {
-    access_token: Option<String>,
-    refresh_token: Option<String>,
-    expires_in: Option<i64>,
-    error: Option<String>,
-    error_description: Option<String>,
-    token_type: Option<String>,
 }
 
 async fn request_with_client(
@@ -93,42 +85,6 @@ async fn request_with_client(
     apply_tokens(grant, tokens, refreshing)
 }
 
-// Why: OAuth response diagnostics can contain credentials; return only the
-// safe failure classification across this boundary.
-async fn accepted_tokens(
-    grant: &Grant,
-    response: reqwest::Response,
-    refreshing: bool,
-) -> FlowResult<Tokens> {
-    let status = response.status().as_u16();
-    tracing::info!(target: "connector_oauth", provider = grant.provider.slug(), user_id = %grant.user,
-        stage = "token", status, refreshing, "token endpoint responded");
-    if status >= 500 || status == 429 {
-        return Err(FlowFailure::new(FailureKind::Outage));
-    }
-    let tokens: Tokens = super::generic_discovery::bounded_json(response)
-        .await
-        .map_err(|_untrusted_response_error| {
-            FlowFailure::new(if refreshing && (200..300).contains(&status) {
-                FailureKind::RefreshUncertain
-            } else {
-                FailureKind::InvalidResponse
-            })
-        })?;
-    if !(200..300).contains(&status) || tokens.error.is_some() {
-        let kind = oauth_failure(
-            &grant.provider,
-            status,
-            tokens.error.as_deref(),
-            tokens.error_description.as_deref(),
-        );
-        let code = safe_oauth_code(tokens.error.as_deref());
-        tracing::warn!(target: "connector_oauth", provider = grant.provider.slug(), user_id = %grant.user,
-            stage = "token", status, oauth_error = code, classification = kind.code(), "token request rejected");
-        return Err(FlowFailure::new(kind));
-    }
-    Ok(tokens)
-}
 
 fn apply_tokens(grant: &mut Grant, tokens: Tokens, refreshing: bool) -> FlowResult<()> {
     // Why: Salesforce rotation has already occurred before response validation.
@@ -141,11 +97,15 @@ fn apply_tokens(grant: &mut Grant, tokens: Tokens, refreshing: bool) -> FlowResu
     };
     if let Some(refresh) = tokens.refresh_token {
         if refresh.trim().is_empty() {
-            return Err(FlowFailure::new(if refreshing {
-                FailureKind::RefreshUncertain
-            } else {
-                FailureKind::InvalidResponse
-            }));
+            return Err(token_validation_failure(
+                grant,
+                if refreshing {
+                    FailureKind::RefreshUncertain
+                } else {
+                    FailureKind::InvalidResponse
+                },
+                "empty_refresh_token",
+            ));
         }
         grant.refresh_token = Some(refresh);
     }
@@ -156,18 +116,22 @@ fn apply_tokens(grant: &mut Grant, tokens: Tokens, refreshing: bool) -> FlowResu
         .is_some_and(|kind| !kind.eq_ignore_ascii_case("bearer"))
         || (matches!(grant.provider, Provider::Generic(_)) && tokens.token_type.is_none())
     {
-        return Err(FlowFailure::new(invalid));
+        return Err(token_validation_failure(
+            grant,
+            invalid,
+            "unexpected_token_type",
+        ));
     }
     grant.access_token = tokens
         .access_token
         .filter(|token| !token.trim().is_empty())
-        .ok_or_else(|| FlowFailure::new(invalid))?;
+        .ok_or_else(|| token_validation_failure(grant, invalid, "missing_access_token"))?;
     let seconds = match tokens.expires_in {
         Some(seconds) if seconds > 0 && seconds <= 31_536_000 => Some(seconds),
         Some(_) => None,
         None => undeclared_expiry_seconds(&grant.provider, &grant.access_token),
     }
-    .ok_or_else(|| FlowFailure::new(invalid))?;
+    .ok_or_else(|| token_validation_failure(grant, invalid, "invalid_expiry"))?;
     grant.expires_at = if seconds == 0 && matches!(grant.provider, Provider::Generic(_)) {
         i64::MAX
     } else {
@@ -179,12 +143,26 @@ fn apply_tokens(grant: &mut Grant, tokens: Tokens, refreshing: bool) -> FlowResu
         grant.expires_at = grant.expires_at.min(expiry);
     }
     if grant.expires_at <= Utc::now().timestamp() {
-        return Err(FlowFailure::new(invalid));
+        return Err(token_validation_failure(
+            grant,
+            invalid,
+            "expired_access_token",
+        ));
     }
     if grant.refresh_token.is_none() && !matches!(grant.provider, Provider::Generic(_)) {
-        return Err(FlowFailure::new(FailureKind::Permission));
+        return Err(token_validation_failure(
+            grant,
+            FailureKind::Permission,
+            "missing_refresh_authorization",
+        ));
     }
     Ok(())
+}
+
+fn token_validation_failure(grant: &Grant, kind: FailureKind, reason: &'static str) -> FlowFailure {
+    tracing::warn!(target: "connector_oauth", provider = grant.provider.slug(), user_id = %grant.user,
+        stage = "token", reason, classification = kind.code(), "token response validation failed");
+    FlowFailure::new(kind)
 }
 
 // Why: Salesforce omits `expires_in`; treating its token as expired would

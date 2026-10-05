@@ -13,6 +13,19 @@ use helpers_logic::{
     AddHelper, EqHelper, GtHelper, NavActiveHelper, NavStateHelper, NotHelper, SubHelper,
 };
 
+#[doc(hidden)]
+pub fn published_asset_version(dist: &std::path::Path) -> String {
+    use sha2::{Digest, Sha256};
+    let mut hash = Sha256::new();
+    for path in ["css/admin-bundle.css", "js/module-version.txt"] {
+        if let Ok(bytes) = std::fs::read(dist.join(path)) {
+            hash.update(path.as_bytes());
+            hash.update(bytes);
+        }
+    }
+    hex::encode(hash.finalize())
+}
+
 pub fn register_helpers(hbs: &mut handlebars::Handlebars<'static>) {
     hbs.register_helper("formatDate", Box::new(FormatDateHelper));
     hbs.register_helper("formatNumber", Box::new(FormatNumberHelper));

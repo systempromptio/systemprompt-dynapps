@@ -79,7 +79,7 @@ pub mod internals {
         TranscriptMeta, classification_schema, parse_classification, render_transcript,
         run_with_classifier,
     };
-    pub use crate::copy_assets::{copy_all_assets, copy_asset};
+    pub use crate::copy_assets::{copy_all_assets, copy_asset, version_module_imports};
     pub use crate::governance_bootstrap::{
         GovernanceStatus, check_governance_config, check_judge_config,
     };
