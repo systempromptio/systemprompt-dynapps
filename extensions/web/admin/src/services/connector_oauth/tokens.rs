@@ -107,7 +107,24 @@ async fn accepted_tokens(provider: &str, response: reqwest::Response) -> AdminRe
             "Connector authorization service unavailable".into(),
         ));
     }
-    let tokens: Tokens = super::generic_discovery::bounded_json(response).await?;
+    // JSON: Salesforce supplies expiry as a number or string; normalize before
+    // typed decoding.
+    let mut value: serde_json::Value = super::generic_discovery::bounded_json(response)
+        .await
+        .map_err(|_| AdminError::Upstream("Invalid OAuth token response JSON".into()))?;
+    if (provider == "salesforce" || provider.starts_with("salesforce-"))
+        && let Some(seconds) = value
+            .get("expires_in")
+            .and_then(serde_json::Value::as_str)
+            .and_then(|text| text.parse::<i64>().ok())
+    {
+        value["expires_in"] = seconds.into();
+    }
+    let tokens: Tokens = serde_json::from_value(value).map_err(|error| {
+        tracing::warn!(target: "connector_oauth", provider, stage = "token", category = ?error.classify(),
+            "token response schema mismatch (values omitted)");
+        AdminError::Upstream("Invalid OAuth token response fields".into())
+    })?;
     // Why: RFC 6749 §5.2 — every error a token endpoint answers with a 4xx
     // (invalid_grant, unauthorized_client, invalid_client, invalid_scope …)
     // is final for this grant; retrying it is a loop, not resilience. Only a
@@ -142,10 +159,10 @@ fn apply_tokens(grant: &mut Grant, tokens: Tokens) -> AdminResult<()> {
     // Treating it as already expired would refresh on every broker call, and
     // with refresh-token rotation each call would carry a different bearer —
     // which breaks the proxy's session binding after `initialize`.
-    let seconds = tokens
-        .expires_in
-        .filter(|n| *n > 0 && *n <= 31_536_000)
-        .or_else(|| match grant.provider {
+    let seconds = match tokens.expires_in {
+        Some(n) if n > 0 && n <= 31_536_000 => Some(n),
+        Some(_) => None,
+        None => match grant.provider {
             Provider::Salesforce(_) => Some(
                 jwt_exp(&grant.access_token)
                     .map_or(SALESFORCE_OPAQUE_TOKEN_SECONDS, |exp| {
@@ -155,8 +172,9 @@ fn apply_tokens(grant: &mut Grant, tokens: Tokens) -> AdminResult<()> {
             ),
             Provider::Generic(_) => Some(0),
             Provider::Atlassian => None,
-        })
-        .ok_or_else(|| AdminError::Upstream("Connector returned no valid token expiry".into()))?;
+        },
+    }
+    .ok_or_else(|| AdminError::Upstream("Connector returned no valid token expiry".into()))?;
     grant.expires_at = if seconds == 0 && matches!(grant.provider, Provider::Generic(_)) {
         i64::MAX
     } else {

@@ -74,6 +74,33 @@ jobs:
             if (!latest || latest.id !== run.id || latest.run_attempt !== run.run_attempt || latest.status !== 'completed' || latest.conclusion !== 'success') throw new Error('Push proof changed during verification');
             core.info(`Verified next-push run ${run.id} attempt ${run.run_attempt}, candidate ${pr.head.sha}, base ${pr.base.sha}`);
 
+  hotfix:
+    name: Verify frozen hotfix
+    if: github.event_name == 'pull_request' && github.base_ref == 'main' && startsWith(github.head_ref, 'hotfix/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Verify main base, candidate and published core
+        env:
+          PR_JSON: ${{ toJSON(github.event.pull_request) }}
+        run: |
+          set -euo pipefail
+          ref=$(jq -r .head.ref <<<"$PR_JSON")
+          head=$(jq -r .head.sha <<<"$PR_JSON")
+          base=$(jq -r .base.sha <<<"$PR_JSON")
+          [[ "$ref" =~ ^hotfix/([0-9]+\.[0-9]+\.[0-9]+)/([0-9a-f]{40})$ ]]
+          version="${BASH_REMATCH[1]}"
+          [ "${BASH_REMATCH[2]}" = "$base" ]
+          [ "$(jq -r .head.repo.full_name <<<"$PR_JSON")" = "$GITHUB_REPOSITORY" ]
+          git merge-base --is-ancestor "$base" "$head"
+          [ "$(git rev-parse HEAD^{tree})" = "$(git rev-parse "$head^{tree}")" ]
+          scripts/sync-release-version.sh "$version" --check
+          scripts/sync-core-version.sh --check
+          bash scripts/check-core-ref.sh
+          ! grep -q '^\[patch.crates-io\]' Cargo.toml tests/Cargo.toml
+
   static:
     if: github.event_name != 'pull_request' || github.base_ref != 'main' || !startsWith(github.head_ref, 'promote/') || github.event.pull_request.head.repo.full_name != github.repository
     name: Static (fmt, sqlx cache, source gates)
@@ -220,15 +247,18 @@ jobs:
   gates-passed:
     name: Gates passed
     runs-on: ubuntu-latest
-    needs: [promotion, static, lint, test]
+    needs: [promotion, hotfix, static, lint, test]
     if: always()
     steps:
       - env:
           NEEDS_JSON: ${{ toJSON(needs) }}
+          IS_HOTFIX: ${{ github.event_name == 'pull_request' && github.base_ref == 'main' && startsWith(github.head_ref, 'hotfix/') }}
           IS_PROMOTION: ${{ github.event_name == 'pull_request' && github.base_ref == 'main' && startsWith(github.head_ref, 'promote/') && github.event.pull_request.head.repo.full_name == github.repository }}
         run: |
           if [ "$IS_PROMOTION" = true ]; then
             jq -e '.promotion.result == "success" and .static.result == "skipped" and .lint.result == "skipped" and .test.result == "skipped"' <<<"$NEEDS_JSON" >/dev/null
+          elif [ "$IS_HOTFIX" = true ]; then
+            jq -e '.hotfix.result == "success" and .promotion.result == "skipped" and .static.result == "success" and .lint.result == "success" and .test.result == "success"' <<<"$NEEDS_JSON" >/dev/null
           else
-            jq -e '.promotion.result == "skipped" and .static.result == "success" and .lint.result == "success" and .test.result == "success"' <<<"$NEEDS_JSON" >/dev/null
+            jq -e '.hotfix.result == "skipped" and .promotion.result == "skipped" and .static.result == "success" and .lint.result == "success" and .test.result == "success"' <<<"$NEEDS_JSON" >/dev/null
           fi

@@ -560,12 +560,16 @@ schema-baseline VERSION="":
         cli="$tmp/${name%.tar.gz}/bin/systemprompt"
         core_ref="v$version"
     else
-        just build
+        if [ -z "${SCHEMA_BASELINE_CLI:-}" ]; then just build; fi
         version="$(awk '/^\[workspace\.package\]/{p=1;next}/^\[/{p=0}p&&/^version[[:space:]]*=/{gsub(/[[:space:]"]/,""); sub(/^version=/,""); print; exit}' Cargo.toml)"
         core_ref="$(tr -d '[:space:]' < bridge/CORE_REF)"
-        cli="{{CLI}}"
+        cli="${SCHEMA_BASELINE_CLI:-{{CLI}}}"
+        if [ -n "${SCHEMA_BASELINE_CLI:-}" ]; then
+            [ "$("$cli" --version)" = "systemprompt ${core_ref#v}" ] || { echo "schema-baseline: CLI core version differs from pinned release" >&2; exit 1; }
+            git diff --quiet "v${core_ref#v}" -- extensions/web/schema || { echo "schema-baseline: overridden CLI requires unchanged released schema" >&2; exit 1; }
+        fi
     fi
-    container="$(docker compose -p "$(just _project_name local)" -f .systemprompt/docker/local.yaml ps -q postgres)"
+    container="${SCHEMA_BASELINE_CONTAINER:-$(docker compose -p "$(just _project_name local)" -f .systemprompt/docker/local.yaml ps -q postgres)}"
     [ -n "$container" ] || { echo "schema-baseline: local Postgres is not running (just db-up)" >&2; exit 1; }
     base_url="$(jq -r '.database_url' .systemprompt/profiles/local/secrets.json)"
     scratch="sp_schema_baseline_$$"

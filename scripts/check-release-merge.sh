@@ -15,6 +15,14 @@ pr="$(jq -sce --arg merge "$merge" --arg head "$head" --arg repo "$repo" '
     [ .[][] | select(.merged_at != null and .merge_commit_sha == $merge and .base.ref == "main" and .head.sha == $head and .head.repo.full_name == $repo) ] |
     if length == 1 then .[0] else error("expected exactly one merged promotion PR") end' <<<"$prs")" || die 'missing unambiguous merged promotion PR'
 ref="$(jq -r .head.ref <<<"$pr")"
+if [[ "$ref" =~ ^hotfix/([0-9]+\.[0-9]+\.[0-9]+)/([0-9a-f]{40})$ ]]; then
+    version="${BASH_REMATCH[1]}"
+    [ "${BASH_REMATCH[2]}" = "$base" ] || die 'hotfix base differs from frozen main'
+    scripts/sync-release-version.sh "$version" --check
+    scripts/sync-core-version.sh --check
+    identity="$(bash scripts/check-hotfix-green.sh "$head" "$ref" "$base")" || die 'hotfix proof did not succeed'
+    IFS=$'\t' read -r run_id attempt <<<"$identity"
+else
 [[ "$ref" =~ ^promote/([0-9]+\.[0-9]+\.[0-9]+)/([0-9a-f]{40})/([0-9a-f]{40})$ ]] || die 'PR is not a frozen promotion'
 [ "${BASH_REMATCH[2]}" = "$base" ] && [ "${BASH_REMATCH[3]}" = "$head" ] || die 'merge parents differ from frozen promotion'
 version="${BASH_REMATCH[1]}"
@@ -23,4 +31,5 @@ scripts/sync-core-version.sh --check
 bash scripts/check-gates-green.sh "$head"
 identity="$(bash scripts/check-promotion-green.sh "$head" "$ref")" || die 'promotion proof did not succeed'
 IFS=$'\t' read -r run_id attempt <<<"$identity"
+fi
 echo "Release merge $merge verified against frozen candidate $head, base $base, promotion run $run_id attempt $attempt"
