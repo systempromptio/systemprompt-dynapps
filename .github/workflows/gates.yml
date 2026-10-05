@@ -74,6 +74,33 @@ jobs:
             if (!latest || latest.id !== run.id || latest.run_attempt !== run.run_attempt || latest.status !== 'completed' || latest.conclusion !== 'success') throw new Error('Push proof changed during verification');
             core.info(`Verified next-push run ${run.id} attempt ${run.run_attempt}, candidate ${pr.head.sha}, base ${pr.base.sha}`);
 
+  hotfix:
+    name: Verify frozen hotfix
+    if: github.event_name == 'pull_request' && github.base_ref == 'main' && startsWith(github.head_ref, 'hotfix/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Verify main base, candidate and published core
+        env:
+          PR_JSON: ${{ toJSON(github.event.pull_request) }}
+        run: |
+          set -euo pipefail
+          ref=$(jq -r .head.ref <<<"$PR_JSON")
+          head=$(jq -r .head.sha <<<"$PR_JSON")
+          base=$(jq -r .base.sha <<<"$PR_JSON")
+          [[ "$ref" =~ ^hotfix/([0-9]+\.[0-9]+\.[0-9]+)/([0-9a-f]{40})$ ]]
+          version="${BASH_REMATCH[1]}"
+          [ "${BASH_REMATCH[2]}" = "$base" ]
+          [ "$(jq -r .head.repo.full_name <<<"$PR_JSON")" = "$GITHUB_REPOSITORY" ]
+          git merge-base --is-ancestor "$base" "$head"
+          [ "$(git rev-parse HEAD^{tree})" = "$(git rev-parse "$head^{tree}")" ]
+          scripts/sync-release-version.sh "$version" --check
+          scripts/sync-core-version.sh --check
+          bash scripts/check-core-ref.sh
+          ! grep -q '^\[patch.crates-io\]' Cargo.toml tests/Cargo.toml
+
   static:
     if: github.event_name != 'pull_request' || github.base_ref != 'main' || !startsWith(github.head_ref, 'promote/') || github.event.pull_request.head.repo.full_name != github.repository
     name: Static (fmt, sqlx cache, source gates)
@@ -212,6 +239,88 @@ jobs:
           workspaces: |
             .
             tests
+      - name: Focused Salesforce emergency gate
+        if: github.event_name == 'pull_request' && github.base_ref == 'main' && startsWith(github.head_ref, 'hotfix/')
+        run: just test-hotfix
+      - run: just test
+        if: github.event_name != 'pull_request' || github.base_ref != 'main' || !startsWith(github.head_ref, 'hotfix/')
+
+  full-hotfix-regression:
+    if: github.event_name == 'pull_request' && github.base_ref == 'main' && startsWith(github.head_ref, 'hotfix/')
+    name: Full hotfix regression (nonblocking)
+    runs-on: ubuntu-latest
+    # Integration is dominated by CREATE/DROP DATABASE round-trips; leave
+    # headroom so a growing suite never turns into a meaningless red X. Green
+    # runs sit at 47-57 minutes, and a cold cache (every core re-pin) adds the
+    # full compile on top, which cancelled run 34691892313 at 60 with the unit
+    # tier already green and nothing failing.
+    timeout-minutes: 90
+    env:
+      CARGO_INCREMENTAL: "0"
+      CARGO_PROFILE_DEV_DEBUG: "0"
+      # The harness accepts a maintenance DB named test, postgres, or *_test.
+      SYSTEMPROMPT_TEST_DATABASE_URL: postgres://test:test@localhost:5432/postgres
+    services:
+      postgres:
+        # Plain postgres 18: no schema needs an extension beyond uuid-ossp and
+        # pgcrypto, which the stock image ships.
+        image: postgres:18
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U test -d test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    steps:
+      # Why: the runner ships ~13 GB free, and the cargo target trees exhaust
+      # it — `just test` began failing with "No space left on device" while
+      # linking the contract crate, which reads as a compile error rather than
+      # as a full disk, and the coverage job builds three instrumented trees on
+      # top of that. Everything removed here is a preinstalled SDK or language
+      # runtime nothing in this repo uses. Ordered roughly by size; `|| true`
+      # throughout because the image's contents drift between runner releases
+      # and a path that has moved must not fail the build.
+      - name: Reclaim runner disk
+        run: |
+          echo "before:"; df -h / | tail -1
+          sudo rm -rf \
+            /usr/local/lib/android \
+            /opt/hostedtoolcache \
+            /usr/share/dotnet \
+            /opt/ghc /usr/local/.ghcup \
+            /usr/share/swift \
+            /usr/local/share/powershell \
+            /usr/share/miniconda \
+            /usr/local/lib/node_modules \
+            /usr/lib/google-cloud-sdk \
+            /opt/microsoft /opt/az /usr/share/az_* \
+            /usr/local/graalvm /usr/share/kotlinc \
+            /usr/local/share/boost /usr/local/julia* \
+            /opt/pipx /usr/local/aws-cli /usr/local/lib/heroku \
+            "${AGENT_TOOLSDIRECTORY:-}" 2>/dev/null || true
+          sudo apt-get clean
+          sudo rm -rf /var/lib/apt/lists/*
+          echo "after:"; df -h / | tail -1
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+      - uses: ./.github/actions/core-checkout
+      - uses: extractions/setup-just@v4
+      # The unit tier includes bridge/keyring code and the Python BA importer.
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends clang mold libpq-dev libssl-dev pkg-config libdbus-1-dev python3 python3-yaml
+      - run: rustup show
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            .
+            tests
       - run: just test
 
   # One stable context for the `main` ruleset: it fails unless every gate
@@ -220,15 +329,18 @@ jobs:
   gates-passed:
     name: Gates passed
     runs-on: ubuntu-latest
-    needs: [promotion, static, lint, test]
+    needs: [promotion, hotfix, static, lint, test]
     if: always()
     steps:
       - env:
           NEEDS_JSON: ${{ toJSON(needs) }}
+          IS_HOTFIX: ${{ github.event_name == 'pull_request' && github.base_ref == 'main' && startsWith(github.head_ref, 'hotfix/') }}
           IS_PROMOTION: ${{ github.event_name == 'pull_request' && github.base_ref == 'main' && startsWith(github.head_ref, 'promote/') && github.event.pull_request.head.repo.full_name == github.repository }}
         run: |
           if [ "$IS_PROMOTION" = true ]; then
             jq -e '.promotion.result == "success" and .static.result == "skipped" and .lint.result == "skipped" and .test.result == "skipped"' <<<"$NEEDS_JSON" >/dev/null
+          elif [ "$IS_HOTFIX" = true ]; then
+            jq -e '.hotfix.result == "success" and .promotion.result == "skipped" and .static.result == "success" and .lint.result == "success" and .test.result == "success"' <<<"$NEEDS_JSON" >/dev/null
           else
-            jq -e '.promotion.result == "skipped" and .static.result == "success" and .lint.result == "success" and .test.result == "success"' <<<"$NEEDS_JSON" >/dev/null
+            jq -e '.hotfix.result == "skipped" and .promotion.result == "skipped" and .static.result == "success" and .lint.result == "success" and .test.result == "success"' <<<"$NEEDS_JSON" >/dev/null
           fi

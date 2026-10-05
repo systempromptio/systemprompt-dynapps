@@ -88,8 +88,64 @@ jobs:
       publish: ${{ inputs.repair_publish }}
     secrets: inherit
 
-  version:
+  hotfix-validation:
+    name: Emergency hotfix validation before publication
     if: inputs.repair_macos != true
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SQLX_OFFLINE: "true"
+      BUILD_NO_COORD: "1"
+      CC: clang
+      CXX: clang++
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Detect isolated hotfix
+        id: candidate
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REF_NAME" == hotfix/* ]]; then
+            echo "hotfix=true" >> "$GITHUB_OUTPUT"
+          else
+            ref=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" --jq '[.[] | select(.merged_at != null and .merge_commit_sha == env.GITHUB_SHA and .base.ref == "main")][0].head.ref // ""')
+            if [[ "$ref" == hotfix/* ]]; then echo "hotfix=true" >> "$GITHUB_OUTPUT"; fi
+          fi
+      - uses: ./.github/actions/core-checkout
+        if: steps.candidate.outputs.hotfix == 'true'
+      - uses: extractions/setup-just@v4
+        if: steps.candidate.outputs.hotfix == 'true'
+      - name: Install build and validation dependencies
+        if: steps.candidate.outputs.hotfix == 'true'
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends clang mold libpq-dev libssl-dev pkg-config libdbus-1-dev python3 python3-yaml ripgrep jq
+      - run: rustup show
+        if: steps.candidate.outputs.hotfix == 'true'
+      - uses: taiki-e/install-action@v2
+        if: steps.candidate.outputs.hotfix == 'true'
+        with:
+          tool: cargo-nextest
+      - uses: Swatinem/rust-cache@v2
+        if: steps.candidate.outputs.hotfix == 'true'
+        with:
+          workspaces: |
+            .
+            tests
+      - name: Validate the exact released hotfix tree
+        if: steps.candidate.outputs.hotfix == 'true'
+        run: |
+          set -euo pipefail
+          ! grep -q '^\[patch.crates-io\]' Cargo.toml tests/Cargo.toml
+          bash scripts/check-core-ref.sh
+          bash tests/scripts/release-merge.sh
+          just preflight-static
+          just clippy
+          just test-hotfix
+
+  version:
+    needs: [hotfix-validation]
+    if: inputs.repair_macos != true && needs.hotfix-validation.result == 'success'
     name: Resolve version & release state
     runs-on: ubuntu-latest
     outputs:
@@ -107,6 +163,7 @@ jobs:
         if: github.event_name == 'push'
         env:
           GH_TOKEN: ${{ github.token }}
+          HOTFIX_VALIDATE_IN_RELEASE: "1"
         run: bash scripts/check-release-merge.sh "$GITHUB_SHA"
       - name: Assert main builds against the published core
         run: |
