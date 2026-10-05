@@ -111,8 +111,9 @@ version when core moves past X.Y.Z.
 
 Create `hotfix/<astound-version>/<main-base-sha>` in a separate worktree from
 `origin/main`. Keep the published core pins and `bridge/CORE_REF` unchanged;
-bump only Astound's release version. Ordinary PR gates run the complete matrix
-and verify the frozen base, candidate tree and published core. Before merging,
+bump only Astound's release version. Emergency PR gates run static checks, the complete lint tier and focused
+Salesforce/OAuth unit regressions; the full test matrix continues in a separate
+nonblocking job. They verify the frozen base, candidate tree and published core. Before merging,
 run `scripts/check-hotfix-green.sh <head-sha> <branch> <main-base-sha>` and verify
 the PR merge tree equals the candidate. Use a two-parent merge through GitHub;
 `release.yml` verifies that exact PR proof before publishing all artifacts.
@@ -123,3 +124,12 @@ use `SCHEMA_BASELINE_CLI` (a checksum-verified released binary or wrapper) and
 `SCHEMA_BASELINE_CONTAINER` (the local Postgres container). The recipe checks
 the binary's core version and rejects schema differences from the release tag,
 then performs a fresh install and records the schema through the usual path.
+
+During an Actions billing outage the owner may merge an isolated hotfix PR
+before PR gates run. The release workflow then runs mandatory static checks,
+root clippy and focused OAuth regressions on the exact merged tree before any
+artifact publication. `HOTFIX_VALIDATE_IN_RELEASE=1` is accepted only inside
+Actions for that merge; ordinary promotion proof remains unchanged. After
+billing recovery, rerun the failed main Release workflow or dispatch it on
+main with `dry_run=false`. Publication still requires signed image smoke and
+upgrade checks.

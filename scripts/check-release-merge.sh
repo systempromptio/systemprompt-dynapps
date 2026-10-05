@@ -20,8 +20,15 @@ if [[ "$ref" =~ ^hotfix/([0-9]+\.[0-9]+\.[0-9]+)/([0-9a-f]{40})$ ]]; then
     [ "${BASH_REMATCH[2]}" = "$base" ] || die 'hotfix base differs from frozen main'
     scripts/sync-release-version.sh "$version" --check
     scripts/sync-core-version.sh --check
-    identity="$(bash scripts/check-hotfix-green.sh "$head" "$ref" "$base")" || die 'hotfix proof did not succeed'
-    IFS=$'\t' read -r run_id attempt <<<"$identity"
+    if [ "${HOTFIX_VALIDATE_IN_RELEASE:-0}" = 1 ]; then
+        [ "${GITHUB_ACTIONS:-false}" = true ] && [ "${GITHUB_SHA:-}" = "$merge" ] || die 'release validation is Actions-only and must identify this merge'
+        run_id="${GITHUB_RUN_ID:?missing release run identity}"
+        attempt="${GITHUB_RUN_ATTEMPT:?missing release run attempt}"
+        echo "Hotfix validated in this release workflow before publication"
+    else
+        identity="$(bash scripts/check-hotfix-green.sh "$head" "$ref" "$base")" || die 'hotfix proof did not succeed'
+        IFS=$'\t' read -r run_id attempt <<<"$identity"
+    fi
 else
 [[ "$ref" =~ ^promote/([0-9]+\.[0-9]+\.[0-9]+)/([0-9a-f]{40})/([0-9a-f]{40})$ ]] || die 'PR is not a frozen promotion'
 [ "${BASH_REMATCH[2]}" = "$base" ] && [ "${BASH_REMATCH[3]}" = "$head" ] || die 'merge parents differ from frozen promotion'
