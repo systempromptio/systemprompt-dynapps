@@ -155,6 +155,27 @@ gateway:
 The older `fallback_provider` / `fallback_upstream_model` keys are refused at
 boot; move them into a one-entry `fallbacks` list.
 
+**Per-project chains.** `by_scope` gives requests attributed to a value in
+one scope dimension their own chain, for example a project's own Vertex
+project or region. A value the route does not list is refused unless
+`unmapped: shared` sends it down the route's own chain:
+
+```yaml
+    by_scope:
+      dimension: project
+      unmapped: shared
+      chains:
+        storefront:
+          provider: vertex-anthropic
+          fallbacks:
+          - provider: anthropic
+```
+
+The project is the one the gateway attributed the request to: the
+`x-systemprompt-scope-project` header, the API key's bound project, or the
+person's primary project. The audit row's route match records
+`scope:project=<id>`.
+
 **When it triggers.** The primary keeps its bounded retry budget for
 transient answers (429, 503). Failover happens when that budget is spent,
 when the primary answers any other **5xx**, or when the **connection fails**

@@ -24,6 +24,16 @@ gateway:
   # Drop the fallback once the project's Vertex Claude quota covers the load.
   # The id is kept from the Anthropic-hosted route so existing audit rows keep
   # their label.
+  #
+  # `by_scope` gives every project its own deployment chain, keyed by the
+  # project core attributed the request to (the x-systemprompt-scope-project
+  # header, the API key's bound project, or the person's primary project).
+  # Today each chain is the route chain, so routing is unchanged; the point is
+  # that the audit row's `route_match` names `scope:project=<id>`, and moving
+  # one project onto its own Vertex project or region is a provider entry in
+  # providers.yaml plus one line here. `unmapped: shared` sends a project not
+  # listed (or a request with no project) down the route chain instead of
+  # refusing it; switch to `deny` only once every project has a chain.
   - id: claude-star-4203d1
     name: Claude (Vertex AI)
     description: >-
@@ -32,6 +42,26 @@ gateway:
     provider: vertex-anthropic
     fallbacks:
     - provider: anthropic
+    by_scope:
+      dimension: project
+      unmapped: shared
+      chains:
+        commerce:
+          provider: vertex-anthropic
+          fallbacks:
+          - provider: anthropic
+        core:
+          provider: vertex-anthropic
+          fallbacks:
+          - provider: anthropic
+        storefront:
+          provider: vertex-anthropic
+          fallbacks:
+          - provider: anthropic
+        business-implementation:
+          provider: vertex-anthropic
+          fallbacks:
+          - provider: anthropic
   # Anthropic's own API is also reachable directly by explicit id.
   - name: Claude (Anthropic API)
     description: >-

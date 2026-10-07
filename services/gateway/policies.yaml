@@ -110,6 +110,16 @@ policies:
         - subject: organization
           window_seconds: 86400
           max_cost_microdollars: 200000000
+        # Per project, daily: a $100/day warning threshold keyed on the project
+        # core attributed each request to (header, bound API key, or primary
+        # project). Last on purpose: under `quota_fault_mode: closed`
+        # (services/ai/gateway.yaml) a person on no project is a subject fault,
+        # which ends evaluation at this window and, in warn mode, records a
+        # quota warning instead of refusing. The windows above are already
+        # counted by then. Give everyone a project before `quota_mode: enforce`.
+        - subject: project
+          window_seconds: 86400
+          max_cost_microdollars: 100000000
       safety:
         mode: warn
         scanners: [heuristic, secrets, pii_extended]
@@ -122,6 +132,15 @@ policies:
         # still covers the complete provider-bound body. Entropy observations
         # never block. Every prior turn received its own PII/phrase scan.
         history: off
+        # `secrets` scans replies only and this plane is in warn mode, so a
+        # scanner fault must not refuse what a finding never would: `open`
+        # records the fault as a non-blocking `scanner_failure` finding and
+        # lets the reply through. 2000 ms bounds it well under the gateway's
+        # own budget; the scanner is local regex work and takes milliseconds.
+        scanner_settings:
+          secrets:
+            fail_mode: open
+            timeout_ms: 2000
         heuristic:
           phrases:
             - "ignore previous instructions"
