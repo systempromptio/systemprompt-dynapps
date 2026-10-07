@@ -3,7 +3,8 @@
 //!
 //! The detail pages show this beside the spend so a reader can see that the
 //! figure was fixed request by request — `primary` is the person's default
-//! at the time, `header` a per-request override — rather than re-derived
+//! at the time, `header` a per-request override, `api_key` the value the
+//! calling key is bound to — rather than re-derived
 //! from whoever is a member today. Read under exclusive attribution only:
 //! the member view has no stamp to report and would answer `member` for
 //! every row.

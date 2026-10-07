@@ -97,6 +97,7 @@ pub(crate) fn attribution_rows(rows: &[AttributionSourceRow]) -> Vec<Attribution
             label: match r.source.as_str() {
                 "primary" => "Person's primary at the time",
                 "header" => "Named by the request",
+                "api_key" => "Bound to the API key",
                 _ => "Current membership",
             },
             source: r.source.clone(),

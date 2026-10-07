@@ -120,6 +120,7 @@ policies:
         - subject: project
           window_seconds: 86400
           max_cost_microdollars: 100000000
+      # No redact_categories: core refuses un-redactable content even in warn mode, so it is enabled only with the enforce flip.
       safety:
         mode: warn
         scanners: [heuristic, secrets, pii_extended]
