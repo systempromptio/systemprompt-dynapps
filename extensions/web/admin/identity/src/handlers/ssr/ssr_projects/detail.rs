@@ -183,6 +183,7 @@ pub(super) fn page_data(
         settings: (tab == "settings").then(|| ProjectSettingsTabView {
             name: project.name.clone(),
             description: project.description.clone().unwrap_or_default(),
+            cost_centre: project.cost_centre.clone().unwrap_or_default(),
             source: project.source.clone(),
             mapping_count: mappings.len() as i64,
             feeding_groups: mapping_rows(

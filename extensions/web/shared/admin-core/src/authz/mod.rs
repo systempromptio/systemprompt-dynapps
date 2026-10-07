@@ -17,16 +17,18 @@
 //! | 160 | `connector` | [`connector`] |
 //! | 170 | `salesforce` | the crate owning Salesforce links |
 //! | 200 | role | core resolver; re-exposed by the crate owning roles |
+//! | 250 | `cost_centre` | the crate owning projects |
 //! | 300 | `organization` | [`organization`] |
 //!
-//! `role` and `organization` change no access decision; they exist because
-//! the gateway's quota resolver finds subjects only through this registry, so
-//! without them a `subject: role` or `subject: organization` window has
-//! nothing to key on. Which providers exist is decided by the crates linked
-//! into the binary: the registry discovers them once per database and caches
-//! the result, so every resolve call site reads the same provider list and
-//! ladder through [`subject_attributes_for`] and [`dimensions`]. [`account`],
-//! [`catalog`] and [`primary`] are the helpers those call sites share.
+//! `role`, `cost_centre` and `organization` change no access decision; they
+//! exist because the gateway's quota resolver finds subjects only through this
+//! registry, so without them a `subject: role` or `subject: organization`
+//! window has nothing to key on. Which providers exist is decided by the crates
+//! linked into the binary: the registry discovers them once per database and
+//! caches the result, so every resolve call site reads the same provider list
+//! and ladder through [`subject_attributes_for`] and [`dimensions`].
+//! [`account`], [`catalog`] and [`primary`] are the helpers those call sites
+//! share.
 
 pub mod account;
 pub mod catalog;

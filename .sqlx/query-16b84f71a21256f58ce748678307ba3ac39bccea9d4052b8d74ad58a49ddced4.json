@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "INSERT INTO projects (id, name, description, source) VALUES ($1, $2, $3, $4)\n         RETURNING id AS \"id: ProjectId\", name, description, source",
+  "query": "SELECT id AS \"id: ProjectId\", name, description, source, cost_centre FROM projects ORDER BY name",
   "describe": {
     "columns": [
       {
@@ -46,22 +46,29 @@
             "name": "source"
           }
         }
+      },
+      {
+        "ordinal": 4,
+        "name": "cost_centre",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "projects",
+            "name": "cost_centre"
+          }
+        }
       }
     ],
     "parameters": {
-      "Left": [
-        "Text",
-        "Text",
-        "Text",
-        "Text"
-      ]
+      "Left": []
     },
     "nullable": [
       false,
       false,
       true,
-      false
+      false,
+      true
     ]
   },
-  "hash": "5f9f8c0aba629ac319660bff1c802bd629f50a73a41953c18484fe895135eacd"
+  "hash": "16b84f71a21256f58ce748678307ba3ac39bccea9d4052b8d74ad58a49ddced4"
 }

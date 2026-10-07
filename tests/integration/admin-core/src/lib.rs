@@ -120,6 +120,8 @@ mod users_ai_request_summary;
 #[cfg(test)]
 mod access_expiry;
 #[cfg(test)]
+mod authz_cost_centre_provider;
+#[cfg(test)]
 mod authz_group_provider;
 #[cfg(test)]
 mod authz_project_provider;

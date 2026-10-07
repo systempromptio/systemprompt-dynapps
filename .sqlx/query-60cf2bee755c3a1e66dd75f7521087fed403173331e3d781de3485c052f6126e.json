@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id AS \"id: ProjectId\", name, description, source FROM projects ORDER BY name",
+  "query": "SELECT id AS \"id: ProjectId\", name, description, source, cost_centre FROM projects WHERE id = $1",
   "describe": {
     "columns": [
       {
@@ -46,17 +46,31 @@
             "name": "source"
           }
         }
+      },
+      {
+        "ordinal": 4,
+        "name": "cost_centre",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "projects",
+            "name": "cost_centre"
+          }
+        }
       }
     ],
     "parameters": {
-      "Left": []
+      "Left": [
+        "Text"
+      ]
     },
     "nullable": [
       false,
       false,
       true,
-      false
+      false,
+      true
     ]
   },
-  "hash": "b203a326edfe4d437aab5669be7be59a9aaedc077196aef0004079e83caadfba"
+  "hash": "60cf2bee755c3a1e66dd75f7521087fed403173331e3d781de3485c052f6126e"
 }

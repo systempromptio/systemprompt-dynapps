@@ -16,6 +16,7 @@ fn create(id: systemprompt_web_shared::ProjectId) -> CreateProjectRequest {
         id,
         name: "Migration programme".to_owned(),
         description: Some("Tracks work during the tenant migration".to_owned()),
+        cost_centre: Some("CC-4100".to_owned()),
     }
 }
 
@@ -35,6 +36,7 @@ async fn a_created_project_is_readable_and_keeps_unnamed_fields_on_update() {
         &UpdateProjectRequest {
             name: Some("Renamed programme".to_owned()),
             description: None,
+            cost_centre: None,
         },
     )
     .await
@@ -43,6 +45,11 @@ async fn a_created_project_is_readable_and_keeps_unnamed_fields_on_update() {
     assert_eq!(
         updated.description, request.description,
         "an omitted description means retain it, rather than erase it"
+    );
+    assert_eq!(
+        updated.cost_centre.as_deref(),
+        Some("CC-4100"),
+        "an omitted cost centre is retained like the description"
     );
     assert_eq!(
         find_project(&db.pool, &request.id)
@@ -81,6 +88,7 @@ async fn duplicate_and_missing_project_mutations_return_caller_errors() {
             &UpdateProjectRequest {
                 name: Some("Nobody".to_owned()),
                 description: None,
+                cost_centre: None,
             },
         )
         .await
@@ -126,5 +134,32 @@ async fn deleting_a_project_removes_it_from_the_listing() {
             .iter()
             .any(|project| project.id == request.id)
     );
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn an_empty_cost_centre_clears_it_and_a_new_one_replaces_it() {
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    let request = create(unique_project("project"));
+    insert_project(&db.pool, &request, "dashboard")
+        .await
+        .expect("create project");
+
+    let edit = |cost_centre: &str| UpdateProjectRequest {
+        name: None,
+        description: None,
+        cost_centre: Some(cost_centre.to_owned()),
+    };
+    let replaced = update_project(&db.pool, &request.id, &edit(" CC-4200 "))
+        .await
+        .expect("replace cost centre");
+    assert_eq!(replaced.cost_centre.as_deref(), Some("CC-4200"));
+
+    let cleared = update_project(&db.pool, &request.id, &edit(""))
+        .await
+        .expect("clear cost centre");
+    assert_eq!(cleared.cost_centre, None);
     db.cleanup().await;
 }

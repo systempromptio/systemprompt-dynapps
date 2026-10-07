@@ -19,6 +19,7 @@ pub struct ProjectRow {
     pub name: String,
     pub description: Option<String>,
     pub source: String,
+    pub cost_centre: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
@@ -54,12 +55,16 @@ pub struct CreateProjectRequest {
     pub id: ProjectId,
     pub name: String,
     pub description: Option<String>,
+    #[serde(default)]
+    pub cost_centre: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct UpdateProjectRequest {
     pub name: Option<String>,
     pub description: Option<String>,
+    #[serde(default)]
+    pub cost_centre: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]

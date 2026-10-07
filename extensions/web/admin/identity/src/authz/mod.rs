@@ -5,6 +5,7 @@
 //! registry that reads every provider live in
 //! `systemprompt_web_admin_core::authz`.
 
+pub mod cost_centre;
 pub mod group;
 pub mod project;
 pub mod role;

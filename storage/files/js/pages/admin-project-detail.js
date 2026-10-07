@@ -88,10 +88,11 @@ const saveSettings = async () => {
     return;
   }
   const description = document.querySelector('[data-field="project-description"]')?.value.trim();
+  const costCentre = document.querySelector('[data-field="project-cost-centre"]')?.value.trim() ?? '';
   try {
     await apiFetch(projectPath(''), {
       method: 'PUT',
-      body: JSON.stringify({ name, description: description || null }),
+      body: JSON.stringify({ name, description: description || null, cost_centre: costCentre }),
     });
     showToast('Project saved', 'success');
     window.location.reload();

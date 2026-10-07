@@ -1,5 +1,8 @@
 //! Project rows: read, create, rename, delete.
 //!
+//! `cost_centre` is set and cleared through the same update: an absent field
+//! keeps the stored value and an empty one clears it.
+//!
 //! No system row and no delete refusal: a project is work attribution, and
 //! deleting one cascades its membership away, which is what an admin removing
 //! a finished project means.
@@ -18,7 +21,7 @@ pub async fn find_project(
 ) -> Result<Option<ProjectRow>, sqlx::Error> {
     sqlx::query_as!(
         ProjectRow,
-        r#"SELECT id AS "id: ProjectId", name, description, source FROM projects WHERE id = $1"#,
+        r#"SELECT id AS "id: ProjectId", name, description, source, cost_centre FROM projects WHERE id = $1"#,
         project_id.as_str()
     )
     .fetch_optional(pool)
@@ -38,12 +41,14 @@ pub async fn insert_project(
     }
     sqlx::query_as!(
         ProjectRow,
-        r#"INSERT INTO projects (id, name, description, source) VALUES ($1, $2, $3, $4)
-         RETURNING id AS "id: ProjectId", name, description, source"#,
+        r#"INSERT INTO projects (id, name, description, source, cost_centre)
+         VALUES ($1, $2, $3, $4, NULLIF(BTRIM($5), ''))
+         RETURNING id AS "id: ProjectId", name, description, source, cost_centre"#,
         req.id.as_str(),
         req.name,
         req.description.as_deref(),
-        source
+        source,
+        req.cost_centre.as_deref()
     )
     .fetch_one(pool)
     .await
@@ -58,11 +63,14 @@ pub async fn update_project(
     sqlx::query_as!(
         ProjectRow,
         r#"UPDATE projects SET name = COALESCE($2, name),
-         description = COALESCE($3, description), updated_at = CURRENT_TIMESTAMP
-         WHERE id = $1 RETURNING id AS "id: ProjectId", name, description, source"#,
+         description = COALESCE($3, description),
+         cost_centre = CASE WHEN $4::text IS NULL THEN cost_centre ELSE NULLIF(BTRIM($4), '') END,
+         updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1 RETURNING id AS "id: ProjectId", name, description, source, cost_centre"#,
         project_id.as_str(),
         req.name.as_deref(),
-        req.description.as_deref()
+        req.description.as_deref(),
+        req.cost_centre.as_deref()
     )
     .fetch_optional(pool)
     .await?
