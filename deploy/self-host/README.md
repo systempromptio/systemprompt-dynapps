@@ -141,18 +141,15 @@ admin, from node 1, before any node serves. A node started against a schema
 it does not match refuses to boot and names the pending migration and the
 `systemprompt infra db migrate --profile self-host` command.
 
-**Boot the nodes one at a time, always.** Start node 1, wait until
-`docker compose ps` shows `healthy`, run the checklist; then node 2 the same
-way; then node 3. The serial order is not only for first
-boot: the MCP server registry in the shared database is keyed by server
-name, and two nodes starting within the same few seconds race each other on
-it, which fails one of them with
-`MCP services running but not properly registered in database`. A node that
-fails this way simply restarts cleanly once the other node is healthy. The
-same rule applies to rolling upgrades: one node at a time.
+**Nodes may boot together.** Each node claims its own instance id in the
+shared database at boot, so the MCP registry and the per-instance state of
+concurrently starting nodes no longer collide; once `migrate` has run, start
+them in any order. Rolling upgrades still go one node at a time, behind the
+balancer, so capacity never drops to zero. Run the checklist on each node
+once it is `healthy`, passing the node's `server.role`:
 
 ```bash
-./verify-node.sh --url http://localhost:8080 --container <compose container name> --version 0.62.1
+./verify-node.sh --url http://localhost:8080 --container <compose container name> --version 0.62.1 --role all
 ```
 
 **If `verify-node.sh` reports the public site missing on a node**, render its
@@ -206,25 +203,45 @@ With this profile's `paths`:
 | root | path | volume |
 |---|---|---|
 | `system.logs` | `/app/logs` | per node, may be ephemeral |
-| `storage.files` | `/app/storage/files` | see below |
+| `storage.files` | `/app/storage/files` | per node, or shared; see below |
 | `storage.exports` | `/app/storage/exports` | per node |
 | `storage.data` | `/app/storage/data` (scratch under `data/scratch`) | per node, already `app_storage_data` |
-| `web.dist` | `/app/web/dist` | per node, already under `app_web` |
-| `services.cache_dir` | `/app/services-cache` | per node, may be ephemeral |
+| `web.dist` | `/app/web/dist` | per node, already under `app_web` (admin and all roles) |
+| `services.cache_dir` | `/app/services-cache` (set in the profile) | per node, may be ephemeral (admin and all roles) |
+| CLI session store | `/app/.systemprompt/sessions` | per node, ephemeral (`emptyDir`) |
 
-The image creates each of them owned by uid 1000, so a named volume mounted
-there is writable. MCP child servers may also write `/tmp`; give it a
-`tmpfs`. For Docker Compose, add `read_only: true`, `tmpfs: [/tmp]` and a
-volume for every row to the `app` service.
+The CLI session store is not a server root: the entrypoint's `admin
+bootstrap` and `infra jobs run` resolve a CLI session and write it under
+`/app/.systemprompt/sessions`, so it needs a writable mount too. The profile
+directory itself stays read-only. MCP child servers may write `/tmp`; give it
+a `tmpfs`. The image creates every path above owned by uid 1000, so a named
+volume or `emptyDir` mounted there is writable. For Docker Compose, add
+`read_only: true`, `tmpfs: [/tmp]` and a volume for every row to the `app`
+service.
 
-`/app/storage/files` is the exception that needs a decision: this image
-ships its admin templates and static assets there, and Docker seeds a named
-volume from the image only when the volume is empty, so a volume over it
-would keep serving the first release's assets after every upgrade. Until
-those assets move out of `storage/files`, keep the root writable (the
-default here) rather than mount a volume over `/app/storage/files`.
-`storage.backend: gcs` (commented in `profile.yaml.template`) moves uploaded
-and generated files to a bucket, but core still probes `storage.files`.
+`/app/storage/files` also carries the image's own admin templates and
+assets. The image keeps a pristine copy in `/app/share/storage-files` with a
+content stamp, and the entrypoint copies it onto the volume whenever the
+stamp differs from the volume's `.image-stamp`: shipped files are refreshed
+on every upgrade, files uploaded beside them are kept. A file a release
+deletes stays on the volume until removed by hand.
+
+### Kubernetes (GKE)
+
+- **Storage:** use `storage: {backend: gcs, bucket: …, credentials:
+  workload_identity}` (the block commented in `profile.yaml.template`) so
+  uploaded and generated files live in one bucket every pod sees.
+  `paths.storage` still needs a per-pod volume for the journal, exports and
+  scratch space.
+- **Role split:** run exactly one `admin` Deployment (`server.role: admin`,
+  `replicas: 1`): it runs the scheduler, MCP and agent reconciliation and the
+  console. Run the gateway pods as a separate Deployment with `server.role:
+  gateway`, scaled freely; they mount only the gateway, bridge, OAuth and
+  health routes and run no workers, and they need neither `web.dist` nor
+  `services.cache_dir`. Two `admin` replicas would run the scheduler twice.
+  Check a node with `verify-node.sh --role gateway` or `--role admin`.
+- **Migrations:** a Job running the image with argument `migrate`, before the
+  rollout; no pod migrates on boot.
 
 ## 7. Clients
 

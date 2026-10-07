@@ -111,6 +111,20 @@ fi
 
 export SYSTEMPROMPT_PROFILE="$PROFILE_FILE"
 
+# Refresh image-shipped files on a /app/storage/files volume when the image
+# changed. Shipped files are overwritten, uploads beside them are kept; a
+# writable image layer (no volume) already carries the current copy.
+SHIPPED_FILES=/app/share/storage-files
+if [ -f "$SHIPPED_FILES.stamp" ] && [ -w /app/storage/files ]; then
+    want="$(cat "$SHIPPED_FILES.stamp")"
+    have="$(cat /app/storage/files/.image-stamp 2>/dev/null || true)"
+    if [ "$want" != "$have" ]; then
+        echo "Refreshing shipped storage files on the volume..."
+        cp -a "$SHIPPED_FILES/." /app/storage/files/
+        printf '%s\n' "$want" > /app/storage/files/.image-stamp
+    fi
+fi
+
 # Probe DATABASE_URL directly when provided (managed Postgres, e.g. Render);
 # fall back to the compose-style host/user/db vars otherwise.
 if [ -n "${DATABASE_URL:-}" ]; then

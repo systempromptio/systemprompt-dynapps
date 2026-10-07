@@ -91,4 +91,4 @@ database before upgrading.
 
 Copy `./profile` to each new node, run `provision.sql` on the shared
 primary if you are moving off the bundled database, and follow `README.md`
-from §4. Boot nodes one at a time.
+from §4.

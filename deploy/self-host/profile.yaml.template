@@ -76,6 +76,10 @@ paths:
 # scratch space stay on the node's disk.
 storage:
   backend: local
+# Composed services bundles are cached here; with a read-only root it is a
+# per-node volume (README.md, Read-only root filesystem).
+services:
+  cache_dir: /app/services-cache
 security:
   jwt_issuer: @EXTERNAL_URL@
   jwt_access_token_expiration: 2592000
