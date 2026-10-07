@@ -6,7 +6,18 @@
 -- statement trigger on core's `ai_requests` copies the primary group and project from
 -- `user_scope_defaults` the moment the row lands, and nothing later touches it.
 -- `source` says who decided — `primary` is the person's default; `header` is
--- reserved for a per-request override a gateway seam may supply later.
+-- the caller's `x-systemprompt-scope-<dimension>` override; `api_key` is the
+-- value the calling API key is bound to.
+--
+-- Gateway requests carry core's own attribution: `ai_request_attributions`
+-- rows (one per registered dimension) written in the same transaction as the
+-- request row, after it. A second statement trigger on that table overwrites
+-- the default-derived project and group with core's values, so the gateway's
+-- decision wins and `user_scope_defaults` is only the fallback for a request
+-- core did not attribute (or a dimension it left out). Core's `default`
+-- source is the provider's first value, which is the person's primary, so it
+-- maps to `primary`. Both triggers fire inside the inserting transaction, so
+-- the row is still pinned at request time.
 --
 -- Extension-only: `ai_requests` is core's and has no scope column, and the
 -- insert is a plain statement on the write pool, so the trigger resolves the
@@ -19,7 +30,7 @@ CREATE TABLE IF NOT EXISTS ai_request_scopes (
     user_id TEXT NOT NULL,
     group_id TEXT REFERENCES groups(id) ON DELETE SET NULL,
     project_id TEXT REFERENCES projects(id) ON DELETE SET NULL,
-    source TEXT NOT NULL DEFAULT 'primary' CHECK (source IN ('primary', 'header')),
+    source TEXT NOT NULL DEFAULT 'primary' CHECK (source IN ('primary', 'header', 'api_key')),
     resolved_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -74,3 +85,52 @@ CREATE OR REPLACE TRIGGER request_scope_stamp_ai_requests_stmt
     REFERENCING NEW TABLE AS new_rows
     FOR EACH STATEMENT
     EXECUTE FUNCTION request_scope_stamp_ai_requests();
+
+-- A value core names that is not a live project or group (deleted between the
+-- request and this statement) leaves that column at its default-derived value.
+CREATE OR REPLACE FUNCTION request_scope_stamp_attributions()
+RETURNS TRIGGER AS $$
+BEGIN
+    BEGIN
+        WITH pivot AS (
+            SELECT a.request_id,
+                   max(a.value) FILTER (WHERE a.dimension = 'project') AS project_value,
+                   max(a.source) FILTER (WHERE a.dimension = 'project') AS project_source,
+                   max(a.value) FILTER (WHERE a.dimension = 'group') AS group_value,
+                   max(a.source) FILTER (WHERE a.dimension = 'group') AS group_source
+              FROM new_rows a
+             WHERE a.dimension IN ('project', 'group')
+             GROUP BY a.request_id
+        ), resolved AS (
+            SELECT pv.request_id, q.user_id, g.id AS group_id, p.id AS project_id,
+                   CASE COALESCE(
+                            CASE WHEN p.id IS NOT NULL THEN pv.project_source END,
+                            CASE WHEN g.id IS NOT NULL THEN pv.group_source END)
+                        WHEN 'header' THEN 'header'
+                        WHEN 'api_key' THEN 'api_key'
+                        ELSE 'primary'
+                   END AS source
+              FROM pivot pv
+              JOIN ai_requests q ON q.id = pv.request_id AND q.actor_kind = 'user'
+              LEFT JOIN projects p ON p.id = pv.project_value
+              LEFT JOIN groups g ON g.id = pv.group_value
+             WHERE p.id IS NOT NULL OR g.id IS NOT NULL
+        )
+        INSERT INTO ai_request_scopes (request_id, user_id, group_id, project_id, source)
+        SELECT request_id, user_id, group_id, project_id, source FROM resolved
+        ON CONFLICT (request_id) DO UPDATE
+           SET group_id = COALESCE(EXCLUDED.group_id, ai_request_scopes.group_id),
+               project_id = COALESCE(EXCLUDED.project_id, ai_request_scopes.project_id),
+               source = EXCLUDED.source;
+    EXCEPTION WHEN OTHERS THEN
+        RAISE WARNING 'request_scope_stamp_attributions failed: %', SQLERRM;
+    END;
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE TRIGGER request_scope_stamp_attributions_stmt
+    AFTER INSERT ON ai_request_attributions
+    REFERENCING NEW TABLE AS new_rows
+    FOR EACH STATEMENT
+    EXECUTE FUNCTION request_scope_stamp_attributions();

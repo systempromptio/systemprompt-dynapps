@@ -29,6 +29,7 @@ Conventions (strict — hold every entry to them):
 
 ### Changed
 
+- **Cost attribution follows the gateway's scope decision.** `ai_request_scopes` now takes a gateway request's project and group from core's `ai_request_attributions` rows (the `x-systemprompt-scope-<dimension>` header, the API key's bound value, or the provider default) instead of always re-deriving them from `user_scope_defaults`, which remains the fallback for requests and dimensions core did not attribute. A new statement trigger on `ai_request_attributions` (`schema/40_request_scopes.sql`) writes the values inside the inserting transaction, so each request is still pinned when it happens. Migration 113 widens `ai_request_scopes.source` to `primary | header | api_key`: a key-bound value is its own decision and is not reported as the person's primary. Core's `default` source maps to `primary`.
 - **Kits: authored skill frontmatter reaches the client.** Core now keeps every `SKILL.md`
   frontmatter key it does not own (`name`, `description`, `title`, `tags`, `category`,
   `display_category`, `hosts`) and writes it into the client `SKILL.md`, so a kit's

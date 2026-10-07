@@ -85,6 +85,8 @@ mod req_044_access_matrix;
 #[cfg(test)]
 mod request_scopes;
 #[cfg(test)]
+mod request_scopes_core;
+#[cfg(test)]
 mod scope_attribution;
 #[cfg(test)]
 mod tempdb;
