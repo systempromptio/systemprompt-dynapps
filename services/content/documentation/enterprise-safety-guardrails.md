@@ -8,7 +8,7 @@ kind: "guide"
 public: true
 tags: ["enterprise", "safety", "admin"]
 published_at: "2026-08-25"
-updated_at: "2026-09-29"
+updated_at: "2026-10-07"
 after_reading_this:
   - "Know which categories the scanners detect and which would block under enforce"
   - "Understand that nothing on this plane refuses traffic today, and why"
@@ -81,9 +81,38 @@ These rules apply once `safety.mode` is set back to `enforce`:
   the scan runs, so findings are recorded and the stream completes. Where
   blocking matters more than latency, use non-streaming calls.
 
-Enforcement **refuses rather than redacts**. A flagged response is rejected
-whole, not rewritten with the values masked. In-flight redaction is on the
-[roadmap](/documentation/enterprise-roadmap).
+## In-flight request redaction
+
+A category listed in **`safety.redact_categories`** is redacted instead of
+refused. A request finding in that category has its matched spans rewritten
+as `[REDACTED:<category>]` in the body forwarded to the provider (and in the
+canonical request), and the persisted finding stores the marker as its
+excerpt, not the matched value. The built-in `heuristic` scanner reports spans
+for its jailbreak, email and card-number matches.
+
+- A category cannot be in both `block_categories` and `redact_categories`;
+  the policy is refused at validation.
+- Content that cannot be redacted is refused: a finding with no location, or
+  a span inside a signed block or a protocol field. Redaction runs in the scan
+  stage whatever `safety.mode` says, so this refusal is not softened by warn
+  mode.
+- **Responses are not redacted.** A flagged response is still refused whole
+  under enforce, or recorded under warn. The inbound copy of the request
+  journaled before scanning is not redacted either.
+
+**No category is listed in `redact_categories` on this instance.**
+
+## Scanner settings
+
+Each scanner can carry `safety.scanner_settings.<scanner>`:
+
+| Key | Default | Meaning |
+|---|---|---|
+| `fail_mode` | `closed` | `closed`: a scanner that errors or times out counts as a blocking finding (refused under enforce). `open`: the failure is stored as a non-blocking `scanner_failure` finding and the request proceeds |
+| `timeout_ms` | `5000` | bound on the scanner in the request, history and response phases. `0` is refused |
+| `config` | none | an opaque mapping handed to the scanner, for example a vendor guardrail service's endpoint or credential reference |
+
+Settings for a scanner not listed in `scanners` are refused at validation.
 
 ## Display-layer redaction
 

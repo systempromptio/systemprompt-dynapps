@@ -18,12 +18,13 @@ use super::month_window::MONTH_WINDOW_SECONDS;
 
 pub const MAX_WINDOWS: usize = 8;
 
-pub const SUBJECTS: [&str; 8] = [
+pub const SUBJECTS: [&str; 9] = [
     "user",
     "group",
     "project",
     "role",
     "cost_centre",
+    "practice",
     "connector",
     "salesforce",
     "organization",

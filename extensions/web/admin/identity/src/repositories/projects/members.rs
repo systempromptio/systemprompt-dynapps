@@ -71,6 +71,24 @@ pub async fn list_cost_centres_for_user(
     .await
 }
 
+pub async fn list_practices_for_user(
+    pool: &PgPool,
+    user_id: &UserId,
+) -> Result<Vec<String>, sqlx::Error> {
+    sqlx::query_scalar!(
+        r#"SELECT p.practice AS "practice!"
+           FROM user_projects up
+           JOIN projects p ON p.id = up.project_id
+           LEFT JOIN user_scope_defaults d ON d.user_id = up.user_id
+           WHERE up.user_id = $1 AND p.practice IS NOT NULL
+           GROUP BY p.practice
+           ORDER BY bool_or(d.primary_project_id = p.id) DESC NULLS LAST, p.practice"#,
+        user_id.as_str()
+    )
+    .fetch_all(pool)
+    .await
+}
+
 pub async fn count_project_members(
     pool: &PgPool,
     project_id: &ProjectId,

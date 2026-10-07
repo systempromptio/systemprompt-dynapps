@@ -19,7 +19,7 @@ pub async fn list_group_options(pool: &PgPool) -> Result<Vec<GroupRecord>, sqlx:
 pub async fn list_project_options(pool: &PgPool) -> Result<Vec<ProjectRow>, sqlx::Error> {
     sqlx::query_as!(
         ProjectRow,
-        r#"SELECT id AS "id: ProjectId", name, description, source, cost_centre FROM projects ORDER BY name"#
+        r#"SELECT id AS "id: ProjectId", name, description, source, cost_centre, practice FROM projects ORDER BY name"#
     )
     .fetch_all(pool)
     .await

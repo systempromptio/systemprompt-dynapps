@@ -8,7 +8,7 @@ kind: "guide"
 public: true
 tags: ["gateway", "api", "governance"]
 published_at: "2026-05-19"
-updated_at: "2026-09-29"
+updated_at: "2026-10-07"
 after_reading_this:
   - "Call the gateway in the Anthropic or OpenAI format"
   - "Supply a credential and an attested x-session-id so a request is not rejected"
@@ -58,6 +58,7 @@ requested on `/v1/messages`.
 | `Authorization: Bearer <jwt or PAT>` *or* `x-api-key: <PAT>` | Caller identity | `401` |
 | `x-session-id: <session id>` | Binds the call to a session for audit and conversation continuity | missing: `400` (`missing required x-session-id header`); not the caller's session: `401` |
 | `x-gateway-conversation-id: <id>` *(optional)* | Pins the conversation; otherwise it is derived from the messages | — |
+| `x-systemprompt-scope-<dimension>: <value>` *(optional)* | Attributes the request to one value in a scope dimension, such as `project` | see [Scope headers](#scope-headers) |
 
 The session must be one the gateway issued:
 
@@ -70,6 +71,27 @@ The session must be one the gateway issued:
 
 A CLI admin session token is **not** a gateway credential. It fails with
 `kid does not match any known signing key`.
+
+## Scope headers
+
+Every request is attributed to one value in each scope dimension the
+instance registers (on this instance, `project` among them). For each
+dimension the value is resolved in this order:
+
+1. the `x-systemprompt-scope-<dimension>` header;
+2. the value the API key is bound to for that dimension;
+3. the caller's default (first) value for that dimension.
+
+| Answer | Cause |
+|---|---|
+| `403` | the header or key-bound value is not one the caller holds (`not a member of <dimension> '<value>'`). An unknown value answers the same, so the header cannot probe for existence |
+| `400` | a header names a dimension the instance does not register, is empty, or appears more than once |
+| `400 scope_required` | a dimension listed in `gateway.require_scopes` resolves to nothing. This instance requires none |
+
+The resolved values and their source are recorded on the request (see
+[Audit Trail](/documentation/enterprise-audit-observability)) and can pick a
+route's per-scope chain (see
+[Model Gateway](/documentation/enterprise-model-routing)).
 
 ## Models
 
@@ -102,8 +124,35 @@ strips before routing.
 |---|---|
 | `400` | missing `x-session-id`, a malformed body, or a model not permitted by gateway policy (`model '<id>' is not permitted by gateway policy`) |
 | `401` | missing, invalid, expired or revoked credential, or a session that does not belong to the caller |
-| `403` | the caller is not entitled to the matched route (`authz denied [<policy>]: <reason>`) |
+| `403` | the caller is not entitled to the matched route (`authz denied [<policy>]: <reason>`), a scope value the caller does not hold, or a model outside the API key's allowlist (`model '<id>' is not allowed for this API key`) |
 | `429` | a quota window is exhausted. **Not returned on this instance**, where quotas run in warn mode |
+| `503` | the process is at its `server.max_in_flight` ceiling (`error_key: "overloaded"`, `Retry-After: 1`). Unset on this instance, so never returned |
+
+A quota `429` carries a `Retry-After` header equal to the seconds until the
+window resets, and a machine-readable body:
+
+```json
+{
+  "type": "error",
+  "error": {
+    "type": "rate_limit_error",
+    "message": "...",
+    "quota": {
+      "window_seconds": 86400,
+      "subject": "user",
+      "dimension": "input_tokens",
+      "limit": 5000000,
+      "used": 5000120,
+      "resets_at": "2026-10-08T00:00:00Z",
+      "retry_after_seconds": 3600
+    }
+  }
+}
+```
+
+The values above are illustrative. `subject` is the window's subject (`user`,
+`api_key` or a scope dimension) and `dimension` names the ceiling breached:
+`requests`, `input_tokens`, `output_tokens` or `cost_microdollars`.
 
 Governance and safety denials also answer before the upstream call. Both
 planes run in warn mode on this instance and do not deny: see

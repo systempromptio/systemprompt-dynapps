@@ -17,6 +17,7 @@ fn create(id: systemprompt_web_shared::ProjectId) -> CreateProjectRequest {
         name: "Migration programme".to_owned(),
         description: Some("Tracks work during the tenant migration".to_owned()),
         cost_centre: Some("CC-4100".to_owned()),
+        practice: Some("Commerce".to_owned()),
     }
 }
 
@@ -37,6 +38,7 @@ async fn a_created_project_is_readable_and_keeps_unnamed_fields_on_update() {
             name: Some("Renamed programme".to_owned()),
             description: None,
             cost_centre: None,
+            practice: None,
         },
     )
     .await
@@ -50,6 +52,11 @@ async fn a_created_project_is_readable_and_keeps_unnamed_fields_on_update() {
         updated.cost_centre.as_deref(),
         Some("CC-4100"),
         "an omitted cost centre is retained like the description"
+    );
+    assert_eq!(
+        updated.practice.as_deref(),
+        Some("Commerce"),
+        "an omitted practice is retained like the description"
     );
     assert_eq!(
         find_project(&db.pool, &request.id)
@@ -89,6 +96,7 @@ async fn duplicate_and_missing_project_mutations_return_caller_errors() {
                 name: Some("Nobody".to_owned()),
                 description: None,
                 cost_centre: None,
+                practice: None,
             },
         )
         .await
@@ -151,6 +159,7 @@ async fn an_empty_cost_centre_clears_it_and_a_new_one_replaces_it() {
         name: None,
         description: None,
         cost_centre: Some(cost_centre.to_owned()),
+        practice: None,
     };
     let replaced = update_project(&db.pool, &request.id, &edit(" CC-4200 "))
         .await
@@ -161,5 +170,38 @@ async fn an_empty_cost_centre_clears_it_and_a_new_one_replaces_it() {
         .await
         .expect("clear cost centre");
     assert_eq!(cleared.cost_centre, None);
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn an_empty_practice_clears_it_and_a_new_one_replaces_it() {
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    let request = create(unique_project("project"));
+    insert_project(&db.pool, &request, "dashboard")
+        .await
+        .expect("create project");
+
+    let edit = |practice: &str| UpdateProjectRequest {
+        name: None,
+        description: None,
+        cost_centre: None,
+        practice: Some(practice.to_owned()),
+    };
+    let replaced = update_project(&db.pool, &request.id, &edit(" Salesforce "))
+        .await
+        .expect("replace practice");
+    assert_eq!(replaced.practice.as_deref(), Some("Salesforce"));
+    assert_eq!(
+        replaced.cost_centre.as_deref(),
+        Some("CC-4100"),
+        "editing the practice leaves the cost centre alone"
+    );
+
+    let cleared = update_project(&db.pool, &request.id, &edit(""))
+        .await
+        .expect("clear practice");
+    assert_eq!(cleared.practice, None);
     db.cleanup().await;
 }

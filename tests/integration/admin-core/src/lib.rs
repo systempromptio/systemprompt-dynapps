@@ -124,6 +124,8 @@ mod authz_cost_centre_provider;
 #[cfg(test)]
 mod authz_group_provider;
 #[cfg(test)]
+mod authz_practice_provider;
+#[cfg(test)]
 mod authz_project_provider;
 #[cfg(test)]
 mod groups_crud;

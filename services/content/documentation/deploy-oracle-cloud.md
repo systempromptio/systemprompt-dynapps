@@ -8,7 +8,7 @@ kind: "guide"
 public: true
 tags: ["documentation", "deployment", "configuration"]
 published_at: "2026-09-02"
-updated_at: "2026-09-29"
+updated_at: "2026-10-07"
 after_reading_this:
   - "Create the OCI Compute, PostgreSQL and Load Balancer resources with the right settings"
   - "Enable the PostgreSQL extensions at the DB-system level before provisioning"
@@ -159,6 +159,11 @@ for this hostname and sign in at `https://ai.example.com/admin/login`.
   once before launch.
 - **More nodes.** Create a compute instance and a load balancer per region and
   copy `/etc/astound/profile` to it unchanged. Add each region's balancer
-  subnet to `--trusted-proxies`, re-render, and boot the nodes one at a time.
-  Every node uses the same primary; read replicas are for disaster recovery
-  only.
+  subnet to `--trusted-proxies` and re-render. The profile sets
+  `database.migrate_on_boot: false`: run the image's one-shot `migrate`
+  command once, then start the nodes; they may start in parallel, because each
+  replica claims its instance id under a database lock before registering
+  its MCP servers. Every node uses the same primary; read replicas are for
+  disaster recovery only. Node roles (`server.role`) and load shedding
+  (`server.max_in_flight`) are covered in
+  [Deploy](/documentation/deploy#growing-to-more-nodes).

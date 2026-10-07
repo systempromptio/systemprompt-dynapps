@@ -8,7 +8,7 @@ kind: "guide"
 public: true
 tags: ["enterprise", "audit", "admin"]
 published_at: "2026-08-25"
-updated_at: "2026-09-29"
+updated_at: "2026-10-07"
 after_reading_this:
   - "Inspect any AI request's actor, model, tokens, cost, and latency at /admin/requests"
   - "Follow a single trace id through policy decision, model call, tool execution, and cost at /admin/traces"
@@ -43,7 +43,10 @@ Every request through the gateway lands a row with **DB-locked actor attribution
 - token counts in and out, and cost;
 - total latency, and the upstream latency spent waiting on the provider;
 - status;
+- the API key that authenticated it (`ai_requests.api_key_id`), rejections included;
 - the trace ids that link it onward.
+
+Each request's **scope attribution** is stored beside it in `ai_request_attributions`, one row per dimension: `request_id`, `dimension` (for example `project`), `value`, and `source`, which is `header` (sent as `x-systemprompt-scope-<dimension>`), `api_key` (the key's bound value) or `default` (the caller's primary value). See [Gateway API](/documentation/gateway-api#scope-headers).
 
 `/admin/requests` lists and filters these rows. `/admin/requests/{id}` opens one, with the governance decisions and safety findings made about it. The serving provider and upstream latency are stored on the row and carried by the [OTLP export](/documentation/observability-export), but the request page does not display them yet. The CLI reaches the same data:
 
@@ -94,8 +97,18 @@ Every governance and safety decision is recorded, whether or not it refused anyt
   - Datadog and Grafana/LGTM take it directly.
   - Splunk takes it through an OpenTelemetry Collector.
   - Neither profile in this repository declares a collector, so nothing is exported until a deployment adds one.
+  - Each `ai_request` span carries its scope attribution as `systemprompt.scope.<dimension>` and `systemprompt.scope.<dimension>.source`, and the key as `systemprompt.api_key.id`. A deployment that registers a `cost_centre` dimension gets `systemprompt.scope.cost_centre` the same way.
   - Setup, attributes and delivery guarantees are on [Observability Export (OTLP)](/documentation/observability-export).
   - `/admin/system/observability` shows the export's lag and last error, and has **Test connection** and **Export now** buttons.
+
+## Gateway metrics
+
+`/metrics` also carries two latency histograms, recorded once per completed request (buffered and streamed), labelled `route` (the inbound wire dialect) and `provider`:
+
+- `gateway_overhead_seconds`: the time the gateway itself added (1 ms to 1 s buckets);
+- `gateway_upstream_duration_seconds`: the provider call (100 ms to 120 s buckets).
+
+Failover hops are counted by `gateway_upstream_failovers_total{from,to,reason}` (see [Model Gateway](/documentation/enterprise-model-routing#provider-failover)) and quota breaches by `systemprompt_quota_denials_total{subject_kind, dimension, mode}`.
 
 ## Retention
 
@@ -120,6 +133,8 @@ The hourly `usage_anomaly` job compares the last complete hour's requests, cost 
 The floor stops a quiet instance from flagging 3 requests where there was 1.
 
 Detections are persisted to `usage_anomalies`, so a restart cannot forget them. They are written once to the server log as a warning on first detection, and shown on the console overview (`/admin`) for 24 hours.
+
+Core adds a second, per-user signal. Its `usage_anomaly_scan` job (hourly at `:02`) compares each user's previous closed hour of completed gateway spend and request count with that user's trailing seven-day hourly baseline. It flags `spend` (3× the baseline and at least $1) and `request_rate` (3× the baseline and at least 50 requests), emits a `usage_anomaly` warning event, and increments the Prometheus counter `systemprompt_usage_anomaly_total{kind, subject_kind}` on `/metrics`.
 
 **There is no push alerting.** The platform sends no chat, email or webhook alert. The earlier Slack delivery was removed from the codebase. To be paged, turn on the [OTLP export](/documentation/observability-export) and alert on the warning log line in your own stack. The thresholds are first-pass constants and will need tuning against real traffic.
 

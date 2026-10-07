@@ -184,6 +184,8 @@
             <input type="text" id="project-description" class="sp-search-input" data-field="project-description" value="{{settings.description}}" {{#unless can_manage}}disabled{{/unless}}>
             <label for="project-cost-centre">Cost centre</label>
             <input type="text" id="project-cost-centre" class="sp-search-input" data-field="project-cost-centre" value="{{settings.cost_centre}}" maxlength="64" autocomplete="off" {{#unless can_manage}}disabled{{/unless}}>
+            <label for="project-practice">Practice</label>
+            <input type="text" id="project-practice" class="sp-search-input" data-field="project-practice" value="{{settings.practice}}" maxlength="64" autocomplete="off" {{#unless can_manage}}disabled{{/unless}}>
             <p class="sp-p-project__note">Defined by <strong>{{settings.source}}</strong>.</p>
             {{#if can_manage}}
             <div class="sp-p-project__form-actions">

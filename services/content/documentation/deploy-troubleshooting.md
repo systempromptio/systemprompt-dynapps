@@ -8,7 +8,7 @@ kind: "guide"
 public: true
 tags: ["documentation", "deployment", "troubleshooting"]
 published_at: "2026-09-02"
-updated_at: "2026-09-11"
+updated_at: "2026-10-07"
 after_reading_this:
   - "Prove each deployment stage on its own before moving to the next"
   - "Read the boot log stage by stage and know what each line means"
@@ -176,7 +176,10 @@ and find the first step that does not appear:
 | `Publishing web assets for this node...` | site rendered into this node's `web/dist` | a warning here never stops boot; the public site 404s until fixed |
 | `Starting services...` and `MCP Servers (1/1)` | children up | the count grows with every server you enable |
 | `Secrets initialization failed` | a secret is malformed | stage 2 signatures |
-| `MCP services running but not properly registered in database` | two nodes booted at the same moment | start this node again once the other is `healthy`; boot nodes one at a time |
+| `instance id '<id>' is already claimed by a live process` | two replicas share one instance id | give each replica its own id: leave `server.instance_id` unset so `HOSTNAME` is used |
+| `MCP services running but not properly registered in database` | registration still failing after 5 retries (the message states the attempt count) | no longer caused by parallel boots; read the MCP server's own log for why it did not register |
+| boot refused naming pending or drifted migrations and `infra db migrate --profile <name>` | the profile skips migrations at boot (`database.migrate_on_boot: false`) and the database is behind its binary | run the named migrate command once, from one node, then start this node again |
+| boot names an unwritable directory | a path the node's role writes is read-only | mount it writable for uid 1000 |
 | `signing key init: ... unavailable` | `signing_key_pem` missing or malformed | stage 2 |
 | `Startup failed after ...` | the reason is in the `Caused by:` lines above it | match it against this page |
 

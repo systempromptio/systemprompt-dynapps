@@ -152,6 +152,7 @@ pub(crate) struct ProjectSettingsTabView {
     pub name: String,
     pub description: String,
     pub cost_centre: String,
+    pub practice: String,
     pub source: String,
     pub feeding_groups: Vec<MappingRowView>,
     pub mapping_count: i64,

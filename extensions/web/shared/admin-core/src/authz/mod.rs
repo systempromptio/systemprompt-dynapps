@@ -18,9 +18,11 @@
 //! | 170 | `salesforce` | the crate owning Salesforce links |
 //! | 200 | role | core resolver; re-exposed by the crate owning roles |
 //! | 250 | `cost_centre` | the crate owning projects |
+//! | 260 | `practice` | the crate owning projects |
 //! | 300 | `organization` | [`organization`] |
 //!
-//! `role`, `cost_centre` and `organization` change no access decision; they
+//! `role`, `cost_centre`, `practice` and `organization` change no access
+//! decision; they
 //! exist because the gateway's quota resolver finds subjects only through this
 //! registry, so without them a `subject: role` or `subject: organization`
 //! window has nothing to key on. Which providers exist is decided by the crates

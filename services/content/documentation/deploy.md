@@ -8,7 +8,7 @@ kind: "guide"
 public: true
 tags: ["documentation", "deployment", "configuration"]
 published_at: "2026-09-02"
-updated_at: "2026-09-29"
+updated_at: "2026-10-07"
 after_reading_this:
   - "Pull and verify the published image"
   - "Provision PostgreSQL with the two required extensions"
@@ -260,7 +260,43 @@ absent.
 
 ## Growing to more nodes
 
-Copy the profile directory to each new machine unchanged, point every node at
-the same PostgreSQL primary, and boot the nodes one at a time. The bundle's
-`README.md` covers the three-node layout, load balancers per region, and the
-rules that apply once more than one node shares a database.
+Copy the profile directory to each new machine unchanged and point every node
+at the same PostgreSQL primary. Nodes no longer need to boot one at a time:
+
+- **Migrate once.** The multi-node profile sets `database.migrate_on_boot:
+  false`, so no node changes the schema as it starts. Exactly one process
+  migrates it first: the image's one-shot `migrate` command
+  (`docker compose -f docker-compose.node.yml run --rm app migrate`, which
+  runs `infra db migrate` and exits).
+  A node that skips migrations checks the schema at boot and refuses to start,
+  naming each pending or drifted migration and the `infra db migrate
+  --profile <name>` command, if the database is behind its binary.
+- **Then boot in parallel.** Each replica claims its instance id under a
+  database lock before registering its MCP servers, so concurrent boots no
+  longer race. Each replica needs its own id: leave `server.instance_id`
+  unset so `HOSTNAME` is used. A second process with a live id refuses to
+  boot.
+- **Roles.** `server.role` is `all` (the default), `gateway` (only `/v1`
+  inference, the bridge, OAuth, discovery and health; no scheduler, MCP
+  servers or agents, so add these freely) or `admin` (everything except the
+  gateway, and all background work). A deployment needs at least one `all` or
+  `admin` node.
+- **Load shedding.** `server.max_in_flight` caps concurrent requests per
+  process. Past it the node answers `503` with `Retry-After: 1`, and
+  `/readyz` reports `{"status":"saturated"}`, so the balancer can shed load
+  instead of queueing it. Unset means no ceiling.
+- **Read-only root.** The server writes only to declared directories
+  (`system.logs`, `storage.files`, `storage.exports`, `storage.data`,
+  `storage.data/scratch`, plus `web.dist` and the services cache on `all` and
+  `admin` nodes). Boot probes each one for the node's role and names any it
+  cannot write. Git checkouts and marketplace import staging use
+  `storage/data/scratch`, so a container can run with a read-only root and no
+  writable `/tmp`.
+- **Shared uploads.** With `storage: {backend: gcs, bucket, prefix?,
+  public_read?, credentials?}`, uploads and generated images go to one Google
+  Cloud Storage bucket instead of each node's disk. `credentials` is
+  `workload_identity` (the default) or `{secret: NAME}`. The gateway journal
+  and exports stay on the node.
+
+The bundle's `README.md` covers the three-node layout, load balancers per
+region, and the exact commands.

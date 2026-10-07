@@ -8,7 +8,7 @@ kind: "guide"
 public: true
 tags: ["enterprise", "finops", "admin"]
 published_at: "2026-08-25"
-updated_at: "2026-09-29"
+updated_at: "2026-10-07"
 after_reading_this:
   - "Read the Cost tab: spend by day, by provider and by model, and consumption by group or project"
   - "Attribute any request's cost to its user, group, project, model, and provider"
@@ -39,6 +39,20 @@ There are no forecasts, no scheduled digests and no alert delivery.
 Cost is not a rollup bolted on afterwards. **Each request row carries user, model, provider, tokens and cost.** Cost is stored as microdollar integers end to end and priced from the model catalogue at the rate of the provider that actually served the request, so a failover is repriced at the fallback's rate.
 
 A person can belong to several groups and projects. Their cost is attributed to the **primary** group and project from their scope defaults, so container totals add up to the instance total rather than double-counting. Chargeback to a project is a filter, not a reconciliation exercise.
+
+### Scope attribution: project, cost centre, practice
+
+Every gateway request is also attributed to one value in each **scope dimension** the instance registers, and each value is stored in `ai_request_attributions` with its source:
+
+- `header`: the client sent `x-systemprompt-scope-<dimension>` (see [Gateway API](/documentation/gateway-api#scope-headers));
+- `api_key`: the API key is bound to that value;
+- `default`: the caller's primary value.
+
+A caller who works on two projects can therefore charge each request to the right one by header, instead of everything landing on their primary project. A header or bound value the caller does not hold is refused with `403`.
+
+On this instance **`cost_centre` and `practice` are per-project fields**. Neither is sent by the client: a request inherits both from the project it is attributed to, so whichever way the project was resolved (header, API key binding or default), its cost centre and practice follow. Spend by cost centre or by practice is spend by project, rolled up one level.
+
+The request row also records `api_key_id`, the key that authenticated it, so spend per key is available alongside spend per user.
 
 ```bash
 systemprompt analytics costs summary
@@ -78,9 +92,15 @@ Spend thresholds are the gateway's quota windows, declared in `services/gateway/
 
 The per-user window is sized to flag a runaway agent within the hour. The instance window flags an unusually expensive day.
 
-The quota plane runs in **warn mode** (`quota_mode: warn`, since 2026-09-04). A window past its threshold is recorded as a `warn` decision under policy `quota`. It appears in `systemprompt infra logs governance report` and on `/admin/governance`, and the request is never refused. [Governance Modes](/documentation/governance-modes) explains the measurement window and how a plane goes back to enforce. Under enforce, a spent window answers HTTP 429 with `retry-after`.
+The quota plane runs in **warn mode** (`quota_mode: warn`, since 2026-09-04). A window past its threshold is recorded as a `warn` decision under policy `quota`. `enforce` and `warn` are independent switches for the quota and safety planes. It appears in `systemprompt infra logs governance report` and on `/admin/governance`, and the request is never refused. [Governance Modes](/documentation/governance-modes) explains the measurement window and how a plane goes back to enforce. Under enforce, a spent window answers HTTP 429 with a `Retry-After` equal to the time until the window resets, and an `error.quota` body naming the window, subject, ceiling, limit and usage (see [Gateway API](/documentation/gateway-api#status-codes-before-the-upstream-call)). Every breach, in either mode, increments `systemprompt_quota_denials_total{subject_kind, dimension, mode}`.
 
-Costs are attributed one request late by design: a request's cost is only known after its response, so the warning lands on the request after the crossing.
+### Reservation, settlement and release
+
+A request's real cost is only known after its response, so admission works on an **estimate** and trues it up afterwards:
+
+1. **Reserve.** Before the provider is called, the gateway estimates the request's tokens (body length / 4 for input, `max_tokens` clamped to the model ceiling for output) and prices them at the pinned rate card. The estimate is reserved in every window the request falls under. In-flight spend therefore counts against the ceiling, and under enforce a request whose estimate alone breaches a cost ceiling is refused before the provider is called.
+2. **Settle.** On completion the bucket is corrected to the audited usage, in the window the request was admitted to.
+3. **Release.** A failed or abandoned request releases its reserved tokens and cost. The request count stays.
 
 ### Subjects and periods
 
@@ -91,7 +111,7 @@ The subjects this instance resolves are:
 - `group`, `project` and `role`, whose providers are in `extensions/web/admin/identity/src/authz/`, and `salesforce` (the linked account), in `extensions/web/admin/platform/src/authz/`;
 - `organization` (the whole installation, subject id `default`), whose provider is in `extensions/web/shared/admin-core/src/authz/organization.rs`.
 
-A person on several groups or projects is counted against their primary one. `quota_fault_mode: closed` means a window whose subject cannot be resolved refuses the request rather than passing it uncounted.
+A window can also key on `api_key` or on any scope dimension, in which case it counts the request's attributed value. A person on several groups or projects is otherwise counted against their primary one. `quota_fault_mode: closed` means a window whose subject cannot be resolved refuses the request rather than passing it uncounted.
 
 **Only the two windows above are declared.** A monthly window per project, group or role is supported but not configured.
 
@@ -101,6 +121,23 @@ Periods are an hour, a day, a week, any number of seconds, or a **calendar month
 - The daily `quota_month_window` job rewrites the live row so it ends at the month's end.
 - The same job carries yesterday's usage bucket into today's, so the bucket holds month-to-date usage and the first of the month starts from zero.
 - The one gap is the first minute after UTC midnight, while core's policy cache is stale.
+
+### Per-key limits
+
+An API key can carry its own limits, set at issuance:
+
+```bash
+systemprompt admin users api-key issue --user <user-id> --name ci-runner \
+  --model claude-sonnet-5 --model claude-haiku-4-5 \
+  --budget-microdollars 50000000 --max-requests 2000 --window-seconds 86400 \
+  --scope project=<project-id>
+```
+
+- `--model` (repeatable) is an allowlist. A request for another model is refused with `403` before routing.
+- `--budget-microdollars` and `--max-requests` are ceilings over `--window-seconds`, which they require. They run as an extra `api_key` quota window, so they reserve, settle and answer `429` like the policy windows, and follow the same `quota_mode` (warn on this instance).
+- `--scope <dimension>=<value>` (repeatable) binds the key to one value per dimension. The key's requests are attributed to it (source `api_key`) unless a header names that dimension. The binding is checked against the owner's memberships at issuance and on every request.
+
+With none of these flags, a key behaves as before. `api-key list` prints each key's limits and scopes.
 
 ### Two console pages
 

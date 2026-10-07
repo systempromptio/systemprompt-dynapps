@@ -67,7 +67,8 @@ CREATE TABLE IF NOT EXISTS projects (
     source TEXT NOT NULL DEFAULT 'dashboard' CHECK (source IN ('yaml','dashboard')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    cost_centre TEXT CHECK (cost_centre IS NULL OR length(cost_centre) BETWEEN 1 AND 64)
+    cost_centre TEXT CHECK (cost_centre IS NULL OR length(cost_centre) BETWEEN 1 AND 64),
+    practice TEXT CHECK (practice IS NULL OR length(practice) BETWEEN 1 AND 64)
 );
 
 CREATE TABLE IF NOT EXISTS project_members (

@@ -1,7 +1,7 @@
 //! Project rows: read, create, rename, delete.
 //!
-//! `cost_centre` is set and cleared through the same update: an absent field
-//! keeps the stored value and an empty one clears it.
+//! `cost_centre` and `practice` are set and cleared through the same update:
+//! an absent field keeps the stored value and an empty one clears it.
 //!
 //! No system row and no delete refusal: a project is work attribution, and
 //! deleting one cascades its membership away, which is what an admin removing
@@ -21,7 +21,7 @@ pub async fn find_project(
 ) -> Result<Option<ProjectRow>, sqlx::Error> {
     sqlx::query_as!(
         ProjectRow,
-        r#"SELECT id AS "id: ProjectId", name, description, source, cost_centre FROM projects WHERE id = $1"#,
+        r#"SELECT id AS "id: ProjectId", name, description, source, cost_centre, practice FROM projects WHERE id = $1"#,
         project_id.as_str()
     )
     .fetch_optional(pool)
@@ -41,14 +41,15 @@ pub async fn insert_project(
     }
     sqlx::query_as!(
         ProjectRow,
-        r#"INSERT INTO projects (id, name, description, source, cost_centre)
-         VALUES ($1, $2, $3, $4, NULLIF(BTRIM($5), ''))
-         RETURNING id AS "id: ProjectId", name, description, source, cost_centre"#,
+        r#"INSERT INTO projects (id, name, description, source, cost_centre, practice)
+         VALUES ($1, $2, $3, $4, NULLIF(BTRIM($5), ''), NULLIF(BTRIM($6), ''))
+         RETURNING id AS "id: ProjectId", name, description, source, cost_centre, practice"#,
         req.id.as_str(),
         req.name,
         req.description.as_deref(),
         source,
-        req.cost_centre.as_deref()
+        req.cost_centre.as_deref(),
+        req.practice.as_deref()
     )
     .fetch_one(pool)
     .await
@@ -65,12 +66,14 @@ pub async fn update_project(
         r#"UPDATE projects SET name = COALESCE($2, name),
          description = COALESCE($3, description),
          cost_centre = CASE WHEN $4::text IS NULL THEN cost_centre ELSE NULLIF(BTRIM($4), '') END,
+         practice = CASE WHEN $5::text IS NULL THEN practice ELSE NULLIF(BTRIM($5), '') END,
          updated_at = CURRENT_TIMESTAMP
-         WHERE id = $1 RETURNING id AS "id: ProjectId", name, description, source, cost_centre"#,
+         WHERE id = $1 RETURNING id AS "id: ProjectId", name, description, source, cost_centre, practice"#,
         project_id.as_str(),
         req.name.as_deref(),
         req.description.as_deref(),
-        req.cost_centre.as_deref()
+        req.cost_centre.as_deref(),
+        req.practice.as_deref()
     )
     .fetch_optional(pool)
     .await?

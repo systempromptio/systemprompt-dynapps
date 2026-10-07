@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id AS \"id: ProjectId\", name, description, source, cost_centre FROM projects ORDER BY name",
+  "query": "INSERT INTO projects (id, name, description, source, cost_centre, practice)\n         VALUES ($1, $2, $3, $4, NULLIF(BTRIM($5), ''), NULLIF(BTRIM($6), ''))\n         RETURNING id AS \"id: ProjectId\", name, description, source, cost_centre, practice",
   "describe": {
     "columns": [
       {
@@ -57,18 +57,37 @@
             "name": "cost_centre"
           }
         }
+      },
+      {
+        "ordinal": 5,
+        "name": "practice",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "projects",
+            "name": "practice"
+          }
+        }
       }
     ],
     "parameters": {
-      "Left": []
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text"
+      ]
     },
     "nullable": [
       false,
       false,
       true,
       false,
+      true,
       true
     ]
   },
-  "hash": "16b84f71a21256f58ce748678307ba3ac39bccea9d4052b8d74ad58a49ddced4"
+  "hash": "53bd062b0220de16b6209e3c3a545f3946b22c6e97b376db3be300c817a6f904"
 }

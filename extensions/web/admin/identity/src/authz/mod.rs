@@ -7,5 +7,6 @@
 
 pub mod cost_centre;
 pub mod group;
+pub mod practice;
 pub mod project;
 pub mod role;
