@@ -8,7 +8,8 @@ Conventions (strict — hold every entry to them):
   section at the top, then one `## <version> — <YYYY-MM-DD>` section per release, each with
   only the categories it needs, in this order: `### Breaking`, `### Added`, `### Changed`,
   `### Fixed`, `### Removed`.
-- Entries are written for the reader who did not make the change: full sentences, what changed
+-- **Gates:** `next` is green again. `extensions/web/jobs/src/copy_assets.rs` compared asset extensions case-sensitively (`clippy::case_sensitive_file_extension_comparisons`, three sites) and it and `tests/unit/web/src/lib.rs` were unformatted; the previous pushes never ran the workflow (startup failures), so the red surfaced only now. A single `is_javascript` helper compares the extension case-insensitively.
+ Entries are written for the reader who did not make the change: full sentences, what changed
   and **why**, named files/commands/flags where the reader will need them. No bare "updated X".
 - Every user-visible or operator-visible change lands in `Unreleased` **in the same commit** as
   the change itself; internal-only refactors are recorded when they alter an API another crate,

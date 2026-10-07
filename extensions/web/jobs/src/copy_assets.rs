@@ -59,7 +59,7 @@ pub async fn copy_all_assets(
     let mut failed = 0u64;
 
     for (ext_id, asset) in assets {
-        let result = if asset.destination().ends_with(".js") {
+        let result = if is_javascript(asset.destination()) {
             copy_versioned_module(dist_dir, &asset, &version).await
         } else {
             copy_asset(dist_dir, ext_id, &asset).await
@@ -86,11 +86,18 @@ pub async fn copy_all_assets(
     Ok((copied, failed))
 }
 
-// Why: browser caches include dependencies, so include the whole graph: changing a leaf must invalidate its importers too.
+fn is_javascript(path: &str) -> bool {
+    Path::new(path)
+        .extension()
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("js"))
+}
+
+// Why: browser caches include dependencies, so include the whole graph:
+// changing a leaf must invalidate its importers too.
 async fn javascript_version(assets: &[(&str, AssetDefinition)]) -> Result<String, JobError> {
     let mut modules: Vec<_> = assets
         .iter()
-        .filter(|(_, asset)| asset.destination().ends_with(".js"))
+        .filter(|(_, asset)| is_javascript(asset.destination()))
         .collect();
     modules.sort_by(|(_, left), (_, right)| left.destination().cmp(right.destination()));
     let mut hash = Sha256::new();
@@ -149,7 +156,7 @@ pub fn version_module_imports(source: &str, version: &str) -> String {
             }
             let end = path[1..].find(quote)? + 1;
             let url = &path[1..end];
-            if !(url.starts_with('.') || url.starts_with("/js/")) || !url.ends_with(".js") {
+            if !(url.starts_with('.') || url.starts_with("/js/")) || !is_javascript(url) {
                 return None;
             }
             Some((
