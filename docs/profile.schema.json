@@ -114,7 +114,8 @@
       "$ref": "#/$defs/StorageConfig",
       "default": {
         "backend": "local",
-        "shared": false
+        "shared": false,
+        "public_read": false
       }
     },
     "observability": {
@@ -182,6 +183,10 @@
               "type": "null"
             }
           ]
+        },
+        "migrate_on_boot": {
+          "type": "boolean",
+          "default": true
         }
       },
       "additionalProperties": false,
@@ -302,6 +307,19 @@
           "minimum": 0,
           "default": 256
         },
+        "role": {
+          "$ref": "#/$defs/NodeRole",
+          "default": "all"
+        },
+        "max_in_flight": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 1,
+          "default": null
+        },
         "trusted_proxies": {
           "type": "array",
           "items": {
@@ -382,6 +400,15 @@
         "strict-origin",
         "strict-origin-when-cross-origin",
         "unsafe-url"
+      ]
+    },
+    "NodeRole": {
+      "description": "The part of the platform a node serves.\n\n`all` is a single-node deployment. `gateway` serves only the AI gateway,\nthe bridge consumer surface and the OAuth/discovery routes they depend on,\nand runs no scheduler, MCP or agent processes, so it scales horizontally.\n`admin` serves everything except the gateway and runs the workers.",
+      "type": "string",
+      "enum": [
+        "all",
+        "gateway",
+        "admin"
       ]
     },
     "PathsConfig": {
@@ -1247,7 +1274,7 @@
       ]
     },
     "StorageConfig": {
-      "description": "Where user-visible files are written and whether the root is shared\nbetween replicas.\n\n`shared: true` declares that `paths.storage` is a mount every replica can\nsee; boot warns when the declaration and the observed mount disagree.",
+      "description": "Where user-visible files are written and whether the root is shared\nbetween replicas.\n\n`backend: local` writes under `paths.storage`; `shared: true` declares\nthat root is a mount every replica can see, and boot warns when the\ndeclaration and the observed mount disagree. `backend: gcs` writes to\n`bucket` under `prefix`; `bucket`, `prefix`, `public_read` and\n`credentials` apply to it alone (credentials default to workload\nidentity).",
       "type": "object",
       "properties": {
         "backend": {
@@ -1257,6 +1284,32 @@
         "shared": {
           "type": "boolean",
           "default": false
+        },
+        "bucket": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "prefix": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "public_read": {
+          "type": "boolean",
+          "default": false
+        },
+        "credentials": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GcsCredentials"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "additionalProperties": false
@@ -1264,7 +1317,33 @@
     "StorageBackend": {
       "type": "string",
       "enum": [
-        "local"
+        "local",
+        "gcs"
+      ]
+    },
+    "GcsCredentials": {
+      "description": "How the `gcs` backend authenticates to Cloud Storage.\n\n`workload_identity` asks the GCE/GKE metadata server for the token of the\nservice account bound to the workload; `{ secret: NAME }` signs with a\nservice-account key JSON held in the secrets store under `NAME`.",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CredentialsLiteral"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "secret": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "secret"
+          ]
+        }
+      ]
+    },
+    "CredentialsLiteral": {
+      "type": "string",
+      "enum": [
+        "workload_identity"
       ]
     },
     "ObservabilityConfig": {

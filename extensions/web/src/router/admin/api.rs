@@ -25,7 +25,6 @@ use std::sync::Arc;
 
 use axum::{Router, middleware as axum_middleware};
 
-use systemprompt::database::DbPool;
 use systemprompt::prelude::PgPool;
 use systemprompt_web_admin_analytics::routes::api as analytics_routes;
 use systemprompt_web_admin_catalog::routes as catalog_routes;
@@ -35,11 +34,9 @@ use systemprompt_web_admin_identity::routes::api as identity_routes;
 use systemprompt_web_admin_platform::routes::api as platform_routes;
 
 pub(super) fn build_admin_only_routes(
-    db: &DbPool,
     read_pool: &Arc<PgPool>,
     write_pool: &Arc<PgPool>,
-    owner: systemprompt::identifiers::UserId,
-    scratch_root: Option<std::path::PathBuf>,
+    managed: Arc<systemprompt_web_admin_core::state::ManagedState>,
 ) -> Router {
     let reads = build_admin_read_routes(read_pool)
         .merge(catalog_routes::managed_resources::reads())
@@ -64,11 +61,6 @@ pub(super) fn build_admin_only_routes(
             systemprompt_web_admin_core::middleware::gates::require_scoped_console_middleware,
         ));
 
-    let managed = Arc::new(systemprompt_web_admin_core::state::ManagedState::new(
-        db,
-        owner,
-        scratch_root,
-    ));
     reads
         .merge(writes)
         .merge(platform)

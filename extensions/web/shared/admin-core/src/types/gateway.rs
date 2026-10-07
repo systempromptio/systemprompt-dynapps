@@ -46,10 +46,10 @@ pub struct RouteFallbackView {
 impl RouteFallbackView {
     #[must_use]
     pub fn describe(&self) -> String {
-        match &self.upstream_model {
-            Some(model) => format!("{} as {model}", self.provider),
-            None => self.provider.clone(),
-        }
+        self.upstream_model.as_ref().map_or_else(
+            || self.provider.clone(),
+            |model| format!("{} as {model}", self.provider),
+        )
     }
 }
 

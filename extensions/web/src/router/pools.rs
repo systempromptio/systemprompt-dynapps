@@ -1,10 +1,12 @@
 //! Database handle extraction from the type-erased extension context, plus
-//! the storage scratch root the managed-source Git checkouts are staged in.
+//! the managed-resource services built once over them (their Git checkouts
+//! are staged under the profile's storage scratch root).
 
 use std::path::PathBuf;
 use std::sync::Arc;
 
 use systemprompt::config::{AppPaths, ProfileBootstrap};
+use systemprompt_web_admin_core::state::ManagedState;
 
 use systemprompt::database::{Database, DbPool};
 use systemprompt::extension::prelude::ExtensionContext;
@@ -13,8 +15,7 @@ use systemprompt::prelude::PgPool;
 use systemprompt::users::{SessionRepository, UserService};
 
 pub(crate) struct DbHandles {
-    pub owner: systemprompt::identifiers::UserId,
-    pub scratch_root: Option<PathBuf>,
+    pub managed: Arc<ManagedState>,
     pub read: Arc<PgPool>,
     pub write: Arc<PgPool>,
     pub db: DbPool,
@@ -30,12 +31,16 @@ impl DbHandles {
             Arc::clone(&read),
             Some(Arc::clone(&write)),
         ));
+        let managed = Arc::new(ManagedState::new(
+            &db,
+            ctx.system_owner_id(),
+            scratch_root(),
+        ));
         Some(Self {
+            managed,
             read,
             write,
             db,
-            owner: ctx.system_owner_id(),
-            scratch_root: scratch_root(),
         })
     }
 }

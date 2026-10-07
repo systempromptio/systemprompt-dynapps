@@ -74,16 +74,15 @@ impl App {
             .expect("build the admin template engine from storage/files/admin")
             .with_branding(branding);
 
+        let managed = Arc::new(systemprompt_web_admin_core::state::ManagedState::new(
+            &database,
+            credentials.admin_user_id.clone(),
+            None,
+        ));
         let api = Router::new()
             .nest(
                 "/admin",
-                admin::admin_router(
-                    &database,
-                    Arc::clone(pool),
-                    pool,
-                    credentials.admin_user_id.clone(),
-                    None,
-                ),
+                admin::admin_router(Arc::clone(pool), pool, Arc::clone(&managed)),
             )
             .merge(platform::connector_api_router(Arc::clone(pool)))
             .merge(platform::bridge_identity_router(Arc::clone(pool)))
@@ -103,8 +102,7 @@ impl App {
             Arc::clone(pool),
             engine.clone(),
             sso_deps,
-            credentials.admin_user_id.clone(),
-            None,
+            managed,
         )
         .layer(axum::Extension(None::<Arc<systemprompt::ai::AiService>>));
         let bridge_auth = admin::bridge_auth_ssr_router(Arc::clone(pool), engine);

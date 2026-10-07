@@ -35,14 +35,8 @@ pub fn admin_ssr_router(
     pool: Arc<PgPool>,
     engine: AdminTemplateEngine,
     sso_deps: AdfsDeps,
-    owner: systemprompt::identifiers::UserId,
-    scratch_root: Option<std::path::PathBuf>,
+    managed: Arc<systemprompt_web_admin_core::state::ManagedState>,
 ) -> Router {
-    let managed = Arc::new(systemprompt_web_admin_core::state::ManagedState::new(
-        db,
-        owner,
-        scratch_root,
-    ));
     let inner = overview::routes()
         .merge(people_routes())
         .merge(ai_activity_routes())

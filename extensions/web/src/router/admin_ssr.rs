@@ -34,8 +34,7 @@ pub(crate) fn build(
             Arc::clone(&db.read),
             engine,
             sso_deps,
-            db.owner.clone(),
-            db.scratch_root.clone(),
+            Arc::clone(&db.managed),
         ),
     })
 }
