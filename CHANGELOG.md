@@ -20,6 +20,11 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+### Added
+
+- **External agents:** `services/external_agents/opencode.yaml` registers OpenCode in the super-agent catalog (enabled), so administrators can toggle the host like Codex CLI and Hermes instead of it being implicitly on. The entry covers both installs — the CLI and the Electron desktop app read the same admin-managed `opencode.json`.
+- **Docs:** `connect-opencode.md` gains a desktop-app section: the app needs no `opencode` binary on `PATH`, reads the same enrolment, exposes skills only through the model's `skill` tool (there is no skills list in its UI), and the bridge recognises the app bundle and offers Open. It also documents the `enabled_providers` allowlist the bridge now writes, which keeps OpenCode's built-in free models out of the picker.
+
 ### Changed
 
 - **Kits: authored skill frontmatter reaches the client.** Core now keeps every `SKILL.md`
@@ -193,6 +198,11 @@ Conventions (strict — hold every entry to them):
 ### Fixed
 
 - **Gateway:** Claude Code 2.1.283 failed on every prompt through the bridge with `400 context_management: Extra inputs are not permitted`. The client sends `anthropic-beta: context-management-2025-06-27` with a `context_management` body field; `vertex-anthropic` declared no `accepted_betas`, so the gateway dropped the header and forwarded the field alone, which Vertex refuses. `services/ai/providers.yaml` now declares the betas Claude Code 2.1.283 sends that Vertex serves (context management, interleaved thinking, effort), pinned by `tests/unit/web/src/vertex_accepted_betas.rs`. The `accepted_betas: []` from earlier today was a no-op: for Vertex an empty list and an absent one are the same policy, and the gateway's learned-beta retry only parses header refusals. Core `next` closes the category (a dropped flag takes its body field with it; a refused body field is learned and re-sent once); this entry ships on core 0.62.0 and needs only the config.
+
+### Removed
+
+- **AI catalog:** `openai.gpt-oss-120b` is dropped from the Vertex MaaS provider in `services/ai/providers.yaml`. It was advertised to every host while its upstream kept failing (`provider 'cerebras' secret 'cerebras' is not configured` in OpenCode logs on 2026-09-24), so a user who picked it got a dead model. The `vertex-gpt-oss` route stays for `gpt-oss-20b` until Google retires it on 2026-10-21.
+
 
 ## 0.62.0 — 2026-09-25
 

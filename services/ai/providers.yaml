@@ -581,9 +581,10 @@ providers:
   # MiniMax MaaS endpoint and gpt-oss-20b on 2026-07-21 and turns them off on
   # 2026-10-21 (models/deprecations/open-models). They are declared anyway so
   # they stay usable until then; after that date core hides a retired
-  # declaration from every listing and the upstream refuses it. Only
-  # gpt-oss-120b and glm-5.2 (preview, guaranteed to at least 2026-10-08) are
-  # not retiring. Delete the retired entries once the date has passed.
+  # declaration from every listing and the upstream refuses it. Only glm-5.2
+  # (preview, guaranteed to at least 2026-10-08) is not retiring; gpt-oss-120b
+  # was dropped on 2026-10-07 because it was offered to every host while its
+  # upstream kept failing. Delete the retired entries once the date has passed.
   #
   # `max_output_tokens` is 32768 where a page states "same as the context
   # window": a reasoning model is sent its own output cap as max_tokens, and
@@ -659,29 +660,6 @@ providers:
       image_resolution_config: false
     limits:
       context_window: 1000000
-      max_output_tokens: 32768
-      max_thinking_budget: 16384
-  - id: openai.gpt-oss-120b
-    upstream_model: openai/gpt-oss-120b-maas
-    pricing:
-      input_per_million: 0.09
-      output_per_million: 0.36
-      cache_read_per_million: 0.0
-      cache_write_per_million: 0.0
-      per_image_cents: null
-    capabilities:
-      vision: false
-      audio_input: false
-      video_input: false
-      image_generation: false
-      audio_generation: false
-      streaming: true
-      tools: true
-      structured_output: true
-      system_prompts: true
-      image_resolution_config: false
-    limits:
-      context_window: 128000
       max_output_tokens: 32768
       max_thinking_budget: 16384
   - id: zai.glm-4.7

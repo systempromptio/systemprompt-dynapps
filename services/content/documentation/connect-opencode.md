@@ -8,11 +8,12 @@ kind: "guide"
 public: true
 tags: ["documentation", "getting-started", "opencode"]
 published_at: "2026-09-04"
-updated_at: "2026-09-15"
+updated_at: "2026-10-07"
 after_reading_this:
   - "Connect OpenCode to the gateway with one installer flag"
   - "Know which files the bridge writes and which tier each lands in"
   - "Diagnose a 403 from the loopback proxy without guessing at credentials"
+  - "Use the OpenCode desktop app against the same enrolment, with no CLI on PATH"
 related_playbooks:
   - title: "Connect Claude Code"
     url: "/documentation/connect-claude-code"
@@ -122,13 +123,34 @@ On Windows, use `& $Bridge doctor`. After selecting a `systemprompt` model in Op
 
 Run `opencode`, open the model picker, and choose a model under the
 `systemprompt` provider. Enrolment writes a default, so the first prompt works
-without picking anything.
+without picking anything. The managed configuration also sets
+`enabled_providers` to the `systemprompt` provider alone, so the picker offers
+only models this gateway serves — never OpenCode's built-in free tier or a
+provider connected by hand.
+
+### The desktop app
+
+The [OpenCode desktop app](https://opencode.ai/) runs the same OpenCode server
+inside the app, so it reads the same admin-managed `opencode.json`, the same
+`auth.json`, and the same MCP connectors, skills and reporting plugin the bridge
+writes for the CLI. Nothing extra is enrolled: install the app, keep the bridge
+running, and pick a `systemprompt` model. It needs no `opencode` binary on your
+`PATH`; the bridge recognises the app itself (`OpenCode.app` on macOS,
+`%LOCALAPPDATA%\Programs\@opencodedesktop\OpenCode.exe` on Windows) and
+offers an **Open** button once it is present.
+
+Skills are not listed anywhere in the app. OpenCode exposes them to the model
+through its `skill` tool, so ask the assistant what skills it has, or name one in
+your prompt, and it loads the matching `SKILL.md`. If the app shows a model from
+another provider, the managed file is missing or stale: run
+`astound-bridge install --host opencode` (as administrator on Windows) and
+restart the app.
 
 ## What the bridge writes
 
 | Piece | Where | Tier |
 |---|---|---|
-| Provider block (`provider.systemprompt`) and the default `model` | `/etc/opencode/opencode.json` | admin-owned |
+| Provider block (`provider.systemprompt`), the default `model` and the `enabled_providers` allowlist | `/etc/opencode/opencode.json` | admin-owned |
 | Provider block, when `/etc` is not writable | `~/.config/opencode/opencode.json` | your own |
 | API key for the `systemprompt` provider | `~/.local/share/opencode/auth.json` (`0600`) | your own |
 | MCP connectors (`mcp.<name>`) | `~/.config/opencode/opencode.json` | your own |
