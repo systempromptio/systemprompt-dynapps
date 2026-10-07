@@ -129,13 +129,21 @@ echo "$GHCR_TOKEN" | docker login ghcr.io -u <github-user> --password-stdin
 export SYSTEMPROMPT_TAG=0.62.1 ASTOUND_PROFILE_DIR=/etc/astound/profile
 export DATABASE_URL='postgres://systemprompt:<pw>@db-primary.example.internal:5432/systemprompt?sslmode=require'
 docker compose -f docker-compose.node.yml pull
+docker compose -f docker-compose.node.yml run --rm app migrate   # node 1 only, once
 docker compose -f docker-compose.node.yml up -d
 ```
 
+**Migrate once, then boot.** The profile sets `database.migrate_on_boot:
+false`, so no node changes the schema as it starts. The `migrate` one-shot
+(the image's entrypoint running `systemprompt infra db migrate`, then
+`admin bootstrap`) moves the shared primary forward and creates the bootstrap
+admin, from node 1, before any node serves. A node started against a schema
+it does not match refuses to boot and names the pending migration and the
+`systemprompt infra db migrate --profile self-host` command.
+
 **Boot the nodes one at a time, always.** Start node 1, wait until
 `docker compose ps` shows `healthy`, run the checklist; then node 2 the same
-way; then node 3. On the first boot node 1 also runs the schema migrations
-and creates the bootstrap admin. The serial order is not only for first
+way; then node 3. The serial order is not only for first
 boot: the MCP server registry in the shared database is keyed by server
 name, and two nodes starting within the same few seconds race each other on
 it, which fails one of them with
@@ -177,14 +185,46 @@ cosign verify --certificate-identity-regexp='https://github.com/Astound-Digital/
   ghcr.io/astound-digital/systemprompt-astound:<new-version>
 # drain the node at the balancer, wait 30 s, then:
 SYSTEMPROMPT_TAG=<new-version> docker compose -f docker-compose.node.yml pull
+SYSTEMPROMPT_TAG=<new-version> docker compose -f docker-compose.node.yml run --rm app migrate   # first node only
 SYSTEMPROMPT_TAG=<new-version> docker compose -f docker-compose.node.yml up -d
 ./verify-node.sh --version <new-version> ...
 ```
 
-The first upgraded node applies the new migrations; the others attach to
-the migrated schema. Rolling back the image is the same command with the
+The one-shot `migrate` on the first upgraded node applies the new
+migrations; every node, that one included, then boots against the migrated
+schema. Rolling back the image is the same command with the
 previous tag and is safe only while the database has not been migrated
 forward — restore the pre-upgrade base backup otherwise.
+
+### Read-only root filesystem
+
+The server writes only to the directories below (core's writable-path
+contract) and at boot write-probes each one for the node's `server.role`,
+refusing to start with one error that names every root it cannot write.
+With this profile's `paths`:
+
+| root | path | volume |
+|---|---|---|
+| `system.logs` | `/app/logs` | per node, may be ephemeral |
+| `storage.files` | `/app/storage/files` | see below |
+| `storage.exports` | `/app/storage/exports` | per node |
+| `storage.data` | `/app/storage/data` (scratch under `data/scratch`) | per node, already `app_storage_data` |
+| `web.dist` | `/app/web/dist` | per node, already under `app_web` |
+| `services.cache_dir` | `/app/services-cache` | per node, may be ephemeral |
+
+The image creates each of them owned by uid 1000, so a named volume mounted
+there is writable. MCP child servers may also write `/tmp`; give it a
+`tmpfs`. For Docker Compose, add `read_only: true`, `tmpfs: [/tmp]` and a
+volume for every row to the `app` service.
+
+`/app/storage/files` is the exception that needs a decision: this image
+ships its admin templates and static assets there, and Docker seeds a named
+volume from the image only when the volume is empty, so a volume over it
+would keep serving the first release's assets after every upgrade. Until
+those assets move out of `storage/files`, keep the root writable (the
+default here) rather than mount a volume over `/app/storage/files`.
+`storage.backend: gcs` (commented in `profile.yaml.template`) moves uploaded
+and generated files to a bucket, but core still probes `storage.files`.
 
 ## 7. Clients
 

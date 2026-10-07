@@ -94,7 +94,11 @@ WORKDIR /app
 # 0.58.1) and is excluded from the build context, so it must be created here:
 # a named volume mounted at a path the image lacks comes up root-owned, and
 # the server, running as uid 1000, cannot write it.
-RUN mkdir -p /app/bin /app/logs /app/storage/data /app/web /app/.systemprompt/profiles/docker
+# The same holds for every other root the server writes (core's writable-path
+# contract): created here so a volume mounted over any of them for a
+# read-only root filesystem comes up owned by uid 1000.
+RUN mkdir -p /app/bin /app/logs /app/storage/data/scratch /app/storage/exports \
+        /app/services-cache /app/web /app/.systemprompt/profiles/docker
 
 COPY --from=builder /out/bin/ /app/bin/
 COPY --from=heybuilder /go/bin/hey /app/bin/hey

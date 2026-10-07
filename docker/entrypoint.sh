@@ -139,13 +139,36 @@ if [ -z "${SIGNING_KEY_FROM_SECRETS:-}" ] && [ ! -f /app/signing_key.pem ]; then
     /app/bin/systemprompt admin keys generate --output /app/signing_key.pem
 fi
 
-echo "Running database migrations..."
 # A managed volume/database outlives the image, so a database seeded by an older
 # tag can carry checksums for migrations that were since edited in the source
 # tree. --repair-drift repairs that case, and only that case, then retries
 # once; every other failure aborts boot with core's classified error and hint
 # (a blind repair-and-retry used to repeat the same failure twice).
-/app/bin/systemprompt infra db migrate --repair-drift
+run_migrations() {
+    echo "Running database migrations..."
+    /app/bin/systemprompt infra db migrate --repair-drift
+}
+
+# `migrate` is the one-shot step for profiles with database.migrate_on_boot:
+# false (deploy/self-host): migrate, ensure the admin, exit.
+if [ "${1:-}" = "migrate" ]; then
+    run_migrations
+    /app/bin/systemprompt admin bootstrap
+    exit 0
+fi
+
+migrate_on_boot() {
+    awk '/^database:/ { in_db = 1; next }
+         /^[^ #]/ { in_db = 0 }
+         in_db && /^  migrate_on_boot:[[:space:]]*false/ { off = 1 }
+         END { exit off ? 1 : 0 }' "$PROFILE_FILE"
+}
+
+if migrate_on_boot; then
+    run_migrations
+else
+    echo "database.migrate_on_boot is false: skipping migrations (run the one-shot migrate step first)."
+fi
 
 echo "Ensuring bootstrap admin user..."
 /app/bin/systemprompt admin bootstrap

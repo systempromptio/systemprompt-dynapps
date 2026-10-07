@@ -46,11 +46,16 @@ Every line must pass; a failure names the stage and the fix.
 ```bash
 export SYSTEMPROMPT_TAG=0.62.1 POSTGRES_PASSWORD='<db-password>'
 docker compose -f docker-compose.single.yml pull
+docker compose -f docker-compose.single.yml run --rm app migrate   # schema + admin user, once
 docker compose -f docker-compose.single.yml up -d          # own database: add `app` at the end
 docker compose -f docker-compose.single.yml ps              # wait for app: healthy
 ```
 
-First boot runs the migrations, creates the admin user and renders the site.
+The profile sets `database.migrate_on_boot: false`, so the server never
+changes the schema as it starts: the `migrate` one-shot applies the
+migrations and creates the admin user, and a node booted against a schema it
+does not match refuses to start and names the command to run. First boot
+renders the site.
 If `verify-node.sh` reports the public site missing (entrypoints before the
 per-node render skipped it), run this once after `healthy`:
 
@@ -74,7 +79,9 @@ Then configure AD FS SSO (`/documentation/adfs-sso-setup`), sign in at
 
 ```bash
 export SYSTEMPROMPT_TAG=<new-version>
-docker compose -f docker-compose.single.yml pull && docker compose -f docker-compose.single.yml up -d
+docker compose -f docker-compose.single.yml pull
+docker compose -f docker-compose.single.yml run --rm app migrate
+docker compose -f docker-compose.single.yml up -d
 ```
 
 Versioned tags never move; migrations are forward-only, so back up the

@@ -6,7 +6,9 @@
 #     --admin-email you@example.com --trusted-proxies <your proxy CIDR> \
 #     --database-url 'postgres://systemprompt:pw@postgres:5432/systemprompt' \
 #     --anthropic-key sk-ant-...
-#   SYSTEMPROMPT_TAG=0.62.1 POSTGRES_PASSWORD=pw docker compose -f docker-compose.single.yml up -d
+#   export SYSTEMPROMPT_TAG=0.62.1 POSTGRES_PASSWORD=pw
+#   docker compose -f docker-compose.single.yml run --rm app migrate   # schema + admin, once
+#   docker compose -f docker-compose.single.yml up -d
 #
 # Bundled Postgres is pgvector/pgvector:pg18: plain postgres:18 plus pgvector,
 # kept so volumes created by earlier releases (which installed `vector`) keep
