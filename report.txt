@@ -1,0 +1,165 @@
+SCALABILITY CONCERNS (IT registry, NFR-2 + related) — VERDICTS FROM CODE
+=======================================================================
+Scope: astound `next` + systemprompt-core `next`, read 2026-10-07. Code reading
+only; nothing built, run or load-tested. Paths: astound = this repo,
+core = ../systemprompt-core.
+
+SUMMARY
+-------
+| # | IT concern                                   | Verdict        |
+|---|----------------------------------------------|----------------|
+| 1 | Files / generated content on local disk      | PARTLY TRUE    |
+| 2 | Local MCP processes not isolated per node    | FALSE (w/ race caveat) |
+| 3 | Nodes boot sequentially                      | PARTLY TRUE    |
+| 4 | No gateway/admin (data/control plane) split  | LARGELY TRUE   |
+| 5 | One Postgres primary, no replica reads/cache | TRUE for our deploy; core supports replica reads |
+| 6 | No overload shedding; only 2 rate limits     | Shedding: TRUE. "Only 2 limits": FALSE |
+
+Bottom line: multi-node works today (3 stateless nodes, shared Postgres,
+job locking, shared quota counters). The real gaps are: per-node file
+storage, an MCP registration race forcing one-at-a-time boot, no
+node-level load shedding, and no way to run gateway-only vs admin-only
+nodes. None is architectural; each is a bounded piece of work.
+
+
+1. "Files and generated content are on local disk" — PARTLY TRUE
+----------------------------------------------------------------
+- Only one storage backend exists: local filesystem.
+  core crates/infra/storage/src/lib.rs:3-7,34-38;
+  crates/shared/manifest/src/profile/storage.rs:12-15 (Local is the only variant).
+  No S3/GCS dependency anywhere.
+- BUT core supports a shared mount: `storage.shared: true` turns on a boot
+  probe where each replica proves it sees its siblings' markers.
+  storage.rs:20-30; crates/infra/storage/src/probe.rs:1-11.
+- Our self-host template does not opt in:
+  deploy/self-host/profile.yaml.template:43-49 (no storage.shared).
+- deploy/self-host/docker-compose.node.yml:21-26,39-41:
+  * /app/web (rendered site) = per-node volume; README:150-157 has operators
+    re-run publish_pipeline per node.
+  * /app/storage/data (gateway journal) = per-node BY DESIGN ("never share it",
+    README:98-100). Not a defect.
+  * /app/storage/files (uploads, generated files) has NO volume -> lives in
+    the container layer: per-node AND lost on container recreate.
+- File metadata and MCP artifacts are in Postgres (shared); only the bytes are
+  per-node.
+=> Fix: mount a shared volume (NFS/Filestore) at /app/storage/files and set
+   storage.shared: true (already supported), or add a GCS backend (new code).
+   Web output is regenerable per node and is acceptable as is.
+
+
+2. "Local MCP processes are not isolated per node" — FALSE (with a caveat)
+--------------------------------------------------------------------------
+- Only ONE MCP server is a local process: systemprompt (services/mcp/systemprompt.yaml,
+  type internal, port 5010). Atlassian, Google Workspace, Salesforce and
+  SF Core are remote HTTPS endpoints; nothing is spawned for them.
+- Each node spawns its own child, reached over 127.0.0.1 — isolated per node.
+  core crates/domain/mcp/src/services/process/spawner.rs;
+  services/database/sync.rs:26; monitoring/proxy_health.rs:65.
+- Port collisions are handled safely within a node (only provably-own stale
+  processes are killed): services/network/port.rs:30,50,95.
+- Registry is per instance: services.sql:1-14 PRIMARY KEY (instance_id, name);
+  repository/service/repo.rs:44-56.
+- MCP session/artifact/execution state is in Postgres, not in-process.
+- CAVEAT: deploy/self-host/README.md:135-144 documents a boot race on the MCP
+  registry; the losing node dies with "MCP services running but not properly
+  registered in database" (core lifecycle/reconciliation.rs:174-187) and
+  recovers on restart. The README says "keyed by server name" but the schema
+  key is (instance_id, name), so the race is more likely in reconciliation /
+  stale-entry cleanup (reconciliation.rs ~197). Needs tracing — see #3.
+
+
+3. "Nodes boot sequentially" — PARTLY TRUE
+-----------------------------------------
+Startup work each node runs (docker/entrypoint.sh): migrate --repair-drift (:148),
+admin bootstrap (:151), publish_pipeline (:160), services start (:165)
+-> MCP reconcile, agents, scheduler (core server/runner.rs:24-31).
+- Migrations ARE safe under concurrent boot: blocking pg_advisory_lock.
+  core crates/infra/database/src/lifecycle/installation/extension/lock.rs:14,45;
+  migrations/repair.rs:54,81.
+- Bootstrap jobs are claimed cluster-wide; only one node runs each.
+  core crates/app/scheduler/src/services/scheduling/bootstrap.rs:70-87.
+- NOT safe: MCP service registration (the race in #2). This is the ONLY reason
+  README:135-144 says "boot the nodes one at a time, always".
+- Minor: the entrypoint's manual publish_pipeline takes no lock
+  (entrypoint.sh:155-158); harmless since output is per node.
+- `--skip-migrate` exists (core cli services/start.rs:66) but the entrypoint
+  has no switch to use it.
+=> Fix: make MCP registration race-free (one core change). Then parallel boot
+   and fast autoscaling work. Optional: a skip-migrate env switch + a one-shot
+   migrate job for Kubernetes.
+
+
+4. "No data/control plane split" — LARGELY TRUE
+-----------------------------------------------
+- One binary always mounts everything: OAuth, A2A, MCP, content, /admin and the
+  inference gateway. No route-group toggles.
+  core crates/entry/api/src/services/server/routes/protocol.rs:273-289,
+  routes/mod.rs:41-48, routes/gateway.rs:1-2.
+- --api/--agents/--mcp flags do not split roles (plans.rs:22-41).
+- Only switch available: scheduler.enabled:false per node
+  (scheduling/mod.rs:143-145) — unused; services/scheduler/config.yaml:13 = true
+  and every node runs the same profile (README:18).
+- CORRECTION to IT: jobs do NOT run duplicated across nodes.
+  distributed_lock defaults true (manifest services/scheduler.rs:106,136);
+  cluster jobs use pg_try_advisory_lock so one replica runs each tick
+  (scheduler repository/job_lock.rs:1-8,106; scheduling/claim.rs:26-43).
+  Only content_prerender, page_prerender and managed_inventory_refresh are
+  node-scoped on purpose.
+=> Mitigation today: run the same image as two deployments (gateway pool +
+   admin pool), route /v1/* vs /admin at the load balancer, and disable the
+   scheduler on the gateway pool. It works, but each pod still carries all routes.
+   A true split needs a role flag in core to skip mounting route groups.
+
+
+5. "One Postgres primary; replicas DR only; no distributed cache" — TRUE for
+   our deployment, but understated
+--------------------------------------------------------------------------
+- Deploy policy: deploy/self-host/README.md:1,6-7,54-56 (boot refuses a standby);
+  SECRETS.md:13,23 (database_write_url "Phase 2, leave unset").
+- CORRECTION: core ALREADY supports read/write split — set database_write_url and
+  reads go to database_url (replica). core crates/infra/database/src/services/
+  database.rs:85-111; runtime builder/core_layer.rs:124-127; write pool refuses a
+  standby (lifecycle/validation.rs:33-43). Disabled by choice (replica-lag
+  read-after-write risk on sessions), not missing.
+- Pool: default 50 connections, 30s acquire, overridable per profile
+  (postgres/connection.rs:44-46; core_layer.rs:203-222). Size primary >= 3x50.
+- In-memory per-node caches (more than IT listed): policy 60s
+  (gateway policies/resolver.rs:28), thought-signature 1h with DB fallback
+  (signature_cache.rs:40), JWKS, credential, authz parent-chain. No Redis.
+- Gateway hot path DB work: synchronous = policy (cached), audit row insert,
+  quota check/reserve upsert, guards, governance (gateway service/mod.rs:82-179).
+  Async after response = finalize, cost, tool results, abandon settlement.
+=> Real limit: 3-4 DB round trips per inference request on one primary. Fine at
+   current scale; this is the first thing a load test (OBJ-003) will measure.
+
+
+6. "No overload shedding; only rate limits for inference and sign-in"
+---------------------------------------------------------------------
+- No shedding: TRUE. No ConcurrencyLimit/LoadShed/TimeoutLayer, no connection
+  cap on axum::serve (core server/startup.rs:86). /readyz returns 503 only
+  pre-boot, draining, or DB probe timeout — not saturation (server/probes.rs:26-61).
+- Body limits exist: 2 MiB global (builder.rs:59), 1 MiB managed consumer.
+- "Only inference + sign-in": FALSE. Rate limiting applies to ~25 route groups
+  (routes/protocol.rs:75-284; manifest profile/rate_limits.rs:10-63), in two tiers
+  (middleware/rate_limit/mod.rs:6-10,136-164):
+  * per-node in-memory governor burst limit (by identity or client IP);
+  * cluster-wide Postgres 10s per-user window (rate_limit/global.rs:22;
+    users repository/rate_limit_bucket.rs:35-38) — correct in multi-node.
+  Gateway quota buckets are also in Postgres (shared).
+- Caveat: unauthenticated per-IP limits (OAuth/sign-in) are per node, so the
+  effective limit is N x configured across N nodes.
+=> Fix: add tower ConcurrencyLimit + LoadShed (or a 503 on in-flight > N) and
+   have /readyz report saturation. Small core change.
+
+
+SUGGESTED REPLY TO IT (one paragraph)
+-------------------------------------
+Multi-node is supported today: stateless nodes on one Postgres primary,
+migrations and scheduled jobs are lock-protected so nothing runs twice, and
+rate limits and quotas are counted cluster-wide in Postgres. Read-replica
+routing exists in core but is off by policy. Real gaps we will close:
+(1) uploads need a shared mount (supported via storage.shared) or a GCS
+backend; (2) an MCP registration race that currently requires one-at-a-time
+boot; (3) no node-level load shedding; (4) gateway and admin cannot yet be
+deployed as separate roles (workaround: two pools from one image). We will
+confirm capacity with the peak load test (OBJ-003).

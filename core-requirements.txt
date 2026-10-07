@@ -1,0 +1,158 @@
+SYSTEMPROMPT CORE — REQUIRED WORK
+=================================
+Date: 2026-10-07. Sources: IT requirements registry (AI_Gateway_Requirements_Registry_EN.xlsx),
+Cloudfresh "Gateway Proposal and Gap Map" and "EAI Target Architecture" (06.10.2026),
+and a code read of core + astound `next` (see report.txt for scalability evidence).
+
+Inclusion rule: only work that (a) a client document explicitly asks for or the
+code shows is broken, (b) belongs in core, and (c) is needed for the 30.11 first
+release on GCP. Out of scope (owned by Google/Cloudfresh or explicitly deferred):
+RAG / vector stores / embeddings / batch / knowledge graph, response cache,
+automatic model selection, SCIM, memory/workflows/sandbox, Terraform, external
+secret-manager SDKs (secrets are mounted as files), Cloud SQL IAM (Auth Proxy).
+
+Priority: P0 = blocks first release or client-reported defect. P1 = required for
+release, named by Cloudfresh as gateway work. P2 = required, lower urgency.
+
+
+A. CLIENT-REPORTED DEFECTS (bridge / skill delivery)        — all P0
+-----------------------------------------------------------------------
+Reported by the client as verified gaps on 0.62.0. First step for each: reproduce on core `next`;
+close any already fixed with a reference to the commit.
+
+A1  Full skill frontmatter (REQ-055)
+    Every SKILL.md frontmatter field reaches the client unchanged, including
+    fields we don't know yet. Today only `name` and `description` survive.
+    Done when: a skill with arbitrary extra keys arrives byte-identical in the
+    client's skill file.
+
+A2  Per-hook timeout preservation (REQ-057)
+    Authored hook `timeout` is delivered as written; omitted -> client default.
+    Why it matters: governance hooks timing out early fail OPEN (ungoverned calls).
+    Done when: authored timeouts round-trip through bridge sync.
+
+A3  Skill-listing budget (REQ-056)
+    A kit declares the Claude Code skill-listing budget; the bridge writes it into
+    client settings on every sync. Without it, large kits have skills silently
+    dropped from the model's view.
+
+A4  Deterministic dependency pinning (REQ-058)
+    Pin external marketplaces to a git ref; support pinned non-marketplace plugin
+    sources (git subdir, GitHub repo, URL). Same inputs -> same bundle on every machine.
+
+A5  Development file exclusion (REQ-060)
+    Kit-level exclude list (gitignore-style) so tests, fixtures, evals and
+    authoring docs never ship to clients. Default excludes: tests/, fixtures/,
+    evals/, .github/, docs/.
+
+A6  Provider-specific request sanitisation (REQ-059)            — P1
+    Strip request fields/betas the selected upstream rejects (Anthropic
+    first-party fields on Vertex); keep them where accepted. Verify the
+    2026-09-28 accepted_betas work covers it; extend to any remaining fields.
+    Done when: stock Claude Code works against a Vertex route without client workaround.
+
+
+B. ATTRIBUTION AND COST CONTROL
+-------------------------------
+B1  Project attribution on every request (Cloudfresh decision 2, D-33)  — P0
+    Every /v1/* request carries project (and practice, cost_centre) and is
+    attributed in ai_requests. Sources in order: explicit header -> PAT/key
+    binding -> bridge-injected header -> user default project.
+    The gateway verifies the user is a member of the stated project (403 if not).
+    Bridge injects the header for Claude Code / OpenCode.
+    Why: Cloudfresh flags "no project tags" as a release risk; chargeback and
+    budget reporting do not work without it.
+
+B2  Cost centre column on ai_requests (FR-5.5)                         — P1
+    Persist cost_centre alongside project; exported via OTLP for BigQuery joins.
+
+B3  Enforce-ready quotas (FR-5.3, Cloudfresh decision 3)               — P1
+    Cost ceilings exist but have never run in enforce. Before flipping:
+    - token/cost overshoot bound: reserve estimated cost at request start
+      (today accounting happens after completion, so in-flight requests overshoot);
+    - clear 429 body naming the window, limit and reset time;
+    - per-plane enforce switch already exists — prove it with an integration test.
+
+B4  Per-key limits (FR-3.1, UC-28)                                     — P2
+    PATs/service identities carry their own model set, budget and request
+    window, and spend is attributable by key. Needed for pipeline service
+    identities (EAI 5.1).
+
+
+C. ROUTING ON GCP
+-----------------
+C1  Per-project upstream routing (Cloudfresh largest change #1)        — P1
+    A route resolves to a Vertex GCP project chosen by the request's project
+    (workspace -> GCP project map in config). Each model project has its own
+    quota and budget.
+
+C2  Multi-deployment fallback within Vertex (FR-2.1/2.4, decision 1)  — P1
+    A route lists an ordered set of deployments (regions/projects); on 429/5xx
+    try the next healthy one (circuit breaker per deployment). Anthropic API
+    only if explicitly configured. Audit records the deployment that served.
+    Optional later: weighted / least-busy selection.
+
+
+D. GUARDRAILS
+-------------
+D1  Model Armor scanner (FR-7.2, Cloudfresh largest change #2)         — P1
+    A safety-plane scanner calling the Model Armor API on request and response,
+    using a configurable template id (and SDP templates for client-name
+    dictionaries). Findings feed the existing warn/enforce + audit path.
+    Fail mode configurable (open/closed) with a timeout.
+
+D2  In-flight redaction (REQ-036, FR-7.7)                               — P2
+    For configured categories, redact before forwarding and before persistence,
+    instead of only warn/block.
+
+
+E. SCALE-OUT ON GKE (evidence in report.txt)
+--------------------------------------------
+E1  Fix MCP registration race on concurrent boot                       — P0
+    Concurrent node start fails with "MCP services running but not properly
+    registered in database" (core lifecycle/reconciliation.rs:174-187), forcing
+    one-at-a-time boot. Make registration/stale-cleanup instance-scoped and
+    race-free. Done when: N nodes boot simultaneously with zero failures.
+
+E2  Cloud Storage file backend (Cloudfresh largest change #3)          — P1
+    Add a GCS StorageBackend (workload identity) next to Local
+    (core crates/infra/storage/src/lib.rs:34-38). Uploads/generated files stop
+    living in the container layer.
+
+E3  Node roles: gateway vs admin (Cloudfresh largest change #4, NFR-2.2) — P1
+    A role setting (all | gateway | admin) that skips mounting the other route
+    groups and, for gateway, disables the scheduler. Same image, two deployments.
+
+E4  Overload shedding (NFR-2.4)                                        — P2
+    Configurable in-flight concurrency limit with fast 503 + Retry-After;
+    /readyz reports not-ready while saturated so the load balancer drains it.
+
+E5  Skip-migrate boot switch                                           — P2
+    Env/profile switch honoured by the entrypoint so Kubernetes runs migrations
+    as a one-shot Job and app pods start with --skip-migrate.
+
+
+F. OBSERVABILITY AND SECURITY HYGIENE
+-------------------------------------
+F1  Emit usage_anomaly as metrics/log events (FR-13.3, UC-42)          — P1
+    Cloud Monitoring alerts need a signal; today anomalies only show on the dashboard.
+
+F2  Read-only filesystem compatible image (NFR-4.4)                    — P1
+    The server runs with readOnlyRootFilesystem: all writes go to declared
+    volume paths (storage, tmp). Document the writable paths.
+
+F3  Gateway overhead metric (OBJ-002, NFR-1.6)                         — P1
+    Histogram of gateway overhead = total latency - upstream latency, on /metrics,
+    so p50/p95/p99 can be published from real traffic.
+
+F4  SECURITY.md + no-telemetry statement (NFR-4.7, NFR-4.8)            — P2
+    Disclosure route, response times, and an explicit statement that self-hosted
+    instances send nothing to the vendor.
+
+
+SUGGESTED ORDER
+---------------
+1. A1-A5 reproduce + fix, E1, B1        (defects and the release-risk item)
+2. C1, C2, B3, D1, E2, E3               (Cloudfresh gateway column)
+3. F1-F3, A6, B2                        (ops readiness for GKE)
+4. B4, D2, E4, E5, F4                   (hardening)
