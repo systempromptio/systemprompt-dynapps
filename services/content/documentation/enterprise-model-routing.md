@@ -136,9 +136,10 @@ catalog cannot claim one platform while pointing at another.
 
 ## Provider failover
 
-A route may name a **`fallback_provider`**, and optionally a
-**`fallback_upstream_model`** when the fallback's model id differs. The
-shipped `claude-*` route fails over from Vertex to Anthropic's API:
+A route may list **`fallbacks`**: deployments tried in order after the
+primary, each a `provider` and optionally an `upstream_model` when that
+deployment's model id differs. The shipped `claude-*` route fails over from
+Vertex to Anthropic's API:
 
 ```yaml
 gateway:
@@ -147,8 +148,12 @@ gateway:
     name: Claude (Vertex AI)
     model_pattern: claude-*
     provider: vertex-anthropic
-    fallback_provider: anthropic
+    fallbacks:
+    - provider: anthropic
 ```
+
+The older `fallback_provider` / `fallback_upstream_model` keys are refused at
+boot; move them into a one-entry `fallbacks` list.
 
 **When it triggers.** The primary keeps its bounded retry budget for
 transient answers (429, 503). Failover happens when that budget is spent,

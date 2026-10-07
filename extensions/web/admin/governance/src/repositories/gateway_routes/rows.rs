@@ -18,7 +18,7 @@ pub struct RouteRow {
     pub updated_at: DateTime<Utc>,
 }
 
-// JSON: variable-shape route blocks (pricing/when/requires) as stored
+// JSON: variable-shape route blocks (pricing/when/requires/by_scope) as stored
 fn yaml_of(value: Option<serde_json::Value>) -> Option<serde_yaml::Value> {
     value.and_then(|v| serde_yaml::to_value(v).ok())
 }
@@ -31,8 +31,8 @@ fn json_of(value: Option<&serde_yaml::Value>) -> Option<serde_json::Value> {
 pub async fn list_gateway_routes(pool: &PgPool) -> Result<Vec<RouteRow>, sqlx::Error> {
     let rows = sqlx::query!(
         r"SELECT id, position, name, description, model_pattern, provider, upstream_model,
-                 extra_headers, pricing, when_match, requires, fallback_provider,
-                 fallback_upstream_model, explicit_id, source, updated_at
+                 extra_headers, pricing, when_match, requires, fallbacks, by_scope,
+                 explicit_id, source, updated_at
             FROM gateway_routes
            ORDER BY position ASC, id ASC"
     )
@@ -44,6 +44,12 @@ pub async fn list_gateway_routes(pool: &PgPool) -> Result<Vec<RouteRow>, sqlx::E
             let extra_headers =
                 serde_json::from_value(r.extra_headers).map_err(|e| sqlx::Error::ColumnDecode {
                     index: "extra_headers".to_owned(),
+                    source: Box::new(e),
+                })?;
+            // JSON: ordered failover deployments column
+            let fallbacks =
+                serde_json::from_value(r.fallbacks).map_err(|e| sqlx::Error::ColumnDecode {
+                    index: "fallbacks".to_owned(),
                     source: Box::new(e),
                 })?;
             Ok(RouteRow {
@@ -58,8 +64,8 @@ pub async fn list_gateway_routes(pool: &PgPool) -> Result<Vec<RouteRow>, sqlx::E
                     pricing: yaml_of(r.pricing),
                     when: yaml_of(r.when_match),
                     requires: yaml_of(r.requires),
-                    fallback_provider: r.fallback_provider,
-                    fallback_upstream_model: r.fallback_upstream_model,
+                    fallbacks,
+                    by_scope: yaml_of(r.by_scope),
                 },
                 position: r.position,
                 explicit_id: r.explicit_id,
@@ -92,10 +98,13 @@ pub async fn upsert_gateway_route(
     // JSON: outgoing fixed-shape
     // Why: discard-ok: a string-keyed map of strings always serialises
     let headers = serde_json::to_value(&r.extra_headers).unwrap_or_default();
+    // JSON: outgoing fixed-shape
+    // Why: discard-ok: a list of provider/model string pairs always serialises
+    let fallbacks = serde_json::to_value(&r.fallbacks).unwrap_or_default();
     sqlx::query!(
         r"INSERT INTO gateway_routes
               (id, position, model_pattern, provider, upstream_model, extra_headers, pricing,
-               when_match, requires, fallback_provider, fallback_upstream_model, explicit_id,
+               when_match, requires, fallbacks, by_scope, explicit_id,
                source, name, description, updated_at)
           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NOW())
           ON CONFLICT (id) DO UPDATE
@@ -109,8 +118,8 @@ pub async fn upsert_gateway_route(
                  pricing = EXCLUDED.pricing,
                  when_match = EXCLUDED.when_match,
                  requires = EXCLUDED.requires,
-                 fallback_provider = EXCLUDED.fallback_provider,
-                 fallback_upstream_model = EXCLUDED.fallback_upstream_model,
+                 fallbacks = EXCLUDED.fallbacks,
+                 by_scope = EXCLUDED.by_scope,
                  explicit_id = EXCLUDED.explicit_id,
                  source = EXCLUDED.source,
                  updated_at = NOW()",
@@ -123,8 +132,8 @@ pub async fn upsert_gateway_route(
         json_of(r.pricing.as_ref()),
         json_of(r.when.as_ref()),
         json_of(r.requires.as_ref()),
-        r.fallback_provider,
-        r.fallback_upstream_model,
+        fallbacks,
+        json_of(r.by_scope.as_ref()),
         write.explicit_id,
         write.source,
         r.name,

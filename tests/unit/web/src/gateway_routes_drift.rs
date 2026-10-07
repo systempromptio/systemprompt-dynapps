@@ -4,6 +4,7 @@
 //! touching the settings above them.
 
 use chrono::Utc;
+use systemprompt_web_admin_core::types::RouteFallbackView;
 use systemprompt_web_admin_governance::repositories::gateway_routes::declared::{
     DeclaredRoutes, parse_declared_routes,
 };
@@ -20,8 +21,15 @@ gateway:
   - id: claude-star
     model_pattern: claude-*
     provider: anthropic
-    fallback_provider: vertex
-    fallback_upstream_model: claude-sonnet-5
+    fallbacks:
+    - provider: vertex
+      upstream_model: claude-sonnet-5
+    by_scope:
+      dimension: project
+      unmapped: shared
+      chains:
+        storefront:
+          provider: vertex
   - model_pattern: gemini-*
     provider: gemini
   - id: gpt
@@ -54,10 +62,16 @@ fn declaration_carries_every_route_field_and_synthesises_missing_ids() {
     assert_eq!(declared.routes.len(), 3);
     let claude = &declared.routes[0];
     assert!(claude.explicit_id);
-    assert_eq!(claude.route.fallback_provider.as_deref(), Some("vertex"));
     assert_eq!(
-        claude.route.fallback_upstream_model.as_deref(),
-        Some("claude-sonnet-5")
+        claude.route.fallbacks,
+        vec![RouteFallbackView {
+            provider: "vertex".to_owned(),
+            upstream_model: Some("claude-sonnet-5".to_owned()),
+        }]
+    );
+    assert!(
+        claude.route.by_scope.is_some(),
+        "per-scope chains are carried"
     );
     let gemini = &declared.routes[1];
     assert!(!gemini.explicit_id);
@@ -104,7 +118,10 @@ fn drift_names_missing_orphan_changed_fields_and_console_origin() {
     let declared = parse_declared_routes(DECLARED).expect("parses");
     let mut rows = rows_from(&declared, SOURCE_CODE);
     rows.remove(2);
-    rows[0].route.fallback_provider = Some("cerebras".to_owned());
+    rows[0].route.fallbacks = vec![RouteFallbackView {
+        provider: "cerebras".to_owned(),
+        upstream_model: None,
+    }];
     rows[0].source = SOURCE_DASHBOARD.to_owned();
     rows.push(RouteRow {
         route: systemprompt_web_admin_core::types::GatewayRouteView {
@@ -123,10 +140,7 @@ fn drift_names_missing_orphan_changed_fields_and_console_origin() {
     assert_eq!(drift.only_in_db.len(), 1);
     assert!(drift.only_in_db[0].dashboard);
     assert_eq!(drift.changed.len(), 1);
-    assert_eq!(
-        drift.changed[0].fields,
-        vec!["fallback_provider".to_owned()]
-    );
+    assert_eq!(drift.changed[0].fields, vec!["fallbacks".to_owned()]);
     assert!(drift.changed[0].dashboard);
     assert!(drift.changed[0].in_db.contains("fallback cerebras"));
     assert!(drift.reordered.is_none(), "shared routes keep their order");
@@ -153,7 +167,10 @@ fn render_replaces_the_sequence_and_keeps_settings_and_header() {
     assert!(out.starts_with("# Gateway routes — header comment.\n"));
     assert!(out.contains("quota_fault_mode: closed"));
     assert!(out.contains("default_provider: anthropic"));
-    assert!(out.contains("fallback_provider: vertex"));
+    assert!(out.contains("fallbacks:"));
+    assert!(out.contains("- provider: vertex"));
+    assert!(out.contains("by_scope:"));
+    assert!(!out.contains("fallback_provider"));
     assert!(!out.contains("gemini-*"));
     let back = parse_declared_routes(&out).expect("round-trips");
     assert_eq!(back.routes.len(), 1);

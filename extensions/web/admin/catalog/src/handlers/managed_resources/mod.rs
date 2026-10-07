@@ -85,9 +85,15 @@ pub(crate) async fn sync_git(
             "Source path and body differ".to_owned(),
         ));
     }
+    let scratch_root = state.scratch_root.clone().ok_or_else(|| {
+        systemprompt_web_admin_core::error::AdminError::Unavailable(
+            "storage scratch root is unresolved; Git sources cannot be synchronised".to_owned(),
+        )
+    })?;
     Ok(Json(
         systemprompt::system::managed::git_sources::GitSourceOrchestrator::new(
             state.repository.clone(),
+            scratch_root,
         )
         .synchronize(&state.owner, &input)
         .await?,

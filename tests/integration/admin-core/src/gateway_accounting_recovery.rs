@@ -60,6 +60,8 @@ fn audit(repos: &GatewayRepositories, user: &UserId, request: &CanonicalRequest)
         ),
         evidence: ClientEvidence::none(),
         access_log: None,
+        attribution: systemprompt::models::attribution::RequestAttribution::none(),
+        api_key_windows: Vec::new(),
     };
     let audit = GatewayAudit::new(repos, ctx);
     audit

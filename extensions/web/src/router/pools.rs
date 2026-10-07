@@ -1,6 +1,10 @@
-//! Database handle extraction from the type-erased extension context.
+//! Database handle extraction from the type-erased extension context, plus
+//! the storage scratch root the managed-source Git checkouts are staged in.
 
+use std::path::PathBuf;
 use std::sync::Arc;
+
+use systemprompt::config::{AppPaths, ProfileBootstrap};
 
 use systemprompt::database::{Database, DbPool};
 use systemprompt::extension::prelude::ExtensionContext;
@@ -10,6 +14,7 @@ use systemprompt::users::{SessionRepository, UserService};
 
 pub(crate) struct DbHandles {
     pub owner: systemprompt::identifiers::UserId,
+    pub scratch_root: Option<PathBuf>,
     pub read: Arc<PgPool>,
     pub write: Arc<PgPool>,
     pub db: DbPool,
@@ -30,8 +35,23 @@ impl DbHandles {
             write,
             db,
             owner: ctx.system_owner_id(),
+            scratch_root: scratch_root(),
         })
     }
+}
+
+fn scratch_root() -> Option<PathBuf> {
+    let profile = ProfileBootstrap::get()
+        .map_err(|e| tracing::error!(error = %e, "Profile unavailable for the scratch root"))
+        .ok()?;
+    let paths = AppPaths::from_profile(
+        &profile.paths,
+        profile.path_resolution(),
+        systemprompt::loader::ServicesRootBootstrap::get().map(|root| root.path.as_path()),
+    )
+    .map_err(|e| tracing::error!(error = %e, "App paths unavailable for the scratch root"))
+    .ok()?;
+    Some(paths.storage().scratch().to_path_buf())
 }
 
 pub(crate) fn build_session_service(db: &DbHandles) -> Arc<SessionCreationService> {

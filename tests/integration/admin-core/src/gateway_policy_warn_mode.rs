@@ -16,12 +16,16 @@ use std::sync::Arc;
 use systemprompt::ai::repository::{AiGatewayPolicyRepository, AiQuotaBucketRepository};
 use systemprompt::database::{Database, DbPool};
 use systemprompt::gateway::policies::PolicyResolver;
-use systemprompt::gateway::quota::precheck_and_reserve;
+use systemprompt::gateway::quota::{
+    QuotaEstimate, QuotaSubjects, ReserveOutcome, ReserveParams, precheck_and_reserve,
+};
 use systemprompt::gateway::{
     GatewayPolicyConfig, GatewayPolicyIngestOptions, GatewayPolicyIngestionService, QuotaMode,
     QuotaWindow, SafetyMode,
 };
 use systemprompt::identifiers::UserId;
+use systemprompt::models::attribution::RequestAttribution;
+use systemprompt::security::authz::{AuthzHookContext, NullAuditSink, SubjectProviderSet};
 
 use crate::fixtures::unique;
 use crate::tempdb::TempDb;
@@ -147,27 +151,39 @@ async fn an_exhausted_window_is_still_detected_so_the_warn_carries_a_reason() {
     let buckets = AiQuotaBucketRepository::new(&pool);
     let user = UserId::new(unique("quota-user"));
 
-    let first = precheck_and_reserve(
-        &pool,
-        &buckets,
-        &user,
-        std::slice::from_ref(&tiny),
-        systemprompt::manifest::services::QuotaFaultMode::default(),
-    )
-    .await
-    .expect("first reservation");
-    assert!(first.is_none(), "the first request is within the window");
+    let providers = SubjectProviderSet::discover(&AuthzHookContext {
+        pool: pool.pool(),
+        sink: Arc::new(NullAuditSink),
+    });
+    let attribution = RequestAttribution::none();
+    let params = ReserveParams {
+        providers: &providers,
+        subjects: QuotaSubjects {
+            user_id: &user,
+            api_key_id: None,
+            attribution: &attribution,
+        },
+        windows: std::slice::from_ref(&tiny),
+        fault_mode: systemprompt::manifest::services::QuotaFaultMode::default(),
+        estimate: QuotaEstimate::default(),
+    };
 
-    let second = precheck_and_reserve(
-        &pool,
-        &buckets,
-        &user,
-        std::slice::from_ref(&tiny),
-        systemprompt::manifest::services::QuotaFaultMode::default(),
-    )
-    .await
-    .expect("second reservation")
-    .expect("the second request breaches a one-request window");
+    let first = precheck_and_reserve(&buckets, params)
+        .await
+        .expect("first reservation");
+    assert!(
+        matches!(first, ReserveOutcome::Admitted(_)),
+        "the first request is within the window"
+    );
+
+    let ReserveOutcome::Denied {
+        decision: second, ..
+    } = precheck_and_reserve(&buckets, params)
+        .await
+        .expect("second reservation")
+    else {
+        panic!("the second request breaches a one-request window");
+    };
     assert!(
         !second.allow,
         "the breach is detected exactly as under enforce"

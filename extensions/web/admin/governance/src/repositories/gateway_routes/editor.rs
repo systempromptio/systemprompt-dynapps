@@ -77,14 +77,10 @@ fn preserve_hidden_fields(merged: &mut GatewayRouteView, keep: &GatewayRouteView
     merged.pricing = merged.pricing.take().or_else(|| keep.pricing.clone());
     merged.when = merged.when.take().or_else(|| keep.when.clone());
     merged.requires = merged.requires.take().or_else(|| keep.requires.clone());
-    merged.fallback_provider = merged
-        .fallback_provider
-        .take()
-        .or_else(|| keep.fallback_provider.clone());
-    merged.fallback_upstream_model = merged
-        .fallback_upstream_model
-        .take()
-        .or_else(|| keep.fallback_upstream_model.clone());
+    if merged.fallbacks.is_empty() {
+        merged.fallbacks.clone_from(&keep.fallbacks);
+    }
+    merged.by_scope = merged.by_scope.take().or_else(|| keep.by_scope.clone());
     if merged.extra_headers.is_empty() {
         merged.extra_headers.clone_from(&keep.extra_headers);
     }

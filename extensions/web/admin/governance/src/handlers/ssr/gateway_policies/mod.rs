@@ -25,6 +25,7 @@ use crate::repositories::gateway_policies::month_window_db::refresh_month_window
 use crate::repositories::gateway_policies::rows::{
     PolicyWrite, delete_policy, list_policies, upsert_policy,
 };
+use crate::repositories::gateway_policies::unedited::carry_unedited_safety;
 use systemprompt_web_admin_core::activity;
 use systemprompt_web_admin_core::activity::NewActivity;
 use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
@@ -175,10 +176,14 @@ pub(crate) async fn save_gateway_policy(
     Form(fields): Form<Vec<(String, String)>>,
 ) -> AdminHtmlResult<Redirect> {
     require_admin_write(&page, &headers)?;
-    let parsed = match parse_policy_form(&fields) {
+    let mut parsed = match parse_policy_form(&fields) {
         Ok(p) => p,
         Err(e) => return Ok(not_saved(&e.to_string())),
     };
+    let stored = list_policies(&pool).await.map_err(AdminError::Database)?;
+    if let Some(row) = stored.iter().find(|row| row.name == parsed.name) {
+        carry_unedited_safety(&mut parsed.spec.safety, &row.spec.safety);
+    }
     upsert_policy(
         &pool,
         &PolicyWrite {

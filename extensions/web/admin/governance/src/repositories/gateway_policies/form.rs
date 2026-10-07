@@ -253,6 +253,7 @@ pub fn parse_policy_form(fields: &[(String, String)]) -> Result<ParsedPolicy, Fo
             block_categories: all(fields, "block"),
             block_response_categories: all(fields, "block_response"),
             history: parse_history(first(fields, "history"))?,
+            ..SafetyConfig::default()
         },
     };
     let parsed = ParsedPolicy {

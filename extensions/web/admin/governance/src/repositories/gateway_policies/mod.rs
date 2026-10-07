@@ -22,4 +22,5 @@ pub mod form_error;
 pub mod month_window;
 pub mod month_window_db;
 pub mod rows;
+pub mod unedited;
 pub mod usage;

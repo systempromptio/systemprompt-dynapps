@@ -7369,6 +7369,7 @@ dependencies = [
  "serde",
  "serde_json",
  "systemprompt-identifiers",
+ "systemprompt-models",
  "systemprompt-provider-contracts",
  "systemprompt-traits",
  "thiserror 2.0.21",
@@ -7426,7 +7427,6 @@ dependencies = [
  "serde_json",
  "serde_yaml_ng",
  "sha2 0.11.0",
- "sqlx",
  "systemprompt-ai",
  "systemprompt-client",
  "systemprompt-config",
@@ -7795,9 +7795,11 @@ dependencies = [
 name = "systemprompt-runtime"
 version = "0.62.0"
 dependencies = [
+ "async-trait",
  "chrono",
  "indicatif",
  "maxminddb",
+ "reqwest 0.12.28",
  "serde",
  "serde_json",
  "serde_yaml_ng",
@@ -7826,6 +7828,7 @@ dependencies = [
  "thiserror 2.0.21",
  "tokio",
  "tracing",
+ "url",
 ]
 
 [[package]]
@@ -7932,11 +7935,17 @@ version = "0.62.0"
 dependencies = [
  "async-trait",
  "chrono",
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
  "systemprompt-identifiers",
  "systemprompt-manifest",
  "systemprompt-traits",
+ "thiserror 2.0.21",
  "tokio",
  "tracing",
+ "url",
+ "urlencoding",
  "uuid",
 ]
 

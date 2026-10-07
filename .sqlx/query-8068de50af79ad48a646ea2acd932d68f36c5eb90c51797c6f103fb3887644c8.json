@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, position, name, description, model_pattern, provider, upstream_model,\n                 extra_headers, pricing, when_match, requires, fallback_provider,\n                 fallback_upstream_model, explicit_id, source, updated_at\n            FROM gateway_routes\n           ORDER BY position ASC, id ASC",
+  "query": "SELECT id, position, name, description, model_pattern, provider, upstream_model,\n                 extra_headers, pricing, when_match, requires, fallbacks, by_scope,\n                 explicit_id, source, updated_at\n            FROM gateway_routes\n           ORDER BY position ASC, id ASC",
   "describe": {
     "columns": [
       {
@@ -126,23 +126,23 @@
       },
       {
         "ordinal": 11,
-        "name": "fallback_provider",
-        "type_info": "Text",
+        "name": "fallbacks",
+        "type_info": "Jsonb",
         "origin": {
           "Table": {
             "table": "gateway_routes",
-            "name": "fallback_provider"
+            "name": "fallbacks"
           }
         }
       },
       {
         "ordinal": 12,
-        "name": "fallback_upstream_model",
-        "type_info": "Text",
+        "name": "by_scope",
+        "type_info": "Jsonb",
         "origin": {
           "Table": {
             "table": "gateway_routes",
-            "name": "fallback_upstream_model"
+            "name": "by_scope"
           }
         }
       },
@@ -195,12 +195,12 @@
       true,
       true,
       true,
-      true,
+      false,
       true,
       false,
       false,
       false
     ]
   },
-  "hash": "6dbf4bc553c0a1be8e42d85e0d2cb855ac78d1b6484c407161e36d43c3522b42"
+  "hash": "8068de50af79ad48a646ea2acd932d68f36c5eb90c51797c6f103fb3887644c8"
 }

@@ -26,12 +26,31 @@ pub struct GatewayRouteView {
     pub when: Option<serde_yaml::Value>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub requires: Option<serde_yaml::Value>,
-    // Why: core's `GatewayRoute::fallback_view` reads these two, so the editor
-    // must carry them or a console save silently removes a route's fallback.
+    // Why: core's failover chain and per-scope routing read these two, so the
+    // editor must carry them or a console save silently removes a route's
+    // failover or a project's dedicated deployment.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub fallbacks: Vec<RouteFallbackView>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub fallback_provider: Option<String>,
+    pub by_scope: Option<serde_yaml::Value>,
+}
+
+/// One deployment a route fails over to, in the order core tries them.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RouteFallbackView {
+    pub provider: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub fallback_upstream_model: Option<String>,
+    pub upstream_model: Option<String>,
+}
+
+impl RouteFallbackView {
+    #[must_use]
+    pub fn describe(&self) -> String {
+        match &self.upstream_model {
+            Some(model) => format!("{} as {model}", self.provider),
+            None => self.provider.clone(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Default)]

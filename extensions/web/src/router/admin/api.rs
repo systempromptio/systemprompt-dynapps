@@ -39,6 +39,7 @@ pub(super) fn build_admin_only_routes(
     read_pool: &Arc<PgPool>,
     write_pool: &Arc<PgPool>,
     owner: systemprompt::identifiers::UserId,
+    scratch_root: Option<std::path::PathBuf>,
 ) -> Router {
     let reads = build_admin_read_routes(read_pool)
         .merge(catalog_routes::managed_resources::reads())
@@ -64,7 +65,9 @@ pub(super) fn build_admin_only_routes(
         ));
 
     let managed = Arc::new(systemprompt_web_admin_core::state::ManagedState::new(
-        db, owner,
+        db,
+        owner,
+        scratch_root,
     ));
     reads
         .merge(writes)

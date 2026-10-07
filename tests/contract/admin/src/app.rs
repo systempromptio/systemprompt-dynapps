@@ -82,6 +82,7 @@ impl App {
                     Arc::clone(pool),
                     pool,
                     credentials.admin_user_id.clone(),
+                    None,
                 ),
             )
             .merge(platform::connector_api_router(Arc::clone(pool)))
@@ -103,6 +104,7 @@ impl App {
             engine.clone(),
             sso_deps,
             credentials.admin_user_id.clone(),
+            None,
         )
         .layer(axum::Extension(None::<Arc<systemprompt::ai::AiService>>));
         let bridge_auth = admin::bridge_auth_ssr_router(Arc::clone(pool), engine);

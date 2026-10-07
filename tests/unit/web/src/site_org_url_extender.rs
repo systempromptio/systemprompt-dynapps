@@ -30,6 +30,8 @@ fn install_config() {
         instance_id: systemprompt::identifiers::InstanceId::new("org-url-tests"),
         metrics_port: None,
         max_concurrent_streams: 16,
+        role: systemprompt::manifest::profile::NodeRole::All,
+        max_in_flight: None,
         sitename: "astound-test".to_owned(),
         database_type: "postgres".to_owned(),
         database_url: "postgres://unused".to_owned(),

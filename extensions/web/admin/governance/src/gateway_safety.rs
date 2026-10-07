@@ -21,7 +21,9 @@
 //! cannot reach the injected one, and a second engine's rate limiter would
 //! double every budget.
 
-use systemprompt::gateway::{Finding, SafetyScanner, Severity, register_safety_scanner};
+use systemprompt::gateway::{
+    Finding, SafetyScanner, ScannerSettings, Severity, register_safety_scanner,
+};
 use systemprompt::wire::canonical::{CanonicalRequest, CanonicalResponse};
 
 use std::sync::LazyLock;
@@ -115,12 +117,17 @@ impl SecretsScanner {
                     .to_owned(),
                     excerpt: Some(format!("{}: {}", hit.pattern.id, hit.redacted)),
                     scanner: "secrets",
+                    spans: Vec::new(),
+                    replacement: None,
                 }]
             })
     }
 }
 
-register_safety_scanner!(SecretsScanner::new, name = "secrets");
+register_safety_scanner!(
+    |_: &ScannerSettings| SecretsScanner::new(),
+    name = "secrets"
+);
 
 /// PII scanner for the categories core's heuristic does not carry: formatted
 /// US SSNs (SSA never-issued ranges excluded) and E.164 phone numbers.
@@ -190,6 +197,8 @@ fn pii_findings(text: &str, phase: &'static str) -> Vec<Finding> {
             category: "pii_ssn".to_owned(),
             excerpt: Some(excerpt),
             scanner: "pii_extended",
+            spans: Vec::new(),
+            replacement: None,
         });
     }
     if let Some(excerpt) = find_e164_phone(text) {
@@ -199,6 +208,8 @@ fn pii_findings(text: &str, phase: &'static str) -> Vec<Finding> {
             category: "pii_phone".to_owned(),
             excerpt: Some(excerpt),
             scanner: "pii_extended",
+            spans: Vec::new(),
+            replacement: None,
         });
     }
     findings
@@ -266,4 +277,7 @@ fn digit_adjacent(bytes: &[u8], start: usize, end: usize) -> bool {
     before.is_some_and(|b| b.is_ascii_digit()) || after.is_some_and(|b| b.is_ascii_digit())
 }
 
-register_safety_scanner!(PiiScanner::new, name = "pii_extended");
+register_safety_scanner!(
+    |_: &ScannerSettings| PiiScanner::new(),
+    name = "pii_extended"
+);

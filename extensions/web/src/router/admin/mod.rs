@@ -56,8 +56,9 @@ pub fn admin_router(
     read_pool: Arc<PgPool>,
     write_pool: &Arc<PgPool>,
     owner: systemprompt::identifiers::UserId,
+    scratch_root: Option<std::path::PathBuf>,
 ) -> Router {
-    let admin_only = api::build_admin_only_routes(db, &read_pool, write_pool, owner);
+    let admin_only = api::build_admin_only_routes(db, &read_pool, write_pool, owner, scratch_root);
     let auth_reads = api::build_auth_read_routes(&read_pool);
     let self_service = api::build_self_service_routes(write_pool);
 

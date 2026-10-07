@@ -13,7 +13,7 @@ use sha2::{Digest, Sha256};
 
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 use systemprompt_web_admin_core::repositories::gateway_catalog::route_from_yaml;
-use systemprompt_web_admin_core::types::GatewayRouteView;
+use systemprompt_web_admin_core::types::{GatewayRouteView, RouteFallbackView};
 
 pub const GATEWAY_FILE: &str = "ai/gateway.yaml";
 
@@ -52,8 +52,13 @@ pub fn route_fingerprint(route: &GatewayRouteView) -> String {
         block(route.pricing.as_ref()),
         block(route.when.as_ref()),
         block(route.requires.as_ref()),
-        route.fallback_provider.as_deref().unwrap_or_default(),
-        route.fallback_upstream_model.as_deref().unwrap_or_default(),
+        route
+            .fallbacks
+            .iter()
+            .map(RouteFallbackView::describe)
+            .collect::<Vec<_>>()
+            .join(","),
+        block(route.by_scope.as_ref()),
     )
 }
 

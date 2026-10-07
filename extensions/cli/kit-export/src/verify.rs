@@ -64,7 +64,7 @@ pub fn round_trip(kit: &Path, services_root: &Path, report: &ExportReport) -> Re
         &into,
         &ImportOptions {
             strict: true,
-            dry_run: false,
+            ..ImportOptions::new(scratch.path().join("import-scratch"))
         },
     )
     .map_err(|e| anyhow::anyhow!("strict re-import failed: {e}"))?;

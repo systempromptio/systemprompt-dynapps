@@ -265,10 +265,11 @@ fn the_gateway_default_model_is_a_catalog_entry() {
     assert_eq!(route.provider.as_str(), "vertex-anthropic");
     assert_eq!(
         route
-            .fallback_provider
-            .as_ref()
-            .map(systemprompt::identifiers::ProviderId::as_str),
-        Some("anthropic")
+            .fallbacks
+            .iter()
+            .map(|deployment| deployment.provider.as_str())
+            .collect::<Vec<_>>(),
+        vec!["anthropic"]
     );
     assert!(
         provider(route.provider.as_str())

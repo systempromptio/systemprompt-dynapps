@@ -65,8 +65,8 @@ pub(crate) fn route(id: &str, pattern: &str, provider_name: &str) -> GatewayRout
         pricing: None,
         when: None,
         requires: None,
-        fallback_provider: None,
-        fallback_upstream_model: None,
+        fallbacks: Vec::new(),
+        by_scope: None,
     }
 }
 
@@ -86,5 +86,6 @@ pub(crate) fn config(routes: Vec<GatewayRoute>) -> GatewayConfig {
         bridge_releases: None,
         quota_fault_mode: QuotaFaultMode::default(),
         automatic_prompt_caching: true,
+        require_scopes: Vec::new(),
     }
 }

@@ -35,6 +35,7 @@ pub(crate) fn build(
             engine,
             sso_deps,
             db.owner.clone(),
+            db.scratch_root.clone(),
         ),
     })
 }
