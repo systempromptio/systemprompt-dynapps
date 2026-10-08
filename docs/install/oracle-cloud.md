@@ -10,7 +10,7 @@ OCI mapping for it.
 | database | OCI Database with PostgreSQL, **version 16**, primary in the region closest to most users, read replicas in the other two regions for DR. Enable the `vector`, `uuid-ossp` and `pgcrypto` extensions on the DB system (Configuration → Extensions) before running `provision.sql`; extensions not enabled at the system level cannot be created inside the database |
 | database network | private endpoint; security list allows 5432 from the three node subnets over the DRG/VCN peering. Connect with `?sslmode=require`; the OCI CA is publicly chained so no `?sslrootcert=` is needed |
 | secrets | OCI Vault holds `secrets.json` as one secret (base64 of the file). `render-profile.sh` runs once on an operator machine; the result goes into the Vault, and a cloud-init / Ansible step writes it to `/etc/astound/profile` on each node (`oci secrets secret-bundle get ... | base64 -d`) |
-| image pull | `docker login ghcr.io` with the Astound-issued token, or mirror once into OCIR (`docker pull` then `docker tag` + `docker push` to `<region>.ocir.io/<tenancy>/systemprompt-astound:0.63.1`) and point `SYSTEMPROMPT_TAG`'s image at OCIR in the compose file |
+| image pull | `docker login ghcr.io` with the Astound-issued token, or mirror once into OCIR (`docker pull` then `docker tag` + `docker push` to `<region>.ocir.io/<tenancy>/systemprompt-astound:0.64.0`) and point `SYSTEMPROMPT_TAG`'s image at OCIR in the compose file |
 | egress | NAT gateway per VCN for `api.anthropic.com`, `bedrock-runtime.eu-central-1.amazonaws.com`, `ghcr.io` |
 
 Only the region-local node sits behind each region's balancer; every node
