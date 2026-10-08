@@ -7,11 +7,12 @@
 //! the provider default in `ProviderEntry::effective_governance`, which is
 //! what `validate()` and dispatch both consult.
 
-use systemprompt::models::services::{
-    GatewayProfileError, GatewayRoute, ModelGovernance, RouteRequirements, WireProtocol,
+use systemprompt::manifest::services::{
+    GatewayProfileError, GatewayRoute, ModelGovernance, RouteRequirements,
 };
 
 use crate::support::{config, model, provider, registry, route};
+use systemprompt::wire::WireProtocol;
 
 fn no_retain_route() -> GatewayRoute {
     let mut r = route("no-retain", "classified-*", "retaining-provider");

@@ -2,11 +2,8 @@
 //! character budget: the opening turns say what was wanted, the closing turns
 //! say how it ended, and the middle is elided when it does not fit.
 
-use systemprompt_web_admin::test_support::{ConversationView, StepView, TurnView};
+use systemprompt_web_admin_analytics::test_support::{ConversationView, StepView, TurnView};
 
-// Why: roughly four characters per token. The budget is on characters because
-// that is what the transcript is made of; the parameter is in tokens because
-// that is how the model is priced.
 const CHARS_PER_TOKEN: usize = 4;
 const HEAD_TURNS: usize = 6;
 const TAIL_TURNS: usize = 10;
@@ -89,9 +86,6 @@ fn render_step(s: &mut String, step: &StepView) {
     }
 }
 
-// Why: keeps every turn when they fit, otherwise the first `HEAD_TURNS` and
-// last `TAIL_TURNS` with an elision marker, shrinking the tail first if even
-// that is too long.
 fn fit_turns(rendered: &[String], budget: usize) -> String {
     let total: usize = rendered.iter().map(String::len).sum();
     if total <= budget {

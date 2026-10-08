@@ -4,6 +4,3 @@
 storage/files/js/admin-report-bridge.js
 storage/files/js/admin-report-shell.js
 
-# Manifest for the evidence screenshots beside it, written by `just e2e-screens`.
-# It documents the pack rather than being served, so nothing links to it.
-storage/files/images/evidence/index.md

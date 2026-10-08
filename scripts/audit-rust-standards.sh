@@ -7,10 +7,20 @@
 # module heads) live in their own blocking scripts and are not duplicated here;
 # this script covers the fuzzy rules that need a human to adjudicate.
 #
-# Run: ./scripts/audit-rust-standards.sh
+# Run: ./scripts/audit-rust-standards.sh [--dry-run]
 # State: .audit-state holds last audited SHA. ISSUE.md is the append-only ledger.
+# --dry-run prints the report to stdout and writes neither file.
 
 set -uo pipefail
+
+DRY_RUN=0
+for arg in "$@"; do
+    case "$arg" in
+        --dry-run) DRY_RUN=1 ;;
+        -h|--help) echo "usage: $0 [--dry-run]"; exit 0 ;;
+        *) echo "audit-rust-standards: unknown argument: $arg" >&2; exit 2 ;;
+    esac
+done
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_ROOT"
@@ -65,14 +75,17 @@ scan_files() {
     # 1. paraphrase rustdoc — a `///` whose first word merely restates the item
     #    name or signature beneath it. `Returns Ok/Err/Some/None ...` is exempt:
     #    documenting a specific non-obvious outcome is a sanctioned use.
-    while IFS=: read -r f l _; do
+    #    The exemption is a second grep, not a lookahead: rg's default engine
+    #    has no look-around, and CI's apt ripgrep may lack --pcre2.
+    while IFS=: read -r f l text; do
         is_test_path "$f" && continue
         case "$f" in */build.rs|*.md) continue ;; esac
+        printf '%s\n' "$text" | grep -qE '///[[:space:]]*Returns `?(Ok|Err|Some|None)' && continue
         MAJORS+=("\`${f}:${l}\` — paraphrase rustdoc (${label})")
     done < <(rg -n --color=never \
         -g '*.rs' -g '!**/tests/**' -g '!**/target/**' \
-        '^\s*///\s*(Returns (?!`?(Ok|Err|Some|None))|Fetches |Inserts |Deletes |Updates |Creates |Builds |Gets |Errors if |Constructs |Computes? |Resolves |Lists |Parses |Wraps |Converts |Sums )' \
-        "$@" 2>/dev/null || true)
+        '^\s*///\s*(Returns |Fetches |Inserts |Deletes |Updates |Creates |Builds |Gets |Errors if |Constructs |Computes? |Resolves |Lists |Parses |Wraps |Converts |Sums )' \
+        "$@")
 
     # 2. rustdoc that narrates the body's own control flow — a `///` numbered or
     #    bulleted step list is a second, un-compiled copy of the match below it.
@@ -83,7 +96,7 @@ scan_files() {
     done < <(rg -n --color=never \
         -g '*.rs' -g '!**/tests/**' -g '!**/target/**' \
         '^\s*///\s+[0-9]+\.\s' \
-        "$@" 2>/dev/null || true)
+        "$@")
 
     # 3. `///` in test code (banned — tests document themselves by name)
     while IFS=: read -r f l _; do
@@ -92,7 +105,7 @@ scan_files() {
     done < <(rg -n --color=never \
         -g '*.rs' -g '!**/target/**' \
         '^\s*///' \
-        "$@" 2>/dev/null || true)
+        "$@")
 
     # 4. unwrap / expect in library code (rough — false-positives on validated newtypes)
     while IFS=: read -r f l _; do
@@ -104,7 +117,7 @@ scan_files() {
     done < <(rg -n --color=never \
         -g '*.rs' -g '!**/tests/**' -g '!**/target/**' \
         -e '\.unwrap\(\)|\.expect\(' \
-        "$@" 2>/dev/null || true)
+        "$@")
 
     # 5. println / eprintln / dbg outside carve-outs
     while IFS=: read -r f l _; do
@@ -114,7 +127,7 @@ scan_files() {
     done < <(rg -n --color=never \
         -g '*.rs' -g '!**/tests/**' -g '!**/target/**' \
         -e '^\s*(println!|eprintln!|dbg!)' \
-        "$@" 2>/dev/null || true)
+        "$@")
 
     # 6. anyhow in a library pub signature (extensions are libraries; only the
     #    root src/ binary is an application boundary)
@@ -125,7 +138,7 @@ scan_files() {
     done < <(rg -n --color=never \
         -g 'extensions/**/*.rs' -g '!**/tests/**' -g '!**/target/**' \
         -e '^\s*pub (async )?fn .*anyhow' \
-        "$@" 2>/dev/null || true)
+        "$@")
 
     # 7. *Manager type names
     while IFS=: read -r f l _; do
@@ -135,7 +148,7 @@ scan_files() {
     done < <(rg -n --color=never \
         -g '*.rs' -g '!**/tests/**' -g '!**/target/**' \
         -e '^\s*(pub )?(struct|enum|trait) \w+Manager\b' \
-        "$@" 2>/dev/null || true)
+        "$@")
 
     # 8. inline #[cfg(test)] mod tests
     while IFS=: read -r f l _; do
@@ -144,7 +157,7 @@ scan_files() {
     done < <(rg -n --color=never \
         -g '*.rs' -g '!**/tests/**' -g '!**/target/**' \
         -e '#\[cfg\(test\)\]\s*mod tests' \
-        "$@" 2>/dev/null || true)
+        "$@")
 
     # 9. let _ = <fallible> without Why comment on same/prev line
     while IFS=: read -r f l _; do
@@ -156,7 +169,7 @@ scan_files() {
     done < <(rg -n --color=never \
         -g '*.rs' -g '!**/tests/**' -g '!**/target/**' \
         -e '^\s*let _ = ' \
-        "$@" 2>/dev/null || true)
+        "$@")
 
     # 10. zero-assertion test fn — a test fn body with no assertion token at all.
     #     Fuzzy: scans each fn from its attribute to the next fn/attribute boundary.
@@ -173,7 +186,7 @@ scan_files() {
     done < <(rg -n --color=never \
         -g '*.rs' -g '!**/target/**' \
         -e '^\s*(async )?fn .*\(' \
-        "$@" 2>/dev/null || true)
+        "$@")
 }
 
 # ---- build the fileset: working tree ∪ commit range ----
@@ -181,7 +194,11 @@ scan_files() {
 # Both sources are scanned from the current on-disk content, so a file in both
 # would yield byte-identical findings twice under two different labels. Take
 # the union once and report a single honest scope.
-mapfile -t FILES < <(
+# A read loop rather than `mapfile`, which macOS's stock bash 3.2 lacks.
+EXISTING=()
+while IFS= read -r f; do
+    [ -f "$f" ] && EXISTING+=("$f")
+done < <(
     {
         git diff --name-only --diff-filter=AM 2>/dev/null
         git diff --name-only --cached --diff-filter=AM 2>/dev/null
@@ -190,23 +207,13 @@ mapfile -t FILES < <(
     } | grep -E '\.rs$' | sort -u
 )
 
-EXISTING=()
-for f in "${FILES[@]}"; do
-    [ -f "$f" ] && EXISTING+=("$f")
-done
-
 if [ "${#EXISTING[@]}" -gt 0 ]; then
     scan_files "$SCOPE_LABEL + working tree" "${EXISTING[@]}"
 fi
 
-# ---- write to ledger ----
-if [ ! -f "$LEDGER" ]; then
-    printf '# Rust Standards Violations Ledger\n\n' > "$LEDGER"
-fi
-
 total=$((${#BLOCKERS[@]} + ${#MAJORS[@]} + ${#MINORS[@]}))
 
-{
+render_report() {
     printf '## %s — audit run\n\n' "$NOW"
     printf 'Scope: %s + working tree (%d files)\n\n' "$SCOPE_LABEL" "${#EXISTING[@]}"
     if [ "$total" -eq 0 ]; then
@@ -228,7 +235,20 @@ total=$((${#BLOCKERS[@]} + ${#MAJORS[@]} + ${#MINORS[@]}))
             printf '\n'
         fi
     fi
-} >> "$LEDGER"
+}
+
+if [ "$DRY_RUN" -eq 1 ]; then
+    render_report
+    echo "audit-rust-standards: dry run, nothing written (BLOCKER=${#BLOCKERS[@]} MAJOR=${#MAJORS[@]} MINOR=${#MINORS[@]})"
+    exit 0
+fi
+
+# ---- write to ledger ----
+if [ ! -f "$LEDGER" ]; then
+    printf '# Rust Standards Violations Ledger\n\n' > "$LEDGER"
+fi
+
+render_report >> "$LEDGER"
 
 echo "$CURRENT_SHA" > "$STATE_FILE"
 

@@ -3,8 +3,8 @@
 use std::collections::HashMap;
 use systemprompt::identifiers::McpServerId;
 use systemprompt::models::mcp::{Deployment, McpServerType};
-use systemprompt_web_admin::connector_oauth::Provider;
-use systemprompt_web_admin::salesforce_orgs::{
+use systemprompt_web_admin_platform::connector_oauth::Provider;
+use systemprompt_web_admin_platform::salesforce_orgs::{
     SHARED_CLIENT_ID_SECRET, SHARED_CLIENT_SECRET, SalesforceEnvironment, SalesforceOrgRegistry,
     SalesforceServerKind, is_salesforce_server_id,
 };
@@ -91,7 +91,7 @@ fn registry_parses_and_selects_the_endpoint_by_environment() {
 #[test]
 fn server_kind_defaults_to_sobject_and_selects_headless_when_declared() {
     let registry = SalesforceOrgRegistry::parse(
-        r#"
+        r"
 orgs:
   salesforce:
     label: CRM
@@ -102,7 +102,7 @@ orgs:
     my_domain: https://example.my.salesforce.com
     environment: production
     server_kind: headless_360
-"#,
+",
     )
     .expect("registry parses");
     let crm = registry

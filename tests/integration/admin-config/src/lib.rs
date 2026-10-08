@@ -1,4 +1,4 @@
-//! Integration coverage for `systemprompt-web-admin`'s repositories against a
+//! Integration coverage for the admin crates' repositories against a
 //! live Postgres: the configured-policy surface (`config`), the marketplace's
 //! usage and environment records, the two month-end report families, encrypted
 //! secret storage, the bridge control plane, and the scheduled-job list.
@@ -72,3 +72,9 @@ mod executive_marketplace;
 
 #[cfg(test)]
 mod analysis_ingestion;
+
+#[cfg(test)]
+mod connector_resolution;
+
+#[cfg(test)]
+mod connector_resolution_fixture;

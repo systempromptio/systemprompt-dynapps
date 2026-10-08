@@ -1,4 +1,4 @@
-//! The account templates — profile, history, connect, connectors, setup — are
+//! The account templates — profile, history, connect, connectors — are
 //! held to the design system rather than to a screenshot.
 //!
 //! Each of these pages carried its own header, its own card and its own list
@@ -11,7 +11,7 @@
 
 use crate::support::repo_root;
 
-const PAGES: [&str; 5] = ["profile", "history", "connect", "connectors", "setup"];
+const PAGES: [&str; 4] = ["profile", "history", "connect", "connectors"];
 
 // Every class family the account pages used to define for themselves. Their
 // stylesheets are deleted, so any surviving reference styles nothing at all.
@@ -89,8 +89,6 @@ fn the_retired_account_stylesheets_are_gone() {
         "20-page-profile5-tiles.css",
         "20-page-profile6-sections.css",
         "20-page-profile7-deflist.css",
-        "90-setup.css",
-        "90-setup-actions.css",
         "20-page-settings.css",
         "05-connection.css",
     ] {

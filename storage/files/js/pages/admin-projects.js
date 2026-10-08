@@ -19,7 +19,7 @@ const createProject = async () => {
   try {
     await apiFetch('/projects', {
       method: 'POST',
-      body: JSON.stringify({ id, name, description: field('new-project-description') || null }),
+      body: JSON.stringify({ id, name, description: field('new-project-description') || null, cost_centre: field('new-project-cost-centre') || null, practice: field('new-project-practice') || null }),
     });
     showToast('Project created', 'success');
     window.location.assign(`/admin/projects/${encodeURIComponent(id)}`);

@@ -5,10 +5,10 @@
 
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
-// JSON: content items cross the provider trait as Values.
+// JSON: required by trait contract
 use serde_json::Value;
 
-// JSON: reads the content item the provider trait hands over as a Value.
+// JSON: required by trait contract
 fn parse_field<T: DeserializeOwned + Default>(item: &Value, field: &str) -> T {
     let Some(v) = item.get(field) else {
         return T::default();
@@ -35,8 +35,8 @@ pub struct RelatedLink {
     pub url: String,
 }
 
-// Why: empty lists and a `false` flag are omitted so the `{{#if}}` guards in
-// `docs-page.html` behave exactly as when the keys were inserted conditionally.
+// Why: Handlebars `{{#if}}` guards in `docs-page.html` need empty lists and a
+// `false` flag omitted, not serialized.
 #[derive(Debug, Default, Serialize)]
 pub(crate) struct DocsLearningTemplateData {
     #[serde(rename = "AFTER_READING_THIS", skip_serializing_if = "Vec::is_empty")]

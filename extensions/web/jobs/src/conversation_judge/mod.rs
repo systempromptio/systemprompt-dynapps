@@ -24,6 +24,7 @@ mod discovery;
 mod judge;
 mod params;
 mod repository;
+mod source;
 mod transcript;
 
 use std::sync::Arc;
@@ -34,13 +35,6 @@ use systemprompt::database::DbPool;
 use systemprompt::identifiers::Actor;
 use systemprompt::system::AppContext;
 use systemprompt::traits::{Job, JobContext, JobResult};
-use systemprompt_web_admin::repositories::analytics::context_detail::{
-    list_context_requests, list_messages_for_requests,
-};
-use systemprompt_web_admin::repositories::analytics::context_tool_calls::list_tool_calls_for_requests;
-use systemprompt_web_admin::test_support::{
-    TranscriptOptions, build_conversation, transcript_request_ids,
-};
 
 use crate::JobError;
 
@@ -52,6 +46,7 @@ pub use transcript::{TranscriptMeta, render_transcript};
 
 use discovery::DiscoveryWindow;
 use repository::{AnalysisLease, Completion, ConversationJudgeRepository};
+use source::judge_conversation;
 
 pub(crate) const JOB_NAME: &str = "conversation_judge";
 
@@ -63,13 +58,27 @@ struct Tick<'a> {
     repo: ConversationJudgeRepository,
     classifier: &'a dyn ConversationClassifier,
     params: JudgeParams,
-    // Why: the profile's automatic switch is off — no discovery, and only
-    // rows a person queued from the console are judged.
     manual_only: bool,
 }
 
-// Why: the scheduler and DB-backed tests use this one control-flow runner;
-// only the inference boundary is supplied by the caller.
+impl Tick<'_> {
+    const fn batch_size(&self) -> u32 {
+        if self.params.context_id.is_some() {
+            1
+        } else {
+            self.params.batch_size
+        }
+    }
+
+    const fn trigger(&self, lease: &AnalysisLease) -> &'static str {
+        if self.params.context_id.is_some() || lease.manual {
+            "manual"
+        } else {
+            "automatic"
+        }
+    }
+}
+
 #[doc(hidden)]
 pub async fn run_with_classifier(
     pool: &PgPool,
@@ -95,54 +104,88 @@ enum Step {
 
 impl ConversationJudgeJob {
     async fn run_tick(tick: &Tick<'_>) -> Result<JobResult, JobError> {
-        let repo = &tick.repo;
-        repo.update_judge_costs().await?;
+        tick.repo.update_judge_costs().await?;
+        if let Some(message) = Self::enqueue(tick).await? {
+            return Ok(JobResult::success().with_message(message));
+        }
+        let leases = tick
+            .repo
+            .claim(
+                tick.batch_size(),
+                tick.manual_only,
+                tick.params.context_id.as_ref(),
+            )
+            .await?;
+        let (judged, failed) = Self::judge_leases(tick, &leases).await?;
+        Ok(JobResult::success().with_stats(judged, failed))
+    }
+
+    async fn enqueue(tick: &Tick<'_>) -> Result<Option<String>, JobError> {
         if let Some(context_id) = &tick.params.context_id {
-            if !repo.mark_for_rejudging(context_id).await? {
-                return Ok(JobResult::success()
-                    .with_message(format!("no gateway requests for context {context_id}")));
+            if !tick.repo.mark_for_rejudging(context_id).await? {
+                return Ok(Some(format!(
+                    "no gateway requests for context {context_id}"
+                )));
             }
         } else if tick.manual_only {
             tracing::debug!("conversation judge: automatic off, manual requests only");
         } else {
-            let queued = repo
-                .discover_and_enqueue(DiscoveryWindow {
-                    quiet_minutes: tick.params.quiet_minutes,
-                    lookback_days: tick.params.lookback_days,
-                })
-                .await?;
-            tracing::debug!(queued, "conversation judge discovery");
+            Self::discover(tick).await?;
         }
+        Ok(None)
+    }
 
-        let batch = if tick.params.context_id.is_some() {
-            1
-        } else {
-            tick.params.batch_size
-        };
-        let leases = repo
-            .claim(batch, tick.manual_only, tick.params.context_id.as_ref())
+    async fn discover(tick: &Tick<'_>) -> Result<(), JobError> {
+        let queued = tick
+            .repo
+            .discover_and_enqueue(DiscoveryWindow {
+                quiet_minutes: tick.params.quiet_minutes,
+                lookback_days: tick.params.lookback_days,
+            })
             .await?;
+        tracing::debug!(queued, "conversation judge discovery");
+        Ok(())
+    }
+
+    async fn judge_leases(
+        tick: &Tick<'_>,
+        leases: &[AnalysisLease],
+    ) -> Result<(u64, u64), JobError> {
         let (mut judged, mut failed) = (0u64, 0u64);
         for (index, lease) in leases.iter().enumerate() {
             match Self::judge_one(tick, lease).await {
                 Ok(Step::Judged) => judged += 1,
                 Ok(Step::Failed) => failed += 1,
                 Ok(Step::CapReached) => {
-                    repo.release(&leases[index..]).await?;
-                    tracing::warn!(
-                        cap_microdollars = tick.params.daily_cost_cap_microdollars,
-                        "conversation judge daily cost cap reached; leases released"
-                    );
+                    Self::release_at_cap(tick, &leases[index..]).await?;
                     break;
                 },
                 Err(error) => {
                     failed += 1;
-                    repo.retry(lease, &error.to_string()).await?;
-                    tracing::warn!(%error, context_id = %lease.context_id, "conversation judgement will retry");
+                    Self::retry_later(tick, lease, &error).await?;
                 },
             }
         }
-        Ok(JobResult::success().with_stats(judged, failed))
+        Ok((judged, failed))
+    }
+
+    async fn release_at_cap(tick: &Tick<'_>, remaining: &[AnalysisLease]) -> Result<(), JobError> {
+        tick.repo.release(remaining).await?;
+        tracing::warn!(
+            cap_microdollars = tick.params.daily_cost_cap_microdollars,
+            "conversation judge daily cost cap reached; leases released"
+        );
+        Ok(())
+    }
+
+    async fn retry_later(
+        tick: &Tick<'_>,
+        lease: &AnalysisLease,
+        error: &JobError,
+    ) -> Result<(), JobError> {
+        tick.repo.retry(lease, &error.to_string()).await?;
+        tracing::warn!(%error, context_id = %lease.context_id, "conversation judgement will retry");
+        Ok(())
     }
 
     async fn judge_one(tick: &Tick<'_>, lease: &AnalysisLease) -> Result<Step, JobError> {
@@ -156,59 +199,17 @@ impl ConversationJudgeJob {
                 .await?;
             return Ok(Step::Failed);
         };
-
-        let requests = list_context_requests(tick.pool, &lease.context_id).await?;
-        let ids = transcript_request_ids(&requests);
-        let messages = list_messages_for_requests(tick.pool, &ids.messages).await?;
-        let tool_calls = list_tool_calls_for_requests(tick.pool, &ids.tool_calls).await?;
-        let view = build_conversation(
-            &messages,
-            &tool_calls,
-            &requests,
-            TranscriptOptions::owner_facing(),
-        );
-
-        let (classification, ai_request_id, input_tokens, output_tokens) = if view.has_content {
-            let hooked = repo.list_hooked_skills(&lease.context_id).await?;
-            let transcript_meta = TranscriptMeta {
-                client_kind: meta.client_kind.clone(),
-                model: meta.model.clone(),
-                turn_count: meta.turn_count,
-                tool_call_count: meta.tool_call_count,
-                error_count: meta.error_count,
-                duration_minutes: match (meta.first_at, meta.last_at) {
-                    (Some(first), Some(last)) => (last - first).num_minutes().max(0),
-                    _ => 0,
-                },
-                hooked_skills: hooked,
-            };
-            let transcript =
-                render_transcript(&transcript_meta, &view, tick.params.transcript_token_budget);
-            let verdict = tick.classifier.classify(&transcript).await?;
-            (
-                verdict.classification,
-                Some(verdict.ai_request_id),
-                verdict.input_tokens,
-                verdict.output_tokens,
-            )
-        } else {
-            (Classification::unreadable(), None, None, None)
-        };
-
+        let judgement = judge_conversation(tick, lease, &meta).await?;
         repo.complete(
             lease,
             Completion {
-                classification: &classification,
+                classification: &judgement.classification,
                 provider: &tick.params.provider,
                 model: &tick.params.model,
-                ai_request_id: ai_request_id.as_deref(),
-                input_tokens,
-                output_tokens,
-                trigger: if tick.params.context_id.is_some() || lease.manual {
-                    "manual"
-                } else {
-                    "automatic"
-                },
+                ai_request_id: judgement.ai_request_id.as_deref(),
+                input_tokens: judgement.input_tokens,
+                output_tokens: judgement.output_tokens,
+                trigger: tick.trigger(lease),
                 fingerprint: meta.fingerprint,
             },
         )
@@ -239,12 +240,8 @@ impl Job for ConversationJudgeJob {
         &self,
         ctx: &JobContext,
     ) -> Result<JobResult, systemprompt::traits::ProviderError> {
-        let db = ctx
-            .db_pool::<DbPool>()
-            .ok_or(JobError::MissingContext("DbPool"))?;
-        let app = ctx
-            .app_context::<Arc<AppContext>>()
-            .ok_or(JobError::MissingContext("AppContext"))?;
+        let db = ctx.get::<DbPool>()?;
+        let app = ctx.get::<Arc<AppContext>>()?;
         let params = JudgeParams::from_context(ctx)?;
         let automatic = ProfileBootstrap::get()
             .map_err(JobError::from)?

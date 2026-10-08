@@ -1,0 +1,54 @@
+//! Handlebars helpers registered on the admin template engine.
+
+mod helpers_format;
+mod helpers_logic;
+
+use helpers_format::{
+    AvatarToneHelper, ConcatHelper, CssVersionHelper, DefaultHelper, DeltaPctHelper,
+    FormatDateHelper, FormatNumberHelper, FormatUsdHelper, GovernanceColorHelper, InitialsHelper,
+    JsonHelper, PercentHelper, RelativeTimeHelper, ShortIdHelper, ToLowerCaseHelper,
+    ToUpperCaseHelper, TruncateHelper,
+};
+use helpers_logic::{
+    AddHelper, EqHelper, GtHelper, NavActiveHelper, NavStateHelper, NotHelper, SubHelper,
+};
+
+#[doc(hidden)]
+pub fn published_asset_version(dist: &std::path::Path) -> String {
+    use sha2::{Digest, Sha256};
+    let mut hash = Sha256::new();
+    for path in ["css/admin-bundle.css", "js/module-version.txt"] {
+        if let Ok(bytes) = std::fs::read(dist.join(path)) {
+            hash.update(path.as_bytes());
+            hash.update(bytes);
+        }
+    }
+    hex::encode(hash.finalize())
+}
+
+pub fn register_helpers(hbs: &mut handlebars::Handlebars<'static>) {
+    hbs.register_helper("formatDate", Box::new(FormatDateHelper));
+    hbs.register_helper("formatNumber", Box::new(FormatNumberHelper));
+    hbs.register_helper("relativeTime", Box::new(RelativeTimeHelper));
+    hbs.register_helper("initials", Box::new(InitialsHelper));
+    hbs.register_helper("avatar_tone", Box::new(AvatarToneHelper));
+    hbs.register_helper("truncate", Box::new(TruncateHelper));
+    hbs.register_helper("json", Box::new(JsonHelper));
+    hbs.register_helper("concat", Box::new(ConcatHelper));
+    hbs.register_helper("toLowerCase", Box::new(ToLowerCaseHelper));
+    hbs.register_helper("toUpperCase", Box::new(ToUpperCaseHelper));
+    hbs.register_helper("default", Box::new(DefaultHelper));
+    hbs.register_helper("governanceColor", Box::new(GovernanceColorHelper));
+    hbs.register_helper("css_version", Box::new(CssVersionHelper));
+    hbs.register_helper("navState", Box::new(NavStateHelper));
+    hbs.register_helper("eq", Box::new(EqHelper));
+    hbs.register_helper("gt", Box::new(GtHelper));
+    hbs.register_helper("not", Box::new(NotHelper));
+    hbs.register_helper("add", Box::new(AddHelper));
+    hbs.register_helper("sub", Box::new(SubHelper));
+    hbs.register_helper("formatUsd", Box::new(FormatUsdHelper));
+    hbs.register_helper("percent", Box::new(PercentHelper));
+    hbs.register_helper("deltaPct", Box::new(DeltaPctHelper));
+    hbs.register_helper("shortId", Box::new(ShortIdHelper));
+    hbs.register_helper("navActive", Box::new(NavActiveHelper));
+}

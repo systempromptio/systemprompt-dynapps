@@ -1,4 +1,4 @@
-//! Integration coverage for `systemprompt-web-admin`'s repositories against a
+//! Integration coverage for the admin crates' repositories against a
 //! live Postgres: user identity and provisioning, the project split, the
 //! analytics read models, the dashboard counters, the
 //! governance record, and the trace explorer.
@@ -40,6 +40,8 @@ mod analytics_site;
 mod approvals;
 #[cfg(test)]
 mod conversation_facts_detail;
+#[cfg(test)]
+mod conversation_native_sessions;
 #[cfg(test)]
 #[cfg(test)]
 mod dashboard_counters;
@@ -83,6 +85,8 @@ mod req_044_access_matrix;
 #[cfg(test)]
 mod request_scopes;
 #[cfg(test)]
+mod request_scopes_core;
+#[cfg(test)]
 mod scope_attribution;
 #[cfg(test)]
 mod tempdb;
@@ -116,7 +120,11 @@ mod users_ai_request_summary;
 #[cfg(test)]
 mod access_expiry;
 #[cfg(test)]
+mod authz_cost_centre_provider;
+#[cfg(test)]
 mod authz_group_provider;
+#[cfg(test)]
+mod authz_practice_provider;
 #[cfg(test)]
 mod authz_project_provider;
 #[cfg(test)]
@@ -160,3 +168,6 @@ mod gateway_owner_isolation;
 #[cfg(test)]
 #[cfg(test)]
 mod managed_revisions;
+
+#[cfg(test)]
+mod data_console;

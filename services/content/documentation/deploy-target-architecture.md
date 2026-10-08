@@ -8,7 +8,7 @@ kind: "guide"
 public: true
 tags: ["documentation", "deployment", "architecture", "proposed"]
 published_at: "2026-09-02"
-updated_at: "2026-09-02"
+updated_at: "2026-10-07"
 after_reading_this:
   - "See the proposed end-state architecture and who owns each component"
   - "Tell current capability apart from aspiration, component by component"
@@ -121,12 +121,16 @@ integration points worth specifying in the Terraform:
 | Scheduled jobs across replicas | Instance-scoped claims, node and cluster policies | Same | **None — already built** |
 | Session and identity state | In PostgreSQL | Same | **None — already built** |
 | Liveness / readiness / metrics | `/livez`, `/readyz`, separate metrics port | Same | **None — already built** |
+| Load shedding | `server.max_in_flight` per process: `503` + `Retry-After`, `/readyz` reports `saturated` | Same | **None — already built** |
+| Node roles | `server.role`: `all`, `gateway` or `admin`; gateway nodes run no background work | Gateway and admin tiers scaled separately | **None — already built** |
+| Schema migrations across replicas | One process migrates; others boot with `--skip-migrate` / `database.migrate_on_boot: false` and refuse a behind schema | Same | **None — already built** |
+| Read-only root filesystem | Every written directory declared and probed at boot; scratch under `storage/data` | Same | **None — already built** |
 | Provider egress | Single NAT path, in-process outbound URL validation | Same | **None — already built** |
 | Database | One managed primary, DR replicas | Same; per-region replica reads still off | Deliberate — replica lag breaks read-after-write |
 | Secrets | Rendered file, or environment | OCI Vault, with rotation | **Gap 1** |
-| Uploaded and generated files | Local directory, or a shared mount | Object storage | **Gap 2** |
+| Uploaded and generated files | Local directory, a shared mount, or a Google Cloud Storage bucket (`storage.backend: gcs`) | Object storage | **Gap 2 — closed for GCS**; no OCI Object Storage or S3 backend |
 | Generated static content | Rendered to node-local disk on every node | Rendered once to shared storage | **Gap 3** |
-| Locally spawned MCP processes | Tracked by PID, not scoped per node | Scoped per instance | **Gap 4** |
+| Locally spawned MCP processes | Registered per instance id, claimed under a database lock; liveness still by PID | Scoped per instance | **Gap 4 — boot race closed**; PID liveness open |
 | Database TLS | Encrypted (`sslmode=require`) | Certificate verified against a CA | Minor, open |
 
 ## The four gaps, precisely
@@ -144,16 +148,21 @@ box in the diagram is satisfied operationally: the secret is stored in Vault and
 placed on the node by the deployment, which is how
 [Deploy on Oracle Cloud](/documentation/deploy-oracle-cloud) does it today.
 
-**Gap 2 — File storage has no object-storage backend.** File storage sits behind
-a vendor-agnostic interface with exactly one implementation: a local directory.
-Multiple replicas therefore need a shared mount, which OCI Container Instances
-do not hand you comfortably. The fix is an OCI Object Storage (or
-S3-compatible) backend behind the existing interface.
+**Gap 2 — File storage on object storage: closed for Google Cloud Storage.**
+File storage sits behind a vendor-agnostic interface, which now has two
+backends: a local directory, and Google Cloud Storage
+(`storage: {backend: gcs, bucket, prefix?, public_read?, credentials?}`, with
+`credentials` either `workload_identity` or a service-account key held as a
+secret). Replicas on GCP share one bucket and need no shared mount. On OCI the
+gap remains: an OCI Object Storage (or S3-compatible) backend behind the same
+interface is not written. The gateway journal and exports stay node-local by
+design.
 
 **Gap 3 — Generated static content is written to node-local disk.** The content
 pipeline renders HTML, sitemaps and feeds to a directory that is then served.
 With two replicas, whichever one ran the job has the fresh content and the other
-serves stale, unless that directory is the same shared mount. Same fix as gap 2.
+serves stale, unless that directory is the same shared mount. The storage backend
+covers uploads and generated images, not this directory, so gap 3 is still open.
 
 **Gap 4 — Locally spawned processes are not scoped per node.** MCP servers and
 orchestrated agent processes started on a node are recorded in the shared
@@ -161,9 +170,11 @@ database by raw process id, with liveness checked by signalling that id. On one
 node that is correct. On two, one node can read a row written by another and
 judge liveness against — or terminate — an unrelated local process holding the
 same id. The blast radius is bounded (remote MCP servers over HTTP are
-unaffected) but it is a real defect the moment two nodes both spawn local
-processes, and it is why multi-node boots are currently serialised. The fix is
-the instance-scoping the job scheduler already has.
+unaffected). The boot-time half is fixed: each replica now claims its
+instance id under a database advisory lock before reconciling its MCP rows,
+refuses to boot when that id is already live, and the dead-instance reaper
+skips claimed ids, so multi-node boots no longer need to be serialised. PID
+liveness checks across nodes remain the open half.
 
 ## The staged path
 
@@ -176,8 +187,9 @@ a time means you always know which one broke.
    reversible in a minute. Reaches none of the four gaps.
 2. **Next — Vault-backed secrets.** Closes gap 1, the only one with a security
    dimension.
-3. **Then — object storage.** Closes gaps 2 and 3 together, and is the
-   precondition for more than one replica serving files or content.
+3. **Then — object storage.** Gap 2 is closed on GCS; OCI still needs its
+   backend, and gap 3 (rendered static content) needs its own fix. Both are
+   the precondition for more than one replica serving files or content.
 4. **Then — blue/green with two replicas.** Needs gap 4 closed first.
 5. **Then — WAF, multi-AZ, and whatever region story the business needs.**
 

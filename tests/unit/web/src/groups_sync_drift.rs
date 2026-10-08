@@ -2,10 +2,10 @@
 //! loader's asymmetry — sets are only upserted, mappings are reconciled —
 //! is what the drift rows and the export must say.
 
-use systemprompt_web_admin::repositories::sync::groups_db::{
+use systemprompt_web_admin_identity::repositories::sync_planes::groups_db::{
     parse_groups_doc, render_groups_export,
 };
-use systemprompt_web_admin::repositories::sync::groups_drift::{
+use systemprompt_web_admin_identity::repositories::sync_planes::groups_drift::{
     MappingRow, MemberSetRow, compute_groups_drift, declared_count, declared_hash,
 };
 

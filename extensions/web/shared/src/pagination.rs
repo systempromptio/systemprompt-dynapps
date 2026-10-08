@@ -1,23 +1,18 @@
 //! Page-window arithmetic for paginated list views.
 
-// Why: one bundle for the five numbers a footer needs, so each page's
-// pagination builder takes a window rather than a row of bare integers.
+/// `index` is zero-based; `shown_rows` counts what this page renders, so the
+/// last page is short.
 #[derive(Debug, Clone, Copy)]
 pub struct PageWindow {
-    // Why: Zero-based page index.
     pub index: i64,
     pub size: i64,
     pub total_pages: i64,
     pub total_rows: i64,
-    // Why: Rows actually rendered on this page — the last page is short.
     pub shown_rows: i64,
-    // Why: What the rows are called: "Showing 1-50 of 54 <noun>".
     pub noun: &'static str,
 }
 
 impl PageWindow {
-    // Why: an empty result still renders as "page 1 of 1" rather than "of 0",
-    // which is the one case the ceiling division cannot produce on its own.
     pub const fn new(
         index: i64,
         size: i64,
@@ -40,7 +35,6 @@ impl PageWindow {
         }
     }
 
-    // Why: The 1-based inclusive row range this page covers, `(0, 0)` when empty.
     pub const fn bounds(self) -> (i64, i64) {
         if self.shown_rows == 0 {
             return (0, 0);

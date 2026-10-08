@@ -23,5 +23,6 @@ Agents
 Governance
 ----------
 - Tail decisions: `systemprompt infra db query "SELECT * FROM governance_decisions ORDER BY created_at DESC LIMIT 20"`
-- Rules live in the plugin hooks YAML and are executed in the Rust handler at
-  extensions/web/admin/src/handlers/webhook/governance/rules.rs
+- Rules are declared in services/governance/config.yaml and evaluated by
+  core's policy chain; the hook webhook that feeds it is at
+  extensions/web/admin/governance/src/handlers/webhook/governance/

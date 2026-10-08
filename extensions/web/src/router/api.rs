@@ -3,42 +3,50 @@
 use std::sync::Arc;
 
 use axum::Router;
+use axum::http::HeaderMap;
 use axum::routing::post;
 
 use systemprompt::oauth::SessionCreationService;
 
 use super::pools::DbHandles;
+use super::{admin, sign_out};
+use crate::api;
 use crate::extension::WebExtension;
-use crate::{admin, api};
 
-pub(crate) fn build(
-    db: &DbHandles,
-    session_service: &Arc<SessionCreationService>,
-) -> Result<Router, admin::StateError> {
-    let admin_api = admin::admin_router(&db.db, Arc::clone(&db.read), &db.write, db.owner.clone())?;
+pub(crate) fn build(db: &DbHandles, session_service: &Arc<SessionCreationService>) -> Router {
+    let admin_api = admin::admin_router(Arc::clone(&db.read), &db.write, Arc::clone(&db.managed));
     let webhook_api =
-        admin::hooks_webhook_router(&db.db, Arc::clone(&db.write), Arc::clone(session_service))?;
+        admin::hooks_webhook_router(&db.db, Arc::clone(&db.write), Arc::clone(session_service));
     let secrets_api = admin::secrets_router(Arc::clone(&db.write));
-    let bridge_identity = admin::bridge_identity_router(Arc::clone(&db.read));
+    let bridge_identity =
+        systemprompt_web_admin_platform::bridge_identity_router(Arc::clone(&db.read));
     let links_router = api::router(Arc::clone(&db.read), WebExtension::blog_config());
-    let salesforce_api = admin::salesforce_api_router(admin::SalesforceDeps {
-        config: WebExtension::salesforce_config()
-            .unwrap_or_else(|| Arc::new(admin::SalesforceConfig::disabled())),
-        write_pool: Arc::clone(&db.write),
-    });
+    let salesforce_api = systemprompt_web_admin_platform::salesforce_api_router(
+        systemprompt_web_admin_platform::SalesforceDeps {
+            config: WebExtension::salesforce_config().unwrap_or_else(|| {
+                Arc::new(systemprompt_web_admin_platform::SalesforceConfig::disabled())
+            }),
+            write_pool: Arc::clone(&db.write),
+        },
+    );
 
-    Ok(Router::new()
+    Router::new()
         .route(
             "/auth/session",
-            post(api::auth::set_session).delete(api::auth::clear_session),
+            post(api::auth::set_session).delete({
+                let pool = Arc::clone(&db.write);
+                move |headers: HeaderMap| sign_out::sign_out(Arc::clone(&pool), headers)
+            }),
         )
         .merge(links_router)
         .merge(bridge_identity)
-        .merge(admin::connector_api_router(Arc::clone(&db.write)))
+        .merge(systemprompt_web_admin_platform::connector_api_router(
+            Arc::clone(&db.write),
+        ))
         .merge(salesforce_api)
         .merge(webhook_api)
         .merge(secrets_api)
-        .nest("/admin", admin_api))
+        .nest("/admin", admin_api)
 }
 
 pub(crate) fn share(db: &DbHandles) -> Router {

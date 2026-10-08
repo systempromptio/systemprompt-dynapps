@@ -85,7 +85,7 @@
         <a href="/admin/access-control"{{navActive page "access-control"}}>
             <svg class="sp-icon" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="7" width="10" height="7" rx="1"/><path d="M5.5 7V4.5a2.5 2.5 0 015 0V7" stroke-linecap="round"/></svg>
             Access control
-            {{#if access_attention}}<span class="sp-nav-attention" title="{{access_attention}} entities where code and this database disagree">{{access_attention}}<span class="sp-u-sr-only"> entities need review</span></span>{{/if}}
+            <span class="sp-nav-attention" data-attention="access" data-attention-title="entities where code and this database disagree"{{#unless access_attention}} hidden{{/unless}} title="{{access_attention}} entities where code and this database disagree"><span data-attention-count>{{access_attention}}</span><span class="sp-u-sr-only"> entities need review</span></span>
         </a>
         {{#> nav-item href="/admin/devices" text="Devices & enrolments" leaf="devices" child="device-detail" page=page}}
             {{#*inline "nav_text"}}Devices &amp; enrolments{{/inline}}
@@ -153,6 +153,7 @@
         <a href="/admin/governance/approvals"{{navActive page "governance-approvals"}}>
             <svg class="sp-icon" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><path d="M5.2 8.2l2 2 3.6-4" stroke-linecap="round" stroke-linejoin="round"/></svg>
             Approvals
+            <span class="sp-nav-attention" data-attention="approvals" data-attention-title="calls held for a decision" hidden><span data-attention-count>0</span><span class="sp-u-sr-only"> calls waiting</span></span>
         </a>
         <a href="/admin/governance/secrets"{{navActive page "governance-secrets"}}>
             <svg class="sp-icon" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="6" r="3"/><path d="M8 9v4M6.5 11.5h3" stroke-linecap="round"/></svg>
@@ -187,6 +188,10 @@
             <svg class="sp-icon" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="1.5"/><path d="M5 6h6M5 8.5h6M5 11h4" stroke-linecap="round"/></svg>
             Configuration
         </a>
+        {{#if current_user.is_platform_admin}}
+        <a href="/admin/logs"{{navActive page "logs"}}>Logs</a>
+        <a href="/admin/sql"{{navActive page "sql"}}>SQL</a>
+        {{/if}}
         <a href="/admin/lifecycle"{{navActive page "lifecycle"}}>
             <svg class="sp-icon" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><ellipse cx="8" cy="4" rx="5" ry="2"/><path d="M3 4v8c0 1.1 2.2 2 5 2s5-.9 5-2V4M3 8c0 1.1 2.2 2 5 2s5-.9 5-2" stroke-linecap="round"/></svg>
             Data lifecycle
@@ -233,7 +238,7 @@
             <svg class="sp-icon" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="5" r="3"/><path d="M2 14c0-3.3 2.7-6 6-6s6 2.7 6 6"/></svg>
             Profile
         </a>
-        {{#> nav-item href="/admin/connect" text="Connect" leaf="connect" child="setup" page=page}}
+        {{#> nav-item href="/admin/connect" text="Connect" leaf="connect" page=page}}
             {{#*inline "nav_icon"}}<svg class="sp-icon" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6.5 9.5l3-3M5 11l-1.5 1.5a2.1 2.1 0 01-3-3L3 8a2.1 2.1 0 013 0M11 5l1.5-1.5a2.1 2.1 0 013 3L13 8a2.1 2.1 0 01-3 0" stroke-linecap="round" stroke-linejoin="round"/></svg>{{/inline}}
         {{/nav-item}}
         {{#> nav-item href="/admin/connectors" text="Connectors" leaf="connectors" page=page}}

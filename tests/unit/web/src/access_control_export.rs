@@ -1,10 +1,14 @@
 //! Database → `rules.yaml`: the export is the loader's inverse.
 
 use systemprompt_security::authz::Access;
-use systemprompt_web_admin::repositories::access_control::drift::{BandRuleRow, EntityDefaultRow};
-use systemprompt_web_admin::repositories::access_control::export::{Owners, render_export};
-use systemprompt_web_admin::repositories::config::rules_yaml_loader::parse_rules_doc;
-use systemprompt_web_admin::repositories::config::rules_yaml_types::{BandSpec, EntityDefault};
+use systemprompt_web_admin_core::repositories::access_rules::drift::{
+    BandRuleRow, EntityDefaultRow,
+};
+use systemprompt_web_admin_core::repositories::access_rules::export::{Owners, render_export};
+use systemprompt_web_admin_core::repositories::access_rules::rules_yaml_loader::parse_rules_doc;
+use systemprompt_web_admin_core::repositories::access_rules::rules_yaml_types::{
+    BandSpec, EntityDefault,
+};
 
 #[expect(
     clippy::too_many_arguments,

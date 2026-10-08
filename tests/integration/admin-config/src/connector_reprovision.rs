@@ -2,8 +2,8 @@
 
 use crate::fixtures::{insert_user, unique, user_id};
 use crate::tempdb::TempDb;
-use systemprompt_web_admin::repositories::users::connector_accounts as accounts;
-use systemprompt_web_admin::repositories::users::connector_credentials::{
+use systemprompt_web_admin_platform::repositories::connectors::connector_accounts as accounts;
+use systemprompt_web_admin_platform::repositories::connectors::connector_credentials::{
     self as credentials, EncryptedGrant,
 };
 

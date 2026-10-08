@@ -5,10 +5,10 @@
 //! pins one rule of that projection with no database in the way.
 
 use systemprompt_security::authz::{Access, EntityKind, RegisteredEntities};
-use systemprompt_web_admin::repositories::access_control::declared::{
+use systemprompt_web_admin_core::repositories::access_rules::declared::{
     DeclaredInputs, DeclaredKey, build_declared_set,
 };
-use systemprompt_web_admin::repositories::config::rules_yaml_loader::parse_rules_doc;
+use systemprompt_web_admin_core::repositories::access_rules::rules_yaml_loader::parse_rules_doc;
 
 fn key(entity_type: &str, entity_id: &str, rule_type: &str, rule_value: &str) -> DeclaredKey {
     DeclaredKey {
@@ -23,7 +23,8 @@ fn project(
     yaml: &str,
     routes: &[&str],
     marketplaces: &[&str],
-) -> Result<systemprompt_web_admin::repositories::access_control::declared::DeclaredSet, String> {
+) -> Result<systemprompt_web_admin_core::repositories::access_rules::declared::DeclaredSet, String>
+{
     let doc = parse_rules_doc(yaml).map_err(|e| e.to_string())?;
     let routes: Vec<String> = routes.iter().map(|r| (*r).to_owned()).collect();
     let marketplaces: Vec<String> = marketplaces.iter().map(|m| (*m).to_owned()).collect();
@@ -149,7 +150,7 @@ fn unknown_keys_and_bands_are_rejected() {
     assert!(parse_rules_doc("entities:\n  - entity: mcp_server/x\n    why: x\n    reason: y\n    allow:\n      role: [user]\n").is_err());
     assert!(parse_rules_doc("entities:\n  - entity: mcp_server/x\n    why: x\n    allow:\n      department: [sales]\n").is_err());
     assert!(matches!(
-        "skill/x".parse::<systemprompt_web_admin::repositories::config::rules_yaml_types::EntityRef>(),
+        "skill/x".parse::<systemprompt_web_admin_core::repositories::access_rules::rules_yaml_types::EntityRef>(),
         Ok(r) if r.kind == EntityKind::Skill && r.id == "x"
     ));
 }
@@ -197,6 +198,74 @@ fn a_malformed_owner_is_rejected_at_parse() {
     .expect_err("rejected")
     .to_string();
     assert!(err.contains("bundle:<name>"), "{err}");
+}
+
+fn rejection(yaml: &str) -> String {
+    parse_rules_doc(yaml).expect_err("rejected").to_string()
+}
+
+#[test]
+fn validate_with_literal_generated_id_returns_the_glob_hint() {
+    let err = rejection(
+        "entities:\n  - entity: gateway_route/abc\n    why: x\n    allow:\n      role: [user]\n",
+    );
+    assert!(
+        err.contains("gateway_route/abc: gateway_route ids are generated, never written — use gateway_route/*"),
+        "{err}"
+    );
+}
+
+#[test]
+fn validate_with_neither_allow_nor_deny_returns_declares_nothing() {
+    let err = rejection("entities:\n  - entity: mcp_server/x\n    why: x\n");
+    assert!(
+        err.contains("mcp_server/x: declares no allow and no deny"),
+        "{err}"
+    );
+}
+
+#[test]
+fn validate_with_owner_on_a_glob_returns_glob_owner_error() {
+    let err = rejection(
+        "entities:\n  - entity: gateway_route/*\n    owner: bundle:kit\n    why: x\n    allow:\n      role: [user]\n",
+    );
+    assert!(
+        err.contains("gateway_route/*: a glob cannot name an owner"),
+        "{err}"
+    );
+}
+
+#[test]
+fn validate_with_conflict_returns_band_and_subject() {
+    let err = rejection(
+        "entities:\n  - entity: mcp_server/x\n    why: x\n    allow:\n      role: [admin, user]\n    deny:\n      role: [user]\n",
+    );
+    assert!(
+        err.contains("mcp_server/x: role 'user' is both allowed and denied"),
+        "{err}"
+    );
+}
+
+#[test]
+fn validate_with_empty_band_returns_names_no_subjects() {
+    let err = rejection(
+        "entities:\n  - entity: mcp_server/x\n    why: x\n    allow:\n      role: [admin]\n    deny:\n      group: []\n",
+    );
+    assert!(
+        err.contains("mcp_server/x: group names no subjects"),
+        "{err}"
+    );
+}
+
+#[test]
+fn validate_with_blank_subject_returns_blank_subject_error() {
+    let err = rejection(
+        "entities:\n  - entity: mcp_server/x\n    why: x\n    allow:\n      project: [' ']\n",
+    );
+    assert!(
+        err.contains("mcp_server/x: project contains a blank subject"),
+        "{err}"
+    );
 }
 
 #[test]

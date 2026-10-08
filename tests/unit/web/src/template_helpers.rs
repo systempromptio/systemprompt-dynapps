@@ -3,16 +3,9 @@
 //! Every one of these formats a number, a date, or a decision that an operator
 //! reads off a governance page, so the exact output string is the contract.
 
-#![allow(
-    clippy::expect_used,
-    clippy::panic,
-    clippy::needless_pass_by_value,
-    clippy::redundant_clone,
-    reason = "test code: panics are the assertion mechanism and clones keep fixtures readable"
-)]
 
 use handlebars::Handlebars;
-use systemprompt_web_admin::templates::helpers::register_helpers;
+use systemprompt_web_admin_core::templates::helpers::register_helpers;
 
 fn engine() -> Handlebars<'static> {
     let mut hbs = Handlebars::new();
@@ -28,7 +21,9 @@ fn render(template: &str, data: &serde_json::Value) -> String {
 }
 
 fn render_value(template: &str, value: serde_json::Value) -> String {
-    render(template, &serde_json::json!({ "v": value }))
+    let data: serde_json::Map<String, serde_json::Value> =
+        std::iter::once(("v".to_owned(), value)).collect();
+    render(template, &serde_json::Value::Object(data))
 }
 
 #[test]
@@ -430,4 +425,15 @@ fn nav_state_accepts_a_second_child_id() {
     let t = r#"<a{{navState page "plugins" "plugin-detail" "catalog"}}>"#;
     let catalog = render(t, &serde_json::json!({ "page": "catalog" }));
     assert_eq!(catalog, r#"<a class="is-ancestor" aria-expanded="true">"#);
+}
+
+#[test]
+fn asset_version_changes_when_javascript_is_republished_without_a_restart() {
+    use systemprompt_web_admin_core::templates::helpers::published_asset_version;
+    let dist = tempfile::tempdir().unwrap();
+    std::fs::create_dir(dist.path().join("js")).unwrap();
+    std::fs::write(dist.path().join("js/module-version.txt"), "first").unwrap();
+    let first = published_asset_version(dist.path());
+    std::fs::write(dist.path().join("js/module-version.txt"), "second").unwrap();
+    assert_ne!(first, published_asset_version(dist.path()));
 }

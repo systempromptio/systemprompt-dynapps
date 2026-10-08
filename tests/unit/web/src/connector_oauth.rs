@@ -1,6 +1,6 @@
 //! Hosted connector refresh uses provider credentials and fails closed.
 
-use systemprompt_web_admin::connector_oauth::{Grant, Provider, refresh_at};
+use systemprompt_web_admin_platform::connector_oauth::{Grant, Provider, refresh_at};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 pub(super) fn grant() -> Grant {
@@ -32,7 +32,7 @@ pub(super) async fn endpoint(body: &'static str) -> (String, tokio::task::JoinHa
     endpoint_with_status(200, "OK", body).await
 }
 
-async fn endpoint_with_status(
+pub(super) async fn endpoint_with_status(
     status: u16,
     reason: &'static str,
     body: &'static str,
@@ -83,8 +83,8 @@ fn debug_redacts_connector_credentials() {
 #[test]
 fn verification_report_keeps_the_failed_stage_and_finishes_unsuccessfully() {
     use std::time::Instant;
-    use systemprompt_web_admin::connector_oauth::VerificationReport;
-    use systemprompt_web_admin::error::AdminError;
+    use systemprompt_web_admin_core::connections::report::VerificationReport;
+    use systemprompt_web_admin_core::error::AdminError;
 
     let mut report = VerificationReport::for_provider("atlassian");
     report.record(
@@ -118,7 +118,7 @@ fn verification_report_keeps_the_failed_stage_and_finishes_unsuccessfully() {
 
 #[test]
 fn verification_report_does_not_mark_an_empty_probe_as_connected() {
-    use systemprompt_web_admin::connector_oauth::VerificationReport;
+    use systemprompt_web_admin_core::connections::report::VerificationReport;
 
     let report = VerificationReport::for_provider("atlassian").finish();
     assert!(!report.ok);
@@ -167,17 +167,17 @@ async fn a_retired_refresh_token_is_an_authentication_failure_not_an_outage() {
     let error = refresh_at(&mut grant(), &url).await.unwrap_err();
     assert_eq!(error.status(), axum::http::StatusCode::UNAUTHORIZED);
     assert!(
-        error.to_string().contains("unauthorized_client"),
+        error.to_string().contains("Reconnect"),
         "the OAuth error code names the cause: {error}"
     );
     mock.await.unwrap();
 }
 
 #[tokio::test]
-async fn a_4xx_without_an_oauth_error_body_still_retires_the_grant() {
-    let (url, mock) = endpoint_with_status(400, "Bad Request", r#"{}"#).await;
+async fn a_4xx_without_an_oauth_error_body_preserves_the_grant() {
+    let (url, mock) = endpoint_with_status(400, "Bad Request", r"{}").await;
     let error = refresh_at(&mut grant(), &url).await.unwrap_err();
-    assert_eq!(error.status(), axum::http::StatusCode::UNAUTHORIZED);
+    assert_eq!(error.status(), axum::http::StatusCode::BAD_GATEWAY);
     mock.await.unwrap();
 }
 
@@ -211,7 +211,7 @@ async fn empty_access_tokens_cannot_pass_refresh() {
 #[test]
 fn atlassian_identity_accepts_wrapped_and_text_tool_results() {
     use serde_json::json;
-    use systemprompt_web_admin::connector_oauth::payload::atlassian_user;
+    use systemprompt_web_admin_platform::connector_oauth::payload::atlassian_user;
     let user = json!({"account_id":"account-123","displayName":"Pilot user"});
     for response in [
         json!({"structuredContent":user}),
@@ -237,7 +237,7 @@ fn atlassian_identity_accepts_wrapped_and_text_tool_results() {
 #[test]
 fn atlassian_sites_accepts_wrapped_array_and_ignores_empty_structured_content() {
     use serde_json::json;
-    use systemprompt_web_admin::connector_oauth::payload::atlassian_sites;
+    use systemprompt_web_admin_platform::connector_oauth::payload::atlassian_sites;
     let sites = json!([{"id":"cloud-123","url":"https://astounddigital.atlassian.net"}]);
     for response in [
         json!({"structuredContent":{"result":sites}}),
@@ -251,7 +251,7 @@ fn atlassian_sites_accepts_wrapped_array_and_ignores_empty_structured_content() 
 #[test]
 fn atlassian_v2_resources_use_cloud_id_without_url() {
     use serde_json::json;
-    use systemprompt_web_admin::connector_oauth::payload::atlassian_sites;
+    use systemprompt_web_admin_platform::connector_oauth::payload::atlassian_sites;
     let response = json!({"content":[{"type":"text","text":json!({"data":{"resources":[
         {"cloudId":"cloud-123","products":[{"id":"jira","access":"read"}]}
     ]}}).to_string()}],"isError":false});
@@ -261,7 +261,7 @@ fn atlassian_v2_resources_use_cloud_id_without_url() {
 
 #[test]
 fn atlassian_site_lookup_cannot_target_arbitrary_hosts() {
-    use systemprompt_web_admin::connector_oauth::site::tenant_metadata_url;
+    use systemprompt_web_admin_platform::connector_oauth::site::tenant_metadata_url;
     assert_eq!(
         tenant_metadata_url("https://astounddigital.atlassian.net")
             .unwrap()
@@ -303,7 +303,7 @@ fn configured_provider_ids_preserve_legacy_wire_names() {
 
 #[test]
 fn generic_oauth_cannot_send_credentials_outside_approved_origins() {
-    use systemprompt_web_admin::connector_oauth::generic::validate_endpoint;
+    use systemprompt_web_admin_platform::connector_oauth::generic::validate_endpoint;
     let resource = "https://mcp.example.test/resource";
     let origins = vec!["https://login.example.test".to_owned()];
     for endpoint in [
@@ -331,7 +331,7 @@ fn generic_oauth_cannot_send_credentials_outside_approved_origins() {
 #[tokio::test]
 async fn gateway_does_not_allow_a_request_when_its_policy_database_is_unavailable() {
     use systemprompt::extension::{GatewayDenyKind, GatewayGuardRequest, GatewayRequestGuard};
-    use systemprompt_web_admin::gateway_entitlement::RouteEntitlementGuard;
+    use systemprompt_web_admin_governance::gateway_entitlement::RouteEntitlementGuard;
     let pool = sqlx::postgres::PgPoolOptions::new()
         .connect_lazy("postgres://test:test@localhost:1/test")
         .unwrap();
@@ -341,12 +341,15 @@ async fn gateway_does_not_allow_a_request_when_its_policy_database_is_unavailabl
     let model = systemprompt::identifiers::ModelId::new("test-model");
     let route = systemprompt::identifiers::RouteId::new("test-route");
     let provider = systemprompt::identifiers::ProviderId::new("test-provider");
+    let attribution = systemprompt::models::attribution::RequestAttribution::none();
     let request = GatewayGuardRequest {
         user_id: &user_id,
         model: &model,
         route_id: Some(&route),
         provider: &provider,
         streaming: false,
+        attribution: &attribution,
+        api_key_id: None,
     };
     let denial = RouteEntitlementGuard
         .check(&database, &request)
@@ -370,12 +373,13 @@ async fn gateway_does_not_allow_a_request_when_its_policy_database_is_unavailabl
 async fn fourth_configured_connector_completes_oauth_and_mcp_verification() {
     use std::io::{BufRead, BufReader};
     use std::process::{Command, Stdio};
-    use systemprompt_web_admin::connector_oauth::{exchange_with_client, generic, verify};
+    use systemprompt_web_admin_platform::connector_oauth::{exchange_with_client, generic, verify};
     struct Server(std::process::Child);
     impl Drop for Server {
         fn drop(&mut self) {
-            let _ = self.0.kill();
-            let _ = self.0.wait();
+            if self.0.kill().is_ok() {
+                self.0.wait().ok();
+            }
         }
     }
     let root = tempfile::tempdir().unwrap();
@@ -437,7 +441,7 @@ async fn fourth_configured_connector_completes_oauth_and_mcp_verification() {
         .unwrap();
     assert_eq!(grant.access_token, "access-token");
     assert!(grant.verifier.is_empty());
-    systemprompt_web_admin::connector_oauth::refresh_with_client(&mut grant, &http)
+    systemprompt_web_admin_platform::connector_oauth::refresh_with_client(&mut grant, &http)
         .await
         .unwrap();
     assert_eq!(grant.refresh_token.as_deref(), Some("refresh-token"));
@@ -450,7 +454,7 @@ async fn fourth_configured_connector_completes_oauth_and_mcp_verification() {
 
 #[test]
 fn issuer_comparison_ignores_a_single_trailing_slash_and_nothing_else() {
-    use systemprompt_web_admin::connector_oauth::generic::same_issuer;
+    use systemprompt_web_admin_platform::connector_oauth::generic::same_issuer;
     assert!(same_issuer(
         "https://accounts.google.com",
         "https://accounts.google.com/"
@@ -482,12 +486,13 @@ fn issuer_comparison_ignores_a_single_trailing_slash_and_nothing_else() {
 async fn google_shaped_connector_sends_offline_params_and_reads_userinfo() {
     use std::io::{BufRead, BufReader};
     use std::process::{Command, Stdio};
-    use systemprompt_web_admin::connector_oauth::{exchange_with_client, generic, verify};
+    use systemprompt_web_admin_platform::connector_oauth::{exchange_with_client, generic, verify};
     struct Server(std::process::Child);
     impl Drop for Server {
         fn drop(&mut self) {
-            let _ = self.0.kill();
-            let _ = self.0.wait();
+            if self.0.kill().is_ok() {
+                self.0.wait().ok();
+            }
         }
     }
     let root = tempfile::tempdir().unwrap();
@@ -564,7 +569,7 @@ async fn subject_attribute_failure_is_not_an_empty_membership() {
     pool.close().await;
     let user = systemprompt::identifiers::UserId::new("00000000-0000-0000-0000-000000000001");
     assert!(
-        systemprompt_web_admin::authz::subject_attributes_for(&pool, &user)
+        systemprompt_web_admin_core::authz::subject_attributes_for(&pool, &user)
             .await
             .is_err()
     );
@@ -575,7 +580,7 @@ async fn gateway_rejects_incompatible_database_handles_even_when_reported_connec
     use systemprompt::extension::{GatewayDenyKind, GatewayGuardRequest, GatewayRequestGuard};
     use systemprompt::identifiers::{ModelId, ProviderId, RouteId, UserId};
     use systemprompt::traits::DatabaseHandle;
-    use systemprompt_web_admin::gateway_entitlement::RouteEntitlementGuard;
+    use systemprompt_web_admin_governance::gateway_entitlement::RouteEntitlementGuard;
 
     struct ForeignDatabase;
     impl DatabaseHandle for ForeignDatabase {
@@ -591,12 +596,15 @@ async fn gateway_rejects_incompatible_database_handles_even_when_reported_connec
     let model = ModelId::new("test-model");
     let route = RouteId::new("test-route");
     let provider = ProviderId::new("test-provider");
+    let attribution = systemprompt::models::attribution::RequestAttribution::none();
     let request = GatewayGuardRequest {
         user_id: &user_id,
         model: &model,
         route_id: Some(&route),
         provider: &provider,
         streaming: false,
+        attribution: &attribution,
+        api_key_id: None,
     };
     let denial = RouteEntitlementGuard
         .check(&ForeignDatabase, &request)

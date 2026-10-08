@@ -7,7 +7,12 @@ kind: "guide"
 public: true
 tags: ["documentation", "getting-started", "bridge"]
 published_at: "2026-09-08"
-updated_at: "2026-09-09"
+updated_at: "2026-09-29"
+keywords: "macos, install, bridge, claude code, cowork, sign in, verify"
+after_reading_this:
+  - "Install and verify the bridge on macOS"
+  - "Sign in and connect Claude Code or Cowork"
+  - "Find configuration and disconnect a client"
 related_playbooks:
   - title: "Connect Claude Code"
     url: "/documentation/connect-claude-code"

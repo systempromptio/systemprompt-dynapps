@@ -1,15 +1,15 @@
 //! `repositories::scope::membership` and `users::roles` — who a listing may
 //! span, and how the two writers of `users.roles` are joined.
 
-use systemprompt_web_admin::repositories::groups::crud::insert_group;
-use systemprompt_web_admin::repositories::groups::members::insert_group_member;
-use systemprompt_web_admin::repositories::scope::membership::get_subject_scope;
-use systemprompt_web_admin::repositories::scope::{ScopeRequest, SubjectScope, Visibility};
-use systemprompt_web_admin::repositories::users::roles::{
+use systemprompt_web_admin_core::repositories::scope::membership::get_subject_scope;
+use systemprompt_web_admin_core::repositories::scope::{ScopeRequest, SubjectScope, Visibility};
+use systemprompt_web_admin_core::types::groups::CreateGroupRequest;
+use systemprompt_web_admin_identity::repositories::groups::crud::insert_group;
+use systemprompt_web_admin_identity::repositories::groups::members::insert_group_member;
+use systemprompt_web_admin_identity::repositories::users::roles::{
     count_platform_admins, list_directory_roles, list_manual_roles, recompute_roles,
     set_manual_roles,
 };
-use systemprompt_web_admin::types::groups::CreateGroupRequest;
 
 use crate::fixtures::{insert_user, unclaimed_email, unique, unique_group};
 use crate::tempdb::TempDb;

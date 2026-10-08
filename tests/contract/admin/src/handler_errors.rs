@@ -1,25 +1,9 @@
 //! The failure half of the admin HTTP contract.
 //!
-//! [`crate::status_contract`] drives every route once, well-formed, and proves
-//! it does not 5xx. That is the happy path even when it ends in a 404 — the
-//! request was still shaped exactly as the router expects. This module drives
-//! the requests that are wrong on purpose:
-//!
-//! - a detail page asked for an id that exists in no table, which owes the
-//!   caller a 404 carrying the reason, not a 500 and not a blank page that
-//!   reads as "this record was deleted";
-//! - a payload that is not JSON, or is JSON of the wrong shape, or arrives with
-//!   no content type, each of which the extractor must refuse before the
-//!   handler ever runs;
-//! - a write attempted with no credentials, or with credentials that are not an
-//!   admin's;
-//! - a query string carrying nonsense where a number or a date was expected,
-//!   which must be a client error rather than a panic inside a parser.
-//!
-//! Where a handler's exact code is genuinely a judgement call the case asserts
-//! the weaker property — a client error, or merely "not a server error" — and
-//! says so at the case. An assertion that pins a code nobody chose deliberately
-//! is a change detector, not a contract.
+//! Requests that are wrong on purpose: unknown ids, malformed payloads,
+//! missing credentials, nonsense query strings. Where the exact code is a
+//! judgement call the case asserts the weaker property (`ClientError`,
+//! `NotServerError`) rather than pinning a code nobody chose.
 
 use axum::http::StatusCode;
 
@@ -28,19 +12,13 @@ use crate::principal::Principal;
 use crate::tempdb::TempDb;
 use crate::{globals, principal};
 
-// What a case demands of the response.
 #[derive(Clone, Copy)]
 enum Expect {
-    // Exactly this code, and nothing else.
     Status(StatusCode),
-    // Refused, by whichever mechanism the layer uses: 401, 403, or a redirect
-    // to the sign-in page. The SSR and API planes differ here by design.
+    // The API answers 401/403; the SSR plane redirects to sign-in.
     Refused,
-    // Some 4xx. Used where the boundary between 400 and 422 is the extractor's
-    // choice rather than the handler's.
+    // axum's extractor, not the handler, picks between 400 and 422.
     ClientError,
-    // Only that the server did not fault. Used where the handler's behaviour
-    // is not determined by reading it.
     NotServerError,
 }
 
@@ -67,7 +45,6 @@ impl Expect {
     }
 }
 
-// One deliberately wrong request, and what the plane owes in return.
 struct Case {
     method: &'static str,
     path: &'static str,
@@ -75,9 +52,7 @@ struct Case {
     content_type: Option<&'static str>,
     body: Option<&'static str>,
     expect: Expect,
-    // A substring the response must carry. The status says a request was
-    // refused; this says it was refused for the stated reason, which is what
-    // stops a validation 400 from passing as an unrelated 400.
+    // Stops an unrelated 400 from passing as the intended validation 400.
     marker: Option<&'static str>,
 }
 
@@ -142,11 +117,6 @@ const UNAUTHORIZED: StatusCode = StatusCode::UNAUTHORIZED;
 const UNSUPPORTED_MEDIA: StatusCode = StatusCode::UNSUPPORTED_MEDIA_TYPE;
 const UNPROCESSABLE: StatusCode = StatusCode::UNPROCESSABLE_ENTITY;
 
-// Detail pages and detail endpoints handed an id that matches nothing.
-//
-// Each owes a 404 whose body names what was not found. A 500 here is the
-// classic "the query returned no rows and the handler unwrapped it"; a 200
-// with a blank page is worse, because it asserts the record was deleted.
 const UNKNOWN_ID: [Case; 16] = [
     get(
         "/admin/contexts/no-such-context",
@@ -219,7 +189,6 @@ const UNKNOWN_ID: [Case; 16] = [
         Expect::Status(NOT_FOUND),
         Some("Agent not found"),
     ),
-    // Usage is a list, and an unknown user's list is empty rather than absent.
     get(
         "/api/public/admin/users/no-such-user/usage",
         Expect::Status(OK),
@@ -227,12 +196,8 @@ const UNKNOWN_ID: [Case; 16] = [
     ),
 ];
 
-// Payloads the extractor or the handler must refuse.
-//
-// The three extractor rejections are asserted exactly because axum fixes them:
-// unparseable JSON is a 400, well-formed JSON of the wrong shape is a 422, and
-// a body with no `content-type` is a 415. Everything below them is the
-// handler's own validation, whose message is the marker.
+// axum fixes the extractor codes: unparseable JSON 400, wrong shape 422, no
+// `content-type` 415. The rest is handler validation, asserted by marker.
 const MALFORMED: [Case; 13] = [
     json(
         "post",
@@ -262,8 +227,6 @@ const MALFORMED: [Case; 13] = [
         Expect::Status(BAD_REQUEST),
         None,
     ),
-    // `entity_type` is a closed vocabulary mirroring the table's CHECK
-    // constraint; an unknown one is rejected rather than stored.
     json(
         "post",
         "/api/public/admin/access-control/entity/not-an-entity-kind/x/rules",
@@ -322,8 +285,6 @@ const MALFORMED: [Case; 13] = [
         Expect::Status(BAD_REQUEST),
         Some("invalid subject_type"),
     ),
-    // An admin who is not the named user still cannot mint a share token for
-    // an account that does not exist.
     json(
         "post",
         "/api/public/admin/users/no-such-user/share-token",
@@ -333,10 +294,8 @@ const MALFORMED: [Case; 13] = [
     ),
 ];
 
-// The hook plane, which is mounted at the root rather than under either admin
-// prefix and answers on its own terms: a governance hook returns 200 with a
-// decision, because an error status reads to the client as "hook unavailable"
-// and lets the call through.
+// Claude Code reads a hook error status as "hook unavailable" and lets the call
+// through, so `/hooks/govern` answers 200 with a decision.
 const HOOKS: [Case; 6] = [
     json(
         "post",
@@ -345,7 +304,6 @@ const HOOKS: [Case; 6] = [
         Expect::Status(BAD_REQUEST),
         None,
     ),
-    // A session token is not a hook token: `/hooks/track` wants `aud=hook`.
     json(
         "post",
         "/hooks/track",
@@ -374,15 +332,9 @@ const HOOKS: [Case; 6] = [
         Expect::Status(BAD_REQUEST),
         None,
     ),
-    // An envelope with nothing to govern is still a decision, not a failure.
     json("post", "/hooks/govern", "{}", Expect::Status(OK), None),
 ];
 
-// Writes attempted without the standing to make them.
-//
-// The two planes refuse differently on purpose — the API answers 401/403 to a
-// caller that expects JSON, the SSR pages redirect a browser to sign in — so
-// the case demands refusal rather than a particular code.
 const UNAUTHENTICATED: [Case; 10] = [
     anon("post", "/api/public/admin/users", "{}"),
     anon("put", "/api/public/admin/users/someone", "{}"),
@@ -396,8 +348,6 @@ const UNAUTHENTICATED: [Case; 10] = [
     non_admin("post", "/admin/devices/pats", "{}"),
 ];
 
-// A body with no `content-type` at all. `Json` refuses it rather than
-// guessing, which is a 415 — a distinct outcome from "the JSON was bad".
 const NO_CONTENT_TYPE: [Case; 2] = [
     Case {
         method: "post",
@@ -419,12 +369,6 @@ const NO_CONTENT_TYPE: [Case; 2] = [
     },
 ];
 
-// Long and unparseable query strings on the list pages.
-//
-// A page whose `?page=` is a word, or whose `?from=` is not a date, must
-// answer a client error or render its default — never fault. The overlong
-// search terms are here because a search box is the easiest place to reach a
-// query builder with something it did not expect.
 const BAD_QUERY: [Case; 13] = [
     get(
         "/admin/requests?page=not-a-number",
@@ -456,12 +400,8 @@ const BAD_QUERY: [Case; 13] = [
         Expect::Status(BAD_REQUEST),
         None,
     ),
-    // `limit` and `offset` are plain `i64` query parameters bound straight
-    // into `LIMIT $3 OFFSET $4`, and Postgres rejects a negative LIMIT — so
-    // `list_events` clamps to `1..=500` and `offset` to non-negative before
-    // binding. The echoed values are the marker: asserting only "not a 5xx"
-    // would pass just as well against an endpoint that had quietly stopped
-    // clamping and started returning every row instead.
+    // Postgres rejects a negative LIMIT; `list_events` clamps to `1..=500`.
+    // The echoed values catch an endpoint that stopped clamping altogether.
     get(
         "/api/public/admin/events?limit=-1",
         Expect::Status(OK),
@@ -491,8 +431,6 @@ const BAD_QUERY: [Case; 13] = [
     get(LONG_SEARCH_CONTEXTS, Expect::NotServerError, None),
 ];
 
-// A search term far longer than any box would submit, spelled out so the
-// cases above stay readable.
 const LONG_SEARCH_REQUESTS: &str = concat!(
     "/admin/requests?tab=log&q=",
     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
@@ -522,9 +460,7 @@ async fn admin_routes_refuse_malformed_requests_without_faulting() {
     let credentials = principal::provision(&db.pool).await;
     let app = App::new(&db.pool, credentials);
 
-    // Every API case is written against the prefix the router mounts, so a
-    // change to it fails loudly here rather than turning every case into a
-    // vacuous 404.
+    // A moved prefix would turn every API case into a vacuous 404.
     assert_eq!(
         ADMIN_API_PREFIX, "/api/public/admin",
         "the API cases below spell the mount prefix out; update them together"

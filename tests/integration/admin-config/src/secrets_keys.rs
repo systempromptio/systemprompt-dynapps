@@ -5,16 +5,16 @@
 //! so these tests exercise the storage paths without mutating process state.
 
 use systemprompt::identifiers::PluginId;
-use systemprompt_web_admin::repositories::secrets::secret_crypto::{encrypt, generate_nonce};
+use systemprompt_web_admin_core::crypto::secret_crypto::{encrypt, generate_nonce};
 
 fn plug() -> PluginId {
     PluginId::new("plug")
 }
-use systemprompt_web_admin::repositories::secrets::secret_keys::{
+use systemprompt_web_admin_governance::repositories::secrets::secret_keys::{
     get_or_create_user_dek, rotate_user_dek,
 };
-use systemprompt_web_admin::repositories::secrets::secret_migration::get_key_version;
-use systemprompt_web_admin::repositories::secrets::secret_resolve::resolve_secrets_for_plugin;
+use systemprompt_web_admin_governance::repositories::secrets::secret_migration::get_key_version;
+use systemprompt_web_admin_governance::repositories::secrets::secret_resolve::resolve_secrets_for_plugin;
 
 use crate::fixtures::{insert_env_var, insert_user, unique, user_id};
 use crate::tempdb::TempDb;

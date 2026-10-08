@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT p.practice AS \"practice!\"\n           FROM user_projects up\n           JOIN projects p ON p.id = up.project_id\n           LEFT JOIN user_scope_defaults d ON d.user_id = up.user_id\n           WHERE up.user_id = $1 AND p.practice IS NOT NULL\n           GROUP BY p.practice\n           ORDER BY bool_or(d.primary_project_id = p.id) DESC NULLS LAST, p.practice",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "practice!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "projects",
+            "name": "practice"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "34d80490d7d8d3365a96226151d28f096a63d7be86181a08a36236f57dca54fe"
+}

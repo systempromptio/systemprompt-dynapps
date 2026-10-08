@@ -6,7 +6,7 @@
 //! computed live from `engagement_events`. The two paths return the same row
 //! shape but differ in what they can populate, so both are covered here.
 
-use systemprompt_web_admin::repositories::dashboard::traffic::list_content_performance;
+use systemprompt_web_admin_analytics::repositories::dashboard::traffic::list_content_performance;
 
 use crate::dashboard_traffic_queries::{
     insert_content_metrics, insert_view, insert_view_yesterday,

@@ -34,7 +34,6 @@ impl MarketplaceSource for AstoundArtifactsSource {
 
 register_marketplace_source!(AstoundArtifactsSource, priority = 10);
 
-// Why: this installation governs Claude surfaces only — Codex must not appear
-// on any bridge surface, including pre-first-sync onboarding where the
-// manifest host gate cannot apply yet.
-systemprompt_bridge::suppress_host_app!("codex-cli");
+// Why: core's manifest host gate cannot apply before the first sync, so Codex
+// is suppressed here to keep it off every surface, onboarding included.
+systemprompt_bridge::suppress_host_app!(systemprompt_bridge::integration::HostKind::CodexCli);

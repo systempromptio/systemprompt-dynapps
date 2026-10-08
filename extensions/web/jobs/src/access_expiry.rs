@@ -14,13 +14,13 @@ use sqlx::PgPool;
 use systemprompt::database::DbPool;
 use systemprompt::identifiers::UserId;
 use systemprompt::traits::{Job, JobContext, JobResult};
-use systemprompt_web_admin::repositories::access_control::validity::delete_expired_rules;
-use systemprompt_web_admin::repositories::devices::certs::revoke_expired_device_certs;
-use systemprompt_web_admin::repositories::scope::defaults::recompute_scope_defaults_for_user;
-use systemprompt_web_admin::repositories::scope::expiry::revoke_expired_memberships;
-use systemprompt_web_admin::repositories::users::revocation::revoke_user_access;
-use systemprompt_web_admin::repositories::users::roles;
-use systemprompt_web_admin::types::{ROLES_MANAGE, has_any};
+use systemprompt_web_admin_core::repositories::access_rules::validity::delete_expired_rules;
+use systemprompt_web_admin_core::repositories::scope::defaults::recompute_scope_defaults_for_user;
+use systemprompt_web_admin_core::repositories::scope::expiry::revoke_expired_memberships;
+use systemprompt_web_admin_core::types::{ROLES_MANAGE, has_any};
+use systemprompt_web_admin_identity::repositories::users::revocation::revoke_user_access;
+use systemprompt_web_admin_identity::repositories::users::roles;
+use systemprompt_web_admin_platform::repositories::devices::certs::revoke_expired_device_certs;
 
 use crate::error::JobError;
 
@@ -44,8 +44,6 @@ impl ExpirySweep {
     }
 }
 
-// Why: whether losing these roles took a manage role away — the same test the
-// role editor applies before it revokes live credentials.
 #[must_use]
 pub fn lost_manage_role(before: &[String], after: &[String]) -> bool {
     has_any(before, ROLES_MANAGE) && !has_any(after, ROLES_MANAGE)
@@ -128,9 +126,7 @@ impl Job for AccessExpiryJob {
         &self,
         ctx: &JobContext,
     ) -> Result<JobResult, systemprompt::traits::ProviderError> {
-        let db = ctx
-            .db_pool::<DbPool>()
-            .ok_or(JobError::MissingContext("DbPool"))?;
+        let db = ctx.get::<DbPool>()?;
         let pool = db.write_pool();
 
         Ok(Self::execute_with_pool(&pool).await?)

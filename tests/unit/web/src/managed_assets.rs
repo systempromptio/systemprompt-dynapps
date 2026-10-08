@@ -98,7 +98,7 @@ fn authoring_capture_preserves_all_files_and_detects_changes() {
     .expect("config");
     std::fs::write(skill.join("SKILL.md"), "Read evidence.").expect("skill");
     std::fs::write(skill.join("assets/image.bin"), [0, 255, 128]).expect("binary");
-    let ids = vec!["test_skill".to_owned()];
+    let ids = vec![systemprompt::identifiers::SkillId::new("test_skill")];
     let first = capture_skills(dir.path(), &ids).expect("capture");
     let same = capture_skills(dir.path(), &ids).expect("repeat");
     assert_eq!(first.tree_digest(), same.tree_digest());
@@ -109,7 +109,13 @@ fn authoring_capture_preserves_all_files_and_detects_changes() {
     std::fs::write(skill.join("assets/image.bin"), [1, 255, 128]).expect("change");
     let changed = capture_skills(dir.path(), &ids).expect("changed capture");
     assert_ne!(first.tree_digest(), changed.tree_digest());
-    assert!(capture_skills(dir.path(), &["../outside".to_owned()]).is_err());
+    assert!(
+        capture_skills(
+            dir.path(),
+            &[systemprompt::identifiers::SkillId::new("../outside")]
+        )
+        .is_err()
+    );
 }
 
 #[cfg(unix)]
@@ -120,7 +126,13 @@ fn authoring_capture_rejects_symlinks_instead_of_reading_outside_the_source() {
     let skill = dir.path().join("skills/test_skill");
     std::fs::create_dir_all(&skill).expect("directories");
     std::os::unix::fs::symlink("/etc/passwd", skill.join("SKILL.md")).expect("symlink");
-    assert!(capture_skills(dir.path(), &["test_skill".to_owned()]).is_err());
+    assert!(
+        capture_skills(
+            dir.path(),
+            &[systemprompt::identifiers::SkillId::new("test_skill")]
+        )
+        .is_err()
+    );
 }
 
 #[test]
@@ -130,7 +142,7 @@ fn revision_diff_includes_metadata_changes_and_removed_files() {
     let original = files("SKILL.md");
     let before = RevisionManifest::from_files(snapshot.clone(), None, &original, BTreeMap::new())
         .expect("manifest");
-    let mut changed = original.clone();
+    let mut changed = original;
     changed.0.get_mut("SKILL.md").expect("file").executable = true;
     let after = RevisionManifest::from_files(snapshot.clone(), None, &changed, BTreeMap::new())
         .expect("manifest");

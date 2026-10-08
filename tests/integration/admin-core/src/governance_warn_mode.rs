@@ -58,7 +58,7 @@ struct Call<'a> {
     scope: AccessScope,
     user: &'a UserId,
     session: &'a SessionId,
-    call_id: CallId,
+    id: CallId,
 }
 
 impl<'a> Call<'a> {
@@ -69,7 +69,7 @@ impl<'a> Call<'a> {
             scope: AccessScope::User,
             user,
             session,
-            call_id: CallId::new(unique("call")),
+            id: CallId::new(unique("call")),
         }
     }
 
@@ -82,7 +82,7 @@ impl<'a> Call<'a> {
             scope: AccessScope::User,
             user,
             session,
-            call_id: CallId::new(unique("call")),
+            id: CallId::new(unique("call")),
         }
     }
 
@@ -96,14 +96,14 @@ impl<'a> Call<'a> {
             session_id: self.session,
             user_id: self.user,
             input: &self.input,
-            call_id: &self.call_id,
+            call_id: &self.id,
         })
     }
 
     fn audit(&self, evaluation: Evaluation) -> DecisionAudit {
         DecisionAudit {
             id: unique("dec"),
-            call_id: self.call_id.clone(),
+            call_id: self.id.clone(),
             origin: AuditOrigin::Governed,
             decision: evaluation.decision,
             principal: PrincipalSnapshot {
@@ -115,7 +115,7 @@ impl<'a> Call<'a> {
                 client_id: None,
             },
             target: AuditTarget {
-                tool_name: self.target.as_str().to_owned(),
+                tool_name: McpToolName::new(self.target.as_str()),
                 plugin_id: None,
                 tool_use_id: None,
             },
@@ -123,7 +123,7 @@ impl<'a> Call<'a> {
             approver: None,
             act_chain: Vec::new(),
             context_id: None,
-            trace_id: Some(unique("trace")),
+            trace_id: Some(systemprompt::identifiers::TraceId::new(unique("trace"))),
         }
     }
 }

@@ -31,6 +31,10 @@ const initExclusiveOpen = (group, groups) => {
     const search = group.querySelector('[data-filter-typeahead]');
     if (search && !search.hidden) search.focus();
   });
+  // On a phone the open group's ::before is the sheet backdrop, and a tap on it targets the details itself.
+  group.addEventListener('click', (e) => {
+    if (e.target === group && group.open) group.open = false;
+  });
 };
 
 const closeAll = (groups) => {

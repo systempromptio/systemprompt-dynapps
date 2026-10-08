@@ -4,7 +4,7 @@
 
 use chrono::{Duration, Utc};
 use systemprompt::identifiers::{CallId, UserId};
-use systemprompt_web_admin::repositories::governance::approvals::{
+use systemprompt_web_admin_governance::repositories::governance::approvals::{
     ApprovalVerdict, find_approval, get_approval_stats, list_approvals_paged,
     update_approval_decision,
 };

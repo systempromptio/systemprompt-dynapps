@@ -1,0 +1,231 @@
+//! Everything the governance page reads, in one pass.
+//!
+//! The KPI strip spans both planes and both are read on every tab, because the
+//! whole claim of the page is that the chain and the scanners are configured
+//! separately and have to be read together. Only the paged body is tab-shaped.
+//!
+//! A read that fails renders as its empty value and is listed on the page as
+//! unavailable rather than failing the page: a governance surface that 500s
+//! because one rollup timed out tells an operator nothing, and the tab they
+//! came for is usually still readable.
+
+use sqlx::PgPool;
+
+use crate::repositories::governance::decision_calls::{DecisionCallRow, list_decision_calls_paged};
+use crate::repositories::governance::decision_log::{
+    DecisionFilter, DecisionSort, DecisionStats, PolicyCount, get_decision_stats,
+    list_decision_policies, list_decision_policy_counts,
+};
+use crate::repositories::governance::findings::{
+    FindingFilter, SafetyFindingLogRow, SafetyStats, get_safety_stats, list_finding_categories,
+    list_safety_findings_paged,
+};
+use crate::repositories::governance::hook_events::{
+    RecentHookEvent, count_posttool_fired_24h, count_pretool_fired_24h, recent_hook_events,
+};
+use crate::repositories::governance::{
+    DecisionPage, PageSlice, list_top_actors, list_top_policies,
+};
+use systemprompt_web_admin_core::repositories::scope::SubjectScope;
+use systemprompt_web_admin_core::ssr::faults::Faults;
+use systemprompt_web_admin_core::types::{TopActor, TopPolicy};
+use systemprompt_web_admin_core::util::time_range::TimeRange;
+
+use super::GovernanceTab;
+
+const RANK_LIMIT: i64 = 10;
+const HOOK_LIMIT: i64 = 50;
+
+const ATTENTION_LIMIT: i64 = 10;
+
+pub(super) struct GovernanceData {
+    pub(super) stats: DecisionStats,
+    pub(super) safety: SafetyStats,
+    pub(super) policies: Vec<String>,
+    pub(super) categories: Vec<String>,
+    pub(super) decisions: Vec<DecisionCallRow>,
+    pub(super) attention: Vec<DecisionCallRow>,
+    pub(super) policy_counts: Vec<PolicyCount>,
+    pub(super) decision_total: i64,
+    pub(super) findings: Vec<SafetyFindingLogRow>,
+    pub(super) finding_total: i64,
+    pub(super) hooks: Vec<RecentHookEvent>,
+    pub(super) pretool_24h: i64,
+    pub(super) posttool_24h: i64,
+    pub(super) top_policies: Vec<TopPolicy>,
+    pub(super) top_actors: Vec<TopActor>,
+}
+
+pub(super) struct GovernanceRead<'a> {
+    pub(super) tab: GovernanceTab,
+    pub(super) range: TimeRange,
+    pub(super) scope: &'a SubjectScope,
+    pub(super) decision_filter: &'a DecisionFilter,
+    pub(super) finding_filter: &'a FindingFilter,
+    pub(super) sort: DecisionSort,
+    pub(super) page_size: i64,
+    pub(super) offset: i64,
+}
+
+impl GovernanceRead<'_> {
+    const fn slice(&self) -> PageSlice {
+        PageSlice {
+            limit: self.page_size,
+            offset: self.offset,
+        }
+    }
+}
+
+async fn load_attention(
+    pool: &PgPool,
+    read: &GovernanceRead<'_>,
+    attention_calls: i64,
+    faults: &mut Faults,
+) -> Vec<DecisionCallRow> {
+    if read.tab != GovernanceTab::Decisions
+        || read.decision_filter.attention
+        || attention_calls <= 0
+    {
+        return Vec::new();
+    }
+    let filter = DecisionFilter {
+        attention: true,
+        ..read.decision_filter.clone()
+    };
+    let (rows, _) = faults.take(
+        "attention band",
+        list_decision_calls_paged(
+            pool,
+            read.range,
+            read.scope,
+            &filter,
+            DecisionPage {
+                sort: read.sort,
+                slice: PageSlice::first(ATTENTION_LIMIT),
+            },
+        )
+        .await,
+    );
+    rows
+}
+
+pub(super) async fn load(
+    pool: &PgPool,
+    read: GovernanceRead<'_>,
+    faults: &mut Faults,
+) -> GovernanceData {
+    let stats = faults.take(
+        "decision stats",
+        get_decision_stats(pool, read.range, read.scope).await,
+    );
+    let safety = faults.take(
+        "safety finding stats",
+        get_safety_stats(pool, read.range, read.scope).await,
+    );
+    let policies = faults.take(
+        "decision policies",
+        list_decision_policies(pool, read.range, read.scope).await,
+    );
+    let categories = faults.take(
+        "finding categories",
+        list_finding_categories(pool, read.range, read.scope).await,
+    );
+    let policy_counts = faults.take(
+        "decision policy counts",
+        list_decision_policy_counts(pool, read.range, read.scope).await,
+    );
+
+    let (decisions, decision_total) = if read.tab == GovernanceTab::Decisions {
+        faults.take(
+            "decision log",
+            list_decision_calls_paged(
+                pool,
+                read.range,
+                read.scope,
+                read.decision_filter,
+                DecisionPage {
+                    sort: read.sort,
+                    slice: read.slice(),
+                },
+            )
+            .await,
+        )
+    } else {
+        (Vec::new(), stats.calls)
+    };
+
+    let (findings, finding_total) = if read.tab == GovernanceTab::Safety {
+        faults.take(
+            "safety finding log",
+            list_safety_findings_paged(
+                pool,
+                read.range,
+                read.scope,
+                read.finding_filter,
+                read.slice(),
+            )
+            .await,
+        )
+    } else {
+        (Vec::new(), safety.findings)
+    };
+
+    let attention = load_attention(pool, &read, stats.attention_calls, faults).await;
+
+    let window_seconds = (read.range.to - read.range.from).num_seconds().max(1);
+    let hooks = load_hooks(pool, read.tab, window_seconds, faults).await;
+
+    GovernanceData {
+        stats,
+        safety,
+        policies,
+        policy_counts,
+        attention,
+        categories,
+        decisions,
+        decision_total,
+        findings,
+        finding_total,
+        hooks: hooks.events,
+        pretool_24h: hooks.pretool_24h,
+        posttool_24h: hooks.posttool_24h,
+        top_policies: hooks.top_policies,
+        top_actors: hooks.top_actors,
+    }
+}
+
+#[derive(Default)]
+struct HookData {
+    events: Vec<RecentHookEvent>,
+    pretool_24h: i64,
+    posttool_24h: i64,
+    top_policies: Vec<TopPolicy>,
+    top_actors: Vec<TopActor>,
+}
+
+async fn load_hooks(
+    pool: &PgPool,
+    tab: GovernanceTab,
+    window_seconds: i64,
+    faults: &mut Faults,
+) -> HookData {
+    if tab != GovernanceTab::Hooks {
+        return HookData::default();
+    }
+    HookData {
+        events: faults.take(
+            "recent hook events",
+            recent_hook_events(pool, HOOK_LIMIT).await,
+        ),
+        pretool_24h: faults.take("pretool hook count", count_pretool_fired_24h(pool).await),
+        posttool_24h: faults.take("posttool hook count", count_posttool_fired_24h(pool).await),
+        top_policies: faults.take(
+            "top policies",
+            list_top_policies(pool, window_seconds, RANK_LIMIT).await,
+        ),
+        top_actors: faults.take(
+            "top actors",
+            list_top_actors(pool, window_seconds, RANK_LIMIT).await,
+        ),
+    }
+}

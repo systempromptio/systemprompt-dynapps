@@ -7,7 +7,7 @@
 //! Each arm exists because some client writes only to that table, so each gets
 //! its own test: losing one turns a working trace link into a 404.
 
-use systemprompt_web_admin::repositories::traces::resolve_trace_session;
+use systemprompt_web_admin_analytics::repositories::traces::resolve_trace_session;
 
 use crate::fixtures::{
     DecisionSpec, EventSpec, RequestSpec, insert_decision, insert_event, insert_request,

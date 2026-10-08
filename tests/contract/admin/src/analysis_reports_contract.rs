@@ -17,19 +17,19 @@ fn inputs() -> serde_json::Value {
             "window_end": "2025-01-31T00:00:00Z",
             "totals": {
                 "conversations": 13, "people": 4, "turns": 38, "tokens": 12000,
-                "cost_microdollars": 2500000, "errors": 2, "denied": 1,
+                "cost_microdollars": 2_500_000, "errors": 2, "denied": 1,
                 "safety_findings": 1, "artifacts": 3, "tool_calls": 9, "judged": 8,
                 "completion_avg": 62.5, "achieved": 5, "partial": 2,
                 "abandoned": 1, "unclear": 0
             },
             "skills": [{
                 "skill": "contract-plugin:contract-skill", "invocations": 9,
-                "conversations": 7, "cost_microdollars": 1500000,
+                "conversations": 7, "cost_microdollars": 1_500_000,
                 "completion_avg": 55.0, "errors": 2
             }],
             "models": [{
                 "model": "contract-model", "conversations": 13, "requests": 22,
-                "cost_microdollars": 2500000, "errors": 2, "completion_avg": 62.5
+                "cost_microdollars": 2_500_000, "errors": 2, "completion_avg": 62.5
             }],
             "people": [], "worst": [], "best": [], "outliers": [], "denials": [],
             "intents": [], "clients": []

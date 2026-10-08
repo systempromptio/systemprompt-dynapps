@@ -1,10 +1,13 @@
 //! `repositories::groups::crud` — the group rows, and the one row that cannot
 //! be deleted.
 
-use systemprompt_web_admin::repositories::groups::crud::{
-    delete_group, find_group, insert_group, list_group_summaries, list_groups, update_group,
+use systemprompt_web_admin_core::repositories::scope::containers::{
+    list_group_options, list_group_summaries,
 };
-use systemprompt_web_admin::types::groups::{CreateGroupRequest, UpdateGroupRequest};
+use systemprompt_web_admin_core::types::groups::{CreateGroupRequest, UpdateGroupRequest};
+use systemprompt_web_admin_identity::repositories::groups::crud::{
+    delete_group, find_group, insert_group, update_group,
+};
 use systemprompt_web_shared::GroupId;
 
 use crate::fixtures::{insert_user, unclaimed_email, unique, unique_group};
@@ -105,13 +108,8 @@ async fn deleting_a_group_removes_it_from_the_listing() {
 
     delete_group(&db.pool, &id).await.expect("delete");
 
-    let ids: Vec<GroupId> = list_groups(&db.pool)
-        .await
-        .expect("list")
-        .into_iter()
-        .map(|g| g.id)
-        .collect();
-    assert!(!ids.contains(&id));
+    let groups = list_group_options(&db.pool).await.expect("list");
+    assert!(groups.iter().all(|g| g.id != id));
     db.cleanup().await;
 }
 

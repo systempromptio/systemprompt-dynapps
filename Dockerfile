@@ -94,13 +94,26 @@ WORKDIR /app
 # 0.58.1) and is excluded from the build context, so it must be created here:
 # a named volume mounted at a path the image lacks comes up root-owned, and
 # the server, running as uid 1000, cannot write it.
-RUN mkdir -p /app/bin /app/logs /app/storage/data /app/web /app/.systemprompt/profiles/docker
+# The same holds for every other root the server writes (core's writable-path
+# contract): created here so a volume mounted over any of them for a
+# read-only root filesystem comes up owned by uid 1000.
+RUN mkdir -p /app/bin /app/logs /app/storage/data/scratch /app/storage/exports \
+        /app/services-cache /app/web /app/.systemprompt/profiles/docker \
+        /app/.systemprompt/sessions
 
 COPY --from=builder /out/bin/ /app/bin/
 COPY --from=heybuilder /go/bin/hey /app/bin/hey
 
 COPY services /app/services
 COPY storage /app/storage
+# A pristine copy of the shipped storage/files tree plus a content stamp: a
+# volume mounted over /app/storage/files (read-only root) hides the image's
+# templates and assets and keeps the first release's copies, so the
+# entrypoint refreshes the volume from here whenever the stamp changes.
+RUN mkdir -p /app/share \
+    && cp -a /app/storage/files /app/share/storage-files \
+    && (cd /app/share/storage-files && find . -type f -exec sha256sum {} + | sort | sha256sum | cut -d' ' -f1) \
+        > /app/share/storage-files.stamp
 COPY web /app/web
 # The homepage demo showcase scans <system_root>/demo at runtime; without
 # this the catalogue renders as an empty section.

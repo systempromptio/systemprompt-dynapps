@@ -1,0 +1,84 @@
+//! Request/response DTOs for the generic entity-access handlers in
+//! [`super`].
+
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+use systemprompt_security::authz::AccessRule;
+
+#[derive(Debug, Serialize)]
+pub(crate) struct EntityAccessResponse {
+    pub entity_type: String,
+    pub entity_id: String,
+    pub default_included: bool,
+    pub rules: Vec<AccessRule>,
+}
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct UpsertRuleBody {
+    pub rule_type: String,
+    pub rule_value: String,
+    pub access: String,
+    #[serde(default)]
+    pub justification: Option<String>,
+    #[serde(default)]
+    pub valid_until: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+pub(crate) struct RemoveRuleQuery {
+    #[serde(default)]
+    pub reason: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub(crate) struct UpsertRuleResponse {
+    pub rule: AccessRule,
+    pub valid_until: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct DefaultIncludedBody {
+    pub default_included: bool,
+}
+
+#[derive(Debug, Serialize)]
+pub(crate) struct EntityDefaultResponse {
+    pub entity_type: String,
+    pub entity_id: String,
+    pub default_included: bool,
+}
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct AllAccessQuery {
+    pub entity_type: String,
+}
+
+#[derive(Debug, Serialize)]
+pub(crate) struct EntityAccessEntry {
+    pub entity_id: String,
+    pub default_included: bool,
+    pub rules: Vec<AccessRule>,
+}
+
+#[derive(Debug, Serialize)]
+pub(crate) struct ListAllEntityAccessResponse {
+    pub entity_type: String,
+    pub entities: Vec<EntityAccessEntry>,
+}
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct ApplyTemplateBody {
+    pub entity_type: String,
+    pub subject_type: String,
+    pub subject_value: String,
+    pub action: String,
+    #[serde(default)]
+    pub justification: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub(crate) struct ApplyTemplateResponse {
+    pub applied: usize,
+    pub failed: usize,
+    pub entity_count: usize,
+}

@@ -89,8 +89,13 @@
 .sp-p-access__rule-editor { display: none; }
 [data-access][data-editing="true"] .sp-p-access__rule-editor { display: inline-block; }
 [data-access][data-editing="true"] .sp-p-access__rule-state { display: none; }
-@media (max-width: 760px) {
+}
+
+@layer responsive {
+
+@media (max-width: 48rem) {
   .sp-p-access__summary { grid-template-columns: 1fr; }
   .sp-p-access__plugins li, .sp-p-access__other li { flex-wrap: wrap; }
 }
+
 }

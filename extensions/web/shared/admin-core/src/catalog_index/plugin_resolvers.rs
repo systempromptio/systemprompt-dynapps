@@ -1,0 +1,234 @@
+//! Resolves a plugin's declared skill and agent ids to their definitions.
+//!
+//! Plugin YAML holds references only, so every id here must resolve against a
+//! real top-level resource in `services/`.
+
+use std::path::Path;
+
+use systemprompt::identifiers::{AgentId, SkillId};
+
+use crate::types::{AgentInfo, RequiredSecret, SkillInfo};
+
+pub fn resolve_all_plugin_skill_ids(
+    plugin: &systemprompt::manifest::services::PluginConfig,
+    skills_path: &Path,
+    _agents_path: &Path,
+) -> Vec<String> {
+    if plugin.skills.source == systemprompt::models::plugin::ComponentSource::Explicit {
+        plugin
+            .skills
+            .include
+            .iter()
+            .filter(|id| skills_path.join(id).exists())
+            .cloned()
+            .collect()
+    } else {
+        let mut ids = Vec::new();
+        if let Ok(entries) = std::fs::read_dir(skills_path) {
+            for entry in entries.flatten() {
+                if !entry.path().is_dir() {
+                    continue;
+                }
+                let skill_id = entry.file_name().to_string_lossy().into_owned();
+                if plugin.skills.exclude.contains(&skill_id) {
+                    continue;
+                }
+                ids.push(skill_id);
+            }
+        }
+        ids.sort();
+        ids
+    }
+}
+
+pub fn resolve_plugin_skills(
+    plugin: &systemprompt::manifest::services::PluginConfig,
+    skills_path: &Path,
+    agents_path: &Path,
+) -> Vec<SkillInfo> {
+    resolve_all_plugin_skill_ids(plugin, skills_path, agents_path)
+        .into_iter()
+        .filter_map(|skill_id| {
+            let id = match SkillId::try_new(skill_id.clone()) {
+                Ok(id) => id,
+                Err(error) => {
+                    tracing::warn!(%skill_id, %error, "Invalid configured skill identifier");
+                    return None;
+                },
+            };
+            let skill_dir = skills_path.join(&skill_id);
+            let (name, description, required_secrets) = read_skill_config(&skill_dir, &id);
+            let command = format!(
+                "/{}",
+                crate::util::skill_ref::skill_ref(plugin.id.as_str(), &skill_id)
+            );
+            Some(SkillInfo {
+                id,
+                name,
+                description,
+                command,
+                source: "system".to_owned(),
+                enabled: true,
+                required_secrets,
+            })
+        })
+        .collect()
+}
+
+fn read_skill_config(
+    skill_dir: &Path,
+    skill_id: &SkillId,
+) -> (String, String, Vec<RequiredSecret>) {
+    let config_path = skill_dir.join("config.yaml");
+    if !config_path.exists() {
+        return (skill_id.as_str().to_owned(), String::new(), Vec::new());
+    }
+    let cfg_text = std::fs::read_to_string(&config_path).unwrap_or_else(|e| {
+        tracing::warn!(
+            path = %config_path.display(),
+            error = %e,
+            "Failed to read skill config"
+        );
+        String::new()
+    });
+    let cfg: serde_yaml::Value = serde_yaml::from_str(&cfg_text).unwrap_or_else(|e| {
+        tracing::warn!(
+            path = %config_path.display(),
+            error = %e,
+            "Failed to parse skill config"
+        );
+        serde_yaml::Value::Null
+    });
+    let name = cfg
+        .get("name")
+        .and_then(|v| v.as_str())
+        .unwrap_or(skill_id.as_str())
+        .to_owned();
+    let desc = cfg
+        .get("description")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_owned();
+    let required_secrets: Vec<RequiredSecret> = cfg
+        .get("required_secrets")
+        .and_then(|v| {
+            serde_yaml::from_value(v.clone())
+                .inspect_err(|e| tracing::warn!(error = %e, plugin = %name, "plugin config: malformed required_secrets"))
+                .ok()
+        })
+        .unwrap_or_else(Vec::new);
+    (name, desc, required_secrets)
+}
+
+pub fn resolve_plugin_agents(
+    plugin: &systemprompt::manifest::services::PluginConfig,
+    agents_path: &Path,
+) -> Vec<AgentInfo> {
+    let agent_ids: Vec<String> =
+        if plugin.agents.source == systemprompt::models::plugin::ComponentSource::Explicit {
+            plugin.agents.include.clone()
+        } else {
+            let mut ids = Vec::new();
+            if let Ok(entries) = std::fs::read_dir(agents_path) {
+                for entry in entries.flatten() {
+                    let path = entry.path();
+                    let ext = path.extension().and_then(|e| e.to_str());
+                    if ext != Some("yaml") && ext != Some("yml") {
+                        continue;
+                    }
+                    if let Ok(content) = std::fs::read_to_string(&path)
+                        && let Ok(config) = serde_yaml::from_str::<serde_yaml::Value>(&content)
+                        && let Some(agents) = config.get("agents").and_then(|a| a.as_mapping())
+                    {
+                        for (key, _) in agents {
+                            if let Some(name) = key.as_str()
+                                && !plugin.agents.exclude.contains(&name.to_owned())
+                            {
+                                ids.push(name.to_owned());
+                            }
+                        }
+                    }
+                }
+            }
+            ids.sort();
+            ids
+        };
+
+    agent_ids
+        .into_iter()
+        .map(|agent_id| {
+            let agent_id_typed = AgentId::from(agent_id.as_str());
+            let description = agent_description(&agent_id_typed, agents_path)
+                .unwrap_or_else(|| format!("{agent_id} agent"));
+            let enabled = agent_enabled(&agent_id_typed, agents_path);
+            AgentInfo {
+                id: agent_id.clone().into(),
+                name: agent_id,
+                description,
+                enabled,
+            }
+        })
+        .collect()
+}
+
+fn agent_enabled(agent_id: &AgentId, agents_dir: &Path) -> bool {
+    if !agents_dir.exists() {
+        return true;
+    }
+    let Ok(entries) = std::fs::read_dir(agents_dir) else {
+        return true;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let ext = path.extension().and_then(|e| e.to_str());
+        if ext != Some("yaml") && ext != Some("yml") {
+            continue;
+        }
+        let Ok(content) = std::fs::read_to_string(&path) else {
+            continue;
+        };
+        let Ok(config) = serde_yaml::from_str::<serde_yaml::Value>(&content) else {
+            continue;
+        };
+        if let Some(agent) = config.get("agents").and_then(|a| a.get(agent_id.as_str())) {
+            return agent
+                .get("enabled")
+                .and_then(serde_yaml::Value::as_bool)
+                .unwrap_or(true);
+        }
+    }
+    true
+}
+
+fn agent_description(agent_id: &AgentId, agents_dir: &Path) -> Option<String> {
+    if !agents_dir.exists() {
+        return None;
+    }
+    let Ok(entries) = std::fs::read_dir(agents_dir) else {
+        tracing::warn!(path = %agents_dir.display(), "Failed to read agents directory");
+        return None;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let ext = path.extension().and_then(|e| e.to_str());
+        if ext != Some("yaml") && ext != Some("yml") {
+            continue;
+        }
+        let Ok(content) = std::fs::read_to_string(&path) else {
+            continue;
+        };
+        let Ok(config) = serde_yaml::from_str::<serde_yaml::Value>(&content) else {
+            continue;
+        };
+        if let Some(desc) = config
+            .get("agents")
+            .and_then(|a| a.get(agent_id.as_str()))
+            .and_then(|a| a.get("card"))
+            .and_then(|c| c.get("description"))
+            .and_then(|d| d.as_str())
+        {
+            return Some(desc.to_owned());
+        }
+    }
+    None
+}

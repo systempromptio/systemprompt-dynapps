@@ -4,14 +4,11 @@
 //! flagged, a tool on one side only must be named rather than dropped, and
 //! the Gemini rule hits must be computed only when the provider is Gemini.
 
-#![allow(
-    clippy::expect_used,
-    clippy::panic,
-    reason = "test code: panics are the assertion mechanism"
-)]
 
 use serde_json::json;
-use systemprompt_web_admin::types::tool_schema_diff::{gemini_rules_apply, pair_tools, wire_tools};
+use systemprompt_web_admin_core::types::tool_schema_diff::{
+    gemini_rules_apply, pair_tools, wire_tools,
+};
 
 fn schema() -> serde_json::Value {
     json!({"type": "object", "properties": {"q": {"type": "string"}}})

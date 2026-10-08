@@ -1,0 +1,61 @@
+[package]
+name = "systemprompt-web-admin-core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "Shared core of the admin dashboard for the systemprompt.io template: errors, types, SSR page kit, auth gates, and the data access every admin domain reads."
+repository.workspace = true
+homepage.workspace = true
+publish = false
+
+[dependencies]
+# Foundation
+systemprompt-web-shared = { workspace = true }
+systemprompt-mcp-shared = { workspace = true }
+# Audit: uses ai, identifiers, models, oauth, security — requires `full`.
+systemprompt = { workspace = true, features = ["full"] }
+systemprompt-security = { workspace = true }
+
+# Database
+sqlx = { workspace = true }
+
+# Web framework
+axum = { workspace = true }
+
+# Async runtime
+tokio = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+chrono = { workspace = true }
+chrono-tz = { workspace = true }
+uuid = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+
+# Logging
+tracing = { workspace = true }
+
+# Crypto & encoding
+sha2 = { workspace = true }
+chacha20poly1305 = { workspace = true }
+hex = { workspace = true }
+rand = { workspace = true }
+
+# Templating
+handlebars = { workspace = true }
+
+# Archive (the `AdminError::Archive` variant)
+zip = { workspace = true }
+
+# Utilities
+url = { workspace = true }
+urlencoding = { workspace = true }
+async-trait = { workspace = true }
+inventory = { workspace = true }
+
+[lints]
+workspace = true

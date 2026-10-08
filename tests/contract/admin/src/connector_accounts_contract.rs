@@ -3,8 +3,8 @@
 
 use axum::http::StatusCode;
 use base64::Engine;
-use systemprompt_web_admin::connector_oauth::{self, Grant, Provider};
-use systemprompt_web_admin::repositories::users::connector_credentials;
+use systemprompt_web_admin_platform::connector_oauth::{self, Grant, Provider};
+use systemprompt_web_admin_platform::repositories::connectors::connector_credentials;
 
 use crate::app::{App, Call};
 use crate::principal::Principal;

@@ -4,7 +4,9 @@
 //! path: each row is written as one JSON object per line, gzipped as it
 //! arrives, and a SHA-256 is taken over the compressed file so the manifest
 //! can be verified without inflating it. Memory stays flat whatever the table
-//! holds.
+//! holds. The manifest is written last, so a directory with a manifest is a
+//! complete archive. Period names are zero-padded (`2026-W03`, `2026-03`), so
+//! pruning "before `keep_from`" is a string compare.
 
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -53,8 +55,6 @@ pub(crate) struct ArchiveTarget<'a> {
     pub window: Window,
 }
 
-// Why: the manifest is written last, so a directory with a manifest is a
-// complete archive.
 pub(crate) async fn archive_tables(
     target: &ArchiveTarget<'_>,
     tables: &[ManagedTable],
@@ -128,10 +128,9 @@ async fn archive_one(
     })
 }
 
-// Why: a streamed `SELECT`, not `COPY … TO STDOUT`. COPY's text format
-// escapes backslashes, so a JSON string containing \" arrives as \\" and the
-// line is not valid JSON. `fetch` yields one row at a time, so memory stays
-// flat, and the text is exactly what `row_to_json` produced.
+// Why: Postgres `COPY … TO STDOUT` text format escapes backslashes, so a JSON
+// string containing \" arrives as \\", which is invalid JSON;
+// a streamed `SELECT` returns exactly what `row_to_json` produced.
 fn select_statement(table: &ManagedTable, window: Window) -> String {
     format!(
         "SELECT row_to_json(t)::text FROM {name} t \
@@ -144,8 +143,6 @@ fn select_statement(table: &ManagedTable, window: Window) -> String {
     )
 }
 
-// Why: period strings are zero-padded (`2026-W03`, `2026-03`), so lexical
-// order is chronological and "before keep_from" is a string compare.
 pub(crate) fn prune_periods(
     exports_root: &Path,
     tier: &str,

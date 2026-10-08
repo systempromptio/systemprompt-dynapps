@@ -9,7 +9,7 @@
 
 use chrono::{Duration, Utc};
 use systemprompt::identifiers::SessionId;
-use systemprompt_web_admin::repositories::traces::list_trace_spans;
+use systemprompt_web_admin_analytics::repositories::traces::list_trace_spans;
 
 use crate::fixtures::{
     DecisionSpec, EventSpec, RequestSpec, insert_decision, insert_event, insert_request,

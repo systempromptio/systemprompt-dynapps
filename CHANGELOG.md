@@ -8,7 +8,8 @@ Conventions (strict — hold every entry to them):
   section at the top, then one `## <version> — <YYYY-MM-DD>` section per release, each with
   only the categories it needs, in this order: `### Breaking`, `### Added`, `### Changed`,
   `### Fixed`, `### Removed`.
-- Entries are written for the reader who did not make the change: full sentences, what changed
+-- **Gates:** `next` is green again. `extensions/web/jobs/src/copy_assets.rs` compared asset extensions case-sensitively (`clippy::case_sensitive_file_extension_comparisons`, three sites) and it and `tests/unit/web/src/lib.rs` were unformatted; the previous pushes never ran the workflow (startup failures), so the red surfaced only now. A single `is_javascript` helper compares the extension case-insensitively.
+ Entries are written for the reader who did not make the change: full sentences, what changed
   and **why**, named files/commands/flags where the reader will need them. No bare "updated X".
 - Every user-visible or operator-visible change lands in `Unreleased` **in the same commit** as
   the change itself; internal-only refactors are recorded when they alter an API another crate,
@@ -19,6 +20,204 @@ Conventions (strict — hold every entry to them):
   prefixed `bridge-` (e.g. `bridge-0.17.1`).
 
 ## Unreleased
+
+## 0.63.0 — 2026-10-08
+
+### Added
+
+- **Practices on projects, exported on every gateway span.** Projects gain an optional practice (migration 116, `projects.practice`) beside their cost centre, set on a project's Settings tab or when creating it; an empty value clears it. A `practice` subject dimension (`extensions/web/admin/identity/src/authz/practice.rs`, rung 260) gives each person the practices of the projects they are a live member of, their primary project's first, so core attributes every gateway request to that practice by default and exports `systemprompt.scope.practice`. A caller picks another with `x-systemprompt-scope-practice`, and a quota window may key on `subject: practice`. It changes no access decision.
+- **Core `usage_anomaly_scan` is scheduled.** Core runs only the jobs `services/scheduler/config.yaml` names, so its per-user anomaly scan never ran here. It now runs hourly beside the instance-wide `usage_anomaly` job, emitting `systemprompt_usage_anomaly_total{kind}` and a `usage_anomaly` event for alerting.
+- **Cost centres on projects, exported on every gateway span.** Projects gain an optional cost centre (migration 115, `projects.cost_centre`), set on a project's Settings tab or when creating it; an empty value clears it. A new `cost_centre` subject dimension (`extensions/web/admin/identity/src/authz/cost_centre.rs`, rung 250) gives each person the cost centres of the projects they are a live member of, their primary project's first, so core attributes every `/v1/messages` and `/v1/responses` request to that cost centre by default and its OTLP exporter emits `systemprompt.scope.cost_centre`. A caller on several cost centres picks another with `x-systemprompt-scope-cost_centre`, and a quota window may key on `subject: cost_centre`. It changes no access decision.
+- **Core pin moved to core `next` at `046600419`.** The bridge's OpenCode hooks plugin loads again (its template had carried a syntax error since 2026-09-17, so no OpenCode session reported skill use or linked its chat requests), the OpenCode desktop app counts as an installed OpenCode with an Open button, and the managed `opencode.json` sets `enabled_providers: ["systemprompt"]` so only gateway models are offered. Only `bridge/CORE_REF` moves; the core workspace version is still 0.62.0, so the pins and lockfiles are unchanged.
+- **External agents:** `services/external_agents/opencode.yaml` registers OpenCode in the super-agent catalog (enabled), so administrators can toggle the host like Codex CLI and Hermes instead of it being implicitly on. The entry covers both installs — the CLI and the Electron desktop app read the same admin-managed `opencode.json`.
+- **Docs:** `connect-opencode.md` gains a desktop-app section: the app needs no `opencode` binary on `PATH`, reads the same enrolment, exposes skills only through the model's `skill` tool (there is no skills list in its UI), and the bridge recognises the app bundle and offers Open. It also documents the `enabled_providers` allowlist the bridge now writes, which keeps OpenCode's built-in free models out of the picker.
+
+### Changed
+
+- **Built on published core 0.63.0.** Every core pin in `Cargo.toml` and `tests/Cargo.toml` is `0.63.0` from crates.io and `bridge/CORE_REF` is `v0.63.0`; the `[patch.crates-io]` blocks that built `next` against the sibling core checkout are commented out, so the release builds only against the registry.
+- **`tests/unit/bridge` takes `systemprompt-wire`, `-gateway`, `-manifest` and `-models` from the registry** (`0.63.0`) instead of the sibling core checkout by path. With the patch blocks off, the path copies split from the registry `systemprompt-api` the desktop-policy test also uses, and the crate stopped compiling (two `RequestOrigin`s, two `InboundAdapter`s). Only `systemprompt-bridge`, which is not published, stays a path dependency.
+- **Self-host: concurrent boot, read-only root and the GKE role split.** README drops "boot the nodes one at a time": core claims a per-node instance id, so nodes start together once `migrate` has run (upgrades stay rolling). The image keeps a stamped copy of its `storage/files` tree in `/app/share/storage-files`, and the entrypoint refreshes a `/app/storage/files` volume from it when the image changes, keeping uploads; the profile sets `services.cache_dir: /app/services-cache`, and the image pre-creates `/app/.systemprompt/sessions`, which `admin bootstrap` and `infra jobs run` write. README documents every writable path, `storage.backend: gcs` as the GKE choice, and exactly one `server.role: admin` Deployment (scheduler) with gateway pods on `server.role: gateway`. `verify-node.sh --role all|gateway|admin` skips the console, site, downloads and MCP checks on gateway nodes and expects no `/v1/messages` on admin nodes.
+- **Attribution source `api_key` is labelled on the people and project pages** ("Bound to the API key"), and `services/gateway/policies.yaml` notes why it carries no `redact_categories`: core refuses un-redactable content even in warn mode, so redaction is switched on only with the enforce flip.
+- **Self-host: migrate once, then boot; node role, load shedding and storage options.** `deploy/self-host/profile.yaml.template` sets `database.migrate_on_boot: false`, `server.role: all`, `server.max_in_flight: 512` and an explicit `storage: {backend: local}` with the `gcs` alternative documented beside it. Nodes no longer migrate as they start: `docker compose … run --rm app migrate` is the one-shot step (the image entrypoint runs `systemprompt infra db migrate` and `admin bootstrap`, then exits), run from one node before any node serves a new release, and the entrypoint skips its own migration whenever the profile sets `migrate_on_boot: false`. A profile without the key migrates at boot as before. README §5–§6 and SINGLE-NODE.md carry the new order, and README gains a read-only-root section mapping core's writable paths onto this image's; it recommends keeping the root writable for now because the image ships assets under `/app/storage/files`. The Dockerfile creates `/app/storage/data/scratch`, `/app/storage/exports` and `/app/services-cache` owned by uid 1000. The template needs an image built from core with these keys (the next release).
+- **Gateway: per-project chains, a per-project quota window and scanner fault handling.** The Vertex `claude-*` route in `services/ai/gateway.yaml` gains `by_scope: {dimension: project, unmapped: shared}` with a chain for each declared project (`commerce`, `core`, `storefront`, `business-implementation`). Every chain is today the route's own Vertex-then-Anthropic chain, so routing is unchanged; each audit row's route match now names `scope:project=<id>`, and moving one project onto its own Vertex project or region is a provider entry plus one line. `services/gateway/policies.yaml` adds a daily per-project window (`subject: project`, $100, warn) after the user and organization windows: under `quota_fault_mode: closed` a person on no project ends evaluation there and is recorded as a quota warning, so give everyone a project before switching quotas to enforce. `safety.scanner_settings.secrets` sets `fail_mode: open` and `timeout_ms: 2000`, so a fault in the reply-only secrets scanner records a `scanner_failure` finding instead of refusing a reply that warn mode would have let through. `enterprise-model-routing.md` documents `fallbacks` and `by_scope`.
+- **Core pin moved to core `next` at `eab3b5c4c`, and Astound adopts its breaking changes.** Gateway routes follow core's failover model: `services/ai/gateway.yaml` lists `fallbacks: [{provider, upstream_model}]` (core now refuses `fallback_provider` at load), the console route editor and the sync drift view carry `fallbacks` and `by_scope` instead of the two removed fields, and migration 114 moves `gateway_routes.fallback_provider` / `fallback_upstream_model` into a JSONB `fallbacks` chain (plus a `by_scope` column) so a console save never regenerates a file core refuses. Saving a gateway policy from the console now keeps the stored `safety.scanner_settings` and `redact_categories`, which the form does not edit. Managed Git source sync stages its checkout under core's storage scratch directory (`{paths.storage}/data/scratch`) and answers 503 if the profile's paths cannot be resolved, and `kit-export verify` passes core its scratch root. The `secrets` and `pii_extended` scanners register through core's settings-aware factory.
+- **Cost attribution follows the gateway's scope decision.** `ai_request_scopes` now takes a gateway request's project and group from core's `ai_request_attributions` rows (the `x-systemprompt-scope-<dimension>` header, the API key's bound value, or the provider default) instead of always re-deriving them from `user_scope_defaults`, which remains the fallback for requests and dimensions core did not attribute. A new statement trigger on `ai_request_attributions` (`schema/40_request_scopes.sql`) writes the values inside the inserting transaction, so each request is still pinned when it happens. Migration 113 widens `ai_request_scopes.source` to `primary | header | api_key`: a key-bound value is its own decision and is not reported as the person's primary. Core's `default` source maps to `primary`.
+- **Kits: authored skill frontmatter reaches the client.** Core now keeps every `SKILL.md`
+  frontmatter key it does not own (`name`, `description`, `title`, `tags`, `category`,
+  `display_category`, `hosts`) and writes it into the client `SKILL.md`, so a kit's
+  `allowed-tools`, `disable-model-invocation`, `user-invocable` and `argument-hint` take effect
+  in Claude Code instead of being dropped. `just kit-export`
+  (`extensions/cli/kit-export/src/skill_md.rs`) now carries those keys into the exported
+  `SKILL.md` too, after the platform's: first the ones in the instance's `SKILL.md`, in
+  authored order, then any the imported `config.yaml` `frontmatter` records that the file does
+  not; a source `SKILL.md` whose frontmatter is not a YAML mapping now fails the export rather
+  than losing its keys. `systemprompt_kit_export::render_skill_md` is public so the projection
+  is testable. Skills that carry such keys re-stamp once when the new core is adopted.
+- **Kits: dev-only files stay out of the client tree.** Core now drops a skill's root
+  `README.md`, its `tests/`, `test/`, `fixtures/` and `__tests__/` directories and its
+  `*.test.*` / `*.spec.*` files on import, managed capture and client install, and honours a
+  kit-root `.systempromptignore` (gitignore syntax) for the kit's own dev paths — before, all
+  70 test and fixture files of a plugin and 11 of 20 skill READMEs reached every client.
+  `deploy/kit/tools/sanitize-kit.py` applies the same filter, so a skill citing a file the
+  bundle will not carry is a release-blocking error; `just kit-export` writes a starter
+  `.systempromptignore` (`*.snap`, `coverage/`, `node_modules/`, `__pycache__/`, `.DS_Store`)
+  into every exported kit; `deploy/kit/README-INTEGRATION.md` documents both. Each kit's
+  bundle digest, and so its stamped plugin versions, moves once on the first import.
+- **Core pin moved to core `next` at `239a64381`.** Core now merges user accounts through
+  injected `OwnerReassignment`s. Each owning crate moves its own rows, and the users crate no
+  longer writes other crates' tables on `admin users merge` or anonymous-user promotion.
+  `UserRepository::merge_users` is removed, and `insert_governance_decision` takes any
+  `PgExecutor`. Astound calls neither in a way that breaks, so no call sites change; only the
+  root and `tests/` lockfiles move. Core's DB-backed tests now fail rather than skip without a
+  database.
+- **Core pin moved to core `next` at `4d166edb7`.** Core's MCP executor now claims tool-call
+  intents through the `ToolCallIntentClaims` trait instead of reading `ai_requests` itself.
+  The bundled `systemprompt` MCP server (`extensions/mcp/systemprompt/src/server/mod.rs`) and
+  the two MCP integration suites now pass it an `AiRequestRepository`. Core also ranks popular
+  content over the analytics report views, so the `site_content_prerender` job
+  (`extensions/web/jobs/src/prerender.rs`) hands `prerender_content` a
+  `ContentAnalyticsRepository`. A local database whose `web` migrations stopped at 55 cannot
+  upgrade past 56 (`skill_version_impact` reads the `managed_invocation_attributions` table that
+  core dropped). It predates the 0.56.0 schema-upgrade floor, so recreate it and run
+  `systemprompt admin bootstrap`.
+- **Admin crate split, stage 6.** The residual `systemprompt-web-admin` crate is gone. Its
+  composition root — the admin API, SSR, bridge sign-in, webhook, secrets and share routers, the
+  session and personal-access-token middleware, the sidebar marketplace context, the login page
+  and the legacy-path redirects — lives in the web aggregator at `extensions/web/src/router/admin/`,
+  mounted at the same paths. `systemprompt_web_admin::{admin_router, admin_ssr_router,
+  bridge_auth_ssr_router, hooks_webhook_router, secrets_router, share_manifest_router}` import
+  from `systemprompt_web_extension::admin`, which also re-exports the six admin crates as
+  `admin::{core, analytics, catalog, governance, identity, platform}`. The temporary app-tier
+  rule in `scripts/lint-layers.sh` and the residual crate's coverage row are removed.
+- **Admin crate split, stage 5.** The analytics domain — the dashboards, requests, sessions,
+  traces, conversations, history, tools, artifacts, skills, reports, overview, observability, the
+  hook-tracking ingestion and every table and document export — is `systemprompt-web-admin-analytics`
+  (`extensions/web/admin/analytics`), mounted at the same paths; `web/jobs` reads its rollups from
+  there. Only the composition root (routers, middleware, login) remains in `extensions/web/admin`.
+- **Admin crate split, stage 4.** The identity domain — users, groups, projects, roles, access
+  control and entity access, the AD FS sign-in, dev login, sign-out, the people and account pages
+  and the authz subject-attribute providers — is `systemprompt-web-admin-identity`
+  (`extensions/web/admin/identity`), mounted at the same paths. `AdfsConfig`, the dev-login CLI
+  entry points and `permissions_for_roles` import from there; the `services/` catalog readers the
+  access matrix shares with the catalog pages, and the Salesforce identity read, moved into
+  `systemprompt-web-admin-core`.
+- **Admin crate split, stage 3.** The platform domain — sync, devices, the bridge identity and
+  device link, connectors and connector OAuth, Salesforce identity and orgs, jobs and the
+  configuration page — is `systemprompt-web-admin-platform` (`extensions/web/admin/platform`),
+  mounted at the same paths. `SalesforceConfig` and the connector OAuth flows import from there;
+  group-membership reads shared with identity and the bridge client constants moved into
+  `systemprompt-web-admin-core`.
+- **Admin crate split, stage 2.** The governance domain — governance decisions and chain, gateway
+  routes and policies, approvals, secrets, plugin environment variables, the governance and authz
+  webhooks and the request audit record — is `systemprompt-web-admin-governance`
+  (`extensions/web/admin/governance`), mounted at the same paths; the `governance-ssr` cargo
+  feature lives only there. Tool-activity reads shared with analytics moved into
+  `systemprompt-web-admin-core::repositories::tool_activity`.
+- **Admin crate split, stage 1.** The catalog domain — marketplaces, plugins, skills, agents, MCP
+  servers, managed resources, the retention lifecycle page and the marketplace-version analysis —
+  is its own domain crate, `systemprompt-web-admin-catalog` (`extensions/web/admin/catalog`), mounted
+  by the residual admin crate at the same paths; `systemprompt_web_admin::repositories::{marketplace,
+  mcp, lifecycle}` readers import `systemprompt_web_admin_catalog::…` instead. The shared pieces the
+  split surfaced (tone tokens, retention view, byte formatting, the scheduled-jobs and share-token
+  readers) moved into `systemprompt-web-admin-core`. The contract route parser and the template-link
+  gate read the catalog crate's `routes/` too.
+- **Page loads fail soft.** Every admin page collects the panels its loaders could not read into a
+  `Faults` list (`systemprompt_web_admin_core::ssr::faults`) and renders the rest, listing the
+  unavailable panels above the content instead of answering 500; `scripts/check-fail-soft.sh` fails
+  a page handler that still discards a read error. `/admin/setup` now redirects (308) to the connect
+  page, and `/admin/governance/attention` serves the attention counts the sidebar polls.
+- **Admin times are shown in the viewer's timezone** (`systemprompt_web_admin_core::ssr::viewer_tz`,
+  from the browser's IANA zone cookie, UTC when absent), and signing out revokes the session
+  server-side (`/admin/sign-out`) rather than only clearing the cookie.
+- **Admin console on phones.** Below 48rem every admin data table is drawn as a stack of cards
+  instead of a squashed, sideways-scrolling grid: `storage/files/js/services/table-cards.js`
+  copies each column's header text onto its cells as `data-label` (no template changes across
+  the 139 table uses), and `06-table-cards.css` / `06-table-cards2.css` render the identity
+  column as the card title, numbers and dates right-aligned against their labels, the actions
+  cell as a card footer, an expandable row's detail as a full-width card beneath it, and a
+  phone-only "Sort by" select in place of the hidden header row. A wide ledger opts out with
+  `table_mode="scroll"` on `components/table` (marketplace versions, the sync diff, the trace
+  turn list) and keeps a pinned first column. Without JS the tables stay as they were.
+- **Mobile shell.** The topbar is sticky on phones (`03-shell-header-mobile.css`; `body` and the
+  main column now use `overflow: clip`, since a hidden overflow made them scroll containers and
+  defeated sticky), the ID search collapses behind an icon that opens a full-width row, the
+  sidebar drawer is `100dvh` and `min(20rem, 85vw)`, locks page scroll, marks the page `inert`,
+  traps Tab and returns focus on close (`sidebar.js`), and touch targets are 44px. The filter
+  ribbon no longer carries `z-index: 1100`, which had painted it over the drawer and the topbar
+  menu; it is raised only while one of its panels is open, and the topbar has its own
+  `--sp-z-topbar` layer. Filter panels, dialogs, the export dialog, the side panel and row-action
+  menus become bottom sheets on phones (`06-filter-ribbon-mobile.css`, `07-overlay-mobile.css`),
+  KPI tiles sit two to a row with wrapping labels, chart cards size to their content instead of
+  scrolling inside themselves (`08-chart-mobile.css`), form controls are at least 1rem so iOS
+  does not zoom, and page header actions, breadcrumbs, tabs and pill rows scroll sideways with a
+  fade instead of clipping (`04-page-chrome-mobile.css`). Breakpoints in the touched files are
+  now rem (30 / 48 / 64 / 80); `10-responsive.css` and `07-field-details.css` were folded into
+  the files that own their rules and removed.
+
+- **Claude Code needs no beta workaround through the gateway.** The `400 context_management:
+  Extra inputs are not permitted` that sp-dev's 0.62.0 image returns to Claude Code (its
+  `vertex-anthropic` declares no `accepted_betas`, so the flag is dropped and the field sent
+  alone) is fixed on `next` twice over: the `accepted_betas` declaration (`4b95e914`) and the
+  pinned core (`65b0ba9a1`, contained in `4d166edb7`), under which a body field whose gating `anthropic-beta`
+  flag a provider's `accepted_betas` drops is removed with the flag, and a field Vertex still
+  refuses is learned and re-sent once. `vertex-anthropic` keeps `context-management-2025-06-27`
+  in `accepted_betas` because Vertex serves context editing (beta), so Claude Code keeps it there.
+  `CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS=1` is no longer needed in `~/.claude/settings.json`;
+  `scripts/eval/run.ps1` stops setting it so eval runs send what a user's session sends, and
+  `develop-claude-code` and `enterprise-model-routing` say so.
+  `tests/unit/web/src/vertex_gated_fields.rs` pins the outbound body: the field reaches Vertex
+  with its flag, and is gone when the policy drops the flag or the provider declares no list.
+
+### Fixed
+
+- **`install.sh` refuses macOS.** The Linux installer (`scripts/install-bridge.sh`, published as
+  `/files/downloads/install.sh`) mapped an Apple Silicon Mac's `arm64` to the Linux `aarch64`
+  tarball and installed a Linux binary into `~/.local/bin/astound-bridge`, which then failed with
+  `exec format error`. It now checks `uname -s` first and, on Darwin, exits 1 naming
+  `<download base>/astound-bridge-macos.dmg` before downloading anything; Linux is unchanged.
+  `tests/release/macos-smoke.sh` pins both halves under a fake `uname`
+  (`--install-sh-only` runs just that check, on any host).
+- `07-panel.css` and `07-dialog.css` each had `transition` declarations whose property name had
+  been lost, leaving orphaned continuation lines and, in the panel file, a selector list that
+  swallowed the reduced-motion block; both are valid CSS again.
+
+- **Admin crate split, stage 0.** The shared half of `systemprompt-web-admin` now lives in its own
+  shared-tier crate, `systemprompt-web-admin-core` (`extensions/web/shared/admin-core`): the error
+  type, view types, templates, SSR page shell and list view, the export framework, the access-rule
+  ledger, the sync engine, scope and entitlement resolution, the principal and conversation
+  readers, the authz provider registry, connections, and the entity panel. Anything that consumed
+  those through `systemprompt_web_admin::…` (the web facade, `web/jobs`, `cli/dev-login`, the
+  test workspace) imports `systemprompt_web_admin_core::…` instead. Three cross-domain lists
+  became `inventory` registrations so the remaining domains can be carved into their own crates
+  without depending on each other: export datasets (`export::registry::DataSetRegistration`,
+  ordered), sync planes (`repositories::sync::registry::PlaneRegistration`) and the connection
+  snapshot source (`connections::ConnectionSourceRegistration`). `scripts/lint-layers.sh`
+  classifies the residual `extensions/web/admin` as app-tier until the split completes; the
+  repository, HTTP-error, template-link and coverage gates scan both crates.
+- Builds against core `next` at `bridge/CORE_REF` (`208ba1c3`), which adds
+  `RuleType::extension_static` so an extension rule type is built from a literal slug in a `const`
+  and a malformed slug fails the build; the five `authz/*` dimensions use it and the last
+  `unreachable!` under `extensions/` is gone. The conversation fact row is now
+  `ConversationFactRow { context_id, facts: ConversationFacts }` (serde-flattened, same JSON), in
+  place of a macro-generated generic.
+- **Lint bar.** `clippy::cognitive_complexity` is enforced (deny, threshold 30) and `just clippy`
+  lints the `tests/` workspace with `--all-targets` under a strict mirror of the root lint set
+  (`tests/Cargo.toml` lists the nine test-only relaxations). Comment gates now hold what the
+  cleanup established: at most six `// Why:` blocks per production file, none inside a function
+  body unless it is a `discard-ok`/`lint-ok` marker or names an external system, and a `// Why:`
+  that opens as paraphrase fails `scripts/check-comments.sh`; `scripts/check-file-size.sh` warns
+  on files within twenty lines of the ceiling. `scripts/audit-rust-standards.sh --dry-run` prints
+  without writing `ISSUE.md`.
+- Builds against core `next` at `bridge/CORE_REF` (`c8d340fe`, ahead of 0.62.0) with both `[patch.crates-io]` blocks active, so the gateway fix below ships with the config: a `anthropic-beta` flag the gateway drops now takes the body field it gates with it, and a body field an upstream refuses (`<field>: Extra inputs are not permitted`) is learned per provider, dropped and re-sent once, the way a refused beta already was. Core's `wire::anthropic::BETA_GATED_FIELDS` names the pairs; `UpstreamCall::{beta_policy, dropped_betas}` are the one policy header and body both apply.
+
+### Fixed
+
+- **Gateway:** Claude Code 2.1.283 failed on every prompt through the bridge with `400 context_management: Extra inputs are not permitted`. The client sends `anthropic-beta: context-management-2025-06-27` with a `context_management` body field; `vertex-anthropic` declared no `accepted_betas`, so the gateway dropped the header and forwarded the field alone, which Vertex refuses. `services/ai/providers.yaml` now declares the betas Claude Code 2.1.283 sends that Vertex serves (context management, interleaved thinking, effort), pinned by `tests/unit/web/src/vertex_accepted_betas.rs`. The `accepted_betas: []` from earlier today was a no-op: for Vertex an empty list and an absent one are the same policy, and the gateway's learned-beta retry only parses header refusals. Core `next` closes the category (a dropped flag takes its body field with it; a refused body field is learned and re-sent once); this entry ships on core 0.62.0 and needs only the config.
+
+### Removed
+
+- **AI catalog:** `openai.gpt-oss-120b` is dropped from the Vertex MaaS provider in `services/ai/providers.yaml`. It was advertised to every host while its upstream kept failing (`provider 'cerebras' secret 'cerebras' is not configured` in OpenCode logs on 2026-09-24), so a user who picked it got a dead model. The `vertex-gpt-oss` route stays for `gpt-oss-20b` until Google retires it on 2026-10-21.
+
 
 ## 0.62.0 — 2026-09-25
 

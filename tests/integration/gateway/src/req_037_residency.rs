@@ -8,12 +8,13 @@
 //! the boot-time check the register asks for is enforced by configuration the
 //! operator actually writes.
 
-use systemprompt::models::services::{
+use systemprompt::manifest::services::{
     GatewayConfigSpec, GatewayProfileError, GatewayRoute, ModelGovernance, ProviderEntry,
-    RouteRequirements, WireProtocol,
+    RouteRequirements,
 };
 
 use crate::support::{config, model, provider, registry, route};
+use systemprompt::wire::WireProtocol;
 
 fn european_route() -> GatewayRoute {
     let mut r = route("eu-classified", "classified-*", "eu-provider");
@@ -113,7 +114,7 @@ routes:
     assert!(!requires.no_retain);
 
     let entry: ProviderEntry = serde_yaml::from_str(
-        r#"
+        r"
 name: eu-provider
 wire: openai-chat
 surface: backend
@@ -121,7 +122,7 @@ endpoint: https://eu.example.com/v1
 api_key_secret: eu_key
 governance:
   european: true
-"#,
+",
     )
     .expect("the governance block parses from YAML");
     assert!(entry.governance.european);

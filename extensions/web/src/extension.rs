@@ -25,8 +25,6 @@ impl WebExtension {
         Self
     }
 
-    // Why: Backed by [`BlogConfigValidated::cached`], so every consumer sees the
-    // same load result; a load failure is logged and treated as "no config".
     #[must_use]
     pub fn blog_config() -> Option<Arc<BlogConfigValidated>> {
         match BlogConfigValidated::cached() {
@@ -57,21 +55,20 @@ impl WebExtension {
     }
 
     #[must_use]
-    pub fn adfs_config() -> Option<Arc<systemprompt_web_admin::AdfsConfig>> {
+    pub fn adfs_config() -> Option<Arc<systemprompt_web_admin_identity::AdfsConfig>> {
         config_loader::adfs_config()
     }
 
     #[must_use]
-    pub fn salesforce_config() -> Option<Arc<systemprompt_web_admin::SalesforceConfig>> {
+    pub fn salesforce_config() -> Option<Arc<systemprompt_web_admin_platform::SalesforceConfig>> {
         config_loader::salesforce_config()
     }
 }
 
 register_extension!(WebExtension);
 
-// Why: the tables whose user_id may also carry the `system` principal cannot
-// reference users(id), so a deleted user's rows leave through the purge; the
-// rest cascade from the constraints in schema/.
+// Why: Postgres FKs cannot hold where `user_id` may be the `system` principal,
+// so these tables purge explicitly; the rest cascade from `schema/`.
 user_purge_tables!(
     "systemprompt-web",
     [

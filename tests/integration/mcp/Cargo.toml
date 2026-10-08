@@ -14,13 +14,3 @@ serde_json = { workspace = true }
 systemprompt = { workspace = true }
 tokio = { workspace = true }
 sqlx = { workspace = true }
-uuid = { workspace = true }
-url = { workspace = true }
-async-trait = { workspace = true }
-chrono = { workspace = true }
-tempfile = { workspace = true }
-base64 = { workspace = true }
-axum = { workspace = true }
-
-systemprompt-api = { workspace = true }
-tower = { workspace = true }

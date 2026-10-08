@@ -11,17 +11,17 @@ use std::path::Path;
 
 use sqlx::PgPool;
 use systemprompt_security::authz::{DASHBOARD_SOURCE, RegisteredEntities};
-use systemprompt_web_admin::repositories::access_control::declared::{
+use systemprompt_web_admin_core::repositories::access_rules::declared::{
     DeclaredInputs, build_declared_set,
 };
-use systemprompt_web_admin::repositories::access_control::declared_load::load_declared_set;
-use systemprompt_web_admin::repositories::access_control::drift::compute_drift;
-use systemprompt_web_admin::repositories::access_control::export::{Owners, render_export};
-use systemprompt_web_admin::repositories::access_control::rules::{
+use systemprompt_web_admin_core::repositories::access_rules::declared_load::load_declared_set;
+use systemprompt_web_admin_core::repositories::access_rules::drift::compute_drift;
+use systemprompt_web_admin_core::repositories::access_rules::export::{Owners, render_export};
+use systemprompt_web_admin_core::repositories::access_rules::rules::{
     list_band_rules, list_entity_defaults,
 };
-use systemprompt_web_admin::repositories::access_control::sync::{SyncMode, apply_sync};
-use systemprompt_web_admin::repositories::config::rules_yaml_loader::parse_rules_doc;
+use systemprompt_web_admin_core::repositories::access_rules::rules_yaml_loader::parse_rules_doc;
+use systemprompt_web_admin_core::repositories::access_rules::sync::{SyncMode, apply_sync};
 
 use crate::fixtures::{insert_acl_entity, unique, write_services_file};
 use crate::tempdb::TempDb;
@@ -36,7 +36,7 @@ fn rules_yaml(server: &str, groups: &str) -> String {
 
 async fn declared(
     dir: &Path,
-) -> systemprompt_web_admin::repositories::access_control::declared::DeclaredSet {
+) -> systemprompt_web_admin_core::repositories::access_rules::declared::DeclaredSet {
     load_declared_set(dir, &[], &RegisteredEntities::default())
         .await
         .expect("declared set")
@@ -184,7 +184,7 @@ async fn overwrite_retires_rows_code_wrote_on_an_entity_it_dropped_and_its_defau
          WHERE entity_type = 'mcp_server' AND entity_id = $1",
     )
     .bind(&dropped)
-    .bind(systemprompt_web_admin::repositories::access_control::sync::RULES_SOURCE)
+    .bind(systemprompt_web_admin_core::repositories::access_rules::sync::RULES_SOURCE)
     .execute(&*db.pool)
     .await
     .expect("stamp the entity as the file's");
@@ -256,7 +256,7 @@ async fn export_round_trips_through_the_loader() {
 
 #[tokio::test]
 async fn sync_state_records_the_seed_and_every_apply() {
-    use systemprompt_web_admin::repositories::sync::state::{
+    use systemprompt_web_admin_core::repositories::sync::state::{
         Applied, AppliedFrom, BOOT_ACTOR, find_sync_state, record_applied, record_declared,
     };
     let Some(db) = TempDb::create().await else {

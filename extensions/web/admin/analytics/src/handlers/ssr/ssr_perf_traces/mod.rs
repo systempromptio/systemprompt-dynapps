@@ -1,0 +1,275 @@
+//! `/admin/traces` — Trace Explorer list page.
+//!
+//! Replaces the old plugin-events recap with a true trace list bound to the
+//! shared time-range + identity-filter-ribbon URL contract. Each row links to
+//! the per-trace waterfall at `/admin/traces/{session_id}`.
+
+use std::sync::Arc;
+use systemprompt_web_admin_core::error::AdminError;
+
+use axum::extract::{Query, State};
+use axum::response::Response;
+use serde::Deserialize;
+use sqlx::PgPool;
+use systemprompt::identifiers::{AgentId, UserId};
+
+use crate::repositories::traces::{
+    TraceFilter, TracePage, TraceSort, TraceSortColumn, TraceSortDir, TraceStats, TraceSummary,
+    get_trace_stats, list_traces,
+};
+use systemprompt_web_admin_core::error::AdminHtmlResult;
+use systemprompt_web_admin_core::repositories::filter_options::{
+    FilterOptions, get_filter_options,
+};
+use systemprompt_web_admin_core::repositories::scope::{ScopeRequest, SubjectScope};
+use systemprompt_web_admin_core::ssr::faults::Faults;
+use systemprompt_web_admin_core::ssr::helpers::Viewer;
+use systemprompt_web_admin_core::ssr::list_view;
+use systemprompt_web_admin_core::types::UserContext;
+use systemprompt_web_admin_core::util::time_range::{TimeRange, TimeRangeQuery, parse_time_range};
+
+mod context;
+pub(crate) mod export;
+mod rows;
+mod summary;
+mod view;
+
+use context::PerfTracesPageContext;
+use systemprompt_web_admin_core::ssr::list_view::DEFAULT_PAGE_SIZE;
+use systemprompt_web_admin_core::ssr::page::Page;
+
+const BASE_URL: &str = "/admin/traces";
+#[derive(Debug, Deserialize)]
+pub(crate) struct TraceListQuery {
+    pub from: Option<String>,
+    pub to: Option<String>,
+    pub preset: Option<String>,
+    pub user_id: Option<UserId>,
+    pub agent_id: Option<AgentId>,
+    pub agent_scope: Option<String>,
+    pub policy: Option<String>,
+    pub decision: Option<String>,
+    pub error_only: Option<String>,
+    pub deny_only: Option<String>,
+    pub include_lifecycle: Option<String>,
+    pub sort: Option<String>,
+    pub dir: Option<String>,
+    pub page: Option<i64>,
+    pub group: Option<String>,
+    pub project: Option<String>,
+}
+
+pub(crate) async fn perf_traces_page(
+    shell: Page,
+    State(pool): State<Arc<PgPool>>,
+    Query(query): Query<TraceListQuery>,
+) -> AdminHtmlResult<Response> {
+    if !shell.user.is_console {
+        return Err(AdminError::Forbidden("Admin access required.".to_owned()).into());
+    }
+
+    let range = parse_time_range(&TimeRangeQuery {
+        from: query.from.clone(),
+        to: query.to.clone(),
+        preset: query.preset.clone(),
+    });
+    let window = TraceWindow {
+        range,
+        page: query.page.unwrap_or(0).max(0),
+    };
+
+    let request = ScopeRequest::from_query(
+        &shell.user,
+        query.group.as_deref(),
+        query.project.as_deref(),
+    );
+    let scope = systemprompt_web_admin_core::repositories::scope::membership::get_subject_scope(
+        &pool, &request,
+    )
+    .await?;
+    let mut faults = Faults::new();
+    let ctx = load_traces_data(
+        &pool,
+        TraceScope {
+            user: &shell.user,
+            request: &request,
+            subjects: scope,
+        },
+        &query,
+        window,
+        &mut faults,
+    )
+    .await;
+    Ok(
+        systemprompt_web_admin_core::ssr::helpers::render_page_with_faults(
+            &shell.engine,
+            "perf-traces",
+            &ctx,
+            Viewer::new(&shell.user, &shell.marketplace),
+            &faults,
+        ),
+    )
+}
+
+struct TraceWindow {
+    range: TimeRange,
+    page: i64,
+}
+
+struct TraceScope<'a> {
+    user: &'a UserContext,
+    request: &'a ScopeRequest,
+    subjects: SubjectScope,
+}
+
+struct TraceRead {
+    rows: Vec<TraceSummary>,
+    total: i64,
+    stats: TraceStats,
+    options: FilterOptions,
+}
+
+async fn load_traces(
+    pool: &PgPool,
+    filter: TraceFilter<'_>,
+    range: TimeRange,
+    trace_page: TracePage,
+    faults: &mut Faults,
+) -> TraceRead {
+    let (list_res, stats_res, options_res) = tokio::join!(
+        list_traces(pool, filter, range, trace_page),
+        get_trace_stats(pool, range, filter.subject_ids, filter.include_lifecycle),
+        get_filter_options(pool, range),
+    );
+    let (rows, total) = faults.take("trace list", list_res);
+    TraceRead {
+        rows,
+        total,
+        stats: faults.take("trace stats", stats_res),
+        options: faults.take("filter options", options_res),
+    }
+}
+
+async fn load_traces_data(
+    pool: &PgPool,
+    scope: TraceScope<'_>,
+    query: &TraceListQuery,
+    window: TraceWindow,
+    faults: &mut Faults,
+) -> PerfTracesPageContext {
+    let TraceWindow { range, page } = window;
+    let preset = preset_str(query, range);
+    let filter = build_filter(query, scope.subjects.as_sql());
+    let sort = sort_from_query(query);
+    let trace_page = TracePage {
+        sort,
+        limit: DEFAULT_PAGE_SIZE,
+        offset: page * DEFAULT_PAGE_SIZE,
+    };
+    let read = load_traces(pool, filter, range, trace_page, faults).await;
+
+    let trace_rows: Vec<rows::TraceRow> = read.rows.iter().map(rows::trace_to_json).collect();
+    let has_traces = !trace_rows.is_empty();
+    let window = list_view::PageWindow::new(
+        page,
+        DEFAULT_PAGE_SIZE,
+        read.total,
+        i64::try_from(trace_rows.len()).unwrap_or(DEFAULT_PAGE_SIZE),
+        "traces",
+    );
+    let sort_col = view::sort_col_to_str(sort.column);
+    let sort_dir = view::sort_dir_to_str(sort.dir);
+    let scope_filter = view::scope_filter(
+        pool,
+        scope.user,
+        &view::TraceScopeFilterArgs {
+            request: scope.request,
+            query,
+            range,
+            preset: &preset,
+        },
+    )
+    .await;
+
+    PerfTracesPageContext {
+        page: "traces",
+        title: "Trace Explorer",
+        breadcrumbs: vec![
+            systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView::link(
+                "AI activity",
+                "/admin/analytics",
+            ),
+            systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView::current("Traces"),
+        ],
+        time_range: view::time_range_context(range, &preset),
+        filter_ribbon: context::TraceFilterRibbon {
+            base_url: BASE_URL,
+            preserved: view::build_preserved(query, range, &preset),
+            options: view::annotate_options(&read.options, &filter),
+            chips: view::build_chips(query),
+        },
+        stats: summary::serde_stats(query, &read.stats),
+        traces: trace_rows,
+        has_traces,
+        total_count: read.total,
+        page_size: DEFAULT_PAGE_SIZE,
+        page_index: page,
+        page_count: window.total_pages,
+        pagination: view::build_pagination(query, window),
+        sort_headers: summary::build_sort_headers(query, sort_col, sort_dir),
+        sort: sort_col,
+        dir: sort_dir,
+        error_only: filter.error_only,
+        deny_only: filter.deny_only,
+        scope_filter,
+        export: view::export_view(query, range, &preset),
+    }
+}
+
+pub(super) fn build_filter<'a>(
+    query: &'a TraceListQuery,
+    subject_ids: Option<&'a [String]>,
+) -> TraceFilter<'a> {
+    TraceFilter {
+        subject_ids,
+        user_id: empty_to_none(query.user_id.as_ref().map(UserId::as_str)),
+        agent_id: empty_to_none(query.agent_id.as_ref().map(AgentId::as_str)),
+        agent_scope: empty_to_none(query.agent_scope.as_deref()),
+        policy: empty_to_none(query.policy.as_deref()),
+        decision: empty_to_none(query.decision.as_deref()),
+        error_only: query.error_only.as_deref() == Some("true"),
+        deny_only: query.deny_only.as_deref() == Some("true"),
+        include_lifecycle: query.include_lifecycle.as_deref() == Some("true"),
+    }
+}
+
+fn empty_to_none(v: Option<&str>) -> Option<&str> {
+    v.filter(|s| !s.is_empty())
+}
+
+fn preset_str(query: &TraceListQuery, range: TimeRange) -> String {
+    if let Some(p) = query.preset.as_deref()
+        && !p.is_empty()
+    {
+        return p.to_owned();
+    }
+    if query.from.is_some() && query.to.is_some() {
+        return "custom".to_owned();
+    }
+    range.preset.as_str().to_owned()
+}
+
+pub(super) fn sort_from_query(query: &TraceListQuery) -> TraceSort {
+    let column = match query.sort.as_deref() {
+        Some("duration") => TraceSortColumn::Duration,
+        Some("spans") => TraceSortColumn::SpanCount,
+        Some("cost") => TraceSortColumn::Cost,
+        Some("tokens") => TraceSortColumn::Tokens,
+        _ => TraceSortColumn::StartedAt,
+    };
+    let dir = match query.dir.as_deref() {
+        Some("asc") => TraceSortDir::Asc,
+        _ => TraceSortDir::Desc,
+    };
+    TraceSort { column, dir }
+}

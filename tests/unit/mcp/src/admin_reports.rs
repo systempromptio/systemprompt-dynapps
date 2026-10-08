@@ -121,11 +121,11 @@ fn cost_chart_normalization_preserves_dollars_and_refuses_misaligned_data() {
 fn report_normalization_accepts_each_documented_cli_envelope_without_rewriting_rows() {
     let item = json!({"heading":"total_requests","content":12});
     assert_eq!(
-        normalize_cli(&json!({"items":[item.clone()]})).expect("items envelope"),
+        normalize_cli(&json!({"items":[item]})).expect("items envelope"),
         vec![item.clone()]
     );
     assert_eq!(
-        normalize_cli(&json!({"sections":[item.clone()]})).expect("sections envelope"),
+        normalize_cli(&json!({"sections":[item]})).expect("sections envelope"),
         vec![item.clone()]
     );
     assert_eq!(

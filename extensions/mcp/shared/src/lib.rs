@@ -22,25 +22,16 @@ pub struct AuditMetadata {
     pub reason: Option<String>,
 }
 
-use repositories::McpAccessParams;
-
-use repositories::find_anonymous_user_id;
-
-use repositories::insert_mcp_access;
-
-use repositories::insert_mcp_access_rejection;
+use repositories::{
+    McpAccessParams, find_anonymous_user_id, insert_mcp_access, insert_mcp_access_rejection,
+};
+use sqlx::PgPool;
 
 const ACTION_USED: &str = "used";
 
-// Why: Maximum length (in bytes) of the reason text kept in a rejection
-// description before it is truncated. Truncated text gains a "..." suffix, so
-// the reason portion never exceeds `MAX_REASON_LEN + 3` bytes.
 #[doc(hidden)]
 pub const MAX_REASON_LEN: usize = 117;
 
-// Why: Exposed (behind `#[doc(hidden)]`) so the external test workspace can
-// assert the char-boundary and "..." suffix semantics directly; not part of the
-// public API.
 #[doc(hidden)]
 pub fn truncate_on_char_boundary(s: &str, max_bytes: usize) -> String {
     if s.len() <= max_bytes {
@@ -94,29 +85,17 @@ pub async fn record_mcp_access(
 
 pub async fn record_mcp_access_rejected(pool: &DbPool, server: &str, tool: &str, reason: &str) {
     let pg_pool = pool.pool();
+    let Some(anonymous_user_id) = resolve_anonymous_principal(pg_pool.as_ref(), server, tool).await
+    else {
+        return;
+    };
+
     let reason_text = truncate_on_char_boundary(reason, MAX_REASON_LEN);
     let description = format!("Access rejected on {server}: {reason_text}");
     let metadata = AuditMetadata {
         tool_name: tool.to_owned(),
         server: server.to_owned(),
         reason: Some(reason.to_owned()),
-    };
-
-    let anonymous_user_id = match find_anonymous_user_id(pg_pool.as_ref()).await {
-        Ok(Some(id)) => id,
-        Ok(None) => {
-            tracing::error!(
-                server,
-                tool,
-                "Dropping MCP access-rejection audit row: no anonymous principal exists to \
-                 attribute it to (refusing to attribute a rejection to an arbitrary user)"
-            );
-            return;
-        },
-        Err(e) => {
-            tracing::error!(error = %e, server, tool, "Failed to resolve anonymous principal for MCP access-rejection audit; dropping row");
-            return;
-        },
     };
 
     if let Err(e) = insert_mcp_access_rejection(
@@ -130,6 +109,29 @@ pub async fn record_mcp_access_rejected(pool: &DbPool, server: &str, tool: &str,
     {
         tracing::warn!(error = %e, "Failed to record MCP access rejection (non-fatal)");
     }
+}
+
+async fn resolve_anonymous_principal(pool: &PgPool, server: &str, tool: &str) -> Option<UserId> {
+    match find_anonymous_user_id(pool).await {
+        Ok(Some(id)) => Some(id),
+        Ok(None) => {
+            log_no_anonymous_principal(server, tool);
+            None
+        },
+        Err(e) => {
+            tracing::error!(error = %e, server, tool, "Failed to resolve anonymous principal for MCP access-rejection audit; dropping row");
+            None
+        },
+    }
+}
+
+fn log_no_anonymous_principal(server: &str, tool: &str) {
+    tracing::error!(
+        server,
+        tool,
+        "Dropping MCP access-rejection audit row: no anonymous principal exists to \
+         attribute it to (refusing to attribute a rejection to an arbitrary user)"
+    );
 }
 
 pub mod access_policy;

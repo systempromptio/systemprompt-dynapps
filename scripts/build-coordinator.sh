@@ -52,6 +52,8 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # COORD_STATE_DIR points the ledger and the lock somewhere else. Used by the
 # self-test so exercising the coordinator cannot disturb a real build in flight.
 STATE_DIR="${COORD_STATE_DIR:-$ROOT/.build}"
+mkdir -p "$STATE_DIR"
+STATE_DIR="$(cd "$STATE_DIR" && pwd -P)"
 LOCK="$STATE_DIR/lock"
 RUNS="$STATE_DIR/runs.jsonl"
 MAX_RUNS=200
@@ -116,6 +118,9 @@ compute_key() {
 lock_alive() {
     local pid
     pid="$(cat "$LOCK/pid" 2>/dev/null || echo)"
+    # Old callers can still be filling a real-directory lock during rollout.
+    # Never reclaim a directory merely because its pid is not published yet.
+    if [ -z "$pid" ]; then [ -d "$LOCK" ]; return; fi
     [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null
 }
 
@@ -159,7 +164,7 @@ record_binaries() {
 # which the caller is relaying verbatim to its own agent.
 FOLLOW_STATUS=1
 follow_log() {
-    local log="$1" status_file="$2" off=0 size
+    local log="$1" status_file="$2" owner="$3" off=0 size pid
     while :; do
         if [ -f "$log" ]; then
             size="$(wc -c < "$log" | tr -d ' ')"
@@ -169,6 +174,8 @@ follow_log() {
             fi
         fi
         [ -f "$status_file" ] && break
+        pid="$(cat "$owner/pid" 2>/dev/null || true)"
+        if [ -z "$pid" ] || ! kill -0 "$pid" 2>/dev/null; then break; fi
         sleep 0.4
     done
     if [ -f "$log" ]; then
@@ -243,16 +250,72 @@ cmd_run() {
     fi
     local log="$STATE_DIR/logs/$recipe-$(cut -c1-12 <<<"$key").log"
 
+    # Publish an already-initialised directory in one symlink syscall. A
+    # mkdir followed by a pid write leaves a window in which a waiter sees
+    # an ownerless lock and deletes a live leader's directory.
+    local owner_dir
+    owner_dir="$(mktemp -d "$STATE_DIR/lock.owner.$$.XXXXXX")"
+    COORD_OWNED_DIR="$owner_dir"
+    release_owned_lock() {
+        if [ "$(readlink "$LOCK" 2>/dev/null || true)" = "$COORD_OWNED_DIR" ]; then
+            rm -f "$LOCK"
+        fi
+        rm -rf "$COORD_OWNED_DIR"
+    }
+    trap release_owned_lock EXIT
+    trap 'exit 130' INT
+    trap 'exit 143' TERM
+
     while :; do
-        if mkdir "$LOCK" 2>/dev/null; then break; fi
+        # A waiter may have observed an older checkout. Recompute the input
+        # identity before publishing the run, not before waiting for it.
+        unset COORD_CURRENT_KEY
+        TREE="$(compute_tree)"; export COORD_CURRENT_KEY="$TREE"
+        key="$(compute_key "$recipe" "$flags")"
+        log="$STATE_DIR/logs/$recipe-$(cut -c1-12 <<<"$key").log"
+        echo $$ > "$owner_dir/pid"
+        echo "$key" > "$owner_dir/key"
+        echo "$recipe $flags" > "$owner_dir/recipe"
+        echo "$(now)" > "$owner_dir/started"
+        echo "$log" > "$owner_dir/log-path"
+        : > "$owner_dir/log"
+        if python3 -c 'import fcntl, os, pathlib, shutil, sys
+owner, lock = sys.argv[1], pathlib.Path(sys.argv[2])
+with open(str(lock) + ".publication", "a") as guard:
+    fcntl.flock(guard, fcntl.LOCK_EX)
+    if os.path.lexists(lock):
+        try:
+            pid = int((lock / "pid").read_text().strip())
+        except (FileNotFoundError, ValueError):
+            if lock.is_symlink() and not lock.exists():
+                lock.unlink()
+                os.symlink(owner, lock)
+                sys.exit(0)
+            sys.exit(73)
+        if pid <= 0:
+            sys.exit(73)
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            stale_owner = lock.resolve() if lock.is_symlink() else None
+            if lock.is_symlink():
+                lock.unlink()
+                if stale_owner.parent == lock.parent.resolve() and stale_owner.name.startswith("lock.owner."):
+                    shutil.rmtree(stale_owner, ignore_errors=True)
+            else:
+                shutil.rmtree(lock)
+            print("[coord] clearing stale lock from a dead process", file=sys.stderr)
+        else:
+            sys.exit(73)
+    os.symlink(owner, lock)' "$owner_dir" "$LOCK"; then
+            break
+        else
+            local publication_status=$?
+            if [ "$publication_status" -ne 73 ]; then return "$publication_status"; fi
+        fi
         if ! lock_alive "$LOCK"; then
-            # mv is atomic, so concurrent waiters cannot both clear the stale
-            # lock and then delete a successor's freshly-created lock dir; the
-            # loser's mv fails and it simply retries the mkdir.
-            if mv "$LOCK" "$LOCK.stale.$$" 2>/dev/null; then
-                echo "[coord] clearing stale lock from a dead process" >&2
-                rm -rf "$LOCK.stale.$$"
-            fi
+            # Recheck and reclaim under the publication guard. Otherwise a
+            # second waiter can mistake a successor's lock for the stale one.
             continue
         fi
         local owner_key owner_recipe
@@ -260,7 +323,9 @@ cmd_run() {
         owner_recipe="$(cat "$LOCK/recipe" 2>/dev/null || echo run)"
         if [ "$owner_key" = "$key" ] && [ "$owner_recipe" = "$recipe $flags" ]; then
             echo "[coord] a '$recipe $flags' of this exact source is already in progress (pid $(cat "$LOCK/pid")); attaching to its output instead of starting a second one."
-            follow_log "$LOCK/log" "$LOCK/status"
+            local leader_dir
+            leader_dir="$(readlink "$LOCK" 2>/dev/null || printf '%s' "$LOCK")"
+            follow_log "$leader_dir/log" "$leader_dir/status" "$leader_dir"
             echo "[coord] leader finished with status $FOLLOW_STATUS"
             record_run "$recipe" "$flags" "$key" "$FOLLOW_STATUS" "$(now)" "$log" attached
             return "$FOLLOW_STATUS"
@@ -270,22 +335,15 @@ cmd_run() {
     done
 
     # We are the leader.
-    trap 'rm -rf "$LOCK"' EXIT INT TERM
-    local started; started="$(now)"
-    echo $$ > "$LOCK/pid"
-    echo "$key" > "$LOCK/key"
-    echo "$recipe $flags" > "$LOCK/recipe"
-    echo "$started" > "$LOCK/started"
-    echo "$log" > "$LOCK/log-path"
-    : > "$LOCK/log"
+    local started; started="$(cat "$owner_dir/started")"
 
     echo "[coord] leading '$recipe $flags' (fingerprint $(cut -c1-12 <<<"$key"))"
     set +e
-    BUILD_COORD_ACTIVE=1 "$@" 2>&1 | tee "$LOCK/log"
+    BUILD_COORD_ACTIVE=1 "$@" 2>&1 | tee "$owner_dir/log"
     local rc=${PIPESTATUS[0]}
     set -e
-    echo "$rc" > "$LOCK/status"
-    cp "$LOCK/log" "$log" 2>/dev/null || true
+    echo "$rc" > "$owner_dir/status"
+    cp "$owner_dir/log" "$log" 2>/dev/null || true
 
     if [ "$rc" -eq 0 ] && [ "$recipe" = build ]; then
         record_binaries

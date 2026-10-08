@@ -1,12 +1,4 @@
-#![allow(
-    clippy::expect_used,
-    clippy::panic,
-    clippy::needless_pass_by_value,
-    clippy::redundant_clone,
-    reason = "test code: panics are the assertion mechanism and clones keep fixtures readable"
-)]
-
-use systemprompt_web_admin::repositories::analytics::conversations::redact_text;
+use systemprompt_web_admin_core::repositories::conversations::redact_text;
 
 #[test]
 fn redact_aws_key() {

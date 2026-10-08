@@ -9,15 +9,15 @@ use systemprompt::loader::ConfigLoader;
 use systemprompt_security::authz::{
     AccessControlRepository, BulkKeepQuery, ChainSources, EntityKind, ParentChainIndex, allowed_ids,
 };
-use systemprompt_web_admin::authz::{dimensions, subject_attributes_for};
-use systemprompt_web_admin::repositories::access_control::declared_load::load_declared_set;
-use systemprompt_web_admin::repositories::access_control::sync::{SyncMode, apply_sync};
-use systemprompt_web_admin::repositories::config::gateway::{
+use systemprompt_web_admin_core::authz::{dimensions, subject_attributes_for};
+use systemprompt_web_admin_core::repositories::access_rules::declared_load::load_declared_set;
+use systemprompt_web_admin_core::repositories::access_rules::sync::{SyncMode, apply_sync};
+use systemprompt_web_admin_core::repositories::gateway_catalog::{
     dispatchable_route_ids, registered_routes,
 };
-use systemprompt_web_admin::repositories::config::groups_yaml_loader;
-use systemprompt_web_admin::repositories::users::connector_accounts as accounts;
-use systemprompt_web_admin::salesforce_orgs;
+use systemprompt_web_admin_identity::repositories::config::groups_yaml_loader;
+use systemprompt_web_admin_platform::repositories::connectors::connector_accounts as accounts;
+use systemprompt_web_admin_platform::salesforce_orgs;
 
 use crate::fixtures::{insert_user_with_roles, set_project, unique};
 use crate::tempdb::TempDb;
@@ -94,7 +94,7 @@ fn salesforce_catalog_is_exact_and_contains_no_collaboration_channel_content() {
         .find(|(id, _)| id.as_str() == "astound-salesforce")
         .expect("Salesforce plugin exists")
         .1;
-    let actual: Vec<&str> = plugin.skills.include.iter().map(|id| id.as_str()).collect();
+    let actual: Vec<&str> = plugin.skills.include.iter().map(String::as_str).collect();
     assert_eq!(actual, EXPECTED);
     assert!(
         !services
@@ -117,6 +117,10 @@ fn salesforce_catalog_is_exact_and_contains_no_collaboration_channel_content() {
 }
 
 #[tokio::test]
+#[expect(
+    unsafe_code,
+    reason = "set_var is unsafe in edition 2024; see the SAFETY note"
+)]
 async fn executive_and_salesforce_connection_grant_only_the_intended_resources() {
     let Some(db) = TempDb::create().await else {
         return;
@@ -137,7 +141,8 @@ async fn executive_and_salesforce_connection_grant_only_the_intended_resources()
     // Why: a connection is `not_provisioned` until the org's External Client
     // App credentials resolve; nextest runs each test in its own process, so
     // the environment override reaches only this one.
-    // SAFETY: single-threaded at this point; no other thread reads the environment.
+    // SAFETY: current-thread `#[tokio::test]` and nextest gives each test its
+    // own process, so no other thread reads the environment.
     unsafe {
         std::env::set_var(
             salesforce_orgs::SHARED_CLIENT_ID_SECRET.to_uppercase(),
@@ -287,7 +292,7 @@ async fn executive_and_salesforce_connection_grant_only_the_intended_resources()
 
 #[tokio::test]
 async fn executive_manual_role_can_be_saved_and_survives_directory_recomputation() {
-    use systemprompt_web_admin::repositories::users::roles;
+    use systemprompt_web_admin_identity::repositories::users::roles;
     let Some(db) = TempDb::create().await else {
         return;
     };

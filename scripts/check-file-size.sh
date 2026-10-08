@@ -13,6 +13,22 @@ violations=$(find extensions src bridge/src -name '*.rs' \
     -not -path '*/target/*' \
     -not -path '*/tests/*' \
     -exec awk '!/^\/\/!/ {n[FILENAME]++} END {for (f in n) if (n[f]>300) print n[f], f}' {} +)
+
+# Headroom warning (non-fatal): a file at >=280 lines has no room for the next
+# feature, so the split belongs in the change that lands before it.
+headroom=$(find extensions src bridge/src -name '*.rs' \
+    -not -path '*/target/*' \
+    -not -path '*/tests/*' \
+    -exec awk '!/^\/\/!/ {n[FILENAME]++} END {for (f in n) if (n[f]>=280 && n[f]<=300) print n[f], f}' {} + | sort -rn)
+if [ -n "$headroom" ]; then
+    {
+        echo "warning: source file(s) within 20 lines of the 300-line ceiling:"
+        echo "$headroom"
+        echo "Split at a clean seam before the next feature lands in any of these."
+        echo
+    } >&2
+fi
+
 if [ -n "$violations" ]; then
     echo "error: extension source file(s) exceed the 300-line ceiling:"
     echo "$violations"

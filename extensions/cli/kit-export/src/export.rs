@@ -8,6 +8,10 @@
 //! `services/skills/<id>/` with `config.yaml` merged into its frontmatter
 //! ([`crate::skill_md`]); and `plugin.json` keeps the authored version, not
 //! the content-suffixed one the bundler stamps for the bridge.
+//!
+//! The kit root also gets a starter [`IGNORE_FILE`]: core already keeps a
+//! skill's `README.md`, tests and fixtures out of the client tree, and the
+//! file is where the kit names its own dev-only paths on top of those.
 
 use std::collections::BTreeSet;
 use std::fs;
@@ -15,19 +19,26 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, bail};
 use serde::Serialize;
-use systemprompt::marketplace::{CatalogContent, build_plugin_bundle};
-use systemprompt::models::services::{
-    ComponentSource, MarketplaceConfig, PluginComponentRef, PluginConfig, PluginHooksRef,
-    ServicesConfig,
-};
+use systemprompt::manifest::services::{MarketplaceConfig, PluginConfig, ServicesConfig};
+use systemprompt::marketplace::{CatalogContent, IGNORE_FILE, build_plugin_bundle};
+use systemprompt::models::plugin::{ComponentSource, PluginComponentRef, PluginHooksRef};
 
-// Why: the catalog loader wants an API URL for agent cards and managed MCP
-// entries; neither reaches the kit, so any syntactically valid URL will do.
 const PLACEHOLDER_API_URL: &str = "https://kit.invalid";
 const MCP_FILE: &str = ".mcp.json";
 const PLUGIN_MANIFEST: &str = ".claude-plugin/plugin.json";
 const SIDECAR: &str = ".claude-plugin/systemprompt.yaml";
 const MANIFEST: &str = ".claude-plugin/marketplace.json";
+const DEFAULT_IGNORE: &str = "\
+# Dev-only paths kept out of every client, in gitignore syntax.
+# Core already drops a skill-root README.md, any tests/, test/, fixtures/ or
+# __tests__/ directory, and any *.test.* or *.spec.* file; a `!` line here
+# re-includes one of those. A pattern with a `/` is anchored to this kit root.
+*.snap
+coverage/
+node_modules/
+__pycache__/
+.DS_Store
+";
 
 #[derive(Debug, Default)]
 pub struct ExportReport {
@@ -65,11 +76,8 @@ impl From<&PluginComponentRef> for ComponentRefOut {
     }
 }
 
-// Why: `schema: 1` and the sidecar's own key names, and nothing that
-// `marketplace.json` already carries — core's import refuses `id`, `name`,
-// `description`, `version`, `author`, `keywords`, `license`, `plugins` and
-// `skills` in a sidecar. No `access`: who reaches a kit is declared in this
-// repository's rules.yaml, never in the kit.
+// Why: core's import refuses any key `marketplace.json` already carries (`id`,
+// `name`, `version`, `plugins`, …) in a sidecar; `access` lives in rules.yaml.
 #[derive(Debug, Serialize)]
 struct MarketplaceSidecarOut {
     schema: u32,
@@ -79,7 +87,7 @@ struct MarketplaceSidecarOut {
 #[derive(Debug, Serialize)]
 struct MarketplaceSidecarBody {
     title: String,
-    visibility: systemprompt::models::services::MarketplaceVisibility,
+    visibility: systemprompt::manifest::services::MarketplaceVisibility,
     enabled: bool,
     mcp_servers: ComponentRefOut,
 }
@@ -173,11 +181,12 @@ pub fn export_kit(
     }
 
     write_marketplace_files(out, wanted, marketplace, &entries)?;
-    report.files += 2;
+    write(&out.join(IGNORE_FILE), DEFAULT_IGNORE.as_bytes())?;
+    report.files += 3;
     Ok(report)
 }
 
-// JSON: the marketplace.json plugin entries, Anthropic's outgoing shape.
+// JSON: outgoing fixed-shape
 fn write_marketplace_files(
     out: &Path,
     id: &str,
@@ -209,7 +218,7 @@ fn skill_id_of(rel: &str) -> Option<(String, String)> {
     (file == "SKILL.md").then(|| (kebab.replace('-', "_"), kebab.to_owned()))
 }
 
-// JSON: `plugin.json` is Anthropic's format; only its `version` is touched.
+// JSON: variable-shape plugin.json
 fn authored_version(manifest: &[u8], version: &str) -> Result<Vec<u8>> {
     let mut doc: serde_json::Value = serde_json::from_slice(manifest)?;
     if let Some(obj) = doc.as_object_mut() {
@@ -221,8 +230,7 @@ fn authored_version(manifest: &[u8], version: &str) -> Result<Vec<u8>> {
     Ok(serde_json::to_vec_pretty(&doc)?)
 }
 
-// JSON: `.claude-plugin/marketplace.json` is Anthropic's format — an outgoing
-// fixed shape with no Rust type of its own on this side.
+// JSON: outgoing fixed-shape
 fn manifest_entry(config: &PluginConfig) -> serde_json::Value {
     serde_json::json!({
         "name": config.id.as_str(),

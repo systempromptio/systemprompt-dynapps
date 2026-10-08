@@ -7,9 +7,12 @@
 //! else would make an operator's deliberate act evaporate the next time
 //! someone logged in.
 
-use systemprompt_web_admin::repositories::groups::members::{
-    delete_group_member, insert_group_member, list_group_ids_for_user, list_group_members,
-    list_source_ad_groups, list_unassigned_users, replace_directory_group_memberships,
+use systemprompt_web_admin_core::repositories::principal::group_membership::{
+    list_group_ids_for_user, list_source_ad_groups,
+};
+use systemprompt_web_admin_identity::repositories::groups::members::{
+    delete_group_member, insert_group_member, list_group_members, list_unassigned_users,
+    replace_directory_group_memberships,
 };
 
 use crate::fixtures::{insert_group, insert_user, unclaimed_email, unique, unique_group};

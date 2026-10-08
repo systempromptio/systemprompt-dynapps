@@ -46,25 +46,23 @@ fn request_context() -> RequestContext {
         TraceId::new("protocol-trace"),
         ContextId::try_new("00000000-0000-4000-8000-00000000a11c").expect("valid fixture context"),
         AgentName::try_new("protocol-agent").expect("valid fixture agent"),
+        Actor::user(UserId::new("00000000-0000-4000-8000-00000000a11d")),
     )
 }
 
 fn http_request_context() -> RequestContext {
-    request_context().with_actor(Actor::user(UserId::new(
-        "00000000-0000-4000-8000-00000000a11d",
-    )))
+    request_context()
 }
 
 fn server(pool: &Arc<PgPool>) -> (SystempromptServer, Arc<ArtifactIngest>) {
     let db_pool = db_pool(pool);
-    let ingest = Arc::new(ArtifactIngest::from_db(&db_pool, None).expect("artifact ingest"));
+    let ingest = Arc::new(ArtifactIngest::from_db(&db_pool, None));
     let server = SystempromptServer::new(
         db_pool,
         McpServerId::try_new("systemprompt").expect("valid service id"),
         deny_all_hook(),
         Arc::clone(&ingest),
-    )
-    .expect("server from live database");
+    );
     (server, ingest)
 }
 
@@ -102,7 +100,7 @@ fn install_services_profile() {
     });
 }
 
-fn mcp_request(body: serde_json::Value, session: Option<&str>) -> http::Request<Body> {
+fn mcp_request(body: &serde_json::Value, session: Option<&str>) -> http::Request<Body> {
     let mut request = http::Request::builder()
         .method(http::Method::POST)
         .uri("/mcp")
@@ -162,7 +160,7 @@ async fn first_sse_json(mut body: Body) -> serde_json::Value {
 
 async fn post_mcp(
     router: axum::Router,
-    body: serde_json::Value,
+    body: &serde_json::Value,
     session: Option<&str>,
 ) -> (http::StatusCode, http::HeaderMap, serde_json::Value) {
     let request = mcp_request(body, session);
@@ -183,7 +181,7 @@ async fn post_mcp(
 async fn notify_initialized(router: axum::Router, session: &str) {
     let response = router
         .oneshot(mcp_request(
-            serde_json::json!({
+            &serde_json::json!({
                 "jsonrpc": "2.0",
                 "method": "notifications/initialized"
             }),
@@ -198,7 +196,7 @@ async fn notify_initialized(router: axum::Router, session: &str) {
     );
 }
 
-async fn seed_artifact(ingest: &ArtifactIngest) -> systemprompt::identifiers::ArtifactId {
+async fn seed_artifact(ingest: &ArtifactIngest) -> ArtifactId {
     let artifact = CliArtifact::text(
         TextArtifact::new("protocol artifact body").with_title("Protocol artifact"),
     );
@@ -213,8 +211,8 @@ async fn seed_artifact(ingest: &ArtifactIngest) -> systemprompt::identifiers::Ar
     ingest
         .ingest(systemprompt::mcp::IngestRequest {
             result,
-            tool_name: "systemprompt".to_owned(),
-            server_name: Some("systemprompt".to_owned()),
+            tool_name: systemprompt::identifiers::McpToolName::new("systemprompt"),
+            server_name: Some(McpServerId::new("systemprompt")),
             ai_tool_call_id: None,
             mcp_execution_id: None,
             ctx: request_context(),
@@ -237,8 +235,7 @@ async fn protocol_client_initializes_discovers_resources_and_reads_stored_artifa
     let artifact_id = seed_artifact(&ingest).await;
     let (server_transport, client_transport) = tokio::io::duplex(16 * 1024);
     let server_task = tokio::spawn(async move {
-        server
-            .serve(server_transport)
+        Box::pin(server.serve(server_transport))
             .await
             .expect("server starts")
             .waiting()
@@ -286,7 +283,7 @@ async fn protocol_client_initializes_discovers_resources_and_reads_stored_artifa
     assert_eq!(uri, "ui://systemprompt/artifact-viewer");
     assert_eq!(mime_type.as_deref(), Some("text/html;profile=mcp-app"));
     assert!(text.contains("Artifact Viewer"));
-    let artifact_uri = artifact_resource_uri("systemprompt", &artifact_id);
+    let artifact_uri = artifact_resource_uri(&McpServerId::new("systemprompt"), &artifact_id);
     let artifact = client
         .read_resource(ReadResourceRequestParams::new(artifact_uri))
         .await
@@ -302,7 +299,8 @@ async fn protocol_client_initializes_discovers_resources_and_reads_stored_artifa
     };
     assert_eq!(mime_type.as_deref(), Some("text/html;profile=mcp-app"));
     assert!(text.contains("protocol artifact body"));
-    let missing_artifact_uri = artifact_resource_uri("systemprompt", &ArtifactId::generate());
+    let missing_artifact_uri =
+        artifact_resource_uri(&McpServerId::new("systemprompt"), &ArtifactId::generate());
     assert!(
         client
             .read_resource(ReadResourceRequestParams::new(missing_artifact_uri))
@@ -336,15 +334,14 @@ async fn unauthenticated_http_tool_call_reaches_oauth_and_creates_no_execution()
     let db_pool = db_pool(&db.pool);
     let router = systemprompt::mcp::create_router(
         server,
-        Arc::new(
-            systemprompt::mcp::repository::McpSessionRepository::new(&db_pool)
-                .expect("MCP session repository"),
-        ),
+        Arc::new(systemprompt::mcp::repository::McpSessionRepository::new(
+            &db_pool,
+        )),
         systemprompt::mcp::McpHttpConfig::default(),
     );
     let (status, headers, initialized) = post_mcp(
         router.clone(),
-        serde_json::json!({
+        &serde_json::json!({
             "jsonrpc": "2.0",
             "id": 1,
             "method": "initialize",
@@ -373,7 +370,7 @@ async fn unauthenticated_http_tool_call_reaches_oauth_and_creates_no_execution()
         .expect("count executions before denial");
     let (status, _, denied) = post_mcp(
         router,
-        serde_json::json!({
+        &serde_json::json!({
             "jsonrpc": "2.0",
             "id": 2,
             "method": "tools/call",

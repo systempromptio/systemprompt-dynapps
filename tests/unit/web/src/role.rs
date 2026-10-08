@@ -7,7 +7,7 @@
 //! minting a platform admin — are pinned here rather than in an integration
 //! test that could stop covering them.
 
-use systemprompt_web_admin::types::role::{
+use systemprompt_web_admin_core::types::role::{
     ROLES_CONSOLE, ROLES_MANAGE, ROLES_PLATFORM, Role, RoleChangeRefusal, authorize_role_change,
     has_any, parse_roles,
 };

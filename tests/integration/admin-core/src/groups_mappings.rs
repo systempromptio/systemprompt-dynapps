@@ -2,15 +2,17 @@
 //! `members::replace_directory_group_memberships` — what an AD group claim
 //! resolves to, and what a sign-in does to it.
 
-use systemprompt_web_admin::repositories::groups::crud::insert_group;
-use systemprompt_web_admin::repositories::groups::mappings::{
+use systemprompt_web_admin_core::repositories::principal::group_membership::{
+    list_group_ids_for_user, list_source_ad_groups,
+};
+use systemprompt_web_admin_core::types::groups::CreateGroupRequest;
+use systemprompt_web_admin_identity::repositories::groups::crud::insert_group;
+use systemprompt_web_admin_identity::repositories::groups::mappings::{
     delete_group_ad_mapping, insert_group_ad_mapping, list_group_ad_mappings,
 };
-use systemprompt_web_admin::repositories::groups::members::{
-    insert_group_member, list_group_ids_for_user, list_source_ad_groups,
-    replace_directory_group_memberships,
+use systemprompt_web_admin_identity::repositories::groups::members::{
+    insert_group_member, replace_directory_group_memberships,
 };
-use systemprompt_web_admin::types::groups::CreateGroupRequest;
 use systemprompt_web_shared::GroupId;
 
 use crate::fixtures::{insert_user, unclaimed_email, unique, unique_group};

@@ -17,7 +17,7 @@ Failing to try first — asking the user to connect, or surfacing a "not connect
 <!-- /global-rules-bootstrap -->
 # Research Prospect
 
-Salesforce only. **Web search and external research are out of scope** (blocked for this model) — do not call WebSearch/WebFetch or any Google Workspace tool. Say once in the output that company facts, news and funding signals were not researched externally.
+Use Salesforce for CRM facts and WebSearch/WebFetch for current company facts, news and funding signals. Cite external sources and keep those findings distinct from CRM records. Do not call Google Workspace tools for this workflow. If a web call fails, report the actual error; do not assume web access is blocked by the model or deployment.
 
 Resolve Account by name → ONE combined read → score fit → widget. All fields below are verified for this org; no grounding/describe call.
 
@@ -83,4 +83,5 @@ Opps (open/won/lost), contacts (name, title), recent Events
 1. …
 ## Suggested Next Step
 [e.g. "Owned by [Name] — coordinate first" | "Run draft-outreach to [Contact]" | "Poor fit — disqualify"]
-_External research (news, funding, leadership) not performed — out of scope._
+## External Research
+[Current news, funding and leadership findings with source URLs; clearly state any failed lookups.]

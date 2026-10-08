@@ -1,18 +1,11 @@
 //! Window resolution for the audit and usage-report pages.
 
-#![allow(
-    clippy::expect_used,
-    clippy::panic,
-    clippy::unwrap_used,
-    clippy::separated_literal_suffix,
-    reason = "test code: panics are the assertion mechanism"
-)]
 
 use chrono::{Datelike, Duration, Months, TimeZone, Utc};
-use systemprompt_web_admin::util::month_range::{
+use systemprompt_web_admin_core::util::month_range::{
     MonthQuery, list_month_options, parse_month_range,
 };
-use systemprompt_web_admin::util::time_range::{
+use systemprompt_web_admin_core::util::time_range::{
     TimeRangePreset, TimeRangeQuery, parse_time_range, preset_to_range,
 };
 
@@ -197,7 +190,7 @@ fn preset_to_range_of_custom_falls_back_to_a_24_hour_window() {
     );
 }
 
-fn month(key: &str) -> systemprompt_web_admin::util::month_range::MonthRange {
+fn month(key: &str) -> systemprompt_web_admin_core::util::month_range::MonthRange {
     parse_month_range(&MonthQuery {
         month: Some(key.to_owned()),
     })

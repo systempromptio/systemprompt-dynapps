@@ -8,36 +8,36 @@
 use chrono::{DateTime, TimeZone, Utc};
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
-use systemprompt_web_admin::repositories::scope::SubjectScope;
+use systemprompt_web_admin_core::repositories::scope::SubjectScope;
 
 // A window far enough in the past that no seeded row falls in it.
 #[must_use]
-pub fn ancient_window() -> (DateTime<Utc>, DateTime<Utc>) {
+pub(crate) fn ancient_window() -> (DateTime<Utc>, DateTime<Utc>) {
     (at(2001, 3, 1, 0), at(2001, 4, 1, 0))
 }
 
 #[must_use]
-pub fn at(year: i32, month: u32, day: u32, hour: u32) -> DateTime<Utc> {
+pub(crate) fn at(year: i32, month: u32, day: u32, hour: u32) -> DateTime<Utc> {
     Utc.with_ymd_and_hms(year, month, day, hour, 0, 0)
         .single()
         .expect("fixed timestamp is unambiguous")
 }
 
 #[must_use]
-pub fn unique(prefix: &str) -> String {
+pub(crate) fn unique(prefix: &str) -> String {
     format!("{prefix}-{}", uuid::Uuid::new_v4().simple())
 }
 
 #[must_use]
-pub fn user_id(raw: &str) -> UserId {
+pub(crate) fn user_id(raw: &str) -> UserId {
     UserId::new(raw.to_owned())
 }
 
-pub async fn insert_user(pool: &PgPool, id: &str) {
+pub(crate) async fn insert_user(pool: &PgPool, id: &str) {
     insert_user_with_roles(pool, id, &["user".to_owned()]).await;
 }
 
-pub async fn insert_user_with_roles(pool: &PgPool, id: &str, roles: &[String]) {
+pub(crate) async fn insert_user_with_roles(pool: &PgPool, id: &str, roles: &[String]) {
     static SERVICES: std::sync::Once = std::sync::Once::new();
     SERVICES.call_once(|| {
         if systemprompt::loader::ServicesBootstrap::is_initialized() {
@@ -66,7 +66,7 @@ pub async fn insert_user_with_roles(pool: &PgPool, id: &str, roles: &[String]) {
 // Put `user` in `project` (creating the project), or, with `None`, take them
 // out of every project. The customer report scopes by resolved user id now,
 // so membership is what the fixture has to establish.
-pub async fn set_project(pool: &PgPool, user: &str, project: Option<&str>) {
+pub(crate) async fn set_project(pool: &PgPool, user: &str, project: Option<&str>) {
     sqlx::query("DELETE FROM project_members WHERE user_id = $1")
         .bind(user)
         .execute(pool)
@@ -95,7 +95,7 @@ pub async fn set_project(pool: &PgPool, user: &str, project: Option<&str>) {
 }
 
 // The users in one project, as a bound scope.
-pub async fn project_scope(pool: &PgPool, project: &str) -> SubjectScope {
+pub(crate) async fn project_scope(pool: &PgPool, project: &str) -> SubjectScope {
     let ids: Vec<String> =
         sqlx::query_scalar("SELECT user_id FROM project_members WHERE project_id = $1")
             .bind(project)
@@ -107,7 +107,7 @@ pub async fn project_scope(pool: &PgPool, project: &str) -> SubjectScope {
 
 // One `ai_requests` row. Defaults describe a completed, costed request; each
 // test overrides only the columns its assertion reads.
-pub struct RequestSeed<'a> {
+pub(crate) struct RequestSeed<'a> {
     pub id: &'a str,
     pub user_id: &'a str,
     pub provider: Option<&'a str>,
@@ -127,7 +127,7 @@ pub struct RequestSeed<'a> {
 
 impl<'a> RequestSeed<'a> {
     #[must_use]
-    pub fn new(id: &'a str, user_id: &'a str, created_at: DateTime<Utc>) -> Self {
+    pub(crate) fn new(id: &'a str, user_id: &'a str, created_at: DateTime<Utc>) -> Self {
         Self {
             id,
             user_id,
@@ -145,7 +145,7 @@ impl<'a> RequestSeed<'a> {
     }
 }
 
-pub async fn insert_request(pool: &PgPool, seed: &RequestSeed<'_>) {
+pub(crate) async fn insert_request(pool: &PgPool, seed: &RequestSeed<'_>) {
     sqlx::query(
         "INSERT INTO ai_requests
             (id, request_id, user_id, context_id, provider, model, input_tokens, output_tokens,
@@ -175,7 +175,12 @@ pub async fn insert_request(pool: &PgPool, seed: &RequestSeed<'_>) {
 }
 
 // Registers the catalog row `access_control_rules` foreign-keys against.
-pub async fn insert_acl_entity(pool: &PgPool, entity_type: &str, entity_id: &str, default: bool) {
+pub(crate) async fn insert_acl_entity(
+    pool: &PgPool,
+    entity_type: &str,
+    entity_id: &str,
+    default: bool,
+) {
     sqlx::query(
         "INSERT INTO access_control_entities (entity_type, entity_id, default_included, source)
          VALUES ($1, $2, $3, 'test')
@@ -193,7 +198,7 @@ pub async fn insert_acl_entity(pool: &PgPool, entity_type: &str, entity_id: &str
     clippy::too_many_arguments,
     reason = "one parameter per column of the row being seeded; a params struct would churn 18 call sites to say the same thing"
 )]
-pub async fn insert_env_var(
+pub(crate) async fn insert_env_var(
     pool: &PgPool,
     user: &str,
     plugin: &str,
@@ -218,7 +223,7 @@ pub async fn insert_env_var(
     id
 }
 
-pub async fn count_rows(pool: &PgPool, sql: &'static str, arg: &str) -> i64 {
+pub(crate) async fn count_rows(pool: &PgPool, sql: &'static str, arg: &str) -> i64 {
     sqlx::query_scalar::<_, i64>(sql)
         .bind(arg)
         .fetch_one(pool)
@@ -227,7 +232,7 @@ pub async fn count_rows(pool: &PgPool, sql: &'static str, arg: &str) -> i64 {
 }
 
 // Writes `services/<rel>` under `dir`, creating parents.
-pub fn write_services_file(dir: &std::path::Path, rel: &str, contents: &str) {
+pub(crate) fn write_services_file(dir: &std::path::Path, rel: &str, contents: &str) {
     let path = dir.join(rel);
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent).expect("create services subdirectory");

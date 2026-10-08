@@ -12,6 +12,8 @@
 //! Every input is a flat struct: `String` fields default to `""` and integer
 //! fields to a number, never `Option`, because schemars renders an `Option`
 //! as a type list and Gemini refuses a function declaration that holds one.
+//! A page size above `MAX_PAGE` is clamped and reported rather than refused,
+//! since a refusal is one more error the model has to reason around.
 
 mod activity;
 mod conversation_audit;
@@ -30,9 +32,8 @@ pub use request_log::RequestLogHandler;
 pub use usage_by_user::UsageByUserHandler;
 pub use users::UsersHandler;
 
-// Why: the argv each tool builds is its contract with the CLI; exposed behind
-// `#[doc(hidden)]` so the external test workspace can pin it without a
-// binary in the path. Not part of the public API.
+// Why: `#[doc(hidden)]` — each tool's argv is its contract with the CLI, pinned
+// by the external test workspace without a binary in the path.
 #[doc(hidden)]
 pub use activity::{conversation_list_command, user_activity_command, window_bound};
 #[doc(hidden)]
@@ -48,20 +49,16 @@ use crate::cli::{self, CliLocation};
 use crate::reports::{failure, invalid, normalize_cli, with_dollar_siblings};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-// JSON: rows are the CLI's own row objects, heterogeneous by command.
+// JSON: variable-shape CLI rows
 use serde_json::Value;
 use std::collections::BTreeMap;
 use systemprompt::mcp::McpOutputSchema;
 
-// Why: a request for more than this is clamped, not refused, and the output
-// says so — a refusal is one more error the model has to reason around.
 pub const MAX_PAGE: u16 = 100;
 
-// Why: rows are ~1 KB of JSON each and a host folds the whole result into the
-// model's context (pretty-printed for clients without structured content),
-// so a row count alone is no bound: 200 wide request rows filled most of a
-// 200k-token window. Past this serialized size trailing rows are dropped and
-// the page ends early with a cursor to the rest.
+// Why: an MCP host folds the whole result into the model's context window, so
+// a row count is no bound (200 wide request rows filled most of 200k tokens);
+// past this serialized size trailing rows drop and the page ends with a cursor.
 pub const MAX_OUTPUT_BYTES: usize = 48 * 1024;
 
 const MICRODOLLARS_SUFFIX: &str = "_microdollars";
@@ -75,9 +72,6 @@ pub struct PagedOutput {
     pub rows: Vec<BTreeMap<String, Value>>,
     pub returned: usize,
     pub truncated: bool,
-    // Why: a cursor rather than a page number — the caller passes it back as
-    // `cursor` (or as `offset` for offset-paged tools); empty means the tool
-    // knows of no later page.
     pub next_cursor: String,
     pub hint: String,
 }
@@ -109,8 +103,6 @@ impl PagedOutput {
         }
     }
 
-    // Why: a page must fit a model's context whatever its row width, so
-    // trailing rows are dropped until the serialized output fits.
     pub fn fit_to_budget(&mut self, max_bytes: usize) -> usize {
         let received = self.rows.len();
         while !self.rows.is_empty() && self.wire_bytes() > max_bytes {
@@ -152,9 +144,6 @@ impl McpOutputSchema for PagedOutput {
     }
 }
 
-// Why: `with_dollar_siblings` adds `<x>_usd` beside every `<x>_microdollars`
-// and the tools tell the model to quote the dollars, so the raw integer is
-// only width.
 fn without_raw_costs(mut row: BTreeMap<String, Value>) -> BTreeMap<String, Value> {
     let raw: Vec<String> = row
         .keys()
@@ -178,20 +167,25 @@ pub(crate) fn page_limit(requested: u16, default: u16) -> u16 {
     }
 }
 
-// Why: a value with whitespace or a leading dash would become a second flag
-// once the command string is split again; refusing it keeps one input field
-// equal to one argv token.
 pub(crate) fn flag_value(name: &str, value: &str) -> Result<String, rmcp::ErrorData> {
     let value = value.trim();
     if value.is_empty() {
         return Ok(String::new());
     }
-    if value.chars().any(|c| c.is_whitespace() || c.is_control()) || value.starts_with('-') {
+    if !is_single_argv_token(value) {
         return Err(invalid(format!(
             "`{name}` must be a single value without spaces (got {value:?})"
         )));
     }
     Ok(shell_words::quote(value).into_owned())
+}
+
+fn is_single_argv_token(value: &str) -> bool {
+    !value.starts_with('-') && !value.chars().any(|c| c.is_whitespace() || c.is_control())
+}
+
+fn is_empty_list_message(value: &Value) -> bool {
+    value.get("lines").is_some()
 }
 
 pub(crate) async fn read_rows(
@@ -200,9 +194,7 @@ pub(crate) async fn read_rows(
     command: &str,
 ) -> Result<Vec<Value>, rmcp::ErrorData> {
     let value = read_value(location, token, command).await?;
-    // Why: an empty list is a message artifact ("No AI requests found"), and
-    // zero rows is the right answer to it, not an envelope error.
-    if value.get("lines").is_some() {
+    if is_empty_list_message(&value) {
         return Ok(Vec::new());
     }
     Ok(with_dollar_siblings(normalize_cli(&value)?))
@@ -230,9 +222,6 @@ pub(crate) async fn read_value(
         .map_err(|_error| failure(format!("`{command}` returned malformed JSON")))
 }
 
-// Why: `card_value` splits an object into heading/content sections for the
-// terminal; folding them back gives the caller `message_count`, not a section
-// whose heading is `message_count`.
 pub(crate) fn card_object(value: &Value) -> BTreeMap<String, Value> {
     value
         .get("sections")

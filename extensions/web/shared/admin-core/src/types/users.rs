@@ -1,0 +1,211 @@
+//! User value types shared across the admin pages.
+
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+use sqlx::FromRow;
+use systemprompt::identifiers::{Email, PluginId, SessionId, SkillId, UserId};
+use systemprompt_web_shared::{GroupId, ProjectId};
+
+use super::super::activity;
+
+#[derive(Debug, Serialize, Deserialize, FromRow)]
+pub struct UserSummary {
+    pub user_id: UserId,
+    pub display_name: Option<String>,
+    pub email: Option<Email>,
+    pub roles: Vec<String>,
+    pub is_active: bool,
+    pub last_active: Option<DateTime<Utc>>,
+    pub total_events: i64,
+    pub last_tool: Option<String>,
+    pub custom_skills_count: i64,
+    pub preferred_client: Option<String>,
+    pub prompts: i64,
+    pub sessions: i64,
+    pub bytes: i64,
+    pub logins: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserDetail {
+    pub user_id: UserId,
+    pub display_name: Option<String>,
+    pub email: Option<Email>,
+    pub roles: Vec<String>,
+    pub is_active: bool,
+    pub last_active: Option<DateTime<Utc>>,
+    pub total_events: i64,
+    pub custom_skills_count: i64,
+    pub preferred_client: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub recent_activity: Vec<activity::ActivityTimelineEvent>,
+    pub activity_summary: Vec<activity::ActivityCategorySummary>,
+    pub sessions: Vec<UserSession>,
+    pub event_type_breakdown: Vec<EventTypeCount>,
+    pub top_tools: Vec<ToolUsageCount>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct UserSession {
+    pub session_id: SessionId,
+    pub started_at: Option<DateTime<Utc>>,
+    pub total_events: i64,
+    pub tool_uses: i64,
+    pub prompts: i64,
+    pub errors: i64,
+    pub content_input_bytes: i64,
+    pub content_output_bytes: i64,
+    pub subagent_spawns: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct EventTypeCount {
+    pub event_type: String,
+    pub count: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct ToolUsageCount {
+    pub tool_name: String,
+    pub count: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize, FromRow)]
+pub struct UserUsageEvent {
+    pub id: String,
+    pub event_type: String,
+    pub tool_name: Option<String>,
+    pub created_at: DateTime<Utc>,
+    // JSON: the usage_events.metadata jsonb column is caller-defined per event type
+    pub metadata: serde_json::Value,
+}
+
+#[derive(Debug, Clone)]
+pub struct UserBasicInfo {
+    pub display_name: String,
+    pub email: String,
+    pub roles: Vec<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct CookieSession {
+    pub user_id: UserId,
+    pub username: String,
+    pub email: Email,
+    pub session_id: Option<SessionId>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct ContentBytes {
+    pub input: i64,
+    pub output: i64,
+}
+
+#[derive(Debug, Clone)]
+pub struct DetectedEntity {
+    pub entity_type: &'static str,
+    pub entity_name: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct JwtIdentity {
+    pub user_id: UserId,
+    pub plugin_id: PluginId,
+}
+
+#[derive(Debug, Clone)]
+pub struct UserTier {
+    pub plan_name: String,
+    pub status: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CreateUserRequest {
+    pub user_id: UserId,
+    pub display_name: String,
+    pub email: Email,
+    #[serde(default)]
+    pub roles: Vec<String>,
+    #[serde(default)]
+    pub status: Option<String>,
+    #[serde(default)]
+    pub group_ids: Vec<GroupId>,
+    #[serde(default)]
+    pub project_ids: Vec<ProjectId>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateUserRequest {
+    pub display_name: Option<String>,
+    pub email: Option<String>,
+    pub is_active: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct SkillSecret {
+    pub id: String,
+    pub skill_id: SkillId,
+    pub var_name: String,
+    pub var_value: String,
+    pub is_secret: bool,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpsertSkillSecretRequest {
+    pub var_name: String,
+    pub var_value: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UsersQuery {
+    pub group: Option<String>,
+    pub project: Option<String>,
+    pub role: Option<String>,
+}
+
+/// The whole role set a user should end up with.
+///
+/// A PUT, not a patch: the caller states the target set and the server
+/// decides whether it may be reached, which is the only form
+/// [`crate::types::authorize_role_change`] can rule on.
+#[derive(Debug, Clone, Deserialize)]
+pub struct SetUserRolesRequest {
+    pub roles: Vec<String>,
+    #[serde(default)]
+    pub valid_until: Option<DateTime<Utc>>,
+}
+
+/// What a user holds, split by where it came from. `roles` is the effective
+/// set on `users.roles`; `directory_roles` is what their AD groups project,
+/// and is what the editor must refuse to revoke.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserRolesResponse {
+    pub roles: Vec<String>,
+    pub manual_roles: Vec<String>,
+    pub directory_roles: Vec<String>,
+    pub valid_until: Option<DateTime<Utc>>,
+}
+
+/// One row of the `/admin/overview/identity` users table.
+///
+/// Aggregates `ai_requests` (sessions, contexts, tokens, cost, models, last
+/// activity) and `governance_decisions` (denies, secret breaches, scope
+/// violations) per user.
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct UserIdentityRow {
+    pub user_id: UserId,
+    pub display_name: Option<String>,
+    pub email: Option<String>,
+    pub group_ids: Vec<String>,
+    pub is_active: bool,
+    pub last_active: Option<DateTime<Utc>>,
+    pub requests: i64,
+    pub sessions: i64,
+    pub contexts: i64,
+    pub models: i64,
+    pub tokens: i64,
+    pub cost_microdollars: i64,
+    pub denies: i64,
+    pub secret_breaches: i64,
+    pub scope_violations: i64,
+}

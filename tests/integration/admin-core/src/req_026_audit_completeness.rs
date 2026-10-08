@@ -9,7 +9,7 @@
 //! and directly from the audit table, asserting the actor and lineage columns
 //! the view does not project are populated rather than null.
 
-use systemprompt_web_admin::repositories::analytics::requests::{
+use systemprompt_web_admin_analytics::repositories::analytics::requests::{
     RequestFilter, RequestPage, RequestSortSpec, list_requests_paged,
 };
 

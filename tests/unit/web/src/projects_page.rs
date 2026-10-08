@@ -128,7 +128,7 @@ fn every_table_carries_a_caption() {
 fn assert_guarded(source: &str, control: &str, expected: usize) {
     let needle = format!("data-action=\"{control}\"");
     let mut depth: i32 = 0;
-    let mut guarded = 0_usize;
+    let mut guarded = 0usize;
     for line in source.lines() {
         let opens = line.matches("{{#if ").count();
         let closes = line.matches("{{/if}}").count();

@@ -83,7 +83,10 @@ fn javascript_sources_hang_off_the_storage_js_root_and_publish_under_js() {
 fn the_full_manifest_has_unique_destinations_and_skips_client_downloads() {
     let assets = web_assets(&FakePaths::new());
 
-    let mut destinations: Vec<&str> = assets.iter().map(|a| a.destination()).collect();
+    let mut destinations: Vec<&str> = assets
+        .iter()
+        .map(systemprompt::extension::AssetDefinition::destination)
+        .collect();
     destinations.sort_unstable();
     let count = destinations.len();
     destinations.dedup();

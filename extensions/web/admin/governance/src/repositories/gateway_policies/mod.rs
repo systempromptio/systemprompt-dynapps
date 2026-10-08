@@ -1,0 +1,26 @@
+//! The gateway policy plane: `services/gateway/policies.yaml` projected into
+//! `ai_gateway_policies`, and the console editor over the same table.
+//!
+//! Core re-reads `ai_gateway_policies` on every inference request (a
+//! sixty-second cache), so a row written here is live without a restart —
+//! this is the one governance plane the console can change in place. The
+//! declaration stays the file: [`declared`] reads it, [`drift`] compares it
+//! with the rows, [`export`] renders the rows back as the file, and
+//! [`sync::gateway_policies`](crate::repositories::sync_planes::gateway_policies)
+//! is the plane the sync page drives.
+//!
+//! Calendar-month quota windows are an extension-side interim over core's
+//! fixed-length windows: [`month_window`] holds the arithmetic and
+//! [`month_window_db`] the daily rewrite. Read that module head before
+//! touching a window longer than 31 days.
+
+pub mod declared;
+pub mod drift;
+pub mod export;
+pub mod form;
+pub mod form_error;
+pub mod month_window;
+pub mod month_window_db;
+pub mod rows;
+pub mod unedited;
+pub mod usage;

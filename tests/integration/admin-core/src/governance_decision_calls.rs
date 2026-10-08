@@ -10,12 +10,12 @@
 
 use systemprompt::identifiers::UserId;
 
-use systemprompt_web_admin::repositories::governance::decision_calls::list_decision_calls_paged;
-use systemprompt_web_admin::repositories::governance::decision_log::{
+use systemprompt_web_admin_core::repositories::scope::SubjectScope;
+use systemprompt_web_admin_governance::repositories::governance::decision_calls::list_decision_calls_paged;
+use systemprompt_web_admin_governance::repositories::governance::decision_log::{
     DecisionFilter, DecisionSort,
 };
-use systemprompt_web_admin::repositories::governance::{DecisionPage, PageSlice};
-use systemprompt_web_admin::repositories::scope::SubjectScope;
+use systemprompt_web_admin_governance::repositories::governance::{DecisionPage, PageSlice};
 
 use crate::fixtures::{
     DecisionSpec, insert_decision, insert_user, unclaimed_email, unique, wide_window,
@@ -34,9 +34,9 @@ async fn calls(
     user: &UserId,
     filter: &DecisionFilter,
 ) -> (
-    Vec<systemprompt_web_admin::repositories::governance::decision_calls::DecisionCallRow>,
+    Vec<systemprompt_web_admin_governance::repositories::governance::decision_calls::DecisionCallRow>,
     i64,
-) {
+){
     list_decision_calls_paged(
         &db.pool,
         wide_window(),
@@ -275,7 +275,7 @@ async fn attention_groups_recurrences_but_excludes_entropy_observations() {
     let (rows, total) = calls(&db, &user, &filter).await;
     assert_eq!(total, 1);
     assert_eq!(rows[0].eval_count, 3);
-    let stats = systemprompt_web_admin::repositories::governance::decision_log::get_decision_stats(
+    let stats = systemprompt_web_admin_governance::repositories::governance::decision_log::get_decision_stats(
         &db.pool,
         wide_window(),
         &only(&user),

@@ -22,8 +22,6 @@ pub fn extension_jobs() -> Vec<Arc<dyn Job>> {
     jobs
 }
 
-// Why: the inventory yields `&'static dyn Job` but the `Extension` trait
-// wants owned `Arc<dyn Job>`; this zero-cost wrapper bridges the two.
 struct StaticJob(&'static dyn Job);
 
 #[async_trait::async_trait]

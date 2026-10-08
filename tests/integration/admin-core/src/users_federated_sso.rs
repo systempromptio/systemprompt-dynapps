@@ -6,19 +6,21 @@
 //! the set and a manual grant survives it, so a sign-in that demotes someone
 //! in AD must not also erase what an admin gave them by hand.
 
-use systemprompt_web_admin::repositories::users::federated::{
+use systemprompt_web_admin_identity::repositories::users::federated::{
     FederatedClaims, LinkOutcome, delete_federated_identities_for_issuer, link_identity_to_user,
     resolve_federated_user,
 };
 
-use systemprompt_web_admin::repositories::users::roles::{list_manual_roles, set_manual_roles};
+use systemprompt_web_admin_identity::repositories::users::roles::{
+    list_manual_roles, set_manual_roles,
+};
 
 use crate::fixtures::{
     insert_federated_identity, insert_user, insert_user_full, unclaimed_email, unique,
 };
 use crate::tempdb::TempDb;
 
-pub const ISSUER: &str = "https://login.adfs.test/adfs";
+pub(crate) const ISSUER: &str = "https://login.adfs.test/adfs";
 
 const USER_ROLE: &[String] = &[];
 

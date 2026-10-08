@@ -20,6 +20,8 @@
     opacity: 0;
     visibility: hidden;
     transform: translateY(-4px);
+    transition: opacity var(--sp-duration-fast) var(--sp-ease-in-out),
+                visibility var(--sp-duration-fast) var(--sp-ease-in-out),
                 transform var(--sp-duration-fast) var(--sp-ease-in-out);
 }
 

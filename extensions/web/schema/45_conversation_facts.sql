@@ -406,7 +406,7 @@ END $$;
 CREATE OR REPLACE FUNCTION refresh_conversation_facts_between(from_at TIMESTAMPTZ, to_at TIMESTAMPTZ)
 RETURNS BIGINT LANGUAGE sql AS $$
 SELECT refresh_conversation_facts(ARRAY(
-    SELECT DISTINCT context_id FROM (
+    SELECT DISTINCT canonical_conversation_context(context_id) FROM (
         SELECT r.context_id FROM ai_requests r
         WHERE (r.updated_at >= from_at AND r.updated_at < to_at)
            OR (r.created_at >= from_at AND r.created_at < to_at)

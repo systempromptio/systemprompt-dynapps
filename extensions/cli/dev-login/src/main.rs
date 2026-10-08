@@ -12,10 +12,10 @@ use clap::Parser;
 use systemprompt::config::{ProfileBootstrap, SecretsBootstrap, try_init_config};
 use systemprompt::logging::CliService;
 use systemprompt::system::AppContext;
-use systemprompt_web_admin::repositories::dev_login::{
+use systemprompt_web_admin_identity::repositories::dev_login::{
     DEV_LOGIN_CODE_TTL_SECONDS, find_active_user_id_by_login, insert_dev_login_code,
 };
-use systemprompt_web_admin::{dev_login_allowed, dev_login_url};
+use systemprompt_web_admin_identity::{dev_login_allowed, dev_login_url};
 
 #[derive(Debug, Parser)]
 #[command(
@@ -53,10 +53,7 @@ async fn main() -> Result<()> {
     let ctx = AppContext::new()
         .await
         .context("Failed to initialize application context")?;
-    let pool = ctx
-        .db_pool()
-        .pool_arc()
-        .context("dev login needs a Postgres pool")?;
+    let pool = ctx.db_pool().pool();
 
     let Some(user_id) = find_active_user_id_by_login(&pool, &cli.user).await? else {
         bail!("no active user matches '{}'", cli.user);

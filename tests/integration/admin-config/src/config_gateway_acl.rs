@@ -3,7 +3,7 @@
 
 use systemprompt::identifiers::RouteId;
 use systemprompt_security::authz::{Access, EntityKind, RuleType};
-use systemprompt_web_admin::repositories::config::gateway_acl;
+use systemprompt_web_admin_governance::repositories::config::gateway_acl;
 
 use crate::fixtures::{count_rows, insert_acl_entity, unique};
 use crate::tempdb::TempDb;

@@ -1,7 +1,7 @@
 //! The `admin_usage_daily_rollups` recompute — idempotent by design, so
 //! running it twice must not double anything.
 
-use systemprompt_web_admin::repositories::dashboard::usage_rollups;
+use systemprompt_web_admin_analytics::repositories::dashboard::usage_rollups;
 
 use crate::fixtures::{RequestSpec, insert_request, insert_user, unclaimed_email, unique};
 use crate::tempdb::TempDb;

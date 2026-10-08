@@ -2,7 +2,7 @@
 //! a [`Scope`] resolves to without touching the database.
 
 use systemprompt::identifiers::UserId;
-use systemprompt_web_admin::repositories::scope::{
+use systemprompt_web_admin_core::repositories::scope::{
     Attribution, Scope, ScopeKind, ScopeQuery, ScopeTarget,
 };
 use systemprompt_web_shared::{GroupId, ProjectId};

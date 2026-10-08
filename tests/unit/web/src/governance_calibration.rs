@@ -1,9 +1,7 @@
-use systemprompt::ai::SafetyScanner;
+use systemprompt::gateway::SafetyScanner;
 use systemprompt::identifiers::{CallId, ModelId, SessionId, UserId};
-use systemprompt::models::wire::canonical::{
-    CanonicalContent, CanonicalMessage, CanonicalRequest, Role,
-};
-use systemprompt::models::wire::inspect::{SurfaceBudget, string_leaves};
+use systemprompt::wire::canonical::{CanonicalContent, CanonicalMessage, CanonicalRequest, Role};
+use systemprompt::wire::inspect::{SurfaceBudget, string_leaves};
 use systemprompt_security::authz::types::Decision;
 use systemprompt_security::policy::secrets::redact_spans;
 use systemprompt_security::policy::types::AccessScope;
@@ -11,7 +9,7 @@ use systemprompt_security::policy::{
     AgentScope, GovernanceConfig, GovernanceEngine, GovernedInput, GovernedTarget, McpToolInput,
     PolicyContext,
 };
-use systemprompt_web_admin::gateway_safety::PiiScanner;
+use systemprompt_web_admin_governance::gateway_safety::PiiScanner;
 
 fn engine(mode: &str) -> GovernanceEngine {
     GovernanceEngine::from_config(
@@ -188,8 +186,17 @@ async fn historical_pii_is_separate_in_canonical_and_forwarded_requests() {
         if forwarded {
             request.forwarded_surface = string_leaves(br#"{"messages":[{"role":"user","content":"Phone +442079460100"},{"role":"user","content":"Summarize"}]}"#, SurfaceBudget::default());
         }
-        assert!(PiiScanner::new().scan_request(&request).await.is_empty());
-        let history = PiiScanner::new().scan_request_history(&request).await;
+        assert!(
+            PiiScanner::new()
+                .scan_request(&request)
+                .await
+                .expect("scanner succeeds")
+                .is_empty()
+        );
+        let history = PiiScanner::new()
+            .scan_request_history(&request)
+            .await
+            .expect("scanner succeeds");
         assert_eq!(history.len(), 1);
         assert_eq!(history[0].phase, "request_history");
     }

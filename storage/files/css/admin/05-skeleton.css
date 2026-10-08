@@ -12,6 +12,18 @@
     margin-block: var(--sp-space-1);
 }
 
+/* A veil keeps the element's box while its content is being replaced: the
+   text goes transparent and children invisible, so the shimmer plays over the
+   exact footprint the fresh value will occupy and nothing on the page jumps. */
+.sp-skeleton--veil {
+    color: transparent;
+    user-select: none;
+}
+
+.sp-skeleton--veil > * {
+    visibility: hidden;
+}
+
 
 @keyframes sp-shimmer {
     to { background-position: -200% 0; }

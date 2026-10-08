@@ -1,6 +1,6 @@
 //! Regression coverage for native correlation and malformed hook identity.
 use systemprompt::identifiers::ClientSessionId;
-use systemprompt_web_admin::types::webhook::validate_session_key;
+use systemprompt_web_admin_core::types::webhook::validate_session_key;
 
 #[test]
 fn native_json_session_is_preserved() {

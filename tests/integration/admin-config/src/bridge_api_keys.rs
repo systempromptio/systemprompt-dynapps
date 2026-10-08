@@ -2,8 +2,8 @@
 //! and revocation.
 
 use chrono::{Duration, Utc};
-use systemprompt_web_admin::repositories::bridge::api_keys::API_KEY_PREFIX;
-use systemprompt_web_admin::repositories::bridge::{
+use systemprompt_web_admin_core::repositories::bridge::api_keys::API_KEY_PREFIX;
+use systemprompt_web_admin_core::repositories::bridge::{
     BridgeRepoError, issue_api_key, list_api_keys_for_user, revoke_api_key,
 };
 

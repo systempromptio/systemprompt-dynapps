@@ -69,7 +69,7 @@ one is not.
 4. Add `<id>` to `IDENTITY_SERVERS` in
    `tests/unit/web/src/downstream_credential_configs.rs`.
 
-Code: `extensions/web/admin/src/services/identity_token.rs` (claims and
-signing), `extensions/web/admin/src/handlers/connector_auth/identity.rs`
+Code: `extensions/web/admin/platform/src/services/identity_token.rs` (claims and
+signing), `extensions/web/admin/platform/src/handlers/connector_auth/identity.rs`
 (accessor). Contract tests:
 `tests/contract/admin/src/identity_token_contract.rs`.

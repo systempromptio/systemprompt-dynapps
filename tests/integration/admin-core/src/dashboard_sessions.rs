@@ -2,13 +2,18 @@
 //! hook endpoints depend on, plus the row builders the dashboard suite shares.
 
 use systemprompt::identifiers::SessionId;
-use systemprompt_web_admin::repositories::dashboard::hooks_track;
+use systemprompt_web_admin_core::repositories::ingestion::hooks_track;
 
 use crate::fixtures::{EventSpec, insert_event, insert_user, unclaimed_email, unique};
 use crate::tempdb::TempDb;
 
 
-pub async fn insert_mcp_execution(pool: &sqlx::PgPool, user: &str, tool: &str, status: &str) {
+pub(crate) async fn insert_mcp_execution(
+    pool: &sqlx::PgPool,
+    user: &str,
+    tool: &str,
+    status: &str,
+) {
     sqlx::query(
         "INSERT INTO mcp_tool_executions
              (mcp_execution_id, tool_name, server_name, started_at, input, status, user_id)

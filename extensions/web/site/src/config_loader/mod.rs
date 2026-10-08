@@ -103,12 +103,8 @@ fn load_branding_config() -> Result<Option<BrandingConfig>, ConfigError> {
     Ok(Some(branding_config))
 }
 
-// Why: Both router builds and the HTTP contract suite need the engine
-// configured the same way; the templates read `branding.*` under strict mode,
-// so an engine built without it fails to render every page that has one.
-//
-// Cached: the router build and each prerender context ask for branding
-// independently, and re-reading theme.yaml per caller is pure waste.
+// Why: Handlebars strict mode fails every page reading `branding.*` when an
+// engine is built without it, so all builders share this one cached load.
 #[must_use]
 pub fn branding_config() -> Option<BrandingConfig> {
     log_and_discard_err(
@@ -122,10 +118,11 @@ static NAVIGATION_CONFIG: OnceLock<Result<Option<Arc<NavigationConfig>>, String>
 static HOMEPAGE_CONFIG: OnceLock<Result<Option<Arc<HomepageConfig>>, String>> = OnceLock::new();
 static SKILLS_PAGE_CONFIG: OnceLock<Result<Option<Arc<SkillsPageConfig>>, String>> =
     OnceLock::new();
-static ADFS_CONFIG: OnceLock<Result<Option<Arc<systemprompt_web_admin::AdfsConfig>>, String>> =
-    OnceLock::new();
+static ADFS_CONFIG: OnceLock<
+    Result<Option<Arc<systemprompt_web_admin_identity::AdfsConfig>>, String>,
+> = OnceLock::new();
 static SALESFORCE_CONFIG: OnceLock<
-    Result<Option<Arc<systemprompt_web_admin::SalesforceConfig>>, String>,
+    Result<Option<Arc<systemprompt_web_admin_platform::SalesforceConfig>>, String>,
 > = OnceLock::new();
 
 #[must_use]
@@ -156,12 +153,12 @@ pub fn skills_page_config() -> Option<Arc<SkillsPageConfig>> {
 }
 
 #[must_use]
-pub fn adfs_config() -> Option<Arc<systemprompt_web_admin::AdfsConfig>> {
+pub fn adfs_config() -> Option<Arc<systemprompt_web_admin_identity::AdfsConfig>> {
     log_and_discard_err(&ADFS_CONFIG, load_adfs_config, "ADFS config error")
 }
 
 #[must_use]
-pub fn salesforce_config() -> Option<Arc<systemprompt_web_admin::SalesforceConfig>> {
+pub fn salesforce_config() -> Option<Arc<systemprompt_web_admin_platform::SalesforceConfig>> {
     log_and_discard_err(
         &SALESFORCE_CONFIG,
         load_salesforce_config,

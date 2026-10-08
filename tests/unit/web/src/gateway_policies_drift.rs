@@ -3,14 +3,16 @@
 //! the loader's inverse and always declares the sentinel.
 
 use chrono::{NaiveDate, Utc};
-use systemprompt::ai::{GatewayPolicyConfig, QuotaMode, SafetyMode};
-use systemprompt_web_admin::repositories::gateway_policies::declared::parse_declared_policies;
-use systemprompt_web_admin::repositories::gateway_policies::drift::compute_policy_drift;
-use systemprompt_web_admin::repositories::gateway_policies::export::render_policies_export;
-use systemprompt_web_admin::repositories::gateway_policies::month_window::{
+use systemprompt::gateway::{GatewayPolicyConfig, QuotaMode, SafetyMode};
+use systemprompt_web_admin_governance::repositories::gateway_policies::declared::parse_declared_policies;
+use systemprompt_web_admin_governance::repositories::gateway_policies::drift::compute_policy_drift;
+use systemprompt_web_admin_governance::repositories::gateway_policies::export::render_policies_export;
+use systemprompt_web_admin_governance::repositories::gateway_policies::month_window::{
     MONTH_WINDOW_SECONDS, month_window_seconds,
 };
-use systemprompt_web_admin::repositories::gateway_policies::rows::{PolicyRow, effective_spec};
+use systemprompt_web_admin_governance::repositories::gateway_policies::rows::{
+    PolicyRow, effective_spec,
+};
 
 const DECLARED: &str = r"
 policies:
@@ -81,6 +83,32 @@ fn a_console_edit_names_the_field_that_moved() {
     );
     assert!(drift.changed[0].in_db.contains("enforce"));
     assert!(drift.changed[0].in_code.contains("warn"));
+}
+
+#[test]
+fn compute_policy_drift_with_every_scalar_edit_returns_fields_in_declaration_order() {
+    let declared = parse_declared_policies(DECLARED).expect("parses");
+    let mut row = row_from_declared("default-quotas");
+    row.enabled = !row.enabled;
+    row.priority += 1;
+    row.spec.quota_mode = QuotaMode::Enforce;
+    row.spec.safety.scanners.pop();
+    row.spec.safety.block_categories.clear();
+    row.spec.safety.block_response_categories.clear();
+    let drift = compute_policy_drift(&declared, &[row]);
+    assert_eq!(
+        drift.changed[0].fields,
+        vec![
+            "enabled".to_owned(),
+            "priority".to_owned(),
+            "quota_mode".to_owned(),
+            "safety.scanners".to_owned(),
+            "safety.block_categories".to_owned(),
+            "safety.block_response_categories".to_owned(),
+        ]
+    );
+    assert!(drift.missing_in_db.is_empty());
+    assert!(drift.only_in_db.is_empty());
 }
 
 #[test]

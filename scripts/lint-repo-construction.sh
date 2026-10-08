@@ -23,7 +23,8 @@
 # plural suffix is the sanctioned composition form.
 #
 # The allowlist is checked for staleness: an entry whose file is gone or no
-# longer constructs a repository fails the gate.
+# longer constructs a repository fails the gate. An entry may name a file
+# mid-move as `old|new`; it is satisfied by whichever of the two exists.
 #
 # Test workspaces are out of scope: fixtures construct repositories freely.
 set -euo pipefail
@@ -31,11 +32,8 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 ALLOWED_FILES=(
-  # hooks_webhook_router constructs one device-auth repository and injects it
-  # into its independently mounted authenticated webhook router.
-  extensions/web/admin/src/lib.rs
   # Admin router constructs this owned managed-resource service once and injects it.
-  extensions/web/admin/src/routes/managed_state.rs
+  extensions/web/shared/admin-core/src/state.rs
   # content services construct-and-store their own repository once at service
   # build; the content crate has no shared context object to inject from.
   extensions/web/content/src/services/content.rs
@@ -50,8 +48,11 @@ ALLOWED_FILES=(
 )
 
 declare -A allowed
-for f in "${ALLOWED_FILES[@]}"; do
-  allowed["$f"]=1
+for entry in "${ALLOWED_FILES[@]}"; do
+  IFS='|' read -r -a alternatives <<<"$entry"
+  for f in "${alternatives[@]}"; do
+    allowed["$f"]=1
+  done
 done
 
 pattern='\b[A-Z][A-Za-z0-9_]*Repository::new('
@@ -78,12 +79,19 @@ while IFS= read -r file; do
   fi
 done < <(git ls-files -co --exclude-standard 'extensions/**/*.rs' 'src/**/*.rs' 'bridge/src/**/*.rs')
 
-for f in "${ALLOWED_FILES[@]}"; do
-  if [[ ! -f "$f" ]]; then
-    echo "lint-repo-construction: stale allowlist entry (file missing): $f"
+for entry in "${ALLOWED_FILES[@]}"; do
+  IFS='|' read -r -a alternatives <<<"$entry"
+  present=0
+  constructs=0
+  for f in "${alternatives[@]}"; do
+    if [[ -f "$f" ]]; then present=1; fi
+    if [[ -n "${seen[$f]:-}" ]]; then constructs=1; fi
+  done
+  if [[ "$present" -eq 0 ]]; then
+    echo "lint-repo-construction: stale allowlist entry (file missing): $entry"
     fail=1
-  elif [[ -z "${seen[$f]:-}" ]]; then
-    echo "lint-repo-construction: stale allowlist entry (no repository construction): $f"
+  elif [[ "$constructs" -eq 0 ]]; then
+    echo "lint-repo-construction: stale allowlist entry (no repository construction): $entry"
     fail=1
   fi
 done

@@ -10,7 +10,7 @@
 use chrono::{Duration, Utc};
 use serde_json::json;
 use systemprompt::identifiers::{CallId, UserId};
-use systemprompt_web_admin::repositories::governance::approvals::ApprovalRow;
+use systemprompt_web_admin_governance::repositories::governance::approvals::ApprovalRow;
 
 use crate::support::repo_root;
 
@@ -76,7 +76,7 @@ fn a_decided_row_keeps_the_verdict_it_was_given() {
 fn every_approval_decision_control_sits_inside_the_admin_guard() {
     let source = template("governance-approvals.hbs");
     let mut depth: i32 = 0;
-    let mut guarded = 0_usize;
+    let mut guarded = 0usize;
     for line in source.lines() {
         if line.contains("{{#if ../can_decide}}") || line.contains("{{#if can_decide}}") {
             depth += 1;

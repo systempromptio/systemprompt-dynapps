@@ -103,13 +103,14 @@ group_roles:
 #
 # Project managers are regional — `Systemprompt-ProjectManagers-UK`, `-India`,
 # `-Europe`, and whatever IT adds next — so enumerating them in `group_roles`
-# would go stale on every new region. `project_manager` is the semi-admin
-# role: it reaches every read-only page of the admin dashboard and, unlike
-# `admin`, may span projects without being in a project group. It is
-# deliberately NOT granted the systemprompt MCP server, the astound-admin
-# plugin or the admin skills in services/access-control/rules.yaml, and it
-# reaches no write route on the
-# admin JSON API.
+# would go stale on every new region. `project_manager` is an entitlement
+# role, not a console role: since 2026-09-17 the console tier is `admin` and
+# `platform_admin` alone (ROLES_CONSOLE in admin-core types/role.rs), so a
+# project manager reaches the admin dashboard only through marketplace
+# participation, scoped like any other participant. It is deliberately NOT
+# granted the systemprompt MCP server, the astound-admin plugin or the admin
+# skills in services/access-control/rules.yaml, and it reaches no write route
+# on the admin JSON API.
 group_role_patterns:
   Systemprompt-ProjectManagers-*: [project_manager, user]
 

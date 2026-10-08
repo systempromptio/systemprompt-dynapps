@@ -1,6 +1,6 @@
 //! Salesforce's numeric string expiry is normalized only at its token boundary.
 use super::connector_oauth::{endpoint, grant};
-use systemprompt_web_admin::connector_oauth::{
+use systemprompt_web_admin_platform::connector_oauth::{
     Provider, exchange_with_client, refresh_with_client,
 };
 
@@ -8,7 +8,7 @@ async fn response(body: &'static str, refreshing: bool, salesforce: bool) -> Res
     let (url, mock) = endpoint(body).await;
     let mut credential = grant();
     if salesforce {
-        credential.provider = Provider::try_from("salesforce-astound-us".to_owned()).unwrap();
+        credential.provider = Provider::try_from("salesforce".to_owned()).unwrap();
     }
     credential.token_endpoint = url;
     let http = reqwest::Client::new();

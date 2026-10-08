@@ -7,7 +7,7 @@
 //! either while they lived inside the page's private view module, which is the
 //! reason they went unnoticed; these tests are the point of moving them.
 
-use systemprompt_web_admin::types::governance_labels::{plane_of, target_label};
+use systemprompt_web_admin_core::types::governance_labels::{plane_of, target_label};
 
 // Why: every policy this instance's `governance_decisions` table has ever held,
 // read off the live database. If a producer starts writing a new one, the last

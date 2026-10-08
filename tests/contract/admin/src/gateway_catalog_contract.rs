@@ -1,21 +1,9 @@
 //! The per-user gateway catalog and the after-the-fact ACL detector.
 //!
-//! Both surfaces are redundant by design — real enforcement happens in core's
-//! `AuthzDecisionHook` — and redundancy is exactly what makes them easy to
-//! leave broken: nothing downstream fails when the catalog quietly returns
-//! everything, or when the detector quietly emits nothing. The exhaustive
-//! table drives each route once, with a user id that exists nowhere, which
-//! pins the `404` and leaves every loop body unentered.
-//!
-//! So the cases below put rules in the database and requests in
-//! `ai_requests`, and assert on what is *kept* and what is *written*.
-//!
-//! Two facts shape every assertion here. The resolver's default is **deny**:
-//! a route with no `access_control_entities` row and no rules is invisible,
-//! so the interesting transition is empty-to-populated rather than the other
-//! way round. And the detector sweeps *every* recent request in the database,
-//! so nothing asserts on a global count — the evidence is the row written
-//! against the user the case created.
+//! Both surfaces are redundant with core's `AuthzDecisionHook`, so nothing
+//! downstream fails when they break. The resolver defaults to deny, and the
+//! detector sweeps every recent request in the database, so assertions
+//! target rows written for the case's own user, never a global count.
 
 use axum::http::StatusCode;
 use serde_json::Value;
@@ -27,8 +15,7 @@ use crate::principal::Principal;
 use crate::tempdb::TempDb;
 use crate::{globals, principal, seed};
 
-// The two routes `fixtures/gateway.yaml` declares. `contract-claude` matches
-// the `claude-contract-model` that `seed::insert_request` writes.
+// `contract-claude` matches the model `seed::insert_request` writes.
 const CLAUDE_ROUTE: &str = "contract-claude";
 const GPT_ROUTE: &str = "contract-gpt";
 
@@ -42,7 +29,6 @@ fn catalog_path(user_id: &str) -> String {
     format!("/api/public/admin/gateway/catalog/for-user/{user_id}")
 }
 
-// The route ids the catalog returned, sorted.
 async fn catalog_for(app: &App, user_id: &str) -> Vec<String> {
     let (status, body) = app
         .call(Call::get(&catalog_path(user_id), Principal::Admin))
@@ -72,7 +58,6 @@ async fn rule_for_user(pool: &PgPool, route_id: &str, user_id: &UserId, access: 
     .await;
 }
 
-// Run a sweep and return the decisions recorded against one user.
 async fn sweep_and_count(app: &App, pool: &PgPool, user_id: &UserId) -> i64 {
     let (status, body) = app.call(Call::get(DETECT, Principal::Admin)).await;
     assert_eq!(status, StatusCode::OK, "sweep: {body}");
@@ -100,15 +85,11 @@ async fn the_catalog_returns_only_the_routes_a_user_is_granted() {
     let id = seed::unique("catalog-user");
     let user = seed::insert_user(&db.pool, &id, &format!("{id}@contract.test")).await;
 
-    // Nothing granted, nothing listed. A catalog that defaulted to open would
-    // advertise every model to every employee.
     assert!(
         catalog_for(&app, &id).await.is_empty(),
         "an unconfigured user sees no routes"
     );
 
-    // Grant one. The other must stay hidden — a rule leaking from one entity
-    // onto its siblings is the failure mode worth pinning.
     rule_for_user(&db.pool, CLAUDE_ROUTE, &user, "allow").await;
     assert_eq!(
         catalog_for(&app, &id).await,
@@ -169,10 +150,8 @@ async fn the_catalog_and_the_detector_are_both_behind_the_admin_gate() {
     let credentials = principal::provision(&db.pool).await;
     let app = App::new(&db.pool, credentials);
 
-    // Both routes are mounted behind the admin middleware, so a non-admin is
-    // stopped before either handler runs. Note this means the catalog
-    // handler's own "or the subject themselves" carve-out is unreachable over
-    // HTTP: a user cannot read their own catalog through this endpoint.
+    // The admin middleware runs first, so the handler's "or the subject
+    // themselves" carve-out is unreachable over HTTP.
     for path in [
         catalog_path(&seed::unique("someone-else")),
         DETECT.to_owned(),
@@ -186,7 +165,6 @@ async fn the_catalog_and_the_detector_are_both_behind_the_admin_gate() {
         );
     }
 
-    // An admin asking about a user who does not exist gets the honest answer.
     let (status, body) = app
         .call(Call::get(
             &catalog_path(&seed::unique("ghost")),
@@ -210,8 +188,6 @@ async fn the_detector_echoes_the_window_it_swept() {
     let credentials = principal::provision(&db.pool).await;
     let app = App::new(&db.pool, credentials);
 
-    // No window given: the handler's own default stands in, and it is echoed
-    // so the caller knows what was actually swept rather than guessing.
     let (status, body) = app.call(Call::get(DETECT, Principal::Admin)).await;
     assert_eq!(status, StatusCode::OK, "default window: {body}");
     assert_eq!(parse(&body)["since_minutes"], 60);
@@ -244,9 +220,8 @@ async fn the_detector_records_a_request_that_should_have_been_denied() {
     let session = seed::unique("detect-session");
     seed::insert_session(&db.pool, &session, &user).await;
 
-    // Grant the route first, so the recorded request was legitimate. Without
-    // this half the case cannot tell "the detector works" from "the detector
-    // flags everything it sees".
+    // Grant first, or the case cannot tell a working detector from one that
+    // flags everything.
     rule_for_user(&db.pool, CLAUDE_ROUTE, &user, "allow").await;
 
     let request_id = seed::unique("detect-request");
@@ -269,8 +244,6 @@ async fn the_detector_records_a_request_that_should_have_been_denied() {
         "a request the ACL permits is not flagged"
     );
 
-    // Revoke. The request is now, retroactively, one that should not have been
-    // allowed — which is precisely the drift this detector exists to surface.
     sqlx::query("DELETE FROM access_control_rules WHERE rule_value = $1")
         .bind(user.as_str())
         .execute(db.pool.as_ref())
@@ -283,8 +256,6 @@ async fn the_detector_records_a_request_that_should_have_been_denied() {
         "the now-denied request is flagged"
     );
 
-    // The count is a summary; the durable output is the audit row, and that is
-    // what an operator actually goes looking at.
     let (decision, policy, actor_id, reason, evaluated) =
         sqlx::query_as::<_, (String, String, String, String, Option<Value>)>(
             "SELECT decision, policy, actor_id, reason, evaluated_rules
@@ -295,8 +266,8 @@ async fn the_detector_records_a_request_that_should_have_been_denied() {
         .await
         .expect("a decision row was written");
 
-    // `decision` is constrained to allow/deny, so what marks this row as a
-    // redundancy check rather than live enforcement is the policy and actor.
+    // `decision` is CHECK-constrained to allow/deny; policy and actor mark the
+    // row as a redundancy check.
     assert_eq!(decision, "deny");
     assert_eq!(policy, "gateway_acl");
     assert_eq!(actor_id, "gateway_acl_detector");
@@ -341,9 +312,7 @@ async fn the_detector_skips_requests_outside_the_window_and_off_the_catalog() {
     )
     .await;
 
-    // Age it out. A sweep that ignored `since_minutes` would re-flag every
-    // historical request on every run, and the audit table would grow without
-    // bound from a button an operator pressed twice.
+    // A sweep ignoring `since_minutes` would re-flag all history on every run.
     sqlx::query(
         "UPDATE ai_requests SET created_at = NOW() - INTERVAL '3 hours' WHERE user_id = $1",
     )
@@ -365,9 +334,7 @@ async fn the_detector_skips_requests_outside_the_window_and_off_the_catalog() {
         "a request older than the window is not swept"
     );
 
-    // Bring it back into the window but point it at a model no route matches.
-    // An unrouted model has no ACL to violate, so it is skipped rather than
-    // defaulting to denied.
+    // An unrouted model has no ACL to violate: skipped, not denied.
     sqlx::query(
         "UPDATE ai_requests SET created_at = NOW(), model = 'llama-3-70b' WHERE user_id = $1",
     )
@@ -401,9 +368,7 @@ async fn already_rejected_requests_are_not_swept_again() {
     let session = seed::unique("detect-rejected-session");
     seed::insert_session(&db.pool, &session, &user).await;
 
-    // A request live enforcement already refused. Re-flagging it would double
-    // count the same incident: the point of the detector is to catch what
-    // enforcement *missed*.
+    // Already refused by live enforcement; re-flagging would double count.
     seed::insert_request(
         &db.pool,
         &seed::RequestSpec {

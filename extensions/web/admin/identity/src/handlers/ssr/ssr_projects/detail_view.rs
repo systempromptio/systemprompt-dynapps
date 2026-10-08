@@ -1,0 +1,260 @@
+//! Row shaping for the project detail page's Usage and Settings tabs.
+//!
+//! Sibling of [`super::detail`], which owns the reads and the page context.
+//! Everything here turns one repository row into one rendered row, so the
+//! templates do no arithmetic and no formatting decision lives in two places.
+
+use crate::repositories::people_usage::DailyRequests;
+use crate::repositories::projects::activity::{
+    ProjectSessionRow, SkillEffectivenessRow, ToolHealthRow,
+};
+use systemprompt_web_admin_core::types::access_control::{AccessControlRule, AccessDecision};
+use systemprompt_web_shared::ProjectId;
+
+use super::super::people_view::{attribution_rows, format_usd, model_rows};
+use super::super::types::{
+    AccessRowView, ProjectKpiView, ProjectSessionRowView, ProjectSkillRowView, ProjectToolRowView,
+    ProjectUsageTabView,
+};
+use super::detail::{DetailData, ProjectUsageData};
+use super::pct;
+use systemprompt_web_admin_core::ssr::format::short_num;
+use systemprompt_web_admin_core::ssr::types::svg_line::{
+    LineChartSpec, SvgLineChartView, SvgSeriesInput, line_chart,
+};
+use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;
+
+pub(super) fn tabs(project_id: &ProjectId, active: &str) -> Vec<TabLinkView> {
+    [
+        ("members", "Members"),
+        ("usage", "Usage"),
+        ("settings", "Settings"),
+    ]
+    .into_iter()
+    .map(|(slug, label)| TabLinkView {
+        slug,
+        label,
+        href: format!("/admin/projects/{project_id}?tab={slug}"),
+        is_active: slug == active,
+        count: None,
+    })
+    .collect()
+}
+
+pub(super) fn kpis(data: &DetailData, member_count: i64) -> Vec<ProjectKpiView> {
+    let usage = &data.usage;
+    let success = pct(data.tool_success, data.tool_calls);
+    let per_member = if member_count > 0 {
+        usage.cost_microdollars / member_count
+    } else {
+        0
+    };
+    vec![
+        tile(
+            "Members",
+            member_count.to_string(),
+            format!("{} active in the window", usage.active_members),
+            "accent",
+        ),
+        tile(
+            "Requests",
+            short_num(usage.requests),
+            "attributed at request time",
+            "accent",
+        ),
+        tile(
+            "Tokens",
+            format!(
+                "{} / {}",
+                short_num(usage.tokens_in),
+                short_num(usage.tokens_out)
+            ),
+            "input / output over the window",
+            "accent",
+        ),
+        tile(
+            "Cost",
+            format_usd(usage.cost_microdollars),
+            format!("{} per member", format_usd(per_member)),
+            "accent",
+        ),
+        tile(
+            "Tool success",
+            format!("{success}%"),
+            format!("{} of {} MCP calls", data.tool_success, data.tool_calls),
+            if data.tool_calls == 0 {
+                "accent"
+            } else if success >= 95 {
+                "ok"
+            } else if success >= 80 {
+                "warn"
+            } else {
+                "err"
+            },
+        ),
+        tile(
+            "Skills",
+            data.skills.len().to_string(),
+            "distinct skills invoked",
+            "accent",
+        ),
+    ]
+}
+
+fn tile(label: &str, value: String, note: impl Into<String>, tone: &'static str) -> ProjectKpiView {
+    ProjectKpiView {
+        label: label.to_owned(),
+        value,
+        note: note.into(),
+        tone,
+        href: None,
+    }
+}
+
+pub(super) fn usage_tab(
+    u: &ProjectUsageData,
+    skills: &[SkillEffectivenessRow],
+) -> ProjectUsageTabView {
+    let (daily, daily_cost) = daily_charts(&u.daily);
+    ProjectUsageTabView {
+        attribution: attribution_rows(&u.attribution),
+        daily,
+        daily_cost,
+        model_count: u.models.len() as i64,
+        skill_count: skills.len() as i64,
+        tool_count: u.tools.len() as i64,
+        session_count: u.sessions.len() as i64,
+        models: model_rows(&u.models),
+        skills: skill_rows(skills),
+        tools: tool_rows(&u.tools),
+        sessions: u.sessions.iter().map(session_row).collect(),
+    }
+}
+
+pub(super) fn daily_charts(daily: &[DailyRequests]) -> (SvgLineChartView, SvgLineChartView) {
+    (daily_chart(daily), daily_cost_chart(daily))
+}
+
+fn daily_chart(daily: &[DailyRequests]) -> SvgLineChartView {
+    let requests: Vec<i64> = daily.iter().map(|d| d.requests).collect();
+    let total: i64 = requests.iter().sum();
+    let cost: i64 = daily.iter().map(|d| d.cost_microdollars).sum();
+    let day = |i: usize| daily.get(i).map_or_else(String::new, |d| d.day.to_string());
+    line_chart(LineChartSpec {
+        title: "Requests per day",
+        subtitle: format!("{total} requests, {} over the window", format_usd(cost)),
+        empty_message: "No gateway traffic attributed to this project in the window.",
+        series: vec![SvgSeriesInput {
+            label: "Requests".to_owned(),
+            values: requests,
+            value_display: total.to_string(),
+        }],
+        ref_lines: Vec::new(),
+        y_max: None,
+        y_display: |v| v.to_string(),
+        x_start_display: day(0),
+        x_mid_display: day(daily.len() / 2),
+        x_end_display: day(daily.len().saturating_sub(1)),
+        show_area: true,
+        x_labels: Vec::new(),
+        y_unit: "",
+    })
+}
+
+fn daily_cost_chart(daily: &[DailyRequests]) -> SvgLineChartView {
+    let cost: Vec<i64> = daily.iter().map(|d| d.cost_microdollars).collect();
+    let total: i64 = cost.iter().sum();
+    let day = |i: usize| daily.get(i).map_or_else(String::new, |d| d.day.to_string());
+    line_chart(LineChartSpec {
+        title: "Cost per day",
+        subtitle: format!("{} over the window", format_usd(total)),
+        empty_message: "Nothing was billed to this project in the window.",
+        series: vec![SvgSeriesInput {
+            label: "Cost".to_owned(),
+            values: cost,
+            value_display: format_usd(total),
+        }],
+        ref_lines: Vec::new(),
+        y_max: None,
+        y_display: format_usd,
+        x_start_display: day(0),
+        x_mid_display: day(daily.len() / 2),
+        x_end_display: day(daily.len().saturating_sub(1)),
+        show_area: true,
+        x_labels: Vec::new(),
+        y_unit: "",
+    })
+}
+
+pub(super) fn skill_rows(rows: &[SkillEffectivenessRow]) -> Vec<ProjectSkillRowView> {
+    rows.iter()
+        .map(|r| ProjectSkillRowView {
+            skill: r.skill.clone(),
+            invocations: r.invocations,
+            users: r.users,
+        })
+        .collect()
+}
+
+pub(super) fn tool_rows(rows: &[ToolHealthRow]) -> Vec<ProjectToolRowView> {
+    rows.iter()
+        .map(|r| {
+            let error_pct = pct(r.failures, r.calls);
+            ProjectToolRowView {
+                server_name: r.server_name.clone(),
+                tool_name: r.tool_name.clone(),
+                calls: r.calls,
+                failures: r.failures,
+                users: r.users,
+                error_pct,
+                tone: if error_pct == 0 {
+                    "ok"
+                } else if error_pct < 10 {
+                    "warn"
+                } else {
+                    "err"
+                },
+                p95_display: format!("{} ms", r.p95_ms),
+            }
+        })
+        .collect()
+}
+
+pub(super) fn session_row(s: &ProjectSessionRow) -> ProjectSessionRowView {
+    ProjectSessionRowView {
+        session_short: short(s.session_id.as_str()),
+        href: format!("/admin/sessions/{}", s.session_id.as_str()),
+        session_id: s.session_id.clone(),
+        person: s.user_id.to_string(),
+        user_id: s.user_id.clone(),
+        requests: s.requests,
+        models: s.models,
+        cost_display: format_usd(s.cost_microdollars),
+        last_activity: s.last_activity_at.to_rfc3339(),
+    }
+}
+
+fn short(id: &str) -> String {
+    id.chars().take(8).collect()
+}
+
+pub(super) fn gated_rows(rules: &[AccessControlRule]) -> Vec<AccessRowView> {
+    rules
+        .iter()
+        .map(|r| AccessRowView {
+            entity_type: r.entity_type.clone(),
+            entity_id: r.entity_id.clone(),
+            entity_name: r.entity_id.clone(),
+            effective: match r.access {
+                AccessDecision::Allow => "allow".to_owned(),
+                AccessDecision::Deny => "deny".to_owned(),
+            },
+            layer: "project".to_owned(),
+            detail: format!("project:{} {}", r.rule_value, r.entity_type),
+            state: match r.access {
+                AccessDecision::Allow => "allow",
+                AccessDecision::Deny => "deny",
+            },
+        })
+        .collect()
+}

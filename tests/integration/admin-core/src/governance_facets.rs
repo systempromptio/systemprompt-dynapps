@@ -3,7 +3,8 @@
 //! behind the global search bar.
 
 use chrono::{Duration, Utc};
-use systemprompt_web_admin::repositories::governance::{filter_options, hook_events, resolve};
+use systemprompt_web_admin_core::repositories::filter_options;
+use systemprompt_web_admin_governance::repositories::governance::{hook_events, resolve};
 
 use crate::fixtures::{
     DecisionSpec, RequestSpec, insert_decision, insert_request, insert_session, insert_user,

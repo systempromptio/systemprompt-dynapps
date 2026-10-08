@@ -1,7 +1,9 @@
 //! `repositories::traces::{stats, spans}` — the percentile strip over the same
 //! window as the list, and resolving an opaque id to a session.
 
-use systemprompt_web_admin::repositories::traces::{get_trace_stats, resolve_trace_session};
+use systemprompt_web_admin_analytics::repositories::traces::{
+    get_trace_stats, resolve_trace_session,
+};
 
 use crate::fixtures::{
     DecisionSpec, RequestSpec, insert_decision, insert_request, insert_session, insert_user,

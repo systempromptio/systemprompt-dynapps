@@ -1,16 +1,9 @@
 //! Loading and rendering the admin Handlebars engine.
 
-#![allow(
-    clippy::expect_used,
-    clippy::panic,
-    clippy::needless_pass_by_value,
-    clippy::redundant_clone,
-    reason = "test code: panics are the assertion mechanism and clones keep fixtures readable"
-)]
 
 use std::path::{Path, PathBuf};
 
-use systemprompt_web_admin::templates::{AdminTemplateEngine, AdminTemplateError};
+use systemprompt_web_admin_core::templates::{AdminTemplateEngine, AdminTemplateError};
 
 fn write(path: &Path, body: &str) {
     if let Some(parent) = path.parent() {
@@ -164,7 +157,7 @@ fn branding_is_absent_until_it_is_attached() {
     let dir = admin_dir_with(&[("page", "ok")], &[]);
     let engine = AdminTemplateEngine::new(dir.path()).expect("build engine");
     assert!(engine.branding().is_none());
-    assert!(engine.clone().with_branding(None).branding().is_none());
+    assert!(engine.with_branding(None).branding().is_none());
 }
 
 #[test]

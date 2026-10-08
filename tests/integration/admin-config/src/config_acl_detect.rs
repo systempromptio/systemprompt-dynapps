@@ -1,7 +1,7 @@
 //! `repositories::config::acl_detect` — the after-the-fact gateway-ACL scan
 //! and the decision rows it writes.
 
-use systemprompt_web_admin::repositories::config::acl_detect::{
+use systemprompt_web_admin_governance::repositories::config::acl_detect::{
     GatewayAclDecision, insert_gateway_acl_decision, list_recent_unrejected_requests,
 };
 

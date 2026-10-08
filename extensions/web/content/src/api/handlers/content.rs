@@ -11,7 +11,8 @@ use systemprompt::identifiers::SourceId;
 
 use crate::api::{BlogState, ErrorResponse};
 use crate::services::{ContentService, SearchService};
-use systemprompt_web_shared::models::SearchRequest;
+use systemprompt_web_shared::error::BlogError;
+use systemprompt_web_shared::models::{SearchRequest, SearchResponse};
 
 pub async fn query_handler(
     State(state): State<BlogState>,
@@ -22,15 +23,19 @@ pub async fn query_handler(
     let search_service = SearchService::new(Arc::clone(&state.pool));
 
     match search_service.search(&request).await {
-        Ok(response) => {
-            tracing::info!(total = response.total, "Search completed");
-            Json(response).into_response()
-        },
-        Err(e) => {
-            tracing::error!(error = %e, "Search error");
-            error_response(StatusCode::INTERNAL_SERVER_ERROR, "Internal server error")
-        },
+        Ok(response) => search_completed_response(response),
+        Err(e) => search_failed_response(&e),
     }
+}
+
+fn search_completed_response(response: SearchResponse) -> Response {
+    tracing::info!(total = response.total, "Search completed");
+    Json(response).into_response()
+}
+
+fn search_failed_response(e: &BlogError) -> Response {
+    tracing::error!(error = %e, "Search error");
+    error_response(StatusCode::INTERNAL_SERVER_ERROR, "Internal server error")
 }
 
 pub async fn list_content_handler(

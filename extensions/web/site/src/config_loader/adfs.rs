@@ -3,6 +3,9 @@
 //! Split from the parent module to keep it inside the file-size gate. The two
 //! SAML URLs are derived here from the profile rather than authored in YAML,
 //! so one committed config is correct on every deployment host.
+//! `adfs.<profile>.yaml` overrides the committed `adfs.yaml` and names its own
+//! `idp_metadata_path`, so two farms' signing certificates sit side by side. A
+//! missing metadata file is a config error, never a silent "SSO unavailable".
 
 use std::sync::Arc;
 
@@ -10,11 +13,6 @@ use systemprompt::config::ProfileBootstrap;
 
 use super::{ConfigError, load_app_paths, load_config_section};
 
-// Why: A deployment points at its own AD FS farm without evicting anyone
-// else's config: `adfs.<profile>.yaml` wins when it is present, and the
-// committed `adfs.yaml` is the default every profile falls back to. The
-// override names its own `idp_metadata_path`, so the two farms' signing
-// certificates sit side by side rather than overwriting one another.
 fn adfs_config_filename() -> String {
     ProfileBootstrap::get().map_or_else(
         |_| "adfs.yaml".to_owned(),
@@ -22,18 +20,14 @@ fn adfs_config_filename() -> String {
     )
 }
 
-// Why: the relying-party identifier and the ACS are the instance's own public
-// URLs, and the profile already names that host. Deriving both from
-// `api_external_url` keeps one committed `adfs.yaml` correct on every
-// deployment and makes it impossible for them to disagree with each other; a
-// tracked literal was right on exactly one host and produced AD FS `MSIS7007`
-// on all the others. An explicit value still wins, for a trust registered
-// against a URL this instance does not serve itself under.
-fn derive_saml_urls(config: &mut systemprompt_web_admin::AdfsConfig) {
+// Why: AD FS answers `MSIS7007` when the relying-party id or ACS is not this
+// host's own URL, so both derive from `api_external_url`; an explicit value
+// still wins for a trust registered under another URL.
+fn derive_saml_urls(config: &mut systemprompt_web_admin_identity::AdfsConfig) {
     if !config.entity_id.is_empty() && !config.acs_url.is_empty() {
         return;
     }
-    let Ok(global) = systemprompt::models::Config::get().inspect_err(|e| {
+    let Ok(global) = systemprompt::manifest::Config::get().inspect_err(|e| {
         tracing::warn!(error = %e, "No profile config; ADFS SAML URLs stay unset");
     }) else {
         return;
@@ -43,10 +37,13 @@ fn derive_saml_urls(config: &mut systemprompt_web_admin::AdfsConfig) {
         return;
     }
     if config.entity_id.is_empty() {
-        config.entity_id = format!("{base}{}", systemprompt_web_admin::ADFS_METADATA_PATH);
+        config.entity_id = format!(
+            "{base}{}",
+            systemprompt_web_admin_identity::ADFS_METADATA_PATH
+        );
     }
     if config.acs_url.is_empty() {
-        config.acs_url = format!("{base}{}", systemprompt_web_admin::ADFS_ACS_PATH);
+        config.acs_url = format!("{base}{}", systemprompt_web_admin_identity::ADFS_ACS_PATH);
     }
     tracing::info!(
         entity_id = %config.entity_id,
@@ -56,7 +53,7 @@ fn derive_saml_urls(config: &mut systemprompt_web_admin::AdfsConfig) {
 }
 
 pub(super) fn load_adfs_config()
--> Result<Option<Arc<systemprompt_web_admin::AdfsConfig>>, ConfigError> {
+-> Result<Option<Arc<systemprompt_web_admin_identity::AdfsConfig>>, ConfigError> {
     let profile_filename = adfs_config_filename();
     let (filename, value) = match load_config_section(&profile_filename)? {
         Some(value) => (profile_filename, value),
@@ -66,17 +63,14 @@ pub(super) fn load_adfs_config()
         },
     };
 
-    let mut config: systemprompt_web_admin::AdfsConfig =
-        serde_yaml::from_value(value).map_err(|e| ConfigError::Parse {
+    let mut config: systemprompt_web_admin_identity::AdfsConfig = serde_yaml::from_value(value)
+        .map_err(|e| ConfigError::Parse {
             config_name: filename.clone(),
             message: e.to_string(),
         })?;
 
     derive_saml_urls(&mut config);
 
-    // Why: the IdP signing certificate is pinned in the repository as the
-    // federation metadata file; a missing file is a config error, not a
-    // silent "SSO unavailable".
     if config.enabled {
         let metadata_path = load_app_paths()?
             .system()

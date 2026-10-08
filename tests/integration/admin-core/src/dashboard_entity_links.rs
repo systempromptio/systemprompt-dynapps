@@ -8,7 +8,7 @@
 //! increments.
 
 use systemprompt::identifiers::SessionId;
-use systemprompt_web_admin::repositories::dashboard::conversation_analytics::{
+use systemprompt_web_admin_analytics::repositories::dashboard::conversation_analytics::{
     EntityLinkInput, list_session_entity_links, upsert_session_entity_link,
 };
 

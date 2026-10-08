@@ -2,14 +2,14 @@
 
 use systemprompt::generator::PublishError;
 use systemprompt::traits::ProviderError;
-use systemprompt_web_admin::repositories::secrets::secret_crypto::SecretCryptoError;
+use systemprompt_web_admin_core::crypto::secret_crypto::SecretCryptoError;
 use systemprompt_web_shared::error::{InfraError, MarketplaceError};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum JobError {
-    #[error("Job context missing required value: {0}")]
-    MissingContext(&'static str),
+    #[error(transparent)]
+    Dependency(#[from] systemprompt::traits::MissingDependency),
 
     #[error("Configuration error: {0}")]
     Config(String),
@@ -18,7 +18,7 @@ pub enum JobError {
     ExtensionConfig(#[from] systemprompt_web_shared::config_errors::ExtensionConfigErrors),
 
     #[error("Configuration error: {0}")]
-    CoreConfig(#[from] systemprompt::models::errors::ConfigError),
+    CoreConfig(#[from] systemprompt::models::errors::GlobalConfigError),
 
     #[error("Profile error: {0}")]
     Profile(#[from] systemprompt::config::ProfileBootstrapError),
@@ -62,7 +62,7 @@ pub enum JobError {
 
 impl From<JobError> for ProviderError {
     fn from(err: JobError) -> Self {
-        Self::Internal(err.to_string())
+        Self::Internal(Box::new(err))
     }
 }
 

@@ -9,11 +9,13 @@ use systemprompt::identifiers::UserId;
 use systemprompt::marketplace::{MarketplaceCandidate, MarketplaceFilter};
 use systemprompt::models::bridge::manifest::ManagedMcpServer;
 use systemprompt_security::authz::{AccessControlRepository, EntityKind};
-use systemprompt_web_admin::authz::connector::connector_rule_type;
-use systemprompt_web_admin::authz::subject_attributes_for;
-use systemprompt_web_admin::marketplace_filter::TemplateMarketplaceFilter;
-use systemprompt_web_admin::repositories::users::connector_accounts as accounts;
-use systemprompt_web_admin::test_support::{Connection, NotReady, get_connections};
+use systemprompt_web_admin_core::authz::connector::connector_rule_type;
+use systemprompt_web_admin_core::authz::subject_attributes_for;
+use systemprompt_web_admin_core::connections::Connection;
+use systemprompt_web_admin_core::connections::readiness::NotReady;
+use systemprompt_web_admin_core::connections::source::get_connections;
+use systemprompt_web_admin_core::marketplace_filter::TemplateMarketplaceFilter;
+use systemprompt_web_admin_platform::repositories::connectors::connector_accounts as accounts;
 
 use crate::fixtures::{insert_user_with_roles, unique};
 use crate::tempdb::TempDb;
@@ -52,7 +54,8 @@ fn install_services() {
     )
     .expect("write services fixture");
     systemprompt::loader::ServicesBootstrap::init_from_path(&path).expect("install services");
-    std::mem::forget(directory);
+    // Why: the registry holds this path for the life of the process.
+    let _kept = directory.keep();
 }
 
 struct Harness {
@@ -68,7 +71,7 @@ impl Harness {
             Arc::clone(&db.pool),
             Some(Arc::clone(&db.pool)),
         ));
-        let filter = TemplateMarketplaceFilter::from_db(&database).expect("build filter");
+        let filter = TemplateMarketplaceFilter::from_db(&database);
         let repo = AccessControlRepository::from_pool(Arc::clone(&db.pool));
         for id in [CRM, CONTROL_PLANE] {
             repo.upsert_entity(EntityKind::McpServer, id, true, "test")

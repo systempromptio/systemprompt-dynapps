@@ -148,6 +148,15 @@ scheduler:
       owner: admin
       enabled: true
 
+    # Per-user spike detection (FR-13.3): a user's previous-hour spend or
+    # request rate against their own 7-day baseline. Complements the
+    # instance-wide job above; this one feeds alerting through
+    # systemprompt_usage_anomaly_total{kind} and the `usage_anomaly` event.
+    - name: usage_anomaly_scan
+      extension: core
+      owner: admin
+      enabled: true
+
     # Drops expired Gemini thought signatures (hourly).
     - name: thought_signature_cleanup
       extension: core

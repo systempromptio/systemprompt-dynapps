@@ -10,34 +10,58 @@
 
 use crate::app::{ADMIN_API_PREFIX, SSR_PREFIX};
 
-const ADMIN_API_SRC: &str =
-    include_str!("../../../../extensions/web/admin/src/routes/admin/mod.rs");
-const ADMIN_API_READ_SRC: &str =
-    include_str!("../../../../extensions/web/admin/src/routes/admin/read.rs");
-const ADMIN_GROUPS_SRC: &str =
-    include_str!("../../../../extensions/web/admin/src/routes/admin_groups.rs");
+const ADMIN_API_SRC: &str = include_str!("../../../../extensions/web/src/router/admin/api.rs");
+const ANALYTICS_API_SRC: &str =
+    include_str!("../../../../extensions/web/admin/analytics/src/routes/api.rs");
+const ANALYTICS_OVERVIEW_SRC: &str =
+    include_str!("../../../../extensions/web/admin/analytics/src/routes/overview.rs");
+const ANALYTICS_ACTIVITY_SRC: &str =
+    include_str!("../../../../extensions/web/admin/analytics/src/routes/activity_ssr.rs");
+const ANALYTICS_ANALYSIS_SRC: &str =
+    include_str!("../../../../extensions/web/admin/analytics/src/routes/analysis_ssr.rs");
+const ANALYTICS_OBSERVABILITY_SRC: &str =
+    include_str!("../../../../extensions/web/admin/analytics/src/routes/observability_ssr.rs");
+const IDENTITY_API_SRC: &str =
+    include_str!("../../../../extensions/web/admin/identity/src/routes/api.rs");
+const IDENTITY_GROUPS_SRC: &str =
+    include_str!("../../../../extensions/web/admin/identity/src/routes/admin_groups.rs");
+const IDENTITY_PEOPLE_SRC: &str =
+    include_str!("../../../../extensions/web/admin/identity/src/routes/people_ssr.rs");
+const IDENTITY_ACCOUNT_SRC: &str =
+    include_str!("../../../../extensions/web/admin/identity/src/routes/account_ssr.rs");
+const IDENTITY_PUBLIC_SRC: &str =
+    include_str!("../../../../extensions/web/admin/identity/src/routes/public.rs");
 const MANAGED_SRC: &str =
-    include_str!("../../../../extensions/web/admin/src/routes/managed_resources.rs");
-const ANALYSIS_SRC: &str =
-    include_str!("../../../../extensions/web/admin/src/routes/ssr_analysis.rs");
-const SSR_SRC: &str = include_str!("../../../../extensions/web/admin/src/routes/ssr.rs");
+    include_str!("../../../../extensions/web/admin/catalog/src/routes/managed_resources.rs");
+const CATALOG_API_SRC: &str =
+    include_str!("../../../../extensions/web/admin/catalog/src/routes/api.rs");
+const CATALOG_SSR_SRC: &str =
+    include_str!("../../../../extensions/web/admin/catalog/src/routes/ssr.rs");
+const GOVERNANCE_API_SRC: &str =
+    include_str!("../../../../extensions/web/admin/governance/src/routes/api.rs");
+const GOVERNANCE_SSR_SRC: &str =
+    include_str!("../../../../extensions/web/admin/governance/src/routes/ssr_governance.rs");
+const PLATFORM_API_SRC: &str =
+    include_str!("../../../../extensions/web/admin/platform/src/routes/api.rs");
+const PLATFORM_SSR_SRC: &str =
+    include_str!("../../../../extensions/web/admin/platform/src/routes/platform_ssr.rs");
+const SSR_SRC: &str = include_str!("../../../../extensions/web/src/router/admin/ssr.rs");
 // Merged into the SSR router from its own module, so it is read on its own:
 // without it every export route — the PAT surface included — drops out of the
 // table and out of the contract.
-const EXPORT_SRC: &str = include_str!("../../../../extensions/web/admin/src/routes/ssr_export.rs");
-const GOVERNANCE_SRC: &str =
-    include_str!("../../../../extensions/web/admin/src/routes/ssr_governance.rs");
+const EXPORT_SRC: &str =
+    include_str!("../../../../extensions/web/admin/analytics/src/routes/export_ssr.rs");
 // The legacy paths, which answer 308 rather than HTML. They are a route table
 // like any other and are exercised like one: a redirect that stops redirecting
 // is exactly as much a contract change as a page that stops rendering.
 const SSR_REDIRECT_SRC: &str =
-    include_str!("../../../../extensions/web/admin/src/routes/ssr_redirects.rs");
+    include_str!("../../../../extensions/web/src/router/admin/redirects.rs");
 
 const METHODS: [&str; 5] = ["get", "post", "put", "patch", "delete"];
 
 // A single method/path pair the router serves.
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub struct MountedRoute {
+pub(crate) struct MountedRoute {
     pub method: String,
     // The path as mounted, path parameters still in `{brace}` form.
     pub template: String,
@@ -50,7 +74,7 @@ impl MountedRoute {
     // table. That is the interesting case rather than a limitation: a route
     // asked for an id it cannot find owes the caller a 404, and one that
     // answers 500 instead is the exact defect this suite is here to catch.
-    pub fn request_path(&self) -> String {
+    pub(crate) fn request_path(&self) -> String {
         self.template
             .split('/')
             .map(|seg| {
@@ -64,7 +88,7 @@ impl MountedRoute {
             .join("/")
     }
 
-    pub fn key(&self) -> String {
+    pub(crate) fn key(&self) -> String {
         format!("{} {}", self.method.to_uppercase(), self.template)
     }
 }
@@ -72,17 +96,29 @@ impl MountedRoute {
 // Well-formed, and deliberately absent from every table.
 const UNKNOWN_ID: &str = "00000000-0000-4000-8000-000000000000";
 
-pub fn mounted_routes() -> Vec<MountedRoute> {
+pub(crate) fn mounted_routes() -> Vec<MountedRoute> {
     let mut routes = Vec::new();
     for (src, prefix) in [
         (ADMIN_API_SRC, ADMIN_API_PREFIX),
-        (ADMIN_API_READ_SRC, ADMIN_API_PREFIX),
-        (ADMIN_GROUPS_SRC, ADMIN_API_PREFIX),
+        (ANALYTICS_API_SRC, ADMIN_API_PREFIX),
+        (IDENTITY_API_SRC, ADMIN_API_PREFIX),
+        (IDENTITY_GROUPS_SRC, ADMIN_API_PREFIX),
         (MANAGED_SRC, ADMIN_API_PREFIX),
+        (CATALOG_API_SRC, ADMIN_API_PREFIX),
+        (CATALOG_SSR_SRC, SSR_PREFIX),
+        (GOVERNANCE_API_SRC, ADMIN_API_PREFIX),
+        (GOVERNANCE_SSR_SRC, SSR_PREFIX),
+        (PLATFORM_API_SRC, ADMIN_API_PREFIX),
+        (PLATFORM_SSR_SRC, SSR_PREFIX),
+        (IDENTITY_PEOPLE_SRC, SSR_PREFIX),
+        (IDENTITY_ACCOUNT_SRC, SSR_PREFIX),
+        (IDENTITY_PUBLIC_SRC, SSR_PREFIX),
         (SSR_SRC, SSR_PREFIX),
-        (ANALYSIS_SRC, SSR_PREFIX),
+        (ANALYTICS_OVERVIEW_SRC, SSR_PREFIX),
+        (ANALYTICS_ACTIVITY_SRC, SSR_PREFIX),
+        (ANALYTICS_ANALYSIS_SRC, SSR_PREFIX),
+        (ANALYTICS_OBSERVABILITY_SRC, SSR_PREFIX),
         (EXPORT_SRC, SSR_PREFIX),
-        (GOVERNANCE_SRC, SSR_PREFIX),
         (SSR_REDIRECT_SRC, SSR_PREFIX),
     ] {
         parse(src, prefix, &mut routes);

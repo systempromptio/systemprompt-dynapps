@@ -64,7 +64,7 @@ BUILTIN = set(
 )
 SHELL = set(
     "branding current_user marketplace scope_selector demo_help page title "
-    "breadcrumbs user csrf_token flash nav request env version".split()
+    "breadcrumbs user csrf_token flash nav request env version unavailable".split()
 )
 
 

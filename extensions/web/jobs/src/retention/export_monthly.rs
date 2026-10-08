@@ -4,10 +4,11 @@
 //! `conversation_facts`, …) are the instance's durable record and are never
 //! expired, so their monthly archive under
 //! `storage/exports/monthly/<yyyy>-<mm>/` is the off-database copy of
-//! everything the console can still show. The health check runs after the
-//! archive and its report is stored for the Data lifecycle tab; the vacuum runs
-//! last, one plain statement per table on a pool connection, because `VACUUM`
-//! cannot run inside a transaction.
+//! everything the console can still show. After the archive the managed tables
+//! are vacuumed, one plain statement per table on a pool connection, because
+//! `VACUUM` cannot run inside a transaction. The health check runs after the
+//! vacuum, so the dead tuples it reports as bloat are rows vacuum could not
+//! reclaim; its report is stored for the Data lifecycle tab.
 
 use std::path::Path;
 use std::sync::Arc;
@@ -24,6 +25,7 @@ use super::{ROLLUP_TABLES, all_managed, health};
 use crate::error::JobError;
 
 const TIER: &str = "monthly";
+const KEEP_EVERY_MONTH: u32 = 0;
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct RetentionExportMonthlyJob;
@@ -31,12 +33,9 @@ pub struct RetentionExportMonthlyJob;
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct MonthlyParams {
     pub months_back: u32,
-    // Why: `0` keeps every monthly archive; the rollups are the durable record.
     pub keep_months: u32,
 }
 
-// Why: the calendar month `months_back` before the one containing `day`,
-// as a window and its `yyyy-mm` label.
 pub(crate) fn month_window(day: NaiveDate, months_back: u32) -> (Window, String) {
     let mut year = day.year();
     let mut month = day.month();
@@ -72,50 +71,10 @@ impl RetentionExportMonthlyJob {
         now: DateTime<Utc>,
     ) -> Result<JobResult, JobError> {
         let started = std::time::Instant::now();
-        let mut written: u64 = 0;
-        for back in 1..=params.months_back.max(1) {
-            let (window, period) = month_window(now.date_naive(), back);
-            if archive_exists(pool, TIER, &period).await? {
-                continue;
-            }
-            let target = ArchiveTarget {
-                pool,
-                exports_root,
-                tier: TIER,
-                period: &period,
-                window,
-            };
-            let manifest = archive_tables(&target, ROLLUP_TABLES).await?;
-            tracing::info!(
-                period,
-                files = manifest.files.len(),
-                "monthly archive written"
-            );
-            written += 1;
-        }
-        let pruned = if params.keep_months == 0 {
-            0
-        } else {
-            let (_, keep_from) = month_window(now.date_naive(), params.keep_months);
-            prune_periods(exports_root, TIER, &keep_from)?
-        };
-        // Why: vacuum before the health check, not after. The check reports
-        // dead tuples as bloat, and running it first reported every tuple the
-        // vacuum was about to reclaim — a finding that reappeared every month
-        // and told nobody anything. Measured after, dead tuples mean rows
-        // vacuum could not reclaim, which is worth a finding.
+        let written = write_missing_archives(pool, exports_root, params, now).await?;
+        let pruned = prune_old_archives(exports_root, params, now)?;
         let vacuumed = vacuum_managed(pool).await?;
-        let report = health::run(pool).await?;
-        let counts = report.counts();
-        record_health_report(pool, &report, counts).await?;
-        for finding in &report.findings {
-            match finding.rank {
-                health::Rank::P1 => tracing::warn!(check = finding.check, "{}", finding.detail),
-                health::Rank::P2 | health::Rank::P3 => {
-                    tracing::info!(check = finding.check, "{}", finding.detail);
-                },
-            }
-        }
+        let counts = check_health(pool).await?;
         let duration_ms = u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX);
         Ok(JobResult::success()
             .with_stats(written, 0)
@@ -125,6 +84,63 @@ impl RetentionExportMonthlyJob {
                 counts.0, counts.1, counts.2
             )))
     }
+}
+
+async fn write_missing_archives(
+    pool: &PgPool,
+    exports_root: &Path,
+    params: MonthlyParams,
+    now: DateTime<Utc>,
+) -> Result<u64, JobError> {
+    let mut written: u64 = 0;
+    for back in 1..=params.months_back.max(1) {
+        let (window, period) = month_window(now.date_naive(), back);
+        if archive_exists(pool, TIER, &period).await? {
+            continue;
+        }
+        let target = ArchiveTarget {
+            pool,
+            exports_root,
+            tier: TIER,
+            period: &period,
+            window,
+        };
+        let manifest = archive_tables(&target, ROLLUP_TABLES).await?;
+        tracing::info!(
+            period,
+            files = manifest.files.len(),
+            "monthly archive written"
+        );
+        written += 1;
+    }
+    Ok(written)
+}
+
+fn prune_old_archives(
+    exports_root: &Path,
+    params: MonthlyParams,
+    now: DateTime<Utc>,
+) -> Result<u64, JobError> {
+    if params.keep_months == KEEP_EVERY_MONTH {
+        return Ok(0);
+    }
+    let (_, keep_from) = month_window(now.date_naive(), params.keep_months);
+    prune_periods(exports_root, TIER, &keep_from)
+}
+
+async fn check_health(pool: &PgPool) -> Result<(i32, i32, i32), JobError> {
+    let report = health::run(pool).await?;
+    let counts = report.counts();
+    record_health_report(pool, &report, counts).await?;
+    for finding in &report.findings {
+        match finding.rank {
+            health::Rank::P1 => tracing::warn!(check = finding.check, "{}", finding.detail),
+            health::Rank::P2 | health::Rank::P3 => {
+                tracing::info!(check = finding.check, "{}", finding.detail);
+            },
+        }
+    }
+    Ok(counts)
 }
 
 async fn vacuum_managed(pool: &PgPool) -> Result<u64, JobError> {
@@ -159,12 +175,8 @@ impl Job for RetentionExportMonthlyJob {
         &self,
         ctx: &JobContext,
     ) -> Result<JobResult, systemprompt::traits::ProviderError> {
-        let db = ctx
-            .db_pool::<DbPool>()
-            .ok_or(JobError::MissingContext("DbPool"))?;
-        let paths = ctx
-            .app_paths::<Arc<AppPaths>>()
-            .ok_or(JobError::MissingContext("AppPaths"))?;
+        let db = ctx.get::<DbPool>()?;
+        let paths = ctx.get::<Arc<AppPaths>>()?;
         let params = MonthlyParams {
             months_back: ctx.get_parameter_parsed::<u32>("months_back")?.unwrap_or(1),
             keep_months: ctx.get_parameter_parsed::<u32>("keep_months")?.unwrap_or(0),

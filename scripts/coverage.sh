@@ -12,9 +12,12 @@
 #      MERGES target rustflags back in, which is why it cannot be used.
 #
 # Builds only in dedicated target dirs under coverage-report/ so concurrent
-# agents sharing this checkout are unaffected. %m%c profraw naming (continuous
-# mode, no %p) because PID reuse across many test processes silently
-# overwrites per-PID files.
+# agents sharing this checkout are unaffected. Profraw naming is per platform:
+# Linux uses %m%c (continuous mode with --runtime-counter-relocation); on
+# macOS the nightly LLVM runtime rejects continuous-mode counters ("Counters
+# section not page-aligned") and records nothing, so Darwin uses %m%p. %m makes
+# the runtime merge into an existing file under a lock, so PID reuse across
+# many test processes cannot overwrite a profile in either mode.
 #
 # DB-backed suites (mcp-integration, admin-contract) manage their own
 # throwaway *_test databases via SYSTEMPROMPT_TEST_DATABASE_URL, same
@@ -60,6 +63,14 @@ fi
 # that collide inside one test process, honours the serial DB test-groups,
 # and --no-fail-fast keeps one red package from silently dropping every
 # later package out of the denominator.
+if [ "$(uname -s)" = "Darwin" ]; then
+    PROFRAW_PATTERN="%m%p"
+    COVERAGE_RUSTFLAGS="-C instrument-coverage"
+else
+    PROFRAW_PATTERN="%m%c"
+    COVERAGE_RUSTFLAGS="-C instrument-coverage -C llvm-args=--runtime-counter-relocation"
+fi
+
 run_instrumented() {
     local tdir="$1"; shift
     # Why: the export below picks the newest binary per crate basename, so a
@@ -79,8 +90,8 @@ run_instrumented() {
     if CARGO_BUILD_RUSTC_WRAPPER="" \
         RUSTC_WRAPPER="" \
         CARGO_TARGET_DIR="$tdir" \
-        LLVM_PROFILE_FILE="$PROFDIR/%m%c.profraw" \
-        RUSTFLAGS="-C instrument-coverage -C llvm-args=--runtime-counter-relocation" \
+        LLVM_PROFILE_FILE="$PROFDIR/$PROFRAW_PATTERN.profraw" \
+        RUSTFLAGS="$COVERAGE_RUSTFLAGS" \
         SQLX_OFFLINE=true \
         cargo nextest run --no-fail-fast --build-jobs "$BUILD_JOBS" "$@"
     then
@@ -108,11 +119,14 @@ run_instrumented() {
     esac
 }
 
+# Why: cargo keys artifacts by package, not workspace, and the root and
+# tests/ workspaces compile the same dependency graph, so one instrumented
+# target dir serves both at half the disk of two.
 echo "==> [1/3] Instrumented tests: root workspace"
-run_instrumented "$TBASE-root" --workspace --tests
+run_instrumented "$TBASE-shared" --workspace --tests
 
 echo "==> [2/3] Instrumented tests: tests/ workspace"
-run_instrumented "$TBASE-tests" --manifest-path tests/Cargo.toml --workspace
+run_instrumented "$TBASE-shared" --manifest-path tests/Cargo.toml --workspace
 
 echo "==> [3/3] Instrumented tests: bridge/ workspace"
 run_instrumented "$TBASE-bridge" --manifest-path bridge/Cargo.toml --workspace
@@ -133,23 +147,25 @@ find "$PROFDIR" -name '*.profraw' > "$ROOT/coverage-report/profraw-list.txt"
 "$LLVM_PROFDATA" merge -sparse -f "$ROOT/coverage-report/profraw-list.txt" \
     -o "$ROOT/coverage-report/tests.profdata"
 
-# Test binaries land in <target>/debug/deps. Emit candidates from every
-# workspace, then dedupe the combined stream by crate basename. Prefer the
-# tests workspace because that is where the 1,800+ executed tests live; root
-# and bridge supply only crates absent from it. Within a workspace, keep the
-# newest build. Dedupe must be global: doing it once per target directory
+# Test binaries land in <target>/debug/deps. Emit candidates from both
+# instrumented dirs, then dedupe the combined stream by crate basename,
+# keeping the newest build of each. Dedupe must be global: doing it once per target directory
 # feeds llvm-cov multiple feature/build variants of the same crate. Their
 # function names overlap but their mapping hashes differ, so llvm-cov discards
 # profile records with "functions have mismatched data" and under-reports the
 # very tests this job is meant to measure.
+# Why: BSD find (macOS) has no -printf, so the mtime is read with stat on
+# either platform instead; GNU stat and BSD stat spell the format differently.
 collect_bin_candidates() {
-    find "$1/debug/deps" -maxdepth 1 -executable -type f ! -name '*.d' ! -name '*.so' \
-        -printf '%T@ %p\n' 2>/dev/null | sort -rn
+    find "$1/debug/deps" -maxdepth 1 -type f -perm -u+x ! -name '*.d' ! -name '*.so' \
+        ! -name '*.dylib' ! -name '*.rlib' ! -name '*.rmeta' 2>/dev/null \
+        | while IFS= read -r bin; do
+            if stat -f '%m %N' "$bin" 2>/dev/null; then :; else stat -c '%Y %n' "$bin"; fi
+          done | sort -rn
 }
 BINS="$(
     {
-        collect_bin_candidates "$TBASE-tests"
-        collect_bin_candidates "$TBASE-root"
+        collect_bin_candidates "$TBASE-shared"
         collect_bin_candidates "$TBASE-bridge"
     } | awk '{ base=$2; sub(".*/", "", base); sub(/-[0-9a-f]+$/, "", base); if (!seen[base]++) print $2 }'
 )"

@@ -15,7 +15,7 @@
 //! replace it with a 400 and drop the event.
 
 use serde_json::json;
-use systemprompt_web_admin::types::webhook::{HookEvent, HookEventPayload};
+use systemprompt_web_admin_core::types::webhook::{HookEvent, HookEventPayload};
 
 fn common() -> serde_json::Value {
     json!({
@@ -26,12 +26,10 @@ fn common() -> serde_json::Value {
 
 fn payload(extra: serde_json::Value) -> serde_json::Value {
     let mut base = common();
-    let (Some(obj), Some(add)) = (base.as_object_mut(), extra.as_object()) else {
+    let (Some(obj), serde_json::Value::Object(add)) = (base.as_object_mut(), extra) else {
         panic!("both fixtures are JSON objects");
     };
-    for (k, v) in add {
-        obj.insert(k.clone(), v.clone());
-    }
+    obj.extend(add);
     base
 }
 

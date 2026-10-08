@@ -3,15 +3,8 @@
 //! cookie session nor an explicit `user_id` query parameter is present,
 //! resolution returns `None` and the handler returns 401.
 
-#![allow(
-    clippy::expect_used,
-    clippy::panic,
-    clippy::needless_pass_by_value,
-    clippy::redundant_clone,
-    reason = "test code: panics are the assertion mechanism and clones keep fixtures readable"
-)]
 
-use systemprompt_web_admin::test_support::resolve_principal;
+use systemprompt_web_admin_core::auth::session::resolve_principal;
 
 #[test]
 fn returns_none_when_neither_cookie_nor_query_present() {

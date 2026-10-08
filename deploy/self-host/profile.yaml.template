@@ -1,4 +1,4 @@
-# template-version: 0.62.1
+# template-version: 0.63.0
 # Astound Digital profile template for self-hosted, multi-node deployments.
 # Rendered by deploy/self-host/render-profile.sh; @TOKENS@ are substituted.
 # Every node runs this exact file. The provider catalog and gateway routes are
@@ -15,6 +15,14 @@ site:
 database:
   type: postgres
   external_db_access: false
+  # Nodes never migrate on boot: with three nodes sharing one primary, the
+  # schema moves forward once, from one place, before any node runs the new
+  # image. Run the one-shot step first (README.md §5 and §6):
+  #   docker compose -f docker-compose.node.yml run --rm app migrate
+  # (inside a container: systemprompt infra db migrate --profile self-host).
+  # A node that boots against a schema it does not match refuses to start and
+  # names the pending migration and that command.
+  migrate_on_boot: false
 server:
   host: 0.0.0.0
   port: 8080
@@ -37,6 +45,15 @@ server:
     permissions_policy: camera=(), microphone=(), geolocation=()
     content_security_policy: null
   instance_id: null
+  # all: gateway, admin console, MCP, scheduler — the launch topology runs
+  # every node the same. `gateway` serves only /v1, the bridge, OAuth and
+  # health and runs no workers; `admin` is everything except the gateway.
+  role: all
+  # Concurrent requests one node accepts; past it the node answers 503 with
+  # Retry-After: 1 and /readyz reports `saturated`, so the balancer moves
+  # traffic instead of the node queueing until it falls over. Sized for the
+  # 2 vCPU / 4 GB floor with long-lived streams; raise it with the node.
+  max_in_flight: 512
   max_concurrent_streams: 256
   trusted_proxies:
 @TRUSTED_PROXIES@
@@ -47,6 +64,22 @@ paths:
   web_path: /app/web
   storage: /app/storage
   geoip_database: null
+# Uploaded and generated files. `local` writes under paths.storage/files on
+# each node. To keep them in a Cloud Storage bucket every node sees, replace
+# this block with (the identity needs roles/storage.objectAdmin on the bucket):
+#   storage:
+#     backend: gcs
+#     bucket: <bucket>
+#     prefix: astound/files          # optional
+#     credentials: workload_identity # or { secret: GCS_SERVICE_ACCOUNT_KEY }
+# paths.storage is still required with gcs: the gateway journal, exports and
+# scratch space stay on the node's disk.
+storage:
+  backend: local
+# Composed services bundles are cached here; with a read-only root it is a
+# per-node volume (README.md, Read-only root filesystem).
+services:
+  cache_dir: /app/services-cache
 security:
   jwt_issuer: @EXTERNAL_URL@
   jwt_access_token_expiration: 2592000

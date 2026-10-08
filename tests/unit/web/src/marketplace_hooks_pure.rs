@@ -1,14 +1,6 @@
-#![allow(
-    clippy::expect_used,
-    clippy::panic,
-    clippy::needless_pass_by_value,
-    clippy::redundant_clone,
-    reason = "test code: panics are the assertion mechanism and clones keep fixtures readable"
-)]
-
 use std::path::Path;
 
-use systemprompt_web_admin::repositories::marketplace::hooks::list_configured_hooks;
+use systemprompt_web_admin_catalog::repositories::marketplace::hooks::list_configured_hooks;
 
 fn hook(root: &Path, dir: &str, body: &str) {
     let path = root.join("hooks").join(dir);

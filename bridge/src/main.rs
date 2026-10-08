@@ -7,23 +7,19 @@
 //! [`systemprompt_bridge::run_with_brand`]. All behaviour lives in the shared
 //! core library — this file is intentionally tiny so a new client bridge is
 //! "copy this crate, swap `assets/`, edit the const below". See `README.md` for
-//! the recipe.
+//! the recipe. The brand ships a single dark palette with no light theme, so
+//! `force_dark` keeps a light desktop from drawing a light title bar over it.
 
 use std::process::ExitCode;
 
 use systemprompt_bridge::brand::{Brand, BrandAssets};
 
-// Why: the `mod` reference is what keeps this module's `inventory::submit!`s
-// linked into the binary — an unreferenced module is dropped before its
-// initializers run.
 #[cfg(any(target_os = "windows", target_os = "macos"))]
 mod registry;
 
-// Why: the stock `/v1/bridge/whoami` answers only id, email, display name and
-// roles — everything this instance knows about a caller beyond that (the ADFS
-// issuer they authenticated against, their AD group memberships, department,
-// organization seat) lives in the web extension. Point the bridge at the
-// gateway's own richer envelope; core forwards the unknown keys verbatim.
+// Why: core's stock `/v1/bridge/whoami` answers only id, email, name and roles;
+// this envelope adds the ADFS issuer, AD groups, department and seat, and core
+// forwards the unknown keys verbatim.
 systemprompt_bridge::register_identity_source!("/api/public/bridge/whoami");
 
 static ASTOUND_BRAND: Brand = Brand {
@@ -39,8 +35,7 @@ static ASTOUND_BRAND: Brand = Brand {
     keyring_service: "astound-bridge.oauth-client",
     env_prefix: "ASTOUND_BRIDGE",
     default_gateway_url: "https://sp-dev.astound.digital",
-    // Why: the gateway mounts this page under /bridge-auth (see
-    // extensions/web/src/extension_impl.rs), not the upstream default /bridge.
+    // Why: the gateway mounts this page under /bridge-auth, not core's default /bridge.
     device_link_path: "/bridge-auth/device-link",
     tray_tooltip: "Astound Bridge",
     window_title: "Astound Bridge",
@@ -58,13 +53,9 @@ static ASTOUND_BRAND: Brand = Brand {
     autostart_label: "com.astounddigital.bridge-gui",
     autostart_task_name: "AstoundBridgeGui",
     aumid: "com.astounddigital.bridge",
-    // Why: this brand ships one palette and it is dark (theme.css sets
-    // `--sp-bg: oklch(0.17 0 0)` with no `prefers-color-scheme` block), so
-    // following the OS would hand a light desktop a light title bar over a
-    // page that has no light theme to render.
     force_dark: true,
-    // Why: embedded from OUT_DIR (build.rs copies them there) so a regenerated
-    // asset re-embeds under incremental/sccache builds.
+    // Why: cargo/sccache only re-embed a regenerated asset read from OUT_DIR,
+    // where build.rs copies them.
     assets: BrandAssets {
         icon_svg: include_str!(concat!(env!("OUT_DIR"), "/icon.svg")),
         logo_svg: include_str!(concat!(env!("OUT_DIR"), "/logo.svg")),

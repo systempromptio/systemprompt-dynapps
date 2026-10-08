@@ -4,15 +4,17 @@
 //! over them are asserted absolutely; the `plugin_usage_events` feed is seeded
 //! by migration 011, so those tests assert on their own rows.
 
-use systemprompt_web_admin::repositories::dashboard::aggregates::{
+use systemprompt_web_admin_analytics::repositories::dashboard::aggregates::{
     get_active_users_24h, get_activity_stats, list_usage_timeseries,
 };
-use systemprompt_web_admin::repositories::dashboard::queries::{
+use systemprompt_web_admin_analytics::repositories::dashboard::queries::{
     list_hourly_activity, list_popular_skills, list_recent_mcp_errors, list_tool_success_rates,
     list_top_users,
 };
-use systemprompt_web_admin::repositories::dashboard::{get_dashboard_data, get_events_page};
-use systemprompt_web_admin::types::EventsQuery;
+use systemprompt_web_admin_analytics::repositories::dashboard::{
+    get_dashboard_data, get_events_page,
+};
+use systemprompt_web_admin_core::types::EventsQuery;
 
 use crate::dashboard_sessions::insert_mcp_execution;
 use crate::fixtures::{

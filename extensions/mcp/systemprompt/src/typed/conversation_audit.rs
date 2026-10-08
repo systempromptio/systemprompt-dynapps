@@ -6,7 +6,7 @@ use crate::cli::CliLocation;
 use rmcp::ErrorData;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-// JSON: the audit card's fields are the CLI's own values.
+// JSON: variable-shape CLI audit card
 use serde_json::Value;
 use std::collections::BTreeMap;
 use systemprompt::identifiers::McpExecutionId;
@@ -25,8 +25,6 @@ pub struct AuditOutput {
     pub command: String,
     pub fields: BTreeMap<String, Value>,
     pub has_more: bool,
-    // Why: the next `offset` to request when `has_more`, the current one
-    // otherwise, so the caller never has to add `limit` itself.
     pub next_offset: u16,
     pub hint: String,
 }
@@ -60,9 +58,6 @@ pub fn command(input: &ConversationAuditInput) -> Result<String, ErrorData> {
     Ok(command)
 }
 
-// Why: `--max-content 0` is the whole transcript body, which for one long
-// agent turn is hundreds of KB; with the page cap a full page stays near
-// 50 KB, which a model can read.
 pub(super) const MAX_BODY_CHARS: u16 = 2000;
 pub(super) const MAX_AUDIT_PAGE: u16 = 25;
 

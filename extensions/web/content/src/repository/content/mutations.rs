@@ -1,4 +1,4 @@
-//! Content writes and the update parameter builder.
+//! Content writes: create (row plus enrichment), update, delete and prune.
 
 use chrono::Utc;
 use sqlx::types::Json;
@@ -6,6 +6,8 @@ use sqlx::{PgPool, Postgres};
 use std::sync::Arc;
 use systemprompt::identifiers::{CategoryId, ContentId, SourceId};
 use systemprompt_web_shared::models::{Content, ContentLinkMetadata, CreateContentParams};
+
+use super::update_params::UpdateContentParams;
 
 #[derive(Debug, Clone)]
 pub(super) struct ContentMutationRepository {
@@ -45,6 +47,57 @@ async fn insert_enrichment(
     .await?;
 
     Ok(())
+}
+
+async fn upsert_content_row(
+    tx: &mut sqlx::Transaction<'_, Postgres>,
+    id: &ContentId,
+    params: &CreateContentParams,
+    now: chrono::DateTime<Utc>,
+) -> Result<ContentId, sqlx::Error> {
+    let row = sqlx::query!(
+        r#"
+            INSERT INTO markdown_content (
+                id, slug, title, description, body, author,
+                published_at, keywords, kind, image, category_id, source_id,
+                version_hash, links, updated_at
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+            ON CONFLICT (slug, locale) DO UPDATE SET
+                title = EXCLUDED.title,
+                description = EXCLUDED.description,
+                body = EXCLUDED.body,
+                author = EXCLUDED.author,
+                published_at = EXCLUDED.published_at,
+                keywords = EXCLUDED.keywords,
+                kind = EXCLUDED.kind,
+                image = EXCLUDED.image,
+                category_id = EXCLUDED.category_id,
+                source_id = EXCLUDED.source_id,
+                version_hash = EXCLUDED.version_hash,
+                links = EXCLUDED.links,
+                updated_at = EXCLUDED.updated_at
+            RETURNING id AS "id!: ContentId"
+            "#,
+        id.as_str(),
+        params.slug,
+        params.title,
+        params.description,
+        params.body,
+        params.author,
+        params.published_at,
+        params.keywords,
+        params.kind.as_str(),
+        params.image,
+        params.category_id.as_ref().map(CategoryId::as_str),
+        params.source_id.as_str(),
+        params.version_hash,
+        params.links as _,
+        now
+    )
+    .fetch_one(&mut **tx)
+    .await?;
+    Ok(row.id)
 }
 
 async fn get_content(
@@ -89,52 +142,11 @@ impl ContentMutationRepository {
         let now = Utc::now();
         let mut tx = self.pool.begin().await?;
 
-        let row = sqlx::query!(
-            r#"
-            INSERT INTO markdown_content (
-                id, slug, title, description, body, author,
-                published_at, keywords, kind, image, category_id, source_id,
-                version_hash, links, updated_at
-            )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-            ON CONFLICT (slug, locale) DO UPDATE SET
-                title = EXCLUDED.title,
-                description = EXCLUDED.description,
-                body = EXCLUDED.body,
-                author = EXCLUDED.author,
-                published_at = EXCLUDED.published_at,
-                keywords = EXCLUDED.keywords,
-                kind = EXCLUDED.kind,
-                image = EXCLUDED.image,
-                category_id = EXCLUDED.category_id,
-                source_id = EXCLUDED.source_id,
-                version_hash = EXCLUDED.version_hash,
-                links = EXCLUDED.links,
-                updated_at = EXCLUDED.updated_at
-            RETURNING id AS "id!: ContentId"
-            "#,
-            id.as_str(),
-            params.slug,
-            params.title,
-            params.description,
-            params.body,
-            params.author,
-            params.published_at,
-            params.keywords,
-            params.kind.as_str(),
-            params.image,
-            params.category_id.as_ref().map(CategoryId::as_str),
-            params.source_id.as_str(),
-            params.version_hash,
-            params.links as _,
-            now
-        )
-        .fetch_one(&mut *tx)
-        .await?;
+        let content_id = upsert_content_row(&mut tx, &id, params, now).await?;
 
-        insert_enrichment(&mut tx, &row.id, params, now).await?;
+        insert_enrichment(&mut tx, &content_id, params, now).await?;
 
-        let content = get_content(&mut tx, row.id.as_str()).await?;
+        let content = get_content(&mut tx, content_id.as_str()).await?;
         tx.commit().await?;
         Ok(content)
     }
@@ -193,90 +205,5 @@ impl ContentMutationRepository {
         .execute(&*self.pool)
         .await?;
         Ok(result.rows_affected())
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct UpdateContentParams {
-    pub id: ContentId,
-    pub title: String,
-    pub description: String,
-    pub body: String,
-    pub keywords: String,
-    pub image: Option<String>,
-    pub version_hash: String,
-    pub links: Option<Json<Vec<ContentLinkMetadata>>>,
-}
-
-/// Required fields for [`UpdateContentParams`]; optional fields are layered
-/// on via the `UpdateContentParamsBuilder::with_*` methods.
-#[derive(Debug, Clone)]
-pub struct UpdateContentSeed {
-    pub id: ContentId,
-    pub title: String,
-    pub description: String,
-    pub body: String,
-    pub keywords: String,
-    pub version_hash: String,
-}
-
-impl UpdateContentParams {
-    #[must_use]
-    pub fn builder(seed: UpdateContentSeed) -> UpdateContentParamsBuilder {
-        UpdateContentParamsBuilder::new(seed)
-    }
-}
-
-#[derive(Debug)]
-pub struct UpdateContentParamsBuilder {
-    id: ContentId,
-    title: String,
-    description: String,
-    body: String,
-    keywords: String,
-    version_hash: String,
-    image: Option<String>,
-    links: Option<Json<Vec<ContentLinkMetadata>>>,
-}
-
-impl UpdateContentParamsBuilder {
-    #[must_use]
-    pub fn new(seed: UpdateContentSeed) -> Self {
-        Self {
-            id: seed.id,
-            title: seed.title,
-            description: seed.description,
-            body: seed.body,
-            keywords: seed.keywords,
-            version_hash: seed.version_hash,
-            image: None,
-            links: None,
-        }
-    }
-
-    #[must_use]
-    pub fn with_image(mut self, image: impl Into<String>) -> Self {
-        self.image = Some(image.into());
-        self
-    }
-
-    #[must_use]
-    pub fn with_links(mut self, links: Vec<ContentLinkMetadata>) -> Self {
-        self.links = Some(Json(links));
-        self
-    }
-
-    #[must_use]
-    pub fn build(self) -> UpdateContentParams {
-        UpdateContentParams {
-            id: self.id,
-            title: self.title,
-            description: self.description,
-            body: self.body,
-            keywords: self.keywords,
-            version_hash: self.version_hash,
-            image: self.image,
-            links: self.links,
-        }
     }
 }

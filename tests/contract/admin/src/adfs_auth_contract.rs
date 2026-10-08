@@ -9,13 +9,13 @@
 //! The suite runs the router twice. Once with SSO disabled, which is how
 //! [`crate::app::App::new`] builds it and which pins the "unavailable"
 //! response every route owes when no `adfs.yaml` is present. Once with the
-//! real, committed AD FS federation metadata, so the AuthnRequest, the state
+//! real, committed AD FS federation metadata, so the `AuthnRequest`, the state
 //! cookie, and the callback's whole validation ladder — including a genuine
 //! XML-DSig check against the pinned certificate — run for real, offline.
 
 use std::collections::BTreeMap;
 
-use systemprompt_web_admin::AdfsConfig;
+use systemprompt_web_admin_identity::AdfsConfig;
 
 use crate::app::{App, Call};
 use crate::principal::Principal;

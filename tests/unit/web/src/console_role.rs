@@ -8,11 +8,13 @@
 use std::collections::BTreeMap;
 
 use systemprompt::identifiers::{Email, UserId};
-use systemprompt_web_admin::repositories::analytics::conversations::has_full_history_view;
-use systemprompt_web_admin::types::{
-    ROLE_ADMIN, ROLE_PROJECT_MANAGER, ROLE_USER, roles_grant_console, roles_grant_manage,
+use systemprompt_web_admin_core::repositories::conversations::has_full_history_view;
+use systemprompt_web_admin_core::repositories::scope::Participation;
+use systemprompt_web_admin_core::types::{
+    ROLE_ADMIN, ROLE_PROJECT_MANAGER, ROLE_USER, UserContext, roles_grant_console,
+    roles_grant_manage,
 };
-use systemprompt_web_admin::{AdfsConfig, UserContext, group_matches_pattern};
+use systemprompt_web_admin_identity::{AdfsConfig, group_matches_pattern};
 
 fn roles(list: &[&str]) -> Vec<String> {
     list.iter().map(|r| (*r).to_owned()).collect()
@@ -26,7 +28,7 @@ fn ctx(list: &[&str], groups: &[&str]) -> UserContext {
         email: Email::try_new("u-1@example.test".to_owned()).expect("fixture email"),
         group_ids: groups.iter().map(|g| (*g).to_owned()).collect(),
         project_ids: Vec::new(),
-        participation: Default::default(),
+        participation: Participation::default(),
         is_admin: roles_grant_manage(&roles),
         is_console: roles_grant_console(&roles),
         is_platform_admin: roles.iter().any(|r| r == "platform_admin"),

@@ -7,12 +7,12 @@
 
 use chrono::{DateTime, Duration, Utc};
 
-use systemprompt_web_admin::repositories::overview::kpis::OverviewKpis;
-use systemprompt_web_admin::repositories::overview::liveness::{
+use systemprompt_web_admin_analytics::repositories::overview::kpis::OverviewKpis;
+use systemprompt_web_admin_analytics::repositories::overview::queues::anomaly_tone;
+use systemprompt_web_admin_core::repositories::liveness::{
     HEARTBEAT_INTERVAL_SECS, Liveness, liveness_state,
 };
-use systemprompt_web_admin::repositories::overview::queues::anomaly_tone;
-use systemprompt_web_admin::util::delta::{DeltaKind, delta};
+use systemprompt_web_admin_core::util::delta::{DeltaKind, delta};
 
 fn now() -> DateTime<Utc> {
     DateTime::from_timestamp(1_756_000_000, 0).expect("fixed timestamp")

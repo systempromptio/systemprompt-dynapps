@@ -1,188 +1,150 @@
 ---
 title: "Dashboard"
-description: "Monitor AI usage across your organization with the admin dashboard. View real-time activity, metrics, top users, popular skills, model usage, and project breakdowns."
+description: "The admin overview: ten live headline figures against the previous window, five charts over time, spend by project and group, the most used models, and what is waiting on a person."
 author: "Astound Digital"
 slug: "dashboard"
-keywords: "dashboard, analytics, metrics, usage, monitoring, activity, events, sessions"
+keywords: "dashboard, overview, admin home, kpi, spend, requests, latency, error rate, models, projects, groups, approvals, anomalies, live"
 kind: "guide"
 public: true
 tags: ["dashboard", "analytics", "admin"]
 published_at: "2026-02-18"
-updated_at: "2026-09-11"
+updated_at: "2026-09-29"
 after_reading_this:
-  - "Understand the metrics displayed on the admin dashboard"
-  - "Use time-range controls to analyze AI usage trends"
-  - "Identify top users, popular skills, and project activity"
-  - "Monitor error rates and system health"
+  - "Read every headline figure on the overview and know where each one drills down to"
+  - "Switch the window between 24 hours, 7 days and 30 days and read the comparison"
+  - "Find which projects, groups and models carry the spend"
+  - "See the approvals and usage anomalies waiting on a person"
 related_docs:
-  - title: "Standing Up the Gateway"
-    url: "/documentation/deploy"
-  - title: "Authentication"
-    url: "/documentation/authentication"
+  - title: "Usage, Adoption & Productivity Analytics"
+    url: "/documentation/enterprise-analytics"
+  - title: "Cost Management"
+    url: "/documentation/enterprise-cost-management"
   - title: "Create & Manage Users"
     url: "/documentation/admin-user-management"
 ---
 
 # Dashboard
 
-**TL;DR:** The dashboard is the admin home page. It shows a metric ribbon with today's key numbers, an AI usage chart with selectable time ranges, live activity feed, system health indicators, top users leaderboard, popular skills, event breakdown, model usage, hourly activity, and project activity. Administrative readers, including project managers, can view the dashboard; ordinary users are redirected to their profile page.
+**TL;DR:** `/admin` is the overview — one screen for the whole instance over
+the last 24 hours, 7 days or 30 days. Ten headline tiles compare the window
+with the one before it, five charts show it over time, two leaderboards rank
+projects and groups by spend, one table ranks models, and a queue shows the
+approvals and anomalies waiting on a person. The page refreshes itself every
+half minute while it is open. Every figure links one click deeper.
 
+## Who sees it
 
-## Access Control
+The overview is for the console roles, `admin` and `platform_admin`. Anyone
+else who opens `/admin` is sent to their profile, or — if they participate in
+a marketplace — to the scoped pages that participation opens. See
+[Create & Manage Users → Roles](/documentation/admin-user-management#roles).
 
-The dashboard requires an administrative read role. Project managers have read-only access; write actions remain restricted to administrators. Ordinary users visiting `/admin/` are redirected to `/admin/profile`. See [User & Access Management](/documentation/enterprise-user-access).
+## The window
 
-## What You'll See
+The **24h / 7d / 30d** buttons in the page header choose the window (24 hours
+is the default; the choice is in the URL as `?preset=`, so it can be
+bookmarked). Changing it redraws the page without a reload.
 
-### Metric Ribbon
+Each tile's note compares the window with the one immediately before it
+("vs previous 7d"). When the previous window carried too few requests to
+compare against, a note says so and no tile shows a percentage.
 
-A horizontal strip across the top of the page shows key statistics at a glance:
+## Live refresh
 
-| Metric | Description |
-|--------|-------------|
-| **Events Today** | Total events recorded in the current day |
-| **Tool Uses** | Number of tool invocations this week |
-| **Prompts** | Number of user prompts submitted this week |
-| **Sessions** | Total sessions this week |
-| **Active Users** | Distinct users active in the last 24 hours |
-| **Errors** | Error count this week (only shown when errors exist, highlighted in red) |
-| **Plugins** | Total number of plugins available to your roles |
-| **Skills** | Total number of skills across all accessible plugins |
+While the tab is visible the page fetches its own figures every 30 seconds
+and updates them in place — tiles count to their new value, charts keep your
+hidden series and focus, changed table cells flash. The **Live** indicator in
+the header shows how old the figures are; **Pause** stops the refresh, and it
+stops by itself when your session ends or the fetch keeps failing. Motion is
+switched off under your system's reduced-motion setting, and the page works
+without JavaScript — it just does not refresh.
 
-### AI Usage Chart
+The live figures come from `GET /admin/api/overview`, which renders the same
+markup as the page from the same queries, so a refreshed number can never
+disagree with the one on first load.
 
-A multi-series area chart visualizes usage over time. The chart plots five data series:
+## Headline figures
 
-- **Sessions** (purple) — Number of sessions started
-- **Active Users** (green) — Distinct users per time bucket
-- **Prompts** (blue) — User prompts submitted
-- **Tool Uses** (indigo) — Tool invocations
-- **Errors** (red) — Error events
+| Tile | What it counts | Opens |
+|---|---|---|
+| **Requests** | Gateway requests in the window | Request log |
+| **Spend** | Gateway cost in the window | Analytics → Cost |
+| **Active people** | Distinct accounts that made a request | Users |
+| **Conversations** | Distinct gateway conversations | Analysis → Conversations |
+| **Tokens** | Input and output tokens; the note gives the share read from cache | Analytics → Models |
+| **Tool calls** | Tool calls across every client | Analytics → Tools |
+| **p50 latency** | Half of routed requests finished faster than this | Traces |
+| **p95 latency** | 95% of routed requests finished faster than this | Traces |
+| **Error rate** | Failed requests over all requests | Request log, failed only |
+| **Denied** | Requests recorded as `rejected` — refused before routing | Request log, rejected only |
 
-Use the time-range tabs to switch between views:
+While governance, safety and quotas run in warn mode, **Denied** counts only
+what is still refused — for example a model the gateway does not route — not
+what warn mode would have blocked. Those are recorded as warnings; see
+[Governance Modes](/documentation/governance-modes).
 
-- **24h** — Last 24 hours, bucketed hourly
-- **7d** — Last 7 days (default), bucketed daily
-- **14d** — Last 14 days, bucketed daily
+## Over time
 
-The chart also displays a peak value indicator and Y-axis labels that auto-scale to the data.
+Five charts, bucketed to the window:
 
-### Live Activity Feed
+- **Requests, conversations and people**
+- **Tokens and cache reads**
+- **Tool calls, errors and denials** — with rejected requests as their own series
+- **Latency per bucket** — p50 and p95, captioned with the worst bucket of each
+- **Spend by model** and **Requests by client** — the top series, the rest as *Other*; requests for a model the gateway does not route appear as *Unrouted*
 
-The left column shows a **Live Activity** timeline of recent events. Each entry includes:
+## Where the spend goes
 
-- The user's display name
-- A description of the action
-- A relative timestamp (e.g., "2 minutes ago")
+**Top projects by spend** and **Top groups by spend** sit side by side and
+share one layout: requests, spend and share of the window's spend. Attribution
+is exclusive — each person counts once, under their primary project or group
+— so each board adds up to the whole. People with no primary project or group
+appear as *Unattributed*. **All** opens the full list; a row opens that
+project's or group's page with its own usage tab.
 
-Events are color-coded by category: blue for logins, purple for marketplace connections, green for marketplace edits, cyan for sessions, and orange for other events.
+## Most used models
 
-Real-time updates are delivered via Server-Sent Events (SSE), indicated by a live dot next to the section title.
+One row per model the gateway served in the window, ordered by requests, with
+share of traffic, spend and median latency. A model the gateway refused is
+marked **REJECTED**. **All models** opens the Analytics Models tab, which
+reads the same rows.
 
-### System Overview
+## Waiting on a person
 
-The right column shows three health cards:
+- **Pending approvals** — tool calls held by a `require_approval` policy.
+  Opens the approvals queue at `/admin/governance/approvals`.
+- **Open anomalies** — usage the anomaly detector flagged in the last 24
+  hours, listed below the tile with metric, window, observed value, baseline
+  and severity. Anomalies are shown here and written to the server log; no
+  notification is sent anywhere else. See
+  [Audit & Observability](/documentation/enterprise-audit-observability).
 
-- **Error Rate** — Percentage of events that are errors this week, with a progress bar that turns red when errors exist
-- **Active Users (24h)** — Count of distinct users in the last 24 hours
-- **Avg Session** — Average session duration, formatted as minutes and seconds
+## Getting around
 
-### Models
+The header buttons open the **Request log** and **Analytics**. The sidebar
+groups the console:
 
-Below the system overview, a bar chart shows which AI models are being used and how frequently. Model names are shortened for display (e.g., `claude-3-5-sonnet` becomes `sonnet`).
+| Group | Pages |
+|---|---|
+| Activity | Overview, Analytics, By person |
+| People | Users, Groups, Projects, Roles & permissions, Access control, Devices & enrolments |
+| Analysis | Conversations, Skills, Reports, Versions |
+| Governance | Governance, Approvals, Secrets, Quotas |
+| Platform | Configuration, Lifecycle, Code sync, Marketplaces, Plugins, Skills, MCP servers, Gateway |
+| Account | Profile, Connect, Connectors, My conversations |
+| Developer | Requests, Sessions, Conversations, Traces, Tools & artifacts |
 
-### Top Users
-
-A leaderboard table ranks users by activity. Columns include:
-
-| Column | Description |
-|--------|-------------|
-| **#** | Rank position (top 3 get special styling) |
-| **User** | Display name with avatar initials |
-| **Logins** | Number of login events |
-| **Prompts** | Number of prompts submitted |
-| **Plugins** | Number of plugins accessed |
-| **Tokens** | Token usage count |
-
-### Popular Skills
-
-A horizontal bar chart shows the most-used skills (tools) ranked by invocation count.
-
-### Activity (Last 24h)
-
-A mini bar chart shows hourly event counts for the last 24 hours. Each bar is labeled with the hour and shows a tooltip with the exact count.
-
-### Event Breakdown
-
-A horizontal bar chart shows the distribution of event types. Event types include Tool Use, Tool Failure, Session Start, Session End, Turn Complete, Subagent Start, Subagent Stop, and User Prompt. Error-related events are highlighted in red.
-
-### Project Activity
-
-Users may belong to zero, one, or several projects. The dashboard's Project selector narrows activity to the selected project.
-
-## Navigating from the Dashboard
-
-The dashboard links to other admin pages:
-
-- Click **View all events** in the live activity feed to jump to the full events view
-- Use the sidebar to navigate to users, jobs, and other management pages
-- The **Share & Install** menu (share icon in the header) provides install commands for Claude Code
-- New users see an onboarding panel with step-by-step installation guides for both Claude surfaces (Claude Code and claude.ai)
-
-## Enterprise Cost & Usage Visibility
-
-The dashboard provides enterprise-scale visibility designed for large organizational deployments. At enterprise scale, cost and usage data must be actionable across organizational boundaries — from individual agents to entire projects.
-
-### Per-Agent Token Consumption
-
-The platform tracks token consumption for each agent independently:
-
-- **Platform agents** — Token usage from internal developer workflows (code assistance, documentation, API integration)
-- **Domain agents** — Token usage from project-specific interactions (revenue management, operations, scheduling)
-
-Each agent's consumption is broken down by input tokens, output tokens, and total cost, allowing precise attribution of AI spend to business functions.
-
-### Project-Level Cost Tracking
-
-For chargeback, the dashboard aggregates costs at the project level. Each project's AI spend is the spend of the users the directory placed in it, so finance can allocate AI costs to Commerce or Core without manual reconciliation.
-
-### Model Usage Distribution
-
-The model usage chart (described above) extends to show distribution across agents. Track which models each agent uses most frequently — for example, whether domain agents are consuming more expensive models than necessary, or whether platform agents could be shifted to a more cost-effective model for routine tasks.
-
-### CLI Commands for Cost Analytics
-
-Use the CLI for programmatic access to cost data:
+The same figures are available from the CLI for scripting and export:
 
 ```bash
-# Summary overview of analytics
-systemprompt analytics overview
-
-# Analytics for the last 7 days
 systemprompt analytics overview --since 7d
-
-# Export analytics data
 systemprompt analytics overview --export overview.csv
+systemprompt analytics costs breakdown --by model --since 30d
 ```
 
-These commands output structured data suitable for scripting, reporting, and integration with existing BI tools.
+## Check it yourself
 
-### RBAC-Governed Cost Visibility
-
-Cost data visibility is governed by the same RBAC system that controls all platform resources. A plain user sees only their own data. Instance-wide and cross-project cost views require the `admin` role. This ensures sensitive spend data is compartmentalized appropriately across enterprise-scale deployments.
-
-### Export to CSV
-
-Finance teams can export cost and usage data to CSV for integration with existing accounting and budgeting systems. Exports include per-agent breakdowns, project rollups, model-level costs, and daily/weekly/monthly aggregations. Use the dashboard export button or the CLI to generate reports on demand.
-
----
-
-## Enterprise Analytics: Internal Data Integration
-
-The dashboard analytics extend to enterprise-scale reporting with internal data mapping. The following are planning topics, not delivered cross-system outcome measurements. See [Usage, Adoption & Productivity Analytics](/documentation/enterprise-analytics) for the implemented metrics and external-data prerequisites:
-
-- **Internal data source mapping** — correlate platform analytics with your existing data structures (CRM, ERP, workforce management) for unified reporting
-- **Custom analytics dashboards** — define which metrics, charts, and drill-downs appear in the Control Center based on operational priorities
-- **User analytics with role context** — map platform usage data to your internal user hierarchy, teams, and reporting lines
-- **Cross-system engagement metrics** — combine AI usage data with business outcomes to measure the impact of AI adoption on operational KPIs
-- **Scheduled reporting** — automated report generation and distribution to stakeholders on configurable schedules
+1. Open `/admin`, choose **7d**, and note **Requests**.
+2. Click the tile. The request log opens on the same window; its count matches.
+3. Run `systemprompt analytics overview --since 7d` and compare the request
+   total. A small difference is requests that landed between the two reads.

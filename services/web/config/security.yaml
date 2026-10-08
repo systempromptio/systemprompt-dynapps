@@ -1,7 +1,7 @@
 # Credential lifetime policy for this installation.
 #
-# Read by the admin console at boot (extensions/web/admin/src/repositories/
-# config/security_policy.rs). A missing file means the defaults below.
+# Read by the admin console at boot (extensions/web/admin/platform/src/
+# repositories/security_policy.rs). A missing file means the defaults below.
 
 security:
   # Longest a personal access token may live from the moment it is issued,

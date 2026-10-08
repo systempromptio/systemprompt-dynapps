@@ -7,7 +7,7 @@
 //! and still belong in the request, token, and cost totals.
 
 use chrono::{Duration, Utc};
-use systemprompt_web_admin::repositories::users::usage::get_ai_request_summary;
+use systemprompt_web_admin_core::repositories::user_usage::get_ai_request_summary;
 
 use crate::fixtures::{
     LEGACY_CONTEXT_ID, RequestSpec, insert_request, insert_user, new_context_id, unclaimed_email,

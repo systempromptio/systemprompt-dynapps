@@ -1,0 +1,210 @@
+//! `/admin/sessions/{session_id}` — single-session detail page.
+//!
+//! Renders the header, KPI strip, and three linked tables (contexts, traces,
+//! requests) for one `session_id`, mirroring `analytics sessions stats` plus
+//! `analytics conversations list` with cross-links to the other entity pages.
+//! An owner outside the caller's view answers 404 exactly like a missing id,
+//! so the URL is no oracle for other people's session ids.
+
+mod context;
+mod rows;
+
+
+use std::sync::Arc;
+use systemprompt_web_admin_core::error::AdminError;
+
+use axum::extract::{Path, State};
+use axum::response::Response;
+use sqlx::PgPool;
+use systemprompt::identifiers::SessionId;
+
+use crate::repositories::analytics::session_detail::{
+    SessionContextRow, SessionHeader, SessionKpis, SessionRequestRow, SessionTraceRow,
+    find_session_header, get_session_kpis, list_session_contexts, list_session_requests,
+    list_session_traces,
+};
+use crate::repositories::session_state::session_state;
+use systemprompt_web_admin_core::error::AdminHtmlResult;
+use systemprompt_web_admin_core::repositories::scope::may_view;
+use systemprompt_web_admin_core::ssr::faults::Faults;
+use systemprompt_web_admin_core::ssr::format::{
+    format_cost, format_duration_ms, format_token_total, local_time, short_id,
+};
+use systemprompt_web_admin_core::ssr::helpers::Viewer;
+use systemprompt_web_admin_core::ssr::page::Page;
+
+use rows::{context_view, request_view, trace_view};
+
+use context::{SessionDetailPageContext, SessionHeaderView, SessionKpisView};
+use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
+
+
+struct SessionRead {
+    kpis: SessionKpis,
+    contexts: Vec<SessionContextRow>,
+    traces: Vec<SessionTraceRow>,
+    requests: Vec<SessionRequestRow>,
+}
+
+async fn load_session(pool: &PgPool, session_id: &SessionId, faults: &mut Faults) -> SessionRead {
+    let (kpis, contexts, traces, requests) = tokio::join!(
+        get_session_kpis(pool, session_id),
+        list_session_contexts(pool, session_id),
+        list_session_traces(pool, session_id),
+        list_session_requests(pool, session_id),
+    );
+    SessionRead {
+        kpis: faults.take("session totals", kpis),
+        contexts: faults.take("session contexts", contexts),
+        traces: faults.take("session traces", traces),
+        requests: faults.take("session requests", requests),
+    }
+}
+
+pub(crate) async fn session_detail_page(
+    shell: Page,
+    State(pool): State<Arc<PgPool>>,
+    Path(session_id): Path<String>,
+) -> AdminHtmlResult<Response> {
+    let session_id = SessionId::new(session_id.trim());
+    let header = if session_id.as_str().is_empty() {
+        None
+    } else {
+        find_session_header(&pool, &session_id).await?
+    };
+    let visible = match &header {
+        Some(h) => may_view(&pool, &shell.user, h.user_id.as_ref()).await?,
+        None => false,
+    };
+    let Some(header) = header.filter(|_| visible) else {
+        return Err(AdminError::NotFound(
+            "No AI requests, contexts, or hook events match that session id.".to_owned(),
+        )
+        .into());
+    };
+
+    let mut faults = Faults::new();
+    let read = load_session(&pool, &session_id, &mut faults).await;
+
+    let data = SessionDetailPageContext {
+        page: "session-detail",
+        title: format!("Session · {}", short_id(header.session_id.as_str())),
+        breadcrumbs: breadcrumbs(&header),
+        header: header_view(&header),
+        kpis: kpis_view(&read.kpis, &session_id),
+        has_contexts: !read.contexts.is_empty(),
+        contexts: read.contexts.iter().map(context_view).collect(),
+        has_traces: !read.traces.is_empty(),
+        traces: read.traces.iter().map(trace_view).collect(),
+        has_requests: !read.requests.is_empty(),
+        requests: read.requests.iter().map(request_view).collect(),
+        back_url: "/admin/sessions",
+        export: systemprompt_web_admin_core::export::view::ExportView::new(
+            &[],
+            &format!(
+                "session_id={}",
+                urlencoding::encode(header.session_id.as_str())
+            ),
+        )
+        .with_transcripts(
+            systemprompt_web_admin_core::export::transcripts::TranscriptSource::Sessions,
+        ),
+    };
+
+    Ok(
+        systemprompt_web_admin_core::ssr::helpers::render_page_with_faults(
+            &shell.engine,
+            "session-detail",
+            &data,
+            Viewer::new(&shell.user, &shell.marketplace),
+            &faults,
+        ),
+    )
+}
+
+fn breadcrumbs(h: &SessionHeader) -> Vec<BreadcrumbView> {
+    vec![
+        BreadcrumbView::link("Sessions", "/admin/sessions"),
+        BreadcrumbView::current(short_id(h.session_id.as_str())),
+    ]
+}
+
+fn header_view(h: &SessionHeader) -> SessionHeaderView {
+    SessionHeaderView {
+        session_id: h.session_id.clone(),
+        session_id_short: short_id(h.session_id.as_str()),
+        user_id: h.user_id.clone(),
+        user_url: h
+            .user_id
+            .as_ref()
+            .map(|u| format!("/admin/users/{}", urlencoding::encode(u.as_str()))),
+        display_name: h.display_name.clone(),
+        groups_display: (!h.groups.is_empty()).then(|| h.groups.join(", ")),
+        started_at: h.started_at.map(|t| t.to_rfc3339()),
+        started_at_local: h.started_at.map(local_time),
+        last_activity_at: h.last_activity_at.map(|t| t.to_rfc3339()),
+        last_activity_at_local: h.last_activity_at.map(local_time),
+        duration_display: duration_display(h.started_at, h.last_activity_at),
+        status: session_state(chrono::Utc::now(), h.completed, h.last_activity_at)
+            .label()
+            .to_owned(),
+        model: h.model.clone(),
+        plugin_id: h.plugin_id.clone(),
+        ai_title: h.ai_title.clone(),
+    }
+}
+
+fn kpis_view(k: &SessionKpis, session_id: &SessionId) -> SessionKpisView {
+    let wire_input =
+        k.total_input_tokens + k.total_cache_read_tokens + k.total_cache_creation_tokens;
+    let total = wire_input + k.total_output_tokens;
+    SessionKpisView {
+        request_count: k.request_count,
+        context_count: k.context_count,
+        trace_count: k.trace_count,
+        error_count: k.error_count,
+        total_input_tokens: k.total_input_tokens,
+        total_cache_read_tokens: k.total_cache_read_tokens,
+        total_cache_creation_tokens: k.total_cache_creation_tokens,
+        total_output_tokens: k.total_output_tokens,
+        total_tokens: total,
+        tokens_display: format_token_total(total),
+        tokens_note: tokens_note(wire_input, k.total_cache_read_tokens, k.total_output_tokens),
+        total_cost_microdollars: k.total_cost_microdollars,
+        total_cost_display: format_cost(k.total_cost_microdollars),
+        tool_call_count: k.tool_call_count,
+        executed_count: k.executed_count,
+        artifact_count: k.artifact_count,
+        artifacts_url: format!(
+            "/admin/artifacts?session={}&all=1&preset=30d",
+            urlencoding::encode(session_id.as_str())
+        ),
+    }
+}
+
+fn tokens_note(wire_input: i64, cached: i64, output: i64) -> String {
+    let cached_note = if wire_input > 0 && cached > 0 {
+        format!(
+            " ({} cached, {}%)",
+            format_token_total(cached),
+            cached.saturating_mul(100) / wire_input
+        )
+    } else {
+        String::new()
+    };
+    format!(
+        "{} in{cached_note} / {} out",
+        format_token_total(wire_input),
+        format_token_total(output)
+    )
+}
+
+fn duration_display(
+    start: Option<chrono::DateTime<chrono::Utc>>,
+    end: Option<chrono::DateTime<chrono::Utc>>,
+) -> String {
+    match (start, end) {
+        (Some(s), Some(e)) => format_duration_ms((e - s).num_milliseconds().max(0)),
+        _ => "—".to_owned(),
+    }
+}

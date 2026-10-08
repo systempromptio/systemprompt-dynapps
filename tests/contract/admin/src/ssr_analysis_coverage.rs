@@ -43,6 +43,12 @@ async fn seed_analysis(pool: &PgPool) -> (String, String, String) {
         .execute(pool)
         .await
         .expect("bind client session");
+    seed::insert_offered_tools(pool, &request_id).await;
+    let context: String = sqlx::query_scalar("SELECT canonical_conversation_context($1)")
+        .bind(&context)
+        .fetch_one(pool)
+        .await
+        .expect("resolve native session context");
     sqlx::query(
         "INSERT INTO conversation_facts
          (context_id, user_id, client_session_id, client_kind, client_attestation,

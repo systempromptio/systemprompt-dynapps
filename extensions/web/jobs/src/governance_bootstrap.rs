@@ -5,11 +5,16 @@
 //! 0. Validate `services/governance/config.yaml`, failing the boot rather than
 //!    letting an unparseable file degrade to the built-in defaults unnoticed,
 //!    and warn when the resulting chain enforces nothing. Then report whether a
-//!    plugin owns `hooks.judge`, the conversation judge's switch.
+//!    plugin owns `hooks.judge`, the conversation judge's switch. `warning`
+//!    policies are counted apart from `active` ones because an active chain of
+//!    warning-only policies enforces nothing. Paths resolve against the
+//!    composed services root, the same tree `/admin/sync` reads.
 //! 1. Reconcile the services gateway-route entities into
 //!    `access_control_entities` (so the FK on `access_control_rules` is
 //!    satisfied and a `gateway_route` `entity_match` glob has routes to expand
-//!    over), deleting catalog rows no configured route claims.
+//!    over), deleting catalog rows no configured route claims. An empty route
+//!    set leaves the catalog untouched: reconciling against it would cascade
+//!    away every route grant, and a tree with no gateway is legitimate.
 //! 2. Run every sync plane through the one boot contract
 //!    (`repositories::sync::boot`): groups, then access control, then gateway
 //!    policies. A plane whose projection is empty is seeded from its file;
@@ -30,11 +35,11 @@ use systemprompt::traits::{Job, JobContext, JobResult};
 use systemprompt::security::authz::{EntityKind, RegisteredEntities};
 
 use crate::error::JobError;
-use systemprompt_web_admin::repositories::config::gateway::{
+use systemprompt_web_admin_core::repositories::gateway_catalog::{
     dispatchable_route_ids, registered_routes,
 };
-use systemprompt_web_admin::repositories::sync::boot::reconcile_all;
-use systemprompt_web_admin::repositories::sync::sources_db::record_service_sources;
+use systemprompt_web_admin_core::repositories::sync::boot::reconcile_all;
+use systemprompt_web_admin_core::repositories::sync::sources_db::record_service_sources;
 use systemprompt_web_shared::error::MarketplaceError;
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -70,21 +75,13 @@ impl Job for GovernanceBootstrapJob {
 async fn execute_inner(ctx: &JobContext) -> Result<JobResult, JobError> {
     let start = std::time::Instant::now();
 
-    let db_pool = ctx.db_pool::<DbPool>().ok_or(MarketplaceError::Internal(
-        "Database not available in job context".to_owned(),
-    ))?;
-    // Why: the composed root — the same tree the sync page reads — so a kit's
-    // marketplace validates once its bundle is active, and boot and page can
-    // never disagree about what the declaration says.
-    let profile = systemprompt::config::ProfileBootstrap::get()?;
-    let services_path = systemprompt::loader::services_root::ServicesRootBootstrap::active_root_or(
-        &profile.paths.services,
-    );
+    let db_pool = ctx.get::<DbPool>()?;
+    let services_path = composed_services_root()?;
 
     let governance = check_governance_config(&services_path)?;
     check_judge_config()?;
 
-    systemprompt_web_admin::salesforce_orgs_boot_check(&services_path)
+    systemprompt_web_admin_platform::salesforce_orgs_boot_check(&services_path)
         .await
         .map_err(|e| JobError::from(MarketplaceError::Internal(e)))?;
 
@@ -95,10 +92,6 @@ async fn execute_inner(ctx: &JobContext) -> Result<JobResult, JobError> {
         .await
         .map_err(|e| JobError::from(MarketplaceError::Internal(e.to_string())))?;
 
-    // Why: every skill invocation is credited to the marketplace that owns
-    // its plugin and the version that marketplace was serving; ownership and
-    // versions come from the composition this process booted on, so they are
-    // recorded here.
     let sources = record_service_sources(&pool)
         .await
         .map_err(JobError::from)?;
@@ -128,21 +121,22 @@ async fn execute_inner(ctx: &JobContext) -> Result<JobResult, JobError> {
     Ok(JobResult::success().with_duration(duration_ms))
 }
 
+fn composed_services_root() -> Result<std::path::PathBuf, JobError> {
+    let profile = systemprompt::config::ProfileBootstrap::get()?;
+    Ok(
+        systemprompt::loader::services_root::ServicesRootBootstrap::active_root_or(
+            &profile.paths.services,
+        ),
+    )
+}
+
 #[doc(hidden)]
 #[derive(Debug, Clone, Copy)]
 pub struct GovernanceStatus {
     pub active: usize,
-    // Why: reported separately from `active` because the two answer different
-    // questions. `active` says the chain is wired; `warning` says how much of
-    // it will actually refuse anything. Four active and four warning policies
-    // enforce nothing, and a boot line showing only `active = 4` would read as
-    // fully protected.
     pub warning: usize,
 }
 
-// Why: an unparseable policy file must fail boot rather than degrade to the
-// built-in defaults — an operator who edited it to relax a policy would get
-// stricter enforcement than before and no signal.
 #[doc(hidden)]
 pub fn check_governance_config(
     services_path: &std::path::Path,
@@ -184,9 +178,6 @@ pub fn check_governance_config(
     Ok(GovernanceStatus { active, warning })
 }
 
-// Why: `hooks.judge` on the governance owner is the switch for the
-// conversation judge; core already refuses two owners. Reported so the boot
-// log says whether conversations will be labelled.
 #[doc(hidden)]
 pub fn check_judge_config() -> Result<(), JobError> {
     let services = systemprompt::loader::ServicesBootstrap::get()?;
@@ -224,10 +215,6 @@ async fn bootstrap_gateway_entities(db_pool: &DbPool) -> Result<GatewayCatalog, 
     let registered = registered_routes(&route_ids);
     let id_refs: Vec<&str> = route_ids.iter().map(String::as_str).collect();
 
-    // Why: reconciling against an empty set would delete every gateway_route
-    // entity and cascade away every route grant. A services tree with no
-    // gateway is a legitimate configuration, not a signal to empty the catalog,
-    // so leave it untouched and let step 2 run unenforced.
     if id_refs.is_empty() {
         tracing::warn!(
             gateway = %gateway_path.display(),
@@ -241,8 +228,7 @@ async fn bootstrap_gateway_entities(db_pool: &DbPool) -> Result<GatewayCatalog, 
     }
 
     let source = format!("services:{}", gateway_path.display());
-    let repo = systemprompt::security::authz::AccessControlRepository::new(db_pool)
-        .map_err(|e| MarketplaceError::Internal(e.to_string()))?;
+    let repo = systemprompt::security::authz::AccessControlRepository::new(db_pool);
     let report =
         systemprompt::security::authz::reconcile_gateway_entities_exact(&repo, &id_refs, &source)
             .await

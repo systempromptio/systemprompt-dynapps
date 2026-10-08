@@ -1,15 +1,15 @@
 //! `repositories::people_usage` — the gateway rollups the group page draws.
 
-use systemprompt_web_admin::repositories::groups::crud::insert_group;
-use systemprompt_web_admin::repositories::groups::members::insert_group_member;
-use systemprompt_web_admin::repositories::people_usage::breakdown::{
+use systemprompt_web_admin_core::repositories::scope::{Attribution, ScopeQuery, ScopeTarget};
+use systemprompt_web_admin_core::types::groups::CreateGroupRequest;
+use systemprompt_web_admin_identity::repositories::groups::crud::insert_group;
+use systemprompt_web_admin_identity::repositories::groups::members::insert_group_member;
+use systemprompt_web_admin_identity::repositories::people_usage::breakdown::{
     list_linked_scopes, list_scope_top_models,
 };
-use systemprompt_web_admin::repositories::people_usage::{
+use systemprompt_web_admin_identity::repositories::people_usage::{
     DEFAULT_WINDOW_DAYS, get_scope_usage, list_daily_requests,
 };
-use systemprompt_web_admin::repositories::scope::{Attribution, ScopeQuery, ScopeTarget};
-use systemprompt_web_admin::types::groups::CreateGroupRequest;
 use systemprompt_web_shared::GroupId;
 
 use crate::fixtures::{

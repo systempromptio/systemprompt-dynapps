@@ -11,7 +11,7 @@ use rmcp::model::{CallToolRequestParams, CallToolResult};
 use rmcp::service::{RequestContext, RoleServer};
 use std::sync::Arc;
 use systemprompt::database::DbPool;
-use systemprompt::identifiers::McpExecutionId;
+use systemprompt::identifiers::{McpExecutionId, McpServerId};
 use systemprompt::mcp::middleware::enforce_rbac_from_registry;
 use systemprompt::mcp::{ArtifactIngest, ClientProfile, McpToolExecutor, McpToolHandler};
 use systemprompt::models::artifacts::{CliArtifact, TextArtifact};
@@ -23,7 +23,7 @@ pub(super) struct SystempromptToolHandler<'a> {
     pub(super) auth_token: String,
     pub(super) cli: &'a cli::CliLocation,
     pub(super) ingest: &'a ArtifactIngest,
-    pub(super) server_name: &'a str,
+    pub(super) server_name: &'a McpServerId,
 }
 
 impl McpToolHandler for SystempromptToolHandler<'_> {
@@ -63,12 +63,6 @@ impl McpToolHandler for SystempromptToolHandler<'_> {
                 CliArtifact::text(TextArtifact::new(&output.stdout).with_title("Command Output"))
             },
         };
-        // Why: the response builder pairs the summary with the artifact's text
-        // body on the wire, so echoing stdout as the summary would print the
-        // whole output twice for structured clients — and an unbounded body
-        // is what a host spills to a file the model cannot read back. An
-        // oversize result is kept whole as its own artifact and the model gets
-        // a pointer; trimming is only what happens when that store fails.
         if let Some(bytes) = crate::bounds::oversize_bytes(&artifact) {
             let store = super::overflow::OverflowStore {
                 ingest: self.ingest,
@@ -114,11 +108,11 @@ impl McpToolHandler for SystempromptToolHandler<'_> {
 pub(super) async fn authenticate_tool_request(
     db_pool: &DbPool,
     tool_name: &str,
-    service_id: &str,
+    service_id: &McpServerId,
     ctx: &RequestContext<RoleServer>,
     authz_hook: &SharedAuthzHook,
 ) -> Result<(SysRequestContext, String), McpError> {
-    let server_name = service_id;
+    let server_name = service_id.as_str();
     let rbac_result = enforce_rbac_from_registry(ctx, service_id, authz_hook).await;
 
     match rbac_result {
@@ -135,7 +129,16 @@ pub(super) async fn authenticate_tool_request(
                         "authenticated",
                     )
                     .await;
-                    let token = authenticated.token().to_owned();
+                    let token = authenticated
+                        .auth_token()
+                        .ok_or_else(|| {
+                            McpError::internal_error(
+                                "Authenticated request has no credential",
+                                None,
+                            )
+                        })?
+                        .as_str()
+                        .to_owned();
                     Ok((authenticated.context.clone(), token))
                 },
                 Err(e) => {
@@ -155,7 +158,7 @@ pub(super) async fn authenticate_tool_request(
 #[doc(hidden)]
 #[derive(Debug)]
 pub struct Dispatch<'a> {
-    pub service_id: &'a str,
+    pub service_id: &'a McpServerId,
     pub db_pool: &'a DbPool,
     pub executor: &'a McpToolExecutor,
     pub request: &'a CallToolRequestParams,
@@ -174,8 +177,6 @@ async fn run_typed<H: McpToolHandler>(
         .await
 }
 
-// Why: the typed tools share one constructor shape; matching them here
-// keeps `dispatch_tool` a flat name table.
 async fn dispatch_typed(
     ctx: &Dispatch<'_>,
     tool_name: &str,
@@ -197,9 +198,8 @@ async fn dispatch_typed(
     })
 }
 
-// Why: Exposed (behind `#[doc(hidden)]`) so the external test workspace can
-// assert the unknown-tool arm without an rmcp `Peer`, which only exists once a
-// transport is serving. Not part of the public API.
+// Why: `#[doc(hidden)]` so the external test workspace can assert the
+// unknown-tool arm without an rmcp `Peer`, which exists only once serving.
 #[doc(hidden)]
 pub async fn dispatch_tool(
     ctx: &Dispatch<'_>,

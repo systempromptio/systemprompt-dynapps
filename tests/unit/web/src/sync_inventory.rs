@@ -2,10 +2,12 @@
 //! every path it names exists in this repository's `services/` tree; each
 //! registered plane is a kind the inventory marks as projected.
 
-use systemprompt_web_admin::repositories::sync::inventory::{
+use systemprompt_web_admin_core::repositories::sync::inventory::{
     CONFIG_KINDS, kind_by_id, kind_for_path,
 };
-use systemprompt_web_admin::repositories::sync::registry::planes;
+use systemprompt_web_admin_core::repositories::sync::registry::planes;
+use systemprompt_web_admin_governance as _;
+use systemprompt_web_admin_identity as _;
 
 use crate::support::repo_root;
 
@@ -44,6 +46,21 @@ fn ids_are_unique_and_projected_kinds_come_first() {
             saw_served = true;
         }
     }
+}
+
+#[test]
+fn registered_planes_keep_the_page_order() {
+    let ids: Vec<&str> = planes().iter().map(|p| p.id()).collect();
+    assert_eq!(
+        ids,
+        [
+            "access_control",
+            "groups",
+            "gateway_policies",
+            "gateway_routes",
+            "governance"
+        ]
+    );
 }
 
 #[test]

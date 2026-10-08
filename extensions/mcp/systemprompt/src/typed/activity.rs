@@ -28,12 +28,10 @@ pub struct ConversationListHandler<'a> {
     pub token: &'a str,
 }
 
-// Why: values are spliced into SQL text, so the accepted alphabet excludes
-// every quote, backslash and statement separator rather than escaping them.
 fn literal(name: &str, value: &str) -> Result<String, ErrorData> {
     let value = value.trim();
-    let allowed = |c: char| c.is_alphanumeric() || " @._+-:".contains(c);
-    if value.len() > 80 || !value.chars().all(allowed) {
+    let sql_splice_safe = |c: char| c.is_alphanumeric() || " @._+-:".contains(c);
+    if value.len() > 80 || !value.chars().all(sql_splice_safe) {
         return Err(invalid(format!(
             "`{name}` may hold letters, digits, spaces and @._+-: only (got {value:?})"
         )));
@@ -75,9 +73,6 @@ pub fn window_bound(name: &str, value: &str, default: &str) -> Result<String, Er
     Ok(format!("'{value}'::timestamptz"))
 }
 
-// Why: a person is named however the asker names them — id, email, or part
-// of a name — and one question can match several people, who then each get
-// a row rather than a guess.
 fn person_match(alias: &str, user: &str) -> Result<String, ErrorData> {
     let v = literal("user", user)?;
     if v.is_empty() {
@@ -90,8 +85,6 @@ fn person_match(alias: &str, user: &str) -> Result<String, ErrorData> {
     ))
 }
 
-// Why: the SQL is ~2 KB; echoing it back as `command` is width the model
-// reads on every call and learns nothing from.
 fn label(tool: &str, user: &str, since: &str) -> String {
     format!("{tool} user={:?} since={:?}", user.trim(), since.trim())
 }

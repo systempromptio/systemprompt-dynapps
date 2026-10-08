@@ -1,5 +1,5 @@
 import { rawResponse } from './api.js';
-import { on, onKey, onOutsideClick } from './events.js';
+import { on, onEscape, onKey, onOutsideClick } from './events.js';
 import { createSearchList } from './header-search-list.js';
 
 // Why: every list page copies out a `short_id` — twelve characters and an
@@ -110,6 +110,32 @@ const bindKeys = (input, list) => {
   });
 };
 
+// Why: on a phone the form hides behind an icon (03-shell-header-mobile.css)
+// and opens as a row under the topbar; on desktop the toggle is never shown.
+const bindToggle = (form, input) => {
+  const bar = form.closest('.sp-topbar');
+  const toggle = bar?.querySelector('[data-action="header-search-toggle"]');
+  if (!bar || !toggle) return;
+  const isOpen = () => bar.classList.contains('is-search-open');
+  const setOpen = (open) => {
+    bar.classList.toggle('is-search-open', open);
+    toggle.setAttribute('aria-expanded', String(open));
+    if (open) input.focus();
+  };
+  on('click', '[data-action="header-search-toggle"]', (e) => {
+    e.preventDefault();
+    setOpen(!isOpen());
+  }, { exclusive: true });
+  onEscape(() => {
+    if (!isOpen()) return;
+    setOpen(false);
+    toggle.focus();
+  });
+  onOutsideClick((e) => {
+    if (isOpen() && !form.contains(e.target) && !toggle.contains(e.target)) setOpen(false);
+  });
+};
+
 let searchReady = false;
 
 export const initHeaderSearch = () => {
@@ -131,6 +157,7 @@ export const initHeaderSearch = () => {
     await runResolve(ctx);
   });
   bindKeys(input, list);
+  bindToggle(form, input);
   onKey('/', focusOnSlash(input));
   on('click', '[data-action="header-search-pick"]', (e, item) => {
     e.preventDefault();

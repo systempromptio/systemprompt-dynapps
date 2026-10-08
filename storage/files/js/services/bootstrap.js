@@ -3,12 +3,16 @@ import { initDropdown, closeAllMenus } from './dropdown.js';
 import { initSidebar } from './sidebar.js';
 import { initNavGroups } from './nav-groups.js';
 import { initTableExpand } from './table-expand.js';
+import { initTableCards } from './table-cards.js';
 import { initHeaderActions } from './header-actions.js';
 import { initHeaderSearch } from './header-search.js';
 import { initLogout, initUserDisplay, getUserContext } from './auth.js';
 import { initFilterRibbon } from './filter-ribbon.js';
 import { initScope } from './scope.js';
 import { initExport } from './export.js';
+import { initAttention } from './attention.js';
+import { initFlash } from './flash.js';
+import { initFormConfirm } from './form-confirm.js';
 import { showToast } from './toast.js';
 import { initHelp } from '../components/sp-help.js';
 
@@ -31,11 +35,15 @@ for (const init of [
   initSidebar,
   initNavGroups,
   initTableExpand,
+  initTableCards,
   initHeaderActions,
   initHeaderSearch,
   initFilterRibbon,
   initScope,
   initExport,
+  initAttention,
+  initFlash,
+  initFormConfirm,
   initHelp,
   initLogout,
   initUserDisplay,

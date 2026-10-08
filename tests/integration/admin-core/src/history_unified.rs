@@ -5,9 +5,7 @@
 //! prompt as the preview, that the user-id scope constrains the rows, and
 //! that paging and the total count are computed over the whole list.
 
-use systemprompt_web_admin::repositories::analytics::conversations::{
-    HistoryFilter, list_history_items,
-};
+use systemprompt_web_admin_core::repositories::conversations::{HistoryFilter, list_history_items};
 
 use crate::fixtures::{
     LEGACY_CONTEXT_ID, RequestSpec, insert_message, insert_offered_tools, insert_request,

@@ -53,6 +53,7 @@ pub fn service_js_assets(storage_js: &Path) -> Vec<AssetDefinition> {
 fn service_core_js(p: &Path) -> Vec<AssetDefinition> {
     vec![
         svc_js!(p, "api.js"),
+        svc_js!(p, "attention.js"),
         svc_js!(p, "auth.js"),
         svc_js!(p, "bootstrap.js"),
         svc_js!(p, "confirm.js"),
@@ -64,14 +65,20 @@ fn service_core_js(p: &Path) -> Vec<AssetDefinition> {
         svc_js!(p, "export-preview.js"),
         svc_js!(p, "export-scope.js"),
         svc_js!(p, "export-url.js"),
+        svc_js!(p, "live-number.js"),
+        svc_js!(p, "live-poll.js"),
+        svc_js!(p, "live-status.js"),
         svc_js!(p, "export.js"),
         svc_js!(p, "filter-ribbon.js"),
+        svc_js!(p, "flash.js"),
+        svc_js!(p, "form-confirm.js"),
         svc_js!(p, "header-actions.js"),
         svc_js!(p, "header-search-list.js"),
         svc_js!(p, "header-search.js"),
         svc_js!(p, "nav-groups.js"),
         svc_js!(p, "scope.js"),
         svc_js!(p, "sidebar.js"),
+        svc_js!(p, "table-cards.js"),
         svc_js!(p, "table-expand.js"),
         svc_js!(p, "toast.js"),
         svc_js!(p, "validity.js"),
@@ -143,6 +150,10 @@ fn service_utils_js(storage_js: &Path) -> Vec<AssetDefinition> {
         AssetDefinition::js(
             storage_js.join("components/sp-chart-tooltip.js"),
             "js/components/sp-chart-tooltip.js",
+        ),
+        AssetDefinition::js(
+            storage_js.join("components/sp-chart-update.js"),
+            "js/components/sp-chart-update.js",
         ),
     ]
 }

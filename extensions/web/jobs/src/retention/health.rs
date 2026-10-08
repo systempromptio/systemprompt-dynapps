@@ -2,7 +2,8 @@
 //! health/` that a job can run without operator input, as one JSON report
 //! with ranked findings. P1 is a queue that is not draining or a window
 //! that is not being applied; P2 is growth that will hurt within a year;
-//! P3 is hygiene.
+//! P3 is hygiene. Dead tuples above a fifth mean autovacuum is behind; an
+//! oldest row a week past its window means retention is not being enforced.
 
 use chrono::{Duration, Utc};
 use serde::Serialize;
@@ -54,11 +55,6 @@ impl HealthReport {
     }
 }
 
-// Why: the outbox drains in seconds when healthy, so an hour-old pending
-// row means a stalled consumer whatever the depth. Dead tuples above a fifth
-// means autovacuum is behind; a
-// table whose oldest row is a week past its window has a retention job that
-// is not running or not enforced.
 const DEAD_RATIO_WARN_PERCENT: i64 = 20;
 const WINDOW_GRACE_DAYS: i64 = 7;
 const OUTBOX_STALE_MINUTES: i64 = 60;

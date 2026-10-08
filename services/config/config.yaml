@@ -2,9 +2,8 @@
 # Thin aggregator — every top-level resource file is listed here explicitly.
 # Skills and plugins are auto-discovered from nested directories
 # (services/skills/<id>/config.yaml, services/plugins/<id>/config.yaml).
-# This instance ships no A2A agents: the only one it ever had existed to give
-# the inbound Slack slash command something to dispatch to, and that pipeline
-# is gone.
+# This instance ships no A2A agents: everything it offers is skills, MCP
+# servers and artifacts.
 
 includes:
   # MCP servers

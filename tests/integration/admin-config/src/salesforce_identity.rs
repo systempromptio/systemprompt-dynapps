@@ -3,7 +3,8 @@
 
 use crate::fixtures::{insert_user, unique, user_id};
 use crate::tempdb::TempDb;
-use systemprompt_web_admin::repositories::users::salesforce_identity as repo;
+use systemprompt_web_admin_core::repositories::principal::salesforce_identity::list_identities;
+use systemprompt_web_admin_platform::repositories::connectors::salesforce_identity as repo;
 
 #[tokio::test]
 async fn identities_are_keyed_per_org_and_listed_for_authz() {
@@ -61,10 +62,5 @@ async fn identities_are_keyed_per_org_and_listed_for_authz() {
         ["salesforce"]
     );
     repo::delete_all_identities(&db.pool, &alice).await.unwrap();
-    assert!(
-        repo::list_identities(&db.pool, &alice)
-            .await
-            .unwrap()
-            .is_empty()
-    );
+    assert!(list_identities(&db.pool, &alice).await.unwrap().is_empty());
 }

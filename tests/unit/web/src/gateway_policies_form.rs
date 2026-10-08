@@ -1,9 +1,9 @@
 //! The policy editor's form pairs → a spec core would accept, with every
 //! refusal in the operator's words.
 
-use systemprompt::ai::{QuotaMode, SafetyHistoryMode, SafetyMode};
-use systemprompt_web_admin::repositories::gateway_policies::form::parse_policy_form;
-use systemprompt_web_admin::repositories::gateway_policies::month_window::MONTH_WINDOW_SECONDS;
+use systemprompt::gateway::{QuotaMode, SafetyHistoryMode, SafetyMode};
+use systemprompt_web_admin_governance::repositories::gateway_policies::form::parse_policy_form;
+use systemprompt_web_admin_governance::repositories::gateway_policies::month_window::MONTH_WINDOW_SECONDS;
 
 fn pairs(list: &[(&str, &str)]) -> Vec<(String, String)> {
     list.iter()

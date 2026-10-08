@@ -7,7 +7,12 @@ kind: "guide"
 public: true
 tags: ["documentation", "salesforce", "connectors", "development"]
 published_at: "2026-09-09"
-updated_at: "2026-09-11"
+updated_at: "2026-09-29"
+keywords: "salesforce, hosted mcp, headless 360, salesforce dx, connectors, external client app, oauth, sandbox"
+after_reading_this:
+  - "Choose between hosted Salesforce MCP and local Salesforce DX"
+  - "Set up the packaged External Client App and org registry entry"
+  - "Hand over Salesforce credentials securely and verify a connection"
 related_playbooks:
   - title: "Connect Claude Code"
     url: "/documentation/connect-claude-code"
@@ -27,11 +32,11 @@ This guide is for developers, Salesforce administrators, and the operators of yo
 
 | Integration | What it provides | Where it runs |
 |---|---|---|
-| Salesforce Hosted MCP — SObject All | Record creation, reads, updates, deletes, SOQL and search, within the user's Salesforce permissions | Salesforce-managed HTTPS endpoint |
+| Salesforce Hosted MCP — Headless 360 (`salesforce`) | Governed record reads, approved writes, SOQL and search, and dynamic widgets, within the user's Salesforce permissions | Salesforce-managed HTTPS endpoint |
 | Salesforce DX MCP — `@salesforce/mcp` | Development tools for metadata retrieval and deployment, tests, org management and data operations | On the machine running the development tools, alongside the project and CLI authorization |
 | Other Salesforce MCP servers | Scoped record access, Data 360, Tableau, and custom tools backed by Apex, Flows or APIs | Separate servers with their own capabilities and setup |
 
-The hosted SObject All connector does not provide the local project environment needed for DX development. Salesforce also offers separate B2C Commerce developer tooling; it is not the Salesforce Core DX integration described here. See the [official DX server](https://github.com/salesforcecli/mcp), [hosted server catalogue](https://developer.salesforce.com/docs/platform/hosted-mcp-servers/references/reference/servers-reference.html), [custom hosted servers](https://developer.salesforce.com/docs/platform/hosted-mcp-servers/guide/custom-servers.html), and [B2C Commerce tooling](https://developer.salesforce.com/blogs/2026/04/introducing-the-b2c-commerce-cli-and-on-demand-sandbox-cloning).
+The hosted Headless 360 connector does not provide the local project environment needed for DX development. Salesforce also offers separate B2C Commerce developer tooling; it is not the Salesforce Core DX integration described here. See the [official DX server](https://github.com/salesforcecli/mcp), [hosted server catalogue](https://developer.salesforce.com/docs/platform/hosted-mcp-servers/references/reference/servers-reference.html), [custom hosted servers](https://developer.salesforce.com/docs/platform/hosted-mcp-servers/guide/custom-servers.html), and [B2C Commerce tooling](https://developer.salesforce.com/blogs/2026/04/introducing-the-b2c-commerce-cli-and-on-demand-sandbox-cloning).
 
 ## Which clients can use it?
 
@@ -45,7 +50,7 @@ Anthropic documents that local servers configured through `claude_desktop_config
 
 ## How the India skills use Salesforce
 
-The India marketplace import includes 18 Salesforce Core skills and 16 business-analysis skills. Salesforce instructions cover Apex tests, Flow patterns, permissions, integration, deployment, and project context. The Salesforce plugin currently declares the hosted Salesforce and Atlassian connectors; it does not install DX MCP.
+The India marketplace import includes 38 Salesforce Core skills and 16 business-analysis skills. Salesforce instructions cover Apex tests, Flow patterns, permissions, integration, deployment, and project context. The Salesforce plugin currently declares the hosted Salesforce and Atlassian connectors; it does not install DX MCP.
 
 The client loads a skill's instructions, discovers its available tools, and invokes those tools when needed. Skills do not install runtimes, start DX servers, or authorize orgs. Local source review and artifact generation can proceed without a Salesforce connection. Org queries, retrieval, tests, and deployments need the appropriate authenticated tools.
 
@@ -63,7 +68,7 @@ The retained India test matrix excludes live Salesforce execution. Local artifac
 | Application settings in the correct gateway secret store | Gateway operator | Completing the dashboard connection flow |
 | Individual Salesforce login and consent, or separately configured administrative pre-authorization | Each user, with administrator support | That user's hosted Salesforce access |
 | Salesforce CLI, compatible Node/npm runtime, DX MCP, project checkout, and local org authorization | Developer | Local DX development operations |
-| An entry in the org registry (`services/config/salesforce-orgs.yaml`), a matching `services/mcp/salesforce-<slug>.yaml` server and an access rule for every org, sandbox included | Gateway operator | That org appearing on the profile page at all |
+| An entry in the org registry (`services/config/salesforce-orgs.yaml`), a matching `services/mcp/salesforce-<slug>.yaml` server and an access rule for every org, sandbox included | Gateway operator | That org appearing on the Connectors page at all |
 | Bridge execution, readiness reporting, and policy/audit integration for DX | Systemprompt maintainer | Dashboard-managed, governed local DX |
 | Reachable remote service with an isolated development workspace, or an authenticated relay to the execution machine | Systemprompt maintainer | Cowork invoking DX remotely |
 
@@ -78,7 +83,7 @@ One **External Client App**, `Systemprompt`, serves every org. It is created onc
 1. Identify the target Salesforce org, its HTTPS My Domain origin, org ID, and environment type. Use the My Domain origin, such as `https://example.my.salesforce.com`, without a Lightning page path, and send them to the gateway operator.
 2. Install the `Systemprompt` package from the install link the operator provides (for a sandbox, sign in via `test.salesforce.com`). The installed app references the source org's OAuth settings — callback, PKCE, `mcp_api`, `refresh_token` and `openid` scopes, named-user JWT access tokens — so nothing is configured by hand.
 3. Assign the packaged **Systemprompt MCP Access** permission set to the people who may connect. That assignment is the entitlement: a user without it, or without a login in this org, is refused by Salesforce at consent.
-4. In Salesforce Setup, find **MCP Servers** under API Catalog and activate **SObject All** for the org. Confirm the intended users can access the required objects, fields, and records; the hosted server enforces their own permissions.
+4. In Salesforce Setup, find **MCP Servers** under API Catalog and activate **Headless 360** for the org (the `server_kind` this installation declares; **SObject All** is the alternative kind). Confirm the intended users can access the required objects, fields, and records; the hosted server enforces their own permissions.
 5. Allow for Salesforce's documented propagation delay of up to 30 minutes after the app first appears in the org.
 
 Only the source org's administrator handles credentials: the app's consumer key and consumer secret are delivered once, using the secure process below, and stored on the gateway as `salesforce_mcp_client_id` and `salesforce_mcp_client_secret`.
@@ -101,7 +106,7 @@ Follow Salesforce's [External Client App setup](https://developer.salesforce.com
 
 ### One entry per org: the org registry
 
-Salesforce has no central authorization server. Every org is its own login, holds its own user records, and a sandbox is served by a different hosted MCP endpoint. Astound therefore declares the org in `services/config/salesforce-orgs.yaml`, keyed by the id of the MCP server that fronts it (`salesforce`; `salesforce-<slug>` for an org added later). A user picks the connection on the profile page before signing in; the grant, verification and every tool call are bound to it. Every entry shares one callback, `/api/public/connectors/salesforce/callback` — the server id travels in the OAuth `state` — so adding an entry never touches the app.
+Salesforce has no central authorization server. Every org is its own login, holds its own user records, and a sandbox is served by a different hosted MCP endpoint. Astound therefore declares the org in `services/config/salesforce-orgs.yaml`, keyed by the id of the MCP server that fronts it (`salesforce`; `salesforce-<slug>` for an org added later). A user picks the connection on the [Connectors](/admin/connectors) page before signing in; the grant, verification and every tool call are bound to it. Every entry shares one callback, `/api/public/connectors/salesforce/callback` — the server id travels in the OAuth `state` — so adding an entry never touches the app.
 
 ```yaml
 orgs:
@@ -124,7 +129,7 @@ headless:    https://api.salesforce.com/platform/mcp/v1/platform/headless-360
 headless sb: https://api.salesforce.com/platform/mcp/v1/sandbox/platform/headless-360
 ```
 
-The gateway refuses to start if an org names a server that is missing, disabled, internal, or on the wrong endpoint, or if `my_domain` does not match `environment`. It does **not** refuse to start when the shared secrets are absent: every org is shown as **Not provisioned** on the profile page until the operator has stored the packaged app's key and secret. `groups` controls who sees the row; a user outside those groups sees the org as not entitled and cannot connect, even by URL.
+The gateway refuses to start if an org names a server that is missing, disabled, internal, or on the wrong endpoint, or if `my_domain` does not match `environment`. It does **not** refuse to start when the shared secrets are absent: every org is shown as **Not provisioned** on the Connectors page until the operator has stored the packaged app's key and secret. `groups` controls who sees the row; a user outside those groups sees the org as not entitled and cannot connect, even by URL.
 
 Because every org is its own MCP server, governance sees the org: an audit row for a SOQL query names `salesforce-client-a-uat`, and a blocklist rule on production writes does not touch UAT.
 
@@ -136,7 +141,7 @@ A sandbox refresh recreates the org without the installed package and with it ev
 POST /api/public/admin/connectors/salesforce-client-a-uat/reprovision
 ```
 
-Every account on that org moves to **Reconnect required** with the reason shown on the profile page; no other org is affected. See [Salesforce endpoint troubleshooting](https://developer.salesforce.com/docs/platform/hosted-mcp-servers/guide/connection-issues.html).
+Every account on that org moves to **Reconnect required** with the reason shown on the Connectors page; no other org is affected. See [Salesforce endpoint troubleshooting](https://developer.salesforce.com/docs/platform/hosted-mcp-servers/guide/connection-issues.html).
 
 ## How to provide credentials securely
 
@@ -152,7 +157,7 @@ Create a restricted item in your organization's approved secret manager or appro
 | consumer key | stored under the `client_id_secret` name in the org's registry entry (`salesforce_mcp_client_id` for the default org) | Yes |
 | consumer secret | stored under the `client_secret` name in the org's registry entry (`salesforce_mcp_client_secret` for the default org) | Yes |
 
-Alongside the restricted item, provide the target gateway URL, Salesforce org ID, environment type, registered callback, app name, intended test user's Salesforce username, and confirmation that SObject All and the required permissions are enabled. The username can differ from the employee's Astound email.
+Alongside the restricted item, provide the target gateway URL, Salesforce org ID, environment type, registered callback, app name, intended test user's Salesforce username, and confirmation that the hosted server (Headless 360) and the required permissions are enabled. The username can differ from the employee's Astound email.
 
 Send the operator the restricted item's reference and non-secret setup details through the normal support process. **Do not paste credential values into Slack, email, tickets, this documentation, repository files, or AI conversations.** If no approved sharing facility is available, have the gateway operator arrange direct entry through the deployment's secret-management interface before proceeding. Do not invent an upload URL or use a public form.
 

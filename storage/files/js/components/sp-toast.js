@@ -45,8 +45,14 @@ sheet.replaceSync(`
   @media (prefers-reduced-motion: reduce) {
     .toast { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
   }
-  @media (max-width: 640px) {
-    :host { left: var(--sp-space-3); right: var(--sp-space-3); max-width: none; }
+  @media (max-width: 48rem) {
+    :host {
+      top: auto;
+      bottom: calc(var(--sp-space-3) + env(safe-area-inset-bottom, 0px));
+      left: var(--sp-space-3);
+      right: var(--sp-space-3);
+      max-width: none;
+    }
   }
 `);
 

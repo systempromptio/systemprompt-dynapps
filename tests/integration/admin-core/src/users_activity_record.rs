@@ -15,7 +15,7 @@
 use serde_json::json;
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
-use systemprompt_web_admin::activity::{
+use systemprompt_web_admin_core::activity::{
     ActivityAction, ActivityCategory, ActivityEntity, ActivityEntityRef, NewActivity, record,
 };
 
@@ -30,7 +30,7 @@ struct Event<'a> {
     description: &'a str,
 }
 
-fn new_activity(event: Event<'_>) -> NewActivity {
+fn new_activity(event: &Event<'_>) -> NewActivity {
     NewActivity {
         user_id: event.user_id.clone(),
         category: event.category,
@@ -56,7 +56,7 @@ async fn rows_for(pool: &PgPool, user_id: &UserId) -> i64 {
 async fn use_tool(pool: &PgPool, user_id: &UserId, tool: Option<&str>) {
     record(
         pool,
-        new_activity(Event {
+        new_activity(&Event {
             user_id,
             category: ActivityCategory::ToolUsage,
             action: ActivityAction::Used,
@@ -70,7 +70,7 @@ async fn use_tool(pool: &PgPool, user_id: &UserId, tool: Option<&str>) {
 async fn reject_mcp(pool: &PgPool, user_id: &UserId, server: Option<&str>) {
     record(
         pool,
-        new_activity(Event {
+        new_activity(&Event {
             user_id,
             category: ActivityCategory::McpAccess,
             action: ActivityAction::Rejected,
@@ -84,7 +84,7 @@ async fn reject_mcp(pool: &PgPool, user_id: &UserId, server: Option<&str>) {
 async fn start_session(pool: &PgPool, user_id: &UserId, session_id: Option<&str>) {
     record(
         pool,
-        new_activity(Event {
+        new_activity(&Event {
             user_id,
             category: ActivityCategory::Session,
             action: ActivityAction::Started,
@@ -108,7 +108,7 @@ async fn a_recorded_event_lands_with_its_entity_and_metadata() {
 
     record(
         &db.pool,
-        new_activity(Event {
+        new_activity(&Event {
             user_id: &user,
             category: ActivityCategory::MarketplaceEdit,
             action: ActivityAction::Updated,
@@ -156,7 +156,7 @@ async fn an_event_with_no_entity_writes_null_entity_columns() {
 
     record(
         &db.pool,
-        new_activity(Event {
+        new_activity(&Event {
             user_id: &user,
             category: ActivityCategory::Prompt,
             action: ActivityAction::Submitted,
@@ -191,7 +191,7 @@ async fn uncollapsed_categories_write_every_repeat() {
     for _ in 0..3 {
         record(
             &db.pool,
-            new_activity(Event {
+            new_activity(&Event {
                 user_id: &user,
                 category: ActivityCategory::Prompt,
                 action: ActivityAction::Submitted,
@@ -218,7 +218,7 @@ async fn repeat_logins_within_the_hour_collapse_to_one_row() {
     for _ in 0..3 {
         record(
             &db.pool,
-            new_activity(Event {
+            new_activity(&Event {
                 user_id: &user,
                 category: ActivityCategory::Login,
                 action: ActivityAction::LoggedIn,
@@ -234,7 +234,7 @@ async fn repeat_logins_within_the_hour_collapse_to_one_row() {
     // event, not a duplicate of the first.
     record(
         &db.pool,
-        new_activity(Event {
+        new_activity(&Event {
             user_id: &other,
             category: ActivityCategory::Login,
             action: ActivityAction::LoggedIn,
@@ -256,7 +256,7 @@ async fn repeat_logins_within_the_hour_collapse_to_one_row() {
 
     record(
         &db.pool,
-        new_activity(Event {
+        new_activity(&Event {
             user_id: &user,
             category: ActivityCategory::Login,
             action: ActivityAction::LoggedIn,
@@ -387,7 +387,7 @@ async fn a_session_ending_is_not_governed_by_the_start_rule() {
     for action in [ActivityAction::Started, ActivityAction::Ended] {
         record(
             &db.pool,
-            new_activity(Event {
+            new_activity(&Event {
                 user_id: &user,
                 category: ActivityCategory::Session,
                 action,

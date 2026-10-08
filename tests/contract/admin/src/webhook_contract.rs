@@ -1,16 +1,10 @@
 //! The webhook endpoints mounted at the router root: the governance gate and
 //! the authz hook.
 //!
-//! The governance gate is the one channel in the admin plane that deliberately
-//! answers `200` when it refuses. A `PreToolUse` hook blocks a tool call by
-//! returning a *deny decision* in the body; a `401` would read to the client as
-//! "the hook is unavailable" and let the call through. Every case here
-//! therefore asserts on the decision in the body, not on the status — a suite
-//! that only checked statuses would pass while the gate allowed everything.
-//!
-//! The authz hook has the mirror-image contract: it answers `200` with an
-//! allow/deny decision, and reserves non-`200` for genuine unavailability, so
-//! core can tell "denied" from "could not decide".
+//! Claude Code reads a non-`200` from a `PreToolUse` hook as "hook unavailable"
+//! and lets the call through, so the gate refuses with `200` and a deny
+//! decision in the body. Every case asserts on the body, not the status. The
+//! authz hook likewise reserves non-`200` for "could not decide".
 
 use axum::http::StatusCode;
 use systemprompt::models::auth::{JwtAudience, Permission};
@@ -40,17 +34,14 @@ fn tool_event(session: &str, tool: &str, input: &str) -> String {
     )
 }
 
-// The gate's happy path and its refusal path, both of which are `200`.
 #[tokio::test(flavor = "multi_thread")]
 async fn govern_answers_two_hundred_with_a_decision_either_way() {
     if !globals::init() {
         return;
     }
-    // Why: this suite carries the privilege-escalation regression check, and a
-    // silent skip on a missing database is worse than no test — it reports
-    // green having asserted nothing about a security boundary. Under
-    // SYSTEMPROMPT_REQUIRE_DB (set by `just test-contract`) an absent database
-    // is a failure, not a skip.
+    // Why: this suite carries the privilege-escalation check; under
+    // SYSTEMPROMPT_REQUIRE_DB (set by `just test-contract`) a missing database
+    // fails instead of skipping green.
     let Some(db) = TempDb::create().await else {
         assert!(
             std::env::var_os("SYSTEMPROMPT_REQUIRE_DB").is_none(),
@@ -85,7 +76,6 @@ async fn govern_answers_two_hundred_with_a_decision_either_way() {
             }
         };
 
-    // An authenticated, unremarkable tool call passes the chain.
     let benign = tool_event(&session, "Read", r#"{"file_path":"/tmp/notes.md"}"#);
     let (status, body) = app.call_with_bearer(post(GOVERN, &benign), &token).await;
     check(
@@ -103,8 +93,6 @@ async fn govern_answers_two_hundred_with_a_decision_either_way() {
         status,
     );
 
-    // No credentials is a *deny*, not a 401: the client must be told the call
-    // is blocked, not that the gate is down.
     let (status, body) = app.call(post(GOVERN, &benign)).await;
     check(
         &mut failures,
@@ -121,7 +109,6 @@ async fn govern_answers_two_hundred_with_a_decision_either_way() {
         status,
     );
 
-    // A token that does not validate is the same channel as no token at all.
     let (status, body) = app
         .call_with_bearer(post(GOVERN, &benign), "not-a-jwt")
         .await;
@@ -133,13 +120,8 @@ async fn govern_answers_two_hundred_with_a_decision_either_way() {
         status,
     );
 
-    // Unlike `/hooks/track`, this endpoint gates on *audience* rather than
-    // scope: a token minted for any of the three audiences a Claude Code hook
-    // runs under is accepted, and the decision then comes from the policy chain
-    // and the caller's resolved privilege. A `hook:track` token is therefore
-    // allowed through the door, which is the behaviour to pin — it is the
-    // difference between the gate refusing a caller and the gate refusing a
-    // call.
+    // This endpoint gates on audience, not scope: a `hook:track` token is let
+    // through the door and the decision comes from the policy chain.
     let other_hook_scope = seed::mint(&TokenSpec {
         subject: &user_id,
         audiences: vec![JwtAudience::Hook],
@@ -157,8 +139,6 @@ async fn govern_answers_two_hundred_with_a_decision_either_way() {
         status,
     );
 
-    // A token minted for a completely different issuer's audience is not,
-    // which is what keeps the door itself shut.
     let wrong_audience = seed::mint(&TokenSpec {
         subject: &user_id,
         audiences: vec![JwtAudience::Bridge],
@@ -176,8 +156,6 @@ async fn govern_answers_two_hundred_with_a_decision_either_way() {
         status,
     );
 
-    // A prompt gate is answered in its own envelope rather than a PreToolUse
-    // one the caller would have to reinterpret.
     let prompt = format!(
         r#"{{"session_id":"{session}","cwd":"/tmp/contract","hook_event_name":"UserPromptSubmit","prompt":"summarise the audit spine"}}"#
     );
@@ -190,7 +168,6 @@ async fn govern_answers_two_hundred_with_a_decision_either_way() {
         status,
     );
 
-    // A credential in a tool input is what the secret scanner exists for.
     let with_secret = tool_event(
         &session,
         "Bash",
@@ -220,8 +197,6 @@ async fn govern_answers_two_hundred_with_a_decision_either_way() {
         status,
     );
 
-    // Plugin binding remains in the audit; an unverified agent claim cannot
-    // become a principal identity.
     let with_agent = format!(
         r#"{{"session_id":"{session}","cwd":"/tmp/contract","hook_event_name":"PreToolUse","agent_id":"contract-agent","agent_type":"Explore","tool_name":"Grep","tool_input":{{"pattern":"fn main"}},"tool_use_id":"tu-2"}}"#
     );
@@ -239,7 +214,6 @@ async fn govern_answers_two_hundred_with_a_decision_either_way() {
         status,
     );
 
-    // The caller's self-reported agent id never enters the verified principal.
     let mut row: Option<(Option<String>, Option<String>)> = None;
     for _ in 0..50 {
         row = sqlx::query_as(
@@ -275,11 +249,8 @@ async fn govern_answers_two_hundred_with_a_decision_either_way() {
         },
     }
 
-    // The escalation itself, not just its audit trace: `admin_console` is the
-    // one agent this instance ships whose yaml declares `oauth.scopes: [admin]`.
-    // Naming it in the body of a call made with a non-admin hook token must not
-    // govern that call as admin — that path waived the tool blocklist and the
-    // approval hold.
+    // `admin_console` is the one shipped agent declaring `oauth.scopes: [admin]`;
+    // naming it in a non-admin call's body must not govern that call as admin.
     let escalation_session = seed::unique("govern-escalation");
     let claim_admin = format!(
         r#"{{"session_id":"{escalation_session}","cwd":"/tmp/contract","hook_event_name":"PreToolUse","agent_id":"admin_console","agent_type":"Explore","tool_name":"Read","tool_input":{{"file_path":"/tmp/notes.md"}},"tool_use_id":"tu-esc"}}"#
@@ -325,8 +296,6 @@ async fn govern_answers_two_hundred_with_a_decision_either_way() {
         },
     }
 
-    // An envelope with nothing recognisable still gets a decision — the gate
-    // cannot answer "I do not know" without letting the call through.
     let (status, body) = app.call_with_bearer(post(GOVERN, "{}"), &token).await;
     check(
         &mut failures,
@@ -336,8 +305,6 @@ async fn govern_answers_two_hundred_with_a_decision_either_way() {
         status,
     );
 
-    // The audit spine is the point of the endpoint: every decision above,
-    // allowed or denied, owes a `governance_decisions` row.
     let audited: i64 =
         sqlx::query_scalar("SELECT COUNT(*) FROM governance_decisions WHERE session_id = $1")
             .bind(&session)
@@ -360,8 +327,6 @@ async fn govern_answers_two_hundred_with_a_decision_either_way() {
     );
 }
 
-// `POST /govern/authz` — the rule-based hook core's gateway and MCP
-// enforcement sites call.
 #[tokio::test(flavor = "multi_thread")]
 async fn authz_hook_resolves_rules_for_every_entity_kind() {
     if !globals::init() {
@@ -385,9 +350,6 @@ async fn authz_hook_resolves_rules_for_every_entity_kind() {
 
     let mut failures = Vec::new();
 
-    // Every entity kind the resolver knows. An entity with no catalog row and
-    // no rules is denied by the deny-overrides default, which is the answer
-    // that matters: an unknown entity must not fall open.
     for kind in [
         "gateway_route",
         "mcp_server",
@@ -408,8 +370,6 @@ async fn authz_hook_resolves_rules_for_every_entity_kind() {
         }
     }
 
-    // A user rule granting access flips the same entity to allow, which proves
-    // the resolver read the rules table rather than answering from the default.
     let skill_id = seed::unique("granted-skill");
     seed::insert_acl_rule(&db.pool, "skill", &skill_id, "user", &user_id, "allow").await;
     let (status, body) = app.call(post(AUTHZ, &request("skill", &skill_id))).await;
@@ -420,7 +380,6 @@ async fn authz_hook_resolves_rules_for_every_entity_kind() {
         ));
     }
 
-    // A role rule binds through `roles` on the request rather than the user id.
     let role_skill = seed::unique("role-skill");
     seed::insert_acl_rule(&db.pool, "skill", &role_skill, "role", "user", "allow").await;
     let (status, body) = app.call(post(AUTHZ, &request("skill", &role_skill))).await;
@@ -431,7 +390,6 @@ async fn authz_hook_resolves_rules_for_every_entity_kind() {
         ));
     }
 
-    // A role denial alone closes the entity.
     let role_denied = seed::unique("role-denied-skill");
     seed::insert_acl_rule(&db.pool, "skill", &role_denied, "role", "user", "deny").await;
     let (status, body) = app.call(post(AUTHZ, &request("skill", &role_denied))).await;
@@ -442,11 +400,8 @@ async fn authz_hook_resolves_rules_for_every_entity_kind() {
         ));
     }
 
-    // Specificity, not deny-overrides, decides a contested entity: the ladder
-    // is `user > role`, so a grant naming this user beats a denial aimed at
-    // everyone holding their role. Deny-overrides applies *within* a band and
-    // between a child and its parent, not across bands — an admin who grants
-    // one person an exception should not have to delete the role rule.
+    // Core's `RuleBasedHook` ladder is `user > role`: deny-overrides applies
+    // within a band, not across bands, so a user grant beats a role denial.
     let contested = seed::unique("contested-skill");
     seed::insert_acl_rule(&db.pool, "skill", &contested, "user", &user_id, "allow").await;
     seed::insert_acl_rule(&db.pool, "skill", &contested, "role", "user", "deny").await;
@@ -459,8 +414,6 @@ async fn authz_hook_resolves_rules_for_every_entity_kind() {
         ));
     }
 
-    // The same entity for a *different* user, who has only the role, is denied
-    // — which is what proves the allow above came from the user rule.
     let bystander = format!(
         r#"{{"entity":{{"kind":"skill","id":"{contested}"}},"user_id":"{}","roles":["user"],"trace_id":"{}"}}"#,
         seed::unique("bystander"),
@@ -475,8 +428,6 @@ async fn authz_hook_resolves_rules_for_every_entity_kind() {
         ));
     }
 
-    // Every decision is audited under the `authz` policy so gateway and MCP
-    // decisions correlate in one stream.
     let audited: i64 =
         sqlx::query_scalar("SELECT COUNT(*) FROM governance_decisions WHERE policy = 'authz'")
             .fetch_one(&*db.pool)
@@ -486,9 +437,7 @@ async fn authz_hook_resolves_rules_for_every_entity_kind() {
         failures.push("  the authz hook decided without writing an audit row".to_owned());
     }
 
-    // A body that is not an `AuthzRequest` is refused by the extractor, which
-    // is a genuine 4xx rather than a deny decision: core must not read a
-    // malformed request as an authorization answer.
+    // A malformed body must be a 4xx, never a deny core would read as an answer.
     for (label, body) in [
         ("an empty object", "{}"),
         (
@@ -516,14 +465,8 @@ async fn authz_hook_resolves_rules_for_every_entity_kind() {
     );
 }
 
-// Two databases, one process: the marketplace-parent cache must not serve one
-// database's authorization rules to another.
-//
-// This is the same defect class the subject-dimension registry carried before
-// it was keyed per database (commit 32e6cbbe) — the cache sits one file over
-// in the same authz path, so it gets the same guard. Without per-database
-// keying the second app, querying inside the TTL window, would resolve
-// against the first database's marketplace rules.
+// Two databases in one process: the marketplace-parent cache must be keyed per
+// database, or B, queried inside the TTL, resolves against A's rules.
 #[tokio::test(flavor = "multi_thread")]
 async fn the_marketplace_parent_cache_is_keyed_per_database() {
     if !globals::init() {
@@ -539,8 +482,6 @@ async fn the_marketplace_parent_cache_is_keyed_per_database() {
 
     let marketplace_id = seed::unique("marketplace");
 
-    // Database A: a marketplace whose rules grant the user access to a skill
-    // that cascades from it.
     let user_a = seed::unique("cache-user-a");
     seed::insert_user(&db_a.pool, &user_a, &format!("{user_a}@contract.test")).await;
     seed::insert_acl_rule(
@@ -553,8 +494,6 @@ async fn the_marketplace_parent_cache_is_keyed_per_database() {
     )
     .await;
 
-    // Database B: the same marketplace id exists as a catalog row, but grants
-    // nothing to anyone.
     let user_b = seed::unique("cache-user-b");
     seed::insert_user(&db_b.pool, &user_b, &format!("{user_b}@contract.test")).await;
 
@@ -572,7 +511,6 @@ async fn the_marketplace_parent_cache_is_keyed_per_database() {
         "database A grants this user the marketplace: {body_a}"
     );
 
-    // Immediately (well inside the cache TTL), the same shape against B.
     let request_b = format!(
         r#"{{"entity":{{"kind":"marketplace","id":"{marketplace_id}"}},"user_id":"{user_b}","roles":["user"],"trace_id":"{}"}}"#,
         seed::unique("trace")
@@ -588,9 +526,6 @@ async fn the_marketplace_parent_cache_is_keyed_per_database() {
     db_b.cleanup().await;
 }
 
-// The decision audit is written before the response leaves, not spawned to
-// finish whenever: this endpoint's whole product is the audit row, and a
-// caller that reads it immediately must find it.
 #[tokio::test(flavor = "multi_thread")]
 async fn the_governed_decision_is_audited_before_the_response_returns() {
     if !globals::init() {
@@ -615,7 +550,7 @@ async fn the_governed_decision_is_audited_before_the_response_returns() {
         .await;
     assert_eq!(status, StatusCode::OK, "the gate decided: {body}");
 
-    // No sleep, no retry: if the write were spawned this would be a race.
+    // No sleep, no retry: a spawned audit write would race this read.
     let audited: i64 =
         sqlx::query_scalar("SELECT COUNT(*) FROM governance_decisions WHERE session_id = $1")
             .bind(&session)

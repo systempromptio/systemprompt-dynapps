@@ -3,7 +3,7 @@ name = "systemprompt-web-extension"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
-description = "Web extension for the systemprompt.io template: content, navigation, and template rendering for the self-hosted AI governance binary."
+description = "Web extension for the systemprompt.io template: content, navigation, template rendering and the admin plane's composition root for the self-hosted AI governance binary."
 repository.workspace = true
 homepage.workspace = true
 publish = false
@@ -24,7 +24,12 @@ systemprompt = { workspace = true, features = ["full"] }
 
 # Local sub-crates
 systemprompt-web-shared = { workspace = true }
-systemprompt-web-admin = { workspace = true }
+systemprompt-web-admin-analytics = { workspace = true }
+systemprompt-web-admin-catalog = { workspace = true }
+systemprompt-web-admin-governance = { workspace = true }
+systemprompt-web-admin-identity = { workspace = true }
+systemprompt-web-admin-platform = { workspace = true }
+systemprompt-web-admin-core = { workspace = true }
 systemprompt-web-content = { workspace = true }
 systemprompt-web-site = { workspace = true }
 systemprompt-web-jobs = { workspace = true }
@@ -36,9 +41,16 @@ inventory = { workspace = true }
 
 # Web framework
 axum = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
 
 # Utilities
 tracing = { workspace = true }
+urlencoding = { workspace = true }
 
 [build-dependencies]
 systemprompt-extension = { workspace = true }

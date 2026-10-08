@@ -7,7 +7,7 @@
 //! getting it wrong either loses an admin's deliberate grant at the next
 //! sign-in or makes a directory revocation un-revocable.
 
-use systemprompt_web_admin::repositories::users::roles::{
+use systemprompt_web_admin_identity::repositories::users::roles::{
     count_platform_admins, list_directory_roles, list_manual_roles, recompute_roles,
     set_manual_roles,
 };

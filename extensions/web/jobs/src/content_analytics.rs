@@ -6,7 +6,7 @@ use systemprompt::database::DbPool;
 use systemprompt::traits::{Job, JobContext, JobResult};
 
 use crate::error::JobError;
-use systemprompt_web_admin::repositories::analytics::content_rollup::{
+use systemprompt_web_admin_analytics::repositories::analytics::content_rollup::{
     self, ContentRollupRow, UpsertMetricsParams,
 };
 
@@ -121,9 +121,7 @@ impl Job for ContentAnalyticsAggregationJob {
     ) -> Result<JobResult, systemprompt::traits::ProviderError> {
         tracing::debug!(actor = %ctx.actor().user_id.as_str(), "Content analytics aggregation invoked");
 
-        let db = ctx
-            .db_pool::<DbPool>()
-            .ok_or(JobError::MissingContext("DbPool"))?;
+        let db = ctx.get::<DbPool>()?;
 
         let pool = db.write_pool();
 

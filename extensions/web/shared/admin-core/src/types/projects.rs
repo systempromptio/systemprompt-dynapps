@@ -1,0 +1,80 @@
+//! Projects: what work is attributed to, and an ACL subject in their own
+//! right.
+//!
+//! Deliberately the same shape as [`super::groups`] rather than a shared
+//! generic: the two diverge where it matters — a project has no system row
+//! and no derived membership, and only groups carry marketplace entitlement —
+//! so one type parameterised over both would have to encode the differences
+//! anyway.
+
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+use sqlx::FromRow;
+use systemprompt::identifiers::UserId;
+use systemprompt_web_shared::ProjectId;
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct ProjectRow {
+    pub id: ProjectId,
+    pub name: String,
+    pub description: Option<String>,
+    pub source: String,
+    pub cost_centre: Option<String>,
+    pub practice: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct ProjectSummary {
+    pub id: ProjectId,
+    pub name: String,
+    pub description: Option<String>,
+    pub member_count: i64,
+    pub active_members_30d: i64,
+    pub requests_30d: i64,
+    pub cost_30d_microdollars: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct ProjectMemberRow {
+    pub user_id: UserId,
+    pub display_name: Option<String>,
+    pub email: Option<String>,
+    pub sources: Vec<String>,
+    pub source_ad_groups: Vec<String>,
+    pub valid_until: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct ProjectAdMappingRow {
+    pub ad_group: String,
+    pub project_id: ProjectId,
+    pub source: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct CreateProjectRequest {
+    pub id: ProjectId,
+    pub name: String,
+    pub description: Option<String>,
+    #[serde(default)]
+    pub cost_centre: Option<String>,
+    #[serde(default)]
+    pub practice: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct UpdateProjectRequest {
+    pub name: Option<String>,
+    pub description: Option<String>,
+    #[serde(default)]
+    pub cost_centre: Option<String>,
+    #[serde(default)]
+    pub practice: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct AddProjectMemberRequest {
+    pub user_id: UserId,
+    #[serde(default)]
+    pub valid_until: Option<DateTime<Utc>>,
+}

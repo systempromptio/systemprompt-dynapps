@@ -8,7 +8,6 @@ mod overflow;
 #[doc(hidden)]
 pub mod tool;
 
-use crate::error::SystempromptToolError;
 use crate::tools::{self, SERVER_NAME};
 use rmcp::model::{
     CallToolRequestParams, CallToolResponse, Icon, Implementation, InitializeRequestParams,
@@ -20,6 +19,7 @@ use rmcp::service::{MaybeSendFuture, RequestContext, RoleServer};
 use rmcp::{ErrorData as McpError, ServerHandler};
 use std::future::Future;
 use std::sync::Arc;
+use systemprompt::ai::AiRequestRepository;
 use systemprompt::database::DbPool;
 use systemprompt::identifiers::McpServerId;
 use systemprompt::mcp::repository::ToolUsageRepository;
@@ -30,6 +30,7 @@ use systemprompt::mcp::{
     read_artifact_resource, read_artifact_viewer_resource,
 };
 use systemprompt::security::authz::SharedAuthzHook;
+use systemprompt::traits::DynToolCallIntentClaims;
 use systemprompt_mcp_shared::record_mcp_access;
 
 use systemprompt::mcp::client_profile_from_peer;
@@ -50,24 +51,23 @@ impl SystempromptServer {
         service_id: McpServerId,
         authz_hook: SharedAuthzHook,
         artifact_ingest: Arc<ArtifactIngest>,
-    ) -> Result<Self, SystempromptToolError> {
-        let tool_usage_repo = Arc::new(
-            ToolUsageRepository::new(&db_pool)
-                .map_err(|e| SystempromptToolError::Internal(e.to_string()))?,
-        );
+    ) -> Self {
+        let tool_usage_repo = Arc::new(ToolUsageRepository::new(&db_pool));
+        let intent_claims: DynToolCallIntentClaims = Arc::new(AiRequestRepository::new(&db_pool));
         let executor = McpToolExecutor::new(
             tool_usage_repo,
+            intent_claims,
             Arc::clone(&artifact_ingest),
-            service_id.as_str(),
+            service_id.clone(),
         );
 
-        Ok(Self {
+        Self {
             service_id,
             db_pool,
             executor,
             authz_hook,
             artifact_ingest,
-        })
+        }
     }
 }
 
@@ -80,12 +80,9 @@ impl ServerHandler for SystempromptServer {
                 .enable_extensions_with(build_extension_capabilities())
                 .build(),
         )
-        // Why: MCP Apps (SEP-1865) is a 2026-era extension, so a server that
-        // negotiates 2025-06-18 never runs the UI handshake — ClientProfile
-        // reports no UI support, core skips the renderer entirely, and every
-        // tool returns text with no embedded artifact and no error. The
-        // dashboards were invisible for exactly that reason. Core's own client
-        // and every server in the reference instance pin this version.
+        // Why: MCP Apps (SEP-1865) needs a 2026-era protocol; negotiating
+        // 2025-06-18 skips the UI handshake, so core drops every embedded
+        // artifact without an error.
         .with_protocol_version(ProtocolVersion::V_2026_07_28)
         .with_server_info(
             Implementation::new(
@@ -152,7 +149,7 @@ impl ServerHandler for SystempromptServer {
         let (request_context, auth_token) = authenticate_tool_request(
             &self.db_pool,
             &tool_name,
-            self.service_id.as_str(),
+            &self.service_id,
             &ctx,
             &self.authz_hook,
         )
@@ -171,7 +168,7 @@ impl ServerHandler for SystempromptServer {
         let cli = crate::cli::CliLocation::from_profile()?;
         dispatch_tool(
             &tool::Dispatch {
-                service_id: self.service_id.as_str(),
+                service_id: &self.service_id,
                 db_pool: &self.db_pool,
                 executor: &self.executor,
                 request: &request,
@@ -193,7 +190,7 @@ impl ServerHandler for SystempromptServer {
         _ctx: RequestContext<RoleServer>,
     ) -> impl Future<Output = Result<ListResourcesResult, McpError>> + MaybeSendFuture + '_ {
         std::future::ready(Ok(build_artifact_viewer_resource(&ArtifactViewerConfig {
-            server_name: SERVER_NAME,
+            server_name: &McpServerId::new(SERVER_NAME),
             title: "systemprompt.io Artifact Viewer",
             description: "Interactive UI viewer for systemprompt.io artifacts. Receives the tool \
                           result via the MCP Apps ui/notifications/tool-result protocol and mounts \
@@ -213,16 +210,15 @@ impl ServerHandler for SystempromptServer {
         _ctx: RequestContext<RoleServer>,
     ) -> Result<ReadResourceResponse, McpError> {
         if parse_artifact_resource_uri(&request.uri).is_some() {
-            let repo = McpArtifactRepository::new(&self.db_pool)
-                .map_err(|e| McpError::internal_error(e.to_string(), None))?;
-            return read_artifact_resource(&request, SERVER_NAME, &repo)
+            let repo = McpArtifactRepository::new(&self.db_pool);
+            return read_artifact_resource(&request, &McpServerId::new(SERVER_NAME), &repo)
                 .await
                 .map(Into::into);
         }
 
         read_artifact_viewer_resource(
             &request,
-            SERVER_NAME,
+            &McpServerId::new(SERVER_NAME),
             &crate::reports::admin_artifact_shell(),
         )
         .map(Into::into)

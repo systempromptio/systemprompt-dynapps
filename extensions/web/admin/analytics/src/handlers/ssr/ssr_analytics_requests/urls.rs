@@ -1,0 +1,155 @@
+//! URL builders for the Inference Requests page.
+//!
+//! Every link the page emits — tab bar, chip removal, Clear, the breakdown
+//! rows' drill-through, and pagination — rebuilds the current query string
+//! minus the one parameter it is changing, so the reader never loses the
+//! window or the filters they picked.
+
+use urlencoding::encode as urlencode;
+
+use systemprompt_web_admin_core::ssr::list_view::{PageWindow, Pagination};
+
+use systemprompt_web_admin_core::ssr::list_view::Chip;
+
+use super::context::RequestsTab;
+use super::{BASE_URL, RequestsQuery};
+use systemprompt_web_admin_core::ssr::list_view::{paginate_prefixed, query_string_dropping};
+use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;
+
+pub(super) fn log_filter_url(query: &RequestsQuery, param: &str, value: &str) -> String {
+    let qs = preserved_query_string(query, &[param, "page", "tab"]);
+    let mut url = format!("{BASE_URL}?tab=log&{param}={}", urlencode(value));
+    if !qs.is_empty() {
+        url.push('&');
+        url.push_str(&qs);
+    }
+    url
+}
+
+pub(super) fn tab_links(
+    active: RequestsTab,
+    query: &RequestsQuery,
+    total: i64,
+) -> Vec<TabLinkView> {
+    const TABS: [(RequestsTab, &str); 5] = [
+        (RequestsTab::Log, "Log"),
+        (RequestsTab::Overview, "Overview"),
+        (RequestsTab::Models, "Models"),
+        (RequestsTab::Providers, "Providers"),
+        (RequestsTab::Status, "Status"),
+    ];
+
+    let qs = preserved_query_string(query, &["tab", "page"]);
+    TABS.iter()
+        .map(|&(tab, label)| {
+            let mut href = format!("{BASE_URL}?tab={}", tab.as_str());
+            if !qs.is_empty() {
+                href.push('&');
+                href.push_str(&qs);
+            }
+            TabLinkView {
+                slug: tab.as_str(),
+                label,
+                href,
+                is_active: tab == active,
+                count: (tab == RequestsTab::Log).then_some(total),
+            }
+        })
+        .collect()
+}
+
+pub(super) fn active_chips(query: &RequestsQuery) -> Vec<Chip> {
+    let mut chips = Vec::new();
+    for (param, group_label, value) in [
+        ("model", "Model", query.model.as_deref()),
+        ("provider", "Provider", query.provider.as_deref()),
+        ("status", "Status", query.status.as_deref()),
+        ("tool", "Tool", query.tool.as_deref()),
+        ("group", "Group", query.group.as_deref()),
+        ("project", "Project", query.project.as_deref()),
+        ("q", "Search", query.q.as_deref()),
+    ] {
+        let Some(value) = value.filter(|s| !s.is_empty()) else {
+            continue;
+        };
+        let qs = preserved_query_string(query, &[param, "page"]);
+        chips.push(Chip {
+            group_label,
+            label: value.to_owned(),
+            value: value.to_owned(),
+            remove_url: if qs.is_empty() {
+                BASE_URL.to_owned()
+            } else {
+                format!("{BASE_URL}?{qs}")
+            },
+        });
+    }
+    chips
+}
+
+pub(super) fn clear_url(query: &RequestsQuery) -> String {
+    let qs = preserved_query_string(
+        query,
+        &[
+            "model", "provider", "status", "tool", "q", "user_id", "agent_id", "page",
+        ],
+    );
+    if qs.is_empty() {
+        BASE_URL.to_owned()
+    } else {
+        format!("{BASE_URL}?{qs}")
+    }
+}
+
+pub(super) fn preserved_query_string(query: &RequestsQuery, drop: &[&str]) -> String {
+    let pairs_str: [(&str, Option<&str>); 15] = [
+        ("tab", query.tab.as_deref()),
+        ("group", query.group.as_deref()),
+        ("project", query.project.as_deref()),
+        ("preset", query.preset.as_deref()),
+        ("from", query.from.as_deref()),
+        ("to", query.to.as_deref()),
+        (
+            "user_id",
+            query
+                .user_id
+                .as_ref()
+                .map(systemprompt::identifiers::UserId::as_str),
+        ),
+        (
+            "agent_id",
+            query
+                .agent_id
+                .as_ref()
+                .map(systemprompt::identifiers::AgentId::as_str),
+        ),
+        ("model", query.model.as_deref()),
+        ("provider", query.provider.as_deref()),
+        ("status", query.status.as_deref()),
+        ("tool", query.tool.as_deref()),
+        ("q", query.q.as_deref()),
+        ("sort", query.sort.as_deref()),
+        ("dir", query.dir.as_deref()),
+    ];
+    let extra = [("page", query.page.filter(|p| *p > 0))];
+    query_string_dropping(&pairs_str, &extra, drop)
+}
+
+pub(super) fn sort_url_prefix(query: &RequestsQuery) -> String {
+    let qs = preserved_query_string(query, &["sort", "dir", "page"]);
+    if qs.is_empty() {
+        format!("{BASE_URL}?")
+    } else {
+        format!("{BASE_URL}?{qs}&")
+    }
+}
+
+pub(super) fn build_pagination(query: &RequestsQuery, window: PageWindow) -> Pagination {
+    let qs = preserved_query_string(query, &["page"]);
+    let prefix = if qs.is_empty() {
+        format!("{BASE_URL}?")
+    } else {
+        format!("{BASE_URL}?{qs}&")
+    };
+    paginate_prefixed(window, &prefix)
+}

@@ -8,7 +8,7 @@
 //! the function, so it is pinned in both directions.
 
 use systemprompt::identifiers::SessionId;
-use systemprompt_web_admin::repositories::dashboard::usage_aggregations::{
+use systemprompt_web_admin_analytics::repositories::dashboard::usage_aggregations::{
     update_session_metadata, update_session_permission_mode, update_session_title,
     update_session_title_if_empty,
 };

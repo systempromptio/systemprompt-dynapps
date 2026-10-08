@@ -258,6 +258,8 @@ _clippy-uncoordinated *FLAGS: lint-no-synthesis lint-no-untyped-admin lint-gates
     else
         SQLX_OFFLINE=false cargo clippy --workspace {{FLAGS}} -- -D warnings
     fi
+    # tests/ is a standalone workspace and is not covered by --workspace
+    SQLX_OFFLINE=true cargo clippy --manifest-path tests/Cargo.toml --workspace --all-targets {{FLAGS}} -- -D warnings
     # bridge/ is a standalone workspace and is not covered by --workspace
     cargo clippy --manifest-path bridge/Cargo.toml --all-targets {{FLAGS}} -- -D warnings
     # Why: the GUI (src/registry.rs's marketplace seam included) is cfg'd to
@@ -270,7 +272,15 @@ _clippy-uncoordinated *FLAGS: lint-no-synthesis lint-no-untyped-admin lint-gates
         cargo clippy --manifest-path bridge/Cargo.toml --all-targets --target x86_64-pc-windows-gnu {{FLAGS}} -- -D warnings
     fi
 
-# Unit tests: extensions/web/admin (main workspace) + the tests/ workspace.
+# Focused Desktop/Bridge policy and protocol regression tests.
+test-bridge:
+    @scripts/build-coordinator.sh run test-bridge "" -- {{just_executable()}} _test-bridge-uncoordinated
+
+_test-bridge-uncoordinated:
+    cargo nextest run --no-fail-fast --manifest-path tests/Cargo.toml -p bridge-unit-tests
+    node --experimental-vm-modules --test tests/bridge/*.test.mjs
+
+# Unit tests: the unit crates of the tests/ workspace.
 # If sqlx offline errors appear, run `just prepare` first to refresh .sqlx.
 # Emergency Salesforce hotfix: exact token boundary and connection regressions.
 test-hotfix:
@@ -287,13 +297,11 @@ test-unit:
 # round (the 0.54.0 pin-flip took five rounds for twenty). Every tier runs to
 # completion and the job lists every failure at once.
 #
-# Why: every tier passes --workspace and picks its crates with a nextest
-# filter rather than -p. A -p set unifies features for that set alone, so the
-# three tiers compiled systemprompt-web-admin and everything above it three
-# times over (40 + 27 + 15 min on a cold CI runner, past the job budget);
-# --workspace unifies once and the second and third tiers reuse the build.
+# Unit tests select their three crates explicitly. Database tiers use
+# --workspace to unify their broader feature set and reuse it across tiers.
 _test-unit-uncoordinated:
-    cargo nextest run --no-fail-fast --manifest-path tests/Cargo.toml --workspace -E 'package(mcp-unit-tests) | package(web-unit-tests) | package(bridge-unit-tests)'
+    cargo nextest run --no-fail-fast --manifest-path tests/Cargo.toml -p mcp-unit-tests -p web-unit-tests -p bridge-unit-tests
+    node --experimental-vm-modules --test tests/bridge/*.test.mjs
 
 # DB-backed integration tests. Creates/drops throwaway mcp_ext_test_*
 # databases on the maintenance DB; the harness guard refuses any database
@@ -383,6 +391,7 @@ _lint-gates-uncoordinated:
         check-bridge-lifecycle.sh
         check-discarded-results.sh
         check-fail-open.sh
+        check-fail-soft.sh
         lint-schema.sh
         lint-extensions.sh
         check-migration-numbers.sh
@@ -403,7 +412,7 @@ _lint-gates-uncoordinated:
         check-admin-template-links.sh
         check-admin-template-assets.sh
         # admin-css-classes + frontend-standards now run as cargo tests in
-        # extensions/web/tests/ (admin_css_classes.rs, frontend_standards.rs).
+        # tests/unit/web/src/ (admin_css_classes.rs, frontend_standards.rs).
         check-dead-repository-code.sh
         check-file-headers.sh
         check-file-size.sh
@@ -420,6 +429,12 @@ _lint-gates-uncoordinated:
         check-docs-version.sh
         check-template-fields.sh
     )
+    # Why: cargo replaces the rust-contracts scanner binary while another gate
+    # is exec'ing it ("never executed"), so build it once here, before the fan-out.
+    contracts="{{justfile_directory()}}/../systemprompt-core/scripts/rust-contracts/Cargo.toml"
+    if [ -f "$contracts" ]; then
+        cargo build --quiet --locked --manifest-path "$contracts" || { echo "rust-contracts scanner failed to build" >&2; exit 1; }
+    fi
     logdir=$(mktemp -d)
     trap 'rm -rf "$logdir"' EXIT
     pids=()
@@ -480,6 +495,7 @@ preflight-static:
     check "fmt (bridge)" cargo fmt --manifest-path bridge/Cargo.toml --all -- --check
     check "sqlx cache" bash scripts/check-sqlx-cache.sh
     check "core crate versions" bash scripts/check-core-crate-versions.sh
+    check "build coordinator" bash tests/scripts/build-coordinator.sh
     check "deploy-release recipe present" bash -c '{{just_executable()}} --summary | tr " " "\n" | grep -qx deploy-release'
     check "source gates" {{just_executable()}} _lint-gates-uncoordinated
     if [ "${#failed[@]}" -gt 0 ]; then printf '::error::preflight-static failed: %s\n' "${failed[@]}"; exit 1; fi
@@ -908,10 +924,10 @@ _prepare-uncoordinated:
     done
     # Workspace-level prepare (catches lib crates)
     root_pass
-    # Second pass: the tests workspace builds systemprompt-web-admin with
+    # Second pass: the tests workspace builds systemprompt-web-admin-governance with
     # `governance-ssr`, whose queries a default-feature prepare never expands
     # (and therefore prunes). The union with the first pass happens in $NEW.
-    root_pass -- --package systemprompt-web-admin --features systemprompt-web-admin/governance-ssr
+    root_pass -- --package systemprompt-web-admin-governance --features systemprompt-web-admin-governance/governance-ssr
     # Per-crate prepare for binary/extension crates that cargo sqlx skips.
     #
     # These caches are SCRATCH, not artefacts: each crate's queries are copied
@@ -2277,3 +2293,21 @@ dashboard-benchmark:
 # Selected core test packages, preserving core serial groups and Astound coordination.
 test-core-feedback PACKAGES FILTER="all()":
     @scripts/test-core-feedback.sh "$@"
+
+# Regenerate query metadata for one changed crate against the existing schema.
+# Unlike prepare, this does not run migrations or remove other cache entries;
+# useful when the installed CLI cannot yet load newly added configuration.
+prepare-query-cache package:
+    @scripts/build-coordinator.sh run prepare-query-cache "{{package}}" -- {{just_executable()}} _prepare-query-cache-uncoordinated {{package}}
+
+_prepare-query-cache-uncoordinated package:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    task_cache_dir=$(mktemp -d "{{justfile_directory()}}/.build/query-cache.XXXXXX")
+    trap 'rm -rf "$task_cache_dir"' EXIT
+    task_database_url=$(jq -er '.database_url' .systemprompt/profiles/local/secrets.json)
+    DATABASE_URL="$task_database_url" SQLX_OFFLINE=false SQLX_OFFLINE_DIR="$task_cache_dir" cargo check -p {{package}}
+    for task_query_file in "$task_cache_dir"/query-*.json; do
+        [ -f "$task_query_file" ] || continue
+        cp "$task_query_file" .sqlx/
+    done

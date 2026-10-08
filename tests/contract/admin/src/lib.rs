@@ -1,6 +1,7 @@
 //! HTTP contract coverage for the admin plane.
 //!
-//! Every route in `extensions/web/admin/src/routes/{admin,ssr}.rs`
+//! Every route in the admin route tables (`extensions/web/src/router/admin/`
+//! and each admin domain crate's `routes/`)
 //! is driven end-to-end through the *real* router — assembled exactly as
 //! `extensions/web/src/extension_impl.rs` assembles it — under three
 //! principals: anonymous, authenticated non-admin, and admin.
@@ -101,6 +102,8 @@ mod self_service_contract;
 #[cfg(test)]
 mod share_contract;
 #[cfg(test)]
+mod sign_out_contract;
+#[cfg(test)]
 mod ssr_access_control_audience_contract;
 #[cfg(test)]
 mod ssr_access_control_entities_contract;
@@ -110,6 +113,8 @@ mod ssr_analysis_coverage;
 mod ssr_analytics_contract;
 #[cfg(test)]
 mod ssr_deep_contract;
+#[cfg(test)]
+mod ssr_overview_live_contract;
 #[cfg(test)]
 mod ssr_people_containers_contract;
 #[cfg(test)]
@@ -135,3 +140,6 @@ mod managed_resources_contract;
 #[cfg(test)]
 #[cfg(test)]
 mod marketplace_versions_contract;
+
+#[cfg(test)]
+mod data_console_contract;

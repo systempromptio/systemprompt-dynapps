@@ -11,7 +11,7 @@
 
 use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
-use systemprompt_web_admin::repositories::users::access_control::{
+use systemprompt_web_admin_core::repositories::entitlement::{
     MatrixRow, SectionInput, resolve_user_matrix,
 };
 
@@ -21,7 +21,7 @@ use crate::fixtures::{
 use crate::tempdb::TempDb;
 
 // One section holding a single skill, which is what every test below grades.
-pub fn one_skill(entity_id: &str) -> Vec<SectionInput> {
+pub(crate) fn one_skill(entity_id: &str) -> Vec<SectionInput> {
     vec![(
         "skill".to_owned(),
         "Skills".to_owned(),
@@ -44,7 +44,7 @@ async fn set_default_included(pool: &PgPool, entity_type: &str, entity_id: &str,
     .expect("set entity default");
 }
 
-pub async fn grade(pool: &PgPool, user: &UserId, entity_id: &str) -> MatrixRow {
+pub(crate) async fn grade(pool: &PgPool, user: &UserId, entity_id: &str) -> MatrixRow {
     let matrix = resolve_user_matrix(pool, user, one_skill(entity_id))
         .await
         .expect("resolve matrix")

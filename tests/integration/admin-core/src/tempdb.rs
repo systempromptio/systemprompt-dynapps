@@ -4,4 +4,4 @@
 //! Databases and templates are named after the running test binary, so this
 //! suite's never collide with another's.
 
-pub use astound_test_common::TempDb;
+pub(crate) use astound_test_common::TempDb;

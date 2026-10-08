@@ -88,7 +88,10 @@ fn required_assets_is_the_site_manifest_plus_the_admin_manifest() {
         "required assets must add the admin manifest on top of the site one"
     );
 
-    let declared: HashSet<&str> = required.iter().map(|a| a.destination()).collect();
+    let declared: HashSet<&str> = required
+        .iter()
+        .map(systemprompt::extension::AssetDefinition::destination)
+        .collect();
     for asset in &site {
         assert!(
             declared.contains(asset.destination()),

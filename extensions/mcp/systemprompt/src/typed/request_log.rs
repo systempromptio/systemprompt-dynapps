@@ -3,7 +3,7 @@
 use super::{PagedOutput, RequestLogInput, flag_value, page_limit, read_rows};
 use crate::cli::CliLocation;
 use rmcp::ErrorData;
-// JSON: rows are the CLI's own row objects.
+// JSON: variable-shape CLI rows
 use serde_json::Value;
 use std::collections::BTreeMap;
 use systemprompt::identifiers::McpExecutionId;
@@ -37,8 +37,6 @@ pub fn command(input: &RequestLogInput) -> Result<String, ErrorData> {
     Ok(command)
 }
 
-// Why: the last row's own cursor is the next page's `--before`; a short page
-// has no next page, so it yields none, unless the byte budget cut it short.
 pub(crate) fn next_cursor(rows: &[BTreeMap<String, Value>], page_full: bool) -> String {
     if !page_full {
         return String::new();

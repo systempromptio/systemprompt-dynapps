@@ -89,7 +89,19 @@ fi
 # A route handler is an `async fn`; a synchronous `-> Response` is a renderer
 # that never fails (a CSV body, a redirect, an `IntoResponse` impl) and has no
 # error to type. Only the async form is checked, so a renderer needs no marker.
-HANDLER_DIR="extensions/web/admin/src/handlers"
+# Handlers, page renderers and export datasets live in the shared admin core
+# and each admin domain crate, and the composition root's own handlers in the
+# web facade's admin router; directories that do not exist are skipped.
+HANDLER_DIRS=()
+for d in extensions/web/shared/admin-core/src/handlers \
+         extensions/web/shared/admin-core/src/ssr \
+         extensions/web/shared/admin-core/src/export \
+         extensions/web/admin/*/src/handlers \
+         extensions/web/admin/*/src/export \
+         extensions/web/src/router/admin; do
+    [ -d "$d" ] && HANDLER_DIRS+=("$d")
+done
+[ "${#HANDLER_DIRS[@]}" -gt 0 ] || { echo "check-http-errors: OK (no admin handler directory)"; exit 0; }
 
 UNTYPED=$(
     while IFS= read -r f; do
@@ -98,7 +110,7 @@ UNTYPED=$(
             /->[[:space:]]*(impl IntoResponse|Response)[[:space:]]*[{]/ {
                 if (in_async) printf "%s:%d:%s\n", fname, FNR, $0
             }' "$f"
-    done < <(find "$HANDLER_DIR" -name '*.rs')
+    done < <(find "${HANDLER_DIRS[@]}" -name '*.rs')
 )
 
 if [ -n "$UNTYPED" ]; then
@@ -114,7 +126,7 @@ fi
 # the ones that were being hand-written most often, and the ones where getting
 # it wrong is least visible: a 500 that should have been a 404, or a 403 built
 # beside the check instead of by it.
-LITERALS=$(grep -rnE 'StatusCode::(INTERNAL_SERVER_ERROR|FORBIDDEN)' "$HANDLER_DIR" --include='*.rs' || true)
+LITERALS=$(grep -rnE 'StatusCode::(INTERNAL_SERVER_ERROR|FORBIDDEN)' "${HANDLER_DIRS[@]}" --include='*.rs' || true)
 
 if [ -n "$LITERALS" ]; then
     echo "check-http-errors: raw status literal in a handler."

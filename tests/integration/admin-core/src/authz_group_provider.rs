@@ -8,7 +8,7 @@
 use std::sync::Arc;
 
 use systemprompt_security::authz::SubjectAttributeProvider;
-use systemprompt_web_admin::authz::group::{GroupAttributeProvider, group_rule_type};
+use systemprompt_web_admin_identity::authz::group::{GroupAttributeProvider, group_rule_type};
 
 use crate::fixtures::{
     insert_group, insert_group_member, insert_user, unclaimed_email, unique, unique_group,

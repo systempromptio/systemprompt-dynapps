@@ -12,7 +12,9 @@
 //! Its absence on production cannot be shown here — the profile is a
 //! per-process `OnceLock` — and is pinned by the gate's unit test instead.
 
-use systemprompt_web_admin::repositories::dev_login::{hash_dev_login_code, insert_dev_login_code};
+use systemprompt_web_admin_identity::repositories::dev_login::{
+    hash_dev_login_code, insert_dev_login_code,
+};
 
 use crate::app::{App, Call};
 use crate::principal::Principal;

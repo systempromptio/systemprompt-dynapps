@@ -4,12 +4,12 @@
 //! Every windowed query runs over `fixtures::narrow_window`, which starts 30
 //! seconds ago, so the window isolates the rows each test inserts.
 
-use systemprompt_web_admin::repositories::analytics::requests::{
+use systemprompt_web_admin_analytics::repositories::analytics::requests::{
     RequestFilter, RequestPage, RequestSortColumn, RequestSortSpec, SortDir,
     list_requests_by_model, list_requests_by_provider, list_requests_by_status,
     list_requests_paged,
 };
-use systemprompt_web_admin::repositories::scope::SubjectScope;
+use systemprompt_web_admin_core::repositories::scope::SubjectScope;
 
 use crate::fixtures::{
     DecisionSpec, RequestSpec, insert_decision, insert_request, insert_session, insert_user,

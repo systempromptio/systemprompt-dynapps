@@ -9,7 +9,7 @@
 
 use std::collections::BTreeMap;
 
-use systemprompt_web_admin::{AdfsConfig, AssertionClaims};
+use systemprompt_web_admin_identity::{AdfsConfig, AssertionClaims};
 
 const EMAIL: &str = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress";
 const NAME: &str = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name";

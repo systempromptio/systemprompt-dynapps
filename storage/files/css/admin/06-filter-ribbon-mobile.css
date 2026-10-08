@@ -1,0 +1,66 @@
+@layer responsive {
+
+/* A 240px dropdown anchored under a pill ran off the right edge of a phone
+   for every pill past the first, so on a phone each panel opens as a sheet
+   from the bottom of the screen over a dimmed page. filter-ribbon.js closes
+   the group when that dimmed backdrop is tapped. */
+@media (max-width: 48rem) {
+    .sp-filter-ribbon__groups {
+        flex-wrap: nowrap;
+        width: 100%;
+        overflow-x: auto;
+        overscroll-behavior-x: contain;
+        scrollbar-width: none;
+    }
+
+    .sp-filter-ribbon__group {
+        flex: 0 0 auto;
+    }
+
+    .sp-filter-ribbon__group-summary {
+        min-height: 44px;
+        white-space: nowrap;
+    }
+
+    /* The search box leads the scrolling row so it is never the control
+       that starts off screen, and leaves a sliver for the first pill. */
+    .sp-ribbon__search {
+        order: -1;
+        flex: 0 0 min(14rem, 70%);
+        min-height: 44px;
+    }
+
+    .sp-filter-ribbon__group[open]::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        background: var(--sp-overlay-light);
+    }
+
+    .sp-filter-ribbon__group-panel {
+        position: fixed;
+        inset: auto 0 0;
+        width: 100vw;
+        min-width: 0;
+        max-width: none;
+        max-height: 70dvh;
+        padding: var(--sp-space-3) var(--sp-space-3) calc(var(--sp-space-3) + env(safe-area-inset-bottom, 0px));
+        border-width: 1px 0 0;
+        border-radius: var(--sp-radius-lg) var(--sp-radius-lg) 0 0;
+        box-shadow: var(--sp-shadow-float);
+        overscroll-behavior: contain;
+    }
+
+    .sp-filter-ribbon__option {
+        min-height: 44px;
+    }
+
+    .sp-filter-ribbon__actions .sp-btn,
+    .sp-filter-ribbon__clear {
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+    }
+}
+
+}

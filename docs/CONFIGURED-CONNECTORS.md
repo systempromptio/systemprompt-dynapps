@@ -170,7 +170,7 @@ A live connection is an authorization subject. `services/access-control/rules.ya
 accepts a `connector:` band (precedence 160, between `group` and the Salesforce
 `salesforce` link band) whose values are server ids; a person matches while
 `mcp_connector_accounts` holds a `connected` row for that server
-(`extensions/web/admin/src/authz/connector.rs`). The band is available to any
+(`extensions/web/shared/admin-core/src/authz/connector.rs`). The band is available to any
 entity; the `astound-salesforce` marketplace no longer uses it — it reaches the
 `business-users` group by membership alone, and the Salesforce connector is
 linked from inside the workspace (Salesforce still refuses anyone without a

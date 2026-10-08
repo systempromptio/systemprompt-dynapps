@@ -57,12 +57,10 @@ pub fn schema_definitions() -> Vec<SchemaDefinition> {
         SchemaDefinition::sql_only(include_str!("../schema/46_tool_artifacts.sql")),
         SchemaDefinition::sql_only(include_str!("../schema/47_user_last_seen.sql")),
         SchemaDefinition::sql_only(include_str!("../schema/48_retention.sql")),
+        SchemaDefinition::sql_only(include_str!("../schema/49_platform_data_console.sql")),
     ]
 }
 
-// Why: not `const` — with migrations present, `extension_migrations!()`
-// expands to a `vec![…]` of embedded files, which cannot be built in const
-// context (it could while the migrations directory was empty).
 #[doc(hidden)]
 pub fn migrations() -> Vec<Migration> {
     extension_migrations!()

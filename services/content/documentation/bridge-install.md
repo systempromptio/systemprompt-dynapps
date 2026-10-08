@@ -7,7 +7,12 @@ kind: "guide"
 public: true
 tags: ["documentation", "getting-started", "bridge"]
 published_at: "2026-08-19"
-updated_at: "2026-09-11"
+updated_at: "2026-09-29"
+keywords: "bridge, astound-bridge, install, sign in, macos, windows, linux, wsl, sync, doctor"
+after_reading_this:
+  - "Install Astound Bridge with trusted gateway and signing configuration"
+  - "Sign in and sync your plugins, skills and MCP servers"
+  - "Diagnose a bridge with whoami, status and doctor"
 related_playbooks:
   - title: "Connect Claude Code"
     url: "/documentation/connect-claude-code"
@@ -71,6 +76,8 @@ Connect codes are single-use and expire after ten minutes. If a code expires or 
 ## Linux and WSL
 
 Run these steps in your Linux terminal, as your normal user. For WSL, both Claude Code and the bridge must run inside the same distribution.
+
+The installer is Linux-only. On a Mac it stops before downloading anything and points you at `astound-bridge-macos.dmg`; follow [Install on macOS](/documentation/install-macos) instead.
 
 You need `curl`, `tar`, a SHA-256 utility, and a supported Linux environment. See [Downloads](/documentation/downloads) for architectures and checksum instructions. Minimal distributions may also need `libdbus-1-3`, `libcap2`, `libgcrypt20`, and `libsystemd0`.
 

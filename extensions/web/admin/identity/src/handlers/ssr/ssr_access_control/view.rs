@@ -1,0 +1,230 @@
+//! Template contexts for `/admin/access-control`.
+//!
+//! The Rules tab is entity-centric: one row per governed entity under a
+//! heading per kind, its bands as chips, its why in full, and whether code
+//! and database agree about it. The audience grid — every role, group and
+//! project against every entity, each cell the resolver's own answer — and
+//! the person search are their own tabs.
+
+use serde::Serialize;
+
+
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct AcStatsView {
+    pub groups: usize,
+    pub projects: usize,
+    pub users: usize,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct AcKpiView {
+    pub label: &'static str,
+    pub value: String,
+    pub note: String,
+    pub tone: &'static str,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct AcOptionView {
+    pub value: String,
+    pub label: String,
+    pub selected: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct BandChipsView {
+    pub band: String,
+    pub label: &'static str,
+    pub values: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct AcRuleView {
+    pub band: String,
+    pub band_label: &'static str,
+    pub subject: String,
+    pub access: String,
+    pub access_tone: &'static str,
+    pub source: String,
+    pub source_tone: &'static str,
+    pub justification: String,
+    pub expires_at: Option<String>,
+    pub expires_soon: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct AcEntityView {
+    pub entity_type: String,
+    pub entity_type_label: &'static str,
+    pub entity_id: String,
+    pub entity_label: String,
+    pub entity_sub: Option<String>,
+    pub labelled: bool,
+    pub default_open: bool,
+    pub default_label: &'static str,
+    pub allow: Vec<BandChipsView>,
+    pub deny: Vec<BandChipsView>,
+    pub why: String,
+    pub has_why: bool,
+    pub state: &'static str,
+    pub state_tone: &'static str,
+    pub in_sync: bool,
+    pub sync_url: String,
+    pub rules: Vec<AcRuleView>,
+    pub rule_count: usize,
+    pub resolution: String,
+    pub expiring_soon: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct AcEntityGroupView {
+    pub kind: String,
+    pub kind_label: &'static str,
+    pub count: usize,
+    pub rows: Vec<AcEntityView>,
+}
+
+#[derive(Debug, Default, Serialize)]
+pub(crate) struct AcEntitiesView {
+    pub groups: Vec<AcEntityGroupView>,
+    pub total: usize,
+    pub kpis: Vec<AcKpiView>,
+    pub entity_options: Vec<AcOptionView>,
+    pub band_options: Vec<AcOptionView>,
+    pub state_options: Vec<AcOptionView>,
+    pub expiring_only: bool,
+    pub search: String,
+    pub filters_applied: bool,
+    pub clear_url: &'static str,
+    pub capped: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct AcAudienceColumnView {
+    pub id: String,
+    pub subject: String,
+    pub label: String,
+    pub kind: &'static str,
+    pub kind_label: &'static str,
+    pub focus_url: String,
+    pub is_focused: bool,
+    pub allowed: usize,
+    pub denied: usize,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct AcAudienceColumnGroupView {
+    pub kind: &'static str,
+    pub kind_label: &'static str,
+    pub span: usize,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct AcAudienceCellView {
+    pub decision: &'static str,
+    pub glyph: &'static str,
+    pub tone: &'static str,
+    pub layer: String,
+    pub detail: String,
+    pub subject_id: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct AcAudienceRowView {
+    pub entity_type: String,
+    pub entity_type_label: &'static str,
+    pub entity_id: String,
+    pub entity_name: String,
+    pub entity_sub: Option<String>,
+    pub drill_url: String,
+    pub allowed: usize,
+    pub denied: usize,
+    pub cells: Vec<AcAudienceCellView>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct AcAudienceRowGroupView {
+    pub kind: String,
+    pub kind_label: &'static str,
+    pub count: usize,
+    pub rows: Vec<AcAudienceRowView>,
+}
+
+#[derive(Debug, Default, Serialize)]
+pub(crate) struct AcAudienceFiltersView {
+    pub subject_kind_options: Vec<AcOptionView>,
+    pub subject_options: Vec<AcOptionView>,
+    pub entity_options: Vec<AcOptionView>,
+    pub decision_options: Vec<AcOptionView>,
+    pub band_options: Vec<AcOptionView>,
+    pub search: String,
+    pub filters_applied: bool,
+    pub clear_url: &'static str,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct AcAudienceKpiView {
+    pub label: &'static str,
+    pub value: String,
+    pub note: String,
+    pub tone: &'static str,
+    pub href: Option<String>,
+    pub active: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct AcAudienceLegendView {
+    pub decision: &'static str,
+    pub glyph: &'static str,
+    pub tone: &'static str,
+    pub label: &'static str,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct AcAudienceBucketItemView {
+    pub label: String,
+    pub note: Option<String>,
+    pub kind_label: &'static str,
+    pub layer: String,
+    pub detail: String,
+    pub why: Option<String>,
+    pub expires_at: Option<String>,
+    pub rules_url: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct AcAudienceBucketView {
+    pub decision: &'static str,
+    pub glyph: &'static str,
+    pub tone: &'static str,
+    pub label: &'static str,
+    pub count: usize,
+    pub items: Vec<AcAudienceBucketItemView>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct AcAudienceFocusView {
+    pub kind_label: &'static str,
+    pub label: String,
+    pub note: Option<String>,
+    pub back_url: String,
+    pub item_noun: &'static str,
+    pub item_label: &'static str,
+    pub buckets: Vec<AcAudienceBucketView>,
+}
+
+#[derive(Debug, Default, Serialize)]
+pub(crate) struct AudienceGridView {
+    pub column_groups: Vec<AcAudienceColumnGroupView>,
+    pub columns: Vec<AcAudienceColumnView>,
+    pub row_groups: Vec<AcAudienceRowGroupView>,
+    pub has_rows: bool,
+    pub resolved: bool,
+    pub total_rows: usize,
+    pub total_columns: usize,
+    pub colspan: usize,
+    pub kpis: Vec<AcAudienceKpiView>,
+    pub legend: Vec<AcAudienceLegendView>,
+    pub filters: AcAudienceFiltersView,
+    pub focus: Option<AcAudienceFocusView>,
+}

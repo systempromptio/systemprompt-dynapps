@@ -63,7 +63,6 @@
 .sp-u-mt-3 { margin-top: var(--sp-space-3); }
 .sp-u-mt-4 { margin-top: var(--sp-space-4); }
 .sp-u-mt-8 { margin-top: var(--sp-space-8); }
-.sp-u-mb-6 { margin-bottom: var(--sp-space-6); }
 .sp-u-p-3 { padding: var(--sp-space-3); }
 .sp-u-p-4 { padding: var(--sp-space-4); }
 .sp-u-p-5 { padding: var(--sp-space-5); }
@@ -104,13 +103,5 @@
 }
 
 .sp-skip-link:focus-visible { top: 0; }
-
-}
-
-@layer responsive {
-
-@media (max-width: 48rem) {
-    .sp-u-grid-2, .sp-u-grid-3, .sp-u-grid-2col, .sp-u-grid-3col { grid-template-columns: 1fr; }
-}
 
 }

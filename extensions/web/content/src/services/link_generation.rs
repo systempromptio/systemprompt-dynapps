@@ -77,9 +77,8 @@ impl LinkGenerationService {
     }
 }
 
-// Why: Exposed (behind `#[doc(hidden)]`) so the external test workspace can
-// assert the length and charset of a generated code without a database; not
-// part of the public API.
+// Why: `#[doc(hidden)]` so the external test workspace can assert a code's
+// length and charset without a database.
 #[doc(hidden)]
 pub fn generate_short_code() -> String {
     use rand::Rng;

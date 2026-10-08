@@ -14,12 +14,6 @@
     {{> components/sync-plane plane=sync can_write=can_write}}
     {{> components/sync-plane-dialogs}}
     {{else}}
-    {{#if saved}}
-    {{> components/notice tone="ok" title="Saved" message=(concat "Policy '" saved "' is written. The gateway reads it on the next request; a cached policy lasts at most sixty seconds.")}}
-    {{/if}}
-    {{#if error}}
-    {{> components/notice tone="err" title="Not saved" message=error}}
-    {{/if}}
     {{#unless can_write}}
     {{> components/notice tone="info" title="Read only" message="Editing gateway policies needs an administrator. Everything below is the live configuration."}}
     {{/unless}}
@@ -40,7 +34,7 @@
             {{> gateway-policy-fields this can_write=../can_write}}
         </form>
         {{#if ../can_write}}
-        <form method="post" action="/admin/gateway/policies/delete" class="sp-gwp__delete" data-confirm="Delete policy '{{name}}'? The gateway stops applying it within a minute.">
+        <form method="post" action="/admin/gateway/policies/delete" class="sp-gwp__delete" data-confirm="Delete policy '{{name}}'? The gateway stops applying it within a minute." data-confirm-title="Delete policy" data-confirm-label="Delete">
             <input type="hidden" name="name" value="{{name}}">
             <button type="submit" class="sp-btn sp-btn--sm sp-btn--ghost">Delete policy</button>
         </form>

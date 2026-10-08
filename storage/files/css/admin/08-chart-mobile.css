@@ -1,0 +1,57 @@
+@layer responsive {
+
+/* On desktop a chart card has a fixed height so every card in a grid row
+   shares a baseline. On a phone there is one card per row, so the card sizes
+   to its content with a floor instead, and never scrolls inside itself. This
+   cannot grow without bound: the live SVG is absolutely positioned inside
+   .sp-chart, so it contributes no height back to the card. */
+@media (max-width: 48rem) {
+    .sp-p-overview__chart,
+    .sp-analytics-grid__panel,
+    .sp-requests-charts__panel {
+        block-size: auto;
+        min-block-size: 18rem;
+        overflow: visible;
+    }
+
+    .sp-chart {
+        min-height: 13rem;
+    }
+
+    .sp-requests-charts,
+    .sp-p-overview__two-up {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .sp-chart__legend,
+    .sp-svgchart__legend {
+        gap: var(--sp-space-1) var(--sp-space-3);
+    }
+
+    /* The ring and its legend stack, the ring capped so it leaves the
+       legend on screen, and each legend label keeps the full row width. */
+    .sp-pie-chart__body {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--sp-space-4);
+    }
+
+    .sp-pie-chart__ring {
+        flex: none;
+        width: 100%;
+        min-width: 0;
+        max-width: 12rem;
+        align-self: center;
+    }
+
+    .sp-latency-histogram__row {
+        grid-template-columns: 4rem 1fr 2.5rem;
+        gap: var(--sp-space-2);
+    }
+
+    .sp-latency-histogram__axis {
+        padding-left: calc(4rem + var(--sp-space-2));
+    }
+}
+
+}

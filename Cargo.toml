@@ -2,7 +2,12 @@
 members = [
     "extensions/web",
     "extensions/web/shared",
-    "extensions/web/admin",
+    "extensions/web/shared/admin-core",
+    "extensions/web/admin/analytics",
+    "extensions/web/admin/catalog",
+    "extensions/web/admin/governance",
+    "extensions/web/admin/identity",
+    "extensions/web/admin/platform",
     "extensions/web/content",
     "extensions/web/site",
     "extensions/web/jobs",
@@ -30,7 +35,7 @@ opt-level = "z"
 [workspace.package]
 edition = "2024"
 rust-version = "1.96"
-version = "0.62.1"
+version = "0.63.0"
 authors = ["Astound Digital <ed@systemprompt.io>"]
 repository = "https://github.com/systempromptio/systemprompt-astound"
 homepage = "https://astounddigital.com"
@@ -40,16 +45,21 @@ documentation = "https://systemprompt.io/documentation"
 # ============================================
 # CORE FACADE (single dependency for all systemprompt-core)
 # ============================================
-systemprompt = { version = "0.62.0", default-features = false, features = ["core", "database", "config"] }
-systemprompt-security = { version = "0.62.0" }
-systemprompt-extension = { version = "0.62.0" }
+systemprompt = { version = "0.63.0", default-features = false, features = ["core", "database", "config"] }
+systemprompt-security = { version = "0.63.0" }
+systemprompt-extension = { version = "0.63.0" }
 
 # ============================================
 # LOCAL EXTENSIONS
 # ============================================
 systemprompt-web-extension = { path = "extensions/web" }
 systemprompt-web-shared = { path = "extensions/web/shared" }
-systemprompt-web-admin = { path = "extensions/web/admin" }
+systemprompt-web-admin-core = { path = "extensions/web/shared/admin-core" }
+systemprompt-web-admin-analytics = { path = "extensions/web/admin/analytics" }
+systemprompt-web-admin-catalog = { path = "extensions/web/admin/catalog" }
+systemprompt-web-admin-governance = { path = "extensions/web/admin/governance" }
+systemprompt-web-admin-identity = { path = "extensions/web/admin/identity" }
+systemprompt-web-admin-platform = { path = "extensions/web/admin/platform" }
 systemprompt-web-content = { path = "extensions/web/content" }
 systemprompt-web-site = { path = "extensions/web/site" }
 systemprompt-web-jobs = { path = "extensions/web/jobs" }
@@ -71,6 +81,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_yaml = { package = "serde_yaml_ng", version = "0.10" }
 serde_json = { version = "1.0", features = ["preserve_order"] }
 chrono = { version = "0.4", features = ["serde"] }
+chrono-tz = "0.10"
 uuid = { version = "1.18", features = ["v4", "serde"] }
 thiserror = "2.0"
 shell-words = "1.1"
@@ -88,7 +99,6 @@ inventory = "0.3"
 walkdir = "2.0"
 tempfile = "3.0"
 zip = { version = "8", default-features = false, features = ["deflate-flate2"] }
-glob = "0.3"
 url = "2.5"
 urlencoding = "2.1"
 
@@ -138,7 +148,7 @@ module_name_repetitions = "allow"
 missing_errors_doc = "allow"
 missing_panics_doc = "allow"
 derive_partial_eq_without_eq = "allow"
-cognitive_complexity = "allow"
+cognitive_complexity = "deny"
 unwrap_or_default = "allow"
 redundant_pub_crate = "allow"
 
@@ -251,7 +261,7 @@ workspace = true
 # Local development and `next` deploys use the persistent sibling core checkout
 # directly; `just core-guard` requires it clean at bridge/CORE_REF. Keep version
 # requirements and this block aligned in both workspaces; `main` comments it out.
-# INACTIVE: core 0.61.0 is published; `main` builds against the registry. Uncomment on `next` when building against the sibling core checkout.
+# INACTIVE: core 0.63.0 is published; `main` builds against the registry. Uncomment on `next` when building against the sibling core checkout.
 # [patch.crates-io]
 # systemprompt = { path = "../systemprompt-core/systemprompt" }
 # systemprompt-models = { path = "../systemprompt-core/crates/shared/models" }

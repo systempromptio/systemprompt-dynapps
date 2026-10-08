@@ -18,7 +18,7 @@ name: Release
 # binaries at /files/downloads (storage/files/downloads/ is gitignored and
 # COPYed in), so the download artifacts are staged into the build context
 # first. Asset names are version-less and load-bearing — they are referenced by
-# extensions/web/admin/src/handlers/ssr/ssr_bridge_setup.rs,
+# extensions/web/admin/platform/src/handlers/ssr/ssr_connect.rs,
 # storage/files/admin/templates/bridge-setup.hbs and
 # scripts/fetch-remote-downloads.sh, and by the `assets:` map of the gateway's
 # `bridge_releases` config (services/ai/gateway.yaml — the in-app self-updater).

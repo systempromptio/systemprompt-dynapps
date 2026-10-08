@@ -1,0 +1,193 @@
+//! Turning roster rows into the context the template renders.
+//!
+//! Every link on the page is built from the same preserved query string, so
+//! sorting keeps the filter, filtering keeps the sort, and paging keeps both.
+
+use std::collections::BTreeMap;
+
+use crate::repositories::users::roster::{RosterFilter, RosterRow, RosterStats};
+use systemprompt_web_admin_core::ssr::format::{format_cost, format_token_total, relative_time};
+use systemprompt_web_admin_core::ssr::list_view::{PageWindow, Pagination};
+
+use super::super::BASE_URL;
+use super::RosterUrlState;
+use systemprompt_web_admin_core::ssr::entity_urls::context_detail_url;
+use systemprompt_web_admin_core::ssr::types::table::FilterChipView;
+
+use super::context::{RosterChipView, RosterKpiView, RosterRowView};
+use systemprompt_web_admin_core::ssr::list_view::paginate_prefixed;
+
+pub(super) fn build_chips(url: &RosterUrlState, totals: &RosterStats) -> Vec<FilterChipView> {
+    let prefix = url.link_prefix(&["filter", "page"]);
+    let active = url.filter;
+    vec![
+        FilterChipView {
+            label: "All",
+            href: format!("{prefix}filter="),
+            is_active: active == RosterFilter::None,
+            count: totals.total,
+        },
+        FilterChipView {
+            label: "Unassigned",
+            href: format!("{prefix}filter=unassigned"),
+            is_active: active == RosterFilter::Unassigned,
+            count: totals.unassigned,
+        },
+        FilterChipView {
+            label: "No role",
+            href: format!("{prefix}filter=no-role"),
+            is_active: active == RosterFilter::NoRole,
+            count: totals.no_role,
+        },
+        FilterChipView {
+            label: "Inactive 30d",
+            href: format!("{prefix}filter=inactive-30d"),
+            is_active: active == RosterFilter::Inactive30d,
+            count: totals.inactive_30d,
+        },
+    ]
+}
+
+pub(super) fn build_kpis(url: &RosterUrlState, totals: &RosterStats) -> RosterKpiView {
+    let prefix = url.link_prefix(&["filter", "page"]);
+    let (cost_delta, cost_delta_dir) =
+        delta(totals.cost_microdollars, totals.prior_cost_microdollars);
+    let (requests_delta, requests_delta_dir) = delta(totals.requests, totals.prior_requests);
+    RosterKpiView {
+        total: totals.total,
+        active: totals.active,
+        unassigned: totals.unassigned,
+        no_role: totals.no_role,
+        inactive: totals.inactive_30d,
+        cost_display: format_cost(totals.cost_microdollars),
+        cost_delta,
+        cost_delta_dir,
+        requests_display: format_token_total(totals.requests),
+        requests_delta,
+        requests_delta_dir,
+        unassigned_url: format!("{prefix}filter=unassigned"),
+        no_role_url: format!("{prefix}filter=no-role"),
+        inactive_url: format!("{prefix}filter=inactive-30d"),
+        all_url: format!("{prefix}filter="),
+        filter_active: url.filter != RosterFilter::None,
+        unassigned_active: url.filter == RosterFilter::Unassigned,
+        no_role_active: url.filter == RosterFilter::NoRole,
+        inactive_active: url.filter == RosterFilter::Inactive30d,
+    }
+}
+
+fn delta(current: i64, prior: i64) -> (String, &'static str) {
+    if prior == 0 {
+        return (String::new(), "flat");
+    }
+    let pct = systemprompt_web_admin_core::numeric::percentage(current - prior, prior);
+    let dir = if pct > 1.0 {
+        "up"
+    } else if pct < -1.0 {
+        "down"
+    } else {
+        "flat"
+    };
+    (format!("{pct:+.0}%"), dir)
+}
+
+pub(super) struct RowInput<'a> {
+    pub rows: &'a [RosterRow],
+    pub group_names: &'a BTreeMap<String, String>,
+    pub project_names: &'a BTreeMap<String, String>,
+}
+
+pub(super) fn build_rows(input: &RowInput<'_>) -> Vec<RosterRowView> {
+    input
+        .rows
+        .iter()
+        .map(|row| {
+            let name = row
+                .display_name
+                .clone()
+                .unwrap_or_else(|| row.user_id.as_str().to_owned());
+            RosterRowView {
+                initials: initials(&name),
+                detail_url: format!("/admin/users/{}", urlencoding::encode(row.user_id.as_str())),
+                email: row
+                    .email
+                    .as_ref()
+                    .map(|e| e.as_str().to_owned())
+                    .unwrap_or_default(),
+                has_roles: !row.roles.is_empty(),
+                roles_title: row.roles.join(", "),
+                roles: row.roles.clone(),
+                has_scope: !row.group_ids.is_empty() || !row.project_ids.is_empty(),
+                scope: chips(&row.group_ids, input.group_names, "group", "info")
+                    .into_iter()
+                    .chain(chips(
+                        &row.project_ids,
+                        input.project_names,
+                        "project",
+                        "accent",
+                    ))
+                    .collect(),
+                last_active: row.last_active.map(relative_time),
+                last_active_title: last_active_title(row),
+                last_active_url: row.last_context_id.as_ref().map(context_detail_url),
+                cost_display: format_cost(row.cost_microdollars),
+                requests_display: format_token_total(row.requests),
+                tokens_display: format_token_total(row.tokens),
+                status_label: if row.is_active {
+                    "Enabled"
+                } else {
+                    "Suspended"
+                },
+                status_tone: if row.is_active { "ok" } else { "muted" },
+                is_active: row.is_active,
+                name,
+                user_id: row.user_id.clone(),
+            }
+        })
+        .collect()
+}
+
+fn chips(
+    ids: &[String],
+    names: &BTreeMap<String, String>,
+    facet: &str,
+    tone: &'static str,
+) -> Vec<RosterChipView> {
+    ids.iter()
+        .map(|id| RosterChipView {
+            label: names.get(id).cloned().unwrap_or_else(|| id.clone()),
+            href: format!("{BASE_URL}?{facet}={}", urlencoding::encode(id)),
+            tone,
+            id: id.clone(),
+        })
+        .collect()
+}
+
+fn last_active_title(row: &RosterRow) -> String {
+    let Some(t) = row.last_active else {
+        return "No recorded activity".to_owned();
+    };
+    let source = match row.last_active_source.as_deref() {
+        Some("request") => "last gateway request",
+        Some("session") => "last sign-in activity",
+        Some("activity") => "last console action",
+        Some("hook") => "last Claude Code hook event",
+        Some("tool") => "last MCP tool call",
+        Some("bridge") => "last bridge heartbeat",
+        _ => "last activity",
+    };
+    format!("{} · {source}", t.to_rfc3339())
+}
+
+fn initials(name: &str) -> String {
+    name.split(|c: char| c.is_whitespace() || c == '-' || c == '.' || c == '@')
+        .filter(|part| !part.is_empty())
+        .take(2)
+        .filter_map(|part| part.chars().next())
+        .flat_map(char::to_uppercase)
+        .collect()
+}
+
+pub(super) fn build_pagination(url: &RosterUrlState, window: PageWindow) -> Pagination {
+    paginate_prefixed(window, &url.link_prefix(&["page"]))
+}

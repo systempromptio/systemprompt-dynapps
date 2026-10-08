@@ -1,0 +1,63 @@
+//! The Handlebars context of the conversations page: tiles, charts, the
+//! filter ribbon, the breakdown, the rows, selection and export.
+
+use serde::Serialize;
+
+use super::kpis::KpisView;
+use super::summary::{ConversationAnalysisFilterView, ConversationBucketView};
+use super::view::ConversationRowView;
+use crate::handlers::ssr::analysis::help::HelpView;
+use crate::handlers::ssr::analysis::reports::banner::ReportBannerView;
+use crate::handlers::ssr::analysis::ribbon::RibbonView;
+use systemprompt_web_admin_core::ssr::list_view::{Pagination, ScopeFilterView};
+use systemprompt_web_admin_core::ssr::types::svg_line::SvgLineChartView;
+use systemprompt_web_admin_core::ssr::types::table::SortHeaderView;
+use systemprompt_web_admin_core::ssr::types::tabs::TabLinkView;
+
+#[derive(Debug, Serialize)]
+pub(crate) struct SortHeaders {
+    pub activity: SortHeaderView,
+    pub turns: SortHeaderView,
+    pub tools: SortHeaderView,
+    pub errors: SortHeaderView,
+    pub tokens: SortHeaderView,
+    pub cost: SortHeaderView,
+    pub active: SortHeaderView,
+    pub duration: SortHeaderView,
+}
+
+#[derive(Debug, Serialize)]
+pub(crate) struct ConversationsPageContext {
+    pub page: &'static str,
+    pub title: &'static str,
+    pub kpis: KpisView,
+    pub charts: Vec<SvgLineChartView>,
+    pub range_links: Vec<TabLinkView>,
+    pub filter: ConversationAnalysisFilterView,
+    pub ribbon: RibbonView,
+    pub scope_filter: ScopeFilterView,
+    pub breakdown_tabs: Vec<TabLinkView>,
+    pub breakdown_label: &'static str,
+    pub breakdown: Vec<ConversationBucketView>,
+    pub rows: Vec<ConversationRowView>,
+    pub has_rows: bool,
+    pub count_label: String,
+    pub turns_toggle: TurnsToggleView,
+    pub pagination: Pagination,
+    pub sort_headers: SortHeaders,
+    pub export: systemprompt_web_admin_core::export::view::ExportView,
+    pub help: HelpView,
+    pub report_banner: ReportBannerView,
+    pub current_url: String,
+    pub judge_all_url: &'static str,
+    pub can_judge: bool,
+    pub manual_judge: bool,
+    pub unjudged_in_view: i64,
+}
+
+#[derive(Debug, Serialize)]
+pub(crate) struct TurnsToggleView {
+    pub show_all: bool,
+    pub without_turns: i64,
+    pub href: String,
+}

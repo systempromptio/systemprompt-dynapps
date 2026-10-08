@@ -6,7 +6,9 @@
 
 #[test]
 fn the_customer_repository_selects_no_cost_column() {
-    let src = include_str!("../../../../extensions/web/admin/src/repositories/reports/customer.rs");
+    let src = include_str!(
+        "../../../../extensions/web/admin/analytics/src/repositories/reports/customer.rs"
+    );
     let sql_only: String = src
         .lines()
         .filter(|l| !l.trim_start().starts_with("//"))

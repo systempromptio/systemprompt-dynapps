@@ -1,0 +1,35 @@
+{{!--
+  Everything on the overview below the page header, as one partial so the
+  full page and `GET /admin/api/overview` render identical markup: the live
+  layer fetches this fragment and morphs it over the page in place. Each
+  `data-live-region` is a unit the client updates on its own terms — tiles by
+  `data-kpi`, charts by slot, boards wholesale.
+
+  Invoke as: {{> overview/live-body}} (reads the overview page context)
+--}}
+<div class="sp-p-overview__live" data-overview-live data-preset="{{preset}}" data-subtitle="{{subtitle}}">
+<section aria-label="Headline figures" data-live-region="kpis">
+    {{#if kpis.error}}{{> components/notice tone="err" title="Headline figures unavailable" message=kpis.error}}{{/if}}
+    {{#if kpis.comparison_note}}<p class="sp-p-overview__note">{{kpis.comparison_note}}</p>{{/if}}
+    <div class="sp-kpi-grid sp-kpi-grid--compact sp-p-overview__kpis">
+        {{#each kpis.tiles}}
+        {{> components/kpi key=this.key label=this.label icon=this.icon value=this.value note=this.note href=this.href
+            hint=this.hint tone=this.tone delta=this.delta delta_dir=this.delta_dir spark=this.spark}}
+        {{/each}}
+    </div>
+</section>
+
+<section class="sp-p-overview__charts" aria-label="Over time" data-live-region="charts">
+    {{#each charts}}<div class="sp-p-overview__chart" data-chart-slot="{{@index}}">{{> components/svg-line-chart this}}</div>{{/each}}
+</section>
+
+<div class="sp-p-overview__two-up" data-live-region="scopes">
+    {{> overview/scope-board board=projects}}
+    {{> overview/scope-board board=groups}}
+</div>
+
+<div class="sp-p-overview__two-up" data-live-region="models">
+    {{> overview/models-board}}
+    {{> overview/queues}}
+</div>
+</div>

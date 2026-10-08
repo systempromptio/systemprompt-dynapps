@@ -5,7 +5,7 @@
 //! user who is not the one who signed in.
 
 use systemprompt::models::auth::Permission;
-use systemprompt_web_admin::permissions_for_roles;
+use systemprompt_web_admin_identity::permissions_for_roles;
 
 fn roles(names: &[&str]) -> Vec<String> {
     names.iter().map(|n| (*n).to_owned()).collect()

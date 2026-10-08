@@ -31,7 +31,7 @@ bundle with the bundled database and one compose file.
 | Image access | a GitHub personal access token with `read:packages` issued by Astound (the package is private); `docker login ghcr.io` on each node |
 | Database | PostgreSQL **16** (tested floor for this deployment; 18 is the general floor) reachable from all three regions on 5432 with TLS, with the `vector`, `uuid-ossp` and `pgcrypto` extensions available |
 | Model provider | a Google service-account JSON for Vertex AI (the gateway routes `claude-*` to Vertex, failing over to Anthropic), plus an Anthropic API key |
-| Public entry | one hostname (for example `ai.example.com`) with TLS terminated at the load balancer in each region, all three forwarding to their local node. HTTPS is mandatory: the sign-in cookie is `Secure` and passkeys need a secure context |
+| Public entry | one hostname (for example `ai.example.com`) with TLS terminated at the load balancer in each region, all three forwarding to their local node. HTTPS is mandatory: the sign-in cookie is `Secure` and the SAML assertion is posted back to an `https` ACS URL |
 
 ## 2. Database
 
@@ -77,7 +77,7 @@ cluster's signing identity. Render on one machine, copy everywhere:
   --trusted-proxies 10.10.0.0/16,10.20.0.0/16,10.30.0.0/16 \
   --database-url 'postgres://systemprompt:<pw>@db-primary.example.internal:5432/systemprompt?sslmode=require' \
   --anthropic-key sk-ant-... \
-  --image ghcr.io/astound-digital/systemprompt-astound:0.62.1     # validates the result in the image
+  --image ghcr.io/astound-digital/systemprompt-astound:0.63.0     # validates the result in the image
 ```
 
 `--trusted-proxies` is the list of CIDRs your load balancers connect from.
@@ -126,25 +126,30 @@ On every node, with `/etc/astound/profile` in place:
 
 ```bash
 echo "$GHCR_TOKEN" | docker login ghcr.io -u <github-user> --password-stdin
-export SYSTEMPROMPT_TAG=0.62.1 ASTOUND_PROFILE_DIR=/etc/astound/profile
+export SYSTEMPROMPT_TAG=0.63.0 ASTOUND_PROFILE_DIR=/etc/astound/profile
 export DATABASE_URL='postgres://systemprompt:<pw>@db-primary.example.internal:5432/systemprompt?sslmode=require'
 docker compose -f docker-compose.node.yml pull
+docker compose -f docker-compose.node.yml run --rm app migrate   # node 1 only, once
 docker compose -f docker-compose.node.yml up -d
 ```
 
-**Boot the nodes one at a time, always.** Start node 1, wait until
-`docker compose ps` shows `healthy`, run the checklist; then node 2 the same
-way; then node 3. On the first boot node 1 also runs the schema migrations
-and creates the bootstrap admin. The serial order is not only for first
-boot: the MCP server registry in the shared database is keyed by server
-name, and two nodes starting within the same few seconds race each other on
-it, which fails one of them with
-`MCP services running but not properly registered in database`. A node that
-fails this way simply restarts cleanly once the other node is healthy. The
-same rule applies to rolling upgrades: one node at a time.
+**Migrate once, then boot.** The profile sets `database.migrate_on_boot:
+false`, so no node changes the schema as it starts. The `migrate` one-shot
+(the image's entrypoint running `systemprompt infra db migrate`, then
+`admin bootstrap`) moves the shared primary forward and creates the bootstrap
+admin, from node 1, before any node serves. A node started against a schema
+it does not match refuses to boot and names the pending migration and the
+`systemprompt infra db migrate --profile self-host` command.
+
+**Nodes may boot together.** Each node claims its own instance id in the
+shared database at boot, so the MCP registry and the per-instance state of
+concurrently starting nodes no longer collide; once `migrate` has run, start
+them in any order. Rolling upgrades still go one node at a time, behind the
+balancer, so capacity never drops to zero. Run the checklist on each node
+once it is `healthy`, passing the node's `server.role`:
 
 ```bash
-./verify-node.sh --url http://localhost:8080 --container <compose container name> --version 0.62.1
+./verify-node.sh --url http://localhost:8080 --container <compose container name> --version 0.63.0 --role all
 ```
 
 **If `verify-node.sh` reports the public site missing on a node**, render its
@@ -163,8 +168,9 @@ calls, the binary version, the MCP child server, the migration ledger and the bo
 and after every upgrade.
 
 First sign-in: `https://ai.example.com/admin/login`. The bootstrap admin is
-the `admin` user with the e-mail given to `--admin-email`; passkey registration and the SSO configuration are in the
-documentation site the node serves at `/documentation/`.
+the `admin` user with the e-mail given to `--admin-email`, and sign-in is AD FS SSO only, so configure the relying party
+first (`/documentation/adfs-sso-setup` on the node's own documentation site). With SSO down, use the CLI break-glass
+session described in `/documentation/authentication`.
 
 ## 6. Upgrade and roll back
 
@@ -176,21 +182,73 @@ cosign verify --certificate-identity-regexp='https://github.com/Astound-Digital/
   ghcr.io/astound-digital/systemprompt-astound:<new-version>
 # drain the node at the balancer, wait 30 s, then:
 SYSTEMPROMPT_TAG=<new-version> docker compose -f docker-compose.node.yml pull
+SYSTEMPROMPT_TAG=<new-version> docker compose -f docker-compose.node.yml run --rm app migrate   # first node only
 SYSTEMPROMPT_TAG=<new-version> docker compose -f docker-compose.node.yml up -d
 ./verify-node.sh --version <new-version> ...
 ```
 
-The first upgraded node applies the new migrations; the others attach to
-the migrated schema. Rolling back the image is the same command with the
+The one-shot `migrate` on the first upgraded node applies the new
+migrations; every node, that one included, then boots against the migrated
+schema. Rolling back the image is the same command with the
 previous tag and is safe only while the database has not been migrated
 forward — restore the pre-upgrade base backup otherwise.
+
+### Read-only root filesystem
+
+The server writes only to the directories below (core's writable-path
+contract) and at boot write-probes each one for the node's `server.role`,
+refusing to start with one error that names every root it cannot write.
+With this profile's `paths`:
+
+| root | path | volume |
+|---|---|---|
+| `system.logs` | `/app/logs` | per node, may be ephemeral |
+| `storage.files` | `/app/storage/files` | per node, or shared; see below |
+| `storage.exports` | `/app/storage/exports` | per node |
+| `storage.data` | `/app/storage/data` (scratch under `data/scratch`) | per node, already `app_storage_data` |
+| `web.dist` | `/app/web/dist` | per node, already under `app_web` (admin and all roles) |
+| `services.cache_dir` | `/app/services-cache` (set in the profile) | per node, may be ephemeral (admin and all roles) |
+| CLI session store | `/app/.systemprompt/sessions` | per node, ephemeral (`emptyDir`) |
+
+The CLI session store is not a server root: the entrypoint's `admin
+bootstrap` and `infra jobs run` resolve a CLI session and write it under
+`/app/.systemprompt/sessions`, so it needs a writable mount too. The profile
+directory itself stays read-only. MCP child servers may write `/tmp`; give it
+a `tmpfs`. The image creates every path above owned by uid 1000, so a named
+volume or `emptyDir` mounted there is writable. For Docker Compose, add
+`read_only: true`, `tmpfs: [/tmp]` and a volume for every row to the `app`
+service.
+
+`/app/storage/files` also carries the image's own admin templates and
+assets. The image keeps a pristine copy in `/app/share/storage-files` with a
+content stamp, and the entrypoint copies it onto the volume whenever the
+stamp differs from the volume's `.image-stamp`: shipped files are refreshed
+on every upgrade, files uploaded beside them are kept. A file a release
+deletes stays on the volume until removed by hand.
+
+### Kubernetes (GKE)
+
+- **Storage:** use `storage: {backend: gcs, bucket: …, credentials:
+  workload_identity}` (the block commented in `profile.yaml.template`) so
+  uploaded and generated files live in one bucket every pod sees.
+  `paths.storage` still needs a per-pod volume for the journal, exports and
+  scratch space.
+- **Role split:** run exactly one `admin` Deployment (`server.role: admin`,
+  `replicas: 1`): it runs the scheduler, MCP and agent reconciliation and the
+  console. Run the gateway pods as a separate Deployment with `server.role:
+  gateway`, scaled freely; they mount only the gateway, bridge, OAuth and
+  health routes and run no workers, and they need neither `web.dist` nor
+  `services.cache_dir`. Two `admin` replicas would run the scheduler twice.
+  Check a node with `verify-node.sh --role gateway` or `--role admin`.
+- **Migrations:** a Job running the image with argument `migrate`, before the
+  rollout; no pod migrates on boot.
 
 ## 7. Clients
 
 The gateway serves its own client binaries, so users never need GitHub
 access: `https://ai.example.com/documentation/downloads` lists Windows,
 macOS, Linux x86_64 and aarch64 builds with checksums, and the Linux
-installer one-liner. Linking a client is `https://ai.example.com/bridge-auth/setup`
+installer one-liner. Linking a client is `https://ai.example.com/admin/connect`
 after sign-in, or `systemprompt admin bridge issue-code --user-id <email>`
 inside a node container for headless onboarding.
 
@@ -208,6 +266,5 @@ inside a node container for headless onboarding.
 | 8 | Rendered `profile/` in the vault, copied to `/etc/astound/profile` on all nodes | customer ops | bind mount |
 | 9 | Security groups per §4 | customer network | — |
 | 10 | Node 1 booted and `verify-node.sh` green, then nodes 2 and 3 | customer ops | — |
-| 11 | First admin signed in, passkey registered, SSO configured | customer admin | `/admin` |
+| 11 | AD FS relying party configured, first admin signed in through SSO | customer admin | `/admin` |
 | 12 | Base backup schedule and restore test | customer DBA | — |
-| 13 | Optional: SMTP, Slack | customer | `SECRETS.md` |

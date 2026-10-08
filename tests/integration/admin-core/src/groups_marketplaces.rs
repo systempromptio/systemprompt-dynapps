@@ -2,11 +2,11 @@
 //! access-control rules.
 
 use systemprompt::identifiers::MarketplaceId;
-use systemprompt_web_admin::repositories::groups::crud::insert_group;
-use systemprompt_web_admin::repositories::groups::marketplaces::{
+use systemprompt_web_admin_core::types::groups::CreateGroupRequest;
+use systemprompt_web_admin_identity::repositories::groups::crud::insert_group;
+use systemprompt_web_admin_identity::repositories::groups::marketplaces::{
     list_group_marketplace_ids, set_group_marketplaces,
 };
-use systemprompt_web_admin::types::groups::CreateGroupRequest;
 use systemprompt_web_shared::GroupId;
 
 use crate::fixtures::unique_group;

@@ -13,7 +13,7 @@ use crate::fixtures::{content_params, link_params, source_id};
 use crate::tempdb::TempDb;
 
 fn session(id: &str) -> SessionId {
-    SessionId::new(id.to_string())
+    SessionId::new(id.to_owned())
 }
 
 #[tokio::test]
@@ -32,9 +32,9 @@ async fn track_click_records_the_click_and_bumps_the_total() {
     analytics
         .track_click(
             &TrackClickParams::new(link.id.clone(), session("sess-a"))
-                .with_ip_address(Some("203.0.113.9".to_string()))
-                .with_user_agent(Some("integration-test".to_string()))
-                .with_referrer_page(Some("/guides/intro".to_string())),
+                .with_ip_address(Some("203.0.113.9".to_owned()))
+                .with_user_agent(Some("integration-test".to_owned()))
+                .with_referrer_page(Some("/guides/intro".to_owned())),
         )
         .await
         .expect("track click");
@@ -251,7 +251,7 @@ async fn get_link_performance_derives_the_conversion_rate() {
     assert_eq!(after.unique_click_count, 1);
 
     let missing = analytics
-        .get_link_performance(&LinkId::new("no-such-link".to_string()))
+        .get_link_performance(&LinkId::new("no-such-link".to_owned()))
         .await
         .expect("read performance for an unknown link");
     assert!(missing.is_none(), "an unknown link reads as None");
@@ -266,7 +266,7 @@ async fn get_campaign_performance_rolls_up_the_campaign_links() {
     };
     let links = LinkRepository::new(Arc::clone(&db.pool));
     let analytics = LinkAnalyticsRepository::new(Arc::clone(&db.pool));
-    let campaign = CampaignId::new("rollup-2026".to_string());
+    let campaign = CampaignId::new("rollup-2026".to_owned());
 
     let first = links
         .create_link(&link_params("roll01").with_campaign_id(Some(campaign.clone())))
@@ -300,7 +300,7 @@ async fn get_campaign_performance_rolls_up_the_campaign_links() {
     assert_eq!(perf.total_clicks, 2);
 
     let empty = analytics
-        .get_campaign_performance(&CampaignId::new("never-ran".to_string()))
+        .get_campaign_performance(&CampaignId::new("never-ran".to_owned()))
         .await
         .expect("read performance for a campaign with no links");
     assert!(

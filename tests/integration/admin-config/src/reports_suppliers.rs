@@ -1,7 +1,7 @@
 //! `repositories::reports::internal` — the supplier bill and the platform
 //! cost trend.
 
-use systemprompt_web_admin::repositories::reports::internal::{
+use systemprompt_web_admin_analytics::repositories::reports::internal::{
     list_model_month_costs, list_platform_month_series, list_provider_month_costs,
 };
 

@@ -19,7 +19,7 @@ use crate::fixtures::content_params;
 use crate::tempdb::TempDb;
 
 fn documentation() -> SourceId {
-    SourceId::new("documentation".to_string())
+    SourceId::new("documentation".to_owned())
 }
 
 fn doc(slug: &str, kind: ContentKind) -> CreateContentParams {
@@ -52,7 +52,8 @@ async fn enrich(
     content_id: &str,
 ) -> Result<serde_json::Value, systemprompt::traits::ProviderError> {
     let pool = database(db);
-    let ctx = ContentDataContext::new(content_id, "documentation", &pool);
+    let dependencies = systemprompt::traits::Dependencies::new().with(pool);
+    let ctx = ContentDataContext::new(content_id, "documentation", &dependencies);
     let mut item = serde_json::json!({ "slug": "seeded" });
     DocsContentDataProvider::new()
         .enrich_content(&ctx, &mut item)
@@ -241,7 +242,7 @@ async fn enrichment_reports_a_context_carrying_no_database() {
     let Some(db) = TempDb::create().await else {
         return;
     };
-    let absent = ();
+    let absent = systemprompt::traits::Dependencies::new();
     let ctx = ContentDataContext::new("content_any", "documentation", &absent);
     let mut item = serde_json::json!({});
 
@@ -287,7 +288,7 @@ async fn a_source_with_no_documentation_rows_yields_no_children() {
     };
 
     let children = DocsContentDataProvider::new()
-        .get_children_static(&db.pool, &SourceId::new("empty".to_string()), "index")
+        .get_children_static(&db.pool, &SourceId::new("empty".to_owned()), "index")
         .await;
 
     assert!(children.is_empty());

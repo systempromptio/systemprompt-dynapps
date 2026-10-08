@@ -225,3 +225,32 @@ fn errors_accumulate_across_fields() {
         vec!["title", "slug", "published_at", "kind"]
     );
 }
+
+#[test]
+fn validate_metadata_with_oversized_blank_description_returns_warning_only() {
+    let mut meta = metadata();
+    meta.description = " ".repeat(600);
+    let result = ValidationService::validate_metadata(&meta);
+    assert!(result.is_valid);
+    assert_eq!(
+        result.warnings,
+        vec!["Description is empty - this may affect SEO".to_owned()]
+    );
+}
+
+#[test]
+fn validate_metadata_with_all_optional_fields_blank_returns_warnings_in_field_order() {
+    let mut meta = metadata();
+    meta.description = String::new();
+    meta.author = String::new();
+    meta.keywords = String::new();
+    let result = ValidationService::validate_metadata(&meta);
+    assert_eq!(
+        result.warnings,
+        vec![
+            "Description is empty - this may affect SEO".to_owned(),
+            "Author is not specified".to_owned(),
+            "Keywords are empty - this may affect SEO".to_owned(),
+        ]
+    );
+}

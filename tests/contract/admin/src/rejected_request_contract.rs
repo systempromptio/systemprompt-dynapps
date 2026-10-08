@@ -20,6 +20,10 @@ use crate::principal::Principal;
 use crate::tempdb::TempDb;
 use crate::{globals, principal, seed};
 
+#[expect(
+    clippy::struct_field_names,
+    reason = "each field is named for the id column it seeds"
+)]
 struct RejectedTrail {
     user_id: UserId,
     session_id: String,

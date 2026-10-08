@@ -3,16 +3,16 @@
 //! per-user daily rollups.
 
 use chrono::{Duration, Utc};
-use systemprompt_web_admin::repositories::analytics::site::SiteScope;
-use systemprompt_web_admin::repositories::analytics::site::kpis::get_site_kpis;
-use systemprompt_web_admin::repositories::analytics::site::latency::{
+use systemprompt_web_admin_analytics::repositories::analytics::site::SiteScope;
+use systemprompt_web_admin_analytics::repositories::analytics::site::kpis::get_site_kpis;
+use systemprompt_web_admin_analytics::repositories::analytics::site::latency::{
     FAST_THRESHOLD_MS, get_latency_split,
 };
-use systemprompt_web_admin::repositories::analytics::site::model_series::list_model_cost_series;
-use systemprompt_web_admin::repositories::analytics::site::series::SeriesBucket;
-use systemprompt_web_admin::repositories::analytics::site::user_rollups::list_user_daily_rollups;
-use systemprompt_web_admin::repositories::scope::{Attribution, SubjectScope};
-use systemprompt_web_admin::util::time_range::{TimeRange, TimeRangePreset};
+use systemprompt_web_admin_analytics::repositories::analytics::site::model_series::list_model_cost_series;
+use systemprompt_web_admin_analytics::repositories::analytics::site::series::SeriesBucket;
+use systemprompt_web_admin_analytics::repositories::analytics::site::user_rollups::list_user_daily_rollups;
+use systemprompt_web_admin_core::repositories::scope::{Attribution, SubjectScope};
+use systemprompt_web_admin_core::util::time_range::{TimeRange, TimeRangePreset};
 
 use crate::fixtures::{
     RequestSpec, insert_request, insert_user, project_scope, set_project, unclaimed_email, unique,

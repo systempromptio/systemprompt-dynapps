@@ -41,3 +41,21 @@
 .sp-empty--pad-lg { padding-block: var(--sp-space-16); }
 
 }
+
+@layer responsive {
+
+/* A centred empty state sized for a desktop fold filled half a phone screen
+   with white space; the inline and compact variants already fit and keep
+   their own padding. */
+@media (max-width: 48rem) {
+    .sp-empty:not(.sp-empty--inline, .sp-empty--compact) {
+        padding: var(--sp-space-5) var(--sp-space-3);
+    }
+
+    .sp-empty.sp-empty--pad,
+    .sp-empty.sp-empty--pad-lg {
+        padding-block: var(--sp-space-6);
+    }
+}
+
+}

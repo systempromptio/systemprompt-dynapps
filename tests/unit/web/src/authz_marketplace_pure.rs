@@ -1,27 +1,21 @@
 //! The subject dimensions this extension adds, and the pure shape-shuffling
 //! the marketplace filter does around the access-control resolver.
 
-#![allow(
-    clippy::expect_used,
-    clippy::panic,
-    clippy::unwrap_used,
-    clippy::separated_literal_suffix,
-    reason = "test code: panics are the assertion mechanism"
-)]
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use systemprompt::identifiers::{AgentId, HookId, MarketplaceId, McpServerId};
+use systemprompt::identifiers::{
+    AgentId, HookId, LibraryArtifactId, MarketplaceId, McpServerId, PluginId, SkillId,
+};
+use systemprompt::manifest::services::MarketplaceAccess;
 use systemprompt::marketplace::{EntryKeepSets, MarketplaceCandidate, MarketplaceMembership};
-use systemprompt::models::bridge::ids::{LibraryArtifactId, PluginId, SkillId};
 use systemprompt::models::bridge::manifest::{
     AgentEntry, ArtifactEntry, HookEntry, ManagedMcpServer, PluginEntry, SkillEntry,
 };
-use systemprompt::models::services::MarketplaceAccess;
 use systemprompt_security::authz::{EntityKind, EntityRef};
-use systemprompt_web_admin::authz::group::{group_dimension, group_rule_type};
-use systemprompt_web_admin::authz::project::{project_dimension, project_rule_type};
-use systemprompt_web_admin::authz::salesforce::salesforce_dimension;
+use systemprompt_web_admin_identity::authz::group::{group_dimension, group_rule_type};
+use systemprompt_web_admin_identity::authz::project::{project_dimension, project_rule_type};
+use systemprompt_web_admin_platform::authz::salesforce::salesforce_dimension;
 
 #[test]
 fn the_membership_dimensions_sit_between_user_and_role() {

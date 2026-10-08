@@ -3,7 +3,7 @@
 # lint-layers.sh, adapted to this repo's topology):
 #
 #   facade (src/) -> aggregator (extensions/web) -> app (site, jobs)
-#     -> domain (admin, content) -> shared (web/shared, mcp/shared)
+#     -> domain (admin/*, content) -> shared (web/shared/*, mcp/shared)
 #
 # extensions/cli/* and extensions/mcp/* (non-shared) are entry-tier peers of
 # the aggregator. Three properties must hold exactly:
@@ -16,6 +16,8 @@
 # Layer membership is read from each crate's position on disk, so a crate
 # moved between directories is re-classified automatically. Only normal and
 # build dependencies count: dev-dependencies are not part of the shipped graph.
+#
+# RULES is ordered and the first match wins.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."

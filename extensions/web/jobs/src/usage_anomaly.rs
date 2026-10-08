@@ -8,7 +8,13 @@
 //! from alerting on ordinary growth. Findings persist to `usage_anomalies` —
 //! unlike core's in-memory anomaly service, a restart cannot forget an
 //! incident — and the primary key makes the first detection per window the
-//! only one that alerts.
+//! only one that alerts, as a `warn` on that transition.
+//!
+//! The baseline divides the trailing week by its 168 hours rather than
+//! averaging same-hour windows; errors take the tighter multiplier because an
+//! error spike is an incident at far lower volume. The job runs five past the
+//! hour, so the judged hour is complete and the top-of-hour rollups have the
+//! lock to themselves.
 
 use sqlx::PgPool;
 use systemprompt::database::DbPool;
@@ -16,9 +22,6 @@ use systemprompt::traits::{Job, JobContext, JobResult};
 
 use crate::error::JobError;
 
-// Why: observed must exceed baseline * multiplier AND the absolute floor.
-// Errors get the tighter multiplier because an error spike is an incident at
-// far lower volume than a traffic spike is.
 const REQUESTS_MULTIPLIER: i64 = 3;
 const COST_MULTIPLIER: i64 = 3;
 const ERRORS_MULTIPLIER: i64 = 5;
@@ -108,9 +111,6 @@ pub fn evaluate(
     })
 }
 
-// Why: the baseline divides the trailing week by its 168 hours rather than
-// averaging only same-hour windows — simpler, and a spike big enough to matter
-// clears a whole-week average with the multipliers above.
 async fn load_hourly_observation(pool: &PgPool) -> Result<HourlyObservation, JobError> {
     let row = sqlx::query!(
         r#"
@@ -151,8 +151,8 @@ async fn load_hourly_observation(pool: &PgPool) -> Result<HourlyObservation, Job
     })
 }
 
-// Why: `xmax = 0` reports the INSERT arm, so a re-run over the same hour never
-// re-alerts — same transition-not-state contract as the budget warnings.
+// Why: Postgres `xmax = 0` marks the INSERT arm of the upsert, so a re-run over
+// the same hour never re-alerts.
 async fn record_anomaly(
     pool: &PgPool,
     obs: &HourlyObservation,
@@ -181,23 +181,19 @@ fn alert(finding: Finding, obs: &HourlyObservation) {
     } else {
         (finding.observed.to_string(), finding.baseline.to_string())
     };
-    // Why: the Slack delivery this used to fan out to is gone with the rest of
-    // the Slack integration. The finding still has to leave a trace a human can
-    // find, so it warns on the transition — the first-detection rule above
-    // keeps a recurring condition from warning on every observation.
     tracing::warn!(
         metric = %finding.metric,
         window_start = %obs.window_start.format("%Y-%m-%d %H:%M UTC"),
         %observed,
         %baseline,
-        "usage anomaly: check /admin/analytics?tab=spend and the request log"
+        "usage anomaly: check /admin/analytics?tab=cost and the request log"
     );
 }
 
 fn usd(microdollars: i64) -> String {
     format!(
         "${:.2}",
-        systemprompt_web_admin::numeric::to_f64(microdollars) / 1_000_000.0
+        systemprompt_web_admin_core::numeric::to_f64(microdollars) / 1_000_000.0
     )
 }
 
@@ -212,11 +208,9 @@ impl Job for UsageAnomalyJob {
     }
 
     fn description(&self) -> &'static str {
-        "Hourly spike detection over gateway requests/cost/errors, persisted and Slack-alerted"
+        "Hourly spike detection over gateway requests/cost/errors, persisted and logged"
     }
 
-    // Why: five past the hour, so the hour being judged is complete and the
-    // rollup-heavy top-of-hour jobs have the lock to themselves.
     fn schedule(&self) -> &'static str {
         "0 5 * * * *"
     }
@@ -227,9 +221,7 @@ impl Job for UsageAnomalyJob {
     ) -> Result<JobResult, systemprompt::traits::ProviderError> {
         tracing::info!(actor = %ctx.actor().user_id.as_str(), "Usage anomaly sweep invoked");
 
-        let db = ctx
-            .db_pool::<DbPool>()
-            .ok_or(JobError::MissingContext("DbPool"))?;
+        let db = ctx.get::<DbPool>()?;
         let pool = db.write_pool();
 
         Ok(Self::execute_with_pool(&pool).await?)

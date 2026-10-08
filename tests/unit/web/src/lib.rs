@@ -44,7 +44,6 @@
 #[cfg(test)]
 mod agents_ingestion;
 #[cfg(test)]
-#[cfg(test)]
 mod analysis_skills;
 #[cfg(test)]
 mod builders;
@@ -85,6 +84,8 @@ mod doc_links;
 #[cfg(test)]
 mod downstream_credential_configs;
 #[cfg(test)]
+mod export_registry;
+#[cfg(test)]
 mod format_display;
 #[cfg(test)]
 mod groups_yaml_types;
@@ -103,6 +104,8 @@ mod gateway_policies_drift;
 mod gateway_policies_form;
 #[cfg(test)]
 mod gateway_policies_month_window;
+#[cfg(test)]
+mod gateway_policies_unedited;
 #[cfg(test)]
 mod gateway_policy_config;
 #[cfg(test)]
@@ -201,15 +204,12 @@ mod site_skills_grouping;
 #[cfg(test)]
 mod site_skills_prerenderer;
 #[cfg(test)]
-#[cfg(test)]
 mod web_extension_providers;
 #[cfg(test)]
 mod web_extension_wiring;
 #[cfg(test)]
 mod web_schemas;
 
-// Migrated from the former in-crate `extensions/web/admin/tests/` and
-// `extensions/web/tests/` directories: the tests workspace is the only home.
 #[cfg(test)]
 mod access_control_drift;
 #[cfg(test)]
@@ -243,11 +243,9 @@ mod analytics_conversations_redact;
 #[cfg(test)]
 mod asset_manifest;
 #[cfg(test)]
-#[cfg(test)]
 mod authz_marketplace_pure;
 #[cfg(test)]
 mod authz_quota_subjects;
-#[cfg(test)]
 #[cfg(test)]
 mod config_gateway_pure;
 #[cfg(test)]
@@ -279,7 +277,6 @@ mod secrets_crypto_pure;
 #[cfg(test)]
 mod services_tree_declarations;
 #[cfg(test)]
-#[cfg(test)]
 mod support;
 #[cfg(test)]
 mod sync_archive;
@@ -287,6 +284,8 @@ mod sync_archive;
 mod sync_boot_contract;
 #[cfg(test)]
 mod sync_declaration_text;
+#[cfg(test)]
+mod sync_drift_kpis;
 #[cfg(test)]
 mod sync_inventory;
 #[cfg(test)]
@@ -309,14 +308,17 @@ mod users_page;
 mod util_ranges;
 #[cfg(test)]
 mod util_svg_pure;
+#[cfg(test)]
+mod viewer_timezone;
 
 #[cfg(test)]
 mod connector_cards;
 #[cfg(test)]
 mod connector_oauth;
 #[cfg(test)]
-mod connector_token_expiry;
+mod connector_oauth_classify;
 #[cfg(test)]
+mod connector_token_expiry;
 #[cfg(test)]
 mod salesforce_orgs;
 
@@ -324,6 +326,10 @@ mod bridge_release_parity;
 
 #[cfg(test)]
 mod authorization_failures;
+#[cfg(test)]
+mod vertex_accepted_betas;
+#[cfg(test)]
+mod vertex_gated_fields;
 #[cfg(test)]
 mod vertex_rate_card_routes;
 
@@ -351,3 +357,9 @@ mod time_bound_access;
 mod tool_schema_diff;
 #[cfg(test)]
 mod traces_spans_resolve;
+
+#[cfg(test)]
+mod connector_recovery;
+
+#[cfg(test)]
+mod data_console;

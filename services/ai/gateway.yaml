@@ -5,23 +5,63 @@
 gateway:
   enabled: true
   routes:
+  # Server web and deferred-tool search need Anthropic's native tool service.
+  # Keep ordinary Claude inference on Vertex, with the same gateway governance.
+  - id: claude-native-tools
+    name: Claude native web and tool search
+    model_pattern: claude-*
+    provider: anthropic
+    when:
+      tool_names_any: [WebSearch, WebFetch, ToolSearch, web_search, web_fetch, tool_search, tool_search_tool_regex, tool_search_tool_bm25]
   # Claude is served from Vertex AI under the `vertex` service account: the
   # bare claude-* ids Claude Code and the bridge ask for belong to
   # `vertex-anthropic`. Failover to Anthropic's own API covers Vertex capacity:
   # when Vertex exhausts its retry budget (429/503), answers any other 5xx or
-  # the connection fails, the same governed request is re-sent to `anthropic`,
-  # which serves the same model under its `anthropic-claude-*` id (matched on
-  # the upstream name, so no `fallback_upstream_model`). The audit row records
-  # `served_provider: anthropic`. Drop the fallback once the project's Vertex
-  # Claude quota covers the load. The id is kept from the Anthropic-hosted
-  # route so existing audit rows keep their label.
+  # the connection fails, the same governed request is re-sent down
+  # `fallbacks` in order — here `anthropic`, which serves the same model under
+  # its `anthropic-claude-*` id (matched on the upstream name, so no
+  # `upstream_model`). The audit row records `served_provider: anthropic`.
+  # Drop the fallback once the project's Vertex Claude quota covers the load.
+  # The id is kept from the Anthropic-hosted route so existing audit rows keep
+  # their label.
+  #
+  # `by_scope` gives every project its own deployment chain, keyed by the
+  # project core attributed the request to (the x-systemprompt-scope-project
+  # header, the API key's bound project, or the person's primary project).
+  # Today each chain is the route chain, so routing is unchanged; the point is
+  # that the audit row's `route_match` names `scope:project=<id>`, and moving
+  # one project onto its own Vertex project or region is a provider entry in
+  # providers.yaml plus one line here. `unmapped: shared` sends a project not
+  # listed (or a request with no project) down the route chain instead of
+  # refusing it; switch to `deny` only once every project has a chain.
   - id: claude-star-4203d1
     name: Claude (Vertex AI)
     description: >-
       Every claude-* request goes to Claude on Vertex AI under the vertex service account, failing over to Anthropic's API when Vertex is out of capacity or unreachable.
     model_pattern: claude-*
     provider: vertex-anthropic
-    fallback_provider: anthropic
+    fallbacks:
+    - provider: anthropic
+    by_scope:
+      dimension: project
+      unmapped: shared
+      chains:
+        commerce:
+          provider: vertex-anthropic
+          fallbacks:
+          - provider: anthropic
+        core:
+          provider: vertex-anthropic
+          fallbacks:
+          - provider: anthropic
+        storefront:
+          provider: vertex-anthropic
+          fallbacks:
+          - provider: anthropic
+        business-implementation:
+          provider: vertex-anthropic
+          fallbacks:
+          - provider: anthropic
   # Anthropic's own API is also reachable directly by explicit id.
   - name: Claude (Anthropic API)
     description: >-
@@ -79,7 +119,8 @@ gateway:
       MiniMax open models on Vertex AI Model-as-a-Service.
     model_pattern: minimax.*
     provider: vertex-maas
-  # Every Qwen, Kimi, DeepSeek and MiniMax endpoint retires 2026-10-21. After
+  # Every Qwen, Kimi, DeepSeek and MiniMax endpoint retires 2026-10-21, as do
+  # zai.glm-5, zai.glm-4.7 and openai.gpt-oss-20b (providers.yaml). After
   # that core hides the retired models, so these routes stop being offered in
   # any model list without failing boot; remove them with the entries.
   - id: vertex-gpt-oss
@@ -104,7 +145,7 @@ gateway:
   # Closed: a quota window whose subject cannot be resolved — no provider,
   # provider error, or a user with no value — refuses the request instead of
   # passing it uncounted. Every subject policies.yaml names (user, group,
-  # project, role, organization) has a provider in extensions/web/admin/src/authz,
+  # project, role, organization) has a provider in an admin crate's src/authz,
   # so a fault here is a bug to surface, not traffic to wave through.
   quota_fault_mode: closed
   auth_scheme: bearer

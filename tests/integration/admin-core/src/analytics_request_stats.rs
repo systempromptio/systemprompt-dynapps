@@ -1,10 +1,10 @@
 //! `repositories::analytics::request_stats` — the KPI strip, latency histogram,
 //! and the traffic time series behind the Inference Requests page.
 
-use systemprompt_web_admin::repositories::analytics::request_stats::{
+use systemprompt_web_admin_analytics::repositories::analytics::request_stats::{
     LATENCY_BIN_EDGES_MS, get_request_stats, list_latency_histogram, list_request_timeseries,
 };
-use systemprompt_web_admin::repositories::scope::SubjectScope;
+use systemprompt_web_admin_core::repositories::scope::SubjectScope;
 
 use crate::fixtures::{
     DecisionSpec, RequestSpec, insert_decision, insert_request, insert_session, insert_user,

@@ -1,0 +1,18 @@
+@layer responsive {
+
+/* Touch targets on a phone: 44px is the Apple and WCAG minimum for a
+   control operated by a thumb. A button inside a table cell is exempt, since
+   the card layout sizes its own action buttons and a scrolling ledger keeps
+   the desktop row density. :where keeps the exemption weightless, so the
+   small size below and the page header's 44px row both still apply. */
+@media (max-width: 48rem) {
+    .sp-btn:where(:not(.sp-table__el td .sp-btn)) {
+        min-height: 44px;
+    }
+
+    .sp-btn--sm:where(:not(.sp-table__el td .sp-btn)) {
+        min-height: 36px;
+    }
+}
+
+}

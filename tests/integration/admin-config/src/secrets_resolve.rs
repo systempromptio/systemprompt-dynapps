@@ -2,16 +2,16 @@
 //! the plugin-facing secret read.
 
 use systemprompt::identifiers::PluginId;
-use systemprompt_web_admin::repositories::secrets::secret_audit::{
+use systemprompt_web_admin_core::crypto::secret_crypto::{encrypt, generate_nonce};
+use systemprompt_web_admin_governance::repositories::secrets::secret_audit::{
     insert_audit_entry, list_audit_log,
 };
-use systemprompt_web_admin::repositories::secrets::secret_crypto::{encrypt, generate_nonce};
 
 fn plug() -> PluginId {
     PluginId::new("plug")
 }
-use systemprompt_web_admin::repositories::secrets::secret_keys::get_or_create_user_dek;
-use systemprompt_web_admin::repositories::secrets::secret_resolve::{
+use systemprompt_web_admin_governance::repositories::secrets::secret_keys::get_or_create_user_dek;
+use systemprompt_web_admin_governance::repositories::secrets::secret_resolve::{
     create_resolution_token, resolve_secrets_for_plugin, validate_and_consume_token,
 };
 

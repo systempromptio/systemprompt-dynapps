@@ -1,17 +1,11 @@
 //! Process-wide globals the admin handlers read, installed once per test
 //! binary.
 //!
-//! `Config`, `ProfileBootstrap`, the secrets bundle, and the JWT signing
-//! authority are all `OnceLock`s in core, and `cargo test` runs every test in
-//! one process against one set of them. Installing them behind a `Once` keeps
-//! the whole binary agreed on a single issuer, which is what makes a token
-//! minted in [`crate::principal`] validate inside the handler.
-//!
-//! The profile is a checked-in fixture rather than the developer's
-//! `.systemprompt` profile, which is git-ignored. Depending on the latter
-//! would make the suite pass locally and silently skip in CI — the one place
-//! the gate has to bite — and would couple the assertions to whatever a given
-//! machine happens to have configured.
+//! Core's config, profile, secrets and signing authority are `OnceLock`s, so
+//! they are installed behind a `Once` and every token minted in
+//! [`crate::principal`] validates against the same issuer. The profile is a
+//! checked-in fixture: the developer's `.systemprompt` profile is git-ignored,
+//! so relying on it would pass locally and silently skip in CI.
 
 use std::path::PathBuf;
 use std::sync::{Once, OnceLock};
@@ -19,36 +13,27 @@ use std::sync::{Once, OnceLock};
 static INIT: Once = Once::new();
 static READY: OnceLock<bool> = OnceLock::new();
 
-// Any absolute URL works: it only has to be a well-formed issuer that both
-// the minter and the validator agree on.
 const ISSUER: &str = "http://localhost:8099";
 
-pub use astound_test_common::repo_root;
+pub(crate) use astound_test_common::repo_root;
 
-// Install the profile, secrets, config, and an ephemeral signing key.
-//
-// Returns `false` only if the fixture cannot be materialised; the suite then
-// self-skips the same way it does without a database.
-pub fn init() -> bool {
+pub(crate) fn init() -> bool {
     INIT.call_once(|| {
         let ready = try_init();
-        let _ = READY.set(ready);
+        READY
+            .set(ready)
+            .expect("call_once runs this exactly once, so READY is unset");
     });
     *READY.get().unwrap_or(&false)
 }
 
 fn try_init() -> bool {
-    let Some(profile) = write_fixture_profile() else {
-        return false;
-    };
+    let profile = write_fixture_profile();
 
     systemprompt::config::ProfileBootstrap::init_from_path(&profile)
         .expect("initialise the contract fixture profile");
-    // Why: the secrets bootstrap is async since core 0.50 (Vault source), but
-    // `init` is a synchronous `Once` guard called from inside `#[tokio::test]`
-    // functions. Blocking on the current thread there panics with "cannot start
-    // a runtime from within a runtime", so the throwaway runtime is driven on a
-    // thread of its own — correct whether or not the caller already has one.
+    // Why: tokio panics on `block_on` inside a `#[tokio::test]` runtime, so the
+    // async secrets bootstrap runs on a throwaway runtime on its own thread.
     std::thread::scope(|scope| {
         scope
             .spawn(|| {
@@ -63,39 +48,20 @@ fn try_init() -> bool {
             .expect("the secrets bootstrap thread did not panic");
     });
     systemprompt::config::try_init_config(None).expect("build config from the fixture profile");
-    // The gateway catalog the admin routes serve comes from the services tree the
-    // fixture profile points at — the checked-in one, catalog and routes included.
     systemprompt::loader::ServicesBootstrap::try_init()
         .expect("load the services tree the fixture profile points at");
 
-    // The local profile ships no signing key. A key generated per process is
-    // enough because the same authority both mints and validates here.
     let key = systemprompt_security::keys::RsaSigningKey::generate()
         .expect("generate an ephemeral RSA signing key");
-    systemprompt_security::keys::authority::install_for_test(key);
+    systemprompt_security::keys::authority::install(key).expect("install signing authority");
     true
 }
 
-// The checked-in profile, with `__REPO__` resolved to this checkout.
-//
-// Deliberately a fixture rather than the developer's `.systemprompt` profile,
-// which is git-ignored: relying on it would make the suite pass locally and
-// silently skip in CI, which is the one place the gate has to bite.
 const FIXTURE_PROFILE: &str = include_str!("../fixtures/profile.yaml");
 
-// Minimal secrets bundle. Nothing here is a real credential — the suite talks
-// to no provider, and the signing key is generated in-process.
-//
-// `database_url` is required by the schema but unused: the harness opens its
-// own throwaway database in `crate::tempdb` and hands that pool to the
-// router, so it is echoed back rather than pointed anywhere live.
-//
-// `anthropic` is the `api_key_secret` the fixture provider names. The services
-// loader demotes a provider with no credential in the store to
-// `surface: backend`, and the per-user catalog hides every route on a backend
-// provider — so without this entry both fixture routes vanish before any ACL
-// rule is consulted, and the catalog cases fail for a reason that has nothing
-// to do with access control.
+// `anthropic` must exist: core's services loader demotes a provider with no
+// credential to `surface: backend`, which hides both fixture routes from the
+// per-user catalog before any ACL rule is consulted.
 fn fixture_secrets() -> String {
     let database_url = std::env::var("SYSTEMPROMPT_TEST_DATABASE_URL")
         .or_else(|_| std::env::var("DATABASE_URL"))
@@ -112,21 +78,15 @@ fn fixture_secrets() -> String {
     )
 }
 
-// A fixed 32-byte key, hex-encoded. `secret_crypto::load_master_key` refuses
-// anything that is not exactly that, and without it every secrets route
-// answers 500 before reaching the code the cases are about.
+// `secret_crypto::load_master_key` refuses anything but exactly 32 bytes.
 const MASTER_KEY_HEX: &str = "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff";
 
-// Materialise the fixture profile under `tests/target/`, which is already
-// ignored. Secrets live beside the profile because `secrets_path` is relative
-// to it, and `paths.bin` is an empty directory beside it too: profile path
-// validation requires it to exist, and a runner that has only built this
-// workspace has no `target/debug` to borrow.
-fn write_fixture_profile() -> Option<PathBuf> {
+// Profile path validation requires `paths.bin` to exist; a runner that built
+// only this workspace has no `target/debug`, so an empty `bin/` stands in.
+fn write_fixture_profile() -> PathBuf {
     let root = repo_root();
-    // Why: the tree is removed and rewritten on every init, so two contract
-    // runs sharing one path (a peer's and yours) race each other into
-    // "No such file or directory" mid-copy. A per-process path is private.
+    // Why: the tree is rewritten on every init; two concurrent runs sharing a
+    // path race into "No such file or directory" mid-copy.
     let dir = root.join(format!(
         "tests/target/contract-profile-{}",
         std::process::id()
@@ -144,15 +104,11 @@ fn write_fixture_profile() -> Option<PathBuf> {
     std::fs::write(dir.join("secrets.json"), fixture_secrets()).expect("write fixture secrets");
     write_fixture_services(&root, &dir.join("services"));
 
-    Some(dir.join("profile.yaml"))
+    dir.join("profile.yaml")
 }
 
-// The provider catalog and gateway routes are services files, not profile
-// sections, and the suite needs its own: two routes with fixed ids and no
-// default provider, so an unrouted model exists for the ACL detector cases.
-// Everything else — MCP servers, skills, plugins, roles — must stay the
-// checked-in tree, so it is copied under the fixture and only the two `ai/`
-// files are replaced.
+// Two routes with fixed ids and no default provider, so an unrouted model
+// exists for the ACL detector cases; the rest of `services/` is copied as-is.
 const FIXTURE_PROVIDERS: &str = include_str!("../fixtures/providers.yaml");
 const FIXTURE_GATEWAY: &str = include_str!("../fixtures/gateway.yaml");
 
@@ -168,9 +124,6 @@ fn write_fixture_services(root: &std::path::Path, dest: &std::path::Path) {
     enable_identity_server(&dest.join("mcp/sfcore_dev.yaml"));
 }
 
-// `sfcore_dev` ships disabled until its upstream verifies identity tokens; the
-// suite enables its copy either way so the accessor's signing path is
-// exercised.
 fn enable_identity_server(path: &std::path::Path) {
     let yaml = std::fs::read_to_string(path).expect("read sfcore_dev.yaml");
     std::fs::write(path, yaml.replacen("enabled: false", "enabled: true", 1))
@@ -190,9 +143,8 @@ fn copy_tree(from: &std::path::Path, to: &std::path::Path) {
     }
 }
 
-// The issuer the admin cookie validator will check tokens against.
-pub fn jwt_issuer() -> String {
-    systemprompt::models::Config::get()
+pub(crate) fn jwt_issuer() -> String {
+    systemprompt::manifest::Config::get()
         .expect("config installed by init()")
         .jwt_issuer
         .clone()

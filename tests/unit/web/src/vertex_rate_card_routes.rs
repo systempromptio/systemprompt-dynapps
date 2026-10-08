@@ -1,7 +1,7 @@
 //! The embedded Vertex rate card, cross-checked against this deployment's
 //! gateway routes.
 //!
-//! Vertex publishes and retires MaaS models without an operator edit, so the
+//! Vertex publishes and retires `MaaS` models without an operator edit, so the
 //! served catalog is not only what `services/ai/providers.yaml` names: at boot,
 //! every model Vertex publishes that the core rate card prices is added to the
 //! `vertex-maas` provider. A card id with no matching route in
@@ -13,14 +13,9 @@
 //! validate (so nothing the card prices can break the boot-time pricing gate),
 //! and every card id that is not on its way out must match a route.
 
-#![allow(
-    clippy::expect_used,
-    clippy::panic,
-    reason = "test code: panics are the assertion mechanism"
-)]
 
 use systemprompt::loader::config_loader::gateway::backfill_route_ids;
-use systemprompt::models::services::{GatewayConfigSpec, ProviderRegistry, VertexRateCard};
+use systemprompt::manifest::services::{GatewayConfigSpec, ProviderRegistry, VertexRateCard};
 
 use crate::support::repo_root;
 
@@ -84,6 +79,28 @@ fn the_full_rate_card_still_validates_against_the_gateway() {
         .resolve()
         .validate(&registry)
         .expect("every rate-card model must be priced and routable");
+}
+
+#[test]
+fn native_tool_route_rejects_an_unpriced_upstream_model() {
+    let mut registry = registry();
+    let provider = registry
+        .providers
+        .iter_mut()
+        .find(|provider| provider.name.as_str() == "anthropic")
+        .expect("Anthropic provider is configured");
+    let model = provider
+        .models
+        .iter_mut()
+        .find(|model| model.upstream_model.as_deref() == Some("claude-sonnet-5"))
+        .expect("Sonnet upstream model is configured");
+    model.pricing = systemprompt::manifest::services::ai::ModelPricing::default();
+    let error = gateway()
+        .resolve()
+        .validate(&registry)
+        .expect_err("native routing must retain the billable-model check");
+    assert!(error.to_string().contains("claude-native-tools"));
+    assert!(error.to_string().contains("anthropic-claude-sonnet-5"));
 }
 
 #[test]

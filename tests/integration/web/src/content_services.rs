@@ -74,7 +74,7 @@ async fn content_service_scopes_slug_lookups_to_the_source() {
     };
     let service = ContentService::new(Arc::clone(&db.pool));
     let mine = source_id();
-    let other = SourceId::new("other-source".to_string());
+    let other = SourceId::new("other-source".to_owned());
 
     let created = service
         .create(&content_params("scoped-service", &mine))
@@ -114,7 +114,7 @@ async fn content_service_lists_pages_and_sources() {
     };
     let service = ContentService::new(Arc::clone(&db.pool));
     let mine = source_id();
-    let other = SourceId::new("other-source".to_string());
+    let other = SourceId::new("other-source".to_owned());
 
     for slug in ["list-a", "list-b", "list-c"] {
         service
@@ -157,11 +157,11 @@ async fn content_service_updates_then_deletes() {
         .update(
             &UpdateContentParams::builder(UpdateContentSeed {
                 id: created.id.clone(),
-                title: "Service revised title".to_string(),
-                description: "Service revised description".to_string(),
-                body: "Service revised body".to_string(),
-                keywords: "delta".to_string(),
-                version_hash: "hash-service-v2".to_string(),
+                title: "Service revised title".to_owned(),
+                description: "Service revised description".to_owned(),
+                body: "Service revised body".to_owned(),
+                keywords: "delta".to_owned(),
+                version_hash: "hash-service-v2".to_owned(),
             })
             .build(),
         )
@@ -228,7 +228,7 @@ async fn process_redirect_records_the_click_and_returns_the_target() {
     let destination = service
         .process_redirect(
             "svc002",
-            SessionId::new("sess-redirect".to_string()),
+            SessionId::new("sess-redirect".to_owned()),
             Some("integration-test"),
             Some("203.0.113.7"),
         )
@@ -274,7 +274,7 @@ async fn process_redirect_reports_an_unknown_short_code_as_link_not_found() {
     let error = service
         .process_redirect(
             "ghost1",
-            SessionId::new("sess-ghost".to_string()),
+            SessionId::new("sess-ghost".to_owned()),
             None,
             None,
         )
@@ -299,12 +299,12 @@ async fn link_generation_persists_a_unique_short_code_per_call() {
 
     let first = generator
         .generate(
-            "https://example.com/campaign".to_string(),
-            Some("launch".to_string()),
+            "https://example.com/campaign".to_owned(),
+            Some("launch".to_owned()),
             Some(UtmParams {
-                source: Some("newsletter".to_string()),
-                medium: Some("email".to_string()),
-                campaign: Some("launch".to_string()),
+                source: Some("newsletter".to_owned()),
+                medium: Some("email".to_owned()),
+                campaign: Some("launch".to_owned()),
                 term: None,
                 content: None,
             }),
@@ -312,7 +312,7 @@ async fn link_generation_persists_a_unique_short_code_per_call() {
         .await
         .expect("generate a campaign link");
     let second = generator
-        .generate("https://example.com/campaign".to_string(), None, None)
+        .generate("https://example.com/campaign".to_owned(), None, None)
         .await
         .expect("generate a second link for the same target");
 
@@ -362,9 +362,9 @@ async fn generate_for_content_binds_the_link_to_its_source_content() {
 
     let link = generator
         .generate_for_content(
-            "https://example.com/linked".to_string(),
+            "https://example.com/linked".to_owned(),
             article.id.clone(),
-            Some("in-article".to_string()),
+            Some("in-article".to_owned()),
         )
         .await
         .expect("generate a content-scoped link");
@@ -394,7 +394,7 @@ async fn search_service_applies_a_default_limit_of_twenty() {
 
     let defaulted = search
         .search(&SearchRequest {
-            query: "Body for bulk".to_string(),
+            query: "Body for bulk".to_owned(),
             filters: None,
             limit: None,
         })
@@ -414,7 +414,7 @@ async fn search_service_applies_a_default_limit_of_twenty() {
 
     let explicit = search
         .search(&SearchRequest {
-            query: "Body for bulk".to_string(),
+            query: "Body for bulk".to_owned(),
             filters: None,
             limit: Some(3),
         })
@@ -442,7 +442,7 @@ async fn search_service_returns_an_empty_response_when_nothing_matches() {
 
     let response = search
         .search(&SearchRequest {
-            query: "quicksilver-nonexistent".to_string(),
+            query: "quicksilver-nonexistent".to_owned(),
             filters: None,
             limit: None,
         })

@@ -1,0 +1,61 @@
+[package]
+name = "systemprompt-web-admin-platform"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "Platform domain of the admin dashboard for the systemprompt.io template: devices and bridge sign-in, connector OAuth and accounts, Salesforce identity, configuration and code sync."
+repository.workspace = true
+homepage.workspace = true
+publish = false
+
+[dependencies]
+semver = "1"
+# Foundation
+systemprompt-web-shared = { workspace = true }
+systemprompt-web-admin-core = { workspace = true }
+# Audit: uses identifiers, loader, models, oauth, security — requires `full`.
+systemprompt = { workspace = true, features = ["full"] }
+systemprompt-security = { workspace = true }
+
+# Database
+sqlx = { workspace = true }
+sqlparser = { version = "0.63", features = ["visitor"] }
+
+# Web framework
+axum = { workspace = true }
+
+# Async runtime
+tokio = { workspace = true }
+futures-util = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+
+# Logging
+tracing = { workspace = true }
+
+# Crypto & encoding (connector PKCE and broker check, identity and Salesforce
+# JWTs)
+sha2 = { workspace = true }
+jsonwebtoken = { workspace = true }
+base64 = { workspace = true }
+rand = { workspace = true }
+
+# HTTP client (connector OAuth, Salesforce token endpoint)
+reqwest = { workspace = true }
+
+# Utilities
+url = { workspace = true }
+urlencoding = { workspace = true }
+inventory = { workspace = true }
+async-trait = { workspace = true }
+
+[lints]
+workspace = true

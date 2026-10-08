@@ -10,10 +10,6 @@ use systemprompt::identifiers::ContextId;
 use super::repository::ConversationJudgeRepository;
 use crate::JobError;
 
-// Why: the sentinel context core pools context-less requests under; never a
-// conversation.
-const LEGACY_CONTEXT: &str = "00000000-0000-0000-0000-4c4547414359";
-
 #[derive(Debug, Clone, Copy)]
 pub(super) struct DiscoveryWindow {
     pub(super) quiet_minutes: i32,
@@ -21,13 +17,11 @@ pub(super) struct DiscoveryWindow {
 }
 
 impl ConversationJudgeRepository {
-    // Why: queues every quiet conversation with at least one turn that has
-    // never been classified, and re-queues classified ones that grew since.
-    // Returns how many rows were inserted or flipped back to pending.
     pub(super) async fn discover_and_enqueue(
         &self,
         window: DiscoveryWindow,
     ) -> Result<u64, JobError> {
+        let legacy = ContextId::legacy_context_row();
         let result = sqlx::query!(
             r#"
             WITH latest AS (
@@ -61,7 +55,7 @@ impl ConversationJudgeRepository {
                   AND (SELECT q.request_count FROM quiet q WHERE q.context_id = conversation_analyses.context_id)
                       > conversation_analyses.source_request_count
             "#,
-            LEGACY_CONTEXT,
+            legacy.as_str(),
             window.lookback_days,
             window.quiet_minutes,
         )
@@ -70,7 +64,6 @@ impl ConversationJudgeRepository {
         Ok(result.rows_affected())
     }
 
-    // Why: forces one conversation back onto the queue regardless of state.
     pub(super) async fn mark_for_rejudging(
         &self,
         context_id: &ContextId,

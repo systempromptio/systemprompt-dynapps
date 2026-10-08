@@ -1,0 +1,182 @@
+//! Which conversations a JSON Lines export covers: a ticked selection, every
+//! context of one session, or the set a list page is showing — resolved
+//! through that page's own query type and window kind, so the file answers
+//! the question the page was asked.
+
+use serde::Deserialize;
+use sqlx::PgPool;
+use systemprompt::identifiers::{ContextId, SessionId};
+
+use crate::handlers::ssr::ssr_history::{ExportRequest, HistoryView, export_rows};
+use crate::repositories::analytics::session_detail::list_session_contexts;
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::export::model::{ExportContext, ExportWindow};
+use systemprompt_web_admin_core::export::transcripts::{MAX_CONVERSATIONS, TranscriptSource};
+use systemprompt_web_admin_core::export::window;
+use systemprompt_web_admin_core::types::UserContext;
+use systemprompt_web_admin_core::util::time_range::{TimeRange, TimeRangePreset};
+
+#[derive(Debug, Default, Deserialize)]
+pub(crate) struct SelectionQuery {
+    source: Option<String>,
+    ids: Option<String>,
+    #[serde(rename = "session_id")]
+    session: Option<String>,
+}
+
+pub(crate) struct Selection {
+    pub context_ids: Vec<ContextId>,
+    pub total: i64,
+    pub window: Option<ExportWindow>,
+}
+
+impl Selection {
+    pub(crate) fn capped(&self) -> bool {
+        self.total > i64::try_from(self.context_ids.len()).unwrap_or(i64::MAX)
+    }
+}
+
+pub(crate) fn source_of(ctx: &ExportContext<'_>) -> AdminResult<TranscriptSource> {
+    let query: SelectionQuery = ctx.query()?;
+    let raw = query.source.as_deref().unwrap_or("sessions");
+    TranscriptSource::parse(raw).ok_or_else(|| {
+        AdminError::BadRequest(format!(
+            "Unknown conversation source `{raw}`; use sessions, analysis, conversations or history"
+        ))
+    })
+}
+
+pub(crate) async fn resolve_selection(
+    pool: &PgPool,
+    user: &UserContext,
+    ctx: &ExportContext<'_>,
+) -> AdminResult<Selection> {
+    let query: SelectionQuery = ctx.query()?;
+    if let Some(ids) = query.ids.as_deref().filter(|s| !s.trim().is_empty()) {
+        return Ok(ticked_valid_ids(ids));
+    }
+    if let Some(session) = query.session.as_deref().filter(|s| !s.trim().is_empty()) {
+        return session_contexts(pool, session).await;
+    }
+    let source = source_of(ctx)?;
+    let w = window::resolve(source.window(), &ctx.query()?)?
+        .ok_or_else(|| AdminError::BadRequest("This export needs a window".to_owned()))?;
+    let mut selection = match source {
+        TranscriptSource::Sessions => sessions_set(pool, user, ctx, range_of(w)).await?,
+        TranscriptSource::Analysis => analysis_set(pool, user, ctx, range_of(w)).await?,
+        TranscriptSource::Conversations => {
+            history_set(pool, user, ctx, w, HistoryView::Org).await?
+        },
+        TranscriptSource::History => history_set(pool, user, ctx, w, HistoryView::Own).await?,
+    };
+    selection.window = Some(w);
+    Ok(selection)
+}
+
+fn ticked_valid_ids(ids: &str) -> Selection {
+    let valid: Vec<ContextId> = ids
+        .split(',')
+        .map(str::trim)
+        .filter_map(|s| ContextId::try_new(s).ok())
+        .collect();
+    let total = i64::try_from(valid.len()).unwrap_or(i64::MAX);
+    Selection {
+        context_ids: valid
+            .into_iter()
+            .take(usize::try_from(MAX_CONVERSATIONS).unwrap_or(usize::MAX))
+            .collect(),
+        total,
+        window: None,
+    }
+}
+
+async fn session_contexts(pool: &PgPool, session: &str) -> AdminResult<Selection> {
+    let session_id = SessionId::new(session.trim());
+    let rows = list_session_contexts(pool, &session_id).await?;
+    let total = i64::try_from(rows.len()).unwrap_or(i64::MAX);
+    Ok(Selection {
+        context_ids: rows
+            .into_iter()
+            .map(|r| r.context_id)
+            .take(usize::try_from(MAX_CONVERSATIONS).unwrap_or(usize::MAX))
+            .collect(),
+        total,
+        window: None,
+    })
+}
+
+const fn range_of(w: ExportWindow) -> TimeRange {
+    TimeRange {
+        from: w.from,
+        to: w.to,
+        preset: TimeRangePreset::Custom,
+        rejected_bounds: false,
+    }
+}
+
+async fn history_set(
+    pool: &PgPool,
+    user: &UserContext,
+    ctx: &ExportContext<'_>,
+    w: ExportWindow,
+    view: HistoryView,
+) -> AdminResult<Selection> {
+    let (rows, total) = export_rows(
+        pool,
+        user,
+        ExportRequest {
+            query: ctx.query()?,
+            view,
+            window: Some(w),
+            limit: MAX_CONVERSATIONS,
+        },
+    )
+    .await?;
+    Ok(Selection {
+        context_ids: rows.into_iter().map(|r| r.context_id).collect(),
+        total,
+        window: None,
+    })
+}
+
+async fn sessions_set(
+    pool: &PgPool,
+    user: &UserContext,
+    ctx: &ExportContext<'_>,
+    range: TimeRange,
+) -> AdminResult<Selection> {
+    let (rows, total) = crate::handlers::ssr::ssr_sessions_list::export::export_rows(
+        pool,
+        user,
+        ctx.query()?,
+        range,
+        MAX_CONVERSATIONS,
+    )
+    .await?;
+    Ok(Selection {
+        context_ids: rows.into_iter().map(|r| r.context_id).collect(),
+        total,
+        window: None,
+    })
+}
+
+async fn analysis_set(
+    pool: &PgPool,
+    user: &UserContext,
+    ctx: &ExportContext<'_>,
+    range: TimeRange,
+) -> AdminResult<Selection> {
+    let result = crate::handlers::ssr::analysis::conversations::export::export_rows(
+        pool,
+        user,
+        ctx.query()?,
+        range,
+        MAX_CONVERSATIONS,
+    )
+    .await?;
+    Ok(Selection {
+        total: result.totals.conversations,
+        context_ids: result.rows.into_iter().map(|r| r.context_id).collect(),
+        window: None,
+    })
+}

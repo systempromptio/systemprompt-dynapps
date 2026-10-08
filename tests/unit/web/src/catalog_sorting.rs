@@ -1,16 +1,12 @@
-#![allow(
-    clippy::expect_used,
-    clippy::panic,
-    reason = "test code: panics are the assertion mechanism"
-)]
 //! The pure half of the platform list pages: sort-link construction, the
 //! server-side text filter, and the MCP status a declaration plus a heartbeat
 //! resolve to.
 
-use systemprompt_web_admin::repositories::overview::liveness::HEARTBEAT_INTERVAL_SECS;
-use systemprompt_web_admin::test_support::{
-    SortColumn, direction, matches, preserved_search, sort_headers, status_of,
+use systemprompt_web_admin_catalog::test_support::{
+    direction, matches, preserved_search, sort_headers, status_of,
 };
+use systemprompt_web_admin_core::repositories::liveness::HEARTBEAT_INTERVAL_SECS;
+use systemprompt_web_admin_core::ssr::types::table::SortColumn;
 
 fn columns() -> Vec<SortColumn> {
     vec![
@@ -30,7 +26,7 @@ fn columns() -> Vec<SortColumn> {
 }
 
 fn beat_secs_ago(seconds: i64) -> Option<chrono::DateTime<chrono::Utc>> {
-    Some(chrono::Utc::now() - chrono::Duration::seconds(seconds))
+    chrono::Utc::now().checked_sub_signed(chrono::Duration::seconds(seconds))
 }
 
 fn recent() -> Option<chrono::DateTime<chrono::Utc>> {

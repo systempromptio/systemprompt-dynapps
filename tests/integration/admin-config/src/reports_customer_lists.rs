@@ -1,11 +1,11 @@
 //! `repositories::reports::customer` — the per-user, per-project, and
 //! per-model tables under the header figures.
 
-use systemprompt_web_admin::repositories::reports::customer::{
+use systemprompt_web_admin_analytics::repositories::reports::customer::{
     list_customer_month_models, list_customer_month_projects, list_customer_month_users,
 };
 
-use systemprompt_web_admin::repositories::scope::SubjectScope;
+use systemprompt_web_admin_core::repositories::scope::SubjectScope;
 
 use crate::fixtures::{
     RequestSeed, ancient_window, at, insert_request, insert_user, project_scope, set_project,

@@ -159,7 +159,7 @@ re-creates the contention. Escape hatches when you truly need them:
 ```bash
 just preflight          # optional development confidence: static → lint → tests → coverage
 just preflight-static   # seconds: fmt, sqlx cache, 25 source gates
-just preflight-lint     # clippy (both workspaces), doc-check, msrv-check
+just preflight-lint     # clippy (all three workspaces), doc-check, msrv-check
 just preflight-full     # weekly: preflight + deny + audit + machete + hack
 just init-hooks         # once per clone: tracked .githooks/ (pre-commit only)
 ```
@@ -218,7 +218,7 @@ drop to `cargo nextest` directly with a filter — this bypasses the coordinator
 so keep it to iteration and finish with the `just` recipe:
 
 ```bash
-cargo nextest run -p systemprompt-web-admin --tests -E 'test(list_top_users)'
+cargo nextest run -p systemprompt-web-admin-analytics --tests -E 'test(list_top_users)'
 cargo nextest run --manifest-path tests/Cargo.toml -p web-unit-tests some_name
 # DB-backed suites need the maintenance DB, normally derived from the local
 # profile; override explicitly with:
@@ -277,9 +277,9 @@ systemprompt core skills show --help
 - `src/main.rs` is a thin entry point that delegates to the published `systemprompt` core crates (sibling checkout at `../systemprompt-core`, patched in via `[patch.crates-io]` for cross-repo work). All customization is **compile-time** via the [`inventory`](https://docs.rs/inventory) crate — there is no dynamic plugin loader.
 - Rust code lives in `extensions/`: `extensions/mcp/*` for MCP server extensions, `extensions/web` for page data and template rendering. Each MCP extension has its own crate with `Cargo.toml` + `.sqlx/` offline cache.
 - Configuration is YAML under `services/`, loaded through `services/config/config.yaml`'s explicit `includes:` list. Unknown keys error loudly (`#[serde(deny_unknown_fields)]`).
-- Governance is a four-stage synchronous pipeline on every tool call: **scope check → configured secret scan → blocklist → rate limit**. Every decision is audited to Postgres with a trace_id linking identity → agent → tool → result → cost. **All four stages are enabled in this installation** (`services/governance/config.yaml`), as are the gateway safety scanners (`services/gateway/policies.yaml`) — both were switched on 2026-08-25 for the enterprise rollout, and both files carry the tunables and the reasoning. A missing governance file falls back to core's vendor-neutral warn-only chain; this installation declares every stage and signature explicitly. Authentication is separate and is never disabled — an invalid or expired token is denied with `policy=authentication`.
+- Governance is a four-stage synchronous pipeline on every tool call: **scope check → configured secret scan → blocklist → rate limit**. Every decision is audited to Postgres with a trace_id linking identity → agent → tool → result → cost. **All four stages are enabled in this installation** (`services/governance/config.yaml`), as are the gateway safety scanners and quota windows (`services/gateway/policies.yaml`) — switched on 2026-08-25 for the enterprise rollout, and **running in warn mode since 2026-09-04** (`governance.mode: warn`, `safety.mode: warn`, `quota_mode: warn`). Warn mode is a measurement window, not a posture: every stage and scanner runs and every finding is recorded as a `warn` decision, but nothing is refused. Read it back with `systemprompt infra logs governance report --since 7d` and restore `mode: enforce` one plane at a time. A missing governance file falls back to core's vendor-neutral warn-only chain; this installation declares every stage and signature explicitly. Authentication is separate and is never disabled — an invalid or expired token is denied with `policy=authentication`.
 
-  The safety scanners are a **second, independent plane** from the governance chain: the chain is request-only and runs first; the scanners run both directions. Which categories *block* is deliberately narrower than which are *scanned* — every finding is audited regardless. `jailbreak` and `pii_credit_card` are audit-only after both denied ordinary developer traffic in production on 2026-08-31; see the header of `services/gateway/policies.yaml`.
+  The safety scanners are a **second, independent plane** from the governance chain: the chain is request-only and runs first; the scanners run both directions. Which categories *would block* is deliberately narrower than which are *scanned*: the block lists keep the pre-warn enforcement set (`[pii_ssn]` on requests, `[secret, pii_ssn]` on responses), so the warnings report can count what enforce mode would have refused. `jailbreak`, `pii_email`, `pii_credit_card` and `pii_phone` are audit-only even under enforce. The quota windows are warning thresholds, never ceilings. See the headers of both files.
 - Per-clone Docker Postgres: `just db-up / db-down / db-logs [tenant=local]`. Project name is derived from a hash of the repo path, so multiple clones on one host get isolated containers and volumes. There is no destructive reset recipe — recover migration checksum drift in place with `just repair-migrations`.
 - Deploy flow: `just build-all` (release binary + MCP servers + web assets) then `just deploy`. The `publish_pipeline` job also runs automatically at server startup.
 
@@ -291,7 +291,7 @@ three times:
 
 | Workspace | Members | Note |
 |-----------|---------|------|
-| root (`Cargo.toml`) | `extensions/**` | `exclude = ["tests"]` |
+| root (`Cargo.toml`) | `extensions/**` — admin is split into `web/shared/admin-core` plus the domain crates `web/admin/{identity,analytics,catalog,governance,platform}` | `exclude = ["tests"]` |
 | `tests/Cargo.toml` | `unit/`, `integration/`, `contract/` crates | separate so it never compiles when extensions are consumed as deps |
 | `bridge/Cargo.toml` | the Claude Code client | depends on unpublished `systemprompt-bridge` **by path** — needs `../systemprompt-core` checked out (`just bridge-build` clones it) |
 
@@ -299,19 +299,24 @@ three times:
 
 ```
 facade (src/) -> aggregator (extensions/web) -> app (site, jobs)
-  -> domain (admin, content) -> shared (web/shared, mcp/shared)
+  -> domain (admin/{identity,analytics,catalog,governance,platform}, content)
+  -> shared (web/shared/{admin-core, …}, mcp/shared)
 ```
 
 Membership is derived from a crate's directory, so moving a crate re-classifies
 it. Three properties are checked and must hold exactly: no dependency points
-upward, no cycles, and **no domain -> domain edges** — `admin` and `content` are
-peers, so anything they both need belongs in `shared`. `extensions/cli/*` and
+upward, no cycles, and **no domain -> domain edges** — the admin domain crates
+and `content` are peers, so anything two of them need belongs in `shared`
+(`web/shared/admin-core` for admin code). The admin composition root — the
+routers that merge the domain crates' fragments, the session middleware and
+the login page — lives in the aggregator at `extensions/web/src/router/admin/`,
+the one tier allowed to depend on all five. `extensions/cli/*` and
 `extensions/mcp/*` sit at the entry tier beside the aggregator. Dev-dependencies
 are exempt.
 
 ### Source-shape gates worth knowing before you write code
 
-`just lint-gates` runs 25 independent read-only checks concurrently (the
+`just lint-gates` runs 37 independent read-only checks concurrently (the
 `gates=()` array in the justfile is the list — trust the array, not this count;
 every failure is reported, so one red gate never hides the rest). Two frontend
 gates that used to live there — admin CSS classes and frontend standards — are
@@ -341,12 +346,25 @@ makes every one of them walk an empty tree and pass. The ones that most often su
   image alone is built with the repo root as its context (`COPY . /src`).
   `.systemprompt/profiles/production/docker/` is gitignored by design and sits
   outside this gate; `cloud deploy` refuses a stale COPY there itself.
-- Comment density, inline comments, file size, duplicate types, dead repository
-  code, admin template links/assets, and `services/` validity are all gates too
-  — read the failing script's header comment, which states the rule and why.
+- **`// Why:` is for external constraints, not narration**
+  (`lint-inline-comments.sh`, `check-comments.sh`). At most 6 `// Why:` blocks
+  per production file. None inside a function body (indent ≥ 8) unless the block
+  is a `// Why: discard-ok:` / `// Why: lint-ok:` marker or its first line names
+  an external system on the script's allowlist (AD FS, axum, Postgres, core,
+  Claude Code, MCP, …) — otherwise extract a named `let`, fn, or enum. A
+  `// Why:` that opens with `The`/`A`/`What`/`Returns`/`Builds`… is paraphrase
+  and fails; delete it or rename the item (`// doc-ok:` on the line above exempts).
+- **File size: 300 lines hard, 280 warns** (`check-file-size.sh`, `//!` lines
+  excluded). The warning is non-fatal; a file on that list is split before the
+  next feature lands in it.
+- Comment density, duplicate types, dead repository code, admin template
+  links/assets, and `services/` validity are all gates too — read the failing
+  script's header comment, which states the rule and why.
 
-`just clippy` additionally depends on two identity gates that are not in that
-array, so they fail the lint tier rather than `lint-gates`:
+`just clippy` lints all three workspaces with `-D warnings` — the `tests/`
+workspace with `--all-targets`, so test code carries the same lint bar as
+production. It additionally depends on two identity gates that are not in the
+`lint-gates` array, so they fail the lint tier rather than `lint-gates`:
 
 - **`lint-no-synthesis`** — no `UserId::new("…")` with a string literal anywhere
   under `extensions/`. Every legitimate `UserId::new` takes an identifier
@@ -365,6 +383,17 @@ gateway — the host's `~/.claude` and `~/.config` are untouched; `just connect
 with a 10-minute TTL, so build the bridge before issuing one. Headless code
 issue: `systemprompt admin bridge issue-code --user-id <email>`.
 `just claude-reset` signs this clone out (`ALL=1` for every clone on the host).
+
+**Betas through the gateway.** Claude Code sends every `anthropic-beta` flag it
+knows; the gateway forwards to a Vertex provider exactly the flags in that
+provider's `accepted_betas` (`services/ai/providers.yaml`), and a body field
+one of the dropped flags gates (`context_management`) is removed with it, so
+header and body never disagree. A flag or field the upstream still refuses is
+learned per provider for the rest of the process, dropped, and the request
+re-sent once. The bridge rewrites nothing: a request that fails through it is a
+gateway or config fault, never a client install to downgrade. The 2026-09-28
+`400 context_management: Extra inputs are not permitted` on Claude Code 2.1.283
+was an empty `accepted_betas` list with the body field forwarded alone.
 
 ---
 
@@ -507,8 +536,9 @@ and artifacts — `admin agents list` returning zero rows is the correct answer.
 
 ## Repository Naming Convention
 
-Every function under `extensions/web/admin/src/repositories/` is named for what
-it returns, so a call site reads the same as its signature:
+Every function under an admin `src/repositories/` (in
+`extensions/web/shared/admin-core` and each `extensions/web/admin/*` crate) is
+named for what it returns, so a call site reads the same as its signature:
 
 | Returns | Prefix | Example |
 |---------|--------|---------|
@@ -592,7 +622,7 @@ Every id listed must resolve to a real top-level resource in `services/`. `Servi
 
 Skills follow the same nested shape: `services/skills/<id>/config.yaml`, with the instruction body beside it. So do marketplaces (`services/marketplaces/<id>/config.yaml`) and artifacts (`services/artifacts/<id>/config.yaml`).
 
-**Skill ids are `snake_case` in `services/` and dashed everywhere else.** Core renders a skill for every host as `<id>` with `_` → `-` (`/astound-commons:who-am-i` for `services/skills/who_am_i/`), the hooks report the dashed name, and every analytics key is the dashed `plugin:skill`. Code that starts from a services id and needs the host or analytics form goes through `extensions/web/admin/src/util/skill_ref.rs`; never compare the two spellings directly.
+**Skill ids are `snake_case` in `services/` and dashed everywhere else.** Core renders a skill for every host as `<id>` with `_` → `-` (`/astound-commons:who-am-i` for `services/skills/who_am_i/`), the hooks report the dashed name, and every analytics key is the dashed `plugin:skill`. Code that starts from a services id and needs the host or analytics form goes through `extensions/web/shared/admin-core/src/util/skill_ref.rs`; never compare the two spellings directly.
 
 **Every entitlement is declared in `services/access-control/rules.yaml`** — one block per
 entity (`marketplace/<id>`, `plugin/<id>`, `skill/<id>`, `mcp_server/<id>`, `gateway_route/*`),

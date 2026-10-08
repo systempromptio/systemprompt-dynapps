@@ -4,8 +4,8 @@
 //! whose digests let two versions diff without re-reading either tree.
 
 use systemprompt::identifiers::{MarketplaceId, PluginId, SkillId};
-use systemprompt::models::services::bundle::FileEntry;
-use systemprompt_web_admin::repositories::sync::marketplace_hash::{
+use systemprompt::manifest::services::bundle::FileEntry;
+use systemprompt_web_admin_core::repositories::sync::marketplace_hash::{
     MarketplaceSpec, MarketplaceVersion, PluginSpec, SourceOf, hash_marketplaces, skill_key,
 };
 
@@ -20,7 +20,7 @@ fn file(path: &str, content: &str) -> FileEntry {
 // A cheap, deterministic stand-in for a digest: the tests only need that
 // different content yields a different string.
 fn md5_like(content: &str) -> u64 {
-    content.bytes().fold(0xcbf2_9ce4_8422_2325_u64, |h, b| {
+    content.bytes().fold(0xcbf2_9ce4_8422_2325u64, |h, b| {
         (h ^ u64::from(b)).wrapping_mul(0x0100_0000_01b3)
     })
 }

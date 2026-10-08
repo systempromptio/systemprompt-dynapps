@@ -1,0 +1,90 @@
+//! Reading and overriding a user's primary group and project.
+//!
+//! The recomputation job picks both from membership and rewrites its own
+//! answer whenever membership moves. Writing here marks the row `manual`,
+//! which is what stops the job from overwriting it again — so an operator's
+//! choice is permanent until they change it, not until the next run.
+//!
+//! Directory sign-ins, restores and imports write membership without passing
+//! through this API, so `auto` attribution keys drift; the recompute endpoint
+//! is the way back and leaves `manual` rows alone.
+
+use std::sync::Arc;
+
+use axum::extract::{Path, State};
+use axum::response::{IntoResponse, Response};
+use axum::{Extension, Json};
+use serde::Deserialize;
+use sqlx::PgPool;
+use systemprompt::identifiers::UserId;
+use systemprompt_web_shared::{GroupId, ProjectId};
+
+use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+use systemprompt_web_admin_core::repositories::scope::defaults;
+use systemprompt_web_admin_core::repositories::scope::defaults::ScopeDefaults;
+use systemprompt_web_admin_core::types::UserContext;
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct SetScopeDefaultsRequest {
+    pub primary_group_id: Option<GroupId>,
+    pub primary_project_id: Option<ProjectId>,
+}
+
+pub(crate) async fn get_user_scope_defaults_handler(
+    State(pool): State<Arc<PgPool>>,
+    Path(user_id): Path<String>,
+) -> AdminResult<Response> {
+    let user_id = UserId::new(user_id);
+    require_user(&pool, &user_id).await?;
+    let found = defaults::find_scope_defaults(&pool, &user_id).await?;
+    let body = found.unwrap_or_else(|| ScopeDefaults {
+        primary_group_id: None,
+        primary_project_id: None,
+        source: "auto".to_owned(),
+    });
+    Ok(Json(body).into_response())
+}
+
+pub(crate) async fn set_user_scope_defaults_handler(
+    State(pool): State<Arc<PgPool>>,
+    Extension(user_ctx): Extension<UserContext>,
+    Path(user_id): Path<String>,
+    Json(body): Json<SetScopeDefaultsRequest>,
+) -> AdminResult<Response> {
+    let user_id = UserId::new(user_id);
+    require_user(&pool, &user_id).await?;
+    let written = defaults::set_scope_defaults(
+        &pool,
+        &user_id,
+        body.primary_group_id.as_ref(),
+        body.primary_project_id.as_ref(),
+    )
+    .await?;
+    tracing::info!(
+        actor = %user_ctx.user_id.as_str(),
+        user_id = %user_id.as_str(),
+        "Scope defaults set manually"
+    );
+    Ok(Json(written).into_response())
+}
+
+pub(crate) async fn recompute_scope_defaults_handler(
+    State(pool): State<Arc<PgPool>>,
+    Extension(user_ctx): Extension<UserContext>,
+) -> AdminResult<Response> {
+    let written = defaults::recompute_scope_defaults(&pool).await?;
+    tracing::info!(
+        actor = %user_ctx.user_id.as_str(),
+        written,
+        "Scope defaults recomputed"
+    );
+    Ok(Json(serde_json::json!({ "recomputed": written })).into_response())
+}
+
+async fn require_user(pool: &PgPool, user_id: &UserId) -> AdminResult<()> {
+    sqlx::query_scalar!("SELECT id FROM users WHERE id = $1", user_id.as_str())
+        .fetch_optional(pool)
+        .await?
+        .ok_or_else(|| AdminError::NotFound(format!("User {user_id} not found")))?;
+    Ok(())
+}

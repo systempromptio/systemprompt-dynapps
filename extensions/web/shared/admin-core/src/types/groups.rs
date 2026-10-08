@@ -1,0 +1,90 @@
+//! Groups: the people container the directory maps AD groups onto, and the
+//! subject marketplace entitlement is bound to.
+//!
+//! A group's membership has two sources that never overwrite each other —
+//! `adfs` rows are replaced wholesale at every sign-in, `manual` rows are
+//! what an admin added by hand — so a member row carries the set of sources
+//! that put it there rather than a single one.
+
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+use sqlx::FromRow;
+use systemprompt::identifiers::{MarketplaceId, UserId};
+use systemprompt_web_shared::GroupId;
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct GroupRecord {
+    pub id: GroupId,
+    pub name: String,
+    pub description: Option<String>,
+    pub is_system: bool,
+    pub source: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct GroupSummary {
+    pub id: GroupId,
+    pub name: String,
+    pub description: Option<String>,
+    pub is_system: bool,
+    pub member_count: i64,
+    pub project_count: i64,
+    pub active_members_30d: i64,
+    pub requests_30d: i64,
+    pub cost_30d_microdollars: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct GroupMemberRow {
+    pub user_id: UserId,
+    pub display_name: Option<String>,
+    pub email: Option<String>,
+    pub sources: Vec<String>,
+    pub source_ad_groups: Vec<String>,
+    pub valid_until: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct GroupAdMappingRow {
+    pub ad_group: String,
+    pub group_id: GroupId,
+    pub source: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct CreateGroupRequest {
+    pub id: GroupId,
+    pub name: String,
+    pub description: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct UpdateGroupRequest {
+    pub name: Option<String>,
+    pub description: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct AddGroupMemberRequest {
+    pub user_id: UserId,
+    #[serde(default)]
+    pub valid_until: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct AddAdMappingRequest {
+    pub ad_group: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct SetGroupMarketplacesRequest {
+    pub marketplace_ids: Vec<MarketplaceId>,
+}
+
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+pub struct GroupUsageSummary {
+    pub requests: i64,
+    pub tokens: i64,
+    pub cost_microdollars: i64,
+    pub active_users: i64,
+}

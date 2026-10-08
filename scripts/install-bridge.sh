@@ -1,5 +1,5 @@
 #!/bin/sh
-# Astound Bridge client installer for Linux.
+# Astound Bridge client installer for Linux (refuses macOS: use the .dmg).
 #
 # Published as storage/files/downloads/install.sh and run as:
 #
@@ -132,6 +132,13 @@ DOWNLOAD_BASE="${DOWNLOAD_BASE%/}"
 [ -n "$GATEWAY_URL" ] || GATEWAY_URL="${DOWNLOAD_BASE%/files/downloads}"
 
 # ── Preconditions ─────────────────────────────────────────────────────────────
+# macOS ships as a signed, notarized app in a disk image, not as a tarball. Left
+# to the arch mapping below, an Apple Silicon Mac reports arm64, gets the Linux
+# aarch64 binary, and fails later with `exec format error`; stop here instead.
+case "$(uname -s)" in
+    Darwin) fail "this installer is for Linux — on macOS install the app from
+       $DOWNLOAD_BASE/astound-bridge-macos.dmg" ;;
+esac
 command -v curl >/dev/null 2>&1 || fail "curl is required"
 command -v tar  >/dev/null 2>&1 || fail "tar is required"
 

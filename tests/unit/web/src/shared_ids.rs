@@ -12,7 +12,7 @@ fn group_id_round_trips_through_every_accessor() {
     assert_eq!(id.as_str(), "europe-devs");
     assert_eq!(id.to_string(), "europe-devs");
     assert_eq!(AsRef::<str>::as_ref(&id), "europe-devs");
-    assert!(id == "europe-devs");
+    assert_eq!(id, "europe-devs");
     assert_eq!(id.into_inner(), "europe-devs");
 }
 

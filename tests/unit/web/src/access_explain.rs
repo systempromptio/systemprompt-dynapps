@@ -7,11 +7,11 @@ use systemprompt::identifiers::UserId;
 use systemprompt_security::authz::{
     ParentChainIndex, RuleType, SubjectAttributes, SubjectDimension,
 };
-use systemprompt_web_admin::repositories::users::access_control::MatrixSubject;
-use systemprompt_web_admin::repositories::users::access_control::explain::{
+use systemprompt_web_admin_core::repositories::entitlement::MatrixSubject;
+use systemprompt_web_admin_core::repositories::entitlement::explain::{
     BandExplanation, ExplainInput, Explanation, explain,
 };
-use systemprompt_web_admin::types::access_control::{AccessControlRule, AccessDecision};
+use systemprompt_web_admin_core::types::access_control::{AccessControlRule, AccessDecision};
 
 fn group_band() -> RuleType {
     RuleType::extension("group").expect("group band")

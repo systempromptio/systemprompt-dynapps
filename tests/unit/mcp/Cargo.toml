@@ -8,7 +8,6 @@ publish = false
 workspace = true
 
 [dependencies]
-astound-test-common = { workspace = true }
 systemprompt-mcp-shared = { workspace = true }
 systemprompt-mcp-agent = { workspace = true }
 rmcp = { workspace = true }
@@ -17,7 +16,4 @@ systemprompt = { workspace = true, features = ["full"] }
 axum = { workspace = true }
 serde = { version = "1", features = ["derive"] }
 serde_json = { workspace = true }
-async-trait = { workspace = true }
-chrono = { workspace = true }
 tempfile = { workspace = true }
-serde_yaml = { workspace = true }

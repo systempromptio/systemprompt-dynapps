@@ -23,3 +23,23 @@
 }
 
 }
+
+@layer responsive {
+
+/* The avatar shrinks with the topbar on a phone so the bar keeps room for
+   the search toggle and the actions menu beside it. */
+@media (max-width: 48rem) {
+    .sp-user-widget {
+        width: 38px;
+        height: 38px;
+    }
+}
+
+@media (max-width: 30rem) {
+    .sp-user-widget {
+        width: 34px;
+        height: 34px;
+    }
+}
+
+}

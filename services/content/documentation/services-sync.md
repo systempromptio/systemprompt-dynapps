@@ -174,7 +174,7 @@ receive.
 | the API | `/api/public/admin/sync/status`, `…/planes/{id}/drift`, `…/planes/{id}/apply`, `…/planes/{id}/export`, `…/sources/refresh`, `…/export.zip`, `…/import`, `…/import/{stage}/apply`, `DELETE …/import/{stage}` |
 | the component | `partials/components/sync-plane.hbs` + `js/components/sp-sync-plane.js`, built by `handlers/ssr/sync_plane/` for any plane from disk or from uploaded text |
 | the inventory | `repositories/sync/inventory.rs` — every kind the configuration page lists |
-| the planes | `extensions/web/admin/src/repositories/sync/` — one `impl SyncPlane` and one registry line per plane |
+| the planes | the registry in `extensions/web/shared/admin-core/src/repositories/sync/`; each plane is one `impl SyncPlane` plus one `inventory::submit!` in the crate that owns it (`repositories/sync_planes/` in identity and governance) |
 | the state | table `sync_state`, one row per plane |
 | the kit template and registry | `deploy/kit/` — runbook, publish workflow, the sanitation gate (`tools/sanitize-kit.py`), sidecars, `known-kits.json` |
 | the exporter | `just kit-export <marketplace> <dir>` — writes a kit and proves it re-imports identically |

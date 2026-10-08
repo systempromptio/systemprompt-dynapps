@@ -1,0 +1,172 @@
+@layer responsive {
+
+@media (max-width: 48rem) {
+
+    /* A number or a date reads against its label from the right edge, which
+       is where a reader's eye compares one card's figure with the next. */
+    .sp-table[data-cards="ready"] > .sp-table__scroll > .sp-table__el > :is(tbody, tfoot) > tr > td:is(.sp-table__cell--num, .sp-table__cell--date, .sp-col-date, .sp-col-currency) {
+        justify-items: end;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+    }
+
+    /* The label keeps the left column's alignment so every label in a card
+       lines up, whichever way its value reads. */
+    .sp-table[data-cards="ready"] > .sp-table__scroll > .sp-table__el > :is(tbody, tfoot) > tr > td:is(.sp-table__cell--num, .sp-table__cell--date, .sp-col-date, .sp-col-currency)::before {
+        justify-self: start;
+        text-align: left;
+    }
+
+    /* Stacked lines and badge rows were forced onto one line to keep a table
+       row short; inside a card they wrap instead of being clipped. */
+    .sp-table[data-cards="ready"] > .sp-table__scroll > .sp-table__el > :is(tbody, tfoot) > tr > td.sp-table__cell--stacked > *,
+    .sp-table[data-cards="ready"] > .sp-table__scroll > .sp-table__el > :is(tbody, tfoot) > tr > td .sp-badge-stack__row {
+        white-space: normal;
+        overflow: visible;
+        text-overflow: clip;
+    }
+
+    .sp-table[data-cards="ready"] > .sp-table__scroll > .sp-table__el > :is(tbody, tfoot) > tr > td .sp-badge-stack__row {
+        flex-wrap: wrap;
+    }
+
+    .sp-table[data-cards="ready"] > .sp-table__scroll > .sp-table__el > :is(tbody, tfoot) > tr > td.sp-table__cell--spark {
+        width: auto;
+    }
+
+    /* Row actions become the card's footer. They were pinned to the right edge
+       of a scrolling table; a card does not scroll, so they sit last instead,
+       with buttons at full touch height rather than the table's line height. */
+    .sp-table[data-cards="ready"] > .sp-table__scroll > .sp-table__el > :is(tbody, tfoot) > tr > td.sp-table__cell--actions {
+        order: 99;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: flex-end;
+        gap: var(--sp-space-2);
+        padding-block: var(--sp-space-2) 0;
+        margin-block-start: var(--sp-space-1);
+        border-top: 1px solid var(--sp-border-subtle);
+    }
+
+    .sp-table[data-cards="ready"] > .sp-table__scroll > .sp-table__el > :is(tbody, tfoot) > tr > td.sp-table__cell--actions::before {
+        content: none;
+    }
+
+    .sp-table[data-cards="ready"] > .sp-table__scroll > .sp-table__el > :is(tbody, tfoot) > tr > td.sp-table__cell--actions:not(:has(*)) {
+        display: none;
+    }
+
+    .sp-table[data-cards="ready"] > .sp-table__scroll > .sp-table__el > :is(tbody, tfoot) > tr > td.sp-table__cell--actions .sp-btn {
+        min-width: 44px;
+        min-height: 44px;
+        height: auto;
+    }
+
+    /* A closed detail row is hidden outright; an open one is drawn as the
+       lower half of the summary card above it, pulled up across the gap. */
+    .sp-table[data-cards="ready"] > .sp-table__scroll > .sp-table__el > tbody > tr.sp-table__row-detail:not(.is-open) {
+        display: none;
+    }
+
+    .sp-table[data-cards="ready"] > .sp-table__scroll > .sp-table__el > tbody > tr.sp-table__row-detail {
+        display: block;
+        padding: 0;
+        margin-block-start: calc(-1 * var(--sp-space-3));
+        border-start-start-radius: 0;
+        border-start-end-radius: 0;
+        background: var(--sp-bg-surface-raised);
+        overflow: hidden;
+    }
+
+    .sp-table[data-cards="ready"] > .sp-table__scroll > .sp-table__el > tbody > tr.sp-table__row--expand.is-expanded {
+        border-end-start-radius: 0;
+        border-end-end-radius: 0;
+    }
+
+    .sp-table[data-cards="ready"] > .sp-table__scroll > .sp-table__el > tbody > tr.sp-table__row-detail > td {
+        display: block;
+        padding: 0;
+    }
+
+    /* The nested table inside an open detail keeps its desktop layout, since
+       every card rule stops at the outer table, and scrolls sideways here. */
+    .sp-table[data-cards="ready"] > .sp-table__scroll > .sp-table__el > tbody > tr.sp-table__row-detail.is-open .sp-table__detail-inner {
+        overflow-x: auto;
+    }
+
+    .sp-table[data-cards="ready"] > .sp-table__scroll > .sp-table__el > tbody > tr.sp-table__empty > td {
+        display: block;
+        padding: var(--sp-space-6) 0;
+        text-align: center;
+        color: var(--sp-text-tertiary);
+    }
+
+    /* Pagination under a list of cards is a card of its own, with the page
+       controls spread across it and every control at touch height. */
+    .sp-table[data-cards="ready"] > .sp-pagination {
+        flex-direction: column;
+        align-items: stretch;
+        margin-block-start: var(--sp-space-3);
+        padding: var(--sp-space-3) var(--sp-space-4);
+        border-top: 0;
+        border-radius: var(--sp-corners-md);
+        box-shadow: var(--sp-shadow-card);
+    }
+
+    .sp-table[data-cards="ready"] > .sp-pagination .sp-pagination__controls {
+        justify-content: space-between;
+        margin-left: 0;
+    }
+
+    .sp-table[data-cards="ready"] > .sp-pagination :is(.sp-btn, .sp-pagination__size) {
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+    }
+
+    /* The header row and its sort links are hidden on a phone, so the same
+       sort orders are offered as one select above the first card. */
+    .sp-table[data-cards="ready"] > .sp-table__sort-bar {
+        display: flex;
+        align-items: center;
+        gap: var(--sp-space-2);
+        margin-block-end: var(--sp-space-3);
+        font-size: var(--sp-text-sm);
+        color: var(--sp-text-secondary);
+    }
+
+    .sp-table[data-cards="ready"] > .sp-table__sort-bar .sp-table__sort-select {
+        flex: 1 1 auto;
+        min-width: 0;
+        min-height: 44px;
+        padding-inline: var(--sp-space-3);
+        border: 1px solid var(--sp-border-default);
+        border-radius: var(--sp-corners-sm);
+        background: var(--sp-bg-input);
+        color: var(--sp-text-primary);
+        font-family: inherit;
+        font-size: max(1rem, var(--sp-text-base));
+    }
+
+    /* A table that opts out of cards keeps scrolling sideways, so the swipe
+       must stop at its edge instead of dragging the page with it. */
+    .sp-table--scroll > .sp-table__scroll {
+        overscroll-behavior-x: contain;
+    }
+
+    /* Its first column stays pinned while the rest scroll under it, which is
+       what tells a reader whose row the far-right figures belong to. */
+    .sp-table--scroll > .sp-table__scroll > .sp-table__el > * > tr:not(.sp-table__row-detail) > :first-child {
+        position: sticky;
+        left: 0;
+        z-index: var(--sp-z-sticky);
+        background: var(--sp-bg-surface);
+    }
+
+    .sp-table--scroll > .sp-table__scroll > .sp-table__el > thead > tr > th:first-child {
+        background: var(--sp-bg-card-header);
+    }
+}
+
+}

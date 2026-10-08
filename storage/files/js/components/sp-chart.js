@@ -21,7 +21,7 @@ const parseLabels = (raw) => {
   }
 };
 
-const readModel = (figure) => {
+export const readModel = (figure) => {
   const unit = figure.dataset.unit ?? '';
   const series = [...figure.querySelectorAll('[data-series]')].map((group, index) => {
     const values = parseValues(group.dataset.values ?? '');
@@ -59,7 +59,15 @@ const button = (label, pressed) => {
   return el;
 };
 
+// One live handle per figure: a second init of the same node (the page
+// script and a stale tag both loading, or a refresh re-walking the DOM)
+// returns the handle it already has instead of drawing a second chart.
+const handles = new WeakMap();
+
+export const chartOf = (figure) => handles.get(figure) ?? null;
+
 export const initChart = (figure) => {
+  if (handles.has(figure)) return handles.get(figure);
   const model = readModel(figure);
   if (!model) return null;
   for (const stale of figure.querySelectorAll('.sp-timeseries__plot, .sp-timeseries__x-axis, .sp-svgchart__legend, .sp-svgchart__refs')) {
@@ -87,7 +95,7 @@ export const initChart = (figure) => {
   const legend = buildLegend(model, draw);
   if (legend) figure.append(legend);
 
-  const table = buildTable(model);
+  let table = buildTable(model);
   table.hidden = true;
   figure.append(table);
   const head = figure.querySelector('.sp-timeseries__head');
@@ -115,7 +123,20 @@ export const initChart = (figure) => {
   }
   draw();
   figure.classList.add('sp-svgchart--live');
-  return { draw, model };
+  const handle = {
+    draw,
+    model,
+    host,
+    legend,
+    table: () => table,
+    setTable: (next) => {
+      next.hidden = table.hidden;
+      table.replaceWith(next);
+      table = next;
+    },
+  };
+  handles.set(figure, handle);
+  return handle;
 };
 
 export const initAllCharts = (scope = document) =>

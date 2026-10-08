@@ -8,7 +8,7 @@ kind: "guide"
 public: true
 tags: ["authentication", "security", "sso", "administration"]
 published_at: "2026-08-31"
-updated_at: "2026-09-11"
+updated_at: "2026-09-29"
 after_reading_this:
   - "Register this platform as a relying party in AD FS with the right identifier and endpoint"
   - "Write the three claim issuance rules the platform needs"
@@ -229,24 +229,11 @@ assertion, deduplicated. Two rules follow:
 - **A group the file does not name maps to nothing.** It grants no role and it
   is not recorded, so it cannot be used for entitlements either.
 
-The roles the platform itself understands:
-
-| Role | Reaches |
-|---|---|
-| `user` | `/admin/profile`, `/admin/connect`, `/admin/connectors`, `/admin/setup`, the desktop bridge, the gateway |
-| `developer` | Everything `user` reaches; names the person as an engineer in listings and reports |
-| `knowledge_worker` | Everything `user` reaches, plus the Cowork workspace and the Salesforce MCP server |
-| `project_manager` | Every page of the admin console, read-only, plus everything `user` reaches |
-| `admin` | The whole admin console including every write action, plus everything `user` reaches |
-
-`project_manager` is the semi-admin role. It sees the estate — users, access,
-analytics, conversations, traces, reports, the catalog — across every project,
-and it changes nothing: no user or role edit, no access-control rule, no
-gateway configuration, no device enrolment. It is also deliberately outside
-the admin control plane, so a project manager gets neither the `systemprompt`
-MCP server, nor the `astound-admin` plugin, nor
-the admin skills. Attempting an admin tool call is denied by governance the
-same way it is for any other non-admin.
+What each role opens — including that `project_manager` is an entitlement
+role, not a console role, and reaches the admin dashboard only through
+marketplace participation — is in the one role table on
+[Create & Manage Users → Roles](/documentation/admin-user-management#roles).
+This page only decides which AD groups grant which role.
 
 ### One rule for many regional groups
 

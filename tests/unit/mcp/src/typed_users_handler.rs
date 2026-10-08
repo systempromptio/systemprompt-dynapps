@@ -15,17 +15,21 @@ fn context() -> RequestContext {
         TraceId::new("typed-users-trace"),
         ContextId::try_new("00000000-0000-4000-8000-00000000a11d").expect("context"),
         AgentName::try_new("typed-users-agent").expect("agent"),
+        systemprompt::identifiers::Actor::user(systemprompt::identifiers::UserId::new(
+            "00000000-0000-4000-8000-00000000a11d",
+        )),
     )
 }
 
 fn fake_cli(dir: &tempfile::TempDir) -> CliLocation {
+    use std::os::unix::fs::PermissionsExt as _;
+
     let path = dir.path().join("systemprompt");
     std::fs::write(
         &path,
         "#!/bin/sh\nprintf '%s' '[{\"id\":\"user-a\",\"roles\":[\"admin\"]},{\"id\":\"user-b\",\"roles\":[\"user\"]}]'\n",
     )
     .expect("write CLI fixture");
-    use std::os::unix::fs::PermissionsExt as _;
     std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755))
         .expect("make fixture executable");
     CliLocation {

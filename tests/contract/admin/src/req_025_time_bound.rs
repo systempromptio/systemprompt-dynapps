@@ -23,8 +23,8 @@ use crate::tempdb::TempDb;
 use crate::{globals, principal, seed};
 
 // Byte-for-byte the token construction in
-// `extensions/web/admin/src/handlers/share.rs::sign`, driven by the fixture
-// seed `globals::init` installs. If the handler's algorithm drifts, the
+// `extensions/web/admin/catalog/src/handlers/share.rs::sign`, driven by the
+// fixture seed `globals::init` installs. If the handler's algorithm drifts, the
 // acceptance test below fails first.
 fn sign(secret: &[u8], user_id: &str, version: i32, expires_unix: i64) -> String {
     let payload = format!("{user_id}:{version}:{expires_unix}");

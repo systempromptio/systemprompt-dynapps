@@ -9,7 +9,9 @@
 use std::sync::Arc;
 
 use systemprompt_security::authz::SubjectAttributeProvider;
-use systemprompt_web_admin::authz::project::{ProjectAttributeProvider, project_rule_type};
+use systemprompt_web_admin_identity::authz::project::{
+    ProjectAttributeProvider, project_rule_type,
+};
 
 use crate::fixtures::{
     insert_project, insert_project_member, insert_user, unclaimed_email, unique, unique_project,

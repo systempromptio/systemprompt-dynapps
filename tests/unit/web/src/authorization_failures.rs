@@ -15,15 +15,21 @@ async fn authz_database_failure_returns_http_200_with_an_explicit_deny() {
             .connect_lazy("postgres://test:test@localhost:1/test")
             .unwrap(),
     );
-    let database = Arc::new(Database::from_pools(pool.clone(), Some(pool.clone())));
-    let users = UserService::new(Arc::new(UserRepository::new(&database).unwrap()));
-    let session_repository = SessionRepository::new(&database).unwrap();
+    let database = Arc::new(Database::from_pools(
+        Arc::clone(&pool),
+        Some(Arc::clone(&pool)),
+    ));
+    let users = UserService::new(Arc::new(UserRepository::new(&database)));
+    let session_repository = SessionRepository::new(&database);
     let sessions = Arc::new(SessionCreationService::new(
         Arc::new(session_repository),
         Arc::new(users),
     ));
-    let router = systemprompt_web_admin::hooks_webhook_router(&database, pool.clone(), sessions)
-        .expect("build the hooks router from a connected database");
+    let router = systemprompt_web_extension::admin::hooks_webhook_router(
+        &database,
+        Arc::clone(&pool),
+        sessions,
+    );
     pool.close().await;
     let payload = serde_json::json!({
         "entity": systemprompt_security::authz::EntityRef::McpServer(systemprompt::identifiers::McpServerId::try_new("atlassian").expect("valid fixture identifier")),

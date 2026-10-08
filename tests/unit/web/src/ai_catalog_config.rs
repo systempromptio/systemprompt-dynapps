@@ -5,14 +5,15 @@
 //! pricing written beside it.
 //!
 //! Claude is served twice. The bare `claude-*` ids belong to
-//! `vertex-anthropic` (Claude on Vertex AI), which every `claude-*` request is
-//! routed to; Anthropic's own API carries the same models as
-//! `anthropic-claude-*`, each naming the bare id as its upstream model. That
-//! twin is what the route's failover lands on: core finds the requested model
-//! on the fallback provider by upstream name, so a Vertex model with no twin
-//! has nowhere to fail over to. The twins are `hidden`: they are never listed
-//! to a client, so nobody picks an `anthropic-claude-*` id, while the failover
-//! still finds them because it looks up by upstream name, not by listing.
+//! `vertex-anthropic` (Claude on Vertex AI), which ordinary `claude-*` requests
+//! use; native web and tool search route to Anthropic. Anthropic carries the
+//! models as `anthropic-claude-*`, each naming the bare id as its upstream
+//! model. That twin is what the route's failover lands on: core finds the
+//! requested model on the fallback provider by upstream name, so a Vertex model
+//! with no twin has nowhere to fail over to. The twins are `hidden`: they are
+//! never listed to a client, so nobody picks an `anthropic-claude-*` id, while
+//! the failover still finds them because it looks up by upstream name, not by
+//! listing.
 //!
 //! That makes catalog drift expensive in two directions. A missing current
 //! model is an outage for every client that names it. A stale price is a
@@ -21,7 +22,7 @@
 //! vendor's rate card.
 //!
 //! The Claude 4.x Opus and Sonnet models were removed on 2026-09-24, and
-//! with them the direct OpenAI and Cerebras providers; every Vertex provider
+//! with them the direct `OpenAI` and Cerebras providers; every Vertex provider
 //! now authenticates with the one `vertex` service-account secret.
 //!
 //! These tests pin the served id set and its twins, the Sonnet 5 rate that was
@@ -30,13 +31,8 @@
 //! the catalog through the `claude-*` route. Changing any of them is then a
 //! deliberate, review-visible edit rather than a one-line drift.
 
-#![allow(
-    clippy::expect_used,
-    clippy::panic,
-    reason = "test code: panics are the assertion mechanism"
-)]
 
-use systemprompt::models::services::{
+use systemprompt::manifest::services::{
     GatewayConfigSpec, ProviderEntry, ProviderModel, ProviderRegistry,
 };
 
@@ -129,8 +125,15 @@ fn every_served_claude_model_has_an_anthropic_api_twin_to_fail_over_to() {
         .iter()
         .map(|m| m.id.as_str().to_owned())
         .collect();
-    let expected: Vec<String> = SERVED.iter().map(|id| format!("anthropic-{id}")).collect();
+    let mut expected: Vec<String> = SERVED.iter().map(|id| format!("anthropic-{id}")).collect();
+    expected.push("anthropic-claude-haiku-4-5-20251001".to_owned());
     assert_eq!(twins, expected);
+    let dated = model(&anthropic.models, "anthropic-claude-haiku-4-5-20251001");
+    assert_eq!(
+        dated.upstream_model.as_deref(),
+        Some("claude-haiku-4-5-20251001")
+    );
+    assert!(dated.hidden);
 
     for id in SERVED {
         let twin = anthropic
@@ -257,12 +260,16 @@ fn the_gateway_default_model_is_a_catalog_entry() {
     let route = spec
         .routes
         .iter()
-        .find(|r| r.matches(&default_model))
+        .find(|r| r.matches(&default_model) && r.when.is_none())
         .expect("a route for the default model");
     assert_eq!(route.provider.as_str(), "vertex-anthropic");
     assert_eq!(
-        route.fallback_provider.as_ref().map(|p| p.as_str()),
-        Some("anthropic")
+        route
+            .fallbacks
+            .iter()
+            .map(|deployment| deployment.provider.as_str())
+            .collect::<Vec<_>>(),
+        vec!["anthropic"]
     );
     assert!(
         provider(route.provider.as_str())

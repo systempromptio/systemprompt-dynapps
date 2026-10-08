@@ -10,10 +10,8 @@ use systemprompt::database::DbPool;
 use systemprompt::traits::{Job, JobContext, JobResult};
 
 use crate::error::JobError;
-use systemprompt_web_admin::repositories::dashboard::usage_rollups;
+use systemprompt_web_admin_analytics::repositories::dashboard::usage_rollups;
 
-// Why: yesterday and today — late-arriving events for the previous UTC day
-// are still folded in on the next run after midnight.
 const WINDOW_DAYS_BACK: i32 = 1;
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -56,9 +54,7 @@ impl Job for UsageDailyRollupJob {
     ) -> Result<JobResult, systemprompt::traits::ProviderError> {
         tracing::info!(actor = %ctx.actor().user_id.as_str(), "Usage daily rollup invoked");
 
-        let db = ctx
-            .db_pool::<DbPool>()
-            .ok_or(JobError::MissingContext("DbPool"))?;
+        let db = ctx.get::<DbPool>()?;
         let pool = db.write_pool();
 
         Ok(Self::execute_with_pool(&pool).await?)

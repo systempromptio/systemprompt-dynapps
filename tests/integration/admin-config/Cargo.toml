@@ -13,15 +13,19 @@ astound-test-common = { workspace = true }
 # the migrations these repositories query (users, ai_requests, access control,
 # scheduled jobs); the admin crate itself carries the web-owned schema.
 systemprompt = { workspace = true, features = ["full"] }
-systemprompt-web-admin = { workspace = true }
-systemprompt-web-extension = { workspace = true }
+systemprompt-web-admin-analytics = { workspace = true }
+systemprompt-web-admin-identity = { workspace = true }
+systemprompt-web-admin-platform = { workspace = true }
+systemprompt-web-admin-core = { workspace = true }
+systemprompt-web-admin-catalog = { workspace = true }
+systemprompt-web-admin-governance = { workspace = true }
 systemprompt-security = { workspace = true }
 
+reqwest = { version = "0.13", default-features = false, features = ["json", "rustls"] }
 chrono = { workspace = true }
 serde_json = { workspace = true }
 serde_yaml = { workspace = true }
 sqlx = { workspace = true }
 tempfile = { workspace = true }
 tokio = { workspace = true }
-url = { workspace = true }
 uuid = { workspace = true }

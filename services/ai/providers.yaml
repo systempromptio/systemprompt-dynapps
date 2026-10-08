@@ -169,6 +169,29 @@ providers:
     limits:
       context_window: 200000
       max_output_tokens: 64000
+  - id: anthropic-claude-haiku-4-5-20251001
+    hidden: true
+    upstream_model: claude-haiku-4-5-20251001
+    pricing:
+      input_per_million: 1.0
+      output_per_million: 5.0
+      cache_read_per_million: 0.1
+      cache_write_per_million: 1.25
+      per_image_cents: null
+    capabilities:
+      vision: true
+      audio_input: false
+      video_input: false
+      image_generation: false
+      audio_generation: false
+      streaming: true
+      tools: true
+      structured_output: true
+      system_prompts: true
+      image_resolution_config: false
+    limits:
+      context_window: 200000
+      max_output_tokens: 64000
 - name: gemini
   # Google Gemini via the public endpoint, authenticated with an API key sent on
   # x-goog-api-key. The Vertex-hosted copies of the same models are the `vertex`
@@ -362,6 +385,24 @@ providers:
   # usual tenth of input — kept as published. Haiku 4.5 is guaranteed only
   # to 2026-10-15. The Claude 4.x Opus and Sonnet models were removed on
   # 2026-09-24; the 5.x family replaces them.
+  #
+  # `accepted_betas` is the whole list of `anthropic-beta` flags the gateway
+  # forwards here; Vertex refuses a flag it does not serve, so the gateway
+  # sends none that is not declared. A flag that gates a body field
+  # (`context-management-*` gates `context_management`) must be declared or
+  # the field arrives alone and Vertex answers `context_management: Extra
+  # inputs are not permitted` — the 400 every Claude Code 2.1.283 prompt got
+  # on 2026-09-28 while this list was empty. Which flags: the betas Claude
+  # Code 2.1.283 sends (captured 2026-09-28) that Anthropic's feature matrix
+  # (platform.claude.com/docs/en/build-with-claude/overview, read 2026-09-28)
+  # lists for Google Cloud. Absent on purpose because Vertex does not serve
+  # them: advisor-tool-*, code-execution-*, mcp-client-*, files-api-*,
+  # skills-*, web-fetch-*; and context-1m-*, since Vertex serves 1M natively.
+  # Also sent by 2.1.283 but held back until Vertex is seen to accept them:
+  # claude-code-20250219, thinking-token-count-2026-05-13,
+  # prompt-caching-scope-2026-01-05, mid-conversation-system-2026-04-07.
+  # A flag Vertex still refuses is learned at runtime and dropped, together
+  # with the body field it gates, so a mistake here costs one round trip.
   display_name: Google Vertex AI (Claude)
   description: >-
     Claude models served from Vertex AI under a Google OAuth token minted from the vertex service-account secret. Serves every claude-* request on this installation.
@@ -369,6 +410,10 @@ providers:
   surface: anthropic
   endpoint: https://aiplatform.googleapis.com/v1/projects/{project}/locations/global/publishers/anthropic
   api_key_secret: vertex
+  accepted_betas:
+  - context-management-2025-06-27
+  - interleaved-thinking-2025-05-14
+  - effort-2025-11-24
   governance:
     european: false
     no_retain: true
@@ -437,6 +482,7 @@ providers:
       context_window: 1000000
       max_output_tokens: 128000
   - id: claude-fable-5-1
+    hidden: true
     pricing:
       input_per_million: 10.0
       output_per_million: 50.0
@@ -458,6 +504,7 @@ providers:
       context_window: 1000000
       max_output_tokens: 128000
   - id: claude-fable-5
+    hidden: true
     pricing:
       input_per_million: 10.0
       output_per_million: 50.0
@@ -534,9 +581,10 @@ providers:
   # MiniMax MaaS endpoint and gpt-oss-20b on 2026-07-21 and turns them off on
   # 2026-10-21 (models/deprecations/open-models). They are declared anyway so
   # they stay usable until then; after that date core hides a retired
-  # declaration from every listing and the upstream refuses it. Only
-  # gpt-oss-120b and glm-5.2 (preview, guaranteed to at least 2026-10-08) are
-  # not retiring. Delete the retired entries once the date has passed.
+  # declaration from every listing and the upstream refuses it. Only glm-5.2
+  # (preview, guaranteed to at least 2026-10-08) is not retiring; gpt-oss-120b
+  # was dropped on 2026-10-07 because it was offered to every host while its
+  # upstream kept failing. Delete the retired entries once the date has passed.
   #
   # `max_output_tokens` is 32768 where a page states "same as the context
   # window": a reasoning model is sent its own output cap as max_tokens, and
@@ -612,29 +660,6 @@ providers:
       image_resolution_config: false
     limits:
       context_window: 1000000
-      max_output_tokens: 32768
-      max_thinking_budget: 16384
-  - id: openai.gpt-oss-120b
-    upstream_model: openai/gpt-oss-120b-maas
-    pricing:
-      input_per_million: 0.09
-      output_per_million: 0.36
-      cache_read_per_million: 0.0
-      cache_write_per_million: 0.0
-      per_image_cents: null
-    capabilities:
-      vision: false
-      audio_input: false
-      video_input: false
-      image_generation: false
-      audio_generation: false
-      streaming: true
-      tools: true
-      structured_output: true
-      system_prompts: true
-      image_resolution_config: false
-    limits:
-      context_window: 128000
       max_output_tokens: 32768
       max_thinking_budget: 16384
   - id: zai.glm-4.7

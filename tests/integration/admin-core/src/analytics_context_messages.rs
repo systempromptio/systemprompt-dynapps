@@ -8,7 +8,7 @@
 
 use chrono::{Duration, Utc};
 use systemprompt::identifiers::ContextId;
-use systemprompt_web_admin::repositories::analytics::context_detail as repo;
+use systemprompt_web_admin_analytics::repositories::analytics::context_detail as repo;
 
 use crate::fixtures::{
     RequestSpec, insert_message, insert_request, insert_user, new_context_id, unclaimed_email,
@@ -169,5 +169,37 @@ async fn list_context_tool_calls_is_empty_for_a_context_with_no_calls() {
         .await
         .expect("list tool calls");
     assert!(none.is_empty());
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn malformed_tool_arguments_do_not_fail_other_calls() {
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("malformed")).await;
+    let context = new_context_id();
+    let request = unique("req");
+    let mut spec = RequestSpec::completed(&request, &user);
+    spec.context_id = Some(&context);
+    insert_request(&db.pool, &spec).await;
+    insert_tool_call(&db.pool, &request, 0, "Read").await;
+    insert_tool_call(&db.pool, &request, 1, "Write").await;
+    let raw = "{\"content\":\"unfinished";
+    sqlx::query(
+        "UPDATE ai_request_tool_calls SET tool_input=$1 WHERE request_id=$2 AND sequence_number=1",
+    )
+    .bind(raw)
+    .bind(&request)
+    .execute(&*db.pool)
+    .await
+    .unwrap();
+    let calls = repo::list_tool_calls_for_requests(&db.pool, &[request])
+        .await
+        .unwrap();
+    assert_eq!(calls.len(), 2);
+    assert_eq!(calls[0].tool_input["command"], "ls");
+    assert_eq!(calls[1].tool_input_raw.as_deref(), Some(raw));
+    assert!(calls[1].tool_input_parse_error.is_some());
     db.cleanup().await;
 }

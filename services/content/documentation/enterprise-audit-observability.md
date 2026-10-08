@@ -1,35 +1,54 @@
 ---
 title: "Audit Trail, Traceability & Observability"
-description: "Audit every AI call with actor, cost, and latency; follow one trace id from request to tool to cost; ingest OTLP; and catch cost or error spikes automatically."
+description: "Audit every AI call with actor, cost, and latency; follow one trace id from request to tool to cost; export the trail to your own stack over OTLP; and catch cost or error spikes automatically."
 author: "Astound Digital"
 slug: "enterprise-audit-observability"
-keywords: "audit, trace, observability, otlp, sse, anomaly detection, requests, traceability"
+keywords: "audit, trace, observability, otlp, export, anomaly detection, requests, traceability, retention"
 kind: "guide"
 public: true
 tags: ["enterprise", "audit", "admin"]
 published_at: "2026-08-25"
-updated_at: "2026-09-11"
+updated_at: "2026-10-07"
 after_reading_this:
-  - "Inspect any AI request's actor, model, tokens, cost, and latency at /admin/entities/requests"
-  - "Follow a single trace id through policy decision, model call, tool execution, and cost"
-  - "Ingest OTLP telemetry and watch the live audit stream over SSE"
-  - "Inspect persisted cost, volume, and error anomalies"
+  - "Inspect any AI request's actor, model, tokens, cost, and latency at /admin/requests"
+  - "Follow a single trace id through policy decision, model call, tool execution, and cost at /admin/traces"
+  - "Know that the trail is exported to an OTLP collector only once a deployment names one"
+  - "Know how long audit records are kept and where the archives are"
+  - "Find persisted cost, volume, and error anomalies, and know that nothing pushes an alert"
 related_docs:
+  - title: "Observability Export (OTLP)"
+    url: "/documentation/observability-export"
+  - title: "Data Retention & Archives"
+    url: "/documentation/data-retention"
+  - title: "Governance Modes: Warn and Enforce"
+    url: "/documentation/governance-modes"
   - title: "Model Gateway, Routing & Data Residency"
     url: "/documentation/enterprise-model-routing"
-  - title: "MCP, Tool Governance & Distribution"
-    url: "/documentation/enterprise-tool-governance"
   - title: "Enterprise Roadmap & Known Limitations"
     url: "/documentation/enterprise-roadmap"
 ---
 
 # Audit Trail, Traceability & Observability
 
-**TL;DR:** Every model call writes an audit row — actor, model, provider, tokens, cost, latency, trace ids — browsable at `/admin/entities/requests`. One trace id links the whole chain (request → policy decision → model call → tool execution → cost) and resolves at `/admin/entities/traces`. The platform ingests OTLP, streams live audit events over SSE, and a persisted anomaly job records cost, volume, and error spikes.
+**TL;DR:** Every model call writes an audit row with the actor, model, the provider that actually served it, tokens, cost, total and upstream latency, and trace ids. You can browse these rows at `/admin/requests`. One trace id links the whole chain (request → policy decision → model call → tool execution → cost), and `/admin/traces` resolves it.
 
-## Per-call audit: /admin/entities/requests
+The trail can be pushed to Datadog, Grafana or Splunk through an OTLP collector, but only after a deployment configures one. Raw requests are kept for 90 days, and weekly archives are kept beyond that. An hourly job records cost, volume and error spikes. Nothing pushes an alert: anomalies and warnings go to the log, the console and, once export is on, your collector.
 
-Every request through the gateway lands a row with **DB-locked actor attribution**: who made the call, which model and provider served it, token counts in and out, cost, latency, status, and the trace ids that link it onward. `/admin/entities/requests` lists and filters these rows; the CLI reaches the same data:
+## Per-call audit: /admin/requests
+
+Every request through the gateway lands a row with **DB-locked actor attribution**. The row records:
+
+- who made the call;
+- which model was asked for, which route matched, and which provider served it (after a failover, `served_provider` names the fallback);
+- token counts in and out, and cost;
+- total latency, and the upstream latency spent waiting on the provider;
+- status;
+- the API key that authenticated it (`ai_requests.api_key_id`), rejections included;
+- the trace ids that link it onward.
+
+Each request's **scope attribution** is stored beside it in `ai_request_attributions`, one row per dimension: `request_id`, `dimension` (for example `project`), `value`, and `source`, which is `header` (sent as `x-systemprompt-scope-<dimension>`), `api_key` (the key's bound value) or `default` (the caller's primary value). See [Gateway API](/documentation/gateway-api#scope-headers).
+
+`/admin/requests` lists and filters these rows. `/admin/requests/{id}` opens one, with the governance decisions and safety findings made about it. The serving provider and upstream latency are stored on the row and carried by the [OTLP export](/documentation/observability-export), but the request page does not display them yet. The CLI reaches the same data:
 
 ```bash
 systemprompt infra logs request list --limit 20
@@ -40,11 +59,26 @@ systemprompt infra logs audit <request-id>                  # identity, model, t
 systemprompt infra logs audit <request-id> --messages --limit 20 --max-content 400
 ```
 
-`audit <request-id>` reconstructs the context for one call — identity, policy evaluations, tokens and cost, with `message_count` and `tool_call_count`. The transcript is opt-in and paged: `--messages` / `--tools` include the rows, `--offset` / `--limit` walk them, and `--max-content` bounds each body, so a long session never has to come back as one document. The same surface is what the admin MCP server's `request_log` and `conversation_audit` tools call.
+`audit <request-id>` reconstructs the context for one call: identity, policy evaluations, tokens and cost, with `message_count` and `tool_call_count`.
 
-## End-to-end traceability: /admin/entities/traces
+The transcript is opt-in and paged:
+- `--messages` and `--tools` include the rows;
+- `--offset` and `--limit` walk through them;
+- `--max-content` bounds each body.
 
-One **trace id** correlates the entire chain: the inbound request, the governance policy decision, the model call, any MCP or tool executions it triggered, and the resulting cost. `/admin/entities/traces` is the universal chain resolver — paste a trace id and read the whole story, whichever link you started from.
+This means a long session never has to come back as one document. The admin MCP server's `request_log` and `conversation_audit` tools call the same surface.
+
+## End-to-end traceability: /admin/traces
+
+One **trace id** links the entire chain:
+
+1. the inbound request;
+2. the governance policy decision;
+3. the model call;
+4. any MCP or tool executions it triggered;
+5. the resulting cost.
+
+`/admin/traces/{id}` resolves any trace id, whichever link you started from, and `/admin/api/chain/{id}` returns the same chain as JSON.
 
 ```bash
 systemprompt infra logs trace list --limit 20
@@ -52,32 +86,77 @@ systemprompt infra logs trace list --agent <name> --status failed
 systemprompt infra logs trace show <trace-id>
 ```
 
-## Observability ingest and live stream
+## Governance decisions in the trail
 
-- **OTLP ingest** — the platform accepts OpenTelemetry traces, logs, and metrics, so instrumented clients and services report into the same place.
-- **Live audit stream** — audit events stream as JSON over **Server-Sent Events**, useful for watching an incident unfold or feeding a live wallboard.
+Every governance and safety decision is recorded, whether or not it refused anything. The instance currently runs every plane in **warn mode**: stages and scanners run and record `warn` decisions, but nothing is refused (see [Governance Modes](/documentation/governance-modes)). `/admin/governance` shows the decisions and safety findings side by side, and `systemprompt infra logs governance report --since 7d` rolls them up.
+
+## Telemetry in and out
+
+- **In:** Claude Code's own OpenTelemetry output reaches the gateway's `/otel` endpoint through the bridge, which authenticates it. The gateway stores it beside the audit trail.
+- **Out:** the `otlp_export` job ships every completed request as a span, with its tool calls and governance decisions as child spans, plus the server log as log records, to the collector named in the profile's `observability.otlp` block.
+  - Datadog and Grafana/LGTM take it directly.
+  - Splunk takes it through an OpenTelemetry Collector.
+  - Neither profile in this repository declares a collector, so nothing is exported until a deployment adds one.
+  - Each `ai_request` span carries its scope attribution as `systemprompt.scope.<dimension>` and `systemprompt.scope.<dimension>.source`, and the key as `systemprompt.api_key.id`. A deployment that registers a `cost_centre` dimension gets `systemprompt.scope.cost_centre` the same way.
+  - Setup, attributes and delivery guarantees are on [Observability Export (OTLP)](/documentation/observability-export).
+  - `/admin/system/observability` shows the export's lag and last error, and has **Test connection** and **Export now** buttons.
+
+## Gateway metrics
+
+`/metrics` also carries two latency histograms, recorded once per completed request (buffered and streamed), labelled `route` (the inbound wire dialect) and `provider`:
+
+- `gateway_overhead_seconds`: the time the gateway itself added (1 ms to 1 s buckets);
+- `gateway_upstream_duration_seconds`: the provider call (100 ms to 120 s buckets).
+
+Failover hops are counted by `gateway_upstream_failovers_total{from,to,reason}` (see [Model Gateway](/documentation/enterprise-model-routing#provider-failover)) and quota breaches by `systemprompt_quota_denials_total{subject_kind, dimension, mode}`.
+
+## Retention
+
+The trail is finite by design.
+
+| Record | Kept for |
+|---|---|
+| Raw gateway requests | 90 days |
+| Stored prompt and completion text | 30 days |
+| Raw request bodies | 7 days |
+| Governance decisions | 180 days |
+
+After those windows, the daily rollups and per-conversation facts are kept indefinitely. Before raw rows expire, a weekly job archives them to gzipped JSON Lines, which you can download from `/admin/lifecycle`. The windows, the archive jobs and what they mean for audit claims are on [Data Retention & Archives](/documentation/data-retention).
 
 ## Anomaly detection
 
-A **persisted anomaly job** watches for cost spikes, volume spikes, and error spikes against recent baselines. Detections are persisted to `usage_anomalies`, logged on first detection per window, and shown on the dashboard. This installation has no configured Slack delivery. The current detectors are threshold-based rather than learned baselines; tuning iterates with real traffic.
+The hourly `usage_anomaly` job compares the last complete hour's requests, cost and errors with the trailing week's hourly average. It flags a metric that is both:
+
+- past its multiplier: 3× for requests and cost, 5× for errors; and
+- past an absolute floor: 50 requests, $1, or 10 errors.
+
+The floor stops a quiet instance from flagging 3 requests where there was 1.
+
+Detections are persisted to `usage_anomalies`, so a restart cannot forget them. They are written once to the server log as a warning on first detection, and shown on the console overview (`/admin`) for 24 hours.
+
+Core adds a second, per-user signal. Its `usage_anomaly_scan` job (hourly at `:02`) compares each user's previous closed hour of completed gateway spend and request count with that user's trailing seven-day hourly baseline. It flags `spend` (3× the baseline and at least $1) and `request_rate` (3× the baseline and at least 50 requests), emits a `usage_anomaly` warning event, and increments the Prometheus counter `systemprompt_usage_anomaly_total{kind, subject_kind}` on `/metrics`.
+
+**There is no push alerting.** The platform sends no chat, email or webhook alert. The earlier Slack delivery was removed from the codebase. To be paged, turn on the [OTLP export](/documentation/observability-export) and alert on the warning log line in your own stack. The thresholds are first-pass constants and will need tuning against real traffic.
 
 ## Known caveats
 
-Two limitations are stated here once and tracked on the [Enterprise Roadmap](/documentation/enterprise-roadmap):
+These limitations are tracked on the [Enterprise Roadmap](/documentation/enterprise-roadmap):
 
-- **Append-only by convention, not mechanism.** There is no WORM storage or hash-chaining. Database privileges and retention/cleanup operations determine whether rows can be changed or deleted.
-- **No push egress.** Telemetry flows *in* (OTLP ingest, SSE out to connected clients), but there is no built-in exporter pushing audit data to Datadog, Splunk, or an external OTEL collector.
+- **Append-only by convention, not by mechanism.** There is no WORM storage or hash-chaining. Whether rows can be changed or deleted depends on database privileges and the retention jobs. Archives sit on the instance's own disk.
+- **No alert channel.** See above.
+- **Some older rows have no upstream latency or serving provider.** Those columns were not populated before late September 2026, so overhead and failover analysis is reliable only from then on.
 
-## Verification
+## Check it yourself
 
-Use the commands and UI checks above against the configured instance. Repository maintainers can run `just test-unit` and `just test-integration`; a passing fixture test does not establish that a deployed integration is configured. Screenshots below are illustrative and may show an earlier configuration.
+- `/admin/requests`: open any request and check the actor, model, tokens, cost, latency, policy decisions and safety findings.
+- `/admin/traces`: open a trace and follow it to its tool calls and cost.
+- `/admin/governance`: the decisions log and safety findings for the same window.
+- `/admin/system/observability`: whether a collector is configured, and the export lag.
+- `/admin/lifecycle` and `/admin/configuration`: archives, retention windows and the last cleanup run.
+- From the CLI:
 
-### Screenshots
-
-![A request audit record showing actor, model, policy chain, cost, and trace ids](/files/images/evidence/req-026-requests-audit.png)
-
-![One trace id resolving the full chain: session, identity, and spans](/files/images/evidence/req-027-trace-chain.png)
-
-![Latency reported against a configured SLO threshold on the spend dashboard](/files/images/evidence/req-029-latency-slo.png)
-
-![The spend dashboard's budget warnings and anomalies sections](/files/images/evidence/req-009-spend-meters.png)
+  ```bash
+  systemprompt infra logs request list --since 1h
+  systemprompt infra logs trace list --limit 5
+  systemprompt infra logs governance report --since 7d
+  ```

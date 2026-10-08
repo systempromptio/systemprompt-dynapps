@@ -35,7 +35,7 @@ cd deploy/self-host
 ## 2b. Prove the inputs before starting anything
 
 ```bash
-./preflight.sh --image ghcr.io/astound-digital/systemprompt-astound:0.62.1 \
+./preflight.sh --image ghcr.io/astound-digital/systemprompt-astound:0.63.0 \
   --profile-dir ./profile --external-url https://ai.example.com
 ```
 
@@ -44,13 +44,18 @@ Every line must pass; a failure names the stage and the fix.
 ## 3. Start
 
 ```bash
-export SYSTEMPROMPT_TAG=0.62.1 POSTGRES_PASSWORD='<db-password>'
+export SYSTEMPROMPT_TAG=0.63.0 POSTGRES_PASSWORD='<db-password>'
 docker compose -f docker-compose.single.yml pull
+docker compose -f docker-compose.single.yml run --rm app migrate   # schema + admin user, once
 docker compose -f docker-compose.single.yml up -d          # own database: add `app` at the end
 docker compose -f docker-compose.single.yml ps              # wait for app: healthy
 ```
 
-First boot runs the migrations, creates the admin user and renders the site.
+The profile sets `database.migrate_on_boot: false`, so the server never
+changes the schema as it starts: the `migrate` one-shot applies the
+migrations and creates the admin user, and a node booted against a schema it
+does not match refuses to start and names the command to run. First boot
+renders the site.
 If `verify-node.sh` reports the public site missing (entrypoints before the
 per-node render skipped it), run this once after `healthy`:
 
@@ -63,18 +68,20 @@ docker compose -f docker-compose.single.yml exec \
 ## 4. Check
 
 ```bash
-./verify-node.sh --url http://localhost:8080 --container "$(docker compose -f docker-compose.single.yml ps -q app)" --version 0.62.1
+./verify-node.sh --url http://localhost:8080 --container "$(docker compose -f docker-compose.single.yml ps -q app)" --version 0.63.0
 ```
 
-Then sign in at `https://ai.example.com/admin/login` as the admin e-mail you
-gave, register a passkey, and hand users the
+Then configure AD FS SSO (`/documentation/adfs-sso-setup`), sign in at
+`https://ai.example.com/admin/login` as the admin e-mail you gave, and hand users the
 `https://ai.example.com/documentation/downloads` page.
 
 ## 5. Upgrade
 
 ```bash
 export SYSTEMPROMPT_TAG=<new-version>
-docker compose -f docker-compose.single.yml pull && docker compose -f docker-compose.single.yml up -d
+docker compose -f docker-compose.single.yml pull
+docker compose -f docker-compose.single.yml run --rm app migrate
+docker compose -f docker-compose.single.yml up -d
 ```
 
 Versioned tags never move; migrations are forward-only, so back up the
@@ -84,4 +91,4 @@ database before upgrading.
 
 Copy `./profile` to each new node, run `provision.sql` on the shared
 primary if you are moving off the bundled database, and follow `README.md`
-from §4. Boot nodes one at a time.
+from §4.

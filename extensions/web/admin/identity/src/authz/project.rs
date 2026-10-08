@@ -1,0 +1,75 @@
+//! Current database-backed project attributes for authorization (rung 140).
+
+use async_trait::async_trait;
+use sqlx::PgPool;
+use std::sync::Arc;
+use systemprompt::identifiers::UserId;
+use systemprompt_security::authz::{
+    AuthzError, RuleType, SharedSubjectAttributeProvider, SubjectAttributeProvider,
+    SubjectDimension,
+};
+use systemprompt_web_shared::ProjectId;
+
+use systemprompt_web_admin_core::authz::primary::lead_with_primary;
+
+const PROJECT_RULE_TYPE: RuleType = RuleType::extension_static("project");
+
+const PROJECT_PRECEDENCE: u16 = 140;
+
+#[must_use]
+pub const fn project_rule_type() -> RuleType {
+    PROJECT_RULE_TYPE
+}
+
+#[must_use]
+pub const fn project_dimension() -> SubjectDimension {
+    SubjectDimension {
+        rule_type: project_rule_type(),
+        label: "Project",
+        precedence: PROJECT_PRECEDENCE,
+    }
+}
+
+#[derive(Debug)]
+pub struct ProjectAttributeProvider {
+    pool: Arc<PgPool>,
+}
+
+impl ProjectAttributeProvider {
+    #[must_use]
+    pub const fn new(pool: Arc<PgPool>) -> Self {
+        Self { pool }
+    }
+}
+
+#[async_trait]
+impl SubjectAttributeProvider for ProjectAttributeProvider {
+    fn dimension(&self) -> SubjectDimension {
+        project_dimension()
+    }
+
+    async fn values_for(&self, user_id: &UserId) -> Result<Vec<String>, AuthzError> {
+        let ids: Vec<String> =
+            crate::repositories::projects::members::list_project_ids_for_user(&self.pool, user_id)
+                .await?
+                .into_iter()
+                .map(|id| id.as_str().to_owned())
+                .collect();
+        let primary =
+            systemprompt_web_admin_core::repositories::scope::defaults::find_scope_defaults(
+                &self.pool, user_id,
+            )
+            .await?
+            .and_then(|d| d.primary_project_id);
+        Ok(lead_with_primary(
+            primary.as_ref().map(ProjectId::as_str),
+            ids,
+        ))
+    }
+}
+
+systemprompt_security::register_subject_attribute_provider!(|ctx| {
+    let provider: SharedSubjectAttributeProvider =
+        Arc::new(ProjectAttributeProvider::new(Arc::clone(&ctx.pool)));
+    provider
+});

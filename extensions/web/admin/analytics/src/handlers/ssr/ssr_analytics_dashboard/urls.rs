@@ -1,0 +1,169 @@
+//! URL builders for the site analytics dashboard.
+//!
+//! Every link the page emits — tab bar, filter chips, bucket toggle, sort
+//! headers, pagination, and the leaderboard's self-drill scope links —
+//! rebuilds the current query string minus the parameter it is changing, so
+//! the reader never loses the window or the filters they picked.
+
+use urlencoding::encode as urlencode;
+
+use systemprompt_web_admin_core::ssr::list_view::{PageWindow, Pagination};
+
+use super::context::{BucketLinkView, DashboardTab, DashboardTabLink, ScopeChipView, SloOption};
+
+pub(super) use super::urls_controls::{attribution_links, audience_links, axis_links, drill_url};
+use super::{AnalyticsDashboardQuery, BASE_URL};
+use systemprompt_web_admin_core::ssr::list_view::{paginate_prefixed, query_string_dropping};
+
+pub(super) fn preserved_query_string(query: &AnalyticsDashboardQuery, drop: &[&str]) -> String {
+    let pairs: [(&str, Option<&str>); 12] = [
+        ("tab", query.tab.as_deref()),
+        ("preset", query.preset.as_deref()),
+        ("from", query.from.as_deref()),
+        ("to", query.to.as_deref()),
+        ("bucket", query.bucket.as_deref()),
+        ("group", query.group.as_deref()),
+        ("project", query.project.as_deref()),
+        (
+            "user_id",
+            query
+                .user_id
+                .as_ref()
+                .map(systemprompt::identifiers::UserId::as_str),
+        ),
+        ("sort", query.sort.as_deref()),
+        ("attr", query.attr.as_deref()),
+        ("audience", query.audience.as_deref()),
+        ("axis", query.axis.as_deref()),
+    ];
+    let extra = [
+        ("page", query.page.filter(|p| *p > 0)),
+        ("slo_ms", query.slo_ms.map(i64::from)),
+    ];
+    query_string_dropping(&pairs, &extra, drop)
+}
+
+pub(super) fn with_qs(base: String, qs: &str) -> String {
+    if qs.is_empty() {
+        base
+    } else if base.contains('?') {
+        format!("{base}&{qs}")
+    } else {
+        format!("{base}?{qs}")
+    }
+}
+
+pub(super) fn tab_links(
+    active: DashboardTab,
+    query: &AnalyticsDashboardQuery,
+) -> Vec<DashboardTabLink> {
+    const TABS: [(DashboardTab, &str); 6] = [
+        (DashboardTab::Overview, "Overview"),
+        (DashboardTab::Models, "Models"),
+        (DashboardTab::Skills, "Skills"),
+        (DashboardTab::Tools, "Tools"),
+        (DashboardTab::Sessions, "Sessions"),
+        (DashboardTab::Cost, "Cost"),
+    ];
+    let qs = preserved_query_string(query, &["tab", "page", "sort"]);
+    TABS.iter()
+        .map(|&(tab, label)| DashboardTabLink {
+            slug: tab.as_str(),
+            label,
+            href: with_qs(format!("{BASE_URL}?tab={}", tab.as_str()), &qs),
+            is_active: tab == active,
+        })
+        .collect()
+}
+
+pub(super) fn bucket_links(
+    query: &AnalyticsDashboardQuery,
+    active_week: bool,
+) -> Vec<BucketLinkView> {
+    let qs = preserved_query_string(query, &["bucket", "page"]);
+    vec![
+        BucketLinkView {
+            label: "Daily",
+            href: with_qs(format!("{BASE_URL}?bucket=day"), &qs),
+            is_active: !active_week,
+        },
+        BucketLinkView {
+            label: "Weekly",
+            href: with_qs(format!("{BASE_URL}?bucket=week"), &qs),
+            is_active: active_week,
+        },
+    ]
+}
+
+pub(super) fn active_chips(query: &AnalyticsDashboardQuery) -> Vec<ScopeChipView> {
+    let mut chips = Vec::new();
+    let candidates: [(&str, &'static str, Option<&str>); 3] = [
+        ("group", "Group", query.group.as_deref()),
+        ("project", "Project", query.project.as_deref()),
+        (
+            "user_id",
+            "User",
+            query
+                .user_id
+                .as_ref()
+                .map(systemprompt::identifiers::UserId::as_str),
+        ),
+    ];
+    for (param, group_label, value) in candidates {
+        let Some(value) = value.filter(|s| !s.is_empty()) else {
+            continue;
+        };
+        let qs = preserved_query_string(query, &[param, "page"]);
+        chips.push(ScopeChipView {
+            group_label,
+            label: value.to_owned(),
+            remove_url: with_qs(BASE_URL.to_owned(), &qs),
+        });
+    }
+    chips
+}
+
+pub(super) fn clear_url(query: &AnalyticsDashboardQuery) -> String {
+    let qs = preserved_query_string(query, &["project", "user_id", "page", "sort"]);
+    with_qs(BASE_URL.to_owned(), &qs)
+}
+
+pub(super) fn scope_to_user_url(
+    query: &AnalyticsDashboardQuery,
+    user_id: &systemprompt::identifiers::UserId,
+) -> String {
+    let qs = preserved_query_string(query, &["user_id", "page"]);
+    with_qs(
+        format!("{BASE_URL}?user_id={}", urlencode(user_id.as_str())),
+        &qs,
+    )
+}
+
+pub(super) fn sort_url(query: &AnalyticsDashboardQuery, sort: &str) -> String {
+    let qs = preserved_query_string(query, &["sort", "page"]);
+    with_qs(format!("{BASE_URL}?sort={sort}"), &qs)
+}
+
+pub(super) fn build_pagination(query: &AnalyticsDashboardQuery, window: PageWindow) -> Pagination {
+    let qs = preserved_query_string(query, &["page"]);
+    let prefix = if qs.is_empty() {
+        format!("{BASE_URL}?")
+    } else {
+        format!("{BASE_URL}?{qs}&")
+    };
+    paginate_prefixed(window, &prefix)
+}
+
+pub(super) fn slo_links(query: &AnalyticsDashboardQuery, active_ms: i32) -> Vec<SloOption> {
+    const CHOICES: [(i32, &str); 4] =
+        [(1_000, "1s"), (2_000, "2s"), (5_000, "5s"), (10_000, "10s")];
+    let qs = preserved_query_string(query, &["slo_ms", "page"]);
+    CHOICES
+        .iter()
+        .map(|&(ms, label)| SloOption {
+            label: label.to_owned(),
+            href: with_qs(format!("{BASE_URL}?slo_ms={ms}"), &qs),
+            selected: ms == active_ms,
+        })
+        .collect()
+}

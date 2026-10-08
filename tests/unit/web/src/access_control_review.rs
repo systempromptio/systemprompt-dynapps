@@ -3,18 +3,18 @@
 
 use chrono::Utc;
 use systemprompt_security::authz::{Access, DASHBOARD_SOURCE, RegisteredEntities};
-use systemprompt_web_admin::repositories::access_control::declared::{
+use systemprompt_web_admin_core::repositories::access_rules::declared::{
     DeclaredInputs, DeclaredSet, build_declared_set,
 };
-use systemprompt_web_admin::repositories::access_control::drift::{
+use systemprompt_web_admin_core::repositories::access_rules::drift::{
     BandRuleRow, EntityDefaultRow, compute_drift,
 };
-use systemprompt_web_admin::repositories::access_control::review::{
+use systemprompt_web_admin_core::repositories::access_rules::review::{
     EntityReview, ReviewKind, review_entities,
 };
-use systemprompt_web_admin::repositories::config::rules_yaml_loader::parse_rules_doc;
-use systemprompt_web_admin::repositories::sync::attention::split_reviews;
-use systemprompt_web_admin::repositories::sync::history::KeptReview;
+use systemprompt_web_admin_core::repositories::access_rules::rules_yaml_loader::parse_rules_doc;
+use systemprompt_web_admin_core::repositories::sync::attention::split_reviews;
+use systemprompt_web_admin_core::repositories::sync::history::KeptReview;
 
 fn declared() -> DeclaredSet {
     let doc = parse_rules_doc(

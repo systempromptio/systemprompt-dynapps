@@ -7,16 +7,16 @@ use std::path::Path;
 
 use sqlx::PgPool;
 use systemprompt_security::authz::RegisteredEntities;
-use systemprompt_web_admin::repositories::access_control::declared::DeclaredSet;
-use systemprompt_web_admin::repositories::access_control::declared_load::load_declared_set;
-use systemprompt_web_admin::repositories::access_control::drift::compute_drift;
-use systemprompt_web_admin::repositories::access_control::review::{
+use systemprompt_web_admin_core::repositories::access_rules::declared::DeclaredSet;
+use systemprompt_web_admin_core::repositories::access_rules::declared_load::load_declared_set;
+use systemprompt_web_admin_core::repositories::access_rules::drift::compute_drift;
+use systemprompt_web_admin_core::repositories::access_rules::review::{
     EntityReview, ReviewKind, review_entities,
 };
-use systemprompt_web_admin::repositories::access_control::rules::{
+use systemprompt_web_admin_core::repositories::access_rules::rules::{
     list_band_rules, list_entity_defaults,
 };
-use systemprompt_web_admin::repositories::access_control::sync::{
+use systemprompt_web_admin_core::repositories::access_rules::sync::{
     EntityScope, SyncMode, apply_sync_scoped,
 };
 

@@ -13,3 +13,25 @@ external_agents:
     description: "Anthropic's native macOS/Windows desktop app for Claude. Routes inference through this gateway."
     platforms: [macos, windows]
     docs_url: "https://claude.ai/download"
+    desktop_policy:
+      schema_version: 1
+      settings:
+        modelPrefer1mContext: true
+        alwaysStartWithDefaultModel: true
+        modelDiscoveryEnabled: false
+        toolSearchEnabled: true
+        disableAutoUpdates: false
+        autoUpdaterEnforcementHours: 72
+        configRecheckIntervalMinutes: 2
+        relaunchEnforcementHours: 24
+        mcpToolTimeoutSec: 300
+        inferenceStreamIdleTimeoutSec: 300
+        chatAdvancedFileAnalysisEnabled: true
+        disableBundledSkills: false
+        builtinToolPolicy:
+          WebSearch: allow
+          WebFetch: allow
+        deploymentDisplayName: Astound Digital
+        otlpDesktopLogLevel: info
+        otlpTracesEnabled: true
+        otlpContentCapture: []

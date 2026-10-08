@@ -9,14 +9,14 @@
 
 use std::collections::BTreeSet;
 
-use systemprompt_web_admin::types::doc_links::{doc_slug_for, documentation_url};
+use systemprompt_web_admin_core::types::doc_links::{doc_slug_for, documentation_url};
 
 use crate::support::repo_root;
 
 // Why: read from the handler source rather than a second hand-kept list. A
 // duplicated list would agree with itself while both drifted from the pages.
 fn help_topics() -> BTreeSet<String> {
-    let dir = repo_root().join("extensions/web/admin/src/handlers/ssr/ssr_demo_help");
+    let dir = repo_root().join("extensions/web/shared/admin-core/src/ssr/demo_help");
     let mut topics = BTreeSet::new();
     let entries = std::fs::read_dir(&dir).unwrap_or_else(|e| panic!("read {}: {e}", dir.display()));
     for entry in entries {
@@ -53,7 +53,7 @@ fn last_literal_before_close(chunk: &str) -> Option<String> {
     let arm = chunk.split("))").next()?;
     let mut literals = arm.rsplit('"');
     let _after = literals.next()?;
-    literals.next().map(std::borrow::ToOwned::to_owned)
+    literals.next().map(ToOwned::to_owned)
 }
 
 fn shipped_docs() -> BTreeSet<String> {
@@ -62,11 +62,8 @@ fn shipped_docs() -> BTreeSet<String> {
     let docs: BTreeSet<String> = entries
         .filter_map(|e| {
             let path = e.ok()?.path();
-            (path.extension()?.to_str()? == "md").then(|| {
-                path.file_stem()?
-                    .to_str()
-                    .map(std::borrow::ToOwned::to_owned)
-            })?
+            (path.extension()?.to_str()? == "md")
+                .then(|| path.file_stem()?.to_str().map(ToOwned::to_owned))?
         })
         .collect();
     assert!(!docs.is_empty(), "no documentation found to check against");

@@ -1,19 +1,19 @@
 ---
 title: "Create a Conversation and See It Land"
-description: "Connect a client, invoke one skill on purpose, then find that conversation under Analysis Conversations and open its transcript. Includes how long to wait and what to check when it does not appear."
+description: "Connect a client, invoke one skill on purpose, then find that conversation on the skill's Analysis page and open its transcript. Includes how long to wait and what to check when it does not appear."
 author: "Astound Digital"
 slug: "analysis-test-conversation"
-keywords: "conversation, skill invocation, bridge, connect code, attribution, revision-verified, hooks, session, transcript"
+keywords: "conversation, skill invocation, bridge, connect code, attribution, installation receipt, hooks, conversation rollup, session, transcript"
 kind: "guide"
 public: true
 tags: ["enterprise", "admin", "analytics"]
 published_at: "2026-09-16"
-updated_at: "2026-09-16"
+updated_at: "2026-09-29"
 after_reading_this:
   - "Connect a client to this gateway and invoke a named skill deliberately"
-  - "Find the resulting conversation under Analysis › Conversations, filtered to that skill"
+  - "Find the resulting conversation on the skill's Analysis page"
   - "Open the transcript for that session"
-  - "Diagnose a missing conversation as unbound, no receipt, or snapshot pending"
+  - "Diagnose a missing conversation: not routed, no hook report, rollup pending, or no install receipt"
 related_docs:
   - title: "Analysis: Measure, Improve and Publish a Skill"
     url: "/documentation/analysis"
@@ -64,37 +64,48 @@ The client's hooks report the invocation to this gateway as it happens: the plug
 
 **Expected result:** the skill's instructions are visible in the client's output, not a generic model answer.
 
-## Step 4: Wait for the facts to drain
+## Step 4: Give the rollup a minute
 
-The feedback fact and snapshot passes run every five seconds, and the inventory refresh every minute. Give it a minute before concluding anything is wrong. Nothing on the Analysis pages is computed live from raw events, so a conversation is invisible until its facts are in a snapshot.
+Nothing on the Analysis pages is computed live from raw events. The
+`conversation_rollup` job runs every minute and folds every conversation
+touched since its last run into `conversation_facts` and the per-skill
+`conversation_skill_facts`. Give it a minute before concluding anything is
+wrong. `/admin/history` does not wait for the rollup, so your request is
+visible there straight away.
 
 ## Step 5: Find the conversation
 
-1. Open `/admin/analysis/skills`.
-2. Click the skill's name. Conversations opens filtered to that skill.
-3. Set **From (UTC)** and **Until (UTC, exclusive)** so the window covers today, then press **Apply**. The end date is exclusive, so a run from today needs tomorrow's date in **Until**.
+1. Open `/admin/analysis/skills` and pick a window that covers today.
+2. Click the skill's name. Its page lists every conversation that invoked it.
 
-Your session should be listed with its consumer, first and last seen times, invocation count, requests, tokens, cost and the latest retained assessment.
+Your session should be listed with the person, client and model, turns, tool
+calls, artifacts, errors, cost and — once the judge has run — its AI score.
+The same conversation is on `/admin/analysis/conversations`; the
+**Conversations with skills** button on the Skills page opens that list
+filtered to conversations that invoked any skill.
 
 ## Step 6: Open the transcript
 
-Click the short session id in the first column. That opens the session detail page with the conversation itself. The same session is reachable from `/admin/conversations` and from the skill's row on [Skills](/admin/analysis/skills).
+Click the conversation. Its page shows the transcript turn by turn, with the
+requests, tool calls, artifacts and governance decisions of each turn. The
+same conversation is reachable from `/admin/conversations` and from your own
+`/admin/history`.
 
 ## When it does not appear
 
-Work down this list in order. The three causes are distinct and the fix differs for each.
+Work down this list in order.
 
 | Check | Symptom | What it means | Fix |
 |---|---|---|---|
-| 1. Bound? | The skill reads `unbound` on the Skills table. | The inventory entry is not attached to a managed resource, so nothing can attach metrics to it. | Press **Sync inventory now** and resolve any **Name collisions**. |
-| 2. Snapshot? | The skill reads `pending`, or Conversations says facts have not been drained. | The measurement exists but the snapshot has not landed. | Wait a minute and reload. |
-| 3. Receipt? | The skill shows invocations in the organisation totals but no attributed use of its own, and Coverage is empty. | Attribution needs verified evidence: a device-authenticated consumer, a session binding and a verified installation receipt. Without the chain the invocation counts in the totals but not in the skill's row. | Confirm the device installed the distributed publication. Receipts are listed under Distribution on that marketplace's [Versions](/admin/analysis/versions) page. |
+| 1. Reached the gateway? | Nothing in `/admin/history`. | The client's model traffic is not routed through this gateway. | Go back to Step 2. |
+| 2. Hook reported? | The request is in History, but the skill's **Invoked** count did not move. | The plugin that carries the governance hooks is not installed on that client, so no invocation was reported. | Run `astound-bridge status`, sync, and restart the client. |
+| 3. Rolled up? | Invoked moved but the conversation is missing from the skill's page. | The rollup has not passed yet. | Wait a minute and reload. After an upgrade an operator can rebuild everything with `systemprompt infra jobs run conversation_rollup -p all=true`. |
+| 4. Installed? | The skill's **Installs** stays at zero. | Installs count verified installation receipts — a device that read back every file of the distributed bundle. Invocations still count without one. | Check **Installation receipts** on that marketplace's [Versions](/admin/analysis/versions) page. |
 
-Two further things worth knowing before you go hunting:
-
-**Attributed is not revision-verified.** Attributed means the hook reported the skill. Revision-verified is stricter: the invocation was proven against a published managed resource that this device verifiably installed. The Skills table's verified share reports the stricter figure, so a conversation can be attributed and still not count as verified.
-
-**Old invocations catch up.** Invocations recorded before a skill identity existed are attributed once the backfill re-normalises them, so an empty table today is not always an empty table tomorrow.
+**Attributed is not the same as installed.** Attributed means the hook
+reported the skill for that invocation — the percentage under the skill name
+on the Skills table. A verified receipt is stricter: that device proved it
+installed the published bundle.
 
 ## Troubleshooting
 
@@ -110,10 +121,10 @@ Two further things worth knowing before you go hunting:
 **Cause:** Inside a container, `localhost` is the container.
 **Solution:** `just claude` rewrites the address for you. By hand, use `http://host.docker.internal:8080`.
 
-### The conversation is in History but not in Analysis
+### The conversation is in History but not on the skill's page
 
-**Symptom:** `/admin/history` shows the request, Analysis › Conversations does not.
-**Cause:** The request carries no skill identity, so there is nothing to attribute it to.
+**Symptom:** `/admin/history` shows the request; the skill's page does not list it.
+**Cause:** No invocation of that skill was reported for the session — the model answered without it, or the hooks plugin is not installed on that client.
 **Solution:** Re-run invoking the skill explicitly, and confirm the skill is served from a marketplace this user receives.
 
 ## Related pages

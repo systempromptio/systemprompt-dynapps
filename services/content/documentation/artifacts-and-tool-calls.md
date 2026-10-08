@@ -8,7 +8,7 @@ kind: "guide"
 public: true
 tags: ["enterprise", "admin", "observability"]
 published_at: "2026-09-17"
-updated_at: "2026-09-17"
+updated_at: "2026-09-29"
 after_reading_this:
   - "Say for any client which vantage points record its tool calls, and read the Tool calls, Executed and Artifacts columns as the same numbers on every page"
   - "Open an artifact and read its provenance strip: where it was seen, whether its join is exact or inferred, and the request, decision and session of the same call"
@@ -47,7 +47,7 @@ intent — the call bypassed the gateway).
 |---|---|---|
 | Claude Code, Cowork | yes | every tool, via the `PostToolUse` hook |
 | OpenCode | yes | every tool, via the `tool.execute.after` hook |
-| Codex, Hermes, Pi, other API clients | yes | MCP tools proxied through the gateway (the proxy tap); builtin tools have no reporting hook in those hosts, so they stay `intended` |
+| Codex, Pi, other API clients | yes | MCP tools proxied through the gateway (the proxy tap); builtin tools have no reporting hook in those hosts, so they stay `intended` |
 | In-process MCP servers | yes | always, at the server |
 
 The **Tool calls** column is the intent count and is the same for every
@@ -129,7 +129,8 @@ the bound) only happens if that store fails, and the result then says so.
 - **Conversations** link each tool step to its stored result.
 - **Traces** link hook tool events to the artifact they produced.
 - **Analysis › Skills / Conversations** count artifacts per skill and per
-  conversation from the `artifact` fact on the feedback plane.
+  conversation from `conversation_facts` (`artifact_count`, split into files
+  and cards), which the `conversation_rollup` job keeps current every minute.
 
 ## Where the numbers come from
 
@@ -137,6 +138,6 @@ A hook event keeps the `tool_use_id` it reported and the execution the ingest
 resolved (`plugin_usage_events.tool_use_id`, `mcp_execution_id`). A governance
 decision keeps the `tool_use_id` it governed. Skill attribution of an artifact
 is the most recent skill invocation in the same session before the result was
-produced. The feedback plane's `artifact` fact carries the execution, the
-invocation and request keys where known, the vantage point, the join quality
-and the finding count, and is what the Analysis pages aggregate.
+produced. The Analysis pages aggregate the per-conversation rollup
+(`conversation_facts`), which counts an artifact once per tool execution by
+the single artifact definition in `tool_activity.artifact_kind`.

@@ -6,18 +6,13 @@
 //! decision where a wrong answer is silent — an unbounded tag list, a
 //! confidence past 1, a transcript that quietly drops the closing turns.
 
-#![allow(
-    clippy::expect_used,
-    clippy::panic,
-    reason = "test code: panics are the assertion mechanism"
-)]
 
 use chrono::{DateTime, TimeZone, Utc};
 use systemprompt::identifiers::{AiRequestId, GatewayConversationId};
-use systemprompt_web_admin::repositories::analytics::context_detail::{
+use systemprompt_web_admin_analytics::repositories::analytics::context_detail::{
     ContextMessageRow, ContextRequestRow,
 };
-use systemprompt_web_admin::test_support::{
+use systemprompt_web_admin_analytics::test_support::{
     ConversationView, TranscriptOptions, build_conversation,
 };
 use systemprompt_web_extension::jobs::internals::{

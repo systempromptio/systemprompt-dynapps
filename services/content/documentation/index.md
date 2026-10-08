@@ -7,7 +7,12 @@ kind: "guide"
 public: true
 tags: ["documentation", "getting-started", "bridge"]
 published_at: "2026-02-18"
-updated_at: "2026-09-22"
+updated_at: "2026-09-29"
+keywords: "get started, astound ai platform, claude code, cowork, opencode, bridge, gateway, documentation"
+after_reading_this:
+  - "Pick the setup guide for your client and platform"
+  - "Verify your first session reached the gateway"
+  - "Find the page for any part of the platform"
 related_playbooks:
   - title: "Connect Claude Code"
     url: "/documentation/connect-claude-code"
@@ -53,30 +58,53 @@ its source through distribution, loading and measurement.
 
 ## Sync: code and instance
 
-- [Update a Skill and Ship It](/documentation/update-a-skill) — the developer walkthrough, end to end
 - [Code ↔ Instance: sources, planes and sync](/documentation/services-sync) — the model behind it: where declarations come from, what they project into, which hash proves what
 - [Access control: who reaches what, and why](/documentation/access-control) — entitlement, declared here and enforced from the database
 
 ## Analysis: measuring and comparing skills
 
-- [Analysis overview: the five tabs and the end-to-end path](/documentation/analysis)
+- [Analysis overview: the tabs and the end-to-end path](/documentation/analysis)
 - [Measure which skills are used](/documentation/analysis-measure-skills)
+- [Evaluate a plugin before you ship it](/documentation/analysis-evaluate-plugins)
 - [Create a conversation and see it land](/documentation/analysis-test-conversation)
-- [Versions: sources, generations and compare](/documentation/analysis-versions)
+- [Versions: hashes, history and compare](/documentation/analysis-versions)
+- [Artifacts and the tool-call ledger](/documentation/artifacts-and-tool-calls)
 
-## Reference and administration
+## Connections
 
 - [Salesforce CRM and development connections](/documentation/salesforce)
 - [Downloads and checksum verification](/documentation/downloads)
 - [Bridge installation, sign-in, and troubleshooting](/documentation/bridge-install)
+
+## Administration
+
+- [Dashboard](/documentation/dashboard) — the admin overview
+- [Create and manage users](/documentation/admin-user-management) — including the one role table
 - [Authentication](/documentation/authentication)
+- [Set up SSO (AD FS)](/documentation/adfs-sso-setup)
 - [User and access management](/documentation/enterprise-user-access)
 - [Usage and analytics](/documentation/enterprise-analytics)
+- [Cost management](/documentation/enterprise-cost-management)
 - [Model routing and data residency](/documentation/enterprise-model-routing)
-- [Cost management and budgets](/documentation/enterprise-cost-management)
-- [Audit and observability](/documentation/enterprise-audit-observability)
-- [Artifacts and the tool-call ledger](/documentation/artifacts-and-tool-calls)
+- [Gateway API](/documentation/gateway-api)
+- [Conversation history and search](/documentation/enterprise-conversation-history)
+
+## Governance and compliance
+
+- [Governance modes: warn and enforce](/documentation/governance-modes)
 - [Safety and guardrails](/documentation/enterprise-safety-guardrails)
 - [Tool governance](/documentation/enterprise-tool-governance)
+- [Audit and observability](/documentation/enterprise-audit-observability)
+- [Export telemetry (OTLP)](/documentation/observability-export)
+- [Data retention](/documentation/data-retention)
+- [Roadmap and known limitations](/documentation/enterprise-roadmap)
+
+## Deploy and operate
+
+- [Stand up one node and PostgreSQL](/documentation/deploy)
+- [Deploy on Oracle Cloud](/documentation/deploy-oracle-cloud)
+- [Validate every stage](/documentation/deploy-troubleshooting)
+- [Expose your instance remotely](/documentation/remote-access)
+- [Target deployment architecture](/documentation/deploy-target-architecture)
 
 For platform maintainers: [Develop Against a Local Gateway](/documentation/develop-claude-code).

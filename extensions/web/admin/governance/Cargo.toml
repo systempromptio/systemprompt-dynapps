@@ -1,0 +1,58 @@
+[package]
+name = "systemprompt-web-admin-governance"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "Governance domain of the admin dashboard for the systemprompt.io template: the decision record, approvals, secrets, the gateway routes and policies, and the webhooks that enforce them."
+repository.workspace = true
+homepage.workspace = true
+publish = false
+
+[dependencies]
+# Foundation
+systemprompt-web-shared = { workspace = true }
+systemprompt-web-admin-core = { workspace = true }
+# Audit: uses ai, extension, identifiers, models, oauth, security — requires `full`.
+systemprompt = { workspace = true, features = ["full"] }
+systemprompt-security = { workspace = true }
+
+# Database
+sqlx = { workspace = true }
+
+# Web framework
+axum = { workspace = true }
+
+# Async runtime
+tokio = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+serde_jcs = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+
+# Logging
+tracing = { workspace = true }
+
+# Crypto & encoding (declaration digests, secret resolution)
+sha2 = { workspace = true }
+hex = { workspace = true }
+
+# Utilities
+urlencoding = { workspace = true }
+inventory = { workspace = true }
+async-trait = { workspace = true }
+
+[features]
+# The ssr_governance surface lives upstream in systemprompt-template; this fork
+# does not ship it. The feature keeps the shared repository files identical
+# across both trees while compiling their dead-in-this-fork queries out.
+governance-ssr = []
+
+[lints]
+workspace = true

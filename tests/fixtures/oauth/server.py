@@ -17,6 +17,9 @@ openssl("req", "-newkey", "rsa:2048", "-nodes", "-keyout", "server.key", "-out",
 (root / "extensions").write_text("subjectAltName=DNS:localhost,IP:127.0.0.1\nbasicConstraints=CA:FALSE\nkeyUsage=digitalSignature,keyEncipherment\nextendedKeyUsage=serverAuth\n")
 openssl("x509", "-req", "-in", "server.csr", "-CA", "ca.pem", "-CAkey", "ca.key", "-CAcreateserial", "-out", "server.pem", "-days", "1", "-extfile", "extensions")
 
+mode = sys.argv[2] if len(sys.argv) > 2 else "standard"
+refresh_requests = 0
+
 class Handler(http.server.BaseHTTPRequestHandler):
     def log_message(self, *args):
         pass
@@ -30,6 +33,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.wfile.write(data)
 
     def do_GET(self):
+        if self.path == "/stats":
+            return self.send_json({"refresh_requests": refresh_requests})
         if self.path.startswith("/.well-known/oauth-protected-resource"):
             suffix = self.path.removeprefix("/.well-known/oauth-protected-resource") or "/mcp"
             # Google advertises the issuer with a trailing slash here and without
@@ -47,6 +52,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.send_json({}, 404)
 
     def do_POST(self):
+        global refresh_requests
         body = self.rfile.read(int(self.headers.get("Content-Length", 0))).decode()
         if self.path == "/register":
             registration = json.loads(body)
@@ -58,16 +64,26 @@ class Handler(http.server.BaseHTTPRequestHandler):
             if fields.get("grant_type") == ["authorization_code"]:
                 valid = fields.get("code") == ["test-code"] and fields.get("code_verifier") == ["test-verifier"]
             else:
-                valid = fields.get("refresh_token") == ["refresh-token"]
+                refresh_requests += 1
+                if mode == "invalid-client":
+                    return self.send_json({"error": "invalid_client"}, 400)
+                if mode == "lost-response":
+                    self.close_connection = True
+                    return
+                expected = "refresh-token" if refresh_requests == 1 or mode == "standard" else "rotated-refresh-token"
+                valid = fields.get("refresh_token") == [expected]
             if not valid or fields.get("client_id") != ["test-client"] or fields.get("resource") != [origin + "/mcp"]:
                 return self.send_json({"error": "invalid_grant"}, 400)
-            return self.send_json({"access_token": "access-token", "token_type": "Bearer", "refresh_token": "refresh-token", "expires_in": 3600})
+            token = "rotated-refresh-token" if mode != "standard" and fields.get("grant_type") == ["refresh_token"] else "refresh-token"
+            return self.send_json({"access_token": "access-token", "token_type": "Bearer", "refresh_token": token, "expires_in": 3600})
         if self.path == "/mcp":
             if self.headers.get("Authorization") != "Bearer access-token":
                 return self.send_json({}, 401)
             message = json.loads(body)
             result = {"protocolVersion": "2025-03-26", "capabilities": {"tools": {}}, "serverInfo": {"name": "fourth-mcp", "version": "1"}}
             if message["method"] == "tools/list":
+                if mode == "verification-failure" and refresh_requests:
+                    return self.send_json({}, 503)
                 result = {"tools": [{"name": "read_example", "inputSchema": {"type": "object"}}]}
             if "id" not in message:
                 return self.send_json({})

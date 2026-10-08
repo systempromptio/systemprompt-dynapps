@@ -6,7 +6,7 @@
 use std::path::Path;
 
 use systemprompt::identifiers::AgentId;
-use systemprompt_web_admin::repositories::config::agents::{find_agent, list_configured_agents};
+use systemprompt_web_admin_core::catalog_index::agents::{find_agent, list_configured_agents};
 
 fn write(root: &Path, relative: &str, body: &str) {
     let path = root.join(relative);
@@ -86,7 +86,7 @@ fn agent_loader_joins_declared_skills_and_discards_invalid_mcp_ids() {
         agent
             .mcp_servers
             .iter()
-            .map(|id| id.as_str())
+            .map(systemprompt::identifiers::McpServerId::as_str)
             .collect::<Vec<_>>(),
         ["deployment"],
         "empty MCP ids must not reach the bridge profile"

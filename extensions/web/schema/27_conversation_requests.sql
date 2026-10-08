@@ -1,3 +1,46 @@
+-- Native sessions group request threads without rewriting the audit ledger.
+CREATE TABLE IF NOT EXISTS conversation_session_contexts (
+    user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    client_session_id text NOT NULL,
+    context_id text NOT NULL DEFAULT gen_random_uuid()::text UNIQUE,
+    PRIMARY KEY (user_id, client_session_id)
+);
+CREATE TABLE IF NOT EXISTS conversation_context_aliases (
+    original_context_id text NOT NULL,
+    context_id text NOT NULL REFERENCES conversation_session_contexts(context_id) ON DELETE CASCADE,
+    PRIMARY KEY (original_context_id, context_id)
+);
+
+CREATE OR REPLACE FUNCTION register_conversation_session()
+RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE canonical text;
+BEGIN
+    IF NEW.client_session_id IS NULL OR NEW.user_id IS NULL
+       OR NEW.actor_kind = 'job'
+       OR NEW.context_id = '00000000-0000-0000-0000-4c4547414359' THEN
+        RETURN NEW;
+    END IF;
+    INSERT INTO conversation_session_contexts(user_id, client_session_id)
+    VALUES (NEW.user_id, NEW.client_session_id) ON CONFLICT DO NOTHING;
+    SELECT context_id INTO canonical FROM conversation_session_contexts
+    WHERE user_id = NEW.user_id AND client_session_id = NEW.client_session_id;
+    INSERT INTO conversation_context_aliases(original_context_id, context_id)
+    VALUES (NEW.context_id, canonical) ON CONFLICT DO NOTHING;
+    RETURN NEW;
+END
+$$;
+DROP TRIGGER IF EXISTS ai_requests_conversation_session ON ai_requests;
+CREATE TRIGGER ai_requests_conversation_session
+AFTER INSERT OR UPDATE OF user_id, client_session_id, context_id ON ai_requests
+FOR EACH ROW EXECUTE FUNCTION register_conversation_session();
+
+-- An ambiguous legacy link never chooses between separate native sessions.
+CREATE OR REPLACE FUNCTION canonical_conversation_context(context_key text)
+RETURNS text LANGUAGE sql STABLE AS $function$
+SELECT COALESCE((SELECT MIN(context_id) FROM conversation_context_aliases
+                WHERE original_context_id = context_key HAVING COUNT(*) = 1), context_key)
+$function$;
+
 -- Shared classification: request labels take precedence over thread shape.
 --
 -- A side call is a probe, an explicitly labelled utility call, or — only
@@ -25,19 +68,23 @@ $function$;
 -- job owner, and a job is never a conversation.
 CREATE OR REPLACE VIEW conversation_requests AS
 WITH threads AS (
-    SELECT context_id, gateway_conversation_id, COUNT(*)::bigint AS thread_requests
-    FROM ai_requests
-    GROUP BY context_id, gateway_conversation_id
+    SELECT COALESCE(s.context_id, r.context_id) AS context_id,
+           r.gateway_conversation_id, COUNT(*)::bigint AS thread_requests
+    FROM ai_requests r LEFT JOIN conversation_session_contexts s
+      ON s.user_id = r.user_id AND s.client_session_id = r.client_session_id
+    GROUP BY COALESCE(s.context_id, r.context_id), r.gateway_conversation_id
 )
-SELECT r.id, r.user_id, r.session_id, r.client_session_id, r.context_id,
+SELECT r.id, r.user_id, r.session_id, r.client_session_id, COALESCE(s.context_id, r.context_id)::varchar(255) AS context_id,
        r.gateway_conversation_id, r.trace_id, r.provider, r.model, r.client_kind,
        r.client_attestation, r.status,
        r.max_tokens, r.input_tokens, r.output_tokens, r.cost_microdollars,
        r.latency_ms, r.created_at, r.completed_at,
        conversation_request_kind(r.request_kind, p.offered_tools_sha256 IS NOT NULL, t.thread_requests, r.client_session_id IS NOT NULL) AS effective_kind
 FROM ai_requests r
+LEFT JOIN conversation_session_contexts s
+  ON s.user_id = r.user_id AND s.client_session_id = r.client_session_id
 LEFT JOIN ai_request_payloads p ON p.ai_request_id = r.id
-JOIN threads t ON t.context_id = r.context_id
+JOIN threads t ON t.context_id = COALESCE(s.context_id, r.context_id)
    AND t.gateway_conversation_id IS NOT DISTINCT FROM r.gateway_conversation_id
 WHERE r.context_id <> '00000000-0000-0000-0000-4c4547414359'
   AND r.actor_kind <> 'job';
@@ -58,19 +105,10 @@ RETURNS TABLE (
     total_output_tokens bigint, total_cost_microdollars bigint,
     first_at timestamptz, last_at timestamptz, status text
 ) LANGUAGE sql STABLE AS $function$
-WITH scoped AS (
-    SELECT ar.id, ar.context_id, ar.gateway_conversation_id, ar.user_id,
-           ar.session_id, ar.client_session_id, ar.model, ar.client_kind, ar.client_attestation,
-           ar.request_kind,
-           ar.status, ar.input_tokens, ar.output_tokens, ar.cost_microdollars, ar.created_at,
-           COUNT(*) OVER (PARTITION BY ar.context_id, ar.gateway_conversation_id) AS thread_size
-    FROM ai_requests ar
-    WHERE ar.context_id <> '00000000-0000-0000-0000-4c4547414359'
-      AND ar.actor_kind <> 'job'
-      AND (context_ids IS NULL OR ar.context_id IN (SELECT unnest(context_ids)))
-), requests AS MATERIALIZED (
-    SELECT r.*, conversation_request_kind(r.request_kind, p.offered_tools_sha256 IS NOT NULL, r.thread_size, r.client_session_id IS NOT NULL) AS effective_kind
-    FROM scoped r LEFT JOIN ai_request_payloads p ON p.ai_request_id = r.id
+WITH requests AS MATERIALIZED (
+    SELECT r.* FROM conversation_requests r
+    WHERE context_ids IS NULL OR r.context_id IN (
+        SELECT canonical_conversation_context(unnest(context_ids)))
 ), agg AS (
     SELECT r.context_id,
         COUNT(*) FILTER (WHERE effective_kind = 'turn')::bigint AS turn_count,

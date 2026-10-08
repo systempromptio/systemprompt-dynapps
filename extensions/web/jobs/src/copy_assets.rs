@@ -2,6 +2,7 @@
 //!
 //! Runs after the CSS and JS bundle jobs, whose output it picks up.
 
+use sha2::{Digest, Sha256};
 use std::path::Path;
 use std::sync::Arc;
 
@@ -53,11 +54,17 @@ pub async fn copy_all_assets(
     dist_dir: &Path,
     assets: Vec<(&str, AssetDefinition)>,
 ) -> Result<(u64, u64), JobError> {
+    let version = javascript_version(&assets).await?;
     let mut copied = 0u64;
     let mut failed = 0u64;
 
     for (ext_id, asset) in assets {
-        match copy_asset(dist_dir, ext_id, &asset).await {
+        let result = if is_javascript(asset.destination()) {
+            copy_versioned_module(dist_dir, &asset, &version).await
+        } else {
+            copy_asset(dist_dir, ext_id, &asset).await
+        };
+        match result {
             Ok(()) => copied += 1,
             Err(e) => {
                 if asset.is_required() {
@@ -74,7 +81,96 @@ pub async fn copy_all_assets(
         }
     }
 
+    tokio::fs::create_dir_all(dist_dir.join("js")).await?;
+    tokio::fs::write(dist_dir.join("js/module-version.txt"), version).await?;
     Ok((copied, failed))
+}
+
+fn is_javascript(path: &str) -> bool {
+    Path::new(path)
+        .extension()
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("js"))
+}
+
+// Why: browser caches include dependencies, so include the whole graph:
+// changing a leaf must invalidate its importers too.
+async fn javascript_version(assets: &[(&str, AssetDefinition)]) -> Result<String, JobError> {
+    let mut modules: Vec<_> = assets
+        .iter()
+        .filter(|(_, asset)| is_javascript(asset.destination()))
+        .collect();
+    modules.sort_by(|(_, left), (_, right)| left.destination().cmp(right.destination()));
+    let mut hash = Sha256::new();
+    for (_, asset) in modules {
+        match tokio::fs::read(asset.source()).await {
+            Ok(bytes) => {
+                hash.update(asset.destination().as_bytes());
+                hash.update([0]);
+                hash.update(bytes);
+                hash.update([0]);
+            },
+            Err(error) if asset.is_required() => return Err(error.into()),
+            Err(_) => {},
+        }
+    }
+    Ok(hex::encode(hash.finalize()))
+}
+
+async fn copy_versioned_module(
+    dist_dir: &Path,
+    asset: &AssetDefinition,
+    version: &str,
+) -> Result<(), JobError> {
+    let source = tokio::fs::read_to_string(asset.source()).await?;
+    let destination = dist_dir.join(asset.destination());
+    if let Some(parent) = destination.parent() {
+        tokio::fs::create_dir_all(parent).await?;
+    }
+    // Why: browsers can read assets while the publish job replaces them.
+    let temporary = destination.with_extension(format!("{}.tmp", uuid::Uuid::new_v4()));
+    tokio::fs::write(&temporary, version_module_imports(&source, version)).await?;
+    tokio::fs::rename(temporary, destination).await?;
+    Ok(())
+}
+
+#[doc(hidden)]
+pub fn version_module_imports(source: &str, version: &str) -> String {
+    let mut output = String::with_capacity(source.len());
+    for line in source.split_inclusive('\n') {
+        let trimmed = line.trim_start();
+        let declaration = trimmed.starts_with("import ")
+            || trimmed.starts_with("export ")
+            || trimmed.starts_with("} from ");
+        let specifier = if declaration {
+            trimmed
+                .split_once("from ")
+                .map(|(_, path)| path)
+                .or_else(|| trimmed.strip_prefix("import "))
+        } else {
+            None
+        };
+        let replacement = specifier.and_then(|path| {
+            let quote = path.chars().next()?;
+            if !matches!(quote, '\'' | '"') {
+                return None;
+            }
+            let end = path[1..].find(quote)? + 1;
+            let url = &path[1..end];
+            if !(url.starts_with('.') || url.starts_with("/js/")) || !is_javascript(url) {
+                return None;
+            }
+            Some((
+                format!("{quote}{url}{quote}"),
+                format!("{quote}{url}?v={version}{quote}"),
+            ))
+        });
+        if let Some((old, new)) = replacement {
+            output.push_str(&line.replacen(&old, &new, 1));
+        } else {
+            output.push_str(line);
+        }
+    }
+    output
 }
 
 #[doc(hidden)]
@@ -123,10 +219,7 @@ impl Job for CopyExtensionAssetsJob {
         &self,
         ctx: &JobContext,
     ) -> Result<JobResult, systemprompt::traits::ProviderError> {
-        let paths = ctx
-            .app_paths::<Arc<AppPaths>>()
-            .ok_or(JobError::MissingContext("AppPaths"))?
-            .as_ref();
+        let paths = ctx.get::<Arc<AppPaths>>()?.as_ref();
         Ok(Self::execute_copy(paths).await?)
     }
 }

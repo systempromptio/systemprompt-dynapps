@@ -28,16 +28,113 @@ edition = "2024"
 version = "0.0.0"
 publish = false
 
-# Test code asserts by panicking and constructs fixtures liberally; relax the
-# strict production lints the root workspace enforces. This is an intentional
-# partial mirror of the root Cargo.toml [workspace.lints.clippy] block: only
-# the relaxations below differ.
+# Test code asserts by panicking and constructs fixtures liberally. This is a
+# full mirror of the root Cargo.toml [workspace.lints.clippy] and
+# [workspace.lints.rust] blocks; the only differences are the nine
+# relaxations at the end of the clippy block. Keep the two in lockstep.
 [workspace.lints.clippy]
+all = { level = "deny", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+nursery = { level = "warn", priority = -1 }
+cargo = { level = "warn", priority = -1 }
+perf = { level = "warn", priority = -1 }
+suspicious = { level = "deny", priority = -1 }
+
+cargo_common_metadata = "allow"
+multiple_crate_versions = "allow"
+return_self_not_must_use = "allow"
+must_use_candidate = "allow"
+trivially_copy_pass_by_ref = "allow"
+cast_possible_truncation = "allow"
+cast_sign_loss = "allow"
+cast_precision_loss = "allow"
+cast_possible_wrap = "allow"
+format_push_string = "allow"
+uninlined_format_args = "allow"
+result_unit_err = "allow"
+missing_docs_in_private_items = "allow"
+module_name_repetitions = "allow"
+derive_partial_eq_without_eq = "allow"
+unwrap_or_default = "allow"
+redundant_pub_crate = "allow"
+
+too_many_arguments = "deny"
+type_complexity = "warn"
+inefficient_to_string = "warn"
+unnecessary_wraps = "warn"
+unused_async = "warn"
+
+if_not_else = "warn"
+redundant_else = "warn"
+manual_let_else = "warn"
+match_bool = "warn"
+option_if_let_else = "warn"
+needless_pass_by_value = "warn"
+items_after_statements = "warn"
+semicolon_if_nothing_returned = "warn"
+
+or_fun_call = "warn"
+redundant_clone = "warn"
+unnecessary_to_owned = "warn"
+implicit_clone = "warn"
+large_futures = "warn"
+
+match_wild_err_arm = "warn"
+
+todo = "deny"
+unimplemented = "deny"
+dbg_macro = "deny"
+let_underscore_must_use = "deny"
+let_underscore_future = "deny"
+exit = "deny"
+rc_mutex = "deny"
+mem_forget = "deny"
+await_holding_lock = "deny"
+await_holding_refcell_ref = "deny"
+lossy_float_literal = "deny"
+read_zero_byte_vec = "deny"
+path_buf_push_overwrite = "deny"
+verbose_file_reads = "deny"
+empty_structs_with_brackets = "warn"
+rest_pat_in_fully_bound_structs = "warn"
+clone_on_ref_ptr = "warn"
+separated_literal_suffix = "warn"
+try_err = "warn"
+
+map_err_ignore = "warn"
+str_to_string = "warn"
+undocumented_unsafe_blocks = "warn"
+self_named_module_files = "warn"
+allow_attributes = "warn"
+allow_attributes_without_reason = "warn"
+
 unwrap_used = "allow"
 expect_used = "allow"
 panic = "allow"
-missing_panics_doc = "allow"
 missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+# A test is a linear sequence of assertions; its length is not branching logic.
+too_many_lines = "allow"
+# Assertion chains score as complexity without being any harder to read.
+cognitive_complexity = "allow"
+# The sanctioned skip pattern (scripts/lint-silent-skips.sh) reports on stderr.
+print_stderr = "allow"
+# Measurement tests (migration_cost) print their report under --nocapture.
+print_stdout = "allow"
+
+[workspace.lints.rust]
+unsafe_code = "deny"
+unsafe_op_in_unsafe_fn = "deny"
+missing_debug_implementations = "warn"
+missing_copy_implementations = "warn"
+trivial_casts = "warn"
+trivial_numeric_casts = "warn"
+unused_import_braces = "warn"
+unused_qualifications = "warn"
+variant_size_differences = "warn"
+unreachable_pub = "warn"
+unused_lifetimes = "warn"
+single_use_lifetimes = "warn"
 
 [workspace.dependencies]
 # The shared test harness: one throwaway-database implementation, one skip
@@ -48,7 +145,12 @@ astound-test-common = { path = "common" }
 systemprompt-mcp-shared = { path = "../extensions/mcp/shared" }
 systemprompt-mcp-agent = { path = "../extensions/mcp/systemprompt" }
 systemprompt-web-shared = { path = "../extensions/web/shared" }
-systemprompt-web-admin = { path = "../extensions/web/admin", features = ["governance-ssr"] }
+systemprompt-web-admin-core = { path = "../extensions/web/shared/admin-core" }
+systemprompt-web-admin-analytics = { path = "../extensions/web/admin/analytics" }
+systemprompt-web-admin-catalog = { path = "../extensions/web/admin/catalog" }
+systemprompt-web-admin-governance = { path = "../extensions/web/admin/governance", features = ["governance-ssr"] }
+systemprompt-web-admin-identity = { path = "../extensions/web/admin/identity" }
+systemprompt-web-admin-platform = { path = "../extensions/web/admin/platform" }
 systemprompt-web-content = { path = "../extensions/web/content" }
 systemprompt-web-jobs = { path = "../extensions/web/jobs" }
 systemprompt-web-extension = { path = "../extensions/web" }
@@ -59,9 +161,9 @@ systemprompt-kit-export = { path = "../extensions/cli/kit-export" }
 # The contract crate additionally enables `full`, which links the core
 # extension crates whose `register_extension!` registrations carry the
 # migrations the admin schema needs.
-systemprompt = { version = "0.62.0", default-features = false, features = ["core", "database"] }
-systemprompt-security = { version = "0.62.0" }
-systemprompt-api = { version = "0.62.0" }
+systemprompt = { version = "0.63.0", default-features = false, features = ["core", "database"] }
+systemprompt-security = { version = "0.63.0" }
+systemprompt-api = { version = "0.63.0" }
 
 # HTTP contract harness — drives the real admin router in-process.
 axum = "0.8"
@@ -94,7 +196,7 @@ zip = { version = "8", default-features = false, features = ["deflate"] }
 rmcp = { version = "=3.3.0", features = ["server"] }
 uuid = { version = "1.18", features = ["v4"] }
 base64 = "0.22"
-# Pinned to what `extensions/web/admin` uses for the share-token HMAC, so the
+# Pinned to what `extensions/web/admin/catalog` uses for the share-token HMAC, so the
 # contract suite's expired-token forgery signs with the same primitive.
 sha2 = "0.10"
 # Pinned to the version core signs with, so the tokens this suite mints for the
@@ -104,7 +206,7 @@ jsonwebtoken = { version = "11", features = ["rust_crypto"] }
 # Local development and `next` deploys use the persistent sibling core checkout
 # directly; `just core-guard` requires it clean at bridge/CORE_REF. Keep version
 # requirements and this block aligned in both workspaces; `main` comments it out.
-# INACTIVE: core 0.61.0 is published; `main` builds against the registry. Uncomment on `next` when building against the sibling core checkout.
+# INACTIVE: core 0.63.0 is published; `main` builds against the registry. Uncomment on `next` when building against the sibling core checkout.
 # [patch.crates-io]
 # systemprompt = { path = "../../systemprompt-core/systemprompt" }
 # systemprompt-models = { path = "../../systemprompt-core/crates/shared/models" }

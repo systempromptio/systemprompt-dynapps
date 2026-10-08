@@ -3,10 +3,10 @@
 //! export the parser accepts back.
 
 use chrono::Utc;
-use systemprompt_web_admin::repositories::governance_chain::declared::{
+use systemprompt_web_admin_governance::repositories::governance_chain::declared::{
     DeclaredChain, parse_declared_chain,
 };
-use systemprompt_web_admin::repositories::governance_chain::export::{
+use systemprompt_web_admin_governance::repositories::governance_chain::export::{
     compute_chain_drift, render_chain_export,
 };
 

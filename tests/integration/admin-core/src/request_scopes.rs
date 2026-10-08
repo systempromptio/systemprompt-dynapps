@@ -7,13 +7,13 @@
 //! else.
 
 use sqlx::PgPool;
-use systemprompt_web_admin::repositories::people_usage::get_scope_usage;
-use systemprompt_web_admin::repositories::people_usage::totals::list_scope_totals;
-use systemprompt_web_admin::repositories::scope::defaults::set_scope_defaults;
-use systemprompt_web_admin::repositories::scope::membership::UNATTRIBUTED;
-use systemprompt_web_admin::repositories::scope::{
+use systemprompt_web_admin_core::repositories::scope::defaults::set_scope_defaults;
+use systemprompt_web_admin_core::repositories::scope::membership::UNATTRIBUTED;
+use systemprompt_web_admin_core::repositories::scope::{
     Attribution, ScopeKind, ScopeQuery, ScopeTarget,
 };
+use systemprompt_web_admin_identity::repositories::people_usage::get_scope_usage;
+use systemprompt_web_admin_identity::repositories::people_usage::totals::list_scope_totals;
 use systemprompt_web_shared::GroupId;
 
 use crate::fixtures::{
