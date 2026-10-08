@@ -1,4 +1,9 @@
 //! HTTP handlers for user administration.
+//!
+//! `DELETE /users/{id}` archives (NFR-5.2): the account stops signing in and
+//! leaves every roster, its credentials are revoked, its history stays.
+//! `POST /users/{id}/restore` reverses it inside
+//! `retention.archived_users_days`.
 
 use std::sync::Arc;
 
@@ -8,6 +13,7 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use sqlx::PgPool;
 
+use systemprompt::config::ProfileBootstrap;
 use systemprompt::identifiers::UserId;
 
 use crate::repositories;
@@ -97,9 +103,17 @@ pub(crate) async fn delete_user_handler(
     if !user_ctx.is_admin {
         return Err(AdminError::Forbidden("Admin access required".to_owned()));
     }
-    if !repositories::users::mutations::delete_user(&pool, &user_id).await? {
+    if !repositories::users::mutations::archive_user(
+        &pool,
+        &user_id,
+        &user_ctx.user_id,
+        "archived from the admin console",
+    )
+    .await?
+    {
         return Err(AdminError::NotFound("User not found".to_owned()));
     }
+    repositories::users::revocation::revoke_user_access(&pool, &user_id).await?;
     let p = Arc::clone(&pool);
     let uid = user_ctx.user_id.clone();
     let target = user_id.clone();
@@ -107,6 +121,40 @@ pub(crate) async fn delete_user_handler(
         activity::record(
             &p,
             NewActivity::entity_deleted(
+                &uid,
+                ActivityEntity::User,
+                target.as_str(),
+                target.as_str(),
+            ),
+        )
+        .await;
+    });
+    Ok(StatusCode::NO_CONTENT.into_response())
+}
+
+pub(crate) async fn restore_user_handler(
+    State(pool): State<Arc<PgPool>>,
+    Extension(user_ctx): Extension<UserContext>,
+    Path(user_id_raw): Path<String>,
+) -> AdminResult<Response> {
+    let user_id = UserId::new(user_id_raw);
+    if !user_ctx.is_admin {
+        return Err(AdminError::Forbidden("Admin access required".to_owned()));
+    }
+    let profile = ProfileBootstrap::get().map_err(AdminError::internal)?;
+    let window_days = i32::try_from(profile.retention.archived_users_days).unwrap_or(i32::MAX);
+    if !repositories::users::mutations::restore_user(&pool, &user_id, window_days).await? {
+        return Err(AdminError::Conflict(format!(
+            "Not restorable: the user is not archived, or was archived more than {window_days} days ago"
+        )));
+    }
+    let p = Arc::clone(&pool);
+    let uid = user_ctx.user_id.clone();
+    let target = user_id.clone();
+    tokio::spawn(async move {
+        activity::record(
+            &p,
+            NewActivity::entity_updated(
                 &uid,
                 ActivityEntity::User,
                 target.as_str(),

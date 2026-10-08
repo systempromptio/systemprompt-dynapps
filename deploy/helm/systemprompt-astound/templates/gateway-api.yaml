@@ -1,0 +1,93 @@
+{{- if .Values.gatewayApi.enabled }}
+{{- $fullname := include "astound.fullname" . -}}
+{{- $host := required "routing.host is required" .Values.routing.host -}}
+{{- $g := .Values.gatewayApi -}}
+{{- if not $g.existingGateway }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: {{ $fullname }}
+  labels:
+    {{- include "astound.labels" . | nindent 4 }}
+  annotations:
+    {{- with $g.certificateMapName }}
+    networking.gke.io/certmap: {{ . }}
+    {{- end }}
+spec:
+  gatewayClassName: {{ $g.gatewayClassName }}
+  listeners:
+    - name: https
+      protocol: HTTPS
+      port: 443
+      hostname: {{ $host }}
+  {{- with $g.staticAddressName }}
+  addresses:
+    - type: NamedAddress
+      value: {{ . }}
+  {{- end }}
+---
+{{- end }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ $fullname }}
+  labels:
+    {{- include "astound.labels" . | nindent 4 }}
+spec:
+  parentRefs:
+    - name: {{ default $fullname $g.existingGateway }}
+  hostnames: [{{ $host }}]
+  rules:
+    - matches:
+        {{- range .Values.routing.gatewayPaths }}
+        - path: {type: PathPrefix, value: {{ . }}}
+        {{- end }}
+      backendRefs:
+        - name: {{ $fullname }}-gateway
+          port: {{ .Values.service.port }}
+    - matches:
+        - path: {type: PathPrefix, value: /}
+      backendRefs:
+        - name: {{ $fullname }}-admin
+          port: {{ .Values.service.port }}
+{{- range $c := list "gateway" "admin" }}
+---
+apiVersion: networking.gke.io/v1
+kind: HealthCheckPolicy
+metadata:
+  name: {{ $fullname }}-{{ $c }}
+  labels:
+    {{- include "astound.labels" $ | nindent 4 }}
+spec:
+  default:
+    checkIntervalSec: 5
+    timeoutSec: 3
+    healthyThreshold: 1
+    unhealthyThreshold: 2
+    config:
+      type: HTTP
+      httpHealthCheck:
+        port: {{ $.Values.service.port }}
+        requestPath: /readyz
+  targetRef:
+    group: ""
+    kind: Service
+    name: {{ $fullname }}-{{ $c }}
+---
+apiVersion: networking.gke.io/v1
+kind: GCPBackendPolicy
+metadata:
+  name: {{ $fullname }}-{{ $c }}
+  labels:
+    {{- include "astound.labels" $ | nindent 4 }}
+spec:
+  default:
+    timeoutSec: {{ $.Values.routing.backendTimeoutSec }}
+    connectionDraining:
+      drainingTimeoutSec: {{ $.Values.routing.drainingTimeoutSec }}
+  targetRef:
+    group: ""
+    kind: Service
+    name: {{ $fullname }}-{{ $c }}
+{{- end }}
+{{- end }}

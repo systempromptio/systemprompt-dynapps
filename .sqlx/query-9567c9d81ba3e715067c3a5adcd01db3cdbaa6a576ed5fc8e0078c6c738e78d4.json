@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM gateway_overhead_daily WHERE date < $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Date"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "9567c9d81ba3e715067c3a5adcd01db3cdbaa6a576ed5fc8e0078c6c738e78d4"
+}

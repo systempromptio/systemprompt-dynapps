@@ -56,6 +56,15 @@ async fn init_context() -> Result<Arc<AppContext>> {
 async fn main() -> Result<()> {
     systemprompt::logging::init_console_logging();
 
+    let violations = systemprompt_mcp_agent::tools::schema_violations();
+    if !violations.is_empty() {
+        let listed: Vec<String> = violations.iter().map(ToString::to_string).collect();
+        anyhow::bail!(
+            "refusing to serve malformed tool schemas:\n{}",
+            listed.join("\n")
+        );
+    }
+
     let addr = format!("0.0.0.0:{}", port());
     // Why: core's supervisor judges this process by pid and port, so the port
     // is claimed before the slow, bounded bring-up and a clash fails at once.

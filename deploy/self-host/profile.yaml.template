@@ -26,6 +26,11 @@ database:
 server:
   host: 0.0.0.0
   port: 8080
+  # Prometheus /metrics listener (gateway_overhead_seconds,
+  # gateway_upstream_duration_seconds and the rest). Same host, separate port,
+  # no auth: the compose files expose it on the internal network only, never
+  # publish it. Remove the line to turn the listener off.
+  metrics_port: 9090
   api_server_url: @EXTERNAL_URL@
   api_internal_url: http://localhost:8080
   api_external_url: @EXTERNAL_URL@

@@ -12,7 +12,7 @@
 //!   consumed by the SSR layer.
 //! - **Analytics / housekeeping** ([`ContentAnalyticsAggregationJob`],
 //!   [`SecretMigrationJob`]) — periodic rollups and one-shot migrations.
-//! - **Data lifecycle** ([`RetentionDailyReportJob`],
+//! - **Data lifecycle** ([`RetentionDailyReportJob`], [`AuditChainVerifyJob`],
 //!   [`RetentionExportWeeklyJob`], [`RetentionExportMonthlyJob`]) — measures,
 //!   archives and health-checks the retention-managed tables; see
 //!   `retention/mod.rs`.
@@ -24,11 +24,13 @@ mod error;
 mod registry;
 
 mod access_expiry;
+mod audit_chain;
 mod bundle_admin_css;
 mod content_analytics;
 mod conversation_judge;
 mod conversation_rollup;
 mod copy_assets;
+mod gateway_overhead;
 mod governance_bootstrap;
 mod ingestion;
 mod llms_txt;
@@ -48,11 +50,13 @@ pub use error::JobError;
 pub use registry::{JOB_TAG, extension_jobs};
 
 pub use access_expiry::{AccessExpiryJob, ExpirySweep, lost_manage_role};
+pub use audit_chain::AuditChainVerifyJob;
 pub use bundle_admin_css::BundleAdminCssJob;
 pub use content_analytics::ContentAnalyticsAggregationJob;
 pub use conversation_judge::ConversationJudgeJob;
 pub use conversation_rollup::ConversationRollupJob;
 pub use copy_assets::CopyExtensionAssetsJob;
+pub use gateway_overhead::GatewayOverheadRollupJob;
 pub use governance_bootstrap::GovernanceBootstrapJob;
 pub use ingestion::ContentIngestionJob;
 pub use llms_txt::LlmsTxtGenerationJob;
@@ -80,6 +84,7 @@ pub mod internals {
         run_with_classifier,
     };
     pub use crate::copy_assets::{copy_all_assets, copy_asset, version_module_imports};
+    pub use crate::gateway_overhead::{previous_utc_day, retention_cutoff};
     pub use crate::governance_bootstrap::{
         GovernanceStatus, check_governance_config, check_judge_config,
     };

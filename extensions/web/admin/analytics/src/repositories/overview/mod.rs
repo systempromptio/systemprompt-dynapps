@@ -11,6 +11,7 @@
 //! nothing here is folded into a single fallible load.
 
 pub mod dimension_series;
+pub mod gateway_overhead;
 pub mod kpis;
 pub mod queues;
 pub mod scopes;

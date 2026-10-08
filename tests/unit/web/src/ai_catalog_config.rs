@@ -269,7 +269,7 @@ fn the_gateway_default_model_is_a_catalog_entry() {
             .iter()
             .map(|deployment| deployment.provider.as_str())
             .collect::<Vec<_>>(),
-        vec!["anthropic"]
+        vec!["vertex-anthropic-eu"]
     );
     assert!(
         provider(route.provider.as_str())
@@ -303,6 +303,7 @@ fn every_vertex_provider_shares_the_vertex_secret() {
     for name in [
         "vertex",
         "vertex-anthropic",
+        "vertex-anthropic-eu",
         "vertex-maas",
         "vertex-maas-us-central1",
     ] {

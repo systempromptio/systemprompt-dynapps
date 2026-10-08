@@ -1,0 +1,317 @@
+# Default values for systemprompt-astound.
+# Every value a GKE operator MUST set is marked REQUIRED; values-gke-example.yaml
+# shows a complete set. Runbook: docs/install/gke.md.
+
+nameOverride: ""
+fullnameOverride: ""
+
+image:
+  # Private GHCR by default. Cloudfresh mirrors it to Artifact Registry, e.g.
+  # europe-west1-docker.pkg.dev/<project>/astound/systemprompt-astound
+  repository: ghcr.io/astound-digital/systemprompt-astound
+  # Defaults to Chart.appVersion. Versioned tags are immutable; never use latest.
+  tag: ""
+  # Pin the verified digest (cosign verify, deploy/self-host/README.md §6) in production.
+  digest: ""
+  pullPolicy: IfNotPresent
+# e.g. [{name: ghcr-pull}] when pulling from GHCR; empty for Artifact Registry
+# with the node service account granted roles/artifactregistry.reader.
+imagePullSecrets: []
+
+# ---------------------------------------------------------------------------
+# Profile: rendered into a ConfigMap per role from the values below. It is the
+# Kubernetes form of deploy/self-host/profile.yaml.template; secrets never
+# appear here (they come from secrets.json, see `secrets`).
+# ---------------------------------------------------------------------------
+profile:
+  # REQUIRED. Public https URL users and the bridge reach, e.g. https://ai.example.com
+  externalUrl: ""
+  # REQUIRED. E-mail of the bootstrap `admin` user (first SSO sign-in).
+  adminEmail: ""
+  # Load balancer source ranges whose X-Forwarded-For is trusted. The GKE
+  # external Application Load Balancer connects from the Google Front End ranges.
+  trustedProxies:
+    - 35.191.0.0/16
+    - 130.211.0.0/22
+  # Per-pod concurrency ceiling; past it the pod answers 503 + Retry-After and
+  # /readyz reports {"status":"saturated"}, so the load balancer moves traffic.
+  maxInFlight: 512
+  maxConcurrentStreams: 256
+  logLevel: normal
+  # Uploaded and generated files. GKE uses one bucket every pod sees, reached
+  # through Workload Identity (the GSA needs roles/storage.objectAdmin on it).
+  storage:
+    backend: gcs
+    bucket: ""          # REQUIRED with backend gcs
+    prefix: astound/files
+    credentials: workload_identity
+  # Requests per second per client address, one bucket per route group; same
+  # meanings as deploy/self-host/profile.yaml.template. Behind the GKE load
+  # balancer the client address is the X-Forwarded-For hop it trusts.
+  rateLimits:
+    disabled: false
+    oauth_public_per_second: 10
+    oauth_auth_per_second: 10
+    contexts_per_second: 100
+    tasks_per_second: 50
+    artifacts_per_second: 50
+    agent_registry_per_second: 50
+    agents_per_second: 20
+    mcp_registry_per_second: 50
+    mcp_per_second: 200
+    stream_per_second: 100
+    content_per_second: 50
+    gateway_per_second: 100
+    bridge_auth_per_second: 20
+    burst_multiplier: 3
+  retention:
+    logs_days: 14
+    analytics_events_days: 30
+    ai_request_messages_days: 30
+    ai_request_payload_raw_days: 7
+    governance_decisions_days: 180
+    mcp_tool_executions_days: 180
+    outbox_processed_days: 7
+  # Deep-merged over the generated profile last (lists replace). Use it for any
+  # profile key this chart does not surface, e.g. rate_limits or governance.
+  overrides: {}
+
+# ---------------------------------------------------------------------------
+# secrets.json (deploy/self-host/SECRETS.md lists every key). It is copied,
+# together with profile.yaml, into an in-memory profile directory by an init
+# container, because the server reads both from one directory.
+# Rotation = update the secret version, then `kubectl rollout restart`.
+# ---------------------------------------------------------------------------
+secrets:
+  # csi            Google Secret Manager through the Secret Store CSI driver (GKE add-on).
+  # existingSecret a Kubernetes Secret you manage (External Secrets, Config Sync, ...).
+  # inline         the chart creates a Secret from `inline.json`. Development only.
+  mode: csi
+  # Name of the file inside the source; the copy is always secrets.json.
+  fileName: secrets.json
+  csi:
+    # GKE Secret Manager add-on. For the open-source driver + GCP provider use
+    # driver secrets-store.csi.k8s.io and provider gcp.
+    driver: secrets-store-gke.csi.k8s.io
+    provider: gke
+    # REQUIRED with mode csi: full resource name of the secret version holding the
+    # whole secrets.json document. Pin a version number in production, so a
+    # restart never picks up an unreviewed rotation.
+    secretVersion: ""   # projects/<project>/secrets/astound-secrets-json/versions/1
+  existingSecret:
+    name: ""
+    key: secrets.json
+  inline:
+    json: ""
+
+# ---------------------------------------------------------------------------
+# Database: Cloud SQL for PostgreSQL 16 through the Cloud SQL Auth Proxy, run
+# as a native sidecar (restartPolicy: Always init container, Kubernetes 1.29+)
+# so it starts before the app and ends with the migrate Job. secrets.json
+# database_url then points at 127.0.0.1, e.g. with IAM database auth:
+#   postgres://astound-gw%40<project>.iam@127.0.0.1:5432/systemprompt?sslmode=disable
+# ---------------------------------------------------------------------------
+cloudSqlProxy:
+  enabled: true
+  image:
+    repository: gcr.io/cloud-sql-connectors/cloud-sql-proxy
+    tag: "2.14.1"
+  # REQUIRED. <project>:<region>:<instance>
+  instanceConnectionName: ""
+  port: 5432
+  autoIamAuthn: true
+  privateIp: true
+  extraArgs: []
+  resources:
+    requests: {cpu: 100m, memory: 128Mi}
+    limits: {cpu: "1", memory: 256Mi}
+
+# ---------------------------------------------------------------------------
+# Identity
+# ---------------------------------------------------------------------------
+serviceAccount:
+  create: true
+  name: ""
+  # REQUIRED on GKE: the Google service account bound through Workload
+  # Identity (roles/cloudsql.client, roles/cloudsql.instanceUser,
+  # roles/secretmanager.secretAccessor, roles/storage.objectAdmin on the bucket).
+  gcpServiceAccount: ""
+  annotations: {}
+
+# ---------------------------------------------------------------------------
+# Migrations: a one-shot Job (image argument `migrate`: infra db migrate, then
+# admin bootstrap) run as a pre-install/pre-upgrade hook. Pods never migrate
+# on boot (database.migrate_on_boot: false) and refuse a behind schema. The
+# hook uses its own KSA, `<fullname>-migrate`, which needs the same Workload
+# Identity binding as the app KSA.
+# ---------------------------------------------------------------------------
+migrate:
+  enabled: true
+  backoffLimit: 0
+  activeDeadlineSeconds: 1800
+  ttlSecondsAfterFinished: 86400
+  resources:
+    requests: {cpu: 500m, memory: 1Gi}
+    limits: {cpu: "2", memory: 2Gi}
+
+# ---------------------------------------------------------------------------
+# Gateway role: /v1 inference, bridge, OAuth, well-known, health. No
+# scheduler, MCP or agent workers. Scales horizontally.
+# ---------------------------------------------------------------------------
+gateway:
+  replicas: 3
+  resources:
+    requests: {cpu: "1", memory: 1Gi}
+    limits: {cpu: "2", memory: 2Gi}
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 12
+    targetCPUUtilizationPercentage: 65
+    # Optional per-pod custom metric (needs the Custom Metrics Stackdriver
+    # Adapter or Prometheus Adapter). core 0.63 exports
+    # http_in_flight_saturation (0..1 of server.max_in_flight) on /metrics
+    # when server.metrics_port is set, so this works once an adapter is installed.
+    customMetric:
+      enabled: false
+      name: http_in_flight_saturation
+      targetAverageValue: "0.7"
+    behavior:
+      scaleDown:
+        stabilizationWindowSeconds: 600
+        policies: [{type: Pods, value: 1, periodSeconds: 120}]
+      scaleUp:
+        stabilizationWindowSeconds: 0
+        policies: [{type: Percent, value: 100, periodSeconds: 60}]
+  pdb:
+    enabled: true
+    minAvailable: 2
+  topologySpread: true
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  podAnnotations: {}
+
+# ---------------------------------------------------------------------------
+# Admin role: console, scheduler, MCP servers, agents. Exactly ONE replica:
+# two would run the scheduler twice. Recreate strategy, so an upgrade never
+# overlaps two admins. No PDB (a 1-replica PDB blocks node drains).
+# ---------------------------------------------------------------------------
+admin:
+  resources:
+    requests: {cpu: "1", memory: 2Gi}
+    limits: {cpu: "2", memory: 4Gi}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  podAnnotations: {}
+
+# Shared pod settings
+pod:
+  # The server has no graceful shutdown: preStop waits for the load balancer to
+  # deregister the pod before SIGTERM; streams get the rest of the grace period.
+  preStopSleepSeconds: 30
+  terminationGracePeriodSeconds: 120
+  # Sizes of the per-pod scratch volumes (emptyDir sizeLimit).
+  volumes:
+    storage: 10Gi      # /app/storage: journal (data/), exports, scratch, files cache
+    web: 1Gi           # /app/web: rendered public site (publish_pipeline at boot)
+    servicesCache: 1Gi
+    logs: 2Gi
+    tmp: 1Gi           # memory-backed /tmp for MCP children
+    home: 512Mi        # /home/app: LibreOffice profile for document exports
+  extraEnv: []
+
+probes:
+  startup:   {path: /livez,  periodSeconds: 5,  failureThreshold: 120}
+  liveness:  {path: /livez,  periodSeconds: 10, failureThreshold: 3, timeoutSeconds: 5}
+  readiness: {path: /readyz, periodSeconds: 5,  failureThreshold: 2, timeoutSeconds: 3}
+
+service:
+  type: ClusterIP
+  port: 8080
+
+# Prometheus listener (server.metrics_port): gateway_overhead_seconds,
+# gateway_upstream_duration_seconds, http_load_shed_total,
+# systemprompt_quota_denials_total, systemprompt_usage_anomaly_total,
+# http_request_duration_seconds.
+metrics:
+  enabled: true
+  port: 9090
+  # Google Cloud Managed Service for Prometheus
+  podMonitoring:
+    enabled: false
+    interval: 30s
+  # prometheus-operator
+  podMonitor:
+    enabled: false
+    interval: 30s
+    labels: {}
+
+# ---------------------------------------------------------------------------
+# North-south traffic. Choose ONE of ingress (GKE Ingress + BackendConfig) or
+# gatewayApi (GKE Gateway controller). /v1 goes to the gateway pods, everything
+# else to the admin pod.
+# ---------------------------------------------------------------------------
+routing:
+  host: ""              # REQUIRED, e.g. ai.example.com
+  gatewayPaths: ["/v1"]
+  # Long enough for streamed completions.
+  backendTimeoutSec: 600
+  drainingTimeoutSec: 60
+
+ingress:
+  enabled: true
+  staticIpName: ""      # kubernetes.io/ingress.global-static-ip-name
+  managedCertificate:
+    enabled: true
+  # Existing TLS Secret instead of a ManagedCertificate.
+  tlsSecretName: ""
+  sslPolicy: ""         # FrontendConfig sslPolicy, e.g. astound-modern-tls
+  annotations: {}
+
+gatewayApi:
+  enabled: false
+  gatewayClassName: gke-l7-global-external-managed
+  # Attach to an existing Gateway instead of creating one.
+  existingGateway: ""
+  certificateMapName: ""   # networking.gke.io/certmap
+  staticAddressName: ""
+
+# ---------------------------------------------------------------------------
+# NetworkPolicy (GKE Dataplane V2 enforces it). Egress allow-list: DNS, the
+# metadata server (Workload Identity), Cloud SQL private IP (proxy, 3307),
+# Private Google Access ranges (443). AI providers outside Google (e.g.
+# api.anthropic.com failover) need `extraEgress` or allowPublicHttps.
+# ---------------------------------------------------------------------------
+networkPolicy:
+  enabled: true
+  # REQUIRED with the proxy: the Cloud SQL private services access range.
+  cloudSqlCidrs: []
+  googleApisCidrs:
+    - 199.36.153.8/30    # private.googleapis.com
+    - 199.36.153.4/30    # restricted.googleapis.com
+  # Allows 443 to any public address (RFC 1918 excluded). Needed unless DNS
+  # steers *.googleapis.com to the ranges above, and for non-Google providers.
+  allowPublicHttps: false
+  ingressFromCidrs:
+    - 35.191.0.0/16      # Google Front End and health checks
+    - 130.211.0.0/22
+  # Namespace label selector allowed to scrape the metrics port.
+  metricsFromNamespaceLabels:
+    kubernetes.io/metadata.name: gmp-system
+  extraEgress: []
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  seccompProfile: {type: RuntimeDefault}
+
+containerSecurityContext:
+  runAsNonRoot: true
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities: {drop: ["ALL"]}
+  seccompProfile: {type: RuntimeDefault}

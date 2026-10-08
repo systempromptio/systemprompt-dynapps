@@ -173,3 +173,20 @@ fn named_container_filters(
         _ => (request.group_filter(), request.project_filter()),
     }
 }
+
+pub async fn list_managed_member_ids(
+    pool: &PgPool,
+    manager: &UserId,
+) -> Result<Vec<UserId>, sqlx::Error> {
+    let ids = sqlx::query_scalar!(
+        r#"SELECT DISTINCT member.user_id AS "user_id!"
+           FROM user_projects mine
+           JOIN user_projects member ON member.project_id = mine.project_id
+           WHERE mine.user_id = $1
+           ORDER BY 1"#,
+        manager.as_str()
+    )
+    .fetch_all(pool)
+    .await?;
+    Ok(ids.into_iter().map(UserId::new).collect())
+}

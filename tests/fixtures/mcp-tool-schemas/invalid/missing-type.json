@@ -1,0 +1,4 @@
+{
+  "properties": { "command": { "type": "string" } },
+  "required": ["command"]
+}

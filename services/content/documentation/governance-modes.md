@@ -8,7 +8,7 @@ kind: "guide"
 public: true
 tags: ["enterprise", "governance", "admin"]
 published_at: "2026-09-29"
-updated_at: "2026-09-29"
+updated_at: "2026-10-08"
 after_reading_this:
   - "Know which of the three enforcement planes refuse traffic today (none of them)"
   - "Read what each plane would have refused, from the console or the CLI"
@@ -95,18 +95,39 @@ findings the report counts as *would have blocked*, so every finding is
 written with `blocked = false`. Under enforce, a streamed response is still
 only audited: its tokens are on the wire before the scan finishes.
 
+**Redaction ignores the mode.** Core can rewrite a request finding in place,
+as `[REDACTED:<category>]`, for every category listed in
+`safety.redact_categories`. That rewrite, and its fail-closed refusal of
+content that cannot be redacted (a finding with no location, or a span inside
+a signed block or protocol field), apply under `warn` as well as `enforce`.
+This is why `services/gateway/policies.yaml` lists no `redact_categories`:
+switching redaction on would let warn mode refuse requests. It is switched on
+together with the enforce flip. Separately, each scanner's
+`scanner_settings.<name>.fail_mode` decides whether a scanner fault or timeout
+blocks; here `secrets` is `fail_mode: open` with a 2-second timeout, so a fault
+is recorded as a `scanner_failure` finding.
+
 ### Quota windows
 
 | Subject | Window | Threshold |
 |---|---|---|
 | each user | 1 hour | 600 requests or $20 |
+| each project (`project`) | 1 day | $100 |
 | the whole instance (`organization`) | 1 day | $200 |
 
-Every window is still reserved and evaluated. A breach is recorded as a `warn`
-under policy `quota` rather than answered with HTTP 429. Treat these numbers
+Every window still runs in full under warn. Admission **reserves** the
+request's estimated tokens and cost in each window, completion settles the
+bucket to the audited usage, and a failed request releases its reservation, so
+the usage figures are the same as they would be under enforce. A breach is
+recorded as a `warn` under policy `quota`, and counted in
+`systemprompt_quota_denials_total{mode="warn"}`, rather than answered with
+HTTP 429. Treat these numbers
 as **warning thresholds, not ceilings**. The instance has no spend cap. The
-windows can also be scoped to a `group`, `project` or `role`, or run for a
-calendar month, but none of those is declared today. Edit them live at
+windows can also be scoped to a `group`, `role`, `cost_centre`, `practice` or
+`api_key`, or run for a calendar month, but none of those is declared today.
+An API key's own budget and request ceiling (see
+[User & Access Management](/documentation/enterprise-user-access#per-key-limits-and-scope-bindings))
+are quota windows too and follow the same `quota_mode`. Edit them live at
 `/admin/gateway/policies`; see
 [Cost Management](/documentation/enterprise-cost-management).
 
@@ -154,8 +175,10 @@ Change one plane, watch it for a few days, then move to the next.
      is ready.
    - Scanners: set `safety.mode: enforce` in `services/gateway/policies.yaml`.
      The block lists then take effect exactly as written.
-   - Quotas: set `quota_mode: enforce`. A breach then answers HTTP 429, and
-     the thresholds become ceilings.
+   - Quotas: set `quota_mode: enforce`. A breach then answers HTTP 429 with a
+     `Retry-After` and a machine-readable `error.quota` body, and the
+     thresholds become ceilings. A request whose reserved estimate alone
+     breaches a cost ceiling is refused before the provider is called.
 3. **Deploy it.** Both files are read at boot. The gateway policy table can
    also be edited live at `/admin/gateway/policies`, and `/admin/sync` shows
    whether the table and the file have drifted apart.

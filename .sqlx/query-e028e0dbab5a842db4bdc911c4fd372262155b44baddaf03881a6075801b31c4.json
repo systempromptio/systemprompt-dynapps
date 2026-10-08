@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, position, name, description, model_pattern, provider, upstream_model,\n                 extra_headers, pricing, when_match, requires, fallbacks, by_scope,\n                 explicit_id, source, updated_at\n            FROM gateway_routes\n           ORDER BY position ASC, id ASC",
+  "query": "SELECT id, position, name, description, model_pattern, provider, upstream_model,\n                 extra_headers, pricing, when_match, requires, fallbacks, by_scope,\n                 routing, explicit_id, source, updated_at\n            FROM gateway_routes\n           ORDER BY position ASC, id ASC",
   "describe": {
     "columns": [
       {
@@ -148,6 +148,17 @@
       },
       {
         "ordinal": 13,
+        "name": "routing",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "gateway_routes",
+            "name": "routing"
+          }
+        }
+      },
+      {
+        "ordinal": 14,
         "name": "explicit_id",
         "type_info": "Bool",
         "origin": {
@@ -158,7 +169,7 @@
         }
       },
       {
-        "ordinal": 14,
+        "ordinal": 15,
         "name": "source",
         "type_info": "Text",
         "origin": {
@@ -169,7 +180,7 @@
         }
       },
       {
-        "ordinal": 15,
+        "ordinal": 16,
         "name": "updated_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -197,10 +208,11 @@
       true,
       false,
       true,
+      true,
       false,
       false,
       false
     ]
   },
-  "hash": "8068de50af79ad48a646ea2acd932d68f36c5eb90c51797c6f103fb3887644c8"
+  "hash": "e028e0dbab5a842db4bdc911c4fd372262155b44baddaf03881a6075801b31c4"
 }

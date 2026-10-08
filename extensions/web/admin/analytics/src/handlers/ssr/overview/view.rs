@@ -15,6 +15,7 @@ use systemprompt_web_admin_core::util::time_range::{TimeRange, TimeRangePreset};
 use super::charts::charts;
 use super::data::OverviewData;
 use super::kpis_view::{OverviewKpiStripView, kpi_strip};
+use super::overhead_view::{OverheadView, overhead_view};
 use super::panels_view::{
     BoardSpec, ModelsBoardView, QueuesView, ScopeBoardView, models_board, queues, scope_board,
 };
@@ -100,6 +101,7 @@ pub(super) struct OverviewContext {
     pub queues: QueuesView,
     pub projects: ScopeBoardView,
     pub groups: ScopeBoardView,
+    pub overhead: OverheadView,
 }
 
 #[derive(Debug, Serialize)]
@@ -143,6 +145,7 @@ pub(super) fn overview_page(range: OverviewRange, data: &OverviewData) -> Overvi
             },
             &data.groups,
         ),
+        overhead: overhead_view(&data.overhead),
     }
 }
 

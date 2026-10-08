@@ -13,6 +13,9 @@ use sqlx::PgPool;
 use crate::repositories::analytics::site::SiteScope;
 use crate::repositories::analytics::site::models::{ModelStatsRow, list_model_stats};
 use crate::repositories::overview::dimension_series::{DimensionBucket, OverviewDimension};
+use crate::repositories::overview::gateway_overhead::{
+    GatewayOverheadDay, list_gateway_overhead_days,
+};
 use crate::repositories::overview::kpis::OverviewKpis;
 use crate::repositories::overview::queues::UsageAnomalyRow;
 use crate::repositories::overview::scopes::ScopeCostRow;
@@ -20,6 +23,7 @@ use crate::repositories::overview::series::OverviewSeriesPoint;
 use crate::repositories::overview::{dimension_series, kpis, queues, scopes, series};
 use systemprompt_web_admin_core::repositories::scope::{ScopeKind, SubjectScope};
 
+use super::overhead_view::OVERHEAD_DAYS;
 use super::view::OverviewRange;
 
 pub(super) const TOP_SCOPES: i64 = 5;
@@ -40,6 +44,7 @@ pub(super) struct OverviewData {
     pub projects: Loaded<Vec<ScopeCostRow>>,
     pub groups: Loaded<Vec<ScopeCostRow>>,
     pub models: Loaded<Vec<ModelStatsRow>>,
+    pub overhead: Loaded<Vec<GatewayOverheadDay>>,
 }
 
 pub(super) async fn load_overview(pool: &Arc<PgPool>, range: OverviewRange) -> OverviewData {
@@ -55,6 +60,7 @@ pub(super) async fn load_overview(pool: &Arc<PgPool>, range: OverviewRange) -> O
         projects,
         groups,
         models,
+        overhead,
     ) = tokio::join!(
         kpis::get_overview_kpis(pool, window),
         series::list_overview_series(pool, window),
@@ -65,6 +71,7 @@ pub(super) async fn load_overview(pool: &Arc<PgPool>, range: OverviewRange) -> O
         scopes::list_top_scopes_by_cost(pool, ScopeKind::Project, window, TOP_SCOPES),
         scopes::list_top_scopes_by_cost(pool, ScopeKind::Group, window, TOP_SCOPES),
         list_model_stats(pool, window, &scope),
+        list_gateway_overhead_days(pool, OVERHEAD_DAYS),
     );
 
     OverviewData {
@@ -77,5 +84,6 @@ pub(super) async fn load_overview(pool: &Arc<PgPool>, range: OverviewRange) -> O
         projects,
         groups,
         models,
+        overhead,
     }
 }

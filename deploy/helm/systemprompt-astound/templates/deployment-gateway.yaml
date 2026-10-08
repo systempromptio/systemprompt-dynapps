@@ -1,0 +1,60 @@
+{{- $fullname := include "astound.fullname" . -}}
+{{- $sel := dict "ctx" . "component" "gateway" -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullname }}-gateway
+  labels:
+    {{- include "astound.labels" . | nindent 4 }}
+    app.kubernetes.io/component: gateway
+spec:
+  {{- if not .Values.gateway.autoscaling.enabled }}
+  replicas: {{ .Values.gateway.replicas }}
+  {{- end }}
+  revisionHistoryLimit: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: {maxSurge: 25%, maxUnavailable: 0}
+  selector:
+    matchLabels:
+      {{- include "astound.selectorLabels" $sel | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "astound.labels" . | nindent 8 }}
+        {{- include "astound.selectorLabels" $sel | nindent 8 }}
+      annotations:
+        checksum/profile: {{ include "astound.profile" (dict "ctx" . "role" "gateway") | sha256sum }}
+        checksum/secrets-source: {{ toJson .Values.secrets | sha256sum }}
+        {{- with .Values.gateway.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- include "astound.podSpec" (dict "ctx" . "role" "gateway" "component" "gateway" "profileConfigMap" (printf "%s-profile-gateway" $fullname) "serviceAccount" (include "astound.serviceAccountName" .) "spc" (printf "%s-secrets" $fullname) "secretName" (include "astound.secretName" .) "job" false "args" list "resources" .Values.gateway.resources) | nindent 6 }}
+      {{- if .Values.gateway.topologySpread }}
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              {{- include "astound.selectorLabels" $sel | nindent 14 }}
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              {{- include "astound.selectorLabels" $sel | nindent 14 }}
+      {{- end }}
+      {{- with .Values.gateway.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.gateway.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.gateway.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

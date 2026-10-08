@@ -228,6 +228,8 @@ deletes stays on the volume until removed by hand.
 
 ### Kubernetes (GKE)
 
+The Helm chart `deploy/helm/systemprompt-astound/` implements everything below; runbook: `docs/install/gke.md`.
+
 - **Storage:** use `storage: {backend: gcs, bucket: …, credentials:
   workload_identity}` (the block commented in `profile.yaml.template`) so
   uploaded and generated files live in one bucket every pod sees.

@@ -1,0 +1,42 @@
+{{- if .Values.metrics.enabled }}
+{{- range $c := list "gateway" "admin" }}
+{{- if $.Values.metrics.podMonitoring.enabled }}
+---
+# Google Cloud Managed Service for Prometheus
+apiVersion: monitoring.googleapis.com/v1
+kind: PodMonitoring
+metadata:
+  name: {{ include "astound.fullname" $ }}-{{ $c }}
+  labels:
+    {{- include "astound.labels" $ | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "astound.selectorLabels" (dict "ctx" $ "component" $c) | nindent 6 }}
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: {{ $.Values.metrics.podMonitoring.interval }}
+{{- end }}
+{{- if $.Values.metrics.podMonitor.enabled }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: {{ include "astound.fullname" $ }}-{{ $c }}
+  labels:
+    {{- include "astound.labels" $ | nindent 4 }}
+    {{- with $.Values.metrics.podMonitor.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "astound.selectorLabels" (dict "ctx" $ "component" $c) | nindent 6 }}
+  podMetricsEndpoints:
+    - port: metrics
+      path: /metrics
+      interval: {{ $.Values.metrics.podMonitor.interval }}
+{{- end }}
+{{- end }}
+{{- end }}

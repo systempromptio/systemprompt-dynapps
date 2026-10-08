@@ -101,6 +101,16 @@ const revoke = async (path, label) => {
   }
 };
 
+const accountAction = async (path, method, done) => {
+  try {
+    await apiFetch(path, { method });
+    showToast(done, 'success');
+    reloadSoon();
+  } catch (err) {
+    showToast(err?.message ?? 'The account change failed', 'error');
+  }
+};
+
 const issueShareToken = async (button) => {
   const userId = userIdOf(button);
   try {
@@ -153,6 +163,21 @@ const bindActions = () => {
   });
 
   on('click', '[data-issue-share-token]', (_ev, button) => issueShareToken(button));
+
+  on('click', '[data-archive-user]', (_ev, button) => {
+    const userId = userIdOf(button);
+    showConfirmDialog(
+      'Archive user',
+      'The account stops signing in and its sessions and keys are revoked. Its history stays, and it can be restored within the retention window.',
+      'Archive',
+      () => accountAction(`/users/${encodeURIComponent(userId)}`, 'DELETE', 'User archived'),
+    );
+  });
+
+  on('click', '[data-restore-user]', (_ev, button) => {
+    const userId = userIdOf(button);
+    accountAction(`/users/${encodeURIComponent(userId)}/restore`, 'POST', 'User restored');
+  });
 };
 
 const init = () => {

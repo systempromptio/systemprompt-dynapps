@@ -11,9 +11,10 @@ use super::HistoryQuery;
 use super::window::HistoryWindow;
 use systemprompt_web_admin_core::ssr::list_view::paginate_prefixed;
 
-pub(super) fn scope_label(scope: &HistoryScope) -> String {
+pub(super) fn scope_label(scope: &HistoryScope, managed: bool) -> String {
     match scope {
         HistoryScope::All => "all users".to_owned(),
+        HistoryScope::Users(_) if managed => "you and your projects' members".to_owned(),
         HistoryScope::Users(_) => "your own conversations".to_owned(),
     }
 }

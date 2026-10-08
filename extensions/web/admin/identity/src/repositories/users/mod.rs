@@ -11,4 +11,4 @@ pub mod roster;
 pub mod sessions;
 pub mod user_settings;
 
-pub use mutations::{create_user, delete_user, update_user};
+pub use mutations::{archive_user, create_user, restore_user, update_user};

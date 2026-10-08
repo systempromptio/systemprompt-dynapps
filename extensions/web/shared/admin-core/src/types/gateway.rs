@@ -33,14 +33,24 @@ pub struct GatewayRouteView {
     pub fallbacks: Vec<RouteFallbackView>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub by_scope: Option<serde_yaml::Value>,
+    // Why: core's deployment selection and context-window check read these
+    // three; the editor carries them untouched so a console save keeps them.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub strategy: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub weight: Option<u32>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub context_fallbacks: Vec<RouteFallbackView>,
 }
 
 /// One deployment a route fails over to, in the order core tries them.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct RouteFallbackView {
     pub provider: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub upstream_model: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub weight: Option<u32>,
 }
 
 impl RouteFallbackView {

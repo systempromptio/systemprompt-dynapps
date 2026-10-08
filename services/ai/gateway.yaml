@@ -15,13 +15,15 @@ gateway:
       tool_names_any: [WebSearch, WebFetch, ToolSearch, web_search, web_fetch, tool_search, tool_search_tool_regex, tool_search_tool_bm25]
   # Claude is served from Vertex AI under the `vertex` service account: the
   # bare claude-* ids Claude Code and the bridge ask for belong to
-  # `vertex-anthropic`. Failover to Anthropic's own API covers Vertex capacity:
-  # when Vertex exhausts its retry budget (429/503), answers any other 5xx or
-  # the connection fails, the same governed request is re-sent down
-  # `fallbacks` in order — here `anthropic`, which serves the same model under
-  # its `anthropic-claude-*` id (matched on the upstream name, so no
-  # `upstream_model`). The audit row records `served_provider: anthropic`.
-  # Drop the fallback once the project's Vertex Claude quota covers the load.
+  # `vertex-anthropic` (the `global` endpoint). Failover stays on Vertex: when
+  # the global deployment exhausts its retry budget (429/503), answers any
+  # other 5xx or the connection fails, the same governed request is re-sent
+  # down `fallbacks` to `vertex-anthropic-eu`, the europe-west1 regional
+  # deployment under the same credential, which serves the same model under a
+  # hidden `vertex-eu-claude-*` alias (matched on the upstream name, so no
+  # `upstream_model`). The audit row records `served_provider:
+  # vertex-anthropic-eu`. Anthropic's own API is in no chain: it is reached only
+  # by the explicit anthropic-claude-* ids and the native-tools route above.
   # The id is kept from the Anthropic-hosted route so existing audit rows keep
   # their label.
   #
@@ -37,11 +39,11 @@ gateway:
   - id: claude-star-4203d1
     name: Claude (Vertex AI)
     description: >-
-      Every claude-* request goes to Claude on Vertex AI under the vertex service account, failing over to Anthropic's API when Vertex is out of capacity or unreachable.
+      Every claude-* request goes to Claude on Vertex AI under the vertex service account, failing over to the europe-west1 Vertex deployment when the global endpoint is out of capacity or unreachable.
     model_pattern: claude-*
     provider: vertex-anthropic
     fallbacks:
-    - provider: anthropic
+    - provider: vertex-anthropic-eu
     by_scope:
       dimension: project
       unmapped: shared
@@ -49,19 +51,19 @@ gateway:
         commerce:
           provider: vertex-anthropic
           fallbacks:
-          - provider: anthropic
+          - provider: vertex-anthropic-eu
         core:
           provider: vertex-anthropic
           fallbacks:
-          - provider: anthropic
+          - provider: vertex-anthropic-eu
         storefront:
           provider: vertex-anthropic
           fallbacks:
-          - provider: anthropic
+          - provider: vertex-anthropic-eu
         business-implementation:
           provider: vertex-anthropic
           fallbacks:
-          - provider: anthropic
+          - provider: vertex-anthropic-eu
   # Anthropic's own API is also reachable directly by explicit id.
   - name: Claude (Anthropic API)
     description: >-

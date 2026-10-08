@@ -31,6 +31,10 @@ services:
       # - /etc/astound/pg-ca.pem:/etc/astound/pg-ca.pem:ro
     ports:
       - "${HTTP_PORT:-8080}:8080"
+    # Prometheus metrics (server.metrics_port): reachable from the compose
+    # network only, never published on the host.
+    expose:
+      - "9090"
     healthcheck:
       # During boot the same path answers 200 {"status":"starting"}; only a
       # body containing "healthy" means the node may take traffic.

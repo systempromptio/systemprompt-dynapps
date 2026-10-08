@@ -3,12 +3,12 @@ title: "Audit Trail, Traceability & Observability"
 description: "Audit every AI call with actor, cost, and latency; follow one trace id from request to tool to cost; export the trail to your own stack over OTLP; and catch cost or error spikes automatically."
 author: "Astound Digital"
 slug: "enterprise-audit-observability"
-keywords: "audit, trace, observability, otlp, export, anomaly detection, requests, traceability, retention"
+keywords: "audit, trace, observability, otlp, export, anomaly detection, requests, traceability, retention, prometheus, metrics, scope attribution"
 kind: "guide"
 public: true
 tags: ["enterprise", "audit", "admin"]
 published_at: "2026-08-25"
-updated_at: "2026-10-07"
+updated_at: "2026-10-08"
 after_reading_this:
   - "Inspect any AI request's actor, model, tokens, cost, and latency at /admin/requests"
   - "Follow a single trace id through policy decision, model call, tool execution, and cost at /admin/traces"
@@ -40,6 +40,7 @@ Every request through the gateway lands a row with **DB-locked actor attribution
 
 - who made the call;
 - which model was asked for, which route matched, and which provider served it (after a failover, `served_provider` names the fallback);
+- how the route matched (`route_match`): `failover:a->b` when the request failed over down the chain, and `scope:project=<id>` when a per-project chain served it;
 - token counts in and out, and cost;
 - total latency, and the upstream latency spent waiting on the provider;
 - status;
@@ -97,18 +98,30 @@ Every governance and safety decision is recorded, whether or not it refused anyt
   - Datadog and Grafana/LGTM take it directly.
   - Splunk takes it through an OpenTelemetry Collector.
   - Neither profile in this repository declares a collector, so nothing is exported until a deployment adds one.
-  - Each `ai_request` span carries its scope attribution as `systemprompt.scope.<dimension>` and `systemprompt.scope.<dimension>.source`, and the key as `systemprompt.api_key.id`. A deployment that registers a `cost_centre` dimension gets `systemprompt.scope.cost_centre` the same way.
+  - Each `ai_request` span carries its scope attribution as `systemprompt.scope.<dimension>` and `systemprompt.scope.<dimension>.source`, and the key as `systemprompt.api_key.id`. This instance registers `project`, `cost_centre` and `practice` among its dimensions, so every span carries `systemprompt.scope.project`, `systemprompt.scope.cost_centre` and `systemprompt.scope.practice`.
   - Setup, attributes and delivery guarantees are on [Observability Export (OTLP)](/documentation/observability-export).
   - `/admin/system/observability` shows the export's lag and last error, and has **Test connection** and **Export now** buttons.
 
 ## Gateway metrics
 
-`/metrics` also carries two latency histograms, recorded once per completed request (buffered and streamed), labelled `route` (the inbound wire dialect) and `provider`:
+The Prometheus `/metrics` listener starts only when the profile sets `server.metrics_port`. Neither profile in this repository sets it, so on this instance the series below are built but not exposed until a deployment adds the port.
+
+`/metrics` carries two latency histograms, recorded once per completed request (buffered and streamed), labelled `route` (the inbound wire dialect) and `provider`:
 
 - `gateway_overhead_seconds`: the time the gateway itself added (1 ms to 1 s buckets);
 - `gateway_upstream_duration_seconds`: the provider call (100 ms to 120 s buckets).
 
 Failover hops are counted by `gateway_upstream_failovers_total{from,to,reason}` (see [Model Gateway](/documentation/enterprise-model-routing#provider-failover)) and quota breaches by `systemprompt_quota_denials_total{subject_kind, dimension, mode}`.
+
+| Series | What it counts |
+|---|---|
+| `gateway_overhead_seconds` | histogram: time the gateway added |
+| `gateway_upstream_duration_seconds` | histogram: the provider call |
+| `gateway_upstream_failovers_total{from,to,reason}` | every failover hop |
+| `systemprompt_quota_denials_total{subject_kind,dimension,mode}` | every quota breach, warn or enforce |
+| `systemprompt_usage_anomaly_total{kind,subject_kind}` | per-user anomalies from `usage_anomaly_scan` |
+| `http_load_shed_total`, `http_in_flight_limit`, `http_in_flight_saturation` | load shedding under `server.max_in_flight` (unset here) |
+| `http_request_duration_seconds` | HTTP latency, a histogram with 5 ms to 10 s buckets (no longer a summary) |
 
 ## Retention
 
@@ -134,16 +147,16 @@ The floor stops a quiet instance from flagging 3 requests where there was 1.
 
 Detections are persisted to `usage_anomalies`, so a restart cannot forget them. They are written once to the server log as a warning on first detection, and shown on the console overview (`/admin`) for 24 hours.
 
-Core adds a second, per-user signal. Its `usage_anomaly_scan` job (hourly at `:02`) compares each user's previous closed hour of completed gateway spend and request count with that user's trailing seven-day hourly baseline. It flags `spend` (3× the baseline and at least $1) and `request_rate` (3× the baseline and at least 50 requests), emits a `usage_anomaly` warning event, and increments the Prometheus counter `systemprompt_usage_anomaly_total{kind, subject_kind}` on `/metrics`.
+Core adds a second, per-user signal. Its `usage_anomaly_scan` job (hourly at `:02`, scheduled in `services/scheduler/config.yaml`; core runs only the jobs that file names) compares each user's previous closed hour of completed gateway spend and request count with that user's trailing seven-day hourly baseline. It flags `spend` (3× the baseline and at least $1) and `request_rate` (3× the baseline and at least 50 requests), emits a `usage_anomaly` warning event, and increments the Prometheus counter `systemprompt_usage_anomaly_total{kind, subject_kind}` on `/metrics`.
 
-**There is no push alerting.** The platform sends no chat, email or webhook alert. The earlier Slack delivery was removed from the codebase. To be paged, turn on the [OTLP export](/documentation/observability-export) and alert on the warning log line in your own stack. The thresholds are first-pass constants and will need tuning against real traffic.
+**The platform emits the alert signal; your monitoring stack delivers it.** It sends no chat, email or webhook alert itself, and the earlier Slack delivery was removed from the codebase. To be paged, alert on `systemprompt_usage_anomaly_total` or `systemprompt_quota_denials_total` from a metrics scrape (once `server.metrics_port` is set), or on the `usage_anomaly` warning log line through the [OTLP export](/documentation/observability-export). The thresholds are first-pass constants and will need tuning against real traffic.
 
 ## Known caveats
 
 These limitations are tracked on the [Enterprise Roadmap](/documentation/enterprise-roadmap):
 
 - **Append-only by convention, not by mechanism.** There is no WORM storage or hash-chaining. Whether rows can be changed or deleted depends on database privileges and the retention jobs. Archives sit on the instance's own disk.
-- **No alert channel.** See above.
+- **No built-in alert channel.** The signal is a metric and an event; delivery is the operator's monitoring stack. See above.
 - **Some older rows have no upstream latency or serving provider.** Those columns were not populated before late September 2026, so overhead and failover analysis is reliable only from then on.
 
 ## Check it yourself

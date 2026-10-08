@@ -1,0 +1,46 @@
+{{!--
+  Measured gateway overhead (NFR-1.6): last night's p50/p95/p99 of total
+  minus upstream latency, each tile carrying a 30-night sparkline, and the
+  nightly rows behind them. Written by the `gateway_overhead_rollup` job, so
+  it does not follow the window control.
+
+  Invoke as: {{> overview/gateway-overhead}} (reads `overhead` from the page context)
+--}}
+<section class="sp-p-overview__board" aria-label="Gateway overhead">
+    {{#> components/section title="Gateway overhead" note="Total minus upstream latency, completed requests, per UTC night."}}
+        {{#*inline "section_actions"}}<a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/requests">Request log</a>{{/inline}}
+    {{/components/section}}
+    {{#if overhead.error}}{{> components/notice tone="err" title="Gateway overhead unavailable" message=overhead.error}}{{/if}}
+    {{#if overhead.has_rows}}
+    <p class="sp-p-overview__note">Last rolled-up night: {{overhead.latest_date}} (UTC)</p>
+    <div class="sp-kpi-grid sp-kpi-grid--compact">
+        {{#each overhead.tiles}}
+        {{> components/kpi key=this.key label=this.label value=this.value note=this.note tone=this.tone spark=this.spark}}
+        {{/each}}
+    </div>
+    {{#> components/table caption="Gateway overhead per night, last 30 nights"}}
+        <thead><tr>
+            <th scope="col" aria-sort="descending">Night (UTC)</th>
+            <th scope="col" class="sp-table__cell--num">Requests</th>
+            <th scope="col" class="sp-table__cell--num">p50</th>
+            <th scope="col" class="sp-table__cell--num">p95</th>
+            <th scope="col" class="sp-table__cell--num">p99</th>
+            <th scope="col" class="sp-table__cell--num">Upstream p95</th>
+        </tr></thead>
+        <tbody>
+        {{#each overhead.rows}}
+        <tr>
+            <td class="sp-u-mono">{{this.date}}</td>
+            <td class="sp-table__cell--num sp-u-num">{{this.requests_display}}</td>
+            <td class="sp-table__cell--num sp-u-num">{{this.p50_display}}</td>
+            <td class="sp-table__cell--num sp-u-num">{{this.p95_display}}</td>
+            <td class="sp-table__cell--num sp-u-num">{{this.p99_display}}</td>
+            <td class="sp-table__cell--num sp-u-num">{{this.upstream_p95_display}}</td>
+        </tr>
+        {{/each}}
+        </tbody>
+    {{/components/table}}
+    {{else}}
+    {{> components/empty-state heading="No nights rolled up yet" message="The gateway_overhead_rollup job writes one row per UTC night at 00:10. Run it now with: systemprompt infra jobs run gateway_overhead_rollup"}}
+    {{/if}}
+</section>

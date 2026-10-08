@@ -237,3 +237,11 @@ mod client_accepts_every_tool_schema {
         }
     }
 }
+
+// Why: the server refuses to start on a malformed schema, so a schema change
+// that breaks meta-validation must fail here, in CI, not at boot.
+#[test]
+fn every_listed_tool_schema_passes_meta_validation() {
+    let violations = systemprompt_mcp_agent::tools::schema_violations();
+    assert!(violations.is_empty(), "{violations:?}");
+}

@@ -1,0 +1,55 @@
+# Example values for GKE (Autopilot or Standard >= 1.29, Dataplane V2,
+# Workload Identity, Secret Manager add-on). Replace every <...>.
+# helm upgrade --install astound deploy/helm/systemprompt-astound \
+#   -n astound -f values-gke-example.yaml --wait --timeout 20m
+
+image:
+  repository: europe-west1-docker.pkg.dev/<project>/astound/systemprompt-astound
+  tag: "0.63.1"
+  digest: ""            # sha256:... from `crane digest` / cosign verify
+
+profile:
+  externalUrl: https://ai.<customer-domain>
+  adminEmail: <first-admin>@<customer-domain>
+  storage:
+    backend: gcs
+    bucket: <project>-astound-files
+    prefix: astound/files
+    credentials: workload_identity
+
+secrets:
+  mode: csi
+  csi:
+    secretVersion: projects/<project>/secrets/astound-secrets-json/versions/1
+
+cloudSqlProxy:
+  instanceConnectionName: <project>:europe-west1:astound-pg16
+
+serviceAccount:
+  gcpServiceAccount: astound-gw@<project>.iam.gserviceaccount.com
+
+gateway:
+  autoscaling:
+    minReplicas: 3
+    maxReplicas: 12
+
+routing:
+  host: ai.<customer-domain>
+
+ingress:
+  enabled: true
+  staticIpName: astound-gw-ip
+  managedCertificate:
+    enabled: true
+  sslPolicy: astound-modern-tls
+
+metrics:
+  podMonitoring:
+    enabled: true
+
+networkPolicy:
+  cloudSqlCidrs:
+    - <private-services-access-range>/20
+  # true until DNS steers *.googleapis.com to private.googleapis.com and the
+  # Anthropic failover is either dropped or allow-listed in extraEgress.
+  allowPublicHttps: true

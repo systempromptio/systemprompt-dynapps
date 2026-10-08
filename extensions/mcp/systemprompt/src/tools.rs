@@ -142,3 +142,25 @@ pub fn list_tools() -> Vec<Tool> {
     );
     tools
 }
+
+#[must_use]
+// JSON: rmcp carries each tool schema as a JSON object at the MCP protocol
+// boundary.
+pub fn schema_violations() -> Vec<systemprompt_mcp_shared::tool_schema::ToolSchemaViolation> {
+    list_tools()
+        .iter()
+        .flat_map(|tool| {
+            let input = serde_json::Value::Object((*tool.input_schema).clone());
+            let output = tool
+                .output_schema
+                .as_ref()
+                .map(|schema| serde_json::Value::Object((**schema).clone()));
+            systemprompt_mcp_shared::tool_schema::tool_violations(
+                SERVER_NAME,
+                tool.name.as_ref(),
+                &input,
+                output.as_ref(),
+            )
+        })
+        .collect()
+}

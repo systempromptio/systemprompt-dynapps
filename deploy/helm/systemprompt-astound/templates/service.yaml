@@ -1,0 +1,25 @@
+{{- range $c := list "gateway" "admin" }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "astound.fullname" $ }}-{{ $c }}
+  labels:
+    {{- include "astound.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $c }}
+  annotations:
+    # Container-native load balancing: the load balancer targets pods directly.
+    cloud.google.com/neg: '{"ingress": true}'
+    {{- if $.Values.ingress.enabled }}
+    cloud.google.com/backend-config: '{"default": "{{ include "astound.fullname" $ }}"}'
+    {{- end }}
+spec:
+  type: {{ $.Values.service.type }}
+  selector:
+    {{- include "astound.selectorLabels" (dict "ctx" $ "component" $c) | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ $.Values.service.port }}
+      targetPort: http
+      protocol: TCP
+{{- end }}

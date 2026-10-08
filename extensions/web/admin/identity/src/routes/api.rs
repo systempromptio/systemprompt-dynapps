@@ -79,6 +79,10 @@ pub fn user_write_routes() -> Router<Arc<PgPool>> {
             "/users/{user_id}",
             put(handlers::update_user_handler).delete(handlers::delete_user_handler),
         )
+        .route(
+            "/users/{user_id}/restore",
+            post(handlers::restore_user_handler),
+        )
 }
 
 pub fn session_write_routes() -> Router<Arc<PgPool>> {

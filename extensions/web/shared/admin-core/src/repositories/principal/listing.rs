@@ -1,5 +1,5 @@
-//! The user index listing: every non-anonymous account inside a subject
-//! scope, with its activity totals, most recently active first.
+//! The user index listing: every non-anonymous, non-archived account inside a
+//! subject scope, with its activity totals, most recently active first.
 
 use sqlx::PgPool;
 use systemprompt::identifiers::{Email, UserId};
@@ -66,6 +66,7 @@ pub async fn list_users(
             ) air ON air.user_id = u.id
             WHERE NOT ('anonymous' = ANY(u.roles))
               AND u.email NOT LIKE '%@anonymous.local'
+              AND u.status <> 'deleted'
               AND ($1::TEXT[] IS NULL OR u.id = ANY($1))
             GROUP BY u.id, u.created_at, u.name, u.display_name, u.full_name, u.email,
                      u.roles, u.status, bytes.total_bytes,

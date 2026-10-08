@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "command": { "type": "string", "description": "The CLI command to run." },
+    "filter": { "$ref": "#/$defs/filter" }
+  },
+  "required": ["command"],
+  "$defs": {
+    "filter": { "type": "object", "properties": { "since": { "type": "string" } } }
+  }
+}

@@ -1,0 +1,100 @@
+{{- if and .Values.ingress.enabled .Values.gatewayApi.enabled }}
+{{- fail "enable only one of ingress and gatewayApi" }}
+{{- end }}
+{{- if .Values.ingress.enabled }}
+{{- $fullname := include "astound.fullname" . -}}
+{{- $host := required "routing.host is required" .Values.routing.host -}}
+# Health check on /readyz (a saturated pod answers 503 and leaves rotation);
+# backend timeout long enough for streamed completions.
+apiVersion: cloud.google.com/v1
+kind: BackendConfig
+metadata:
+  name: {{ $fullname }}
+  labels:
+    {{- include "astound.labels" . | nindent 4 }}
+spec:
+  timeoutSec: {{ .Values.routing.backendTimeoutSec }}
+  connectionDraining:
+    drainingTimeoutSec: {{ .Values.routing.drainingTimeoutSec }}
+  healthCheck:
+    type: HTTP
+    requestPath: /readyz
+    port: {{ .Values.service.port }}
+    checkIntervalSec: 5
+    timeoutSec: 3
+    healthyThreshold: 1
+    unhealthyThreshold: 2
+---
+apiVersion: networking.gke.io/v1beta1
+kind: FrontendConfig
+metadata:
+  name: {{ $fullname }}
+  labels:
+    {{- include "astound.labels" . | nindent 4 }}
+spec:
+  redirectToHttps:
+    enabled: true
+  {{- with .Values.ingress.sslPolicy }}
+  sslPolicy: {{ . }}
+  {{- end }}
+{{- if .Values.ingress.managedCertificate.enabled }}
+---
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: {{ $fullname }}
+  labels:
+    {{- include "astound.labels" . | nindent 4 }}
+spec:
+  domains:
+    - {{ $host }}
+{{- end }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ $fullname }}
+  labels:
+    {{- include "astound.labels" . | nindent 4 }}
+  annotations:
+    kubernetes.io/ingress.class: gce
+    kubernetes.io/ingress.allow-http: "false"
+    networking.gke.io/v1beta1.FrontendConfig: {{ $fullname }}
+    {{- with .Values.ingress.staticIpName }}
+    kubernetes.io/ingress.global-static-ip-name: {{ . }}
+    {{- end }}
+    {{- if .Values.ingress.managedCertificate.enabled }}
+    networking.gke.io/managed-certificates: {{ $fullname }}
+    {{- end }}
+    {{- with .Values.ingress.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  {{- with .Values.ingress.tlsSecretName }}
+  tls:
+    - hosts: [{{ $host }}]
+      secretName: {{ . }}
+  {{- end }}
+  defaultBackend:
+    service:
+      name: {{ $fullname }}-admin
+      port: {number: {{ .Values.service.port }}}
+  rules:
+    - host: {{ $host }}
+      http:
+        paths:
+          {{- range .Values.routing.gatewayPaths }}
+          - path: {{ . }}
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $fullname }}-gateway
+                port: {number: {{ $.Values.service.port }}}
+          {{- end }}
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $fullname }}-admin
+                port: {number: {{ .Values.service.port }}}
+{{- end }}

@@ -98,7 +98,8 @@
         "mcp_tool_executions_days": 365,
         "outbox_processed_days": 7,
         "ai_request_payload_raw_days": 7,
-        "governance_decisions_days": 180
+        "governance_decisions_days": 180,
+        "archived_users_days": 90
       }
     },
     "services": {
@@ -1126,6 +1127,12 @@
           "format": "uint32",
           "minimum": 0,
           "default": 180
+        },
+        "archived_users_days": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "default": 90
         }
       },
       "additionalProperties": false
