@@ -53,10 +53,10 @@ fn function_block<'a>(sql: &'a str, name: &str) -> &'a str {
     let start = sql
         .find(&format!("CREATE OR REPLACE FUNCTION {name}("))
         .unwrap_or_else(|| panic!("{name} is not declared"));
-    let end = sql[start..]
-        .find("END $$;")
-        .map(|offset| start + offset + "END $$;".len())
-        .unwrap_or_else(|| panic!("{name} has no closing END $$;"));
+    let end = sql[start..].find("END $$;").map_or_else(
+        || panic!("{name} has no closing END $$;"),
+        |offset| start + offset + "END $$;".len(),
+    );
     &sql[start..end]
 }
 
