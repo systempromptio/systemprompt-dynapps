@@ -21,6 +21,12 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+## 0.63.1 — 2026-10-08
+
+### Fixed
+
+- **Core 0.63.1: Fly replica identity; production deploy unblocked.** Core 0.63.0 refused `server.instance_id` on cloud profiles and expected the replica identity from `HOSTNAME`, which Fly does not export, so its deploy preflight rejected the production profile either way. Core 0.63.1 falls back to `FLY_MACHINE_ID`, passes it to subprocesses, and its doctor accepts a cloud profile without the key. Every core pin is `0.63.1` (including the four registry pins in `tests/unit/bridge/Cargo.toml`), `bridge/CORE_REF` is `v0.63.1`, and the 0.63.1 schema rung is the 0.63.0 schema, since core 0.63.1 has no migrations. Operator note: remove `server.instance_id` from any cloud profile before deploying.
+
 ## 0.63.0 — 2026-10-08
 
 ### Added
