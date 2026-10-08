@@ -241,6 +241,7 @@ POST   /api/public/admin/sync/import/{stage_id}/apply        anonymous=401 non-a
 POST   /api/public/admin/sync/planes/{plane}/apply           anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
 POST   /api/public/admin/sync/sources/refresh                anonymous=401 non-admin=403 developer=403 admin=500 platform-admin=500 project-manager=403 knowledge-worker=403
 POST   /api/public/admin/users                               anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
+POST   /api/public/admin/users/{user_id}/restore             anonymous=401 non-admin=403 developer=403 admin=409 platform-admin=409 project-manager=403 knowledge-worker=403
 POST   /api/public/admin/users/{user_id}/salesforce-identity anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
 POST   /api/public/admin/users/{user_id}/share-token         anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=403 knowledge-worker=403
 PUT    /api/public/admin/access-control/bulk                 anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403

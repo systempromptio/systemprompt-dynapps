@@ -143,7 +143,7 @@ async fn a_timezone_that_cannot_be_a_zone_name_is_refused() {
 // the account did stays, because `ai_requests` holds no foreign key to `users`
 // and an audit trail a person can erase by closing their account is not one.
 #[tokio::test]
-async fn deleting_an_account_removes_it_and_leaves_the_audit_trail() {
+async fn deleting_an_account_archives_it_and_leaves_the_audit_trail() {
     if !globals::init() {
         return;
     }
@@ -197,12 +197,19 @@ async fn deleting_an_account_removes_it_and_leaves_the_audit_trail() {
         .await;
     assert_eq!(status, StatusCode::NO_CONTENT, "body: {body}");
 
-    let users: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM users WHERE id = $1")
-        .bind(&owner)
-        .fetch_one(&*db.pool)
-        .await
-        .expect("count users");
-    assert_eq!(users, 0, "the account is gone");
+    let (status, archived_by): (String, Option<String>) = sqlx::query_as(
+        "SELECT status, archived_by FROM users WHERE id = $1 AND archived_at IS NOT NULL",
+    )
+    .bind(&owner)
+    .fetch_one(&*db.pool)
+    .await
+    .expect("the account is archived, not removed");
+    assert_eq!(status, "deleted", "an archived account cannot sign in");
+    assert_eq!(
+        archived_by.as_deref(),
+        Some(owner.as_str()),
+        "the holder archived it"
+    );
 
     let settings: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM user_settings WHERE user_id = $1")
         .bind(&owner)
