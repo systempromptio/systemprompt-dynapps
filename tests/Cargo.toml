@@ -207,7 +207,7 @@ jsonwebtoken = { version = "11", features = ["rust_crypto"] }
 # directly; `just core-guard` requires it clean at bridge/CORE_REF. Keep version
 # requirements and this block aligned in both workspaces; `main` comments it out.
 # ACTIVE on `next`: building against the sibling core checkout (comment out again for a published release).
-# ACTIVE: core 0.64.0 is unreleased (next at e4916872e: selection strategies, context-window check, user archive)
+# ACTIVE: core 0.64.0 is unreleased (next at 17144cba0: selection strategies, context-window check, user archive)
 [patch.crates-io]
 systemprompt = { path = "../../systemprompt-core/systemprompt" }
 systemprompt-models = { path = "../../systemprompt-core/crates/shared/models" }
