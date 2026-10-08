@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT DISTINCT member.user_id AS \"user_id!\"\n           FROM user_projects mine\n           JOIN user_projects member ON member.project_id = mine.project_id\n           WHERE mine.user_id = $1\n           ORDER BY 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user_id!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "user_projects",
+            "name": "user_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "ce3097e2d098e7ddff34faf716e3fa763374b0684277521e5f2401b424cd832d"
+}

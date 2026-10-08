@@ -9,7 +9,8 @@ use serde::Serialize;
 use systemprompt::identifiers::{ContextId, UserId};
 
 use crate::repositories::conversations::{
-    HistoryItem, HistoryScope, history_scope_for, own_history_scope, redact_text,
+    HistoryItem, HistoryScope, get_history_scope, manages_member_history, own_history_scope,
+    redact_text,
 };
 use crate::ssr::entity_urls::{context_detail_url, session_detail_url};
 use crate::ssr::format::{
@@ -61,10 +62,16 @@ impl HistoryView {
         }
     }
 
-    pub fn scope(self, ctx: &UserContext) -> HistoryScope {
+    // Why: a project_manager cannot reach the console-gated org listing, so
+    // "My conversations" is where their projects' members appear.
+    pub async fn scope(
+        self,
+        pool: &sqlx::PgPool,
+        ctx: &UserContext,
+    ) -> Result<HistoryScope, sqlx::Error> {
         match self {
-            Self::Own => own_history_scope(ctx),
-            Self::Org => history_scope_for(ctx),
+            Self::Own if !manages_member_history(ctx) => Ok(own_history_scope(ctx)),
+            Self::Own | Self::Org => get_history_scope(pool, ctx).await,
         }
     }
 

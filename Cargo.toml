@@ -35,7 +35,7 @@ opt-level = "z"
 [workspace.package]
 edition = "2024"
 rust-version = "1.96"
-version = "0.63.1"
+version = "0.64.0"
 authors = ["Astound Digital <ed@systemprompt.io>"]
 repository = "https://github.com/systempromptio/systemprompt-astound"
 homepage = "https://astounddigital.com"
@@ -45,9 +45,9 @@ documentation = "https://systemprompt.io/documentation"
 # ============================================
 # CORE FACADE (single dependency for all systemprompt-core)
 # ============================================
-systemprompt = { version = "0.63.1", default-features = false, features = ["core", "database", "config"] }
-systemprompt-security = { version = "0.63.1" }
-systemprompt-extension = { version = "0.63.1" }
+systemprompt = { version = "0.64.0", default-features = false, features = ["core", "database", "config"] }
+systemprompt-security = { version = "0.64.0" }
+systemprompt-extension = { version = "0.64.0" }
 
 # ============================================
 # LOCAL EXTENSIONS
@@ -80,6 +80,9 @@ sqlx = { version = "0.9", features = ["runtime-tokio", "tls-rustls-ring-webpki",
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = { package = "serde_yaml_ng", version = "0.10" }
 serde_json = { version = "1.0", features = ["preserve_order"] }
+# Tool-schema meta-validation only: no HTTP/file resolution, so a `$ref` never
+# leaves the document (extensions/mcp/shared/src/tool_schema.rs).
+jsonschema = { version = "=0.56.0", default-features = false }
 chrono = { version = "0.4", features = ["serde"] }
 chrono-tz = "0.10"
 uuid = { version = "1.18", features = ["v4", "serde"] }
@@ -261,7 +264,7 @@ workspace = true
 # Local development and `next` deploys use the persistent sibling core checkout
 # directly; `just core-guard` requires it clean at bridge/CORE_REF. Keep version
 # requirements and this block aligned in both workspaces; `main` comments it out.
-# INACTIVE: core 0.63.0 is published; `main` builds against the registry. Uncomment on `next` when building against the sibling core checkout.
+# INACTIVE: core 0.64.0 is published; `main` builds against the registry. Uncomment on `next` when building against the sibling core checkout.
 # [patch.crates-io]
 # systemprompt = { path = "../systemprompt-core/systemprompt" }
 # systemprompt-models = { path = "../systemprompt-core/crates/shared/models" }

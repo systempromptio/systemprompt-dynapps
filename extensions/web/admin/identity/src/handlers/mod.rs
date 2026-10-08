@@ -23,6 +23,6 @@ pub(crate) use user_sessions::{
     list_user_sessions_handler, revoke_all_user_sessions_handler, revoke_user_session_handler,
 };
 pub(crate) use users::{
-    delete_user_handler, list_users_handler, update_user_handler, user_detail_handler,
-    user_usage_handler,
+    delete_user_handler, list_users_handler, restore_user_handler, update_user_handler,
+    user_detail_handler, user_usage_handler,
 };

@@ -109,6 +109,8 @@ mod gateway_policies_unedited;
 #[cfg(test)]
 mod gateway_policy_config;
 #[cfg(test)]
+mod gateway_route_selection_keys;
+#[cfg(test)]
 mod gateway_routes_drift;
 #[cfg(test)]
 mod gateway_text_markers;
@@ -138,6 +140,8 @@ mod scope;
 mod scope_attribution;
 
 #[cfg(test)]
+mod gateway_overhead;
+#[cfg(test)]
 mod jobs_finops;
 #[cfg(test)]
 mod jobs_governance_config;
@@ -162,6 +166,7 @@ mod paper_metadata;
 
 #[cfg(test)]
 mod pii_scanner;
+#[cfg(test)]
 #[cfg(test)]
 mod registry_completeness;
 #[cfg(test)]
@@ -242,6 +247,8 @@ mod analytics;
 mod analytics_conversations_redact;
 #[cfg(test)]
 mod asset_manifest;
+#[cfg(test)]
+mod audit_integrity_schema;
 #[cfg(test)]
 mod authz_marketplace_pure;
 #[cfg(test)]
@@ -355,6 +362,8 @@ mod marketplace_version_diff;
 mod time_bound_access;
 #[cfg(test)]
 mod tool_schema_diff;
+#[cfg(test)]
+mod tool_schema_validation;
 #[cfg(test)]
 mod traces_spans_resolve;
 

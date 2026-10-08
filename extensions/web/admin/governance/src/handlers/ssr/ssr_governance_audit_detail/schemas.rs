@@ -12,6 +12,7 @@
 use serde::Serialize;
 use sqlx::PgPool;
 use systemprompt::identifiers::SessionId;
+use systemprompt_mcp_shared::tool_schema::schema_violations;
 use systemprompt_web_admin_core::ssr::viewer_tz::viewer_tz;
 
 use crate::repositories::governance::request_schemas::{RequestSchemaRow, find_request_schemas};
@@ -57,6 +58,9 @@ pub(super) struct ToolPairView {
     pub rule_hits: Vec<String>,
     pub rule_hit_count: usize,
     pub has_rule_hits: bool,
+    pub schema_violations: Vec<String>,
+    pub schema_violation_count: usize,
+    pub has_schema_violations: bool,
     pub tone: &'static str,
     pub label: &'static str,
 }
@@ -173,6 +177,11 @@ fn pair_view(pair: &ToolSchemaPair) -> ToolPairView {
         (_, _, true) => ("info", "rewritten"),
         (_, _, false) => ("muted", "as sent"),
     };
+    let violations = pair
+        .client
+        .as_ref()
+        .map(|tool| schema_violations(&tool.schema))
+        .unwrap_or_default();
     ToolPairView {
         name: pair.name.clone(),
         description: pair
@@ -189,6 +198,9 @@ fn pair_view(pair: &ToolSchemaPair) -> ToolPairView {
         has_rule_hits: !pair.rule_hits.is_empty(),
         rule_hit_count: pair.rule_hits.len(),
         rule_hits: pair.rule_hits.clone(),
+        has_schema_violations: !violations.is_empty(),
+        schema_violation_count: violations.len(),
+        schema_violations: violations,
         tone,
         label,
     }

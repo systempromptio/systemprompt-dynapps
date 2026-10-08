@@ -1,4 +1,4 @@
-//! User create, update, and delete.
+//! User create, update, archive and restore.
 //!
 //! Neither door touches group or project membership here: the create handler
 //! writes the drawer's picks as manual grants through the membership
@@ -111,9 +111,42 @@ pub async fn update_user(
     .await
 }
 
-pub async fn delete_user(pool: &PgPool, user_id: &UserId) -> Result<bool, sqlx::Error> {
-    let result = sqlx::query!("DELETE FROM users WHERE id = $1", user_id.as_str())
-        .execute(pool)
-        .await?;
+pub async fn archive_user(
+    pool: &PgPool,
+    user_id: &UserId,
+    archived_by: &UserId,
+    reason: &str,
+) -> Result<bool, sqlx::Error> {
+    let result = sqlx::query!(
+        "UPDATE users
+         SET status = 'deleted', archived_at = COALESCE(archived_at, NOW()),
+             archived_by = COALESCE(archived_by, $2), archive_reason = COALESCE(archive_reason, $3),
+             updated_at = NOW()
+         WHERE id = $1",
+        user_id.as_str(),
+        archived_by.as_str(),
+        reason,
+    )
+    .execute(pool)
+    .await?;
+    Ok(result.rows_affected() > 0)
+}
+
+pub async fn restore_user(
+    pool: &PgPool,
+    user_id: &UserId,
+    window_days: i32,
+) -> Result<bool, sqlx::Error> {
+    let result = sqlx::query!(
+        "UPDATE users
+         SET status = 'active', archived_at = NULL, archived_by = NULL, archive_reason = NULL,
+             updated_at = NOW()
+         WHERE id = $1 AND status = 'deleted'
+           AND (archived_at IS NULL OR archived_at > NOW() - make_interval(days => $2))",
+        user_id.as_str(),
+        window_days,
+    )
+    .execute(pool)
+    .await?;
     Ok(result.rows_affected() > 0)
 }

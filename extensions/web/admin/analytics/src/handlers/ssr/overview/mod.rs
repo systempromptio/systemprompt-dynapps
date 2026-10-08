@@ -17,6 +17,7 @@ mod data;
 mod fragment;
 mod kpi_tiles;
 mod kpis_view;
+mod overhead_view;
 mod panels_view;
 mod view;
 

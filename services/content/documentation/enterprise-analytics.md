@@ -8,7 +8,7 @@ kind: "guide"
 public: true
 tags: ["enterprise", "analytics", "admin"]
 published_at: "2026-08-25"
-updated_at: "2026-09-29"
+updated_at: "2026-10-08"
 after_reading_this:
   - "Navigate the Overview, Models, Skills, Tools, Sessions and Cost tabs"
   - "Scope any view to a group, a project or one person, and pick a window from 15 minutes to 90 days"
@@ -95,12 +95,22 @@ There is no layer above them (no hub or division).
 
 These gaps are also listed on the [Enterprise Roadmap](/documentation/enterprise-roadmap#known-limitations).
 
+## Gateway overhead
+
+Gateway overhead is the time the gateway adds around the provider call: authentication, the governance chain, the safety scanners, quota checks, routing and the audit write. It is measured on real traffic, never on a synthetic benchmark.
+
+- **Formula.** For every completed, non-synthetic gateway request that recorded both timings, overhead = `latency_ms - upstream_latency_ms` from its `ai_requests` row, floored at zero. `latency_ms` is the total the gateway recorded for the request; `upstream_latency_ms` is the provider call alone.
+- **Nightly rollup.** The `gateway_overhead_rollup` job runs at 00:10 UTC (`services/scheduler/config.yaml`) and writes the previous UTC day into `gateway_overhead_daily`: request count, p50/p95/p99 of overhead and p50/p95/p99 of upstream latency, in milliseconds, computed with Postgres `percentile_cont`. There is one row per inbound wire dialect (`wire_protocol`) and one `all` row. The table keeps 400 days. Re-running the job overwrites the day's rows, so it is safe to run again by hand: `systemprompt infra jobs run gateway_overhead_rollup`.
+- **Where to read it.** The **Gateway overhead** block on the console landing page (`/admin`) shows last night's p50, p95 and p99, each with a 30-night sparkline, and a table of the last 30 nights with upstream p95 beside them. The block reads the nightly rows, so it does not move with the 24h/7d/30d control. A tile turns amber at a p95 of 250 ms and red at 1 s.
+- **Live source.** When `server.metrics_port` is set in the profile, the server also exports Prometheus histograms on that port: `gateway_overhead_seconds` and `gateway_upstream_duration_seconds`. They are the live view for alerting and short windows; the nightly table is the published record. The self-host profile template sets `metrics_port: 9090` and the compose files expose that port on the compose network only. Production does not set it today.
+
 ## Check it yourself
 
 - `/admin/analytics?preset=7d`: the Overview for the last week.
 - `/admin/analytics?tab=skills&preset=30d`: skill adoption for the month.
 - `/admin/groups` and `/admin/projects`: open one and read its **Usage** tab.
 - `/admin/users?filter=inactive-30d`: who has not used the platform in 30 days.
+- `/admin`: the **Gateway overhead** block, last night's p50/p95/p99.
 - From the CLI:
 
   ```bash

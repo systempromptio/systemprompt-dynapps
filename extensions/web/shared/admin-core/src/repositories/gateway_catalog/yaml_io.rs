@@ -92,6 +92,15 @@ pub fn route_from_yaml(val: &Value) -> Option<GatewayRouteView> {
             .map(fallbacks_from_yaml)
             .unwrap_or_default(),
         by_scope: map.get(Value::from("by_scope")).cloned(),
+        strategy: text("strategy"),
+        weight: map
+            .get(Value::from("weight"))
+            .and_then(Value::as_u64)
+            .and_then(|w| u32::try_from(w).ok()),
+        context_fallbacks: map
+            .get(Value::from("context_fallbacks"))
+            .map(fallbacks_from_yaml)
+            .unwrap_or_default(),
     })
 }
 
@@ -140,6 +149,18 @@ pub fn route_to_yaml(route: &GatewayRouteView) -> Value {
     if let Some(by_scope) = &route.by_scope {
         map.insert(Value::from("by_scope"), by_scope.clone());
     }
+    if let Some(strategy) = route.strategy.as_deref().filter(|s| !s.trim().is_empty()) {
+        map.insert(Value::from("strategy"), Value::from(strategy.to_owned()));
+    }
+    if let Some(weight) = route.weight {
+        map.insert(Value::from("weight"), Value::from(weight));
+    }
+    if !route.context_fallbacks.is_empty() {
+        map.insert(
+            Value::from("context_fallbacks"),
+            fallbacks_to_yaml(&route.context_fallbacks),
+        );
+    }
     Value::Mapping(map)
 }
 
@@ -156,9 +177,14 @@ pub fn fallbacks_from_yaml(value: &Value) -> Vec<RouteFallbackView> {
                         .get("upstream_model")
                         .and_then(Value::as_str)
                         .map(str::to_owned);
+                    let weight = entry
+                        .get("weight")
+                        .and_then(Value::as_u64)
+                        .and_then(|w| u32::try_from(w).ok());
                     Some(RouteFallbackView {
                         provider,
                         upstream_model,
+                        weight,
                     })
                 })
                 .collect()
@@ -178,6 +204,9 @@ fn fallbacks_to_yaml(fallbacks: &[RouteFallbackView]) -> Value {
                 );
                 if let Some(model) = &fallback.upstream_model {
                     entry.insert(Value::from("upstream_model"), Value::from(model.clone()));
+                }
+                if let Some(weight) = fallback.weight {
+                    entry.insert(Value::from("weight"), Value::from(weight));
                 }
                 Value::Mapping(entry)
             })

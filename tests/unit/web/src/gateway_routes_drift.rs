@@ -67,6 +67,7 @@ fn declaration_carries_every_route_field_and_synthesises_missing_ids() {
         vec![RouteFallbackView {
             provider: "vertex".to_owned(),
             upstream_model: Some("claude-sonnet-5".to_owned()),
+            weight: None,
         }]
     );
     assert!(
@@ -121,6 +122,7 @@ fn drift_names_missing_orphan_changed_fields_and_console_origin() {
     rows[0].route.fallbacks = vec![RouteFallbackView {
         provider: "cerebras".to_owned(),
         upstream_model: None,
+        weight: None,
     }];
     rows[0].source = SOURCE_DASHBOARD.to_owned();
     rows.push(RouteRow {

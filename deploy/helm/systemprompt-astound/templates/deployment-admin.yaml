@@ -1,0 +1,44 @@
+{{- $fullname := include "astound.fullname" . -}}
+{{- $sel := dict "ctx" . "component" "admin" -}}
+# Exactly one admin: it runs the scheduler, MCP servers and agents. Never scale
+# it and never give it an HPA; Recreate keeps two from overlapping on upgrade.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullname }}-admin
+  labels:
+    {{- include "astound.labels" . | nindent 4 }}
+    app.kubernetes.io/component: admin
+spec:
+  replicas: 1
+  revisionHistoryLimit: 5
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "astound.selectorLabels" $sel | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "astound.labels" . | nindent 8 }}
+        {{- include "astound.selectorLabels" $sel | nindent 8 }}
+      annotations:
+        checksum/profile: {{ include "astound.profile" (dict "ctx" . "role" "admin") | sha256sum }}
+        checksum/secrets-source: {{ toJson .Values.secrets | sha256sum }}
+        {{- with .Values.admin.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- include "astound.podSpec" (dict "ctx" . "role" "admin" "component" "admin" "profileConfigMap" (printf "%s-profile-admin" $fullname) "serviceAccount" (include "astound.serviceAccountName" .) "spc" (printf "%s-secrets" $fullname) "secretName" (include "astound.secretName" .) "job" false "args" list "resources" .Values.admin.resources) | nindent 6 }}
+      {{- with .Values.admin.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.admin.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.admin.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

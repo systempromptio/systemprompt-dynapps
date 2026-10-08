@@ -3,16 +3,17 @@ title: "Observability Export (OTLP)"
 description: "Ship the audit trail — every AI request with its tool calls and governance decisions, plus the server log — to Datadog, Grafana/LGTM, Splunk or any OpenTelemetry collector."
 author: "Astound Digital"
 slug: "observability-export"
-keywords: "otlp, opentelemetry, datadog, splunk, grafana, lgtm, siem, export, telemetry, observability, upstream latency"
+keywords: "otlp, opentelemetry, datadog, splunk, grafana, lgtm, google cloud, cloud logging, cloud trace, bigquery, chargeback, siem, export, telemetry, observability, upstream latency"
 kind: "guide"
 public: true
 tags: ["enterprise", "audit", "observability", "admin"]
 published_at: "2026-09-29"
-updated_at: "2026-09-29"
+updated_at: "2026-10-08"
 after_reading_this:
   - "Configure the observability.otlp profile block to point at your collector"
   - "Know exactly which records are exported as spans and log records, and which attributes they carry"
   - "Test the connection and force an export from /admin/system/observability"
+  - "Forward the export to Cloud Logging and Cloud Trace through an OpenTelemetry Collector"
   - "Know what is not exported: history before the first export, metrics, and archives"
 related_docs:
   - title: "Audit Trail, Traceability & Observability"
@@ -40,6 +41,7 @@ A request span carries the OpenTelemetry GenAI attributes plus the platform's ow
 - **Identity:** `enduser.id`, `session.id`, `systemprompt.actor.id`, `systemprompt.actor.kind`, `systemprompt.client.kind`.
 - **Routing and cost:** `systemprompt.route`, `systemprompt.served_provider` (the provider that actually answered, which differs from the route's provider after a failover), `systemprompt.wire_protocol`, `systemprompt.cost.usd` and `systemprompt.cost.microdollars`.
 - **Timing:** `systemprompt.latency_ms` (total) and `systemprompt.upstream_latency_ms` (time spent waiting on the provider). The difference between the two is the gateway's own overhead, so you can chart it in your own stack. Some older rows have no upstream figure.
+- **Attribution:** `systemprompt.scope.<dimension>` and `systemprompt.scope.<dimension>.source` (`header`, `api_key` or `default`) for every scope dimension the request was attributed to (here `project`, `cost_centre` and `practice` among them), and `systemprompt.api_key.id` for the key that authenticated it. These are the chargeback keys.
 - **Correlation:** `systemprompt.request.id`, `systemprompt.trace.id`, `systemprompt.context.id`, `systemprompt.instance.id`, `systemprompt.request.kind`, `systemprompt.request.status`.
 
 Prompt and completion bodies are **not** exported. The spans carry the accounting and the chain, not the conversation.
@@ -72,6 +74,75 @@ The profile is read once at boot, so adding or changing the block needs a restar
 - **Grafana / LGTM:** send to Grafana Alloy or an OpenTelemetry Collector that forwards traces to Tempo and logs to Loki.
 - **Splunk:** put an OpenTelemetry Collector in front, with Splunk HEC as its exporter. The platform does not speak HEC directly.
 
+### Google Cloud
+
+> **Example, untested on GCP.** This configuration follows the OpenTelemetry Collector
+> Contrib `googlecloud` exporter's documented options. Astound has not run it against a
+> Google Cloud project; validate it in a non-production project first.
+
+The gateway speaks OTLP/HTTP only, and Google Cloud's services do not take that push
+directly from it, so run an OpenTelemetry Collector (the `otelcol-contrib` image, or
+Google's build of it) beside the instance, for example as a sidecar or a small
+Deployment on GKE. Its service account needs `roles/cloudtrace.agent` and
+`roles/logging.logWriter`.
+
+```yaml
+# otel-collector.yaml
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_percentage: 75
+  batch: {}
+  resourcedetection:
+    detectors: [gcp]
+
+exporters:
+  googlecloud:
+    project: <gcp-project-id>   # omit to use the detected project
+    log:
+      default_log_name: systemprompt
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, resourcedetection, batch]
+      exporters: [googlecloud]   # -> Cloud Trace
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, resourcedetection, batch]
+      exporters: [googlecloud]   # -> Cloud Logging
+```
+
+Then point the profile at the collector's HTTP receiver:
+
+```yaml
+observability:
+  otlp:
+    endpoint: http://otel-collector:4318
+    protocol: http
+    signals: [traces, logs]
+```
+
+- **Cloud Trace** receives one trace per AI request, with tool calls and governance
+  decisions as child spans. Filter on `systemprompt.scope.project` or
+  `systemprompt.served_provider`.
+- **Cloud Logging** receives the server log under the `systemprompt` log name.
+- **BigQuery.** A Cloud Logging sink with a BigQuery dataset as destination
+  (`gcloud logging sinks create <name> bigquery.googleapis.com/projects/<project>/datasets/<dataset> --log-filter='logName:"systemprompt"'`)
+  lands the log records as tables. Spans go to Cloud Trace, not Cloud Logging, so the
+  sink does not carry them; a chargeback table needs the span attributes
+  (`systemprompt.scope.project`, `systemprompt.scope.cost_centre`,
+  `systemprompt.scope.practice`, `systemprompt.api_key.id`,
+  `systemprompt.cost.microdollars`, `gen_ai.request.model`) routed to the warehouse by
+  an additional collector pipeline, which this example does not include.
+
 ## Delivery guarantees
 
 - **At least once.** Each signal has a watermark in `otlp_export_state`. The watermark only advances after the collector acknowledges a batch.
@@ -92,12 +163,14 @@ The profile is read once at boot, so adding or changing the block needs a restar
 
 ## What is not exported
 
-- **Metrics.** The Prometheus `/metrics` listener carries counters such as:
-  - `gateway_upstream_failovers_total{from,to,reason}` (every Vertex→Anthropic failover);
+- **Metrics.** The Prometheus `/metrics` listener carries series such as:
+  - `gateway_upstream_failovers_total{from,to,reason}` (every failover hop);
+  - `systemprompt_quota_denials_total{subject_kind,dimension,mode}` and `systemprompt_usage_anomaly_total{kind,subject_kind}` (the alert signals);
+  - `gateway_overhead_seconds` and `gateway_upstream_duration_seconds` (latency histograms);
   - `otlp_export_batches_total{signal,status}`.
 
   Metrics are not part of the OTLP push. The listener only starts when the profile sets `server.metrics_port`, and neither shipped profile sets it, so scrape it only after a deployment enables it.
-- **Alerts.** The platform sends no email, chat or webhook alerts. Budget-threshold warnings and usage anomalies are recorded as log lines and database rows. Once the export is on, those log lines reach your collector, and alert rules belong there.
+- **Alerts.** The platform sends no email, chat or webhook alerts. Budget-threshold warnings and usage anomalies are recorded as log lines, database rows, metrics and (for `usage_anomaly_scan`) a `usage_anomaly` event. Once the export is on, those log lines reach your collector, and alert rules belong there.
 - **Archives and rollups.** Archives stay on the instance's storage. See [Data Retention & Archives](/documentation/data-retention).
 
 ## Check it yourself

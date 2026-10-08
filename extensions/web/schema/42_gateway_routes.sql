@@ -12,6 +12,8 @@
 -- regenerated file omits an id the loader would synthesise identically.
 -- `fallbacks` is the route's ordered failover chain and `by_scope` its
 -- per-scope chains, both stored as declared (core validates them at boot).
+-- `routing` holds the route-level `strategy`, `weight` and
+-- `context_fallbacks` as declared; NULL when the route sets none.
 --
 -- `governance_chain` stages services/governance/config.yaml: one row per
 -- policy in chain order with its raw entry. Core builds the chain from the
@@ -33,6 +35,7 @@ CREATE TABLE IF NOT EXISTS gateway_routes (
     requires JSONB,
     fallbacks JSONB NOT NULL DEFAULT '[]'::jsonb,
     by_scope JSONB,
+    routing JSONB,
     explicit_id BOOLEAN NOT NULL DEFAULT FALSE,
     source TEXT NOT NULL DEFAULT 'code' CHECK (source IN ('code', 'dashboard')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,

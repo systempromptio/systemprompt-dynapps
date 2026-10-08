@@ -107,8 +107,30 @@ On a gateway request, the request detail page puts the client's `tools` array
 beside the one the gateway sent upstream, paired by name, so you can see what
 the model was actually given.
 
-Captured schemas are **not** meta-validated against the JSON-Schema
-specification. See the [roadmap](/documentation/enterprise-roadmap).
+### Tool schema validation
+
+A provider refuses a whole request when one offered tool schema is malformed,
+so tool schemas are meta-validated before that can happen. Each `inputSchema`,
+and the `outputSchema` when a tool declares one, is checked against:
+
+- the **JSON Schema meta-schema** its `$schema` names, Draft 2020-12 when it
+  names none (Draft 7 and the other standard drafts are recognised);
+- the shapes providers reject even when the meta-schema allows them: the top
+  level must be **`type: object`**, a top-level **`required`** may name only
+  keys that `properties` declares, and **no `$ref` may leave the document**
+  (only `#/...` references; nothing is fetched).
+
+Where it runs:
+
+| Where | What happens on a malformed schema |
+|---|---|
+| The bundled `systemprompt` MCP server, at start | It refuses to serve, and the error names the server, the tool, the schema side and the violation. |
+| CI | The `check-mcp-tool-schemas.sh` gate checks every schema declared under `services/mcp/` and proves the checker against fixtures; the unit tests run the full check over the bundled server's tools. |
+| The request detail page | A client tool whose schema fails carries a **schema errors** badge and lists each violation. |
+
+The checker is `extensions/mcp/shared/src/tool_schema.rs`. Servers that
+list their tools only at runtime (external and connector servers) are
+registered by core and are checked on the request page, not at registration.
 
 ## Signed distribution, versions and rollback
 

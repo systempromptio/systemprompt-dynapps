@@ -67,6 +67,9 @@ pub(crate) fn route(id: &str, pattern: &str, provider_name: &str) -> GatewayRout
         requires: None,
         fallbacks: Vec::new(),
         by_scope: None,
+        strategy: systemprompt::manifest::services::SelectionStrategy::Ordered,
+        weight: None,
+        context_fallbacks: Vec::new(),
     }
 }
 

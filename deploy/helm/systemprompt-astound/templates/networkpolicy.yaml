@@ -1,0 +1,79 @@
+{{- if .Values.networkPolicy.enabled }}
+{{- $np := .Values.networkPolicy -}}
+{{- if and .Values.cloudSqlProxy.enabled (not $np.cloudSqlCidrs) }}
+{{- fail "networkPolicy.cloudSqlCidrs is required when the Cloud SQL proxy and the NetworkPolicy are both enabled" }}
+{{- end }}
+# Default-deny for every pod of this release (gateway, admin, migrate), then
+# an explicit allow-list. The Cloud SQL proxy is in the same pod, so the app's
+# 127.0.0.1:5432 never crosses the policy; the proxy's own egress does.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "astound.fullname" . }}
+  labels:
+    {{- include "astound.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "astound.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        {{- range $np.ingressFromCidrs }}
+        - ipBlock: {cidr: {{ . }}}
+        {{- end }}
+      ports:
+        - {port: {{ .Values.service.port }}, protocol: TCP}
+    {{- if .Values.metrics.enabled }}
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              {{- toYaml $np.metricsFromNamespaceLabels | nindent 14 }}
+      ports:
+        - {port: {{ .Values.metrics.port }}, protocol: TCP}
+    {{- end }}
+  egress:
+    # DNS
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels: {k8s-app: kube-dns}
+      ports:
+        - {port: 53, protocol: UDP}
+        - {port: 53, protocol: TCP}
+    # GKE metadata server (Workload Identity tokens)
+    - to:
+        - ipBlock: {cidr: 169.254.169.254/32}
+        - ipBlock: {cidr: 169.254.169.252/32}
+      ports:
+        - {port: 80, protocol: TCP}
+        - {port: 988, protocol: TCP}
+    {{- if .Values.cloudSqlProxy.enabled }}
+    # Cloud SQL private IP (proxy server port)
+    - to:
+        {{- range $np.cloudSqlCidrs }}
+        - ipBlock: {cidr: {{ . }}}
+        {{- end }}
+      ports:
+        - {port: 3307, protocol: TCP}
+    {{- end }}
+    # Google APIs through Private Google Access (Vertex AI, GCS, Secret Manager, sqladmin)
+    - to:
+        {{- range $np.googleApisCidrs }}
+        - ipBlock: {cidr: {{ . }}}
+        {{- end }}
+      ports:
+        - {port: 443, protocol: TCP}
+    {{- if $np.allowPublicHttps }}
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except: [10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16]
+      ports:
+        - {port: 443, protocol: TCP}
+    {{- end }}
+    {{- with $np.extraEgress }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+{{- end }}

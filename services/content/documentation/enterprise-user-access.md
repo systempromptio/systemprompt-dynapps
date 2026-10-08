@@ -3,18 +3,19 @@ title: "User & Access Management"
 description: "Manage enterprise users from the admin UI: search, roles, session and PAT revocation, closed registration, and Astound SSO with AD groups as entitlements."
 author: "Astound Digital"
 slug: "enterprise-user-access"
-keywords: "users, access, roles, sso, adfs, active directory, pat, sessions, registration, deprovisioning, time-bound access, expiry"
+keywords: "users, access, roles, sso, adfs, active directory, pat, api key, per-key limits, scope binding, sessions, registration, deprovisioning, time-bound access, expiry"
 kind: "guide"
 public: true
 tags: ["enterprise", "admin", "access"]
 published_at: "2026-08-25"
-updated_at: "2026-09-29"
+updated_at: "2026-10-08"
 after_reading_this:
   - "Manage users end to end from /admin/users without touching the CLI or database"
   - "Provision users through SSO or operator administration"
   - "Understand the closed browser registration and recovery paths"
   - "Revoke sessions and personal access tokens for any user immediately"
   - "Understand how Astound SSO provisions accounts and how AD groups revoke access"
+  - "Issue an API key with its own model allowlist, budget, request ceiling and scope bindings"
 related_docs:
   - title: "Access Control: Who Reaches What, and Why"
     url: "/documentation/access-control"
@@ -73,6 +74,30 @@ with what each role reaches, is in
 
 Every token has an expiry. `security.max_pat_lifetime_days` in `services/web/config/security.yaml` (default **90**) is the longest a token may live from issuance, enforced on every path that mints one — the console form, `POST /admin/devices/pats`, and device enrolment. A request with no expiry gets the maximum; one asking for more is refused with a 400 rather than silently clamped. Tokens issued before the policy changed keep the expiry they were issued with.
 
+### Per-key limits and scope bindings
+
+A key (personal access token) can carry its own policy, set when it is issued. Without it, a key inherits its owner's scope and counts against the owner's quota windows only. With it, the key is **its own quota subject** (`api_key`), on top of the owner's windows, so one application's key can be capped without capping the person.
+
+| Limit | Effect |
+|---|---|
+| Model allowlist | A request for a model not on the list is refused with `403` (`model '<id>' is not allowed for this API key`) before routing. |
+| Budget (microdollars) and request ceiling | Ceilings over the key's own window (`request_window_seconds`, required when either is set). They reserve, settle and answer the machine-readable `429` exactly like policy quota windows, and follow the instance's `quota_mode`, which is **warn** here: a crossing is recorded, not refused. |
+| Scope bindings | One value per scope dimension (for example `project=<id>`). The key's requests are attributed to that value, with source `api_key`, unless the request names the dimension by header. The value is checked against the owner's memberships at issuance and on every request: a value the owner does not hold is refused with `403`, an unregistered dimension with `400`. |
+
+From the CLI:
+
+```bash
+systemprompt admin users api-key issue --user <user> --name ci-runner \
+  --model claude-sonnet-5 \
+  --budget-microdollars 50000000 --max-requests 2000 --window-seconds 86400 \
+  --scope project=<project-id>
+systemprompt admin users api-key list --user <user>     # prints each key's limits and scopes
+```
+
+`--model` and `--scope` repeat. With none of these flags, issuance is unchanged.
+
+From the API, `POST /api/v1/admin/api-keys` accepts `model_allowlist`, `budget_microdollars`, `max_requests`, `request_window_seconds` and `scopes`, with the same membership check, and `GET /api/v1/admin/api-keys` returns them. The **Issue a token** form on `/admin/devices` does not set limits; use the CLI or API for a limited key.
+
 Device certificates can be given an expiry from the certificates tab (**Set expiry**). The window is recorded beside the certificate and the hourly sweep revokes the certificate once it passes.
 
 ## Time-bound sharing
@@ -91,6 +116,10 @@ How an expiry binds differs by what it is on, because two of the four are decide
 | Device certificate | Within the hour | The sweep stamps the certificate revoked, which is what the device gate reads. |
 
 Re-adding a member whose earlier membership expired revives the row with the new window. For contractors, combine a membership expiry with the PAT lifetime cap above; account-level disable and revocation remain available for the immediate case.
+
+### Archive instead of delete
+
+Deleting a person archives them (NFR-5.2). The account stops signing in and leaves the roster. Their sessions, tokens and certificates are revoked at once, and who archived them, when and why is recorded. Their requests, decisions and usage stay. **Restore** on the person's page, or `systemprompt admin users restore <user>`, brings the account back within `retention.archived_users_days` (90 days by default). After that window, the nightly cleanup purges the account and its rows, unless it is under legal hold (`systemprompt admin users legal-hold <user>`). See [Data Retention](/documentation/data-retention#archived-users).
 
 ## Context-aware access control
 

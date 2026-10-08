@@ -8,7 +8,7 @@ kind: "guide"
 public: true
 tags: ["enterprise", "gateway", "admin"]
 published_at: "2026-08-25"
-updated_at: "2026-09-30"
+updated_at: "2026-10-08"
 after_reading_this:
   - "Route any Anthropic- or OpenAI-compatible client through the provider-neutral gateway"
   - "Know which models this instance serves, from which provider, and which retire soon"
@@ -139,7 +139,9 @@ catalog cannot claim one platform while pointing at another.
 A route may list **`fallbacks`**: deployments tried in order after the
 primary, each a `provider` and optionally an `upstream_model` when that
 deployment's model id differs. The shipped `claude-*` route fails over from
-Vertex to Anthropic's API:
+Vertex AI's `global` endpoint to a second Vertex deployment,
+`vertex-anthropic-eu`, on the `europe-west1` regional endpoint under the same
+`vertex` service account. Traffic never leaves Vertex:
 
 ```yaml
 gateway:
@@ -149,11 +151,19 @@ gateway:
     model_pattern: claude-*
     provider: vertex-anthropic
     fallbacks:
-    - provider: anthropic
+    - provider: vertex-anthropic-eu
 ```
 
 The older `fallback_provider` / `fallback_upstream_model` keys are refused at
 boot; move them into a one-entry `fallbacks` list.
+
+**Anthropic's API is in no failover chain.** A provider serves a route's
+traffic only when the route (or one of its chains) names it, and no `claude-*`
+chain names `anthropic`. The regional deployment serves each Claude model under
+a hidden `vertex-eu-claude-*` alias, priced at Vertex's 10% regional premium.
+The project's Claude quota in `europe-west1` must be requested from Google in
+advance, or the fallback answers 429 too. The separate `anthropic-claude-*` and
+`claude-native-tools` routes name Anthropic as their primary and are unaffected.
 
 **Per-project chains.** `by_scope` gives requests attributed to a value in
 one scope dimension their own chain, for example a project's own Vertex
@@ -168,7 +178,7 @@ project or region. A value the route does not list is refused unless
         storefront:
           provider: vertex-anthropic
           fallbacks:
-          - provider: anthropic
+          - provider: vertex-anthropic-eu
 ```
 
 The project is the one the gateway attributed the request to: the
@@ -180,10 +190,12 @@ person's primary project. The audit row's route match records
 transient answers (429, 503). Failover happens when that budget is spent,
 when the primary answers any other **5xx**, or when the **connection fails**
 (DNS, TLS, timeout). The same governed request is then re-sent to the
-fallback once, under the same retry policy. A 4xx other than 429 never fails
+next deployment in the chain, under that deployment's own retry budget, and so
+on down the list. A 4xx other than 429 never fails
 over, because the fault is in the request, not the provider. A per-provider
 **circuit breaker** skips a primary that keeps failing and tries the fallback
-first.
+first; when every deployment is tripped, all are tried anyway, so a request is
+never left unsent.
 
 **What is re-sent.** The request that governance and the safety scanners
 already judged is rebuilt in the fallback's wire format. Neither plane runs
@@ -193,7 +205,13 @@ again, because the content has not changed.
 route's primary and records the provider that answered in
 **`served_provider`**. The request is repriced at that provider's rate, and
 the route-match descriptor gains a `failover:<primary>-><fallback>` segment.
-`systemprompt infra logs audit <request-id>` prints both. The Prometheus
+`systemprompt infra logs audit <request-id>` prints both.
+
+| `route_match` contains | Meaning |
+|---|---|
+| `failover:vertex-anthropic->vertex-anthropic-eu` | the primary failed and the next deployment answered (`a->b->c` for a longer chain) |
+| `scope:project=<id>` | the request was attributed to that project and served by its `by_scope` chain (or the shared chain under `unmapped: shared`) |
+ The Prometheus
 counter **`gateway_upstream_failovers_total{from,to,reason}`** (`reason` is
 `status_<code>`, `transport` or `circuit_open`) is on `/metrics`.
 
@@ -201,6 +219,44 @@ counter **`gateway_upstream_failovers_total{from,to,reason}`** (`reason` is
 a priced model, and satisfy the route's `requires:` block. If a fallback
 cannot be used at request time, the client gets the primary's own error, as
 it would with no fallback declared.
+
+### Selection strategy
+
+A route, and each `by_scope` chain, can set `strategy` to choose which
+deployment a request tries first. Failover after that first attempt works
+as described above.
+
+| `strategy` | First attempt |
+|---|---|
+| `ordered` (default) | The chain order: `provider`, then `fallbacks`. |
+| `weighted` | Drawn by each deployment's `weight` (default 1) among deployments whose circuit breaker is closed. The rest follow in descending weight. |
+| `least_busy` | The healthy deployment with the fewest requests in flight on this server process. |
+
+`weight` sits on the route for the primary and on each `fallbacks` entry.
+`weight: 0` is refused at load. A weight under `ordered` is ignored. A
+non-ordered strategy adds `strategy:<name>` to the request's `route_match`,
+and `gateway_deployment_selected_total{route,provider,strategy}` counts every
+selection. This instance's routes keep the default `ordered`.
+
+### Context-window check
+
+Before any upstream call, the gateway estimates the request's input tokens
+from its text and compares the estimate with the selected model's
+`context_window` in the provider catalog. Images and tool inputs are not
+counted, so the estimate errs low and never refuses a request that fits.
+
+- **It fits.** The request is sent as normal. Failover deployments whose
+  declared window is too small are skipped.
+- **It does not fit, and the route lists `context_fallbacks`.** The request
+  goes to the first context fallback whose window fits. `route_match`
+  records `context_window:a->b`.
+- **It does not fit, and no fallback fits.** The request is refused with a
+  400 in the caller's API format, with `error_key: context_window_exceeded`
+  naming the estimate, the limit and the model. Nothing is sent upstream, so
+  nothing is billed.
+
+A model with no declared window is never refused. An oversized `max_tokens`
+is clamped to the model's output ceiling rather than refused.
 
 ## Model access control
 

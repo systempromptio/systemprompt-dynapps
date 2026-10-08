@@ -127,6 +127,12 @@
                     <dt>Share token</dt>
                     <dd><span class="sp-kv-row__value"><span class="sp-u-num">version {{identity.share_token_version}}</span>{{#if can_write}}<button type="button" class="sp-btn sp-btn--sm sp-btn--outline" data-issue-share-token>Issue</button>{{/if}}</span></dd>
                 </div>
+                {{#if can_write}}{{#unless is_self}}
+                <div class="sp-kv-row">
+                    <dt>Account</dt>
+                    <dd><span class="sp-kv-row__value"><span class="sp-u-text-tertiary">Archiving keeps the history and can be restored within the retention window</span>{{#unless header.is_active}}<button type="button" class="sp-btn sp-btn--sm sp-btn--outline" data-restore-user>Restore</button>{{/unless}}<button type="button" class="sp-btn sp-btn--sm sp-btn--danger" data-archive-user>Archive</button></span></dd>
+                </div>
+                {{/unless}}{{/if}}
             </dl>
         </div>
     </section>

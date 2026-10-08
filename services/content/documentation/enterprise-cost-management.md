@@ -3,12 +3,12 @@ title: "Cost Management & FinOps"
 description: "Attribute every AI request's cost to a user, group, project, model and provider; read the Cost tab; watch spend against quota-window warning thresholds; and export cost reports."
 author: "Astound Digital"
 slug: "enterprise-cost-management"
-keywords: "cost, finops, spend, quota windows, warning thresholds, chargeback, csv, cost tab, provider cost"
+keywords: "cost, finops, spend, quota windows, warning thresholds, chargeback, csv, cost tab, provider cost, cost centre, practice, api key budget, otlp, bigquery"
 kind: "guide"
 public: true
 tags: ["enterprise", "finops", "admin"]
 published_at: "2026-08-25"
-updated_at: "2026-10-07"
+updated_at: "2026-10-08"
 after_reading_this:
   - "Read the Cost tab: spend by day, by provider and by model, and consumption by group or project"
   - "Attribute any request's cost to its user, group, project, model, and provider"
@@ -30,7 +30,7 @@ related_docs:
 
 **TL;DR:** Every AI request carries its own cost, attributed to a user, their primary group and project, a model and a provider. The **Cost** tab on `/admin/analytics` shows spend by day, provider and model, and consumption by group or project. Every table there exports.
 
-Spend is watched by the gateway's **quota windows**: $20 and 600 requests per user per hour, and $200 per day for the whole instance. Since 2026-09-04 those windows only **warn**. A crossing is recorded and reported, and the request still runs, so nothing on this instance stops spend.
+Spend is watched by the gateway's **quota windows**: $20 and 600 requests per user per hour, $100 per project per day, and $200 per day for the whole instance. An API key can carry its own budget on top. Since 2026-09-04 those windows only **warn**. A crossing is recorded and reported, and the request still runs, so nothing on this instance stops spend.
 
 There are no forecasts, no scheduled digests and no alert delivery.
 
@@ -50,7 +50,15 @@ Every gateway request is also attributed to one value in each **scope dimension*
 
 A caller who works on two projects can therefore charge each request to the right one by header, instead of everything landing on their primary project. A header or bound value the caller does not hold is refused with `403`.
 
-On this instance **`cost_centre` and `practice` are per-project fields**. Neither is sent by the client: a request inherits both from the project it is attributed to, so whichever way the project was resolved (header, API key binding or default), its cost centre and practice follow. Spend by cost centre or by practice is spend by project, rolled up one level.
+On this instance three dimensions are registered for chargeback:
+
+| Dimension | Values a person holds | Default |
+|---|---|---|
+| `project` | the projects they are a live member of | their primary project |
+| `cost_centre` | the cost centres of those projects (a project's optional **Cost centre** field) | their primary project's cost centre |
+| `practice` | the practices of those projects (a project's optional **Practice** field) | their primary project's practice |
+
+Each dimension is resolved on its own, by the same header → API key binding → default order. A caller on several cost centres picks one with `x-systemprompt-scope-cost_centre`, and likewise for `practice`. None of the three changes an access decision; they exist for attribution and for quota windows keyed on them.
 
 The request row also records `api_key_id`, the key that authenticated it, so spend per key is available alongside spend per user.
 
@@ -88,11 +96,12 @@ Spend thresholds are the gateway's quota windows, declared in `services/gateway/
 | Window | Subject | Threshold |
 |---|---|---|
 | Hourly | each user | 600 requests or $20 |
+| Daily | each project (`project`) | $100 |
 | Daily | the whole instance (`organization`) | $200 |
 
-The per-user window is sized to flag a runaway agent within the hour. The instance window flags an unusually expensive day.
+The per-user window is sized to flag a runaway agent within the hour. The per-project window flags a project's unusually expensive day, and the instance window the whole installation's. Because `quota_fault_mode` is `closed`, a person on no project is recorded as a quota warning at the project window; give everyone a project before switching quotas to enforce.
 
-The quota plane runs in **warn mode** (`quota_mode: warn`, since 2026-09-04). A window past its threshold is recorded as a `warn` decision under policy `quota`. `enforce` and `warn` are independent switches for the quota and safety planes. It appears in `systemprompt infra logs governance report` and on `/admin/governance`, and the request is never refused. [Governance Modes](/documentation/governance-modes) explains the measurement window and how a plane goes back to enforce. Under enforce, a spent window answers HTTP 429 with a `Retry-After` equal to the time until the window resets, and an `error.quota` body naming the window, subject, ceiling, limit and usage (see [Gateway API](/documentation/gateway-api#status-codes-before-the-upstream-call)). Every breach, in either mode, increments `systemprompt_quota_denials_total{subject_kind, dimension, mode}`.
+The quota plane runs in **warn mode** (`quota_mode: warn`, since 2026-09-04). A window past its threshold is recorded as a `warn` decision under policy `quota`. `enforce` and `warn` are independent switches for the quota and safety planes. It appears in `systemprompt infra logs governance report` and on `/admin/governance`, and the request is never refused. [Governance Modes](/documentation/governance-modes) explains the measurement window and how a plane goes back to enforce. Under enforce, a spent window answers HTTP 429 with a `Retry-After` equal to the time until the window resets, and an `error.quota` body `{window_seconds, subject, dimension, limit, used, resets_at, retry_after_seconds}` (see [Gateway API](/documentation/gateway-api#status-codes-before-the-upstream-call)). Every breach, in either mode, increments `systemprompt_quota_denials_total{subject_kind, dimension, mode}`.
 
 ### Reservation, settlement and release
 
@@ -113,7 +122,7 @@ The subjects this instance resolves are:
 
 A window can also key on `api_key` or on any scope dimension, in which case it counts the request's attributed value. A person on several groups or projects is otherwise counted against their primary one. `quota_fault_mode: closed` means a window whose subject cannot be resolved refuses the request rather than passing it uncounted.
 
-**Only the two windows above are declared.** A monthly window per project, group or role is supported but not configured.
+**Only the three windows above are declared.** A monthly window per project, group or role, or a window keyed on `cost_centre` or `practice`, is supported but not configured.
 
 Periods are an hour, a day, a week, any number of seconds, or a **calendar month**. Core's windows are fixed-length and aligned to the Unix epoch, so the calendar month is an interim provided by the admin extension:
 
@@ -148,14 +157,24 @@ Both pages read and write the same table, `ai_gateway_policies`:
   - `/admin/sync` then shows the edit as drift on the `gateway_policies` plane, until it is exported to `services/gateway/policies.yaml` and committed, or overwritten from code.
 - **`/admin/governance/quotas`** shows usage against each window's threshold, per subject, for the current period, with a meter for the threshold closest to being reached. Under warn mode, a subject past 100% was warned about, never refused.
 
+## Chargeback outside the platform
+
+The console and CLI answer "who spent what" inside the instance. To charge spend back in a finance system, export it:
+
+- **OTLP spans.** With [Observability Export](/documentation/observability-export) turned on, every exported `ai_request` span carries `systemprompt.scope.<dimension>` and `systemprompt.scope.<dimension>.source` for each attributed dimension (so `systemprompt.scope.project`, `systemprompt.scope.cost_centre` and `systemprompt.scope.practice` here), plus `systemprompt.api_key.id`, beside the request's tokens and cost. A collector can forward them to a warehouse; on Google Cloud the path is OTLP → OpenTelemetry Collector → Cloud Logging → a log sink into BigQuery (see [Observability Export: Google Cloud](/documentation/observability-export#google-cloud)).
+- **Exports.** The Cost tab and `analytics costs` exports (below) give the same figures as CSV or JSON.
+
+The export is not in the FinOps Open Cost and Usage Specification (FOCUS) format. Mapping the span attributes onto FOCUS columns is the collector's or warehouse's job.
+
 ## What is not built
 
 These controls are **not** available. The roadmap records each one:
 
-- **Budgets that stop spend.** The quota windows can enforce, but they are switched to warn by decision, and no per-project or per-group monthly window is declared.
+- **Budgets that stop spend.** The quota windows and per-key budgets can enforce, but quotas are switched to warn by decision, and no per-project or per-group monthly window is declared.
 - **Forecasting or burndown.** Nothing projects month-end spend from the run rate.
 - **Scheduled digests.** No job sends a periodic cost summary.
-- **Alert delivery.** A threshold crossing is a `warn` row and a log line; no email, chat or webhook message is sent. With the [OTLP export](/documentation/observability-export) turned on, those log lines reach your own alerting stack.
+- **Alert delivery.** A threshold crossing is a `warn` row, a log line and an increment of `systemprompt_quota_denials_total`; the hourly `usage_anomaly_scan` adds `systemprompt_usage_anomaly_total` and a `usage_anomaly` event for unusual per-user spend. No email, chat or webhook message is sent: delivery is your monitoring stack's job, through the [OTLP export](/documentation/observability-export) or a metrics scrape.
+- **FOCUS export.** Cost data is not emitted in the FOCUS format.
 
 ## Self-service reporting
 

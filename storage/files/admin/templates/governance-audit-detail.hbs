@@ -311,11 +311,17 @@
                   <code class="sp-code-inline">{{this.name}}</code>
                   <span class="sp-badge sp-badge--{{this.tone}}">{{this.label}}</span>
                   {{#if this.has_rule_hits}}<span class="sp-badge sp-badge--warn">{{this.rule_hit_count}} rule hits</span>{{/if}}
+                  {{#if this.has_schema_violations}}<span class="sp-badge sp-badge--warn" title="Fails JSON Schema meta-validation">{{this.schema_violation_count}} schema errors</span>{{/if}}
                   {{#if this.description}}<span class="sp-table__cell--muted sp-p-request-schemas__desc">{{this.description}}</span>{{/if}}
                 </summary>
                 {{#if this.has_rule_hits}}
                 <ul class="sp-p-request-schemas__hits">
                   {{#each this.rule_hits}}<li><code class="sp-code-inline">{{this}}</code></li>{{/each}}
+                </ul>
+                {{/if}}
+                {{#if this.has_schema_violations}}
+                <ul class="sp-p-request-schemas__hits">
+                  {{#each this.schema_violations}}<li>{{this}}</li>{{/each}}
                 </ul>
                 {{/if}}
                 <div class="sp-p-request-schemas__pair">

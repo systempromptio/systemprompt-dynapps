@@ -140,6 +140,15 @@ scheduler:
       owner: admin
       enabled: true
 
+    # Nightly measured gateway overhead (NFR-1.6): p50/p95/p99 of total minus
+    # upstream latency for the previous UTC day, per wire dialect, into
+    # gateway_overhead_daily (last 400 days kept). Shown on /admin.
+    - name: gateway_overhead_rollup
+      extension: web
+      owner: admin
+      schedule: "0 10 0 * * *"
+      enabled: true
+
     # Hourly usage spike detection (REQ-031): requests/cost/errors vs the
     # trailing-week hourly baseline, persisted to usage_anomalies and
     # warned to the log on first detection per window.
@@ -220,6 +229,16 @@ scheduler:
       extension: web
       owner: admin
       schedule: "0 30 2 1 * *"
+      enabled: true
+
+    # Audit hash chain (NFR-5.6): re-hashes the last two days of the
+    # ai_requests and ai_safety_findings chains, records one
+    # audit_chain_verifications row per table and fails the run on any break.
+    # Schema 51_audit_integrity.sql; see /documentation/data-retention.
+    - name: audit_chain_verify
+      extension: web
+      owner: admin
+      schedule: "0 45 4 * * *"
       enabled: true
 
     # Calendar-month quota windows (web extension, interim until core has

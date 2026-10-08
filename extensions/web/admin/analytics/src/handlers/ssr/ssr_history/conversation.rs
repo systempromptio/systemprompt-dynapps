@@ -20,7 +20,7 @@ use axum::extract::{Path, State};
 use axum::response::Response;
 use serde::Serialize;
 use sqlx::PgPool;
-use systemprompt::identifiers::ContextId;
+use systemprompt::identifiers::{ContextId, UserId};
 
 use crate::handlers::ssr::conversation_header::{
     ConversationStatsView, StatusBadgeView, resolve_title, stats_view, status_badge,
@@ -34,9 +34,10 @@ use crate::repositories::analytics::context_detail::{
 };
 use crate::repositories::analytics::context_tool_calls::list_tool_calls_for_requests;
 use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
-use systemprompt_web_admin_core::repositories::conversations::history_scope_for;
+use systemprompt_web_admin_core::repositories::conversations::get_history_scope;
 use systemprompt_web_admin_core::ssr::entity_urls::context_detail_url;
 use systemprompt_web_admin_core::ssr::page::Page;
+use systemprompt_web_admin_core::types::UserContext;
 
 #[derive(Debug, Serialize)]
 struct ConversationPageContext {
@@ -69,13 +70,12 @@ pub(crate) async fn history_conversation_page(
         return Err(not_found().into());
     };
 
-    let scope = history_scope_for(&shell.user);
-    let owned = header
-        .user_id
-        .as_ref()
-        .is_some_and(|owner| scope.may_view(owner));
-    if !owned {
+    let scope = get_history_scope(&pool, &shell.user).await?;
+    let Some(owner) = header.user_id.as_ref().filter(|o| scope.may_view(o)) else {
         return Err(not_found().into());
+    };
+    if owner != &shell.user.user_id {
+        record_cross_user_read(&shell.user, owner, &context_id);
     }
 
     let (kpis_res, requests_res) = tokio::join!(
@@ -123,4 +123,15 @@ pub(crate) async fn history_conversation_page(
             &shell.marketplace,
         ),
     )
+}
+
+fn record_cross_user_read(viewer: &UserContext, owner: &UserId, context_id: &ContextId) {
+    tracing::info!(
+        target: "history_access",
+        viewer = %viewer.user_id,
+        owner = %owner,
+        context_id = %context_id,
+        full_view = viewer.is_console,
+        "conversation read by someone other than its owner"
+    );
 }

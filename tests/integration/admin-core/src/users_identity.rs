@@ -171,21 +171,30 @@ async fn update_user_leaves_fields_the_request_omits() {
 }
 
 #[tokio::test]
-async fn delete_user_reports_whether_a_row_went() {
+async fn archive_keeps_the_row_and_restore_reverses_it() {
     let Some(db) = TempDb::create().await else {
         return;
     };
-    let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("delete")).await;
+    let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("archive")).await;
+    let missing = UserId::new(unique("absent"));
 
-    let removed = users::delete_user(&db.pool, &user)
+    let archived = users::archive_user(&db.pool, &user, &user, "test")
         .await
-        .expect("delete succeeds");
-    let removed_again = users::delete_user(&db.pool, &user)
+        .expect("archive succeeds");
+    let absent = users::archive_user(&db.pool, &missing, &user, "test")
         .await
-        .expect("a second delete is not an error");
+        .expect("archiving an absent user is not an error");
+    let restored = users::restore_user(&db.pool, &user, 90)
+        .await
+        .expect("restore succeeds");
+    let restored_again = users::restore_user(&db.pool, &user, 90)
+        .await
+        .expect("restoring an active user is not an error");
 
-    assert!(removed, "the first delete removes the row");
-    assert!(!removed_again, "the second finds nothing to remove");
+    assert!(archived, "the archive finds the row");
+    assert!(!absent, "an absent user is reported, not created");
+    assert!(restored, "an archive inside the window is restored");
+    assert!(!restored_again, "an active user has nothing to restore");
     db.cleanup().await;
 }
 

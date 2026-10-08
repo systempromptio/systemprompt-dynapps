@@ -14,6 +14,7 @@ use crate::error::AdminResult;
 use crate::repositories::scheduled_jobs::find_job_run;
 
 const JOB_NAME: &str = "database_cleanup";
+const RAW_EVIDENCE_DAYS: u32 = 90;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct RetentionRowView {
@@ -67,6 +68,16 @@ pub async fn retention_view(
 }
 
 fn retention_rows(
+    retention: &RetentionConfig,
+    ai_history_days: u32,
+    counts: &[(String, String)],
+) -> Vec<RetentionRowView> {
+    let mut rows = operational_rows(retention, ai_history_days, counts);
+    rows.extend(audit_rows(retention, counts));
+    rows
+}
+
+fn operational_rows(
     retention: &RetentionConfig,
     ai_history_days: u32,
     counts: &[(String, String)],
@@ -125,6 +136,33 @@ fn retention_rows(
             days: retention.governance_decisions_days,
             days_source: "profile retention.governance_decisions_days",
             deleted_last_run: deleted("governance_decisions"),
+        },
+    ]
+}
+
+fn audit_rows(retention: &RetentionConfig, counts: &[(String, String)]) -> Vec<RetentionRowView> {
+    let deleted = |table: &str| deleted_count(counts, table);
+    vec![
+        RetentionRowView {
+            table: "ai_requests",
+            purpose: "gateway request log, its safety findings and attributions; 90-day audit floor",
+            days: RAW_EVIDENCE_DAYS,
+            days_source: "fixed: plugin_usage_retention (expire_raw_evidence)",
+            deleted_last_run: None,
+        },
+        RetentionRowView {
+            table: "plugin_usage_events",
+            purpose: "hook events; 90-day audit floor",
+            days: RAW_EVIDENCE_DAYS,
+            days_source: "fixed: plugin_usage_retention (expire_raw_evidence)",
+            deleted_last_run: None,
+        },
+        RetentionRowView {
+            table: "users (archived)",
+            purpose: "archived accounts purged with their rows; never under legal hold",
+            days: retention.archived_users_days,
+            days_source: "profile retention.archived_users_days",
+            deleted_last_run: deleted("archived_users"),
         },
         RetentionRowView {
             table: "ai_quota_buckets",

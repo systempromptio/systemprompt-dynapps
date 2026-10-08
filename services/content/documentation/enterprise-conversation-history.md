@@ -78,13 +78,15 @@ Asking for a conversation you do not own returns **404**, the same answer as an 
 | You are | You can see |
 |---|---|
 | Any signed-in user | Your own conversations, always, at `/admin/history` |
+| `project_manager` | Your own, plus every live member of the projects you are a live member of, at `/admin/history` (the scope reads "you and your projects' members") |
 | `admin` or `platform_admin` | Everyone's, at `/admin/conversations`, with a per-user filter |
 
 Scope is resolved on the server for every request. A request naming a `user_id` outside your scope returns **403**, and the result set can never widen beyond the users your identity resolves to. Group and project scoping, which narrows the admin analytics pages, is deliberately not applied to your own history: it must never hide a person's own conversations from them.
 
-Two gaps:
+A project manager's list is read from live project membership on every request. A membership that has expired, is not yet valid or was revoked does not count, on the manager's side or the member's, so removing someone from a project removes them from the manager's view at once. Opening a conversation that belongs to someone else, as a manager or an admin, writes a `history_access` log event naming the viewer, the owner and the conversation.
 
-- **No manager view.** The scope resolver accepts a list of people a viewer manages, but nothing supplies that list yet. A project manager therefore sees only their own conversations, and a line-manager view of a team's history is not available.
+One gap:
+
 - **No auditor role to grant.** The code gives full history view to an `auditor` role, but `auditor` is not among the roles the directory mapping or the role editor can assign. Today, full view means an admin role.
 
 ## Redaction carries through

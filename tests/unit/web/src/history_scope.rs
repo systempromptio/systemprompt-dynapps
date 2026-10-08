@@ -1,10 +1,12 @@
 //! Conversation-history scope resolution: self is always visible, the full
 //! view (admin / auditor) bypasses the allowlist entirely, and a plain user's
-//! allowlist is exactly themselves.
+//! allowlist is exactly themselves. A `project_manager` widens to the live
+//! members of their projects; the member list itself comes from the
+//! `user_projects` view, so these tests pin the decision over a given list.
 
 use systemprompt::identifiers::{Email, UserId};
 use systemprompt_web_admin_core::repositories::conversations::{
-    HistoryScope, history_scope_for, resolve_history_scope,
+    HistoryScope, history_scope_for, manages_member_history, resolve_history_scope,
 };
 use systemprompt_web_admin_core::repositories::scope::Participation;
 use systemprompt_web_admin_core::types::UserContext;
@@ -73,4 +75,38 @@ fn a_non_admin_scope_is_exactly_themselves() {
     let scope = history_scope_for(&ctx("viewer", &["user"]));
     assert_eq!(scope, HistoryScope::Users(vec![uid("viewer")]));
     assert!(!scope.may_view(&uid("colleague-in-the-same-project")));
+}
+
+#[test]
+fn only_a_non_admin_project_manager_widens_to_members() {
+    assert!(manages_member_history(&ctx("pm", &["project_manager"])));
+    assert!(manages_member_history(&ctx(
+        "pm",
+        &["user", "Project_Manager"]
+    )));
+    assert!(!manages_member_history(&ctx("dev", &["developer", "user"])));
+    assert!(!manages_member_history(&ctx(
+        "root",
+        &["admin", "project_manager"]
+    )));
+    assert!(!manages_member_history(&ctx(
+        "eyes",
+        &["auditor", "project_manager"]
+    )));
+}
+
+#[test]
+fn a_manager_sees_their_members_and_themselves_only() {
+    let members = vec![uid("alice"), uid("bob")];
+    let scope = resolve_history_scope(&uid("pm"), false, members);
+    assert!(scope.may_view(&uid("pm")));
+    assert!(scope.may_view(&uid("alice")));
+    assert!(scope.may_view(&uid("bob")));
+    assert!(!scope.may_view(&uid("member-of-another-project")));
+}
+
+#[test]
+fn a_manager_without_live_memberships_sees_only_themselves() {
+    let scope = resolve_history_scope(&uid("pm"), false, Vec::new());
+    assert_eq!(scope, HistoryScope::Users(vec![uid("pm")]));
 }

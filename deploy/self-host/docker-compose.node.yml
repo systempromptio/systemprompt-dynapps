@@ -2,7 +2,7 @@
 # input is the profile directory rendered by render-profile.sh (and even that
 # is the same content everywhere). See README.md.
 #
-#   export SYSTEMPROMPT_TAG=0.63.1 ASTOUND_PROFILE_DIR=/etc/astound/profile
+#   export SYSTEMPROMPT_TAG=0.64.0 ASTOUND_PROFILE_DIR=/etc/astound/profile
 #   docker compose -f docker-compose.node.yml run --rm app migrate   # once, first node
 #   docker compose -f docker-compose.node.yml up -d
 #
@@ -10,7 +10,7 @@
 # `run --rm app migrate` is the one-shot schema step (README.md §5).
 services:
   app:
-    image: ghcr.io/astound-digital/systemprompt-astound:${SYSTEMPROMPT_TAG:?pin a release, e.g. 0.63.1}
+    image: ghcr.io/astound-digital/systemprompt-astound:${SYSTEMPROMPT_TAG:?pin a release, e.g. 0.64.0}
     restart: unless-stopped
     # The server has no graceful shutdown: drain the node at the load balancer
     # before stopping it, and give in-flight requests this long to finish.
@@ -31,6 +31,10 @@ services:
       # - /etc/astound/pg-ca.pem:/etc/astound/pg-ca.pem:ro
     ports:
       - "${HTTP_PORT:-8080}:8080"
+    # Prometheus metrics (server.metrics_port): reachable from the compose
+    # network only, never published on the host.
+    expose:
+      - "9090"
     healthcheck:
       # During boot the same path answers 200 {"status":"starting"}; only a
       # body containing "healthy" means the node may take traffic.

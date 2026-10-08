@@ -15,7 +15,7 @@ mod unified;
 pub use gateway_text::strip_gateway_markers;
 pub use redact::redact_text;
 pub use scope::{
-    HistoryScope, has_full_history_view, history_scope_for, own_history_scope,
-    resolve_history_scope,
+    HistoryScope, get_history_scope, has_full_history_view, history_scope_for,
+    manages_member_history, own_history_scope, resolve_history_scope,
 };
 pub use unified::{HistoryFilter, HistoryItem, list_history_items};

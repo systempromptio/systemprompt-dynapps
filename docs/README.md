@@ -8,6 +8,7 @@ into the product documentation site remains under `services/content/documentatio
 
 - [Docker installation](install/docker.md)
 - [Oracle Cloud deployment](install/oracle-cloud.md)
+- [GKE deployment with the Helm chart](install/gke.md)
 - [Required secrets](install/required-secrets.md) and [Vertex configuration](install/vertex.md)
 - [Profile schema](profile.schema.json)
 
@@ -23,6 +24,7 @@ into the product documentation site remains under `services/content/documentatio
 
 - [Branching](BRANCHING.md)
 - [Release and rollback procedure](RELEASING.md)
+- [Security policy and telemetry statement](../SECURITY.md)
 
 Do not commit customer diagnostics, credentials, or raw deployment transcripts.
 Capability descriptions must distinguish implemented behavior from planned work and

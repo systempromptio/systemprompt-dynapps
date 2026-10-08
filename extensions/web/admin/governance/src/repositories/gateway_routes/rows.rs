@@ -1,10 +1,10 @@
 //! `gateway_routes` reads and writes, in dispatch order.
 
 use chrono::{DateTime, Utc};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 
-use systemprompt_web_admin_core::types::GatewayRouteView;
+use systemprompt_web_admin_core::types::{GatewayRouteView, RouteFallbackView};
 
 pub const SOURCE_CODE: &str = "code";
 pub const SOURCE_DASHBOARD: &str = "dashboard";
@@ -28,11 +28,51 @@ fn json_of(value: Option<&serde_yaml::Value>) -> Option<serde_json::Value> {
     value.and_then(|v| serde_json::to_value(v).ok())
 }
 
+#[derive(Debug, Default, Serialize, Deserialize)]
+struct RoutingColumn {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    strategy: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    weight: Option<u32>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    context_fallbacks: Vec<RouteFallbackView>,
+}
+
+// JSON: fixed-shape routing column as stored
+fn routing_of(value: Option<serde_json::Value>) -> Result<RoutingColumn, sqlx::Error> {
+    value.map_or_else(
+        || Ok(RoutingColumn::default()),
+        |v| {
+            serde_json::from_value(v).map_err(|e| sqlx::Error::ColumnDecode {
+                index: "routing".to_owned(),
+                source: Box::new(e),
+            })
+        },
+    )
+}
+
+// JSON: fixed-shape routing column written for storage
+fn routing_json(route: &GatewayRouteView) -> Option<serde_json::Value> {
+    let column = RoutingColumn {
+        strategy: route.strategy.clone(),
+        weight: route.weight,
+        context_fallbacks: route.context_fallbacks.clone(),
+    };
+    let empty =
+        column.strategy.is_none() && column.weight.is_none() && column.context_fallbacks.is_empty();
+    if empty {
+        return None;
+    }
+    // Why: discard-ok: a struct of strings, an integer and string pairs always
+    // serialises
+    serde_json::to_value(column).ok()
+}
+
 pub async fn list_gateway_routes(pool: &PgPool) -> Result<Vec<RouteRow>, sqlx::Error> {
     let rows = sqlx::query!(
         r"SELECT id, position, name, description, model_pattern, provider, upstream_model,
                  extra_headers, pricing, when_match, requires, fallbacks, by_scope,
-                 explicit_id, source, updated_at
+                 routing, explicit_id, source, updated_at
             FROM gateway_routes
            ORDER BY position ASC, id ASC"
     )
@@ -52,6 +92,7 @@ pub async fn list_gateway_routes(pool: &PgPool) -> Result<Vec<RouteRow>, sqlx::E
                     index: "fallbacks".to_owned(),
                     source: Box::new(e),
                 })?;
+            let routing = routing_of(r.routing)?;
             Ok(RouteRow {
                 route: GatewayRouteView {
                     id: r.id,
@@ -66,6 +107,9 @@ pub async fn list_gateway_routes(pool: &PgPool) -> Result<Vec<RouteRow>, sqlx::E
                     requires: yaml_of(r.requires),
                     fallbacks,
                     by_scope: yaml_of(r.by_scope),
+                    strategy: routing.strategy,
+                    weight: routing.weight,
+                    context_fallbacks: routing.context_fallbacks,
                 },
                 position: r.position,
                 explicit_id: r.explicit_id,
@@ -105,8 +149,8 @@ pub async fn upsert_gateway_route(
         r"INSERT INTO gateway_routes
               (id, position, model_pattern, provider, upstream_model, extra_headers, pricing,
                when_match, requires, fallbacks, by_scope, explicit_id,
-               source, name, description, updated_at)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NOW())
+               source, name, description, routing, updated_at)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW())
           ON CONFLICT (id) DO UPDATE
              SET position = EXCLUDED.position,
                  name = EXCLUDED.name,
@@ -120,6 +164,7 @@ pub async fn upsert_gateway_route(
                  requires = EXCLUDED.requires,
                  fallbacks = EXCLUDED.fallbacks,
                  by_scope = EXCLUDED.by_scope,
+                 routing = EXCLUDED.routing,
                  explicit_id = EXCLUDED.explicit_id,
                  source = EXCLUDED.source,
                  updated_at = NOW()",
@@ -138,6 +183,7 @@ pub async fn upsert_gateway_route(
         write.source,
         r.name,
         r.description,
+        routing_json(r),
     )
     .execute(pool)
     .await?;

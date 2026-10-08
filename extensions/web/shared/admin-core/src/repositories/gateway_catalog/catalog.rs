@@ -12,7 +12,7 @@
 use systemprompt::identifiers::RouteId;
 use systemprompt::loader::ServicesBootstrap;
 use systemprompt::manifest::ServicesConfig;
-use systemprompt::manifest::services::ProviderRegistry;
+use systemprompt::manifest::services::{ProviderRegistry, RouteDeployment};
 use systemprompt::security::authz::{EntityKind, RegisteredEntities};
 use systemprompt_web_shared::error::MarketplaceError;
 
@@ -49,20 +49,28 @@ pub fn dispatchable_routes(
                 pricing: None,
                 when: None,
                 requires: None,
-                fallbacks: route
-                    .fallbacks
-                    .into_iter()
-                    .map(|deployment| RouteFallbackView {
-                        provider: deployment.provider.as_str().to_owned(),
-                        upstream_model: deployment.upstream_model,
-                    })
-                    .collect(),
+                fallbacks: route.fallbacks.into_iter().map(fallback_view).collect(),
                 by_scope: route
                     .by_scope
                     .and_then(|scoped| serde_yaml::to_value(scoped).ok()),
+                strategy: (!route.strategy.is_ordered()).then(|| route.strategy.to_string()),
+                weight: route.weight,
+                context_fallbacks: route
+                    .context_fallbacks
+                    .into_iter()
+                    .map(fallback_view)
+                    .collect(),
             }
         })
         .collect())
+}
+
+fn fallback_view(deployment: RouteDeployment) -> RouteFallbackView {
+    RouteFallbackView {
+        provider: deployment.provider.as_str().to_owned(),
+        upstream_model: deployment.upstream_model,
+        weight: deployment.weight,
+    }
 }
 
 fn missing_gateway() -> MarketplaceError {

@@ -89,8 +89,16 @@ pub(crate) async fn delete_own_account_handler(
         ));
     }
     repositories::users::user_settings::delete_user_settings(&pool, &user_ctx.user_id).await?;
-    if !repositories::users::mutations::delete_user(&pool, &user_ctx.user_id).await? {
+    if !repositories::users::mutations::archive_user(
+        &pool,
+        &user_ctx.user_id,
+        &user_ctx.user_id,
+        "deleted by the account holder",
+    )
+    .await?
+    {
         return Err(AdminError::NotFound("No such user.".to_owned()));
     }
+    repositories::users::revocation::revoke_user_access(&pool, &user_ctx.user_id).await?;
     Ok(StatusCode::NO_CONTENT.into_response())
 }

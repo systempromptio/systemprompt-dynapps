@@ -428,6 +428,7 @@ _lint-gates-uncoordinated:
         coverage-badge.sh
         check-docs-version.sh
         check-template-fields.sh
+        check-mcp-tool-schemas.sh
     )
     # Why: cargo replaces the rust-contracts scanner binary while another gate
     # is exec'ing it ("never executed"), so build it once here, before the fan-out.

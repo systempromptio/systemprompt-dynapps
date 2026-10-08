@@ -26,6 +26,7 @@ fn route(id: &str, pattern: &str) -> GatewayRouteView {
         fallbacks: vec![RouteFallbackView {
             provider: "openai".into(),
             upstream_model: Some("gpt-fixture".into()),
+            weight: None,
         }],
         by_scope: Some(
             serde_yaml::from_str(
@@ -33,6 +34,7 @@ fn route(id: &str, pattern: &str) -> GatewayRouteView {
             )
             .expect("by_scope yaml"),
         ),
+        ..GatewayRouteView::default()
     }
 }
 

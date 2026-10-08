@@ -75,6 +75,8 @@ mod governance_facets;
 #[cfg(test)]
 mod governance_warn_mode;
 #[cfg(test)]
+mod history_managed_members;
+#[cfg(test)]
 mod history_unified;
 #[cfg(test)]
 mod mcp_servers_yaml;

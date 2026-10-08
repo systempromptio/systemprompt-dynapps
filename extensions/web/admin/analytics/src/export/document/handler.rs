@@ -27,7 +27,7 @@ use crate::repositories::analytics::context_detail::find_context_header;
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 use systemprompt_web_admin_core::export::model::ExportContext;
 use systemprompt_web_admin_core::export::transcripts::{MAX_CONVERSATIONS, TranscriptSource};
-use systemprompt_web_admin_core::repositories::conversations::history_scope_for;
+use systemprompt_web_admin_core::repositories::conversations::get_history_scope;
 use systemprompt_web_admin_core::repositories::scope::visibility::may_view;
 use systemprompt_web_admin_core::types::UserContext;
 
@@ -63,7 +63,10 @@ async fn visible(pool: &PgPool, user: &UserContext, context_id: &ContextId) -> A
     if user.has_scoped_console() {
         return Ok(may_view(pool, user, owner).await?);
     }
-    Ok(owner.is_some_and(|o| history_scope_for(user).may_view(o)))
+    let Some(owner) = owner else {
+        return Ok(false);
+    };
+    Ok(get_history_scope(pool, user).await?.may_view(owner))
 }
 
 fn attachment(content_type: &str, filename: &str, body: String) -> Response {

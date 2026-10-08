@@ -39,7 +39,7 @@ use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
 use systemprompt_web_admin_core::export::model::ExportWindow;
 use systemprompt_web_admin_core::export::transcripts::TranscriptSource;
 use systemprompt_web_admin_core::repositories::conversations::{
-    HistoryFilter, HistoryItem, HistoryScope, list_history_items,
+    HistoryFilter, HistoryItem, HistoryScope, list_history_items, manages_member_history,
 };
 use systemprompt_web_admin_core::ssr::list_view::PageWindow;
 use systemprompt_web_admin_core::types::UserContext;
@@ -100,7 +100,7 @@ async fn fetch_history_slice(
     query: &HistoryQuery,
     view: HistoryView,
 ) -> Result<HistorySlice, AdminError> {
-    let scope = view.scope(user_ctx);
+    let scope = view.scope(pool, user_ctx).await?;
     let scope_ids = scope_user_ids(&scope, query, "view")?;
     let (since, until) = HistoryWindow::of(query).bounds();
     let page = query.page.unwrap_or(0).max(0);
@@ -143,7 +143,7 @@ pub(crate) async fn export_rows(
         window,
         limit,
     } = request;
-    let scope = view.scope(user_ctx);
+    let scope = view.scope(pool, user_ctx).await?;
     let scope_ids = scope_user_ids(&scope, &query, "export")?;
     let (since, until) = window.map_or_else(
         || HistoryWindow::of(&query).bounds(),
@@ -209,7 +209,7 @@ async fn render_listing(
         title: view.title(),
         search_query: query.q.clone().unwrap_or_default(),
         filter_user_id: query.user_id.as_ref().map(|u| u.as_str().to_owned()),
-        scope_label: scope_label(&slice.scope),
+        scope_label: scope_label(&slice.scope, manages_member_history(user_ctx)),
         has_rows: !rows.is_empty(),
         rows,
         show_side: query.show_side(),

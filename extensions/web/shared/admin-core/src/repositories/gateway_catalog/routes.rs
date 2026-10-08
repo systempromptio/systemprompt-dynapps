@@ -109,6 +109,13 @@ pub fn update_route(
             merged.by_scope = merged
                 .by_scope
                 .or_else(|| existing.get(Value::from("by_scope")).cloned());
+            if let Some(previous) = route_from_yaml(&routes[index]) {
+                merged.strategy = merged.strategy.or(previous.strategy);
+                merged.weight = merged.weight.or(previous.weight);
+                if merged.context_fallbacks.is_empty() {
+                    merged.context_fallbacks = previous.context_fallbacks;
+                }
+            }
         }
         routes[index] = route_to_yaml(&merged);
         if !had_explicit_id && let Some(map) = routes[index].as_mapping_mut() {

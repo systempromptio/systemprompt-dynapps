@@ -8,13 +8,15 @@ kind: "guide"
 public: true
 tags: ["enterprise", "audit", "admin", "compliance"]
 published_at: "2026-09-29"
-updated_at: "2026-09-29"
+updated_at: "2026-10-08"
 after_reading_this:
   - "Know how long requests, prompts, governance decisions and logs are kept before deletion"
   - "Know which records are kept indefinitely"
   - "Find and download the weekly and monthly archives from /admin/lifecycle"
   - "Read the live retention windows and the last cleanup run on /admin/configuration"
   - "Understand what finite retention means for audit and history claims"
+  - "Know what the audit guard refuses, how the hash chain works and how to verify it"
+  - "Archive, restore and legal-hold a user account"
 related_docs:
   - title: "Audit Trail, Traceability & Observability"
     url: "/documentation/enterprise-audit-observability"
@@ -53,6 +55,8 @@ These are the windows this installation runs with. The profile sets no `retentio
 | Traffic and behaviour events | 90 days | profile default |
 | Processed durable events (`event_outbox`) | 7 days | profile default |
 | Spent quota windows | 62 days | fixed (longest quota window plus carry-forward) |
+| Archived user accounts and every row keyed on them | 90 days after archiving; never while under legal hold | profile `retention.archived_users_days` |
+| Audit chain links (`audit_chain_links`) | 100 days | `audit_chain_verify` |
 
 `/admin/configuration` is the authority for a running instance. It reads the windows from the live profile and shows how many rows the last `database_cleanup` run deleted per table, and when the next run is due. If a deployment's profile overrides a window, that page shows the override, not the table above.
 
@@ -92,9 +96,102 @@ Archives are written to the instance's own storage volume. They are not a separa
   - P2 means growth that will hurt within a year.
   - P3 is hygiene.
 
+## Tamper resistance
+
+The audit tables are append-only by mechanism, not only by convention. A set of database triggers checks every write, whichever path it comes from: core, this extension, the data console or a `psql` session.
+
+**What the guard checks**
+
+| Table | UPDATE | DELETE | TRUNCATE |
+|---|---|---|---|
+| `ai_requests` | Constrained (see below) | Only rows older than 90 days | Refused |
+| `ai_safety_findings` | Refused | Only rows older than 90 days | Refused |
+| `ai_request_attributions` | Refused | Only with the request it belongs to | Refused |
+| `governance_decisions` | Refused (core's own trigger) | Only rows older than 30 days | Refused |
+| `mcp_tool_executions` | Allowed (results land after the call) | Only rows older than 30 days | Refused |
+| `plugin_usage_events` | Allowed (execution links, account merges) | Only rows older than 90 days | Refused |
+| `secret_audit_log` | Refused | Only rows older than 365 days | Refused |
+| `platform_data_clear_audit` (the data console's deletion receipts) | Refused | Never | Refused |
+| `audit_chain_links`, `audit_guard_violations` | Refused | Only rows past their floor | Refused |
+
+Each floor is at or below the retention window that deletes the table, so the scheduled retention jobs pass the guard. A delete that arrives by foreign-key cascade is judged by its parent: when a request expires, its findings and attributions go with it.
+
+A gateway request is settled after it is written, so `ai_requests` cannot be fully frozen. Instead:
+
+- `id`, `request_id`, `created_at`, `actor_kind`, `actor_id` and `api_key_id` never change.
+- Once a request is `completed` or `rejected`, its routing and usage are frozen. That covers `provider`, `served_provider`, `model`, `requested_model`, the token counts, `cost_microdollars` and `finish_reason`.
+- A completed request may only move to `failed`, which is what an accounting failure does.
+- Everything else stays writable: the owner during an account merge, session and context links, the message count, error and accounting fields, and timings.
+
+**Modes.** The guard has three modes, stored in `audit_guard_settings`:
+
+- `off`: nothing is checked.
+- `warn` (the default): the write goes through and a row lands in `audit_guard_violations`.
+- `enforce`: the write is refused with `restrict_violation`.
+
+`warn` follows the measurement-window posture the rest of this installation runs in. Move to `enforce` once `audit_guard_violations` has stayed empty under real traffic:
+
+```sql
+SELECT set_audit_guard('enforce', TRUE);   -- mode, hash chain on
+```
+
+A deliberate backfill, or a legal erasure inside a floor, runs in its own transaction with `SET LOCAL systemprompt.audit_maintenance = 'on'`. That makes it a visible, reviewable act rather than an ordinary statement.
+
+**The hash chain.** Every insert into `ai_requests` and `ai_safety_findings` appends a row to `audit_chain_links`. The row holds a sequence number, the previous link's hash, and `sha256(previous hash + the row's canonical fields)`:
+
+- For a request, the canonical fields are its immutable columns.
+- For a safety finding, they are every column.
+
+`verify_audit_chain(table, from, to)` recomputes the chain and reports five kinds of break:
+
+- missing links (a gap in the sequence)
+- a link whose previous hash does not match
+- a row whose hash no longer matches (altered)
+- a row deleted inside the 90-day floor
+- a row with no link at all (written while the chain was off, or with triggers disabled)
+
+The `audit_chain_verify` job runs nightly at 04:45 UTC. It checks the last two days and writes one `audit_chain_verifications` row per table, including the anchor hash it started from and the head hash it reached. The run fails if it finds any break, so the failure appears in the job history.
+
+The chain costs about 0.1 ms per insert, measured on 5,000 inserts. Inserts into each table also queue behind one row lock for the length of the inserting transaction. `SELECT set_audit_guard('warn', FALSE)` turns the chain off.
+
+**What an auditor can and cannot rely on**
+
+- *Can:* the application, the console and an ordinary SQL session cannot silently rewrite or remove recent audit rows under `enforce`. Under `warn`, they cannot do it without leaving a violation row. A row changed or removed out-of-band shows up as a chain break on the next nightly run.
+- *Can:* verify the chain on demand:
+
+  ```sql
+  SELECT * FROM verify_audit_chain('ai_requests', now() - interval '30 days', now());
+  SELECT run_at, table_name, links_checked, problems, anchor_hash, head_hash
+  FROM audit_chain_verifications ORDER BY run_at DESC LIMIT 10;
+  ```
+
+- *Cannot:* rely on any of this against the database owner. The application role owns these tables, and an owner can disable a trigger or recompute the whole chain. The defence is to keep the recorded head hashes off the instance: the weekly archives, the OTLP stream, or a copy of `audit_chain_verifications`. A rewritten chain then disagrees with heads recorded earlier. Separating the owning role from the runtime role, and write-once storage, are open decisions (DEC-007).
+- *Cannot:* rely on sign-in history or access-rule edits to be covered. `user_sessions` and the access-control tables are mutable operational state and are not guarded.
+
+## Archived users
+
+Deleting a user archives the account (NFR-5.2). Archiving does four things:
+
+- The account moves to status `deleted`, so it can no longer sign in.
+- It leaves the user listings and rosters.
+- Its sessions, API keys and device certificates are revoked in the same transaction.
+- Who archived it, when and why are recorded on the `users` row.
+
+Its history stays. The account can be restored within `retention.archived_users_days` (90 days by default). After that, `database_cleanup` purges it with every row keyed on it, unless it is under legal hold. A restored account signs in again, but credentials revoked at archive time stay revoked.
+
+```bash
+systemprompt admin users delete <user> --yes --reason "left the company"   # archive
+systemprompt admin users delete <user> --yes --legal-hold                   # archive under hold
+systemprompt admin users restore <user>
+systemprompt admin users legal-hold <user> [--release]
+systemprompt admin users delete <user> --yes --purge                        # physical, archived and not held only
+```
+
+The console's user page has the same **Archive** and **Restore** actions. API keys are never deleted on their own: revoking one sets `revoked_at` and keeps the row.
+
 ## Known limits
 
-- **No write-once storage.** Rows and archives are protected by database and filesystem permissions, not by WORM storage or hash-chaining. The [roadmap](/documentation/enterprise-roadmap) records the hardening options.
+- **No write-once storage.** The guard and the hash chain make tampering refused or visible, but rows and archives still sit on the instance. See [Tamper resistance](#tamper-resistance) for what that does and does not prove.
 - **Archives stay on the instance.** Nothing copies them off the host automatically. The [OTLP export](/documentation/observability-export) streams requests, decisions and logs to an external collector as they happen, which can serve as the off-host copy if your collector keeps them.
 - **The health check expects shorter windows than some deletions use.** It judges `logs` against 14 days, `analytics_events` against 30 and `mcp_tool_executions` against 180. The profile defaults keep those tables for 30, 90 and 365 days, so until the two agree, expect the health report to list those tables as P1 findings.
 
@@ -108,4 +205,12 @@ Archives are written to the instance's own storage volume. They are not a separa
   systemprompt infra jobs run retention_daily_report
   systemprompt infra jobs run database_cleanup
   systemprompt infra jobs history --job database_cleanup
+  systemprompt infra jobs run audit_chain_verify
+  ```
+
+- Read the guard's findings while it runs in `warn`:
+
+  ```sql
+  SELECT table_name, operation, rule, count(*) FROM audit_guard_violations
+  WHERE created_at > now() - interval '7 days' GROUP BY 1, 2, 3 ORDER BY 4 DESC;
   ```

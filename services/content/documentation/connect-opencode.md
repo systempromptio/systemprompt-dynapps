@@ -3,17 +3,18 @@ title: "Connect OpenCode"
 description: "Route OpenCode through the Astound gateway: one installer flag writes the provider block and the API key, so every prompt is governed and audited instead of being refused with 403."
 author: "Astound Digital"
 slug: "connect-opencode"
-keywords: "opencode, connect, install, bridge, openai compatible, provider, auth.json, loopback proxy, 403, no loopback credential presented, mcp"
+keywords: "opencode, vs code, github copilot, byok, custom endpoint, connect, install, bridge, openai compatible, provider, auth.json, loopback proxy, 403, no loopback credential presented, mcp"
 kind: "guide"
 public: true
 tags: ["documentation", "getting-started", "opencode"]
 published_at: "2026-09-04"
-updated_at: "2026-10-07"
+updated_at: "2026-10-08"
 after_reading_this:
   - "Connect OpenCode to the gateway with one installer flag"
   - "Know which files the bridge writes and which tier each lands in"
   - "Diagnose a 403 from the loopback proxy without guessing at credentials"
   - "Use the OpenCode desktop app against the same enrolment, with no CLI on PATH"
+  - "Point VS Code GitHub Copilot Chat at the gateway (documented, not validated by Astound)"
 related_playbooks:
   - title: "Connect Claude Code"
     url: "/documentation/connect-claude-code"
@@ -244,6 +245,58 @@ curl -s -H "Authorization: Bearer <your-pat>" \
 
 If a model you expect is missing from OpenCode's picker but present there, it is
 a discovery filter rather than a permission problem — ask an administrator.
+
+## VS Code GitHub Copilot
+
+> **Documented, not validated by Astound** (REQ-054 / FR-17.3). The steps below follow
+> Microsoft's and third-party gateway guides for Copilot's "bring your own model" Custom
+> Endpoint provider as of October 2026. Astound has not run them end to end; check the
+> setting names against your VS Code version.
+
+Copilot Chat in VS Code 1.122 or later can send Chat requests to an OpenAI-compatible
+endpoint through a **Custom Endpoint** model group:
+
+1. On Copilot Business or Enterprise, a GitHub organization administrator must first
+   enable **Bring Your Own Language Model Key in VS Code** in the Copilot policy settings.
+2. In VS Code run **Chat: Manage Language Models**, choose **Add Models → Custom
+   Endpoint**, name the group (for example `Astound`), paste the API key, and pick the API
+   type **Chat Completions**.
+3. VS Code opens `chatLanguageModels.json` with the group created. Leave the generated
+   `apiKey` secret reference alone and add the models:
+
+   ```json
+   [
+     {
+       "name": "Astound",
+       "vendor": "customendpoint",
+       "apiKey": "${input:chat.lm.secret...}",
+       "apiType": "chat-completions",
+       "models": [
+         {
+           "id": "claude-sonnet-5",
+           "name": "Claude Sonnet 5 (Astound)",
+           "url": "http://127.0.0.1:48217/v1/chat/completions",
+           "toolCalling": true
+         }
+       ]
+     }
+   ]
+   ```
+
+   Each model's `url` is the **full** path, not a base URL. Model ids are the gateway's
+   bare ids (`GET /v1/models` lists them), with no `systemprompt/` prefix.
+
+**Which URL and key.** The gateway's OpenAI-compatible base is `https://<host>/v1`, so
+the direct URL is `https://<host>/v1/chat/completions` with a personal access token as
+the API key; there is no `/openai/v1` prefix (see
+[Gateway API](/documentation/gateway-api#base-url-for-openai-sdk-clients)). But a direct
+call must also carry an `x-session-id` header minted at
+`POST /api/public/gateway/sessions`, and the Custom Endpoint form documents no field
+for extra headers, so a direct call is expected to fail with `400 missing required
+x-session-id header`. Through the bridge's loopback proxy (the URL in the example, with
+the loopback key from `bridge-loopback.key` as the API key) the proxy supplies the
+session, as it does for OpenCode. Either way, only Copilot Chat and its tool calls
+are routed; inline completions and next-edit suggestions still go to GitHub.
 
 ## Troubleshooting
 

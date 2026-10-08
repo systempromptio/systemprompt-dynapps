@@ -8,7 +8,7 @@ kind: "guide"
 public: true
 tags: ["gateway", "api", "governance"]
 published_at: "2026-05-19"
-updated_at: "2026-10-07"
+updated_at: "2026-10-08"
 after_reading_this:
   - "Call the gateway in the Anthropic or OpenAI format"
   - "Supply a credential and an attested x-session-id so a request is not rejected"
@@ -51,6 +51,20 @@ provider that serves it. An OpenCode request on `/v1/chat/completions` for
 `claude-sonnet-5` is served by Claude on Vertex, exactly like the same model
 requested on `/v1/messages`.
 
+### Base URL for OpenAI SDK clients
+
+An OpenAI-compatible client takes a base URL and appends `/chat/completions`
+(or `/responses`, `/models`) itself. Set it to:
+
+```
+https://<host>/v1
+```
+
+There is no `/openai/v1` prefix. A client configured with
+`https://<host>/openai/v1` requests `/openai/v1/chat/completions`, which does
+not exist, and gets `404`. Anthropic SDK clients take the bare host
+(`https://<host>`) and append `/v1/messages`.
+
 ## Request contract
 
 | Header | Purpose | If missing or wrong |
@@ -75,12 +89,24 @@ A CLI admin session token is **not** a gateway credential. It fails with
 ## Scope headers
 
 Every request is attributed to one value in each scope dimension the
-instance registers (on this instance, `project` among them). For each
-dimension the value is resolved in this order:
+instance registers. For each dimension the value is resolved in this order:
 
 1. the `x-systemprompt-scope-<dimension>` header;
 2. the value the API key is bound to for that dimension;
 3. the caller's default (first) value for that dimension.
+
+The chargeback dimensions this instance registers:
+
+| Header | Value | Default when absent |
+|---|---|---|
+| `x-systemprompt-scope-project: <project id>` | a project the caller is a live member of | the caller's primary project |
+| `x-systemprompt-scope-cost_centre: <code>` | the cost centre of one of the caller's projects | the primary project's cost centre |
+| `x-systemprompt-scope-practice: <name>` | the practice of one of the caller's projects | the primary project's practice |
+
+The dimension name is written as registered, underscore included
+(`cost_centre`). The instance also registers access dimensions (`group`,
+`role`, `organization` and others) that a header can name under the same
+rules; they exist for access rules and quota windows, not chargeback.
 
 | Answer | Cause |
 |---|---|

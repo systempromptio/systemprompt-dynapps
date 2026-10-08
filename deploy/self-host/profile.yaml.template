@@ -1,4 +1,4 @@
-# template-version: 0.63.1
+# template-version: 0.64.0
 # Astound Digital profile template for self-hosted, multi-node deployments.
 # Rendered by deploy/self-host/render-profile.sh; @TOKENS@ are substituted.
 # Every node runs this exact file. The provider catalog and gateway routes are
@@ -26,6 +26,11 @@ database:
 server:
   host: 0.0.0.0
   port: 8080
+  # Prometheus /metrics listener (gateway_overhead_seconds,
+  # gateway_upstream_duration_seconds and the rest). Same host, separate port,
+  # no auth: the compose files expose it on the internal network only, never
+  # publish it. Remove the line to turn the listener off.
+  metrics_port: 9090
   api_server_url: @EXTERNAL_URL@
   api_internal_url: http://localhost:8080
   api_external_url: @EXTERNAL_URL@
