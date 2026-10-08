@@ -227,13 +227,10 @@ BEGIN
     IF NOT COALESCE((SELECT chain_enabled FROM audit_guard_settings WHERE singleton), TRUE) THEN
         RETURN;
     END IF;
-    LOOP
-        SELECT h.seq, h.head_hash INTO head_seq, head
-        FROM audit_chain_heads h WHERE h.table_name = p_table FOR UPDATE;
-        EXIT WHEN FOUND;
-        INSERT INTO audit_chain_heads (table_name, seq, head_hash)
-        VALUES (p_table, 0, repeat('0', 64)) ON CONFLICT (table_name) DO NOTHING;
-    END LOOP;
+    INSERT INTO audit_chain_heads (table_name, seq, head_hash)
+    VALUES (p_table, 0, repeat('0', 64)) ON CONFLICT (table_name) DO NOTHING;
+    SELECT h.seq, h.head_hash INTO STRICT head_seq, head
+    FROM audit_chain_heads h WHERE h.table_name = p_table FOR UPDATE;
     next_hash := audit_chain_hash(head, p_payload);
     INSERT INTO audit_chain_links (table_name, seq, row_id, row_created_at, prev_hash, row_hash)
     VALUES (p_table, head_seq + 1, p_row_id, p_created, head, next_hash);

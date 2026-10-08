@@ -2,8 +2,9 @@
 //! and every audit table the matrix names carries its triggers.
 //!
 //! A fresh install runs `schema/51_audit_integrity.sql`; an upgraded one runs
-//! migration 118. If the two drift, the guard an operator reads about in the
-//! migration header is not the guard a new instance gets.
+//! migration 118 then 120, which replaces `audit_chain_append`. If the two
+//! drift, the guard an operator reads about in the migration header is not the
+//! guard a new instance gets.
 
 use crate::support::repo_root;
 
@@ -48,13 +49,29 @@ fn read(relative: &str) -> String {
     std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()))
 }
 
+fn function_block<'a>(sql: &'a str, name: &str) -> &'a str {
+    let start = sql
+        .find(&format!("CREATE OR REPLACE FUNCTION {name}("))
+        .unwrap_or_else(|| panic!("{name} is not declared"));
+    let end = sql[start..]
+        .find("END $$;")
+        .map(|offset| start + offset + "END $$;".len())
+        .unwrap_or_else(|| panic!("{name} has no closing END $$;"));
+    &sql[start..end]
+}
+
 #[test]
-fn migration_carries_the_schema_ddl_verbatim() {
+fn migrations_carry_the_schema_ddl_verbatim() {
     let schema = read("extensions/web/schema/51_audit_integrity.sql");
-    let migration = read("extensions/web/schema/migrations/118_audit_integrity.sql");
+    let original = read("extensions/web/schema/migrations/118_audit_integrity.sql");
+    let replacement = read("extensions/web/schema/migrations/120_audit_chain_append_no_loop.sql");
+    let upgraded = original.replace(
+        function_block(&original, "audit_chain_append"),
+        function_block(&replacement, "audit_chain_append"),
+    );
     assert!(
-        migration.ends_with(&schema),
-        "migration 118 must end with schema/51_audit_integrity.sql unchanged"
+        upgraded.ends_with(&schema),
+        "migration 118 with 120's audit_chain_append must end with schema/51_audit_integrity.sql unchanged"
     );
 }
 

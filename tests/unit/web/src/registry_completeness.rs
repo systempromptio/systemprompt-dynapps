@@ -12,6 +12,7 @@ fn all_jobs_registered() {
     let names: BTreeSet<&'static str> = extension_jobs().iter().map(|j| j.name()).collect();
     let expected: BTreeSet<&'static str> = [
         "access_expiry",
+        "audit_chain_verify",
         "blog_content_ingestion",
         "bundle_admin_css",
         "content_analytics_aggregation",
