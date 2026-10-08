@@ -9,10 +9,10 @@ workspace = true
 
 [dependencies]
 systemprompt-bridge = { path = "../../../../systemprompt-core/bin/bridge" }
-systemprompt-wire = { path = "../../../../systemprompt-core/crates/shared/wire" }
-systemprompt-gateway = { path = "../../../../systemprompt-core/crates/app/gateway" }
-systemprompt-manifest = { path = "../../../../systemprompt-core/crates/shared/manifest" }
-systemprompt-models = { path = "../../../../systemprompt-core/crates/shared/models" }
+systemprompt-wire = { version = "0.63.0" }
+systemprompt-gateway = { version = "0.63.0" }
+systemprompt-manifest = { version = "0.63.0" }
+systemprompt-models = { version = "0.63.0" }
 axum.workspace = true
 tokio.workspace = true
 systemprompt-api.workspace = true
