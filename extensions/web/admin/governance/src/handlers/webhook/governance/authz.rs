@@ -10,17 +10,14 @@ use std::sync::Arc;
 
 use axum::Json;
 use axum::extract::State;
-use axum::http::StatusCode;
-use axum::response::{IntoResponse, Response};
 use sqlx::PgPool;
-use systemprompt_security::authz::AuthzRequest;
+use systemprompt_security::authz::{AuthzDecision, AuthzRequest};
 
 // Why: core's hook caller reads a non-200 status as "hook unavailable" and
 // lets the call through, so every answer is 200, a failure a deny body.
 pub(crate) async fn govern_authz(
     State(pool): State<Arc<PgPool>>,
     Json(req): Json<AuthzRequest>,
-) -> Response {
-    let decision = crate::authz_eval::evaluate(&pool, req).await;
-    (StatusCode::OK, Json(decision)).into_response()
+) -> Json<AuthzDecision> {
+    Json(crate::authz_eval::evaluate(&pool, req).await)
 }

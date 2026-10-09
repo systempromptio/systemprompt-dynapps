@@ -37,9 +37,9 @@ mod analytics_session_detail;
 #[cfg(test)]
 mod analytics_site;
 #[cfg(test)]
-mod audit_chain_seal;
-#[cfg(test)]
 mod approvals;
+#[cfg(test)]
+mod audit_chain_seal;
 #[cfg(test)]
 mod conversation_facts_detail;
 #[cfg(test)]
