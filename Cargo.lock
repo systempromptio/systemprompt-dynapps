@@ -5914,6 +5914,7 @@ dependencies = [
  "shell-words",
  "systemprompt",
  "systemprompt-mcp-shared",
+ "systemprompt-web-admin-governance",
  "thiserror 2.0.21",
  "tokio",
  "tracing",

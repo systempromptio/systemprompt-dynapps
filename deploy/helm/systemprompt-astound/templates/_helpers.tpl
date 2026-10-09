@@ -104,9 +104,13 @@ identity is the pod name (HOSTNAME).
 {{- $_ := set $base "storage" (dict "backend" $st.backend) -}}
 {{- end -}}
 {{- $_ := set $base "security" (dict "jwt_issuer" $url "jwt_access_token_expiration" 2592000 "jwt_refresh_token_expiration" 15552000 "jwt_audiences" (list "web" "api" "a2a" "mcp") "allowed_resource_audiences" (list "hook") "allow_registration" false "signing_key_path" "signing_key.pem" "id_jag_ttl_secs" 300) -}}
-{{- /* /govern/authz is served by the admin role only, and core accepts a plain-http hook only on loopback; gateway pods reach it through the authz-relay sidecar. */ -}}
-{{- $authzPort := ternary (int .ctx.Values.gateway.authzRelay.port) (int $v.service.port) (and (eq .role "gateway") .ctx.Values.gateway.authzRelay.enabled) -}}
-{{- $_ := set $base "governance" (dict "authz" (dict "hook" (dict "mode" "webhook" "url" (printf "http://localhost:%d/api/public/govern/authz" $authzPort) "timeout_ms" 500 "acknowledgement" nil))) -}}
+{{- /* Images from 0.65.0 register the authz hook in-process (mode extension, no hop). gateway.authzRelay is only for older images, whose gateway pods must reach the admin role's /govern/authz over the loopback relay sidecar. */ -}}
+{{- $relay := and (eq .role "gateway") .ctx.Values.gateway.authzRelay.enabled -}}
+{{- if $relay -}}
+{{- $_ := set $base "governance" (dict "authz" (dict "hook" (dict "mode" "webhook" "url" (printf "http://localhost:%d/api/public/govern/authz" (int .ctx.Values.gateway.authzRelay.port)) "timeout_ms" 500 "acknowledgement" nil))) -}}
+{{- else -}}
+{{- $_ := set $base "governance" (dict "authz" (dict "hook" (dict "mode" "extension" "url" nil "timeout_ms" 500 "acknowledgement" nil))) -}}
+{{- end -}}
 {{- $merged := mergeOverwrite $base (deepCopy (default dict $p.overrides)) -}}
 {{- toYaml $merged -}}
 {{- end -}}

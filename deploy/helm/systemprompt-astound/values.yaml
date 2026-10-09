@@ -188,8 +188,10 @@ gateway:
   # therefore call localhost:<port>, relayed by this sidecar to the admin
   # Service. Every inference request crosses it: the single admin pod is on
   # the gateway's hot path until the gateway role serves the route itself.
+  # Only for images older than 0.65.0. From 0.65.0 the binary registers the
+  # authz hook in-process (profile mode extension) and no relay is rendered.
   authzRelay:
-    enabled: true
+    enabled: false
     image: alpine/socat:1.8.0.1
     port: 8081
     resources:

@@ -149,11 +149,13 @@ secrets:
   source: file
 extensions:
   disabled: []
+# The installation's authz hook runs in-process (registered by the binary), so
+# no node posts its decisions to /api/public/govern/authz over HTTP.
 governance:
   authz:
     hook:
-      mode: webhook
-      url: http://localhost:8080/api/public/govern/authz
+      mode: extension
+      url: null
       timeout_ms: 500
       acknowledgement: null
 # Retention windows for the tables that grow with traffic, applied nightly by

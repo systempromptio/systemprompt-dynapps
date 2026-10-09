@@ -250,6 +250,8 @@ mod asset_manifest;
 #[cfg(test)]
 mod audit_integrity_schema;
 #[cfg(test)]
+mod authz_hook_mode;
+#[cfg(test)]
 mod authz_marketplace_pure;
 #[cfg(test)]
 mod authz_quota_subjects;

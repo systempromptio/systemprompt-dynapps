@@ -54,6 +54,9 @@ postgres://systemprompt:<pw>@db-primary.example.internal:5432/systemprompt?sslmo
 - **Always the primary.** Boot runs `SELECT pg_is_in_recovery()` and refuses
   a standby. Read replicas are for DR at launch; per-region replica reads are
   a later, separately tested option (`database_write_url` in `SECRETS.md`).
+- **Authorization.** The profile's `governance.authz.hook.mode: extension`
+  makes each node decide entitlement in-process; it never calls another
+  node's `/api/public/govern/authz`.
 - **Connections.** Each node opens up to 50 connections (the pool default).
   Size the primary for at least `3 × 50 + replication + admin`, or add
   `database: { pool: { max_connections: N } }` to the profile.

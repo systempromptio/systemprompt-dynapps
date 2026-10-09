@@ -119,6 +119,10 @@ gcloud sql backups create --instance=<instance> --description="pre-<tag>"
   freely. The HPA scales on CPU at 65 percent, from 3 to 12 pods. It can
   double the pod count each minute and removes at most one pod every two
   minutes.
+- **Authorization runs in each pod.** The profile sets
+  `governance.authz.hook.mode: extension`, so every gateway pod decides
+  entitlement in-process; no request hops to the admin pod's
+  `/api/public/govern/authz`.
 - **The admin pod** must be exactly one. Two would run the scheduler twice,
   so the chart fixes `replicas: 1` and gives it no HPA and no PDB.
 - **Load shedding.** Past `server.max_in_flight` a pod answers 503 with
