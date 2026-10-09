@@ -145,6 +145,9 @@ def main(run):
         "log_pressure_lines": open(os.path.join(run, "log-pressure.txt")).read().strip() if os.path.exists(os.path.join(run, "log-pressure.txt")) else None,
     }
     ov99 = pm.get("overhead_p99_s")
+    # A run that is not majority 200 measured an error path, not the gateway:
+    # it is invalid and can never be a ceiling.
+    summary["valid"] = bool(total) and ok / total > 0.5
     summary["stop"] = bool((errors and any(c.startswith(("5", "4")) for c in status if c != "200"))
                            or (isinstance(ov99, (int, float)) and ov99 > 0.2))
     json.dump(summary, open(run + ".json", "w"), indent=2)
@@ -162,14 +165,14 @@ def main(run):
           f"| deployment selected | {pm.get('deployment_selected')} |",
           f"| failovers / shed / quota denials | {pm.get('failovers_total')} / {pm.get('load_shed_total')} / {pm.get('quota_denials_total')} |",
           f"| postgres restarts during run | {meta.get('pg_restarts')} |",
-          f"| pods | {summary['pods']} |", f"| stop rule hit | {summary['stop']} |", "",
+          f"| pods | {summary['pods']} |", f"| stop rule hit | {summary['stop']} |", f"| valid (majority 200) | {summary['valid']} |", "",
           "## pg waits (avg active sessions per 1 s sample)", "", "| type | event | relation | avg |", "|---|---|---|---|"]
     md += [f"| {r['wait_type']} | {r['wait_event']} | {r['relation']} | {r['avg_sessions']} |" for r in w]
     md += ["", "## top statements by total time", "", "| total ms | calls | mean ms | query |", "|---|---|---|---|"]
     md += [f"| {r[0]} | {r[1]} | {r[2]} | `{r[-1][:110]}` |" for r in summary["statements"]["by_total_time"] if len(r) >= 4]
     open(run + ".md", "w").write("\n".join(md) + "\n")
     print(f"{meta['name']}: {total} req, {summary['rps']} rps, status {dict(status)}, "
-          f"e2e p99 {ms(summary['e2e_s']['p99'])}, overhead p99 {ms(ov99)}, stop={summary['stop']}")
+          f"e2e p99 {ms(summary['e2e_s']['p99'])}, overhead p99 {ms(ov99)}, stop={summary['stop']}, valid={summary['valid']}")
 
 
 if __name__ == "__main__":

@@ -9,6 +9,8 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$HERE/../../.." && pwd)"
 FILTER="${1:-.}"
 OUT="${LOADTEST_OUT:-$ROOT/reports/loadtest/kind/$(date -u +%Y%m%dT%H%M%SZ)}"
+# Never overwrite an earlier matrix: a reused directory gets a timestamp suffix.
+[ ! -e "$OUT" ] || OUT="$OUT-$(date -u +%Y%m%dT%H%M%SZ)"
 mkdir -p "$OUT"
 echo "matrix -> $OUT"
 
@@ -28,6 +30,8 @@ while IFS= read -r e <&3; do
         for c in $(echo "$e" | jq -r '.ramp[]'); do
             "$HERE/run.sh" "$name-c$c" --out "$OUT" --concurrency "$c" "${args[@]+"${args[@]}"}" </dev/null
             stop="$(jq -r .stop "$OUT/$name-c$c.json")"
+            valid="$(jq -r .valid "$OUT/$name-c$c.json")"
+            if [ "$valid" != true ]; then last_ok='"invalid"'; break; fi
             [ "$stop" = true ] && break
             last_ok="$c"
         done
@@ -36,7 +40,7 @@ import json, os, sys
 out, name, last = sys.argv[1], sys.argv[2], sys.argv[3]
 path = os.path.join(out, "ceilings.json")
 d = json.load(open(path)) if os.path.exists(path) else {}
-d[name] = None if last == "null" else int(last)
+d[name] = None if last == "null" else ("invalid" if last == '"invalid"' else int(last))
 json.dump(d, open(path, "w"), indent=2)
 PY
     else

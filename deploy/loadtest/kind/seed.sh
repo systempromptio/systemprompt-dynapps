@@ -45,6 +45,11 @@ WITH u AS (
 ), m AS (
   INSERT INTO project_members (project_id, user_id, source)
   SELECT p, id, 'manual' FROM u ON CONFLICT DO NOTHING
+), r AS (
+  -- The role provider reads user_manual_roles, not users.roles; without a row
+  -- the route entitlement sees roles [] and denies once the route is closed.
+  INSERT INTO user_manual_roles (user_id, role)
+  SELECT id, 'user' FROM u ON CONFLICT DO NOTHING
 )
 INSERT INTO user_scope_defaults (user_id, primary_project_id, source)
 SELECT id, p, 'manual' FROM u

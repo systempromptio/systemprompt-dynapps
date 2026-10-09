@@ -26,6 +26,8 @@ while [ $# -gt 0 ]; do
 done
 OUT="${OUT:-$ROOT/reports/loadtest/kind/$(date -u +%Y%m%dT%H%M%SZ)}"
 RUN="$OUT/$NAME"
+[ ! -e "$RUN" ] || RUN="$OUT/$NAME-$(date -u +%H%M%S)"
+NAME="$(basename "$RUN")"
 mkdir -p "$RUN"
 K="kubectl --context kind-astound-loadtest -n loadtest"
 psqlc() { $K exec -i deploy/postgres -c postgres -- psql -U postgres -d systemprompt -At "$@"; }
@@ -83,10 +85,15 @@ esac
 $K create configmap loadtest-body --from-file=body.json="$B" --dry-run=client -o yaml | $K apply -f - >/dev/null
 
 # --- baseline marks ------------------------------------------------------------
+# rules.yaml declares gateway_route/* `default: open`, but each admin boot's
+# catalog sync (source services:/app/services/ai/gateway.yaml) rewrites it to
+# closed, and core's rule-based check sees roles [] for a PAT caller, so every
+# call 403s. Restore the declared default; this is a product bug, not a knob.
+psqlc -c "UPDATE access_control_entities SET default_included = true WHERE entity_type = 'gateway_route' AND NOT default_included;" >/dev/null </dev/null
 # Fresh backends per run: 0.64.0 backends grow without bound (prepared
 # statements are never released), so a run must not inherit the last one's.
 psqlc -c "SELECT count(pg_terminate_backend(pid)) FROM pg_stat_activity WHERE usename = 'systemprompt';" >/dev/null </dev/null
-sleep 5
+sleep 35
 psqlc -c "SELECT pg_stat_statements_reset();" >/dev/null </dev/null
 before="$(mock_stats | tr '\n' ' ')"
 pg_restarts() { $K get pod -l app=postgres -o jsonpath='{.items[0].status.containerStatuses[?(@.name=="postgres")].restartCount}'; }
