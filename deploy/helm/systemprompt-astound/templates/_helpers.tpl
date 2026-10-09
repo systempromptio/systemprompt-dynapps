@@ -104,7 +104,7 @@ identity is the pod name (HOSTNAME).
 {{- $_ := set $base "storage" (dict "backend" $st.backend) -}}
 {{- end -}}
 {{- $_ := set $base "security" (dict "jwt_issuer" $url "jwt_access_token_expiration" 2592000 "jwt_refresh_token_expiration" 15552000 "jwt_audiences" (list "web" "api" "a2a" "mcp") "allowed_resource_audiences" (list "hook") "allow_registration" false "signing_key_path" "signing_key.pem" "id_jag_ttl_secs" 300) -}}
-{{- $_ := set $base "governance" (dict "authz" (dict "hook" (dict "mode" "webhook" "url" (printf "http://localhost:%d/api/public/govern/authz" (int $v.service.port)) "timeout_ms" 500 "acknowledgement" nil))) -}}
+{{- $_ := set $base "governance" (dict "authz" (dict "hook" (dict "mode" "extension" "url" nil "timeout_ms" 500 "acknowledgement" nil))) -}}
 {{- $merged := mergeOverwrite $base (deepCopy (default dict $p.overrides)) -}}
 {{- toYaml $merged -}}
 {{- end -}}

@@ -7,12 +7,12 @@
 //! subject dimension in the ladder. A denial is 403: no amount of retrying
 //! buys a model the caller is not entitled to.
 //!
-//! The route's entity and rules are cached per route and the caller's roles
-//! per user for 30 s (`ttl_cache`); subject attributes are cached by their
+//! The route's entity and rules and the caller's roles come from
+//! [`crate::authz_eval`]'s 30 s caches; subject attributes are cached by their
 //! providers. An access-control sync apply or a console rule edit drops every
 //! entry on this replica at once.
 
-use std::sync::LazyLock;
+use std::sync::Arc;
 
 use sqlx::PgPool;
 use systemprompt::extension::{
@@ -20,18 +20,9 @@ use systemprompt::extension::{
 };
 use systemprompt::identifiers::{RouteId, UserId};
 use systemprompt_security::authz::resolver::{ResolveInput, resolve};
-use systemprompt_security::authz::{AccessRule, Decision, EntityRef, EntityRow};
-use systemprompt_web_admin_core::ttl_cache::{AUTHZ_TTL, TtlCache};
+use systemprompt_security::authz::{Decision, EntityKind, EntityRef};
 
-use crate::repositories::config::gateway_acl;
-
-type RouteGrant = (Option<EntityRow>, Vec<AccessRule>);
-
-static ROUTE_GRANTS: LazyLock<TtlCache<(String, RouteId), RouteGrant>> =
-    LazyLock::new(|| TtlCache::new(AUTHZ_TTL));
-
-static USER_ROLES: LazyLock<TtlCache<(String, UserId), Vec<String>>> =
-    LazyLock::new(|| TtlCache::new(AUTHZ_TTL));
+use crate::authz_eval;
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct RouteEntitlementGuard;
@@ -82,8 +73,16 @@ async fn resolve_route(
     user_id: &UserId,
 ) -> Result<Decision, sqlx::Error> {
     let database = systemprompt_web_admin_core::authz::database_key(pool);
-    let (entity, rules) = route_grant(pool, &database, route_id).await?;
-    let user_roles = cached_roles(pool, &database, user_id).await?;
+    let shared = Arc::new(pool.clone());
+    let (entity, rules) = authz_eval::entity_grant(
+        &shared,
+        &database,
+        EntityKind::GatewayRoute,
+        route_id.as_str(),
+    )
+    .await
+    .inspect_err(|e| tracing::warn!(error = %e, %route_id, "route grant lookup failed"))?;
+    let user_roles = authz_eval::active_roles(pool, &database, user_id).await?;
     let attributes =
         systemprompt_web_admin_core::authz::subject_attributes_for(pool, user_id).await?;
 
@@ -99,53 +98,6 @@ async fn resolve_route(
         attributes: &attributes,
         dimensions: systemprompt_web_admin_core::authz::dimensions(pool),
     }))
-}
-
-async fn route_grant(
-    pool: &PgPool,
-    database: &str,
-    route_id: &RouteId,
-) -> Result<RouteGrant, sqlx::Error> {
-    let key = (database.to_owned(), route_id.clone());
-    if let Some(grant) = ROUTE_GRANTS.get(&key) {
-        return Ok(grant);
-    }
-    let entity = gateway_acl::find_entity(pool, route_id)
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, %route_id, "route entity lookup failed"))?;
-    let rules = gateway_acl::list_rules_for_route(pool, route_id)
-        .await
-        .inspect_err(|e| tracing::warn!(error = %e, %route_id, "route rule lookup failed"))?;
-    let grant = (entity, rules);
-    ROUTE_GRANTS.insert(key, grant.clone());
-    Ok(grant)
-}
-
-async fn cached_roles(
-    pool: &PgPool,
-    database: &str,
-    user_id: &UserId,
-) -> Result<Vec<String>, sqlx::Error> {
-    let key = (database.to_owned(), user_id.clone());
-    if let Some(roles) = USER_ROLES.get(&key) {
-        return Ok(roles);
-    }
-    let roles = load_roles(pool, user_id).await?;
-    USER_ROLES.insert(key, roles.clone());
-    Ok(roles)
-}
-
-async fn load_roles(pool: &PgPool, user_id: &UserId) -> Result<Vec<String>, sqlx::Error> {
-    let identity =
-        systemprompt_web_admin_core::repositories::principal::identity::find_identity_envelope(
-            pool, user_id,
-        )
-        .await?
-        .ok_or(sqlx::Error::RowNotFound)?;
-    if identity.status != "active" {
-        return Err(sqlx::Error::RowNotFound);
-    }
-    Ok(identity.roles)
 }
 
 register_gateway_guard!(RouteEntitlementGuard);

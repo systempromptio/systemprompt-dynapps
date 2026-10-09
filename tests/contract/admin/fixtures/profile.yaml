@@ -89,7 +89,7 @@ extensions:
 governance:
   authz:
     hook:
-      mode: webhook
-      url: http://localhost:8099/api/public/govern/authz
+      mode: extension
+      url: null
       timeout_ms: 500
       acknowledgement: null

@@ -1341,16 +1341,15 @@ setup-local ANTHROPIC_KEY="" OPENAI_KEY="" GEMINI_KEY="" HTTP_PORT="8080" PG_POR
                 --db-user systemprompt --db-password 123 --db-name systemprompt \
                 --admin-email "$ADMIN_EMAIL"
         fi
+        # `admin setup` writes core's default webhook authz mode; this binary
+        # registers its authz hook in-process, and core refuses to boot a
+        # registered hook under any other mode.
+        "$BIN" admin config governance set --mode extension
         if [ "$HTTP_PORT" != "8080" ]; then
             "$BIN" admin config server set --port "$HTTP_PORT" \
                 --api-server-url "http://localhost:${HTTP_PORT}" \
                 --api-internal-url "http://localhost:${HTTP_PORT}" \
                 --api-external-url "http://localhost:${HTTP_PORT}"
-            # The authz hook URL is an absolute webhook target baked at
-            # `admin setup` time on the default port; re-point it at the
-            # chosen port so the gateway's govern callback reaches this server.
-            "$BIN" admin config governance set --mode webhook \
-                --url "http://localhost:${HTTP_PORT}/api/public/govern/authz"
             # jwt_issuer is baked on the default port too, and it is not
             # cosmetic: it is the base a client resolves
             # `{iss}/.well-known/jwks.json` against. Left at :8080 on a
