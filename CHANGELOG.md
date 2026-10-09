@@ -20,6 +20,17 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+## 0.65.0 — 2026-10-09
+
+### Changed
+
+- **Built on published core 0.65.0.** Every core pin in `Cargo.toml`, `tests/Cargo.toml` and `tests/unit/bridge/Cargo.toml` is `0.65.0` from crates.io and `bridge/CORE_REF` is `v0.65.0`; the `[patch.crates-io]` blocks that built `next` against the sibling core checkout during the hot-path work are commented out. Core 0.65.0 commits the gateway admission writes in one transaction, batches quota buckets, request messages and safety findings, shares one cached `PolicyResolver` per router, bounds Postgres prepared statements per connection (new profile key `database.pool.statement_cache_capacity`, default 100) and exports `db_pool_size` / `db_pool_connections` gauges. Its catalog reconciles no longer overwrite an entity's access columns, so a restart cannot flip route access. Core 0.65.0 adds no schema migrations; the 0.65.0 schema rung (`tests/fixtures/schema/release-baseline-0.65.0.sql`) records astound's own migrations up to this release.
+- **Audit sealing and route entitlement are off the request path.** The audit chain is sealed by a background job instead of on every insert, and route entitlement is decided in-process when `governance.authz.hook.mode: extension` is set, with a cache in front of it. The sealer's advisory lock key no longer equals its job name.
+
+### Added
+
+- **Load-test rig.** A kind cluster runs the Helm chart against mock inference, with patched-image overlays, per-run fresh backends, route-state capture, statements-per-request and seal-lag measurement. The Helm chart gains `pod.extraVolumes` and `pod.extraVolumeMounts` on every pod.
+
 ## 0.64.0 — 2026-10-08
 
 ### Added
