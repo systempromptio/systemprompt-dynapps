@@ -83,8 +83,14 @@ esac
 $K create configmap loadtest-body --from-file=body.json="$B" --dry-run=client -o yaml | $K apply -f - >/dev/null
 
 # --- baseline marks ------------------------------------------------------------
-psqlc -c "SELECT pg_stat_statements_reset();" >/dev/null
+# Fresh backends per run: 0.64.0 backends grow without bound (prepared
+# statements are never released), so a run must not inherit the last one's.
+psqlc -c "SELECT count(pg_terminate_backend(pid)) FROM pg_stat_activity WHERE usename = 'systemprompt';" >/dev/null </dev/null
+sleep 5
+psqlc -c "SELECT pg_stat_statements_reset();" >/dev/null </dev/null
 before="$(mock_stats | tr '\n' ' ')"
+pg_restarts() { $K get pod -l app=postgres -o jsonpath='{.items[0].status.containerStatuses[?(@.name=="postgres")].restartCount}'; }
+pg_r0="$(pg_restarts)"
 start="$(date -u +%s)"
 
 # --- samplers ------------------------------------------------------------------
@@ -160,6 +166,6 @@ cat > "$RUN/meta.json" <<JSON
 {"name":"$NAME","concurrency":$C,"set":"$SET","body":"$BODY","duration_s":$secs,"pods":$PODS,
  "mock_mode":"$MOCK_MODE","chain":"$CHAIN","policies":"$POLICIES","helm":"$HELM",
  "kill_pod_after":"$KILL_AFTER","start":$start,"end":$end,"image":"$IMG",
- "mock_before":"$before","mock_after":"$after"}
+ "mock_before":"$before","mock_after":"$after","pg_restarts":$(( $(pg_restarts) - pg_r0 ))}
 JSON
 python3 "$HERE/report.py" "$RUN"

@@ -34,6 +34,10 @@ profile:
     database:
       pool:
         max_connections: 50
+        # Baseline only: 0.64.0 never releases named prepared statements
+        # (statement cache 0), so a backend grows ~190 MB in 5 min and
+        # Postgres OOMs. Recycling connections caps it without hiding it.
+        max_lifetime_secs: 120
 
 secrets:
   mode: inline

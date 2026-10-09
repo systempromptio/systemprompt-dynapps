@@ -161,6 +161,7 @@ def main(run):
           f"| mock served | {mock_served} |",
           f"| deployment selected | {pm.get('deployment_selected')} |",
           f"| failovers / shed / quota denials | {pm.get('failovers_total')} / {pm.get('load_shed_total')} / {pm.get('quota_denials_total')} |",
+          f"| postgres restarts during run | {meta.get('pg_restarts')} |",
           f"| pods | {summary['pods']} |", f"| stop rule hit | {summary['stop']} |", "",
           "## pg waits (avg active sessions per 1 s sample)", "", "| type | event | relation | avg |", "|---|---|---|---|"]
     md += [f"| {r['wait_type']} | {r['wait_event']} | {r['relation']} | {r['avg_sessions']} |" for r in w]
