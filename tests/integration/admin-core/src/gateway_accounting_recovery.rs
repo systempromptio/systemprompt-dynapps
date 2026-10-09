@@ -53,6 +53,7 @@ fn audit(repos: &GatewayRepositories, user: &UserId, request: &CanonicalRequest)
         requested_model: None,
         max_tokens: Some(16),
         is_streaming: false,
+        context_bound: false,
         origin: RequestOrigin::gateway(
             ClientKind::Other,
             InboundWireProtocol::AnthropicMessages,
