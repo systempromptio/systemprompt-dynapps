@@ -241,6 +241,9 @@ containers:
       - {name: sessions, mountPath: /app/.systemprompt/sessions}
       - {name: tmp, mountPath: /tmp}
       - {name: home, mountPath: /home/app}
+      {{- with $v.pod.extraVolumeMounts }}
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
 volumes:
   - name: profile-src
     configMap:
@@ -276,6 +279,9 @@ volumes:
     emptyDir: {medium: Memory, sizeLimit: {{ $v.pod.volumes.tmp }}}
   - name: home
     emptyDir: {sizeLimit: {{ $v.pod.volumes.home }}}
+{{- with $v.pod.extraVolumes }}
+  {{- toYaml . | nindent 2 }}
+{{- end }}
 {{- end -}}
 
 {{/* Name of the Secret holding secrets.json in the non-CSI modes. */}}

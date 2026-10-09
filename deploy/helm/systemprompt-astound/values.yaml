@@ -221,6 +221,12 @@ pod:
     tmp: 1Gi           # memory-backed /tmp for MCP children
     home: 512Mi        # /home/app: LibreOffice profile for document exports
   extraEnv: []
+  # Extra volumes and mounts, added to the gateway, admin and migrate pods.
+  # Typical use: a ConfigMap mounted over single files under /app/services
+  # (subPath) to override ai/providers.yaml or gateway/policies.yaml without
+  # rebuilding the image.
+  extraVolumes: []
+  extraVolumeMounts: []
 
 probes:
   startup:   {path: /livez,  periodSeconds: 5,  failureThreshold: 120}
