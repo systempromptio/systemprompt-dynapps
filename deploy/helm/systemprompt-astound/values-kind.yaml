@@ -1,0 +1,122 @@
+# Values for the local kind load-test rig (deploy/loadtest/kind/README.md).
+# Same chart as GKE; only the cloud attachments are swapped for in-cluster
+# stand-ins: Postgres is a Deployment, inference is the core mock, secrets are
+# inline (rendered by `just loadtest-kind-secrets`), storage is the pod's own
+# emptyDir. Never use these values anywhere real.
+#
+#   helm upgrade --install astound deploy/helm/systemprompt-astound -n loadtest \
+#     -f deploy/helm/systemprompt-astound/values-kind.yaml \
+#     --set-file secrets.inline.json=deploy/loadtest/kind/.profile/secrets.json
+
+fullnameOverride: astound
+
+image:
+  # Chart.appVersion lags the release; pin the image under test explicitly.
+  # Phase 3 swaps in `systemprompt-astound:loadtest-local` (Dockerfile.local).
+  tag: "0.64.0"
+  pullPolicy: IfNotPresent
+
+profile:
+  externalUrl: https://gateway.loadtest.local
+  adminEmail: loadtest-admin@astounddigital.com
+  # kind pod network + node network; the generator talks to the Service directly.
+  trustedProxies:
+    - 10.0.0.0/8
+    - 172.16.0.0/12
+  maxInFlight: 512
+  maxConcurrentStreams: 256
+  storage:
+    backend: local
+  # One generator address would be 429'd at ~100 rps by the per-IP buckets.
+  rateLimits:
+    disabled: true
+  overrides:
+    database:
+      pool:
+        max_connections: 50
+
+secrets:
+  mode: inline
+
+cloudSqlProxy:
+  enabled: false
+
+ingress:
+  enabled: false
+gatewayApi:
+  enabled: false
+networkPolicy:
+  enabled: false
+
+migrate:
+  resources:
+    requests: {cpu: 250m, memory: 512Mi}
+    limits: {cpu: "2", memory: 2Gi}
+
+gateway:
+  replicas: 3
+  resources:
+    requests: {cpu: 500m, memory: 512Mi}
+    limits: {cpu: "2", memory: 2Gi}
+  autoscaling:
+    # Scenario 1 runs once with this off (fixed 3 pods) and once on.
+    enabled: false
+    minReplicas: 3
+    maxReplicas: 8
+    targetCPUUtilizationPercentage: 65
+    behavior:
+      scaleDown:
+        stabilizationWindowSeconds: 120
+        policies: [{type: Pods, value: 1, periodSeconds: 60}]
+      scaleUp:
+        stabilizationWindowSeconds: 0
+        policies: [{type: Percent, value: 100, periodSeconds: 30}]
+  pdb:
+    enabled: true
+    minAvailable: 1
+  topologySpread: true
+  nodeSelector: {loadtest/role: app}
+  podAnnotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9090"
+
+admin:
+  resources:
+    requests: {cpu: 250m, memory: 1Gi}
+    limits: {cpu: "2", memory: 3Gi}
+  nodeSelector: {loadtest/role: app}
+  podAnnotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9090"
+
+pod:
+  preStopSleepSeconds: 5
+  terminationGracePeriodSeconds: 30
+  volumes:
+    storage: 2Gi
+    web: 1Gi
+    servicesCache: 512Mi
+    logs: 1Gi
+    tmp: 512Mi
+    home: 256Mi
+  # Core refuses plain-http provider endpoints unless the host is loopback or
+  # trusted; the mocks speak plain http inside the cluster.
+  trustedHttpHosts:
+    - mock-primary.loadtest.svc.cluster.local
+    - mock-eu.loadtest.svc.cluster.local
+  # The mock provider catalog, routes and policies replace the shipped files.
+  # The ConfigMap is created by `just loadtest-kind-deploy` before helm runs,
+  # because the migrate hook mounts it too.
+  extraVolumes:
+    - name: loadtest-services
+      configMap:
+        name: loadtest-services
+  extraVolumeMounts:
+    - {name: loadtest-services, mountPath: /app/services/ai/providers.yaml, subPath: providers.yaml, readOnly: true}
+    - {name: loadtest-services, mountPath: /app/services/ai/gateway.yaml, subPath: gateway.yaml, readOnly: true}
+    - {name: loadtest-services, mountPath: /app/services/ai/config.yaml, subPath: config.yaml, readOnly: true}
+    - {name: loadtest-services, mountPath: /app/services/gateway/policies.yaml, subPath: policies.yaml, readOnly: true}
+
+metrics:
+  enabled: true
+  port: 9090

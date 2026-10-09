@@ -1,0 +1,43 @@
+# Load-test gateway routes (deploy/loadtest/kind). Mounted over
+# /app/services/ai/gateway.yaml. Keeps the shipped `by_scope` structure — one
+# chain per project, so the audit row's route_match still names
+# scope:project=<id> — but every chain is mock-anthropic failing over to
+# mock-anthropic-eu. The Vertex, Gemini and MaaS routes are dropped: their
+# providers are absent here and a route to an absent provider fails boot.
+gateway:
+  enabled: true
+  routes:
+  - id: claude-star-4203d1
+    name: Claude (mock)
+    description: >-
+      Every claude-* request goes to the in-cluster mock, failing over to the EU mock.
+    model_pattern: claude-*
+    provider: mock-anthropic
+    fallbacks:
+    - provider: mock-anthropic-eu
+    by_scope:
+      dimension: project
+      unmapped: shared
+      chains:
+        commerce:
+          provider: mock-anthropic
+          fallbacks:
+          - provider: mock-anthropic-eu
+        core:
+          provider: mock-anthropic
+          fallbacks:
+          - provider: mock-anthropic-eu
+        storefront:
+          provider: mock-anthropic
+          fallbacks:
+          - provider: mock-anthropic-eu
+        business-implementation:
+          provider: mock-anthropic
+          fallbacks:
+          - provider: mock-anthropic-eu
+  default_provider: mock-anthropic
+  default_model: claude-sonnet-5
+  allow_unlisted_models: false
+  quota_fault_mode: closed
+  auth_scheme: bearer
+  inference_path_prefix: /v1

@@ -1,0 +1,17 @@
+{
+  "_comment": "Baseline matrix for matrix.sh. A `ramp` entry runs run.sh once per step and stops at the first step whose report sets stop=true (any 4xx/5xx, or p99 gateway_overhead_seconds > 200 ms). `deploy` is applied once before the entry with cluster.sh deploy and reverted after; `args` go to every run.sh call.",
+  "scenarios": [
+    {"name": "s1-ramp-buffered-hpa-off", "ramp": [50, 100, 200, 400, 800, 1200], "deploy": ["gateway.autoscaling.enabled=false"], "args": ["--body", "buffered"]},
+    {"name": "s1-ramp-buffered-hpa-on", "ramp": [50, 100, 200, 400, 800, 1200], "deploy": ["gateway.autoscaling.enabled=true"], "args": ["--body", "buffered"]},
+    {"name": "s2-ramp-stream", "ramp": [50, 100, 200, 400, 800, 1200], "args": ["--body", "stream"]},
+    {"name": "s3-long-conversation", "args": ["--concurrency", "200", "--body", "long"]},
+    {"name": "s4-hot-quota", "args": ["--concurrency", "400", "--set", "hot"]},
+    {"name": "s5-chain-on", "args": ["--concurrency", "400"]},
+    {"name": "s5-chain-off", "args": ["--concurrency", "400", "--chain", "off"]},
+    {"name": "s6-failover", "args": ["--concurrency", "200", "--mock-mode", "5xx"]},
+    {"name": "s7-saturation", "args": ["--concurrency", "800", "--helm", "profile.maxInFlight=64"]},
+    {"name": "s8-pool-starvation", "args": ["--concurrency", "200", "--helm", "profile.overrides.database.pool.max_connections=5"]},
+    {"name": "s9-quota-enforce", "args": ["--concurrency", "100", "--set", "u20", "--policies", "enforce"]},
+    {"name": "s10-pod-kill", "args": ["--concurrency", "200", "--body", "stream", "--kill-pod-after", "40"]}
+  ]
+}

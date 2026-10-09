@@ -104,7 +104,9 @@ identity is the pod name (HOSTNAME).
 {{- $_ := set $base "storage" (dict "backend" $st.backend) -}}
 {{- end -}}
 {{- $_ := set $base "security" (dict "jwt_issuer" $url "jwt_access_token_expiration" 2592000 "jwt_refresh_token_expiration" 15552000 "jwt_audiences" (list "web" "api" "a2a" "mcp") "allowed_resource_audiences" (list "hook") "allow_registration" false "signing_key_path" "signing_key.pem" "id_jag_ttl_secs" 300) -}}
-{{- $_ := set $base "governance" (dict "authz" (dict "hook" (dict "mode" "webhook" "url" (printf "http://localhost:%d/api/public/govern/authz" (int $v.service.port)) "timeout_ms" 500 "acknowledgement" nil))) -}}
+{{- /* /govern/authz is served by the admin role only, and core accepts a plain-http hook only on loopback; gateway pods reach it through the authz-relay sidecar. */ -}}
+{{- $authzPort := ternary (int .ctx.Values.gateway.authzRelay.port) (int $v.service.port) (and (eq .role "gateway") .ctx.Values.gateway.authzRelay.enabled) -}}
+{{- $_ := set $base "governance" (dict "authz" (dict "hook" (dict "mode" "webhook" "url" (printf "http://localhost:%d/api/public/govern/authz" $authzPort) "timeout_ms" 500 "acknowledgement" nil))) -}}
 {{- $merged := mergeOverwrite $base (deepCopy (default dict $p.overrides)) -}}
 {{- toYaml $merged -}}
 {{- end -}}
@@ -169,6 +171,21 @@ initContainers:
     resources:
       {{- toYaml $v.cloudSqlProxy.resources | nindent 6 }}
 {{- end }}
+{{- if and (eq .role "gateway") (not .job) $v.gateway.authzRelay.enabled }}
+  # Native sidecar: relays localhost:<port> to the admin role's /govern/authz.
+  - name: authz-relay
+    image: {{ $v.gateway.authzRelay.image | quote }}
+    restartPolicy: Always
+    args:
+      - TCP-LISTEN:{{ $v.gateway.authzRelay.port }},bind=127.0.0.1,fork,reuseaddr
+      - TCP:{{ include "astound.fullname" $ctx }}-admin:{{ $v.service.port }}
+    securityContext:
+      {{- toYaml $v.containerSecurityContext | nindent 6 }}
+      runAsUser: 65534
+      runAsGroup: 65534
+    resources:
+      {{- toYaml $v.gateway.authzRelay.resources | nindent 6 }}
+{{- end }}
   # The server reads profile.yaml and secrets.json from one directory; assemble
   # it in memory from the ConfigMap and the secret source.
   - name: assemble-profile
@@ -180,6 +197,9 @@ initContainers:
         cp /src/profile/profile.yaml {{ $profileDir }}/profile.yaml
         cp /src/secrets/{{ $v.secrets.fileName }} {{ $profileDir }}/secrets.json
         chmod 0600 {{ $profileDir }}/secrets.json
+        # /app/storage is an emptyDir that hides the image's storage/files;
+        # the entrypoint refills it from /app/share only when the dir exists.
+        mkdir -p /app/storage/files /app/storage/data/scratch /app/storage/exports
     securityContext:
       {{- toYaml $v.containerSecurityContext | nindent 6 }}
     resources:
@@ -189,6 +209,7 @@ initContainers:
       - {name: profile-src, mountPath: /src/profile, readOnly: true}
       - {name: secrets-src, mountPath: /src/secrets, readOnly: true}
       - {name: profile, mountPath: {{ $profileDir }}}
+      - {name: storage, mountPath: /app/storage}
 containers:
   - name: {{ if .job }}migrate{{ else }}server{{ end }}
     image: {{ include "astound.image" $ctx }}
@@ -200,6 +221,10 @@ containers:
     env:
       - {name: SYSTEMPROMPT_PROFILE_DIR, value: {{ $profileDir }}}
       - {name: HOME, value: /home/app}
+      {{- $trusted := $v.pod.trustedHttpHosts | default list }}
+      {{- with $trusted }}
+      - {name: SYSTEMPROMPT_TRUSTED_HTTP_HOSTS, value: {{ join "," . | quote }}}
+      {{- end }}
       {{- with $v.pod.extraEnv }}
       {{- toYaml . | nindent 6 }}
       {{- end }}

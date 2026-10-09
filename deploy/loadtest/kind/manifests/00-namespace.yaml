@@ -1,0 +1,10 @@
+# Namespace for the load-test rig. Restricted Pod Security, the same level the
+# chart is written for on GKE, so a pod that only runs here cannot hide a
+# securityContext gap.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: loadtest
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/warn: restricted

@@ -1609,6 +1609,43 @@ web-build:
 docker-build TAG="local":
     docker build -f Dockerfile --build-arg SYSTEMPROMPT_VERSION={{TAG}} -t {{IMAGE}}:{{TAG}} .
 
+# Local Kubernetes load-test rig: kind + the real Helm chart + Postgres +
+# core's mock inference + Prometheus. No paid calls. deploy/loadtest/kind/README.md.
+loadtest-kind-up:
+    deploy/loadtest/kind/cluster.sh up
+
+# Render deploy/loadtest/kind/.profile/secrets.json (gitignored).
+loadtest-kind-secrets:
+    deploy/loadtest/kind/cluster.sh secrets
+
+# helm upgrade --install with values-kind.yaml; extra args pass through,
+# e.g. `just loadtest-kind-deploy --set gateway.autoscaling.enabled=true`.
+loadtest-kind-deploy *SET:
+    deploy/loadtest/kind/cluster.sh deploy {{SET}}
+
+# Seed USERS load-test users + PAT + session into .tokens/<set>.csv and a Secret.
+loadtest-kind-seed USERS SET="" PROJECTS="commerce,core":
+    deploy/loadtest/kind/seed.sh {{USERS}} {{ if SET == "" { "u" + USERS } else { SET } }} {{PROJECTS}}
+
+# One run; options as deploy/loadtest/kind/run.sh documents.
+loadtest-kind-run NAME *ARGS:
+    deploy/loadtest/kind/run.sh {{NAME}} {{ARGS}}
+
+# Every scenario in scenarios.json (optional name regex).
+loadtest-kind-matrix FILTER=".":
+    deploy/loadtest/kind/matrix.sh '{{FILTER}}'
+
+# Image from locally built release binaries (run `just build --release` first).
+loadtest-kind-image-local:
+    deploy/loadtest/kind/cluster.sh image-local
+
+# helm lint + template with values-kind.yaml + profile schema check in the image.
+loadtest-kind-lint:
+    deploy/loadtest/kind/cluster.sh lint
+
+loadtest-kind-down:
+    deploy/loadtest/kind/cluster.sh down
+
 # Run a local or published image against .env
 docker-run TAG="local":
     docker run -p 8080:8080 --env-file .env {{IMAGE}}:{{TAG}}

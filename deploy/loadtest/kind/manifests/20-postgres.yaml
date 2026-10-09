@@ -1,0 +1,163 @@
+# Postgres 16 for the rig, alone on the `db` worker. Tuned for observation,
+# not speed: pg_stat_statements, lock-wait logging and IO timing are on, and
+# max_connections covers 8 gateway pods x the largest pool tried. Data is an
+# emptyDir: `just loadtest-kind-down` is the reset.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres
+  namespace: loadtest
+type: Opaque
+stringData:
+  POSTGRES_PASSWORD: loadtest
+  DATA_SOURCE_NAME: postgresql://postgres:loadtest@localhost:5432/systemprompt?sslmode=disable
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init
+  namespace: loadtest
+data:
+  # Same shape as deploy/self-host/provision.sql, plus the stats extension.
+  10-provision.sql: |
+    CREATE ROLE systemprompt LOGIN PASSWORD 'loadtest';
+    CREATE DATABASE systemprompt OWNER systemprompt;
+    \connect systemprompt
+    CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+    CREATE EXTENSION IF NOT EXISTS pgcrypto;
+    CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
+    GRANT ALL ON SCHEMA public TO systemprompt;
+    GRANT pg_read_all_stats TO systemprompt;
+    ALTER DATABASE systemprompt SET timezone TO 'UTC';
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-exporter-queries
+  namespace: loadtest
+data:
+  queries.yaml: |
+    pg_wait:
+      query: |
+        SELECT coalesce(wait_event_type,'cpu') AS wait_event_type,
+               coalesce(wait_event,'running') AS wait_event,
+               state, count(*) AS sessions
+        FROM pg_stat_activity
+        WHERE datname = 'systemprompt' AND pid <> pg_backend_pid()
+        GROUP BY 1,2,3
+      metrics:
+        - wait_event_type: {usage: LABEL, description: wait event type}
+        - wait_event: {usage: LABEL, description: wait event}
+        - state: {usage: LABEL, description: backend state}
+        - sessions: {usage: GAUGE, description: backends in this state}
+    pg_lock_waits:
+      query: |
+        SELECT coalesce(c.relname, l.locktype) AS relation, l.mode, count(*) AS waiting
+        FROM pg_locks l LEFT JOIN pg_class c ON c.oid = l.relation
+        WHERE NOT l.granted
+        GROUP BY 1,2
+      metrics:
+        - relation: {usage: LABEL, description: relation or lock type}
+        - mode: {usage: LABEL, description: lock mode}
+        - waiting: {usage: GAUGE, description: ungranted lock requests}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: loadtest
+spec:
+  replicas: 1
+  strategy: {type: Recreate}
+  selector:
+    matchLabels: {app: postgres}
+  template:
+    metadata:
+      labels: {app: postgres}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9187"
+    spec:
+      nodeSelector: {loadtest/role: db}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: postgres
+          image: pgvector/pgvector:pg16
+          args:
+            - -c
+            - max_connections=400
+            - -c
+            - shared_buffers=1GB
+            - -c
+            - effective_cache_size=3GB
+            - -c
+            - work_mem=8MB
+            - -c
+            - shared_preload_libraries=pg_stat_statements
+            - -c
+            - pg_stat_statements.max=5000
+            - -c
+            - pg_stat_statements.track=all
+            - -c
+            - track_io_timing=on
+            - -c
+            - log_lock_waits=on
+            - -c
+            - deadlock_timeout=200ms
+            - -c
+            - synchronous_commit=on
+          env:
+            - {name: PGDATA, value: /var/lib/postgresql/data/pgdata}
+            - name: POSTGRES_PASSWORD
+              valueFrom: {secretKeyRef: {name: postgres, key: POSTGRES_PASSWORD}}
+          ports: [{containerPort: 5432, name: pg}]
+          readinessProbe:
+            exec: {command: ["pg_isready", "-U", "postgres", "-d", "systemprompt"]}
+            periodSeconds: 3
+          resources:
+            requests: {cpu: "2", memory: 2Gi}
+            limits: {cpu: "4", memory: 4Gi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: ["ALL"]}
+          volumeMounts:
+            - {name: data, mountPath: /var/lib/postgresql/data}
+            - {name: init, mountPath: /docker-entrypoint-initdb.d}
+            - {name: run, mountPath: /var/run/postgresql}
+            - {name: shm, mountPath: /dev/shm}
+        - name: exporter
+          image: quay.io/prometheuscommunity/postgres-exporter:v0.15.0
+          args: ["--extend.query-path=/q/queries.yaml", "--no-collector.stat_bgwriter"]
+          env:
+            - name: DATA_SOURCE_NAME
+              valueFrom: {secretKeyRef: {name: postgres, key: DATA_SOURCE_NAME}}
+          ports: [{containerPort: 9187, name: metrics}]
+          resources:
+            requests: {cpu: 50m, memory: 64Mi}
+            limits: {cpu: 500m, memory: 128Mi}
+          securityContext:
+            runAsUser: 65534
+            allowPrivilegeEscalation: false
+            capabilities: {drop: ["ALL"]}
+          volumeMounts:
+            - {name: queries, mountPath: /q}
+      volumes:
+        - {name: data, emptyDir: {}}
+        - {name: run, emptyDir: {}}
+        - {name: shm, emptyDir: {medium: Memory, sizeLimit: 1Gi}}
+        - {name: init, configMap: {name: postgres-init}}
+        - {name: queries, configMap: {name: postgres-exporter-queries}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: loadtest
+spec:
+  selector: {app: postgres}
+  ports: [{name: pg, port: 5432, targetPort: 5432}]

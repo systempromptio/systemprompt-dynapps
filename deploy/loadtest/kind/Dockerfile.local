@@ -1,0 +1,14 @@
+# Phase-3 image: the published release with locally built binaries and the
+# working tree's services/ and MCP extensions laid over it. The root
+# Dockerfile compiles inside its context and cannot see a patched sibling
+# core; this one only copies what `just build --release` produced.
+# `just loadtest-kind-image-local` stages target/release/systemprompt* into
+# deploy/loadtest/kind/.bin/ and builds with the repo root as context.
+ARG BASE=ghcr.io/astound-digital/systemprompt-astound:0.64.0
+FROM ${BASE}
+USER root
+COPY deploy/loadtest/kind/.bin/ /app/bin/
+COPY services /app/services
+COPY extensions/mcp /app/extensions/mcp
+RUN chown -R app:app /app/services /app/extensions/mcp && chmod 0755 /app/bin/systemprompt*
+USER app
