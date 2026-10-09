@@ -43,15 +43,24 @@
 -- writable: user_id (account merge), session/task/context ids (FK SET NULL,
 -- attribution), message_count, error and accounting fields, timings.
 --
--- The chain: every insert into ai_requests and ai_safety_findings appends an
--- audit_chain_links row, seq + 1 under a row lock on audit_chain_heads, with
+-- The chain: the `audit_chain_seal` job (every 10 s) appends one
+-- audit_chain_links row per new ai_requests and ai_safety_findings row,
+-- seq + 1 under a row lock on audit_chain_heads, with
 -- row_hash = sha256(prev_hash || canonical fields). ai_requests hashes its
--- immutable columns; a safety finding hashes every column.
+-- immutable columns; a safety finding hashes every column. audit_chain_seal()
+-- is the only writer (a transaction-scoped advisory lock), so the head lock is
+-- never contended and no gateway insert waits on it. It walks each table from
+-- its audit_chain_cursors position minus a ten-minute lookback, linking every
+-- row that has no link yet, so a row whose transaction committed late is still
+-- sealed. The seal is therefore eventually consistent (within one seal
+-- interval); the UPDATE/DELETE/TRUNCATE guards above stay synchronous.
 -- verify_audit_chain(table, from, to) reports gaps, broken links, altered and
--- deleted rows, and rows with no link; record_audit_chain_verification() is
--- the nightly `audit_chain_verify` job and keeps each run's anchor and head.
--- The chain serialises inserts on one row per table for the length of the
--- inserting transaction; set_audit_guard(mode, FALSE) turns it off.
+-- deleted rows, and rows the sealer has passed with no link;
+-- audit_chain_unsealed(table) counts the rows still waiting.
+-- record_audit_chain_verification() is the nightly `audit_chain_verify` job
+-- and keeps each run's anchor, head and unsealed count.
+-- set_audit_guard(mode, FALSE) turns the chain off; the sealer then no-ops.
+
 CREATE TABLE IF NOT EXISTS audit_guard_settings (
     singleton BOOLEAN PRIMARY KEY DEFAULT TRUE CHECK (singleton),
     mode TEXT NOT NULL DEFAULT 'warn' CHECK (mode IN ('off', 'warn', 'enforce')),
@@ -103,9 +112,17 @@ CREATE TABLE IF NOT EXISTS audit_chain_verifications (
     head_hash TEXT,
     links_checked BIGINT NOT NULL,
     problems BIGINT NOT NULL,
-    first_problems JSONB NOT NULL DEFAULT '[]'::jsonb
+    first_problems JSONB NOT NULL DEFAULT '[]'::jsonb,
+    unsealed_rows BIGINT NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_audit_chain_verifications_run ON audit_chain_verifications(table_name, run_at DESC);
+
+CREATE TABLE IF NOT EXISTS audit_chain_cursors (
+    table_name TEXT PRIMARY KEY,
+    last_created_at TIMESTAMPTZ NOT NULL,
+    last_id TEXT NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 
 CREATE OR REPLACE FUNCTION set_audit_guard(p_mode TEXT, p_chain BOOLEAN)
 RETURNS VOID LANGUAGE plpgsql AS $$
@@ -239,19 +256,100 @@ BEGIN
     WHERE table_name = p_table;
 END $$;
 
-CREATE OR REPLACE FUNCTION audit_chain_link_ai_requests()
-RETURNS TRIGGER LANGUAGE plpgsql AS $$
+-- Rows created before this bound have been passed by the sealer for good:
+-- its cursor minus the lookback it re-scans for late commits. NULL while a
+-- table has never been sealed.
+CREATE OR REPLACE FUNCTION audit_chain_sealed_through(p_table TEXT)
+RETURNS TIMESTAMPTZ LANGUAGE sql STABLE AS $$
+    SELECT c.last_created_at - interval '10 minutes' FROM audit_chain_cursors c WHERE c.table_name = p_table
+$$;
+
+CREATE OR REPLACE FUNCTION audit_chain_seal_table(p_table TEXT, p_limit INTEGER)
+RETURNS BIGINT LANGUAGE plpgsql AS $$
+DECLARE
+    cur_at TIMESTAMPTZ;
+    cur_id TEXT;
+    from_at TIMESTAMPTZ;
+    req ai_requests;
+    fin ai_safety_findings;
+    sealed BIGINT := 0;
 BEGIN
-    PERFORM audit_chain_append('ai_requests', NEW.id, NEW.created_at, audit_chain_payload_ai_requests(NEW));
-    RETURN NULL;
+    SELECT c.last_created_at, c.last_id INTO cur_at, cur_id
+    FROM audit_chain_cursors c WHERE c.table_name = p_table;
+    from_at := COALESCE(cur_at - interval '10 minutes', '-infinity'::timestamptz);
+    IF p_table = 'ai_requests' THEN
+        FOR req IN SELECT a.* FROM ai_requests a
+                   WHERE a.created_at >= from_at
+                     AND NOT EXISTS (SELECT 1 FROM audit_chain_links k
+                                     WHERE k.table_name = 'ai_requests' AND k.row_id = a.id)
+                   ORDER BY a.created_at, a.id LIMIT p_limit LOOP
+            PERFORM audit_chain_append('ai_requests', req.id, req.created_at,
+                audit_chain_payload_ai_requests(req));
+            IF cur_at IS NULL OR (req.created_at, req.id::TEXT) > (cur_at, cur_id) THEN
+                cur_at := req.created_at; cur_id := req.id;
+            END IF;
+            sealed := sealed + 1;
+        END LOOP;
+    ELSIF p_table = 'ai_safety_findings' THEN
+        FOR fin IN SELECT f.* FROM ai_safety_findings f
+                   WHERE f.created_at >= from_at
+                     AND NOT EXISTS (SELECT 1 FROM audit_chain_links k
+                                     WHERE k.table_name = 'ai_safety_findings' AND k.row_id = f.id)
+                   ORDER BY f.created_at, f.id LIMIT p_limit LOOP
+            PERFORM audit_chain_append('ai_safety_findings', fin.id, fin.created_at,
+                audit_chain_payload_ai_safety_findings(fin));
+            IF cur_at IS NULL OR (fin.created_at, fin.id::TEXT) > (cur_at, cur_id) THEN
+                cur_at := fin.created_at; cur_id := fin.id;
+            END IF;
+            sealed := sealed + 1;
+        END LOOP;
+    ELSE
+        RAISE EXCEPTION 'no audit chain for %', p_table USING ERRCODE = '22023';
+    END IF;
+    IF cur_at IS NOT NULL THEN
+        INSERT INTO audit_chain_cursors (table_name, last_created_at, last_id)
+        VALUES (p_table, cur_at, cur_id)
+        ON CONFLICT (table_name) DO UPDATE
+        SET last_created_at = EXCLUDED.last_created_at, last_id = EXCLUDED.last_id,
+            updated_at = clock_timestamp();
+    END IF;
+    RETURN sealed;
 END $$;
 
-CREATE OR REPLACE FUNCTION audit_chain_link_ai_safety_findings()
-RETURNS TRIGGER LANGUAGE plpgsql AS $$
+-- The `audit_chain_seal` job. One writer at a time by a transaction-scoped
+-- advisory lock (a pooled connection never keeps it); a second caller returns
+-- -1 at once. Returns the rows sealed, 0 when the chain is off.
+CREATE OR REPLACE FUNCTION audit_chain_seal(p_limit INTEGER)
+RETURNS BIGINT LANGUAGE plpgsql AS $$
 BEGIN
-    PERFORM audit_chain_append('ai_safety_findings', NEW.id, NEW.created_at,
-        audit_chain_payload_ai_safety_findings(NEW));
-    RETURN NULL;
+    IF NOT COALESCE((SELECT chain_enabled FROM audit_guard_settings WHERE singleton), TRUE) THEN
+        RETURN 0;
+    END IF;
+    IF NOT pg_try_advisory_xact_lock(hashtext('audit_chain_seal')) THEN
+        RETURN -1;
+    END IF;
+    RETURN audit_chain_seal_table('ai_requests', p_limit)
+        + audit_chain_seal_table('ai_safety_findings', p_limit);
+END $$;
+
+CREATE OR REPLACE FUNCTION audit_chain_unsealed(p_table TEXT)
+RETURNS BIGINT LANGUAGE plpgsql STABLE AS $$
+DECLARE
+    from_at TIMESTAMPTZ := COALESCE(audit_chain_sealed_through(p_table), '-infinity'::timestamptz);
+    waiting BIGINT;
+BEGIN
+    IF p_table = 'ai_requests' THEN
+        SELECT count(*) INTO waiting FROM ai_requests a
+        WHERE a.created_at >= from_at
+          AND NOT EXISTS (SELECT 1 FROM audit_chain_links k
+                          WHERE k.table_name = 'ai_requests' AND k.row_id = a.id);
+    ELSE
+        SELECT count(*) INTO waiting FROM ai_safety_findings f
+        WHERE f.created_at >= from_at
+          AND NOT EXISTS (SELECT 1 FROM audit_chain_links k
+                          WHERE k.table_name = 'ai_safety_findings' AND k.row_id = f.id);
+    END IF;
+    RETURN waiting;
 END $$;
 
 CREATE OR REPLACE FUNCTION verify_audit_chain(p_table TEXT, p_from TIMESTAMPTZ, p_to TIMESTAMPTZ)
@@ -261,6 +359,7 @@ DECLARE
     lo BIGINT;
     hi BIGINT;
     first_linked TIMESTAMPTZ;
+    sealed_to TIMESTAMPTZ;
     link RECORD;
     prev_seq BIGINT;
     v_prev_hash TEXT;
@@ -306,27 +405,29 @@ BEGIN
             v_prev_hash := link.row_hash;
         END LOOP;
     END IF;
-    IF first_linked IS NULL THEN
+    sealed_to := LEAST(p_to, audit_chain_sealed_through(p_table));
+    IF first_linked IS NULL OR sealed_to IS NULL THEN
         RETURN;
     END IF;
     IF p_table = 'ai_requests' THEN
         RETURN QUERY SELECT NULL::BIGINT, a.id::TEXT, 'row has no chain link'::TEXT
         FROM ai_requests a
-        WHERE a.created_at >= GREATEST(p_from, first_linked) AND a.created_at < p_to
+        WHERE a.created_at >= GREATEST(p_from, first_linked) AND a.created_at < sealed_to
           AND NOT EXISTS (SELECT 1 FROM audit_chain_links k
                           WHERE k.table_name = 'ai_requests' AND k.row_id = a.id);
     ELSE
         RETURN QUERY SELECT NULL::BIGINT, f.id::TEXT, 'row has no chain link'::TEXT
         FROM ai_safety_findings f
-        WHERE f.created_at >= GREATEST(p_from, first_linked) AND f.created_at < p_to
+        WHERE f.created_at >= GREATEST(p_from, first_linked) AND f.created_at < sealed_to
           AND NOT EXISTS (SELECT 1 FROM audit_chain_links k
                           WHERE k.table_name = 'ai_safety_findings' AND k.row_id = f.id);
     END IF;
 END $$;
 
 -- The nightly check: verifies the last p_window of both chains, records one
--- row per table (with the anchor it started from and the head it reached, so
--- a later rewrite of the chain itself disagrees with what was recorded), and
+-- row per table (with the anchor it started from, the head it reached, so
+-- a later rewrite of the chain itself disagrees with what was recorded, and
+-- the rows still waiting for the sealer), and
 -- drops links past the longest floor. Returns the number of problems found.
 CREATE OR REPLACE FUNCTION record_audit_chain_verification(p_window INTERVAL)
 RETURNS BIGINT LANGUAGE plpgsql AS $$
@@ -346,13 +447,14 @@ BEGIN
             WHERE k.table_name = chained AND k.row_created_at >= v_from AND k.row_created_at < v_to
         )
         INSERT INTO audit_chain_verifications (table_name, window_from, window_to, first_seq, last_seq,
-            anchor_hash, head_hash, links_checked, problems, first_problems)
+            anchor_hash, head_hash, links_checked, problems, first_problems, unsealed_rows)
         SELECT chained, v_from, v_to, span.first_seq, span.last_seq,
             (SELECT k.prev_hash FROM audit_chain_links k WHERE k.table_name = chained AND k.seq = span.first_seq),
             (SELECT k.row_hash FROM audit_chain_links k WHERE k.table_name = chained AND k.seq = span.last_seq),
             span.checked,
             (SELECT count(*) FROM problems),
-            COALESCE((SELECT jsonb_agg(to_jsonb(p)) FROM (SELECT * FROM problems LIMIT 20) p), '[]'::jsonb)
+            COALESCE((SELECT jsonb_agg(to_jsonb(p)) FROM (SELECT * FROM problems LIMIT 20) p), '[]'::jsonb),
+            audit_chain_unsealed(chained)
         FROM span
         RETURNING problems INTO found_problems;
         total := total + found_problems;
@@ -367,8 +469,6 @@ CREATE OR REPLACE TRIGGER ai_requests_audit_delete
     BEFORE DELETE ON ai_requests FOR EACH ROW EXECUTE FUNCTION audit_guard_delete('90', 'created_at', 'id');
 CREATE OR REPLACE TRIGGER ai_requests_audit_truncate
     BEFORE TRUNCATE ON ai_requests FOR EACH STATEMENT EXECUTE FUNCTION audit_guard_truncate();
-CREATE OR REPLACE TRIGGER ai_requests_audit_chain
-    AFTER INSERT ON ai_requests FOR EACH ROW EXECUTE FUNCTION audit_chain_link_ai_requests();
 
 CREATE OR REPLACE TRIGGER ai_safety_findings_audit_update
     BEFORE UPDATE ON ai_safety_findings FOR EACH ROW EXECUTE FUNCTION audit_guard_append_only('id');
@@ -376,8 +476,6 @@ CREATE OR REPLACE TRIGGER ai_safety_findings_audit_delete
     BEFORE DELETE ON ai_safety_findings FOR EACH ROW EXECUTE FUNCTION audit_guard_delete('90', 'created_at', 'id');
 CREATE OR REPLACE TRIGGER ai_safety_findings_audit_truncate
     BEFORE TRUNCATE ON ai_safety_findings FOR EACH STATEMENT EXECUTE FUNCTION audit_guard_truncate();
-CREATE OR REPLACE TRIGGER ai_safety_findings_audit_chain
-    AFTER INSERT ON ai_safety_findings FOR EACH ROW EXECUTE FUNCTION audit_chain_link_ai_safety_findings();
 
 CREATE OR REPLACE TRIGGER ai_request_attributions_audit_update
     BEFORE UPDATE ON ai_request_attributions FOR EACH ROW EXECUTE FUNCTION audit_guard_append_only('request_id');

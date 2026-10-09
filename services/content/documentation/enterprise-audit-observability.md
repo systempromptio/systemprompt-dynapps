@@ -155,7 +155,7 @@ Core adds a second, per-user signal. Its `usage_anomaly_scan` job (hourly at `:0
 
 These limitations are tracked on the [Enterprise Roadmap](/documentation/enterprise-roadmap):
 
-- **Append-only by convention, not by mechanism.** There is no WORM storage or hash-chaining. Whether rows can be changed or deleted depends on database privileges and the retention jobs. Archives sit on the instance's own disk.
+- **The hash seal is eventually consistent; tamper refusal is immediate.** Database triggers refuse (or, in `warn` mode, record) updates, deletes and truncates on the audit tables inside the writing statement. The hash chain over `ai_requests` and `ai_safety_findings` is written by the `audit_chain_seal` job every 10 seconds, so a new row is sealed within one interval rather than at insert, and the gateway's request path never waits on the chain. Rows still waiting are reported as `unsealed_rows` by `audit_chain_verify`. There is no WORM storage, and archives sit on the instance's own disk. See [Data retention](/documentation/data-retention).
 - **No built-in alert channel.** The signal is a metric and an event; delivery is the operator's monitoring stack. See above.
 - **Some older rows have no upstream latency or serving provider.** Those columns were not populated before late September 2026, so overhead and failover analysis is reliable only from then on.
 

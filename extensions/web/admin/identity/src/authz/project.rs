@@ -70,6 +70,8 @@ impl SubjectAttributeProvider for ProjectAttributeProvider {
 
 systemprompt_security::register_subject_attribute_provider!(|ctx| {
     let provider: SharedSubjectAttributeProvider =
-        Arc::new(ProjectAttributeProvider::new(Arc::clone(&ctx.pool)));
+        systemprompt_web_admin_core::authz::cached::cached_provider(ProjectAttributeProvider::new(
+            Arc::clone(&ctx.pool),
+        ));
     provider
 });
