@@ -16,11 +16,11 @@ CLUSTER=astound-loadtest
 NS=loadtest
 CHART="$ROOT/deploy/helm/systemprompt-astound"
 VALUES="$CHART/values-kind.yaml"
-# Optional overlay (e.g. values-kind-patched.yaml for >= 0.65.0 images).
+# Optional extra values file under the chart directory (LOADTEST_VALUES).
 EXTRA_VALUES=()
 [ -z "${LOADTEST_VALUES:-}" ] || EXTRA_VALUES=(-f "$CHART/$LOADTEST_VALUES")
 IMAGE_REPO=ghcr.io/astound-digital/systemprompt-astound
-IMAGE_TAG="${LOADTEST_IMAGE_TAG:-0.64.0}"
+IMAGE_TAG="${LOADTEST_IMAGE_TAG:-0.65.0}"
 MOCK_IMAGE=astound-loadtest/mock-inference:local
 CORE="${CORE_DIR:-$ROOT/../systemprompt-core}"
 SECRETS="$HERE/.profile/secrets.json"

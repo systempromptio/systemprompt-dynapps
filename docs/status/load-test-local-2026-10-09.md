@@ -220,7 +220,7 @@ just loadtest-kind-up && just loadtest-kind-deploy
 just loadtest-kind-seed 100 && just loadtest-kind-seed 20 && just loadtest-kind-seed 100 hot commerce
 LOADTEST_OUT=reports/loadtest/kind/<new-dir> just loadtest-kind-matrix
 # patched image
-LOADTEST_IMAGE_TAG=loadtest-local LOADTEST_VALUES=values-kind-patched.yaml LOADTEST_NO_ROUTE_RESTORE=1 \
+LOADTEST_IMAGE_TAG=loadtest-local LOADTEST_NO_ROUTE_RESTORE=1 \
   LOADTEST_OUT=reports/loadtest/kind/<new-dir> just loadtest-kind-matrix
 deploy/loadtest/kind/compare.py --before <baseline dir> --after <patched dirs...>
 ```

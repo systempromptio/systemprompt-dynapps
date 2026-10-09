@@ -12,8 +12,8 @@ fullnameOverride: astound
 
 image:
   # Chart.appVersion lags the release; pin the image under test explicitly.
-  # Phase 3 swaps in `systemprompt-astound:loadtest-local` (Dockerfile.local).
-  tag: "0.64.0"
+  # `just loadtest-kind-image-local` swaps in `systemprompt-astound:loadtest-local`.
+  tag: "0.65.0"
   pullPolicy: IfNotPresent
 
 profile:
@@ -34,10 +34,6 @@ profile:
     database:
       pool:
         max_connections: 50
-        # Baseline only: 0.64.0 never releases named prepared statements
-        # (statement cache 0), so a backend grows ~190 MB in 5 min and
-        # Postgres OOMs. Recycling connections caps it without hiding it.
-        max_lifetime_secs: 120
 
 secrets:
   mode: inline
