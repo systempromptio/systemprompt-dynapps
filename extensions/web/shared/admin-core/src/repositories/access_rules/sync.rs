@@ -83,6 +83,7 @@ pub async fn apply_sync_scoped(
     }
 
     tx.commit().await?;
+    crate::ttl_cache::invalidate_all();
     Ok(outcome)
 }
 

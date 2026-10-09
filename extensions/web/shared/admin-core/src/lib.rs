@@ -43,5 +43,6 @@ pub mod request;
 pub mod ssr;
 pub mod state;
 pub mod templates;
+pub mod ttl_cache;
 pub mod types;
 pub mod util;

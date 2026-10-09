@@ -30,9 +30,11 @@
 //! caches the result, so every resolve call site reads the same provider list
 //! and ladder through [`subject_attributes_for`] and [`dimensions`].
 //! [`account`], [`catalog`] and [`primary`] are the helpers those call sites
-//! share.
+//! share. Every database-backed provider registers through [`cached`], so a
+//! user's values are read once per 30 s rather than once per request.
 
 pub mod account;
+pub mod cached;
 pub mod catalog;
 pub mod connector;
 pub mod organization;
@@ -55,7 +57,8 @@ struct Registry {
 
 static REGISTRIES: OnceLock<Mutex<HashMap<String, &'static Registry>>> = OnceLock::new();
 
-fn database_key(pool: &PgPool) -> String {
+#[must_use]
+pub fn database_key(pool: &PgPool) -> String {
     let options = pool.connect_options();
     format!(
         "{}:{}/{}",

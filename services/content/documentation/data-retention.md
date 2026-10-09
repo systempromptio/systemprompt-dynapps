@@ -137,7 +137,7 @@ SELECT set_audit_guard('enforce', TRUE);   -- mode, hash chain on
 
 A deliberate backfill, or a legal erasure inside a floor, runs in its own transaction with `SET LOCAL systemprompt.audit_maintenance = 'on'`. That makes it a visible, reviewable act rather than an ordinary statement.
 
-**The hash chain.** Every insert into `ai_requests` and `ai_safety_findings` appends a row to `audit_chain_links`. The row holds a sequence number, the previous link's hash, and `sha256(previous hash + the row's canonical fields)`:
+**The hash chain.** The `audit_chain_seal` job runs every 10 seconds and appends a row to `audit_chain_links` for each new `ai_requests` and `ai_safety_findings` row. The row holds a sequence number, the previous link's hash, and `sha256(previous hash + the row's canonical fields)`:
 
 - For a request, the canonical fields are its immutable columns.
 - For a safety finding, they are every column.
@@ -148,11 +148,11 @@ A deliberate backfill, or a legal erasure inside a floor, runs in its own transa
 - a link whose previous hash does not match
 - a row whose hash no longer matches (altered)
 - a row deleted inside the 90-day floor
-- a row with no link at all (written while the chain was off, or with triggers disabled)
+- a row with no link at all that the sealer has already passed (written while the chain was off)
 
 The `audit_chain_verify` job runs nightly at 04:45 UTC. It checks the last two days and writes one `audit_chain_verifications` row per table, including the anchor hash it started from and the head hash it reached. The run fails if it finds any break, so the failure appears in the job history.
 
-The chain costs about 0.1 ms per insert, measured on 5,000 inserts. Inserts into each table also queue behind one row lock for the length of the inserting transaction. `SELECT set_audit_guard('warn', FALSE)` turns the chain off.
+The seal is eventually consistent: a new row is linked within one seal interval (10 seconds), and rows still waiting are counted as `unsealed_rows` on each verification and in the job's run message. Gateway inserts no longer take the chain's row lock; one replica seals at a time under an advisory lock. Tamper refusal is not deferred: the UPDATE, DELETE and TRUNCATE guards still run inside the writing statement. `SELECT set_audit_guard('warn', FALSE)` turns the chain off and the sealer stops.
 
 **What an auditor can and cannot rely on**
 

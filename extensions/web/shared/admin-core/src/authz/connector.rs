@@ -72,7 +72,8 @@ impl SubjectAttributeProvider for ConnectorAttributeProvider {
 }
 
 systemprompt_security::register_subject_attribute_provider!(|ctx| {
-    let provider: SharedSubjectAttributeProvider =
-        Arc::new(ConnectorAttributeProvider::new(Arc::clone(&ctx.pool)));
+    let provider: SharedSubjectAttributeProvider = crate::authz::cached::cached_provider(
+        ConnectorAttributeProvider::new(Arc::clone(&ctx.pool)),
+    );
     provider
 });
