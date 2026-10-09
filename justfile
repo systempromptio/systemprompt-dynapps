@@ -409,6 +409,7 @@ _lint-gates-uncoordinated:
         check-duplicate-types.sh
         check-field-copy-from.sh
         check-repository-naming.sh
+        check-plane-ownership.sh
         check-admin-template-links.sh
         check-admin-template-assets.sh
         # admin-css-classes + frontend-standards now run as cargo tests in

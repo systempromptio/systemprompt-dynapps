@@ -372,3 +372,6 @@ mod connector_recovery;
 
 #[cfg(test)]
 mod data_console;
+
+#[cfg(test)]
+mod route_catalog_plane_ownership;

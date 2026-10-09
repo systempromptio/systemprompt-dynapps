@@ -37,6 +37,7 @@ pub mod plane;
 pub mod plane_ids;
 pub mod provenance;
 pub mod registry;
+pub mod route_catalog;
 pub mod source_badges;
 pub mod sources;
 pub mod sources_db;
