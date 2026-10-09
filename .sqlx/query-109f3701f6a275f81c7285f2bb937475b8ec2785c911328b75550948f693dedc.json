@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT audit_chain_unsealed('ai_requests') + audit_chain_unsealed('ai_safety_findings') AS \"unsealed_rows!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "unsealed_rows!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "109f3701f6a275f81c7285f2bb937475b8ec2785c911328b75550948f693dedc"
+}
