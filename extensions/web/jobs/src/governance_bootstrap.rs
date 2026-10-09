@@ -219,9 +219,7 @@ async fn bootstrap_gateway_entities(db_pool: &DbPool) -> Result<GatewayCatalog, 
 
     let route_ids = dispatchable_route_ids(services);
     let registered = registered_routes(&route_ids);
-    let id_refs: Vec<&str> = route_ids.iter().map(String::as_str).collect();
-
-    if id_refs.is_empty() {
+    if route_ids.is_empty() {
         tracing::warn!(
             gateway = %gateway_path.display(),
             "services config declares no dispatchable gateway routes — leaving the \
