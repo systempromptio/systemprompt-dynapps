@@ -53,13 +53,14 @@ cleanup() {
     for p in $(jobs -p); do kill "$p" 2>/dev/null || true; done
     [ "$MOCK_MODE" = ok ] && [ "$MOCK_LAT" = 300:900 ] || set_mock ok
     [ "$CHAIN" = on ] || set_chain true
-    [ "$POLICIES" = default ] && [ -z "$HELM" ] || "$HERE/cluster.sh" deploy >/dev/null 2>&1 || true
+    [ -z "$HELM" ] || "$HERE/cluster.sh" deploy >/dev/null 2>&1 || true
+    [ "$POLICIES" = default ] || psqlc -c "UPDATE ai_gateway_policies SET spec = '$(cat "$RUN/policy-before.json" 2>/dev/null)'::jsonb WHERE name = 'default-quotas';" >/dev/null </dev/null || true
 }
 trap cleanup EXIT
 
 # --- knobs -------------------------------------------------------------------
-if [ -n "$HELM" ] || [ "$POLICIES" != default ]; then
-    args=(--policies "$POLICIES")
+if [ -n "$HELM" ]; then
+    args=()
     IFS=',' read -ra kv <<< "$HELM"
     for s in "${kv[@]+"${kv[@]}"}"; do args+=(--set "$s"); done
     "$HERE/cluster.sh" deploy "${args[@]}" >"$RUN/helm.log" 2>&1
@@ -69,6 +70,13 @@ if [ -n "$HELM" ] || [ "$POLICIES" != default ]; then
     $K rollout status deploy/astound-gateway --timeout 300s >/dev/null
 fi
 { [ "$MOCK_MODE" = ok ] && [ "$MOCK_LAT" = 300:900 ]; } || set_mock "$MOCK_MODE"
+# Quota enforce: the gateway_policies plane only seeds an empty table at boot,
+# so a changed policies.yaml never reaches the live row. Edit the row (core
+# re-reads it within 60 s) and put the saved spec back on exit.
+if [ "$POLICIES" = enforce ]; then
+    psqlc -c "SELECT spec FROM ai_gateway_policies WHERE name = 'default-quotas';" > "$RUN/policy-before.json" </dev/null
+    psqlc -c "UPDATE ai_gateway_policies SET spec = jsonb_set(jsonb_set(spec, '{quota_mode}', '\"enforce\"'), '{quota_windows,0}', '{\"subject\":\"user\",\"window_seconds\":60,\"max_requests\":30}'), updated_at = now() WHERE name = 'default-quotas';" >/dev/null </dev/null
+fi
 [ "$CHAIN" = on ] || set_chain false
 
 # --- bodies --------------------------------------------------------------------
