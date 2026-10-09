@@ -144,6 +144,15 @@ def main(run):
         "statements": statements(os.path.join(run, "statements.tsv")),
         "log_pressure_lines": open(os.path.join(run, "log-pressure.txt")).read().strip() if os.path.exists(os.path.join(run, "log-pressure.txt")) else None,
     }
+    calls_path = os.path.join(run, "statement-calls.txt")
+    try:
+        calls = int(open(calls_path).read().strip().splitlines()[-1])
+    except (OSError, ValueError, IndexError):
+        calls = None
+    summary["statement_calls"] = calls
+    summary["statements_per_request"] = round(calls / total, 1) if calls and total else None
+    up = os.path.join(run, "chain-unsealed.tsv")
+    summary["chain_unsealed"] = open(up).read().strip() if os.path.exists(up) else None
     ov99 = pm.get("overhead_p99_s")
     # A run that is not majority 200 measured an error path, not the gateway:
     # it is invalid and can never be a ceiling.
@@ -165,6 +174,8 @@ def main(run):
           f"| deployment selected | {pm.get('deployment_selected')} |",
           f"| failovers / shed / quota denials | {pm.get('failovers_total')} / {pm.get('load_shed_total')} / {pm.get('quota_denials_total')} |",
           f"| postgres restarts during run | {meta.get('pg_restarts')} |",
+          f"| DB statements per request | {summary['statements_per_request']} |",
+          f"| audit chain unsealed | {summary['chain_unsealed']} |",
           f"| pods | {summary['pods']} |", f"| stop rule hit | {summary['stop']} |", f"| valid (majority 200) | {summary['valid']} |", "",
           "## pg waits (avg active sessions per 1 s sample)", "", "| type | event | relation | avg |", "|---|---|---|---|"]
     md += [f"| {r['wait_type']} | {r['wait_event']} | {r['relation']} | {r['avg_sessions']} |" for r in w]

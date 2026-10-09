@@ -16,6 +16,9 @@ CLUSTER=astound-loadtest
 NS=loadtest
 CHART="$ROOT/deploy/helm/systemprompt-astound"
 VALUES="$CHART/values-kind.yaml"
+# Optional overlay (e.g. values-kind-patched.yaml for >= 0.65.0 images).
+EXTRA_VALUES=()
+[ -z "${LOADTEST_VALUES:-}" ] || EXTRA_VALUES=(-f "$CHART/$LOADTEST_VALUES")
 IMAGE_REPO=ghcr.io/astound-digital/systemprompt-astound
 IMAGE_TAG="${LOADTEST_IMAGE_TAG:-0.64.0}"
 MOCK_IMAGE=astound-loadtest/mock-inference:local
@@ -100,7 +103,7 @@ cmd_deploy() {
     [ -f "$SECRETS" ] || cmd_secrets
     services_configmap "$policies"
     helm --kube-context "$KCTX" upgrade --install astound "$CHART" -n "$NS" \
-        -f "$VALUES" --set image.tag="$IMAGE_TAG" \
+        -f "$VALUES" "${EXTRA_VALUES[@]+"${EXTRA_VALUES[@]}"}" --set image.tag="$IMAGE_TAG" \
         --set-file secrets.inline.json="$SECRETS" \
         "${sets[@]+"${sets[@]}"}" --wait --timeout 15m
     k -n "$NS" rollout status deploy/astound-gateway --timeout 300s

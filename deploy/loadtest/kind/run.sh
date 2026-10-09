@@ -89,7 +89,10 @@ $K create configmap loadtest-body --from-file=body.json="$B" --dry-run=client -o
 # catalog sync (source services:/app/services/ai/gateway.yaml) rewrites it to
 # closed, and core's rule-based check sees roles [] for a PAT caller, so every
 # call 403s. Restore the declared default; this is a product bug, not a knob.
-psqlc -c "UPDATE access_control_entities SET default_included = true WHERE entity_type = 'gateway_route' AND NOT default_included;" >/dev/null </dev/null
+# Fixed from 0.65.0: LOADTEST_NO_ROUTE_RESTORE=1 skips the restore and records
+# the route state instead, so a flip shows up as a failed run.
+psqlc -F $'\t' -c "SELECT entity_id, default_included FROM access_control_entities WHERE entity_type = 'gateway_route';" > "$RUN/routes-before.tsv" </dev/null
+[ -n "${LOADTEST_NO_ROUTE_RESTORE:-}" ] || psqlc -c "UPDATE access_control_entities SET default_included = true WHERE entity_type = 'gateway_route' AND NOT default_included;" >/dev/null </dev/null
 # Fresh backends per run: 0.64.0 backends grow without bound (prepared
 # statements are never released), so a run must not inherit the last one's.
 psqlc -c "SELECT count(pg_terminate_backend(pid)) FROM pg_stat_activity WHERE usename = 'systemprompt';" >/dev/null </dev/null
@@ -178,6 +181,10 @@ for p in $($K get pod -l app=loadgen -o name); do $K logs "$p" >> "$RUN/hey.csv"
 # --- collection ----------------------------------------------------------------
 after="$(mock_stats | tr '\n' ' ')"
 psqlc -f /dev/stdin < "$HERE/sql/top-statements.sql" > "$RUN/statements.tsv" 2>&1 || true
+# Statements per request: every systemprompt statement since the reset.
+psqlc -c "SELECT sum(calls) FROM pg_stat_statements WHERE dbid = (SELECT oid FROM pg_database WHERE datname = 'systemprompt') AND userid = (SELECT oid FROM pg_roles WHERE rolname = 'systemprompt');" > "$RUN/statement-calls.txt" </dev/null 2>&1 || true
+# Audit chain seal lag (0.65.0+ sealer job); absent on 0.64.0.
+psqlc -F $'\t' -c "SELECT audit_chain_unsealed('ai_requests'), audit_chain_unsealed('ai_safety_findings');" > "$RUN/chain-unsealed.tsv" </dev/null 2>&1 || true
 $K logs -l app.kubernetes.io/component=gateway -c server --since="$((end - start + 30))s" --tail=-1 2>/dev/null \
     | grep -ciE 'saturated|load shed|acquire timeout|pool timed out' > "$RUN/log-pressure.txt" || true
 $K get pods -o wide > "$RUN/pods.txt"
