@@ -18,7 +18,7 @@ use systemprompt_web_admin_core::repositories::sync::route_catalog::reconcile_ro
 use crate::fixtures::unique;
 use crate::tempdb::TempDb;
 
-const RULES: &str = "entities:\n  - entity: gateway_route/*\n    default: open\n    why: every signed-in user may reach the gateway\n";
+const RULES: &str = "entities:\n  - entity: gateway_route/*\n    default: open\n    why: every signed-in user may reach the gateway\n    allow:\n      role: [user]\n";
 const SOURCE: &str = "services:test/ai/gateway.yaml";
 
 async fn snapshot(pool: &PgPool) -> (Vec<String>, Vec<String>) {

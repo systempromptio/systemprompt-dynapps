@@ -196,7 +196,7 @@
       ]
     },
     "PoolConfig": {
-      "description": "Operator-tunable connection-pool sizing.\n\nOmitted fields fall back to the engine defaults (50 connections, 30s\nacquire, 300s idle, 1800s lifetime); set them to fit the pool to the\ndeployment's Postgres `max_connections` and replica count.\n[`crate::profile::Profile::validate`] range-checks the values at bootstrap.",
+      "description": "Operator-tunable connection-pool sizing.\n\nOmitted fields fall back to the engine defaults (50 connections, 30s\nacquire, 300s idle, 1800s lifetime); set them to fit the pool to the\ndeployment's Postgres `max_connections` and replica count.\n`statement_cache_capacity` defaults to 100 prepared statements per\nconnection. 0 is accepted but leaks: sqlx still names every statement and\nnever closes one without a cache, so each backend grows until Postgres runs\nout of memory.\n[`crate::profile::Profile::validate`] range-checks the values at bootstrap.",
       "type": "object",
       "properties": {
         "max_connections": {
@@ -229,6 +229,14 @@
             "null"
           ],
           "format": "uint64",
+          "minimum": 0
+        },
+        "statement_cache_capacity": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint",
           "minimum": 0
         }
       },

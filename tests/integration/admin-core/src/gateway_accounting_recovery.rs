@@ -117,6 +117,10 @@ async fn terminal_receipt_survives_database_failure_and_replays_without_duplicat
     )
     .await;
     first.open(&request, &raw).await.expect("admission");
+    first
+        .commit_admission()
+        .await
+        .expect("admission committed before dispatch");
     sqlx::raw_sql("CREATE FUNCTION fail_completion() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.status='completed' THEN RAISE EXCEPTION 'injected storage outage'; END IF; RETURN NEW; END $$; CREATE TRIGGER fail_completion BEFORE UPDATE ON ai_requests FOR EACH ROW EXECUTE FUNCTION fail_completion();")
         .execute(&*db.pool).await.expect("install fault");
     let usage = CanonicalUsage {
@@ -183,6 +187,10 @@ async fn terminal_receipt_survives_database_failure_and_replays_without_duplicat
         .open(&request, &raw)
         .await
         .expect("admission after receipt recovery");
+    second
+        .commit_admission()
+        .await
+        .expect("second admission committed");
     let row:(String,Option<i32>,i64)=sqlx::query_as("SELECT status,tokens_used,(SELECT count(*) FROM ai_request_tool_calls WHERE request_id=r.id) FROM ai_requests r WHERE id=$1")
         .bind(first.ctx.ai_request_id.as_str()).fetch_one(&*db.pool).await.expect("replayed completion");
     assert_eq!(row, ("completed".into(), Some(18), 1));
