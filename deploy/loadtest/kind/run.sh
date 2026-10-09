@@ -94,6 +94,13 @@ psqlc -c "UPDATE access_control_entities SET default_included = true WHERE entit
 # statements are never released), so a run must not inherit the last one's.
 psqlc -c "SELECT count(pg_terminate_backend(pid)) FROM pg_stat_activity WHERE usename = 'systemprompt';" >/dev/null </dev/null
 sleep 35
+# Warm the fresh pools (connect + first prepares) outside the measured window.
+IFS=, read -r wtok wsid < <($K get secret "loadtest-tokens-$SET" -o jsonpath='{.data.tokens\.csv}' | base64 -d | head -1)
+$K exec deploy/astound-admin -c server -- /app/bin/hey -z 20s -c 12 -m POST -T application/json \
+    -H "Authorization: Bearer $wtok" -H "x-session-id: $wsid" -H "anthropic-version: 2023-06-01" \
+    -d '{"model":"claude-sonnet-5","max_tokens":32,"messages":[{"role":"user","content":"warm"}]}' \
+    http://astound-gateway:8080/v1/messages >/dev/null 2>&1 </dev/null || true
+sleep 15
 psqlc -c "SELECT pg_stat_statements_reset();" >/dev/null </dev/null
 before="$(mock_stats | tr '\n' ' ')"
 pg_restarts() { $K get pod -l app=postgres -o jsonpath='{.items[0].status.containerStatuses[?(@.name=="postgres")].restartCount}'; }
@@ -108,6 +115,11 @@ start="$(date -u +%s)"
 
 # --- generator -----------------------------------------------------------------
 $K delete job loadgen --ignore-not-found --wait >/dev/null
+# No more generator pods than active credentials: an idle pod would finish
+# at once and, with backoffLimit 0, a failing one ends the whole Job early.
+ntok="$($K get secret "loadtest-tokens-$SET" -o jsonpath='{.data.tokens\.csv}' | base64 -d | grep -c ,)"
+active=$(( ntok < C ? ntok : C ))
+[ "$PODS" -le "$active" ] || PODS="$active"
 IMG="$($K get deploy astound-gateway -o jsonpath='{.spec.template.spec.containers[0].image}')"
 cat > "$RUN/job.yaml" <<YAML
 apiVersion: batch/v1
@@ -143,7 +155,7 @@ spec:
                 i=\$((i + 1))
               done < /t/tokens.csv
               wait
-              cat /tmp/h*.csv | grep -v '^response-time'
+              cat /tmp/h*.csv 2>/dev/null | grep -v '^response-time' || true
           securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: ["ALL"]}}
           resources: {requests: {cpu: 500m, memory: 256Mi}, limits: {cpu: "2", memory: 1Gi}}
           volumeMounts:
