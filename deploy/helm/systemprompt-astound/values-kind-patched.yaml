@@ -1,11 +1,7 @@
-# Overlay on values-kind.yaml for images >= 0.65.0 (Phase 3): the authz hook
-# runs in-process (mode extension, no relay sidecar), and the prepared
+# Overlay on values-kind.yaml for images >= 0.65.0 (Phase 3): the prepared
 # statement leak is fixed (statement cache 100), so the baseline's 120 s pool
 # recycle is removed (null deletes the key from the merged values).
 #   LOADTEST_IMAGE_TAG=loadtest-local LOADTEST_VALUES=values-kind-patched.yaml just loadtest-kind-deploy
-gateway:
-  authzRelay:
-    enabled: false
 profile:
   overrides:
     database:

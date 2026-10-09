@@ -183,20 +183,6 @@ gateway:
       scaleUp:
         stabilizationWindowSeconds: 0
         policies: [{type: Percent, value: 100, periodSeconds: 60}]
-  # The authz webhook (/api/public/govern/authz) is served by the admin role
-  # only, and core accepts a plain-http hook URL only on loopback. Gateway pods
-  # therefore call localhost:<port>, relayed by this sidecar to the admin
-  # Service. Every inference request crosses it: the single admin pod is on
-  # the gateway's hot path until the gateway role serves the route itself.
-  # Only for images older than 0.65.0. From 0.65.0 the binary registers the
-  # authz hook in-process (profile mode extension) and no relay is rendered.
-  authzRelay:
-    enabled: false
-    image: alpine/socat:1.8.0.1
-    port: 8081
-    resources:
-      requests: {cpu: 50m, memory: 16Mi}
-      limits: {cpu: 500m, memory: 64Mi}
   pdb:
     enabled: true
     minAvailable: 2

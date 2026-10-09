@@ -104,14 +104,7 @@ identity is the pod name (HOSTNAME).
 {{- $_ := set $base "storage" (dict "backend" $st.backend) -}}
 {{- end -}}
 {{- $_ := set $base "security" (dict "jwt_issuer" $url "jwt_access_token_expiration" 2592000 "jwt_refresh_token_expiration" 15552000 "jwt_audiences" (list "web" "api" "a2a" "mcp") "allowed_resource_audiences" (list "hook") "allow_registration" false "signing_key_path" "signing_key.pem" "id_jag_ttl_secs" 300) -}}
-{{- /* Images from 0.65.0 register the authz hook in-process (mode extension, no hop). gateway.authzRelay is only for older images, whose gateway pods must reach the admin role's /govern/authz over the loopback relay sidecar. */ -}}
-{{- /* Relay on means a pre-0.65 image: every role uses the webhook, the admin on its own port and the gateway through the relay. */ -}}
-{{- if .ctx.Values.gateway.authzRelay.enabled -}}
-{{- $hookPort := ternary (int .ctx.Values.gateway.authzRelay.port) (int $v.service.port) (eq .role "gateway") -}}
-{{- $_ := set $base "governance" (dict "authz" (dict "hook" (dict "mode" "webhook" "url" (printf "http://localhost:%d/api/public/govern/authz" $hookPort) "timeout_ms" 500 "acknowledgement" nil))) -}}
-{{- else -}}
 {{- $_ := set $base "governance" (dict "authz" (dict "hook" (dict "mode" "extension" "url" nil "timeout_ms" 500 "acknowledgement" nil))) -}}
-{{- end -}}
 {{- $merged := mergeOverwrite $base (deepCopy (default dict $p.overrides)) -}}
 {{- toYaml $merged -}}
 {{- end -}}
@@ -175,21 +168,6 @@ initContainers:
       runAsGroup: 65532
     resources:
       {{- toYaml $v.cloudSqlProxy.resources | nindent 6 }}
-{{- end }}
-{{- if and (eq .role "gateway") (not .job) $v.gateway.authzRelay.enabled }}
-  # Native sidecar: relays localhost:<port> to the admin role's /govern/authz.
-  - name: authz-relay
-    image: {{ $v.gateway.authzRelay.image | quote }}
-    restartPolicy: Always
-    args:
-      - TCP-LISTEN:{{ $v.gateway.authzRelay.port }},bind=127.0.0.1,fork,reuseaddr
-      - TCP:{{ include "astound.fullname" $ctx }}-admin:{{ $v.service.port }}
-    securityContext:
-      {{- toYaml $v.containerSecurityContext | nindent 6 }}
-      runAsUser: 65534
-      runAsGroup: 65534
-    resources:
-      {{- toYaml $v.gateway.authzRelay.resources | nindent 6 }}
 {{- end }}
   # The server reads profile.yaml and secrets.json from one directory; assemble
   # it in memory from the ConfigMap and the secret source.
