@@ -71,6 +71,10 @@ gateway:
       scaleUp:
         stabilizationWindowSeconds: 0
         policies: [{type: Percent, value: 100, periodSeconds: 30}]
+  # 0.64.0 (the baseline) has no in-process authz hook: relay to the admin
+  # role's webhook. Phase 3 images (>= 0.65.0) deploy with this set to false.
+  authzRelay:
+    enabled: true
   pdb:
     enabled: true
     minAvailable: 1

@@ -105,9 +105,10 @@ identity is the pod name (HOSTNAME).
 {{- end -}}
 {{- $_ := set $base "security" (dict "jwt_issuer" $url "jwt_access_token_expiration" 2592000 "jwt_refresh_token_expiration" 15552000 "jwt_audiences" (list "web" "api" "a2a" "mcp") "allowed_resource_audiences" (list "hook") "allow_registration" false "signing_key_path" "signing_key.pem" "id_jag_ttl_secs" 300) -}}
 {{- /* Images from 0.65.0 register the authz hook in-process (mode extension, no hop). gateway.authzRelay is only for older images, whose gateway pods must reach the admin role's /govern/authz over the loopback relay sidecar. */ -}}
-{{- $relay := and (eq .role "gateway") .ctx.Values.gateway.authzRelay.enabled -}}
-{{- if $relay -}}
-{{- $_ := set $base "governance" (dict "authz" (dict "hook" (dict "mode" "webhook" "url" (printf "http://localhost:%d/api/public/govern/authz" (int .ctx.Values.gateway.authzRelay.port)) "timeout_ms" 500 "acknowledgement" nil))) -}}
+{{- /* Relay on means a pre-0.65 image: every role uses the webhook, the admin on its own port and the gateway through the relay. */ -}}
+{{- if .ctx.Values.gateway.authzRelay.enabled -}}
+{{- $hookPort := ternary (int .ctx.Values.gateway.authzRelay.port) (int $v.service.port) (eq .role "gateway") -}}
+{{- $_ := set $base "governance" (dict "authz" (dict "hook" (dict "mode" "webhook" "url" (printf "http://localhost:%d/api/public/govern/authz" $hookPort) "timeout_ms" 500 "acknowledgement" nil))) -}}
 {{- else -}}
 {{- $_ := set $base "governance" (dict "authz" (dict "hook" (dict "mode" "extension" "url" nil "timeout_ms" 500 "acknowledgement" nil))) -}}
 {{- end -}}
