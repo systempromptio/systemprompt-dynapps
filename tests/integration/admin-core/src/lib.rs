@@ -175,3 +175,6 @@ mod managed_revisions;
 
 #[cfg(test)]
 mod data_console;
+
+#[cfg(test)]
+mod sync_plane_restart_stability;
