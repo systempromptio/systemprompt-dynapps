@@ -1,0 +1,22 @@
+# Load-test AI config (deploy/loadtest/kind). Mounted over
+# /app/services/ai/config.yaml: the shipped file enables vertex-anthropic,
+# anthropic and gemini, which are absent from the load-test catalog.
+ai:
+  default_provider: mock-anthropic
+  default_max_output_tokens: 4096
+  sampling:
+    enable_smart_routing: false
+    fallback_enabled: true
+  providers:
+    mock-anthropic:
+      enabled: true
+      google_search_enabled: false
+      default_model: claude-sonnet-5
+  mcp:
+    auto_discover: true
+    connect_timeout_ms: 5000
+    execution_timeout_ms: 30000
+    retry_attempts: 3
+  history:
+    retention_days: 30
+    log_tool_executions: true

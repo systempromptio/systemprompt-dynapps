@@ -8,6 +8,7 @@ use systemprompt::config::{ProfileBootstrap, SecretsBootstrap, try_init_config};
 use systemprompt::identifiers::McpServerId;
 use systemprompt::system::AppContext;
 use systemprompt_mcp_agent::SystempromptServer;
+use systemprompt_web_admin_governance as _;
 use tokio::net::TcpListener;
 
 const DEFAULT_SERVICE_ID: &str = "systemprompt";

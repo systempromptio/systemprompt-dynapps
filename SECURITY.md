@@ -69,6 +69,17 @@ Out of scope:
 - Denial of service through unrealistic resource consumption against a local
   development build.
 
+## Audit tamper evidence
+
+Audit tables (`ai_requests`, `ai_safety_findings` and the other audit logs)
+are guarded by database triggers that refuse, or in `warn` mode record, any
+update, delete or truncate outside the retention floors. That refusal is
+immediate: it runs inside the offending statement. The hash chain over
+`ai_requests` and `ai_safety_findings` is eventually consistent: the
+`audit_chain_seal` job links new rows every 10 seconds, so a row can be
+unsealed for up to one seal interval, and `audit_chain_verify` reports the
+waiting count as `unsealed_rows`. See `extensions/web/schema/51_audit_integrity.sql`.
+
 ## Telemetry
 
 A self-hosted Astound instance sends nothing to the vendor. Neither this

@@ -35,6 +35,7 @@ chrono.workspace = true
 inventory.workspace = true
 
 systemprompt-mcp-shared.workspace = true
+systemprompt-web-admin-governance.workspace = true
 
 [lints]
 workspace = true

@@ -6,7 +6,9 @@
 //! `audit_chain_verifications` row per table with the anchor and head it saw,
 //! and drops links older than every retention floor. A run that finds a gap,
 //! a broken link, an altered or deleted row, or an unlinked row fails, so the
-//! break surfaces in the scheduler's run history and `infra logs`.
+//! break surfaces in the scheduler's run history and `infra logs`. The run
+//! message also carries `unsealed_rows`: rows `audit_chain_seal` has not
+//! linked yet, which is the seal's lag rather than a break.
 
 use crate::error::JobError;
 use sqlx::PgPool;
@@ -26,12 +28,18 @@ impl AuditChainVerifyJob {
         )
         .fetch_one(pool)
         .await?;
+        let unsealed_rows = sqlx::query_scalar!(
+            r#"SELECT audit_chain_unsealed('ai_requests') + audit_chain_unsealed('ai_safety_findings') AS "unsealed_rows!""#
+        )
+        .fetch_one(pool)
+        .await?;
         if problems > 0 {
             return Err(JobError::other(format!(
-                "audit chain verification found {problems} problems; see audit_chain_verifications"
+                "audit chain verification found {problems} problems (unsealed_rows={unsealed_rows}); see audit_chain_verifications"
             )));
         }
-        Ok(JobResult::success().with_message("audit chain intact".to_owned()))
+        Ok(JobResult::success()
+            .with_message(format!("audit chain intact; unsealed_rows={unsealed_rows}")))
     }
 }
 

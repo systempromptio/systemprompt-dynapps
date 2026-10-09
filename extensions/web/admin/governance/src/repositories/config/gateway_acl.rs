@@ -73,11 +73,16 @@ pub async fn upsert_rule(
         })
         .await
         .map_err(|e| map_err(&e))
+        .inspect(|_| systemprompt_web_admin_core::ttl_cache::invalidate_all())
 }
 
 pub async fn delete_rule(pool: &PgPool, rule_id: &str) -> Result<bool, sqlx::Error> {
     let id = systemprompt::identifiers::RuleId::new(rule_id.to_owned());
-    repo(pool).delete_rule(&id).await.map_err(|e| map_err(&e))
+    repo(pool)
+        .delete_rule(&id)
+        .await
+        .map_err(|e| map_err(&e))
+        .inspect(|_| systemprompt_web_admin_core::ttl_cache::invalidate_all())
 }
 
 pub async fn find_entity(

@@ -1,0 +1,87 @@
+# Two copies of core's mock inference server (crates/tests/mock-inference),
+# one per provider in services/ai/providers.yaml, so failover can be exercised
+# by turning only mock-primary to `--mode 5xx` (run.sh patches the args).
+# GET /stats counts what each served: the proof that nothing left the cluster.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mock-primary
+  namespace: loadtest
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: mock-primary}
+  template:
+    metadata:
+      labels: {app: mock-primary}
+    spec:
+      nodeSelector: {loadtest/role: app}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: mock
+          image: astound-loadtest/mock-inference:local
+          imagePullPolicy: Never
+          args: ["--port", "9100", "--latency-ms", "300:900", "--mode", "ok"]
+          env: [{name: RUST_LOG, value: warn}]
+          ports: [{containerPort: 9100, name: http}]
+          readinessProbe: {httpGet: {path: /health, port: http}, periodSeconds: 3}
+          resources:
+            requests: {cpu: 250m, memory: 64Mi}
+            limits: {cpu: "2", memory: 256Mi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: ["ALL"]}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mock-eu
+  namespace: loadtest
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: mock-eu}
+  template:
+    metadata:
+      labels: {app: mock-eu}
+    spec:
+      nodeSelector: {loadtest/role: app}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: mock
+          image: astound-loadtest/mock-inference:local
+          imagePullPolicy: Never
+          args: ["--port", "9100", "--latency-ms", "300:900", "--mode", "ok"]
+          env: [{name: RUST_LOG, value: warn}]
+          ports: [{containerPort: 9100, name: http}]
+          readinessProbe: {httpGet: {path: /health, port: http}, periodSeconds: 3}
+          resources:
+            requests: {cpu: 250m, memory: 64Mi}
+            limits: {cpu: "2", memory: 256Mi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: ["ALL"]}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mock-primary
+  namespace: loadtest
+spec:
+  selector: {app: mock-primary}
+  ports: [{name: http, port: 9100, targetPort: 9100}]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mock-eu
+  namespace: loadtest
+spec:
+  selector: {app: mock-eu}
+  ports: [{name: http, port: 9100, targetPort: 9100}]

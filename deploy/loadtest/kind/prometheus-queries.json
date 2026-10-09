@@ -1,0 +1,21 @@
+{
+  "_comment": "PromQL evaluated by report.py at the run's end time; $W is the run window (e.g. 130s). Missing series are reported as null, never as 0.",
+  "overhead_p50_s": "histogram_quantile(0.50, sum(rate(gateway_overhead_seconds_bucket[$W])) by (le))",
+  "overhead_p95_s": "histogram_quantile(0.95, sum(rate(gateway_overhead_seconds_bucket[$W])) by (le))",
+  "overhead_p99_s": "histogram_quantile(0.99, sum(rate(gateway_overhead_seconds_bucket[$W])) by (le))",
+  "upstream_p50_s": "histogram_quantile(0.50, sum(rate(gateway_upstream_duration_seconds_bucket[$W])) by (le))",
+  "upstream_p99_s": "histogram_quantile(0.99, sum(rate(gateway_upstream_duration_seconds_bucket[$W])) by (le))",
+  "http_p99_s": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{component=\"gateway\",path=\"/v1/messages\"}[$W])) by (le))",
+  "requests_by_status": "sum(increase(http_requests_total{component=\"gateway\",path=\"/v1/messages\"}[$W])) by (status)",
+  "in_flight_saturation_max": "max(max_over_time(http_in_flight_saturation[$W]))",
+  "sse_active_max": "max(max_over_time(sse_active_connections[$W]))",
+  "load_shed_total": "sum(increase(http_load_shed_total[$W]))",
+  "failovers_total": "sum(increase(gateway_upstream_failovers_total[$W]))",
+  "deployment_selected": "sum(increase(gateway_deployment_selected_total[$W])) by (provider)",
+  "quota_denials_total": "sum(increase(systemprompt_quota_denials_total[$W]))",
+  "db_pool": "max(max_over_time(db_pool_connections[$W])) by (state)",
+  "db_pool_acquire_p99_s": "histogram_quantile(0.99, sum(rate(db_pool_acquire_seconds_bucket[$W])) by (le))",
+  "pg_backends_max": "max(max_over_time(pg_stat_database_numbackends{datname=\"systemprompt\"}[$W]))",
+  "pg_lock_waits_max": "max(max_over_time(pg_lock_waits_waiting[$W])) by (relation, mode)",
+  "pg_wait_sessions_avg": "avg_over_time(sum(pg_wait_sessions{state=\"active\"}) by (wait_event_type, wait_event)[$W:5s])"
+}

@@ -10,11 +10,15 @@
 //!   the secrets router, and the `/hooks/govern` and `/govern/authz` webhooks.
 //! - [`gateway_entitlement`], [`gateway_safety`] — the gateway guard and the
 //!   safety scanners core runs on every `/v1/messages` request.
+//! - [`authz_hook`] — the in-process authz hook (`mode: extension`), and
+//!   [`authz_eval`], the decision it shares with the `/govern/authz` webhook.
 //!
-//! The route guard, the two scanners, the three sync planes and the governance
-//! export datasets register with core through `inventory`, so a binary that
-//! serves the gateway, sync or exports must link this crate.
+//! The authz hook, the route guard, the two scanners, the three sync planes and
+//! the governance export datasets register with core through `inventory`, so a
+//! binary that serves the gateway, sync or exports must link this crate.
 
+pub mod authz_eval;
+pub mod authz_hook;
 mod export;
 pub mod gateway_entitlement;
 pub mod gateway_safety;

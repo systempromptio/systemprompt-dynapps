@@ -285,3 +285,8 @@ storage/.systemprompt/
 # Plugin eval runs (transcripts, bundles, per-case results) stay local: they
 # describe real users' work. The console's Evaluation tab is the shared record.
 evals/
+
+# Local kind load-test rig: credentials, rendered profile, staged binaries
+/deploy/loadtest/kind/.tokens/
+/deploy/loadtest/kind/.profile/
+/deploy/loadtest/kind/.bin/

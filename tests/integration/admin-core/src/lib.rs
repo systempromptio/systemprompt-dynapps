@@ -39,6 +39,8 @@ mod analytics_site;
 #[cfg(test)]
 mod approvals;
 #[cfg(test)]
+mod audit_chain_seal;
+#[cfg(test)]
 mod conversation_facts_detail;
 #[cfg(test)]
 mod conversation_native_sessions;
@@ -173,3 +175,6 @@ mod managed_revisions;
 
 #[cfg(test)]
 mod data_console;
+
+#[cfg(test)]
+mod sync_plane_restart_stability;

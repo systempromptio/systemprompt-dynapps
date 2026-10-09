@@ -1,0 +1,18 @@
+# kind cluster for the load-test rig: one control plane, three workers.
+# worker 1+2 run the app and the generator, worker 3 runs Postgres alone so
+# database CPU is never stolen by the gateway. NodePort 30080 -> host 18080
+# (gateway), 30090 -> host 19091 (Prometheus).
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: astound-loadtest
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      - {containerPort: 30080, hostPort: 18080, protocol: TCP}
+      - {containerPort: 30090, hostPort: 19091, protocol: TCP}
+  - role: worker
+    labels: {loadtest/role: app}
+  - role: worker
+    labels: {loadtest/role: app}
+  - role: worker
+    labels: {loadtest/role: db}

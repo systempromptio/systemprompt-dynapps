@@ -1,4 +1,4 @@
-# template-version: 0.64.0
+# template-version: 0.65.0
 # Astound Digital profile template for self-hosted, multi-node deployments.
 # Rendered by deploy/self-host/render-profile.sh; @TOKENS@ are substituted.
 # Every node runs this exact file. The provider catalog and gateway routes are
@@ -149,11 +149,13 @@ secrets:
   source: file
 extensions:
   disabled: []
+# The installation's authz hook runs in-process (registered by the binary), so
+# no node posts its decisions to /api/public/govern/authz over HTTP.
 governance:
   authz:
     hook:
-      mode: webhook
-      url: http://localhost:8080/api/public/govern/authz
+      mode: extension
+      url: null
       timeout_ms: 500
       acknowledgement: null
 # Retention windows for the tables that grow with traffic, applied nightly by

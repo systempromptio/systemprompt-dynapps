@@ -54,6 +54,9 @@ postgres://systemprompt:<pw>@db-primary.example.internal:5432/systemprompt?sslmo
 - **Always the primary.** Boot runs `SELECT pg_is_in_recovery()` and refuses
   a standby. Read replicas are for DR at launch; per-region replica reads are
   a later, separately tested option (`database_write_url` in `SECRETS.md`).
+- **Authorization.** The profile's `governance.authz.hook.mode: extension`
+  makes each node decide entitlement in-process; it never calls another
+  node's `/api/public/govern/authz`.
 - **Connections.** Each node opens up to 50 connections (the pool default).
   Size the primary for at least `3 × 50 + replication + admin`, or add
   `database: { pool: { max_connections: N } }` to the profile.
@@ -77,7 +80,7 @@ cluster's signing identity. Render on one machine, copy everywhere:
   --trusted-proxies 10.10.0.0/16,10.20.0.0/16,10.30.0.0/16 \
   --database-url 'postgres://systemprompt:<pw>@db-primary.example.internal:5432/systemprompt?sslmode=require' \
   --anthropic-key sk-ant-... \
-  --image ghcr.io/astound-digital/systemprompt-astound:0.64.0     # validates the result in the image
+  --image ghcr.io/astound-digital/systemprompt-astound:0.65.0     # validates the result in the image
 ```
 
 `--trusted-proxies` is the list of CIDRs your load balancers connect from.
@@ -126,7 +129,7 @@ On every node, with `/etc/astound/profile` in place:
 
 ```bash
 echo "$GHCR_TOKEN" | docker login ghcr.io -u <github-user> --password-stdin
-export SYSTEMPROMPT_TAG=0.64.0 ASTOUND_PROFILE_DIR=/etc/astound/profile
+export SYSTEMPROMPT_TAG=0.65.0 ASTOUND_PROFILE_DIR=/etc/astound/profile
 export DATABASE_URL='postgres://systemprompt:<pw>@db-primary.example.internal:5432/systemprompt?sslmode=require'
 docker compose -f docker-compose.node.yml pull
 docker compose -f docker-compose.node.yml run --rm app migrate   # node 1 only, once
@@ -149,7 +152,7 @@ balancer, so capacity never drops to zero. Run the checklist on each node
 once it is `healthy`, passing the node's `server.role`:
 
 ```bash
-./verify-node.sh --url http://localhost:8080 --container <compose container name> --version 0.64.0 --role all
+./verify-node.sh --url http://localhost:8080 --container <compose container name> --version 0.65.0 --role all
 ```
 
 **If `verify-node.sh` reports the public site missing on a node**, render its

@@ -409,6 +409,7 @@ _lint-gates-uncoordinated:
         check-duplicate-types.sh
         check-field-copy-from.sh
         check-repository-naming.sh
+        check-plane-ownership.sh
         check-admin-template-links.sh
         check-admin-template-assets.sh
         # admin-css-classes + frontend-standards now run as cargo tests in
@@ -1341,16 +1342,15 @@ setup-local ANTHROPIC_KEY="" OPENAI_KEY="" GEMINI_KEY="" HTTP_PORT="8080" PG_POR
                 --db-user systemprompt --db-password 123 --db-name systemprompt \
                 --admin-email "$ADMIN_EMAIL"
         fi
+        # `admin setup` writes core's default webhook authz mode; this binary
+        # registers its authz hook in-process, and core refuses to boot a
+        # registered hook under any other mode.
+        "$BIN" admin config governance set --mode extension
         if [ "$HTTP_PORT" != "8080" ]; then
             "$BIN" admin config server set --port "$HTTP_PORT" \
                 --api-server-url "http://localhost:${HTTP_PORT}" \
                 --api-internal-url "http://localhost:${HTTP_PORT}" \
                 --api-external-url "http://localhost:${HTTP_PORT}"
-            # The authz hook URL is an absolute webhook target baked at
-            # `admin setup` time on the default port; re-point it at the
-            # chosen port so the gateway's govern callback reaches this server.
-            "$BIN" admin config governance set --mode webhook \
-                --url "http://localhost:${HTTP_PORT}/api/public/govern/authz"
             # jwt_issuer is baked on the default port too, and it is not
             # cosmetic: it is the base a client resolves
             # `{iss}/.well-known/jwks.json` against. Left at :8080 on a
@@ -1608,6 +1608,43 @@ web-build:
 # (`just bridge-package-host`, `just downloads-fetch`) or the image 404s them.
 docker-build TAG="local":
     docker build -f Dockerfile --build-arg SYSTEMPROMPT_VERSION={{TAG}} -t {{IMAGE}}:{{TAG}} .
+
+# Local Kubernetes load-test rig: kind + the real Helm chart + Postgres +
+# core's mock inference + Prometheus. No paid calls. deploy/loadtest/kind/README.md.
+loadtest-kind-up:
+    deploy/loadtest/kind/cluster.sh up
+
+# Render deploy/loadtest/kind/.profile/secrets.json (gitignored).
+loadtest-kind-secrets:
+    deploy/loadtest/kind/cluster.sh secrets
+
+# helm upgrade --install with values-kind.yaml; extra args pass through,
+# e.g. `just loadtest-kind-deploy --set gateway.autoscaling.enabled=true`.
+loadtest-kind-deploy *SET:
+    deploy/loadtest/kind/cluster.sh deploy {{SET}}
+
+# Seed USERS load-test users + PAT + session into .tokens/<set>.csv and a Secret.
+loadtest-kind-seed USERS SET="" PROJECTS="commerce,core":
+    deploy/loadtest/kind/seed.sh {{USERS}} {{ if SET == "" { "u" + USERS } else { SET } }} {{PROJECTS}}
+
+# One run; options as deploy/loadtest/kind/run.sh documents.
+loadtest-kind-run NAME *ARGS:
+    deploy/loadtest/kind/run.sh {{NAME}} {{ARGS}}
+
+# Every scenario in scenarios.json (optional name regex).
+loadtest-kind-matrix FILTER=".":
+    deploy/loadtest/kind/matrix.sh '{{FILTER}}'
+
+# Image from locally built release binaries (run `just build --release` first).
+loadtest-kind-image-local:
+    deploy/loadtest/kind/cluster.sh image-local
+
+# helm lint + template with values-kind.yaml + profile schema check in the image.
+loadtest-kind-lint:
+    deploy/loadtest/kind/cluster.sh lint
+
+loadtest-kind-down:
+    deploy/loadtest/kind/cluster.sh down
 
 # Run a local or published image against .env
 docker-run TAG="local":

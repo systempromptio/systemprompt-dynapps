@@ -69,6 +69,8 @@ impl SubjectAttributeProvider for RoleAttributeProvider {
 
 systemprompt_security::register_subject_attribute_provider!(|ctx| {
     let provider: SharedSubjectAttributeProvider =
-        Arc::new(RoleAttributeProvider::new(Arc::clone(&ctx.pool)));
+        systemprompt_web_admin_core::authz::cached::cached_provider(RoleAttributeProvider::new(
+            Arc::clone(&ctx.pool),
+        ));
     provider
 });

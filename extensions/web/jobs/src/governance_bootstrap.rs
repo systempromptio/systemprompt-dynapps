@@ -14,7 +14,9 @@
 //!    satisfied and a `gateway_route` `entity_match` glob has routes to expand
 //!    over), deleting catalog rows no configured route claims. An empty route
 //!    set leaves the catalog untouched: reconciling against it would cascade
-//!    away every route grant, and a tree with no gateway is legitimate.
+//!    away every route grant, and a tree with no gateway is legitimate. The
+//!    catalog only inserts unseen routes (with the `rules.yaml` default) and
+//!    deletes stale ones; it never rewrites an existing row's access columns.
 //! 2. Run every sync plane through the one boot contract
 //!    (`repositories::sync::boot`): groups, then access control, then gateway
 //!    policies. A plane whose projection is empty is seeded from its file;
@@ -35,10 +37,14 @@ use systemprompt::traits::{Job, JobContext, JobResult};
 use systemprompt::security::authz::{EntityKind, RegisteredEntities};
 
 use crate::error::JobError;
+use systemprompt_web_admin_core::repositories::access_rules::declared_load::{
+    load_declared_set, marketplace_ids_from_services,
+};
 use systemprompt_web_admin_core::repositories::gateway_catalog::{
     dispatchable_route_ids, registered_routes,
 };
 use systemprompt_web_admin_core::repositories::sync::boot::reconcile_all;
+use systemprompt_web_admin_core::repositories::sync::route_catalog::reconcile_route_catalog;
 use systemprompt_web_admin_core::repositories::sync::sources_db::record_service_sources;
 use systemprompt_web_shared::error::MarketplaceError;
 
@@ -213,9 +219,7 @@ async fn bootstrap_gateway_entities(db_pool: &DbPool) -> Result<GatewayCatalog, 
 
     let route_ids = dispatchable_route_ids(services);
     let registered = registered_routes(&route_ids);
-    let id_refs: Vec<&str> = route_ids.iter().map(String::as_str).collect();
-
-    if id_refs.is_empty() {
+    if route_ids.is_empty() {
         tracing::warn!(
             gateway = %gateway_path.display(),
             "services config declares no dispatchable gateway routes — leaving the \
@@ -227,17 +231,32 @@ async fn bootstrap_gateway_entities(db_pool: &DbPool) -> Result<GatewayCatalog, 
         });
     }
 
+    let declared_open = declared_route_defaults(&registered).await?;
     let source = format!("services:{}", gateway_path.display());
-    let repo = systemprompt::security::authz::AccessControlRepository::new(db_pool);
     let report =
-        systemprompt::security::authz::reconcile_gateway_entities_exact(&repo, &id_refs, &source)
+        reconcile_route_catalog(&db_pool.write_pool(), &route_ids, &declared_open, &source)
             .await
-            .map_err(|e| JobError::from(MarketplaceError::Internal(e.to_string())))?;
+            .map_err(JobError::from)?;
 
     Ok(GatewayCatalog {
         registered,
         pruned: report.pruned,
     })
+}
+
+async fn declared_route_defaults(
+    registered: &RegisteredEntities,
+) -> Result<std::collections::BTreeMap<String, bool>, JobError> {
+    let marketplaces = marketplace_ids_from_services().map_err(JobError::from)?;
+    let declared = load_declared_set(&composed_services_root()?, &marketplaces, registered)
+        .await
+        .map_err(JobError::from)?;
+    Ok(declared
+        .entities
+        .into_values()
+        .filter(|e| e.entity_type == EntityKind::GatewayRoute.as_str())
+        .map(|e| (e.entity_id, e.default_included))
+        .collect())
 }
 
 systemprompt::traits::submit_job!(&GovernanceBootstrapJob);

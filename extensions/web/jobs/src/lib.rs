@@ -25,6 +25,7 @@ mod registry;
 
 mod access_expiry;
 mod audit_chain;
+mod audit_chain_seal;
 mod bundle_admin_css;
 mod content_analytics;
 mod conversation_judge;
@@ -51,6 +52,7 @@ pub use registry::{JOB_TAG, extension_jobs};
 
 pub use access_expiry::{AccessExpiryJob, ExpirySweep, lost_manage_role};
 pub use audit_chain::AuditChainVerifyJob;
+pub use audit_chain_seal::AuditChainSealJob;
 pub use bundle_admin_css::BundleAdminCssJob;
 pub use content_analytics::ContentAnalyticsAggregationJob;
 pub use conversation_judge::ConversationJudgeJob;
