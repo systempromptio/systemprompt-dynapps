@@ -109,7 +109,10 @@ BEGIN
     IF NOT COALESCE((SELECT chain_enabled FROM audit_guard_settings WHERE singleton), TRUE) THEN
         RETURN 0;
     END IF;
-    IF NOT pg_try_advisory_xact_lock(hashtext('audit_chain_seal')) THEN
+    -- Why: core's scheduler holds pg_advisory_lock(hashtext(<job name>)) on
+    -- another connection while a job runs, so a key equal to the job name
+    -- 'audit_chain_seal' is always taken by the job's own scheduler slot.
+    IF NOT pg_try_advisory_xact_lock(hashtext('audit_chain_seal:chain')) THEN
         RETURN -1;
     END IF;
     RETURN audit_chain_seal_table('ai_requests', p_limit)

@@ -128,7 +128,7 @@ fn the_chain_is_sealed_by_the_job_not_an_insert_trigger() {
     }
     for needed in [
         "CREATE OR REPLACE FUNCTION audit_chain_seal(p_limit INTEGER)",
-        "pg_try_advisory_xact_lock(hashtext('audit_chain_seal'))",
+        "pg_try_advisory_xact_lock(hashtext('audit_chain_seal:chain'))",
         "unsealed_rows BIGINT NOT NULL DEFAULT 0",
         "CREATE OR REPLACE FUNCTION audit_chain_append(",
     ] {
