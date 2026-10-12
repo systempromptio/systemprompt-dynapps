@@ -128,7 +128,8 @@ impl App {
             sso_deps,
             managed,
         )
-        .layer(axum::Extension(None::<Arc<systemprompt::ai::AiService>>));
+        .layer(axum::Extension(None::<Arc<systemprompt::ai::AiService>>))
+        .layer(axum::Extension(Arc::clone(&farm_state)));
         let bridge_auth = admin::bridge_auth_ssr_router(Arc::clone(pool), engine);
 
         // Core layers the governance engine and artifact ingest onto every

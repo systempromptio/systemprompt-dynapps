@@ -64,4 +64,3 @@ pub async fn list_run_events(
     .fetch_all(pool)
     .await
 }
-

@@ -6,7 +6,9 @@ use chrono::{Duration, Utc};
 use systemprompt::identifiers::UserId;
 use systemprompt_web_admin_farm::repositories::filters::RunSort;
 use systemprompt_web_admin_farm::types::{FarmAgentId, FarmId, RunStatus, TriggeredVia};
-use systemprompt_web_admin_farm::views::runs_query::{RunSortColumn, RunsQuery, run_filter, run_sort};
+use systemprompt_web_admin_farm::views::runs_query::{
+    RunSortColumn, RunsQuery, run_filter, run_sort,
+};
 use systemprompt_web_admin_farm::views::status::{is_live, status_badge, trigger_badge};
 
 fn query(pairs: &[(&str, &str)]) -> RunsQuery {

@@ -165,6 +165,19 @@ async fn persist_diff(root: &std::path::Path, run: &RunRow, diff: &WorkspaceDiff
     }
 }
 
+fn spawn_failed(state: &FarmState, sink: &mut EventSink<'_>, err: &std::io::Error) -> RunOutcome {
+    let message = format!("spawn {}: {err}", state.claude_bin.display());
+    sink.note(message.clone());
+    outcome::failed(message)
+}
+
+async fn record_pid(state: &FarmState, run_id: &FarmRunId, pid: Option<u32>) {
+    let pid = pid.and_then(|pid| i32::try_from(pid).ok());
+    if let Err(err) = runs::update_run_pid(state.pool.as_ref(), run_id, pid).await {
+        tracing::warn!(run = %run_id, error = %err, "farm run pid not recorded");
+    }
+}
+
 async fn launch(
     state: &FarmState,
     job: &LaunchJob<'_>,
@@ -219,16 +232,9 @@ async fn launch(
     let started = Instant::now();
     let child = match build_claude_command(&spec).spawn() {
         Ok(child) => child,
-        Err(err) => {
-            let message = format!("spawn {}: {err}", state.claude_bin.display());
-            sink.note(message.clone());
-            return Ok(outcome::failed(message));
-        },
+        Err(err) => return Ok(spawn_failed(state, sink, &err)),
     };
-    let pid = child.id().and_then(|pid| i32::try_from(pid).ok());
-    if let Err(err) = runs::update_run_pid(state.pool.as_ref(), &run.id, pid).await {
-        tracing::warn!(run = %run.id, error = %err, "farm run pid not recorded");
-    }
+    record_pid(state, &run.id, child.id()).await;
     let child_run = supervise(child, &layout.logs, sink, timeout, cancel).await;
     if !child_run.stderr_tail.trim().is_empty() {
         sink.push(&RunEventPayload::Stderr {

@@ -1,7 +1,7 @@
 #!/bin/bash
 # Step 70 — start one farm run as the user (PAT), poll it to a terminal status
 # (timeout RUN_TIMEOUT, default 900 s), then print the result and an event tail.
-# Env: CASE (else the first case of farm/evals/<agent>.yaml), FARM_AGENT.
+# Env: CASE (else the first case of farm/evals/<agent>.yaml), FARM_AGENT, FARM_MODEL.
 set -euo pipefail
 source "$(cd "$(dirname "$0")" && pwd)/_farm_common.sh"
 header "Agent Farm 70 — run" "$FARM_AGENT"
@@ -11,10 +11,12 @@ assert_nonempty "$case_id" "eval case id (set CASE or KIT_DIR)"
 auth="Authorization: Bearer $USER_PAT"
 
 started=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-payload=$(jq -nc --arg f "$FARM_ID" --arg a "$FARM_AGENT" --arg c "$case_id" '{farm:$f, agent:$a, case:$c}')
+# FARM_MODEL overrides the agent's model (the kit names one the gateway may not route).
+payload=$(jq -nc --arg f "$FARM_ID" --arg a "$FARM_AGENT" --arg c "$case_id" --arg m "${FARM_MODEL:-}" \
+  '{farm:$f, agent:$a, case:$c} + (if $m == "" then {} else {model:$m} end)')
 cmd "curl -X POST $BASE_URL/api/public/agent-farm/runs -H 'Authorization: Bearer \$PAT' -d '$payload'"
 created=$(http_json POST "$BASE_URL/api/public/agent-farm/runs" "$auth" "$payload")
-assert_http "$HTTP_CODE" 2xx "create run"
+assert_http "$(http_code)" 2xx "create run"
 run_id=$(printf '%s' "$created" | jq -r '.id // empty')
 assert_nonempty "$run_id" "run id"
 printf '%s' "$run_id" > "$STATE_RUN_ID"

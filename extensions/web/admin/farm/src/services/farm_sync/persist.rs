@@ -54,8 +54,8 @@ fn new_cases(suite: &EvalSuiteDefinition) -> FarmResult<Vec<NewEvalCase>> {
         .cases
         .iter()
         .map(|case| {
-            let assertions = serde_json::to_value(&case.assertions)
-                .map_err(|source| FarmError::Json {
+            let assertions =
+                serde_json::to_value(&case.assertions).map_err(|source| FarmError::Json {
                     at: suite.source_path.clone(),
                     source,
                 })?;

@@ -44,6 +44,10 @@ GET    /admin/analysis/versions/{marketplace_id}             anonymous=307 non-a
 GET    /admin/analytics                                      anonymous=307 non-admin=303 developer=303 admin=200 platform-admin=200 project-manager=303 knowledge-worker=303
 GET    /admin/analytics/users/{user_id}                      anonymous=307 non-admin=303 developer=303 admin=308 platform-admin=308 project-manager=303 knowledge-worker=303
 GET    /admin/api/chain/{id}                                 anonymous=307 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=403 knowledge-worker=403
+GET    /admin/api/farm/activity                              anonymous=307 non-admin=403 developer=403 admin=200 platform-admin=200 project-manager=403 knowledge-worker=403
+GET    /admin/api/farm/evals/runs/{eval_run_id}              anonymous=307 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=403 knowledge-worker=403
+GET    /admin/api/farm/runs                                  anonymous=307 non-admin=403 developer=403 admin=200 platform-admin=200 project-manager=403 knowledge-worker=403
+GET    /admin/api/farm/runs/{run_id}                         anonymous=307 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=403 knowledge-worker=403
 GET    /admin/api/history/search                             anonymous=307 non-admin=200 developer=200 admin=200 platform-admin=200 project-manager=200 knowledge-worker=200
 GET    /admin/api/overview                                   anonymous=307 non-admin=403 developer=403 admin=200 platform-admin=200 project-manager=403 knowledge-worker=403
 GET    /admin/api/search/resolve                             anonymous=307 non-admin=403 developer=403 admin=200 platform-admin=200 project-manager=403 knowledge-worker=403
@@ -87,6 +91,14 @@ GET    /admin/export/transcripts/preview                     anonymous=307 non-a
 GET    /admin/export/transcripts/{context_id}                anonymous=307 non-admin=404 developer=404 admin=404 platform-admin=404 project-manager=404 knowledge-worker=404
 GET    /admin/export/{dataset}                               anonymous=307 non-admin=303 developer=303 admin=404 platform-admin=404 project-manager=303 knowledge-worker=303
 GET    /admin/export/{dataset}/preview                       anonymous=307 non-admin=303 developer=303 admin=404 platform-admin=404 project-manager=303 knowledge-worker=303
+GET    /admin/farm                                           anonymous=307 non-admin=303 developer=303 admin=200 platform-admin=200 project-manager=303 knowledge-worker=303
+GET    /admin/farm/evals                                     anonymous=307 non-admin=303 developer=303 admin=200 platform-admin=200 project-manager=303 knowledge-worker=303
+GET    /admin/farm/evals/runs/{eval_run_id}                  anonymous=307 non-admin=303 developer=303 admin=404 platform-admin=404 project-manager=303 knowledge-worker=303
+GET    /admin/farm/people                                    anonymous=307 non-admin=303 developer=303 admin=200 platform-admin=200 project-manager=303 knowledge-worker=303
+GET    /admin/farm/runs                                      anonymous=307 non-admin=303 developer=303 admin=200 platform-admin=200 project-manager=303 knowledge-worker=303
+GET    /admin/farm/runs/{run_id}                             anonymous=307 non-admin=303 developer=303 admin=404 platform-admin=404 project-manager=303 knowledge-worker=303
+GET    /admin/farm/{farm_id}                                 anonymous=307 non-admin=303 developer=303 admin=404 platform-admin=404 project-manager=303 knowledge-worker=303
+GET    /admin/farm/{farm_id}/agents/{agent_id}               anonymous=307 non-admin=303 developer=303 admin=404 platform-admin=404 project-manager=303 knowledge-worker=303
 GET    /admin/gateway                                        anonymous=307 non-admin=303 developer=303 admin=200 platform-admin=200 project-manager=303 knowledge-worker=303
 GET    /admin/gateway/policies                               anonymous=307 non-admin=303 developer=303 admin=200 platform-admin=200 project-manager=303 knowledge-worker=303
 GET    /admin/gateway/routes/{route_id}                      anonymous=307 non-admin=303 developer=303 admin=404 platform-admin=404 project-manager=303 knowledge-worker=303
@@ -139,6 +151,8 @@ GET    /api/public/admin/access-control                      anonymous=401 non-a
 GET    /api/public/admin/access-control/entity-access/all    anonymous=401 non-admin=403 developer=403 admin=400 platform-admin=400 project-manager=403 knowledge-worker=403
 GET    /api/public/admin/access-control/entity/{entity_type}/{entity_id}/access anonymous=401 non-admin=403 developer=403 admin=400 platform-admin=400 project-manager=403 knowledge-worker=403
 GET    /api/public/admin/access-control/users/{user_id}/matrix anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=403 knowledge-worker=403
+GET    /api/public/admin/agent-farm/farms                    anonymous=401 non-admin=403 developer=403 admin=200 platform-admin=200 project-manager=403 knowledge-worker=403
+GET    /api/public/admin/agent-farm/farms/{farm_id}          anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=403 knowledge-worker=403
 GET    /api/public/admin/agents                              anonymous=401 non-admin=200 developer=200 admin=200 platform-admin=200 project-manager=200 knowledge-worker=200
 GET    /api/public/admin/agents/{agent_id}                   anonymous=401 non-admin=404 developer=404 admin=404 platform-admin=404 project-manager=404 knowledge-worker=404
 GET    /api/public/admin/dashboard                           anonymous=401 non-admin=200 developer=200 admin=200 platform-admin=200 project-manager=200 knowledge-worker=200
@@ -183,6 +197,11 @@ GET    /api/public/admin/users/{user_id}/roles               anonymous=401 non-a
 GET    /api/public/admin/users/{user_id}/scope-defaults      anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=403 knowledge-worker=403
 GET    /api/public/admin/users/{user_id}/sessions            anonymous=401 non-admin=403 developer=403 admin=200 platform-admin=200 project-manager=403 knowledge-worker=403
 GET    /api/public/admin/users/{user_id}/usage               anonymous=401 non-admin=403 developer=403 admin=200 platform-admin=200 project-manager=403 knowledge-worker=403
+GET    /api/public/agent-farm/agents                         anonymous=401 non-admin=200 developer=200 admin=200 platform-admin=200 project-manager=200 knowledge-worker=200
+GET    /api/public/agent-farm/evals/runs/{eval_run_id}       anonymous=401 non-admin=404 developer=404 admin=404 platform-admin=404 project-manager=404 knowledge-worker=404
+GET    /api/public/agent-farm/runs                           anonymous=401 non-admin=200 developer=200 admin=200 platform-admin=200 project-manager=200 knowledge-worker=200
+GET    /api/public/agent-farm/runs/{run_id}                  anonymous=401 non-admin=404 developer=404 admin=404 platform-admin=404 project-manager=404 knowledge-worker=404
+GET    /api/public/agent-farm/runs/{run_id}/events           anonymous=401 non-admin=404 developer=404 admin=404 platform-admin=404 project-manager=404 knowledge-worker=404
 PATCH  /api/public/admin/access-control/entity/{entity_type}/{entity_id}/default anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
 PATCH  /api/public/admin/gateway                             anonymous=401 non-admin=403 developer=403 admin=200 platform-admin=200 project-manager=403 knowledge-worker=403
 PATCH  /api/public/admin/gateway/routes/{idx}                anonymous=401 non-admin=403 developer=403 admin=400 platform-admin=400 project-manager=403 knowledge-worker=403
@@ -200,6 +219,9 @@ POST   /admin/auth/adfs/acs                                  anonymous=303 non-a
 POST   /admin/data/clear/confirm                             anonymous=307 non-admin=303 developer=303 admin=415 platform-admin=415 project-manager=303 knowledge-worker=303
 POST   /admin/data/clear/preview                             anonymous=307 non-admin=303 developer=303 admin=415 platform-admin=415 project-manager=303 knowledge-worker=303
 POST   /admin/devices/pats                                   anonymous=307 non-admin=303 developer=303 admin=422 platform-admin=422 project-manager=303 knowledge-worker=303
+POST   /admin/farm/evals/{suite_id}/run                      anonymous=307 non-admin=303 developer=303 admin=422 platform-admin=422 project-manager=303 knowledge-worker=303
+POST   /admin/farm/runs/{run_id}/cancel                      anonymous=307 non-admin=303 developer=303 admin=303 platform-admin=303 project-manager=303 knowledge-worker=303
+POST   /admin/farm/{farm_id}/agents/{agent_id}/runs          anonymous=307 non-admin=303 developer=303 admin=422 platform-admin=422 project-manager=303 knowledge-worker=303
 POST   /admin/gateway/policies                               anonymous=307 non-admin=303 developer=303 admin=415 platform-admin=415 project-manager=303 knowledge-worker=303
 POST   /admin/gateway/policies/delete                        anonymous=307 non-admin=303 developer=303 admin=415 platform-admin=415 project-manager=303 knowledge-worker=303
 POST   /admin/sql/query                                      anonymous=307 non-admin=303 developer=303 admin=415 platform-admin=415 project-manager=303 knowledge-worker=303
@@ -207,6 +229,7 @@ POST   /admin/system/observability/export                    anonymous=307 non-a
 POST   /admin/system/observability/test                      anonymous=307 non-admin=303 developer=303 admin=303 platform-admin=303 project-manager=303 knowledge-worker=303
 POST   /api/public/admin/access-control/bulk-template        anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
 POST   /api/public/admin/access-control/entity/{entity_type}/{entity_id}/rules anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
+POST   /api/public/admin/agent-farm/farms/{farm_id}/sync     anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=403 knowledge-worker=403
 POST   /api/public/admin/approvals/{call_id}/approve         anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=403 knowledge-worker=403
 POST   /api/public/admin/approvals/{call_id}/deny            anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=403 knowledge-worker=403
 POST   /api/public/admin/connectors/{provider}/reprovision   anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=403 knowledge-worker=403
@@ -244,6 +267,9 @@ POST   /api/public/admin/users                               anonymous=401 non-a
 POST   /api/public/admin/users/{user_id}/restore             anonymous=401 non-admin=403 developer=403 admin=409 platform-admin=409 project-manager=403 knowledge-worker=403
 POST   /api/public/admin/users/{user_id}/salesforce-identity anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
 POST   /api/public/admin/users/{user_id}/share-token         anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=403 knowledge-worker=403
+POST   /api/public/agent-farm/evals/{suite_id}/run           anonymous=401 non-admin=422 developer=422 admin=422 platform-admin=422 project-manager=422 knowledge-worker=422
+POST   /api/public/agent-farm/runs                           anonymous=401 non-admin=422 developer=422 admin=422 platform-admin=422 project-manager=422 knowledge-worker=422
+POST   /api/public/agent-farm/runs/{run_id}/cancel           anonymous=401 non-admin=404 developer=404 admin=404 platform-admin=404 project-manager=404 knowledge-worker=404
 PUT    /api/public/admin/access-control/bulk                 anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
 PUT    /api/public/admin/access-control/entity/{entity_type}/{entity_id} anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
 PUT    /api/public/admin/devices/certs/{id}/expiry           anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=403 knowledge-worker=403

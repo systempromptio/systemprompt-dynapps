@@ -113,8 +113,11 @@ impl<'a> Case<'a> {
 
 fn workspace() -> tempfile::TempDir {
     let dir = tempfile::tempdir().expect("tempdir");
-    std::fs::write(dir.path().join("REVIEW.md"), "Found sudo( in onchange at line 12\n")
-        .expect("write review");
+    std::fs::write(
+        dir.path().join("REVIEW.md"),
+        "Found sudo( in onchange at line 12\n",
+    )
+    .expect("write review");
     dir
 }
 
@@ -122,11 +125,21 @@ fn workspace() -> tempfile::TempDir {
 fn file_exists_passes_fails_and_rejects_escape() {
     let dir = workspace();
     let case = Case::new(dir.path());
-    let ok = case.check(Assertion::FileExists { path: "REVIEW.md".into() });
+    let ok = case.check(Assertion::FileExists {
+        path: "REVIEW.md".into(),
+    });
     assert!(ok.passed, "{ok:?}");
     assert_eq!(ok.kind, "file_exists");
-    assert!(!case.check(Assertion::FileExists { path: "PLAN.md".into() }).passed);
-    let escape = case.check(Assertion::FileExists { path: "../REVIEW.md".into() });
+    assert!(
+        !case
+            .check(Assertion::FileExists {
+                path: "PLAN.md".into()
+            })
+            .passed
+    );
+    let escape = case.check(Assertion::FileExists {
+        path: "../REVIEW.md".into(),
+    });
     assert!(!escape.passed);
     assert!(escape.detail.contains("escapes"), "{escape:?}");
 }
@@ -135,29 +148,53 @@ fn file_exists_passes_fails_and_rejects_escape() {
 fn output_contains_reads_path_then_output_then_final_text() {
     let dir = workspace();
     let mut case = Case::new(dir.path());
-    let explicit = Assertion::OutputContains { path: Some("REVIEW.md".into()), text: "sudo(".into() };
+    let explicit = Assertion::OutputContains {
+        path: Some("REVIEW.md".into()),
+        text: "sudo(".into(),
+    };
     assert!(case.check(explicit).passed);
-    let missing = Assertion::OutputContains { path: Some("REVIEW.md".into()), text: "N+1".into() };
+    let missing = Assertion::OutputContains {
+        path: Some("REVIEW.md".into()),
+        text: "N+1".into(),
+    };
     assert!(!case.check(missing).passed);
 
-    let implicit = || Assertion::OutputContains { path: None, text: "sudo(".into() };
-    assert!(!case.check(implicit()).passed, "no output path and no final text");
+    let implicit = || Assertion::OutputContains {
+        path: None,
+        text: "sudo(".into(),
+    };
+    assert!(
+        !case.check(implicit()).passed,
+        "no output path and no final text"
+    );
     case.final_text = Some("done: sudo( flagged");
     assert!(case.check(implicit()).passed, "falls back to final text");
     case.output_path = Some("REVIEW.md");
     case.final_text = Some("nothing here");
-    assert!(case.check(implicit()).passed, "agent output path wins over final text");
+    assert!(
+        case.check(implicit()).passed,
+        "agent output path wins over final text"
+    );
 }
 
 #[test]
 fn regex_matches_and_reports_bad_patterns() {
     let dir = workspace();
     let case = Case::new(dir.path());
-    let hit = Assertion::Regex { path: Some("REVIEW.md".into()), pattern: r"line \d+".into() };
+    let hit = Assertion::Regex {
+        path: Some("REVIEW.md".into()),
+        pattern: r"line \d+".into(),
+    };
     assert!(case.check(hit).passed);
-    let miss = Assertion::Regex { path: Some("REVIEW.md".into()), pattern: r"col \d+".into() };
+    let miss = Assertion::Regex {
+        path: Some("REVIEW.md".into()),
+        pattern: r"col \d+".into(),
+    };
     assert!(!case.check(miss).passed);
-    let bad = case.check(Assertion::Regex { path: Some("REVIEW.md".into()), pattern: "(".into() });
+    let bad = case.check(Assertion::Regex {
+        path: Some("REVIEW.md".into()),
+        pattern: "(".into(),
+    });
     assert!(!bad.passed);
     assert!(bad.detail.contains("invalid pattern"), "{bad:?}");
 }
@@ -198,15 +235,24 @@ fn max_turns_and_max_cost_compare_against_the_run_row() {
 fn skill_invoked_normalises_dashes_and_reads_hooks() {
     let dir = workspace();
     let mut case = Case::new(dir.path());
-    let wanted = || Assertion::SkillInvoked { skill: "odoo_module_review".into() };
+    let wanted = || Assertion::SkillInvoked {
+        skill: "odoo_module_review".into(),
+    };
     assert!(!case.check(wanted()).passed);
-    case.events = vec![tool(1, "Skill", json!({"skill": "dynapps-odoo-delivery:odoo-module-review"}))];
+    case.events = vec![tool(
+        1,
+        "Skill",
+        json!({"skill": "dynapps-odoo-delivery:odoo-module-review"}),
+    )];
     assert!(case.check(wanted()).passed);
     case.events = vec![tool(1, "Read", json!({"skill": "odoo-module-review"}))];
     assert!(!case.check(wanted()).passed, "only the Skill tool counts");
     case.events = vec![event(
         1,
-        &RunEventPayload::Hook { name: "PostToolUse:odoo-module-review".into(), decision: None },
+        &RunEventPayload::Hook {
+            name: "PostToolUse:odoo-module-review".into(),
+            decision: None,
+        },
     )];
     assert!(case.check(wanted()).passed);
 }

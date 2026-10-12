@@ -385,15 +385,15 @@ mod farm_definitions;
 mod farm_assertions;
 
 #[cfg(test)]
-mod farm_stream_json;
-#[cfg(test)]
-mod farm_workspace_diff;
+mod farm_curl_snippet;
 #[cfg(test)]
 mod farm_people_rows;
 #[cfg(test)]
 mod farm_status_view;
 #[cfg(test)]
-mod farm_curl_snippet;
+mod farm_stream_json;
+#[cfg(test)]
+mod farm_workspace_diff;
 
 #[cfg(test)]
 mod farm_sync_card;

@@ -17,11 +17,11 @@ auth=$(farm_admin_auth_header)
 step "POST /api/v1/admin/services/refresh"
 body=$(http_json POST "$BASE_URL/api/v1/admin/services/refresh" "$auth" '{}')
 echo "$body" | jq -C . 2>/dev/null | head -30 | sed 's/^/  /' || echo "  $body"
-assert_http "$HTTP_CODE" 2xx "services refresh"
+assert_http "$(http_code)" 2xx "services refresh"
 
 step "GET /api/v1/admin/services/status"
 status=$(http_json GET "$BASE_URL/api/v1/admin/services/status" "$auth")
-assert_http "$HTTP_CODE" 200 "services status"
+assert_http "$(http_code)" 200 "services status"
 echo "$status" | jq -C . 2>/dev/null | head -40 | sed 's/^/  /'
 if printf '%s' "$status" | grep -q "bundle:$FARM_ID\|$FARM_ID"; then
   pass "status names $FARM_ID"

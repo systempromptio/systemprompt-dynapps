@@ -1,6 +1,7 @@
 //! The farm domain's error type and its mapping onto the admin plane's
 //! [`AdminError`], so handlers propagate with a bare `?`.
 
+use systemprompt::identifiers::PluginId;
 use systemprompt::marketplace::managed::ManagedError;
 use systemprompt_web_admin_core::error::AdminError;
 use systemprompt_web_admin_core::repositories::bridge::BridgeRepoError;
@@ -80,7 +81,7 @@ pub enum FarmError {
 
     #[error("Config: plugin {plugin_id}: {path}: {source}")]
     PluginConfigRead {
-        plugin_id: String,
+        plugin_id: PluginId,
         path: String,
         #[source]
         source: std::io::Error,
@@ -88,7 +89,7 @@ pub enum FarmError {
 
     #[error("Config: plugin {plugin_id}: {source}")]
     PluginConfigParse {
-        plugin_id: String,
+        plugin_id: PluginId,
         #[source]
         source: serde_yaml::Error,
     },

@@ -8,3 +8,4 @@
 .run_id
 .run_started_at
 .bundle/
+.http_code

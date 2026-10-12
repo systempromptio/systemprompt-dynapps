@@ -53,22 +53,22 @@ pub struct MaterialisedPlugin {
 
 pub fn materialise_plugin(
     services_root: &Path,
-    plugin_id: &PluginId,
+    plugin: &PluginId,
     out_root: &Path,
 ) -> FarmResult<MaterialisedPlugin> {
-    let plugin_id = plugin_id.as_str();
+    let plugin_id = plugin.as_str();
     let config = services_root
         .join("plugins")
         .join(plugin_id)
         .join("config.yaml");
     let raw = std::fs::read_to_string(&config).map_err(|source| FarmError::PluginConfigRead {
-        plugin_id: plugin_id.to_owned(),
+        plugin_id: plugin.clone(),
         path: config.display().to_string(),
         source,
     })?;
     let doc: PluginDoc =
         serde_yaml::from_str(&raw).map_err(|source| FarmError::PluginConfigParse {
-            plugin_id: plugin_id.to_owned(),
+            plugin_id: plugin.clone(),
             source,
         })?;
     let section = doc.plugin;

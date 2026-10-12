@@ -16,6 +16,10 @@ path = "src/main.rs"
 # Audit: uses config (ProfileBootstrap, SecretsBootstrap), logging, models, system (AppContext) — requires `full`.
 systemprompt = { workspace = true, features = ["full"] }
 systemprompt-web-admin-identity = { workspace = true }
+# Links the governance crate so its register_authz_hook! lands in the inventory;
+# the profile sets governance.authz.hook.mode = extension and AppContext refuses
+# to start without one.
+systemprompt-web-admin-governance = { workspace = true }
 
 anyhow.workspace = true
 clap.workspace = true

@@ -98,19 +98,24 @@ farm_admin_cookie() {
   echo "$STATE_COOKIE"
 }
 
-# HTTP helpers: print body, set HTTP_CODE global.
+# HTTP helpers: print the body; the status lands in HTTP_CODE_FILE because
+# callers capture the body with $(...) and a subshell cannot set a global.
+# Read it with http_code.
 #   http_json METHOD URL AUTH_HEADER [BODY]
+HTTP_CODE_FILE="$FARM_DIR/.http_code"
 http_json() {
-  local method="$1" url="$2" auth="$3" body="${4:-}" tmp
+  local method="$1" url="$2" auth="$3" body="${4:-}" tmp code
   tmp=$(mktemp)
   if [[ -n "$body" ]]; then
-    HTTP_CODE=$(curl -s -o "$tmp" -w '%{http_code}' -X "$method" -H "$auth" \
+    code=$(curl -s -o "$tmp" -w '%{http_code}' -X "$method" -H "$auth" \
       -H 'Content-Type: application/json' --data "$body" "$url" || echo 000)
   else
-    HTTP_CODE=$(curl -s -o "$tmp" -w '%{http_code}' -X "$method" -H "$auth" "$url" || echo 000)
+    code=$(curl -s -o "$tmp" -w '%{http_code}' -X "$method" -H "$auth" "$url" || echo 000)
   fi
+  printf '%s' "$code" > "$HTTP_CODE_FILE"
   cat "$tmp"; rm -f "$tmp"
 }
+http_code() { cat "$HTTP_CODE_FILE" 2>/dev/null || echo 000; }
 
 assert_http() {
   local actual="$1" expected="$2" label="$3"

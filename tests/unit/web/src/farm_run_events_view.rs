@@ -1,6 +1,7 @@
 //! The run page's event view model: payload decoding with a raw fallback,
-//! `tool_use` ⇄ `tool_result` pairing, offsets from the run start, body folding,
-//! the after-seq filter the live fragment uses, and the timeline geometry.
+//! `tool_use` ⇄ `tool_result` pairing, offsets from the run start, body
+//! folding, the after-seq filter the live fragment uses, and the timeline
+//! geometry.
 
 use chrono::{DateTime, Duration, TimeZone, Utc};
 use serde_json::{Value, json};

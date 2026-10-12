@@ -30,8 +30,10 @@ name="agent-farm-e2e-$(date +%Y%m%d%H%M%S)"
 budget_args=()
 [[ -n "${PAT_BUDGET_MICRODOLLARS:-}" ]] && budget_args=(--budget-microdollars "$PAT_BUDGET_MICRODOLLARS")
 out=$("$CLI" --json admin users api-key issue --user "$uid" --name "$name" ${budget_args[@]+"${budget_args[@]}"} --profile "$PROFILE" 2>&1)
-pat=$(printf '%s' "$out" | jq -r '[.. | objects | (.secret?, .token?, .key?, .api_key?) | strings] | first // empty' 2>/dev/null || true)
-[[ -z "$pat" ]] && pat=$(printf '%s' "$out" | grep -oE 'sp[a-z_]*_[A-Za-z0-9_-]{16,}' | head -1)
+# The CLI renders a presentation card ({sections:[{heading,content}]}) or a flat
+# object; accept either, then fall back to the secret's own shape.
+pat=$(printf '%s' "$out" | jq -r '[(.sections[]? | select(.heading == "secret") | .content), (.. | objects | (.secret?, .token?, .key?, .api_key?))] | map(strings) | first // empty' 2>/dev/null || true)
+[[ -z "$pat" ]] && pat=$(printf '%s' "$out" | grep -oE 'sp[-_][a-z]+[-_][A-Za-z0-9._-]{16,}' | head -1)
 assert_nonempty "$pat" "api-key issue returned a token"
 ( umask 077; printf '%s' "$pat" > "$STATE_USER_TOKEN" )
 pass "PAT $name written to demo/agent-farm/.token.user"

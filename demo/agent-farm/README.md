@@ -27,7 +27,7 @@ SKIP="10" ./demo/agent-farm/run-all.sh
 
 Environment: `KIT_DIR` (default `../systemprompt-agent-farm`), `VERSION`,
 `GHCR_USER`, `CASE` (default: first case in `farm/evals/odoo_module_reviewer.yaml`),
-`FARM_AGENT`, `FARM_USER_EMAIL`, `ADMIN_EMAIL`, `RUN_TIMEOUT` (900 s),
+`FARM_AGENT`, `FARM_MODEL` (override the agent's model), `FARM_USER_EMAIL`, `ADMIN_EMAIL`, `RUN_TIMEOUT` (900 s),
 `FARM_ADMIN_AUTH` (an admin PAT instead of the CLI session JWT), `ROTATE=1`
 (new PAT), `PROFILE`, `BASE_URL`.
 

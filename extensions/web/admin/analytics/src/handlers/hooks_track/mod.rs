@@ -73,6 +73,7 @@ pub(crate) async fn handle_hook_track(
             .entry("event_id")
             .or_insert_with(|| serde_json::Value::String(event_id.to_owned()));
     }
+    ensure_lifecycle_event_id(&mut raw);
     let (payload, warnings) = HookEventPayload::from_value(raw);
     payload
         .validate_ingestion()
@@ -146,6 +147,27 @@ async fn dispatch_inserted_event(ctx: &DispatchContext<'_>) {
         event_hub: ctx.event_hub,
     })
     .await;
+}
+
+// Why: Claude Code http hooks send a static header set, so a lifecycle event
+// (SessionStart, SessionEnd, Stop, …) arrives with neither `event_id` nor
+// `x-ingestion-event-id`; only prompts and tool calls carry a natural id.
+// A digest of the envelope is deterministic across retries, so dedup still
+// holds.
+fn ensure_lifecycle_event_id(raw: &mut serde_json::Value) {
+    let Some(object) = raw.as_object_mut() else {
+        return;
+    };
+    if object.contains_key("event_id") {
+        return;
+    }
+    let digest = hex::encode(sha2::Sha256::digest(
+        serde_json::to_vec(&*object).unwrap_or_default(),
+    ));
+    object.insert(
+        "event_id".to_owned(),
+        serde_json::Value::String(format!("envelope-{}", &digest[..32])),
+    );
 }
 
 async fn insert_hook_event(
