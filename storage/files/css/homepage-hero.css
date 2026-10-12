@@ -119,6 +119,7 @@ body.has-image-hero main {
   }
 
   .hero-media {
+    order: -1;
     min-height: 0;
     aspect-ratio: 3 / 2;
   }
