@@ -171,12 +171,11 @@ async fn executive_and_salesforce_connection_grant_only_the_intended_resources()
     apply_sync(&db.pool, &declared, SyncMode::Overwrite)
         .await
         .expect("seed");
-    let project_exists: bool = sqlx::query_scalar(
-        "SELECT EXISTS(SELECT 1 FROM projects WHERE id = 'business-implementation')",
-    )
-    .fetch_one(&*db.pool)
-    .await
-    .expect("configured project");
+    let project_exists: bool =
+        sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM projects WHERE id = 'odoo-delivery')")
+            .fetch_one(&*db.pool)
+            .await
+            .expect("configured project");
     assert!(project_exists);
     let repo = AccessControlRepository::from_pool(Arc::clone(&db.pool));
     let chains = ParentChainIndex::load(&repo, Arc::new(ChainSources::from_services(&services)))
@@ -186,44 +185,34 @@ async fn executive_and_salesforce_connection_grant_only_the_intended_resources()
     // super_admin alone — dynapps-super-admin absorbed the old
     // systemprompt-admin marketplace, and splitting the control plane in two is
     // exactly how an administrator ended up holding half of it. `sales` is
-    // reached by business-users membership; a verified Salesforce connection
-    // or legacy UK membership alone grants nothing.
-    for (role, uk, business, connected, project, control_plane, sales) in [
-        ("user", false, false, false, false, false, false),
-        ("admin", false, false, false, false, true, false),
-        ("platform_admin", false, false, false, false, true, false),
-        ("knowledge_worker", false, false, false, false, false, false),
-        ("project_manager", false, false, false, false, false, false),
-        ("user", true, false, false, false, false, false),
-        ("user", false, true, false, false, false, true),
-        ("user", false, false, true, false, false, false),
-        ("user", false, false, false, true, false, false),
-        ("super_admin", false, false, false, false, true, false),
-        ("super_admin", true, true, true, true, true, true),
+    // reached by staff membership; a verified Salesforce connection or a
+    // project assignment alone grants nothing.
+    for (role, staff, connected, project, control_plane, sales) in [
+        ("user", false, false, false, false, false),
+        ("admin", false, false, false, true, false),
+        ("platform_admin", false, false, false, true, false),
+        ("knowledge_worker", false, false, false, false, false),
+        ("project_manager", false, false, false, false, false),
+        ("user", true, false, false, false, true),
+        ("user", false, true, false, false, false),
+        ("user", false, false, true, false, false),
+        ("super_admin", false, false, false, true, false),
+        ("super_admin", true, true, true, true, true),
     ] {
         let user = UserId::new(unique("executive-access"));
         let roles = vec!["user".to_owned(), role.to_owned()];
         insert_user_with_roles(&db.pool, user.as_str(), &roles).await;
-        if uk {
+        if staff {
             sqlx::query(
-                "INSERT INTO group_members (group_id,user_id,source) VALUES ('uk',$1,'manual')",
+                "INSERT INTO group_members (group_id,user_id,source) VALUES ('staff',$1,'manual')",
             )
             .bind(user.as_str())
             .execute(&*db.pool)
             .await
-            .expect("UK membership");
-        }
-        if business {
-            sqlx::query(
-                "INSERT INTO group_members (group_id,user_id,source) VALUES ('business-users',$1,'manual')",
-            )
-            .bind(user.as_str())
-            .execute(&*db.pool)
-            .await
-            .expect("business-users membership");
+            .expect("staff membership");
         }
         if project {
-            set_project(&db.pool, user.as_str(), Some("business-implementation")).await;
+            set_project(&db.pool, user.as_str(), Some("odoo-delivery")).await;
         }
         if connected {
             let mut tx = db.pool.begin().await.expect("begin connector update");
@@ -276,7 +265,7 @@ async fn executive_and_salesforce_connection_grant_only_the_intended_resources()
             assert_eq!(
                 allowed.contains(id),
                 expected,
-                "{role}, uk={uk}, business={business}, connected={connected}, project={project}: {id}"
+                "{role}, staff={staff}, connected={connected}, project={project}: {id}"
             );
         }
     }

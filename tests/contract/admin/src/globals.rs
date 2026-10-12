@@ -111,6 +111,10 @@ fn write_fixture_profile() -> PathBuf {
 // exists for the ACL detector cases; the rest of `services/` is copied as-is.
 const FIXTURE_PROVIDERS: &str = include_str!("../fixtures/providers.yaml");
 const FIXTURE_GATEWAY: &str = include_str!("../fixtures/gateway.yaml");
+// The instance ships no identity-backed server; the accessor routes under
+// /api/public/identity/ are exercised against this fixture instead.
+const FIXTURE_IDENTITY_SERVER: &str = include_str!("../fixtures/sfcore_dev.yaml");
+const IDENTITY_SERVER_INCLUDE: &str = "  - ../mcp/sfcore_dev.yaml\n";
 
 fn write_fixture_services(root: &std::path::Path, dest: &std::path::Path) {
     if dest.exists() {
@@ -121,13 +125,24 @@ fn write_fixture_services(root: &std::path::Path, dest: &std::path::Path) {
         .expect("write fixture providers.yaml");
     std::fs::write(dest.join("ai/gateway.yaml"), FIXTURE_GATEWAY)
         .expect("write fixture gateway.yaml");
-    enable_identity_server(&dest.join("mcp/sfcore_dev.yaml"));
+    add_identity_server(dest);
 }
 
-fn enable_identity_server(path: &std::path::Path) {
-    let yaml = std::fs::read_to_string(path).expect("read sfcore_dev.yaml");
-    std::fs::write(path, yaml.replacen("enabled: false", "enabled: true", 1))
-        .expect("enable fixture sfcore_dev.yaml");
+fn add_identity_server(dest: &std::path::Path) {
+    std::fs::write(dest.join("mcp/sfcore_dev.yaml"), FIXTURE_IDENTITY_SERVER)
+        .expect("write fixture sfcore_dev.yaml");
+    let config_path = dest.join("config/config.yaml");
+    let config = std::fs::read_to_string(&config_path).expect("read fixture config.yaml");
+    let anchor = "  - ../mcp/atlassian.yaml\n";
+    assert!(
+        config.contains(anchor),
+        "services/config/config.yaml must include ../mcp/atlassian.yaml"
+    );
+    std::fs::write(
+        &config_path,
+        config.replacen(anchor, &format!("{anchor}{IDENTITY_SERVER_INCLUDE}"), 1),
+    )
+    .expect("include fixture sfcore_dev.yaml");
 }
 
 fn copy_tree(from: &std::path::Path, to: &std::path::Path) {

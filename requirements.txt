@@ -30,16 +30,21 @@ What we have provisioned:
 -----------------------------------------
 
 2.1  Routing for dynapps.systemprompt.io.
-     DNS already resolves to the platform edge (66.241.124.121). We still
-     have to confirm the edge routes this hostname to tenant e43527c1cbb5.
+     DNS already resolves to the platform edge (66.241.124.121) and the edge
+     terminates TLS for it (both hostnames answered 502 before the first
+     deploy). We still have to confirm the edge routes this hostname to
+     tenant e43527c1cbb5 after the deploy.
      If the edge needs a per-tenant mapping, we add it on the control plane.
      Otherwise we add a Fly certificate on sp-e43527c1cbb5 and CNAME
      dynapps.systemprompt.io to sp-e43527c1cbb5.fly.dev.
      Constraint: astound.systemprompt.io is another customer's live address
      with its own certificate and must not be repointed.
 
-2.2  AI provider credentials for the tenant secrets (Vertex AI and/or
-     Anthropic), once Dynapps confirms provider and region (3.7).
+2.2  AI provider credentials. For the pilot the tenant uses systemprompt.io's
+     own Vertex AI service account (Claude on Vertex, global endpoint, with
+     the europe-west1 deployment as fallback) and Anthropic API key. Before
+     production use Dynapps should receive its own GCP project / Vertex
+     credentials so usage and billing are theirs; see 3.7.
 
 2.3  An SMTP sender for notification email.
 
@@ -118,5 +123,10 @@ What we have provisioned:
     only command-line admin sessions work.
   - Desktop bridge downloads return 404 until the first GitHub release
     is published (2.4, 2.5).
+  - SSO limits: encrypted SAML tokens are not supported (keep token
+    encryption off); users in more groups than a token carries are refused
+    (sign-in reason group_overage) rather than looked up in Microsoft Graph,
+    so restrict the groups claim to groups assigned to the application;
+    single logout is not implemented.
   - Content specific to the previous customer has been removed: their kits,
     their Salesforce org connection and the Google Workspace MCP server.

@@ -1,0 +1,24 @@
+# Contract-suite fixture: an identity-backed external MCP server. The gateway
+# asks /api/public/identity/sfcore_dev/token for a short-lived RS256 JWT signed
+# by this instance and sends it as the bearer (docs/EXTERNAL-MCP-IDENTITY.md).
+# The instance ships no such server; the harness writes this file into its
+# copy of services/ so the identity accessor routes have something to sign for.
+mcp_servers:
+  sfcore_dev:
+    type: external
+    endpoint: https://identity-fixture.invalid/mcp
+    enabled: true
+    tool_policy: allow
+    display_in_web: false
+    removable: true
+    description: Identity-backed external server (contract fixture)
+    external_auth:
+      token_endpoint: /api/public/identity/sfcore_dev/token
+      header: Authorization
+      scheme: Bearer
+    oauth:
+      required: false
+      scopes:
+      - user
+      audience: mcp
+      client_id: null

@@ -15,7 +15,7 @@ use crate::tempdb::TempDb;
 use crate::{globals, principal, seed};
 
 const ROUTE: &str = "/api/public/identity/sfcore_dev/token";
-const AUDIENCE: &str = "https://mcp-dev-server-611435061062.asia-south1.run.app/mcp";
+const AUDIENCE: &str = "https://identity-fixture.invalid/mcp";
 const BROKER: (&str, &str) = (
     "x-systemprompt-credential-broker",
     "contract-suite-broker-not-a-real-secret",
