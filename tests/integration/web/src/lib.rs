@@ -24,6 +24,8 @@ mod conversation_judge;
 #[cfg(test)]
 mod farm_attribution;
 #[cfg(test)]
+mod farm_run_as_dimension;
+#[cfg(test)]
 mod farm_runner_lifecycle;
 #[cfg(test)]
 mod fixtures;

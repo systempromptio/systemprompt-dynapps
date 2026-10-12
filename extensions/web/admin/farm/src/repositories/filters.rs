@@ -24,6 +24,7 @@ pub struct NewFarm {
     pub max_turns: i32,
     pub max_budget_usd: f64,
     pub model: Option<String>,
+    pub run_as_user_id: Option<UserId>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

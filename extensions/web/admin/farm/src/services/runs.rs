@@ -79,7 +79,7 @@ pub async fn launch(state: &Arc<FarmState>, req: LaunchRequest) -> FarmResult<Ru
         ));
     }
 
-    let credential_user = prepare::credential_user(None, &req.user_id);
+    let credential_user = prepare::credential_user(farm.run_as_user_id.as_ref(), &req.user_id);
     let new_run = NewRun {
         id: farm_run_id.clone(),
         agent_run_id: agent_run_id.clone(),

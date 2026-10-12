@@ -386,6 +386,9 @@ mod farm_definitions;
 mod farm_host_kind;
 
 #[cfg(test)]
+mod farm_run_as;
+
+#[cfg(test)]
 mod farm_assertions;
 
 #[cfg(test)]

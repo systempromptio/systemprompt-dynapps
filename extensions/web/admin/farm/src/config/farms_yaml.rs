@@ -32,6 +32,8 @@ pub struct FarmDef {
     #[serde(default)]
     pub owner: Option<String>,
     #[serde(default)]
+    pub run_as: Option<String>,
+    #[serde(default)]
     pub defaults: FarmDefaults,
 }
 
@@ -142,6 +144,9 @@ impl FarmsDoc {
                     "farm {:?}: marketplace {:?} is not a slug",
                     farm.id, farm.marketplace
                 )));
+            }
+            if farm.run_as.as_deref().is_some_and(|id| id.trim().is_empty()) {
+                return Err(invalid(&format!("farm {:?}: run_as is empty", farm.id)));
             }
             farm.source.validate(&farm.id)?;
             farm.defaults.validate(&farm.id)?;

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id AS \"id: FarmId\", name, description, marketplace_id AS \"marketplace_id: MarketplaceId\",\n       source_repo, source_ref, source_subdir, permission_mode, timeout_seconds, max_turns,\n       max_budget_usd, model, synced_commit_sha, synced_at, synced_by, sync_error,\n       owner_user_id, created_at, updated_at\nFROM agent_farms\nORDER BY name, id\n",
+  "query": "SELECT id AS \"id: FarmId\", name, description, marketplace_id AS \"marketplace_id: MarketplaceId\",\n       source_repo, source_ref, source_subdir, permission_mode, timeout_seconds, max_turns,\n       max_budget_usd, model, synced_commit_sha, synced_at, synced_by, sync_error,\n       owner_user_id, run_as_user_id AS \"run_as_user_id: UserId\", created_at, updated_at\nFROM agent_farms\nORDER BY name, id\n",
   "describe": {
     "columns": [
       {
@@ -192,6 +192,17 @@
       },
       {
         "ordinal": 17,
+        "name": "run_as_user_id: UserId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farms",
+            "name": "run_as_user_id"
+          }
+        }
+      },
+      {
+        "ordinal": 18,
         "name": "created_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -202,7 +213,7 @@
         }
       },
       {
-        "ordinal": 18,
+        "ordinal": 19,
         "name": "updated_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -234,9 +245,10 @@
       true,
       true,
       true,
+      true,
       false,
       false
     ]
   },
-  "hash": "0b9e652a1d8bab2dda17e31c9a54d9ca16d092b7aab3da421c40d7d47ef34858"
+  "hash": "cd427155e8c101db0cfddb236a43336866a839b8013783bf128f80e147ce3aa1"
 }

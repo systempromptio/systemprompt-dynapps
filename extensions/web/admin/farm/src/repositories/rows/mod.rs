@@ -33,6 +33,7 @@ pub struct FarmRow {
     pub synced_by: Option<String>,
     pub sync_error: Option<String>,
     pub owner_user_id: Option<String>,
+    pub run_as_user_id: Option<UserId>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }

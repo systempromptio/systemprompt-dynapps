@@ -20,6 +20,18 @@ pub async fn find_farm(pool: &PgPool, id: &FarmId) -> Result<Option<FarmRow>, sq
         .await
 }
 
+pub async fn find_service_account(
+    pool: &PgPool,
+    user_id: &str,
+) -> Result<Option<UserId>, sqlx::Error> {
+    sqlx::query_file_scalar!(
+        "src/repositories/farms/find_service_account.sql",
+        user_id
+    )
+    .fetch_optional(pool)
+    .await
+}
+
 pub async fn upsert_farm(pool: &PgPool, farm: &NewFarm) -> Result<(), sqlx::Error> {
     sqlx::query_file!(
         "src/repositories/farms/upsert_farm.sql",
@@ -35,6 +47,7 @@ pub async fn upsert_farm(pool: &PgPool, farm: &NewFarm) -> Result<(), sqlx::Erro
         farm.max_turns,
         farm.max_budget_usd,
         farm.model,
+        farm.run_as_user_id.as_ref().map(UserId::as_str),
     )
     .execute(pool)
     .await?;

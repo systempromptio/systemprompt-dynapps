@@ -147,7 +147,7 @@ async fn write_fixtures(parsed: &ParsedFarm, dirs: &[PathBuf]) -> FarmResult<Vec
     .map_err(|e| FarmError::Io(std::io::Error::other(e)))?
 }
 
-fn new_farm(def: &FarmDef) -> NewFarm {
+fn new_farm(def: &FarmDef, run_as_user_id: Option<UserId>) -> NewFarm {
     NewFarm {
         id: FarmId::new(def.id.clone()),
         name: def.name.clone(),
@@ -161,7 +161,23 @@ fn new_farm(def: &FarmDef) -> NewFarm {
         max_turns: i32::try_from(def.defaults.max_turns).unwrap_or(i32::MAX),
         max_budget_usd: def.defaults.max_budget_usd,
         model: def.defaults.model.clone(),
+        run_as_user_id,
     }
+}
+
+async fn resolve_run_as(pool: &PgPool, def: &FarmDef) -> FarmResult<Option<UserId>> {
+    let Some(run_as) = def.run_as.as_deref() else {
+        return Ok(None);
+    };
+    farms::find_service_account(pool, run_as.trim())
+        .await?
+        .map(Some)
+        .ok_or_else(|| {
+            FarmError::Config(format!(
+                "farm {:?}: run_as {run_as:?} is not an active service account",
+                def.id
+            ))
+        })
 }
 
 pub async fn seed_farms_from_yaml(pool: &PgPool, services_path: &Path) -> FarmResult<usize> {
@@ -169,7 +185,8 @@ pub async fn seed_farms_from_yaml(pool: &PgPool, services_path: &Path) -> FarmRe
         return Ok(0);
     };
     for def in &doc.farms {
-        farms::upsert_farm(pool, &new_farm(def)).await?;
+        let run_as_user_id = resolve_run_as(pool, def).await?;
+        farms::upsert_farm(pool, &new_farm(def, run_as_user_id)).await?;
     }
     Ok(doc.farms.len())
 }
