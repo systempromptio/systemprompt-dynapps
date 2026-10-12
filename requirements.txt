@@ -31,9 +31,14 @@ What we have provisioned:
 
 2.1  Routing for dynapps.systemprompt.io.
      DNS already resolves to the platform edge (66.241.124.121) and the edge
-     terminates TLS for it (both hostnames answered 502 before the first
-     deploy). We still have to confirm the edge routes this hostname to
-     tenant e43527c1cbb5 after the deploy.
+     terminates TLS for it, but after the first deploy (2026-10-12) the edge
+     still answers 502 on dynapps.systemprompt.io while
+     e43527c1cbb5.systemprompt.io serves the instance. The edge therefore has
+     no mapping from the custom hostname to tenant e43527c1cbb5 yet. Action:
+     add the hostname mapping on the systemprompt.io control plane (as was
+     done for astound.systemprompt.io), then update api_external_url,
+     cors_allowed_origins and jwt_issuer in the production profile and
+     redeploy.
      If the edge needs a per-tenant mapping, we add it on the control plane.
      Otherwise we add a Fly certificate on sp-e43527c1cbb5 and CNAME
      dynapps.systemprompt.io to sp-e43527c1cbb5.fly.dev.
