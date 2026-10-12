@@ -97,10 +97,8 @@ fn the_full_manifest_has_unique_destinations_and_skips_client_downloads() {
     );
 
     assert!(
-        assets
-            .iter()
-            .any(|a| a.destination() == "video/showreel.mp4"),
-        "the homepage showreel must be declared"
+        !assets.iter().any(|a| a.destination().starts_with("video/")),
+        "the homepage hero is a still image; no video asset may be published"
     );
     assert!(
         !assets

@@ -5,17 +5,17 @@
    them, so a white-label theme moves the whole system by reassigning this file. */
 
 :root {
-  --sp-primitive-brand-50:  oklch(0.972 0.006 95);
-  --sp-primitive-brand-100: oklch(0.950 0.004 80);
-  --sp-primitive-brand-200: oklch(0.891 0 0);
-  --sp-primitive-brand-300: oklch(0.775 0 0);
-  --sp-primitive-brand-400: oklch(0.548 0 0);
-  --sp-primitive-brand-500: oklch(0.407 0 0);
-  --sp-primitive-brand-600: oklch(0.264 0 0);
-  --sp-primitive-brand-700: oklch(0.196 0 0);
-  --sp-primitive-brand-800: oklch(0.150 0 0);
-  --sp-primitive-brand-900: oklch(0.117 0 0);
-  --sp-primitive-brand-950: oklch(0.072 0 0);
+  --sp-primitive-brand-50:  oklch(0.985 0 0);
+  --sp-primitive-brand-100: oklch(0.970 0 0);
+  --sp-primitive-brand-200: oklch(0.922 0 0);
+  --sp-primitive-brand-300: oklch(0.870 0 0);
+  --sp-primitive-brand-400: oklch(0.715 0 0);
+  --sp-primitive-brand-500: oklch(0.439 0 0);
+  --sp-primitive-brand-600: oklch(0.371 0 0);
+  --sp-primitive-brand-700: oklch(0.187 0.110 269.0);
+  --sp-primitive-brand-800: oklch(0.165 0.095 269.5);
+  --sp-primitive-brand-900: oklch(0.145 0.081 270.4);
+  --sp-primitive-brand-950: oklch(0.110 0.060 270.4);
 
   --sp-primitive-warm-50:  var(--sp-primitive-brand-50);
   --sp-primitive-warm-100: var(--sp-primitive-brand-100);
@@ -29,7 +29,8 @@
   --sp-primitive-warm-900: var(--sp-primitive-brand-700);
   --sp-primitive-warm-950: var(--sp-primitive-brand-900);
 
-  --sp-primitive-accent-red: oklch(0.633 0.216 24.4);
+  --sp-primitive-accent-navy: oklch(0.265 0.183 264.4);
+  --sp-primitive-accent-purple: oklch(0.490 0.263 298.9);
   --sp-primitive-white: oklch(1 0 0);
   --sp-primitive-black: oklch(0 0 0);
 

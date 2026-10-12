@@ -3,7 +3,7 @@
 :root {
     color-scheme: light;
 
-    --sp-font-family: "Readex Pro", "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --sp-font-family: "Readex Pro", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     --sp-font-body: var(--sp-font-family);
     --sp-font-heading: var(--sp-font-family);
     --sp-font-brand: var(--sp-font-family);
@@ -63,23 +63,18 @@
     --sp-text-secondary: var(--sp-primitive-brand-500);
     --sp-text-tertiary:  oklch(0.520 0 0);
     --sp-text-disabled:  var(--sp-primitive-brand-300);
-    --sp-text-on-accent: var(--sp-primitive-brand-50);
+    --sp-text-on-accent: var(--sp-primitive-white);
     --sp-text-on-dark:   var(--sp-primitive-brand-50);
 
-    --sp-interactive:   var(--sp-primitive-accent-red);
-    --sp-accent:        var(--sp-primitive-accent-red);
-    --sp-accent-hover:  color-mix(in oklch, var(--sp-accent) 88%, var(--sp-primitive-black));
-    /* The brand red is a decoration colour: as a border, a bar or a focus ring
-       it only owes 3:1 and it clears that. It cannot be text and it cannot sit
-       behind text — as text on white it measures 4.2:1 and behind
-       --sp-text-on-accent it measures 3.9:1. So the family splits three ways and
-       the brand value itself is left alone: --sp-accent decorates,
-       --sp-accent-text is accent-coloured text, --sp-accent-fill is a filled
-       surface that carries text. Measured: accent-text 6.7:1 on white, 5.8:1
-       on --sp-bg-base and 5.0:1 on an accent tint over the page ground, which is
-       the worst ground it lands on; --sp-text-on-accent on accent-fill 5.3:1. */
-    --sp-accent-text:   oklch(0.495 0.180 24);
-    --sp-accent-fill:   oklch(0.535 0.200 24);
+    --sp-interactive:   var(--sp-primitive-accent-navy);
+    --sp-accent:        var(--sp-primitive-accent-navy);
+    --sp-accent-hover:  var(--sp-primitive-accent-purple);
+    /* Dynapps CTAs are a navy fill that turns purple on hover; the logo's
+       red-orange gradient stays in the mark and never reaches a control. Navy
+       clears 4.5:1 as text and behind --sp-text-on-accent on every ground, so
+       --sp-accent-text and --sp-accent-fill are the brand value itself. */
+    --sp-accent-text:   var(--sp-primitive-accent-navy);
+    --sp-accent-fill:   var(--sp-primitive-accent-navy);
     --sp-accent-dim:    color-mix(in oklch, var(--sp-accent) 10%, transparent);
     --sp-accent-strong: color-mix(in oklch, var(--sp-accent) 18%, transparent);
     --sp-accent-surface: color-mix(in oklch, var(--sp-accent) 6%, var(--sp-bg-surface));

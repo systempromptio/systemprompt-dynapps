@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -21,21 +21,16 @@
     <meta name="twitter:image" content="{{site.branding.image}}">
     <meta name="theme-color" content="{{site.branding.themeColor}}">
     <link rel="stylesheet" href="{{CSS_BASE_PATH}}/homepage-hero.css">
-    <link rel="stylesheet" href="{{CSS_BASE_PATH}}/homepage-showreel.css">
     <link rel="stylesheet" href="{{CSS_BASE_PATH}}/homepage-getting-started.css">
     <script src="{{JS_BASE_PATH}}/motion-flag.js"></script>
 </head>
-<body class="has-video-hero">
+<body class="has-image-hero">
     {{{HEADER}}}
 
     <main>
 
         <section class="hero">
             <div class="hero-frame">
-            <video class="hero-bg-video" autoplay muted loop playsinline preload="metadata" aria-hidden="true" tabindex="-1">
-                <source src="/video/showreel.mp4" type="video/mp4">
-            </video>
-            <div class="hero-scrim" aria-hidden="true"></div>
             <div class="hero-layout">
                 <div class="hero-pane">
                     <p class="hero-eyebrow" data-reveal style="--reveal-index: 0">{{#if site.homepage.hero.eyebrow}}{{site.homepage.hero.eyebrow}}{{else}}Dynapps{{/if}}</p>
@@ -73,6 +68,9 @@
                         </a>
                     </div>
                 </div>
+                <figure class="hero-media">
+                    <img src="/files/images/hero-home.jpg" alt="Two colleagues chatting on an office staircase" width="2000" height="1334" fetchpriority="high" decoding="async">
+                </figure>
             </div>
             </div>
         </section>
@@ -80,7 +78,7 @@
 
     </main>
 
-    {{! No footer on the homepage: the video hero is a single full-screen frame. }}
+    {{! No footer on the homepage: the hero is a single full-screen frame. }}
     {{{SCRIPTS}}}
     <script src="{{JS_BASE_PATH}}/homepage.js" type="module"></script>
 </body>
