@@ -172,6 +172,7 @@ async fn ensure_template(admin: &PgPool, base: &str, prefix: &str, template: &st
         )
         .await
         .expect("install extension schemas");
+        seed_test_projects(&pool).await;
         // Postgres refuses the template copy while any session holds it open.
         pool.close().await;
         drop_stale_templates(&mut conn, prefix, template).await;
@@ -206,6 +207,21 @@ async fn copy_template(admin: &PgPool, template: &str, db_name: &str) {
         "could not copy the template database: {}",
         last.expect("a failure after the retry budget")
     );
+}
+
+/// The two directory-backed projects the integration suites attach users to.
+/// Production projects come from `groups.yaml` through the boot sync, which
+/// the template install does not run, and the seeds carry no customer rows,
+/// so the suites own these fixtures.
+async fn seed_test_projects(pool: &PgPool) {
+    sqlx::query(
+        "INSERT INTO projects (id, name, source)
+         VALUES ('commerce', 'Commerce', 'yaml'), ('core', 'Core', 'yaml')
+         ON CONFLICT (id) DO NOTHING",
+    )
+    .execute(pool)
+    .await
+    .expect("seed the suites' projects");
 }
 
 impl TempDb {

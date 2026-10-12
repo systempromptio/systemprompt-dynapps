@@ -566,9 +566,10 @@ coverage-baseline: coverage
 # major — the host client may be older and refuse). With no argument the
 # current tree is installed under the workspace version — run it after every
 # version bump (scripts/check-schema-baseline.sh enforces that). With a
-# version, that release's server tarball is fetched and ITS binary does the
-# install, so a rung can be added for a release that shipped before the
-# ladder existed. The upgrade test restores every rung into an empty database
+# version, that release's server tarball is fetched from this fork's GitHub
+# Releases and ITS binary does the install, so a rung can be added for a
+# published Dynapps release that shipped before the ladder existed (the fork
+# has none below 0.66.0: the argument form has no use yet). The upgrade test restores every rung into an empty database
 # and runs the current installer over it; the ladder is append-only.
 schema-baseline VERSION="":
     #!/usr/bin/env bash
@@ -606,7 +607,9 @@ schema-baseline VERSION="":
     trap cleanup EXIT
     docker exec "$container" psql -U systemprompt -d postgres -qc "CREATE DATABASE \"$scratch\""
     echo "schema-baseline: fresh install of $version (core $core_ref) into $scratch"
-    if ! log="$(SYSTEMPROMPT_DATABASE_URL="$scratch_url" "$cli" infra db migrate --profile local 2>&1)"; then
+    # Why: core 0.65 ignores SYSTEMPROMPT_DATABASE_URL once a profile is named and
+    # installs into the profile's own database; the flag is the override that bypasses it.
+    if ! log="$("$cli" infra db migrate --profile local --database-url "$scratch_url" 2>&1)"; then
         echo "$log" | tail -30; echo "schema-baseline: fresh install failed" >&2; exit 1
     fi
     {

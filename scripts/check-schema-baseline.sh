@@ -23,16 +23,16 @@
 # database shaped like a deployed install was production. A tracked dump of
 # the release is deterministic, offline, and identical in CI and locally.
 #
-# Why the floor is 0.56.0: core's analytics 015 retires the feedback fact
-# tables before web's own migrations run, and web 059, 071 and 084 still write
-# or select them, so a database older than 0.56 (web below 084) cannot upgrade
-# in one step. Such a database upgrades through 0.59.1 first.
+# Why the floor is 0.66.0: it is this fork's first release. The fork started
+# from Astound's 0.65.0 tree with its migration chain and ladder removed, so no
+# database older than 0.66.0 was ever installed from it; the inherited Astound
+# tags below the floor are ignored.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
 DIR="tests/fixtures/schema"
-FLOOR="0.56.0"
+FLOOR="0.66.0"
 
 version="$(awk '/^\[workspace\.package\]/{p=1;next}/^\[/{p=0}p&&/^version[[:space:]]*=/{gsub(/[[:space:]"]/,""); sub(/^version=/,""); print; exit}' Cargo.toml)"
 [ -n "$version" ] || { echo "check-schema-baseline: could not read the workspace version" >&2; exit 1; }
@@ -46,7 +46,7 @@ top="$DIR/release-baseline-$version.sql"
 fail=0
 for fixture in "$DIR"/release-baseline-*.sql; do
     named="${fixture##*/release-baseline-}"; named="${named%.sql}"
-    recorded="$(sed -n '1s/^-- systemprompt-\(astound\|dynapps\) release-baseline: \([0-9][0-9.]*\) .*/\2/p' "$fixture")"
+    recorded="$(sed -n '1s/^-- systemprompt-dynapps release-baseline: \([0-9][0-9.]*\) .*/\1/p' "$fixture")"
     if [ -z "$recorded" ]; then
         echo "check-schema-baseline: $fixture line 1 is not a release-baseline header" >&2; fail=1
     elif [ "$recorded" != "$named" ]; then

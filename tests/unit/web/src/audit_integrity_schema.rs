@@ -1,22 +1,12 @@
-//! The audit guard's declarative schema and its migrations stay one definition,
-//! and every audit table the matrix names carries its triggers.
+//! The audit guard's declarative schema is the one definition, and every
+//! audit table the matrix names carries its triggers.
 //!
-//! A fresh install runs `schema/51_audit_integrity.sql`; an upgraded one runs
-//! migration 118, then 120 (`audit_chain_append`), then 121 (the sealer). If
-//! the two drift, the guard an operator reads about in the migration header is
-//! not the guard a new instance gets.
+//! Every install runs `schema/51_audit_integrity.sql`; there is no migration
+//! chain to drift from it.
 
 use crate::support::repo_root;
 
 const SCHEMA: &str = "extensions/web/schema/51_audit_integrity.sql";
-const SEALER: &str = "extensions/web/schema/migrations/121_audit_chain_sealer.sql";
-
-const MIGRATIONS_NEWEST_FIRST: &[&str] = &[
-    SEALER,
-    "extensions/web/schema/migrations/120_audit_chain_append_no_loop.sql",
-    "extensions/web/schema/migrations/118_audit_integrity.sql",
-];
-
 const GUARDED: &[(&str, &[&str])] = &[
     (
         "ai_requests",
@@ -43,87 +33,24 @@ const GUARDED: &[(&str, &[&str])] = &[
     ),
 ];
 
-const PLPGSQL_END: &str = "END $$;";
-const SQL_END: &str = "\n$$;";
-
 fn read(relative: &str) -> String {
     let path = repo_root().join(relative);
     std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()))
 }
 
-fn declared_functions(sql: &str) -> Vec<String> {
-    let head = "CREATE OR REPLACE FUNCTION ";
-    sql.match_indices(head)
-        .filter_map(|(at, _)| {
-            let rest = &sql[at + head.len()..];
-            rest.find('(').map(|end| rest[..end].to_owned())
-        })
-        .collect()
-}
-
-fn function_block<'a>(sql: &'a str, name: &str) -> Option<&'a str> {
-    let start = sql.find(&format!("CREATE OR REPLACE FUNCTION {name}("))?;
-    let rest = &sql[start..];
-    let end = match (rest.find(PLPGSQL_END), rest.find(SQL_END)) {
-        (Some(a), Some(b)) if b < a => b + SQL_END.len(),
-        (Some(a), _) => a + PLPGSQL_END.len(),
-        (None, Some(b)) => b + SQL_END.len(),
-        (None, None) => panic!("{name} has no closing $$;"),
-    };
-    Some(&rest[..end])
-}
-
-fn cursor_table(sql: &str) -> Option<&str> {
-    let start = sql.find("CREATE TABLE IF NOT EXISTS audit_chain_cursors (")?;
-    sql[start..].split(");\n").next()
-}
-
-#[test]
-fn migrations_carry_the_schema_ddl_verbatim() {
-    let schema = read(SCHEMA);
-    let migrations: Vec<String> = MIGRATIONS_NEWEST_FIRST.iter().map(|m| read(m)).collect();
-    for name in declared_functions(&schema) {
-        let newest = migrations
-            .iter()
-            .find_map(|sql| function_block(sql, &name))
-            .unwrap_or_else(|| panic!("no migration declares {name}"));
-        assert_eq!(
-            Some(newest),
-            function_block(&schema, &name),
-            "the newest migration declaring {name} must carry schema/51's body verbatim"
-        );
-    }
-    assert_eq!(
-        cursor_table(&migrations[0]),
-        cursor_table(&schema),
-        "migration 121 must create audit_chain_cursors exactly as schema/51 does"
-    );
-}
-
 #[test]
 fn the_chain_is_sealed_by_the_job_not_an_insert_trigger() {
     let schema = read(SCHEMA);
-    let sealer = read(SEALER);
     for gone in [
         "audit_chain_link_ai_requests",
         "audit_chain_link_ai_safety_findings",
     ] {
         assert!(!schema.contains(gone), "schema/51 still declares {gone}");
-        assert!(
-            sealer.contains(&format!("DROP FUNCTION IF EXISTS {gone}();")),
-            "migration 121 must drop {gone}"
-        );
     }
     for table in ["ai_requests", "ai_safety_findings"] {
         assert!(
             !schema.contains(&format!("TRIGGER {table}_audit_chain\n")),
             "{table} still links rows on insert"
-        );
-        assert!(
-            sealer.contains(&format!(
-                "DROP TRIGGER IF EXISTS {table}_audit_chain ON {table};"
-            )),
-            "migration 121 must drop {table}_audit_chain"
         );
     }
     for needed in [

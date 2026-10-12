@@ -222,6 +222,18 @@ regenerating the sqlx cache in both workspaces, and change `delete_batch` off
 two numbers should converge, and `pg_total_relation_size` should fall by roughly
 the 20x the duplication implies.
 
+## 9. A fresh cloud tenant cannot bootstrap its own admin (core gap)
+
+Observed 2026-10-12 on the first Dynapps tenant boot: with an empty database
+the server boot-loops on `Configured system admin 'admin' was not found`, and
+`systemprompt admin bootstrap` — the command that would insert that admin —
+itself needs the app context the boot never reaches. The workaround is a
+direct `INSERT INTO users … ON CONFLICT DO NOTHING` over the public DB URL
+under the *local* profile (`infra db execute --yes --profile local
+--database-url <url>`), then `fly machine start`. Core should either seed the
+configured admin on first boot or let `admin bootstrap` run against a bare
+database URL without the app context.
+
 ## Runbook — reset local activity data (verified 2026-09-17)
 
 Runs in one transaction against the per-clone Docker Postgres; keeps schema,

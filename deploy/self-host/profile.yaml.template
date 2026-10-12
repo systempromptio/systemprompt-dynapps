@@ -1,4 +1,4 @@
-# template-version: 0.65.0
+# template-version: 0.66.0
 # Dynapps profile template for self-hosted, multi-node deployments.
 # Rendered by deploy/self-host/render-profile.sh; @TOKENS@ are substituted.
 # Every node runs this exact file. The provider catalog and gateway routes are

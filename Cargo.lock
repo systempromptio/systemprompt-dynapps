@@ -5540,7 +5540,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-dev-login"
-version = "0.65.0"
+version = "0.66.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -5551,7 +5551,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-dynapps"
-version = "0.65.0"
+version = "0.66.0"
 dependencies = [
  "anyhow",
  "systemprompt",
@@ -5727,7 +5727,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-kit-export"
-version = "0.65.0"
+version = "0.66.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -5901,7 +5901,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-mcp-agent"
-version = "0.65.0"
+version = "0.66.0"
 dependencies = [
  "anyhow",
  "axum",
@@ -5922,7 +5922,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-mcp-shared"
-version = "0.65.0"
+version = "0.66.0"
 dependencies = [
  "jsonschema",
  "serde",
@@ -6314,7 +6314,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-admin-analytics"
-version = "0.65.0"
+version = "0.66.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -6339,7 +6339,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-admin-catalog"
-version = "0.65.0"
+version = "0.66.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -6362,7 +6362,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-admin-core"
-version = "0.65.0"
+version = "0.66.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -6393,7 +6393,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-admin-governance"
-version = "0.65.0"
+version = "0.66.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -6420,7 +6420,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-admin-identity"
-version = "0.65.0"
+version = "0.66.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -6449,7 +6449,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-admin-platform"
-version = "0.65.0"
+version = "0.66.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -6481,7 +6481,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-content"
-version = "0.65.0"
+version = "0.66.0"
 dependencies = [
  "axum",
  "chrono",
@@ -6500,7 +6500,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-extension"
-version = "0.65.0"
+version = "0.66.0"
 dependencies = [
  "axum",
  "inventory",
@@ -6526,7 +6526,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-jobs"
-version = "0.65.0"
+version = "0.66.0"
 dependencies = [
  "async-trait",
  "chrono",
@@ -6555,7 +6555,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-shared"
-version = "0.65.0"
+version = "0.66.0"
 dependencies = [
  "axum",
  "chrono",
@@ -6573,7 +6573,7 @@ dependencies = [
 
 [[package]]
 name = "systemprompt-web-site"
-version = "0.65.0"
+version = "0.66.0"
 dependencies = [
  "async-trait",
  "chrono",

@@ -45,8 +45,14 @@ fn baseline(relative: &str) -> BTreeSet<String> {
 
 fn migration_files() -> Vec<PathBuf> {
     let dir = repo_root().join("extensions/web/schema/migrations");
-    let mut files: Vec<PathBuf> = std::fs::read_dir(&dir)
-        .unwrap_or_else(|e| panic!("{} must be readable: {e}", dir.display()))
+    // Why: core accepts an absent migrations dir (a fresh fork has no chain
+    // yet), so a missing directory is zero migrations, not a skipped run.
+    let entries = match std::fs::read_dir(&dir) {
+        Ok(entries) => entries,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Vec::new(),
+        Err(e) => panic!("{} must be readable: {e}", dir.display()),
+    };
+    let mut files: Vec<PathBuf> = entries
         .flatten()
         .map(|entry| entry.path())
         .filter(|path| {
@@ -54,11 +60,6 @@ fn migration_files() -> Vec<PathBuf> {
                 && !path.to_string_lossy().ends_with(".down.sql")
         })
         .collect();
-    assert!(
-        !files.is_empty(),
-        "no migrations found under {} — a skipped run must not look green",
-        dir.display()
-    );
     files.sort();
     files
 }
@@ -141,8 +142,14 @@ struct RowTrigger {
 // already-applied history and would grow the baseline every upgrade.
 fn schema_files() -> Vec<PathBuf> {
     let dir = repo_root().join("extensions/web/schema");
-    let mut files: Vec<PathBuf> = std::fs::read_dir(&dir)
-        .unwrap_or_else(|e| panic!("{} must be readable: {e}", dir.display()))
+    // Why: core accepts an absent migrations dir (a fresh fork has no chain
+    // yet), so a missing directory is zero migrations, not a skipped run.
+    let entries = match std::fs::read_dir(&dir) {
+        Ok(entries) => entries,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Vec::new(),
+        Err(e) => panic!("{} must be readable: {e}", dir.display()),
+    };
+    let mut files: Vec<PathBuf> = entries
         .flatten()
         .map(|entry| entry.path())
         .filter(|path| path.is_file() && path.extension().is_some_and(|e| e == "sql"))

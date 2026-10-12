@@ -1,8 +1,0 @@
-034_knowledge_bank.sql was added in b683deac and deleted in a6a57f3f, having
-shipped in v0.42.0 through v0.46.0 and on main. The knowledge bank moved to a
-remote MCP server with its own store, so the table it created is no longer part
-of the web extension.
-
-The deletion did not record the number anywhere, which left 034 looking free to
-`ls` while every database from v0.42.0 on had it applied. That is the hazard
-this file closes.

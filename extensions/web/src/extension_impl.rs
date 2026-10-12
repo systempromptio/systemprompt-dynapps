@@ -79,12 +79,6 @@ impl Extension for WebExtension {
         migrations()
     }
 
-    fn retirements(&self) -> Vec<SchemaDefinition> {
-        vec![SchemaDefinition::sql_only(include_str!(
-            "../schema/retire/001_feedback_ingestion.sql"
-        ))]
-    }
-
     fn seeds(&self) -> Vec<Seed> {
         vec![
             Seed::new(

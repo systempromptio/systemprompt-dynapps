@@ -1,4 +1,0 @@
-Migration 035 added a default flag to the former organizations table.
-Migration 038 removed that table. Fresh schemas no longer create it, so
-replaying this ALTER is invalid. Retain the spent slot and existing database
-tracking rows; never reuse this number.

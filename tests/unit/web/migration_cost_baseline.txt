@@ -2,10 +2,5 @@
 # They cannot be annotated: the checksum covers the whole body, so adding a
 # comment makes every established database refuse to boot. This list may only
 # shrink -- an entry whose migration no longer trips the detector fails the gate.
-029_analytics_indexes
-055_recover_native_sessions
-057_version_impact_owner_constraints
-075_plugin_usage_tool_correlation
-083_validate_user_cascades
-085_conversation_facts
-093_hook_events_follow_paired_executions
+# Empty since the fork's migration chain was retired: every migration from 001
+# on declares its cost.

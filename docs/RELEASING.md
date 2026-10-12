@@ -174,7 +174,7 @@ on the sparse index, run `cargo update -w` in root, `tests/` and `bridge/` and
 commit all three lockfiles. Record the new rung of the schema-upgrade ladder
 (`just schema-baseline` writes `tests/fixtures/schema/release-baseline-X.Y.Z.sql`
 from a fresh local install; the ladder is append-only, one rung per release
-since 0.52.0, and `scripts/check-schema-baseline.sh` refuses a missing rung);
+since 0.66.0, and `scripts/check-schema-baseline.sh` refuses a missing rung);
 regenerate SQLx caches when query/schema inputs changed.
 
 Build or clippy only code broken by the core upgrade. If core's bridge GUI
@@ -307,9 +307,10 @@ infrastructure (Oracle VM, remote Postgres) use the published image:
 
 ## Upgrading across several releases
 
-A database is upgraded straight from any release on the ladder (0.56.0 and
-later) to the current one in a single boot. Three guarantees make that safe;
-each exists because a 0.58 → 0.60 client upgrade failed without it:
+A database is upgraded straight from any release on the ladder (0.66.0, the
+fork's first release, and later) to the current one in a single boot. Three
+guarantees make that safe; each exists because an upgrade of the tree this
+fork started from failed without it:
 
 - **Migrations never run stale row triggers.** The runner suspends every
   enabled row trigger on the tables a migration writes, for that migration
@@ -318,9 +319,9 @@ each exists because a 0.58 → 0.60 client upgrade failed without it:
   a migration (`ALTER TABLE … DISABLE TRIGGER <name>`): it fails on a
   database where the trigger is already retired, and boot refuses it.
 - **Retirements run before any migration.** A trigger, function or view an
-  extension retires goes in its `retirements()` (dynapps:
-  `extensions/web/schema/retire/*.sql`, `DROP … IF EXISTS` only), not only in
-  a migration: core migrates first, and a table core drops must not outlive
+  extension retires goes in its `retirements()` (`schema/retire/*.sql`,
+  `DROP … IF EXISTS` only; this fork currently has none), not only in a
+  migration: core migrates first, and a table core drops must not outlive
   the trigger that writes it.
 - **Boot refuses a dangling trigger routine.** Once the schema is final, an
   enabled trigger whose function uses a relation that does not exist stops the
@@ -330,16 +331,6 @@ each exists because a 0.58 → 0.60 client upgrade failed without it:
 is repaired and retried once; any other failure stops with core's hint.
 `/app/storage/data` must be a persistent volume writable by uid 1000 (see
 `deploy/self-host/README.md`).
-
-**A client stuck on 0.56–0.58 with an older image** (symptoms: ai 032
-statement timeout, web 093 `relation "analytics_ingestion_producers" does not
-exist`, web 102 `trigger "feedback_capture" … does not exist`, or `Cannot
-create gateway journal`) upgrades cleanly to a release carrying these fixes.
-Before that release, the manual route was: drop every `feedback_capture*`
-trigger (`extensions/web/schema/retire/001_feedback_ingestion.sql` lists
-them), create a no-op `feedback_capture` trigger on `ai_requests` so web 102
-has something to toggle, and `chown -R 1000:1000` the `app_storage_data`
-volume.
 
 ## Rollback
 
