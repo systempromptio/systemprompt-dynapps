@@ -1,0 +1,46 @@
+schema: 1
+agent: odoo_migration_planner
+cases:
+  - id: plan_to_17
+    timeout_secs: 900
+    assertions:
+      - type: file_exists
+        path: MIGRATION_PLAN.md
+      - type: output_contains
+        path: MIGRATION_PLAN.md
+        text: "attrs"
+      - type: output_contains
+        path: MIGRATION_PLAN.md
+        text: "17.0.1.0.0"
+      - type: regex
+        path: MIGRATION_PLAN.md
+        pattern: "fleet_maintenance_views\\.xml:\\d+"
+      - type: regex
+        path: MIGRATION_PLAN.md
+        pattern: "message_post_with_(template|source)"
+      - type: no_tool_outside_allowlist
+      - type: max_turns
+        value: 40
+      - type: max_cost_usd
+        value: 2.0
+    judge_rubric: |
+      Score 0-100 a plan to migrate an Odoo 16 module to 17.0. Ground truth:
+      views/fleet_maintenance_views.xml uses attrs= at lines 26, 28, 43 and
+      states= at line 30 (both removed in 17; rewrite as invisible="..."
+      Python expressions) (30 points); models/fleet_maintenance.py:69 calls
+      message_post_with_template, removed in 17 (20 points); manifest version
+      must become 17.0.1.0.0 and gains a license key (10 points); steps are
+      ordered and executable with before/after snippets (20 points); risks
+      mention pre-existing defects such as the stored compute with incomplete
+      depends at models/fleet_vehicle.py:15 needing recompute (10 points); an
+      effort and risk estimate is present (10 points). Subtract 10 per
+      fabricated breaking change.
+    judge_threshold: 70
+  - id: skill_used
+    timeout_secs: 900
+    assertions:
+      - type: skill_invoked
+        skill: odoo_migration_plan
+      - type: file_exists
+        path: MIGRATION_PLAN.md
+      - type: no_tool_outside_allowlist

@@ -285,6 +285,9 @@ storage/.systemprompt/
 # Plugin eval runs (transcripts, bundles, per-case results) stay local: they
 # describe real users' work. The console's Evaluation tab is the shared record.
 evals/
+# Source modules and test fixtures that happen to be named `evals` are code.
+!extensions/**/evals/
+!tests/unit/web/fixtures/agent-farm/evals/
 
 # Local kind load-test rig: credentials, rendered profile, staged binaries
 /deploy/loadtest/kind/.tokens/

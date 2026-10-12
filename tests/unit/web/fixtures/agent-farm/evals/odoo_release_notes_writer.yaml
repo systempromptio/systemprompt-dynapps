@@ -1,0 +1,59 @@
+schema: 1
+agent: odoo_release_notes_writer
+cases:
+  - id: customer_notes
+    timeout_secs: 600
+    assertions:
+      - type: file_exists
+        path: RELEASE_NOTES.md
+      - type: output_contains
+        path: RELEASE_NOTES.md
+        text: "16.0.1.0.0"
+      - type: output_contains
+        path: RELEASE_NOTES.md
+        text: "b72e4d1"
+      - type: output_contains
+        path: RELEASE_NOTES.md
+        text: "f8b3a22"
+      - type: regex
+        path: RELEASE_NOTES.md
+        pattern: "(?i)scheduled"
+      - type: no_tool_outside_allowlist
+      - type: max_turns
+        value: 20
+      - type: max_cost_usd
+        value: 1.0
+    judge_rubric: |
+      Score 0-100 customer-facing release notes for version 16.0.1.0.0.
+      Customer-visible commits that must appear in plain business language
+      with their hash: a1f3c09, b72e4d1, c0d9e88, e5c2f10, f8b3a22, 2c4f8a1,
+      4e1c6d2, 6a8d3e9, 7b5f1a0 (5 points each, 45 total). Internal commits
+      d4a1b67, 0a7d5e3, 1b6e9f4, 3d9a7b5, 5f2b0c8, 8c0e2b4 must not appear as
+      customer features (15 points; lose 3 per leak). f8b3a22 (multi-company
+      visibility rule) must be called out as a behaviour change (15 points).
+      No developer jargon such as refactor, ORM, compute, chore (15 points).
+      Structure with Highlights / New features / Fixes / Behaviour changes
+      (10 points). Subtract 10 for any invented change.
+    judge_threshold: 70
+  - id: dutch_customer
+    prompt: "The customer is Belgian: write the release notes in Dutch (Flemish business tone). Keep commit hashes and version numbers unchanged."
+    timeout_secs: 600
+    assertions:
+      - type: file_exists
+        path: RELEASE_NOTES.md
+      - type: output_contains
+        path: RELEASE_NOTES.md
+        text: "a1f3c09"
+      - type: regex
+        path: RELEASE_NOTES.md
+        pattern: "(?i)\\b(onderhoud|voertuig|nieuw)"
+      - type: no_tool_outside_allowlist
+      - type: max_cost_usd
+        value: 1.0
+    judge_rubric: |
+      Score 0-100. Notes must be in natural Dutch (40 points), cover the nine
+      customer-visible commits a1f3c09, b72e4d1, c0d9e88, e5c2f10, f8b3a22,
+      2c4f8a1, 4e1c6d2, 6a8d3e9, 7b5f1a0 with hashes (40 points), and exclude
+      the internal commits d4a1b67, 0a7d5e3, 1b6e9f4, 3d9a7b5, 5f2b0c8, 8c0e2b4
+      (20 points).
+    judge_threshold: 65
