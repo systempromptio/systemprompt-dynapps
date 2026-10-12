@@ -182,7 +182,7 @@ async fn register_client(
         let response = http
             .post(trusted_endpoint(provider, endpoint)?)
             .json(&serde_json::json!({
-                "client_name": "Astound Digital", "redirect_uris": [callback],
+                "client_name": "Dynapps systemprompt", "redirect_uris": [callback],
                 "grant_types": ["authorization_code", "refresh_token"], "response_types": ["code"],
                 "token_endpoint_auth_method": "none", "scope": scope
             }))

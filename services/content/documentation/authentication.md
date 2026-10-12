@@ -1,23 +1,23 @@
 ---
 title: "Authentication"
-description: "The one way into the platform: Astound single sign-on (ADFS over SAML 2.0, with AD groups deciding roles). Covers operator recovery from the CLI, sessions, JWTs, and route protection."
-author: "Astound Digital"
+description: "The one way into the platform: Dynapps single sign-on (Microsoft Entra ID over SAML 2.0, with Entra groups deciding roles). Covers operator recovery from the CLI, sessions, JWTs, and route protection."
+author: "Dynapps"
 slug: "authentication"
-keywords: "authentication, login, sso, adfs, active directory, saml, session, JWT, security, provisioning"
+keywords: "authentication, login, sso, entra id, saml, session, JWT, security, provisioning"
 kind: "guide"
 public: true
 tags: ["authentication", "security", "login"]
 published_at: "2026-03-02"
 updated_at: "2026-09-29"
 after_reading_this:
-  - "Sign in as an Astound user with Astound SSO"
-  - "Understand how Active Directory groups become platform roles and entitlements"
+  - "Sign in as a Dynapps user with Dynapps SSO"
+  - "Understand how Entra ID groups become platform roles and entitlements"
   - "Recover operator access from the CLI when SSO is unavailable"
   - "Understand how session cookies and JWTs govern authenticated access"
   - "Know which admin routes are public and which require a session"
 related_playbooks:
-  - title: "Set Up Astound SSO (AD FS)"
-    url: "/documentation/adfs-sso-setup"
+  - title: "Set Up Dynapps SSO (Microsoft Entra ID)"
+    url: "/documentation/entra-id-sso-setup"
   - title: "User & Access Management"
     url: "/documentation/enterprise-user-access"
   - title: "Create & Manage Users"
@@ -29,30 +29,30 @@ related_playbooks:
 # Authentication
 
 **TL;DR:** There is exactly one way into the platform in a browser, and it
-stores no password. Everyone signs in with **Astound SSO** — the corporate
-AD FS farm, over SAML 2.0 — and their **Active Directory groups** decide what
+stores no password. Everyone signs in with **Dynapps SSO** (Microsoft Entra
+ID, over SAML 2.0) and their **Entra groups** decide what
 they can do. There is no second login form, no self-registration, and no
 in-browser invite redemption; operator recovery happens from the **CLI**.
 
-The directory is the authority. A `Systemprompt-*` group in Active Directory
+The directory is the authority. A `Dynapps-Systemprompt-*` group in Entra ID
 is the entitlement; the platform reads it at every sign-in and never stores a
 credential of its own for SSO users. The desktop bridge is not an exception:
 linking a device sends you through the same browser sign-in, and the link code
 it returns is only minted for a session SSO already created.
 
 Being the authority means the directory can also take things away. A sign-in
-refused because the AD group is gone does not merely fail — it revokes the
+refused because the Entra group is gone does not merely fail — it revokes the
 sessions and bridge credentials that sign-in's owner already holds. See
 [Deprovisioning](#deprovisioning).
 
-## Path 1 — Astound Users: Astound SSO
+## Path 1 — Dynapps Users: Dynapps SSO
 
 This is how everyone who is not a platform operator signs in.
 
-The user clicks **Sign in with Astound SSO** on `/admin/login` (or picks
-this application on the AD FS portal). The platform sends a SAML 2.0
-`AuthnRequest` to AD FS, so the corporate login policies — Windows
-authentication, forms, MFA — apply unchanged, and AD FS posts a signed
+The user clicks **Sign in with Dynapps SSO** on `/admin/login` (or picks
+the application tile in My Apps). The platform sends a SAML 2.0
+`AuthnRequest` to Entra ID, so Conditional Access and MFA apply
+unchanged, and Entra ID posts a signed
 assertion back to `/admin/auth/adfs/acs`.
 
 On that callback, the platform:
@@ -61,21 +61,21 @@ On that callback, the platform:
    in the committed federation metadata, audience, destination, validity
    window, replay, and — for a sign-in we started — the request it answers
    and the `RelayState` this browser's request minted.
-2. Gates the claims: the email must be on an allow-listed Astound domain, and
-   the assertion must carry at least one AD group. An assertion with no group
+2. Gates the claims: the email must be on an allow-listed Dynapps domain, and
+   the assertion must carry at least one Entra group. An assertion with no group
    claim at all gets **no session** — deny by default. A group the platform
    does not map is not a refusal; it simply mints no role.
 3. Maps the groups to roles (`services/web/config/adfs.yaml`, `group_roles`).
    This rewrites the *directory* half of the account's role set, so leaving an
-   AD group revokes the role at the next sign-in. Roles an admin granted by
+   Entra group revokes the role at the next sign-in. Roles an admin granted by
    hand are a separate half and survive. A sign-in carrying no mapped group
    signs in as a plain `user`.
 4. Resolves the identity — returning login, merge onto an existing account by
    email, or just-in-time provisioning.
-5. Places the person in the groups and projects those AD groups map to
+5. Places the person in the groups and projects those Entra groups map to
    (`services/web/config/groups.yaml`), replacing the directory-sourced
    memberships from their last sign-in and leaving dashboard-granted ones
-   alone. An AD group that maps to nothing leaves them in the derived
+   alone. An Entra group that maps to nothing leaves them in the derived
    `unassigned` group.
 6. Mints a session JWT and sets it as the `access_token` cookie.
 
@@ -84,23 +84,24 @@ Failures return to `/admin/login?sso=<reason>`:
 | Reason | Meaning |
 |---|---|
 | `unavailable` | No usable `adfs.yaml` (or unreadable IdP metadata) on this instance |
-| `denied` | AD FS refused or the user cancelled |
-| `no_subject` | The assertion carries no `NameID` — the relying-party trust needs a Name ID claim |
+| `correlation_lost` | The sign-in state cookie was missing or expired |
+| `no_subject` | The assertion carries no `NameID` — the Enterprise Application needs a Name ID claim |
 | `invalid_assertion` | Signature, audience, destination, validity, or replay check failed |
 | `no_email` | The assertion carried no email attribute and no email-format `NameID` |
 | `forbidden` | The email domain is not allow-listed |
-| `no_group` | The assertion carried no AD group at all |
+| `no_group` | The assertion carried no group at all |
+| `group_overage` | Entra ID sent a group overage link instead of the group list |
 | `not_provisioned` | No account exists and auto-provisioning is off |
 | `error` | Anything else — the server log has the detail |
 
 ### Groups as entitlements
 
-Two things read the AD groups:
+Two things read the Entra groups:
 
 - **Roles** — `group_roles` in `adfs.yaml` maps a group to `platform_admin`,
   `admin`, `project_manager`, `developer`, `knowledge_worker` and/or `user`
   (`group_role_patterns` adds glob matches such as
-  `Systemprompt-ProjectManagers-*`). The directory half of the role set is
+  `Dynapps-Systemprompt-PM-*`). The directory half of the role set is
   re-projected on every sign-in. What each role opens is on
   [Create & Manage Users → Roles](/documentation/admin-user-management#roles).
 - **Membership** — `services/web/config/groups.yaml` maps a group onto a
@@ -122,8 +123,8 @@ The exceptions are the ones that revoke: losing the group that grants `admin`
 and a refused sign-in both tear down the person's credentials, and disabling
 the account from the console is enforced on every JWT-bearing request within
 about 30 seconds. The full table is in
-[How a directory change propagates](/documentation/adfs-sso-setup#how-a-directory-change-propagates).
-There is no SCIM endpoint — AD FS does not push one, so nothing observes a
+[Lifecycle](/documentation/entra-id-sso-setup#lifecycle-joiners-movers-and-leavers).
+There is no SCIM endpoint and no single logout, so nothing observes a
 change between sign-ins.
 
 Linking a desktop bridge is not a second login: the device-link approval runs
@@ -131,8 +132,8 @@ inside an SSO session and mints a *device* credential from it.
 
 ## Operator Recovery — CLI Only
 
-SSO is the only browser door. That makes the directory a dependency: if the
-AD FS farm is unreachable, nobody signs in through the web UI. Recovery is
+SSO is the only browser door. That makes the directory a dependency: if
+Entra ID is unreachable, nobody signs in through the web UI. Recovery is
 therefore deliberately out-of-band and does not run through the login page at
 all.
 
@@ -143,15 +144,15 @@ create an account. Accounts are provisioned by operators or by SSO when a signed
 
 ```bash
 # Create the account and grant the admin role
-systemprompt admin users create --name "Jane" --email jane@astounddigital.com
-systemprompt admin users role promote jane@astounddigital.com admin
+systemprompt admin users create --name "Jane" --email jane@dynapps.es
+systemprompt admin users role promote jane@dynapps.es admin
 ```
 
 For access when SSO itself is down, mint a CLI admin session directly against
 the database rather than through the web UI. This, `systemprompt admin bridge
 issue-code`, and a personal access token minted from an existing admin session
 are the platform's **break-glass** credentials: they are retained deliberately
-so an AD FS outage is not a lock-out, they are operator tools rather than a
+so an Entra ID outage is not a lock-out, they are operator tools rather than a
 second user-facing login, and every one of them needs either database access or
 an SSO session that already exists.
 
@@ -180,22 +181,22 @@ demotion.
 ## Configuring SSO
 
 `services/web/config/adfs.yaml` carries the relying party: our entity id, the
-ACS URL, the path of the committed IdP federation metadata (which pins the
-signing certificate — rotation is a re-fetch and a reviewable diff), the
+ACS URL, the committed IdP federation metadata file or its URL (which
+supplies the signing certificate), the
 allow-listed domains, the claim URIs, and the group→role map. There is no
 client secret.
 
-**[Set Up Astound SSO (AD FS)](/documentation/adfs-sso-setup)** is the full
-procedure: what your IT team registers in AD FS, the three claim issuance
-rules, every config key, how groups become roles and per-entity entitlements,
-certificate rotation, and pointing an instance at a different farm.
+**[Set Up Dynapps SSO (Microsoft Entra ID)](/documentation/entra-id-sso-setup)** is the full
+procedure: what your Entra ID administrator registers, the claims, every
+config key, how groups become roles and per-entity entitlements, and
+certificate rotation.
 
 The deployed trust and group mapping are configured in
 `services/web/config/adfs.yaml`.
 
 ## Deprovisioning
 
-Removing someone from their `Systemprompt-*` group is the whole deprovision
+Removing someone from their `Dynapps-Systemprompt-*` group is the whole deprovision
 step. There is nothing else to click.
 
 Blocking the next sign-in would not be enough on its own: a cookie session and a

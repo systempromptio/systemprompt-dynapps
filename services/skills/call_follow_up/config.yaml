@@ -6,7 +6,7 @@ description: Create a customer follow-up email and internal recap from a meeting
 enabled: true
 file: SKILL.md
 tags:
-- astound
+- dynapps
 - salesforce
 - sales
 category: business

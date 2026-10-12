@@ -21,9 +21,6 @@ use crate::support::repo_root;
 // 404 at tool-call time and nowhere earlier.
 const ATLASSIAN_ACCESSOR: &str = "/api/public/connectors/atlassian/token";
 const SALESFORCE_SERVERS: [&str; 1] = ["salesforce"];
-// Servers that trust the identity this instance signs rather than a banked
-// provider token; their accessor is `identity_token::accessor_path`.
-const IDENTITY_SERVERS: [&str; 1] = ["sfcore_dev"];
 
 fn web_config(name: &str) -> PathBuf {
     repo_root().join("services/web/config").join(name)
@@ -93,13 +90,6 @@ fn every_external_server_points_at_the_accessor_that_serves_it() {
         ATLASSIAN_ACCESSOR.to_owned(),
     )];
     servers.extend(salesforce);
-    servers.extend(IDENTITY_SERVERS.map(|name| {
-        (
-            format!("{name}.yaml"),
-            name,
-            systemprompt_web_admin_platform::identity_token::accessor_path(name),
-        )
-    }));
     for (file, name, accessor) in servers {
         let entry = server(&file, name);
         let external_auth = entry
@@ -132,92 +122,6 @@ fn every_external_server_points_at_the_accessor_that_serves_it() {
             "{file}: a server with external_auth must be type: external"
         );
     }
-}
-
-#[test]
-fn the_google_workspace_server_leaves_its_accessor_to_the_generic_connector() {
-    // Why: with a `connector:` block and no `external_auth`, core synthesises
-    // the accessor route itself; declaring both would name the route twice and
-    // let them drift apart.
-    {
-        let (file, name) = ("google_workspace.yaml", "google_workspace");
-        let entry = server(file, name);
-        assert!(
-            entry.get("external_auth").is_none(),
-            "{file}: the generic connector owns the accessor"
-        );
-        let connector = entry
-            .get("connector")
-            .unwrap_or_else(|| panic!("{file}: {name} must declare a connector block"));
-        assert_eq!(
-            connector.get("adapter").and_then(serde_yaml::Value::as_str),
-            Some("generic"),
-            "{file}: adapter"
-        );
-        // Why: Google issues a refresh token only when offline access is
-        // requested; without it the connection expires with the hour-long
-        // access token.
-        assert_eq!(
-            connector
-                .get("authorization_params")
-                .and_then(|p| p.get("access_type"))
-                .and_then(serde_yaml::Value::as_str),
-            Some("offline"),
-            "{file}: access_type=offline is what keeps the grant alive"
-        );
-        assert_eq!(
-            connector
-                .get("identity")
-                .and_then(serde_yaml::Value::as_str),
-            Some("userinfo"),
-            "{file}: identity"
-        );
-        assert_eq!(
-            entry
-                .get("oauth")
-                .and_then(|o| o.get("required"))
-                .and_then(serde_yaml::Value::as_bool),
-            Some(false),
-            "{file}: oauth.required"
-        );
-        assert_eq!(
-            entry.get("type").and_then(serde_yaml::Value::as_str),
-            Some("external"),
-            "{file}: type"
-        );
-        assert_eq!(
-            entry.get("tool_policy").and_then(serde_yaml::Value::as_str),
-            Some("allow"),
-            "{file}: a server without tool_policy is withheld from the bridge"
-        );
-    }
-}
-
-#[test]
-fn the_google_workspace_server_targets_agent_search_with_its_scope() {
-    // Why: the MCP endpoint is regional and must match the engine's location
-    // — Astound's workspace-search engine is `global`, so the host is the
-    // global one — and its protected-resource metadata names exactly this
-    // scope; a token minted without it is accepted by Google's OAuth server and
-    // then rejected by the MCP endpoint, which surfaces as a failed Test on the
-    // Connectors page and nowhere earlier.
-    let entry = server("google_workspace.yaml", "google_workspace");
-    assert_eq!(
-        entry.get("endpoint").and_then(serde_yaml::Value::as_str),
-        Some("https://discoveryengine.googleapis.com/mcp")
-    );
-    let scopes: Vec<&str> = entry
-        .get("connector")
-        .and_then(|c| c.get("scopes"))
-        .and_then(serde_yaml::Value::as_sequence)
-        .expect("google_workspace.yaml: connector.scopes is a list")
-        .iter()
-        .filter_map(serde_yaml::Value::as_str)
-        .collect();
-    assert!(
-        scopes.contains(&"https://www.googleapis.com/auth/discoveryengine.readwrite"),
-        "google_workspace.yaml: scopes must carry discoveryengine.readwrite, got {scopes:?}"
-    );
 }
 
 #[test]

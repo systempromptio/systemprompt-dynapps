@@ -12,11 +12,11 @@
     <main class="sp-auth-page">
         <div class="sp-auth-info">
             <div>
-                <div class="sp-auth-badge">Astound Digital &middot; Internal AI Platform</div>
+                <div class="sp-auth-badge">Dynapps &middot; Internal AI Gateway</div>
                 <h2 class="sp-section__title">Welcome</h2>
                 <p>
-                    This is Astound Digital's internal AI platform. Sign in with your
-                    Astound work account through single sign-on. No passwords are created
+                    This is Dynapps' internal AI gateway. Sign in with your
+                    Dynapps work account through single sign-on. No passwords are created
                     or stored here.
                 </p>
 
@@ -26,25 +26,25 @@
 
                 <h2 class="sp-section__title">Getting Started</h2>
                 <div class="sp-auth-flow-steps">
-                    <div class="sp-auth-flow-step"><span class="sp-step-num">1</span><span>Sign in with your Astound work account (single sign-on)</span></div>
-                    <div class="sp-auth-flow-step"><span class="sp-step-num">2</span><span>Download the desktop bridge for <a href="/files/downloads/astound-bridge-windows.exe">Windows</a>, or <a href="/files/downloads/astound-bridge-linux-x86_64.tar.gz">Linux</a></span></div>
+                    <div class="sp-auth-flow-step"><span class="sp-step-num">1</span><span>Sign in with your Dynapps work account (single sign-on)</span></div>
+                    <div class="sp-auth-flow-step"><span class="sp-step-num">2</span><span>Download the desktop bridge for <a href="/files/downloads/dynapps-bridge-windows.exe">Windows</a>, or <a href="/files/downloads/dynapps-bridge-linux-x86_64.tar.gz">Linux</a></span></div>
                     <div class="sp-auth-flow-step"><span class="sp-step-num">3</span><span>Approve the device link &mdash; the bridge installs your Cowork profile and syncs your skills</span></div>
-                    <div class="sp-auth-flow-step"><span class="sp-step-num">4</span><span>Use Astound skills and tools directly inside your AI tools</span></div>
+                    <div class="sp-auth-flow-step"><span class="sp-step-num">4</span><span>Use Dynapps skills and tools directly inside your AI tools</span></div>
                 </div>
 
                 <hr class="sp-auth-divider">
 
                 <h2 class="sp-section__title">How Sign-In Works</h2>
-                <p>Single sign-on is the only way in. It hands you to Astound's corporate
-                    login (ADFS) and back. Your Active Directory groups decide what you can
+                <p>Single sign-on is the only way in. It hands you to Dynapps' corporate
+                    login (Microsoft Entra ID) and back. Your Entra ID groups decide what you can
                     reach here, and they are re-read every time you sign in, so a group added
-                    or removed in AD takes effect at your next sign-in.</p>
+                    or removed in Entra ID takes effect at your next sign-in.</p>
 
                 <hr class="sp-auth-divider">
 
                 <h2 class="sp-section__title">Trouble Signing In?</h2>
                 <p>
-                    Sign-in is handled entirely by Astound's corporate directory. If it
+                    Sign-in is handled entirely by Dynapps' corporate directory (Microsoft Entra ID). If it
                     refuses you, or you reach this page with an error, contact the platform
                     team &mdash; there is no separate account here to recover.
                 </p>
@@ -67,9 +67,9 @@
 
                         {{#if sso_enabled}}
                         <div class="sp-form-actions">
-                            <a id="sso-btn" class="sp-btn sp-btn--primary sp-u-w-full" href="/admin/auth/adfs/start{{#if redirect_encoded}}?redirect={{redirect_encoded}}{{/if}}">Sign in with Astound SSO</a>
+                            <a id="sso-btn" class="sp-btn sp-btn--primary sp-u-w-full" href="/admin/auth/adfs/start{{#if redirect_encoded}}?redirect={{redirect_encoded}}{{/if}}">Sign in with Dynapps SSO (Microsoft Entra ID)</a>
                         </div>
-                        <p class="sp-login-switch">Your Astound directory account is the only sign-in.</p>
+                        <p class="sp-login-switch">Your Dynapps Entra ID account is the only sign-in.</p>
                         {{else}}
                         <p class="sp-login-switch">Single sign-on is not configured on this instance. Contact the platform team.</p>
                         {{/if}}

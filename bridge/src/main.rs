@@ -1,8 +1,8 @@
 #![cfg_attr(target_os = "windows", windows_subsystem = "windows")]
-//! Astound Digital desktop bridge.
+//! Dynapps desktop bridge.
 //!
 //! A thin white-label wrapper over the systemprompt bridge: it defines the
-//! Astound [`Brand`] (chrome, on-disk paths, env prefix, default gateway, and
+//! Dynapps [`Brand`] (chrome, on-disk paths, env prefix, default gateway, and
 //! embedded GUI assets) and hands it to
 //! [`systemprompt_bridge::run_with_brand`]. All behaviour lives in the shared
 //! core library — this file is intentionally tiny so a new client bridge is
@@ -18,41 +18,41 @@ use systemprompt_bridge::brand::{Brand, BrandAssets};
 mod registry;
 
 // Why: core's stock `/v1/bridge/whoami` answers only id, email, name and roles;
-// this envelope adds the ADFS issuer, AD groups, department and seat, and core
-// forwards the unknown keys verbatim.
+// this envelope adds the SSO issuer, directory groups, department and seat, and
+// core forwards the unknown keys verbatim.
 systemprompt_bridge::register_identity_source!("/api/public/bridge/whoami");
 
-static ASTOUND_BRAND: Brand = Brand {
-    app_name: "Astound Bridge",
-    binary_name: "astound-bridge",
+static DYNAPPS_BRAND: Brand = Brand {
+    app_name: "Dynapps Bridge",
+    binary_name: "dynapps-bridge",
     version: env!("CARGO_PKG_VERSION"),
-    vendor: "Astound Digital",
-    config_dir: "astound",
-    config_file: "astound-bridge.toml",
-    pat_file: "astound-bridge.pat",
-    working_dir_name: "astound-bridge",
-    workspace_dir_name: "Astound",
-    keyring_service: "astound-bridge.oauth-client",
-    env_prefix: "ASTOUND_BRIDGE",
-    default_gateway_url: "https://sp-dev.astound.digital",
+    vendor: "Dynapps",
+    config_dir: "dynapps",
+    config_file: "dynapps-bridge.toml",
+    pat_file: "dynapps-bridge.pat",
+    working_dir_name: "dynapps-bridge",
+    workspace_dir_name: "Dynapps",
+    keyring_service: "dynapps-bridge.oauth-client",
+    env_prefix: "DYNAPPS_BRIDGE",
+    default_gateway_url: "https://dynapps.systemprompt.io",
     // Why: the gateway mounts this page under /bridge-auth, not core's default /bridge.
     device_link_path: "/bridge-auth/device-link",
-    tray_tooltip: "Astound Bridge",
-    window_title: "Astound Bridge",
-    app_menu_name: "Astound Bridge",
+    tray_tooltip: "Dynapps Bridge",
+    window_title: "Dynapps Bridge",
+    app_menu_name: "Dynapps Bridge",
     sign_in_label: "Sign in",
-    sign_in_hint: "Opens your browser — sign in with Astound SSO. This device is linked \
+    sign_in_hint: "Opens your browser — sign in with Microsoft Entra ID. This device is linked \
                    automatically once you approve.",
-    docs_url: "https://astound.systemprompt.io/documentation",
+    docs_url: "https://dynapps.systemprompt.io/documentation",
     contact_email: "ed@systemprompt.io",
     pitch_head: "Govern every coding agent.",
     pitch_body: "One gateway. Every agent. Every tool call audited.",
-    schedule_label: "com.astounddigital.bridge-sync",
-    schedule_unit: "astound-bridge-sync",
-    schedule_task_name: "AstoundBridgeSync",
-    autostart_label: "com.astounddigital.bridge-gui",
-    autostart_task_name: "AstoundBridgeGui",
-    aumid: "com.astounddigital.bridge",
+    schedule_label: "com.dynapps.bridge-sync",
+    schedule_unit: "dynapps-bridge-sync",
+    schedule_task_name: "DynappsBridgeSync",
+    autostart_label: "com.dynapps.bridge-gui",
+    autostart_task_name: "DynappsBridgeGui",
+    aumid: "com.dynapps.bridge",
     force_dark: true,
     // Why: cargo/sccache only re-embed a regenerated asset read from OUT_DIR,
     // where build.rs copies them.
@@ -67,5 +67,5 @@ static ASTOUND_BRAND: Brand = Brand {
 };
 
 fn main() -> ExitCode {
-    systemprompt_bridge::run_with_brand(&ASTOUND_BRAND)
+    systemprompt_bridge::run_with_brand(&DYNAPPS_BRAND)
 }

@@ -23,13 +23,13 @@ install_sh_refuses_darwin() {
             --download-base "$base" --no-claude-code 2>&1 < /dev/null)" || status=$?
         if [ "$os" = Darwin ]; then
             [ "$status" -eq 1 ] || { echo "FAIL: install.sh on Darwin exited $status, want 1" >&2; exit 1; }
-            grep -Fq "$base/astound-bridge-macos.dmg" <<< "$out" \
+            grep -Fq "$base/dynapps-bridge-macos.dmg" <<< "$out" \
                 || { echo "FAIL: install.sh on Darwin does not name the dmg: $out" >&2; exit 1; }
             if grep -Fq 'downloading' <<< "$out" || [ -e "$work/home/.local" ]; then
                 echo "FAIL: install.sh on Darwin went on to download or install" >&2; exit 1
             fi
         else
-            grep -Fq 'downloading astound-bridge-linux-aarch64.tar.gz' <<< "$out" \
+            grep -Fq 'downloading dynapps-bridge-linux-aarch64.tar.gz' <<< "$out" \
                 || { echo "FAIL: install.sh on Linux arm64 no longer reaches the aarch64 download: $out" >&2; exit 1; }
         fi
     done
@@ -52,12 +52,12 @@ cleanup() {
 }
 trap cleanup EXIT
 hdiutil attach "$DMG" -readonly -nobrowse -mountpoint "$MOUNT" -quiet
-ditto "$MOUNT/AstoundBridge.app" "$WORK/AstoundBridge.app"
+ditto "$MOUNT/DynappsBridge.app" "$WORK/DynappsBridge.app"
 hdiutil detach "$MOUNT" -quiet
-BIN="$WORK/AstoundBridge.app/Contents/MacOS/astound-bridge"
-export ASTOUND_BRIDGE_CONFIG="$WORK/config/astound-bridge.toml"
+BIN="$WORK/DynappsBridge.app/Contents/MacOS/dynapps-bridge"
+export DYNAPPS_BRIDGE_CONFIG="$WORK/config/dynapps-bridge.toml"
 export XDG_CONFIG_HOME="$WORK/config" XDG_DATA_HOME="$WORK/data" XDG_CACHE_HOME="$WORK/cache"
-unset ASTOUND_BRIDGE_PAT
+unset DYNAPPS_BRIDGE_PAT
 mkdir -p "$XDG_CONFIG_HOME" "$XDG_DATA_HOME" "$XDG_CACHE_HOME"
 "$BIN" --version
 "$BIN" --help > "$WORK/help.txt"
@@ -74,10 +74,10 @@ login_link() {
     grep -Fq "$expected_url/bridge-auth/device-link" "$WORK/login.txt"
     grep -Fq 'nothing pasted' "$WORK/login.txt"
 }
-login_link https://sp-dev.astound.digital
+login_link https://dynapps.es
 login_link http://127.0.0.1:18081 --gateway http://127.0.0.1:18081
-printf 'gateway_url = "http://127.0.0.1:18082"\n' > "$ASTOUND_BRIDGE_CONFIG"
+printf 'gateway_url = "http://127.0.0.1:18082"\n' > "$DYNAPPS_BRIDGE_CONFIG"
 login_link http://127.0.0.1:18082
 login_link http://127.0.0.1:18083 --gateway http://127.0.0.1:18083
-grep -Fq 'http://127.0.0.1:18082' "$ASTOUND_BRIDGE_CONFIG"
-echo "PASS: $(uname -m) packaged CLI, Astound default, explicit and saved gateway overrides, empty-login rejection"
+grep -Fq 'http://127.0.0.1:18082' "$DYNAPPS_BRIDGE_CONFIG"
+echo "PASS: $(uname -m) packaged CLI, Dynapps default, explicit and saved gateway overrides, empty-login rejection"

@@ -12,7 +12,7 @@ mcp_servers:
     tool_policy: allow
     display_in_web: true
     removable: false
-    description: Astound Digital MCP Server - Execute CLI commands (admin only)
+    description: Dynapps MCP Server - Execute CLI commands (admin only)
     oauth:
       required: true
       scopes:

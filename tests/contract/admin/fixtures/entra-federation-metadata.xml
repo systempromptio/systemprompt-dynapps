@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Test-only Microsoft Entra ID federation metadata: a placeholder tenant and a self-signed certificate whose private key was discarded. -->
+<EntityDescriptor ID="_entra-fixture" entityID="https://sts.windows.net/00000000-0000-4000-8000-000000000e17/" xmlns="urn:oasis:names:tc:SAML:2.0:metadata">
+  <IDPSSODescriptor protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
+    <KeyDescriptor use="signing">
+      <KeyInfo xmlns="http://www.w3.org/2000/09/xmldsig#">
+        <X509Data>
+          <X509Certificate>MIIDSTCCAjGgAwIBAgIUfixsEX/lmH0yZZGZN0KCLhwfZpgwDQYJKoZIhvcNAQELBQAwNDEyMDAGA1UEAwwpTWljcm9zb2Z0IEF6dXJlIEZlZGVyYXRlZCBTU08gQ2VydGlmaWNhdGUwHhcNMjYxMDEyMDk0MjM2WhcNMzYxMDA5MDk0MjM2WjA0MTIwMAYDVQQDDClNaWNyb3NvZnQgQXp1cmUgRmVkZXJhdGVkIFNTTyBDZXJ0aWZpY2F0ZTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAL2G05/es+Zp5DvfiasWgwm2M5Id6m7qPkRCbxg8CdDx/Vpmk1ajMvJr+aNQWmBik2QNXKpxrySY8Pw9Ufo///O3R6MNuxyM/PB+NCoEK2swFomFrDbB3+FLNjAgImaXgCXHVNlF2MZe/TrKNyfPEoQk1t3BOEKvbOPH/hwckV7XyIC//bQlwqdVXG8N1U+BmbpsI0u4utBhRyAICccITAvDrMSqNMDngg5Rl2OG6YtSE3kHZ2u/OyrHqtTB6btI68/1Y2LYAiaF/YG/VTOhLPC7QKVEdk98krfAOu8pV6/vx6t5nSn8YwFNshQpUPc2HNc4rKYZyg+ABkMh+VB1QMUCAwEAAaNTMFEwHQYDVR0OBBYEFGezWZxmyfrQA6C+EQFtylUDqYB8MB8GA1UdIwQYMBaAFGezWZxmyfrQA6C+EQFtylUDqYB8MA8GA1UdEwEB/wQFMAMBAf8wDQYJKoZIhvcNAQELBQADggEBAJSUBt3FjjSwlyZaaTVgDUlTaR2m08OezUZI6CpI7AYkUkHvcLNHXpEpsNbCD2dNrBg8gUVkVivlo4TMtomtrMvUjEnjGBfSETjkETrdkQd3z/3t3OezmamowFzmEKBqkWRCCOpP6ySpVF6y+jJ+OBFAy2rO3sQCc0KOtlQ38ntYZpnsYAV2o+fEk1qn/nSKMWj2tGz6FQEiJwMufi+uvT7grZXKwkxpK0qjIMcx7iGN/atYkWJzk9v/CZSdotPfNPJufiIrAjqMAHxBTiJRldXsuMLTLFO1QptLoJWH2jc0Mao4KiIpjeo8tkFpI2/tX2wemPC661DP0VXt8rF2yL0=</X509Certificate>
+        </X509Data>
+      </KeyInfo>
+    </KeyDescriptor>
+    <SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="https://login.microsoftonline.com/00000000-0000-4000-8000-000000000e17/saml2" />
+    <SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="https://login.microsoftonline.com/00000000-0000-4000-8000-000000000e17/saml2" />
+    <SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://login.microsoftonline.com/00000000-0000-4000-8000-000000000e17/saml2" />
+  </IDPSSODescriptor>
+</EntityDescriptor>

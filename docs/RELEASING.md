@@ -14,15 +14,15 @@ the published core — is in [BRANCHING.md](BRANCHING.md); read it first.
 
 ## Versioning policy
 
-Astound and core carry **separate** versions. Astound's version (the workspace
+Dynapps and core carry **separate** versions. Dynapps's version (the workspace
 `version`, `bridge/Cargo.toml`, the profile template, the operator docs) → git
 tag `vX.Y.Z` → image tag `X.Y.Z`; `scripts/sync-release-version.sh X.Y.Z`
 writes it and `--check` gates it. The core pins in both manifests and
 `bridge/CORE_REF = vC.D.E` name the published core it builds on;
 `scripts/sync-core-version.sh C.D.E` writes them and `--check` gates them. A
-core release normally means an astound release, but an astound release (a
+core release normally means an dynapps release, but an dynapps release (a
 fix, or a re-release after a failed run) needs no core release: bump only
-astound's version.
+Dynapps's version.
 
 Because the version is core's, most pushes to `main` will *not* carry a new
 version. That is fine: the workflow is create-once for everything versioned
@@ -32,12 +32,12 @@ and only moves the floating tags on a repeat (see *Idempotency*).
 
 | artifact | where | tag / name | signed by |
 |---|---|---|---|
-| gateway image, amd64 + arm64 | `ghcr.io/astound-digital/systemprompt-astound` (private) | `X.Y.Z` (create-once), `latest`, `sha-<7>` | cosign keyless |
-| server binaries tarball (`bin/systemprompt` + every `bin/systemprompt-mcp-*`, `services/`, MCP manifests) — consumed by `just fetch-release` / `setup-local` | GitHub Release `vX.Y.Z` | `systemprompt-astound-server-X.Y.Z-linux-{amd64,arm64}.tar.gz` | cosign keyless |
-| bridge, Linux | Release **and** baked into the image at `/files/downloads/` | `astound-bridge-linux-{x86_64,aarch64}.tar.gz` + `.sha256` | cosign keyless |
-| bridge, macOS universal | same | `astound-bridge-macos.dmg` + `.sha256` | cosign; Apple notarization when the `APPLE_*` secrets exist |
-| bridge, macOS self-updater | Release only (the gateway's `/v1/bridge/latest` feed proxies it; `bridge_releases.assets.macos`) | `astound-bridge-macos.zip` + `.sha256` — the same stapled `.app` as the dmg, zipped with `ditto` | cosign; Apple notarization |
-| bridge, Windows x64 | same | `astound-bridge-windows.exe` + `.sha256` | cosign; Authenticode when the `WINDOWS_CERT_*` secrets exist |
+| gateway image, amd64 + arm64 | `ghcr.io/systempromptio/systemprompt-dynapps` (private) | `X.Y.Z` (create-once), `latest`, `sha-<7>` | cosign keyless |
+| server binaries tarball (`bin/systemprompt` + every `bin/systemprompt-mcp-*`, `services/`, MCP manifests) — consumed by `just fetch-release` / `setup-local` | GitHub Release `vX.Y.Z` | `systemprompt-dynapps-server-X.Y.Z-linux-{amd64,arm64}.tar.gz` | cosign keyless |
+| bridge, Linux | Release **and** baked into the image at `/files/downloads/` | `dynapps-bridge-linux-{x86_64,aarch64}.tar.gz` + `.sha256` | cosign keyless |
+| bridge, macOS universal | same | `dynapps-bridge-macos.dmg` + `.sha256` | cosign; Apple notarization when the `APPLE_*` secrets exist |
+| bridge, macOS self-updater | Release only (the gateway's `/v1/bridge/latest` feed proxies it; `bridge_releases.assets.macos`) | `dynapps-bridge-macos.zip` + `.sha256` — the same stapled `.app` as the dmg, zipped with `ditto` | cosign; Apple notarization |
+| bridge, Windows x64 | same | `dynapps-bridge-windows.exe` + `.sha256` | cosign; Authenticode when the `WINDOWS_CERT_*` secrets exist |
 | installer | same | `install.sh` (release copy points at the release; image copy at the gateway) | cosign keyless |
 | checksums | Release | `SHA256SUMS` + `.sig`/`.pem` | cosign keyless |
 
@@ -111,7 +111,7 @@ scripts/sync-core-version.sh NEW --check            # must be silent
 
 `sync-core-version.sh` covers every core pin in both manifests plus a
 residual sweep that fails on any core pin it does not itself move — so a pin
-added to a new crate cannot sit stale. Astound's own version is
+added to a new crate cannot sit stale. Dynapps's own version is
 `sync-release-version.sh` and belongs to Step A, not here.
 
 Then prove it, in this order — each step catches a class the previous one
@@ -237,7 +237,7 @@ with:
 
 ```bash
 cosign verify-blob \
-  --certificate-identity-regexp='https://github.com/Astound-Digital/systemprompt-astound/' \
+  --certificate-identity-regexp='https://github.com/systempromptio/systemprompt-dynapps/' \
   --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
   --signature SHA256SUMS.sig --certificate SHA256SUMS.pem SHA256SUMS
 ```
@@ -263,7 +263,7 @@ Run `bash scripts/provision-apple-signing.sh` on a Mac with the existing
 Developer ID certificate/private key and App Store Connect API key. Set
 `APPLE_CERT_PEM`, `APPLE_PRIVATE_KEY_PEM`, `APPLE_NOTARY_KEY` to their file paths,
 and `APPLE_API_KEY_ID` and `APPLE_API_ISSUER_ID` to the App Store Connect metadata.
-`APPLE_SIGNING_REPO` defaults to `Astound-Digital/systemprompt-astound` and
+`APPLE_SIGNING_REPO` defaults to `systempromptio/systemprompt-dynapps` and
 `APPLE_TEAM_ID` must match the signing certificate’s development team.
 
 The script validates the matching key pair, certificate expiry, team and
@@ -275,7 +275,7 @@ belongs in git or workflow inputs. Both normal releases and repairs use
 
 ## Versions in documentation
 
-`scripts/sync-release-version.sh X.Y.Z` (astound's version) also rewrites
+`scripts/sync-release-version.sh X.Y.Z` (Dynapps's version) also rewrites
 the image pins in the operator docs (`deploy/self-host/*.md`,
 `docs/install/*.md`), and its `--check` refuses any other `0.x.y` there. Hosted
 pages under `services/content/` never carry a literal version: they write
@@ -286,7 +286,7 @@ so the site can only ever describe the release it is running.
 ## First-run checklist (one-off, before the first push to `main`)
 
 - [ ] Repository → Actions → General → *Workflow permissions: read and write* (or rely on the per-workflow `permissions:` block, which is set).
-- [ ] After the first successful run: Packages → `systemprompt-astound` → *Manage access* → grant the team read.
+- [ ] After the first successful run: Packages → `systemprompt-dynapps` → *Manage access* → grant the team read.
 - [ ] Branch protection on `main` requiring `Gates passed` — unavailable on the Free plan for a private repo; `just release` enforces it instead (`scripts/check-gates-green.sh`).
 - [ ] Provision the required Apple signing secrets above; optionally add Windows signing.
 
@@ -318,7 +318,7 @@ each exists because a 0.58 → 0.60 client upgrade failed without it:
   a migration (`ALTER TABLE … DISABLE TRIGGER <name>`): it fails on a
   database where the trigger is already retired, and boot refuses it.
 - **Retirements run before any migration.** A trigger, function or view an
-  extension retires goes in its `retirements()` (astound:
+  extension retires goes in its `retirements()` (dynapps:
   `extensions/web/schema/retire/*.sql`, `DROP … IF EXISTS` only), not only in
   a migration: core migrates first, and a table core drops must not outlive
   the trigger that writes it.

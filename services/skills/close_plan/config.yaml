@@ -6,7 +6,7 @@ description: Build a customer-facing business case and dated mutual action plan 
 enabled: true
 file: SKILL.md
 tags:
-- astound
+- dynapps
 - salesforce
 - sales
 category: business

@@ -6,7 +6,7 @@ description: Compile attributable customer quotes and themes from Salesforce mee
 enabled: true
 file: SKILL.md
 tags:
-- astound
+- dynapps
 - salesforce
 - sales
 category: business

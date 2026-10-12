@@ -1,7 +1,7 @@
 ---
 title: "Skills: Lifecycle & Managed Revisions"
-description: "Maintainer guide to the Astound skill lifecycle: authoring, discovery, signed distribution, runtime loading, invocation measurement, and how disk skills relate to managed revisions."
-author: "Astound Digital"
+description: "Maintainer guide to the Dynapps skill lifecycle: authoring, discovery, signed distribution, runtime loading, invocation measurement, and how disk skills relate to managed revisions."
+author: "Dynapps"
 slug: "skills-lifecycle"
 keywords: "skills, revisions, bundles, publication, attribution, managed resources"
 kind: "guide"
@@ -30,7 +30,7 @@ related_docs:
 # Skills: lifecycle & managed revisions
 
 **TL;DR:** A skill is a versionable package of instructions and supporting files,
-not a model or a permission grant. Astound discovers skills from `services/skills/`,
+not a model or a permission grant. Dynapps discovers skills from `services/skills/`,
 projects eligible skills into signed client bundles, and records authenticated
 invocations for analysis. Analysis observes, compares and measures those skills by
 version; it does not run skills against datasets, and publishing a revision is a
@@ -62,7 +62,7 @@ publication record that says which revision each installation received.
 | Compare two marketplace versions or read a version's provenance | [Versions](/documentation/analysis-versions) |
 | Publish, withdraw or roll back a revision | [Analysis overview](/documentation/analysis) |
 
-Astound supplies configuration, admin presentation, and acceptance checks. The
+Dynapps supplies configuration, admin presentation, and acceptance checks. The
 pinned `systemprompt-core` crates supply skill loading, catalog and bundle assembly,
 managed revisions, publication, and accounting. PostgreSQL is the persistent store
 for requests, revisions, publications, receipts, and audit records.

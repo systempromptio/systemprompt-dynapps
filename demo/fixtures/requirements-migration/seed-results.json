@@ -2,7 +2,7 @@
   "dataset": "demo-spa-migration",
   "jira_issue_count": 60,
   "confluence_source_count": 20,
-  "root_page": "https://astounddigital.atlassian.net/wiki/spaces/EAICOMM/pages/1374322821",
+  "root_page": "https://dynapps.atlassian.net/wiki/spaces/EAICOMM/pages/1374322821",
   "records": {
     "PAGE-01": {
       "id": "1374322821",

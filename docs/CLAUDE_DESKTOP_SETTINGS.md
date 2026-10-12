@@ -208,4 +208,4 @@ native web/tool-search definitions select the Anthropic API route; ordinary
 inference continues to use Vertex. Tool search is enabled in the fleet profile.
 The installed Desktop version and an actual 300K/700K task must be verified
 before claiming the compaction incident is resolved. Staging and the live
-Astound endpoint must be verified separately, including downloaded binaries.
+Dynapps endpoint must be verified separately, including downloaded binaries.

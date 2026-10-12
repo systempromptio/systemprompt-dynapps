@@ -2,7 +2,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 version="${1:?usage: release.sh X.Y.Z}"
-repo=Astound-Digital/systemprompt-astound
+repo=systempromptio/systemprompt-dynapps
 die() { echo "release: $*" >&2; exit 1; }
 [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || die 'expected X.Y.Z'
 [ -z "$(git status --porcelain)" ] || die 'working tree is not clean'

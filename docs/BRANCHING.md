@@ -83,7 +83,7 @@ must name a commit that exists on GitHub, so push core before pushing here.
 ```bash
 # Remove BOTH [patch.crates-io] blocks, then prepare every version pin and CORE_REF.
 scripts/sync-core-version.sh C.D.E           # core pins + bridge/CORE_REF
-scripts/sync-release-version.sh X.Y.Z        # astound's own version
+scripts/sync-release-version.sh X.Y.Z        # Dynapps's own version
 cargo update -w
 cargo update -w --manifest-path tests/Cargo.toml
 cargo update -w --manifest-path bridge/Cargo.toml
@@ -109,9 +109,9 @@ version when core moves past X.Y.Z.
 
 ## Emergency patch releases
 
-Create `hotfix/<astound-version>/<main-base-sha>` in a separate worktree from
+Create `hotfix/<dynapps-version>/<main-base-sha>` in a separate worktree from
 `origin/main`. Keep the published core pins and `bridge/CORE_REF` unchanged;
-bump only Astound's release version. Emergency PR gates run static checks, the complete lint tier and focused
+bump only Dynapps's release version. Emergency PR gates run static checks, the complete lint tier and focused
 Salesforce/OAuth unit regressions; the full test matrix continues in a separate
 nonblocking job. They verify the frozen base, candidate tree and published core. Before merging,
 run `scripts/check-hotfix-green.sh <head-sha> <branch> <main-base-sha>` and verify

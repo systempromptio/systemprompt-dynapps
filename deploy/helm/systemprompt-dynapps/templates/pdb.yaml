@@ -2,13 +2,13 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: {{ include "astound.fullname" . }}-gateway
+  name: {{ include "dynapps.fullname" . }}-gateway
   labels:
-    {{- include "astound.labels" . | nindent 4 }}
+    {{- include "dynapps.labels" . | nindent 4 }}
     app.kubernetes.io/component: gateway
 spec:
   minAvailable: {{ .Values.gateway.pdb.minAvailable }}
   selector:
     matchLabels:
-      {{- include "astound.selectorLabels" (dict "ctx" . "component" "gateway") | nindent 6 }}
+      {{- include "dynapps.selectorLabels" (dict "ctx" . "component" "gateway") | nindent 6 }}
 {{- end }}

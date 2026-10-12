@@ -238,7 +238,7 @@ fn atlassian_identity_accepts_wrapped_and_text_tool_results() {
 fn atlassian_sites_accepts_wrapped_array_and_ignores_empty_structured_content() {
     use serde_json::json;
     use systemprompt_web_admin_platform::connector_oauth::payload::atlassian_sites;
-    let sites = json!([{"id":"cloud-123","url":"https://astounddigital.atlassian.net"}]);
+    let sites = json!([{"id":"cloud-123","url":"https://dynapps.atlassian.net"}]);
     for response in [
         json!({"structuredContent":{"result":sites}}),
         json!({"structuredContent":{},"content":[{"text":sites.to_string()}]}),
@@ -263,10 +263,10 @@ fn atlassian_v2_resources_use_cloud_id_without_url() {
 fn atlassian_site_lookup_cannot_target_arbitrary_hosts() {
     use systemprompt_web_admin_platform::connector_oauth::site::tenant_metadata_url;
     assert_eq!(
-        tenant_metadata_url("https://astounddigital.atlassian.net")
+        tenant_metadata_url("https://dynapps.atlassian.net")
             .unwrap()
             .as_str(),
-        "https://astounddigital.atlassian.net/_edge/tenant_info"
+        "https://dynapps.atlassian.net/_edge/tenant_info"
     );
     for site in [
         "http://example.atlassian.net",
@@ -557,7 +557,7 @@ async fn google_shaped_connector_sends_offline_params_and_reads_userinfo() {
         .unwrap();
     verify::verify_with_client(&mut grant, &http).await.unwrap();
     assert_eq!(grant.account_id, "1029384756");
-    assert_eq!(grant.account_name, "sales.tester@astound.example");
+    assert_eq!(grant.account_name, "sales.tester@dynapps.example");
     assert_eq!(grant.resource_name, format!("{origin}/mcp"));
 }
 

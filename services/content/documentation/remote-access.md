@@ -1,7 +1,7 @@
 ---
 title: "Expose Your Instance Remotely"
 description: "Take the gateway from 127.0.0.1 to a public HTTPS URL: profile changes, nginx with TLS, and why you can stay on the local profile."
-author: "Astound Digital"
+author: "Dynapps"
 slug: "remote-access"
 keywords: "remote access, 0.0.0.0, bind address, nginx, TLS, https, reverse proxy, profile, local, production, cors, jwt issuer, trusted proxies"
 kind: "guide"

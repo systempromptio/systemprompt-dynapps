@@ -6,7 +6,7 @@ description: 'Create today''s sales briefing from Salesforce events, near-term a
 enabled: true
 file: SKILL.md
 tags:
-- astound
+- dynapps
 - salesforce
 - sales
 category: business

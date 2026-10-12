@@ -88,11 +88,11 @@ e2e_host_client_home() {
 }
 
 # Kill only the processes this run started. They are identified by the
-# throwaway HOME in their environment, never by name: `pkill astound-bridge`
+# throwaway HOME in their environment, never by name: `pkill dynapps-bridge`
 # would take out a proxy the developer is using on this same machine.
 e2e_host_kill_bridge() {
     local pid
-    for pid in $(pgrep -f 'astound-bridge' 2>/dev/null || true); do
+    for pid in $(pgrep -f 'dynapps-bridge' 2>/dev/null || true); do
         if tr '\0' '\n' <"/proc/$pid/environ" 2>/dev/null | grep -qx "HOME=$CLIENT_HOME"; then
             kill "$pid" 2>/dev/null || true
         fi
@@ -143,7 +143,7 @@ cx_host() {
         HOME="$CLIENT_HOME" \
         XDG_CONFIG_HOME="$CLIENT_HOME/.config" \
         XDG_CACHE_HOME="$CLIENT_HOME/.cache" \
-        ASTOUND_BRIDGE_GATEWAY_URL="$GATEWAY" \
+        DYNAPPS_BRIDGE_GATEWAY_URL="$GATEWAY" \
         PATH="${E2E_CLIENT_PATH:+$E2E_CLIENT_PATH:}$CLIENT_HOME/.local/bin:$PATH" \
         bash -lc "$1" </dev/null
 }
@@ -184,7 +184,7 @@ e2e_mcp_url() { printf 'http://127.0.0.1:%s/mcp/%s' "$E2E_PROXY_PORT" "$1"; }
 # leave SID + MH set. Exits 3 when the proxy answers with no session.
 E2E_MCP_SESSION_SH='
 set -uo pipefail
-KEY=$(cat "${XDG_CONFIG_HOME:-$HOME/.config}/astound/bridge-loopback.key")
+KEY=$(cat "${XDG_CONFIG_HOME:-$HOME/.config}/dynapps/bridge-loopback.key")
 MH=(-H content-type:application/json -H "accept:application/json,text/event-stream" -H "Authorization: Bearer $KEY")
 HDR=$(mktemp)
 curl -sS -D "$HDR" -o /dev/null -X POST "$URL" "${MH[@]}" \
@@ -224,7 +224,7 @@ e2e_mcp_call() { e2e_mcp_call_at "$(e2e_mcp_url "$1")" "$2" "${3:-}"; }
 # The HTTP status the proxy answers /mcp/<server> with, for a bare initialize.
 # A server the principal is not entitled to must not answer 2xx.
 e2e_mcp_status() {
-    cx 'KEY=$(cat "${XDG_CONFIG_HOME:-$HOME/.config}/astound/bridge-loopback.key" 2>/dev/null)
+    cx 'KEY=$(cat "${XDG_CONFIG_HOME:-$HOME/.config}/dynapps/bridge-loopback.key" 2>/dev/null)
 curl -sS -o /dev/null -w "%{http_code}" -X POST "'"$(e2e_mcp_url "$1")"'" \
   -H "Authorization: Bearer $KEY" -H content-type:application/json \
   -H "accept:application/json,text/event-stream" \

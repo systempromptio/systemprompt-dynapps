@@ -1,9 +1,9 @@
 //! Stateful acceptance for marketplace004–011, analytics005–007, AI024 and
-//! Astound059–070 on fresh and real release-upgrade paths. The release fixture
+//! web 059–070 on fresh and real release-upgrade paths. The release fixture
 //! still carries the evaluation engine's tables; marketplace011 drops them on
 //! the upgrade path and they never exist on the fresh one.
 
-use astound_test_common::TempDb;
+use dynapps_test_common::TempDb;
 use sqlx::PgPool;
 use systemprompt::database::{MigrationConfig, install_extension_schemas_full};
 use systemprompt::extension::ExtensionRegistry;

@@ -1,7 +1,7 @@
 ---
 title: "Deploy on Google Kubernetes Engine"
 description: "The Helm chart for GKE: a scalable gateway tier, one admin pod, a migration Job before every rollout, Cloud SQL through the Auth Proxy with IAM auth, Secret Manager as a file, GCS for files and Pod Security restricted."
-author: "Astound Digital"
+author: "Dynapps"
 slug: "deploy-gke"
 keywords: "gke, google kubernetes engine, helm, cloud sql auth proxy, secret manager, workload identity, gcs, hpa, pod disruption budget, pod security restricted, deploy"
 kind: "guide"
@@ -28,7 +28,7 @@ related_playbooks:
 
 # Deploy on Google Kubernetes Engine
 
-The repository ships a Helm chart, `deploy/helm/systemprompt-astound/`, that
+The repository ships a Helm chart, `deploy/helm/systemprompt-dynapps/`, that
 runs the same image, profile and `secrets.json` as the
 [one-node deployment](/documentation/deploy) on GKE. **The chart is new.** It
 lints and renders cleanly and its profile validates against the profile

@@ -6,7 +6,7 @@ description: Model the impact of a deal slipping, shrinking or being lost from S
 enabled: true
 file: SKILL.md
 tags:
-- astound
+- dynapps
 - salesforce
 - sales
 category: business

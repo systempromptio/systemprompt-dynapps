@@ -1,6 +1,6 @@
 # Required secrets
 
-Everything an Astound operator must provide for Claude Code, OpenCode and
+Everything an Dynapps operator must provide for Claude Code, OpenCode and
 Gemini to work end to end. Each provider entry in
 [`services/ai/providers.yaml`](../../services/ai/providers.yaml) names the
 secret it reads its credential from; the profile secret store supplies the

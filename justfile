@@ -1,4 +1,4 @@
-# systemprompt-astound
+# systemprompt-dynapps
 set dotenv-load
 # Without this, `just cli ... --full-name "Test User"` word-splits the quoted
 # value into two arguments before the CLI ever parses it.
@@ -10,12 +10,13 @@ export SIBLING_REPO := env("SIBLING_REPO", if path_exists("../systemprompt-templ
 
 CLI_RELEASE := "target/release/systemprompt"
 
-# Cloud profile every deploy targets: tenant a2f658d8bc5f, Fly app
-# sp-a2f658d8bc5f, served at https://astound.systemprompt.io.
+# Cloud profile every deploy targets: tenant e43527c1cbb5, Fly app
+# sp-e43527c1cbb5, served at https://dynapps.systemprompt.io
+# (tenant hostname https://e43527c1cbb5.systemprompt.io).
 # See .systemprompt/profiles/production/.
 DEPLOY_PROFILE := "production"
 # Where .github/workflows/release.yml publishes the gateway image.
-IMAGE := "ghcr.io/astound-digital/systemprompt-astound"
+IMAGE := "ghcr.io/systempromptio/systemprompt-dynapps"
 
 # Use newest binary (release vs debug, whichever is most recent)
 CLI := if path_exists("target/release/systemprompt") == "true" { \
@@ -577,9 +578,9 @@ schema-baseline VERSION="":
     if [ -n "$version" ]; then
         [ "$(uname -s)" = "Linux" ] || { echo "schema-baseline: release tarballs are Linux-only" >&2; exit 1; }
         case "$(uname -m)" in x86_64) arch=amd64 ;; aarch64|arm64) arch=arm64 ;; *) echo "schema-baseline: no tarball for $(uname -m)" >&2; exit 1 ;; esac
-        name="systemprompt-astound-server-$version-linux-$arch.tar.gz"
+        name="systemprompt-dynapps-server-$version-linux-$arch.tar.gz"
         echo "schema-baseline: downloading $name"
-        gh release download "v$version" -R Astound-Digital/systemprompt-astound -p "$name" -p SHA256SUMS -D "$tmp"
+        gh release download "v$version" -R systempromptio/systemprompt-dynapps -p "$name" -p SHA256SUMS -D "$tmp"
         (cd "$tmp" && grep " $name\$" SHA256SUMS | sha256sum -c - >/dev/null)
         tar xzf "$tmp/$name" -C "$tmp"
         cli="$tmp/${name%.tar.gz}/bin/systemprompt"
@@ -609,7 +610,7 @@ schema-baseline VERSION="":
         echo "$log" | tail -30; echo "schema-baseline: fresh install failed" >&2; exit 1
     fi
     {
-        echo "-- systemprompt-astound release-baseline: $version (core $core_ref)"
+        echo "-- systemprompt-dynapps release-baseline: $version (core $core_ref)"
         echo "-- Recorded by 'just schema-baseline' from a fresh install; the upgrade test"
         echo "-- restores it and migrates forward. Re-record after every version bump."
         docker exec "$container" pg_dump -U systemprompt --schema-only --no-owner --no-privileges --no-comments "$scratch"
@@ -645,7 +646,7 @@ coverage-html:
     "$TOOLDIR/llvm-cov" show \
         --instr-profile="$ROOT/coverage-report/tests.profdata" \
         $OBJ_ARGS \
-        --ignore-filename-regex="(\.cargo|/rustc/|/registry/|/debug/build/|/tests/|/target/|systemprompt-core/|systemprompt-astound/src/(main|lib)\.rs|bridge/src/main\.rs|extensions/(cli|mcp)/[^/]+/src/main\.rs|extensions/cli/[^/]+/src/commands/|extensions/.*/extension\.rs|build\.rs)" \
+        --ignore-filename-regex="(\.cargo|/rustc/|/registry/|/debug/build/|/tests/|/target/|systemprompt-core/|systemprompt-dynapps/src/(main|lib)\.rs|bridge/src/main\.rs|extensions/(cli|mcp)/[^/]+/src/main\.rs|extensions/cli/[^/]+/src/commands/|extensions/.*/extension\.rs|build\.rs)" \
         --format=html \
         --output-dir="$ROOT/coverage-report/html"
     echo "Coverage report: coverage-report/html/index.html"
@@ -1717,7 +1718,7 @@ bridge-package-windows: core-checkout
 [macos]
 bridge-package-macos: core-checkout
     @scripts/build-coordinator.sh run bridge-package-macos "" -- scripts/package-bridge-macos.sh
-    @bash scripts/verify-bridge-macos.sh storage/files/downloads/astound-bridge-macos.dmg
+    @bash scripts/verify-bridge-macos.sh storage/files/downloads/dynapps-bridge-macos.dmg
 
 # Backfill storage/files/downloads/ from the deployed host. The dir is
 # gitignored and each platform's bridge binary can only be built on that
@@ -1733,7 +1734,7 @@ downloads-fetch:
     @scripts/fetch-remote-downloads.sh
 
 # Install the compiled server + MCP binaries from a GitHub Release instead of
-# building them: `systemprompt-astound-server-<version>-linux-<arch>.tar.gz`
+# building them: `systemprompt-dynapps-server-<version>-linux-<arch>.tar.gz`
 # holds bin/systemprompt and every bin/systemprompt-mcp-* the manifests name,
 # built by the same `cargo build --release --workspace` as the image. The
 # binaries land in target/release/, which is where `just start`, `setup-local`
@@ -1747,10 +1748,10 @@ fetch-release VERSION="":
     [ -n "$v" ] || v=$(sed -n 's/^version = "\([0-9.]*\)"/\1/p' Cargo.toml | head -1)
     [ "$(uname -s)" = "Linux" ] || { echo "fetch-release: the server tarball is Linux-only; on $(uname -s) use the image (docs/install/docker.md) or 'just build --release'." >&2; exit 1; }
     case "$(uname -m)" in x86_64) arch=amd64 ;; aarch64|arm64) arch=arm64 ;; *) echo "fetch-release: no tarball for $(uname -m)" >&2; exit 1 ;; esac
-    name="systemprompt-astound-server-$v-linux-$arch.tar.gz"
+    name="systemprompt-dynapps-server-$v-linux-$arch.tar.gz"
     tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
     echo "==> downloading $name from release v$v"
-    gh release download "v$v" -R Astound-Digital/systemprompt-astound -p "$name" -p SHA256SUMS -D "$tmp" \
+    gh release download "v$v" -R systempromptio/systemprompt-dynapps -p "$name" -p SHA256SUMS -D "$tmp" \
         || { echo "fetch-release: release v$v has no $name (gh auth, or the release does not exist yet)." >&2; exit 1; }
     (cd "$tmp" && grep " $name\$" SHA256SUMS | sha256sum -c -)
     tar xzf "$tmp/$name" -C "$tmp"
@@ -1808,8 +1809,8 @@ claude CODE="" GATEWAY="http://localhost:8080":
     REPO_HASH="$(printf '%s' "{{justfile_directory()}}" | sha256sum | cut -c1-8)"
     GW_SLUG="$(printf '%s' "$GATEWAY" | sed -e 's|^https\?://||' -e 's|[^A-Za-z0-9]|-|g')"
     SCOPE="${REPO_SLUG}-${REPO_HASH}-${GW_SLUG}"
-    VOL="astound-claude-${SCOPE}"
-    NAME="astound-claude-${SCOPE}"
+    VOL="dynapps-claude-${SCOPE}"
+    NAME="dynapps-claude-${SCOPE}"
 
     if [ "$(docker inspect -f '{{{{.State.Running}}}}' "$NAME" 2>/dev/null)" = "true" ]; then
         echo "Already running for this repo — opening another session in it."
@@ -1817,7 +1818,7 @@ claude CODE="" GATEWAY="http://localhost:8080":
     fi
     docker rm -f "$NAME" >/dev/null 2>&1 || true
 
-    if ! docker image inspect astound-clean-client:local >/dev/null 2>&1; then
+    if ! docker image inspect dynapps-clean-client:local >/dev/null 2>&1; then
         echo "Image missing — building it first." >&2
         just clean-client-build
     fi
@@ -1827,7 +1828,7 @@ claude CODE="" GATEWAY="http://localhost:8080":
     # checkout present. `bridge-build` fetches it. Do this before the code is
     # spent: a first-run compile can outlive the code's 10-minute TTL, so
     # `just bridge-build` belongs in setup rather than here.
-    BRIDGE="{{justfile_directory()}}/bridge/target/release/astound-bridge"
+    BRIDGE="{{justfile_directory()}}/bridge/target/release/dynapps-bridge"
     if [ ! -f "$BRIDGE" ] || [ ! -x "$BRIDGE" ]; then
         echo "Client not built yet — fetching core and building it."
         echo "warn: a first build takes minutes and the code expires in 10." >&2
@@ -1850,7 +1851,7 @@ claude CODE="" GATEWAY="http://localhost:8080":
     gateway_reachable() {
         docker run --rm --entrypoint curl \
             --add-host host.docker.internal:host-gateway \
-            astound-clean-client:local \
+            dynapps-clean-client:local \
             -sf --max-time 5 "$GATEWAY/health" 2>/dev/null | grep -Eq '"status" *: *"healthy"'
     }
 
@@ -1947,11 +1948,11 @@ claude CODE="" GATEWAY="http://localhost:8080":
     # caller sees as a hang.
     CODE_ENV=()
     if [ -n "{{CODE}}" ]; then
-        CODE_ENV=(-e ASTOUND_BRIDGE_CODE="{{CODE}}")
+        CODE_ENV=(-e DYNAPPS_BRIDGE_CODE="{{CODE}}")
     elif ! docker run --rm --entrypoint test \
             -v "$VOL":/home/tester \
-            astound-clean-client:local \
-            -f /home/tester/.config/astound/astound-bridge.pat >/dev/null 2>&1; then
+            dynapps-clean-client:local \
+            -f /home/tester/.config/dynapps/dynapps-bridge.pat >/dev/null 2>&1; then
         echo "ERROR: not signed in yet, and no code was given." >&2
         echo "" >&2
         echo "  A code is needed the first time. Take one from /admin/profile:" >&2
@@ -1966,15 +1967,15 @@ claude CODE="" GATEWAY="http://localhost:8080":
         --name "$NAME" \
         --hostname "${REPO_SLUG:0:24}" \
         --add-host host.docker.internal:host-gateway \
-        -e ASTOUND_BRIDGE_GATEWAY_URL="$GATEWAY" \
+        -e DYNAPPS_BRIDGE_GATEWAY_URL="$GATEWAY" \
         "${CODE_ENV[@]}" \
         -e CLEAN_CLIENT_EXEC_CLAUDE=1 \
         -e CLEAN_CLIENT_ALLOW_STATE=1 \
         -v "$VOL":/home/tester \
-        -v "$BRIDGE:/usr/local/bin/astound-bridge:ro" \
+        -v "$BRIDGE:/usr/local/bin/dynapps-bridge:ro" \
         -v "{{justfile_directory()}}/deploy/clean-client/bootstrap.sh:/usr/local/bin/bootstrap.sh:ro" \
         "${PORTS[@]}" \
-        astound-clean-client:local /usr/local/bin/bootstrap.sh
+        dynapps-clean-client:local /usr/local/bin/bootstrap.sh
 
 # ──────────────────────────────────────────────────────────────────────────────
 # CLEAN CLIENT — a config-free Linux box for testing the Claude Code + bridge
@@ -1983,21 +1984,21 @@ claude CODE="" GATEWAY="http://localhost:8080":
 
 # Build the clean-client image (context is deploy/clean-client only — no repo state)
 clean-client-build *ARGS:
-    docker build {{ARGS}} -f deploy/clean-client/Dockerfile -t astound-clean-client:local deploy/clean-client
+    docker build {{ARGS}} -f deploy/clean-client/Dockerfile -t dynapps-clean-client:local deploy/clean-client
 
 # Shell into a clean client. PERSIST=1 keeps the login across runs.
 # GATEWAY overrides the gateway URL (default: this WSL host on :8080).
 clean-client PERSIST="0" GATEWAY="http://host.docker.internal:8080":
     #!/usr/bin/env bash
     set -euo pipefail
-    if ! docker image inspect astound-clean-client:local >/dev/null 2>&1; then
+    if ! docker image inspect dynapps-clean-client:local >/dev/null 2>&1; then
         echo "Image missing — building it first." >&2
         just clean-client-build
     fi
 
     # Mount the bridge you just built, read-only. Absent is not fatal: you can
     # still test Claude Code against the gateway without the bridge installed.
-    BRIDGE="{{justfile_directory()}}/bridge/target/release/astound-bridge"
+    BRIDGE="{{justfile_directory()}}/bridge/target/release/dynapps-bridge"
     MOUNTS=()
     # -f as well as -x: a bare `docker run -v` against a missing path makes
     # docker create a root-owned DIRECTORY there, and `[ -x dir ]` is true, so
@@ -2009,16 +2010,16 @@ clean-client PERSIST="0" GATEWAY="http://host.docker.internal:8080":
         exit 1
     fi
     if [ -f "$BRIDGE" ] && [ -x "$BRIDGE" ]; then
-        MOUNTS+=(-v "$BRIDGE:/usr/local/bin/astound-bridge:ro")
+        MOUNTS+=(-v "$BRIDGE:/usr/local/bin/dynapps-bridge:ro")
     else
         echo "warn: $BRIDGE not found — run 'cd bridge && cargo build --release' for the full flow." >&2
     fi
 
-    # PERSIST keeps ~/.config/astound and ~/.claude in a named volume so a PAT
+    # PERSIST keeps ~/.config/dynapps and ~/.claude in a named volume so a PAT
     # survives a restart. Off by default: a throwaway HOME is the point.
     if [ "{{PERSIST}}" = "1" ]; then
-        MOUNTS+=(-v astound-clean-home:/home/tester -e CLEAN_CLIENT_ALLOW_STATE=1)
-        echo "State persists in volume 'astound-clean-home' — 'just clean-client-reset' wipes it."
+        MOUNTS+=(-v dynapps-clean-home:/home/tester -e CLEAN_CLIENT_ALLOW_STATE=1)
+        echo "State persists in volume 'dynapps-clean-home' — 'just clean-client-reset' wipes it."
     fi
 
     # 8767 is the bridge's plugin-OAuth loopback port; it must be reachable from
@@ -2034,12 +2035,12 @@ clean-client PERSIST="0" GATEWAY="http://host.docker.internal:8080":
     # Note what is deliberately NOT here: no --env-file, no $HOME mounts, no
     # repo mount. The container must start from nothing.
     exec docker run -it --rm \
-        --name astound-clean-client \
+        --name dynapps-clean-client \
         --hostname clean-client \
         --add-host host.docker.internal:host-gateway \
-        -e ASTOUND_BRIDGE_GATEWAY_URL="{{GATEWAY}}" \
+        -e DYNAPPS_BRIDGE_GATEWAY_URL="{{GATEWAY}}" \
         "${MOUNTS[@]}" "${PORTS[@]}" \
-        astound-clean-client:local
+        dynapps-clean-client:local
 
 alias cc := clean-client-ready
 
@@ -2050,29 +2051,29 @@ clean-client-ready GATEWAY="http://host.docker.internal:8080":
 
     # Already running (another terminal has it): open a second shell in it
     # rather than failing on the name conflict.
-    if [ "$(docker inspect -f '{{{{.State.Running}}}}' astound-clean-client 2>/dev/null)" = "true" ]; then
-        echo "Container 'astound-clean-client' is already running — opening a shell in it."
-        exec docker exec -it astound-clean-client bash -l
+    if [ "$(docker inspect -f '{{{{.State.Running}}}}' dynapps-clean-client 2>/dev/null)" = "true" ]; then
+        echo "Container 'dynapps-clean-client' is already running — opening a shell in it."
+        exec docker exec -it dynapps-clean-client bash -l
     fi
 
     # Stopped leftover (a crashed run, or one started without --rm): restart it
     # and shell in, so anything written outside the /home/tester volume survives.
     # Only if it refuses to start do we reclaim the name.
-    if docker inspect astound-clean-client >/dev/null 2>&1; then
-        echo "Container 'astound-clean-client' is stopped — restarting it."
-        if docker start astound-clean-client >/dev/null 2>&1; then
-            exec docker exec -it astound-clean-client bash -l
+    if docker inspect dynapps-clean-client >/dev/null 2>&1; then
+        echo "Container 'dynapps-clean-client' is stopped — restarting it."
+        if docker start dynapps-clean-client >/dev/null 2>&1; then
+            exec docker exec -it dynapps-clean-client bash -l
         fi
         echo "warn: it would not restart — removing it and starting fresh." >&2
-        docker rm -f astound-clean-client >/dev/null
+        docker rm -f dynapps-clean-client >/dev/null
     fi
 
-    if ! docker image inspect astound-clean-client:local >/dev/null 2>&1; then
+    if ! docker image inspect dynapps-clean-client:local >/dev/null 2>&1; then
         echo "Image missing — building it first." >&2
         just clean-client-build
     fi
 
-    BRIDGE="{{justfile_directory()}}/bridge/target/release/astound-bridge"
+    BRIDGE="{{justfile_directory()}}/bridge/target/release/dynapps-bridge"
     if [ ! -f "$BRIDGE" ] || [ ! -x "$BRIDGE" ]; then
         echo "ERROR: $BRIDGE not found — run 'just bridge-build' first." >&2
         exit 1
@@ -2089,16 +2090,16 @@ clean-client-ready GATEWAY="http://host.docker.internal:8080":
     # CLEAN_CLIENT_ALLOW_STATE tells the entrypoint that reuse is deliberate
     # here rather than host config leaking in.
     exec docker run -it --rm \
-        --name astound-clean-client \
+        --name dynapps-clean-client \
         --hostname clean-client \
         --add-host host.docker.internal:host-gateway \
-        -e ASTOUND_BRIDGE_GATEWAY_URL="{{GATEWAY}}" \
+        -e DYNAPPS_BRIDGE_GATEWAY_URL="{{GATEWAY}}" \
         -e CLEAN_CLIENT_ALLOW_STATE=1 \
-        -v astound-clean-home:/home/tester \
-        -v "$BRIDGE:/usr/local/bin/astound-bridge:ro" \
+        -v dynapps-clean-home:/home/tester \
+        -v "$BRIDGE:/usr/local/bin/dynapps-bridge:ro" \
         -v "{{justfile_directory()}}/deploy/clean-client/bootstrap.sh:/usr/local/bin/bootstrap.sh:ro" \
         "${PORTS[@]}" \
-        astound-clean-client:local /usr/local/bin/bootstrap.sh
+        dynapps-clean-client:local /usr/local/bin/bootstrap.sh
 
 # End-to-end: run the published installer with a PAT and assert managed MCP (see script header for how to mint the PAT)
 clean-client-install PAT GATEWAY="http://host.docker.internal:8080":
@@ -2122,12 +2123,12 @@ claude-reset ALL="0":
     # Scoped to this clone by default: signing every other checkout out because
     # one of them wanted a clean slate is not what anyone means by "reset".
     if [ "{{ALL}}" = "1" ]; then
-        FILTER='name=^astound-claude-'
+        FILTER='name=^dynapps-claude-'
         echo "Signing out every repo on this host."
     else
         REPO_SLUG="$(basename "{{justfile_directory()}}" | sed 's|[^A-Za-z0-9]|-|g')"
         REPO_HASH="$(printf '%s' "{{justfile_directory()}}" | sha256sum | cut -c1-8)"
-        FILTER="name=^astound-claude-${REPO_SLUG}-${REPO_HASH}-"
+        FILTER="name=^dynapps-claude-${REPO_SLUG}-${REPO_HASH}-"
     fi
     docker ps -aq --filter "$FILTER" | while read -r c; do
         docker rm -f "$c" >/dev/null 2>&1 && echo "removed container $c"
@@ -2141,8 +2142,8 @@ claude-reset ALL="0":
 
 # Wipe the persisted clean-client state volume
 clean-client-reset:
-    -docker rm -f astound-clean-client 2>/dev/null
-    -docker volume rm astound-clean-home
+    -docker rm -f dynapps-clean-client 2>/dev/null
+    -docker volume rm dynapps-clean-home
     @echo "Clean-client state wiped."
 
 # Isolated dev sandbox on a real project: clean client + the repo mounted at
@@ -2157,11 +2158,11 @@ dev-sandbox REPO PERSIST="0" GATEWAY="http://host.docker.internal:8080":
         echo "ERROR: {{REPO}} is not a directory" >&2
         exit 1
     fi
-    if ! docker image inspect astound-clean-client:local >/dev/null 2>&1; then
+    if ! docker image inspect dynapps-clean-client:local >/dev/null 2>&1; then
         echo "Image missing — building it first." >&2
         just clean-client-build
     fi
-    BRIDGE="{{justfile_directory()}}/bridge/target/release/astound-bridge"
+    BRIDGE="{{justfile_directory()}}/bridge/target/release/dynapps-bridge"
     MOUNTS=(-v "$REPO_ABS:/workspace/project")
     if [ -d "$BRIDGE" ]; then
         echo "ERROR: $BRIDGE is a directory (docker created it from a stale -v mount)." >&2
@@ -2169,13 +2170,13 @@ dev-sandbox REPO PERSIST="0" GATEWAY="http://host.docker.internal:8080":
         exit 1
     fi
     if [ -f "$BRIDGE" ] && [ -x "$BRIDGE" ]; then
-        MOUNTS+=(-v "$BRIDGE:/usr/local/bin/astound-bridge:ro")
+        MOUNTS+=(-v "$BRIDGE:/usr/local/bin/dynapps-bridge:ro")
     else
         echo "warn: $BRIDGE not found — run 'cd bridge && cargo build --release' for the full flow." >&2
     fi
     if [ "{{PERSIST}}" = "1" ]; then
-        MOUNTS+=(-v astound-clean-home:/home/tester -e CLEAN_CLIENT_ALLOW_STATE=1)
-        echo "State persists in volume 'astound-clean-home' — 'just clean-client-reset' wipes it."
+        MOUNTS+=(-v dynapps-clean-home:/home/tester -e CLEAN_CLIENT_ALLOW_STATE=1)
+        echo "State persists in volume 'dynapps-clean-home' — 'just clean-client-reset' wipes it."
     fi
     PORTS=()
     if ss -ltn 2>/dev/null | grep -q ':8767 '; then
@@ -2184,12 +2185,12 @@ dev-sandbox REPO PERSIST="0" GATEWAY="http://host.docker.internal:8080":
         PORTS+=(-p 127.0.0.1:8767:8767)
     fi
     exec docker run -it --rm \
-        --name astound-dev-sandbox \
+        --name dynapps-dev-sandbox \
         --hostname dev-sandbox \
         --add-host host.docker.internal:host-gateway \
-        -e ASTOUND_BRIDGE_GATEWAY_URL="{{GATEWAY}}" \
+        -e DYNAPPS_BRIDGE_GATEWAY_URL="{{GATEWAY}}" \
         "${MOUNTS[@]}" "${PORTS[@]}" \
-        astound-clean-client:local
+        dynapps-clean-client:local
 
 # Test build without pushing
 docker-test:
@@ -2292,7 +2293,7 @@ core-bump version:
     cargo run --bin systemprompt -- infra db migrate --profile local
     just build
     just clippy
-    @echo "core-bump {{version}} complete — set astound's version with scripts/sync-release-version.sh X.Y.Z, then: just preflight && just release X.Y.Z"
+    @echo "core-bump {{version}} complete — set dynapps's version with scripts/sync-release-version.sh X.Y.Z, then: just preflight && just release X.Y.Z"
 
 # Pin bridge/CORE_REF to a core `next` commit while [patch.crates-io] is
 # active (the sibling checkout's HEAD by default). CI checks that ref out.
@@ -2328,7 +2329,7 @@ deploy-release VERSION:
 dashboard-benchmark:
     @scripts/build-coordinator.sh run dashboard-benchmark "release" -- cargo nextest run --manifest-path tests/Cargo.toml --release -p admin-contract-tests --run-ignored only -E 'test(benchmark_dashboard_http)' --no-capture
 
-# Selected core test packages, preserving core serial groups and Astound coordination.
+# Selected core test packages, preserving core serial groups and Dynapps coordination.
 test-core-feedback PACKAGES FILTER="all()":
     @scripts/test-core-feedback.sh "$@"
 

@@ -1,5 +1,5 @@
 {{- if .Values.migrate.enabled }}
-{{- $fullname := include "astound.fullname" . -}}
+{{- $fullname := include "dynapps.fullname" . -}}
 {{- $name := printf "%s-migrate" $fullname -}}
 {{- $hook := "pre-install,pre-upgrade" -}}
 # Every object the Job needs is its own hook copy: on a first install the
@@ -11,7 +11,7 @@ kind: ServiceAccount
 metadata:
   name: {{ $name }}
   labels:
-    {{- include "astound.labels" . | nindent 4 }}
+    {{- include "dynapps.labels" . | nindent 4 }}
     app.kubernetes.io/component: migrate
   annotations:
     helm.sh/hook: {{ $hook }}
@@ -27,7 +27,7 @@ kind: ConfigMap
 metadata:
   name: {{ $name }}-profile
   labels:
-    {{- include "astound.labels" . | nindent 4 }}
+    {{- include "dynapps.labels" . | nindent 4 }}
     app.kubernetes.io/component: migrate
   annotations:
     helm.sh/hook: {{ $hook }}
@@ -35,7 +35,7 @@ metadata:
     helm.sh/hook-delete-policy: before-hook-creation
 data:
   profile.yaml: |
-    {{- include "astound.profile" (dict "ctx" . "role" "admin") | nindent 4 }}
+    {{- include "dynapps.profile" (dict "ctx" . "role" "admin") | nindent 4 }}
 {{- if eq .Values.secrets.mode "csi" }}
 ---
 apiVersion: secrets-store.csi.x-k8s.io/v1
@@ -43,14 +43,14 @@ kind: SecretProviderClass
 metadata:
   name: {{ $name }}-secrets
   labels:
-    {{- include "astound.labels" . | nindent 4 }}
+    {{- include "dynapps.labels" . | nindent 4 }}
     app.kubernetes.io/component: migrate
   annotations:
     helm.sh/hook: {{ $hook }}
     helm.sh/hook-weight: "-10"
     helm.sh/hook-delete-policy: before-hook-creation
 spec:
-  {{- include "astound.spcSpec" . | nindent 2 }}
+  {{- include "dynapps.spcSpec" . | nindent 2 }}
 {{- else if eq .Values.secrets.mode "inline" }}
 ---
 apiVersion: v1
@@ -58,7 +58,7 @@ kind: Secret
 metadata:
   name: {{ $name }}-secrets
   labels:
-    {{- include "astound.labels" . | nindent 4 }}
+    {{- include "dynapps.labels" . | nindent 4 }}
     app.kubernetes.io/component: migrate
   annotations:
     helm.sh/hook: {{ $hook }}
@@ -76,7 +76,7 @@ kind: Job
 metadata:
   name: {{ $name }}
   labels:
-    {{- include "astound.labels" . | nindent 4 }}
+    {{- include "dynapps.labels" . | nindent 4 }}
     app.kubernetes.io/component: migrate
   annotations:
     helm.sh/hook: {{ $hook }}
@@ -90,9 +90,9 @@ spec:
   template:
     metadata:
       labels:
-        {{- include "astound.labels" . | nindent 8 }}
-        {{- include "astound.selectorLabels" (dict "ctx" . "component" "migrate") | nindent 8 }}
+        {{- include "dynapps.labels" . | nindent 8 }}
+        {{- include "dynapps.selectorLabels" (dict "ctx" . "component" "migrate") | nindent 8 }}
     spec:
-      {{- $secretName := ternary (printf "%s-secrets" $name) (include "astound.secretName" .) (eq .Values.secrets.mode "inline") }}
-      {{- include "astound.podSpec" (dict "ctx" . "role" "admin" "component" "migrate" "profileConfigMap" (printf "%s-profile" $name) "serviceAccount" $name "spc" (printf "%s-secrets" $name) "secretName" $secretName "job" true "args" (list "migrate") "resources" .Values.migrate.resources) | nindent 6 }}
+      {{- $secretName := ternary (printf "%s-secrets" $name) (include "dynapps.secretName" .) (eq .Values.secrets.mode "inline") }}
+      {{- include "dynapps.podSpec" (dict "ctx" . "role" "admin" "component" "migrate" "profileConfigMap" (printf "%s-profile" $name) "serviceAccount" $name "spc" (printf "%s-secrets" $name) "secretName" $secretName "job" true "args" (list "migrate") "resources" .Values.migrate.resources) | nindent 6 }}
 {{- end }}

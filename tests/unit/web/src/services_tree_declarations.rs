@@ -228,7 +228,7 @@ fn no_export_carries_a_person() {
             entity_type: "mcp_server".to_owned(),
             entity_id: "atlassian".to_owned(),
             rule_type: "user".to_owned(),
-            rule_value: "someone@astounddigital.com".to_owned(),
+            rule_value: "someone@dynapps.es".to_owned(),
             access: systemprompt_security::authz::Access::Allow,
             justification: Some("override".to_owned()),
             source: "dashboard".to_owned(),
@@ -253,7 +253,7 @@ fn no_export_carries_a_person() {
         source: "yaml".to_owned(),
     }];
     let access = render_export(&rules, &entities, &Owners::default());
-    assert!(!access.contains("someone@astounddigital.com"));
+    assert!(!access.contains("someone@dynapps.es"));
     assert!(!access.contains("user:"));
     assert!(access.contains("group: [uk]") || access.contains("- uk"));
 

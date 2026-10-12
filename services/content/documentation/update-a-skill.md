@@ -1,7 +1,7 @@
 ---
 title: "Update a Skill and Ship It"
 description: "The developer walkthrough: change a skill in a kit repository, prove it locally, open a pull request, merge, and watch it reach the agents that run it — with the gate that refuses a broken tree before it is merged."
-author: "Astound Digital"
+author: "Dynapps"
 slug: "update-a-skill"
 keywords: "skill, kit, SKILL.md, frontmatter, sanitize, publish, bundle, digest, stable channel, import, sync, marketplace, plugin, claude code, cowork"
 kind: "guide"
@@ -39,7 +39,7 @@ The two paths differ, and picking the wrong one wastes a day.
 | | **Kit skill** | **Base skill** |
 |---|---|---|
 | lives in | its own repository — `plugins/<plugin>/skills/<skill>/SKILL.md` | this repository — `services/skills/<skill_id>/` |
-| examples | every Salesforce Core and business-analysis skill (`sf-…`, `ba-…`), the Europe storefront and delivery skills | the skills of the marketplaces this repository declares — `astound-commons`, `astound-salesforce`, `astound-super-admin` |
+| examples | any skill a pinned kit ships (none today) | the skills of the marketplaces this repository declares — `dynapps-commons`, `dynapps-salesforce`, `dynapps-super-admin` |
 | to ship a change | merge a pull request; CI publishes; press Import | deploy the instance |
 | takes effect | in place, no restart | at the next deploy |
 | who can ship it | anyone with write access to the kit | a platform maintainer |
@@ -61,15 +61,15 @@ Clone the kit and get the same server binary CI uses, so what passes locally pas
 in CI:
 
 ```bash
-git clone https://github.com/Astound-Digital/<kit-repo>.git
+git clone https://github.com/<org>/<kit-repo>.git
 cd <kit-repo>
 
-# the release the kit validates against — the value of ASTOUND_RELEASE in
+# the release the kit validates against — the value of DYNAPPS_RELEASE in
 # .github/workflows/publish-bundle.yml
-gh release download "$ASTOUND_RELEASE" --repo Astound-Digital/systemprompt-astound \
-  --pattern 'systemprompt-astound-server-*-linux-amd64.tar.gz' --dir ./release
-tar -xzf release/systemprompt-astound-server-*-linux-amd64.tar.gz -C release
-export PATH="$PWD/$(ls -d release/systemprompt-astound-server-*-linux-amd64)/bin:$PATH"
+gh release download "$DYNAPPS_RELEASE" --repo systempromptio/systemprompt-dynapps \
+  --pattern 'systemprompt-dynapps-server-*-linux-amd64.tar.gz' --dir ./release
+tar -xzf release/systemprompt-dynapps-server-*-linux-amd64.tar.gz -C release
+export PATH="$PWD/$(ls -d release/systemprompt-dynapps-server-*-linux-amd64)/bin:$PATH"
 ```
 
 ## 1. Change the skill
@@ -78,7 +78,7 @@ A skill is one directory. `SKILL.md` is the instruction the model reads; everyth
 beside it is material the skill can cite.
 
 ```text
-plugins/astound-india-sfcore/skills/sf-core-logic/
+plugins/<plugin-id>/skills/odoo-module-review/
   SKILL.md
   references/        # optional, and only read from here
 ```
@@ -88,21 +88,21 @@ measures against:
 
 ```yaml
 ---
-name: sf-core-logic          # must equal the directory name
-title: Core Logic (Domain Knowledge)
-description: Use when implementing or reviewing Apex logic that depends on order of execution.
+name: odoo-module-review     # must equal the directory name
+title: Odoo Module Review
+description: Use when reviewing a custom Odoo module for upgrade safety and ORM misuse.
 tags:
-  - india
-  - salesforce
+  - odoo
+  - review
 category: development
-display_category: Salesforce Core
+display_category: Odoo Development
 ---
 ```
 
 Four rules that are easy to get wrong, each of which the gate will catch:
 
-- **The directory is the id, not `name`.** `plugins/<p>/skills/sf-core-logic/` becomes
-  the skill `sf_core_logic`. Renaming the directory renames the skill; changing `name`
+- **The directory is the id, not `name`.** `plugins/<p>/skills/odoo-module-review/` becomes
+  the skill `odoo_module_review`. Renaming the directory renames the skill; changing `name`
   only changes how it is listed.
 - **`description` is the only key the platform requires** — and it decides when the
   model reaches for the skill, so write it as *when to use this*, not as a title. Quote
@@ -235,7 +235,7 @@ The bridge fetches the signed manifest and writes the plugins to disk. It does t
 | trigger | when |
 |---|---|
 | the scheduled background sync installed with the bridge | **every 30 minutes** — launchd, systemd or Task Scheduler, depending on the platform |
-| `astound-bridge sync` | immediately, on demand |
+| `dynapps-bridge sync` | immediately, on demand |
 | **Sync now** in the bridge GUI or tray | immediately |
 | signing in, first run, or enabling a host | automatically, once |
 
@@ -254,7 +254,7 @@ The bridge writes files; the client reads them when it starts. A `claude` sessio
 that is already open will not pick up a new skill, however many times you sync.
 
 ```bash
-astound-bridge sync     # fetch the new manifest
+dynapps-bridge sync     # fetch the new manifest
 # then exit Claude Code and start it again
 claude plugin list      # the new skill's plugin, in a new session
 ```
@@ -279,7 +279,7 @@ Almost always one of these four:
    explicitly — read it rather than guessing.
 
 If you have just changed an entitlement and want to test without waiting, the server
-memoises a user's resolved catalogue for up to a minute; `astound-bridge sync --fresh`
+memoises a user's resolved catalogue for up to a minute; `dynapps-bridge sync --fresh`
 bypasses it.
 
 ## If something is wrong

@@ -4,7 +4,7 @@
 # (gateway), 30090 -> host 19091 (Prometheus).
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
-name: astound-loadtest
+name: dynapps-loadtest
 nodes:
   - role: control-plane
     extraPortMappings:

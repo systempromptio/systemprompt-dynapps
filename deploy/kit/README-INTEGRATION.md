@@ -10,9 +10,8 @@ ship a kit: **Import** recomposes, reconciles entitlement and refreshes the
 inventory in the running process.
 
 Every kit is seeded from this directory so all kits have the same shape by
-construction. The kits are listed in `known-kits.json`: `sfnext`
-(`Astound-Digital/sfnext-claude-dev-kit`) and `india`
-(`Astound-Digital/sfscore-claude-india-kit`), both private packages. A plugin
+construction. The kits are listed in `known-kits.json`; this instance ships
+with none, so the list is empty until Dynapps publishes its first kit. A plugin
 may additionally carry `package.json` + lockfile (Claude Code runs `npm ci` on
 the client), declared `scripts`, and `plugin.json` `dependencies`, including
 cross-marketplace ones (`allowCrossMarketplaceDependenciesOn` in
@@ -34,10 +33,10 @@ repository owns everything else, every entitlement included.
 ## Seeding a kit from `services/`
 
 ```bash
-just kit-export astound-india-dev ../sfscore-claude-india-kit
-cp -r deploy/kit/.github ../sfscore-claude-india-kit/
-cp -r deploy/kit/tools ../sfscore-claude-india-kit/
-cp deploy/kit/README-INTEGRATION.md ../sfscore-claude-india-kit/
+just kit-export dynapps-<team>-dev ../<team>-claude-kit
+cp -r deploy/kit/.github ../<team>-claude-kit/
+cp -r deploy/kit/tools ../<team>-claude-kit/
+cp deploy/kit/README-INTEGRATION.md ../<team>-claude-kit/
 ```
 
 The exporter writes the marketplace, its plugins and their skills in kit
@@ -111,18 +110,18 @@ filters them.
 | where | secret | value |
 |---|---|---|
 | kit repository | `BUNDLE_SIGNING_SEED` | `systemprompt core services keygen` — the base64 seed. Keep the printed public key. |
-| kit repository | `ASTOUND_RELEASE_TOKEN` | fine-grained PAT, Contents: read on this repository — the kit CI downloads the server binary (and packs the base from `services/`) from here while it is private |
+| kit repository | `DYNAPPS_RELEASE_TOKEN` | fine-grained PAT, Contents: read on this repository — the kit CI downloads the server binary (and packs the base from `services/`) from here while it is private |
 | kit repository (optional) | `SYSTEMPROMPT_ADMIN_TOKEN`, `SYSTEMPROMPT_API_URL` | an instance admin PAT and the gateway URL, so a release imports itself |
-| kit repository (optional) | `ASTOUND_STATS_PAT` (+ `SYSTEMPROMPT_API_URL`) | a PAT whose owner has console access; `tools/kit-stats.sh` writes the run record per kit version into each release's notes and attaches `kit-stats.json`, and `kit-stats.yml` refreshes the latest release daily. The PAT is accepted on `GET /admin/export/{dataset}` only |
+| kit repository (optional) | `DYNAPPS_STATS_PAT` (+ `SYSTEMPROMPT_API_URL`) | a PAT whose owner has console access; `tools/kit-stats.sh` writes the run record per kit version into each release's notes and attaches `kit-stats.json`, and `kit-stats.yml` refreshes the latest release daily. The PAT is accepted on `GET /admin/export/{dataset}` only |
 | this repository | `deploy/kit/known-kits.json` `public_key`, `pull`, `channel` | the public half of the kit's seed; `public` when the GHCR package is public (no pull secret anywhere); the channel tag the CI moves |
 | instance profile secrets | `ghcr_pull_token` | `<github-user>:<read:packages PAT>` — only for a kit whose package is private (`pull: private` in `known-kits.json`; `services-pin` then writes `auth_secret: ghcr_pull_token`) |
-| this repository (Actions) | `ASTOUND_BUNDLE_SIGNING_SEED` | signs the **base** bundle `release.yml` publishes as `ghcr.io/astound-digital/systemprompt-astound-base:<version>` |
+| this repository (Actions) | `DYNAPPS_BUNDLE_SIGNING_SEED` | signs the **base** bundle `release.yml` publishes as `ghcr.io/systempromptio/systemprompt-dynapps-base:<version>` |
 
 The image is pushed with the workflow's own `GITHUB_TOKEN` to
 `ghcr.io/<owner>/<repo>`; no packages PAT is needed. Make the package public
-after the first push if the kit is public; the Astound kits stay private, so
-every instance that composes them carries `ghcr_pull_token`. Another instance
-(e.g. `sp-dev.astound.digital`) follows `docs/kits-on-another-instance.md`.
+after the first push if the kit is public; a private kit requires every
+instance that composes it to carry `ghcr_pull_token`. Another instance
+follows `docs/kits-on-another-instance.md`.
 
 ## Release flow
 

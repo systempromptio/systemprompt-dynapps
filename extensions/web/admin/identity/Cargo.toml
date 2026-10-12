@@ -3,7 +3,7 @@ name = "systemprompt-web-admin-identity"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
-description = "Identity domain of the admin dashboard for the systemprompt.io template: users and their sessions, AD FS and developer sign-in, groups, projects, roles and the access-control rules."
+description = "Identity domain of the admin dashboard for the systemprompt.io template: users and their sessions, SAML single sign-on and developer sign-in, groups, projects, roles and the access-control rules."
 repository.workspace = true
 homepage.workspace = true
 publish = false
@@ -45,8 +45,10 @@ hex = { workspace = true }
 base64 = { workspace = true }
 rand = { workspace = true }
 
-# ADFS SAML 2.0 relying party: pure-Rust XML-DSig, no libxml2/xmlsec.
+# SAML 2.0 relying party: pure-Rust XML-DSig, no libxml2/xmlsec.
 saml = { workspace = true }
+# Fetches the IdP federation metadata from `idp_metadata_url`.
+reqwest = { workspace = true }
 
 # Utilities
 urlencoding = { workspace = true }

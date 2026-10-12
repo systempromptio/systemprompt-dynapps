@@ -1,4 +1,4 @@
-{{- $fullname := include "astound.fullname" . -}}
+{{- $fullname := include "dynapps.fullname" . -}}
 {{- $sel := dict "ctx" . "component" "admin" -}}
 # Exactly one admin: it runs the scheduler, MCP servers and agents. Never scale
 # it and never give it an HPA; Recreate keeps two from overlapping on upgrade.
@@ -7,7 +7,7 @@ kind: Deployment
 metadata:
   name: {{ $fullname }}-admin
   labels:
-    {{- include "astound.labels" . | nindent 4 }}
+    {{- include "dynapps.labels" . | nindent 4 }}
     app.kubernetes.io/component: admin
 spec:
   replicas: 1
@@ -16,20 +16,20 @@ spec:
     type: Recreate
   selector:
     matchLabels:
-      {{- include "astound.selectorLabels" $sel | nindent 6 }}
+      {{- include "dynapps.selectorLabels" $sel | nindent 6 }}
   template:
     metadata:
       labels:
-        {{- include "astound.labels" . | nindent 8 }}
-        {{- include "astound.selectorLabels" $sel | nindent 8 }}
+        {{- include "dynapps.labels" . | nindent 8 }}
+        {{- include "dynapps.selectorLabels" $sel | nindent 8 }}
       annotations:
-        checksum/profile: {{ include "astound.profile" (dict "ctx" . "role" "admin") | sha256sum }}
+        checksum/profile: {{ include "dynapps.profile" (dict "ctx" . "role" "admin") | sha256sum }}
         checksum/secrets-source: {{ toJson .Values.secrets | sha256sum }}
         {{- with .Values.admin.podAnnotations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
     spec:
-      {{- include "astound.podSpec" (dict "ctx" . "role" "admin" "component" "admin" "profileConfigMap" (printf "%s-profile-admin" $fullname) "serviceAccount" (include "astound.serviceAccountName" .) "spc" (printf "%s-secrets" $fullname) "secretName" (include "astound.secretName" .) "job" false "args" list "resources" .Values.admin.resources) | nindent 6 }}
+      {{- include "dynapps.podSpec" (dict "ctx" . "role" "admin" "component" "admin" "profileConfigMap" (printf "%s-profile-admin" $fullname) "serviceAccount" (include "dynapps.serviceAccountName" .) "spc" (printf "%s-secrets" $fullname) "secretName" (include "dynapps.secretName" .) "job" false "args" list "resources" .Values.admin.resources) | nindent 6 }}
       {{- with .Values.admin.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

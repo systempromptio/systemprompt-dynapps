@@ -46,7 +46,7 @@ top="$DIR/release-baseline-$version.sql"
 fail=0
 for fixture in "$DIR"/release-baseline-*.sql; do
     named="${fixture##*/release-baseline-}"; named="${named%.sql}"
-    recorded="$(sed -n '1s/^-- systemprompt-astound release-baseline: \([0-9][0-9.]*\) .*/\1/p' "$fixture")"
+    recorded="$(sed -n '1s/^-- systemprompt-\(astound\|dynapps\) release-baseline: \([0-9][0-9.]*\) .*/\2/p' "$fixture")"
     if [ -z "$recorded" ]; then
         echo "check-schema-baseline: $fixture line 1 is not a release-baseline header" >&2; fail=1
     elif [ "$recorded" != "$named" ]; then

@@ -9,13 +9,13 @@
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: {{ include "astound.fullname" . }}
+  name: {{ include "dynapps.fullname" . }}
   labels:
-    {{- include "astound.labels" . | nindent 4 }}
+    {{- include "dynapps.labels" . | nindent 4 }}
 spec:
   podSelector:
     matchLabels:
-      app.kubernetes.io/name: {{ include "astound.name" . }}
+      app.kubernetes.io/name: {{ include "dynapps.name" . }}
       app.kubernetes.io/instance: {{ .Release.Name }}
   policyTypes: [Ingress, Egress]
   ingress:

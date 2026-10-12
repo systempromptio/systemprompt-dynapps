@@ -1,7 +1,7 @@
 ---
 title: "Model Gateway, Routing & Data Residency"
 description: "Route all AI traffic through one provider-neutral gateway with ACL-enforced model access, quotas, latency SLOs, private endpoints, and declared residency requirements."
-author: "Astound Digital"
+author: "Dynapps"
 slug: "enterprise-model-routing"
 keywords: "gateway, routing, models, providers, vertex ai, failover, acl, quotas, residency, no-retain, shadow ai, slo, chat completions, retirement"
 kind: "guide"

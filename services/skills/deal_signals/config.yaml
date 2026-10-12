@@ -6,7 +6,7 @@ description: Build a deal-risk digest from Salesforce close dates, activity, nex
 enabled: true
 file: SKILL.md
 tags:
-- astound
+- dynapps
 - salesforce
 - sales
 category: business

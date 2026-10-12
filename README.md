@@ -1,18 +1,18 @@
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="storage/files/images/logo-white.svg">
   <source media="(prefers-color-scheme: light)" srcset="storage/files/images/logo.svg">
-  <img src="storage/files/images/logo.svg" alt="Astound Digital" width="380">
+  <img src="storage/files/images/logo.svg" alt="Dynapps" width="380">
 </picture>
 
-# Astound Digital AI platform
+# Dynapps AI platform
 
-Astound Digital's deployment of SystemPrompt. This repository contains the server configuration, admin interface, MCP integrations, skills and branded desktop Bridge. The server links the `systemprompt` Rust library; Astound-specific behavior lives in the extension crates and service configuration.
+Dynapps's deployment of SystemPrompt. This repository contains the server configuration, admin interface, MCP integrations, skills and branded desktop Bridge. The server links the `systemprompt` Rust library; Dynapps-specific behavior lives in the extension crates and service configuration.
 
 This README covers local development and points to installation and release procedures. Requests sent through the gateway and connected MCP services are subject to their configured access rules and audit handling. Local client actions require the corresponding client integration.
 
 ## Choose an installation path
 
-- **Use the deployed platform:** start at https://sp-dev.astound.digital and follow its sign-in and client setup instructions.
+- **Use the deployed platform:** start at https://dynapps.systemprompt.io and follow its sign-in and client setup instructions.
 - **Install a released server:** follow [Docker installation](docs/install/docker.md). Access to the private GitHub package is required; no Rust build is needed.
 - **Develop locally:** use the steps below. Building the Bridge is a separate, optional step.
 - **Operate your own deployment:** see [single-node installation](deploy/self-host/SINGLE-NODE.md) or [multi-node installation](deploy/self-host/README.md).
@@ -22,8 +22,8 @@ This README covers local development and points to installation and release proc
 You need repository access, Git, Docker with Compose, [just](https://just.systems/), Bash, `curl`, `jq`, Python 3 and Rust installed through [rustup](https://rustup.rs/). The workspace requires Rust 1.96+ and pins its toolchain in [rust-toolchain.toml](rust-toolchain.toml). Provide an Anthropic, OpenAI or Gemini API key for inference.
 
 ```bash
-git clone https://github.com/Astound-Digital/systemprompt-astound
-cd systemprompt-astound
+git clone https://github.com/systempromptio/systemprompt-dynapps
+cd systemprompt-dynapps
 just setup-local
 just start
 ```
@@ -78,7 +78,7 @@ For host installation and desktop clients, see [Bridge documentation](bridge/REA
 | `tests/` | Rust test workspace. |
 | `deploy/`, `docs/` | Installation, operations and release procedures. |
 
-`services/config/config.yaml` lists the flat resource files. Skills and plugins are discovered from their nested directories. Not every marketplace has to live here: the Europe development workspace (`astound-europe-dev`) is authored in [Astound-Digital/sfnext-claude-dev-kit](https://github.com/Astound-Digital/sfnext-claude-dev-kit) and arrives at boot as a signed services bundle pulled from GHCR. It is **not pinned in this release** — pin one with `just services-pin sfnext <sha256 digest>` to bring it back; see [docs/sfnext-marketplace.md](docs/sfnext-marketplace.md). Deployment profiles under `.systemprompt/profiles/` hold environment-specific settings and secret references. See [CLAUDE.md](CLAUDE.md) for development conventions and [gateway routes](docs/gateway-routes.md) for inference configuration.
+`services/config/config.yaml` lists the flat resource files. Skills and plugins are discovered from their nested directories. Deployment profiles under `.systemprompt/profiles/` hold environment-specific settings and secret references. See [CLAUDE.md](CLAUDE.md) for development conventions and [gateway routes](docs/gateway-routes.md) for inference configuration.
 
 ## Build and verify changes
 
@@ -108,7 +108,7 @@ Follow [the release procedure](docs/RELEASING.md) for version changes, migration
 
 | Environment | Address and behavior |
 |---|---|
-| Astound endpoint | `https://sp-dev.astound.digital` — verify releases against this endpoint. |
-| SystemPrompt test environment | `https://astound.systemprompt.io` — the local Fly profile is named `production`. |
+| Dynapps endpoint | `https://dynapps.systemprompt.io` — verify releases against this endpoint. |
+| SystemPrompt test environment | `https://dynapps.systemprompt.io` — the local Fly profile is named `production`. |
 
-`just deploy` targets the Fly test environment, not the Astound endpoint. With Core patches active, `just deploy` refuses unless `../systemprompt-core` is clean at `bridge/CORE_REF`, so the image is built from a committed core. A registry push alone does not verify deployment to the Astound endpoint.
+`just deploy` targets the Fly test environment, not the Dynapps endpoint. With Core patches active, `just deploy` refuses unless `../systemprompt-core` is clean at `bridge/CORE_REF`, so the image is built from a committed core. A registry push alone does not verify deployment to the Dynapps endpoint.

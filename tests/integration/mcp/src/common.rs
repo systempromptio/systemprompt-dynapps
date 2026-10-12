@@ -4,18 +4,18 @@
 //! the audit writers touch two tables, and a hand-written pair is both faster
 //! and a tighter statement of what the code under test depends on. The
 //! database itself, and the `CI` guard that stops a missing Postgres from
-//! reading as a pass, come from `astound-test-common`.
+//! reading as a pass, come from `dynapps-test-common`.
 
 use systemprompt::database::DbPool;
 
 pub(crate) struct TempDb {
-    inner: astound_test_common::TempDb,
+    inner: dynapps_test_common::TempDb,
     pub pool: DbPool,
 }
 
 impl TempDb {
     pub(crate) async fn create() -> Option<Self> {
-        let inner = astound_test_common::TempDb::create_empty().await?;
+        let inner = dynapps_test_common::TempDb::create_empty().await?;
         let pg = &*inner.pool;
 
         // Minimal schema: only the columns the audit writers read/write.

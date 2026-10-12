@@ -22,7 +22,7 @@ spec:
         seccompProfile: {type: RuntimeDefault}
       containers:
         - name: mock
-          image: astound-loadtest/mock-inference:local
+          image: dynapps-loadtest/mock-inference:local
           imagePullPolicy: Never
           args: ["--port", "9100", "--latency-ms", "300:900", "--mode", "ok"]
           env: [{name: RUST_LOG, value: warn}]
@@ -55,7 +55,7 @@ spec:
         seccompProfile: {type: RuntimeDefault}
       containers:
         - name: mock
-          image: astound-loadtest/mock-inference:local
+          image: dynapps-loadtest/mock-inference:local
           imagePullPolicy: Never
           args: ["--port", "9100", "--latency-ms", "300:900", "--mode", "ok"]
           env: [{name: RUST_LOG, value: warn}]

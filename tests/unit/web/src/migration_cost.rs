@@ -1,4 +1,4 @@
-//! Static gate: an astound migration that rewrites a hot table must state
+//! Static gate: an dynapps migration that rewrites a hot table must state
 //! what it measured, and a new row trigger may not fan out beyond its row.
 //!
 //! Migrations run before the HTTP listener binds, and every per-row trigger
@@ -15,7 +15,7 @@ use systemprompt::database::{HOT_TABLES, audit_one};
 use crate::support::repo_root;
 
 // Row counts from the 2026-09-22 production analysis.
-const ASTOUND_HOT_TABLES: &[&str] = &[
+const DYNAPPS_HOT_TABLES: &[&str] = &[
     "plugin_usage_events",
     "conversation_facts",
     "analysis_skill_events",
@@ -28,7 +28,7 @@ const FANOUT_BASELINE: &str = "tests/unit/web/trigger_fanout_baseline.txt";
 
 fn hot_tables() -> Vec<&'static str> {
     let mut all = HOT_TABLES.to_vec();
-    all.extend_from_slice(ASTOUND_HOT_TABLES);
+    all.extend_from_slice(DYNAPPS_HOT_TABLES);
     all
 }
 

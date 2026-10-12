@@ -6,7 +6,7 @@ description: 'Catch a manager up on one of their sales reps before a 1:1: the re
 enabled: true
 file: SKILL.md
 tags:
-- astound
+- dynapps
 - salesforce
 - sales
 category: business

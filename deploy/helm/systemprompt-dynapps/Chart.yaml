@@ -1,20 +1,20 @@
 apiVersion: v2
-name: systemprompt-astound
-description: Astound Digital AI governance gateway on Kubernetes (GKE first) - gateway/admin role split, Cloud SQL Auth Proxy, Secret Manager CSI, GCS storage, restricted Pod Security.
+name: systemprompt-dynapps
+description: Dynapps AI governance gateway on Kubernetes (GKE first) - gateway/admin role split, Cloud SQL Auth Proxy, Secret Manager CSI, GCS storage, restricted Pod Security.
 type: application
 # Chart version moves on its own; appVersion is the image tag deployed by default.
 version: 0.1.0
 appVersion: "0.63.1"
 kubeVersion: ">=1.29.0-0"
-home: https://astounddigital.com
+home: https://dynapps.es
 sources:
-  - https://github.com/Astound-Digital/systemprompt-astound
+  - https://github.com/systempromptio/systemprompt-dynapps
 keywords:
   - ai-gateway
   - governance
   - gke
 maintainers:
-  - name: Astound Digital
+  - name: Dynapps
 annotations:
   # New in 0.63.1; rendered and linted, not yet run against a real GKE project.
-  astounddigital.com/status: preview
+  dynapps.es/status: preview

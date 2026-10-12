@@ -4,21 +4,21 @@
 # inline (rendered by `just loadtest-kind-secrets`), storage is the pod's own
 # emptyDir. Never use these values anywhere real.
 #
-#   helm upgrade --install astound deploy/helm/systemprompt-astound -n loadtest \
-#     -f deploy/helm/systemprompt-astound/values-kind.yaml \
+#   helm upgrade --install dynapps deploy/helm/systemprompt-dynapps -n loadtest \
+#     -f deploy/helm/systemprompt-dynapps/values-kind.yaml \
 #     --set-file secrets.inline.json=deploy/loadtest/kind/.profile/secrets.json
 
-fullnameOverride: astound
+fullnameOverride: dynapps
 
 image:
   # Chart.appVersion lags the release; pin the image under test explicitly.
-  # `just loadtest-kind-image-local` swaps in `systemprompt-astound:loadtest-local`.
+  # `just loadtest-kind-image-local` swaps in `systemprompt-dynapps:loadtest-local`.
   tag: "0.65.0"
   pullPolicy: IfNotPresent
 
 profile:
   externalUrl: https://gateway.loadtest.local
-  adminEmail: loadtest-admin@astounddigital.com
+  adminEmail: loadtest-admin@dynapps.es
   # kind pod network + node network; the generator talks to the Service directly.
   trustedProxies:
     - 10.0.0.0/8

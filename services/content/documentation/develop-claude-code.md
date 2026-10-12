@@ -1,7 +1,7 @@
 ---
 title: "Develop Against a Local Gateway"
 description: "Developer setup: clone, build, start the gateway, and connect Claude Code with a one-shot code. Includes the clean-state verification procedure for the connect path."
-author: "Astound Digital"
+author: "Dynapps"
 slug: "develop-claude-code"
 keywords: "claude code, developer setup, just claude, setup local, clean state, bridge build, local gateway"
 kind: "guide"
@@ -48,7 +48,7 @@ clones it.
 ## Setup
 
 ```bash
-git clone https://github.com/systempromptio/systemprompt-astound.git && cd systemprompt-astound
+git clone https://github.com/systempromptio/systemprompt-dynapps.git && cd systemprompt-dynapps
 just setup-local     # profile, Docker Postgres, migrations, publish pipeline
 just build
 just bridge-build    # Claude Code client; clones systemprompt-core beside this repo
@@ -67,7 +67,7 @@ incremental.
 
 ## Sign in
 
-For browser access, configure Astound SSO for the gateway hostname and sign in at `/admin/login`. This installation has no passkey login or public registration page. On a local development instance without SSO, use the operator CLI to create an account and issue a bridge code:
+For browser access, configure Dynapps SSO for the gateway hostname and sign in at `/admin/login`. This installation has no passkey login or public registration page. On a local development instance without SSO, use the operator CLI to create an account and issue a bridge code:
 
 ```bash
 systemprompt admin users create --name you --email you@example.com --if-not-exists
@@ -131,7 +131,7 @@ rather than a container. It writes:
 
 | Path | Contents |
 |------|----------|
-| `~/.config/astound/` | Client config, PAT (0600), loopback key |
+| `~/.config/dynapps/` | Client config, PAT (0600), loopback key |
 | `~/.profile` | Managed block sourcing `env.sh`, for other Anthropic-API clients. Claude Code does not depend on it |
 | `~/.claude/settings.json` | Base URL, `apiKeyHelper`, model discovery (merged into your existing settings; `/etc/claude-code/managed-settings.json` instead when run as root) |
 | `~/.local/share/Claude/org-plugins/` | Organization plugins, skills, MCP servers |
@@ -166,7 +166,7 @@ instance coexists with a running gateway; substitute the defaults if nothing
 else is up.
 
 ```bash
-git clone https://github.com/systempromptio/systemprompt-astound.git fresh && cd fresh
+git clone https://github.com/systempromptio/systemprompt-dynapps.git fresh && cd fresh
 just setup-local <provider-key> "" "" 8081 5436
 just build
 just bridge-build
@@ -210,7 +210,7 @@ Assert on the output, not the exit code.
 | `signing in with the supplied code` | Pass — the code was redeemed |
 | `already signed in — reusing the stored PAT` | Fail — sign-in never ran |
 
-`astound-bridge doctor` runs last, one line per check. The hook-token warning is
+`dynapps-bridge doctor` runs last, one line per check. The hook-token warning is
 expected: OAuth client provisioning is lazy, on the first plugin hook request,
 not during sync.
 
@@ -221,7 +221,7 @@ not during sync.
 | `Client not built yet` | The client is a separate workspace; `just build` does not produce it. `just bridge-build` does, and clones `systemprompt-core` beside this repo because the client depends on it by path. |
 | Code rejected | 10-minute TTL, single use. Open Profile and click **Generate a connect code** again. |
 | Prompted for a code on a repeat run | The stored credential did not validate against this gateway — usually a different gateway from the one that issued it. `just claude-reset`, then connect with a fresh code. |
-| Session works, audit trail empty | Not routed through the gateway. Check `ANTHROPIC_BASE_URL` points at the loopback proxy and that `astound-bridge doctor` reports it running. |
+| Session works, audit trail empty | Not routed through the gateway. Check `ANTHROPIC_BASE_URL` points at the loopback proxy and that `dynapps-bridge doctor` reports it running. |
 | `400 context_management: Extra inputs are not permitted` | The gateway forwarded a beta body field without the flag that gates it. Current gateways strip the field whenever its flag is not in the provider's `accepted_betas`; a gateway older than this release does not, so upgrade it. Do not set `CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS` in the client; the fix belongs to the gateway. |
 | Container cannot reach the gateway | Inside a container `localhost` is the container. `just claude` rewrites it; by hand, use `http://host.docker.internal:8080`. |
-| 401 from a container that signed in fine | The gateway the container passes to `login --gateway` is not the gateway the PAT was issued by. The bridge follows only its config file (`login --gateway` writes it); re-run the container with the right `ASTOUND_BRIDGE_GATEWAY_URL` and reconnect. |
+| 401 from a container that signed in fine | The gateway the container passes to `login --gateway` is not the gateway the PAT was issued by. The bridge follows only its config file (`login --gateway` writes it); re-run the container with the right `DYNAPPS_BRIDGE_GATEWAY_URL` and reconnect. |

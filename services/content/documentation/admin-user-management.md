@@ -1,7 +1,7 @@
 ---
 title: "Create & Manage Users"
 description: "Every way to create and manage users beyond SSO: admin CLI, bulk creation, operator provisioning, roles, and conversational admin via the systemprompt MCP server."
-author: "Astound Digital"
+author: "Dynapps"
 slug: "admin-user-management"
 keywords: "users, create user, bulk users, roles, role table, entitlement roles, marketplace participation, promote, admin, user management, systemprompt mcp, csv"
 kind: "guide"
@@ -26,7 +26,7 @@ related_playbooks:
 
 # Create & Manage Users
 
-Astound SSO is one way accounts come to exist — not the only way. This page
+Dynapps SSO is one way accounts come to exist — not the only way. This page
 covers the paths that need no SSO at all: the admin CLI, bulk creation,
 roles, and the conversational admin workflow.
 
@@ -34,8 +34,8 @@ roles, and the conversational admin workflow.
 
 1. **Admin CLI** — an operator creates the account directly (below). Full
    control, scriptable, works headless.
-2. **Astound SSO just-in-time** — first sign-in creates the account, with the
-   role and project the AD groups map to, provided the assertion passes the domain and group-claim gates and `auto_provision` is on. See [Authentication](/documentation/authentication).
+2. **Dynapps SSO just-in-time** — first sign-in creates the account, with the
+   role and project the Entra groups map to, provided the assertion passes the domain and group-claim gates and `auto_provision` is on. See [Authentication](/documentation/authentication).
 
 Public self-registration, passkey login, and browser invite redemption are not available in this installation. See [Authentication](/documentation/authentication) for operator recovery.
 
@@ -57,7 +57,7 @@ Send the code through a channel you trust — it is single-use with a 10-minute
 TTL. The user then installs the bridge with it:
 [Install the Desktop Bridge](/documentation/bridge-install).
 
-Browser access requires Astound SSO. The CLI retains WebAuthn administration commands, but this installation has no browser passkey setup or sign-in flow.
+Browser access requires Dynapps SSO. The CLI retains WebAuthn administration commands, but this installation has no browser passkey setup or sign-in flow.
 
 ## Bulk creation
 
@@ -103,7 +103,7 @@ owns the spelling — and seven roles ship.
 | `developer` | entitlement | No (participation only) | Whatever `rules.yaml` allows to `role: [developer]` — engineering marketplaces and MCP servers |
 | `knowledge_worker` | entitlement | No (participation only) | Whatever `rules.yaml` allows to `role: [knowledge_worker]` — the Cowork workspace, business skills |
 | `project_manager` | entitlement | No (participation only) | Whatever `rules.yaml` allows to `role: [project_manager]`; nothing on the admin plane |
-| `super_admin` | entitlement | No | The `astound-super-admin` marketplace, its plugin, the admin skills and the `systemprompt` MCP server |
+| `super_admin` | entitlement | No | The `dynapps-super-admin` marketplace, its plugin, the admin skills and the `systemprompt` MCP server |
 | `admin` | console | Yes, unscoped | Every admin page and write action |
 | `platform_admin` | console | Yes, unscoped | Everything `admin` has, plus moving `platform_admin` / `super_admin` |
 
@@ -137,23 +137,22 @@ who participates in no marketplace sees only their account pages (`/admin/profil
 So a project manager sees the conversations and versions of the marketplaces
 their groups and projects participate in — not every project, and never a
 write action on users, roles, access rules or gateway configuration. They do
-not get the `systemprompt` MCP server, the `astound-super-admin` plugin or the
+not get the `systemprompt` MCP server, the `dynapps-super-admin` plugin or the
 admin skills.
 
 ### Where roles come from
 
 Roles have two halves, recomputed together on `users.roles`:
 
-- **Directory half** — projected from AD groups on **every** sign-in
-  (replace, not union). `Systemprompt-Admins` → `platform_admin, admin`;
-  `Systemprompt-Commerce` and `Systemprompt-Core` → `developer`;
-  `Systemprompt-Business` → `knowledge_worker`; `Systemprompt-ProjectManagers-*`
-  → `project_manager`. Everyone also gets `user`. The map is `group_roles` and
+- **Directory half** — projected from Entra groups on **every** sign-in
+  (replace, not union). For example,
+  `Dynapps-Systemprompt-Admins` → `platform_admin, admin` and
+  `Dynapps-Systemprompt-Users` → `user`. Everyone also gets `user`. The map is `group_roles` and
   `group_role_patterns` in `services/web/config/adfs.yaml`; see
-  [Set Up Astound SSO (AD FS)](/documentation/adfs-sso-setup).
+  [Set Up Dynapps SSO (Microsoft Entra ID)](/documentation/entra-id-sso-setup).
 - **Manual half** — granted by an admin on `/admin/roles`, on a user's detail
   page (`/admin/users/<id>`), or from the CLI. A manual grant survives sign-in;
-  a directory role cannot be revoked by hand — remove the AD group instead.
+  a directory role cannot be revoked by hand — remove the Entra group instead.
 
 ```bash
 systemprompt admin users role promote jane@example.com   # grant admin
@@ -202,6 +201,6 @@ requests, cost and conversations.
 
 **New user** creates an account from the browser only when
 `auto_provision: false` in `services/web/config/adfs.yaml`. This installation
-runs with `auto_provision: true` — the AD group is the invitation — so the
+runs with `auto_provision: true` — the Entra group is the invitation — so the
 button is disabled and explains why. The CLI and the MCP route above work
 either way.

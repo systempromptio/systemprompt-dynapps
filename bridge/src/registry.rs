@@ -1,4 +1,4 @@
-//! Astound-specific bridge behaviour registered through core's `inventory`
+//! Dynapps-specific bridge behaviour registered through core's `inventory`
 //! seams. Linked by `main.rs` (`mod registry;`) so these submissions survive
 //! into the final binary — an unreferenced module would be dropped by the
 //! linker before its `inventory::submit!` initializers ran.
@@ -13,26 +13,26 @@ use systemprompt_bridge::gui::server_marketplace::source::{
 };
 use systemprompt_bridge::register_marketplace_source;
 
-struct AstoundArtifactsSource;
+struct DynappsArtifactsSource;
 
-impl MarketplaceSource for AstoundArtifactsSource {
+impl MarketplaceSource for DynappsArtifactsSource {
     fn category(&self) -> MarketplaceCategory {
         MarketplaceCategory::Artifacts
     }
 
     fn items(&self, _ctx: &MarketplaceSourceCtx<'_>) -> Vec<MarketplaceItem> {
         vec![
-            MarketplaceItem::builder("astound-welcome", String::new())
-                .name("Astound Digital — Welcome")
+            MarketplaceItem::builder("dynapps-welcome", String::new())
+                .name("Dynapps — Welcome")
                 .summary(Some(
-                    "Branded starter artifact contributed by the Astound bridge.".to_owned(),
+                    "Branded starter artifact contributed by the Dynapps bridge.".to_owned(),
                 ))
                 .build(),
         ]
     }
 }
 
-register_marketplace_source!(AstoundArtifactsSource, priority = 10);
+register_marketplace_source!(DynappsArtifactsSource, priority = 10);
 
 // Why: core's manifest host gate cannot apply before the first sync, so Codex
 // is suppressed here to keep it off every surface, onboarding included.

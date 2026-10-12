@@ -2,7 +2,7 @@
 set -euo pipefail
 head="${1:?usage: check-promotion-green.sh <head-sha> <promotion-ref>}"
 ref="${2:?usage: check-promotion-green.sh <head-sha> <promotion-ref>}"
-repo=Astound-Digital/systemprompt-astound
+repo=systempromptio/systemprompt-dynapps
 die() { echo "promotion-proof: $*" >&2; exit 1; }
 [[ "$head" =~ ^[0-9a-f]{40}$ ]] || die 'expected full candidate SHA'
 [[ "$ref" =~ ^promote/[0-9]+\.[0-9]+\.[0-9]+/[0-9a-f]{40}/$head$ ]] || die 'promotion ref differs from candidate'

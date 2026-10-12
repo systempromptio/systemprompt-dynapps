@@ -8,7 +8,7 @@ publish = false
 workspace = true
 
 [dependencies]
-astound-test-common = { workspace = true }
+dynapps-test-common = { workspace = true }
 # `full` links the core extension crates whose `register_extension!` supplies
 # the content-domain migrations (markdown_content, campaign_links,
 # link_clicks) these repositories query.

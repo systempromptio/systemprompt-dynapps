@@ -34,7 +34,7 @@ fn services_path() -> PathBuf {
 fn executive_services_load_with_resolvable_plugin_members() {
     let services = ConfigLoader::load_from_path(&services_path().join("config/config.yaml"))
         .expect("shipped services load and validate");
-    for id in ["astound-super-admin", "astound-salesforce"] {
+    for id in ["dynapps-super-admin", "dynapps-salesforce"] {
         let marketplace = services
             .marketplaces
             .iter()
@@ -71,7 +71,6 @@ fn salesforce_catalog_is_exact_and_contains_no_collaboration_channel_content() {
         "expansion_whitespace",
         "find_internal_answer",
         "forecast_narrative",
-        "google_workspace_test",
         "handle_objection",
         "lead_triage",
         "pipeline_review",
@@ -91,7 +90,7 @@ fn salesforce_catalog_is_exact_and_contains_no_collaboration_channel_content() {
     let plugin = services
         .plugins
         .iter()
-        .find(|(id, _)| id.as_str() == "astound-salesforce")
+        .find(|(id, _)| id.as_str() == "dynapps-salesforce")
         .expect("Salesforce plugin exists")
         .1;
     let actual: Vec<&str> = plugin.skills.include.iter().map(String::as_str).collect();
@@ -100,7 +99,7 @@ fn salesforce_catalog_is_exact_and_contains_no_collaboration_channel_content() {
         !services
             .marketplaces
             .iter()
-            .any(|(id, _)| id.as_str() == "astound-sales-uk")
+            .any(|(id, _)| id.as_str() == "dynapps-sales-uk")
     );
 
     for id in EXPECTED {
@@ -184,7 +183,7 @@ async fn executive_and_salesforce_connection_grant_only_the_intended_resources()
         .await
         .expect("parent policies");
     // Why: `control_plane` is reached by every administrator role, not by
-    // super_admin alone — astound-super-admin absorbed the old
+    // super_admin alone — dynapps-super-admin absorbed the old
     // systemprompt-admin marketplace, and splitting the control plane in two is
     // exactly how an administrator ended up holding half of it. `sales` is
     // reached by business-users membership; a verified Salesforce connection
@@ -204,7 +203,6 @@ async fn executive_and_salesforce_connection_grant_only_the_intended_resources()
     ] {
         let user = UserId::new(unique("executive-access"));
         let roles = vec!["user".to_owned(), role.to_owned()];
-        let operator = role == "super_admin";
         insert_user_with_roles(&db.pool, user.as_str(), &roles).await;
         if uk {
             sqlx::query(
@@ -246,23 +244,18 @@ async fn executive_and_salesforce_connection_grant_only_the_intended_resources()
         for (kind, id, expected) in [
             (
                 EntityKind::Marketplace,
-                "astound-super-admin",
+                "dynapps-super-admin",
                 control_plane,
             ),
-            (EntityKind::Marketplace, "astound-salesforce", sales),
-            (EntityKind::Plugin, "astound-super-admin", control_plane),
-            (EntityKind::Plugin, "astound-salesforce", sales),
+            (EntityKind::Marketplace, "dynapps-salesforce", sales),
+            (EntityKind::Plugin, "dynapps-super-admin", control_plane),
+            (EntityKind::Plugin, "dynapps-salesforce", sales),
             (EntityKind::Skill, "admin_critical_projects", control_plane),
             (EntityKind::Skill, "admin_ai_usage", control_plane),
             (EntityKind::Skill, "admin_daily_brief", control_plane),
             (EntityKind::Skill, "account_context", sales),
             (EntityKind::Skill, "pipeline_review", sales),
             (EntityKind::Skill, "using_display_widget", sales),
-            (
-                EntityKind::McpServer,
-                "google_workspace",
-                operator || uk || business,
-            ),
             (EntityKind::McpServer, "salesforce", true),
         ] {
             let ids = vec![id.to_owned()];

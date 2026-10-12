@@ -278,7 +278,7 @@ async fn user_access_tab_explains_a_group_grant_without_offering_a_personal_over
     let credentials = principal::provision(&db.pool).await;
     let app = App::new(&db.pool, credentials);
     let (_, _, user, group) = seed_member_with_group_and_project(&db.pool).await;
-    let entity = "astound-commons";
+    let entity = "dynapps-commons";
     sqlx::query(
         "INSERT INTO access_control_entities (entity_type, entity_id, default_included, source)
          VALUES ('marketplace', $1, false, 'dashboard')
@@ -352,7 +352,7 @@ async fn group_detail_tabs_render_mapping_project_and_marketplace_relationships(
     set_group_marketplaces(
         &db.pool,
         &systemprompt_web_shared::GroupId::new(group.clone()),
-        &[MarketplaceId::new("astound-commons")],
+        &[MarketplaceId::new("dynapps-commons")],
     )
     .await
     .expect("grant marketplace");
@@ -362,7 +362,7 @@ async fn group_detail_tabs_render_mapping_project_and_marketplace_relationships(
         ("projects", "Core", "linked project"),
         (
             "access",
-            "data-entity-type=\"marketplace\" data-entity-id=\"astound-commons\"",
+            "data-entity-type=\"marketplace\" data-entity-id=\"dynapps-commons\"",
             "workspace entitlement",
         ),
     ] {

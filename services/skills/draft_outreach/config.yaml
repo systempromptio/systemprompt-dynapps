@@ -6,7 +6,7 @@ description: Create a personalized email draft from Salesforce contact, account,
 enabled: true
 file: SKILL.md
 tags:
-- astound
+- dynapps
 - salesforce
 - sales
 category: business

@@ -22,5 +22,5 @@
 #   {"sf_username": "ed.aa...@agentforce.com"}
 
 enabled: false
-my_domain: "https://astound.my.salesforce.com"
+my_domain: "https://<my-domain>.my.salesforce.com"
 consumer_key: "REPLACE_WITH_SALESFORCE_CONSUMER_KEY"

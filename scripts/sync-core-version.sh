@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Sync every systemprompt-core crate pin to one published core version, and
-# point bridge/CORE_REF at its tag. Astound's own version is separate
+# point bridge/CORE_REF at its tag. Dynapps's own version is separate
 # (scripts/sync-release-version.sh).
 #
 #   scripts/sync-core-version.sh 0.61.0          # apply

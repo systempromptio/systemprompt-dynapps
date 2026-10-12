@@ -1,5 +1,5 @@
-{{- $fullname := include "astound.fullname" . -}}
-Astound Digital gateway {{ include "astound.tag" . }} - release {{ .Release.Name }} in {{ .Release.Namespace }}.
+{{- $fullname := include "dynapps.fullname" . -}}
+Dynapps gateway {{ include "dynapps.tag" . }} - release {{ .Release.Name }} in {{ .Release.Namespace }}.
 
 {{- if .Values.migrate.enabled }}
 1. The schema was migrated by the hook Job {{ $fullname }}-migrate before any pod rolled:

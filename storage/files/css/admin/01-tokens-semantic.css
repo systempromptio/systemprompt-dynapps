@@ -3,7 +3,7 @@
 :root {
     color-scheme: light;
 
-    --sp-font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --sp-font-family: "Readex Pro", "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     --sp-font-body: var(--sp-font-family);
     --sp-font-heading: var(--sp-font-family);
     --sp-font-brand: var(--sp-font-family);
@@ -78,8 +78,8 @@
        surface that carries text. Measured: accent-text 6.7:1 on white, 5.8:1
        on --sp-bg-base and 5.0:1 on an accent tint over the page ground, which is
        the worst ground it lands on; --sp-text-on-accent on accent-fill 5.3:1. */
-    --sp-accent-text:   oklch(0.495 0.180 29);
-    --sp-accent-fill:   oklch(0.535 0.200 29);
+    --sp-accent-text:   oklch(0.495 0.180 24);
+    --sp-accent-fill:   oklch(0.535 0.200 24);
     --sp-accent-dim:    color-mix(in oklch, var(--sp-accent) 10%, transparent);
     --sp-accent-strong: color-mix(in oklch, var(--sp-accent) 18%, transparent);
     --sp-accent-surface: color-mix(in oklch, var(--sp-accent) 6%, var(--sp-bg-surface));

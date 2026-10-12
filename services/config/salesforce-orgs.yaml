@@ -7,10 +7,19 @@
 # (`salesforce` or `salesforce-<slug>`); the connector reads the org's domain
 # and endpoint from here.
 #
-# This instance fronts ONE org through ONE connector, `salesforce`, on the
-# Headless 360 endpoint — the governed surface the sales skills call. A second
-# entry here would be a second Connect row and a second grant, so add one only
-# when there is genuinely another org or another tool surface to reach.
+# This instance ships with NO org registered. The `salesforce` MCP server and
+# the dynapps-salesforce marketplace stay in place so a Dynapps org can be
+# attached without code changes; until then no Connect row is offered.
+#
+# To add a Dynapps org, replace `orgs: {}` below with, for example:
+#
+#   orgs:
+#     salesforce:
+#       label: "Dynapps Salesforce"
+#       my_domain: https://<my-domain>.my.salesforce.com
+#       environment: production
+#       server_kind: headless_360
+#       groups: []
 #
 # One External Client App serves the org, and would serve any org added later:
 # it is built once (deploy/salesforce/) and every org resolves to its consumer
@@ -54,10 +63,4 @@
 # shares /api/public/connectors/salesforce/callback and the org is recovered
 # from the OAuth state.
 
-orgs:
-  salesforce:
-    label: "Astound Salesforce"
-    my_domain: https://ontrq.my.salesforce.com
-    environment: production
-    server_kind: headless_360
-    groups: []
+orgs: {}

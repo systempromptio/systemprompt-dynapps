@@ -1,14 +1,15 @@
-//! Identity half of the ADFS callback: turn a verified assertion into gated
-//! claims (allow-listed domain, mapped AD group) and resolve them to a local
-//! user with the roles the groups map to.
+//! Identity half of the SSO callback: turn a verified assertion into gated
+//! claims (allow-listed domain, mapped Entra ID group) and resolve them to a
+//! local user with the roles the groups map to.
 //!
-//! A refused sign-in (`forbidden`, `no_group`) also revokes the cookie
-//! sessions and bridge links the directory once vouched for; revocation
-//! failures are logged and never turn the `?sso=` redirect into a 500.
+//! A refused sign-in (`forbidden`, `no_group`, `group_overage`) also revokes
+//! the cookie sessions and bridge links the directory once vouched for;
+//! revocation failures are logged and never turn the `?sso=` redirect into a
+//! 500.
 
 use saml::{Identity, NameIdFormat};
 
-use super::config::AdfsConfig;
+use super::config::{AdfsConfig, GROUPS_OVERAGE_ATTRIBUTE};
 use super::{AdfsDeps, LoginRedirect};
 use crate::repositories::users::{federated, revocation};
 use crate::repositories::{groups, projects};
@@ -52,7 +53,7 @@ impl AssertionClaims {
             .find(|v| !v.is_empty())
     }
 
-    // Why: AD compares addresses case-insensitively and `users.email` is
+    // Why: Entra ID compares addresses case-insensitively and `users.email` is
     // stored lower-cased, so the asserted email is folded before any lookup.
     #[must_use]
     pub fn login_email(&self, cfg: &AdfsConfig) -> Option<String> {
@@ -72,8 +73,8 @@ impl AssertionClaims {
         self.first(&cfg.name_attribute)
     }
 
-    // Why: AD FS relying parties are routinely configured with claims but no
-    // NameID, so the login email stands in as the stable external subject.
+    // Why: SAML IdPs are often configured with claims but no usable NameID,
+    // so the login email stands in as the stable external subject.
     #[must_use]
     pub fn external_sub(&self, email: &str) -> String {
         self.name_id
@@ -81,6 +82,15 @@ impl AssertionClaims {
             .map(str::trim)
             .filter(|s| !s.is_empty())
             .map_or_else(|| email.to_owned(), ToOwned::to_owned)
+    }
+
+    // Why: Microsoft Entra ID withholds the groups claim from a user in more
+    // groups than a token carries and sends a Graph link in its place.
+    #[must_use]
+    pub fn groups_overage(&self) -> bool {
+        self.attributes
+            .iter()
+            .any(|(name, _)| name == GROUPS_OVERAGE_ATTRIBUTE)
     }
 }
 
@@ -92,21 +102,30 @@ pub(super) struct GatedIdentity {
     pub roles: Vec<String>,
 }
 
-// Why: AD is the corporate directory, so an address it asserts is verified by
-// construction; the domain allow-list and group map gate, not `email_verified`.
+// Why: Entra ID is the corporate directory, so an address it asserts is
+// verified by construction; the domain allow-list and group map gate, not
+// `email_verified`.
 pub(super) fn gate_claims(
     cfg: &AdfsConfig,
     claims: &AssertionClaims,
 ) -> Result<GatedIdentity, LoginRedirect> {
     let email = claims.login_email(cfg).ok_or(LoginRedirect("no_email"))?;
     if !cfg.email_allowed(&email) {
-        tracing::warn!(email, "ADFS login rejected: domain not allow-listed");
+        tracing::warn!(email, "SSO login rejected: domain not allow-listed");
         return Err(LoginRedirect("forbidden"));
+    }
+    if claims.groups_overage() {
+        tracing::warn!(
+            email,
+            "SSO login rejected: Entra ID sent a groups overage link instead of the groups claim; \
+             set the enterprise application's groups claim to \"Groups assigned to the application\""
+        );
+        return Err(LoginRedirect("group_overage"));
     }
     let groups = claims.values(&cfg.groups_attribute);
     let directory_vouched_for_nobody = groups.is_empty();
     if directory_vouched_for_nobody && cfg.deny_without_group {
-        tracing::warn!(email, "ADFS login rejected: assertion carried no AD group");
+        tracing::warn!(email, "SSO login rejected: assertion carried no group");
         return Err(LoginRedirect("no_group"));
     }
     let mut roles = cfg.roles_for_groups(&groups);
@@ -160,13 +179,13 @@ async fn find_or_provision_user(
     )
     .await
     .map_err(|e| {
-        tracing::error!(error = %e, "Failed to resolve federated ADFS user");
+        tracing::error!(error = %e, "Failed to resolve federated SSO user");
         LoginRedirect("error")
     })?
     .ok_or_else(|| {
         tracing::warn!(
             email = %gated.email,
-            "ADFS login rejected: auto-provisioning disabled and no existing account"
+            "SSO login rejected: auto-provisioning disabled and no existing account"
         );
         LoginRedirect("not_provisioned")
     })
@@ -182,13 +201,13 @@ async fn persist_directory_memberships(
         groups::members::replace_directory_group_memberships(&deps.write_pool, user_id, groups)
             .await
     {
-        tracing::warn!(error = %e, %user_id, "Failed to persist ADFS group memberships");
+        tracing::warn!(error = %e, %user_id, "Failed to persist SSO group memberships");
     }
     if let Err(e) =
         projects::members::replace_directory_project_memberships(&deps.write_pool, user_id, groups)
             .await
     {
-        tracing::warn!(error = %e, %user_id, "Failed to persist ADFS project memberships");
+        tracing::warn!(error = %e, %user_id, "Failed to persist SSO project memberships");
     }
 }
 
@@ -201,12 +220,12 @@ async fn revoke_if_demoted(deps: &AdfsDeps, resolved: &federated::ResolvedFedera
             user_id = %resolved.user_id,
             sessions = counts.sessions,
             api_keys = counts.api_keys,
-            "Revoked credentials after ADFS removed the admin role"
+            "Revoked credentials after SSO removed the admin role"
         ),
         Err(e) => tracing::error!(
             error = %e,
             user_id = %resolved.user_id,
-            "Failed to revoke credentials after an ADFS admin demotion"
+            "Failed to revoke credentials after an SSO admin demotion"
         ),
     }
 }
@@ -217,7 +236,7 @@ async fn revoke_on_denial(
     claims: &AssertionClaims,
     reason: &str,
 ) {
-    if !matches!(reason, "no_group" | "forbidden") {
+    if !matches!(reason, "no_group" | "forbidden" | "group_overage") {
         return;
     }
     let Some(email) = claims.login_email(cfg) else {
@@ -231,11 +250,11 @@ async fn revoke_on_denial(
             api_keys = counts.api_keys,
             device_certs = counts.device_certs,
             exchange_codes = counts.exchange_codes,
-            "Revoked credentials after ADFS refused the sign-in"
+            "Revoked credentials after SSO refused the sign-in"
         ),
         Ok(_) => {},
         Err(e) => {
-            tracing::error!(error = %e, reason, "Failed to revoke credentials after a refused ADFS sign-in");
+            tracing::error!(error = %e, reason, "Failed to revoke credentials after a refused SSO sign-in");
         },
     }
 }

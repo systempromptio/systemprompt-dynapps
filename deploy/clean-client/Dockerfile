@@ -1,9 +1,9 @@
 # syntax=docker/dockerfile:1.7
 #
-# A clean Linux client for testing the Claude Code and OpenCode + Astound
+# A clean Linux client for testing the Claude Code and OpenCode + Dynapps
 # Bridge integrations.
 #
-# This image deliberately contains NO Astound config. It exists to prove the
+# This image deliberately contains NO Dynapps config. It exists to prove the
 # integration works from a machine that has never been set up: bridge login,
 # bridge install, credential helper, plugin/MCP sync, then a real Claude Code
 # session routed through the gateway.
@@ -34,7 +34,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # its help ("error while loading shared libraries: libdbus-1.so.3"). `dbus`
 # itself provides dbus-run-session, needed because keyring writes require a
 # session bus and a container has none:
-#   dbus-run-session -- astound-bridge <cmd>
+#   dbus-run-session -- dynapps-bridge <cmd>
 # Any Linux tarball we ship has the same runtime dependency — see README.
 RUN apt-get update && apt-get install -y --no-install-recommends \
       dbus \
@@ -113,7 +113,7 @@ RUN npm install -g opencode-ai@latest \
 WORKDIR /home/tester/work
 
 # The gateway URL is run-time-only by design: every `just` recipe passes
-# -e ASTOUND_BRIDGE_GATEWAY_URL, bootstrap.sh hard-errors when it is unset,
+# -e DYNAPPS_BRIDGE_GATEWAY_URL, bootstrap.sh hard-errors when it is unset,
 # and no default is baked here. A baked default once silently overrode the
 # gateway the bridge was logged into and produced a phantom "Invalid PAT".
 ENV TERM=xterm-256color

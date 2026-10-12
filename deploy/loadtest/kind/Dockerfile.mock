@@ -2,7 +2,7 @@
 # workspace) as a small image for the load-test rig. Build context is that
 # crate directory in the sibling core checkout:
 #   docker build -f deploy/loadtest/kind/Dockerfile.mock \
-#     -t astound-loadtest/mock-inference:local ../systemprompt-core/crates/tests/mock-inference
+#     -t dynapps-loadtest/mock-inference:local ../systemprompt-core/crates/tests/mock-inference
 FROM rust:1.90-bookworm AS build
 WORKDIR /src
 COPY . .

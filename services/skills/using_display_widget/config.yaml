@@ -6,7 +6,7 @@ description: Render assembled Salesforce data as a styled widget using either a 
 enabled: true
 file: SKILL.md
 tags:
-- astound
+- dynapps
 - salesforce
 - sales
 category: business

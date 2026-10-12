@@ -1,6 +1,6 @@
 # Host access to the gateway pods (host port 18080 via kind-config.yaml) for
 # manual calls and the core harness. In-cluster generators use the chart's
-# ClusterIP Service `astound-gateway` instead, which avoids the kind proxy hop.
+# ClusterIP Service `dynapps-gateway` instead, which avoids the kind proxy hop.
 apiVersion: v1
 kind: Service
 metadata:
@@ -9,6 +9,6 @@ metadata:
 spec:
   type: NodePort
   selector:
-    app.kubernetes.io/instance: astound
+    app.kubernetes.io/instance: dynapps
     app.kubernetes.io/component: gateway
   ports: [{name: http, port: 8080, targetPort: 8080, nodePort: 30080}]

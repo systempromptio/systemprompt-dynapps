@@ -6,7 +6,7 @@ description: Produce an inbound-lead priority and routing recommendation from Sa
 enabled: true
 file: SKILL.md
 tags:
-- astound
+- dynapps
 - salesforce
 - sales
 category: business

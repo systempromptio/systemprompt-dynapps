@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Sync astound's own release version. The core crate pins and
+# Sync dynapps's own release version. The core crate pins and
 # bridge/CORE_REF are a separate number, owned by scripts/sync-core-version.sh:
-# astound can release without a core release.
+# dynapps can release without a core release.
 #
 #   scripts/sync-release-version.sh 0.21.0          # apply
 #   scripts/sync-release-version.sh 0.21.0 --check  # verify only (CI guard)
@@ -51,7 +51,7 @@ check_or_apply Cargo.toml \
 
 # bridge/Cargo.toml — the white-label bridge crate. Its version is what the
 # desktop app displays and what the gateway heartbeat reports, so it tracks the
-# astound release.
+# dynapps release.
 check_or_apply bridge/Cargo.toml \
     "s|^version = \"[0-9.]*\"|version = \"$VERSION\"|" \
     "^version = \"$VERSION\"" \
@@ -111,7 +111,7 @@ for doc in deploy/self-host/README.md deploy/self-host/SINGLE-NODE.md \
 done
 
 if [ "$MODE" = "--check" ]; then
-    [ "$fail" -eq 0 ] && echo "version sync OK: astound pinned to $VERSION" || exit 1
+    [ "$fail" -eq 0 ] && echo "version sync OK: dynapps pinned to $VERSION" || exit 1
 else
     echo "version sync applied: $VERSION"
 fi

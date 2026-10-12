@@ -1,20 +1,20 @@
 marketplace:
-  id: astound-super-admin
-  name: "Astound Digital — Super Admin"
+  id: dynapps-super-admin
+  name: "Dynapps — Super Admin"
   description: "The single administrator control plane: a daily brief with a traffic-light view of critical projects, critical-project and AI-usage reporting over Jira and Confluence evidence, and direct CLI access to the instance."
   version: "2.0.0"
   visibility: private
   author:
-    name: Astound Digital
+    name: Dynapps
     email: ed@systemprompt.io
   keywords: [admin, governance, reporting, atlassian, operations]
   license: proprietary
   # Who reaches this workspace is declared in services/access-control/rules.yaml
-  # (entity marketplace/astound-super-admin), the single source of entitlement on this instance.
+  # (entity marketplace/dynapps-super-admin), the single source of entitlement on this instance.
   plugins:
     source: explicit
     include:
-      - astound-super-admin
+      - dynapps-super-admin
   mcp_servers:
     source: explicit
     include:

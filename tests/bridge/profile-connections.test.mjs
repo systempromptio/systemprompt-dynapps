@@ -90,8 +90,8 @@ test('renders one compact row per provider with a display name, a status dot and
   h.snapshot('https://gw');
   await flush();
   h.pending.pop()({ identity: { extra: { connections: { version: 1, user_id: 'user', revision: 1, connections: [
-    { provider: 'atlassian', status: 'connected', configured: true, entitled: true, verified_at: '2026-09-08T10:34:00Z', resource_name: 'https://astounddigital.atlassian.net' },
-    { provider: 'salesforce', display_name: 'Astound Salesforce', status: 'not_connected', configured: true, entitled: true },
+    { provider: 'atlassian', status: 'connected', configured: true, entitled: true, verified_at: '2026-09-08T10:34:00Z', resource_name: 'https://dynappsdigital.atlassian.net' },
+    { provider: 'salesforce', display_name: 'Dynapps Salesforce', status: 'not_connected', configured: true, entitled: true },
     { provider: 'fifth-mcp', status: 'verification_required', configured: true, entitled: false },
   ] } } } });
   await flush();
@@ -100,8 +100,8 @@ test('renders one compact row per provider with a display name, a status dot and
   assert.ok(html.includes('1 / 3 connected'));
   assert.equal((html.match(/<li class="sp-profile-connection"/g) || []).length, 3);
   assert.ok(html.includes('sp-dot--ok') && html.includes('sp-dot--warn') && html.includes('sp-dot--unknown'));
-  assert.ok(html.includes('>Atlassian<') && html.includes('>Astound Salesforce<') && !html.includes('>atlassian<'));
-  assert.ok(html.includes('astounddigital.atlassian.net') && !html.includes('https://astounddigital'.replace('https://', '>https://')));
+  assert.ok(html.includes('>Atlassian<') && html.includes('>Dynapps Salesforce<') && !html.includes('>atlassian<'));
+  assert.ok(html.includes('dynappsdigital.atlassian.net') && !html.includes('https://dynappsdigital'.replace('https://', '>https://')));
   assert.ok(html.includes('Verification required'));
   assert.ok(html.includes('>Manage<') && html.includes('>Connect<'));
   assert.equal((html.match(/data-action="manage-connection"/g) || []).length, 2);

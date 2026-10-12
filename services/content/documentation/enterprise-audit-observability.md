@@ -1,7 +1,7 @@
 ---
 title: "Audit Trail, Traceability & Observability"
 description: "Audit every AI call with actor, cost, and latency; follow one trace id from request to tool to cost; export the trail to your own stack over OTLP; and catch cost or error spikes automatically."
-author: "Astound Digital"
+author: "Dynapps"
 slug: "enterprise-audit-observability"
 keywords: "audit, trace, observability, otlp, export, anomaly detection, requests, traceability, retention, prometheus, metrics, scope attribution"
 kind: "guide"

@@ -1,23 +1,23 @@
 marketplace:
-  id: astound-commons
-  name: "Astound Digital — Commons"
+  id: dynapps-commons
+  name: "Dynapps — Commons"
   description: "The baseline workspace every signed-in user reaches: who you are and what your access grants you. No connectors and no credentials required."
   version: "1.0.0"
   visibility: public
   author:
-    name: Astound Digital
+    name: Dynapps
     email: ed@systemprompt.io
   keywords:
-    - astound
+    - dynapps
     - commons
     - productivity
   license: proprietary
   # Who reaches this workspace is declared in services/access-control/rules.yaml
-  # (entity marketplace/astound-commons), the single source of entitlement on this instance.
+  # (entity marketplace/dynapps-commons), the single source of entitlement on this instance.
   plugins:
     source: explicit
     include:
-      - astound-commons
+      - dynapps-commons
   # No servers. Everything here is prose the agent follows with its own tools.
   mcp_servers:
     source: explicit

@@ -1,11 +1,11 @@
-# Fixed eval inputs for the astound-salesforce plugin. Every run sends exactly
+# Fixed eval inputs for the dynapps-salesforce plugin. Every run sends exactly
 # these prompts, so a change in the metrics is a change in the skills, not in
 # the question. Edit a prompt only with a new suite version: prompts are hashed
 # into every run's manifest and runs with different hashes are not compared.
 #
 # Every record named here is in the Salesforce MCP TEST seed dataset
 # (5 accounts, 8 opportunities, 8 contacts, 0 leads) on ontrq.
-plugin: astound-salesforce
+plugin: dynapps-salesforce
 suite_version: 1
 model: claude-sonnet-5[1m]
 suffix: >-

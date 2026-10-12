@@ -14,7 +14,7 @@ with no source change leaves both files byte-identical.
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-# Palette: the astound product set (storage/files/css/core/variables.css).
+# Palette: the dynapps product set (storage/files/css/core/variables.css).
 # Not the orange print set used by core's internal architecture factsheets.
 INK = "#171717"
 SECONDARY = "#4d4d4d"

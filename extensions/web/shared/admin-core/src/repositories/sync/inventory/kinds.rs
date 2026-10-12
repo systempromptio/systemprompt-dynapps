@@ -159,15 +159,15 @@ pub const CONFIG_KINDS: &[ConfigKind] = &[
     ),
     file(
         "adfs",
-        "ADFS sign-in",
+        "Entra ID sign-in",
         "the SAML relying party the console signs in through",
         "web/config/adfs.yaml",
     ),
     file(
         "adfs_metadata",
-        "ADFS federation metadata",
+        "Entra ID federation metadata",
         "the identity provider's pinned certificate and endpoints",
-        "web/config/adfs-federation-metadata.xml",
+        "web/config/entra-federation-metadata.xml",
     ),
     file(
         "security",

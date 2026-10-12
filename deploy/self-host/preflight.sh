@@ -4,8 +4,8 @@
 # stage passes. Pair with verify-node.sh (post-boot) for the whole picture.
 #
 # Usage:
-#   preflight.sh --image ghcr.io/astound-digital/systemprompt-astound:X.Y.Z \
-#                --profile-dir /etc/astound/profile \
+#   preflight.sh --image ghcr.io/systempromptio/systemprompt-dynapps:X.Y.Z \
+#                --profile-dir /etc/dynapps/profile \
 #                [--database-url 'postgres://...']   # defaults to secrets.json database_url
 #                [--external-url https://ai.example.com]   # adds the DNS + TLS stage
 #
@@ -59,7 +59,7 @@ done
 n="$(docker run --rm --entrypoint sh "$IMAGE" -c 'ls /app/storage/files/downloads | wc -l' 2>/dev/null | tr -d ' ')"
 [ "${n:-0}" -ge 9 ] && ok "client downloads baked in ($n files)" || bad "client downloads incomplete in the image ($n files)"
 if command -v cosign >/dev/null; then
-    cosign verify --certificate-identity-regexp='https://github.com/Astound-Digital/systemprompt-astound/' \
+    cosign verify --certificate-identity-regexp='https://github.com/systempromptio/systemprompt-dynapps/' \
         --certificate-oidc-issuer=https://token.actions.githubusercontent.com "$IMAGE" >/dev/null 2>&1 \
         && ok "cosign signature verifies" || bad "cosign signature does not verify"
 else

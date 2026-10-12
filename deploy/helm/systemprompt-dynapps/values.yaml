@@ -1,4 +1,4 @@
-# Default values for systemprompt-astound.
+# Default values for systemprompt-dynapps.
 # Every value a GKE operator MUST set is marked REQUIRED; values-gke-example.yaml
 # shows a complete set. Runbook: docs/install/gke.md.
 
@@ -7,8 +7,8 @@ fullnameOverride: ""
 
 image:
   # Private GHCR by default. Cloudfresh mirrors it to Artifact Registry, e.g.
-  # europe-west1-docker.pkg.dev/<project>/astound/systemprompt-astound
-  repository: ghcr.io/astound-digital/systemprompt-astound
+  # europe-west1-docker.pkg.dev/<project>/dynapps/systemprompt-dynapps
+  repository: ghcr.io/systempromptio/systemprompt-dynapps
   # Defaults to Chart.appVersion. Versioned tags are immutable; never use latest.
   tag: ""
   # Pin the verified digest (cosign verify, deploy/self-host/README.md §6) in production.
@@ -43,7 +43,7 @@ profile:
   storage:
     backend: gcs
     bucket: ""          # REQUIRED with backend gcs
-    prefix: astound/files
+    prefix: dynapps/files
     credentials: workload_identity
   # Requests per second per client address, one bucket per route group; same
   # meanings as deploy/self-host/profile.yaml.template. Behind the GKE load
@@ -97,7 +97,7 @@ secrets:
     # REQUIRED with mode csi: full resource name of the secret version holding the
     # whole secrets.json document. Pin a version number in production, so a
     # restart never picks up an unreviewed rotation.
-    secretVersion: ""   # projects/<project>/secrets/astound-secrets-json/versions/1
+    secretVersion: ""   # projects/<project>/secrets/dynapps-secrets-json/versions/1
   existingSecret:
     name: ""
     key: secrets.json
@@ -109,7 +109,7 @@ secrets:
 # as a native sidecar (restartPolicy: Always init container, Kubernetes 1.29+)
 # so it starts before the app and ends with the migrate Job. secrets.json
 # database_url then points at 127.0.0.1, e.g. with IAM database auth:
-#   postgres://astound-gw%40<project>.iam@127.0.0.1:5432/systemprompt?sslmode=disable
+#   postgres://dynapps-gw%40<project>.iam@127.0.0.1:5432/systemprompt?sslmode=disable
 # ---------------------------------------------------------------------------
 cloudSqlProxy:
   enabled: true
@@ -275,7 +275,7 @@ ingress:
     enabled: true
   # Existing TLS Secret instead of a ManagedCertificate.
   tlsSecretName: ""
-  sslPolicy: ""         # FrontendConfig sslPolicy, e.g. astound-modern-tls
+  sslPolicy: ""         # FrontendConfig sslPolicy, e.g. dynapps-modern-tls
   annotations: {}
 
 gatewayApi:

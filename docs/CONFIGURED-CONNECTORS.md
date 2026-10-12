@@ -70,87 +70,6 @@ Issuer identifiers are compared as URLs, with a single trailing slash ignored,
 so an issuer advertised as `https://idp.example/` in protected-resource metadata
 matches `https://idp.example` in its own metadata.
 
-## Google Workspace (Agent Search, `google_workspace`)
-
-`services/mcp/google_workspace.yaml` connects Google Agent Search's hosted MCP
-server (Discovery Engine, ex-Vertex AI Search) over **federated** Google
-Drive, Gmail and Calendar data stores: nothing is copied, all are searched
-live, and Google filters every result to what the signed-in user can already
-open — their Drive permissions, their own mailbox and calendar. Tools: `search`,
-`conversational_search`, `list_engines`. Scope:
-`https://www.googleapis.com/auth/discoveryengine.readwrite`. The endpoint is
-**regional** and must match the engine's location: this instance's engine is
-`global` in the Astound Knowledge UK Sales project
-(`astound-knowledge-uk-sales`, number `148780456827`), so it calls `discoveryengine.googleapis.com/mcp`. An `eu`
-engine needs `eu-discoveryengine.googleapis.com/mcp`; the wrong host answers
-`Incorrect API endpoint used`.
-
-**No licence.** Discovery Engine is usage-billed (10k queries/month free);
-Gemini Enterprise is the licensed end-user app on the same engine and is not
-needed. Proven 17 Sep 2026 in a project with nothing but the API enabled. The
-OAuth scope is Discovery Engine only — no `gmail.*` scope; Google reads the
-mailbox server-side under the user's Workspace identity. (RAG Engine, the
-corpus-copy alternative, was dropped the same day: with per-user Drive ACLs
-available live there is no reason to hold a copy.)
-
-The row uses the generic adapter: Google publishes protected-resource metadata
-for the endpoint and OpenID metadata at `accounts.google.com`. Two Google
-specifics are carried by the keys above: `authorization_params: {access_type:
-offline, prompt: consent}` — Google issues a refresh token only when offline
-access is requested, and without one the connection expires with the hour-long
-access token — and `identity: userinfo` so the row shows the Google address.
-
-The engine's serving config is a **tool argument**, and nothing model-visible
-in a server config reaches the model, so the gateway writes it into every call
-from `tools.<name>.arguments` in `services/mcp/google_workspace.yaml`. **On
-handover** two things change and nothing else: that `servingConfig` and the
-OAuth client id/secret. Engine, OAuth client and IAM grants must all live in the
-same project.
-
-On the Google side, in one GCP project:
-
-1. Enable `discoveryengine.googleapis.com`; attach billing and a budget alert.
-2. AI Applications → Settings → Identity provider → Google Identity (before
-   the data store; the wizard refuses otherwise).
-3. Create federated data stores for Drive, Gmail and Calendar (location
-   `global`, matching the endpoint) and one Enterprise-tier search app over **all of them** — an app
-   created with a single store can never gain a second (`Engines with a
-   single data store cannot add or remove data stores`); the app's
-   `…/servingConfigs/default_search` is the `servingConfig`. Scriptable against
-   the Discovery Engine REST API with an `x-goog-user-project` header:
-   `dataStores.create` (v1alpha) with **all three** of `contentConfig:
-   GOOGLE_WORKSPACE`, `aclEnabled: true` and `workspaceConfig: {type:
-   GOOGLE_DRIVE | GOOGLE_MAIL | GOOGLE_CALENDAR, dasherCustomerId: <Workspace
-   customer id, e.g. C01hjjuoz from `gcloud organizations list`>}`, then
-   `engines.create` with every `dataStoreId`. A store created without those
-   three fields is accepted, silently unbound from the Workspace, and returns
-   nothing forever — `workspaceConfig` is immutable, so delete and recreate.
-   `GOOGLE_PEOPLE` (directory) is not servable by the search backend in `eu`
-   (untested in `global`)
-   (`No mapping of workspace config type found`); Chat, Groups, Sites and Keep
-   were left out deliberately. The console wizard sets all of this for you;
-   the API does not.
-4. Create an OAuth **Web application** client with an **Internal** consent
-   screen, the scope above and the redirect
-   `https://YOUR-SERVER/api/public/connectors/google_workspace/callback`. Store
-   the pair as `google_drive_mcp_client_id` / `google_drive_mcp_client_secret`.
-5. Grant the readership group `roles/mcp.toolUser` and
-   `roles/discoveryengine.viewer` on the project. IAM decides who may call;
-   Drive decides what they see. The Astound rule for `mcp_server/google_workspace`
-   decides who sees the row.
-6. Workspace Admin → Security → API controls → Manage third-party app access:
-   mark Google's Agent Search client as **Trusted**, and turn on "Smart
-   features and personalization in other Google products" (Gmail user
-   settings, org-wide or per user). Without both, searches succeed and return
-   nothing; propagation can take up to 24 h.
-7. Turn on Data Access audit logs for Discovery Engine.
-
-Acceptance: connect with an account inside the group — the row reads
-"Google Workspace · Connected" with the address, Test lists `search`, and a call
-an hour later still succeeds (refresh path). Two users with different Drive
-access to one file get different results for the same query; an account
-outside the group is refused by Google, not answered.
-
 ## Migration and failures
 
 Migration 051 replaces the three-provider database restrictions with server-ID
@@ -171,11 +90,10 @@ accepts a `connector:` band (precedence 160, between `group` and the Salesforce
 `salesforce` link band) whose values are server ids; a person matches while
 `mcp_connector_accounts` holds a `connected` row for that server
 (`extensions/web/shared/admin-core/src/authz/connector.rs`). The band is available to any
-entity; the `astound-salesforce` marketplace no longer uses it — it reaches the
+entity; the `dynapps-salesforce` marketplace no longer uses it — it reaches the
 `business-users` group by membership alone, and the Salesforce connector is
 linked from inside the workspace (Salesforce still refuses anyone without a
-user in the org). Google Workspace remains an optional connector and is
-filtered independently.
+user in the org).
 
 ## Tool permissions in the clients
 

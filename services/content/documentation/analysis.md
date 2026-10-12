@@ -1,7 +1,7 @@
 ---
 title: "Analysis: The Record of Every Conversation and Skill"
 description: "What the Analysis section of the admin console shows — the deterministic record of every gateway conversation and every skill invocation, with one judge label on top — and how to read it."
-author: "Astound Digital"
+author: "Dynapps"
 slug: "analysis"
 keywords: "analysis, conversations, skills, tokens, cost, models, tool calls, governance, judge, completion, versions, marketplace hash, install rate"
 kind: "guide"

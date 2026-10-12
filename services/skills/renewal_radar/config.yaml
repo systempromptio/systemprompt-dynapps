@@ -6,7 +6,7 @@ description: Build a renewal risk brief from Salesforce opportunities and accoun
 enabled: true
 file: SKILL.md
 tags:
-- astound
+- dynapps
 - salesforce
 - sales
 category: business

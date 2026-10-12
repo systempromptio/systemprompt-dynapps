@@ -1,7 +1,7 @@
 ---
 title: "Observability Export (OTLP)"
 description: "Ship the audit trail — every AI request with its tool calls and governance decisions, plus the server log — to Datadog, Grafana/LGTM, Splunk or any OpenTelemetry collector."
-author: "Astound Digital"
+author: "Dynapps"
 slug: "observability-export"
 keywords: "otlp, opentelemetry, datadog, splunk, grafana, lgtm, google cloud, cloud logging, cloud trace, bigquery, chargeback, siem, export, telemetry, observability, upstream latency"
 kind: "guide"
@@ -77,7 +77,7 @@ The profile is read once at boot, so adding or changing the block needs a restar
 ### Google Cloud
 
 > **Example, untested on GCP.** This configuration follows the OpenTelemetry Collector
-> Contrib `googlecloud` exporter's documented options. Astound has not run it against a
+> Contrib `googlecloud` exporter's documented options. Dynapps has not run it against a
 > Google Cloud project; validate it in a non-production project first.
 
 The gateway speaks OTLP/HTTP only, and Google Cloud's services do not take that push

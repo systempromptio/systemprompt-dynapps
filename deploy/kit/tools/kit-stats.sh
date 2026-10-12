@@ -17,7 +17,7 @@ set -euo pipefail
 
 tag="${1:?usage: kit-stats.sh <release-tag>}"
 if [ -z "${API_URL:-}" ] || [ -z "${STATS_PAT:-}" ]; then
-  echo "::warning title=No kit stats::set SYSTEMPROMPT_API_URL and ASTOUND_STATS_PAT to record each release's run figures in its notes"
+  echo "::warning title=No kit stats::set SYSTEMPROMPT_API_URL and DYNAPPS_STATS_PAT to record each release's run figures in its notes"
   exit 0
 fi
 

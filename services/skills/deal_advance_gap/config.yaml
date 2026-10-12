@@ -6,7 +6,7 @@ description: Map an opportunity's path to advance or close from Salesforce stage
 enabled: true
 file: SKILL.md
 tags:
-- astound
+- dynapps
 - salesforce
 - sales
 category: business

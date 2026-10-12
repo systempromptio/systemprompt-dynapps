@@ -1,7 +1,7 @@
 ---
 title: "Dashboard"
 description: "The admin overview: ten live headline figures against the previous window, five charts over time, spend by project and group, the most used models, and what is waiting on a person."
-author: "Astound Digital"
+author: "Dynapps"
 slug: "dashboard"
 keywords: "dashboard, overview, admin home, kpi, spend, requests, latency, error rate, models, projects, groups, approvals, anomalies, live"
 kind: "guide"

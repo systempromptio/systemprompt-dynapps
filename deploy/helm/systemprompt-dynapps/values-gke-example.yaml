@@ -1,10 +1,10 @@
 # Example values for GKE (Autopilot or Standard >= 1.29, Dataplane V2,
 # Workload Identity, Secret Manager add-on). Replace every <...>.
-# helm upgrade --install astound deploy/helm/systemprompt-astound \
-#   -n astound -f values-gke-example.yaml --wait --timeout 20m
+# helm upgrade --install dynapps deploy/helm/systemprompt-dynapps \
+#   -n dynapps -f values-gke-example.yaml --wait --timeout 20m
 
 image:
-  repository: europe-west1-docker.pkg.dev/<project>/astound/systemprompt-astound
+  repository: europe-west1-docker.pkg.dev/<project>/dynapps/systemprompt-dynapps
   tag: "0.63.1"
   digest: ""            # sha256:... from `crane digest` / cosign verify
 
@@ -13,20 +13,20 @@ profile:
   adminEmail: <first-admin>@<customer-domain>
   storage:
     backend: gcs
-    bucket: <project>-astound-files
-    prefix: astound/files
+    bucket: <project>-dynapps-files
+    prefix: dynapps/files
     credentials: workload_identity
 
 secrets:
   mode: csi
   csi:
-    secretVersion: projects/<project>/secrets/astound-secrets-json/versions/1
+    secretVersion: projects/<project>/secrets/dynapps-secrets-json/versions/1
 
 cloudSqlProxy:
-  instanceConnectionName: <project>:europe-west1:astound-pg16
+  instanceConnectionName: <project>:europe-west1:dynapps-pg16
 
 serviceAccount:
-  gcpServiceAccount: astound-gw@<project>.iam.gserviceaccount.com
+  gcpServiceAccount: dynapps-gw@<project>.iam.gserviceaccount.com
 
 gateway:
   autoscaling:
@@ -38,10 +38,10 @@ routing:
 
 ingress:
   enabled: true
-  staticIpName: astound-gw-ip
+  staticIpName: dynapps-gw-ip
   managedCertificate:
     enabled: true
-  sslPolicy: astound-modern-tls
+  sslPolicy: dynapps-modern-tls
 
 metrics:
   podMonitoring:

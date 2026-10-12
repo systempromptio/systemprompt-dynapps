@@ -38,14 +38,14 @@ categories:
     name: Pages
     slug: pages
 metadata:
-  default_author: Astound Digital
+  default_author: Dynapps
   language: en
   structured_data:
     organization:
-      name: Astound Digital
-      url: https://astounddigital.com
-      logo: https://astounddigital.com/files/images/logo.png
-      description: Global digital commerce and AI-powered experience consultancy
+      name: Dynapps
+      url: https://www.dynapps.es
+      logo: https://dynapps.systemprompt.io/files/images/logo.png
+      description: Europe's leading Odoo implementation partner
     article:
       type: BlogPosting
       language: en-US

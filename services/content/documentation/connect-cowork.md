@@ -1,18 +1,18 @@
 ---
 title: "Connect Cowork"
-description: "Connect Claude Cowork through Astound Bridge on macOS and Windows, approve Desktop policy, and verify a session."
-author: "Astound Digital"
+description: "Connect Claude Cowork through Dynapps Bridge on macOS and Windows, approve Desktop policy, and verify a session."
+author: "Dynapps"
 slug: "connect-cowork"
 kind: "guide"
 public: true
 tags: ["documentation", "getting-started", "bridge"]
 published_at: "2026-09-09"
 updated_at: "2026-09-29"
-keywords: "cowork, claude desktop, bridge, gateway, desktop profile, connectors, google workspace, agent search"
+keywords: "cowork, claude desktop, bridge, gateway, desktop profile, connectors"
 after_reading_this:
-  - "Install the Desktop profile that points Cowork at the Astound gateway"
+  - "Install the Desktop profile that points Cowork at the Dynapps gateway"
   - "Verify a Cowork request reached the gateway"
-  - "Connect Google Workspace and other personal connectors"
+  - "Connect Atlassian, Salesforce and other personal connectors"
 related_playbooks:
   - title: "Connect Claude Code"
     url: "/documentation/connect-claude-code"
@@ -24,7 +24,7 @@ related_playbooks:
 
 # Connect Cowork
 
-Connect Cowork in Claude Desktop to your organization's Astound gateway on macOS or Windows. This is separate from [Claude Code in a terminal](/documentation/connect-claude-code).
+Connect Cowork in Claude Desktop to your organization's Dynapps gateway on macOS or Windows. This is separate from [Claude Code in a terminal](/documentation/connect-claude-code).
 
 ## Before you start
 
@@ -42,8 +42,8 @@ Save your work and quit Claude Desktop before applying the profile.
 On **macOS**, use the alias from the installation guide:
 
 ```bash
-astound-bridge sync
-astound-bridge install --host claude-desktop
+dynapps-bridge sync
+dynapps-bridge install --host claude-desktop
 ```
 
 The bridge prepares a configuration profile and opens the macOS profile-installation flow. In System Settings, review and install the downloaded profile. Follow the displayed instructions and approve the administrator prompt if authorized. Opening the profile is not the same as completing installation.
@@ -67,9 +67,9 @@ If installation reports pending approval, disabled access, or a failure, resolve
 
 ## 2. Open Cowork
 
-Keep Astound Bridge running and reopen Claude Desktop after the profile is installed. Open Cowork and choose a Claude model available through your organization's gateway configuration.
+Keep Dynapps Bridge running and reopen Claude Desktop after the profile is installed. Open Cowork and choose a Claude model available through your organization's gateway configuration.
 
-If Cowork or gateway mode is unavailable, confirm the approved Desktop version, installed profile, and account access with your administrator. Do not assume that signing in to a personal Claude account establishes the Astound connection.
+If Cowork or gateway mode is unavailable, confirm the approved Desktop version, installed profile, and account access with your administrator. Do not assume that signing in to a personal Claude account establishes the Dynapps connection.
 
 The Gemini `--model` examples in the Claude Code guide are terminal commands, not Cowork setup instructions.
 
@@ -83,9 +83,9 @@ The Gemini `--model` examples in the Claude Code guide are terminal commands, no
 **macOS:**
 
 ```bash
-astound-bridge whoami
-astound-bridge status
-astound-bridge doctor
+dynapps-bridge whoami
+dynapps-bridge status
+dynapps-bridge doctor
 ```
 
 **Windows PowerShell:**
@@ -106,17 +106,7 @@ whether it is connected, the account it is connected as, and a **Test**
 button that lists the tools you can call. Disconnecting removes the
 credential from every enrolled device.
 
-**Google Workspace** (`google_workspace`) searches Google Drive, Gmail and
-Calendar live through Google Agent Search. Nothing is copied into the
-platform: Google filters every result to what your own Google account can
-already open, so two people asking the same question can get different
-answers. The connector appears for the `uk` and `business-users` groups;
-if you do not see it, ask your administrator. Connect it with your
-Astound Google account and accept the consent screen — the row then reads
-*Google Workspace · Connected* with your address.
-
-Atlassian (Jira and Confluence) and Salesforce connect the same way; see
-[Salesforce](/documentation/salesforce) for the Salesforce specifics.
+Atlassian (Jira and Confluence) and Salesforce connect the same way.
 
 ## Troubleshooting
 
@@ -135,7 +125,7 @@ Save your work and quit Claude Desktop. Remove its bridge profile:
 **macOS:**
 
 ```bash
-astound-bridge uninstall --host claude-desktop
+dynapps-bridge uninstall --host claude-desktop
 ```
 
 **Windows PowerShell:**

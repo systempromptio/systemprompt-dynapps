@@ -4,7 +4,7 @@
 #   cluster.sh secrets       render .profile/secrets.json (deploy/self-host/render-profile.sh)
 #   cluster.sh deploy [--set k=v ...] [--policies default|enforce]
 #                            services ConfigMap + helm upgrade --install, wait for both roles
-#   cluster.sh image-local   build systemprompt-astound:loadtest-local (Dockerfile.local) and load it
+#   cluster.sh image-local   build systemprompt-dynapps:loadtest-local (Dockerfile.local) and load it
 #   cluster.sh lint          helm lint + template with values-kind.yaml, profile schema check
 #   cluster.sh down          delete the cluster
 # Portable bash (macOS + Linux); needs kind, kubectl, helm, docker, jq, openssl.
@@ -12,16 +12,16 @@ set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$HERE/../../.." && pwd)"
-CLUSTER=astound-loadtest
+CLUSTER=dynapps-loadtest
 NS=loadtest
-CHART="$ROOT/deploy/helm/systemprompt-astound"
+CHART="$ROOT/deploy/helm/systemprompt-dynapps"
 VALUES="$CHART/values-kind.yaml"
 # Optional extra values file under the chart directory (LOADTEST_VALUES).
 EXTRA_VALUES=()
 [ -z "${LOADTEST_VALUES:-}" ] || EXTRA_VALUES=(-f "$CHART/$LOADTEST_VALUES")
-IMAGE_REPO=ghcr.io/astound-digital/systemprompt-astound
+IMAGE_REPO=ghcr.io/systempromptio/systemprompt-dynapps
 IMAGE_TAG="${LOADTEST_IMAGE_TAG:-0.65.0}"
-MOCK_IMAGE=astound-loadtest/mock-inference:local
+MOCK_IMAGE=dynapps-loadtest/mock-inference:local
 CORE="${CORE_DIR:-$ROOT/../systemprompt-core}"
 SECRETS="$HERE/.profile/secrets.json"
 KCTX="kind-$CLUSTER"
@@ -72,7 +72,7 @@ cmd_secrets() {
     [ -n "$emk" ] || emk="$(openssl rand -hex 32)"
     "$ROOT/deploy/self-host/render-profile.sh" --out "$HERE/.profile" \
         --external-url https://gateway.loadtest.local \
-        --admin-email loadtest-admin@astounddigital.com \
+        --admin-email loadtest-admin@dynapps.es \
         --trusted-proxies 10.0.0.0/8 \
         --database-url 'postgres://systemprompt:loadtest@postgres.loadtest.svc.cluster.local:5432/systemprompt?sslmode=disable' \
         --anthropic-key sk-ant-loadtest-mock \
@@ -102,12 +102,12 @@ cmd_deploy() {
     done
     [ -f "$SECRETS" ] || cmd_secrets
     services_configmap "$policies"
-    helm --kube-context "$KCTX" upgrade --install astound "$CHART" -n "$NS" \
+    helm --kube-context "$KCTX" upgrade --install dynapps "$CHART" -n "$NS" \
         -f "$VALUES" "${EXTRA_VALUES[@]+"${EXTRA_VALUES[@]}"}" --set image.tag="$IMAGE_TAG" \
         --set-file secrets.inline.json="$SECRETS" \
         "${sets[@]+"${sets[@]}"}" --wait --timeout 15m
-    k -n "$NS" rollout status deploy/astound-gateway --timeout 300s
-    k -n "$NS" rollout status deploy/astound-admin --timeout 300s
+    k -n "$NS" rollout status deploy/dynapps-gateway --timeout 300s
+    k -n "$NS" rollout status deploy/dynapps-admin --timeout 300s
 }
 
 cmd_image_local() {
@@ -126,11 +126,11 @@ cmd_lint() {
     tmp="$(mktemp -d)"
     printf '{"database_url":"postgres://x@y/z"}' > "$tmp/s.json"
     helm lint "$CHART" -f "$VALUES" --set-file secrets.inline.json="$tmp/s.json"
-    helm template astound "$CHART" -n "$NS" -f "$VALUES" \
+    helm template dynapps "$CHART" -n "$NS" -f "$VALUES" \
         --set-file secrets.inline.json="$tmp/s.json" > "$tmp/out.yaml"
     echo "helm template: $(grep -c '^kind:' "$tmp/out.yaml") objects"
     # The gateway profile, extracted from the rendered ConfigMap, validated by the image.
-    awk '/name: astound-profile-gateway/{f=1} f&&/profile.yaml: \|/{p=1;next} p&&/^---/{exit} p{sub(/^    /,"");print}' \
+    awk '/name: dynapps-profile-gateway/{f=1} f&&/profile.yaml: \|/{p=1;next} p&&/^---/{exit} p{sub(/^    /,"");print}' \
         "$tmp/out.yaml" > "$tmp/profile.yaml"
     [ -f "$SECRETS" ] && cp "$SECRETS" "$tmp/secrets.json" || cp "$tmp/s.json" "$tmp/secrets.json"
     docker run --rm --entrypoint /app/bin/systemprompt --user "$(id -u):$(id -g)" \

@@ -6,4 +6,4 @@
 services:
   app:
     build: .
-    image: ghcr.io/astound-digital/systemprompt-astound:local
+    image: ghcr.io/systempromptio/systemprompt-dynapps:local

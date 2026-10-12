@@ -1,7 +1,7 @@
 ---
 title: "Access Control: Who Reaches What, and Why"
 description: "How entitlement works on this instance: the five subject bands and their precedence, the one declarative file every rule lives in, the database that enforces it, and the sync loop that keeps code and console in step."
-author: "Astound Digital"
+author: "Dynapps"
 slug: "access-control"
 keywords: "access control, entitlement, rules.yaml, roles, groups, projects, marketplace, plugin, skill, mcp server, gateway route, precedence, deny overrides, sync, drift, export"
 kind: "guide"
@@ -19,8 +19,8 @@ related_docs:
     url: "/documentation/enterprise-user-access"
   - title: "MCP, Tool Governance & Distribution"
     url: "/documentation/enterprise-tool-governance"
-  - title: "Astound SSO setup"
-    url: "/documentation/adfs-sso-setup"
+  - title: "Dynapps SSO setup"
+    url: "/documentation/entra-id-sso-setup"
   - title: "Code ↔ Instance: sources, planes and sync"
     url: "/documentation/services-sync"
 ---
@@ -35,13 +35,13 @@ Access control answers one question: *may this person reach this entity?* The en
 
 | Kind | Examples on this instance | What "reach" means |
 |---|---|---|
-| `marketplace` | `astound-commons`, `astound-india-dev` | The workspace appears in Claude Code / Cowork and its plugins can be installed |
-| `plugin` | `astound-super-admin`, `astound-salesforce` | The plugin is offered |
+| `marketplace` | `dynapps-commons`, `dynapps-salesforce` | The workspace appears in Claude Code / Cowork and its plugins can be installed |
+| `plugin` | `dynapps-super-admin`, `dynapps-salesforce` | The plugin is offered |
 | `skill` | `admin_daily_brief`, `account_context` | The skill is offered and may run |
-| `mcp_server` | `atlassian`, `google_workspace`, `salesforce`, `systemprompt` | The server is listed and its tools may be called |
+| `mcp_server` | `atlassian`, `salesforce`, `systemprompt` | The server is listed and its tools may be called |
 | `gateway_route` | `claude-star-4203d1`, … | Requests may be routed to that model |
 
-It does **not** decide whether a person can sign in (that is [authentication](/documentation/authentication) and [SSO](/documentation/adfs-sso-setup)), whether a tool call is allowed to proceed once the person is entitled (the [governance chain](/documentation/enterprise-tool-governance)), or what may be said (the [safety scanners](/documentation/enterprise-safety-guardrails)). Those run after entitlement, on every request.
+It does **not** decide whether a person can sign in (that is [authentication](/documentation/authentication) and [SSO](/documentation/entra-id-sso-setup)), whether a tool call is allowed to proceed once the person is entitled (the [governance chain](/documentation/enterprise-tool-governance)), or what may be said (the [safety scanners](/documentation/enterprise-safety-guardrails)). Those run after entitlement, on every request.
 
 ## The model
 
@@ -52,8 +52,8 @@ A rule names a **subject** at one **band**:
 | Band | Precedence | Subject is… | Where a person gets it |
 |---|---|---|---|
 | person | 0 | one account | an override set on the user's Access tab |
-| project | 140 | a project id | assigned on the Projects page or mapped from an AD group |
-| group | 150 | a group id | mapped from the AD groups the directory asserts at sign-in |
+| project | 140 | a project id | assigned on the Projects page or mapped from an Entra group |
+| group | 150 | a group id | mapped from the Entra groups the directory asserts at sign-in |
 | connected server | 160 | a ready OAuth-backed MCP server id | recorded after its connection is verified |
 | linked account | 170 | a downstream org id (`salesforce`) | recorded when the person links that org |
 | role | 200 | `user`, `admin`, `platform_admin`, `project_manager`, `super_admin`, … | granted by SSO or on the Roles page |
@@ -69,24 +69,24 @@ Lower precedence is **narrower**. The ladder is walked from the top.
 
 Two consequences worth holding onto:
 
-- A **role grant does not "reopen" a group-gated entity to everyone** — only to the roles it names. `atlassian` is allowed to `admin` *and* to the `india-devs` group; an admin in no group reaches it through the role band, a plain `user` in no group is refused by the closed default.
+- A **role grant does not "reopen" a group-gated entity to everyone** — only to the roles it names. `atlassian` is allowed to `admin` *and* to the `staff` group; an admin in no group reaches it through the role band, a plain `user` in no group is refused by the closed default.
 - A **wider band cannot rescue a narrower deny**. A person-band deny on one account beats every group and role allow that person holds.
 
 ### Worked examples from this instance
 
-`mcp_server/atlassian` is closed and allows: role `platform_admin, admin, super_admin` · group `india-devs, europe-devs, uk` · project `storefront`.
+`mcp_server/atlassian` is closed and allows: role `platform_admin, admin, super_admin` · group `staff` · project `odoo-delivery`.
 
 | Person | Walk | Result |
 |---|---|---|
-| role `user`, group `india-devs` | person: nothing · project: nothing · **group: matches allow** | **allowed** (decided by group) |
+| role `user`, group `staff` | person: nothing · project: nothing · **group: matches allow** | **allowed** (decided by group) |
 | role `admin`, no group | person · project · group · linked: nothing · **role: matches allow** | **allowed** (decided by role) |
-| role `user`, no group, not on storefront | no band names them | **refused** — the entity is closed |
+| role `user`, no group, not on odoo-delivery | no band names them | **refused** — the entity is closed |
 
-`mcp_server/salesforce` is closed and allows: role `super_admin` · group `india-devs, europe-devs, uk` · project `storefront` · linked account `salesforce`.
+`mcp_server/salesforce` is closed and allows: role `super_admin` · group `staff` · project `odoo-delivery` · linked account `salesforce`.
 
 | Person | Walk | Result |
 |---|---|---|
-| role `user`, group `uk`, **not** linked | group matches allow | **allowed** — the linked-account band only *adds* people; it does not gate the group grant |
+| role `user`, group `staff`, **not** linked | group matches allow | **allowed** — the linked-account band only *adds* people; it does not gate the group grant |
 | role `user`, no group, **linked** | linked account matches allow | **allowed** (decided by linked account) |
 | role `admin`, no group, not linked | no band names them (`admin` is not in the role list) | **refused** |
 
@@ -101,12 +101,12 @@ entities:
   - entity: mcp_server/atlassian        # <kind>/<id>
     default: closed                      # open | closed — what an unmatched person gets
     why: >-                              # REQUIRED; becomes the justification on every rule row
-      Jira/Confluence for the delivery groups and the storefront project;
+      Jira/Confluence for staff and the Odoo delivery project;
       administrators use their own connected Atlassian account.
     allow:                               # band → subjects
       role: [platform_admin, admin, super_admin]
-      group: [india-devs, europe-devs, uk]
-      project: [storefront]
+      group: [staff]
+      project: [odoo-delivery]
     deny: {}                             # same shape
 
   - entity: gateway_route/*              # glob: route ids are generated, never written
@@ -115,7 +115,7 @@ entities:
     allow:
       role: [user, admin, platform_admin, project_manager, super_admin]
 
-  - entity: marketplace/astound-salesforce
+  - entity: marketplace/dynapps-salesforce
     default: closed
     why: Salesforce sales workspace for the business-users group.
     allow:
@@ -170,15 +170,15 @@ The Sync page is instance-wide — access control is one **plane** of it, beside
 
 ## External kits
 
-A marketplace can arrive as a signed **services bundle** published by another GitHub repository — a *kit* in Anthropic marketplace format — rather than from this repository's `services/`. The Europe development workspace is one. **Kits carry no access.** A kit's sidecar has no `access:` block, and one it carries anyway is ignored as a declaration and flagged on the Sync page. Who reaches a kit's marketplace is declared **here**, like every internal one, with one extra key naming the source it arrives from:
+A marketplace can arrive as a signed **services bundle** published by another GitHub repository — a *kit* in Anthropic marketplace format — rather than from this repository's `services/`. This instance pins no kit today. **Kits carry no access.** A kit's sidecar has no `access:` block, and one it carries anyway is ignored as a declaration and flagged on the Sync page. Who reaches a kit's marketplace is declared **here**, like every internal one, with one extra key naming the source it arrives from:
 
 ```yaml
-  - entity: marketplace/astound-europe-dev
-    owner: bundle:sfnext
+  - entity: marketplace/<kit-marketplace>
+    owner: bundle:<name>
     default: closed
-    why: Europe development workspace, published by sfnext-claude-dev-kit.
+    why: Development workspace published by an external kit.
     allow:
-      group: [europe-devs]
+      group: [staff]
 ```
 
 `owner: bundle:<name>` lets the entity be declared before the bundle is pinned: until that source is active the Sync page lists it as **awaiting its bundle** rather than failing boot, and the CI gate accepts the id without a local `services/marketplaces/<id>`. Once the bundle is active the entity validates and is governed like any other. A kit release therefore can never widen who sees it — ownership of *content* is the kit's; ownership of *access* is this repository's.

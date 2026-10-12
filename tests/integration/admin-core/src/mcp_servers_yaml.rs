@@ -134,7 +134,7 @@ fn list_mcp_servers_reads_every_declared_field() {
   crm:
     type: remote
     binary: crm-mcp
-    package: '@astound/crm-mcp'
+    package: '@dynapps/crm-mcp'
     port: 7100
     endpoint: https://sf.example.test/mcp
     description: CRM accessor
@@ -152,7 +152,7 @@ fn list_mcp_servers_reads_every_declared_field() {
 
     let server = &servers[0];
     assert_eq!(server.server_type, "remote", "an explicit type wins");
-    assert_eq!(server.package_name, "@astound/crm-mcp");
+    assert_eq!(server.package_name, "@dynapps/crm-mcp");
     assert_eq!(server.port, 7100);
     assert_eq!(server.description, "CRM accessor");
     assert!(!server.enabled);

@@ -71,7 +71,7 @@ async fn upsert_daily_aggregation_inserts_the_first_event_of_the_day() {
     };
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("daily")).await;
     let date = Utc::now().date_naive();
-    let plugin = PluginId::new("astound-commons");
+    let plugin = PluginId::new("dynapps-commons");
 
     upsert_daily_aggregation(&daily_params(
         &db.pool,
@@ -98,7 +98,7 @@ async fn upsert_daily_aggregation_accumulates_into_one_row_per_tool_and_day() {
     };
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("dailyacc")).await;
     let date = Utc::now().date_naive();
-    let plugin = PluginId::new("astound-commons");
+    let plugin = PluginId::new("dynapps-commons");
 
     for _ in 0..3 {
         upsert_daily_aggregation(&daily_params(
@@ -128,7 +128,7 @@ async fn upsert_daily_aggregation_counts_errors_separately_from_events() {
     };
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("dailyerr")).await;
     let date = Utc::now().date_naive();
-    let plugin = PluginId::new("astound-commons");
+    let plugin = PluginId::new("dynapps-commons");
     let mut params = daily_params(&db.pool, &user, &plugin, &date, EVENT_POST_TOOL_USE);
     params.is_error = true;
 
@@ -148,7 +148,7 @@ async fn upsert_daily_aggregation_keeps_a_null_tool_name_on_its_own_row() {
     };
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("dailynull")).await;
     let date = Utc::now().date_naive();
-    let plugin = PluginId::new("astound-commons");
+    let plugin = PluginId::new("dynapps-commons");
     let with_tool = daily_params(&db.pool, &user, &plugin, &date, EVENT_POST_TOOL_USE);
     let mut without_tool = with_tool;
     without_tool.tool_name = None;
@@ -171,7 +171,7 @@ async fn upsert_daily_aggregation_keeps_separate_rows_per_event_type() {
     };
     let user = insert_user(&db.pool, &unique("user"), &unclaimed_email("dailytypes")).await;
     let date = Utc::now().date_naive();
-    let plugin = PluginId::new("astound-commons");
+    let plugin = PluginId::new("dynapps-commons");
 
     upsert_daily_aggregation(&daily_params(
         &db.pool,

@@ -1,7 +1,7 @@
 ---
 title: "Usage, Adoption & Productivity Analytics"
 description: "Track AI usage and adoption in /admin/analytics — requests, spend, weekly active users, models, skills, tools and sessions — scoped to the whole instance, one group, one project or one person."
-author: "Astound Digital"
+author: "Dynapps"
 slug: "enterprise-analytics"
 keywords: "analytics, usage, adoption, wau, groups, projects, inactive users, skills, tools, models, dashboards"
 kind: "guide"
@@ -42,7 +42,7 @@ The analytics pages are for console roles. A signed-in user without console acce
 Every tab shares the same controls, carried in the query string, so a view can be bookmarked:
 
 - **Window:** presets of 15 minutes, 1 hour, 24 hours, 7 days, 30 days and 90 days, plus a custom range capped at 30 days for query cost. Raw requests are kept for 90 days ([Data Retention](/documentation/data-retention)), so the 90-day preset is also the longest reach into raw history.
-- **Scope:** everyone, one **group** (`?group=`), one **project** (`?project=`), or one **person** (`?user_id=`). Groups and projects come from Active Directory at sign-in or from console membership. See [User & Access Management](/documentation/enterprise-user-access).
+- **Scope:** everyone, one **group** (`?group=`), one **project** (`?project=`), or one **person** (`?user_id=`). Groups and projects come from Entra ID groups at sign-in or from console membership. See [User & Access Management](/documentation/enterprise-user-access).
 - **Attribution:** **Exclusive** by default. Each person's usage counts once, against their primary group or project, so container totals add up to the instance total. **Member** (`?attr=member`) counts a person in every group they belong to, which answers "who uses what". The page says on screen that those totals overlap.
 
 ## The tabs

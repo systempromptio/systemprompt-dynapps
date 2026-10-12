@@ -6,7 +6,7 @@ description: Rank an account list or full book into action tiers from Salesforce
 enabled: true
 file: SKILL.md
 tags:
-- astound
+- dynapps
 - salesforce
 - sales
 category: business

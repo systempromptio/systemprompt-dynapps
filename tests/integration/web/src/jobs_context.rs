@@ -67,7 +67,7 @@ fn set_master_key() {
 
 // `Config` is a process-wide `OnceLock`: every test in this binary must
 // install the same value, or the first installer decides it for the rest.
-const BASE_URL: &str = "https://astound.test";
+const BASE_URL: &str = "https://dynapps.test";
 
 const DOCUMENTATION_SOURCE_ENABLED: &str = "\
 content_sources:\n\
@@ -101,7 +101,7 @@ pub(crate) fn install_config() {
         max_concurrent_streams: 16,
         role: systemprompt::manifest::profile::NodeRole::All,
         max_in_flight: None,
-        sitename: "astound-test".to_owned(),
+        sitename: "dynapps-test".to_owned(),
         database_type: "postgres".to_owned(),
         database_url: "postgres://unused".to_owned(),
         database_write_url: None,

@@ -1,9 +1,9 @@
 # Security Policy
 
-This repository is the Astound Digital installation of systemprompt: the
+This repository is the Dynapps installation of systemprompt: the
 extensions, services configuration, desktop-bridge white-label and deployment
 bundles built on the published `systemprompt-*` core crates. It runs inside
-Astound's own environment, and a vulnerability here can expose governed AI
+Dynapps's own environment, and a vulnerability here can expose governed AI
 traffic, audit data or credentials, so reports are handled by coordinated
 disclosure.
 
@@ -39,7 +39,7 @@ If a fix needs longer than this, we will say why and agree a timeline in writing
 
 ## Supported Versions
 
-Astound releases track core minor versions (this release is 0.63.1 on core 0.63.1).
+Dynapps releases track core minor versions (this release is 0.63.1 on core 0.63.1).
 
 | Version | Security fixes |
 |---------|----------------|
@@ -82,7 +82,7 @@ waiting count as `unsealed_rows`. See `extensions/web/schema/51_audit_integrity.
 
 ## Telemetry
 
-A self-hosted Astound instance sends nothing to the vendor. Neither this
+A self-hosted Dynapps instance sends nothing to the vendor. Neither this
 repository nor the core it builds on has crash reporting, usage or licence
 pings, or an update check. Every outbound connection is one the operator
 configures:
@@ -96,12 +96,10 @@ configures:
    exported until a deployment names one.
 4. **Container images from GHCR.** The deployment pulls the instance image from
    `ghcr.io`; the server process itself does not.
-5. **Kit bundles from GHCR.** The remote kits the profile pins
-   (`services.sources[]`, by digest) are fetched from their registry.
-6. **Bridge release feed.** When the services manifest declares a bridge
+5. **Bridge release feed.** When the services manifest declares a bridge
    releases repository, the gateway resolves the newest bridge release from
    that GitHub repository on a desktop bridge's request.
-7. **Identity and connectors.** AD FS for sign-in, and the Google Workspace,
+6. **Identity and connectors.** Microsoft Entra ID (SAML) for sign-in, and the
    Atlassian and Salesforce connectors when a user uses them.
 
 The desktop bridge checks for its own updates against the gateway it is

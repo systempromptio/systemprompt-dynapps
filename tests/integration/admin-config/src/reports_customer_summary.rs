@@ -132,7 +132,7 @@ async fn get_customer_month_summary_reports_zeroes_under_the_nothing_scope() {
 
 #[tokio::test]
 async fn get_customer_month_summary_reports_reasoning_without_re_summing_the_total() {
-    let db = astound_test_common::db_or_skip!();
+    let db = dynapps_test_common::db_or_skip!();
     let user = unique("u-think");
     insert_user(&db.pool, &user).await;
 

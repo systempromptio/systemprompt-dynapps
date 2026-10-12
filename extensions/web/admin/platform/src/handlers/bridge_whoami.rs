@@ -2,7 +2,7 @@
 //! shows on its account card.
 //!
 //! The gateway's stock whoami answers only what core can prove from a JWT and
-//! a `users` row. Everything that makes an Astound sign-in legible — which
+//! a `users` row. Everything that makes a Dynapps sign-in legible — which
 //! ADFS issuer minted the assertion, which AD groups came back on it, the
 //! groups and projects those resolved to — is written by this
 //! repo's ADFS callback and was visible nowhere on the desktop. The bridge is

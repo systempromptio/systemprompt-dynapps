@@ -6,7 +6,7 @@ description: 'Build a call brief from Salesforce meeting, account, opportunity, 
 enabled: true
 file: SKILL.md
 tags:
-- astound
+- dynapps
 - salesforce
 - sales
 category: business

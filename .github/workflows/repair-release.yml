@@ -22,7 +22,7 @@ permissions:
   id-token: write
 
 env:
-  IMAGE: ghcr.io/astound-digital/systemprompt-astound
+  IMAGE: ghcr.io/systempromptio/systemprompt-dynapps
   BASE_DIGEST: ${{ inputs.base_digest }}
   GH_TOKEN: ${{ github.token }}
 
@@ -76,7 +76,7 @@ jobs:
           rustup target add aarch64-apple-darwin x86_64-apple-darwin
           bash scripts/package-bridge-macos.sh
           mkdir candidate
-          cp storage/files/downloads/astound-bridge-macos.dmg* candidate/
+          cp storage/files/downloads/dynapps-bridge-macos.dmg* candidate/
           printf '%s\n' "$BASE_DIGEST" > candidate/base-image-digest.txt
       - name: Remove private credentials
         if: always() && inputs.candidate_run == ''
@@ -94,11 +94,11 @@ jobs:
         id: digest
         run: |
           [ "$(cat candidate/base-image-digest.txt)" = "$BASE_DIGEST" ]
-          (cd candidate && shasum -a 256 -c astound-bridge-macos.dmg.sha256)
-          bash scripts/verify-bridge-macos.sh candidate/astound-bridge-macos.dmg
-          echo "sha256=$(shasum -a 256 candidate/astound-bridge-macos.dmg | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+          (cd candidate && shasum -a 256 -c dynapps-bridge-macos.dmg.sha256)
+          bash scripts/verify-bridge-macos.sh candidate/dynapps-bridge-macos.dmg
+          echo "sha256=$(shasum -a 256 candidate/dynapps-bridge-macos.dmg | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
       - name: Exercise the downloaded bridge on Apple Silicon
-        run: bash tests/release/macos-smoke.sh candidate/astound-bridge-macos.dmg "${{ steps.digest.outputs.sha256 }}"
+        run: bash tests/release/macos-smoke.sh candidate/dynapps-bridge-macos.dmg "${{ steps.digest.outputs.sha256 }}"
       - uses: actions/upload-artifact@v4
         with:
           name: verified-macos-repair
@@ -154,8 +154,8 @@ jobs:
             --certificate-oidc-issuer=https://token.actions.githubusercontent.com "$IMAGE@$DIGEST"
           docker pull "$IMAGE@$DIGEST"
           docker run --rm --entrypoint /bin/sh "$IMAGE@$DIGEST" -c \
-            'cd /app/storage/files/downloads && sha256sum -c astound-bridge-macos.dmg.sha256'
-          actual=$(docker run --rm --entrypoint sha256sum "$IMAGE@$DIGEST" /app/storage/files/downloads/astound-bridge-macos.dmg | cut -d' ' -f1)
+            'cd /app/storage/files/downloads && sha256sum -c dynapps-bridge-macos.dmg.sha256'
+          actual=$(docker run --rm --entrypoint sha256sum "$IMAGE@$DIGEST" /app/storage/files/downloads/dynapps-bridge-macos.dmg | cut -d' ' -f1)
           [ "$actual" = "$EXPECTED_SHA" ]
           docker run --rm --entrypoint /app/bin/systemprompt "$IMAGE@$DIGEST" --version | grep -F '0.47.0'
           echo "digest=$DIGEST" >> "$GITHUB_OUTPUT"

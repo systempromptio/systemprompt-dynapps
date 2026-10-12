@@ -6,7 +6,7 @@ description: Audit open Salesforce opportunities for missing fields, stale dates
 enabled: true
 file: SKILL.md
 tags:
-- astound
+- dynapps
 - salesforce
 - sales
 category: business

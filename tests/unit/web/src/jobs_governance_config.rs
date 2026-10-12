@@ -160,7 +160,7 @@ fn the_shipped_governance_config_declares_the_entropy_tunables() {
     let patterns = secret_scan["patterns"].as_sequence().unwrap();
     assert!(
         !patterns.is_empty(),
-        "Astound declares its credential catalog"
+        "Dynapps declares its credential catalog"
     );
     assert!(patterns.iter().all(|pattern| {
         !pattern["id"]

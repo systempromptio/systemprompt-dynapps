@@ -10,7 +10,7 @@
 //! endpoint from here.
 //!
 //! One External Client App serves every org: it is built in the source org
-//! (Astound US) and installed elsewhere as a managed package
+//! (the Dynapps org) and installed elsewhere as a managed package
 //! (`deploy/salesforce/`), so subscriber orgs resolve to the source org's
 //! consumer key. An org therefore names no secrets of its own unless it
 //! deliberately runs an independent app (`client_id_secret` /

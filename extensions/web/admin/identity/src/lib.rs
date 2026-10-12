@@ -28,7 +28,8 @@ pub mod sign_out;
 
 pub use handlers::adfs_auth::{
     ADFS_ACS_PATH, ADFS_METADATA_PATH, AdfsConfig, AdfsDeps, AdfsError, AssertionClaims, FlowState,
-    clear_state_cookie, group_matches_pattern, permissions_for_roles, read_state_cookie,
+    GROUPS_OVERAGE_ATTRIBUTE, IDP_METADATA_REFRESH_INTERVAL, clear_state_cookie,
+    group_matches_pattern, permissions_for_roles, read_state_cookie, spawn_idp_metadata_refresh,
     state_cookie,
 };
 pub use handlers::dev_login::{

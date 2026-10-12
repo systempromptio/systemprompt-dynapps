@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Build, sign, notarize, and stage the macOS bridge as the single-file DMG the
 # homepage and the admin Bridge Setup page link to
-# (storage/files/downloads/astound-bridge-macos.dmg), plus the zipped .app the
-# in-app self-updater installs (astound-bridge-macos.zip). The updater cannot
+# (storage/files/downloads/dynapps-bridge-macos.dmg), plus the zipped .app the
+# in-app self-updater installs (dynapps-bridge-macos.zip). The updater cannot
 # consume the DMG: it unpacks with `ditto -x -k` and assesses the bundle with
 # codesign + spctl before swapping it in (core bin/bridge/src/update/install/macos.rs).
 #
@@ -17,7 +17,7 @@
 # app downloaded from the web is still blocked by Gatekeeper, so shipping one
 # would look identical to shipping nothing. Store credentials once with:
 #
-#     xcrun notarytool store-credentials astound-bridge \
+#     xcrun notarytool store-credentials dynapps-bridge \
 #         --apple-id <apple-id> --team-id <team-id> \
 #         --password <app-specific-password>
 #
@@ -35,9 +35,9 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BRIDGE_DIR="$REPO_ROOT/bridge"
 DOWNLOADS_DIR="$REPO_ROOT/storage/files/downloads"
-ASSET="astound-bridge-macos.dmg"
-UPDATER_ASSET="astound-bridge-macos.zip"
-NOTARY_PROFILE="${NOTARY_PROFILE:-astound-bridge}"
+ASSET="dynapps-bridge-macos.dmg"
+UPDATER_ASSET="dynapps-bridge-macos.zip"
+NOTARY_PROFILE="${NOTARY_PROFILE:-dynapps-bridge}"
 TARGETS=(aarch64-apple-darwin x86_64-apple-darwin)
 UNIVERSAL="universal-apple-darwin"
 
@@ -93,29 +93,29 @@ fi
 # ── Build both slices and fuse them ───────────────────────────────────────────
 if [ "${SKIP_BUILD:-0}" != "1" ]; then
     for t in "${TARGETS[@]}"; do
-        echo "==> building astound-bridge for $t"
+        echo "==> building dynapps-bridge for $t"
         (cd "$BRIDGE_DIR" && cargo build --locked --release --target "$t")
     done
 fi
 for t in "${TARGETS[@]}"; do
-    [ -f "$BRIDGE_DIR/target/$t/release/astound-bridge" ] || {
+    [ -f "$BRIDGE_DIR/target/$t/release/dynapps-bridge" ] || {
         echo "ERROR: missing $t binary. Run without SKIP_BUILD=1." >&2; exit 1; }
 done
 
 UNI_DIR="$BRIDGE_DIR/target/$UNIVERSAL/release"
 mkdir -p "$UNI_DIR"
-lipo -create -output "$UNI_DIR/astound-bridge" \
-    "$BRIDGE_DIR/target/aarch64-apple-darwin/release/astound-bridge" \
-    "$BRIDGE_DIR/target/x86_64-apple-darwin/release/astound-bridge"
-lipo -archs "$UNI_DIR/astound-bridge" | grep -q 'x86_64.*arm64\|arm64.*x86_64' || {
+lipo -create -output "$UNI_DIR/dynapps-bridge" \
+    "$BRIDGE_DIR/target/aarch64-apple-darwin/release/dynapps-bridge" \
+    "$BRIDGE_DIR/target/x86_64-apple-darwin/release/dynapps-bridge"
+lipo -archs "$UNI_DIR/dynapps-bridge" | grep -q 'x86_64.*arm64\|arm64.*x86_64' || {
     echo "ERROR: lipo output is not universal:" >&2
-    lipo -archs "$UNI_DIR/astound-bridge" >&2
+    lipo -archs "$UNI_DIR/dynapps-bridge" >&2
     exit 1
 }
 
 # ── Wrap, sign, verify ────────────────────────────────────────────────────────
 "$BRIDGE_DIR/scripts/make-mac-app.sh" --target "$UNIVERSAL"
-APP="$UNI_DIR/AstoundBridge.app"
+APP="$UNI_DIR/DynappsBridge.app"
 
 echo "==> signing with: $CODESIGN_IDENTITY"
 # Hardened runtime is a notarization requirement. Inside-out: binary, then
@@ -123,15 +123,15 @@ echo "==> signing with: $CODESIGN_IDENTITY"
 # An ad-hoc identity ("-") cannot be timestamped, so the flag is dropped there.
 SIGN_FLAGS=(--force --options runtime)
 [ "$CODESIGN_IDENTITY" = "-" ] || SIGN_FLAGS+=(--timestamp)
-codesign "${SIGN_FLAGS[@]}" --sign "$CODESIGN_IDENTITY" "$APP/Contents/MacOS/astound-bridge"
+codesign "${SIGN_FLAGS[@]}" --sign "$CODESIGN_IDENTITY" "$APP/Contents/MacOS/dynapps-bridge"
 codesign "${SIGN_FLAGS[@]}" --sign "$CODESIGN_IDENTITY" "$APP"
 codesign --verify --strict --deep "$APP"
 
 # Notarize the app itself before imaging it: its ticket must survive copying
 # to Applications and ejecting the DMG, including an offline first launch.
 if [ "${SKIP_NOTARIZE:-0}" != "1" ]; then
-    ditto -c -k --keepParent "$APP" "$UNI_DIR/AstoundBridge.app.zip"
-    xcrun notarytool submit "$UNI_DIR/AstoundBridge.app.zip" "${NOTARY[@]}" --wait --timeout 30m
+    ditto -c -k --keepParent "$APP" "$UNI_DIR/DynappsBridge.app.zip"
+    xcrun notarytool submit "$UNI_DIR/DynappsBridge.app.zip" "${NOTARY[@]}" --wait --timeout 30m
     xcrun stapler staple "$APP"
     xcrun stapler validate "$APP"
     spctl --assess --type exec --verbose=4 "$APP"
@@ -140,11 +140,11 @@ fi
 # ── DMG ───────────────────────────────────────────────────────────────────────
 STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT
-ditto "$APP" "$STAGE/AstoundBridge.app"
+ditto "$APP" "$STAGE/DynappsBridge.app"
 ln -s /Applications "$STAGE/Applications"
 DMG="$BRIDGE_DIR/target/$UNIVERSAL/release/$ASSET"
 rm -f "$DMG"
-if ! hdiutil create -volname "Astound Bridge" -srcfolder "$STAGE" \
+if ! hdiutil create -volname "Dynapps Bridge" -srcfolder "$STAGE" \
     -format UDZO -ov "$DMG"; then
     # macOS privacy controls can deny create's intermediate /Volumes mount.
     # Mount a blank writable image at a private temporary path, then copy
@@ -164,11 +164,11 @@ if ! hdiutil create -volname "Astound Bridge" -srcfolder "$STAGE" \
         trap cleanup_image EXIT
         SIZE_KB="$(du -sk "$STAGE" | awk '{print $1 + 65536}')"
         hdiutil create -size "${SIZE_KB}k" -fs HFS+ \
-            -volname "Astound Bridge" "$IMAGE_WORK/writable.dmg"
+            -volname "Dynapps Bridge" "$IMAGE_WORK/writable.dmg"
         hdiutil attach "$IMAGE_WORK/writable.dmg" -nobrowse \
             -mountpoint "$IMAGE_MOUNT" -quiet
         ditto "$STAGE" "$IMAGE_MOUNT"
-        codesign --verify --strict --deep "$IMAGE_MOUNT/AstoundBridge.app"
+        codesign --verify --strict --deep "$IMAGE_MOUNT/DynappsBridge.app"
         hdiutil detach "$IMAGE_MOUNT" -quiet
         hdiutil convert "$IMAGE_WORK/writable.dmg" -format UDZO -o "$DMG" -ov
     )

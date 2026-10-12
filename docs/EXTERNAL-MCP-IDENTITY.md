@@ -11,7 +11,7 @@ The first such server is `sfcore_dev` (`services/mcp/sfcore_dev.yaml`).
 
 ```
 Claude Code / Cowork
-  │  (bridge, signed in through Astound SSO)
+  │  (bridge, signed in through Dynapps SSO (Microsoft Entra ID))
   ▼
 Gateway  /api/v1/mcp/<server>/mcp
   │  1. authenticate the user (systemprompt JWT, live session)
@@ -39,7 +39,7 @@ next call.
 | header `alg` | `RS256` |
 | header `kid` | the instance's active signing key id (published in JWKS) |
 | header `typ` | `JWT` |
-| `iss` | the instance issuer: `https://astound.systemprompt.io` in production |
+| `iss` | the instance issuer: `https://dynapps.systemprompt.io` in production |
 | `aud` | the server's configured `endpoint`, exactly as written in its YAML |
 | `sub` | the systemprompt user id, stable per user |
 | `email` | the user's email |

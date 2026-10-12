@@ -1,11 +1,14 @@
-//! Loader for the ADFS SSO config (`services/web/config/adfs*.yaml`).
+//! Loader for the SSO config (`services/web/config/adfs*.yaml`), a SAML
+//! relying party of Microsoft Entra ID.
 //!
 //! Split from the parent module to keep it inside the file-size gate. The two
 //! SAML URLs are derived here from the profile rather than authored in YAML,
 //! so one committed config is correct on every deployment host.
 //! `adfs.<profile>.yaml` overrides the committed `adfs.yaml` and names its own
-//! `idp_metadata_path`, so two farms' signing certificates sit side by side. A
-//! missing metadata file is a config error, never a silent "SSO unavailable".
+//! metadata, so two tenants' signing certificates sit side by side. With
+//! `idp_metadata_url` set the metadata is fetched at run time and the file is
+//! an optional fallback; without it a missing metadata file is a config
+//! error, never a silent "SSO unavailable". A disabled config reads no file.
 
 use std::sync::Arc;
 
@@ -20,15 +23,16 @@ fn adfs_config_filename() -> String {
     )
 }
 
-// Why: AD FS answers `MSIS7007` when the relying-party id or ACS is not this
-// host's own URL, so both derive from `api_external_url`; an explicit value
-// still wins for a trust registered under another URL.
+// Why: Microsoft Entra ID answers `AADSTS700016`/`AADSTS50011` when the
+// Identifier or Reply URL is not this host's own URL, so both derive from
+// `api_external_url`; an explicit value still wins for a trust registered under
+// another URL.
 fn derive_saml_urls(config: &mut systemprompt_web_admin_identity::AdfsConfig) {
     if !config.entity_id.is_empty() && !config.acs_url.is_empty() {
         return;
     }
     let Ok(global) = systemprompt::manifest::Config::get().inspect_err(|e| {
-        tracing::warn!(error = %e, "No profile config; ADFS SAML URLs stay unset");
+        tracing::warn!(error = %e, "No profile config; SSO SAML URLs stay unset");
     }) else {
         return;
     };
@@ -48,7 +52,7 @@ fn derive_saml_urls(config: &mut systemprompt_web_admin_identity::AdfsConfig) {
     tracing::info!(
         entity_id = %config.entity_id,
         acs_url = %config.acs_url,
-        "Derived ADFS SAML URLs from the profile"
+        "Derived SSO SAML URLs from the profile"
     );
 }
 
@@ -72,26 +76,56 @@ pub(super) fn load_adfs_config()
     derive_saml_urls(&mut config);
 
     if config.enabled {
-        let metadata_path = load_app_paths()?
-            .system()
-            .services()
-            .join("web/config")
-            .join(&config.idp_metadata_path);
-        config.idp_metadata_xml =
-            std::fs::read_to_string(&metadata_path).map_err(|e| ConfigError::Parse {
-                config_name: filename.clone(),
-                message: format!(
-                    "idp_metadata_path {} unreadable: {e}",
-                    metadata_path.display()
-                ),
-            })?;
+        read_pinned_metadata(&mut config, &filename)?;
     }
 
     tracing::info!(
         enabled = config.enabled,
         file = %filename,
-        "Loaded ADFS SSO config"
+        "Loaded SSO config"
     );
 
-    Ok(Some(Arc::new(config)))
+    let config = Arc::new(config);
+    systemprompt_web_admin_identity::spawn_idp_metadata_refresh(&config);
+    Ok(Some(config))
+}
+
+fn read_pinned_metadata(
+    config: &mut systemprompt_web_admin_identity::AdfsConfig,
+    filename: &str,
+) -> Result<(), ConfigError> {
+    let fetched = config.idp_metadata_url.is_some();
+    if config.idp_metadata_path.is_empty() {
+        return if fetched {
+            Ok(())
+        } else {
+            Err(ConfigError::Parse {
+                config_name: filename.to_owned(),
+                message: "enabled SSO needs idp_metadata_url or idp_metadata_path".to_owned(),
+            })
+        };
+    }
+    let metadata_path = load_app_paths()?
+        .system()
+        .services()
+        .join("web/config")
+        .join(&config.idp_metadata_path);
+    match std::fs::read_to_string(&metadata_path) {
+        Ok(xml) => config.idp_metadata_xml = xml,
+        Err(e) if fetched => tracing::warn!(
+            error = %e,
+            path = %metadata_path.display(),
+            "Pinned IdP metadata unreadable; relying on idp_metadata_url alone"
+        ),
+        Err(e) => {
+            return Err(ConfigError::Parse {
+                config_name: filename.to_owned(),
+                message: format!(
+                    "idp_metadata_path {} unreadable: {e}",
+                    metadata_path.display()
+                ),
+            });
+        },
+    }
+    Ok(())
 }

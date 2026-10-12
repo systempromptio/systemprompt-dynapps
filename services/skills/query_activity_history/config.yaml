@@ -6,7 +6,7 @@ description: Build an interaction timeline from closed Salesforce Tasks and Even
 enabled: true
 file: SKILL.md
 tags:
-- astound
+- dynapps
 - salesforce
 - sales
 category: business

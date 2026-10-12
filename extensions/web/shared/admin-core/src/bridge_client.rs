@@ -6,7 +6,7 @@
 
 use systemprompt::manifest::Config;
 
-pub const BRIDGE_BINARY: &str = "astound-bridge";
+pub const BRIDGE_BINARY: &str = "dynapps-bridge";
 
 pub fn read_config_strings() -> (Option<String>, Option<String>) {
     Config::get().map_or((None, None), |c| {

@@ -48,7 +48,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         if self.path == "/userinfo":
             if self.headers.get("Authorization") != "Bearer access-token":
                 return self.send_json({}, 401)
-            return self.send_json({"sub": "1029384756", "email": "sales.tester@astound.example", "name": "Sales Tester"})
+            return self.send_json({"sub": "1029384756", "email": "sales.tester@dynapps.example", "name": "Sales Tester"})
         self.send_json({}, 404)
 
     def do_POST(self):

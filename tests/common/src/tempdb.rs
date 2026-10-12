@@ -80,7 +80,7 @@ fn suite_prefix() -> String {
     let stem = exe
         .file_stem()
         .and_then(|s| s.to_str())
-        .unwrap_or("astound_test")
+        .unwrap_or("dynapps_test")
         .to_owned();
     let stem = stem
         .rsplit_once('-')

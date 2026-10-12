@@ -26,63 +26,24 @@
 # in the derived `unassigned` group — a real row, membership computed as "has
 # no group_members row at all". It is never written and cannot be deleted.
 
-# Groups are labelled by the WORK they do, not by where the people sit. The
-# europe-devs group is the Commerce Cloud / Storefront Next estate (Victor's
-# team), which the directory calls Systemprompt-Commerce; india-devs is the
-# Salesforce Core build plus the business-analysis team, which the directory
-# calls Systemprompt-Core. Those AD names describe the content each team
-# works on, so the mapping reads "Commerce content -> Europe developers" —
-# read it as a content label, not a contradiction.
+# Dynapps ships with one staff group. Both Entra ID security groups assigned
+# to the Enterprise Application place people in it; the admin group is told
+# apart by ROLE (services/web/config/adfs.yaml `group_roles`), not by group.
+# The group names below are placeholders until Dynapps IT confirms the real
+# Entra group names (or object ids, if the app emits group ids).
 groups:
-  - id: europe-devs
-    name: Europe developers
+  - id: staff
+    name: Dynapps staff
     description: >-
-      Commerce Cloud and Storefront Next developers. Their workspace,
-      astound-europe-dev, is not in this tree: it ships as a remote services
-      bundle that is not pinned in this release, so the group currently reaches
-      only the commons workspace.
-    ad_groups: [Systemprompt-Commerce]
-  - id: india-devs
-    name: India developers
-    description: >-
-      Salesforce Core developers and the business-analysis team. Reaches the
-      India development workspace (astound-india-dev, published by the
-      sfscore-claude-india-kit bundle).
-    ad_groups: [Systemprompt-Core]
-  - id: business-users
-    name: Business users
-    description: >-
-      Non-engineering staff: delivery, account and project management. No
-      development tooling. Reaches the Salesforce sales workspace
-      (astound-salesforce); the Cowork workspace is reached through the
-      knowledge_worker role, not through this group.
-    ad_groups: [Systemprompt-Business]
-
-  - id: uk
-    name: UK
-    description: UK business team using client discovery, reporting and research.
-    ad_groups: []
+      Every Dynapps employee assigned to the Systemprompt Enterprise
+      Application in Microsoft Entra ID. Reaches the commons workspace and the
+      Salesforce sales workspace (dynapps-salesforce) once an org is connected.
+    ad_groups: [Dynapps-Systemprompt-Users, Dynapps-Systemprompt-Admins]
 
 projects:
-  - id: commerce
-    name: Commerce
-    description: Commerce Cloud delivery work.
-    ad_groups: [Systemprompt-Commerce]
-  - id: core
-    name: Core
-    description: Core platform work.
-    ad_groups: [Systemprompt-Core]
-  # No AD mapping: storefront delivery is assigned by hand in the dashboard,
-  # because the directory has no group that means "on the storefront build".
-  # The Europe development marketplace names it in a `project` rule, which is
-  # the narrowest band there is; that marketplace ships as a remote bundle and
-  # is not pinned in this release.
-  - id: storefront
-    name: Storefront
-    description: Storefront Next delivery work, assigned per engagement.
-    ad_groups: []
-  # Business rollout attribution; membership is assigned explicitly.
-  - id: business-implementation
-    name: Business Implementation
-    description: UK business AI implementation, executive insight and sales enablement.
+  # No directory mapping: delivery work is assigned per engagement in the
+  # dashboard, because no Entra group means "on this Odoo implementation".
+  - id: odoo-delivery
+    name: Odoo delivery
+    description: Odoo implementation, migration, integration and support engagements.
     ad_groups: []

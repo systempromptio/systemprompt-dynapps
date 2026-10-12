@@ -1,7 +1,7 @@
 ---
 title: "Enterprise Roadmap & Known Limitations"
 description: "What has shipped since the first enterprise release, what is not built yet, what was removed, and one consolidated table of known limitations."
-author: "Astound Digital"
+author: "Dynapps"
 slug: "enterprise-roadmap"
 keywords: "roadmap, limitations, semantic caching, ab testing, redaction, phi, data classification, alerts, budgets, api keys, failover, load shedding, scim, removed features"
 kind: "guide"
@@ -51,7 +51,7 @@ One fact affects everything below. Since 2026-09-04 the governance chain, the sa
 | **Alert signal** (0.63) | The hourly `usage_anomaly_scan` flags per-user spend and request-rate spikes as `systemprompt_usage_anomaly_total` and a `usage_anomaly` event; quota breaches count in `systemprompt_quota_denials_total`. **Enabled (scheduled).** Delivery to a person is the operator's monitoring stack, through OTLP or a metrics scrape. | [Audit Trail: Anomaly detection](/documentation/enterprise-audit-observability#anomaly-detection) |
 | **Multi-node operation** (0.63) | Replicas boot concurrently (each claims its instance id), migrations run once (`database.migrate_on_boot: false` / `--skip-migrate`), nodes split by `server.role: all \| gateway \| admin`, and `server.max_in_flight` sheds load with a `503` and a saturated `/readyz`. **Built; the self-host template sets them, the production profile sets none.** | [Deploy: Growing to more nodes](/documentation/deploy#growing-to-more-nodes) |
 | **Tool schema meta-validation** | Every MCP tool's input and output schema is checked against the JSON Schema meta-schema (Draft 2020-12, or the draft its `$schema` names) plus the shapes providers refuse: top-level `type: object`, `required` keys `properties` declares, no external `$ref`. **Enabled:** the bundled `systemprompt` server refuses to start on a violation, CI runs the same checks, and the request detail page badges a client schema that fails. | [MCP, Tool Governance & Distribution: Tool schema validation](/documentation/enterprise-tool-governance#tool-schema-validation) |
-| **AD FS single sign-on** | SAML 2.0 against Astound's AD FS is the only way to sign in. AD groups map to roles, groups and projects, and being in a mapped group is what admits a person. | [AD FS SSO Setup](/documentation/adfs-sso-setup) |
+| **Microsoft Entra ID single sign-on** | SAML 2.0 against Dynapps' Entra ID tenant is the only way to sign in. Entra groups map to roles, groups and projects, and being in a mapped group is what admits a person. | [Entra ID SSO Setup](/documentation/entra-id-sso-setup) |
 | **OpenAI-compatible IDE endpoint** | The gateway serves `/v1/chat/completions` (and `/v1/responses`) beside `/v1/messages`. The bridge registers it as an OpenCode provider, so IDE traffic is governed and audited like any other. | [Connect OpenCode](/documentation/connect-opencode) |
 | **Observability export** | The audit trail (requests, tool calls, governance decisions, server logs) is pushed to any OTLP/HTTP collector: Datadog, Grafana/LGTM, or Splunk behind a collector. | [Observability Export (OTLP)](/documentation/observability-export) |
 | **Retention and archives** | Every high-volume table has a deletion window. Raw requests are archived weekly before they expire, and rollups are archived monthly. | [Data Retention & Archives](/documentation/data-retention) |
@@ -59,7 +59,7 @@ One fact affects everything below. Since 2026-09-04 the governance chain, the sa
 | **Conversation history** | Every user can list and search their own conversations. Admins can search everyone's, with export. | [Conversation History & Search](/documentation/enterprise-conversation-history) |
 | **Versioning and rollback for prompt content** | Skills are the unit of prompt distribution. Each marketplace version is content-hashed, and versions can be compared. Rollback re-pins a previous digest. Every invocation records which published version served it. | [Versions](/documentation/analysis-versions), [Update a Skill](/documentation/update-a-skill), [Code ↔ Instance Sync](/documentation/services-sync) |
 | **Group and project drill-down** | Analytics, cost and quota windows can be scoped to a group, a project or a person. Group and project pages have their own usage tabs. | [Analytics](/documentation/enterprise-analytics#groups-projects-and-people) |
-| **Knowledge through connectors** | Google Workspace (Drive, Gmail and Calendar, through Agent Search), Atlassian (Jira and Confluence) and Salesforce are reachable as governed MCP servers, each filtered to what the signed-in person can already open. | [Access Control](/documentation/access-control) |
+| **Knowledge through connectors** | Atlassian (Jira and Confluence) and Salesforce are reachable as governed MCP servers, each filtered to what the signed-in person can already open. | [Access Control](/documentation/access-control) |
 
 ## Coming
 
@@ -83,7 +83,7 @@ Health-identifier detection would join the PII set. Today the scanners cover ema
 
 ### Data classification beyond two flags
 
-Routes can require a provider to be `european` or `no_retain`, and dispatch refuses a provider that lacks the flag. A richer classification scheme (labels on requests, routed by class) needs Astound's data-classification scheme first. Today every provider is declared `european: false`, and no route requires either flag. See [Data classification & residency](/documentation/enterprise-model-routing#data-classification-residency).
+Routes can require a provider to be `european` or `no_retain`, and dispatch refuses a provider that lacks the flag. A richer classification scheme (labels on requests, routed by class) needs Dynapps' data-classification scheme first. Today every provider is declared `european: false`, and no route requires either flag. See [Data classification & residency](/documentation/enterprise-model-routing#data-classification-residency).
 
 ### Latency objectives per use case
 
@@ -118,8 +118,8 @@ These were built and then taken out on purpose. They are listed so that an older
 | Per-organization budgets, run-rate early warning, burndown forecasts, scheduled cost digests | 2026-09-01, with organizations and departments | Quota windows as warning thresholds ([Cost Management](/documentation/enterprise-cost-management)). Groups and projects replace organizations and departments. |
 | Slack alerting | 2026-09-10 | Metrics and events for the operator's monitoring stack; see [Alert delivery](#alert-delivery). |
 | Code-impact metrics (AI-authored lines, applied edits, commit lines) | 2026-09-16 | Nothing. They were proxies too weak to report ([Analytics](/documentation/enterprise-analytics#what-is-not-measured)). |
-| The in-house retrieval server | September 2026 | The Google Workspace, Atlassian and Salesforce connectors. |
-| Passkey and invitation sign-in, Salesforce sign-in | 2026-08-29 to 08-31 | AD FS single sign-on. |
+| The in-house retrieval server | September 2026 | The Atlassian and Salesforce connectors. |
+| Passkey and invitation sign-in, Salesforce sign-in | 2026-08-29 to 08-31 | SAML single sign-on, now against Microsoft Entra ID. |
 
 ## Known limitations
 
@@ -128,15 +128,15 @@ These were built and then taken out on purpose. They are listed so that an older
 | **Nothing is enforced** | Governance, safety and quota planes run in warn mode since 2026-09-04. Only authentication refuses. | [Governance Modes](/documentation/governance-modes) |
 | **No spend ceiling** | Quota windows and per-key budgets warn. A daily per-project window ($100) is declared; no monthly window is, although calendar-month periods are supported. | [Cost Management](/documentation/enterprise-cost-management) |
 | **Redaction off** | In-flight redaction is built but no category is listed, so detected values still reach the provider; transcripts are masked at the display layer only. | [Governance Modes](/documentation/governance-modes) |
-| **SCIM provisioning** | Not offered. AD FS pushes no SCIM, so an endpoint would have no caller. The directory group decides access at each sign-in, bounded by the session lifetime. Revisit if Okta or Entra fronts the instance. | [User & Access Management](/documentation/enterprise-user-access) |
+| **SCIM provisioning** | Not offered. Entra ID can push SCIM, but the platform has no SCIM endpoint yet. The directory group decides access at each sign-in, bounded by the session lifetime. | [User & Access Management](/documentation/enterprise-user-access) |
 | **Audit immutability** | Audit tables are guarded by database triggers: settled rows cannot be rewritten, recent rows cannot be deleted, and `ai_requests` and safety findings are hash-chained and verified nightly. The guard ships in `warn` mode until enforcement is switched on. The application role still owns the tables, and archives sit on the instance's own disk, so a database owner can bypass the guard. Separating the owning role and adding write-once storage remain open (DEC-007). | [Data Retention](/documentation/data-retention#tamper-resistance) |
 | **Finite history** | Raw requests are kept for 90 days, prompt text for 30 and raw bodies for 7. Older history lives in the weekly archives. | [Data Retention](/documentation/data-retention) |
 | **Model access is open** | The access rule for gateway routes is open to every role. Models are shaped by governance and quotas, not restricted per role. | [Model Gateway & Routing](/documentation/enterprise-model-routing) |
 | **No EU route** | Every provider is declared `european: false`, and Vertex endpoints use the global location. | [Model Gateway & Routing](/documentation/enterprise-model-routing#data-classification-residency) |
-| **Shadow AI outside the gateway** | Unlisted models are refused at the gateway. Traffic that never reaches the gateway is invisible to it, and blocking it is a network egress control for Astound IT. | [Model Gateway & Routing](/documentation/enterprise-model-routing) |
+| **Shadow AI outside the gateway** | Unlisted models are refused at the gateway. Traffic that never reaches the gateway is invisible to it, and blocking it is a network egress control for Dynapps IT. | [Model Gateway & Routing](/documentation/enterprise-model-routing) |
 | **Tab-acceptance and commit metrics** | Not measurable. Claude Code emits no accept/reject signal, and commits outside Claude Code are not visible. | [Analytics](/documentation/enterprise-analytics#what-is-not-measured) |
 | **Metrics endpoint** | The Prometheus `/metrics` listener only starts when the profile sets `server.metrics_port`, and neither shipped profile does. | [Observability Export](/documentation/observability-export) |
-| **VS Code Copilot** | A Custom Endpoint configuration is documented but not validated by Astound. OpenCode is the supported IDE client of the OpenAI-compatible endpoint. | [Connect OpenCode: VS Code GitHub Copilot](/documentation/connect-opencode#vs-code-github-copilot) |
+| **VS Code Copilot** | A Custom Endpoint configuration is documented but not validated by Dynapps. OpenCode is the supported IDE client of the OpenAI-compatible endpoint. | [Connect OpenCode: VS Code GitHub Copilot](/documentation/connect-opencode#vs-code-github-copilot) |
 | **No external guardrail provider** | The scanners running are the built-in `heuristic`, `secrets` and `pii_extended`. A Model Armor scanner in the gateway is out of scope (decision 2026-10-08); Model Armor applies on the GCP side. | [Content Safety](/documentation/enterprise-safety-guardrails) |
 | **No push alerts** | The platform emits metrics and events; it sends nothing to people. | [Audit Trail](/documentation/enterprise-audit-observability#anomaly-detection) |
 

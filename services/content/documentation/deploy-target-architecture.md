@@ -1,7 +1,7 @@
 ---
 title: "Proposed: Target Deployment Architecture"
 description: "The multi-AZ Oracle Cloud architecture this deployment is growing towards, what is in place today, and the four gaps between them. Aspirational — nothing on this page is running yet."
-author: "Astound Digital"
+author: "Dynapps"
 slug: "deploy-target-architecture"
 keywords: "target architecture, proposed, roadmap, oracle cloud, oci, vault, blue green, object storage, multi replica, load balancer, waf, terraform, gitops"
 kind: "guide"
@@ -107,7 +107,7 @@ integration points worth specifying in the Terraform:
    set requires replica-safe job scheduling and shared session state.
 5. **Identity, two planes.** OCI IAM authenticates the platform team to the
    cloud. It does not authenticate end users to the application — that is
-   Astound SSO and the gateway's own authorization model. Do not assume IAM
+   Dynapps SSO and the gateway's own authorization model. Do not assume IAM
    covers application access.
 6. **Health and observability.** Structured JSON logs on stdout (no agent
    required), a metrics port separate from the API port, and distinct liveness

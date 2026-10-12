@@ -1,20 +1,25 @@
-/* Astound Digital brand override for the bridge GUI.
+/* Dynapps brand override for the bridge GUI.
  *
  * Injected by the core GUI as the last <style> in <head> (see
  * gui/assets.rs::render_index), so these :root values win the cascade over the
- * bundled tokens.css. Astound is monochrome (neutral greys) with a single
- * vivid red accent (#fe190a ≈ oklch(0.63 0.25 28)). We retune the accent and
- * neutralise the warm-grey backgrounds to true neutral; everything else
- * inherits the core dark theme. */
+ * bundled tokens.css. Dynapps' primary accent is red #F13C42 with purple
+ * #951CF3 as the secondary; the brand gradient runs #7B00DC -> #F13C42 ->
+ * #FF911F. Readex Pro leads the font stack and is used when installed; the
+ * bridge loads no network fonts, so system sans is the offline fallback. */
 :root {
-  /* Red accent (#fe190a and tints) */
-  --sp-accent:        oklch(0.63 0.25 28);
-  --sp-accent-hover:  oklch(0.58 0.25 28);
-  --sp-accent-soft:   oklch(0.63 0.25 28 / 0.12);
-  --sp-accent-ring:   oklch(0.63 0.25 28 / 0.40);
-  --sp-accent-deep:   oklch(0.54 0.24 28);
+  /* Red accent (#F13C42 and tints) */
+  --sp-accent:        #F13C42;
+  --sp-accent-hover:  #D9333A;
+  --sp-accent-soft:   rgb(241 60 66 / 0.12);
+  --sp-accent-ring:   rgb(241 60 66 / 0.40);
+  --sp-accent-deep:   #C42A30;
+  --sp-secondary:     #951CF3;
+  --sp-brand-gradient: linear-gradient(90deg, #7B00DC 0%, #F13C42 55%, #FF911F 100%);
 
-  /* Neutral (hue-less) greys */
+  --sp-font-body:     "Readex Pro", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --sp-font-display:  "Readex Pro", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  /* Neutral dark surfaces */
   --sp-bg:            oklch(0.17 0 0);
   --sp-bg-elev-1:     oklch(0.20 0 0);
   --sp-bg-elev-2:     oklch(0.24 0 0);
@@ -22,14 +27,13 @@
   --sp-line:          oklch(0.30 0 0);
   --sp-line-soft:     oklch(0.30 0 0 / 0.5);
 
-  --sp-text:          oklch(0.97 0 0);
+  --sp-text:          #FAFAFA;
   --sp-muted:         oklch(0.68 0 0);
   --sp-muted-strong:  oklch(0.80 0 0);
 
-  --sp-shadow-accent: 0 12px 40px oklch(0.58 0.25 28 / 0.22);
+  --sp-shadow-accent: 0 12px 40px rgb(241 60 66 / 0.22);
 
-  /* Core defaults --sp-info to a vivid blue for "changed/updated" chips. Astound
-   * is monochrome, so desaturate it to a faint cool grey — still distinct from
-   * the red accent and the ok/err/warn hues, without introducing a second colour. */
-  --sp-info:          oklch(0.72 0.02 240);
+  /* "Changed/updated" chips take the brand purple so they stay distinct from
+   * the red accent and the ok/err/warn hues. */
+  --sp-info:          #B66BF7;
 }

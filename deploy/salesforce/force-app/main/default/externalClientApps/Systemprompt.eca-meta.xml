@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ExternalClientApplication xmlns="http://soap.sforce.com/2006/04/metadata">
-    <contactEmail>REPLACE-admin@astounddigital.com</contactEmail>
-    <description>Systemprompt gateway: governed, per-user access to this org&apos;s hosted MCP server from Claude Code, OpenCode and Cowork. Astound US is the source org; other orgs install this app as a managed package.</description>
+    <contactEmail>REPLACE-admin@dynapps.es</contactEmail>
+    <description>Systemprompt gateway: governed, per-user access to this org&apos;s hosted MCP server from Claude Code, OpenCode and Cowork. The publishing org is the source org; other orgs install this app as a managed package.</description>
     <distributionState>Packaged</distributionState>
     <isProtected>false</isProtected>
     <label>Systemprompt</label>

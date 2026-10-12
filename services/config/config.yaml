@@ -7,14 +7,11 @@
 
 includes:
   # MCP servers
-  # `atlassian`, `google_workspace`, `salesforce` and the internal `systemprompt`
-  # control plane are reachable. One connector each; one Connect row each.
-  # `sfcore_dev` is identity-backed: no connector, the instance signs who calls.
+  # `atlassian`, `salesforce` and the internal `systemprompt` control plane
+  # are reachable. One connector each; one Connect row each.
   - ../mcp/systemprompt.yaml
   - ../mcp/salesforce.yaml
   - ../mcp/atlassian.yaml
-  - ../mcp/google_workspace.yaml
-  - ../mcp/sfcore_dev.yaml
 
   # AI, scheduler, content
   # Note: ../web/config.yaml is NOT included here — the web domain validator
@@ -34,10 +31,10 @@ includes:
 
 settings:
   # Why: more than one marketplace is enabled, so the instance has to say which
-  # one is the default. astound-commons is the baseline workspace every
+  # one is the default. dynapps-commons is the baseline workspace every
   # signed-in user reaches; the group- and role-scoped ones are additive and are
   # gated in services/access-control/rules.yaml, the one source of entitlement.
-  default_marketplace_id: astound-commons
+  default_marketplace_id: dynapps-commons
   agent_port_range: [9000, 9999]
   mcp_port_range: [5000, 5999]
   auto_start_enabled: true

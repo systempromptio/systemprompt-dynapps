@@ -18,8 +18,8 @@ fn registry() -> SalesforceOrgRegistry {
         r#"
 orgs:
   salesforce:
-    label: "Astound (production)"
-    my_domain: https://astound.my.salesforce.com
+    label: "Dynapps (production)"
+    my_domain: https://example-co.my.salesforce.com
     environment: production
   salesforce-uat:
     label: "Client A UAT"

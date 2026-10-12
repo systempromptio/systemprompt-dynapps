@@ -3,19 +3,19 @@
 # ===== CUSTOMIZE THESE =====
 
 site:
-  name: "Astound Digital"
-  title: "Astound Digital — AI-Powered Commerce & Experience Solutions"
-  description: "Astound Digital delivers end-to-end digital commerce, data-driven strategy, AI solutions, marketing & CRM services for global brands seeking growth and transformation."
-  author: "Astound Digital"
-  baseUrl: "https://astounddigital.com"
+  name: "Dynapps"
+  title: "Dynapps AI Gateway - governed Claude Code for Dynapps teams"
+  description: "Governed AI for Dynapps teams, inside Claude. One corporate sign-in connects Claude Code and Cowork to your organization's skills and tools, with every action audited."
+  author: "Dynapps"
+  baseUrl: "https://dynapps.systemprompt.io"
 
 seo:
   defaultImage: "/files/images/logo.png"
-  twitterHandle: "@astounddigital"
-  keywords: "Astound Digital, digital commerce, AI solutions, composable commerce, experience design, intelligent automation, CRM, data strategy, AI governance"
+  twitterHandle: "@dynapps"
+  keywords: "Dynapps, Odoo, AI gateway, Claude Code, Cowork, skills marketplace, AI governance"
 
 copyright:
-  holder: "Astound Digital"
+  holder: "Dynapps"
   year: 2026
-  link: "https://astounddigital.com"
-  notice: "2026 Astound Digital"
+  link: "https://www.dynapps.es"
+  notice: "2026 Dynapps"

@@ -1,7 +1,7 @@
 ---
 title: "Content Safety, PII & Guardrails"
 description: "What the gateway safety scanners and the governance chain detect on every request, what they would block under enforce, and why both currently run in warn mode."
-author: "Astound Digital"
+author: "Dynapps"
 slug: "enterprise-safety-guardrails"
 keywords: "safety, guardrails, pii, ssn, secrets, jailbreak, redaction, scanners, warn mode, block list, phi"
 kind: "guide"

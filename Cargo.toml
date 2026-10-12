@@ -36,9 +36,9 @@ opt-level = "z"
 edition = "2024"
 rust-version = "1.96"
 version = "0.65.0"
-authors = ["Astound Digital <ed@systemprompt.io>"]
-repository = "https://github.com/systempromptio/systemprompt-astound"
-homepage = "https://astounddigital.com"
+authors = ["Dynapps <ed@systemprompt.io>"]
+repository = "https://github.com/systempromptio/systemprompt-dynapps"
+homepage = "https://www.dynapps.es"
 documentation = "https://systemprompt.io/documentation"
 
 [workspace.dependencies]
@@ -229,15 +229,15 @@ single_use_lifetimes = "warn"
 # ROOT PACKAGE (Template Application)
 # ============================================
 [package]
-name = "systemprompt-astound"
+name = "systemprompt-dynapps"
 publish = false
 version.workspace = true
 edition.workspace = true
-description = "Astound Digital branded AI governance platform — local evaluation. A single compiled Rust binary that authenticates, authorises, rate-limits, logs, and costs every AI interaction. Self-hosted, air-gap capable, provider-agnostic. Built on systemprompt-core."
+description = "Dynapps branded AI governance platform — local evaluation. A single compiled Rust binary that authenticates, authorises, rate-limits, logs, and costs every AI interaction. Self-hosted, air-gap capable, provider-agnostic. Built on systemprompt-core."
 readme = "README.md"
-repository = "https://github.com/systempromptio/systemprompt-astound"
-homepage = "https://astounddigital.com"
-documentation = "https://astounddigital.com"
+repository = "https://github.com/systempromptio/systemprompt-dynapps"
+homepage = "https://www.dynapps.es"
+documentation = "https://www.dynapps.es"
 keywords = ["ai", "governance", "mcp", "agents", "claude"]
 categories = ["command-line-utilities", "web-programming"]
 

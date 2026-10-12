@@ -7,7 +7,7 @@
 # the point of the flow rather than an obstacle to it.
 set -euo pipefail
 
-GATEWAY="${ASTOUND_BRIDGE_GATEWAY_URL:?gateway URL not set}"
+GATEWAY="${DYNAPPS_BRIDGE_GATEWAY_URL:?gateway URL not set}"
 
 # The container reaches the gateway at host.docker.internal; a browser on the
 # host reaches the same server at localhost. Printing the container's view would
@@ -18,8 +18,8 @@ bold() { printf '\033[1m%s\033[0m\n' "$*"; }
 step() { printf '\n\033[1m==>\033[0m %s\n' "$*"; }
 warn() { printf '\033[33mwarn:\033[0m %s\n' "$*" >&2; }
 
-if ! command -v astound-bridge >/dev/null 2>&1; then
-    printf '\033[31mERROR:\033[0m astound-bridge is not mounted. Run `just bridge-build` first.\n' >&2
+if ! command -v dynapps-bridge >/dev/null 2>&1; then
+    printf '\033[31mERROR:\033[0m dynapps-bridge is not mounted. Run `just bridge-build` first.\n' >&2
     exit 1
 fi
 
@@ -47,21 +47,21 @@ esac
 # ── 1. Credentials ────────────────────────────────────────────────────────────
 # Skip the prompt when the state volume already carries a PAT that still works;
 # re-authenticating a working client would just burn a code.
-if [ -f "$HOME/.config/astound/astound-bridge.pat" ] && astound-bridge whoami >/dev/null 2>&1; then
+if [ -f "$HOME/.config/dynapps/dynapps-bridge.pat" ] && dynapps-bridge whoami >/dev/null 2>&1; then
     step "already signed in — reusing the stored PAT"
     # A credential saved by an earlier bootstrap still names the Docker alias
     # as its gateway; whoami works over it, but no device is enrolled and the
     # feedback plane stays dark until the sign-in is redone through the relay.
-    if grep -qs 'host\.docker\.internal' "$HOME/.config/astound/astound-bridge.toml"; then
+    if grep -qs 'host\.docker\.internal' "$HOME/.config/dynapps/dynapps-bridge.toml"; then
         warn "the stored config still points at host.docker.internal, so the bridge
       never self-enrolled a device. Run 'just clean-client-reset' and sign in
       again to route through 127.0.0.1 (see README, \"Feedback plane\")."
     fi
-elif [ -n "${ASTOUND_BRIDGE_CODE:-}" ]; then
+elif [ -n "${DYNAPPS_BRIDGE_CODE:-}" ]; then
     # The caller already has the code (it came off the profile page as an
     # argument), so there is nothing to ask for.
     step "signing in with the supplied code"
-    astound-bridge login --code "$ASTOUND_BRIDGE_CODE" \
+    dynapps-bridge login --code "$DYNAPPS_BRIDGE_CODE" \
         --gateway "$GATEWAY" --device-name clean-client
 else
     step "sign in"
@@ -85,7 +85,7 @@ else
 
     # Tolerant on purpose: the page shows a command as well as a bare code, and
     # the CLI accepts either. Refusing a paste here would be gratuitous.
-    astound-bridge login --code "$CODE" --gateway "$GATEWAY" --device-name clean-client
+    dynapps-bridge login --code "$CODE" --gateway "$GATEWAY" --device-name clean-client
 fi
 
 # ── 2. Policy + plugins ───────────────────────────────────────────────────────
@@ -93,27 +93,27 @@ step "installing integration"
 # Two calls on purpose: the policy install must succeed, while the scheduler
 # step degrades here — no `systemd --user` in a container — and a degraded
 # schedule is a warning, never a reason to stop before the proxy and sync.
-astound-bridge install --apply
-astound-bridge install --apply --apply-schedule \
+dynapps-bridge install --apply
+dynapps-bridge install --apply --apply-schedule \
     || warn "scheduler units not activated (no systemd --user here); the proxy is started by hand below"
 
 step "starting the loopback proxy"
 # No systemd in this container, which is why --apply-schedule warned above.
-if astound-bridge doctor 2>/dev/null | grep -q '^\[OK  \] inference proxy'; then
+if dynapps-bridge doctor 2>/dev/null | grep -q '^\[OK  \] inference proxy'; then
     echo "    already running"
 else
-    astound-bridge proxy >"$HOME/.cache/bridge-proxy.log" 2>&1 &
+    dynapps-bridge proxy >"$HOME/.cache/bridge-proxy.log" 2>&1 &
     for _ in $(seq 1 20); do
-        astound-bridge doctor 2>/dev/null | grep -q '^\[OK  \] inference proxy' && break
+        dynapps-bridge doctor 2>/dev/null | grep -q '^\[OK  \] inference proxy' && break
         sleep 0.5
     done
 fi
 
 step "syncing plugins, skills, agents, MCP"
-astound-bridge sync --allow-tofu
+dynapps-bridge sync --allow-tofu
 
 step "verifying"
-astound-bridge doctor || warn "doctor reported problems — read them above before trusting the result"
+dynapps-bridge doctor || warn "doctor reported problems — read them above before trusting the result"
 
 if [ -n "${CLEAN_CLIENT_EXEC_CLAUDE:-}" ]; then
     step "starting Claude Code"
@@ -129,7 +129,7 @@ cat <<'DONE'
       claude
 
   This shell is a login shell, so ANTHROPIC_BASE_URL and ANTHROPIC_AUTH_TOKEN
-  are already set from ~/.config/astound/env.sh. Proxy log: ~/.cache/bridge-proxy.log
+  are already set from ~/.config/dynapps/env.sh. Proxy log: ~/.cache/bridge-proxy.log
   Gateway relay log (host.docker.internal gateways only): ~/.cache/gateway-forward.<port>.log
 
 DONE

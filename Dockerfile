@@ -1,11 +1,11 @@
 # syntax=docker/dockerfile:1.7
-# Multi-stage build for the Astound Digital gateway.
+# Multi-stage build for the Dynapps gateway.
 # Stage 1 compiles the Rust workspace against the repo's .sqlx/ offline cache.
 # Stage 2 ships a slim Debian runtime with the binaries + services/ YAML tree.
 # The `artifacts` stage exports just the binaries, for the release tarball.
 #
 # Published by .github/workflows/release.yml on every push to main as
-# ghcr.io/astound-digital/systemprompt-astound (docs/RELEASING.md). Build it
+# ghcr.io/systempromptio/systemprompt-dynapps (docs/RELEASING.md). Build it
 # locally with `just docker-build`.
 
 FROM rust:1-bookworm AS builder
@@ -61,12 +61,12 @@ FROM public.ecr.aws/aws-cli/aws-cli:2.36.18 AS awscli
 FROM debian:bookworm-slim AS runtime
 
 ARG SYSTEMPROMPT_VERSION=dev
-LABEL org.opencontainers.image.title="Astound Digital gateway" \
-      org.opencontainers.image.description="Astound Digital AI governance gateway — policy, audit, and MCP orchestration on systemprompt" \
-      org.opencontainers.image.source="https://github.com/Astound-Digital/systemprompt-astound" \
-      org.opencontainers.image.url="https://astounddigital.com" \
-      org.opencontainers.image.documentation="https://github.com/Astound-Digital/systemprompt-astound/tree/main/docs" \
-      org.opencontainers.image.vendor="Astound Digital" \
+LABEL org.opencontainers.image.title="Dynapps gateway" \
+      org.opencontainers.image.description="Dynapps AI governance gateway — policy, audit, and MCP orchestration on systemprompt" \
+      org.opencontainers.image.source="https://github.com/systempromptio/systemprompt-dynapps" \
+      org.opencontainers.image.url="https://www.dynapps.es" \
+      org.opencontainers.image.documentation="https://github.com/systempromptio/systemprompt-dynapps/tree/main/docs" \
+      org.opencontainers.image.vendor="Dynapps" \
       org.opencontainers.image.version="${SYSTEMPROMPT_VERSION}"
 
 RUN apt-get update && apt-get install -y --no-install-recommends \

@@ -3,13 +3,13 @@
 # (name, description, version, owner, plugins) is refused here.
 #
 # NO `access:` BLOCK. Who reaches this marketplace is declared in the
-# systemprompt-astound repository (services/access-control/rules.yaml, entity
+# systemprompt-dynapps repository (services/access-control/rules.yaml, entity
 # `marketplace/<name>` with `owner: bundle:<kit>`). A kit release can never
 # widen its own audience; the instance ignores an access block a kit carries
 # and shows it as a warning on /admin/sync.
 schema: 1
 marketplace:
-  title: "Astound Digital — <Region> Development"
+  title: "Dynapps — <Team> Development"
   visibility: private
   enabled: true
   # MCP servers this marketplace exposes, by id as defined on the instance

@@ -1,55 +1,122 @@
-Kit rollout — what Astound must provide (updated 2026-09-18, after the first releases)
+DYNAPPS ON SYSTEMPROMPT.IO: PILOT REQUIREMENTS AND OPEN ITEMS
 =============================================================
+Prepared by systemprompt.io (Ed, ed@systemprompt.io), 2026-10-12.
 
-Scope: publish Astound-Digital/sfnext-claude-dev-kit and Astound-Digital/sfscore-claude-india-kit
-as signed services bundles (private GHCR packages) and let each systemprompt instance import them.
-Every item says who can do it and what it unlocks. Tick with the date when done.
 
-A. GitHub Actions secrets on Astound-Digital/sfnext-claude-dev-kit
-   (Settings → Secrets and variables → Actions; needs repo admin)
-   [x] BUNDLE_SIGNING_SEED       ROTATED 2026-09-18 (the 2026-09-15 value was not valid base64). Public key:
-                                 CyTVcLiluJ5zeCfmTt0QlOxJvZf+f1+UkubOjZP8K2Q=
-                                 Set by the operator on 2026-09-18.
-   [x] ASTOUND_RELEASE_TOKEN     (set 2026-09-18 from the operator's copy) GitHub PAT (classic) with scope `repo`, on an account that can read
-                                 Astound-Digital/systemprompt-astound (private). Unlocks: CI downloads
-                                 systemprompt-astound-server-0.55.1-linux-amd64.tar.gz and
-                                 systemprompt-astound-base-0.55.1.tar.gz from the private release.
-                                 Same value as `astound_release_token` in the operator's local secrets.json.
-   [ ] SYSTEMPROMPT_API_URL      optional: https://astound.systemprompt.io — CI imports the release itself.
-   [ ] SYSTEMPROMPT_ADMIN_TOKEN  optional: admin PAT on that instance
-                                 (`systemprompt admin users api-key issue --user <admin uuid>`).
+1. CONTEXT
+----------
 
-B. GitHub Actions secrets on Astound-Digital/sfscore-claude-india-kit (same page, repo admin)
-   [x] BUNDLE_SIGNING_SEED       set 2026-09-18 (generated with `systemprompt core services keygen`; the
-                                 seed exists only as this repo secret). Public key pinned by the instance:
-                                 a8Xa0VL5BFVauW8NsUmVktmzj8G+9+qt6//UBZH4X0o=
-   [x] ASTOUND_RELEASE_TOKEN     set 2026-09-18, same PAT as A.
-   [ ] SYSTEMPROMPT_API_URL / SYSTEMPROMPT_ADMIN_TOKEN   optional, as A.
+Dynapps asked:
 
-C. GHCR packages — both exist and are PRIVATE (created by the first CI runs on 2026-09-18)
-   ghcr.io/astound-digital/sfnext-claude-dev-kit    :v2.2.1 = :stable  sha256:5f95d5d2…
-   ghcr.io/astound-digital/sfscore-claude-india-kit :v3.2.1 = :stable  sha256:9a649846…
-   Nothing to do unless the package is not linked to its repository (then: Package settings →
-   Manage Actions access → add the kit repository with write).
+  "We'd like to setup systemprompt as we would be using it in production,
+   so that we can setup a couple of users and assess if it is still a good
+   match... From authentication perspective, we would need some kind of
+   integration with our EntraID SSO so that we can disable users in one
+   location and propagating to all services we use."
 
-D. Instance pull token (one per instance that composes the kits)
-   [ ] GitHub PAT (classic) with scope `read:packages` ONLY, on an account that can read the
-       Astound-Digital org packages. Stored as secret `ghcr_pull_token` with the value
-       `<github-user>:<PAT>` (e.g. `Ejb503:ghp_...`).
-       - local profile      .systemprompt/profiles/local/secrets.json        [x] 2026-09-18 (operator's own
-                            token; proven: all three kits fetched, verified and composed locally)
-       - astound.systemprompt.io (profile `production`) secrets.json          [ ] NEEDED before `just deploy`:
-                            production has no ghcr_pull_token yet; the profile already pins sfnext + india
-       - sp-dev.astound.digital  that deployment's secrets (its operator)
+What we have provisioned:
 
-E. What sp-dev.astound.digital's operator must do (Astound side) — runbook: docs/kits-on-another-instance.md
-   [ ] set `ghcr_pull_token` (D)
-   [ ] add the services.sources[] block from docs/kits-on-another-instance.md to that instance's
-       profile (sfnext + india, both with auth_secret: ghcr_pull_token), then Import on
-       /admin/sync after every kit release (the CI self-imports one URL only).
-   [ ] keep services/access-control/rules.yaml + ADFS group mapping (india-devs, europe-devs) in step.
+  - A Dynapps instance built from systemprompt release 0.65.0, branded for
+    Dynapps (name, logo, colours, Readex Pro typeface).
+  - A dedicated cloud tenant: sp-e43527c1cbb5.
+  - Tenant address, live now:   https://e43527c1cbb5.systemprompt.io
+  - Canonical address:          https://dynapps.systemprompt.io
+    (all configuration and SSO values below use the canonical address)
+  - Sign-in through Microsoft Entra ID (SAML 2.0). Disabling a user in Entra
+    ID stops their access here; see section 3.6 for exactly when.
 
-F. People
-   - Kit maintainers need write on their kit repository and the ability to create a GitHub Release
-     (tag vX.Y.Z → Release → CI publishes). Collaborators on the India kit today: Ejb503,
-     jdave-astounddigital, nbohra-astound, mruia-astound, priyam-astound.
+
+2. BLOCKERS ON OUR SIDE (systemprompt.io)
+-----------------------------------------
+
+2.1  Routing for dynapps.systemprompt.io.
+     DNS already resolves to the platform edge (66.241.124.121). We still
+     have to confirm the edge routes this hostname to tenant e43527c1cbb5.
+     If the edge needs a per-tenant mapping, we add it on the control plane.
+     Otherwise we add a Fly certificate on sp-e43527c1cbb5 and CNAME
+     dynapps.systemprompt.io to sp-e43527c1cbb5.fly.dev.
+     Constraint: astound.systemprompt.io is another customer's live address
+     with its own certificate and must not be repointed.
+
+2.2  AI provider credentials for the tenant secrets (Vertex AI and/or
+     Anthropic), once Dynapps confirms provider and region (3.7).
+
+2.3  An SMTP sender for notification email.
+
+2.4  Release pipeline: the GitHub container package, the bundle signing
+     seed (DYNAPPS_BUNDLE_SIGNING_SEED) and the remaining GitHub secrets
+     that CI needs to publish releases.
+
+2.5  Code-signing for the branded desktop bridge (Apple Developer ID and
+     Windows Authenticode). Until then the bridge ships unsigned, and the
+     download links return 404 until the first release is published.
+
+
+3. QUESTIONS AND INPUTS NEEDED FROM DYNAPPS
+-------------------------------------------
+
+3.1  Entra ID federation metadata. Please send either the App Federation
+     Metadata URL, which has the form
+
+       https://login.microsoftonline.com/<tenant-id>/federationmetadata/2007-06/federationmetadata.xml?appid=<app-id>
+
+     or the downloaded XML file, together with your Entra tenant ID.
+
+3.2  Values to enter in your Entra ID Enterprise Application
+     (Single sign-on > SAML):
+
+       Identifier (Entity ID)   https://dynapps.systemprompt.io/saml/metadata
+       Reply URL (ACS URL)      https://dynapps.systemprompt.io/admin/auth/adfs/acs
+       Sign-on URL              https://dynapps.systemprompt.io/admin/auth/adfs/start
+       Signing option           Sign SAML assertion
+                                (or "Sign SAML response and assertion")
+       Signing algorithm        SHA-256
+       Token encryption         Off
+       Name ID                  user.userprincipalname or user.mail
+                                (format: emailAddress)
+       Claims                   emailaddress
+                                http://schemas.microsoft.com/identity/claims/displayname
+       Groups claim             "Groups assigned to the application" only.
+                                This avoids the 150-group overage link,
+                                which we cannot resolve from a SAML token.
+       Assignment required      Yes (Properties tab), so only assigned
+                                users can sign in.
+
+3.3  Roles. The Entra group names or object IDs that map to:
+       - the admin role
+       - the standard user role
+
+3.4  Allowed email domains. We have assumed dynapps.es and
+     wearedynapps.com. Please confirm or correct.
+
+3.5  Pilot users. The list of people in the pilot, and who owns the admin
+     role on the Dynapps side.
+
+3.6  Deprovisioning. There is no SCIM sync. A user disabled or unassigned in
+     Entra ID is refused at their next sign-in, and any existing session
+     ends when its access token expires. We propose an 8-hour access token on
+     this instance. Please confirm that window is acceptable.
+
+3.7  AI provider and data residency. Which provider and region should
+     inference use? For example Vertex AI in an EU region (europe-west) or
+     Anthropic directly. Is EU data residency a requirement?
+
+3.8  Pilot scope. Which marketplaces and skills to enable for the pilot
+     (the shared commons plugin only, or more), and any Odoo-specific MCP
+     servers or tools you would want.
+
+3.9  Brand sign-off. Logo and colours were taken from dynapps.es:
+     gradient #7B00DC -> #F13C42 -> #FF911F, typeface Readex Pro.
+     Please confirm or send preferred assets.
+
+
+4. LAUNCH-STATE CAVEATS
+-----------------------
+
+  - Browser sign-in goes live only once the Entra ID metadata (3.1) is in
+    place and SSO is switched on in the instance configuration. Until then,
+    only command-line admin sessions work.
+  - Desktop bridge downloads return 404 until the first GitHub release
+    is published (2.4, 2.5).
+  - Content specific to the previous customer has been removed: their kits,
+    their Salesforce org connection and the Google Workspace MCP server.

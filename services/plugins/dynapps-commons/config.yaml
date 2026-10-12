@@ -1,11 +1,11 @@
 plugin:
-  id: astound-commons
-  name: "Astound Commons"
+  id: dynapps-commons
+  name: "Dynapps Commons"
   description: "The baseline every signed-in user receives: who you are, what your workspaces grant you, and the governance hooks that record and police every session."
   version: "1.0.0"
   enabled: true
   author:
-    name: Astound Digital
+    name: Dynapps
     email: ed@systemprompt.io
   keywords: [commons, profile, governance, onboarding]
   license: proprietary

@@ -22,7 +22,7 @@ pub struct SalesforceConfig {
     #[serde(default)]
     pub enabled: bool,
     // Why: Salesforce's JWT-bearer flow uses the org's My Domain base URL
-    // (`https://astound.my.salesforce.com`) as the assertion audience.
+    // (`https://<my-domain>.my.salesforce.com`) as the assertion audience.
     pub my_domain: String,
     #[serde(alias = "client_id")]
     pub consumer_key: String,

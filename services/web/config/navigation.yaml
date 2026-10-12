@@ -1,7 +1,7 @@
 # Navigation Configuration
 # Header, footer, and documentation sidebar
 #
-# External links point to https://astounddigital.com.
+# External links point to https://www.dynapps.es.
 # Local routes (/skills, /documentation, /admin/login) target the running
 # template instance.
 
@@ -15,36 +15,24 @@ header:
 
 footer:
   capabilities:
-    - path: "https://astounddigital.com/industries/retail-consumer-products"
-      label: "Retail & Consumer Products"
+    - path: "https://www.dynapps.es/en"
+      label: "Odoo Implementation"
       external: true
-    - path: "https://astounddigital.com/industries/travel-hospitality"
-      label: "Travel & Hospitality"
+    - path: "https://www.dynapps.es/en"
+      label: "Odoo Integration"
       external: true
-    - path: "https://astounddigital.com/industries/manufacturing"
-      label: "Manufacturing"
+    - path: "https://www.dynapps.es/en"
+      label: "Hosting & Support"
       external: true
-    - path: "https://astounddigital.com/industries/medtech-life-sciences"
-      label: "MedTech & Life Sciences"
-      external: true
-    - path: "https://astounddigital.com/industries/consumer-business-services"
-      label: "Consumer & Business Services"
+    - path: "https://www.dynapps.es/en"
+      label: "AI & Automation"
       external: true
   integrations:
-    - path: "https://astounddigital.com/about"
-      label: "About"
+    - path: "https://www.dynapps.es/en"
+      label: "About Dynapps"
       external: true
-    - path: "https://astounddigital.com/partners"
-      label: "Partners"
-      external: true
-    - path: "https://astounddigital.com/client-success"
-      label: "Client Success"
-      external: true
-    - path: "https://careers.astounddigital.com/"
-      label: "Careers"
-      external: true
-    - path: "https://trust.astounddigital.com/"
-      label: "Trust Center"
+    - path: "https://wearedynapps.com"
+      label: "We Are Dynapps"
       external: true
   resources:
     - path: "/skills/"
@@ -53,34 +41,22 @@ footer:
       label: "Documentation"
     - path: "/documentation/downloads"
       label: "Downloads"
-    - path: "https://astounddigital.com/ai-hub"
-      label: "AI Hub"
-      external: true
-    - path: "https://astounddigital.com/reports"
-      label: "Reports"
-      external: true
     - path: "/sitemap.xml"
       label: "Sitemap"
     - path: "/admin/login"
       label: "Login"
   legal:
-    - path: "https://astounddigital.com/legal/privacy-policy"
-      label: "Privacy Policy"
-      external: true
-    - path: "https://astounddigital.com/legal/privacy-policy-us"
-      label: "Privacy Policy (US)"
-      external: true
-    - path: "https://astounddigital.com/legal/terms-of-use"
-      label: "Terms of Use"
+    - path: "https://www.dynapps.es"
+      label: "Dynapps"
       external: true
   contact:
-    - href: "https://astounddigital.com/contact-us"
+    - href: "https://www.dynapps.es/en"
       label: "Contact Us"
-    - href: "https://www.linkedin.com/company/astound-digital/"
+    - href: "https://www.linkedin.com/company/dynapps/"
       label: "LinkedIn"
 
 social:
-  - href: "https://www.linkedin.com/company/astound-digital/"
+  - href: "https://www.linkedin.com/company/dynapps/"
     type: "linkedin"
     label: "LinkedIn"
 
@@ -104,8 +80,6 @@ docs_sidebar:
         href: "/documentation/install-windows"
       - label: "Downloads"
         href: "/documentation/downloads"
-      - label: "Connect Salesforce"
-        href: "/documentation/salesforce"
 
   - title: "Skills"
     links:
@@ -163,8 +137,8 @@ docs_sidebar:
     links:
       - label: "User & Access Management"
         href: "/documentation/enterprise-user-access"
-      - label: "Set Up SSO (AD FS)"
-        href: "/documentation/adfs-sso-setup"
+      - label: "Set Up SSO (Microsoft Entra ID)"
+        href: "/documentation/entra-id-sso-setup"
       - label: "Usage & Productivity Analytics"
         href: "/documentation/enterprise-analytics"
       - label: "Cost Management & FinOps"

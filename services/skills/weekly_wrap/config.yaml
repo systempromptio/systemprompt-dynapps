@@ -6,7 +6,7 @@ description: Build a weekly sales recap from Salesforce opportunity movement and
 enabled: true
 file: SKILL.md
 tags:
-- astound
+- dynapps
 - salesforce
 - sales
 category: business

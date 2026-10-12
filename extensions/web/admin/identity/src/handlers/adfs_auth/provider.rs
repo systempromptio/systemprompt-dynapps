@@ -1,8 +1,8 @@
 //! The SAML roles built from [`AdfsConfig`]: our service-provider descriptor
-//! and the `IdP` descriptor parsed from the pinned federation metadata.
+//! and the `IdP` descriptor parsed from the federation metadata in force.
 //!
-//! Metadata parsing is cached per config so the 70 KB AD FS document is
-//! parsed once per process, not once per sign-in.
+//! Parsing is cached per metadata document, so it happens once per document
+//! rather than once per sign-in; a refreshed document replaces the entry.
 
 use std::collections::HashMap;
 use std::sync::{Arc, LazyLock};
@@ -15,8 +15,9 @@ use tokio::sync::RwLock;
 
 use super::AdfsError;
 use super::config::AdfsConfig;
+use super::metadata::current_metadata_xml;
 
-static IDP_CACHE: LazyLock<RwLock<HashMap<String, Arc<IdpDescriptor>>>> =
+static IDP_CACHE: LazyLock<RwLock<HashMap<Arc<str>, Arc<IdpDescriptor>>>> =
     LazyLock::new(|| RwLock::new(HashMap::new()));
 
 pub(super) fn service_provider(cfg: &AdfsConfig) -> Result<ServiceProvider, AdfsError> {
@@ -28,8 +29,8 @@ pub(super) fn service_provider(cfg: &AdfsConfig) -> Result<ServiceProvider, Adfs
         signing_key: None,
         decryption_key: None,
         sign_authn_requests: false,
-        // Why: AD FS signs the assertion by default but not the outer Response,
-        // so requiring a signed Response would reject every login.
+        // Why: SAML IdPs, Entra ID included, sign only the assertion by default,
+        // not the outer Response; requiring a signed Response rejects logins.
         want_signed: SpWantSigned {
             response: false,
             assertions: true,
@@ -43,15 +44,17 @@ pub(super) fn service_provider(cfg: &AdfsConfig) -> Result<ServiceProvider, Adfs
 }
 
 pub(super) async fn idp_descriptor(cfg: &AdfsConfig) -> Result<Arc<IdpDescriptor>, AdfsError> {
-    if let Some(idp) = IDP_CACHE.read().await.get(&cfg.idp_metadata_xml) {
+    let xml = current_metadata_xml(cfg).await?;
+    if let Some(idp) = IDP_CACHE.read().await.get(&xml) {
         return Ok(Arc::clone(idp));
     }
-    let parsed = IdpDescriptor::from_metadata_xml(cfg.idp_metadata_xml.as_bytes())
+    let parsed = IdpDescriptor::from_metadata_xml(xml.as_bytes())
         .map_err(|e| AdfsError::Metadata(e.to_string()))?;
     let idp = Arc::new(parsed);
-    IDP_CACHE
-        .write()
-        .await
-        .insert(cfg.idp_metadata_xml.clone(), Arc::clone(&idp));
+    {
+        let mut cache = IDP_CACHE.write().await;
+        cache.clear();
+        cache.insert(xml, Arc::clone(&idp));
+    }
     Ok(idp)
 }

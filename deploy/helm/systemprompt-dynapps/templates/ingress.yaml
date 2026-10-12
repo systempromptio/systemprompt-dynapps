@@ -2,7 +2,7 @@
 {{- fail "enable only one of ingress and gatewayApi" }}
 {{- end }}
 {{- if .Values.ingress.enabled }}
-{{- $fullname := include "astound.fullname" . -}}
+{{- $fullname := include "dynapps.fullname" . -}}
 {{- $host := required "routing.host is required" .Values.routing.host -}}
 # Health check on /readyz (a saturated pod answers 503 and leaves rotation);
 # backend timeout long enough for streamed completions.
@@ -11,7 +11,7 @@ kind: BackendConfig
 metadata:
   name: {{ $fullname }}
   labels:
-    {{- include "astound.labels" . | nindent 4 }}
+    {{- include "dynapps.labels" . | nindent 4 }}
 spec:
   timeoutSec: {{ .Values.routing.backendTimeoutSec }}
   connectionDraining:
@@ -30,7 +30,7 @@ kind: FrontendConfig
 metadata:
   name: {{ $fullname }}
   labels:
-    {{- include "astound.labels" . | nindent 4 }}
+    {{- include "dynapps.labels" . | nindent 4 }}
 spec:
   redirectToHttps:
     enabled: true
@@ -44,7 +44,7 @@ kind: ManagedCertificate
 metadata:
   name: {{ $fullname }}
   labels:
-    {{- include "astound.labels" . | nindent 4 }}
+    {{- include "dynapps.labels" . | nindent 4 }}
 spec:
   domains:
     - {{ $host }}
@@ -55,7 +55,7 @@ kind: Ingress
 metadata:
   name: {{ $fullname }}
   labels:
-    {{- include "astound.labels" . | nindent 4 }}
+    {{- include "dynapps.labels" . | nindent 4 }}
   annotations:
     kubernetes.io/ingress.class: gce
     kubernetes.io/ingress.allow-http: "false"

@@ -1,16 +1,16 @@
 ---
 title: "Install the Desktop Bridge"
-description: "Install and sign in to Astound Bridge with trusted configuration on macOS, Windows, Linux, and WSL."
-author: "Astound Digital"
+description: "Install and sign in to Dynapps Bridge with trusted configuration on macOS, Windows, Linux, and WSL."
+author: "Dynapps"
 slug: "bridge-install"
 kind: "guide"
 public: true
 tags: ["documentation", "getting-started", "bridge"]
 published_at: "2026-08-19"
 updated_at: "2026-09-29"
-keywords: "bridge, astound-bridge, install, sign in, macos, windows, linux, wsl, sync, doctor"
+keywords: "bridge, dynapps-bridge, install, sign in, macos, windows, linux, wsl, sync, doctor"
 after_reading_this:
-  - "Install Astound Bridge with trusted gateway and signing configuration"
+  - "Install Dynapps Bridge with trusted gateway and signing configuration"
   - "Sign in and sync your plugins, skills and MCP servers"
   - "Diagnose a bridge with whoami, status and doctor"
 related_playbooks:
@@ -24,7 +24,7 @@ related_playbooks:
 
 # Install the Desktop Bridge
 
-Astound Bridge links your computer to your organization's gateway. It runs a local inference proxy and synchronizes the skills, plugins, and MCP connections available to your account.
+Dynapps Bridge links your computer to your organization's gateway. It runs a local inference proxy and synchronizes the skills, plugins, and MCP connections available to your account.
 
 ## Choose a platform
 
@@ -47,11 +47,11 @@ A fresh installation also needs the gateway's trusted manifest public key. Obtai
 On macOS or Linux, pin it with:
 
 ```bash
-astound-bridge install --gateway "$GATEWAY_URL" \
+dynapps-bridge install --gateway "$GATEWAY_URL" \
   --pubkey "ADMINISTRATOR_PROVIDED_BASE64_PUBLIC_KEY"
 ```
 
-Use the executable invocation from your platform guide if `astound-bridge` is not on your PATH. If verification reports a key mismatch, stop and contact your administrator. Do not replace a trusted key, accept an unverified key, or disable signature verification to get past the error.
+Use the executable invocation from your platform guide if `dynapps-bridge` is not on your PATH. If verification reports a key mismatch, stop and contact your administrator. Do not replace a trusted key, accept an unverified key, or disable signature verification to get past the error.
 
 ## Sign in
 
@@ -60,7 +60,7 @@ Open your gateway's `/admin/login` page and sign in using the method your organi
 Interactive sign-in on macOS or Linux:
 
 ```bash
-astound-bridge login --gateway "$GATEWAY_URL"
+dynapps-bridge login --gateway "$GATEWAY_URL"
 ```
 
 Approve the device link in your browser and return to the terminal. Confirm the gateway address and account before approving.
@@ -68,7 +68,7 @@ Approve the device link in your browser and return to the terminal. Confirm the 
 Alternatively, open **Profile** and click **Generate a connect code**. Copy the code only when ready to connect:
 
 ```bash
-astound-bridge login --gateway "$GATEWAY_URL" --code "YOUR_CONNECT_CODE"
+dynapps-bridge login --gateway "$GATEWAY_URL" --code "YOUR_CONNECT_CODE"
 ```
 
 Connect codes are single-use and expire after ten minutes. If a code expires or has already been used, click **Generate a connect code** again. Opening or refreshing Profile does not generate a code. Treat it as a credential: do not share it in chat, screenshots, or support logs.
@@ -77,7 +77,7 @@ Connect codes are single-use and expire after ten minutes. If a code expires or 
 
 Run these steps in your Linux terminal, as your normal user. For WSL, both Claude Code and the bridge must run inside the same distribution.
 
-The installer is Linux-only. On a Mac it stops before downloading anything and points you at `astound-bridge-macos.dmg`; follow [Install on macOS](/documentation/install-macos) instead.
+The installer is Linux-only. On a Mac it stops before downloading anything and points you at `dynapps-bridge-macos.dmg`; follow [Install on macOS](/documentation/install-macos) instead.
 
 You need `curl`, `tar`, a SHA-256 utility, and a supported Linux environment. See [Downloads](/documentation/downloads) for architectures and checksum instructions. Minimal distributions may also need `libdbus-1-3`, `libcap2`, `libgcrypt20`, and `libsystemd0`.
 
@@ -85,9 +85,9 @@ Download the installer from your gateway and inspect it before running it:
 
 ```bash
 GATEWAY_URL="https://gateway.example.com"
-curl -fSLo astound-install.sh "$GATEWAY_URL/files/downloads/install.sh"
-less astound-install.sh
-sh astound-install.sh --download-base "$GATEWAY_URL/files/downloads" \
+curl -fSLo dynapps-install.sh "$GATEWAY_URL/files/downloads/install.sh"
+less dynapps-install.sh
+sh dynapps-install.sh --download-base "$GATEWAY_URL/files/downloads" \
   --gateway "$GATEWAY_URL" \
   --pubkey "ADMINISTRATOR_PROVIDED_BASE64_PUBLIC_KEY"
 ```
@@ -98,7 +98,7 @@ The bridge installs to `~/.local/bin` for a normal user. If your shell cannot fi
 
 ```bash
 export PATH="$HOME/.local/bin:$PATH"
-astound-bridge --version
+dynapps-bridge --version
 ```
 
 Keep that directory on your PATH in your shell configuration. Run `claude --version` to confirm Claude Code is installed, then complete [Connect Claude Code](/documentation/connect-claude-code), including its explicit client-enrolment step.
@@ -108,20 +108,20 @@ Keep that directory on your PATH in your shell configuration. Run `claude --vers
 If the installer cannot enable systemd user services, keep the proxy running in a separate WSL terminal:
 
 ```bash
-astound-bridge proxy
+dynapps-bridge proxy
 ```
 
-Leave that terminal open while using Claude Code. Do not start a second proxy if one is already running. With working systemd user services, register the bridge's background jobs with `astound-bridge install --apply-schedule`. Use a reachable gateway hostname; Windows and WSL are separate environments.
+Leave that terminal open while using Claude Code. Do not start a second proxy if one is already running. With working systemd user services, register the bridge's background jobs with `dynapps-bridge install --apply-schedule`. Use a reachable gateway hostname; Windows and WSL are separate environments.
 
 ## Sync and verify
 
 After signing in and configuring your chosen client:
 
 ```bash
-astound-bridge sync
-astound-bridge whoami
-astound-bridge status
-astound-bridge doctor
+dynapps-bridge sync
+dynapps-bridge whoami
+dynapps-bridge status
+dynapps-bridge doctor
 ```
 
 Confirm that identity and gateway match your intended account. Resolve failed checks for the client you are using. Doctor also checks other installed clients; a failure for another client needs separate investigation.
@@ -132,11 +132,11 @@ Keep the desktop app or proxy service running during sessions. Background synchr
 
 | Platform | Default bridge configuration directory |
 |---|---|
-| macOS | `~/Library/Application Support/astound/` |
-| Windows | `%APPDATA%\astound\` |
-| Linux and WSL | `~/.config/astound/` |
+| macOS | `~/Library/Application Support/dynapps/` |
+| Windows | `%APPDATA%\dynapps\` |
+| Linux and WSL | `~/.config/dynapps/` |
 
-An absolute `XDG_CONFIG_HOME` override changes the base directory. Use `astound-bridge status` to identify your actual configuration location. These directories contain credentials as well as configuration: do not upload their contents.
+An absolute `XDG_CONFIG_HOME` override changes the base directory. Use `dynapps-bridge status` to identify your actual configuration location. These directories contain credentials as well as configuration: do not upload their contents.
 
 ## Troubleshooting
 

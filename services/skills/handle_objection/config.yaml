@@ -6,7 +6,7 @@ description: Build a grounded response to a customer objection from the current 
 enabled: true
 file: SKILL.md
 tags:
-- astound
+- dynapps
 - salesforce
 - sales
 category: business

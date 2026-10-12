@@ -31,8 +31,8 @@ SKILLS = REPO / "services" / "skills"
 PLUGINS = REPO / "services" / "plugins"
 
 SKILL_TO_PLUGIN = {
-    "cowork_setup": "astound-commons",
-    "admin_workspace_setup": "astound-admin",
+    "cowork_setup": "dynapps-commons",
+    "admin_workspace_setup": "dynapps-admin",
 }
 
 

@@ -28,7 +28,7 @@ const AGENT_NAME: &str = "analysis-reporter";
 const MAX_OUTPUT_TOKENS: u32 = 4_096;
 
 const JUDGE_JOB_NAME: &str = "conversation_judge";
-const REPORTER_CONTEXT_SEED: &[u8] = b"astound:analysis_report";
+const REPORTER_CONTEXT_SEED: &[u8] = b"dynapps:analysis_report";
 
 #[derive(Debug, Clone)]
 pub(crate) struct ReportModel {

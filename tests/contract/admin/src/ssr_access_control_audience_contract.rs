@@ -8,7 +8,7 @@ use crate::principal::Principal;
 use crate::tempdb::TempDb;
 use crate::{globals, principal, seed};
 
-const MARKETPLACE: &str = "astound-commons";
+const MARKETPLACE: &str = "dynapps-commons";
 
 async fn seed_developer_deny(db: &TempDb, reason: &str) {
     sqlx::query(
@@ -100,7 +100,7 @@ async fn audience_grid_groups_axes_and_marks_decisions() {
 
     let (status, body) = app
         .call(Call::get(
-            "/admin/access-control?tab=audience&entity=marketplace%2Fastound-commons",
+            "/admin/access-control?tab=audience&entity=marketplace%2Fdynapps-commons",
             Principal::Admin,
         ))
         .await;

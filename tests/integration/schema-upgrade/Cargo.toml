@@ -8,7 +8,7 @@ publish = false
 workspace = true
 
 [dependencies]
-astound-test-common = { workspace = true }
+dynapps-test-common = { workspace = true }
 # The shared harness links the extension inventory, so this installer sees
 # the same migration set as the server without a redundant direct edge.
 systemprompt = { workspace = true, features = ["full"] }

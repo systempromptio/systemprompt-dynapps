@@ -1,7 +1,7 @@
 ---
 title: "Conversation History & Search"
 description: "Every AI conversation through the gateway — from Claude Code, Claude Desktop, OpenCode or any SDK client — listed and searchable: your own at /admin/history, everyone's at /admin/conversations for console roles."
-author: "Astound Digital"
+author: "Dynapps"
 slug: "enterprise-conversation-history"
 keywords: "history, conversations, search, transcripts, audit, export, redaction, retention, gateway"
 kind: "guide"

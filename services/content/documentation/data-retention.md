@@ -1,7 +1,7 @@
 ---
 title: "Data Retention & Archives"
 description: "How long each kind of record is kept, what is deleted and when, what survives indefinitely, and where the weekly and monthly archives land."
-author: "Astound Digital"
+author: "Dynapps"
 slug: "data-retention"
 keywords: "retention, data lifecycle, archive, deletion, audit trail, ai_requests, governance decisions, compliance, gdpr"
 kind: "guide"

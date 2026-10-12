@@ -1,9 +1,9 @@
-# Fixed eval inputs for the astound-super-admin plugin. Unlike the Salesforce
+# Fixed eval inputs for the dynapps-super-admin plugin. Unlike the Salesforce
 # suite these are natural questions with no slash command: whether the right
 # skill triggers on its own is part of what is measured (`expect` names it).
 # Every question reads real sp-dev data and is read-only. Edit a prompt only
 # with a new suite version: prompts are hashed into every run's manifest.
-plugin: astound-super-admin
+plugin: dynapps-super-admin
 suite_version: 1
 model: claude-sonnet-5[1m]
 # Why: the harness retries a session that started before the bridge's MCP
@@ -17,12 +17,12 @@ cases:
   jay_working_on:
     expect: admin_ai_usage
     prompt: "what has jay been working on in the past 4 weeks?"
-  india_team_count:
+  belgium_team_count:
     expect: admin_ai_usage
-    prompt: "how many people in india are using systemprompt?"
-  india_team_intensity:
+    prompt: "how many people in Belgium are using systemprompt?"
+  belgium_team_intensity:
     expect: admin_ai_usage
-    prompt: "how intensively is the India team using the system over the past 30 days? how many hours per day? whose work relates to salesforce core?"
+    prompt: "how intensively is the Belgium team using the system over the past 30 days? how many hours per day? whose work relates to Odoo implementations?"
   ai_costs_week:
     expect: admin_ai_usage
     prompt: "What did we spend on AI this week, and who were the top five users?"

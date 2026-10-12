@@ -1,6 +1,6 @@
 # Salesforce connector: one package, one connector, N orgs
 
-**Status:** decided 2026-09-17 — Option A; stage 1 = Astound US (source org) + Astound UK, proven on the Developer Edition org first · **Date:** 2026-09-17 · **Supersedes in part:** the 2026-09-11
+**Status:** decided 2026-09-17 — Option A; stage 1 = the source org + one installing org, proven on the Developer Edition org first · **Date:** 2026-09-17 · **Supersedes in part:** the 2026-09-11
 connector design ([artifact](https://claude.ai/code/artifact/5c590947-7438-44bd-a2d1-e25777c6c57a),
 commit 1079d707)
 
@@ -17,7 +17,7 @@ must choose its runtime shape. Two things prompted this:
    live through an MCP connector; a copied corpus adds staleness, a second permission model
    and an ingestion pipeline for structured data that is better queried than embedded.
 
-Orgs in scope are **both** Astound-owned (production + sandboxes) **and** client-owned.
+Orgs in scope are **both** Dynapps-owned (production + sandboxes) **and** client-owned.
 
 ## Facts the decision rests on (verified 2026-09-17)
 
@@ -25,7 +25,7 @@ Orgs in scope are **both** Astound-owned (production + sandboxes) **and** client
 |------|--------|-------------|
 | An ECA with distribution state *Packaged* can ship in a 2GP managed package. A subscriber org either **references the source org's OAuth settings** (same consumer key/secret/callbacks everywhere) or generates independent global settings. Deleting the app in the source org breaks every subscriber. Requires a Dev Hub. | [Package an External Client App](https://help.salesforce.com/s/articleView?id=xcloud.configure_packageable_external_client_apps.htm), [Trailhead](https://trailhead.salesforce.com/content/learn/modules/external-client-app-basics/package-and-distribute-external-client-apps) | One consumer key can serve N orgs. The Dev Hub org becomes production infrastructure. |
 | Hosted MCP (`api.salesforce.com/platform/mcp/…/sobject-all`) accepts only authorization-code + PKCE via an ECA with scope `mcp_api`. Tokens are org-scoped. Salesforce states MCP "doesn't support multitenant systems like Salesforce", so the user must be logged into the target org before consent. | [Hosted MCP: create an ECA](https://developer.salesforce.com/docs/platform/hosted-mcp-servers/guide/create-external-client-app.html), [log into your org](https://developer.salesforce.com/docs/platform/hosted-mcp-servers/guide/log-into-org.html) | Org selection cannot be pushed past consent while we proxy the hosted server. |
-| Astound owns **no** Salesforce MCP code. `services/mcp/salesforce.yaml` is `type: external` pointing at Salesforce's hosted `sobject-all`; core's external proxy injects a per-user bearer minted by `/api/public/connectors/<id>/token`. | `extensions/web/admin/platform/src/services/salesforce_orgs.rs`, `connector_oauth/` | The tool surface is Salesforce's. Every org is a separate MCP server id. |
+| Dynapps owns **no** Salesforce MCP code. `services/mcp/salesforce.yaml` is `type: external` pointing at Salesforce's hosted `sobject-all`; core's external proxy injects a per-user bearer minted by `/api/public/connectors/<id>/token`. | `extensions/web/admin/platform/src/services/salesforce_orgs.rs`, `connector_oauth/` | The tool surface is Salesforce's. Every org is a separate MCP server id. |
 | The registry only stores secret **names**; nothing rejects two orgs naming the same secret. Only one org (`salesforce`, production) is declared. | `salesforce_orgs.rs::validate` | A shared client id needs no registry change. |
 | Salesforce is not indexed for retrieval; the connector is live query only. | `services/mcp/salesforce.yaml` | "No Salesforce RAG" is a decision to record, not work to undo. |
 
@@ -33,7 +33,7 @@ Orgs in scope are **both** Astound-owned (production + sandboxes) **and** client
 
 ### One packaged ECA, not N hand-made apps
 
-Astound builds a 2GP managed package from its Dev Hub containing:
+Dynapps builds a 2GP managed package from its Dev Hub containing:
 
 - the ECA (`distributionState: Packaged`, global OAuth settings **referenced from the source
   org**, PKCE required, web-server flow, scopes `mcp_api refresh_token openid` — plus `api`
@@ -46,7 +46,7 @@ Installing the package and assigning the permission set becomes the whole per-or
 Every `orgs.yaml` entry names the same `salesforce_mcp_client_id` / `salesforce_mcp_client_secret`.
 
 Client-owned orgs install from the package URL (an AppExchange listing is not required). Their
-security review is the gating step. If a client refuses to reference Astound's source-org
+security review is the gating step. If a client refuses to reference Dynapps's source-org
 credentials, they generate independent global settings and hand over that consumer key — the
 existing per-org secret names cover that case without code.
 
@@ -78,7 +78,7 @@ against the org the server id names.
   default to the shared pair (`SalesforceOrg` in `salesforce_orgs.rs`).
 
 **Per-org onboarding.** Install package → assign permission set → activate hosted MCP server
-(Setup → API Catalog) → Astound adds an `orgs.yaml` entry and `services/mcp/<id>.yaml` → deploy
+(Setup → API Catalog) → Dynapps adds an `orgs.yaml` entry and `services/mcp/<id>.yaml` → deploy
 or kit import → users press Connect.
 
 **Pros.**
@@ -98,7 +98,7 @@ or kit import → users press Connect.
   org's tools land in the client's tool list).
 - Tool surface is whatever Salesforce ships; `mcp_api` does not reach metadata or DX.
 
-## Option B — Astound-owned Salesforce MCP crate, org as a first-class argument
+## Option B — Dynapps-owned Salesforce MCP crate, org as a first-class argument
 
 **How it works.** A new internal server `extensions/mcp/salesforce` exposing tools such as
 `list_orgs`, `search(org, query)`, `query(org, soql)`, `get_record(org, id)`,
@@ -143,7 +143,7 @@ automatically. Fan-out is limited to the orgs the caller has grants for.
 | Org auto-discovery | No | Yes |
 | Cross-org queries | Agent calls N servers | `search_all_orgs` |
 | Scope requested from the org | `mcp_api refresh_token openid` | `api refresh_token openid` |
-| Who maintains tools | Salesforce | Astound |
+| Who maintains tools | Salesforce | Dynapps |
 | Governance granularity | Per server id (exists) | Per tool argument (to build) |
 | Sandbox refresh | `reprovision` per server id (exists) | Per org id (to build) |
 | Exposure to Salesforce change | Hosted MCP feature cadence | REST API versioning |
@@ -163,7 +163,7 @@ Option A that is Salesforce's choice.
 ## Stage 1 (implemented 2026-09-17)
 
 - `deploy/salesforce/`: the packaged External Client App as an SFDX project, package and
-  install scripts, and the runbook. Astound US is the source org; UK installs the package; the
+  install scripts, and the runbook. the source org publishes it; a second org installs the package; the
   Developer Edition org `orgfarm-141013b2b4-dev-ed.develop.my.salesforce.com` proves it first.
 - Gateway: one shared callback `/api/public/connectors/salesforce/callback` (org in the OAuth
   `state` prefix), shared secret pair by default, instance URL stored on every grant.
@@ -178,8 +178,8 @@ Option A that is Salesforce's choice.
 ## Recommendation
 
 Adopt the two "regardless" items now. Ship **Option A** first: build the package, add the
-shared callback, and connect Astound's production org and one sandbox through it. It gets both
-Astound-owned and client-owned orgs live with the least new surface, and the package, the
+shared callback, and connect Dynapps's production org and one sandbox through it. It gets both
+Dynapps-owned and client-owned orgs live with the least new surface, and the package, the
 permission set and the org-side runbook carry over unchanged if Option B is taken later.
 
 Take **Option B** only when connected orgs show a concrete need for cross-org fan-out or for
@@ -190,12 +190,12 @@ surface and the governance rework, neither of which the package saves.
 
 1. **Callback propagation.** On a source-referenced packaged ECA, does adding a callback URL on
    the source org reach subscribers without a new package version? Thirty-minute test on two
-   Astound sandboxes (carried over from the 09-11 design). If not, the shared callback in
+   Dynapps sandboxes (carried over from the 09-11 design). If not, the shared callback in
    Option A is mandatory rather than convenient.
 2. **Package ownership.** Which Dev Hub org and namespace own the package, and who holds the
    consumer secret. The source org is now production infrastructure: deleting the app there
    breaks every subscriber.
-3. **Client acceptance.** Whether client security teams accept referencing Astound's source-org
+3. **Client acceptance.** Whether client security teams accept referencing Dynapps's source-org
    credentials, or will insist on independent global settings (falls back to per-org secrets).
 4. **Org inventory.** The launch list of orgs with label, My Domain, environment, org id and
    entitled groups — still outstanding from 09-11.

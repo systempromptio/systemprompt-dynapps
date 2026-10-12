@@ -1,14 +1,14 @@
-# Astound Bridge
+# Dynapps Bridge
 
 A branded, white-label build of the **systemprompt bridge** (credential helper +
-plugin/MCP sync agent + local inference proxy) for Astound Digital. The desktop
+plugin/MCP sync agent + local inference proxy) for Dynapps. The desktop
 app for Windows and macOS that connects Claude Desktop / Claude Code / Codex to
-the Astound governance gateway.
+the Dynapps governance gateway.
 
 This crate is intentionally tiny. All behaviour lives in the shared core library
 (`systemprompt-core/bin/bridge`); here we only supply a `Brand` value and the
 brand assets. The crate is a **standalone workspace** (its own `[workspace]`),
-not a member of the main Astound server workspace, because it carries GUI
+not a member of the main Dynapps server workspace, because it carries GUI
 dependencies and ships on its own release cadence — exactly like core's bridge.
 
 ## Build & run
@@ -16,16 +16,16 @@ dependencies and ships on its own release cadence — exactly like core's bridge
 ```bash
 cd bridge
 cargo build --release                 # host target
-cargo run -- help                     # show Astound-branded help
+cargo run -- help                     # show Dynapps-branded help
 cargo run -- gui                      # native settings UI (macOS/Windows only)
 ```
 
 The GUI (winit + wry) compiles only on macOS/Windows; on Linux the crate builds
 in headless/proxy mode.
 
-Config, PAT, cache, and logs are isolated under the `astound` / `astound-bridge`
-paths (e.g. `~/.config/astound/astound-bridge.toml`), and all env overrides use
-the `ASTOUND_BRIDGE_` prefix (`ASTOUND_BRIDGE_PAT`, `ASTOUND_BRIDGE_CONFIG`, …).
+Config, PAT, cache, and logs are isolated under the `dynapps` / `dynapps-bridge`
+paths (e.g. `~/.config/dynapps/dynapps-bridge.toml`), and all env overrides use
+the `DYNAPPS_BRIDGE_` prefix (`DYNAPPS_BRIDGE_PAT`, `DYNAPPS_BRIDGE_CONFIG`, …).
 The gateway URL is not overridable by env: it lives only in the config file
 written by `login --gateway`, so a stale environment can never silently point
 an authenticated bridge at a different gateway.
@@ -75,19 +75,19 @@ instead, and `--pubkey <base64>` pins the manifest signing key out of band
 
 | What | Where |
 |---|---|
-| `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN` | `~/.config/astound/env.sh` |
+| `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN` | `~/.config/dynapps/env.sh` |
 | a marker-delimited block sourcing that file | `~/.profile` |
-| periodic plugin/MCP sync | `astound-bridge-sync.{service,timer}` (systemd user) |
-| the loopback proxy, restarted on failure | `astound-bridge-proxy.service` (systemd user) |
+| periodic plugin/MCP sync | `dynapps-bridge-sync.{service,timer}` (systemd user) |
+| the loopback proxy, restarted on failure | `dynapps-bridge-proxy.service` (systemd user) |
 
-The token is read from `~/.config/astound/bridge-loopback.key` when the file is
+The token is read from `~/.config/dynapps/bridge-loopback.key` when the file is
 sourced, not baked in, so a rotated secret needs no rewrite. Re-running install
 replaces the `~/.profile` block rather than appending a second one, and
-`astound-bridge uninstall` removes both units, `env.sh`, and the block.
+`dynapps-bridge uninstall` removes both units, `env.sh`, and the block.
 
 Where there is no systemd user bus (a container, WSL without systemd) the units
 are still written and `--apply-schedule` warns instead of failing; run the proxy
-by hand with `astound-bridge proxy`.
+by hand with `dynapps-bridge proxy`.
 
 `claude` then works with no manual exports and no new shell: the settings are
 merged into `~/.claude/settings.json`, which Claude Code reads on every run.
@@ -99,13 +99,13 @@ a browser, which a device-link grant cannot. Name the certificate in the config:
 
 ```toml
 [mtls]
-cert_keystore_ref = "~/.config/astound/device.pem"
+cert_keystore_ref = "~/.config/dynapps/device.pem"
 ```
 
 `cert_keystore_ref` carries a *path* on Linux only. macOS addresses certificates
 by Keychain label and Windows by cert-store thumbprint, and both ignore the
 value — there, its presence just means "use mTLS".
-`ASTOUND_BRIDGE_DEVICE_CERT` still works and takes precedence where both are set.
+`DYNAPPS_BRIDGE_DEVICE_CERT` still works and takes precedence where both are set.
 
 **Credential storage tiers down.** The OAuth client secret behind plugin hooks
 prefers the freedesktop Secret Service, falls back to the kernel keyutils keyring
@@ -113,7 +113,7 @@ when no provider is present (headless servers, containers, CI), and finally to
 this process's memory. Never a plaintext file — the secret is re-mintable, so
 disk persistence would add an exfiltration target and buy nothing. Docker's
 default seccomp profile denies `keyctl`/`add_key`, so keyutils is probed with a
-real write/read round-trip before being accepted. `astound-bridge doctor` reports
+real write/read round-trip before being accepted. `dynapps-bridge doctor` reports
 which tier is in use — along with whether the proxy is listening and whether its
 systemd unit is active.
 
@@ -129,7 +129,7 @@ sudo apt-get install -y libdbus-1-3 libcap2 libgcrypt20 libsystemd0   # Debian/U
 ### Release tarball
 
 ```bash
-just bridge-package-linux     # → dist/astound-bridge-linux-<arch>.tar.gz + .sha256
+just bridge-package-linux     # → dist/dynapps-bridge-linux-<arch>.tar.gz + .sha256
 ```
 
 The recipe also publishes the tarball, its `.sha256`, and
@@ -146,14 +146,16 @@ with no config using `just clean-client` (see `deploy/clean-client/`).
 
 ```bash
 cargo build --release --target aarch64-apple-darwin
-scripts/make-mac-app.sh --target aarch64-apple-darwin   # → AstoundBridge.app
+scripts/make-mac-app.sh --target aarch64-apple-darwin   # → DynappsBridge.app
 ```
 
 ## Icons
 
-`assets/icon.svg` is the master Astound "A" mark (white on a near-black rounded
-square, matching `storage/files/images/favicon-*`). The raster icons consumed by
-the build are generated from it by `scripts/render-icons.py` (cairosvg + Pillow):
+`assets/icon.svg` is the master Dynapps mark, the purple-red-orange gradient
+symbol copied from `brand/icon.svg`. It wraps a single embedded 512px PNG, so
+`scripts/render-icons.py` decodes that raster with Pillow and resizes it. No SVG
+rasteriser is needed. `assets/logo.svg` is the Dynapps wordmark with its text
+filled near-white for the dark bridge theme.
 
 ```bash
 python3 scripts/render-icons.py
@@ -162,17 +164,17 @@ python3 scripts/render-icons.py
 This regenerates, idempotently:
 
 - `assets/window-icon-1024.png` — GUI window icon + macOS `.icns` source.
-- `assets/tray-icon.png` — 44×44 tray icon (A on the rounded dark square, legible
-  on both the dark macOS menu bar and a light Windows tray).
+- `assets/tray-icon.png` — 44×44 tray icon (the gradient mark, legible on both the
+  dark macOS menu bar and a light Windows tray).
 - `assets/app-icon.ico` — multi-resolution (16/32/48/256), embedded into the
   Windows `.exe` by `build.rs`. Rebuild (`cargo build --release`) after changing
   the icon so the new `.ico` is re-embedded.
 
 Edit `assets/icon.svg` and rerun the script to change the mark. `assets/logo.svg`
-is the full Astound wordmark, used by the GUI chrome.
+is the full Dynapps wordmark, used by the GUI chrome.
 
-> ⚠️ Still pre-release: set `default_gateway_url` in `src/main.rs` to the real Astound gateway host
-(currently a `https://gateway.astounddigital.com` placeholder).
+> ⚠️ Still pre-release: set `default_gateway_url` in `src/main.rs` to the real Dynapps gateway host
+(currently a `https://gateway.dynapps.es` placeholder).
 
 ## Recipe: a new client bridge
 

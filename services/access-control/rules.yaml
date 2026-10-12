@@ -48,7 +48,7 @@
 
 entities:
   # ─── Workspaces (marketplaces) ───────────────────────────────────────────
-  - entity: marketplace/astound-commons
+  - entity: marketplace/dynapps-commons
     default: open
     why: >-
       Baseline workspace and governance-hook carrier for every signed-in
@@ -57,42 +57,16 @@ entities:
     allow:
       role: [user]
 
-  # Arrives as a signed bundle from Astound-Digital/sfscore-claude-india-kit;
-  # the kit owns the content, this file owns who reaches it
-  # (docs/india-marketplace.md).
-  - entity: marketplace/astound-india-dev
-    owner: bundle:india
+  - entity: marketplace/dynapps-salesforce
     default: closed
     why: >-
-      Salesforce Core and business-analysis workspace for the india-devs
-      group, published by the india kit.
-    allow:
-      group: [india-devs]
-
-  - entity: marketplace/astound-salesforce
-    default: closed
-    why: >-
-      Salesforce sales workspace for the business-users group. Membership
-      alone grants it; the Salesforce connector is linked from inside the
+      Salesforce sales workspace for the staff group. Membership alone
+      grants it; the Salesforce connector is linked from inside the
       workspace and Salesforce still refuses anyone without a user in the org.
     allow:
-      group: [business-users]
+      group: [staff]
 
-  # Arrives as a signed bundle from Astound-Digital/sfnext-claude-dev-kit; the
-  # kit owns the content, this file owns who reaches it. Declared here even
-  # while the bundle is not pinned (docs/sfnext-marketplace.md).
-  - entity: marketplace/astound-europe-dev
-    owner: bundle:sfnext
-    default: closed
-    why: >-
-      Europe development workspace (Commerce Cloud / Storefront Next),
-      published by the sfnext kit; reaches the europe-devs group and the
-      storefront delivery project.
-    allow:
-      group: [europe-devs]
-      project: [storefront]
-
-  - entity: marketplace/astound-super-admin
+  - entity: marketplace/dynapps-super-admin
     default: closed
     why: >-
       One control plane for every administrator of this instance. Salesforce
@@ -115,7 +89,7 @@ entities:
     allow:
       role: [platform_admin, admin, super_admin]
 
-  - entity: plugin/astound-super-admin
+  - entity: plugin/dynapps-super-admin
     default: closed
     why: Admin plugin; closed to every role but the administrators named.
     allow:
@@ -123,31 +97,31 @@ entities:
 
   - entity: skill/systemprompt_cli
     default: closed
-    why: Admin skill shipped by astound-super-admin.
+    why: Admin skill shipped by dynapps-super-admin.
     allow:
       role: [platform_admin, admin, super_admin]
 
   - entity: skill/admin_critical_projects
     default: closed
-    why: Admin skill shipped by astound-super-admin.
+    why: Admin skill shipped by dynapps-super-admin.
     allow:
       role: [platform_admin, admin, super_admin]
 
   - entity: skill/admin_ai_usage
     default: closed
-    why: Admin skill shipped by astound-super-admin.
+    why: Admin skill shipped by dynapps-super-admin.
     allow:
       role: [platform_admin, admin, super_admin]
 
   - entity: skill/admin_person_activity
     default: closed
-    why: Admin skill shipped by astound-super-admin; it reads every user's conversation history.
+    why: Admin skill shipped by dynapps-super-admin; it reads every user's conversation history.
     allow:
       role: [platform_admin, admin, super_admin]
 
   - entity: skill/admin_daily_brief
     default: closed
-    why: Admin skill shipped by astound-super-admin.
+    why: Admin skill shipped by dynapps-super-admin.
     allow:
       role: [platform_admin, admin, super_admin]
 
@@ -162,18 +136,18 @@ entities:
       role: [user, admin, platform_admin, project_manager, super_admin]
 
   # ─── Delivery connectors ──────────────────────────────────────────────────
-  # Closed on purpose: a person outside the listed groups sees no server rather
+  # Closed on purpose: a person outside the listed group sees no server rather
   # than a "connect your account first" error on every call. Admins reach
   # Atlassian through the role band with their own connected account.
   - entity: mcp_server/atlassian
     default: closed
     why: >-
-      Jira/Confluence for the delivery groups and the storefront project;
+      Jira/Confluence for Dynapps staff and the odoo-delivery project;
       administrators use their own connected Atlassian account.
     allow:
       role: [platform_admin, admin, super_admin]
-      group: [india-devs, europe-devs, uk]
-      project: [storefront]
+      group: [staff]
+      project: [odoo-delivery]
 
   # Open like the connector it fronts: a person must be able to reach the
   # connector before they hold the marketplace it grants, or nobody could ever
@@ -183,30 +157,3 @@ entities:
     why: Salesforce connector for the sales workspace, as the signed-in user.
     allow:
       role: [user, admin, platform_admin, project_manager, super_admin]
-
-  # Identity-backed, client-hosted: the instance signs who is calling, so this
-  # band is the whole access decision. Group-only: any role in the SFCore
-  # delivery group reaches it, and no role reaches it from outside the group.
-  - entity: mcp_server/sfcore_dev
-    default: closed
-    why: >-
-      SFCore dev workflow server hosted by the SFCore team; it trusts the
-      identity this instance signs, so only the india-devs group may reach it.
-    allow:
-      group: [india-devs]
-
-  - entity: mcp_server/google_workspace
-    default: closed
-    why: >-
-      Org-wide Drive, Gmail and Calendar search through Agent Search; Google
-      filters every result to what the user can already open, so the band only
-      decides who sees the connector. Open to the UK pilot and the
-      business-users group, whose Salesforce sales workspace draws on it; IAM
-      in astound-knowledge-uk-sales is granted to the whole astounddigital.com
-      domain, so widening needs no Google change. The connector band keeps the
-      server for anyone who has already connected it, which is what lets the
-      connection-gated search skills stay usable if the person's group changes.
-    allow:
-      group: [uk, business-users]
-      connector: [google_workspace]
-      role: [super_admin]

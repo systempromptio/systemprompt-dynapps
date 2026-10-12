@@ -1,13 +1,13 @@
 branding:
-  name: Astound Digital
-  title: "The Internal AI Platform by Astound Digital"
-  description: Governed AI for Astound Digital teams, inside Claude. One
+  name: Dynapps
+  title: "Dynapps AI Gateway - governed Claude Code for Dynapps teams"
+  description: Governed AI for Dynapps teams, inside Claude. One
     corporate sign-in connects Claude Code and Cowork to your organization's
     skills and tools, with every action audited.
-  copyright: 2026 Astound Digital
-  themeColor: '#171717'
+  copyright: 2026 Dynapps
+  themeColor: '#F13C42'
   display_sitename: true
-  twitter_handle: '@astounddigital'
+  twitter_handle: '@dynapps'
   image: /files/images/logo.png
   logo:
     primary:

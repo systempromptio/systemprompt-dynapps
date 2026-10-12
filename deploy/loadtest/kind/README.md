@@ -1,6 +1,6 @@
 # Local Kubernetes load-test rig (kind)
 
-This rig runs the real Helm chart (`deploy/helm/systemprompt-astound`) on a local
+This rig runs the real Helm chart (`deploy/helm/systemprompt-dynapps`) on a local
 kind cluster. It uses in-cluster stand-ins for the GKE attachments, so it makes
 no paid model calls. It exists to find gateway blockers before Cloudfresh runs
 the same test on GKE.
@@ -52,7 +52,7 @@ Each run writes `reports/loadtest/kind/<ts>/<name>/` (raw data) plus
 with p99 `gateway_overhead_seconds` above 200 ms.
 
 The generator is an Indexed Job of `hey` pods built from the app image, which
-ships `/app/bin/hey`. It calls the `astound-gateway` ClusterIP Service, and
+ships `/app/bin/hey`. It calls the `dynapps-gateway` ClusterIP Service, and
 every active credential gets its own `hey` process. The core harness
 (`crates/tests/loadtest`, `--model`, `--token-file`) also works from the host
 through NodePort 18080.

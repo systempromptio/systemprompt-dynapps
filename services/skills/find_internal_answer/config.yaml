@@ -6,7 +6,7 @@ description: Find a concise answer with authoritative sources from Salesforce re
 enabled: true
 file: SKILL.md
 tags:
-- astound
+- dynapps
 - salesforce
 - sales
 category: business

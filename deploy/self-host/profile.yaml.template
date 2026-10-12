@@ -1,5 +1,5 @@
 # template-version: 0.65.0
-# Astound Digital profile template for self-hosted, multi-node deployments.
+# Dynapps profile template for self-hosted, multi-node deployments.
 # Rendered by deploy/self-host/render-profile.sh; @TOKENS@ are substituted.
 # Every node runs this exact file. The provider catalog and gateway routes are
 # not here: they ship inside the image (services/ai/providers.yaml,
@@ -10,7 +10,7 @@ name: self-host
 display_name: Self-hosted
 target: local
 site:
-  name: Astound Digital
+  name: Dynapps
   github_link: null
 database:
   type: postgres
@@ -75,7 +75,7 @@ paths:
 #   storage:
 #     backend: gcs
 #     bucket: <bucket>
-#     prefix: astound/files          # optional
+#     prefix: dynapps/files          # optional
 #     credentials: workload_identity # or { secret: GCS_SERVICE_ACCOUNT_KEY }
 # paths.storage is still required with gcs: the gateway journal, exports and
 # scratch space stay on the node's disk.

@@ -4,7 +4,7 @@
 # core; this one only copies what `just build --release` produced.
 # `just loadtest-kind-image-local` stages target/release/systemprompt* into
 # deploy/loadtest/kind/.bin/ and builds with the repo root as context.
-ARG BASE=ghcr.io/astound-digital/systemprompt-astound:0.64.0
+ARG BASE=ghcr.io/systempromptio/systemprompt-dynapps:0.64.0
 FROM ${BASE}
 USER root
 COPY deploy/loadtest/kind/.bin/ /app/bin/

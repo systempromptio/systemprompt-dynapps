@@ -1,6 +1,6 @@
 # Centralized MCP connections
 
-The India Development marketplace exposes Atlassian and Salesforce
+The development marketplace exposes Atlassian and Salesforce
 through the Systemprompt MCP gateway. Each employee links their own account on
 `/admin/connectors`. The bridge displays the same server-owned
 connection model in its Profile view; **Manage on server** opens that page.
@@ -33,8 +33,7 @@ replace the encryption key used to recover provider tokens.
 | --- | --- |
 | `encryption_master_key` | Persistent 32-byte encryption key encoded as 64 hexadecimal characters; required to store OAuth grants, preserve it across restarts |
 | `mcp_credential_broker_secret` | Random server-only secret of at least 32 bytes; shared by core and the account accessor in the same instance |
-| `salesforce_mcp_client_id`, `salesforce_mcp_client_secret` | Consumer key and secret of the packaged `Systemprompt` External Client App (source org Astound US); shared by every org that installs the package. An org running its own app names its own secrets in `services/config/salesforce-orgs.yaml` |
-| `google_drive_mcp_client_id`, `google_drive_mcp_client_secret` | OAuth web-client credentials from the GCP project that owns the Agent Search engine (`docs/CONFIGURED-CONNECTORS.md`) |
+| `salesforce_mcp_client_id`, `salesforce_mcp_client_secret` | Consumer key and secret of the packaged `Systemprompt` External Client App (the publishing source org); shared by every org that installs the package. An org running its own app names its own secrets in `services/config/salesforce-orgs.yaml` |
 | `salesforce_private_key` | JWT-bearer signing key when an org uses admin pre-authorization (`private_key_secret` per org) |
 
 Set `server.api_external_url` to the HTTPS origin of the deployment and provision
@@ -42,7 +41,6 @@ its credentials independently. Local user grants are not copied into production.
 Register callbacks under that origin:
 
 - `https://YOUR-SERVER/api/public/connectors/atlassian/callback`
-- `https://YOUR-SERVER/api/public/connectors/google_workspace/callback`
 - `https://YOUR-SERVER/api/public/connectors/salesforce/callback` — one callback for
   every Salesforce org; the org rides in the OAuth `state`
 
@@ -51,7 +49,7 @@ registration. Its organization must allow the server callback domain and,
 where IP allowlisting is enabled, the server's outbound IP.
 
 Salesforce uses browser OAuth against one packaged **External Client App**. The
-app is created once in the source org (Astound US) with the callback above,
+app is created once in the source org with the callback above,
 PKCE, `mcp_api`, `refresh_token` and `openid` scopes, and JWT-based access
 tokens for named users; `deploy/salesforce/` holds it as an SFDX project and
 builds the managed package every other org installs (the README there is the
@@ -80,18 +78,18 @@ Disconnect prevents silent re-provisioning until the user reconnects.
 
 The registry definitions stay enabled because enabled marketplace plugins must
 resolve their server references. The manifest filter independently requires
-provider configuration, India entitlement, and a verified connection before
+provider configuration, marketplace entitlement, and a verified connection before
 publishing any connector to the employee. A registered server is not proof of a
 working provider connection.
 
 ## Atlassian account check
 
 An Atlassian login alone is not proof of Jira/Confluence access. Open Jira from
-Atlassian Home and confirm an existing project loads. The supplied pilot site is
-`https://astounddigital.atlassian.net`, project `EAICOMM`.
+Atlassian Home and confirm an existing project loads. Use the
+organization's Atlassian site, for example `https://dynapps.atlassian.net`.
 
 Once this build is running, open Account → Connected accounts → Atlassian →
-Connect. Enter `https://astounddigital.atlassian.net` in the site address field
+Connect. Enter `https://dynapps.atlassian.net` in the site address field
 and approve the site in Atlassian's consent screen. The
 server checks that it belongs to the authorized resource list. Then use
 **Test connection** and sync the bridge.
@@ -110,7 +108,7 @@ to connect an existing employee account.
 
 ## Acceptance checks
 
-1. Use two India users with different provider permissions and one non-India user.
+1. Use two entitled users with different provider permissions and one non-entitled user.
 2. Link accounts on the server. Check the same identities and states in the bridge.
 3. Sync a clean Claude Code installation. Verify the connectors with `/mcp` and
    make a read-only request against each provider, without provider CLI login.
@@ -119,7 +117,7 @@ to connect an existing employee account.
    refresh within 15 seconds while visible, with a 30-second bridge background
    refresh. Manifest sync follows availability changes.
 6. Exercise expired grants, provider outages, callback replay/account switches,
-   concurrent refresh, and non-India denial. An outage preserves the grant.
+   concurrent refresh, and non-entitled denial. An outage preserves the grant.
 7. Check manifests and local config for absence of provider tokens. Check audit
    identity and trace IDs for tool calls and governance denials.
 

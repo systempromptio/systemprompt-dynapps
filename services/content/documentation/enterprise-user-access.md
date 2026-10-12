@@ -1,9 +1,9 @@
 ---
 title: "User & Access Management"
-description: "Manage enterprise users from the admin UI: search, roles, session and PAT revocation, closed registration, and Astound SSO with AD groups as entitlements."
-author: "Astound Digital"
+description: "Manage enterprise users from the admin UI: search, roles, session and PAT revocation, closed registration, and Dynapps SSO with Entra groups as entitlements."
+author: "Dynapps"
 slug: "enterprise-user-access"
-keywords: "users, access, roles, sso, adfs, active directory, pat, api key, per-key limits, scope binding, sessions, registration, deprovisioning, time-bound access, expiry"
+keywords: "users, access, roles, sso, entra id, saml, pat, api key, per-key limits, scope binding, sessions, registration, deprovisioning, time-bound access, expiry"
 kind: "guide"
 public: true
 tags: ["enterprise", "admin", "access"]
@@ -14,7 +14,7 @@ after_reading_this:
   - "Provision users through SSO or operator administration"
   - "Understand the closed browser registration and recovery paths"
   - "Revoke sessions and personal access tokens for any user immediately"
-  - "Understand how Astound SSO provisions accounts and how AD groups revoke access"
+  - "Understand how Dynapps SSO provisions accounts and how Entra groups revoke access"
   - "Issue an API key with its own model allowlist, budget, request ceiling and scope bindings"
 related_docs:
   - title: "Access Control: Who Reaches What, and Why"
@@ -27,7 +27,7 @@ related_docs:
 
 # User & Access Management
 
-The admin UI at `/admin/users` manages accounts, roles, status, sessions, and personal access tokens. Browser sign-in uses Astound SSO; operators can provision and recover access through the CLI. Public registration, browser invite redemption, and passkey login are not offered by this installation.
+The admin UI at `/admin/users` manages accounts, roles, status, sessions, and personal access tokens. Browser sign-in uses Dynapps SSO; operators can provision and recover access through the CLI. Public registration, browser invite redemption, and passkey login are not offered by this installation.
 
 ## Managing users from the admin UI
 
@@ -47,17 +47,17 @@ No CLI or database access is required for any of these operations. The CLI equiv
 
 Users enter through group-gated SSO when `auto_provision` is enabled, or an operator creates their account. Existing invite and WebAuthn administration primitives do not provide a browser onboarding flow here. Follow [Authentication](/documentation/authentication) and [Create & Manage Users](/documentation/admin-user-management).
 
-## Astound SSO and deprovisioning
+## Dynapps SSO and deprovisioning
 
-The login page offers **Sign in with Astound SSO**. A verified assertion must carry an allowed email domain and a group claim when `deny_without_group` is enabled. Mapped groups grant their configured roles; an unmapped group receives `user`. Directory role grants are refreshed at sign-in, while manual grants survive. Users may belong to zero, one, or several projects. See [Set Up Astound SSO (AD FS)](/documentation/adfs-sso-setup).
+The login page offers **Sign in with Dynapps SSO**. A verified assertion must carry an allowed email domain and a group claim when `deny_without_group` is enabled. Mapped groups grant their configured roles; an unmapped group receives `user`. Directory role grants are refreshed at sign-in, while manual grants survive. Users may belong to zero, one, or several projects. See [Set Up Dynapps SSO (Microsoft Entra ID)](/documentation/entra-id-sso-setup).
 
-Deprovisioning follows the directory: disabling the AD account stops sign-in immediately, and removing someone from a `Systemprompt-*` group strips the role it granted at their next sign-in. Mid-session revocation is bounded by the session TTL; an admin can revoke sessions and PATs immediately from `/admin/users`.
+Deprovisioning follows the directory: disabling the Entra ID account stops the next sign-in, and removing someone from a `Dynapps-Systemprompt-*` group strips the role it granted at their next sign-in. Mid-session revocation is bounded by the session TTL; an admin can revoke sessions and PATs immediately from `/admin/users`.
 
-SCIM provisioning is not offered — AD FS does not push standards-based SCIM, so an endpoint would have no caller. See the [Enterprise Roadmap](/documentation/enterprise-roadmap) for when this changes.
+SCIM provisioning is not offered: the platform has no SCIM endpoint, so Entra ID changes arrive only through the next sign-in. See the [Enterprise Roadmap](/documentation/enterprise-roadmap) for when this changes.
 
 ## Roles
 
-Roles come from the directory (the `Systemprompt-*` AD groups mapped in
+Roles come from the directory (the `Dynapps-Systemprompt-*` Entra groups mapped in
 `adfs.yaml`) or are granted by hand. Only `admin` and `platform_admin` see the
 whole console unscoped. `project_manager` is an **entitlement role**: it
 changes what a person reaches in `services/access-control/rules.yaml`, and it
@@ -104,7 +104,7 @@ Device certificates can be given an expiry from the certificates tab (**Set expi
 
 Share tokens honour an expiry timestamp, and setup tokens, session JWTs and personal access tokens are all time-bound, so no credential lives forever.
 
-Access itself is time-bound too. A group membership, a project membership, a manual role grant and an access-control rule each carry an optional expiry, set from the console with a date picker — the **Add member** dialog on a group or project, the **Roles** section of a person's page (one window for every role granted by hand), and the rule editor's reason box on a group's or person's Access tab. Membership tables and the `/admin/access-control` ledger show an **Expires** column, badge anything that lapses inside seven days, and the ledger's *Expiring in 7 days* filter lists what needs renewing. Directory-sourced membership and directory-projected roles never carry a window: Active Directory decides when those end.
+Access itself is time-bound too. A group membership, a project membership, a manual role grant and an access-control rule each carry an optional expiry, set from the console with a date picker — the **Add member** dialog on a group or project, the **Roles** section of a person's page (one window for every role granted by hand), and the rule editor's reason box on a group's or person's Access tab. Membership tables and the `/admin/access-control` ledger show an **Expires** column, badge anything that lapses inside seven days, and the ledger's *Expiring in 7 days* filter lists what needs renewing. Directory-sourced membership and directory-projected roles never carry a window: Entra ID decides when those end.
 
 How an expiry binds differs by what it is on, because two of the four are decided by code this extension does not own:
 

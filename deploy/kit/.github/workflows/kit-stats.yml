@@ -1,6 +1,6 @@
 # Keep the latest release's run record current. Copied verbatim into a kit
 # repository beside publish-bundle.yml; needs SYSTEMPROMPT_API_URL and
-# ASTOUND_STATS_PAT (a PAT whose owner has console access) and does nothing
+# DYNAPPS_STATS_PAT (a PAT whose owner has console access) and does nothing
 # but warn without them. Only the notes and the kit-stats.json asset of the
 # latest release change; no commit is made.
 name: Kit stats
@@ -26,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       API_URL: ${{ secrets.SYSTEMPROMPT_API_URL }}
-      STATS_PAT: ${{ secrets.ASTOUND_STATS_PAT }}
+      STATS_PAT: ${{ secrets.DYNAPPS_STATS_PAT }}
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4

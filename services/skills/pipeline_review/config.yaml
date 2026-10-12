@@ -6,7 +6,7 @@ description: Build one rep's current pipeline assessment from Salesforce stage a
 enabled: true
 file: SKILL.md
 tags:
-- astound
+- dynapps
 - salesforce
 - sales
 category: business

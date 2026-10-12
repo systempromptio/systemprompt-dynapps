@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Plugin eval harness: run a plugin's fixed prompt suite through the Windows
-# Astound bridge, export every conversation from the gateway with the bridge's
+# Dynapps bridge, export every conversation from the gateway with the bridge's
 # PAT, and compute deterministic metrics. No model scores anything here: the
 # same exports always produce the same numbers.
 #
@@ -12,16 +12,16 @@
 # and its proxy running. Docs: /documentation/analysis-evaluate-plugins.
 set -euo pipefail
 
-cmd=${1:?run|export|metrics}; label=${2:?label}; plugin=${3:-astound-salesforce}
+cmd=${1:?run|export|metrics}; label=${2:?label}; plugin=${3:-dynapps-salesforce}
 here=$(cd "$(dirname "$0")" && pwd); root=$(cd "$here/../.." && pwd)
 WIN_HOME=${WIN_HOME:-/mnt/c/Users/ejb50}
-GATEWAY=${GATEWAY:-https://sp-dev.astound.digital}
+GATEWAY=${GATEWAY:-https://dynapps.systemprompt.io}
 PARALLEL=${PARALLEL:-4}
 out="$root/evals/$plugin/$label"; raw="$out/raw"
 winrun="$WIN_HOME/sp-skill-runs"; cc_projects="$WIN_HOME/.claude/projects/C--Users-ejb50-sp-skill-runs"
 prompts="$here/prompts/$plugin.yaml"
 
-pat() { tr -d '\r\n' < "$WIN_HOME/AppData/Roaming/astound/astound-bridge.pat"; }
+pat() { tr -d '\r\n' < "$WIN_HOME/AppData/Roaming/dynapps/dynapps-bridge.pat"; }
 
 run_one() {
   local skill=$1 dashed=${1//_/-} attempt

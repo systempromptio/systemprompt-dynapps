@@ -25,7 +25,7 @@ pub use classification::{
 
 pub(super) const AGENT_NAME: &str = "conversation-judge";
 
-const JOB_CONTEXT_SEED: &[u8] = b"astound:conversation_judge";
+const JOB_CONTEXT_SEED: &[u8] = b"dynapps:conversation_judge";
 
 const SYSTEM_PROMPT: &str = "\
 You judge one conversation between a person and an AI assistant, recorded through an \

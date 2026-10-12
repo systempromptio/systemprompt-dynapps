@@ -1,6 +1,6 @@
 ---
 name: systemprompt-cli
-description: Operate and inspect the Astound Digital platform through the admin systemprompt MCP server and CLI - is the instance healthy, services status, which MCP servers are configured or running, recent errors, list skills, plugins or users, who is using AI, or run any CLI command.
+description: Operate and inspect the Dynapps platform through the admin systemprompt MCP server and CLI - is the instance healthy, services status, which MCP servers are configured or running, recent errors, list skills, plugins or users, who is using AI, or run any CLI command.
 ---
 
 # systemprompt CLI Reference

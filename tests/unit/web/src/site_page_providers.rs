@@ -186,7 +186,7 @@ fn navigation_branding_is_null_until_it_is_supplied() {
 #[test]
 fn navigation_carries_the_branding_it_was_given() {
     let branding = systemprompt_web_site::navigation::BrandingConfig {
-        name: "Astound Digital".to_owned(),
+        name: "Dynapps".to_owned(),
         ..Default::default()
     };
     let provider =
@@ -194,7 +194,7 @@ fn navigation_carries_the_branding_it_was_given() {
 
     let data = page_data(&provider, "homepage");
 
-    assert_eq!(data["site"]["branding"]["name"], "Astound Digital");
+    assert_eq!(data["site"]["branding"]["name"], "Dynapps");
 }
 
 #[test]

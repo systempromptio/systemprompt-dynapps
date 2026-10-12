@@ -13,7 +13,7 @@
 use std::path::PathBuf;
 
 fn policies_yaml() -> serde_yaml::Value {
-    let path: PathBuf = astound_test_common::repo_path("services/gateway/policies.yaml");
+    let path: PathBuf = dynapps_test_common::repo_path("services/gateway/policies.yaml");
     let raw =
         std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
     serde_yaml::from_str(&raw).expect("policies.yaml is valid YAML")

@@ -1,22 +1,25 @@
-//! "Sign in with Astound SSO" — SAML 2.0 Web Browser SSO against the
-//! corporate AD FS farm, with this platform as the relying party.
+//! "Sign in with Dynapps SSO (Microsoft Entra ID)" — SAML 2.0 Web Browser
+//! SSO against an Entra ID enterprise application, with this platform as the
+//! relying party.
 //!
-//! - [`adfs_start`] redirects the browser to AD FS with a signed-shape
-//!   `AuthnRequest` (HTTP-Redirect binding) and an anti-CSRF `RelayState`.
+//! - [`adfs_start`] redirects the browser to Entra ID with an `AuthnRequest`
+//!   (HTTP-Redirect binding) and an anti-CSRF `RelayState`.
 //! - [`adfs_callback`] is the assertion consumer service: it verifies the
-//!   posted `SAMLResponse` (XML-DSig against the metadata-pinned certificate,
-//!   audience, destination, validity window, replay), maps the AD group
-//!   attribute to roles, resolves the identity, and mints the session.
+//!   posted `SAMLResponse` (XML-DSig against the metadata certificate,
+//!   audience, destination, validity window, replay), maps the groups claim to
+//!   roles, resolves the identity, and mints the session.
 //!
-//! Module layout: [`config`] (the loaded YAML), [`provider`] (the SP and `IdP`
-//! descriptors built from it), [`start`] (the redirect), [`callback`] (the
-//! ACS handler), [`identity`] (claim gating + federated resolution),
-//! [`session`] (the session JWT mint and cookie shared by every browser
-//! sign-in, the development login link included).
+//! Module layout: [`config`] (the loaded YAML), [`metadata`] (the federation
+//! metadata in force, fetched and refreshed or pinned), [`provider`] (the SP
+//! and `IdP` descriptors built from it), [`start`] (the redirect),
+//! [`callback`] (the ACS handler), [`identity`] (claim gating + federated
+//! resolution), [`session`] (the session JWT mint and cookie shared by every
+//! browser sign-in, the development login link included).
 
 mod callback;
 mod config;
 mod identity;
+mod metadata;
 mod provider;
 mod session;
 mod start;
@@ -35,10 +38,11 @@ use systemprompt::oauth::SessionCreationService;
 
 pub(crate) use callback::adfs_callback;
 pub use config::{
-    ACS_PATH as ADFS_ACS_PATH, AdfsConfig, METADATA_PATH as ADFS_METADATA_PATH,
-    group_matches_pattern,
+    ACS_PATH as ADFS_ACS_PATH, AdfsConfig, GROUPS_OVERAGE_ATTRIBUTE,
+    METADATA_PATH as ADFS_METADATA_PATH, group_matches_pattern,
 };
 pub use identity::AssertionClaims;
+pub use metadata::{REFRESH_INTERVAL as IDP_METADATA_REFRESH_INTERVAL, spawn_idp_metadata_refresh};
 pub use session::permissions_for_roles;
 pub(crate) use session::{SessionSubject, mint_session, record_login, session_cookie};
 pub(crate) use start::adfs_start;
@@ -53,6 +57,10 @@ const DEFAULT_REDIRECT: &str = "/admin";
 pub enum AdfsError {
     #[error("IdP federation metadata is unusable: {0}")]
     Metadata(String),
+    #[error("IdP federation metadata could not be fetched")]
+    MetadataFetch(#[from] reqwest::Error),
+    #[error("fetched IdP federation metadata does not parse")]
+    MetadataParse(#[source] saml::Error),
     #[error("service-provider configuration rejected: {0}")]
     ServiceProvider(String),
     #[error("SAMLResponse is not valid base64: {0}")]
@@ -61,7 +69,7 @@ pub enum AdfsError {
     Assertion(#[source] saml::Error),
 }
 
-/// Per-request dependencies for the ADFS handlers, shared via an axum
+/// Per-request dependencies for the SSO handlers, shared via an axum
 /// `Extension`.
 #[derive(Clone)]
 pub struct AdfsDeps {
@@ -145,9 +153,10 @@ pub fn read_state_cookie(headers: &HeaderMap) -> Option<FlowState> {
     })
 }
 
-// Why: AD FS posts the ACS cross-site and browsers withhold `SameSite=Lax`
-// cookies on that POST, so the `saml` crate would reject `InResponseTo` with no
-// tracker. `None` needs `Secure`, hence `Lax` on plain-http local dev only.
+// Why: Microsoft Entra ID posts the ACS cross-site and browsers withhold
+// `SameSite=Lax` cookies on that POST, so the `saml` crate would reject
+// `InResponseTo` with no tracker. `None` needs `Secure`, hence `Lax` on
+// plain-http local dev only.
 const fn same_site_attrs(secure: bool) -> &'static str {
     if secure {
         "SameSite=None; Secure"

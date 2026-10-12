@@ -6,7 +6,7 @@ description: 'Build a team pipeline brief from Salesforce users and opportunitie
 enabled: true
 file: SKILL.md
 tags:
-- astound
+- dynapps
 - salesforce
 - sales
 category: business

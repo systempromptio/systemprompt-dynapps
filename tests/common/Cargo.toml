@@ -1,5 +1,5 @@
 [package]
-name = "astound-test-common"
+name = "dynapps-test-common"
 version.workspace = true
 edition.workspace = true
 publish = false

@@ -49,8 +49,8 @@ code="$(curl -sk -o /dev/null -w '%{http_code}' "$URL/admin/login" || true)"
 code="$(curl -sk -o /dev/null -w '%{http_code}' "$URL/documentation/" || true)"
 [ "$code" = "200" ] && ok "GET /documentation/ (public site rendered on this node) → 200" || bad "GET /documentation/ → $code (the publish pipeline has not run on this node)"
 
-for asset in astound-bridge-windows.exe astound-bridge-macos.dmg \
-             astound-bridge-linux-x86_64.tar.gz astound-bridge-linux-aarch64.tar.gz; do
+for asset in dynapps-bridge-windows.exe dynapps-bridge-macos.dmg \
+             dynapps-bridge-linux-x86_64.tar.gz dynapps-bridge-linux-aarch64.tar.gz; do
     want="$("${CURL[@]}" "$URL/files/downloads/$asset.sha256" 2>/dev/null | cut -d' ' -f1 || true)"
     got="$("${CURL[@]}" "$URL/files/downloads/$asset" 2>/dev/null | sha || true)"
     if [ -n "$want" ] && [ "$want" = "$got" ]; then

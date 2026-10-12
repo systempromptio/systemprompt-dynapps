@@ -1,8 +1,8 @@
 {
-  "name": "astound-<region>-dev",
-  "owner": { "name": "Astound Digital", "email": "engineering@astounddigital.com" },
+  "name": "dynapps-<team>-dev",
+  "owner": { "name": "Dynapps", "email": "ed@systemprompt.io" },
   "metadata": {
-    "description": "Astound Digital <Region> development workspace",
+    "description": "Dynapps <Team> development workspace",
     "version": "1.0.0",
     "pluginRoot": "./plugins"
   },

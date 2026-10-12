@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Package the branded bridge as a Linux release tarball.
 #
-# Produces dist/astound-bridge-linux-x86_64.tar.gz plus a .sha256, matching the
+# Produces dist/dynapps-bridge-linux-x86_64.tar.gz plus a .sha256, matching the
 # asset name the admin Bridge Setup page links to. Keep the two in lockstep:
 # extensions/web/admin/platform/src/handlers/ssr/ssr_connect.rs (DOWNLOAD_BASE_URL)
 # and storage/files/admin/templates/connect.hbs (asset filenames).
@@ -12,7 +12,7 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BRIDGE_DIR="$REPO_ROOT/bridge"
 DIST_DIR="$REPO_ROOT/dist"
-BIN_NAME="astound-bridge"
+BIN_NAME="dynapps-bridge"
 
 ARCH="$(uname -m)"
 case "$ARCH" in
@@ -58,7 +58,7 @@ VERSION="$(cd "$BRIDGE_DIR" && cargo metadata --no-deps --format-version 1 \
 COMMIT="$(git -C "$REPO_ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)"
 
 cat > "$PKG/INSTALL.md" <<EOF
-# Astound Bridge for Linux
+# Dynapps Bridge for Linux
 
 Version ${VERSION} (${COMMIT}, ${ASSET_ARCH})
 
@@ -108,7 +108,7 @@ one it chose in \`${BIN_NAME} doctor\`.
 \`apiKeyHelper\`, model discovery) into \`~/.claude/settings.json\` — or
 \`/etc/claude-code/managed-settings.json\` when it can write there. That is the
 channel Claude Code reads on every run, in any shell. It also writes
-\`~/.config/astound/env.sh\` (ANTHROPIC_BASE_URL and ANTHROPIC_AUTH_TOKEN) and a
+\`~/.config/dynapps/env.sh\` (ANTHROPIC_BASE_URL and ANTHROPIC_AUTH_TOKEN) and a
 managed block in \`~/.profile\` that sources it, for other Anthropic-API clients.
 \`--apply-schedule\` registers two systemd user units: the periodic sync timer
 and \`${BIN_NAME}-proxy.service\`, which keeps the loopback inference proxy
@@ -123,9 +123,9 @@ Device certificates are the supported unattended credential. Generate one,
 have an admin enrol its fingerprint, then name it in the config:
 
     [mtls]
-    cert_keystore_ref = "~/.config/astound/device.pem"
+    cert_keystore_ref = "~/.config/dynapps/device.pem"
 
-\`ASTOUND_BRIDGE_DEVICE_CERT\` still works and takes precedence.
+\`DYNAPPS_BRIDGE_DEVICE_CERT\` still works and takes precedence.
 
 ## Uninstall
 
@@ -153,7 +153,7 @@ echo "    version ${VERSION} (${COMMIT})  size $(du -h "$DIST_DIR/$ASSET" | cut 
 # INSTALL_BASE_URL bakes that origin into the published installer's
 # DEFAULT_DOWNLOAD_BASE, so end users run it with no --download-base; override
 # it when packaging for a different deployment target.
-INSTALL_BASE_URL="${INSTALL_BASE_URL:-https://astound.systemprompt.io/files/downloads}"
+INSTALL_BASE_URL="${INSTALL_BASE_URL:-https://dynapps.systemprompt.io/files/downloads}"
 PUBLISH_DIR="$REPO_ROOT/storage/files/downloads"
 mkdir -p "$PUBLISH_DIR"
 install -m 0644 "$DIST_DIR/$ASSET" "$PUBLISH_DIR/$ASSET"

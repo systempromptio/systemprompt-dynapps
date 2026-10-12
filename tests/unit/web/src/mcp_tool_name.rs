@@ -4,7 +4,7 @@
 use systemprompt_web_admin_core::util::mcp_tool_name::{McpToolName, parse_mcp_tool_name_with};
 
 fn known() -> Vec<String> {
-    ["systemprompt", "google_workspace", "atlassian"]
+    ["systemprompt", "odoo_erp", "atlassian"]
         .into_iter()
         .map(str::to_owned)
         .collect()
@@ -25,7 +25,7 @@ fn plain_server_form_splits_on_the_last_separator() {
 fn plugin_form_resolves_the_server_against_the_instance() {
     assert_eq!(
         parse_mcp_tool_name_with(
-            "mcp__plugin_astound-super-admin_systemprompt__admin_report",
+            "mcp__plugin_dynapps-super-admin_systemprompt__admin_report",
             &known()
         ),
         Some(McpToolName {
@@ -38,12 +38,9 @@ fn plugin_form_resolves_the_server_against_the_instance() {
 #[test]
 fn plugin_form_keeps_an_underscored_server_id_whole() {
     assert_eq!(
-        parse_mcp_tool_name_with(
-            "mcp__plugin_astound-commons_google_workspace__search",
-            &known()
-        )
-        .map(|n| n.server),
-        Some("google_workspace".to_owned())
+        parse_mcp_tool_name_with("mcp__plugin_dynapps-commons_odoo_erp__search", &known())
+            .map(|n| n.server),
+        Some("odoo_erp".to_owned())
     );
 }
 

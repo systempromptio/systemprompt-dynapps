@@ -1,7 +1,7 @@
 //! The session mint every browser sign-in ends in: create the authenticated
 //! session row, sign the JWT, and spell the `access_token` cookie that
-//! carries it. ADFS and the development login link both land here, so the
-//! two can never drift on what a session is — and both record the sign-in
+//! carries it. Entra ID SSO and the development login link both land here, so
+//! the two can never drift on what a session is — and both record the sign-in
 //! as a `login` activity, the row every "Logins" figure counts.
 //!
 //! A JWT is checked on `permissions`, not roles, so a subject whose roles

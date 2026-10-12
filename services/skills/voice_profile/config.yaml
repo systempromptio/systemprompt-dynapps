@@ -6,7 +6,7 @@ description: Build a reusable voice profile from recent sent emails to capture a
 enabled: true
 file: SKILL.md
 tags:
-- astound
+- dynapps
 - salesforce
 - sales
 category: business

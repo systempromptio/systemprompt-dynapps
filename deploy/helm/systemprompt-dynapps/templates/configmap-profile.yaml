@@ -3,11 +3,11 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "astound.fullname" $ }}-profile-{{ $role }}
+  name: {{ include "dynapps.fullname" $ }}-profile-{{ $role }}
   labels:
-    {{- include "astound.labels" $ | nindent 4 }}
+    {{- include "dynapps.labels" $ | nindent 4 }}
     app.kubernetes.io/component: {{ $role }}
 data:
   profile.yaml: |
-    {{- include "astound.profile" (dict "ctx" $ "role" $role) | nindent 4 }}
+    {{- include "dynapps.profile" (dict "ctx" $ "role" $role) | nindent 4 }}
 {{- end }}

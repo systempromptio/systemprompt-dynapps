@@ -6,7 +6,7 @@ description: Create a prioritized response queue and email drafts from unread th
 enabled: true
 file: SKILL.md
 tags:
-- astound
+- dynapps
 - salesforce
 - sales
 category: business

@@ -2,7 +2,7 @@
 //!
 //! Core calls every registered provider's `values_for` on each gateway
 //! request (the entitlement guard and the quota resolver both gather
-//! subjects), and each astound provider is a database read. Wrapping it at
+//! subjects), and each local provider is a database read. Wrapping it at
 //! registration keeps the provider itself a plain query and makes the cache
 //! one rule for all of them: values are reused for [`AUTHZ_TTL`] and dropped
 //! by [`crate::ttl_cache::invalidate_all`].

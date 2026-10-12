@@ -1,7 +1,7 @@
 ---
 title: "Create a Conversation and See It Land"
 description: "Connect a client, invoke one skill on purpose, then find that conversation on the skill's Analysis page and open its transcript. Includes how long to wait and what to check when it does not appear."
-author: "Astound Digital"
+author: "Dynapps"
 slug: "analysis-test-conversation"
 keywords: "conversation, skill invocation, bridge, connect code, attribution, installation receipt, hooks, conversation rollup, session, transcript"
 kind: "guide"
@@ -98,7 +98,7 @@ Work down this list in order.
 | Check | Symptom | What it means | Fix |
 |---|---|---|---|
 | 1. Reached the gateway? | Nothing in `/admin/history`. | The client's model traffic is not routed through this gateway. | Go back to Step 2. |
-| 2. Hook reported? | The request is in History, but the skill's **Invoked** count did not move. | The plugin that carries the governance hooks is not installed on that client, so no invocation was reported. | Run `astound-bridge status`, sync, and restart the client. |
+| 2. Hook reported? | The request is in History, but the skill's **Invoked** count did not move. | The plugin that carries the governance hooks is not installed on that client, so no invocation was reported. | Run `dynapps-bridge status`, sync, and restart the client. |
 | 3. Rolled up? | Invoked moved but the conversation is missing from the skill's page. | The rollup has not passed yet. | Wait a minute and reload. After an upgrade an operator can rebuild everything with `systemprompt infra jobs run conversation_rollup -p all=true`. |
 | 4. Installed? | The skill's **Installs** stays at zero. | Installs count verified installation receipts — a device that read back every file of the distributed bundle. Invocations still count without one. | Check **Installation receipts** on that marketplace's [Versions](/admin/analysis/versions) page. |
 

@@ -1,7 +1,7 @@
 ---
 title: "Install on macOS"
-description: "Install and verify Astound Bridge on macOS, sign in, and connect Claude Code or Cowork."
-author: "Astound Digital"
+description: "Install and verify Dynapps Bridge on macOS, sign in, and connect Claude Code or Cowork."
+author: "Dynapps"
 slug: "install-macos"
 kind: "guide"
 public: true
@@ -24,25 +24,25 @@ related_playbooks:
 
 # Install on macOS
 
-Install Astound Bridge, sign in to your gateway, then connect Claude Code or Cowork. The macOS download is a universal app for Apple Silicon and Intel.
+Install Dynapps Bridge, sign in to your gateway, then connect Claude Code or Cowork. The macOS download is a universal app for Apple Silicon and Intel.
 
 ## 1. Download and verify
 
-Download the [macOS disk image](/files/downloads/astound-bridge-macos.dmg) and its [SHA-256 checksum](/files/downloads/astound-bridge-macos.dmg.sha256) from your gateway. In Terminal, change to the directory containing both files:
+Download the [macOS disk image](/files/downloads/dynapps-bridge-macos.dmg) and its [SHA-256 checksum](/files/downloads/dynapps-bridge-macos.dmg.sha256) from your gateway. In Terminal, change to the directory containing both files:
 
 ```bash
 cd "$HOME/Downloads"
-shasum -a 256 -c astound-bridge-macos.dmg.sha256
+shasum -a 256 -c dynapps-bridge-macos.dmg.sha256
 ```
 
 Continue only if verification reports `OK`. If your browser renamed either download, restore the published filenames before checking. More detail: [Downloads](/documentation/downloads).
 
-Open the disk image and drag **Astound Bridge** to **Applications**. Eject the disk image. The installed app must be at `/Applications/AstoundBridge.app`; do not run it from the mounted image.
+Open the disk image and drag **Dynapps Bridge** to **Applications**. Eject the disk image. The installed app must be at `/Applications/DynappsBridge.app`; do not run it from the mounted image.
 
 The app is Developer ID signed and notarized. macOS may ask you to confirm opening an app downloaded from the internet. You can check the installed app:
 
 ```bash
-spctl --assess --type execute --verbose=2 /Applications/AstoundBridge.app
+spctl --assess --type execute --verbose=2 /Applications/DynappsBridge.app
 ```
 
 Expect acceptance with a notarized Developer ID source. If macOS rejects the signature or blocks the app under your organization's policy, stop and contact IT. Do not remove quarantine attributes or disable Gatekeeper.
@@ -52,7 +52,7 @@ Expect acceptance with a notarized Developer ID source. If macOS rejects the sig
 The command-line interface is inside the app. Define this alias in the Terminal window you will use:
 
 ```bash
-alias astound-bridge=/Applications/AstoundBridge.app/Contents/MacOS/astound-bridge
+alias dynapps-bridge=/Applications/DynappsBridge.app/Contents/MacOS/dynapps-bridge
 GATEWAY_URL="https://gateway.example.com"
 ```
 
@@ -61,18 +61,18 @@ Replace the example URL with the gateway supplied by your administrator. Do not 
 For a fresh device, pin the manifest public key supplied through your administrator's approved channel:
 
 ```bash
-astound-bridge install --gateway "$GATEWAY_URL" \
+dynapps-bridge install --gateway "$GATEWAY_URL" \
   --pubkey "ADMINISTRATOR_PROVIDED_BASE64_PUBLIC_KEY"
-astound-bridge login --gateway "$GATEWAY_URL"
+dynapps-bridge login --gateway "$GATEWAY_URL"
 ```
 
 If IT has already configured a trusted key, do not replace it. Approve the sign-in link in your browser with your work account. For a one-time connect code instead, follow [Bridge sign-in](/documentation/bridge-install#sign-in).
 
-Launch Astound Bridge from Applications and keep it running. Synchronize your account's resources:
+Launch Dynapps Bridge from Applications and keep it running. Synchronize your account's resources:
 
 ```bash
-astound-bridge sync
-astound-bridge whoami
+dynapps-bridge sync
+dynapps-bridge whoami
 ```
 
 ## 3. Connect your client
@@ -84,7 +84,7 @@ These are separate setup paths. The broad `install --apply` option applies platf
 
 ## 4. Verify
 
-Run `astound-bridge status` and `astound-bridge doctor`, then make the real request described in your client guide. Confirm it in your gateway's [History](/admin/history). Sign-in and diagnostic success alone are not an end-to-end inference test.
+Run `dynapps-bridge status` and `dynapps-bridge doctor`, then make the real request described in your client guide. Confirm it in your gateway's [History](/admin/history). Sign-in and diagnostic success alone are not an end-to-end inference test.
 
 Doctor can report checks for other installed clients, and some integration checks need an initial session. Investigate failures by client instead of assuming that every warning means sign-in failed.
 
@@ -93,10 +93,10 @@ Doctor can report checks for other installed clients, and some integration check
 The default bridge directory is:
 
 ```text
-~/Library/Application Support/astound/
+~/Library/Application Support/dynapps/
 ```
 
-In Finder, press **Command–Shift–G** and paste that path. An absolute `XDG_CONFIG_HOME` changes the base directory; use `astound-bridge status` to find your actual configuration.
+In Finder, press **Command–Shift–G** and paste that path. An absolute `XDG_CONFIG_HOME` changes the base directory; use `dynapps-bridge status` to find your actual configuration.
 
 Claude Code enrolment creates `claude-code-settings.json` and its helper here. The file does not exist merely because the app was downloaded. See [Find your installed settings file](/documentation/connect-claude-code#find-your-installed-settings-file) for exact commands.
 
@@ -104,4 +104,4 @@ The directory also contains credentials. Share diagnostic error messages with su
 
 ## Disconnect a client
 
-Use `astound-bridge uninstall --host claude-code` for Claude Code. For Cowork, follow [Disconnect Cowork](/documentation/connect-cowork#disconnect-cowork), including any required macOS profile removal. Disconnecting one client does not sign out the whole bridge.
+Use `dynapps-bridge uninstall --host claude-code` for Claude Code. For Cowork, follow [Disconnect Cowork](/documentation/connect-cowork#disconnect-cowork), including any required macOS profile removal. Disconnecting one client does not sign out the whole bridge.

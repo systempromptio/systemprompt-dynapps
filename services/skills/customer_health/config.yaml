@@ -6,7 +6,7 @@ description: 'Assess customer health from Salesforce account, renewal, case, tas
 enabled: true
 file: SKILL.md
 tags:
-- astound
+- dynapps
 - salesforce
 - sales
 category: business

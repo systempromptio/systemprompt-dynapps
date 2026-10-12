@@ -37,10 +37,10 @@ checksum = "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa"
 name = "admin-contract-tests"
 version = "0.0.0"
 dependencies = [
- "astound-test-common",
  "axum",
  "base64 0.22.1",
  "chrono",
+ "dynapps-test-common",
  "http-body-util",
  "jsonwebtoken",
  "serde_json",
@@ -63,8 +63,8 @@ dependencies = [
 name = "admin-db-config-tests"
 version = "0.0.0"
 dependencies = [
- "astound-test-common",
  "chrono",
+ "dynapps-test-common",
  "reqwest 0.13.5",
  "serde_json",
  "serde_yaml_ng",
@@ -86,8 +86,8 @@ dependencies = [
 name = "admin-db-core-tests"
 version = "0.0.0"
 dependencies = [
- "astound-test-common",
  "chrono",
+ "dynapps-test-common",
  "serde_json",
  "serde_yaml_ng",
  "sqlx",
@@ -353,18 +353,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.119",
-]
-
-[[package]]
-name = "astound-test-common"
-version = "0.0.0"
-dependencies = [
- "sqlx",
- "systemprompt",
- "systemprompt-web-extension",
- "tokio",
- "url",
- "uuid",
 ]
 
 [[package]]
@@ -1959,6 +1947,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d0881ea181b1df73ff77ffaaf9c7544ecc11e82fba9b5f27b262a3c73a332555"
 
 [[package]]
+name = "dynapps-test-common"
+version = "0.0.0"
+dependencies = [
+ "sqlx",
+ "systemprompt",
+ "systemprompt-web-extension",
+ "tokio",
+ "url",
+ "uuid",
+]
+
+[[package]]
 name = "ecdsa"
 version = "0.16.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2485,7 +2485,7 @@ dependencies = [
 name = "gateway-integration-tests"
 version = "0.0.0"
 dependencies = [
- "astound-test-common",
+ "dynapps-test-common",
  "serde_yaml_ng",
  "systemprompt",
 ]
@@ -3884,7 +3884,7 @@ dependencies = [
 name = "mcp-integration-tests"
 version = "0.0.0"
 dependencies = [
- "astound-test-common",
+ "dynapps-test-common",
  "serde_json",
  "sqlx",
  "systemprompt",
@@ -6088,7 +6088,7 @@ dependencies = [
 name = "schema-upgrade-tests"
 version = "0.0.0"
 dependencies = [
- "astound-test-common",
+ "dynapps-test-common",
  "sqlx",
  "systemprompt",
  "tokio",
@@ -8474,6 +8474,7 @@ dependencies = [
  "hex",
  "inventory",
  "rand 0.9.5",
+ "reqwest 0.13.5",
  "saml",
  "serde",
  "serde_json",
@@ -9812,10 +9813,10 @@ dependencies = [
 name = "web-integration-tests"
 version = "0.0.0"
 dependencies = [
- "astound-test-common",
  "async-trait",
  "axum",
  "chrono",
+ "dynapps-test-common",
  "http-body-util",
  "rmcp",
  "serde_json",

@@ -1,14 +1,14 @@
 ---
-title: "Get Started with the Astound AI Platform"
-description: "Choose your Astound client and follow the platform setup, sign-in, and verification guides."
-author: "Astound Digital"
+title: "Get Started with the Dynapps AI Platform"
+description: "Choose your Dynapps client and follow the platform setup, sign-in, and verification guides."
+author: "Dynapps"
 slug: ""
 kind: "guide"
 public: true
 tags: ["documentation", "getting-started", "bridge"]
 published_at: "2026-02-18"
 updated_at: "2026-09-29"
-keywords: "get started, astound ai platform, claude code, cowork, opencode, bridge, gateway, documentation"
+keywords: "get started, dynapps ai platform, claude code, cowork, opencode, bridge, gateway, documentation"
 after_reading_this:
   - "Pick the setup guide for your client and platform"
   - "Verify your first session reached the gateway"
@@ -24,7 +24,7 @@ related_playbooks:
 
 # Get Started
 
-Connect your AI client to your organization's gateway to use the models, skills, and tools your account can access. You need an account and Astound Bridge on your computer; you do not need to build or run a server.
+Connect your AI client to your organization's gateway to use the models, skills, and tools your account can access. You need an account and Dynapps Bridge on your computer; you do not need to build or run a server.
 
 ## Choose your client
 
@@ -72,7 +72,6 @@ its source through distribution, loading and measurement.
 
 ## Connections
 
-- [Salesforce CRM and development connections](/documentation/salesforce)
 - [Downloads and checksum verification](/documentation/downloads)
 - [Bridge installation, sign-in, and troubleshooting](/documentation/bridge-install)
 
@@ -81,7 +80,7 @@ its source through distribution, loading and measurement.
 - [Dashboard](/documentation/dashboard) — the admin overview
 - [Create and manage users](/documentation/admin-user-management) — including the one role table
 - [Authentication](/documentation/authentication)
-- [Set up SSO (AD FS)](/documentation/adfs-sso-setup)
+- [Set up SSO (Microsoft Entra ID)](/documentation/entra-id-sso-setup)
 - [User and access management](/documentation/enterprise-user-access)
 - [Usage and analytics](/documentation/enterprise-analytics)
 - [Cost management](/documentation/enterprise-cost-management)

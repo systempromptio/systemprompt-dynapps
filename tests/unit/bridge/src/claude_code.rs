@@ -7,7 +7,7 @@ use systemprompt_bridge::install::mdm::claude_code_settings::windows_helper_comm
 
 #[test]
 fn windows_helper_quotes_paths_and_survives_outer_shell_expansion() {
-    let path = r"C:\Users\O'Brien $USER %TEMP% & café\Astound Bridge.exe";
+    let path = r"C:\Users\O'Brien $USER %TEMP% & café\Dynapps Bridge.exe";
     let command = windows_helper_command(Path::new(path));
     let encoded = command
         .strip_prefix("powershell.exe -NoProfile -NonInteractive -EncodedCommand ")

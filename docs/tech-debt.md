@@ -8,7 +8,7 @@ they undermine the end-to-end story the console is meant to tell.
 
 ## Status (2026-09-17, later the same day)
 
-Fixed on `next` — core `f70d6d3fe`, astound `f495e4fd` — and proven on the
+Fixed on `next` — core `f70d6d3fe`, dynapps `f495e4fd` — and proven on the
 local instance: §1 (one artifact per MCP call, `executed`/`exact`, linked to
 its request), §2 (typed `structuredContent`; the systemprompt outputs declare
 `report` / `paged_table`), §3 (glob expands over the live catalog; empty
@@ -57,7 +57,7 @@ Every tool an internal MCP server executes for a Claude Code session lands as
 | vantage | `tool_name` | `session_id` | `ai_tool_call_id` | ledger state |
 |---|---|---|---|---|
 | `in_process` (the real result) | `admin_report` | `sess_8af4…` (MCP session) | *(empty)* | `unattested` |
-| `hook_claude_code` | `mcp__plugin_astound-super-admin_systemprompt__admin_report` | `d46d06e1…` (Claude Code session) | `toolu_017n…` | `executed` |
+| `hook_claude_code` | `mcp__plugin_dynapps-super-admin_systemprompt__admin_report` | `d46d06e1…` (Claude Code session) | `toolu_017n…` | `executed` |
 
 `ArtifactIngest` resolves identity by `_meta` execution id → minted id →
 `tool_use_id` via `mcp_tool_executions.ai_tool_call_id` → fingerprint
@@ -86,7 +86,7 @@ The declared `outputSchema` and the envelope actually sent disagree; Claude
 Code 2.1.x validates and treats the call as failed, so the model gives up on
 the admin tools. Also `services/artifacts/admin-ai-usage/config.yaml` binds
 `mcp_tools: [mcp__systemprompt__admin_report]`, which is not the name a
-plugin-installed server presents (`mcp__plugin_astound-super-admin_systemprompt__admin_report`).
+plugin-installed server presents (`mcp__plugin_dynapps-super-admin_systemprompt__admin_report`).
 
 ## 3. Access-control sync silently declares nothing for `gateway_route/*`
 
@@ -165,7 +165,7 @@ those rows behind.
 - `just bridge-build` refuses whenever `../systemprompt-core` is ahead of
   `bridge/CORE_REF`, which on `next` is the normal state between pins.
   A local client build needed `cd bridge && cargo build --release` directly.
-- `deploy/clean-client/bootstrap.sh` runs `astound-bridge install --apply
+- `deploy/clean-client/bootstrap.sh` runs `dynapps-bridge install --apply
   --apply-schedule` under `set -e`; without systemd the bridge returns non-zero
   on "partially completed" and the bootstrap dies before the proxy and sync
   ever run. `--apply` alone exits 0.
@@ -203,7 +203,7 @@ own new messages and silently truncate every transcript.
 033, is the right shape: an `ai_message_contents(sha256, content)` table with
 `ai_request_messages.content_sha256` referencing it. The obstacle is reach —
 `ai_request_messages` is read from roughly twenty call sites across both repos
-and nine cached `.sqlx` queries in astound alone, and every one of them would
+and nine cached `.sqlx` queries in dynapps alone, and every one of them would
 need regenerating against a live database (`just prepare`), which could not be
 run.
 

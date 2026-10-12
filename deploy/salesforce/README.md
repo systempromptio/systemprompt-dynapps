@@ -170,7 +170,7 @@ what is deployed:
    and references the expected source app. Compare its consumer key with the
    gateway configuration without sharing the consumer secret.
 2. Verify the gateway's stored secret matches that app, its callback includes
-   `https://sp-dev.astound.digital/api/public/connectors/salesforce/callback`,
+   `https://dynapps.systemprompt.io/api/public/connectors/salesforce/callback`,
    and PKCE plus named-user JWT access tokens are enabled.
 3. Check `mcp_api`, `refresh_token` and `openid` scopes, the actual refresh
    lifetime and idle TTL, rotation, session level and permitted-user policy.
@@ -209,6 +209,6 @@ Recovery depends on the failure:
 - **Authorization saved, verification failed:** Test connection retries the MCP
   and identity checks without requiring another browser authorization.
 
-Successful tests in `astound.systemprompt.io` do not prove recovery on the
-separate live endpoint `sp-dev.astound.digital`. Close the incident only after
+Successful tests in `dynapps.systemprompt.io` do not prove recovery on the
+separate live endpoint `dynapps.systemprompt.io`. Close the incident only after
 verifying its deployed version, reconnect, tools access and a later refresh.

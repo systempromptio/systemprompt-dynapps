@@ -24,7 +24,7 @@ mock_gh() {
     [[ "$case_name" != hotfix_* ]] || ref="hotfix/$version/$base"
     if [[ "$*" == *'/commits/'* ]]; then
         [ "$case_name" != changed_base ] || ref="promote/$version/$head/$head"
-        jq -n --arg merge "$merge" --arg head "$head" --arg ref "$ref" '[{merged_at:"today",merge_commit_sha:$merge,base:{ref:"main"},head:{sha:$head,ref:$ref,repo:{full_name:"Astound-Digital/systemprompt-astound"}}}]'
+        jq -n --arg merge "$merge" --arg head "$head" --arg ref "$ref" '[{merged_at:"today",merge_commit_sha:$merge,base:{ref:"main"},head:{sha:$head,ref:$ref,repo:{full_name:"systempromptio/systemprompt-dynapps"}}}]'
     elif [[ "$*" == *'/jobs?'* ]]; then
         if [[ "$case_name" == hotfix_* ]]; then
             if [ "$case_name" = hotfix_missing_gate ]; then echo '{"jobs":[]}'; return; fi

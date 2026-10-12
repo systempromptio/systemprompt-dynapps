@@ -1,19 +1,17 @@
 plugin:
-  id: astound-salesforce
-  name: "Astound Digital — Salesforce"
-  description: "Salesforce sales workflows adapted from Salesforce's public Sales Cloud plugin, with dynamic Headless 360 widgets. Google Workspace evidence returns when its connector is live; google_workspace_test checks it."
+  id: dynapps-salesforce
+  name: "Dynapps — Salesforce"
+  description: "Salesforce sales workflows adapted from Salesforce's public Sales Cloud plugin, with dynamic Headless 360 widgets."
   version: "1.1.0"
   enabled: true
   author:
-    name: Astound Digital
+    name: Dynapps
     email: ed@systemprompt.io
-  keywords: [astound, salesforce, sales, crm, pipeline]
+  keywords: [dynapps, salesforce, sales, crm, pipeline]
   license: Apache-2.0
   category: business
   skills:
     source: explicit
-    # calendar_events, inbox_sweep and voice_profile read only Google
-    # Workspace; they return when its connector works (IAM on 148780456827).
     include:
       - account_context
       - account_tiering
@@ -31,7 +29,6 @@ plugin:
       - expansion_whitespace
       - find_internal_answer
       - forecast_narrative
-      - google_workspace_test
       - handle_objection
       - lead_triage
       - pipeline_review
@@ -52,7 +49,6 @@ plugin:
     source: explicit
     include:
       - salesforce
-      - google_workspace
   content_sources: {}
   artifacts:
     source: explicit

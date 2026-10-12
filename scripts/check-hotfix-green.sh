@@ -3,7 +3,7 @@ set -euo pipefail
 head="${1:?usage: check-hotfix-green.sh <head> <ref> <base>}"
 ref="${2:?missing hotfix ref}"
 base="${3:?missing main base}"
-repo=Astound-Digital/systemprompt-astound
+repo=systempromptio/systemprompt-dynapps
 die() { echo "hotfix-proof: $*" >&2; exit 1; }
 [[ "$head" =~ ^[0-9a-f]{40}$ && "$base" =~ ^[0-9a-f]{40}$ ]] || die 'expected full commit identities'
 [[ "$ref" =~ ^hotfix/[0-9]+\.[0-9]+\.[0-9]+/$base$ ]] || die 'hotfix ref differs from frozen base'

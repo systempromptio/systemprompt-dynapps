@@ -104,7 +104,7 @@ fn blurb(glyph: &str, c: &Connection) -> String {
             "Search across Drive, Gmail and Calendar — only what you can already open.".into()
         },
         "systemprompt" => {
-            "The Astound control plane: governed tools, catalogue and deployments, as the admin you are signed in as.".into()
+            "The Dynapps control plane: governed tools, catalogue and deployments, as the admin you are signed in as.".into()
         },
         "salesforce" => format!(
             "Records, SOQL and metadata in {}, as the Salesforce user you sign in as.",

@@ -1,13 +1,13 @@
 # Install from the published image
 
 Every push to `main` publishes a prebuilt, multi-arch (amd64 + arm64) image to
-`ghcr.io/astound-digital/systemprompt-astound`. Installing means pulling it —
+`ghcr.io/systempromptio/systemprompt-dynapps`. Installing means pulling it —
 no Rust toolchain, no compile.
 
 ## 1. Access
 
 The package is private, like the repository. You need a GitHub account with
-read access to `Astound-Digital/systemprompt-astound` and a **personal access
+read access to `systempromptio/systemprompt-dynapps` and a **personal access
 token (classic)** with the `read:packages` scope
 (GitHub → Settings → Developer settings → Personal access tokens).
 
@@ -17,13 +17,13 @@ echo "$GITHUB_PAT" | docker login ghcr.io -u <github-username> --password-stdin
 
 If the pull is denied although the repo is visible to you, a maintainer must
 grant your team read access on the package once: repository → Packages →
-`systemprompt-astound` → Package settings → Manage access.
+`systemprompt-dynapps` → Package settings → Manage access.
 
 ## 2. Configure
 
 ```bash
-git clone https://github.com/Astound-Digital/systemprompt-astound.git   # for docker-compose.yml + .env.example
-cd systemprompt-astound
+git clone https://github.com/systempromptio/systemprompt-dynapps.git   # for docker-compose.yml + .env.example
+cd systemprompt-dynapps
 cp .env.example .env
 ```
 
@@ -96,7 +96,7 @@ already sets `SYSTEMPROMPT_SERVICES_PATH=/app/services`, so the mount is all
 that is needed. Note that admin-UI edits to gateway routes write inside the
 container and are lost when it is replaced unless that tree is mounted, and
 that a `:ro` mount makes the UI editor fail on write. The served
-[Deploy](https://astound.systemprompt.io/documentation/deploy) page covers both
+[Deploy](https://dynapps.systemprompt.io/documentation/deploy) page covers both
 in full.
 
 Versioned tags (`X.Y.Z`) are immutable; `latest` and `sha-<commit>` move with
@@ -119,9 +119,9 @@ migrations match the database.
 
 ```bash
 cosign verify \
-  --certificate-identity-regexp='https://github.com/Astound-Digital/systemprompt-astound/' \
+  --certificate-identity-regexp='https://github.com/systempromptio/systemprompt-dynapps/' \
   --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
-  ghcr.io/astound-digital/systemprompt-astound:0.65.0
+  ghcr.io/systempromptio/systemprompt-dynapps:0.65.0
 ```
 
 ## 4. The bridge (Claude Code client)
@@ -132,9 +132,9 @@ them. The same files are attached to the GitHub Release `vX.Y.Z`:
 
 | file | platform |
 |---|---|
-| `astound-bridge-linux-x86_64.tar.gz`, `astound-bridge-linux-aarch64.tar.gz` | Linux (glibc ≥ 2.35) |
-| `astound-bridge-macos.dmg` | macOS, universal (Apple Silicon + Intel) |
-| `astound-bridge-windows.exe` | Windows x86_64 |
+| `dynapps-bridge-linux-x86_64.tar.gz`, `dynapps-bridge-linux-aarch64.tar.gz` | Linux (glibc ≥ 2.35) |
+| `dynapps-bridge-macos.dmg` | macOS, universal (Apple Silicon + Intel) |
+| `dynapps-bridge-windows.exe` | Windows x86_64 |
 | `install.sh` | Linux one-liner installer |
 
 ```bash
@@ -145,7 +145,7 @@ curl -fsSL <gateway>/files/downloads/install.sh | sh -s -- \
 The macOS app and DMG are Developer ID signed, notarized and stapled, so
 Gatekeeper opens them without a prompt (`scripts/verify-bridge-macos.sh <dmg>`
 checks the team, notarization tickets and Gatekeeper verdict on a downloaded
-copy). Until Astound provides a Windows code-signing certificate the Windows
+copy). Until Dynapps provides a Windows code-signing certificate the Windows
 exe is **not OS-signed**: SmartScreen asks for *More info → Run anyway*. Every
 asset is checksummed (`SHA256SUMS`) and Sigstore-signed (`.sig`/`.pem`)
 regardless — see the release notes for the `cosign verify-blob` line.
@@ -159,15 +159,15 @@ instance signs with its own key (derived from the profile's
 learns the key on its first sync (trust-on-first-use) and stores it in
 `[sync] pinned_pubkey` **together with the gateway it was learned from**. A
 pin for one gateway is ignored for another, and the next sync re-learns it.
-`astound-bridge doctor` reports which gateway the pin belongs to.
+`dynapps-bridge doctor` reports which gateway the pin belongs to.
 
 The key can also be supplied out of band, and that source always wins:
 
 | source | where | precedence |
 |---|---|---|
-| env var | `ASTOUND_BRIDGE_POLICY_PUBKEY` | highest |
-| managed policy | Windows `HKLM\SOFTWARE\Policies\astound` / `HKCU\…`, value `manifestPubkey`; macOS `io.systemprompt.astound` plist | second |
-| config file | `[sync] pinned_pubkey` + `pinned_pubkey_gateway` in `astound-bridge.toml` | lowest |
+| env var | `DYNAPPS_BRIDGE_POLICY_PUBKEY` | highest |
+| managed policy | Windows `HKLM\SOFTWARE\Policies\dynapps` / `HKCU\…`, value `manifestPubkey`; macOS `io.systemprompt.dynapps` plist | second |
+| config file | `[sync] pinned_pubkey` + `pinned_pubkey_gateway` in `dynapps-bridge.toml` | lowest |
 
 A sync that fails with *"does not match the pubkey pinned from the policy"*
 means one of the first two rows holds a key for a different gateway. Read the
@@ -175,7 +175,7 @@ current gateway's key and repin:
 
 ```bash
 curl -s http://localhost:8080/v1/bridge/pubkey
-astound-bridge install --apply --pubkey <base64 from the response>
+dynapps-bridge install --apply --pubkey <base64 from the response>
 ```
 
 ### Windows: which registry hive the policy lands in
@@ -186,7 +186,7 @@ elevated (or via `install --apply`, which prompts once). Cowork honours HKCU
 only while no HKLM key exists, so the bridge refuses an HKCU write that a
 conflicting HKLM key would shadow and says so in the sync result. Every write
 is read back; a value that did not land is reported, never assumed.
-`astound-bridge doctor` shows which hive holds the policy.
+`dynapps-bridge doctor` shows which hive holds the policy.
 
 ## Building from source instead
 

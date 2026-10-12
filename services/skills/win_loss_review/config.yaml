@@ -6,7 +6,7 @@ description: Build a win-loss analysis from closed Salesforce opportunities, sta
 enabled: true
 file: SKILL.md
 tags:
-- astound
+- dynapps
 - salesforce
 - sales
 category: business

@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-# Astound Digital
+# Dynapps
 
 **Nothing in this file is a startup routine.** It describes how to do work in this
 repo *once you have been given a task*. On arrival, run no commands and read no
@@ -39,8 +39,8 @@ crate, `version = "0.40.0"` means `>=0.40.0, <0.41.0`, so a patch pointing at a
 the published crate and the build passes having proved nothing. Bump the pins in
 **both** workspaces (`Cargo.toml` and `tests/Cargo.toml`; `[patch]` is
 per-workspace) and check with `scripts/sync-core-version.sh <core-version> --check`.
-Astound's own version is separate (`scripts/sync-release-version.sh`): an
-astound release does not need a core release.
+Dynapps's own version is separate (`scripts/sync-release-version.sh`): an
+dynapps release does not need a core release.
 The only proof the patch is live is the build log: it must name
 `../systemprompt-core` paths. A bare `v0.40.0` with no path means the pins
 are still wrong.
@@ -399,6 +399,10 @@ was an empty `accepted_betas` list with the body field forwarded alone.
 
 ## Operating on production from this machine
 
+The `production` profile targets the systemprompt.io cloud tenant: Fly app
+`sp-e43527c1cbb5`, reachable at `https://e43527c1cbb5.systemprompt.io` and served
+under the brand URL `https://dynapps.systemprompt.io`.
+
 Two separate auth planes; nothing tells you which one a command wants:
 
 | plane | command | what it unlocks |
@@ -527,7 +531,7 @@ and artifacts — `admin agents list` returning zero rows is the correct answer.
 2. **Rust code -> `extensions/`** — All `.rs` files live here.
 3. **Config only -> `services/`** — YAML/Markdown only. No Rust code.
 4. **CSS files -> `storage/files/css/`** — NEVER put CSS in `extensions/*/assets/css/`.
-5. **Brand name is `Astound Digital`** — Use "Astound Digital" for display, "astounddigital.com" for URLs.
+5. **Brand name is `Dynapps`** — Use "Dynapps" for display, "dynapps.es" for URLs.
 6. **It's a library, not a framework** — Embedded code you own and extend. NEVER call it a "framework".
 7. **Demo scripts must work on macOS and Linux** — BSD vs GNU differ on `grep -oP`, `head -n -1`, `sha256sum`, `sed -i`, and binary downloads (pick `hey_darwin_amd64` vs `hey_linux_amd64`). `demo/_common.sh` provides `install_hey()` for the last case; prefer `grep -oE` + `sed -n 's/.../\1/p'` over `grep -oP … \K …`.
 8. **No Co-Authored-By in commits** — `coauthorAttribution: false` is set in `.claude/settings.json`. Never add `Co-Authored-By:` trailers to commit messages.
@@ -598,8 +602,8 @@ Each plugin is a directory holding one `config.yaml` — `services/plugins/<id>/
 
 ```yaml
 plugin:
-  id: astound-commons
-  name: "Astound Commons"
+  id: dynapps-commons
+  name: "Dynapps Commons"
   version: "1.0.0"
   enabled: true
   skills:
@@ -622,7 +626,7 @@ Every id listed must resolve to a real top-level resource in `services/`. `Servi
 
 Skills follow the same nested shape: `services/skills/<id>/config.yaml`, with the instruction body beside it. So do marketplaces (`services/marketplaces/<id>/config.yaml`) and artifacts (`services/artifacts/<id>/config.yaml`).
 
-**Skill ids are `snake_case` in `services/` and dashed everywhere else.** Core renders a skill for every host as `<id>` with `_` → `-` (`/astound-commons:who-am-i` for `services/skills/who_am_i/`), the hooks report the dashed name, and every analytics key is the dashed `plugin:skill`. Code that starts from a services id and needs the host or analytics form goes through `extensions/web/shared/admin-core/src/util/skill_ref.rs`; never compare the two spellings directly.
+**Skill ids are `snake_case` in `services/` and dashed everywhere else.** Core renders a skill for every host as `<id>` with `_` → `-` (`/dynapps-commons:who-am-i` for `services/skills/who_am_i/`), the hooks report the dashed name, and every analytics key is the dashed `plugin:skill`. Code that starts from a services id and needs the host or analytics form goes through `extensions/web/shared/admin-core/src/util/skill_ref.rs`; never compare the two spellings directly.
 
 **Every entitlement is declared in `services/access-control/rules.yaml`** — one block per
 entity (`marketplace/<id>`, `plugin/<id>`, `skill/<id>`, `mcp_server/<id>`, `gateway_route/*`),
@@ -633,15 +637,12 @@ insert-only, overwrite-from-code, or export-to-code. Console edits on a shared b
 reason. Model and procedure: `/documentation/access-control`.
 
 **Sources, planes, sync.** `/admin/sync` ("Code ↔ Instance") is the one sync system. A
-*source* is where declarations come from, each with a content hash: `base` is this tree and
-`bundle:<name>` is each remote kit the profile pins (`services.sources[]`, by digest). A *plane*
+*source* is where declarations come from, each with a content hash; this instance pins no
+remote bundles, so the only source is `base`, this tree. A *plane*
 is what those declarations project into the database — `access_control`, `groups` and
 `gateway_policies` (`repositories/sync/registry.rs`; `gateway_policies` is also edited live at
 `/admin/gateway/policies`, since core reads `ai_gateway_policies` per request). Every apply
-records the declared hash, actor and mode in `sync_state`. Kits own content, this repo owns
-access: a kit ships no `access:` block; `rules.yaml` declares `marketplace/<id>` with
-`owner: bundle:<name>`, reported as *awaiting its bundle* until the source is active. Kit
-template and exporter: `deploy/kit/`, `just kit-export`, `just services-pin`. Doc:
+records the declared hash, actor and mode in `sync_state`. Doc:
 `/documentation/services-sync`.
 
-**`hooks: {governance: true}` belongs to exactly one plugin.** Claude Code runs plugin hooks session-globally, so `astound-commons` owns them because it is the plugin every signed-in user receives through the default marketplace. A second owner is another `govern` call per tool; an owner only some users receive leaves every other session ungoverned and unrecorded (no `plugin_usage_events`, so no skill invocations on the dashboard).
+**`hooks: {governance: true}` belongs to exactly one plugin.** Claude Code runs plugin hooks session-globally, so `dynapps-commons` owns them because it is the plugin every signed-in user receives through the default marketplace. A second owner is another `govern` call per tool; an owner only some users receive leaves every other session ungoverned and unrecorded (no `plugin_usage_events`, so no skill invocations on the dashboard).

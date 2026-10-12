@@ -6,7 +6,7 @@ description: 'Build a prospect brief from Salesforce data only (account, leads, 
 enabled: true
 file: SKILL.md
 tags:
-- astound
+- dynapps
 - salesforce
 - sales
 category: business

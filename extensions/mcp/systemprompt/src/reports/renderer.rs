@@ -9,7 +9,7 @@ use systemprompt::models::artifacts::ArtifactType;
 struct AdminRenderer;
 
 inventory::submit! {
-    UiRendererRegistration { name: "astound-admin-reports", factory: || std::sync::Arc::new(AdminRenderer) }
+    UiRendererRegistration { name: "dynapps-admin-reports", factory: || std::sync::Arc::new(AdminRenderer) }
 }
 
 impl UiRenderer for AdminRenderer {

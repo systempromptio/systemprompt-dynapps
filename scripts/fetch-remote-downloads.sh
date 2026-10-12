@@ -39,9 +39,9 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DOWNLOADS_DIR="$REPO_ROOT/storage/files/downloads"
-BASE="${DOWNLOADS_REMOTE_BASE:-https://astound.systemprompt.io/files/downloads}"
+BASE="${DOWNLOADS_REMOTE_BASE:-https://dynapps.systemprompt.io/files/downloads}"
 BASE="${BASE%/}"
-REPO="${DOWNLOADS_GH_REPO:-Astound-Digital/systemprompt-astound}"
+REPO="${DOWNLOADS_GH_REPO:-systempromptio/systemprompt-dynapps}"
 # Which release to backfill from. `latest` resolves the newest published
 # release; pin an explicit vX.Y.Z when rebuilding an older image.
 RELEASE_TAG="${DOWNLOADS_RELEASE_TAG:-latest}"
@@ -74,9 +74,9 @@ fi
 # Every asset a page links. Checksummed ones are listed bare — their .sha256
 # sidecar is fetched and verified alongside. install.sh has no sidecar.
 CHECKSUMMED=(
-    astound-bridge-windows.exe
-    astound-bridge-linux-x86_64.tar.gz
-    astound-bridge-macos.dmg
+    dynapps-bridge-windows.exe
+    dynapps-bridge-linux-x86_64.tar.gz
+    dynapps-bridge-macos.dmg
 )
 PLAIN=(
     install.sh
@@ -87,13 +87,13 @@ PLAIN=(
 # them, which is the point: a strict release must not be blocked on an artifact
 # nothing links.
 #
-# astound-bridge-macos.dmg moved to CHECKSUMMED above on 2026-09-11: the DMG is
+# dynapps-bridge-macos.dmg moved to CHECKSUMMED above on 2026-09-11: the DMG is
 # built, it ships in the release, and the homepage and header both link it. This
 # comment used to say it had never been built and the macOS links were commented
 # out site-wide — both stopped being true without anyone moving it, so a strict
 # release was not guarding a link the site actually serves.
 OPTIONAL_CHECKSUMMED=(
-    astound-bridge-linux-aarch64.tar.gz
+    dynapps-bridge-linux-aarch64.tar.gz
 )
 
 if command -v sha256sum >/dev/null 2>&1; then

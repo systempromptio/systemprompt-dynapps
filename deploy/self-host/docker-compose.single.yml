@@ -34,7 +34,7 @@ services:
       retries: 10
 
   app:
-    image: ghcr.io/astound-digital/systemprompt-astound:${SYSTEMPROMPT_TAG:?pin a release, e.g. 0.65.0}
+    image: ghcr.io/systempromptio/systemprompt-dynapps:${SYSTEMPROMPT_TAG:?pin a release, e.g. 0.65.0}
     restart: unless-stopped
     stop_grace_period: 30s
     depends_on:
@@ -44,7 +44,7 @@ services:
       SYSTEMPROMPT_PROFILE_DIR: /app/.systemprompt/profiles/self-host
       DATABASE_URL: ${DATABASE_URL:-postgres://systemprompt:${POSTGRES_PASSWORD:-}@postgres:5432/systemprompt}
     volumes:
-      - ${ASTOUND_PROFILE_DIR:-./profile}:/app/.systemprompt/profiles/self-host:ro
+      - ${DYNAPPS_PROFILE_DIR:-./profile}:/app/.systemprompt/profiles/self-host:ro
       - app_web:/app/web
       # Per-node runtime state (gateway accounting receipts); never share it.
       # Must be writable by uid 1000 (the image creates it so; a bind mount must be chowned).

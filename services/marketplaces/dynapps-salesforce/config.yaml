@@ -1,23 +1,22 @@
 marketplace:
-  id: astound-salesforce
-  name: "Astound Digital — Salesforce"
+  id: dynapps-salesforce
+  name: "Dynapps — Salesforce"
   description: "Salesforce account, pipeline, forecasting, meeting and outreach workflows with governed Headless 360 reads, approval-gated writes and dynamic visual artifacts."
   version: "1.1.0"
   visibility: private
   author:
-    name: Astound Digital
+    name: Dynapps
     email: ed@systemprompt.io
-  keywords: [astound, salesforce, sales, crm, reporting]
+  keywords: [dynapps, salesforce, sales, crm, reporting]
   license: Apache-2.0
   plugins:
     source: explicit
     include:
-      - astound-salesforce
+      - dynapps-salesforce
   mcp_servers:
     source: explicit
     include:
       - salesforce
-      - google_workspace
   agents:
     source: explicit
     include: []

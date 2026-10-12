@@ -6,7 +6,7 @@ set +x
 set -euo pipefail
 umask 077
 
-REPO="${APPLE_SIGNING_REPO:-Astound-Digital/systemprompt-astound}"
+REPO="${APPLE_SIGNING_REPO:-systempromptio/systemprompt-dynapps}"
 : "${APPLE_CERT_PEM:?path to Developer ID certificate PEM}"
 : "${APPLE_PRIVATE_KEY_PEM:?path to its private key PEM}"
 : "${APPLE_NOTARY_KEY:?path to App Store Connect .p8 key}"

@@ -3,22 +3,22 @@
 
 branding:
   # ===== CUSTOMIZE THESE FOR EACH DEMO CLIENT =====
-  name: "Astound Digital"
-  domain: "astounddigital.com"
-  display_name: "Astound Digital"
-  title: "Astound Digital — AI-Powered Commerce & Experience Solutions"
-  description: "Astound Digital delivers end-to-end digital commerce, data-driven strategy, AI solutions, marketing & CRM services for global brands seeking growth and transformation."
-  copyright: "2026 Astound Digital"
-  tagline: "Transformation That Endures."
-  themeColor: "#171717"
-  platform_name: "Astound Digital"
+  name: "Dynapps"
+  domain: "dynapps.es"
+  display_name: "Dynapps"
+  title: "Dynapps AI Gateway - governed Claude Code for Dynapps teams"
+  description: "Governed AI for Dynapps teams, inside Claude. One corporate sign-in connects Claude Code and Cowork to your organization's skills and tools, with every action audited."
+  copyright: "2026 Dynapps"
+  tagline: "Odoo, shaped around how you work."
+  themeColor: "#F13C42"
+  platform_name: "Dynapps"
   support_email: "ed@systemprompt.io"
   logo_light: "/files/images/logo.svg"
   logo_dark: "/files/images/logo-white.svg"
   favicon: "/files/images/favicon.ico"
-  twitter_handle: "@astounddigital"
+  twitter_handle: "@dynapps"
   password_hash: ""  # Set via: echo -n 'your-password' | sha256sum | cut -d' ' -f1
-  session_storage_key: "astoundDemoUnlocked"
+  session_storage_key: "dynappsDemoUnlocked"
   # Legacy fields (used by public site pipeline)
   display_sitename: true
   image: "/files/images/logo.png"
@@ -34,28 +34,28 @@ branding:
 
 fonts:
   body:
-    family: "Inter"
+    family: "Readex Pro"
     fallback: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
     files: []
   heading:
-    family: "Inter"
+    family: "Readex Pro"
     fallback: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
     files: []
   brand:
-    family: "Inter"
+    family: "Readex Pro"
     fallback: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
     files: []
 
-# Color palette - Astound Digital monochrome (off-black on paper, red accent)
+# Color palette - Dynapps (red primary, purple secondary, purple-red-orange gradient)
 colors:
   light:
     primary:
-      hsl: "hsl(0, 0%, 9%)"
-      rgb: [23, 23, 23]
+      hsl: "hsl(358, 87%, 59%)"
+      rgb: [241, 60, 66]
     secondary:
-      hsl: "hsl(0, 0%, 30%)"
-      rgb: [77, 77, 77]
-    accent: "#fe190a"
+      hsl: "hsl(274, 90%, 53%)"
+      rgb: [149, 28, 243]
+    accent: "#951CF3"
     success: "#10b981"
     warning: "#f59e0b"
     error: "#ef4444"
@@ -67,7 +67,7 @@ colors:
       errorContainer: "#FEE2E2"
     text:
       primary: "#171717"
-      secondary: "#4d4d4d"
+      secondary: "#535862"
       inverted: "#f8f7f3"
       disabled: "#b6b6b6"
     background:
@@ -80,12 +80,12 @@ colors:
 
   dark:
     primary:
-      hsl: "hsl(48, 26%, 96%)"
-      rgb: [248, 247, 243]
+      hsl: "hsl(358, 87%, 59%)"
+      rgb: [241, 60, 66]
     secondary:
-      hsl: "hsl(0, 0%, 71%)"
-      rgb: [182, 182, 182]
-    accent: "#fe190a"
+      hsl: "hsl(274, 90%, 53%)"
+      rgb: [149, 28, 243]
+    accent: "#951CF3"
     success: "#34d399"
     warning: "#fbbf24"
     error: "#f87171"
@@ -93,7 +93,7 @@ colors:
       default: "#171717"
       dark: "#0a0a0a"
       variant: "#292929"
-      secondaryContainer: "rgba(254, 25, 10, 0.1)"
+      secondaryContainer: "rgba(241, 60, 66, 0.1)"
       errorContainer: "rgba(248, 113, 113, 0.1)"
     text:
       primary: "#f8f7f3"
@@ -185,9 +185,9 @@ card:
     md: "16px"
     lg: "24px"
   gradient:
-    start: "rgba(23, 23, 23, 0.05)"
-    mid: "rgba(23, 23, 23, 0.025)"
-    end: "rgba(23, 23, 23, 0.01)"
+    start: "rgba(123, 0, 220, 0.05)"
+    mid: "rgba(241, 60, 66, 0.025)"
+    end: "rgba(255, 145, 31, 0.01)"
 
 mobile:
   spacing:

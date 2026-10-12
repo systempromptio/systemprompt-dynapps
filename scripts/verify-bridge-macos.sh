@@ -3,7 +3,7 @@
 # No execution or quarantine removal; suitable for untrusted release inputs.
 set -euo pipefail
 
-DMG="${1:?usage: verify-bridge-macos.sh path/to/astound-bridge-macos.dmg}"
+DMG="${1:?usage: verify-bridge-macos.sh path/to/dynapps-bridge-macos.dmg}"
 TEAM_ID="${APPLE_TEAM_ID:-7FSAPLA7RX}"
 [ "$(uname -s)" = Darwin ] || { echo 'macOS is required' >&2; exit 1; }
 [ -f "$DMG" ] || { echo "missing DMG: $DMG" >&2; exit 1; }
@@ -29,12 +29,12 @@ verify_identity "$DMG"
 spctl --assess --type open --context context:primary-signature --verbose=4 "$DMG"
 hdiutil attach "$DMG" -readonly -nobrowse -mountpoint "$MOUNT" -quiet
 [ "$(readlink "$MOUNT/Applications")" = /Applications ]
-APP="$WORK/AstoundBridge.app"
-ditto "$MOUNT/AstoundBridge.app" "$APP"
+APP="$WORK/DynappsBridge.app"
+ditto "$MOUNT/DynappsBridge.app" "$APP"
 hdiutil detach "$MOUNT" -quiet
 verify_identity "$APP"
 spctl --assess --type exec --verbose=4 "$APP"
-BIN="$APP/Contents/MacOS/astound-bridge"
+BIN="$APP/Contents/MacOS/dynapps-bridge"
 codesign --verify --strict "$BIN"
 codesign -d --verbose=4 "$BIN" 2>&1 | grep -E 'flags=.*runtime'
 lipo "$BIN" -verify_arch arm64 x86_64

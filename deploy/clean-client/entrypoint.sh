@@ -15,7 +15,7 @@ warn() { printf '\033[33mwarn:\033[0m %s\n' "$1" >&2; }
 for leaked in \
     "$HOME/.claude.json" \
     "$HOME/.claude/settings.json" \
-    "$HOME/.config/astound/astound-bridge.toml"
+    "$HOME/.config/dynapps/dynapps-bridge.toml"
 do
     if [ -e "$leaked" ] && [ "${CLEAN_CLIENT_ALLOW_STATE:-0}" != "1" ]; then
         fail "$leaked already exists — this container is not clean.
@@ -32,49 +32,49 @@ if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
 fi
 
 # ── Bridge availability ───────────────────────────────────────────────────────
-if command -v astound-bridge >/dev/null 2>&1; then
-    BRIDGE_STATUS="$(astound-bridge --version 2>/dev/null || echo 'present (version unavailable)')"
+if command -v dynapps-bridge >/dev/null 2>&1; then
+    BRIDGE_STATUS="$(dynapps-bridge --version 2>/dev/null || echo 'present (version unavailable)')"
 else
     BRIDGE_STATUS="NOT MOUNTED — build it with: cd bridge && cargo build --release"
 fi
 
 cat <<BANNER
 
-  Astound clean client — no config, no host state.
+  Dynapps clean client — no config, no host state.
 
-  gateway   ${ASTOUND_BRIDGE_GATEWAY_URL:-<unset>}
+  gateway   ${DYNAPPS_BRIDGE_GATEWAY_URL:-<unset>}
   bridge    ${BRIDGE_STATUS}
   home      ${HOME}
 
   Integration test sequence (device cert = the supported headless path):
 
-    mkdir -p ~/.config/astound
+    mkdir -p ~/.config/dynapps
     openssl req -x509 -newkey rsa:2048 -nodes -days 730 \
-      -keyout ~/.config/astound/device.key \
-      -out    ~/.config/astound/device.pem -subj "/CN=$(hostname)"
-    openssl x509 -in ~/.config/astound/device.pem -outform der | sha256sum
+      -keyout ~/.config/dynapps/device.key \
+      -out    ~/.config/dynapps/device.pem -subj "/CN=$(hostname)"
+    openssl x509 -in ~/.config/dynapps/device.pem -outform der | sha256sum
 
     # admin enrols that fingerprint:
     #   systemprompt admin bridge enroll-cert --user-id <uuid> --fingerprint <hex>
 
-    printf '\n[mtls]\ncert_keystore_ref = "%s/.config/astound/device.pem"\n' "$HOME" \
-      >> ~/.config/astound/astound-bridge.toml
+    printf '\n[mtls]\ncert_keystore_ref = "%s/.config/dynapps/device.pem"\n' "$HOME" \
+      >> ~/.config/dynapps/dynapps-bridge.toml
 
-    astound-bridge whoami                  # your identity, no PAT needed
-    astound-bridge install --apply --apply-schedule
-    astound-bridge sync --allow-tofu       # plugins, skills, agents, MCP
-    astound-bridge proxy &                 # no systemd here, so start it by hand
+    dynapps-bridge whoami                  # your identity, no PAT needed
+    dynapps-bridge install --apply --apply-schedule
+    dynapps-bridge sync --allow-tofu       # plugins, skills, agents, MCP
+    dynapps-bridge proxy &                 # no systemd here, so start it by hand
     claude                                 # org skills load, no manual exports
 
   'install --apply' merges the gateway settings into ~/.claude/settings.json,
   which Claude Code reads on every run — no new shell and nothing to source. It
-  also writes ~/.config/astound/env.sh and a managed block in ~/.profile, for
+  also writes ~/.config/dynapps/env.sh and a managed block in ~/.profile, for
   other Anthropic-API clients. '--apply-schedule' writes the systemd user units
   for sync and the proxy; this container has no systemd, so it warns and you run
-  'astound-bridge proxy' yourself. That degradation is part of what this
+  'dynapps-bridge proxy' yourself. That degradation is part of what this
   container tests.
 
-  Run 'astound-bridge doctor' if anything looks wrong — it names the cause,
+  Run 'dynapps-bridge doctor' if anything looks wrong — it names the cause,
   including whether the proxy is listening. With no Secret Service provider the
   bridge tiers down to the kernel keyring, then to process memory, and says so.
 

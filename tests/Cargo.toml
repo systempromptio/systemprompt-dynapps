@@ -139,7 +139,7 @@ single_use_lifetimes = "warn"
 [workspace.dependencies]
 # The shared test harness: one throwaway-database implementation, one skip
 # policy. Every DB-backed crate below depends on it.
-astound-test-common = { path = "common" }
+dynapps-test-common = { path = "common" }
 
 # Local extension crates under test (paths relative to tests/).
 systemprompt-mcp-shared = { path = "../extensions/mcp/shared" }

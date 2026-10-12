@@ -5,13 +5,13 @@ name: Release
 # IS the release — there is no separate tag step; this workflow creates the
 # tag. See docs/RELEASING.md and docs/BRANCHING.md.
 #
-#   * the gateway image  ghcr.io/astound-digital/systemprompt-astound
+#   * the gateway image  ghcr.io/systempromptio/systemprompt-dynapps
 #       :X.Y.Z (create-once)  :latest  :sha-<short>   — amd64 + arm64, cosign-signed
 #   * a GitHub Release vX.Y.Z (create-once) carrying
-#       astound-bridge-linux-{x86_64,aarch64}.tar.gz, astound-bridge-macos.dmg,
-#       astound-bridge-macos.zip, astound-bridge-windows.exe, their .sha256
+#       dynapps-bridge-linux-{x86_64,aarch64}.tar.gz, dynapps-bridge-macos.dmg,
+#       dynapps-bridge-macos.zip, dynapps-bridge-windows.exe, their .sha256
 #       sidecars, install.sh,
-#       systemprompt-astound-server-<version>-linux-{amd64,arm64}.tar.gz,
+#       systemprompt-dynapps-server-<version>-linux-{amd64,arm64}.tar.gz,
 #       SHA256SUMS, and a cosign keyless .sig/.pem per asset
 #
 # The bridge is built BEFORE the image on purpose: the image serves those
@@ -75,7 +75,7 @@ permissions:
 
 env:
   CARGO_TERM_COLOR: always
-  IMAGE: ghcr.io/astound-digital/systemprompt-astound
+  IMAGE: ghcr.io/systempromptio/systemprompt-dynapps
   DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run == true }}
 
 jobs:
@@ -237,21 +237,21 @@ jobs:
           # ubuntu-22.04: oldest runner glibc, so the tarball runs on the most
           # distributions. The packaging script derives the arch from uname.
           - runner: ubuntu-22.04
-            asset: astound-bridge-linux-x86_64.tar.gz
+            asset: dynapps-bridge-linux-x86_64.tar.gz
             script: scripts/package-bridge-linux.sh
           - runner: ubuntu-22.04-arm
-            asset: astound-bridge-linux-aarch64.tar.gz
+            asset: dynapps-bridge-linux-aarch64.tar.gz
             script: scripts/package-bridge-linux.sh
           # Windows is cross-built from Linux with cargo-xwin — the same path
           # `just bridge-package-windows` takes locally, so there is exactly one
           # Windows build definition and its two refuse-to-ship gates.
           - runner: ubuntu-22.04
-            asset: astound-bridge-windows.exe
+            asset: dynapps-bridge-windows.exe
             script: scripts/package-bridge-windows.sh
           - runner: macos-14
-            asset: astound-bridge-macos.dmg
+            asset: dynapps-bridge-macos.dmg
             # What the in-app updater downloads; the dmg stays the human one.
-            updater_asset: astound-bridge-macos.zip
+            updater_asset: dynapps-bridge-macos.zip
             script: scripts/package-bridge-macos.sh
     steps:
       - uses: actions/checkout@v7
@@ -335,9 +335,9 @@ jobs:
       - name: Verify the staged macOS download
         if: runner.os == 'macOS'
         run: |
-          dmg=storage/files/downloads/astound-bridge-macos.dmg
+          dmg=storage/files/downloads/dynapps-bridge-macos.dmg
           bash tests/release/macos-smoke.sh "$dmg" "$(shasum -a 256 "$dmg" | cut -d' ' -f1)"
-          zip=storage/files/downloads/astound-bridge-macos.zip
+          zip=storage/files/downloads/dynapps-bridge-macos.zip
           [ ! -f "$zip" ] || bash tests/release/macos-updater-zip.sh "$zip"
 
       - name: Tear down signing keychain
@@ -367,13 +367,13 @@ jobs:
         run: |
           sudo apt-get install -y --no-install-recommends osslsigncode
           echo "$WINDOWS_CERT_PFX_BASE64" | base64 -d > "$RUNNER_TEMP/cert.pfx"
-          exe=storage/files/downloads/astound-bridge-windows.exe
+          exe=storage/files/downloads/dynapps-bridge-windows.exe
           osslsigncode sign -pkcs12 "$RUNNER_TEMP/cert.pfx" -pass "$WINDOWS_CERT_PASSWORD" \
-            -n "Astound Bridge" -i https://astounddigital.com \
+            -n "Dynapps Bridge" -i https://www.dynapps.es \
             -t http://timestamp.digicert.com -h sha256 -in "$exe" -out "$exe.signed"
           rm -f "$RUNNER_TEMP/cert.pfx"
           mv "$exe.signed" "$exe"
-          (cd storage/files/downloads && sha256sum astound-bridge-windows.exe > astound-bridge-windows.exe.sha256)
+          (cd storage/files/downloads && sha256sum dynapps-bridge-windows.exe > dynapps-bridge-windows.exe.sha256)
           osslsigncode verify "$exe"
 
       - name: Record signing status
@@ -394,7 +394,7 @@ jobs:
             storage/files/downloads/${{ matrix.asset }}
             storage/files/downloads/${{ matrix.asset }}.sha256
             storage/files/downloads/${{ matrix.asset }}.signing
-            storage/files/downloads/astound-bridge-macos.zip*
+            storage/files/downloads/dynapps-bridge-macos.zip*
             storage/files/downloads/install.sh
           if-no-files-found: error
           retention-days: 7
@@ -426,12 +426,12 @@ jobs:
       - name: Assert every download asset is staged
         run: |
           cd storage/files/downloads
-          for f in astound-bridge-linux-x86_64.tar.gz astound-bridge-linux-aarch64.tar.gz \
-                   astound-bridge-macos.dmg astound-bridge-windows.exe install.sh; do
+          for f in dynapps-bridge-linux-x86_64.tar.gz dynapps-bridge-linux-aarch64.tar.gz \
+                   dynapps-bridge-macos.dmg dynapps-bridge-windows.exe install.sh; do
             [ -s "$f" ] || { echo "::error::missing download asset $f"; exit 1; }
           done
           for f in *.sha256; do sha256sum -c "$f"; done
-          rm -f *.signing astound-bridge-macos.zip astound-bridge-macos.zip.sha256
+          rm -f *.signing dynapps-bridge-macos.zip dynapps-bridge-macos.zip.sha256
           ls -la
 
       - uses: docker/setup-buildx-action@v3
@@ -472,7 +472,7 @@ jobs:
       - name: Stage server tarball
         run: |
           v=${{ needs.version.outputs.version }}
-          name=systemprompt-astound-server-$v-linux-${{ matrix.arch }}
+          name=systemprompt-dynapps-server-$v-linux-${{ matrix.arch }}
           mkdir -p "stage/$name/extensions/mcp"
           cp -r server-out/bin "stage/$name/bin"
           cp -r services "stage/$name/services"
@@ -519,7 +519,7 @@ jobs:
     env:
       VERSION: ${{ needs.version.outputs.version }}
       GHCR_AUTH: ${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}
-      ASTOUND_BUNDLE_SIGNING_SEED: ${{ secrets.ASTOUND_BUNDLE_SIGNING_SEED }}
+      DYNAPPS_BUNDLE_SIGNING_SEED: ${{ secrets.DYNAPPS_BUNDLE_SIGNING_SEED }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/download-artifact@v4
@@ -528,23 +528,23 @@ jobs:
           path: server
       - name: Unpack the server binary
         run: |
-          tar -xzf server/systemprompt-astound-server-$VERSION-linux-amd64.tar.gz -C server
-          echo "$PWD/server/systemprompt-astound-server-$VERSION-linux-amd64/bin" >> "$GITHUB_PATH"
+          tar -xzf server/systemprompt-dynapps-server-$VERSION-linux-amd64.tar.gz -C server
+          echo "$PWD/server/systemprompt-dynapps-server-$VERSION-linux-amd64/bin" >> "$GITHUB_PATH"
       - name: Pack and sign
         run: |
           mkdir -p dist
           sign=()
-          if [ -n "$ASTOUND_BUNDLE_SIGNING_SEED" ]; then sign=(--sign-key env:ASTOUND_BUNDLE_SIGNING_SEED); fi
+          if [ -n "$DYNAPPS_BUNDLE_SIGNING_SEED" ]; then sign=(--sign-key env:DYNAPPS_BUNDLE_SIGNING_SEED); fi
           systemprompt core services bundle \
-            --root services --out "dist/systemprompt-astound-base-$VERSION.tar.gz" \
+            --root services --out "dist/systemprompt-dynapps-base-$VERSION.tar.gz" \
             --version "$VERSION" "${sign[@]}" \
             --source-repo "$GITHUB_REPOSITORY" --source-commit "$GITHUB_SHA" --workflow-run "$GITHUB_RUN_ID"
       - name: Publish to GHCR
         if: env.DRY_RUN != 'true'
         run: |
           systemprompt core services publish \
-            --bundle "dist/systemprompt-astound-base-$VERSION.tar.gz" \
-            --to "oci://ghcr.io/astound-digital/systemprompt-astound-base:$VERSION" \
+            --bundle "dist/systemprompt-dynapps-base-$VERSION.tar.gz" \
+            --to "oci://ghcr.io/systempromptio/systemprompt-dynapps-base:$VERSION" \
             --auth env:GHCR_AUTH
       - uses: actions/upload-artifact@v4
         with:
@@ -668,17 +668,17 @@ jobs:
         run: |
           # The per-asset .sha256 sidecars stay: install.sh fetches <base>/<asset>.sha256.
           # The gateway's update feed reads the updater zip's digest from here.
-          sha256sum astound-bridge-linux-x86_64.tar.gz astound-bridge-linux-aarch64.tar.gz \
-            astound-bridge-macos.dmg astound-bridge-macos.zip astound-bridge-windows.exe \
-            systemprompt-astound-server-*.tar.gz install.sh > SHA256SUMS
+          sha256sum dynapps-bridge-linux-x86_64.tar.gz dynapps-bridge-linux-aarch64.tar.gz \
+            dynapps-bridge-macos.dmg dynapps-bridge-macos.zip dynapps-bridge-windows.exe \
+            systemprompt-dynapps-server-*.tar.gz install.sh > SHA256SUMS
           cat SHA256SUMS
       - uses: sigstore/cosign-installer@v3
       - name: Sign every asset (cosign keyless)
         working-directory: dist
         run: |
-          for f in astound-bridge-linux-x86_64.tar.gz astound-bridge-linux-aarch64.tar.gz \
-                   astound-bridge-macos.dmg astound-bridge-macos.zip astound-bridge-windows.exe \
-                   systemprompt-astound-server-*.tar.gz install.sh SHA256SUMS; do
+          for f in dynapps-bridge-linux-x86_64.tar.gz dynapps-bridge-linux-aarch64.tar.gz \
+                   dynapps-bridge-macos.dmg dynapps-bridge-macos.zip dynapps-bridge-windows.exe \
+                   systemprompt-dynapps-server-*.tar.gz install.sh SHA256SUMS; do
             cosign sign-blob --yes --output-signature "$f.sig" --output-certificate "$f.pem" "$f"
           done
 
@@ -691,11 +691,11 @@ jobs:
             echo "::error::bridge/Cargo.toml is $bridge_version but the release is $VERSION (run scripts/sync-release-version.sh $VERSION)"
             exit 1
           fi
-          mac=$(cat dist/astound-bridge-macos.dmg.signing)
-          win=$(cat dist/astound-bridge-windows.exe.signing)
+          mac=$(cat dist/dynapps-bridge-macos.dmg.signing)
+          win=$(cat dist/dynapps-bridge-windows.exe.signing)
           rm -f dist/*.signing
           {
-            echo "## Astound Digital gateway $TAG"
+            echo "## Dynapps gateway $TAG"
             echo
             core=$(sed -n 's/^systemprompt = { version = "\([0-9.]*\)".*/\1/p' Cargo.toml | head -1)
             echo "Built against published \`systemprompt\` core **$core** (crates.io); the bridge carries the release version."
@@ -713,11 +713,11 @@ jobs:
             echo
             echo "| asset | platform | OS signing |"
             echo "|---|---|---|"
-            echo "| astound-bridge-linux-x86_64.tar.gz | Linux x86_64 (glibc ≥ 2.35) | n/a |"
-            echo "| astound-bridge-linux-aarch64.tar.gz | Linux aarch64 | n/a |"
-            echo "| astound-bridge-macos.dmg | macOS universal (Apple Silicon + Intel) | $mac |"
-            echo "| astound-bridge-macos.zip | macOS in-app updater (same bundle as the dmg) | $mac |"
-            echo "| astound-bridge-windows.exe | Windows x86_64 | $win |"
+            echo "| dynapps-bridge-linux-x86_64.tar.gz | Linux x86_64 (glibc ≥ 2.35) | n/a |"
+            echo "| dynapps-bridge-linux-aarch64.tar.gz | Linux aarch64 | n/a |"
+            echo "| dynapps-bridge-macos.dmg | macOS universal (Apple Silicon + Intel) | $mac |"
+            echo "| dynapps-bridge-macos.zip | macOS in-app updater (same bundle as the dmg) | $mac |"
+            echo "| dynapps-bridge-windows.exe | Windows x86_64 | $win |"
             echo
             if [ "$mac" != "notarized" ]; then
               echo "**macOS is not notarized**: Gatekeeper will block the first open. Right-click → Open, or \`xattr -d com.apple.quarantine\` the app."
@@ -749,7 +749,7 @@ jobs:
       - name: Create release
         run: |
           gh release create "$TAG" --target "$GITHUB_SHA" --title "$TAG" --notes-file notes.md \
-            dist/astound-bridge-* dist/systemprompt-astound-server-* dist/systemprompt-astound-base-* \
+            dist/dynapps-bridge-* dist/systemprompt-dynapps-server-* dist/systemprompt-dynapps-base-* \
             dist/install.sh dist/install.sh.sig dist/install.sh.pem \
             dist/SHA256SUMS dist/SHA256SUMS.sig dist/SHA256SUMS.pem
 
@@ -800,7 +800,7 @@ jobs:
             docker volume create "$vol" > /dev/null
             docker run -d --name "boot_$db" --network host \
               -e ANTHROPIC_API_KEY=sk-ant-release-gate \
-              -e SYSTEMPROMPT_ADMIN_EMAIL=release-gate@astounddigital.com \
+              -e SYSTEMPROMPT_ADMIN_EMAIL=ed@systemprompt.io \
               -e DATABASE_URL="postgres://test:test@localhost:5432/$db" \
               -v "$vol:/app/storage/data" "$ref" > /dev/null
             healthy=""
@@ -844,11 +844,11 @@ jobs:
           docker pull "$ref"
           out=$(docker run --rm --entrypoint /app/bin/systemprompt "$ref" --version)
           echo "$out"
-          # --version reports the core crate version, not astound's.
+          # --version reports the core crate version, not dynapps's.
           core="${{ needs.version.outputs.core_version }}"
           [ -n "$core" ] && echo "$out" | grep -q "$core" || { echo "::error::--version does not report core $core"; exit 1; }
           docker run --rm --entrypoint ls "$ref" -la /app/storage/files/downloads
-          docker run --rm --entrypoint sh "$ref" -c 'for f in astound-bridge-linux-x86_64.tar.gz astound-bridge-linux-aarch64.tar.gz astound-bridge-macos.dmg astound-bridge-windows.exe install.sh; do test -s /app/storage/files/downloads/$f || exit 1; done'
+          docker run --rm --entrypoint sh "$ref" -c 'for f in dynapps-bridge-linux-x86_64.tar.gz dynapps-bridge-linux-aarch64.tar.gz dynapps-bridge-macos.dmg dynapps-bridge-windows.exe install.sh; do test -s /app/storage/files/downloads/$f || exit 1; done'
           docker run --rm --entrypoint ls "$ref" /app/bin/systemprompt-mcp-agent
           docker buildx imagetools inspect "$ref" | tee inspect.txt
           grep -q 'linux/amd64' inspect.txt && grep -q 'linux/arm64' inspect.txt

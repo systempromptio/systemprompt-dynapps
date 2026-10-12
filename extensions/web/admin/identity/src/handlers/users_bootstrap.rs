@@ -1,11 +1,11 @@
 //! `POST /users` — operator-created accounts and their credential bootstrap.
 //!
 //! Split from `users.rs` at the 300-line ceiling. A user created here gets no
-//! credential of its own: Astound SSO is the only door, so the row waits to be
-//! adopted by the first assertion carrying the matching email and a mapped
-//! Active Directory group. The groups and projects picked in the drawer are
-//! written as manual grants alongside the row, so the account is scoped before
-//! that first sign-in rather than after it.
+//! credential of its own: Dynapps SSO (Microsoft Entra ID) is the only door,
+//! so the row waits to be adopted by the first assertion carrying the matching
+//! email and a mapped Entra ID group. The groups and projects picked in the
+//! drawer are written as manual grants alongside the row, so the account is
+//! scoped before that first sign-in rather than after it.
 
 use std::sync::Arc;
 
@@ -99,8 +99,8 @@ fn already_held_is_fine(res: AdminResult<()>) -> AdminResult<()> {
 }
 
 fn sign_in_note() -> String {
-    "User created. They sign in with Astound SSO — there is no link to send. The groups and \
-     projects chosen here are manual grants; any their Active Directory group maps to are \
-     added at their first sign-in."
+    "User created. They sign in with Dynapps SSO (Microsoft Entra ID) — there is no link to \
+     send. The groups and projects chosen here are manual grants; any their Entra ID group \
+     maps to are added at their first sign-in."
         .to_owned()
 }

@@ -3,7 +3,7 @@
 #
 #     scripts/clean-client-install.sh sp-live-...
 #
-# Takes a PAT and proves the whole claim: a machine that has never seen Astound
+# Takes a PAT and proves the whole claim: a machine that has never seen Dynapps
 # ends up running Claude Code against the gateway with the managed MCP servers
 # already authenticated, and OpenCode enrolled with a provider block, an API
 # key, and a loopback proxy that answers it. Everything between those two points is automated —
@@ -22,8 +22,8 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-IMAGE="astound-clean-client:local"
-CONTAINER="astound-clean-client-install"
+IMAGE="dynapps-clean-client:local"
+CONTAINER="dynapps-clean-client-install"
 
 # The gateway is reached from inside the container, so it cannot be localhost.
 GATEWAY="${GATEWAY:-http://host.docker.internal:8080}"
@@ -33,7 +33,7 @@ say()  { printf '\033[1m==>\033[0m %s\n' "$*"; }
 warn() { printf '\033[33mwarn:\033[0m %s\n' "$*" >&2; }
 fail() { printf '\033[31mERROR:\033[0m %s\n' "$*" >&2; exit 1; }
 
-PAT="${1:-${ASTOUND_BRIDGE_PAT:-}}"
+PAT="${1:-${DYNAPPS_BRIDGE_PAT:-}}"
 case "$PAT" in
     sp-live-*) ;;
     "") fail "usage: $0 sp-live-...
@@ -87,7 +87,7 @@ say "running the published installer in a config-free container"
 docker run --rm --name "$CONTAINER" \
     --hostname clean-client \
     --add-host host.docker.internal:host-gateway \
-    -e ASTOUND_BRIDGE_GATEWAY_URL="$GATEWAY" \
+    -e DYNAPPS_BRIDGE_GATEWAY_URL="$GATEWAY" \
     -v "$REPO_ROOT/deploy/clean-client/gateway-forward.sh:/usr/local/bin/gateway-forward:ro" \
     --entrypoint bash \
     "$IMAGE" -lc '
@@ -191,8 +191,8 @@ echo
 echo "── feedback plane ────────────────────────────────────────────────────"
 
 # Written by `bridge login` (which `install --pat` runs) under the bridge
-# working dir — ~/.local/state/astound-bridge on Linux, XDG_STATE_HOME aside.
-DEVICE_JSON="${XDG_STATE_HOME:-$HOME/.local/state}/astound-bridge/metadata/feedback/device.json"
+# working dir — ~/.local/state/dynapps-bridge on Linux, XDG_STATE_HOME aside.
+DEVICE_JSON="${XDG_STATE_HOME:-$HOME/.local/state}/dynapps-bridge/metadata/feedback/device.json"
 if [ -f "$DEVICE_JSON" ]; then
     echo "[OK  ] device credential enrolled at login ($DEVICE_JSON)"
     [ "$(stat -c %a "$DEVICE_JSON")" = "600" ] \
@@ -290,7 +290,7 @@ if [ -f "$OC_PLUGIN" ]; then
     else
         echo "[FAIL] OpenCode hook plugin has no chat.headers hook — requests are not session-linked"; rc=1
     fi
-    LOOPBACK_KEY_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/astound/bridge-loopback.key"
+    LOOPBACK_KEY_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/dynapps/bridge-loopback.key"
     if [ -r "$LOOPBACK_KEY_FILE" ] && grep -qF "$(cat "$LOOPBACK_KEY_FILE")" "$OC_PLUGIN"; then
         echo "[FAIL] OpenCode hook plugin embeds the raw loopback secret"; rc=1
     else
@@ -310,7 +310,7 @@ fi
 
 # The baseURL OpenCode was given must actually answer. Reading the key from the
 # file rather than from the config proves the two halves agree.
-KEY_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/astound/bridge-loopback.key"
+KEY_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/dynapps/bridge-loopback.key"
 if [ -r "$KEY_FILE" ]; then
     CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
         -H "Authorization: Bearer $(cat "$KEY_FILE")" \

@@ -8,7 +8,7 @@ publish = false
 workspace = true
 
 [dependencies]
-astound-test-common = { workspace = true }
+dynapps-test-common = { workspace = true }
 systemprompt = { workspace = true, features = ["full"] }
 systemprompt-web-admin-identity = { workspace = true }
 systemprompt-web-admin-platform = { workspace = true }

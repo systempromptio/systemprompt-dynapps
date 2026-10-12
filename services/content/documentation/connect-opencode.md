@@ -1,7 +1,7 @@
 ---
 title: "Connect OpenCode"
-description: "Route OpenCode through the Astound gateway: one installer flag writes the provider block and the API key, so every prompt is governed and audited instead of being refused with 403."
-author: "Astound Digital"
+description: "Route OpenCode through the Dynapps gateway: one installer flag writes the provider block and the API key, so every prompt is governed and audited instead of being refused with 403."
+author: "Dynapps"
 slug: "connect-opencode"
 keywords: "opencode, vs code, github copilot, byok, custom endpoint, connect, install, bridge, openai compatible, provider, auth.json, loopback proxy, 403, no loopback credential presented, mcp"
 kind: "guide"
@@ -14,7 +14,7 @@ after_reading_this:
   - "Know which files the bridge writes and which tier each lands in"
   - "Diagnose a 403 from the loopback proxy without guessing at credentials"
   - "Use the OpenCode desktop app against the same enrolment, with no CLI on PATH"
-  - "Point VS Code GitHub Copilot Chat at the gateway (documented, not validated by Astound)"
+  - "Point VS Code GitHub Copilot Chat at the gateway (documented, not validated by Dynapps)"
 related_playbooks:
   - title: "Connect Claude Code"
     url: "/documentation/connect-claude-code"
@@ -32,7 +32,7 @@ it against the gateway's OpenAI-compatible endpoint, as a provider called
 model vendor's key, and every request is governed, priced, and audited like any
 other.
 
-Use your administrator's gateway HTTPS URL and trusted manifest public key. The Astound endpoint is `https://sp-dev.astound.digital`; `https://astound.systemprompt.io` is a separate test environment. Install OpenCode using your organization's approved method before enrolment.
+Use your administrator's gateway HTTPS URL and trusted manifest public key. The Dynapps endpoint is `https://dynapps.systemprompt.io`. Install OpenCode using your organization's approved method before enrolment.
 
 ## 1. Get a connect code
 
@@ -52,32 +52,32 @@ systemprompt admin bridge issue-code --user-id you@example.com
 
 ```bash
 GATEWAY_URL="https://gateway.example.com"
-curl -fSLo astound-install.sh "$GATEWAY_URL/files/downloads/install.sh"
-less astound-install.sh
-sh astound-install.sh --download-base "$GATEWAY_URL/files/downloads" \
+curl -fSLo dynapps-install.sh "$GATEWAY_URL/files/downloads/install.sh"
+less dynapps-install.sh
+sh dynapps-install.sh --download-base "$GATEWAY_URL/files/downloads" \
   --gateway "$GATEWAY_URL" --pubkey "ADMINISTRATOR_PROVIDED_BASE64_PUBLIC_KEY" \
   --code "YOUR_CONNECT_CODE" --host opencode
 ```
 
 The installer downloads the bridge, verifies its checksum, redeems the code for
 a durable token, starts the loopback proxy, enrols the clients you named, and
-finishes by running `astound-bridge doctor`.
+finishes by running `dynapps-bridge doctor`.
 
 `--host` is repeatable and accepts a comma-separated list, so a machine running
 both clients takes `--host claude-code,opencode`. Left off entirely, the
 installer enrols Claude Code and adds OpenCode only when the `opencode` binary
 is **already** on your `PATH` — so if you install OpenCode later, re-run the
-enrolment. The same list can come from `$ASTOUND_HOSTS` for unattended
+enrolment. The same list can come from `$DYNAPPS_HOSTS` for unattended
 provisioning. The installer accepts `--host` only; `--hosts all` is a flag of
 the bridge binary, below.
 
 Already have the bridge? Enrol OpenCode on its own, without reinstalling:
 
 ```bash
-astound-bridge install --host opencode
+dynapps-bridge install --host opencode
 ```
 
-`astound-bridge install` also takes `--hosts all` to enrol every client this
+`dynapps-bridge install` also takes `--hosts all` to enrol every client this
 build supports. Name either `--hosts all` or one or more `--host <id>`, never
 both on the same line.
 
@@ -94,7 +94,7 @@ Use the verified `$Bridge` executable path from that guide. Keep the app or prox
 
 ## 3. Verify
 
-`astound-bridge doctor` reports the proxy, the credential, and the synced
+`dynapps-bridge doctor` reports the proxy, the credential, and the synced
 manifest in one pass, and is the fastest way to tell a local problem from a
 gateway one.
 
@@ -102,14 +102,14 @@ The loopback proxy authenticates every request with a bearer token local to this
 machine. Ask it for the model list:
 
 ```bash
-curl -s -H "Authorization: Bearer $(cat ~/.config/astound/bridge-loopback.key)" \
+curl -s -H "Authorization: Bearer $(cat ~/.config/dynapps/bridge-loopback.key)" \
   http://127.0.0.1:48217/v1/models
 ```
 
 A JSON list of model ids means the proxy is up, your gateway credential is
 valid, and the wire OpenCode uses is answering.
 
-The `curl` example above uses Linux default paths and port; use the actual endpoint reported by `astound-bridge diagnostics` if they differ. Do not paste credentials or authentication-file contents into support logs.
+The `curl` example above uses Linux default paths and port; use the actual endpoint reported by `dynapps-bridge diagnostics` if they differ. Do not paste credentials or authentication-file contents into support logs.
 
 On Linux, confirm OpenCode itself has the provider and the key:
 
@@ -144,7 +144,7 @@ Skills are not listed anywhere in the app. OpenCode exposes them to the model
 through its `skill` tool, so ask the assistant what skills it has, or name one in
 your prompt, and it loads the matching `SKILL.md`. If the app shows a model from
 another provider, the managed file is missing or stale: run
-`astound-bridge install --host opencode` (as administrator on Windows) and
+`dynapps-bridge install --host opencode` (as administrator on Windows) and
 restart the app.
 
 ## What the bridge writes
@@ -179,7 +179,7 @@ OpenCode makes to the loopback proxy. Its hook events carry the same id, plus
 before forwarding it, so a whole OpenCode conversation
 — every request in it and the spend it incurs — is attributed to the skills it
 invoked, the same way a Claude Code session is. Nothing in your OpenCode config
-needs changing for this; the plugin is written by `astound-bridge install
+needs changing for this; the plugin is written by `dynapps-bridge install
 --host opencode` and refreshed by `sync`.
 
 The device the proxy stamps on those requests is enrolled automatically when
@@ -222,7 +222,7 @@ editing either tier or adding another provider. Governance is enforced at the
 gateway — scope checks, secret scanning, blocklists, rate limits and the audit
 trail all run there, on every request, regardless of what any local file says.
 
-Note that `sudo astound-bridge install --host opencode` does **not** work today:
+Note that `sudo dynapps-bridge install --host opencode` does **not** work today:
 the bridge resolves your credentials from `$HOME`, which under `sudo` is
 `/root`, where no enrolment exists. Run the enrolment as your normal user.
 
@@ -248,9 +248,9 @@ a discovery filter rather than a permission problem — ask an administrator.
 
 ## VS Code GitHub Copilot
 
-> **Documented, not validated by Astound** (REQ-054 / FR-17.3). The steps below follow
+> **Documented, not validated by Dynapps** (REQ-054 / FR-17.3). The steps below follow
 > Microsoft's and third-party gateway guides for Copilot's "bring your own model" Custom
-> Endpoint provider as of October 2026. Astound has not run them end to end; check the
+> Endpoint provider as of October 2026. Dynapps has not run them end to end; check the
 > setting names against your VS Code version.
 
 Copilot Chat in VS Code 1.122 or later can send Chat requests to an OpenAI-compatible
@@ -259,7 +259,7 @@ endpoint through a **Custom Endpoint** model group:
 1. On Copilot Business or Enterprise, a GitHub organization administrator must first
    enable **Bring Your Own Language Model Key in VS Code** in the Copilot policy settings.
 2. In VS Code run **Chat: Manage Language Models**, choose **Add Models → Custom
-   Endpoint**, name the group (for example `Astound`), paste the API key, and pick the API
+   Endpoint**, name the group (for example `Dynapps`), paste the API key, and pick the API
    type **Chat Completions**.
 3. VS Code opens `chatLanguageModels.json` with the group created. Leave the generated
    `apiKey` secret reference alone and add the models:
@@ -267,14 +267,14 @@ endpoint through a **Custom Endpoint** model group:
    ```json
    [
      {
-       "name": "Astound",
+       "name": "Dynapps",
        "vendor": "customendpoint",
        "apiKey": "${input:chat.lm.secret...}",
        "apiType": "chat-completions",
        "models": [
          {
            "id": "claude-sonnet-5",
-           "name": "Claude Sonnet 5 (Astound)",
+           "name": "Claude Sonnet 5 (Dynapps)",
            "url": "http://127.0.0.1:48217/v1/chat/completions",
            "toolCalling": true
          }
@@ -302,23 +302,23 @@ are routed; inline completions and next-edit suggestions still go to GitHub.
 
 | What you see | What it means | What to do |
 |---|---|---|
-| `403 forbidden: no loopback credential presented` | OpenCode reached the proxy with no `Authorization` header. Almost always the provider block or `auth.json` was never written: `sync` installs MCP connectors and no credential, so the connectors appear and inference does not. | `astound-bridge install --host opencode`, then restart OpenCode. |
+| `403 forbidden: no loopback credential presented` | OpenCode reached the proxy with no `Authorization` header. Almost always the provider block or `auth.json` was never written: `sync` installs MCP connectors and no credential, so the connectors appear and inference does not. | `dynapps-bridge install --host opencode`, then restart OpenCode. |
 | `403 forbidden: bad loopback secret` | The credential is real but belongs to a different bridge install answering on this port — most often Windows and WSL2 sharing `127.0.0.1:48217`. The body names the config directory of the install that answered. | Decide which install owns the port, stop the other, then re-run the enrolment from the one you keep. |
 | MCP servers are listed but every prompt fails | The same missing-credential case as the first row; the two are written by different steps. | As above. |
-| `connection refused` on `127.0.0.1:48217` | The proxy is not running. | Keep the bridge app running, or run `astound-bridge proxy` in a separate terminal (`& $Bridge proxy` in PowerShell). |
-| The model list is empty, or a model is rejected | Your role does not reach that model, or the manifest has not synced yet. | `astound-bridge sync`, then check the list with the `curl` above. |
+| `connection refused` on `127.0.0.1:48217` | The proxy is not running. | Keep the bridge app running, or run `dynapps-bridge proxy` in a separate terminal (`& $Bridge proxy` in PowerShell). |
+| The model list is empty, or a model is rejected | Your role does not reach that model, or the manifest has not synced yet. | `dynapps-bridge sync`, then check the list with the `curl` above. |
 | `--host opencode: this build does not offer the 'opencode' host` | The bridge binary you installed was built without the OpenCode integration. | Re-download the bridge from this instance rather than reusing an older binary. |
-| Enrolment says the instance does not enable this host | OpenCode is not in the host list your instance publishes for you. | Ask an administrator to enable the `opencode` host, then `astound-bridge sync` and re-run the enrolment. |
+| Enrolment says the instance does not enable this host | OpenCode is not in the host list your instance publishes for you. | Ask an administrator to enable the `opencode` host, then `dynapps-bridge sync` and re-run the enrolment. |
 | The provider block landed in your own config, not `/etc` | `/etc/opencode` was not writable and Linux has no elevation path to offer. | It works as is. To use the admin tier, have an administrator create `/etc/opencode` writable by you, then re-run the enrolment. |
 | Upstream errors naming a missing API key | The gateway has no credential configured for the provider behind that model. | Nothing to fix locally — report the model id to an administrator. |
-| Skills you run in OpenCode do not appear on the Skill conversations page | The reporting plugin is missing (`~/.config/opencode/plugin/systemprompt-hooks.js`), the proxy is not running, or no plugin on your instance owns governance hooks. | `astound-bridge sync`, confirm the file exists, keep the proxy running, then re-run the skill. |
+| Skills you run in OpenCode do not appear on the Skill conversations page | The reporting plugin is missing (`~/.config/opencode/plugin/systemprompt-hooks.js`), the proxy is not running, or no plugin on your instance owns governance hooks. | `dynapps-bridge sync`, confirm the file exists, keep the proxy running, then re-run the skill. |
 
 ## Removing it
 
 Un-enrol OpenCode and leave everything else in place:
 
 ```bash
-astound-bridge uninstall --host opencode
+dynapps-bridge uninstall --host opencode
 ```
 
 In Windows PowerShell, use `& $Bridge uninstall --host opencode`.
@@ -327,8 +327,8 @@ This strips the bridge-owned provider block from both tiers, removes the
 `systemprompt` entry from `auth.json` and deletes the reporting plugin,
 leaving every other provider, plugin and key you added untouched.
 
-To remove the bridge itself, `astound-bridge uninstall` with no `--host`, or
-`astound-bridge uninstall --purge` to take the cached credentials and synced
+To remove the bridge itself, `dynapps-bridge uninstall` with no `--host`, or
+`dynapps-bridge uninstall --purge` to take the cached credentials and synced
 manifest with it.
 
 ---

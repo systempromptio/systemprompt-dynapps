@@ -7,7 +7,7 @@
 
 use std::path::PathBuf;
 
-use astound_test_common::{TempDb, db_or_skip, empty_db_or_skip, repo_path};
+use dynapps_test_common::{TempDb, db_or_skip, empty_db_or_skip, repo_path};
 use systemprompt::database::{MigrationConfig, install_extension_schemas_full};
 use systemprompt::extension::ExtensionRegistry;
 
@@ -157,7 +157,8 @@ fn every_rung_header_names_its_release() {
     for rung in ladder() {
         let header = rung.sql.lines().next().unwrap_or_default();
         let recorded = header
-            .strip_prefix("-- systemprompt-astound release-baseline: ")
+            .strip_prefix("-- systemprompt-dynapps release-baseline: ")
+            .or_else(|| header.strip_prefix("-- systemprompt-astound release-baseline: "))
             .and_then(|l| l.split_whitespace().next())
             .unwrap_or_else(|| panic!("rung {} has no release-baseline header", rung.version));
         assert_eq!(recorded, rung.version, "{header}");

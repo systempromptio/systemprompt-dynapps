@@ -91,7 +91,7 @@ async fn identity(
             let response = http
                 .get(url)
                 .bearer_auth(&grant.access_token)
-                .header("User-Agent", "Astound-Systemprompt")
+                .header("User-Agent", "Dynapps-systemprompt")
                 .send()
                 .await
                 .map_err(|_redacted_error| {
@@ -176,7 +176,7 @@ async fn handshake(
             session,
             json!({"jsonrpc":"2.0", "id":1, "method":"initialize",
             "params":{"protocolVersion":"2025-03-26", "capabilities":{},
-                "clientInfo":{"name":"Astound connection verification", "version":"1.0"}}}),
+                "clientInfo":{"name":"Dynapps connection verification", "version":"1.0"}}}),
         )
         .await?;
         rpc(

@@ -1,4 +1,5 @@
-//! "Sign in with Astound SSO" — the branches reachable without a live farm.
+//! "Sign in with Dynapps SSO (Microsoft Entra ID)" — the branches reachable
+//! without a live tenant.
 //!
 //! SSO reports failure by *redirecting*, not by returning an error status: a
 //! `500` on the callback would strand the browser on a dead end instead of
@@ -8,10 +9,11 @@
 //!
 //! The suite runs the router twice. Once with SSO disabled, which is how
 //! [`crate::app::App::new`] builds it and which pins the "unavailable"
-//! response every route owes when no `adfs.yaml` is present. Once with the
-//! real, committed AD FS federation metadata, so the `AuthnRequest`, the state
-//! cookie, and the callback's whole validation ladder — including a genuine
-//! XML-DSig check against the pinned certificate — run for real, offline.
+//! response every route owes when no `adfs.yaml` is present. Once with an
+//! Entra ID-shaped federation metadata fixture (placeholder tenant, throwaway
+//! self-signed certificate), so the `AuthnRequest`, the state cookie, and the
+//! callback's whole validation ladder — including a genuine XML-DSig check
+//! against the pinned certificate — run for real, offline.
 
 use std::collections::BTreeMap;
 
@@ -24,22 +26,27 @@ use crate::{globals, principal};
 
 const START: &str = "/admin/auth/adfs/start";
 const ACS_PATH: &str = "/admin/auth/adfs/acs";
-const ACS: &str = "https://sp-dev.astound.digital/admin/auth/adfs/acs";
+const ACS: &str = "https://dynapps.systemprompt.io/admin/auth/adfs/acs";
+const ENTRA_SSO: &str =
+    "https://login.microsoftonline.com/00000000-0000-4000-8000-000000000e17/saml2";
 
 fn configured() -> AdfsConfig {
-    let metadata = globals::repo_root().join("services/web/config/adfs-federation-metadata.xml");
+    let metadata =
+        globals::repo_root().join("tests/contract/admin/fixtures/entra-federation-metadata.xml");
     AdfsConfig {
         enabled: true,
-        entity_id: "https://sp-dev.astound.digital/saml/metadata".to_owned(),
+        entity_id: "https://dynapps.systemprompt.io/saml/metadata".to_owned(),
         acs_url: ACS.to_owned(),
-        idp_metadata_path: "adfs-federation-metadata.xml".to_owned(),
-        idp_metadata_xml: std::fs::read_to_string(metadata).expect("committed IdP metadata"),
+        idp_metadata_path: "entra-federation-metadata.xml".to_owned(),
+        idp_metadata_url: None,
+        idp_metadata_xml: std::fs::read_to_string(metadata).expect("Entra ID metadata fixture"),
         allowed_email_domains: vec!["contract.test".to_owned()],
         auto_provision: true,
         email_attribute: "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"
             .to_owned(),
-        name_attribute: "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name".to_owned(),
-        groups_attribute: "http://temp/groups".to_owned(),
+        name_attribute: "http://schemas.microsoft.com/identity/claims/displayname".to_owned(),
+        groups_attribute: "http://schemas.microsoft.com/ws/2008/06/identity/claims/groups"
+            .to_owned(),
         deny_without_group: true,
         allow_idp_initiated: true,
         clock_skew_seconds: 120,
@@ -56,7 +63,7 @@ async fn adfs_routes_report_unavailable_when_sso_is_not_configured() {
         return;
     }
     let Some(db) = TempDb::create().await else {
-        eprintln!("no DATABASE_URL — skipping ADFS SSO suite");
+        eprintln!("no DATABASE_URL — skipping SSO suite");
         return;
     };
 
@@ -103,10 +110,10 @@ async fn adfs_routes_report_unavailable_when_sso_is_not_configured() {
     );
 }
 
-// With SSO configured, `start` builds the AuthnRequest redirect to the farm
+// With SSO configured, `start` builds the AuthnRequest redirect to Entra ID
 // and the state cookie the callback later validates against.
 #[tokio::test(flavor = "multi_thread")]
-async fn adfs_start_redirects_to_the_farm_with_a_request_and_a_state_cookie() {
+async fn adfs_start_redirects_to_entra_id_with_a_request_and_a_state_cookie() {
     if !globals::init() {
         return;
     }
@@ -136,11 +143,7 @@ async fn adfs_start_redirects_to_the_farm_with_a_request_and_a_state_cookie() {
             continue;
         }
         let target = headers.location.clone().unwrap_or_default();
-        for marker in [
-            "https://login.astoundcommerce.com/adfs/ls/",
-            "SAMLRequest=",
-            "RelayState=",
-        ] {
+        for marker in [ENTRA_SSO, "SAMLRequest=", "RelayState="] {
             if !target.contains(marker) {
                 failures.push(format!("  {path} -> SSO URL {target:?} lacks {marker:?}"));
             }
@@ -166,7 +169,7 @@ async fn adfs_start_redirects_to_the_farm_with_a_request_and_a_state_cookie() {
     db.cleanup().await;
     assert!(
         failures.is_empty(),
-        "{} ADFS start case(s) failed:\n{}",
+        "{} SSO start case(s) failed:\n{}",
         failures.len(),
         failures.join("\n")
     );
@@ -250,7 +253,7 @@ async fn adfs_callback_rejects_every_malformed_return() {
     db.cleanup().await;
     assert!(
         failures.is_empty(),
-        "{} ADFS callback case(s) failed:\n{}",
+        "{} SSO callback case(s) failed:\n{}",
         failures.len(),
         failures.join("\n")
     );

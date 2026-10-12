@@ -22,10 +22,10 @@ fn commons_export_round_trips_without_instance_access_or_mcp_files() {
         .expect("load configured services");
     let out = tempfile::tempdir().expect("kit output directory");
 
-    let report = export_kit(&services, &services_root, "astound-commons", out.path())
+    let report = export_kit(&services, &services_root, "dynapps-commons", out.path())
         .expect("export configured commons marketplace");
-    assert_eq!(report.marketplace, "astound-commons");
-    assert_eq!(report.plugins, vec!["astound-commons".to_owned()]);
+    assert_eq!(report.marketplace, "dynapps-commons");
+    assert_eq!(report.plugins, vec!["dynapps-commons".to_owned()]);
     assert!(report.skills.contains("who_am_i"));
     assert!(report.files > 0);
     let diffs = round_trip(out.path(), &services_root, &report).expect("strict re-import");
@@ -39,7 +39,7 @@ fn commons_export_round_trips_without_instance_access_or_mcp_files() {
             .expect("marketplace manifest"),
     )
     .expect("portable marketplace JSON");
-    assert_eq!(manifest["name"], "astound-commons");
+    assert_eq!(manifest["name"], "dynapps-commons");
     assert_eq!(manifest["plugins"][0]["version"], "1.0.0");
     let sidecar = std::fs::read_to_string(out.path().join(".claude-plugin/systemprompt.yaml"))
         .expect("marketplace sidecar");
@@ -49,19 +49,19 @@ fn commons_export_round_trips_without_instance_access_or_mcp_files() {
     );
     assert!(
         !out.path()
-            .join("plugins/astound-commons/.mcp.json")
+            .join("plugins/dynapps-commons/.mcp.json")
             .exists(),
         "instance MCP connection configuration is not portable"
     );
     assert!(
         !out.path()
-            .join("plugins/astound-commons/config.yaml")
+            .join("plugins/dynapps-commons/config.yaml")
             .exists(),
         "the source config file, which can carry instance-only fields, is not copied"
     );
     let exported_skill = std::fs::read_to_string(
         out.path()
-            .join("plugins/astound-commons/skills/who-am-i/SKILL.md"),
+            .join("plugins/dynapps-commons/skills/who-am-i/SKILL.md"),
     )
     .expect("exported skill instructions");
     let source_skill = std::fs::read_to_string(services_root.join("skills/who_am_i/SKILL.md"))

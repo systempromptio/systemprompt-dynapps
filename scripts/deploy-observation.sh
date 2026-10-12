@@ -14,7 +14,7 @@ read_health() {
     local code="${body##*$'\n'}"
     local payload="${body%$'\n'*}"
     echo "    $(date -u +%H:%M:%S) $code $payload"
-    # /health reports the core crate version, not astound's.
+    # /health reports the core crate version, not dynapps's.
     [ "$code" = 200 ] && jq -e --arg version "$CORE_VERSION" '.status == "healthy" and .version == $version' <<<"$payload" >/dev/null
 }
 

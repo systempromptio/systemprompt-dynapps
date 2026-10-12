@@ -14,13 +14,13 @@ async fn identities_are_keyed_per_org_and_listed_for_authz() {
     let alice = unique("sf-alice");
     insert_user(&db.pool, &alice).await;
     let alice = user_id(&alice);
-    repo::upsert_identity(&db.pool, &alice, "salesforce", "alice@astound.prod")
+    repo::upsert_identity(&db.pool, &alice, "salesforce", "alice@dynapps.es")
         .await
         .unwrap();
     repo::upsert_identity(&db.pool, &alice, "salesforce-uat", "alice@client-a.uat")
         .await
         .unwrap();
-    repo::upsert_identity(&db.pool, &alice, "salesforce", "alice.fixed@astound.prod")
+    repo::upsert_identity(&db.pool, &alice, "salesforce", "alice.fixed@dynapps.es")
         .await
         .unwrap();
 
@@ -29,7 +29,7 @@ async fn identities_are_keyed_per_org_and_listed_for_authz() {
             .await
             .unwrap()
             .as_deref(),
-        Some("alice.fixed@astound.prod")
+        Some("alice.fixed@dynapps.es")
     );
     assert_eq!(
         repo::find_username(&db.pool, &alice, "salesforce-uat")

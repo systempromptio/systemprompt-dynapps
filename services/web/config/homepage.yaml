@@ -1,14 +1,14 @@
 # Homepage Configuration
 #
-# Front page for the Astound Digital internal AI platform. The hero below
+# Front page for the Dynapps internal AI gateway. The hero below
 # is authoritative. Body sections (value pillars, department grid, integrations,
 # how to use) live in services/web/templates/homepage.html.
 
 hero:
   title: "The Internal AI Platform,"
-  title_highlight: "by Astound"
-  subtitle: "Governed AI for Astound Digital teams, inside Claude. One corporate sign-in connects Claude Code and Cowork to your organization's skills and tools. Every change is confirmed with you first, and every action is audited."
-  eyebrow: "Astound Digital · Internal AI Platform"
+  title_highlight: "by Dynapps"
+  subtitle: "Governed AI for Dynapps teams, inside Claude. One corporate sign-in connects Claude Code and Cowork to your organization's skills and tools. Every change is confirmed with you first, and every action is audited."
+  eyebrow: "Dynapps · Internal AI Gateway"
   cta: "Documentation"
   cta_url: "/documentation/"
   cta_secondary: ""

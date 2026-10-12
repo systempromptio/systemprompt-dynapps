@@ -35,7 +35,7 @@ cd deploy/self-host
 ## 2b. Prove the inputs before starting anything
 
 ```bash
-./preflight.sh --image ghcr.io/astound-digital/systemprompt-astound:0.65.0 \
+./preflight.sh --image ghcr.io/systempromptio/systemprompt-dynapps:0.65.0 \
   --profile-dir ./profile --external-url https://ai.example.com
 ```
 
@@ -71,7 +71,7 @@ docker compose -f docker-compose.single.yml exec \
 ./verify-node.sh --url http://localhost:8080 --container "$(docker compose -f docker-compose.single.yml ps -q app)" --version 0.65.0
 ```
 
-Then configure AD FS SSO (`/documentation/adfs-sso-setup`), sign in at
+Then configure Microsoft Entra ID (SAML) SSO (`/documentation/adfs-sso-setup`), sign in at
 `https://ai.example.com/admin/login` as the admin e-mail you gave, and hand users the
 `https://ai.example.com/documentation/downloads` page.
 

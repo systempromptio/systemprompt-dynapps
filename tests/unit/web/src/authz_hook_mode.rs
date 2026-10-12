@@ -37,7 +37,7 @@ fn every_rendered_profile_runs_the_hook_in_process() {
             "      mode: extension\n",
         ),
         (
-            "deploy/helm/systemprompt-astound/templates/_helpers.tpl",
+            "deploy/helm/systemprompt-dynapps/templates/_helpers.tpl",
             "\"mode\" \"extension\"",
         ),
         ("justfile", "admin config governance set --mode extension"),

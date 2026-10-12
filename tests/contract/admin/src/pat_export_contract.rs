@@ -1,8 +1,8 @@
 //! A personal access token on the export routes, driven end-to-end.
 //!
 //! Exporting their own transcripts and figures with a PAT is how users and
-//! their CI read astound without a browser session. The PAT resolves to its
-//! owner and meets the gates a session does, on `GET /admin/export/…` only:
+//! their CI read the instance without a browser session. The PAT resolves to
+//! its owner and meets the gates a session does, on `GET /admin/export/…` only:
 //! every other admin route, and any write, refuses it. A user's own
 //! transcripts are `?source=history` ("My conversations"); the console sources
 //! need a console seat, from a PAT exactly as from a browser.

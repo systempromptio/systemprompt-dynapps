@@ -1,7 +1,7 @@
 ---
 title: "MCP, Tool Governance & Distribution"
 description: "Govern tool calls with the four-stage pre-execution chain, run a declarative MCP server registry with instant revocation, and distribute, version and roll back skills and plugins through signed catalogs."
-author: "Astound Digital"
+author: "Dynapps"
 slug: "enterprise-tool-governance"
 keywords: "mcp, tools, governance, registry, revocation, signing, plugins, skills, blocklist, warn mode, versions, rollback, tool schema"
 kind: "guide"
@@ -32,7 +32,7 @@ decision is audited under a trace id. **The chain has run in warn mode since
 2026-09-04.** It records what it would have refused and lets the call
 continue. Authentication and access-control entitlements are still enforced.
 MCP servers are declared in `services/mcp/` and administered at `/admin/mcp`,
-with per-server OAuth scopes, entitlement by role or AD group, and immediate
+with per-server OAuth scopes, entitlement by role or Entra group, and immediate
 revocation. Skills and plugins are delivered through signed manifests. Each
 marketplace version is a content hash that can be compared and rolled back.
 
@@ -40,14 +40,14 @@ marketplace version is a content hash that can be compared and rolled back.
 
 The chain runs **before the tool executes**, synchronously, on every
 governed call. Local tools in Claude Code are governed through the hooks that
-the `astound-commons` plugin installs. Routing model inference alone does not
+the `dynapps-commons` plugin installs. Routing model inference alone does not
 govern local tools. The stages, as configured in
 `services/governance/config.yaml`:
 
 1. **Scope check.** Tools prefixed `mcp__systemprompt__` (the admin MCP
    server) need an admin caller.
 2. **Secret scan.** The tool arguments are checked against credential
-   patterns owned by Astound (GitHub, Anthropic, OpenAI and Google keys, PEM
+   patterns owned by Dynapps (GitHub, Anthropic, OpenAI and Google keys, PEM
    keys, JWTs, database URLs that embed a password, structured
    `password`/`secret` fields). A high-entropy check runs alongside and only
    observes.
@@ -79,7 +79,6 @@ five:
 |---|---|
 | `systemprompt` | this platform's admin CLI. It cannot be removed and is admin-only |
 | `atlassian` | Jira and Confluence, under each person's own Atlassian account |
-| `google_workspace` | Google Agent Search over Drive, Gmail and Calendar, searched live and filtered to what the signed-in person can already open |
 | `salesforce` | Salesforce's hosted MCP, authenticated as the signed-in person |
 | `sfcore_dev` | the SFCore team's development-workflow server, called with a short-lived token this instance signs |
 

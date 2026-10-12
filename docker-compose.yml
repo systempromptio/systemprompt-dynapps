@@ -27,7 +27,7 @@ services:
     # `docker login ghcr.io` with a token holding read:packages
     # (docs/install/docker.md). To build from source instead:
     #   docker compose -f docker-compose.yml -f docker-compose.build.yml up --build
-    image: ghcr.io/astound-digital/systemprompt-astound:${SYSTEMPROMPT_TAG:-latest}
+    image: ghcr.io/systempromptio/systemprompt-dynapps:${SYSTEMPROMPT_TAG:-latest}
     restart: unless-stopped
     depends_on:
       postgres:

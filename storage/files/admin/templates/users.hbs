@@ -7,7 +7,7 @@
         {{#if can_write}}
         {{#if create_user.sso_provisions}}
         <button type="button" class="sp-btn sp-btn--sm sp-btn--primary" data-action="create-user" disabled
-                title="Accounts are created by Astound SSO at first sign-in (auto_provision is on). Set auto_provision: false in services/web/config/adfs.yaml to pre-create accounts here.">New user (via SSO)</button>
+                title="Accounts are created by Dynapps SSO (Microsoft Entra ID) at first sign-in (auto_provision is on). Set auto_provision: false in services/web/config/adfs.yaml to pre-create accounts here.">New user (via SSO)</button>
         {{else}}
         <button type="button" class="sp-btn sp-btn--sm sp-btn--primary" data-action="create-user">New user</button>
         {{/if}}

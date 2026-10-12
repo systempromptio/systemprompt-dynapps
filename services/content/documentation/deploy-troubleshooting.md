@@ -1,7 +1,7 @@
 ---
 title: "Deploy: Validate Every Stage"
 description: "The deployment as a sequence of stages, each with the command that proves it, the output to expect, and the failure signatures with their fixes."
-author: "Astound Digital"
+author: "Dynapps"
 slug: "deploy-troubleshooting"
 keywords: "troubleshooting, deploy, preflight, validate, image, ghcr, postgresql, secrets, vault, profile, entrypoint, health, load balancer, boot"
 kind: "guide"
@@ -33,8 +33,8 @@ starts, `verify-node.sh` proves stages 5 to 8 after it does. Run both after
 every change and keep their output with the change record.
 
 ```bash
-./preflight.sh --image ghcr.io/astound-digital/systemprompt-astound:@RELEASE_VERSION@ \
-  --profile-dir /etc/astound/profile --external-url https://ai.example.com
+./preflight.sh --image ghcr.io/systempromptio/systemprompt-dynapps:@RELEASE_VERSION@ \
+  --profile-dir /etc/dynapps/profile --external-url https://ai.example.com
 ./verify-node.sh --url http://localhost:8080 --container <app container> --version @RELEASE_VERSION@
 ```
 
@@ -53,16 +53,16 @@ every change and keep their output with the change record.
 
 ```bash
 echo "$GHCR_TOKEN" | docker login ghcr.io -u <github-user> --password-stdin
-docker pull ghcr.io/astound-digital/systemprompt-astound:@RELEASE_VERSION@
-docker image inspect ghcr.io/astound-digital/systemprompt-astound:@RELEASE_VERSION@ \
+docker pull ghcr.io/systempromptio/systemprompt-dynapps:@RELEASE_VERSION@
+docker image inspect ghcr.io/systempromptio/systemprompt-dynapps:@RELEASE_VERSION@ \
   -f '{{index .Config.Labels "org.opencontainers.image.version"}}'      # @RELEASE_VERSION@
 docker run --rm --entrypoint /app/bin/systemprompt \
-  ghcr.io/astound-digital/systemprompt-astound:@RELEASE_VERSION@ --version   # systemprompt @RELEASE_VERSION@
+  ghcr.io/systempromptio/systemprompt-dynapps:@RELEASE_VERSION@ --version   # systemprompt @RELEASE_VERSION@
 ```
 
 | Signature | Meaning | Fix |
 |-----------|---------|-----|
-| `denied` / `unauthorized` on pull | token lacks `read:packages`, or the token's account has no access to the package | ask Astound for a token on the package; `docker logout ghcr.io` then log in again |
+| `denied` / `unauthorized` on pull | token lacks `read:packages`, or the token's account has no access to the package | ask systemprompt.io for a token on the package; `docker logout ghcr.io` then log in again |
 | `manifest unknown` | the tag does not exist | versioned tags are `X.Y.Z` without a `v`; check the release list |
 | label version differs from the tag | wrong image | never run it; the tag was pulled from the wrong registry or mirror |
 | `cosign verify` fails | the image was not built by the release pipeline | do not run it |
@@ -77,12 +77,12 @@ source of truth, write it onto each node at deploy time, mount the
 directory read-only.
 
 ```bash
-jq -r 'keys[]' /etc/astound/profile/secrets.json
+jq -r 'keys[]' /etc/dynapps/profile/secrets.json
 # database_url  oauth_at_rest_pepper  manifest_signing_secret_seed  signing_key_pem  anthropic
-stat -c '%a %U' /etc/astound/profile/secrets.json                    # 600 <uid 1000>
+stat -c '%a %U' /etc/dynapps/profile/secrets.json                    # 600 <uid 1000>
 jq -r .manifest_signing_secret_seed secrets.json | base64 -d | wc -c   # 32
 jq -r .signing_key_pem secrets.json | base64 -d | openssl pkey -noout && echo key-ok
-sha256sum /etc/astound/profile/secrets.json                          # identical on every node
+sha256sum /etc/dynapps/profile/secrets.json                          # identical on every node
 ```
 
 | Signature | Meaning | Fix |
@@ -97,7 +97,7 @@ sha256sum /etc/astound/profile/secrets.json                          # identical
 
 The container reads exactly one directory:
 `SYSTEMPROMPT_PROFILE_DIR=/app/.systemprompt/profiles/self-host`, which the
-compose file binds from `ASTOUND_PROFILE_DIR` on the host. The profile carries
+compose file binds from `DYNAPPS_PROFILE_DIR` on the host. The profile carries
 only what differs per deployment — URLs, database, admin, secrets pointer,
 governance hook. The provider catalog (models, pricing, limits) and the gateway
 routes are not in it: they ship inside the image as
@@ -111,23 +111,23 @@ container will mount, and inspect the catalog the image carries:
 
 ```bash
 docker run --rm --entrypoint /app/bin/systemprompt \
-  -v /etc/astound/profile:/p:ro -e SYSTEMPROMPT_PROFILE=/p/profile.yaml \
-  ghcr.io/astound-digital/systemprompt-astound:@RELEASE_VERSION@ admin config validate --strict /p/profile.yaml
-grep -E 'api_external_url|jwt_issuer|^  email' /etc/astound/profile/profile.yaml
-head -1 /etc/astound/profile/profile.yaml
+  -v /etc/dynapps/profile:/p:ro -e SYSTEMPROMPT_PROFILE=/p/profile.yaml \
+  ghcr.io/systempromptio/systemprompt-dynapps:@RELEASE_VERSION@ admin config validate --strict /p/profile.yaml
+grep -E 'api_external_url|jwt_issuer|^  email' /etc/dynapps/profile/profile.yaml
+head -1 /etc/dynapps/profile/profile.yaml
 docker run --rm --entrypoint /app/bin/systemprompt \
-  -v /etc/astound/profile:/p:ro -e SYSTEMPROMPT_PROFILE=/p/profile.yaml \
-  ghcr.io/astound-digital/systemprompt-astound:@RELEASE_VERSION@ admin config catalog provider list
+  -v /etc/dynapps/profile:/p:ro -e SYSTEMPROMPT_PROFILE=/p/profile.yaml \
+  ghcr.io/systempromptio/systemprompt-dynapps:@RELEASE_VERSION@ admin config catalog provider list
 docker run --rm --entrypoint /app/bin/systemprompt \
-  -v /etc/astound/profile:/p:ro -e SYSTEMPROMPT_PROFILE=/p/profile.yaml \
-  ghcr.io/astound-digital/systemprompt-astound:@RELEASE_VERSION@ admin config gateway route list
+  -v /etc/dynapps/profile:/p:ro -e SYSTEMPROMPT_PROFILE=/p/profile.yaml \
+  ghcr.io/systempromptio/systemprompt-dynapps:@RELEASE_VERSION@ admin config gateway route list
 ```
 
 After boot, confirm the running container sees the same file:
 
 ```bash
 docker compose exec app sh -c 'sha256sum /app/.systemprompt/profiles/self-host/profile.yaml'
-sha256sum /etc/astound/profile/profile.yaml
+sha256sum /etc/dynapps/profile/profile.yaml
 ```
 
 | Signature | Meaning | Fix |
@@ -135,7 +135,7 @@ sha256sum /etc/astound/profile/profile.yaml
 | `unknown field` on validate | a key the image does not know; the template is from a different release | re-render from the bundle that matches the image version (`head -1 profile.yaml` names the template release) |
 | `still carries a top-level \`providers:\` section ... move the block into services/ai/providers.yaml` | a profile rendered from an older bundle, when the catalog and routes still lived in the profile | re-render from the @RELEASE_VERSION@ bundle; the catalog is in the image, nothing to copy |
 | `admin config catalog provider list` is empty, or `/v1/messages` answers `No gateway route matches model` | the image's `services/config/config.yaml` does not include `ai/providers.yaml` and `ai/gateway.yaml` | a build defect, not a deployment one — report the image tag |
-| `SYSTEMPROMPT_PROFILE_DIR is set but .../profile.yaml is missing` | wrong `ASTOUND_PROFILE_DIR`, or the directory is not readable | fix the path in the environment; check ownership |
+| `SYSTEMPROMPT_PROFILE_DIR is set but .../profile.yaml is missing` | wrong `DYNAPPS_PROFILE_DIR`, or the directory is not readable | fix the path in the environment; check ownership |
 | `No admin email configured for 'admin'` | `system_admin.email` missing | re-render with `--admin-email` |
 | sign-in page loads but login fails with a cookie error | `api_external_url` is not the URL in the browser, or not https | re-render with the real public URL |
 

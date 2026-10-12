@@ -5338,16 +5338,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "systemprompt-astound"
-version = "0.65.0"
-dependencies = [
- "anyhow",
- "systemprompt",
- "systemprompt-web-extension",
- "tokio",
-]
-
-[[package]]
 name = "systemprompt-cli"
 version = "0.65.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5556,6 +5546,16 @@ dependencies = [
  "clap",
  "systemprompt",
  "systemprompt-web-admin-identity",
+ "tokio",
+]
+
+[[package]]
+name = "systemprompt-dynapps"
+version = "0.65.0"
+dependencies = [
+ "anyhow",
+ "systemprompt",
+ "systemprompt-web-extension",
  "tokio",
 ]
 
@@ -6429,6 +6429,7 @@ dependencies = [
  "hex",
  "inventory",
  "rand 0.9.5",
+ "reqwest 0.13.5",
  "saml",
  "serde",
  "serde_json",

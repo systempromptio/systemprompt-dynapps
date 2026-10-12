@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 sha="${1:?usage: check-gates-green.sh <full-sha>}"
-repo=Astound-Digital/systemprompt-astound
+repo=systempromptio/systemprompt-dynapps
 [[ "$sha" =~ ^[0-9a-f]{40}$ ]] || { echo 'ERROR: expected a full commit SHA' >&2; exit 1; }
 query="repos/$repo/actions/workflows/gates.yml/runs?event=push&branch=next&head_sha=$sha&per_page=1"
 run="$(gh api "$query")"

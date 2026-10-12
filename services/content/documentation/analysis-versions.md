@@ -1,7 +1,7 @@
 ---
 title: "Versions: Marketplace Hashes, History and Compare"
 description: "Every marketplace by the content hash of what it serves: how a version is computed and recorded, how to read its history and inline diff, how to compare two versions skill by skill, and where delivery evidence lives."
-author: "Astound Digital"
+author: "Dynapps"
 slug: "analysis-versions"
 keywords: "versions, marketplace hash, content hash, history, compare, diff, distribution, receipts, coverage, bundle, base, kit"
 kind: "guide"

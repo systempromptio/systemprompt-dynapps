@@ -1,4 +1,4 @@
-# Include the Astound account UI in every local and packaged bridge build.
+# Include the Dynapps account UI in every local and packaged bridge build.
 [env]
 SYSTEMPROMPT_BRIDGE_WEB_OVERLAY = { value = "web", relative = true }
 # This repo embeds its own branded Windows resource (build.rs); core must not

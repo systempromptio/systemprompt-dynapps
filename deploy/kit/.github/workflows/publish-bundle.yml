@@ -3,12 +3,12 @@
 #
 # Copied verbatim into a kit repository (see README-INTEGRATION.md) apart from
 # the two env values below. Secrets: BUNDLE_SIGNING_SEED (the Ed25519 seed
-# whose public half the instance pins) is required. ASTOUND_RELEASE_TOKEN
-# (Contents: read on the Astound release repository) is needed while that
+# whose public half the instance pins) is required. DYNAPPS_RELEASE_TOKEN
+# (Contents: read on the Dynapps release repository) is needed while that
 # repository is private — the job downloads its server binary and base bundle
 # from there. SYSTEMPROMPT_ADMIN_TOKEN + SYSTEMPROMPT_API_URL are optional:
 # with them the job asks the instance to import the new composition in place;
-# without them an operator presses Import on /admin/sync. ASTOUND_STATS_PAT is
+# without them an operator presses Import on /admin/sync. DYNAPPS_STATS_PAT is
 # optional too: a personal access token (owner with console access) that lets
 # the job write the instance's run record per kit version into the release
 # notes (tools/kit-stats.sh; kit-stats.yml refreshes it daily). The image is
@@ -34,18 +34,18 @@ on:
   workflow_dispatch:
 
 env:
-  # The systemprompt-astound release whose server binary and base bundle this
+  # The systemprompt-dynapps release whose server binary and base bundle this
   # kit validates against. `latest` is the newest published release (drafts
   # and pre-releases excluded), resolved once per run by the validate job and
   # handed to publish, so the kit follows the base without a hand-kept pin.
   # A `vX.Y.Z` tag pins it deliberately.
-  ASTOUND_RELEASE: latest
-  ASTOUND_REPO: Astound-Digital/systemprompt-astound
-  # Empty: validate against the base-bundle asset of ASTOUND_RELEASE. A git
-  # ref (e.g. `next`): pack the base from the Astound repository's services/
+  DYNAPPS_RELEASE: latest
+  DYNAPPS_REPO: systempromptio/systemprompt-dynapps
+  # Empty: validate against the base-bundle asset of DYNAPPS_RELEASE. A git
+  # ref (e.g. `next`): pack the base from the Dynapps repository's services/
   # tree at that ref instead — for a kit whose ids the released base still
-  # carries, until the next Astound release drops them.
-  ASTOUND_BASE_REF: next
+  # carries, until the next Dynapps release drops them.
+  DYNAPPS_BASE_REF: next
   CHANNEL: stable
 
 # contents: write — the publish job creates the tag and the GitHub release.
@@ -65,44 +65,44 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     outputs:
-      astound_release: ${{ steps.astound.outputs.tag }}
+      dynapps_release: ${{ steps.dynapps.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Resolve the Astound release
-        id: astound
+      - name: Resolve the Dynapps release
+        id: dynapps
         env:
-          GH_TOKEN: ${{ secrets.ASTOUND_RELEASE_TOKEN || github.token }}
+          GH_TOKEN: ${{ secrets.DYNAPPS_RELEASE_TOKEN || github.token }}
         run: |
-          tag="$ASTOUND_RELEASE"
+          tag="$DYNAPPS_RELEASE"
           if [ "$tag" = latest ]; then
-            tag=$(gh release view --repo "$ASTOUND_REPO" --json tagName -q .tagName)
+            tag=$(gh release view --repo "$DYNAPPS_REPO" --json tagName -q .tagName)
           fi
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
-          echo "ASTOUND_RELEASE=$tag" >> "$GITHUB_ENV"
-          echo "::notice title=Astound base::validating against $ASTOUND_REPO $tag"
+          echo "DYNAPPS_RELEASE=$tag" >> "$GITHUB_ENV"
+          echo "::notice title=Dynapps base::validating against $DYNAPPS_REPO $tag"
 
       - name: Fetch the server binary and the base bundle
         env:
-          GH_TOKEN: ${{ secrets.ASTOUND_RELEASE_TOKEN || github.token }}
+          GH_TOKEN: ${{ secrets.DYNAPPS_RELEASE_TOKEN || github.token }}
         run: |
-          gh release download "$ASTOUND_RELEASE" --repo "$ASTOUND_REPO" \
-            --pattern 'systemprompt-astound-server-*-linux-amd64.tar.gz' --dir ./release
-          tar -xzf release/systemprompt-astound-server-*-linux-amd64.tar.gz -C release
-          echo "$PWD/$(ls -d release/systemprompt-astound-server-*-linux-amd64)/bin" >> "$GITHUB_PATH"
-          if [ -z "$ASTOUND_BASE_REF" ]; then
-            gh release download "$ASTOUND_RELEASE" --repo "$ASTOUND_REPO" \
-              --pattern 'systemprompt-astound-base-*.tar.gz' --dir ./release
-            mv release/systemprompt-astound-base-*.tar.gz ./base.tar.gz
+          gh release download "$DYNAPPS_RELEASE" --repo "$DYNAPPS_REPO" \
+            --pattern 'systemprompt-dynapps-server-*-linux-amd64.tar.gz' --dir ./release
+          tar -xzf release/systemprompt-dynapps-server-*-linux-amd64.tar.gz -C release
+          echo "$PWD/$(ls -d release/systemprompt-dynapps-server-*-linux-amd64)/bin" >> "$GITHUB_PATH"
+          if [ -z "$DYNAPPS_BASE_REF" ]; then
+            gh release download "$DYNAPPS_RELEASE" --repo "$DYNAPPS_REPO" \
+              --pattern 'systemprompt-dynapps-base-*.tar.gz' --dir ./release
+            mv release/systemprompt-dynapps-base-*.tar.gz ./base.tar.gz
           else
-            echo "::notice::packing the base from $ASTOUND_REPO@$ASTOUND_BASE_REF services/ (ASTOUND_BASE_REF is set)"
-            git clone --depth 1 --branch "$ASTOUND_BASE_REF" \
-              "https://x-access-token:${GH_TOKEN}@github.com/${ASTOUND_REPO}.git" ./release/astound
-            "$PWD/$(ls -d release/systemprompt-astound-server-*-linux-amd64)/bin/systemprompt" \
-              core services bundle --root ./release/astound/services --out ./base.tar.gz --version "0.0.0-$ASTOUND_BASE_REF"
-            rm -rf ./release/astound
+            echo "::notice::packing the base from $DYNAPPS_REPO@$DYNAPPS_BASE_REF services/ (DYNAPPS_BASE_REF is set)"
+            git clone --depth 1 --branch "$DYNAPPS_BASE_REF" \
+              "https://x-access-token:${GH_TOKEN}@github.com/${DYNAPPS_REPO}.git" ./release/dynapps
+            "$PWD/$(ls -d release/systemprompt-dynapps-server-*-linux-amd64)/bin/systemprompt" \
+              core services bundle --root ./release/dynapps/services --out ./base.tar.gz --version "0.0.0-$DYNAPPS_BASE_REF"
+            rm -rf ./release/dynapps
           fi
 
       # Runs before the importer so a bad SKILL.md is reported as the line that
@@ -128,7 +128,7 @@ jobs:
       - name: Validate against the base
         run: |
           systemprompt core services validate --root ./services --base ./base.tar.gz --strict || {
-            echo "::error::this kit does not compose with the instance's services/ tree — an id the base already owns, or one this kit references that the base does not define (check ASTOUND_RELEASE / ASTOUND_BASE_REF)"
+            echo "::error::this kit does not compose with the instance's services/ tree — an id the base already owns, or one this kit references that the base does not define (check DYNAPPS_RELEASE / DYNAPPS_BASE_REF)"
             exit 1
           }
 
@@ -141,10 +141,10 @@ jobs:
     # workflow fails to parse. Expose the optional secrets as job env and test
     # the env instead.
     env:
-      ASTOUND_RELEASE: ${{ needs.validate.outputs.astound_release }}
+      DYNAPPS_RELEASE: ${{ needs.validate.outputs.dynapps_release }}
       ADMIN_TOKEN: ${{ secrets.SYSTEMPROMPT_ADMIN_TOKEN }}
       API_URL: ${{ secrets.SYSTEMPROMPT_API_URL }}
-      STATS_PAT: ${{ secrets.ASTOUND_STATS_PAT }}
+      STATS_PAT: ${{ secrets.DYNAPPS_STATS_PAT }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -175,12 +175,12 @@ jobs:
       - name: Fetch the server binary and the base bundle
         if: steps.decide.outputs.skip == 'false'
         env:
-          GH_TOKEN: ${{ secrets.ASTOUND_RELEASE_TOKEN || github.token }}
+          GH_TOKEN: ${{ secrets.DYNAPPS_RELEASE_TOKEN || github.token }}
         run: |
-          gh release download "$ASTOUND_RELEASE" --repo "$ASTOUND_REPO" \
-            --pattern 'systemprompt-astound-server-*-linux-amd64.tar.gz' --dir ./release
-          tar -xzf release/systemprompt-astound-server-*-linux-amd64.tar.gz -C release
-          echo "$PWD/$(ls -d release/systemprompt-astound-server-*-linux-amd64)/bin" >> "$GITHUB_PATH"
+          gh release download "$DYNAPPS_RELEASE" --repo "$DYNAPPS_REPO" \
+            --pattern 'systemprompt-dynapps-server-*-linux-amd64.tar.gz' --dir ./release
+          tar -xzf release/systemprompt-dynapps-server-*-linux-amd64.tar.gz -C release
+          echo "$PWD/$(ls -d release/systemprompt-dynapps-server-*-linux-amd64)/bin" >> "$GITHUB_PATH"
 
       - name: Import the authored tree
         if: steps.decide.outputs.skip == 'false'

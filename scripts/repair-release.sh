@@ -38,26 +38,26 @@ gh release create "$BACKUP" --draft --target "$(jq -r .targetCommitish original/
     --notes 'Rollback assets and original release metadata. Do not delete until repair acceptance.' original/*
 
 cp original/SHA256SUMS repaired/
-cp candidate/astound-bridge-macos.dmg candidate/astound-bridge-macos.dmg.sha256 repaired/
-(cd repaired && sha256sum -c astound-bridge-macos.dmg.sha256)
-awk -v sha="$EXPECTED_SHA" '$2 == "astound-bridge-macos.dmg" {$1=sha} {print $1 "  " $2}' \
+cp candidate/dynapps-bridge-macos.dmg candidate/dynapps-bridge-macos.dmg.sha256 repaired/
+(cd repaired && sha256sum -c dynapps-bridge-macos.dmg.sha256)
+awk -v sha="$EXPECTED_SHA" '$2 == "dynapps-bridge-macos.dmg" {$1=sha} {print $1 "  " $2}' \
     original/SHA256SUMS > repaired/SHA256SUMS
-for name in astound-bridge-macos.dmg SHA256SUMS; do
+for name in dynapps-bridge-macos.dmg SHA256SUMS; do
     cosign sign-blob --yes --output-signature "repaired/$name.sig" \
         --output-certificate "repaired/$name.pem" "repaired/$name"
     verify_blob "repaired/$name"
 done
 jq -r '.body' original/release-metadata.json | \
-    sed "/^\\*\\*macOS is not notarized\\*\\*/d; /astound-bridge-macos.dmg |/s/signed-cosign-only/notarized (app + DMG)/; s/$BASE_DIGEST/$CANDIDATE_DIGEST/g" > repaired/notes.md
+    sed "/^\\*\\*macOS is not notarized\\*\\*/d; /dynapps-bridge-macos.dmg |/s/signed-cosign-only/notarized (app + DMG)/; s/$BASE_DIGEST/$CANDIDATE_DIGEST/g" > repaired/notes.md
 {
     printf '\n### macOS packaging repair\n\n'
     printf 'Repaired %s from source `%s`, retaining core v0.47.0.\n\n' "$(date -u +%FT%TZ)" "${REPAIR_SOURCE_SHA:?}"
     printf 'DMG SHA-256: `%s`. Image digest: `%s`. Original release tag retained.\n\n' "$EXPECTED_SHA" "$CANDIDATE_DIGEST"
-    printf 'Download through https://sp-dev.astound.digital/admin/connect on the Astound network. '
+    printf 'Download through https://dynapps.es/admin/connect on the Dynapps network. '
     printf 'Drag to Applications, eject the DMG and launch. Both app and DMG are signed, notarized and stapled. '
-    printf 'For another gateway use `astound-bridge login --gateway <URL>`.\n'
+    printf 'For another gateway use `dynapps-bridge login --gateway <URL>`.\n'
 } >> repaired/notes.md
-gh release upload "$TAG" --clobber repaired/astound-bridge-macos.dmg* repaired/SHA256SUMS*
+gh release upload "$TAG" --clobber repaired/dynapps-bridge-macos.dmg* repaired/SHA256SUMS*
 docker buildx imagetools create -t "$IMAGE:0.47.0" -t "$IMAGE:latest" "$IMAGE@$CANDIDATE_DIGEST"
 gh release edit "$TAG" --notes-file repaired/notes.md
 mkdir redownload

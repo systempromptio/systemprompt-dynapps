@@ -1,9 +1,9 @@
 {{/* Names and labels */}}
-{{- define "astound.name" -}}
+{{- define "dynapps.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
-{{- define "astound.fullname" -}}
+{{- define "dynapps.fullname" -}}
 {{- if .Values.fullnameOverride -}}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" -}}
 {{- else -}}
@@ -16,42 +16,42 @@
 {{- end -}}
 {{- end -}}
 
-{{- define "astound.labels" -}}
+{{- define "dynapps.labels" -}}
 helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" }}
-app.kubernetes.io/name: {{ include "astound.name" . }}
+app.kubernetes.io/name: {{ include "dynapps.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
-app.kubernetes.io/version: {{ include "astound.tag" . | quote }}
+app.kubernetes.io/version: {{ include "dynapps.tag" . | quote }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end -}}
 
 {{/* selectorLabels: pass (dict "ctx" $ "component" "gateway") */}}
-{{- define "astound.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "astound.name" .ctx }}
+{{- define "dynapps.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "dynapps.name" .ctx }}
 app.kubernetes.io/instance: {{ .ctx.Release.Name }}
 app.kubernetes.io/component: {{ .component }}
 {{- end -}}
 
-{{- define "astound.serviceAccountName" -}}
+{{- define "dynapps.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create -}}
-{{- default (include "astound.fullname" .) .Values.serviceAccount.name -}}
+{{- default (include "dynapps.fullname" .) .Values.serviceAccount.name -}}
 {{- else -}}
 {{- required "serviceAccount.name is required when serviceAccount.create is false" .Values.serviceAccount.name -}}
 {{- end -}}
 {{- end -}}
 
-{{- define "astound.tag" -}}
+{{- define "dynapps.tag" -}}
 {{- default .Chart.AppVersion .Values.image.tag -}}
 {{- end -}}
 
-{{- define "astound.image" -}}
+{{- define "dynapps.image" -}}
 {{- if .Values.image.digest -}}
 {{- printf "%s@%s" .Values.image.repository .Values.image.digest -}}
 {{- else -}}
-{{- printf "%s:%s" .Values.image.repository (include "astound.tag" .) -}}
+{{- printf "%s:%s" .Values.image.repository (include "dynapps.tag" .) -}}
 {{- end -}}
 {{- end -}}
 
-{{- define "astound.profileDir" -}}/app/.systemprompt/profiles/k8s{{- end -}}
+{{- define "dynapps.profileDir" -}}/app/.systemprompt/profiles/k8s{{- end -}}
 
 {{/*
 profile.yaml for one role: pass (dict "ctx" $ "role" "gateway").
@@ -59,7 +59,7 @@ Mirrors deploy/self-host/profile.yaml.template; values.profile.overrides is
 deep-merged last. server.instance_id is deliberately absent: the replica
 identity is the pod name (HOSTNAME).
 */}}
-{{- define "astound.profile" -}}
+{{- define "dynapps.profile" -}}
 {{- $v := .ctx.Values -}}
 {{- $p := $v.profile -}}
 {{- $url := required "profile.externalUrl is required" $p.externalUrl -}}
@@ -67,7 +67,7 @@ identity is the pod name (HOSTNAME).
   "name" "k8s"
   "display_name" "Kubernetes"
   "target" "local"
-  "site" (dict "name" "Astound Digital" "github_link" nil)
+  "site" (dict "name" "Dynapps" "github_link" nil)
   "database" (dict "type" "postgres" "external_db_access" false "migrate_on_boot" false)
   "paths" (dict "system" "/app" "services" "/app/services" "bin" "/app/bin" "web_path" "/app/web" "storage" "/app/storage" "geoip_database" nil)
   "services" (dict "cache_dir" "/app/services-cache")
@@ -114,10 +114,10 @@ Pod spec shared by the gateway, admin and migrate pods.
 pass (dict "ctx" $ "role" "gateway" "component" "gateway" "profileConfigMap" NAME
           "serviceAccount" NAME "spc" NAME "secretName" NAME "job" bool "args" list "resources" dict)
 */}}
-{{- define "astound.podSpec" -}}
+{{- define "dynapps.podSpec" -}}
 {{- $ctx := .ctx -}}
 {{- $v := $ctx.Values -}}
-{{- $profileDir := include "astound.profileDir" $ctx -}}
+{{- $profileDir := include "dynapps.profileDir" $ctx -}}
 serviceAccountName: {{ .serviceAccount }}
 automountServiceAccountToken: false
 {{- with $v.imagePullSecrets }}
@@ -172,7 +172,7 @@ initContainers:
   # The server reads profile.yaml and secrets.json from one directory; assemble
   # it in memory from the ConfigMap and the secret source.
   - name: assemble-profile
-    image: {{ include "astound.image" $ctx }}
+    image: {{ include "dynapps.image" $ctx }}
     imagePullPolicy: {{ $v.image.pullPolicy }}
     command: ["/bin/sh", "-ec"]
     args:
@@ -195,7 +195,7 @@ initContainers:
       - {name: storage, mountPath: /app/storage}
 containers:
   - name: {{ if .job }}migrate{{ else }}server{{ end }}
-    image: {{ include "astound.image" $ctx }}
+    image: {{ include "dynapps.image" $ctx }}
     imagePullPolicy: {{ $v.image.pullPolicy }}
     {{- with .args }}
     args:
@@ -293,16 +293,16 @@ volumes:
 {{- end -}}
 
 {{/* Name of the Secret holding secrets.json in the non-CSI modes. */}}
-{{- define "astound.secretName" -}}
+{{- define "dynapps.secretName" -}}
 {{- if eq .Values.secrets.mode "existingSecret" -}}
 {{- required "secrets.existingSecret.name is required" .Values.secrets.existingSecret.name -}}
 {{- else -}}
-{{- printf "%s-secrets" (include "astound.fullname" .) -}}
+{{- printf "%s-secrets" (include "dynapps.fullname" .) -}}
 {{- end -}}
 {{- end -}}
 
 {{/* SecretProviderClass spec body (shared by the app and migrate copies). */}}
-{{- define "astound.spcSpec" -}}
+{{- define "dynapps.spcSpec" -}}
 provider: {{ .Values.secrets.csi.provider }}
 parameters:
   secrets: |

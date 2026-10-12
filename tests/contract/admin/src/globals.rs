@@ -15,7 +15,7 @@ static READY: OnceLock<bool> = OnceLock::new();
 
 const ISSUER: &str = "http://localhost:8099";
 
-pub(crate) use astound_test_common::repo_root;
+pub(crate) use dynapps_test_common::repo_root;
 
 pub(crate) fn init() -> bool {
     INIT.call_once(|| {

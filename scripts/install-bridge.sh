@@ -1,5 +1,5 @@
 #!/bin/sh
-# Astound Bridge client installer for Linux (refuses macOS: use the .dmg).
+# Dynapps Bridge client installer for Linux (refuses macOS: use the .dmg).
 #
 # Published as storage/files/downloads/install.sh and run as:
 #
@@ -15,7 +15,7 @@
 # POSIX sh only — it runs on whatever /bin/sh the target box has.
 set -eu
 
-BIN_NAME="astound-bridge"
+BIN_NAME="dynapps-bridge"
 
 say()  { printf '%s\n' "$*"; }
 step() { printf '\033[1m==>\033[0m %s\n' "$*"; }
@@ -71,16 +71,16 @@ box_row() {
 # arguments beyond the credential. Running the raw checkout copy leaves the
 # placeholder in place, and then --download-base is required as before.
 DEFAULT_DOWNLOAD_BASE="@DOWNLOAD_BASE@"
-DOWNLOAD_BASE="${ASTOUND_DOWNLOAD_BASE:-}"
-GATEWAY_URL="${ASTOUND_GATEWAY_URL:-}"
-PAT="${ASTOUND_BRIDGE_PAT:-}"
-CODE="${ASTOUND_BRIDGE_CODE:-}"
-PUBKEY="${ASTOUND_BRIDGE_PUBKEY:-}"
+DOWNLOAD_BASE="${DYNAPPS_DOWNLOAD_BASE:-}"
+GATEWAY_URL="${DYNAPPS_GATEWAY_URL:-}"
+PAT="${DYNAPPS_BRIDGE_PAT:-}"
+CODE="${DYNAPPS_BRIDGE_CODE:-}"
+PUBKEY="${DYNAPPS_BRIDGE_PUBKEY:-}"
 # Which client applications to enrol: write each one's provider profile against
 # this machine's proxy port and loopback secret. Left empty, the default below
 # is worked out from what is on PATH. `sync` alone does NOT do this — it writes
 # MCP connectors and no credential, and the client then gets 403 from the proxy.
-HOSTS="${ASTOUND_HOSTS:-}"
+HOSTS="${DYNAPPS_HOSTS:-}"
 SKIP_CLAUDE=0
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -101,7 +101,7 @@ while [ $# -gt 0 ]; do
             say "bound to the identity you sign in as. That is the normal case."
             say ""
             say "--pat and --code exist for unattended installs, and may also come"
-            say "from \$ASTOUND_BRIDGE_PAT / \$ASTOUND_BRIDGE_CODE. An administrator"
+            say "from \$DYNAPPS_BRIDGE_PAT / \$DYNAPPS_BRIDGE_CODE. An administrator"
             say "issues a code with:"
             say "    systemprompt admin bridge issue-code --user-id <uuid>"
             say "Codes are one-shot, short-lived, and assert an identity rather"
@@ -112,7 +112,7 @@ while [ $# -gt 0 ]; do
             say ""
             say "--host enrols a client application: it writes that client's provider"
             say "profile against this machine's proxy port and loopback secret."
-            say "Repeatable, comma-separated, and also read from \$ASTOUND_HOSTS."
+            say "Repeatable, comma-separated, and also read from \$DYNAPPS_HOSTS."
             say "Ids: claude-code, opencode. Default: claude-code, plus opencode"
             say "when the opencode binary is on PATH. Sync alone writes MCP servers"
             say "and no credential, which the proxy answers with 403."
@@ -137,7 +137,7 @@ DOWNLOAD_BASE="${DOWNLOAD_BASE%/}"
 # aarch64 binary, and fails later with `exec format error`; stop here instead.
 case "$(uname -s)" in
     Darwin) fail "this installer is for Linux — on macOS install the app from
-       $DOWNLOAD_BASE/astound-bridge-macos.dmg" ;;
+       $DOWNLOAD_BASE/dynapps-bridge-macos.dmg" ;;
 esac
 command -v curl >/dev/null 2>&1 || fail "curl is required"
 command -v tar  >/dev/null 2>&1 || fail "tar is required"
@@ -357,7 +357,7 @@ step "verifying the installation"
 DOCTOR_RC=0
 "$BRIDGE" doctor || DOCTOR_RC=$?
 
-CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/astound"
+CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/dynapps"
 
 # The optional device-certificate note is long, so it prints BEFORE the verdict.
 # Printed after, it pushed the one command the user actually needs off-screen —
@@ -375,7 +375,7 @@ headless box wants a device certificate, which renews with no browser:
     openssl x509 -in $CONFIG_DIR/device.pem -outform der | sha256sum   # send to your admin
 
     printf '\\n[mtls]\\ncert_keystore_ref = "%s/device.pem"\\n' "$CONFIG_DIR" \\
-      >> $CONFIG_DIR/astound-bridge.toml
+      >> $CONFIG_DIR/dynapps-bridge.toml
 
 Your administrator enrols the fingerprint with:
 
@@ -392,7 +392,7 @@ if [ "$DOCTOR_RC" = "0" ] && proxy_listening; then
     box_rule "$GRN" "$BOX_TL" "$BOX_TR"
     box_row  ""                                              "$GRN"
     box_row  "   $MARK_OK  INSTALL SUCCESSFUL"               "$GRN" "$B$GRN"
-    box_row  "      Astound Bridge is installed and running." "$GRN"
+    box_row  "      Dynapps Bridge is installed and running." "$GRN"
     box_row  ""                                              "$GRN"
     box_row  "   Start Claude Code:"                         "$GRN"
     box_row  ""                                              "$GRN"

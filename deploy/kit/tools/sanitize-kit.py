@@ -3,7 +3,7 @@
 platform serves badly, and for the ones it refuses with an offset instead of a
 reason.
 
-Copied verbatim into every kit repository from systemprompt-astound
+Copied verbatim into every kit repository from systemprompt-dynapps
 `deploy/kit/tools/`; the kits are the same shape by construction, so this file
 is edited there and copied, never edited in place.
 
@@ -373,7 +373,7 @@ def check_no_access(root, out):
                     offset,
                     "carries an access: block — who reaches a kit is declared on the instance",
                     "declare marketplace/<id> with owner: bundle:<kit> in "
-                    "systemprompt-astound/services/access-control/rules.yaml",
+                    "systemprompt-dynapps/services/access-control/rules.yaml",
                 )
 
 

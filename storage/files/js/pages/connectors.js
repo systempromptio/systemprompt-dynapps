@@ -136,7 +136,7 @@ function formFor(provider, action, user) {
     }
     if (provider === 'atlassian') {
         const site = field(form, 'Atlassian site address', 'resource_id', 'url');
-        site.value = 'https://astounddigital.atlassian.net'; site.required = true;
+        site.value = 'https://dynapps.atlassian.net'; site.required = true;
     }
     const actions = element('div', '', 'sp-connector__actions'); form.append(actions);
     const submit = element('button', action === 'manual_token' ? 'Verify and save' : 'Continue to Atlassian', 'sp-btn sp-btn--sm sp-btn--primary'); submit.type = 'submit'; actions.append(submit);

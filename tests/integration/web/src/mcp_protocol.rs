@@ -80,7 +80,7 @@ fn client_info() -> ClientInfo {
 fn install_services_profile() {
     static INIT: Once = Once::new();
     INIT.call_once(|| {
-        let root = astound_test_common::repo_root();
+        let root = dynapps_test_common::repo_root();
         let dir = root.join(format!(
             "tests/target/mcp-protocol-profile-{}",
             std::process::id()

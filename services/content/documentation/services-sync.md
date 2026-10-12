@@ -1,7 +1,7 @@
 ---
 title: "Code ↔ Instance: Sources, Planes and Sync"
 description: "One sync system for every declared service, local and external: where declarations come from (sources), what they project into (planes), which hash proves what, the three directions, and how a kit published from another repository reaches the instance without a redeploy."
-author: "Astound Digital"
+author: "Dynapps"
 slug: "services-sync"
 keywords: "sync, services bundle, kit, marketplace, digest, content hash, composed hash, declared hash, provenance, refresh, pin, rules.yaml, owner, access control, drift"
 kind: "guide"
@@ -32,7 +32,7 @@ related_docs:
 
 | word | meaning | today |
 |---|---|---|
-| **source** | a tree of declarations with a content hash | `base` (this repository), `bundle:sfnext` (the Europe development kit), any further kit |
+| **source** | a tree of declarations with a content hash | `base` (this repository), plus one `bundle:<name>` per kit the profile pins (none today) |
 | **plane** | a projection of declarations into database tables, with drift and three directions | `access_control` (`rules.yaml` → `access_control_rules`, `access_control_entities`); `groups` (`web/config/groups.yaml` → `groups`, `projects`, `group_ad_mappings`, `project_ad_mappings`); `gateway_policies` (`gateway/policies.yaml` → `ai_gateway_policies`) |
 | **ownership** | decided by id at composition | a bundle owns its marketplaces, plugins and skills; the base owns everything else, every entitlement included |
 | **hash control** | every source reports what it declares; every plane records what it applied | the table below |
@@ -115,9 +115,9 @@ Code sync's **Export & import** tab moves every projected plane at once.
 
 ## Kits: content from another repository
 
-A **kit** is a GitHub repository in Anthropic marketplace format — `.claude-plugin/marketplace.json`, `plugins/<id>/` — plus two small systemprompt sidecars. Its CI publishes a signed **services bundle** on every release; the instance composes it with `services/` at boot. Both development workspaces are kits: Europe (`sfnext`) and India (`india`). A new one is seeded from this repository with `just kit-export`.
+A **kit** is a GitHub repository in Anthropic marketplace format — `.claude-plugin/marketplace.json`, `plugins/<id>/` — plus two small systemprompt sidecars. Its CI publishes a signed **services bundle** on every release; the instance composes it with `services/` at boot. This instance pins no kit today. A new one is seeded from this repository with `just kit-export`.
 
-**Kits own content; this repository owns access.** A kit ships no `access:` block. Who reaches `marketplace/astound-europe-dev` is declared in `services/access-control/rules.yaml` here with `owner: bundle:sfnext`, which lets the entity be declared before the digest is pinned: until the source is active the access-control card lists it as **awaiting its bundle** rather than failing boot. An access block a kit carries anyway is ignored as a declaration, flagged on its Sources row, and the rows it wrote at reconcile (`source = bundle:<name>`) appear as *bundle* orphans that an Overwrite deletes.
+**Kits own content; this repository owns access.** A kit ships no `access:` block. Who reaches a kit's `marketplace/<id>` is declared in `services/access-control/rules.yaml` here with `owner: bundle:<name>`, which lets the entity be declared before the digest is pinned: until the source is active the access-control card lists it as **awaiting its bundle** rather than failing boot. An access block a kit carries anyway is ignored as a declaration, flagged on its Sources row, and the rows it wrote at reconcile (`source = bundle:<name>`) appear as *bundle* orphans that an Overwrite deletes.
 
 ### End to end
 
@@ -126,7 +126,7 @@ A **kit** is a GitHub repository in Anthropic marketplace format — `.claude-pl
 3. **Import**: the CI's call, or **Import sources** on `/admin/sync`. The reply says `changed`, `reconciled` and `restart_recommended`.
 4. **Green**: the kit's row reads *in step* with the new active digest; Marketplaces lists the kit's marketplace; the access-control card shows the `owner:` entity as governed; Analysis → Versions minted a generation carrying the new hash. The process never restarted.
 
-The live kits are `sfnext` (`Astound-Digital/sfnext-claude-dev-kit`, the Europe development marketplace) and `india` (`Astound-Digital/sfscore-claude-india-kit`, the India development marketplace), both private packages the instance pulls with `ghcr_pull_token`. A plugin may also carry `package.json` + lockfile (Claude Code runs `npm ci` on the client) and `plugin.json` dependencies, including cross-marketplace ones.
+A kit published as a private package is pulled with `ghcr_pull_token`. A plugin may also carry `package.json` + lockfile (Claude Code runs `npm ci` on the client) and `plugin.json` dependencies, including cross-marketplace ones.
 
 The sanitation step exists because core's importer is deliberately permissive: `description` is the only frontmatter key it requires, so the rest degrades quietly. A skill directory with no `SKILL.md` is not imported and nothing it holds reaches the bundle; a `references/` file a body cites but does not carry is simply absent; a path to a sibling skill can never resolve, because composition renames skill directories to `snake_case`; and an id generic enough to clash — `devops`, `integration` — collides with another kit at boot and neither starts. The gate reports each as an annotation on the file and line that causes it, so a pull request is refused before it is merged.
 

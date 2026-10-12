@@ -139,7 +139,7 @@ fn the_connect_card_is_tabbed_documented_and_quiet() {
         r#"data-connect-field="install_command""#,
         r#"data-connect-field="opencode_install_command""#,
         r#"data-connect-field="desktop_windows_login_command""#,
-        r#"href="/files/downloads/astound-bridge-macos.dmg""#,
+        r#"href="/files/downloads/dynapps-bridge-macos.dmg""#,
         "components/sp-tabs.js",
     ] {
         if !body.contains(needle) {

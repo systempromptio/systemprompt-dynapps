@@ -178,7 +178,7 @@ def skill_metrics(raw, skill, manifest):
         m.update(console)
     m["completed"] = int(bool(m["completed"]) and bool(m["invoked"]))
     m["console_success"] = int(bool(m["success"]) and bool(m["invoked"]))
-    if manifest["plugin"] != "astound-salesforce":
+    if manifest["plugin"] != "dynapps-salesforce":
         m["success"] = int(m["console_success"] and m["single_page_conclusions"] == 0
                            and m["invented_causes"] == 0 and m["cross_tool_mismatch"] == 0
                            and m["writes"] == 0)

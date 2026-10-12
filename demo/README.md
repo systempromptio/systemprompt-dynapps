@@ -1,8 +1,8 @@
 # Demo Harness
 
-Setup and seeding scripts for a local Astound Digital instance. The generic
+Setup and seeding scripts for a local Dynapps instance. The generic
 template demo catalogue (governance, analytics, agents, scenarios, recordings)
-was removed when this fork narrowed to the Astound SSO + Claude Code use case;
+was removed when this fork narrowed to the Dynapps SSO (Microsoft Entra ID) + Claude Code use case;
 what remains is the working harness other tooling depends on.
 
 ## Scripts

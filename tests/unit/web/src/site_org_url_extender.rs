@@ -13,7 +13,7 @@ use systemprompt::manifest::services::WebConfig;
 use systemprompt::template_provider::{ExtenderContext, TemplateDataExtender};
 use systemprompt_web_site::extenders::OrgUrlExtender;
 
-const ORG_URL: &str = "https://astound.example";
+const ORG_URL: &str = "https://dynapps.example";
 
 
 fn web_config() -> WebConfig {
@@ -32,7 +32,7 @@ fn install_config() {
         max_concurrent_streams: 16,
         role: systemprompt::manifest::profile::NodeRole::All,
         max_in_flight: None,
-        sitename: "astound-test".to_owned(),
+        sitename: "dynapps-test".to_owned(),
         database_type: "postgres".to_owned(),
         database_url: "postgres://unused".to_owned(),
         database_write_url: None,

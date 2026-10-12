@@ -86,7 +86,7 @@ async fn registration(
             let response = client()?
                 .post(endpoint)
                 .json(&serde_json::json!({
-                    "client_name":"Astound Systemprompt", "redirect_uris":[callback],
+                    "client_name":"Dynapps systemprompt", "redirect_uris":[callback],
                     "grant_types":["authorization_code","refresh_token"], "response_types":["code"],
                     "token_endpoint_auth_method":"none",
                     "scope": super::discovery::ATLASSIAN_SCOPES

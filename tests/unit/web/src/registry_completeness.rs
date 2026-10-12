@@ -45,7 +45,7 @@ fn all_jobs_registered() {
 fn stateless_provider_registries_are_complete() {
     assert_eq!(registry::component_renderers().len(), 9);
     // Docs only: the template also registers the blog list and post providers,
-    // and Astound ships no blog.
+    // and Dynapps ships no blog.
     assert_eq!(registry::page_data_providers().len(), 1);
     assert_eq!(registry::content_data_providers().len(), 1);
     // org_url and release_version (site/src/extenders).

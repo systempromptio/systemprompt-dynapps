@@ -89,8 +89,8 @@ fn report_data_renders_as_a_deterministic_mcp_asset() {
     .html;
     // The brand mark is written once, in title case, and uppercased by CSS —
     // asserting the rendered casing pinned a stylesheet detail rather than the
-    // brand. "Astound Digital" is the required display name (CLAUDE.md rule 5).
-    assert!(html.contains("Astound Digital"));
+    // brand. "Dynapps" is the required display name (CLAUDE.md rule 5).
+    assert!(html.contains("Dynapps"));
     // The page must not claim to show delivery health: its data is the audit
     // tables, and Jira never reaches it.
     assert!(html.contains("AI Usage"));

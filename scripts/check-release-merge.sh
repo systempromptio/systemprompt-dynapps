@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
-repo=Astound-Digital/systemprompt-astound
+repo=systempromptio/systemprompt-dynapps
 merge="${1:?usage: check-release-merge.sh <main-sha>}"
 die() { echo "release-proof: $*" >&2; exit 1; }
 [[ "$merge" =~ ^[0-9a-f]{40}$ ]] || die 'expected full merge SHA'

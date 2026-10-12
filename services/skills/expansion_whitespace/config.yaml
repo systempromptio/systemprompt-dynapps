@@ -6,7 +6,7 @@ description: Identify ranked expansion plays for one customer from Salesforce co
 enabled: true
 file: SKILL.md
 tags:
-- astound
+- dynapps
 - salesforce
 - sales
 category: business

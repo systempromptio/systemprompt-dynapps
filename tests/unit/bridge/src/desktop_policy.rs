@@ -250,13 +250,13 @@ fn tool_search_requires_an_explicit_compatible_fleet_policy() {
     assert!(!legacy.iter().any(|(key, _)| *key == "toolSearchEnabled"));
     let policy: DesktopPolicy = serde_json::from_value(json!({
         "schema_version":1,
-        "settings":{"toolSearchEnabled":true,"deploymentDisplayName":"Astound Digital"}
+        "settings":{"toolSearchEnabled":true,"deploymentDisplayName":"Dynapps"}
     }))
     .unwrap();
     let configured = resolved_settings(&policy).unwrap();
     assert!(configured.contains(&("toolSearchEnabled", PolicyValue::Bool(true))));
     assert!(configured.contains(&(
         "deploymentDisplayName",
-        PolicyValue::Str("Astound Digital".to_owned())
+        PolicyValue::Str("Dynapps".to_owned())
     )));
 }

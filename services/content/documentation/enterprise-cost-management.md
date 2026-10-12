@@ -1,7 +1,7 @@
 ---
 title: "Cost Management & FinOps"
 description: "Attribute every AI request's cost to a user, group, project, model and provider; read the Cost tab; watch spend against quota-window warning thresholds; and export cost reports."
-author: "Astound Digital"
+author: "Dynapps"
 slug: "enterprise-cost-management"
 keywords: "cost, finops, spend, quota windows, warning thresholds, chargeback, csv, cost tab, provider cost, cost centre, practice, api key budget, otlp, bigquery"
 kind: "guide"

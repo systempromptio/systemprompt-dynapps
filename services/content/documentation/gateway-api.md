@@ -1,7 +1,7 @@
 ---
 title: "Gateway API"
 description: "The governed inference gateway: the /v1/messages, /v1/chat/completions and /v1/responses contracts, the required x-session-id header, the model list, status codes, and the three profile API URLs."
-author: "Astound Digital"
+author: "Dynapps"
 slug: "gateway-api"
 keywords: "gateway, /v1/messages, /v1/chat/completions, /v1/responses, /v1/models, x-session-id, inference, model allow-list, status codes, api url, governance"
 kind: "guide"

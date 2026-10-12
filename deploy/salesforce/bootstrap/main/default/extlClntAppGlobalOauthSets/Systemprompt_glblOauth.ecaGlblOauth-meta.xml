@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ExtlClntAppGlobalOauthSettings xmlns="http://soap.sforce.com/2006/04/metadata">
-    <callbackUrl>https://astound.systemprompt.io/api/public/connectors/salesforce/callback
-https://sp-dev.astound.digital/api/public/connectors/salesforce/callback
+    <callbackUrl>https://dynapps.systemprompt.io/api/public/connectors/salesforce/callback
+https://dynapps.systemprompt.io/api/public/connectors/salesforce/callback
 http://localhost:8080/api/public/connectors/salesforce/callback</callbackUrl>
     <externalClientApplication>Systemprompt</externalClientApplication>
     <isClientCredentialsFlowEnabled>false</isClientCredentialsFlowEnabled>

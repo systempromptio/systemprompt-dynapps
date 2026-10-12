@@ -29,11 +29,11 @@ RUN="$OUT/$NAME"
 [ ! -e "$RUN" ] || RUN="$OUT/$NAME-$(date -u +%H%M%S)"
 NAME="$(basename "$RUN")"
 mkdir -p "$RUN"
-K="kubectl --context kind-astound-loadtest -n loadtest"
+K="kubectl --context kind-dynapps-loadtest -n loadtest"
 psqlc() { $K exec -i deploy/postgres -c postgres -- psql -U postgres -d systemprompt -At "$@"; }
 mock_stats() {
     for m in mock-primary mock-eu; do
-        printf '%s=%s\n' "$m" "$($K exec deploy/astound-admin -c server -- curl -s "http://$m:9100/stats" | sed -n 's/.*"requests":\([0-9]*\).*/\1/p')"
+        printf '%s=%s\n' "$m" "$($K exec deploy/dynapps-admin -c server -- curl -s "http://$m:9100/stats" | sed -n 's/.*"requests":\([0-9]*\).*/\1/p')"
     done
 }
 secs="${DUR%s}"
@@ -65,9 +65,9 @@ if [ -n "$HELM" ]; then
     for s in "${kv[@]+"${kv[@]}"}"; do args+=(--set "$s"); done
     "$HERE/cluster.sh" deploy "${args[@]}" >"$RUN/helm.log" 2>&1
     # Policies are loaded at admin boot; restart so the table matches the file.
-    $K rollout restart deploy/astound-admin deploy/astound-gateway >/dev/null
-    $K rollout status deploy/astound-admin --timeout 300s >/dev/null
-    $K rollout status deploy/astound-gateway --timeout 300s >/dev/null
+    $K rollout restart deploy/dynapps-admin deploy/dynapps-gateway >/dev/null
+    $K rollout status deploy/dynapps-admin --timeout 300s >/dev/null
+    $K rollout status deploy/dynapps-gateway --timeout 300s >/dev/null
 fi
 { [ "$MOCK_MODE" = ok ] && [ "$MOCK_LAT" = 300:900 ]; } || set_mock "$MOCK_MODE"
 # Quota enforce: the gateway_policies plane only seeds an empty table at boot,
@@ -107,10 +107,10 @@ psqlc -c "SELECT count(pg_terminate_backend(pid)) FROM pg_stat_activity WHERE us
 sleep 35
 # Warm the fresh pools (connect + first prepares) outside the measured window.
 IFS=, read -r wtok wsid < <($K get secret "loadtest-tokens-$SET" -o jsonpath='{.data.tokens\.csv}' | base64 -d | head -1)
-$K exec deploy/astound-admin -c server -- /app/bin/hey -z 20s -c 12 -m POST -T application/json \
+$K exec deploy/dynapps-admin -c server -- /app/bin/hey -z 20s -c 12 -m POST -T application/json \
     -H "Authorization: Bearer $wtok" -H "x-session-id: $wsid" -H "anthropic-version: 2023-06-01" \
     -d '{"model":"claude-sonnet-5","max_tokens":32,"messages":[{"role":"user","content":"warm"}]}' \
-    http://astound-gateway:8080/v1/messages >/dev/null 2>&1 </dev/null || true
+    http://dynapps-gateway:8080/v1/messages >/dev/null 2>&1 </dev/null || true
 sleep 15
 psqlc -c "SELECT pg_stat_statements_reset();" >/dev/null </dev/null
 before="$(mock_stats | tr '\n' ' ')"
@@ -122,7 +122,7 @@ start="$(date -u +%s)"
 ( while :; do psqlc -F $'\t' -f /dev/stdin < "$HERE/sql/sample-locks.sql" >> "$RUN/waits.tsv" 2>/dev/null || true; sleep 1; done ) &
 ( while :; do t=$(date -u +%H:%M:%S); $K top pods --no-headers 2>/dev/null | sed "s/^/$t /" >> "$RUN/top.txt"; \
     $K get hpa --no-headers 2>/dev/null | sed "s/^/$t /" >> "$RUN/hpa.txt"; \
-    $K get deploy astound-gateway --no-headers 2>/dev/null | sed "s/^/$t /" >> "$RUN/replicas.txt"; sleep 5; done ) &
+    $K get deploy dynapps-gateway --no-headers 2>/dev/null | sed "s/^/$t /" >> "$RUN/replicas.txt"; sleep 5; done ) &
 
 # --- generator -----------------------------------------------------------------
 $K delete job loadgen --ignore-not-found --wait >/dev/null
@@ -131,7 +131,7 @@ $K delete job loadgen --ignore-not-found --wait >/dev/null
 ntok="$($K get secret "loadtest-tokens-$SET" -o jsonpath='{.data.tokens\.csv}' | base64 -d | grep -c ,)"
 active=$(( ntok < C ? ntok : C ))
 [ "$PODS" -le "$active" ] || PODS="$active"
-IMG="$($K get deploy astound-gateway -o jsonpath='{.spec.template.spec.containers[0].image}')"
+IMG="$($K get deploy dynapps-gateway -o jsonpath='{.spec.template.spec.containers[0].image}')"
 cat > "$RUN/job.yaml" <<YAML
 apiVersion: batch/v1
 kind: Job
@@ -161,7 +161,7 @@ spec:
                 if [ \$i -lt \$active ] && [ \$(( i % $PODS )) -eq \$JOB_COMPLETION_INDEX ]; then
                   /app/bin/hey -z $DUR -c \$per -t 60 -m POST -T application/json \
                     -H "Authorization: Bearer \$tok" -H "x-session-id: \$sid" -H "anthropic-version: 2023-06-01" \
-                    -D /b/body.json -o csv http://astound-gateway:8080/v1/messages > /tmp/h\$i.csv 2>/dev/null &
+                    -D /b/body.json -o csv http://dynapps-gateway:8080/v1/messages > /tmp/h\$i.csv 2>/dev/null &
                 fi
                 i=\$((i + 1))
               done < /t/tokens.csv

@@ -73,7 +73,7 @@ async fn run_callback(
     let (idp, identity) = verify_response(deps, &form.saml_response, flow.as_ref())
         .await
         .map_err(|e| {
-            tracing::warn!(error = %e, "ADFS assertion rejected");
+            tracing::warn!(error = %e, "SSO assertion rejected");
             match e {
                 AdfsError::Assertion(saml::Error::XmlParse(m)) if m.contains("NameID") => {
                     LoginRedirect("no_subject")
@@ -81,9 +81,10 @@ async fn run_callback(
                 AdfsError::Assertion(saml::Error::UnsolicitedNotAllowed) => {
                     LoginRedirect("correlation_lost")
                 },
-                AdfsError::Metadata(_) | AdfsError::ServiceProvider(_) => {
-                    LoginRedirect("unavailable")
-                },
+                AdfsError::Metadata(_)
+                | AdfsError::MetadataFetch(_)
+                | AdfsError::MetadataParse(_)
+                | AdfsError::ServiceProvider(_) => LoginRedirect("unavailable"),
                 _ => LoginRedirect("invalid_assertion"),
             }
         })?;
@@ -95,7 +96,7 @@ async fn run_callback(
     let (jwt, max_age) = mint_session(&deps.session_service, &subject, headers)
         .await
         .map_err(|e| {
-            tracing::error!(error = %e, "Failed to mint session for ADFS user");
+            tracing::error!(error = %e, "Failed to mint session for SSO user");
             LoginRedirect("error")
         })?;
     record_login(&deps.write_pool, &subject).await;
@@ -105,7 +106,7 @@ async fn run_callback(
         email = %resolved.email,
         roles = ?resolved.roles,
         assertion_id = %identity.assertion_id,
-        "ADFS SSO login succeeded"
+        "SSO login succeeded"
     );
 
     Ok(SuccessfulLogin {
@@ -123,7 +124,7 @@ fn correlate(
     match read_state_cookie(headers) {
         Some(flow) => {
             if relay_state != Some(flow.state.as_str()) {
-                tracing::warn!("ADFS RelayState does not match the state cookie");
+                tracing::warn!("SSO RelayState does not match the state cookie");
                 return Err(LoginRedirect("error"));
             }
             Ok(Some(flow))
@@ -131,7 +132,7 @@ fn correlate(
         None if allow_idp_initiated => Ok(None),
         None => {
             tracing::warn!(
-                "ADFS response arrived with no state cookie and IdP-initiated sign-in is off"
+                "SSO response arrived with no state cookie and IdP-initiated sign-in is off"
             );
             Err(LoginRedirect("error"))
         },

@@ -1,7 +1,7 @@
 ---
 title: "Deploy on Oracle Cloud"
 description: "Single node on an OCI Compute instance with OCI Database with PostgreSQL: the resources to create, the settings that matter, and the exact commands, step by step."
-author: "Astound Digital"
+author: "Dynapps"
 slug: "deploy-oracle-cloud"
 keywords: "oracle cloud, oci, compute, oci database with postgresql, load balancer, vault, nat gateway, deploy, self-host, docker"
 kind: "guide"
@@ -87,11 +87,11 @@ instance:
 
 ```bash
 oci vault secret create-base64 --region <region> --compartment-id ... --vault-id ... --key-id ... \
-  --secret-name astound-secrets --secret-content-content "$(base64 -w0 profile/secrets.json)"
-sudo install -d -m 0750 -o 1000 -g 1000 /etc/astound/profile
-sudo install -m 0644 -o 1000 -g 1000 profile/profile.yaml /etc/astound/profile/profile.yaml
+  --secret-name dynapps-secrets --secret-content-content "$(base64 -w0 profile/secrets.json)"
+sudo install -d -m 0750 -o 1000 -g 1000 /etc/dynapps/profile
+sudo install -m 0644 -o 1000 -g 1000 profile/profile.yaml /etc/dynapps/profile/profile.yaml
 oci secrets secret-bundle get --region <region> --secret-id <ocid> --query 'data."secret-bundle-content".content' --raw-output \
-  | base64 -d | sudo install -m 0600 -o 1000 -g 1000 /dev/stdin /etc/astound/profile/secrets.json
+  | base64 -d | sudo install -m 0600 -o 1000 -g 1000 /dev/stdin /etc/dynapps/profile/secrets.json
 ```
 
 Two OCI CLI traps:
@@ -104,14 +104,14 @@ Two OCI CLI traps:
   reference. The OCI CLI rejects `file:///dev/stdin`. On macOS, use `base64`
   with no flags in place of `base64 -w0`.
 
-The container runs as uid 1000 and mounts `/etc/astound/profile` read-only.
+The container runs as uid 1000 and mounts `/etc/dynapps/profile` read-only.
 
 ## 4. Boot
 
 OCI uses the app-only compose file, because the database is external:
 
 ```bash
-export SYSTEMPROMPT_TAG=@RELEASE_VERSION@ ASTOUND_PROFILE_DIR=/etc/astound/profile
+export SYSTEMPROMPT_TAG=@RELEASE_VERSION@ DYNAPPS_PROFILE_DIR=/etc/dynapps/profile
 export DATABASE_URL='postgres://systemprompt:<pw>@<db-private-fqdn>:5432/systemprompt?sslmode=require'
 docker compose -f docker-compose.node.yml pull
 docker compose -f docker-compose.node.yml up -d
@@ -147,7 +147,7 @@ public address:
 curl -fsS https://ai.example.com/api/v1/health
 ```
 
-Every check must pass. Then configure [Astound SSO](/documentation/adfs-sso-setup)
+Every check must pass. Then configure [Dynapps SSO](/documentation/entra-id-sso-setup)
 for this hostname and sign in at `https://ai.example.com/admin/login`.
 
 ## Upgrades, backups, growth
@@ -158,7 +158,7 @@ for this hostname and sign in at `https://ai.example.com/admin/login`.
 - **Backups.** Enable automatic backups on the DB system, and test a restore
   once before launch.
 - **More nodes.** Create a compute instance and a load balancer per region and
-  copy `/etc/astound/profile` to it unchanged. Add each region's balancer
+  copy `/etc/dynapps/profile` to it unchanged. Add each region's balancer
   subnet to `--trusted-proxies` and re-render. The profile sets
   `database.migrate_on_boot: false`: run the image's one-shot `migrate`
   command once, then start the nodes; they may start in parallel, because each

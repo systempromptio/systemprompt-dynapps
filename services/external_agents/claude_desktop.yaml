@@ -31,7 +31,7 @@ external_agents:
         builtinToolPolicy:
           WebSearch: allow
           WebFetch: allow
-        deploymentDisplayName: Astound Digital
+        deploymentDisplayName: Dynapps
         otlpDesktopLogLevel: info
         otlpTracesEnabled: true
         otlpContentCapture: []

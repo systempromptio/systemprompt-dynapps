@@ -11,8 +11,8 @@
 //!
 //! Participation is what the scoped console runs on. A participant sees the
 //! activity of everyone in the groups and projects named on their
-//! marketplaces' allow rules — a europe-devs member sees the `storefront`
-//! project's people because both reach `astound-europe-dev` — and may read
+//! marketplaces' allow rules — a developers-group member sees the `storefront`
+//! project's people because both reach `dynapps-commons` — and may read
 //! the versions and drive the code sync of exactly those marketplaces.
 //! Console (admin) callers never resolve this; they see everything.
 

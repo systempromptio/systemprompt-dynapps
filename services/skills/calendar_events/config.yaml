@@ -6,7 +6,7 @@ description: Show a schedule from Salesforce Event data with local times, subjec
 enabled: true
 file: SKILL.md
 tags:
-- astound
+- dynapps
 - salesforce
 - sales
 category: business

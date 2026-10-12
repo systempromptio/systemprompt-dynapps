@@ -1,7 +1,7 @@
 ---
 title: "Measure Which Skills Are Used"
 description: "Step-by-step: pick a window and marketplace, sync the skill inventory, and read every column of the Analysis Skills table."
-author: "Astound Digital"
+author: "Dynapps"
 slug: "analysis-measure-skills"
 keywords: "skill usage, inventory sync, invocations, adoption, installs, attributed use, p95, marketplace, conversation rollup, ai judge"
 kind: "guide"
@@ -117,7 +117,7 @@ the table for the same window.
 it, or the plugin carrying the governance hooks is not installed on that
 client — without the hooks, no invocation is reported.
 **Solution:** wait a minute and reload, widen the window, clear the search,
-then check the client with `astound-bridge status`.
+then check the client with `dynapps-bridge status`.
 
 ### Invoked is high but Conv. is zero
 

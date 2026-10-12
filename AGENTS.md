@@ -1,6 +1,6 @@
-# AGENTS.md — systemprompt-astound
+# AGENTS.md — systemprompt-dynapps
 
-Astound Digital's branded fork of the [systemprompt.io](https://systemprompt.io) evaluation template. Stand up a complete AI governance binary with demo data in under 10 minutes.
+Dynapps's branded fork of the [systemprompt.io](https://systemprompt.io) evaluation template. Stand up a complete AI governance binary with demo data in under 10 minutes.
 
 ## What this is
 
@@ -11,8 +11,8 @@ It wraps [`systemprompt-core`](https://github.com/systempromptio/systemprompt-co
 ## Try it
 
 ```bash
-git clone https://github.com/systempromptio/systemprompt-astound
-cd systemprompt-astound
+git clone https://github.com/systempromptio/systemprompt-dynapps
+cd systemprompt-dynapps
 just setup-local <your-anthropic-api-key>   # builds, runs migrations, starts Postgres
 just start                                  # serves on http://localhost:8080
 ```
@@ -40,13 +40,13 @@ Full developer guidance for working in this repo lives in [`CLAUDE.md`](./CLAUDE
   PRs unless the owner explicitly requests that exception.
 - Integrate existing task work into `next`, preserving concurrent changes, and
   remove temporary branches once their commits are safely merged.
-- The live Astound endpoint is `https://sp-dev.astound.digital`. Do not confuse
+- The live Dynapps endpoint is `https://dynapps.systemprompt.io`. Do not confuse
   it with the older Fly `production` profile. A registry push is not proof of
   deployment: verify the binary downloaded from the live endpoint itself.
-- `https://astound.systemprompt.io` is our test environment. Its local profile
+- `https://dynapps.systemprompt.io` is our test environment. Its local profile
   is named `production`, and `just deploy` targets it. The owner permits
   deploying current `next` there for end-to-end testing; this does not deploy
-  the separate Astound endpoint above. Preserve existing secrets and signing
+  the separate Dynapps endpoint above. Preserve existing secrets and signing
   keys when restoring deployment access.
 
 ## Governance pipeline
@@ -70,8 +70,8 @@ Fork it, modify it, ship it.
 
 ## Links
 
-- This fork: https://github.com/systempromptio/systemprompt-astound
+- This fork: https://github.com/systempromptio/systemprompt-dynapps
 - Upstream template: https://github.com/systempromptio/systemprompt-template
 - Core: https://github.com/systempromptio/systemprompt-core
-- Astound Digital: https://astounddigital.com
+- Dynapps: https://dynapps.es
 - Feedback: open a `feedback`-labelled issue, or email `ed@systemprompt.io`

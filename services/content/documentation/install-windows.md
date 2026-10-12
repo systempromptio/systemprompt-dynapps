@@ -1,7 +1,7 @@
 ---
 title: "Install on Windows"
-description: "Install native Windows Claude Code with Astound gateway routing from PowerShell, or connect Cowork."
-author: "Astound Digital"
+description: "Install native Windows Claude Code with Dynapps gateway routing from PowerShell, or connect Cowork."
+author: "Dynapps"
 slug: "install-windows"
 kind: "guide"
 public: true
@@ -24,7 +24,7 @@ related_playbooks:
 
 # Install on Windows
 
-Run Claude Code directly in Windows PowerShell with the native Astound Bridge. WSL is optional; use it when your projects need a Linux environment.
+Run Claude Code directly in Windows PowerShell with the native Dynapps Bridge. WSL is optional; use it when your projects need a Linux environment.
 
 | Client | Where it runs | Bridge to install |
 |---|---|---|
@@ -56,12 +56,12 @@ See [Anthropic's Windows setup instructions](https://code.claude.com/docs/en/set
 
 ## 2. Download and verify the bridge
 
-Download the [Windows executable](/files/downloads/astound-bridge-windows.exe) and its [checksum](/files/downloads/astound-bridge-windows.exe.sha256) from your gateway. Complete the [PowerShell checksum comparison](/documentation/downloads#windows-powershell) before running it.
+Download the [Windows executable](/files/downloads/dynapps-bridge-windows.exe) and its [checksum](/files/downloads/dynapps-bridge-windows.exe.sha256) from your gateway. Complete the [PowerShell checksum comparison](/documentation/downloads#windows-powershell) before running it.
 
 Keep the verified executable in a stable folder approved by your organization. Claude Code's generated credential helper calls this executable, so moving or deleting it breaks authentication until you repeat enrolment from its new location. In each PowerShell window where you run bridge commands, define its actual path:
 
 ```powershell
-$Bridge = "C:\Users\YOUR_USERNAME\Applications\Astound\astound-bridge-windows.exe"
+$Bridge = "C:\Users\YOUR_USERNAME\Applications\Dynapps\dynapps-bridge-windows.exe"
 & $Bridge --version
 ```
 
@@ -69,10 +69,10 @@ Replace the example with the path where you placed the verified download. If end
 
 ## 3. Configure your gateway and sign in
 
-Use the HTTPS address and trusted manifest public key supplied by your administrator. The Astound endpoint is `https://sp-dev.astound.digital`; `https://astound.systemprompt.io` is a separate test environment. Download and sign in against the intended gateway.
+Use the HTTPS address and trusted manifest public key supplied by your administrator. The Dynapps endpoint is `https://dynapps.systemprompt.io`. Download and sign in against the intended gateway.
 
 ```powershell
-$GatewayUrl = "https://sp-dev.astound.digital"
+$GatewayUrl = "https://dynapps.systemprompt.io"
 & $Bridge install --gateway $GatewayUrl --pubkey "ADMINISTRATOR_PROVIDED_BASE64_PUBLIC_KEY"
 & $Bridge login --gateway $GatewayUrl
 ```
@@ -107,7 +107,7 @@ Back in your working PowerShell window, close existing Claude Code sessions and 
 & $Bridge doctor
 ```
 
-Enrolment generates `%APPDATA%\astound\claude-code-settings.json` and merges routing into Claude Code's managed settings when writable, otherwise `%USERPROFILE%\.claude\settings.json`. The Windows helper invokes the installed bridge to read its machine-local proxy credential; it does not require a `.sh` file or a provider API key. Run enrolment and Claude Code as the same Windows user.
+Enrolment generates `%APPDATA%\dynapps\claude-code-settings.json` and merges routing into Claude Code's managed settings when writable, otherwise `%USERPROFILE%\.claude\settings.json`. The Windows helper invokes the installed bridge to read its machine-local proxy credential; it does not require a `.sh` file or a provider API key. Run enrolment and Claude Code as the same Windows user.
 
 If sync reports a Cowork organizational-directory provisioning error, follow the Windows provisioning step in [Connect Cowork](/documentation/connect-cowork), or ask your administrator to review the hosts enabled for your account. A failed sync is not successful Claude Code setup.
 
@@ -134,24 +134,24 @@ Remove persistent Claude Code routing while retaining the standalone file:
 ```powershell
 & $Bridge uninstall --host claude-code
 & $Bridge sync
-$ClaudeSettings = Join-Path $env:APPDATA "astound\claude-code-settings.json"
+$ClaudeSettings = Join-Path $env:APPDATA "dynapps\claude-code-settings.json"
 Get-Item -LiteralPath $ClaudeSettings
 claude --settings "$ClaudeSettings" --model gemini-3.8-flash
 ```
 
-Use an approved model ID. If you set an absolute `XDG_CONFIG_HOME`, the file is under that directory's `astound` subdirectory instead; `& $Bridge status` reports the bridge configuration location. A custom `CLAUDE_CONFIG_DIR` is separate: use explicit `--settings` because enrolment's user fallback targets the default Claude Code directory.
+Use an approved model ID. If you set an absolute `XDG_CONFIG_HOME`, the file is under that directory's `dynapps` subdirectory instead; `& $Bridge status` reports the bridge configuration location. A custom `CLAUDE_CONFIG_DIR` is separate: use explicit `--settings` because enrolment's user fallback targets the default Claude Code directory.
 
 A short **CMD** launch after completing PowerShell setup:
 
 ```bat
-claude --settings "%APPDATA%\astound\claude-code-settings.json" --model gemini-3.8-flash
+claude --settings "%APPDATA%\dynapps\claude-code-settings.json" --model gemini-3.8-flash
 ```
 
 PowerShell uses `$env:APPDATA`; CMD uses `%APPDATA%`. Managed settings can override either launch. See [Claude Code settings precedence](https://code.claude.com/docs/en/settings).
 
 ## 6. Verify routing and tools
 
-1. Ask Claude Code: **Reply with ASTOUND_CONNECTED. Do not use tools.**
+1. Ask Claude Code: **Reply with DYNAPPS_CONNECTED. Do not use tools.**
 2. Find the request in your gateway's [History](/admin/history), or ask an administrator to confirm its time, account, and model.
 3. Run `claude plugin list`. In a fresh session, try a specific read-only tool your organization provides and verify its result and gateway activity separately.
 
@@ -182,4 +182,4 @@ Complete the download, gateway, and sign-in steps above, then follow [Connect Co
 
 If you choose WSL, install both Claude Code and the Linux bridge inside the same approved distribution. Follow [Linux and WSL bridge installation](/documentation/bridge-install#linux-and-wsl), then [Connect Claude Code](/documentation/connect-claude-code) using its Linux commands.
 
-The standalone settings file is normally `~/.config/astound/claude-code-settings.json` **inside WSL**. Keep the WSL proxy or its systemd user service running. Native Windows and WSL installations have separate credentials, settings, and process lifecycles; one does not configure the other.
+The standalone settings file is normally `~/.config/dynapps/claude-code-settings.json` **inside WSL**. Keep the WSL proxy or its systemd user service running. Native Windows and WSL installations have separate credentials, settings, and process lifecycles; one does not configure the other.

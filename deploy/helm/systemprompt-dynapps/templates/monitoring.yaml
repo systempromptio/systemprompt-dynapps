@@ -6,13 +6,13 @@
 apiVersion: monitoring.googleapis.com/v1
 kind: PodMonitoring
 metadata:
-  name: {{ include "astound.fullname" $ }}-{{ $c }}
+  name: {{ include "dynapps.fullname" $ }}-{{ $c }}
   labels:
-    {{- include "astound.labels" $ | nindent 4 }}
+    {{- include "dynapps.labels" $ | nindent 4 }}
 spec:
   selector:
     matchLabels:
-      {{- include "astound.selectorLabels" (dict "ctx" $ "component" $c) | nindent 6 }}
+      {{- include "dynapps.selectorLabels" (dict "ctx" $ "component" $c) | nindent 6 }}
   endpoints:
     - port: metrics
       path: /metrics
@@ -23,16 +23,16 @@ spec:
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
 metadata:
-  name: {{ include "astound.fullname" $ }}-{{ $c }}
+  name: {{ include "dynapps.fullname" $ }}-{{ $c }}
   labels:
-    {{- include "astound.labels" $ | nindent 4 }}
+    {{- include "dynapps.labels" $ | nindent 4 }}
     {{- with $.Values.metrics.podMonitor.labels }}
     {{- toYaml . | nindent 4 }}
     {{- end }}
 spec:
   selector:
     matchLabels:
-      {{- include "astound.selectorLabels" (dict "ctx" $ "component" $c) | nindent 6 }}
+      {{- include "dynapps.selectorLabels" (dict "ctx" $ "component" $c) | nindent 6 }}
   podMetricsEndpoints:
     - port: metrics
       path: /metrics

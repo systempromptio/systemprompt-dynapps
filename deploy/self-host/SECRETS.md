@@ -23,8 +23,7 @@ tokens the other two reject.
 | `database_write_url` | read/write split: reads use `database_url`, writes use this. Phase 2 only; cross-region replica lag breaks read-after-write for sessions. Leave unset at launch. |
 | `vertex` | Google service-account JSON (`roles/aiplatform.user`) for **every** Vertex provider: `vertex` (`vertex-gemini-*`), `vertex-anthropic` (the primary for `claude-*`), `vertex-maas` and `vertex-maas-us-central1` (`qwen.*`, `zai.*`, `moonshotai.*`, `deepseek.*`, `minimax.*`, `openai.gpt-oss-*`). One key, one GCP project; there is no separate `vertex_maas` secret — see `docs/install/vertex.md`. A route whose provider has no key is unusable, not fatal. |
 | `gemini` | Gemini API key for the `gemini` provider (`gemini-*`, sent as `x-goog-api-key`); the classifier job dispatches here. |
-| `astound_release_token` | the bridge update feed. `services/ai/gateway.yaml` points `bridge_releases` at the private `Astound-Digital/systemprompt-astound` repo, so the gateway needs a GitHub token to list releases, read `SHA256SUMS`, and proxy the installer bytes. **Astound issues this token** — a fine-grained PAT scoped to that one repository with `Contents: Read-only`, never a classic PAT. Without it `/v1/bridge/latest` answers 503 `bridge release token secret ASTOUND_RELEASE_TOKEN is not configured`, and every bridge shows an update-check error every 6 h and on each wake-from-sleep; nobody can self-update. An **expired** token reads differently — 502 `github returned 401` — so record the renewal date. |
-| `ghcr_pull_token` | only when the profile pins private kit bundles — a `services.sources[]` entry whose `oci.auth_secret` names it (the `sfnext` and `india` marketplaces are private GHCR packages). Value is `<github-user>:<PAT>`, a **classic** PAT whose single scope is `read:packages`, on an account that can read the `Astound-Digital` organisation's packages — note this is a different credential and a different format from `astound_release_token` above, and the two cannot be merged. It must be in place **before** the first boot that carries the `services:` block, or the fetch fails. Full procedure: `docs/kits-on-another-instance.md`. |
+| `dynapps_release_token` | the bridge update feed. `services/ai/gateway.yaml` points `bridge_releases` at the private `systempromptio/systemprompt-dynapps` repo, so the gateway needs a GitHub token to list releases, read `SHA256SUMS`, and proxy the installer bytes. **Dynapps issues this token** — a fine-grained PAT scoped to that one repository with `Contents: Read-only`, never a classic PAT. Without it `/v1/bridge/latest` answers 503 `bridge release token secret DYNAPPS_RELEASE_TOKEN is not configured`, and every bridge shows an update-check error every 6 h and on each wake-from-sleep; nobody can self-update. An **expired** token reads differently — 502 `github returned 401` — so record the renewal date. |
 
 ## Injection
 
@@ -32,9 +31,9 @@ The platform reads the file at boot only (`secrets.source: file`). Render it
 on each node from your vault at deploy time, before `docker compose up`:
 
 ```bash
-install -d -m 0750 -o 1000 -g 1000 /etc/astound/profile
-vault-cli read astound/prod/secrets.json > /etc/astound/profile/secrets.json   # OCI Vault, HashiCorp, SOPS — your choice
-chown 1000:1000 /etc/astound/profile/secrets.json && chmod 0600 /etc/astound/profile/secrets.json
+install -d -m 0750 -o 1000 -g 1000 /etc/dynapps/profile
+vault-cli read dynapps/prod/secrets.json > /etc/dynapps/profile/secrets.json   # OCI Vault, HashiCorp, SOPS — your choice
+chown 1000:1000 /etc/dynapps/profile/secrets.json && chmod 0600 /etc/dynapps/profile/secrets.json
 ```
 
 The container runs as uid 1000 and mounts the directory read-only. A change
@@ -44,7 +43,7 @@ to the file takes effect on the next `docker compose restart app`.
 
 | key | procedure |
 |---|---|
-| provider keys, `astound_release_token`, `ghcr_pull_token` | update the file on all nodes, rolling restart. No user impact. |
+| provider keys, `dynapps_release_token` | update the file on all nodes, rolling restart. No user impact. |
 | `database_url` password | create the new role or password, update the file, rolling restart, drop the old. |
 | `signing_key_pem` | update all nodes, restart **all** nodes within the same window; every session and PAT is invalidated, bridge clients re-link with a new code. |
 | `oauth_at_rest_pepper`, `manifest_signing_secret_seed` | treat as non-rotatable in practice: rotating the pepper destroys stored OAuth tokens, rotating the seed forces every client re-sync. |

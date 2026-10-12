@@ -1,7 +1,7 @@
 ---
 title: "Downloads"
-description: "Download Astound Bridge for your platform, compare its SHA-256 checksum, and follow the installation guide."
-author: "Astound Digital"
+description: "Download Dynapps Bridge for your platform, compare its SHA-256 checksum, and follow the installation guide."
+author: "Dynapps"
 slug: "downloads"
 kind: "reference"
 public: true
@@ -23,14 +23,14 @@ related_playbooks:
 
 # Downloads
 
-Download Astound Bridge from the gateway you intend to use. Choose your platform, verify the checksum, and follow its setup guide. A checksum confirms that your download matches the published file; it does not replace OS signature verification or your organization's software-approval policy.
+Download Dynapps Bridge from the gateway you intend to use. Choose your platform, verify the checksum, and follow its setup guide. A checksum confirms that your download matches the published file; it does not replace OS signature verification or your organization's software-approval policy.
 
 | Platform | Download | SHA-256 checksum |
 |---|---|---|
-| macOS, Apple Silicon and Intel | [astound-bridge-macos.dmg](/files/downloads/astound-bridge-macos.dmg) | [Checksum](/files/downloads/astound-bridge-macos.dmg.sha256) |
-| Windows x86_64 | [astound-bridge-windows.exe](/files/downloads/astound-bridge-windows.exe) | [Checksum](/files/downloads/astound-bridge-windows.exe.sha256) |
-| Linux x86_64, glibc 2.35 or newer | [astound-bridge-linux-x86_64.tar.gz](/files/downloads/astound-bridge-linux-x86_64.tar.gz) | [Checksum](/files/downloads/astound-bridge-linux-x86_64.tar.gz.sha256) |
-| Linux aarch64, glibc 2.35 or newer | [astound-bridge-linux-aarch64.tar.gz](/files/downloads/astound-bridge-linux-aarch64.tar.gz) | [Checksum](/files/downloads/astound-bridge-linux-aarch64.tar.gz.sha256) |
+| macOS, Apple Silicon and Intel | [dynapps-bridge-macos.dmg](/files/downloads/dynapps-bridge-macos.dmg) | [Checksum](/files/downloads/dynapps-bridge-macos.dmg.sha256) |
+| Windows x86_64 | [dynapps-bridge-windows.exe](/files/downloads/dynapps-bridge-windows.exe) | [Checksum](/files/downloads/dynapps-bridge-windows.exe.sha256) |
+| Linux x86_64, glibc 2.35 or newer | [dynapps-bridge-linux-x86_64.tar.gz](/files/downloads/dynapps-bridge-linux-x86_64.tar.gz) | [Checksum](/files/downloads/dynapps-bridge-linux-x86_64.tar.gz.sha256) |
+| Linux aarch64, glibc 2.35 or newer | [dynapps-bridge-linux-aarch64.tar.gz](/files/downloads/dynapps-bridge-linux-aarch64.tar.gz) | [Checksum](/files/downloads/dynapps-bridge-linux-aarch64.tar.gz.sha256) |
 | Linux and WSL installer | [install.sh](/files/downloads/install.sh) | The installer checks the downloaded bridge archive |
 
 ## Verify your download
@@ -42,7 +42,7 @@ Save the binary or archive and its checksum in the same directory. Keep the publ
 From the directory containing the download:
 
 ```bash
-shasum -a 256 -c astound-bridge-macos.dmg.sha256
+shasum -a 256 -c dynapps-bridge-macos.dmg.sha256
 ```
 
 Continue only if it reports `OK`. Follow [Install on macOS](/documentation/install-macos) for app installation and Gatekeeper verification. Do not disable Gatekeeper or remove quarantine attributes to work around a rejected download.
@@ -52,8 +52,8 @@ Continue only if it reports `OK`. Follow [Install on macOS](/documentation/insta
 In the directory containing both files, compare the expected and actual values:
 
 ```powershell
-$ExpectedHash = ((Get-Content ".\astound-bridge-windows.exe.sha256" -Raw).Trim() -split '\s+')[0]
-$ActualHash = (Get-FileHash ".\astound-bridge-windows.exe" -Algorithm SHA256).Hash
+$ExpectedHash = ((Get-Content ".\dynapps-bridge-windows.exe.sha256" -Raw).Trim() -split '\s+')[0]
+$ActualHash = (Get-FileHash ".\dynapps-bridge-windows.exe" -Algorithm SHA256).Hash
 if ($ExpectedHash -notmatch '^[0-9a-fA-F]{64}$' -or $ActualHash -ne $ExpectedHash) {
     throw "Checksum verification failed. Do not run this download."
 }
@@ -67,13 +67,13 @@ Follow [Install on Windows](/documentation/install-windows), including its bridg
 For x86_64:
 
 ```bash
-sha256sum -c astound-bridge-linux-x86_64.tar.gz.sha256
+sha256sum -c dynapps-bridge-linux-x86_64.tar.gz.sha256
 ```
 
 For aarch64:
 
 ```bash
-sha256sum -c astound-bridge-linux-aarch64.tar.gz.sha256
+sha256sum -c dynapps-bridge-linux-aarch64.tar.gz.sha256
 ```
 
 Continue only if the check reports `OK`. The [Linux and WSL installation guide](/documentation/bridge-install#linux-and-wsl) covers prerequisites, the installer, trusted manifest keys, sign-in, and background services.

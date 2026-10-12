@@ -1,11 +1,11 @@
-{{- $fullname := include "astound.fullname" . -}}
+{{- $fullname := include "dynapps.fullname" . -}}
 {{- $sel := dict "ctx" . "component" "gateway" -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ $fullname }}-gateway
   labels:
-    {{- include "astound.labels" . | nindent 4 }}
+    {{- include "dynapps.labels" . | nindent 4 }}
     app.kubernetes.io/component: gateway
 spec:
   {{- if not .Values.gateway.autoscaling.enabled }}
@@ -17,20 +17,20 @@ spec:
     rollingUpdate: {maxSurge: 25%, maxUnavailable: 0}
   selector:
     matchLabels:
-      {{- include "astound.selectorLabels" $sel | nindent 6 }}
+      {{- include "dynapps.selectorLabels" $sel | nindent 6 }}
   template:
     metadata:
       labels:
-        {{- include "astound.labels" . | nindent 8 }}
-        {{- include "astound.selectorLabels" $sel | nindent 8 }}
+        {{- include "dynapps.labels" . | nindent 8 }}
+        {{- include "dynapps.selectorLabels" $sel | nindent 8 }}
       annotations:
-        checksum/profile: {{ include "astound.profile" (dict "ctx" . "role" "gateway") | sha256sum }}
+        checksum/profile: {{ include "dynapps.profile" (dict "ctx" . "role" "gateway") | sha256sum }}
         checksum/secrets-source: {{ toJson .Values.secrets | sha256sum }}
         {{- with .Values.gateway.podAnnotations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
     spec:
-      {{- include "astound.podSpec" (dict "ctx" . "role" "gateway" "component" "gateway" "profileConfigMap" (printf "%s-profile-gateway" $fullname) "serviceAccount" (include "astound.serviceAccountName" .) "spc" (printf "%s-secrets" $fullname) "secretName" (include "astound.secretName" .) "job" false "args" list "resources" .Values.gateway.resources) | nindent 6 }}
+      {{- include "dynapps.podSpec" (dict "ctx" . "role" "gateway" "component" "gateway" "profileConfigMap" (printf "%s-profile-gateway" $fullname) "serviceAccount" (include "dynapps.serviceAccountName" .) "spc" (printf "%s-secrets" $fullname) "secretName" (include "dynapps.secretName" .) "job" false "args" list "resources" .Values.gateway.resources) | nindent 6 }}
       {{- if .Values.gateway.topologySpread }}
       topologySpreadConstraints:
         - maxSkew: 1
@@ -38,13 +38,13 @@ spec:
           whenUnsatisfiable: ScheduleAnyway
           labelSelector:
             matchLabels:
-              {{- include "astound.selectorLabels" $sel | nindent 14 }}
+              {{- include "dynapps.selectorLabels" $sel | nindent 14 }}
         - maxSkew: 1
           topologyKey: kubernetes.io/hostname
           whenUnsatisfiable: ScheduleAnyway
           labelSelector:
             matchLabels:
-              {{- include "astound.selectorLabels" $sel | nindent 14 }}
+              {{- include "dynapps.selectorLabels" $sel | nindent 14 }}
       {{- end }}
       {{- with .Values.gateway.nodeSelector }}
       nodeSelector:

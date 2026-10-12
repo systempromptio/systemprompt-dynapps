@@ -196,7 +196,7 @@ for b in $BINS; do OBJ_ARGS+=(--object "$b"); done
 # picked up depends on which binaries a run happened to build, so leaving them
 # in made a crate's number move by several points when an unrelated test crate
 # took a new dependency.
-IGNORE_RE="(\.cargo|/rustc/|/registry/|/debug/build/|/tests/|/target/|systemprompt-core/|systemprompt-astound/src/(main|lib)\.rs|bridge/src/main\.rs|extensions/(cli|mcp)/[^/]+/src/main\.rs|extensions/cli/[^/]+/src/commands/|extensions/.*/extension\.rs|build\.rs)"
+IGNORE_RE="(\.cargo|/rustc/|/registry/|/debug/build/|/tests/|/target/|systemprompt-core/|systemprompt-dynapps/src/(main|lib)\.rs|bridge/src/main\.rs|extensions/(cli|mcp)/[^/]+/src/main\.rs|extensions/cli/[^/]+/src/commands/|extensions/.*/extension\.rs|build\.rs)"
 
 echo "==> Coverage report"
 WARNINGS="$ROOT/coverage-report/llvm-cov-warnings.txt"

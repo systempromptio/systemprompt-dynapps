@@ -6,7 +6,7 @@ description: 'Build a stakeholder map from Salesforce contacts, opportunity cont
 enabled: true
 file: SKILL.md
 tags:
-- astound
+- dynapps
 - salesforce
 - sales
 category: business

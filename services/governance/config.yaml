@@ -35,7 +35,7 @@ governance:
   policies:
   - id: secret_scan
     enabled: true
-    # This catalog is Astound-owned. Pattern absence means disabled, so AWS
+    # This catalog is Dynapps-owned. Pattern absence means disabled, so AWS
     # examples and AWS-shaped values produce no confirmed finding here.
     patterns:
       - id: github-token-classic

@@ -1,4 +1,4 @@
-# Astound Digital documentation
+# Dynapps documentation
 
 Installation, configuration, architecture, workflow, and engineering references for
 this repository. This is the single repository-documentation tree. Content compiled
@@ -17,7 +17,6 @@ into the product documentation site remains under `services/content/documentatio
 - [Gateway routing](gateway-routes.md)
 - [Personal MCP accounts](CONFIGURED-CONNECTORS.md)
 - [Centralized MCP connections](integrations/centralized-mcp.md)
-- [India development marketplace](india-marketplace.md)
 - [UK requirements workflow](UK-EVALUATIONS.md)
 
 ## Maintain the repository

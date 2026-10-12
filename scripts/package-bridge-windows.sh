@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Cross-compile the branded bridge for Windows and stage it as the single-file
-# download the homepage links to (storage/files/downloads/astound-bridge-windows.exe).
+# download the homepage links to (storage/files/downloads/dynapps-bridge-windows.exe).
 #
 # Target is x86_64-pc-windows-msvc, NOT -gnu, and that is load-bearing:
 # webview2-com-sys statically links WebView2LoaderStatic.lib only on msvc
@@ -21,8 +21,8 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BRIDGE_DIR="$REPO_ROOT/bridge"
 DOWNLOADS_DIR="$REPO_ROOT/storage/files/downloads"
 TARGET="x86_64-pc-windows-msvc"
-ASSET="astound-bridge-windows.exe"
-BIN="$BRIDGE_DIR/target/$TARGET/release/astound-bridge.exe"
+ASSET="dynapps-bridge-windows.exe"
+BIN="$BRIDGE_DIR/target/$TARGET/release/dynapps-bridge.exe"
 
 command -v cargo-xwin >/dev/null || {
     echo "ERROR: cargo-xwin not installed (cargo install cargo-xwin, or a" >&2
@@ -46,7 +46,7 @@ if [ -z "${RC_PATH:-}" ]; then
 fi
 
 if [ "${SKIP_BUILD:-0}" != "1" ]; then
-    echo "==> building astound-bridge for $TARGET (static CRT, rc=$RC_PATH)"
+    echo "==> building dynapps-bridge for $TARGET (static CRT, rc=$RC_PATH)"
     (cd "$BRIDGE_DIR" && RUSTFLAGS="-C target-feature=+crt-static" \
         cargo xwin build --release --target "$TARGET")
 fi

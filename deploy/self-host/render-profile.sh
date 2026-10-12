@@ -9,12 +9,12 @@
 # pass in.
 #
 # Usage:
-#   render-profile.sh --out /etc/astound/profile \
+#   render-profile.sh --out /etc/dynapps/profile \
 #     --external-url https://ai.example.com --admin-email platform-admin@example.com \
 #     --trusted-proxies 10.0.0.0/8,10.1.0.0/16 \
 #     --database-url 'postgres://systemprompt:pw@db:5432/systemprompt?sslmode=require' \
 #     --anthropic-key sk-ant-... \
-#     [--secret name=value ...] [--image ghcr.io/astound-digital/systemprompt-astound:0.44.0]
+#     [--secret name=value ...] [--image ghcr.io/systempromptio/systemprompt-dynapps:0.44.0]
 #
 # Portable: bash, openssl, jq. --image checks the template's version pin
 # against the image label and validates the rendered profile inside the

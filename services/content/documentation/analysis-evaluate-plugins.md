@@ -1,7 +1,7 @@
 ---
 title: "Evaluate a Plugin: Fixed Suite, PAT Export, Deterministic Metrics"
 description: "How to measure a plugin's skills run over run: send a fixed prompt suite through a real client, export every conversation with a personal access token, compute deterministic metrics, and compare versions over time in the console and in git."
-author: "Astound Digital"
+author: "Dynapps"
 slug: "analysis-evaluate-plugins"
 keywords: "evaluate, evaluation, eval, plugin, skills, metrics, PAT, personal access token, export, transcripts, versions, compare, baseline, regression"
 kind: "guide"
@@ -30,7 +30,7 @@ related_docs:
 ## Why this shape
 
 - **Fixed inputs.** The prompts live in `scripts/eval/prompts/<plugin>.yaml`, and their hash is stamped on every run. Runs with different prompt hashes are flagged as not comparable, so a change in the numbers is a change in the skills.
-- **A real client.** The suite runs in Claude Code through the Astound bridge, so every turn goes through the gateway, governance, cost accounting and the audit record exactly as a user's would. The eval measures what users get.
+- **A real client.** The suite runs in Claude Code through the Dynapps bridge, so every turn goes through the gateway, governance, cost accounting and the audit record exactly as a user's would. The eval measures what users get.
 - **Deterministic scoring.** Tokens, cost, turns, tool calls and errors come from the gateway's own record of each conversation. Error classes are fixed patterns over tool results. Quality review is done separately by a person or by the engineer changing the skills, and it is never mixed into the metrics.
 - **Two histories.** Each run's metrics are written locally under `evals/<plugin>/<label>/` (the directory is gitignored: runs read real users' data). Each shipped change also produces a new marketplace version in the console, which is the shared history.
 
@@ -49,7 +49,7 @@ The first run on a plugin is its **baseline**. Every later run is compared with 
 ## Run
 
 ```bash
-scripts/eval/eval.sh run r2-2026-09-25 astound-salesforce
+scripts/eval/eval.sh run r2-2026-09-25 dynapps-salesforce
 ```
 
 This runs every skill in the suite four at a time. Each run is a headless Claude Code session on the bridge host, with the model set in the suite file. The prompt is the skill's slash command, the fixed prompt, and the suite's constant suffix (scope to the test records, never write, never ask). The run manifest records:
@@ -67,8 +67,8 @@ This runs every skill in the suite four at a time. Each run is a headless Claude
 To measure a change the same day, before it ships, install this tree's skills straight into the eval host's plugin cache:
 
 ```bash
-python3 scripts/eval/patch-bridge.py astound-salesforce            # back up, then install
-python3 scripts/eval/patch-bridge.py astound-salesforce --restore  # put the served version back
+python3 scripts/eval/patch-bridge.py dynapps-salesforce            # back up, then install
+python3 scripts/eval/patch-bridge.py dynapps-salesforce --restore  # put the served version back
 ```
 
 The run manifest records the patch under `bridge_patch`. The gateway still credits these conversations to the marketplace version it serves, so the console's Versions page shows them under the old hash until the deploy. The deterministic metrics are unaffected. The next bridge sync replaces a patch, so check that `.eval-patch` is still in the cache before a run.

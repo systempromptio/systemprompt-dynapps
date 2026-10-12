@@ -1,10 +1,12 @@
-//! ADFS SSO connection config, loaded from `services/web/config/adfs.yaml`.
+//! SSO connection config, loaded from `services/web/config/adfs.yaml`:
+//! a SAML 2.0 relying party trusted by a Microsoft Entra ID enterprise
+//! application.
 //!
-//! ADFS SSO is the only way a non-operator account comes into existence: the
-//! domain allow-list and the AD group map are the two halves of the
+//! SSO is the only way a non-operator account comes into existence: the
+//! domain allow-list and the Entra ID group map are the two halves of the
 //! provisioning gate. Operators are created out-of-band with
 //! `admin users create`. `auto_provision` defaults off — an allow-listed domain
-//! says an address *could* belong to someone, only a mapped AD group says IT
+//! says an address *could* belong to someone, only a mapped group says IT
 //! approved them — so SSO signs in existing accounts unless an installation
 //! trusts its group map.
 
@@ -12,25 +14,26 @@ use std::collections::BTreeMap;
 
 use serde::Deserialize;
 
-// Why: AD FS default claim URIs for the standard issuance templates; an
-// installation whose issuance rules name them differently overrides them.
+// Why: Microsoft Entra ID's default claim URIs for a SAML enterprise
+// application; an application whose claim mapping renames them overrides them.
 pub(super) fn default_email_attribute() -> String {
     "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress".to_owned()
 }
 
 pub(super) fn default_name_attribute() -> String {
-    "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name".to_owned()
+    "http://schemas.microsoft.com/identity/claims/displayname".to_owned()
 }
 
 pub(super) fn default_groups_attribute() -> String {
-    "http://schemas.xmlsoap.org/claims/Group".to_owned()
+    "http://schemas.microsoft.com/ws/2008/06/identity/claims/groups".to_owned()
 }
 
+// Why: Microsoft Entra ID replaces the groups claim with this link when a user
+// belongs to more groups than a SAML token may carry (150).
+pub const GROUPS_OVERAGE_ATTRIBUTE: &str = "http://schemas.microsoft.com/claims/groups.link";
+
 pub(super) fn default_allowed_domains() -> Vec<String> {
-    vec![
-        "astounddigital.com".to_owned(),
-        "astoundcommerce.com".to_owned(),
-    ]
+    vec!["dynapps.es".to_owned(), "wearedynapps.com".to_owned()]
 }
 
 pub(super) const fn default_auto_provision() -> bool {
@@ -49,19 +52,23 @@ pub(super) const fn default_clock_skew_seconds() -> u64 {
     120
 }
 
-// Why: AD FS relying-party trust registers these URLs character for character;
+// Why: the Entra ID enterprise application registers these URLs as its
+// Identifier and Reply URL character for character;
 // the loader appends them to the profile's external URL so trust and requests
 // agree.
 pub const METADATA_PATH: &str = "/saml/metadata";
 pub const ACS_PATH: &str = "/admin/auth/adfs/acs";
 
-/// ADFS SSO connection config (SAML 2.0 relying party).
+/// SSO connection config (SAML 2.0 relying party of Microsoft Entra ID).
 ///
 /// There is no client secret: trust runs on the `IdP` signing certificate in
-/// the federation metadata at `idp_metadata_path` (relative to
-/// `services/web/config/`), committed so rotation is a reviewable diff rather
-/// than a fetch at sign-in. `entity_id` is our `<Audience>`/`<Issuer>` and
-/// `acs_url` must equal the trust's registered ACS; both are derived from the
+/// its federation metadata. `idp_metadata_url` (the enterprise application's
+/// "App Federation Metadata Url") is fetched at boot and every six hours, so
+/// a certificate roll-over needs no redeploy; `idp_metadata_path` (relative to
+/// `services/web/config/`) is a committed copy used when no URL is set or the
+/// fetch fails. At least one of the two is required when `enabled`.
+/// `entity_id` is our `<Audience>`/`<Issuer>` and `acs_url` must equal the
+/// application's registered Reply URL; both are derived from the
 /// profile's external URL when omitted. `deny_without_group` refuses an
 /// assertion with no group at all; `group_roles` (exact) and
 /// `group_role_patterns` (one-`*` globs, additive) are re-projected onto the
@@ -76,7 +83,10 @@ pub struct AdfsConfig {
     pub entity_id: String,
     #[serde(default)]
     pub acs_url: String,
+    #[serde(default)]
     pub idp_metadata_path: String,
+    #[serde(default)]
+    pub idp_metadata_url: Option<String>,
     #[serde(skip)]
     pub idp_metadata_xml: String,
     #[serde(default = "default_allowed_domains")]
@@ -121,6 +131,7 @@ impl AdfsConfig {
             entity_id: String::new(),
             acs_url: String::new(),
             idp_metadata_path: String::new(),
+            idp_metadata_url: None,
             idp_metadata_xml: String::new(),
             allowed_email_domains: default_allowed_domains(),
             auto_provision: default_auto_provision(),
@@ -140,7 +151,7 @@ impl AdfsConfig {
         self.enabled
             && !self.entity_id.is_empty()
             && !self.acs_url.is_empty()
-            && !self.idp_metadata_xml.is_empty()
+            && (!self.idp_metadata_xml.is_empty() || self.idp_metadata_url.is_some())
     }
 
     #[must_use]

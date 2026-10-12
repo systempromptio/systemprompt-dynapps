@@ -24,7 +24,7 @@ use systemprompt_kit_export::{export_kit, round_trip};
     about = "Export a marketplace from services/ as a kit tree in Anthropic marketplace format"
 )]
 struct Cli {
-    #[arg(help = "Marketplace id, e.g. astound-india-dev")]
+    #[arg(help = "Marketplace id, e.g. dynapps-delivery-dev")]
     marketplace: String,
     #[arg(help = "Directory to write the kit tree into (created; must be empty)")]
     out: PathBuf,

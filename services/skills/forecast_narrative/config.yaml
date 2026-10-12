@@ -6,7 +6,7 @@ description: Build a forecast-call brief from Salesforce opportunity aggregates,
 enabled: true
 file: SKILL.md
 tags:
-- astound
+- dynapps
 - salesforce
 - sales
 category: business

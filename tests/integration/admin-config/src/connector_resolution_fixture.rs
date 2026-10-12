@@ -34,7 +34,7 @@ pub(super) struct Harness {
 impl Harness {
     pub(super) async fn create_or_skip(mode: &str) -> Option<Self> {
         let directory = tempfile::tempdir().unwrap();
-        let script = astound_test_common::repo_path("tests/fixtures/oauth/server.py");
+        let script = dynapps_test_common::repo_path("tests/fixtures/oauth/server.py");
         let mut server = Server(
             Command::new("python3")
                 .arg("-u")
@@ -61,7 +61,7 @@ impl Harness {
         ] {
             let destination = directory.path().join(relative);
             std::fs::create_dir_all(destination.parent().unwrap()).unwrap();
-            std::fs::copy(astound_test_common::repo_path(relative), destination).unwrap();
+            std::fs::copy(dynapps_test_common::repo_path(relative), destination).unwrap();
         }
         std::fs::write(&config, format!(
             "mcp_servers:\n  rotation-mcp:\n    type: external\n    endpoint: {origin}/mcp\n    enabled: true\n    display_in_web: false\n    oauth: {{required: false, scopes: [user], audience: mcp, client_id: null}}\n    connector: {{adapter: generic, scopes: [tools:read]}}\n"
@@ -69,7 +69,7 @@ impl Harness {
         let profile = include_str!("../../../contract/admin/fixtures/profile.yaml")
             .replace(
                 "__REPO__",
-                &astound_test_common::repo_root().to_string_lossy(),
+                &dynapps_test_common::repo_root().to_string_lossy(),
             )
             .replace("__PROFILE_DIR__", &directory.path().to_string_lossy());
         std::fs::write(directory.path().join("profile.yaml"), profile).unwrap();

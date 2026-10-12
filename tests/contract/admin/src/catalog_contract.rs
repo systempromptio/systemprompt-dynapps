@@ -478,7 +478,7 @@ async fn access_control_api_replaces_rules_and_projects_a_matrix() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn the_matrix_resolves_a_role_granted_marketplace_at_the_role_layer() {
-    const MARKETPLACE: &str = "astound-super-admin";
+    const MARKETPLACE: &str = "dynapps-super-admin";
     if !globals::init() {
         return;
     }

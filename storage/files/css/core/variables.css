@@ -12,13 +12,13 @@
   --sp-brand-900: #0a0a0a;
   --sp-brand-950: #050505;
 
-  --sp-color-primary: #171717;
-  --sp-color-primary-hover: #000000;
-  --sp-color-primary-dark: #0a0a0a;
-  --sp-color-primary-rgb: 23, 23, 23;
-  --sp-color-accent: #fe190a;
-  --sp-color-accent-rgb: 254, 25, 10;
-  --sp-color-text-on-primary: #f8f7f3;
+  --sp-color-primary: #F13C42;
+  --sp-color-primary-hover: color-mix(in oklch, #F13C42 88%, black);
+  --sp-color-primary-dark: color-mix(in oklch, #F13C42 75%, black);
+  --sp-color-primary-rgb: 241, 60, 66;
+  --sp-color-accent: #951CF3;
+  --sp-color-accent-rgb: 149, 28, 243;
+  --sp-color-text-on-primary: #FAFAFA;
   --sp-color-background: #f8f7f3;
   --sp-color-surface: #f1efed;
   --sp-color-surface-elevated: #f8f7f3;
@@ -93,12 +93,12 @@
   --sp-syntax-bg: #0a0a0a;
   --sp-syntax-fg: #f8f7f3;
   --sp-syntax-comment: #707070;
-  --sp-syntax-keyword: #fe190a;
+  --sp-syntax-keyword: #F13C42;
   --sp-syntax-string: #22c55e;
   --sp-syntax-number: #b6b6b6;
   --sp-syntax-function: #f1efed;
   --sp-syntax-variable: #dddddd;
-  --sp-syntax-operator: #fe190a;
+  --sp-syntax-operator: #951CF3;
   --sp-syntax-class: #b6b6b6;
 
   --sp-font-size-xs: 12px;
@@ -172,11 +172,11 @@
   --sp-card-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
   --sp-card-shadow-hover: 0 8px 32px rgba(10, 10, 10, 0.12);
   --sp-card-shadow-highlight: 0 0 20px rgba(23, 23, 23, 0.12);
-  --sp-brand-gradient: linear-gradient(135deg, #f1efed, #f8f7f3);
-  --sp-brand-gradient-reverse: linear-gradient(135deg, #f8f7f3, #f1efed);
+  --sp-brand-gradient: linear-gradient(135deg, #7B00DC, #F13C42, #FF911F);
+  --sp-brand-gradient-reverse: linear-gradient(135deg, #FF911F, #F13C42, #7B00DC);
 
   --sp-client-black: #171717;
-  --sp-client-tints-cta-orange: #171717;
+  --sp-client-tints-cta-orange: #FF911F;
   --sp-client-tints-orange-3: #f1efed;
   --sp-client-sand: #f8f7f3;
   --sp-client-sand-60: rgba(248, 247, 243, 0.6);

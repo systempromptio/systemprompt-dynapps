@@ -1,7 +1,7 @@
 # Clean client
 
-A disposable Linux container with **no Astound configuration**, for testing the
-Claude Code + Astound Bridge integration as a new user experiences it.
+A disposable Linux container with **no Dynapps configuration**, for testing the
+Claude Code + Dynapps Bridge integration as a new user experiences it.
 
 The problem it solves: a dev machine has already been set up, so an integration
 test there can pass by reading config that a real customer would not have. This
@@ -22,8 +22,8 @@ drops straight into Claude Code:
 just claude <code>
 ```
 
-It runs as container `astound-claude` with its own `astound-claude-home` volume,
-deliberately separate from this suite's `astound-clean-home`: a test run must
+It runs as container `dynapps-claude` with its own `dynapps-claude-home` volume,
+deliberately separate from this suite's `dynapps-clean-home`: a test run must
 not inherit a real session's PAT (it would skip the sign-in the test exists to
 exercise), and wiping the test state must not sign a user out. `just
 claude-reset` drops the session volume; `just clean-client-reset` drops the
@@ -32,7 +32,7 @@ testing one.
 Point it somewhere other than this host's gateway:
 
 ```bash
-just clean-client 0 https://gateway.astounddigital.com
+just clean-client 0 https://gateway.dynapps.es
 ```
 
 ## What it does and does not contain
@@ -40,7 +40,7 @@ just clean-client 0 https://gateway.astounddigital.com
 Baked in: Node 22, Claude Code (`@anthropic-ai/claude-code`), git, ripgrep, jq,
 curl, and Playwright + Chromium (build with `--build-arg INSTALL_BROWSERS=0`
 for the slim bridge-only variant — the browser layer is ~1GB). Bind-mounted
-read-only at run time: `bridge/target/release/astound-bridge`, so you test the
+read-only at run time: `bridge/target/release/dynapps-bridge`, so you test the
 binary you just built rather than a stale copy.
 
 ### Dev sandbox variant
@@ -57,7 +57,7 @@ Deliberately absent — do not add these:
 | Not present | Why |
 |---|---|
 | `--env-file .env` | provider keys would let Claude Code bypass the gateway |
-| any `$HOME` bind-mount | `~/.claude`, `~/.claude.json`, `~/.config/astound` are the exact state under test |
+| any `$HOME` bind-mount | `~/.claude`, `~/.claude.json`, `~/.config/dynapps` are the exact state under test |
 | a mount of this repo | `.systemprompt/profiles/` and `sessions/` are real host config |
 
 `entrypoint.sh` enforces the first and second: it refuses to start if bridge or
@@ -75,15 +75,15 @@ Port `8767` — the bridge's plugin-OAuth loopback — is published to
 it when the host already holds that port, and says so; the rest of the flow
 still works.
 
-Neither `astound-bridge login` (paste a `sp-live-…` PAT) nor Claude Code's OAuth
+Neither `dynapps-bridge login` (paste a `sp-live-…` PAT) nor Claude Code's OAuth
 needs a browser inside the container: open the printed URL on Windows and paste
 the code back.
 
 ## Feedback plane
 
-On `astound-bridge login` (which `install.sh --pat` runs for you) the bridge
+On `dynapps-bridge login` (which `install.sh --pat` runs for you) the bridge
 POSTs `/v1/bridge/device` and saves a **device credential** at
-`~/.local/state/astound-bridge/metadata/feedback/device.json`. That credential
+`~/.local/state/dynapps-bridge/metadata/feedback/device.json`. That credential
 is what every hook event and every OpenCode chat request is stamped with, and
 it is a bearer token — so the bridge only self-enrols when the gateway URL is
 `https://…` or loopback (`http://localhost:*`, `http://127.0.0.1:*`). A gateway
@@ -131,7 +131,7 @@ would try to open a browser each time).
 **Admin, on the host:**
 
 ```bash
-just cli admin users create --name jdoe --email jdoe@astounddigital.com --full-name Jane-Doe
+just cli admin users create --name jdoe --email jdoe@dynapps.es --full-name Jane-Doe
 just cli admin users show jdoe                    # capture the UUID
 just cli admin bridge enroll-cert --user-id <UUID> --fingerprint <sha256> --label jdoe-laptop
 ```
@@ -139,22 +139,22 @@ just cli admin bridge enroll-cert --user-id <UUID> --fingerprint <sha256> --labe
 **User, in the container:**
 
 ```bash
-mkdir -p ~/.config/astound
+mkdir -p ~/.config/dynapps
 openssl req -x509 -newkey rsa:2048 -nodes -days 730 \
-  -keyout ~/.config/astound/device.key \
-  -out    ~/.config/astound/device.pem -subj "/CN=$(hostname)"
-openssl x509 -in ~/.config/astound/device.pem -outform der | sha256sum   # send to admin
+  -keyout ~/.config/dynapps/device.key \
+  -out    ~/.config/dynapps/device.pem -subj "/CN=$(hostname)"
+openssl x509 -in ~/.config/dynapps/device.pem -outform der | sha256sum   # send to admin
 
 # Name the cert in the config. On Linux cert_keystore_ref is the certificate's
-# path; ASTOUND_BRIDGE_DEVICE_CERT still works and takes precedence.
-printf '\n[mtls]\ncert_keystore_ref = "%s/.config/astound/device.pem"\n' "$HOME" \
-  >> ~/.config/astound/astound-bridge.toml
+# path; DYNAPPS_BRIDGE_DEVICE_CERT still works and takes precedence.
+printf '\n[mtls]\ncert_keystore_ref = "%s/.config/dynapps/device.pem"\n' "$HOME" \
+  >> ~/.config/dynapps/dynapps-bridge.toml
 
-astound-bridge whoami                 # your own identity, no PAT
-astound-bridge install --apply --apply-schedule
-astound-bridge sync --allow-tofu      # plugins, skills, agents, MCP + marketplace
-astound-bridge doctor                 # names any remaining problem
-astound-bridge proxy &                # no systemd here — start the proxy by hand
+dynapps-bridge whoami                 # your own identity, no PAT
+dynapps-bridge install --apply --apply-schedule
+dynapps-bridge sync --allow-tofu      # plugins, skills, agents, MCP + marketplace
+dynapps-bridge doctor                 # names any remaining problem
+dynapps-bridge proxy &                # no systemd here — start the proxy by hand
 bash -l -c claude                     # org skills load with zero manual exports
 ```
 
@@ -173,14 +173,14 @@ shell needs:
 
 | What | Where |
 |---|---|
-| `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN` | `~/.config/astound/env.sh` |
+| `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN` | `~/.config/dynapps/env.sh` |
 | a marker-delimited block sourcing that file | `~/.profile` |
 
 That part is fully exercised here: `bash -l` then `claude` must work with no
 exports, and running install twice must leave exactly one block in `~/.profile`.
 
 `--apply-schedule` additionally writes two systemd **user** units —
-`astound-bridge-sync.{service,timer}` and `astound-bridge-proxy.service`. **This
+`dynapps-bridge-sync.{service,timer}` and `dynapps-bridge-proxy.service`. **This
 container has no systemd**, so only half of that is testable here: unit
 *generation*, and the graceful degradation (files written, a warning printed,
 exit 0). Activation and restart-on-failure must be confirmed on a real systemd
@@ -216,5 +216,5 @@ wrapping.
 `gnome-keyring` is deliberately **not** installed. A container has no Secret
 Service provider, which is exactly the condition a real headless Linux user hits;
 the bridge tiers down to the kernel keyutils keyring (and then to process memory)
-and reports which one it chose via `astound-bridge doctor`. Installing a desktop
+and reports which one it chose via `dynapps-bridge doctor`. Installing a desktop
 keyring here would hide that path instead of testing it.

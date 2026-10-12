@@ -1,7 +1,7 @@
 ---
 title: "Deploy: One Node and PostgreSQL"
-description: "Run the published Astound Digital gateway image on one Linux machine against PostgreSQL, from pulling the image to the first admin sign-in."
-author: "Astound Digital"
+description: "Run the published Dynapps gateway image on one Linux machine against PostgreSQL, from pulling the image to the first admin sign-in."
+author: "Dynapps"
 slug: "deploy"
 keywords: "deploy, self-host, docker, docker compose, postgresql, ghcr, image, profile, secrets, vertex ai, service account, single node, install, upgrade"
 kind: "guide"
@@ -30,7 +30,7 @@ related_playbooks:
 # Deploy: One Node and PostgreSQL
 
 This page takes one Linux machine with Docker from nothing to a running,
-verified gateway. It is the same procedure the Astound-published bundle in
+verified gateway. It is the same procedure the published bundle in
 `deploy/self-host/` of the repository automates, and the three-node layout
 grows from it without redoing any step. On Oracle Cloud, read
 [Deploy on Oracle Cloud](/documentation/deploy-oracle-cloud) alongside this
@@ -45,7 +45,7 @@ name a release the gateway is not on.
 | Item | Requirement |
 |------|-------------|
 | Machine | Linux (amd64 or arm64), Docker Engine 24+ with Compose v2, 2 vCPU and 4 GB RAM minimum, outbound HTTPS to `ghcr.io`, `aiplatform.googleapis.com`, `oauth2.googleapis.com` and `api.anthropic.com` |
-| Image access | a GitHub token with `read:packages`, issued by Astound. The image is private |
+| Image access | a GitHub token with `read:packages`, issued by systemprompt.io. The image is private |
 | PostgreSQL | version 16 or newer, reachable from the machine on 5432 with TLS. The `uuid-ossp` and `pgcrypto` extensions must be available. The bundled option runs PostgreSQL 18 beside the app |
 | Model provider | a Google service-account JSON with `roles/aiplatform.user` on one GCP project (every `claude-*` request is served from Vertex AI), plus an Anthropic API key for the failover |
 | Public hostname | an HTTPS address with TLS terminated by nginx on the machine or by a load balancer in front of it. HTTPS is mandatory: the sign-in cookie is `Secure` and SSO callbacks must match the public HTTPS URL |
@@ -53,21 +53,21 @@ name a release the gateway is not on.
 ## 1. Get the bundle and the image
 
 ```bash
-git clone https://github.com/Astound-Digital/systemprompt-astound.git
-cd systemprompt-astound/deploy/self-host
+git clone https://github.com/systempromptio/systemprompt-dynapps.git
+cd systemprompt-dynapps/deploy/self-host
 echo "$GHCR_TOKEN" | docker login ghcr.io -u <github-user> --password-stdin
 ```
 
-The image is `ghcr.io/astound-digital/systemprompt-astound:<version>`. Always
+The image is `ghcr.io/systempromptio/systemprompt-dynapps:<version>`. Always
 pin a version; `latest` follows the main branch.
 
 Images built by the release pipeline are cosign-signed, and this verifies one:
 
 ```bash
 cosign verify \
-  --certificate-identity-regexp='https://github.com/Astound-Digital/systemprompt-astound/' \
+  --certificate-identity-regexp='https://github.com/systempromptio/systemprompt-dynapps/' \
   --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
-  ghcr.io/astound-digital/systemprompt-astound:@RELEASE_VERSION@
+  ghcr.io/systempromptio/systemprompt-dynapps:@RELEASE_VERSION@
 ```
 
 ## 2. Provision the database
@@ -110,7 +110,7 @@ line pins it to the image release, which `--image` and `preflight.sh` check.
   --database-url 'postgres://systemprompt:<pw>@<db-host>:5432/systemprompt?sslmode=require' \
   --anthropic-key sk-ant-... \
   --secret "vertex=$(cat vertex-sa.json)" \
-  --image ghcr.io/astound-digital/systemprompt-astound:@RELEASE_VERSION@
+  --image ghcr.io/systempromptio/systemprompt-dynapps:@RELEASE_VERSION@
 ```
 
 | Flag | Value |
@@ -120,15 +120,15 @@ line pins it to the image release, which `--image` and `preflight.sh` check.
 | `--trusted-proxies` | the address your TLS proxy or load balancer connects from. nginx on the same machine: `127.0.0.0/8`. Without it forwarded headers are ignored and rate limiting can refuse callers |
 | `--database-url` | from step 2, or `postgres://systemprompt:<pw>@postgres:5432/systemprompt` for the bundled database |
 | `--anthropic-key` | the Anthropic API key, stored as the `anthropic` secret. The `claude-*` route fails over to it when Vertex is out of capacity or unreachable |
-| `--secret name=value` | any other secret, repeatable. `vertex=<service-account JSON>` is the one every deployment needs: one key serves Claude, Gemini and the open models on Vertex. Optional ones (`gemini`, `astound_release_token`, `ghcr_pull_token`) are listed in `SECRETS.md` |
+| `--secret name=value` | any other secret, repeatable. `vertex=<service-account JSON>` is the one every deployment needs: one key serves Claude, Gemini and the open models on Vertex. Optional ones (`gemini`, `dynapps_release_token`, `ghcr_pull_token`) are listed in `SECRETS.md` |
 | `--image` | optional; validates the rendered profile inside the image before you start anything |
 
 **Settle the hostname before the first boot.** Changing `--external-url` later
 is not a re-render and a restart: the JWT issuer moves with it, so every issued
 session and bridge token stops validating, and every bridge has to be
-connected again. The AD FS relying-party trust is registered against this host
-too, so IT has to update it — see
-[ADFS SSO setup](/documentation/adfs-sso-setup).
+connected again. The Entra ID Enterprise Application is registered against this
+host too, so IT has to update its Identifier and Reply URL — see
+[Entra ID SSO setup](/documentation/entra-id-sso-setup).
 
 `render-profile.sh` also generates the three secrets that form the
 instance's identity: the OAuth pepper, the manifest signing seed, and an RSA
@@ -187,7 +187,7 @@ client download against its checksum, anonymous rejection (`401`) on
 5010, the migration ledger and the admin user. It exits 0 only when every
 check passes; resolve each failure before continuing.
 
-Configure [Astound SSO](/documentation/adfs-sso-setup) for the public hostname, sign in at `https://ai.example.com/admin/login`, and hand users the
+Configure [Dynapps SSO](/documentation/entra-id-sso-setup) for the public hostname, sign in at `https://ai.example.com/admin/login`, and hand users the
 [Downloads](/documentation/downloads) page, which your own gateway serves.
 
 ## Upgrade and roll back

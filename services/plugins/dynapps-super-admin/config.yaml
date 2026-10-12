@@ -1,11 +1,11 @@
 plugin:
-  id: astound-super-admin
-  name: "Astound Super Admin — Control Plane"
+  id: dynapps-super-admin
+  name: "Dynapps Super Admin — Control Plane"
   description: "The administrator control plane: a daily brief with a traffic light per project from Jira and Confluence, critical-project analysis, what each person and team has been working on (conversations, skills, Jira and Confluence), AI spend per user, and direct CLI access to the instance."
   version: "5.2.0"
   enabled: true
   author:
-    name: Astound Digital
+    name: Dynapps
     email: ed@systemprompt.io
   keywords: [admin, governance, analytics, reporting, atlassian, control-plane]
   license: proprietary
@@ -48,6 +48,6 @@ plugin:
     include:
       - admin-ai-usage
   # No hooks here. Claude Code runs plugin hooks session-globally and one plugin
-  # must own them; astound-commons does, because it reaches every signed-in user
+  # must own them; dynapps-commons does, because it reaches every signed-in user
   # while this plugin reaches admins only — hooks declared here left every
   # non-admin session ungoverned and unrecorded.

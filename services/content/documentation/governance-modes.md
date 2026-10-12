@@ -1,7 +1,7 @@
 ---
 title: "Governance Modes: Warn and Enforce"
 description: "Why governance, safety scanning and quotas all run in warn mode on this instance, what each plane records while it does, how to read the numbers, and how to switch a plane back to enforce."
-author: "Astound Digital"
+author: "Dynapps"
 slug: "governance-modes"
 keywords: "governance, warn mode, enforce, measurement window, safety scanners, quotas, block list, policy, would have blocked"
 kind: "guide"
@@ -58,7 +58,7 @@ Four stages run in order: **scope check → secret scan → blocklist → rate
 limit**. Their settings on this instance:
 
 - **Scope check.** Tools prefixed `mcp__systemprompt__` are admin-only.
-- **Secret scan.** A list of credential patterns owned by Astound: GitHub,
+- **Secret scan.** A list of credential patterns owned by Dynapps: GitHub,
   Anthropic, OpenAI and Google keys, PEM private keys, JWTs, database URLs
   that embed a password, and structured `password`/`secret`/`client_secret`
   fields. A high-entropy check runs alongside it, but only as an observation.

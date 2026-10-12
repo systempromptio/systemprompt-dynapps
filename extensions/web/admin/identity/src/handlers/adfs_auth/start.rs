@@ -1,5 +1,5 @@
 //! `GET /admin/auth/adfs/start` — build an `AuthnRequest` and redirect the
-//! browser to the AD FS SSO endpoint (HTTP-Redirect binding), stashing the
+//! browser to the Entra ID SSO endpoint (HTTP-Redirect binding), stashing the
 //! request id and an anti-CSRF `RelayState` in a cookie for the callback.
 
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -33,7 +33,7 @@ pub(crate) async fn adfs_start(
     let (idp, sp) = match (idp_descriptor(cfg).await, service_provider(cfg)) {
         (Ok(idp), Ok(sp)) => (idp, sp),
         (Err(e), _) | (_, Err(e)) => {
-            tracing::error!(error = %e, "ADFS SSO cannot start");
+            tracing::error!(error = %e, "SSO cannot start");
             return Err(LoginRedirect("unavailable"));
         },
     };
@@ -55,12 +55,12 @@ pub(crate) async fn adfs_start(
     ) {
         Ok(s) => s,
         Err(e) => {
-            tracing::error!(error = %e, "ADFS AuthnRequest could not be built");
+            tracing::error!(error = %e, "SSO AuthnRequest could not be built");
             return Err(LoginRedirect("unavailable"));
         },
     };
     let Dispatch::Redirect(target) = started.dispatch else {
-        tracing::error!("ADFS start produced a POST dispatch for a redirect binding");
+        tracing::error!("SSO start produced a POST dispatch for a redirect binding");
         return Err(LoginRedirect("unavailable"));
     };
 

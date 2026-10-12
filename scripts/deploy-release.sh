@@ -32,7 +32,7 @@ WATCH_INTERVAL=15
 DIGEST_WAIT_SECONDS="${DEPLOY_DIGEST_WAIT_SECONDS:-120}"
 DIGEST_WAIT_INTERVAL=5
 HEALTH_READY_SECONDS="${DEPLOY_HEALTH_READY_SECONDS:-300}"
-REPO=Astound-Digital/systemprompt-astound
+REPO=systempromptio/systemprompt-dynapps
 
 # A desktop/credential docker shim fails `docker build` with an error naming
 # neither; the real binary is /usr/bin/docker.
@@ -65,7 +65,7 @@ tag_sha="$(git -C "$ROOT" rev-parse "$TAG^{commit}" 2>/dev/null || true)"
 [ "$tag_sha" = "$main_sha" ] || die "tag $TAG is $tag_sha but origin/main is $main_sha — deploy the release, not a later main"
 gh release view "$TAG" -R "$REPO" --json assets --jq '.assets|length' >/dev/null \
     || die "no GitHub release $TAG"
-docker manifest inspect "ghcr.io/astound-digital/systemprompt-astound:$VERSION" >/dev/null 2>&1 \
+docker manifest inspect "ghcr.io/systempromptio/systemprompt-dynapps:$VERSION" >/dev/null 2>&1 \
     || die "GHCR has no :$VERSION image — release.yml did not finish"
 echo "    origin/main = $TAG = ${main_sha:0:12}"
 

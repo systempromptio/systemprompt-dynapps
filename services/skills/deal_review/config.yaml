@@ -6,7 +6,7 @@ description: Build a scored deal-health assessment from Salesforce fields, conta
 enabled: true
 file: SKILL.md
 tags:
-- astound
+- dynapps
 - salesforce
 - sales
 category: business

@@ -1,7 +1,7 @@
 ---
 title: "Artifacts and the Tool-Call Ledger"
 description: "Every tool result from every client is one linked artifact: how a call's intent, execution and result are joined by the client tool_use_id, what each vantage point contributes, how results are scanned before they are stored, and what each dashboard column means."
-author: "Astound Digital"
+author: "Dynapps"
 slug: "artifacts-and-tool-calls"
 keywords: "artifacts, tool calls, tool_use_id, ledger, mcp_artifacts, mcp_tool_executions, ingestion, secret scanning, Claude Code, Cowork, OpenCode, Codex, hooks, gateway"
 kind: "guide"

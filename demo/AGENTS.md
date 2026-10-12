@@ -5,7 +5,7 @@
 ## Purpose
 
 The generic template's 43-script demo catalogue was removed when this fork
-narrowed to the Astound SSO + Claude Code use case. What remains is the working
+narrowed to the Dynapps SSO (Microsoft Entra ID) + Claude Code use case. What remains is the working
 harness: preflight (token mint), seeding, and the sweep runner.
 
 ## Hard preconditions

@@ -100,10 +100,10 @@
                             </div>
                             <div class="sp-p-connect__ready" data-connect-ready hidden>
                                 <p class="sp-p-connect__label">Windows</p>
-                                <p class="sp-p-connect__lede">Download <a href="/files/downloads/astound-bridge-windows.exe" download>astound-bridge-windows.exe</a>, run it and paste the code when asked, or from PowerShell in the download folder. SmartScreen may warn on first run; the binary is unsigned.</p>
+                                <p class="sp-p-connect__lede">Download <a href="/files/downloads/dynapps-bridge-windows.exe" download>dynapps-bridge-windows.exe</a>, run it and paste the code when asked, or from PowerShell in the download folder. SmartScreen may warn on first run; the binary is unsigned.</p>
                                 <pre class="sp-connect__cmd"><code data-connect-field="desktop_windows_login_command"></code></pre>
                                 <p class="sp-p-connect__label">macOS</p>
-                                <p class="sp-p-connect__lede">Download <a href="/files/downloads/astound-bridge-macos.dmg" download>astound-bridge-macos.dmg</a>, drag Astound Bridge to Applications, launch it and paste the code, or sign in from the terminal.</p>
+                                <p class="sp-p-connect__lede">Download <a href="/files/downloads/dynapps-bridge-macos.dmg" download>dynapps-bridge-macos.dmg</a>, drag Dynapps Bridge to Applications, launch it and paste the code, or sign in from the terminal.</p>
                                 <pre class="sp-connect__cmd"><code data-connect-field="login_command"></code></pre>
                                 <p class="sp-p-connect__label">Linux and WSL</p>
                                 <pre class="sp-connect__cmd"><code data-connect-field="install_command"></code></pre>
@@ -128,8 +128,8 @@
                         <details class="sp-p-connect__advanced">
                             <summary>Sign in with a device token instead of a code</summary>
                             <p class="sp-p-connect__lede">Open <a href="/bridge-auth/device-link">the device link page</a>, approve the request and copy the <code class="sp-u-mono">sp-live-…</code> token; it is shown once. Then, in a terminal or the tray app's sign-in box:</p>
-                            <pre class="sp-connect__cmd"><code>astound-bridge login sp-live-YOUR_TOKEN --gateway {{gateway_url}}</code></pre>
-                            <p class="sp-p-connect__lede">The bridge keeps its configuration at <code class="sp-u-mono">$XDG_CONFIG_HOME/astound/</code> on Linux, <code class="sp-u-mono">~/Library/Application Support/astound/</code> on macOS and <code class="sp-u-mono">%APPDATA%\astound\</code> on Windows. Session and certificate (mTLS) sign-in, and revoking a token, are covered in <a href="/documentation/bridge-install">the desktop bridge guide</a>; a certificate is issued with <code class="sp-u-mono">systemprompt admin bridge enroll-cert</code>.</p>
+                            <pre class="sp-connect__cmd"><code>dynapps-bridge login sp-live-YOUR_TOKEN --gateway {{gateway_url}}</code></pre>
+                            <p class="sp-p-connect__lede">The bridge keeps its configuration at <code class="sp-u-mono">$XDG_CONFIG_HOME/dynapps/</code> on Linux, <code class="sp-u-mono">~/Library/Application Support/dynapps/</code> on macOS and <code class="sp-u-mono">%APPDATA%\dynapps\</code> on Windows. Session and certificate (mTLS) sign-in, and revoking a token, are covered in <a href="/documentation/bridge-install">the desktop bridge guide</a>; a certificate is issued with <code class="sp-u-mono">systemprompt admin bridge enroll-cert</code>.</p>
                         </details>
                     </div>
                 </div>
@@ -172,34 +172,34 @@
         <ul class="sp-p-connect__downloads">
             <li class="sp-card">
                 <strong>Windows</strong>
-                <code>astound-bridge-windows.exe</code>
+                <code>dynapps-bridge-windows.exe</code>
                 <span class="sp-p-connect__download-actions">
-                    <a class="sp-btn sp-btn--sm sp-btn--outline-primary" href="/files/downloads/astound-bridge-windows.exe" download>Download</a>
-                    <a class="sp-btn sp-btn--sm sp-btn--ghost" href="/files/downloads/astound-bridge-windows.exe.sha256" download>sha256</a>
+                    <a class="sp-btn sp-btn--sm sp-btn--outline-primary" href="/files/downloads/dynapps-bridge-windows.exe" download>Download</a>
+                    <a class="sp-btn sp-btn--sm sp-btn--ghost" href="/files/downloads/dynapps-bridge-windows.exe.sha256" download>sha256</a>
                 </span>
             </li>
             <li class="sp-card">
                 <strong>macOS</strong>
-                <code>astound-bridge-macos.dmg</code>
+                <code>dynapps-bridge-macos.dmg</code>
                 <span class="sp-p-connect__download-actions">
-                    <a class="sp-btn sp-btn--sm sp-btn--outline-primary" href="/files/downloads/astound-bridge-macos.dmg" download>Download</a>
-                    <a class="sp-btn sp-btn--sm sp-btn--ghost" href="/files/downloads/astound-bridge-macos.dmg.sha256" download>sha256</a>
+                    <a class="sp-btn sp-btn--sm sp-btn--outline-primary" href="/files/downloads/dynapps-bridge-macos.dmg" download>Download</a>
+                    <a class="sp-btn sp-btn--sm sp-btn--ghost" href="/files/downloads/dynapps-bridge-macos.dmg.sha256" download>sha256</a>
                 </span>
             </li>
             <li class="sp-card">
                 <strong>Linux x86_64</strong>
-                <code>astound-bridge-linux-x86_64.tar.gz</code>
+                <code>dynapps-bridge-linux-x86_64.tar.gz</code>
                 <span class="sp-p-connect__download-actions">
-                    <a class="sp-btn sp-btn--sm sp-btn--outline-primary" href="/files/downloads/astound-bridge-linux-x86_64.tar.gz" download>Download</a>
-                    <a class="sp-btn sp-btn--sm sp-btn--ghost" href="/files/downloads/astound-bridge-linux-x86_64.tar.gz.sha256" download>sha256</a>
+                    <a class="sp-btn sp-btn--sm sp-btn--outline-primary" href="/files/downloads/dynapps-bridge-linux-x86_64.tar.gz" download>Download</a>
+                    <a class="sp-btn sp-btn--sm sp-btn--ghost" href="/files/downloads/dynapps-bridge-linux-x86_64.tar.gz.sha256" download>sha256</a>
                 </span>
             </li>
             <li class="sp-card">
                 <strong>Linux aarch64</strong>
-                <code>astound-bridge-linux-aarch64.tar.gz</code>
+                <code>dynapps-bridge-linux-aarch64.tar.gz</code>
                 <span class="sp-p-connect__download-actions">
-                    <a class="sp-btn sp-btn--sm sp-btn--outline-primary" href="/files/downloads/astound-bridge-linux-aarch64.tar.gz" download>Download</a>
-                    <a class="sp-btn sp-btn--sm sp-btn--ghost" href="/files/downloads/astound-bridge-linux-aarch64.tar.gz.sha256" download>sha256</a>
+                    <a class="sp-btn sp-btn--sm sp-btn--outline-primary" href="/files/downloads/dynapps-bridge-linux-aarch64.tar.gz" download>Download</a>
+                    <a class="sp-btn sp-btn--sm sp-btn--ghost" href="/files/downloads/dynapps-bridge-linux-aarch64.tar.gz.sha256" download>sha256</a>
                 </span>
             </li>
         </ul>

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  PLACEHOLDER. Not real Entra ID metadata, and not read while adfs.yaml has
+  enabled: false. Replace this file with the "Federation Metadata XML"
+  downloaded from the Dynapps Enterprise Application in Microsoft Entra ID
+  before setting enabled: true (or set idp_metadata_url instead).
+-->
+<EntityDescriptor xmlns="urn:oasis:names:tc:SAML:2.0:metadata" entityID="https://sts.windows.net/00000000-0000-0000-0000-000000000000/"/>
