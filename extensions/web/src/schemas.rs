@@ -60,7 +60,6 @@ pub fn schema_definitions() -> Vec<SchemaDefinition> {
         SchemaDefinition::sql_only(include_str!("../schema/49_platform_data_console.sql")),
         SchemaDefinition::sql_only(include_str!("../schema/50_gateway_overhead.sql")),
         SchemaDefinition::sql_only(include_str!("../schema/51_audit_integrity.sql")),
-        SchemaDefinition::sql_only(include_str!("../schema/52_agent_farm.sql")),
     ]
 }
 
