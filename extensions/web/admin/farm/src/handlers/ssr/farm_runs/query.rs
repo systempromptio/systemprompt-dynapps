@@ -120,12 +120,12 @@ pub fn run_filter(query: &RunsQuery, since: DateTime<Utc>, until: DateTime<Utc>)
 }
 
 /// The sortable columns and the order each one reads in. Only the start time
-/// sorts both ways; duration, turns and cost read largest first.
+/// sorts both ways; duration, tool calls and cost read largest first.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RunSortColumn {
     Started,
     Duration,
-    Turns,
+    ToolCalls,
     Cost,
 }
 
@@ -135,7 +135,7 @@ impl RunSortColumn {
         match self {
             Self::Started => "started",
             Self::Duration => "duration",
-            Self::Turns => "turns",
+            Self::ToolCalls => "tool_calls",
             Self::Cost => "cost",
         }
     }
@@ -144,7 +144,7 @@ impl RunSortColumn {
     pub fn parse(value: Option<&str>) -> Self {
         match value {
             Some("duration") => Self::Duration,
-            Some("turns") => Self::Turns,
+            Some("tool_calls" | "turns") => Self::ToolCalls,
             Some("cost") => Self::Cost,
             _ => Self::Started,
         }
@@ -158,7 +158,7 @@ pub fn run_sort(query: &RunsQuery) -> (RunSortColumn, RunSort) {
         RunSortColumn::Started if query.dir.as_deref() == Some("asc") => RunSort::CreatedAsc,
         RunSortColumn::Started => RunSort::CreatedDesc,
         RunSortColumn::Duration => RunSort::DurationDesc,
-        RunSortColumn::Turns => RunSort::TurnsDesc,
+        RunSortColumn::ToolCalls => RunSort::ToolCallsDesc,
         RunSortColumn::Cost => RunSort::CostDesc,
     };
     (column, sort)

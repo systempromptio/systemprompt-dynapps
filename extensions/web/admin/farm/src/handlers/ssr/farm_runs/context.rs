@@ -63,6 +63,6 @@ pub(super) struct RunKpiView {
 pub(super) struct RunSortHeaders {
     pub(super) started: SortHeaderView,
     pub(super) duration: SortHeaderView,
-    pub(super) turns: SortHeaderView,
+    pub(super) tool_calls: SortHeaderView,
     pub(super) cost: SortHeaderView,
 }

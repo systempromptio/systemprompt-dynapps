@@ -74,6 +74,7 @@ anyhow = "1.0"
 clap = { version = "4.6", features = ["derive"] }
 tracing = "0.1"
 async-trait = "0.1"
+tokio-util = "0.7"
 
 # Database
 sqlx = { version = "0.9", features = ["runtime-tokio", "tls-rustls-ring-webpki", "macros", "sqlite", "postgres", "migrate", "chrono", "rust_decimal", "json"] }

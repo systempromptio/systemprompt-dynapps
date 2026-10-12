@@ -1,12 +1,11 @@
-//! The run page's event view model: payload decoding with a raw fallback,
+//! The run page's event view model: titles and bodies per payload,
 //! `tool_use` ⇄ `tool_result` pairing, offsets from the run start, body
 //! folding, the after-seq filter the live fragment uses, and the timeline
-//! geometry.
+//! geometry. Events are core's `RunEvent`s, read from `agent_run_events`.
 
 use chrono::{DateTime, Duration, TimeZone, Utc};
 use serde_json::{Value, json};
-use systemprompt_web_admin_farm::repositories::rows::RunEventRow;
-use systemprompt_web_admin_farm::types::FarmRunId;
+use systemprompt_web_admin_farm::types::{RunEvent, RunEventPayload};
 use systemprompt_web_admin_farm::views::run_events::{
     FOLD_CHARS, FRAGMENT_EVENT_CAP, MIN_MARK_WIDTH, PairKey, RunEventView, VIEW_WIDTH, event_views,
     events_after, pair_seqs, scale, timeline_view, transcript_views,
@@ -16,20 +15,28 @@ fn start() -> DateTime<Utc> {
     Utc.with_ymd_and_hms(2026, 10, 12, 9, 0, 0).unwrap()
 }
 
-fn row(seq: i64, at_ms: i64, payload: Value) -> RunEventRow {
-    let kind = payload["kind"].as_str().unwrap_or("runner").to_owned();
-    RunEventRow {
-        run_id: FarmRunId::new("run-1"),
+fn row(seq: i64, at_ms: i64, payload: Value) -> RunEvent {
+    let payload = serde_json::from_value(payload).expect("payload matches core's contract");
+    let event = RunEvent {
         seq,
-        kind,
-        tool_name: payload["name"].as_str().map(str::to_owned),
-        tool_use_id: payload["tool_use_id"].as_str().map(str::to_owned),
+        kind: RunEventPayload::kind(&payload),
+        tool_name: None,
+        tool_use_id: None,
         payload,
         created_at: start() + Duration::milliseconds(at_ms),
-    }
+    };
+    with_tool_fields(event)
 }
 
-fn sample() -> Vec<RunEventRow> {
+fn with_tool_fields(mut event: RunEvent) -> RunEvent {
+    event.tool_use_id = event.payload.tool_use_id().map(str::to_owned);
+    if let RunEventPayload::ToolUse { name, .. } = &event.payload {
+        event.tool_name = Some(name.clone());
+    }
+    event
+}
+
+fn sample() -> Vec<RunEvent> {
     vec![
         row(
             1,
@@ -56,11 +63,11 @@ fn sample() -> Vec<RunEventRow> {
             5_000,
             json!({"kind": "tool_use", "tool_use_id": "tu-2", "name": "Read", "input": {"file_path": "/w/a.txt"}}),
         ),
-        row(6, 6_000, json!({"kind": "stderr", "text": "warning"})),
+        row(6, 6_000, json!({"kind": "stderr", "line": "warning"})),
         row(
             7,
             9_000,
-            json!({"kind": "result", "subtype": "success", "is_error": false, "num_turns": 2, "duration_ms": 9000, "cost_usd": 0.01, "text": "Done."}),
+            json!({"kind": "result", "subtype": "success", "is_error": false, "num_turns": 2, "duration_ms": 9000, "input_tokens": 10, "output_tokens": 5, "cost_microdollars": 10_000}),
         ),
     ]
 }
@@ -90,8 +97,11 @@ fn tool_use_and_result_pair_both_ways() {
 
 #[test]
 fn a_result_borrows_its_calls_tool_name() {
-    let mut rows = sample();
-    rows[3].tool_name = None;
+    let rows = sample();
+    assert_eq!(
+        rows[3].tool_name, None,
+        "core leaves tool_name off a result"
+    );
     let v = event_views(&rows, Some(start()));
     assert_eq!(by_seq(&v, 4).tool_name.as_deref(), Some("Bash"));
     assert_eq!(by_seq(&v, 4).title, "Bash returned");
@@ -176,23 +186,13 @@ fn long_bodies_fold_and_short_ones_do_not() {
 }
 
 #[test]
-fn an_undecodable_payload_renders_raw_instead_of_vanishing() {
-    let rows = vec![row(1, 0, json!({"kind": "tool_use", "surprise": true}))];
-    let v = event_views(&rows, Some(start()));
-    assert_eq!(v.len(), 1);
-    assert_eq!(v[0].kind, "tool_use");
-    assert!(v[0].title.starts_with("Unrecognised"));
-    assert!(v[0].body.contains("surprise"));
-}
-
-#[test]
 fn events_after_is_strict_and_capped() {
     let v = views();
     let after: Vec<i64> = events_after(&v, 4).iter().map(|e| e.seq).collect();
     assert_eq!(after, vec![5, 6, 7]);
     assert!(events_after(&v, 7).is_empty());
-    let many: Vec<RunEventRow> = (1..=500)
-        .map(|i| row(i, i, json!({"kind": "stderr", "text": "x"})))
+    let many: Vec<RunEvent> = (1..=500)
+        .map(|i| row(i, i, json!({"kind": "stderr", "line": "x"})))
         .collect();
     let mv = event_views(&many, Some(start()));
     let page = events_after(&mv, 0);

@@ -3,14 +3,14 @@ name = "systemprompt-web-admin-farm"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
-description = "Agent farm domain of the admin dashboard for the systemprompt.io template: farms synced from a Git marketplace, headless Claude Code runs attributed to a user, their event streams, and the eval suites scored over them."
+description = "Agent farm domain of the admin dashboard for the systemprompt.io template: farms synced from a Git marketplace, headless coding-agent runs queued on core's agent_runs executor and attributed to a user, and the eval suites scored over them."
 repository.workspace = true
 homepage.workspace = true
 publish = false
 
 [package.metadata.cargo-machete]
-# Declared for the sync, runner and eval phases that land on this scaffold.
-ignored = ["reqwest", "walkdir", "tempfile", "sha2", "hex", "uuid", "tracing"]
+# Declared for the sync and eval phases that land on this scaffold.
+ignored = ["walkdir", "tempfile", "uuid", "tracing"]
 
 [dependencies]
 # Foundation
@@ -26,6 +26,8 @@ axum = { workspace = true }
 
 # Async runtime
 tokio = { workspace = true }
+tokio-util = { workspace = true }
+async-trait = { workspace = true }
 
 # Serialization
 serde = { workspace = true }
@@ -43,10 +45,7 @@ tracing = { workspace = true }
 # Eval assertion patterns
 regex = "1.13"
 
-# Source capture, run workspaces and gateway calls
-sha2 = { workspace = true }
-hex = { workspace = true }
-reqwest = { workspace = true }
+# Source capture and run workspaces
 walkdir = { workspace = true }
 tempfile = { workspace = true }
 

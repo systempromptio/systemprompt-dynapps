@@ -5128,6 +5128,7 @@ dependencies = [
  "rmcp",
  "sqlx",
  "systemprompt-agent",
+ "systemprompt-agent-runs",
  "systemprompt-ai",
  "systemprompt-analytics",
  "systemprompt-api",
@@ -5199,6 +5200,34 @@ dependencies = [
  "tokio-util",
  "tower-http 0.7.1",
  "tracing",
+]
+
+[[package]]
+name = "systemprompt-agent-runs"
+version = "0.66.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "hex",
+ "inventory",
+ "nix",
+ "serde",
+ "serde_json",
+ "sha2 0.11.0",
+ "sqlx",
+ "systemprompt-agent",
+ "systemprompt-database",
+ "systemprompt-extension",
+ "systemprompt-identifiers",
+ "systemprompt-models",
+ "systemprompt-oauth",
+ "systemprompt-traits",
+ "systemprompt-users",
+ "thiserror 2.0.21",
+ "tokio",
+ "tokio-util",
+ "tracing",
+ "walkdir",
 ]
 
 [[package]]
@@ -5356,6 +5385,7 @@ dependencies = [
  "sha2 0.11.0",
  "sqlx",
  "systemprompt-agent",
+ "systemprompt-agent-runs",
  "systemprompt-ai",
  "systemprompt-analytics",
  "systemprompt-api",
@@ -5523,6 +5553,7 @@ dependencies = [
  "anyhow",
  "clap",
  "systemprompt",
+ "systemprompt-web-admin-governance",
  "systemprompt-web-admin-identity",
  "tokio",
 ]
@@ -6323,15 +6354,13 @@ dependencies = [
 name = "systemprompt-web-admin-farm"
 version = "0.66.0"
 dependencies = [
+ "async-trait",
  "axum",
  "chrono",
- "hex",
  "regex",
- "reqwest 0.13.5",
  "serde",
  "serde_json",
  "serde_yaml_ng",
- "sha2 0.10.9",
  "sqlx",
  "systemprompt",
  "systemprompt-web-admin-core",
@@ -6339,6 +6368,7 @@ dependencies = [
  "tempfile",
  "thiserror 2.0.21",
  "tokio",
+ "tokio-util",
  "tracing",
  "uuid",
  "walkdir",
@@ -6455,6 +6485,7 @@ dependencies = [
 name = "systemprompt-web-extension"
 version = "0.66.0"
 dependencies = [
+ "async-trait",
  "axum",
  "inventory",
  "serde",
@@ -6473,6 +6504,7 @@ dependencies = [
  "systemprompt-web-shared",
  "systemprompt-web-site",
  "tokio",
+ "tokio-util",
  "tower",
  "tower-http 0.7.1",
  "tracing",

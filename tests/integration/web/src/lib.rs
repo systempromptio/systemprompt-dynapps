@@ -22,6 +22,8 @@ mod content_services;
 #[cfg(test)]
 mod conversation_judge;
 #[cfg(test)]
+mod farm_runner_lifecycle;
+#[cfg(test)]
 mod fixtures;
 #[cfg(test)]
 mod jobs_context;

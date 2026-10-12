@@ -6,10 +6,14 @@ SELECT COUNT(*)::bigint AS "total!",
        COUNT(*) FILTER (WHERE status = 'timed_out')::bigint AS "timed_out!",
        COUNT(*) FILTER (WHERE status = 'cancelled')::bigint AS "cancelled!",
        COALESCE(SUM(cost_microdollars), 0)::bigint AS "cost_microdollars!",
-       (percentile_cont(0.5) WITHIN GROUP (ORDER BY duration_ms))::float8 AS "p50_duration_ms?",
-       (percentile_cont(0.95) WITHIN GROUP (ORDER BY duration_ms))::float8 AS "p95_duration_ms?",
-       COALESCE(SUM(input_tokens), 0)::bigint AS "input_tokens!",
-       COALESCE(SUM(output_tokens), 0)::bigint AS "output_tokens!"
+       (percentile_cont(0.5) WITHIN GROUP (
+           ORDER BY EXTRACT(EPOCH FROM (finished_at - started_at)) * 1000))::float8
+           AS "p50_duration_ms?",
+       (percentile_cont(0.95) WITHIN GROUP (
+           ORDER BY EXTRACT(EPOCH FROM (finished_at - started_at)) * 1000))::float8
+           AS "p95_duration_ms?",
+       COALESCE(SUM(tool_call_count), 0)::bigint AS "tool_calls!",
+       COALESCE(SUM(gateway_request_count), 0)::bigint AS "gateway_requests!"
 FROM agent_farm_runs
 WHERE ($1::text IS NULL OR farm_id = $1)
   AND ($2::text IS NULL OR agent_id = $2)

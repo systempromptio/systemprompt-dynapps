@@ -157,8 +157,8 @@ pub(super) fn kpis(query: &RunsQuery, stats: &RunStats) -> Vec<RunKpiView> {
             "Cost",
             format_cost(stats.cost_microdollars),
             Some(format!(
-                "{} in · {} out tokens",
-                stats.input_tokens, stats.output_tokens
+                "{} tool calls · {} gateway requests",
+                stats.tool_calls, stats.gateway_requests
             )),
         ),
         plain_tile(
@@ -195,7 +195,11 @@ pub(super) fn sort_headers(query: &RunsQuery, column: RunSortColumn) -> RunSortH
             "When the run started, or was queued",
         ),
         duration: header(RunSortColumn::Duration, "Duration", "Longest first"),
-        turns: header(RunSortColumn::Turns, "Turns", "Most agent turns first"),
+        tool_calls: header(
+            RunSortColumn::ToolCalls,
+            "Tool calls",
+            "Most tool calls first",
+        ),
         cost: header(RunSortColumn::Cost, "Cost", "Most expensive first"),
     }
 }

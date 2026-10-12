@@ -5,71 +5,69 @@ use std::path::Path;
 
 use chrono::Utc;
 use serde_json::json;
-use systemprompt::identifiers::UserId;
-use systemprompt_web_admin_farm::repositories::rows::{RunEventRow, RunRow};
+use systemprompt::agent_runs::AgentRunRow;
+use systemprompt::identifiers::{AgentRunId, UserId};
 use systemprompt_web_admin_farm::services::evals::{
     AssertionContext, AssertionResult, evaluate_assertions,
 };
 use systemprompt_web_admin_farm::services::farm_sync::Assertion;
-use systemprompt_web_admin_farm::types::{FarmAgentId, FarmId, FarmRunId, RunEventPayload};
+use systemprompt_web_admin_farm::types::{HookDecision, RunEvent, RunEventPayload};
 
-fn run_row(turns: Option<i32>, cost: Option<i64>) -> RunRow {
+fn agent_run_row(turns: Option<i32>, cost: Option<i64>) -> AgentRunRow {
     let now = Utc::now();
-    RunRow {
-        id: FarmRunId::new("run-1"),
-        farm_id: FarmId::new("farm"),
-        agent_id: FarmAgentId::new("agent"),
+    AgentRunRow {
+        id: AgentRunId::new("agent-run-1"),
+        origin_kind: "agent_farm_run".to_owned(),
+        origin_id: "run-1".to_owned(),
         user_id: UserId::new("user-1"),
-        triggered_via: "eval".to_owned(),
+        host: "claude-code".to_owned(),
         status: "succeeded".to_owned(),
-        prompt: "review".to_owned(),
-        fixture: None,
-        model: None,
-        permission_mode: "acceptEdits".to_owned(),
-        max_turns: 40,
-        max_budget_usd: 5.0,
-        timeout_seconds: 900,
-        source_commit_sha: None,
+        request: json!({}),
+        attempt: 1,
+        not_before: None,
+        claimed_by: None,
+        lease_until: None,
+        claimed_at: None,
         run_dir: None,
         gateway_session_id: None,
-        claude_session_id: None,
-        context_id: None,
         api_key_id: None,
+        host_session_id: None,
         pid: None,
         started_at: Some(now),
         finished_at: Some(now),
         duration_ms: Some(1),
-        num_turns: turns,
+        error_class: Some("ok".to_owned()),
+        turns,
         input_tokens: None,
         output_tokens: None,
         cost_microdollars: cost,
-        result_subtype: None,
+        structured_output: None,
         exit_code: Some(0),
         error: None,
         diff_summary: None,
-        eval_result_id: None,
         cancel_requested_at: None,
+        task_id: None,
+        context_id: None,
         created_at: now,
         updated_at: now,
     }
 }
 
-fn event(seq: i64, payload: &RunEventPayload) -> RunEventRow {
-    RunEventRow {
-        run_id: FarmRunId::new("run-1"),
+fn event(seq: i64, payload: RunEventPayload) -> RunEvent {
+    RunEvent {
         seq,
-        kind: payload.kind().as_str().to_owned(),
+        kind: payload.kind(),
         tool_name: None,
-        tool_use_id: None,
-        payload: serde_json::to_value(payload).expect("payload serializes"),
+        tool_use_id: payload.tool_use_id().map(str::to_owned),
+        payload,
         created_at: Utc::now(),
     }
 }
 
-fn tool(seq: i64, name: &str, input: serde_json::Value) -> RunEventRow {
+fn tool(seq: i64, name: &str, input: serde_json::Value) -> RunEvent {
     event(
         seq,
-        &RunEventPayload::ToolUse {
+        RunEventPayload::ToolUse {
             tool_use_id: format!("t{seq}"),
             name: name.to_owned(),
             input,
@@ -78,8 +76,8 @@ fn tool(seq: i64, name: &str, input: serde_json::Value) -> RunEventRow {
 }
 
 struct Case<'a> {
-    run: RunRow,
-    events: Vec<RunEventRow>,
+    run: AgentRunRow,
+    events: Vec<RunEvent>,
     workspace: &'a Path,
     tools: Vec<String>,
     output_path: Option<&'a str>,
@@ -89,7 +87,7 @@ struct Case<'a> {
 impl<'a> Case<'a> {
     fn new(workspace: &'a Path) -> Self {
         Self {
-            run: run_row(Some(5), Some(1_500_000)),
+            run: agent_run_row(Some(5), Some(1_500_000)),
             events: Vec::new(),
             workspace,
             tools: Vec::new(),
@@ -219,14 +217,14 @@ fn no_tool_outside_allowlist_allows_skill_and_listed_mcp() {
 }
 
 #[test]
-fn max_turns_and_max_cost_compare_against_the_run_row() {
+fn max_turns_and_max_cost_compare_against_the_recorded_outcome() {
     let dir = workspace();
     let mut case = Case::new(dir.path());
     assert!(case.check(Assertion::MaxTurns { value: 5 }).passed);
     assert!(!case.check(Assertion::MaxTurns { value: 4 }).passed);
     assert!(case.check(Assertion::MaxCostUsd { value: 2.0 }).passed);
     assert!(!case.check(Assertion::MaxCostUsd { value: 1.0 }).passed);
-    case.run = run_row(None, None);
+    case.run = agent_run_row(None, None);
     assert!(!case.check(Assertion::MaxTurns { value: 40 }).passed);
     assert!(!case.check(Assertion::MaxCostUsd { value: 2.0 }).passed);
 }
@@ -249,9 +247,10 @@ fn skill_invoked_normalises_dashes_and_reads_hooks() {
     assert!(!case.check(wanted()).passed, "only the Skill tool counts");
     case.events = vec![event(
         1,
-        &RunEventPayload::Hook {
+        RunEventPayload::Hook {
             name: "PostToolUse:odoo-module-review".into(),
-            decision: None,
+            decision: HookDecision::Allow,
+            policy: None,
         },
     )];
     assert!(case.check(wanted()).passed);

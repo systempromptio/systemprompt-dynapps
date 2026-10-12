@@ -7,8 +7,8 @@
   <td><a class="sp-link" href="{{user_url}}">{{user_id}}</a></td>
   <td>{{> components/badge tone=trigger.tone text=trigger.text}}</td>
   <td>{{> components/badge tone=status.tone text=status.text}}</td>
-  <td class="sp-table__cell--num">{{turns}}</td>
-  <td class="sp-table__cell--num">{{tokens_display}}</td>
+  <td class="sp-table__cell--num">{{tool_calls}}</td>
+  <td class="sp-table__cell--num">{{events_display}}</td>
   <td class="sp-table__cell--num">{{cost_display}}</td>
   <td class="sp-table__cell--num">{{duration_display}}</td>
   {{#if cancel}}<td>{{#if is_live}}<form method="post" action="/admin/farm/runs/{{run_id}}/cancel" class="sp-farm-run-row__cancel"><button class="sp-btn sp-btn--xs sp-btn--outline" type="submit" title="Ask the runner to stop this run">Cancel</button></form>{{/if}}</td>{{/if}}

@@ -1,0 +1,245 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT farm_id AS \"farm_id: FarmId\", id AS \"id: FarmAgentId\", name, description, model, tools,\n       plugin_id AS \"plugin_id: PluginId\", skills, entry_prompt, fixture, max_turns,\n       max_budget_usd, output_path, output_format, source_path, body, synced_commit_sha, host,\n       updated_at\nFROM agent_farm_agents\nWHERE farm_id = $1 AND id = $2\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "farm_id: FarmId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_agents",
+            "name": "farm_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "id: FarmAgentId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_agents",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_agents",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "description",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_agents",
+            "name": "description"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "model",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_agents",
+            "name": "model"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "tools",
+        "type_info": "TextArray",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_agents",
+            "name": "tools"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "plugin_id: PluginId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_agents",
+            "name": "plugin_id"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "skills",
+        "type_info": "TextArray",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_agents",
+            "name": "skills"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "entry_prompt",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_agents",
+            "name": "entry_prompt"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "fixture",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_agents",
+            "name": "fixture"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "max_turns",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_agents",
+            "name": "max_turns"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "max_budget_usd",
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_agents",
+            "name": "max_budget_usd"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "output_path",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_agents",
+            "name": "output_path"
+          }
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "output_format",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_agents",
+            "name": "output_format"
+          }
+        }
+      },
+      {
+        "ordinal": 14,
+        "name": "source_path",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_agents",
+            "name": "source_path"
+          }
+        }
+      },
+      {
+        "ordinal": 15,
+        "name": "body",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_agents",
+            "name": "body"
+          }
+        }
+      },
+      {
+        "ordinal": 16,
+        "name": "synced_commit_sha",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_agents",
+            "name": "synced_commit_sha"
+          }
+        }
+      },
+      {
+        "ordinal": 17,
+        "name": "host",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_agents",
+            "name": "host"
+          }
+        }
+      },
+      {
+        "ordinal": 18,
+        "name": "updated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_agents",
+            "name": "updated_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "492284974b735399e550f061fc1005b178a62a9976ead39b2878ebaf75bc02c1"
+}

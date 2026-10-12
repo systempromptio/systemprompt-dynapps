@@ -7,7 +7,7 @@
 use std::sync::Arc;
 
 use systemprompt::extension::prelude::*;
-use systemprompt::traits::Job;
+use systemprompt::traits::{Job, RunnerService};
 
 use crate::SkillsPagePrerenderer;
 use crate::assets::web_assets;
@@ -102,6 +102,8 @@ impl Extension for WebExtension {
 
     fn cross_extension_tables(&self) -> Vec<&'static str> {
         vec![
+            "agent_run_events",
+            "agent_runs",
             "ai_requests",
             "managed_installation_receipts",
             "managed_publications",
@@ -127,6 +129,10 @@ impl Extension for WebExtension {
 
     fn jobs(&self) -> Vec<Arc<dyn Job>> {
         crate::jobs::extension_jobs()
+    }
+
+    fn runner_services(&self) -> Vec<Arc<dyn RunnerService>> {
+        vec![Arc::new(crate::router::farm_public::FarmRunner)]
     }
 
     fn priority(&self) -> u32 {

@@ -19,8 +19,8 @@ pub struct RunStats {
     pub cost_microdollars: i64,
     pub p50_duration_ms: Option<f64>,
     pub p95_duration_ms: Option<f64>,
-    pub input_tokens: i64,
-    pub output_tokens: i64,
+    pub tool_calls: i64,
+    pub gateway_requests: i64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]

@@ -41,8 +41,8 @@
         {{#> components/table caption="Recent runs of this agent"}}
           <thead><tr>
             <th scope="col">Started</th><th scope="col">Run</th><th scope="col">Agent</th><th scope="col">User</th>
-            <th scope="col">Trigger</th><th scope="col">Status</th><th scope="col">Turns</th>
-            <th scope="col">Tokens in / out</th><th scope="col">Cost</th><th scope="col">Duration</th>
+            <th scope="col">Trigger</th><th scope="col">Status</th><th scope="col">Tool calls</th>
+            <th scope="col">Events</th><th scope="col">Cost</th><th scope="col">Duration</th>
           </tr></thead>
           <tbody>{{#each runs}}{{> farm/run-row this}}{{/each}}</tbody>
         {{/components/table}}

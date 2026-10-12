@@ -29,7 +29,9 @@ use crate::repositories::rows::FarmRow;
 use crate::state::FarmState;
 use crate::types::FarmId;
 
-pub use agent_md::{AgentDefinition, AgentOutput, parse_agent_markdown, render_entry_prompt};
+pub use agent_md::{
+    AgentDefinition, AgentOutput, DEFAULT_HOST, HOSTS, parse_agent_markdown, render_entry_prompt,
+};
 pub use capture::{
     CapturedFarm, CapturedFile, FarmSourceCapture, InMemoryCapture, NativeCapture, github_https_url,
 };

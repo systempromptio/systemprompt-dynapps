@@ -1,13 +1,13 @@
 //! Inputs to the farm repositories: the rows a sync or a launch writes, the
-//! outcome a finished run records, and the filter and sort the run list reads.
+//! farm facts a finished run records, and the filter and sort the run list
+//! reads.
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use systemprompt::identifiers::{ContextId, MarketplaceId, PluginId, UserId};
+use systemprompt::identifiers::{AgentRunId, ContextId, MarketplaceId, PluginId, UserId};
 
 use crate::types::{
-    EvalResultId, EvalSuiteId, FarmAgentId, FarmId, FarmRunId, RunEventKind, RunStatus,
-    TriggeredVia,
+    EvalResultId, EvalSuiteId, FarmAgentId, FarmId, FarmRunId, RunStatus, TriggeredVia,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -33,6 +33,7 @@ pub struct NewAgent {
     pub name: String,
     pub description: String,
     pub model: Option<String>,
+    pub host: String,
     pub tools: Vec<String>,
     pub plugin_id: PluginId,
     pub skills: Vec<String>,
@@ -60,10 +61,13 @@ pub struct NewFixture {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NewRun {
     pub id: FarmRunId,
+    pub agent_run_id: AgentRunId,
     pub farm_id: FarmId,
     pub agent_id: FarmAgentId,
     pub user_id: UserId,
     pub triggered_via: TriggeredVia,
+    pub host: String,
+    pub attempt: i32,
     pub prompt: String,
     pub fixture: Option<String>,
     pub model: Option<String>,
@@ -75,31 +79,17 @@ pub struct NewRun {
     pub eval_result_id: Option<EvalResultId>,
 }
 
-// JSON: fixed-shape document — `diff_summary` is the workspace diff the
-// runner computes after exit, written to the JSONB column as-is.
+/// The farm facts a finished run records; the executor's own outcome is on
+/// the `agent_runs` row.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RunOutcome {
+pub struct RunFinish {
     pub status: RunStatus,
+    pub error_class: Option<String>,
+    pub cost_microdollars: i64,
+    pub event_count: i32,
+    pub tool_call_count: i32,
+    pub gateway_request_count: i32,
     pub context_id: Option<ContextId>,
-    pub duration_ms: Option<i64>,
-    pub num_turns: Option<i32>,
-    pub input_tokens: Option<i64>,
-    pub output_tokens: Option<i64>,
-    pub cost_microdollars: Option<i64>,
-    pub result_subtype: Option<String>,
-    pub exit_code: Option<i32>,
-    pub error: Option<String>,
-    pub diff_summary: Option<serde_json::Value>,
-}
-
-// JSON: protocol boundary — `payload` is the serialized `RunEventPayload`.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NewRunEvent {
-    pub seq: i64,
-    pub kind: RunEventKind,
-    pub tool_name: Option<String>,
-    pub tool_use_id: Option<String>,
-    pub payload: serde_json::Value,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -143,7 +133,7 @@ pub enum RunSort {
     CreatedAsc,
     DurationDesc,
     CostDesc,
-    TurnsDesc,
+    ToolCallsDesc,
 }
 
 impl RunSort {
@@ -154,7 +144,7 @@ impl RunSort {
             Self::CreatedAsc => "created_asc",
             Self::DurationDesc => "duration_desc",
             Self::CostDesc => "cost_desc",
-            Self::TurnsDesc => "turns_desc",
+            Self::ToolCallsDesc => "tool_calls_desc",
         }
     }
 }

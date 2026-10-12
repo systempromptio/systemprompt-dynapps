@@ -16,19 +16,21 @@ use axum::extract::{Request, State};
 use axum::middleware::{self as axum_middleware, Next};
 use axum::response::Response;
 use systemprompt::config::AppPaths;
+use systemprompt::database::DbPool;
 use systemprompt::prelude::PgPool;
+use systemprompt::traits::{JobContext, RunnerService};
 use systemprompt_web_admin_core::ssr::viewer_tz::with_viewer_tz;
 use systemprompt_web_admin_farm::routes::public::agent_farm_public_routes;
 use systemprompt_web_admin_farm::services::farm_sync::seed_farms_from_yaml;
-use systemprompt_web_admin_farm::services::runner::install_runner;
+use systemprompt_web_admin_farm::services::runner::FarmRunnerService;
 use systemprompt_web_admin_farm::state::{
     FarmPaths, FarmState, GatewayEndpoints, RunnerLimits, build_farm_state,
 };
+use tokio_util::sync::CancellationToken;
 
 use super::admin;
 
 pub(crate) const FARM_PUBLIC_PREFIX: &str = "/agent-farm";
-const CLAUDE_BIN_ENV: &str = "SYSTEMPROMPT_FARM_CLAUDE_BIN";
 
 pub fn farm_public_router(read_pool: Arc<PgPool>, state: Arc<FarmState>) -> Router {
     agent_farm_public_routes()
@@ -58,10 +60,7 @@ async fn farm_context_middleware(
 
 pub(crate) fn start(state: &Arc<FarmState>, app_paths: Option<&AppPaths>) {
     if tokio::runtime::Handle::try_current().is_err() {
-        tracing::error!("No async runtime at router build; the agent farm runner is not started");
-        return;
-    }
-    if install_runner(state).is_none() {
+        tracing::error!("No async runtime at router build; the agent farms are not seeded");
         return;
     }
     let services = app_paths.map_or_else(
@@ -77,13 +76,34 @@ pub(crate) fn start(state: &Arc<FarmState>, app_paths: Option<&AppPaths>) {
     });
 }
 
+pub(crate) struct FarmRunner;
+
+#[async_trait::async_trait]
+impl RunnerService for FarmRunner {
+    fn name(&self) -> &'static str {
+        "agent_farm_runner"
+    }
+
+    async fn run(&self, ctx: JobContext, shutdown: CancellationToken) {
+        let pool = match ctx.get::<DbPool>() {
+            Ok(db) => db.write_pool(),
+            Err(e) => {
+                tracing::error!(error = %e, "agent farm runner has no database");
+                return;
+            },
+        };
+        let paths = ctx.get::<Arc<AppPaths>>().ok().map(Arc::clone);
+        let state = build_state(pool, paths.as_deref());
+        FarmRunnerService::new(state).run(ctx, shutdown).await;
+    }
+}
+
 pub fn build_state(pool: Arc<PgPool>, app_paths: Option<&AppPaths>) -> Arc<FarmState> {
     build_farm_state(
         pool,
         farm_paths(app_paths),
         gateway_endpoints(),
         RunnerLimits::default(),
-        claude_bin(),
     )
 }
 
@@ -118,10 +138,4 @@ fn gateway_endpoints() -> GatewayEndpoints {
             external_base: config.api_external_url.trim_end_matches('/').to_owned(),
         },
     )
-}
-
-fn claude_bin() -> PathBuf {
-    std::env::var_os(CLAUDE_BIN_ENV)
-        .filter(|value| !value.is_empty())
-        .map_or_else(|| PathBuf::from("claude"), PathBuf::from)
 }

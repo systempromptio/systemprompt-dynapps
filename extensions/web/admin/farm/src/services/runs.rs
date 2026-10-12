@@ -1,21 +1,27 @@
 //! Launching and cancelling runs: the one entry point the dashboard, the
 //! public API and the eval service share.
 //!
-//! A launch resolves the agent's and farm's defaults, records the run
-//! `queued` and hands its id to the runner.
+//! A launch resolves the agent's and farm's defaults, builds core's
+//! `RunRequest`, and in one transaction queues the `agent_runs` row and the
+//! `agent_farm_runs` row that references it. The farm's runner service
+//! claims it from there. A cancel stamps both rows; a run still queued is
+//! finished at once, a running one is stopped by its handler.
 
 use std::sync::Arc;
 
-use serde::{Deserialize, Serialize};
-use systemprompt::identifiers::UserId;
+use sqlx::PgPool;
 
-use super::runner::outcome;
-use super::runner::prepare::render_entry_prompt;
+use serde::{Deserialize, Serialize};
+use systemprompt::agent_runs::AgentRunRepository;
+use systemprompt::agent_runs::repository::NewAgentRun;
+use systemprompt::identifiers::{AgentRunId, UserId};
+
+use super::runner::{ORIGIN_KIND, observer, prepare};
 use crate::error::{FarmError, FarmResult};
 use crate::repositories::filters::NewRun;
-use crate::repositories::rows::RunRow;
+use crate::repositories::rows::{AgentRow, FarmRow, RunRow};
 use crate::repositories::{agents, farms, runs};
-use crate::state::FarmState;
+use crate::state::{FarmState, RunnerLimits};
 use crate::types::{EvalResultId, FarmAgentId, FarmId, FarmRunId, RunStatus, TriggeredVia};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -35,10 +41,6 @@ pub struct LaunchRequest {
 }
 
 pub async fn launch(state: &Arc<FarmState>, req: LaunchRequest) -> FarmResult<RunRow> {
-    let runner = state
-        .runner()
-        .cloned()
-        .ok_or_else(|| FarmError::Config("the agent farm runner is not running".to_owned()))?;
     let pool = state.pool.as_ref();
     let farm = farms::find_farm(pool, &req.farm_id)
         .await?
@@ -47,24 +49,86 @@ pub async fn launch(state: &Arc<FarmState>, req: LaunchRequest) -> FarmResult<Ru
         .await?
         .ok_or_else(|| FarmError::NotFound(format!("agent {}/{}", req.farm_id, req.agent_id)))?;
 
+    let (max_turns, max_budget_usd, timeout_seconds) =
+        resolve_limits(&req, &agent, &farm, state.limits)?;
     let template = req
         .prompt
         .filter(|p| !p.trim().is_empty())
         .unwrap_or_else(|| agent.entry_prompt.clone());
-    let case_prompt = req.case_prompt.unwrap_or_default();
-    let prompt = render_entry_prompt(&template, "{{fixture_path}}", &case_prompt);
-    if prompt.trim().is_empty() {
+    let model = req.model.or_else(|| agent.model.clone()).or(farm.model);
+
+    let farm_run_id = FarmRunId::new(uuid::Uuid::new_v4().to_string());
+    let agent_run_id = AgentRunId::generate();
+    let layout = prepare::run_layout(state, &agent_run_id);
+    let request = prepare::build_request(prepare::RequestSpec {
+        agent: &agent,
+        farm_id: &req.farm_id,
+        farm_run_id: &farm_run_id,
+        layout: &layout,
+        prompt_template: &template,
+        case_prompt: req.case_prompt.as_deref(),
+        model: model.as_deref(),
+        permission_mode: &farm.permission_mode,
+        max_turns,
+        max_budget_usd,
+        timeout_seconds,
+    })?;
+    if request.prompt.trim().is_empty() {
         return Err(FarmError::Validation(
             "the run has no prompt and the agent declares no entry prompt".to_owned(),
         ));
     }
 
-    let limits = state.limits;
+    let credential_user = prepare::credential_user(None, &req.user_id);
+    let new_run = NewRun {
+        id: farm_run_id.clone(),
+        agent_run_id: agent_run_id.clone(),
+        farm_id: req.farm_id,
+        agent_id: req.agent_id,
+        user_id: req.user_id,
+        triggered_via: req.triggered_via,
+        host: request.host.as_str().to_owned(),
+        attempt: i32::try_from(request.attempt).unwrap_or(1),
+        prompt: request.prompt.clone(),
+        fixture: req.fixture.or_else(|| agent.fixture.clone()),
+        model,
+        permission_mode: farm.permission_mode,
+        max_turns,
+        max_budget_usd,
+        timeout_seconds,
+        source_commit_sha: farm.synced_commit_sha,
+        eval_result_id: req.eval_result_id,
+    };
+
+    let row = insert_pair(
+        pool,
+        &new_run,
+        NewAgentRun {
+            id: &agent_run_id,
+            origin_kind: ORIGIN_KIND,
+            origin_id: farm_run_id.as_str(),
+            user_id: &credential_user,
+            request: &request,
+            not_before: None,
+            task_id: None,
+            context_id: None,
+        },
+    )
+    .await?;
+    Ok(row)
+}
+
+fn resolve_limits(
+    req: &LaunchRequest,
+    agent: &AgentRow,
+    farm: &FarmRow,
+    limits: RunnerLimits,
+) -> FarmResult<(i32, f64, i32)> {
     let max_turns = req
         .max_turns
         .or(agent.max_turns)
         .or_else(|| (farm.max_turns > 0).then_some(farm.max_turns))
-        .unwrap_or(limits.default_max_turns as i32);
+        .unwrap_or_else(|| i32::try_from(limits.default_max_turns).unwrap_or(i32::MAX));
     let max_budget_usd = req
         .max_budget_usd
         .or(agent.max_budget_usd)
@@ -73,39 +137,28 @@ pub async fn launch(state: &Arc<FarmState>, req: LaunchRequest) -> FarmResult<Ru
     let timeout_seconds = req
         .timeout_seconds
         .or_else(|| (farm.timeout_seconds > 0).then_some(farm.timeout_seconds))
-        .unwrap_or(limits.default_timeout_seconds as i32);
-    if max_turns < 1 || max_budget_usd <= 0.0 || timeout_seconds < 1 {
+        .unwrap_or_else(|| i32::try_from(limits.default_timeout_seconds).unwrap_or(i32::MAX));
+    if max_budget_usd <= 0.0 {
         return Err(FarmError::Validation(
-            "max_turns, max_budget_usd and timeout_seconds must be positive".to_owned(),
+            "max_budget_usd must be positive".to_owned(),
         ));
     }
+    Ok((max_turns, max_budget_usd, timeout_seconds))
+}
 
-    let new_run = NewRun {
-        id: FarmRunId::new(uuid::Uuid::new_v4().to_string()),
-        farm_id: req.farm_id,
-        agent_id: req.agent_id,
-        user_id: req.user_id,
-        triggered_via: req.triggered_via,
-        prompt,
-        fixture: req.fixture.or_else(|| agent.fixture.clone()),
-        model: req.model.or_else(|| agent.model.clone()).or(farm.model),
-        permission_mode: farm.permission_mode,
-        max_turns,
-        max_budget_usd,
-        timeout_seconds,
-        source_commit_sha: farm.synced_commit_sha,
-        eval_result_id: req.eval_result_id,
-    };
-    let row = runs::insert_run(pool, &new_run).await?;
-    runner.enqueue(row.id.clone()).await?;
+async fn insert_pair(
+    pool: &PgPool,
+    new_run: &NewRun,
+    new_agent_run: NewAgentRun<'_>,
+) -> FarmResult<RunRow> {
+    let mut tx = pool.begin().await?;
+    AgentRunRepository::insert_run_in_tx(&mut tx, new_agent_run).await?;
+    let row = runs::insert_run(&mut *tx, new_run).await?;
+    tx.commit().await?;
     Ok(row)
 }
 
-pub async fn cancel(
-    state: &Arc<FarmState>,
-    run_id: &FarmRunId,
-    user_id: &UserId,
-) -> FarmResult<bool> {
+pub async fn cancel(state: &FarmState, run_id: &FarmRunId, user_id: &UserId) -> FarmResult<bool> {
     let pool = state.pool.as_ref();
     let run = runs::find_run(pool, run_id)
         .await?
@@ -115,17 +168,12 @@ pub async fn cancel(
         return Ok(false);
     }
     tracing::info!(run = %run_id, actor = %user_id, "farm run cancel requested");
-    if status == Some(RunStatus::Queued) {
-        let cancelled = outcome::terminal(
-            RunStatus::Cancelled,
-            Some(format!("cancelled by {user_id}")),
-        );
-        runs::update_run_finished(pool, run_id, &cancelled).await?;
-        return Ok(true);
-    }
+    let repo = AgentRunRepository::from_pool(Arc::clone(&state.pool));
     let flagged = runs::update_run_cancel_requested(pool, run_id).await?;
-    Ok(flagged
-        && state
-            .runner()
-            .is_some_and(|runner| runner.request_cancel(run_id)))
+    if repo.cancel_queued(&run.agent_run_id).await? {
+        observer::observe_finished(state, &run.agent_run_id).await?;
+    } else {
+        repo.update_cancel_requested(&run.agent_run_id).await?;
+    }
+    Ok(flagged)
 }

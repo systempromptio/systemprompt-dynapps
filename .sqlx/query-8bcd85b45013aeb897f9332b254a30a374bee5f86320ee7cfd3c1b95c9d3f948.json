@@ -1,0 +1,31 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO agent_farm_agents (farm_id, id, name, description, model, tools, plugin_id, skills,\n                               entry_prompt, fixture, max_turns, max_budget_usd, output_path,\n                               output_format, source_path, body, synced_commit_sha, host)\nVALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)\nON CONFLICT (farm_id, id) DO UPDATE SET\n    name = EXCLUDED.name,\n    description = EXCLUDED.description,\n    model = EXCLUDED.model,\n    tools = EXCLUDED.tools,\n    plugin_id = EXCLUDED.plugin_id,\n    skills = EXCLUDED.skills,\n    entry_prompt = EXCLUDED.entry_prompt,\n    fixture = EXCLUDED.fixture,\n    max_turns = EXCLUDED.max_turns,\n    max_budget_usd = EXCLUDED.max_budget_usd,\n    output_path = EXCLUDED.output_path,\n    output_format = EXCLUDED.output_format,\n    source_path = EXCLUDED.source_path,\n    body = EXCLUDED.body,\n    synced_commit_sha = EXCLUDED.synced_commit_sha,\n    host = EXCLUDED.host,\n    updated_at = NOW()\n",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "TextArray",
+        "Text",
+        "TextArray",
+        "Text",
+        "Text",
+        "Int4",
+        "Float8",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "8bcd85b45013aeb897f9332b254a30a374bee5f86320ee7cfd3c1b95c9d3f948"
+}

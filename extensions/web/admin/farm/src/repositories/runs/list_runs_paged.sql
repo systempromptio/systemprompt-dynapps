@@ -1,10 +1,9 @@
 -- $8 is a sort key bound as text and picked by CASE, never interpolated.
-SELECT id AS "id: FarmRunId", farm_id AS "farm_id: FarmId", agent_id AS "agent_id: FarmAgentId",
-       user_id AS "user_id: UserId", triggered_via, status, prompt, fixture, model,
-       permission_mode, max_turns, max_budget_usd, timeout_seconds, source_commit_sha, run_dir,
-       gateway_session_id, claude_session_id, context_id AS "context_id: ContextId", api_key_id,
-       pid, started_at, finished_at, duration_ms, num_turns, input_tokens, output_tokens,
-       cost_microdollars, result_subtype, exit_code, error, diff_summary, eval_result_id,
+SELECT id AS "id: FarmRunId", agent_run_id AS "agent_run_id: AgentRunId", farm_id AS "farm_id: FarmId",
+       agent_id AS "agent_id: FarmAgentId", user_id AS "user_id: UserId", triggered_via, host, status,
+       attempt, prompt, fixture, model, permission_mode, max_turns, max_budget_usd, timeout_seconds,
+       source_commit_sha, context_id AS "context_id: ContextId", error_class, cost_microdollars,
+       event_count, tool_call_count, gateway_request_count, eval_result_id, started_at, finished_at,
        cancel_requested_at, created_at, updated_at
 FROM agent_farm_runs
 WHERE ($1::text IS NULL OR farm_id = $1)
@@ -16,9 +15,9 @@ WHERE ($1::text IS NULL OR farm_id = $1)
   AND ($7::timestamptz IS NULL OR created_at < $7)
 ORDER BY
     CASE WHEN $8 = 'created_asc' THEN created_at END ASC,
-    CASE WHEN $8 = 'duration_desc' THEN duration_ms END DESC NULLS LAST,
+    CASE WHEN $8 = 'duration_desc' THEN finished_at - started_at END DESC NULLS LAST,
     CASE WHEN $8 = 'cost_desc' THEN cost_microdollars END DESC NULLS LAST,
-    CASE WHEN $8 = 'turns_desc' THEN num_turns END DESC NULLS LAST,
+    CASE WHEN $8 = 'tool_calls_desc' THEN tool_call_count END DESC NULLS LAST,
     created_at DESC,
     id
 LIMIT $9 OFFSET $10

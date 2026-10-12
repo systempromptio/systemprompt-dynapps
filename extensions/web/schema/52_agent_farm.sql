@@ -2,8 +2,9 @@
 --
 -- Farms are synced from a Git marketplace (`services/web/config/agent-farms.yaml`);
 -- their agents, fixtures and eval suites are projections of the synced commit.
--- A run is one headless Claude Code process attributed to the user who launched
--- it; its stream-json lines land in agent_farm_run_events in arrival order.
+-- A farm run is a projection over one core agent_runs row (the executor owns
+-- leases, credentials and events in agent_run_events); the counters here are
+-- stamped from it at finish time.
 -- Ids are TEXT (UUID strings for runs and eval rows) so the typed id newtypes
 -- decode without a cast. Every statement is idempotent: this file is the only
 -- place the farm DDL lives.
@@ -48,6 +49,8 @@ CREATE TABLE IF NOT EXISTS agent_farm_agents (
     source_path TEXT NOT NULL,
     body TEXT NOT NULL,
     synced_commit_sha TEXT NOT NULL,
+    host TEXT NOT NULL DEFAULT 'claude-code'
+        CHECK (host IN ('claude-code', 'codex-cli', 'opencode', 'hermes')),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY (farm_id, id)
 );
@@ -65,13 +68,17 @@ CREATE TABLE IF NOT EXISTS agent_farm_fixtures (
 
 CREATE TABLE IF NOT EXISTS agent_farm_runs (
     id TEXT PRIMARY KEY,
+    agent_run_id TEXT NOT NULL REFERENCES agent_runs(id) ON DELETE CASCADE,
     farm_id TEXT NOT NULL REFERENCES agent_farms(id) ON DELETE CASCADE,
     agent_id TEXT NOT NULL,
     user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     triggered_via TEXT NOT NULL
         CHECK (triggered_via IN ('dashboard', 'api', 'eval')),
+    host TEXT NOT NULL DEFAULT 'claude-code'
+        CHECK (host IN ('claude-code', 'codex-cli', 'opencode', 'hermes')),
     status TEXT NOT NULL DEFAULT 'queued'
         CHECK (status IN ('queued', 'preparing', 'running', 'succeeded', 'failed', 'cancelled', 'timed_out')),
+    attempt INTEGER NOT NULL DEFAULT 1,
     prompt TEXT NOT NULL,
     fixture TEXT,
     model TEXT,
@@ -80,24 +87,15 @@ CREATE TABLE IF NOT EXISTS agent_farm_runs (
     max_budget_usd DOUBLE PRECISION NOT NULL,
     timeout_seconds INTEGER NOT NULL,
     source_commit_sha TEXT,
-    run_dir TEXT,
-    gateway_session_id TEXT,
-    claude_session_id TEXT,
     context_id TEXT,
-    api_key_id TEXT,
-    pid INTEGER,
+    error_class TEXT,
+    cost_microdollars BIGINT NOT NULL DEFAULT 0,
+    event_count INTEGER NOT NULL DEFAULT 0,
+    tool_call_count INTEGER NOT NULL DEFAULT 0,
+    gateway_request_count INTEGER NOT NULL DEFAULT 0,
+    eval_result_id TEXT,
     started_at TIMESTAMPTZ,
     finished_at TIMESTAMPTZ,
-    duration_ms BIGINT,
-    num_turns INTEGER,
-    input_tokens BIGINT,
-    output_tokens BIGINT,
-    cost_microdollars BIGINT,
-    result_subtype TEXT,
-    exit_code INTEGER,
-    error TEXT,
-    diff_summary JSONB,
-    eval_result_id TEXT,
     cancel_requested_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -107,22 +105,7 @@ CREATE INDEX IF NOT EXISTS idx_agent_farm_runs_status ON agent_farm_runs(status)
 CREATE INDEX IF NOT EXISTS idx_agent_farm_runs_user ON agent_farm_runs(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_agent_farm_runs_agent ON agent_farm_runs(farm_id, agent_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_agent_farm_runs_created ON agent_farm_runs(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_agent_farm_runs_gateway_session ON agent_farm_runs(gateway_session_id);
-CREATE INDEX IF NOT EXISTS idx_agent_farm_runs_claude_session ON agent_farm_runs(claude_session_id);
-
-CREATE TABLE IF NOT EXISTS agent_farm_run_events (
-    run_id TEXT NOT NULL REFERENCES agent_farm_runs(id) ON DELETE CASCADE,
-    seq BIGINT NOT NULL,
-    kind TEXT NOT NULL
-        CHECK (kind IN ('init', 'assistant_text', 'tool_use', 'tool_result', 'hook', 'result', 'stderr', 'runner')),
-    tool_name TEXT,
-    tool_use_id TEXT,
-    payload JSONB NOT NULL DEFAULT '{}',
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (run_id, seq)
-);
-
-CREATE INDEX IF NOT EXISTS idx_agent_farm_run_events_tool_use ON agent_farm_run_events(run_id, tool_use_id);
+CREATE INDEX IF NOT EXISTS idx_agent_farm_runs_agent_run ON agent_farm_runs(agent_run_id);
 
 CREATE TABLE IF NOT EXISTS agent_farm_eval_suites (
     id TEXT PRIMARY KEY,

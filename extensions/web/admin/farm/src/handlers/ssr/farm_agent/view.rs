@@ -83,10 +83,14 @@ const fn kpi(key: &'static str, label: &'static str, value: String) -> AgentKpiV
     }
 }
 
-fn mean_turns(runs: &[RunRow]) -> Option<f64> {
-    let turns: Vec<i32> = runs.iter().filter_map(|r| r.num_turns).collect();
-    let count = i32::try_from(turns.len()).ok().filter(|n| *n > 0)?;
-    Some(f64::from(turns.iter().sum::<i32>()) / f64::from(count))
+fn mean_tool_calls(runs: &[RunRow]) -> Option<f64> {
+    let calls: Vec<i32> = runs
+        .iter()
+        .filter(|r| r.finished_at.is_some())
+        .map(|r| r.tool_call_count)
+        .collect();
+    let count = i32::try_from(calls.len()).ok().filter(|n| *n > 0)?;
+    Some(f64::from(calls.iter().sum::<i32>()) / f64::from(count))
 }
 
 fn mean_score(cells: &[MatrixCellRow]) -> Option<f64> {
@@ -133,9 +137,9 @@ pub(crate) fn kpi_views(
         latency,
         kpi("cost", "Mean cost", mean_cost),
         kpi(
-            "turns",
-            "Mean turns",
-            mean_turns(recent).map_or_else(|| DASH.to_owned(), |t| format!("{t:.1}")),
+            "tool_calls",
+            "Mean tool calls",
+            mean_tool_calls(recent).map_or_else(|| DASH.to_owned(), |t| format!("{t:.1}")),
         ),
         kpi(
             "judge",

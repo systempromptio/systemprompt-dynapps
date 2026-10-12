@@ -23,7 +23,7 @@ farms:
       timeout_seconds: 1200
       max_turns: 40
       max_budget_usd: 2.0
-      model: claude-sonnet-4-5
+      model: claude-sonnet-5
 
 runner:
   max_concurrent: 2

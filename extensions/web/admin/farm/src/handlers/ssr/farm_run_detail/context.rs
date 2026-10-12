@@ -15,7 +15,6 @@ use crate::handlers::ssr::run_events_view::{
     RunEventView, RunTimelineView, timeline_view, transcript_views,
 };
 use crate::handlers::ssr::shared::{BadgeView, status_badge, trigger_badge};
-use crate::repositories::rows::RunRow;
 
 #[derive(Debug, Serialize)]
 pub(crate) struct RunDetailContext {
@@ -54,7 +53,12 @@ pub(crate) struct RunHeaderView {
     pub context_url: Option<String>,
     pub gateway_session_id: Option<String>,
     pub session_url: Option<String>,
-    pub claude_session_id: Option<String>,
+    pub host: String,
+    pub host_session_id: Option<String>,
+    pub attempt: i32,
+    pub claimed_by: Option<String>,
+    pub lease_until_local: Option<String>,
+    pub error_class: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -69,13 +73,13 @@ pub(crate) struct RunLiveView {
 }
 
 pub(crate) fn live_view(data: &RunData, events: Vec<RunEventView>) -> RunLiveView {
-    let summary = run_summary(&data.run, &data.events, &data.requests);
+    let summary = run_summary(data);
     RunLiveView {
         status: status_badge(&data.run.status),
         status_key: data.run.status.clone(),
         is_live: summary.is_live,
         last_seq: data.events.last().map_or(0, |e| e.seq),
-        timeline: timeline_view(&data.events, run_duration_ms(&data.run)),
+        timeline: timeline_view(&data.events, run_duration_ms(data)),
         summary,
         events,
     }
@@ -83,11 +87,7 @@ pub(crate) fn live_view(data: &RunData, events: Vec<RunEventView>) -> RunLiveVie
 
 pub(crate) fn detail_context(data: &RunData) -> RunDetailContext {
     let short = short_id(data.run.id.as_str());
-    let header = header_view(
-        &data.run,
-        data.agent_name.as_deref(),
-        data.context_id.as_ref(),
-    );
+    let header = header_view(data);
     RunDetailContext {
         page: "farm-run-detail",
         title: format!("Run · {short}"),
@@ -98,17 +98,17 @@ pub(crate) fn detail_context(data: &RunData) -> RunDetailContext {
         ],
         transcript: transcript_views(&data.events),
         cost: cost_view(&data.requests),
-        artifacts: artifacts_view(&data.run),
+        artifacts: artifacts_view(&data.run, &data.agent_run),
         live: live_view(data, data.events.clone()),
         header,
     }
 }
 
-fn header_view(
-    run: &RunRow,
-    agent_name: Option<&str>,
-    context: Option<&ContextId>,
-) -> RunHeaderView {
+fn header_view(data: &RunData) -> RunHeaderView {
+    let run = &data.run;
+    let agent_run = &data.agent_run;
+    let agent_name = data.agent_name.as_deref();
+    let context = data.context_id.as_ref();
     let id = run.id.as_str();
     let agent_url = format!(
         "/admin/farm/{}/agents/{}",
@@ -144,12 +144,26 @@ fn header_view(
         source_commit: run.source_commit_sha.clone(),
         context_id: context.cloned(),
         context_url: context.map(context_detail_url),
-        gateway_session_id: run.gateway_session_id.clone(),
-        session_url: run
+        gateway_session_id: agent_run
             .gateway_session_id
             .as_ref()
-            .map(|s| format!("/admin/sessions/{s}")),
-        claude_session_id: run.claude_session_id.clone(),
+            .map(|s| s.as_str().to_owned()),
+        session_url: agent_run
+            .gateway_session_id
+            .as_ref()
+            .map(|s| format!("/admin/sessions/{}", s.as_str())),
+        host: run.host.clone(),
+        host_session_id: agent_run
+            .host_session_id
+            .as_ref()
+            .map(|s| s.as_str().to_owned()),
+        attempt: run.attempt,
+        claimed_by: agent_run.claimed_by.clone(),
+        lease_until_local: agent_run.lease_until.map(local_time),
+        error_class: run
+            .error_class
+            .clone()
+            .or_else(|| agent_run.error_class.clone()),
     }
 }
 

@@ -1,8 +1,11 @@
-//! Run reads: one run, the paged and filtered list, and the queue views the
-//! runner and the dashboard poll.
+//! Run reads: one run, one run with its `agent_runs` row, the paged and
+//! filtered list, and the active and recent views the dashboard polls.
+
+use std::sync::Arc;
 
 use sqlx::PgPool;
-use systemprompt::identifiers::{ContextId, UserId};
+use systemprompt::agent_runs::{AgentRunRepository, AgentRunRow, AgentRunsError};
+use systemprompt::identifiers::{AgentRunId, ContextId, UserId};
 
 use crate::repositories::filters::{PageWindow, RunFilter, RunSort};
 use crate::repositories::rows::RunRow;
@@ -12,6 +15,32 @@ pub async fn find_run(pool: &PgPool, id: &FarmRunId) -> Result<Option<RunRow>, s
     sqlx::query_file_as!(RunRow, "src/repositories/runs/find_run.sql", id.as_str())
         .fetch_optional(pool)
         .await
+}
+
+pub async fn find_run_by_agent_run(
+    pool: &PgPool,
+    agent_run_id: &AgentRunId,
+) -> Result<Option<RunRow>, sqlx::Error> {
+    sqlx::query_file_as!(
+        RunRow,
+        "src/repositories/runs/find_run_by_agent_run.sql",
+        agent_run_id.as_str()
+    )
+    .fetch_optional(pool)
+    .await
+}
+
+pub async fn find_run_with_agent_run(
+    pool: &Arc<PgPool>,
+    id: &FarmRunId,
+) -> Result<Option<(RunRow, AgentRunRow)>, AgentRunsError> {
+    let Some(run) = find_run(pool, id).await? else {
+        return Ok(None);
+    };
+    let agent_run = AgentRunRepository::from_pool(Arc::clone(pool))
+        .find_run(&run.agent_run_id)
+        .await?;
+    Ok(agent_run.map(|agent_run| (run, agent_run)))
 }
 
 pub async fn list_runs_paged(
@@ -77,10 +106,4 @@ pub async fn list_recent_runs(
     )
     .fetch_all(pool)
     .await
-}
-
-pub async fn list_runs_to_requeue(pool: &PgPool) -> Result<Vec<RunRow>, sqlx::Error> {
-    sqlx::query_file_as!(RunRow, "src/repositories/runs/list_runs_to_requeue.sql")
-        .fetch_all(pool)
-        .await
 }

@@ -34,6 +34,7 @@ fn new_agent(
         name: agent.name.clone(),
         description: agent.description.clone(),
         model: agent.model.clone().or_else(|| defaults.model.clone()),
+        host: agent.host.clone(),
         tools: agent.tools.clone(),
         plugin_id: PluginId::new(agent.plugin.clone()),
         skills: agent.skills.clone(),

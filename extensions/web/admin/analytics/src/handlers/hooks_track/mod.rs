@@ -154,6 +154,8 @@ async fn dispatch_inserted_event(ctx: &DispatchContext<'_>) {
 // `x-ingestion-event-id`; only prompts and tool calls carry a natural id.
 // A digest of the envelope is deterministic across retries, so dedup still
 // holds.
+// JSON: the track envelope is Claude Code's wire shape; event_id is patched
+// into the raw object before the typed decode.
 fn ensure_lifecycle_event_id(raw: &mut serde_json::Value) {
     let Some(object) = raw.as_object_mut() else {
         return;
@@ -161,9 +163,10 @@ fn ensure_lifecycle_event_id(raw: &mut serde_json::Value) {
     if object.contains_key("event_id") {
         return;
     }
-    let digest = hex::encode(sha2::Sha256::digest(
-        serde_json::to_vec(&*object).unwrap_or_default(),
-    ));
+    let Ok(bytes) = serde_json::to_vec(&*object) else {
+        return;
+    };
+    let digest = hex::encode(sha2::Sha256::digest(bytes));
     object.insert(
         "event_id".to_owned(),
         serde_json::Value::String(format!("envelope-{}", &digest[..32])),

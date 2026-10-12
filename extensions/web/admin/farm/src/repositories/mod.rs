@@ -9,6 +9,5 @@ pub mod filters;
 pub mod fixtures;
 pub mod people;
 pub mod rows;
-pub mod run_events;
 pub mod runs;
 pub mod summaries;

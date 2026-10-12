@@ -1,8 +1,11 @@
-//! The Artifacts tab: the workspace diff the runner recorded after exit, and
-//! how the process ended.
+//! The Artifacts tab: the workspace diff the executor recorded after exit,
+//! how the host process ended, and its structured answer. All of it is read
+//! from the run's `agent_runs` row.
 
 use serde::{Deserialize, Serialize};
 use systemprompt_web_admin_core::ssr::format::format_bytes;
+
+use systemprompt::agent_runs::AgentRunRow;
 
 use crate::repositories::rows::RunRow;
 
@@ -17,9 +20,11 @@ pub(crate) struct RunArtifactsView {
     pub fixture: Option<String>,
     pub exit_code: Option<i32>,
     pub exit_display: String,
-    pub result_subtype: Option<String>,
+    pub error_class: Option<String>,
     pub error: Option<String>,
     pub run_dir: Option<String>,
+    pub has_structured_output: bool,
+    pub structured_output: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -51,8 +56,8 @@ struct DiffFile {
     bytes: Option<i64>,
 }
 
-pub(crate) fn artifacts_view(run: &RunRow) -> RunArtifactsView {
-    let parsed = run
+pub(crate) fn artifacts_view(run: &RunRow, agent_run: &AgentRunRow) -> RunArtifactsView {
+    let parsed = agent_run
         .diff_summary
         .as_ref()
         .map(|v| serde_json::from_value::<DiffDoc>(v.clone()));
@@ -81,12 +86,23 @@ pub(crate) fn artifacts_view(run: &RunRow) -> RunArtifactsView {
             })
             .collect(),
         fixture: run.fixture.clone(),
-        exit_code: run.exit_code,
-        exit_display: run
+        exit_code: agent_run.exit_code,
+        exit_display: agent_run
             .exit_code
             .map_or_else(|| "—".to_owned(), |c| c.to_string()),
-        result_subtype: run.result_subtype.clone(),
-        error: run.error.clone(),
-        run_dir: run.run_dir.clone(),
+        error_class: run
+            .error_class
+            .clone()
+            .or_else(|| agent_run.error_class.clone()),
+        error: agent_run.error.clone(),
+        run_dir: agent_run.run_dir.clone(),
+        has_structured_output: agent_run.structured_output.is_some(),
+        structured_output: agent_run.structured_output.as_ref().map(pretty_json),
     }
+}
+
+// JSON: protocol boundary — the host's structured answer, shaped by the
+// caller's output schema, shown verbatim.
+fn pretty_json(value: &serde_json::Value) -> String {
+    serde_json::to_string_pretty(value).unwrap_or_else(|_| value.to_string())
 }

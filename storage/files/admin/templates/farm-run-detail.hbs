@@ -45,8 +45,19 @@
         {{#if header.gateway_session_id}}
         <div class="sp-kv-row"><dt>Gateway session</dt><dd><a href="{{header.session_url}}"><code class="sp-code-inline">{{header.gateway_session_id}}</code></a></dd></div>
         {{/if}}
-        {{#if header.claude_session_id}}
-        <div class="sp-kv-row"><dt>Claude Code session</dt><dd><code class="sp-code-inline">{{header.claude_session_id}}</code></dd></div>
+        <div class="sp-kv-row"><dt>Host</dt><dd><code class="sp-code-inline">{{header.host}}</code></dd></div>
+        <div class="sp-kv-row"><dt>Attempt</dt><dd>{{header.attempt}}</dd></div>
+        {{#if header.host_session_id}}
+        <div class="sp-kv-row"><dt>Host session</dt><dd><code class="sp-code-inline">{{header.host_session_id}}</code></dd></div>
+        {{/if}}
+        {{#if header.claimed_by}}
+        <div class="sp-kv-row"><dt>Claimed by</dt><dd><code class="sp-code-inline">{{header.claimed_by}}</code></dd></div>
+        {{/if}}
+        {{#if header.lease_until_local}}
+        <div class="sp-kv-row"><dt>Lease until</dt><dd>{{header.lease_until_local}}</dd></div>
+        {{/if}}
+        {{#if header.error_class}}
+        <div class="sp-kv-row"><dt>Error class</dt><dd><code class="sp-code-inline">{{header.error_class}}</code></dd></div>
         {{/if}}
         {{#if header.context_id}}
         <div class="sp-kv-row"><dt>Context</dt><dd><a href="{{header.context_url}}"><code class="sp-code-inline">{{header.context_id}}</code></a></dd></div>
@@ -154,11 +165,17 @@
       <dl class="sp-kv-list">
         <div class="sp-kv-row"><dt>Fixture</dt><dd>{{#if artifacts.fixture}}<code class="sp-code-inline">{{artifacts.fixture}}</code>{{else}}none{{/if}}</dd></div>
         <div class="sp-kv-row"><dt>Exit code</dt><dd><code class="sp-code-inline">{{artifacts.exit_display}}</code></dd></div>
-        <div class="sp-kv-row"><dt>Result</dt><dd>{{#if artifacts.result_subtype}}<code class="sp-code-inline">{{artifacts.result_subtype}}</code>{{else}}—{{/if}}</dd></div>
+        <div class="sp-kv-row"><dt>Error class</dt><dd>{{#if artifacts.error_class}}<code class="sp-code-inline">{{artifacts.error_class}}</code>{{else}}—{{/if}}</dd></div>
         {{#if artifacts.run_dir}}
         <div class="sp-kv-row"><dt>Run directory</dt><dd><code class="sp-code-inline">{{artifacts.run_dir}}</code></dd></div>
         {{/if}}
       </dl>
+      {{#if artifacts.has_structured_output}}
+        <details class="sp-farm-run__ids">
+          <summary class="sp-farm-run__ids-summary">Structured output</summary>
+          <pre class="sp-code-block">{{artifacts.structured_output}}</pre>
+        </details>
+      {{/if}}
       {{#if artifacts.has_diff}}
         <p class="sp-farm-run__diff-stats">
           {{> components/badge tone="ok" text=(concat "+" artifacts.added " added")}}

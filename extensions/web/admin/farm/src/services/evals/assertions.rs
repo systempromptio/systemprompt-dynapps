@@ -8,8 +8,8 @@
 use std::path::{Component, Path, PathBuf};
 
 use serde::Serialize;
+use systemprompt::agent_runs::{AgentRunRow, RunEvent};
 
-use crate::repositories::rows::{RunEventRow, RunRow};
 use crate::services::farm_sync::eval_yaml::Assertion;
 use crate::types::RunEventPayload;
 
@@ -17,8 +17,8 @@ const SKILL_TOOL: &str = "Skill";
 
 #[derive(Debug)]
 pub struct AssertionContext<'a> {
-    pub run: &'a RunRow,
-    pub events: &'a [RunEventRow],
+    pub run: &'a AgentRunRow,
+    pub events: &'a [RunEvent],
     pub workspace: &'a Path,
     pub agent_tools: &'a [String],
     pub output_path: Option<&'a str>,
@@ -69,7 +69,7 @@ fn evaluate_one(assertion: &Assertion, ctx: &AssertionContext<'_>) -> AssertionR
         Assertion::NoToolOutsideAllowlist { .. } => tool_allowlist(ctx),
         Assertion::MaxTurns { value } => {
             let limit = i64::from(*value);
-            ctx.run.num_turns.map_or_else(
+            ctx.run.turns.map_or_else(
                 || AssertionResult::new("max_turns", false, "run recorded no turn count"),
                 |turns| {
                     AssertionResult::new(
@@ -146,10 +146,8 @@ fn output_check(
     AssertionResult::new(kind, passed, format!("{detail} in {source}"))
 }
 
-fn payloads(events: &[RunEventRow]) -> impl Iterator<Item = RunEventPayload> + '_ {
-    events
-        .iter()
-        .filter_map(|e| serde_json::from_value::<RunEventPayload>(e.payload.clone()).ok())
+fn payloads(events: &[RunEvent]) -> impl Iterator<Item = RunEventPayload> + '_ {
+    events.iter().map(|e| e.payload.clone())
 }
 
 fn tool_permitted(tool: &str, allowlist: &[String]) -> bool {
@@ -192,6 +190,8 @@ fn normalise(name: &str) -> String {
     name.trim().to_lowercase().replace('_', "-")
 }
 
+// JSON: protocol boundary — a `ToolUse` input is whatever the tool's own
+// schema says; the Skill tool's `skill` / `name` key is read and nothing else.
 fn skill_invoked(ctx: &AssertionContext<'_>, skill: &str) -> AssertionResult {
     let wanted = normalise(skill);
     let hit = payloads(ctx.events).find_map(|p| match p {

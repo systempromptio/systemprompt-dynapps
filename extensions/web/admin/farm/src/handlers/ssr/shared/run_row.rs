@@ -1,5 +1,7 @@
 //! One run as a table row, shared by the explorer, the overview board, the
-//! farm and agent pages and the person drill-in.
+//! farm and agent pages and the person drill-in. It reads the farm row only:
+//! tool calls and events are the counters stamped when the run finished, so
+//! a live row shows a dash until then.
 
 use crate::types::FarmAgentId;
 use chrono::Utc;
@@ -27,8 +29,8 @@ pub(crate) struct RunRowView {
     pub trigger: BadgeView,
     pub status: BadgeView,
     pub is_live: bool,
-    pub turns: String,
-    pub tokens_display: String,
+    pub tool_calls: String,
+    pub events_display: String,
     pub cost_display: String,
     pub duration_display: String,
     pub prompt_preview: String,
@@ -36,14 +38,18 @@ pub(crate) struct RunRowView {
 
 pub(crate) fn run_row_view(run: &RunRow) -> RunRowView {
     let started = run.started_at.unwrap_or(run.created_at);
-    let duration_ms = run.duration_ms.or_else(|| {
-        run.started_at
-            .filter(|_| is_live(&run.status))
-            .map(|s| (Utc::now() - s).num_milliseconds())
-    });
-    let tokens = match (run.input_tokens, run.output_tokens) {
-        (Some(i), Some(o)) => format!("{i} / {o}"),
-        _ => "—".to_owned(),
+    let live = is_live(&run.status);
+    let duration_ms = match (run.started_at, run.finished_at) {
+        (Some(s), Some(f)) => Some((f - s).num_milliseconds().max(0)),
+        (Some(s), None) if live => Some((Utc::now() - s).num_milliseconds().max(0)),
+        _ => None,
+    };
+    let counter = |n: i32| {
+        if run.finished_at.is_some() {
+            n.to_string()
+        } else {
+            "—".to_owned()
+        }
     };
     RunRowView {
         run_id: run.id.as_str().to_owned(),
@@ -63,14 +69,14 @@ pub(crate) fn run_row_view(run: &RunRow) -> RunRowView {
         user_url: format!("/admin/users/{}", run.user_id.as_str()),
         trigger: trigger_badge(&run.triggered_via),
         status: status_badge(&run.status),
-        is_live: is_live(&run.status),
-        turns: run
-            .num_turns
-            .map_or_else(|| "—".to_owned(), |n| n.to_string()),
-        tokens_display: tokens,
-        cost_display: run
-            .cost_microdollars
-            .map_or_else(|| "—".to_owned(), format_cost),
+        is_live: live,
+        tool_calls: counter(run.tool_call_count),
+        events_display: counter(run.event_count),
+        cost_display: if run.finished_at.is_some() || run.cost_microdollars > 0 {
+            format_cost(run.cost_microdollars)
+        } else {
+            "—".to_owned()
+        },
         duration_display: duration_ms.map_or_else(|| "—".to_owned(), format_duration_ms),
         prompt_preview: run.prompt.chars().take(120).collect(),
     }

@@ -63,6 +63,8 @@ fn it_declares_the_extensions_whose_tables_it_reads() {
     assert_eq!(
         shared,
         vec![
+            "agent_run_events",
+            "agent_runs",
             "ai_requests",
             "managed_installation_receipts",
             "managed_publications",

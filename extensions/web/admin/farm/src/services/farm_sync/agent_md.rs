@@ -13,6 +13,8 @@ use crate::error::FarmResult;
 
 pub const FIXTURE_PATH_PLACEHOLDER: &str = "{{fixture_path}}";
 pub const CASE_PROMPT_PLACEHOLDER: &str = "{{case.prompt}}";
+pub const DEFAULT_HOST: &str = "claude-code";
+pub const HOSTS: [&str; 4] = [DEFAULT_HOST, "codex-cli", "opencode", "hermes"];
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -28,6 +30,8 @@ struct Frontmatter {
     description: String,
     #[serde(default)]
     model: Option<String>,
+    #[serde(default)]
+    host: Option<String>,
     tools: Vec<String>,
     plugin: String,
     #[serde(default)]
@@ -49,6 +53,7 @@ pub struct AgentDefinition {
     pub name: String,
     pub description: String,
     pub model: Option<String>,
+    pub host: String,
     pub tools: Vec<String>,
     pub plugin: String,
     pub skills: Vec<String>,
@@ -120,6 +125,13 @@ fn validate(path: &str, stem: &str, fm: &Frontmatter) -> FarmResult<()> {
         path,
         "description is empty",
     )?;
+    if let Some(host) = &fm.host {
+        require(
+            HOSTS.contains(&host.as_str()),
+            path,
+            format!("agent {:?}: host {host:?} is not one of {HOSTS:?}", fm.name),
+        )?;
+    }
     require(!fm.tools.is_empty(), path, "tools must be a non-empty list")?;
     if let Some(tool) = fm
         .tools
@@ -186,6 +198,7 @@ pub fn parse_agent_markdown(path: &str, text: &str) -> FarmResult<AgentDefinitio
         name: fm.name,
         description: fm.description.trim().to_owned(),
         model: fm.model,
+        host: fm.host.unwrap_or_else(|| DEFAULT_HOST.to_owned()),
         tools: fm.tools,
         plugin: fm.plugin,
         skills: fm.skills,

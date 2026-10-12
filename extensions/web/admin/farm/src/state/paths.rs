@@ -1,6 +1,6 @@
-//! Where the farm keeps its files: run directories and synced farm trees
-//! under the storage data root, and the plugins Claude Code loads from the
-//! composed services tree.
+//! Where the farm keeps its files: run directories (keyed by the
+//! `agent_runs` id) and synced farm trees under the storage data root, and
+//! the plugins a host loads from the composed services tree.
 
 use std::path::{Path, PathBuf};
 

@@ -12,6 +12,7 @@ use super::judge::EvalJudge;
 use crate::error::{FarmError, FarmResult};
 use crate::repositories::rows::{AgentRow, EvalCaseRow, EvalRunRow};
 use crate::repositories::{agents, evals};
+use crate::services::runs::cancel;
 use crate::state::FarmState;
 use crate::types::{
     EvalResultId, EvalResultStatus, EvalRunId, EvalRunStatus, EvalSuiteId, FarmId, FarmRunId,
@@ -217,15 +218,16 @@ async fn drive(
 pub async fn cancel_eval_run(state: &FarmState, eval_run_id: &EvalRunId) -> FarmResult<()> {
     set_cancelled(eval_run_id, true);
     evals::update_eval_run_status(&state.pool, eval_run_id, EvalRunStatus::Cancelled).await?;
+    let Some(eval_run) = evals::find_eval_run(&state.pool, eval_run_id).await? else {
+        return Ok(());
+    };
     let results = evals::list_eval_results(&state.pool, eval_run_id).await?;
-    if let Some(runner) = state.runner() {
-        results
-            .iter()
-            .filter(|r| r.status == EvalResultStatus::Running.as_str())
-            .filter_map(|r| r.run_id.as_deref())
-            .for_each(|run_id| {
-                runner.request_cancel(&FarmRunId::new(run_id));
-            });
+    let running = results
+        .iter()
+        .filter(|r| r.status == EvalResultStatus::Running.as_str())
+        .filter_map(|r| r.run_id.as_deref());
+    for run_id in running {
+        cancel(state, &FarmRunId::new(run_id), &eval_run.user_id).await?;
     }
     Ok(())
 }

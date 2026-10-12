@@ -6,22 +6,24 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 
+use systemprompt::agent_runs::{AgentRunRepository, AgentRunRow, RunEvent};
 use systemprompt::identifiers::UserId;
 
 use super::assertions::{AssertionContext, AssertionResult, evaluate_assertions};
 use super::judge::{EvalJudge, JudgeInput};
 use super::transcript::{final_result_text, render_transcript, truncate_utf8};
 use crate::error::{FarmError, FarmResult};
-use crate::repositories::rows::{AgentRow, EvalCaseRow, RunEventRow, RunRow};
-use crate::repositories::{evals, run_events, runs};
+use crate::repositories::rows::{AgentRow, EvalCaseRow, RunRow};
+use crate::repositories::{evals, runs};
 use crate::services::farm_sync::eval_yaml::{Assertion, DEFAULT_JUDGE_THRESHOLD};
-use crate::services::runs::{LaunchRequest, launch};
+use crate::services::runs::{LaunchRequest, cancel, launch};
 use crate::state::FarmState;
 use crate::types::{EvalResultId, EvalResultStatus, FarmId, FarmRunId, RunStatus, TriggeredVia};
 
 const POLL_INTERVAL: Duration = Duration::from_secs(2);
 const WAIT_GRACE_SECONDS: u64 = 60;
 const OUTPUT_CAP_BYTES: usize = 16 * 1024;
+const EVENT_PAGE: i64 = 1_000;
 
 pub(crate) struct CaseJob<'a> {
     pub state: &'a Arc<FarmState>,
@@ -66,16 +68,20 @@ pub(crate) async fn run_case(job: &CaseJob<'_>) -> FarmResult<CaseOutcome> {
     )
     .await?;
     evals::update_eval_result_run(pool, job.result_id, &launched.id).await?;
-    let run = wait_for_terminal(job.state, &launched.id, timeout + WAIT_GRACE_SECONDS).await?;
-    let events = run_events::list_run_events(pool, &run.id).await?;
-    let workspace = workspace_of(&run);
+    let (run, agent_run) =
+        wait_for_terminal(job, &launched.id, timeout + WAIT_GRACE_SECONDS).await?;
+    let events = list_events(job.state, &agent_run).await?;
+    let workspace = workspace_of(&agent_run);
     let final_text = final_result_text(&events);
-    let assertions: Vec<Assertion> = serde_json::from_value(job.case.assertions.clone())
-        .map_err(|e| FarmError::Validation(format!("case {} assertions: {e}", job.case.id)))?;
+    let assertions: Vec<Assertion> =
+        serde_json::from_value(job.case.assertions.clone()).map_err(|source| FarmError::Json {
+            at: format!("case {} assertions", job.case.id),
+            source,
+        })?;
     let results = evaluate_assertions(
         &assertions,
         &AssertionContext {
-            run: &run,
+            run: &agent_run,
             events: &events,
             workspace: &workspace,
             agent_tools: &job.agent.tools,
@@ -83,10 +89,12 @@ pub(crate) async fn run_case(job: &CaseJob<'_>) -> FarmResult<CaseOutcome> {
             final_text: final_text.as_deref(),
         },
     );
-    let verdict = judge_case(job, &run, &events, &workspace).await;
-    let (status, score, rationale) = settle(&run, &results, verdict);
-    let assertions_json = serde_json::to_value(&results)
-        .map_err(|e| FarmError::Validation(format!("assertion results: {e}")))?;
+    let verdict = judge_case(job, (&run, &agent_run), &events, &workspace).await;
+    let (status, score, rationale) = settle((&run, &agent_run), &results, verdict);
+    let assertions_json = serde_json::to_value(&results).map_err(|source| FarmError::Json {
+        at: "assertion results".to_owned(),
+        source,
+    })?;
     evals::update_eval_result_outcome(
         pool,
         job.result_id,
@@ -101,14 +109,14 @@ pub(crate) async fn run_case(job: &CaseJob<'_>) -> FarmResult<CaseOutcome> {
     Ok(CaseOutcome {
         status: Some(status),
         score,
-        cost_microdollars: run.cost_microdollars.unwrap_or(0),
+        cost_microdollars: run.cost_microdollars,
     })
 }
 
 type Verdict = Option<Result<(i32, bool, String), String>>;
 
 fn settle(
-    run: &RunRow,
+    (run, agent_run): (&RunRow, &AgentRunRow),
     results: &[AssertionResult],
     verdict: Verdict,
 ) -> (EvalResultStatus, Option<i32>, Option<String>) {
@@ -121,7 +129,7 @@ fn settle(
             Some(format!("judge failed: {err}")),
         ),
         _ if !succeeded => {
-            let why = run
+            let why = agent_run
                 .error
                 .clone()
                 .unwrap_or_else(|| format!("run {}", run.status));
@@ -143,8 +151,8 @@ fn settle(
 
 async fn judge_case(
     job: &CaseJob<'_>,
-    run: &RunRow,
-    events: &[RunEventRow],
+    (run, agent_run): (&RunRow, &AgentRunRow),
+    events: &[RunEvent],
     workspace: &Path,
 ) -> Verdict {
     let rubric = job.case.judge_rubric.as_deref()?;
@@ -164,7 +172,7 @@ async fn judge_case(
         rubric: rubric.to_owned(),
         case_prompt: run.prompt.clone(),
         transcript,
-        diff_summary: run
+        diff_summary: agent_run
             .diff_summary
             .as_ref()
             .map_or_else(|| "(none recorded)".to_owned(), ToString::to_string),
@@ -179,29 +187,42 @@ async fn judge_case(
     )
 }
 
-fn workspace_of(run: &RunRow) -> PathBuf {
+fn workspace_of(run: &AgentRunRow) -> PathBuf {
     let root = PathBuf::from(run.run_dir.clone().unwrap_or_default());
     let nested = root.join("workspace");
     if nested.is_dir() { nested } else { root }
 }
 
+async fn list_events(state: &FarmState, agent_run: &AgentRunRow) -> FarmResult<Vec<RunEvent>> {
+    let repo = AgentRunRepository::from_pool(Arc::clone(&state.pool));
+    let mut events: Vec<RunEvent> = Vec::new();
+    loop {
+        let after = events.last().map_or(-1, |e| e.seq);
+        let page = repo
+            .list_events_after(&agent_run.id, after, EVENT_PAGE)
+            .await?;
+        if page.is_empty() {
+            return Ok(events);
+        }
+        events.extend(page);
+    }
+}
+
 async fn wait_for_terminal(
-    state: &Arc<FarmState>,
+    job: &CaseJob<'_>,
     run_id: &FarmRunId,
     budget_seconds: u64,
-) -> FarmResult<RunRow> {
+) -> FarmResult<(RunRow, AgentRunRow)> {
     let deadline = tokio::time::Instant::now() + Duration::from_secs(budget_seconds);
     loop {
-        let run = runs::find_run(&state.pool, run_id)
+        let (run, agent_run) = runs::find_run_with_agent_run(&job.state.pool, run_id)
             .await?
             .ok_or_else(|| FarmError::NotFound(format!("run {}", run_id.as_str())))?;
         if RunStatus::parse(&run.status).is_some_and(RunStatus::is_terminal) {
-            return Ok(run);
+            return Ok((run, agent_run));
         }
         if tokio::time::Instant::now() >= deadline {
-            if let Some(runner) = state.runner() {
-                runner.request_cancel(run_id);
-            }
+            cancel(job.state, run_id, job.user_id).await?;
             return Err(FarmError::Spawn(format!(
                 "run {} did not finish within {budget_seconds}s",
                 run_id.as_str()

@@ -22,6 +22,8 @@ systemprompt-web-admin-analytics = { workspace = true }
 systemprompt-web-jobs = { workspace = true }
 systemprompt-web-site = { workspace = true }
 systemprompt-mcp-agent = { workspace = true }
+# The farm lifecycle suite launches, cancels and finishes runs over a real schema.
+systemprompt-web-admin-farm = { workspace = true }
 
 chrono = { workspace = true }
 serde_json = { workspace = true }

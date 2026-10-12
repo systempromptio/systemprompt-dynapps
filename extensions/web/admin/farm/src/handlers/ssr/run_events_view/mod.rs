@@ -1,8 +1,8 @@
-//! A run's stream-json events as the rail and the timeline draw them.
+//! A run's `agent_run_events` as the rail and the timeline draw them.
 //!
-//! Every `payload` is decoded here, once, into [`RunEventPayload`]; a row
-//! that does not decode is still shown, as its raw JSON, so a payload shape
-//! the farm has not met yet never drops an event from the record.
+//! Core's repository decodes every row into a typed [`RunEvent`], so this
+//! module only words and pairs them; the host that produced an event
+//! (Claude Code, Codex CLI, …) makes no difference here.
 //!
 //! - [`text`] — titles, bodies and folding.
 //! - [`pairing`] — `tool_use` ⇄ `tool_result` by `tool_use_id`.
@@ -18,10 +18,10 @@ use chrono::{DateTime, Utc};
 use serde::Serialize;
 use systemprompt_web_admin_core::ssr::format::{format_duration_ms, local_time};
 
-use crate::repositories::rows::RunEventRow;
-use crate::types::RunEventPayload;
+use systemprompt::agent_runs::{RunEvent, RunEventPayload};
+
 use pairing::{PairKey, pair_seqs};
-use text::{EventText, PREVIEW_CHARS, event_text, first_line, is_long, raw_text};
+use text::{EventText, PREVIEW_CHARS, event_text, first_line, is_long};
 
 pub(crate) use timeline::{RunTimelineView, timeline_view};
 
@@ -45,91 +45,54 @@ pub struct RunEventView {
     pub created_local: String,
 }
 
-struct Decoded<'a> {
-    row: &'a RunEventRow,
-    payload: Option<RunEventPayload>,
-}
-
-impl Decoded<'_> {
-    fn tool_use_id(&self) -> Option<&str> {
-        match &self.payload {
-            Some(
-                RunEventPayload::ToolUse { tool_use_id, .. }
-                | RunEventPayload::ToolResult { tool_use_id, .. },
-            ) => Some(tool_use_id.as_str()),
-            Some(_) => None,
-            None => self.row.tool_use_id.as_deref(),
-        }
-    }
-
-    fn is_use(&self) -> bool {
-        self.payload.as_ref().map_or_else(
-            || self.row.kind == "tool_use",
-            |p| matches!(p, RunEventPayload::ToolUse { .. }),
-        )
-    }
-
-    fn tool_name(&self) -> Option<String> {
-        match &self.payload {
-            Some(RunEventPayload::ToolUse { name, .. }) => Some(name.clone()),
-            _ => self.row.tool_name.clone(),
-        }
+fn tool_name(event: &RunEvent) -> Option<String> {
+    match &event.payload {
+        RunEventPayload::ToolUse { name, .. } => Some(name.clone()),
+        _ => event.tool_name.clone(),
     }
 }
 
-pub fn event_views(events: &[RunEventRow], started_at: Option<DateTime<Utc>>) -> Vec<RunEventView> {
-    let decoded: Vec<Decoded<'_>> = events
+const fn is_use(event: &RunEvent) -> bool {
+    matches!(event.payload, RunEventPayload::ToolUse { .. })
+}
+
+pub fn event_views(events: &[RunEvent], started_at: Option<DateTime<Utc>>) -> Vec<RunEventView> {
+    let keys: Vec<PairKey<'_>> = events
         .iter()
-        .map(|row| Decoded {
-            row,
-            payload: serde_json::from_value::<RunEventPayload>(row.payload.clone()).ok(),
-        })
-        .collect();
-    let keys: Vec<PairKey<'_>> = decoded
-        .iter()
-        .map(|d| PairKey {
-            seq: d.row.seq,
-            tool_use_id: d.tool_use_id(),
-            is_use: d.is_use(),
+        .map(|e| PairKey {
+            seq: e.seq,
+            tool_use_id: e.payload.tool_use_id().or(e.tool_use_id.as_deref()),
+            is_use: is_use(e),
         })
         .collect();
     let pairs = pair_seqs(&keys);
     let origin = started_at.or_else(|| events.iter().map(|e| e.created_at).min());
-    let names: HashMap<i64, String> = decoded
+    let names: HashMap<i64, String> = events
         .iter()
-        .filter_map(|d| d.tool_name().map(|n| (d.row.seq, n)))
+        .filter_map(|e| tool_name(e).map(|n| (e.seq, n)))
         .collect();
-    decoded
+    events
         .iter()
         .zip(pairs)
-        .map(|(d, paired_seq)| {
-            let tool_name = d
-                .tool_name()
-                .or_else(|| paired_seq.and_then(|s| names.get(&s).cloned()));
-            let text = d.payload.as_ref().map_or_else(
-                || raw_text(&d.row.kind, &d.row.payload),
-                |p| event_text(p, tool_name.as_deref()),
-            );
-            view(d, text, tool_name, paired_seq, origin)
+        .map(|(e, paired_seq)| {
+            let name = tool_name(e).or_else(|| paired_seq.and_then(|s| names.get(&s).cloned()));
+            let text = event_text(&e.payload, name.as_deref());
+            view(e, text, name, paired_seq, origin)
         })
         .collect()
 }
 
 fn view(
-    d: &Decoded<'_>,
+    e: &RunEvent,
     text: EventText,
     tool_name: Option<String>,
     paired_seq: Option<i64>,
     origin: Option<DateTime<Utc>>,
 ) -> RunEventView {
-    let offset_ms = origin.map_or(0, |o| (d.row.created_at - o).num_milliseconds().max(0));
-    let kind = d
-        .payload
-        .as_ref()
-        .map_or_else(|| d.row.kind.clone(), |p| p.kind().as_str().to_owned());
+    let offset_ms = origin.map_or(0, |o| (e.created_at - o).num_milliseconds().max(0));
     RunEventView {
-        seq: d.row.seq,
-        kind,
+        seq: e.seq,
+        kind: e.kind.as_str().to_owned(),
         glyph: text.glyph,
         offset_ms,
         offset_label: format!("+{}", format_duration_ms(offset_ms)),
@@ -139,9 +102,9 @@ fn view(
         body_is_long: is_long(&text.body),
         body: text.body,
         is_error: text.is_error,
-        is_tool_use: d.is_use(),
+        is_tool_use: is_use(e),
         paired_seq,
-        created_local: local_time(d.row.created_at),
+        created_local: local_time(e.created_at),
     }
 }
 

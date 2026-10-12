@@ -130,7 +130,10 @@ fn sort_defaults_to_newest_first_and_only_start_time_reverses() {
         run_sort(&query(&[("sort", "duration"), ("dir", "asc")])),
         (RunSortColumn::Duration, RunSort::DurationDesc)
     );
-    assert_eq!(run_sort(&query(&[("sort", "turns")])).1, RunSort::TurnsDesc);
+    assert_eq!(
+        run_sort(&query(&[("sort", "turns")])).1,
+        RunSort::ToolCallsDesc
+    );
     assert_eq!(run_sort(&query(&[("sort", "cost")])).1, RunSort::CostDesc);
     assert_eq!(
         run_sort(&query(&[("sort", "nonsense")])).0,

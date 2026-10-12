@@ -9,7 +9,7 @@ use chrono::{DateTime, Utc};
 use serde::Serialize;
 use systemprompt::identifiers::{MarketplaceId, PluginId, UserId};
 
-use crate::types::{FarmAgentId, FarmId, FarmRunId};
+use crate::types::{FarmAgentId, FarmId};
 
 pub use eval::{EvalCaseRow, EvalResultRow, EvalRunRow, EvalSuiteRow};
 pub use run::RunRow;
@@ -44,6 +44,7 @@ pub struct AgentRow {
     pub name: String,
     pub description: String,
     pub model: Option<String>,
+    pub host: String,
     pub tools: Vec<String>,
     pub plugin_id: PluginId,
     pub skills: Vec<String>,
@@ -68,19 +69,6 @@ pub struct FixtureRow {
     pub stored_path: String,
     pub synced_commit_sha: String,
     pub updated_at: DateTime<Utc>,
-}
-
-// JSON: protocol boundary — `payload` is the serialized `RunEventPayload`
-// stored as JSONB; readers decode it back into the typed enum.
-#[derive(Debug, Clone, PartialEq, Serialize, sqlx::FromRow)]
-pub struct RunEventRow {
-    pub run_id: FarmRunId,
-    pub seq: i64,
-    pub kind: String,
-    pub tool_name: Option<String>,
-    pub tool_use_id: Option<String>,
-    pub payload: serde_json::Value,
-    pub created_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, sqlx::FromRow)]

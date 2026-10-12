@@ -61,6 +61,7 @@ pub async fn upsert_agent(pool: &PgPool, agent: &NewAgent) -> Result<(), sqlx::E
         agent.source_path,
         agent.body,
         agent.synced_commit_sha,
+        agent.host,
     )
     .execute(pool)
     .await?;

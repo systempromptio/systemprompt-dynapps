@@ -86,8 +86,10 @@ struct RawVerdict {
 }
 
 pub fn parse_verdict(content: &str, threshold: i32) -> FarmResult<(i32, bool, String)> {
-    let raw: RawVerdict = serde_json::from_str(content)
-        .map_err(|e| FarmError::Gateway(format!("judge returned malformed JSON: {e}")))?;
+    let raw: RawVerdict = serde_json::from_str(content).map_err(|source| FarmError::Json {
+        at: "judge verdict".to_owned(),
+        source,
+    })?;
     let score = i32::try_from(raw.score.clamp(0, 100)).unwrap_or(0);
     let mut rationale = raw.rationale.trim().to_owned();
     for finding in raw.findings.iter().filter(|f| !f.trim().is_empty()) {
@@ -145,8 +147,11 @@ impl GatewayJudge {
     }
 
     fn request_context(&self) -> FarmResult<RequestContext> {
-        let agent = AgentName::try_new(JUDGE_AGENT_NAME)
-            .map_err(|e| FarmError::Config(format!("judge agent name: {e}")))?;
+        let agent =
+            AgentName::try_new(JUDGE_AGENT_NAME).map_err(|source| FarmError::Identifier {
+                at: "judge agent name",
+                source: Box::new(source),
+            })?;
         Ok(RequestContext::new(
             SessionId::generate(),
             TraceId::new(uuid::Uuid::new_v4().to_string()),

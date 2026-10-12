@@ -46,6 +46,7 @@ pub async fn replace_eval_cases(
     let prompts: Vec<Option<String>> = cases.iter().map(|c| c.prompt.clone()).collect();
     let fixtures: Vec<Option<String>> = cases.iter().map(|c| c.fixture.clone()).collect();
     let timeouts: Vec<Option<i32>> = cases.iter().map(|c| c.timeout_secs).collect();
+    // JSON: assertions are the kit's free-form YAML, stored as JSONB verbatim.
     let assertions: Vec<serde_json::Value> = cases.iter().map(|c| c.assertions.clone()).collect();
     let rubrics: Vec<Option<String>> = cases.iter().map(|c| c.judge_rubric.clone()).collect();
     let thresholds: Vec<Option<f64>> = cases.iter().map(|c| c.judge_threshold).collect();

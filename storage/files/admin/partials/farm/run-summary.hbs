@@ -10,7 +10,7 @@
   {{> components/kpi key="tokens-in" label="Tokens in" value=tokens_in}}
   {{> components/kpi key="tokens-out" label="Tokens out" value=tokens_out}}
   {{> components/kpi key="cost" label="Cost" value=cost_display note=cost_note}}
-  {{> components/kpi key="events" label="Events" value=event_count note="stream-json lines"}}
+  {{> components/kpi key="events" label="Events" value=event_count note="host events"}}
   {{> components/kpi key="tools" label="Tool calls" value=tool_calls}}
   {{#if errors}}
     {{> components/kpi key="errors" label="Errors" value=errors tone="err" note="failed tool results or result"}}

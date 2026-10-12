@@ -1,40 +1,31 @@
 //! Renders a run's event stream as the plain-text transcript the judge
-//! reads, and pulls the final result text out of it.
+//! reads, and pulls the final answer (the last assistant text) out of it.
 
-use crate::repositories::rows::RunEventRow;
+use systemprompt::agent_runs::{RunEvent, RunOutcome};
+
 use crate::types::RunEventPayload;
 
 pub const TRANSCRIPT_CAP_BYTES: usize = 60 * 1024;
 
-fn decode(events: &[RunEventRow]) -> impl Iterator<Item = RunEventPayload> + '_ {
-    events
-        .iter()
-        .filter_map(|e| serde_json::from_value::<RunEventPayload>(e.payload.clone()).ok())
+#[must_use]
+pub fn final_result_text(events: &[RunEvent]) -> Option<String> {
+    let payloads: Vec<RunEventPayload> = events.iter().map(|e| e.payload.clone()).collect();
+    RunOutcome::last_assistant_text(&payloads)
 }
 
 #[must_use]
-pub fn final_result_text(events: &[RunEventRow]) -> Option<String> {
-    decode(events)
-        .filter_map(|p| match p {
-            RunEventPayload::Result { text, .. } => text,
-            _ => None,
-        })
-        .last()
-}
-
-#[must_use]
-pub fn render_transcript(prompt: &str, events: &[RunEventRow]) -> String {
+pub fn render_transcript(prompt: &str, events: &[RunEvent]) -> String {
     let mut out = format!("PROMPT:\n{prompt}\n\n");
-    for payload in decode(events) {
-        let line = match payload {
+    for event in events {
+        let line = match &event.payload {
             RunEventPayload::AssistantText { text } => format!("ASSISTANT:\n{text}\n\n"),
             RunEventPayload::ToolUse { name, .. } => format!("TOOL: {name}\n"),
-            RunEventPayload::Result {
-                text: Some(text), ..
-            } => format!("\nFINAL RESULT:\n{text}\n"),
             _ => continue,
         };
         out.push_str(&line);
+    }
+    if let Some(text) = final_result_text(events) {
+        out.push_str(&format!("\nFINAL RESULT:\n{text}\n"));
     }
     truncate_utf8(out, TRANSCRIPT_CAP_BYTES)
 }

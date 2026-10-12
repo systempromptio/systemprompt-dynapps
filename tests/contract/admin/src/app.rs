@@ -60,7 +60,6 @@ fn farm_state(pool: &Arc<PgPool>) -> Arc<farm::state::FarmState> {
             external_base: String::new(),
         },
         farm::state::RunnerLimits::default(),
-        std::path::PathBuf::from("claude"),
     )
 }
 

@@ -1,13 +1,12 @@
 //! The farm domain's error type and its mapping onto the admin plane's
 //! [`AdminError`], so handlers propagate with a bare `?`.
 
+use systemprompt::agent_runs::AgentRunsError;
 use systemprompt::identifiers::PluginId;
+use systemprompt::identifiers::error::IdValidationError;
 use systemprompt::marketplace::managed::ManagedError;
 use systemprompt_web_admin_core::error::AdminError;
-use systemprompt_web_admin_core::repositories::bridge::BridgeRepoError;
 use thiserror::Error;
-
-use crate::types::FarmRunId;
 
 #[derive(Debug, Error)]
 pub enum FarmError {
@@ -58,20 +57,6 @@ pub enum FarmError {
     #[error("Gateway: {0}")]
     Gateway(String),
 
-    #[error("Gateway: {step}: {source}")]
-    GatewayHttp {
-        step: String,
-        #[source]
-        source: reqwest::Error,
-    },
-
-    #[error("Gateway: {step}: {source}")]
-    Credential {
-        step: &'static str,
-        #[source]
-        source: BridgeRepoError,
-    },
-
     #[error("JSON: {at}: {source}")]
     Json {
         at: String,
@@ -103,8 +88,22 @@ pub enum FarmError {
     #[error("Config: {0}")]
     Config(String),
 
-    #[error("Runner queue closed: {0}")]
-    QueueClosed(#[from] tokio::sync::mpsc::error::SendError<FarmRunId>),
+    #[error("Agent run: {0}")]
+    AgentRuns(#[from] AgentRunsError),
+
+    #[error("Agent run: agent {agent}: {source}")]
+    AgentHost {
+        agent: String,
+        #[source]
+        source: Box<AgentRunsError>,
+    },
+
+    #[error("Invalid: {at}: {source}")]
+    Identifier {
+        at: &'static str,
+        #[source]
+        source: Box<IdValidationError>,
+    },
 }
 
 pub type FarmResult<T> = Result<T, FarmError>;
