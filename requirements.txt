@@ -29,21 +29,14 @@ What we have provisioned:
 2. BLOCKERS ON OUR SIDE (systemprompt.io)
 -----------------------------------------
 
-2.1  Routing for dynapps.systemprompt.io.
-     DNS already resolves to the platform edge (66.241.124.121) and the edge
-     terminates TLS for it, but after the first deploy (2026-10-12) the edge
-     still answers 502 on dynapps.systemprompt.io while
-     e43527c1cbb5.systemprompt.io serves the instance. The edge therefore has
-     no mapping from the custom hostname to tenant e43527c1cbb5 yet. Action:
-     add the hostname mapping on the systemprompt.io control plane (as was
-     done for astound.systemprompt.io), then update api_external_url,
-     cors_allowed_origins and jwt_issuer in the production profile and
-     redeploy.
-     If the edge needs a per-tenant mapping, we add it on the control plane.
-     Otherwise we add a Fly certificate on sp-e43527c1cbb5 and CNAME
-     dynapps.systemprompt.io to sp-e43527c1cbb5.fly.dev.
+2.1  Routing for dynapps.systemprompt.io. DONE 2026-10-12.
+     Cloudflare: CNAME dynapps -> sp-e43527c1cbb5.fly.dev (DNS only) plus the
+     ACME challenge CNAME _acme-challenge.dynapps ->
+     dynapps.systemprompt.io.gdwqlrk.flydns.net. Fly certificate issued on
+     sp-e43527c1cbb5; the production profile now uses the canonical URL for
+     api_external_url, cors_allowed_origins and jwt_issuer.
      Constraint: astound.systemprompt.io is another customer's live address
-     with its own certificate and must not be repointed.
+     and was not touched.
 
 2.2  AI provider credentials. For the pilot the tenant uses systemprompt.io's
      own Vertex AI service account (Claude on Vertex, global endpoint, with
