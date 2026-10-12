@@ -1,8 +1,0 @@
-{
-  "origin": "LOCAL PATCH; NOT LIVE DEPLOYMENT",
-  "skill_sha256": "463c3ae71f03acc73df2d456eef5221c8ecca6cd64f7a25a03b7ff957b23693b",
-  "destinations": [
-    "/home/tester/.claude/plugins/marketplaces/astound-india-dev/plugins/astound-india-sfcore/skills/sf-bypass-patterns",
-    "/home/tester/.claude/plugins/cache/astound-india-dev/astound-india-sfcore/current/skills/sf-bypass-patterns"
-  ]
-}

@@ -1,8 +1,0 @@
-{
-  "origin": "LOCAL PATCH; NOT LIVE DEPLOYMENT",
-  "skill_sha256": "b8bc7902af9413dc89cec2d1bf886079788cc3724cb5782c64b196450a08bfb0",
-  "destinations": [
-    "/home/tester/.claude/plugins/marketplaces/astound-india-dev/plugins/astound-india-sfcore/skills/sf-profile-permissionset-patterns",
-    "/home/tester/.claude/plugins/cache/astound-india-dev/astound-india-sfcore/current/skills/sf-profile-permissionset-patterns"
-  ]
-}

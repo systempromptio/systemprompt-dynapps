@@ -1,5 +1,0 @@
-QuickAction Lead.Review: referenced flow Lead_Review not found
-CustomApplication Demo: Demo_UtilityBar missing
-Profile: applicationVisibilities visible=false
-PermissionSet: permission requires prerequisite
-Flow screen: neither allowBack nor allowFinish enabled

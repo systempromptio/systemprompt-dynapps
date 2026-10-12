@@ -1,3 +1,0 @@
-risk_id,description,likelihood,impact,mitigation,status
-RISK-001,Existing risk,Low,Low,Monitor,Open
-RISK-002,Rounding drift in tax/shipping calculations,Medium,Medium,Apply half-to-even rounding consistently across all calculations,Open

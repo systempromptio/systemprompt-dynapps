@@ -1,8 +1,0 @@
-{
-  "origin": "LOCAL PATCH; NOT LIVE DEPLOYMENT",
-  "skill_sha256": "3351c0d4796eb4e521ffd34440b7a0a17c1ca9e670c8f534624f15fbc516087b",
-  "destinations": [
-    "/home/tester/.claude/plugins/marketplaces/astound-india-dev/plugins/astound-india-sfcore/skills/sf-devops",
-    "/home/tester/.claude/plugins/cache/astound-india-dev/astound-india-sfcore/current/skills/sf-devops"
-  ]
-}

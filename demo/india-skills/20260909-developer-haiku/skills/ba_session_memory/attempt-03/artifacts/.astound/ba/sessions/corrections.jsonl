@@ -1,1 +1,0 @@
-{"session_id": "rounding-review", "agent_output": "Use half-up rounding.", "correction_text": "Use half-to-even rounding, not half-up.", "correction_type": "factual_error", "extracted_fact": "Half-to-even (banker's rounding) is the required rounding method for checkout values, not half-up rounding.", "timestamp": "2026-09-09"}

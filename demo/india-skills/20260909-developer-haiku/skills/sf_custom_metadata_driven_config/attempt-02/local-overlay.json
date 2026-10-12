@@ -1,8 +1,0 @@
-{
-  "origin": "LOCAL PATCH; NOT LIVE DEPLOYMENT",
-  "skill_sha256": "938ed077bf9260616a04cd3a0aeb8050dbba686ddc22c65c7094d0fd94b6609d",
-  "destinations": [
-    "/home/tester/.claude/plugins/marketplaces/astound-india-dev/plugins/astound-india-sfcore/skills/sf-custom-metadata-driven-config",
-    "/home/tester/.claude/plugins/cache/astound-india-dev/astound-india-sfcore/current/skills/sf-custom-metadata-driven-config"
-  ]
-}

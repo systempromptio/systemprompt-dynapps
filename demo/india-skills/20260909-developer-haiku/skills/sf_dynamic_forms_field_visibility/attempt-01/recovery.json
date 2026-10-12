@@ -1,6 +1,0 @@
-{
-  "reason": "Retried failed Docker evidence collection without another model call",
-  "artifact_count": 15,
-  "cost_usd": 0.027655149999999996,
-  "audit": "audit-recovered.json"
-}

@@ -1,1 +1,0 @@
-Connection verification only. Reply exactly READY. Do not call tools or load skills.

@@ -1,8 +1,0 @@
-{
-  "origin": "LOCAL PATCH; NOT LIVE DEPLOYMENT",
-  "skill_sha256": "7e7d1ae4560b12645fe4ffb12de3f3dc7fa568b45a024bf7417fdc5ec499d0ef",
-  "destinations": [
-    "/home/tester/.claude/plugins/marketplaces/astound-india-dev/plugins/astound-india-sfcore/skills/sf-quick-action-flow-pattern",
-    "/home/tester/.claude/plugins/cache/astound-india-dev/astound-india-sfcore/current/skills/sf-quick-action-flow-pattern"
-  ]
-}
