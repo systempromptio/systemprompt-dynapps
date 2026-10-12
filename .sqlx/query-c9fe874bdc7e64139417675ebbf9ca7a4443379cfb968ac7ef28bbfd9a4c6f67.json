@@ -1,0 +1,112 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT suite_id AS \"suite_id: EvalSuiteId\", id, prompt, fixture, timeout_secs, assertions,\n       judge_rubric, judge_threshold\nFROM agent_farm_eval_cases\nWHERE suite_id = $1\nORDER BY id\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "suite_id: EvalSuiteId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_eval_cases",
+            "name": "suite_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_eval_cases",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "prompt",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_eval_cases",
+            "name": "prompt"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "fixture",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_eval_cases",
+            "name": "fixture"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "timeout_secs",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_eval_cases",
+            "name": "timeout_secs"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "assertions",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_eval_cases",
+            "name": "assertions"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "judge_rubric",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_eval_cases",
+            "name": "judge_rubric"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "judge_threshold",
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_eval_cases",
+            "name": "judge_threshold"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      true,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "c9fe874bdc7e64139417675ebbf9ca7a4443379cfb968ac7ef28bbfd9a4c6f67"
+}

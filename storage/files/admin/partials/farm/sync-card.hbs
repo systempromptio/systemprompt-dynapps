@@ -1,0 +1,37 @@
+{{!--
+  A farm's sync record beside the pinned bundle that ships its marketplace.
+  The behind modifier marks a farm whose synced commit differs from the
+  commit the bundle was built from. Usage: {{> farm/sync-card sync}}
+--}}
+<section class="sp-card sp-farm-sync-card{{#if is_behind}} sp-farm-sync-card--behind{{/if}}" aria-label="Sync status" data-sync-state="{{badge.key}}">
+    <div class="sp-card__body sp-farm-sync-card__body">
+        <header class="sp-farm-sync-card__head">
+            <h2 class="sp-farm-sync-card__title">Sync</h2>
+            {{> components/badge tone=badge.tone text=badge.text}}
+        </header>
+        <p class="sp-farm-sync-card__message">{{message}}</p>
+        {{#if sync_error}}<p class="sp-farm-sync-card__error">{{sync_error}}</p>{{/if}}
+        <dl class="sp-farm-sync-card__facts">
+            <dt class="sp-farm-sync-card__term">Source</dt>
+            <dd class="sp-farm-sync-card__value sp-u-mono">{{source_repo}} @ {{source_ref}}</dd>
+            <dt class="sp-farm-sync-card__term">Synced commit</dt>
+            <dd class="sp-farm-sync-card__value sp-u-mono" title="{{synced_sha}}">{{#if synced_sha_short}}{{synced_sha_short}}{{else}}—{{/if}}</dd>
+            <dt class="sp-farm-sync-card__term">Last sync</dt>
+            <dd class="sp-farm-sync-card__value" title="{{synced_at_local}}">{{#if synced_at_relative}}{{synced_at_relative}}{{#if synced_by}} by {{synced_by}}{{/if}}{{else}}never{{/if}}</dd>
+            {{#if bundle}}
+            <dt class="sp-farm-sync-card__term">Bundle</dt>
+            <dd class="sp-farm-sync-card__value"><a class="sp-link" href="/admin/sync">{{bundle.name}}</a> <span class="sp-u-mono">{{bundle.version}}</span></dd>
+            <dt class="sp-farm-sync-card__term">Bundle commit</dt>
+            <dd class="sp-farm-sync-card__value sp-u-mono" title="{{bundle.commit}}">{{#if bundle.commit_short}}{{bundle.commit_short}}{{else}}not recorded{{/if}}</dd>
+            <dt class="sp-farm-sync-card__term">Active digest</dt>
+            <dd class="sp-farm-sync-card__value sp-u-mono">{{#if bundle.digest_short}}{{bundle.digest_short}}{{else}}not fetched{{/if}}{{#if bundle.fetched_at}} · fetched {{bundle.fetched_at}}{{/if}}</dd>
+            {{else}}
+            <dt class="sp-farm-sync-card__term">Bundle</dt>
+            <dd class="sp-farm-sync-card__value">no pinned bundle owns this marketplace</dd>
+            {{/if}}
+        </dl>
+        {{#if bundle.badges}}
+        <p class="sp-farm-sync-card__badges">{{#each bundle.badges}}<span title="{{this.detail}}">{{> components/badge tone=this.tone text=this.text}}</span>{{/each}}</p>
+        {{/if}}
+    </div>
+</section>

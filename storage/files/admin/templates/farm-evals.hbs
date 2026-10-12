@@ -1,0 +1,66 @@
+{{#> layout page_title=title page_id=page}}
+    {{#*inline "content"}}
+    {{> components/breadcrumbs crumbs=breadcrumbs}}
+
+    {{#*inline "header_actions"}}<form method="get" action="/admin/farm/evals" class="sp-farm-evals__filters" aria-label="Filter evals"><label class="sp-u-sr-only" for="farm-evals-farm">Farm</label><select class="sp-select" id="farm-evals-farm" name="farm"><option value="">All farms</option>{{#each farms}}<option value="{{this.value}}"{{#if this.selected}} selected{{/if}}>{{this.label}}</option>{{/each}}</select><label class="sp-u-sr-only" for="farm-evals-days">Window</label><select class="sp-select" id="farm-evals-days" name="days">{{#each windows}}<option value="{{this.value}}"{{#if this.selected}} selected{{/if}}>{{this.label}}</option>{{/each}}</select><button class="sp-btn sp-btn--sm sp-btn--outline" type="submit">Apply</button></form>{{/inline}}
+    {{> components/page-header title=title
+        subtitle="Eval suites per agent, the case matrix, and how scores move over time."}}
+
+    <div class="sp-farm-evals">
+      <section class="sp-kpi-grid" aria-label="Eval summary">
+        {{#each kpis}}{{> components/kpi key=this.key label=this.label value=this.value tone=this.tone note=this.note}}{{/each}}
+      </section>
+
+      {{#if has_suites}}
+      <section class="sp-farm-evals__section" aria-labelledby="farm-evals-matrix-title">
+        <h2 class="sp-farm-evals__title" id="farm-evals-matrix-title">Case matrix</h2>
+        <p class="sp-farm-evals__lede">The latest verdict for every case, by the agent its suite evaluates. Open a cell for the eval run behind it.</p>
+        {{> farm/eval-matrix matrix}}
+      </section>
+
+      <section class="sp-farm-evals__trends" aria-label="Trends">
+        {{> components/svg-line-chart score_chart}}
+        {{> components/svg-line-chart pass_chart}}
+      </section>
+
+      <section class="sp-farm-evals__section" aria-labelledby="farm-evals-suites-title">
+        <h2 class="sp-farm-evals__title" id="farm-evals-suites-title">Suites</h2>
+        {{#> components/table caption="Eval suites" modifier="sp-farm-evals__suites"}}
+          <thead><tr>
+            <th scope="col">Suite</th>
+            <th scope="col">Farm › agent</th>
+            <th class="sp-table__cell--num" scope="col">Cases</th>
+            <th scope="col">Last run</th>
+            <th class="sp-table__cell--num" scope="col">Score</th>
+            <th scope="col">Trend</th>
+            <th class="sp-table__cell--actions" scope="col"><span class="sp-u-sr-only">Run</span></th>
+          </tr></thead>
+          <tbody>
+            {{#each suites}}
+            <tr class="sp-table__row">
+              <td class="sp-table__cell--mono" title="{{this.source_path}}">{{this.suite_id}}</td>
+              <td><a class="sp-link" href="/admin/farm/{{this.farm_id}}">{{this.farm_id}}</a> › <a class="sp-link" href="{{this.agent_url}}">{{this.agent_id}}</a></td>
+              <td class="sp-table__cell--num">{{this.case_count}}</td>
+              <td>{{#if this.last_run}}<a class="sp-farm-evals__last" href="{{this.last_run.href}}">{{> components/badge tone=this.last_run.status.tone text=this.last_run.status.text}} <span class="sp-u-text-tertiary">{{this.last_run.relative}}</span></a>{{else}}<span class="sp-u-text-tertiary">Never run</span>{{/if}}</td>
+              <td class="sp-table__cell--num">{{#if this.last_run}}<span class="sp-farm-evals__score sp-farm-evals__score--{{this.last_run.score_tone}}">{{this.last_run.score_display}}</span>{{else}}—{{/if}}</td>
+              <td class="sp-farm-evals__spark">{{> components/sparkline this.spark}}</td>
+              <td class="sp-table__cell--actions">
+                <form method="post" action="{{this.run_url}}" class="sp-farm-evals__run">
+                  <input type="hidden" name="farm_id" value="{{this.farm_id}}">
+                  <button class="sp-btn sp-btn--xs sp-btn--primary" type="submit" title="Run every case in {{this.suite_id}} now">Run now</button>
+                </form>
+              </td>
+            </tr>
+            {{/each}}
+          </tbody>
+        {{/components/table}}
+      </section>
+      {{else}}
+      {{> components/empty-state heading="No eval suites yet" message="Eval suites are synced from each agent's eval file. Sync a farm to bring its suites in."}}
+      {{/if}}
+    </div>
+    {{/inline}}
+    {{#*inline "scripts"}}
+    <script data-cfasync="false" type="module" src="/js/pages/admin-farm-evals.js"></script>
+    {{/inline}}
+{{/layout}}

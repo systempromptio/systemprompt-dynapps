@@ -1,0 +1,100 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id AS \"id: EvalSuiteId\", farm_id AS \"farm_id: FarmId\", agent_id AS \"agent_id: FarmAgentId\",\n       source_path, case_count, synced_commit_sha, updated_at\nFROM agent_farm_eval_suites\nWHERE id = $1\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id: EvalSuiteId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_eval_suites",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "farm_id: FarmId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_eval_suites",
+            "name": "farm_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "agent_id: FarmAgentId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_eval_suites",
+            "name": "agent_id"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "source_path",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_eval_suites",
+            "name": "source_path"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "case_count",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_eval_suites",
+            "name": "case_count"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "synced_commit_sha",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_eval_suites",
+            "name": "synced_commit_sha"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "updated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_eval_suites",
+            "name": "updated_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "ebeb32da0905e076ff8bf317669fad72b788a2bccf7e15d5cc070042f43247ba"
+}

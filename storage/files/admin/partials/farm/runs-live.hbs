@@ -1,0 +1,39 @@
+{{!--
+  The runs explorer's live half: the KPI strip and the run table. The page
+  embeds it as {{> farm/runs-live live}} and /admin/api/farm/runs answers
+  with it alone, from the same RunsLiveView, so a polled refresh can never
+  read differently from the first paint. `data-live-active="false"` tells the
+  poller that no row on the page can change any more.
+--}}
+<div data-farm-live-body data-live-active="{{#if live_active}}true{{else}}false{{/if}}">
+  <section class="sp-kpi-grid" aria-label="Run summary" data-live-region="kpis">
+    {{#each kpis}}{{> components/kpi key=this.key label=this.label value=this.value tone=this.tone href=this.href active=this.active note=this.note hint=this.hint}}{{/each}}
+  </section>
+  <div data-live-region="rows">
+    {{#if has_rows}}
+      {{#> components/table caption="Agent farm runs in the selected window" pagination=pagination modifier="sp-farm-runs__table"}}
+        <thead><tr>
+          {{> components/sort-header sort_headers.started}}
+          <th scope="col">Run</th>
+          <th scope="col">Farm › agent</th>
+          <th scope="col">User</th>
+          <th scope="col">Trigger</th>
+          <th scope="col">Status</th>
+          {{> components/sort-header sort_headers.turns}}
+          <th class="sp-table__cell--num" scope="col">Tokens in / out</th>
+          {{> components/sort-header sort_headers.cost}}
+          {{> components/sort-header sort_headers.duration}}
+        </tr></thead>
+        <tbody>
+          {{#each rows}}{{> farm/run-row this}}{{/each}}
+        </tbody>
+      {{/components/table}}
+    {{else}}
+      {{#if filtered}}
+        {{> components/empty-state heading="No runs match these filters" message="Nothing in this window matches the farm, agent, user, status and trigger selected. Clear a filter or widen the range."}}
+      {{else}}
+        {{> components/empty-state heading="No runs in this window" message="Runs launched from the dashboard, the API or an eval suite appear here. Widen the range to see older runs."}}
+      {{/if}}
+    {{/if}}
+  </div>
+</div>

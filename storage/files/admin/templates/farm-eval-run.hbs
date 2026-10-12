@@ -1,0 +1,35 @@
+{{#> layout page_title=title page_id=page}}
+    {{#*inline "content"}}
+    {{> components/breadcrumbs crumbs=breadcrumbs}}
+
+    {{#*inline "header_actions"}}<form method="post" action="{{header.run_now_url}}" class="sp-farm-evals__run"><input type="hidden" name="farm_id" value="{{header.farm_id}}"><button class="sp-btn sp-btn--sm sp-btn--primary" type="submit">Run suite again</button></form>{{/inline}}
+    {{> components/page-header title=title
+        subtitle="One eval run: every case, its assertions, judge score and the run behind it."}}
+
+    <div class="sp-farm-evals">
+      <dl class="sp-farm-eval-run__meta">
+        <div><dt>Status</dt><dd>{{> components/badge tone=live.status.tone text=live.status.text}}</dd></div>
+        <div><dt>Suite</dt><dd class="sp-table__cell--mono">{{header.suite_id}}</dd></div>
+        <div><dt>Agent</dt><dd><a class="sp-link" href="{{header.farm_url}}">{{header.farm_id}}</a> › <a class="sp-link" href="{{header.agent_url}}">{{header.agent_id}}</a></dd></div>
+        <div><dt>Launched by</dt><dd><a class="sp-link" href="{{header.user_url}}">{{header.user_id}}</a></dd></div>
+        <div><dt>Created</dt><dd title="{{header.created_local}}">{{header.created_relative}}</dd></div>
+      </dl>
+
+      <section class="sp-farm-evals__section"{{#if live.is_live}} data-farm-live-list="{{live.fragment_url}}" data-live-interval="3000"{{/if}} aria-label="Case results">
+        {{#if live.is_live}}
+        <span class="sp-live" data-live-status hidden>
+          <span class="sp-live__dot" aria-hidden="true"></span>
+          <span class="sp-live__text" data-live-text aria-hidden="true">Live</span>
+          <span class="sp-u-sr-only" role="status" aria-live="polite" data-live-announce></span>
+          <button type="button" class="sp-btn sp-btn--xs sp-btn--ghost sp-live__toggle" data-live-toggle aria-pressed="false">Pause</button>
+        </span>
+        {{/if}}
+        {{> farm/eval-run-live live}}
+      </section>
+    </div>
+    {{/inline}}
+    {{#*inline "scripts"}}
+    <script data-cfasync="false" type="module" src="/js/pages/admin-farm-live-list.js"></script>
+    <script data-cfasync="false" type="module" src="/js/pages/admin-farm-evals.js"></script>
+    {{/inline}}
+{{/layout}}

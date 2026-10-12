@@ -1,0 +1,30 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT (created_at AT TIME ZONE 'UTC')::date AS \"day!\", COUNT(*)::bigint AS \"runs!\"\nFROM agent_farm_runs\nWHERE created_at >= $1\nGROUP BY 1\nORDER BY 1\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "day!",
+        "type_info": "Date",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "runs!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      null,
+      null
+    ]
+  },
+  "hash": "49e052d6b74992ffcf5de063abc36ee8132d3e35eed511c7b64fb218a73d97c5"
+}

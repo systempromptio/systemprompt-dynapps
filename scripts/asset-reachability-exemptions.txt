@@ -4,3 +4,6 @@
 storage/files/js/admin-report-bridge.js
 storage/files/js/admin-report-shell.js
 
+# Rendered by the run fragment handler (LIVE_PARTIAL in
+# extensions/web/admin/farm/src/handlers/ssr/fragments/run.rs), never via {{> }}.
+storage/files/admin/partials/farm/run-live.hbs

@@ -1,0 +1,25 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE agent_farm_runs\nSET status = $2,\n    finished_at = NOW(),\n    context_id = COALESCE($3, context_id),\n    duration_ms = COALESCE($4, (EXTRACT(EPOCH FROM (NOW() - started_at)) * 1000)::bigint),\n    num_turns = $5,\n    input_tokens = $6,\n    output_tokens = $7,\n    cost_microdollars = $8,\n    result_subtype = $9,\n    exit_code = $10,\n    error = $11,\n    diff_summary = $12,\n    pid = NULL,\n    updated_at = NOW()\nWHERE id = $1 AND status IN ('queued', 'preparing', 'running')\n",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Int8",
+        "Int4",
+        "Int8",
+        "Int8",
+        "Int8",
+        "Text",
+        "Int4",
+        "Text",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "3a03cfa75f414a22d4b18c5249e1b7f0157d11423f6fd4dc8312bfee6a5112cb"
+}

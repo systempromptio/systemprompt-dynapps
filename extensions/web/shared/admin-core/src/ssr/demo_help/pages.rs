@@ -199,3 +199,41 @@ pub(super) fn demo_help_misc_pages(page: &str) -> Option<(&'static str, &'static
         _ => None,
     }
 }
+
+pub(super) fn demo_help_farm_pages(page: &str) -> Option<(&'static str, &'static str)> {
+    match page {
+        "farms" => Some((
+            "<strong>Agent farms</strong> are agents authored in an external Git marketplace and synced into this instance. Each farm card shows its source commit, when it last synced, and what is running now. Every run is a headless Claude Code process attributed to the person who launched it.",
+            "agents",
+        )),
+        "farm-detail" => Some((
+            "<strong>Farm</strong> shows one farm's sync state against its Git source, the agents it ships, and their recent runs and eval results.",
+            "agents",
+        )),
+        "farm-agent" => Some((
+            "<strong>Farm agent</strong> is one agent's definition: its entry prompt, allowed tools and fixture. Launch a run from here, or copy the remote execution command to start one with a personal access token.",
+            "agents",
+        )),
+        "farm-runs" => Some((
+            "<strong>Farm runs</strong> lists every headless run across all farms, filterable by farm, agent, person, status and trigger. Live runs update in place.",
+            "events",
+        )),
+        "farm-run-detail" => Some((
+            "<strong>Farm run</strong> is one run's full record: the event timeline, the transcript, the gateway requests it made and what they cost, and the files it changed.",
+            "events",
+        )),
+        "farm-evals" => Some((
+            "<strong>Farm evals</strong> scores each agent against its eval suite: assertions on the files and tools a run used, plus an optional judged rubric, as a case-by-agent matrix.",
+            "agents",
+        )),
+        "farm-eval-run" => Some((
+            "<strong>Eval run</strong> shows every case of one eval run with its assertions, judge score and rationale, linked to the farm run that produced it.",
+            "agents",
+        )),
+        "farm-people" => Some((
+            "<strong>Farm runs by person</strong> ranks the people who launch farm runs by volume, success rate and cost, with the agent each uses most.",
+            "users",
+        )),
+        _ => None,
+    }
+}

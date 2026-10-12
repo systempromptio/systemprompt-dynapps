@@ -1,0 +1,141 @@
+@layer components {
+
+/* An agent page lays its definition, remote execution and recent runs in one column. */
+
+.sp-farm-agent {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-space-4);
+}
+
+.sp-farm-agent__meta {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-space-1);
+    margin-right: var(--sp-space-3);
+    font-size: var(--sp-text-sm);
+    color: var(--sp-text-secondary);
+}
+
+.sp-farm-agent__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+    gap: var(--sp-space-4);
+}
+
+.sp-farm-agent__card {
+    min-width: 0;
+}
+
+.sp-farm-agent__label {
+    margin: var(--sp-space-3) 0 var(--sp-space-1);
+    font-size: var(--sp-text-xs);
+    font-weight: 600;
+    color: var(--sp-text-tertiary);
+}
+
+.sp-farm-agent__lede {
+    margin: var(--sp-space-2) 0 0;
+    font-size: var(--sp-text-sm);
+    color: var(--sp-text-secondary);
+}
+
+/* The entry prompt keeps its line breaks but never widens the card. */
+.sp-farm-agent__prompt {
+    margin: 0 0 var(--sp-space-3);
+    padding: var(--sp-space-3);
+    max-height: 16rem;
+    overflow: auto;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    background: var(--sp-bg-surface-alt);
+    border: 1px solid var(--sp-border-subtle);
+    border-radius: var(--sp-radius-sm);
+    font-family: var(--sp-font-mono);
+    font-size: var(--sp-text-sm);
+    color: var(--sp-text-primary);
+}
+
+.sp-farm-agent__tool {
+    display: inline-block;
+    margin: 0 var(--sp-space-1) var(--sp-space-1) 0;
+    padding: 0 var(--sp-space-1);
+    background: var(--sp-bg-surface-alt);
+    border-radius: var(--sp-radius-sm);
+    font-family: var(--sp-font-mono);
+    font-size: var(--sp-text-xs);
+}
+
+.sp-farm-agent__matrix {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr));
+    gap: var(--sp-space-2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.sp-farm-agent__case {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-space-2);
+    padding: var(--sp-space-2) var(--sp-space-3);
+    background: var(--sp-bg-surface);
+    border: 1px solid var(--sp-border-subtle);
+    border-radius: var(--sp-radius-sm);
+}
+
+.sp-farm-agent__case-id {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: var(--sp-font-mono);
+    font-size: var(--sp-text-sm);
+}
+
+.sp-farm-agent__score {
+    font-variant-numeric: tabular-nums;
+    font-size: var(--sp-text-sm);
+    color: var(--sp-text-secondary);
+}
+
+/* The launch dialog is wider than the default so a long prompt stays readable. */
+.sp-farm-launch {
+    max-width: min(40rem, 92vw);
+}
+
+.sp-farm-launch textarea {
+    resize: vertical;
+    font-family: var(--sp-font-mono);
+}
+
+.sp-farm-launch select {
+    font: inherit;
+    font-weight: 400;
+    padding: var(--sp-space-2) var(--sp-space-3);
+    background: var(--sp-bg-surface);
+    border: 1px solid var(--sp-border-default);
+    border-radius: var(--sp-corners-sm);
+    color: var(--sp-text-primary);
+}
+
+.sp-farm-launch__row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+    gap: var(--sp-space-3);
+}
+
+.sp-farm-launch__count {
+    margin: calc(-1 * var(--sp-space-2)) 0 0;
+    text-align: right;
+    font-size: var(--sp-text-xs);
+    color: var(--sp-text-tertiary);
+}
+
+.sp-farm-launch__count.is-over {
+    color: var(--sp-danger-strong);
+}
+
+}

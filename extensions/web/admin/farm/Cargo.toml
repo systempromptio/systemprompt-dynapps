@@ -1,0 +1,54 @@
+[package]
+name = "systemprompt-web-admin-farm"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "Agent farm domain of the admin dashboard for the systemprompt.io template: farms synced from a Git marketplace, headless Claude Code runs attributed to a user, their event streams, and the eval suites scored over them."
+repository.workspace = true
+homepage.workspace = true
+publish = false
+
+[package.metadata.cargo-machete]
+# Declared for the sync, runner and eval phases that land on this scaffold.
+ignored = ["reqwest", "walkdir", "tempfile", "sha2", "hex", "uuid", "tracing"]
+
+[dependencies]
+# Foundation
+systemprompt-web-shared = { workspace = true }
+systemprompt-web-admin-core = { workspace = true }
+systemprompt = { workspace = true, features = ["full"] }
+
+# Database
+sqlx = { workspace = true }
+
+# Web framework
+axum = { workspace = true }
+
+# Async runtime
+tokio = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+
+# Logging
+tracing = { workspace = true }
+
+# Eval assertion patterns
+regex = "1.13"
+
+# Source capture, run workspaces and gateway calls
+sha2 = { workspace = true }
+hex = { workspace = true }
+reqwest = { workspace = true }
+walkdir = { workspace = true }
+tempfile = { workspace = true }
+
+[lints]
+workspace = true

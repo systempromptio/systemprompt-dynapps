@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO agent_farm_run_events (run_id, seq, kind, tool_name, tool_use_id, payload)\nSELECT $1, e.seq, e.kind, e.tool_name, e.tool_use_id, e.payload\nFROM UNNEST($2::bigint[], $3::text[], $4::text[], $5::text[], $6::jsonb[])\n    AS e(seq, kind, tool_name, tool_use_id, payload)\nON CONFLICT (run_id, seq) DO NOTHING\n",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int8Array",
+        "TextArray",
+        "TextArray",
+        "TextArray",
+        "JsonbArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "05b453a5c15fa19c0dc3c4d8b995eb60a205bef0e86647f87336f270c813fc24"
+}

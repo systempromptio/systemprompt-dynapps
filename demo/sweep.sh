@@ -26,6 +26,8 @@ while IFS= read -r -d '' script; do
   if [[ "$parent" == "demo" ]]; then
     continue
   fi
+  # agent-farm is an ordered e2e with side effects (GHCR publish); run-all.sh drives it.
+  [[ "$parent" == "agent-farm" ]] && continue
   SCRIPTS+=("$parent/$name")
 done < <(find "$DEMO_ROOT" -mindepth 2 -maxdepth 2 -name '*.sh' -print0 | sort -z)
 

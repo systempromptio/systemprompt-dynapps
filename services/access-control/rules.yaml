@@ -75,6 +75,19 @@ entities:
     allow:
       role: [admin, platform_admin, super_admin]
 
+  - entity: marketplace/dynapps-agent-farm
+    owner: bundle:dynapps-agent-farm
+    default: closed
+    why: >-
+      Odoo delivery agent farm shipped by the dynapps-agent-farm kit. Farm runs
+      execute as the requesting person through the gateway, so only someone who
+      already holds the workspace may launch one: administrators, the staff
+      group and the Odoo delivery project.
+    allow:
+      role: [admin, platform_admin, super_admin]
+      group: [staff]
+      project: [odoo-delivery]
+
   # ─── Admin control plane ──────────────────────────────────────────────────
   # platform_admin is always named beside admin: it is the strictly stronger
   # role, so an entity open to admin and closed to platform_admin is a hole.

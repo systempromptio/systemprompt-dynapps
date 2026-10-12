@@ -1,0 +1,77 @@
+{{#> layout page_title=title page_id=page}}
+    {{#*inline "content"}}
+    {{> components/breadcrumbs crumbs=breadcrumbs}}
+
+    {{> components/page-header title=title
+        subtitle="Every headless run across all farms, with who launched it and how it ended."}}
+
+    <section class="sp-farm-runs"{{#if live.live_active}} data-farm-live-list="{{fragment_url}}" data-live-query="1" data-live-interval="5000"{{/if}} aria-label="Runs">
+      {{#if live.live_active}}
+      <span class="sp-live" data-live-status hidden>
+        <span class="sp-live__dot" aria-hidden="true"></span>
+        <span class="sp-live__text" data-live-text aria-hidden="true">Live</span>
+        <span class="sp-u-sr-only" role="status" aria-live="polite" data-live-announce></span>
+        <button type="button" class="sp-btn sp-btn--xs sp-btn--ghost sp-live__toggle" data-live-toggle aria-pressed="false">Pause</button>
+      </span>
+      {{/if}}
+
+      {{> components/time-range time_range}}
+
+      {{#> components/toolbar toolbar_count=(concat total_count " runs")}}
+        {{#*inline "toolbar_filters"}}
+          <form method="get" action="{{filters.base_url}}" class="sp-toolbar__filter" aria-label="Filter runs">
+            {{#each filters.preserved}}<input type="hidden" name="{{this.name}}" value="{{this.value}}">{{/each}}
+            <label class="sp-u-sr-only" for="farm-runs-farm">Farm</label>
+            <select id="farm-runs-farm" name="farm_id" class="sp-search-input">
+              <option value="">All farms</option>
+              {{#each filters.farms}}<option value="{{this.id}}"{{#if this.selected}} selected{{/if}}>{{this.label}}</option>{{/each}}
+            </select>
+            <label class="sp-u-sr-only" for="farm-runs-agent">Agent</label>
+            <select id="farm-runs-agent" name="agent_id" class="sp-search-input">
+              <option value="">All agents</option>
+              {{#each filters.agents}}<option value="{{this.id}}"{{#if this.selected}} selected{{/if}}>{{this.label}}</option>{{/each}}
+            </select>
+            <label class="sp-u-sr-only" for="farm-runs-user">User</label>
+            <select id="farm-runs-user" name="user_id" class="sp-search-input">
+              <option value="">All users</option>
+              {{#each filters.users}}<option value="{{this.id}}"{{#if this.selected}} selected{{/if}}>{{this.label}} ({{this.count}})</option>{{/each}}
+            </select>
+            <label class="sp-u-sr-only" for="farm-runs-status">Status</label>
+            <select id="farm-runs-status" name="status" class="sp-search-input">
+              <option value="">Any status</option>
+              {{#each filters.statuses}}<option value="{{this.id}}"{{#if this.selected}} selected{{/if}}>{{this.label}}</option>{{/each}}
+            </select>
+            <label class="sp-u-sr-only" for="farm-runs-trigger">Trigger</label>
+            <select id="farm-runs-trigger" name="trigger" class="sp-search-input">
+              <option value="">Any trigger</option>
+              {{#each filters.triggers}}<option value="{{this.id}}"{{#if this.selected}} selected{{/if}}>{{this.label}}</option>{{/each}}
+            </select>
+            <button type="submit" class="sp-btn sp-btn--sm sp-btn--primary">Apply</button>
+          </form>
+        {{/inline}}
+        {{#*inline "toolbar_actions"}}
+          <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/farm/people">By person</a>
+          <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/farm">Farms</a>
+        {{/inline}}
+      {{/components/toolbar}}
+
+      {{#if filters.chips}}
+      <ul class="sp-filter-ribbon__chips" aria-label="Active filters">
+        {{#each filters.chips}}
+        <li class="sp-filter-ribbon__chip">
+          <span class="sp-filter-ribbon__chip-group">{{this.group_label}}:</span>
+          <span class="sp-filter-ribbon__chip-value">{{this.label}}</span>
+          <a class="sp-filter-ribbon__chip-remove" href="{{this.remove_url}}" aria-label="Remove {{this.group_label}} filter {{this.label}}">&times;</a>
+        </li>
+        {{/each}}
+        <li class="sp-filter-ribbon__chip"><a class="sp-filter-ribbon__clear" href="{{filters.clear_url}}">Clear all</a></li>
+      </ul>
+      {{/if}}
+
+      {{> farm/runs-live live}}
+    </section>
+    {{/inline}}
+    {{#*inline "scripts"}}
+    <script data-cfasync="false" type="module" src="/js/pages/admin-farm-live-list.js"></script>
+    {{/inline}}
+{{/layout}}

@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE agent_farm_runs\nSET status = 'failed',\n    finished_at = NOW(),\n    error = COALESCE(error, 'The server restarted while this run was in flight'),\n    pid = NULL,\n    updated_at = NOW()\nWHERE status IN ('preparing', 'running')\n",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "71d99ba60cfe0772b9f018a8d2152a04b59bca1caf3d72cfc80b92bd9a9ac156"
+}

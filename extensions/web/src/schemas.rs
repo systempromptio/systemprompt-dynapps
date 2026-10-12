@@ -60,6 +60,7 @@ pub fn schema_definitions() -> Vec<SchemaDefinition> {
         SchemaDefinition::sql_only(include_str!("../schema/49_platform_data_console.sql")),
         SchemaDefinition::sql_only(include_str!("../schema/50_gateway_overhead.sql")),
         SchemaDefinition::sql_only(include_str!("../schema/51_audit_integrity.sql")),
+        SchemaDefinition::sql_only(include_str!("../schema/52_agent_farm.sql")),
     ]
 }
 
@@ -67,7 +68,10 @@ pub fn schema_definitions() -> Vec<SchemaDefinition> {
 // directory is empty, which clippy reads as const-able; the first
 // `001_<name>.sql` makes the body non-const again, so the signature stays.
 #[doc(hidden)]
-#[expect(clippy::missing_const_for_fn, reason = "empty until the first 001_<name>.sql lands")]
+#[expect(
+    clippy::missing_const_for_fn,
+    reason = "empty until the first 001_<name>.sql lands"
+)]
 pub fn migrations() -> Vec<Migration> {
     extension_migrations!()
 }

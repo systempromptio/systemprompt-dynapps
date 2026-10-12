@@ -1,0 +1,13 @@
+schema: 1
+id: dynapps-agent-farm
+marketplace: dynapps-agent-farm
+defaults:
+  model: claude-sonnet-4-5
+  max_turns: 40
+  max_budget_usd: 2.00
+  permission_mode: acceptEdits
+agents:
+  - odoo_module_reviewer
+  - odoo_migration_planner
+  - odoo_release_notes_writer
+  - odoo_test_author

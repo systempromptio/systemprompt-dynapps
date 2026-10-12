@@ -9,10 +9,10 @@ workspace = true
 
 [dependencies]
 systemprompt-bridge = { path = "../../../../systemprompt-core/bin/bridge" }
-systemprompt-wire = { version = "0.65.0" }
-systemprompt-gateway = { version = "0.65.0" }
-systemprompt-manifest = { version = "0.65.0" }
-systemprompt-models = { version = "0.65.0" }
+systemprompt-wire = { version = "0.66.0" }
+systemprompt-gateway = { version = "0.66.0" }
+systemprompt-manifest = { version = "0.66.0" }
+systemprompt-models = { version = "0.66.0" }
 axum.workspace = true
 tokio.workspace = true
 systemprompt-api.workspace = true

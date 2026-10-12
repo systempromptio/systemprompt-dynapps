@@ -1,0 +1,10 @@
+{{!-- The fragment /admin/api/farm/runs/{id}?after=<seq> answers with: the
+  status badge, KPI strip, timeline and only the events after <seq>. The
+  page script reads the data-* stamps to know where it is and whether to
+  keep polling. Context: RunLiveView. --}}
+<div data-farm-run-live data-run-status="{{status_key}}" data-last-seq="{{last_seq}}" data-live-active="{{is_live}}"{{#if summary.started_epoch_ms}} data-started-ms="{{summary.started_epoch_ms}}"{{/if}}>
+  <span data-live-region="status">{{> components/badge tone=status.tone text=status.text}}</span>
+  <section data-live-region="summary">{{> farm/run-summary summary}}</section>
+  <div data-live-region="timeline">{{> farm/run-timeline timeline}}</div>
+  <ol data-live-region="events">{{> farm/run-events events=events}}</ol>
+</div>

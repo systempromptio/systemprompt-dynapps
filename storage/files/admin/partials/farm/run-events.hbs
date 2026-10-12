@@ -1,0 +1,27 @@
+{{!-- One <li> per run event. Usage: {{> farm/run-events events=list}} inside
+  <ol class="sp-run-events">. A tool_use links to its tool_result (and back)
+  by seq; a long body folds behind its first line. --}}
+{{#each events}}
+<li class="sp-run-event sp-run-event--{{this.kind}}{{#if this.is_error}} sp-run-event--error{{/if}}" id="run-event-{{this.seq}}" data-seq="{{this.seq}}">
+  <span class="sp-run-event__glyph" aria-hidden="true">{{this.glyph}}</span>
+  <div class="sp-run-event__main">
+    <p class="sp-run-event__head">
+      <span class="sp-run-event__title">{{this.title}}</span>
+      <span class="sp-run-event__offset" title="{{this.created_local}}">{{this.offset_label}}</span>
+      {{#if this.paired_seq}}
+        <a class="sp-run-event__pair" href="#run-event-{{this.paired_seq}}">{{#if this.is_tool_use}}result{{else}}call{{/if}} #{{this.paired_seq}}</a>
+      {{/if}}
+    </p>
+    {{#if this.body}}
+      {{#if this.body_is_long}}
+        <details class="sp-run-event__fold">
+          <summary class="sp-run-event__preview">{{this.preview}}</summary>
+          <pre class="sp-run-event__body">{{this.body}}</pre>
+        </details>
+      {{else}}
+        <pre class="sp-run-event__body">{{this.body}}</pre>
+      {{/if}}
+    {{/if}}
+  </div>
+</li>
+{{/each}}

@@ -1,0 +1,44 @@
+@layer components {
+
+/* The runs explorer keeps its filters and table in one column so polling never reflows them. */
+
+.sp-farm-runs {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-space-3);
+}
+
+.sp-farm-runs > .sp-live { align-self: flex-end; }
+
+.sp-farm-runs__table { inline-size: 100%; }
+
+.sp-farm-run-row .sp-link {
+    color: var(--sp-accent);
+    text-decoration: none;
+}
+
+.sp-farm-run-row .sp-link:hover,
+.sp-farm-run-row .sp-link:focus-visible { text-decoration: underline; }
+
+/* A live run marks its row with an accent edge that breathes while the
+   process runs, so the rows a refresh can still change are visible at a
+   glance; reduced motion keeps the edge and drops the breathing. */
+.sp-farm-run-row[data-run-status="queued"] > :first-child,
+.sp-farm-run-row[data-run-status="preparing"] > :first-child,
+.sp-farm-run-row[data-run-status="running"] > :first-child {
+    box-shadow: inset 2px 0 0 var(--sp-accent);
+}
+
+.sp-farm-run-row[data-run-status="running"] > :first-child {
+    animation: sp-farm-run-pulse var(--sp-duration-slower) var(--sp-ease-in-out) infinite;
+}
+
+@keyframes sp-farm-run-pulse {
+    50% { box-shadow: inset 2px 0 0 color-mix(in oklch, var(--sp-accent) 30%, transparent); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sp-farm-run-row[data-run-status="running"] > :first-child { animation: none; }
+}
+
+}

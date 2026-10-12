@@ -377,3 +377,29 @@ mod data_console;
 
 #[cfg(test)]
 mod route_catalog_plane_ownership;
+
+#[cfg(test)]
+mod farm_definitions;
+
+#[cfg(test)]
+mod farm_assertions;
+
+#[cfg(test)]
+mod farm_stream_json;
+#[cfg(test)]
+mod farm_workspace_diff;
+#[cfg(test)]
+mod farm_people_rows;
+#[cfg(test)]
+mod farm_status_view;
+#[cfg(test)]
+mod farm_curl_snippet;
+
+#[cfg(test)]
+mod farm_sync_card;
+
+#[cfg(test)]
+mod farm_eval_matrix;
+
+#[cfg(test)]
+mod farm_run_events_view;

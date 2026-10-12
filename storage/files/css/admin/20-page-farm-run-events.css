@@ -1,0 +1,116 @@
+@layer components {
+
+/* The event rail lists a run's stream-json events in arrival order, tightly spaced. */
+.sp-run-events {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-space-1);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.sp-run-event {
+    display: grid;
+    grid-template-columns: var(--sp-space-6) minmax(0, 1fr);
+    gap: var(--sp-space-2);
+    padding: var(--sp-space-2) var(--sp-space-3);
+    background: var(--sp-bg-surface);
+    border: 1px solid var(--sp-border-subtle);
+    border-radius: var(--sp-corners-sm);
+    scroll-margin-block: var(--sp-space-6);
+}
+
+.sp-run-event:target { border-color: var(--sp-accent); }
+.sp-run-event--tool_use { border-inline-start: 3px solid var(--sp-success); }
+.sp-run-event--tool_result { margin-inline-start: var(--sp-space-6); }
+.sp-run-event--hook { border-inline-start: 3px solid var(--sp-warning); }
+.sp-run-event--runner,
+.sp-run-event--init { background: var(--sp-bg-surface-alt); }
+.sp-run-event--error { border-inline-start: 3px solid var(--sp-danger); }
+
+/* stderr is diagnostic noise next to the transcript, so it reads muted. */
+.sp-run-event--stderr {
+    background: var(--sp-bg-surface-alt);
+    color: var(--sp-text-tertiary);
+}
+
+/* The result closes the run, so it is drawn as a card the rail ends on. */
+.sp-run-event--result {
+    margin-top: var(--sp-space-2);
+    padding: var(--sp-space-3) var(--sp-space-4);
+    border: 1px solid var(--sp-success);
+}
+
+.sp-run-event--result.sp-run-event--error { border-color: var(--sp-danger); }
+
+/* A freshly polled event fades in so the eye catches what arrived. */
+.sp-run-event--new { animation: sp-run-event-in var(--sp-duration-slow) var(--sp-ease-in-out); }
+
+@keyframes sp-run-event-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: none; }
+}
+
+.sp-run-event__glyph {
+    font-family: var(--sp-font-mono);
+    color: var(--sp-text-tertiary);
+    text-align: center;
+}
+
+.sp-run-event__main { min-inline-size: 0; }
+
+.sp-run-event__head {
+    display: flex;
+    align-items: baseline;
+    gap: var(--sp-space-2);
+    margin: 0;
+}
+
+.sp-run-event__title {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--sp-text-sm);
+    font-weight: var(--sp-font-weight-medium);
+}
+
+.sp-run-event__offset,
+.sp-run-event__pair {
+    flex: none;
+    font-size: var(--sp-text-2xs);
+    color: var(--sp-text-tertiary);
+    font-variant-numeric: tabular-nums;
+}
+
+.sp-run-event__body {
+    margin: var(--sp-space-1) 0 0;
+    max-block-size: 32rem;
+    overflow: auto;
+    font-family: var(--sp-font-mono);
+    font-size: var(--sp-text-xs);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.sp-run-event--assistant_text .sp-run-event__body,
+.sp-run-event--result .sp-run-event__body {
+    font-family: inherit;
+    font-size: var(--sp-text-sm);
+    line-height: var(--sp-leading-relaxed);
+}
+
+.sp-run-event__fold { margin-top: var(--sp-space-1); }
+
+.sp-run-event__preview {
+    cursor: pointer;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--sp-text-xs);
+    color: var(--sp-text-secondary);
+}
+
+}

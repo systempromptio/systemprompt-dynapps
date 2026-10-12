@@ -1,0 +1,34 @@
+{{!-- The run's timeline strip. Context: RunTimelineView (1000-unit viewBox).
+  Assistant turns on top, tool calls below, hooks and stderr as ticks. --}}
+<figure class="sp-farm-run__strip">
+  <figcaption class="sp-farm-run__legend">
+    <span><span class="sp-farm-run__key sp-farm-run__key--assistant"></span> Assistant turn</span>
+    <span><span class="sp-farm-run__key sp-farm-run__key--tool"></span> Tool call</span>
+    <span><span class="sp-farm-run__key sp-farm-run__key--err"></span> Failed</span>
+    <span><span class="sp-farm-run__key sp-farm-run__key--open"></span> Running</span>
+    <span><span class="sp-farm-run__key sp-farm-run__key--tick"></span> Hook or stderr</span>
+  </figcaption>
+  {{#if has_marks}}
+  <svg class="sp-farm-run__svg" role="img" aria-label="Run timeline over {{window_label}}"
+       viewBox="0 0 {{view_width}} {{view_height}}" preserveAspectRatio="none">
+    <g class="sp-farm-run__grid">
+      {{#each axis}}<line x1="{{this.x}}" y1="0" x2="{{this.x}}" y2="{{../view_height}}"></line>{{/each}}
+    </g>
+    {{#each marks}}
+      <a href="#run-event-{{this.seq}}">
+        <rect class="sp-farm-run__mark sp-farm-run__mark--{{this.lane}} sp-farm-run__mark--{{this.tone}}"
+              x="{{this.x}}" y="{{this.y}}" width="{{this.width}}" height="{{this.height}}" rx="1"><title>{{this.label}}</title></rect>
+      </a>
+    {{/each}}
+    {{#each ticks}}
+      <a href="#run-event-{{this.seq}}">
+        <rect class="sp-farm-run__tick sp-farm-run__tick--{{this.kind}}"
+              x="{{this.x}}" y="{{this.y}}" width="2" height="{{this.height}}"><title>{{this.label}}</title></rect>
+      </a>
+    {{/each}}
+  </svg>
+  <ol class="sp-farm-run__axis">{{#each axis}}<li>{{this.label}}</li>{{/each}}</ol>
+  {{else}}
+  <p class="sp-empty">Nothing to draw yet: no assistant turns, tool calls or hooks recorded.</p>
+  {{/if}}
+</figure>

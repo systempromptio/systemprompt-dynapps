@@ -1,0 +1,35 @@
+{{!--
+  The evals page's case-by-agent matrix: one row per suite › case, one
+  column per agent. A cell is the latest decided verdict — a pass/fail glyph,
+  the judge score chip, the rationale as its title — linking to the eval run
+  that produced it. Usage: {{> farm/eval-matrix matrix}} (an EvalMatrixView).
+--}}
+{{#if rows}}
+{{#> components/table caption="Latest verdict per case and agent" modifier="sp-farm-matrix" table_mode="scroll"}}
+  <thead><tr>
+    <th scope="col">Suite › case</th>
+    {{#each agents}}<th class="sp-farm-matrix__agent" scope="col">{{this}}</th>{{/each}}
+  </tr></thead>
+  <tbody>
+    {{#each rows}}
+    <tr class="sp-table__row">
+      <th class="sp-farm-matrix__case" scope="row"><span class="sp-u-text-tertiary">{{this.suite_id}} ›</span> {{this.case_id}}</th>
+      {{#each this.slots}}
+      <td class="sp-farm-matrix__slot">
+        {{#if this.cell}}
+        <a class="sp-farm-matrix__cell sp-farm-matrix__cell--{{this.cell.tone}}" href="{{this.cell.href}}" title="{{this.cell.label}}{{#if this.cell.rationale}} — {{this.cell.rationale}}{{/if}}">
+          <span class="sp-farm-matrix__glyph" aria-hidden="true">{{this.cell.glyph}}</span>
+          <span class="sp-u-sr-only">{{this.cell.label}}</span>
+          {{#if this.cell.score_display}}<span class="sp-farm-evals__score sp-farm-evals__score--{{this.cell.score_tone}}">{{this.cell.score_display}}</span>{{/if}}
+        </a>
+        {{else}}<span class="sp-farm-matrix__none" aria-label="No verdict">·</span>{{/if}}
+      </td>
+      {{/each}}
+    </tr>
+    {{/each}}
+  </tbody>
+{{/components/table}}
+<p class="sp-farm-evals__lede">{{passed}} of {{decided}} cases passed on their latest run.</p>
+{{else}}
+{{> components/empty-state compact=true heading="No cases yet" message="Suites declare their cases in the agent's eval file."}}
+{{/if}}

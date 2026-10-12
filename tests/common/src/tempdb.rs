@@ -209,10 +209,10 @@ async fn copy_template(admin: &PgPool, template: &str, db_name: &str) {
     );
 }
 
-/// The two directory-backed projects the integration suites attach users to.
-/// Production projects come from `groups.yaml` through the boot sync, which
-/// the template install does not run, and the seeds carry no customer rows,
-/// so the suites own these fixtures.
+// The two directory-backed projects the integration suites attach users to.
+// Production projects come from `groups.yaml` through the boot sync, which
+// the template install does not run, and the seeds carry no customer rows,
+// so the suites own these fixtures.
 async fn seed_test_projects(pool: &PgPool) {
     sqlx::query(
         "INSERT INTO projects (id, name, source)

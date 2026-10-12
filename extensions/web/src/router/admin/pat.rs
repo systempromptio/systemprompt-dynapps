@@ -1,5 +1,5 @@
 //! A personal access token in place of a browser session, on the export
-//! routes only.
+//! routes and the agent farm's public run API only.
 //!
 //! A kit repository's CI reads its release figures from
 //! `/admin/export/{dataset}`, and an analysis job reads conversation records
@@ -7,7 +7,9 @@
 //! The PAT resolves to its owner and then passes through exactly the gates a
 //! browser session does, so it reads what its owner could export and no more
 //! — a transcript outside the owner's view is a 404, the same as in the
-//! console. Every other admin route still refuses it.
+//! console. Every other admin route still refuses it. Which requests may
+//! carry one is the caller's decision: the admin router admits the export
+//! GETs ([`is_export_request`]), the farm router admits every request.
 
 use axum::Json;
 use axum::extract::Request;
@@ -21,14 +23,14 @@ use systemprompt_web_admin_core::auth::session::extract_token_from_headers;
 use systemprompt_web_admin_core::repositories::bridge::{API_KEY_PREFIX, find_api_key_user};
 use systemprompt_web_admin_core::types::CookieSession;
 
-pub(super) enum PatSession {
+pub(crate) enum PatSession {
     NotApplicable,
     Accepted(CookieSession),
     Rejected(PatRejection),
 }
 
 #[derive(Debug, Clone, Copy)]
-pub(super) struct PatRejection(&'static str);
+pub(crate) struct PatRejection(&'static str);
 
 impl IntoResponse for PatRejection {
     fn into_response(self) -> Response {
@@ -59,22 +61,26 @@ const fn rejected(message: &'static str) -> PatSession {
     PatSession::Rejected(PatRejection(message))
 }
 
-pub(super) fn pat_request(request: &Request) -> Option<PatRequest> {
+pub(crate) fn is_export_request(request: &Request) -> bool {
+    request.method() == Method::GET && is_export(request.uri().path())
+}
+
+pub(crate) fn pat_request(request: &Request, allowed: bool) -> Option<PatRequest> {
     let token = extract_token_from_headers(request.headers()).ok()?;
     token.starts_with(API_KEY_PREFIX).then(|| PatRequest {
         token,
-        allowed: request.method() == Method::GET && is_export(request.uri().path()),
+        allowed,
         path: request.uri().path().to_owned(),
     })
 }
 
-pub(super) struct PatRequest {
+pub(crate) struct PatRequest {
     token: String,
     allowed: bool,
     path: String,
 }
 
-pub(super) async fn pat_session(pool: &PgPool, pat: Option<PatRequest>) -> PatSession {
+pub(crate) async fn pat_session(pool: &PgPool, pat: Option<PatRequest>) -> PatSession {
     let Some(PatRequest {
         token,
         allowed,
@@ -97,7 +103,7 @@ pub(super) async fn pat_session(pool: &PgPool, pat: Option<PatRequest>) -> PatSe
     let Ok(email) = Email::try_new(user.email) else {
         return rejected("The token's owner has no valid email");
     };
-    tracing::info!(key_id = %user.key_id, user_id = %user.user_id, path = %path, "export read with a personal access token");
+    tracing::info!(key_id = %user.key_id, user_id = %user.user_id, path = %path, "request authenticated with a personal access token");
     PatSession::Accepted(CookieSession {
         user_id: user.user_id,
         username: user.username,

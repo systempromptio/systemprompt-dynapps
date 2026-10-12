@@ -1,0 +1,434 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id AS \"id: FarmRunId\", farm_id AS \"farm_id: FarmId\", agent_id AS \"agent_id: FarmAgentId\",\n       user_id AS \"user_id: UserId\", triggered_via, status, prompt, fixture, model,\n       permission_mode, max_turns, max_budget_usd, timeout_seconds, source_commit_sha, run_dir,\n       gateway_session_id, claude_session_id, context_id AS \"context_id: ContextId\", api_key_id,\n       pid, started_at, finished_at, duration_ms, num_turns, input_tokens, output_tokens,\n       cost_microdollars, result_subtype, exit_code, error, diff_summary, eval_result_id,\n       cancel_requested_at, created_at, updated_at\nFROM agent_farm_runs\nWHERE status IN ('queued', 'preparing', 'running')\nORDER BY created_at\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id: FarmRunId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "farm_id: FarmId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "farm_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "agent_id: FarmAgentId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "agent_id"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "user_id: UserId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "user_id"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "triggered_via",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "triggered_via"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "status",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "status"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "prompt",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "prompt"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "fixture",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "fixture"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "model",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "model"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "permission_mode",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "permission_mode"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "max_turns",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "max_turns"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "max_budget_usd",
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "max_budget_usd"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "timeout_seconds",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "timeout_seconds"
+          }
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "source_commit_sha",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "source_commit_sha"
+          }
+        }
+      },
+      {
+        "ordinal": 14,
+        "name": "run_dir",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "run_dir"
+          }
+        }
+      },
+      {
+        "ordinal": 15,
+        "name": "gateway_session_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "gateway_session_id"
+          }
+        }
+      },
+      {
+        "ordinal": 16,
+        "name": "claude_session_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "claude_session_id"
+          }
+        }
+      },
+      {
+        "ordinal": 17,
+        "name": "context_id: ContextId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "context_id"
+          }
+        }
+      },
+      {
+        "ordinal": 18,
+        "name": "api_key_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "api_key_id"
+          }
+        }
+      },
+      {
+        "ordinal": 19,
+        "name": "pid",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "pid"
+          }
+        }
+      },
+      {
+        "ordinal": 20,
+        "name": "started_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "started_at"
+          }
+        }
+      },
+      {
+        "ordinal": 21,
+        "name": "finished_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "finished_at"
+          }
+        }
+      },
+      {
+        "ordinal": 22,
+        "name": "duration_ms",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "duration_ms"
+          }
+        }
+      },
+      {
+        "ordinal": 23,
+        "name": "num_turns",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "num_turns"
+          }
+        }
+      },
+      {
+        "ordinal": 24,
+        "name": "input_tokens",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "input_tokens"
+          }
+        }
+      },
+      {
+        "ordinal": 25,
+        "name": "output_tokens",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "output_tokens"
+          }
+        }
+      },
+      {
+        "ordinal": 26,
+        "name": "cost_microdollars",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "cost_microdollars"
+          }
+        }
+      },
+      {
+        "ordinal": 27,
+        "name": "result_subtype",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "result_subtype"
+          }
+        }
+      },
+      {
+        "ordinal": 28,
+        "name": "exit_code",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "exit_code"
+          }
+        }
+      },
+      {
+        "ordinal": 29,
+        "name": "error",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "error"
+          }
+        }
+      },
+      {
+        "ordinal": 30,
+        "name": "diff_summary",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "diff_summary"
+          }
+        }
+      },
+      {
+        "ordinal": 31,
+        "name": "eval_result_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "eval_result_id"
+          }
+        }
+      },
+      {
+        "ordinal": 32,
+        "name": "cancel_requested_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "cancel_requested_at"
+          }
+        }
+      },
+      {
+        "ordinal": 33,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 34,
+        "name": "updated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "updated_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "9ffde1202962c2ecb705f45f989084d2af7e18f59ec8a31c7042c6ece0f3aace"
+}

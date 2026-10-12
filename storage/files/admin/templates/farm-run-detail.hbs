@@ -1,0 +1,193 @@
+{{#> layout page_title=title page_id=page}}
+    {{#*inline "content"}}
+    {{> components/breadcrumbs crumbs=breadcrumbs}}
+
+    <div class="sp-farm-run" data-farm-run
+         data-poll-url="{{header.poll_url}}"
+         data-run-status="{{live.status_key}}"
+         data-last-seq="{{live.last_seq}}"
+         data-live-active="{{live.is_live}}"
+         {{#if live.summary.started_epoch_ms}}data-started-ms="{{live.summary.started_epoch_ms}}"{{/if}}>
+
+    {{#> components/page-header title=title
+        subtitle="One headless Claude Code run: what it did, what it said, what it cost and the files it changed."}}
+      {{#*inline "header_meta"}}
+        <span data-live-region="status">{{> components/badge tone=live.status.tone text=live.status.text}}</span>
+        · <a href="{{header.agent_url}}">{{header.agent_label}}</a>
+        · <a href="{{header.user_url}}">{{header.user_id}}</a>
+        · {{> components/badge tone=header.trigger.tone text=header.trigger.text}}
+        · <span title="{{header.started_local}}">{{header.started_relative}}</span>
+        · {{header.model}}
+      {{/inline}}
+      {{#*inline "header_actions"}}
+        <form method="post" action="{{header.cancel_url}}" class="sp-farm-run__inline-form">
+          <button class="sp-btn sp-btn--sm sp-btn--danger" type="submit" data-farm-run-cancel
+                  {{#unless live.is_live}}disabled{{/unless}}
+                  title="Stop the Claude Code process; the run ends as cancelled">Cancel</button>
+        </form>
+        <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{header.agent_url}}">Agent</a>
+        {{#if header.context_url}}
+          <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{header.context_url}}">Gateway conversation</a>
+        {{/if}}
+        {{#if header.session_url}}
+          <a class="sp-btn sp-btn--sm sp-btn--outline" href="{{header.session_url}}">Session</a>
+        {{/if}}
+        <a class="sp-btn sp-btn--sm sp-btn--primary" href="{{header.rerun_url}}"
+           title="Open the agent's launch dialog with this prompt">Re-run</a>
+      {{/inline}}
+    {{/components/page-header}}
+
+    <details class="sp-farm-run__ids">
+      <summary class="sp-farm-run__ids-summary">Identifiers and limits</summary>
+      <dl class="sp-kv-list">
+        <div class="sp-kv-row"><dt>Run</dt><dd><code class="sp-code-inline">{{header.run_id}}</code></dd></div>
+        <div class="sp-kv-row"><dt>Farm</dt><dd><a href="{{header.farm_url}}">{{header.farm_id}}</a></dd></div>
+        {{#if header.gateway_session_id}}
+        <div class="sp-kv-row"><dt>Gateway session</dt><dd><a href="{{header.session_url}}"><code class="sp-code-inline">{{header.gateway_session_id}}</code></a></dd></div>
+        {{/if}}
+        {{#if header.claude_session_id}}
+        <div class="sp-kv-row"><dt>Claude Code session</dt><dd><code class="sp-code-inline">{{header.claude_session_id}}</code></dd></div>
+        {{/if}}
+        {{#if header.context_id}}
+        <div class="sp-kv-row"><dt>Context</dt><dd><a href="{{header.context_url}}"><code class="sp-code-inline">{{header.context_id}}</code></a></dd></div>
+        {{/if}}
+        {{#if header.source_commit}}
+        <div class="sp-kv-row"><dt>Source commit</dt><dd><code class="sp-code-inline">{{header.source_commit}}</code></dd></div>
+        {{/if}}
+        <div class="sp-kv-row"><dt>Permission mode</dt><dd><code class="sp-code-inline">{{header.permission_mode}}</code></dd></div>
+        <div class="sp-kv-row"><dt>Limits</dt><dd>{{header.limits}}</dd></div>
+      </dl>
+    </details>
+
+    <section data-live-region="summary" aria-label="Run summary">
+      {{> farm/run-summary live.summary}}
+    </section>
+
+    <div class="sp-tabs" role="tablist" data-tabs="farm-run" aria-label="Run views">
+      <button type="button" class="sp-tab sp-tab--active" role="tab" id="run-tab-timeline" aria-controls="run-panel-timeline" aria-selected="true" data-tab="timeline">Timeline</button>
+      <button type="button" class="sp-tab" role="tab" id="run-tab-transcript" aria-controls="run-panel-transcript" aria-selected="false" tabindex="-1" data-tab="transcript">Transcript</button>
+      <button type="button" class="sp-tab" role="tab" id="run-tab-cost" aria-controls="run-panel-cost" aria-selected="false" tabindex="-1" data-tab="cost">Cost</button>
+      <button type="button" class="sp-tab" role="tab" id="run-tab-artifacts" aria-controls="run-panel-artifacts" aria-selected="false" tabindex="-1" data-tab="artifacts">Artifacts</button>
+    </div>
+
+    <div class="sp-tab-panel" id="run-panel-timeline" role="tabpanel" aria-labelledby="run-tab-timeline">
+      <div data-live-region="timeline">{{> farm/run-timeline live.timeline}}</div>
+      <div class="sp-farm-run__toolbar">
+        <label class="sp-farm-run__follow"><input type="checkbox" data-farm-run-follow {{#if live.is_live}}checked{{/if}}> Follow new events</label>
+        <button type="button" class="sp-btn sp-btn--xs sp-btn--ghost" data-action="farm-run-expand">Expand all</button>
+        <button type="button" class="sp-btn sp-btn--xs sp-btn--ghost" data-action="farm-run-collapse">Collapse all</button>
+      </div>
+      <ol class="sp-run-events" data-live-region="events" aria-label="Run events">
+        {{> farm/run-events events=live.events}}
+      </ol>
+      {{#unless live.events}}
+        <div data-farm-run-empty>{{> components/empty-state heading="No events yet" message="The run has not written any stream-json events. They appear here as Claude Code produces them."}}</div>
+      {{/unless}}
+    </div>
+
+    <div class="sp-tab-panel" id="run-panel-transcript" role="tabpanel" aria-labelledby="run-tab-transcript" hidden>
+      {{#if header.context_url}}
+        <div class="sp-notice sp-notice--info" role="status">
+          <p>The full conversation, with every gateway message and tool block, is in the <a href="{{header.context_url}}">gateway conversation viewer</a>.</p>
+        </div>
+      {{else}}
+        {{> components/notice tone="info" message="This view shows the prompt, the assistant's text and the result. The gateway conversation appears once Claude Code registers its session."}}
+      {{/if}}
+      <article class="sp-farm-run__transcript">
+        <section class="sp-farm-run__turn sp-farm-run__turn--prompt">
+          <h3 class="sp-farm-run__turn-head">Prompt</h3>
+          <p class="sp-farm-run__prose">{{header.prompt}}</p>
+        </section>
+        {{#each transcript}}
+        <section class="sp-farm-run__turn sp-farm-run__turn--{{this.kind}}{{#if this.is_error}} sp-farm-run__turn--error{{/if}}">
+          <h3 class="sp-farm-run__turn-head">{{this.title}} <span class="sp-farm-run__muted">{{this.offset_label}}</span></h3>
+          <p class="sp-farm-run__prose">{{this.body}}</p>
+        </section>
+        {{/each}}
+      </article>
+    </div>
+
+    <div class="sp-tab-panel" id="run-panel-cost" role="tabpanel" aria-labelledby="run-tab-cost" hidden>
+      {{> components/timeseries-chart cost.chart}}
+      {{#if cost.has_rows}}
+      {{#> components/table caption="Gateway requests made by this run" table_mode="scroll"}}
+        <thead><tr>
+          <th class="sp-table__cell--num">#</th>
+          <th class="sp-col-date">When</th>
+          <th>Request</th>
+          <th>Model</th>
+          <th class="sp-table__cell--num">Latency</th>
+          <th class="sp-table__cell--num">In</th>
+          <th class="sp-table__cell--num">Out</th>
+          <th class="sp-table__cell--num">Cost</th>
+        </tr></thead>
+        <tbody>
+        {{#each cost.rows}}
+          <tr>
+            <td class="sp-table__cell--num sp-table__cell--muted">{{this.index}}</td>
+            <td class="sp-col-date sp-table__cell--date">{{this.created_local}}</td>
+            <td><a href="{{this.url}}"><code class="sp-code-inline" title="{{this.request_id}}">{{this.request_id_short}}</code></a></td>
+            <td>{{this.model}}</td>
+            <td class="sp-table__cell--num">{{this.latency}}</td>
+            <td class="sp-table__cell--num">{{this.tokens_in}}</td>
+            <td class="sp-table__cell--num">{{this.tokens_out}}</td>
+            <td class="sp-table__cell--num sp-u-mono">{{this.cost}}</td>
+          </tr>
+        {{/each}}
+        </tbody>
+        <tfoot><tr>
+          <th colspan="5">Total</th>
+          <td class="sp-table__cell--num">{{cost.total_tokens_in}}</td>
+          <td class="sp-table__cell--num">{{cost.total_tokens_out}}</td>
+          <td class="sp-table__cell--num sp-u-mono">{{cost.total_cost}}</td>
+        </tr></tfoot>
+      {{/components/table}}
+      {{else}}
+        {{> components/empty-state heading="No gateway requests" message="No ai_requests row carries this run's gateway session yet."}}
+      {{/if}}
+    </div>
+
+    <div class="sp-tab-panel" id="run-panel-artifacts" role="tabpanel" aria-labelledby="run-tab-artifacts" hidden>
+      {{#if artifacts.error}}
+        {{> components/notice tone="err" title="The run reported an error" message=artifacts.error}}
+      {{/if}}
+      <dl class="sp-kv-list">
+        <div class="sp-kv-row"><dt>Fixture</dt><dd>{{#if artifacts.fixture}}<code class="sp-code-inline">{{artifacts.fixture}}</code>{{else}}none{{/if}}</dd></div>
+        <div class="sp-kv-row"><dt>Exit code</dt><dd><code class="sp-code-inline">{{artifacts.exit_display}}</code></dd></div>
+        <div class="sp-kv-row"><dt>Result</dt><dd>{{#if artifacts.result_subtype}}<code class="sp-code-inline">{{artifacts.result_subtype}}</code>{{else}}—{{/if}}</dd></div>
+        {{#if artifacts.run_dir}}
+        <div class="sp-kv-row"><dt>Run directory</dt><dd><code class="sp-code-inline">{{artifacts.run_dir}}</code></dd></div>
+        {{/if}}
+      </dl>
+      {{#if artifacts.has_diff}}
+        <p class="sp-farm-run__diff-stats">
+          {{> components/badge tone="ok" text=(concat "+" artifacts.added " added")}}
+          {{> components/badge tone="info" text=(concat artifacts.modified " modified")}}
+          {{> components/badge tone="err" text=(concat artifacts.deleted " deleted")}}
+        </p>
+        {{#if artifacts.files}}
+        {{#> components/table caption="Files the run changed in its workspace" table_mode="scroll"}}
+          <thead><tr><th>Path</th><th class="sp-col-status">Change</th><th class="sp-table__cell--num">Size</th></tr></thead>
+          <tbody>
+          {{#each artifacts.files}}
+            <tr>
+              <td><code class="sp-code-inline">{{this.path}}</code></td>
+              <td class="sp-col-status">{{> components/badge tone=this.tone text=this.kind}}</td>
+              <td class="sp-table__cell--num">{{this.bytes}}</td>
+            </tr>
+          {{/each}}
+          </tbody>
+        {{/components/table}}
+        {{/if}}
+      {{else if artifacts.diff_unreadable}}
+        {{> components/notice tone="warn" message="The recorded workspace diff could not be read."}}
+      {{else}}
+        {{> components/empty-state heading="No diff yet" message="The runner records the workspace diff when the process exits."}}
+      {{/if}}
+    </div>
+    </div>
+    {{/inline}}
+    {{#*inline "scripts"}}
+    <script data-cfasync="false" type="module" src="/js/pages/admin-farm-run.js"></script>
+    {{/inline}}
+{{/layout}}

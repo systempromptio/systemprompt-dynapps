@@ -13,6 +13,7 @@ systemprompt = { workspace = true, features = ["full"] }
 systemprompt-web-admin-identity = { workspace = true }
 systemprompt-web-admin-platform = { workspace = true }
 systemprompt-web-admin-core = { workspace = true }
+systemprompt-web-admin-farm = { workspace = true }
 systemprompt-web-extension = { workspace = true }
 systemprompt-web-shared = { workspace = true }
 systemprompt-security = { workspace = true }

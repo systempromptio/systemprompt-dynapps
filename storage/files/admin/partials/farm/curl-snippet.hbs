@@ -1,0 +1,11 @@
+{{!-- Remote execution card. Usage: {{> farm/curl-snippet remote=remote devices_url=devices_url}} --}}
+<section class="sp-card sp-farm-agent__card" aria-labelledby="farm-agent-remote">
+  <div class="sp-card__body">
+    <h2 class="sp-section__title" id="farm-agent-remote">Remote execution</h2>
+    <p class="sp-farm-agent__lede">Queue a run as yourself with a personal access token in <code class="sp-u-mono">SYSTEMPROMPT_TOKEN</code>. Issue one on <a class="sp-link" href="{{devices_url}}">Devices</a>.</p>
+    <p class="sp-farm-agent__label">Launch</p>
+    <pre class="sp-connect__cmd"><code>{{remote.launch}}</code></pre>
+    <p class="sp-farm-agent__label">Follow its events, with <code class="sp-u-mono">RUN_ID</code> from the launch response</p>
+    <pre class="sp-connect__cmd"><code>{{remote.poll}}</code></pre>
+  </div>
+</section>

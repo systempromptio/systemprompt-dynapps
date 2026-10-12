@@ -3,7 +3,7 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use axum::Router;
+use axum::{Extension, Router};
 
 use systemprompt::config::{AppPaths, ProfileBootstrap};
 
@@ -35,7 +35,8 @@ pub(crate) fn build(
             engine,
             sso_deps,
             Arc::clone(&db.managed),
-        ),
+        )
+        .layer(Extension(Arc::clone(&db.farm))),
     })
 }
 

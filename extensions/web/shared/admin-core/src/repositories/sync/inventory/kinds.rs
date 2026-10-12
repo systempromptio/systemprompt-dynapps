@@ -146,6 +146,12 @@ pub const CONFIG_KINDS: &[ConfigKind] = &[
         "config/salesforce-orgs.yaml",
     ),
     file(
+        "agent_farms",
+        "Agent farms",
+        "the Git-sourced agent farms this instance syncs and runs",
+        "web/config/agent-farms.yaml",
+    ),
+    file(
         "web_config",
         "Web config",
         "the public site's settings",

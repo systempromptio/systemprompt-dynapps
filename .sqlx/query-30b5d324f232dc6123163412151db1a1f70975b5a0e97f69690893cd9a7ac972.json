@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE agent_farms SET owner_user_id = $2, updated_at = NOW() WHERE id = $1\n",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "30b5d324f232dc6123163412151db1a1f70975b5a0e97f69690893cd9a7ac972"
+}

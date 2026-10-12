@@ -1,0 +1,45 @@
+{{!--
+  The live half of the farms overview: the KPI strip and the "Now running"
+  board. The page embeds it and GET /admin/api/farm/activity returns it, both
+  from the same view, so admin-farm-live-list.js can swap each
+  data-live-region and morph tiles by data-kpi.
+
+  Invoke as: {{> farm/activity-live activity}}
+--}}
+<section class="sp-farm-overview__kpis" aria-label="Headline figures" data-live-region="kpis">
+    {{#if unavailable}}{{> components/notice tone="warn" title="Some figures unavailable" message="A query behind these figures failed; the rest are current."}}{{/if}}
+    <div class="sp-kpi-grid sp-kpi-grid--compact">
+        {{#each kpis}}
+        {{> components/kpi key=this.key label=this.label icon=this.icon value=this.value note=this.note
+            href=this.href hint=this.hint tone=this.tone spark=this.spark}}
+        {{/each}}
+    </div>
+</section>
+
+<section class="sp-farm-overview__running" aria-label="Now running" data-live-region="running">
+    {{> components/section title="Now running" count=running_count note="Queued, preparing and running farm runs across every farm."}}
+    {{#if has_running}}
+    {{#> components/table caption="Farm runs in flight"}}
+        <thead>
+            <tr>
+                <th scope="col">Started</th>
+                <th scope="col">Run</th>
+                <th scope="col">Farm › agent</th>
+                <th scope="col">User</th>
+                <th scope="col">Trigger</th>
+                <th scope="col">Status</th>
+                <th scope="col">Turns</th>
+                <th scope="col">Tokens</th>
+                <th scope="col">Cost</th>
+                <th scope="col">Duration</th>
+                <th scope="col"><span class="sp-u-sr-only">Actions</span></th>
+            </tr>
+        </thead>
+        <tbody>
+            {{#each running}}{{> farm/run-row this cancel=true}}{{/each}}
+        </tbody>
+    {{/components/table}}
+    {{else}}
+    {{> components/empty-state compact=true heading="Nothing running" message="Launch an agent from its farm page, or call the run API, and it appears here."}}
+    {{/if}}
+</section>

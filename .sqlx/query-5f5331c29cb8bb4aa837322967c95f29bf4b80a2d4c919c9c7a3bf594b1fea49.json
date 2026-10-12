@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM agent_farm_agents\nWHERE farm_id = $1 AND NOT (id = ANY($2::text[]))\n",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "TextArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "5f5331c29cb8bb4aa837322967c95f29bf4b80a2d4c919c9c7a3bf594b1fea49"
+}

@@ -1,0 +1,75 @@
+@layer components {
+
+/* The farms overview: the live KPI strip and running board above a grid of
+   farm cards. A farm page shares the one-column stack. */
+
+.sp-farm-overview,
+.sp-farm-detail {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-space-4);
+}
+
+.sp-farm-overview__kpis,
+.sp-farm-overview__running,
+.sp-farm-overview__farms {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-space-2);
+}
+
+.sp-farm-overview__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+    gap: var(--sp-space-3);
+}
+
+/* The Cancel form sits inline in its table cell. */
+.sp-farm-run-row__cancel { display: inline; }
+
+.sp-farm-card { min-inline-size: 0; }
+
+.sp-farm-card__body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-space-2);
+}
+
+.sp-farm-card__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-space-2);
+}
+
+.sp-farm-card__title {
+    margin: 0;
+    font-size: var(--sp-text-md);
+    font-weight: var(--sp-font-weight-semibold);
+    overflow-wrap: anywhere;
+}
+
+.sp-farm-card__desc {
+    margin: 0;
+    font-size: var(--sp-text-sm);
+    color: var(--sp-text-secondary);
+}
+
+.sp-farm-card__facts {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    gap: var(--sp-space-1) var(--sp-space-3);
+    margin: 0;
+    font-size: var(--sp-text-sm);
+}
+
+.sp-farm-card__term { color: var(--sp-text-tertiary); }
+
+.sp-farm-card__value {
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+}

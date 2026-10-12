@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE agent_farm_eval_results\nSET run_id = $2, status = 'running', updated_at = NOW()\nWHERE id = $1\n",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "0d77645b0f8acf8c9ace21df404c1e72fb76fbeff5f0fe25ee730c67cdf1af44"
+}

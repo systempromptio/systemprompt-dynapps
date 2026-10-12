@@ -6,5 +6,24 @@
         "status: pinned \u2014 the profile pins this kit (or is expected to); the seed asserts its marketplaces are served. planned \u2014 the kit repository is being seeded (`just kit-export`); its ids still live in services/ until it is pinned, so the seed ignores it.",
         "pull: public \u2014 the GHCR package is public, so the profile entry carries no auth_secret. channel \u2014 the tag the kit's CI moves on every release; `just services-pin <kit> <channel>` follows it, `just services-pin <kit> sha256:<digest>` pins one upload."
     ],
-    "kits": []
+    "kits": [
+        {
+            "name": "dynapps-agent-farm",
+            "repository": "systempromptio/systemprompt-agent-farm",
+            "image": "ghcr.io/systempromptio/systemprompt-agent-farm",
+            "channel": "stable",
+            "pull": "public",
+            "status": "pinned",
+            "public_key": "B4UBK6UgOqiVwFETibS+a65y4Yf7ALC68CSosD1+RKE=",
+            "key_id": "6e148c4b59e64177",
+            "marketplaces": [
+                "dynapps-agent-farm"
+            ],
+            "farm": {
+                "path": "farm",
+                "ref": "main",
+                "note": "Agent, eval and fixture definitions the bundle importer ignores; Dynapps fetches them itself (services/web/config/agent-farms.yaml)."
+            }
+        }
+    ]
 }

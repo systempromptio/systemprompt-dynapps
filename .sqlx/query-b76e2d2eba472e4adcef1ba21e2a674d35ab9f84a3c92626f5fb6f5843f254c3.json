@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE agent_farm_eval_runs\nSET passed = $2, failed = $3, errored = $4\nWHERE id = $1\n",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int4",
+        "Int4",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b76e2d2eba472e4adcef1ba21e2a674d35ab9f84a3c92626f5fb6f5843f254c3"
+}

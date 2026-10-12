@@ -17,6 +17,7 @@ use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use http_body_util::BodyExt as _;
 use sqlx::PgPool;
+use systemprompt_web_admin_farm as farm;
 use systemprompt_web_admin_identity as identity;
 use systemprompt_web_admin_platform as platform;
 use systemprompt_web_extension::admin;
@@ -27,6 +28,7 @@ use crate::principal::{Credentials, Principal};
 
 pub(crate) const ADMIN_API_PREFIX: &str = "/api/public/admin";
 pub(crate) const SSR_PREFIX: &str = "/admin";
+pub(crate) const FARM_PUBLIC_PREFIX: &str = "/api/public/agent-farm";
 
 pub(crate) struct App {
     router: Router,
@@ -44,6 +46,22 @@ fn session_service(pool: &Arc<PgPool>) -> Arc<SessionCreationService> {
         Arc::new(sessions),
         Arc::new(user),
     ))
+}
+
+// A farm state over the test pool whose data root is a fresh directory under
+// the system temp dir: no run is ever spawned, so nothing is written there.
+fn farm_state(pool: &Arc<PgPool>) -> Arc<farm::state::FarmState> {
+    let data_root = std::env::temp_dir().join(format!("farm-contract-{}", uuid::Uuid::new_v4()));
+    farm::state::build_farm_state(
+        Arc::clone(pool),
+        farm::state::FarmPaths::new(data_root, globals::repo_root().join("services")),
+        farm::state::GatewayEndpoints {
+            internal_base: String::new(),
+            external_base: String::new(),
+        },
+        farm::state::RunnerLimits::default(),
+        std::path::PathBuf::from("claude"),
+    )
 }
 
 impl App {
@@ -79,10 +97,16 @@ impl App {
             credentials.admin_user_id.clone(),
             None,
         ));
+        let farm_state = farm_state(pool);
         let api = Router::new()
             .nest(
                 "/admin",
-                admin::admin_router(Arc::clone(pool), pool, Arc::clone(&managed)),
+                admin::admin_router(
+                    Arc::clone(pool),
+                    pool,
+                    Arc::clone(&managed),
+                    Arc::clone(&farm_state),
+                ),
             )
             .merge(platform::connector_api_router(Arc::clone(pool)))
             .merge(platform::bridge_identity_router(Arc::clone(pool)))
@@ -121,6 +145,8 @@ impl App {
             .layer(axum::Extension(governance))
             .layer(axum::Extension(artifact_ingest));
 
+        let farm = admin::farm_public_router(Arc::clone(pool), farm_state);
+
         let secrets = admin::secrets_router(Arc::clone(pool));
         let share = admin::share_manifest_router(Arc::clone(pool));
 
@@ -128,6 +154,7 @@ impl App {
             .nest_service(SSR_PREFIX, ssr)
             .nest_service("/bridge-auth", bridge_auth)
             .nest("/api/public", api)
+            .nest(FARM_PUBLIC_PREFIX, farm)
             .merge(hooks)
             .merge(secrets)
             .merge(share);

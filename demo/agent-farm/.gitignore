@@ -1,0 +1,10 @@
+# Per-run state written by the agent-farm e2e scripts (tokens, cookies, digests).
+.token.user
+.user_id
+.admin_jwt
+.cookie.admin
+.digest
+.version
+.run_id
+.run_started_at
+.bundle/

@@ -1,0 +1,12 @@
+SELECT id AS "id: FarmRunId", farm_id AS "farm_id: FarmId", agent_id AS "agent_id: FarmAgentId",
+       user_id AS "user_id: UserId", triggered_via, status, prompt, fixture, model,
+       permission_mode, max_turns, max_budget_usd, timeout_seconds, source_commit_sha, run_dir,
+       gateway_session_id, claude_session_id, context_id AS "context_id: ContextId", api_key_id,
+       pid, started_at, finished_at, duration_ms, num_turns, input_tokens, output_tokens,
+       cost_microdollars, result_subtype, exit_code, error, diff_summary, eval_result_id,
+       cancel_requested_at, created_at, updated_at
+FROM agent_farm_runs
+WHERE ($1::text IS NULL OR farm_id = $1)
+  AND ($2::text IS NULL OR agent_id = $2)
+ORDER BY created_at DESC, id
+LIMIT $3

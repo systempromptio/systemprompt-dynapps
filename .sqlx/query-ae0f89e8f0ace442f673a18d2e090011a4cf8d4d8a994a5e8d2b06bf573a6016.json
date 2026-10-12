@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO agent_farm_eval_cases (suite_id, id, prompt, fixture, timeout_secs, assertions,\n                                   judge_rubric, judge_threshold)\nSELECT $1, c.id, c.prompt, c.fixture, c.timeout_secs, c.assertions, c.judge_rubric,\n       c.judge_threshold\nFROM UNNEST($2::text[], $3::text[], $4::text[], $5::int4[], $6::jsonb[], $7::text[],\n            $8::float8[])\n    AS c(id, prompt, fixture, timeout_secs, assertions, judge_rubric, judge_threshold)\n",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "TextArray",
+        "TextArray",
+        "TextArray",
+        "Int4Array",
+        "JsonbArray",
+        "TextArray",
+        "Float8Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "ae0f89e8f0ace442f673a18d2e090011a4cf8d4d8a994a5e8d2b06bf573a6016"
+}
