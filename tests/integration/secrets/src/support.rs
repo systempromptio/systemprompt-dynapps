@@ -21,7 +21,7 @@ pub(crate) fn config(block: &Value) -> OnePasswordConfig {
 pub(crate) fn provider(block: &Value) -> Result<OnePasswordProvider, OnePasswordError> {
     let cfg = config(block);
     let token_env = cfg.token_env.clone();
-    OnePasswordProvider::from_config(cfg, None, &move |name: &str| {
+    OnePasswordProvider::from_config(&cfg, None, &move |name: &str| {
         (name == token_env).then(|| TOKEN.to_owned())
     })
 }

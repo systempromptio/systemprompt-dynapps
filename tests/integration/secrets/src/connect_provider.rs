@@ -105,7 +105,7 @@ async fn connect_wrong_token_is_refused_by_the_server() {
     block["token_env"] = json!("SOME_OTHER_TOKEN_VAR");
     let cfg = crate::support::config(&block);
     let provider = systemprompt_secrets_onepassword::OnePasswordProvider::from_config(
-        cfg,
+        &cfg,
         None,
         &|name: &str| (name == "SOME_OTHER_TOKEN_VAR").then(|| "not-the-token".to_owned()),
     )

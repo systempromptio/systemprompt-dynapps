@@ -108,7 +108,7 @@ fn refresh_hint_follows_refresh_secs() {
 #[test]
 fn from_config_requires_the_token_from_env() {
     let empty = |_: &str| None::<String>;
-    let err = OnePasswordProvider::from_config(items_config(), None, &empty)
+    let err = OnePasswordProvider::from_config(&items_config(), None, &empty)
         .err()
         .unwrap();
     assert!(
@@ -116,13 +116,13 @@ fn from_config_requires_the_token_from_env() {
     );
 
     let blank = |_: &str| Some("  ".to_owned());
-    assert!(OnePasswordProvider::from_config(items_config(), None, &blank).is_err());
+    assert!(OnePasswordProvider::from_config(&items_config(), None, &blank).is_err());
 }
 
 #[test]
 fn from_config_builds_cli_and_connect() {
     let env = |name: &str| (name.starts_with("OP_")).then(|| "ops_token_value".to_owned());
-    let cli = OnePasswordProvider::from_config(items_config(), Some(120), &env).unwrap();
+    let cli = OnePasswordProvider::from_config(&items_config(), Some(120), &env).unwrap();
     assert_eq!(cli.describe(), "onepassword cli vault dynapps-prod");
     assert!(!cli.describe().contains("ops_token_value"));
     assert_eq!(cli.refresh_hint(), Some(Duration::from_secs(120)));
@@ -133,7 +133,7 @@ fn from_config_builds_cli_and_connect() {
         "vault": "v",
         "item": "platform",
     }));
-    let connect = OnePasswordProvider::from_config(connect, None, &env).unwrap();
+    let connect = OnePasswordProvider::from_config(&connect, None, &env).unwrap();
     assert_eq!(connect.describe(), "onepassword connect vault v");
 }
 

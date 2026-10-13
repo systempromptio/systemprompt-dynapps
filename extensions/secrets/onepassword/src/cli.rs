@@ -84,7 +84,7 @@ impl CliBackend {
             })?;
         let output = tokio::time::timeout(self.timeout, child.wait_with_output())
             .await
-            .map_err(|_| OnePasswordError::Timeout(self.timeout.as_secs()))?
+            .map_err(|_elapsed| OnePasswordError::Timeout(self.timeout.as_secs()))?
             .map_err(OnePasswordError::Wait)?;
         if !output.status.success() {
             return Err(OnePasswordError::cli(
@@ -128,7 +128,7 @@ impl Backend for CliBackend {
         let stdout = self
             .run(&["read", "--no-newline", &reference.to_string()])
             .await?;
-        let value = String::from_utf8(stdout).map_err(|_| {
+        let value = String::from_utf8(stdout).map_err(|_not_utf8| {
             OnePasswordError::InvalidResponse(format!("op read {reference}: not UTF-8"))
         })?;
         Ok(value.trim_end_matches(['\r', '\n']).to_owned())

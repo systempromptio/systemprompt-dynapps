@@ -23,7 +23,7 @@ pub struct Field {
     #[serde(default)]
     pub label: Option<String>,
     #[serde(rename = "type", default)]
-    pub field_type: String,
+    pub kind: String,
     #[serde(default)]
     pub value: Option<String>,
 }
@@ -31,7 +31,7 @@ pub struct Field {
 impl Field {
     #[must_use]
     pub fn is_readable(&self) -> bool {
-        self.field_type == CONCEALED || self.field_type == STRING
+        self.kind == CONCEALED || self.kind == STRING
     }
 
     #[must_use]
@@ -39,7 +39,7 @@ impl Field {
         Self {
             id: name.to_owned(),
             label: Some(name.to_owned()),
-            field_type: CONCEALED.to_owned(),
+            kind: CONCEALED.to_owned(),
             value: Some(value),
         }
     }

@@ -110,7 +110,7 @@ impl OnePasswordConfig {
         let backend = raw.backend.unwrap_or(BackendKind::Cli);
         let vault = non_empty("vault", raw.vault)?;
         let connect_url = match (backend, raw.connect_url) {
-            (BackendKind::Connect, Some(url)) => Some(validate_url(url)?),
+            (BackendKind::Connect, Some(url)) => Some(validate_url(&url)?),
             (BackendKind::Connect, None) => {
                 return Err(invalid("backend: connect requires connect_url"));
             },
@@ -192,7 +192,7 @@ fn non_empty(field: &str, value: String) -> Result<String, OnePasswordError> {
     Ok(value)
 }
 
-fn validate_url(url: String) -> Result<String, OnePasswordError> {
+fn validate_url(url: &str) -> Result<String, OnePasswordError> {
     if !(url.starts_with("https://") || url.starts_with("http://")) {
         return Err(invalid("connect_url must be an http:// or https:// URL"));
     }

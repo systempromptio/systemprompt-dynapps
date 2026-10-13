@@ -43,7 +43,7 @@ impl RetryPolicy {
     pub fn delays(&self) -> Vec<Duration> {
         (0..self.retries)
             .map(|attempt| {
-                let factor = 1_u32.checked_shl(attempt).unwrap_or(u32::MAX);
+                let factor = 1u32.checked_shl(attempt).unwrap_or(u32::MAX);
                 self.base.saturating_mul(factor).min(self.max)
             })
             .collect()

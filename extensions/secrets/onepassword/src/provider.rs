@@ -43,7 +43,7 @@ impl fmt::Debug for OnePasswordProvider {
 
 impl OnePasswordProvider {
     pub fn from_config(
-        config: OnePasswordConfig,
+        config: &OnePasswordConfig,
         refresh_secs: Option<u64>,
         env: &dyn Fn(&str) -> Option<String>,
     ) -> Result<Self, OnePasswordError> {
@@ -74,7 +74,7 @@ impl OnePasswordProvider {
         };
         Ok(Self::with_backend(
             backend,
-            &config,
+            config,
             refresh_secs.map(Duration::from_secs),
         ))
     }
@@ -173,11 +173,15 @@ impl DynSecretsProvider for OnePasswordProvider {
     }
 }
 
+#[expect(
+    clippy::needless_pass_by_value,
+    reason = "core's SecretsSourceFactory fn-pointer type hands EnvLookup by value"
+)]
 pub fn build(
     cfg: &ExternalSecretsConfig,
     env: EnvLookup,
 ) -> Result<SharedSecretsProvider, SecretsBootstrapError> {
     let config = OnePasswordConfig::from_external(cfg)?;
-    let provider = OnePasswordProvider::from_config(config, cfg.refresh_secs, &*env)?;
+    let provider = OnePasswordProvider::from_config(&config, cfg.refresh_secs, &*env)?;
     Ok(Box::new(provider))
 }
