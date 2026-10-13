@@ -14,17 +14,16 @@ use serde::Deserialize;
 use systemprompt::config::SecretsBootstrap;
 use systemprompt::sso::SsoError;
 
+use super::super::error::SsoProviderError;
+
 /// Where the OIDC client secret is read from at each code redemption.
 #[derive(Clone)]
 pub enum ClientSecretSource {
-    /// The named key in the secrets store, read afresh each time.
     Store(String),
-    /// A fixed value, for tests against a fake `IdP`.
     Fixed(String),
 }
 
 impl ClientSecretSource {
-    /// The secret as it stands now; `None` when absent or empty.
     #[must_use]
     pub fn current(&self) -> Option<String> {
         let secret = match self {
@@ -93,7 +92,7 @@ pub(super) async fn redeem_code(
         .body(body)
         .send()
         .await
-        .map_err(|e| SsoError::Unavailable(format!("token endpoint unreachable: {e}")))?;
+        .map_err(SsoProviderError::TokenEndpoint)?;
 
     let status = response.status();
     if status.is_server_error() {
@@ -114,7 +113,7 @@ pub(super) async fn redeem_code(
     response
         .json::<TokenResponse>()
         .await
-        .map_err(|e| SsoError::InvalidAssertion(format!("token response unparseable: {e}")))?
+        .map_err(SsoProviderError::TokenParse)?
         .id_token
         .ok_or_else(|| SsoError::InvalidAssertion("token response has no id_token".to_owned()))
 }

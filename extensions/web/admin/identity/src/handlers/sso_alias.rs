@@ -49,7 +49,6 @@ impl SsoDeps {
         self.driver.provider(id).is_some()
     }
 
-    /// Whether any enabled provider creates accounts on first sign-in.
     #[must_use]
     pub fn provisions(&self) -> bool {
         self.driver
@@ -60,18 +59,40 @@ impl SsoDeps {
     }
 }
 
+// Why: axum answers `Result<Response, E>` through `E: IntoResponse`, so each
+// way a sign-in path fails picks its own response here rather than at the
+// call site.
+#[derive(Debug)]
+pub(crate) enum SsoFlowError {
+    Refused(&'static str),
+    MetadataNotFound,
+    MetadataUnavailable,
+}
+
+impl IntoResponse for SsoFlowError {
+    fn into_response(self) -> Response {
+        match self {
+            Self::Refused(reason) => login_redirect(reason),
+            Self::MetadataNotFound => StatusCode::NOT_FOUND.into_response(),
+            Self::MetadataUnavailable => StatusCode::SERVICE_UNAVAILABLE.into_response(),
+        }
+    }
+}
+
+type SsoFlowResult = Result<Response, SsoFlowError>;
+
 #[derive(Debug, Deserialize)]
 pub(crate) struct StartParams {
     redirect: Option<String>,
 }
 
-async fn start(id: &'static str, deps: SsoDeps, params: Option<StartParams>) -> Response {
+async fn start(id: &'static str, deps: SsoDeps, params: Option<StartParams>) -> SsoFlowResult {
     let redirect = params.and_then(|p| p.redirect);
     match deps.driver.start(id, redirect.as_deref()).await {
-        Ok(outcome) => start_response(outcome),
+        Ok(outcome) => Ok(start_response(outcome)),
         Err(err) => {
             tracing::warn!(provider_id = id, error = %err, "SSO start failed");
-            login_redirect(err.reason_code())
+            Err(SsoFlowError::Refused(err.reason_code()))
         },
     }
 }
@@ -86,11 +107,11 @@ async fn finish(
     headers: &HeaderMap,
     binding: SsoReturnBinding,
     params: Vec<(String, String)>,
-) -> Response {
+) -> SsoFlowResult {
     // Why: core's driver sends a return for a provider it does not know to
     // `/`; ours belongs on the login page with the same reason.
     if !deps.provider_enabled(id) {
-        return login_redirect("unavailable");
+        return Err(SsoFlowError::Refused("unavailable"));
     }
     let analytics = SessionAnalyticsBuilder::new(headers).build();
     let ip = analytics
@@ -108,13 +129,13 @@ async fn finish(
             ip,
         )
         .await;
-    into_response(outcome)
+    Ok(into_response(outcome))
 }
 
 pub(crate) async fn saml_start(
     Extension(deps): Extension<SsoDeps>,
     params: Result<Query<StartParams>, QueryRejection>,
-) -> Response {
+) -> SsoFlowResult {
     start(entra_saml::ID, deps, params.ok().map(|Query(p)| p)).await
 }
 
@@ -122,7 +143,7 @@ pub(crate) async fn saml_acs(
     Extension(deps): Extension<SsoDeps>,
     headers: HeaderMap,
     form: Result<Form<Vec<(String, String)>>, FormRejection>,
-) -> Response {
+) -> SsoFlowResult {
     let params = form.map(|Form(p)| p).unwrap_or_default();
     finish(
         entra_saml::ID,
@@ -137,7 +158,7 @@ pub(crate) async fn saml_acs(
 pub(crate) async fn oidc_start(
     Extension(deps): Extension<SsoDeps>,
     params: Result<Query<StartParams>, QueryRejection>,
-) -> Response {
+) -> SsoFlowResult {
     start(entra_oidc::ID, deps, params.ok().map(|Query(p)| p)).await
 }
 
@@ -145,7 +166,7 @@ pub(crate) async fn oidc_callback(
     Extension(deps): Extension<SsoDeps>,
     headers: HeaderMap,
     params: Result<Query<Vec<(String, String)>>, QueryRejection>,
-) -> Response {
+) -> SsoFlowResult {
     let params = params.map(|Query(p)| p).unwrap_or_default();
     finish(
         entra_oidc::ID,
@@ -157,15 +178,13 @@ pub(crate) async fn oidc_callback(
     .await
 }
 
-/// `GET /saml/metadata` — our service-provider descriptor, which the Entra
-/// ID application's Identifier names.
-pub(crate) async fn saml_metadata(Extension(deps): Extension<SsoDeps>) -> Response {
+pub(crate) async fn saml_metadata(Extension(deps): Extension<SsoDeps>) -> SsoFlowResult {
     match deps.driver.metadata(entra_saml::ID).await {
-        None => StatusCode::NOT_FOUND.into_response(),
-        Some(Ok(doc)) => ([(header::CONTENT_TYPE, doc.content_type)], doc.body).into_response(),
+        None => Err(SsoFlowError::MetadataNotFound),
+        Some(Ok(doc)) => Ok(([(header::CONTENT_TYPE, doc.content_type)], doc.body).into_response()),
         Some(Err(err)) => {
             tracing::warn!(error = %err, "SSO metadata unavailable");
-            StatusCode::SERVICE_UNAVAILABLE.into_response()
+            Err(SsoFlowError::MetadataUnavailable)
         },
     }
 }

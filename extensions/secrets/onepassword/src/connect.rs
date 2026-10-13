@@ -57,7 +57,7 @@ impl ConnectBackend {
             .connect_timeout(timeout.min(CONNECT_TIMEOUT_CAP))
             .redirect(redirect::Policy::none())
             .build()
-            .map_err(|e| OnePasswordError::Http(e.to_string()))?;
+            .map_err(OnePasswordError::Http)?;
         Ok(Self {
             base_url: base_url.trim_end_matches('/').to_owned(),
             token,
@@ -87,8 +87,11 @@ impl ConnectBackend {
                     };
                     match classify_status(code) {
                         StatusClass::Success => {
-                            return response.json::<T>().await.map_err(|e| {
-                                OnePasswordError::InvalidResponse(format!("{path}: {e}"))
+                            return response.json::<T>().await.map_err(|source| {
+                                OnePasswordError::ResponseBody {
+                                    path: path.to_owned(),
+                                    source,
+                                }
                             });
                         },
                         StatusClass::Retryable => status,
@@ -96,8 +99,8 @@ impl ConnectBackend {
                     }
                 },
                 Err(e) if e.is_timeout() => OnePasswordError::Timeout(self.timeout.as_secs()),
-                Err(e) if e.is_connect() => OnePasswordError::Http(e.to_string()),
-                Err(e) => return Err(OnePasswordError::Http(e.to_string())),
+                Err(e) if e.is_connect() => OnePasswordError::Http(e),
+                Err(e) => return Err(OnePasswordError::Http(e)),
             };
             let Some(delay) = delays.get(attempt) else {
                 return Err(failure);

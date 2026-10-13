@@ -32,7 +32,7 @@ pub struct IdTokenSpec {
     pub preferred_username: Option<String>,
     pub name: String,
     pub groups: Vec<String>,
-    /// Emit `_claim_names`/`_claim_sources` in place of `groups`.
+    // Emit `_claim_names`/`_claim_sources` in place of `groups`.
     pub groups_overage: bool,
     pub nonce: String,
     pub aud: String,
@@ -116,8 +116,8 @@ impl FakeOidcIdp {
         Arc::clone(&self.inner.requests)
     }
 
-    /// A single-use code the token endpoint redeems for `spec`'s ID token,
-    /// provided the caller presents a verifier hashing to `code_challenge`.
+    // A single-use code the token endpoint redeems for `spec`'s ID token,
+    // provided the caller presents a verifier hashing to `code_challenge`.
     pub fn issue_code(&self, spec: IdTokenSpec, code_challenge: &str) -> String {
         let code = format!("code-{}", uuid::Uuid::new_v4().simple());
         self.inner
@@ -143,7 +143,7 @@ impl Drop for FakeOidcIdp {
     }
 }
 
-/// The PKCE `S256` challenge for `verifier`.
+// The PKCE `S256` challenge for `verifier`.
 pub fn pkce_challenge(verifier: &str) -> String {
     URL_SAFE_NO_PAD.encode(Sha256::digest(verifier.as_bytes()))
 }

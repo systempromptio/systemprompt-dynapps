@@ -25,7 +25,6 @@ pub fn sign_in_routes() -> Router<Arc<PgPool>> {
     dev_login_routes(routes)
 }
 
-/// `GET /saml/metadata`, mounted at the site root.
 pub fn saml_metadata_routes() -> Router {
     Router::new().route(
         crate::sso::entra_saml::METADATA_PATH,

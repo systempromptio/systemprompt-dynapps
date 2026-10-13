@@ -231,7 +231,7 @@ fn the_committed_entra_oidc_config_parses() {
         .unwrap_or_else(|e| panic!("{} does not deserialise: {e}", path.display()));
     if cfg.enabled {
         assert!(
-            !cfg.tenant_id.trim().is_empty() && !cfg.client_id.trim().is_empty(),
+            !cfg.entra_tenant_id.trim().is_empty() && !cfg.entra_client_id.trim().is_empty(),
             "{} is enabled without a tenant and client id",
             path.display()
         );

@@ -17,6 +17,7 @@ use systemprompt::sso::{ExternalIdentity, SsoError, SsoReturn, SsoStateContext};
 
 use super::claims::AssertionClaims;
 use super::provider::EntraSamlProvider;
+use crate::sso::error::SsoProviderError;
 
 fn assertion_error(e: saml::Error) -> SsoError {
     match e {
@@ -38,7 +39,7 @@ impl EntraSamlProvider {
             .ok_or_else(|| SsoError::InvalidAssertion("no SAMLResponse".to_owned()))?;
         let xml = STANDARD
             .decode(encoded.trim())
-            .map_err(|e| SsoError::InvalidAssertion(format!("SAMLResponse is not base64: {e}")))?;
+            .map_err(SsoProviderError::SamlBase64)?;
         let idp = self.metadata.descriptor().await?;
         let sp = self.service_provider()?;
 

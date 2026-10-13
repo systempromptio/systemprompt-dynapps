@@ -36,7 +36,7 @@ pub(crate) struct SsoApp {
     router: Router,
 }
 
-/// One response, reduced to what an SSO assertion reads.
+// One response, reduced to what an SSO assertion reads.
 #[derive(Debug, Clone)]
 pub(crate) struct Reply {
     pub status: StatusCode,
@@ -45,7 +45,7 @@ pub(crate) struct Reply {
 }
 
 impl Reply {
-    /// `name=value` of a cookie the response set, empty values excluded.
+    // `name=value` of a cookie the response set, empty values excluded.
     pub(crate) fn cookie(&self, name: &str) -> Option<String> {
         self.set_cookies.iter().find_map(|c| {
             let pair = c.split(';').next()?.trim();
@@ -54,7 +54,7 @@ impl Reply {
         })
     }
 
-    /// The `?sso=<reason>` a refusal redirects with.
+    // The `?sso=<reason>` a refusal redirects with.
     pub(crate) fn reason(&self) -> Option<&str> {
         let (_, query) = self.location.split_once("sso=")?;
         Some(query.split('&').next().unwrap_or(query))
@@ -186,12 +186,12 @@ impl SsoApp {
     }
 }
 
-/// A form value, percent-encoded for an `x-www-form-urlencoded` body.
+// A form value, percent-encoded for an `x-www-form-urlencoded` body.
 pub(crate) fn form_encode(value: &str) -> String {
     url::form_urlencoded::byte_serialize(value.as_bytes()).collect()
 }
 
-/// `(outcome, reason)` of every `sso_login_events` row, oldest first.
+// `(outcome, reason)` of every `sso_login_events` row, oldest first.
 pub(crate) async fn login_events(pool: &PgPool) -> Vec<(String, Option<String>)> {
     sqlx::query_as("SELECT outcome, reason FROM sso_login_events ORDER BY id")
         .fetch_all(pool)
@@ -217,7 +217,7 @@ pub(crate) async fn directory_groups(pool: &PgPool, user_id: &str) -> Vec<String
     .expect("read group_members")
 }
 
-/// A dashboard group that directory group `ad_group` maps onto.
+// A dashboard group that directory group `ad_group` maps onto.
 pub(crate) async fn map_directory_group(pool: &PgPool, group_id: &str, ad_group: &str) {
     sqlx::query("INSERT INTO groups (id, name) VALUES ($1, $1) ON CONFLICT (id) DO NOTHING")
         .bind(group_id)

@@ -59,7 +59,7 @@ impl TestIdpKeys {
         }
     }
 
-    /// The certificate body as metadata carries it: base64 DER, no armour.
+    // The certificate body as metadata carries it: base64 DER, no armour.
     pub fn certificate_base64(&self) -> String {
         self.certificate_pem
             .lines()

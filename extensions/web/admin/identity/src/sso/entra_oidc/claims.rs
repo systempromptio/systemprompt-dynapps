@@ -28,8 +28,8 @@ pub struct IdTokenClaims {
     pub name: Option<String>,
     #[serde(default)]
     pub groups: Option<Vec<String>>,
-    /// Present when the user is in more groups than fit in the token; names
-    /// the claims that must be fetched from Graph instead.
+    // Why: Entra ID sets `_claim_names` when the user is in more groups than fit
+    // in the token; those claims must then come from Graph.
     #[serde(default, rename = "_claim_names")]
     pub claim_names: Option<Map<String, Value>>,
     #[serde(default, rename = "_claim_sources")]

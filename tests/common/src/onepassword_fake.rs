@@ -102,7 +102,7 @@ impl FakeConnect {
         id
     }
 
-    /// Overwrite `label` on an item, adding the field when it is absent.
+    // Overwrite `label` on an item, adding the field when it is absent.
     pub fn set_field(&self, vault_id: &str, item_id: &str, label: &str, value: &str) {
         self.with_vault(vault_id, |v| {
             let item = v.items.get_mut(item_id).expect("unknown item id");
@@ -115,13 +115,13 @@ impl FakeConnect {
         });
     }
 
-    /// The next `n` requests answer `status` before any routing or auth.
+    // The next `n` requests answer `status` before any routing or auth.
     pub fn fail_next(&self, n: usize, status: StatusCode) {
         let mut queue = self.inner.failures.lock().expect("failures");
         queue.extend(std::iter::repeat_n(status, n));
     }
 
-    /// The next request answers 429; the one after it is served normally.
+    // The next request answers 429; the one after it is served normally.
     pub fn rate_limit_once(&self) {
         self.fail_next(1, StatusCode::TOO_MANY_REQUESTS);
     }
@@ -143,7 +143,7 @@ impl FakeConnect {
         f(vaults.get_mut(vault_id).expect("unknown vault id"))
     }
 
-    /// A snapshot of every vault, for [`crate::onepassword_fake_cli`].
+    // A snapshot of every vault, for [`crate::onepassword_fake_cli`].
     pub(crate) fn export(&self) -> Value {
         let out: Vec<Value> = self
             .inner
@@ -199,7 +199,7 @@ fn error(status: StatusCode, message: &str) -> Response {
     (status, body).into_response()
 }
 
-/// The value of a Connect `filter=<attr> eq "<value>"` query, if present.
+// The value of a Connect `filter=<attr> eq "<value>"` query, if present.
 fn filter(uri: &Uri, attr: &str) -> Option<String> {
     let query = uri.query()?;
     let raw = url::form_urlencoded::parse(query.as_bytes())

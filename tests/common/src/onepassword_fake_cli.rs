@@ -29,7 +29,7 @@ impl FakeOpCli {
             .is_ok_and(|o| o.status.success())
     }
 
-    /// Install `op` with an empty store that accepts only `token_expected`.
+    // Install `op` with an empty store that accepts only `token_expected`.
     pub fn install(token_expected: &str) -> Self {
         let dir = tempfile::tempdir().expect("temp dir");
         let bin_dir = dir.path().join("bin");
@@ -55,19 +55,18 @@ impl FakeOpCli {
         self.bin_dir.join("op")
     }
 
-    /// Mirror every vault and item of `connect` into the CLI's store.
+    // Mirror every vault and item of `connect` into the CLI's store.
     pub fn write_store(&self, connect: &FakeConnect) {
         self.write_vaults(connect.export()["vaults"].clone());
     }
 
-    /// Replace the vaults with raw store JSON (an array of vault objects).
+    // Replace the vaults with raw store JSON (an array of vault objects).
     pub fn write_vaults(&self, vaults: Value) {
         self.store.lock().expect("store")["vaults"] = vaults;
         self.flush();
     }
 
-    /// Every later invocation (bar `--version`) exits `exit_code` with
-    /// `stderr`.
+    // Every later invocation (bar `--version`) exits `exit_code` with `stderr`.
     pub fn set_fail(&self, exit_code: i32, stderr: &str) {
         self.store.lock().expect("store")["fail"] =
             json!({ "exit_code": exit_code, "stderr": stderr });
@@ -79,7 +78,7 @@ impl FakeOpCli {
         self.flush();
     }
 
-    /// `PATH` with the fake first, and `FAKE_OP_STORE`, for a child process.
+    // `PATH` with the fake first, and `FAKE_OP_STORE`, for a child process.
     pub fn env(&self) -> Vec<(String, String)> {
         let path = std::env::var("PATH").unwrap_or_default();
         vec![

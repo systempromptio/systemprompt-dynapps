@@ -14,8 +14,8 @@ use crate::sso_harness::saml::{self, DOMAIN};
 use crate::sso_harness::{SAML_ACS, SsoApp, federated_user, login_events};
 use crate::tempdb::TempDb;
 
-/// Runs one solicited flow under `cfg_edit`, spoils the response with
-/// `mutate`, and asserts the refusal `reason` and its audit row.
+// Runs one solicited flow under `cfg_edit`, spoils the response with
+// `mutate`, and asserts the refusal `reason` and its audit row.
 async fn refused_by_policy(
     cfg_edit: impl FnOnce(&mut EntraSamlConfig),
     mutate: impl FnOnce(&mut SamlResponseSpec),

@@ -12,13 +12,13 @@ use super::{
 
 pub(crate) const CLIENT_ID: &str = "11111111-2222-4333-8444-555555555555";
 
-/// Points discovery at `idp` and admits loopback JWKS; the policy matches
-/// [`saml::config`]'s.
+// Points discovery at `idp` and admits loopback JWKS; the policy matches
+// [`saml::config`]'s.
 pub(crate) fn config(idp: &FakeOidcIdp) -> EntraOidcConfig {
     EntraOidcConfig {
         enabled: true,
-        tenant_id: OIDC_TENANT.to_owned(),
-        client_id: CLIENT_ID.to_owned(),
+        entra_tenant_id: OIDC_TENANT.to_owned(),
+        entra_client_id: CLIENT_ID.to_owned(),
         client_secret_secret: OIDC_SECRET_KEY.to_owned(),
         redirect_uri: Some(format!("{EXTERNAL_URL}{OIDC_CALLBACK}")),
         discovery_url: Some(idp.discovery_url()),
@@ -34,7 +34,7 @@ pub(crate) fn config(idp: &FakeOidcIdp) -> EntraOidcConfig {
     }
 }
 
-/// What a real `start` sent the browser to the authorize endpoint with.
+// What a real `start` sent the browser to the authorize endpoint with.
 #[derive(Debug, Clone)]
 pub(crate) struct Started {
     pub state: String,
@@ -73,7 +73,7 @@ pub(crate) async fn start_default(app: &SsoApp) -> Started {
     start(app, OIDC_START).await
 }
 
-/// A valid ID token for `email` answering `started`, in [`saml::USERS_GROUP`].
+// A valid ID token for `email` answering `started`, in [`saml::USERS_GROUP`].
 pub(crate) fn token_for(started: &Started, email: &str, sub: &str) -> IdTokenSpec {
     IdTokenSpec {
         sub: sub.to_owned(),
@@ -97,8 +97,8 @@ pub(crate) fn callback_uri(code: &str, state: &str) -> String {
     )
 }
 
-/// Mints a code for `spec` at `idp` and returns it to the callback with
-/// `started`'s state and binder.
+// Mints a code for `spec` at `idp` and returns it to the callback with
+// `started`'s state and binder.
 pub(crate) async fn call_back(
     app: &SsoApp,
     idp: &FakeOidcIdp,

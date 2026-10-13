@@ -15,6 +15,7 @@ use systemprompt::sso::SsoError;
 use tokio::sync::RwLock;
 
 use super::config::EntraSamlConfig;
+use crate::sso::error::SsoProviderError;
 use crate::sso::refresh::RefreshingDoc;
 
 // Why: Microsoft Entra ID publishes a new signing certificate in its
@@ -87,36 +88,40 @@ impl IdpMetadata {
         }
         let idp = Arc::new(
             IdpDescriptor::from_metadata_xml(xml.as_bytes())
-                .map_err(|e| SsoError::Unavailable(format!("IdP metadata unusable: {e}")))?,
+                .map_err(SsoProviderError::IdpMetadata)?,
         );
         *self.parsed.write().await = Some((xml, Arc::clone(&idp)));
         Ok(idp)
     }
 }
 
-/// The `entityID` of a metadata document, for the issuer federated
-/// identities are keyed by.
 pub(super) fn entity_id_of(xml: &str) -> Option<String> {
     IdpDescriptor::from_metadata_xml(xml.as_bytes())
         .ok()
         .map(|idp| idp.entity_id)
 }
 
-async fn download(url: String) -> Result<String, String> {
+async fn download(url: String) -> Result<String, SsoProviderError> {
     let client = reqwest::Client::builder()
         .timeout(FETCH_TIMEOUT)
         .build()
-        .map_err(|e| e.to_string())?;
-    let xml = client
-        .get(&url)
-        .send()
-        .await
-        .and_then(reqwest::Response::error_for_status)
-        .map_err(|e| format!("IdP federation metadata fetch from {url} failed: {e}"))?
-        .text()
-        .await
-        .map_err(|e| e.to_string())?;
-    IdpDescriptor::from_metadata_xml(xml.as_bytes())
-        .map_err(|e| format!("IdP federation metadata from {url} does not parse: {e}"))?;
+        .map_err(SsoProviderError::MetadataClient)?;
+    let fetched = async {
+        client
+            .get(&url)
+            .send()
+            .await?
+            .error_for_status()?
+            .text()
+            .await
+    }
+    .await;
+    let xml = match fetched {
+        Ok(xml) => xml,
+        Err(source) => return Err(SsoProviderError::MetadataFetch { url, source }),
+    };
+    if let Err(source) = IdpDescriptor::from_metadata_xml(xml.as_bytes()) {
+        return Err(SsoProviderError::MetadataParse { url, source });
+    }
     Ok(xml)
 }

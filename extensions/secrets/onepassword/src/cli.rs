@@ -78,11 +78,14 @@ impl CliBackend {
             .stderr(Stdio::piped())
             .kill_on_drop(true)
             .spawn()
-            .map_err(|e| OnePasswordError::Spawn(format!("{}: {e}", self.op_bin)))?;
+            .map_err(|source| OnePasswordError::Spawn {
+                bin: self.op_bin.clone(),
+                source,
+            })?;
         let output = tokio::time::timeout(self.timeout, child.wait_with_output())
             .await
             .map_err(|_| OnePasswordError::Timeout(self.timeout.as_secs()))?
-            .map_err(|e| OnePasswordError::Spawn(e.to_string()))?;
+            .map_err(OnePasswordError::Wait)?;
         if !output.status.success() {
             return Err(OnePasswordError::cli(
                 output.status.to_string(),
@@ -111,9 +114,11 @@ impl Backend for CliBackend {
                     "item", "get", title, "--vault", vault, "--format", "json", "--reveal",
                 ])
                 .await?;
-            let item: Item = serde_json::from_slice(&stdout).map_err(|e| {
-                OnePasswordError::InvalidResponse(format!("op item get '{title}': {e}"))
-            })?;
+            let item: Item =
+                serde_json::from_slice(&stdout).map_err(|source| OnePasswordError::ItemJson {
+                    item: title.clone(),
+                    source,
+                })?;
             items.push(item);
         }
         Ok(items)

@@ -23,6 +23,7 @@ use systemprompt::sso::{
 use super::ID;
 use super::config::{ACS_PATH, EntraSamlConfig, METADATA_PATH, START_PATH};
 use super::metadata::IdpMetadata;
+use crate::sso::error::SsoProviderError;
 
 #[derive(Debug)]
 pub struct EntraSamlProvider {
@@ -63,7 +64,7 @@ impl EntraSamlProvider {
             outbound_signature_algorithm: SignatureAlgorithm::RsaSha256,
             outbound_digest_algorithm: DigestAlgorithm::Sha256,
         })
-        .map_err(|e| SsoError::Unavailable(format!("service-provider configuration rejected: {e}")))
+        .map_err(|source| SsoProviderError::SpConfig(source).into())
     }
 }
 
@@ -135,7 +136,7 @@ impl SsoProvider for EntraSamlProvider {
                     response_binding: None,
                 },
             )
-            .map_err(|e| SsoError::Unavailable(format!("AuthnRequest could not be built: {e}")))?;
+            .map_err(SsoProviderError::AuthnRequest)?;
         let Dispatch::Redirect(target) = started.dispatch else {
             return Err(SsoError::Unavailable(
                 "SSO start produced a POST dispatch for a redirect binding".to_owned(),
@@ -166,7 +167,7 @@ impl SsoProvider for EntraSamlProvider {
             self.service_provider()
                 .and_then(|sp| {
                     sp.metadata_xml(false)
-                        .map_err(|e| SsoError::Unavailable(format!("SP metadata: {e}")))
+                        .map_err(|source| SsoProviderError::SpMetadata(source).into())
                 })
                 .map(|body| SsoMetadataDoc {
                     content_type: "application/samlmetadata+xml",

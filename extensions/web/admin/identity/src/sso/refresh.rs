@@ -14,7 +14,9 @@ use std::pin::Pin;
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
-type FetchFuture<T> = Pin<Box<dyn Future<Output = Result<T, String>> + Send>>;
+use super::error::SsoProviderError;
+
+type FetchFuture<T> = Pin<Box<dyn Future<Output = Result<T, SsoProviderError>> + Send>>;
 type Fetcher<T> = Box<dyn Fn() -> FetchFuture<T> + Send + Sync>;
 
 struct Inner<T> {
@@ -42,7 +44,7 @@ impl<T: Clone + Send + Sync + 'static> RefreshingDoc<T> {
     pub fn new<F, Fut>(name: &'static str, fetch: F, ttl: Duration, retry: Duration) -> Self
     where
         F: Fn() -> Fut + Send + Sync + 'static,
-        Fut: Future<Output = Result<T, String>> + Send + 'static,
+        Fut: Future<Output = Result<T, SsoProviderError>> + Send + 'static,
     {
         let fetch: Fetcher<T> = Box::new(move || Box::pin(fetch()));
         Self {
@@ -56,7 +58,6 @@ impl<T: Clone + Send + Sync + 'static> RefreshingDoc<T> {
         }
     }
 
-    /// The last document fetched successfully, if any.
     #[must_use]
     pub fn get(&self) -> Option<Arc<T>> {
         self.inner
@@ -65,9 +66,9 @@ impl<T: Clone + Send + Sync + 'static> RefreshingDoc<T> {
             .map_or(None, |guard| guard.as_ref().map(Arc::clone))
     }
 
-    /// Fetches now. A failure keeps the last good document and answers it;
-    /// with none, the error.
-    pub async fn refresh(&self) -> Result<Arc<T>, String> {
+    // Why: an Entra ID discovery or metadata outage must not end sign-in, so a
+    // failed fetch keeps answering the last good document.
+    pub async fn refresh(&self) -> Result<Arc<T>, SsoProviderError> {
         refresh_inner(&self.inner).await
     }
 
@@ -95,7 +96,7 @@ impl<T: Clone + Send + Sync + 'static> RefreshingDoc<T> {
     }
 }
 
-async fn refresh_inner<T>(inner: &Inner<T>) -> Result<Arc<T>, String> {
+async fn refresh_inner<T>(inner: &Inner<T>) -> Result<Arc<T>, SsoProviderError> {
     match (inner.fetch)().await {
         Ok(doc) => {
             let doc = Arc::new(doc);

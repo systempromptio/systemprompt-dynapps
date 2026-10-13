@@ -13,8 +13,8 @@ use crate::sso_harness::saml::{self, DOMAIN};
 use crate::sso_harness::{SAML_ACS, SsoApp, federated_user, login_events};
 use crate::tempdb::TempDb;
 
-/// Starts a flow, lets `mutate` spoil the response, posts it, and asserts an
-/// `invalid_assertion` refusal with a matching audit row and no link.
+// Starts a flow, lets `mutate` spoil the response, posts it, and asserts an
+// `invalid_assertion` refusal with a matching audit row and no link.
 async fn refused_on_the_wire(mutate: impl FnOnce(&mut SamlResponseSpec)) {
     let Some(db) = TempDb::create().await else {
         return;

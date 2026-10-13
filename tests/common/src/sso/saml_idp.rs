@@ -41,19 +41,19 @@ pub struct SamlIdpFixture {
 pub enum Tamper {
     #[default]
     None,
-    /// Alter the signed assertion after signing, so the digest no longer
-    /// matches.
+    // Alter the signed assertion after signing, so the digest no longer
+    // matches.
     BreakSignature,
-    /// Sign with [`TestIdpKeys::other`], a key the metadata does not carry.
+    // Sign with [`TestIdpKeys::other`], a key the metadata does not carry.
     SignWithOtherKey,
 }
 
 #[derive(Debug, Clone)]
 pub struct SamlResponseSpec {
     pub in_response_to: Option<String>,
-    /// The SP's ACS URL; becomes `Destination` and the bearer `Recipient`.
+    // The SP's ACS URL; becomes `Destination` and the bearer `Recipient`.
     pub destination: String,
-    /// The SP's entity id; becomes the `AudienceRestriction`.
+    // The SP's entity id; becomes the `AudienceRestriction`.
     pub audience: String,
     pub name_id: String,
     pub email: Option<String>,
@@ -69,7 +69,7 @@ pub struct SamlResponseSpec {
 }
 
 impl SamlResponseSpec {
-    /// A valid, five-minute response for `name_id` with Entra's claim names.
+    // A valid, five-minute response for `name_id` with Entra's claim names.
     pub fn new(
         destination: &str,
         audience: &str,
@@ -106,7 +106,7 @@ impl Default for SamlIdpFixture {
 }
 
 impl SamlIdpFixture {
-    /// Federation metadata naming [`TestIdpKeys::get`] as the signing key.
+    // Federation metadata naming [`TestIdpKeys::get`] as the signing key.
     pub fn idp_metadata_xml(&self) -> String {
         format!(
             r#"<?xml version="1.0" encoding="UTF-8"?>
@@ -127,10 +127,10 @@ impl SamlIdpFixture {
         )
     }
 
-    /// The base64 `SAMLResponse` form value answering `spec.in_response_to`.
-    ///
-    /// # Panics
-    /// When `spec.in_response_to` is `None`; see the module head.
+    // The base64 `SAMLResponse` form value answering `spec.in_response_to`.
+    //
+    // # Panics
+    // When `spec.in_response_to` is `None`; see the module head.
     pub fn issue_response(&self, spec: &SamlResponseSpec) -> String {
         let request_id = spec
             .in_response_to
@@ -147,7 +147,7 @@ impl SamlIdpFixture {
         }
     }
 
-    /// Always an error: the crate's `IdP` role cannot omit `InResponseTo`.
+    // Always an error: the crate's `IdP` role cannot omit `InResponseTo`.
     pub fn issue_unsolicited_response(_spec: &SamlResponseSpec) -> Result<String, String> {
         Err("saml 0.0.1-alpha.2 IdP role cannot issue an unsolicited response".to_owned())
     }

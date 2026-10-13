@@ -35,17 +35,38 @@ pub enum OnePasswordError {
         stderr_excerpt: String,
     },
 
-    #[error("could not run op: {0}")]
-    Spawn(String),
+    #[error("could not run {bin}: {source}")]
+    Spawn {
+        bin: String,
+        #[source]
+        source: std::io::Error,
+    },
+
+    #[error("op did not finish: {0}")]
+    Wait(#[source] std::io::Error),
 
     #[error("connect request failed: {0}")]
-    Http(String),
+    Http(#[source] reqwest::Error),
 
     #[error("connect answered HTTP {code} for {path}")]
     Status { code: u16, path: String },
 
     #[error("unreadable response: {0}")]
     InvalidResponse(String),
+
+    #[error("unreadable response from op item get '{item}': {source}")]
+    ItemJson {
+        item: String,
+        #[source]
+        source: serde_json::Error,
+    },
+
+    #[error("unreadable response from {path}: {source}")]
+    ResponseBody {
+        path: String,
+        #[source]
+        source: reqwest::Error,
+    },
 
     #[error("timed out after {0} s")]
     Timeout(u64),
@@ -68,7 +89,11 @@ impl OnePasswordError {
     pub const fn allows_reference_fallback(&self) -> bool {
         matches!(
             self,
-            Self::Cli { .. } | Self::ItemNotFound { .. } | Self::InvalidResponse(_)
+            Self::Cli { .. }
+                | Self::ItemNotFound { .. }
+                | Self::InvalidResponse(_)
+                | Self::ItemJson { .. }
+                | Self::ResponseBody { .. }
         )
     }
 }

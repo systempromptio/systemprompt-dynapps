@@ -65,7 +65,6 @@ impl RoleResolver for DynappsRoleResolver {
     }
 }
 
-/// `first` then whatever of `second` it lacks, each role once.
 #[must_use]
 pub fn union(first: &[String], second: &[String]) -> Vec<String> {
     let mut out: Vec<String> = Vec::with_capacity(first.len() + second.len());

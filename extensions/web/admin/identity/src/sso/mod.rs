@@ -5,6 +5,7 @@
 //! - [`events`] — the activity, membership and revocation side effects.
 //! - [`roles`] — the role resolver: directory roles joined with manual grants,
 //!   and revocation when a sign-in drops admin.
+//! - [`error`] — the providers' typed failures, mapped onto core's reasons.
 //! - [`refresh`] — the background-refreshed IdP documents both protocols use.
 //!
 //! Each provider's factory reads a config the aggregator installs before the
@@ -12,6 +13,7 @@
 
 pub mod entra_oidc;
 pub mod entra_saml;
+pub mod error;
 pub mod events;
 pub mod refresh;
 pub mod roles;

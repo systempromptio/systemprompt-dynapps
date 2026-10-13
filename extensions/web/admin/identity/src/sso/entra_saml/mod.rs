@@ -26,7 +26,6 @@ pub use provider::EntraSamlProvider;
 
 pub const ID: &str = "entra-saml";
 
-/// `None` — SSO off — when no config was installed or it is not usable.
 pub fn factory(_ctx: &SsoHookContext) -> Option<Arc<dyn SsoProvider>> {
     let cfg = config::installed_config().filter(|cfg| cfg.is_usable())?;
     let issuer = cfg

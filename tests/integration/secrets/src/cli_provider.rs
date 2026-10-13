@@ -45,6 +45,7 @@ fn installed() -> Option<FakeOpCli> {
 #[tokio::test]
 async fn cli_reads_the_item_whole() {
     let Some(cli) = installed() else {
+        // skip-ok: no python3 for the fake op CLI; installed() panics under CI
         return;
     };
     let connect = FakeConnect::start(TOKEN).await;
@@ -66,6 +67,7 @@ async fn cli_reads_the_item_whole() {
 #[tokio::test]
 async fn cli_falls_back_to_op_read_per_reference() {
     let Some(cli) = installed() else {
+        // skip-ok: no python3 for the fake op CLI; installed() panics under CI
         return;
     };
     cli.write_vaults(json!([{
@@ -87,6 +89,7 @@ async fn cli_falls_back_to_op_read_per_reference() {
 #[tokio::test]
 async fn cli_surfaces_a_non_zero_exit() {
     let Some(cli) = installed() else {
+        // skip-ok: no python3 for the fake op CLI; installed() panics under CI
         return;
     };
     cli.set_fail(6, "[ERROR] simulated outage");
@@ -110,6 +113,7 @@ async fn cli_surfaces_a_non_zero_exit() {
 #[tokio::test]
 async fn cli_with_the_wrong_token_is_refused() {
     let Some(cli) = installed() else {
+        // skip-ok: no python3 for the fake op CLI; installed() panics under CI
         return;
     };
     let other = FakeOpCli::install("a-different-token");

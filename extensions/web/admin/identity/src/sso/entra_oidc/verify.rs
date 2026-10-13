@@ -6,11 +6,14 @@
 
 use chrono::{DateTime, Utc};
 use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode, decode_header};
+// JSON: core's `ExternalIdentity::raw_claims` keeps the id_token's claims
+// as issued, so they are decoded untyped before `IdTokenClaims` reads them.
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 use systemprompt::security::keys::{JwksClient, JwksClientError};
 use systemprompt::sso::{ExternalIdentity, SsoError};
 
+use super::super::error::SsoProviderError;
 use super::claims::IdTokenClaims;
 use super::config::EntraOidcConfig;
 use super::discovery::OidcDiscovery;
@@ -22,8 +25,7 @@ pub(super) async fn validate_id_token(
     jwks: &JwksClient,
     expected_nonce: &str,
 ) -> Result<ExternalIdentity, SsoError> {
-    let header = decode_header(id_token)
-        .map_err(|e| SsoError::InvalidAssertion(format!("id_token header: {e}")))?;
+    let header = decode_header(id_token).map_err(SsoProviderError::IdTokenHeader)?;
     if header.alg != Algorithm::RS256 {
         return Err(SsoError::InvalidAssertion(
             "id_token must be RS256-signed".to_owned(),
@@ -47,15 +49,15 @@ pub(super) async fn validate_id_token(
     let configured_issuer = cfg.issuer();
     let mut validation = Validation::new(Algorithm::RS256);
     validation.set_issuer(&[discovery.issuer.as_str(), configured_issuer.as_str()]);
-    validation.set_audience(&[cfg.client_id.as_str()]);
+    validation.set_audience(&[cfg.entra_client_id.as_str()]);
     validation.set_required_spec_claims(&["exp", "iat", "iss", "aud"]);
     validation.leeway = cfg.clock_skew_seconds;
 
     let raw = decode::<Value>(id_token, &key, &validation)
-        .map_err(|e| SsoError::InvalidAssertion(format!("id_token rejected: {e}")))?
+        .map_err(SsoProviderError::IdTokenRejected)?
         .claims;
-    let claims: IdTokenClaims = serde_json::from_value(raw.clone())
-        .map_err(|e| SsoError::InvalidAssertion(format!("id_token claims: {e}")))?;
+    let claims: IdTokenClaims =
+        serde_json::from_value(raw.clone()).map_err(SsoProviderError::IdTokenClaims)?;
 
     let mut identity = identity_from_claims(&claims, cfg, expected_nonce, raw)?;
     if identity.assertion_id.is_none() {
@@ -64,8 +66,6 @@ pub(super) async fn validate_id_token(
     Ok(identity)
 }
 
-/// Turns validated claims into an [`ExternalIdentity`]. `assertion_id` is the
-/// `jti` when present; the caller falls back to a digest of the raw token.
 pub fn identity_from_claims(
     claims: &IdTokenClaims,
     cfg: &EntraOidcConfig,
@@ -75,7 +75,7 @@ pub fn identity_from_claims(
     if expected_nonce.is_empty() || claims.nonce.as_deref() != Some(expected_nonce) {
         return Err(SsoError::InvalidAssertion("nonce".to_owned()));
     }
-    if claims.tid.as_deref() != Some(cfg.tenant_id.as_str()) {
+    if claims.tid.as_deref() != Some(cfg.entra_tenant_id.as_str()) {
         return Err(SsoError::InvalidAssertion("tenant".to_owned()));
     }
     if claims.sub.trim().is_empty() {

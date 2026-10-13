@@ -47,16 +47,14 @@ fn default_jwks_allowed_hosts() -> Vec<String> {
 pub struct EntraOidcConfig {
     #[serde(default)]
     pub enabled: bool,
-    #[serde(default)]
-    pub tenant_id: String,
-    #[serde(default)]
-    pub client_id: String,
-    /// Key in the secrets store holding the client secret; never the secret.
+    #[serde(default, rename = "tenant_id")]
+    pub entra_tenant_id: String,
+    #[serde(default, rename = "client_id")]
+    pub entra_client_id: String,
     #[serde(default = "default_client_secret_secret")]
     pub client_secret_secret: String,
     #[serde(default = "default_redirect_path")]
     pub redirect_path: String,
-    /// Filled by the loader from `api_external_url` + `redirect_path`.
     #[serde(skip)]
     pub redirect_uri: Option<String>,
     #[serde(default = "default_scopes")]
@@ -65,8 +63,8 @@ pub struct EntraOidcConfig {
     pub groups_claim: String,
     #[serde(default = "default_clock_skew_seconds")]
     pub clock_skew_seconds: u64,
-    /// Overrides the tenant's well-known discovery document (tests, sovereign
-    /// clouds). When set, the discovery document's `issuer` is authoritative.
+    // Why: tests and sovereign clouds override Entra ID's well-known discovery
+    // URL; the discovery document's `issuer` is then authoritative.
     #[serde(default)]
     pub discovery_url: Option<String>,
     #[serde(default = "default_jwks_allowed_hosts")]
@@ -79,8 +77,8 @@ impl Default for EntraOidcConfig {
     fn default() -> Self {
         Self {
             enabled: false,
-            tenant_id: String::new(),
-            client_id: String::new(),
+            entra_tenant_id: String::new(),
+            entra_client_id: String::new(),
             client_secret_secret: default_client_secret_secret(),
             redirect_path: default_redirect_path(),
             redirect_uri: None,
@@ -95,10 +93,9 @@ impl Default for EntraOidcConfig {
 }
 
 impl EntraOidcConfig {
-    /// The v2.0 issuer Entra ID stamps on this tenant's id_tokens.
     #[must_use]
     pub fn issuer(&self) -> String {
-        format!("{ENTRA_AUTHORITY}/{}/v2.0", self.tenant_id)
+        format!("{ENTRA_AUTHORITY}/{}/v2.0", self.entra_tenant_id)
     }
 
     #[must_use]
@@ -111,8 +108,8 @@ impl EntraOidcConfig {
     #[must_use]
     pub fn is_usable(&self) -> bool {
         self.enabled
-            && !self.tenant_id.trim().is_empty()
-            && !self.client_id.trim().is_empty()
+            && !self.entra_tenant_id.trim().is_empty()
+            && !self.entra_client_id.trim().is_empty()
             && self
                 .redirect_uri
                 .as_deref()
@@ -120,9 +117,8 @@ impl EntraOidcConfig {
     }
 }
 
-/// Stores the loaded config for [`super::factory`]. The first call wins; a
-/// second is ignored with a warning, since the driver has already discovered
-/// providers by then.
+// Why: core's SSO driver discovers providers once, so the first install wins
+// and a later one is only warned about.
 pub fn install_config(cfg: Arc<EntraOidcConfig>) {
     if CONFIG.set(cfg).is_err() {
         tracing::warn!("Entra OIDC config installed twice; keeping the first");

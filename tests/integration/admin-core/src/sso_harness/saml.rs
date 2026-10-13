@@ -18,8 +18,8 @@ pub(crate) fn entity_id() -> String {
     format!("{EXTERNAL_URL}/saml/metadata")
 }
 
-/// Trusts [`SamlIdpFixture::default`]; one allowed domain, auto-provisioning
-/// on, and one directory group granting `user`.
+// Trusts [`SamlIdpFixture::default`]; one allowed domain, auto-provisioning
+// on, and one directory group granting `user`.
 pub(crate) fn config(idp: &SamlIdpFixture) -> EntraSamlConfig {
     let mut cfg = EntraSamlConfig::disabled();
     cfg.enabled = true;
@@ -38,12 +38,12 @@ pub(crate) fn config(idp: &SamlIdpFixture) -> EntraSamlConfig {
     cfg
 }
 
-/// What a real `start` handed the browser.
+// What a real `start` handed the browser.
 #[derive(Debug, Clone)]
 pub(crate) struct Started {
     pub request_id: String,
     pub relay_state: String,
-    /// `sp_sso_bind=<value>`, ready for a `Cookie` header.
+    // `sp_sso_bind=<value>`, ready for a `Cookie` header.
     pub binder: String,
     pub redirect: Reply,
 }
@@ -70,7 +70,7 @@ pub(crate) async fn start_default(app: &SsoApp) -> Started {
     start(app, SAML_START).await
 }
 
-/// A valid response to `started` for `email`, in group [`USERS_GROUP`].
+// A valid response to `started` for `email`, in group [`USERS_GROUP`].
 pub(crate) fn response_for(started: &Started, email: &str) -> SamlResponseSpec {
     let mut spec =
         SamlResponseSpec::new(&acs_url(), &entity_id(), Some(&started.request_id), email);
@@ -87,8 +87,8 @@ pub(crate) fn acs_body(saml_response: &str, relay_state: Option<&str>) -> String
     body
 }
 
-/// Signs `spec` and posts it to the ACS with `started`'s `RelayState` and
-/// binder.
+// Signs `spec` and posts it to the ACS with `started`'s `RelayState` and
+// binder.
 pub(crate) async fn post_back(
     app: &SsoApp,
     idp: &SamlIdpFixture,

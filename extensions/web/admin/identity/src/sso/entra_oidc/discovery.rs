@@ -12,6 +12,7 @@ use std::time::Duration;
 use serde::Deserialize;
 use systemprompt::sso::SsoError;
 
+use super::super::error::SsoProviderError;
 use super::super::refresh::RefreshingDoc;
 
 const DISCOVERY_TTL: Duration = Duration::from_secs(6 * 60 * 60);
@@ -34,20 +35,26 @@ pub(super) fn http_client() -> Result<reqwest::Client, SsoError> {
         .map_err(SsoError::internal)
 }
 
-async fn fetch_discovery(http: reqwest::Client, url: String) -> Result<OidcDiscovery, String> {
+async fn fetch_discovery(
+    http: reqwest::Client,
+    url: String,
+) -> Result<OidcDiscovery, SsoProviderError> {
     let response = http
         .get(&url)
         .send()
         .await
-        .map_err(|e| format!("discovery request to {url} failed: {e}"))?;
+        .map_err(|source| SsoProviderError::Discovery {
+            url: url.clone(),
+            source,
+        })?;
     let status = response.status();
     if !status.is_success() {
-        return Err(format!("discovery {url} answered {status}"));
+        return Err(SsoProviderError::DiscoveryStatus { url, status });
     }
     response
         .json::<OidcDiscovery>()
         .await
-        .map_err(|e| format!("discovery {url} unparseable: {e}"))
+        .map_err(|source| SsoProviderError::DiscoveryParse { url, source })
 }
 
 #[derive(Debug)]
@@ -74,6 +81,6 @@ impl DiscoverySource {
         if let Some(doc) = self.doc.get() {
             return Ok(doc);
         }
-        self.doc.refresh().await.map_err(SsoError::Unavailable)
+        Ok(self.doc.refresh().await?)
     }
 }

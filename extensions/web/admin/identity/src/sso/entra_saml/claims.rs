@@ -85,8 +85,8 @@ impl AssertionClaims {
             .any(|(name, _)| name == GROUPS_OVERAGE_ATTRIBUTE)
     }
 
-    /// Entra ID is the corporate directory, so an address it asserts is
-    /// verified by construction; the policy's domain list and group map gate.
+    // Why: Entra ID is the corporate directory, so an address it asserts is
+    // verified by construction; the policy's domain list and group map gate.
     #[must_use]
     pub fn to_external_identity(
         &self,
@@ -95,6 +95,7 @@ impl AssertionClaims {
         assertion_expires_at: Option<DateTime<Utc>>,
     ) -> ExternalIdentity {
         let email = self.login_email(cfg);
+        // JSON: core's `ExternalIdentity::raw_claims` is an untyped claim map.
         let raw_claims = self
             .attributes
             .iter()

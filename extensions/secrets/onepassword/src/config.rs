@@ -90,6 +90,8 @@ impl OnePasswordConfig {
         Self::from_map(&cfg.config)
     }
 
+    // JSON: core hands an external secrets provider its profile block as an
+    // opaque map; it is typed here, at the boundary, through `RawConfig`.
     pub fn from_map(
         map: &serde_json::Map<String, serde_json::Value>,
     ) -> Result<Self, OnePasswordError> {

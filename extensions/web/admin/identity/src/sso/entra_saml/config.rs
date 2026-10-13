@@ -118,8 +118,8 @@ impl EntraSamlConfig {
 
 static CONFIG: OnceLock<Arc<EntraSamlConfig>> = OnceLock::new();
 
-/// Stores the loaded config for [`super::factory`]. Must run before the
-/// driver discovers providers; the first call wins.
+// Why: core's SSO driver discovers providers once; this must run before it,
+// and the first call wins.
 pub fn install_config(cfg: Arc<EntraSamlConfig>) {
     if CONFIG.set(cfg).is_err() {
         tracing::warn!("Entra SAML config installed twice; keeping the first");

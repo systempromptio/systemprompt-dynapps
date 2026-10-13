@@ -39,6 +39,8 @@ pub(crate) struct SecretsCardView {
     pub reload_url: &'static str,
 }
 
+// JSON: core's secrets document is listed by its serialized key names, so
+// the card shows every key core knows without mirroring its struct here.
 fn key_names() -> Vec<String> {
     let Ok(secrets) = SecretsBootstrap::get() else {
         return Vec::new();

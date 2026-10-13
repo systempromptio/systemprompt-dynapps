@@ -15,8 +15,8 @@ const NONCE: &str = "n-0S6_WzA2Mj";
 fn config() -> EntraOidcConfig {
     EntraOidcConfig {
         enabled: true,
-        tenant_id: TENANT.to_owned(),
-        client_id: "client-123".to_owned(),
+        entra_tenant_id: TENANT.to_owned(),
+        entra_client_id: "client-123".to_owned(),
         redirect_uri: Some("https://example.test/admin/auth/entra/callback".to_owned()),
         ..EntraOidcConfig::default()
     }

@@ -24,8 +24,8 @@ pub(crate) fn snapshot(log: &RequestLog) -> Vec<RecordedRequest> {
     log.lock().expect("request log").clone()
 }
 
-/// A bound loopback listener and its `http://127.0.0.1:{port}` base URL, so
-/// a fake can bake its own address into what it serves before it starts.
+// A bound loopback listener and its `http://127.0.0.1:{port}` base URL, so
+// a fake can bake its own address into what it serves before it starts.
 pub(crate) async fn bind() -> (tokio::net::TcpListener, String) {
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
         .await

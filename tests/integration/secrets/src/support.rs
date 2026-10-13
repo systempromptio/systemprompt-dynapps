@@ -17,7 +17,7 @@ pub(crate) fn config(block: &Value) -> OnePasswordConfig {
     OnePasswordConfig::from_map(map).expect("valid onepassword block")
 }
 
-/// A provider whose token lookup answers [`TOKEN`] for `token_env` alone.
+// A provider whose token lookup answers [`TOKEN`] for `token_env` alone.
 pub(crate) fn provider(block: &Value) -> Result<OnePasswordProvider, OnePasswordError> {
     let cfg = config(block);
     let token_env = cfg.token_env.clone();
@@ -40,8 +40,8 @@ pub(crate) fn connect_block(url: &str) -> Value {
     })
 }
 
-/// The fields core requires of every secrets document, so a fetched
-/// document carrying only the mapped keys can be parsed and read back.
+// The fields core requires of every secrets document, so a fetched
+// document carrying only the mapped keys can be parsed and read back.
 pub(crate) fn baseline_fields() -> serde_json::Map<String, Value> {
     let Value::Object(map) = json!({
         "database_url": "postgres://unused:unused@localhost:5432/postgres",
@@ -55,7 +55,7 @@ pub(crate) fn baseline_fields() -> serde_json::Map<String, Value> {
     map
 }
 
-/// `key` of a fetched document, read through core's own parse.
+// `key` of a fetched document, read through core's own parse.
 pub(crate) fn value_of(doc: &SecretsDocument, key: &str) -> Option<String> {
     let mut doc = doc.clone();
     let present = doc.key_names();

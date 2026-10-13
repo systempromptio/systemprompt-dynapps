@@ -19,11 +19,11 @@ const FIXTURE_PROFILE: &str = include_str!("../../../../contract/admin/fixtures/
 // `secret_crypto::load_master_key` refuses anything but exactly 32 bytes.
 const MASTER_KEY_HEX: &str = "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff";
 
-/// The tenant every OIDC test's fake `IdP` serves, so the client secret in
-/// the fixture secrets file matches the fake's.
+// The tenant every OIDC test's fake `IdP` serves, so the client secret in
+// the fixture secrets file matches the fake's.
 pub(crate) const OIDC_TENANT: &str = "00000000-0000-4000-8000-0000000000aa";
 pub(crate) const OIDC_SECRET_KEY: &str = "entra_oidc_client_secret";
-/// A secrets key whose value the fake token endpoint refuses.
+// A secrets key whose value the fake token endpoint refuses.
 pub(crate) const OIDC_WRONG_SECRET_KEY: &str = "entra_oidc_wrong_secret";
 pub(crate) const EXTERNAL_URL: &str = "http://localhost:8099";
 

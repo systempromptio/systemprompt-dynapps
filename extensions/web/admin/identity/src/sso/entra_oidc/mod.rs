@@ -88,7 +88,6 @@ pub fn build_authorize_url(req: &AuthorizeRequest<'_>) -> String {
     format!("{}{separator}{query}", req.authorization_endpoint)
 }
 
-/// The S256 PKCE challenge of `verifier`.
 #[must_use]
 pub fn pkce_challenge(verifier: &str) -> String {
     URL_SAFE_NO_PAD.encode(Sha256::digest(verifier.as_bytes()))
@@ -111,10 +110,6 @@ pub struct EntraOidcProvider {
 }
 
 impl EntraOidcProvider {
-    /// Builds the provider and starts the discovery refresh. A test against a
-    /// fake IdP sets `cfg.discovery_url` and lists `127.0.0.1` in
-    /// `cfg.jwks_allowed_hosts` (plain `http` is accepted for loopback only),
-    /// and passes [`ClientSecretSource::Fixed`].
     pub fn new(
         cfg: Arc<EntraOidcConfig>,
         client_secret: ClientSecretSource,
@@ -139,9 +134,8 @@ impl EntraOidcProvider {
     }
 }
 
-/// The registration hook: `None` unless the config is installed, usable and
-/// its client secret resolves now. Only presence is checked here; the value is
-/// read again at every code redemption.
+// Why: core calls this hook once at discovery; only the client secret's
+// presence is checked, its value is re-read at every code redemption.
 pub fn factory(_ctx: &SsoHookContext) -> Option<Arc<dyn SsoProvider>> {
     let cfg = config::installed_config()?;
     if !cfg.is_usable() {
@@ -210,7 +204,7 @@ impl SsoProvider for EntraOidcProvider {
         let verifier = random_b64url::<64>();
         let url = build_authorize_url(&AuthorizeRequest {
             authorization_endpoint: &discovery.authorization_endpoint,
-            client_id: &self.cfg.client_id,
+            client_id: &self.cfg.entra_client_id,
             redirect_uri: self.redirect_uri(input.callback_url),
             scopes: &self.cfg.scopes,
             state: &state,
@@ -260,7 +254,7 @@ impl SsoProvider for EntraOidcProvider {
                 token_endpoint: &discovery.token_endpoint,
                 code,
                 redirect_uri,
-                client_id: &self.cfg.client_id,
+                client_id: &self.cfg.entra_client_id,
                 client_secret: &client_secret,
                 code_verifier: &verifier,
             },

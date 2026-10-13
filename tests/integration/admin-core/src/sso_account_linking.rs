@@ -19,8 +19,8 @@ use crate::tempdb::TempDb;
 
 const MANUAL_ROLE: &str = "admin";
 
-/// An existing local account with a verified `@sso.test` email, and an app
-/// whose policy never provisions and links by email when `link_by_email`.
+// An existing local account with a verified `@sso.test` email, and an app
+// whose policy never provisions and links by email when `link_by_email`.
 async fn existing_account(db: &TempDb, link_by_email: bool) -> (SsoApp, SamlIdpFixture, String) {
     let idp = SamlIdpFixture::default();
     let mut cfg = saml::config(&idp);
