@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE agent_farms\nSET synced_commit_sha = $2, synced_at = NOW(), synced_by = $3, sync_error = NULL,\n    updated_at = NOW()\nWHERE id = $1\n",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "40cfcaad2cd4d1169bb6049996d3c6a6e1dbc26f46ac7b7dd43b4243cca87a5e"
+}

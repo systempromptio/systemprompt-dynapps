@@ -79,6 +79,9 @@ def main() -> None:
         lines[ref_at] = f"{indent}reference: {reference}"
         action = "re-pinned"
     else:
+        empty_at = next((i for i in block if lines[i].rstrip() == "  sources: []"), None)
+        if empty_at is not None:
+            lines[empty_at] = "  sources:"
         sources_at = next((i for i in block if lines[i].rstrip() == "  sources:"), None)
         if sources_at is None:
             insert_at = services_at + 1

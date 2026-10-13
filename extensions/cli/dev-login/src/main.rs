@@ -12,6 +12,7 @@ use clap::Parser;
 use systemprompt::config::{ProfileBootstrap, SecretsBootstrap, try_init_config};
 use systemprompt::logging::CliService;
 use systemprompt::system::AppContext;
+use systemprompt_web_admin_governance as _;
 use systemprompt_web_admin_identity::repositories::dev_login::{
     DEV_LOGIN_CODE_TTL_SECONDS, find_active_user_id_by_login, insert_dev_login_code,
 };
@@ -33,8 +34,24 @@ struct Cli {
     json: bool,
 }
 
+// Why: reqwest is built without a bundled crypto provider (core enables
+// `rustls-no-provider`), so this binary, which does not enter through
+// `systemprompt::cli::run`, installs ring before the first client is built.
+fn install_tls_crypto_provider() {
+    if rustls::crypto::CryptoProvider::get_default().is_some() {
+        return;
+    }
+    if rustls::crypto::ring::default_provider()
+        .install_default()
+        .is_err()
+    {
+        tracing::debug!("rustls crypto provider was installed concurrently");
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
+    install_tls_crypto_provider();
     let cli = Cli::parse();
 
     let profile = ProfileBootstrap::init()

@@ -20,15 +20,18 @@ use tower_http::normalize_path::NormalizePathLayer;
 use super::{login, marketplace_context, middleware, redirects};
 use systemprompt::database::DbPool;
 use systemprompt::prelude::PgPool;
+use systemprompt::users::UserRepository;
 use systemprompt_web_admin_analytics::routes::{
     activity_ssr, analysis_ssr, export_ssr, observability_ssr, overview,
 };
 use systemprompt_web_admin_catalog::routes::ssr as catalog_ssr;
 use systemprompt_web_admin_core::templates::AdminTemplateEngine;
+use systemprompt_web_admin_farm::routes::{farm_fragments, farm_ssr};
 use systemprompt_web_admin_governance::routes::ssr_governance;
 use systemprompt_web_admin_identity::AdfsDeps;
 use systemprompt_web_admin_identity::routes::{account_ssr, people_ssr, public as sign_in};
 use systemprompt_web_admin_platform::routes::{platform_ssr, ssr_bridge};
+use systemprompt_web_admin_platform::service_accounts::ServiceAccounts;
 
 pub fn admin_ssr_router(
     db: &DbPool,
@@ -42,12 +45,14 @@ pub fn admin_ssr_router(
         .merge(ai_activity_routes())
         .merge(analysis_routes())
         .merge(governance_routes())
+        .merge(farm_routes())
         .merge(platform_routes())
         .merge(platform_ssr::data_routes().with_state(db.write_pool()))
         .merge(account_routes())
         .merge(api_routes())
         .merge(redirects::legacy_routes())
         .layer(Extension(engine.clone()))
+        .layer(Extension(ServiceAccounts::new(UserRepository::new(db))))
         .layer(Extension(managed))
         .layer(Extension(sso_deps.clone()))
         .layer(axum_middleware::from_fn_with_state(
@@ -96,6 +101,10 @@ fn analysis_routes() -> Router<Arc<PgPool>> {
     catalog_ssr::analysis_routes().merge(analysis_ssr::routes())
 }
 
+fn farm_routes() -> Router<Arc<PgPool>> {
+    farm_ssr::routes().merge(farm_fragments::routes())
+}
+
 fn governance_routes() -> Router<Arc<PgPool>> {
     ssr_governance::routes().merge(overview::attention_routes())
 }
@@ -103,6 +112,7 @@ fn governance_routes() -> Router<Arc<PgPool>> {
 fn people_routes() -> Router<Arc<PgPool>> {
     people_ssr::directory_routes()
         .merge(platform_ssr::device_routes())
+        .merge(platform_ssr::service_account_routes())
         .merge(people_ssr::access_control_routes())
 }
 

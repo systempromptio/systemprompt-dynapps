@@ -5,6 +5,7 @@ members = [
     "extensions/web/shared/admin-core",
     "extensions/web/admin/analytics",
     "extensions/web/admin/catalog",
+    "extensions/web/admin/farm",
     "extensions/web/admin/governance",
     "extensions/web/admin/identity",
     "extensions/web/admin/platform",
@@ -45,9 +46,9 @@ documentation = "https://systemprompt.io/documentation"
 # ============================================
 # CORE FACADE (single dependency for all systemprompt-core)
 # ============================================
-systemprompt = { version = "0.65.0", default-features = false, features = ["core", "database", "config"] }
-systemprompt-security = { version = "0.65.0" }
-systemprompt-extension = { version = "0.65.0" }
+systemprompt = { version = "0.66.0", default-features = false, features = ["core", "database", "config"] }
+systemprompt-security = { version = "0.66.0" }
+systemprompt-extension = { version = "0.66.0" }
 
 # ============================================
 # LOCAL EXTENSIONS
@@ -57,6 +58,7 @@ systemprompt-web-shared = { path = "extensions/web/shared" }
 systemprompt-web-admin-core = { path = "extensions/web/shared/admin-core" }
 systemprompt-web-admin-analytics = { path = "extensions/web/admin/analytics" }
 systemprompt-web-admin-catalog = { path = "extensions/web/admin/catalog" }
+systemprompt-web-admin-farm = { path = "extensions/web/admin/farm" }
 systemprompt-web-admin-governance = { path = "extensions/web/admin/governance" }
 systemprompt-web-admin-identity = { path = "extensions/web/admin/identity" }
 systemprompt-web-admin-platform = { path = "extensions/web/admin/platform" }
@@ -72,6 +74,7 @@ anyhow = "1.0"
 clap = { version = "4.6", features = ["derive"] }
 tracing = "0.1"
 async-trait = "0.1"
+tokio-util = "0.7"
 
 # Database
 sqlx = { version = "0.9", features = ["runtime-tokio", "tls-rustls-ring-webpki", "macros", "sqlite", "postgres", "migrate", "chrono", "rust_decimal", "json"] }
@@ -85,13 +88,14 @@ serde_json = { version = "1.0", features = ["preserve_order"] }
 jsonschema = { version = "=0.56.0", default-features = false }
 chrono = { version = "0.4", features = ["serde"] }
 chrono-tz = "0.10"
-uuid = { version = "1.18", features = ["v4", "serde"] }
+uuid = { version = "1.28", features = ["v4", "serde"] }
 thiserror = "2.0"
 shell-words = "1.1"
 
 # HTTP/API
 axum = "0.8"
 reqwest = { version = "0.13", default-features = false, features = ["json", "stream", "rustls"] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "logging", "tls12"] }
 tower = { version = "0.5", features = ["util"] }
 tower-http = { version = "0.7", features = ["cors", "trace", "fs", "normalize-path"] }
 
@@ -121,7 +125,7 @@ handlebars = "6"
 # Archive
 
 # MCP Protocol
-rmcp = { version = "=3.3.0", features = ["server", "client", "transport-io", "transport-streamable-http-server", "transport-streamable-http-server-session", "transport-streamable-http-client", "transport-streamable-http-client-reqwest", "macros", "auth"] }
+rmcp = { version = "=3.5.1", features = ["server", "client", "transport-io", "transport-streamable-http-server", "transport-streamable-http-server-session", "transport-streamable-http-client", "transport-streamable-http-client-reqwest", "macros", "auth"] }
 
 # The tests/ workspace deliberately relaxes a handful of these (unwrap/expect/
 # panic and the doc lints) in its own [workspace.lints.clippy] block — see
@@ -264,7 +268,7 @@ workspace = true
 # Local development and `next` deploys use the persistent sibling core checkout
 # directly; `just core-guard` requires it clean at bridge/CORE_REF. Keep version
 # requirements and this block aligned in both workspaces; `main` comments it out.
-# INACTIVE: core 0.65.0 is published; `main` builds against the registry. Uncomment on `next` when building against the sibling core checkout.
+# INACTIVE on `main`: builds against published core crates (bridge/CORE_REF names the tag).
 # [patch.crates-io]
 # systemprompt = { path = "../systemprompt-core/systemprompt" }
 # systemprompt-models = { path = "../systemprompt-core/crates/shared/models" }

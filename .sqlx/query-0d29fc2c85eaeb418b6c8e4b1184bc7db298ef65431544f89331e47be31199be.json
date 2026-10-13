@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE agent_farm_eval_runs\nSET status = $2, mean_score = $3, cost_microdollars = $4, finished_at = NOW()\nWHERE id = $1\n",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Float8",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "0d29fc2c85eaeb418b6c8e4b1184bc7db298ef65431544f89331e47be31199be"
+}

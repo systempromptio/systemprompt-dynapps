@@ -13,6 +13,9 @@
 //! - [`connector_oauth`], [`identity_token`], [`salesforce_orgs`] — the
 //!   hosted-MCP OAuth broker, the identity tokens minted for MCP servers, and
 //!   the Salesforce org registry.
+//! - [`machine_credentials`], [`service_accounts`] — the non-interactive
+//!   accounts workflow write-backs act as, and the provider credential each
+//!   holds.
 //! - [`test_support`] — the pure helpers the test workspace exercises.
 //!
 //! The connector accounts register as core's connection snapshot source and
@@ -29,7 +32,9 @@ pub(crate) mod services;
 pub use handlers::salesforce_auth::{SalesforceConfig, SalesforceDeps, SalesforceError};
 pub use routes::public::{bridge_identity_router, connector_api_router, salesforce_api_router};
 pub use services::salesforce_orgs::salesforce_orgs_boot_check;
-pub use services::{connector_oauth, identity_token, salesforce_orgs};
+pub use services::{
+    connector_oauth, identity_token, machine_credentials, salesforce_orgs, service_accounts,
+};
 
 pub mod test_support {
     pub use crate::handlers::ssr::ssr_connectors_cards::{

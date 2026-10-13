@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE agent_farm_eval_results\nSET status = $2, assertions = $3, judge_score = $4, judge_rationale = $5, updated_at = NOW()\nWHERE id = $1\n",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Jsonb",
+        "Float8",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "9b9d750ea6ed88d52b8dab8fb208f069c3be840764bbb4a25765d5bac3e676e2"
+}

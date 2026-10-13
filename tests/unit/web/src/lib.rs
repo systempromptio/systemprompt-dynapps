@@ -95,6 +95,8 @@ mod mcp_tool_name;
 mod release_version_substitution;
 #[cfg(test)]
 mod role;
+#[cfg(test)]
+mod service_accounts_pages;
 
 #[cfg(test)]
 mod conversation_sort;
@@ -377,3 +379,34 @@ mod data_console;
 
 #[cfg(test)]
 mod route_catalog_plane_ownership;
+
+#[cfg(test)]
+mod farm_agent_host;
+#[cfg(test)]
+mod farm_definitions;
+#[cfg(test)]
+mod farm_host_kind;
+
+#[cfg(test)]
+mod farm_run_as;
+
+#[cfg(test)]
+mod farm_assertions;
+
+#[cfg(test)]
+mod farm_curl_snippet;
+#[cfg(test)]
+mod farm_people_rows;
+#[cfg(test)]
+mod farm_status_view;
+
+#[cfg(test)]
+mod farm_sync_card;
+
+#[cfg(test)]
+mod farm_eval_matrix;
+
+#[cfg(test)]
+mod farm_attribution;
+#[cfg(test)]
+mod farm_run_events_view;

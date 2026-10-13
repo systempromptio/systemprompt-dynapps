@@ -1,0 +1,38 @@
+{{#> layout page_title=title page_id=page}}
+    {{#*inline "content"}}
+    {{> components/breadcrumbs crumbs=breadcrumbs}}
+
+    {{#> components/page-header title=title subtitle=subtitle}}
+        {{#*inline "header_meta"}}
+        <span class="sp-live" data-live-status hidden>
+            <span class="sp-live__dot" aria-hidden="true"></span>
+            <span class="sp-live__text" data-live-text aria-hidden="true">Live</span>
+            <span class="sp-u-sr-only" role="status" aria-live="polite" data-live-announce></span>
+            <button type="button" class="sp-btn sp-btn--xs sp-btn--ghost sp-live__toggle" data-live-toggle aria-pressed="false">Pause</button>
+        </span>
+        {{/inline}}
+        {{#*inline "header_actions"}}
+        <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/farm/evals">Evals</a>
+        <a class="sp-btn sp-btn--sm sp-btn--primary" href="/admin/farm/runs">All runs</a>
+        {{/inline}}
+    {{/components/page-header}}
+
+    <div class="sp-farm-overview" data-farm-live-list="{{live_url}}">
+        {{> farm/activity-live activity}}
+
+        <section class="sp-farm-overview__farms" aria-label="Farms">
+            {{> components/section title="Farms" count=farm_count note="Each farm is a Git marketplace whose agents run headlessly on this instance."}}
+            {{#if has_farms}}
+            <div class="sp-farm-overview__grid">
+                {{#each farms}}{{> farm/farm-card this}}{{/each}}
+            </div>
+            {{else}}
+            {{> components/empty-state heading="No farms synced yet" message="Declare a farm in agent-farms.yaml and sync it to see its agents here."}}
+            {{/if}}
+        </section>
+    </div>
+    {{/inline}}
+    {{#*inline "scripts"}}
+    <script data-cfasync="false" type="module" src="/js/pages/admin-farm-live-list.js?v={{css_version}}"></script>
+    {{/inline}}
+{{/layout}}

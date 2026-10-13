@@ -1,0 +1,36 @@
+{{!--
+  Launch dialog for one agent. A plain form: without script, `open` (from
+  `?launch=1` or a refused submission) renders it in place and Cancel is a link
+  back to the page. Usage: {{> farm/launch-dialog launch}}
+--}}
+<dialog class="sp-dialog sp-farm-launch" data-dialog="farm-launch" aria-labelledby="farm-launch-title"{{#if open}} open{{/if}}>
+  <form class="sp-dialog-form" method="post" action="{{action_url}}">
+    <h3 id="farm-launch-title">Launch a run</h3>
+    {{#if error}}{{> components/notice tone="err" title="Not launched" message=error}}{{/if}}
+    <input type="hidden" name="triggered_via" value="dashboard">
+    <label>Prompt
+      <textarea name="prompt" rows="8" maxlength="{{prompt_max}}" required data-field="farm-launch-prompt">{{prompt}}</textarea>
+    </label>
+    <p class="sp-farm-launch__count" aria-live="polite"><span data-field="farm-launch-count">{{prompt_len}}</span> / {{prompt_max}}</p>
+    <div class="sp-farm-launch__row">
+      <label>Model
+        <select name="model">{{#each models}}<option value="{{value}}"{{#if selected}} selected{{/if}}>{{label}}</option>{{/each}}</select>
+      </label>
+      <label>Fixture
+        <select name="fixture">{{#each fixtures}}<option value="{{value}}"{{#if selected}} selected{{/if}}>{{label}}</option>{{/each}}</select>
+      </label>
+    </div>
+    <div class="sp-farm-launch__row">
+      <label>Max turns
+        <input type="number" name="max_turns" min="{{turns_min}}" max="{{turns_max}}" value="{{max_turns}}" required>
+      </label>
+      <label>Timeout (seconds)
+        <input type="number" name="timeout_seconds" min="{{timeout_min}}" max="{{timeout_max}}" value="{{timeout_seconds}}" required>
+      </label>
+    </div>
+    <menu>
+      <a class="sp-btn sp-btn--outline" href="{{close_url}}" data-action="farm-launch-close">Cancel</a>
+      <button type="submit" class="sp-btn sp-btn--primary">Launch</button>
+    </menu>
+  </form>
+</dialog>

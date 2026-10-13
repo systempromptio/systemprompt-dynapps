@@ -1,0 +1,106 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT COUNT(*)::bigint AS \"total!\",\n       COUNT(*) FILTER (WHERE status IN ('preparing', 'running'))::bigint AS \"running!\",\n       COUNT(*) FILTER (WHERE status = 'queued')::bigint AS \"queued!\",\n       COUNT(*) FILTER (WHERE status = 'succeeded')::bigint AS \"succeeded!\",\n       COUNT(*) FILTER (WHERE status = 'failed')::bigint AS \"failed!\",\n       COUNT(*) FILTER (WHERE status = 'timed_out')::bigint AS \"timed_out!\",\n       COUNT(*) FILTER (WHERE status = 'cancelled')::bigint AS \"cancelled!\",\n       COALESCE(SUM(cost_microdollars), 0)::bigint AS \"cost_microdollars!\",\n       (percentile_cont(0.5) WITHIN GROUP (\n           ORDER BY EXTRACT(EPOCH FROM (finished_at - started_at)) * 1000))::float8\n           AS \"p50_duration_ms?\",\n       (percentile_cont(0.95) WITHIN GROUP (\n           ORDER BY EXTRACT(EPOCH FROM (finished_at - started_at)) * 1000))::float8\n           AS \"p95_duration_ms?\",\n       COALESCE(SUM(tool_call_count), 0)::bigint AS \"tool_calls!\",\n       COALESCE(SUM(gateway_request_count), 0)::bigint AS \"gateway_requests!\"\nFROM agent_farm_runs\nWHERE ($1::text IS NULL OR farm_id = $1)\n  AND ($2::text IS NULL OR agent_id = $2)\n  AND ($3::text IS NULL OR user_id = $3)\n  AND ($4::text IS NULL OR status = $4)\n  AND ($5::text IS NULL OR triggered_via = $5)\n  AND ($6::timestamptz IS NULL OR created_at >= $6)\n  AND ($7::timestamptz IS NULL OR created_at < $7)\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "total!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "running!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "queued!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "succeeded!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "failed!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "timed_out!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 6,
+        "name": "cancelled!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 7,
+        "name": "cost_microdollars!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 8,
+        "name": "p50_duration_ms?",
+        "type_info": "Float8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 9,
+        "name": "p95_duration_ms?",
+        "type_info": "Float8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 10,
+        "name": "tool_calls!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 11,
+        "name": "gateway_requests!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Timestamptz",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "3679246d9fe0a661f940461a3ef55f8795fe6dbac80142205a418cafd22cedea"
+}

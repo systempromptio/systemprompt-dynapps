@@ -166,6 +166,10 @@ pub(super) fn demo_help_user_pages(page: &str) -> Option<(&'static str, &'static
             "<strong>User Detail</strong> is the per-user admin view &mdash; profile, roles, project, session history, tool usage, governance violations, cost attribution, and activity timeline. The single place to investigate what any individual has been doing on the platform.",
             "users",
         )),
+        "service-accounts" => Some((
+            "<strong>Service accounts</strong> are the non-interactive identities a workflow definition runs as when it writes back to GitHub, Salesforce or Atlassian. Each holds at most one machine credential per provider &mdash; a GitHub App installation, Salesforce client credentials or an Atlassian API token &mdash; sealed at rest and never shown again. The broker issues a token from it only to a workflow write-back or farm caller, so no person and no interactive session can borrow it.",
+            "users",
+        )),
         "sessions" => Some((
             "<strong>Sessions</strong> lists every interactive run on the platform &mdash; who drove it, which group and project it is attributed to, how long it lasted, and what it cost. Open one to see its contexts, traces, and requests side by side.",
             "users",
@@ -195,6 +199,44 @@ pub(super) fn demo_help_misc_pages(page: &str) -> Option<(&'static str, &'static
         "demo-register" => Some((
             "<strong>Demo Registration</strong> is the lightweight sign-up flow for the demo environment. It provisions a temporary workspace with pre-seeded plugins, agents, and sample telemetry so you can evaluate the full governance pipeline end-to-end without any setup overhead.",
             "getting-started",
+        )),
+        _ => None,
+    }
+}
+
+pub(super) fn demo_help_farm_pages(page: &str) -> Option<(&'static str, &'static str)> {
+    match page {
+        "farms" => Some((
+            "<strong>Agent farms</strong> are agents authored in an external Git marketplace and synced into this instance. Each farm card shows its source commit, when it last synced, and what is running now. Every run is a headless Claude Code process attributed to the person who launched it.",
+            "agents",
+        )),
+        "farm-detail" => Some((
+            "<strong>Farm</strong> shows one farm's sync state against its Git source, the agents it ships, and their recent runs and eval results.",
+            "agents",
+        )),
+        "farm-agent" => Some((
+            "<strong>Farm agent</strong> is one agent's definition: its entry prompt, allowed tools and fixture. Launch a run from here, or copy the remote execution command to start one with a personal access token.",
+            "agents",
+        )),
+        "farm-runs" => Some((
+            "<strong>Farm runs</strong> lists every headless run across all farms, filterable by farm, agent, person, status and trigger. Live runs update in place.",
+            "events",
+        )),
+        "farm-run-detail" => Some((
+            "<strong>Farm run</strong> is one run's full record: the event timeline, the transcript, the gateway requests it made and what they cost, and the files it changed.",
+            "events",
+        )),
+        "farm-evals" => Some((
+            "<strong>Farm evals</strong> scores each agent against its eval suite: assertions on the files and tools a run used, plus an optional judged rubric, as a case-by-agent matrix.",
+            "agents",
+        )),
+        "farm-eval-run" => Some((
+            "<strong>Eval run</strong> shows every case of one eval run with its assertions, judge score and rationale, linked to the farm run that produced it.",
+            "agents",
+        )),
+        "farm-people" => Some((
+            "<strong>Farm runs by person</strong> ranks the people who launch farm runs by volume, success rate and cost, with the agent each uses most.",
+            "users",
         )),
         _ => None,
     }

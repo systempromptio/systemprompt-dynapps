@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE agent_farm_runs\nSET status = $2,\n    error_class = $3,\n    cost_microdollars = $4,\n    event_count = $5,\n    tool_call_count = $6,\n    gateway_request_count = $7,\n    context_id = COALESCE($8, context_id),\n    attempt = $9,\n    finished_at = NOW(),\n    updated_at = NOW()\nWHERE id = $1 AND status IN ('queued', 'preparing', 'running')\n",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Int8",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Text",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "ab96e513f41afe816ada5e7919119570cdd32d663f79e51f2980e604eb06c175"
+}

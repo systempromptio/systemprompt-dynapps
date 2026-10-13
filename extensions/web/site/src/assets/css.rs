@@ -34,7 +34,6 @@ fn core_css(p: &Path) -> Vec<AssetDefinition> {
 fn homepage_css(p: &Path) -> Vec<AssetDefinition> {
     vec![
         css!(p, "homepage-hero.css"),
-        css!(p, "homepage-showreel.css"),
         css!(p, "homepage-getting-started.css"),
     ]
 }

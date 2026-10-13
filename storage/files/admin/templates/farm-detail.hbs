@@ -1,0 +1,151 @@
+{{#> layout page_title=title page_id=page}}
+    {{#*inline "content"}}
+    {{> components/breadcrumbs crumbs=breadcrumbs}}
+
+    {{#> components/page-header title=title subtitle=subtitle}}
+        {{#*inline "header_meta"}}
+        <span>Marketplace <a class="sp-link" href="{{marketplace_url}}">{{marketplace_id}}</a></span>
+        <span>Owner {{#if owner_url}}<a class="sp-link" href="{{owner_url}}">{{owner}}</a>{{else}}unowned{{/if}}</span>
+        {{/inline}}
+        {{#*inline "header_actions"}}
+        <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/farm/runs?farm_id={{farm_id}}">All runs</a>
+        {{/inline}}
+    {{/components/page-header}}
+
+    <div class="sp-farm-detail" data-farm-id="{{farm_id}}">
+        {{> farm/sync-card sync}}
+
+        {{> components/tabs tabs=tabs nav_label="Farm views"}}
+
+        {{#if (eq tab "agents")}}
+        {{#if agents}}
+        {{#> components/table caption="Agents in this farm"}}
+            <thead><tr>
+                <th scope="col">Agent</th>
+                <th scope="col">Description</th>
+                <th scope="col">Model</th>
+                <th scope="col">Tools</th>
+                <th scope="col">Skills</th>
+                <th scope="col">Synced</th>
+            </tr></thead>
+            <tbody>
+                {{#each agents}}
+                <tr class="sp-table__row">
+                    <td><a class="sp-link" href="{{url}}">{{name}}</a></td>
+                    <td>{{description}}</td>
+                    <td class="sp-table__cell--mono">{{model}}</td>
+                    <td class="sp-table__cell--num">{{tool_count}}</td>
+                    <td>{{skills}}</td>
+                    <td class="sp-table__cell--mono">{{synced_sha_short}}{{#if is_stale}} {{> components/badge tone="warn" text="Stale"}}{{/if}}</td>
+                </tr>
+                {{/each}}
+            </tbody>
+        {{/components/table}}
+        {{else}}
+        {{> components/empty-state heading="No agents synced" message="Sync the farm to project its agent files here."}}
+        {{/if}}
+        {{/if}}
+
+        {{#if (eq tab "runs")}}
+        {{#if runs}}
+        {{#> components/table caption="Recent runs in this farm"}}
+            <thead><tr>
+                <th scope="col">Started</th>
+                <th scope="col">Run</th>
+                <th scope="col">Farm › agent</th>
+                <th scope="col">User</th>
+                <th scope="col">Trigger</th>
+                <th scope="col">Status</th>
+                <th scope="col">Tool calls</th>
+                <th scope="col">Events</th>
+                <th scope="col">Cost</th>
+                <th scope="col">Duration</th>
+            </tr></thead>
+            <tbody>{{#each runs}}{{> farm/run-row this}}{{/each}}</tbody>
+        {{/components/table}}
+        {{else}}
+        {{> components/empty-state heading="No runs yet" message="Launch one of this farm's agents and its run appears here."}}
+        {{/if}}
+        {{/if}}
+
+        {{#if (eq tab "evals")}}
+        {{> components/section title="Eval suites" count=suite_count}}
+        {{#if suites}}
+        {{#> components/table caption="Eval suites in this farm"}}
+            <thead><tr>
+                <th scope="col">Suite</th>
+                <th scope="col">Agent</th>
+                <th scope="col">Cases</th>
+                <th scope="col">Source</th>
+                <th scope="col">Synced</th>
+            </tr></thead>
+            <tbody>
+                {{#each suites}}
+                <tr class="sp-table__row">
+                    <td class="sp-table__cell--mono">{{id}}</td>
+                    <td><a class="sp-link" href="{{agent_url}}">{{agent_id}}</a></td>
+                    <td class="sp-table__cell--num">{{case_count}}</td>
+                    <td class="sp-table__cell--mono">{{source_path}}</td>
+                    <td class="sp-table__cell--mono">{{synced_sha_short}}</td>
+                </tr>
+                {{/each}}
+            </tbody>
+        {{/components/table}}
+        {{else}}
+        {{> components/empty-state compact=true heading="No eval suites" message="Add an eval file beside an agent and sync the farm."}}
+        {{/if}}
+
+        {{> components/section title="Recent eval runs" count=eval_run_count}}
+        {{#if eval_runs}}
+        {{#> components/table caption="Recent eval runs in this farm"}}
+            <thead><tr>
+                <th scope="col">Started</th>
+                <th scope="col">Eval run</th>
+                <th scope="col">Agent</th>
+                <th scope="col">Status</th>
+                <th scope="col">Passed</th>
+                <th scope="col">Failed</th>
+                <th scope="col">Errored</th>
+                <th scope="col">Score</th>
+                <th scope="col">Cost</th>
+            </tr></thead>
+            <tbody>
+                {{#each eval_runs}}
+                <tr class="sp-table__row">
+                    <td title="{{created_local}}">{{created_relative}}</td>
+                    <td class="sp-table__cell--mono"><a class="sp-link" href="{{url}}">{{id}}</a></td>
+                    <td>{{agent_id}}</td>
+                    <td>{{> components/badge tone=status.tone text=status.text}}</td>
+                    <td class="sp-table__cell--num">{{passed}}</td>
+                    <td class="sp-table__cell--num">{{failed}}</td>
+                    <td class="sp-table__cell--num">{{errored}}</td>
+                    <td class="sp-table__cell--num">{{score}}</td>
+                    <td class="sp-table__cell--num">{{cost_display}}</td>
+                </tr>
+                {{/each}}
+            </tbody>
+        {{/components/table}}
+        {{else}}
+        {{> components/empty-state compact=true heading="No eval runs" message="Run a suite from the Evals page to score this farm's agents."}}
+        {{/if}}
+        {{/if}}
+
+        {{#if (eq tab "sync")}}
+        {{> components/section title="Sync record" note="What the last farm sync wrote, and the bundle it is compared against."}}
+        {{#> components/table caption="Farm sync record"}}
+            <tbody>
+                <tr class="sp-table__row"><th scope="row">State</th><td>{{> components/badge tone=sync.badge.tone text=sync.badge.text}}</td></tr>
+                <tr class="sp-table__row"><th scope="row">Source repository</th><td class="sp-table__cell--mono">{{sync.source_repo}}</td></tr>
+                <tr class="sp-table__row"><th scope="row">Source ref</th><td class="sp-table__cell--mono">{{sync.source_ref}}</td></tr>
+                <tr class="sp-table__row"><th scope="row">Synced commit</th><td class="sp-table__cell--mono">{{#if sync.synced_sha}}{{sync.synced_sha}}{{else}}—{{/if}}</td></tr>
+                <tr class="sp-table__row"><th scope="row">Synced at</th><td>{{#if sync.synced_at_local}}{{sync.synced_at_local}}{{else}}never{{/if}}</td></tr>
+                <tr class="sp-table__row"><th scope="row">Synced by</th><td>{{#if sync.synced_by}}{{sync.synced_by}}{{else}}—{{/if}}</td></tr>
+                <tr class="sp-table__row"><th scope="row">Last error</th><td>{{#if sync.sync_error}}{{sync.sync_error}}{{else}}none{{/if}}</td></tr>
+                <tr class="sp-table__row"><th scope="row">Bundle owner key</th><td class="sp-table__cell--mono">{{#if sync.bundle}}{{sync.bundle.owner_key}}{{else}}—{{/if}}</td></tr>
+                <tr class="sp-table__row"><th scope="row">Bundle commit</th><td class="sp-table__cell--mono">{{#if sync.bundle.commit}}{{sync.bundle.commit}}{{else}}—{{/if}}</td></tr>
+            </tbody>
+        {{/components/table}}
+        {{/if}}
+    </div>
+    {{/inline}}
+{{/layout}}

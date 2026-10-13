@@ -29,6 +29,7 @@ use systemprompt::prelude::PgPool;
 use systemprompt_web_admin_analytics::routes::api as analytics_routes;
 use systemprompt_web_admin_catalog::routes as catalog_routes;
 use systemprompt_web_admin_core::types::{ROLES_CONSOLE, ROLES_MANAGE, ROLES_PLATFORM};
+use systemprompt_web_admin_farm::routes::api as farm_routes;
 use systemprompt_web_admin_governance::routes::api as governance_routes;
 use systemprompt_web_admin_identity::routes::api as identity_routes;
 use systemprompt_web_admin_platform::routes::api as platform_routes;
@@ -37,6 +38,7 @@ pub(super) fn build_admin_only_routes(
     read_pool: &Arc<PgPool>,
     write_pool: &Arc<PgPool>,
     managed: Arc<systemprompt_web_admin_core::state::ManagedState>,
+    farm: Arc<systemprompt_web_admin_farm::state::FarmState>,
 ) -> Router {
     let reads = build_admin_read_routes(read_pool)
         .merge(catalog_routes::managed_resources::reads())
@@ -66,6 +68,7 @@ pub(super) fn build_admin_only_routes(
         .merge(platform)
         .merge(participant)
         .layer(axum::Extension(managed))
+        .layer(axum::Extension(farm))
 }
 
 fn build_admin_read_routes(read_pool: &Arc<PgPool>) -> Router {
@@ -77,6 +80,7 @@ fn build_admin_read_routes(read_pool: &Arc<PgPool>) -> Router {
         .merge(identity_routes::access_read_routes())
         .merge(platform_routes::sync_read_routes())
         .merge(identity_routes::directory_read_routes())
+        .merge(farm_routes::farm_read_routes())
         .with_state(Arc::clone(read_pool))
 }
 
@@ -91,7 +95,9 @@ fn build_admin_write_routes(write_pool: &Arc<PgPool>) -> Router {
         .merge(platform_routes::sync_write_routes())
         .merge(identity_routes::directory_write_routes())
         .merge(platform_routes::device_write_routes())
+        .merge(platform_routes::service_account_write_routes())
         .merge(governance_routes::approval_write_routes())
+        .merge(farm_routes::farm_write_routes())
         .with_state(Arc::clone(write_pool))
 }
 

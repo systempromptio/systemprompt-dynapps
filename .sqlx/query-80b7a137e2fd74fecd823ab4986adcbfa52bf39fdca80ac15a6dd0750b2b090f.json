@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE agent_farms SET sync_error = $2, updated_at = NOW() WHERE id = $1\n",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "80b7a137e2fd74fecd823ab4986adcbfa52bf39fdca80ac15a6dd0750b2b090f"
+}

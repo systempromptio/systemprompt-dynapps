@@ -1,0 +1,20 @@
+{{!-- The run's KPI strip. Context: RunSummaryView. Rendered on the page and
+  inside farm/run-live, so a poll morphs tiles matched by data-kpi. --}}
+<div class="sp-kpi-grid">
+  {{#if is_live}}
+    {{> components/kpi key="duration" label="Duration" value=duration_display note=duration_note tone="accent"}}
+  {{else}}
+    {{> components/kpi key="duration" label="Duration" value=duration_display note=duration_note}}
+  {{/if}}
+  {{> components/kpi key="turns" label="Turns" value=turns note="gateway turns"}}
+  {{> components/kpi key="tokens-in" label="Tokens in" value=tokens_in}}
+  {{> components/kpi key="tokens-out" label="Tokens out" value=tokens_out}}
+  {{> components/kpi key="cost" label="Cost" value=cost_display note=cost_note}}
+  {{> components/kpi key="events" label="Events" value=event_count note="host events"}}
+  {{> components/kpi key="tools" label="Tool calls" value=tool_calls}}
+  {{#if errors}}
+    {{> components/kpi key="errors" label="Errors" value=errors tone="err" note="failed tool results or result"}}
+  {{else}}
+    {{> components/kpi key="errors" label="Errors" value=errors tone="ok" note="none so far"}}
+  {{/if}}
+</div>

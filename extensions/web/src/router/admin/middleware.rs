@@ -2,9 +2,11 @@
 //!
 //! `user_context_middleware` runs first and puts a [`UserContext`] on the
 //! request — from the session cookie, or from a personal access token on the
-//! export routes (`pat`); `systemprompt_web_admin_core::middleware::gates`
-//! then decides whether the request may proceed, and
-//! `marketplace_context_middleware` supplies what a page needs to render.
+//! export routes (`pat`). [`resolve_session`] and [`resolve_user_context`]
+//! are shared with the agent farm's router, which admits a token on every
+//! route. `systemprompt_web_admin_core::middleware::gates` then decides whether
+//! the request may proceed, and `marketplace_context_middleware` supplies what
+//! a page needs to render.
 //!
 //! The marketplace counts injected into every render are cached because they
 //! are derived from a remote catalog and are identical for every user holding
@@ -27,7 +29,7 @@ use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 use systemprompt_web_admin_core::repositories::scope::Participation;
 use systemprompt_web_admin_core::ssr::viewer_tz::{Tz, parse_tz, with_viewer_tz};
 use systemprompt_web_admin_core::types::{
-    UserContext, roles_grant_console, roles_grant_developer, roles_grant_manage,
+    CookieSession, UserContext, roles_grant_console, roles_grant_developer, roles_grant_manage,
     roles_grant_platform,
 };
 
@@ -51,24 +53,56 @@ pub(super) async fn user_context_middleware(
     mut request: Request,
     next: Next,
 ) -> Result<Response, pat::PatRejection> {
-    let cookie = extract_user_from_cookie(request.headers());
-    let pat = cookie
-        .is_err()
-        .then(|| pat::pat_request(&request))
-        .flatten();
-    let session = match cookie {
-        Ok(s) => s,
-        Err(reason) => match pat::pat_session(&pool, pat).await {
-            pat::PatSession::Accepted(s) => s,
-            pat::PatSession::Rejected(rejection) => return Err(rejection),
+    let pat_allowed = pat::is_export_request(&request);
+    let Some(session) =
+        resolve_session(&pool, SessionInputs::from_request(&request, pat_allowed)).await?
+    else {
+        return Ok(next.run(request).await);
+    };
+    let (ctx, tz) = resolve_user_context(&pool, session).await;
+    request.extensions_mut().insert(ctx);
+    Ok(with_viewer_tz(tz, next.run(request)).await)
+}
+
+pub(crate) struct SessionInputs {
+    cookie: Result<CookieSession, AdminError>,
+    pat: Option<pat::PatRequest>,
+}
+
+impl SessionInputs {
+    pub(crate) fn from_request(request: &Request, pat_allowed: bool) -> Self {
+        let cookie = extract_user_from_cookie(request.headers());
+        let pat = cookie
+            .is_err()
+            .then(|| pat::pat_request(request, pat_allowed))
+            .flatten();
+        Self { cookie, pat }
+    }
+}
+
+pub(crate) async fn resolve_session(
+    pool: &PgPool,
+    inputs: SessionInputs,
+) -> Result<Option<CookieSession>, pat::PatRejection> {
+    let SessionInputs { cookie, pat } = inputs;
+    match cookie {
+        Ok(s) => Ok(Some(s)),
+        Err(reason) => match pat::pat_session(pool, pat).await {
+            pat::PatSession::Accepted(s) => Ok(Some(s)),
+            pat::PatSession::Rejected(rejection) => Err(rejection),
             pat::PatSession::NotApplicable => {
                 tracing::warn!(reason = %reason, "UserContext middleware: no valid session");
-                return Ok(next.run(request).await);
+                Ok(None)
             },
         },
-    };
+    }
+}
 
-    let profile = find_access_profile(&pool, &session.user_id).await;
+pub(crate) async fn resolve_user_context(
+    pool: &PgPool,
+    session: CookieSession,
+) -> (UserContext, Tz) {
+    let profile = find_access_profile(pool, &session.user_id).await;
     let (roles, group_ids, project_ids) = profile.map_or_else(
         || (vec!["user".to_owned()], Vec::new(), Vec::new()),
         |p| (p.roles, p.group_ids, p.project_ids),
@@ -78,7 +112,7 @@ pub(super) async fn user_context_middleware(
     let participation = if is_console {
         Participation::default()
     } else {
-        find_participation(&pool, &session.user_id, &group_ids, &project_ids).await
+        find_participation(pool, &session.user_id, &group_ids, &project_ids).await
     };
 
     let ctx = UserContext {
@@ -97,9 +131,8 @@ pub(super) async fn user_context_middleware(
         session_id: session.session_id,
     };
 
-    let tz = find_viewer_tz(&pool, &ctx.user_id).await;
-    request.extensions_mut().insert(ctx);
-    Ok(with_viewer_tz(tz, next.run(request)).await)
+    let tz = find_viewer_tz(pool, &ctx.user_id).await;
+    (ctx, tz)
 }
 
 async fn find_viewer_tz(pool: &PgPool, user_id: &UserId) -> Tz {

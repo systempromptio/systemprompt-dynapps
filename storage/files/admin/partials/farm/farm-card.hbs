@@ -1,0 +1,24 @@
+{{!-- One farm on the overview. Usage: {{#each farms}}{{> farm/farm-card this}}{{/each}} --}}
+<article class="sp-card sp-farm-card" data-farm-id="{{id}}">
+    <div class="sp-card__body sp-farm-card__body">
+        <header class="sp-farm-card__head">
+            <h3 class="sp-farm-card__title"><a class="sp-link" href="{{url}}">{{name}}</a></h3>
+            <span title="{{sync_error}}">{{> components/badge tone=sync_badge.tone text=sync_badge.text}}</span>
+        </header>
+        {{#if description}}<p class="sp-farm-card__desc">{{description}}</p>{{/if}}
+        <dl class="sp-farm-card__facts">
+            <dt class="sp-farm-card__term">Marketplace</dt>
+            <dd class="sp-farm-card__value"><a class="sp-link" href="{{marketplace_url}}">{{marketplace_id}}</a></dd>
+            <dt class="sp-farm-card__term">Source</dt>
+            <dd class="sp-farm-card__value sp-u-mono" title="{{source_repo}}">{{source_repo}} @ {{source_ref}}</dd>
+            <dt class="sp-farm-card__term">Commit</dt>
+            <dd class="sp-farm-card__value sp-u-mono" title="{{sha}}">{{#if sha_short}}{{sha_short}}{{else}}—{{/if}}</dd>
+            <dt class="sp-farm-card__term">Last sync</dt>
+            <dd class="sp-farm-card__value" title="{{synced_local}}">{{#if synced_relative}}{{synced_relative}}{{else}}never{{/if}}</dd>
+            <dt class="sp-farm-card__term">Owner</dt>
+            <dd class="sp-farm-card__value">{{#if owner_url}}<a class="sp-link" href="{{owner_url}}">{{owner}}</a>{{else}}unowned{{/if}}</dd>
+            <dt class="sp-farm-card__term">Agents</dt>
+            <dd class="sp-farm-card__value">{{agent_count}}</dd>
+        </dl>
+    </div>
+</article>

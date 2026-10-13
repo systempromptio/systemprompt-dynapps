@@ -109,6 +109,7 @@ pub(crate) async fn mint_session(
         resource: None,
         plugin_id: None,
         client_id: None,
+        purpose: None,
     };
     let signing = JwtSigningParams {
         issuer: &cfg.jwt_issuer,

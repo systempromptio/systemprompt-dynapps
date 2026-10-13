@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT COUNT(*)::bigint AS \"count!\"\nFROM agent_farm_eval_runs\nWHERE ($1::text IS NULL OR farm_id = $1) AND ($2::text IS NULL OR suite_id = $2)\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "ff76832a11577832393c0ac56143886276a3081b2632b744ff898e20b512b50d"
+}

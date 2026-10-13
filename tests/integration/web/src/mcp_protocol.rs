@@ -12,7 +12,7 @@ use axum::http;
 use http_body_util::BodyExt;
 use rmcp::ServiceExt;
 use rmcp::model::{
-    ClientCapabilities, ClientInfo, Implementation, ReadResourceRequestParams, ResourceContents,
+    ClientCapabilities, ClientConfig, Implementation, ReadResourceRequestParams, ResourceContents,
 };
 use sqlx::PgPool;
 use systemprompt::database::Database;
@@ -70,11 +70,12 @@ fn deny_all_hook() -> SharedAuthzHook {
     Arc::new(DenyAllHook::null())
 }
 
-fn client_info() -> ClientInfo {
-    ClientInfo::new(
+fn client_info() -> ClientConfig {
+    ClientConfig::new(
         ClientCapabilities::default(),
         Implementation::new("protocol-contract-client", "1.0"),
     )
+    .with_protocol_version(rmcp::model::ProtocolVersion::LATEST_WITH_INITIALIZE)
 }
 
 fn install_services_profile() {

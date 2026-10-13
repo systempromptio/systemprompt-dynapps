@@ -75,6 +75,19 @@ entities:
     allow:
       role: [admin, platform_admin, super_admin]
 
+  - entity: marketplace/dynapps-agent-farm
+    owner: bundle:dynapps-agent-farm
+    default: closed
+    why: >-
+      Odoo delivery agent farm shipped by the dynapps-agent-farm kit. Farm runs
+      execute as the requesting person through the gateway, so only someone who
+      already holds the workspace may launch one: administrators, the staff
+      group and the Odoo delivery project.
+    allow:
+      role: [admin, platform_admin, super_admin]
+      group: [staff]
+      project: [odoo-delivery]
+
   # ─── Admin control plane ──────────────────────────────────────────────────
   # platform_admin is always named beside admin: it is the strictly stronger
   # role, so an entity open to admin and closed to platform_admin is a hole.
@@ -143,17 +156,33 @@ entities:
     default: closed
     why: >-
       Jira/Confluence for Dynapps staff and the odoo-delivery project;
-      administrators use their own connected Atlassian account.
+      administrators use their own connected Atlassian account; workflow
+      service accounts write back with an attached Atlassian API token.
     allow:
       role: [platform_admin, admin, super_admin]
-      group: [staff]
+      group: [staff, service-accounts]
       project: [odoo-delivery]
+
+  # Closed: GitHub is reached by workflow service accounts, whose credential
+  # the broker issues only to a workflow write-back or farm caller. Admins see
+  # the server so they can inspect it; nobody else does.
+  - entity: mcp_server/github
+    default: closed
+    why: >-
+      Workflow write-backs to GitHub act as a per-definition service account
+      holding a GitHub App installation; people are not granted it.
+    allow:
+      role: [platform_admin, admin, super_admin]
+      group: [service-accounts]
 
   # Open like the connector it fronts: a person must be able to reach the
   # connector before they hold the marketplace it grants, or nobody could ever
   # connect. Salesforce still refuses anyone without a user in the org.
   - entity: mcp_server/salesforce
     default: open
-    why: Salesforce connector for the sales workspace, as the signed-in user.
+    why: >-
+      Salesforce connector for the sales workspace, as the signed-in user;
+      workflow service accounts write back with client credentials.
     allow:
       role: [user, admin, platform_admin, project_manager, super_admin]
+      group: [service-accounts]

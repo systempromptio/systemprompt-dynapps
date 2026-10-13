@@ -56,11 +56,13 @@
     color: var(--sp-sidebar-text-muted);
 }
 
-/* Each group heading carries its own hue so the rail reads as five zones at
+/* Each group heading carries its own hue so the rail reads as six zones at
    a glance. The hue is keyed by the group's modifier class, not its position,
    so reordering the groups never recolours a neighbour; the account group
    stays neutral because it is about the reader, not the business. */
 .sp-nav-group--activity .sp-nav-group__title { color: var(--sp-nav-label-1); }
+
+.sp-nav-group--farms .sp-nav-group__title { color: var(--sp-nav-label-6); }
 
 .sp-nav-group--people .sp-nav-group__title { color: var(--sp-nav-label-2); }
 

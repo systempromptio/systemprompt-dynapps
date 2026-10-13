@@ -10,7 +10,7 @@ branding:
   description: "Governed AI for Dynapps teams, inside Claude. One corporate sign-in connects Claude Code and Cowork to your organization's skills and tools, with every action audited."
   copyright: "2026 Dynapps"
   tagline: "Odoo, shaped around how you work."
-  themeColor: "#F13C42"
+  themeColor: "#01007C"
   platform_name: "Dynapps"
   support_email: "ed@systemprompt.io"
   logo_light: "/files/images/logo.svg"
@@ -28,8 +28,10 @@ branding:
       webp: "/files/images/logo.webp"
       png: "/files/images/logo.png"
     dark:
+      svg: "/files/images/logo-white.svg"
       png: "/files/images/logo.png"
     small:
+      svg: "/files/images/icon.svg"
       png: "/files/images/logo.png"
 
 fonts:
@@ -46,46 +48,46 @@ fonts:
     fallback: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
     files: []
 
-# Color palette - Dynapps (red primary, purple secondary, purple-red-orange gradient)
+# Color palette - Dynapps (navy primary, purple hover/secondary; the purple-red-orange gradient is the logo mark only)
 colors:
   light:
     primary:
-      hsl: "hsl(358, 87%, 59%)"
-      rgb: [241, 60, 66]
+      hsl: "hsl(240, 100%, 24%)"
+      rgb: [1, 0, 124]
     secondary:
-      hsl: "hsl(274, 90%, 53%)"
-      rgb: [149, 28, 243]
-    accent: "#951CF3"
+      hsl: "hsl(274, 100%, 43%)"
+      rgb: [123, 0, 220]
+    accent: "#7B00DC"
     success: "#10b981"
     warning: "#f59e0b"
     error: "#ef4444"
     surface:
       default: "#FFFFFF"
-      dark: "#f8f7f3"
-      variant: "#f1efed"
-      secondaryContainer: "#f1efed"
+      dark: "#fafafa"
+      variant: "#f5f5f5"
+      secondaryContainer: "#f4ebff"
       errorContainer: "#FEE2E2"
     text:
-      primary: "#171717"
-      secondary: "#535862"
-      inverted: "#f8f7f3"
-      disabled: "#b6b6b6"
+      primary: "#050543"
+      secondary: "#404040"
+      inverted: "#FFFFFF"
+      disabled: "#a3a3a3"
     background:
-      default: "#f8f7f3"
-      dark: "#f1efed"
+      default: "#FFFFFF"
+      dark: "#fafafa"
     border:
-      default: "#dddddd"
-      dark: "#b6b6b6"
-      outline: "#b6b6b6"
+      default: "#e5e5e5"
+      dark: "#d4d4d4"
+      outline: "#d4d4d4"
 
   dark:
     primary:
-      hsl: "hsl(358, 87%, 59%)"
-      rgb: [241, 60, 66]
+      hsl: "hsl(240, 100%, 24%)"
+      rgb: [1, 0, 124]
     secondary:
-      hsl: "hsl(274, 90%, 53%)"
-      rgb: [149, 28, 243]
-    accent: "#951CF3"
+      hsl: "hsl(274, 100%, 43%)"
+      rgb: [123, 0, 220]
+    accent: "#7B00DC"
     success: "#34d399"
     warning: "#fbbf24"
     error: "#f87171"
@@ -93,7 +95,7 @@ colors:
       default: "#171717"
       dark: "#0a0a0a"
       variant: "#292929"
-      secondaryContainer: "rgba(241, 60, 66, 0.1)"
+      secondaryContainer: "rgba(123, 0, 220, 0.15)"
       errorContainer: "rgba(248, 113, 113, 0.1)"
     text:
       primary: "#f8f7f3"

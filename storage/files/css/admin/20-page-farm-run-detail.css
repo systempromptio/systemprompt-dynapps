@@ -1,0 +1,155 @@
+@layer components {
+
+/* A run page holds the header, KPI strip and the tabbed views in one column. */
+.sp-farm-run {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-space-4);
+}
+
+.sp-farm-run__inline-form { display: inline; }
+
+.sp-farm-run__ids {
+    padding: var(--sp-space-2) var(--sp-space-3);
+    background: var(--sp-bg-surface);
+    border: 1px solid var(--sp-border-subtle);
+    border-radius: var(--sp-corners-sm);
+}
+
+.sp-farm-run__ids-summary {
+    cursor: pointer;
+    font-size: var(--sp-text-sm);
+    color: var(--sp-text-secondary);
+}
+
+.sp-farm-run__toolbar {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-space-2);
+    margin-block: var(--sp-space-3);
+}
+
+.sp-farm-run__follow {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-space-1);
+    margin-inline-end: auto;
+    font-size: var(--sp-text-sm);
+    color: var(--sp-text-secondary);
+}
+
+/* The transcript reads as prose: the prompt, each assistant turn, then the result. */
+.sp-farm-run__transcript {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-space-3);
+    margin-top: var(--sp-space-3);
+    max-inline-size: 72ch;
+}
+
+.sp-farm-run__turn {
+    padding: var(--sp-space-3) var(--sp-space-4);
+    background: var(--sp-bg-surface);
+    border: 1px solid var(--sp-border-subtle);
+    border-radius: var(--sp-corners-sm);
+}
+
+.sp-farm-run__turn--prompt { background: var(--sp-bg-surface-alt); }
+.sp-farm-run__turn--result { border-inline-start: 3px solid var(--sp-success); }
+.sp-farm-run__turn--error { border-inline-start: 3px solid var(--sp-danger); }
+
+.sp-farm-run__turn-head {
+    margin: 0 0 var(--sp-space-2);
+    font-size: var(--sp-text-sm);
+    font-weight: var(--sp-font-weight-semibold);
+}
+
+.sp-farm-run__muted {
+    font-weight: var(--sp-font-weight-regular);
+    color: var(--sp-text-tertiary);
+    font-variant-numeric: tabular-nums;
+}
+
+.sp-farm-run__prose {
+    margin: 0;
+    white-space: pre-wrap;
+    line-height: var(--sp-leading-relaxed);
+}
+
+.sp-farm-run__diff-stats {
+    display: flex;
+    gap: var(--sp-space-2);
+    margin-block: var(--sp-space-3);
+}
+
+/* Timeline strip: one short SVG at full width, lanes drawn in viewBox units. */
+.sp-farm-run__strip {
+    margin: var(--sp-space-3) 0 0;
+    padding: var(--sp-space-3) var(--sp-space-4);
+    background: var(--sp-bg-surface);
+    border: 1px solid var(--sp-border-subtle);
+    border-radius: var(--sp-corners-sm);
+}
+
+.sp-farm-run__legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-space-3);
+    margin-bottom: var(--sp-space-2);
+    font-size: var(--sp-text-2xs);
+    color: var(--sp-text-tertiary);
+}
+
+.sp-farm-run__key {
+    display: inline-block;
+    inline-size: 10px;
+    block-size: 10px;
+    border-radius: var(--sp-radius-xs);
+    vertical-align: middle;
+}
+
+.sp-farm-run__key--assistant { background: var(--sp-accent); }
+.sp-farm-run__key--tool { background: var(--sp-success); }
+.sp-farm-run__key--err { background: var(--sp-danger); }
+.sp-farm-run__key--open { background: var(--sp-info); }
+.sp-farm-run__key--tick { background: var(--sp-warning); }
+
+.sp-farm-run__svg {
+    display: block;
+    inline-size: 100%;
+    block-size: 56px;
+    background: var(--sp-bg-surface-alt);
+    border-radius: var(--sp-radius-xs);
+}
+
+.sp-farm-run__grid line {
+    stroke: var(--sp-border-subtle);
+    stroke-width: 1;
+}
+
+.sp-farm-run__mark {
+    cursor: pointer;
+    transition: opacity var(--sp-duration-fast) var(--sp-ease-in-out);
+}
+
+.sp-farm-run__mark:hover { opacity: 0.7; }
+.sp-farm-run__mark--assistant { fill: var(--sp-accent); }
+.sp-farm-run__mark--tool.sp-farm-run__mark--ok { fill: var(--sp-success); }
+.sp-farm-run__mark--tool.sp-farm-run__mark--err { fill: var(--sp-danger); }
+.sp-farm-run__mark--tool.sp-farm-run__mark--open { fill: var(--sp-info); }
+
+.sp-farm-run__tick { fill: var(--sp-warning); }
+.sp-farm-run__tick--stderr { fill: var(--sp-text-tertiary); }
+
+.sp-farm-run__axis {
+    display: flex;
+    justify-content: space-between;
+    list-style: none;
+    margin: var(--sp-space-1) 0 0;
+    padding: 0;
+    font-size: var(--sp-text-2xs);
+    color: var(--sp-text-tertiary);
+    font-variant-numeric: tabular-nums;
+}
+
+}

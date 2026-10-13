@@ -1,0 +1,70 @@
+{{!--
+  The eval run page's live half: the KPI strip and one expandable row per
+  case. The page embeds it as {{> farm/eval-run-live live}} and
+  /admin/api/farm/evals/runs/{id} answers with it alone, from the same
+  EvalRunLiveView. `data-live-active="false"` tells the poller the eval run
+  has finished and nothing here can change any more.
+--}}
+<div data-farm-live-body data-live-active="{{#if is_live}}true{{else}}false{{/if}}">
+  <section class="sp-kpi-grid" aria-label="Eval run summary" data-live-region="kpis">
+    {{#each kpis}}{{> components/kpi key=this.key label=this.label value=this.value tone=this.tone}}{{/each}}
+  </section>
+  <div data-live-region="rows">
+    {{#if rows}}
+    {{#> components/table caption="Case results for this eval run" modifier="sp-farm-eval-run__table"}}
+      <thead><tr>
+        <th scope="col">Case</th>
+        <th scope="col">Status</th>
+        <th class="sp-table__cell--num" scope="col">Assertions held</th>
+        <th class="sp-table__cell--num" scope="col">Judge</th>
+        <th scope="col">Run</th>
+        <th class="sp-table__cell--actions" scope="col"><span class="sp-u-sr-only">Details</span></th>
+      </tr></thead>
+      <tbody>
+        {{#each rows}}
+        <tr class="sp-table__row--expand" data-expand-row tabindex="0">
+          <td class="sp-table__cell--mono">{{this.case_id}}</td>
+          <td>{{> components/badge tone=this.status.tone text=this.status.text}}</td>
+          <td class="sp-table__cell--num">{{this.assertions_display}}</td>
+          <td class="sp-table__cell--num"><span class="sp-farm-evals__score sp-farm-evals__score--{{this.score_tone}}">{{this.score_display}}</span></td>
+          <td class="sp-table__cell--mono">{{#if this.run_url}}<a class="sp-link" href="{{this.run_url}}">{{this.run_id_short}}</a>{{else}}—{{/if}}</td>
+          <td class="sp-table__cell--actions">
+            <button class="sp-btn sp-btn--sm sp-btn--icon sp-btn--ghost sp-table__row-toggle" data-action="row-toggle" type="button"
+                    aria-expanded="false" aria-controls="{{this.detail_id}}" aria-label="Show assertions for {{this.case_id}}">
+              <svg class="sp-icon" aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 6l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </td>
+        </tr>
+        <tr class="sp-table__row-detail" id="{{this.detail_id}}" hidden>
+          <td colspan="6">
+            <div class="sp-table__detail-panel"><div class="sp-table__detail-inner">
+              {{#if this.assertions}}
+              <ul class="sp-farm-eval-run__assertions">
+                {{#each this.assertions}}
+                <li class="sp-farm-eval-run__assertion">
+                  {{#if this.passed}}{{> components/badge tone="ok" text="Held"}}{{else}}{{> components/badge tone="err" text="Broke"}}{{/if}}
+                  <span class="sp-farm-eval-run__kind">{{this.kind}}</span>
+                  <span class="sp-farm-eval-run__detail">{{this.detail}}</span>
+                </li>
+                {{/each}}
+              </ul>
+              {{else}}
+              <p class="sp-u-text-tertiary">No assertion outcomes recorded yet.</p>
+              {{/if}}
+              {{#if this.has_score}}
+              <div class="sp-farm-eval-run__judge">
+                <span class="sp-farm-evals__score sp-farm-evals__score--{{this.score_tone}}">{{this.score_display}}</span>
+                <p class="sp-farm-eval-run__rationale">{{#if this.rationale}}{{this.rationale}}{{else}}The judge gave no rationale.{{/if}}</p>
+              </div>
+              {{/if}}
+            </div></div>
+          </td>
+        </tr>
+        {{/each}}
+      </tbody>
+    {{/components/table}}
+    {{else}}
+    {{> components/empty-state heading="No case results yet" message="Cases appear here as the eval run queues them."}}
+    {{/if}}
+  </div>
+</div>

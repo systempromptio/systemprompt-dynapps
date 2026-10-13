@@ -137,6 +137,10 @@ unused_lifetimes = "warn"
 single_use_lifetimes = "warn"
 
 [workspace.dependencies]
+# The service-account suite signs GitHub App JWTs with a key generated at
+# runtime, so no private key is ever committed.
+rsa = { version = "0.9", features = ["pem"] }
+rand_core = { version = "0.6", features = ["getrandom"] }
 # The shared test harness: one throwaway-database implementation, one skip
 # policy. Every DB-backed crate below depends on it.
 dynapps-test-common = { path = "common" }
@@ -151,6 +155,7 @@ systemprompt-web-admin-catalog = { path = "../extensions/web/admin/catalog" }
 systemprompt-web-admin-governance = { path = "../extensions/web/admin/governance", features = ["governance-ssr"] }
 systemprompt-web-admin-identity = { path = "../extensions/web/admin/identity" }
 systemprompt-web-admin-platform = { path = "../extensions/web/admin/platform" }
+systemprompt-web-admin-farm = { path = "../extensions/web/admin/farm" }
 systemprompt-web-content = { path = "../extensions/web/content" }
 systemprompt-web-jobs = { path = "../extensions/web/jobs" }
 systemprompt-web-extension = { path = "../extensions/web" }
@@ -161,9 +166,9 @@ systemprompt-kit-export = { path = "../extensions/cli/kit-export" }
 # The contract crate additionally enables `full`, which links the core
 # extension crates whose `register_extension!` registrations carry the
 # migrations the admin schema needs.
-systemprompt = { version = "0.65.0", default-features = false, features = ["core", "database"] }
-systemprompt-security = { version = "0.65.0" }
-systemprompt-api = { version = "0.65.0" }
+systemprompt = { version = "0.66.0", default-features = false, features = ["core", "database"] }
+systemprompt-security = { version = "0.66.0" }
+systemprompt-api = { version = "0.66.0" }
 
 # HTTP contract harness — drives the real admin router in-process.
 axum = "0.8"
@@ -193,8 +198,8 @@ tempfile = "3"
 zip = { version = "8", default-features = false, features = ["deflate"] }
 # Pinned to the exact version the root workspace pins, so the `ServerHandler`
 # trait the tests bring into scope is the one the MCP crates implement.
-rmcp = { version = "=3.3.0", features = ["server"] }
-uuid = { version = "1.18", features = ["v4"] }
+rmcp = { version = "=3.5.1", features = ["server"] }
+uuid = { version = "1.28", features = ["v4"] }
 base64 = "0.22"
 # Pinned to what `extensions/web/admin/catalog` uses for the share-token HMAC, so the
 # contract suite's expired-token forgery signs with the same primitive.
@@ -206,7 +211,7 @@ jsonwebtoken = { version = "11", features = ["rust_crypto"] }
 # Local development and `next` deploys use the persistent sibling core checkout
 # directly; `just core-guard` requires it clean at bridge/CORE_REF. Keep version
 # requirements and this block aligned in both workspaces; `main` comments it out.
-# INACTIVE: core 0.65.0 is published; `main` builds against the registry. Uncomment on `next` when building against the sibling core checkout.
+# INACTIVE on `main`: builds against published core crates (bridge/CORE_REF names the tag).
 # [patch.crates-io]
 # systemprompt = { path = "../../systemprompt-core/systemprompt" }
 # systemprompt-models = { path = "../../systemprompt-core/crates/shared/models" }

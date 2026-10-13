@@ -234,6 +234,30 @@ under the *local* profile (`infra db execute --yes --profile local
 configured admin on first boot or let `admin bootstrap` run against a bare
 database URL without the app context.
 
+## 10. Farm aggregates scan `agent_farm_runs` (store, don't compute)
+
+Recorded 2026-10-12 while moving the farm onto core's `agent_runs`. Three
+farm reads aggregate the run table on every page load instead of reading a
+stored rollup:
+
+- `get_run_stats` (the runs, agent and people stat strips): counts by status,
+  cost, p50/p95 duration and tool-call and gateway-request sums over a filter.
+- `list_daily_run_counts` (the overview sparkline): runs per UTC day.
+- `list_runs_by_user` (`/admin/farm/people`): per-user counts, cost and the
+  favourite agent.
+
+Each is bounded by an index today and cheap at demo volume, but the cost grows
+with history and the percentile is a full sort of the window. The fix is a
+daily rollup keyed by `(day, farm_id, agent_id, user_id, triggered_via,
+status)` with counts, cost and the stamped counters, written when a run
+finishes (the farm already stamps `event_count`, `tool_call_count` and
+`gateway_request_count` at that moment) and read by the three queries. Follow
+core's hourly rollup pattern: `crates/domain/ai/schema/ai_usage_rollup_hourly.sql`
+(table + migration `040`) and `crates/infra/logging/schema/log_rollup_hourly.sql`,
+with a drain job shaped like `crates/app/scheduler/src/jobs/trace_facts_rollup.rs`
+for backfill. Percentiles stay a live read over a bounded window, or move to a
+stored histogram.
+
 ## Runbook — reset local activity data (verified 2026-09-17)
 
 Runs in one transaction against the per-clone Docker Postgres; keeps schema,

@@ -1,0 +1,105 @@
+@layer components {
+
+/* The by-person leaderboard: share-of-runs bar and trigger split per person. */
+
+.sp-farm-people {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-space-3);
+}
+
+.sp-farm-people__row:hover td {
+    background: var(--sp-accent-dim);
+}
+
+.sp-farm-people__name {
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.sp-farm-people__name:hover {
+    text-decoration: underline;
+}
+
+.sp-farm-people__runs {
+    white-space: nowrap;
+}
+
+.sp-farm-people__share {
+    display: inline-block;
+    inline-size: 5rem;
+    block-size: 0.5rem;
+    margin-inline-end: var(--sp-space-2);
+    vertical-align: middle;
+    border-radius: var(--sp-radius-sm);
+    background:
+        linear-gradient(
+            to right,
+            var(--sp-accent) 0,
+            var(--sp-accent) var(--sp-share),
+            color-mix(in oklch, var(--sp-warm-900) 6%, transparent) var(--sp-share)
+        );
+}
+
+.sp-farm-people__num {
+    font-variant-numeric: tabular-nums;
+}
+
+.sp-farm-people__num--err {
+    color: var(--sp-danger);
+}
+
+.sp-farm-people__pct {
+    margin-inline-start: var(--sp-space-1);
+    font-size: var(--sp-text-xs);
+    color: var(--sp-text-tertiary);
+    font-variant-numeric: tabular-nums;
+}
+
+.sp-farm-people__agent {
+    font-size: var(--sp-text-xs);
+}
+
+.sp-farm-people__split {
+    display: inline-flex;
+    inline-size: 5rem;
+    block-size: 0.5rem;
+    overflow: hidden;
+    vertical-align: middle;
+    border-radius: var(--sp-radius-sm);
+    background: color-mix(in oklch, var(--sp-warm-900) 6%, transparent);
+}
+
+.sp-farm-people__seg {
+    inline-size: var(--sp-share);
+}
+
+.sp-farm-people__seg--dashboard {
+    background: var(--sp-info);
+}
+
+.sp-farm-people__seg--api {
+    background: var(--sp-accent);
+}
+
+.sp-farm-people__seg--eval {
+    background: var(--sp-text-tertiary);
+}
+
+.sp-farm-people__legend {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-space-2);
+    margin: 0;
+    font-size: var(--sp-text-xs);
+    color: var(--sp-text-secondary);
+}
+
+.sp-farm-people__key {
+    display: inline-block;
+    inline-size: 0.625rem;
+    block-size: 0.625rem;
+    border-radius: var(--sp-radius-sm);
+}
+
+}

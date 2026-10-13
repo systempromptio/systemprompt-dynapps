@@ -1,11 +1,11 @@
 //! Platform JSON API routes.
 //!
 //! The scheduled-jobs listing, the sync planes and the archive import, device
-//! credential management, and the per-user Salesforce link and connector
-//! reprovisioning. The sync participant tier is its own fragment because the
-//! root gates it on the scoped-console role rather than an admin tier; the
-//! archive import stays with the manage-tier writes because a staged archive
-//! can rewrite every plane at once.
+//! credential and service-account management, and the per-user Salesforce link
+//! and connector reprovisioning. The sync participant tier is its own fragment
+//! because the root gates it on the scoped-console role rather than an admin
+//! tier; the archive import stays with the manage-tier writes because a staged
+//! archive can rewrite every plane at once.
 
 use std::sync::Arc;
 
@@ -78,6 +78,17 @@ pub fn connector_write_routes() -> Router<Arc<PgPool>> {
         .route(
             "/connectors/{provider}/reprovision",
             post(handlers::connector_reprovision::reprovision_connector_handler),
+        )
+}
+
+pub fn service_account_write_routes() -> Router<Arc<PgPool>> {
+    use handlers::service_accounts::api;
+    Router::new()
+        .route("/service-accounts", post(api::create))
+        .route("/service-accounts/{user_id}", delete(api::delete))
+        .route(
+            "/service-accounts/{user_id}/credentials/{provider}",
+            post(api::attach_credential).delete(api::remove_credential),
         )
 }
 

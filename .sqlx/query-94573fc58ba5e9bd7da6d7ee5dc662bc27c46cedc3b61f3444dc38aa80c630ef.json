@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "-- A queued run has no process to signal, so it is cancelled outright; a\n-- preparing or running one is flagged for the runner to kill.\nUPDATE agent_farm_runs\nSET cancel_requested_at = COALESCE(cancel_requested_at, NOW()),\n    status = CASE WHEN status = 'queued' THEN 'cancelled' ELSE status END,\n    finished_at = CASE WHEN status = 'queued' THEN NOW() ELSE finished_at END,\n    updated_at = NOW()\nWHERE id = $1 AND status IN ('queued', 'preparing', 'running')\n",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "94573fc58ba5e9bd7da6d7ee5dc662bc27c46cedc3b61f3444dc38aa80c630ef"
+}

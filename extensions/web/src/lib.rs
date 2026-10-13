@@ -26,16 +26,18 @@ mod router;
 #[doc(hidden)]
 pub mod schemas;
 
-/// The admin plane: the shared admin core, the five domain crates, and the
+/// The admin plane: the shared admin core, the six domain crates, and the
 /// routers composed from their fragments in `router::admin`.
 pub mod admin {
     pub use crate::router::admin::{
         admin_router, admin_ssr_router, bridge_auth_ssr_router, hooks_webhook_router,
-        secrets_router, share_manifest_router,
+        secrets_router, service_accounts, share_manifest_router,
     };
+    pub use crate::router::farm_public::{build_state as build_farm_state, farm_public_router};
     pub use systemprompt_web_admin_analytics as analytics;
     pub use systemprompt_web_admin_catalog as catalog;
     pub use systemprompt_web_admin_core as core;
+    pub use systemprompt_web_admin_farm as farm;
     pub use systemprompt_web_admin_governance as governance;
     pub use systemprompt_web_admin_identity as identity;
     pub use systemprompt_web_admin_platform as platform;

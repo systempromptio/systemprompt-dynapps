@@ -1,9 +1,9 @@
 //! Server-rendered platform pages.
 //!
 //! The configuration and code-sync pages in the Platform group, the device
-//! credentials page in People, and the connect, connectors and setup pages
-//! every signed-in user reaches from their account, plus the Salesforce unlink
-//! those pages post to.
+//! credentials and service-account pages in People, and the connect, connectors
+//! and setup pages every signed-in user reaches from their account, plus the
+//! Salesforce unlink those pages post to.
 
 use std::sync::Arc;
 
@@ -37,6 +37,18 @@ pub fn device_routes() -> Router<Arc<PgPool>> {
         .route(
             "/devices/certs/{id}",
             axum::routing::delete(handlers::devices::revoke_cert),
+        )
+}
+
+pub fn service_account_routes() -> Router<Arc<PgPool>> {
+    Router::new()
+        .route(
+            "/identity/service-accounts",
+            get(handlers::service_accounts::service_accounts_page),
+        )
+        .route(
+            "/identity/service-accounts/{user_id}",
+            get(handlers::service_accounts::service_account_page),
         )
 }
 

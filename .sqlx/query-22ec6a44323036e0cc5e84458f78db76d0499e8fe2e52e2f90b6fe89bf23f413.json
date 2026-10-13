@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO agent_farm_fixtures (farm_id, name, file_count, bytes, stored_path, synced_commit_sha)\nVALUES ($1, $2, $3, $4, $5, $6)\nON CONFLICT (farm_id, name) DO UPDATE SET\n    file_count = EXCLUDED.file_count,\n    bytes = EXCLUDED.bytes,\n    stored_path = EXCLUDED.stored_path,\n    synced_commit_sha = EXCLUDED.synced_commit_sha,\n    updated_at = NOW()\n",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Int4",
+        "Int8",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "22ec6a44323036e0cc5e84458f78db76d0499e8fe2e52e2f90b6fe89bf23f413"
+}

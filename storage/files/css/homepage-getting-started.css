@@ -9,25 +9,15 @@
 .hero-cta {
   display: inline-flex;
   align-items: center;
-  padding: var(--sp-space-sm) var(--sp-space-lg);
-  border-radius: var(--sp-radius-sm);
+  padding: 0.75rem 1.125rem;
+  border-radius: var(--sp-radius-round);
   font-family: var(--sp-font-brand);
   font-weight: 600;
-  font-size: 0.875rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  font-size: 1rem;
   text-decoration: none;
-  gap: 1.25rem;
+  gap: var(--sp-space-1);
+  box-shadow: var(--sp-shadow-cta);
   transition: background-color var(--sp-transition-fast), color var(--sp-transition-fast), transform var(--sp-transition-fast), box-shadow var(--sp-transition-fast);
-}
-
-.hero-cta::after {
-  content: "";
-  flex: none;
-  width: 0.25rem;
-  height: 0.25rem;
-  border-radius: 50%;
-  background: var(--sp-color-accent);
 }
 
 .hero-cta-primary {
@@ -38,21 +28,18 @@
 
 .hero-cta-primary:hover {
   background: var(--sp-color-primary-hover);
-  transform: translateY(-1px);
-  box-shadow: var(--sp-shadow-md);
+  border-color: var(--sp-color-primary-hover);
 }
 
 .hero-cta-secondary {
-  background: transparent;
+  background: var(--sp-color-surface-variant);
   color: var(--sp-color-text);
-  border: 1px solid var(--sp-color-border);
+  border: 1px solid var(--sp-color-border-strong);
 }
 
 .hero-cta-secondary:hover {
   background: var(--sp-color-surface);
-  border-color: var(--sp-color-primary);
-  color: var(--sp-color-primary);
-  transform: translateY(-1px);
+  color: var(--sp-color-text-secondary);
 }
 
 .section-header {

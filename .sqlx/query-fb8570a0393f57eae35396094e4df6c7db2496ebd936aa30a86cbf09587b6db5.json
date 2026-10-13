@@ -1,0 +1,114 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "-- The latest decided result for every (suite, case): one cell of the\n-- suite-by-case matrix. Pending and running results are not a verdict.\nSELECT DISTINCT ON (er.suite_id, res.case_id)\n       er.suite_id AS \"suite_id!: EvalSuiteId\",\n       res.case_id AS \"case_id!\",\n       er.agent_id AS \"agent_id!: FarmAgentId\",\n       er.id AS \"eval_run_id!: EvalRunId\",\n       res.status AS \"status!\",\n       (res.status = 'passed') AS \"passed!\",\n       res.judge_score AS \"judge_score?\",\n       res.judge_rationale AS \"rationale?\",\n       COALESCE(er.finished_at, res.updated_at) AS \"finished_at?\"\nFROM agent_farm_eval_results res\nJOIN agent_farm_eval_runs er ON er.id = res.eval_run_id\nWHERE res.status IN ('passed', 'failed', 'errored')\n  AND ($1::text IS NULL OR er.farm_id = $1)\nORDER BY er.suite_id, res.case_id, res.updated_at DESC\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "suite_id!: EvalSuiteId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_eval_runs",
+            "name": "suite_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "case_id!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_eval_results",
+            "name": "case_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "agent_id!: FarmAgentId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_eval_runs",
+            "name": "agent_id"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "eval_run_id!: EvalRunId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_eval_runs",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "status!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_eval_results",
+            "name": "status"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "passed!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 6,
+        "name": "judge_score?",
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_eval_results",
+            "name": "judge_score"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "rationale?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_eval_results",
+            "name": "judge_rationale"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "finished_at?",
+        "type_info": "Timestamptz",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      null,
+      true,
+      true,
+      null
+    ]
+  },
+  "hash": "fb8570a0393f57eae35396094e4df6c7db2496ebd936aa30a86cbf09587b6db5"
+}

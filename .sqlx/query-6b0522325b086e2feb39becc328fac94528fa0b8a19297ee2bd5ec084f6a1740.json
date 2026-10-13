@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM agent_farm_eval_cases WHERE suite_id = $1\n",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6b0522325b086e2feb39becc328fac94528fa0b8a19297ee2bd5ec084f6a1740"
+}

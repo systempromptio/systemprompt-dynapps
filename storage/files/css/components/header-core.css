@@ -137,16 +137,15 @@ button.cta-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: var(--sp-space-2) var(--sp-space-6);
+  padding: 0.625rem 0.875rem;
   background: var(--sp-color-primary);
   color: var(--sp-color-text-on-primary);
   font-family: var(--sp-font-brand);
   font-size: 0.875rem;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
   text-decoration: none;
-  border-radius: var(--sp-radius-sm);
+  border-radius: var(--sp-radius-round);
+  box-shadow: var(--sp-shadow-cta);
   border: 0;
   cursor: pointer;
   transition: background-color var(--sp-transition-fast), transform var(--sp-transition-fast), box-shadow var(--sp-transition-fast);
@@ -156,8 +155,6 @@ a.cta-button:hover,
 button.cta-button:hover {
   background: var(--sp-color-primary-hover);
   color: var(--sp-color-text-on-primary);
-  transform: translateY(-1px);
-  box-shadow: var(--sp-shadow-md);
 }
 
 
@@ -171,11 +168,11 @@ a.download-badge {
   display: inline-flex;
   align-items: center;
   gap: var(--sp-space-sm);
-  padding: var(--sp-space-xs) var(--sp-space-md);
+  padding: var(--sp-space-xs) var(--sp-space-lg);
   background: var(--sp-color-primary);
   color: var(--sp-color-text-on-primary);
   text-decoration: none;
-  border-radius: var(--sp-radius-sm);
+  border-radius: var(--sp-radius-round);
   border: 0;
   cursor: pointer;
   transition: background-color var(--sp-transition-fast), transform var(--sp-transition-fast), box-shadow var(--sp-transition-fast);
@@ -184,8 +181,6 @@ a.download-badge {
 a.download-badge:hover {
   background: var(--sp-color-primary-hover);
   color: var(--sp-color-text-on-primary);
-  transform: translateY(-1px);
-  box-shadow: var(--sp-shadow-md);
 }
 
 .download-badge-logo {
@@ -265,7 +260,7 @@ a.download-badge:hover {
 }
 
 
-body.has-video-hero .site-header {
+body.has-image-hero .site-header {
   background: #fff;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;

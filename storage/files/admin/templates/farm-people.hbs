@@ -1,0 +1,87 @@
+{{#> layout page_title=title page_id=page}}
+    {{#*inline "content"}}
+    {{> components/breadcrumbs crumbs=breadcrumbs}}
+
+    {{#> components/page-header title=title
+        subtitle="Who launches farm runs, how often they succeed, and what they cost."}}
+      {{#*inline "header_meta"}}
+        {{> components/time-range time_range}}
+      {{/inline}}
+    {{/components/page-header}}
+
+    <form class="sp-toolbar" method="get" action="{{base_url}}">
+      <input type="hidden" name="preset" value="{{time_range.preset}}">
+      <input type="hidden" name="from" value="{{time_range.from}}">
+      <input type="hidden" name="to" value="{{time_range.to}}">
+      <label class="sp-toolbar__filter">
+        <span class="sp-toolbar__filter-label">Farm</span>
+        <select class="sp-filter-select" name="farm">
+          {{#each farms}}<option value="{{this.value}}"{{#if this.selected}} selected{{/if}}>{{this.label}}</option>{{/each}}
+        </select>
+      </label>
+      <div class="sp-toolbar__actions">
+        <button type="submit" class="sp-btn sp-btn--sm sp-btn--outline">Apply</button>
+      </div>
+    </form>
+
+    <section class="sp-kpi-grid" aria-label="Runs by person summary">
+      {{#each kpis}}
+        {{> components/kpi label=this.label value=this.value note=this.note tone=this.tone}}
+      {{/each}}
+    </section>
+
+    <div class="sp-farm-people">
+      {{#> components/section title="Leaderboard" count=row_count}}{{/components/section}}
+      {{#if has_people}}
+      {{#> components/table caption="Farm runs by person" modifier="sp-farm-people__table"}}
+        <thead><tr>
+          <th scope="col">Person</th>
+          <th scope="col">Runs</th>
+          <th scope="col">Succeeded</th>
+          <th scope="col">Failed</th>
+          <th scope="col">Success</th>
+          <th scope="col">Cost</th>
+          <th scope="col">Favourite agent</th>
+          <th scope="col">Triggered via</th>
+          <th scope="col">Last run</th>
+          <th scope="col"><span class="sp-u-sr-only">Runs</span></th>
+        </tr></thead>
+        <tbody>
+          {{#each people}}
+          <tr class="sp-farm-people__row">
+            <td><a class="sp-farm-people__name" href="{{this.user_url}}" title="{{this.user_id}}">{{this.display_name}}</a></td>
+            <td class="sp-farm-people__runs">
+              <span class="sp-farm-people__share" role="img" aria-label="{{this.share_label}} of runs"
+                    style="--sp-share: {{this.share_pct}}%"></span>
+              <span class="sp-farm-people__num">{{this.runs}}</span>
+              <span class="sp-farm-people__pct">{{this.share_label}}</span>
+            </td>
+            <td class="sp-farm-people__num">{{this.succeeded}}</td>
+            <td class="sp-farm-people__num{{#if this.failed}} sp-farm-people__num--err{{/if}}">{{this.failed}}</td>
+            <td class="sp-farm-people__num">{{this.success_label}}</td>
+            <td class="sp-farm-people__num">{{this.cost_display}}</td>
+            <td>{{#if this.favourite_agent}}<code class="sp-farm-people__agent">{{this.favourite_agent}}</code>{{else}}—{{/if}}</td>
+            <td>
+              <span class="sp-farm-people__split" role="img" aria-label="{{this.split_title}}" title="{{this.split_title}}">
+                <span class="sp-farm-people__seg sp-farm-people__seg--dashboard" style="--sp-share: {{this.split.dashboard}}%"></span>
+                <span class="sp-farm-people__seg sp-farm-people__seg--api" style="--sp-share: {{this.split.api}}%"></span>
+                <span class="sp-farm-people__seg sp-farm-people__seg--eval" style="--sp-share: {{this.split.eval}}%"></span>
+              </span>
+            </td>
+            <td><time title="{{this.last_run_local}}">{{this.last_run_relative}}</time></td>
+            <td><a class="sp-btn sp-btn--sm sp-btn--ghost" href="{{this.runs_url}}">View runs</a></td>
+          </tr>
+          {{/each}}
+        </tbody>
+      {{/components/table}}
+      <p class="sp-farm-people__legend">
+        <span class="sp-farm-people__key sp-farm-people__seg--dashboard"></span>Dashboard
+        <span class="sp-farm-people__key sp-farm-people__seg--api"></span>API
+        <span class="sp-farm-people__key sp-farm-people__seg--eval"></span>Eval
+      </p>
+      {{else}}
+      {{> components/empty-state heading="No runs in this window" message="Each person who launches a run is ranked here."}}
+      {{/if}}
+    </div>
+    {{/inline}}
+{{/layout}}

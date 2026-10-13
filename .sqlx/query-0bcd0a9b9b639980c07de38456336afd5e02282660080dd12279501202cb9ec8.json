@@ -1,0 +1,362 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id AS \"id: FarmRunId\", agent_run_id AS \"agent_run_id: AgentRunId\", farm_id AS \"farm_id: FarmId\",\n       agent_id AS \"agent_id: FarmAgentId\", user_id AS \"user_id: UserId\", triggered_via, host, status,\n       attempt, prompt, fixture, model, permission_mode, max_turns, max_budget_usd, timeout_seconds,\n       source_commit_sha, context_id AS \"context_id: ContextId\", error_class, cost_microdollars,\n       event_count, tool_call_count, gateway_request_count, eval_result_id, started_at, finished_at,\n       cancel_requested_at, created_at, updated_at\nFROM agent_farm_runs\nWHERE status IN ('queued', 'preparing', 'running')\nORDER BY created_at\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id: FarmRunId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "agent_run_id: AgentRunId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "agent_run_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "farm_id: FarmId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "farm_id"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "agent_id: FarmAgentId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "agent_id"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "user_id: UserId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "user_id"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "triggered_via",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "triggered_via"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "host",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "host"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "status",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "status"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "attempt",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "attempt"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "prompt",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "prompt"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "fixture",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "fixture"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "model",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "model"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "permission_mode",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "permission_mode"
+          }
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "max_turns",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "max_turns"
+          }
+        }
+      },
+      {
+        "ordinal": 14,
+        "name": "max_budget_usd",
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "max_budget_usd"
+          }
+        }
+      },
+      {
+        "ordinal": 15,
+        "name": "timeout_seconds",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "timeout_seconds"
+          }
+        }
+      },
+      {
+        "ordinal": 16,
+        "name": "source_commit_sha",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "source_commit_sha"
+          }
+        }
+      },
+      {
+        "ordinal": 17,
+        "name": "context_id: ContextId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "context_id"
+          }
+        }
+      },
+      {
+        "ordinal": 18,
+        "name": "error_class",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "error_class"
+          }
+        }
+      },
+      {
+        "ordinal": 19,
+        "name": "cost_microdollars",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "cost_microdollars"
+          }
+        }
+      },
+      {
+        "ordinal": 20,
+        "name": "event_count",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "event_count"
+          }
+        }
+      },
+      {
+        "ordinal": 21,
+        "name": "tool_call_count",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "tool_call_count"
+          }
+        }
+      },
+      {
+        "ordinal": 22,
+        "name": "gateway_request_count",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "gateway_request_count"
+          }
+        }
+      },
+      {
+        "ordinal": 23,
+        "name": "eval_result_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "eval_result_id"
+          }
+        }
+      },
+      {
+        "ordinal": 24,
+        "name": "started_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "started_at"
+          }
+        }
+      },
+      {
+        "ordinal": 25,
+        "name": "finished_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "finished_at"
+          }
+        }
+      },
+      {
+        "ordinal": 26,
+        "name": "cancel_requested_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "cancel_requested_at"
+          }
+        }
+      },
+      {
+        "ordinal": 27,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 28,
+        "name": "updated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "updated_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "0bcd0a9b9b639980c07de38456336afd5e02282660080dd12279501202cb9ec8"
+}

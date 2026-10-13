@@ -8,7 +8,7 @@
 //! coverage exhaustive by construction: a new `.route(...)` is picked up and
 //! exercised on the next run, and shows up as a baseline addition.
 
-use crate::app::{ADMIN_API_PREFIX, SSR_PREFIX};
+use crate::app::{ADMIN_API_PREFIX, FARM_PUBLIC_PREFIX, SSR_PREFIX};
 
 const ADMIN_API_SRC: &str = include_str!("../../../../extensions/web/src/router/admin/api.rs");
 const ANALYTICS_API_SRC: &str =
@@ -46,6 +46,16 @@ const PLATFORM_API_SRC: &str =
 const PLATFORM_SSR_SRC: &str =
     include_str!("../../../../extensions/web/admin/platform/src/routes/platform_ssr.rs");
 const SSR_SRC: &str = include_str!("../../../../extensions/web/src/router/admin/ssr.rs");
+// The agent farm crate mounts four route tables: pages and their fragments in
+// the SSR router, the console JSON API beside the other admin reads and
+// writes, and the public run API at its own prefix.
+const FARM_SSR_SRC: &str =
+    include_str!("../../../../extensions/web/admin/farm/src/routes/farm_ssr.rs");
+const FARM_FRAGMENTS_SRC: &str =
+    include_str!("../../../../extensions/web/admin/farm/src/routes/farm_fragments.rs");
+const FARM_PUBLIC_SRC: &str =
+    include_str!("../../../../extensions/web/admin/farm/src/routes/public.rs");
+const FARM_API_SRC: &str = include_str!("../../../../extensions/web/admin/farm/src/routes/api.rs");
 // Merged into the SSR router from its own module, so it is read on its own:
 // without it every export route — the PAT surface included — drops out of the
 // table and out of the contract.
@@ -120,6 +130,10 @@ pub(crate) fn mounted_routes() -> Vec<MountedRoute> {
         (ANALYTICS_OBSERVABILITY_SRC, SSR_PREFIX),
         (EXPORT_SRC, SSR_PREFIX),
         (SSR_REDIRECT_SRC, SSR_PREFIX),
+        (FARM_SSR_SRC, SSR_PREFIX),
+        (FARM_FRAGMENTS_SRC, SSR_PREFIX),
+        (FARM_API_SRC, ADMIN_API_PREFIX),
+        (FARM_PUBLIC_SRC, FARM_PUBLIC_PREFIX),
     ] {
         parse(src, prefix, &mut routes);
     }

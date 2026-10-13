@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE agent_farm_runs\nSET status = 'running', started_at = COALESCE(started_at, NOW()), updated_at = NOW()\nWHERE id = $1 AND status IN ('queued', 'preparing')\n",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "97b4525a9fbfb817324150a88c2b3ea6ed1b82f52b656e1e3bd643d5d1d644bd"
+}

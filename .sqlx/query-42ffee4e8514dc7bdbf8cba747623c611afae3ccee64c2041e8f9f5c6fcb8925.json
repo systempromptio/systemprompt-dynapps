@@ -1,0 +1,106 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "-- The \"By person\" leaderboard over a window; agent_farm_runs_by_user is the\n-- same shape over all time.\nSELECT r.user_id AS \"user_id!: UserId\",\n       COALESCE(NULLIF(u.display_name, ''), u.email, r.user_id) AS \"display_name?\",\n       COUNT(*)::bigint AS \"runs?\",\n       COUNT(*) FILTER (WHERE r.status = 'succeeded')::bigint AS \"succeeded?\",\n       COUNT(*) FILTER (WHERE r.status IN ('failed', 'timed_out'))::bigint AS \"failed?\",\n       COUNT(*) FILTER (WHERE r.status IN ('queued', 'preparing', 'running'))::bigint AS \"active?\",\n       COUNT(*) FILTER (WHERE r.triggered_via = 'dashboard')::bigint AS \"dashboard_runs?\",\n       COUNT(*) FILTER (WHERE r.triggered_via = 'api')::bigint AS \"api_runs?\",\n       COUNT(*) FILTER (WHERE r.triggered_via = 'eval')::bigint AS \"eval_runs?\",\n       COALESCE(SUM(r.cost_microdollars), 0)::bigint AS \"cost_microdollars?\",\n       MODE() WITHIN GROUP (ORDER BY r.agent_id) AS \"favourite_agent?\",\n       MAX(r.created_at) AS \"last_run_at?\"\nFROM agent_farm_runs r\nLEFT JOIN users u ON u.id = r.user_id\nWHERE r.created_at >= $1\n  AND ($2::text IS NULL OR r.farm_id = $2)\nGROUP BY r.user_id, u.display_name, u.email\nORDER BY COUNT(*) DESC, MAX(r.created_at) DESC, r.user_id\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user_id!: UserId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "user_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "display_name?",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "runs?",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "succeeded?",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "failed?",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "active?",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 6,
+        "name": "dashboard_runs?",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 7,
+        "name": "api_runs?",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 8,
+        "name": "eval_runs?",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 9,
+        "name": "cost_microdollars?",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 10,
+        "name": "favourite_agent?",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 11,
+        "name": "last_run_at?",
+        "type_info": "Timestamptz",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Timestamptz",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "42ffee4e8514dc7bdbf8cba747623c611afae3ccee64c2041e8f9f5c6fcb8925"
+}

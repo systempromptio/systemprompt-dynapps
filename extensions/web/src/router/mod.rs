@@ -12,6 +12,7 @@
 pub(crate) mod admin;
 mod admin_ssr;
 mod api;
+pub(crate) mod farm_public;
 mod pools;
 mod sign_out;
 

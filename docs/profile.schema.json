@@ -412,12 +412,13 @@
       ]
     },
     "NodeRole": {
-      "description": "The part of the platform a node serves.\n\n`all` is a single-node deployment. `gateway` serves only the AI gateway,\nthe bridge consumer surface and the OAuth/discovery routes they depend on,\nand runs no scheduler, MCP or agent processes, so it scales horizontally.\n`admin` serves everything except the gateway and runs the workers.",
+      "description": "The part of the platform a node serves.\n\n`all` is a single-node deployment: every surface, every worker, and the\nextensions' runner services, so one node runs the whole product.\n`gateway` serves only the AI gateway,\nthe bridge consumer surface and the OAuth/discovery routes they depend on,\nand runs no scheduler, MCP or agent processes, so it scales horizontally.\n`admin` serves everything except the gateway and runs the workers.\n`runner` serves only the health, readiness and metrics probes, runs no\nscheduler, MCP or agent processes, and starts the extensions' runner\nservices, so long-running work scales on its own Deployment.",
       "type": "string",
       "enum": [
         "all",
         "gateway",
-        "admin"
+        "admin",
+        "runner"
       ]
     },
     "PathsConfig": {

@@ -1,0 +1,29 @@
+# Agent farms this instance syncs and runs.
+#
+# Each farm is a public GitHub repository in Claude Code marketplace format
+# whose `subdir` holds the farm definition (farm.yaml, agents/, evals/,
+# fixtures/). The farm crate clones `source.github` at `source.ref`, projects
+# the agents, fixtures and eval suites into the agent_farm_* tables, and runs
+# agents headlessly with Claude Code under the launching user's identity.
+# `marketplace` names the marketplace a user must be entitled to (see
+# services/access-control/rules.yaml) to see and run the farm's agents.
+# Unknown keys are a load error.
+
+farms:
+  - id: dynapps-agent-farm
+    name: "Dynapps Odoo delivery farm"
+    description: "Odoo delivery agents: module review, migration planning, release notes and test authoring over a sample Odoo module."
+    marketplace: dynapps-agent-farm
+    source:
+      github: systempromptio/systemprompt-agent-farm
+      ref: main
+      subdir: farm
+    defaults:
+      permission_mode: acceptEdits
+      timeout_seconds: 1200
+      max_turns: 40
+      max_budget_usd: 2.0
+      model: claude-sonnet-5
+
+runner:
+  max_concurrent: 2

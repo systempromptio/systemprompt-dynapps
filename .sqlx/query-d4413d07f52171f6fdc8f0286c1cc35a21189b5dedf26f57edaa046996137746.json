@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT context_id AS \"context_id: ContextId\"\nFROM conversation_session_contexts\nWHERE user_id = $1 AND client_session_id = $2\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "context_id: ContextId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "conversation_session_contexts",
+            "name": "context_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "d4413d07f52171f6fdc8f0286c1cc35a21189b5dedf26f57edaa046996137746"
+}
