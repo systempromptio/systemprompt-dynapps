@@ -221,6 +221,6 @@ fn authorize_url_carries_every_parameter() {
 fn pkce_challenge_matches_rfc7636_vector() {
     assert_eq!(
         pkce_challenge("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"),
-        "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGrBEU6WtsU"
+        "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
     );
 }

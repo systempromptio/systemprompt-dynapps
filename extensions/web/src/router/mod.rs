@@ -28,7 +28,7 @@ pub(crate) fn build(ctx: &dyn ExtensionContext) -> Option<ExtensionRouter> {
     let db = DbHandles::from_context(ctx)?;
     let session_service = pools::build_session_service(&db);
 
-    let sso_deps = sso::build(&db, &session_service)?;
+    let sso_deps = sso::build(&db, &session_service);
 
     let api_router = api::build(&db, &session_service);
     let share_api = api::share(&db);

@@ -31,7 +31,10 @@ const LOGIN_PATH: &str = "/admin/login";
 /// `Extension`.
 #[derive(Clone)]
 pub struct SsoDeps {
-    pub driver: SsoDriver,
+    // Why: core's SsoDriver needs the profile Config at build time; a router
+    // assembled without one (tests, early boot) keeps every SSO route
+    // mounted but answers `unavailable`, as the pre-driver flow did.
+    pub driver: Option<SsoDriver>,
     pub write_pool: Arc<PgPool>,
     pub session_service: Arc<SessionCreationService>,
 }
@@ -47,16 +50,20 @@ impl std::fmt::Debug for SsoDeps {
 impl SsoDeps {
     #[must_use]
     pub fn provider_enabled(&self, id: &str) -> bool {
-        self.driver.provider(id).is_some()
+        self.driver
+            .as_ref()
+            .is_some_and(|d| d.provider(id).is_some())
     }
 
     #[must_use]
     pub fn provisions(&self) -> bool {
-        self.driver
-            .provider_ids()
-            .iter()
-            .filter_map(|id| self.driver.provider(id))
-            .any(|p| p.policy().auto_provision)
+        self.driver.as_ref().is_some_and(|driver| {
+            driver
+                .provider_ids()
+                .iter()
+                .filter_map(|id| driver.provider(id))
+                .any(|p| p.policy().auto_provision)
+        })
     }
 }
 
@@ -89,7 +96,10 @@ pub(crate) struct StartParams {
 
 async fn start(id: &'static str, deps: SsoDeps, params: Option<StartParams>) -> SsoFlowResult {
     let redirect = params.and_then(|p| p.redirect);
-    match deps.driver.start(id, redirect.as_deref()).await {
+    let Some(driver) = deps.driver.as_ref() else {
+        return Err(SsoFlowError::Refused("unavailable"));
+    };
+    match driver.start(id, redirect.as_deref()).await {
         Ok(outcome) => Ok(start_response(&outcome)),
         Err(err) => {
             tracing::warn!(provider_id = id, error = %err, "SSO start failed");
@@ -120,8 +130,10 @@ async fn finish(
         .as_deref()
         .and_then(|raw| raw.parse::<IpAddr>().ok());
     let binder = binder_from_headers(headers);
-    let outcome = deps
-        .driver
+    let Some(driver) = deps.driver.as_ref() else {
+        return Err(SsoFlowError::Refused("unavailable"));
+    };
+    let outcome = driver
         .finish(
             id,
             SsoCallback {
@@ -182,7 +194,10 @@ pub(crate) async fn oidc_callback(
 }
 
 pub(crate) async fn saml_metadata(Extension(deps): Extension<SsoDeps>) -> SsoFlowResult {
-    match deps.driver.metadata(entra_saml::ID).await {
+    let Some(driver) = deps.driver.as_ref() else {
+        return Err(SsoFlowError::MetadataUnavailable);
+    };
+    match driver.metadata(entra_saml::ID).await {
         None => Err(SsoFlowError::MetadataNotFound),
         Some(Ok(doc)) => Ok(([(header::CONTENT_TYPE, doc.content_type)], doc.body).into_response()),
         Some(Err(err)) => {
