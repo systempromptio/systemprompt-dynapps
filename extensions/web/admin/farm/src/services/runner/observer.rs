@@ -126,6 +126,7 @@ async fn stamp(
     };
     let finish = RunFinish {
         status: RunStatus::from_agent_run(facts.status),
+        attempt: agent_run.attempt,
         error_class: facts.error_class,
         cost_microdollars: facts.cost_microdollars,
         event_count: count_i32(repo.count_events(&agent_run.id).await?),

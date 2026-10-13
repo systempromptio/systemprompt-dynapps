@@ -84,6 +84,7 @@ pub struct NewRun {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RunFinish {
     pub status: RunStatus,
+    pub attempt: i32,
     pub error_class: Option<String>,
     pub cost_microdollars: i64,
     pub event_count: i32,

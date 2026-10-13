@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT DISTINCT farm_id AS \"farm_id!\"\nFROM agent_farm_runs\nWHERE user_id = $1 AND status IN ('queued', 'preparing', 'running')\nORDER BY farm_id\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "farm_id!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "farm_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "49b32c1c291103c416b25cea9513cf82d4038c1b6daff1186a37e6e71cbf1daf"
+}

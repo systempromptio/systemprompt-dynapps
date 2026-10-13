@@ -107,3 +107,15 @@ pub async fn list_recent_runs(
     .fetch_all(pool)
     .await
 }
+
+pub async fn list_active_farm_ids_for_user(
+    pool: &PgPool,
+    user_id: &UserId,
+) -> Result<Vec<String>, sqlx::Error> {
+    sqlx::query_file_scalar!(
+        "src/repositories/runs/list_active_farm_ids_for_user.sql",
+        user_id.as_str()
+    )
+    .fetch_all(pool)
+    .await
+}

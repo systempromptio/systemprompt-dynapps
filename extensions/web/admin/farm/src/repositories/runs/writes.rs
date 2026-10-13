@@ -59,6 +59,7 @@ pub async fn update_run_finished(
         finish.tool_call_count,
         finish.gateway_request_count,
         finish.context_id.as_ref().map(ContextId::as_str),
+        finish.attempt,
     )
     .execute(pool)
     .await?;

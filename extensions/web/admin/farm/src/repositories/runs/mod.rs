@@ -9,8 +9,8 @@ mod writes;
 
 pub use links::{count_run_requests, find_run_context_id, list_run_requests};
 pub use reads::{
-    find_run, find_run_by_agent_run, find_run_with_agent_run, list_active_runs, list_recent_runs,
-    list_runs_paged,
+    find_run, find_run_by_agent_run, find_run_with_agent_run, list_active_farm_ids_for_user,
+    list_active_runs, list_recent_runs, list_runs_paged,
 };
 pub use stats::{get_run_stats, list_daily_run_counts};
 pub use writes::{

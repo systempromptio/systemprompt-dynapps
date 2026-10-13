@@ -119,6 +119,7 @@ impl FarmRunHandler {
                     max_budget_usd: request.max_budget_usd,
                     max_requests: None,
                 },
+                purpose: Some(prepare::credential_purpose(&run.id)),
             })
             .await?;
         let job = Job {

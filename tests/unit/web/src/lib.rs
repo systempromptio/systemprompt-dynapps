@@ -402,4 +402,6 @@ mod farm_sync_card;
 mod farm_eval_matrix;
 
 #[cfg(test)]
+mod farm_attribution;
+#[cfg(test)]
 mod farm_run_events_view;

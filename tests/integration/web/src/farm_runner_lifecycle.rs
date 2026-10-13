@@ -4,7 +4,8 @@
 //! claim loop picks up (origin `agent_farm_run`, origin id = the farm run id)
 //! and the `agent_farm_runs` row that references it. A cancel before any
 //! claim flags both. The finish observer copies a `RunOutcome` onto the farm
-//! row. No executor is started, so no host process is ever spawned.
+//! row, attempt included. No executor is started, so no host process is ever
+//! spawned.
 
 use std::sync::Arc;
 
@@ -23,15 +24,14 @@ use systemprompt_web_admin_farm::types::{FarmAgentId, FarmId, TriggeredVia};
 
 use crate::tempdb::TempDb;
 
-
-struct Seeded {
-    state: Arc<FarmState>,
-    user: UserId,
-    farm: FarmId,
-    agent: FarmAgentId,
+pub(crate) struct Seeded {
+    pub(crate) state: Arc<FarmState>,
+    pub(crate) user: UserId,
+    pub(crate) farm: FarmId,
+    pub(crate) agent: FarmAgentId,
 }
 
-async fn seed(pool: &Arc<PgPool>) -> Seeded {
+pub(crate) async fn seed(pool: &Arc<PgPool>) -> Seeded {
     let tag = uuid::Uuid::new_v4().simple().to_string();
     let user = UserId::new(format!("farm-lifecycle-{tag}"));
     sqlx::query("INSERT INTO users (id, name, email) VALUES ($1, $1, $1 || '@test.invalid')")
@@ -103,7 +103,7 @@ async fn seed(pool: &Arc<PgPool>) -> Seeded {
     }
 }
 
-async fn launch_one(seeded: &Seeded) -> RunRow {
+pub(crate) async fn launch_one(seeded: &Seeded) -> RunRow {
     launch(
         &seeded.state,
         LaunchRequest {
@@ -138,7 +138,10 @@ async fn launch_queues_an_agent_run_and_a_farm_row_that_references_it() {
     let run = launch_one(&seeded).await;
 
     assert_eq!(run.status, "queued");
-    assert_eq!(run.host, "codex-cli", "the agent's host is copied to the run");
+    assert_eq!(
+        run.host, "codex-cli",
+        "the agent's host is copied to the run"
+    );
     let agent_run = repo(&db.pool)
         .find_run(&run.agent_run_id)
         .await
@@ -220,6 +223,36 @@ async fn the_finish_observer_stamps_the_outcome_on_the_farm_row() {
     assert_eq!(farm_row.error_class.as_deref(), Some("ok"));
     assert_eq!(farm_row.cost_microdollars, 42_000);
     assert!(farm_row.finished_at.is_some());
+    assert_eq!(farm_row.attempt, 1);
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn the_finish_observer_stamps_a_reclaimed_runs_attempt() {
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    let seeded = seed(&db.pool).await;
+    let run = launch_one(&seeded).await;
+    assert_eq!(run.attempt, 1);
+    sqlx::query("UPDATE agent_runs SET attempt = 2 WHERE id = $1")
+        .bind(run.agent_run_id.as_str())
+        .execute(db.pool.as_ref())
+        .await
+        .expect("simulate a reclaim");
+    let outcome = systemprompt_web_admin_farm::services::runner::observer::unexecuted_outcome(
+        RunStatus::Failed,
+        ErrorClass::Timeout,
+        "lease expired",
+    );
+
+    observe_finish(&seeded.state, &run, &outcome).await;
+
+    let farm_row = runs::find_run(&db.pool, &run.id)
+        .await
+        .expect("read farm run")
+        .expect("farm run exists");
+    assert_eq!(farm_row.attempt, 2, "the core row's attempt is stamped");
     db.cleanup().await;
 }
 
@@ -231,9 +264,11 @@ async fn observe_finish(state: &Arc<FarmState>, run: &RunRow, outcome: &RunOutco
         .await
         .expect("finish the agent run");
     assert!(finished, "the agent run was still open");
-    let stamped =
-        systemprompt_web_admin_farm::services::runner::observer::observe_finished(state, &run.agent_run_id)
-            .await
-            .expect("observe the finish");
+    let stamped = systemprompt_web_admin_farm::services::runner::observer::observe_finished(
+        state,
+        &run.agent_run_id,
+    )
+    .await
+    .expect("observe the finish");
     assert!(stamped, "the observer stamped the farm row");
 }

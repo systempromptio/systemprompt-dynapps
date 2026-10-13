@@ -3,6 +3,7 @@
 //! an isolated directory, attributed to the user who launched them, and scored
 //! by eval suites.
 //!
+//! - [`attribution`] — the `farm` subject dimension gateway calls report under.
 //! - [`types`] — typed ids, run and eval statuses, and the run event payload.
 //! - [`config`] — the `web/config/agent-farms.yaml` loader.
 //! - [`state`] — the shared [`state::FarmState`] the public API and runner use.
@@ -11,6 +12,7 @@
 //! - [`routes`] — the dashboard pages, their fragments, the console JSON API,
 //!   and the public `/api/public/agent-farm` router.
 
+pub mod attribution;
 pub mod config;
 pub mod error;
 pub(crate) mod handlers;

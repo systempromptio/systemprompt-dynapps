@@ -14,16 +14,20 @@
 //! sent as a forgeable scope header. `credential_user` names the user a run's
 //! credentials are issued to: the farm's service account
 //! (`agent_farm_farms.run_as_user_id`) when it has one, the launching user
-//! otherwise. Callers pass `None` until that column lands.
+//! otherwise. Callers pass `None` until that column lands. The run's farm
+//! is bound as its `farm` attribution scope, verified at the gateway against
+//! the credential user's active runs.
 
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use systemprompt::agent_runs::{HostKind, PermissionMode, RunLayout, RunRequest};
-use systemprompt::identifiers::{AgentRunId, UserId};
+use systemprompt::identifiers::{AgentRunId, ScopeDimension, UserId};
+use systemprompt::models::attribution::ScopeBinding;
 use walkdir::WalkDir;
 
 use super::plugin::materialise_plugin;
+use crate::attribution::FARM_DIMENSION;
 use crate::error::{FarmError, FarmResult};
 use crate::repositories::rows::{AgentRow, RunRow};
 use crate::repositories::{farms, fixtures};
@@ -86,6 +90,13 @@ pub fn build_request(spec: RequestSpec<'_>) -> FarmResult<RunRequest> {
         .filter(|secs| *secs > 0)
         .map(Duration::from_secs)
         .ok_or_else(|| positive("timeout_seconds"))?;
+    let farm_scope = ScopeBinding {
+        dimension: ScopeDimension::try_new(FARM_DIMENSION).map_err(|e| FarmError::Identifier {
+            at: "farm scope dimension",
+            source: Box::new(e),
+        })?,
+        value: spec.farm_id.as_str().to_owned(),
+    };
     Ok(RunRequest {
         host,
         prompt,
@@ -105,7 +116,7 @@ pub fn build_request(spec: RequestSpec<'_>) -> FarmResult<RunRequest> {
         wall_clock,
         resume_session_id: None,
         attempt: 1,
-        attribution_scopes: Vec::new(),
+        attribution_scopes: vec![farm_scope],
         plugin_id: Some(agent.plugin_id.clone()),
         plugin_dirs: vec![plugin_root(spec.layout).join(agent.plugin_id.as_str())],
     })
