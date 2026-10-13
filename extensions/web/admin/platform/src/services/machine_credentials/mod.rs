@@ -4,7 +4,8 @@
 //! a global key. The account holds at most one credential per provider; the
 //! broker exchanges it for a short-lived token only when the caller names a
 //! purpose a service account may serve ([`caller`]). Minting and its cache
-//! are core's (the private `grant` module); this module stores, seals and gates.
+//! are core's (the private `grant` module); this module stores, seals and
+//! gates.
 //!
 //! The secret half is sealed in an envelope bound to its user and provider,
 //! like hosted MCP grants, so a row copied onto another account cannot open.
