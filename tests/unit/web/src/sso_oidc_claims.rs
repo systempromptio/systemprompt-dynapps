@@ -1,6 +1,7 @@
-//! The pure half of the Entra ID OpenID Connect login: id_token claim shapes,
-//! the claims-to-identity rules, the config defaults and the authorize URL —
-//! everything that decides a login without a live tenant or a signing key.
+//! The pure half of the Entra ID `OpenID Connect` login: `id_token` claim
+//! shapes, the claims-to-identity rules, the config defaults and the authorize
+//! URL — everything that decides a login without a live tenant or a signing
+//! key.
 
 use serde_json::{Value, json};
 use systemprompt::sso::SsoError;

@@ -1,4 +1,4 @@
-//! id_token validation: signature against the tenant's JWKS, the registered
+//! `id_token` validation: signature against the tenant's JWKS, the registered
 //! claims, then the checks Entra ID leaves to the relying party.
 //!
 //! [`identity_from_claims`] is the pure half — nonce, tenant, subject, the

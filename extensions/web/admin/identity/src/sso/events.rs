@@ -1,6 +1,8 @@
-//! What this installation records around core's SSO driver: the `login`
-//! activity, the directory group and project memberships an assertion
-//! carried, and revocation when the directory refuses someone. Roles are not
+//! What this installation records around core's SSO driver.
+//!
+//! That is the `login` activity, the directory group and project memberships
+//! an assertion carried, and revocation when the directory refuses someone.
+//! Roles are not
 //! written here: [`super::roles`] settles them before the session is minted.
 //!
 //! A refused sign-in (`forbidden`, `no_group`, `group_overage`) revokes the

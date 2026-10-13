@@ -19,7 +19,8 @@ use sqlx::PgPool;
 use systemprompt::analytics::SessionAnalyticsBuilder;
 use systemprompt::oauth::SessionCreationService;
 use systemprompt::sso::{
-    SsoDriver, SsoReturn, SsoReturnBinding, binder_from_headers, into_response, start_response,
+    SsoCallback, SsoDriver, SsoReturn, SsoReturnBinding, binder_from_headers, into_response,
+    start_response,
 };
 
 use crate::sso::{entra_oidc, entra_saml};
@@ -89,7 +90,7 @@ pub(crate) struct StartParams {
 async fn start(id: &'static str, deps: SsoDeps, params: Option<StartParams>) -> SsoFlowResult {
     let redirect = params.and_then(|p| p.redirect);
     match deps.driver.start(id, redirect.as_deref()).await {
-        Ok(outcome) => Ok(start_response(outcome)),
+        Ok(outcome) => Ok(start_response(&outcome)),
         Err(err) => {
             tracing::warn!(provider_id = id, error = %err, "SSO start failed");
             Err(SsoFlowError::Refused(err.reason_code()))
@@ -123,10 +124,12 @@ async fn finish(
         .driver
         .finish(
             id,
-            SsoReturn { binding, params },
-            binder.as_deref(),
-            &analytics,
-            ip,
+            SsoCallback {
+                ret: SsoReturn { binding, params },
+                binder_cookie: binder.as_deref(),
+                analytics: &analytics,
+                ip,
+            },
         )
         .await;
     Ok(into_response(outcome))

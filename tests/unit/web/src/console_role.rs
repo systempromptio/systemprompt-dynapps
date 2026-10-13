@@ -106,16 +106,17 @@ fn group_matches_pattern(pattern: &str, group: &str) -> bool {
 }
 
 fn pattern_config() -> SsoIdentityPolicy {
-    let mut cfg = SsoIdentityPolicy::default();
-    cfg.group_roles = BTreeMap::from([(
-        "Systemprompt-Admins".to_owned(),
-        vec![ROLE_ADMIN.to_owned(), ROLE_USER.to_owned()],
-    )]);
-    cfg.group_role_patterns = BTreeMap::from([(
-        "Systemprompt-ProjectManagers-*".to_owned(),
-        vec![ROLE_PROJECT_MANAGER.to_owned(), ROLE_USER.to_owned()],
-    )]);
-    cfg
+    SsoIdentityPolicy {
+        group_roles: BTreeMap::from([(
+            "Systemprompt-Admins".to_owned(),
+            vec![ROLE_ADMIN.to_owned(), ROLE_USER.to_owned()],
+        )]),
+        group_role_patterns: BTreeMap::from([(
+            "Systemprompt-ProjectManagers-*".to_owned(),
+            vec![ROLE_PROJECT_MANAGER.to_owned(), ROLE_USER.to_owned()],
+        )]),
+        ..SsoIdentityPolicy::default()
+    }
 }
 
 #[test]

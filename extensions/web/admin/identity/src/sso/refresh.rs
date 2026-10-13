@@ -96,7 +96,7 @@ impl<T: Clone + Send + Sync + 'static> RefreshingDoc<T> {
     }
 }
 
-async fn refresh_inner<T>(inner: &Inner<T>) -> Result<Arc<T>, SsoProviderError> {
+async fn refresh_inner<T: Send + Sync>(inner: &Inner<T>) -> Result<Arc<T>, SsoProviderError> {
     match (inner.fetch)().await {
         Ok(doc) => {
             let doc = Arc::new(doc);
@@ -111,15 +111,12 @@ async fn refresh_inner<T>(inner: &Inner<T>) -> Result<Arc<T>, SsoProviderError> 
                 .current
                 .read()
                 .map_or(None, |guard| guard.as_ref().map(Arc::clone));
-            match last_good {
-                Some(doc) => {
-                    tracing::warn!(error = %e, doc = inner.name, "Identity provider document refresh failed; keeping the last good one");
-                    Ok(doc)
-                },
-                None => {
-                    tracing::error!(error = %e, doc = inner.name, "Identity provider document unavailable");
-                    Err(e)
-                },
+            if let Some(doc) = last_good {
+                tracing::warn!(error = %e, doc = inner.name, "Identity provider document refresh failed; keeping the last good one");
+                Ok(doc)
+            } else {
+                tracing::error!(error = %e, doc = inner.name, "Identity provider document unavailable");
+                Err(e)
             }
         },
     }

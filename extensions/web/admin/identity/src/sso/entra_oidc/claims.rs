@@ -1,4 +1,4 @@
-//! The id_token claims Entra ID v2.0 issues, as far as sign-in reads them.
+//! The `id_token` claims Entra ID v2.0 issues, as far as sign-in reads them.
 
 use serde::{Deserialize, Deserializer};
 use serde_json::{Map, Value};

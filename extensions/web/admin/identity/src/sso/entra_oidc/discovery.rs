@@ -1,4 +1,4 @@
-//! The tenant's OpenID Connect discovery document, fetched once and kept
+//! The tenant's `OpenID Connect` discovery document, fetched once and kept
 //! fresh in the background.
 //!
 //! The endpoints and the issuer come from the document rather than being
@@ -15,8 +15,8 @@ use systemprompt::sso::SsoError;
 use super::super::error::SsoProviderError;
 use super::super::refresh::RefreshingDoc;
 
-const DISCOVERY_TTL: Duration = Duration::from_secs(6 * 60 * 60);
-const DISCOVERY_RETRY: Duration = Duration::from_secs(5 * 60);
+const DISCOVERY_TTL: Duration = Duration::from_hours(6);
+const DISCOVERY_RETRY: Duration = Duration::from_mins(5);
 const HTTP_TIMEOUT: Duration = Duration::from_secs(10);
 
 #[derive(Debug, Clone, Deserialize)]

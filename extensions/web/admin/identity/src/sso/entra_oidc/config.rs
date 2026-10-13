@@ -1,4 +1,4 @@
-//! Configuration of the Microsoft Entra ID OpenID Connect relying party
+//! Configuration of the Microsoft Entra ID `OpenID Connect` relying party
 //! (`services/web/config/entra-oidc.yaml`).
 //!
 //! The aggregator loads the file at boot and hands it to [`install_config`]

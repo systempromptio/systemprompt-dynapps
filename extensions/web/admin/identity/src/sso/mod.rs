@@ -1,12 +1,12 @@
 //! Browser single sign-on, as providers of core's SSO driver.
 //!
 //! - [`entra_saml`] — Microsoft Entra ID over SAML 2.0 (`adfs.yaml`).
-//! - [`entra_oidc`] — Microsoft Entra ID over OpenID Connect.
+//! - [`entra_oidc`] — Microsoft Entra ID over `OpenID Connect`.
 //! - [`events`] — the activity, membership and revocation side effects.
 //! - [`roles`] — the role resolver: directory roles joined with manual grants,
 //!   and revocation when a sign-in drops admin.
 //! - [`error`] — the providers' typed failures, mapped onto core's reasons.
-//! - [`refresh`] — the background-refreshed IdP documents both protocols use.
+//! - [`refresh`] — the background-refreshed `IdP` documents both protocols use.
 //!
 //! Each provider's factory reads a config the aggregator installs before the
 //! driver discovers providers; with none installed the provider is off.

@@ -53,7 +53,7 @@ impl EntraSamlProvider {
                 requested_authn_context: None,
                 requested_name_id_format: None,
             });
-        let relay_state = tracker.as_ref().and(ret.param("RelayState"));
+        let relay_state = tracker.as_ref().and_then(|_| ret.param("RelayState"));
 
         let identity = sp
             .consume_response(ConsumeResponse {

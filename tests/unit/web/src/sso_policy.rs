@@ -123,10 +123,10 @@ fn a_regional_pattern_adds_to_the_exact_groups() {
     ]));
     roles.sort();
     assert_eq!(roles, strings(&["admin", "project_manager", "user"]));
-    assert!(
+    assert_eq!(
         p.roles_for_groups(&strings(&["Systemprompt-ProjectManagers-"]))
-            .len()
-            == 2
+            .len(),
+        2
     );
     assert!(
         p.roles_for_groups(&strings(&["Other-ProjectManagers-UK"]))

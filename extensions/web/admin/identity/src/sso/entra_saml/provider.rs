@@ -99,11 +99,11 @@ impl SsoProvider for EntraSamlProvider {
         }
     }
 
-    fn login_path(&self) -> &str {
+    fn login_path(&self) -> &'static str {
         "/admin/login"
     }
 
-    fn default_return_to(&self) -> &str {
+    fn default_return_to(&self) -> &'static str {
         "/admin"
     }
 

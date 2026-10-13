@@ -1,4 +1,4 @@
-//! Microsoft Entra ID as an OpenID Connect relying party: the authorization
+//! Microsoft Entra ID as an `OpenID Connect` relying party: the authorization
 //! code flow with PKCE, validated against the tenant's discovery document and
 //! JWKS.
 //!
@@ -185,11 +185,11 @@ impl SsoProvider for EntraOidcProvider {
         PATHS
     }
 
-    fn login_path(&self) -> &str {
+    fn login_path(&self) -> &'static str {
         "/admin/login"
     }
 
-    fn default_return_to(&self) -> &str {
+    fn default_return_to(&self) -> &'static str {
         "/admin"
     }
 

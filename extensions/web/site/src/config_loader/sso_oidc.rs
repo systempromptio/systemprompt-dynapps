@@ -1,4 +1,4 @@
-//! Loader for the Microsoft Entra ID OpenID Connect config
+//! Loader for the Microsoft Entra ID `OpenID Connect` config
 //! (`services/web/config/entra-oidc.yaml`).
 //!
 //! The absolute `redirect_uri` is derived from the profile's
