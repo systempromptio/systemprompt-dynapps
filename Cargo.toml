@@ -88,13 +88,14 @@ serde_json = { version = "1.0", features = ["preserve_order"] }
 jsonschema = { version = "=0.56.0", default-features = false }
 chrono = { version = "0.4", features = ["serde"] }
 chrono-tz = "0.10"
-uuid = { version = "1.18", features = ["v4", "serde"] }
+uuid = { version = "1.28", features = ["v4", "serde"] }
 thiserror = "2.0"
 shell-words = "1.1"
 
 # HTTP/API
 axum = "0.8"
 reqwest = { version = "0.13", default-features = false, features = ["json", "stream", "rustls"] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "logging", "tls12"] }
 tower = { version = "0.5", features = ["util"] }
 tower-http = { version = "0.7", features = ["cors", "trace", "fs", "normalize-path"] }
 
@@ -124,7 +125,7 @@ handlebars = "6"
 # Archive
 
 # MCP Protocol
-rmcp = { version = "=3.3.0", features = ["server", "client", "transport-io", "transport-streamable-http-server", "transport-streamable-http-server-session", "transport-streamable-http-client", "transport-streamable-http-client-reqwest", "macros", "auth"] }
+rmcp = { version = "=3.5.1", features = ["server", "client", "transport-io", "transport-streamable-http-server", "transport-streamable-http-server-session", "transport-streamable-http-client", "transport-streamable-http-client-reqwest", "macros", "auth"] }
 
 # The tests/ workspace deliberately relaxes a handful of these (unwrap/expect/
 # panic and the doc lints) in its own [workspace.lints.clippy] block — see

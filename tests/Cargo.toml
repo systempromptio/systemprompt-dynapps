@@ -198,8 +198,8 @@ tempfile = "3"
 zip = { version = "8", default-features = false, features = ["deflate"] }
 # Pinned to the exact version the root workspace pins, so the `ServerHandler`
 # trait the tests bring into scope is the one the MCP crates implement.
-rmcp = { version = "=3.3.0", features = ["server"] }
-uuid = { version = "1.18", features = ["v4"] }
+rmcp = { version = "=3.5.1", features = ["server"] }
+uuid = { version = "1.28", features = ["v4"] }
 base64 = "0.22"
 # Pinned to what `extensions/web/admin/catalog` uses for the share-token HMAC, so the
 # contract suite's expired-token forgery signs with the same primitive.
