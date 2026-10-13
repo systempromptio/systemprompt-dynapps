@@ -20,13 +20,21 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
-### Added
-
-- **Service accounts and machine credentials for workflows and farm runs.** External write-backs act as a per-definition or per-farm service account (a user with core's `account_kind = service`, which never signs in), not a global key. `/admin/identity/service-accounts` creates and deletes them and attaches, rotates and removes one machine credential per provider: a GitHub App installation, Salesforce client credentials or an Atlassian API token, stored sealed in `mcp_connector_machine_credentials` (migration `002_connector_machine_credentials.sql`). The credential broker resolves a service account's bearer from that credential and refuses (403, logged under `connector_broker`) any caller whose purpose is not `workflow:<id>:write` or `farm:<id>`. A farm names its account with `run_as` in `agent-farms.yaml` (migration `001_farm_run_as_service_account.sql`). `services/mcp/github.yaml` declares GitHub's hosted MCP server; no plugin enables it. New service accounts join the `service-accounts` group, which `rules.yaml` grants GitHub, Atlassian and Salesforce.
+## 0.66.0 — 2026-10-13
 
 ### Changed
 
+- **Built on published core 0.66.0.** Every core pin in `Cargo.toml`, `tests/Cargo.toml` and `tests/unit/bridge/Cargo.toml` is `0.66.0` from crates.io and `bridge/CORE_REF` is `v0.66.0`; the `[patch.crates-io]` blocks that built `next` against the sibling core checkout are commented out. Core 0.66.0 adds the `systemprompt::agent_runs` headless coding-agent executor and the `server.role: runner` node role (farm runs execute through it), service accounts (`users.account_kind`, users migration 024) that can never obtain an interactive credential, machine grants on MCP connectors, an issuer-set caller purpose carried to the credential broker, and the A2A 1.0.1 JSON-RPC binding (`A2A-Version: 1.0` is required on every agent JSON-RPC request; agent migration 016 rewrites stored `PENDING`/`UNKNOWN` task states). It also adds usage-rollup, trace-facts and tool-result ingest migrations across the ai, analytics, mcp, logging and database extensions and moves reqwest to 0.13. The 0.66.0 schema rung (`tests/fixtures/schema/release-baseline-0.66.0.sql`) records the schema at this release.
 - **Service-account tokens are minted by core, not by Dynapps.** The credential broker opens a service account's sealed GitHub App key, Salesforce client secret or Atlassian API token and passes it to core's `connector_grant::MachineGrant`, the same minter core uses for connectors declared with a machine grant. Dynapps's own App JWT signer, GitHub and Salesforce token exchanges, Basic encoding and in-process token cache are deleted. Policy is unchanged: only a service account holds a credential, only a `workflow:<id>:write` or `farm:<id>` caller is issued one, and every issue and refusal is logged under `connector_broker`. Requires core with `MachineGrant::ApiToken` and `MachineGrant::authorization`.
+
+### Added
+
+- **Agent farm admin domain.** Farm runs execute through core's `systemprompt::agent_runs` instead of a local executor; runs carry a farm attribution dimension, purposed run credentials, and the attempt number stamped on finish.
+- **Service accounts and machine credentials for workflows and farm runs.** External write-backs act as a per-definition or per-farm service account (a user with core's `account_kind = service`, which never signs in), not a global key. `/admin/identity/service-accounts` creates and deletes them and attaches, rotates and removes one machine credential per provider: a GitHub App installation, Salesforce client credentials or an Atlassian API token, stored sealed in `mcp_connector_machine_credentials` (migration `002_connector_machine_credentials.sql`). The credential broker resolves a service account's bearer from that credential and refuses (403, logged under `connector_broker`) any caller whose purpose is not `workflow:<id>:write` or `farm:<id>`. A farm names its account with `run_as` in `agent-farms.yaml` (migration `001_farm_run_as_service_account.sql`). `services/mcp/github.yaml` declares GitHub's hosted MCP server; no plugin enables it. New service accounts join the `service-accounts` group, which `rules.yaml` grants GitHub, Atlassian and Salesforce.
+
+### Fixed
+
+- **Brand surface matches dynapps.be.** The hero is a crescent-cropped image in a full-width pane (replacing the showreel), shown above content on mobile, and the light mobile menu draws only on brand tokens with no literal fallback colour.
 
 ## 0.65.0 — 2026-10-09
 
