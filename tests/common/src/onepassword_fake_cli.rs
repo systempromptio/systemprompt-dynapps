@@ -35,8 +35,11 @@ impl FakeOpCli {
         let bin_dir = dir.path().join("bin");
         std::fs::create_dir_all(&bin_dir).expect("bin dir");
         let target = bin_dir.join("op");
-        std::fs::copy(crate::repo_path("tests/fixtures/onepassword/op.sh"), &target)
-            .expect("copy fake op");
+        std::fs::copy(
+            crate::repo_path("tests/fixtures/onepassword/op.sh"),
+            &target,
+        )
+        .expect("copy fake op");
         make_executable(&target);
         let cli = Self {
             bin_dir,
@@ -63,9 +66,11 @@ impl FakeOpCli {
         self.flush();
     }
 
-    /// Every later invocation (bar `--version`) exits `exit_code` with `stderr`.
+    /// Every later invocation (bar `--version`) exits `exit_code` with
+    /// `stderr`.
     pub fn set_fail(&self, exit_code: i32, stderr: &str) {
-        self.store.lock().expect("store")["fail"] = json!({ "exit_code": exit_code, "stderr": stderr });
+        self.store.lock().expect("store")["fail"] =
+            json!({ "exit_code": exit_code, "stderr": stderr });
         self.flush();
     }
 
@@ -78,13 +83,20 @@ impl FakeOpCli {
     pub fn env(&self) -> Vec<(String, String)> {
         let path = std::env::var("PATH").unwrap_or_default();
         vec![
-            ("PATH".to_owned(), format!("{}:{path}", self.bin_dir.display())),
-            ("FAKE_OP_STORE".to_owned(), self.store_path.display().to_string()),
+            (
+                "PATH".to_owned(),
+                format!("{}:{path}", self.bin_dir.display()),
+            ),
+            (
+                "FAKE_OP_STORE".to_owned(),
+                self.store_path.display().to_string(),
+            ),
         ]
     }
 
     fn flush(&self) {
-        let body = serde_json::to_vec_pretty(&*self.store.lock().expect("store")).expect("store json");
+        let body =
+            serde_json::to_vec_pretty(&*self.store.lock().expect("store")).expect("store json");
         let tmp = self.store_path.with_extension("tmp");
         std::fs::write(&tmp, body).expect("write store");
         std::fs::rename(&tmp, &self.store_path).expect("replace store");

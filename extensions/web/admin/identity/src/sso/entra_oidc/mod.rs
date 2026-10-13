@@ -250,7 +250,9 @@ impl SsoProvider for EntraOidcProvider {
         let redirect_uri = self.redirect_uri("");
         let discovery = self.discovery.current().await?;
         let client_secret = self.client_secret.current().ok_or_else(|| {
-            SsoError::Unavailable("Entra OIDC client secret missing from the secrets store".to_owned())
+            SsoError::Unavailable(
+                "Entra OIDC client secret missing from the secrets store".to_owned(),
+            )
         })?;
         let id_token = redeem_code(
             &self.http,

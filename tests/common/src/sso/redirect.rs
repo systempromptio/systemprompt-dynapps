@@ -16,7 +16,11 @@ pub struct ParsedRedirect {
 /// Decode the `SAMLRequest` of an HTTP-Redirect URL (base64, raw DEFLATE).
 pub fn parse_authn_request_redirect(url: &str) -> ParsedRedirect {
     let url = url::Url::parse(url).expect("redirect URL");
-    let param = |k: &str| url.query_pairs().find(|(n, _)| n == k).map(|(_, v)| v.into_owned());
+    let param = |k: &str| {
+        url.query_pairs()
+            .find(|(n, _)| n == k)
+            .map(|(_, v)| v.into_owned())
+    };
     let compressed = STANDARD
         .decode(param("SAMLRequest").expect("SAMLRequest param"))
         .expect("SAMLRequest base64");

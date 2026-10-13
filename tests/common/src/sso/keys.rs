@@ -89,8 +89,9 @@ impl TestIdpKeys {
 }
 
 fn self_signed_certificate(private_key_pem: &str, subject: &str) -> String {
-    let key = rcgen::KeyPair::from_pkcs8_pem_and_sign_algo(private_key_pem, &rcgen::PKCS_RSA_SHA256)
-        .expect("import RSA key into rcgen");
+    let key =
+        rcgen::KeyPair::from_pkcs8_pem_and_sign_algo(private_key_pem, &rcgen::PKCS_RSA_SHA256)
+            .expect("import RSA key into rcgen");
     let params = rcgen::CertificateParams::new(vec![subject.to_owned()]).expect("cert params");
     params.self_signed(&key).expect("self-sign").pem()
 }

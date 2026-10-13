@@ -71,13 +71,21 @@ impl FakeOidcIdp {
         });
         let t = tenant_id;
         let router = Router::new()
-            .route(&format!("/{t}/v2.0/.well-known/openid-configuration"), get(discovery))
+            .route(
+                &format!("/{t}/v2.0/.well-known/openid-configuration"),
+                get(discovery),
+            )
             .route(&format!("/{t}/discovery/v2.0/keys"), get(jwks))
             .route(&format!("/{t}/oauth2/v2.0/authorize"), get(authorize))
             .route(&format!("/{t}/oauth2/v2.0/token"), post(token))
             .with_state(Arc::clone(&inner));
         let task = spawn(listener, router);
-        Self { inner, base_url, tenant: tenant_id.to_owned(), task }
+        Self {
+            inner,
+            base_url,
+            tenant: tenant_id.to_owned(),
+            task,
+        }
     }
 
     pub fn issuer(&self) -> &str {
@@ -141,11 +149,19 @@ pub fn pkce_challenge(verifier: &str) -> String {
 }
 
 fn mint(issuer: &str, spec: &IdTokenSpec) -> String {
-    let keys = if spec.sign_with_other_key { TestIdpKeys::other() } else { TestIdpKeys::get() };
+    let keys = if spec.sign_with_other_key {
+        TestIdpKeys::other()
+    } else {
+        TestIdpKeys::get()
+    };
     let now = Utc::now();
     let iat = spec.iat.unwrap_or(now);
     let exp = spec.exp.unwrap_or(iat + Duration::hours(1));
-    let iss = if spec.wrong_issuer { format!("{issuer}/not-this-one") } else { issuer.to_owned() };
+    let iss = if spec.wrong_issuer {
+        format!("{issuer}/not-this-one")
+    } else {
+        issuer.to_owned()
+    };
     let mut claims = json!({
         "iss": iss, "sub": spec.sub, "oid": spec.oid, "aud": spec.aud, "tid": spec.tid,
         "nonce": spec.nonce, "name": spec.name, "ver": "2.0",
@@ -163,8 +179,14 @@ fn mint(issuer: &str, spec: &IdTokenSpec) -> String {
     }
     if spec.groups_overage {
         obj.insert("_claim_names".into(), json!({ "groups": "src1" }));
-        let endpoint = format!("https://graph.microsoft.com/v1.0/users/{}/getMemberObjects", spec.oid);
-        obj.insert("_claim_sources".into(), json!({ "src1": { "endpoint": endpoint } }));
+        let endpoint = format!(
+            "https://graph.microsoft.com/v1.0/users/{}/getMemberObjects",
+            spec.oid
+        );
+        obj.insert(
+            "_claim_sources".into(),
+            json!({ "src1": { "endpoint": endpoint } }),
+        );
     } else if !spec.groups.is_empty() {
         obj.insert("groups".into(), json!(spec.groups));
     }
@@ -217,16 +239,32 @@ async fn token(
     State(inner): State<Arc<Inner>>,
     Form(form): Form<BTreeMap<String, String>>,
 ) -> Response {
-    log(&inner, "POST", "token", None, serde_json::to_string(&form).expect("form json"));
+    log(
+        &inner,
+        "POST",
+        "token",
+        None,
+        serde_json::to_string(&form).expect("form json"),
+    );
     let field = |k: &str| form.get(k).map(String::as_str).unwrap_or_default();
     if field("client_secret") != inner.client_secret {
-        return (StatusCode::UNAUTHORIZED, Json(json!({ "error": "invalid_client" }))).into_response();
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(json!({ "error": "invalid_client" })),
+        )
+            .into_response();
     }
     let redeemed = inner.codes.lock().expect("codes").remove(field("code"));
     let valid = field("grant_type") == "authorization_code"
-        && redeemed.as_ref().is_some_and(|(_, c)| pkce_challenge(field("code_verifier")) == *c);
+        && redeemed
+            .as_ref()
+            .is_some_and(|(_, c)| pkce_challenge(field("code_verifier")) == *c);
     let Some((spec, _)) = redeemed.filter(|_| valid) else {
-        return (StatusCode::BAD_REQUEST, Json(json!({ "error": "invalid_grant" }))).into_response();
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "error": "invalid_grant" })),
+        )
+            .into_response();
     };
     Json(json!({
         "id_token": mint(&inner.issuer, &spec),

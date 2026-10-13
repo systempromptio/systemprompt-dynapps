@@ -63,7 +63,11 @@ impl FakeConnect {
             async move { handle(&state, &method, &uri, &headers).await }
         });
         let task = spawn(listener, router);
-        Self { inner, base_url, task }
+        Self {
+            inner,
+            base_url,
+            task,
+        }
     }
 
     pub fn base_url(&self) -> &str {
@@ -72,8 +76,15 @@ impl FakeConnect {
 
     pub fn add_vault(&self, name: &str) -> String {
         let id = new_id();
-        let vault = Vault { name: name.to_owned(), items: BTreeMap::new() };
-        self.inner.vaults.lock().expect("vaults").insert(id.clone(), vault);
+        let vault = Vault {
+            name: name.to_owned(),
+            items: BTreeMap::new(),
+        };
+        self.inner
+            .vaults
+            .lock()
+            .expect("vaults")
+            .insert(id.clone(), vault);
         id
     }
 
@@ -83,7 +94,10 @@ impl FakeConnect {
             .iter()
             .map(|(label, value)| (new_id(), (*label).to_owned(), (*value).to_owned()))
             .collect();
-        let item = Item { title: title.to_owned(), fields };
+        let item = Item {
+            title: title.to_owned(),
+            fields,
+        };
         self.with_vault(vault_id, |v| v.items.insert(id.clone(), item));
         id
     }
@@ -94,7 +108,9 @@ impl FakeConnect {
             let item = v.items.get_mut(item_id).expect("unknown item id");
             match item.fields.iter_mut().find(|(_, l, _)| l == label) {
                 Some(field) => value.clone_into(&mut field.2),
-                None => item.fields.push((new_id(), label.to_owned(), value.to_owned())),
+                None => item
+                    .fields
+                    .push((new_id(), label.to_owned(), value.to_owned())),
             }
         });
     }
@@ -136,7 +152,11 @@ impl FakeConnect {
             .expect("vaults")
             .iter()
             .map(|(id, v)| {
-                let items: Vec<Value> = v.items.iter().map(|(iid, i)| item_json(id, iid, i)).collect();
+                let items: Vec<Value> = v
+                    .items
+                    .iter()
+                    .map(|(iid, i)| item_json(id, iid, i))
+                    .collect();
                 json!({ "id": id, "name": v.name, "items": items })
             })
             .collect();
@@ -155,7 +175,11 @@ fn new_id() -> String {
 }
 
 fn field_type(label: &str) -> &'static str {
-    if matches!(label, "username" | "url" | "notes") { "STRING" } else { "CONCEALED" }
+    if matches!(label, "username" | "url" | "notes") {
+        "STRING"
+    } else {
+        "CONCEALED"
+    }
 }
 
 fn item_json(vault_id: &str, item_id: &str, item: &Item) -> Value {
@@ -181,7 +205,11 @@ fn filter(uri: &Uri, attr: &str) -> Option<String> {
     let raw = url::form_urlencoded::parse(query.as_bytes())
         .find(|(k, _)| k == "filter")
         .map(|(_, v)| v.into_owned())?;
-    let rest = raw.strip_prefix(attr)?.trim_start().strip_prefix("eq")?.trim();
+    let rest = raw
+        .strip_prefix(attr)?
+        .trim_start()
+        .strip_prefix("eq")?
+        .trim();
     Some(rest.trim_matches('"').to_owned())
 }
 
@@ -239,12 +267,13 @@ async fn handle(inner: &Inner, method: &Method, uri: &Uri, headers: &HeaderMap) 
                 .collect();
             axum::Json(list).into_response()
         },
-        ["v1", "vaults", vault_id, "items", item_id] => {
-            vaults.get(*vault_id).and_then(|v| v.items.get(*item_id)).map_or_else(
+        ["v1", "vaults", vault_id, "items", item_id] => vaults
+            .get(*vault_id)
+            .and_then(|v| v.items.get(*item_id))
+            .map_or_else(
                 || error(StatusCode::NOT_FOUND, "item not found"),
                 |item| axum::Json(item_json(vault_id, item_id, item)).into_response(),
-            )
-        },
+            ),
         _ => error(StatusCode::NOT_FOUND, "no such route"),
     }
 }
