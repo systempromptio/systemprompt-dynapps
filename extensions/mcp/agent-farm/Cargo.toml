@@ -41,6 +41,9 @@ thiserror.workspace = true
 systemprompt-mcp-shared.workspace = true
 systemprompt-web-shared.workspace = true
 systemprompt-web-admin-core.workspace = true
+systemprompt-web-admin-governance.workspace = true
+systemprompt-web-admin-identity.workspace = true
+systemprompt-web-admin-platform.workspace = true
 systemprompt-web-admin-analytics.workspace = true
 systemprompt-web-admin-farm = { workspace = true, optional = true }
 

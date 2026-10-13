@@ -8,7 +8,13 @@ use systemprompt::config::{ProfileBootstrap, SecretsBootstrap, try_init_config};
 use systemprompt::identifiers::McpServerId;
 use systemprompt::system::AppContext;
 use systemprompt_mcp_agent::SystempromptServer;
+// Why: core discovers the governance authz hook, the connection snapshot
+// source and the group/project/role subject providers through inventory, so
+// the crates that register them must be linked into this binary or rules on
+// those bands never fire here.
 use systemprompt_web_admin_governance as _;
+use systemprompt_web_admin_identity as _;
+use systemprompt_web_admin_platform as _;
 use tokio::net::TcpListener;
 
 const DEFAULT_SERVICE_ID: &str = "systemprompt";

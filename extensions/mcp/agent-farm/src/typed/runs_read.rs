@@ -156,7 +156,7 @@ async fn events(
     let limit = bounded(input.limit, 200, MAX_EVENTS);
     let repo = repo(ctx)?;
     let rows = repo
-        .list_events_after(&id, input.after_seq.max(0), limit)
+        .list_events_after(&id, input.after_seq.max(-1), limit)
         .await?;
     let total_events = repo.count_events(&id).await?;
     let next_after_seq = rows.last().map_or(input.after_seq, |e| e.seq);

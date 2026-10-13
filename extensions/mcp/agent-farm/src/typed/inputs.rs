@@ -20,6 +20,10 @@ const fn fifty() -> u16 {
     50
 }
 
+const fn minus_one() -> i64 {
+    -1
+}
+
 const fn two_hundred() -> u16 {
     200
 }
@@ -69,9 +73,9 @@ pub struct RunEventsInput {
     #[schemars(description = "Agent run id (UUID).")]
     pub run_id: String,
     #[schemars(
-        description = "Return events with `seq` strictly greater than this. 0 starts at the beginning."
+        description = "Return events with `seq` strictly greater than this. Sequence numbers start at 0, so -1 (the default) starts at the beginning."
     )]
-    #[serde(default)]
+    #[serde(default = "minus_one")]
     pub after_seq: i64,
     #[schemars(description = "Events per page. 1-500; defaults to 200.")]
     #[serde(default = "two_hundred")]
