@@ -8,8 +8,8 @@ use crate::repositories::filters::{NewRun, RunFinish};
 use crate::repositories::rows::RunRow;
 use crate::types::{EvalResultId, FarmAgentId, FarmId, FarmRunId};
 
-pub async fn insert_run<'e>(
-    executor: impl PgExecutor<'e>,
+pub async fn insert_run(
+    executor: impl PgExecutor<'_>,
     run: &NewRun,
 ) -> Result<RunRow, sqlx::Error> {
     sqlx::query_file_as!(
