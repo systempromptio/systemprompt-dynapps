@@ -93,6 +93,8 @@ mod request_scopes_core;
 #[cfg(test)]
 mod scope_attribution;
 #[cfg(test)]
+mod service_accounts;
+#[cfg(test)]
 mod tempdb;
 #[cfg(test)]
 mod tool_activity_intent_rows;

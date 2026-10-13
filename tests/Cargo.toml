@@ -137,6 +137,10 @@ unused_lifetimes = "warn"
 single_use_lifetimes = "warn"
 
 [workspace.dependencies]
+# The service-account suite signs GitHub App JWTs with a key generated at
+# runtime, so no private key is ever committed.
+rsa = { version = "0.9", features = ["pem"] }
+rand_core = { version = "0.6", features = ["getrandom"] }
 # The shared test harness: one throwaway-database implementation, one skip
 # policy. Every DB-backed crate below depends on it.
 dynapps-test-common = { path = "common" }

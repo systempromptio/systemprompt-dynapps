@@ -80,6 +80,15 @@ immediate: it runs inside the offending statement. The hash chain over
 unsealed for up to one seal interval, and `audit_chain_verify` reports the
 waiting count as `unsealed_rows`. See `extensions/web/schema/51_audit_integrity.sql`.
 
+## Service-account credentials
+
+Workflow write-backs and farm runs act as service accounts that core refuses
+for every interactive login. Their machine credentials (GitHub App keys,
+Salesforce client secrets, Atlassian API tokens) are sealed with the master
+key, bound to one account and provider, never returned by any endpoint, and
+issued as a bearer only to a `workflow:<id>:write` or `farm:<id>` caller. See
+`extensions/web/schema/53_connector_machine_credentials.sql`.
+
 ## Telemetry
 
 A self-hosted Dynapps instance sends nothing to the vendor. Neither this

@@ -27,6 +27,7 @@ mod redirects;
 mod ssr;
 
 use std::sync::Arc;
+use systemprompt_web_admin_platform::service_accounts::ServiceAccounts;
 
 use axum::{Extension, Router, middleware as axum_middleware};
 use systemprompt::prelude::PgPool;
@@ -53,6 +54,15 @@ pub fn hooks_webhook_router(
         .with_state(pool)
 }
 
+#[must_use]
+pub fn service_accounts(read_pool: &Arc<PgPool>, write_pool: &Arc<PgPool>) -> ServiceAccounts {
+    let db = Arc::new(systemprompt::database::Database::from_pools(
+        Arc::clone(read_pool),
+        Some(Arc::clone(write_pool)),
+    ));
+    ServiceAccounts::new(systemprompt::users::UserRepository::new(&db))
+}
+
 pub fn admin_router(
     read_pool: Arc<PgPool>,
     write_pool: &Arc<PgPool>,
@@ -66,6 +76,7 @@ pub fn admin_router(
     admin_only
         .merge(auth_reads)
         .merge(self_service)
+        .layer(Extension(service_accounts(&read_pool, write_pool)))
         .layer(axum_middleware::from_fn(
             systemprompt_web_admin_core::middleware::gates::require_auth_middleware,
         ))

@@ -169,7 +169,7 @@ async fn resolve_run_as(pool: &PgPool, def: &FarmDef) -> FarmResult<Option<UserI
     let Some(run_as) = def.run_as.as_deref() else {
         return Ok(None);
     };
-    farms::find_service_account(pool, run_as.trim())
+    farms::find_service_account(pool, &UserId::new(run_as.trim()))
         .await?
         .map(Some)
         .ok_or_else(|| {

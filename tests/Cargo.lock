@@ -89,6 +89,8 @@ version = "0.0.0"
 dependencies = [
  "chrono",
  "dynapps-test-common",
+ "rand_core 0.6.4",
+ "rsa",
  "serde_json",
  "serde_yaml_ng",
  "sqlx",

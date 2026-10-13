@@ -14,6 +14,7 @@ use sqlx::PgPool;
 use crate::handlers;
 use crate::handlers::connector_auth::{account, consent, identity};
 use crate::handlers::salesforce_auth::SalesforceDeps;
+use crate::services::service_accounts::ServiceAccounts;
 
 // Why: the desktop bridge has no cookie jar, so this route authenticates the
 // bridge token itself and must stay outside the admin session-cookie layers.
@@ -37,7 +38,7 @@ pub fn salesforce_api_router(deps: SalesforceDeps) -> Router {
         .layer(Extension(deps))
 }
 
-pub fn connector_api_router(pool: Arc<PgPool>) -> Router {
+pub fn connector_api_router(pool: Arc<PgPool>, accounts: ServiceAccounts) -> Router {
     Router::new()
         .route("/account/connections", get(account::list))
         .route(
@@ -58,5 +59,6 @@ pub fn connector_api_router(pool: Arc<PgPool>) -> Router {
         .route("/connectors/{provider}/token", get(consent::token))
         .route("/identity/{server}/token", get(identity::token))
         .layer(axum::extract::DefaultBodyLimit::max(32768))
+        .layer(Extension(accounts))
         .with_state(pool)
 }

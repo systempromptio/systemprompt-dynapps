@@ -48,6 +48,7 @@ pub(crate) fn build(db: &DbHandles, session_service: &Arc<SessionCreationService
         .merge(bridge_identity)
         .merge(systemprompt_web_admin_platform::connector_api_router(
             Arc::clone(&db.write),
+            admin::service_accounts(&db.read, &db.write),
         ))
         .merge(salesforce_api)
         .merge(webhook_api)

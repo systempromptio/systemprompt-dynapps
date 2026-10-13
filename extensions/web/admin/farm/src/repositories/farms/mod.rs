@@ -22,11 +22,11 @@ pub async fn find_farm(pool: &PgPool, id: &FarmId) -> Result<Option<FarmRow>, sq
 
 pub async fn find_service_account(
     pool: &PgPool,
-    user_id: &str,
+    user_id: &UserId,
 ) -> Result<Option<UserId>, sqlx::Error> {
     sqlx::query_file_scalar!(
         "src/repositories/farms/find_service_account.sql",
-        user_id
+        user_id.as_str()
     )
     .fetch_optional(pool)
     .await

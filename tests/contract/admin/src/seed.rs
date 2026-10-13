@@ -70,8 +70,8 @@ pub(crate) fn mint(spec: &TokenSpec<'_>) -> String {
         session_id: None,
         rate_limit_tier: Some(RateLimitTier::Service),
         plugin_id: spec.plugin_id.map(systemprompt::identifiers::PluginId::new),
-        act: None,
         purpose: None,
+        act: None,
     };
 
     let kid =

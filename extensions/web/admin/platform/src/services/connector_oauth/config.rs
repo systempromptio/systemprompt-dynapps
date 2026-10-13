@@ -10,6 +10,9 @@ use systemprompt::models::mcp::Deployment;
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
 pub const SALESFORCE_CALLBACK_SEGMENT: &str = "salesforce";
+// Why: GitHub's hosted MCP server; a person would connect through the generic
+// OAuth path, a service account presents a GitHub App installation instead.
+pub const GITHUB_SLUG: &str = "github";
 
 /// A configured MCP connector.
 ///
@@ -56,6 +59,9 @@ impl Provider {
             Self::Salesforce(id) => id.as_str(),
             Self::Generic(id) => id,
         }
+    }
+    pub fn is_github(&self) -> bool {
+        matches!(self, Self::Generic(id) if id == GITHUB_SLUG)
     }
     pub const fn is_salesforce(&self) -> bool {
         matches!(self, Self::Salesforce(_))
@@ -143,7 +149,13 @@ impl Provider {
             Self::Generic(id) => self
                 .settings()
                 .and_then(|settings| settings.display_name)
-                .unwrap_or_else(|| id.clone()),
+                .unwrap_or_else(|| {
+                    if self.is_github() {
+                        "GitHub".into()
+                    } else {
+                        id.clone()
+                    }
+                }),
         }
     }
 }

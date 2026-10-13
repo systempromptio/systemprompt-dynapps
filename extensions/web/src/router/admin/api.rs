@@ -95,6 +95,7 @@ fn build_admin_write_routes(write_pool: &Arc<PgPool>) -> Router {
         .merge(platform_routes::sync_write_routes())
         .merge(identity_routes::directory_write_routes())
         .merge(platform_routes::device_write_routes())
+        .merge(platform_routes::service_account_write_routes())
         .merge(governance_routes::approval_write_routes())
         .merge(farm_routes::farm_write_routes())
         .with_state(Arc::clone(write_pool))

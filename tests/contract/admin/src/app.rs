@@ -107,7 +107,10 @@ impl App {
                     Arc::clone(&farm_state),
                 ),
             )
-            .merge(platform::connector_api_router(Arc::clone(pool)))
+            .merge(platform::connector_api_router(
+                Arc::clone(pool),
+                admin::service_accounts(pool, pool),
+            ))
             .merge(platform::bridge_identity_router(Arc::clone(pool)))
             .merge(platform::salesforce_api_router(platform::SalesforceDeps {
                 config: Arc::new(platform::SalesforceConfig::disabled()),

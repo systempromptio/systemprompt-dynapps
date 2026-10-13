@@ -9,9 +9,11 @@ includes:
   # MCP servers
   # `atlassian`, `salesforce` and the internal `systemprompt` control plane
   # are reachable. One connector each; one Connect row each.
+  # `github` serves workflow write-backs only; no plugin enables it.
   - ../mcp/systemprompt.yaml
   - ../mcp/salesforce.yaml
   - ../mcp/atlassian.yaml
+  - ../mcp/github.yaml
 
   # AI, scheduler, content
   # Note: ../web/config.yaml is NOT included here — the web domain validator

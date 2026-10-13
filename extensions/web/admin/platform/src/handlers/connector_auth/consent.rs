@@ -1,23 +1,31 @@
-//! Browser consent bound to the initiating login and connection generation.
+//! Browser consent bound to the initiating login and connection generation,
+//! and the bearer accessor core calls for a person or a service account.
 
 use super::live_user;
 use crate::repositories::connectors::{
     connector_accounts as accounts, connector_credentials as credentials,
 };
-use crate::services::connector_accounts as service;
 use crate::services::connector_oauth::{self as oauth, Consent, Provider};
-use axum::Json;
+use crate::services::service_accounts::ServiceAccounts;
+use crate::services::{connector_accounts as service, machine_credentials};
 use axum::extract::{Path, Query, State};
 use axum::http::HeaderMap;
 use axum::http::header::CACHE_CONTROL;
 use axum::response::{IntoResponse, Redirect, Response};
+use axum::{Extension, Json};
 use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use rand::Rng;
 use serde::Deserialize;
 use sqlx::PgPool;
 use std::sync::Arc;
+use systemprompt_web_admin_core::auth::session::extract_mcp_accessor_user;
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
+
+// Why: core's external-MCP client forwards the run's declared purpose under
+// this header; a service account's credential is spent only for the purposes
+// `machine_credentials::caller` allows.
+const CALLER_HEADER: &str = "x-systemprompt-caller";
 
 #[derive(Deserialize)]
 pub(crate) struct Start {
@@ -142,18 +150,35 @@ async fn complete(
 
 pub(crate) async fn token(
     State(pool): State<Arc<PgPool>>,
+    Extension(accounts): Extension<ServiceAccounts>,
     Path(provider): Path<Provider>,
     headers: HeaderMap,
 ) -> AdminResult<Response> {
     super::require_broker(&headers)?;
+    // Why: core's MCP client presents a service account's in-process JWT, which
+    // has no interactive session behind it; the purpose-bound caller check in
+    // `broker_token` is that account's trust anchor instead of `live_user`.
+    let claimed = extract_mcp_accessor_user(&headers)?;
+    if accounts.is_service_account(&claimed.user_id).await? {
+        let user = claimed;
+        let caller = headers.get(CALLER_HEADER).and_then(|v| v.to_str().ok());
+        let value =
+            machine_credentials::broker_token(&pool, &user.user_id, provider.slug(), caller)
+                .await?;
+        return Ok(bearer_response(&value));
+    }
     let user = live_user(&pool, &headers, false).await?;
     service::require_entitlement(&pool, &user.user_id, provider.clone()).await?;
     let access_token = oauth::verified_token(&pool, &user.user_id, provider.clone(), false).await?;
-    // Why: Atlassian personal tokens use Basic auth, so the descriptor's scheme
-    // is empty and the trusted adapter supplies the complete header.
-    Ok((
+    Ok(bearer_response(&access_token))
+}
+
+// Why: Atlassian personal tokens use Basic auth, so the descriptor's scheme
+// is empty and the trusted adapter supplies the complete header.
+fn bearer_response(access_token: &str) -> Response {
+    (
         [(CACHE_CONTROL, "no-store")],
         Json(serde_json::json!({"access_token": access_token})),
     )
-        .into_response())
+        .into_response()
 }

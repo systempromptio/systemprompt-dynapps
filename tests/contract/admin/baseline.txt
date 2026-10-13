@@ -12,6 +12,8 @@ DELETE /api/public/admin/groups/{group_id}/members/{user_id} anonymous=401 non-a
 DELETE /api/public/admin/projects/{project_id}               anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=403 knowledge-worker=403
 DELETE /api/public/admin/projects/{project_id}/ad-mappings/{ad_group} anonymous=401 non-admin=403 developer=403 admin=403 platform-admin=404 project-manager=403 knowledge-worker=403
 DELETE /api/public/admin/projects/{project_id}/members/{user_id} anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=403 knowledge-worker=403
+DELETE /api/public/admin/service-accounts/{user_id}          anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
+DELETE /api/public/admin/service-accounts/{user_id}/credentials/{provider} anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=403 knowledge-worker=403
 DELETE /api/public/admin/sync/import/{stage_id}              anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=403 knowledge-worker=403
 DELETE /api/public/admin/user/account                        anonymous=401 non-admin=400 developer=400 admin=400 platform-admin=400 project-manager=400 knowledge-worker=400
 DELETE /api/public/admin/users/{user_id}                     anonymous=401 non-admin=403 developer=403 admin=404 platform-admin=404 project-manager=403 knowledge-worker=403
@@ -113,6 +115,8 @@ GET    /admin/groups                                         anonymous=307 non-a
 GET    /admin/groups/{group_id}                              anonymous=307 non-admin=303 developer=303 admin=404 platform-admin=404 project-manager=303 knowledge-worker=303
 GET    /admin/history                                        anonymous=307 non-admin=200 developer=200 admin=200 platform-admin=200 project-manager=200 knowledge-worker=200
 GET    /admin/history/conversations/{context_id}             anonymous=307 non-admin=404 developer=404 admin=404 platform-admin=404 project-manager=404 knowledge-worker=404
+GET    /admin/identity/service-accounts                      anonymous=307 non-admin=303 developer=303 admin=200 platform-admin=200 project-manager=303 knowledge-worker=303
+GET    /admin/identity/service-accounts/{user_id}            anonymous=307 non-admin=303 developer=303 admin=404 platform-admin=404 project-manager=303 knowledge-worker=303
 GET    /admin/lifecycle                                      anonymous=307 non-admin=303 developer=303 admin=200 platform-admin=200 project-manager=303 knowledge-worker=303
 GET    /admin/lifecycle/archive/{tier}/{period}/{file}       anonymous=307 non-admin=303 developer=303 admin=404 platform-admin=404 project-manager=303 knowledge-worker=303
 GET    /admin/login                                          anonymous=200 non-admin=303 developer=303 admin=303 platform-admin=303 project-manager=303 knowledge-worker=303
@@ -258,6 +262,8 @@ POST   /api/public/admin/projects                            anonymous=401 non-a
 POST   /api/public/admin/projects/{project_id}/ad-mappings   anonymous=401 non-admin=403 developer=403 admin=403 platform-admin=422 project-manager=403 knowledge-worker=403
 POST   /api/public/admin/projects/{project_id}/members       anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
 POST   /api/public/admin/scope-defaults/recompute            anonymous=401 non-admin=403 developer=403 admin=200 platform-admin=200 project-manager=403 knowledge-worker=403
+POST   /api/public/admin/service-accounts                    anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
+POST   /api/public/admin/service-accounts/{user_id}/credentials/{provider} anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
 POST   /api/public/admin/sync/access-control/keep            anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
 POST   /api/public/admin/sync/import                         anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403
 POST   /api/public/admin/sync/import/{stage_id}/apply        anonymous=401 non-admin=403 developer=403 admin=422 platform-admin=422 project-manager=403 knowledge-worker=403

@@ -20,6 +20,10 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+### Added
+
+- **Service accounts and machine credentials for workflows and farm runs.** External write-backs act as a per-definition or per-farm service account (a user with core's `account_kind = service`, which never signs in), not a global key. `/admin/identity/service-accounts` creates and deletes them and attaches, rotates and removes one machine credential per provider: a GitHub App installation, Salesforce client credentials or an Atlassian API token, stored sealed in `mcp_connector_machine_credentials` (migration `002_connector_machine_credentials.sql`). The credential broker resolves a service account's bearer from that credential and refuses (403, logged under `connector_broker`) any caller whose purpose is not `workflow:<id>:write` or `farm:<id>`. A farm names its account with `run_as` in `agent-farms.yaml` (migration `001_farm_run_as_service_account.sql`). `services/mcp/github.yaml` declares GitHub's hosted MCP server; no plugin enables it. New service accounts join the `service-accounts` group, which `rules.yaml` grants GitHub, Atlassian and Salesforce.
+
 ## 0.65.0 — 2026-10-09
 
 ### Changed

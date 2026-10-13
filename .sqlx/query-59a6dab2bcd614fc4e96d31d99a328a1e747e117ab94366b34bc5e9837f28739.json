@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO groups (id, name, description, source) VALUES ($1, 'Service accounts', 'Non-interactive accounts workflow write-backs act as.', 'yaml') ON CONFLICT (id) DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "59a6dab2bcd614fc4e96d31d99a328a1e747e117ab94366b34bc5e9837f28739"
+}

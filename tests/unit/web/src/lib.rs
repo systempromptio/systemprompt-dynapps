@@ -95,6 +95,8 @@ mod mcp_tool_name;
 mod release_version_substitution;
 #[cfg(test)]
 mod role;
+#[cfg(test)]
+mod service_accounts_pages;
 
 #[cfg(test)]
 mod conversation_sort;

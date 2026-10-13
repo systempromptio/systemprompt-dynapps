@@ -166,6 +166,10 @@ pub(super) fn demo_help_user_pages(page: &str) -> Option<(&'static str, &'static
             "<strong>User Detail</strong> is the per-user admin view &mdash; profile, roles, project, session history, tool usage, governance violations, cost attribution, and activity timeline. The single place to investigate what any individual has been doing on the platform.",
             "users",
         )),
+        "service-accounts" => Some((
+            "<strong>Service accounts</strong> are the non-interactive identities a workflow definition runs as when it writes back to GitHub, Salesforce or Atlassian. Each holds at most one machine credential per provider &mdash; a GitHub App installation, Salesforce client credentials or an Atlassian API token &mdash; sealed at rest and never shown again. The broker issues a token from it only to a workflow write-back or farm caller, so no person and no interactive session can borrow it.",
+            "users",
+        )),
         "sessions" => Some((
             "<strong>Sessions</strong> lists every interactive run on the platform &mdash; who drove it, which group and project it is attributed to, how long it lasted, and what it cost. Open one to see its contexts, traces, and requests side by side.",
             "users",

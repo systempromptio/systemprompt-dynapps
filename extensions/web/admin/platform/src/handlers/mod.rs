@@ -11,6 +11,7 @@ pub(crate) mod devices;
 mod jobs;
 pub(crate) mod salesforce_auth;
 pub(crate) mod salesforce_identity;
+pub(crate) mod service_accounts;
 pub(crate) mod ssr;
 pub(crate) mod sync;
 

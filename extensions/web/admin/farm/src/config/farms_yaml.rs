@@ -145,7 +145,11 @@ impl FarmsDoc {
                     farm.id, farm.marketplace
                 )));
             }
-            if farm.run_as.as_deref().is_some_and(|id| id.trim().is_empty()) {
+            if farm
+                .run_as
+                .as_deref()
+                .is_some_and(|id| id.trim().is_empty())
+            {
                 return Err(invalid(&format!("farm {:?}: run_as is empty", farm.id)));
             }
             farm.source.validate(&farm.id)?;
