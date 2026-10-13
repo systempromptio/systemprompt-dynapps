@@ -130,7 +130,6 @@ pub(crate) async fn remove_credential(
     if !delete_machine_credential(&pool, &user_id, &provider).await? {
         return Err(AdminError::NotFound("No such credential".to_owned()));
     }
-    machine_credentials::forget_cached(&user_id, &provider);
     tracing::info!(target: "connector_broker", actor = %user_ctx.user_id, user_id = %user_id,
         provider, "machine credential removed");
     Ok(StatusCode::NO_CONTENT.into_response())

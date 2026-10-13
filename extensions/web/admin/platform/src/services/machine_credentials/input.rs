@@ -5,7 +5,7 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
-use super::exchange::endpoint_allowed;
+use super::grant::endpoint_allowed;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "snake_case")]

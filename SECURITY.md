@@ -86,7 +86,10 @@ Workflow write-backs and farm runs act as service accounts that core refuses
 for every interactive login. Their machine credentials (GitHub App keys,
 Salesforce client secrets, Atlassian API tokens) are sealed with the master
 key, bound to one account and provider, never returned by any endpoint, and
-issued as a bearer only to a `workflow:<id>:write` or `farm:<id>` caller. See
+issued as a bearer only to a `workflow:<id>:write` or `farm:<id>` caller. Dynapps stores and
+gates them; every token is minted by core's `connector_grant`, the one
+machine-credential minter for both config-declared connectors and service
+accounts. See
 `extensions/web/schema/53_connector_machine_credentials.sql`.
 
 ## Telemetry

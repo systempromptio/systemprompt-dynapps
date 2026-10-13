@@ -3,14 +3,14 @@
 //! A workflow's write-back acts as a per-definition service account, never as
 //! a global key. The account holds at most one credential per provider; the
 //! broker exchanges it for a short-lived token only when the caller names a
-//! purpose a service account may serve ([`caller`]).
+//! purpose a service account may serve ([`caller`]). Minting and its cache
+//! are core's ([`grant`]); this module stores, seals and gates.
 //!
 //! The secret half is sealed in an envelope bound to its user and provider,
 //! like hosted MCP grants, so a row copied onto another account cannot open.
 
-mod cache;
 pub mod caller;
-mod exchange;
+mod grant;
 pub mod input;
 
 use crate::repositories::connectors::machine_credentials::{
@@ -23,8 +23,7 @@ use systemprompt::identifiers::UserId;
 use systemprompt_web_admin_core::crypto::secret_crypto;
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 
-pub use cache::forget as forget_cached;
-pub use exchange::endpoint_allowed;
+pub use grant::endpoint_allowed;
 pub use input::{AttachCredential, MachineKind};
 
 #[derive(Serialize, Deserialize)]
@@ -84,7 +83,6 @@ pub async fn attach(
         },
     )
     .await?;
-    cache::forget(user, provider);
     Ok(())
 }
 
@@ -107,17 +105,23 @@ pub async fn broker_token(
         .await?
         .ok_or_else(|| AdminError::NotFound("Service account holds no credential".into()))?;
     let stamp = row.rotated_at.unwrap_or(row.created_at).timestamp_micros();
-    if let Some(value) = cache::get(user, provider, stamp) {
-        return Ok(value);
-    }
-    let secret = open(&row, user, provider)?;
     let kind = MachineKind::parse(&row.kind)?;
-    let minted = exchange::mint(kind, &row.config, &secret).await?;
+    let grant = grant::grant(kind, &row.config, open(&row, user, provider)?)?;
+    // Why: core's token cache is keyed by string; the rotation stamp in the
+    // key means a rotated credential never serves the previous token.
+    let header_value = grant
+        .authorization(&format!("service-account:{user}:{provider}:{stamp}"))
+        .await
+        .map_err(|error| {
+            tracing::warn!(target: "connector_broker", user_id = %user, provider,
+                kind = kind.as_str(), %error, decision = "failed",
+                "service account bearer could not be minted");
+            AdminError::Upstream(format!("{} token exchange failed", kind.label()))
+        })?;
     tracing::info!(target: "connector_broker", user_id = %user, provider,
         caller = caller.unwrap_or(""), kind = kind.as_str(), decision = "issued",
         "service account bearer issued");
-    cache::put(user, provider, stamp, &minted);
-    Ok(minted.header_value)
+    Ok(header_value)
 }
 
 fn open(row: &MachineCredentialRow, user: &UserId, provider: &str) -> AdminResult<String> {

@@ -2,9 +2,9 @@
 //!
 //! The rules that matter are the refusals: a person cannot hold a machine
 //! credential, and a service account's credential is only spent for a
-//! workflow write-back or farm caller. The GitHub exchange runs against a
-//! local mock that checks the App JWT is presented and answers with an
-//! installation token.
+//! workflow write-back or farm caller. Minting is core's `MachineGrant`; the
+//! GitHub exchange runs through it against a local mock that checks the App
+//! JWT is presented and answers with an installation token.
 
 use std::sync::Arc;
 
@@ -236,5 +236,35 @@ async fn a_credential_with_no_row_is_not_connected() {
         missing,
         Err(systemprompt_web_admin_core::error::AdminError::NotFound(_))
     ));
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn the_broker_returns_an_atlassian_basic_pair() {
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    set_master_key();
+    let id = service_account(&db.pool).await;
+    let body: AttachCredential = serde_json::from_value(serde_json::json!({
+        "kind": "atlassian_api_token", "email": "bot@example.com", "secret": "tok",
+    }))
+    .expect("attach body");
+    machine_credentials::attach(
+        &db.pool,
+        &accounts(&db.pool),
+        Holder {
+            user: &id,
+            provider: "atlassian",
+        },
+        body,
+        "test",
+    )
+    .await
+    .expect("attach");
+    let value = machine_credentials::broker_token(&db.pool, &id, "atlassian", Some("farm:triage"))
+        .await
+        .expect("token");
+    assert_eq!(value, "Basic Ym90QGV4YW1wbGUuY29tOnRvaw==");
     db.cleanup().await;
 }
