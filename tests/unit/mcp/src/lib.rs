@@ -11,6 +11,8 @@
 //! - the passthrough result bound: the overflow decision, the pointer sent in
 //!   place of a stored oversize result, and the trimming fallback
 //! - Gemini declarability of every listed tool's input schema
+//! - the `agent-farm` server's tool surface, schemas, run authorisation and the
+//!   administrator-only `all` scope
 
 #[cfg(test)]
 mod access_policy;
@@ -29,6 +31,8 @@ mod truncate_on_char_boundary;
 
 #[cfg(test)]
 mod admin_reports;
+#[cfg(test)]
+mod agent_farm_tools;
 #[cfg(test)]
 mod bounds;
 #[cfg(test)]

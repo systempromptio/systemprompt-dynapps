@@ -100,6 +100,11 @@ docs_sidebar:
       - label: "Artifacts and the Tool-Call Ledger"
         href: "/documentation/artifacts-and-tool-calls"
 
+  - title: "Engineering"
+    links:
+      - label: "Agent Farm from Claude Code"
+        href: "/documentation/agent-farm"
+
   - title: "Sync: Code and Instance"
     links:
       - label: "Sources, Planes and Sync"

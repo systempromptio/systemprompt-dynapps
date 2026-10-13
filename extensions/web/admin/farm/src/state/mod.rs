@@ -8,9 +8,11 @@
 mod limits;
 mod paths;
 
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use sqlx::PgPool;
+use systemprompt::config::AppPaths;
 
 pub use limits::RunnerLimits;
 pub use paths::FarmPaths;
@@ -54,4 +56,50 @@ pub fn build_farm_state(
         gateway,
         limits,
     })
+}
+
+#[must_use]
+pub fn build_farm_state_from_app(
+    pool: Arc<PgPool>,
+    app_paths: Option<&AppPaths>,
+) -> Arc<FarmState> {
+    build_farm_state(
+        pool,
+        farm_paths(app_paths),
+        gateway_endpoints(),
+        RunnerLimits::default(),
+    )
+}
+
+fn farm_paths(app_paths: Option<&AppPaths>) -> FarmPaths {
+    let data_root = app_paths.map_or_else(
+        || std::env::temp_dir().join("systemprompt-agent-farm"),
+        |paths| paths.storage().data().join("agent-farm"),
+    );
+    let composed = systemprompt::loader::ServicesRootBootstrap::get().map_or_else(
+        || {
+            app_paths.map_or_else(
+                || PathBuf::from("services"),
+                |paths| paths.system().services().to_path_buf(),
+            )
+        },
+        |root| root.path.clone(),
+    );
+    FarmPaths::new(data_root, composed)
+}
+
+fn gateway_endpoints() -> GatewayEndpoints {
+    systemprompt::manifest::Config::get().map_or_else(
+        |e| {
+            tracing::error!(error = %e, "Config unavailable for the agent farm gateway base");
+            GatewayEndpoints {
+                internal_base: String::new(),
+                external_base: String::new(),
+            }
+        },
+        |config| GatewayEndpoints {
+            internal_base: config.api_internal_url.trim_end_matches('/').to_owned(),
+            external_base: config.api_external_url.trim_end_matches('/').to_owned(),
+        },
+    )
 }

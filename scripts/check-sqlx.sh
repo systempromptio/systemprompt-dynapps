@@ -19,6 +19,10 @@ allowlist=(
     # COPY … TO STDOUT, VACUUM and pg_catalog lookups over a static table
     # registry — statements the macros cannot express, and none takes input.
     extensions/web/jobs/src/retention/
+    # A workflow step's project lives in workflow_runs, an astound table the
+    # dynapps schema does not have; the macros cannot check a relation the
+    # local database lacks, so the probe and the read stay dynamic.
+    extensions/web/shared/admin-core/src/repositories/agent_run_facts/workflow.rs
 )
 
 if [ ${#allowlist[@]} -gt 0 ]; then

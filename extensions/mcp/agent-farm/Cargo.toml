@@ -1,0 +1,48 @@
+[package]
+name = "systemprompt-mcp-agent-farm"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "The agent-farm MCP server for the Dynapps instance: run-centric tools over core's agent_runs for developers and project managers, scoped to the caller's own runs and projects."
+repository.workspace = true
+homepage.workspace = true
+publish = false
+
+[[bin]]
+name = "systemprompt-mcp-agent-farm"
+path = "src/main.rs"
+
+[features]
+# Dynapps builds with the farm on; astound flips the default to `workflows`.
+default = ["farm"]
+farm = ["dep:systemprompt-web-admin-farm"]
+workflows = []
+
+[dependencies]
+# Audit: uses agent_runs, config, database, identifiers, logging, mcp, models, security, system — requires `full`.
+systemprompt = { workspace = true, features = ["full"] }
+
+anyhow.workspace = true
+rustls.workspace = true
+tokio.workspace = true
+
+rmcp.workspace = true
+axum.workspace = true
+
+schemars.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+chrono.workspace = true
+sqlx.workspace = true
+
+tracing.workspace = true
+thiserror.workspace = true
+
+systemprompt-mcp-shared.workspace = true
+systemprompt-web-shared.workspace = true
+systemprompt-web-admin-core.workspace = true
+systemprompt-web-admin-analytics.workspace = true
+systemprompt-web-admin-farm = { workspace = true, optional = true }
+
+[lints]
+workspace = true

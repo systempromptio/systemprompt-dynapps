@@ -1,0 +1,26 @@
+# `tool_policy` is required on every managed server: `allow` (no per-call
+# prompt in Claude Code / Claude Desktop), `prompt` or `deny`. A server without
+# it is withheld from the bridge manifest and fails boot validation.
+# See docs/CONFIGURED-CONNECTORS.md.
+#
+# Scoped to `user`: every signed-in developer or project manager holding the
+# dynapps-engineering workspace reaches it. The server itself narrows every
+# run tool to the caller's own runs and their projects' runs; cross-user
+# aggregates need an administrator role at the tool.
+mcp_servers:
+  agent-farm:
+    type: internal
+    binary: systemprompt-mcp-agent-farm
+    package: agent-farm
+    port: 5011
+    enabled: true
+    tool_policy: allow
+    display_in_web: true
+    removable: false
+    description: Agent farm runs, evals, usage and catalog for developers and project managers
+    oauth:
+      required: true
+      scopes:
+      - user
+      audience: mcp
+      client_id: null

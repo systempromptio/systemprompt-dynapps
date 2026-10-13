@@ -28,10 +28,4 @@ pub use platform::{normalize_cli, with_dollar_siblings};
 pub use renderer::admin_artifact_shell;
 pub use shape::{ReportInput, ReportKind, ReportOutput, ReportTable, SourceStatus};
 
-pub(crate) fn invalid(message: impl Into<String>) -> rmcp::ErrorData {
-    rmcp::ErrorData::invalid_params(message.into(), None)
-}
-
-pub(crate) fn failure(message: impl Into<String>) -> rmcp::ErrorData {
-    rmcp::ErrorData::internal_error(message.into(), None)
-}
+pub(crate) use systemprompt_mcp_shared::reply::{failure, invalid};

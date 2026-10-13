@@ -5916,10 +5916,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "systemprompt-mcp-agent-farm"
+version = "0.66.0"
+dependencies = [
+ "anyhow",
+ "axum",
+ "chrono",
+ "rmcp",
+ "rustls",
+ "schemars",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "systemprompt",
+ "systemprompt-mcp-shared",
+ "systemprompt-web-admin-analytics",
+ "systemprompt-web-admin-core",
+ "systemprompt-web-admin-farm",
+ "systemprompt-web-shared",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "systemprompt-mcp-shared"
 version = "0.66.0"
 dependencies = [
  "jsonschema",
+ "rmcp",
  "serde",
  "serde_json",
  "sqlx",
@@ -6367,7 +6392,9 @@ dependencies = [
  "handlebars",
  "hex",
  "inventory",
+ "jsonschema",
  "rand 0.9.5",
+ "schemars",
  "serde",
  "serde_json",
  "serde_yaml_ng",

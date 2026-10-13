@@ -61,6 +61,10 @@ its source through distribution, loading and measurement.
 - [Code ↔ Instance: sources, planes and sync](/documentation/services-sync) — the model behind it: where declarations come from, what they project into, which hash proves what
 - [Access control: who reaches what, and why](/documentation/access-control) — entitlement, declared here and enforced from the database
 
+## Engineering
+
+- [Agent farm from Claude Code: runs, evals and usage](/documentation/agent-farm) — the agent-farm MCP server for developers and project managers
+
 ## Analysis: measuring and comparing skills
 
 - [Analysis overview: the tabs and the end-to-end path](/documentation/analysis)

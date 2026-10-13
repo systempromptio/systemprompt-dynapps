@@ -10,6 +10,10 @@ workspace = true
 [dependencies]
 systemprompt-mcp-shared = { workspace = true }
 systemprompt-mcp-agent = { workspace = true }
+systemprompt-mcp-agent-farm = { workspace = true }
+systemprompt-web-admin-core = { workspace = true }
+systemprompt-web-shared = { workspace = true }
+chrono = { workspace = true }
 rmcp = { workspace = true }
 tokio = { workspace = true }
 systemprompt = { workspace = true, features = ["full"] }

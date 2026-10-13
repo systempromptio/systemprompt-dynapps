@@ -1,0 +1,28 @@
+plugin:
+  id: dynapps-engineering
+  name: "Dynapps Engineering"
+  description: "The agent-farm MCP server and the skill that explains its run, eval, analytics and catalog tools."
+  version: "1.0.0"
+  enabled: true
+  author:
+    name: Dynapps
+    email: ed@systemprompt.io
+  keywords: [engineering, agent-farm, runs, evals]
+  license: proprietary
+  category: engineering
+  # `source: explicit` everywhere. Left to default the plugin would claim every
+  # skill and agent on the instance.
+  skills:
+    source: explicit
+    include:
+      - agent_farm_runs
+  agents:
+    source: explicit
+    include: []
+  mcp_servers:
+    source: explicit
+    include:
+      - agent-farm
+  content_sources: {}
+  # No `hooks:` key. dynapps-commons owns the session-global governance
+  # hooks; a second owner would be another govern call per tool.

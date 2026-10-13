@@ -850,6 +850,7 @@ jobs:
           docker run --rm --entrypoint ls "$ref" -la /app/storage/files/downloads
           docker run --rm --entrypoint sh "$ref" -c 'for f in dynapps-bridge-linux-x86_64.tar.gz dynapps-bridge-linux-aarch64.tar.gz dynapps-bridge-macos.dmg dynapps-bridge-windows.exe install.sh; do test -s /app/storage/files/downloads/$f || exit 1; done'
           docker run --rm --entrypoint ls "$ref" /app/bin/systemprompt-mcp-agent
+          docker run --rm --entrypoint ls "$ref" /app/bin/systemprompt-mcp-agent-farm
           docker buildx imagetools inspect "$ref" | tee inspect.txt
           grep -q 'linux/amd64' inspect.txt && grep -q 'linux/arm64' inspect.txt
           cosign verify \

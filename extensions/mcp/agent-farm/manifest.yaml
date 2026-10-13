@@ -1,0 +1,8 @@
+extension:
+  type: mcp
+  name: agent-farm
+  binary: systemprompt-mcp-agent-farm
+  description: Agent farm run tools for developers and project managers (own runs and project runs)
+  port: 5011
+  build_type: workspace
+  enabled: true

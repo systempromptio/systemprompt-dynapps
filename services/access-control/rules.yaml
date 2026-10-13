@@ -88,6 +88,15 @@ entities:
       group: [staff]
       project: [odoo-delivery]
 
+  - entity: marketplace/dynapps-engineering
+    default: closed
+    why: >-
+      Engineering workspace: the agent-farm run tools and the skill that
+      explains them. Developers and project managers launch and read runs of
+      their own and of their projects; administrators see every run.
+    allow:
+      role: [developer, project_manager, admin, platform_admin, super_admin]
+
   # ─── Admin control plane ──────────────────────────────────────────────────
   # platform_admin is always named beside admin: it is the strictly stronger
   # role, so an entity open to admin and closed to platform_admin is a hole.
@@ -101,6 +110,28 @@ entities:
       admin plugin never holds a control plane with no controls.
     allow:
       role: [platform_admin, admin, super_admin]
+
+  - entity: mcp_server/agent-farm
+    default: closed
+    why: >-
+      The agent-farm MCP server. Gated a second time by oauth.scopes (user)
+      in services/mcp/agent-farm.yaml; the server narrows every run tool to
+      the caller's own and project runs, so the role band here only decides
+      who sees the server at all.
+    allow:
+      role: [developer, project_manager, admin, platform_admin, super_admin]
+
+  - entity: plugin/dynapps-engineering
+    default: closed
+    why: Engineering plugin; the agent-farm server and its guide skill.
+    allow:
+      role: [developer, project_manager, admin, platform_admin, super_admin]
+
+  - entity: skill/agent_farm_runs
+    default: closed
+    why: Guide skill shipped by dynapps-engineering.
+    allow:
+      role: [developer, project_manager, admin, platform_admin, super_admin]
 
   - entity: plugin/dynapps-super-admin
     default: closed

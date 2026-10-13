@@ -15,6 +15,8 @@
 
 
 #[cfg(test)]
+mod agent_run_facts;
+#[cfg(test)]
 mod analysis_report_digest;
 #[cfg(test)]
 mod analytics_content_metrics;

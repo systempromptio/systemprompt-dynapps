@@ -20,6 +20,10 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+### Added
+
+- **`agent-farm` MCP server for developers and project managers.** A new internal server, `systemprompt-mcp-agent-farm` (crate `extensions/mcp/agent-farm`, port 5011, OAuth scope `user`), gives Claude Code and Cowork a run-centric tool set over core's `agent_runs`: `run_start`, `run_status`, `run_events`, `run_cancel`, `run_list`, `run_facts`, `run_stats`, `farm_evals_run`, `farm_eval_results`, `analytics_costs`, `analytics_requests`, `analytics_skills`, `analytics_tools` and `catalog_list`. Every run tool resolves the caller into a viewer and admits only their own runs, their projects' runs, or everything for an administrator; `scope: all` is refused without an administrator role. Evals are deterministic assertions only. It ships in the new `dynapps-engineering` workspace and plugin with the `agent_farm_runs` skill, declared in `rules.yaml` for the `developer`, `project_manager` and administrator roles. Documented at `/documentation/agent-farm`. The admin server's per-call authentication and error replies moved to `extensions/mcp/shared` (`auth`, `reply`) so both servers share them, and the farm state builder moved into the farm crate (`state::build_farm_state_from_app`) so the web extension and the new binary build it the same way.
+
 ## 0.66.0 — 2026-10-13
 
 ### Changed

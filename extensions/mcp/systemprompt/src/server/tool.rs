@@ -1,23 +1,20 @@
 //! Tool handler, authentication, and dispatch for the `systemprompt` MCP tool.
 //!
 //! The server in the parent module owns the rmcp `ServerHandler` surface; this
-//! module owns what happens per tool call: RBAC enforcement against the
-//! registry, access auditing, and turning CLI output into a [`CliArtifact`].
+//! module owns what happens per tool call after the shared
+//! `systemprompt_mcp_shared::auth` check: turning CLI output into a
+//! [`CliArtifact`] and dispatching the typed tools.
 
 use crate::cli;
 use crate::tools::CliInput;
 use rmcp::ErrorData as McpError;
 use rmcp::model::{CallToolRequestParams, CallToolResult};
-use rmcp::service::{RequestContext, RoleServer};
 use std::sync::Arc;
 use systemprompt::database::DbPool;
 use systemprompt::identifiers::{McpExecutionId, McpServerId};
-use systemprompt::mcp::middleware::enforce_rbac_from_registry;
 use systemprompt::mcp::{ArtifactIngest, ClientProfile, McpToolExecutor, McpToolHandler};
 use systemprompt::models::artifacts::{CliArtifact, TextArtifact};
 use systemprompt::models::execution::context::RequestContext as SysRequestContext;
-use systemprompt::security::authz::SharedAuthzHook;
-use systemprompt_mcp_shared::{record_mcp_access, record_mcp_access_rejected};
 
 pub(super) struct SystempromptToolHandler<'a> {
     pub(super) auth_token: String,
@@ -102,56 +99,6 @@ impl McpToolHandler for SystempromptToolHandler<'_> {
         }
 
         Ok((bounded.artifact, summary))
-    }
-}
-
-pub(super) async fn authenticate_tool_request(
-    db_pool: &DbPool,
-    tool_name: &str,
-    service_id: &McpServerId,
-    ctx: &RequestContext<RoleServer>,
-    authz_hook: &SharedAuthzHook,
-) -> Result<(SysRequestContext, String), McpError> {
-    let server_name = service_id.as_str();
-    let rbac_result = enforce_rbac_from_registry(ctx, service_id, authz_hook).await;
-
-    match rbac_result {
-        Ok(result) => {
-            match result
-                .expect_authenticated("BUG: systemprompt requires OAuth but auth was not enforced")
-            {
-                Ok(authenticated) => {
-                    record_mcp_access(
-                        db_pool,
-                        authenticated.context.user_id(),
-                        server_name,
-                        tool_name,
-                        "authenticated",
-                    )
-                    .await;
-                    let token = authenticated
-                        .auth_token()
-                        .ok_or_else(|| {
-                            McpError::internal_error(
-                                "Authenticated request has no credential",
-                                None,
-                            )
-                        })?
-                        .as_str()
-                        .to_owned();
-                    Ok((authenticated.context.clone(), token))
-                },
-                Err(e) => {
-                    record_mcp_access_rejected(db_pool, server_name, tool_name, e.message.as_ref())
-                        .await;
-                    Err(e)
-                },
-            }
-        },
-        Err(e) => {
-            record_mcp_access_rejected(db_pool, server_name, tool_name, &format!("{e}")).await;
-            Err(e)
-        },
     }
 }
 
