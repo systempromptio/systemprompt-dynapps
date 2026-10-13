@@ -3,6 +3,7 @@
 
 use sqlx::PgPool;
 use systemprompt::identifiers::{MarketplaceId, UserId};
+use systemprompt_web_shared::ProjectId;
 
 use super::filters::NewFarm;
 use super::rows::FarmRow;
@@ -48,6 +49,7 @@ pub async fn upsert_farm(pool: &PgPool, farm: &NewFarm) -> Result<(), sqlx::Erro
         farm.max_budget_usd,
         farm.model,
         farm.run_as_user_id.as_ref().map(UserId::as_str),
+        farm.project_id.as_ref().map(ProjectId::as_str),
     )
     .execute(pool)
     .await?;

@@ -14,6 +14,9 @@ farms:
     name: "Dynapps Odoo delivery farm"
     description: "Odoo delivery agents: module review, migration planning, release notes and test authoring over a sample Odoo module."
     marketplace: dynapps-agent-farm
+    # Runs of this farm belong to the project its agents deliver for, so a
+    # project manager's `scope: project` reads them (agent_farms.project_id).
+    project: odoo-delivery
     source:
       github: systempromptio/systemprompt-agent-farm
       ref: main

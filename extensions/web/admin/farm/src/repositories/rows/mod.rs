@@ -8,6 +8,7 @@ mod run;
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 use systemprompt::identifiers::{MarketplaceId, PluginId, UserId};
+use systemprompt_web_shared::ProjectId;
 
 use crate::types::{FarmAgentId, FarmId};
 
@@ -32,6 +33,7 @@ pub struct FarmRow {
     pub synced_at: Option<DateTime<Utc>>,
     pub synced_by: Option<String>,
     pub sync_error: Option<String>,
+    pub project_id: Option<ProjectId>,
     pub owner_user_id: Option<String>,
     pub run_as_user_id: Option<UserId>,
     pub created_at: DateTime<Utc>,

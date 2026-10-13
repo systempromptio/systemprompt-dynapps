@@ -80,6 +80,18 @@ async fn start_farm_run(
             "you are not a member of project {project}"
         )));
     }
+    if !project.is_empty()
+        && farm
+            .project_id
+            .as_ref()
+            .is_some_and(|own| own.as_str() != project)
+    {
+        return Err(ToolError::Invalid(format!(
+            "farm {} belongs to project {}, not {project}; a farm run is attributed to its farm's project",
+            farm.id,
+            farm.project_id.as_ref().map_or("", |p| p.as_str())
+        )));
+    }
     let state = ctx.env()?.farm_state()?;
     let max_turns =
         (input.max_turns > 0).then(|| i32::try_from(input.max_turns).unwrap_or(i32::MAX));

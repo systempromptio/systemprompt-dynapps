@@ -6,6 +6,7 @@
         {{#*inline "header_meta"}}
         <span>Marketplace <a class="sp-link" href="{{marketplace_url}}">{{marketplace_id}}</a></span>
         <span>Owner {{#if owner_url}}<a class="sp-link" href="{{owner_url}}">{{owner}}</a>{{else}}unowned{{/if}}</span>
+        <span>Project {{#if project}}<a class="sp-link" href="/admin/projects/{{project}}">{{project}}</a>{{else}}none{{/if}}</span>
         {{/inline}}
         {{#*inline "header_actions"}}
         <a class="sp-btn sp-btn--sm sp-btn--outline" href="/admin/farm/runs?farm_id={{farm_id}}">All runs</a>

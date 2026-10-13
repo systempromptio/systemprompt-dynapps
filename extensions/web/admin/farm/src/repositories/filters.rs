@@ -5,6 +5,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use systemprompt::identifiers::{AgentRunId, ContextId, MarketplaceId, PluginId, UserId};
+use systemprompt_web_shared::ProjectId;
 
 use crate::types::{
     EvalResultId, EvalSuiteId, FarmAgentId, FarmId, FarmRunId, RunStatus, TriggeredVia,
@@ -25,6 +26,7 @@ pub struct NewFarm {
     pub max_budget_usd: f64,
     pub model: Option<String>,
     pub run_as_user_id: Option<UserId>,
+    pub project_id: Option<ProjectId>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

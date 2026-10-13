@@ -20,6 +20,7 @@ use std::sync::Arc;
 use serde::Serialize;
 use sqlx::PgPool;
 use systemprompt::identifiers::{MarketplaceId, UserId};
+use systemprompt_web_shared::ProjectId;
 
 use crate::config::{FarmDef, read_farms_doc};
 use crate::error::{FarmError, FarmResult};
@@ -162,6 +163,12 @@ fn new_farm(def: &FarmDef, run_as_user_id: Option<UserId>) -> NewFarm {
         max_budget_usd: def.defaults.max_budget_usd,
         model: def.defaults.model.clone(),
         run_as_user_id,
+        project_id: def
+            .project
+            .as_deref()
+            .map(str::trim)
+            .filter(|p| !p.is_empty())
+            .map(ProjectId::new),
     }
 }
 

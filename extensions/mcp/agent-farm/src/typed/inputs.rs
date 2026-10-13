@@ -52,7 +52,7 @@ pub struct RunStartInput {
     #[serde(default)]
     pub timeout_seconds: u32,
     #[schemars(
-        description = "Project id to attribute the run to. Empty means the farm's own project; a project you do not belong to is refused."
+        description = "Project id the run is attributed to. A farm run always belongs to its farm's project; naming a different project, or one you do not belong to, is refused. Empty means the farm's own project."
     )]
     #[serde(default)]
     pub project: String,
