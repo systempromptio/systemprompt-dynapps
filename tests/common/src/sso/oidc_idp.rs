@@ -62,6 +62,14 @@ pub struct FakeOidcIdp {
 
 impl FakeOidcIdp {
     pub async fn start(tenant_id: &str) -> Self {
+        // Why: the provider under test gives each IdP request a 10 s timeout;
+        // RSA-2048 generation must not land inside a token or JWKS handler.
+        tokio::task::spawn_blocking(|| {
+            TestIdpKeys::get();
+            TestIdpKeys::other();
+        })
+        .await
+        .expect("generate fake IdP keys");
         let (listener, base_url) = bind().await;
         let inner = Arc::new(Inner {
             issuer: format!("{base_url}/{tenant_id}/v2.0"),
