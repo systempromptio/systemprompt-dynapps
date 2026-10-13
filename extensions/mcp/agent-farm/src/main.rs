@@ -11,10 +11,12 @@ use systemprompt_mcp_agent_farm::{AgentFarmServer, Env};
 // Why: core discovers the governance authz hook, the connection snapshot
 // source and the group/project/role subject providers through inventory, so
 // the crates that register them must be linked into this binary or rules on
-// those bands never fire here.
+// those bands never fire here. The external secrets source is found the same
+// way, so a profile naming `onepassword` needs that crate linked too.
 use systemprompt_web_admin_governance as _;
 use systemprompt_web_admin_identity as _;
 use systemprompt_web_admin_platform as _;
+use systemprompt_secrets_onepassword as _;
 use tokio::net::TcpListener;
 
 const DEFAULT_SERVICE_ID: &str = "agent-farm";

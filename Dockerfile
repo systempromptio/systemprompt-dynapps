@@ -59,6 +59,18 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 
 FROM public.ecr.aws/aws-cli/aws-cli:2.36.18 AS awscli
 
+# 1Password CLI for `secrets.external.kind: onepassword` with `backend: cli`
+# (service accounts). Pinned; TARGETARCH (amd64/arm64) matches 1Password's
+# package naming. Unused by every other secrets source.
+FROM debian:bookworm-slim AS opcli
+ARG OP_CLI_VERSION=2.30.0
+ARG TARGETARCH=amd64
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl unzip \
+    && curl -fsSLo /tmp/op.zip "https://cache.agilebits.com/dist/1P/op2/pkg/v${OP_CLI_VERSION}/op_linux_${TARGETARCH}_v${OP_CLI_VERSION}.zip" \
+    && unzip -d /tmp/op /tmp/op.zip op \
+    && install -m 0755 /tmp/op/op /usr/local/bin/op \
+    && /usr/local/bin/op --version
+
 FROM debian:bookworm-slim AS runtime
 
 ARG SYSTEMPROMPT_VERSION=dev
@@ -87,6 +99,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY --from=awscli /usr/local/aws-cli /usr/local/aws-cli
 RUN ln -s /usr/local/aws-cli/v2/current/bin/aws /usr/local/bin/aws
+COPY --from=opcli /usr/local/bin/op /usr/local/bin/op
 
 RUN useradd -m -u 1000 app
 WORKDIR /app

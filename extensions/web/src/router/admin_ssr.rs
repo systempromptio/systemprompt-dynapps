@@ -19,7 +19,7 @@ pub(crate) struct SsrRouters {
 
 pub(crate) fn build(
     db: &DbHandles,
-    sso_deps: systemprompt_web_admin_identity::AdfsDeps,
+    sso_deps: systemprompt_web_admin_identity::SsoDeps,
 ) -> Option<SsrRouters> {
     let admin_dir = admin_template_dir()?;
     let branding = config_loader::branding_config();

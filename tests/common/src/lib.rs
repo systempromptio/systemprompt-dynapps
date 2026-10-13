@@ -5,13 +5,24 @@
 //! decided in one place ([`skip`]) rather than five times over with four of
 //! them getting it wrong.
 
+pub mod fake_http;
+pub mod onepassword_fake;
+pub mod onepassword_fake_cli;
 pub mod orphans;
 pub mod paths;
 pub mod skip;
+pub mod sso;
 pub mod tempdb;
 
 pub use paths::{repo_path, repo_root};
 pub use skip::{ci, skip_or_panic};
+pub use fake_http::{RecordedRequest, RequestLog};
+pub use onepassword_fake::FakeConnect;
+pub use onepassword_fake_cli::FakeOpCli;
+pub use sso::{
+    FakeOidcIdp, IdTokenSpec, ParsedRedirect, SamlIdpFixture, SamlResponseSpec, Tamper, TestIdpKeys,
+    parse_authn_request_redirect,
+};
 pub use tempdb::TempDb;
 
 // Why: the sanctioned way for a DB-backed test to acquire its database. The

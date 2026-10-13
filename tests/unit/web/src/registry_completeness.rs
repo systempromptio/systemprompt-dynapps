@@ -31,6 +31,7 @@ fn all_jobs_registered() {
         "retention_export_weekly",
         "robots_txt_generation",
         "secret_migration",
+        "secrets_refresh",
         "scope_defaults_recompute",
         "site_content_prerender",
         "sitemap_generation",

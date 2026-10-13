@@ -12,6 +12,7 @@ use clap::Parser;
 use systemprompt::config::{ProfileBootstrap, SecretsBootstrap, try_init_config};
 use systemprompt::logging::CliService;
 use systemprompt::system::AppContext;
+use systemprompt_secrets_onepassword as _;
 use systemprompt_web_admin_governance as _;
 use systemprompt_web_admin_identity::repositories::dev_login::{
     DEV_LOGIN_CODE_TTL_SECONDS, find_active_user_id_by_login, insert_dev_login_code,

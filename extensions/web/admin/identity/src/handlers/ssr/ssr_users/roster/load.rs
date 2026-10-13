@@ -70,11 +70,10 @@ pub(super) async fn load_roster(
 
 pub(super) async fn create_user_panel(
     pool: &PgPool,
-    sso: &crate::handlers::adfs_auth::AdfsConfig,
+    sso_provisions: bool,
     can_write: bool,
     faults: &mut Faults,
 ) -> CreateUserPanelView {
-    let sso_provisions = sso.enabled && sso.auto_provision;
     if !can_write || sso_provisions {
         return CreateUserPanelView {
             sso_provisions,

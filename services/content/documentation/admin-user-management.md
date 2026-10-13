@@ -144,15 +144,30 @@ admin skills.
 
 Roles have two halves, recomputed together on `users.roles`:
 
-- **Directory half** — projected from Entra groups on **every** sign-in
-  (replace, not union). For example,
-  `Dynapps-Systemprompt-Admins` → `platform_admin, admin` and
-  `Dynapps-Systemprompt-Users` → `user`. Everyone also gets `user`. The map is `group_roles` and
-  `group_role_patterns` in `services/web/config/adfs.yaml`; see
-  [Set Up Dynapps SSO (Microsoft Entra ID)](/documentation/entra-id-sso-setup).
-- **Manual half** — granted by an admin on `/admin/roles`, on a user's detail
-  page (`/admin/users/<id>`), or from the CLI. A manual grant survives sign-in;
-  a directory role cannot be revoked by hand — remove the Entra group instead.
+- **Directory half** — projected from Entra groups on **every** SSO sign-in
+  (replace, not union), by the same identity policy (`SsoIdentityPolicy`)
+  for SAML and OIDC. For example,
+  `Dynapps-Systemprompt-Admins` → `platform_admin, admin, user` and
+  `Dynapps-Systemprompt-Users` → `user`. A sign-in whose groups map to nothing
+  gets `default_roles` (`[user]`). The map is `group_roles` and
+  `group_role_patterns` (one `*` glob) in `services/web/config/adfs.yaml` or
+  `entra-oidc.yaml`; see
+  [Set Up Dynapps SSO (Microsoft Entra ID)](/documentation/entra-id-sso-setup#groups-roles-and-entitlements-both-options).
+- **Manual half** — granted by an admin on `/admin/roles` or on a user's
+  detail page (`/admin/users/<id>`), stored in `user_manual_roles`. Core's
+  sign-in writes the directory roles over `users.roles`, and the platform
+  re-joins this half immediately afterwards, so a manual grant survives
+  sign-in. A directory role cannot be revoked by hand — remove the Entra group
+  instead.
+
+The CLI commands below write `users.roles` directly and record no manual
+grant. That is right for operators who never sign in through SSO; for anyone
+who does, the role is replaced at their next SSO sign-in — grant it from the
+dashboard instead.
+
+Only the `admin` role mints the session's `admin` permission
+(`permissions_for_roles`); `platform_admin` on its own mints only `user`, so
+always pair it with `admin`.
 
 ```bash
 systemprompt admin users role promote jane@example.com   # grant admin
@@ -199,8 +214,8 @@ A user's detail page (`/admin/users/<id>`) holds their roles, groups and
 projects, sessions (revoke from here), and a **Usage** tab with their
 requests, cost and conversations.
 
-**New user** creates an account from the browser only when
-`auto_provision: false` in `services/web/config/adfs.yaml`. This installation
+**New user** creates an account from the browser only when no registered SSO
+provider has `auto_provision: true` (`adfs.yaml`, `entra-oidc.yaml`). This installation
 runs with `auto_provision: true` — the Entra group is the invitation — so the
 button is disabled and explains why. The CLI and the MCP route above work
 either way.

@@ -7,9 +7,11 @@
 //! the source that ships it and the hash it declares, which is the whole
 //! of its state: the tree is read, nothing is copied. The page is the
 //! Platform group's home because it is the one honest answer to "what is
-//! configured here".
+//! configured here". The secrets card beside it says where secrets come from
+//! and offers a reload (the `secrets` module).
 
 mod rows;
+mod secrets;
 mod view;
 
 use std::path::Path;
@@ -22,6 +24,7 @@ use sqlx::PgPool;
 use systemprompt::config::ProfileBootstrap;
 use systemprompt::loader::ServicesBootstrap;
 
+pub(crate) use self::secrets::secrets_reload;
 use self::view::{ConfigKpiView, ConfigRowView, ConfigurationPageData};
 use crate::handlers::ssr::ssr_sync::{DOCS_URL, EXPORT_ZIP_URL, empty_sources};
 use systemprompt_web_admin_core::error::{AdminError, AdminHtmlResult};
@@ -157,6 +160,7 @@ pub(crate) async fn configuration_page(
         kpis,
         rows,
         retention,
+        secrets: secrets::secrets_card(),
         sync_url: super::ssr_sync::BASE_URL,
         export_zip_url: EXPORT_ZIP_URL,
         docs_url: DOCS_URL,

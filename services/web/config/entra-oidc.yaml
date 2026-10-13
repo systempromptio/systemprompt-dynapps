@@ -1,0 +1,65 @@
+# Dynapps SSO (Microsoft Entra ID) — OpenID Connect relying party.
+#
+# The alternative to the SAML trust in adfs.yaml: an App Registration with a
+# client secret instead of an Enterprise Application with federation metadata.
+# Run one or the other, not both, against the same Entra groups.
+#
+# DISABLED until Dynapps IT has created the App Registration. To switch on:
+#   1. Fill in `tenant_id` and `client_id` below (App Registration > Overview).
+#   2. Store the client secret VALUE in the secrets store under the key named
+#      by `client_secret_secret` (default `entra_oidc_client_secret`). The
+#      secret never goes in this file.
+#   3. Replace the placeholder group ids below with the real Entra group
+#      object ids, set `enabled: true` and redeploy.
+#
+# Entra ID App Registration — values to enter:
+#   Platform                Web
+#   Redirect URIs           https://dynapps.systemprompt.io/admin/auth/entra/callback
+#                           https://dynapps.systemprompt.io/api/v1/core/sso/entra-oidc/callback
+#   Front-channel logout    (leave empty)
+#   ID tokens (implicit)    off — the code flow with PKCE is used
+#   Token configuration     add the "groups" claim, "Groups assigned to the
+#                           application", emitted in the ID token
+#   API permissions         Microsoft Graph: openid, profile, email (delegated)
+#   Users and groups        on the Enterprise Application, assign the groups
+#                           named in `group_roles`
+#
+# THE REDIRECT URI IS NOT IN THIS FILE. It is derived at boot from the
+# profile's `api_external_url` + `redirect_path`, so one config is correct on
+# every deployment host.
+#
+# Public authentication reference: services/content/documentation/entra-id-sso-setup.md
+
+enabled: false
+
+tenant_id: "00000000-0000-0000-0000-000000000000"
+client_id: "00000000-0000-0000-0000-000000000000"
+client_secret_secret: entra_oidc_client_secret
+
+redirect_path: /admin/auth/entra/callback
+scopes: [openid, profile, email]
+
+# Entra emits group object ids under `groups`. A user in more groups than fit
+# in the token gets `_claim_names` instead, and the sign-in is refused as a
+# group overage — assign groups to the application to stay under the limit.
+groups_claim: groups
+clock_skew_seconds: 120
+
+# Only these email domains may sign in.
+allowed_email_domains:
+  - dynapps.es
+  - wearedynapps.com
+
+# Attach a first sign-in to the active local account that owns the asserted
+# (verified) address, instead of provisioning a duplicate.
+link_by_email: true
+
+# A sign-in whose token carries no group at all gets no session.
+deny_without_group: true
+
+# Entra group object id -> roles. Placeholders until IT sends the real ids.
+group_roles:
+  "11111111-1111-1111-1111-111111111111": [platform_admin, admin, user]
+  "22222222-2222-2222-2222-222222222222": [user]
+
+auto_provision: true

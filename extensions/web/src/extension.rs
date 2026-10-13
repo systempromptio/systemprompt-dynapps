@@ -55,8 +55,14 @@ impl WebExtension {
     }
 
     #[must_use]
-    pub fn adfs_config() -> Option<Arc<systemprompt_web_admin_identity::AdfsConfig>> {
-        config_loader::adfs_config()
+    pub fn entra_saml_config() -> Option<Arc<systemprompt_web_admin_identity::EntraSamlConfig>> {
+        config_loader::entra_saml_config()
+    }
+
+    #[must_use]
+    pub fn entra_oidc_config()
+    -> Option<Arc<systemprompt_web_admin_identity::sso::entra_oidc::EntraOidcConfig>> {
+        config_loader::entra_oidc_config()
     }
 
     #[must_use]

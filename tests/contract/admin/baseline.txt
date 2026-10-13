@@ -228,6 +228,7 @@ POST   /admin/farm/runs/{run_id}/cancel                      anonymous=307 non-a
 POST   /admin/farm/{farm_id}/agents/{agent_id}/runs          anonymous=307 non-admin=303 developer=303 admin=422 platform-admin=422 project-manager=303 knowledge-worker=303
 POST   /admin/gateway/policies                               anonymous=307 non-admin=303 developer=303 admin=415 platform-admin=415 project-manager=303 knowledge-worker=303
 POST   /admin/gateway/policies/delete                        anonymous=307 non-admin=303 developer=303 admin=415 platform-admin=415 project-manager=303 knowledge-worker=303
+POST   /admin/platform/secrets/reload                        anonymous=307 non-admin=303 developer=303 admin=303 platform-admin=303 project-manager=303 knowledge-worker=303
 POST   /admin/sql/query                                      anonymous=307 non-admin=303 developer=303 admin=415 platform-admin=415 project-manager=303 knowledge-worker=303
 POST   /admin/system/observability/export                    anonymous=307 non-admin=303 developer=303 admin=303 platform-admin=303 project-manager=303 knowledge-worker=303
 POST   /admin/system/observability/test                      anonymous=307 non-admin=303 developer=303 admin=303 platform-admin=303 project-manager=303 knowledge-worker=303

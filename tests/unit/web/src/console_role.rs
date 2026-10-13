@@ -8,13 +8,13 @@
 use std::collections::BTreeMap;
 
 use systemprompt::identifiers::{Email, UserId};
+use systemprompt::sso::SsoIdentityPolicy;
 use systemprompt_web_admin_core::repositories::conversations::has_full_history_view;
 use systemprompt_web_admin_core::repositories::scope::Participation;
 use systemprompt_web_admin_core::types::{
     ROLE_ADMIN, ROLE_PROJECT_MANAGER, ROLE_USER, UserContext, roles_grant_console,
     roles_grant_manage,
 };
-use systemprompt_web_admin_identity::{AdfsConfig, group_matches_pattern};
 
 fn roles(list: &[&str]) -> Vec<String> {
     list.iter().map(|r| (*r).to_owned()).collect()
@@ -96,8 +96,17 @@ fn the_group_glob_matches_prefix_and_suffix() {
     ));
 }
 
-fn pattern_config() -> AdfsConfig {
-    let mut cfg = AdfsConfig::disabled();
+// The one-`*` glob, read through the policy that applies it.
+fn group_matches_pattern(pattern: &str, group: &str) -> bool {
+    let policy = SsoIdentityPolicy {
+        group_role_patterns: BTreeMap::from([(pattern.to_owned(), vec![ROLE_USER.to_owned()])]),
+        ..SsoIdentityPolicy::default()
+    };
+    !policy.roles_for_groups(&[group.to_owned()]).is_empty()
+}
+
+fn pattern_config() -> SsoIdentityPolicy {
+    let mut cfg = SsoIdentityPolicy::default();
     cfg.group_roles = BTreeMap::from([(
         "Systemprompt-Admins".to_owned(),
         vec![ROLE_ADMIN.to_owned(), ROLE_USER.to_owned()],
@@ -121,10 +130,11 @@ fn a_regional_pm_group_maps_to_the_role() {
 #[test]
 fn patterns_are_applied_on_top_of_exact_groups() {
     let cfg = pattern_config();
-    let granted = cfg.roles_for_groups(&roles(&[
+    let mut granted = cfg.roles_for_groups(&roles(&[
         "Systemprompt-Admins",
         "Systemprompt-ProjectManagers-UK",
     ]));
+    granted.sort();
     assert_eq!(
         granted,
         vec![

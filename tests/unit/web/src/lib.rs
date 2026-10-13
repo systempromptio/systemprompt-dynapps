@@ -211,6 +211,16 @@ mod site_skills_grouping;
 #[cfg(test)]
 mod site_skills_prerenderer;
 #[cfg(test)]
+mod sso_config_files;
+#[cfg(test)]
+mod sso_oidc_claims;
+#[cfg(test)]
+mod sso_permissions;
+#[cfg(test)]
+mod sso_policy;
+#[cfg(test)]
+mod sso_saml_claims;
+#[cfg(test)]
 mod web_extension_providers;
 #[cfg(test)]
 mod web_extension_wiring;
@@ -231,14 +241,6 @@ mod access_explain;
 mod account_pages;
 #[cfg(test)]
 mod activity_constructors;
-#[cfg(test)]
-mod adfs_claims;
-#[cfg(test)]
-mod adfs_config_files;
-#[cfg(test)]
-mod adfs_session_pure;
-#[cfg(test)]
-mod adfs_state_cookie;
 #[cfg(test)]
 mod admin_css_classes;
 #[cfg(test)]

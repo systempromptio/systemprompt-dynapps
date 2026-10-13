@@ -38,6 +38,7 @@ inventory.workspace = true
 systemprompt-mcp-shared.workspace = true
 systemprompt-web-admin-governance.workspace = true
 systemprompt-web-admin-identity.workspace = true
+systemprompt-secrets-onepassword.workspace = true
 systemprompt-web-admin-platform.workspace = true
 
 [lints]

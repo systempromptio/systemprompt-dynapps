@@ -63,6 +63,15 @@ identity is the pod name (HOSTNAME).
 {{- $v := .ctx.Values -}}
 {{- $p := $v.profile -}}
 {{- $url := required "profile.externalUrl is required" $p.externalUrl -}}
+{{- $secrets := dict "secrets_path" "./secrets.json" "validation" "strict" "source" "file" -}}
+{{- if eq $v.secrets.mode "onepassword" -}}
+{{- $op := $v.secrets.onepassword -}}
+{{- $external := dict "kind" "onepassword" "backend" $op.backend "vault" (required "secrets.onepassword.vault is required with secrets.mode onepassword" $op.vault) "token_env" $op.tokenEnv -}}
+{{- if $op.refreshSecs }}{{- $_ := set $external "refresh_secs" (int $op.refreshSecs) -}}{{- end -}}
+{{- if eq $op.backend "connect" }}{{- $_ := set $external "connect_url" (required "secrets.onepassword.connectUrl is required with backend connect" $op.connectUrl) -}}{{- end -}}
+{{- if $op.item }}{{- $_ := set $external "item" $op.item -}}{{- else }}{{- $_ := set $external "items" (required "secrets.onepassword.items or .item is required" $op.items) -}}{{- end -}}
+{{- $secrets = dict "source" "external" "validation" "strict" "external" $external -}}
+{{- end -}}
 {{- $base := dict
   "name" "k8s"
   "display_name" "Kubernetes"
@@ -73,7 +82,7 @@ identity is the pod name (HOSTNAME).
   "services" (dict "cache_dir" "/app/services-cache")
   "system_admin" (dict "username" "admin" "email" (required "profile.adminEmail is required" $p.adminEmail))
   "runtime" (dict "environment" "production" "log_level" $p.logLevel "output_format" "json" "no_color" true "non_interactive" true)
-  "secrets" (dict "secrets_path" "./secrets.json" "validation" "strict" "source" "file")
+  "secrets" $secrets
   "extensions" (dict "disabled" list)
   "retention" $p.retention
   "rate_limits" $p.rateLimits
@@ -178,8 +187,10 @@ initContainers:
     args:
       - |
         cp /src/profile/profile.yaml {{ $profileDir }}/profile.yaml
+        {{- if ne $v.secrets.mode "onepassword" }}
         cp /src/secrets/{{ $v.secrets.fileName }} {{ $profileDir }}/secrets.json
         chmod 0600 {{ $profileDir }}/secrets.json
+        {{- end }}
         # /app/storage is an emptyDir that hides the image's storage/files;
         # the entrypoint refills it from /app/share only when the dir exists.
         mkdir -p /app/storage/files /app/storage/data/scratch /app/storage/exports
@@ -190,7 +201,9 @@ initContainers:
       limits: {cpu: 100m, memory: 64Mi}
     volumeMounts:
       - {name: profile-src, mountPath: /src/profile, readOnly: true}
+      {{- if ne $v.secrets.mode "onepassword" }}
       - {name: secrets-src, mountPath: /src/secrets, readOnly: true}
+      {{- end }}
       - {name: profile, mountPath: {{ $profileDir }}}
       - {name: storage, mountPath: /app/storage}
 containers:
@@ -204,6 +217,14 @@ containers:
     env:
       - {name: SYSTEMPROMPT_PROFILE_DIR, value: {{ $profileDir }}}
       - {name: HOME, value: /home/app}
+      {{- if eq $v.secrets.mode "onepassword" }}
+      {{- $op := $v.secrets.onepassword }}
+      - name: {{ $op.tokenEnv }}
+        valueFrom:
+          secretKeyRef:
+            name: {{ required "secrets.onepassword.tokenSecret.name is required with secrets.mode onepassword" $op.tokenSecret.name }}
+            key: {{ $op.tokenSecret.key }}
+      {{- end }}
       {{- $trusted := $v.pod.trustedHttpHosts | default list }}
       {{- with $trusted }}
       - {name: SYSTEMPROMPT_TRUSTED_HTTP_HOSTS, value: {{ join "," . | quote }}}
@@ -256,6 +277,7 @@ volumes:
   - name: profile-src
     configMap:
       name: {{ .profileConfigMap }}
+  {{- if ne $v.secrets.mode "onepassword" }}
   - name: secrets-src
   {{- if eq $v.secrets.mode "csi" }}
     csi:
@@ -270,6 +292,7 @@ volumes:
       items:
         - key: {{ if eq $v.secrets.mode "existingSecret" }}{{ $v.secrets.existingSecret.key }}{{ else }}secrets.json{{ end }}
           path: {{ $v.secrets.fileName }}
+  {{- end }}
   {{- end }}
   - name: profile
     emptyDir: {medium: Memory, sizeLimit: 16Mi}

@@ -61,6 +61,34 @@
     {{/components/table}}
     <p class="sp-u-text-tertiary">Sizes, growth, archives and the monthly health check for these tables are on <a href="/admin/lifecycle">Data lifecycle</a>.</p>
 
+    {{#if secrets}}
+    {{#> components/table caption="Secrets — where they come from and how fresh they are (names only, never values)" modifier="sp-config-secrets"}}
+        <thead><tr>
+            <th>Source</th>
+            <th>Generation</th>
+            <th>Loaded</th>
+            <th>Last reload</th>
+            <th>Keys</th>
+        </tr></thead>
+        <tbody>
+        <tr data-secrets-source="{{secrets.source}}">
+            <td><strong>{{secrets.source}}</strong>{{#if secrets.refresh_secs}}<br><span class="sp-u-text-tertiary">refreshed every {{secrets.refresh_secs}}s by <span class="sp-u-mono">secrets_refresh</span></span>{{/if}}</td>
+            <td><strong>{{secrets.generation}}</strong></td>
+            <td>{{relativeTime secrets.initialised_at}}</td>
+            <td>{{#if secrets.last_reload_at}}{{relativeTime secrets.last_reload_at}}{{else}}<span class="sp-u-text-tertiary">—</span>{{/if}}{{#if secrets.last_error}}<br>{{> components/badge tone="err" text="last reload failed"}}<br><span class="sp-u-text-tertiary">{{secrets.last_error}}</span>{{/if}}</td>
+            <td><strong>{{secrets.key_count}}</strong><br><span class="sp-u-mono sp-u-text-tertiary">{{#each secrets.key_names}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}</span></td>
+        </tr>
+        </tbody>
+        {{#if can_write}}
+        <tfoot><tr>
+            <td colspan="5">
+                <form method="post" action="{{secrets.reload_url}}"><button class="sp-btn sp-btn--sm sp-btn--secondary" type="submit" title="Re-read the secrets source now; a changed pinned key is refused and the current secrets stay live">Reload now</button></form>
+            </td>
+        </tr></tfoot>
+        {{/if}}
+    {{/components/table}}
+    {{/if}}
+
     {{> components/tabs tabs=tabs nav_label="Configuration views"}}
 
     {{#> components/table caption="Every kind of configuration the instance loads" modifier="sp-config"}}

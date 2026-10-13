@@ -34,6 +34,8 @@ systemprompt-web-admin-core = { workspace = true }
 systemprompt-web-content = { workspace = true }
 systemprompt-web-site = { workspace = true }
 systemprompt-web-jobs = { workspace = true }
+# Registers the `onepassword` secrets source; linked for its inventory entry.
+systemprompt-secrets-onepassword = { workspace = true }
 
 # Extension framework — direct dep so the `extension_migrations!()` macro
 # expansion (`::systemprompt_extension::Migration`) resolves.

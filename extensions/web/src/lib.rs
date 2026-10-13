@@ -20,6 +20,10 @@
 //! - `site` — public homepage / docs content providers.
 
 pub use systemprompt_web_site::config_loader::branding_config;
+// Why: core finds external secrets sources through inventory, so the crate
+// registering `onepassword` must be linked into the server binary or a
+// profile naming that kind fails at boot.
+use systemprompt_secrets_onepassword as _;
 pub mod extension;
 mod extension_impl;
 mod router;

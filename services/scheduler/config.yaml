@@ -199,6 +199,14 @@ scheduler:
       owner: admin
       enabled: true
 
+    # Re-reads an external secrets source (secrets.external, e.g. 1Password)
+    # every refresh_secs (web extension). Wakes each minute and reloads only
+    # when due; a no-op on every other source. Logs changed key names only.
+    - name: secrets_refresh
+      extension: web
+      owner: admin
+      enabled: true
+
     # Expires raw evidence older than 90 days — hook events, gateway
     # requests and what hangs off them — in one transaction (web extension).
     # conversation_facts and conversation_skill_facts are kept.

@@ -1,0 +1,22 @@
+//! Browser single sign-on, as providers of core's SSO driver.
+//!
+//! - [`entra_saml`] — Microsoft Entra ID over SAML 2.0 (`adfs.yaml`).
+//! - [`entra_oidc`] — Microsoft Entra ID over OpenID Connect.
+//! - [`events`] — the activity, membership and revocation side effects.
+//! - [`roles`] — the role resolver: directory roles joined with manual grants,
+//!   and revocation when a sign-in drops admin.
+//! - [`refresh`] — the background-refreshed IdP documents both protocols use.
+//!
+//! Each provider's factory reads a config the aggregator installs before the
+//! driver discovers providers; with none installed the provider is off.
+
+pub mod entra_oidc;
+pub mod entra_saml;
+pub mod events;
+pub mod refresh;
+pub mod roles;
+
+systemprompt::sso::register_sso_provider!(entra_saml::factory);
+systemprompt::sso::register_sso_provider!(entra_oidc::factory);
+systemprompt::sso::register_auth_event_sink!(events::factory);
+systemprompt::sso::register_role_resolver!(roles::factory);

@@ -5,7 +5,6 @@
 //! data.
 
 pub(crate) mod access_control;
-pub(crate) mod adfs_auth;
 pub(crate) mod dev_login;
 pub(crate) mod entity_access;
 pub(crate) mod gateway_access;
@@ -14,6 +13,7 @@ pub(crate) mod projects;
 pub(crate) mod roles;
 pub(crate) mod scope_defaults;
 pub(crate) mod self_service;
+pub(crate) mod sso_alias;
 pub(crate) mod ssr;
 mod user_sessions;
 mod users;

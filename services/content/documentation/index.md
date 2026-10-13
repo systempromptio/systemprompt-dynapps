@@ -85,6 +85,7 @@ its source through distribution, loading and measurement.
 - [Create and manage users](/documentation/admin-user-management) — including the one role table
 - [Authentication](/documentation/authentication)
 - [Set up SSO (Microsoft Entra ID)](/documentation/entra-id-sso-setup)
+- [Secrets management](/documentation/secrets-management) — secrets sources, 1Password, rotation
 - [User and access management](/documentation/enterprise-user-access)
 - [Usage and analytics](/documentation/enterprise-analytics)
 - [Cost management](/documentation/enterprise-cost-management)

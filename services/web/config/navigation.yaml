@@ -144,6 +144,8 @@ docs_sidebar:
         href: "/documentation/enterprise-user-access"
       - label: "Set Up SSO (Microsoft Entra ID)"
         href: "/documentation/entra-id-sso-setup"
+      - label: "Secrets Management"
+        href: "/documentation/secrets-management"
       - label: "Usage & Productivity Analytics"
         href: "/documentation/enterprise-analytics"
       - label: "Cost Management & FinOps"

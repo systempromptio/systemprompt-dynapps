@@ -68,10 +68,19 @@
 
                         <div id="error" class="sp-login-error" role="alert" aria-live="polite" hidden></div>
 
-                        {{#if sso_enabled}}
+                        {{#if sso_saml_enabled}}
                         <div class="sp-form-actions">
                             <a id="sso-btn" class="sp-btn sp-btn--primary sp-u-w-full" href="/admin/auth/adfs/start{{#if redirect_encoded}}?redirect={{redirect_encoded}}{{/if}}">Sign in with Dynapps SSO (Microsoft Entra ID)</a>
                         </div>
+                        {{/if}}
+                        {{#if sso_oidc_enabled}}
+                        <div class="sp-form-actions">
+                            <a id="sso-oidc-btn" class="sp-btn {{#if sso_saml_enabled}}sp-btn--secondary{{else}}sp-btn--primary{{/if}} sp-u-w-full" href="/admin/auth/entra/start{{#if redirect_encoded}}?redirect={{redirect_encoded}}{{/if}}">Sign in with Microsoft</a>
+                        </div>
+                        {{/if}}
+                        {{#if sso_saml_enabled}}
+                        <p class="sp-login-switch">Your Dynapps Entra ID account is the only sign-in.</p>
+                        {{else if sso_oidc_enabled}}
                         <p class="sp-login-switch">Your Dynapps Entra ID account is the only sign-in.</p>
                         {{else}}
                         <p class="sp-login-switch">Single sign-on is not configured on this instance. Contact the platform team.</p>

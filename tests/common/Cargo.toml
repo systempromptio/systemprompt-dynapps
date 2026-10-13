@@ -19,3 +19,17 @@ sqlx = { workspace = true }
 tokio = { workspace = true }
 url = { workspace = true }
 uuid = { workspace = true }
+
+# SSO and 1Password fakes (src/sso, src/onepassword_fake*).
+axum = { workspace = true }
+base64 = { workspace = true }
+chrono = { workspace = true }
+flate2 = { workspace = true }
+jsonwebtoken = { workspace = true }
+rand_core = { workspace = true }
+rcgen = { workspace = true }
+rsa = { workspace = true }
+saml = { workspace = true }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
+tempfile = { workspace = true }

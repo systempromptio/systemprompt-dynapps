@@ -3,7 +3,7 @@
 # lint-layers.sh, adapted to this repo's topology):
 #
 #   facade (src/) -> aggregator (extensions/web) -> app (site, jobs)
-#     -> domain (admin/*, content) -> shared (web/shared/*, mcp/shared)
+#     -> domain (admin/*, content) -> shared (web/shared/*, mcp/shared, secrets/*)
 #
 # extensions/cli/* and extensions/mcp/* (non-shared) are entry-tier peers of
 # the aggregator. Three properties must hold exactly:
@@ -32,6 +32,7 @@ ORDER = {"shared": 0, "domain": 1, "app": 2, "entry": 3, "facade": 4}
 
 RULES = [
     (r"/extensions/(web|mcp)/shared/", "shared"),
+    (r"/extensions/secrets/", "shared"),
     (r"/extensions/web/(admin|content)/", "domain"),
     (r"/extensions/web/(site|jobs)/", "app"),
     (r"/extensions/web/Cargo\.toml$", "entry"),

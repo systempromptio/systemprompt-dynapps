@@ -1,0 +1,233 @@
+//! The sign-in router as the server mounts it, plus the request and audit
+//! helpers the SSO flow suites share.
+//!
+//! [`SsoApp::build`] installs whichever Entra configs the test supplies into
+//! the identity crate's process-wide slots, then lets core's driver discover
+//! providers — the order `extensions/web/src/router/sso.rs` uses. Both slots
+//! are first-write-wins `OnceLock`s, so every test builds exactly one app and
+//! relies on nextest's process-per-test isolation.
+
+pub(crate) mod oidc;
+pub(crate) mod profile;
+pub(crate) mod saml;
+
+use std::sync::Arc;
+
+use axum::body::Body;
+use axum::http::{Request, StatusCode, header};
+use axum::{Extension, Router};
+use sqlx::PgPool;
+use systemprompt::database::Database;
+use systemprompt::oauth::SessionCreationService;
+use systemprompt::users::{SessionRepository, UserRepository, UserService};
+use systemprompt_web_admin_identity::sso::{entra_oidc, entra_saml};
+use systemprompt_web_admin_identity::{EntraSamlConfig, SsoDeps, routes};
+use tower::ServiceExt as _;
+
+pub(crate) use profile::{EXTERNAL_URL, OIDC_TENANT};
+
+pub(crate) const SAML_START: &str = "/admin/auth/adfs/start";
+pub(crate) const SAML_ACS: &str = "/admin/auth/adfs/acs";
+pub(crate) const OIDC_START: &str = "/admin/auth/entra/start";
+pub(crate) const OIDC_CALLBACK: &str = "/admin/auth/entra/callback";
+pub(crate) const BINDER: &str = "sp_sso_bind";
+
+pub(crate) struct SsoApp {
+    router: Router,
+}
+
+/// One response, reduced to what an SSO assertion reads.
+#[derive(Debug, Clone)]
+pub(crate) struct Reply {
+    pub status: StatusCode,
+    pub location: String,
+    pub set_cookies: Vec<String>,
+}
+
+impl Reply {
+    /// `name=value` of a cookie the response set, empty values excluded.
+    pub(crate) fn cookie(&self, name: &str) -> Option<String> {
+        self.set_cookies.iter().find_map(|c| {
+            let pair = c.split(';').next()?.trim();
+            let value = pair.strip_prefix(&format!("{name}="))?;
+            (!value.is_empty()).then(|| pair.to_owned())
+        })
+    }
+
+    /// The `?sso=<reason>` a refusal redirects with.
+    pub(crate) fn reason(&self) -> Option<&str> {
+        let (_, query) = self.location.split_once("sso=")?;
+        Some(query.split('&').next().unwrap_or(query))
+    }
+
+    pub(crate) fn assert_refused(&self, reason: &str) {
+        assert!(
+            self.status.is_redirection(),
+            "expected a redirect, got {self:?}"
+        );
+        assert!(
+            self.location.starts_with("/admin/login"),
+            "a refusal lands on the login page: {self:?}"
+        );
+        assert_eq!(self.reason(), Some(reason), "refusal reason: {self:?}");
+        assert!(
+            self.cookie("access_token").is_none(),
+            "a refusal mints no session"
+        );
+    }
+
+    pub(crate) fn assert_signed_in(&self, return_to: &str) {
+        assert_eq!(
+            self.status,
+            StatusCode::SEE_OTHER,
+            "success is a 303: {self:?}"
+        );
+        assert_eq!(
+            self.location, return_to,
+            "success returns to the start target"
+        );
+        assert!(
+            self.cookie("access_token").is_some(),
+            "success sets access_token: {self:?}"
+        );
+    }
+}
+
+fn session_service(pool: &Arc<PgPool>) -> Arc<SessionCreationService> {
+    let db = Arc::new(Database::from_pools(
+        Arc::clone(pool),
+        Some(Arc::clone(pool)),
+    ));
+    let users = UserService::new(Arc::new(UserRepository::new(&db)));
+    Arc::new(SessionCreationService::new(
+        Arc::new(SessionRepository::new(&db)),
+        Arc::new(users),
+    ))
+}
+
+impl SsoApp {
+    pub(crate) fn build(
+        pool: &Arc<PgPool>,
+        saml: Option<EntraSamlConfig>,
+        oidc: Option<entra_oidc::EntraOidcConfig>,
+    ) -> Self {
+        assert!(profile::init(), "SSO fixture profile");
+        if let Some(cfg) = saml {
+            entra_saml::install_config(Arc::new(cfg));
+        }
+        if let Some(cfg) = oidc {
+            entra_oidc::install_config(Arc::new(cfg));
+        }
+        let database: systemprompt::database::DbPool = Arc::new(Database::from_pools(
+            Arc::clone(pool),
+            Some(Arc::clone(pool)),
+        ));
+        let sessions = session_service(pool);
+        let config = systemprompt::manifest::Config::get().expect("fixture profile config");
+        let deps = SsoDeps {
+            driver: systemprompt::sso::SsoDriver::discover(
+                &database,
+                Arc::clone(&sessions),
+                Arc::new(config.clone()),
+            ),
+            write_pool: Arc::clone(pool),
+            session_service: sessions,
+        };
+        let router = Router::new()
+            .nest(
+                "/admin",
+                routes::public::sign_in_routes().with_state(Arc::clone(pool)),
+            )
+            .merge(routes::public::saml_metadata_routes())
+            .layer(Extension(deps));
+        Self { router }
+    }
+
+    pub(crate) async fn get(&self, uri: &str, cookie: Option<&str>) -> Reply {
+        self.send(Request::get(uri), Body::empty(), cookie).await
+    }
+
+    pub(crate) async fn post_form(&self, uri: &str, body: &str, cookie: Option<&str>) -> Reply {
+        let builder =
+            Request::post(uri).header(header::CONTENT_TYPE, "application/x-www-form-urlencoded");
+        self.send(builder, Body::from(body.to_owned()), cookie)
+            .await
+    }
+
+    async fn send(
+        &self,
+        mut builder: axum::http::request::Builder,
+        body: Body,
+        cookie: Option<&str>,
+    ) -> Reply {
+        if let Some(cookie) = cookie {
+            builder = builder.header(header::COOKIE, cookie);
+        }
+        let response = self
+            .router
+            .clone()
+            .oneshot(builder.body(body).expect("request"))
+            .await
+            .expect("router is infallible");
+        let headers = response.headers();
+        Reply {
+            status: response.status(),
+            location: headers
+                .get(header::LOCATION)
+                .and_then(|v| v.to_str().ok())
+                .unwrap_or_default()
+                .to_owned(),
+            set_cookies: headers
+                .get_all(header::SET_COOKIE)
+                .iter()
+                .filter_map(|v| v.to_str().ok().map(str::to_owned))
+                .collect(),
+        }
+    }
+}
+
+/// A form value, percent-encoded for an `x-www-form-urlencoded` body.
+pub(crate) fn form_encode(value: &str) -> String {
+    url::form_urlencoded::byte_serialize(value.as_bytes()).collect()
+}
+
+/// `(outcome, reason)` of every `sso_login_events` row, oldest first.
+pub(crate) async fn login_events(pool: &PgPool) -> Vec<(String, Option<String>)> {
+    sqlx::query_as("SELECT outcome, reason FROM sso_login_events ORDER BY id")
+        .fetch_all(pool)
+        .await
+        .expect("read sso_login_events")
+}
+
+pub(crate) async fn federated_user(pool: &PgPool, external_sub: &str) -> Option<String> {
+    sqlx::query_scalar("SELECT user_id FROM federated_identities WHERE external_sub = $1")
+        .bind(external_sub)
+        .fetch_optional(pool)
+        .await
+        .expect("read federated_identities")
+}
+
+pub(crate) async fn directory_groups(pool: &PgPool, user_id: &str) -> Vec<String> {
+    sqlx::query_scalar(
+        "SELECT group_id FROM group_members WHERE user_id = $1 AND source = 'adfs' ORDER BY group_id",
+    )
+    .bind(user_id)
+    .fetch_all(pool)
+    .await
+    .expect("read group_members")
+}
+
+/// A dashboard group that directory group `ad_group` maps onto.
+pub(crate) async fn map_directory_group(pool: &PgPool, group_id: &str, ad_group: &str) {
+    sqlx::query("INSERT INTO groups (id, name) VALUES ($1, $1) ON CONFLICT (id) DO NOTHING")
+        .bind(group_id)
+        .execute(pool)
+        .await
+        .expect("insert group");
+    sqlx::query("INSERT INTO group_ad_mappings (ad_group, group_id) VALUES ($1, $2)")
+        .bind(ad_group)
+        .bind(group_id)
+        .execute(pool)
+        .await
+        .expect("insert group_ad_mapping");
+}

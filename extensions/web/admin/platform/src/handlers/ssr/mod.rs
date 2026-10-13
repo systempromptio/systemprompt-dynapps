@@ -13,7 +13,7 @@ mod ssr_setup;
 mod ssr_sync;
 mod ssr_sync_import;
 
-pub(crate) use configuration::configuration_page;
+pub(crate) use configuration::{configuration_page, secrets_reload};
 pub(crate) use devices::devices_page;
 pub(crate) use ssr_bridge_device_link::{device_link_approve, device_link_deny, device_link_page};
 pub(crate) use ssr_connect::connect_page;
