@@ -14,6 +14,7 @@ use async_trait::async_trait;
 use systemprompt::agent_runs::AgentRunRepository;
 use systemprompt::agent_runs::credentials::RunCredentialService;
 use systemprompt::agent_runs::governance::HookBases;
+use systemprompt::agent_runs::repository::RunCredentialRepositories;
 use systemprompt::agent_runs::service::{ClaimLoop, RunHandler, claimer_id};
 use systemprompt::database::DbPool;
 use systemprompt::traits::{JobContext, RunnerService};
@@ -44,7 +45,7 @@ impl FarmRunnerService {
         let gateway = &self.state.gateway;
         Arc::new(FarmRunHandler {
             state: Arc::clone(&self.state),
-            credentials: RunCredentialService::new(db, issuer),
+            credentials: RunCredentialService::new(RunCredentialRepositories::new(db), issuer),
             hooks: HookBases {
                 govern_url: gateway.govern_url(),
                 track_url: gateway.track_url(),
