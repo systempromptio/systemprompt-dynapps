@@ -17,6 +17,7 @@ path = "src/main.rs"
 systemprompt = { workspace = true, features = ["full"] }
 
 anyhow.workspace = true
+rustls.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 

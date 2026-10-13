@@ -53,8 +53,24 @@ async fn init_context() -> Result<Arc<AppContext>> {
     ))
 }
 
+// Why: reqwest is built without a bundled crypto provider (core enables
+// `rustls-no-provider`), so this binary, which does not enter through
+// `systemprompt::cli::run`, installs ring before the first client is built.
+fn install_tls_crypto_provider() {
+    if rustls::crypto::CryptoProvider::get_default().is_some() {
+        return;
+    }
+    if rustls::crypto::ring::default_provider()
+        .install_default()
+        .is_err()
+    {
+        tracing::debug!("rustls crypto provider was installed concurrently");
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
+    install_tls_crypto_provider();
     systemprompt::logging::init_console_logging();
 
     let violations = systemprompt_mcp_agent::tools::schema_violations();
