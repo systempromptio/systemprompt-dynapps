@@ -1,6 +1,6 @@
 //! The judged half of an eval.
 //!
-//! One structured-output call through the process's `AiService` scoring a
+//! One JSON-answer call through the process's `AiService` scoring a
 //! case's run against its rubric, built the way the conversation judge job
 //! builds its requests. The provider and model come from the `evals:` block of
 //! the farms file, so every trigger builds the same judge through
@@ -13,7 +13,7 @@ use std::pin::Pin;
 use std::sync::Arc;
 
 use serde::Deserialize;
-use systemprompt::ai::{AiMessage, AiRequest, AiService, StructuredOutputOptions};
+use systemprompt::ai::{AiMessage, AiRequest, AiService};
 use systemprompt::identifiers::{Actor, AgentName, ContextId, SessionId, TraceId, UserId};
 use systemprompt::models::execution::context::RequestContext;
 
@@ -34,7 +34,8 @@ the transcript that the output file does not back up earns nothing.
 passed: true when score meets the threshold you are given.
 rationale: two or three sentences, at most 80 words, naming the evidence for the score.
 findings: short bullet strings, one per rubric item met or missed.
-Never quote credentials, keys or personal data.";
+Never quote credentials, keys or personal data.
+Reply with one JSON object and nothing else, matching this schema:";
 
 pub type JudgeFuture<'a> = Pin<Box<dyn Future<Output = FarmResult<JudgeVerdict>> + Send + 'a>>;
 
@@ -63,7 +64,9 @@ pub trait EvalJudge: Send + Sync {
     fn judge<'a>(&'a self, input: &'a JudgeInput) -> JudgeFuture<'a>;
 }
 
-// Why: Gemini's responseSchema is an OpenAPI subset (enums and `required`
+// Why: the schema is stated in the prompt, not sent as structured output:
+// Anthropic's current models refuse the forced `tool_choice` core uses for it.
+// Gemini's responseSchema is an OpenAPI subset (enums and `required`
 // only); core's sanitizer strips anything richer, so the schema stays inside
 // what every provider accepts.
 // JSON: outgoing fixed-shape
@@ -90,7 +93,10 @@ struct RawVerdict {
 }
 
 pub fn parse_verdict(content: &str, threshold: i32) -> FarmResult<(i32, bool, String)> {
-    let raw: RawVerdict = serde_json::from_str(content).map_err(|source| FarmError::Json {
+    let start = content.find('{').unwrap_or(0);
+    let end = content.rfind('}').map_or(content.len(), |i| i + 1);
+    let json = content.get(start..end).unwrap_or(content);
+    let raw: RawVerdict = serde_json::from_str(json).map_err(|source| FarmError::Json {
         at: "judge verdict".to_owned(),
         source,
     })?;
@@ -168,7 +174,7 @@ impl GatewayJudge {
     async fn judge_inner(&self, input: &JudgeInput) -> FarmResult<JudgeVerdict> {
         let request = AiRequest::builder(
             vec![
-                AiMessage::system(SYSTEM_PROMPT),
+                AiMessage::system(format!("{SYSTEM_PROMPT}\n{}", verdict_schema())),
                 AiMessage::user(render_user_message(input)),
             ],
             self.provider.as_str(),
@@ -176,7 +182,6 @@ impl GatewayJudge {
             self.max_output_tokens,
             self.request_context()?,
         )
-        .with_structured_output(StructuredOutputOptions::with_schema(verdict_schema()))
         .build();
         let response = self
             .ai
