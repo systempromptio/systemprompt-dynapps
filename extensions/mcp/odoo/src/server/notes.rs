@@ -1,7 +1,7 @@
 //! The chatter tools: `note_add`, `note_list` and `note_search`.
 //!
 //! Odoo Community has no Knowledge app — that is an Enterprise module — so the
-//! knowledge bank here is not a separate store. It is the chatter that already
+//! record notes here is not a separate store. It is the chatter that already
 //! hangs off business records: every `mail.message` is anchored to a
 //! `(res_model, res_id)` pair, which means a note is never free-floating and
 //! always answers "about what?".

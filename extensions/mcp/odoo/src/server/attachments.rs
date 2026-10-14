@@ -1,7 +1,7 @@
 //! The attachment tools: `attachment_add`, `attachment_list`,
 //! `attachment_get`.
 //!
-//! `ir.attachment` is the other half of the record-anchored knowledge bank.
+//! `ir.attachment` is the other half of the record-anchored record notes.
 //! Like chatter, an attachment carries a `(res_model, res_id)` pair, so a file
 //! is filed against the lead or partner it concerns rather than into a folder
 //! nobody can find.

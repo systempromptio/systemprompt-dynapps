@@ -18,7 +18,7 @@
 //! is on — a refusal for any record not tagged `demo-*`.
 //!
 //! The tool surface ([`tools`]) covers leads, partners, activities, and the
-//! record-anchored knowledge bank — chatter notes and attachments — plus one
+//! record-anchored record notes — chatter notes and attachments — plus one
 //! composite briefing that aggregates in Odoo rather than pulling records back
 //! to count them.
 //!

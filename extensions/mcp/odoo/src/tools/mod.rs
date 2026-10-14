@@ -13,7 +13,7 @@
 //! used to require knowing `stage_id` numerically; nothing listed the stages,
 //! so the guess was the only option and a wrong one moved the wrong deal.
 //!
-//! Odoo Community ships no Knowledge app, so the knowledge bank is the chatter
+//! Odoo Community ships no Knowledge app, so the record notes is the chatter
 //! and attachments already anchored to business records. `note_search` is the
 //! way into it and the descriptions below say so explicitly: a model choosing
 //! between tools needs to know that `crm_lead_search` finds records by their

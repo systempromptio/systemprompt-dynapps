@@ -5,7 +5,7 @@
 //! field, does not have to translate.
 //!
 //! Split by plane: the CRM record inputs live here, the record-anchored
-//! knowledge bank in [`knowledge`], the reason-carrying destructive and
+//! record notes in [`knowledge`], the reason-carrying destructive and
 //! erasure inputs in [`guarded`], and the scheduling and collaboration
 //! surfaces in [`work`].
 

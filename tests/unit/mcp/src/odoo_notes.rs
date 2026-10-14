@@ -1,6 +1,6 @@
 //! The chatter tools' domains and rendering.
 //!
-//! `note_search` is the knowledge bank's retrieval path, and its domain has the
+//! `note_search` is the record notes's retrieval path, and its domain has the
 //! property most easily got wrong in prefix notation: the two text leaves must
 //! be an OR that the filters then AND onto. Written wrong, it silently returns
 //! subject-only matches or drops the model filter — no error, just wrong

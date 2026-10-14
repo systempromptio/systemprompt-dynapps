@@ -1,4 +1,4 @@
-//! Inputs for the record-anchored knowledge bank: chatter and attachments.
+//! Inputs for the record-anchored record notes: chatter and attachments.
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
