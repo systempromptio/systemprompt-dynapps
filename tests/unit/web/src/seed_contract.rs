@@ -6,13 +6,8 @@
 
 const ADMIN_OAUTH_CLIENT: &str =
     include_str!("../../../../extensions/web/schema/seeds/admin_oauth_client.sql");
-const MARKETPLACE_PLANS: &str =
-    include_str!("../../../../extensions/web/schema/seeds/marketplace_plans.sql");
 
-const ALL_SEEDS: [(&str, &str); 2] = [
-    ("admin_oauth_client", ADMIN_OAUTH_CLIENT),
-    ("marketplace_plans", MARKETPLACE_PLANS),
-];
+const ALL_SEEDS: [(&str, &str); 1] = [("admin_oauth_client", ADMIN_OAUTH_CLIENT)];
 
 fn statements(sql: &str) -> Vec<String> {
     let without_comments: String = sql
@@ -47,19 +42,6 @@ fn every_seed_is_idempotent_sql() {
                     "seed {id}: INSERT without ON CONFLICT is not idempotent"
                 );
             }
-        }
-    }
-}
-
-#[test]
-fn the_marketplace_plan_seed_never_overwrites_operator_edits() {
-    for (id, sql) in [("marketplace_plans", MARKETPLACE_PLANS)] {
-        for stmt in statements(sql) {
-            assert!(
-                stmt.contains("DO NOTHING"),
-                "seed {id}: inserts must be insert-if-absent (ON CONFLICT ... DO NOTHING) so an \
-                 operator's edits survive every boot"
-            );
         }
     }
 }

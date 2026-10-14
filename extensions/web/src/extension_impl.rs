@@ -86,10 +86,6 @@ impl Extension for WebExtension {
                 include_str!("../schema/seeds/admin_oauth_client.sql"),
             ),
             Seed::new(
-                "marketplace_plans",
-                include_str!("../schema/seeds/marketplace_plans.sql"),
-            ),
-            Seed::new(
                 "groups_projects",
                 include_str!("../schema/seeds/groups_projects.sql"),
             ),

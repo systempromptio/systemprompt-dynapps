@@ -2,10 +2,10 @@
 //! SSO against an Entra ID enterprise application, served by core's SSO
 //! driver at this installation's historical paths.
 //!
-//! Module layout: `config` (the loaded YAML and the slot the aggregator
-//! installs it into), `metadata` (the federation metadata in force),
-//! `provider` (the [`SsoProvider`] and `start`), `finish` (assertion
-//! verification), `claims` (the pure assertion → identity read).
+//! Module layout: [`config`] (the loaded YAML and the slot the aggregator
+//! installs it into), [`metadata`] (the federation metadata in force),
+//! [`provider`] (the [`SsoProvider`] and `start`), [`finish`] (assertion
+//! verification), [`claims`] (the pure assertion → identity read).
 
 mod claims;
 mod config;

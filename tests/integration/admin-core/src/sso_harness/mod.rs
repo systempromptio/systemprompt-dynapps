@@ -125,11 +125,11 @@ impl SsoApp {
         let sessions = session_service(pool);
         let config = systemprompt::manifest::Config::get().expect("fixture profile config");
         let deps = SsoDeps {
-            driver: Some(systemprompt::sso::SsoDriver::discover(
+            driver: systemprompt::sso::SsoDriver::discover(
                 &database,
                 Arc::clone(&sessions),
                 Arc::new(config.clone()),
-            )),
+            ),
             write_pool: Arc::clone(pool),
             session_service: sessions,
         };
