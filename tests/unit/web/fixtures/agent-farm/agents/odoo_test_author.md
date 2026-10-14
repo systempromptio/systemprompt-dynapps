@@ -1,7 +1,7 @@
 ---
 name: odoo_test_author
 description: Plans and writes missing Odoo TransactionCase tests for a module, producing TEST_PLAN.md and new test files.
-model: claude-sonnet-4-5
+model: claude-sonnet-5-5
 tools: [Read, Grep, Glob, Write, Edit]
 plugin: dynapps-odoo-delivery
 skills: [odoo_test_plan]

@@ -33,6 +33,7 @@ fn context<'a>(
             user_id: user.clone(),
         },
         access_scope: AccessScope::User,
+        roles: &[],
         user_id: user,
         session_id: session,
         call_id: call,
@@ -207,11 +208,13 @@ fn installation_omits_aws_and_keeps_warn_mode() {
     let cfg = GovernanceConfig::parse(include_str!("../../../../services/governance/config.yaml"))
         .unwrap();
     assert_eq!(cfg.mode.to_string(), "warn");
-    assert!(
-        cfg.policies
-            .iter()
-            .all(|policy| policy.mode.to_string() == "warn")
-    );
+    for policy in &cfg.policies {
+        let expected = match policy.id.as_str() {
+            "scope_check" | "tool_blocklist" => "enforce",
+            _ => "warn",
+        };
+        assert_eq!(policy.mode.to_string(), expected, "{}", policy.id.as_str());
+    }
     let engine = GovernanceEngine::from_config(&cfg).unwrap();
     assert!(!engine.enforces_prompt_secrets());
     let secret_scan = cfg

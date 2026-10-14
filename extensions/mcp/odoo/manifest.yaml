@@ -1,0 +1,8 @@
+extension:
+  type: mcp
+  name: odoo
+  binary: systemprompt-mcp-odoo
+  description: Odoo CRM - leads, partners, notes, activities, sales and invoices as the caller's sealed Odoo credential
+  port: 5012
+  build_type: workspace
+  enabled: true

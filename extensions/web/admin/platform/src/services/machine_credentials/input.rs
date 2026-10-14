@@ -13,13 +13,15 @@ pub enum MachineKind {
     GithubApp,
     SalesforceClientCredentials,
     AtlassianApiToken,
+    OdooApiKey,
 }
 
 impl MachineKind {
-    pub const ALL: [Self; 3] = [
+    pub const ALL: [Self; 4] = [
         Self::GithubApp,
         Self::SalesforceClientCredentials,
         Self::AtlassianApiToken,
+        Self::OdooApiKey,
     ];
 
     #[must_use]
@@ -28,6 +30,7 @@ impl MachineKind {
             Self::GithubApp => "github_app",
             Self::SalesforceClientCredentials => "salesforce_client_credentials",
             Self::AtlassianApiToken => "atlassian_api_token",
+            Self::OdooApiKey => "odoo_api_key",
         }
     }
 
@@ -37,6 +40,7 @@ impl MachineKind {
             Self::GithubApp => "GitHub App installation",
             Self::SalesforceClientCredentials => "Salesforce client credentials",
             Self::AtlassianApiToken => "Atlassian API token",
+            Self::OdooApiKey => "Odoo API key",
         }
     }
 
@@ -64,6 +68,12 @@ pub struct AttachCredential {
     pub consumer_key: String,
     #[serde(default)]
     pub email: String,
+    #[serde(default)]
+    pub url: String,
+    #[serde(default)]
+    pub db: String,
+    #[serde(default)]
+    pub login: String,
     #[serde(default)]
     pub secret: String,
 }
@@ -131,6 +141,11 @@ impl AttachCredential {
                 }
                 json!({ "email": email })
             },
+            MachineKind::OdooApiKey => json!({
+                "url": endpoint(&self.url, "Odoo URL")?,
+                "db": plain(&self.db, "Database")?,
+                "login": plain(&self.login, "Login")?,
+            }),
         };
         Ok((self.kind, config, self.secret))
     }

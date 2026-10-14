@@ -92,7 +92,7 @@ fn native_tool_route_rejects_an_unpriced_upstream_model() {
     let model = provider
         .models
         .iter_mut()
-        .find(|model| model.upstream_model.as_deref() == Some("claude-sonnet-5"))
+        .find(|model| model.upstream_model.as_deref() == Some("claude-sonnet-5-5"))
         .expect("Sonnet upstream model is configured");
     model.pricing = systemprompt::manifest::services::ai::ModelPricing::default();
     let error = gateway()
@@ -100,23 +100,25 @@ fn native_tool_route_rejects_an_unpriced_upstream_model() {
         .validate(&registry)
         .expect_err("native routing must retain the billable-model check");
     assert!(error.to_string().contains("claude-native-tools"));
-    assert!(error.to_string().contains("anthropic-claude-sonnet-5"));
+    assert!(error.to_string().contains("anthropic-claude-sonnet-5-5"));
 }
 
+// Why: the Vertex rate card is still priced and discovered, but since
+// 2026-10-14 the gateway is Anthropic-only, so no Vertex id may be reachable.
+// Restoring Vertex is the moment to flip this back to "every id routes".
 #[test]
-fn every_rate_card_id_matches_a_gateway_route() {
+fn no_rate_card_id_is_routable_while_anthropic_only() {
     let config = gateway().resolve();
-    let unroutable: Vec<String> = card()
+    let routable: Vec<String> = card()
         .entries
         .iter()
         .filter(|e| e.retires_on.is_none())
         .map(|e| e.id.as_str().to_owned())
-        .filter(|id| config.find_route(id).is_none())
+        .filter(|id| !id.starts_with("claude-") && config.find_route(id).is_some())
         .collect();
     assert!(
-        unroutable.is_empty(),
-        "rate-card models with no route in services/ai/gateway.yaml (they would be priced but \
-         unreachable): {}",
-        unroutable.join(", ")
+        routable.is_empty(),
+        "Vertex rate-card models routable on an Anthropic-only gateway: {}",
+        routable.join(", ")
     );
 }

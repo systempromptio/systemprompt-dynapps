@@ -69,7 +69,7 @@ pub(crate) async fn seed(pool: &Arc<PgPool>) -> Seeded {
             id: agent.clone(),
             name: "reviewer".to_owned(),
             description: "reviews".to_owned(),
-            model: Some("claude-sonnet-5".to_owned()),
+            model: Some("claude-sonnet-5-5".to_owned()),
             host: "codex-cli".to_owned(),
             tools: vec!["Read".to_owned()],
             plugin_id: PluginId::new("lifecycle-plugin"),
@@ -156,7 +156,7 @@ async fn launch_queues_an_agent_run_and_a_farm_row_that_references_it() {
     assert_eq!(agent_run.host, "codex-cli");
     assert_eq!(agent_run.user_id, seeded.user);
     assert_eq!(agent_run.request["prompt"], "Review the module.");
-    assert_eq!(agent_run.request["model"], "claude-sonnet-5");
+    assert_eq!(agent_run.request["model"], "claude-sonnet-5-5");
     db.cleanup().await;
 }
 

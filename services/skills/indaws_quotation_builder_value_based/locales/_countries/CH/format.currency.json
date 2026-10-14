@@ -1,0 +1,20 @@
+{
+  "_layer": "country",
+  "_note": "CHF: símbolo delante, miles con apóstrofo. El formatter (proposal_data/generate_proposal/locale_loader) ya lee estos campos; requiere relajar scripts/odoo_discovery.py:688-689 (_smoke).",
+  "currency": {
+    "code": "CHF", "code_label": "CHF", "symbol": "CHF",
+    "symbol_position": "before", "symbol_space": true,
+    "decimals": 0, "decimal_sep": ".", "thousands_sep": "'",
+    "round_display": "half_up", "round_step": "<<VERIFY: 5 o 10 CHF>>"
+  },
+  "spreadsheet": {
+    "number_format_currency": "[$CHF] #,##0",
+    "locale_block": {
+      "name": "<<per-lang: German (Switzerland) de_CH | French (Switzerland) fr_CH | Italian (Switzerland) it_CH>>",
+      "code": "<<de_CH | fr_CH | it_CH>>",
+      "thousandsSeparator": "'", "decimalSeparator": ".",
+      "dateFormat": "dd.mm.yyyy", "timeFormat": "hh:mm:ss",
+      "formulaArgSeparator": ";", "weekStart": 1
+    }
+  }
+}

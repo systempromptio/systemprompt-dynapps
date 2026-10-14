@@ -132,7 +132,7 @@ impl<'a> RequestSeed<'a> {
             id,
             user_id,
             provider: Some("anthropic"),
-            model: Some("claude-sonnet-4-5-20250929"),
+            model: Some("claude-sonnet-5-5"),
             input_tokens: 100,
             output_tokens: 20,
             cache_read_tokens: 0,

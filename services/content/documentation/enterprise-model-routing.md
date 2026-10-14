@@ -64,7 +64,7 @@ boots the same set.
 
 | Requested id | Provider | Models |
 |---|---|---|
-| `claude-*` | `vertex-anthropic` (Vertex AI, `global`), failing over to `anthropic` | Opus 5.5, Opus 5, Sonnet 5, Fable 5.1, Fable 5, Haiku 4.5 |
+| `claude-*` | `vertex-anthropic` (Vertex AI, `global`), failing over to `anthropic` | Opus 5.5, Sonnet 5.5, Haiku 5.5 |
 | `anthropic-claude-*` | `anthropic` (Anthropic's API) | the same Claude models, hidden from every model list |
 | `vertex-gemini-*` | `vertex` (Vertex AI, `global`) | Gemini 3.8 Flash, 3.5 Flash, 3.5 Flash-Lite |
 | `gemini-*` | `gemini` (public API, by key) | Gemini 3.8 Flash; also used by the classifier job |
@@ -76,26 +76,21 @@ The Claude models, at Vertex's global rates:
 | Model | Input / output per million | Context | Max output |
 |---|---|---|---|
 | `claude-opus-5-5` | $4.00 / $20.00 | 1M | 128k |
-| `claude-opus-5` | $5.00 / $25.00 | 1M | 128k |
-| `claude-sonnet-5` | $2.00 / $10.00 | 1M | 128k |
-| `claude-fable-5-1` | $10.00 / $50.00 | 1M | 128k |
-| `claude-fable-5` | $10.00 / $50.00 | 1M | 128k |
-| `claude-haiku-4-5` | $1.00 / $5.00 | 200k | 64k |
+| `claude-sonnet-5-5` | $2.00 / $10.00 | 1M | 128k |
+| `claude-haiku-5-5` | $0.10 / $0.50 (≤100K prompt; $0.50 / $2.50 beyond) | 1M | 128k |
 
-`gateway.default_model` is `claude-sonnet-5[1m]`. The `[1m]` suffix is Claude
+`gateway.default_model` is `claude-sonnet-5-5[1m]`. The `[1m]` suffix is Claude
 Code's 1M-context marker: the bridge seeds it into Claude Code, and the
 gateway strips it before routing, so the request reaches Vertex as
-`claude-sonnet-5`. Without the marker, Claude Code budgets 200k for every
-gateway model. `claude-haiku-4-5` also answers to its dated id,
-`claude-haiku-4-5-20251001`. The Claude 4.x Opus and Sonnet models were
-removed on 2026-09-24. With `allow_unlisted_models: false`, a request for a
+`claude-sonnet-5-5`. Without the marker, Claude Code budgets 200k for every
+gateway model. Only the latest Claude models are declared; Claude 4.x and the
+5.0 models were removed on 2026-10-14. With `allow_unlisted_models: false`, a request for a
 retired id is refused rather than forwarded.
 
 ### Retirement dates
 
 | Date | What stops |
 |---|---|
-| **2026-10-15** | Vertex guarantees `claude-haiku-4-5` only until this date |
 | **2026-10-21** | Google turns off every Qwen, Kimi, DeepSeek and MiniMax Model-as-a-Service endpoint, plus `zai.glm-5`, `zai.glm-4.7` and `openai.gpt-oss-20b`. After this date, core hides the retired entries from every model list |
 
 `openai.gpt-oss-120b` and `zai.glm-5.2` are not retiring. `zai.glm-5.2` is a

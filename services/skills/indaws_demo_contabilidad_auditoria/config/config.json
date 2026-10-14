@@ -1,0 +1,9 @@
+{
+  "_doc": "Config de la auditoría contable. Por defecto analiza el último trimestre vencido.",
+  "company": {"name": "Lumina Ingeniería"},
+  "iva_mismatch_threshold_eur": 0.05,
+  "eu_country_codes": ["AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", "FI", "FR", "DE", "GR", "HU", "IE", "IT", "LV", "LT", "LU", "MT", "NL", "PL", "PT", "RO", "SK", "SI", "SE"],
+  "manual_journal_types": ["general"],
+  "amortization_account_prefixes": ["68", "28"],
+  "bank_journal_types": ["bank", "cash"]
+}

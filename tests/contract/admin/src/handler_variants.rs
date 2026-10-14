@@ -53,8 +53,8 @@ const REQUESTS: [Variant; 28] = [
     // Postgres rejects a negative OFFSET; the page must clamp.
     v("/admin/requests?tab=log&page=-5", REQUESTS_LOG_ROWS),
     v(
-        "/admin/requests?tab=log&model=claude-opus-5",
-        r#"filter-ribbon__chip-value">claude-opus-5</span>"#,
+        "/admin/requests?tab=log&model=claude-opus-5-5",
+        r#"filter-ribbon__chip-value">claude-opus-5-5</span>"#,
     ),
     v(
         "/admin/requests?tab=log&provider=anthropic",

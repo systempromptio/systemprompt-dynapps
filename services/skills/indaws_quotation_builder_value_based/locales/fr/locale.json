@@ -1,0 +1,10 @@
+{
+  "code": "fr",
+  "schema_version": 1,
+  "name": "France / Français",
+  "lang_tag": "fr",
+  "odoo_lang": "fr_FR",
+  "fallback": "en",
+  "output_language": "français correct et professionnel (accents, apostrophes typographiques, vouvoiement du client, espaces insécables devant : ; ! ?)",
+  "pack_status": "stub"
+}

@@ -1,7 +1,7 @@
 ---
 name: odoo_release_notes_writer
 description: Turns a commit log and previous changelog into customer-facing release notes in RELEASE_NOTES.md.
-model: claude-sonnet-4-5
+model: claude-sonnet-5-5
 tools: [Read, Grep, Glob, Write]
 plugin: dynapps-odoo-delivery
 skills: [odoo_release_notes]

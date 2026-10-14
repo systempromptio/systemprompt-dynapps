@@ -1,0 +1,15 @@
+{
+  "_comment": "Shared, language-neutral engine fallback for brand_lint (plan §2.2). `acronyms` is the UNIVERSAL core of valid all-caps tokens (product/tech/business acronyms) that every locale inherits: the runtime ACRONYMS set = this core ∪ fiscal.acronyms_fiscal ∪ brand_lint.acronyms_extra. Jurisdiction-specific fiscal acronyms live in each pack's fiscal.acronyms_fiscal, NOT here. `slop_tells` are universal AI-slop giveaways (English) shared as a fallback signal; the ES/EN packs already list these in brand_lint.slop, so they are informational here and not yet unioned by the loader.",
+  "acronyms": [
+    "ERP", "CRM", "MRP", "EPI", "EPIS", "RGPD",
+    "B2B", "B2C", "SaaS", "LIMS", "KPI", "KPIS", "EUR", "USD", "IT", "RRHH", "TIC",
+    "API", "PYME", "SL", "SA", "SLU", "UTE", "POC", "ROI", "QBR", "DOD", "OK", "FAQ",
+    "EDI", "SQL", "PDF", "HTML", "IA", "AI", "GTIN", "EAN", "SLA", "SLAS"
+  ],
+  "slop_tells": [
+    "delve", "leverage", "elevate", "tapestry", "testament", "beacon", "synergize",
+    "groundbreaking", "seamless", "cutting-edge", "unlock", "unleash", "empower",
+    "game-changer", "robust solution",
+    "transformative", "authentic", "genuine", "thrilled", "next-level", "unprecedented"
+  ]
+}

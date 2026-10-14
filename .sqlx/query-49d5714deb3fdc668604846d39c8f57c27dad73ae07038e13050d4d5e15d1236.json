@@ -1,0 +1,76 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT odoo_url, odoo_login, odoo_uid, linked_at, verified_at FROM odoo_user_links WHERE user_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "odoo_url",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "odoo_user_links",
+            "name": "odoo_url"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "odoo_login",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "odoo_user_links",
+            "name": "odoo_login"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "odoo_uid",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "odoo_user_links",
+            "name": "odoo_uid"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "linked_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "odoo_user_links",
+            "name": "linked_at"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "verified_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "odoo_user_links",
+            "name": "verified_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "49d5714deb3fdc668604846d39c8f57c27dad73ae07038e13050d4d5e15d1236"
+}

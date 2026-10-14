@@ -1,0 +1,24 @@
+{
+  "stages_whitelist": [
+    "Rescue Pack",
+    "Análisis",
+    "En proceso",
+    "Migraciones",
+    "Salida a producción"
+  ],
+  "data_dir": "~/.indaws/executive-projects-tracker/projects",
+  "report_output_dir": ".",
+  "report_filename_pattern": "informe_seguimiento_cartera_{YYYY}_W{WW}.md",
+  "production_date_field": "x_studio_fecha_prevista_salida_produccin",
+  "alert_thresholds": {
+    "no_movement_days": 7,
+    "advance_gap_pp": 10
+  },
+  "completed_task_stages": ["Realizado", "Hecho", "Realizada", "Done", "Cancelado"],
+  "skip_overdue_if_stage_and_checklist_100": ["Testeo cliente"],
+  "cadence_rules": {
+    "stage_always_weekly": ["Análisis"],
+    "biweekly_min_duration_days": 90
+  },
+  "odoo_lang": "es_ES"
+}

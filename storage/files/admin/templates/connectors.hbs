@@ -77,10 +77,35 @@
     {{else}}
     {{> components/empty-state heading="No connectors on this gateway" message="Connectors appear here once an administrator enables an MCP server that needs your authorization."}}
     {{/if}}
+    <section class="sp-connector-group" data-odoo-link aria-label="Odoo account">
+        <div class="sp-section__head">
+            <h2 class="sp-section__title">Odoo account</h2>
+            <p class="sp-section__sub">Link your own Odoo login so Odoo tools act as you. Odoo checks the login and API key before anything is saved; the key is sealed and never shown again.</p>
+        </div>
+        {{#if odoo}}
+        <dl class="sp-connector__facts">
+            <div class="sp-connector__fact"><dt>Login</dt><dd class="sp-u-mono">{{odoo.login}}</dd></div>
+            <div class="sp-connector__fact"><dt>Odoo user</dt><dd class="sp-u-mono">{{odoo.uid}}</dd></div>
+            <div class="sp-connector__fact"><dt>Site</dt><dd>{{odoo.url}}</dd></div>
+            <div class="sp-connector__fact"><dt>Verified</dt><dd>{{odoo.verified_at}}</dd></div>
+        </dl>
+        <div class="sp-connector__actions">
+            <button type="button" class="sp-btn sp-btn--sm sp-btn--outline" data-action="unlink-odoo">Unlink Odoo</button>
+        </div>
+        {{/if}}
+        <form class="sp-dialog-form" data-form="link-odoo">
+            <label for="odoo-login">Odoo login</label>
+            <input type="text" id="odoo-login" class="sp-search-input" data-field="odoo-login" autocomplete="username"{{#if odoo}} value="{{odoo.login}}"{{/if}}>
+            <label for="odoo-api-key">API key (Odoo → Preferences → Account Security)</label>
+            <input type="password" id="odoo-api-key" class="sp-search-input" data-field="odoo-api-key" autocomplete="off">
+            <button type="button" class="sp-btn sp-btn--sm sp-btn--primary" data-action="link-odoo">{{#if odoo}}Replace key{{else}}Link Odoo{{/if}}</button>
+        </form>
+    </section>
     <noscript><p class="sp-p-connectors__message sp-notice sp-notice--warn">Enable JavaScript to connect, test or disconnect a provider.</p></noscript>
     </div>
     {{/inline}}
     {{#*inline "scripts"}}
     <script src="/js/pages/connectors.js?v={{css_version}}" type="module"></script>
+    <script src="/js/pages/odoo-link.js?v={{css_version}}" type="module"></script>
     {{/inline}}
 {{/layout}}

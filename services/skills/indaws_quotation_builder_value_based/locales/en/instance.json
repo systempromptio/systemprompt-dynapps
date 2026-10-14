@@ -1,0 +1,56 @@
+{
+  "odoo_url": "https://www.dynapps.eu",
+  "odoo_db": "<ODOO_DB — set per connector>",
+  "impl_template_name": "Implantación Value Based - ENGLISH",
+  "impl_template_id": null,
+  "cases_base_url": "https://www.dynapps.es/en/cases",
+  "_cases_base_url_note": "Spain deployment (ai-claude-sales): English case pages on dynapps.es/en/cases (verified HTTP 200, 2026-07). match_cases composes url = cases_base_url + slug.",
+  "industries": {
+    "construction": "Construction",
+    "manufacturing": "Manufacturing",
+    "food-beverage": "Food & beverage",
+    "pharma-biotech": "Pharma & biotech",
+    "laboratories": "Laboratories",
+    "logistics": "Logistics",
+    "retail-wholesale": "Retail & wholesale",
+    "professional-services": "Professional services",
+    "financial-services": "Financial services",
+    "energy-utilities": "Energy & utilities"
+  },
+  "_industries_note": "EXACT industry taxonomy labels from dynapps.es/en (nav + case badges, verified live 2026-07-17). Canonical ids in shared/industries.json. Reference cards must show the label verbatim — never translate/paraphrase.",
+  "sales_url_pattern": "{odoo_url}/odoo/sales/{id}",
+  "team_email_domain": "dynapps.eu",
+  "core_module_label": "Dynapps Core",
+  "core_module_set_exists": true,
+  "contact": {
+    "email": "info@dynapps.eu",
+    "web": "www.dynapps.eu",
+    "tel": "<local phone — verify>"
+  },
+  "odoo_partner_manager": {
+    "source": "verify_from_odoo",
+    "name": "<Odoo SA partner manager — verify_from_odoo>",
+    "email": "<partner manager email — verify_from_odoo>"
+  },
+  "legal_entity": {
+    "name": "<selling legal entity — verify_from_odoo>",
+    "vat": "<VAT — verify_from_odoo>",
+    "address": "<registered address — verify_from_odoo>",
+    "governing_law": "<governing law / jurisdiction — verify>"
+  },
+  "offices": [
+    "Belgium",
+    "Netherlands",
+    "France",
+    "Switzerland",
+    "Spain"
+  ],
+  "local_country": "Europe",
+  "credibility": {
+    "implementations": 900,
+    "claims_text": "Odoo partner worldwide",
+    "experts": 280,
+    "countries": 52,
+    "iso27001": false
+  }
+}

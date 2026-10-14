@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dynapps — {{PRODUCT_TITLE}} {{PRODUCT_TITLE_ACCENT}} (one-pager)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@200;300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --midnight:#050543; --violet:#951CF3; --carmine:#FF575D; --orange:#FF7759; --tangerine:#FF7E23;
+  --snow:#F5F5FA; --white:#FFFFFF;
+  --grey-100:#E8E7EC; --grey-400:#9290A6; --grey-600:#65637A;
+  --grad:linear-gradient(45deg,var(--violet) 0%,var(--carmine) 52%,var(--orange) 100%);
+  --grad-h:linear-gradient(90deg,var(--violet) 0%,var(--carmine) 52%,var(--orange) 100%);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:16px}
+body{font-family:'Readex Pro',system-ui,sans-serif;background:var(--snow);color:var(--midnight);-webkit-font-smoothing:antialiased;line-height:1.55}
+.page{max-width:1120px;margin:0 auto;padding:2.4rem 3rem 2.6rem;min-height:100vh;display:flex;flex-direction:column}
+.accent{color:var(--carmine)}
+.accent-v{color:var(--violet)}
+
+/* HEADER */
+header{display:flex;align-items:center;justify-content:space-between;padding-bottom:1.6rem;border-bottom:1px solid var(--grey-100);margin-bottom:2.2rem}
+header .logo{height:54px;width:auto;display:block}
+header .h-right{display:flex;align-items:center;gap:1rem}
+.h-phone{font-size:.9rem;font-weight:500;color:var(--grey-600);text-decoration:none}
+.h-phone:hover{color:var(--midnight)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;padding:.7rem 1.4rem;border-radius:100px;font-weight:600;font-size:.92rem;text-decoration:none;border:none;transition:transform .25s ease,box-shadow .25s ease;cursor:pointer;white-space:nowrap}
+.btn-primary{background:var(--grad);color:#fff}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(149,28,243,.28)}
+.btn-secondary{background:var(--white);color:var(--violet);border:1.5px solid var(--violet)}
+.btn-secondary:hover{transform:translateY(-2px);background:rgba(149,28,243,.05)}
+
+/* INTRO */
+.intro{margin-bottom:2.2rem}
+.badge{display:inline-flex;align-items:center;gap:.5rem;padding:.35rem .85rem;border-radius:100px;font-size:11.5px;font-weight:500;color:var(--midnight);background:var(--white);border:1px solid var(--grey-100);margin-bottom:1rem}
+.badge .dot{width:7px;height:7px;border-radius:50%;background:var(--grad)}
+h1{font-size:2.9rem;font-weight:700;letter-spacing:-.02em;line-height:1.05;margin-bottom:.7rem}
+.sub{font-size:1.12rem;color:var(--grey-600);max-width:760px}
+
+/* THREE BLOCKS */
+.blocks{display:grid;grid-template-columns:repeat(3,1fr);gap:1.4rem;flex:1}
+.block{background:var(--white);border:1px solid var(--grey-100);border-radius:18px;padding:1.9rem 1.7rem;box-shadow:0 2px 14px rgba(5,5,67,.05);display:flex;flex-direction:column}
+.block .q{display:inline-flex;align-items:center;gap:.6rem;font-size:1.15rem;font-weight:700;margin-bottom:.9rem;color:var(--midnight)}
+.block .q .n{flex:0 0 auto;width:30px;height:30px;border-radius:9px;background:var(--grad);color:#fff;font-size:.9rem;font-weight:700;display:flex;align-items:center;justify-content:center}
+.block p{font-size:.95rem;color:var(--grey-600);margin-bottom:.9rem}
+.block p:last-child{margin-bottom:0}
+.block ul{list-style:none;display:flex;flex-direction:column;gap:.55rem;margin-bottom:.2rem}
+.block li{font-size:.9rem;color:var(--grey-600);padding-left:1.35rem;position:relative;line-height:1.45}
+.block li::before{content:'';position:absolute;left:0;top:.48rem;width:7px;height:7px;border-radius:50%;background:var(--grad)}
+.block strong{color:var(--midnight);font-weight:600}
+
+/* FOOTER STRIP */
+.foot{margin-top:2.2rem;background:var(--white);border:1px solid var(--grey-100);border-radius:18px;padding:1.6rem 2rem;display:flex;align-items:center;justify-content:space-between;gap:1.4rem;box-shadow:0 2px 14px rgba(5,5,67,.05)}
+.foot .txt{font-size:1.02rem;font-weight:500;color:var(--midnight)}
+.foot .txt span{color:var(--grey-600);font-weight:400;font-size:.9rem;display:block;margin-top:.15rem}
+.foot .actions{display:flex;align-items:center;gap:.8rem;flex-shrink:0}
+.tech{margin-top:1.1rem;font-size:.74rem;color:var(--grey-400);text-align:center}
+.tech code{color:var(--violet);font-size:.74rem}
+.footer-grad{height:3px;background:var(--grad-h);border-radius:100px;margin-top:1.4rem}
+
+@media(max-width:880px){
+  .blocks{grid-template-columns:1fr}
+  .page{padding:1.8rem 1.4rem}
+  h1{font-size:2.2rem}
+  header .logo{height:44px}
+  .foot{flex-direction:column;align-items:stretch}
+  header .h-phone{display:none}
+  .foot .actions{flex-direction:column;align-items:stretch;width:100%;gap:.7rem}
+  .foot .actions .btn{width:100%}
+}
+@media(max-width:560px){
+  header .h-right{width:auto}
+  header .h-right .btn{padding:.6rem 1rem;font-size:.85rem}
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <img class="logo" src="{{LOGO_SRC}}" alt="{{LOGO_ALT}}">
+    <div class="h-right">
+      <a class="h-phone" href="tel:{{PHONE_TEL}}">{{PHONE}}</a>
+      <a class="btn btn-primary" href="mailto:{{DEMO_EMAIL}}?subject={{DEMO_SUBJECT}}">{{CTA_PRIMARY}}</a>
+    </div>
+  </header>
+
+  <div class="intro">
+    <span class="badge"><span class="dot"></span>{{BADGE_LABEL}}</span>
+    <h1>{{PRODUCT_TITLE}} <span class="accent">{{PRODUCT_TITLE_ACCENT}}</span></h1>
+    <p class="sub">{{TAGLINE}}</p>
+  </div>
+
+  <div class="blocks">
+    <div class="block">
+      <div class="q"><span class="n">1</span>{{Q1_TITLE}}</div>
+      {{Q1_BODY}}
+    </div>
+
+    <div class="block">
+      <div class="q"><span class="n">2</span>{{Q2_TITLE}}</div>
+      {{Q2_BODY}}
+    </div>
+
+    <div class="block">
+      <div class="q"><span class="n">3</span>{{Q3_TITLE}}</div>
+      {{Q3_BODY}}
+    </div>
+  </div>
+
+  <div class="foot">
+    <div class="txt">{{FOOT_HOOK}}<span>{{FOOT_SUB}}</span></div>
+    <div class="actions">
+      <a class="btn btn-secondary" href="tel:{{PHONE_TEL}}">{{CTA_SECONDARY}}</a>
+      <a class="btn btn-primary" href="mailto:{{DEMO_EMAIL}}?subject={{DEMO_SUBJECT}}">{{CTA_PRIMARY}}</a>
+    </div>
+  </div>
+
+  <p class="tech">{{TECH_LINE}}</p>
+  <div class="footer-grad"></div>
+
+</div>
+</body>
+</html>

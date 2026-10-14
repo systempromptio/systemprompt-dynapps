@@ -1,11 +1,12 @@
 //! Platform JSON API routes.
 //!
 //! The scheduled-jobs listing, the sync planes and the archive import, device
-//! credential and service-account management, and the per-user Salesforce link
-//! and connector reprovisioning. The sync participant tier is its own fragment
-//! because the root gates it on the scoped-console role rather than an admin
-//! tier; the archive import stays with the manage-tier writes because a staged
-//! archive can rewrite every plane at once.
+//! credential and service-account management, the per-user Salesforce link
+//! and connector reprovisioning, and a person's own Odoo link (self-service).
+//! The sync participant tier is its own fragment because the root gates it on
+//! the scoped-console role rather than an admin tier; the archive import stays
+//! with the manage-tier writes because a staged archive can rewrite every plane
+//! at once.
 
 use std::sync::Arc;
 
@@ -90,6 +91,13 @@ pub fn service_account_write_routes() -> Router<Arc<PgPool>> {
             "/service-accounts/{user_id}/credentials/{provider}",
             post(api::attach_credential).delete(api::remove_credential),
         )
+}
+
+pub fn odoo_link_routes() -> Router<Arc<PgPool>> {
+    Router::new().route(
+        "/user/odoo-link",
+        post(handlers::odoo_link::link).delete(handlers::odoo_link::unlink),
+    )
 }
 
 pub fn device_write_routes() -> Router<Arc<PgPool>> {

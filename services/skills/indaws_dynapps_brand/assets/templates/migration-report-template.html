@@ -1,0 +1,249 @@
+<meta charset="utf-8">
+<title>Migration Report — {{CLIENT}} v{{SRC}} → v{{TGT}}</title>
+<!--
+  ============================================================================
+  PLANTILLA CANÓNICA del informe de migración (Dynapps brand). FUENTE ÚNICA.
+  Para un informe nuevo: COPIA este archivo y sustituye los {{PLACEHOLDERS}} y
+  las filas/bloques marcados con <!== repeat ==>. NO re-inventes el CSS.
+
+  ⚠️ REGLAS CRÍTICAS DE CSS — NO LAS ROMPAS (causaron artefactos en el pasado):
+   1. FULL-BLEED (.cover): SIEMPRE width:100%;height:100vh. NUNCA width/height en
+      mm igualando el papel (210mm/297mm). El mm NO mapea al 100% de la página en
+      el render Playwright → deja franja blanca a la derecha/abajo.
+   2. CONTENEDORES QUE SE PARTEN (.panel): SIN border / border-radius / box-shadow.
+      Un contenedor con borde que cruza un salto de página dibuja sus bordes
+      laterales en cada fragmento → líneas verticales/caja partida. El estilo lo
+      llevan los hijos (tablas, .find, .sc), que sí pueden partirse sin borde.
+   3. NADA PUEDE ENSANCHAR SU COLUMNA: grids con minmax(0,1fr) (nunca 1fr a secas),
+      hijos de flex/grid con min-width:0 y texto/código con overflow-wrap:anywhere.
+      Un `code` largo sin partir (relative_uom_id, product.uom…) ensancha la celda y
+      empuja el contenido fuera del margen derecho → informe "desplazado a la derecha".
+   4. Render SIEMPRE con pdf-footer/gen.js + stamp.py, y PASA el QA:
+      python3 dynapps-brand/scripts/verify.py <pdf>  (cover full-bleed + márgenes + sin hairlines).
+  ============================================================================
+-->
+<style>
+/* ===== Dynapps Migration Report — brand base (self-contained) ===== */
+@font-face{font-family:'Readex Pro';font-weight:300;src:url('file://{{BRAND_ASSETS}}/fonts/ReadexPro-Light.ttf')format('truetype');}
+@font-face{font-family:'Readex Pro';font-weight:400;src:url('file://{{BRAND_ASSETS}}/fonts/ReadexPro-Regular.ttf')format('truetype');}
+@font-face{font-family:'Readex Pro';font-weight:500;src:url('file://{{BRAND_ASSETS}}/fonts/ReadexPro-Medium.ttf')format('truetype');}
+@font-face{font-family:'Readex Pro';font-weight:600;src:url('file://{{BRAND_ASSETS}}/fonts/ReadexPro-SemiBold.ttf')format('truetype');}
+@font-face{font-family:'Readex Pro';font-weight:700;src:url('file://{{BRAND_ASSETS}}/fonts/ReadexPro-Bold.ttf')format('truetype');}
+
+:root{
+  --midnight:#050543; --violet:#951CF3; --carmine:#FF575D; --orange:#FF7759;
+  --tangerine:#FF7E23; --deep:#030330; --surface:#070757;
+  --snow:#F5F5FA; --white:#FFFFFF;
+  --tw:rgba(255,255,255,.92); --td:rgba(255,255,255,.54); --tdd:rgba(255,255,255,.28);
+  --lm:#7272A8; --grey-100:#E8E7EC; --grey-200:#CDCBD4; --grey-400:#9290A6; --grey-600:#65637A;
+  --ink:#1B1B2E;
+  --grad-h:linear-gradient(90deg,var(--violet) 0%,var(--carmine) 52%,var(--orange) 100%);
+}
+
+*{margin:0;padding:0;box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+
+@page{size:A4;margin:13mm 0 18mm;}
+@page:first{margin:0;}
+
+html,body{font-family:'Readex Pro',system-ui,sans-serif;color:var(--ink);background:var(--white);font-size:10.5pt;line-height:1.45;-webkit-font-smoothing:antialiased;}
+
+/* ---------- COVER (full-bleed page 1) — width:100%/height:100vh, NUNCA mm ---------- */
+.cover{position:relative;z-index:10;width:100%;height:100vh;background:var(--midnight);color:var(--tw);
+  padding:18mm 20mm 0;display:flex;flex-direction:column;overflow:hidden;}
+.cover::after{content:"";position:absolute;width:520px;height:520px;right:-160px;top:-120px;border-radius:50%;
+  background:radial-gradient(circle,rgba(149,28,243,.22) 0%,transparent 70%);}
+.cover .nav{display:flex;align-items:center;justify-content:space-between;position:relative;z-index:2;}
+.cover .nav img{height:9mm;}
+.badge{font-size:8pt;letter-spacing:.16em;text-transform:uppercase;color:var(--tw);
+  border:1px solid rgba(255,255,255,.28);border-radius:999px;padding:4px 12px;}
+.navdiv{height:1px;background:rgba(255,255,255,.14);margin:14mm 0;position:relative;z-index:2;}
+.cover .body{flex:1;position:relative;z-index:2;}
+.kicker{font-size:9pt;letter-spacing:.18em;text-transform:uppercase;color:var(--orange);font-weight:600;margin-bottom:12mm;}
+.cover h1{display:flex;flex-direction:column;gap:6px;font-weight:700;line-height:1.05;}
+.cover h1 .client{font-size:42pt;color:var(--orange);}
+.cover h1 .ver{font-size:24pt;color:var(--white);font-weight:500;}
+.cover .sub{margin-top:10px;font-size:12pt;color:var(--td);font-weight:300;}
+.cover .meta{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:16mm;}
+.cover .meta .lbl{font-size:7.5pt;letter-spacing:.12em;text-transform:uppercase;color:var(--lm);margin-bottom:5px;}
+.cover .meta .val{font-size:11pt;color:var(--tw);font-weight:600;}
+.coverfoot{position:relative;z-index:2;padding:0 0 16mm;}
+.coverfoot .gl{height:3px;background:var(--grad-h);border-radius:3px;margin-bottom:10px;}
+.coverfoot .row{display:flex;justify-content:space-between;font-size:8.5pt;color:var(--td);}
+
+/* ---------- CONTENT ---------- */
+.pad{padding:13mm 16mm;}
+/* .panel NO lleva border/radius/shadow: puede partirse entre páginas sin dejar líneas */
+.panel{background:var(--white);
+  padding:9mm 9mm 8mm;margin-bottom:9mm;}
+.panel.keep{break-inside:avoid;}
+.eyebrow{font-size:9pt;font-weight:700;letter-spacing:.14em;color:var(--carmine);margin-bottom:3px;}
+.head{font-size:19pt;font-weight:700;color:var(--midnight);line-height:1.1;}
+.head .accent{color:var(--carmine);}
+.gl-soft{height:2px;width:64px;background:var(--grad-h);border-radius:2px;margin:8px 0 12px;}
+.lead{font-size:9.5pt;color:var(--grey-600);margin:6px 0 14px;line-height:1.5;}
+/* Nota de seccion (asteriscos, salvedades, supuestos) — patron de marca descrito en
+   references/pdf-reports.md §"Notas al pie / asteriscos". Estaba especificado alli pero NO
+   existia en esta plantilla, asi que cada informe salia con las aclaraciones a tamano de
+   cuerpo: parecian parte del argumento en vez de una salvedad.
+   `break-before:avoid` NO es decorativo: sin el, una nota al final de seccion se queda
+   HUERFANA en una pagina propia (medido el 2026-08-14 — una pagina entera en blanco con
+   tres lineas arriba). `break-inside` solo no lo evita: impide partirla, no que empiece
+   pagina. */
+.note{font-size:8.4pt;color:var(--grey-400);margin-top:10px;line-height:1.45;
+  break-inside:avoid;break-before:avoid;}
+.note strong{color:var(--grey-600);font-weight:600;}
+.note code{font-size:7.8pt;}
+code{font-family:'SFMono-Regular',Menlo,Consolas,monospace;font-size:8.4pt;background:var(--snow);
+  border:1px solid var(--grey-100);border-radius:5px;padding:1px 5px;color:var(--midnight);
+  overflow-wrap:anywhere;word-break:break-word;
+  -webkit-box-decoration-break:clone;box-decoration-break:clone;}
+
+/* Executive summary cards */
+.sumrow{display:flex;gap:10px;margin-top:6px;}
+.sc{flex:1;min-width:0;border:1px solid var(--grey-100);border-radius:12px;padding:14px 12px;background:var(--white);}
+.sc .num{font-size:23pt;font-weight:700;color:var(--midnight);line-height:1;}
+.sc .num span{font-size:11pt;font-weight:600;color:var(--grey-400);}
+.sc .lbl{font-size:9pt;font-weight:600;color:var(--ink);margin-top:6px;}
+.sc .sub{font-size:7.6pt;color:var(--grey-400);margin-top:3px;}
+.sc.total{background:var(--midnight);border-color:var(--midnight);}
+.sc.total .num{color:var(--white);}
+.sc.total .num span{color:var(--orange);}
+.sc.total .lbl{color:var(--tw);}
+.sc.total .sub{color:var(--td);}
+.verrow{display:flex;gap:10px;margin-top:12px;}
+.vc{flex:1;min-width:0;border:1px solid var(--grey-100);border-radius:10px;padding:10px 12px;background:var(--snow);}
+.vc .lbl{font-size:7.5pt;letter-spacing:.1em;text-transform:uppercase;color:var(--grey-400);margin-bottom:4px;}
+.vc .vp{font-size:11pt;font-weight:600;color:var(--midnight);}
+.vc.tgt{border-left:3px solid var(--carmine);}
+.vc.src{border-left:3px solid var(--violet);}
+.vc.strat{border-left:3px solid var(--orange);}
+
+/* Tables */
+table{width:100%;border-collapse:collapse;margin-top:4px;font-size:9pt;}
+tr{break-inside:avoid;}
+thead th{background:var(--midnight);color:var(--tw);text-align:left;font-weight:600;font-size:8.2pt;
+  letter-spacing:.04em;padding:9px 10px;}
+thead th:first-child{border-radius:8px 0 0 8px;}
+thead th:last-child{border-radius:0 8px 8px 0;}
+th.h,td.h{text-align:right;}
+tbody td{padding:8px 10px;border-bottom:1px solid var(--grey-100);vertical-align:top;overflow-wrap:anywhere;}
+tbody tr:nth-child(even){background:var(--snow);}
+td.mod{font-family:'SFMono-Regular',Menlo,Consolas,monospace;font-size:8.4pt;font-weight:600;color:var(--midnight);}
+td.func{color:var(--grey-600);}
+td.h{font-weight:700;color:var(--midnight);white-space:nowrap;}
+.type{display:inline-flex;align-items:center;gap:6px;font-size:8.5pt;color:var(--ink);}
+.type .dot{width:8px;height:8px;border-radius:50%;background:var(--carmine);display:inline-block;}
+.tag{display:inline-block;font-size:7.6pt;font-weight:600;letter-spacing:.03em;padding:2px 8px;border-radius:999px;}
+.tag.cplx{background:rgba(255,87,93,.14);color:#C62A30;}
+.tag.std{background:rgba(149,28,243,.12);color:#6A12B0;}
+.tag.mech{background:var(--grey-100);color:var(--grey-600);}
+.tdesc{font-size:7.8pt;color:var(--grey-400);margin-top:5px;line-height:1.4;}
+tfoot{display:table-row-group;}
+tfoot td{background:var(--surface);color:var(--tw);font-weight:700;padding:9px 10px;font-size:9pt;}
+tfoot td:first-child{border-radius:8px 0 0 8px;}
+tfoot td:last-child{border-radius:0 8px 8px 0;text-align:right;}
+tfoot td.h{color:var(--tw);}
+tfoot{break-before:avoid;}
+table.cc{margin-bottom:10px;}
+td.c1{font-weight:600;color:var(--midnight);}
+td small{display:block;color:var(--grey-400);font-size:7.6pt;margin-top:2px;}
+
+/* Critical findings */
+.findgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:4px;}
+.find{min-width:0;overflow-wrap:anywhere;border:1px solid var(--grey-100);border-left:3px solid var(--carmine);border-radius:10px;
+  padding:11px 13px;background:var(--white);break-inside:avoid;}
+.find .t{font-size:9.5pt;font-weight:700;color:var(--midnight);margin-bottom:5px;}
+.find p{font-size:8.6pt;color:var(--grey-600);line-height:1.45;}
+</style>
+
+<!-- ========= COVER ========= -->
+<div class="cover">
+  <div class="nav">
+    <img src="file://{{BRAND_ASSETS}}/logos/Dynapps_Logo_Horizontal_Color_White.svg" alt="dynapps">
+    <span class="badge">Migration Report</span>
+  </div>
+  <div class="navdiv"></div>
+  <div class="body">
+    <div class="kicker">Migration Estimate · Technical Analysis</div>
+    <h1><span class="client">{{CLIENT}}</span><span class="ver">Odoo v{{SRC}} → v{{TGT}}</span></h1>
+    <div class="sub">Direct 1:1 technical migration</div>
+    <div class="meta">
+      <div><div class="lbl">Client</div><div class="val">{{CLIENT}}</div></div>
+      <div><div class="lbl">Date</div><div class="val">{{DATE}}</div></div>
+      <div><div class="lbl">Modules analysed</div><div class="val">{{MODULES_ANALYSED}}</div></div>
+      <div><div class="lbl">Total estimate</div><div class="val">{{TOTAL}} hours</div></div>
+      <div><div class="lbl">Strategy</div><div class="val">Direct 1:1</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="pad">
+
+  <!-- ========= 01 EXECUTIVE SUMMARY ========= -->
+  <div class="panel keep">
+    <div class="eyebrow">01</div>
+    <h3 class="head">Executive <span class="accent">Summary</span></h3>
+    <div class="gl-soft"></div>
+    <div class="sumrow">
+      <div class="sc"><div class="num">{{CODE_H}}<span> h</span></div><div class="lbl">Code Migration</div><div class="sub">{{CODE_SUB}}</div></div>
+      <div class="sc"><div class="num">{{DB_H}}<span> h</span></div><div class="lbl">Database Migration</div><div class="sub">{{DB_SUB}}</div></div>
+      <div class="sc"><div class="num">{{TEST_H}}<span> h</span></div><div class="lbl">Unit Tests</div><div class="sub">Capped allocation</div></div>
+      <div class="sc"><div class="num">{{PM_H}}<span> h</span></div><div class="lbl">Project Management</div><div class="sub">Coordination &amp; follow-up</div></div>
+      <div class="sc total"><div class="num">{{TOTAL}}<span> h</span></div><div class="lbl">Total Project</div><div class="sub">Code · DB · test · PM</div></div>
+    </div>
+    <div class="verrow">
+      <div class="vc src"><div class="lbl">Source version</div><div class="vp">Odoo {{SRC}}.0</div></div>
+      <div class="vc tgt"><div class="lbl">Target version</div><div class="vp">Odoo {{TGT}}.0</div></div>
+      <div class="vc strat"><div class="lbl">Strategy</div><div class="vp">Direct 1:1</div></div>
+    </div>
+  </div>
+
+  <!-- ========= 02 CODE MIGRATION ========= -->
+  <div class="panel">
+    <div class="eyebrow">02</div>
+    <h3 class="head">Code <span class="accent">Migration</span></h3>
+    <div class="lead">{{CODE_LEAD}}</div>
+    <table class="mods">
+      <thead><tr><th>Module</th><th>Functionality</th><th>Type</th><th>Tier</th><th class="h">H</th></tr></thead>
+      <tbody>
+        <!-- repeat por módulo en scope. tag: cplx|std|mech -->
+        <tr><td class="mod">{{MOD}}</td><td class="func">{{FUNC}}</td><td><span class="type"><span class="dot"></span>{{TYPE}}</span></td><td><span class="tag {{TAGCLASS}}">{{TIER}}</span><div class="tdesc">{{CHANGES}}</div></td><td class="h">{{H}}</td></tr>
+      </tbody>
+      <tfoot><tr><td colspan="4">Total Code Migration</td><td class="h">{{CODE_H}} h</td></tr></tfoot>
+    </table>
+  </div>
+
+  <!-- ========= 03 DATABASE & UNIT TESTS ========= -->
+  <div class="panel">
+    <div class="eyebrow">03</div>
+    <h3 class="head">Database <span class="accent">&amp; Unit Tests</span></h3>
+    <div class="lead">Infrastructure upgrade and unit-test coverage.</div>
+    <table class="cc">
+      <thead><tr><th>Concept</th><th>Iterations</th><th>DB Size</th><th>Calculation</th><th class="h">Total (H)</th></tr></thead>
+      <tbody><tr><td class="c1">Database Upgrade</td><td>4 iterations<small>Test 1 · Test 2 · Rehearsal · Production</small></td><td>{{DB_SIZE}}</td><td>{{DB_CALC}}</td><td class="h">{{DB_H}}</td></tr></tbody>
+      <tfoot><tr><td colspan="4">Database Migration subtotal</td><td class="h">{{DB_H}} h</td></tr></tfoot>
+    </table>
+    <table class="cc">
+      <thead><tr><th>Concept</th><th>Scope</th><th class="h">Total (H)</th></tr></thead>
+      <tbody><tr><td class="c1">Unit Tests</td><td>{{TEST_SCOPE}}</td><td class="h">{{TEST_H}}</td></tr></tbody>
+      <tfoot><tr><td colspan="2">Unit Tests subtotal (fixed)</td><td class="h">{{TEST_H}} h</td></tr></tfoot>
+    </table>
+    <table class="cc">
+      <thead><tr><th>Concept</th><th>Scope</th><th class="h">Total (H)</th></tr></thead>
+      <tbody><tr><td class="c1">Project Management</td><td>Coordination, planning, follow-up, hand-offs, release</td><td class="h">{{PM_H}}</td></tr></tbody>
+      <tfoot><tr><td colspan="2">Project Management subtotal</td><td class="h">{{PM_H}} h</td></tr></tfoot>
+    </table>
+  </div>
+
+  <!-- ========= 04 CRITICAL FINDINGS ========= -->
+  <div class="panel">
+    <div class="eyebrow">04</div>
+    <h3 class="head">Critical <span class="accent">Findings</span></h3>
+    <div class="lead">Technical findings from static code analysis.</div>
+    <div class="findgrid">
+      <!-- repeat por hallazgo/decisión. Incluir SIEMPRE el bloque de decisiones OCA/terceros (casos 1/2/3, ver calibration.md) -->
+      <div class="find"><div class="t">{{FIND_TITLE}}</div><p>{{FIND_BODY}}</p></div>
+    </div>
+  </div>
+
+</div>

@@ -1,0 +1,132 @@
+{
+  "rates": {
+    "analysis_per_hour": 80,
+    "dev_per_hour": 75,
+    "onsite_day_rate": 900,
+    "productivity_factor": 0.92
+  },
+  "analysis_formula": {
+    "hours_per_session": 4,
+    "base_hours": 10
+  },
+  "support": {
+    "salida_pct": 0.1
+  },
+  "golive_weeks": 4,
+  "migration": {
+    "pct": 0.15,
+    "months": 24
+  },
+  "poc": {
+    "pct": 0.2,
+    "product_id": "<<VERIFY: FR POC product_id in FR DB>>"
+  },
+  "recurring_monthly": {
+    "mcp": 50,
+    "field_service_per_user": 2,
+    "odoo_light_user": -1
+  },
+  "app_base_prices": {
+    "config_general": 500,
+    "crm": 750,
+    "ventas": 1500,
+    "compras": 1000,
+    "inventario": 1250,
+    "fabricacion": 2000,
+    "facturacion": 1500,
+    "contabilidad": 2000,
+    "proyecto": 1500,
+    "helpdesk": 1000,
+    "website": 1500,
+    "marketing_email": 750,
+    "rrhh": 1000,
+    "inbuilt": 6000
+  },
+  "complement_prices": {
+    "sii": 500,
+    "sepa": 750,
+    "modelo_349": 250,
+    "multi_company": 250
+  },
+  "custom_complement_band": {
+    "min": 250,
+    "max": 5000
+  },
+  "recurrent_lines": [
+    {
+      "id": "dyn_cloud",
+      "source": "sheet_verbatim",
+      "fallback_amount": 1080,
+      "fallback_period": "year",
+      "fallback_price_display": "<<VERIFY: dyn_cloud price display>>"
+    },
+    {
+      "id": "maintenance",
+      "source": "sheet_verbatim",
+      "fallback_period": "month"
+    },
+    {
+      "id": "odoo_license",
+      "source": "verify_from_odoo",
+      "fallback_amount_per_user_year": -1,
+      "fallback_amount_per_user_month": -1,
+      "fallback_price_display": "<<VERIFY: odoo_license price display>>"
+    }
+  ],
+  "ia_catalog": {
+    "exclusive": [
+      {
+        "id": "mcp",
+        "product_id": "<<VERIFY: mcp product_id in FR DB>>",
+        "oneshot": 2500,
+        "monthly": 50
+      },
+      {
+        "id": "starter_ia",
+        "product_id": "<<VERIFY: starter_ia product_id in FR DB>>",
+        "oneshot": 7500,
+        "monthly": 0
+      }
+    ],
+    "addons": [
+      {
+        "id": "ocr_facturas",
+        "product_id": "<<VERIFY: ocr_facturas product_id in FR DB>>",
+        "oneshot": 500,
+        "cond": null
+      },
+      {
+        "id": "ocr_nominas",
+        "product_id": "<<VERIFY: ocr_nominas product_id in FR DB>>",
+        "oneshot": 1000,
+        "cond": null
+      },
+      {
+        "id": "ocr_albaranes",
+        "product_id": "<<VERIFY: ocr_albaranes product_id in FR DB>>",
+        "oneshot": 1000,
+        "cond": null
+      },
+      {
+        "id": "field_service",
+        "product_id": "<<VERIFY: field_service product_id in FR DB>>",
+        "oneshot": 2500,
+        "monthly_per_user": 2,
+        "cond": "proyecto"
+      }
+    ]
+  },
+  "vertical": {
+    "inbuilt": {
+      "pack_product_id": "228",
+      "pack_oneshot": 6000,
+      "app_oneshot": 2500
+    }
+  },
+  "adjust_band_pct": 0.15,
+  "maintenance_plan": {
+    "base_monthly": 320,
+    "included_hours": 5,
+    "extra_hour": 64
+  }
+}

@@ -124,12 +124,29 @@ fn a_github_app_keeps_its_ids_and_seals_only_the_key() {
 }
 
 #[test]
+fn an_odoo_key_keeps_url_db_and_login_and_seals_only_the_key() {
+    let (kind, config, secret) = attach(serde_json::json!({
+        "kind": "odoo_api_key", "url": "https://odoo.example.com/", "db": "prod",
+        "login": "farm-bot", "secret": "odoo-key"
+    }))
+    .expect("valid");
+    assert_eq!(kind, MachineKind::OdooApiKey);
+    assert_eq!(
+        config,
+        serde_json::json!({"url": "https://odoo.example.com", "db": "prod", "login": "farm-bot"})
+    );
+    assert_eq!(secret, "odoo-key");
+}
+
+#[test]
 fn the_attach_form_refuses_what_it_cannot_use() {
     let cases = [
         serde_json::json!({"kind": "github_app", "app_id": "12a", "installation_id": "4", "secret": "k"}),
         serde_json::json!({"kind": "github_app", "app_id": "1", "installation_id": "4", "secret": " "}),
         serde_json::json!({"kind": "salesforce_client_credentials", "instance_url": "http://evil.example", "consumer_key": "c", "secret": "s"}),
         serde_json::json!({"kind": "atlassian_api_token", "email": "a:b@x.io", "secret": "t"}),
+        serde_json::json!({"kind": "odoo_api_key", "url": "http://odoo.example", "db": "d", "login": "l", "secret": "k"}),
+        serde_json::json!({"kind": "odoo_api_key", "url": "https://odoo.example", "db": "", "login": "l", "secret": "k"}),
         serde_json::json!({"kind": "aws_keys", "secret": "t"}),
     ];
     for case in cases {

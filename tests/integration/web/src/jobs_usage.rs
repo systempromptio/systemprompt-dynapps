@@ -85,7 +85,7 @@ async fn seed(pool: &PgPool, user: &str, requests: &[Request]) {
                  created_at, updated_at)
              VALUES ($1, $1, $2, $6, 'trace',
                      '00000000-0000-4000-8000-000000000001',
-                     'anthropic', 'claude-opus-5', 10, 20, 30, $3, 100, $4,
+                     'anthropic', 'claude-opus-5-5', 10, 20, 30, $3, 100, $4,
                      'user', $2,
                      DATE_TRUNC('hour', NOW()) - ($5 || ' minutes')::interval,
                      DATE_TRUNC('hour', NOW()) - ($5 || ' minutes')::interval)",

@@ -1,0 +1,184 @@
+{
+  "flow_id": "CHAIN_SALE_TO_CASH",
+  "flow_name": "Venta nacional completa",
+  "description": "Crear pedido de venta, confirmar, validar albarán, facturar y cobrar",
+  "odoo_version": "18.0",
+  "environment": "staging",
+  "data": {
+    "partner_name": "Muebles Valencia S.L.",
+    "product_name": "Mesa Oficina Roble 160x80",
+    "qty": 5,
+    "price_unit": 450.00
+  },
+  "preconditions": [
+    {
+      "model": "res.partner",
+      "domain": [["name", "ilike", "Muebles Valencia"], ["customer_rank", ">", 0]],
+      "fields": ["id", "name"],
+      "save_as": "partner_id",
+      "min_records": 1
+    },
+    {
+      "model": "product.product",
+      "domain": [["name", "ilike", "Mesa Oficina Roble"], ["sale_ok", "=", true]],
+      "fields": ["id", "name", "list_price"],
+      "save_as": "product_id",
+      "min_records": 1
+    },
+    {
+      "model": "account.journal",
+      "domain": [["type", "=", "sale"]],
+      "fields": ["id", "name"],
+      "save_as": "sale_journal_id",
+      "min_records": 1
+    },
+    {
+      "model": "account.journal",
+      "domain": [["type", "=", "bank"]],
+      "fields": ["id", "name"],
+      "save_as": "bank_journal_id",
+      "min_records": 1
+    }
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "name": "Crear pedido de venta",
+      "action": "create",
+      "model": "sale.order",
+      "values": {
+        "partner_id": "{pre.partner_id}",
+        "order_line": [[0, 0, {
+          "product_id": "{pre.product_id}",
+          "product_uom_qty": "{data.qty}",
+          "price_unit": "{data.price_unit}"
+        }]]
+      },
+      "save_as": "sale_order_id",
+      "verify": {"field": "state", "expected": "draft"}
+    },
+    {
+      "step": 2,
+      "name": "Confirmar pedido",
+      "action": "execute",
+      "model": "sale.order",
+      "method": "action_confirm",
+      "ids": ["{result.sale_order_id}"],
+      "verify": {"field": "state", "expected": "sale"}
+    },
+    {
+      "step": 3,
+      "name": "Detectar albarán de salida",
+      "action": "search",
+      "model": "stock.picking",
+      "domain": [["origin", "=", "{result.sale_order_name}"], ["picking_type_code", "=", "outgoing"]],
+      "fields": ["id", "name", "state", "move_ids", "move_line_ids"],
+      "save_as": "picking_id",
+      "verify": {"field": "state", "expected_any": ["confirmed", "assigned"]}
+    },
+    {
+      "step": 3.1,
+      "name": "Confirmar albarán (si no auto-confirmado)",
+      "action": "execute",
+      "model": "stock.picking",
+      "method": "action_confirm",
+      "ids": ["{result.picking_id}"],
+      "skip_if": {"field": "state", "not_in": ["draft"]}
+    },
+    {
+      "step": 3.2,
+      "name": "Reservar stock",
+      "action": "execute",
+      "model": "stock.picking",
+      "method": "action_assign",
+      "ids": ["{result.picking_id}"],
+      "verify": {"field": "state", "expected": "assigned"}
+    },
+    {
+      "step": 3.3,
+      "name": "Establecer cantidades procesadas (move_line_ids.quantity + move_ids.picked)",
+      "action": "multi_update",
+      "operations": [
+        {
+          "model": "stock.move.line",
+          "ids": ["{result.picking_move_line_ids}"],
+          "values": {"quantity": "{data.qty}"}
+        },
+        {
+          "model": "stock.move",
+          "ids": ["{result.picking_move_ids}"],
+          "values": {"picked": true}
+        }
+      ],
+      "note": "En Odoo 18: campo 'quantity' en stock.move.line (NO 'qty_done'). Campo 'picked' en stock.move indica procesado por operario."
+    },
+    {
+      "step": 4,
+      "name": "Validar albarán",
+      "action": "execute",
+      "model": "stock.picking",
+      "method": "button_validate",
+      "ids": ["{result.picking_id}"],
+      "context": {"skip_backorder": true, "picking_ids_not_to_backorder": ["{result.picking_id}"]},
+      "verify": {"field": "state", "expected": "done"}
+    },
+    {
+      "step": 5,
+      "name": "Crear factura desde pedido",
+      "action": "execute",
+      "model": "sale.order",
+      "method": "_create_invoices",
+      "ids": ["{result.sale_order_id}"],
+      "note": "Método privado pero funcional via XML-RPC. Alternativa: wizard sale.advance.payment.inv con create_invoices()",
+      "detect_cascade": {
+        "model": "account.move",
+        "domain": [["invoice_origin", "=", "{result.sale_order_name}"]],
+        "save_as": "invoice_id"
+      }
+    },
+    {
+      "step": 6,
+      "name": "Publicar factura",
+      "action": "execute",
+      "model": "account.move",
+      "method": "action_post",
+      "ids": ["{result.invoice_id}"],
+      "verify": {"field": "state", "expected": "posted"}
+    },
+    {
+      "step": 7,
+      "name": "Crear pago",
+      "action": "create",
+      "model": "account.payment",
+      "values": {
+        "payment_type": "inbound",
+        "partner_type": "customer",
+        "partner_id": "{pre.partner_id}",
+        "amount": "{result.sale_order_amount_total}",
+        "journal_id": "{pre.bank_journal_id}",
+        "date": "{today}"
+      },
+      "save_as": "payment_id",
+      "verify": {"field": "state", "expected": "draft"}
+    },
+    {
+      "step": 8,
+      "name": "Confirmar pago",
+      "action": "execute",
+      "model": "account.payment",
+      "method": "action_post",
+      "ids": ["{result.payment_id}"],
+      "verify": {"field": "state", "expected_any": ["in_process", "paid"]}
+    }
+  ],
+  "revert": [
+    {"step": 8, "action": "execute", "model": "account.payment", "method": "action_cancel", "ids": ["{result.payment_id}"]},
+    {"step": 7, "action": "delete", "model": "account.payment", "ids": ["{result.payment_id}"]},
+    {"step": 6, "action": "execute", "model": "account.move", "method": "button_draft", "ids": ["{result.invoice_id}"]},
+    {"step": 5, "action": "execute", "model": "account.move", "method": "button_cancel", "ids": ["{result.invoice_id}"]},
+    {"step": 5, "action": "delete", "model": "account.move", "ids": ["{result.invoice_id}"]},
+    {"step": 4, "action": "return_picking", "model": "stock.picking", "ids": ["{result.picking_id}"]},
+    {"step": 2, "action": "execute", "model": "sale.order", "method": "action_cancel", "ids": ["{result.sale_order_id}"], "context": {"disable_cancel_warning": true}},
+    {"step": 1, "action": "delete", "model": "sale.order", "ids": ["{result.sale_order_id}"]}
+  ]
+}

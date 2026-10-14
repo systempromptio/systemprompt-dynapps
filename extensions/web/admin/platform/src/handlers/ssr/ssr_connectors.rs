@@ -1,7 +1,9 @@
 //! SSR page for a user's connectors — a health strip, then the cards grouped
 //! by what the person should do next. The first paint is server-rendered from
 //! the same snapshot the browser then polls; `connectors.js` re-renders the
-//! groups in place and keeps each card's static "about" block.
+//! groups in place and keeps each card's static "about" block. The person's
+//! own Odoo account sits in a panel of its own: it is linked with a login and
+//! API key Odoo verifies, not through an OAuth connector.
 
 use std::sync::Arc;
 
@@ -13,6 +15,7 @@ use sqlx::PgPool;
 use systemprompt::identifiers::UserId;
 
 use super::ssr_connectors_cards::{ATTENTION, ConnectorCardView, card};
+use crate::repositories::connectors::odoo_user_links::find_odoo_link_summary;
 use systemprompt_web_admin_core::connections::Connection;
 use systemprompt_web_admin_core::connections::source::get_connections;
 use systemprompt_web_admin_core::error::AdminHtmlResult;
@@ -52,7 +55,16 @@ struct ConnectorsPageView {
     groups: Vec<GroupView>,
     has_connectors: bool,
     callback_notice: Option<String>,
+    odoo: Option<OdooLinkView>,
     breadcrumbs: Vec<BreadcrumbView>,
+}
+
+#[derive(Debug, Serialize)]
+struct OdooLinkView {
+    login: String,
+    uid: i64,
+    url: String,
+    verified_at: String,
 }
 
 const GROUPS: [(&str, &str, &str); 4] = [
@@ -160,6 +172,14 @@ pub(crate) async fn connectors_page(
 ) -> AdminHtmlResult<Response> {
     let snapshot = get_connections(&pool, &user_ctx.user_id).await?;
     let connections = snapshot.connections;
+    let odoo = find_odoo_link_summary(&pool, &user_ctx.user_id)
+        .await?
+        .map(|link| OdooLinkView {
+            login: link.odoo_login,
+            uid: link.odoo_uid,
+            url: link.odoo_url,
+            verified_at: link.verified_at.format("%Y-%m-%d %H:%M").to_string(),
+        });
     let view = ConnectorsPageView {
         page: "connectors",
         callback_notice: notice.message(),
@@ -169,6 +189,7 @@ pub(crate) async fn connectors_page(
         summary: summarise(&connections),
         has_connectors: !connections.is_empty(),
         groups: group(&connections),
+        odoo,
         breadcrumbs: vec![
             BreadcrumbView::link("Account", "/admin/profile"),
             BreadcrumbView::current("Connectors"),

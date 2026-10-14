@@ -1,0 +1,32 @@
+# Upstream pins for scripts/import-indaws-skills.sh — one commit SHA per
+# repository of Dynapps Spain's Claude Code marketplace (built by Indaws).
+# Move pins with `scripts/import-indaws-skills.sh --update`; the generated
+# services/{skills/indaws_*,plugins/indaws-*,marketplaces/indaws-*} follow.
+marketplace:
+  repo: indawsodoo/ai-claude-marketplace
+  sha: 4ed477e18e79d5e32008cad3b5a0ab56d2f55ecd
+plugins:
+  - repo: indawsodoo/ai-claude-common
+    sha: 1da5c4213f1fd7bc4769fbfcf0e226150ee19d8c
+  - repo: indawsodoo/ai-claude-developer
+    sha: 4939d88e726ce19e5e691ac1dcc75383945e6883
+  - repo: indawsodoo/ai-claude-consultant
+    sha: e27b0ec2321c254ac31e25cd8dd758d6619ae895
+  - repo: indawsodoo/ai-claude-marketing
+    sha: ad50ab8fa157c337a8ccfea6779dc70d554cc848
+  - repo: indawsodoo/ai-claude-sales
+    sha: aa7726bb06bac86456c006476e4e0b3542a59dda
+  - repo: indawsodoo/ai-claude-management
+    sha: d81e522b48b86cdfd311ea104f5556688ad78ddc
+  - repo: indawsodoo/ai-claude-hr
+    sha: 3fbd1752245548df8b294947c43bce4b7feae287
+  - repo: indawsodoo/ai-claude-demo
+    sha: 92b9979da424b6563e643562b0090d09e5055c40
+  - repo: indawsodoo/ai-claude-migration-lab
+    sha: 230df6f2c9102d83c6ec5046d337e0a3b6f0660d
+  - repo: indawsodoo/ai-claude-devops
+    sha: e3e3d1d4eca3826c286fcdcb4deeefb6eada130c
+  - repo: indawsodoo/ai-claude-odoo-knowledge
+    sha: eaab2ef8174088b3abbda8039227a716110ad651
+  - repo: indawsodoo/ai-claude-farm
+    sha: 0184ab773f1c44f10aae40ae0c4620455fcbe8d8

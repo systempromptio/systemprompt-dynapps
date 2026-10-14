@@ -43,7 +43,6 @@ pub(crate) struct CaseOutcome {
 }
 
 pub(crate) async fn run_case(job: &CaseJob<'_>) -> FarmResult<CaseOutcome> {
-    let pool = &job.state.pool;
     let timeout = job
         .case
         .timeout_secs
@@ -67,7 +66,14 @@ pub(crate) async fn run_case(job: &CaseJob<'_>) -> FarmResult<CaseOutcome> {
         },
     )
     .await?;
-    evals::update_eval_result_run(pool, job.result_id, &launched.id).await?;
+    evals::update_eval_result_run(&job.state.pool, job.result_id, &launched.id).await?;
+    settle_case(job, &launched).await
+}
+
+pub(crate) async fn settle_case(job: &CaseJob<'_>, launched: &RunRow) -> FarmResult<CaseOutcome> {
+    let pool = &job.state.pool;
+    let timeout =
+        u64::try_from(launched.timeout_seconds).unwrap_or(job.state.limits.default_timeout_seconds);
     let (run, agent_run) =
         wait_for_terminal(job, &launched.id, timeout + WAIT_GRACE_SECONDS).await?;
     let events = list_events(job.state, &agent_run).await?;

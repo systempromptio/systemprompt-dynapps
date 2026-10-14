@@ -1,0 +1,81 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Event Planner Template Placeholders",
+  "description": "Schema de placeholders para templates del Event Planner skill",
+  "templates": {
+    "base.html": {
+      "description": "Layout base con diseño glassmorphism Indaws. Contenedor para otros templates.",
+      "placeholders": {
+        "{{ title }}": {
+          "type": "string",
+          "description": "Título de la página (aparece en <title> y header)",
+          "example": "Event Report",
+          "required": true
+        },
+        "{{ content }}": {
+          "type": "html",
+          "description": "Contenido HTML principal a insertar en el body",
+          "example": "<h1>Mi Evento</h1><p>Descripción...</p>",
+          "required": true
+        }
+      }
+    },
+    "event-report.html": {
+      "description": "Reporte post-evento con métricas, KPIs, presupuesto y lecciones aprendidas. Template con datos de ejemplo hardcodeados.",
+      "placeholders": {},
+      "notes": "Este template tiene datos de ejemplo embebidos. Para personalizar: editar directamente el HTML o usar generate_report.py para calcular métricas.",
+      "data_structure": {
+        "event_info": ["name", "date", "venue", "speaker"],
+        "metrics": ["registered", "attended", "attendance_rate"],
+        "leads": ["new_leads", "hot_leads", "cost_per_lead", "lead_goal", "lead_goal_percent"],
+        "budget": ["total", "spent", "categories", "status"],
+        "satisfaction": ["overall", "content", "speaker", "networking"],
+        "insights": ["what_worked", "lessons_learned"],
+        "next_steps": ["48h", "1_week", "30_days"]
+      }
+    },
+    "event-checklist.html": {
+      "description": "Checklist interactivo para el día del evento. Organizado por fases horarias con checkboxes clickeables.",
+      "placeholders": {},
+      "notes": "Template con datos de ejemplo. Para personalizar: editar el HTML directamente.",
+      "data_structure": {
+        "event_info": ["name", "date", "time_start", "time_end", "venue", "attendees"],
+        "quick_reference": ["venue_contact", "wifi", "catering_time", "parking"],
+        "phases": {
+          "montaje": "07:00 - Setup inicial",
+          "pre_evento": "08:30 - 30min antes",
+          "registro": "09:00 - Llegada asistentes",
+          "presentacion": "09:30 - Charla principal",
+          "qa_networking": "10:15 - Q&A y networking",
+          "cierre": "11:00 - Desmontaje"
+        },
+        "emergency_protocols": "Contingencias comunes y soluciones"
+      }
+    }
+  },
+  "scripts": {
+    "create_event_project.py": {
+      "description": "Genera proyecto Odoo con tareas pre-configuradas",
+      "arguments": {
+        "--name": "Nombre del evento",
+        "--date": "Fecha YYYY-MM-DD",
+        "--venue": "Nombre del venue",
+        "--capacity": "Capacidad máxima (default: 50)",
+        "--budget": "Presupuesto EUR (default: 1000)",
+        "--dry-run": "Mostrar plan sin crear en Odoo"
+      },
+      "output": "JSON con plan de tareas organizadas por fase",
+      "environment": ["ODOO_URL", "ODOO_DB", "ODOO_KEY"]
+    },
+    "generate_report.py": {
+      "description": "Genera HTML de reporte o checklist desde datos JSON",
+      "arguments": {
+        "--event-data": "Archivo JSON con datos del evento",
+        "--output": "Archivo HTML de salida",
+        "--interactive": "Modo interactivo para ingresar datos",
+        "--type": "Tipo: report o checklist"
+      },
+      "output": "HTML renderizado con métricas calculadas"
+    }
+  }
+}

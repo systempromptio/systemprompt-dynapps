@@ -1,0 +1,3370 @@
+[
+  {
+    "url": "https://www.dynapps.es/es",
+    "category": "page",
+    "title_hint": "Es",
+    "lastmod": "2026-06-25T16:16:00.611Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en",
+    "category": "page",
+    "title_hint": "En",
+    "lastmod": "2026-06-25T16:16:00.611Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/challenges/scaling-growth",
+    "category": "page",
+    "title_hint": "Scaling Growth",
+    "lastmod": "2026-06-25T16:06:09.194Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/challenges/scaling-growth",
+    "category": "page",
+    "title_hint": "Scaling Growth",
+    "lastmod": "2026-06-25T16:06:09.194Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/services/recover-odoo",
+    "category": "page",
+    "title_hint": "Recover Odoo",
+    "lastmod": "2026-06-25T16:00:49.524Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/services/recover-odoo",
+    "category": "page",
+    "title_hint": "Recover Odoo",
+    "lastmod": "2026-06-25T16:00:49.524Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/services/odoo-implementation",
+    "category": "page",
+    "title_hint": "Odoo Implementation",
+    "lastmod": "2026-06-25T15:55:56.322Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/services/odoo-implementation",
+    "category": "page",
+    "title_hint": "Odoo Implementation",
+    "lastmod": "2026-06-25T15:55:56.322Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/about",
+    "category": "page",
+    "title_hint": "About",
+    "lastmod": "2026-06-25T13:50:19.296Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/about",
+    "category": "page",
+    "title_hint": "About",
+    "lastmod": "2026-06-25T13:50:19.296Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/industries/food-beverage",
+    "category": "page",
+    "title_hint": "Food Beverage",
+    "lastmod": "2026-06-25T13:09:35.100Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/industries/food-beverage",
+    "category": "page",
+    "title_hint": "Food Beverage",
+    "lastmod": "2026-06-25T13:09:35.100Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/cases/regiechatel",
+    "category": "case_study",
+    "title_hint": "Regiechatel",
+    "lastmod": "2026-06-25T08:02:54.166Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/cases/regiechatel",
+    "category": "case_study",
+    "title_hint": "Regiechatel",
+    "lastmod": "2026-06-25T08:02:54.166Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/industries/construction",
+    "category": "page",
+    "title_hint": "Construction",
+    "lastmod": "2026-06-25T07:48:13.653Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/industries/construction",
+    "category": "page",
+    "title_hint": "Construction",
+    "lastmod": "2026-06-25T07:48:13.653Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/challenges/consolidating-operations",
+    "category": "page",
+    "title_hint": "Consolidating Operations",
+    "lastmod": "2026-06-25T07:38:18.722Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/challenges/consolidating-operations",
+    "category": "page",
+    "title_hint": "Consolidating Operations",
+    "lastmod": "2026-06-25T07:38:18.722Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/cases/readytobrand",
+    "category": "case_study",
+    "title_hint": "Readytobrand",
+    "lastmod": "2026-06-25T04:50:43.459Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/cases/readytobrand",
+    "category": "case_study",
+    "title_hint": "Readytobrand",
+    "lastmod": "2026-06-25T04:50:43.459Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/blog/openerp-erp-advantages",
+    "category": "blog",
+    "title_hint": "Openerp Erp Advantages",
+    "lastmod": "2026-06-24T13:29:55.311Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/blog/openerp-erp-advantages",
+    "category": "blog",
+    "title_hint": "Openerp Erp Advantages",
+    "lastmod": "2026-06-24T13:29:55.311Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/campaigns/sales",
+    "category": "page",
+    "title_hint": "Sales",
+    "lastmod": "2026-06-24T13:23:50.920Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/campaigns/sales",
+    "category": "page",
+    "title_hint": "Sales",
+    "lastmod": "2026-06-24T13:23:50.920Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/campaigns/odoo-point-of-sale",
+    "category": "page",
+    "title_hint": "Odoo Point Of Sale",
+    "lastmod": "2026-06-24T13:11:39.519Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/campaigns/odoo-point-of-sale",
+    "category": "page",
+    "title_hint": "Odoo Point Of Sale",
+    "lastmod": "2026-06-24T13:11:39.519Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/campaigns/que-es-odoo",
+    "category": "page",
+    "title_hint": "Que Es Odoo",
+    "lastmod": "2026-06-24T13:08:44.773Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/campaigns/que-es-odoo",
+    "category": "page",
+    "title_hint": "Que Es Odoo",
+    "lastmod": "2026-06-24T13:08:44.773Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/services",
+    "category": "page",
+    "title_hint": "Services",
+    "lastmod": "2026-06-24T10:12:06.224Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/services",
+    "category": "page",
+    "title_hint": "Services",
+    "lastmod": "2026-06-24T10:12:06.224Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/cases",
+    "category": "page",
+    "title_hint": "Cases",
+    "lastmod": "2026-06-24T09:47:34.996Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/cases",
+    "category": "page",
+    "title_hint": "Cases",
+    "lastmod": "2026-06-24T09:47:34.996Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/about-odoo",
+    "category": "page",
+    "title_hint": "About Odoo",
+    "lastmod": "2026-06-24T09:39:50.483Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/about-odoo",
+    "category": "page",
+    "title_hint": "About Odoo",
+    "lastmod": "2026-06-24T09:39:50.483Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/terms-and-conditions",
+    "category": "page",
+    "title_hint": "Terms And Conditions",
+    "lastmod": "2026-06-24T09:27:29.802Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/terms-and-conditions",
+    "category": "page",
+    "title_hint": "Terms And Conditions",
+    "lastmod": "2026-06-24T09:27:29.802Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/challenges/recovering-odoo",
+    "category": "page",
+    "title_hint": "Recovering Odoo",
+    "lastmod": "2026-06-23T13:38:18.051Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/challenges/recovering-odoo",
+    "category": "page",
+    "title_hint": "Recovering Odoo",
+    "lastmod": "2026-06-23T13:38:18.051Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/campaigns/odoo-19",
+    "category": "page",
+    "title_hint": "Odoo",
+    "lastmod": "2026-06-23T13:37:30.270Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/campaigns/odoo-19",
+    "category": "page",
+    "title_hint": "Odoo",
+    "lastmod": "2026-06-23T13:37:30.270Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/campaigns/stock-mrp",
+    "category": "page",
+    "title_hint": "Stock Mrp",
+    "lastmod": "2026-06-23T13:34:50.334Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/campaigns/stock-mrp",
+    "category": "page",
+    "title_hint": "Stock Mrp",
+    "lastmod": "2026-06-23T13:34:50.334Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/campaigns/finance",
+    "category": "page",
+    "title_hint": "Finance",
+    "lastmod": "2026-06-23T13:32:36.710Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/campaigns/finance",
+    "category": "page",
+    "title_hint": "Finance",
+    "lastmod": "2026-06-23T13:32:36.710Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/challenges/untangling-disconnected-systems",
+    "category": "page",
+    "title_hint": "Untangling Disconnected Systems",
+    "lastmod": "2026-06-23T13:31:18.335Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/challenges/untangling-disconnected-systems",
+    "category": "page",
+    "title_hint": "Untangling Disconnected Systems",
+    "lastmod": "2026-06-23T13:31:18.335Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/campaigns/oxp",
+    "category": "page",
+    "title_hint": "Oxp",
+    "lastmod": "2026-06-23T13:31:12.442Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/campaigns/oxp",
+    "category": "page",
+    "title_hint": "Oxp",
+    "lastmod": "2026-06-23T13:31:12.442Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/campaigns/crm-odoo",
+    "category": "page",
+    "title_hint": "Crm Odoo",
+    "lastmod": "2026-06-23T13:29:25.784Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/campaigns/crm-odoo",
+    "category": "page",
+    "title_hint": "Crm Odoo",
+    "lastmod": "2026-06-23T13:29:25.784Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/challenges/replacing-erp",
+    "category": "page",
+    "title_hint": "Replacing Erp",
+    "lastmod": "2026-06-23T13:23:17.887Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/challenges/replacing-erp",
+    "category": "page",
+    "title_hint": "Replacing Erp",
+    "lastmod": "2026-06-23T13:23:17.887Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/campaigns/helpdesk-odoo",
+    "category": "page",
+    "title_hint": "Helpdesk Odoo",
+    "lastmod": "2026-06-23T12:44:48.127Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/campaigns/helpdesk-odoo",
+    "category": "page",
+    "title_hint": "Helpdesk Odoo",
+    "lastmod": "2026-06-23T12:44:48.127Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/campaigns/odoo-projects",
+    "category": "page",
+    "title_hint": "Odoo Projects",
+    "lastmod": "2026-06-23T12:42:59.438Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/campaigns/odoo-projects",
+    "category": "page",
+    "title_hint": "Odoo Projects",
+    "lastmod": "2026-06-23T12:42:59.438Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/campaigns/website",
+    "category": "page",
+    "title_hint": "Website",
+    "lastmod": "2026-06-23T12:41:31.784Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/campaigns/website",
+    "category": "page",
+    "title_hint": "Website",
+    "lastmod": "2026-06-23T12:41:31.784Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/industries/pharma-biotech",
+    "category": "page",
+    "title_hint": "Pharma Biotech",
+    "lastmod": "2026-06-23T12:38:11.479Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/industries/pharma-biotech",
+    "category": "page",
+    "title_hint": "Pharma Biotech",
+    "lastmod": "2026-06-23T12:38:11.479Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/campaigns/ecommerce-odoo",
+    "category": "page",
+    "title_hint": "Ecommerce Odoo",
+    "lastmod": "2026-06-23T12:36:20.239Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/campaigns/ecommerce-odoo",
+    "category": "page",
+    "title_hint": "Ecommerce Odoo",
+    "lastmod": "2026-06-23T12:36:20.239Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/industries/laboratories",
+    "category": "page",
+    "title_hint": "Laboratories",
+    "lastmod": "2026-06-23T12:32:05.970Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/industries/laboratories",
+    "category": "page",
+    "title_hint": "Laboratories",
+    "lastmod": "2026-06-23T12:32:05.970Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/campaigns/odoo-lims",
+    "category": "page",
+    "title_hint": "Odoo Lims",
+    "lastmod": "2026-06-23T12:31:09.708Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/campaigns/odoo-lims",
+    "category": "page",
+    "title_hint": "Odoo Lims",
+    "lastmod": "2026-06-23T12:31:09.708Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/campaigns/odoo-20",
+    "category": "page",
+    "title_hint": "Odoo",
+    "lastmod": "2026-06-23T12:29:59.185Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/campaigns/odoo-20",
+    "category": "page",
+    "title_hint": "Odoo",
+    "lastmod": "2026-06-23T12:29:59.185Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/cases/orionautomotive",
+    "category": "case_study",
+    "title_hint": "Orionautomotive",
+    "lastmod": "2026-06-23T12:23:53.996Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/cases/orionautomotive",
+    "category": "case_study",
+    "title_hint": "Orionautomotive",
+    "lastmod": "2026-06-23T12:23:53.996Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/industries/retail-wholesale",
+    "category": "page",
+    "title_hint": "Retail Wholesale",
+    "lastmod": "2026-06-23T12:21:29.662Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/industries/retail-wholesale",
+    "category": "page",
+    "title_hint": "Retail Wholesale",
+    "lastmod": "2026-06-23T12:21:29.662Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/services/front-end",
+    "category": "page",
+    "title_hint": "Front End",
+    "lastmod": "2026-06-23T12:19:29.424Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/services/front-end",
+    "category": "page",
+    "title_hint": "Front End",
+    "lastmod": "2026-06-23T12:19:29.424Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/industries/logistics",
+    "category": "page",
+    "title_hint": "Logistics",
+    "lastmod": "2026-06-23T12:08:12.638Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/industries/logistics",
+    "category": "page",
+    "title_hint": "Logistics",
+    "lastmod": "2026-06-23T12:08:12.638Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/industries",
+    "category": "page",
+    "title_hint": "Industries",
+    "lastmod": "2026-06-23T11:48:54.717Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/industries",
+    "category": "page",
+    "title_hint": "Industries",
+    "lastmod": "2026-06-23T11:48:54.717Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/services/odoo-hosting",
+    "category": "page",
+    "title_hint": "Odoo Hosting",
+    "lastmod": "2026-06-23T11:28:56.672Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/services/odoo-hosting",
+    "category": "page",
+    "title_hint": "Odoo Hosting",
+    "lastmod": "2026-06-23T11:28:56.672Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/services/run-evolve-odoo",
+    "category": "page",
+    "title_hint": "Run Evolve Odoo",
+    "lastmod": "2026-06-23T11:25:44.511Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/services/run-evolve-odoo",
+    "category": "page",
+    "title_hint": "Run Evolve Odoo",
+    "lastmod": "2026-06-23T11:25:44.511Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/campaigns/who-is-required-to-use-verifactu",
+    "category": "page",
+    "title_hint": "Who Is Required To Use Verifactu",
+    "lastmod": "2026-06-23T10:09:03.429Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/campaigns/who-is-required-to-use-verifactu",
+    "category": "page",
+    "title_hint": "Who Is Required To Use Verifactu",
+    "lastmod": "2026-06-23T10:09:03.429Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/campaigns/verifactu-complete-guide",
+    "category": "page",
+    "title_hint": "Verifactu Complete Guide",
+    "lastmod": "2026-06-23T10:08:27.462Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/campaigns/verifactu-complete-guide",
+    "category": "page",
+    "title_hint": "Verifactu Complete Guide",
+    "lastmod": "2026-06-23T10:08:27.462Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/industries/professional-services",
+    "category": "page",
+    "title_hint": "Professional Services",
+    "lastmod": "2026-06-23T10:08:00.363Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/industries/professional-services",
+    "category": "page",
+    "title_hint": "Professional Services",
+    "lastmod": "2026-06-23T10:08:00.363Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/picking-list-odoo",
+    "category": "page",
+    "title_hint": "Picking List Odoo",
+    "lastmod": "2026-06-23T10:06:49.763Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/picking-list-odoo",
+    "category": "page",
+    "title_hint": "Picking List Odoo",
+    "lastmod": "2026-06-23T10:06:49.763Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/odoo-ticket-management",
+    "category": "service",
+    "title_hint": "Odoo Ticket Management",
+    "lastmod": "2026-06-23T10:02:21.897Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/odoo-ticket-management",
+    "category": "service",
+    "title_hint": "Odoo Ticket Management",
+    "lastmod": "2026-06-23T10:02:21.897Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/industries/manufacturing",
+    "category": "page",
+    "title_hint": "Manufacturing",
+    "lastmod": "2026-06-23T10:01:52.263Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/industries/manufacturing",
+    "category": "page",
+    "title_hint": "Manufacturing",
+    "lastmod": "2026-06-23T10:01:52.263Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/odoo-dynapps-academy",
+    "category": "service",
+    "title_hint": "Odoo Dynapps Academy",
+    "lastmod": "2026-06-23T10:01:42.595Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/odoo-dynapps-academy",
+    "category": "service",
+    "title_hint": "Odoo Dynapps Academy",
+    "lastmod": "2026-06-23T10:01:42.595Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/kit-digital-odoo",
+    "category": "page",
+    "title_hint": "Kit Digital Odoo",
+    "lastmod": "2026-06-23T09:59:49.302Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/kit-digital-odoo",
+    "category": "page",
+    "title_hint": "Kit Digital Odoo",
+    "lastmod": "2026-06-23T09:59:49.302Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/cases/despraz",
+    "category": "case_study",
+    "title_hint": "Despraz",
+    "lastmod": "2026-06-23T09:54:09.729Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/cases/despraz",
+    "category": "case_study",
+    "title_hint": "Despraz",
+    "lastmod": "2026-06-23T09:54:09.729Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/industries/energy-utilities",
+    "category": "page",
+    "title_hint": "Energy Utilities",
+    "lastmod": "2026-06-23T09:44:42.661Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/industries/energy-utilities",
+    "category": "page",
+    "title_hint": "Energy Utilities",
+    "lastmod": "2026-06-23T09:44:42.661Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/cases/cyclisbikelease",
+    "category": "case_study",
+    "title_hint": "Cyclisbikelease",
+    "lastmod": "2026-06-23T09:37:56.931Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/cases/cyclisbikelease",
+    "category": "case_study",
+    "title_hint": "Cyclisbikelease",
+    "lastmod": "2026-06-23T09:37:56.931Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/cases/primaproteccion",
+    "category": "case_study",
+    "title_hint": "Primaproteccion",
+    "lastmod": "2026-06-23T09:35:33.175Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/cases/primaproteccion",
+    "category": "case_study",
+    "title_hint": "Primaproteccion",
+    "lastmod": "2026-06-23T09:35:33.175Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/accessibility-statement",
+    "category": "page",
+    "title_hint": "Accessibility Statement",
+    "lastmod": "2026-06-23T09:33:28.480Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/accessibility-statement",
+    "category": "page",
+    "title_hint": "Accessibility Statement",
+    "lastmod": "2026-06-23T09:33:28.480Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/cases/sensorfact",
+    "category": "case_study",
+    "title_hint": "Sensorfact",
+    "lastmod": "2026-06-23T09:33:06.644Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/cases/sensorfact",
+    "category": "case_study",
+    "title_hint": "Sensorfact",
+    "lastmod": "2026-06-23T09:33:06.644Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/industries/financial-services",
+    "category": "page",
+    "title_hint": "Financial Services",
+    "lastmod": "2026-06-23T09:16:46.738Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/industries/financial-services",
+    "category": "page",
+    "title_hint": "Financial Services",
+    "lastmod": "2026-06-23T09:16:46.738Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/cases/eurofins",
+    "category": "case_study",
+    "title_hint": "Eurofins",
+    "lastmod": "2026-06-23T09:07:16.692Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/cases/eurofins",
+    "category": "case_study",
+    "title_hint": "Eurofins",
+    "lastmod": "2026-06-23T09:07:16.692Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/cases/obiz",
+    "category": "case_study",
+    "title_hint": "Obiz",
+    "lastmod": "2026-06-23T08:59:17.128Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/cases/obiz",
+    "category": "case_study",
+    "title_hint": "Obiz",
+    "lastmod": "2026-06-23T08:59:17.128Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/cases/beldico",
+    "category": "case_study",
+    "title_hint": "Beldico",
+    "lastmod": "2026-06-23T08:55:22.810Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/cases/beldico",
+    "category": "case_study",
+    "title_hint": "Beldico",
+    "lastmod": "2026-06-23T08:55:22.810Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/cases/plastimyr",
+    "category": "case_study",
+    "title_hint": "Plastimyr",
+    "lastmod": "2026-06-23T08:53:39.403Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/cases/plastimyr",
+    "category": "case_study",
+    "title_hint": "Plastimyr",
+    "lastmod": "2026-06-23T08:53:39.403Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/cases/tmtechnics",
+    "category": "case_study",
+    "title_hint": "Tmtechnics",
+    "lastmod": "2026-06-23T08:50:49.168Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/cases/tmtechnics",
+    "category": "case_study",
+    "title_hint": "Tmtechnics",
+    "lastmod": "2026-06-23T08:50:49.168Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/cases/50five",
+    "category": "case_study",
+    "title_hint": "50Five",
+    "lastmod": "2026-06-23T08:35:44.973Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/cases/50five",
+    "category": "case_study",
+    "title_hint": "50Five",
+    "lastmod": "2026-06-23T08:35:44.973Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/cases/puratos",
+    "category": "case_study",
+    "title_hint": "Puratos",
+    "lastmod": "2026-06-23T08:26:27.338Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/cases/puratos",
+    "category": "case_study",
+    "title_hint": "Puratos",
+    "lastmod": "2026-06-23T08:26:27.338Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/integrations",
+    "category": "page",
+    "title_hint": "Integrations",
+    "lastmod": "2026-06-22T15:51:13.094Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/integrations",
+    "category": "page",
+    "title_hint": "Integrations",
+    "lastmod": "2026-06-22T15:51:13.094Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/challenges",
+    "category": "page",
+    "title_hint": "Challenges",
+    "lastmod": "2026-06-22T14:50:35.157Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/challenges",
+    "category": "page",
+    "title_hint": "Challenges",
+    "lastmod": "2026-06-22T14:50:35.157Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/cases/tunergia",
+    "category": "case_study",
+    "title_hint": "Tunergia",
+    "lastmod": "2026-06-22T14:41:26.253Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/cases/tunergia",
+    "category": "case_study",
+    "title_hint": "Tunergia",
+    "lastmod": "2026-06-22T14:41:26.253Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/cases/todotrofeo",
+    "category": "case_study",
+    "title_hint": "Todotrofeo",
+    "lastmod": "2026-06-22T14:40:27.484Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/cases/todotrofeo",
+    "category": "case_study",
+    "title_hint": "Todotrofeo",
+    "lastmod": "2026-06-22T14:40:27.484Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/cases/lonestaralphalaboratories",
+    "category": "case_study",
+    "title_hint": "Lonestaralphalaboratories",
+    "lastmod": "2026-06-22T14:31:19.624Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/cases/lonestaralphalaboratories",
+    "category": "case_study",
+    "title_hint": "Lonestaralphalaboratories",
+    "lastmod": "2026-06-22T14:31:19.624Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/cases/evolink",
+    "category": "case_study",
+    "title_hint": "Evolink",
+    "lastmod": "2026-06-22T14:29:17.994Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/cases/evolink",
+    "category": "case_study",
+    "title_hint": "Evolink",
+    "lastmod": "2026-06-22T14:29:17.994Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/cases/espacioorganico",
+    "category": "case_study",
+    "title_hint": "Espacioorganico",
+    "lastmod": "2026-06-22T14:26:43.065Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/cases/espacioorganico",
+    "category": "case_study",
+    "title_hint": "Espacioorganico",
+    "lastmod": "2026-06-22T14:26:43.065Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/blog/getting-started-with-odoo",
+    "category": "blog",
+    "title_hint": "Getting Started With Odoo",
+    "lastmod": "2026-06-22T10:00:14.259Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/blog/getting-started-with-odoo",
+    "category": "blog",
+    "title_hint": "Getting Started With Odoo",
+    "lastmod": "2026-06-22T10:00:14.259Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/blog/digital-transformation-process-what-it-is-and-how-to-implement-it-in-your-company",
+    "category": "blog",
+    "title_hint": "Digital Transformation Process What It Is And How To Implement It In Your Company",
+    "lastmod": "2026-06-22T09:35:15.327Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/blog/digital-transformation-process-what-it-is-and-how-to-implement-it-in-your-company",
+    "category": "blog",
+    "title_hint": "Digital Transformation Process What It Is And How To Implement It In Your Company",
+    "lastmod": "2026-06-22T09:35:15.327Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/contact",
+    "category": "page",
+    "title_hint": "Contact",
+    "lastmod": "2026-06-19T07:17:13.796Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/contact",
+    "category": "page",
+    "title_hint": "Contact",
+    "lastmod": "2026-06-19T07:17:13.796Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/blog",
+    "category": "blog",
+    "title_hint": "Blog",
+    "lastmod": "2026-06-18T13:47:12.112Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/blog",
+    "category": "blog",
+    "title_hint": "Blog",
+    "lastmod": "2026-06-18T13:47:12.112Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/cookie-policy",
+    "category": "page",
+    "title_hint": "Cookie Policy",
+    "lastmod": "2026-06-18T12:20:05.160Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/cookie-policy",
+    "category": "page",
+    "title_hint": "Cookie Policy",
+    "lastmod": "2026-06-18T12:20:05.160Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/privacy-policy",
+    "category": "page",
+    "title_hint": "Privacy Policy",
+    "lastmod": "2026-06-18T12:10:36.939Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/privacy-policy",
+    "category": "page",
+    "title_hint": "Privacy Policy",
+    "lastmod": "2026-06-18T12:10:36.939Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/events",
+    "category": "page",
+    "title_hint": "Events",
+    "lastmod": "2026-06-18T11:00:01.538Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/events",
+    "category": "page",
+    "title_hint": "Events",
+    "lastmod": "2026-06-18T11:00:01.538Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/international",
+    "category": "page",
+    "title_hint": "International",
+    "lastmod": "2026-06-17T12:43:04.171Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/international",
+    "category": "page",
+    "title_hint": "International",
+    "lastmod": "2026-06-17T12:43:04.171Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/blog/odoo-vs-afas",
+    "category": "blog",
+    "title_hint": "Odoo Vs Afas",
+    "lastmod": "2026-06-16T08:37:55.739Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/blog/odoo-vs-afas",
+    "category": "blog",
+    "title_hint": "Odoo Vs Afas",
+    "lastmod": "2026-06-16T08:37:55.739Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/blog/odoo-vs-exact-online",
+    "category": "blog",
+    "title_hint": "Odoo Vs Exact Online",
+    "lastmod": "2026-06-15T14:26:39.951Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/blog/odoo-vs-exact-online",
+    "category": "blog",
+    "title_hint": "Odoo Vs Exact Online",
+    "lastmod": "2026-06-15T14:26:39.951Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/blog/erp-vs-crm",
+    "category": "blog",
+    "title_hint": "Erp Vs Crm",
+    "lastmod": "2026-06-15T14:17:13.125Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/blog/erp-vs-crm",
+    "category": "blog",
+    "title_hint": "Erp Vs Crm",
+    "lastmod": "2026-06-15T14:17:13.125Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/blog/best-odoo-partner",
+    "category": "blog",
+    "title_hint": "Best Odoo Partner",
+    "lastmod": "2026-06-15T14:14:44.352Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/blog/best-odoo-partner",
+    "category": "blog",
+    "title_hint": "Best Odoo Partner",
+    "lastmod": "2026-06-15T14:14:44.352Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/blog/software-time-tracking",
+    "category": "blog",
+    "title_hint": "Software Time Tracking",
+    "lastmod": "2026-06-12T13:42:56.403Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/blog/software-time-tracking",
+    "category": "blog",
+    "title_hint": "Software Time Tracking",
+    "lastmod": "2026-06-12T13:42:56.403Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/blog/how-to-integrate-whatsapp-with-odoo-improve-customer-communication",
+    "category": "blog",
+    "title_hint": "How To Integrate Whatsapp With Odoo Improve Customer Communication",
+    "lastmod": "2026-06-11T13:43:29.470Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/blog/how-to-integrate-whatsapp-with-odoo-improve-customer-communication",
+    "category": "blog",
+    "title_hint": "How To Integrate Whatsapp With Odoo Improve Customer Communication",
+    "lastmod": "2026-06-11T13:43:29.470Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/blog/7-benefits-of-implementing-odoo-in-your-company",
+    "category": "blog",
+    "title_hint": "7 Benefits Of Implementing Odoo In Your Company",
+    "lastmod": "2026-06-11T13:43:18.550Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/blog/7-benefits-of-implementing-odoo-in-your-company",
+    "category": "blog",
+    "title_hint": "7 Benefits Of Implementing Odoo In Your Company",
+    "lastmod": "2026-06-11T13:43:18.550Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/blog/artificial-intelligence-odoo-19",
+    "category": "blog",
+    "title_hint": "Artificial Intelligence Odoo",
+    "lastmod": "2026-06-11T13:43:10.569Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/blog/artificial-intelligence-odoo-19",
+    "category": "blog",
+    "title_hint": "Artificial Intelligence Odoo",
+    "lastmod": "2026-06-11T13:43:10.569Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/blog/10-tips-to-improve-your-productivity-in-odoo",
+    "category": "blog",
+    "title_hint": "10 Tips To Improve Your Productivity In Odoo",
+    "lastmod": "2026-06-11T13:42:54.101Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/blog/10-tips-to-improve-your-productivity-in-odoo",
+    "category": "blog",
+    "title_hint": "10 Tips To Improve Your Productivity In Odoo",
+    "lastmod": "2026-06-11T13:42:54.101Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/blog/meaning-of-odoo-gold-partner",
+    "category": "blog",
+    "title_hint": "Meaning Of Odoo Gold Partner",
+    "lastmod": "2026-06-11T13:42:03.792Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/blog/meaning-of-odoo-gold-partner",
+    "category": "blog",
+    "title_hint": "Meaning Of Odoo Gold Partner",
+    "lastmod": "2026-06-11T13:42:03.792Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/blog/what-is-odoo-sh",
+    "category": "blog",
+    "title_hint": "What Is Odoo Sh",
+    "lastmod": "2026-06-11T13:41:47.139Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/blog/what-is-odoo-sh",
+    "category": "blog",
+    "title_hint": "What Is Odoo Sh",
+    "lastmod": "2026-06-11T13:41:47.139Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/blog/odoo-runbot",
+    "category": "blog",
+    "title_hint": "Odoo Runbot",
+    "lastmod": "2026-06-11T13:41:39.439Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/blog/odoo-runbot",
+    "category": "blog",
+    "title_hint": "Odoo Runbot",
+    "lastmod": "2026-06-11T13:41:39.439Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/blog/what-is-odoo-oca-how-it-works",
+    "category": "blog",
+    "title_hint": "What Is Odoo Oca How It Works",
+    "lastmod": "2026-06-11T13:41:30.624Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/blog/what-is-odoo-oca-how-it-works",
+    "category": "blog",
+    "title_hint": "What Is Odoo Oca How It Works",
+    "lastmod": "2026-06-11T13:41:30.624Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/es/blog/odoo-vs-zoho",
+    "category": "blog",
+    "title_hint": "Odoo Vs Zoho",
+    "lastmod": "2026-06-11T13:40:55.440Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://www.dynapps.es/en/blog/odoo-vs-zoho",
+    "category": "blog",
+    "title_hint": "Odoo Vs Zoho",
+    "lastmod": "2026-06-11T13:40:55.440Z",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/appointment",
+    "category": "page",
+    "title_hint": "Appointment",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/calendar",
+    "category": "page",
+    "title_hint": "Calendar",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/groups/indaws-academy-1",
+    "category": "page",
+    "title_hint": "Indaws Academy",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/groups",
+    "category": "page",
+    "title_hint": "Groups",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/shop",
+    "category": "page",
+    "title_hint": "Shop",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/shop/category/inventario-6",
+    "category": "shop",
+    "title_hint": "Inventario",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/shop/category/integraciones-13",
+    "category": "shop",
+    "title_hint": "Integraciones",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/shop/category/crm-17",
+    "category": "shop",
+    "title_hint": "Crm",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/shop/category/firma-18",
+    "category": "shop",
+    "title_hint": "Firma",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/",
+    "category": "page",
+    "title_hint": "",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/website/info",
+    "category": "page",
+    "title_hint": "Info",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/jobs",
+    "category": "page",
+    "title_hint": "Jobs",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/blog",
+    "category": "blog",
+    "title_hint": "Blog",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/event/testeo-8",
+    "category": "event",
+    "title_hint": "Testeo",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/events",
+    "category": "page",
+    "title_hint": "Events",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/partners",
+    "category": "page",
+    "title_hint": "Partners",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/helpdesk/soporte-1/knowledgebase",
+    "category": "helpdesk",
+    "title_hint": "Knowledgebase",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/helpdesk/soporte-1",
+    "category": "helpdesk",
+    "title_hint": "Soporte",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/helpdesk",
+    "category": "page",
+    "title_hint": "Helpdesk",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/curso-completo-odoo-v16-35",
+    "category": "slide",
+    "title_hint": "Curso Completo Odoo V16",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/curso-completo-odoo-v18-36",
+    "category": "slide",
+    "title_hint": "Curso Completo Odoo V18",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/forum",
+    "category": "page",
+    "title_hint": "Forum",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/forum/ayuda-11/faq",
+    "category": "forum",
+    "title_hint": "Faq",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/helpdesk/soporte-1/forums",
+    "category": "helpdesk",
+    "title_hint": "Forums",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/helpdesk/soporte-1/slides",
+    "category": "helpdesk",
+    "title_hint": "Slides",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/forum/ayuda-11",
+    "category": "forum",
+    "title_hint": "Ayuda",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/crm-522",
+    "category": "slide",
+    "title_hint": "Crm",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/introduccion-648",
+    "category": "slide",
+    "title_hint": "Introduccion",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/analisis-de-iniciativas-523",
+    "category": "slide",
+    "title_hint": "Analisis De Iniciativas",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/flujo-del-crm-524",
+    "category": "slide",
+    "title_hint": "Flujo Del Crm",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/buscador-649",
+    "category": "slide",
+    "title_hint": "Buscador",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/ficha-de-la-oportunidad-525",
+    "category": "slide",
+    "title_hint": "Ficha De La Oportunidad",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/exporta-datos-de-forma-facil-y-rapida-627",
+    "category": "slide",
+    "title_hint": "Exporta Datos De Forma Facil Y Rapida",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/actividades-526",
+    "category": "slide",
+    "title_hint": "Actividades",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/adios-al-caos-de-emails-organiza-tu-comunicacion-630",
+    "category": "slide",
+    "title_hint": "Adios Al Caos De Emails Organiza Tu Comunicacion",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/perdida-de-leads-527",
+    "category": "slide",
+    "title_hint": "Perdida De Leads",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/plantillas-de-correo-664",
+    "category": "slide",
+    "title_hint": "Plantillas De Correo",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/entrada-de-leads-528",
+    "category": "slide",
+    "title_hint": "Entrada De Leads",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/documentos-adjuntos-665",
+    "category": "slide",
+    "title_hint": "Documentos Adjuntos",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/equipos-de-ventas-529",
+    "category": "slide",
+    "title_hint": "Equipos De Ventas",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/calendario-666",
+    "category": "slide",
+    "title_hint": "Calendario",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/idiomas-667",
+    "category": "slide",
+    "title_hint": "Idiomas",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/multicompania-668",
+    "category": "slide",
+    "title_hint": "Multicompania",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/ventas-531",
+    "category": "slide",
+    "title_hint": "Ventas",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/introduccion-532",
+    "category": "slide",
+    "title_hint": "Introduccion",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/operaciones-intercompania-669",
+    "category": "slide",
+    "title_hint": "Operaciones Intercompania",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/ficha-de-clientes-533",
+    "category": "slide",
+    "title_hint": "Ficha De Clientes",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/usuarios-y-permisos-670",
+    "category": "slide",
+    "title_hint": "Usuarios Y Permisos",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/contactos-y-direcciones-534",
+    "category": "slide",
+    "title_hint": "Contactos Y Direcciones",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/doble-factor-de-autenticacion-671",
+    "category": "slide",
+    "title_hint": "Doble Factor De Autenticacion",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/ficha-de-producto-535",
+    "category": "slide",
+    "title_hint": "Ficha De Producto",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/usuarios-portal-674",
+    "category": "slide",
+    "title_hint": "Usuarios Portal",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/categorias-de-producto-536",
+    "category": "slide",
+    "title_hint": "Categorias De Producto",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/crm-646",
+    "category": "slide",
+    "title_hint": "Crm",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/variantes-537",
+    "category": "slide",
+    "title_hint": "Variantes",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/introduccion-al-crm-616",
+    "category": "slide",
+    "title_hint": "Introduccion Al Crm",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/introduccion-a-tarifas-538",
+    "category": "slide",
+    "title_hint": "Introduccion A Tarifas",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/informes-de-crm-617",
+    "category": "slide",
+    "title_hint": "Informes De Crm",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/tarifas-avanzadas-539",
+    "category": "slide",
+    "title_hint": "Tarifas Avanzadas",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/diferencias-clave-entre-v16-y-v18-crm-619",
+    "category": "slide",
+    "title_hint": "Diferencias Clave Entre V16 Y V18 Crm",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/reglas-de-precios-540",
+    "category": "slide",
+    "title_hint": "Reglas De Precios",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/ficha-de-la-oportunidad-crm-625",
+    "category": "slide",
+    "title_hint": "Ficha De La Oportunidad Crm",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/descuentos-541",
+    "category": "slide",
+    "title_hint": "Descuentos",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/flujo-eficiente-del-crm-optimiza-tu-estrategia-comercial-621",
+    "category": "slide",
+    "title_hint": "Flujo Eficiente Del Crm Optimiza Tu Estrategia Comercial",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/crear-presupuesto-542",
+    "category": "slide",
+    "title_hint": "Crear Presupuesto",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/domina-las-actividades-en-crm-para-aumentar-tu-productividad-622",
+    "category": "slide",
+    "title_hint": "Domina Las Actividades En Crm Para Aumentar Tu Productividad",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/tipos-de-pedido-543",
+    "category": "slide",
+    "title_hint": "Tipos De Pedido",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/equipos-de-ventas-675",
+    "category": "slide",
+    "title_hint": "Equipos De Ventas",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/informes-544",
+    "category": "slide",
+    "title_hint": "Informes",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/entrada-de-leads-623",
+    "category": "slide",
+    "title_hint": "Entrada De Leads",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/perdida-de-leads-676",
+    "category": "slide",
+    "title_hint": "Perdida De Leads",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/compras-545",
+    "category": "slide",
+    "title_hint": "Compras",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/introduccion-546",
+    "category": "slide",
+    "title_hint": "Introduccion",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/activar-iniciativas-677",
+    "category": "slide",
+    "title_hint": "Activar Iniciativas",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/proveedores-en-productos-547",
+    "category": "slide",
+    "title_hint": "Proveedores En Productos",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/ventas-647",
+    "category": "slide",
+    "title_hint": "Ventas",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/descuentos-en-compras-548",
+    "category": "slide",
+    "title_hint": "Descuentos En Compras",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/introduccion-678",
+    "category": "slide",
+    "title_hint": "Introduccion",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/varios-presupuestos-y-comparativas-549",
+    "category": "slide",
+    "title_hint": "Varios Presupuestos Y Comparativas",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/ficha-de-clientes-679",
+    "category": "slide",
+    "title_hint": "Ficha De Clientes",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/pedidos-de-compra-550",
+    "category": "slide",
+    "title_hint": "Pedidos De Compra",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/contactos-y-direcciones-680",
+    "category": "slide",
+    "title_hint": "Contactos Y Direcciones",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/compras-sobre-ventas-551",
+    "category": "slide",
+    "title_hint": "Compras Sobre Ventas",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/ficha-de-producto-681",
+    "category": "slide",
+    "title_hint": "Ficha De Producto",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/reglas-de-stock-minimo-552",
+    "category": "slide",
+    "title_hint": "Reglas De Stock Minimo",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/categorias-de-producto-682",
+    "category": "slide",
+    "title_hint": "Categorias De Producto",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/dropshipping-553",
+    "category": "slide",
+    "title_hint": "Dropshipping",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/variantes-683",
+    "category": "slide",
+    "title_hint": "Variantes",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/introduccion-a-tarifas-686",
+    "category": "slide",
+    "title_hint": "Introduccion A Tarifas",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/inventario-554",
+    "category": "slide",
+    "title_hint": "Inventario",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/introduccion-555",
+    "category": "slide",
+    "title_hint": "Introduccion",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/tarifas-avanzadas-688",
+    "category": "slide",
+    "title_hint": "Tarifas Avanzadas",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/gestion-de-stock-en-odoo-556",
+    "category": "slide",
+    "title_hint": "Gestion De Stock En Odoo",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/reglas-de-precios-689",
+    "category": "slide",
+    "title_hint": "Reglas De Precios",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/almacenes-557",
+    "category": "slide",
+    "title_hint": "Almacenes",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/descuentos-691",
+    "category": "slide",
+    "title_hint": "Descuentos",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/ubicaciones-558",
+    "category": "slide",
+    "title_hint": "Ubicaciones",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/crear-presupuesto-692",
+    "category": "slide",
+    "title_hint": "Crear Presupuesto",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/valoracion-de-inventario-559",
+    "category": "slide",
+    "title_hint": "Valoracion De Inventario",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/informes-699",
+    "category": "slide",
+    "title_hint": "Informes",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/ajustes-de-inventario-560",
+    "category": "slide",
+    "title_hint": "Ajustes De Inventario",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/compras-700",
+    "category": "slide",
+    "title_hint": "Compras",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/albaranes-y-operaciones-de-inventario-561",
+    "category": "slide",
+    "title_hint": "Albaranes Y Operaciones De Inventario",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/presupuestos-y-comparativas-709",
+    "category": "slide",
+    "title_hint": "Presupuestos Y Comparativas",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/albaranes-de-clientes-y-valorados-562",
+    "category": "slide",
+    "title_hint": "Albaranes De Clientes Y Valorados",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/pedidos-de-compra-710",
+    "category": "slide",
+    "title_hint": "Pedidos De Compra",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/entregas-parciales-563",
+    "category": "slide",
+    "title_hint": "Entregas Parciales",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/proveedores-en-productos-708",
+    "category": "slide",
+    "title_hint": "Proveedores En Productos",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/devoluciones-564",
+    "category": "slide",
+    "title_hint": "Devoluciones",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/compras-sobre-ventas-722",
+    "category": "slide",
+    "title_hint": "Compras Sobre Ventas",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/lotes-numeros-de-serie-y-trazabilidad-565",
+    "category": "slide",
+    "title_hint": "Lotes Numeros De Serie Y Trazabilidad",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/reglas-de-stock-minimo-723",
+    "category": "slide",
+    "title_hint": "Reglas De Stock Minimo",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/fechas-de-caducidad-566",
+    "category": "slide",
+    "title_hint": "Fechas De Caducidad",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/dropshipping-724",
+    "category": "slide",
+    "title_hint": "Dropshipping",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/facturacion-567",
+    "category": "slide",
+    "title_hint": "Facturacion",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/inventario-725",
+    "category": "slide",
+    "title_hint": "Inventario",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/introduccion-568",
+    "category": "slide",
+    "title_hint": "Introduccion",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/gestion-de-stock-726",
+    "category": "slide",
+    "title_hint": "Gestion De Stock",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/facturas-de-cliente-569",
+    "category": "slide",
+    "title_hint": "Facturas De Cliente",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/almacenes-727",
+    "category": "slide",
+    "title_hint": "Almacenes",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/series-de-facturacion-570",
+    "category": "slide",
+    "title_hint": "Series De Facturacion",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/ubicaciones-737",
+    "category": "slide",
+    "title_hint": "Ubicaciones",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/factura-sobre-pedido-cantidades-pedidas-571",
+    "category": "slide",
+    "title_hint": "Factura Sobre Pedido Cantidades Pedidas",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/valoracion-de-inventario-738",
+    "category": "slide",
+    "title_hint": "Valoracion De Inventario",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/factura-sobre-albaranes-cantidades-entregadas-572",
+    "category": "slide",
+    "title_hint": "Factura Sobre Albaranes Cantidades Entregadas",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/ajustes-de-inventario-742",
+    "category": "slide",
+    "title_hint": "Ajustes De Inventario",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/facturas-de-servicios-573",
+    "category": "slide",
+    "title_hint": "Facturas De Servicios",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/albaranes-y-operaciones-de-inventario-743",
+    "category": "slide",
+    "title_hint": "Albaranes Y Operaciones De Inventario",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/envio-de-facturas-por-email-574",
+    "category": "slide",
+    "title_hint": "Envio De Facturas Por Email",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/albaranes-de-clientes-y-valorados-745",
+    "category": "slide",
+    "title_hint": "Albaranes De Clientes Y Valorados",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/facturas-de-anticipo-575",
+    "category": "slide",
+    "title_hint": "Facturas De Anticipo",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/entregas-parciales-747",
+    "category": "slide",
+    "title_hint": "Entregas Parciales",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/facturas-rectificativas-576",
+    "category": "slide",
+    "title_hint": "Facturas Rectificativas",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/devoluciones-749",
+    "category": "slide",
+    "title_hint": "Devoluciones",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/factura-de-proveedor-577",
+    "category": "slide",
+    "title_hint": "Factura De Proveedor",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/lotes-numeros-de-serie-y-trazabilidad-750",
+    "category": "slide",
+    "title_hint": "Lotes Numeros De Serie Y Trazabilidad",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/facturas-desde-pedidos-de-compra-578",
+    "category": "slide",
+    "title_hint": "Facturas Desde Pedidos De Compra",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/fechas-de-caducidad-751",
+    "category": "slide",
+    "title_hint": "Fechas De Caducidad",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/analisis-de-facturas-579",
+    "category": "slide",
+    "title_hint": "Analisis De Facturas",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/facturacion-753",
+    "category": "slide",
+    "title_hint": "Facturacion",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/introduccion-755",
+    "category": "slide",
+    "title_hint": "Introduccion",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/contabilidad-580",
+    "category": "slide",
+    "title_hint": "Contabilidad",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/facturas-de-cliente-756",
+    "category": "slide",
+    "title_hint": "Facturas De Cliente",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/series-de-facturacion-757",
+    "category": "slide",
+    "title_hint": "Series De Facturacion",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/plan-de-cuentas-583",
+    "category": "slide",
+    "title_hint": "Plan De Cuentas",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/factura-sobre-pedido-cantidades-pedidas-758",
+    "category": "slide",
+    "title_hint": "Factura Sobre Pedido Cantidades Pedidas",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/cuentas-de-clientes-y-proveedores-584",
+    "category": "slide",
+    "title_hint": "Cuentas De Clientes Y Proveedores",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/factura-sobre-albaranes-cantidades-entregadas-760",
+    "category": "slide",
+    "title_hint": "Factura Sobre Albaranes Cantidades Entregadas",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/cuentas-en-productos-y-categorias-de-productos-585",
+    "category": "slide",
+    "title_hint": "Cuentas En Productos Y Categorias De Productos",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/facturas-de-servicios-771",
+    "category": "slide",
+    "title_hint": "Facturas De Servicios",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/impuestos-586",
+    "category": "slide",
+    "title_hint": "Impuestos",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/envio-de-facturas-por-email-772",
+    "category": "slide",
+    "title_hint": "Envio De Facturas Por Email",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/posiciones-fiscales-587",
+    "category": "slide",
+    "title_hint": "Posiciones Fiscales",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/facturas-de-anticipo-786",
+    "category": "slide",
+    "title_hint": "Facturas De Anticipo",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/diarios-contables-588",
+    "category": "slide",
+    "title_hint": "Diarios Contables",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/facturas-rectificativas-787",
+    "category": "slide",
+    "title_hint": "Facturas Rectificativas",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/plazos-de-cobro-pago-589",
+    "category": "slide",
+    "title_hint": "Plazos De Cobro Pago",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/factura-de-proveedor-788",
+    "category": "slide",
+    "title_hint": "Factura De Proveedor",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/modos-de-cobro-pago-590",
+    "category": "slide",
+    "title_hint": "Modos De Cobro Pago",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/facturas-desde-pedidos-de-compra-789",
+    "category": "slide",
+    "title_hint": "Facturas Desde Pedidos De Compra",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/introduccion-a-la-conciliacion-bancaria-591",
+    "category": "slide",
+    "title_hint": "Introduccion A La Conciliacion Bancaria",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/facturas-desde-pedidos-de-compra-790",
+    "category": "slide",
+    "title_hint": "Facturas Desde Pedidos De Compra",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/conciliacion-de-pagos-y-facturas-592",
+    "category": "slide",
+    "title_hint": "Conciliacion De Pagos Y Facturas",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/analisis-de-facturas-791",
+    "category": "slide",
+    "title_hint": "Analisis De Facturas",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/pago-completo-de-una-factura-593",
+    "category": "slide",
+    "title_hint": "Pago Completo De Una Factura",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/encuestas-792",
+    "category": "slide",
+    "title_hint": "Encuestas",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/pago-parcial-de-una-factura-594",
+    "category": "slide",
+    "title_hint": "Pago Parcial De Una Factura",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/basico-de-encuestas-793",
+    "category": "slide",
+    "title_hint": "Basico De Encuestas",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/pago-de-varias-facturas-en-una-misma-linea-595",
+    "category": "slide",
+    "title_hint": "Pago De Varias Facturas En Una Misma Linea",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/preguntas-y-secciones-794",
+    "category": "slide",
+    "title_hint": "Preguntas Y Secciones",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/pago-de-varias-facturas-y-comision-incluida-596",
+    "category": "slide",
+    "title_hint": "Pago De Varias Facturas Y Comision Incluida",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/analisis-de-encuestas-795",
+    "category": "slide",
+    "title_hint": "Analisis De Encuestas",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/pago-de-facturas-de-varios-clientes-597",
+    "category": "slide",
+    "title_hint": "Pago De Facturas De Varios Clientes",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/encuestas-en-vivo-796",
+    "category": "slide",
+    "title_hint": "Encuestas En Vivo",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/pago-de-una-comision-bancaria-598",
+    "category": "slide",
+    "title_hint": "Pago De Una Comision Bancaria",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/e-mail-797",
+    "category": "slide",
+    "title_hint": "E Mail",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/pago-de-un-anticipo-de-cliente-sin-factura-599",
+    "category": "slide",
+    "title_hint": "Pago De Un Anticipo De Cliente Sin Factura",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/basicos-de-e-mail-marketing-805",
+    "category": "slide",
+    "title_hint": "Basicos De E Mail Marketing",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/traspaso-entre-dos-bancos-600",
+    "category": "slide",
+    "title_hint": "Traspaso Entre Dos Bancos",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/campanas-de-e-mail-798",
+    "category": "slide",
+    "title_hint": "Campanas De E Mail",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/rectificar-errores-de-conciliacion-601",
+    "category": "slide",
+    "title_hint": "Rectificar Errores De Conciliacion",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/listas-de-correo-799",
+    "category": "slide",
+    "title_hint": "Listas De Correo",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/asientos-manuales-603",
+    "category": "slide",
+    "title_hint": "Asientos Manuales",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/gestionar-exclusiones-800",
+    "category": "slide",
+    "title_hint": "Gestionar Exclusiones",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/asientos-de-nominas-604",
+    "category": "slide",
+    "title_hint": "Asientos De Nominas",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/reactivacion-de-leads-perdidos-801",
+    "category": "slide",
+    "title_hint": "Reactivacion De Leads Perdidos",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/cierre-de-periodos-605",
+    "category": "slide",
+    "title_hint": "Cierre De Periodos",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/plantillas-de-e-mail-802",
+    "category": "slide",
+    "title_hint": "Plantillas De E Mail",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/compensacion-clientes-proveedores-606",
+    "category": "slide",
+    "title_hint": "Compensacion Clientes Proveedores",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/plantillas-de-e-mail-avanzadas-803",
+    "category": "slide",
+    "title_hint": "Plantillas De E Mail Avanzadas",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/activos-y-amortizaciones-607",
+    "category": "slide",
+    "title_hint": "Activos Y Amortizaciones",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/tests-ab-804",
+    "category": "slide",
+    "title_hint": "Tests Ab",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/asiento-de-apertura-608",
+    "category": "slide",
+    "title_hint": "Asiento De Apertura",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/marketing-auto-806",
+    "category": "slide",
+    "title_hint": "Marketing Auto",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/cierre-contable-609",
+    "category": "slide",
+    "title_hint": "Cierre Contable",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/basicos-de-marketing-auto-807",
+    "category": "slide",
+    "title_hint": "Basicos De Marketing Auto",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/recibos-domiciliados-sepa-610",
+    "category": "slide",
+    "title_hint": "Recibos Domiciliados Sepa",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/automatizacion-de-actividades-808",
+    "category": "slide",
+    "title_hint": "Automatizacion De Actividades",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/devoluciones-de-recibos-611",
+    "category": "slide",
+    "title_hint": "Devoluciones De Recibos",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/testeo-y-ejecucion-de-campanas-809",
+    "category": "slide",
+    "title_hint": "Testeo Y Ejecucion De Campanas",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/modelos-de-hacienda-612",
+    "category": "slide",
+    "title_hint": "Modelos De Hacienda",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/proyectos-y-parte-de-horas-810",
+    "category": "slide",
+    "title_hint": "Proyectos Y Parte De Horas",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/libro-de-iva-613",
+    "category": "slide",
+    "title_hint": "Libro De Iva",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/etapas-y-estado-del-proyecto-811",
+    "category": "slide",
+    "title_hint": "Etapas Y Estado Del Proyecto",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/modelo-347-614",
+    "category": "slide",
+    "title_hint": "Modelo 347",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/personaliza-tu-proyecto-812",
+    "category": "slide",
+    "title_hint": "Personaliza Tu Proyecto",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/modelos-303-349-111-y-115-615",
+    "category": "slide",
+    "title_hint": "Modelos 303 349 111 Y 115",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/informes-en-proyectos-813",
+    "category": "slide",
+    "title_hint": "Informes En Proyectos",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/pagos-en-facturas-y-conciliaciones-bancarias-602",
+    "category": "slide",
+    "title_hint": "Pagos En Facturas Y Conciliaciones Bancarias",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/costes-partes-de-horas-facturas-de-proveedor-y-rentabilidad-814",
+    "category": "slide",
+    "title_hint": "Costes Partes De Horas Facturas De Proveedor Y Rentabilidad",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/como-medir-rentabilidad-de-un-proyecto-815",
+    "category": "slide",
+    "title_hint": "Como Medir Rentabilidad De Un Proyecto",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/registrar-y-facturar-el-tiempo-dedicado-a-las-tareas-816",
+    "category": "slide",
+    "title_hint": "Registrar Y Facturar El Tiempo Dedicado A Las Tareas",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/gastos-en-proyectos-817",
+    "category": "slide",
+    "title_hint": "Gastos En Proyectos",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/recordatorios-partes-de-horas-818",
+    "category": "slide",
+    "title_hint": "Recordatorios Partes De Horas",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/planificacion-de-proyectos-819",
+    "category": "slide",
+    "title_hint": "Planificacion De Proyectos",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/tareas-820",
+    "category": "slide",
+    "title_hint": "Tareas",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/tareas-recurrentes-821",
+    "category": "slide",
+    "title_hint": "Tareas Recurrentes",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/subtareas-822",
+    "category": "slide",
+    "title_hint": "Subtareas",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/dependencias-de-tareas-823",
+    "category": "slide",
+    "title_hint": "Dependencias De Tareas",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/creacion-de-tareas-a-partir-de-pedidos-de-cliente-824",
+    "category": "slide",
+    "title_hint": "Creacion De Tareas A Partir De Pedidos De Cliente",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/automatizaciones-825",
+    "category": "slide",
+    "title_hint": "Automatizaciones",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/contabilidad-828",
+    "category": "slide",
+    "title_hint": "Contabilidad",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/plan-de-cuentas-829",
+    "category": "slide",
+    "title_hint": "Plan De Cuentas",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/cuentas-en-productos-y-categorias-de-productos-833",
+    "category": "slide",
+    "title_hint": "Cuentas En Productos Y Categorias De Productos",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/cuentas-de-clientes-y-proveedores-837",
+    "category": "slide",
+    "title_hint": "Cuentas De Clientes Y Proveedores",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/impuestos-836",
+    "category": "slide",
+    "title_hint": "Impuestos",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/posiciones-fiscales-838",
+    "category": "slide",
+    "title_hint": "Posiciones Fiscales",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/diarios-contables-839",
+    "category": "slide",
+    "title_hint": "Diarios Contables",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/pago-completo-840",
+    "category": "slide",
+    "title_hint": "Pago Completo",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/pago-parcial-846",
+    "category": "slide",
+    "title_hint": "Pago Parcial",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/firmas-830",
+    "category": "slide",
+    "title_hint": "Firmas",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/firmas-831",
+    "category": "slide",
+    "title_hint": "Firmas",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/slide/firmas-20-832",
+    "category": "slide",
+    "title_hint": "Firmas 20",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides",
+    "category": "page",
+    "title_hint": "Slides",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/profile/users",
+    "category": "page",
+    "title_hint": "Users",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/profile/ranks_badges",
+    "category": "page",
+    "title_hint": "Ranks Badges",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  },
+  {
+    "url": "https://portal.dynapps.es/slides/all",
+    "category": "slide",
+    "title_hint": "All",
+    "lastmod": "",
+    "priority": 0.5,
+    "changefreq": ""
+  }
+]

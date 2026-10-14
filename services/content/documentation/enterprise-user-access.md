@@ -99,7 +99,7 @@ From the CLI:
 
 ```bash
 systemprompt admin users api-key issue --user <user> --name ci-runner \
-  --model claude-sonnet-5 \
+  --model claude-sonnet-5-5 \
   --budget-microdollars 50000000 --max-requests 2000 --window-seconds 86400 \
   --scope project=<project-id>
 systemprompt admin users api-key list --user <user>     # prints each key's limits and scopes

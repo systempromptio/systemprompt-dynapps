@@ -7,6 +7,7 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
+use super::evals_yaml::EvalsConfig;
 use crate::error::{FarmError, FarmResult};
 
 pub const FARMS_FILE: &str = "web/config/agent-farms.yaml";
@@ -18,6 +19,8 @@ pub struct FarmsDoc {
     pub farms: Vec<FarmDef>,
     #[serde(default)]
     pub runner: Option<RunnerConfig>,
+    #[serde(default)]
+    pub evals: Option<EvalsConfig>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -159,6 +162,9 @@ impl FarmsDoc {
         }
         if self.runner.as_ref().is_some_and(|r| r.max_concurrent == 0) {
             return Err(invalid("runner.max_concurrent must be at least 1"));
+        }
+        if let Some(evals) = &self.evals {
+            evals.validate(FARMS_FILE)?;
         }
         Ok(())
     }

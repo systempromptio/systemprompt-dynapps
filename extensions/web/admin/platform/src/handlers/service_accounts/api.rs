@@ -1,5 +1,6 @@
 //! JSON mutations behind the service-account pages: create, delete, and
-//! attach / rotate / remove a machine credential. Admin only.
+//! attach / rotate / remove a machine credential. Admin only; every credential
+//! change writes a `connector_credential_audit` row naming the admin.
 
 use std::sync::Arc;
 
@@ -14,6 +15,7 @@ use systemprompt::identifiers::UserId;
 use crate::repositories::connectors::machine_credentials::{
     count_machine_credentials, delete_machine_credential,
 };
+use crate::repositories::connectors::odoo_user_links::{CredentialAudit, insert_credential_audit};
 use crate::repositories::service_account_group::insert_service_account_membership;
 use crate::services::connector_oauth::Provider;
 use crate::services::machine_credentials::{self, AttachCredential, Holder};
@@ -104,7 +106,7 @@ pub(crate) async fn attach_credential(
 ) -> AdminResult<Response> {
     require_admin(&user_ctx)?;
     let provider = provider_slug(provider)?;
-    machine_credentials::attach(
+    let attached = machine_credentials::attach(
         &pool,
         &accounts,
         Holder {
@@ -115,8 +117,18 @@ pub(crate) async fn attach_credential(
         user_ctx.user_id.as_str(),
     )
     .await?;
+    insert_credential_audit(
+        &pool,
+        CredentialAudit {
+            subject: &user_id,
+            provider: &provider,
+            action: attached.as_str(),
+            actor: &user_ctx.user_id,
+        },
+    )
+    .await?;
     tracing::info!(target: "connector_broker", actor = %user_ctx.user_id, user_id = %user_id,
-        provider, "machine credential attached");
+        provider, action = attached.as_str(), "machine credential attached");
     Ok(StatusCode::NO_CONTENT.into_response())
 }
 
@@ -130,6 +142,16 @@ pub(crate) async fn remove_credential(
     if !delete_machine_credential(&pool, &user_id, &provider).await? {
         return Err(AdminError::NotFound("No such credential".to_owned()));
     }
+    insert_credential_audit(
+        &pool,
+        CredentialAudit {
+            subject: &user_id,
+            provider: &provider,
+            action: "remove",
+            actor: &user_ctx.user_id,
+        },
+    )
+    .await?;
     tracing::info!(target: "connector_broker", actor = %user_ctx.user_id, user_id = %user_id,
         provider, "machine credential removed");
     Ok(StatusCode::NO_CONTENT.into_response())

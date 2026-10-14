@@ -93,7 +93,21 @@ text_enum!(TriggeredVia {
     Dashboard => "dashboard",
     Api => "api",
     Eval => "eval",
+    Mcp => "mcp",
+    Console => "console",
+    Demo => "demo",
 });
+
+impl TriggeredVia {
+    pub const ALL: [Self; 6] = [
+        Self::Dashboard,
+        Self::Api,
+        Self::Eval,
+        Self::Mcp,
+        Self::Console,
+        Self::Demo,
+    ];
+}
 
 text_enum!(EvalRunStatus {
     Queued => "queued",

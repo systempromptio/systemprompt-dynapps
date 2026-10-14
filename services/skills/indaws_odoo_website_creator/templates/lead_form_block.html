@@ -1,0 +1,73 @@
+<!--
+  lead_form_block.html — s_website_form (MODERN Odoo 18/19 structure) → crm.lead.
+
+  Drop this <section> inside #wrap.oe_structure. On submit, /website/form/ creates a crm.lead.
+  Requires `website_crm` installed (ensure_website_crm.py). For OTHER actions (email, task,
+  ticket, job, custom model) change `data-model_name` + the fields + install the module — see
+  references/website-forms-to-leads.md (table of all action types).
+
+  Modern structure: each field wraps label + input in an inner `row s_col_no_resize`; `data-fill-with`
+  + `data-pre-fill="true"` enable prefill; the model-required field (crm.lead.name = "Subject") uses
+  `s_website_form_model_required`. Only post WHITELISTED fields. Success → /contactus-thank-you
+  (Odoo's built-in thank-you page; do NOT create a new one).
+
+  Placeholders: {{SUCCESS_PAGE}} (default /contactus-thank-you), {{MODEL}} (default crm.lead).
+-->
+<section class="s_website_form pt48 pb48" data-snippet="s_website_form" data-name="Contact">
+  <div class="container">
+    <form action="/website/form/" method="post" enctype="multipart/form-data"
+          class="o_mark_required" data-mark="*" data-pre-fill="true"
+          data-model_name="{{MODEL}}"
+          data-success-mode="redirect" data-success-page="{{SUCCESS_PAGE}}">
+      <div class="s_website_form_rows row s_col_no_bgcolor">
+
+        <div data-name="Field" class="s_website_form_field mb-3 col-12 col-md-6 s_website_form_required" data-type="char">
+          <div class="row s_col_no_resize s_col_no_bgcolor">
+            <label class="col-form-label s_website_form_label" for="iw_contact_name"><span class="s_website_form_label_content">Name</span><span class="s_website_form_mark"> *</span></label>
+            <div class="col-sm"><input class="form-control s_website_form_input" type="text" name="contact_name" required="1" data-fill-with="name" id="iw_contact_name"/></div>
+          </div>
+        </div>
+
+        <div data-name="Field" class="s_website_form_field mb-3 col-12 col-md-6 s_website_form_required" data-type="email">
+          <div class="row s_col_no_resize s_col_no_bgcolor">
+            <label class="col-form-label s_website_form_label" for="iw_email_from"><span class="s_website_form_label_content">Email</span><span class="s_website_form_mark"> *</span></label>
+            <div class="col-sm"><input class="form-control s_website_form_input" type="email" name="email_from" required="1" data-fill-with="email" id="iw_email_from"/></div>
+          </div>
+        </div>
+
+        <div data-name="Field" class="s_website_form_field mb-3 col-12 col-md-6" data-type="tel">
+          <div class="row s_col_no_resize s_col_no_bgcolor">
+            <label class="col-form-label s_website_form_label" for="iw_phone"><span class="s_website_form_label_content">Phone</span></label>
+            <div class="col-sm"><input class="form-control s_website_form_input" type="tel" name="phone" data-fill-with="phone" id="iw_phone"/></div>
+          </div>
+        </div>
+
+        <div data-name="Field" class="s_website_form_field mb-3 col-12 col-md-6" data-type="char">
+          <div class="row s_col_no_resize s_col_no_bgcolor">
+            <label class="col-form-label s_website_form_label" for="iw_partner_name"><span class="s_website_form_label_content">Company</span></label>
+            <div class="col-sm"><input class="form-control s_website_form_input" type="text" name="partner_name" data-fill-with="commercial_company_name" id="iw_partner_name"/></div>
+          </div>
+        </div>
+
+        <div data-name="Field" class="s_website_form_field mb-3 col-12 s_website_form_model_required" data-type="char">
+          <div class="row s_col_no_resize s_col_no_bgcolor">
+            <label class="col-form-label s_website_form_label" for="iw_name"><span class="s_website_form_label_content">Subject</span><span class="s_website_form_mark"> *</span></label>
+            <div class="col-sm"><input class="form-control s_website_form_input" type="text" name="name" required="" id="iw_name"/></div>
+          </div>
+        </div>
+
+        <div data-name="Field" class="s_website_form_field mb-3 col-12 s_website_form_required" data-type="text">
+          <div class="row s_col_no_resize s_col_no_bgcolor">
+            <label class="col-form-label s_website_form_label" for="iw_description"><span class="s_website_form_label_content">What do you need?</span></label>
+            <div class="col-sm"><textarea class="form-control s_website_form_input" name="description" id="iw_description" rows="4"></textarea></div>
+          </div>
+        </div>
+
+        <div data-name="Submit Button" class="s_website_form_submit col-12">
+          <a href="#" role="button" class="btn btn-primary s_website_form_send">Send</a>
+          <span id="s_website_form_result"></span>
+        </div>
+      </div>
+    </form>
+  </div>
+</section>

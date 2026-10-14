@@ -1,0 +1,35 @@
+{{!--
+  Recent eval runs: when, which suite, what triggered it (API, MCP, console,
+  demo), its status and tallies, the mean judge score and the cost. Each row
+  opens the eval run page, which lists every case's assertions and the
+  judge's rationale. Usage: {{> farm/eval-runs-recent rows=… caption="…"}}
+  (EvalRunItemView[]).
+--}}
+{{#> components/table caption=caption modifier="sp-farm-evals__recent" table_mode="scroll"}}
+  <thead><tr>
+    <th scope="col">Started</th>
+    <th scope="col">Suite</th>
+    <th scope="col">Trigger</th>
+    <th scope="col">Status</th>
+    <th class="sp-table__cell--num" scope="col">Passed</th>
+    <th class="sp-table__cell--num" scope="col">Failed</th>
+    <th class="sp-table__cell--num" scope="col">Errored</th>
+    <th class="sp-table__cell--num" scope="col">Score</th>
+    <th class="sp-table__cell--num" scope="col">Cost</th>
+  </tr></thead>
+  <tbody>
+    {{#each rows}}
+    <tr class="sp-table__row">
+      <td><a class="sp-link" href="{{this.href}}">{{this.relative}}</a></td>
+      <td class="sp-table__cell--mono">{{this.suite_id}}</td>
+      <td>{{> components/badge tone=this.trigger.tone text=this.trigger.text}}</td>
+      <td>{{> components/badge tone=this.status.tone text=this.status.text}}</td>
+      <td class="sp-table__cell--num">{{this.passed}}</td>
+      <td class="sp-table__cell--num">{{this.failed}}</td>
+      <td class="sp-table__cell--num">{{this.errored}}</td>
+      <td class="sp-table__cell--num"><span class="sp-farm-evals__score sp-farm-evals__score--{{this.score_tone}}">{{this.score_display}}</span></td>
+      <td class="sp-table__cell--num">{{this.cost}}</td>
+    </tr>
+    {{/each}}
+  </tbody>
+{{/components/table}}

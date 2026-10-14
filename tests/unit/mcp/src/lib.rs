@@ -13,6 +13,10 @@
 //! - Gemini declarability of every listed tool's input schema
 //! - the `agent-farm` server's tool surface, schemas, run authorisation and the
 //!   administrator-only `all` scope
+//! - the `odoo` server: JSON-RPC envelope handling, search domains, the
+//!   knowledge, quote-to-cash and work planes' shaping, its tool contract, and
+//!   the guarded tools — the required `reason`, demo scope, and the
+//!   posted-invoice refusal — exercised against an in-process Odoo
 
 #[cfg(test)]
 mod access_policy;
@@ -41,3 +45,38 @@ mod typed_activity;
 mod typed_inputs;
 #[cfg(all(test, unix))]
 mod typed_users_handler;
+
+#[cfg(test)]
+mod odoo_apps;
+#[cfg(test)]
+mod odoo_attachment_kind;
+#[cfg(test)]
+mod odoo_attachments;
+#[cfg(test)]
+mod odoo_authority;
+#[cfg(test)]
+mod odoo_domains;
+#[cfg(test)]
+mod odoo_error;
+#[cfg(test)]
+mod odoo_format;
+#[cfg(test)]
+mod odoo_guard;
+#[cfg(test)]
+mod odoo_guarded;
+#[cfg(test)]
+mod odoo_lead_table;
+#[cfg(test)]
+mod odoo_mock;
+#[cfg(test)]
+mod odoo_notes;
+#[cfg(test)]
+mod odoo_rpc;
+#[cfg(test)]
+mod odoo_sales;
+#[cfg(test)]
+mod odoo_text;
+#[cfg(test)]
+mod odoo_tools;
+#[cfg(test)]
+mod odoo_work;

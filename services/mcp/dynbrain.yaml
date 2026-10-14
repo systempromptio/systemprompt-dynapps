@@ -1,0 +1,32 @@
+# DynBrain, the Dynapps RAG knowledge system, hosted on the Dynapps portal
+# (portal.dynapps.es) and reached through this gateway so every tool call
+# passes the governance chain before it leaves.
+#
+# Same issuer and flow as `dynapps-odoo` (services/mcp/dynapps-odoo.yaml):
+# per-user generic OAuth with dynamic client registration, PKCE S256 and the
+# `odoo` scope. It is a separate connector because the portal publishes a
+# separate protected resource for it, and a grant is bound to its resource.
+# The path segment after /mcp/ is a routing id, not a credential.
+#
+# Who may reach it is declared in services/access-control/rules.yaml
+# (`mcp_server/dynbrain`). See docs/CONFIGURED-CONNECTORS.md.
+mcp_servers:
+  dynbrain:
+    type: external
+    endpoint: https://portal.dynapps.es/mcp/HHqBulo1Jyae9zA-IE95WA
+    enabled: true
+    tool_policy: allow
+    display_in_web: false
+    removable: true
+    description: DynBrain, the Dynapps RAG knowledge system on portal.dynapps.es, queried as the signed-in user's own Odoo account
+    oauth:
+      required: false
+      scopes:
+      - user
+      audience: mcp
+      client_id: null
+    connector:
+      adapter: generic
+      display_name: DynBrain
+      scopes:
+      - odoo

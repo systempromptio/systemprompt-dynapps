@@ -1,0 +1,81 @@
+{
+  "_layer": "country",
+  "_status": "skeleton — inert until Phase-1 engine composition (see references/add_be_ch_plan.md)",
+  "_ch_languages": "VERIFICADO: dynapps.ch = Romandía, FR + EN únicamente (oficinas Bulle/Fribourg, Martigny/Valais). NO existe sitio DE/IT suizo → CH se sirve con fr-CH + en-CH (capas idioma fr/en existentes). de-CH/it-CH NO aplican.",
+  "odoo_url": "<<VERIFY: Odoo URL de la entidad CH dedicada>>",
+  "odoo_db": "<<VERIFY: DB CH>>",
+  "impl_template_name": "Implantación v2",
+  "impl_template_id": "<<VERIFY from Odoo: id de sale.order.template por NOMBRE en la DB CH — nunca 15>>",
+  "sales_url_pattern": "{odoo_url}/odoo/sales/{id}",
+  "team_email_domain": "<<VERIFY: dominio email equipo CH, p.ej. dynapps.ch>>",
+  "core_module_label": "Dynapps Core",
+  "core_module_set_exists": true,
+  "cases_base_url": "https://www.dynapps.ch/{lang}/cases",
+  "_cases_base_url_note": "VERIFICADO HTTP 200: {lang} ∈ fr|en en dynapps.ch (de/it dan 404). URL de caso = cases_base_url + slug.",
+  "industries": {
+    "construction": {
+      "fr": "Construction",
+      "en": "Construction"
+    },
+    "manufacturing": {
+      "fr": "Fabrication",
+      "en": "Manufacturing"
+    },
+    "food-beverage": {
+      "fr": "Alimentation et boissons",
+      "en": "Food & beverage"
+    },
+    "pharma-biotech": {
+      "fr": "Pharmacie et biotechnologies",
+      "en": "Pharma & biotech"
+    },
+    "retail-wholesale": {
+      "fr": "Vente au détail et en gros",
+      "en": "Retail & wholesale"
+    },
+    "professional-services": {
+      "fr": "Services professionnels",
+      "en": "Professional services"
+    },
+    "financial-services": {
+      "fr": "Services financiers",
+      "en": "Financial services"
+    },
+    "energy-utilities": {
+      "fr": "Énergie et services publics",
+      "en": "Energy & utilities"
+    }
+  },
+  "_industries_note": "Taxonomía EXACTA de dynapps.ch (nav fr/en, verificado en vivo 2026-07-17). SIN 'laboratories' ni 'logistics': dynapps.ch no las lista. Valores por-idioma porque CH compone fr-CH/en-CH. Ids canónicos en shared/industries.json.",
+  "contact": {
+    "email": "<<VERIFY>>",
+    "web": "www.dynapps.ch",
+    "tel": "<<VERIFY>>"
+  },
+  "odoo_partner_manager": {
+    "source": "verify_from_odoo",
+    "name": "<<VERIFY>>",
+    "email": "<<VERIFY>>"
+  },
+  "legal_entity": {
+    "name": "<<VERIFY: nombre entidad legal CH dedicada>>",
+    "vat": "<<VERIFY: nº UID / MWST (CHE-…)>>",
+    "address": "<<VERIFY: domicilio social CH>>",
+    "governing_law": "Schweiz / Suisse / Svizzera"
+  },
+  "offices": [
+    "Suisse",
+    "Belgique",
+    "Pays-Bas",
+    "France",
+    "Espagne"
+  ],
+  "local_country": "Suisse",
+  "credibility": {
+    "implementations": "<<VERIFY>>",
+    "claims_text": "Partenaire Odoo mondial",
+    "experts": 280,
+    "countries": 52,
+    "iso27001": false
+  }
+}

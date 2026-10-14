@@ -1,0 +1,22 @@
+{
+  "kb_version": "2.5.0",
+  "written": "2026-07-14",
+  "repos": {
+    "/opt/odoo/odoo18": {
+      "sha": "99f5a33c64f84c953eae095ef696adc9dd1dbff8",
+      "date": "2026-07-13 22:54:56 +0000"
+    },
+    "/opt/odoo_enterprise/18": {
+      "sha": "ae4b461edb1d6b49c25d4e264380e7ae4b67f10c",
+      "date": "2026-07-14 03:48:21 +0000"
+    },
+    "/opt/odoo/odoo19": {
+      "sha": "d1d1610332a1596d026fb0a42ec236d1a79c71cc",
+      "date": "2026-07-14 04:19:33 +0000"
+    },
+    "/opt/odoo_enterprise/19": {
+      "sha": "c07a99b6b303bc1cdfac3446f9edb7bf064ed19e",
+      "date": "2026-07-14 04:19:35 +0000"
+    }
+  }
+}

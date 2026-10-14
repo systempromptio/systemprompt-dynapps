@@ -53,7 +53,7 @@ label="$(docker image inspect "$IMAGE" -f '{{index .Config.Labels "org.openconta
 [ -n "$label" ] && [ "$label" = "$VERSION" ] && ok "image label version $label matches the tag" || bad "image version label '$label' ≠ tag '$VERSION'"
 bv="$(inimg /app/bin/systemprompt "$IMAGE" --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)"
 [ "$bv" = "$VERSION" ] && ok "binary inside the image reports $bv" || bad "binary reports '$bv', expected $VERSION"
-for b in systemprompt-mcp-agent systemprompt-mcp-agent-farm; do
+for b in systemprompt-mcp-agent systemprompt-mcp-agent-farm systemprompt-mcp-odoo; do
     docker run --rm --entrypoint test "$IMAGE" -x "/app/bin/$b" 2>/dev/null && ok "MCP binary $b present" || bad "MCP binary $b missing (boot would fail)"
 done
 n="$(docker run --rm --entrypoint sh "$IMAGE" -c 'ls /app/storage/files/downloads | wc -l' 2>/dev/null | tr -d ' ')"

@@ -1,11 +1,14 @@
-//! Starting and cancelling an eval run. Starting records the eval run and a
-//! pending result per case, then hands the cases to a background task that
-//! runs them one at a time and closes the eval run with its tallies.
+//! Starting and cancelling an eval run. Starting records the eval run (with
+//! the surface that triggered it) and a pending result per case, then hands
+//! the cases to a background task that runs them one at a time and closes
+//! the eval run with its tallies.
 
 use std::collections::HashSet;
 use std::sync::{Arc, LazyLock, Mutex};
 
 use systemprompt::identifiers::UserId;
+
+use sqlx::PgPool;
 
 use super::case::{CaseJob, CaseOutcome, run_case};
 use super::judge::EvalJudge;
@@ -21,11 +24,11 @@ use crate::types::{
 
 static CANCELLED: LazyLock<Mutex<HashSet<String>>> = LazyLock::new(|| Mutex::new(HashSet::new()));
 
-fn is_cancelled(id: &EvalRunId) -> bool {
+pub(super) fn is_cancelled(id: &EvalRunId) -> bool {
     CANCELLED.lock().is_ok_and(|set| set.contains(id.as_str()))
 }
 
-fn set_cancelled(id: &EvalRunId, on: bool) {
+pub(super) fn set_cancelled(id: &EvalRunId, on: bool) {
     if let Ok(mut set) = CANCELLED.lock() {
         if on {
             set.insert(id.as_str().to_owned());
@@ -36,16 +39,16 @@ fn set_cancelled(id: &EvalRunId, on: bool) {
 }
 
 #[derive(Debug, Default)]
-struct Tally {
-    passed: i32,
-    failed: i32,
-    errored: i32,
+pub(super) struct Tally {
+    pub(super) passed: i32,
+    pub(super) failed: i32,
+    pub(super) errored: i32,
     scores: Vec<i32>,
     cost_microdollars: i64,
 }
 
 impl Tally {
-    fn record(&mut self, outcome: &CaseOutcome) {
+    pub(super) fn record(&mut self, outcome: &CaseOutcome) {
         match outcome.status {
             Some(EvalResultStatus::Passed) => self.passed += 1,
             Some(EvalResultStatus::Failed) => self.failed += 1,
@@ -55,7 +58,7 @@ impl Tally {
         self.cost_microdollars += outcome.cost_microdollars;
     }
 
-    fn mean_score(&self) -> Option<f64> {
+    pub(super) fn mean_score(&self) -> Option<f64> {
         (!self.scores.is_empty()).then(|| {
             self.scores.iter().map(|s| f64::from(*s)).sum::<f64>() / self.scores.len() as f64
         })
@@ -118,6 +121,7 @@ pub async fn start_eval_run(
             farm_id: &farm_id,
             agent_id: &suite.agent_id,
             user_id: &user_id,
+            triggered_via,
         },
     )
     .await?;
@@ -136,12 +140,7 @@ pub async fn start_eval_run(
             eval_run_id: &id,
         };
         if let Err(err) = drive(&state, judge, &scope, planned).await {
-            tracing::error!(eval_run = id.as_str(), error = %err, "eval run failed");
-            if let Err(e) =
-                evals::update_eval_run_status(&state.pool, &id, EvalRunStatus::Failed).await
-            {
-                tracing::error!(eval_run = id.as_str(), error = %e, "eval run status not recorded");
-            }
+            fail_eval_run(&state.pool, &id, &err).await;
         }
         set_cancelled(&id, false);
     });
@@ -176,29 +175,45 @@ async fn drive(
             case,
             result_id,
         };
-        let outcome = match run_case(&job).await {
-            Ok(outcome) => outcome,
-            Err(err) => {
-                let detail = serde_json::json!([]);
-                let message = err.to_string();
-                evals::update_eval_result_outcome(
-                    pool,
-                    result_id,
-                    &evals::EvalOutcomeUpdate {
-                        status: EvalResultStatus::Errored,
-                        assertions: &detail,
-                        judge_score: None,
-                        judge_rationale: Some(message.as_str()),
-                    },
-                )
-                .await?;
-                CaseOutcome::default()
-            },
-        };
+        let outcome = record_outcome(pool, result_id, run_case(&job).await).await?;
         tally.record(&outcome);
         evals::update_eval_run_counts(pool, eval_run_id, tally.passed, tally.failed, tally.errored)
             .await?;
     }
+    close_eval_run(pool, eval_run_id, &tally).await
+}
+
+pub(super) async fn record_outcome(
+    pool: &PgPool,
+    result_id: &EvalResultId,
+    settled: FarmResult<CaseOutcome>,
+) -> FarmResult<CaseOutcome> {
+    match settled {
+        Ok(outcome) => Ok(outcome),
+        Err(err) => {
+            let detail = serde_json::json!([]);
+            let message = err.to_string();
+            evals::update_eval_result_outcome(
+                pool,
+                result_id,
+                &evals::EvalOutcomeUpdate {
+                    status: EvalResultStatus::Errored,
+                    assertions: &detail,
+                    judge_score: None,
+                    judge_rationale: Some(message.as_str()),
+                },
+            )
+            .await?;
+            Ok(CaseOutcome::default())
+        },
+    }
+}
+
+pub(super) async fn close_eval_run(
+    pool: &PgPool,
+    eval_run_id: &EvalRunId,
+    tally: &Tally,
+) -> FarmResult<()> {
     let status = if is_cancelled(eval_run_id) {
         EvalRunStatus::Cancelled
     } else {
@@ -213,6 +228,13 @@ async fn drive(
     )
     .await?;
     Ok(())
+}
+
+pub(super) async fn fail_eval_run(pool: &PgPool, id: &EvalRunId, err: &FarmError) {
+    tracing::error!(eval_run = id.as_str(), error = %err, "eval run failed");
+    if let Err(e) = evals::update_eval_run_status(pool, id, EvalRunStatus::Failed).await {
+        tracing::error!(eval_run = id.as_str(), error = %e, "eval run status not recorded");
+    }
 }
 
 pub async fn cancel_eval_run(state: &FarmState, eval_run_id: &EvalRunId) -> FarmResult<()> {

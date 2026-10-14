@@ -42,7 +42,8 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
     && mkdir -p /out/bin \
     && cp target/release/systemprompt /out/bin/ \
     && cp target/release/systemprompt-mcp-agent /out/bin/ \
-    && cp target/release/systemprompt-mcp-agent-farm /out/bin/
+    && cp target/release/systemprompt-mcp-agent-farm /out/bin/ \
+    && cp target/release/systemprompt-mcp-odoo /out/bin/
 
 # Binaries only — `docker build --target artifacts --output type=local,dest=…`
 # gives the release job its server tarball from the same compile.

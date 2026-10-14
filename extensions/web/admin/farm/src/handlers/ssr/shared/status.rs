@@ -40,6 +40,9 @@ pub fn trigger_badge(via: &str) -> BadgeView {
         Some(TriggeredVia::Dashboard) => ("info", "Dashboard"),
         Some(TriggeredVia::Api) => ("accent", "API"),
         Some(TriggeredVia::Eval) => ("muted", "Eval"),
+        Some(TriggeredVia::Mcp) => ("accent", "MCP"),
+        Some(TriggeredVia::Console) => ("info", "Console"),
+        Some(TriggeredVia::Demo) => ("warn", "Demo"),
         None => ("muted", "Unknown"),
     };
     BadgeView::new(tone, text, via)

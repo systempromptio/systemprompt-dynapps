@@ -1,0 +1,10 @@
+{
+  "code": "en",
+  "schema_version": 1,
+  "name": "International / English",
+  "lang_tag": "en",
+  "odoo_lang": "en_US",
+  "fallback": null,
+  "output_language": "correct professional English (British/international spelling; clear, concise business tone; second person 'you')",
+  "pack_status": "reference"
+}

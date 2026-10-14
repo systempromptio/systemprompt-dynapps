@@ -1,0 +1,302 @@
+{
+  "_comment": "Language-neutral international success-case library for quotation-builder-value-based. Structural join data ONLY: id, canonical cliente, slug, url, image, scope, NEUTRAL sector tokens, pain_archetype. Localized display+scoring (resultado, metric, localized sectors, cliente override) live per pack in matching.cases.case_translations[<id>]. match_cases.py reads structure from here and scores/renders in the active locale.",
+  "_base_url": "https://www.dynapps.es/en/cases",
+  "_base_url_TEMP": false,
+  "_base_url_note": "Producción dynapps.es (Spain deployment). El link por idioma lo compone match_cases desde instance.cases_base_url del pack activo (en -> dynapps.es/en/cases, es -> dynapps.es/es/cases); este _base_url es solo el fallback cuando el pack no declara cases_base_url. slugs verificados HTTP 200 en 2026-07. La 'image' es la hero (og:image) de cada caso en datocms; se referencia directa o se incrusta downscaled (ver match_cases + generate_proposal).",
+  "pain_archetypes": {
+    "multi-entity": "Consolidación multi-sociedad / multi-país / multi-entidad",
+    "excel-legacy": "Sustituir Excel, hojas sueltas o un sistema legacy/DIY",
+    "b2b-webshop": "Distribución B2B y adopción de tienda online / portal de pedidos",
+    "fast-golive": "Implantación rápida / muchos departamentos en pocos meses",
+    "scaling": "Plataforma que escala con un crecimiento fuerte del negocio"
+  },
+  "cases": [
+    {
+      "id": "50five",
+      "cliente": "50Five",
+      "slug": "/50five",
+      "url": "https://www.dynapps.es/en/cases/50five",
+      "image": "https://www.datocms-assets.com/208685/1780915090-50five-installer-customer-evbox-pedestal.jpg?auto=format&fit=crop&w=1200&h=675&q=70",
+      "scope": "internacional",
+      "sectors": [
+        "energy",
+        "utilities",
+        "e-mobility",
+        "technical-retail"
+      ],
+      "pain_archetype": [
+        "multi-entity",
+        "scaling"
+      ]
+    },
+    {
+      "id": "sensorfact",
+      "cliente": "Sensorfact",
+      "slug": "/sensorfact",
+      "url": "https://www.dynapps.es/en/cases/sensorfact",
+      "image": "https://www.datocms-assets.com/208685/1780920678-energy-01.jpg?auto=format&fit=crop&w=1200&h=675&q=70",
+      "scope": "internacional",
+      "sectors": [
+        "energy",
+        "industry",
+        "industrial-saas"
+      ],
+      "pain_archetype": [
+        "excel-legacy",
+        "scaling"
+      ]
+    },
+    {
+      "id": "regiechatel",
+      "cliente": "Régie Châtel",
+      "slug": "/regiechatel",
+      "url": "https://www.dynapps.es/en/cases/regiechatel",
+      "image": "https://www.datocms-assets.com/208685/1780934729-pexels-anastasia-shuraeva-7647395.jpg?auto=format&fit=crop&w=1200&h=675&q=70",
+      "scope": "internacional",
+      "sectors": [
+        "financial-services",
+        "property-management",
+        "professional-services"
+      ],
+      "pain_archetype": [
+        "multi-entity",
+        "excel-legacy"
+      ]
+    },
+    {
+      "id": "cyclis",
+      "cliente": "Cyclis Bike Lease",
+      "slug": "/cyclisbikelease",
+      "url": "https://www.dynapps.es/en/cases/cyclisbikelease",
+      "image": "https://www.datocms-assets.com/208685/1780915895-cyclis-campagne-winter-web-135.jpg?auto=format&fit=crop&w=1200&h=675&q=70",
+      "scope": "internacional",
+      "sectors": [
+        "financial-services",
+        "renting",
+        "leasing",
+        "mobility"
+      ],
+      "pain_archetype": [
+        "excel-legacy",
+        "scaling"
+      ]
+    },
+    {
+      "id": "lonestar",
+      "cliente": "Lone Star Alpha Laboratories",
+      "slug": "/lonestaralphalaboratories",
+      "url": "https://www.dynapps.es/en/cases/lonestaralphalaboratories",
+      "image": "https://www.datocms-assets.com/208685/1780920774-pexels-pavel-danilyuk-8442509.jpg?auto=format&fit=crop&w=1200&h=675&q=70",
+      "scope": "internacional",
+      "sectors": [
+        "labs",
+        "health",
+        "regulated"
+      ],
+      "pain_archetype": [
+        "fast-golive",
+        "multi-entity"
+      ]
+    },
+    {
+      "id": "lfgparis",
+      "cliente": "LFG Paris",
+      "slug": "/lfgparis",
+      "url": "https://www.dynapps.es/en/cases/lfgparis",
+      "image": "https://www.datocms-assets.com/208685/1780921856-pexels-indraprojectsofficial-28570735.jpg?auto=format&fit=crop&w=1200&h=675&q=70",
+      "scope": "internacional",
+      "sectors": [
+        "labs",
+        "regulated"
+      ],
+      "pain_archetype": [
+        "excel-legacy"
+      ]
+    },
+    {
+      "id": "readytobrand",
+      "cliente": "Ready to Brand",
+      "slug": "/readytobrand",
+      "url": "https://www.dynapps.es/en/cases/readytobrand",
+      "image": "https://www.datocms-assets.com/208685/1780991118-ready_to_brand_cover.jpeg?auto=format&fit=crop&w=1200&h=675&q=70",
+      "scope": "internacional",
+      "sectors": [
+        "retail",
+        "wholesale",
+        "distribution"
+      ],
+      "pain_archetype": [
+        "multi-entity",
+        "scaling"
+      ]
+    },
+    {
+      "id": "primaproteccion",
+      "cliente": "Prima Protección",
+      "slug": "/primaproteccion",
+      "url": "https://www.dynapps.es/en/cases/primaproteccion",
+      "image": "https://www.datocms-assets.com/208685/1781011230-prima02.jpg?auto=format&fit=crop&w=1200&h=675&q=70",
+      "scope": "internacional",
+      "sectors": [
+        "retail",
+        "wholesale",
+        "distribution",
+        "ppe",
+        "workplace-safety"
+      ],
+      "pain_archetype": [
+        "b2b-webshop",
+        "excel-legacy"
+      ]
+    },
+    {
+      "id": "obiz",
+      "cliente": "Obiz Group",
+      "slug": "/obiz",
+      "url": "https://www.dynapps.es/en/cases/obiz",
+      "image": "https://www.datocms-assets.com/208685/1780922063-professional-services-03.jpg?auto=format&fit=crop&w=1200&h=675&q=70",
+      "scope": "internacional",
+      "sectors": [
+        "professional-services",
+        "consulting"
+      ],
+      "pain_archetype": [
+        "multi-entity"
+      ]
+    },
+    {
+      "id": "tmtechnics",
+      "cliente": "TM Technics",
+      "slug": "/tmtechnics",
+      "url": "https://www.dynapps.es/en/cases/tmtechnics",
+      "image": "https://www.datocms-assets.com/208685/1780916247-tm-technics-industriele-ventilatie-klimatisatie-en-afzuigtechnieken-lr-26-van-43.jpg?auto=format&fit=crop&w=1200&h=675&q=70",
+      "scope": "internacional",
+      "sectors": [
+        "construction",
+        "construccion",
+        "obra",
+        "metal-fabrication",
+        "fabricacion",
+        "metalica",
+        "manufacturing",
+        "montaje",
+        "estructuras"
+      ],
+      "pain_archetype": [
+        "excel-legacy"
+      ]
+    },
+    {
+      "id": "despraz",
+      "cliente": "Despraz SA",
+      "slug": "/despraz",
+      "url": "https://www.dynapps.es/en/cases/despraz",
+      "image": "https://www.datocms-assets.com/208685/1780932507-section-maintenancesupport2-683x1024.jpg?auto=format&fit=crop&w=1200&h=675&q=70",
+      "scope": "internacional",
+      "sectors": [
+        "construction",
+        "construccion",
+        "obras",
+        "prefabrication",
+        "prefabricacion",
+        "industrial",
+        "installation",
+        "instalaciones",
+        "piping",
+        "regulado"
+      ],
+      "pain_archetype": [
+        "excel-legacy",
+        "scaling"
+      ]
+    },
+    {
+      "id": "puratos",
+      "cliente": "Puratos",
+      "slug": "/puratos",
+      "url": "https://www.dynapps.es/en/cases/puratos",
+      "image": "https://www.datocms-assets.com/208685/1780921287-food-02.jpg?auto=format&fit=crop&w=1200&h=675&q=70",
+      "scope": "internacional",
+      "sectors": [
+        "manufacturing",
+        "fabricacion",
+        "food",
+        "alimentacion",
+        "multi-plant",
+        "plantas",
+        "grupo",
+        "series"
+      ],
+      "pain_archetype": [
+        "multi-entity",
+        "fast-golive"
+      ]
+    },
+    {
+      "id": "tunergia",
+      "cliente": "Tunergia",
+      "slug": "/tunergia",
+      "url": "https://www.dynapps.es/en/cases/tunergia",
+      "image": "https://www.datocms-assets.com/208685/1780915090-50five-installer-customer-evbox-pedestal.jpg?auto=format&fit=crop&w=1200&h=675&q=70",
+      "scope": "local",
+      "sectors": [
+        "energy",
+        "utilities",
+        "energia",
+        "consulting",
+        "consultoria",
+        "energetica",
+        "servicios",
+        "multi-company"
+      ],
+      "pain_archetype": [
+        "multi-entity",
+        "excel-legacy"
+      ]
+    },
+    {
+      "id": "todotrofeo",
+      "cliente": "Todotrofeo",
+      "slug": "/todotrofeo",
+      "url": "https://www.dynapps.es/en/cases/todotrofeo",
+      "image": "https://www.datocms-assets.com/208685/1781006621-todotrofeo-5.png?auto=format&fit=crop&w=1200&h=675&q=70",
+      "scope": "local",
+      "sectors": [
+        "manufacturing",
+        "fabricacion",
+        "trophies",
+        "trofeos",
+        "medallas",
+        "custom",
+        "made-to-order",
+        "personalizacion"
+      ],
+      "pain_archetype": [
+        "excel-legacy"
+      ]
+    },
+    {
+      "id": "espacioorganico",
+      "cliente": "Espacio Orgánico",
+      "slug": "/espacioorganico",
+      "url": "https://www.dynapps.es/en/cases/espacioorganico",
+      "image": "https://www.datocms-assets.com/208685/1781005037-espacio01.jpg?auto=format&fit=crop&w=1200&h=675&q=70",
+      "scope": "local",
+      "sectors": [
+        "retail",
+        "comercio",
+        "food",
+        "alimentacion",
+        "organic",
+        "ecologico",
+        "ecommerce",
+        "tienda",
+        "supermercado"
+      ],
+      "pain_archetype": [
+        "excel-legacy",
+        "fast-golive"
+      ]
+    }
+  ]
+}

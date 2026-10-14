@@ -75,7 +75,7 @@ CREATE TABLE IF NOT EXISTS agent_farm_runs (
     agent_id TEXT NOT NULL,
     user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     triggered_via TEXT NOT NULL
-        CHECK (triggered_via IN ('dashboard', 'api', 'eval')),
+        CHECK (triggered_via IN ('dashboard', 'api', 'eval', 'mcp', 'console', 'demo')),
     host TEXT NOT NULL DEFAULT 'claude-code'
         CHECK (host IN ('claude-code', 'codex-cli', 'opencode', 'hermes')),
     status TEXT NOT NULL DEFAULT 'queued'
@@ -147,10 +147,13 @@ CREATE TABLE IF NOT EXISTS agent_farm_eval_runs (
     errored INTEGER NOT NULL DEFAULT 0,
     mean_score DOUBLE PRECISION,
     cost_microdollars BIGINT NOT NULL DEFAULT 0,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    triggered_via TEXT NOT NULL DEFAULT 'console'
+        CHECK (triggered_via IN ('dashboard', 'api', 'eval', 'mcp', 'console', 'demo'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_agent_farm_eval_runs_suite ON agent_farm_eval_runs(suite_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_agent_farm_eval_runs_agent ON agent_farm_eval_runs(farm_id, agent_id, created_at DESC);
 
 CREATE TABLE IF NOT EXISTS agent_farm_eval_results (
     id TEXT PRIMARY KEY,
@@ -175,8 +178,8 @@ SELECT r.user_id,
        COUNT(*) FILTER (WHERE r.status = 'succeeded')::BIGINT AS succeeded,
        COUNT(*) FILTER (WHERE r.status IN ('failed', 'timed_out'))::BIGINT AS failed,
        COUNT(*) FILTER (WHERE r.status IN ('queued', 'preparing', 'running'))::BIGINT AS active,
-       COUNT(*) FILTER (WHERE r.triggered_via = 'dashboard')::BIGINT AS dashboard_runs,
-       COUNT(*) FILTER (WHERE r.triggered_via = 'api')::BIGINT AS api_runs,
+       COUNT(*) FILTER (WHERE r.triggered_via IN ('dashboard', 'console', 'demo'))::BIGINT AS dashboard_runs,
+       COUNT(*) FILTER (WHERE r.triggered_via IN ('api', 'mcp'))::BIGINT AS api_runs,
        COUNT(*) FILTER (WHERE r.triggered_via = 'eval')::BIGINT AS eval_runs,
        COALESCE(SUM(r.cost_microdollars), 0)::BIGINT AS cost_microdollars,
        MODE() WITHIN GROUP (ORDER BY r.agent_id) AS favourite_agent,

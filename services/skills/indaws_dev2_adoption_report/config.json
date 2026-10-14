@@ -1,0 +1,9 @@
+{
+  "_comment": "dev2-adoption-report. Edita code_roots a los buildouts de cliente reales donde vive el código generado (ahí se cuenta la marca 'Made with'); soporta $PROJECTS_ROOT y ~. skills_root vacío = autodetección relativa al script (o define $SKILLS_ROOT).",
+  "code_roots": [
+    "${PROJECTS_ROOT}/indawsodoo"
+  ],
+  "skills_root": "",
+  "knowledge_repo": "ai-claude-odoo-knowledge",
+  "since": "90 days ago"
+}

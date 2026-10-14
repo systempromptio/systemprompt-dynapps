@@ -140,7 +140,7 @@ pub(crate) async fn launch_run_action(
         farm_id: farm.id.clone(),
         agent_id: agent.id.clone(),
         user_id: shell.user.user_id.clone(),
-        triggered_via: TriggeredVia::Dashboard,
+        triggered_via: TriggeredVia::Console,
         prompt: Some(checked.prompt),
         case_prompt: None,
         fixture: checked.fixture,

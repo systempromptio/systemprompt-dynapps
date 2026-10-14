@@ -1,0 +1,77 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "format.schema.json",
+  "title": "format.json",
+  "description": "Drives money format/parse, spreadsheet locale block, date rendering, period words (plan §2.2). Bounded currency axis: symbol_position∈{before,after}, decimals∈{0,2}, round_display∈{half_up}. Anything outside is an engine change, not config.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["currency", "spreadsheet", "date", "period_words"],
+  "properties": {
+    "currency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "code_label", "symbol", "symbol_position", "symbol_space", "decimals", "decimal_sep", "thousands_sep", "round_display", "round_step"],
+      "properties": {
+        "code": { "type": "string", "description": "ISO currency code, es='EUR'." },
+        "code_label": { "type": "string", "description": "Label shown in fineprint, es='EUR'." },
+        "symbol": { "type": "string", "description": "es='€'." },
+        "symbol_position": { "type": "string", "enum": ["before", "after"], "description": "es='after'." },
+        "symbol_space": { "type": "boolean", "description": "Space between amount and symbol. es=true." },
+        "decimals": { "type": "integer", "enum": [0, 2], "description": "Display decimals for whole-amount money. es=0." },
+        "decimal_sep": { "type": "string", "description": "es=','." },
+        "thousands_sep": { "type": "string", "description": "es='.'." },
+        "round_display": { "type": "string", "enum": ["half_up"], "description": "Documents the JS rounding rule; es='half_up'. Python eur() keeps int(round()) verbatim (BLOCKER B2) — this field is documentation, not a switch." },
+        "round_step": { "type": "integer", "minimum": 1, "description": "Nearest-N rounding step for headline totals. es=10." }
+      }
+    },
+    "spreadsheet": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["number_format_currency", "locale_block"],
+      "properties": {
+        "number_format_currency": { "type": "string", "description": "o-spreadsheet number format, es='#,##0[$€]'." },
+        "locale_block": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "code", "thousandsSeparator", "decimalSeparator", "dateFormat", "timeFormat", "formulaArgSeparator", "weekStart"],
+          "properties": {
+            "name": { "type": "string" },
+            "code": { "type": "string" },
+            "thousandsSeparator": { "type": "string" },
+            "decimalSeparator": { "type": "string" },
+            "dateFormat": { "type": "string" },
+            "timeFormat": { "type": "string" },
+            "formulaArgSeparator": { "type": "string" },
+            "weekStart": { "type": "integer", "minimum": 0, "maximum": 7 }
+          }
+        }
+      }
+    },
+    "date": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["proposal_format", "month_names"],
+      "properties": {
+        "proposal_format": { "type": "string", "description": "strftime pattern, es='%-d de %B de %Y'." },
+        "month_names": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 12,
+          "maxItems": 12,
+          "description": "12 month names in locale order."
+        }
+      }
+    },
+    "period_words": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["year", "month", "per_year_suffix", "per_month_suffix"],
+      "properties": {
+        "year": { "type": "array", "items": { "type": "string" }, "minItems": 1, "description": "Tokens that classify a price string as yearly (period_of)." },
+        "month": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "per_year_suffix": { "type": "string", "description": "es=' / año'." },
+        "per_month_suffix": { "type": "string", "description": "es=' / mes'." }
+      }
+    }
+  }
+}

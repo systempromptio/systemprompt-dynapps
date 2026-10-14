@@ -1,5 +1,9 @@
 //! Identifier and path rules shared by every farm definition parser, as
 //! `FARM.md` states them.
+//!
+//! A tool is a built-in ([`ALLOWED_TOOLS`]) or an MCP entry:
+//! `mcp__<server>`, `mcp__<server>__<tool>` or `mcp__<server>__*`;
+//! [`mcp_server_of`] names the server one refers to.
 
 use crate::error::{FarmError, FarmResult};
 
@@ -18,6 +22,32 @@ pub const ALLOWED_TOOLS: [&str; 13] = [
     "Task",
     "Skill",
 ];
+
+pub const MCP_TOOL_PREFIX: &str = "mcp__";
+
+fn mcp_name(value: &str, max: usize) -> bool {
+    !value.is_empty()
+        && value.len() <= max
+        && value
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-')
+}
+
+#[must_use]
+pub fn mcp_server_of(tool: &str) -> Option<&str> {
+    let rest = tool.strip_prefix(MCP_TOOL_PREFIX)?;
+    let (server, name) = match rest.split_once("__") {
+        Some((server, name)) => (server, Some(name)),
+        None => (rest, None),
+    };
+    let name_ok = name.is_none_or(|name| name == "*" || mcp_name(name, 128));
+    (mcp_name(server, 64) && name_ok).then_some(server)
+}
+
+#[must_use]
+pub fn is_allowed_tool(tool: &str) -> bool {
+    ALLOWED_TOOLS.contains(&tool) || mcp_server_of(tool).is_some()
+}
 
 pub const PERMISSION_MODES: [&str; 4] = ["default", "acceptEdits", "plan", "bypassPermissions"];
 

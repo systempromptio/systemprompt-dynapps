@@ -1,0 +1,28 @@
+marketplace:
+  id: dynapps-portal
+  name: "Dynapps — Portal"
+  description: "Dynapps' Odoo control and DynBrain knowledge servers from portal.dynapps.es, used as the Odoo account each person connects."
+  version: "1.0.0"
+  visibility: private
+  author:
+    name: Dynapps
+    email: ed@systemprompt.io
+  keywords:
+    - dynapps
+    - odoo
+    - dynbrain
+  license: proprietary
+  # Who reaches this workspace is declared in services/access-control/rules.yaml
+  # (entity marketplace/dynapps-portal).
+  plugins:
+    source: explicit
+    include:
+      - dynapps-portal
+  mcp_servers:
+    source: explicit
+    include:
+      - dynapps-odoo
+      - dynbrain
+  agents:
+    source: explicit
+    include: []

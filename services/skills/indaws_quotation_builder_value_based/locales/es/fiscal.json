@@ -1,0 +1,80 @@
+{
+  "vat_label": "IVA",
+  "seller_vat_number": "<ES VAT of the selling entity>",
+  "einvoicing": {
+    "mandate_status": "b2b_pending",
+    "authority": "AEAT",
+    "network": ["SII", "Verifactu"],
+    "formats": ["Facturae", "Factur-e"],
+    "phase_dates": [
+      {
+        "date": "2026-01-01",
+        "scope": "verifactu",
+        "applies_to": "contribuyentes del Impuesto sobre Sociedades",
+        "note": "Verifactu (RD 1007/2023) en vigor: sistemas informáticos de facturación certificados (SIF) con registros verificables ante la AEAT. Es facturación certificada, NO un mandato de intercambio de factura electrónica B2B."
+      },
+      {
+        "date": "2026-07-01",
+        "scope": "verifactu",
+        "applies_to": "resto de obligados tributarios (autónomos y demás)",
+        "note": "Extensión de la obligación Verifactu al resto de obligados tributarios."
+      },
+      {
+        "date": null,
+        "scope": "b2b",
+        "applies_to": "empresas y autónomos (Ley 18/2022 Crea y Crece, art. 12)",
+        "note": "Factura electrónica B2B obligatoria PENDIENTE de reglamento de desarrollo (sin fecha en vigor); tras su aprobación: 1 año para facturación >8M€, 2 años para el resto."
+      }
+    ],
+    "tolerances": null,
+    "threshold": null,
+    "detection_signals": ["factura", "verifactu", "sii", "factura-e"],
+    "copy_render": "Facturación certificada Verifactu (en vigor desde 2026) y SII integrados de serie con ventas y contabilidad, con soporte Facturae; preparado para la futura factura electrónica B2B (Ley Crea y Crece, reglamento pendiente)."
+  },
+  "chart_of_accounts": {
+    "code": "PGC",
+    "copy": "Contabilidad integrada con el plan contable español (PGCE, IVA): conciliación bancaria automática, gestión de activos fijos, cierres contables asistidos y todos los informes legales (balance, PyG, libro mayor, modelos fiscales)."
+  },
+  "tax_filings": [
+    {
+      "id": "sii",
+      "legal_name": "SII (Suministro Inmediato de Información)",
+      "authority": "AEAT",
+      "is_mandatory": false,
+      "threshold": "Facturación >6M€ o voluntario",
+      "odoo_module": null,
+      "signals": ["sii", "suministro inmediato", "aeat"]
+    },
+    {
+      "id": "sepa",
+      "legal_name": "Domiciliación SEPA",
+      "authority": null,
+      "is_mandatory": false,
+      "threshold": null,
+      "odoo_module": null,
+      "signals": ["domiciliación", "sepa", "mandato", "cobro bancario", "recibo domiciliado"]
+    },
+    {
+      "id": "modelo_349",
+      "legal_name": "Intrastat / modelo 349",
+      "authority": "AEAT",
+      "is_mandatory": false,
+      "threshold": null,
+      "odoo_module": null,
+      "signals": ["intrastat", "349", "intracomunitario"]
+    }
+  ],
+  "reverse_charge_clause": "Operación intracomunitaria: inversión del sujeto pasivo cuando proceda.",
+  "cross_border_notes": "OSS/IOSS relevante para eCommerce intra-UE.",
+  "carriers": ["SEUR", "MRW", "GLS", "paleteras"],
+  "payment_terms": {
+    "validity_days": 30,
+    "default_payment_method": "transferencia bancaria",
+    "late_payment_clause": null,
+    "mandatory_mentions": []
+  },
+  "fineprint_web": "* Precios en {currency_code_label}, {vat_label} no incluido. El análisis se factura al inicio; la implantación, mensualmente durante el proceso. Forma de pago: {forma_pago}. Propuesta válida {validity_days} días.",
+  "fineprint_pdf": "* Precios en {currency_code_label}, {vat_label} no incluido. El análisis se factura al inicio; la implantación, mensualmente durante el proceso. Forma de pago: {forma_pago}. Propuesta válida {validity_days} días.",
+  "travel_clause": "Términos y condiciones. Las jornadas presenciales pueden conllevar un sobrecoste por desplazamiento y dietas fuera del área de trabajo habitual, a presupuestar aparte.",
+  "acronyms_fiscal": ["CIF", "IVA", "IRPF", "SII", "AEAT", "NIF", "DUA", "EORI", "INTRASTAT", "TICKETBAI", "VERIFACTU", "FACE", "FACTURAE", "SEPA", "OSS", "IOSS", "SAFT"]
+}

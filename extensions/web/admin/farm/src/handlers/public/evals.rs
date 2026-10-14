@@ -2,8 +2,9 @@
 //! `GET /evals/runs/{eval_run_id}` reads the eval run and its per-case
 //! results.
 //!
-//! The judge is the process's `AiService` when inference is configured;
-//! without one, rubric cases are scored on their assertions alone.
+//! The judge is the configured model through the process's `AiService` when
+//! inference is configured; without one, rubric cases are scored on their
+//! assertions alone.
 
 use std::sync::Arc;
 
@@ -13,7 +14,6 @@ use axum::response::{IntoResponse, Response};
 use axum::{Extension, Json};
 use serde::{Deserialize, Serialize};
 use systemprompt::ai::AiService;
-use systemprompt::identifiers::UserId;
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 use systemprompt_web_admin_core::types::UserContext;
 
@@ -21,7 +21,7 @@ use super::shared::{load_farm, triggered_via};
 use crate::repositories::evals;
 use crate::repositories::rows::{EvalResultRow, EvalRunRow};
 use crate::services::entitlement::{is_farm_owner, require_farm_access};
-use crate::services::evals::{EvalJudge, EvalLaunch, GatewayJudge, start_eval_run};
+use crate::services::evals::{EvalLaunch, start_eval_run};
 use crate::state::FarmState;
 use crate::types::{EvalRunId, EvalSuiteId, FarmId};
 
@@ -45,10 +45,6 @@ struct EvalRunResponse {
     results: Vec<EvalResultRow>,
 }
 
-fn judge_for(ai: Arc<AiService>, user_id: &UserId) -> Arc<dyn EvalJudge> {
-    Arc::new(GatewayJudge::new(ai, user_id.clone()))
-}
-
 pub(crate) async fn run_eval_suite(
     State(state): State<Arc<FarmState>>,
     Extension(ctx): Extension<UserContext>,
@@ -59,9 +55,9 @@ pub(crate) async fn run_eval_suite(
     let farm = load_farm(&state.pool, &body.farm).await?;
     require_farm_access(&state.pool, &ctx, &farm).await?;
     let cases = body.cases.filter(|c| !c.is_empty());
-    let judge = ai
-        .and_then(|Extension(ai)| ai)
-        .map(|ai| judge_for(ai, &ctx.user_id));
+    let judge = state
+        .judge
+        .judge_for(ai.and_then(|Extension(ai)| ai), &ctx.user_id);
     let eval_run = start_eval_run(
         Arc::clone(&state),
         judge,

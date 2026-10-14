@@ -1,0 +1,55 @@
+{
+  "odoo_url": "<<VERIFY: NL entity Odoo base URL>>",
+  "odoo_db": "<<VERIFY: NL entity Odoo DB name>>",
+  "impl_template_name": "Implantación v2",
+  "impl_template_id": null,
+  "sales_url_pattern": "{odoo_url}/odoo/sales/{id}",
+  "cases_base_url": "https://www.dynapps.be/nl/cases",
+  "_cases_base_url_note": "Belgium deployment: Dutch case pages on dynapps.be/nl/cases (verified HTTP 200, 2026-07). match_cases composes url = cases_base_url + slug.",
+  "industries": {
+    "manufacturing": "Productie",
+    "food-beverage": "Voedingsindustrie",
+    "pharma-biotech": "Pharma & biotech",
+    "laboratories": "Laboratoria",
+    "logistics": "Logistiek",
+    "retail-wholesale": "Retail en groothandel",
+    "professional-services": "Professionele dienstverlening",
+    "financial-services": "Financiële dienstverlening",
+    "energy-utilities": "Energie en nutsvoorzieningen"
+  },
+  "_industries_note": "EXACTE industrie-taxonomie van dynapps.be/nl (nav + case badges, live geverifieerd 2026-07-17). GEEN 'construction': dynapps.be biedt die industrie niet aan. Canonieke ids in shared/industries.json. Referentiekaarten tonen het label letterlijk — nooit vertalen/parafraseren.",
+  "team_email_domain": "<<VERIFY: NL team email domain, e.g. dynapps.nl>>",
+  "core_module_label": "<<VERIFY: NL Core module set label (or Dynapps Core)>>",
+  "core_module_set_exists": false,
+  "contact": {
+    "email": "<<VERIFY: NL contact email>>",
+    "web": "<<VERIFY: NL web>>",
+    "tel": "<<VERIFY: NL phone>>"
+  },
+  "odoo_partner_manager": {
+    "source": "verify_from_odoo",
+    "name": "<<VERIFY: Odoo SA partner manager name for NL entity>>",
+    "email": "<<VERIFY: Odoo SA partner manager email for NL entity>>"
+  },
+  "legal_entity": {
+    "name": "<<VERIFY: NL selling legal entity name>>",
+    "vat": "<<VERIFY: NL entity VAT/BTW number>>",
+    "address": "<<VERIFY: NL registered address>>",
+    "governing_law": "Nederland"
+  },
+  "offices": [
+    "België",
+    "Nederland",
+    "Frankrijk",
+    "Zwitserland",
+    "Spanje"
+  ],
+  "local_country": "Nederland",
+  "credibility": {
+    "implementations": 900,
+    "claims_text": "<<VERIFY: NL credibility claim reviewed for misleidende-reclame law — do not reuse unqualified 'Nº1 wereldwijd'>>",
+    "experts": 280,
+    "countries": 52,
+    "iso27001": true
+  }
+}

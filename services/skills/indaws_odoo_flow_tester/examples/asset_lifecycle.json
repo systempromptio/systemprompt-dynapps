@@ -1,0 +1,196 @@
+{
+  "flow_id": "CHAIN_ASSET_LIFECYCLE_FULL",
+  "flow_name": "Ciclo de vida completo de activo fijo con reversion",
+  "description": "Crear activo fijo manualmente, confirmar (validate), verificar depreciaciones generadas, cerrar/disponer el activo, y revertir todo: reactivar, cancelar (revierte asientos), volver a borrador y eliminar",
+  "odoo_version": "18.0",
+  "environment": "staging",
+  "module": "account_asset (Enterprise)",
+  "data": {
+    "asset_name": "Ordenador Portatil Dell XPS 15",
+    "original_value": 2400.00,
+    "salvage_value": 200.00,
+    "method": "linear",
+    "method_number": 3,
+    "method_period": "12",
+    "acquisition_date": "2026-01-01",
+    "disposal_date": "2026-03-09"
+  },
+  "preconditions": [
+    {
+      "model": "account.account",
+      "domain": [["account_type", "=", "asset_non_current"], ["company_id", "=", "{env.company_id}"]],
+      "fields": ["id", "name", "code"],
+      "save_as": "account_asset_id",
+      "min_records": 1,
+      "note": "Cuenta de activo fijo (ej: 2180 - Inmovilizado material)"
+    },
+    {
+      "model": "account.account",
+      "domain": [["account_type", "=", "asset_non_current"], ["company_id", "=", "{env.company_id}"], ["name", "ilike", "deprecia"]],
+      "fields": ["id", "name", "code"],
+      "save_as": "account_depreciation_id",
+      "min_records": 1,
+      "note": "Cuenta de depreciacion acumulada (ej: 2810 - Amortizacion acumulada)"
+    },
+    {
+      "model": "account.account",
+      "domain": [["account_type", "=", "expense"], ["company_id", "=", "{env.company_id}"], ["name", "ilike", "amortizac"]],
+      "fields": ["id", "name", "code"],
+      "save_as": "account_expense_id",
+      "min_records": 1,
+      "note": "Cuenta de gasto de depreciacion (ej: 6810 - Dotacion amortizaciones)"
+    },
+    {
+      "model": "account.journal",
+      "domain": [["type", "=", "general"], ["company_id", "=", "{env.company_id}"]],
+      "fields": ["id", "name"],
+      "save_as": "misc_journal_id",
+      "min_records": 1,
+      "note": "Diario de asientos varios/miscelaneos para las depreciaciones"
+    }
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "name": "Crear activo fijo",
+      "action": "create",
+      "model": "account.asset",
+      "values": {
+        "name": "{data.asset_name}",
+        "original_value": "{data.original_value}",
+        "salvage_value": "{data.salvage_value}",
+        "account_asset_id": "{pre.account_asset_id}",
+        "account_depreciation_id": "{pre.account_depreciation_id}",
+        "account_depreciation_expense_id": "{pre.account_expense_id}",
+        "journal_id": "{pre.misc_journal_id}",
+        "method": "{data.method}",
+        "method_number": "{data.method_number}",
+        "method_period": "{data.method_period}",
+        "acquisition_date": "{data.acquisition_date}",
+        "prorata_computation_type": "none"
+      },
+      "save_as": "asset_id",
+      "verify": {"field": "state", "expected": "draft"},
+      "note": "Activo creado manualmente (sin factura de origen). method_period='12' significa depreciacion anual, '1' mensual."
+    },
+    {
+      "step": 2,
+      "name": "Confirmar activo (generar plan de depreciacion)",
+      "action": "execute",
+      "model": "account.asset",
+      "method": "validate",
+      "ids": ["{result.asset_id}"],
+      "verify": {"field": "state", "expected": "open"},
+      "note": "validate() cambia state a 'open', genera depreciation_move_ids (N asientos segun method_number), y publica automaticamente los asientos cuya fecha <= hoy"
+    },
+    {
+      "step": 3,
+      "name": "Verificar depreciaciones generadas",
+      "action": "search",
+      "model": "account.move",
+      "domain": [["asset_id", "=", "{result.asset_id}"]],
+      "fields": ["id", "state", "date", "depreciation_value", "asset_remaining_value"],
+      "save_as": "depreciation_move_ids",
+      "verify": {"field": "id", "expected_gt": 0},
+      "note": "Debe haber method_number asientos de depreciacion. Los que tienen fecha <= hoy estaran en 'posted', el resto en 'draft'."
+    },
+    {
+      "step": 4,
+      "name": "Verificar valor residual del activo",
+      "action": "search",
+      "model": "account.asset",
+      "domain": [["id", "=", "{result.asset_id}"]],
+      "fields": ["id", "state", "book_value", "value_residual", "depreciation_entries_count", "total_depreciation_entries_count"],
+      "save_as": "asset_status",
+      "verify": {"field": "state", "expected": "open"},
+      "note": "book_value = original_value - depreciacion_acumulada - salvage_value. depreciation_entries_count = asientos posted."
+    },
+    {
+      "step": 5,
+      "name": "Cerrar/disponer activo",
+      "action": "execute",
+      "model": "account.asset",
+      "method": "set_to_close",
+      "ids": ["{result.asset_id}"],
+      "kwargs": {
+        "invoice_line_ids": [],
+        "date": "{data.disposal_date}"
+      },
+      "verify": {"field": "state", "expected": "close"},
+      "note": "invoice_line_ids vacio = disposicion sin venta. Si se vende, pasar IDs de lineas de factura de venta. Genera asiento de disposicion con valor residual."
+    },
+    {
+      "step": 6,
+      "name": "REVERSION - Reactivar activo (set_to_running)",
+      "action": "execute",
+      "model": "account.asset",
+      "method": "set_to_running",
+      "ids": ["{result.asset_id}"],
+      "verify": {"field": "state", "expected": "open"},
+      "note": "Devuelve el activo a estado 'open'. El asiento de disposicion persiste y debe gestionarse manualmente."
+    },
+    {
+      "step": 7,
+      "name": "REVERSION - Cancelar activo (revierte asientos posted, elimina drafts)",
+      "action": "execute",
+      "model": "account.asset",
+      "method": "set_to_cancelled",
+      "ids": ["{result.asset_id}"],
+      "verify": {"field": "state", "expected": "cancelled"},
+      "note": "set_to_cancelled() revierte TODOS los asientos posted (crea reversal entries), elimina todos los drafts, y establece state='cancelled'. Es el metodo mas seguro para reversion completa."
+    },
+    {
+      "step": 8,
+      "name": "REVERSION - Volver a borrador",
+      "action": "execute",
+      "model": "account.asset",
+      "method": "set_to_draft",
+      "ids": ["{result.asset_id}"],
+      "verify": {"field": "state", "expected": "draft"},
+      "note": "set_to_draft() simplemente cambia state a 'draft'. Solo funciona desde state='cancelled'."
+    },
+    {
+      "step": 9,
+      "name": "REVERSION - Eliminar activo",
+      "action": "delete",
+      "model": "account.asset",
+      "ids": ["{result.asset_id}"],
+      "note": "Solo posible en estado 'draft'. Los reversal entries creados por set_to_cancelled persisten en contabilidad."
+    }
+  ],
+  "revert": [
+    {
+      "step": 5,
+      "action": "execute",
+      "model": "account.asset",
+      "method": "set_to_running",
+      "ids": ["{result.asset_id}"],
+      "note": "Reactivar si fallo despues de set_to_close"
+    },
+    {
+      "step": 2,
+      "action": "execute",
+      "model": "account.asset",
+      "method": "set_to_cancelled",
+      "ids": ["{result.asset_id}"],
+      "note": "Cancelar activo — revierte asientos posted y elimina drafts"
+    },
+    {
+      "step": 1,
+      "action_sequence": [
+        {
+          "action": "execute",
+          "model": "account.asset",
+          "method": "set_to_draft",
+          "ids": ["{result.asset_id}"]
+        },
+        {
+          "action": "delete",
+          "model": "account.asset",
+          "ids": ["{result.asset_id}"]
+        }
+      ],
+      "note": "Volver a draft y eliminar. Solo posible si set_to_cancelled fue exitoso."
+    }
+  ]
+}

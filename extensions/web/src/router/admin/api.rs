@@ -23,6 +23,7 @@
 
 use std::sync::Arc;
 
+use axum::routing::post;
 use axum::{Router, middleware as axum_middleware};
 
 use systemprompt::prelude::PgPool;
@@ -98,6 +99,10 @@ fn build_admin_write_routes(write_pool: &Arc<PgPool>) -> Router {
         .merge(platform_routes::service_account_write_routes())
         .merge(governance_routes::approval_write_routes())
         .merge(farm_routes::farm_write_routes())
+        .route(
+            "/agent-farm/demos/odoo",
+            post(super::odoo_demo::odoo_demo_api),
+        )
         .with_state(Arc::clone(write_pool))
 }
 
@@ -108,7 +113,9 @@ fn build_admin_platform_routes(write_pool: &Arc<PgPool>) -> Router {
 }
 
 pub(super) fn build_self_service_routes(write_pool: &Arc<PgPool>) -> Router {
-    identity_routes::self_service_routes().with_state(Arc::clone(write_pool))
+    identity_routes::self_service_routes()
+        .merge(platform_routes::odoo_link_routes())
+        .with_state(Arc::clone(write_pool))
 }
 
 pub(super) fn build_auth_read_routes(read_pool: &Arc<PgPool>) -> Router {

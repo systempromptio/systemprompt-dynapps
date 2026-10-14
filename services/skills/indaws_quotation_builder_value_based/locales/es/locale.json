@@ -1,0 +1,10 @@
+{
+  "code": "es",
+  "schema_version": 1,
+  "name": "España / Español",
+  "lang_tag": "es",
+  "odoo_lang": "es_ES",
+  "fallback": null,
+  "output_language": "español correcto (acentos y ñ, del/al, tú)",
+  "pack_status": "stub"
+}

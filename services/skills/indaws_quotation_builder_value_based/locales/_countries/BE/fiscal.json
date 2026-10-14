@@ -1,0 +1,29 @@
+{
+  "_layer": "country",
+  "_authoring": "AUTORAR bajo firma fiscal/legal BE. NO copiar de es/nl. Hechos conocidos precargados; confirmar todo.",
+  "vat_label": "<<nl: BTW | fr: TVA>>",
+  "seller_vat_number": "<<VERIFY: BTW/TVA-nummer entidad vendedora BE (BE0…)>>",
+  "einvoicing": {
+    "mandate_status": "b2b_mandate",
+    "authority": "FOD Financiën / SPF Finances",
+    "network": ["Peppol", "Hermes"],
+    "formats": ["Peppol BIS 3.0", "EN 16931"],
+    "phase_dates": ["2026-01-01"],
+    "threshold": null,
+    "detection_signals": ["peppol", "e-facturatie", "facturation électronique", "gestructureerde factuur", "facture structurée", "hermes", "ubl", "e-invoicing"],
+    "copy_render": "<<AUTHOR (legal): mandato belga de factura electrónica estructurada B2B desde 2026-01-01 vía Peppol; Odoo lo emite/recibe nativo. Redactar por idioma, sin traducción máquina.>>"
+  },
+  "chart_of_accounts": { "code": "PCMN/MAR", "copy": "<<AUTHOR (legal): plan contable belga (PCMN/Minimum Algemeen Rekeningstelsel) + reglas BTW/TVA.>>" },
+  "tax_filings": [
+    { "id": "btw_tva_aangifte", "legal_name": "<<nl: Periodieke BTW-aangifte | fr: Déclaration TVA périodique>>", "authority": "FOD Financiën / SPF Finances", "is_mandatory": true, "odoo_module": "<<VERIFY: l10n_be en DB BE>>", "signals": ["btw", "tva", "aangifte", "déclaration"] },
+    { "id": "ic_listing", "legal_name": "<<Intracommunautaire opgave / Relevé intracommunautaire>>", "authority": "FOD Financiën / SPF Finances", "is_mandatory": false, "odoo_module": "<<VERIFY>>", "signals": ["intracommunautair", "intracommunautaire", "ic-listing"] }
+  ],
+  "reverse_charge_clause": "<<AUTHOR (legal): reverse-charge intra-UE (BTW verlegd / autoliquidation).>>",
+  "cross_border_notes": "<<AUTHOR (legal): OSS/IOSS para B2C intra-UE.>>",
+  "carriers": ["bpost", "DPD", "GLS", "PostNL", "DHL"],
+  "payment_terms": { "validity_days": 30, "default_payment_method": "<<nl: overschrijving | fr: virement>>", "late_payment_clause": "<<AUTHOR (legal BE): ley belga de morosidad en transacciones comerciales.>>", "mandatory_mentions": [] },
+  "fineprint_web": "<<AUTHOR: * Prijzen in {currency_code_label}, excl. {vat_label}. …>>",
+  "fineprint_pdf": "<<AUTHOR: idem web>>",
+  "travel_clause": "<<AUTHOR>>",
+  "acronyms_fiscal": ["BTW", "TVA", "KBO", "BCE", "OSS", "IOSS", "PEPPOL", "EN16931", "SEPA", "IBAN", "INTRASTAT", "VIDA"]
+}

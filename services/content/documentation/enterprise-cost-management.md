@@ -137,7 +137,7 @@ An API key can carry its own limits, set at issuance:
 
 ```bash
 systemprompt admin users api-key issue --user <user-id> --name ci-runner \
-  --model claude-sonnet-5 --model claude-haiku-4-5 \
+  --model claude-sonnet-5-5 --model claude-haiku-5-5 \
   --budget-microdollars 50000000 --max-requests 2000 --window-seconds 86400 \
   --scope project=<project-id>
 ```

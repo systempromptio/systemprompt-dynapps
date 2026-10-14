@@ -1,0 +1,1560 @@
+{
+  "signals": {
+    "apps": {
+      "config_general": [],
+      "crm": [
+        "crm",
+        "pipeline",
+        "sales rep",
+        "opportunity",
+        "lead",
+        "prospecting",
+        "funnel"
+      ],
+      "ventas": [
+        "sale",
+        "quotation",
+        "sales order",
+        "price list",
+        "price",
+        "catalog",
+        "sales invoicing",
+        "customer portal"
+      ],
+      "compras": [
+        "purchase",
+        "supplier",
+        "vendor",
+        "purchase order",
+        "procurement",
+        "rfq"
+      ],
+      "inventario": [
+        "inventory",
+        "warehouse",
+        "stock",
+        "logistics",
+        "delivery note",
+        "picking",
+        "traceability",
+        "lot",
+        "serial"
+      ],
+      "fabricacion": [
+        "manufacturing",
+        "production",
+        "mrp",
+        "bill of materials",
+        "bom",
+        "manufacturing order",
+        "assembly",
+        "plant"
+      ],
+      "facturacion": [
+        "invoice",
+        "invoicing",
+        "receipt",
+        "payment",
+        "corrective invoice",
+        "credit note"
+      ],
+      "contabilidad": [
+        "accounting",
+        "accountant",
+        "chart of accounts",
+        "reconciliation",
+        "journal entry",
+        "balance sheet",
+        "p&l",
+        "ledger account",
+        "vat return",
+        "sepa"
+      ],
+      "proyecto": [
+        "project",
+        "task",
+        "timesheet",
+        "time log",
+        "planning"
+      ],
+      "helpdesk": [
+        "helpdesk",
+        "support",
+        "ticket",
+        "issue",
+        "sla",
+        "service desk"
+      ],
+      "website": [
+        "web",
+        "website",
+        "ecommerce",
+        "online store",
+        "blog",
+        "web page"
+      ],
+      "marketing_email": [
+        "marketing",
+        "email marketing",
+        "newsletter",
+        "email campaign",
+        "mailing"
+      ],
+      "rrhh": [
+        "hr",
+        "employee",
+        "payroll",
+        "time tracking",
+        "leave",
+        "holidays",
+        "employment contract",
+        "human resources"
+      ]
+    },
+    "complementos": {
+      "multi_company": [
+        "group of companies",
+        "subsidiary",
+        "multiple companies",
+        "inter-company",
+        "consolidation"
+      ],
+      "multi_idioma": [
+        "international",
+        "export",
+        "foreign customers",
+        "english",
+        "french",
+        "portuguese"
+      ],
+      "crm_4_10_comerciales": [
+        "sales team",
+        "multi-team",
+        "several sales reps"
+      ],
+      "crm_10_comerciales": [
+        "sales network",
+        "sales branches"
+      ],
+      "crm_lead_scoring": [
+        "qualification",
+        "scoring",
+        "nurturing",
+        "automatic leads"
+      ],
+      "crm_automatizaciones": [
+        "automatic emails",
+        "sales alerts",
+        "automatic follow-up"
+      ],
+      "crm_migracion": [
+        "current pipeline",
+        "sales history",
+        "previous crm",
+        "salesforce",
+        "hubspot"
+      ],
+      "crm_prospeccion": [
+        "prospecting",
+        "enrichment",
+        "company search"
+      ],
+      "ventas_suscripciones": [
+        "recurring",
+        "subscription",
+        "contract",
+        "monthly fee",
+        "quota",
+        "renewal",
+        "saas"
+      ],
+      "ventas_plantillas": [
+        "several quotation types",
+        "services and products",
+        "domestic and export"
+      ],
+      "ventas_migr_productos": [
+        "current catalog",
+        "products in previous erp",
+        "migrate products"
+      ],
+      "ventas_migr_clientes": [
+        "customer base",
+        "customer records",
+        "migrate customers"
+      ],
+      "ventas_migr_tarifas": [
+        "current price lists",
+        "price lists",
+        "customer-specific discounts"
+      ],
+      "ventas_aprobacion": [
+        "approval",
+        "authorization",
+        "maximum discount",
+        "minimum margin"
+      ],
+      "ventas_kits": [
+        "kit",
+        "pack",
+        "composite",
+        "bundle"
+      ],
+      "ventas_flujos_tipo": [
+        "consignment",
+        "sample",
+        "sales types"
+      ],
+      "ventas_fidelizacion": [
+        "points",
+        "loyalty",
+        "points program"
+      ],
+      "compras_reabastecimiento": [
+        "minimum stock",
+        "automatic replenishment",
+        "reordering point",
+        "replenishment"
+      ],
+      "compras_acuerdos": [
+        "purchase contract",
+        "negotiated price",
+        "framework agreement",
+        "annual price list"
+      ],
+      "compras_dropshipping": [
+        "dropshipping",
+        "direct shipping",
+        "supplier ships to customer"
+      ],
+      "compras_migr_tarifas": [
+        "purchase prices",
+        "current supplier price lists"
+      ],
+      "compras_gestion_avanzada": [
+        "supplier evaluation",
+        "lead times",
+        "purchase alerts"
+      ],
+      "inv_multi_almacen": [
+        "warehouses",
+        "branches",
+        "facility",
+        "internal transfers"
+      ],
+      "inv_lotes": [
+        "lot",
+        "traceability",
+        "recall"
+      ],
+      "inv_series": [
+        "serial number",
+        "per unit",
+        "per-unit warranty",
+        "serial"
+      ],
+      "inv_caducidad": [
+        "expiration",
+        "perishable",
+        "fefo",
+        "food"
+      ],
+      "inv_rutas": [
+        "pick-pack-ship",
+        "cross-docking",
+        "transit",
+        "picking area"
+      ],
+      "inv_codigos_barras": [
+        "scanner",
+        "barcode",
+        "handheld",
+        "pda"
+      ],
+      "inv_reabastecimiento": [
+        "replenishment between warehouses",
+        "minimum stock per warehouse"
+      ],
+      "inv_migr_stock": [
+        "current inventory",
+        "valued stock",
+        "migrate stock"
+      ],
+      "inv_gen_serie": [
+        "lot nomenclature",
+        "automatic generation",
+        "serial format"
+      ],
+      "inv_stock_proyectos": [
+        "materials per project",
+        "project consumption",
+        "job sites"
+      ],
+      "inv_marcas": [
+        "brands",
+        "product labels",
+        "multi-brand"
+      ],
+      "fact_gen_pdf": [
+        "custom invoice template",
+        "own format",
+        "custom pdf"
+      ],
+      "fact_margenes": [
+        "margin",
+        "landed cost",
+        "minimum margin",
+        "cost control"
+      ],
+      "cont_sii": [
+        "real-time reporting",
+        "e-reporting",
+        "tax authority"
+      ],
+      "cont_sepa": [
+        "direct debit",
+        "sepa",
+        "mandate",
+        "bank collection",
+        "direct debit note"
+      ],
+      "cont_multi_divisa": [
+        "currency",
+        "dollar",
+        "pound",
+        "foreign currency"
+      ],
+      "cont_analitica": [
+        "cost center",
+        "analytic",
+        "departmental"
+      ],
+      "cont_presupuestos": [
+        "budget per department",
+        "variance control",
+        "budget"
+      ],
+      "cont_intrastat": [
+        "intrastat",
+        "ec sales list",
+        "intra-community"
+      ],
+      "cont_mejoras_sii": [
+        "reporting errors",
+        "reporting dashboard",
+        "retries"
+      ],
+      "proy_facturacion": [
+        "bill hours",
+        "billable milestones"
+      ],
+      "proy_planificacion": [
+        "workload",
+        "availability",
+        "team planning"
+      ],
+      "proy_stock": [
+        "materials",
+        "stock per project",
+        "material consumption"
+      ],
+      "rrhh_ausencias": [
+        "holidays",
+        "leave",
+        "time off",
+        "team calendar",
+        "sick leave"
+      ],
+      "rrhh_gastos": [
+        "employee expenses",
+        "expense reports",
+        "per diem",
+        "mileage"
+      ],
+      "rrhh_evaluaciones": [
+        "appraisal",
+        "performance",
+        "objectives",
+        "feedback"
+      ],
+      "rrhh_recruiting": [
+        "recruitment",
+        "candidates",
+        "job openings",
+        "recruiting"
+      ],
+      "rrhh_flota": [
+        "vehicles",
+        "fleet",
+        "company cars",
+        "leasing"
+      ],
+      "rrhh_formacion": [
+        "internal training",
+        "courses",
+        "training plan"
+      ],
+      "rrhh_portal": [
+        "employee portal",
+        "self-service",
+        "payslip access"
+      ],
+      "mrp_multi_centro": [
+        "production lines",
+        "plants",
+        "work centers"
+      ],
+      "mrp_work_orders": [
+        "operations",
+        "work orders",
+        "manufacturing sequence"
+      ],
+      "mrp_subcontratacion": [
+        "subcontracting",
+        "external manufacturing",
+        "toll manufacturing"
+      ],
+      "mrp_mps": [
+        "master schedule",
+        "demand forecast",
+        "mps"
+      ],
+      "mrp_calidad": [
+        "quality",
+        "control",
+        "certificates",
+        "iso",
+        "inspection"
+      ],
+      "mrp_plm": [
+        "versions",
+        "eco",
+        "lifecycle",
+        "engineering changes"
+      ],
+      "mrp_mantenimiento": [
+        "maintenance",
+        "preventive",
+        "corrective",
+        "cmms"
+      ],
+      "mrp_multinivel": [
+        "semi-finished",
+        "intermediate product",
+        "multi-level",
+        "explosion"
+      ],
+      "mrp_migr_ldm": [
+        "bills of materials",
+        "current bom",
+        "cost breakdown"
+      ],
+      "mrp_migr_rutas": [
+        "current work centers",
+        "manufacturing routes"
+      ],
+      "web_paginas": [
+        "many sections",
+        "more than 5 pages"
+      ],
+      "web_ecommerce": [
+        "online store",
+        "ecommerce",
+        "online sales",
+        "cart",
+        "b2c"
+      ],
+      "web_multi_idioma": [
+        "website in english",
+        "multi-language website"
+      ],
+      "web_diseno": [
+        "custom design",
+        "branding",
+        "own brand"
+      ],
+      "web_chat": [
+        "chat",
+        "livechat",
+        "live support"
+      ],
+      "web_migracion": [
+        "current website",
+        "migrate web content",
+        "wordpress"
+      ],
+      "web_merchant": [
+        "google shopping",
+        "google merchant"
+      ],
+      "hd_equipos": [
+        "support teams",
+        "technical and sales",
+        "after-sales"
+      ],
+      "hd_partes_horas": [
+        "log support time",
+        "hours per ticket"
+      ],
+      "hd_facturacion": [
+        "bill support",
+        "billable support"
+      ],
+      "hd_automatizaciones": [
+        "automatic assignment",
+        "escalation",
+        "automatic sla"
+      ],
+      "hd_chat": [
+        "livechat",
+        "support chat"
+      ],
+      "mkt_automatizacion": [
+        "email sequence",
+        "nurturing",
+        "drip",
+        "marketing automation"
+      ],
+      "mkt_segmentacion": [
+        "segments",
+        "behavior",
+        "dynamic"
+      ],
+      "mkt_plantillas": [
+        "more than 3 templates",
+        "custom templates"
+      ],
+      "mkt_sms": [
+        "sms",
+        "text messages",
+        "sms campaigns"
+      ],
+      "mkt_diseno": [
+        "professional email design",
+        "corporate newsletter"
+      ],
+      "mkt_correo": [
+        "email tracking",
+        "retries",
+        "email logs"
+      ]
+    },
+    "metrics": {
+      "usuarios": "users?",
+      "empleados": "employees?",
+      "comerciales": "sales( reps?| people)?",
+      "almacenes": "warehouses?"
+    },
+    "sectors": {
+      "alimentacion": {
+        "display": "Food",
+        "keywords": [
+          "food",
+          "meal",
+          "grocery",
+          "canned",
+          "meat"
+        ]
+      },
+      "fabricacion": {
+        "display": "Manufacturing",
+        "keywords": [
+          "factory",
+          "manufactur",
+          "industry",
+          "industrial production"
+        ]
+      },
+      "retail": {
+        "display": "Retail",
+        "keywords": [
+          "retail",
+          "store",
+          "brick and mortar"
+        ]
+      },
+      "tecnologia": {
+        "display": "Technology",
+        "keywords": [
+          "software",
+          "technology",
+          "it ",
+          "saas",
+          "software development"
+        ]
+      },
+      "construccion": {
+        "display": "Construction",
+        "keywords": [
+          "construction",
+          "building",
+          "real estate"
+        ]
+      },
+      "logistica": {
+        "display": "Logistics",
+        "keywords": [
+          "logistics",
+          "transport",
+          "distribution"
+        ]
+      },
+      "servicios": {
+        "display": "Services",
+        "keywords": [
+          "consultant",
+          "professional service",
+          "advisory"
+        ]
+      }
+    },
+    "archetypes": {
+      "multi-entity": [
+        "multi",
+        "compan",
+        "subsidiar",
+        "group",
+        "entity",
+        "consolidat",
+        "intercompany",
+        "countr",
+        "site",
+        "holding"
+      ],
+      "excel-legacy": [
+        "excel",
+        "spreadsheet",
+        "manual",
+        "legacy",
+        "access",
+        "homegrown",
+        "old",
+        "obsolet",
+        "diy",
+        "paper",
+        "silo"
+      ],
+      "b2b-webshop": [
+        "ecommerce",
+        "e-commerce",
+        "store",
+        "online",
+        "b2b",
+        "portal",
+        "catalog",
+        "web orders",
+        "webshop"
+      ],
+      "fast-golive": [
+        "rapid",
+        "timeline",
+        "urgent",
+        "as soon as possible",
+        "asap",
+        "deadline"
+      ],
+      "scaling": [
+        "growth",
+        "scal",
+        "expansi",
+        "international",
+        "open",
+        "new markets"
+      ]
+    },
+    "intake_labels": {
+      "tipo_proyecto": [
+        "project type"
+      ],
+      "sector": [
+        "sector",
+        "industry"
+      ],
+      "usuarios": [
+        "users",
+        "odoo"
+      ]
+    },
+    "intake_truthy": [
+      "yes",
+      "group",
+      "international"
+    ],
+    "header_markers": [
+      "data intake",
+      "requirements"
+    ],
+    "n_sociedades_word": "compan",
+    "vertical_signals": {
+      "inbuilt": [
+        "bc3",
+        "fiebdc3",
+        "presto",
+        "arquimedes"
+      ]
+    },
+    "app_parse_order": [
+      "config_general",
+      "crm",
+      "ventas",
+      "compras",
+      "inventario",
+      "facturacion",
+      "contabilidad",
+      "proyecto",
+      "rrhh",
+      "fabricacion",
+      "website",
+      "helpdesk",
+      "marketing_email"
+    ],
+    "complementos_catalog": {
+      "config_general": [
+        {
+          "id": "multi_company",
+          "nombre": "Multi-company",
+          "precio": 250,
+          "por_unidad": true
+        },
+        {
+          "id": "multi_idioma",
+          "nombre": "Multi-language",
+          "precio": 250
+        }
+      ],
+      "crm": [
+        {
+          "id": "crm_4_10_comerciales",
+          "nombre": "4-10 sales reps",
+          "precio": 500
+        },
+        {
+          "id": "crm_10_comerciales",
+          "nombre": "+10 sales reps",
+          "precio": 1000
+        },
+        {
+          "id": "crm_lead_scoring",
+          "nombre": "Lead scoring & nurturing",
+          "precio": 500
+        },
+        {
+          "id": "crm_automatizaciones",
+          "nombre": "Sales automations",
+          "precio": 250
+        },
+        {
+          "id": "crm_migracion",
+          "nombre": "Opportunity migration",
+          "precio": 500
+        },
+        {
+          "id": "crm_prospeccion",
+          "nombre": "⚙️ Advanced prospecting",
+          "precio": 500
+        }
+      ],
+      "ventas": [
+        {
+          "id": "ventas_suscripciones",
+          "nombre": "Subscriptions / Recurrence",
+          "precio": 750
+        },
+        {
+          "id": "ventas_plantillas",
+          "nombre": "Additional templates",
+          "precio": 250
+        },
+        {
+          "id": "ventas_migr_productos",
+          "nombre": "Product migration",
+          "precio": 250
+        },
+        {
+          "id": "ventas_migr_clientes",
+          "nombre": "Customer migration",
+          "precio": 250
+        },
+        {
+          "id": "ventas_migr_tarifas",
+          "nombre": "Pricelist migration",
+          "precio": 500
+        },
+        {
+          "id": "ventas_aprobacion",
+          "nombre": "⚙️ Approval workflow",
+          "precio": 500
+        },
+        {
+          "id": "ventas_kits",
+          "nombre": "⚙️ Kits (bundled products)",
+          "precio": 500
+        },
+        {
+          "id": "ventas_flujos_tipo",
+          "nombre": "⚙️ Flows by order type",
+          "precio": 500
+        },
+        {
+          "id": "ventas_fidelizacion",
+          "nombre": "⚙️ Loyalty",
+          "precio": 500
+        }
+      ],
+      "compras": [
+        {
+          "id": "compras_reabastecimiento",
+          "nombre": "Reordering rules",
+          "precio": 500
+        },
+        {
+          "id": "compras_acuerdos",
+          "nombre": "Blanket orders",
+          "precio": 500
+        },
+        {
+          "id": "compras_dropshipping",
+          "nombre": "Dropshipping",
+          "precio": 500
+        },
+        {
+          "id": "compras_migr_tarifas",
+          "nombre": "Purchase pricelist migration",
+          "precio": 250
+        },
+        {
+          "id": "compras_gestion_avanzada",
+          "nombre": "⚙️ Advanced purchasing",
+          "precio": 750
+        }
+      ],
+      "inventario": [
+        {
+          "id": "inv_multi_almacen",
+          "nombre": "Multi-warehouse",
+          "precio": 250,
+          "por_unidad": true
+        },
+        {
+          "id": "inv_lotes",
+          "nombre": "Lot traceability",
+          "precio": 500
+        },
+        {
+          "id": "inv_series",
+          "nombre": "Serial number traceability",
+          "precio": 500
+        },
+        {
+          "id": "inv_caducidad",
+          "nombre": "Expiration dates",
+          "precio": 250
+        },
+        {
+          "id": "inv_rutas",
+          "nombre": "Advanced logistics routes",
+          "precio": 500
+        },
+        {
+          "id": "inv_codigos_barras",
+          "nombre": "Barcodes",
+          "precio": 500
+        },
+        {
+          "id": "inv_reabastecimiento",
+          "nombre": "Automatic replenishment",
+          "precio": 500
+        },
+        {
+          "id": "inv_migr_stock",
+          "nombre": "Current stock migration",
+          "precio": 500
+        },
+        {
+          "id": "inv_gen_serie",
+          "nombre": "⚙️ Serial/lot generator",
+          "precio": 250
+        },
+        {
+          "id": "inv_stock_proyectos",
+          "nombre": "⚙️ Stock in projects",
+          "precio": 500
+        },
+        {
+          "id": "inv_marcas",
+          "nombre": "⚙️ Brands and labels",
+          "precio": 250
+        }
+      ],
+      "facturacion": [
+        {
+          "id": "fact_gen_pdf",
+          "nombre": "⚙️ PDF generator",
+          "precio": 500
+        },
+        {
+          "id": "fact_margenes",
+          "nombre": "⚙️ Advanced margins & costs",
+          "precio": 500
+        }
+      ],
+      "contabilidad": [
+        {
+          "id": "cont_sii",
+          "nombre": "Real-time tax reporting",
+          "precio": 500
+        },
+        {
+          "id": "cont_sepa",
+          "nombre": "SEPA direct debit",
+          "precio": 750
+        },
+        {
+          "id": "cont_multi_divisa",
+          "nombre": "Multi-currency",
+          "precio": 250
+        },
+        {
+          "id": "cont_analitica",
+          "nombre": "Analytic accounting",
+          "precio": 500
+        },
+        {
+          "id": "cont_presupuestos",
+          "nombre": "Accounting budgets",
+          "precio": 500
+        },
+        {
+          "id": "cont_intrastat",
+          "nombre": "Intrastat / EC sales list",
+          "precio": 250
+        },
+        {
+          "id": "cont_mejoras_sii",
+          "nombre": "⚙️ Tax-reporting improvements",
+          "precio": 500
+        }
+      ],
+      "proyecto": [
+        {
+          "id": "proy_facturacion",
+          "nombre": "Project billing",
+          "precio": 500
+        },
+        {
+          "id": "proy_planificacion",
+          "nombre": "Resource planning",
+          "precio": 500
+        },
+        {
+          "id": "proy_stock",
+          "nombre": "⚙️ Stock in projects",
+          "precio": 500
+        }
+      ],
+      "rrhh": [
+        {
+          "id": "rrhh_ausencias",
+          "nombre": "Time off & holidays",
+          "precio": 500
+        },
+        {
+          "id": "rrhh_gastos",
+          "nombre": "Expenses",
+          "precio": 500
+        },
+        {
+          "id": "rrhh_evaluaciones",
+          "nombre": "Appraisals / Performance",
+          "precio": 500
+        },
+        {
+          "id": "rrhh_recruiting",
+          "nombre": "Recruiting",
+          "precio": 500
+        },
+        {
+          "id": "rrhh_flota",
+          "nombre": "Fleet",
+          "precio": 500
+        },
+        {
+          "id": "rrhh_formacion",
+          "nombre": "Employee training",
+          "precio": 250
+        },
+        {
+          "id": "rrhh_portal",
+          "nombre": "⚙️ Employee portal",
+          "precio": 500
+        }
+      ],
+      "fabricacion": [
+        {
+          "id": "mrp_multi_centro",
+          "nombre": "Multi work center",
+          "precio": 250,
+          "por_unidad": true
+        },
+        {
+          "id": "mrp_work_orders",
+          "nombre": "Work orders",
+          "precio": 500
+        },
+        {
+          "id": "mrp_subcontratacion",
+          "nombre": "Subcontracting",
+          "precio": 750
+        },
+        {
+          "id": "mrp_mps",
+          "nombre": "Master production schedule (MPS)",
+          "precio": 750
+        },
+        {
+          "id": "mrp_calidad",
+          "nombre": "Quality control",
+          "precio": 750
+        },
+        {
+          "id": "mrp_plm",
+          "nombre": "PLM",
+          "precio": 500
+        },
+        {
+          "id": "mrp_mantenimiento",
+          "nombre": "Maintenance",
+          "precio": 500
+        },
+        {
+          "id": "mrp_multinivel",
+          "nombre": "Multi-level BoM",
+          "precio": 500
+        },
+        {
+          "id": "mrp_migr_ldm",
+          "nombre": "BoM migration",
+          "precio": 500
+        },
+        {
+          "id": "mrp_migr_rutas",
+          "nombre": "Routing/work-center migration",
+          "precio": 250
+        }
+      ],
+      "website": [
+        {
+          "id": "web_paginas",
+          "nombre": "Additional pages",
+          "precio": 100,
+          "por_unidad": true
+        },
+        {
+          "id": "web_ecommerce",
+          "nombre": "Online store (eCommerce)",
+          "precio": 1500
+        },
+        {
+          "id": "web_multi_idioma",
+          "nombre": "Multi-language website",
+          "precio": 500
+        },
+        {
+          "id": "web_diseno",
+          "nombre": "Custom design",
+          "precio": 750
+        },
+        {
+          "id": "web_chat",
+          "nombre": "Live chat",
+          "precio": 250
+        },
+        {
+          "id": "web_migracion",
+          "nombre": "Content migration",
+          "precio": 500
+        },
+        {
+          "id": "web_merchant",
+          "nombre": "⚙️ Google Merchant",
+          "precio": 250
+        }
+      ],
+      "helpdesk": [
+        {
+          "id": "hd_equipos",
+          "nombre": "Additional teams",
+          "precio": 250,
+          "por_unidad": true
+        },
+        {
+          "id": "hd_partes_horas",
+          "nombre": "Timesheets on tickets",
+          "precio": 250
+        },
+        {
+          "id": "hd_facturacion",
+          "nombre": "Support billing",
+          "precio": 500
+        },
+        {
+          "id": "hd_automatizaciones",
+          "nombre": "Automations",
+          "precio": 250
+        },
+        {
+          "id": "hd_chat",
+          "nombre": "Live chat",
+          "precio": 250
+        }
+      ],
+      "marketing_email": [
+        {
+          "id": "mkt_automatizacion",
+          "nombre": "Marketing automation",
+          "precio": 750
+        },
+        {
+          "id": "mkt_segmentacion",
+          "nombre": "Advanced segmentation",
+          "precio": 250
+        },
+        {
+          "id": "mkt_plantillas",
+          "nombre": "Additional templates",
+          "precio": 250
+        },
+        {
+          "id": "mkt_sms",
+          "nombre": "SMS marketing",
+          "precio": 500
+        },
+        {
+          "id": "mkt_diseno",
+          "nombre": "⚙️ Advanced email design",
+          "precio": 500
+        },
+        {
+          "id": "mkt_correo",
+          "nombre": "⚙️ Improved outbound email",
+          "precio": 250
+        }
+      ]
+    },
+    "sectors_parse": [
+      {
+        "label": "food",
+        "keywords": [
+          "food",
+          "meal",
+          "grocery",
+          "canned",
+          "meat"
+        ]
+      },
+      {
+        "label": "manufacturing",
+        "keywords": [
+          "factory",
+          "manufactur",
+          "industry",
+          "industrial production"
+        ]
+      },
+      {
+        "label": "retail",
+        "keywords": [
+          "retail",
+          "shop",
+          "brick-and-mortar"
+        ]
+      },
+      {
+        "label": "technology",
+        "keywords": [
+          "software",
+          "technology",
+          "it ",
+          "saas",
+          "software development"
+        ]
+      },
+      {
+        "label": "construction",
+        "keywords": [
+          "construction",
+          "building site",
+          "real estate"
+        ]
+      },
+      {
+        "label": "logistics",
+        "keywords": [
+          "logistics",
+          "transport",
+          "distribution"
+        ]
+      },
+      {
+        "label": "services",
+        "keywords": [
+          "consultant",
+          "professional service",
+          "advisor"
+        ]
+      }
+    ],
+    "erps": [
+      "sap",
+      "navision",
+      "dynamics",
+      "sage",
+      "a3erp",
+      "holded",
+      "factusol",
+      "contaplus",
+      "excel",
+      "odoo",
+      "prestashop",
+      "woocommerce",
+      "shopify"
+    ]
+  },
+  "glossary": {
+    "sector_glossary_table": [
+      {
+        "odoo_term": "Customer / partner",
+        "sector_words": [
+          "developer, main contractor (construction)",
+          "patient/facility (healthcare)",
+          "account (industry)"
+        ]
+      },
+      {
+        "odoo_term": "Product",
+        "sector_words": [
+          "reference/SKU (food)",
+          "deliverable (services)",
+          "item/size-color (fashion)"
+        ]
+      },
+      {
+        "odoo_term": "Bill of Materials (BoM)",
+        "sector_words": [
+          "cost breakdown (food)",
+          "recipe (chemicals)",
+          "part breakdown (metal)"
+        ]
+      },
+      {
+        "odoo_term": "Manufacturing Order (MRP)",
+        "sector_words": [
+          "production order",
+          "manufacturing lot",
+          "batch"
+        ]
+      },
+      {
+        "odoo_term": "Delivery note / picking",
+        "sector_words": [
+          "delivery slip",
+          "warehouse note"
+        ]
+      },
+      {
+        "odoo_term": "Lot / traceability",
+        "sector_words": [
+          "heat number (steel)",
+          "expiry/lot (food)",
+          "serial number"
+        ]
+      },
+      {
+        "odoo_term": "Project",
+        "sector_words": [
+          "job site (construction)",
+          "case file (professional services)",
+          "matter (legal)"
+        ]
+      },
+      {
+        "odoo_term": "Opportunity (CRM)",
+        "sector_words": [
+          "tender",
+          "bid",
+          "quotation in progress"
+        ]
+      },
+      {
+        "odoo_term": "Invoice",
+        "sector_words": [
+          "progress certificate (construction)",
+          "fee note (legal)"
+        ]
+      },
+      {
+        "odoo_term": "Warehouse",
+        "sector_words": [
+          "job site/work area",
+          "branch",
+          "logistics center"
+        ]
+      }
+    ],
+    "lang_labels": {
+      "english": "English",
+      "spanish": "Spanish",
+      "french": "French",
+      "german": "German",
+      "portuguese": "Portuguese",
+      "italian": "Italian",
+      "dutch": "Dutch",
+      "catalan": "Catalan",
+      "flemish": "Flemish"
+    },
+    "soft_skills": {
+      "adaptability": "Adaptability",
+      "conflict management": "Conflict management",
+      "leadership": "Leadership",
+      "organizational": "Organization",
+      "problem-solving": "Problem solving",
+      "problem solving": "Problem solving",
+      "teamwork": "Teamwork",
+      "communication": "Communication",
+      "time management": "Time management",
+      "creativity": "Creativity",
+      "critical thinking": "Critical thinking",
+      "negotiation": "Negotiation",
+      "decision making": "Decision making",
+      "stress management": "Stress management",
+      "analytical": "Analytical skills",
+      "customer service": "Customer service"
+    },
+    "skill_block": [
+      "hobby",
+      "sport",
+      "leisure",
+      "personal",
+      "family",
+      "interests"
+    ],
+    "skill_type_tokens": {
+      "odoo": "odoo",
+      "lang": [
+        "language",
+        "lang"
+      ]
+    },
+    "odoo_skill_prefix": "Odoo {sn}"
+  },
+  "cases": {
+    "local_case_source": "common-skills:content-collection",
+    "case_translations": {
+      "50five": {
+        "resultado": "A single Odoo as the backbone across twelve European countries, scaling from a smart-home distributor to an operator of 600,000+ charging points.",
+        "metric": "12 countries, 1 platform",
+        "cliente": "50Five",
+        "sectors": [
+          "energy",
+          "utilities",
+          "e-mobility",
+          "technical retail"
+        ],
+        "scope": "international"
+      },
+      "sensorfact": {
+        "resultado": "Replaced manual purchasing with an integrated procurement, inventory, accounting and sales system serving 1,600 customers in 40 countries.",
+        "metric": "1,600 customers in 40 countries",
+        "cliente": "Sensorfact",
+        "sectors": [
+          "energy",
+          "industry",
+          "industrial saas"
+        ],
+        "scope": "international"
+      },
+      "regiechatel": {
+        "resultado": "Consolidated the management of more than 100 property administrations onto a single platform, replacing combinations of Word and Excel spreadsheets.",
+        "metric": "100+ administrations on one platform",
+        "cliente": "Régie Châtel",
+        "sectors": [
+          "financial services",
+          "property management",
+          "professional services"
+        ],
+        "scope": "international"
+      },
+      "cyclis": {
+        "resultado": "Moved from the founders' homegrown setup to an integrated Odoo platform that sustained growth to more than 36,000 bikes on lease.",
+        "metric": "36,000+ bikes on lease",
+        "cliente": "Cyclis Bike Lease",
+        "sectors": [
+          "financial services",
+          "renting",
+          "leasing",
+          "mobility"
+        ],
+        "scope": "international"
+      },
+      "lonestar": {
+        "resultado": "Unified seven specialized laboratory departments (65,000 samples a year) onto a single Odoo + LIMS platform in just four months.",
+        "metric": "7 departments unified in 4 months",
+        "cliente": "Lone Star Alpha Laboratories",
+        "sectors": [
+          "laboratories",
+          "health",
+          "regulated"
+        ],
+        "scope": "international"
+      },
+      "lfgparis": {
+        "resultado": "Brought the world's oldest gemological laboratory onto a unified Odoo platform with embedded LIMS for compliance and operations.",
+        "metric": "Integrated LIMS at the world's oldest gemological lab",
+        "cliente": "LFG Paris",
+        "sectors": [
+          "laboratories",
+          "regulated"
+        ],
+        "scope": "international"
+      },
+      "readytobrand": {
+        "resultado": "Implemented a single Odoo backbone supporting multi-country operations and expansion.",
+        "metric": "Multi-country on one Odoo backbone",
+        "cliente": "Ready to Brand",
+        "sectors": [
+          "retail",
+          "wholesale",
+          "distribution"
+        ],
+        "scope": "international"
+      },
+      "primaproteccion": {
+        "resultado": "Migrated this B2B safety distributor from a legacy system to Odoo, reaching 95% of orders through the online store.",
+        "metric": "95% of orders via the online store",
+        "cliente": "Prima Protección",
+        "sectors": [
+          "retail",
+          "wholesale",
+          "distribution",
+          "ppe",
+          "workplace safety"
+        ],
+        "scope": "international"
+      },
+      "obiz": {
+        "resultado": "Consolidated three entities onto a single Odoo platform after an acquisition, covering accounting, purchasing and sales.",
+        "metric": "3 entities on one platform",
+        "cliente": "Obiz Group",
+        "sectors": [
+          "professional services",
+          "consulting"
+        ],
+        "scope": "international"
+      },
+      "tmtechnics": {
+        "resultado": "After a first ERP attempt had stalled, brought construction, production and project costing onto one Odoo platform in a single, error-free go-live, with real margins visible while the offer is built.",
+        "metric": "Construction, production and project costing on 1 platform",
+        "cliente": "TM Technics",
+        "sectors": [
+          "construction",
+          "metal fabrication",
+          "manufacturing",
+          "assembly",
+          "installation",
+          "industrial"
+        ],
+        "scope": "international"
+      },
+      "despraz": {
+        "resultado": "Replaced Excel and disconnected tools with one platform covering the full site lifecycle, from quote to closeout: 3,339 construction sites and a single rate base shared by every project manager.",
+        "metric": "3,339 construction sites on one platform",
+        "cliente": "Despraz SA",
+        "sectors": [
+          "construction",
+          "prefabrication",
+          "industrial installation",
+          "industrial"
+        ],
+        "scope": "international"
+      },
+      "puratos": {
+        "resultado": "Standardised the group's acquired plants on a single Odoo template: 14 factories across 4 continents and 230 users, with country go-lives in under two months.",
+        "metric": "14 plants and 230 users on 1 template",
+        "cliente": "Puratos",
+        "sectors": [
+          "manufacturing",
+          "food",
+          "multi-plant",
+          "industrial group"
+        ],
+        "scope": "international"
+      },
+      "tunergia": {
+        "resultado": "Consolidated leads, projects and approvals for this Valencian energy consultancy on a single Odoo platform, replacing Telegram, Excel and paper after sixteen years.",
+        "metric": "2 companies, 1 Odoo platform",
+        "cliente": "Tunergia",
+        "sectors": [
+          "energy",
+          "utilities",
+          "energy consulting",
+          "services"
+        ],
+        "scope": "local"
+      },
+      "todotrofeo": {
+        "resultado": "Replaced a basic invoicing tool and hundreds of scattered files with Sales, CRM and Orders in Odoo: each customer's full history on a single screen.",
+        "metric": "1 screen per customer, ~500 orders/month",
+        "cliente": "Todotrofeo",
+        "sectors": [
+          "manufacturing",
+          "trophies",
+          "medals",
+          "made-to-order"
+        ],
+        "scope": "local"
+      },
+      "espacioorganico": {
+        "resultado": "Moved from manual inter-store transfers and gut-feel purchasing to sales-driven min-max replenishment on standard Odoo, in 6.5 months.",
+        "metric": "Live in 6.5 months",
+        "cliente": "Espacio Orgánico",
+        "sectors": [
+          "retail",
+          "food",
+          "organic",
+          "ecommerce",
+          "grocery"
+        ],
+        "scope": "local"
+      }
+    },
+    "sector_token_map": {
+      "food": "food",
+      "manufacturing": "manufacturing",
+      "retail": "retail",
+      "technology": "tech",
+      "construction": "construction",
+      "logistics": "logistics",
+      "services": "services",
+      "energy": "energy",
+      "utilities": "utilities",
+      "e-mobility": "e-mobility",
+      "technical retail": "technical-retail",
+      "industry": "industry",
+      "industrial saas": "industrial-saas",
+      "financial services": "financial-services",
+      "property management": "property-management",
+      "professional services": "professional-services",
+      "renting": "renting",
+      "leasing": "leasing",
+      "mobility": "mobility",
+      "labs": "labs",
+      "health": "health",
+      "regulated": "regulated",
+      "wholesale": "wholesale",
+      "distribution": "distribution",
+      "ppe": "ppe",
+      "workplace safety": "workplace-safety",
+      "consulting": "consulting"
+    }
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "_comment": "Reglas mecánicas (DASH/MARCA/IDIOMA/REGISTRO/PRESION/EXCL/PASIVA) importadas de dynapps-voice draft 2026-07-17. es NO recibe léxico de voz nuevo ni check de registro/pasiva (decisión de producto): solo la traducción de las reglas mecánicas.",
+  "acronyms_extra": [],
+  "brochure": [
+    "innovador", "innovadora", "innovación disruptiva", "líder", "lider", "puntero",
+    "puntera", "vanguardia", "de referencia", "end-to-end", "end to end", "solución 360",
+    "solucion 360", "360º", "llave en mano", "best-in-class", "best in class",
+    "sinergia", "holístic", "holistic", "disruptiv", "revolucionari", "de clase mundial",
+    "ecosistema integral", "potente y flexible", "a medida de tus necesidades"
+  ],
+  "jargon": [
+    "pipeline", "lead", "leads", "workflow", "backlog", "dashboard", "deadline",
+    "core business", "partner"
+  ],
+  "slop": [
+    "potenciar", "impulsar", "maximizar", "revolucionar", "transformar radicalmente",
+    "un abanico de", "una amplia gama de", "todo un mundo de", "el vertiginoso mundo",
+    "más allá de las expectativas", "llevar al siguiente nivel",
+    "delve", "leverage", "elevate", "tapestry", "testament", "beacon", "synergize",
+    "groundbreaking", "seamless", "cutting-edge", "unlock", "unleash", "empower",
+    "game-changer", "robust solution"
+  ],
+  "fluff": [
+    "en un mundo cada vez más", "en la era digital", "en el mundo actual", "hoy en día",
+    "a día de hoy", "cabe destacar", "cabe mencionar", "es importante destacar",
+    "es importante señalar", "es importante mencionar", "sin lugar a dudas",
+    "en definitiva", "en resumen", "en conclusión", "para concluir", "en última instancia"
+  ],
+  "stopwords": [
+    "de", "el", "la", "los", "las", "un", "una", "unos", "unas", "y", "o", "pero",
+    "que", "en", "con", "por", "para", "sin", "sobre", "es", "son", "está", "están",
+    "fue", "ser", "hay", "del", "al", "se", "su", "sus", "lo", "le", "les", "nos",
+    "como", "más", "muy", "ya", "también", "cada", "este", "esta", "estos", "estas",
+    "ese", "esa", "porque", "cuando", "donde", "entre", "desde", "hasta", "todo", "toda"
+  ],
+  "leak_denylist": [],
+  "register": [],
+  "passive_patterns": [],
+  "pressure": [
+    "última oportunidad", "ultima oportunidad", "solo hasta", "sólo hasta",
+    "oferta limitada", "por tiempo limitado", "date prisa", "no dejes pasar",
+    "no lo dejes escapar", "actúa ahora", "actua ahora", "antes de que sea tarde",
+    "plazas limitadas", "solo quedan", "aprovecha ahora"
+  ],
+  "word_charclass": "A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9./-",
+  "messages": {
+    "ok": "✓ brand_lint: sin hallazgos. Tono y capitalización OK.",
+    "warn": "⚠️  brand_lint: {n} aviso(s) — revisar antes de generar:\n",
+    "finding_line": "  [{kind:7}] {path}: «{token}»  {tip}",
+    "tips": {
+      "CAPS": "→ usar capitalización tipo frase (solo 1ª letra)",
+      "SLOP": "→ muletilla de IA: dilo con palabras normales (regla anti-slop)",
+      "FLUFF": "→ relleno de intro/outro: al grano, sin resumen",
+      "FOLLETO": "→ borrar adjetivo de folleto (Golden Rule 10)",
+      "RITMO": "→ varía la longitud: mezcla frases cortas y largas",
+      "JERGA": "→ preferir la palabra del sector (ver sector_glossary)",
+      "JERGA!": "→ está en glossary.evitar: sustituir por la palabra del sector",
+      "DASH": "→ sin rayas: usa , . ( ) o ->  (semiraya solo en rangos numéricos)",
+      "MARCA": "→ escribe «Dynapps» (D mayúscula; minúscula solo en el wordmark)",
+      "IDIOMA": "→ fuga de idioma: redacta en el idioma del pack",
+      "REGISTRO": "→ tratamiento incorrecto para este mercado",
+      "PRESION": "→ urgencia comercial: preséntala como transparencia de planificación",
+      "EXCL": "→ sin exclamaciones en el cuerpo (warn)",
+      "PASIVA": "→ posible voz pasiva: reescribe en activa (warn, heurística)"
+    },
+    "monotony_finding": "{run} frases seguidas de ~{avg} palabras"
+  }
+}

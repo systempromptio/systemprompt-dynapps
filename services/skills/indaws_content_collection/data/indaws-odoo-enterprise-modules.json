@@ -1,0 +1,124 @@
+{
+  "repository": "indawsodoo/indaws-odoo-enterprise",
+  "description": "Modulos Indaws que requieren Odoo Enterprise (firma, suscripciones, encuestas)",
+  "total_modules": 8,
+  "modules": [
+    {
+      "technical_name": "indaws_base_enterprise",
+      "name": "Indaws: Base Enterprise",
+      "description": "Bridge: conecta modulo base Indaws con funcionalidades Enterprise de Odoo.",
+      "category": "Hidden",
+      "depends": [
+        "web_enterprise",
+        "indaws_base"
+      ],
+      "license": "OPL-1",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_base_sale_subscription",
+      "name": "Indaws: Sale Subscription Base",
+      "description": "Bridge: conecta base Indaws con suscripciones (requiere Enterprise).",
+      "category": "Hidden",
+      "depends": [
+        "sale_subscription",
+        "indaws_base_enterprise"
+      ],
+      "license": "OPL-1",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_base_sign",
+      "name": "Indaws Base Sign",
+      "description": "Bridge: conecta base Indaws con firma electronica (requiere Enterprise).",
+      "category": "Sign",
+      "depends": [
+        "sign",
+        "indaws_base_enterprise"
+      ],
+      "license": "LGPL-3",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_base_survey",
+      "name": "Indaws Base Survey",
+      "description": "Bridge: conecta base Indaws con encuestas (requiere Enterprise).",
+      "category": "Survey",
+      "depends": [
+        "survey",
+        "indaws_base_enterprise"
+      ],
+      "license": "LGPL-3",
+      "auto_install": true,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_report_sign",
+      "name": "inDAWS: Report Sign",
+      "description": "Plantillas de informes para documentos de firma electronica.",
+      "category": "Report",
+      "depends": [
+        "sign"
+      ],
+      "license": "LGPL-3",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_sale_subscription",
+      "name": "Indaws: Sale Subscription",
+      "description": "Mejoras de suscripciones: funcionalidades avanzadas para ventas recurrentes Enterprise.",
+      "category": "Sales/Subscriptions",
+      "depends": [
+        "sale_subscription"
+      ],
+      "license": "OPL-1",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_sign",
+      "name": "inDAWs: Sign",
+      "description": "Indaws Sign.",
+      "category": "Apps",
+      "depends": [
+        "indaws_base_sign"
+      ],
+      "license": "OPL-1",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    },
+    {
+      "technical_name": "indaws_survey",
+      "name": "inDAWs: Survey",
+      "description": "Indaws Survey.",
+      "category": "Survey",
+      "depends": [
+        "base",
+        "indaws_base_survey"
+      ],
+      "license": "OPL-1",
+      "auto_install": false,
+      "versions": [
+        "18.0"
+      ]
+    }
+  ]
+}

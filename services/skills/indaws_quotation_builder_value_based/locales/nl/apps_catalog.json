@@ -1,0 +1,419 @@
+{
+  "config_general": {
+    "display_name": "Algemene instellingen",
+    "icon": "settings.svg",
+    "color": "#951CF3",
+    "outcome": "Een solide multi-company-basis",
+    "intro": "De basis van uw nieuwe ERP-systeem. Bevat alle initiële configuratie die uw team nodig heeft om vanaf dag één te werken: bedrijfsgegevens, gebruikers, rechten, fiscale instellingen en documentsjablonen.",
+    "value": "Een systeem dat vanaf het begin goed is ingericht, bespaart weken aan latere aanpassingen en zorgt dat elk document dat u uitgeeft (facturen, offertes, pakbonnen) uw huisstijl draagt.",
+    "funcionalidades": [
+      "Systeemconfiguratie (bedrijf, logo, valuta, taal)",
+      "Aanmaken van gebruikers en rechten",
+      "E-mailsjablonen en mailserver",
+      "Basis fiscale instellingen (BTW-nummer, fiscale posities, BTW)",
+      "Aanpassing van kop- en voettekst van documenten"
+    ],
+    "formaciones": [
+      { "n": "Systeembeheerder", "sesiones": 1 }
+    ],
+    "migraciones": [],
+    "dynapps_core": [],
+    "extras": [
+      { "n": "Multi-company (250€/extra bedrijf)", "p": 250, "c": "funcionalidades" },
+      { "n": "Meertaligheid (afgedrukte documenten)", "p": 250, "c": "funcionalidades" },
+      { "n": "30-60 gebruikers", "p": 250, "c": "funcionalidades" },
+      { "n": "60-100 gebruikers", "p": 500, "c": "funcionalidades" },
+      { "n": "+100 gebruikers", "p": 750, "c": "funcionalidades" },
+      { "n": "Extra opleidingssessies (200€/sessie)", "p": 200, "c": "formaciones" }
+    ]
+  },
+  "crm": {
+    "display_name": "CRM",
+    "icon": "crm.svg",
+    "color": "#951CF3",
+    "outcome": "Verkooppijplijn onder controle",
+    "intro": "Uw verkooppijplijn, centraal. Elke opportuniteit, elk gesprek, elke afspraak wordt vastgelegd en is zichtbaar voor het hele team. Met realtime dashboards weet u altijd hoe de commerciële activiteit ervoor staat.",
+    "value": "Verlies geen kansen meer door gebrek aan opvolging. Met een goed geïmplementeerd CRM kan uw verkoopteam zich richten op verkopen in plaats van op zoeken naar informatie in e-mails en spreadsheets.",
+    "funcionalidades": [
+      "Verkooppijplijn (fasen, kansen, ≤3 verkopers)",
+      "Opportuniteiten (aanmaken, opvolgen, afsluiten)",
+      "Aangepaste velden op de opportuniteitsfiche",
+      "Activiteiten (gesprekken, afspraken, taken)",
+      "Contactbeheer (bedrijven en contactpersonen)",
+      "Basisrapportage (pijplijn-dashboard, forecast)"
+    ],
+    "formaciones": [
+      { "n": "Verkoopteam", "sesiones": 2 }
+    ],
+    "migraciones": [],
+    "dynapps_core": [
+      "Projecten op opportuniteiten"
+    ],
+    "extras": [
+      { "n": "4-10 verkopers (meerdere teams, toewijzing)", "p": 500, "c": "funcionalidades" },
+      { "n": "+10 verkopers (gebieden, doelen)", "p": 1000, "c": "funcionalidades" },
+      { "n": "Lead scoring en nurturing", "p": 500, "c": "funcionalidades" },
+      { "n": "Verkoopautomatiseringen", "p": 250, "c": "funcionalidades" },
+      { "n": "Migratie van opportuniteiten", "p": 500, "c": "migraciones" },
+      { "n": "Geavanceerde prospectie (Dynapps Core)", "p": 500, "c": "dynapps_core" },
+      { "n": "Extra opleidingssessies (200€/sessie)", "p": 200, "c": "formaciones" }
+    ]
+  },
+  "ventas": {
+    "display_name": "Verkoop",
+    "icon": "sale_management.svg",
+    "color": "#FF575D",
+    "outcome": "Van offerte tot betaling",
+    "intro": "Beheer de volledige verkoopcyclus: van het opmaken van de offerte tot de facturatie, inclusief orderbevestiging en leveringsopvolging. Uw klanten kunnen offertes online ondertekenen en hun orders en facturen raadplegen via het portaal.",
+    "value": "Verminder de administratieve werklast en geef uw klanten een professionele ervaring met een selfserviceportaal, elektronische handtekening en geautomatiseerde communicatie.",
+    "funcionalidades": [
+      "Offertes (aanmaken, versturen, online ondertekenen)",
+      "Verkooporders (bevestiging, opvolging)",
+      "Prijslijsten (meerdere lijsten)",
+      "Productcatalogus (categorieën, varianten)",
+      "Klantenportaal",
+      "Verkooprapportage"
+    ],
+    "formaciones": [
+      { "n": "Administratie + verkoop", "sesiones": 2 }
+    ],
+    "migraciones": [],
+    "dynapps_core": [
+      "Meerdere kortingen",
+      "Offerteversies",
+      "Offerteverbeteringen",
+      "Klantspecifieke productcodes",
+      "Verkoopdocumenten"
+    ],
+    "extras": [
+      { "n": "Abonnementen / Terugkerend", "p": 750, "c": "funcionalidades" },
+      { "n": "Extra offertesjablonen", "p": 250, "c": "personalizaciones" },
+      { "n": "Migratie van producten", "p": 250, "c": "migraciones" },
+      { "n": "Migratie van klanten", "p": 250, "c": "migraciones" },
+      { "n": "Migratie van prijslijsten", "p": 500, "c": "migraciones" },
+      { "n": "Goedkeuringsflow (Dynapps Core)", "p": 500, "c": "dynapps_core" },
+      { "n": "Kits / samengestelde producten (Dynapps Core)", "p": 500, "c": "dynapps_core" },
+      { "n": "Flows per ordertype (Dynapps Core)", "p": 500, "c": "dynapps_core" },
+      { "n": "B2B-getrouwheid (Dynapps Core)", "p": 500, "c": "dynapps_core" },
+      { "n": "Extra opleidingssessies (200€/sessie)", "p": 200, "c": "formaciones" }
+    ]
+  },
+  "compras": {
+    "display_name": "Inkoop",
+    "icon": "purchase.svg",
+    "color": "#FF7759",
+    "outcome": "Inkoop onder controle",
+    "intro": "Centraliseer het inkoopbeheer: maak inkooporders aan, vergelijk offertes van meerdere leveranciers, controleer de goederenontvangst en valideer leveranciersfacturen tegen orders en pakbonnen.",
+    "value": "Krijg zicht op wat u inkoopt, bij wie en tegen welke prijs. Onderhandel beter met echte data en vermijd dubbele of foutieve leveranciersfacturatie.",
+    "funcionalidades": [
+      "Inkooporders",
+      "Meerdere leveranciers",
+      "Offerteaanvragen (RFQ)",
+      "Leveranciersfiches",
+      "Factuurcontrole (2/3-wegmatching)",
+      "Inkooprapportage"
+    ],
+    "formaciones": [
+      { "n": "Inkoopverantwoordelijke", "sesiones": 2 }
+    ],
+    "migraciones": [
+      "Migratie van leveranciers"
+    ],
+    "dynapps_core": [
+      "Integratie inkoop-verkoop"
+    ],
+    "extras": [
+      { "n": "Aanvulling (minimumvoorraad)", "p": 500, "c": "funcionalidades" },
+      { "n": "Raamcontracten", "p": 500, "c": "funcionalidades" },
+      { "n": "Dropshipping", "p": 500, "c": "funcionalidades" },
+      { "n": "Migratie inkoopprijslijsten", "p": 250, "c": "migraciones" },
+      { "n": "Geavanceerd inkoopbeheer (Dynapps Core)", "p": 750, "c": "dynapps_core" },
+      { "n": "Extra opleidingssessies (200€/sessie)", "p": 200, "c": "formaciones" }
+    ]
+  },
+  "inventario": {
+    "display_name": "Voorraad",
+    "icon": "stock.svg",
+    "color": "#FF7E23",
+    "outcome": "Traceerbare voorraad in realtime",
+    "intro": "Volledige controle over uw magazijn: weet op elk moment wat u hebt, waar het ligt en wat het waard is. Beheer inkomende en uitgaande stromen, interne overboekingen en periodieke voorraadtellingen met volledige traceerbaarheid.",
+    "value": "Vermijd voorraadtekorten, verminder overtollige voorraad en werk efficiënter in uw magazijn. Traceerbaarheid laat u binnen minuten reageren op elk incident.",
+    "funcionalidades": [
+      "1 magazijn (inkomend, voorraad, uitgaand)",
+      "Voorraadbewegingen",
+      "Producten (categorieën, eenheden, minimumvoorraad)",
+      "Periodieke voorraadtelling",
+      "Rapportage (voorraad, waardering)"
+    ],
+    "formaciones": [
+      { "n": "Magazijnverantwoordelijke", "sesiones": 2 }
+    ],
+    "migraciones": [
+      "Migratie van producten"
+    ],
+    "dynapps_core": [
+      "Gewaardeerde pakbonnen",
+      "Geavanceerd voorraadbeheer"
+    ],
+    "extras": [
+      { "n": "Meerdere magazijnen (250€/magazijn)", "p": 250, "c": "funcionalidades" },
+      { "n": "Partijtraceerbaarheid", "p": 500, "c": "funcionalidades" },
+      { "n": "Serienummertraceerbaarheid", "p": 500, "c": "funcionalidades" },
+      { "n": "Vervaldatums (FEFO)", "p": 250, "c": "funcionalidades" },
+      { "n": "Geavanceerde logistieke routes", "p": 500, "c": "funcionalidades" },
+      { "n": "Barcodes (PDA)", "p": 500, "c": "funcionalidades" },
+      { "n": "Automatische aanvulling", "p": 500, "c": "funcionalidades" },
+      { "n": "Migratie huidige voorraad", "p": 500, "c": "migraciones" },
+      { "n": "Serienummer-/partijgenerator (Core)", "p": 250, "c": "dynapps_core" },
+      { "n": "Voorraad in projecten (Core)", "p": 500, "c": "dynapps_core" },
+      { "n": "Merken en labels (Core)", "p": 250, "c": "dynapps_core" },
+      { "n": "Extra opleidingssessies (200€/sessie)", "p": 200, "c": "formaciones" }
+    ]
+  },
+  "fabricacion": {
+    "display_name": "Productie (MRP)",
+    "icon": "mrp.svg",
+    "color": "#FF575D",
+    "outcome": "Productie verbonden met verkoop",
+    "intro": "Plan en beheer uw productie: definieer stuklijsten, maak productieorders aan, controleer het componentenverbruik en analyseer productiekosten en -efficiëntie.",
+    "value": "Verbind productie met verkoop, inkoop en voorraad. Wanneer een klant een order plaatst, kan het systeem automatisch de nodige productieorders en grondstofaankopen genereren.",
+    "funcionalidades": [
+      "Stuklijsten",
+      "1 werkplek",
+      "Productieorders",
+      "Materiaalverbruik",
+      "Productierapportage"
+    ],
+    "formaciones": [
+      { "n": "Productieverantwoordelijke", "sesiones": 2 }
+    ],
+    "migraciones": [],
+    "dynapps_core": [],
+    "extras": [
+      { "n": "Meerdere werkplekken (250€/werkplek)", "p": 250, "c": "funcionalidades" },
+      { "n": "Werkorders", "p": 500, "c": "funcionalidades" },
+      { "n": "Uitbesteding", "p": 750, "c": "funcionalidades" },
+      { "n": "Productieplanning (MPS)", "p": 750, "c": "funcionalidades" },
+      { "n": "Kwaliteitscontrole (ISO)", "p": 750, "c": "funcionalidades" },
+      { "n": "PLM (stuklijstversies, ECO's)", "p": 500, "c": "funcionalidades" },
+      { "n": "Onderhoud (prev./correctief)", "p": 500, "c": "funcionalidades" },
+      { "n": "Explosie / Meerlaags", "p": 500, "c": "funcionalidades" },
+      { "n": "Migratie van stuklijsten", "p": 500, "c": "migraciones" },
+      { "n": "Migratie van routes/werkplekken", "p": 250, "c": "migraciones" },
+      { "n": "Extra opleidingssessies (200€/sessie)", "p": 200, "c": "formaciones" }
+    ]
+  },
+  "facturacion": {
+    "display_name": "Facturatie",
+    "icon": "account.svg",
+    "color": "#951CF3",
+    "outcome": "Geautomatiseerde, conforme facturatie",
+    "intro": "Volledige facturatie voor klanten en leveranciers: maak facturen, creditnota's en correctiefacturen aan, registreer inningen en betalingen en volg openstaande vervaldata op. Alles geïntegreerd met verkoop, inkoop en boekhouding.",
+    "value": "Verminder fouten en administratieve tijd. Facturen worden automatisch gegenereerd vanuit orders of pakbonnen, en u kunt ze met één klik per e-mail versturen.",
+    "funcionalidades": [
+      "Klantfacturatie (facturen, creditnota's, correctiefacturen)",
+      "Leveranciersfacturen",
+      "Volledige flow (aanmaken→inning/betaling)",
+      "Inningen en betalingen",
+      "Rapportage"
+    ],
+    "formaciones": [
+      { "n": "Administratie", "sesiones": 2 }
+    ],
+    "migraciones": [],
+    "dynapps_core": [
+      "Facturatie-hulpmiddelen"
+    ],
+    "extras": [
+      { "n": "Aangepaste PDF-generator (Core)", "p": 500, "c": "dynapps_core" },
+      { "n": "Geavanceerde marges en kosten (Core)", "p": 500, "c": "dynapps_core" },
+      { "n": "Extra opleidingssessies (200€/sessie)", "p": 200, "c": "formaciones" }
+    ]
+  },
+  "contabilidad": {
+    "display_name": "Boekhouding",
+    "icon": "account_accountant.svg",
+    "color": "#951CF3",
+    "outcome": "Afsluiting en consolidatie",
+    "accounting_from_fiscal": true,
+    "intro": "Boekhouding geïntegreerd met uw rekeningschema: automatische bankaflettering, beheer van vaste activa, ondersteunde periodeafsluitingen en alle wettelijke rapportages (balans, winst-en-verliesrekening, grootboek, fiscale aangiften).",
+    "value": "Uw boekhouding wordt automatisch gevoed vanuit verkoop- en inkoopfacturen. De automatische bankaflettering vermindert de tijd voor de maandafsluiting drastisch.",
+    "funcionalidades": [
+      "Rekeningschema (BTW)",
+      "Bankaflettering",
+      "Vaste activa",
+      "Periodeafsluitingen",
+      "Boekhoudkundige inningen en betalingen",
+      "Boekhoudkundige rapportage"
+    ],
+    "formaciones": [
+      { "n": "Boekhouding", "sesiones": 3 }
+    ],
+    "migraciones": [
+      "Migratie van rekeningschema",
+      "Migratie van openingsbalans"
+    ],
+    "dynapps_core": [],
+    "extras": [
+      { "n": "Realtime fiscale rapportage", "p": 500, "c": "funcionalidades" },
+      { "n": "SEPA automatische incasso", "p": 750, "c": "funcionalidades" },
+      { "n": "Meerdere valuta", "p": 250, "c": "funcionalidades" },
+      { "n": "Analytische boekhouding", "p": 500, "c": "funcionalidades" },
+      { "n": "Boekhoudkundige budgetten", "p": 500, "c": "funcionalidades" },
+      { "n": "Intrastat / ICP-opgaaf", "p": 250, "c": "funcionalidades" },
+      { "n": "Verbeteringen fiscale rapportage (Dynapps Core)", "p": 500, "c": "dynapps_core" },
+      { "n": "Extra opleidingssessies (200€/sessie)", "p": 200, "c": "formaciones" }
+    ]
+  },
+  "proyecto": {
+    "display_name": "Project",
+    "icon": "project.svg",
+    "color": "#FF7759",
+    "outcome": "Rendabiliteit per project",
+    "intro": "Beheer interne en klantprojecten: maak taken met subtaken en afhankelijkheden aan, wijs resources toe, registreer uren en visualiseer de voortgang met Gantt-diagrammen.",
+    "value": "Beheer de inspanning en rendabiliteit van elk project. Geïntegreerd met facturatie om uren of mijlpalen rechtstreeks aan de klant te factureren.",
+    "funcionalidades": [
+      "Meerdere projecten",
+      "Taken en subtaken (Gantt)",
+      "Urenregistratie",
+      "Samenwerking",
+      "Rapportage"
+    ],
+    "formaciones": [
+      { "n": "Projectverantwoordelijke", "sesiones": 2 }
+    ],
+    "migraciones": [],
+    "dynapps_core": [
+      "Urenregistratie per project"
+    ],
+    "extras": [
+      { "n": "Projectfacturatie", "p": 500, "c": "funcionalidades" },
+      { "n": "Resourceplanning", "p": 500, "c": "funcionalidades" },
+      { "n": "Voorraad in projecten (Core)", "p": 500, "c": "dynapps_core" },
+      { "n": "Extra opleidingssessies (200€/sessie)", "p": 200, "c": "formaciones" }
+    ]
+  },
+  "helpdesk": {
+    "display_name": "Helpdesk",
+    "icon": "helpdesk.svg",
+    "color": "#FF7E23",
+    "outcome": "Professionele klantenondersteuning",
+    "intro": "Professionele klantenondersteuning: ticketbeheer met SLA's, een selfserviceportaal waar uw klanten hun meldingen aanmaken en opvolgen, en een kennisbank met FAQ-artikelen.",
+    "value": "Verbeter de klanttevredenheid met beheerste responstijden en een portaal waar klanten veelgestelde vragen kunnen oplossen zonder uw team te contacteren.",
+    "funcionalidades": [
+      "1 supportteam (basis-SLA)",
+      "Tickets (handmatig en e-mail)",
+      "Klantenportaal",
+      "Kennisbank",
+      "Rapportage"
+    ],
+    "formaciones": [
+      { "n": "Supportteam", "sesiones": 2 }
+    ],
+    "migraciones": [],
+    "dynapps_core": [],
+    "extras": [
+      { "n": "Extra teams (250€/team)", "p": 250, "c": "funcionalidades" },
+      { "n": "Urenregistratie op tickets", "p": 250, "c": "funcionalidades" },
+      { "n": "Support factureren", "p": 500, "c": "funcionalidades" },
+      { "n": "Automatiseringen", "p": 250, "c": "funcionalidades" },
+      { "n": "Livechat", "p": 250, "c": "funcionalidades" },
+      { "n": "Extra opleidingssessies (200€/sessie)", "p": 200, "c": "formaciones" }
+    ]
+  },
+  "website": {
+    "display_name": "Website / eCommerce",
+    "icon": "website.svg",
+    "color": "#951CF3",
+    "outcome": "Een website verbonden met uw ERP",
+    "intro": "Uw webaanwezigheid geïntegreerd met het ERP: een bedrijfssite met blog, een contactformulier gekoppeld aan het CRM, een klantenportaal en optioneel een webshop met catalogus, winkelwagen en checkout.",
+    "value": "Een website verbonden met het ERP betekent dat online orders rechtstreeks in verkoop terechtkomen, de voorraad realtime bijwerkt en klanten hun gegevens direct bijgewerkt zien.",
+    "funcionalidades": [
+      "Bedrijfswebsite (5 pagina's)",
+      "Blog",
+      "Contactformulier",
+      "Klantenportaal",
+      "Basis-SEO",
+      "Responsive"
+    ],
+    "formaciones": [
+      { "n": "Contentbeheerder", "sesiones": 2 }
+    ],
+    "migraciones": [],
+    "dynapps_core": [
+      "eCommerce-verbeteringen"
+    ],
+    "extras": [
+      { "n": "Extra pagina's (100€/pagina)", "p": 100, "c": "funcionalidades" },
+      { "n": "Webshop (eCommerce)", "p": 1500, "c": "funcionalidades" },
+      { "n": "Meertalige website", "p": 500, "c": "funcionalidades" },
+      { "n": "Ontwerp op maat", "p": 750, "c": "personalizaciones" },
+      { "n": "Livechat", "p": 250, "c": "funcionalidades" },
+      { "n": "Migratie van webinhoud", "p": 500, "c": "migraciones" },
+      { "n": "Google Merchant (Core)", "p": 250, "c": "dynapps_core" },
+      { "n": "Extra opleidingssessies (200€/sessie)", "p": 200, "c": "formaciones" }
+    ]
+  },
+  "marketing_email": {
+    "display_name": "E-mailmarketing",
+    "icon": "mass_mailing.svg",
+    "color": "#FF575D",
+    "outcome": "Meetbare campagnes",
+    "intro": "Geïntegreerde e-mailmarketingcampagnes: een visuele editor om e-mails te ontwerpen, beheer van contactlijsten, segmentatie en gedetailleerde resultatenanalyse (openingen, kliks, afmeldingen).",
+    "value": "Communiceer professioneel met uw klanten en meet de werkelijke impact van elke campagne. Geïntegreerd met CRM en verkoop om te segmenteren op koopgedrag.",
+    "funcionalidades": [
+      "E-mailcampagnes (visuele editor)",
+      "Contactlijsten",
+      "3 e-mailsjablonen",
+      "Rapportage (openingen, kliks)"
+    ],
+    "formaciones": [
+      { "n": "Marketing", "sesiones": 1 }
+    ],
+    "migraciones": [],
+    "dynapps_core": [],
+    "extras": [
+      { "n": "Marketingautomatisering", "p": 750, "c": "funcionalidades" },
+      { "n": "Geavanceerde segmentatie", "p": 250, "c": "funcionalidades" },
+      { "n": "Extra sjablonen", "p": 250, "c": "personalizaciones" },
+      { "n": "SMS-marketing", "p": 500, "c": "funcionalidades" },
+      { "n": "Geavanceerd e-mailontwerp (Core)", "p": 500, "c": "dynapps_core" },
+      { "n": "Verbeterde uitgaande e-mail (Core)", "p": 250, "c": "dynapps_core" },
+      { "n": "Extra opleidingssessies (200€/sessie)", "p": 200, "c": "formaciones" }
+    ]
+  },
+  "rrhh": {
+    "display_name": "HR",
+    "icon": "hr.svg",
+    "color": "#FF7E23",
+    "outcome": "Uw team op één plek",
+    "intro": "Gecentraliseerd beheer van uw team: medewerkersdirectory, arbeidsovereenkomsten, organigram, in- en uitklokken en afdelingsbeheer.",
+    "value": "Alle informatie van uw team op één plek. Geïntegreerd met projecten om gewerkte uren te koppelen en met boekhouding voor onkostenbeheer.",
+    "funcionalidades": [
+      "Medewerkersdirectory",
+      "Afdelingen (organigram)",
+      "Arbeidsovereenkomsten",
+      "Aanwezigheid / Tijdregistratie"
+    ],
+    "formaciones": [
+      { "n": "HR", "sesiones": 1 }
+    ],
+    "migraciones": [
+      "Migratie van medewerkers"
+    ],
+    "dynapps_core": [],
+    "extras": [
+      { "n": "Verlof en vakantie", "p": 500, "c": "funcionalidades" },
+      { "n": "Onkosten medewerkers", "p": 500, "c": "funcionalidades" },
+      { "n": "Beoordelingen / Functioneren", "p": 500, "c": "funcionalidades" },
+      { "n": "Werving & selectie", "p": 500, "c": "funcionalidades" },
+      { "n": "Wagenparkbeheer", "p": 500, "c": "funcionalidades" },
+      { "n": "Opleiding medewerkers", "p": 250, "c": "funcionalidades" },
+      { "n": "50-100 medewerkers", "p": 250, "c": "funcionalidades" },
+      { "n": "+100 medewerkers", "p": 500, "c": "funcionalidades" },
+      { "n": "Migratie van verlofsaldi", "p": 250, "c": "migraciones" },
+      { "n": "Medewerkersportaal (Core)", "p": 500, "c": "dynapps_core" },
+      { "n": "Extra opleidingssessies (200€/sessie)", "p": 200, "c": "formaciones" }
+    ]
+  }
+}

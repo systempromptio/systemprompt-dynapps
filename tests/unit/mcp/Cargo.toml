@@ -11,6 +11,8 @@ workspace = true
 systemprompt-mcp-shared = { workspace = true }
 systemprompt-mcp-agent = { workspace = true }
 systemprompt-mcp-agent-farm = { workspace = true }
+systemprompt-mcp-odoo = { workspace = true }
+systemprompt-web-admin-platform = { workspace = true }
 systemprompt-web-admin-core = { workspace = true }
 systemprompt-web-shared = { workspace = true }
 chrono = { workspace = true }
@@ -21,3 +23,4 @@ axum = { workspace = true }
 serde = { version = "1", features = ["derive"] }
 serde_json = { workspace = true }
 tempfile = { workspace = true }
+base64 = { workspace = true }

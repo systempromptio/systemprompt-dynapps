@@ -82,12 +82,12 @@ fi
 # --- bodies --------------------------------------------------------------------
 B="$RUN/body.json"
 case "$BODY" in
-    buffered) echo '{"model":"claude-sonnet-5","max_tokens":32,"messages":[{"role":"user","content":"ping"}]}' > "$B" ;;
-    stream) echo '{"model":"claude-sonnet-5","max_tokens":32,"stream":true,"messages":[{"role":"user","content":"ping"}]}' > "$B" ;;
+    buffered) echo '{"model":"claude-sonnet-5-5","max_tokens":32,"messages":[{"role":"user","content":"ping"}]}' > "$B" ;;
+    stream) echo '{"model":"claude-sonnet-5-5","max_tokens":32,"stream":true,"messages":[{"role":"user","content":"ping"}]}' > "$B" ;;
     long) python3 -c 'import json
 m=[{"role":("user" if i%2==0 else "assistant"),"content":"turn %d: lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor." % i} for i in range(39)]
 m.append({"role":"user","content":"and now?"})
-print(json.dumps({"model":"claude-sonnet-5","max_tokens":32,"messages":m}))' > "$B" ;;
+print(json.dumps({"model":"claude-sonnet-5-5","max_tokens":32,"messages":m}))' > "$B" ;;
     *) echo "unknown body $BODY" >&2; exit 2 ;;
 esac
 $K create configmap loadtest-body --from-file=body.json="$B" --dry-run=client -o yaml | $K apply -f - >/dev/null
@@ -109,7 +109,7 @@ sleep 35
 IFS=, read -r wtok wsid < <($K get secret "loadtest-tokens-$SET" -o jsonpath='{.data.tokens\.csv}' | base64 -d | head -1)
 $K exec deploy/dynapps-admin -c server -- /app/bin/hey -z 20s -c 12 -m POST -T application/json \
     -H "Authorization: Bearer $wtok" -H "x-session-id: $wsid" -H "anthropic-version: 2023-06-01" \
-    -d '{"model":"claude-sonnet-5","max_tokens":32,"messages":[{"role":"user","content":"warm"}]}' \
+    -d '{"model":"claude-sonnet-5-5","max_tokens":32,"messages":[{"role":"user","content":"warm"}]}' \
     http://dynapps-gateway:8080/v1/messages >/dev/null 2>&1 </dev/null || true
 sleep 15
 psqlc -c "SELECT pg_stat_statements_reset();" >/dev/null </dev/null

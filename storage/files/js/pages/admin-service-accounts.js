@@ -45,7 +45,7 @@ const attachCredential = async (form) => {
     return;
   }
   const body = { kind: value('kind'), secret: secret.value };
-  for (const name of ['app_id', 'installation_id', 'instance_url', 'consumer_key', 'email']) {
+  for (const name of ['app_id', 'installation_id', 'instance_url', 'consumer_key', 'email', 'url', 'db', 'login']) {
     body[name] = value(name);
   }
   secret.value = '';

@@ -13,7 +13,7 @@
 
 use std::sync::Arc;
 
-use axum::routing::get;
+use axum::routing::{get, post};
 use axum::{Extension, Router, middleware as axum_middleware};
 use tower_http::normalize_path::NormalizePathLayer;
 
@@ -102,7 +102,9 @@ fn analysis_routes() -> Router<Arc<PgPool>> {
 }
 
 fn farm_routes() -> Router<Arc<PgPool>> {
-    farm_ssr::routes().merge(farm_fragments::routes())
+    farm_ssr::routes()
+        .merge(farm_fragments::routes())
+        .route("/farm/demos/odoo", post(super::odoo_demo::odoo_demo_action))
 }
 
 fn governance_routes() -> Router<Arc<PgPool>> {

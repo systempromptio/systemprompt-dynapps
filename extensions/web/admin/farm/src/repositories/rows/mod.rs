@@ -12,7 +12,7 @@ use systemprompt_web_shared::ProjectId;
 
 use crate::types::{FarmAgentId, FarmId};
 
-pub use eval::{EvalCaseRow, EvalResultRow, EvalRunRow, EvalSuiteRow};
+pub use eval::{EvalCaseRow, EvalDayRow, EvalResultRow, EvalRunRow, EvalSuiteRow};
 pub use run::RunRow;
 
 #[derive(Debug, Clone, PartialEq, Serialize, sqlx::FromRow)]

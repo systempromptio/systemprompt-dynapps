@@ -1,0 +1,12 @@
+id: dynapps_portal_guide
+name: Dynapps Portal Guide
+description: Route Odoo questions and actions to the Dynapps portal servers - DynBrain for how-to and
+  internal knowledge, Dynapps Odoo for live records - and explain how to connect each one.
+enabled: true
+file: SKILL.md
+tags:
+- dynapps
+- odoo
+- knowledge
+category: business
+display_category: Dynapps

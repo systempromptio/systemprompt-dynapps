@@ -122,6 +122,7 @@ impl FarmRunHandler {
                 purpose: Some(prepare::credential_purpose(&run.id)),
             })
             .await?;
+        let request = prepare::with_mcp_bearer(&request, credentials.mcp_token.as_deref());
         let job = Job {
             claimed,
             request: &request,

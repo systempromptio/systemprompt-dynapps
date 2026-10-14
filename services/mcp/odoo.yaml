@@ -1,0 +1,38 @@
+# `tool_policy` is required on every managed server: `allow` (no per-call
+# prompt in Claude Code / Claude Desktop), `prompt` or `deny`. A server without
+# it is withheld from the bridge manifest and fails boot validation.
+# See docs/CONFIGURED-CONNECTORS.md.
+#
+# The Odoo connector. Every call runs as the caller's own sealed
+# `odoo_api_key` machine credential (on this instance the farm's service
+# account), so Odoo's record rules scope what it sees. `allow` because the
+# governance chain judges every call; the destructive tools (crm_lead_delete,
+# partner_delete, partner_anonymise) are gated there by role, and at the tool
+# layer by a required `reason` and demo scope.
+#
+# Who may reach the server at all is declared in
+# services/access-control/rules.yaml (`mcp_server/odoo`), not here.
+#
+# Demo scope: destructive and erasure tools refuse any record not tagged
+# `demo-*` unless ODOO_DEMO_SCOPE is `false`. It defaults on in the binary; the
+# name is forwarded from the server's environment so a deployment can turn it
+# off without a rebuild.
+mcp_servers:
+  odoo:
+    type: internal
+    binary: systemprompt-mcp-odoo
+    package: odoo
+    port: 5012
+    enabled: true
+    tool_policy: allow
+    display_in_web: true
+    removable: false
+    description: Odoo CRM - leads, partners, notes, activities, sales and invoices, plus demo-scoped deletes and GDPR erasure
+    env_vars:
+    - ODOO_DEMO_SCOPE
+    oauth:
+      required: true
+      scopes:
+      - user
+      audience: mcp
+      client_id: null

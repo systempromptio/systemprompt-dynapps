@@ -2,7 +2,7 @@
     {{#*inline "content"}}
     {{> components/breadcrumbs crumbs=breadcrumbs}}
 
-    {{#*inline "header_actions"}}<form method="get" action="/admin/farm/evals" class="sp-farm-evals__filters" aria-label="Filter evals"><label class="sp-u-sr-only" for="farm-evals-farm">Farm</label><select class="sp-select" id="farm-evals-farm" name="farm"><option value="">All farms</option>{{#each farms}}<option value="{{this.value}}"{{#if this.selected}} selected{{/if}}>{{this.label}}</option>{{/each}}</select><label class="sp-u-sr-only" for="farm-evals-days">Window</label><select class="sp-select" id="farm-evals-days" name="days">{{#each windows}}<option value="{{this.value}}"{{#if this.selected}} selected{{/if}}>{{this.label}}</option>{{/each}}</select><button class="sp-btn sp-btn--sm sp-btn--outline" type="submit">Apply</button></form>{{/inline}}
+    {{#*inline "header_actions"}}<form method="get" action="/admin/farm/evals" class="sp-farm-evals__filters" aria-label="Filter evals"><label class="sp-u-sr-only" for="farm-evals-farm">Farm</label><select class="sp-select" id="farm-evals-farm" name="farm"><option value="">All farms</option>{{#each farms}}<option value="{{this.value}}"{{#if this.selected}} selected{{/if}}>{{this.label}}</option>{{/each}}</select><label class="sp-u-sr-only" for="farm-evals-days">Window</label><select class="sp-select" id="farm-evals-days" name="days">{{#each windows}}<option value="{{this.value}}"{{#if this.selected}} selected{{/if}}>{{this.label}}</option>{{/each}}</select><button class="sp-btn sp-btn--sm sp-btn--outline" type="submit">Apply</button></form>{{#if can_run_demo}}<form method="post" action="/admin/farm/demos/odoo" class="sp-farm-evals__run"><button class="sp-btn sp-btn--sm sp-btn--primary" type="submit" title="Re-seed the demo-* Odoo records, grant the farm service account odoo_destructive for 30 minutes, run the three Odoo suites and revoke the grant when they finish">Run Odoo demo</button></form>{{/if}}{{/inline}}
     {{> components/page-header title=title
         subtitle="Eval suites per agent, the case matrix, and how scores move over time."}}
 
@@ -55,6 +55,24 @@
           </tbody>
         {{/components/table}}
       </section>
+
+      <section class="sp-farm-evals__section" aria-labelledby="farm-evals-history-title">
+        <h2 class="sp-farm-evals__title" id="farm-evals-history-title">History per agent</h2>
+        <p class="sp-farm-evals__lede">Every eval run in the window, folded per agent per day: how many cases passed and what the judge scored. Each point is one day with a finished eval run.</p>
+        {{#if history_rows}}
+        {{> farm/eval-trends rows=history_rows caption="Eval history per agent"}}
+        {{else}}
+        {{> components/empty-state heading="No finished eval runs" message="Run a suite, or launch a run with an eval case, to start the history."}}
+        {{/if}}
+      </section>
+
+      {{#if recent_runs}}
+      <section class="sp-farm-evals__section" aria-labelledby="farm-evals-recent-title">
+        <h2 class="sp-farm-evals__title" id="farm-evals-recent-title">Recent eval runs</h2>
+        <p class="sp-farm-evals__lede">Open one for every case's assertions and the judge's rationale.</p>
+        {{> farm/eval-runs-recent rows=recent_runs caption="Recent eval runs"}}
+      </section>
+      {{/if}}
       {{else}}
       {{> components/empty-state heading="No eval suites yet" message="Eval suites are synced from each agent's eval file. Sync a farm to bring its suites in."}}
       {{/if}}

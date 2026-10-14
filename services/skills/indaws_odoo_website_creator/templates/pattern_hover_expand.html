@@ -1,0 +1,40 @@
+<!--
+  PATTERN: hover-expand card (aka "expand on hover" / Apple Store style). No module. Hook class: iw-hx
+  Behavior: on hover, the card ENLARGES smoothly (scale) and gains a shadow — it stands out over
+  the others. The content is AGNOSTIC (an image+text card, a product, a catalog…). It combines
+  very well INSIDE a horizontal carousel `s_iw_hscroll` (each card in the track carries `.iw-hx`).
+
+  RULES (see interactive-patterns.md → "Rules common to all patterns"):
+    - inline `transform`/`transition`/`box-shadow` survive the build, but `:hover` can NOT be
+      inline → the rule goes in INJECTED CSS (custom_code_footer or ir.asset), keyed on `.iw-hx`.
+    - Inert if unused: with no `.iw-hx` elements the rule affects nothing.
+    - DESKTOP only (`min-width:768px`) and respects `prefers-reduced-motion`: on mobile/touch there's no real
+      hover and scaling would get in the way of scrolling.
+    - If it goes inside `s_iw_hscroll`, leave vertical PADDING in the track (e.g. `padding:1rem .5rem 1.5rem`)
+      so the scaled card isn't clipped against the carousel's `overflow`.
+
+  === CSS to inject ONCE (custom_code_footer or ir.asset) ===
+  <style id="iw-hoverexpand">
+  @media (min-width:768px) and (prefers-reduced-motion: no-preference){
+    .iw-hx{transition:transform .35s cubic-bezier(.2,.75,.2,1), box-shadow .35s ease;}
+    .iw-hx:hover{transform:scale(1.04);box-shadow:0 22px 48px rgba(0,0,0,.16);}
+  }
+  </style>
+
+  PERF: everything lives inside the media query on purpose — do NOT add a blanket
+  `will-change:transform` on `.iw-hx`: it promotes EVERY card to its own compositor layer
+  permanently (GPU memory, worst on mobile where hover never fires). The transform transition
+  promotes a layer on demand during the animation, which is all this effect needs.
+  Card <img>s: add `loading="lazy" decoding="async"` — cards scrolled out of a carousel still
+  download their images otherwise.
+
+  Adjustments: intensity → `scale(1.04)`; speed/curve → `.35s cubic-bezier(...)`; shadow → `box-shadow`.
+  Neutral placeholders: explicit gray with `.wc-ph` (NOT `bg-light`, which is a palette color).
+-->
+<div class="iw-hx h-100">
+  <div class="overflow-hidden mb-3" style="aspect-ratio:3/4;background-color:#FFFFFF;border:1px solid #ECEEF0;border-radius:24px;">
+    <img src="/web/image/123" alt="Title" class="w-100 h-100 d-block" style="object-fit:contain;" loading="lazy" decoding="async"/>
+  </div>
+  <h3 class="fw-bold mb-2">Title</h3>
+  <p class="mb-0">Card text.</p>
+</div>

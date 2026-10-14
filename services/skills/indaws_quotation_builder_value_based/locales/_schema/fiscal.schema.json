@@ -1,0 +1,73 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "fiscal.schema.json",
+  "title": "fiscal.json",
+  "description": "Jurisdiction STRUCTURE, not translation (plan §2.2, resolves fiscal blockers F1/F2/F3). Finance/legal-owned; requires a named local finance/legal reviewer. E-invoicing is a structured regime with copy rendered from facts. NO machine-translated fiscal/legal text ever ships. seller_vat_number is verify_from_odoo.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["vat_label", "seller_vat_number", "einvoicing", "chart_of_accounts", "tax_filings", "reverse_charge_clause", "cross_border_notes", "carriers", "payment_terms", "fineprint_web", "fineprint_pdf", "travel_clause", "acronyms_fiscal"],
+  "properties": {
+    "vat_label": { "type": "string", "description": "es='IVA' (FR='TVA', NL='BTW')." },
+    "seller_vat_number": { "type": "string", "verify_from_odoo": true, "description": "VAT number of the selling entity." },
+    "einvoicing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mandate_status", "authority", "network", "formats", "phase_dates", "threshold", "detection_signals", "copy_render"],
+      "properties": {
+        "mandate_status": { "type": "string", "enum": ["none", "b2g_only", "b2b_pending", "b2b_phased", "b2b_full"], "description": "es='b2b_pending' (Crea y Crece B2B awaiting implementing regulation; Verifactu 2026 is certified invoicing, NOT B2B exchange); FR='b2b_phased'; NL='b2g_only'. 'b2b_pending' = B2B mandate legislated but not yet in force." },
+        "authority": { "type": ["string", "null"], "description": "es='AEAT'." },
+        "network": { "type": "array", "items": { "type": "string" }, "description": "es=['SII','Verifactu']." },
+        "formats": { "type": "array", "items": { "type": "string" }, "description": "es=['Facturae','Factur-e']." },
+        "phase_dates": { "type": "array", "items": { "type": "object" }, "description": "FR fills phased scopes+dates; es=[]." },
+        "tolerances": { "type": ["array", "null"], "items": { "type": "string" }, "description": "Administration-published simplification/tolerance measures for the e-invoicing mandate (FR: mesures DGFiP, incl. report des non-établis à 2027). null where N/A (es/en/nl)." },
+        "threshold": { "type": ["string", "number", "null"] },
+        "detection_signals": { "type": "array", "items": { "type": "string" }, "description": "Matcher keywords for e-invoicing pain detection." },
+        "copy_render": { "type": "string", "description": "Client-facing copy RENDERED FROM the facts above; authored under legal review, never MT." }
+      }
+    },
+    "chart_of_accounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "copy"],
+      "properties": {
+        "code": { "type": "string", "description": "es='PGC' (FR='PCG', NL='RGS')." },
+        "copy": { "type": "string", "description": "Chart-of-accounts prose. es references PGCE/IVA/balance/PyG/libro mayor/modelos fiscales." }
+      }
+    },
+    "tax_filings": {
+      "type": "array",
+      "description": "Typed, jurisdiction-keyed filing list (NOT a translation of SII/349). ES=SII/SEPA/349; FR=FEC/CA3/EMEBI; NL=BTW-aangifte/ICP-opgaaf.",
+      "items": {
+        "type": "object",
+        "required": ["id", "legal_name", "is_mandatory", "signals"],
+        "properties": {
+          "id": { "type": "string", "description": "Complement/filing id; where it maps to a priced complement, matches registry complements (sii/sepa/modelo_349)." },
+          "legal_name": { "type": "string" },
+          "authority": { "type": ["string", "null"] },
+          "is_mandatory": { "type": "boolean" },
+          "threshold": { "type": ["string", "number", "null"] },
+          "odoo_module": { "type": ["string", "null"], "verify_from_odoo": true, "description": "Odoo l10n module technical name; DB/version-specific." },
+          "signals": { "type": "array", "items": { "type": "string" }, "description": "Matcher keywords." }
+        }
+      }
+    },
+    "reverse_charge_clause": { "type": "string", "description": "Intra-EU reverse-charge wording." },
+    "cross_border_notes": { "type": "string", "description": "OSS/IOSS relevance note." },
+    "carriers": { "type": "array", "items": { "type": "string" }, "description": "Local carriers, es=['SEUR','MRW','GLS','paleteras']." },
+    "payment_terms": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["validity_days", "default_payment_method", "late_payment_clause", "mandatory_mentions"],
+      "properties": {
+        "validity_days": { "type": "integer", "description": "es=30." },
+        "default_payment_method": { "type": "string", "description": "es='transferencia bancaria'." },
+        "late_payment_clause": { "type": ["string", "null"], "description": "FR REQUIRES this (pénalités de retard); legal defect if omitted where mandated. es=null." },
+        "mandatory_mentions": { "type": "array", "items": { "type": "string" }, "description": "FR: 40 € indemnité forfaitaire etc. es=[]." }
+      }
+    },
+    "fineprint_web": { "type": "string", "description": "Web fineprint frame; formatted with {currency_code_label}/{vat_label}/{validity_days}." },
+    "fineprint_pdf": { "type": "string", "description": "PDF fineprint frame." },
+    "travel_clause": { "type": "string", "description": "Travel/per-diem T&C clause." },
+    "acronyms_fiscal": { "type": "array", "items": { "type": "string" }, "description": "Fiscal acronyms allowed by brand_lint (unioned with shared core + brand_lint.acronyms_extra)." }
+  }
+}

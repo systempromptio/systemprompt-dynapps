@@ -7,7 +7,7 @@
 # (5 accounts, 8 opportunities, 8 contacts, 0 leads) on ontrq.
 plugin: dynapps-salesforce
 suite_version: 1
-model: claude-sonnet-5[1m]
+model: claude-sonnet-5-5[1m]
 suffix: >-
   EVAL RUN. Work only with Salesforce records whose name contains 'MCP TEST'
   and include that filter in every record query. Do not create, update or send

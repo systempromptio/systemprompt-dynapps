@@ -190,7 +190,7 @@ fn a_payload_that_is_not_a_report_fails_loudly() {
 #[test]
 fn every_microdollar_cell_gains_a_dollar_sibling() {
     let rows = with_dollar_siblings(vec![
-        json!({"model":"claude-sonnet-5","total_cost_microdollars":15_150_809,"request_count":320}),
+        json!({"model":"claude-sonnet-5-5","total_cost_microdollars":15_150_809,"request_count":320}),
         json!({"heading":"total_cost_microdollars","content":30_569_751}),
         json!({"heading":"total_requests","content":2524}),
         json!("not an object"),

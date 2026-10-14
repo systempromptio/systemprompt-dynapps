@@ -65,6 +65,7 @@ pub async fn launch(state: &Arc<FarmState>, req: LaunchRequest) -> FarmResult<Ru
         farm_id: &req.farm_id,
         farm_run_id: &farm_run_id,
         layout: &layout,
+        mcp_base: &state.gateway.internal_base,
         prompt_template: &template,
         case_prompt: req.case_prompt.as_deref(),
         model: model.as_deref(),

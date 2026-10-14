@@ -1,0 +1,36 @@
+<!--
+  custom_component_section.html — Pattern for a CUSTOM embedded component (Tier N1, no module).
+
+  This is how to ship a bespoke block that is NOT one of Odoo's native snippets, WITHOUT
+  building a module. Keys to making it behave natively in the Website Builder:
+    - Wrap as a <section> with a unique s_* class, data-snippet, and data-name → the builder
+      treats it as a selectable, movable, deletable block.
+    - Use Bootstrap 5 grid (container/row/col-*) so it is responsive by construction.
+    - Style via utility classes + per-element `style` attributes, or shared CSS via the
+      css-injection-ladder (ir.asset). NEVER a <style>/<script> inside editable content.
+    - data-snippet uses your own s_-prefixed name (e.g. s_iw_*); never use data-oe-* (reserved).
+
+  What this does NOT give you: an entry in the editor's snippet PALETTE, or custom snippet
+  OPTIONS, or interactive JS. Those need a module — see references/custom-components.md (N3).
+
+  Placeholders: {{COMPONENT_KEY}} (e.g. "s_custom_stat_band"), {{NAME}} (e.g. "Stat band").
+-->
+<section class="{{COMPONENT_KEY}} pt48 pb48" data-snippet="{{COMPONENT_KEY}}" data-name="{{NAME}}"
+         style="background-color:#0b1f3a;">
+  <div class="container">
+    <div class="row align-items-center g-4 text-center text-white">
+      <div class="col-12 col-md-4">
+        <div class="display-5 fw-bold" style="color:#ffd43b;">+85%</div>
+        <div class="text-uppercase small">Efficiency</div>
+      </div>
+      <div class="col-12 col-md-4">
+        <div class="display-5 fw-bold" style="color:#ffd43b;">-40%</div>
+        <div class="text-uppercase small">Costs</div>
+      </div>
+      <div class="col-12 col-md-4">
+        <div class="display-5 fw-bold" style="color:#ffd43b;">4 wks.</div>
+        <div class="text-uppercase small">Implementation</div>
+      </div>
+    </div>
+  </div>
+</section>

@@ -1,0 +1,50 @@
+{
+  "currency": {
+    "code": "EUR",
+    "code_label": "EUR",
+    "symbol": "€",
+    "symbol_position": "before",
+    "symbol_space": false,
+    "decimals": 0,
+    "decimal_sep": ".",
+    "thousands_sep": ",",
+    "round_display": "half_up",
+    "round_step": 10
+  },
+  "spreadsheet": {
+    "number_format_currency": "[$€]#,##0",
+    "locale_block": {
+      "name": "English (US)",
+      "code": "en_US",
+      "thousandsSeparator": ",",
+      "decimalSeparator": ".",
+      "dateFormat": "mm/dd/yyyy",
+      "timeFormat": "hh:mm:ss",
+      "formulaArgSeparator": ",",
+      "weekStart": 0
+    }
+  },
+  "date": {
+    "proposal_format": "%B %-d, %Y",
+    "month_names": [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December"
+    ]
+  },
+  "period_words": {
+    "year": ["year", "annual", "/ year", "/year"],
+    "month": ["month", "monthly", "/ month", "/month"],
+    "per_year_suffix": " / year",
+    "per_month_suffix": " / month"
+  }
+}

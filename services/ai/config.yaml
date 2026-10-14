@@ -1,18 +1,18 @@
 ai:
   default_provider: anthropic
-  default_max_output_tokens: 4096
+  default_max_output_tokens: 2048
   sampling:
     enable_smart_routing: false
-    fallback_enabled: true
+    fallback_enabled: false
   providers:
     vertex-anthropic:
-      enabled: true
+      enabled: false
       google_search_enabled: true
-      default_model: claude-sonnet-5
+      default_model: claude-sonnet-5-5
     anthropic:
       enabled: true
       google_search_enabled: true
-      default_model: anthropic-claude-sonnet-5
+      default_model: anthropic-claude-sonnet-5-5
     gemini:
       enabled: false
       google_search_enabled: true

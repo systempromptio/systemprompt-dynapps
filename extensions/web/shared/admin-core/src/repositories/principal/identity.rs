@@ -51,6 +51,10 @@ struct EnvelopeRow {
     last_seen_at: Option<DateTime<Utc>>,
 }
 
+// Why: `users.roles` keeps an expired manual grant until the hourly
+// access_expiry sweep rewrites it, and the govern hook reads roles through
+// here, so a lapsed time-boxed role (odoo_destructive) is dropped at read time.
+//
 // Why: Postgres `LEFT JOIN LATERAL … LIMIT 1` — a plain LEFT JOIN would repeat
 // the user once per IdP mapping; the bridge wants only the most recently seen
 // one.
@@ -68,7 +72,14 @@ pub async fn find_identity_envelope(
             COALESCE(u.display_name, u.full_name) AS display_name,
             u.status AS "status!",
             u.email_verified AS "email_verified!",
-            u.roles AS "roles!: Vec<String>",
+            COALESCE(ARRAY(SELECT r FROM UNNEST(u.roles) AS r
+                           WHERE NOT EXISTS (
+                               SELECT 1 FROM user_manual_roles m
+                               WHERE m.user_id = u.id AND m.role = r
+                                 AND m.valid_until IS NOT NULL
+                                 AND m.valid_until <= CURRENT_TIMESTAMP)
+                           ORDER BY r),
+                     ARRAY[]::TEXT[]) AS "roles!: Vec<String>",
             COALESCE(ARRAY(SELECT ug.group_id FROM user_groups ug
                            WHERE ug.user_id = u.id ORDER BY ug.group_id),
                      ARRAY[]::TEXT[]) AS "group_ids!: Vec<String>",

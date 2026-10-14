@@ -2,12 +2,13 @@
 //!
 //! The connector OAuth broker and the connection snapshot, device credential
 //! issuance, the Salesforce org registry and JWT-bearer grant, identity
-//! tokens, the jobs listing, and the machine credentials service accounts
-//! hold.
+//! tokens, the jobs listing, the machine credentials service accounts
+//! hold, and the Odoo demo seeder that spends one.
 
 pub mod connector_oauth;
 pub mod identity_token;
 pub mod machine_credentials;
+pub mod odoo_demo;
 pub mod salesforce_orgs;
 pub mod service_accounts;
 

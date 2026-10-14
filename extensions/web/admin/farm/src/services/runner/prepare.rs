@@ -9,19 +9,25 @@
 //! attempt only: a resumed attempt keeps the workspace the earlier one
 //! edited, which re-seeding the fixture would overwrite.
 //!
-//! `credential_purpose` (`farm:<run id>`) feeds `IssueRunCredentials.purpose`
-//! once core carries it; the caller is bound to the credential at issue, never
-//! sent as a forgeable scope header. `credential_user` names the user a run's
-//! credentials are issued to: the farm's service account
-//! (`agent_farm_farms.run_as_user_id`) when it has one, the launching user
-//! otherwise. Callers pass `None` until that column lands. The run's farm
-//! is bound as its `farm` attribution scope, verified at the gateway against
-//! the credential user's active runs.
+//! `credential_purpose` (`farm:<run id>`) feeds `IssueRunCredentials.purpose`;
+//! the caller is bound to the credential at issue, never sent as a forgeable
+//! scope header. `credential_user` names the user a run's credentials are
+//! issued to: the farm's service account (`agent_farm_farms.run_as_user_id`)
+//! when it has one, the launching user otherwise. The run's farm is bound as
+//! its `farm` attribution scope, verified at the gateway against the
+//! credential user's active runs.
+//!
+//! Every MCP server an agent's `mcp__<server>` tools name is handed to the
+//! host as this instance's HTTP endpoint for it. The request carries no
+//! bearer: it is stored verbatim, so [`with_mcp_bearer`] adds the run's MCP
+//! token (whose signed `purpose` is the caller) only at claim time.
 
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-use systemprompt::agent_runs::{HostKind, PermissionMode, RunLayout, RunRequest};
+use std::collections::BTreeMap;
+
+use systemprompt::agent_runs::{HostKind, McpServerSpec, PermissionMode, RunLayout, RunRequest};
 use systemprompt::identifiers::{AgentRunId, ScopeDimension, UserId};
 use systemprompt::models::attribution::ScopeBinding;
 use walkdir::WalkDir;
@@ -32,6 +38,7 @@ use crate::error::{FarmError, FarmResult};
 use crate::repositories::rows::{AgentRow, RunRow};
 use crate::repositories::{farms, fixtures};
 use crate::services::farm_sync::render_entry_prompt;
+use crate::services::farm_sync::validate::mcp_server_of;
 use crate::state::FarmState;
 use crate::types::{FarmId, FarmRunId};
 
@@ -46,6 +53,7 @@ pub struct RequestSpec<'a> {
     pub farm_id: &'a FarmId,
     pub farm_run_id: &'a FarmRunId,
     pub layout: &'a RunLayout,
+    pub mcp_base: &'a str,
     pub prompt_template: &'a str,
     pub case_prompt: Option<&'a str>,
     pub model: Option<&'a str>,
@@ -70,6 +78,34 @@ pub fn credential_purpose(run_id: &FarmRunId) -> String {
     format!("farm:{run_id}")
 }
 
+#[must_use]
+pub fn mcp_servers(agent_tools: &[String], base: &str) -> BTreeMap<String, McpServerSpec> {
+    agent_tools
+        .iter()
+        .filter_map(|tool| mcp_server_of(tool))
+        .map(|server| {
+            let spec = McpServerSpec::Http {
+                url: format!("{base}/api/v1/mcp/{server}/mcp"),
+                headers: BTreeMap::new(),
+            };
+            (server.to_owned(), spec)
+        })
+        .collect()
+}
+
+#[must_use]
+pub fn with_mcp_bearer(request: &RunRequest, token: Option<&str>) -> RunRequest {
+    let mut request = request.clone();
+    let Some(token) = token else {
+        return request;
+    };
+    for spec in request.mcp_servers.values_mut() {
+        if let McpServerSpec::Http { headers, .. } = spec {
+            headers.insert("Authorization".to_owned(), format!("Bearer {token}"));
+        }
+    }
+    request
+}
 
 pub fn build_request(spec: RequestSpec<'_>) -> FarmResult<RunRequest> {
     let agent = spec.agent;
@@ -109,7 +145,7 @@ pub fn build_request(spec: RequestSpec<'_>) -> FarmResult<RunRequest> {
         permission_prompts_none: false,
         workspace: spec.layout.workspace.clone(),
         add_dirs: Vec::new(),
-        mcp_servers: std::collections::BTreeMap::new(),
+        mcp_servers: mcp_servers(&agent.tools, spec.mcp_base),
         output_schema: None,
         max_turns: Some(max_turns),
         max_budget_usd: Some(spec.max_budget_usd),

@@ -1,0 +1,49 @@
+<!--
+  PATTERN: horizontal scroll strip (no module). Hook class: s_iw_hscroll
+  Behavior: a row of ITEMS that scrolls horizontally (swipe / trackpad / scrollbar), with N visible at
+  once and optional prev/next arrows. No autoplay. Items are AGNOSTIC — cards, logos, images, quotes,
+  whatever; the card below is just one filling.
+
+  Contract:
+    <section class="s_iw_hscroll ..." data-snippet="s_iw_hscroll" data-name="...">
+      <div data-iw-hscroll-track style="display:flex;overflow-x:auto;scroll-snap-type:x mandatory;…"> ITEMS </div>
+      each ITEM: <div style="flex:0 0 max(260px, calc((100% - (N-1)*GAP)/N));scroll-snap-align:start;"> … </div>
+      arrows (optional): <a data-iw-hscroll="prev"> / <a data-iw-hscroll="next">  (inside the same section)
+
+  CARDS VISIBLE: item width controls how many show. flex:0 0 max(260px, calc((100% - (N-1)*GAP)/N)).
+    GAP=1.5rem, N=3 → calc((100% - 3rem)/3). N items unlimited; the rest scroll. Min 260px keeps mobile sane.
+
+  Scroll works with NO JS (swipe/trackpad/scrollbar). Arrows need this JS injected ONCE
+  (custom_code_footer or ir.asset); event delegation → serves every .s_iw_hscroll on the site:
+
+    (function(){function onClick(ev){var b=ev.target.closest&&ev.target.closest('[data-iw-hscroll]');if(!b)return;
+    ev.preventDefault();var bl=b.closest('.s_iw_hscroll'),t=bl&&bl.querySelector('[data-iw-hscroll-track]');if(!t)return;
+    var d=b.getAttribute('data-iw-hscroll')==='next'?1:-1;t.scrollBy({left:d*Math.max(t.clientWidth*0.8,280),behavior:'smooth'});}
+    document.addEventListener('click',onClick);})();
+
+  Placeholders: {{TITLE}}, {{SUBTITLE}}. Repeat the ITEM block per item.
+  PERF: items scrolled out to the right still download their <img>s at page load →
+  `loading="lazy" decoding="async"` on every item image (browsers lazy-load horizontal overflow too).
+-->
+<section class="s_iw_hscroll s_features pt48 pb48 bg-light" data-snippet="s_iw_hscroll" data-name="{{TITLE}}">
+  <div class="container">
+    <h2 class="fw-bold text-center mb-2 text-primary">{{TITLE}}</h2>
+    <p class="text-center mb-4 mx-auto" style="max-width:680px;">{{SUBTITLE}}</p>
+
+    <div data-iw-hscroll-track style="display:flex;gap:1.5rem;overflow-x:auto;scroll-snap-type:x mandatory;scroll-behavior:smooth;padding:.5rem .25rem 1.25rem;">
+      <!-- ITEM (repeat; fill with anything: card, image, logo…). /3 = 3 visible; change the divisor for another count -->
+      <div style="flex:0 0 max(260px, calc((100% - 3rem) / 3));scroll-snap-align:start;">
+        <div class="h-100 bg-white rounded-4 overflow-hidden shadow-sm p-4">
+          <h3 class="fw-bold mb-2 text-primary">Item</h3>
+          <p class="mb-0" style="font-size:.95rem;">Item content (text, image, whatever).</p>
+        </div>
+      </div>
+      <!-- /ITEM -->
+    </div>
+
+    <div class="d-flex justify-content-end gap-2 mt-3">
+      <a href="#" role="button" data-iw-hscroll="prev" class="btn btn-outline-primary d-flex align-items-center justify-content-center p-0" style="width:44px;height:44px;border-radius:50%;">‹</a>
+      <a href="#" role="button" data-iw-hscroll="next" class="btn btn-outline-primary d-flex align-items-center justify-content-center p-0" style="width:44px;height:44px;border-radius:50%;">›</a>
+    </div>
+  </div>
+</section>

@@ -20,7 +20,7 @@ providers:
   # Why the `anthropic-` prefix: a model id must be unique across the whole
   # catalog (ProviderRegistry::validate), and Claude Code asks for the bare
   # ids. `upstream_model` carries the real name, so a client asking for
-  # `anthropic-claude-sonnet-5` reaches Anthropic's `claude-sonnet-5`.
+  # `anthropic-claude-sonnet-5-5` reaches Anthropic's `claude-sonnet-5-5`.
   display_name: Anthropic
   description: >-
     Claude models on Anthropic's own API, authenticated with the anthropic key. Reached by the anthropic-claude-* ids; the bare claude-* ids are served from Vertex AI.
@@ -55,32 +55,9 @@ providers:
     limits:
       context_window: 1000000
       max_output_tokens: 128000
-  - id: anthropic-claude-opus-5
+  - id: anthropic-claude-sonnet-5-5
     hidden: true
-    upstream_model: claude-opus-5
-    pricing:
-      input_per_million: 5.0
-      output_per_million: 25.0
-      cache_read_per_million: 0.5
-      cache_write_per_million: 6.25
-      per_image_cents: null
-    capabilities:
-      vision: true
-      audio_input: false
-      video_input: false
-      image_generation: false
-      audio_generation: false
-      streaming: true
-      tools: true
-      structured_output: true
-      system_prompts: true
-      image_resolution_config: false
-    limits:
-      context_window: 1000000
-      max_output_tokens: 128000
-  - id: anthropic-claude-sonnet-5
-    hidden: true
-    upstream_model: claude-sonnet-5
+    upstream_model: claude-sonnet-5-5
     pricing:
       input_per_million: 2.0
       output_per_million: 10.0
@@ -101,14 +78,14 @@ providers:
     limits:
       context_window: 1000000
       max_output_tokens: 128000
-  - id: anthropic-claude-fable-5-1
+  - id: anthropic-claude-haiku-5-5
     hidden: true
-    upstream_model: claude-fable-5-1
+    upstream_model: claude-haiku-5-5
     pricing:
-      input_per_million: 10.0
-      output_per_million: 50.0
-      cache_read_per_million: 1.0
-      cache_write_per_million: 12.5
+      input_per_million: 0.1
+      output_per_million: 0.5
+      cache_read_per_million: 0.01
+      cache_write_per_million: 0.125
       per_image_cents: null
     capabilities:
       vision: true
@@ -124,75 +101,6 @@ providers:
     limits:
       context_window: 1000000
       max_output_tokens: 128000
-  - id: anthropic-claude-fable-5
-    hidden: true
-    upstream_model: claude-fable-5
-    pricing:
-      input_per_million: 10.0
-      output_per_million: 50.0
-      cache_read_per_million: 1.0
-      cache_write_per_million: 12.5
-      per_image_cents: null
-    capabilities:
-      vision: true
-      audio_input: false
-      video_input: false
-      image_generation: false
-      audio_generation: false
-      streaming: true
-      tools: true
-      structured_output: true
-      system_prompts: true
-      image_resolution_config: false
-    limits:
-      context_window: 1000000
-      max_output_tokens: 128000
-  - id: anthropic-claude-haiku-4-5
-    hidden: true
-    upstream_model: claude-haiku-4-5
-    pricing:
-      input_per_million: 1.0
-      output_per_million: 5.0
-      cache_read_per_million: 0.1
-      cache_write_per_million: 1.25
-      per_image_cents: null
-    capabilities:
-      vision: true
-      audio_input: false
-      video_input: false
-      image_generation: false
-      audio_generation: false
-      streaming: true
-      tools: true
-      structured_output: true
-      system_prompts: true
-      image_resolution_config: false
-    limits:
-      context_window: 200000
-      max_output_tokens: 64000
-  - id: anthropic-claude-haiku-4-5-20251001
-    hidden: true
-    upstream_model: claude-haiku-4-5-20251001
-    pricing:
-      input_per_million: 1.0
-      output_per_million: 5.0
-      cache_read_per_million: 0.1
-      cache_write_per_million: 1.25
-      per_image_cents: null
-    capabilities:
-      vision: true
-      audio_input: false
-      video_input: false
-      image_generation: false
-      audio_generation: false
-      streaming: true
-      tools: true
-      structured_output: true
-      system_prompts: true
-      image_resolution_config: false
-    limits:
-      context_window: 200000
-      max_output_tokens: 64000
 - name: gemini
   # Google Gemini via the public endpoint, authenticated with an API key sent on
   # x-goog-api-key. The Vertex-hosted copies of the same models are the `vertex`
@@ -278,7 +186,7 @@ providers:
   # supported, from the model pages under models/gemini/ (read 2026-09-11).
   # The 2.5 family retires 2026-10-20 and is not declared; the core rate card
   # still prices it, so discovery publishes it until 30 days before the date
-  # and then stops on its own. 3.8/3.7/3.6 Flash are on introductory pricing
+  # and then stops on its own. 3.8 Flash (the only Gemini declared) is on introductory pricing
   # to 2026-12-31 (then 1.50/7.50); the core rate card carries `price_until`
   # and the scheduler warns 60 days ahead.
   display_name: Google Vertex AI (Gemini)
@@ -318,54 +226,6 @@ providers:
       context_window: 1000000
       max_output_tokens: 65536
       max_thinking_budget: 24576
-  - id: vertex-gemini-3.5-flash
-    upstream_model: gemini-3.5-flash
-    pricing:
-      input_per_million: 1.5
-      output_per_million: 9.0
-      cache_read_per_million: 0.15
-      cache_write_per_million: 0.0
-      per_image_cents: null
-    capabilities:
-      vision: true
-      audio_input: false
-      video_input: false
-      image_generation: false
-      audio_generation: false
-      streaming: true
-      tools: true
-      structured_output: true
-      system_prompts: true
-      image_resolution_config: false
-      reasoning: true
-    limits:
-      context_window: 1000000
-      max_output_tokens: 65536
-      max_thinking_budget: 24576
-  - id: vertex-gemini-3.5-flash-lite
-    upstream_model: gemini-3.5-flash-lite
-    pricing:
-      input_per_million: 0.3
-      output_per_million: 2.5
-      cache_read_per_million: 0.03
-      cache_write_per_million: 0.0
-      per_image_cents: null
-    capabilities:
-      vision: true
-      audio_input: false
-      video_input: false
-      image_generation: false
-      audio_generation: false
-      streaming: true
-      tools: true
-      structured_output: true
-      system_prompts: true
-      image_resolution_config: false
-      reasoning: true
-    limits:
-      context_window: 1000000
-      max_output_tokens: 65536
-      max_thinking_budget: 24576
 - name: vertex-anthropic
   # Claude served from Vertex AI (publisher `anthropic`), under the same
   # Google service account as `vertex`: the gateway and the in-process AI
@@ -376,16 +236,16 @@ providers:
   #
   # Which models: the current Claude family the Vertex publisher listing
   # serves (read 2026-09-23). Current models are served on their `default` version, so the
-  # bare name is the upstream id; Haiku 4.5 is pinned to `@20251001`.
+  # bare name is the upstream id. Only the latest of each tier is declared.
   #
   # `global` because every model above is listed there, and global is the
   # cheapest tier (the US/EU multi-region and regional tables charge 10% more).
   # Prices are Vertex's own global rates for <=200k input, from each model's
   # partner-models/claude page and the pricing page (read 2026-09-23); cache
-  # write is the 5-minute rate. Fable 5.1's cache read is 0.25 there, not the
-  # usual tenth of input — kept as published. Haiku 4.5 is guaranteed only
-  # to 2026-10-15. The Claude 4.x Opus and Sonnet models were removed on
-  # 2026-09-24; the 5.x family replaces them.
+  # write is the 5-minute rate. Haiku 5.5 is priced at its
+  # <=100K-prompt tier ($0.50/$2.50 beyond). Older Claude models (4.x, 5.0)
+  # were removed on 2026-10-14; only the 5.5 family is served
+  # (Fable 5.1 withheld on cost, 2026-10-14).
   #
   # `accepted_betas` is the whole list of `anthropic-beta` flags the gateway
   # forwards here; Vertex refuses a flag it does not serve, so the gateway
@@ -440,28 +300,7 @@ providers:
     limits:
       context_window: 1000000
       max_output_tokens: 128000
-  - id: claude-opus-5
-    pricing:
-      input_per_million: 5.0
-      output_per_million: 25.0
-      cache_read_per_million: 0.5
-      cache_write_per_million: 6.25
-      per_image_cents: null
-    capabilities:
-      vision: true
-      audio_input: false
-      video_input: false
-      image_generation: false
-      audio_generation: false
-      streaming: true
-      tools: true
-      structured_output: true
-      system_prompts: true
-      image_resolution_config: false
-    limits:
-      context_window: 1000000
-      max_output_tokens: 128000
-  - id: claude-sonnet-5
+  - id: claude-sonnet-5-5
     pricing:
       input_per_million: 2.0
       output_per_million: 10.0
@@ -482,13 +321,12 @@ providers:
     limits:
       context_window: 1000000
       max_output_tokens: 128000
-  - id: claude-fable-5-1
-    hidden: true
+  - id: claude-haiku-5-5
     pricing:
-      input_per_million: 10.0
-      output_per_million: 50.0
-      cache_read_per_million: 0.25
-      cache_write_per_million: 12.5
+      input_per_million: 0.1
+      output_per_million: 0.5
+      cache_read_per_million: 0.01
+      cache_write_per_million: 0.125
       per_image_cents: null
     capabilities:
       vision: true
@@ -504,52 +342,6 @@ providers:
     limits:
       context_window: 1000000
       max_output_tokens: 128000
-  - id: claude-fable-5
-    hidden: true
-    pricing:
-      input_per_million: 10.0
-      output_per_million: 50.0
-      cache_read_per_million: 1.0
-      cache_write_per_million: 12.5
-      per_image_cents: null
-    capabilities:
-      vision: true
-      audio_input: false
-      video_input: false
-      image_generation: false
-      audio_generation: false
-      streaming: true
-      tools: true
-      structured_output: true
-      system_prompts: true
-      image_resolution_config: false
-    limits:
-      context_window: 1000000
-      max_output_tokens: 128000
-  - id: claude-haiku-4-5
-    upstream_model: claude-haiku-4-5@20251001
-    aliases:
-    - claude-haiku-4-5-20251001
-    pricing:
-      input_per_million: 1.0
-      output_per_million: 5.0
-      cache_read_per_million: 0.1
-      cache_write_per_million: 1.25
-      per_image_cents: null
-    capabilities:
-      vision: true
-      audio_input: false
-      video_input: false
-      image_generation: false
-      audio_generation: false
-      streaming: true
-      tools: true
-      structured_output: true
-      system_prompts: true
-      image_resolution_config: false
-    limits:
-      context_window: 200000
-      max_output_tokens: 64000
 - name: vertex-anthropic-eu
   # The second Claude deployment on Vertex AI, and the failover target of every
   # claude-* chain in gateway.yaml (vertex-anthropic -> vertex-anthropic-eu):
@@ -563,9 +355,7 @@ providers:
   # `vertex-eu-` alias whose `upstream_model` is the bare id clients ask for;
   # the failover finds it by that name (ProviderEntry::find_served_model).
   # Prices are vertex-anthropic's global rates plus Vertex's 10% regional
-  # premium. Haiku 4.5 is not declared: its Vertex id is version-pinned
-  # (`@20251001`) and retires 2026-10-15, so a Haiku request has no second
-  # deployment. `accepted_betas` mirrors vertex-anthropic; see its comment.
+  # premium. `accepted_betas` mirrors vertex-anthropic; see its comment.
   display_name: Google Vertex AI (Claude, europe-west1)
   description: >-
     Claude models served from Vertex AI's europe-west1 regional endpoint under the vertex service-account secret. The failover deployment for every claude-* request.
@@ -604,32 +394,9 @@ providers:
     limits:
       context_window: 1000000
       max_output_tokens: 128000
-  - id: vertex-eu-claude-opus-5
+  - id: vertex-eu-claude-sonnet-5-5
     hidden: true
-    upstream_model: claude-opus-5
-    pricing:
-      input_per_million: 5.5
-      output_per_million: 27.5
-      cache_read_per_million: 0.55
-      cache_write_per_million: 6.875
-      per_image_cents: null
-    capabilities:
-      vision: true
-      audio_input: false
-      video_input: false
-      image_generation: false
-      audio_generation: false
-      streaming: true
-      tools: true
-      structured_output: true
-      system_prompts: true
-      image_resolution_config: false
-    limits:
-      context_window: 1000000
-      max_output_tokens: 128000
-  - id: vertex-eu-claude-sonnet-5
-    hidden: true
-    upstream_model: claude-sonnet-5
+    upstream_model: claude-sonnet-5-5
     pricing:
       input_per_million: 2.2
       output_per_million: 11.0
@@ -650,37 +417,14 @@ providers:
     limits:
       context_window: 1000000
       max_output_tokens: 128000
-  - id: vertex-eu-claude-fable-5-1
+  - id: vertex-eu-claude-haiku-5-5
     hidden: true
-    upstream_model: claude-fable-5-1
+    upstream_model: claude-haiku-5-5
     pricing:
-      input_per_million: 11.0
-      output_per_million: 55.0
-      cache_read_per_million: 0.275
-      cache_write_per_million: 13.75
-      per_image_cents: null
-    capabilities:
-      vision: true
-      audio_input: false
-      video_input: false
-      image_generation: false
-      audio_generation: false
-      streaming: true
-      tools: true
-      structured_output: true
-      system_prompts: true
-      image_resolution_config: false
-    limits:
-      context_window: 1000000
-      max_output_tokens: 128000
-  - id: vertex-eu-claude-fable-5
-    hidden: true
-    upstream_model: claude-fable-5
-    pricing:
-      input_per_million: 11.0
-      output_per_million: 55.0
-      cache_read_per_million: 1.1
-      cache_write_per_million: 13.75
+      input_per_million: 0.11
+      output_per_million: 0.55
+      cache_read_per_million: 0.011
+      cache_write_per_million: 0.1375
       per_image_cents: null
     capabilities:
       vision: true

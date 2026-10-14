@@ -16,6 +16,8 @@
 //! - [`machine_credentials`], [`service_accounts`] — the non-interactive
 //!   accounts workflow write-backs act as, and the provider credential each
 //!   holds.
+//! - [`odoo_demo`] — restores the demo-* Odoo records the console's Odoo demo
+//!   runs over, as the farm service account.
 //! - [`test_support`] — the pure helpers the test workspace exercises.
 //!
 //! The connector accounts register as core's connection snapshot source and
@@ -33,7 +35,8 @@ pub use handlers::salesforce_auth::{SalesforceConfig, SalesforceDeps, Salesforce
 pub use routes::public::{bridge_identity_router, connector_api_router, salesforce_api_router};
 pub use services::salesforce_orgs::salesforce_orgs_boot_check;
 pub use services::{
-    connector_oauth, identity_token, machine_credentials, salesforce_orgs, service_accounts,
+    connector_oauth, identity_token, machine_credentials, odoo_demo, salesforce_orgs,
+    service_accounts,
 };
 
 pub mod test_support {

@@ -1,0 +1,10 @@
+{
+  "code": "nl",
+  "schema_version": 1,
+  "name": "Nederland / Nederlands",
+  "lang_tag": "nl",
+  "odoo_lang": "nl_NL",
+  "fallback": "en",
+  "output_language": "correct Nederlands (Nederlandse spelling; helder, zakelijk en beknopt; consequent de u-aanspreekvorm; geen anglicismen waar een goed Nederlands woord bestaat)",
+  "pack_status": "stub"
+}

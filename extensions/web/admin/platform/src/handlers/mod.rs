@@ -9,6 +9,7 @@ pub(crate) mod connector_auth;
 pub(crate) mod connector_reprovision;
 pub(crate) mod devices;
 mod jobs;
+pub(crate) mod odoo_link;
 pub(crate) mod salesforce_auth;
 pub(crate) mod salesforce_identity;
 pub(crate) mod service_accounts;

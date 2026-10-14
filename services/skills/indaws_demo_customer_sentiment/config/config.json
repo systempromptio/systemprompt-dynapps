@@ -1,0 +1,46 @@
+{
+  "_doc": "Config del análisis de sentimiento y riesgo de churn por cliente.",
+  "company": {"name": "Lumina Ingeniería"},
+  "window_days": 90,
+  "buckets_days": [30, 30, 30],
+  "score_weights": {
+    "_doc": "Pesos del Churn Score (0-100). Deben sumar 100.",
+    "ticket_health": 30,
+    "sentiment": 25,
+    "trend": 25,
+    "silence_with_subscription": 20
+  },
+  "thresholds": {
+    "red": 55,
+    "amber": 30,
+    "trend_surge_pct": 50,
+    "trend_drop_pct": 60,
+    "silence_drop_pct": 70,
+    "critical_priority_values": ["3"],
+    "high_priority_values": ["2", "3"]
+  },
+  "lexicon": {
+    "_doc": "Léxico básico para análisis de sentimiento. Case-insensitive, matching por substring.",
+    "negative": [
+      "paralizad", "bloquead", "parad", "crític", "critic", "urgent", "inadmisible",
+      "intolerable", "inaceptable", "grave", "queja", "reclamaci", "escalar",
+      "decepci", "insatisfec", "cancelac", "cancelar", "cambiar proveedor",
+      "recurrente", "insostenible", "no funciona", "otra vez", "de nuevo",
+      "reiterad", "sin resolver", "penalizaci", "multa"
+    ],
+    "positive": [
+      "gracias", "perfecto", "excelente", "resuelt", "solucionad", "funciona bien",
+      "correcto", "satisfec", "buen servicio", "buen trabajo", "agradec"
+    ]
+  },
+  "actions_catalog": [
+    "Llamada urgente del Account Manager (48h)",
+    "Reunión de health-check con dirección del cliente",
+    "Oferta de retención sobre contrato de servicio",
+    "Revisión del SLA actual (upgrade a Premium o Crítico)",
+    "Envío de caso de éxito similar en su sector",
+    "Visita presencial del Director de Operaciones",
+    "Plan de mejora de servicio documentado con hitos",
+    "Auditoría técnica del sistema instalado"
+  ]
+}

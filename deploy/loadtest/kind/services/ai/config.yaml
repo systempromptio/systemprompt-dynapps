@@ -11,7 +11,7 @@ ai:
     mock-anthropic:
       enabled: true
       google_search_enabled: false
-      default_model: claude-sonnet-5
+      default_model: claude-sonnet-5-5
   mcp:
     auto_discover: true
     connect_timeout_ms: 5000

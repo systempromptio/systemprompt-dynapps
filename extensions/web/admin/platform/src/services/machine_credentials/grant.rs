@@ -2,8 +2,9 @@
 //!
 //! Core owns every minting step: the GitHub App JWT and installation-token
 //! exchange, the Salesforce client-credentials exchange, the Basic pair for an
-//! Atlassian API token, and the expiry cache. This module only maps a stored
-//! row's non-secret `config` and its opened secret onto the grant.
+//! Atlassian API token or an Odoo API key, and the expiry cache. This module
+//! only maps a stored row's non-secret `config` and its opened secret onto the
+//! grant.
 
 // JSON: a credential's `config` is per-kind JSONB; each field is read by name
 // and refused when absent.
@@ -52,6 +53,14 @@ fn origin(config: &Value, name: &str, default: Option<&str>) -> AdminResult<Stri
     Ok(value.trim_end_matches('/').to_owned())
 }
 
+pub(super) fn odoo_fields(config: &Value) -> AdminResult<(String, String, String)> {
+    Ok((
+        origin(config, "url", None)?,
+        field(config, "db")?,
+        field(config, "login")?,
+    ))
+}
+
 pub(super) fn grant(
     kind: MachineKind,
     config: &Value,
@@ -79,6 +88,13 @@ pub(super) fn grant(
         MachineKind::AtlassianApiToken => MachineGrant::ApiToken {
             email: field(config, "email")?,
             api_token: secret,
+        },
+        MachineKind::OdooApiKey => {
+            origin(config, "url", None)?;
+            MachineGrant::ApiToken {
+                email: field(config, "login")?,
+                api_token: secret,
+            }
         },
     })
 }

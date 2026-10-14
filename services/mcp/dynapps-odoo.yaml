@@ -1,0 +1,44 @@
+# Dynapps' own Odoo control MCP, hosted on the Dynapps portal (portal.dynapps.es)
+# and reached through this gateway, so every tool call passes the governance
+# chain before it leaves (core's external-MCP proxy).
+#
+# Each person connects their OWN portal account on /admin/connectors: the
+# generic connector discovers the server's protected-resource metadata
+# (RFC 9728, path-suffixed), registers a public client dynamically (RFC 7591,
+# `token_endpoint_auth_method: none`), and runs authorization code + PKCE S256
+# with the `odoo` scope the issuer advertises. Issuer, authorize, token and
+# registration endpoints all sit on the resource origin, so no extra
+# `authorization_origins` are needed. With `connector` set and `external_auth`
+# absent, core points the proxy at the credential broker on its own.
+#
+# The path segment after /mcp/ is the portal's routing id for this server, not
+# a credential: the portal answers 401 without a per-user bearer and echoes the
+# path in its public resource metadata. It stays inline like every other
+# endpoint in services/mcp/.
+#
+# `prompt`: the server writes to Dynapps' production ERP as the user, and the
+# governance blocklist does not name its tools, so the client still asks
+# before each call.
+#
+# Who may reach it is declared in services/access-control/rules.yaml
+# (`mcp_server/dynapps-odoo`). See docs/CONFIGURED-CONNECTORS.md.
+mcp_servers:
+  dynapps-odoo:
+    type: external
+    endpoint: https://portal.dynapps.es/mcp/uwX00RzEnfs5Yw_tVlx7aw
+    enabled: true
+    tool_policy: prompt
+    display_in_web: false
+    removable: true
+    description: Dynapps Odoo control MCP on portal.dynapps.es, authenticated as the signed-in user's own Odoo account
+    oauth:
+      required: false
+      scopes:
+      - user
+      audience: mcp
+      client_id: null
+    connector:
+      adapter: generic
+      display_name: Dynapps Odoo
+      scopes:
+      - odoo

@@ -1,0 +1,51 @@
+[package]
+name = "systemprompt-mcp-odoo"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "Odoo MCP server for the Dynapps instance: CRM leads, partners, notes, activities, sales and invoices over Odoo's JSON-RPC API, executed as the caller's own sealed Odoo machine credential."
+repository.workspace = true
+homepage.workspace = true
+publish = false
+
+[[bin]]
+name = "systemprompt-mcp-odoo"
+path = "src/main.rs"
+
+[dependencies]
+# Audit: uses config, database, identifiers, logging, mcp, models, security, system — requires `full`.
+systemprompt = { workspace = true, features = ["full"] }
+
+anyhow.workspace = true
+chrono.workspace = true
+rustls.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+
+rmcp.workspace = true
+axum.workspace = true
+
+schemars.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sqlx.workspace = true
+
+# Odoo speaks JSON-RPC over HTTP; there is no vendor SDK.
+reqwest.workspace = true
+
+# Attachment payloads cross the wire base64-encoded; decoding is how the upload
+# size gate measures what it is about to send.
+base64.workspace = true
+
+tracing.workspace = true
+uuid.workspace = true
+
+systemprompt-mcp-shared.workspace = true
+systemprompt-web-admin-core.workspace = true
+systemprompt-web-admin-governance.workspace = true
+systemprompt-web-admin-identity.workspace = true
+systemprompt-secrets-onepassword.workspace = true
+systemprompt-web-admin-platform.workspace = true
+
+[lints]
+workspace = true

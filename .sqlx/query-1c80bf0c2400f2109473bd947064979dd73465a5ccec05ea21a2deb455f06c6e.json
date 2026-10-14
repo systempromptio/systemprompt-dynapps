@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO odoo_user_links (user_id, odoo_url, odoo_db, odoo_login, odoo_uid, api_key_ciphertext, api_key_nonce) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (user_id) DO UPDATE SET odoo_url = EXCLUDED.odoo_url, odoo_db = EXCLUDED.odoo_db, odoo_login = EXCLUDED.odoo_login, odoo_uid = EXCLUDED.odoo_uid, api_key_ciphertext = EXCLUDED.api_key_ciphertext, api_key_nonce = EXCLUDED.api_key_nonce, verified_at = NOW() RETURNING (xmax = 0) AS \"inserted!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "inserted!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Int8",
+        "Bytea",
+        "Bytea"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "1c80bf0c2400f2109473bd947064979dd73465a5ccec05ea21a2deb455f06c6e"
+}

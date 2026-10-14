@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Motor de mockups Odoo · núcleo (spec 2 capas → render único)</title>
+<style>
+:root{--o-purple:#714B67;--bg:#f4f4f6;--bd:#e0e0e6;--tx:#1f2937;--mu:#6b7280;--link:#017e84;--gn:#28a745;--am:#f0ad4e;--rd:#dc3545;--std:#1e7e34;--studio:#0d6efd;--dev:#dc3545;--ee:#8a5cff}
+*{box-sizing:border-box}body{margin:0;font-family:"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--tx);font-size:13px}
+.top{background:var(--o-purple);color:#fff;display:flex;align-items:center;gap:12px;padding:8px 16px}.top h1{font-size:15px;margin:0}.top .sp{flex:1}
+.vtabs{display:flex;gap:4px}.vtab{background:rgba(255,255,255,.12);color:#fff;border:none;border-radius:6px 6px 0 0;padding:6px 14px;font-size:12.5px;cursor:pointer;font-weight:600}.vtab.act{background:#fff;color:var(--o-purple)}
+.ctl{max-width:1000px;margin:12px auto 0;display:flex;gap:8px;align-items:center;font-size:12px;color:var(--mu)}.ctl button{border:1px solid var(--bd);background:#fff;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px}.ctl button.on{background:var(--o-purple);color:#fff;border-color:var(--o-purple)}
+.wrap{max-width:1340px;margin:0 auto;padding:0 16px}
+/* form */
+.page{margin:0 auto}.page.right{max-width:1340px}.page.bottom{max-width:1000px}
+.navbar{background:var(--o-purple);color:#fff;display:flex;align-items:center;gap:14px;padding:0 14px;height:44px;border-radius:8px 8px 0 0}.navbar .brand{font-weight:700}.navbar .sys{margin-left:auto;background:rgba(255,255,255,.15);padding:3px 9px;border-radius:4px;font-size:12px}
+.oform{display:flex;gap:16px;align-items:flex-start}.page.bottom .oform{flex-direction:column}
+.sheetcol{flex:1;min-width:0}.sheet{background:#fff;border:1px solid var(--bd)}
+.zhead{display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--bd);background:#fbfbfc;padding:5px 12px}.wbtn{border:1px solid var(--o-purple);color:var(--o-purple);background:#fff;border-radius:4px;padding:5px 11px;font-size:12.5px;font-weight:600}
+.sb{display:flex;margin-left:auto}.stg{background:#f1f1f4;color:var(--mu);font-size:12px;padding:8px 20px 8px 26px;clip-path:polygon(0 0,calc(100% - 12px) 0,100% 50%,calc(100% - 12px) 100%,0 100%,12px 50%);margin-left:-10px}.stg.cur{background:var(--o-purple);color:#fff;font-weight:600}
+.smartbar{display:flex;padding:10px 18px 0}.smart{border:1px solid var(--bd);border-right:none;background:#fff;padding:6px 16px;min-width:120px}.smart:last-child{border-right:1px solid var(--bd)}.smart .n{font-weight:700;font-size:15px;color:var(--o-purple)}.smart .l{font-size:11px;color:var(--mu);display:block}
+.body{padding:8px 22px 18px}.oe_title h1{font-size:26px;font-weight:700;margin:6px 0 12px}
+.groups{display:flex;flex-wrap:wrap;gap:2px 36px}.grp{flex:1 1 44%;min-width:280px}
+.fld{display:flex;align-items:center;padding:5px 2px;border-bottom:1px dotted #eee}.fld label{width:150px;color:var(--mu);font-size:12.5px}.fld .v{font-weight:600;display:flex;gap:6px;align-items:center;flex-wrap:wrap}.req label:after,.req:after{content:" *";color:var(--rd)}
+.tabs{display:flex;gap:2px;border-bottom:2px solid var(--bd);margin:16px 0 0}.tab{padding:9px 16px;cursor:pointer;color:var(--mu);border-bottom:2px solid transparent;margin-bottom:-2px;font-weight:600}.tab.act{color:var(--o-purple);border-bottom-color:var(--o-purple)}.pane{display:none;padding:12px 0}.pane.act{display:block}
+table{width:100%;border-collapse:collapse;font-size:12.5px}th{text-align:left;color:var(--mu);font-weight:600;font-size:11px;padding:7px 8px;border-bottom:1px solid var(--bd);text-transform:uppercase}td{padding:8px;border-bottom:1px solid #f0f0f2}.num{text-align:right;font-variant-numeric:tabular-nums}.add{color:var(--link);padding:8px;font-size:12.5px}
+.chatterpanel{background:#fff;border:1px solid var(--bd);border-radius:8px;padding:12px;color:var(--mu)}.page.right .chatterpanel{width:320px;flex-shrink:0}.page.bottom .chatterpanel{width:100%}.chatterpanel .msg{border-top:1px solid #f0f0f2;padding:8px 0;display:flex;gap:8px}
+.av{width:22px;height:22px;border-radius:50%;background:var(--o-purple);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:700}
+/* list/kanban */
+.lst{background:#fff;border:1px solid var(--bd);max-width:1000px;margin:0 auto}
+.kbboard{display:flex;gap:12px;overflow-x:auto;padding:4px 0}.kbcol{background:#eef0f3;border-radius:8px;padding:8px;min-width:240px}.kbcol .kh{font-weight:700;color:var(--mu);padding:4px 6px 8px;display:flex;justify-content:space-between}.kbcard{background:#fff;border:1px solid var(--bd);border-radius:6px;padding:10px;margin-bottom:8px;box-shadow:0 1px 2px rgba(0,0,0,.05)}.kbcard .kf{display:flex;justify-content:space-between;padding:2px 0}.kbcard .kf .kl{color:var(--mu);font-size:11px}
+/* widgets */
+.o_priority i{font-style:normal;color:var(--am);font-size:14px}.o_status{width:11px;height:11px;border-radius:50%;display:inline-block;vertical-align:middle}.o_status_label{margin-left:4px}.o_tag{background:#e7f1ff;color:#0d6efd;border-radius:11px;padding:1px 9px;font-size:11px;font-weight:600}.o_switch{width:30px;height:16px;background:var(--gn);border-radius:9px;position:relative;display:inline-block}.o_switch:after{content:"";position:absolute;width:12px;height:12px;background:#fff;border-radius:50%;top:2px;right:2px}
+/* chips */
+.chip{font-size:9px;font-weight:700;border-radius:3px;padding:0 5px;font-family:monospace;margin-left:5px;vertical-align:middle}.c-std{background:#e2f7e9;color:var(--std)}.c-studio{background:#e7f1ff;color:var(--studio)}.c-dev{background:#fdecec;color:var(--dev)}.c-ee{background:#efe7ff;color:var(--ee)}.c-bad{background:#dc3545;color:#fff}
+body.hidechips .chip{display:none}
+/* panels */
+.panel{max-width:1000px;margin:12px auto 0;border-radius:8px;padding:12px 16px;font-size:12px}
+.pdev{background:#0b1f3a;color:#dde6f5;line-height:1.6}.pdev h3{color:#8fb4ff;margin:0 0 6px;font-size:13px}.pdev .g{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0}.pdev .g b{border-radius:6px;padding:3px 9px}.gstd{background:#123a1e;color:#7ee2a0}.gstudio{background:#0f2a4a;color:#8fc0ff}.gdev{background:#3a1414;color:#ff9a9a}.gee{background:#241a3a;color:#c3a8ff}
+.pchk{background:#fff;border:1px solid var(--bd)}.pchk h3{margin:0 0 6px;font-size:12px;color:var(--mu)}.pchk .row{display:flex;gap:8px;padding:2px 0;font-size:11.5px}.pchk .ok{color:var(--gn)}.pchk .bad{color:var(--rd);font-weight:700}
+.disc{max-width:1000px;margin:10px auto 0;font-size:11px;color:#9aa0a6;text-align:center;padding-bottom:24px}
+code{background:#eef;padding:0 4px;border-radius:3px;font-size:11px}
+.code{background:#0b1f3a;color:#dde6f5;border-radius:6px;padding:12px 14px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;white-space:pre;overflow:auto;line-height:1.5}
+.cpy{border:1px solid var(--bd);background:#fff;border-radius:6px;padding:3px 10px;cursor:pointer;font-size:11px}
+</style></head><body>
+
+<div class="top"><h1>⚙️ Motor de mockups Odoo · núcleo</h1>
+  <div class="vtabs" id="vtabs"></div><span class="sp"></span>
+  <label style="font-size:11px;cursor:pointer;color:#e9d5f0"><input type="checkbox" onchange="document.body.classList.toggle('hidechips',this.checked)"> ocultar chips</label></div>
+
+<div class="ctl">Un solo modelo → varias vistas coherentes. Chatter (form): <button id="cR" onclick="setChat('right')">Derecho</button><button id="cB" onclick="setChat('bottom')">Abajo</button></div>
+<div class="wrap"><div id="app"></div>
+  <div class="panel pdev" id="dev"></div>
+  <div class="panel pchk" id="chk"></div>
+  <div class="disc">Núcleo del motor · spec de 2 capas (modelo+vistas) → renderer único · widgets validados contra <code>widget-matrix.json</code> (fuente Odoo 18) · mockup no funcional</div>
+</div>
+
+<script>
+/* ===== MATRIZ tipo↔widget (extraída de fuente, compacta) ===== */
+const TYPE_W={ char:["char","badge","email","phone","url","text"], text:["text","char"], integer:["integer","handle","priority"], float:["float","float_time","float_toggle","monetary","percentage","percentpie","progressbar"], monetary:["monetary","float"], boolean:["boolean","boolean_toggle"], date:["date","daterange","remaining_days"], datetime:["datetime","daterange"], selection:["selection","badge","label_selection","priority","radio","selection_badge","state_selection","statusbar"], many2one:["many2one","many2one_avatar","badge","radio","selection"], many2many:["many2many_tags","many2many","many2many_checkboxes","many2many_tags_avatar"], one2many:["one2many"], html:["html"], binary:["binary","image","pdf_viewer"] };
+const DEF_W={char:"char",text:"text",integer:"integer",float:"float",monetary:"monetary",boolean:"boolean_toggle",date:"date",datetime:"datetime",selection:"selection",many2one:"many2one",many2many:"many2many_tags",one2many:"one2many",html:"html",binary:"binary"};
+const STD_TYPES=new Set(Object.keys(DEF_W));
+
+/* ===== SPEC de ejemplo (Autosur OR) — modelo UNA vez + 3 vistas ===== */
+const SPEC={odoo:"18",model:{name:"x_taller_orden",label:"Orden de reparación",inherit:"repair.order",fields:[
+  {name:"name",type:"char",label:"Nombre",origin:"std"},
+  {name:"partner_id",type:"many2one",comodel:"res.partner",label:"Cliente",origin:"std"},
+  {name:"user_id",type:"many2one",comodel:"res.users",widget:"many2one_avatar",label:"Responsable",origin:"std"},
+  {name:"schedule_date",type:"date",label:"Fecha prevista",origin:"std"},
+  {name:"tag_ids",type:"many2many",comodel:"repair.tags",widget:"many2many_tags",label:"Etiquetas",origin:"std"},
+  {name:"priority",type:"selection",widget:"priority",label:"Prioridad",origin:"std"},
+  {name:"vehiculo",type:"many2one",comodel:"fleet.vehicle",label:"Vehículo / Matrícula",origin:"new"},
+  {name:"km",type:"integer",label:"Kilómetros",required:true,origin:"new"},
+  {name:"riesgo",type:"selection",widget:"state_selection",label:"Riesgo cliente",origin:"new",compute:true},
+  {name:"fact_state",type:"selection",widget:"badge",label:"Estado facturación",origin:"new"},
+  {name:"state",type:"selection",widget:"statusbar",label:"Estado",origin:"new",compute:true},
+  {name:"importe",type:"monetary",widget:"monetary",label:"Importe",origin:"new",compute:true},
+  {name:"diagnostico_ids",type:"one2many",comodel:"x_taller_diag",label:"Diagnósticos",origin:"new"}
+]},
+views:[
+  {type:"form",chatter:true,chatterPosition:"right",
+   header:{statusbar:"state",buttons:["Cierre técnico","Cierre económico"],smart:["diagnostico_ids","importe"]},
+   body:[{title:"name"},
+     {group:["partner_id","user_id","schedule_date","tag_ids"]},
+     {group:["vehiculo","km","riesgo","fact_state"]},
+     {notebook:[
+       {page:"Diagnósticos",content:[{o2m:"diagnostico_ids",columns:[
+         {name:"averia",type:"char",label:"Avería",origin:"new"},
+         {name:"destino",type:"selection",widget:"badge",label:"Destino fact.",origin:"new"},
+         {name:"estado",type:"selection",widget:"state_selection",label:"Estado",origin:"new"},
+         {name:"imp",type:"monetary",widget:"monetary",label:"Importe",origin:"new"}]}]},
+       {page:"Piezas",content:[{o2m:"pieza_ids",columns:[
+         {name:"ref",type:"char",label:"Ref.",origin:"std"},{name:"desc",type:"char",label:"Descripción",origin:"std"},{name:"est",type:"selection",widget:"badge",label:"Estado",origin:"std"}]}]}]}]},
+  {type:"list",columns:["name","partner_id","priority","state","importe"]},
+  {type:"kanban",groupby:"state",card:["name","partner_id","priority","importe"]}
+]};
+
+/* datos de muestra por campo */
+const D={name:"RO/2026/00042",partner_id:"TRANSPORTES GARRIDO S.L.",user_id:["MF","M. Ferrández"],schedule_date:"04/07/2026",tag_ids:["Flota","Garantía"],priority:2,vehiculo:"Volvo FH16 · 4821 KDR",km:"348.920",riesgo:["r","Excedido · 12.400 €"],fact_state:["Pendiente"],importe:"1.497,25 €",state:["Recepción","En curso","Cierre téc.","Cierre eco.","Facturado"]};
+const O2M={diagnostico_ids:[["Cambio de embrague",["Cliente"],["b","En reparación"],"1.150,00 €"],["Sustitución sensor caja",["Garantía ZF"],["a","Cierre técnico"],"268,50 €"],["Acondicionado ocasión",["Interna"],["","En diagnóstico"],"78,75 €"]],
+  pieza_ids:[["ZF-1650-KIT","Kit embrague ZF 16S",["Consumido"]],["VLV-90312","Volante bimasa",["Reservado"]]]};
+const LIST=[["RO/2026/00042","TRANSPORTES GARRIDO",2,["b","En curso"],"1.497 €"],["RO/2026/00051","LOGÍSTICA DEL SUR",1,["a","Cierre técnico"],"640 €"],["RO/2026/00048","AUTOCARES BELÉN",0,["","Recepción"],"210 €"]];
+
+/* ===== MOTOR ===== */
+let cur="form",chatPos="right";
+function fld(name){return SPEC.model.fields.find(f=>f.name===name)||{name,type:"char",label:name,origin:"new"};}
+function widgetOf(f){return f.widget||DEF_W[f.type]||"char";}
+function validWidget(f){const w=widgetOf(f);return (TYPE_W[f.type]||[]).includes(w)||w===f.type;}
+function classify(f,viewType){ if(["gantt","map","cohort"].includes(viewType))return "ee";
+  if(f.widget==="owl_custom")return "dev";
+  if(f.origin==="std")return "std";
+  // nuevo:
+  if(f.compute)return "dev";
+  if(STD_TYPES.has(f.type)&&validWidget(f))return "studio";
+  return "dev"; }
+function chip(cl){const m={std:"nativo",studio:"Studio",dev:"dev",ee:"EE",bad:"⚠ widget"};return '<span class="chip c-'+cl+'">'+m[cl]+'</span>';}
+/* render de valor por widget */
+function wv(f,val){const w=widgetOf(f);switch(w){
+  case "many2one_avatar":return Array.isArray(val)?'<span class="av">'+val[0]+'</span> '+val[1]:(val||'');
+  case "many2many_tags":{const t=Array.isArray(val)?val:(val?[val]:[]);return t.map(x=>'<span class="o_tag">'+x+'</span>').join(' ');}
+  case "state_selection":{const c=Array.isArray(val)?val[0]:'b',l=Array.isArray(val)?val[1]:(val||'');return '<span class="o_status" style="background:'+({g:'#28a745',a:'#f0ad4e',r:'#dc3545',b:'#0d6efd'}[c]||'#adb5bd')+'"></span><span class="o_status_label">'+l+'</span>';}
+  case "badge":{const l=Array.isArray(val)?val[0]:(val||'');return '<span class="o_tag" style="background:#f0e7f4;color:#714B67">'+l+'</span>';}
+  case "priority":{const n=val||0;let s='';for(let i=0;i<3;i++)s+='<i style="color:'+(i<n?'#f0ad4e':'#ccc')+'">★</i>';return '<span class="o_priority">'+s+'</span>';}
+  case "monetary":return val||'0,00 €';case "many2one":return '<span style="color:var(--link)">'+(val||'')+'</span>';
+  case "boolean_toggle":return '<span class="o_switch'+(val===false?' off':'')+'"></span>';
+  default:return (val==null?'':val);}}
+function fieldRow(f){const val=D[f.name];const cl=classify(f,"form");const bad=validWidget(f)?'':chip("bad");
+  return '<div class="fld'+(f.required?' req':'')+'"><label>'+f.label+'</label><span class="v">'+wv(f,val)+chip(cl)+bad+'</span></div>';}
+
+function renderForm(v){
+  let sheet='<div class="sheet">';
+  // header
+  const buttons=(v.header.buttons||[]).map(b=>'<span class="wbtn">'+b+'</span>').join('');
+  const stg=(D[v.header.statusbar]||['Nuevo','En curso','Hecho']).map((s,i)=>'<span class="stg'+(i===1?' cur':'')+'">'+s+'</span>').join('');
+  sheet+='<div class="zhead">'+buttons+'<div class="sb">'+stg+'</div></div>';
+  // smart
+  sheet+='<div class="smartbar">'+(v.header.smart||[]).map(n=>{const f=fld(n);return '<div class="smart"><span class="n">3</span><span class="l">'+f.label+chip(classify(f,"form"))+'</span></div>';}).join('')+'</div>';
+  sheet+='<div class="body">';
+  v.body.forEach(row=>{
+    if(row.title){const f=fld(row.title);sheet+='<div class="oe_title"><h1>'+(D[row.title]||f.label)+' '+chip(classify(f,"form"))+'</h1></div>';}
+    else if(row.group){sheet+='<div class="groups"><div class="grp">'+row.group.map(n=>fieldRow(fld(n))).join('')+'</div></div>';}
+    else if(row.notebook){
+      sheet+='<div class="tabs">'+row.notebook.map((p,i)=>'<div class="tab'+(i===0?' act':'')+'" onclick="tab('+i+')">'+p.page+'</div>').join('')+'</div>';
+      sheet+=row.notebook.map((p,i)=>'<div class="pane'+(i===0?' act':'')+'" id="pane'+i+'">'+p.content.map(c=>{
+        const cols=c.columns;const rows=O2M[c.o2m]||[];
+        let h='<table><thead><tr>'+cols.map(col=>'<th>'+col.label+chip(classify(col,"form"))+'</th>').join('')+'</tr></thead><tbody>';
+        rows.forEach(r=>{h+='<tr>'+cols.map((col,j)=>'<td class="'+(col.type==='monetary'?'num':'')+'">'+wv(col,r[j])+'</td>').join('')+'</tr>';});
+        return h+'</tbody></table><div class="add">➕ Añadir línea</div>';
+      }).join('')+'</div>').join('');
+    }
+  });
+  sheet+='</div></div>';
+  const chat='<div class="chatterpanel"><b>💬 Chatter</b><div class="msg"><span class="av">MF</span><div><b>M. Ferrández</b> · 16:10<br>Diagnóstico #3 añadido.</div></div></div>';
+  let h='<div class="page '+chatPos+'"><div class="navbar"><span class="brand">Reparaciones</span><span class="sys">Odoo '+SPEC.odoo+' · '+SPEC.model.name+'</span></div><div class="oform"><div class="sheetcol">'+sheet+(chatPos==='bottom'&&v.chatter?chat:'')+'</div>'+(chatPos==='right'&&v.chatter?chat:'')+'</div></div>';
+  return h;
+}
+function renderList(v){
+  let h='<div class="lst"><table><thead><tr>'+v.columns.map(n=>{const f=fld(n);return '<th>'+f.label+chip(classify(f,"list"))+'</th>';}).join('')+'</tr></thead><tbody>';
+  LIST.forEach(r=>{h+='<tr>'+v.columns.map((n,j)=>{const f=fld(n);return '<td class="'+(f.type==='monetary'?'num':'')+'">'+wv(f,r[j])+'</td>';}).join('')+'</tr>';});
+  return h+'</tbody></table><div class="add">➕ Añadir línea</div></div>';
+}
+function renderKanban(v){
+  const cols=["Recepción","En curso","Cierre téc."];
+  let h='<div class="kbboard">';
+  cols.forEach((c,ci)=>{h+='<div class="kbcol"><div class="kh"><span>'+c+'</span><span>2</span></div>';
+    for(let k=0;k<2;k++){const r=LIST[(ci+k)%LIST.length];h+='<div class="kbcard">'+v.card.map((n,j)=>{const f=fld(n);const idx=v.columns?0:["name","partner_id","priority","state","importe"].indexOf(n);const val=idx>=0?r[idx]:D[n];return '<div class="kf"><span class="kl">'+f.label+'</span><span>'+wv(f,val)+'</span></div>';}).join('')+'</div>';}
+    h+='</div>';});
+  return h+'</div>';
+}
+function render(){
+  const app=document.getElementById('app');
+  if(cur==='code'){app.innerHTML=renderCode();document.getElementById('dev').innerHTML='';document.getElementById('chk').innerHTML='';return;}
+  const v=SPEC.views.find(x=>x.type===cur);
+  app.innerHTML= cur==='form'?renderForm(v):cur==='list'?renderList(v):renderKanban(v);
+  // dev panel: tally por clase (de todos los campos del modelo usados)
+  let cnt={std:0,studio:0,dev:0,ee:0};const seen=new Set();
+  function count(f,vt){const c=classify(f,vt);cnt[c]++;}
+  SPEC.model.fields.forEach(f=>count(f,cur));
+  document.getElementById('dev').innerHTML='<h3>■ Presupuesto (derivado por reglas del modelo)</h3><div class="g"><b class="gstd">nativo '+cnt.std+'</b><b class="gstudio">Studio '+cnt.studio+'</b><b class="gdev">dev '+cnt.dev+'</b></div>'
+   +'<div><b>Nativo</b>: campos que ya existen en <code>repair.order</code>. <b>Studio</b>: campos nuevos de tipo estándar con widget nativo → se crean sin código. <b>dev</b>: <code>riesgo</code>/<code>state</code>/<code>importe</code> son <i>computed</i> (lógica) y el modelo hijo de diagnósticos + su motor de precios. El motor lo clasifica solo, no a mano.</div>';
+  // check panel: validación tipo↔widget
+  let rows='';SPEC.model.fields.forEach(f=>{const ok=validWidget(f);rows+='<div class="row"><span class="'+(ok?'ok':'bad')+'">'+(ok?'✓':'✗')+'</span><code>'+f.name+'</code> · tipo <code>'+f.type+'</code> · widget <code>'+widgetOf(f)+'</code>'+(ok?'':' — NO válido para este tipo')+'</div>';});
+  document.getElementById('chk').innerHTML='<h3>■ Validación tipo ↔ widget (contra widget-matrix.json)</h3>'+rows;
+  document.getElementById('cR').classList.toggle('on',chatPos==='right');document.getElementById('cB').classList.toggle('on',chatPos==='bottom');
+}
+/* ===== EMISORES: spec → Python + XML (v18) ===== */
+const PYT={char:"Char",text:"Text",integer:"Integer",float:"Float",monetary:"Monetary",boolean:"Boolean",date:"Date",datetime:"Datetime",selection:"Selection",many2one:"Many2one",one2many:"One2many",many2many:"Many2many",html:"Html",binary:"Binary"};
+function pyField(f,inverse){const a=[];
+  if(f.type==='selection')a.push("[('a','Opción A'),('b','Opción B')]");
+  if(['many2one','many2many'].includes(f.type))a.push("'"+(f.comodel||'res.partner')+"'");
+  if(f.type==='one2many')a.push("'"+(f.comodel||'x.model')+"', '"+(inverse||'x_orden_id')+"'");
+  a.push('string="'+f.label+'"');
+  if(f.type==='monetary')a.push("currency_field='currency_id'");
+  if(f.required)a.push("required=True");
+  if(f.readonly&&!f.compute)a.push("readonly=True");
+  if(f.compute)a.push("compute='_compute_"+f.name+"', store=True");
+  return f.name+" = fields."+(PYT[f.type]||"Char")+"("+a.join(", ")+")";}
+function o2mDefs(){const r=[];const fv=SPEC.views.find(v=>v.type==='form');(fv.body||[]).forEach(row=>{if(row.notebook)row.notebook.forEach(p=>(p.content||[]).forEach(c=>{if(c.o2m){const f=fld(c.o2m);r.push({field:c.o2m,comodel:f.comodel||('x_'+c.o2m),columns:c.columns});}}));});return r;}
+function emitPython(){
+  const m=SPEC.model,newf=m.fields.filter(f=>f.origin!=='std'&&f.type!=='one2many'||f.type==='one2many');
+  let L=["# -*- coding: utf-8 -*-","from odoo import models, fields, api","","","class "+camel(m.name)+"(models.Model):"];
+  if(m.inherit){L.push("    _inherit = '"+m.inherit+"'");}
+  else{L.push("    _name = '"+m.name+"'");L.push("    _inherit = ['mail.thread', 'mail.activity.mixin']");L.push("    _description = '"+m.label+"'");}
+  L.push("");
+  L.push("    # --- Campos NUEVOS (los estándar vienen del _inherit) ---");
+  m.fields.filter(f=>f.origin!=='std').forEach(f=>L.push("    "+pyField(f)));
+  const comp=m.fields.filter(f=>f.origin!=='std'&&f.compute);
+  if(comp.length){L.push("");comp.forEach(f=>{L.push("    @api.depends()  # TODO: dependencias reales");L.push("    def _compute_"+f.name+"(self):");L.push("        for rec in self:");L.push("            rec."+f.name+" = False  # TODO lógica");L.push("");});}
+  // modelo hijo de o2m
+  o2mDefs().forEach(o=>{L.push("");L.push("");L.push("class "+camel(o.comodel)+"(models.Model):");L.push("    _name = '"+o.comodel+"'");L.push("    _description = '"+o.field+"'");L.push("    x_orden_id = fields.Many2one('"+m.name+"', string='Orden')");(o.columns||[]).forEach(c=>L.push("    "+pyField(c)));});
+  return L.join("\n");
+}
+function camel(s){return s.replace(/[._]([a-z])/g,(m,c)=>c.toUpperCase()).replace(/^([a-z])/,(m,c)=>c.toUpperCase());}
+function xf(f){let a='name="'+f.name+'"';const w=f.widget&&f.widget!==DEF_W[f.type]?' widget="'+f.widget+'"':'';if(f.required)a+=' required="1"';if(f.readonly&&!f.compute)a+=' readonly="1"';if(f.invisible)a+=' invisible="1"';return '<field '+a+w+'/>';}
+function emitXml(){
+  const m=SPEC.model,rid=m.name.replace(/\./g,'_');let out=[];
+  // FORM
+  const fv=SPEC.views.find(v=>v.type==='form');
+  if(fv){let a=['<record id="view_'+rid+'_form" model="ir.ui.view">','  <field name="name">'+m.name+'.form</field>','  <field name="model">'+m.name+'</field>','  <field name="arch" type="xml">','    <form>'];
+    a.push('      <header>');(fv.header.buttons||[]).forEach(b=>a.push('        <button name="action_todo" type="object" string="'+b+'" class="btn-primary"/>'));if(fv.header.statusbar)a.push('        <field name="'+fv.header.statusbar+'" widget="statusbar"/>');a.push('      </header>');
+    a.push('      <sheet>');
+    if(fv.header.smart&&fv.header.smart.length){a.push('        <div class="oe_button_box" name="button_box">');fv.header.smart.forEach(n=>a.push('          <button class="oe_stat_button" icon="fa-list" type="object" name="action_todo"><field name="'+n+'" widget="statinfo" string="'+fld(n).label+'"/></button>'));a.push('        </div>');}
+    (fv.body||[]).forEach(row=>{
+      if(row.title)a.push('        <div class="oe_title"><h1>'+xf(fld(row.title))+'</h1></div>');
+      else if(row.group)a.push('        <group>\n          <group>\n'+row.group.map(n=>'            '+xf(fld(n))).join('\n')+'\n          </group>\n        </group>');
+      else if(row.notebook){a.push('        <notebook>');row.notebook.forEach(p=>{a.push('          <page string="'+p.page+'">');(p.content||[]).forEach(c=>{if(c.o2m){a.push('            <field name="'+c.o2m+'">');a.push('              <list editable="bottom">');(c.columns||[]).forEach(col=>a.push('                '+xf(col)));a.push('              </list>');a.push('            </field>');}});a.push('          </page>');});a.push('        </notebook>');}
+    });
+    a.push('      </sheet>');if(fv.chatter)a.push('      <chatter/>');a.push('    </form>');a.push('  </field>','</record>');out.push(a.join('\n'));}
+  // LIST
+  const lv=SPEC.views.find(v=>v.type==='list');
+  if(lv)out.push(['<record id="view_'+rid+'_list" model="ir.ui.view">','  <field name="name">'+m.name+'.list</field>','  <field name="model">'+m.name+'</field>','  <field name="arch" type="xml">','    <list>','      '+lv.columns.map(n=>xf(fld(n))).join('\n      '),'    </list>','  </field>','</record>'].join('\n'));
+  // KANBAN (v18: <t t-name="card">)
+  const kv=SPEC.views.find(v=>v.type==='kanban');
+  if(kv)out.push(['<record id="view_'+rid+'_kanban" model="ir.ui.view">','  <field name="name">'+m.name+'.kanban</field>','  <field name="model">'+m.name+'</field>','  <field name="arch" type="xml">','    <kanban'+(kv.groupby?' default_group_by="'+kv.groupby+'"':'')+'>','      <templates>','        <t t-name="card">','          '+kv.card.map(n=>xf(fld(n))).join('\n          '),'        </t>','      </templates>','    </kanban>','  </field>','</record>'].join('\n'));
+  return out.join('\n\n');
+}
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function renderCode(){
+  return '<div style="max-width:1000px;margin:0 auto">'
+   +'<div style="display:flex;justify-content:space-between;align-items:center;margin:0 0 4px"><b>models/'+SPEC.model.name.replace(/\./g,"_")+'.py</b> <button class="cpy" onclick="cp(this,window._py)">📋 copiar</button></div>'
+   +'<pre class="code">'+esc(window._py=emitPython())+'</pre>'
+   +'<div style="display:flex;justify-content:space-between;align-items:center;margin:14px 0 4px"><b>views/'+SPEC.model.name.replace(/\./g,"_")+'_views.xml</b> <button class="cpy" onclick="cp(this,window._xml)">📋 copiar</button></div>'
+   +'<pre class="code">'+esc(window._xml=emitXml())+'</pre>'
+   +'<div style="color:#6b7280;font-size:11.5px;margin-top:8px">Esqueleto listo para <code>odoo-module-creator</code>. Sintaxis v18 (verificada): <code>&lt;list&gt;</code>, <code>&lt;chatter/&gt;</code>, kanban <code>t-name="card"</code>, <code>invisible=</code>. Solo se emiten los campos NUEVOS (los estándar vienen del <code>_inherit</code>); los <i>compute</i> traen su stub <code>_compute_*</code>.</div></div>';
+}
+function cp(btn,txt){navigator.clipboard.writeText(txt).then(()=>{btn.textContent='✓ copiado';setTimeout(()=>btn.textContent='📋 copiar',1200);}).catch(()=>alert('Copia manual del bloque.'));}
+function tab(i){document.querySelectorAll('.tab').forEach((t,j)=>t.classList.toggle('act',j===i));document.querySelectorAll('.pane').forEach((p,j)=>p.classList.toggle('act',j===i));}
+function setChat(p){chatPos=p;render();}
+function switchV(v){cur=v;document.querySelectorAll('.vtab').forEach(b=>b.classList.toggle('act',b.dataset.v===v));render();}
+(function(){const t=document.getElementById('vtabs');[["form","Formulario"],["list","Lista"],["kanban","Kanban"],["code","⟨/⟩ Código Odoo"]].forEach(([v,lab])=>{const b=document.createElement('button');b.className='vtab'+(v==='form'?' act':'');b.dataset.v=v;b.textContent=lab;b.onclick=()=>switchV(v);t.appendChild(b);});})();
+render();
+</script>
+</body></html>

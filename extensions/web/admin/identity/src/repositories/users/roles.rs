@@ -61,7 +61,7 @@ pub async fn list_directory_roles(
     directory_roles_on(pool, user_id).await
 }
 
-async fn directory_roles_on<'e, E>(
+pub(super) async fn directory_roles_on<'e, E>(
     executor: E,
     user_id: &UserId,
 ) -> Result<Vec<String>, sqlx::Error>
@@ -133,7 +133,7 @@ pub async fn recompute_roles(
     write_effective_roles(pool, user_id, &directory).await
 }
 
-async fn write_effective_roles<'e, E>(
+pub(super) async fn write_effective_roles<'e, E>(
     executor: E,
     user_id: &UserId,
     directory: &[String],

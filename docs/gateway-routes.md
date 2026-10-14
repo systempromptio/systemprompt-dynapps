@@ -17,7 +17,7 @@ providers:
     endpoint: https://api.anthropic.com/v1
     api_key_secret: anthropic
     models:
-      - id: claude-sonnet-5
+      - id: claude-sonnet-5-5
   - name: minimax
     protocol: anthropic
     endpoint: https://api.minimax.io/anthropic/v1
@@ -49,14 +49,14 @@ Worked example: proxy every Anthropic model to Gemini Flash. Instead of hand-edi
 systemprompt admin config secret set gemini <GEMINI_API_KEY>
 systemprompt admin config catalog provider add --name gemini --protocol gemini \
   --endpoint https://generativelanguage.googleapis.com/v1beta --api-key-secret gemini
-systemprompt admin config catalog model add --provider gemini --id gemini-2.5-flash
+systemprompt admin config catalog model add --provider gemini --id gemini-3.8-flash
 
 # 2. Point the claude-* route at gemini and rewrite the upstream model name
 systemprompt admin config gateway route add --model-pattern 'claude-*' \
-  --provider gemini --upstream-model gemini-2.5-flash
+  --provider gemini --upstream-model gemini-3.8-flash
 ```
 
-A client `POST /v1/messages` with `model: claude-haiku-4-5` then returns `model: gemini-2.5-flash`.
+A client `POST /v1/messages` with `model: claude-haiku-5-5` then returns `model: gemini-3.8-flash`.
 
 ## Client attribution
 

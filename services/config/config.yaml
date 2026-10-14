@@ -8,14 +8,20 @@
 includes:
   # MCP servers
   # `atlassian`, `salesforce`, the internal `systemprompt` control plane and
-  # the internal `agent-farm` run server are reachable. One connector each;
+  # the internal `agent-farm` run server and the internal `odoo` server are
+  # reachable. One connector each;
   # one Connect row each.
   # `github` serves workflow write-backs only; no plugin enables it.
+  # `dynapps-odoo` and `dynbrain` are the Dynapps portal's hosted servers,
+  # each connected per user through the generic OAuth connector.
   - ../mcp/systemprompt.yaml
   - ../mcp/agent-farm.yaml
+  - ../mcp/odoo.yaml
   - ../mcp/salesforce.yaml
   - ../mcp/atlassian.yaml
   - ../mcp/github.yaml
+  - ../mcp/dynapps-odoo.yaml
+  - ../mcp/dynbrain.yaml
 
   # AI, scheduler, content
   # Note: ../web/config.yaml is NOT included here — the web domain validator

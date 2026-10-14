@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="{{HTML_LANG}}">
+<head>
+<meta charset="UTF-8">
+<!-- width=794 ≈ 210mm@96dpi: en móvil el navegador ajusta la página A4 al ancho de pantalla (fit-to-width). Ignorado por Chrome --print-to-pdf, así que el PDF A4 no se altera. -->
+<meta name="viewport" content="width=794">
+<title>{{DOC_TITLE}}</title>
+<style>
+{{FONT_FACES}}
+:root{
+  /* Tokens: dynapps-brand references/brand-system.md — keep in sync. */
+  --midnight:#050543;--violet:#951CF3;--carmine:#FF575D;--orange:#FF7759;--tangerine:#FF7E23;
+  --deep:#030330;
+  /* Paleta pura de marca para texto pequeño (decisión deliberada: se acepta el
+     miss de contraste AA a cambio de la fidelidad cromática de marca). */
+  --carmine-text:#FF575D;
+  --tangerine-text:#FF7E23;
+  --grad:linear-gradient(45deg,var(--violet) 0%,var(--carmine) 52%,var(--orange) 100%);
+  --grad-h:linear-gradient(90deg,var(--violet) 0%,var(--carmine) 52%,var(--orange) 100%);
+  /* Superficies claras de marca (el PDF es siempre claro; --surface aquí es la
+     tarjeta blanca, no el token oscuro homónimo del brand system). */
+  --snow:#F5F5FA;--off-white:#F6F5F8;
+  --grey-100:#E8E7EC;--grey-200:#CDCBD4;--grey-400:#9290A6;--grey-600:#65637A;
+  --surface:#ffffff;--tint:var(--snow);--tint2:var(--off-white);
+  /* Texto: tinta principal / secundaria / suave; --line es el hairline neutro. */
+  --ink:#050543;--ink2:var(--grey-600);--soft:var(--grey-600);--line:var(--grey-100);
+  /* Escala tipográfica PDF (pt enteros, ratio ~1.2; densidad A4). */
+  --fs-xs:8pt;--fs-s:9pt;--fs-m:10pt;--fs-l:12pt;--fs-xl:14pt;--fs-2xl:18pt;--fs-3xl:21pt;
+  /* Total grande (panel oscuro de implantación), espejo del --fs-total del web. */
+  --fs-total:26pt;
+  /* Spacing (px, base 4); sólo los pasos en uso por el Gantt. */
+  --sp-3:12px;--sp-4:16px;
+  /* Dos radios: hairline/track (--r-1, 4px) y tarjeta/panel (--r-card, 10px). */
+  --r-1:4px;--r-card:10px;
+  /* Ancho de la columna de etiqueta del Gantt (= ancho columna grid + gutter 12px). */
+  --gantt-label-w:162px;
+}
+@page{size:A4;margin:17mm 15mm;}
+@page:first{margin:0;}
+/* Contraportada a sangre: página nombrada (Chrome soporta named pages en
+   --print-to-pdf); vive FUERA de la tabla de recorrido → sin tiras. */
+@page back{size:A4;margin:0;}
+*{margin:0;padding:0;box-sizing:border-box;print-color-adjust:exact;-webkit-print-color-adjust:exact;}
+body{font-family:'Readex Pro',system-ui,sans-serif;font-weight:400;color:var(--ink);
+  font-size:var(--fs-m);line-height:1.55;}
+.accent{color:var(--tangerine-text);}
+/* Calma visual (Ine): títulos de sección de UN solo color oscuro; el span
+   .accent de los packs se neutraliza aquí (los strings no cambian). La
+   contraportada (.bp-title) conserva su acento tangerine sobre midnight. */
+h2.p-title .accent,.p-gf-title .accent{color:inherit;}
+strong{font-weight:600;color:var(--ink);}
+
+/* ---------- Modelo de FLUJO (v5.1) ----------
+   Antes: una .page por sección con page-break-after:always → hojas medio vacías.
+   Ahora: una sola columna que fluye y llena las hojas de forma natural. La
+   cabecera y el pie corren en CADA hoja mediante una tabla de recorrido
+   (thead=display:table-header-group / tfoot=display:table-footer-group), fiable
+   en Chrome --print-to-pdf y sin position:fixed (que en este build no reserva
+   espacio por hoja) ni WeasyPrint. La tabla RESERVA el hueco de las tiras, así
+   que el contenido nunca las solapa. La portada queda FUERA de la tabla: hoja 1
+   a sangre (@page:first margin:0), sin tira. El corte entre hojas lo deciden los
+   átomos (break-inside:avoid) y los títulos (break-after:avoid). */
+@media screen{
+  body{background:var(--grey-100);padding:22px 0;}
+  .cover,.backpage{width:210mm;min-height:297mm;margin:0 auto 18px;background:#fff;
+    box-shadow:0 4px 22px rgba(0,0,0,.12);}
+  .p-run{width:210mm;margin:0 auto 18px;background:#fff;padding:0 15mm;
+    box-shadow:0 4px 22px rgba(0,0,0,.12);}
+}
+@media print{.cover,.backpage{box-shadow:none;margin:0;}}
+
+/* Tabla de recorrido: header/footer repetidos por hoja + cuerpo que fluye. */
+.p-run{width:100%;border-collapse:collapse;}
+.p-run > thead{display:table-header-group;}
+.p-run > tfoot{display:table-footer-group;}
+.p-run-h{padding:0 0 8px;}
+.p-run-b{padding:6px 0 0;vertical-align:top;}
+.p-run-f{padding:10px 0 0;}
+/* Sección de flujo: bloque neutro sin salto forzado. */
+.p-sec{margin-bottom:6px;}
+/* Bloque que se mantiene junto (título + su primer bloque grande, p.ej. el mapa
+   del metro) para que un encabezado nunca quede huérfano al pie de una hoja. */
+.p-keep{break-inside:avoid;page-break-inside:avoid;}
+
+/* header strip on every page (corre en el thead) */
+.p-head{display:flex;justify-content:space-between;align-items:center;
+  border-bottom:1px solid var(--line);padding-bottom:7px;}
+.p-head img{height:17px;}
+.p-head span{font-size:var(--fs-xs);color:var(--soft);}
+
+/* footer: hairline de gradiente (firma de marca) + pie discreto (corre en el tfoot). */
+.p-foot{margin-top:0;}
+.p-foot::before{content:"";display:block;height:2px;border-radius:2px;
+  background:var(--grad);opacity:.35;margin-bottom:5px;}
+.p-foot-row{display:flex;justify-content:space-between;align-items:center;
+  font-size:var(--fs-xs);color:var(--soft);}
+
+h2.p-title{font-size:var(--fs-3xl);font-weight:700;color:var(--ink);line-height:1.1;margin-bottom:8px;letter-spacing:-.01em;
+  break-after:avoid;page-break-after:avoid;}
+h2.p-title{margin-top:2px;}
+.p-sec:first-child h2.p-title{margin-top:0;}
+.p-lead{font-size:var(--fs-m);color:var(--soft);margin-bottom:16px;max-width:155mm;}
+h3{font-size:var(--fs-l);font-weight:700;color:var(--ink);margin:14px 0 6px;}
+p{margin-bottom:6px;}
+ul{margin:5px 0 9px 16px;}li{margin-bottom:3px;}
+
+/* ---------- COVER ---------- */
+/* Midnight plano con glows ambientales de marca (0.06-0.10 de opacidad). */
+.cover{background:
+  radial-gradient(700px 500px at 78% 16%,rgba(149,28,243,.10),transparent 60%),
+  radial-gradient(600px 420px at 14% 88%,rgba(255,87,93,.06),transparent 60%),var(--midnight);
+  color:#fff;display:flex;flex-direction:column;justify-content:center;
+  min-height:297mm;padding:28mm 24mm;page-break-after:always;}
+/* Logo de portada con más aire alrededor (arriba y a la izquierda) para que respire. */
+.cover .c-logo{height:34px;margin-top:8mm;margin-left:3mm;margin-bottom:30mm;}
+.cover .c-eyebrow{font-size:var(--fs-l);font-weight:600;letter-spacing:.16em;color:var(--tangerine);margin-bottom:14px;}
+.cover h1{font-size:40pt;font-weight:700;line-height:1.04;letter-spacing:-.02em;margin-bottom:14px;}
+.cover .c-sub{font-size:var(--fs-l);color:rgba(255,255,255,.78);max-width:140mm;margin-bottom:30mm;}
+.cover .c-meta{display:flex;gap:30px;flex-wrap:wrap;border-top:1px solid rgba(255,255,255,.2);padding-top:18px;}
+.cover .c-meta div span{display:block;}
+.cover .c-meta .ml{font-size:var(--fs-xs);color:var(--tangerine);letter-spacing:.08em;margin-bottom:3px;}
+.cover .c-meta .mv{font-size:var(--fs-l);color:#fff;font-weight:600;}
+
+/* ---------- KPIs (v5: tarjeta clara con cifra de acento — el color queda para portada/why/cierre/precios) ---------- */
+.kpi-row{display:flex;gap:10px;margin:11px 0 13px;}
+.kpi{flex:1;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);padding:10px 9px;text-align:center;
+  page-break-inside:avoid;}
+.kpi-n{display:block;font-size:var(--fs-xl);font-weight:700;color:var(--violet);line-height:1.05;}
+.kpi-l{display:block;font-size:var(--fs-xs);color:var(--ink2);margin-top:2px;}
+
+/* ---------- Pain table (v5: cabecera clara, sin bloque midnight) ---------- */
+.pp-table{width:100%;border-collapse:collapse;margin:8px 0 4px;page-break-inside:auto;}
+.pp-table th{background:var(--tint);color:var(--ink);text-align:left;font-size:var(--fs-xs);font-weight:700;
+  letter-spacing:.04em;padding:6px 10px;border-bottom:2px solid var(--grey-200);}
+.pp-table td{padding:6px 10px;border-bottom:1px solid var(--line);font-size:var(--fs-s);vertical-align:top;line-height:1.35;}
+.pp-table tr{page-break-inside:avoid;}
+.pp-reto{width:42%;color:var(--ink);font-weight:600;}
+.pp-sol{color:var(--soft);}
+.disclaimer{background:var(--tint);border:1px solid var(--line);border-radius:var(--r-card);
+  padding:9px 13px;margin-top:11px;page-break-inside:avoid;}
+.disclaimer b{display:block;font-size:var(--fs-s);color:var(--ink);margin-bottom:2px;}
+.disclaimer p{font-size:var(--fs-xs);color:var(--soft);margin:0;line-height:1.4;}
+
+/* ---------- Gantt (light) ---------- */
+/* El bloque completo (filas + eje + leyenda) se mantiene junto: una leyenda
+   separada de sus barras en otra hoja es ilegible. */
+.gantt2{margin-top:6px;break-inside:avoid;page-break-inside:avoid;}
+.grow{display:grid;grid-template-columns:calc(var(--gantt-label-w) - var(--sp-3)) 1fr;align-items:center;gap:var(--sp-3);margin-bottom:6px;page-break-inside:avoid;}
+.glabel{font-size:var(--fs-xs);font-weight:600;text-align:right;color:var(--ink);}
+.gtrack{position:relative;height:14px;border-radius:var(--r-1);overflow:hidden;background:var(--snow);}
+.gbar{position:absolute;top:0;height:100%;border-radius:var(--r-1);}
+.gaxis{position:relative;height:14px;margin-left:var(--gantt-label-w);margin-top:5px;}
+.gaxis span{position:absolute;font-size:var(--fs-xs);color:var(--soft);transform:translateX(-50%);}
+.glegend{display:flex;flex-wrap:wrap;gap:var(--sp-4);margin-top:var(--sp-4);margin-left:var(--gantt-label-w);}
+.gleg{display:flex;align-items:center;gap:6px;font-size:var(--fs-xs);color:var(--soft);}
+.gdot{width:10px;height:10px;border-radius:3px;}
+
+/* ---------- Apps (tarjeta plana, sin borde ni fondo: jerarquía por tipografía) ---------- */
+.p-app{padding:15px 4px;margin-bottom:10px;page-break-inside:avoid;}
+.p-app-h{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.p-app-bar{width:5px;height:22px;border-radius:3px;flex-shrink:0;}
+.p-app-ico{width:26px;height:26px;flex-shrink:0;display:block;}
+.p-app-h h3{margin:0;font-size:var(--fs-xl);color:var(--ink);}
+.p-app-out{font-size:var(--fs-xs);color:var(--violet);margin-left:auto;font-weight:600;}
+.p-app-intro{font-size:var(--fs-s);color:var(--soft);margin-bottom:6px;}
+.p-app-intro p{margin-bottom:5px;}
+.p-app-fit{font-size:var(--fs-s);color:var(--ink2);padding:2px 0 4px;margin-bottom:6px;}
+.p-app-fit b{color:var(--ink);font-weight:600;}
+/* Incluido / Adaptado (v5): mismo sistema de bullets que el web — ✓ incluido / + adaptado. */
+.p-feat{margin-top:8px;}
+.p-badge{display:inline-block;font-size:var(--fs-xs);font-weight:700;letter-spacing:.07em;color:var(--violet);margin-bottom:5px;}
+.p-badge.adv{color:var(--violet);}
+.p-feat ul{columns:2;column-gap:22px;margin:4px 0 0 14px;list-style:none;}
+.p-feat li{font-size:var(--fs-s);margin-bottom:3px;break-inside:avoid;color:var(--ink);
+  padding-left:13px;position:relative;}
+/* Calma (Ine): viñetas del color del TEXTO; el tipo lo marca el glifo (✓/+). */
+.p-feat li::before{content:"\2713";position:absolute;left:0;top:0;
+  color:var(--ink);font-weight:700;font-size:var(--fs-s);line-height:inherit;}
+.p-feat.adv li::before{content:"+";color:var(--ink);}
+
+/* ---------- Devs (lenguaje "Metodología": plano, separados por hairline) ---------- */
+.p-dev{border-top:1px solid var(--line);padding:13px 0 3px;page-break-inside:avoid;}
+.p-dev:first-of-type{border-top:none;padding-top:4px;}
+.p-dev-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:4px;}
+.p-dev h4{font-size:var(--fs-l);color:var(--ink);margin:0;}
+.p-dev-price{font-size:var(--fs-l);font-weight:700;color:var(--ink);white-space:nowrap;
+  font-variant-numeric:tabular-nums;}
+.p-dev p{font-size:var(--fs-s);color:var(--soft);margin:0;}
+
+/* ====================================================================== */
+/* INVERSIÓN — réplica del lenguaje visual del web (tarjetas, no tablas).  */
+/* Estático A4: refleja el estado premarcado; sin checkboxes ni JS.        */
+/* ====================================================================== */
+
+/* (1) Panel ANÁLISIS — tarjeta clara con borde neutro; el precio grande en violeta jerarquiza. */
+.p-gateway{border:1px solid var(--line);border-radius:var(--r-card);margin-bottom:14px;
+  page-break-inside:avoid;}
+.p-gateway > .p-gw-inner{background:var(--surface);border-radius:var(--r-card);overflow:hidden;}
+.p-gw-head{display:flex;align-items:center;gap:14px;padding:14px 18px 4px;}
+.p-gw-eyebrow{display:block;font-size:var(--fs-xs);font-weight:700;letter-spacing:.12em;color:var(--violet);margin-bottom:2px;}
+.p-gw-title{font-size:var(--fs-2xl);font-weight:700;color:var(--ink);line-height:1.05;}
+.p-gw-price{margin-left:auto;font-size:var(--fs-3xl);font-weight:700;color:var(--violet);
+  font-variant-numeric:tabular-nums;line-height:1;white-space:nowrap;}
+.p-gw-lead{font-size:var(--fs-s);color:var(--ink2);padding:6px 18px 12px;}
+.p-gw-rights{display:grid;grid-template-columns:1fr 1fr;gap:24px;padding:4px 18px 14px;}
+.p-gright{padding:0;}
+.p-gright-h{font-size:var(--fs-xs);font-weight:700;letter-spacing:.08em;color:var(--violet);margin-bottom:3px;}
+.p-gright p{font-size:var(--fs-xs);color:var(--ink2);margin:0;line-height:1.4;}
+.p-gw-poc{padding:0 18px 16px;}
+
+/* (2) GARANTÍA "Precio cerrado" — tarjeta clara y plana, sin filete ni icono. */
+.p-guarantee-flat{background:var(--tint2);
+  border-radius:var(--r-card);
+  padding:12px 15px;margin-bottom:16px;page-break-inside:avoid;}
+.p-gf-eyebrow{display:inline-block;font-size:var(--fs-xs);font-weight:700;letter-spacing:.1em;
+  color:var(--violet);margin-bottom:2px;}
+.p-gf-title{font-size:var(--fs-l);font-weight:700;color:var(--ink);margin-bottom:3px;line-height:1.1;}
+.p-gf-text{font-size:var(--fs-s);color:var(--ink2);margin:0;line-height:1.45;}
+/* Calma (Ine): sin subrayados en el cuerpo — el énfasis se hace con peso. */
+.p-gf-hl{color:inherit;font-weight:600;}
+
+/* (3) BLOQUES tipo tarjeta: Aplicaciones / Desarrollos / IA (lista de precios).
+   v5.2: el bloque FLUYE entre hojas (con muchas apps ocupaba media hoja y
+   forzaba hojas medio vacías); los átomos son las filas. La cabecera queda
+   pegada a la primera fila (break-after:avoid) y el subtotal a la última
+   (break-before:avoid): ni cabecera ni subtotal huérfanos. */
+.p-block{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);padding:22px;
+  margin-bottom:12px;}
+.p-block-head{display:flex;align-items:baseline;gap:10px;margin-bottom:8px;
+  padding-bottom:8px;border-bottom:1px solid var(--line);
+  break-after:avoid;page-break-after:avoid;}
+.p-block-title{font-size:var(--fs-xs);font-weight:700;letter-spacing:.09em;color:var(--violet);}
+.p-block-hint{font-size:var(--fs-xs);color:var(--soft);font-style:italic;}
+.p-li{list-style:none;margin:0;padding:0;}
+.p-li-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid var(--line);
+  page-break-inside:avoid;}
+.p-li-row:first-child{border-top:none;}
+.p-li-badge{flex:0 0 auto;font-size:7.5pt;font-weight:700;letter-spacing:.07em;color:var(--violet);white-space:nowrap;}
+.p-li-name{flex:1;font-size:var(--fs-s);color:var(--ink);min-width:0;line-height:1.25;}
+.p-li-name strong{color:var(--ink);font-weight:600;}
+.p-li-name small{display:block;font-size:var(--fs-xs);color:var(--ink2);font-weight:400;line-height:1.25;}
+.p-li-price{flex:0 0 auto;font-size:var(--fs-s);font-weight:600;color:var(--ink);white-space:nowrap;
+  font-variant-numeric:tabular-nums;margin-left:auto;}
+/* Subtotal de bloque (mismo lenguaje que el total del Análisis del web). */
+.p-subtotal{display:flex;justify-content:space-between;align-items:center;margin-top:6px;
+  padding:9px 0 1px;border-top:1px solid var(--line);
+  break-inside:avoid;page-break-inside:avoid;break-before:avoid;page-break-before:avoid;}
+.p-subtotal-lab{font-size:var(--fs-xs);color:var(--ink2);font-weight:600;letter-spacing:.05em;}
+.p-subtotal-amt{font-size:var(--fs-m);font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums;}
+
+/* (4) TOTAL implantación — panel oscuro destacado (espejo de .lista-total del web). */
+.p-total{display:flex;align-items:baseline;justify-content:space-between;gap:16px;
+  background:var(--midnight);border-radius:var(--r-card);padding:14px 20px;margin:4px 0 14px;
+  page-break-inside:avoid;break-before:avoid;page-break-before:avoid;}
+.p-total-lab{font-size:var(--fs-l);font-weight:600;color:#fff;}
+.p-total-amt{font-size:var(--fs-total);font-weight:700;line-height:1;color:var(--tangerine);font-variant-numeric:tabular-nums;}
+
+/* (5) ANÁLISIS total + POC (sub-tabla compacta). Reutiliza .p-breakdown. */
+.p-breakdown{width:100%;border-collapse:collapse;margin:0 0 4px;}
+.p-breakdown tr{page-break-inside:avoid;}
+.p-breakdown td{padding:7px 12px;border-bottom:1px solid var(--line);font-size:var(--fs-s);}
+.p-breakdown td:last-child{text-align:right;font-weight:600;font-variant-numeric:tabular-nums;}
+.p-breakdown tr.bt td{background:var(--midnight);color:#fff;font-weight:700;
+  letter-spacing:.02em;border:none;font-size:var(--fs-m);}
+.p-breakdown tr.bdev td:first-child{padding-left:24px;color:var(--soft);}
+
+/* (6) RECURRENTES — dos columnas (Cuota anual | Cuota mensual), tarjetas claras con hairline. */
+.p-recur-cols{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start;}
+.p-recur-sub{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);padding:13px 15px;
+  page-break-inside:avoid;}
+.p-recur-sub-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;
+  margin-bottom:9px;padding-bottom:7px;border-bottom:1px solid var(--line);}
+.p-recur-sub-title{font-size:var(--fs-xs);font-weight:700;letter-spacing:.08em;color:var(--violet);}
+.p-recur-sub-total{font-size:var(--fs-l);font-weight:700;color:var(--violet);font-variant-numeric:tabular-nums;}
+.p-recur-card{padding:9px 0;border-top:1px solid var(--line);}
+.p-recur-card:first-of-type{border-top:none;padding-top:0;}
+.p-recur-card:last-child{padding-bottom:0;}
+.p-recur-t{font-size:var(--fs-s);font-weight:600;color:var(--ink);margin-bottom:2px;}
+.p-recur-p{font-size:var(--fs-m);font-weight:700;color:var(--ink);margin-bottom:2px;font-variant-numeric:tabular-nums;}
+.p-recur-d{font-size:var(--fs-xs);color:var(--ink2);line-height:1.35;}
+.p-recur-empty{font-size:var(--fs-xs);color:var(--soft);font-style:italic;}
+.p-recur-note{font-size:var(--fs-xs);color:var(--soft);margin-top:10px;}
+.p-recur-note a{color:var(--violet);font-weight:600;text-decoration:none;}
+
+.fineprint{font-size:var(--fs-xs);color:var(--soft);margin-top:14px;}
+
+/* ---------- Términos / Why (v5: banda de cifras + tres pilares, espejo del web) ---------- */
+.why-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin:12px 0;}
+.why-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);padding:22px;page-break-inside:avoid;}
+.why-card h4{font-size:var(--fs-m);color:var(--violet);margin-bottom:4px;}
+.why-card p{font-size:var(--fs-s);color:var(--soft);margin:0;}
+.p-figs{display:flex;gap:10px;margin:12px 0;}
+.p-fig{flex:1;background:var(--tint2);border:1px solid var(--line);border-radius:var(--r-card);
+  padding:10px 8px;text-align:center;page-break-inside:avoid;}
+.p-fig-num{display:block;font-size:var(--fs-l);font-weight:700;color:var(--ink);line-height:1.15;}
+.p-fig-lab{display:block;font-size:var(--fs-xs);color:var(--ink2);margin-top:2px;}
+.p-pillars{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;margin:2px 0 12px;}
+.p-pillar{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);
+  padding:22px;page-break-inside:avoid;}
+.p-pillar h4{font-size:var(--fs-m);color:var(--ink);margin-bottom:4px;display:flex;align-items:center;}
+.p-pillar p{font-size:var(--fs-s);color:var(--ink2);margin:0;}
+.philosophy{background:var(--midnight);color:#fff;border-radius:var(--r-card);padding:20px 24px;margin-top:14px;page-break-inside:avoid;}
+.philosophy h3{color:#fff;font-size:var(--fs-l);margin:0 0 8px;}
+.philosophy p{font-size:var(--fs-s);color:rgba(255,255,255,.94);margin-bottom:6px;}
+.philosophy strong{color:#fff;}
+/* ---------- Equipo (pdf) ---------- */
+.p-team-row{display:flex;flex-wrap:wrap;gap:14px;margin:6px 0 8px;}
+.p-team-card{width:152px;text-align:center;page-break-inside:avoid;}
+.p-team-photo{width:62px;height:62px;border-radius:50%;object-fit:cover;margin-bottom:6px;border:1.5px solid var(--line);}
+.avatar-initials{display:inline-flex;align-items:center;justify-content:center;background:var(--grad);
+  color:#fff;font-size:22px;font-weight:700;}
+.p-team-name{font-size:var(--fs-s);font-weight:600;color:var(--ink);line-height:1.2;}
+.p-team-role{font-size:var(--fs-xs);color:var(--violet);font-weight:600;}
+.p-team-area{font-size:var(--fs-xs);color:var(--soft);margin-top:2px;}
+.p-team-focus{font-size:var(--fs-xs);color:var(--soft);font-style:italic;margin-top:4px;line-height:1.3;}
+.p-team-skills{font-size:var(--fs-xs);color:var(--violet);margin-top:4px;line-height:1.3;}
+.p-team-mail{font-size:var(--fs-xs);color:var(--violet);margin-top:4px;word-break:break-all;}
+/* ---------- Casos de éxito (pdf, v5.2: foto CUADRADA lateral, no banner) ---------- */
+.p-caso-grid{display:flex;flex-direction:column;gap:8px;margin:6px 0 14px;}
+.p-caso{display:flex;gap:16px;align-items:flex-start;border:1px solid var(--line);
+  border-radius:var(--r-card);padding:14px 16px;page-break-inside:avoid;overflow:hidden;}
+/* Miniatura cuadrada (36mm) a la izquierda; las fotos apaisadas se recortan
+   centradas vía object-fit:cover. Sin foto no se emite (el texto ocupa todo). */
+.p-caso-img{flex:0 0 36mm;width:36mm;height:36mm;border-radius:calc(var(--r-card) - 3px);
+  overflow:hidden;}
+.p-caso-img img{display:block;width:100%;height:100%;object-fit:cover;}
+.p-caso-tx{flex:1;min-width:0;align-self:center;}
+.p-caso-h{font-size:var(--fs-m);font-weight:700;color:var(--ink);}
+.p-caso-sector{font-size:var(--fs-xs);font-weight:600;color:var(--violet);}
+.p-caso p{font-size:var(--fs-s);color:var(--soft);margin:3px 0 0;}
+.p-caso-logo{display:block;height:24px;max-width:130px;object-fit:contain;margin-bottom:6px;}
+.p-caso-meta{margin:2px 0 4px;}
+.p-caso-pill{display:inline-block;font-size:var(--fs-xs);font-weight:600;color:#fff;
+  border-radius:999px;padding:2px 10px;}
+.p-caso-quote{font-size:var(--fs-s);color:var(--ink);line-height:1.5;margin:4px 0 0;border:none;}
+.p-caso-quote .cq-text::before{content:"\201C";}
+.p-caso-quote .cq-text::after{content:"\201D";}
+.p-caso-quote cite{display:block;font-style:normal;font-size:var(--fs-xs);color:var(--ink2);margin-top:4px;}
+/* Muro de logos (solo logos embebidos como data URI; sin logo, el nombre en texto). */
+.p-wall{margin:8px 0 18px;padding:10px 0;page-break-inside:avoid;text-align:center;}
+.p-wall-h{display:block;font-size:var(--fs-s);font-weight:700;letter-spacing:.12em;
+  color:var(--grey-400);margin-bottom:14px;text-align:center;}
+.p-wall-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:16px 30px;}
+.p-wall-logo{height:34px;max-width:150px;object-fit:contain;}
+.p-wall-name{font-size:var(--fs-s);font-weight:600;color:var(--ink2);}
+/* ---------- Partner banner (pdf) ---------- */
+.partner-banner{display:flex;gap:22px;align-items:center;background:var(--deep);
+  color:#fff;border-radius:var(--r-card);padding:15px 22px;margin-bottom:14px;page-break-inside:avoid;}
+.pb-rank{display:flex;align-items:center;gap:12px;border-right:1px solid rgba(255,255,255,.2);padding-right:20px;}
+.pb-num{font-size:30pt;font-weight:700;line-height:.85;
+  background:var(--grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;}
+.pb-lab{font-size:var(--fs-m);font-weight:600;line-height:1.2;}
+.pb-off-t{font-size:var(--fs-s);font-weight:600;color:var(--tangerine);margin-bottom:4px;}
+.pb-off-l{font-size:var(--fs-s);color:rgba(255,255,255,.85);}
+/* ---------- Phase flow (pdf) ---------- */
+.flow-row{display:flex;gap:8px;margin-bottom:16px;page-break-inside:avoid;}
+.flow-step{flex:1;border:1px solid var(--line);border-radius:var(--r-card);padding:11px 12px;}
+.flow-num{font-size:var(--fs-xs);font-weight:700;color:var(--violet);letter-spacing:.08em;margin-bottom:4px;}
+.flow-title{font-size:var(--fs-m);font-weight:600;color:var(--ink);}
+.flow-dur{font-size:var(--fs-xs);color:var(--violet);font-weight:600;margin-bottom:5px;}
+.flow-desc{font-size:var(--fs-xs);color:var(--soft);}
+.flow-arrow{display:none;}
+/* ---------- Contraportada (pdf, v5.2) ----------
+   Espejo visual de la portada: midnight plano + glows ambientales, logo blanco,
+   "Siguiente paso" como statement, fechas en tangerine, tarjeta de contacto y
+   línea "Hablemos". Página nombrada (page:back → @page back margin:0) fuera de
+   la tabla de recorrido: a sangre y SIN tiras de cabecera/pie. */
+.backpage{page:back;break-before:page;page-break-before:always;
+  background:
+  radial-gradient(700px 500px at 78% 16%,rgba(149,28,243,.10),transparent 60%),
+  radial-gradient(600px 420px at 14% 88%,rgba(255,87,93,.06),transparent 60%),var(--midnight);
+  color:#fff;min-height:297mm;padding:28mm 24mm;display:flex;flex-direction:column;}
+.backpage .bp-logo{height:34px;margin-top:8mm;margin-left:3mm;margin-bottom:30mm;align-self:flex-start;}
+.bp-mid{margin-top:auto;}
+.bp-title{font-size:34pt;font-weight:700;line-height:1.05;letter-spacing:-.02em;color:#fff;margin-bottom:12px;}
+.bp-title .accent{color:var(--tangerine);}
+.bp-lead{font-size:var(--fs-l);color:rgba(255,255,255,.78);max-width:140mm;margin-bottom:16px;}
+.backpage .cta-next{color:#fff;font-size:var(--fs-l);margin:0 0 18px;}
+.backpage .cta-next .accent{color:var(--tangerine);}
+/* Tarjetas de contacto del cierre, en clave oscura. */
+.backpage .p-cierre{margin-top:0;margin-bottom:30mm;max-width:150mm;}
+.backpage .p-cierre-row{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.18);}
+.backpage .p-cierre-role{color:var(--tangerine);}
+.backpage .p-cierre-name{color:#fff;}
+.backpage .p-cierre-bits{color:rgba(255,255,255,.72);}
+.bp-talk{border-top:1px solid rgba(255,255,255,.2);padding-top:18px;
+  display:flex;justify-content:space-between;align-items:baseline;gap:20px;flex-wrap:wrap;}
+.bp-talk .cs-big{color:#fff;}
+.bp-talk .cs-sub{color:rgba(255,255,255,.82);text-align:right;}
+.bp-talk .accent{color:var(--tangerine);}
+/* ---------- Contact strip (pdf) ---------- */
+.contact-strip{display:flex;align-items:center;justify-content:space-between;gap:16px;
+  background:var(--midnight);color:#fff;border-radius:var(--r-card);padding:14px 24px;margin-top:16px;page-break-inside:avoid;}
+.cs-big{font-size:var(--fs-l);font-weight:700;}
+.cs-sub{font-size:var(--fs-s);color:rgba(255,255,255,.82);}
+.contact-strip .accent{color:var(--tangerine);}
+.p-cierre{display:flex;gap:10px;margin-top:14px;page-break-inside:avoid;}
+.p-cierre-row{flex:1;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);padding:22px;display:flex;align-items:center;gap:12px;}
+.p-cierre-tx{display:flex;flex-direction:column;gap:2px;min-width:0;}
+.p-cierre-photo{width:44px;height:44px;border-radius:50%;object-fit:cover;flex:none;}
+.avatar-initials.p-cierre-photo{font-size:var(--fs-l);}
+.p-cierre-role{font-size:var(--fs-xs);font-weight:700;letter-spacing:.06em;color:var(--violet);}
+.p-cierre-name{font-size:var(--fs-m);font-weight:700;color:var(--ink);}
+.p-cierre-bits{font-size:var(--fs-xs);color:var(--soft);word-break:break-all;}
+/* Siguiente paso ligado a las fechas ancla (cierre, v5). */
+.cta-next{font-size:var(--fs-m);font-weight:600;color:var(--ink);margin:2px 0 10px;}
+/* ---------- Understanding (pdf) ---------- */
+.p-und-grid{display:flex;gap:12px;margin:10px 0 6px;}
+.p-und-col{flex:1;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);padding:11px 14px;page-break-inside:avoid;}
+.p-und-h{font-size:var(--fs-xs);font-weight:700;letter-spacing:.06em;color:var(--violet);margin-bottom:5px;}
+.p-und-col ul{margin:0 0 0 14px;}
+.p-und-col li{font-size:var(--fs-s);color:var(--ink);margin-bottom:3px;}
+/* ---------- Cost of delay (pdf) ---------- */
+.p-cod{background:var(--tint);border:1px solid var(--line);border-radius:var(--r-card);padding:11px 15px;margin-top:11px;page-break-inside:avoid;}
+.p-cod-h{font-size:var(--fs-xs);font-weight:700;letter-spacing:.05em;color:var(--violet);margin-bottom:5px;}
+.p-cod ul{columns:2;column-gap:20px;margin:0 0 0 15px;}
+.p-cod li{font-size:var(--fs-s);color:var(--ink);margin-bottom:3px;break-inside:avoid;}
+/* ---------- Anchor dates (pdf, v5.2: timeline HORIZONTAL, no filas apiladas) ----------
+   Hitos como columnas sobre una línea conectora fina: fecha arriba, nodo sobre
+   la línea, chip de dueño (Tú/Dynapps/Juntos con sus colores) + hito debajo.
+   Hasta 7 hitos en una tira; >7 el builder parte en dos tiras. */
+.p-anchor{display:flex;margin:14px 0 6px;break-inside:avoid;page-break-inside:avoid;}
+.p-anchor + .p-anchor{margin-top:2px;}
+.p-anchor-it{flex:1;min-width:0;position:relative;text-align:center;padding:0 4px;}
+.p-anchor-it::before{content:"";position:absolute;left:0;right:0;top:25px;height:2px;
+  background:var(--grey-100);}
+.p-anchor-it:first-child::before{left:50%;}
+.p-anchor-it:last-child::before{right:50%;}
+.p-anchor-date{font-size:var(--fs-s);font-weight:700;color:var(--ink);height:20px;
+  white-space:nowrap;font-variant-numeric:tabular-nums;}
+.p-anchor-node{position:relative;width:12px;height:12px;border-radius:50%;background:#fff;
+  border:3px solid var(--violet);margin:0 auto 7px;}
+.p-anchor-note{background:var(--tint2);color:var(--ink);border-left:3px solid var(--violet);
+  border-radius:var(--r-card);padding:11px 15px;margin:8px 0 12px;
+  font-size:var(--fs-s);font-weight:600;line-height:1.45;page-break-inside:avoid;}
+.p-anchor-who{display:inline-block;font-size:var(--fs-xs);font-weight:700;letter-spacing:.06em;color:var(--violet);}
+.p-anchor-it.cli .p-anchor-who{color:var(--tangerine-text);}
+.p-anchor-it.cli .p-anchor-node{border-color:var(--tangerine);}
+.p-anchor-it.junt .p-anchor-who{color:var(--carmine-text);}
+.p-anchor-it.junt .p-anchor-node{border-color:var(--carmine);}
+.p-anchor-mile{font-size:var(--fs-xs);color:var(--ink);line-height:1.3;margin-top:1px;}
+/* ---------- Casos metric (pdf) ---------- */
+.p-caso-metric{font-size:var(--fs-xl);font-weight:700;color:var(--violet);line-height:1;margin-bottom:3px;}
+.p-caso-link{font-size:var(--fs-xs);color:var(--violet);text-decoration:none;}
+</style>
+</head>
+<body>
+
+<!-- COVER -->
+<div class="cover">
+  <img class="c-logo" src="{{LOGO_WHITE}}" alt="{{LOGO_ALT}}">
+  <div style="margin-top:auto;">
+    <div class="c-eyebrow">{{COVER_EYEBROW}}</div>
+    <h1>{{CLIENTE}}</h1>
+    <p class="c-sub">{{COVER_SUB}}</p>
+    <div class="c-meta">
+      <div><span class="ml">{{META_QUOTE}}</span><span class="mv">{{NUM}}</span></div>
+      <div><span class="ml">{{META_DATE}}</span><span class="mv">{{FECHA}}</span></div>
+      <div><span class="ml">{{META_PARTNER}}</span><span class="mv">{{COMERCIAL}}</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- Páginas cliente-first (construidas en generate_proposal.py, según modo) -->
+{{BODY}}
+
+</body>
+</html>

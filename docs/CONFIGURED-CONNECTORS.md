@@ -14,9 +14,7 @@ Add the server YAML to the service aggregator's includes:
 mcp_servers:
   example-tools:
     type: external
-    binary: ''
-    package: null
-    port: 5050
+    tool_policy: allow
     endpoint: https://mcp.example.com/mcp
     enabled: true
     display_in_web: false

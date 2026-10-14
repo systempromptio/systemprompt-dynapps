@@ -1,0 +1,632 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SEO Manager Template Placeholders",
+  "description": "Schema de placeholders para templates de reportes SEO",
+  "templates": {
+    "audit-report.html": {
+      "description": "Reporte completo de auditoría SEO con scores, checks, issues y recomendaciones.",
+      "placeholders": {
+        "{{DOMAIN}}": {
+          "type": "string",
+          "description": "Dominio auditado",
+          "example": "dynapps.es",
+          "required": true
+        },
+        "{{AUDIT_DATE}}": {
+          "type": "string",
+          "description": "Fecha de generación del reporte",
+          "example": "10 Feb 2025",
+          "required": true
+        },
+        "{{OVERALL_SCORE}}": {
+          "type": "number",
+          "description": "Puntuación SEO general (0-100)",
+          "example": "78",
+          "required": true
+        },
+        "{{GRADE}}": {
+          "type": "string",
+          "description": "Nota letra (A, B, C, D, F)",
+          "example": "B",
+          "required": true
+        },
+        "{{GRADE_CLASS}}": {
+          "type": "string",
+          "description": "Clase CSS para la nota: grade-a, grade-b, grade-c, grade-d",
+          "example": "grade-b",
+          "required": true
+        },
+        "{{TECHNICAL_SCORE}}": {
+          "type": "number",
+          "description": "Puntuación SEO técnico (0-100)",
+          "example": "85",
+          "required": true
+        },
+        "{{TECHNICAL_CLASS}}": {
+          "type": "string",
+          "description": "Clase CSS: fill-good, fill-warning, fill-bad",
+          "example": "fill-good",
+          "required": true
+        },
+        "{{ONPAGE_SCORE}}": {
+          "type": "number",
+          "description": "Puntuación on-page (0-100)",
+          "example": "72",
+          "required": true
+        },
+        "{{ONPAGE_CLASS}}": {
+          "type": "string",
+          "description": "Clase CSS para la barra",
+          "example": "fill-warning",
+          "required": true
+        },
+        "{{CONTENT_SCORE}}": {
+          "type": "number",
+          "description": "Puntuación de contenido (0-100)",
+          "example": "68",
+          "required": true
+        },
+        "{{CONTENT_CLASS}}": {
+          "type": "string",
+          "description": "Clase CSS para la barra",
+          "example": "fill-warning",
+          "required": true
+        },
+        "{{BACKLINKS_SCORE}}": {
+          "type": "number",
+          "description": "Puntuación de backlinks (0-100)",
+          "example": "55",
+          "required": true
+        },
+        "{{BACKLINKS_CLASS}}": {
+          "type": "string",
+          "description": "Clase CSS para la barra",
+          "example": "fill-warning",
+          "required": true
+        },
+        "{{TOTAL_PAGES}}": {
+          "type": "number",
+          "description": "Total de páginas analizadas",
+          "example": "127",
+          "required": true
+        },
+        "{{TOTAL_ISSUES}}": {
+          "type": "number",
+          "description": "Total de issues detectados",
+          "example": "23",
+          "required": true
+        },
+        "{{KEYWORDS_RANKING}}": {
+          "type": "number",
+          "description": "Keywords posicionadas en TOP 100",
+          "example": "45",
+          "required": true
+        },
+        "{{REFERRING_DOMAINS}}": {
+          "type": "number",
+          "description": "Dominios que enlazan",
+          "example": "38",
+          "required": true
+        },
+        "{{#TECHNICAL_CHECKS}}": {
+          "type": "array",
+          "description": "Array de checks técnicos",
+          "required": true,
+          "items": {
+            "NAME": "Nombre del check (ej: SSL Certificate)",
+            "DETAIL": "Detalle del resultado",
+            "STATUS": "Estado: pass, fail, warn",
+            "STATUS_ICON": "Icono: ✓, ✗, !"
+          }
+        },
+        "{{#ONPAGE_CHECKS}}": {
+          "type": "array",
+          "description": "Array de checks on-page",
+          "required": true,
+          "items": {
+            "NAME": "Nombre del check",
+            "DETAIL": "Detalle del resultado",
+            "STATUS": "Estado: pass, fail, warn",
+            "STATUS_ICON": "Icono"
+          }
+        },
+        "{{#ISSUES}}": {
+          "type": "array",
+          "description": "Array de issues detectados",
+          "required": true,
+          "items": {
+            "SEVERITY": "Severidad: Critical, Warning, Info",
+            "SEVERITY_CLASS": "Clase: critical, warning, info",
+            "ISSUE": "Descripción del problema",
+            "URL": "URL completa afectada",
+            "URL_SHORT": "URL truncada para mostrar",
+            "ACTION": "Acción recomendada"
+          }
+        },
+        "{{#RECOMMENDATIONS}}": {
+          "type": "array",
+          "description": "Array de recomendaciones priorizadas",
+          "required": true,
+          "items": {
+            "PRIORITY": "Prioridad: High, Medium, Low",
+            "PRIORITY_CLASS": "Clase: high, medium, low",
+            "TITLE": "Título de la recomendación",
+            "DESCRIPTION": "Descripción detallada",
+            "IMPACT_1": "active o vacío (dot 1)",
+            "IMPACT_2": "active o vacío (dot 2)",
+            "IMPACT_3": "active o vacío (dot 3)",
+            "IMPACT_4": "active o vacío (dot 4)",
+            "IMPACT_5": "active o vacío (dot 5)"
+          }
+        },
+        "{{TOTAL_BACKLINKS}}": {
+          "type": "number",
+          "description": "Total de backlinks",
+          "example": "1234",
+          "required": true
+        },
+        "{{DOFOLLOW_PERCENT}}": {
+          "type": "number",
+          "description": "Porcentaje de backlinks dofollow",
+          "example": "72",
+          "required": true
+        },
+        "{{DOMAIN_RANK}}": {
+          "type": "number",
+          "description": "Domain Rank (0-100)",
+          "example": "28",
+          "required": true
+        },
+        "{{SPAM_SCORE}}": {
+          "type": "number",
+          "description": "Spam Score del dominio",
+          "example": "3",
+          "required": true
+        }
+      }
+    },
+    "keyword-tracker.html": {
+      "description": "Dashboard de tracking de keywords con posiciones, cambios, volumen y tendencias.",
+      "placeholders": {
+        "{{DOMAIN}}": {
+          "type": "string",
+          "description": "Dominio trackeado",
+          "example": "dynapps.es",
+          "required": true
+        },
+        "{{LAST_UPDATE}}": {
+          "type": "string",
+          "description": "Fecha de última actualización",
+          "example": "10 Feb 2025, 08:00",
+          "required": true
+        },
+        "{{TOP1_COUNT}}": {
+          "type": "number",
+          "description": "Keywords en posición 1",
+          "example": "3",
+          "required": true
+        },
+        "{{TOP3_COUNT}}": {
+          "type": "number",
+          "description": "Keywords en TOP 3",
+          "example": "8",
+          "required": true
+        },
+        "{{TOP10_COUNT}}": {
+          "type": "number",
+          "description": "Keywords en TOP 10",
+          "example": "18",
+          "required": true
+        },
+        "{{TOP50_COUNT}}": {
+          "type": "number",
+          "description": "Keywords en TOP 50",
+          "example": "45",
+          "required": true
+        },
+        "{{IMPROVED_COUNT}}": {
+          "type": "number",
+          "description": "Keywords que subieron posición",
+          "example": "12",
+          "required": true
+        },
+        "{{DROPPED_COUNT}}": {
+          "type": "number",
+          "description": "Keywords que bajaron posición",
+          "example": "5",
+          "required": true
+        },
+        "{{#KEYWORDS}}": {
+          "type": "array",
+          "description": "Array de keywords con métricas",
+          "required": true,
+          "items": {
+            "KEYWORD": "Keyword text",
+            "POSITION": "Posición actual (número o 100+)",
+            "POSITION_CLASS": "Clase: top1, top3, top10, top20, top50, out",
+            "POSITION_DISPLAY": "Posición formateada (ej: #1, #5, 100+)",
+            "CHANGE_TYPE": "Tipo: up, down, stable, new",
+            "CHANGE_ARROW": "Flecha: ↑, ↓, —, ★",
+            "CHANGE_VALUE": "Valor del cambio (ej: +5, -2)",
+            "VOLUME": "Volumen mensual búsquedas",
+            "VOLUME_PERCENT": "% para barra visual (0-100)",
+            "DIFFICULTY": "Dificultad: Easy, Medium, Hard",
+            "DIFF_1": "active easy/medium/hard o vacío",
+            "DIFF_2": "active o vacío",
+            "DIFF_3": "active o vacío",
+            "DIFF_4": "active o vacío",
+            "DIFF_5": "active o vacío",
+            "INTENT": "Intent: transactional, informational, navigational",
+            "INTENT_SHORT": "Abreviado: Trans, Info, Nav",
+            "URL": "URL que rankea",
+            "URL_SHORT": "URL truncada",
+            "TREND": "Array de alturas para sparkline (ej: [{HEIGHT: 8}, {HEIGHT: 12}...])"
+          }
+        }
+      }
+    },
+    "weekly-seo-report.html": {
+      "description": "Reporte semanal de métricas SEO con dashboard bento, acciones y competidores.",
+      "placeholders": {
+        "{{WEEK_START}}": {
+          "type": "string",
+          "description": "Fecha inicio de semana",
+          "example": "3 Feb",
+          "required": true
+        },
+        "{{WEEK_END}}": {
+          "type": "string",
+          "description": "Fecha fin de semana",
+          "example": "9 Feb 2025",
+          "required": true
+        },
+        "{{SEO_SCORE}}": {
+          "type": "number",
+          "description": "SEO Score actual",
+          "example": "78",
+          "required": true
+        },
+        "{{SCORE_CHANGE}}": {
+          "type": "string",
+          "description": "Cambio vs semana anterior",
+          "example": "+3",
+          "required": true
+        },
+        "{{SCORE_DIRECTION}}": {
+          "type": "string",
+          "description": "Dirección: up o down",
+          "example": "up",
+          "required": true
+        },
+        "{{SCORE_ARROW}}": {
+          "type": "string",
+          "description": "Flecha de dirección",
+          "example": "↑",
+          "required": true
+        },
+        "{{TOP3_COUNT}}": {
+          "type": "number",
+          "description": "Keywords en TOP 3",
+          "example": "8",
+          "required": true
+        },
+        "{{TOP10_COUNT}}": {
+          "type": "number",
+          "description": "Keywords en TOP 10",
+          "example": "18",
+          "required": true
+        },
+        "{{TOP50_COUNT}}": {
+          "type": "number",
+          "description": "Keywords en TOP 50",
+          "example": "45",
+          "required": true
+        },
+        "{{KEYWORDS_UP}}": {
+          "type": "number",
+          "description": "Keywords que subieron",
+          "example": "12",
+          "required": true
+        },
+        "{{KEYWORDS_DOWN}}": {
+          "type": "number",
+          "description": "Keywords que bajaron",
+          "example": "5",
+          "required": true
+        },
+        "{{NEW_TOP10}}": {
+          "type": "number",
+          "description": "Nuevas keywords en TOP 10",
+          "example": "2",
+          "required": true
+        },
+        "{{#MOVEMENTS}}": {
+          "type": "array",
+          "description": "Array de movimientos destacados",
+          "required": true,
+          "items": {
+            "DIRECTION": "up o down",
+            "ARROW": "↑ o ↓",
+            "KEYWORD": "Keyword text",
+            "CHANGE": "Cambio (ej: +5)"
+          }
+        },
+        "{{INDEXED_PAGES}}": {
+          "type": "string",
+          "description": "Páginas indexadas",
+          "example": "127",
+          "required": true
+        },
+        "{{INDEXED_CHANGE}}": {
+          "type": "string",
+          "description": "Cambio vs semana anterior",
+          "example": "+3",
+          "required": true
+        },
+        "{{INDEXED_DIRECTION}}": {
+          "type": "string",
+          "description": "positive, negative, neutral",
+          "example": "positive",
+          "required": true
+        },
+        "{{BACKLINKS}}": {
+          "type": "string",
+          "description": "Total backlinks",
+          "example": "1.2K",
+          "required": true
+        },
+        "{{BACKLINKS_CHANGE}}": {
+          "type": "string",
+          "description": "Cambio",
+          "example": "+15",
+          "required": true
+        },
+        "{{BACKLINKS_DIRECTION}}": {
+          "type": "string",
+          "description": "positive, negative, neutral",
+          "example": "positive",
+          "required": true
+        },
+        "{{DOMAIN_SCORE}}": {
+          "type": "number",
+          "description": "Domain Score",
+          "example": "28",
+          "required": true
+        },
+        "{{DS_CHANGE}}": {
+          "type": "string",
+          "description": "Cambio Domain Score",
+          "example": "+1",
+          "required": true
+        },
+        "{{DS_DIRECTION}}": {
+          "type": "string",
+          "description": "positive, negative, neutral",
+          "example": "positive",
+          "required": true
+        },
+        "{{REF_DOMAINS}}": {
+          "type": "number",
+          "description": "Referring Domains",
+          "example": "38",
+          "required": true
+        },
+        "{{RD_CHANGE}}": {
+          "type": "string",
+          "description": "Cambio",
+          "example": "+2",
+          "required": true
+        },
+        "{{RD_DIRECTION}}": {
+          "type": "string",
+          "description": "positive, negative, neutral",
+          "example": "positive",
+          "required": true
+        },
+        "{{#ACTIONS}}": {
+          "type": "array",
+          "description": "Top 5 acciones de la semana",
+          "required": true,
+          "items": {
+            "PRIORITY": "1-5",
+            "TITLE": "Título de la acción",
+            "TYPE": "Tipo: Technical, Content, Backlinks, On-Page",
+            "TARGET_KEYWORD": "Keyword objetivo (opcional)",
+            "IMPACT": "Alto, Medio, Bajo"
+          }
+        },
+        "{{ERRORS_4XX}}": {
+          "type": "number",
+          "description": "Errores 4xx",
+          "example": "3",
+          "required": true
+        },
+        "{{ERRORS_4XX_CLASS}}": {
+          "type": "string",
+          "description": "critical, warning, ok",
+          "example": "warning",
+          "required": true
+        },
+        "{{ERRORS_5XX}}": {
+          "type": "number",
+          "description": "Errores 5xx",
+          "example": "0",
+          "required": true
+        },
+        "{{ERRORS_5XX_CLASS}}": {
+          "type": "string",
+          "description": "critical, warning, ok",
+          "example": "ok",
+          "required": true
+        },
+        "{{MISSING_META}}": {
+          "type": "number",
+          "description": "Páginas sin meta description",
+          "example": "5",
+          "required": true
+        },
+        "{{MISSING_META_CLASS}}": {
+          "type": "string",
+          "description": "critical, warning, ok",
+          "example": "warning",
+          "required": true
+        },
+        "{{MISSING_ALT}}": {
+          "type": "number",
+          "description": "Imágenes sin alt text",
+          "example": "12",
+          "required": true
+        },
+        "{{MISSING_ALT_CLASS}}": {
+          "type": "string",
+          "description": "critical, warning, ok",
+          "example": "warning",
+          "required": true
+        },
+        "{{SLOW_PAGES}}": {
+          "type": "number",
+          "description": "Páginas lentas (>3s)",
+          "example": "2",
+          "required": true
+        },
+        "{{SLOW_PAGES_CLASS}}": {
+          "type": "string",
+          "description": "critical, warning, ok",
+          "example": "warning",
+          "required": true
+        },
+        "{{THIN_CONTENT}}": {
+          "type": "number",
+          "description": "Páginas con thin content (<300 palabras)",
+          "example": "8",
+          "required": true
+        },
+        "{{THIN_CONTENT_CLASS}}": {
+          "type": "string",
+          "description": "critical, warning, ok",
+          "example": "warning",
+          "required": true
+        },
+        "{{#TOP_PAGES}}": {
+          "type": "array",
+          "description": "Array de páginas con mejor rendimiento",
+          "required": true,
+          "items": {
+            "URL": "URL de la página",
+            "PAGE_TITLE": "Título para mostrar",
+            "KEYWORD": "Keyword principal",
+            "POSITION": "Posición",
+            "POSITION_CLASS": "top3, top10, top50",
+            "VOLUME": "Volumen búsquedas",
+            "CHANGE": "Cambio (ej: +3)",
+            "CHANGE_CLASS": "positive, negative, neutral"
+          }
+        },
+        "{{LCP_VALUE}}": {
+          "type": "string",
+          "description": "Largest Contentful Paint",
+          "example": "2.1s",
+          "required": true
+        },
+        "{{LCP_CLASS}}": {
+          "type": "string",
+          "description": "good, warning, bad",
+          "example": "good",
+          "required": true
+        },
+        "{{LCP_PERCENT}}": {
+          "type": "number",
+          "description": "% para barra (0-100)",
+          "example": "70",
+          "required": true
+        },
+        "{{FID_VALUE}}": {
+          "type": "string",
+          "description": "First Input Delay",
+          "example": "45ms",
+          "required": true
+        },
+        "{{FID_CLASS}}": {
+          "type": "string",
+          "description": "good, warning, bad",
+          "example": "good",
+          "required": true
+        },
+        "{{FID_PERCENT}}": {
+          "type": "number",
+          "description": "% para barra (0-100)",
+          "example": "90",
+          "required": true
+        },
+        "{{CLS_VALUE}}": {
+          "type": "string",
+          "description": "Cumulative Layout Shift",
+          "example": "0.08",
+          "required": true
+        },
+        "{{CLS_CLASS}}": {
+          "type": "string",
+          "description": "good, warning, bad",
+          "example": "good",
+          "required": true
+        },
+        "{{CLS_PERCENT}}": {
+          "type": "number",
+          "description": "% para barra (0-100)",
+          "example": "85",
+          "required": true
+        },
+        "{{#COMPETITORS}}": {
+          "type": "array",
+          "description": "Array de competidores",
+          "required": true,
+          "items": {
+            "RANK": "Posición en ranking (1-5)",
+            "DOMAIN": "Dominio del competidor",
+            "SHARED_KEYWORDS": "Número de keywords compartidas"
+          }
+        },
+        "{{GENERATED_DATE}}": {
+          "type": "string",
+          "description": "Fecha de generación del reporte",
+          "example": "10 Feb 2025",
+          "required": true
+        }
+      }
+    }
+  },
+  "scripts": {
+    "seo_audit.py": {
+      "description": "Auditoría SEO completa via DataForSEO API",
+      "arguments": {
+        "--full": "Ejecutar todas las auditorías",
+        "--technical": "Solo auditoría técnica",
+        "--backlinks": "Solo análisis de backlinks",
+        "--competitors": "Solo análisis de competidores",
+        "--keywords": "Solo inventario de keywords",
+        "--force": "Ignorar cache, llamadas frescas"
+      },
+      "environment": ["DATAFORSEO_LOGIN", "DATAFORSEO_KEY"],
+      "output": "JSON en data/"
+    },
+    "rank_tracker.py": {
+      "description": "Tracking semanal de posiciones de keywords",
+      "arguments": {
+        "--keywords": "target (objetivo) o all (todas)",
+        "--compare": "Comparar con semana anterior"
+      },
+      "environment": ["DATAFORSEO_LOGIN", "DATAFORSEO_KEY"],
+      "output": "JSON con posiciones y cambios"
+    },
+    "generate_html_reports.py": {
+      "description": "Genera reportes HTML desde datos JSON",
+      "arguments": {
+        "--all": "Generar todos los reportes",
+        "--audit": "Solo reporte de auditoría",
+        "--keywords": "Solo tracker de keywords",
+        "--weekly": "Solo reporte semanal",
+        "--output": "Archivo de salida"
+      }
+    }
+  }
+}

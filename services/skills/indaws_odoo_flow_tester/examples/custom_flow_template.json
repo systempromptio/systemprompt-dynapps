@@ -1,0 +1,145 @@
+{
+  "flow_id": "CHAIN_CUSTOM_FLOW",
+  "flow_name": "--- NOMBRE DEL FLUJO PERSONALIZADO ---",
+  "description": "--- Descripcion del flujo completo ---",
+  "odoo_version": "18.0",
+  "environment": "staging",
+
+  "_instructions": {
+    "usage": "Este template sirve como base para crear flujos personalizados. Duplica este archivo, renombralo y rellena las secciones marcadas con '---'",
+    "naming": "El flow_id debe seguir el formato CHAIN_<AREA>_<DESCRIPCION> en UPPER_SNAKE_CASE",
+    "variables": {
+      "{data.*}": "Datos de entrada del flujo (partner, producto, cantidades, etc.)",
+      "{pre.*}": "IDs de registros encontrados en precondiciones",
+      "{result.*}": "IDs de registros creados durante la ejecucion",
+      "{today}": "Fecha actual en formato YYYY-MM-DD",
+      "{data.test_prefix}": "Prefijo de test [TEST-YYYYMMDD-HHMM] generado automaticamente"
+    },
+    "actions_available": [
+      "create — Crear un nuevo registro",
+      "search — Buscar registros existentes",
+      "update — Actualizar campos de un registro",
+      "execute — Ejecutar un metodo de workflow",
+      "delete — Eliminar un registro",
+      "return_picking — Crear devolucion de albaran (wizard stock.return.picking)",
+      "scrap — Crear y validar un desguace"
+    ],
+    "best_practices": [
+      "Cada paso debe tener una verificacion (verify) que confirme el resultado esperado",
+      "Los pasos de deteccion de registros cascade deben usar save_as para guardar los IDs",
+      "El revert debe estar en orden INVERSO al flujo de ejecucion",
+      "Marcar los puntos de no retorno con notas claras",
+      "Usar context para evitar wizards de confirmacion (ej: skip_backorder, disable_cancel_warning)",
+      "Todos los registros creados deben usar el test_prefix en el campo adecuado"
+    ]
+  },
+
+  "data": {
+    "_comment": "Datos de entrada del test. Adaptar segun el flujo",
+    "partner_name": "--- Nombre del partner ---",
+    "product_name": "--- Nombre del producto ---",
+    "qty": 1,
+    "price_unit": 100.00
+  },
+
+  "preconditions": [
+    {
+      "_comment": "Precondicion 1: Buscar partner existente",
+      "model": "res.partner",
+      "domain": [["name", "ilike", "--- nombre parcial ---"]],
+      "fields": ["id", "name"],
+      "save_as": "partner_id",
+      "min_records": 1
+    },
+    {
+      "_comment": "Precondicion 2: Buscar producto existente",
+      "model": "product.product",
+      "domain": [["name", "ilike", "--- nombre parcial ---"], ["sale_ok", "=", true]],
+      "fields": ["id", "name", "list_price"],
+      "save_as": "product_id",
+      "min_records": 1
+    },
+    {
+      "_comment": "Precondicion N: Anadir mas precondiciones segun necesidad",
+      "model": "--- modelo ---",
+      "domain": [],
+      "fields": ["id", "name"],
+      "save_as": "--- variable_name ---",
+      "min_records": 1
+    }
+  ],
+
+  "steps": [
+    {
+      "_comment": "Paso 1: Crear registro principal",
+      "step": 1,
+      "name": "--- Descripcion del paso ---",
+      "action": "create",
+      "model": "--- modelo ---",
+      "values": {
+        "partner_id": "{pre.partner_id}",
+        "field_1": "{data.valor_1}"
+      },
+      "save_as": "--- record_id ---",
+      "verify": {"field": "state", "expected": "draft"}
+    },
+    {
+      "_comment": "Paso 2: Ejecutar accion de workflow",
+      "step": 2,
+      "name": "--- Descripcion del paso ---",
+      "action": "execute",
+      "model": "--- modelo ---",
+      "method": "--- nombre_metodo ---",
+      "ids": ["{result.record_id}"],
+      "verify": {"field": "state", "expected": "--- estado_esperado ---"}
+    },
+    {
+      "_comment": "Paso 3: Detectar registro cascade",
+      "step": 3,
+      "name": "--- Detectar registro generado automaticamente ---",
+      "action": "search",
+      "model": "--- modelo_hijo ---",
+      "domain": [["--- campo_relacion ---", "=", "{result.record_name}"]],
+      "fields": ["id", "name", "state"],
+      "save_as": "--- cascade_record_id ---",
+      "verify": {"field": "state", "expected": "--- estado_esperado ---"}
+    },
+    {
+      "_comment": "Anadir mas pasos segun necesidad. Numerar secuencialmente.",
+      "step": 4,
+      "name": "--- Descripcion ---",
+      "action": "--- action ---",
+      "model": "--- modelo ---"
+    }
+  ],
+
+  "revert": [
+    {
+      "_comment": "Reversion en orden INVERSO. Ultimo paso ejecutado = primera reversion",
+      "step": 4,
+      "action": "--- action ---",
+      "model": "--- modelo ---",
+      "note": "--- instrucciones especiales de reversion ---"
+    },
+    {
+      "step": 3,
+      "action": "delete",
+      "model": "--- modelo_hijo ---",
+      "ids": ["{result.cascade_record_id}"],
+      "note": "Solo si el registro cascade necesita eliminacion explicita"
+    },
+    {
+      "step": 2,
+      "action": "execute",
+      "model": "--- modelo ---",
+      "method": "--- metodo_cancelacion ---",
+      "ids": ["{result.record_id}"]
+    },
+    {
+      "step": 1,
+      "action": "delete",
+      "model": "--- modelo ---",
+      "ids": ["{result.record_id}"]
+    }
+  ]
+}

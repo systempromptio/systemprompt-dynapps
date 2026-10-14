@@ -334,7 +334,7 @@ if [ -r "$KEY_FILE" ]; then
     # proxy that guards discovery but not inference guards nothing.
     BARE_CHAT=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 \
         -X POST -H "content-type: application/json" \
-        -d "{\"model\":\"claude-haiku-4-5\",\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}]}" \
+        -d "{\"model\":\"claude-haiku-5-5\",\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}]}" \
         http://127.0.0.1:48217/v1/chat/completions)
     if [ "$BARE_CHAT" = "403" ]; then
         echo "[OK  ] uncredentialled /v1/chat/completions is refused with 403"
@@ -357,7 +357,7 @@ if [ -r "$KEY_FILE" ]; then
     CHAT_CODE=$(curl -s -o /tmp/chat.json -w "%{http_code}" --max-time 60 \
         -X POST -H "Authorization: Bearer $(cat "$KEY_FILE")" \
         -H "content-type: application/json" \
-        -d "{\"model\":\"claude-haiku-4-5\",\"max_tokens\":16,\"messages\":[{\"role\":\"user\",\"content\":\"Reply with exactly: pong\"}]}" \
+        -d "{\"model\":\"claude-haiku-5-5\",\"max_tokens\":16,\"messages\":[{\"role\":\"user\",\"content\":\"Reply with exactly: pong\"}]}" \
         http://127.0.0.1:48217/v1/chat/completions)
     if [ "$CHAT_CODE" = "200" ]; then
         echo "[OK  ] a real completion came back over /v1/chat/completions"

@@ -1,0 +1,880 @@
+{
+  "config_general": {
+    "display_name": "Configuraciones Generales",
+    "icon": "settings.svg",
+    "color": "#951CF3",
+    "outcome": "Base sólida multi-sociedad",
+    "intro": "La base de tu nuevo sistema ERP. Incluye toda la configuración inicial necesaria para que tu equipo pueda empezar a trabajar desde el primer día: datos de empresa, usuarios, permisos, configuración fiscal y plantillas de documentos.",
+    "value": "Un sistema bien configurado desde el inicio ahorra semanas de ajustes posteriores y garantiza que todos los documentos que emitas (facturas, presupuestos, albaranes) tengan tu imagen corporativa.",
+    "funcionalidades": [
+      "Configuración del sistema (empresa, logo, moneda, idioma)",
+      "Alta de usuarios y permisos",
+      "Plantillas de email y servidor de correo",
+      "Configuración fiscal básica (NIF, posiciones fiscales, IVA)",
+      "Personalización de cabecera y pie de documentos"
+    ],
+    "formaciones": [
+      {
+        "n": "Administrador del sistema",
+        "sesiones": 1
+      }
+    ],
+    "migraciones": [],
+    "dynapps_core": [],
+    "extras": [
+      {
+        "n": "Multi-compañía (250€/empresa adicional)",
+        "p": 250,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Multi-idioma (documentos impresos)",
+        "p": 250,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "30-60 usuarios",
+        "p": 250,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "60-100 usuarios",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "+100 usuarios",
+        "p": 750,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Sesiones formación adicionales (200€/ses.)",
+        "p": 200,
+        "c": "formaciones"
+      }
+    ]
+  },
+  "crm": {
+    "display_name": "CRM",
+    "icon": "crm.svg",
+    "color": "#951CF3",
+    "outcome": "Pipeline comercial bajo control",
+    "intro": "Tu pipeline comercial centralizado. Cada oportunidad, cada llamada, cada reunión queda registrada y visible para todo el equipo. Con dashboards en tiempo real puedes saber en todo momento cómo va la actividad comercial.",
+    "value": "Deja de perder oportunidades por falta de seguimiento. Con un CRM bien implantado, tu equipo comercial puede centrarse en vender en vez de buscar información en emails y hojas de cálculo.",
+    "funcionalidades": [
+      "Pipeline comercial (etapas, probabilidades, ≤3 comerciales)",
+      "Oportunidades (creación, seguimiento, cierre)",
+      "Campos personalizados en ficha de oportunidad",
+      "Actividades (llamadas, reuniones, tareas)",
+      "Gestión de contactos (empresas y contactos)",
+      "Reporting básico (dashboard pipeline, previsión)"
+    ],
+    "formaciones": [
+      {
+        "n": "Equipo comercial",
+        "sesiones": 2
+      }
+    ],
+    "migraciones": [],
+    "dynapps_core": [
+      "Proyectos en oportunidades"
+    ],
+    "extras": [
+      {
+        "n": "4-10 comerciales (multi-equipo, asignación)",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "+10 comerciales (territorios, objetivos)",
+        "p": 1000,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Lead scoring y nurturing",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Automatizaciones comerciales",
+        "p": 250,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Migración oportunidades",
+        "p": 500,
+        "c": "migraciones"
+      },
+      {
+        "n": "Prospección avanzada (Dynapps Core)",
+        "p": 500,
+        "c": "dynapps_core"
+      },
+      {
+        "n": "Sesiones formación adicionales (200€/ses.)",
+        "p": 200,
+        "c": "formaciones"
+      }
+    ]
+  },
+  "ventas": {
+    "display_name": "Ventas",
+    "icon": "sale_management.svg",
+    "color": "#FF575D",
+    "outcome": "Del presupuesto al cobro",
+    "intro": "Gestiona todo el ciclo de venta: desde la creación del presupuesto hasta la facturación, pasando por la confirmación del pedido y el seguimiento de entregas. Tus clientes podrán firmar presupuestos online y consultar sus pedidos y facturas desde el portal.",
+    "value": "Reduce el tiempo de gestión administrativa y ofrece a tus clientes una experiencia profesional con portal de autoservicio, firma electrónica y comunicaciones automáticas.",
+    "funcionalidades": [
+      "Presupuestos (creación, envío, firma online)",
+      "Pedidos de venta (confirmación, seguimiento)",
+      "Tarifas de precios (múltiples listas)",
+      "Catálogo productos (categorías, variantes)",
+      "Portal del cliente",
+      "Reporting de ventas"
+    ],
+    "formaciones": [
+      {
+        "n": "Administración + comercial",
+        "sesiones": 2
+      }
+    ],
+    "migraciones": [],
+    "dynapps_core": [
+      "Descuentos múltiples",
+      "Versiones presupuesto",
+      "Mejoras presupuestos",
+      "Códigos producto por cliente",
+      "Documentos de venta"
+    ],
+    "extras": [
+      {
+        "n": "Suscripciones / Recurrencia",
+        "p": 750,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Plantillas adicionales presupuesto",
+        "p": 250,
+        "c": "personalizaciones"
+      },
+      {
+        "n": "Migración productos",
+        "p": 250,
+        "c": "migraciones"
+      },
+      {
+        "n": "Migración clientes",
+        "p": 250,
+        "c": "migraciones"
+      },
+      {
+        "n": "Migración tarifas",
+        "p": 500,
+        "c": "migraciones"
+      },
+      {
+        "n": "Flujo de aprobación (Dynapps Core)",
+        "p": 500,
+        "c": "dynapps_core"
+      },
+      {
+        "n": "Kits / productos compuestos (Dynapps Core)",
+        "p": 500,
+        "c": "dynapps_core"
+      },
+      {
+        "n": "Flujos tipo pedido (Dynapps Core)",
+        "p": 500,
+        "c": "dynapps_core"
+      },
+      {
+        "n": "Fidelización B2B (Dynapps Core)",
+        "p": 500,
+        "c": "dynapps_core"
+      },
+      {
+        "n": "Sesiones formación adicionales (200€/ses.)",
+        "p": 200,
+        "c": "formaciones"
+      }
+    ]
+  },
+  "compras": {
+    "display_name": "Compras",
+    "icon": "purchase.svg",
+    "color": "#FF7759",
+    "outcome": "Aprovisionamiento con control",
+    "intro": "Centraliza la gestión de aprovisionamiento: crea pedidos de compra, compara ofertas de varios proveedores, controla la recepción de mercancía y valida facturas de proveedor contra pedidos y albaranes.",
+    "value": "Gana visibilidad sobre lo que compras, a quién y a qué precio. Negocia mejor con datos reales y evita duplicidades o errores en la facturación de proveedores.",
+    "funcionalidades": [
+      "Pedidos de compra",
+      "Multi-proveedor",
+      "Solicitudes presupuesto (RFQ)",
+      "Fichas de proveedor",
+      "Control de facturas (2/3 pasos)",
+      "Reporting compras"
+    ],
+    "formaciones": [
+      {
+        "n": "Resp. compras",
+        "sesiones": 2
+      }
+    ],
+    "migraciones": [
+      "Migración proveedores"
+    ],
+    "dynapps_core": [
+      "Integración compras-ventas"
+    ],
+    "extras": [
+      {
+        "n": "Reabastecimiento (stock mínimo)",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Acuerdos marco",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Dropshipping",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Migración tarifas compra",
+        "p": 250,
+        "c": "migraciones"
+      },
+      {
+        "n": "Gestión avanzada compras (Dynapps Core)",
+        "p": 750,
+        "c": "dynapps_core"
+      },
+      {
+        "n": "Sesiones formación adicionales (200€/ses.)",
+        "p": 200,
+        "c": "formaciones"
+      }
+    ]
+  },
+  "inventario": {
+    "display_name": "Inventario",
+    "icon": "stock.svg",
+    "color": "#FF7E23",
+    "outcome": "Stock trazable en tiempo real",
+    "intro": "Control completo de tu almacén: conoce en todo momento qué tienes, dónde está y cuánto vale. Gestiona entradas, salidas, transferencias internas e inventarios periódicos con trazabilidad completa.",
+    "value": "Evita roturas de stock, reduce el exceso de inventario y gana eficiencia en las operaciones de almacén. La trazabilidad te permite responder ante cualquier incidencia en minutos.",
+    "funcionalidades": [
+      "1 almacén (entrada, stock, salida)",
+      "Movimientos de stock",
+      "Productos (categorías, UdM, stock mínimo)",
+      "Inventario periódico",
+      "Reporting (stock, valoración)"
+    ],
+    "formaciones": [
+      {
+        "n": "Resp. almacén",
+        "sesiones": 2
+      }
+    ],
+    "migraciones": [
+      "Migración productos"
+    ],
+    "dynapps_core": [
+      "Albaranes valorados",
+      "Gestión avanzada stock"
+    ],
+    "extras": [
+      {
+        "n": "Multi-almacén (250€/almacén)",
+        "p": 250,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Trazabilidad por lotes",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Trazabilidad por nº de serie",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Fechas de caducidad (FEFO)",
+        "p": 250,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Rutas logísticas avanzadas",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Códigos de barras (PDA)",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Reabastecimiento automático",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Migración stock actual",
+        "p": 500,
+        "c": "migraciones"
+      },
+      {
+        "n": "Generador nº serie/lote (Core)",
+        "p": 250,
+        "c": "dynapps_core"
+      },
+      {
+        "n": "Stock en proyectos (Core)",
+        "p": 500,
+        "c": "dynapps_core"
+      },
+      {
+        "n": "Marcas y etiquetas (Core)",
+        "p": 250,
+        "c": "dynapps_core"
+      },
+      {
+        "n": "Sesiones formación adicionales (200€/ses.)",
+        "p": 200,
+        "c": "formaciones"
+      }
+    ]
+  },
+  "fabricacion": {
+    "display_name": "Fabricación (MRP)",
+    "icon": "mrp.svg",
+    "color": "#FF575D",
+    "outcome": "Producción conectada a ventas",
+    "intro": "Planifica y gestiona tu producción: define listas de materiales, crea órdenes de fabricación, controla el consumo de componentes y analiza costes y eficiencia de producción.",
+    "value": "Conecta la producción con ventas, compras e inventario. Cuando un cliente hace un pedido, el sistema puede generar automáticamente las órdenes de fabricación y los pedidos de materia prima necesarios.",
+    "funcionalidades": [
+      "Listas de materiales",
+      "1 centro de trabajo",
+      "Órdenes de fabricación",
+      "Consumo de materiales",
+      "Reporting producción"
+    ],
+    "formaciones": [
+      {
+        "n": "Resp. producción",
+        "sesiones": 2
+      }
+    ],
+    "migraciones": [],
+    "dynapps_core": [],
+    "extras": [
+      {
+        "n": "Multi-centro trabajo (250€/centro)",
+        "p": 250,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Órdenes de trabajo",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Subcontratación",
+        "p": 750,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Planificación producción (MPS)",
+        "p": 750,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Control de calidad (ISO)",
+        "p": 750,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "PLM (versiones LdM, ECOs)",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Mantenimiento (prev./correct.)",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Despiece / Multi-nivel",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Migración listas materiales",
+        "p": 500,
+        "c": "migraciones"
+      },
+      {
+        "n": "Migración rutas/centros",
+        "p": 250,
+        "c": "migraciones"
+      },
+      {
+        "n": "Sesiones formación adicionales (200€/ses.)",
+        "p": 200,
+        "c": "formaciones"
+      }
+    ]
+  },
+  "facturacion": {
+    "display_name": "Facturación",
+    "icon": "account.svg",
+    "color": "#951CF3",
+    "outcome": "Facturación automática y legal",
+    "intro": "Facturación completa para clientes y proveedores: crea facturas, abonos y rectificativas, registra cobros y pagos, y haz seguimiento de los vencimientos pendientes. Todo integrado con ventas, compras y contabilidad.",
+    "value": "Reduce errores y tiempo de gestión. Las facturas se generan automáticamente desde pedidos o albaranes, y puedes enviarlas por email con un clic.",
+    "funcionalidades": [
+      "Facturación clientes (facturas, abonos, rectificativas)",
+      "Facturación proveedores",
+      "Flujo completo (creación→cobro/pago)",
+      "Cobros y pagos",
+      "Reporting"
+    ],
+    "formaciones": [
+      {
+        "n": "Administración",
+        "sesiones": 2
+      }
+    ],
+    "migraciones": [],
+    "dynapps_core": [
+      "Utilidades facturación"
+    ],
+    "extras": [
+      {
+        "n": "Generador PDFs personalizados (Core)",
+        "p": 500,
+        "c": "dynapps_core"
+      },
+      {
+        "n": "Márgenes y costes avanzados (Core)",
+        "p": 500,
+        "c": "dynapps_core"
+      },
+      {
+        "n": "Sesiones formación adicionales (200€/ses.)",
+        "p": 200,
+        "c": "formaciones"
+      }
+    ]
+  },
+  "contabilidad": {
+    "display_name": "Contabilidad",
+    "icon": "account_accountant.svg",
+    "color": "#951CF3",
+    "outcome": "Cierre y consolidación",
+    "accounting_from_fiscal": true,
+    "intro": "Contabilidad integrada con el plan contable español: conciliación bancaria automática, gestión de activos fijos, cierres contables asistidos y todos los informes legales (balance, PyG, libro mayor, modelos fiscales).",
+    "value": "Tu contabilidad se alimenta automáticamente de las facturas de venta y compra. La conciliación bancaria automática reduce drásticamente el tiempo de cierre mensual.",
+    "funcionalidades": [
+      "Plan contable español (PGCE, IVA)",
+      "Conciliación bancaria",
+      "Activos fijos",
+      "Cierres contables",
+      "Cobros y pagos contables",
+      "Reporting contable"
+    ],
+    "formaciones": [
+      {
+        "n": "Contabilidad",
+        "sesiones": 3
+      }
+    ],
+    "migraciones": [
+      "Migración plan contable",
+      "Migración asiento apertura"
+    ],
+    "dynapps_core": [],
+    "extras": [
+      {
+        "n": "SII (Suministro Inmediato AEAT)",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Domiciliación SEPA",
+        "p": 750,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Multi-divisa",
+        "p": 250,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Contabilidad analítica",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Presupuestos contables",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Intrastat / modelo 349",
+        "p": 250,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Mejoras SII (Dynapps Core)",
+        "p": 500,
+        "c": "dynapps_core"
+      },
+      {
+        "n": "Sesiones formación adicionales (200€/ses.)",
+        "p": 200,
+        "c": "formaciones"
+      }
+    ]
+  },
+  "proyecto": {
+    "display_name": "Proyecto",
+    "icon": "project.svg",
+    "color": "#FF7759",
+    "outcome": "Rentabilidad por proyecto",
+    "intro": "Gestiona proyectos internos y de clientes: crea tareas con subtareas y dependencias, asigna recursos, registra partes de horas y visualiza el progreso con diagramas de Gantt.",
+    "value": "Controla la dedicación y rentabilidad de cada proyecto. Integrado con facturación para facturar horas o hitos directamente al cliente.",
+    "funcionalidades": [
+      "Multi-proyecto",
+      "Tareas y subtareas (Gantt)",
+      "Partes de horas",
+      "Colaboración",
+      "Reporting"
+    ],
+    "formaciones": [
+      {
+        "n": "Resp. proyecto",
+        "sesiones": 2
+      }
+    ],
+    "migraciones": [],
+    "dynapps_core": [
+      "Fichaje por proyecto"
+    ],
+    "extras": [
+      {
+        "n": "Facturación por proyecto",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Planificación de recursos",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Stock en proyectos (Core)",
+        "p": 500,
+        "c": "dynapps_core"
+      },
+      {
+        "n": "Sesiones formación adicionales (200€/ses.)",
+        "p": 200,
+        "c": "formaciones"
+      }
+    ]
+  },
+  "helpdesk": {
+    "display_name": "Helpdesk",
+    "icon": "helpdesk.svg",
+    "color": "#FF7E23",
+    "outcome": "Soporte profesional al cliente",
+    "intro": "Soporte profesional al cliente: gestión de tickets con SLA, portal de autoservicio donde tus clientes crean y siguen sus incidencias, y base de conocimiento con artículos FAQ.",
+    "value": "Mejora la satisfacción de tus clientes con tiempos de respuesta controlados y un portal donde pueden resolver dudas frecuentes sin contactar a tu equipo.",
+    "funcionalidades": [
+      "1 equipo soporte (SLA básico)",
+      "Tickets (manual y email)",
+      "Portal cliente",
+      "Base de conocimiento",
+      "Reporting"
+    ],
+    "formaciones": [
+      {
+        "n": "Eq. soporte",
+        "sesiones": 2
+      }
+    ],
+    "migraciones": [],
+    "dynapps_core": [],
+    "extras": [
+      {
+        "n": "Equipos adicionales (250€/eq.)",
+        "p": 250,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Partes horas en tickets",
+        "p": 250,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Facturación soporte",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Automatizaciones",
+        "p": 250,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Chat en vivo",
+        "p": 250,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Sesiones formación adicionales (200€/ses.)",
+        "p": 200,
+        "c": "formaciones"
+      }
+    ]
+  },
+  "website": {
+    "display_name": "Website / eCommerce",
+    "icon": "website.svg",
+    "color": "#951CF3",
+    "outcome": "Web conectada al ERP",
+    "intro": "Tu presencia web integrada con el ERP: página corporativa con blog, formulario de contacto vinculado al CRM, portal de cliente y opcionalmente tienda online con catálogo, carrito y checkout.",
+    "value": "Una web conectada al ERP significa que los pedidos online entran directamente en ventas, el stock se actualiza en tiempo real y los clientes ven sus datos actualizados al instante.",
+    "funcionalidades": [
+      "Web corporativa (5 páginas)",
+      "Blog",
+      "Formulario contacto",
+      "Portal cliente",
+      "SEO básico",
+      "Responsive"
+    ],
+    "formaciones": [
+      {
+        "n": "Resp. contenidos",
+        "sesiones": 2
+      }
+    ],
+    "migraciones": [],
+    "dynapps_core": [
+      "Mejoras ecommerce"
+    ],
+    "extras": [
+      {
+        "n": "Páginas adicionales (100€/pág.)",
+        "p": 100,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Tienda online (eCommerce)",
+        "p": 1500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Multi-idioma web",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Diseño personalizado",
+        "p": 750,
+        "c": "personalizaciones"
+      },
+      {
+        "n": "Chat en vivo",
+        "p": 250,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Migración contenidos web",
+        "p": 500,
+        "c": "migraciones"
+      },
+      {
+        "n": "Google Merchant (Core)",
+        "p": 250,
+        "c": "dynapps_core"
+      },
+      {
+        "n": "Sesiones formación adicionales (200€/ses.)",
+        "p": 200,
+        "c": "formaciones"
+      }
+    ]
+  },
+  "marketing_email": {
+    "display_name": "Marketing por email",
+    "icon": "mass_mailing.svg",
+    "color": "#FF575D",
+    "outcome": "Campañas medibles",
+    "intro": "Campañas de email marketing integradas: editor visual para diseñar emails, gestión de listas de contactos, segmentación y análisis detallado de resultados (aperturas, clics, bajas).",
+    "value": "Comunica con tus clientes de forma profesional y mide el impacto real de cada campaña. Integrado con CRM y ventas para segmentar por comportamiento de compra.",
+    "funcionalidades": [
+      "Campañas email (editor visual)",
+      "Listas de contactos",
+      "3 plantillas email",
+      "Reporting (apertura, clics)"
+    ],
+    "formaciones": [
+      {
+        "n": "Marketing",
+        "sesiones": 1
+      }
+    ],
+    "migraciones": [],
+    "dynapps_core": [],
+    "extras": [
+      {
+        "n": "Automatización marketing",
+        "p": 750,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Segmentación avanzada",
+        "p": 250,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Plantillas adicionales",
+        "p": 250,
+        "c": "personalizaciones"
+      },
+      {
+        "n": "SMS marketing",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Diseño avanzado email (Core)",
+        "p": 500,
+        "c": "dynapps_core"
+      },
+      {
+        "n": "Correo saliente mejorado (Core)",
+        "p": 250,
+        "c": "dynapps_core"
+      },
+      {
+        "n": "Sesiones formación adicionales (200€/ses.)",
+        "p": 200,
+        "c": "formaciones"
+      }
+    ]
+  },
+  "rrhh": {
+    "display_name": "RRHH",
+    "icon": "hr.svg",
+    "color": "#FF7E23",
+    "outcome": "Tu equipo en un solo lugar",
+    "intro": "Gestión centralizada de tu equipo: directorio de empleados, contratos laborales, organigrama, fichaje de entradas/salidas y gestión de departamentos.",
+    "value": "Toda la información de tu equipo en un solo lugar. Integrado con proyectos para vincular horas trabajadas y con contabilidad para la gestión de gastos.",
+    "funcionalidades": [
+      "Directorio empleados",
+      "Departamentos (organigrama)",
+      "Contratos laborales",
+      "Asistencia / Fichaje"
+    ],
+    "formaciones": [
+      {
+        "n": "RRHH",
+        "sesiones": 1
+      }
+    ],
+    "migraciones": [
+      "Migración empleados"
+    ],
+    "dynapps_core": [],
+    "extras": [
+      {
+        "n": "Ausencias y vacaciones",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Gastos empleados",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Evaluaciones / Desempeño",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Recruiting",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Flota de vehículos",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Formación empleados",
+        "p": 250,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "50-100 empleados",
+        "p": 250,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "+100 empleados",
+        "p": 500,
+        "c": "funcionalidades"
+      },
+      {
+        "n": "Migración saldos vacaciones",
+        "p": 250,
+        "c": "migraciones"
+      },
+      {
+        "n": "Portal empleado (Core)",
+        "p": 500,
+        "c": "dynapps_core"
+      },
+      {
+        "n": "Sesiones formación adicionales (200€/ses.)",
+        "p": 200,
+        "c": "formaciones"
+      }
+    ]
+  },
+  "inbuilt": {
+    "display_name": "Dynapps Construcción",
+    "icon": "inbuilt.svg",
+    "color": "#951CF3",
+    "outcome": "Obra, certificaciones y coste real, sobre Odoo",
+    "intro": "El vertical de construcción de Dynapps, integrado de forma nativa en Odoo. Importa presupuestos en formato FIEBDC-3 (BC3), gestiona mediciones y certificaciones de obra, y controla el coste real frente al presupuestado en cada capítulo y partida. Incluye la App móvil (iOS y Android) para que jefes de obra y encargados registren avances y partes desde el propio tajo.",
+    "value": "Deja de llevar la obra en Excel y de recalcular certificaciones a mano. Con Dynapps Construcción, presupuesto, ventas, compras y producción comparten los mismos datos: ves el margen real de cada obra en tiempo real y tu equipo comunica desde el móvil sin volver a la oficina.",
+    "funcionalidades": [
+      "Importación de presupuestos FIEBDC-3 / BC3",
+      "Estructura de obra por capítulos, partidas y mediciones",
+      "Certificaciones de obra a cliente y a proveedor",
+      "Control de coste real vs. presupuestado por partida",
+      "Ventas y compras enlazadas a la obra (sale/purchase measurement)",
+      "Márgenes por obra y por capítulo",
+      "App móvil de obra (iOS y Android) para partes y avances"
+    ],
+    "formaciones": [
+      {
+        "n": "Jefe de obra / oficina técnica",
+        "sesiones": 2
+      }
+    ],
+    "migraciones": [],
+    "dynapps_core": [],
+    "extras": []
+  }
+}

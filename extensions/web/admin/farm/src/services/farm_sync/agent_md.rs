@@ -6,8 +6,8 @@ use std::path::Path;
 use serde::{Deserialize, Serialize};
 
 use super::validate::{
-    ALLOWED_TOOLS, PERMISSION_MODES, definition_error, is_identifier, is_safe_relative_path,
-    require,
+    ALLOWED_TOOLS, PERMISSION_MODES, definition_error, is_allowed_tool, is_identifier,
+    is_safe_relative_path, require,
 };
 use crate::error::FarmResult;
 
@@ -133,14 +133,10 @@ fn validate(path: &str, stem: &str, fm: &Frontmatter) -> FarmResult<()> {
         )?;
     }
     require(!fm.tools.is_empty(), path, "tools must be a non-empty list")?;
-    if let Some(tool) = fm
-        .tools
-        .iter()
-        .find(|t| !ALLOWED_TOOLS.contains(&t.as_str()))
-    {
+    if let Some(tool) = fm.tools.iter().find(|t| !is_allowed_tool(t)) {
         return Err(definition_error(
             path,
-            format!("tool {tool:?} is not one of {ALLOWED_TOOLS:?}"),
+            format!("tool {tool:?} is not one of {ALLOWED_TOOLS:?} or mcp__<server>[__<tool>]"),
         ));
     }
     require(!fm.plugin.trim().is_empty(), path, "plugin is empty")?;

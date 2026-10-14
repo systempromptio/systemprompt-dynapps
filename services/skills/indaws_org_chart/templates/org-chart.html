@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Organigrama | Indaws</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap');
+
+  :root {
+    --indaws-warm-yellow: #E5B92B;
+    --indaws-blue-lilac: #6B68FA;
+    --indaws-blue-space: #1C265D;
+    --indaws-light-sky: #8AC2DB;
+    --indaws-white: #FFFFFF;
+    --indaws-gradient-blue: linear-gradient(135deg, #6B68FA 0%, #8AC2DB 100%);
+    --bg: #f0f2f8;
+    --card-bg: #ffffff;
+    --border: rgba(107, 104, 250, 0.15);
+    --shadow: 0 2px 12px rgba(28, 38, 93, 0.08);
+    --shadow-hover: 0 6px 24px rgba(107, 104, 250, 0.18);
+    --radius: 10px;
+    --connector: rgba(107, 104, 250, 0.25);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body { height: 100%; overflow: hidden; }
+
+  body {
+    font-family: 'Montserrat', Verdana, sans-serif;
+    background: var(--bg);
+    color: var(--indaws-blue-space);
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Header ── */
+  .header {
+    background: var(--indaws-blue-space);
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    gap: 16px;
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .header-logo {
+    height: 28px;
+    width: auto;
+  }
+
+  .header h1 {
+    font-size: 16px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--indaws-white);
+  }
+
+  .header .meta {
+    font-size: 11px;
+    color: var(--indaws-light-sky);
+    font-weight: 400;
+  }
+
+  /* ── Controls Bar ── */
+  .controls {
+    background: var(--indaws-white);
+    border-bottom: 1px solid var(--border);
+    padding: 8px 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+
+  .controls input[type="text"] {
+    font-family: 'Montserrat', Verdana, sans-serif;
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 12px;
+    width: 240px;
+    outline: none;
+    color: var(--indaws-blue-space);
+    transition: border-color 0.2s;
+  }
+  .controls input[type="text"]:focus { border-color: var(--indaws-blue-lilac); }
+  .controls input[type="text"]::placeholder { color: var(--indaws-light-sky); }
+
+  .controls button {
+    font-family: 'Montserrat', Verdana, sans-serif;
+    padding: 6px 14px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--card-bg);
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--indaws-blue-space);
+    transition: all 0.15s;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .controls button:hover { background: var(--indaws-blue-lilac); color: var(--indaws-white); border-color: var(--indaws-blue-lilac); }
+
+  .controls .dept-filter {
+    font-family: 'Montserrat', Verdana, sans-serif;
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 12px;
+    outline: none;
+    color: var(--indaws-blue-space);
+    background: var(--card-bg);
+    cursor: pointer;
+  }
+
+  .controls .separator {
+    width: 1px;
+    height: 24px;
+    background: var(--border);
+    margin: 0 4px;
+  }
+
+  .controls .stats {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--indaws-light-sky);
+    font-weight: 500;
+  }
+  .controls .stats strong { color: var(--indaws-blue-lilac); }
+
+  .zoom-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .zoom-controls button {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .zoom-level {
+    font-size: 11px;
+    min-width: 36px;
+    text-align: center;
+    color: var(--indaws-blue-space);
+    font-weight: 500;
+  }
+
+  /* ── Tree Container (fills remaining space) ── */
+  .org-tree-wrapper {
+    flex: 1;
+    overflow: auto;
+    position: relative;
+    cursor: grab;
+  }
+  .org-tree-wrapper:active { cursor: grabbing; }
+
+  .org-tree {
+    display: inline-flex;
+    justify-content: center;
+    padding: 32px 48px 64px;
+    transform-origin: top left;
+    transition: transform 0.15s ease;
+  }
+
+  /* ── Tree Lines ── */
+  .org-tree ul {
+    display: flex;
+    justify-content: center;
+    list-style: none;
+    padding-top: 24px;
+    position: relative;
+  }
+
+  .org-tree li {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0 6px;
+    position: relative;
+  }
+
+  .org-tree li::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    width: 2px;
+    height: 24px;
+    background: var(--connector);
+  }
+
+  .org-tree li::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    height: 2px;
+    background: var(--connector);
+    width: 100%;
+  }
+
+  .org-tree li:first-child::after { left: 50%; width: 50%; }
+  .org-tree li:last-child::after { right: 50%; width: 50%; }
+  .org-tree li:only-child::after { display: none; }
+  .org-tree > ul > li::before,
+  .org-tree > ul > li::after { display: none; }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    min-width: 140px;
+    max-width: 170px;
+    text-align: center;
+    box-shadow: var(--shadow);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    border-top: 3px solid transparent;
+  }
+
+  .card:hover {
+    box-shadow: var(--shadow-hover);
+    transform: translateY(-2px);
+  }
+
+  .card.is-manager { border-top-color: var(--indaws-blue-lilac); }
+  .card.is-root { border-top-color: var(--indaws-warm-yellow); }
+
+  .card .toggle-btn {
+    position: absolute;
+    bottom: -11px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--indaws-blue-lilac);
+    color: var(--indaws-white);
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    font-size: 14px;
+    line-height: 22px;
+    text-align: center;
+    border: 2px solid var(--card-bg);
+    cursor: pointer;
+    font-weight: 700;
+    transition: background 0.15s;
+    z-index: 1;
+  }
+  .card .toggle-btn:hover { background: var(--indaws-warm-yellow); color: var(--indaws-blue-space); }
+
+  .card.collapsed { opacity: 0.55; }
+  .card.collapsed:hover { opacity: 0.85; }
+
+  .card .photo {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    margin: 0 auto 6px;
+    background: var(--indaws-gradient-blue);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--indaws-white);
+  }
+  .card .photo img { width: 100%; height: 100%; object-fit: cover; }
+
+  .card .name {
+    font-weight: 600;
+    font-size: 11px;
+    margin-bottom: 1px;
+    color: var(--indaws-blue-space);
+    line-height: 1.3;
+  }
+  .card .job {
+    color: var(--indaws-light-sky);
+    font-size: 9px;
+    font-weight: 500;
+    margin-bottom: 3px;
+  }
+  .card .dept {
+    display: inline-block;
+    padding: 1px 7px;
+    border-radius: 8px;
+    font-size: 8px;
+    font-weight: 600;
+    color: var(--indaws-white);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .card .contact {
+    font-size: 8px;
+    color: var(--indaws-light-sky);
+    margin-top: 3px;
+    word-break: break-all;
+  }
+
+  /* ── Detail Panel ── */
+  .detail-panel {
+    position: fixed;
+    top: 0; right: -320px;
+    width: 320px;
+    height: 100%;
+    background: var(--indaws-white);
+    box-shadow: -4px 0 24px rgba(28, 38, 93, 0.12);
+    z-index: 100;
+    transition: right 0.25s ease;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  .detail-panel.open { right: 0; }
+
+  .detail-panel .panel-header {
+    background: var(--indaws-blue-space);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .detail-panel .panel-header h3 {
+    color: var(--indaws-white);
+    font-size: 14px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .detail-panel .panel-close {
+    background: none;
+    border: none;
+    color: var(--indaws-light-sky);
+    font-size: 20px;
+    cursor: pointer;
+    padding: 0 4px;
+  }
+  .detail-panel .panel-close:hover { color: var(--indaws-white); }
+
+  .detail-panel .panel-body { padding: 20px; }
+
+  .detail-panel .panel-photo {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    margin: 0 auto 12px;
+    background: var(--indaws-gradient-blue);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--indaws-white);
+    overflow: hidden;
+  }
+  .detail-panel .panel-photo img { width: 100%; height: 100%; object-fit: cover; }
+
+  .detail-panel .panel-name {
+    text-align: center;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--indaws-blue-space);
+    margin-bottom: 2px;
+  }
+  .detail-panel .panel-job {
+    text-align: center;
+    font-size: 12px;
+    color: var(--indaws-light-sky);
+    font-weight: 500;
+    margin-bottom: 16px;
+  }
+
+  .detail-panel .panel-field {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+  }
+  .detail-panel .panel-field .label {
+    font-weight: 600;
+    color: var(--indaws-blue-lilac);
+    min-width: 80px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    padding-top: 1px;
+  }
+  .detail-panel .panel-field .value {
+    color: var(--indaws-blue-space);
+    word-break: break-all;
+  }
+
+  .detail-panel .panel-reports {
+    margin-top: 16px;
+  }
+  .detail-panel .panel-reports h4 {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--indaws-blue-lilac);
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .detail-panel .report-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0;
+    font-size: 12px;
+    cursor: pointer;
+    color: var(--indaws-blue-space);
+  }
+  .detail-panel .report-item:hover { color: var(--indaws-blue-lilac); }
+  .detail-panel .report-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--indaws-gradient-blue);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    font-weight: 600;
+    color: var(--indaws-white);
+    flex-shrink: 0;
+  }
+
+  .hidden { display: none !important; }
+  .highlight > .card { border-color: var(--indaws-warm-yellow); border-width: 2px; box-shadow: 0 0 0 3px rgba(229, 185, 43, 0.2); }
+
+  .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(28,38,93,0.15); z-index: 99; display: none; }
+  .overlay.open { display: block; }
+
+  @media print {
+    .header, .controls, .detail-panel, .overlay { display: none !important; }
+    html, body { overflow: visible; height: auto; }
+    .org-tree-wrapper { overflow: visible; }
+    .org-tree { transform: none !important; }
+    .card { box-shadow: none; border: 1px solid #ccc; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <svg class="header-logo" viewBox="0 0 120 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <text x="0" y="22" font-family="Montserrat,Verdana,sans-serif" font-size="22" font-weight="700" fill="#6B68FA">in</text>
+      <text x="28" y="22" font-family="Montserrat,Verdana,sans-serif" font-size="22" font-weight="700" fill="#FFFFFF">DAWS</text>
+    </svg>
+    <h1 id="chart-title">Organigrama</h1>
+  </div>
+  <div class="meta" id="chart-meta"></div>
+</div>
+
+<div class="controls">
+  <input type="text" id="search" placeholder="Buscar por nombre, cargo o departamento...">
+  <select class="dept-filter" id="dept-filter"><option value="">Todos los departamentos</option></select>
+  <div class="separator"></div>
+  <button id="btn-expand">Expandir</button>
+  <button id="btn-collapse">Colapsar</button>
+  <button id="btn-depth1">Nivel 1</button>
+  <button id="btn-depth2">Nivel 2</button>
+  <div class="separator"></div>
+  <div class="zoom-controls">
+    <button id="btn-zoom-out">-</button>
+    <span class="zoom-level" id="zoom-level">100%</span>
+    <button id="btn-zoom-in">+</button>
+    <button id="btn-zoom-fit">Fit</button>
+  </div>
+  <div class="stats" id="stats"></div>
+</div>
+
+<div class="org-tree-wrapper" id="tree-wrapper">
+  <div class="org-tree" id="org-tree"></div>
+</div>
+
+<div class="overlay" id="overlay"></div>
+<div class="detail-panel" id="detail-panel">
+  <div class="panel-header">
+    <h3>Detalle</h3>
+    <button class="panel-close" id="panel-close">&times;</button>
+  </div>
+  <div class="panel-body" id="panel-body"></div>
+</div>
+
+<script>
+var ORG_DATA = {{ORG_DATA_JSON}};
+var currentZoom = 1;
+var isDragging = false, startX = 0, startY = 0, scrollL = 0, scrollT = 0;
+
+var DEPT_COLORS = {
+  'Negocio': '#1C265D',
+  'Administraci\u00f3n': '#6B68FA',
+  'Consultor\u00eda': '#8AC2DB',
+  'Desarrollo': '#E5B92B',
+  'Comercial': '#d63384',
+  'Marketing': '#20c997',
+  'Marketing externo': '#0dcaf0'
+};
+var FALLBACK_COLORS = ['#6B68FA','#E5B92B','#8AC2DB','#1C265D','#d63384','#20c997','#0dcaf0','#fd7e14','#6f42c1','#dc3545'];
+
+function getDeptColor(d) {
+  if (!d) return '#adb5bd';
+  if (DEPT_COLORS[d]) return DEPT_COLORS[d];
+  var h = 0;
+  for (var i = 0; i < d.length; i++) h = d.charCodeAt(i) + ((h << 5) - h);
+  return FALLBACK_COLORS[Math.abs(h) % FALLBACK_COLORS.length];
+}
+
+function getDeptName(f) {
+  if (Array.isArray(f) && f.length >= 2) return f[1];
+  if (typeof f === 'string') return f;
+  return '';
+}
+
+function getParentId(f) {
+  if (Array.isArray(f) && f.length >= 1) return f[0];
+  if (typeof f === 'number' && f) return f;
+  return null;
+}
+
+function getInitials(n) {
+  return (n || '?').split(' ').map(function(w){return w[0]||'';}).join('').substring(0,2).toUpperCase();
+}
+
+function buildTree() {
+  var emps = ORG_DATA.employees || [];
+  var byId = {}, ch = {}, ids = {};
+  emps.forEach(function(e){ids[e.id]=true;});
+  emps.forEach(function(e){
+    byId[e.id] = e;
+    var p = getParentId(e.parent_id);
+    var key = (p && ids[p]) ? p : 'root';
+    if (!ch[key]) ch[key] = [];
+    ch[key].push(e.id);
+  });
+  return {byId:byId, ch:ch, roots:ch['root']||[]};
+}
+
+var tree = buildTree();
+
+function createCard(emp) {
+  var dept = getDeptName(emp.department_id);
+  var hasKids = !!(tree.ch[emp.id] && tree.ch[emp.id].length);
+  var isRoot = tree.roots.indexOf(emp.id) !== -1;
+
+  var card = document.createElement('div');
+  card.className = 'card' + (hasKids ? ' is-manager' : '') + (isRoot ? ' is-root' : '');
+
+  var photo = document.createElement('div');
+  photo.className = 'photo';
+  if (emp.image_128) {
+    var img = document.createElement('img');
+    img.src = 'data:image/png;base64,' + emp.image_128;
+    img.alt = emp.name || '';
+    photo.appendChild(img);
+  } else {
+    photo.textContent = getInitials(emp.name);
+  }
+  card.appendChild(photo);
+
+  var name = document.createElement('div');
+  name.className = 'name';
+  name.textContent = emp.name || '';
+  card.appendChild(name);
+
+  if (emp.job_title) {
+    var job = document.createElement('div');
+    job.className = 'job';
+    job.textContent = emp.job_title;
+    card.appendChild(job);
+  }
+
+  if (dept) {
+    var d = document.createElement('div');
+    d.className = 'dept';
+    d.style.background = getDeptColor(dept);
+    d.textContent = dept;
+    card.appendChild(d);
+  }
+
+  if (hasKids) {
+    var btn = document.createElement('button');
+    btn.className = 'toggle-btn';
+    btn.textContent = '-';
+    btn.addEventListener('click', function(ev) {
+      ev.stopPropagation();
+      toggleNode(card.parentElement);
+    });
+    card.appendChild(btn);
+  }
+
+  card.addEventListener('click', function(ev) {
+    if (ev.target.classList.contains('toggle-btn')) return;
+    openDetail(emp.id);
+  });
+
+  card.addEventListener('dblclick', function(ev) {
+    ev.stopPropagation();
+    if (hasKids) toggleNode(card.parentElement);
+  });
+
+  return card;
+}
+
+function renderNode(id) {
+  var emp = tree.byId[id];
+  if (!emp) return null;
+  var kids = tree.ch[id] || [];
+
+  var li = document.createElement('li');
+  li.dataset.empId = id;
+  li.dataset.name = (emp.name||'').toLowerCase();
+  li.dataset.job = (emp.job_title||'').toLowerCase();
+  li.dataset.dept = getDeptName(emp.department_id).toLowerCase();
+
+  li.appendChild(createCard(emp));
+
+  if (kids.length) {
+    var ul = document.createElement('ul');
+    kids.sort(function(a,b){
+      var aK=(tree.ch[a]||[]).length, bK=(tree.ch[b]||[]).length;
+      if (aK&&!bK) return -1; if(!aK&&bK) return 1;
+      return (tree.byId[a].name||'').localeCompare(tree.byId[b].name||'');
+    });
+    kids.forEach(function(k){ var n=renderNode(k); if(n) ul.appendChild(n); });
+    li.appendChild(ul);
+  }
+  return li;
+}
+
+function toggleNode(li) {
+  var ul = li.querySelector(':scope > ul');
+  if (!ul) return;
+  var collapsed = ul.classList.contains('hidden');
+  ul.classList.toggle('hidden');
+  var c = li.querySelector(':scope > .card');
+  c.classList.toggle('collapsed');
+  var b = c.querySelector('.toggle-btn');
+  if (b) b.textContent = collapsed ? '-' : '+';
+}
+
+function expandAll() {
+  document.querySelectorAll('.org-tree ul.hidden').forEach(function(u){u.classList.remove('hidden');});
+  document.querySelectorAll('.card.collapsed').forEach(function(c){
+    c.classList.remove('collapsed');
+    var b=c.querySelector('.toggle-btn'); if(b) b.textContent='-';
+  });
+}
+
+function collapseAll() {
+  document.querySelectorAll('.org-tree li > ul').forEach(function(u){u.classList.add('hidden');});
+  document.querySelectorAll('.card .toggle-btn').forEach(function(b){
+    b.textContent='+'; b.closest('.card').classList.add('collapsed');
+  });
+}
+
+function expandToDepth(maxDepth) {
+  collapseAll();
+  function walk(li, depth) {
+    if (depth >= maxDepth) return;
+    var ul = li.querySelector(':scope > ul');
+    if (!ul) return;
+    ul.classList.remove('hidden');
+    var c = li.querySelector(':scope > .card');
+    c.classList.remove('collapsed');
+    var b = c.querySelector('.toggle-btn'); if(b) b.textContent='-';
+    ul.querySelectorAll(':scope > li').forEach(function(child){ walk(child, depth+1); });
+  }
+  document.querySelectorAll('.org-tree > ul > li').forEach(function(r){ walk(r, 0); });
+}
+
+function filterTree(q) {
+  q = q.toLowerCase().trim();
+  document.querySelectorAll('.org-tree li').forEach(function(li) {
+    li.classList.remove('highlight');
+    if (!q) return;
+    var n=li.dataset.name||'', j=li.dataset.job||'', d=li.dataset.dept||'';
+    if (n.indexOf(q)!==-1 || j.indexOf(q)!==-1 || d.indexOf(q)!==-1) {
+      li.classList.add('highlight');
+      var p = li.parentElement;
+      while (p && p.id !== 'org-tree') {
+        if (p.classList.contains('hidden')) p.classList.remove('hidden');
+        var pc = p.previousElementSibling;
+        if (pc && pc.classList && pc.classList.contains('collapsed')) {
+          pc.classList.remove('collapsed');
+          var btn = pc.querySelector('.toggle-btn'); if(btn) btn.textContent='-';
+        }
+        p = p.parentElement;
+      }
+    }
+  });
+}
+
+function filterByDept(dept) {
+  document.querySelectorAll('.org-tree li').forEach(function(li) {
+    li.classList.remove('highlight');
+    if (!dept) return;
+    if (li.dataset.dept === dept.toLowerCase()) {
+      li.classList.add('highlight');
+      var p = li.parentElement;
+      while (p && p.id !== 'org-tree') {
+        if (p.classList.contains('hidden')) p.classList.remove('hidden');
+        var pc = p.previousElementSibling;
+        if (pc && pc.classList && pc.classList.contains('collapsed')) {
+          pc.classList.remove('collapsed');
+          var btn = pc.querySelector('.toggle-btn'); if(btn) btn.textContent='-';
+        }
+        p = p.parentElement;
+      }
+    }
+  });
+}
+
+function setZoom(z) {
+  currentZoom = Math.max(0.3, Math.min(2, z));
+  document.getElementById('org-tree').style.transform = 'scale(' + currentZoom + ')';
+  document.getElementById('zoom-level').textContent = Math.round(currentZoom * 100) + '%';
+}
+
+function fitToScreen() {
+  var wrapper = document.getElementById('tree-wrapper');
+  var treeEl = document.getElementById('org-tree');
+  treeEl.style.transform = 'scale(1)';
+  /* Force reflow to get real dimensions at scale=1 */
+  var tw = treeEl.scrollWidth, th = treeEl.scrollHeight;
+  var ww = wrapper.clientWidth, wh = wrapper.clientHeight;
+  var z = Math.min(ww / tw, wh / th, 1) * 0.95;
+  setZoom(z);
+  /* Center using scaled dimensions (CSS transform doesn't affect layout) */
+  setTimeout(function(){
+    var scaledW = tw * currentZoom;
+    var scaledH = th * currentZoom;
+    wrapper.scrollLeft = Math.max(0, (scaledW - ww) / 2);
+    wrapper.scrollTop = Math.max(0, (scaledH - wh) / 2);
+  }, 50);
+}
+
+function openDetail(empId) {
+  var emp = tree.byId[empId];
+  if (!emp) return;
+  var dept = getDeptName(emp.department_id);
+  var kids = tree.ch[empId] || [];
+  var parentId = getParentId(emp.parent_id);
+  var parent = parentId ? tree.byId[parentId] : null;
+
+  var body = document.getElementById('panel-body');
+  while (body.firstChild) body.removeChild(body.firstChild);
+
+  var photoWrap = document.createElement('div');
+  photoWrap.className = 'panel-photo';
+  if (emp.image_128) {
+    var img = document.createElement('img');
+    img.src = 'data:image/png;base64,' + emp.image_128;
+    img.alt = emp.name || '';
+    photoWrap.appendChild(img);
+  } else {
+    photoWrap.textContent = getInitials(emp.name);
+  }
+  body.appendChild(photoWrap);
+
+  var nameEl = document.createElement('div');
+  nameEl.className = 'panel-name';
+  nameEl.textContent = emp.name || '';
+  body.appendChild(nameEl);
+
+  var jobEl = document.createElement('div');
+  jobEl.className = 'panel-job';
+  jobEl.textContent = emp.job_title || '';
+  body.appendChild(jobEl);
+
+  var fields = [];
+  if (dept) fields.push(['Departamento', dept]);
+  if (emp.work_email) fields.push(['Email', emp.work_email]);
+  if (emp.work_phone) fields.push(['Tel\u00e9fono', emp.work_phone]);
+  if (parent) fields.push(['Reporta a', parent.name || '']);
+
+  fields.forEach(function(f) {
+    var row = document.createElement('div');
+    row.className = 'panel-field';
+    var lbl = document.createElement('span');
+    lbl.className = 'label';
+    lbl.textContent = f[0];
+    var val = document.createElement('span');
+    val.className = 'value';
+    val.textContent = f[1];
+    row.appendChild(lbl);
+    row.appendChild(val);
+    body.appendChild(row);
+  });
+
+  if (kids.length) {
+    var sec = document.createElement('div');
+    sec.className = 'panel-reports';
+    var h4 = document.createElement('h4');
+    h4.textContent = 'Reportes directos (' + kids.length + ')';
+    sec.appendChild(h4);
+    kids.forEach(function(kid) {
+      var e = tree.byId[kid];
+      if (!e) return;
+      var item = document.createElement('div');
+      item.className = 'report-item';
+      var av = document.createElement('div');
+      av.className = 'report-avatar';
+      av.textContent = getInitials(e.name);
+      item.appendChild(av);
+      var txt = document.createElement('span');
+      txt.textContent = e.name + (e.job_title ? ' - ' + e.job_title : '');
+      item.appendChild(txt);
+      item.addEventListener('click', function(){ openDetail(kid); });
+      sec.appendChild(item);
+    });
+    body.appendChild(sec);
+  }
+
+  document.getElementById('detail-panel').classList.add('open');
+  document.getElementById('overlay').classList.add('open');
+}
+
+function closeDetail() {
+  document.getElementById('detail-panel').classList.remove('open');
+  document.getElementById('overlay').classList.remove('open');
+}
+
+/* ── Pan & Drag ── */
+var wrapper = document.getElementById('tree-wrapper');
+wrapper.addEventListener('mousedown', function(e) {
+  if (e.target.closest('.card')) return;
+  isDragging = true;
+  startX = e.pageX - wrapper.offsetLeft;
+  startY = e.pageY - wrapper.offsetTop;
+  scrollL = wrapper.scrollLeft;
+  scrollT = wrapper.scrollTop;
+});
+wrapper.addEventListener('mousemove', function(e) {
+  if (!isDragging) return;
+  e.preventDefault();
+  wrapper.scrollLeft = scrollL - (e.pageX - wrapper.offsetLeft - startX);
+  wrapper.scrollTop = scrollT - (e.pageY - wrapper.offsetTop - startY);
+});
+wrapper.addEventListener('mouseup', function(){ isDragging = false; });
+wrapper.addEventListener('mouseleave', function(){ isDragging = false; });
+
+wrapper.addEventListener('wheel', function(e) {
+  if (e.ctrlKey || e.metaKey) {
+    e.preventDefault();
+    setZoom(currentZoom + (e.deltaY < 0 ? 0.1 : -0.1));
+  }
+}, {passive: false});
+
+/* ── Initialize ── */
+var companies = ORG_DATA.companies || [];
+var companyName = companies.length ? companies[0].name : 'Organization';
+document.getElementById('chart-title').textContent = companyName + ' - Organigrama';
+document.getElementById('chart-meta').textContent =
+  'Generado: ' + (ORG_DATA.timestamp || 'N/A');
+
+var depts = {};
+(ORG_DATA.employees||[]).forEach(function(e){
+  var d = getDeptName(e.department_id);
+  if (d) depts[d] = (depts[d]||0) + 1;
+});
+
+var sel = document.getElementById('dept-filter');
+Object.keys(depts).sort().forEach(function(d){
+  var opt = document.createElement('option');
+  opt.value = d;
+  opt.textContent = d + ' (' + depts[d] + ')';
+  sel.appendChild(opt);
+});
+
+document.getElementById('stats').textContent =
+  (ORG_DATA.employees||[]).length + ' empleados \u00B7 ' + Object.keys(depts).length + ' departamentos';
+
+var treeContainer = document.getElementById('org-tree');
+var rootUl = document.createElement('ul');
+tree.roots.sort(function(a,b){ return (tree.byId[a].name||'').localeCompare(tree.byId[b].name||''); });
+tree.roots.forEach(function(r){ var n=renderNode(r); if(n) rootUl.appendChild(n); });
+treeContainer.appendChild(rootUl);
+
+/* Start collapsed to level 2 for one-page view */
+expandToDepth(2);
+
+/* Events */
+document.getElementById('search').addEventListener('input', function(e){ filterTree(e.target.value); });
+document.getElementById('dept-filter').addEventListener('change', function(e){ filterByDept(e.target.value); });
+document.getElementById('btn-expand').addEventListener('click', expandAll);
+document.getElementById('btn-collapse').addEventListener('click', collapseAll);
+document.getElementById('btn-depth1').addEventListener('click', function(){ expandToDepth(1); });
+document.getElementById('btn-depth2').addEventListener('click', function(){ expandToDepth(2); });
+document.getElementById('btn-zoom-in').addEventListener('click', function(){ setZoom(currentZoom + 0.1); });
+document.getElementById('btn-zoom-out').addEventListener('click', function(){ setZoom(currentZoom - 0.1); });
+document.getElementById('btn-zoom-fit').addEventListener('click', fitToScreen);
+document.getElementById('panel-close').addEventListener('click', closeDetail);
+document.getElementById('overlay').addEventListener('click', closeDetail);
+
+document.addEventListener('keydown', function(e){
+  if (e.key === 'Escape') closeDetail();
+});
+
+/* Auto-fit on load */
+setTimeout(fitToScreen, 100);
+</script>
+</body>
+</html>

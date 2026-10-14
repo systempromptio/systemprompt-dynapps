@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "locale.schema.json",
+  "title": "locale.json",
+  "description": "Ops-owned locale identity. One per locale pack. Reference values from locales/es (plan §2.2).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["code", "schema_version", "name", "lang_tag", "odoo_lang", "fallback", "output_language", "pack_status"],
+  "properties": {
+    "code": { "type": "string", "description": "Locale code, e.g. 'es','fr','nl','en'. Must equal the folder name." },
+    "schema_version": { "type": "integer", "minimum": 1, "description": "Pack schema version; bump on breaking key changes (see CHANGELOG)." },
+    "name": { "type": "string", "description": "Human display name, e.g. 'España / Español'." },
+    "lang_tag": { "type": "string", "description": "HTML lang attribute -> template {{HTML_LANG}}. es='es'." },
+    "odoo_lang": { "type": "string", "description": "Odoo read-context language / skill-type token language, e.g. 'es_ES'." },
+    "fallback": { "type": ["string", "null"], "description": "UI-STRING-only fallback locale. en packs may set 'en'; es sets null (engine base). NEVER a fallback for pricing/fiscal/product ids." },
+    "output_language": { "type": "string", "description": "Instruction passed to the copy LLM, e.g. 'español correcto (acentos y ñ, del/al, tú)'." },
+    "pack_status": {
+      "type": "string",
+      "enum": ["reference", "live", "stub"],
+      "description": "reference=complete language/fiscal FRAME (language + jurisdiction structure authored), entity/pricing filled per deployment; runtime + onboarding fields MAY be placeholders (en is the reference pack); live=validated production pack (onboarding-required fields MUST be real); stub=schema-valid placeholder blocked from production by the loader. NOTE: es is authored complete as the byte-parity regression oracle but is flagged stub (unverified/blocked from production)."
+    }
+  }
+}

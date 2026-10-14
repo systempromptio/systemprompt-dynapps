@@ -1,7 +1,7 @@
 ---
 name: odoo_module_reviewer
 description: Reviews an Odoo module for security, ORM performance, correctness and packaging defects and writes REVIEW.md.
-model: claude-sonnet-4-5
+model: claude-sonnet-5-5
 tools: [Read, Grep, Glob, Write]
 plugin: dynapps-odoo-delivery
 skills: [odoo_module_review]

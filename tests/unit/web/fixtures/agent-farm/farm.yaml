@@ -2,7 +2,7 @@ schema: 1
 id: dynapps-agent-farm
 marketplace: dynapps-agent-farm
 defaults:
-  model: claude-sonnet-4-5
+  model: claude-sonnet-5-5
   max_turns: 40
   max_budget_usd: 2.00
   permission_mode: acceptEdits

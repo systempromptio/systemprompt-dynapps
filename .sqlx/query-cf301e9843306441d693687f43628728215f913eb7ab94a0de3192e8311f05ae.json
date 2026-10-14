@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM user_manual_roles\n         WHERE user_id = $1 AND role = $2 AND valid_until IS NOT NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "cf301e9843306441d693687f43628728215f913eb7ab94a0de3192e8311f05ae"
+}

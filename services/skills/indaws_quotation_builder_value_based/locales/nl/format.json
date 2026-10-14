@@ -1,0 +1,50 @@
+{
+  "currency": {
+    "code": "EUR",
+    "code_label": "EUR",
+    "symbol": "€",
+    "symbol_position": "before",
+    "symbol_space": true,
+    "decimals": 0,
+    "decimal_sep": ",",
+    "thousands_sep": ".",
+    "round_display": "half_up",
+    "round_step": 10
+  },
+  "spreadsheet": {
+    "number_format_currency": "[$€ ]#,##0",
+    "locale_block": {
+      "name": "Dutch / Nederlands",
+      "code": "nl_NL",
+      "thousandsSeparator": ".",
+      "decimalSeparator": ",",
+      "dateFormat": "dd-mm-yyyy",
+      "timeFormat": "hh:mm:ss",
+      "formulaArgSeparator": ";",
+      "weekStart": 1
+    }
+  },
+  "date": {
+    "proposal_format": "%-d %B %Y",
+    "month_names": [
+      "januari",
+      "februari",
+      "maart",
+      "april",
+      "mei",
+      "juni",
+      "juli",
+      "augustus",
+      "september",
+      "oktober",
+      "november",
+      "december"
+    ]
+  },
+  "period_words": {
+    "year": ["jaar", "jaarlijks", "/ jaar", "/jaar"],
+    "month": ["maand", "maandelijks", "/ maand", "/maand"],
+    "per_year_suffix": " / jaar",
+    "per_month_suffix": " / maand"
+  }
+}

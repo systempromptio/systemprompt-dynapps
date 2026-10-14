@@ -5,7 +5,7 @@
 # with a new suite version: prompts are hashed into every run's manifest.
 plugin: dynapps-super-admin
 suite_version: 1
-model: claude-sonnet-5[1m]
+model: claude-sonnet-5-5[1m]
 # Why: the harness retries a session that started before the bridge's MCP
 # servers were ready; this is the server every case needs.
 primary_connector: _systemprompt__

@@ -1,0 +1,36 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "apps_catalog.schema.json",
+  "title": "apps_catalog.json",
+  "description": "Authored per-app prose keyed by app_id (plan §2.2, fixes the #1 render-breaker). Consultant-owned. Top-level keys MUST be canonical app_ids from shared/app_registry.json (config_general, crm, ventas, compras, inventario, fabricacion, facturacion, contabilidad, proyecto, helpdesk, website, marketing_email, rrhh) or namespaced extras. 'sesiones' is NUMERIC (no prose regex). display_name/icon/color mirror the registry es values for the es pack.",
+  "type": "object",
+  "minProperties": 13,
+  "additionalProperties": {
+    "type": "object",
+    "required": ["display_name", "icon", "outcome", "intro", "value"],
+    "additionalProperties": true,
+    "properties": {
+      "display_name": { "type": "string", "description": "App display name in this locale." },
+      "icon": { "type": "string", "description": "SVG filename under assets/odoo-icons/, e.g. 'mrp.svg'. Shared across locales." },
+      "color": { "type": "string", "description": "Hex color; es mirrors registry es_color." },
+      "outcome": { "type": "string", "description": "Short outcome line for mindmap/cards (APP_OUTCOME)." },
+      "intro": { "type": "string", "description": "APP_DESCRIPTIONS[*].intro." },
+      "value": { "type": "string", "description": "APP_DESCRIPTIONS[*].value." },
+      "funcionalidades": { "type": "array", "items": { "type": "string" } },
+      "formaciones": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["n", "sesiones"],
+          "properties": {
+            "n": { "type": "string", "description": "Training block name." },
+            "sesiones": { "type": "integer", "description": "NUMERIC session count (no prose regex)." }
+          }
+        }
+      },
+      "migraciones": { "type": "array", "items": { "type": "string" } },
+      "dynapps_core": { "type": "array", "items": { "type": "string" }, "description": "Core-module features; category label from instance.core_module_label." },
+      "accounting_from_fiscal": { "type": "boolean", "description": "contabilidad: pulls chart-of-accounts copy from fiscal.json instead of hardcoding." }
+    }
+  }
+}

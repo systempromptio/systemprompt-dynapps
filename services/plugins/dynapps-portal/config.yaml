@@ -1,0 +1,31 @@
+plugin:
+  id: dynapps-portal
+  name: "Dynapps — Portal"
+  description: "Dynapps' own Odoo and DynBrain knowledge servers from portal.dynapps.es, each used as the Odoo account you connect on the Connectors page."
+  version: "1.0.0"
+  enabled: true
+  author:
+    name: Dynapps
+    email: ed@systemprompt.io
+  keywords: [dynapps, odoo, dynbrain, knowledge, rag]
+  license: proprietary
+  category: business
+  skills:
+    source: explicit
+    include:
+      - dynapps_portal_guide
+  agents:
+    source: explicit
+    include: []
+  # Both servers are external and per-user: a person connects their own portal
+  # account once on /admin/connectors, and every client then calls through the
+  # gateway's governed proxy with that person's token. Their own plugin rather
+  # than dynapps-commons (which carries no server, by design) or an indaws-*
+  # plugin (generated from upstream, not editable here).
+  mcp_servers:
+    source: explicit
+    include:
+      - dynapps-odoo
+      - dynbrain
+  content_sources: {}
+  # No `hooks:` key: dynapps-commons owns the session-global governance hooks.

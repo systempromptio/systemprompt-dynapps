@@ -1,0 +1,84 @@
+{
+  "_layer": "country",
+  "_status": "skeleton — inert until Phase-1 engine composition (see references/add_be_ch_plan.md)",
+  "odoo_url": "<<VERIFY: Odoo URL de la entidad BE>>",
+  "odoo_db": "<<VERIFY: DB BE>>",
+  "impl_template_name": "Implantación v2",
+  "impl_template_id": "<<VERIFY from Odoo: id de sale.order.template por NOMBRE en la DB BE — nunca 15>>",
+  "sales_url_pattern": "{odoo_url}/odoo/sales/{id}",
+  "team_email_domain": "<<VERIFY: dominio email equipo BE, p.ej. dynapps.be>>",
+  "core_module_label": "Dynapps Core",
+  "core_module_set_exists": true,
+  "cases_base_url": "https://www.dynapps.be/{lang}/cases",
+  "_cases_base_url_note": "VERIFICADO HTTP 200: {lang} ∈ nl|fr|en en dynapps.be. URL de caso = cases_base_url + slug.",
+  "industries": {
+    "manufacturing": {
+      "nl": "Productie",
+      "fr": "Fabrication"
+    },
+    "food-beverage": {
+      "nl": "Voedingsindustrie",
+      "fr": "Alimentation et boissons"
+    },
+    "pharma-biotech": {
+      "nl": "Pharma & biotech",
+      "fr": "Pharmacie et biotechnologies"
+    },
+    "laboratories": {
+      "nl": "Laboratoria",
+      "fr": "Laboratoires"
+    },
+    "logistics": {
+      "nl": "Logistiek",
+      "fr": "Logistique"
+    },
+    "retail-wholesale": {
+      "nl": "Retail en groothandel",
+      "fr": "Vente au détail et en gros"
+    },
+    "professional-services": {
+      "nl": "Professionele dienstverlening",
+      "fr": "Services professionnels"
+    },
+    "financial-services": {
+      "nl": "Financiële dienstverlening",
+      "fr": "Services financiers"
+    },
+    "energy-utilities": {
+      "nl": "Energie en nutsvoorzieningen",
+      "fr": "Énergie et services publics"
+    }
+  },
+  "_industries_note": "Taxonomía EXACTA de dynapps.be (nav nl/fr + badges de casos, verificado en vivo 2026-07-17). SIN 'construction': dynapps.be no ofrece esa industria. Valores por-idioma porque BE compone nl-BE/fr-BE. 'financial-services' nl = 'Financiële dienstverlening' (badge de caso; el nav no la lista). fr 'Services financiers' verificado en el nav CH-FR (mismo CMS) — confirmar en un badge .be/fr antes de ir a live.",
+  "contact": {
+    "email": "<<VERIFY>>",
+    "web": "www.dynapps.be",
+    "tel": "<<VERIFY>>"
+  },
+  "odoo_partner_manager": {
+    "source": "verify_from_odoo",
+    "name": "<<VERIFY>>",
+    "email": "<<VERIFY>>"
+  },
+  "legal_entity": {
+    "name": "Dynapps NV",
+    "vat": "<<VERIFY: BE0…>>",
+    "address": "<<VERIFY: domicilio social>>",
+    "governing_law": "België / Belgique"
+  },
+  "offices": [
+    "België",
+    "Nederland",
+    "Frankrijk",
+    "Zwitserland",
+    "Spanje"
+  ],
+  "local_country": "België",
+  "credibility": {
+    "implementations": "<<VERIFY>>",
+    "claims_text": "Odoo-partner wereldwijd",
+    "experts": 280,
+    "countries": 52,
+    "iso27001": true
+  }
+}

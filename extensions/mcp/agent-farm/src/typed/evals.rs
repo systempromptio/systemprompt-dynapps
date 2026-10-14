@@ -1,5 +1,6 @@
-//! Farm evals as deterministic assertions. No judge is attached to an eval
-//! run and no judge field leaves this module.
+//! Farm evals: start a suite, read the latest verdict per case, and read the
+//! eval history. A suite started here is judged by the farms file's
+//! configured judge, the same one the public API and the console build.
 
 use rmcp::ErrorData;
 use systemprompt::identifiers::McpExecutionId;
@@ -22,7 +23,7 @@ impl McpToolHandler for FarmEvalsRunHandler<'_> {
         "farm_evals_run"
     }
     fn description(&self) -> &'static str {
-        "Start an eval suite on a farm: one headless run per case, each scored by the suite's deterministic assertions (file exists, output matches, tool was or was not used). Returns the eval run id at once; read results with `farm_eval_results` or per run with `run_facts`."
+        "Start an eval suite on a farm: one headless run per case, each scored by the suite's deterministic assertions (file exists, output matches, tool was or was not used) and, for a case with a rubric, by the configured judge model. Returns the eval run id at once; read results with `farm_eval_results` or per run with `run_facts`."
     }
     async fn handle(
         &self,
@@ -53,14 +54,15 @@ async fn start_eval(
         .map(str::to_owned)
         .collect();
     let state = ctx.env()?.farm_state()?;
+    let judge = state.judge.judge_for(None, &ctx.viewer.user_id);
     let row = start_eval_run(
         Arc::clone(state),
-        None,
+        judge,
         EvalLaunch {
             farm_id: farm.id,
             suite_id,
             user_id: ctx.viewer.user_id.clone(),
-            triggered_via: TriggeredVia::Api,
+            triggered_via: TriggeredVia::Mcp,
             case_filter: (!case_filter.is_empty()).then_some(case_filter),
         },
     )
@@ -102,7 +104,7 @@ impl McpToolHandler for FarmEvalResultsHandler<'_> {
         "farm_eval_results"
     }
     fn description(&self) -> &'static str {
-        "The latest decided assertion verdict for every (suite, case) on the farms you may use: passed, failed or errored, with the eval run that decided it. Deterministic assertions only; nothing here is model-judged."
+        "The latest decided verdict for every (suite, case) on the farms you may use: passed, failed or errored, with the eval run that decided it. Set `since` (`7d`, `24h`, an RFC 3339 time) to also get `history`: per agent per day eval runs, case pass rate, mean judge score and cost."
     }
     fn read_only(&self) -> bool {
         true
@@ -128,6 +130,8 @@ async fn eval_results(
     use systemprompt_web_admin_farm::types::FarmId;
 
     use super::outputs::EvalCellOutput;
+
+    let history = eval_history(ctx, &input).await?;
 
     let pool = ctx.pool()?;
     let mut usable: Vec<FarmId> = Vec::new();
@@ -177,12 +181,59 @@ async fn eval_results(
         failed: count("failed"),
         errored: count("errored"),
         rows,
+        history,
     };
     let summary = format!(
         "{} cases: {} passed, {} failed, {} errored",
         output.returned, output.passed, output.failed, output.errored
     );
     Ok((output, summary))
+}
+
+#[cfg(feature = "farm")]
+async fn eval_history(
+    ctx: &ToolCtx<'_>,
+    input: &FarmEvalResultsInput,
+) -> ToolResult<Vec<super::outputs::EvalDayOutput>> {
+    use systemprompt_web_admin_farm::services::evals::{list_visible_history, parse_since};
+    use systemprompt_web_admin_farm::types::FarmId;
+
+    use super::outputs::EvalDayOutput;
+
+    if input.since.trim().is_empty() {
+        return Ok(Vec::new());
+    }
+    let since = parse_since(&input.since, chrono::Utc::now()).ok_or_else(|| {
+        super::ToolError::Invalid(format!(
+            "`since` {:?} is not `<n>d`, `<n>h` or an RFC 3339 time",
+            input.since
+        ))
+    })?;
+    let farm = Some(input.farm.trim())
+        .filter(|f| !f.is_empty())
+        .map(FarmId::new);
+    let points = list_visible_history(
+        ctx.pool()?,
+        ctx.viewer.context()?,
+        farm.as_ref(),
+        None,
+        since,
+    )
+    .await?;
+    Ok(points
+        .into_iter()
+        .map(|p| EvalDayOutput {
+            farm: p.farm.as_str().to_owned(),
+            agent: p.agent.as_str().to_owned(),
+            day: p.day.to_string(),
+            runs: p.runs,
+            passed: p.passed,
+            decided: p.decided,
+            pass_rate: p.pass_rate,
+            mean_score: p.mean_score,
+            cost_usd: p.cost_usd,
+        })
+        .collect())
 }
 
 #[cfg(not(feature = "farm"))]

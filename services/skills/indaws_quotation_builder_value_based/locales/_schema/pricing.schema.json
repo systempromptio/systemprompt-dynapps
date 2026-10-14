@@ -1,0 +1,169 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "pricing.schema.json",
+  "title": "pricing.json",
+  "description": "Every pricing constant (plan §2.2). Market-pricing-owner. NO fallback: a missing value is a hard error, never inherited from es. product_id fields and odoo_license are verify_from_odoo — the validator refuses a non-es pack that keeps es values for them.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["rates", "analysis_formula", "support", "golive_weeks", "migration", "poc", "recurring_monthly", "app_base_prices", "complement_prices", "recurrent_lines", "ia_catalog", "adjust_band_pct", "maintenance_plan"],
+  "properties": {
+    "rates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["analysis_per_hour", "dev_per_hour", "onsite_day_rate", "productivity_factor"],
+      "properties": {
+        "analysis_per_hour": { "type": "number", "description": "es=80." },
+        "dev_per_hour": { "type": "number", "description": "es=75." },
+        "onsite_day_rate": { "type": "number", "description": "Presencialidad €/día. es=900." },
+        "productivity_factor": { "type": "number", "description": "es=0.92." }
+      }
+    },
+    "analysis_formula": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["hours_per_session", "base_hours"],
+      "properties": {
+        "hours_per_session": { "type": "number", "description": "es=4." },
+        "base_hours": { "type": "number", "description": "es=10." }
+      }
+    },
+    "support": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["salida_pct"],
+      "properties": {
+        "salida_pct": { "type": "number", "description": "Soporte Salida a Producción, 10% de apps (base+extras). es=0.10." }
+      }
+    },
+    "golive_weeks": { "type": "integer", "description": "es=4." },
+    "migration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pct", "months"],
+      "properties": {
+        "pct": { "type": "number", "description": "Migración futura, 15% de apps+devs marcados. es=0.15." },
+        "months": { "type": "integer", "description": "es=24." }
+      }
+    },
+    "poc": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pct", "product_id"],
+      "properties": {
+        "pct": { "type": "number", "description": "POC = 20% del Análisis Funcional. es=0.20." },
+        "product_id": { "type": "string", "verify_from_odoo": true, "description": "Odoo product id for the POC line; DB-specific. es='347'." }
+      }
+    },
+    "recurring_monthly": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mcp", "field_service_per_user", "odoo_light_user"],
+      "properties": {
+        "mcp": { "type": "number", "description": "MCP Odoo €/mes. es=50." },
+        "field_service_per_user": { "type": "number", "description": "Field Service €/usuario/mes. es=2." },
+        "odoo_light_user": { "type": "number", "verify_from_odoo": true, "description": "Odoo Light User licence €/user/month (same price billed monthly or yearly): employees WITHOUT access to the core apps (Sales, Purchases, Projects, Accounting), HR record / limited employee self-service only; contracted through an Odoo Advisor. Rendered as its own annual line (rate × 12 × num_usuarios_light). es=4.90 (odoo.com pricelist, Spain, 2026-09-28). -1 = unverified for this market (line omitted, blocked for a live pack)." }
+      }
+    },
+    "app_base_prices": {
+      "type": "object",
+      "description": "Base price per app_id (registry canonical ids). All 13 apps required; extra keys must be namespaced.",
+      "additionalProperties": { "type": "number" }
+    },
+    "complement_prices": {
+      "type": "object",
+      "description": "Price per complement id (registry complements + spreadsheet extras). Keys are complement ids.",
+      "additionalProperties": { "type": "number" }
+    },
+    "custom_complement_band": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["min", "max"],
+      "description": "Policy parameter (NOT a complement price): sanity band for the unit price of an invented complement (extras_custom). Outside it => warning + explicit confirmation. es=250/5000.",
+      "properties": {
+        "min": { "type": "number", "description": "Minimum admissible unit price. es=250." },
+        "max": { "type": "number", "description": "Maximum admissible unit price. es=5000." }
+      }
+    },
+    "recurrent_lines": {
+      "type": "array",
+      "description": "Recurring-cost lines. 'source' marks how the value is obtained (plan §2.2). odoo_license is verify_from_odoo.",
+      "items": {
+        "type": "object",
+        "required": ["id", "source"],
+        "properties": {
+          "id": { "type": "string", "description": "Registry recurrent_lines id: dyn_cloud|maintenance|odoo_license." },
+          "source": { "type": "string", "enum": ["sheet_verbatim", "verify_from_odoo"], "description": "sheet_verbatim=read from spreadsheet cell, fallback only when cell is an unevaluated =ODOO.LIST; verify_from_odoo=Odoo-SA-set, confirm per country." },
+          "fallback_amount": { "type": "number" },
+          "fallback_period": { "type": "string", "enum": ["year", "month"] },
+          "fallback_amount_per_user_year": { "type": "number", "verify_from_odoo": true, "description": "odoo_license only. Reference = Custom (Personalizado), yearly billing, list price. es=334.80 (Standard 178.80 is a sanctioned alternative)." },
+          "fallback_amount_per_user_month": { "type": "number", "verify_from_odoo": true, "description": "odoo_license only. Custom, yearly billing, per month. es=27.90." },
+          "fallback_price_display": { "type": "string", "description": "Verbatim formatted price string used on the =ODOO.LIST fallback path (RECURRENT_DEFAULTS). es dyn_cloud='1.080,00 € / año'." }
+        }
+      }
+    },
+    "ia_catalog": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["exclusive", "addons"],
+      "properties": {
+        "exclusive": {
+          "type": "array",
+          "description": "Radio group (choose 1). product_id verify_from_odoo.",
+          "items": {
+            "type": "object",
+            "required": ["id", "product_id", "oneshot"],
+            "properties": {
+              "id": { "type": "string", "description": "ia_products.exclusive id: mcp|starter_ia." },
+              "product_id": { "type": "string", "verify_from_odoo": true },
+              "oneshot": { "type": "number" },
+              "monthly": { "type": "number" }
+            }
+          }
+        },
+        "addons": {
+          "type": "array",
+          "description": "Multi-select add-ons. cond references an app_id (registry) or null.",
+          "items": {
+            "type": "object",
+            "required": ["id", "product_id", "oneshot"],
+            "properties": {
+              "id": { "type": "string", "description": "ia_products.addons id." },
+              "product_id": { "type": "string", "verify_from_odoo": true },
+              "oneshot": { "type": "number" },
+              "monthly_per_user": { "type": "number" },
+              "cond": { "type": ["string", "null"], "description": "app_id gating visibility (e.g. 'proyecto') or null=always visible." }
+            }
+          }
+        }
+      }
+    },
+    "adjust_band_pct": { "type": "number", "description": "es=0.15." },
+    "vertical": {
+      "type": "object",
+      "description": "Vertical one-shot packs (deal.vertical in Parámetros picks one). Today only 'inbuilt' (construction). Optional: packs without verticals omit it.",
+      "additionalProperties": false,
+      "properties": {
+        "inbuilt": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["pack_oneshot", "app_oneshot"],
+          "properties": {
+            "pack_product_id": { "type": "string", "description": "verify_from_odoo. es=228." },
+            "pack_oneshot": { "type": "number", "description": "Vertical pack, one-shot. Includes the mobile app. es=6000." },
+            "app_oneshot": { "type": "number", "description": "Standalone mobile app (only without the pack). es=2500." }
+          }
+        }
+      }
+    },
+    "maintenance_plan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["base_monthly", "included_hours", "extra_hour"],
+      "properties": {
+        "base_monthly": { "type": "number", "description": "es=320." },
+        "included_hours": { "type": "number", "description": "es=5." },
+        "extra_hour": { "type": "number", "description": "es=64." }
+      }
+    }
+  }
+}

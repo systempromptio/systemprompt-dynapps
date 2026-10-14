@@ -1,0 +1,28 @@
+{
+  "_layer": "country",
+  "_authoring": "AUTORAR bajo firma fiscal/legal CH. Suiza NO es UE: sin OSS/IOSS/Intrastat/reverse-charge intra-UE. Hechos conocidos precargados; confirmar todo.",
+  "vat_label": "<<de: MWST | fr: TVA | it: IVA>>",
+  "seller_vat_number": "<<VERIFY: nº MWST/UID entidad CH (CHE-… MWST)>>",
+  "einvoicing": {
+    "mandate_status": "voluntary",
+    "authority": "Eidgenössische Steuerverwaltung (ESTV) / AFC / AFC",
+    "network": ["QR-bill"],
+    "formats": ["Swiss QR-bill", "swissDIGIN"],
+    "phase_dates": [],
+    "threshold": null,
+    "detection_signals": ["qr-rechnung", "qr-bill", "qr-facture", "mwst", "swissdigin", "e-rechnung"],
+    "copy_render": "<<AUTHOR (legal): sin mandato federal de e-invoicing; estándar de facturación = QR-Rechnung/QR-bill. Odoo la genera nativa. Redactar por idioma.>>"
+  },
+  "chart_of_accounts": { "code": "KMU/PME", "copy": "<<AUTHOR (legal): plan contable suizo (Kontenrahmen KMU / plan comptable PME) + reglas MWST.>>" },
+  "tax_filings": [
+    { "id": "mwst_abrechnung", "legal_name": "<<de: MWST-Abrechnung | fr: Décompte TVA | it: Rendiconto IVA>>", "authority": "ESTV / AFC", "is_mandatory": true, "odoo_module": "<<VERIFY: l10n_ch en DB CH>>", "signals": ["mwst", "tva", "iva", "abrechnung", "décompte", "rendiconto"] }
+  ],
+  "reverse_charge_clause": "<<AUTHOR (legal): Bezugsteuer / impôt sur les acquisitions (adquisición de servicios del extranjero). NO reverse-charge intra-UE.>>",
+  "cross_border_notes": "<<AUTHOR (legal): Suiza fuera de la UE → IVA de importación en aduana; sin OSS/IOSS.>>",
+  "carriers": ["Die Post / La Poste", "DPD", "DHL", "Planzer"],
+  "payment_terms": { "validity_days": 30, "default_payment_method": "<<de: Banküberweisung (QR-Rechnung) | fr: virement (QR-facture)>>", "late_payment_clause": "<<AUTHOR (legal CH): Verzugszins nach OR (5% Standard salvo pacto).>>", "mandatory_mentions": [] },
+  "fineprint_web": "<<AUTHOR: * Preise in {currency_code_label}, exkl. {vat_label}. …>>",
+  "fineprint_pdf": "<<AUTHOR: idem web>>",
+  "travel_clause": "<<AUTHOR>>",
+  "acronyms_fiscal": ["MWST", "TVA", "IVA", "UID", "IDE", "ESTV", "AFC", "OR", "CO", "IBAN", "QR-IBAN"]
+}

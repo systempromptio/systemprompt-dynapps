@@ -1,7 +1,7 @@
 ---
 name: odoo_migration_planner
 description: Plans the upgrade of an Odoo 16 module to Odoo 17 and writes MIGRATION_PLAN.md.
-model: claude-sonnet-4-5
+model: claude-sonnet-5-5
 tools: [Read, Grep, Glob, Write]
 plugin: dynapps-odoo-delivery
 skills: [odoo_migration_plan]

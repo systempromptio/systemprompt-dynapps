@@ -21,4 +21,9 @@ pub fn agent_farm_public_routes() -> Router<Arc<FarmState>> {
         .route("/runs/{run_id}/cancel", post(public::cancel_run))
         .route("/evals/{suite_id}/run", post(public::run_eval_suite))
         .route("/evals/runs/{eval_run_id}", get(public::get_eval_run))
+        .route("/evals/history", get(public::eval_history))
+        .route(
+            "/evals/suites/{suite_id}/runs",
+            get(public::list_suite_runs),
+        )
 }

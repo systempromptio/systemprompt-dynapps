@@ -1,0 +1,52 @@
+<!--
+  PATTERN: segmented toggle (segmented control) → full-width panel. Hook class: s_iw_segtoggle
+  Behavior: a PILL-shaped bar with 2+ options side by side; choosing one changes the PANEL below
+  (full width). The active option is highlighted (here: light teal background + brand text). It's the
+  HORIZONTAL cousin of s_iw_tabs (pattern_tabs_panel.html): use it when the selector is a "switch" of 2-3 modes
+  (e.g. Monthly/Yearly, Picking/Shipments, Individual/Company) and each mode fills the WHOLE width below.
+
+  MECHANICS — NATIVE Bootstrap tabs, NO custom JS:
+    - Each option is a <button class="nav-link" data-bs-toggle="tab" data-bs-target="#panelId">.
+    - Each panel is a <div class="tab-pane" id="panelId">. One starts with `show active` + its button `active`.
+    - Bootstrap (already loaded on Odoo's frontend) handles the show/hide and adds/removes `.active` on the button.
+      Do NOT write JS: just these data-attrs + the CSS for the look (pill + active state).
+    - build_page_arch PRESERVES `data-bs-*`, `id`, `role`, classes and `<button>`.
+
+  IDENTICAL CONTENT NOW / DIVERGENT LATER: it's valid (and common) for the panels to show the SAME
+  info at first and for each one to change later. ALWAYS leave one panel per option (even if you duplicate
+  the content) so that diverging later is just editing one panel — not rebuilding the mechanics.
+
+  ACTIVE STATE (the highlighted "pill") — styled via CSS, not inline (hardcode the BRAND hex, GOTCHA #15).
+
+  === CSS to inject ONCE (custom_code_footer or ir.asset) ===
+  .s_iw_segtoggle{background:#FFFFFF;border-radius:999px;padding:6px;box-shadow:0 4px 18px rgba(0,0,0,.08);}
+  .s_iw_segtoggle .nav-link{flex:1 1 0;border:0;border-radius:999px;background:transparent;color:#5A6169;font-weight:600;padding:12px 16px;text-align:center;transition:background-color .2s ease,color .2s ease;}
+  .s_iw_segtoggle .nav-link:hover{color:#5EBFBA;}
+  .s_iw_segtoggle .nav-link.active{background:#E3F3F3;color:#5EBFBA;}   /* light teal + brand text */
+  /* MOBILE — many/long options: don't let labels squash or wrap the pill; make the TRACK scrollable.
+     Add these two lines to the injected CSS only when >3 options or long labels: */
+  /* .s_iw_segtoggle{overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch;}
+     .s_iw_segtoggle .nav-link{white-space:nowrap;flex:1 0 auto;padding:12px 20px;} */
+
+  Contract: `.s_iw_segtoggle` is the `.nav[role=tablist]` (d-flex) with the buttons `data-bs-target="#id"`;
+  separately, a `.tab-content` with the `.tab-pane#id`. One button `.active` + its pane `.show active` at the start.
+  Unique IDs per instance. RESPONSIVE: `flex:1 1 0` splits the width; on mobile it stays in a row (2-3 fit);
+  if there are many options or long labels, wrap the track or make it scrollable.
+
+  PERF: a hidden `.tab-pane` is `display:none` but its <img>s STILL DOWNLOAD at page load →
+  `loading="lazy" decoding="async"` on every <img> inside non-active panes.
+-->
+<div data-name="Segmented toggle">
+  <div class="s_iw_segtoggle nav mx-auto mb-5 d-flex" role="tablist" style="max-width:960px;">
+    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#iwseg-1" type="button" role="tab">Option A</button>
+    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#iwseg-2" type="button" role="tab">Option B</button>
+  </div>
+  <div class="tab-content mx-auto" style="max-width:1050px;">
+    <div class="tab-pane fade show active" id="iwseg-1" role="tabpanel">
+      <!-- {{CONTENT A — anything: table, cards, text…}} -->
+    </div>
+    <div class="tab-pane fade" id="iwseg-2" role="tabpanel">
+      <!-- {{CONTENT B — can be identical to A for now and diverge later}} -->
+    </div>
+  </div>
+</div>

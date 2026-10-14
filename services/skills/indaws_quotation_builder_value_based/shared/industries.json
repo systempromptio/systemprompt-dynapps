@@ -1,0 +1,68 @@
+{
+  "_comment": "Canonical industry taxonomy for the social-proof pipeline (QB v5 Phase 4). Ids = the dynapps country-website industry slugs (source of truth: /<lang>/industries/<id> pages + case-page badges, verified live 2026-07-17 on dynapps.es / dynapps.be / dynapps.ch). DISPLAY LABELS do NOT live here: the exact per-language label (as tagged on each country site) lives in each locale pack under instance.industries (and per case in shared/references/<CC>.json industry_label). This file carries only language-neutral structure: brand colour per industry, adjacency (for match_cases v2 adjacent-industry scoring) and multilingual match tokens (accent-folded substrings, used to map a prospect's free-text sector to an industry id).",
+  "_nav_note": "The 8 ids marked nav:true are the primary website navigation taxonomy (Ine's list). 'laboratories' and 'financial-services' are additionally used by the sites as case badges / industry pages (dynapps.be nav includes laboratories; dynapps.ch nav includes financial-services), so they are canonical too — a reference card must be able to show them.",
+  "_color_note": "Colours from the Dynapps extended digital palette, per Víctor's decision (pure palette, no derived tints). 10 industries over 6 colours => two deliberate reuses (construction/food-beverage share #FF7E23; manufacturing/pharma-biotech share #951CF3). All chosen fills are readable with white text except #FF7759/#FF7E23 which are borderline — prefer dark text on those two if the render layer supports it.",
+  "palette": ["#951CF3", "#FF575D", "#FF7759", "#FF7E23", "#050543", "#070757"],
+  "industries": {
+    "construction": {
+      "nav": true,
+      "color": "#FF7E23",
+      "adjacent": ["manufacturing", "energy-utilities"],
+      "match_tokens": ["construc", "obra", "inmobiliari", "bouw", "batiment", "chantier", "instalacion", "installat"]
+    },
+    "manufacturing": {
+      "nav": true,
+      "color": "#951CF3",
+      "adjacent": ["food-beverage", "pharma-biotech", "construction", "logistics"],
+      "match_tokens": ["fabrica", "manufactur", "industria", "productie", "usine", "planta", "mrp", "maquinaria"]
+    },
+    "food-beverage": {
+      "nav": true,
+      "color": "#FF7E23",
+      "adjacent": ["manufacturing", "retail-wholesale"],
+      "match_tokens": ["aliment", "bebida", "food", "beverage", "voeding", "boisson", "carnic", "conserva", "horeca"]
+    },
+    "pharma-biotech": {
+      "nav": true,
+      "color": "#951CF3",
+      "adjacent": ["laboratories", "manufacturing"],
+      "match_tokens": ["farmac", "pharma", "biotec", "biotech", "medicament", "sanitari"]
+    },
+    "laboratories": {
+      "nav": false,
+      "color": "#070757",
+      "adjacent": ["pharma-biotech"],
+      "match_tokens": ["laborator", "lims", "muestras", "analitic", "ensayo"]
+    },
+    "logistics": {
+      "nav": true,
+      "color": "#FF7759",
+      "adjacent": ["retail-wholesale", "manufacturing"],
+      "match_tokens": ["logist", "transport", "distribu", "paqueter", "flota", "expedicion"]
+    },
+    "retail-wholesale": {
+      "nav": true,
+      "color": "#FF575D",
+      "adjacent": ["logistics", "food-beverage"],
+      "match_tokens": ["retail", "mayorista", "minorista", "wholesale", "groothandel", "tienda", "comercio", "detail", "ecommerce", "distribuidor"]
+    },
+    "professional-services": {
+      "nav": true,
+      "color": "#050543",
+      "adjacent": ["financial-services"],
+      "match_tokens": ["consultor", "asesor", "professional service", "servicios profesionales", "dienstverlening", "despacho", "agencia", "abogado", "legal"]
+    },
+    "financial-services": {
+      "nav": false,
+      "color": "#050543",
+      "adjacent": ["professional-services"],
+      "match_tokens": ["financ", "banca", "seguro", "leasing", "renting", "verzeker", "inversion", "fintech"]
+    },
+    "energy-utilities": {
+      "nav": true,
+      "color": "#070757",
+      "adjacent": ["construction", "manufacturing"],
+      "match_tokens": ["energ", "utilities", "electric", "nutsvoorzien", "solar", "eolic", "recarga", "fotovolta", "gas", "agua"]
+    }
+  }
+}

@@ -17,6 +17,10 @@ farms:
     # Runs of this farm belong to the project its agents deliver for, so a
     # project manager's `scope: project` reads them (agent_farms.project_id).
     project: odoo-delivery
+    # Runs execute as this service account (by email, so one config serves
+    # every environment). Its odoo_api_key machine credential is what the odoo
+    # MCP server spends; the launching person is still recorded on the run.
+    run_as: svc-odoo-farm@dynapps.es
     source:
       github: systempromptio/systemprompt-agent-farm
       ref: main
@@ -24,9 +28,16 @@ farms:
     defaults:
       permission_mode: acceptEdits
       timeout_seconds: 1200
-      max_turns: 40
+      max_turns: 15
       max_budget_usd: 2.0
-      model: claude-sonnet-5
+      model: claude-sonnet-5-5
 
 runner:
-  max_concurrent: 2
+  max_concurrent: 1
+
+# The model that judges a rubric case after its run finishes. Every trigger
+# (public API, MCP, console, demo) builds the same judge from this block; the
+# call goes through the gateway as the `farm-eval-judge` job actor.
+evals:
+  judge_provider: anthropic
+  judge_model: anthropic-claude-sonnet-5-5

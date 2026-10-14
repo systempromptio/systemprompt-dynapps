@@ -42,6 +42,11 @@ pub struct RunStartInput {
     #[schemars(description = "Prompt for the agent. Empty uses the agent's entry prompt.")]
     #[serde(default)]
     pub prompt: String,
+    #[schemars(
+        description = "Eval case id from the agent's suite. Set, the run uses the case's prompt and fixture and is evaluated when it finishes (assertions, then the judge for a rubric case); the result names the eval run. Empty launches a plain run."
+    )]
+    #[serde(default)]
+    pub case: String,
     #[schemars(description = "Turn ceiling. 0 means the agent's or farm's default.")]
     #[serde(default)]
     pub max_turns: u32,
@@ -144,6 +149,11 @@ pub struct FarmEvalResultsInput {
     #[schemars(description = "Suite id. Empty means every suite.")]
     #[serde(default)]
     pub suite: String,
+    #[schemars(
+        description = "History window: `<n>d`, `<n>h` or an RFC 3339 time. Set, `history` carries per agent per day eval runs, pass rate, mean judge score and cost since then. Empty returns no history."
+    )]
+    #[serde(default)]
+    pub since: String,
 }
 
 /// Usage over a window, for you or for one of your projects.

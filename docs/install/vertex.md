@@ -12,7 +12,7 @@ from, and the secret store supplies the value per environment
 | secret | provider | Google endpoint | what the gateway sends |
 |---|---|---|---|
 | `gemini` | `gemini` (`gemini-3.8-flash`, used by the classifier job) | `https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent` | the value on the `x-goog-api-key` header |
-| `vertex` | `vertex` (`vertex-gemini-3.8-flash`, `vertex-gemini-3.5-flash`, `vertex-gemini-3.5-flash-lite`, plus whatever discovery adds) | `https://aiplatform.googleapis.com/v1/projects/{project}/locations/global/publishers/google/models/{model}:generateContent` | a minted OAuth token as `Authorization: Bearer` |
+| `vertex` | `vertex` (`vertex-gemini-3.8-flash`, plus whatever discovery adds) | `https://aiplatform.googleapis.com/v1/projects/{project}/locations/global/publishers/google/models/{model}:generateContent` | a minted OAuth token as `Authorization: Bearer` |
 | `vertex` | `vertex-anthropic` (the `claude-*` models) | `https://aiplatform.googleapis.com/v1/projects/{project}/locations/global/publishers/anthropic/models/{model}:rawPredict` | a minted OAuth token as `Authorization: Bearer` |
 | `vertex` | `vertex-maas` (GLM 5.2, DeepSeek V3.2, Kimi K2 Thinking, Qwen3 Coder, gpt-oss and the other open models) | `https://aiplatform.googleapis.com/v1beta1/projects/{project}/locations/global/endpoints/openapi/chat/completions` | a minted OAuth token as `Authorization: Bearer` |
 | `vertex` | `vertex-maas-us-central1` (DeepSeek R1) | `https://us-central1-aiplatform.googleapis.com/v1beta1/projects/{project}/locations/us-central1/endpoints/openapi/chat/completions` | a minted OAuth token as `Authorization: Bearer` |

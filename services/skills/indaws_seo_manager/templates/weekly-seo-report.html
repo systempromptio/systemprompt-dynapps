@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SEO Report Semanal | Dynapps</title>
+    <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --dynapps-tangerine: #FF911F;
+            --dynapps-violet: #7B00DC;
+            --dynapps-denim: #050543;
+            --dynapps-coral: #FF7759;
+            --glass-bg: rgba(255, 255, 255, 0.75);
+            --glass-border: rgba(255, 255, 255, 0.3);
+            --glass-shadow: 0 8px 32px rgba(28, 38, 93, 0.1);
+            --text-primary: #1a1a2e;
+            --text-secondary: #4a4a68;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Readex Pro', system-ui, sans-serif;
+            background: linear-gradient(135deg, var(--dynapps-denim) 0%, var(--dynapps-denim) 50%, var(--dynapps-violet) 100%);
+            min-height: 100vh;
+            padding: 2rem;
+            color: var(--text-primary);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .report-header {
+            text-align: center;
+            color: white;
+            margin-bottom: 2rem;
+        }
+
+        .report-header h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .report-header .date-range {
+            font-size: 1rem;
+            opacity: 0.85;
+            font-weight: 400;
+        }
+
+        .report-header .brand {
+            color: var(--dynapps-tangerine);
+            font-weight: 700;
+        }
+
+        /* Glass Card Base */
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 1.5rem;
+            box-shadow: var(--glass-shadow);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .glass-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 40px rgba(28, 38, 93, 0.15);
+        }
+
+        /* Bento Grid */
+        .bento-grid {
+            display: grid;
+            gap: 1.25rem;
+            grid-template-columns: repeat(12, 1fr);
+            grid-template-rows: auto;
+        }
+
+        /* Score Hero - Big Card */
+        .score-hero {
+            grid-column: span 6;
+            grid-row: span 2;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, rgba(107, 104, 250, 0.15) 0%, rgba(138, 194, 219, 0.15) 100%), var(--glass-bg);
+            min-height: 280px;
+        }
+
+        .score-value {
+            font-size: 5rem;
+            font-weight: 700;
+            color: var(--dynapps-violet);
+            line-height: 1;
+        }
+
+        .score-label {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+            font-weight: 600;
+        }
+
+        .score-change {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-top: 1rem;
+        }
+
+        .score-change.up {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--success);
+        }
+
+        .score-change.down {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--danger);
+        }
+
+        /* Keywords Card */
+        .keywords-card {
+            grid-column: span 6;
+        }
+
+        .card-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+        }
+
+        .keyword-stats {
+            display: flex;
+            gap: 1.5rem;
+        }
+
+        .keyword-stat {
+            flex: 1;
+            text-align: center;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 12px;
+        }
+
+        .keyword-stat .value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--dynapps-denim);
+        }
+
+        .keyword-stat .label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+
+        .keyword-stat.up .value { color: var(--success); }
+        .keyword-stat.down .value { color: var(--danger); }
+
+        /* Movement Pills */
+        .movements {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .movement-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.375rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .movement-pill.up {
+            background: rgba(16, 185, 129, 0.12);
+            color: var(--success);
+        }
+
+        .movement-pill.down {
+            background: rgba(239, 68, 68, 0.12);
+            color: var(--danger);
+        }
+
+        /* Metric Cards */
+        .metric-card {
+            grid-column: span 3;
+        }
+
+        .metric-card .metric-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--dynapps-denim);
+        }
+
+        .metric-card .metric-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+
+        .metric-card .metric-change {
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+        }
+
+        .metric-card .metric-change.positive { color: var(--success); }
+        .metric-card .metric-change.negative { color: var(--danger); }
+
+        /* Actions Card */
+        .actions-card {
+            grid-column: span 6;
+        }
+
+        .action-list {
+            list-style: none;
+        }
+
+        .action-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            padding: 0.875rem;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 12px;
+            margin-bottom: 0.5rem;
+        }
+
+        .action-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .action-priority {
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .priority-1 { background: var(--danger); }
+        .priority-2 { background: var(--warning); }
+        .priority-3 { background: var(--dynapps-violet); }
+        .priority-4 { background: var(--dynapps-coral); }
+        .priority-5 { background: #94a3b8; }
+
+        .action-content {
+            flex: 1;
+        }
+
+        .action-title {
+            font-weight: 600;
+            font-size: 0.875rem;
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .action-meta {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .action-tag {
+            display: inline-block;
+            padding: 0.125rem 0.5rem;
+            background: rgba(107, 104, 250, 0.12);
+            color: var(--dynapps-violet);
+            border-radius: 4px;
+            font-size: 0.625rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        /* Technical Issues */
+        .issues-card {
+            grid-column: span 6;
+        }
+
+        .issue-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+        }
+
+        .issue-row:last-child {
+            border-bottom: none;
+        }
+
+        .issue-name {
+            font-size: 0.875rem;
+            color: var(--text-primary);
+        }
+
+        .issue-count {
+            font-size: 0.875rem;
+            font-weight: 700;
+        }
+
+        .issue-count.critical { color: var(--danger); }
+        .issue-count.warning { color: var(--warning); }
+        .issue-count.ok { color: var(--success); }
+
+        /* Top Pages Table */
+        .pages-card {
+            grid-column: span 12;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table th {
+            text-align: left;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 0.75rem 1rem;
+            border-bottom: 2px solid rgba(0, 0, 0, 0.06);
+        }
+
+        .data-table td {
+            padding: 0.875rem 1rem;
+            font-size: 0.875rem;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+        }
+
+        .data-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .data-table tr:hover {
+            background: rgba(107, 104, 250, 0.04);
+        }
+
+        .page-url {
+            color: var(--dynapps-violet);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .page-url:hover {
+            text-decoration: underline;
+        }
+
+        .position-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 24px;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 0.75rem;
+        }
+
+        .position-badge.top3 {
+            background: linear-gradient(135deg, var(--dynapps-tangerine), #FF7E23);
+            color: var(--dynapps-denim);
+        }
+
+        .position-badge.top10 {
+            background: rgba(107, 104, 250, 0.15);
+            color: var(--dynapps-violet);
+        }
+
+        .position-badge.top50 {
+            background: rgba(138, 194, 219, 0.2);
+            color: var(--dynapps-denim);
+        }
+
+        /* Progress Bars */
+        .progress-container {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .progress-bar {
+            flex: 1;
+            height: 6px;
+            background: rgba(0, 0, 0, 0.08);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
+        .progress-fill.good { background: var(--success); }
+        .progress-fill.warning { background: var(--warning); }
+        .progress-fill.bad { background: var(--danger); }
+
+        .progress-value {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            min-width: 36px;
+        }
+
+        /* Competitors Card */
+        .competitors-card {
+            grid-column: span 6;
+        }
+
+        .competitor-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.625rem 0;
+        }
+
+        .competitor-rank {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            width: 20px;
+        }
+
+        .competitor-name {
+            flex: 1;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .competitor-score {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--dynapps-violet);
+        }
+
+        /* Footer */
+        .report-footer {
+            text-align: center;
+            margin-top: 2rem;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.75rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .bento-grid {
+                grid-template-columns: repeat(6, 1fr);
+            }
+            .score-hero { grid-column: span 6; }
+            .keywords-card { grid-column: span 6; }
+            .metric-card { grid-column: span 3; }
+            .actions-card { grid-column: span 6; }
+            .issues-card { grid-column: span 6; }
+            .pages-card { grid-column: span 6; }
+            .competitors-card { grid-column: span 6; }
+        }
+
+        @media (max-width: 640px) {
+            body { padding: 1rem; }
+            .bento-grid { grid-template-columns: 1fr; gap: 1rem; }
+            .score-hero, .keywords-card, .metric-card, 
+            .actions-card, .issues-card, .pages-card, .competitors-card {
+                grid-column: span 1;
+            }
+            .score-value { font-size: 3.5rem; }
+            .keyword-stats { flex-direction: column; gap: 0.75rem; }
+        }
+
+        /* Print Styles */
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            .glass-card {
+                box-shadow: none;
+                border: 1px solid #e5e7eb;
+                break-inside: avoid;
+            }
+            .report-header {
+                color: var(--dynapps-denim);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="report-header">
+            <h1>Reporte SEO Semanal | <span class="brand">Dynapps</span></h1>
+            <p class="date-range">{{WEEK_START}} al {{WEEK_END}}</p>
+        </header>
+
+        <!-- Bento Grid Dashboard -->
+        <div class="bento-grid">
+
+            <!-- Score Hero -->
+            <div class="glass-card score-hero">
+                <div class="score-value">{{SEO_SCORE}}</div>
+                <div class="score-label">SEO Score</div>
+                <div class="score-change {{SCORE_DIRECTION}}">
+                    {{SCORE_ARROW}} {{SCORE_CHANGE}} vs semana anterior
+                </div>
+            </div>
+
+            <!-- Keywords Summary -->
+            <div class="glass-card keywords-card">
+                <div class="card-title">Keywords Rankings</div>
+                <div class="keyword-stats">
+                    <div class="keyword-stat">
+                        <div class="value">{{TOP3_COUNT}}</div>
+                        <div class="label">TOP 3</div>
+                    </div>
+                    <div class="keyword-stat">
+                        <div class="value">{{TOP10_COUNT}}</div>
+                        <div class="label">TOP 10</div>
+                    </div>
+                    <div class="keyword-stat">
+                        <div class="value">{{TOP50_COUNT}}</div>
+                        <div class="label">TOP 50</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Keyword Movements -->
+            <div class="glass-card keywords-card">
+                <div class="card-title">Movimientos Destacados</div>
+                <div class="keyword-stats">
+                    <div class="keyword-stat up">
+                        <div class="value">{{KEYWORDS_UP}}</div>
+                        <div class="label">Subidas</div>
+                    </div>
+                    <div class="keyword-stat down">
+                        <div class="value">{{KEYWORDS_DOWN}}</div>
+                        <div class="label">Bajadas</div>
+                    </div>
+                    <div class="keyword-stat">
+                        <div class="value">{{NEW_TOP10}}</div>
+                        <div class="label">Nuevas TOP 10</div>
+                    </div>
+                </div>
+                <div class="movements">
+                    {{#MOVEMENTS}}
+                    <span class="movement-pill {{DIRECTION}}">{{ARROW}} {{KEYWORD}} ({{CHANGE}})</span>
+                    {{/MOVEMENTS}}
+                </div>
+            </div>
+
+            <!-- Metric Cards -->
+            <div class="glass-card metric-card">
+                <div class="metric-value">{{INDEXED_PAGES}}</div>
+                <div class="metric-label">Paginas Indexadas</div>
+                <div class="metric-change {{INDEXED_DIRECTION}}">{{INDEXED_CHANGE}}</div>
+            </div>
+
+            <div class="glass-card metric-card">
+                <div class="metric-value">{{BACKLINKS}}</div>
+                <div class="metric-label">Backlinks</div>
+                <div class="metric-change {{BACKLINKS_DIRECTION}}">{{BACKLINKS_CHANGE}}</div>
+            </div>
+
+            <div class="glass-card metric-card">
+                <div class="metric-value">{{DOMAIN_SCORE}}</div>
+                <div class="metric-label">Domain Score</div>
+                <div class="metric-change {{DS_DIRECTION}}">{{DS_CHANGE}}</div>
+            </div>
+
+            <div class="glass-card metric-card">
+                <div class="metric-value">{{REF_DOMAINS}}</div>
+                <div class="metric-label">Referring Domains</div>
+                <div class="metric-change {{RD_DIRECTION}}">{{RD_CHANGE}}</div>
+            </div>
+
+            <!-- Top 5 Actions -->
+            <div class="glass-card actions-card">
+                <div class="card-title">Top 5 Acciones Esta Semana</div>
+                <ul class="action-list">
+                    {{#ACTIONS}}
+                    <li class="action-item">
+                        <div class="action-priority priority-{{PRIORITY}}">{{PRIORITY}}</div>
+                        <div class="action-content">
+                            <div class="action-title">{{TITLE}}</div>
+                            <div class="action-meta">
+                                <span class="action-tag">{{TYPE}}</span>
+                                {{TARGET_KEYWORD}} | Impacto: {{IMPACT}}
+                            </div>
+                        </div>
+                    </li>
+                    {{/ACTIONS}}
+                </ul>
+            </div>
+
+            <!-- Technical Issues -->
+            <div class="glass-card issues-card">
+                <div class="card-title">Issues Tecnicos</div>
+                <div class="issue-row">
+                    <span class="issue-name">Errores 4xx</span>
+                    <span class="issue-count {{ERRORS_4XX_CLASS}}">{{ERRORS_4XX}}</span>
+                </div>
+                <div class="issue-row">
+                    <span class="issue-name">Errores 5xx</span>
+                    <span class="issue-count {{ERRORS_5XX_CLASS}}">{{ERRORS_5XX}}</span>
+                </div>
+                <div class="issue-row">
+                    <span class="issue-name">Missing Meta Descriptions</span>
+                    <span class="issue-count {{MISSING_META_CLASS}}">{{MISSING_META}}</span>
+                </div>
+                <div class="issue-row">
+                    <span class="issue-name">Missing Alt Text</span>
+                    <span class="issue-count {{MISSING_ALT_CLASS}}">{{MISSING_ALT}}</span>
+                </div>
+                <div class="issue-row">
+                    <span class="issue-name">Paginas Lentas (&gt;3s)</span>
+                    <span class="issue-count {{SLOW_PAGES_CLASS}}">{{SLOW_PAGES}}</span>
+                </div>
+                <div class="issue-row">
+                    <span class="issue-name">Thin Content (&lt;300 palabras)</span>
+                    <span class="issue-count {{THIN_CONTENT_CLASS}}">{{THIN_CONTENT}}</span>
+                </div>
+            </div>
+
+            <!-- Top Performing Pages -->
+            <div class="glass-card pages-card">
+                <div class="card-title">Top Pages por Rendimiento</div>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Pagina</th>
+                            <th>Keyword Principal</th>
+                            <th>Posicion</th>
+                            <th>Volumen</th>
+                            <th>Cambio</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{#TOP_PAGES}}
+                        <tr>
+                            <td><a href="{{URL}}" class="page-url" target="_blank">{{PAGE_TITLE}}</a></td>
+                            <td>{{KEYWORD}}</td>
+                            <td><span class="position-badge {{POSITION_CLASS}}">{{POSITION}}</span></td>
+                            <td>{{VOLUME}}</td>
+                            <td class="{{CHANGE_CLASS}}">{{CHANGE}}</td>
+                        </tr>
+                        {{/TOP_PAGES}}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Core Web Vitals -->
+            <div class="glass-card issues-card">
+                <div class="card-title">Core Web Vitals</div>
+                <div class="issue-row">
+                    <span class="issue-name">LCP (Largest Contentful Paint)</span>
+                    <div class="progress-container">
+                        <div class="progress-bar">
+                            <div class="progress-fill {{LCP_CLASS}}" style="width: {{LCP_PERCENT}}%"></div>
+                        </div>
+                        <span class="progress-value">{{LCP_VALUE}}</span>
+                    </div>
+                </div>
+                <div class="issue-row">
+                    <span class="issue-name">FID (First Input Delay)</span>
+                    <div class="progress-container">
+                        <div class="progress-bar">
+                            <div class="progress-fill {{FID_CLASS}}" style="width: {{FID_PERCENT}}%"></div>
+                        </div>
+                        <span class="progress-value">{{FID_VALUE}}</span>
+                    </div>
+                </div>
+                <div class="issue-row">
+                    <span class="issue-name">CLS (Cumulative Layout Shift)</span>
+                    <div class="progress-container">
+                        <div class="progress-bar">
+                            <div class="progress-fill {{CLS_CLASS}}" style="width: {{CLS_PERCENT}}%"></div>
+                        </div>
+                        <span class="progress-value">{{CLS_VALUE}}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Competitors -->
+            <div class="glass-card competitors-card">
+                <div class="card-title">Competidores - Keywords Compartidas</div>
+                {{#COMPETITORS}}
+                <div class="competitor-row">
+                    <span class="competitor-rank">{{RANK}}</span>
+                    <span class="competitor-name">{{DOMAIN}}</span>
+                    <span class="competitor-score">{{SHARED_KEYWORDS}} kws</span>
+                </div>
+                {{/COMPETITORS}}
+            </div>
+
+        </div>
+
+        <!-- Footer -->
+        <footer class="report-footer">
+            <p>Generado automaticamente por SEO Manager | dynapps.es</p>
+            <p>Datos: DataForSEO API | Fecha: {{GENERATED_DATE}}</p>
+        </footer>
+    </div>
+</body>
+</html>

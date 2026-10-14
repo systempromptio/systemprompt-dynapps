@@ -3,7 +3,9 @@
 //! upserting agents, fixtures and eval suites.
 //!
 //! A failure at any step records `sync_error` on the farm and leaves the
-//! previously synced rows in place.
+//! previously synced rows in place. Every `mcp__<server>` tool an agent
+//! declares must name an enabled MCP server of this instance, so a typo fails
+//! the sync rather than the run.
 
 pub mod agent_md;
 pub mod capture;
@@ -96,6 +98,7 @@ async fn sync_captured(
             source,
         })??;
     let parsed = parse_farm_tree(&captured.files)?;
+    check_mcp_servers(&parsed)?;
     if parsed.manifest.marketplace != farm.marketplace_id.as_str() {
         return Err(FarmError::Validation(format!(
             "farm.yaml marketplace {:?} does not match the configured {:?}",
@@ -131,6 +134,28 @@ async fn sync_captured(
         cases,
         warnings: parsed.warnings,
     })
+}
+
+fn check_mcp_servers(parsed: &ParsedFarm) -> FarmResult<()> {
+    let Ok(services) = systemprompt::loader::ServicesBootstrap::get() else {
+        return Err(FarmError::Config(
+            "services config is not loaded; MCP tools cannot be checked".to_owned(),
+        ));
+    };
+    for agent in &parsed.agents {
+        let unknown = agent
+            .tools
+            .iter()
+            .filter_map(|tool| validate::mcp_server_of(tool))
+            .find(|server| !services.mcp_servers.get(*server).is_some_and(|s| s.enabled));
+        if let Some(server) = unknown {
+            return Err(validate::definition_error(
+                &agent.source_path,
+                format!("MCP server {server:?} is not an enabled server of this instance"),
+            ));
+        }
+    }
+    Ok(())
 }
 
 async fn write_fixtures(parsed: &ParsedFarm, dirs: &[PathBuf]) -> FarmResult<Vec<FixtureManifest>> {
@@ -176,7 +201,7 @@ async fn resolve_run_as(pool: &PgPool, def: &FarmDef) -> FarmResult<Option<UserI
     let Some(run_as) = def.run_as.as_deref() else {
         return Ok(None);
     };
-    farms::find_service_account(pool, &UserId::new(run_as.trim()))
+    farms::find_service_account(pool, run_as.trim())
         .await?
         .map(Some)
         .ok_or_else(|| {

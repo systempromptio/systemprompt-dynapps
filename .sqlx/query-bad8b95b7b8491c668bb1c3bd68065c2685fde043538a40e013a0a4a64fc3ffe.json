@@ -1,0 +1,88 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT odoo_url, odoo_db, odoo_login, odoo_uid, api_key_ciphertext, api_key_nonce FROM odoo_user_links WHERE user_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "odoo_url",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "odoo_user_links",
+            "name": "odoo_url"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "odoo_db",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "odoo_user_links",
+            "name": "odoo_db"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "odoo_login",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "odoo_user_links",
+            "name": "odoo_login"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "odoo_uid",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "odoo_user_links",
+            "name": "odoo_uid"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "api_key_ciphertext",
+        "type_info": "Bytea",
+        "origin": {
+          "Table": {
+            "table": "odoo_user_links",
+            "name": "api_key_ciphertext"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "api_key_nonce",
+        "type_info": "Bytea",
+        "origin": {
+          "Table": {
+            "table": "odoo_user_links",
+            "name": "api_key_nonce"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "bad8b95b7b8491c668bb1c3bd68065c2685fde043538a40e013a0a4a64fc3ffe"
+}

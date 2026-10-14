@@ -1,0 +1,1231 @@
+<!DOCTYPE html>
+<html lang="{{HTML_LANG}}">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{DOC_TITLE}}</title>
+<style>
+{{FONT_FACES}}
+:root{
+  /* Tokens: dynapps-brand references/brand-system.md — keep in sync. */
+  --midnight:#050543;--violet:#951CF3;
+  --carmine:#FF575D;--orange:#FF7759;--tangerine:#FF7E23;
+  /* Profundidad y superficies de marca. */
+  --deep:#030330;--surface:#070757;
+  --snow:#F5F5FA;--off-white:#F6F5F8;
+  /* Greys de marca (secciones claras). */
+  --grey-100:#E8E7EC;--grey-200:#CDCBD4;--grey-400:#9290A6;--grey-600:#65637A;
+  --lm:#7272A8;
+  /* Paleta pura de marca para texto pequeño (decisión deliberada: se acepta el
+     miss de contraste AA a cambio de la fidelidad cromática de marca). */
+  --carmine-text:#FF575D;
+  --tangerine-text:#FF7E23;
+  --grad:linear-gradient(45deg,var(--violet) 0%,var(--carmine) 52%,var(--orange) 100%);
+  --grad-h:linear-gradient(90deg,var(--violet) 0%,var(--carmine) 52%,var(--orange) 100%);
+  --bg:#ffffff;--tint:var(--snow);--tint2:var(--off-white);
+  --ink:#050543;--ink2:var(--grey-600);--line:var(--grey-100);
+  /* Escala tipográfica cerrada (ratio ~1.25). El hero es el único escalón libre. */
+  --fs-xs:12px;--fs-s:14px;--fs-m:16px;--fs-l:20px;--fs-xl:24px;--fs-2xl:32px;--fs-total:40px;
+  --fs-hero:clamp(40px,6vw,64px);
+  /* Spacing 4pt: 4/8/12/16/24/32/48/64. */
+  --sp-1:4px;--sp-2:8px;--sp-3:12px;--sp-4:16px;--sp-5:24px;--sp-6:32px;--sp-7:48px;--sp-8:64px;
+  /* Radios: chips/inputs 8, controles/cards pequeñas 12, cards 16, paneles 24, pill 999. */
+  --r-1:8px;--r-2:12px;--r-3:16px;--r-4:24px;--r-pill:999px;
+  /* Sombras: 3 niveles de elevación reutilizables + 1 sombra de color (botón/anchor). */
+  --sh-1:0 4px 18px rgba(5,5,67,.05);
+  --sh-2:0 10px 30px rgba(5,5,67,.06);
+  --sh-3:0 22px 56px rgba(5,5,67,.10);
+  --sh-violet:0 10px 28px rgba(149,28,243,.22);
+  /* Ancho de la columna de etiqueta del Gantt (= ancho columna grid + gutter). */
+  --gantt-label-w:216px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;scroll-padding-top:70px;}
+body{font-family:'Readex Pro',system-ui,sans-serif;font-weight:400;line-height:1.5;
+  color:var(--ink);background:var(--bg);font-size:var(--fs-m);overflow-x:hidden;-webkit-font-smoothing:antialiased;}
+.accent{color:var(--tangerine-text);}
+/* Calma visual (Ine): los títulos de sección son de UN solo color oscuro; el
+   span .accent de los packs se neutraliza aquí (los strings no cambian). */
+.sec-title .accent,.gf-title .accent{color:inherit;}
+strong{color:var(--ink);font-weight:600;}
+.wrap{max-width:1080px;margin:0 auto;padding:0 var(--sp-6);}
+.sec{padding:var(--sp-8) 0;position:relative;}
+.sec-tint{background:var(--tint);}
+.eyebrow{display:inline-block;font-size:var(--fs-xs);font-weight:700;letter-spacing:.16em;
+  color:var(--violet);margin-bottom:var(--sp-3);}
+.sec-title{font-size:var(--fs-2xl);font-weight:700;line-height:1.15;color:var(--ink);
+  letter-spacing:-.01em;margin-bottom:var(--sp-4);}
+.sec-lead{font-size:var(--fs-m);color:var(--ink2);max-width:680px;margin-bottom:var(--sp-5);}
+.glass{background:#fff;border:1px solid var(--line);border-radius:var(--r-4);
+  box-shadow:var(--sh-3);}
+
+/* ---------- HERO (banda con gradiente) ---------- */
+/* Fondo plano midnight con glows ambientales de marca (0.06–0.10 de opacidad). */
+.hero{min-height:64vh;display:flex;flex-direction:column;justify-content:center;position:relative;
+  overflow:hidden;padding:calc(var(--sp-8) + 54px) 0 var(--sp-8);color:#fff;
+  background:radial-gradient(1200px 720px at 78% 8%,rgba(149,28,243,.10),transparent 58%),
+  radial-gradient(900px 620px at 6% 96%,rgba(255,87,93,.06),transparent 55%),
+  var(--midnight);}
+/* Logo inicial con más aire alrededor (arriba y a la izquierda) para que respire.
+   align-self:flex-start: el wrap del hero es flex column (align-items:stretch por
+   defecto) y sin él la <img> se estira a todo el ancho y el logo aparece centrado. */
+.hero-logo{height:34px;align-self:flex-start;margin-bottom:auto;margin-top:var(--sp-6);margin-left:var(--sp-4);}
+.hero-inner{margin-top:auto;}
+.hero .eyebrow{color:var(--tangerine);}
+/* Sobre fondo oscuro el tangerine brillante sí cumple AA (9.18:1): úsalo aquí. */
+.hero .accent{color:var(--tangerine);}
+.hero h1{font-size:var(--fs-hero);font-weight:700;line-height:1.04;color:#fff;
+  letter-spacing:-.02em;margin:var(--sp-3) 0;}
+.hero-sub{font-size:var(--fs-l);color:rgba(255,255,255,.82);max-width:640px;margin-bottom:var(--sp-5);}
+.meta-chips{display:flex;flex-wrap:wrap;gap:var(--sp-2);margin-bottom:var(--sp-7);}
+.chip{font-size:var(--fs-s);color:#fff;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.22);
+  border-radius:var(--r-pill);padding:var(--sp-2) var(--sp-4);backdrop-filter:blur(8px);}
+.chip b{color:var(--tangerine);font-weight:600;margin-right:6px;}
+.hero-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--sp-4);}
+.hstat{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:var(--r-3);
+  padding:var(--sp-5) var(--sp-4);backdrop-filter:blur(10px);}
+.hstat-num{display:block;font-size:var(--fs-2xl);font-weight:700;line-height:1;color:var(--tangerine);}
+.hstat-lab{display:block;font-size:var(--fs-s);color:rgba(255,255,255,.78);margin-top:var(--sp-2);}
+
+/* ---------- PARTNER BANNER ---------- */
+.partner-banner{display:grid;grid-template-columns:auto 1fr;gap:var(--sp-6);align-items:center;
+  background:var(--deep);border-radius:var(--r-4);
+  padding:var(--sp-6) var(--sp-7);color:#fff;margin-bottom:var(--sp-6);}
+.partner-rank{display:flex;align-items:center;gap:var(--sp-4);border-right:1px solid rgba(255,255,255,.18);padding-right:var(--sp-6);}
+.partner-num{font-size:var(--fs-total);font-weight:700;line-height:.9;color:var(--tangerine);}
+.partner-lab{font-size:var(--fs-m);font-weight:600;color:#fff;line-height:1.25;}
+.po-title{font-size:var(--fs-m);font-weight:600;color:var(--tangerine);margin-bottom:var(--sp-3);}
+.office-chips{display:flex;flex-wrap:wrap;gap:var(--sp-2);margin-bottom:var(--sp-3);}
+.office-chip{font-size:var(--fs-s);color:#fff;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.2);
+  border-radius:var(--r-pill);padding:var(--sp-1) var(--sp-3);}
+.po-note{font-size:var(--fs-s);color:rgba(255,255,255,.72);margin:0;}
+/* Banda de cifras de credibilidad (instance.credibility + certificaciones). */
+.why-figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:var(--sp-4);margin-bottom:var(--sp-6);}
+.wfig{background:var(--tint2);border:1px solid var(--line);border-radius:var(--r-3);padding:var(--sp-4);text-align:center;}
+.wfig-num{display:block;font-size:var(--fs-xl);font-weight:700;color:var(--ink);line-height:1.15;}
+.wfig-lab{display:block;font-size:var(--fs-xs);color:var(--ink2);margin-top:var(--sp-1);}
+/* Tres pilares (Ine): escala / partner único / predecible. */
+.pillar-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--sp-4);margin-bottom:var(--sp-6);}
+.pillar{padding:var(--sp-5);background:#fff;border:1px solid var(--line);border-radius:var(--r-3);
+  box-shadow:var(--sh-2);}
+.pillar h4{font-size:var(--fs-l);color:var(--ink);margin-bottom:var(--sp-2);display:flex;align-items:center;}
+.pillar p{font-size:var(--fs-s);color:var(--ink2);}
+.philosophy{background:var(--grad);border-radius:var(--r-4);padding:var(--sp-6) var(--sp-7);}
+.philosophy h3{font-size:var(--fs-xl);font-weight:700;color:#fff;margin-bottom:var(--sp-3);}
+.philosophy .accent{color:#fff;}
+.philosophy p{font-size:var(--fs-m);color:rgba(255,255,255,.94);}
+.philosophy strong{color:#fff;}
+
+/* ---------- TEAM ---------- */
+.team-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:var(--sp-4);}
+.team-card{padding:var(--sp-5);text-align:center;display:flex;flex-direction:column;align-items:center;}
+.team-photo{width:104px;height:104px;border-radius:50%;object-fit:cover;margin-bottom:var(--sp-3);
+  border:3px solid #fff;box-shadow:var(--sh-2);}
+.avatar-initials{display:flex;align-items:center;justify-content:center;background:var(--grad);
+  color:#fff;font-size:var(--fs-2xl);font-weight:700;}
+.team-name{font-size:var(--fs-m);font-weight:600;color:var(--ink);}
+.team-role{font-size:var(--fs-s);color:var(--violet);margin-top:var(--sp-1);font-weight:600;}
+.team-area{font-size:var(--fs-xs);color:var(--ink2);margin-top:var(--sp-2);background:var(--tint);
+  border:1px solid var(--line);border-radius:var(--r-pill);padding:var(--sp-1) var(--sp-3);}
+.team-focus{font-size:var(--fs-s);color:var(--ink2);font-style:italic;margin-top:var(--sp-3);line-height:1.4;}
+.team-skills{display:flex;flex-wrap:wrap;gap:var(--sp-2);justify-content:center;margin-top:var(--sp-3);}
+.team-skill{font-size:var(--fs-xs);font-weight:600;color:var(--violet);background:rgba(149,28,243,.08);
+  border:1px solid rgba(149,28,243,.16);border-radius:var(--r-1);padding:var(--sp-1) var(--sp-3);}
+.team-contact{margin-top:var(--sp-3);padding-top:var(--sp-3);border-top:1px solid var(--line);width:100%;
+  display:flex;flex-direction:column;gap:var(--sp-1);align-items:center;}
+.team-mail{font-size:var(--fs-xs);color:var(--violet);text-decoration:none;word-break:break-all;}
+
+/* ---------- PAIN POINTS ---------- */
+.pain-card{display:grid;grid-template-columns:1fr 46px 1fr;align-items:stretch;
+  margin-bottom:var(--sp-4);border-radius:var(--r-3);overflow:hidden;border:1px solid var(--line);background:#fff;
+  box-shadow:var(--sh-2);}
+.pain-side{padding:var(--sp-5);}
+.pain-side.reto{background:var(--tint);}
+.pain-side.sol{background:rgba(149,28,243,.06);}
+.pain-tag{display:inline-block;font-size:var(--fs-xs);font-weight:700;letter-spacing:.12em;
+  color:var(--violet);margin-bottom:var(--sp-2);}
+.pain-tag.sol{color:var(--violet);}
+.pain-side p{font-size:var(--fs-m);color:var(--ink);}
+.pain-arrow{display:flex;align-items:center;justify-content:center;font-size:var(--fs-xl);color:var(--ink2);background:#fff;}
+
+/* ---------- EXEC ---------- */
+.exec-panel{padding:var(--sp-6);font-size:var(--fs-m);}
+.exec-panel p{margin-bottom:var(--sp-4);color:var(--ink2);}
+.exec-panel p:last-child{margin-bottom:0;}
+.exec-panel strong{color:var(--ink);}
+
+/* ---------- MINDMAP ---------- */
+.mindmap-svg{width:100%;height:auto;display:block;}
+/* Lista móvil del mapa (el SVG radial se encoge ilegible en pantallas estrechas) */
+.mindmap-list{display:none;}
+.mm-li-center{display:flex;align-items:center;gap:10px;background:var(--grad);color:#fff;
+  border-radius:var(--r-2);padding:var(--sp-3) var(--sp-4);font-size:var(--fs-s);line-height:1.35;margin-bottom:10px;}
+.mm-li-center b{font-weight:700;}
+.mm-li{display:flex;align-items:center;gap:12px;background:#fff;border-radius:var(--r-2);
+  padding:var(--sp-3);box-shadow:var(--sh-1);}
+.mm-li-ico{width:40px;height:40px;border-radius:var(--r-2);display:flex;align-items:center;
+  justify-content:center;flex-shrink:0;}
+.mm-li-ico-img{width:26px;height:26px;display:block;}
+.mm-li-name{font-size:var(--fs-m);font-weight:700;color:var(--ink);line-height:1.2;}
+.mm-li-out{font-size:var(--fs-s);color:var(--ink2);}
+
+/* ---------- CRONOGRAMA ---------- */
+.flow-row{display:flex;align-items:stretch;gap:10px;flex-wrap:wrap;margin-bottom:var(--sp-7);}
+.flow-step{flex:1;min-width:180px;background:#fff;border:1px solid var(--line);border-radius:var(--r-3);
+  padding:var(--sp-5);box-shadow:var(--sh-2);}
+.flow-num{font-size:var(--fs-s);font-weight:700;color:var(--violet);letter-spacing:.1em;margin-bottom:var(--sp-3);}
+.flow-title{font-size:var(--fs-l);font-weight:600;color:var(--ink);margin-bottom:var(--sp-1);}
+.flow-dur{font-size:var(--fs-s);color:var(--violet);font-weight:600;margin-bottom:var(--sp-3);}
+.flow-desc{font-size:var(--fs-s);color:var(--ink2);}
+.flow-arrow{display:flex;align-items:center;font-size:var(--fs-2xl);color:var(--violet);font-weight:400;}
+.gantt2{margin-top:var(--sp-2);}
+.grow{display:grid;grid-template-columns:calc(var(--gantt-label-w) - var(--sp-4)) 1fr;align-items:center;gap:var(--sp-4);margin-bottom:var(--sp-2);}
+.glabel{font-size:var(--fs-s);font-weight:600;text-align:right;color:var(--ink);}
+.gtrack{position:relative;height:20px;border-radius:var(--r-1);overflow:hidden;}
+.gbar{position:absolute;top:0;height:100%;border-radius:var(--r-1);}
+.gaxis{position:relative;height:18px;margin-left:var(--gantt-label-w);margin-top:var(--sp-2);}
+.gaxis span{position:absolute;font-size:var(--fs-xs);color:var(--ink2);transform:translateX(-50%);}
+.glegend{display:flex;flex-wrap:wrap;gap:var(--sp-4);margin-top:var(--sp-5);margin-left:var(--gantt-label-w);}
+.gleg{display:flex;align-items:center;gap:var(--sp-2);font-size:var(--fs-xs);color:var(--ink2);}
+.gdot{width:12px;height:12px;border-radius:3px;}
+
+/* ---------- APPS (QS vs Advance muy diferenciados) ---------- */
+.app-card{padding:var(--sp-6);margin-bottom:var(--sp-4);background:#fff;
+  border-radius:var(--r-3);box-shadow:var(--sh-3);}
+.app-card-head{display:flex;align-items:center;gap:var(--sp-4);margin-bottom:var(--sp-4);}
+.app-ico{width:52px;height:52px;border-radius:var(--r-2);display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;}
+.app-ico img{width:34px;height:34px;display:block;}
+.app-ico.letter{font-size:var(--fs-xl);font-weight:700;color:#fff;}
+.app-card-head h3{font-size:var(--fs-xl);font-weight:700;color:var(--ink);line-height:1.1;}
+.app-outcome{font-size:var(--fs-s);color:var(--violet);font-weight:600;}
+.app-intro{font-size:var(--fs-m);color:var(--ink2);margin-bottom:var(--sp-4);}
+.app-intro p{margin-bottom:var(--sp-3);}
+.app-fit{display:flex;align-items:baseline;gap:var(--sp-3);margin-bottom:var(--sp-5);padding:var(--sp-3) var(--sp-4);
+  border-radius:var(--r-2);background:var(--tint2);}
+.app-fit-tag{font-size:var(--fs-xs);font-weight:700;letter-spacing:.06em;color:var(--violet);white-space:nowrap;flex-shrink:0;}
+.app-fit-txt{font-size:var(--fs-m);color:var(--ink);}
+.tier-grid{display:flex;flex-direction:column;gap:var(--sp-3);}
+/* Panel sobrio sin borde ni filete: solo tinte muy suave de fondo.
+   Diferenciación Incluido/Adaptado por la etiqueta (badge) y el tinte. */
+.tier{position:relative;border-radius:var(--r-3);padding:var(--sp-5);
+  background:var(--tint2);
+  box-shadow:var(--sh-1);transition:transform .2s ease,box-shadow .2s ease;}
+.tier:hover{transform:translateY(-2px);box-shadow:var(--sh-2);}
+.qs-tier{background:rgba(149,28,243,.04);}
+.adv-tier{background:rgba(149,28,243,.04);}
+.tier-inner{position:relative;}
+.tier-head{display:flex;align-items:center;gap:var(--sp-3);margin-bottom:var(--sp-4);}
+.tier-ico{width:26px;height:26px;border-radius:var(--r-1);display:flex;align-items:center;justify-content:center;
+  color:#fff;font-size:var(--fs-s);font-weight:700;flex-shrink:0;box-shadow:none;}
+.tier-ico.qs{background:var(--violet);}
+.tier-ico.adv{background:var(--violet);}
+.tier-titles{display:flex;flex-direction:column;line-height:1.2;}
+.tier-name{font-size:var(--fs-m);font-weight:700;color:var(--ink);}
+.tier-sub{font-size:var(--fs-xs);font-weight:700;letter-spacing:.1em;}
+.tier-sub.qs{color:var(--violet);}
+.tier-sub.adv{color:var(--violet);}
+.tier-count{margin-left:auto;font-size:var(--fs-xs);font-weight:600;color:var(--ink2);
+  background:#fff;border:1px solid var(--line);border-radius:var(--r-pill);padding:var(--sp-1) var(--sp-3);white-space:nowrap;}
+.feat-list{position:relative;list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-3) var(--sp-6);}
+.feat-list li{font-size:var(--fs-s);padding-left:20px;position:relative;color:var(--ink);line-height:1.45;}
+/* Sistema único de viñetas: "✓" = Incluido, "+" = Adaptado a tu caso. */
+.feat-list li::before{position:absolute;left:0;top:0;display:block;font-weight:700;font-size:var(--fs-s);line-height:1.45;}
+/* Calma (Ine): las viñetas heredan el color del TEXTO; el tipo lo marca el glifo. */
+.qs-list li::before{content:"\2713";color:var(--ink);}
+.adv-list li::before{content:"+";color:var(--ink);}
+.feat-name{font-weight:600;color:var(--ink);}
+.feat-expl{color:var(--ink2);font-weight:400;}
+.feat-name + .feat-expl::before{content:" · ";color:var(--ink2);}
+.adv-empty{font-size:var(--fs-s);color:var(--ink2);font-style:italic;padding:var(--sp-4);background:var(--tint2);
+  border:1px solid var(--line);border-radius:var(--r-2);}
+/* --- Acordeón de apps (progressive disclosure, SOLO web) ---
+   <details> nativo: colapsado por defecto, sin animación de altura (respeta
+   prefers-reduced-motion de serie); solo el chevron rota con una transición
+   suave, que se desactiva bajo reduced-motion. */
+details.app-acc{padding:0;overflow:hidden;}
+.app-acc>summary.app-card-head{list-style:none;cursor:pointer;margin-bottom:0;
+  padding:var(--sp-5) var(--sp-6);border-radius:var(--r-3);}
+.app-acc>summary.app-card-head::-webkit-details-marker{display:none;}
+.app-acc>summary.app-card-head:hover{background:var(--tint2);}
+.app-acc>summary.app-card-head:focus-visible{outline:3px solid var(--violet);outline-offset:-3px;}
+.app-acc .acc-titles{flex:1;min-width:0;}
+.acc-chip{flex:none;font-size:var(--fs-xs);font-weight:600;color:var(--ink2);background:var(--tint2);
+  border:1px solid var(--line);border-radius:var(--r-pill);padding:var(--sp-1) var(--sp-3);white-space:nowrap;}
+.acc-chip b.acc-n-qs{color:var(--ink);font-weight:700;}
+.acc-chip b.acc-n-adv{color:var(--ink);font-weight:700;}
+.acc-chev{flex:none;width:11px;height:11px;margin:-4px 4px 0 2px;
+  border-right:2.5px solid var(--violet);border-bottom:2.5px solid var(--violet);
+  transform:rotate(45deg);transition:transform .2s ease;}
+.app-acc[open]>summary .acc-chev{transform:rotate(225deg);margin-top:4px;}
+.app-acc-body{padding:0 var(--sp-6) var(--sp-6);}
+.acc-toolbar{display:flex;justify-content:flex-end;margin-bottom:var(--sp-4);}
+.acc-toggle-all{font:inherit;font-size:var(--fs-s);font-weight:600;color:var(--violet);
+  background:#fff;border:1px solid var(--line);border-radius:var(--r-pill);
+  padding:var(--sp-2) var(--sp-4);cursor:pointer;transition:border-color .15s ease;}
+.acc-toggle-all:hover{border-color:var(--violet);}
+.acc-toggle-all:focus-visible{outline:3px solid var(--violet);outline-offset:2px;}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+  clip:rect(0,0,0,0);white-space:nowrap;border:0;}
+@media (prefers-reduced-motion: reduce){.acc-chev{transition:none;}}
+/* --- Acordeón de desarrollos (Inversión, SOLO web) ---
+   Mismo patrón <details> nativo que las apps, en variante compacta de fila.
+   El checkbox vive FUERA del <details> (hermano previo): marcar/desmarcar la
+   selección NUNCA expande ni colapsa, sin trucos de propagación de eventos. */
+.li-row.li-dev-acc{align-items:flex-start;}
+.li-row.li-dev-acc>label{width:auto;flex:0 0 auto;margin-top:1px;}
+details.dev-acc{flex:1;min-width:0;}
+.dev-acc>summary{list-style:none;display:flex;align-items:center;gap:10px;cursor:pointer;
+  border-radius:var(--r-1);}
+.dev-acc>summary::-webkit-details-marker{display:none;}
+.dev-acc>summary:focus-visible{outline:2px solid var(--violet);outline-offset:2px;}
+.dev-acc .acc-chev{width:8px;height:8px;margin:-3px 2px 0 2px;border-width:2px;}
+.dev-acc[open]>summary .acc-chev{transform:rotate(225deg);margin-top:3px;}
+.dev-acc-body{padding:var(--sp-2) 0 var(--sp-1);}
+.dev-acc-body p{font-size:var(--fs-xs);color:var(--ink2);line-height:1.45;margin:0;}
+/* ---------- MODO DE LECTURA (ejecutivo vs completo, SOLO web) ----------
+   Toggle en el topnav (lo pinta el HTML, lo activa el JS): .exec-mode en <html>
+   oculta las secciones de detalle (mapa, cronograma, equipo), los cuerpos del
+   acordeón de apps y las filas de valor añadido sin marcar. Sin JS el toggle
+   queda oculto (bajo .js-anim) y el documento es siempre completo. beforeprint
+   fuerza modo completo: en papel nunca falta nada. */
+.mode-switch{display:none;flex-shrink:0;align-items:center;gap:2px;padding:2px;
+  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);border-radius:var(--r-pill);}
+.js-anim .mode-switch{display:inline-flex;}
+.mode-btn{font:inherit;font-size:var(--fs-xs);font-weight:600;color:rgba(255,255,255,.72);
+  background:transparent;border:none;border-radius:var(--r-pill);padding:5px 12px;cursor:pointer;
+  white-space:nowrap;transition:color .2s ease,background .2s ease;}
+.mode-btn:hover{color:#fff;}
+.mode-btn:focus-visible{outline:2px solid var(--tangerine);outline-offset:1px;}
+.mode-btn[aria-pressed="true"]{color:var(--midnight);background:#fff;}
+@media (prefers-reduced-motion: reduce){.mode-btn{transition:none;}}
+.exec-mode #mapa,.exec-mode #cronograma,.exec-mode #equipo{display:none;}
+/* Anclas muertas fuera: los enlaces (topnav y docnav) de las secciones ocultas
+   también se ocultan; el scroll-spy simplemente no recibe sus targets. */
+.exec-mode .docnav a[data-sec="mapa"],.exec-mode .docnav a[data-sec="cronograma"],
+.exec-mode .docnav a[data-sec="equipo"]{display:none;}
+.exec-mode .topnav-links a[href="#mapa"],.exec-mode .topnav-links a[href="#cronograma"],
+.exec-mode .topnav-links a[href="#equipo"]{display:none;}
+/* Apps: quedan los summaries colapsados como índice; el cuerpo y los controles
+   de expandir se ocultan (el summary deja de ser interactivo). */
+.exec-mode .app-acc-body,.exec-mode .acc-toolbar,.exec-mode .app-acc .acc-chev{display:none;}
+.exec-mode .app-acc>summary.app-card-head{pointer-events:none;cursor:default;}
+/* Valor añadido (tile IA): solo lo marcado; los grupos sin nada marcado, fuera. */
+.exec-mode #va-block .va-row:has(input:not(:checked)){display:none;}
+.exec-mode #va-block .va-group:not(:has(input:checked)){display:none;}
+/* Impresión de la página web: el contenido de un <details> cerrado no se
+   imprime (el UA lo oculta y CSS no puede forzarlo en Chrome), así que el JS
+   abre todo en beforeprint y restaura en afterprint; aquí solo ocultamos los
+   controles interactivos del acordeón. El PDF oficial no pasa por aquí. */
+@media print{.acc-toolbar,.acc-chev{display:none;}}
+
+/* ---------- CASOS ---------- */
+/* Tira de logos (logo wall) sobre las tarjetas: prueba social de un vistazo.
+   Logos grandes, fila centrada y con aire (padding vertical generoso). */
+.logo-wall{margin:var(--sp-6) 0 var(--sp-7);padding:var(--sp-6) 0;text-align:center;}
+.wall-h{display:block;font-size:var(--fs-s);font-weight:700;letter-spacing:.12em;color:var(--grey-400);margin-bottom:var(--sp-6);text-align:center;}
+.wall-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:var(--sp-6) var(--sp-7);max-width:960px;margin:0 auto;}
+.wall-logo{height:44px;max-width:190px;object-fit:contain;opacity:.92;}
+@media (max-width:640px){.wall-logo{height:34px;max-width:150px;}.wall-row{gap:var(--sp-5) var(--sp-6);}}
+/* Logo real del cliente en la tarjeta (si el sitio lo publica). */
+.caso-logo{height:30px;max-width:160px;object-fit:contain;align-self:flex-start;margin-bottom:var(--sp-2);}
+/* Pill de industria (color sólido de shared/industries.json, texto blanco). */
+.caso-pill{display:inline-block;font-size:var(--fs-xs);font-weight:600;color:#fff;border-radius:999px;padding:3px 12px;}
+/* Cita punch del cliente (verbatim del sitio), en lugar de la métrica. */
+.caso-quote{flex:1;font-size:var(--fs-m);color:var(--ink);line-height:1.5;margin:0 0 var(--sp-3);border:none;}
+.caso-quote .cq-text::before{content:"\201C";}
+.caso-quote .cq-text::after{content:"\201D";}
+.caso-quote cite{display:block;font-style:normal;font-size:var(--fs-xs);color:var(--ink2);margin-top:var(--sp-2);}
+.caso-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:var(--sp-4);}
+.caso-card{padding:var(--sp-5);display:flex;flex-direction:column;overflow:hidden;}
+.caso-card .caso-img{margin:calc(-1*var(--sp-5)) calc(-1*var(--sp-5)) var(--sp-4);}
+.caso-card .caso-img img{display:block;width:100%;height:150px;object-fit:cover;}
+.caso-cliente{font-size:var(--fs-l);font-weight:700;color:var(--ink);}
+.caso-sector{font-size:var(--fs-xs);font-weight:700;letter-spacing:.08em;color:var(--violet);margin:var(--sp-1) 0 var(--sp-3);}
+.caso-result{font-size:var(--fs-s);color:var(--ink2);flex:1;}
+.caso-link{margin-top:var(--sp-3);font-size:var(--fs-s);font-weight:600;color:var(--violet);text-decoration:none;}
+
+/* ---------- INVERSIÓN ---------- */
+/* (El panel de Análisis usa .gateway; .recur-* viven en RECURRENTES — paso 5, más abajo.) */
+.fineprint{font-size:var(--fs-xs);color:var(--ink2);margin-top:var(--sp-5);}
+
+/* ---------- UNDERSTANDING (opener cliente-first) ---------- */
+.und-grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-4);margin-top:var(--sp-5);}
+.und-col{background:var(--tint2);border:1px solid var(--line);border-radius:var(--r-3);padding:var(--sp-5);}
+.und-h{font-size:var(--fs-xs);font-weight:700;letter-spacing:.1em;color:var(--violet);margin-bottom:var(--sp-3);}
+.und-list{list-style:none;}
+.und-list li{font-size:var(--fs-m);color:var(--ink);padding:var(--sp-2) 0 var(--sp-2) 26px;position:relative;line-height:1.4;}
+.und-list li::before{content:"›";position:absolute;left:4px;color:var(--ink);font-weight:700;}
+.und-list-ok li::before{content:"\2713";left:2px;color:var(--ink);font-size:var(--fs-s);}
+
+/* ---------- COST OF DELAY (cualitativo) ---------- */
+.cod-strip{margin-top:var(--sp-5);border-radius:var(--r-3);padding:var(--sp-6);border:1px solid var(--line);
+  background:var(--tint);}
+.cod-h{font-size:var(--fs-s);font-weight:700;letter-spacing:.1em;color:var(--violet);margin-bottom:var(--sp-3);}
+.cod-list{list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-3) var(--sp-6);margin-bottom:var(--sp-3);}
+.cod-list li{font-size:var(--fs-m);color:var(--ink);padding-left:24px;position:relative;line-height:1.4;}
+.cod-list li::before{content:"";position:absolute;left:0;top:8px;width:9px;height:9px;border-radius:50%;background:var(--ink);}
+.cod-note{font-size:var(--fs-s);color:var(--ink2);margin:0;font-style:italic;}
+
+/* ---------- ANCHOR DATES (calendario conjunto) ---------- */
+.anchor-note{display:flex;align-items:flex-start;gap:var(--sp-3);background:var(--grad);color:#fff;
+  border-radius:var(--r-3);padding:var(--sp-4) var(--sp-5);margin:0 0 var(--sp-5);box-shadow:var(--sh-violet);}
+.anchor-note p{font-size:var(--fs-m);line-height:1.5;color:#fff;margin:0;font-weight:600;}
+/* Timeline horizontal tipo flujo: pasos en fila conectados por una línea.
+   Mobile: scroll táctil horizontal (min-width por paso); el flujo se mantiene. */
+.anchor-cal{position:relative;margin:8px 0 18px;
+  display:flex;align-items:flex-start;overflow-x:auto;padding:12px 2px 6px;-webkit-overflow-scrolling:touch;}
+.anchor-row{flex:1 0 0;min-width:150px;position:relative;padding:0 10px;text-align:center;
+  display:flex;flex-direction:column;align-items:center;}
+.anchor-row::before{content:"";position:absolute;top:9px;left:-50%;width:100%;height:2px;background:var(--line);z-index:0;}
+.anchor-row:first-child::before{display:none;}
+.anchor-dot{position:relative;z-index:1;width:18px;height:18px;border-radius:50%;
+  border:3px solid #fff;box-shadow:0 0 0 2px var(--violet);background:var(--violet);margin-bottom:12px;}
+.anchor-cliente .anchor-dot{background:var(--tangerine);box-shadow:0 0 0 2px var(--tangerine);}
+.anchor-juntos .anchor-dot{background:var(--carmine);box-shadow:0 0 0 2px var(--carmine);}
+.anchor-date{font-size:var(--fs-s);font-weight:700;color:var(--ink);margin-bottom:3px;}
+.anchor-who{font-size:var(--fs-xs);font-weight:700;letter-spacing:.07em;color:var(--violet);margin-bottom:5px;}
+.anchor-cliente .anchor-who{color:var(--tangerine-text);}
+.anchor-juntos .anchor-who{color:var(--carmine-text);}
+.anchor-mile{font-size:var(--fs-s);color:var(--ink2);line-height:1.35;}
+
+/* ---------- ANALYSIS GATEWAY — panel HORIZONTAL a todo el ancho (paso 1) ---------- */
+.gateway{border-radius:var(--r-4);padding:1.6px;background:var(--grad);
+  box-shadow:var(--sh-3);margin:0 0 var(--sp-4);}
+.gateway > *{background:#fff;}
+/* Cabecera: eyebrow+título a la izquierda, PRECIO grande a la derecha. */
+.gateway-head{display:flex;align-items:center;gap:var(--sp-4);flex-wrap:wrap;
+  padding:var(--sp-5) var(--sp-6) var(--sp-3);border-radius:var(--r-4) var(--r-4) 0 0;}
+.gateway-eyebrow{font-size:var(--fs-xs);font-weight:700;letter-spacing:.12em;color:var(--violet);display:block;margin-bottom:2px;}
+.gateway-title{font-size:var(--fs-xl);font-weight:700;color:var(--ink);line-height:1.05;}
+/* Paso preliminar: subordinado al total de implantación (un escalón por debajo). */
+.gateway-price{margin-left:auto;font-size:var(--fs-xl);font-weight:700;color:var(--violet);
+  font-variant-numeric:tabular-nums;line-height:1;}
+.gateway-lead{font-size:var(--fs-m);color:var(--ink2);padding:0 var(--sp-6) var(--sp-4);max-width:none;}
+/* Derechos en 2 columnas lado a lado (horizontal). */
+.gateway-rights{display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-4);padding:0 var(--sp-6) var(--sp-5);}
+.gright{background:var(--tint2);border:1px solid var(--line);border-radius:var(--r-2);padding:var(--sp-4);}
+.gright-h{font-size:var(--fs-m);font-weight:700;color:var(--violet);margin-bottom:var(--sp-1);}
+.gright p{font-size:var(--fs-s);color:var(--ink2);margin:0;line-height:1.45;}
+/* POC + total del Análisis, dentro del panel, a todo el ancho. */
+.gateway-poc{padding:0 var(--sp-6) var(--sp-5);border-radius:0 0 var(--r-4) var(--r-4);}
+.gateway-poc .va-list{margin:0 0 var(--sp-3);}
+
+/* ---------- GARANTÍA "Precio cerrado" — tarjeta CLARA y plana (paso 2) ---------- */
+.guarantee-flat{display:flex;align-items:flex-start;gap:var(--sp-4);
+  background:var(--tint2);border-radius:var(--r-2);padding:var(--sp-4) var(--sp-5);margin:0 0 var(--sp-5);}
+.gf-body{flex:1;}
+.gf-eyebrow{display:inline-block;font-size:var(--fs-xs);font-weight:700;letter-spacing:.12em;
+  color:var(--violet);margin-bottom:var(--sp-1);}
+.gf-title{font-size:var(--fs-l);font-weight:700;color:var(--ink);margin-bottom:var(--sp-1);line-height:1.1;}
+.gf-text{font-size:var(--fs-s);color:var(--ink2);margin:0;line-height:1.5;}
+/* Calma (Ine): sin subrayados en el cuerpo — el énfasis se hace con peso. */
+.gf-hl{color:inherit;font-weight:600;}
+
+/* ---------- CASOS (metric-first) ---------- */
+.caso-metric{font-size:var(--fs-xl);font-weight:700;line-height:1;margin-bottom:var(--sp-3);color:var(--violet);}
+.caso-meta{display:flex;flex-wrap:wrap;gap:var(--sp-2);align-items:center;margin:var(--sp-1) 0 var(--sp-3);}
+.caso-scope{font-size:var(--fs-xs);font-weight:700;letter-spacing:.06em;color:var(--violet);
+  background:rgba(149,28,243,.08);border:1px solid rgba(149,28,243,.16);border-radius:var(--r-pill);padding:2px 10px;}
+
+/* ---------- TOP NAV (glass oscuro con subrayado de gradiente de marca) ---------- */
+.topnav{position:fixed;top:0;left:0;right:0;z-index:50;display:flex;align-items:center;
+  justify-content:space-between;gap:var(--sp-4);height:54px;padding:0 var(--sp-6);
+  background:rgba(5,5,67,.88);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border-bottom:1px solid rgba(255,255,255,.06);}
+.topnav::after{content:"";position:absolute;bottom:-1px;left:0;right:0;height:1px;
+  background:var(--grad-h);opacity:.4;}
+.topnav-logo{display:flex;align-items:center;flex-shrink:0;}
+.topnav-logo img{height:18px;display:block;}
+.topnav-links{display:flex;align-items:center;gap:2px;overflow-x:auto;}
+.topnav-links a{font-size:var(--fs-xs);font-weight:500;letter-spacing:.04em;color:rgba(255,255,255,.72);
+  text-decoration:none;padding:6px 12px;border-radius:var(--r-pill);white-space:nowrap;
+  transition:color .2s ease,background .2s ease;}
+.topnav-links a:hover{color:#fff;background:rgba(255,255,255,.08);}
+@media(max-width:980px){.topnav-links{display:none;}}
+
+/* ---------- DOC NAV (sticky scroll-spy) + barra de progreso ---------- */
+.readbar{position:fixed;top:0;left:0;height:3px;width:100%;background:transparent;z-index:60;}
+.readbar i{display:block;height:100%;width:0;background:var(--grad);transition:width .1s linear;}
+.docnav{position:fixed;top:50%;left:24px;transform:translateY(-50%);z-index:55;
+  display:flex;flex-direction:column;gap:2px;max-width:190px;}
+.docnav a{display:flex;align-items:center;gap:10px;text-decoration:none;padding:5px 0;color:var(--ink2);
+  opacity:.45;transition:opacity .2s ease,color .2s ease;}
+.docnav .dn-dot{width:8px;height:8px;border-radius:50%;background:var(--line);
+  border:2px solid transparent;flex-shrink:0;transition:all .2s ease;}
+.docnav .dn-label{font-size:var(--fs-xs);font-weight:600;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;}
+.docnav a:hover{opacity:.8;}
+.docnav a:hover .dn-dot{background:var(--violet);}
+.docnav a.active{opacity:1;color:var(--violet);}
+.docnav a.active .dn-label{font-weight:700;}
+.docnav a.active .dn-dot{background:var(--grad);transform:scale(1.4);}
+/* Sobre el hero (fondo oscuro) el índice va en blanco; en el cuerpo claro vuelve
+   a su color normal. La clase .over-hero la conmuta el scroll handler. */
+.docnav.over-hero a{color:#fff;opacity:.72;}
+.docnav.over-hero a:hover{opacity:.95;}
+.docnav.over-hero a .dn-dot{background:rgba(255,255,255,.55);}
+.docnav.over-hero a.active{color:#fff;opacity:1;}
+.docnav.over-hero a.active .dn-dot{background:#fff;}
+@media(max-width:1280px){.docnav{display:none;}}
+
+/* ---------- CTA ---------- */
+.cta{text-align:center;padding:var(--sp-7) var(--sp-6);border-radius:var(--r-4);background:var(--midnight);color:#fff;}
+.cta h3{font-size:var(--fs-2xl);font-weight:700;color:#fff;margin-bottom:var(--sp-3);}
+.cta p{font-size:var(--fs-m);color:rgba(255,255,255,.78);}
+.cta .accent{font-weight:600;color:var(--tangerine);}
+.cta-contacts{display:flex;flex-wrap:wrap;justify-content:center;gap:var(--sp-4);margin:var(--sp-5) 0 var(--sp-4);}
+.cta-contact{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);
+  border-radius:var(--r-3);padding:var(--sp-4) var(--sp-5);min-width:230px;text-align:left;}
+.cta-c-photo{width:56px;height:56px;border-radius:50%;object-fit:cover;margin-bottom:var(--sp-3);
+  border:2px solid rgba(255,255,255,.35);}
+.cta-c-photo.avatar-initials{font-size:var(--fs-l);}
+.cta-c-role{font-size:var(--fs-xs);font-weight:700;letter-spacing:.09em;color:var(--tangerine);margin-bottom:var(--sp-1);}
+.cta-c-name{font-size:var(--fs-m);font-weight:700;color:#fff;margin-bottom:var(--sp-2);}
+.cta-c-lines{display:flex;flex-direction:column;gap:var(--sp-1);}
+.cta-c-lines a{color:#fff;font-weight:600;text-decoration:none;font-size:var(--fs-s);}
+.cta-tel{color:rgba(255,255,255,.82);font-size:var(--fs-s);}
+.cta-generic{font-size:var(--fs-s);color:rgba(255,255,255,.7);margin-top:var(--sp-1);}
+/* Siguiente paso ligado a las fechas ancla (solo live con anchor_dates). */
+.cta-next{font-size:var(--fs-m);font-weight:600;color:#fff;margin:0 0 var(--sp-4);}
+.cta-next .accent{color:var(--tangerine);}
+/* ---------- SCROLL REVEAL (progresivo y a prueba de fallos) ----------
+   Sin JS no existe .js-anim y todo es visible. Con JS, las secciones parten
+   ocultas SOLO bajo .js-anim y sin prefers-reduced-motion; el observer las
+   revela al entrar en viewport y un setTimeout(1500) lo revela todo pase lo
+   que pase. */
+@media(prefers-reduced-motion:no-preference){
+  .js-anim section.sec{opacity:0;transform:translateY(18px);
+    transition:opacity .55s ease,transform .55s ease;}
+  .js-anim section.sec.revealed{opacity:1;transform:none;}
+}
+/* Footer oscuro de marca con línea de gradiente encima (footer-grad). */
+.footer-grad{height:3px;background:var(--grad-h);}
+footer{text-align:center;padding:var(--sp-6) 0 var(--sp-7);color:var(--lm);font-size:var(--fs-s);
+  background:var(--deep);}
+
+@media(max-width:980px){
+  .wrap{padding:0 var(--sp-5);}
+  .sec{padding:var(--sp-7) 0;}
+  .exec-panel,.philosophy{padding:var(--sp-6);}
+  .app-card{padding:var(--sp-6);}
+  .partner-banner{padding:var(--sp-6);}
+}
+@media(max-width:860px){
+  .hero-stats{grid-template-columns:1fr 1fr;}
+  .pillar-grid{grid-template-columns:1fr;}
+  .feat-list{grid-template-columns:1fr;}
+  .pain-card{grid-template-columns:1fr;}
+  .pain-side{min-width:0;}
+  /* el arrow ocupaba todo el ancho; al rotarlo se convertía en una barra blanca vertical.
+     En móvil lo encogemos a su glifo y quitamos el fondo. */
+  .pain-arrow{transform:rotate(90deg);justify-self:center;background:transparent;padding:2px 0;}
+  .gantt2{--gantt-label-w:136px;}.glabel{font-size:var(--fs-xs);}
+  .partner-banner{grid-template-columns:1fr;}.partner-rank{border-right:none;border-bottom:1px solid rgba(255,255,255,.18);padding:0 0 var(--sp-5);}
+  .tier-head{flex-wrap:wrap;}
+  .und-grid,.cod-list,.gateway-rights{grid-template-columns:1fr;}
+  .gateway-head{flex-wrap:wrap;}.gateway-price{margin-left:0;}
+  .anchor-row{min-width:132px;padding:0 var(--sp-2);}
+  .anchor-mile{font-size:var(--fs-xs);}
+}
+@media(max-width:640px){
+  .wrap{padding:0 var(--sp-4);}
+  .sec{padding:var(--sp-7) 0;}
+  .hero{min-height:auto;padding:calc(var(--sp-7) + 54px) 0 var(--sp-7);}
+  .pillar-grid{grid-template-columns:1fr;}
+  .hero-stats{grid-template-columns:1fr 1fr;gap:var(--sp-3);}.hstat{padding:var(--sp-5) var(--sp-4);}.hstat-num{font-size:var(--fs-2xl);}
+  .exec-panel,.philosophy{padding:var(--sp-5);font-size:var(--fs-m);}.philosophy h3{font-size:var(--fs-xl);}
+  .app-card{padding:var(--sp-5);}.app-card-head{flex-wrap:wrap;gap:var(--sp-3);}
+  .mindmap-svg{display:none;}.mindmap-list{display:flex;flex-direction:column;gap:var(--sp-2);}
+  /* callout "Para <cliente>": apilar etiqueta sobre texto (si no, el texto se estrecha) */
+  .app-fit{flex-direction:column;gap:var(--sp-2);}.app-fit-tag{white-space:normal;}
+  .tier{padding:var(--sp-5);}
+  .cta{padding:var(--sp-7) var(--sp-5);}.cta h3{font-size:var(--fs-xl);}
+  .cta-contacts{flex-direction:column;}.cta-contact{min-width:0;width:100%;}
+  .sec-lead{font-size:var(--fs-m);}
+}
+@media(max-width:440px){
+  .wrap{padding:0 var(--sp-4);}
+  .grow{grid-template-columns:1fr;gap:var(--sp-1);margin-bottom:var(--sp-4);}.glabel{text-align:left;font-size:var(--fs-xs);}
+  .gtrack{height:24px;}.gaxis,.glegend{margin-left:0;}
+  .app-card-head h3{font-size:var(--fs-l);}
+}
+
+/* ---------- BENTO 2 COLUMNAS (paso 3): IZQ = Aplicaciones + Desarrollos apilados; DER = IA ---------- */
+.precio-lista{margin:0 0 var(--sp-4);}
+/* Izquierda (col 1): Aplicaciones (fila 1) + Desarrollos (fila 2) apilados con gap.
+   Derecha (col 2): IA ocupa ambas filas (toda la altura). Tiles a altura de contenido,
+   por eso align-items:start (sin estiramiento raro). */
+.bento-grid{display:grid;gap:var(--sp-4);grid-template-columns:1.05fr 1fr;
+  grid-template-areas:"apps ia" "devs ia";align-items:start;}
+.tile-apps{grid-area:apps;}.tile-devs{grid-area:devs;}.tile-ia{grid-area:ia;}
+.tile-apps,.tile-devs,.tile-ia{min-width:0;}
+/* Tiles-columna PLANAS: solo borde fino (sin box-shadow). La sombra creaba una banda
+   vertical / seam fea en el hueco entre columnas del bento. */
+.bento-tile{display:flex;flex-direction:column;background:#fff;border:1px solid var(--line);
+  border-radius:var(--r-3);padding:var(--sp-4);}
+.bento-tile .lg-head{margin-bottom:var(--sp-3);padding-bottom:var(--sp-3);border-bottom:1px solid var(--line);}
+.bento-tile .lista-ul{margin:0;}
+/* ---------- COPIAR SELECCIÓN (solo modo live) ---------- */
+/* Wrapper bajo el CTA "Hablemos": separa el botón del bloque oscuro. */
+.copysel-wrap{margin-top:18px;}
+.copysel{display:flex;flex-direction:column;gap:8px;margin-top:4px;}
+.copysel-btn{display:inline-flex;align-items:center;gap:8px;align-self:flex-start;cursor:pointer;
+  font:inherit;font-size:var(--fs-s);font-weight:600;color:#fff;background:var(--grad);border:none;
+  border-radius:var(--r-2);padding:var(--sp-3) var(--sp-5);box-shadow:var(--sh-violet);
+  transition:transform .12s ease,box-shadow .12s ease;}
+.copysel-btn:hover{transform:translateY(-1px);box-shadow:var(--sh-3);}
+.copysel-btn:active{transform:translateY(0);}
+.copysel-ico{font-size:var(--fs-m);line-height:1;}
+.copysel-status{font-size:var(--fs-s);font-weight:600;min-height:1em;}
+.copysel-status.ok{color:var(--violet);}
+.copysel-status.warn{color:var(--carmine-text);}
+.copysel-box{display:flex;flex-direction:column;gap:6px;}
+.copysel-box-head{font-size:var(--fs-xs);color:var(--ink2);}
+.copysel-json{width:100%;max-height:260px;resize:vertical;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:var(--fs-xs);line-height:1.45;
+  color:var(--ink);background:var(--tint2);border:1px solid var(--line);border-radius:var(--r-1);padding:12px 14px;}
+.copysel-json:focus{outline:2px solid var(--violet);outline-offset:1px;}
+
+/* Total implantación destacado, a todo el ancho (paso 4). */
+.bento-total{display:flex;flex-direction:column;gap:var(--sp-2);margin:0 0 var(--sp-5);}
+.bento-total-note{font-size:var(--fs-s);color:var(--ink2);margin:0;}
+.lg-head{display:flex;align-items:baseline;gap:10px;margin-bottom:var(--sp-1);}
+.lg-title{font-size:var(--fs-xs);font-weight:700;letter-spacing:.09em;color:var(--violet);}
+.lg-hint{font-size:var(--fs-xs);color:var(--ink2);font-style:italic;}
+.lista-ul{list-style:none;margin:0;}
+/* Filas densas y tipografía compacta para que el bento quepa en una pantalla. */
+.li-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line);}
+.li-row:first-child{border-top:none;}
+.li-row label{display:flex;align-items:center;gap:12px;cursor:pointer;width:100%;margin:0;}
+.li-row input[type=checkbox]{position:absolute;opacity:0;width:0;height:0;}
+.li-box{flex:0 0 auto;width:20px;height:20px;border-radius:var(--r-1);border:2px solid var(--violet);
+  position:relative;transition:.15s;background:#fff;}
+.li-row input:checked + .li-box{background:var(--violet);border-color:var(--violet);}
+.li-box::after{content:"";position:absolute;left:6px;top:3px;width:4px;height:9px;
+  border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg) scale(0);transition:.15s;}
+.li-row input:checked + .li-box::after{transform:rotate(45deg) scale(1);}
+.li-row input:focus-visible + .li-box{outline:2px solid var(--violet);outline-offset:2px;}
+/* Badge "INCLUIDO" (violeta, único acento) para las filas no desmarcables. */
+.li-badge{flex:0 0 auto;font-size:var(--fs-xs);font-weight:700;letter-spacing:.06em;color:var(--violet);background:rgba(149,28,243,.08);border:1px solid rgba(149,28,243,.35);
+  border-radius:var(--r-pill);padding:4px 10px;white-space:nowrap;}
+.li-name{flex:1;font-size:var(--fs-s);color:var(--ink);min-width:0;line-height:1.25;}
+.li-name strong{color:var(--ink);font-weight:600;}
+.li-name small{display:block;font-size:var(--fs-xs);color:var(--ink2);font-weight:400;line-height:1.25;}
+.li-price{flex:0 0 auto;font-size:var(--fs-s);font-weight:600;color:var(--ink);white-space:nowrap;
+  font-variant-numeric:tabular-nums;margin-left:auto;min-width:88px;text-align:right;}
+.li-row.off .li-name{color:var(--ink2);}
+.li-row.off .li-price{opacity:.4;text-decoration:line-through;}
+/* Fila de presencialidad: selector de jornadas dentro de Aplicaciones. */
+.li-pres-ctrl{flex:0 0 auto;display:flex;align-items:center;gap:6px;font-size:var(--fs-s);color:var(--ink2);}
+.li-pres-input{width:60px;padding:5px 8px;border:1px solid rgba(149,28,243,.3);border-radius:var(--r-1);
+  font:inherit;text-align:right;}
+.lista-total{display:flex;align-items:baseline;justify-content:space-between;gap:var(--sp-4);
+  padding:var(--sp-5) var(--sp-6);border-radius:var(--r-3);background:var(--midnight);}
+.lt-label{font-size:var(--fs-l);font-weight:600;color:#fff;}
+/* Elemento DOMINANTE de la sección de inversión: mayor tamaño de toda la propuesta
+   tras el hero. Tangerine sobre midnight = 9.18:1 (cumple AA). */
+.lt-amount{font-size:var(--fs-total);font-weight:700;line-height:1;color:var(--tangerine);font-variant-numeric:tabular-nums;}
+
+/* ---------- VALOR AÑADIDO / IA (compacto para el bento) ---------- */
+.va-block{display:flex;flex-direction:column;gap:var(--sp-3);}
+.va-group-h{font-weight:600;color:var(--ink);margin-bottom:var(--sp-2);font-size:var(--fs-s);}
+.va-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--sp-2);}
+.va-row{border:1px solid rgba(149,28,243,.16);border-radius:var(--r-2);padding:var(--sp-2) var(--sp-3);transition:border-color .15s;}
+.va-row:hover{border-color:rgba(149,28,243,.4);}
+.va-row label{display:grid;grid-template-columns:20px 1fr auto;grid-template-areas:"box name price" "box desc price";
+  column-gap:10px;row-gap:2px;align-items:center;cursor:pointer;margin:0;}
+.va-row input{position:absolute;opacity:0;width:0;height:0;}
+.va-radio-box,.va-check-box{grid-area:box;width:20px;height:20px;border:2px solid var(--violet);border-radius:var(--r-1);
+  align-self:start;margin-top:2px;position:relative;}
+.va-radio-box{border-radius:50%;}
+.va-row input:checked ~ .va-radio-box,.va-row input:checked ~ .va-check-box{background:var(--violet);}
+.va-row input:checked ~ .va-radio-box::after,.va-row input:checked ~ .va-check-box::after{content:"";
+  position:absolute;inset:4px;background:#fff;border-radius:inherit;}
+.va-name{grid-area:name;font-weight:600;color:var(--ink);font-size:var(--fs-s);}
+.va-desc{grid-area:desc;font-size:var(--fs-xs);color:var(--ink2);line-height:1.3;}
+.va-price{grid-area:price;text-align:right;font-weight:700;color:var(--ink);white-space:nowrap;align-self:start;font-size:var(--fs-s);}
+.va-rec{display:block;font-size:var(--fs-xs);font-weight:400;color:var(--ink2);}
+.va-row input:checked ~ .va-name{color:var(--violet);}
+
+/* ---------- TOTAL DEL ANÁLISIS (gateway + POC) ---------- */
+.an-total{display:flex;justify-content:space-between;align-items:center;margin:var(--sp-3) 0 var(--sp-1);
+  padding:var(--sp-4) var(--sp-5);border-radius:var(--r-2);background:var(--tint);border:1px solid var(--line);}
+.an-total-lab{font-size:var(--fs-s);color:var(--ink2);font-weight:600;}
+.an-total-amt{font-size:var(--fs-l);font-weight:700;color:var(--violet);font-variant-numeric:tabular-nums;}
+/* Subtotal de bloque (Aplicaciones / Desarrollos / IA): se lee como SUBtotal —
+   un escalón por debajo del total del Análisis y en gris-tinta (no violet), para que
+   el color de marca quede reservado a los totales y marque jerarquía. */
+.bento-subtotal{margin:auto 0 0;}
+.bento-tile .lista-ul{margin-bottom:var(--sp-3);}
+.bento-subtotal .an-total-amt{font-size:var(--fs-m);font-weight:600;color:var(--ink);}
+
+/* ---------- IA: nota del grupo excluyente ---------- */
+.va-group-note{font-size:var(--fs-s);color:var(--ink2);margin:0 0 var(--sp-3);line-height:1.45;
+  background:var(--tint2);border:1px solid var(--line);border-radius:var(--r-2);padding:var(--sp-3);}
+.va-group-note strong{color:var(--violet);}
+.va-block > .lg-head{margin-bottom:var(--sp-3);}
+
+/* ---------- RECURRENTES (paso 5): HORIZONTAL — Cuota anual | Cuota mensual ---------- */
+.recur-section{margin:0 0 var(--sp-2);}
+.recur-section > .lg-head{margin-bottom:var(--sp-3);}
+.recur-wrap{display:flex;flex-direction:column;gap:var(--sp-3);}
+.recur-users-ctrl{display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap;font-size:var(--fs-s);color:var(--ink2);
+  background:var(--tint2);border:1px solid var(--line);border-radius:var(--r-2);padding:var(--sp-3) var(--sp-4);}
+.recur-users-lab{font-weight:600;color:var(--ink);}
+.recur-users-input{width:62px;padding:5px 8px;border:1px solid rgba(149,28,243,.3);border-radius:var(--r-1);
+  font:inherit;text-align:right;}
+.recur-users-note{font-style:italic;color:var(--ink2);font-size:var(--fs-xs);}
+/* Anual y Mensual lado a lado (2 columnas) en escritorio. */
+.recur-cols{display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-4);align-items:start;}
+/* Columnas Cuota anual | mensual PLANAS: solo borde fino (sin box-shadow → sin seam). */
+.recur-sub{background:#fff;border:1px solid var(--line);border-radius:var(--r-3);padding:var(--sp-4);}
+.recur-sub-head{display:flex;justify-content:space-between;align-items:baseline;gap:var(--sp-3);
+  margin-bottom:var(--sp-3);padding-bottom:var(--sp-3);border-bottom:1px solid var(--line);}
+.recur-sub-title{font-size:var(--fs-xs);font-weight:700;letter-spacing:.09em;color:var(--violet);}
+.recur-sub-total{font-size:var(--fs-l);font-weight:700;color:var(--violet);font-variant-numeric:tabular-nums;}
+.recur-grid{display:flex;flex-direction:column;gap:var(--sp-3);}
+.recur-card{background:var(--tint2);border:1px solid var(--line);border-radius:var(--r-2);padding:var(--sp-3);box-shadow:none;}
+.recur-t{font-size:var(--fs-s);font-weight:600;color:var(--ink);margin-bottom:3px;}
+.recur-p{font-size:var(--fs-m);font-weight:700;color:var(--ink);margin-bottom:var(--sp-1);font-variant-numeric:tabular-nums;}
+.recur-d{font-size:var(--fs-xs);color:var(--ink2);line-height:1.4;}
+.recur-sel{position:relative;display:flex;align-items:flex-start;gap:11px;cursor:pointer;
+  transition:border-color .15s,box-shadow .15s;}
+.recur-sel:hover{border-color:rgba(149,28,243,.4);}
+.recur-sel input.recur-check{position:absolute;opacity:0;width:0;height:0;}
+.recur-chk-box{flex:0 0 18px;width:18px;height:18px;margin-top:2px;border-radius:var(--r-1);
+  border:2px solid var(--violet);position:relative;transition:background .15s;}
+.recur-check:checked ~ .recur-chk-box{background:var(--violet);}
+.recur-check:checked ~ .recur-chk-box::after{content:"";position:absolute;left:4px;top:0;
+  width:5px;height:10px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg);}
+.recur-body{flex:1;min-width:0;}
+.recur-empty{opacity:.7;}
+.recur-sel.off,.recur-card.off{opacity:.45;}
+.recur-note{font-size:var(--fs-xs);color:var(--ink2);margin-top:var(--sp-3);}
+.recur-note a{color:var(--violet);font-weight:600;text-decoration:none;}
+/* BENTO responsive: ≤640px -> 1 columna apilada (Aplicaciones -> Desarrollos -> IA). */
+@media(max-width:640px){
+  .bento-grid{grid-template-columns:1fr;grid-template-areas:"apps" "devs" "ia";}
+  .gateway-head{flex-direction:column;align-items:flex-start;gap:4px;}
+  .gateway-price{margin-left:0;}
+  .gateway-rights{grid-template-columns:1fr;}
+  .recur-cols{grid-template-columns:1fr;}
+  .lt-amount{font-size:var(--fs-2xl);}
+  .lista-total{flex-direction:column;align-items:flex-start;gap:6px;}
+}
+</style>
+<script>
+/* Scroll reveal: la clase se añade ANTES del primer paint (script síncrono en
+   <head>) para que no haya flash; sin JS este script no corre y todo el
+   contenido es visible por defecto. */
+document.documentElement.classList.add('js-anim');
+</script>
+</head>
+<body>
+
+<div class="readbar"><i id="readbar-fill"></i></div>
+{{NAV}}
+
+<!-- HERO -->
+<header class="hero">
+  <div class="wrap" style="display:flex;flex-direction:column;flex:1;">
+    <img class="hero-logo" src="{{LOGO_WHITE}}" alt="{{LOGO_ALT}}">
+    <div class="hero-inner">
+      {{HERO_HEAD}}
+      <p class="hero-sub">{{SECTOR}}. {{HERO_SUB}}</p>
+      <div class="meta-chips">{{META_CHIPS}}</div>
+    </div>
+    <div class="hero-stats">{{HERO_STATS}}</div>
+  </div>
+</header>
+
+<!-- Secciones cliente-first (construidas en generate_proposal.py, según modo).
+     Orden v5 (Ine): retos ANTES de casos; calendario (compromiso mutuo) tras
+     la inversión, justo antes del cierre. -->
+{{UNDERSTANDING_SECTION}}
+{{PAINS_SECTION}}
+{{CASES_SECTION}}
+{{MINDMAP_SECTION}}
+{{CRONO_SECTION}}
+{{APPS_SECTION}}
+{{DEVS_SECTION}}
+{{WHY_SECTION}}
+{{EQUIPO_SECTION}}
+{{INVERSION_SECTION}}
+{{VALOR_ANADIDO_SECTION}}
+{{ANCHOR_SECTION}}
+{{CTA_SECTION}}
+
+<div class="footer-grad"></div>
+<footer>{{FOOTER}}</footer>
+
+<script>
+(function(){
+  var links = Array.prototype.slice.call(document.querySelectorAll('.docnav a'));
+  var bar = document.getElementById('readbar-fill');
+  var nav = document.querySelector('.docnav');
+  var hero = document.querySelector('.hero');
+  // barra de progreso de lectura + contraste del índice sobre el hero oscuro
+  function onScroll(){
+    var h = document.documentElement;
+    var max = (h.scrollHeight - h.clientHeight) || 1;
+    if(bar) bar.style.width = Math.min(100, (h.scrollTop / max) * 100) + '%';
+    // El índice es fijo y centrado; mientras el hero (oscuro) cubra su centro
+    // vertical, se pinta en blanco para que sea legible.
+    if(nav && hero){
+      nav.classList.toggle('over-hero',
+        hero.getBoundingClientRect().bottom > window.innerHeight / 2);
+    }
+  }
+  document.addEventListener('scroll', onScroll, {passive:true}); onScroll();
+  // scroll-spy: marca activo el enlace de la sección visible
+  if(links.length && 'IntersectionObserver' in window){
+    var byId = {};
+    links.forEach(function(a){ byId[a.getAttribute('data-sec')] = a; });
+    var obs = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if(e.isIntersecting){
+          links.forEach(function(a){ a.classList.remove('active'); });
+          var a = byId[e.target.id]; if(a) a.classList.add('active');
+        }
+      });
+    }, {rootMargin:'-45% 0px -50% 0px', threshold:0});
+    links.forEach(function(a){
+      var s = document.getElementById(a.getAttribute('data-sec')); if(s) obs.observe(s);
+    });
+  }
+  // Scroll reveal de secciones (bajo .js-anim). Cascada a prueba de fallos:
+  // reduced-motion o sin IntersectionObserver -> se revela todo al instante;
+  // en cualquier caso un setTimeout(1500) revela TODO aunque el observer falle.
+  var secs = Array.prototype.slice.call(document.querySelectorAll('section.sec'));
+  function revealAll(){ secs.forEach(function(s){ s.classList.add('revealed'); }); }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduce || !('IntersectionObserver' in window)){
+    revealAll();
+  } else {
+    var rObs = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if(e.isIntersecting){ e.target.classList.add('revealed'); rObs.unobserve(e.target); }
+      });
+    }, {rootMargin:'0px 0px -8% 0px', threshold:0});
+    secs.forEach(function(s){ rObs.observe(s); });
+    setTimeout(revealAll, 1500);
+  }
+  // Acordeón de apps: cards <details> colapsadas por defecto + botón único
+  // "Expandir todo / Contraer todo" (las etiquetas viajan en data-attrs, el JS
+  // es agnóstico del locale). Sin JS los <details> siguen funcionando uno a uno.
+  var accs = Array.prototype.slice.call(document.querySelectorAll('details.app-acc'));
+  if(accs.length){
+    var accBtn = document.querySelector('.acc-toggle-all');
+    function accAllOpen(){ return accs.every(function(d){ return d.open; }); }
+    function accLabel(){
+      if(accBtn) accBtn.textContent = accBtn.getAttribute(
+        accAllOpen() ? 'data-label-collapse' : 'data-label-expand');
+    }
+    if(accBtn) accBtn.addEventListener('click', function(){
+      var open = !accAllOpen();
+      accs.forEach(function(d){ d.open = open; });
+      accLabel();
+    });
+    accs.forEach(function(d){ d.addEventListener('toggle', accLabel); });
+    accLabel();
+  }
+  // Impresión de esta página: un <details> cerrado NO imprime su contenido,
+  // así que abrimos TODOS los acordeones (apps + desarrollos) en beforeprint
+  // y restauramos el estado en afterprint.
+  var allAccs = Array.prototype.slice.call(
+    document.querySelectorAll('details.app-acc, details.dev-acc'));
+  if(allAccs.length){
+    var accPrev = null;
+    window.addEventListener('beforeprint', function(){
+      accPrev = allAccs.map(function(d){ return d.open; });
+      allAccs.forEach(function(d){ d.open = true; });
+    });
+    window.addEventListener('afterprint', function(){
+      if(!accPrev) return;
+      allAccs.forEach(function(d, i){ d.open = accPrev[i]; });
+      accPrev = null;
+    });
+  }
+  // Modo de lectura (ejecutivo vs completo): dos botones en el topnav conmutan
+  // .exec-mode en <html> (CSS puro oculta el detalle). Por defecto: documento
+  // completo; NO se persiste (cada apertura arranca en completo). beforeprint
+  // fuerza modo completo y afterprint lo restaura: en papel nunca falta nada.
+  var modeBtns = Array.prototype.slice.call(document.querySelectorAll('.mode-btn'));
+  if(modeBtns.length){
+    function setMode(exec){
+      document.documentElement.classList.toggle('exec-mode', exec);
+      modeBtns.forEach(function(b){
+        b.setAttribute('aria-pressed',
+          String((b.getAttribute('data-mode') === 'exec') === exec));
+      });
+    }
+    modeBtns.forEach(function(b){
+      b.addEventListener('click', function(){
+        setMode(b.getAttribute('data-mode') === 'exec');
+      });
+    });
+    var execPrev = false;
+    window.addEventListener('beforeprint', function(){
+      execPrev = document.documentElement.classList.contains('exec-mode');
+      if(execPrev) setMode(false);
+    });
+    window.addEventListener('afterprint', function(){
+      if(execPrev){ setMode(true); execPrev = false; }
+    });
+  }
+})();
+</script>
+
+<script>
+/* Recálculo en vivo de la LISTA ÚNICA de implantación (modo 'live').
+   TOTAL implantación (#li-total) = Σ apps marcadas + soporte(10% apps, red. 10€)
+           + Σ desarrollos marcados + Σ IA one-shot marcado + presencialidad(900×días).
+   Análisis total (#an-total) = precio análisis + POC (si marcado, 20% del análisis).
+   Recurrentes: dos totales aparte — anual (#recur-total-anual) y mensual
+   (#recur-total-mensual). Mensual = migración 15%/24 (si marcada) + MCP 50/mes (si marcado)
+   + Field Service 2€/usuario·mes × nº usuarios (si marcado) + cards mensuales fijas.
+   Add-ons IA condicionales (CRM->305/288, Proyecto->212) se ocultan al desmarcar su app.
+   Config General, Salida a producción NO son desmarcables. El PDF es estático (sin JS). */
+(function(){
+  var totalEl = document.getElementById('li-total');
+  if(!totalEl) return;  // predemo (sin precios): JS inerte.
+
+  var appChecks = Array.prototype.slice.call(document.querySelectorAll('.li-app-check'));
+  var devChecks = Array.prototype.slice.call(document.querySelectorAll('.li-dev-check'));
+  var vaChecks  = Array.prototype.slice.call(document.querySelectorAll('.li-va-check'));
+  var pocCheck  = document.getElementById('va-poc-check');
+  var daysInput = document.getElementById('li-pres-days');
+  var migChk    = document.getElementById('li-migracion-check');
+  var usersInput= document.getElementById('recur-users');
+
+  // Formato € idéntico a eur() en Python: miles con "." siempre, sin decimales.
+  function eur(n){ return {{JS_EUR_PREFIX}}String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '{{JS_THOUSANDS}}'){{JS_EUR_SUFFIX}}; }
+  // Lee un importe en formato español ("1.080,00 €", "360,00 € / mes") -> número.
+  function parseEur(txt){
+    if(!txt) return 0;
+    var m = String(txt).match({{JS_PARSE_RE}});
+    if(!m) return 0;
+    var raw = m[1].replace(/\s/g,'').replace(/{{JS_THOUSANDS_ESC}}/g,'').replace('{{JS_DECIMAL}}', '.');
+    var v = parseFloat(raw);
+    return isNaN(v) ? 0 : v;
+  }
+  function round10(n){ return Math.round(n/10)*10; }
+  function ceil10(n){ return Math.ceil(n/10)*10; }
+  // Horas de una línea = ROUND(importe * factor / tarifa, 1) — igual que la hoja (F_i).
+  function lineHoursAt(amount, tarifa){ return (amount && tarifa) ? Math.round(amount * {{JS_FACTOR}} / tarifa * 10) / 10 : 0; }
+  function lineHours(amount){ return lineHoursAt(amount, {{JS_TARIFA_IMPL}}); }
+  function num(el, attr){ return el ? (parseFloat(el.getAttribute(attr)) || 0) : 0; }
+  function setText(id, txt){ var el = document.getElementById(id); if(el) el.textContent = txt; }
+
+  // Muestra/oculta la card recurrente dedicada (mcp/fs) y sincroniza su check con el
+  // bloque VA, para que el recurrente se cuente UNA sola vez (vía la card, no el VA).
+  function syncRecurCard(key, on){
+    var row = document.querySelector('[data-recur-row="' + key + '"]');
+    if(!row) return;
+    row.style.display = on ? '' : 'none';
+    var chk = row.querySelector('.recur-check');
+    if(chk) chk.checked = on;
+  }
+
+  // ¿Está marcada una app por su nombre (data-app)? Acepta variantes de Proyecto.
+  function appOn(name){
+    for(var i=0;i<appChecks.length;i++){
+      var n = appChecks[i].getAttribute('data-app') || '';
+      if(n === name) return appChecks[i].checked;
+    }
+    return false;
+  }
+
+  function recalc(){
+    var usuarios = usersInput ? Math.max(1, parseInt(usersInput.value, 10) || 1) : (num(totalEl, 'data-usuarios') || 1);
+
+    // 1) Suma de apps marcadas + Config General (incluida, base fija). Acumula horas.
+    var configPrice = num(totalEl, 'data-config');
+    var appsSum = configPrice;
+    var implHours = lineHours(configPrice);
+    appChecks.forEach(function(ch){ if(ch.checked){ var p = num(ch, 'data-price'); appsSum += p; implHours += lineHours(p); } });
+    // 2) Desarrollos marcados (sus horas también cuentan para el soporte).
+    var devSum = 0;
+    devChecks.forEach(function(ch){ if(ch.checked){ var p = num(ch, 'data-price'); devSum += p; implHours += lineHours(p); } });
+    // 3) Soporte / salida a producción = 10% del PRECIO de todo el proyecto
+    //    (análisis + Config + apps + desarrollos marcados), replicando la hoja (E36 -> F36).
+    //    NO desmarcable. El € manda y la hora se deriva: así la línea es INVARIANTE al
+    //    factor de productividad (si saliera de las horas factorizadas, bajar el factor
+    //    bajaría el precio y regalaría al cliente la ganancia que debe ser margen).
+    var anaHoursEl = document.getElementById('an-total-wrap');
+    var anaPrice = anaHoursEl ? num(anaHoursEl, 'data-ana') : 0;
+    var soporte = Math.round((anaPrice + appsSum + devSum) * {{JS_SOPORTE_PCT}});
+    var soporteHours = lineHours(soporte);
+    implHours += soporteHours;
+    // 4) IA: one-shots marcados (subtotal IA propio) + recurrentes (aparte).
+    var crmOn = appOn('CRM');
+    var projOn = appOn('Proyecto') || appOn('Project') || appOn('Proyectos');
+    var iaOneShot = 0, vaRecur = 0;
+    var mcpVaOn = false, fsVaOn = false;
+    vaChecks.forEach(function(ch){
+      var req = ch.getAttribute('data-requires');
+      var row = ch.closest('[data-va-row]');
+      var visible = true;
+      if(req === 'crm' && !crmOn) visible = false;
+      if(req === 'projects' && !projOn) visible = false;
+      if(row) row.style.display = visible ? '' : 'none';
+      if(!visible){ if(ch.checked) ch.checked = false; return; }
+      if(ch.checked){
+        iaOneShot += num(ch, 'data-oneshot');
+        vaRecur += num(ch, 'data-recur') + num(ch, 'data-recur-peruser') * usuarios;
+        var link = ch.getAttribute('data-recur-link');
+        if(link === 'mcp') mcpVaOn = true;
+        if(link === 'fs') fsVaOn = true;
+      }
+    });
+    syncRecurCard('mcp', mcpVaOn);
+    syncRecurCard('fs', fsVaOn);
+    // POC -> total del Análisis (no entra en implantación).
+    var anaWrap = document.getElementById('an-total-wrap');
+    if(anaWrap){
+      var anaBase = num(anaWrap, 'data-ana');
+      var pocAmt = (pocCheck && pocCheck.checked) ? num(pocCheck, 'data-amount') : 0;
+      setText('an-total', eur(anaBase + pocAmt));
+    }
+    // Presencialidad (en Aplicaciones): 900 €/día × días (one-shot, suma a Aplicaciones).
+    var presAmt = 0;
+    if(daysInput){
+      var dias = Math.max(0, parseInt(daysInput.value, 10) || 0);
+      presAmt = num(daysInput, 'data-dia') * dias;
+      setText('li-pres-amount', dias > 0 ? eur(presAmt) : '{{JS_ZERO_AMOUNT}}');
+    }
+
+    // 4ter) Vertical construcción (Inbuilt): pack INCLUYE la App (sin doble cobro).
+    //    Precio cerrado sin horas: NO suma horas al soporte; SÍ entra en migración.
+    var vertSum = 0;
+    var vertPack = document.querySelector('.li-vert-check[data-vert="pack"]');
+    var vertApp = document.querySelector('.li-vert-check[data-vert="app"]');
+    var vertPackOn = !!(vertPack && vertPack.checked);
+    if(vertPackOn) vertSum += num(vertPack, 'data-oneshot');
+    if(vertApp){
+      var vertAppPrice = document.getElementById('vert-app-price');
+      if(vertPackOn){
+        if(vertApp.checked) vertApp.checked = false;
+        vertApp.disabled = true;
+        if(vertAppPrice) vertAppPrice.textContent = vertApp.getAttribute('data-included-label') || '';
+      } else {
+        vertApp.disabled = false;
+        if(vertAppPrice) vertAppPrice.textContent = eur(num(vertApp, 'data-oneshot'));
+        if(vertApp.checked) vertSum += num(vertApp, 'data-oneshot');
+      }
+    }
+
+    // 5) Subtotales por bloque (mismo estilo que el total del Análisis) + TOTAL.
+    //    Aplicaciones = Config + apps marcadas + soporte(10%) + presencialidad.
+    //    Desarrollos  = Σ devs marcados.   Vertical = pack o App.   IA = Σ one-shots IA.
+    //    Los subtotales suman el Total de implantación.
+    var stApps = appsSum + soporte + presAmt;
+    var stDevs = devSum;
+    var stIa = iaOneShot;
+    setText('st-apps', eur(stApps));
+    setText('st-devs', eur(stDevs));
+    setText('st-vert', eur(vertSum));
+    setText('st-ia', eur(stIa));
+    var total = stApps + stDevs + vertSum + stIa;
+
+    // 6) Recurrentes: totales ANUAL y MENSUAL aparte (nunca entran en #li-total).
+    var lista = document.getElementById('precio-lista');
+    var migPct = lista ? num(lista, 'data-migracion-pct') : 0.15;
+    var migMeses = (lista ? num(lista, 'data-migracion-meses') : 24) || 24;
+    var migMes = ceil10((appsSum + devSum + vertSum) * migPct / migMeses);
+    setText('li-migracion-amount', eur(migMes));
+    var migOn = migChk && migChk.checked;
+
+    // Licencia Odoo: tarifa POR USUARIO × nº usuarios del selector (recalcula en vivo).
+    // Su periodo (anual/mensual) lo marca data-periodo; expone tarifa unitaria en data-rate-user.
+    var odooAnual = 0, odooMensual = 0;
+    Array.prototype.slice.call(document.querySelectorAll('.recur-peruser')).forEach(function(card){
+      var rate = num(card, 'data-rate-user');
+      if(!rate) return;
+      var tot = rate * usuarios;
+      var per = card.getAttribute('data-periodo');
+      var span = card.querySelector('.recur-odoo-amt');
+      if(span) span.textContent = eur(tot) + ' / ' + (per === 'anual' ? '{{JS_UNIT_YEAR}}' : '{{JS_UNIT_MONTH}}');
+      if(per === 'anual') odooAnual += tot; else odooMensual += tot;
+    });
+
+    // Field Service recurrente (usuarios × 2): visible solo si su fila visible/marcada.
+    var fsMes = 0;
+    var fsRow = document.querySelector('[data-recur-row="fs"]');
+    var fsChk = fsRow ? fsRow.querySelector('.recur-check') : null;
+    if(fsRow && fsRow.style.display !== 'none' && fsChk && fsChk.checked){
+      fsMes = {{JS_FS_USER_MES}} * usuarios;
+      setText('recur-fs-amt', eur(fsMes));
+    }
+    // MCP recurrente (50/mes) si su fila visible/marcada.
+    var mcpMes = 0;
+    var mcpRow = document.querySelector('[data-recur-row="mcp"]');
+    var mcpChk = mcpRow ? mcpRow.querySelector('.recur-check') : null;
+    if(mcpRow && mcpRow.style.display !== 'none' && mcpChk && mcpChk.checked) mcpMes = {{JS_MCP_MES}};
+
+    // Cards fijas (Mantenimiento, Dyn Cloud): suman a su periodo según el importe del dato.
+    // Excluimos las recur-peruser (ya sumadas arriba) y las recur-sel (dinámicas: mig/mcp/fs).
+    var fixAnual = 0, fixMensual = 0;
+    Array.prototype.slice.call(document.querySelectorAll('.recur-card')).forEach(function(card){
+      if(card.classList.contains('recur-peruser') || card.classList.contains('recur-sel')
+         || card.classList.contains('recur-empty')) return;
+      var p = card.querySelector('.recur-p');
+      var amt = p ? parseEur(p.textContent) : 0;
+      if(!amt) return;
+      if(card.getAttribute('data-periodo') === 'anual') fixAnual += amt; else fixMensual += amt;
+    });
+
+    // Totales. Mensual = fijas mensuales (Mantenimiento) + Licencia Odoo mensual +
+    // migración (si marcada) + MCP (si marcado) + Field Service (si marcado) + vaRecur.
+    var totalMensual = fixMensual + odooMensual + (migOn ? migMes : 0) + mcpMes + fsMes + vaRecur;
+    var totalAnual = fixAnual + odooAnual;
+    setText('recur-total-anual', totalAnual > 0 ? eur(totalAnual) + '{{JS_PER_YEAR}}' : '{{JS_EMPTY}}');
+    setText('recur-total-mensual', totalMensual > 0 ? eur(totalMensual) + '{{JS_PER_MONTH}}' : '{{JS_EMPTY}}');
+
+    // --- Pintar.
+    setText('li-soporte-amount', '+ ' + eur(soporte));
+    setText('li-total', eur(total));
+
+    // --- Tachar/atenuar lo desmarcado.
+    function strike(checks){
+      checks.forEach(function(ch){
+        var row = ch.closest('[data-li-row]');
+        if(row) row.classList.toggle('off', !ch.checked);
+      });
+    }
+    strike(appChecks); strike(devChecks); strike(vaChecks);
+    if(migChk){ var mr = migChk.closest('[data-li-row]'); if(mr) mr.classList.toggle('off', !migChk.checked); }
+  }
+
+  // Listeners.
+  appChecks.concat(devChecks).concat(vaChecks).forEach(function(ch){ ch.addEventListener('change', recalc); });
+  Array.prototype.slice.call(document.querySelectorAll('.li-vert-check')).forEach(function(ch){ ch.addEventListener('change', recalc); });
+  if(pocCheck) pocCheck.addEventListener('change', recalc);
+  if(daysInput) daysInput.addEventListener('input', recalc);
+  if(migChk) migChk.addEventListener('change', recalc);
+  if(usersInput) usersInput.addEventListener('input', recalc);
+  Array.prototype.slice.call(document.querySelectorAll('.recur-check')).forEach(function(ch){ ch.addEventListener('change', recalc); });
+
+  // Plataforma IA: checkboxes con EXCLUSIÓN MUTUA (toggle). Al marcar uno, desmarca el
+  // hermano de su mismo grupo data-exclusive; ambos pueden quedar desmarcados (opcional).
+  Array.prototype.slice.call(document.querySelectorAll('[data-exclusive]')).forEach(function(ch){
+    ch.addEventListener('change', function(){
+      if(ch.checked){
+        var grp = ch.getAttribute('data-exclusive');
+        Array.prototype.slice.call(document.querySelectorAll('[data-exclusive="' + grp + '"]'))
+          .forEach(function(other){ if(other !== ch) other.checked = false; });
+      }
+      recalc();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Botón copiar-selección (#copy-selection): serializa la selección ACTUAL del DOM
+  // a JSON legible y la copia al portapapeles. Cascada robusta (file://):
+  // navigator.clipboard.writeText -> textarea + execCommand('copy') -> SIEMPRE muestra
+  // el JSON en un cuadro seleccionable como último recurso. Mismos selectores que el recalc.
+  // ---------------------------------------------------------------------------
+  var copyBtn = document.getElementById('copy-selection');
+  if(copyBtn){
+    // Nombre legible de la fila de un checkbox: usa .li-name / .va-name / .recur-t,
+    // o el texto del label, recortado.
+    function rowName(ch){
+      var row = ch.closest('label') || ch.closest('li') || ch.closest('[data-li-row]') || ch.parentNode;
+      var el = row && (row.querySelector('.li-name') || row.querySelector('.va-name')
+                       || row.querySelector('.recur-t'));
+      var txt = (el ? el.textContent : (row ? row.textContent : '')) || '';
+      return txt.replace(/\s+/g, ' ').trim().slice(0, 80);
+    }
+    function namesOf(sel){
+      return Array.prototype.slice.call(document.querySelectorAll(sel))
+        .filter(function(ch){ return ch.checked; })
+        .filter(function(ch){ var r = ch.closest('[data-va-row]'); return !r || r.style.display !== 'none'; })
+        .map(rowName)
+        .filter(function(n){ return n; });
+    }
+    function plataformaIA(){
+      var r = document.querySelector('.va-excl-check:checked');
+      return r ? rowName(r) : '{{WEB_NONE}}';
+    }
+    function valTxt(id){ var el = document.getElementById(id); return el ? (el.textContent || '').trim() : ''; }
+    function buildSelection(){
+      return {
+        cliente: (document.querySelector('.hero h1') || {}).textContent ?
+                 document.querySelector('.hero h1').textContent.trim() : '',
+        aplicaciones: namesOf('.li-app-check'),
+        desarrollos: namesOf('.li-dev-check'),
+        ia_addons: namesOf('.li-va-check.va-addon-check'),
+        ia_plataforma: plataformaIA(),
+        vertical: (function(){
+          var p = document.querySelector('.li-vert-check[data-vert="pack"]');
+          var a = document.querySelector('.li-vert-check[data-vert="app"]');
+          if(!p && !a) return null;
+          var packOn = !!(p && p.checked);
+          return { pack: packOn, app: !!(a && a.checked && !packOn) };
+        })(),
+        poc: !!(pocCheck && pocCheck.checked),
+        jornadas_presenciales: daysInput ? (parseInt(daysInput.value, 10) || 0) : 0,
+        num_usuarios: usersInput ? (parseInt(usersInput.value, 10) || 0) : 0,
+        recurrentes: namesOf('.recur-check'),
+        migracion_futura: !!(migChk && migChk.checked),
+        totales: {
+          implantacion: valTxt('li-total'),
+          analisis: valTxt('an-total'),
+          recurrente_anual: valTxt('recur-total-anual'),
+          recurrente_mensual: valTxt('recur-total-mensual')
+        }
+      };
+    }
+    var statusEl = document.getElementById('copy-selection-status');
+    var boxEl = document.getElementById('copy-selection-box');
+    var jsonEl = document.getElementById('copy-selection-json');
+    var statusTimer = null;
+    function flash(msg, ok){
+      if(!statusEl) return;
+      statusEl.textContent = msg;
+      statusEl.className = 'copysel-status' + (ok ? ' ok' : ' warn');
+      if(statusTimer) clearTimeout(statusTimer);
+      statusTimer = setTimeout(function(){ statusEl.textContent = ''; statusEl.className = 'copysel-status'; }, 3500);
+    }
+    // Fallback síncrono: textarea temporal + execCommand. Devuelve true/false.
+    function legacyCopy(text){
+      try{
+        var ta = document.createElement('textarea');
+        ta.value = text; ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed'; ta.style.top = '-9999px';
+        document.body.appendChild(ta); ta.select();
+        var ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+        return ok;
+      }catch(e){ return false; }
+    }
+    copyBtn.addEventListener('click', function(){
+      var json = JSON.stringify(buildSelection(), null, 2);
+      // SIEMPRE volcamos el JSON en el cuadro visible (último recurso garantizado).
+      if(jsonEl) jsonEl.value = json;
+      if(boxEl) boxEl.hidden = false;
+      // 1) API moderna (puede fallar en file://).
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(json).then(function(){
+          flash('✅ Copiado', true);
+        }).catch(function(){
+          // 2) Fallback execCommand.
+          if(legacyCopy(json)) flash('✅ Copiado', true);
+          else { flash('Copia manual: usa el cuadro de abajo', false); if(jsonEl) jsonEl.select(); }
+        });
+      } else if(legacyCopy(json)){
+        flash('✅ Copiado', true);
+      } else {
+        flash('Copia manual: usa el cuadro de abajo', false);
+        if(jsonEl) jsonEl.select();
+      }
+    });
+  }
+
+  recalc();
+})();
+</script>
+
+</body>
+</html>

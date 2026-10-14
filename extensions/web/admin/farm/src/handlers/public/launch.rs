@@ -1,5 +1,7 @@
-//! `POST /runs`: launch one agent run as the caller, optionally from an eval
-//! case's prompt and fixture, and optionally wait for it to finish.
+//! `POST /runs`: launch one agent run as the caller and optionally wait for
+//! it to finish. Naming a `case` makes the launch an eval of that case: a
+//! one-case eval run is recorded beside the run, and its assertions and judge
+//! run when the run finishes; the response carries `eval_run_id`.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -8,19 +10,20 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::{Extension, Json};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
+use systemprompt::ai::AiService;
 use systemprompt_web_admin_core::error::{AdminError, AdminResult};
 use systemprompt_web_admin_core::types::UserContext;
 
-use super::run_json::run_json;
+use super::run_json::{RunJson, run_json};
 use super::shared::{load_farm, triggered_via};
-use crate::repositories::rows::{EvalCaseRow, RunRow};
-use crate::repositories::{agents, evals, runs};
+use crate::repositories::rows::RunRow;
+use crate::repositories::{agents, runs};
 use crate::services::entitlement::require_farm_access;
-use crate::services::farm_sync::eval_suite_id;
+use crate::services::evals::{CaseLaunch, start_case_eval};
 use crate::services::runs::{LaunchRequest, launch};
 use crate::state::FarmState;
-use crate::types::{FarmAgentId, FarmId, RunStatus};
+use crate::types::{EvalRunId, FarmAgentId, FarmId, RunStatus};
 
 const WAIT_POLL: Duration = Duration::from_secs(2);
 const WAIT_LIMIT: Duration = Duration::from_secs(600);
@@ -61,25 +64,17 @@ fn check_limits(body: &LaunchBody) -> AdminResult<()> {
     Ok(())
 }
 
-async fn find_case(
-    state: &FarmState,
-    farm: &FarmId,
-    agent: &FarmAgentId,
-    case_id: &str,
-) -> AdminResult<EvalCaseRow> {
-    let suite = eval_suite_id(farm, agent.as_str());
-    evals::list_eval_cases(&state.pool, &suite)
-        .await?
-        .into_iter()
-        .find(|c| c.id == case_id)
-        .ok_or_else(|| {
-            AdminError::NotFound(format!("eval case {case_id} for agent {}", agent.as_str()))
-        })
+#[derive(Debug, Serialize)]
+struct LaunchedJson {
+    #[serde(flatten)]
+    run: RunJson,
+    eval_run_id: Option<EvalRunId>,
 }
 
 pub(crate) async fn launch_run(
     State(state): State<Arc<FarmState>>,
     Extension(ctx): Extension<UserContext>,
+    ai: Option<Extension<Option<Arc<AiService>>>>,
     Json(body): Json<LaunchBody>,
 ) -> AdminResult<Response> {
     check_limits(&body)?;
@@ -88,42 +83,52 @@ pub(crate) async fn launch_run(
     agents::find_agent(&state.pool, &body.farm, &body.agent)
         .await?
         .ok_or_else(|| AdminError::NotFound(format!("agent {}", body.agent.as_str())))?;
-    let case = match body.case.as_deref() {
-        Some(case_id) => Some(find_case(&state, &body.farm, &body.agent, case_id).await?),
-        None => None,
-    };
-    let (case_prompt, case_fixture) = case.map_or((None, None), |c| (c.prompt, c.fixture));
     let request = LaunchRequest {
         farm_id: body.farm,
         agent_id: body.agent,
         user_id: ctx.user_id.clone(),
         triggered_via: triggered_via(&ctx),
         prompt: body.prompt,
-        case_prompt,
-        fixture: body.fixture.or(case_fixture),
+        case_prompt: None,
+        fixture: body.fixture,
         model: body.model,
         max_turns: body.max_turns,
         max_budget_usd: body.max_budget_usd,
         timeout_seconds: body.timeout_seconds,
         eval_result_id: None,
     };
-    let run = launch(&state, request).await?;
+    let (run, eval_run_id) = match body.case.filter(|c| !c.trim().is_empty()) {
+        Some(case_id) => {
+            let request_ai = ai.and_then(|Extension(ai)| ai);
+            let judge = state.judge.judge_for(request_ai, &ctx.user_id);
+            let launched =
+                start_case_eval(Arc::clone(&state), judge, CaseLaunch { request, case_id }).await?;
+            (launched.run, Some(launched.eval_run.id))
+        },
+        None => (launch(&state, request).await?, None),
+    };
     if !body.wait {
-        return accepted(&state, run).await;
+        return accepted(&state, run, eval_run_id).await;
     }
     let run = wait_for_terminal(&state, run).await?;
     let finished = RunStatus::parse(&run.status).is_some_and(RunStatus::is_terminal);
     if finished {
-        Ok(Json(run_json(&state.pool, run).await?).into_response())
+        let run = run_json(&state.pool, run).await?;
+        Ok(Json(LaunchedJson { run, eval_run_id }).into_response())
     } else {
-        accepted(&state, run).await
+        accepted(&state, run, eval_run_id).await
     }
 }
 
-async fn accepted(state: &FarmState, run: RunRow) -> AdminResult<Response> {
+async fn accepted(
+    state: &FarmState,
+    run: RunRow,
+    eval_run_id: Option<EvalRunId>,
+) -> AdminResult<Response> {
+    let run = run_json(&state.pool, run).await?;
     Ok((
         StatusCode::ACCEPTED,
-        Json(run_json(&state.pool, run).await?),
+        Json(LaunchedJson { run, eval_run_id }),
     )
         .into_response())
 }

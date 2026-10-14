@@ -1,0 +1,166 @@
+{
+  "$comment": "Example baseline output of `verify_migration_integrity.py extract`. Trimmed for readability — real baselines have many more rows. Use this to understand the schema. The compare phase produces a different file (see references/migration-accounting-checks.md).",
+  "metadata": {
+    "extracted_at": "2026-05-03T10:14:22+00:00",
+    "odoo_url": "https://origin.example.com",
+    "odoo_db": "client_v15",
+    "odoo_version": "15.0+e",
+    "extraction_runtime_seconds": 84.2,
+    "checks": [
+      "global_balance",
+      "global_balance_per_company",
+      "trial_balance",
+      "partner_ledger_receivable",
+      "partner_ledger_payable",
+      "unreconciled_amount",
+      "move_state_count",
+      "posted_before_count",
+      "hash_chain_count",
+      "tax_totals_per_period",
+      "tax_totals_per_quarter",
+      "mod303_per_period",
+      "asset_value_per_category",
+      "stock_valuation_total",
+      "journal_count",
+      "account_count_per_type",
+      "invoice_name_preservation"
+    ],
+    "scope": {
+      "companies": [1, 2],
+      "fiscal_years": [2024, 2025],
+      "migration_cutoff": "2026-05-01",
+      "as_of_date": "2024-12-31",
+      "from_date": null,
+      "periods": ["2024Q3", "2024Q4"],
+      "legacy_number_field": "x_legacy_number"
+    },
+    "errors": {}
+  },
+  "results": {
+    "global_balance": {
+      "value": 0.0,
+      "details": {
+        "debit_total": 1234567.89,
+        "credit_total": 1234567.89,
+        "line_count": 84231
+      }
+    },
+    "global_balance_per_company": {
+      "rows": [
+        {"company_id": 1, "company_name": "Cliente Matriz S.L.", "debit": 1100000.00, "credit": 1100000.00, "balance": 0.00, "line_count": 70000},
+        {"company_id": 2, "company_name": "Cliente Filial S.L.", "debit": 134567.89,  "credit": 134567.89,  "balance": 0.00, "line_count": 14231}
+      ]
+    },
+    "trial_balance": {
+      "rows": [
+        {"account_id": 12, "account_code": "100000", "account_name": "Capital social",   "account_type": "equity",            "debit": 0.00,      "credit": 60000.00,  "balance": -60000.00,  "line_count": 1},
+        {"account_id": 84, "account_code": "430000", "account_name": "Clientes",         "account_type": "asset_receivable",  "debit": 154321.00, "credit": 142100.00, "balance": 12221.00,   "line_count": 421},
+        {"account_id": 92, "account_code": "400000", "account_name": "Proveedores",      "account_type": "liability_payable", "debit": 98000.00,  "credit": 110500.00, "balance": -12500.00,  "line_count": 312}
+      ]
+    },
+    "partner_ledger_receivable": {
+      "rows": [
+        {"partner_id": 7,  "partner_name": "Cliente A",         "debit": 24300.00, "credit": 22000.00, "balance": 2300.00,  "line_count": 38},
+        {"partner_id": 19, "partner_name": "Cliente B",         "debit": 81230.00, "credit": 81230.00, "balance": 0.00,     "line_count": 156},
+        {"partner_id": 42, "partner_name": "Cliente recurrente","debit": 48791.00, "credit": 38870.00, "balance": 9921.00,  "line_count": 227}
+      ]
+    },
+    "partner_ledger_payable": {
+      "rows": [
+        {"partner_id": 101, "partner_name": "Proveedor X", "debit": 23000.00, "credit": 35500.00, "balance": -12500.00, "line_count": 312}
+      ]
+    },
+    "unreconciled_amount": {
+      "rows": [
+        {"account_id": 84, "account_name": "Clientes",   "open_balance": 12221.00,  "open_lines": 18},
+        {"account_id": 92, "account_name": "Proveedores","open_balance": -12500.00, "open_lines": 9}
+      ]
+    },
+    "move_state_count": {
+      "rows": [
+        {"journal_id": 1, "journal_name": "Facturas Cliente", "move_type": "out_invoice", "state": "posted", "count": 421},
+        {"journal_id": 1, "journal_name": "Facturas Cliente", "move_type": "out_refund",  "state": "posted", "count": 12},
+        {"journal_id": 2, "journal_name": "Facturas Proveedor","move_type": "in_invoice",  "state": "posted", "count": 312},
+        {"journal_id": 5, "journal_name": "Banco BBVA",        "move_type": "entry",       "state": "posted", "count": 980}
+      ]
+    },
+    "posted_before_count": {"value": 1738},
+    "hash_chain_count": {
+      "rows": [
+        {"journal_id": 1, "journal_code": "INV", "journal_name": "Facturas Cliente",  "hashed_count": 421},
+        {"journal_id": 2, "journal_code": "BILL","journal_name": "Facturas Proveedor","hashed_count": 312}
+      ]
+    },
+    "tax_totals_per_period": {
+      "rows": [
+        {"tax_id": 11, "tax_name": "IVA 21% Repercutido", "year": "2024", "tax_balance": -89000.00, "line_count": 421},
+        {"tax_id": 11, "tax_name": "IVA 21% Repercutido", "year": "2025", "tax_balance": -45000.00, "line_count": 187},
+        {"tax_id": 14, "tax_name": "IVA 21% Soportado",   "year": "2024", "tax_balance":  62000.00, "line_count": 312}
+      ]
+    },
+    "tax_totals_per_quarter": {
+      "rows": [
+        {"tax_id": 11, "tax_name": "IVA 21% Repercutido", "period": "2024Q3", "period_start": "2024-07-01", "period_end": "2024-09-30", "tax_balance": -22500.00, "line_count": 105},
+        {"tax_id": 11, "tax_name": "IVA 21% Repercutido", "period": "2024Q4", "period_start": "2024-10-01", "period_end": "2024-12-31", "tax_balance": -23800.00, "line_count": 112},
+        {"tax_id": 14, "tax_name": "IVA 21% Soportado",   "period": "2024Q3", "period_start": "2024-07-01", "period_end": "2024-09-30", "tax_balance":  15500.00, "line_count":  78},
+        {"tax_id": 14, "tax_name": "IVA 21% Soportado",   "period": "2024Q4", "period_start": "2024-10-01", "period_end": "2024-12-31", "tax_balance":  16200.00, "line_count":  82}
+      ]
+    },
+    "mod303_per_period": {
+      "$comment": "Casillas tipicas del 303. Los nombres reales en Odoo Spain son del estilo '+01', '-03', '+28' en account.account.tag.",
+      "rows": [
+        {"period": "2024Q3", "period_start": "2024-07-01", "period_end": "2024-09-30", "tag_id": 23, "tag_name": "+01 Regimen general - Base imponible",   "balance": 107142.86, "line_count": 105},
+        {"period": "2024Q3", "period_start": "2024-07-01", "period_end": "2024-09-30", "tag_id": 24, "tag_name": "+03 Regimen general - Cuota",            "balance":  22500.00, "line_count": 105},
+        {"period": "2024Q3", "period_start": "2024-07-01", "period_end": "2024-09-30", "tag_id": 56, "tag_name": "+28 IVA soportado op. interiores - Base","balance":  73809.52, "line_count":  78},
+        {"period": "2024Q3", "period_start": "2024-07-01", "period_end": "2024-09-30", "tag_id": 57, "tag_name": "+29 IVA soportado op. interiores - Cuota","balance":  15500.00, "line_count":  78},
+        {"period": "2024Q4", "period_start": "2024-10-01", "period_end": "2024-12-31", "tag_id": 23, "tag_name": "+01 Regimen general - Base imponible",   "balance": 113333.33, "line_count": 112},
+        {"period": "2024Q4", "period_start": "2024-10-01", "period_end": "2024-12-31", "tag_id": 24, "tag_name": "+03 Regimen general - Cuota",            "balance":  23800.00, "line_count": 112}
+      ]
+    },
+    "asset_value_per_category": {
+      "rows": [
+        {"category_account_id": 240, "category_account_name": "Equipo informatico", "state": "open",  "original_value": 84000.00, "book_value": 31200.00, "asset_count": 22},
+        {"category_account_id": 241, "category_account_name": "Mobiliario",         "state": "close", "original_value": 12000.00, "book_value": 0.00,     "asset_count": 5}
+      ]
+    },
+    "stock_valuation_total": {
+      "rows": [
+        {"product_id": 501, "product_name": "Producto A", "value": 12500.00, "quantity": 250.0},
+        {"product_id": 502, "product_name": "Producto B", "value":  8900.00, "quantity": 178.0}
+      ]
+    },
+    "journal_count": {
+      "rows": [
+        {"type": "bank",     "count": 3},
+        {"type": "cash",     "count": 1},
+        {"type": "general",  "count": 4},
+        {"type": "purchase", "count": 1},
+        {"type": "sale",     "count": 1}
+      ]
+    },
+    "account_count_per_type": {
+      "rows": [
+        {"account_type": "asset_cash",          "count": 4},
+        {"account_type": "asset_receivable",    "count": 3},
+        {"account_type": "equity",              "count": 6},
+        {"account_type": "expense",             "count": 42},
+        {"account_type": "income",              "count": 18},
+        {"account_type": "liability_current",   "count": 9},
+        {"account_type": "liability_payable",   "count": 3}
+      ]
+    },
+    "invoice_name_preservation": {
+      "$comment": "Una row por factura. En real serian decenas de miles - aqui mostramos 3 a modo de schema. La fase compare las re-extrae en target y clasifica cada una.",
+      "metadata": {
+        "legacy_field": "x_legacy_number",
+        "move_types": ["out_invoice", "out_refund", "in_invoice", "in_refund"],
+        "total_invoices": 3
+      },
+      "rows": [
+        {"id": 5012, "move_type": "out_invoice", "journal_code": "INV",  "invoice_date": "2010-03-15", "partner_vat": "ESB12345678", "partner_name": "Cliente Antiguo S.L.", "amount_total": 1234.56, "currency_code": "EUR", "name": "FAC/2010/00123", "ref": "PO-456", "legacy_value": "FAC/2010/00123"},
+        {"id": 5013, "move_type": "out_invoice", "journal_code": "INV",  "invoice_date": "2010-03-22", "partner_vat": "ESA98765432", "partner_name": "Cliente B SA",         "amount_total":  456.10, "currency_code": "EUR", "name": "FAC/2010/00124", "ref": "",       "legacy_value": "FAC/2010/00124"},
+        {"id": 7321, "move_type": "in_invoice",  "journal_code": "BILL", "invoice_date": "2018-11-30", "partner_vat": "ESB87654321", "partner_name": "Proveedor X",          "amount_total": 2500.00, "currency_code": "EUR", "name": "BILL/2018/00789","ref": "FRA-12/2018", "legacy_value": "FAC-12/2018"}
+      ]
+    }
+  }
+}

@@ -84,6 +84,8 @@ mod doc_links;
 #[cfg(test)]
 mod downstream_credential_configs;
 #[cfg(test)]
+mod dynapps_portal_connectors;
+#[cfg(test)]
 mod export_registry;
 #[cfg(test)]
 mod format_display;
@@ -393,6 +395,15 @@ mod farm_host_kind;
 mod farm_run_as;
 
 #[cfg(test)]
+mod farm_odoo_demo;
+
+#[cfg(test)]
+mod farm_mcp_tools;
+
+#[cfg(test)]
+mod governance_odoo_gate;
+
+#[cfg(test)]
 mod farm_assertions;
 
 #[cfg(test)]
@@ -407,6 +418,12 @@ mod farm_sync_card;
 
 #[cfg(test)]
 mod farm_eval_matrix;
+
+#[cfg(test)]
+mod farm_eval_history;
+
+#[cfg(test)]
+mod farm_eval_judge_config;
 
 #[cfg(test)]
 mod farm_attribution;

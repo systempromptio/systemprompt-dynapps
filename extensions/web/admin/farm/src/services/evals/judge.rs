@@ -1,6 +1,10 @@
-//! The judged half of an eval: one structured-output call through the
-//! process's `AiService` scoring a case's run against its rubric, built the
-//! way the conversation judge job builds its requests.
+//! The judged half of an eval.
+//!
+//! One structured-output call through the process's `AiService` scoring a
+//! case's run against its rubric, built the way the conversation judge job
+//! builds its requests. The provider and model come from the `evals:` block of
+//! the farms file, so every trigger builds the same judge through
+//! [`gateway_judge`].
 //!
 //! `StubJudge` stands in where no provider is configured and in tests.
 
@@ -13,11 +17,10 @@ use systemprompt::ai::{AiMessage, AiRequest, AiService, StructuredOutputOptions}
 use systemprompt::identifiers::{Actor, AgentName, ContextId, SessionId, TraceId, UserId};
 use systemprompt::models::execution::context::RequestContext;
 
+use crate::config::EvalsConfig;
 use crate::error::{FarmError, FarmResult};
 
 pub const JUDGE_AGENT_NAME: &str = "farm-eval-judge";
-pub const DEFAULT_PROVIDER: &str = "gemini";
-pub const DEFAULT_MODEL: &str = "gemini-3.8-flash";
 const MAX_OUTPUT_TOKENS: u32 = 2_048;
 const JUDGE_CONTEXT_SEED: &[u8] = b"dynapps:farm_eval_judge";
 
@@ -61,7 +64,8 @@ pub trait EvalJudge: Send + Sync {
 }
 
 // Why: Gemini's responseSchema is an OpenAPI subset (enums and `required`
-// only); core's sanitizer strips anything richer.
+// only); core's sanitizer strips anything richer, so the schema stays inside
+// what every provider accepts.
 // JSON: outgoing fixed-shape
 #[must_use]
 pub fn verdict_schema() -> serde_json::Value {
@@ -136,12 +140,12 @@ impl std::fmt::Debug for GatewayJudge {
 
 impl GatewayJudge {
     #[must_use]
-    pub fn new(ai: Arc<AiService>, user_id: UserId) -> Self {
+    pub fn new(ai: Arc<AiService>, user_id: UserId, config: &EvalsConfig) -> Self {
         Self {
             ai,
             actor: Actor::job(user_id, JUDGE_AGENT_NAME),
-            provider: DEFAULT_PROVIDER.to_owned(),
-            model: DEFAULT_MODEL.to_owned(),
+            provider: config.judge_provider.clone(),
+            model: config.judge_model.clone(),
             max_output_tokens: MAX_OUTPUT_TOKENS,
         }
     }
@@ -189,6 +193,17 @@ impl GatewayJudge {
             output_tokens: response.output_tokens.and_then(|t| i32::try_from(t).ok()),
         })
     }
+}
+
+#[must_use]
+pub fn gateway_judge(
+    ai: Option<Arc<AiService>>,
+    user_id: &UserId,
+    config: &EvalsConfig,
+) -> Option<Arc<dyn EvalJudge>> {
+    let ai = ai?;
+    let judge: Arc<dyn EvalJudge> = Arc::new(GatewayJudge::new(ai, user_id.clone(), config));
+    Some(judge)
 }
 
 impl EvalJudge for GatewayJudge {

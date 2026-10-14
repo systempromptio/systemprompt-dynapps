@@ -1,7 +1,7 @@
 //! Eval rows: the suite synced per agent, its cases, one eval run per
 //! launch, and one result per case linked to the farm run that produced it.
 
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDate, Utc};
 use serde::Serialize;
 use systemprompt::identifiers::UserId;
 
@@ -48,6 +48,21 @@ pub struct EvalRunRow {
     pub mean_score: Option<f64>,
     pub cost_microdollars: i64,
     pub created_at: DateTime<Utc>,
+    pub triggered_via: String,
+}
+
+/// One agent's eval runs on one day: how many ran, how many of their cases
+/// passed out of how many were decided, the mean judge score and the spend.
+#[derive(Debug, Clone, PartialEq, Serialize, sqlx::FromRow)]
+pub struct EvalDayRow {
+    pub farm_id: FarmId,
+    pub agent_id: FarmAgentId,
+    pub day: NaiveDate,
+    pub runs: i64,
+    pub passed: i64,
+    pub decided: i64,
+    pub mean_score: Option<f64>,
+    pub cost_microdollars: i64,
 }
 
 // JSON: fixed-shape document — `assertions` holds each assertion's outcome
