@@ -14,7 +14,12 @@ use sqlx::PgPool;
 use crate::handlers;
 
 pub fn configuration_routes() -> Router<Arc<PgPool>> {
-    Router::new().route("/configuration", get(handlers::ssr::configuration_page))
+    Router::new()
+        .route("/configuration", get(handlers::ssr::configuration_page))
+        .route(
+            "/platform/secrets/reload",
+            post(handlers::ssr::secrets_reload),
+        )
 }
 
 pub fn sync_routes() -> Router<Arc<PgPool>> {

@@ -1,0 +1,136 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id AS \"id: EvalResultId\", eval_run_id AS \"eval_run_id: EvalRunId\", case_id, run_id, status,\n       assertions, judge_score, judge_rationale, created_at, updated_at\nFROM agent_farm_eval_results\nWHERE id = $1\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id: EvalResultId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_eval_results",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "eval_run_id: EvalRunId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_eval_results",
+            "name": "eval_run_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "case_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_eval_results",
+            "name": "case_id"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "run_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_eval_results",
+            "name": "run_id"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "status",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_eval_results",
+            "name": "status"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "assertions",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_eval_results",
+            "name": "assertions"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "judge_score",
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_eval_results",
+            "name": "judge_score"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "judge_rationale",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_eval_results",
+            "name": "judge_rationale"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_eval_results",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "updated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_eval_results",
+            "name": "updated_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "95afe965c88efa705e503f048b43bd67b3e5c91b2fb05cd742084abf3ef56c9c"
+}

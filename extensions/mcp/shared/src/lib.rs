@@ -135,4 +135,6 @@ fn log_no_anonymous_principal(server: &str, tool: &str) {
 }
 
 pub mod access_policy;
+pub mod auth;
+pub mod reply;
 pub mod tool_schema;

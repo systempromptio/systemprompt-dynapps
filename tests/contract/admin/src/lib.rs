@@ -23,8 +23,6 @@
 //! Everything runs against a throwaway database created on the server named by
 //! `DATABASE_URL`; the suite self-skips when no server is configured.
 
-#[cfg(test)]
-mod adfs_auth_contract;
 
 #[cfg(test)]
 mod analysis_lifecycle_distribution_contract;
@@ -96,6 +94,8 @@ mod route_source;
 #[cfg(test)]
 mod secrets_contract;
 #[cfg(test)]
+mod secrets_status_contract;
+#[cfg(test)]
 mod seed;
 #[cfg(test)]
 mod self_service_contract;
@@ -103,6 +103,8 @@ mod self_service_contract;
 mod share_contract;
 #[cfg(test)]
 mod sign_out_contract;
+#[cfg(test)]
+mod sso_auth_contract;
 #[cfg(test)]
 mod ssr_access_control_audience_contract;
 #[cfg(test)]

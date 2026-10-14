@@ -20,6 +20,24 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+## 0.67.0 — 2026-10-13
+
+### Added
+
+- **SSO on core's provider seam: Entra SAML and Entra OpenID Connect.** The hand-rolled SAML login is replaced by two providers registered on core's `SsoProvider` contract. `entra-saml` is the existing Microsoft Entra SAML path, aliased at `/admin/auth/adfs/*` and `/saml/metadata` so nothing in the IdP registration changes and every reason code is preserved. `entra-oidc` is new (`services/web/config/entra-oidc.yaml`): authorization code with PKCE and a nonce against the Entra app registration, the id_token verified through core's JWKS client with tenant and nonce pinned, and group overage refused. Core's `SsoDriver` owns state binding, replay protection, policy gating, federated resolution (`link_by_email` binds a verified email to the active account that owns it), role resolution and session minting; this repo registers the providers, a role resolver that keeps manually granted roles and revokes on demotion, and an event sink that records every login and the directory memberships it carried. Both providers' finish step is a pure validator, and the OIDC client secret is read per exchange so a rotation takes effect without a restart. Setup for both options: `/documentation/entra-id-sso-setup`.
+- **1Password as a managed external secrets source.** `extensions/secrets/onepassword` registers the `onepassword` kind for a profile's `secrets.source: external`, with an `op` CLI backend (service account) and a Connect REST backend behind one provider: `op://` mappings or one item per deployment, fail-closed, the token never in YAML or an argument list. The `secrets_refresh` scheduler job reloads on the profile's `refresh_secs`; the configuration page shows the source, generation and key names with an administrator **Reload** action that writes an activity row. The root image installs `op` 2.30.0 and the Helm chart gains `secrets.mode: onepassword`. Operator guide: `/documentation/secrets-management` and `deploy/self-host/SECRETS.md`.
+- **A farm belongs to a project.** `services/web/config/agent-farms.yaml` accepts `project:` on a farm (the Odoo delivery farm names `odoo-delivery`); farm sync writes it to `agent_farms.project_id`, the farm page shows it beside the owner, and the run facts view already scoped `scope: project` reads by it, so a project manager now sees the farm's runs. `run_start` with `origin: farm` refuses a `project` that is not the farm's own, since a farm run is attributed to its farm's project rather than to a caller-chosen one.
+- **`agent-farm` MCP server for developers and project managers.** A new internal server, `systemprompt-mcp-agent-farm` (crate `extensions/mcp/agent-farm`, port 5011, OAuth scope `user`), gives Claude Code and Cowork a run-centric tool set over core's `agent_runs`: `run_start`, `run_status`, `run_events`, `run_cancel`, `run_list`, `run_facts`, `run_stats`, `farm_evals_run`, `farm_eval_results`, `analytics_costs`, `analytics_requests`, `analytics_skills`, `analytics_tools` and `catalog_list`. Every run tool resolves the caller into a viewer and admits only their own runs, their projects' runs, or everything for an administrator; `scope: all` is refused without an administrator role. Evals are deterministic assertions only. It ships in the new `dynapps-engineering` workspace and plugin with the `agent_farm_runs` skill, declared in `rules.yaml` for the `developer`, `project_manager` and administrator roles. Documented at `/documentation/agent-farm`. The admin server's per-call authentication and error replies moved to `extensions/mcp/shared` (`auth`, `reply`) so both servers share them, and the farm state builder moved into the farm crate (`state::build_farm_state_from_app`) so the web extension and the new binary build it the same way.
+
+### Changed
+
+- **Built against systemprompt-core 0.67.0.** Every core crate pin moves to `0.67.0` (`Cargo.toml`, `tests/Cargo.toml`, `tests/unit/bridge/Cargo.toml`), `[patch.crates-io]` is inactive in both workspaces, and `bridge/CORE_REF` names `v0.67.0`. Core 0.67.0 carries the SSO provider seam, verified-email federated linking and the external secrets source the Entra and 1Password integrations build on.
+- The self-host `preflight.sh` checks that the image carries `systemprompt-mcp-agent-farm` beside `systemprompt-mcp-agent`, so a missing MCP binary is caught before the node boots rather than by the MCP validator at startup. The shared agent-run facts repository no longer probes for a `workflow_runs` table at runtime; this instance runs no workflow engine, so a `workflow_step` origin never appears and the lookup is empty by construction (the `check-sqlx` allowlist entry for it is gone).
+
+### Removed
+
+- The README coverage badge, which pointed at a `coverage/baseline.json` this repository does not track.
+
 ## 0.66.0 — 2026-10-13
 
 ### Changed

@@ -58,6 +58,8 @@ GET    /admin/artifacts/{artifact_id}                        anonymous=307 non-a
 GET    /admin/artifacts/{artifact_id}/preview                anonymous=307 non-admin=303 developer=303 admin=404 platform-admin=404 project-manager=303 knowledge-worker=303
 GET    /admin/auth/adfs/start                                anonymous=303 non-admin=303 developer=303 admin=303 platform-admin=303 project-manager=303 knowledge-worker=303
 GET    /admin/auth/dev/login                                 anonymous=303 non-admin=303 developer=303 admin=303 platform-admin=303 project-manager=303 knowledge-worker=303
+GET    /admin/auth/entra/callback                            anonymous=303 non-admin=303 developer=303 admin=303 platform-admin=303 project-manager=303 knowledge-worker=303
+GET    /admin/auth/entra/start                               anonymous=303 non-admin=303 developer=303 admin=303 platform-admin=303 project-manager=303 knowledge-worker=303
 GET    /admin/auth/me                                        anonymous=307 non-admin=200 developer=200 admin=200 platform-admin=200 project-manager=200 knowledge-worker=200
 GET    /admin/catalog                                        anonymous=307 non-admin=303 developer=303 admin=308 platform-admin=308 project-manager=303 knowledge-worker=303
 GET    /admin/catalog/access-control                         anonymous=307 non-admin=303 developer=303 admin=308 platform-admin=308 project-manager=303 knowledge-worker=303
@@ -228,6 +230,7 @@ POST   /admin/farm/runs/{run_id}/cancel                      anonymous=307 non-a
 POST   /admin/farm/{farm_id}/agents/{agent_id}/runs          anonymous=307 non-admin=303 developer=303 admin=422 platform-admin=422 project-manager=303 knowledge-worker=303
 POST   /admin/gateway/policies                               anonymous=307 non-admin=303 developer=303 admin=415 platform-admin=415 project-manager=303 knowledge-worker=303
 POST   /admin/gateway/policies/delete                        anonymous=307 non-admin=303 developer=303 admin=415 platform-admin=415 project-manager=303 knowledge-worker=303
+POST   /admin/platform/secrets/reload                        anonymous=307 non-admin=303 developer=303 admin=303 platform-admin=303 project-manager=303 knowledge-worker=303
 POST   /admin/sql/query                                      anonymous=307 non-admin=303 developer=303 admin=415 platform-admin=415 project-manager=303 knowledge-worker=303
 POST   /admin/system/observability/export                    anonymous=307 non-admin=303 developer=303 admin=303 platform-admin=303 project-manager=303 knowledge-worker=303
 POST   /admin/system/observability/test                      anonymous=307 non-admin=303 developer=303 admin=303 platform-admin=303 project-manager=303 knowledge-worker=303

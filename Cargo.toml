@@ -13,9 +13,11 @@ members = [
     "extensions/web/site",
     "extensions/web/jobs",
     "extensions/mcp/systemprompt",
+    "extensions/mcp/agent-farm",
     "extensions/mcp/shared",
     "extensions/cli/dev-login",
     "extensions/cli/kit-export",
+    "extensions/secrets/onepassword",
 ]
 # The test workspace under tests/ is a separate workspace so it never compiles
 # when these extension crates are consumed as dependencies. Run it explicitly:
@@ -36,7 +38,7 @@ opt-level = "z"
 [workspace.package]
 edition = "2024"
 rust-version = "1.96"
-version = "0.66.0"
+version = "0.67.0"
 authors = ["Dynapps <ed@systemprompt.io>"]
 repository = "https://github.com/systempromptio/systemprompt-dynapps"
 homepage = "https://www.dynapps.es"
@@ -46,9 +48,9 @@ documentation = "https://systemprompt.io/documentation"
 # ============================================
 # CORE FACADE (single dependency for all systemprompt-core)
 # ============================================
-systemprompt = { version = "0.66.0", default-features = false, features = ["core", "database", "config"] }
-systemprompt-security = { version = "0.66.0" }
-systemprompt-extension = { version = "0.66.0" }
+systemprompt = { version = "0.67.0", default-features = false, features = ["core", "database", "config"] }
+systemprompt-security = { version = "0.67.0" }
+systemprompt-extension = { version = "0.67.0" }
 
 # ============================================
 # LOCAL EXTENSIONS
@@ -66,6 +68,7 @@ systemprompt-web-content = { path = "extensions/web/content" }
 systemprompt-web-site = { path = "extensions/web/site" }
 systemprompt-web-jobs = { path = "extensions/web/jobs" }
 systemprompt-mcp-shared = { path = "extensions/mcp/shared" }
+systemprompt-secrets-onepassword = { path = "extensions/secrets/onepassword" }
 serde_jcs = "0.1"
 
 # Core runtime dependencies
@@ -119,6 +122,8 @@ hex = "0.4"
 # RS256 signing for the Salesforce RFC 7523 JWT-bearer assertion.
 jsonwebtoken = { version = "11", features = ["rust_crypto"] }
 base64 = "0.22"
+# Holds the 1Password service-account / Connect token; wiped on drop.
+zeroize = "1"
 
 handlebars = "6"
 

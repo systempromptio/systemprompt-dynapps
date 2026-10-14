@@ -23,6 +23,19 @@ pub async fn insert_eval_result(
     .await
 }
 
+pub async fn find_eval_result(
+    pool: &PgPool,
+    id: &EvalResultId,
+) -> Result<Option<EvalResultRow>, sqlx::Error> {
+    sqlx::query_file_as!(
+        EvalResultRow,
+        "src/repositories/evals/find_eval_result.sql",
+        id.as_str()
+    )
+    .fetch_optional(pool)
+    .await
+}
+
 pub async fn list_eval_results(
     pool: &PgPool,
     eval_run_id: &EvalRunId,

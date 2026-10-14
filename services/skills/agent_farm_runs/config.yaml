@@ -1,0 +1,12 @@
+id: agent_farm_runs
+name: Agent Farm Runs
+description: Start, watch, cancel and score headless agent runs on a farm through the agent-farm
+  MCP server, and read your own and your projects' run facts and usage.
+enabled: true
+file: SKILL.md
+tags:
+- engineering
+- agent-farm
+- runs
+category: engineering
+display_category: Engineering

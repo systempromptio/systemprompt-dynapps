@@ -1,0 +1,189 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "-- The scope's rollup and the same rollup per origin kind, from one pass:\n-- GROUPING SETS yields the per-kind rows plus the total row (is_total = 1).\n-- Per-run metered cost, tool uses and hook denials are folded in first so\n-- they sum the same way the counts do.\nWITH runs AS (\n    SELECT ar.origin_kind,\n           ar.status,\n           ar.error_class,\n           ar.duration_ms,\n           ar.cost_microdollars,\n           (SELECT COALESCE(SUM(r.cost_microdollars), 0)::bigint\n              FROM ai_requests r\n             WHERE r.session_id = ar.gateway_session_id) AS metered,\n           (SELECT COUNT(*)::bigint\n              FROM agent_run_events e\n             WHERE e.run_id = ar.id AND e.kind = 'tool_use') AS tool_uses,\n           (SELECT COUNT(*)::bigint\n              FROM agent_run_events e\n             WHERE e.run_id = ar.id\n               AND e.kind = 'hook'\n               AND e.payload ->> 'decision' = 'deny') AS hook_denials\n      FROM agent_runs ar\n      LEFT JOIN agent_farm_runs fr ON fr.agent_run_id = ar.id\n      LEFT JOIN agent_farms f ON f.id = fr.farm_id\n     WHERE ($1::text IS NULL OR ar.user_id = $1)\n       AND ($2::text[] IS NULL OR f.project_id = ANY($2))\n       AND ($3::text IS NULL OR ar.origin_kind = $3)\n       AND ($4::text IS NULL OR ar.origin_id = $4)\n       AND ($5::text IS NULL OR ar.status = $5)\n       AND ($6::timestamptz IS NULL OR ar.created_at >= $6)\n       AND ($7::timestamptz IS NULL OR ar.created_at < $7)\n       AND ($8::text IS NULL OR fr.farm_id = $8)\n)\nSELECT origin_kind AS \"origin_kind?\",\n       GROUPING(origin_kind)::int AS \"is_total!\",\n       COUNT(*)::bigint AS \"total!\",\n       COUNT(*) FILTER (WHERE status = 'queued')::bigint AS \"queued!\",\n       COUNT(*) FILTER (WHERE status = 'preparing')::bigint AS \"preparing!\",\n       COUNT(*) FILTER (WHERE status = 'running')::bigint AS \"running!\",\n       COUNT(*) FILTER (WHERE status = 'succeeded')::bigint AS \"succeeded!\",\n       COUNT(*) FILTER (WHERE status = 'failed')::bigint AS \"failed!\",\n       COUNT(*) FILTER (WHERE status = 'cancelled')::bigint AS \"cancelled!\",\n       COUNT(*) FILTER (WHERE status = 'timed_out')::bigint AS \"timed_out!\",\n       COUNT(*) FILTER (WHERE error_class = 'ok')::bigint AS \"err_ok!\",\n       COUNT(*) FILTER (WHERE error_class = 'budget_exceeded')::bigint AS \"err_budget_exceeded!\",\n       COUNT(*) FILTER (WHERE error_class = 'timeout')::bigint AS \"err_timeout!\",\n       COUNT(*) FILTER (WHERE error_class = 'output_invalid')::bigint AS \"err_output_invalid!\",\n       COUNT(*) FILTER (WHERE error_class = 'hook_denied')::bigint AS \"err_hook_denied!\",\n       COUNT(*) FILTER (WHERE error_class = 'host_crashed')::bigint AS \"err_host_crashed!\",\n       COUNT(*) FILTER (WHERE error_class = 'connector_unavailable')::bigint\n           AS \"err_connector_unavailable!\",\n       COALESCE(SUM(cost_microdollars), 0)::bigint AS \"cost_microdollars_reported!\",\n       COALESCE(SUM(metered), 0)::bigint AS \"cost_microdollars_metered!\",\n       (percentile_cont(0.5) WITHIN GROUP (ORDER BY duration_ms::float8))::float8\n           AS \"p50_duration_ms?\",\n       (percentile_cont(0.95) WITHIN GROUP (ORDER BY duration_ms::float8))::float8\n           AS \"p95_duration_ms?\",\n       COALESCE(SUM(tool_uses), 0)::bigint AS \"tool_use_count!\",\n       COALESCE(SUM(hook_denials), 0)::bigint AS \"hook_deny!\"\nFROM runs\nGROUP BY GROUPING SETS ((origin_kind), ())\nORDER BY GROUPING(origin_kind) DESC, origin_kind\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "origin_kind?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_runs",
+            "name": "origin_kind"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "is_total!",
+        "type_info": "Int4",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "total!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "queued!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "preparing!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "running!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 6,
+        "name": "succeeded!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 7,
+        "name": "failed!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 8,
+        "name": "cancelled!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 9,
+        "name": "timed_out!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 10,
+        "name": "err_ok!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 11,
+        "name": "err_budget_exceeded!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 12,
+        "name": "err_timeout!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 13,
+        "name": "err_output_invalid!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 14,
+        "name": "err_hook_denied!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 15,
+        "name": "err_host_crashed!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 16,
+        "name": "err_connector_unavailable!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 17,
+        "name": "cost_microdollars_reported!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 18,
+        "name": "cost_microdollars_metered!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 19,
+        "name": "p50_duration_ms?",
+        "type_info": "Float8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 20,
+        "name": "p95_duration_ms?",
+        "type_info": "Float8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 21,
+        "name": "tool_use_count!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 22,
+        "name": "hook_deny!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "TextArray",
+        "Text",
+        "Text",
+        "Text",
+        "Timestamptz",
+        "Timestamptz",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "e03ed6807dae650ef89a97cf6832c978619554604700f52408c94c95cb6536a1"
+}

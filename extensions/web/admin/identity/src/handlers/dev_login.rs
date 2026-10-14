@@ -20,7 +20,13 @@ use serde::Deserialize;
 use systemprompt::config::ProfileBootstrap;
 use systemprompt::manifest::profile::{Environment, ProfileType};
 
-use super::adfs_auth::{AdfsDeps, SessionSubject, mint_session, record_login, session_cookie};
+use systemprompt::analytics::SessionAnalyticsBuilder;
+use systemprompt::manifest::Config;
+use systemprompt::sso::{BrowserSessionSubject, mint_browser_session};
+use systemprompt_web_admin_core::activity::NewActivity;
+use systemprompt_web_admin_core::repositories::user_activity::record;
+
+use super::sso_alias::SsoDeps;
 use crate::repositories::dev_login::consume_dev_login_code;
 
 pub const DEV_LOGIN_PATH: &str = "/admin/auth/dev/login";
@@ -48,7 +54,7 @@ pub(crate) struct DevLoginParams {
 }
 
 pub(crate) async fn dev_login_redeem(
-    Extension(deps): Extension<AdfsDeps>,
+    Extension(deps): Extension<SsoDeps>,
     headers: HeaderMap,
     params: Result<Query<DevLoginParams>, QueryRejection>,
 ) -> Result<Response, DevLoginRejected> {
@@ -65,25 +71,46 @@ pub(crate) async fn dev_login_redeem(
         },
     };
 
-    let user_id = user.user_id.clone();
-    let email = user.email.clone();
-    let subject = SessionSubject::from(user);
-    let (jwt, max_age) = match mint_session(&deps.session_service, &subject, &headers).await {
+    let Ok(config) = Config::get() else {
+        tracing::error!("dev login: profile config unavailable");
+        return Err(DevLoginRejected);
+    };
+    let subject = BrowserSessionSubject {
+        user_id: &user.user_id,
+        display_name: &user.display_name,
+        email: &user.email,
+        roles: &user.roles,
+    };
+    let analytics = SessionAnalyticsBuilder::new(&headers).build();
+    let minted = match mint_browser_session(&deps.session_service, config, &subject, &analytics)
+        .await
+    {
         Ok(minted) => minted,
         Err(e) => {
-            tracing::error!(error = %e, user_id = %user_id, "dev login session mint failed");
+            tracing::error!(error = %e, user_id = %user.user_id, "dev login session mint failed");
             return Err(DevLoginRejected);
         },
     };
-    record_login(&deps.write_pool, &subject).await;
+    record(
+        &deps.write_pool,
+        NewActivity::login(&user.user_id, &user.display_name),
+    )
+    .await;
 
-    tracing::info!(user_id = %user_id, email = %email, "dev login code redeemed");
+    tracing::info!(user_id = %user.user_id, email = %user.email, "dev login code redeemed");
 
     let mut out = HeaderMap::new();
-    if let Ok(val) = session_cookie(&jwt, max_age).parse() {
+    if let Ok(val) =
+        session_cookie(&minted.access_token, minted.max_age_secs, config.use_https).parse()
+    {
         out.append(SET_COOKIE, val);
     }
     Ok((out, Redirect::to("/admin")).into_response())
+}
+
+fn session_cookie(jwt: &str, max_age: i64, secure: bool) -> String {
+    let secure = if secure { "; Secure" } else { "" };
+    format!("access_token={jwt}; Path=/; HttpOnly; SameSite=Lax; Max-Age={max_age}{secure}")
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

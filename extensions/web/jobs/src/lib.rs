@@ -42,6 +42,7 @@ mod retention;
 mod robots;
 mod scope_defaults;
 mod secret_migration;
+mod secrets_refresh;
 mod sitemap;
 mod usage_anomaly;
 mod usage_retention;
@@ -69,6 +70,7 @@ pub use retention::{RetentionDailyReportJob, RetentionExportMonthlyJob, Retentio
 pub use robots::RobotsTxtGenerationJob;
 pub use scope_defaults::ScopeDefaultsJob;
 pub use secret_migration::SecretMigrationJob;
+pub use secrets_refresh::{SecretsRefreshJob, reload_due};
 pub use sitemap::SitemapGenerationJob;
 pub use usage_retention::PluginUsageRetentionJob;
 pub use usage_rollup::UsageDailyRollupJob;

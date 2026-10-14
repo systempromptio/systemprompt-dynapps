@@ -122,7 +122,7 @@ impl Extension for WebExtension {
         Some(SiteAuthConfig {
             login_path: "/admin/login",
             protected_prefixes: &["/admin", "/bridge-auth"],
-            public_prefixes: &["/admin/login", "/admin/auth/adfs"],
+            public_prefixes: &["/admin/login", "/admin/auth/adfs", "/admin/auth/entra"],
             required_scope: "user",
         })
     }

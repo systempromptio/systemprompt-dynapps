@@ -8,13 +8,16 @@
 
 use std::sync::{Arc, OnceLock};
 
-mod adfs;
 mod downstream;
+mod sso_oidc;
+mod sso_saml;
 
-use adfs::load_adfs_config;
 use downstream::load_salesforce_config;
+use sso_oidc::load_entra_oidc_config;
+use sso_saml::load_entra_saml_config;
 
 use systemprompt::config::{AppPaths, ProfileBootstrap};
+use systemprompt_web_admin_identity::sso::entra_oidc::EntraOidcConfig;
 use thiserror::Error;
 
 #[doc(hidden)]
@@ -118,9 +121,10 @@ static NAVIGATION_CONFIG: OnceLock<Result<Option<Arc<NavigationConfig>>, String>
 static HOMEPAGE_CONFIG: OnceLock<Result<Option<Arc<HomepageConfig>>, String>> = OnceLock::new();
 static SKILLS_PAGE_CONFIG: OnceLock<Result<Option<Arc<SkillsPageConfig>>, String>> =
     OnceLock::new();
-static ADFS_CONFIG: OnceLock<
-    Result<Option<Arc<systemprompt_web_admin_identity::AdfsConfig>>, String>,
+static ENTRA_SAML_CONFIG: OnceLock<
+    Result<Option<Arc<systemprompt_web_admin_identity::EntraSamlConfig>>, String>,
 > = OnceLock::new();
+static ENTRA_OIDC_CONFIG: OnceLock<Result<Option<Arc<EntraOidcConfig>>, String>> = OnceLock::new();
 static SALESFORCE_CONFIG: OnceLock<
     Result<Option<Arc<systemprompt_web_admin_platform::SalesforceConfig>>, String>,
 > = OnceLock::new();
@@ -153,8 +157,25 @@ pub fn skills_page_config() -> Option<Arc<SkillsPageConfig>> {
 }
 
 #[must_use]
-pub fn adfs_config() -> Option<Arc<systemprompt_web_admin_identity::AdfsConfig>> {
-    log_and_discard_err(&ADFS_CONFIG, load_adfs_config, "ADFS config error")
+pub fn entra_saml_config() -> Option<Arc<systemprompt_web_admin_identity::EntraSamlConfig>> {
+    log_and_discard_err(
+        &ENTRA_SAML_CONFIG,
+        load_entra_saml_config,
+        "Entra SAML config error",
+    )
+}
+
+fn load_optional_entra_oidc_config() -> Result<Option<Arc<EntraOidcConfig>>, ConfigError> {
+    load_entra_oidc_config().map(Some)
+}
+
+#[must_use]
+pub fn entra_oidc_config() -> Option<Arc<EntraOidcConfig>> {
+    log_and_discard_err(
+        &ENTRA_OIDC_CONFIG,
+        load_optional_entra_oidc_config,
+        "Entra OIDC config error",
+    )
 }
 
 #[must_use]

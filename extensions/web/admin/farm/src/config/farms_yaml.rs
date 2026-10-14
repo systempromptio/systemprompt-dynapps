@@ -34,6 +34,8 @@ pub struct FarmDef {
     #[serde(default)]
     pub run_as: Option<String>,
     #[serde(default)]
+    pub project: Option<String>,
+    #[serde(default)]
     pub defaults: FarmDefaults,
 }
 

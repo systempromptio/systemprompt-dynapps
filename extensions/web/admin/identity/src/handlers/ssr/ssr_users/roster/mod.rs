@@ -108,7 +108,7 @@ pub(crate) struct RosterQueryParams {
 
 pub(crate) async fn users_page(
     shell: Page,
-    Extension(sso): Extension<crate::handlers::adfs_auth::AdfsDeps>,
+    Extension(sso): Extension<crate::SsoDeps>,
     State(pool): State<Arc<PgPool>>,
     Query(params): Query<RosterQueryParams>,
 ) -> AdminHtmlResult<Response> {
@@ -159,7 +159,8 @@ pub(crate) async fn users_page(
         pagination: view::build_pagination(&url, window),
         can_write: shell.user.is_admin,
         role_choices: read.roles,
-        create_user: create_user_panel(&pool, &sso.config, shell.user.is_admin, &mut faults).await,
+        create_user: create_user_panel(&pool, sso.provisions(), shell.user.is_admin, &mut faults)
+            .await,
         export: export_view(&url),
     };
 

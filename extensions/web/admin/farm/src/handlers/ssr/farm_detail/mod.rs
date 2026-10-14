@@ -54,6 +54,7 @@ struct FarmDetailContext {
     marketplace_url: String,
     owner: String,
     owner_url: String,
+    project: String,
     sync: SyncCardView,
     tabs: Vec<TabLinkView>,
     tab: &'static str,
@@ -161,6 +162,11 @@ pub(crate) async fn farm_detail_page(
             format!("/admin/users/{owner}")
         },
         owner,
+        project: farm
+            .project_id
+            .as_ref()
+            .map(|p| p.as_str().to_owned())
+            .unwrap_or_default(),
         tabs: tab_links(&id, tab, agents.len(), suites.len()),
         farm_id: id,
         sync,

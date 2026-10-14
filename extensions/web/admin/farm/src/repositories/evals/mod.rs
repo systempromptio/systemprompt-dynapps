@@ -7,8 +7,8 @@ mod suites;
 
 pub use matrix::list_latest_results_matrix;
 pub use results::{
-    EvalOutcomeUpdate, insert_eval_result, list_eval_results, update_eval_result_outcome,
-    update_eval_result_run,
+    EvalOutcomeUpdate, find_eval_result, insert_eval_result, list_eval_results,
+    update_eval_result_outcome, update_eval_result_run,
 };
 pub use runs::{
     NewEvalRun, find_eval_run, insert_eval_run, list_eval_runs_paged, list_recent_eval_runs,

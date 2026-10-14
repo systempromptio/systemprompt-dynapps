@@ -28,7 +28,7 @@ use systemprompt_web_admin_catalog::routes::ssr as catalog_ssr;
 use systemprompt_web_admin_core::templates::AdminTemplateEngine;
 use systemprompt_web_admin_farm::routes::{farm_fragments, farm_ssr};
 use systemprompt_web_admin_governance::routes::ssr_governance;
-use systemprompt_web_admin_identity::AdfsDeps;
+use systemprompt_web_admin_identity::SsoDeps;
 use systemprompt_web_admin_identity::routes::{account_ssr, people_ssr, public as sign_in};
 use systemprompt_web_admin_platform::routes::{platform_ssr, ssr_bridge};
 use systemprompt_web_admin_platform::service_accounts::ServiceAccounts;
@@ -37,7 +37,7 @@ pub fn admin_ssr_router(
     db: &DbPool,
     pool: Arc<PgPool>,
     engine: AdminTemplateEngine,
-    sso_deps: AdfsDeps,
+    sso_deps: SsoDeps,
     managed: Arc<systemprompt_web_admin_core::state::ManagedState>,
 ) -> Router {
     let inner = overview::routes()

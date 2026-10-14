@@ -47,6 +47,8 @@ rand = { workspace = true }
 
 # SAML 2.0 relying party: pure-Rust XML-DSig, no libxml2/xmlsec.
 saml = { workspace = true }
+# Verifies Entra ID OpenID Connect id_tokens (RS256 against the tenant JWKS).
+jsonwebtoken = { workspace = true }
 # Fetches the IdP federation metadata from `idp_metadata_url`.
 reqwest = { workspace = true }
 

@@ -86,6 +86,10 @@ secrets:
   # csi            Google Secret Manager through the Secret Store CSI driver (GKE add-on).
   # existingSecret a Kubernetes Secret you manage (External Secrets, Config Sync, ...).
   # inline         the chart creates a Secret from `inline.json`. Development only.
+  # onepassword    no secrets.json: the profile gets a `secrets.source: external`
+  #                block (kind onepassword) and the pod reads the vault at boot and
+  #                every refreshSecs, with the token from `onepassword.tokenSecret`.
+  #                See deploy/self-host/SECRETS.md#1password.
   mode: csi
   # Name of the file inside the source; the copy is always secrets.json.
   fileName: secrets.json
@@ -103,6 +107,27 @@ secrets:
     key: secrets.json
   inline:
     json: ""
+  onepassword:
+    # cli (service account through the `op` binary in the image) or connect
+    # (a self-hosted 1Password Connect server at connectUrl).
+    backend: cli
+    connectUrl: ""
+    # REQUIRED with mode onepassword.
+    vault: ""
+    # Reload interval in seconds (core floors it at 60); 0 disables refresh.
+    refreshSecs: 300
+    # One secrets.json key per op://<vault>/<item>/<field> reference ...
+    items: {}
+    #   anthropic: op://dynapps-prod/platform/anthropic
+    #   encryption_master_key: op://dynapps-prod/identity/encryption_master_key
+    # ... or every CONCEALED/STRING field of one item, keyed by field label.
+    item: ""
+    # Env var the token is exposed as; use OP_CONNECT_TOKEN with backend connect.
+    tokenEnv: OP_SERVICE_ACCOUNT_TOKEN
+    # Kubernetes Secret holding the service-account (or Connect) token.
+    tokenSecret:
+      name: ""
+      key: token
 
 # ---------------------------------------------------------------------------
 # Database: Cloud SQL for PostgreSQL 16 through the Cloud SQL Auth Proxy, run

@@ -1,0 +1,266 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id AS \"id: FarmId\", name, description, marketplace_id AS \"marketplace_id: MarketplaceId\",\n       source_repo, source_ref, source_subdir, permission_mode, timeout_seconds, max_turns,\n       max_budget_usd, model, synced_commit_sha, synced_at, synced_by, sync_error,\n       owner_user_id, run_as_user_id AS \"run_as_user_id: UserId\", project_id AS \"project_id: ProjectId\", created_at, updated_at\nFROM agent_farms\nORDER BY name, id\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id: FarmId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farms",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farms",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "description",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farms",
+            "name": "description"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "marketplace_id: MarketplaceId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farms",
+            "name": "marketplace_id"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "source_repo",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farms",
+            "name": "source_repo"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "source_ref",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farms",
+            "name": "source_ref"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "source_subdir",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farms",
+            "name": "source_subdir"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "permission_mode",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farms",
+            "name": "permission_mode"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "timeout_seconds",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "agent_farms",
+            "name": "timeout_seconds"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "max_turns",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "agent_farms",
+            "name": "max_turns"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "max_budget_usd",
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "agent_farms",
+            "name": "max_budget_usd"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "model",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farms",
+            "name": "model"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "synced_commit_sha",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farms",
+            "name": "synced_commit_sha"
+          }
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "synced_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "agent_farms",
+            "name": "synced_at"
+          }
+        }
+      },
+      {
+        "ordinal": 14,
+        "name": "synced_by",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farms",
+            "name": "synced_by"
+          }
+        }
+      },
+      {
+        "ordinal": 15,
+        "name": "sync_error",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farms",
+            "name": "sync_error"
+          }
+        }
+      },
+      {
+        "ordinal": 16,
+        "name": "owner_user_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farms",
+            "name": "owner_user_id"
+          }
+        }
+      },
+      {
+        "ordinal": 17,
+        "name": "run_as_user_id: UserId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farms",
+            "name": "run_as_user_id"
+          }
+        }
+      },
+      {
+        "ordinal": 18,
+        "name": "project_id: ProjectId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farms",
+            "name": "project_id"
+          }
+        }
+      },
+      {
+        "ordinal": 19,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "agent_farms",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 20,
+        "name": "updated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "agent_farms",
+            "name": "updated_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "88f9878a92aef62f96aced1b95b33a98bab65ff6989549d78912ddccb8e73dc1"
+}

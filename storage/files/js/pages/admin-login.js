@@ -6,6 +6,7 @@ const SSO_MESSAGES = {
   forbidden: 'Your account is not on an email domain this platform accepts.',
   no_group: 'Your account is not in a Systemprompt-* Entra ID group, so it has no access here. Ask IT to add you to the right group.',
   not_provisioned: 'No account exists for you yet. Ask IT to add you to a Systemprompt-* Entra ID group.',
+  group_overage: 'Your account is in too many Entra ID groups for the sign-in to list them. Ask IT to emit only the groups assigned to the application.',
   correlation_lost: 'Dynapps SSO (Microsoft Entra ID) sent a sign-in this platform did not start. Start again from this page.',
   error: 'Sign-in failed or the sign-in page expired. Start again from this page.'
 };

@@ -801,6 +801,17 @@
             }
           ],
           "default": null
+        },
+        "external": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ExternalSecretsConfig"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "additionalProperties": false,
@@ -813,7 +824,8 @@
       "enum": [
         "file",
         "env",
-        "vault"
+        "vault",
+        "external"
       ]
     },
     "SecretsValidationMode": {
@@ -975,6 +987,27 @@
         "path",
         "field"
       ]
+    },
+    "ExternalSecretsConfig": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "refresh_secs": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0,
+          "default": null
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "additionalProperties": true
     },
     "ExtensionsConfig": {
       "type": "object",

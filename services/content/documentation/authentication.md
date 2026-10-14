@@ -1,9 +1,9 @@
 ---
 title: "Authentication"
-description: "The one way into the platform: Dynapps single sign-on (Microsoft Entra ID over SAML 2.0, with Entra groups deciding roles). Covers operator recovery from the CLI, sessions, JWTs, and route protection."
+description: "The one way into the platform: Dynapps single sign-on (Microsoft Entra ID over SAML 2.0 or OpenID Connect, with Entra groups deciding roles). Covers the SSO provider model, reason codes, the sign-in audit table, operator recovery from the CLI, sessions, JWTs, and route protection."
 author: "Dynapps"
 slug: "authentication"
-keywords: "authentication, login, sso, entra id, saml, session, JWT, security, provisioning"
+keywords: "authentication, login, sso, entra id, saml, oidc, openid connect, sso_login_events, session, JWT, security, provisioning"
 kind: "guide"
 public: true
 tags: ["authentication", "security", "login"]
@@ -22,6 +22,8 @@ related_playbooks:
     url: "/documentation/enterprise-user-access"
   - title: "Create & Manage Users"
     url: "/documentation/admin-user-management"
+  - title: "Secrets Management"
+    url: "/documentation/secrets-management"
   - title: "Install the Desktop Bridge"
     url: "/documentation/bridge-install"
 ---
@@ -30,7 +32,7 @@ related_playbooks:
 
 **TL;DR:** There is exactly one way into the platform in a browser, and it
 stores no password. Everyone signs in with **Dynapps SSO** (Microsoft Entra
-ID, over SAML 2.0) and their **Entra groups** decide what
+ID, over SAML 2.0 or OpenID Connect) and their **Entra groups** decide what
 they can do. There is no second login form, no self-registration, and no
 in-browser invite redemption; operator recovery happens from the **CLI**.
 
@@ -49,56 +51,159 @@ sessions and bridge credentials that sign-in's owner already holds. See
 
 This is how everyone who is not a platform operator signs in.
 
-The user clicks **Sign in with Dynapps SSO** on `/admin/login` (or picks
-the application tile in My Apps). The platform sends a SAML 2.0
-`AuthnRequest` to Entra ID, so Conditional Access and MFA apply
-unchanged, and Entra ID posts a signed
-assertion back to `/admin/auth/adfs/acs`.
+### The provider model
 
-On that callback, the platform:
+Sign-in is run by core's **SSO driver** (`SsoDriver`). A *provider* only
+speaks its protocol: it builds the redirect to the identity provider and
+validates what comes back. Everything around that — state correlation, replay,
+the identity policy, provisioning, the session and the audit row — belongs to
+the driver, so every provider gets the same guarantees and the same failure
+codes.
 
-1. Verifies the assertion: XML signature against the IdP certificate pinned
-   in the committed federation metadata, audience, destination, validity
-   window, replay, and — for a sign-in we started — the request it answers
-   and the `RelayState` this browser's request minted.
-2. Gates the claims: the email must be on an allow-listed Dynapps domain, and
-   the assertion must carry at least one Entra group. An assertion with no group
-   claim at all gets **no session** — deny by default. A group the platform
-   does not map is not a refusal; it simply mints no role.
-3. Maps the groups to roles (`services/web/config/adfs.yaml`, `group_roles`).
-   This rewrites the *directory* half of the account's role set, so leaving an
-   Entra group revokes the role at the next sign-in. Roles an admin granted by
-   hand are a separate half and survive. A sign-in carrying no mapped group
-   signs in as a plain `user`.
-4. Resolves the identity — returning login, merge onto an existing account by
-   email, or just-in-time provisioning.
-5. Places the person in the groups and projects those Entra groups map to
-   (`services/web/config/groups.yaml`), replacing the directory-sourced
-   memberships from their last sign-in and leaving dashboard-granted ones
-   alone. An Entra group that maps to nothing leaves them in the derived
-   `unassigned` group.
-6. Mints a session JWT and sets it as the `access_token` cookie.
+Two providers are registered in this installation, both against Microsoft
+Entra ID. A provider whose config is disabled or incomplete is simply not
+registered; run one or the other against the same Entra groups.
 
-Failures return to `/admin/login?sso=<reason>`:
+| Provider id | Protocol | Config | Start | Callback | Metadata |
+|---|---|---|---|---|---|
+| `entra-saml` | SAML 2.0 (form-POST return) | `services/web/config/adfs.yaml` | `/admin/auth/adfs/start` | `POST /admin/auth/adfs/acs` | `/saml/metadata` |
+| `entra-oidc` | OpenID Connect, code flow with PKCE (query return) | `services/web/config/entra-oidc.yaml` | `/admin/auth/entra/start` | `GET /admin/auth/entra/callback` | — |
 
-| Reason | Meaning |
-|---|---|
-| `unavailable` | No usable `adfs.yaml` (or unreadable IdP metadata) on this instance |
-| `correlation_lost` | The sign-in state cookie was missing or expired |
-| `no_subject` | The assertion carries no `NameID` — the Enterprise Application needs a Name ID claim |
-| `invalid_assertion` | Signature, audience, destination, validity, or replay check failed |
-| `no_email` | The assertion carried no email attribute and no email-format `NameID` |
-| `forbidden` | The email domain is not allow-listed |
-| `no_group` | The assertion carried no group at all |
-| `group_overage` | Entra ID sent a group overage link instead of the group list |
-| `not_provisioned` | No account exists and auto-provisioning is off |
-| `error` | Anything else — the server log has the detail |
+Core also mounts every registered provider generically at
+`/api/v1/core/sso/{id}/start`, `/api/v1/core/sso/{id}/callback` (query or
+form-POST) and `/api/v1/core/sso/{id}/metadata`. The `/admin/auth/*` and
+`/saml/metadata` paths above are aliases onto the same driver, kept because
+they are the URLs the Entra ID applications were registered with. The
+difference is only in failure handling: the aliases always send a refused or
+unconfigured sign-in to `/admin/login?sso=<reason>`.
+
+The login page shows **Sign in with Dynapps SSO (Microsoft Entra ID)** when
+`entra-saml` is registered and **Sign in with Microsoft** when `entra-oidc`
+is; a `?redirect=` on the login page is carried through the start.
+
+### What happens on a sign-in
+
+**Start.** The driver asks the provider for its redirect, then stores the
+attempt server-side in `sso_state_bindings`: the provider, the post-login
+destination, the protocol nonces (SAML request id; OIDC nonce and PKCE
+verifier), and a hash of a fresh **binder** value. The raw state and binder
+are never stored — both are keyed by HMAC-SHA-256 with the at-rest pepper. The
+row lives **600 seconds** and is **single-use**. The binder goes to the
+browser as the `sp_sso_bind` cookie (`HttpOnly`, `Path=` the provider's
+callback, `Max-Age=600`, `Secure` unless the API is served over plain
+`http`). SAML uses `SameSite=None`, because Entra ID posts the ACS
+cross-site; OIDC uses `SameSite=Lax`. The post-login destination must be a
+same-origin relative path; anything else falls back to `/admin`.
+
+**Callback.** The driver, for every provider:
+
+1. Correlates the return: the `state` (OIDC) or `RelayState` (SAML) must
+   match an unconsumed, unexpired row for this provider, and the `sp_sso_bind`
+   cookie must match the row's binder. A return with no state is accepted only
+   when the provider allows unsolicited sign-ins — SAML's
+   `allow_idp_initiated` (My Apps tile); OIDC never does.
+2. Lets the provider validate the response. SAML: XML signature against the
+   tenant's signing certificate from its federation metadata, audience,
+   destination, validity window, and the request id it answers. OIDC: an
+   RS256 `id_token` from the tenant's JWKS, issuer, audience, `tid`, expiry
+   and nonce.
+3. Requires a subject, then claims the assertion id in the **replay guard**
+   (`sso_replay_guard`, scoped per provider) until the assertion expires —
+   one hour if the provider gives no expiry. A second sight of the same
+   assertion is refused.
+4. Requires an email and lowercases it.
+5. Applies the provider's identity policy (`SsoIdentityPolicy`, the same for
+   both protocols): email domain, then group overage, then the group
+   requirement, then group → role mapping. See
+   [Groups as entitlements](#groups-as-entitlements).
+6. Resolves the local user by `(issuer, subject)`; if there is no link and
+   the policy sets `link_by_email` (both shipped configs do), links a verified,
+   allow-listed email to the active, interactive local account that already
+   owns it, so an operator created with `admin users create` signs in without
+   a duplicate account. Otherwise, if `auto_provision` is on, provisions one.
+   An inactive or non-interactive (service) account is refused.
+7. **Writes the resolved roles onto the account** (see below), mints a
+   session, and sets it as the `access_token` cookie.
+8. Records the outcome in `sso_login_events` and runs the installation's
+   sign-in sink: the `login` activity and the directory group and project memberships
+   (`services/web/config/groups.yaml`), replacing the directory-sourced rows
+   from the last sign-in (`source = 'adfs'`) and leaving dashboard-granted
+   ones alone. An Entra group that maps to nothing leaves the person in the
+   derived `unassigned` group.
+
+**Roles are overwritten on every SSO sign-in.** This installation's role
+resolver hands core's driver the policy's roles — the mapped roles, or
+`default_roles` (`[user]`) when no group maps — joined with the roles an admin
+granted by hand in the dashboard (`user_manual_roles`), and the driver writes
+that set to `users.roles` before minting the session. A role granted only by
+`systemprompt admin users role promote|assign` is written to `users.roles`
+alone, not to `user_manual_roles`, and is therefore **replaced at that
+person's next SSO sign-in** (it survives only if the policy resolves no roles
+at all, i.e. `default_roles: []` and no group maps). A sign-in that removes
+every admin-minting role revokes the account's older sessions and tokens
+before the new session is minted. Grant a role
+that must survive SSO from `/admin/roles` or the user's detail page, or map it
+from an Entra group.
+
+**Admin is a permission, not just a role.** The session token's permissions
+come from `permissions_for_roles`: only the `admin` role mints the `admin`
+permission (alongside `user`); every other role, `platform_admin` included,
+mints `user` alone. Map `platform_admin` together with `admin`, as the shipped
+configs do (`[platform_admin, admin, user]`).
+
+### Reason codes
+
+Every refused sign-in lands on `/admin/login?sso=<reason>`. The code is
+deliberately coarse; the finer reason is on the audit row.
+
+| `?sso=` | Audit `reason` | Cause | Message shown on the login page |
+|---|---|---|---|
+| `unavailable` | `unavailable` | Provider not registered (disabled, incomplete config, OIDC client secret missing) or its IdP metadata/discovery is unreachable | Single sign-on is not configured on this instance yet. |
+| `correlation_lost` | `state_lost` | State missing, expired (600 s), already used, or the `sp_sso_bind` cookie does not match | Sent a sign-in this platform did not start. Start again. |
+| `correlation_lost` | `unsolicited` | A return with no state, for a provider that does not accept unsolicited sign-ins | (same) |
+| `invalid_assertion` | `invalid_assertion` | Signature, audience, destination, issuer, tenant, nonce or validity failed — or the user cancelled at Entra ID | Refused or cancelled the sign-in, or returned a response that could not be verified. |
+| `invalid_assertion` | `replayed` | The assertion id was already used | (same) |
+| `no_subject` | `no_subject` | No subject (SAML `NameID`, OIDC `sub`) | Did not identify your account. |
+| `no_email` | `no_email` | No email claim (and, for SAML, no email-format `NameID`; for OIDC, no address in `preferred_username`) | Did not return an email address. |
+| `forbidden` | `forbidden` | Email domain not in `allowed_email_domains` | Your account is not on an email domain this platform accepts. |
+| `group_overage` | `group_overage` | Entra ID sent an overage pointer instead of the group list | Your account is in too many Entra ID groups. |
+| `no_group` | `no_group` | No group at all and `deny_without_group: true` | Your account is not in a Systemprompt-* Entra ID group. |
+| `not_provisioned` | `not_provisioned` | No linked account and `auto_provision` off, or the account is inactive or a service account | No account exists for you yet. |
+| `error` | `error` | Anything else — the server log has the detail | Sign-in failed or the sign-in page expired. |
+
+The messages live in `storage/files/js/pages/admin-login.js`; an unknown code
+shows the `error` message.
+
+### The sign-in audit table
+
+Every attempt — success or refusal — is one row in `sso_login_events`:
+`occurred_at`, `provider_id`, `issuer`, `outcome` (`success` or `refused`), `reason` (refusals only, the
+audit reason above), `user_id` (successes only), `email`, `external_sub`, `ip`
+and `groups_count`. A refused sign-in is as visible as an accepted one.
+
+```sql
+-- Refusals in the last day, by provider and reason
+SELECT provider_id, reason, count(*)
+FROM sso_login_events
+WHERE outcome = 'refused' AND occurred_at > now() - interval '1 day'
+GROUP BY 1, 2 ORDER BY 3 DESC;
+
+-- One person's recent attempts
+SELECT occurred_at, provider_id, outcome, reason, ip, groups_count
+FROM sso_login_events
+WHERE email = 'jane@dynapps.es'
+ORDER BY occurred_at DESC LIMIT 20;
+```
+
+Run them with `systemprompt infra db query "<sql>"` (see
+`systemprompt infra db --help`).
 
 ### Groups as entitlements
 
 Two things read the Entra groups:
 
-- **Roles** — `group_roles` in `adfs.yaml` maps a group to `platform_admin`,
+- **Roles** — `group_roles` in the provider's config (`adfs.yaml` or
+  `entra-oidc.yaml`) maps a group to `platform_admin`,
   `admin`, `project_manager`, `developer`, `knowledge_worker` and/or `user`
   (`group_role_patterns` adds glob matches such as
   `Dynapps-Systemprompt-PM-*`). The directory half of the role set is
@@ -174,25 +279,34 @@ token to refresh. The OAuth
 *scope* minted into the JWT is fixed at issue time, so a change that widens the
 scope itself still needs a fresh sign-in.
 
-An operator who also signs in through SSO keeps their CLI-granted roles unless
-the directory maps a role for them — an SSO login that maps *no* role is not a
-demotion.
+An operator who also signs in through SSO does **not** keep a role granted only
+from the CLI: each SSO sign-in replaces the account's roles with what the
+directory maps (or `user`) joined with only the roles granted by hand in the
+dashboard. Grant a break-glass operator's `admin` on `/admin/roles` (or map it
+from an Entra group) if that operator also signs in through SSO. See
+[The provider model](#what-happens-on-a-sign-in).
 
 ## Configuring SSO
 
-`services/web/config/adfs.yaml` carries the relying party: our entity id, the
-ACS URL, the committed IdP federation metadata file or its URL (which
-supplies the signing certificate), the
-allow-listed domains, the claim URIs, and the group→role map. There is no
-client secret.
+Each provider has one config file, and both embed the same identity policy
+(`allowed_email_domains`, `group_roles`, `group_role_patterns`,
+`default_roles`, `deny_without_group`, `auto_provision`):
+
+- `services/web/config/adfs.yaml` — **SAML** (`entra-saml`): the IdP
+  federation metadata file or its URL (which supplies the signing
+  certificate), the claim URIs, `allow_idp_initiated`. There is no client
+  secret; our entity id and ACS URL derive from the profile's external URL.
+- `services/web/config/entra-oidc.yaml` — **OIDC** (`entra-oidc`): tenant id,
+  client id, `redirect_path`, scopes, the groups claim. The client secret is
+  not in the file: it is read from the secrets store under
+  `entra_oidc_client_secret` (see
+  [Secrets Management](/documentation/secrets-management)).
 
 **[Set Up Dynapps SSO (Microsoft Entra ID)](/documentation/entra-id-sso-setup)** is the full
 procedure: what your Entra ID administrator registers, the claims, every
 config key, how groups become roles and per-entity entitlements, and
 certificate rotation.
 
-The deployed trust and group mapping are configured in
-`services/web/config/adfs.yaml`.
 
 ## Deprovisioning
 
@@ -202,7 +316,8 @@ step. There is nothing else to click.
 Blocking the next sign-in would not be enough on its own: a cookie session and a
 linked bridge both outlive the assertion that created them, so a directory
 change that only guarded the front door would leave a working desktop app behind
-it. So when a sign-in is refused for a missing group or an off-list domain, and
+it. So when a sign-in is refused for a missing group, a group overage or an
+off-list domain (`no_group`, `group_overage`, `forbidden`), and
 when a returning sign-in's groups no longer map to `admin`, the platform revokes
 that user's:
 
@@ -251,7 +366,8 @@ To sign out, clear the `access_token` cookie.
 | Route | Access |
 |-------|--------|
 | `/admin/login` | Public |
-| `/admin/auth/adfs/*` | Public — the SSO start and callback |
+| `/admin/auth/adfs/*`, `/admin/auth/entra/*`, `/saml/metadata` | Public — the SSO start, callback and SP metadata |
+| `/api/v1/core/sso/{id}/*` | Public — core's generic routes onto the same providers |
 | `/admin/profile`, `/admin/history`, `/admin/connect`, `/admin/connectors` | Any valid session, including a plain `user` |
 | `/admin/analysis/conversations`, `/admin/analysis/versions`, `/admin/sync` and the session, request, trace and context detail pages | A valid session with `admin` / `platform_admin`, **or** marketplace participation — scoped to the participant's marketplaces |
 | `/admin/*` (everything else) | A valid session **and** a console role (`admin` or `platform_admin`) |
@@ -259,7 +375,7 @@ To sign out, clear the `access_token` cookie.
 | Adding or removing AD-group mappings on groups and projects (`POST`/`DELETE /api/public/admin/{groups,projects}/{id}/ad-mappings`) | `platform_admin` only |
 | `/bridge-auth/*` | Requires a valid session — the desktop link runs through SSO |
 
-`/admin/login` and the two SSO routes are the *entire* public surface. There is
+`/admin/login` and the SSO routes above are the *entire* public surface. There is
 no public registration, credential-enrolment, or invite-redemption route; if you
 are adding one, you are adding a second way in.
 

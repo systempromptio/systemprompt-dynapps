@@ -20,6 +20,8 @@ systemprompt-web-admin-identity = { workspace = true }
 # the profile sets governance.authz.hook.mode = extension and AppContext refuses
 # to start without one.
 systemprompt-web-admin-governance = { workspace = true }
+# Links the `onepassword` secrets source so a profile naming it can boot here.
+systemprompt-secrets-onepassword = { workspace = true }
 
 anyhow.workspace = true
 rustls.workspace = true

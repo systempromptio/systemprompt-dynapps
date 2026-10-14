@@ -2,6 +2,7 @@
 
 use serde::Serialize;
 
+use super::secrets::SecretsCardView;
 use systemprompt_web_admin_core::ssr::retention::RetentionView;
 use systemprompt_web_admin_core::ssr::sync_plane::{AppliedView, HashView};
 use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
@@ -52,6 +53,7 @@ pub(crate) struct ConfigurationPageData {
     pub kpis: Vec<ConfigKpiView>,
     pub rows: Vec<ConfigRowView>,
     pub retention: RetentionView,
+    pub secrets: Option<SecretsCardView>,
     pub sync_url: &'static str,
     pub export_zip_url: &'static str,
     pub docs_url: &'static str,

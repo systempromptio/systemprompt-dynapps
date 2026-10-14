@@ -1,0 +1,299 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "-- One row per run in scope, with every per-run fact folded in. $1 narrows\n-- to one run (the `find`); the rest are the list's scope and filter.\n-- Metered cost and governance counts hang off the run's gateway session,\n-- the one credential core mints per run, so a run with no session meters\n-- nothing. Hook verdicts come from the run's own event stream.\nSELECT ar.id AS \"run_id!: AgentRunId\",\n       ar.origin_kind AS \"origin_kind!\",\n       ar.origin_id AS \"origin_id!\",\n       ar.user_id AS \"user_id!: UserId\",\n       f.project_id AS \"farm_project_id?: ProjectId\",\n       ar.status AS \"status!\",\n       ar.error_class AS \"error_class?\",\n       ar.started_at AS \"started_at?\",\n       ar.finished_at AS \"finished_at?\",\n       ar.duration_ms AS \"duration_ms?\",\n       ar.attempt AS \"attempt!\",\n       ar.turns AS \"turns?\",\n       ar.input_tokens AS \"input_tokens?\",\n       ar.output_tokens AS \"output_tokens?\",\n       ar.cost_microdollars AS \"cost_microdollars_reported?\",\n       ar.request -> 'output_schema' AS \"output_schema?\",\n       ar.structured_output AS \"structured_output?\",\n       ar.diff_summary AS \"diff_summary?\",\n       (SELECT COALESCE(SUM(r.cost_microdollars), 0)::bigint\n          FROM ai_requests r\n         WHERE r.session_id = ar.gateway_session_id) AS \"cost_microdollars_metered!\",\n       ev.tool_use_count AS \"tool_use_count!\",\n       ev.tool_result_count AS \"tool_result_count!\",\n       ev.tool_result_error_count AS \"tool_result_error_count!\",\n       ev.hook_allow AS \"hook_allow!\",\n       ev.hook_deny AS \"hook_deny!\",\n       ev.tools_by_name AS \"tools_by_name!: Json<Vec<(String, i64)>>\",\n       gov.allow AS \"governance_allow!\",\n       gov.deny AS \"governance_deny!\"\nFROM agent_runs ar\nLEFT JOIN agent_farm_runs fr ON fr.agent_run_id = ar.id\nLEFT JOIN agent_farms f ON f.id = fr.farm_id\nCROSS JOIN LATERAL (\n    SELECT COUNT(*) FILTER (WHERE e.kind = 'tool_use')::bigint AS tool_use_count,\n           COUNT(*) FILTER (WHERE e.kind = 'tool_result')::bigint AS tool_result_count,\n           COUNT(*) FILTER (WHERE e.kind = 'tool_result'\n                              AND (e.payload ->> 'is_error')::boolean)::bigint\n               AS tool_result_error_count,\n           COUNT(*) FILTER (WHERE e.kind = 'hook'\n                              AND e.payload ->> 'decision' = 'allow')::bigint AS hook_allow,\n           COUNT(*) FILTER (WHERE e.kind = 'hook'\n                              AND e.payload ->> 'decision' = 'deny')::bigint AS hook_deny,\n           COALESCE((SELECT jsonb_agg(jsonb_build_array(t.tool_name, t.n)\n                                      ORDER BY t.n DESC, t.tool_name)\n                       FROM (SELECT tool_name, COUNT(*)::bigint AS n\n                               FROM agent_run_events\n                              WHERE run_id = ar.id\n                                AND kind = 'tool_use'\n                                AND tool_name IS NOT NULL\n                              GROUP BY tool_name) t),\n                    '[]'::jsonb) AS tools_by_name\n      FROM agent_run_events e\n     WHERE e.run_id = ar.id\n) ev\nCROSS JOIN LATERAL (\n    SELECT COUNT(*) FILTER (WHERE g.decision = 'allow')::bigint AS allow,\n           COUNT(*) FILTER (WHERE g.decision = 'deny')::bigint AS deny\n      FROM governance_decisions g\n     WHERE g.session_id = ar.gateway_session_id\n) gov\nWHERE ($1::text IS NULL OR ar.id = $1)\n  AND ($2::text IS NULL OR ar.user_id = $2)\n  AND ($3::text[] IS NULL OR f.project_id = ANY($3))\n  AND ($4::text IS NULL OR ar.origin_kind = $4)\n  AND ($5::text IS NULL OR ar.origin_id = $5)\n  AND ($6::text IS NULL OR ar.status = $6)\n  AND ($7::timestamptz IS NULL OR ar.created_at >= $7)\n  AND ($8::timestamptz IS NULL OR ar.created_at < $8)\n  AND ($9::text IS NULL OR fr.farm_id = $9)\nORDER BY ar.created_at DESC, ar.id\nLIMIT $10\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "run_id!: AgentRunId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_runs",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "origin_kind!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_runs",
+            "name": "origin_kind"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "origin_id!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_runs",
+            "name": "origin_id"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "user_id!: UserId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_runs",
+            "name": "user_id"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "farm_project_id?: ProjectId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farms",
+            "name": "project_id"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "status!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_runs",
+            "name": "status"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "error_class?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_runs",
+            "name": "error_class"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "started_at?",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "agent_runs",
+            "name": "started_at"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "finished_at?",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "agent_runs",
+            "name": "finished_at"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "duration_ms?",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "agent_runs",
+            "name": "duration_ms"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "attempt!",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "agent_runs",
+            "name": "attempt"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "turns?",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "agent_runs",
+            "name": "turns"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "input_tokens?",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "agent_runs",
+            "name": "input_tokens"
+          }
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "output_tokens?",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "agent_runs",
+            "name": "output_tokens"
+          }
+        }
+      },
+      {
+        "ordinal": 14,
+        "name": "cost_microdollars_reported?",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "agent_runs",
+            "name": "cost_microdollars"
+          }
+        }
+      },
+      {
+        "ordinal": 15,
+        "name": "output_schema?",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 16,
+        "name": "structured_output?",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "agent_runs",
+            "name": "structured_output"
+          }
+        }
+      },
+      {
+        "ordinal": 17,
+        "name": "diff_summary?",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "agent_runs",
+            "name": "diff_summary"
+          }
+        }
+      },
+      {
+        "ordinal": 18,
+        "name": "cost_microdollars_metered!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 19,
+        "name": "tool_use_count!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 20,
+        "name": "tool_result_count!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 21,
+        "name": "tool_result_error_count!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 22,
+        "name": "hook_allow!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 23,
+        "name": "hook_deny!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 24,
+        "name": "tools_by_name!: Json<Vec<(String, i64)>>",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 25,
+        "name": "governance_allow!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 26,
+        "name": "governance_deny!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "TextArray",
+        "Text",
+        "Text",
+        "Text",
+        "Timestamptz",
+        "Timestamptz",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+      null,
+      true,
+      true,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "38d2a5a13faf39ab191cc7118ab7d2f017bee0154491056ef54eb26e805b8627"
+}

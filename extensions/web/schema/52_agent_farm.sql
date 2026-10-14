@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS agent_farms (
     sync_error TEXT,
     owner_user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
     run_as_user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+    project_id TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

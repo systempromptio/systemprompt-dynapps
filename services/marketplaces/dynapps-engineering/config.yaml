@@ -1,0 +1,24 @@
+marketplace:
+  id: dynapps-engineering
+  name: "Dynapps — Engineering"
+  description: "Agent farm runs from Claude Code and Cowork: start, watch and cancel headless agent runs, run deterministic eval suites, and read your own and your projects' usage."
+  version: "1.0.0"
+  visibility: private
+  author:
+    name: Dynapps
+    email: ed@systemprompt.io
+  keywords: [dynapps, engineering, agent-farm, runs, evals]
+  license: proprietary
+  # Who reaches this workspace is declared in services/access-control/rules.yaml
+  # (entity marketplace/dynapps-engineering), the single source of entitlement on this instance.
+  plugins:
+    source: explicit
+    include:
+      - dynapps-engineering
+  mcp_servers:
+    source: explicit
+    include:
+      - agent-farm
+  agents:
+    source: explicit
+    include: []

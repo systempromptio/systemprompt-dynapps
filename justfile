@@ -823,7 +823,7 @@ _prepare-uncoordinated:
     export DATABASE_URL="$DB_URL"
     ROOT="{{justfile_directory()}}"
     # Crates whose own .sqlx cache this recipe creates as scratch.
-    EXTENSION_DIRS="extensions/web extensions/mcp/shared extensions/mcp/systemprompt"
+    EXTENSION_DIRS="extensions/web extensions/mcp/shared extensions/mcp/systemprompt extensions/mcp/agent-farm"
     # The tracked cache is never written in place. `cargo sqlx prepare`
     # truncates and rewrites .sqlx as it goes, and this recipe runs it several
     # times, so an in-place run that dies part-way (a failed pass, or a SIGKILL

@@ -9,12 +9,15 @@
 //!   `groups` sync plane with the `groups.yaml` declaration it projects.
 //! - [`routes`] — the route fragments the admin composition root merges: the
 //!   users, groups, projects, roles and access-control pages and API, the
-//!   profile page, and the AD FS and developer sign-in routes.
+//!   profile page, and the Entra ID and developer sign-in routes.
+//! - [`sso`] — the Entra ID SAML and OIDC providers of core's SSO driver and
+//!   the event sink that records their sign-ins.
 //! - [`authz`] — the group, project and role subject-attribute providers.
 //! - [`services`] — the bridge profile the profile page renders.
 //! - [`sign_out`] — ending the browser session a sign-out request carries.
 //!
-//! The three providers, the `groups` sync plane and the users, groups and
+//! The three providers, the two SSO providers and their event sink, the
+//! `groups` sync plane and the users, groups and
 //! projects export datasets register with core through `inventory`, so a
 //! binary that serves authorization, sync or exports must link this crate.
 
@@ -25,13 +28,15 @@ pub mod repositories;
 pub mod routes;
 pub mod services;
 pub mod sign_out;
+pub mod sso;
 
-pub use handlers::adfs_auth::{
-    ADFS_ACS_PATH, ADFS_METADATA_PATH, AdfsConfig, AdfsDeps, AdfsError, AssertionClaims, FlowState,
-    GROUPS_OVERAGE_ATTRIBUTE, IDP_METADATA_REFRESH_INTERVAL, clear_state_cookie,
-    group_matches_pattern, permissions_for_roles, read_state_cookie, spawn_idp_metadata_refresh,
-    state_cookie,
+pub use handlers::sso_alias::SsoDeps;
+pub use sso::entra_saml::{
+    ACS_PATH as ADFS_ACS_PATH, AssertionClaims, EntraSamlConfig, GROUPS_OVERAGE_ATTRIBUTE,
+    IDP_METADATA_REFRESH_INTERVAL, METADATA_PATH as ADFS_METADATA_PATH,
 };
+/// Renamed to [`EntraSamlConfig`]; kept for one release.
+pub type AdfsConfig = EntraSamlConfig;
 pub use handlers::dev_login::{
     DEV_LOGIN_PATH, dev_login_allowed, dev_login_enabled, dev_login_url,
 };

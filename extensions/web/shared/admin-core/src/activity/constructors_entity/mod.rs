@@ -2,6 +2,7 @@
 
 mod access;
 mod entity_crud;
+mod secrets;
 mod session_events;
 mod sync;
 

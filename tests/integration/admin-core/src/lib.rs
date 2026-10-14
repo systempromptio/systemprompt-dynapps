@@ -15,6 +15,8 @@
 
 
 #[cfg(test)]
+mod agent_run_facts;
+#[cfg(test)]
 mod analysis_report_digest;
 #[cfg(test)]
 mod analytics_content_metrics;
@@ -180,3 +182,30 @@ mod data_console;
 
 #[cfg(test)]
 mod sync_plane_restart_stability;
+
+#[cfg(test)]
+mod sso_harness;
+
+#[cfg(test)]
+mod sso_saml_flow;
+
+#[cfg(test)]
+mod sso_saml_refusals;
+
+#[cfg(test)]
+mod sso_saml_policy;
+
+#[cfg(test)]
+mod sso_oidc_flow;
+
+#[cfg(test)]
+mod sso_oidc_refusals;
+
+#[cfg(test)]
+mod sso_oidc_correlation;
+
+#[cfg(test)]
+mod sso_state_store;
+
+#[cfg(test)]
+mod sso_account_linking;
