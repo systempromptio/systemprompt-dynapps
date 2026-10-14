@@ -32,8 +32,8 @@
 
 enabled: false
 
-tenant_id: "00000000-0000-0000-0000-000000000000"
-client_id: "00000000-0000-0000-0000-000000000000"
+tenant_id: "19b092eb-6d38-4c26-bf69-6a97d5c150d8"
+client_id: "f4379821-4c96-49a9-b5bf-7f8b9fd14c6a"
 client_secret_secret: entra_oidc_client_secret
 
 redirect_path: /admin/auth/entra/callback
@@ -49,6 +49,8 @@ clock_skew_seconds: 120
 allowed_email_domains:
   - dynapps.es
   - wearedynapps.com
+  # Test only (2026-10-14): Ed's user in the Dynapps tenant is ed@systemprompt.io.
+  - systemprompt.io
 
 # Attach a first sign-in to the active local account that owns the asserted
 # (verified) address, instead of provisioning a duplicate.
