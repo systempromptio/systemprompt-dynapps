@@ -173,14 +173,17 @@ fn config_defaults_and_usability() {
 }
 
 #[test]
-fn committed_yaml_parses_disabled() {
+fn committed_yaml_parses_and_names_its_tenant_when_enabled() {
     let path = concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../../../services/web/config/entra-oidc.yaml"
     );
     let text = std::fs::read_to_string(path).expect("entra-oidc.yaml");
     let cfg: EntraOidcConfig = serde_yaml::from_str(&text).expect("parse");
-    assert!(!cfg.enabled);
+    if cfg.enabled {
+        assert!(!cfg.entra_tenant_id.is_empty());
+        assert!(!cfg.entra_client_id.is_empty());
+    }
     assert!(
         cfg.policy
             .group_roles
