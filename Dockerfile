@@ -91,6 +91,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     postgresql-client \
     lsof \
     git \
+    procps \
     jq \
     python3 \
     libreoffice-writer \
