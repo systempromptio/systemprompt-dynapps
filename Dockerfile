@@ -144,12 +144,15 @@ RUN chmod +x /app/entrypoint.sh /app/bin/* \
     && chown -R app:app /app
 
 USER app
+# Why: the agent farm spawns Claude Code (`claude`) for every run; the native
+# installer puts it under ~/.local/bin for the app user.
+RUN curl -fsSL https://claude.ai/install.sh | bash
 EXPOSE 8080
 
 ENV HOST=0.0.0.0 \
     PORT=8080 \
     RUST_LOG=info \
-    PATH="/app/bin:${PATH}" \
+    PATH="/app/bin:/home/app/.local/bin:${PATH}" \
     SYSTEMPROMPT_SERVICES_PATH=/app/services \
     SYSTEMPROMPT_MCP_PATH=/app/bin \
     SYSTEMPROMPT_PROFILE=/app/.systemprompt/profiles/docker/profile.yaml \
