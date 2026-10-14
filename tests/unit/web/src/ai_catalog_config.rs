@@ -38,11 +38,7 @@ use systemprompt::manifest::services::{
 
 use crate::support::repo_root;
 
-const SERVED: [&str; 3] = [
-    "claude-opus-5-5",
-    "claude-sonnet-5-5",
-    "claude-haiku-5-5",
-];
+const SERVED: [&str; 3] = ["claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5"];
 
 // Rate-card figures are written as decimal literals in the YAML and parsed to
 // the same `f64`, so exact comparison is the right check here; the helper keeps

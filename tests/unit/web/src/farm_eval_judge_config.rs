@@ -69,7 +69,7 @@ fn the_shipped_farms_file_judges_with_sonnet() {
     let root = crate::support::repo_root().join("services");
     let config = read_evals_config(&root);
     assert_eq!(config.judge_provider, "anthropic");
-    assert_eq!(config.judge_model, "claude-sonnet-5-5");
+    assert_eq!(config.judge_model, "anthropic-claude-sonnet-5-5");
 }
 
 #[test]

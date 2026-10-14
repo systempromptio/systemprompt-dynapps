@@ -28,4 +28,4 @@ plugin:
       - dynapps-odoo
       - dynbrain
   content_sources: {}
-  # No `hooks:` key: dynapps-commons owns the session-global governance hooks.
+  # No hook block: dynapps-commons owns the session-global governance hooks.

@@ -166,7 +166,10 @@ fn telemetry_keeps_metadata_and_drops_content_and_credentials() {
         attribute("http.request.header.authorization", "Bearer secret"),
         attribute("gen_ai.response.model", "sk-secret"),
     ]);
-    assert_eq!(sanitized, json!({"gen_ai.request.model":"claude-sonnet-5-5"}));
+    assert_eq!(
+        sanitized,
+        json!({"gen_ai.request.model":"claude-sonnet-5-5"})
+    );
 }
 
 #[test]
