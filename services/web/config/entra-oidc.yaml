@@ -4,7 +4,8 @@
 # client secret instead of an Enterprise Application with federation metadata.
 # Run one or the other, not both, against the same Entra groups.
 #
-# DISABLED until Dynapps IT has created the App Registration. To switch on:
+# ENABLED 2026-10-14 for the first test sign-in. group_roles below are still
+# placeholders until Dynapps IT sends the real group object ids. Original steps:
 #   1. Fill in `tenant_id` and `client_id` below (App Registration > Overview).
 #   2. Store the client secret VALUE in the secrets store under the key named
 #      by `client_secret_secret` (default `entra_oidc_client_secret`). The
@@ -30,7 +31,7 @@
 #
 # Public authentication reference: services/content/documentation/entra-id-sso-setup.md
 
-enabled: false
+enabled: true
 
 tenant_id: "19b092eb-6d38-4c26-bf69-6a97d5c150d8"
 client_id: "f4379821-4c96-49a9-b5bf-7f8b9fd14c6a"
