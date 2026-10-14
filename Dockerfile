@@ -90,6 +90,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libssl3 \
     postgresql-client \
     lsof \
+    git \
     jq \
     python3 \
     libreoffice-writer \
