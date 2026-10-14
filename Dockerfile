@@ -64,7 +64,7 @@ FROM public.ecr.aws/aws-cli/aws-cli:2.36.18 AS awscli
 # package naming. Unused by every other secrets source.
 FROM debian:bookworm-slim AS opcli
 ARG OP_CLI_VERSION=2.30.0
-ARG TARGETARCH=amd64
+ARG TARGETARCH
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl unzip \
     && curl -fsSLo /tmp/op.zip "https://cache.agilebits.com/dist/1P/op2/pkg/v${OP_CLI_VERSION}/op_linux_${TARGETARCH}_v${OP_CLI_VERSION}.zip" \
     && unzip -d /tmp/op /tmp/op.zip op \
