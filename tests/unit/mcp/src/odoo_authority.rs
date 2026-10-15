@@ -11,7 +11,9 @@ use systemprompt_mcp_odoo::client::crud::{as_html, with_footer};
 use systemprompt_mcp_odoo::credential::stored_credential;
 use systemprompt_mcp_odoo::error::OdooError;
 use systemprompt_mcp_odoo::server::activity::scheduled_activity_id;
-use systemprompt_mcp_odoo::server::gate::{action_phrase, is_write_tool, refusal_reason};
+use systemprompt_mcp_odoo::server::gate::{
+    action_phrase, is_write_tool, refusal_reason, settle_reason,
+};
 use systemprompt_mcp_odoo::tools::{GUARDED_TOOLS, TOOL_GDPR_ERASE_INVENTORY};
 use systemprompt_web_admin_platform::machine_credentials::{
     OdooCredentialLookup, OdooMachineCredential,
@@ -199,4 +201,22 @@ fn activity_schedule_results_yield_the_new_activity_id() {
     assert_eq!(scheduled_activity_id(&serde_json::json!([57])), Some(57));
     assert_eq!(scheduled_activity_id(&serde_json::json!(57)), Some(57));
     assert_eq!(scheduled_activity_id(&serde_json::json!(true)), None);
+}
+
+#[test]
+fn a_failed_call_carries_the_odoo_error_into_the_audit_reason() {
+    assert_eq!(settle_reason(None), "executed against Odoo");
+    assert_eq!(settle_reason(Some("  \n ")), "Odoo call failed");
+    let reason = settle_reason(Some(
+        "You are not allowed to delete 'Lead/Opportunity' (crm.lead) records.\n\nThis \
+         operation is allowed for the following groups:\n\t- Sales/Administrator",
+    ));
+    assert!(
+        reason.starts_with("Odoo call failed: You are not allowed to delete"),
+        "{reason}"
+    );
+    assert!(reason.contains("Sales/Administrator"), "{reason}");
+    assert!(!reason.contains('\n'), "the reason is one line: {reason}");
+    let long = settle_reason(Some(&"x".repeat(5_000)));
+    assert!(long.chars().count() < 900, "the reason is clipped");
 }

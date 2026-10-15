@@ -87,16 +87,27 @@ pub(super) async fn refuse(pool: &PgPool, audit: CallAudit<'_>, reason: &str) ->
     CallToolResult::error(vec![ContentBlock::text(reason.to_owned())])
 }
 
-pub(super) async fn settle(pool: &PgPool, audit: CallAudit<'_>, succeeded: bool) {
-    let reason = if succeeded {
-        "executed against Odoo"
-    } else {
-        "Odoo call failed"
+const MAX_FAILURE_DETAIL: usize = 800;
+
+#[must_use]
+pub fn settle_reason(failure: Option<&str>) -> String {
+    let Some(detail) = failure else {
+        return "executed against Odoo".to_owned();
     };
+    let detail: String = detail.split_whitespace().collect::<Vec<_>>().join(" ");
+    if detail.is_empty() {
+        return "Odoo call failed".to_owned();
+    }
+    let clipped: String = detail.chars().take(MAX_FAILURE_DETAIL).collect();
+    format!("Odoo call failed: {clipped}")
+}
+
+pub(super) async fn settle(pool: &PgPool, audit: CallAudit<'_>, failure: Option<&str>) {
+    let reason = settle_reason(failure);
     let outcome = Outcome {
         tag: DecisionTag::Allow,
         policy: policy_for(audit.tool),
-        reason,
+        reason: &reason,
     };
     record(pool, audit, outcome).await;
 }

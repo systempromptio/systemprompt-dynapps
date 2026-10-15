@@ -10,11 +10,13 @@
 //!    anonymise tools pass for the demo's runs and for nothing after it;
 //! 3. farm starts the three Odoo suites, `triggered_via = demo`;
 //! 4. [`watch`] renews the lease while any suite is still running and deletes
-//!    the grant when the last one finishes. If the server dies first, the
-//!    lease's `valid_until` is the safety net: the govern hook stops seeing the
-//!    role at read time, and the hourly sweep deletes the row.
+//!    the grant when the last one finishes, then attempts a `crm_lead_delete`
+//!    as the account and records that it was refused ([`probe`]). If the server
+//!    dies first, the lease's `valid_until` is the safety net: the govern hook
+//!    stops seeing the role at read time, and the hourly sweep deletes the row.
 
 mod handlers;
+mod probe;
 mod watch;
 
 use std::sync::Arc;
@@ -41,6 +43,8 @@ pub(super) use handlers::{odoo_demo_action, odoo_demo_api};
 
 pub(super) const DEMO_ROLE: &str = "odoo_destructive";
 const LEASE: Duration = Duration::minutes(30);
+const POST_REVOKE_CHECK: &str = "after the revoke, crm_lead_delete is attempted as the service account and must be refused; \
+     the verdict lands in the activity feed and the Odoo audit's governance row";
 
 #[derive(Debug, Serialize)]
 pub(super) struct DemoStarted {
@@ -50,6 +54,7 @@ pub(super) struct DemoStarted {
     pub standing_grant: bool,
     pub seed: SeedSummary,
     pub eval_runs: Vec<String>,
+    pub post_revoke_check: &'static str,
 }
 
 async fn renew_lease(
@@ -109,6 +114,7 @@ pub(super) async fn start_odoo_demo(
         actor: actor.clone(),
         grant,
         eval_runs,
+        mcp_url: format!("{}/api/v1/mcp/odoo/mcp", farm.gateway.internal_base),
     });
     Ok(DemoStarted {
         service_account: account,
@@ -117,5 +123,6 @@ pub(super) async fn start_odoo_demo(
         standing_grant: grant == TimedGrant::Standing,
         seed,
         eval_runs: ids,
+        post_revoke_check: POST_REVOKE_CHECK,
     })
 }

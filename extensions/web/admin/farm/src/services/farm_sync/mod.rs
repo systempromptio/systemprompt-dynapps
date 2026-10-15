@@ -8,6 +8,7 @@
 //! the sync rather than the run.
 
 pub mod agent_md;
+pub mod boot;
 pub mod capture;
 pub mod eval_yaml;
 pub mod farm_yaml;

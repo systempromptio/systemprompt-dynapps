@@ -5,7 +5,8 @@
 //! single lease. The watcher renews the lease on every tick while any suite
 //! is unfinished, which keeps the window bounded by [`super::LEASE`] past the
 //! last sign of life rather than past the start. [`MAX_WATCH`] caps a run
-//! that never reports finished.
+//! that never reports finished. After the revoke it runs the post-revoke
+//! probe ([`super::probe`]): a real `crm_lead_delete` that must be refused.
 
 use std::sync::Arc;
 
@@ -18,7 +19,7 @@ use systemprompt_web_admin_identity::repositories::users::role_grants::{
     TimedGrant, delete_timed_manual_role,
 };
 
-use super::{DEMO_ROLE, renew_lease};
+use super::{DEMO_ROLE, probe, renew_lease};
 
 const TICK: std::time::Duration = std::time::Duration::from_secs(30);
 const MAX_WATCH: std::time::Duration = std::time::Duration::from_hours(4);
@@ -29,6 +30,7 @@ pub(super) struct Watch {
     pub actor: UserId,
     pub grant: TimedGrant,
     pub eval_runs: Vec<EvalRunId>,
+    pub mcp_url: String,
 }
 
 pub(super) fn spawn(watch: Watch) {
@@ -43,6 +45,15 @@ pub(super) fn spawn(watch: Watch) {
             }
         }
         revoke(&watch.pool, &watch.account, &watch.actor, watch.grant).await;
+        if watch.grant == TimedGrant::Granted {
+            let target = probe::ProbeTarget {
+                pool: &watch.pool,
+                account: &watch.account,
+                actor: &watch.actor,
+                mcp_url: watch.mcp_url.clone(),
+            };
+            probe::run(target).await;
+        }
     });
 }
 

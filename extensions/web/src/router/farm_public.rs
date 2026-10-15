@@ -20,6 +20,7 @@ use systemprompt::prelude::PgPool;
 use systemprompt::traits::{JobContext, RunnerService};
 use systemprompt_web_admin_core::ssr::viewer_tz::with_viewer_tz;
 use systemprompt_web_admin_farm::routes::public::agent_farm_public_routes;
+use systemprompt_web_admin_farm::services::farm_sync::boot::sync_missing_checkouts;
 use systemprompt_web_admin_farm::services::farm_sync::seed_farms_from_yaml;
 use systemprompt_web_admin_farm::services::runner::FarmRunnerService;
 use systemprompt_web_admin_farm::state::{FarmState, build_farm_state_from_app};
@@ -64,12 +65,14 @@ pub(crate) fn start(state: &Arc<FarmState>, app_paths: Option<&AppPaths>) {
         || state.paths.composed_services_root.clone(),
         |paths| paths.system().services().to_path_buf(),
     );
-    let pool = Arc::clone(&state.pool);
+    let state = Arc::clone(state);
     tokio::spawn(async move {
-        match seed_farms_from_yaml(&pool, &services).await {
+        match seed_farms_from_yaml(&state.pool, &services).await {
             Ok(count) => tracing::info!(farms = count, "agent farms seeded"),
             Err(e) => tracing::error!(error = %e, "agent farm seed failed"),
         }
+        let restored = sync_missing_checkouts(&state).await;
+        tracing::info!(farms = restored, "agent farm checkouts restored");
     });
 }
 
