@@ -11,6 +11,7 @@ use std::collections::BTreeMap;
 
 use super::clients_yaml::{AgentOverride, ClientDef, validate_clients};
 use super::evals_yaml::EvalsConfig;
+use super::runner_yaml::{FlyRunnerConfig, RunnerMode};
 use crate::error::{FarmError, FarmResult};
 
 pub const FARMS_FILE: &str = "web/config/agent-farms.yaml";
@@ -95,6 +96,10 @@ pub struct RunnerConfig {
     pub max_concurrent: usize,
     #[serde(default)]
     pub claude_bin: Option<String>,
+    #[serde(default)]
+    pub mode: RunnerMode,
+    #[serde(default)]
+    pub fly: Option<FlyRunnerConfig>,
 }
 
 impl Default for RunnerConfig {
@@ -102,6 +107,8 @@ impl Default for RunnerConfig {
         Self {
             max_concurrent: default_max_concurrent(),
             claude_bin: None,
+            mode: RunnerMode::default(),
+            fly: None,
         }
     }
 }

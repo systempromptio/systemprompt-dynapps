@@ -5601,6 +5601,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "systemprompt-farm-worker"
+version = "0.68.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "clap",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "systemprompt",
+ "systemprompt-web-admin-farm",
+ "tokio",
+ "tokio-util",
+ "tracing",
+]
+
+[[package]]
 name = "systemprompt-files"
 version = "0.68.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6478,10 +6495,12 @@ version = "0.68.0"
 dependencies = [
  "async-trait",
  "axum",
+ "base64 0.22.1",
  "chrono",
  "hex",
  "inventory",
  "regex",
+ "reqwest",
  "serde",
  "serde_json",
  "serde_yaml_ng",

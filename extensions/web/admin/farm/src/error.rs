@@ -88,6 +88,23 @@ pub enum FarmError {
     #[error("Config: {0}")]
     Config(String),
 
+    #[error("Runner: {0}")]
+    Runner(String),
+
+    #[error("Runner: {at}: {source}")]
+    RunnerHttp {
+        at: String,
+        #[source]
+        source: reqwest::Error,
+    },
+
+    #[error("Runner bundle file {path:?}: {source}")]
+    BundleDecode {
+        path: String,
+        #[source]
+        source: base64::DecodeError,
+    },
+
     #[error("Agent run: {0}")]
     AgentRuns(#[from] AgentRunsError),
 

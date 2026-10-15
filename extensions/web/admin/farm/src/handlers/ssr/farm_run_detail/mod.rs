@@ -10,6 +10,7 @@
 //! [`RunData`] pairs the farm row with the executor's `agent_runs` row. Its
 //! event and tool-call counts are the counters stamped on the farm row once
 //! the run finished, and a live count from `agent_run_events` before that.
+//! `runner` is the Fly Machine the run executed on, when it ran on one.
 //!
 //! - [`context`] — header, identifiers, actions and the live block.
 //! - [`summary`] — the KPI strip.
@@ -36,6 +37,7 @@ use systemprompt_web_admin_core::ssr::page::Page;
 use crate::handlers::ssr::run_events_view::{RunEventView, event_views};
 use crate::handlers::ssr::shared::is_live;
 use crate::repositories::rows::RunRow;
+use crate::repositories::runs::RunnerMachineRow;
 use crate::repositories::summaries::RunRequestRow;
 use crate::repositories::{agents, runs};
 use crate::types::FarmRunId;
@@ -52,6 +54,7 @@ pub(crate) struct RunData {
     pub event_count: i64,
     pub tool_call_count: i64,
     pub requests: Vec<RunRequestRow>,
+    pub runner: Option<RunnerMachineRow>,
 }
 
 pub(crate) fn not_found() -> AdminError {
@@ -109,6 +112,11 @@ pub(crate) async fn load_run_data(
         ),
         None => Vec::new(),
     };
+    let runner = faults.take_or(
+        "runner machine",
+        runs::find_run_runner(pool, &run.id).await,
+        None,
+    );
     Ok(Some(RunData {
         run,
         agent_run,
@@ -118,6 +126,7 @@ pub(crate) async fn load_run_data(
         event_count,
         tool_call_count,
         requests,
+        runner,
     }))
 }
 

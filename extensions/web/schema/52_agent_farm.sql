@@ -111,6 +111,8 @@ CREATE TABLE IF NOT EXISTS agent_farm_runs (
     finished_at TIMESTAMPTZ,
     cancel_requested_at TIMESTAMPTZ,
     client_id TEXT REFERENCES clients(id) ON DELETE SET NULL,
+    runner_machine_id TEXT,
+    runner_region TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

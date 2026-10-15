@@ -13,6 +13,9 @@
 //! one. Core's claim loop cancels a run only on shutdown or a lost lease, so
 //! a cancel requested from the dashboard (`cancel_requested_at`) is polled
 //! here and turned into the run token's cancellation.
+//!
+//! With a `fly` runner config the executor runs on a Fly Machine instead
+//! ([`super::fly::remote`]); everything up to the started row is the same.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -31,7 +34,9 @@ use systemprompt::agent_runs::{
 };
 use systemprompt::identifiers::AgentRunId;
 
+use super::fly::remote::{RemoteJob, run_remote};
 use super::{observer, prepare};
+use crate::config::FlyRunnerConfig;
 use crate::error::{FarmError, FarmResult};
 use crate::repositories::{agents, runs};
 use crate::state::FarmState;
@@ -45,6 +50,7 @@ pub(super) struct FarmRunHandler {
     pub state: Arc<FarmState>,
     pub credentials: RunCredentialService,
     pub hooks: HookBases,
+    pub fly: Option<FlyRunnerConfig>,
 }
 
 #[async_trait]
@@ -124,6 +130,7 @@ impl FarmRunHandler {
             .await?;
         let request = prepare::with_mcp_bearer(&request, credentials.mcp_token.as_deref());
         let job = Job {
+            farm_run_id: &farm_run_id,
             claimed,
             request: &request,
             layout: &layout,
@@ -138,6 +145,7 @@ impl FarmRunHandler {
 
     async fn run_host(&self, job: &Job<'_>, notes: &[String]) -> FarmResult<()> {
         let Job {
+            farm_run_id,
             claimed,
             request,
             layout,
@@ -156,14 +164,27 @@ impl FarmRunHandler {
                 },
             )
             .await?;
+        let sink = DbEventSink::new(claimed.repo.clone(), id.clone());
+        let seq_after = record_notes(claimed, &sink, notes).await?;
+        if let Some(fly) = &self.fly {
+            let remote = RemoteJob {
+                state: &self.state,
+                claimed,
+                farm_run_id,
+                request,
+                layout,
+                credentials,
+                sink: &sink,
+                seq_after,
+            };
+            return run_remote(fly, remote).await;
+        }
         let hooks = match (&request.plugin_id, &credentials.hook_token) {
             (Some(plugin_id), Some(token)) => {
                 hooks_file(request.host, plugin_id, token, &self.hooks, layout).await?
             },
             _ => None,
         };
-        let sink = DbEventSink::new(claimed.repo.clone(), id.clone());
-        let seq_after = record_notes(claimed, &sink, notes).await?;
 
         let watcher = watch_cancel(claimed);
         let report = execute(ExecuteParams {
@@ -193,6 +214,7 @@ impl FarmRunHandler {
 
 #[derive(Debug, Clone, Copy)]
 struct Job<'a> {
+    farm_run_id: &'a FarmRunId,
     claimed: &'a ClaimedRun,
     request: &'a RunRequest,
     layout: &'a RunLayout,

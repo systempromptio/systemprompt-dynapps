@@ -21,6 +21,7 @@ use systemprompt::traits::{JobContext, RunnerService};
 use systemprompt_web_admin_core::ssr::viewer_tz::with_viewer_tz;
 use systemprompt_web_admin_farm::routes::public::agent_farm_public_routes;
 use systemprompt_web_admin_farm::services::farm_sync::boot::sync_missing_checkouts;
+use systemprompt_web_admin_farm::routes::worker::agent_farm_worker_routes;
 use systemprompt_web_admin_farm::services::farm_sync::seed_farms_from_yaml;
 use systemprompt_web_admin_farm::services::runner::FarmRunnerService;
 use systemprompt_web_admin_farm::state::{FarmState, build_farm_state_from_app};
@@ -29,6 +30,7 @@ use tokio_util::sync::CancellationToken;
 use super::admin;
 
 pub(crate) const FARM_PUBLIC_PREFIX: &str = "/agent-farm";
+pub(crate) const FARM_WORKER_PREFIX: &str = "/agent-farm-worker";
 
 pub fn farm_public_router(read_pool: Arc<PgPool>, state: Arc<FarmState>) -> Router {
     agent_farm_public_routes()
@@ -40,6 +42,10 @@ pub fn farm_public_router(read_pool: Arc<PgPool>, state: Arc<FarmState>) -> Rout
             read_pool,
             farm_context_middleware,
         ))
+}
+
+pub(crate) fn farm_worker_router() -> Router {
+    agent_farm_worker_routes()
 }
 
 async fn farm_context_middleware(

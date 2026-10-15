@@ -5,7 +5,8 @@
 //! `origin_kind`) through core's
 //! [`ClaimLoop`], at most `RunnerLimits::max_concurrent` at once, and hands
 //! each to the farm's handler. Beside the loop it reconciles farm rows whose
-//! `agent_runs` row turned terminal without a handler.
+//! `agent_runs` row turned terminal without a handler. The handler's runner
+//! mode (local child or Fly Machine) is read from the farms file once, here.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -22,6 +23,7 @@ use tokio_util::sync::CancellationToken;
 
 use super::handler::FarmRunHandler;
 use super::observer;
+use crate::config::{RunnerMode, read_runner_config};
 use crate::state::FarmState;
 
 pub const ORIGIN_KIND: &str = "agent_farm_run";
@@ -43,6 +45,9 @@ impl FarmRunnerService {
 
     fn handler(&self, db: &DbPool, issuer: String) -> Arc<dyn RunHandler> {
         let gateway = &self.state.gateway;
+        let runner = read_runner_config(&self.state.paths.composed_services_root);
+        let fly = (runner.mode == RunnerMode::FlyMachine).then(|| runner.fly.unwrap_or_default());
+        tracing::info!(mode = runner.mode.as_str(), "farm runner mode");
         Arc::new(FarmRunHandler {
             state: Arc::clone(&self.state),
             credentials: RunCredentialService::new(RunCredentialRepositories::new(db), issuer),
@@ -50,6 +55,7 @@ impl FarmRunnerService {
                 govern_url: gateway.govern_url(),
                 track_url: gateway.track_url(),
             },
+            fly,
         })
     }
 }
