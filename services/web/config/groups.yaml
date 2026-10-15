@@ -37,7 +37,7 @@ groups:
     description: >-
       Every Dynapps employee assigned to the Systemprompt Enterprise
       Application in Microsoft Entra ID. Reaches the commons workspace and the
-      Salesforce sales workspace (dynapps-salesforce) once an org is connected.
+      Dynapps portal servers.
     ad_groups: [Dynapps-Systemprompt-Users, Dynapps-Systemprompt-Admins]
   - id: service-accounts
     name: Service accounts
@@ -45,7 +45,7 @@ groups:
       Non-interactive accounts workflow write-backs and farm runs act as.
       Nobody signs in as one; creating a service account at
       /admin/identity/service-accounts places it here, and rules.yaml grants
-      this group the write-back connectors (GitHub, Atlassian, Salesforce).
+      this group the internal Odoo server.
     ad_groups: []
 
 projects:

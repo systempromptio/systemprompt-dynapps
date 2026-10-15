@@ -9,6 +9,7 @@
 //! probe ([`super::probe`]): a real `crm_lead_delete` that must be refused.
 
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use systemprompt::identifiers::UserId;
 use systemprompt::prelude::PgPool;
@@ -23,6 +24,18 @@ use super::{DEMO_ROLE, probe, renew_lease};
 
 const TICK: std::time::Duration = std::time::Duration::from_secs(30);
 const MAX_WATCH: std::time::Duration = std::time::Duration::from_hours(4);
+
+static IN_FLIGHT: AtomicBool = AtomicBool::new(false);
+
+pub(super) fn claim_in_flight() -> bool {
+    IN_FLIGHT
+        .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+        .is_ok()
+}
+
+pub(super) fn release_in_flight() {
+    IN_FLIGHT.store(false, Ordering::Release);
+}
 
 pub(super) struct Watch {
     pub pool: Arc<PgPool>,
@@ -54,6 +67,7 @@ pub(super) fn spawn(watch: Watch) {
             };
             probe::run(target).await;
         }
+        release_in_flight();
     });
 }
 

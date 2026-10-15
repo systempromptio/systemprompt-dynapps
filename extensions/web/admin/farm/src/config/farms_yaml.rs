@@ -11,6 +11,7 @@ use std::collections::BTreeMap;
 
 use super::clients_yaml::{AgentOverride, ClientDef, validate_clients};
 use super::evals_yaml::EvalsConfig;
+use super::run_as::RunAs;
 use super::runner_yaml::{FlyRunnerConfig, RunnerMode};
 use crate::error::{FarmError, FarmResult};
 
@@ -41,7 +42,7 @@ pub struct FarmDef {
     #[serde(default)]
     pub owner: Option<String>,
     #[serde(default)]
-    pub run_as: Option<String>,
+    pub run_as: Option<RunAs>,
     #[serde(default)]
     pub project: Option<String>,
     #[serde(default)]
@@ -164,15 +165,14 @@ impl FarmsDoc {
                     farm.id
                 )));
             }
-            if farm
+            for (agent, run_as) in farm
                 .agents
-                .values()
-                .any(|a| a.run_as.as_deref().is_some_and(|id| id.trim().is_empty()))
+                .iter()
+                .filter_map(|(id, o)| o.run_as.as_ref().map(|r| (id, r)))
             {
-                return Err(invalid(&format!(
-                    "farm {:?}: an agent run_as is empty",
-                    farm.id
-                )));
+                run_as
+                    .validate(&format!("farm {:?}: agent {agent:?}", farm.id))
+                    .map_err(|e| invalid(&e))?;
             }
             if !is_slug(&farm.id) {
                 return Err(invalid(&format!("farm id {:?} is not a slug", farm.id)));
@@ -186,12 +186,10 @@ impl FarmsDoc {
                     farm.id, farm.marketplace
                 )));
             }
-            if farm
-                .run_as
-                .as_deref()
-                .is_some_and(|id| id.trim().is_empty())
-            {
-                return Err(invalid(&format!("farm {:?}: run_as is empty", farm.id)));
+            if let Some(run_as) = &farm.run_as {
+                run_as
+                    .validate(&format!("farm {:?}", farm.id))
+                    .map_err(|e| invalid(&e))?;
             }
             farm.source.validate(&farm.id)?;
             farm.defaults.validate(&farm.id)?;

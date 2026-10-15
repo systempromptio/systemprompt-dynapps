@@ -23,6 +23,10 @@ content** — they change without any skill changing. Ask the documentation MCP 
 access, under the GitOps/infra section) following the contract in
 [`docs-access.md`](docs-access.md), and delegate the "how to ask" to `common-skills:dynbrain`.
 
+On this Dynapps instance that MCP is the portal's `dynbrain` server, and Odoo records come
+from the portal's `dynapps-odoo` server. Both run as the user's own portal account, so what a
+lookup returns is already bounded by that account's access.
+
 With **MCP unavailable**: say you can't confirm the level's exact scope, apply the
 most-restrictive rule above, and don't quote group ids from memory.
 

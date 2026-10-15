@@ -78,9 +78,10 @@ five:
 | Server | What it reaches |
 |---|---|
 | `systemprompt` | this platform's admin CLI. It cannot be removed and is admin-only |
-| `atlassian` | Jira and Confluence, under each person's own Atlassian account |
-| `salesforce` | Salesforce's hosted MCP, authenticated as the signed-in person |
-| `sfcore_dev` | the SFCore team's development-workflow server, called with a short-lived token this instance signs |
+| `agent-farm` | the agent farm's run server: launch, inspect and cost farm runs |
+| `odoo` | the internal Odoo server, as each person's linked Odoo account or a farm service account's `odoo_api_key` |
+| `dynapps-odoo` | the Dynapps portal's hosted Odoo server, as each person's own portal account |
+| `dynbrain` | the Dynapps portal's hosted DynBrain documentation server, as each person's own portal account |
 
 Each server declares:
 

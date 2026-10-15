@@ -116,7 +116,7 @@ Use the CLI to inspect the same configured services tree:
 ```bash
 systemprompt core skills list
 systemprompt core skills list --enabled
-systemprompt core skills show admin_daily_brief
+systemprompt core skills show systemprompt_cli
 ```
 
 `list` reports configured skill metadata. `show` returns the configuration and an

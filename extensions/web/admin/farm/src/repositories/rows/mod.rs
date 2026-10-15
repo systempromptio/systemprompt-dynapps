@@ -36,6 +36,7 @@ pub struct FarmRow {
     pub project_id: Option<ProjectId>,
     pub owner_user_id: Option<String>,
     pub run_as_user_id: Option<UserId>,
+    pub run_as_mode: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub client_id: Option<ClientId>,
@@ -63,6 +64,7 @@ pub struct AgentRow {
     pub synced_commit_sha: String,
     pub updated_at: DateTime<Utc>,
     pub run_as_user_id: Option<UserId>,
+    pub run_as_mode: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, sqlx::FromRow)]

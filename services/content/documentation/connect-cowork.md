@@ -12,7 +12,7 @@ keywords: "cowork, claude desktop, bridge, gateway, desktop profile, connectors"
 after_reading_this:
   - "Install the Desktop profile that points Cowork at the Dynapps gateway"
   - "Verify a Cowork request reached the gateway"
-  - "Connect Atlassian, Salesforce and other personal connectors"
+  - "Connect the Dynapps portal (Odoo, DynBrain) and other personal connectors"
 related_playbooks:
   - title: "Connect Claude Code"
     url: "/documentation/connect-claude-code"
@@ -106,7 +106,7 @@ whether it is connected, the account it is connected as, and a **Test**
 button that lists the tools you can call. Disconnecting removes the
 credential from every enrolled device.
 
-Atlassian (Jira and Confluence) and Salesforce connect the same way.
+The Dynapps portal servers, Odoo (`dynapps-odoo`) and DynBrain (`dynbrain`), connect the same way, as your own portal.dynapps.es account.
 
 ## Troubleshooting
 

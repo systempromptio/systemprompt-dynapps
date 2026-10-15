@@ -11,7 +11,7 @@ published_at: "2026-09-16"
 updated_at: "2026-09-16"
 after_reading_this:
   - "Read the Access control page and say, for any entity, who reaches it and which band decided"
-  - "Predict the resolver's answer for a person from their role, group, project and linked accounts"
+  - "Predict the resolver's answer for a person from their role, group, project and connected servers"
   - "Grant a group a tool, make an entity admin-only, or retire a rule — in the file or in the console"
   - "Tell what is enforced (the database) from what is declared (rules.yaml), and reconcile the two in either direction"
 related_docs:
@@ -27,7 +27,7 @@ related_docs:
 
 # Access Control: Who Reaches What, and Why
 
-**TL;DR:** Every workspace, plugin, skill, MCP server and model route a signed-in person can reach is decided by rules on that entity. The rules are **declared once**, in `services/access-control/rules.yaml`, each with a stated reason, and **enforced from the database**. A decision walks five bands from narrowest to widest — *person → project → group → linked account → role* — and the first band that names the person decides, with a deny beating an allow inside it. Code and database are compared on every boot and **never silently merged**: `/admin/sync` shows the differences and offers three ways to resolve them.
+**TL;DR:** Every workspace, plugin, skill, MCP server and model route a signed-in person can reach is decided by rules on that entity. The rules are **declared once**, in `services/access-control/rules.yaml`, each with a stated reason, and **enforced from the database**. A decision walks five bands from narrowest to widest — *person → project → group → connected server → role* — and the first band that names the person decides, with a deny beating an allow inside it. Code and database are compared on every boot and **never silently merged**: `/admin/sync` shows the differences and offers three ways to resolve them.
 
 ## What access control decides — and what it does not
 
@@ -35,10 +35,10 @@ Access control answers one question: *may this person reach this entity?* The en
 
 | Kind | Examples on this instance | What "reach" means |
 |---|---|---|
-| `marketplace` | `dynapps-commons`, `dynapps-salesforce` | The workspace appears in Claude Code / Cowork and its plugins can be installed |
-| `plugin` | `dynapps-super-admin`, `dynapps-salesforce` | The plugin is offered |
-| `skill` | `admin_daily_brief`, `account_context` | The skill is offered and may run |
-| `mcp_server` | `atlassian`, `salesforce`, `systemprompt` | The server is listed and its tools may be called |
+| `marketplace` | `dynapps-commons`, `dynapps-portal` | The workspace appears in Claude Code / Cowork and its plugins can be installed |
+| `plugin` | `dynapps-super-admin`, `dynapps-portal` | The plugin is offered |
+| `skill` | `systemprompt_cli`, `agent_farm_runs` | The skill is offered and may run |
+| `mcp_server` | `odoo`, `dynapps-odoo`, `systemprompt` | The server is listed and its tools may be called |
 | `gateway_route` | `claude-star-4203d1`, … | Requests may be routed to that model |
 
 It does **not** decide whether a person can sign in (that is [authentication](/documentation/authentication) and [SSO](/documentation/entra-id-sso-setup)), whether a tool call is allowed to proceed once the person is entitled (the [governance chain](/documentation/enterprise-tool-governance)), or what may be said (the [safety scanners](/documentation/enterprise-safety-guardrails)). Those run after entitlement, on every request.
@@ -55,7 +55,6 @@ A rule names a **subject** at one **band**:
 | project | 140 | a project id | assigned on the Projects page or mapped from an Entra group |
 | group | 150 | a group id | mapped from the Entra groups the directory asserts at sign-in |
 | connected server | 160 | a ready OAuth-backed MCP server id | recorded after its connection is verified |
-| linked account | 170 | a downstream org id (`salesforce`) | recorded when the person links that org |
 | role | 200 | `user`, `admin`, `platform_admin`, `project_manager`, `super_admin`, … | granted by SSO or on the Roles page |
 
 Lower precedence is **narrower**. The ladder is walked from the top.
@@ -69,26 +68,26 @@ Lower precedence is **narrower**. The ladder is walked from the top.
 
 Two consequences worth holding onto:
 
-- A **role grant does not "reopen" a group-gated entity to everyone** — only to the roles it names. `atlassian` is allowed to `admin` *and* to the `staff` group; an admin in no group reaches it through the role band, a plain `user` in no group is refused by the closed default.
+- A **role grant does not "reopen" a group-gated entity to everyone** — only to the roles it names. `dynapps-odoo` is allowed to `admin` *and* to the `staff` group; an admin in no group reaches it through the role band, a plain `user` in no group is refused by the closed default.
 - A **wider band cannot rescue a narrower deny**. A person-band deny on one account beats every group and role allow that person holds.
 
 ### Worked examples from this instance
 
-`mcp_server/atlassian` is closed and allows: role `platform_admin, admin, super_admin` · group `staff` · project `odoo-delivery`.
+`mcp_server/dynapps-odoo` is closed and allows: role `admin, platform_admin, super_admin` · group `staff`.
 
 | Person | Walk | Result |
 |---|---|---|
 | role `user`, group `staff` | person: nothing · project: nothing · **group: matches allow** | **allowed** (decided by group) |
-| role `admin`, no group | person · project · group · linked: nothing · **role: matches allow** | **allowed** (decided by role) |
-| role `user`, no group, not on odoo-delivery | no band names them | **refused** — the entity is closed |
+| role `admin`, no group | person · project · group · connected server: nothing · **role: matches allow** | **allowed** (decided by role) |
+| role `user`, no group | no band names them | **refused** — the entity is closed |
 
-`mcp_server/salesforce` is closed and allows: role `super_admin` · group `staff` · project `odoo-delivery` · linked account `salesforce`.
+`mcp_server/odoo` is closed and allows: role `user, platform_admin, admin, super_admin, odoo_destructive` · group `service-accounts`.
 
 | Person | Walk | Result |
 |---|---|---|
-| role `user`, group `staff`, **not** linked | group matches allow | **allowed** — the linked-account band only *adds* people; it does not gate the group grant |
-| role `user`, no group, **linked** | linked account matches allow | **allowed** (decided by linked account) |
-| role `admin`, no group, not linked | no band names them (`admin` is not in the role list) | **refused** |
+| role `user`, group `staff` | group: nothing (`staff` is not named) · **role: matches allow** | **allowed** (decided by role) |
+| service account, group `service-accounts` | **group: matches allow** | **allowed** (decided by group) — it still needs an `odoo_api_key` machine credential to get a token |
+| role `project_manager` only, no group | no band names them | **refused** |
 
 The **Audience grid** tab of `/admin/access-control` runs exactly these walks, for every role, group and project, against every entity; the word in each cell is the band that decided. To check one real person, use the **Check a person** tab (or open their user page and choose **Access** — the same view): the same resolver, with their actual roles, groups, projects and links. The **Rules** tab is the ledger by entity, grouped by kind, and model routes there carry the name and "pattern → provider" line their gateway declaration gives them rather than the generated id alone.
 
@@ -98,15 +97,14 @@ Every rule on the instance is declared in this one file, entity by entity. Marke
 
 ```yaml
 entities:
-  - entity: mcp_server/atlassian        # <kind>/<id>
+  - entity: mcp_server/dynapps-odoo     # <kind>/<id>
     default: closed                      # open | closed — what an unmatched person gets
     why: >-                              # REQUIRED; becomes the justification on every rule row
-      Jira/Confluence for staff and the Odoo delivery project;
-      administrators use their own connected Atlassian account.
+      Dynapps' Odoo control MCP on portal.dynapps.es, used as the staff
+      member's own Odoo account through a per-user OAuth grant.
     allow:                               # band → subjects
-      role: [platform_admin, admin, super_admin]
+      role: [admin, platform_admin, super_admin]
       group: [staff]
-      project: [odoo-delivery]
     deny: {}                             # same shape
 
   - entity: gateway_route/*              # glob: route ids are generated, never written
@@ -115,11 +113,11 @@ entities:
     allow:
       role: [user, admin, platform_admin, project_manager, super_admin]
 
-  - entity: marketplace/dynapps-salesforce
+  - entity: marketplace/dynapps-super-admin
     default: closed
-    why: Salesforce sales workspace for the business-users group.
+    why: One control plane for every administrator of this instance.
     allow:
-      group: [business-users]
+      role: [admin, platform_admin, super_admin]
 ```
 
 Rules of the file, all checked by `scripts/validate-services.sh` in CI and again when the server reads it:
@@ -127,7 +125,7 @@ Rules of the file, all checked by `scripts/validate-services.sh` in CI and again
 - `why` is required and non-empty. A rule with no reason is a rule nobody can review.
 - Every `entity` must exist: plugins, skills, agents and MCP servers in `services/`, marketplaces under `services/marketplaces/`.
 - `gateway_route` and `hook` take only the glob `*`, expanded against the live catalog at boot. A hand-written route id names a route that cannot exist.
-- Band keys are `role`, `group`, `project`, `salesforce`. Every `group:`/`project:` value must be declared in `services/web/config/groups.yaml`.
+- Band keys are `role`, `group`, `project`, `connector`. Every `group:`/`project:` value must be declared in `services/web/config/groups.yaml`.
 - A subject may not be both allowed and denied on the same band of one entity.
 - `valid_until` is optional, an RFC 3339 instant (`2026-12-31T00:00:00Z`), and applies to every rule of the entity. A declaration already past it is treated as not declared; the hourly `access_expiry` sweep deletes the rows once the instant passes. The console's date picker writes the same window on a rule it saves, and the export writes it back. See [time-bound access](/documentation/enterprise-user-access#time-bound-sharing).
 - **No `services/marketplaces/*/config.yaml` may carry an `access:` block.** The gate refuses it, so the second truth cannot return.
@@ -198,7 +196,7 @@ A marketplace can arrive as a signed **services bundle** published by another Gi
 ## Glossary
 
 - **Entity** — the thing reached: marketplace, plugin, skill, MCP server, gateway route.
-- **Subject** — who a rule names: a person, project, group, linked org, or role.
+- **Subject** — who a rule names: a person, project, group, connected server, or role.
 - **Band** — the kind of subject, with a precedence number; lower is narrower.
 - **Default open / closed** — what an entity gives to a person no rule names. Closed unless declared otherwise.
 - **Cascade** — a ruleless entity's inheritance from plugin then marketplace.

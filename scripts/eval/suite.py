@@ -96,7 +96,7 @@ def manifest_finish(path, raw):
     json.dump(m, open(path, "w"), indent=2)
 
 
-def had_mcp(result, cc_projects, connector="_salesforce__"):
+def had_mcp(result, cc_projects, connector="_systemprompt__"):
     try:
         sid = json.load(open(result, encoding="utf-8-sig"))["session_id"]
         text = open(pathlib.Path(cc_projects) / f"{sid}.jsonl", encoding="utf-8").read()
@@ -112,7 +112,7 @@ if __name__ == "__main__":
     if op == "skills":
         print("\n".join(cases(load(args[0]))))
     elif op == "connector":
-        print(load(args[0]).get("primary_connector", "_salesforce__"))
+        print(load(args[0]).get("primary_connector", "_systemprompt__"))
     elif op == "model":
         print(load(args[0])["model"])
     elif op == "prompt":

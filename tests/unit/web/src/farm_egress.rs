@@ -129,3 +129,11 @@ fn egress_allow_is_read_from_the_farms_file() {
     assert_eq!(fly.egress_allow, ["api.anthropic.com", "1.2.3.4"]);
     assert!(FlyRunnerConfig::default().egress_allow.is_empty());
 }
+
+#[test]
+fn the_ruleset_keeps_ipv6_neighbour_discovery_open() {
+    let rules = systemprompt_web_admin_farm::services::runner::fly::egress::nft_ruleset(&[]);
+    assert!(rules.contains(
+        "icmpv6 type { nd-neighbor-solicit, nd-neighbor-advert, nd-router-solicit } accept"
+    ));
+}

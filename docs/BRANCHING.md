@@ -112,7 +112,7 @@ version when core moves past X.Y.Z.
 Create `hotfix/<dynapps-version>/<main-base-sha>` in a separate worktree from
 `origin/main`. Keep the published core pins and `bridge/CORE_REF` unchanged;
 bump only Dynapps's release version. Emergency PR gates run static checks, the complete lint tier and focused
-Salesforce/OAuth unit regressions; the full test matrix continues in a separate
+connector OAuth unit regressions; the full test matrix continues in a separate
 nonblocking job. They verify the frozen base, candidate tree and published core. Before merging,
 run `scripts/check-hotfix-green.sh <head-sha> <branch> <main-base-sha>` and verify
 the PR merge tree equals the candidate. Use a two-parent merge through GitHub;

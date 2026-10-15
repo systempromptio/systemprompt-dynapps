@@ -45,6 +45,12 @@ Decide like this:
 
 Once chosen, stay on that server for the whole task unless the user switches.
 
+**On this Dynapps instance** the `docs_*` family is served by the portal's hosted `dynbrain`
+server (portal.dynapps.es), and Odoo data by the portal's `dynapps-odoo` server. Both are
+connected per user at `/admin/connectors` through the generic OAuth connector and run as that
+user's own portal account. The name rule above still holds: a user may have named either
+server something else in their own client.
+
 ## 2. Preflight (before the first lookup, not after it fails)
 
 1. **Are the `docs_*` tools present?** Look for the `mcp__*__docs_*` family exposed by

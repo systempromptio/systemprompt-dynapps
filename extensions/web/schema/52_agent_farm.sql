@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS clients (
     name TEXT NOT NULL,
     slug TEXT NOT NULL UNIQUE,
     odoo_partner_id BIGINT,
+    service_account_user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -37,6 +38,7 @@ CREATE TABLE IF NOT EXISTS agent_farms (
     sync_error TEXT,
     owner_user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
     run_as_user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+    run_as_mode TEXT CHECK (run_as_mode IN ('user', 'client', 'service_account')),
     project_id TEXT,
     client_id TEXT REFERENCES clients(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -64,6 +66,7 @@ CREATE TABLE IF NOT EXISTS agent_farm_agents (
     host TEXT NOT NULL DEFAULT 'claude-code'
         CHECK (host IN ('claude-code', 'codex-cli', 'opencode', 'hermes')),
     run_as_user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+    run_as_mode TEXT CHECK (run_as_mode IN ('user', 'client', 'service_account')),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY (farm_id, id)
 );

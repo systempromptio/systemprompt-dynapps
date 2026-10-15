@@ -49,8 +49,7 @@ client. Its callback is
 Client secrets never belong in YAML or browser responses.
 
 Generic verification initializes MCP and lists accessible tools. It does not
-invent an account identity when no provider identity endpoint exists. Atlassian,
-GitHub and Salesforce retain their specific adapters and verification.
+invent an account identity when no provider identity endpoint exists.
 
 Changing a generic resource or OAuth settings requires reconnection. Refresh
 also checks the original issuer and token endpoint. Disconnect removes local
@@ -84,14 +83,11 @@ after database access is restored.
 ## Gating skills on a connection
 
 A live connection is an authorization subject. `services/access-control/rules.yaml`
-accepts a `connector:` band (precedence 160, between `group` and the Salesforce
-`salesforce` link band) whose values are server ids; a person matches while
+accepts a `connector:` band (precedence 160, between `group` and `role`) whose
+values are server ids; a person matches while
 `mcp_connector_accounts` holds a `connected` row for that server
 (`extensions/web/shared/admin-core/src/authz/connector.rs`). The band is available to any
-entity; the `dynapps-salesforce` marketplace no longer uses it — it reaches the
-`business-users` group by membership alone, and the Salesforce connector is
-linked from inside the workspace (Salesforce still refuses anyone without a
-user in the org).
+entity; no entity on this instance uses it today.
 
 ## Tool permissions in the clients
 

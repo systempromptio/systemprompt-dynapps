@@ -12,7 +12,7 @@
 #
 # How a decision is made (core resolver, narrowest band wins):
 #   person (0) → project (140) → group (150) → connected server (160)
-#   → linked account (170) → role (200)
+#   → role (200)
 # The narrowest band in which the person matches ANY rule decides; inside that
 # band a deny beats an allow. An entity that declares any rule is CLOSED to
 # everyone its rules do not name unless `default: open`. An entity with no
@@ -40,7 +40,6 @@
 #         project: [...]
 #         connector: [...]       value = the server id; matches people whose Connections
 #                                 page shows that server as connected (a live OAuth grant)
-#         salesforce: [...]      value = the server id; matches people who linked that org
 #       deny: {}                 same bands
 #
 # Groups and projects named here must exist in services/web/config/groups.yaml.
@@ -57,21 +56,10 @@ entities:
     allow:
       role: [user]
 
-  - entity: marketplace/dynapps-salesforce
-    default: closed
-    why: >-
-      Salesforce sales workspace for the staff group. Membership alone
-      grants it; the Salesforce connector is linked from inside the
-      workspace and Salesforce still refuses anyone without a user in the org.
-    allow:
-      group: [staff]
-
   - entity: marketplace/dynapps-super-admin
     default: closed
     why: >-
-      One control plane for every administrator of this instance. Salesforce
-      sales workflows are delivered through their own connection-scoped
-      marketplace.
+      One control plane for every administrator of this instance.
     allow:
       role: [admin, platform_admin, super_admin]
 
@@ -264,30 +252,6 @@ entities:
     allow:
       role: [platform_admin, admin, super_admin]
 
-  - entity: skill/admin_critical_projects
-    default: closed
-    why: Admin skill shipped by dynapps-super-admin.
-    allow:
-      role: [platform_admin, admin, super_admin]
-
-  - entity: skill/admin_ai_usage
-    default: closed
-    why: Admin skill shipped by dynapps-super-admin.
-    allow:
-      role: [platform_admin, admin, super_admin]
-
-  - entity: skill/admin_person_activity
-    default: closed
-    why: Admin skill shipped by dynapps-super-admin; it reads every user's conversation history.
-    allow:
-      role: [platform_admin, admin, super_admin]
-
-  - entity: skill/admin_daily_brief
-    default: closed
-    why: Admin skill shipped by dynapps-super-admin.
-    allow:
-      role: [platform_admin, admin, super_admin]
-
   # ─── Model routes ─────────────────────────────────────────────────────────
   - entity: gateway_route/*
     default: open
@@ -299,32 +263,6 @@ entities:
       role: [user, admin, platform_admin, project_manager, super_admin]
 
   # ─── Delivery connectors ──────────────────────────────────────────────────
-  # Closed on purpose: a person outside the listed group sees no server rather
-  # than a "connect your account first" error on every call. Admins reach
-  # Atlassian through the role band with their own connected account.
-  - entity: mcp_server/atlassian
-    default: closed
-    why: >-
-      Jira/Confluence for Dynapps staff and the odoo-delivery project;
-      administrators use their own connected Atlassian account; workflow
-      service accounts write back with an attached Atlassian API token.
-    allow:
-      role: [platform_admin, admin, super_admin]
-      group: [staff, service-accounts]
-      project: [odoo-delivery]
-
-  # Closed: GitHub is reached by workflow service accounts, whose credential
-  # the broker issues only to a workflow write-back or farm caller. Admins see
-  # the server so they can inspect it; nobody else does.
-  - entity: mcp_server/github
-    default: closed
-    why: >-
-      Workflow write-backs to GitHub act as a per-definition service account
-      holding a GitHub App installation; people are not granted it.
-    allow:
-      role: [platform_admin, admin, super_admin]
-      group: [service-accounts]
-
   # Closed by default, open to every signed-in person and to service accounts.
   # A person acts as the Odoo account they linked on the connectors page; a
   # farm service account acts as its sealed odoo_api_key, opened only for a
@@ -346,18 +284,6 @@ entities:
           is the role an admin grants a person or service account so its
           delete, anonymise and erase tools pass governance; it is revoked
           afterwards, and holding it implies seeing the server it unlocks.
-      group: [service-accounts]
-
-  # Open like the connector it fronts: a person must be able to reach the
-  # connector before they hold the marketplace it grants, or nobody could ever
-  # connect. Salesforce still refuses anyone without a user in the org.
-  - entity: mcp_server/salesforce
-    default: open
-    why: >-
-      Salesforce connector for the sales workspace, as the signed-in user;
-      workflow service accounts write back with client credentials.
-    allow:
-      role: [user, admin, platform_admin, project_manager, super_admin]
       group: [service-accounts]
 
   # Closed to everyone but staff and administrators: the portal refuses anyone

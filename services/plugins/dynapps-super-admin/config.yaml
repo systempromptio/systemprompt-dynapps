@@ -1,35 +1,27 @@
 plugin:
   id: dynapps-super-admin
   name: "Dynapps Super Admin — Control Plane"
-  description: "The administrator control plane: a daily brief with a traffic light per project from Jira and Confluence, critical-project analysis, what each person and team has been working on (conversations, skills, Jira and Confluence), AI spend per user, and direct CLI access to the instance."
+  description: "The administrator control plane: AI spend per user from this platform's own audit tables, and direct CLI access to the instance."
   version: "5.2.0"
   enabled: true
   author:
     name: Dynapps
     email: ed@systemprompt.io
-  keywords: [admin, governance, analytics, reporting, atlassian, control-plane]
+  keywords: [admin, governance, analytics, reporting, control-plane]
   license: proprietary
   category: admin
-  # Every skill here has been exercised end to end against a live instance.
-  # `systemprompt_cli` and `admin_ai_usage` drive this platform's own server;
-  # `admin_daily_brief` and `admin_critical_projects` read Jira and Confluence
-  # through the `atlassian` connector as the caller's own account, and carry the
-  # traffic-light arithmetic themselves — there is no server-side proxy for them.
+  # Every skill here has been exercised end to end against a live instance and
+  # drives this platform's own server.
   skills:
     source: explicit
     include:
       - systemprompt_cli
-      - admin_critical_projects
-      - admin_ai_usage
-      - admin_person_activity
-      - admin_daily_brief
   # No agents. This instance ships none: the one it had existed only so the
   # inbound Slack slash command could dispatch somewhere, and that is gone.
   agents:
     source: explicit
     include: []
-  # The admin CLI-passthrough server, and Atlassian for the Jira and Confluence
-  # evidence the project reporting reads. `systemprompt` is gated to the admin
+  # The admin CLI-passthrough server. `systemprompt` is gated to the admin
   # role twice over: an entity rule in services/access-control/rules.yaml keeps it
   # out of a non-admin's signed manifest, and oauth.scopes in
   # services/mcp/systemprompt.yaml rejects the call at runtime if it gets there
@@ -38,7 +30,6 @@ plugin:
     source: explicit
     include:
       - systemprompt
-      - atlassian
   content_sources: {}
   # One dashboard, and only one: AI usage, whose data comes from our own audit
   # tables. Selection is plugin-driven (core's selected_artifact_ids), so an

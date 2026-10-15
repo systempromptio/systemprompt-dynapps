@@ -44,9 +44,10 @@ static DYNAPPS_BRAND: Brand = Brand {
     sign_in_hint: "Opens your browser — sign in with Microsoft Entra ID. This device is linked \
                    automatically once you approve.",
     docs_url: "https://dynapps.systemprompt.io/documentation",
-    contact_email: "ed@systemprompt.io",
-    pitch_head: "Govern every coding agent.",
-    pitch_body: "One gateway. Every agent. Every tool call audited.",
+    contact_email: "ai@dynapps.es",
+    pitch_head: "Dynapps AI, governed.",
+    pitch_body: "Claude and Odoo tooling for Dynapps teams, with every tool call audited.",
+    demo_notice: None,
     schedule_label: "com.dynapps.bridge-sync",
     schedule_unit: "dynapps-bridge-sync",
     schedule_task_name: "DynappsBridgeSync",

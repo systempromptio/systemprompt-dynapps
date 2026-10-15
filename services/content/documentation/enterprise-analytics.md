@@ -149,14 +149,14 @@ Nothing today joins AI usage to a ticket closing, a deal advancing, an incident 
 
 To map usage to outcomes, we first have to agree what an outcome *is*. The candidates, roughly in order of how directly they can be observed:
 
-- **Jira issue transitions:** cycle time from in-progress to done, reopen rate, throughput per person per sprint. This is the most concrete option for engineering work, and the easiest to game if it becomes a target.
+- **Task transitions:** cycle time from in-progress to done, reopen rate, throughput per person per sprint. This is the most concrete option for engineering work, and the easiest to game if it becomes a target.
 - **Source control:** pull requests merged, review turnaround, change failure rate. This is closest to delivery, but only meaningful once commits made outside Claude Code are visible.
-- **Salesforce records:** opportunities advanced, cases resolved. This is the right measure for commercial rather than engineering usage.
+- **Odoo records:** opportunities advanced, tickets resolved. This is the right measure for commercial rather than engineering usage.
 - **Ratified judgement:** keep the judge's outcome, but have a human confirm or reject it, which turns an opinion into a label.
 
 Whichever is chosen, two dependencies follow, and neither is optional:
 
-1. **A sync of that system's records into the platform.** The Atlassian and Salesforce connectors let each person *query* those systems under their own permissions. Nothing yet copies their records into analytics, where they could be joined with usage.
-2. **An identity-mapping rule** from the external account to a platform user: a Jira account id, a Salesforce username, a commit-author email. This is the harder half, and the equivalent source-control question is still open.
+1. **A sync of that system's records into the platform.** The Dynapps portal connectors let each person *query* Odoo and DynBrain under their own permissions. Nothing yet copies their records into analytics, where they could be joined with usage.
+2. **An identity-mapping rule** from the external account to a platform user: an Odoo user id, a commit-author email. This is the harder half, and the equivalent source-control question is still open.
 
 Until an outcome is defined and its source system connected, the platform can report what AI cost and what it was used for. It should not claim more than that.

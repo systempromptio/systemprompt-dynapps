@@ -182,7 +182,7 @@ default, so remove a previous `loopback`/`127.0.0.1` override when testing.
 5. Test large serialized requests separately. The Bridge/gateway buffered
    inference request cap is 32 MiB (other buffered routes retain 8 MiB); a 1M context window does not raise this byte
    cap. Include tool schemas, images and JSON framing in the measurement.
-6. Invoke Salesforce and Atlassian, idle through credential refresh, then
+6. Invoke Dynapps Odoo and DynBrain, idle through credential refresh, then
    invoke both again without reconnecting. Compare provider refresh errors
    with Bridge session errors. Verify a native task remains one UI session
    after context compaction.

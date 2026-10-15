@@ -78,6 +78,26 @@
 td:has(> .sp-badge-stack) { overflow: visible; }
 td:has(> .sp-badge-stack:is(:hover, :focus-within)) { position: relative; z-index: 2; }
 
+/* The table scrolls and clips, so an absolute list is cut at its edge. A fixed
+   list escapes every clipping ancestor; anchor positioning ties it back to its
+   own stack, and anchor-scope keeps each stack's name local to its row. */
+@supports (anchor-name: --a) and (anchor-scope: --a) {
+    .sp-badge-stack {
+        anchor-name: --sp-badge-stack;
+        anchor-scope: --sp-badge-stack;
+    }
+
+    .sp-badge-stack__pop {
+        position: fixed;
+        position-anchor: --sp-badge-stack;
+        inset: auto;
+        top: calc(anchor(bottom) + var(--sp-space-1));
+        left: anchor(left);
+        min-width: anchor-size(width);
+        position-try-fallbacks: flip-block, flip-inline;
+    }
+}
+
 /* Nothing hidden means nothing to reveal. */
 .sp-badge-stack:not(:has(.sp-badge-stack__more)) .sp-badge-stack__pop { display: none; }
 

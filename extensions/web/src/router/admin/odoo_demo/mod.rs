@@ -74,6 +74,23 @@ pub(super) async fn start_odoo_demo(
     farm: &Arc<FarmState>,
     actor: &UserId,
 ) -> AdminResult<DemoStarted> {
+    if !watch::claim_in_flight() {
+        return Err(AdminError::Conflict(
+            "an Odoo demo is already running; it shares one grant, so wait for its revoke".into(),
+        ));
+    }
+    let started = launch_odoo_demo(accounts, farm, actor).await;
+    if started.is_err() {
+        watch::release_in_flight();
+    }
+    started
+}
+
+async fn launch_odoo_demo(
+    accounts: &ServiceAccounts,
+    farm: &Arc<FarmState>,
+    actor: &UserId,
+) -> AdminResult<DemoStarted> {
     let pool = &farm.pool;
     let farm_id = odoo_demo_farm();
     let account = find_farm(pool, &farm_id)

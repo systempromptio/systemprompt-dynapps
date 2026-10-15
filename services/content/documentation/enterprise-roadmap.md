@@ -59,7 +59,7 @@ One fact affects everything below. Since 2026-09-04 the governance chain, the sa
 | **Conversation history** | Every user can list and search their own conversations. Admins can search everyone's, with export. | [Conversation History & Search](/documentation/enterprise-conversation-history) |
 | **Versioning and rollback for prompt content** | Skills are the unit of prompt distribution. Each marketplace version is content-hashed, and versions can be compared. Rollback re-pins a previous digest. Every invocation records which published version served it. | [Versions](/documentation/analysis-versions), [Update a Skill](/documentation/update-a-skill), [Code ↔ Instance Sync](/documentation/services-sync) |
 | **Group and project drill-down** | Analytics, cost and quota windows can be scoped to a group, a project or a person. Group and project pages have their own usage tabs. | [Analytics](/documentation/enterprise-analytics#groups-projects-and-people) |
-| **Knowledge through connectors** | Atlassian (Jira and Confluence) and Salesforce are reachable as governed MCP servers, each filtered to what the signed-in person can already open. | [Access Control](/documentation/access-control) |
+| **Knowledge through connectors** | The Dynapps portal's Odoo (`dynapps-odoo`) and DynBrain (`dynbrain`) servers are reachable as governed MCP servers, each filtered to what the signed-in person can already open. | [Access Control](/documentation/access-control) |
 
 ## Coming
 
@@ -103,7 +103,7 @@ Core 0.63 lets an extension scanner receive its own configuration (`scanner_sett
 
 ### Outcome metrics
 
-This would join AI usage to results in a system of record: Jira transitions, merged pull requests, Salesforce records. It needs a decision on which outcome counts, a sync of that system's records, and an identity mapping. See [From usage to outcomes](/documentation/enterprise-analytics#from-usage-to-outcomes).
+This would join AI usage to results in a system of record: Odoo records, merged pull requests, closed tasks. It needs a decision on which outcome counts, a sync of that system's records, and an identity mapping. See [From usage to outcomes](/documentation/enterprise-analytics#from-usage-to-outcomes).
 
 ### Enterprise knowledge platform
 
@@ -118,8 +118,8 @@ These were built and then taken out on purpose. They are listed so that an older
 | Per-organization budgets, run-rate early warning, burndown forecasts, scheduled cost digests | 2026-09-01, with organizations and departments | Quota windows as warning thresholds ([Cost Management](/documentation/enterprise-cost-management)). Groups and projects replace organizations and departments. |
 | Slack alerting | 2026-09-10 | Metrics and events for the operator's monitoring stack; see [Alert delivery](#alert-delivery). |
 | Code-impact metrics (AI-authored lines, applied edits, commit lines) | 2026-09-16 | Nothing. They were proxies too weak to report ([Analytics](/documentation/enterprise-analytics#what-is-not-measured)). |
-| The in-house retrieval server | September 2026 | The Atlassian and Salesforce connectors. |
-| Passkey and invitation sign-in, Salesforce sign-in | 2026-08-29 to 08-31 | Single sign-on, now Microsoft Entra ID over OpenID Connect. |
+| The in-house retrieval server | September 2026 | The Dynapps portal connectors (Odoo and DynBrain). |
+| Passkey and invitation sign-in | 2026-08-29 to 08-31 | Single sign-on, now Microsoft Entra ID over OpenID Connect. |
 
 ## Known limitations
 

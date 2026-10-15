@@ -418,21 +418,19 @@ A dedicated "system" identity would be either a synthesized principal (impersona
 
 ## Service accounts and machine credentials
 
-A workflow that writes back to an external system (opening a GitHub pull request, updating a Salesforce record, commenting in Jira) acts as a **service account**, never as a shared global key. A service account is a `users` row with `account_kind = 'service'`. Core refuses every interactive login for it: session login, passkey, bridge code and OAuth authorization code. Each workflow definition names the account it runs as, and an agent farm names one with `run_as` in `services/web/config/agent-farms.yaml`: its runs mint their credentials for that account and carry the purpose `farm:<run_id>`.
+A workflow or farm run that writes to Odoo through the internal `odoo` server acts as a **service account**, never as a shared global key. A service account is a `users` row with `account_kind = 'service'`. Core refuses every interactive login for it: session login, passkey, bridge code and OAuth authorization code. Each workflow definition names the account it runs as, and an agent farm names one with `run_as` in `services/web/config/agent-farms.yaml`: its runs mint their credentials for that account and carry the purpose `farm:<run_id>`.
 
 Administrators manage them at **People & access → Service accounts** (`/admin/identity/service-accounts`):
 
 1. **Create** the account with a name and an email. It starts with the plain `user` role.
-2. **Attach a machine credential** per provider, keyed by the MCP server id (`github`, `salesforce-<org>`, `atlassian`):
+2. **Attach a machine credential** per provider, keyed by the MCP server id (`odoo`):
 
 | Kind | Non-secret identifiers | Secret | What the broker returns |
 |------|------------------------|--------|-------------------------|
-| `github_app` | App ID, installation ID | App private key (PEM) | An installation token: core signs a 10-minute RS256 App JWT and exchanges it at `/app/installations/{id}/access_tokens`. |
-| `salesforce_client_credentials` | Instance URL, consumer key (client ID) | Client secret | An access token from the org's `client_credentials` grant. |
-| `atlassian_api_token` | Token owner email | API token | `Basic base64(email:token)`. |
+| `odoo_api_key` | Odoo URL, database, login | API key | The login and API key pair the `odoo` server authenticates to Odoo with. |
 
 The secret is sealed with the platform master key in an envelope bound to the account and provider. It is never rendered or returned, and attaching again rotates it. Only a service account may hold a machine credential, and an account that still holds one cannot be deleted.
 
-When core's MCP client asks the credential broker (`/api/public/connectors/{provider}/token`) for a service account's bearer, the broker requires the `x-systemprompt-caller` purpose core forwards from the run. It issues a token only for `workflow:<definition_id>:write` or `farm:<id>`. Any other purpose, or none, is refused with 403 and logged under the `connector_broker` target with the account, provider and caller. The broker does not mint anything itself. It opens the sealed secret and hands it to core's machine grant (`connector_grant::MachineGrant`), the same code that serves core-managed connectors declared with `grant: app_installation` or `client_credentials`, so there is one App JWT signer, one token exchange and one token cache. Core caches a minted token until two minutes before it expires; the cache key includes the credential's rotation time, so a rotated credential never serves the previous token. People keep the per-user OAuth path unchanged.
+When core's MCP client asks the credential broker (`/api/public/connectors/{provider}/token`) for a service account's bearer, the broker requires the `x-systemprompt-caller` purpose core forwards from the run. It issues a token only for `workflow:<definition_id>:write` or `farm:<id>`. Any other purpose, or none, is refused with 403 and logged under the `connector_broker` target with the account, provider and caller. The broker does not mint anything itself. It opens the sealed secret and hands it to core's machine grant (`connector_grant::MachineGrant`), the same code that serves core-managed connectors declared with `grant: app_installation` or `client_credentials`, so there is one token exchange and one token cache. Core caches a minted token until two minutes before it expires; the cache key includes the credential's rotation time, so a rotated credential never serves the previous token. People keep the per-user OAuth path unchanged.
 
-GitHub's hosted MCP server is declared in `services/mcp/github.yaml` for this purpose. No plugin enables it. `services/access-control/rules.yaml` grants it, and the Atlassian and Salesforce servers, to the `service-accounts` group that every new service account joins; among people only administrators reach GitHub.
+`services/access-control/rules.yaml` grants the `odoo` server to the `service-accounts` group that every new service account joins.
