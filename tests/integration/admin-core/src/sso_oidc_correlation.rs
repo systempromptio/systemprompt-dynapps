@@ -9,13 +9,13 @@
 use dynapps_test_common::FakeOidcIdp;
 
 use crate::fixtures::unique;
-use crate::sso_harness::saml::DOMAIN;
+use crate::sso_harness::oidc::DOMAIN;
 use crate::sso_harness::{OIDC_CALLBACK, OIDC_TENANT, SsoApp, login_events, oidc};
 use crate::tempdb::TempDb;
 
 async fn app_and_idp(db: &TempDb) -> (SsoApp, FakeOidcIdp) {
     let idp = FakeOidcIdp::start(OIDC_TENANT).await;
-    (SsoApp::build(&db.pool, None, Some(oidc::config(&idp))), idp)
+    (SsoApp::build(&db.pool, Some(oidc::config(&idp))), idp)
 }
 
 fn token_calls(idp: &FakeOidcIdp) -> usize {

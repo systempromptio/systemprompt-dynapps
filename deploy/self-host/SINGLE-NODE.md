@@ -71,7 +71,7 @@ docker compose -f docker-compose.single.yml exec \
 ./verify-node.sh --url http://localhost:8080 --container "$(docker compose -f docker-compose.single.yml ps -q app)" --version 0.68.0
 ```
 
-Then configure Microsoft Entra ID (SAML) SSO (`/documentation/adfs-sso-setup`), sign in at
+Then configure Microsoft Entra ID (OpenID Connect) SSO (`/documentation/entra-id-sso-setup`), sign in at
 `https://ai.example.com/admin/login` as the admin e-mail you gave, and hand users the
 `https://ai.example.com/documentation/downloads` page.
 

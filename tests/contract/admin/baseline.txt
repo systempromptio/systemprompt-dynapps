@@ -57,7 +57,6 @@ GET    /admin/api/search/resolve                             anonymous=307 non-a
 GET    /admin/artifacts                                      anonymous=307 non-admin=303 developer=303 admin=200 platform-admin=200 project-manager=303 knowledge-worker=303
 GET    /admin/artifacts/{artifact_id}                        anonymous=307 non-admin=303 developer=303 admin=404 platform-admin=404 project-manager=303 knowledge-worker=303
 GET    /admin/artifacts/{artifact_id}/preview                anonymous=307 non-admin=303 developer=303 admin=404 platform-admin=404 project-manager=303 knowledge-worker=303
-GET    /admin/auth/adfs/start                                anonymous=303 non-admin=303 developer=303 admin=303 platform-admin=303 project-manager=303 knowledge-worker=303
 GET    /admin/auth/dev/login                                 anonymous=303 non-admin=303 developer=303 admin=303 platform-admin=303 project-manager=303 knowledge-worker=303
 GET    /admin/auth/entra/callback                            anonymous=303 non-admin=303 developer=303 admin=303 platform-admin=303 project-manager=303 knowledge-worker=303
 GET    /admin/auth/entra/start                               anonymous=303 non-admin=303 developer=303 admin=303 platform-admin=303 project-manager=303 knowledge-worker=303
@@ -224,7 +223,6 @@ POST   /admin/analysis/reports                               anonymous=307 non-a
 POST   /admin/analysis/reports/{id}/regenerate               anonymous=307 non-admin=303 developer=303 admin=404 platform-admin=404 project-manager=303 knowledge-worker=303
 POST   /admin/api/profile/bridge-code                        anonymous=307 non-admin=200 developer=200 admin=200 platform-admin=200 project-manager=200 knowledge-worker=200
 POST   /admin/api/profile/salesforce/unlink                  anonymous=307 non-admin=200 developer=200 admin=200 platform-admin=200 project-manager=200 knowledge-worker=200
-POST   /admin/auth/adfs/acs                                  anonymous=303 non-admin=303 developer=303 admin=303 platform-admin=303 project-manager=303 knowledge-worker=303
 POST   /admin/data/clear/confirm                             anonymous=307 non-admin=303 developer=303 admin=415 platform-admin=415 project-manager=303 knowledge-worker=303
 POST   /admin/data/clear/preview                             anonymous=307 non-admin=303 developer=303 admin=415 platform-admin=415 project-manager=303 knowledge-worker=303
 POST   /admin/devices/pats                                   anonymous=307 non-admin=303 developer=303 admin=422 platform-admin=422 project-manager=303 knowledge-worker=303

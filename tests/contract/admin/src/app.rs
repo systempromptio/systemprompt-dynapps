@@ -48,14 +48,7 @@ fn session_service(pool: &Arc<PgPool>) -> Arc<SessionCreationService> {
     ))
 }
 
-fn sso_deps(
-    pool: &Arc<PgPool>,
-    database: &Arc<Database>,
-    saml: Option<identity::EntraSamlConfig>,
-) -> identity::SsoDeps {
-    if let Some(cfg) = saml {
-        identity::sso::entra_saml::install_config(Arc::new(cfg));
-    }
+fn sso_deps(pool: &Arc<PgPool>, database: &Arc<Database>) -> identity::SsoDeps {
     let sessions = session_service(pool);
     let config = systemprompt::manifest::Config::get().expect("fixture profile config");
     identity::SsoDeps {
@@ -86,25 +79,6 @@ fn farm_state(pool: &Arc<PgPool>) -> Arc<farm::state::FarmState> {
 
 impl App {
     pub(crate) fn new(pool: &Arc<PgPool>, credentials: Credentials) -> Self {
-        Self::build(pool, credentials, None)
-    }
-
-    // Installs the Entra SAML config before the SSO driver discovers its
-    // providers. The slot is process-wide and first-write-wins, which holds
-    // because nextest runs every test in its own process.
-    pub(crate) fn with_sso(
-        pool: &Arc<PgPool>,
-        credentials: Credentials,
-        config: identity::EntraSamlConfig,
-    ) -> Self {
-        Self::build(pool, credentials, Some(config))
-    }
-
-    fn build(
-        pool: &Arc<PgPool>,
-        credentials: Credentials,
-        saml: Option<identity::EntraSamlConfig>,
-    ) -> Self {
         let database = Arc::new(Database::from_pools(
             Arc::clone(pool),
             Some(Arc::clone(pool)),
@@ -142,9 +116,7 @@ impl App {
                 config: Arc::new(platform::SalesforceConfig::disabled()),
                 write_pool: Arc::clone(pool),
             }));
-        let sso_deps = sso_deps(pool, &database, saml);
-        let saml_metadata = identity::routes::public::saml_metadata_routes()
-            .layer(axum::Extension(sso_deps.clone()));
+        let sso_deps = sso_deps(pool, &database);
         // Core layers `Option<Arc<AiService>>` onto every extension router;
         // `None` is an instance without inference configured.
         let ssr = admin::admin_ssr_router(
@@ -182,7 +154,6 @@ impl App {
             .nest_service("/bridge-auth", bridge_auth)
             .nest("/api/public", api)
             .nest(FARM_PUBLIC_PREFIX, farm)
-            .merge(saml_metadata)
             .merge(hooks)
             .merge(secrets)
             .merge(share);

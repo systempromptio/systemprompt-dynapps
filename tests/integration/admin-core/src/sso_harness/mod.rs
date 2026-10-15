@@ -1,15 +1,14 @@
 //! The sign-in router as the server mounts it, plus the request and audit
 //! helpers the SSO flow suites share.
 //!
-//! [`SsoApp::build`] installs whichever Entra configs the test supplies into
-//! the identity crate's process-wide slots, then lets core's driver discover
-//! providers — the order `extensions/web/src/router/sso.rs` uses. Both slots
-//! are first-write-wins `OnceLock`s, so every test builds exactly one app and
+//! [`SsoApp::build`] installs the Entra OIDC config the test supplies into
+//! the identity crate's process-wide slot, then lets core's driver discover
+//! providers — the order `extensions/web/src/router/sso.rs` uses. The slot
+//! is a first-write-wins `OnceLock`, so every test builds exactly one app and
 //! relies on nextest's process-per-test isolation.
 
 pub(crate) mod oidc;
 pub(crate) mod profile;
-pub(crate) mod saml;
 
 use std::sync::Arc;
 
@@ -20,14 +19,12 @@ use sqlx::PgPool;
 use systemprompt::database::Database;
 use systemprompt::oauth::SessionCreationService;
 use systemprompt::users::{SessionRepository, UserRepository, UserService};
-use systemprompt_web_admin_identity::sso::{entra_oidc, entra_saml};
-use systemprompt_web_admin_identity::{EntraSamlConfig, SsoDeps, routes};
+use systemprompt_web_admin_identity::sso::entra_oidc;
+use systemprompt_web_admin_identity::{SsoDeps, routes};
 use tower::ServiceExt as _;
 
 pub(crate) use profile::{EXTERNAL_URL, OIDC_TENANT};
 
-pub(crate) const SAML_START: &str = "/admin/auth/adfs/start";
-pub(crate) const SAML_ACS: &str = "/admin/auth/adfs/acs";
 pub(crate) const OIDC_START: &str = "/admin/auth/entra/start";
 pub(crate) const OIDC_CALLBACK: &str = "/admin/auth/entra/callback";
 pub(crate) const BINDER: &str = "sp_sso_bind";
@@ -106,15 +103,8 @@ fn session_service(pool: &Arc<PgPool>) -> Arc<SessionCreationService> {
 }
 
 impl SsoApp {
-    pub(crate) fn build(
-        pool: &Arc<PgPool>,
-        saml: Option<EntraSamlConfig>,
-        oidc: Option<entra_oidc::EntraOidcConfig>,
-    ) -> Self {
+    pub(crate) fn build(pool: &Arc<PgPool>, oidc: Option<entra_oidc::EntraOidcConfig>) -> Self {
         assert!(profile::init(), "SSO fixture profile");
-        if let Some(cfg) = saml {
-            entra_saml::install_config(Arc::new(cfg));
-        }
         if let Some(cfg) = oidc {
             entra_oidc::install_config(Arc::new(cfg));
         }
@@ -138,20 +128,12 @@ impl SsoApp {
                 "/admin",
                 routes::public::sign_in_routes().with_state(Arc::clone(pool)),
             )
-            .merge(routes::public::saml_metadata_routes())
             .layer(Extension(deps));
         Self { router }
     }
 
     pub(crate) async fn get(&self, uri: &str, cookie: Option<&str>) -> Reply {
         self.send(Request::get(uri), Body::empty(), cookie).await
-    }
-
-    pub(crate) async fn post_form(&self, uri: &str, body: &str, cookie: Option<&str>) -> Reply {
-        let builder =
-            Request::post(uri).header(header::CONTENT_TYPE, "application/x-www-form-urlencoded");
-        self.send(builder, Body::from(body.to_owned()), cookie)
-            .await
     }
 
     async fn send(

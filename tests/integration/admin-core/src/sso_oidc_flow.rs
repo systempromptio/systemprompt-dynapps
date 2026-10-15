@@ -9,7 +9,7 @@
 use dynapps_test_common::FakeOidcIdp;
 
 use crate::fixtures::unique;
-use crate::sso_harness::saml::{DOMAIN, USERS_GROUP};
+use crate::sso_harness::oidc::{DOMAIN, USERS_GROUP};
 use crate::sso_harness::{
     BINDER, OIDC_CALLBACK, OIDC_TENANT, SsoApp, directory_groups, federated_user, login_events,
     map_directory_group, oidc,
@@ -22,7 +22,7 @@ async fn oidc_sign_in_provisions_links_audits_and_maps_groups() {
         return;
     };
     let idp = FakeOidcIdp::start(OIDC_TENANT).await;
-    let app = SsoApp::build(&db.pool, None, Some(oidc::config(&idp)));
+    let app = SsoApp::build(&db.pool, Some(oidc::config(&idp)));
     map_directory_group(&db.pool, "dyn-users", USERS_GROUP).await;
 
     let started = oidc::start(&app, "/admin/auth/entra/start?redirect=/admin/profile").await;

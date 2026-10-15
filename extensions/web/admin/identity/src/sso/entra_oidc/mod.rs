@@ -2,11 +2,10 @@
 //! code flow with PKCE, validated against the tenant's discovery document and
 //! JWKS.
 //!
-//! This is the alternative to the SAML trust in `entra_saml` — an App
-//! Registration with a client secret instead of an Enterprise Application with
-//! federation metadata. State correlation, replay, the identity policy and the
-//! session are the core SSO driver's; this module only builds the redirect and
-//! turns the callback into an [`ExternalIdentity`].
+//! The tenant trust is an App Registration with a client secret. State
+//! correlation, replay, the identity policy and the session are the core SSO
+//! driver's; this module only builds the redirect and turns the callback into
+//! an [`ExternalIdentity`].
 //!
 //! The `redirect_uri` sent at authorize and at code redemption is the same
 //! value — the configured one, else the driver's callback URL — since Entra

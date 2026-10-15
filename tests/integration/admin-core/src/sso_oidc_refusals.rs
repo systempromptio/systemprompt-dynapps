@@ -11,8 +11,8 @@ use dynapps_test_common::{FakeOidcIdp, IdTokenSpec};
 use systemprompt_web_admin_identity::sso::entra_oidc::EntraOidcConfig;
 
 use crate::fixtures::unique;
+use crate::sso_harness::oidc::DOMAIN;
 use crate::sso_harness::profile::OIDC_WRONG_SECRET_KEY;
-use crate::sso_harness::saml::DOMAIN;
 use crate::sso_harness::{OIDC_TENANT, SsoApp, login_events, oidc};
 use crate::tempdb::TempDb;
 
@@ -28,7 +28,7 @@ async fn refused(
     let idp = FakeOidcIdp::start(OIDC_TENANT).await;
     let mut cfg = oidc::config(&idp);
     cfg_edit(&mut cfg);
-    let app = SsoApp::build(&db.pool, None, Some(cfg));
+    let app = SsoApp::build(&db.pool, Some(cfg));
     let started = oidc::start_default(&app).await;
     let mut spec = oidc::token_for(
         &started,

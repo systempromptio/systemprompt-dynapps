@@ -1,4 +1,4 @@
-//! Entra ID SAML sign-in for someone who already has a local account but no
+//! Entra ID OIDC sign-in for someone who already has a local account but no
 //! federated link: core's driver links by verified email when the policy's
 //! `link_by_email` allows it and refuses otherwise, and a hand-granted role
 //! survives the directory's role write (the `RoleResolver` re-joins
@@ -9,24 +9,24 @@
 
 use base64::Engine as _;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
-use dynapps_test_common::SamlIdpFixture;
+use dynapps_test_common::FakeOidcIdp;
 use systemprompt_web_admin_identity::repositories::users::roles::set_manual_roles;
 
 use crate::fixtures::{insert_user, unique};
-use crate::sso_harness::saml::{self, DOMAIN};
-use crate::sso_harness::{SsoApp, federated_user, login_events};
+use crate::sso_harness::oidc::{self, DOMAIN};
+use crate::sso_harness::{OIDC_TENANT, SsoApp, federated_user, login_events};
 use crate::tempdb::TempDb;
 
 const MANUAL_ROLE: &str = "admin";
 
 // An existing local account with a verified `@sso.test` email, and an app
 // whose policy never provisions and links by email when `link_by_email`.
-async fn existing_account(db: &TempDb, link_by_email: bool) -> (SsoApp, SamlIdpFixture, String) {
-    let idp = SamlIdpFixture::default();
-    let mut cfg = saml::config(&idp);
+async fn existing_account(db: &TempDb, link_by_email: bool) -> (SsoApp, FakeOidcIdp, String) {
+    let idp = FakeOidcIdp::start(OIDC_TENANT).await;
+    let mut cfg = oidc::config(&idp);
     cfg.policy.auto_provision = false;
     cfg.policy.link_by_email = link_by_email;
-    let app = SsoApp::build(&db.pool, Some(cfg), None);
+    let app = SsoApp::build(&db.pool, Some(cfg));
     let email = format!("{}@{DOMAIN}", unique("existing"));
     insert_user(&db.pool, &unique("user"), &email).await;
     (app, idp, email)
@@ -34,14 +34,13 @@ async fn existing_account(db: &TempDb, link_by_email: bool) -> (SsoApp, SamlIdpF
 
 async fn sign_in(
     app: &SsoApp,
-    idp: &SamlIdpFixture,
+    idp: &FakeOidcIdp,
     email: &str,
     sub: &str,
 ) -> crate::sso_harness::Reply {
-    let started = saml::start_default(app).await;
-    let mut spec = saml::response_for(&started, email);
-    spec.name_id = sub.to_owned();
-    saml::post_back(app, idp, &started, &spec).await
+    let started = oidc::start_default(app).await;
+    let spec = oidc::token_for(&started, email, sub);
+    oidc::call_back(app, idp, &started, spec).await
 }
 
 fn token_roles(access_cookie: &str) -> Vec<String> {

@@ -119,7 +119,6 @@ rand = "0.9"
 sha2 = "0.10"
 flate2 = "1.1"
 futures-util = "0.3"
-saml = { version = "0.0.1-alpha.2", default-features = false, features = ["rsa-sha", "xmlenc"] }
 hex = "0.4"
 # RS256 signing for the Salesforce RFC 7523 JWT-bearer assertion.
 jsonwebtoken = { version = "11", features = ["rust_crypto"] }

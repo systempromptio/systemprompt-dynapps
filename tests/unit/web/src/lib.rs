@@ -24,7 +24,7 @@
 //!   bundle ordering, asset copy's required-vs-optional split, the boot-time
 //!   governance config refusal, and the job error/tally plumbing
 //! - the admin crate's pure halves, migrated here from its former in-crate
-//!   `tests/` dir: ADFS assertion claims and the group->role map, the gateway
+//!   `tests/` dir: the Entra OIDC config and its group->role map, the gateway
 //!   catalog/budget surfaces, marketplace catalog and hook shapes, the
 //!   governance webhook, secrets crypto, the Handlebars engine and its helpers,
 //!   activity/trace constructors, analytics redaction, and the id/range/SVG
@@ -220,8 +220,6 @@ mod sso_oidc_claims;
 mod sso_permissions;
 #[cfg(test)]
 mod sso_policy;
-#[cfg(test)]
-mod sso_saml_claims;
 #[cfg(test)]
 mod web_extension_providers;
 #[cfg(test)]

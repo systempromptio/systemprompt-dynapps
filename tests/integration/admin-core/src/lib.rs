@@ -189,15 +189,6 @@ mod sync_plane_restart_stability;
 mod sso_harness;
 
 #[cfg(test)]
-mod sso_saml_flow;
-
-#[cfg(test)]
-mod sso_saml_refusals;
-
-#[cfg(test)]
-mod sso_saml_policy;
-
-#[cfg(test)]
 mod sso_oidc_flow;
 
 #[cfg(test)]

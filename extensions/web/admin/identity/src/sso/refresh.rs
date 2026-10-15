@@ -1,5 +1,5 @@
 //! A remote document an identity provider publishes and rotates on its own
-//! schedule — SAML federation metadata, OIDC discovery — held in memory and
+//! schedule — OIDC discovery and its JWKS — held in memory and
 //! kept fresh in the background.
 //!
 //! A successful fetch is served for `ttl`; a failed one keeps the last good

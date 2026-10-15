@@ -10,11 +10,9 @@ use std::sync::{Arc, OnceLock};
 
 mod downstream;
 mod sso_oidc;
-mod sso_saml;
 
 use downstream::load_salesforce_config;
 use sso_oidc::load_entra_oidc_config;
-use sso_saml::load_entra_saml_config;
 
 use systemprompt::config::{AppPaths, ProfileBootstrap};
 use systemprompt_web_admin_identity::sso::entra_oidc::EntraOidcConfig;
@@ -121,9 +119,6 @@ static NAVIGATION_CONFIG: OnceLock<Result<Option<Arc<NavigationConfig>>, String>
 static HOMEPAGE_CONFIG: OnceLock<Result<Option<Arc<HomepageConfig>>, String>> = OnceLock::new();
 static SKILLS_PAGE_CONFIG: OnceLock<Result<Option<Arc<SkillsPageConfig>>, String>> =
     OnceLock::new();
-static ENTRA_SAML_CONFIG: OnceLock<
-    Result<Option<Arc<systemprompt_web_admin_identity::EntraSamlConfig>>, String>,
-> = OnceLock::new();
 static ENTRA_OIDC_CONFIG: OnceLock<Result<Option<Arc<EntraOidcConfig>>, String>> = OnceLock::new();
 static SALESFORCE_CONFIG: OnceLock<
     Result<Option<Arc<systemprompt_web_admin_platform::SalesforceConfig>>, String>,
@@ -153,15 +148,6 @@ pub fn skills_page_config() -> Option<Arc<SkillsPageConfig>> {
         &SKILLS_PAGE_CONFIG,
         load_skills_page_config,
         "Skills page config error",
-    )
-}
-
-#[must_use]
-pub fn entra_saml_config() -> Option<Arc<systemprompt_web_admin_identity::EntraSamlConfig>> {
-    log_and_discard_err(
-        &ENTRA_SAML_CONFIG,
-        load_entra_saml_config,
-        "Entra SAML config error",
     )
 }
 

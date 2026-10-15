@@ -10,9 +10,9 @@ use std::net::IpAddr;
 use std::sync::Arc;
 
 use axum::Extension;
-use axum::extract::rejection::{FormRejection, QueryRejection};
-use axum::extract::{Form, Query};
-use axum::http::{HeaderMap, StatusCode, header};
+use axum::extract::Query;
+use axum::extract::rejection::QueryRejection;
+use axum::http::HeaderMap;
 use axum::response::{IntoResponse, Redirect, Response};
 use serde::Deserialize;
 use sqlx::PgPool;
@@ -23,7 +23,7 @@ use systemprompt::sso::{
     start_response,
 };
 
-use crate::sso::{entra_oidc, entra_saml};
+use crate::sso::entra_oidc;
 
 const LOGIN_PATH: &str = "/admin/login";
 
@@ -73,16 +73,12 @@ impl SsoDeps {
 #[derive(Debug)]
 pub(crate) enum SsoFlowError {
     Refused(&'static str),
-    MetadataNotFound,
-    MetadataUnavailable,
 }
 
 impl IntoResponse for SsoFlowError {
     fn into_response(self) -> Response {
         match self {
             Self::Refused(reason) => login_redirect(reason),
-            Self::MetadataNotFound => StatusCode::NOT_FOUND.into_response(),
-            Self::MetadataUnavailable => StatusCode::SERVICE_UNAVAILABLE.into_response(),
         }
     }
 }
@@ -147,29 +143,6 @@ async fn finish(
     Ok(into_response(outcome))
 }
 
-pub(crate) async fn saml_start(
-    Extension(deps): Extension<SsoDeps>,
-    params: Result<Query<StartParams>, QueryRejection>,
-) -> SsoFlowResult {
-    start(entra_saml::ID, deps, params.ok().map(|Query(p)| p)).await
-}
-
-pub(crate) async fn saml_acs(
-    Extension(deps): Extension<SsoDeps>,
-    headers: HeaderMap,
-    form: Result<Form<Vec<(String, String)>>, FormRejection>,
-) -> SsoFlowResult {
-    let params = form.map(|Form(p)| p).unwrap_or_default();
-    finish(
-        entra_saml::ID,
-        deps,
-        &headers,
-        SsoReturnBinding::Form,
-        params,
-    )
-    .await
-}
-
 pub(crate) async fn oidc_start(
     Extension(deps): Extension<SsoDeps>,
     params: Result<Query<StartParams>, QueryRejection>,
@@ -191,18 +164,4 @@ pub(crate) async fn oidc_callback(
         params,
     )
     .await
-}
-
-pub(crate) async fn saml_metadata(Extension(deps): Extension<SsoDeps>) -> SsoFlowResult {
-    let Some(driver) = deps.driver.as_ref() else {
-        return Err(SsoFlowError::MetadataUnavailable);
-    };
-    match driver.metadata(entra_saml::ID).await {
-        None => Err(SsoFlowError::MetadataNotFound),
-        Some(Ok(doc)) => Ok(([(header::CONTENT_TYPE, doc.content_type)], doc.body).into_response()),
-        Some(Err(err)) => {
-            tracing::warn!(error = %err, "SSO metadata unavailable");
-            Err(SsoFlowError::MetadataUnavailable)
-        },
-    }
 }

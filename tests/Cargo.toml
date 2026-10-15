@@ -213,13 +213,6 @@ sha2 = "0.10"
 # Pinned to the version core signs with, so the tokens this suite mints for the
 # hook audiences validate against core's own decoder.
 jsonwebtoken = { version = "11", features = ["rust_crypto"] }
-# The fake SAML IdP signs with the same crate and feature set the SP verifies
-# with (root Cargo.toml), so a fixture response exercises the production parser.
-saml = { version = "0.0.1-alpha.2", default-features = false, features = ["rsa-sha", "xmlenc"] }
-# Self-signs the fake IdP's certificate from the RSA key generated at runtime.
-rcgen = { version = "0.13", default-features = false, features = ["pem", "ring"] }
-# Inflates the DEFLATE'd SAMLRequest of an HTTP-Redirect AuthnRequest.
-flate2 = "1.1"
 
 # Local development and `next` deploys use the persistent sibling core checkout
 # directly; `just core-guard` requires it clean at bridge/CORE_REF. Keep version

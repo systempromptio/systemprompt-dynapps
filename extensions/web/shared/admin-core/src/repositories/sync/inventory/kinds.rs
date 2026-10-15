@@ -164,16 +164,10 @@ pub const CONFIG_KINDS: &[ConfigKind] = &[
         "web/metadata.yaml",
     ),
     file(
-        "adfs",
+        "entra_oidc",
         "Entra ID sign-in",
-        "the SAML relying party the console signs in through",
-        "web/config/adfs.yaml",
-    ),
-    file(
-        "adfs_metadata",
-        "Entra ID federation metadata",
-        "the identity provider's pinned certificate and endpoints",
-        "web/config/entra-federation-metadata.xml",
+        "the OpenID Connect app registration the console signs in through",
+        "web/config/entra-oidc.yaml",
     ),
     file(
         "security",

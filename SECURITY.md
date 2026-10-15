@@ -111,7 +111,7 @@ configures:
 5. **Bridge release feed.** When the services manifest declares a bridge
    releases repository, the gateway resolves the newest bridge release from
    that GitHub repository on a desktop bridge's request.
-6. **Identity and connectors.** Microsoft Entra ID (SAML) for sign-in, and the
+6. **Identity and connectors.** Microsoft Entra ID (OpenID Connect) for sign-in, and the
    Atlassian and Salesforce connectors when a user uses them.
 
 The desktop bridge checks for its own updates against the gateway it is

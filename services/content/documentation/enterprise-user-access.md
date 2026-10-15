@@ -3,7 +3,7 @@ title: "User & Access Management"
 description: "Manage enterprise users from the admin UI: search, roles, session and PAT revocation, closed registration, and Dynapps SSO with Entra groups as entitlements."
 author: "Dynapps"
 slug: "enterprise-user-access"
-keywords: "users, access, roles, sso, entra id, saml, pat, api key, per-key limits, scope binding, sessions, registration, deprovisioning, time-bound access, expiry"
+keywords: "users, access, roles, sso, entra id, oidc, pat, api key, per-key limits, scope binding, sessions, registration, deprovisioning, time-bound access, expiry"
 kind: "guide"
 public: true
 tags: ["enterprise", "admin", "access"]
@@ -49,18 +49,18 @@ Users enter through group-gated SSO when `auto_provision` is enabled, or an oper
 
 ## Dynapps SSO and deprovisioning
 
-The login page offers **Sign in with Dynapps SSO** (SAML 2.0) or **Sign in with Microsoft** (OpenID Connect), whichever provider is configured. Both apply the same identity policy, core's `SsoIdentityPolicy`, declared as top-level keys of the provider's file (`services/web/config/adfs.yaml` or `entra-oidc.yaml`):
+The login page offers **Sign in with Microsoft**: Microsoft Entra ID over OpenID Connect (provider `entra-oidc`, routes `/admin/auth/entra/start` and `/admin/auth/entra/callback`). It applies core's identity policy, `SsoIdentityPolicy`, declared as top-level keys of `services/web/config/entra-oidc.yaml`:
 
 | Key | Default | Effect |
 |---|---|---|
 | `allowed_email_domains` | `[]` (any) | Only these email domains may sign in (`?sso=forbidden`) |
 | `deny_without_group` | `false` (shipped: `true`) | No group at all, no session (`?sso=no_group`) |
-| `group_roles` | `{}` | Exact Entra group → roles |
+| `group_roles` | `{}` | Exact Entra group object id (from the `groups` claim) → roles |
 | `group_role_patterns` | `{}` | Single-`*` glob, such as `Dynapps-Systemprompt-PM-*` → roles, applied after exact matches |
 | `default_roles` | `[user]` | Roles when no group maps |
 | `auto_provision` | `false` (shipped: `true`) | Create the account on a first sign-in (`?sso=not_provisioned` otherwise) |
 
-Every SSO sign-in sets the account's roles to what the policy resolved joined with the roles granted by hand in the dashboard (the installation's role resolver); a role granted only from the CLI does not survive the next SSO sign-in. A first sign-in attaches to the active local account that already owns the verified address (`link_by_email: true` in both shipped configs) rather than creating a duplicate. Directory group and project memberships are stored with `source = 'adfs'` (for either protocol — the value is historical) and replaced at each sign-in; console-added memberships are `source = 'manual'` and survive. Users may belong to zero, one, or several projects. See [Set Up Dynapps SSO (Microsoft Entra ID)](/documentation/entra-id-sso-setup) and [Authentication](/documentation/authentication#what-happens-on-a-sign-in).
+Every SSO sign-in sets the account's roles to what the policy resolved joined with the roles granted by hand in the dashboard (the installation's role resolver); a role granted only from the CLI does not survive the next SSO sign-in. A first sign-in attaches to the active local account that already owns the verified address (`link_by_email: true` in the shipped config) rather than creating a duplicate. Directory group and project memberships are stored as directory memberships (`source = 'adfs'` — a historical label, not a protocol) and replaced at each sign-in; console-added memberships are `source = 'manual'` and survive. Users may belong to zero, one, or several projects. See [Set Up Dynapps SSO (Microsoft Entra ID)](/documentation/entra-id-sso-setup) and [Authentication](/documentation/authentication#what-happens-on-a-sign-in).
 
 Deprovisioning follows the directory: disabling the Entra ID account stops the next sign-in, and removing someone from a `Dynapps-Systemprompt-*` group strips the role it granted at their next sign-in. Mid-session revocation is bounded by the session TTL; an admin can revoke sessions and PATs immediately from `/admin/users`.
 
@@ -69,7 +69,7 @@ SCIM provisioning is not offered: the platform has no SCIM endpoint, so Entra ID
 ## Roles
 
 Roles come from the directory (the `Dynapps-Systemprompt-*` Entra groups mapped in
-`adfs.yaml` or `entra-oidc.yaml`) or are granted by hand. Only `admin` and `platform_admin` see the
+`entra-oidc.yaml`) or are granted by hand. Only `admin` and `platform_admin` see the
 whole console unscoped. `project_manager` is an **entitlement role**: it
 changes what a person reaches in `services/access-control/rules.yaml`, and it
 does not open the console. Anyone else, project managers included, reaches

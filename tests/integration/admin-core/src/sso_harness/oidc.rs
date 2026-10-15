@@ -7,13 +7,15 @@ use systemprompt_web_admin_identity::sso::entra_oidc::EntraOidcConfig;
 
 use super::profile::OIDC_SECRET_KEY;
 use super::{
-    BINDER, EXTERNAL_URL, OIDC_CALLBACK, OIDC_START, OIDC_TENANT, Reply, SsoApp, form_encode, saml,
+    BINDER, EXTERNAL_URL, OIDC_CALLBACK, OIDC_START, OIDC_TENANT, Reply, SsoApp, form_encode,
 };
 
+pub(crate) const DOMAIN: &str = "sso.test";
+pub(crate) const USERS_GROUP: &str = "Dynapps-Users";
 pub(crate) const CLIENT_ID: &str = "11111111-2222-4333-8444-555555555555";
 
-// Points discovery at `idp` and admits loopback JWKS; the policy matches
-// [`saml::config`]'s.
+// Points discovery at `idp` and admits loopback JWKS; one allowed domain,
+// auto-provisioning on, and one directory group granting `user`.
 pub(crate) fn config(idp: &FakeOidcIdp) -> EntraOidcConfig {
     EntraOidcConfig {
         enabled: true,
@@ -24,10 +26,10 @@ pub(crate) fn config(idp: &FakeOidcIdp) -> EntraOidcConfig {
         discovery_url: Some(idp.discovery_url()),
         jwks_allowed_hosts: vec!["127.0.0.1".to_owned()],
         policy: SsoIdentityPolicy {
-            allowed_email_domains: vec![saml::DOMAIN.to_owned()],
+            allowed_email_domains: vec![DOMAIN.to_owned()],
             auto_provision: true,
             deny_without_group: true,
-            group_roles: [(saml::USERS_GROUP.to_owned(), vec!["user".to_owned()])].into(),
+            group_roles: [(USERS_GROUP.to_owned(), vec!["user".to_owned()])].into(),
             ..SsoIdentityPolicy::default()
         },
         ..EntraOidcConfig::default()
@@ -73,7 +75,7 @@ pub(crate) async fn start_default(app: &SsoApp) -> Started {
     start(app, OIDC_START).await
 }
 
-// A valid ID token for `email` answering `started`, in [`saml::USERS_GROUP`].
+// A valid ID token for `email` answering `started`, in [`USERS_GROUP`].
 pub(crate) fn token_for(started: &Started, email: &str, sub: &str) -> IdTokenSpec {
     IdTokenSpec {
         sub: sub.to_owned(),
@@ -81,7 +83,7 @@ pub(crate) fn token_for(started: &Started, email: &str, sub: &str) -> IdTokenSpe
         email: Some(email.to_owned()),
         preferred_username: Some(email.to_owned()),
         name: "Federated Person".to_owned(),
-        groups: vec![saml::USERS_GROUP.to_owned()],
+        groups: vec![USERS_GROUP.to_owned()],
         nonce: started.nonce.clone(),
         aud: CLIENT_ID.to_owned(),
         tid: OIDC_TENANT.to_owned(),

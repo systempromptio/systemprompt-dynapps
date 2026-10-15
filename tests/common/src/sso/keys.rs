@@ -17,7 +17,6 @@ use sha2::{Digest, Sha256};
 pub struct TestIdpKeys {
     pub private_key_pkcs8_pem: String,
     pub public_key_pem: String,
-    pub certificate_pem: String,
     pub kid: String,
     modulus: Vec<u8>,
     exponent: Vec<u8>,
@@ -28,14 +27,14 @@ static OTHER: OnceLock<TestIdpKeys> = OnceLock::new();
 
 impl TestIdpKeys {
     pub fn get() -> &'static Self {
-        PRIMARY.get_or_init(|| Self::generate("fake-idp.test"))
+        PRIMARY.get_or_init(Self::generate)
     }
 
     pub fn other() -> &'static Self {
-        OTHER.get_or_init(|| Self::generate("other-idp.test"))
+        OTHER.get_or_init(Self::generate)
     }
 
-    fn generate(subject: &str) -> Self {
+    fn generate() -> Self {
         let private = RsaPrivateKey::new(&mut rand_core::OsRng, 2048).expect("generate RSA key");
         let public = RsaPublicKey::from(&private);
         let private_key_pkcs8_pem = private
@@ -48,23 +47,13 @@ impl TestIdpKeys {
         let modulus = public.n().to_bytes_be();
         let exponent = public.e().to_bytes_be();
         let kid = URL_SAFE_NO_PAD.encode(&Sha256::digest(&modulus)[..12]);
-        let certificate_pem = self_signed_certificate(&private_key_pkcs8_pem, subject);
         Self {
             private_key_pkcs8_pem,
             public_key_pem,
-            certificate_pem,
             kid,
             modulus,
             exponent,
         }
-    }
-
-    // The certificate body as metadata carries it: base64 DER, no armour.
-    pub fn certificate_base64(&self) -> String {
-        self.certificate_pem
-            .lines()
-            .filter(|l| !l.starts_with("-----"))
-            .collect()
     }
 
     pub fn jwk(&self) -> serde_json::Value {
@@ -86,12 +75,4 @@ impl TestIdpKeys {
         jsonwebtoken::EncodingKey::from_rsa_pem(self.private_key_pkcs8_pem.as_bytes())
             .expect("RSA encoding key")
     }
-}
-
-fn self_signed_certificate(private_key_pem: &str, subject: &str) -> String {
-    let key =
-        rcgen::KeyPair::from_pkcs8_pem_and_sign_algo(private_key_pem, &rcgen::PKCS_RSA_SHA256)
-            .expect("import RSA key into rcgen");
-    let params = rcgen::CertificateParams::new(vec![subject.to_owned()]).expect("cert params");
-    params.self_signed(&key).expect("self-sign").pem()
 }

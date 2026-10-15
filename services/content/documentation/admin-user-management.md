@@ -146,13 +146,13 @@ Roles have two halves, recomputed together on `users.roles`:
 
 - **Directory half** — projected from Entra groups on **every** SSO sign-in
   (replace, not union), by the same identity policy (`SsoIdentityPolicy`)
-  for SAML and OIDC. For example,
+  of the OpenID Connect provider. For example,
   `Dynapps-Systemprompt-Admins` → `platform_admin, admin, user` and
   `Dynapps-Systemprompt-Users` → `user`. A sign-in whose groups map to nothing
   gets `default_roles` (`[user]`). The map is `group_roles` and
-  `group_role_patterns` (one `*` glob) in `services/web/config/adfs.yaml` or
-  `entra-oidc.yaml`; see
-  [Set Up Dynapps SSO (Microsoft Entra ID)](/documentation/entra-id-sso-setup#groups-roles-and-entitlements-both-options).
+  `group_role_patterns` (one `*` glob) in
+  `services/web/config/entra-oidc.yaml`, keyed by Entra group object id; see
+  [Set Up Dynapps SSO (Microsoft Entra ID)](/documentation/entra-id-sso-setup#groups-roles-and-entitlements).
 - **Manual half** — granted by an admin on `/admin/roles` or on a user's
   detail page (`/admin/users/<id>`), stored in `user_manual_roles`. Core's
   sign-in writes the directory roles over `users.roles`, and the platform
@@ -215,7 +215,7 @@ projects, sessions (revoke from here), and a **Usage** tab with their
 requests, cost and conversations.
 
 **New user** creates an account from the browser only when no registered SSO
-provider has `auto_provision: true` (`adfs.yaml`, `entra-oidc.yaml`). This installation
+provider has `auto_provision: true` (`entra-oidc.yaml`). This installation
 runs with `auto_provision: true` — the Entra group is the invitation — so the
 button is disabled and explains why. The CLI and the MCP route above work
 either way.
