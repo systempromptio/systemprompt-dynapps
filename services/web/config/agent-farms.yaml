@@ -7,7 +7,16 @@
 # agents headlessly with Claude Code under the launching user's identity.
 # `marketplace` names the marketplace a user must be entitled to (see
 # services/access-control/rules.yaml) to see and run the farm's agents.
+# `clients` are who runs are for: each farm names its `client`, and every
+# run, eval run and report it produces is attributed to that client. An
+# agent may name its own `run_as` under `agents:`, preferred over the farm's.
 # Unknown keys are a load error.
+
+clients:
+  - slug: dynapps
+    name: "Dynapps"
+  - slug: acme-logistics
+    name: "Acme Logistics"
 
 farms:
   - id: dynapps-agent-farm
@@ -17,6 +26,7 @@ farms:
     # Runs of this farm belong to the project its agents deliver for, so a
     # project manager's `scope: project` reads them (agent_farms.project_id).
     project: odoo-delivery
+    client: dynapps
     # Runs execute as this service account (by email, so one config serves
     # every environment). Its odoo_api_key machine credential is what the odoo
     # MCP server spends; the launching person is still recorded on the run.

@@ -7,6 +7,9 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
+use std::collections::BTreeMap;
+
+use super::clients_yaml::{AgentOverride, ClientDef, validate_clients};
 use super::evals_yaml::EvalsConfig;
 use crate::error::{FarmError, FarmResult};
 
@@ -15,6 +18,8 @@ pub const FARMS_FILE: &str = "web/config/agent-farms.yaml";
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct FarmsDoc {
+    #[serde(default)]
+    pub clients: Vec<ClientDef>,
     #[serde(default)]
     pub farms: Vec<FarmDef>,
     #[serde(default)]
@@ -38,6 +43,10 @@ pub struct FarmDef {
     pub run_as: Option<String>,
     #[serde(default)]
     pub project: Option<String>,
+    #[serde(default)]
+    pub client: Option<String>,
+    #[serde(default)]
+    pub agents: BTreeMap<String, AgentOverride>,
     #[serde(default)]
     pub defaults: FarmDefaults,
 }
@@ -127,7 +136,7 @@ const fn default_max_concurrent() -> usize {
 
 const PERMISSION_MODES: [&str; 4] = ["default", "acceptEdits", "plan", "bypassPermissions"];
 
-fn is_slug(value: &str) -> bool {
+pub(super) fn is_slug(value: &str) -> bool {
     !value.is_empty()
         && value
             .chars()
@@ -136,8 +145,28 @@ fn is_slug(value: &str) -> bool {
 
 impl FarmsDoc {
     pub fn validate(&self) -> FarmResult<()> {
+        validate_clients(&self.clients, FARMS_FILE)?;
+        let clients: BTreeSet<&str> = self.clients.iter().map(|c| c.slug.as_str()).collect();
         let mut seen = BTreeSet::new();
         for farm in &self.farms {
+            if let Some(client) = farm.client.as_deref()
+                && !clients.contains(client)
+            {
+                return Err(invalid(&format!(
+                    "farm {:?}: client {client:?} is not declared under clients",
+                    farm.id
+                )));
+            }
+            if farm
+                .agents
+                .values()
+                .any(|a| a.run_as.as_deref().is_some_and(|id| id.trim().is_empty()))
+            {
+                return Err(invalid(&format!(
+                    "farm {:?}: an agent run_as is empty",
+                    farm.id
+                )));
+            }
             if !is_slug(&farm.id) {
                 return Err(invalid(&format!("farm id {:?} is not a slug", farm.id)));
             }

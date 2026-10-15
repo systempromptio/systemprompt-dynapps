@@ -20,4 +20,4 @@ pub(crate) use evals::{get_eval_run, run_eval_suite};
 pub(crate) use events::list_run_events;
 pub(crate) use history::{eval_history, list_suite_runs};
 pub(crate) use launch::launch_run;
-pub(crate) use runs::{cancel_run, get_run, list_runs};
+pub(crate) use runs::{cancel_run, get_run, get_run_report, list_runs};

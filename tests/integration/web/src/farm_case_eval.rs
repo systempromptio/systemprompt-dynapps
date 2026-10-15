@@ -61,6 +61,7 @@ fn request(seeded: &Seeded) -> LaunchRequest {
         max_budget_usd: None,
         timeout_seconds: None,
         eval_result_id: None,
+        client_id: None,
     }
 }
 

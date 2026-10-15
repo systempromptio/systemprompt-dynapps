@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO agent_farms (id, name, description, marketplace_id, source_repo, source_ref,\n                         source_subdir, permission_mode, timeout_seconds, max_turns,\n                         max_budget_usd, model, run_as_user_id, project_id, client_id)\nVALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)\nON CONFLICT (id) DO UPDATE SET\n    name = EXCLUDED.name,\n    description = EXCLUDED.description,\n    marketplace_id = EXCLUDED.marketplace_id,\n    source_repo = EXCLUDED.source_repo,\n    source_ref = EXCLUDED.source_ref,\n    source_subdir = EXCLUDED.source_subdir,\n    permission_mode = EXCLUDED.permission_mode,\n    timeout_seconds = EXCLUDED.timeout_seconds,\n    max_turns = EXCLUDED.max_turns,\n    max_budget_usd = EXCLUDED.max_budget_usd,\n    model = EXCLUDED.model,\n    run_as_user_id = EXCLUDED.run_as_user_id,\n    project_id = EXCLUDED.project_id,\n    client_id = EXCLUDED.client_id,\n    updated_at = NOW()\n",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Int4",
+        "Int4",
+        "Float8",
+        "Text",
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "ac4199c26ccc362de12c195cd648defe07265edc1b3ac2d1c7e2afdb62444a71"
+}

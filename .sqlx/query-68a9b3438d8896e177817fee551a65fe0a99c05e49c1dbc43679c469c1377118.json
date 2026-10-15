@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id AS \"id: FarmId\", name, description, marketplace_id AS \"marketplace_id: MarketplaceId\",\n       source_repo, source_ref, source_subdir, permission_mode, timeout_seconds, max_turns,\n       max_budget_usd, model, synced_commit_sha, synced_at, synced_by, sync_error,\n       owner_user_id, run_as_user_id AS \"run_as_user_id: UserId\", project_id AS \"project_id: ProjectId\", created_at, updated_at\nFROM agent_farms\nORDER BY name, id\n",
+  "query": "SELECT id AS \"id: FarmId\", name, description, marketplace_id AS \"marketplace_id: MarketplaceId\",\n       source_repo, source_ref, source_subdir, permission_mode, timeout_seconds, max_turns,\n       max_budget_usd, model, synced_commit_sha, synced_at, synced_by, sync_error,\n       owner_user_id, run_as_user_id AS \"run_as_user_id: UserId\", project_id AS \"project_id: ProjectId\", created_at, updated_at,\n       client_id AS \"client_id: ClientId\"\nFROM agent_farms\nWHERE id = $1\n",
   "describe": {
     "columns": [
       {
@@ -233,10 +233,23 @@
             "name": "updated_at"
           }
         }
+      },
+      {
+        "ordinal": 21,
+        "name": "client_id: ClientId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farms",
+            "name": "client_id"
+          }
+        }
       }
     ],
     "parameters": {
-      "Left": []
+      "Left": [
+        "Text"
+      ]
     },
     "nullable": [
       false,
@@ -259,8 +272,9 @@
       true,
       true,
       false,
-      false
+      false,
+      true
     ]
   },
-  "hash": "88f9878a92aef62f96aced1b95b33a98bab65ff6989549d78912ddccb8e73dc1"
+  "hash": "68a9b3438d8896e177817fee551a65fe0a99c05e49c1dbc43679c469c1377118"
 }

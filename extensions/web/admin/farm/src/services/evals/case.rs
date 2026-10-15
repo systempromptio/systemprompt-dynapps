@@ -16,6 +16,7 @@ use crate::error::{FarmError, FarmResult};
 use crate::repositories::rows::{AgentRow, EvalCaseRow, RunRow};
 use crate::repositories::{evals, runs};
 use crate::services::farm_sync::eval_yaml::{Assertion, DEFAULT_JUDGE_THRESHOLD};
+use crate::services::runner::report::refresh_report_eval;
 use crate::services::runs::{LaunchRequest, cancel, launch};
 use crate::state::FarmState;
 use crate::types::{EvalResultId, EvalResultStatus, FarmId, FarmRunId, RunStatus, TriggeredVia};
@@ -63,6 +64,7 @@ pub(crate) async fn run_case(job: &CaseJob<'_>) -> FarmResult<CaseOutcome> {
             max_budget_usd: None,
             timeout_seconds: i32::try_from(timeout).ok(),
             eval_result_id: Some(job.result_id.clone()),
+            client_id: None,
         },
     )
     .await?;
@@ -112,6 +114,7 @@ pub(crate) async fn settle_case(job: &CaseJob<'_>, launched: &RunRow) -> FarmRes
         },
     )
     .await?;
+    refresh_report_eval(pool, job.result_id).await;
     Ok(CaseOutcome {
         status: Some(status),
         score,

@@ -1,7 +1,7 @@
 //! Queries over the agents a farm sync projected from the farm's agent files.
 
 use sqlx::PgPool;
-use systemprompt::identifiers::PluginId;
+use systemprompt::identifiers::{PluginId, UserId};
 
 use super::filters::NewAgent;
 use super::rows::AgentRow;
@@ -66,6 +66,23 @@ pub async fn upsert_agent(pool: &PgPool, agent: &NewAgent) -> Result<(), sqlx::E
     .execute(pool)
     .await?;
     Ok(())
+}
+
+pub async fn update_agent_run_as(
+    pool: &PgPool,
+    farm_id: &FarmId,
+    id: &str,
+    run_as: Option<&UserId>,
+) -> Result<u64, sqlx::Error> {
+    let result = sqlx::query_file!(
+        "src/repositories/agents/update_agent_run_as.sql",
+        farm_id.as_str(),
+        id,
+        run_as.map(UserId::as_str),
+    )
+    .execute(pool)
+    .await?;
+    Ok(result.rows_affected())
 }
 
 pub async fn delete_agents_not_in(

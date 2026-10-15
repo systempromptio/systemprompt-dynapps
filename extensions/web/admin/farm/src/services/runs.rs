@@ -20,9 +20,11 @@ use super::runner::{ORIGIN_KIND, observer, prepare};
 use crate::error::{FarmError, FarmResult};
 use crate::repositories::filters::NewRun;
 use crate::repositories::rows::{AgentRow, FarmRow, RunRow};
-use crate::repositories::{agents, farms, runs};
+use crate::repositories::{agents, clients, farms, runs};
 use crate::state::{FarmState, RunnerLimits};
-use crate::types::{EvalResultId, FarmAgentId, FarmId, FarmRunId, RunStatus, TriggeredVia};
+use crate::types::{
+    ClientId, EvalResultId, FarmAgentId, FarmId, FarmRunId, RunStatus, TriggeredVia,
+};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LaunchRequest {
@@ -38,6 +40,7 @@ pub struct LaunchRequest {
     pub max_budget_usd: Option<f64>,
     pub timeout_seconds: Option<i32>,
     pub eval_result_id: Option<EvalResultId>,
+    pub client_id: Option<ClientId>,
 }
 
 pub async fn launch(state: &Arc<FarmState>, req: LaunchRequest) -> FarmResult<RunRow> {
@@ -80,10 +83,14 @@ pub async fn launch(state: &Arc<FarmState>, req: LaunchRequest) -> FarmResult<Ru
         ));
     }
 
-    let credential_user = prepare::credential_user(farm.run_as_user_id.as_ref(), &req.user_id);
+    let credential_user = prepare::credential_user(
+        agent.run_as_user_id.as_ref(),
+        farm.run_as_user_id.as_ref(),
+        &req.user_id,
+    );
     let new_run = NewRun {
-        id: farm_run_id.clone(),
-        agent_run_id: agent_run_id.clone(),
+        id: farm_run_id,
+        agent_run_id,
         farm_id: req.farm_id,
         agent_id: req.agent_id,
         user_id: req.user_id,
@@ -99,24 +106,20 @@ pub async fn launch(state: &Arc<FarmState>, req: LaunchRequest) -> FarmResult<Ru
         timeout_seconds,
         source_commit_sha: farm.synced_commit_sha,
         eval_result_id: req.eval_result_id,
+        client_id: req.client_id,
     };
 
-    let row = insert_pair(
-        pool,
-        &new_run,
-        NewAgentRun {
-            id: &agent_run_id,
-            origin_kind: ORIGIN_KIND,
-            origin_id: farm_run_id.as_str(),
-            user_id: &credential_user,
-            request: &request,
-            not_before: None,
-            task_id: None,
-            context_id: None,
-        },
-    )
-    .await?;
-    Ok(row)
+    insert_pair(pool, &new_run, &credential_user, &request).await
+}
+
+pub async fn resolve_client(pool: &PgPool, slug: Option<&str>) -> FarmResult<Option<ClientId>> {
+    let Some(slug) = slug.map(str::trim).filter(|s| !s.is_empty()) else {
+        return Ok(None);
+    };
+    clients::find_client(pool, slug)
+        .await?
+        .map(|row| Some(row.id))
+        .ok_or_else(|| FarmError::Validation(format!("client {slug:?} is not declared")))
 }
 
 fn resolve_limits(
@@ -150,8 +153,19 @@ fn resolve_limits(
 async fn insert_pair(
     pool: &PgPool,
     new_run: &NewRun,
-    new_agent_run: NewAgentRun<'_>,
+    credential_user: &UserId,
+    request: &systemprompt::agent_runs::RunRequest,
 ) -> FarmResult<RunRow> {
+    let new_agent_run = NewAgentRun {
+        id: &new_run.agent_run_id,
+        origin_kind: ORIGIN_KIND,
+        origin_id: new_run.id.as_str(),
+        user_id: credential_user,
+        request,
+        not_before: None,
+        task_id: None,
+        context_id: None,
+    };
     let mut tx = pool.begin().await?;
     AgentRunRepository::insert_run_in_tx(&mut tx, new_agent_run).await?;
     let row = runs::insert_run(&mut *tx, new_run).await?;

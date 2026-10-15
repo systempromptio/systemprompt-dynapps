@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "-- One report per run, recomputed on every call. The Odoo writes are the odoo\n-- MCP server's audit rows (governance_decisions) whose evaluated_rules carry\n-- this farm run id; read-only tools are left out. The eval verdict is read\n-- from the run's eval result once it has settled.\nINSERT INTO agent_farm_run_reports (run_id, client_id, completed, summary, final_message, outputs,\n                                    odoo_writes, eval_passed, eval_score)\nSELECT r.id,\n       r.client_id,\n       r.status = 'succeeded' AND (er.id IS NULL OR er.status = 'passed'),\n       $2,\n       $3,\n       $4,\n       (SELECT COALESCE(jsonb_agg(jsonb_build_object(\n                    'tool', g.evaluated_rules->>'tool',\n                    'model', g.evaluated_rules->>'model',\n                    'record_ids', COALESCE(g.evaluated_rules->'record_ids', '[]'::jsonb),\n                    'decision', g.decision,\n                    'policy', g.policy,\n                    'at', g.created_at) ORDER BY g.created_at), '[]'::jsonb)\n        FROM governance_decisions g\n        WHERE g.evaluated_rules->>'server' = 'odoo'\n          AND g.evaluated_rules->>'farm_run_id' = r.id\n          AND g.evaluated_rules->>'tool' !~ '(_get|_list|_search|_report|_inventory)$'),\n       CASE WHEN er.status IN ('passed', 'failed', 'errored') THEN er.status = 'passed' END,\n       er.judge_score\nFROM agent_farm_runs r\nLEFT JOIN agent_farm_eval_results er ON er.id = r.eval_result_id\nWHERE r.id = $1\nON CONFLICT (run_id) DO UPDATE SET\n    client_id = EXCLUDED.client_id,\n    completed = EXCLUDED.completed,\n    summary = EXCLUDED.summary,\n    final_message = EXCLUDED.final_message,\n    outputs = EXCLUDED.outputs,\n    odoo_writes = EXCLUDED.odoo_writes,\n    eval_passed = EXCLUDED.eval_passed,\n    eval_score = EXCLUDED.eval_score\n",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b13350d242af2c5536cdfdba361d90d932d7ed6e78d98eb31e45d4158ea306bb"
+}

@@ -57,6 +57,7 @@ pub(crate) async fn seed(pool: &Arc<PgPool>) -> Seeded {
             model: None,
             run_as_user_id: None,
             project_id: None,
+            client_id: None,
         },
     )
     .await
@@ -121,6 +122,7 @@ pub(crate) async fn launch_one(seeded: &Seeded) -> RunRow {
             max_budget_usd: None,
             timeout_seconds: None,
             eval_result_id: None,
+            client_id: None,
         },
     )
     .await
@@ -260,7 +262,7 @@ async fn the_finish_observer_stamps_a_reclaimed_runs_attempt() {
 
 // The executor finishes the core row; the farm observer then stamps the
 // outcome onto the farm row from that record.
-async fn observe_finish(state: &Arc<FarmState>, run: &RunRow, outcome: &RunOutcome) {
+pub(crate) async fn observe_finish(state: &Arc<FarmState>, run: &RunRow, outcome: &RunOutcome) {
     let finished = AgentRunRepository::from_pool(Arc::clone(&state.pool))
         .finish(&run.agent_run_id, outcome, None)
         .await

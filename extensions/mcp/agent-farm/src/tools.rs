@@ -11,7 +11,7 @@ use crate::typed;
 
 pub const SERVER_NAME: &str = "agent-farm";
 
-pub const TOOL_NAMES: [&str; 14] = [
+pub const TOOL_NAMES: [&str; 15] = [
     "run_start",
     "run_status",
     "run_events",
@@ -19,6 +19,7 @@ pub const TOOL_NAMES: [&str; 14] = [
     "run_list",
     "run_facts",
     "run_stats",
+    "farm_run_report",
     "farm_evals_run",
     "farm_eval_results",
     "analytics_costs",
@@ -32,7 +33,8 @@ pub const INSTRUCTIONS: &str = "Agent farm for developers and project managers. 
     run_start queues a headless agent run on a farm and returns its run id; run_status, \
     run_events and run_facts read one run (status, event stream, recorded facts); run_list \
     and run_stats cover the runs you may see (`scope: mine`, `project`, or `all` for \
-    administrators); run_cancel stops one. Evals: farm_evals_run starts a suite scored by \
+    administrators); run_cancel stops one; farm_run_report reads a finished farm run's \
+    task-completion report. Evals: farm_evals_run starts a suite scored by \
     deterministic assertions, farm_eval_results reads the verdicts. Analytics: \
     analytics_costs, analytics_requests, analytics_skills, analytics_tools for you or one of \
     your projects over 24h, 7d or 30d. catalog_list shows what your access grants. You only \
@@ -54,6 +56,7 @@ pub fn list_tools() -> Vec<Tool> {
         typed::RunListHandler { ctx }.tool_definition(&server),
         typed::RunFactsHandler { ctx }.tool_definition(&server),
         typed::RunStatsHandler { ctx }.tool_definition(&server),
+        typed::FarmRunReportHandler { ctx }.tool_definition(&server),
         typed::FarmEvalsRunHandler { ctx }.tool_definition(&server),
         typed::FarmEvalResultsHandler { ctx }.tool_definition(&server),
         typed::AnalyticsCostsHandler { ctx }.tool_definition(&server),

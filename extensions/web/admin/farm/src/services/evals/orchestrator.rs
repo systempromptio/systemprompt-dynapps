@@ -15,6 +15,7 @@ use super::judge::EvalJudge;
 use crate::error::{FarmError, FarmResult};
 use crate::repositories::rows::{AgentRow, EvalCaseRow, EvalRunRow};
 use crate::repositories::{agents, evals};
+use crate::services::runner::report::refresh_report_eval;
 use crate::services::runs::cancel;
 use crate::state::FarmState;
 use crate::types::{
@@ -204,6 +205,7 @@ pub(super) async fn record_outcome(
                 },
             )
             .await?;
+            refresh_report_eval(pool, result_id).await;
             Ok(CaseOutcome::default())
         },
     }

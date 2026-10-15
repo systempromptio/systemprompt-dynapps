@@ -113,6 +113,18 @@ pub(crate) async fn get_run(
     Ok(Json(run_json(&state.pool, run).await?).into_response())
 }
 
+pub(crate) async fn get_run_report(
+    State(state): State<Arc<FarmState>>,
+    Extension(ctx): Extension<UserContext>,
+    Path(run_id): Path<FarmRunId>,
+) -> AdminResult<Response> {
+    let run = load_visible_run(&state.pool, &ctx, &run_id).await?;
+    let report = crate::repositories::reports::find_run_report(&state.pool, &run.id)
+        .await?
+        .ok_or_else(|| AdminError::NotFound(format!("report for run {}", run.id.as_str())))?;
+    Ok(Json(report).into_response())
+}
+
 pub(crate) async fn cancel_run(
     State(state): State<Arc<FarmState>>,
     Extension(ctx): Extension<UserContext>,

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT farm_id AS \"farm_id: FarmId\", id AS \"id: FarmAgentId\", name, description, model, tools,\n       plugin_id AS \"plugin_id: PluginId\", skills, entry_prompt, fixture, max_turns,\n       max_budget_usd, output_path, output_format, source_path, body, synced_commit_sha, host,\n       updated_at\nFROM agent_farm_agents\nWHERE farm_id = $1\nORDER BY name, id\n",
+  "query": "SELECT farm_id AS \"farm_id: FarmId\", id AS \"id: FarmAgentId\", name, description, model, tools,\n       plugin_id AS \"plugin_id: PluginId\", skills, entry_prompt, fixture, max_turns,\n       max_budget_usd, output_path, output_format, source_path, body, synced_commit_sha, host,\n       updated_at, run_as_user_id AS \"run_as_user_id: UserId\"\nFROM agent_farm_agents\nWHERE farm_id = $1 AND id = $2\n",
   "describe": {
     "columns": [
       {
@@ -211,10 +211,22 @@
             "name": "updated_at"
           }
         }
+      },
+      {
+        "ordinal": 19,
+        "name": "run_as_user_id: UserId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_agents",
+            "name": "run_as_user_id"
+          }
+        }
       }
     ],
     "parameters": {
       "Left": [
+        "Text",
         "Text"
       ]
     },
@@ -237,8 +249,9 @@
       false,
       false,
       false,
-      false
+      false,
+      true
     ]
   },
-  "hash": "c841b44a186d445af3273a9ae8bb61d620609badf27c728fda36540520f814ea"
+  "hash": "a4e6a3b0eadb2dc7d4c51ce7f39dccb51ecabb7e0f15b6b24ea57d08bbba764f"
 }

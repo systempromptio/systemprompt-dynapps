@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "-- Re-reads a settled eval result into its run's report (the eval settles\n-- after the run's report is first written).\nUPDATE agent_farm_run_reports rep\nSET eval_passed = CASE WHEN er.status IN ('passed', 'failed', 'errored') THEN er.status = 'passed' END,\n    eval_score = er.judge_score,\n    completed = r.status = 'succeeded' AND er.status = 'passed'\nFROM agent_farm_eval_results er\nJOIN agent_farm_runs r ON r.id = er.run_id\nWHERE er.id = $1 AND rep.run_id = er.run_id\n",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "bae69e3b5237982af363c80538b5926661173c52aa67bf80f5b587f73b49b397"
+}

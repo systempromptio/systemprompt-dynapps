@@ -21,7 +21,7 @@ use crate::repositories::rows::RunRow;
 use crate::repositories::{agents, runs};
 use crate::services::entitlement::require_farm_access;
 use crate::services::evals::{CaseLaunch, start_case_eval};
-use crate::services::runs::{LaunchRequest, launch};
+use crate::services::runs::{LaunchRequest, launch, resolve_client};
 use crate::state::FarmState;
 use crate::types::{EvalRunId, FarmAgentId, FarmId, RunStatus};
 
@@ -42,6 +42,7 @@ pub(crate) struct LaunchBody {
     max_turns: Option<i32>,
     max_budget_usd: Option<f64>,
     timeout_seconds: Option<i32>,
+    client: Option<String>,
     #[serde(default)]
     wait: bool,
 }
@@ -83,6 +84,7 @@ pub(crate) async fn launch_run(
     agents::find_agent(&state.pool, &body.farm, &body.agent)
         .await?
         .ok_or_else(|| AdminError::NotFound(format!("agent {}", body.agent.as_str())))?;
+    let client_id = resolve_client(&state.pool, body.client.as_deref()).await?;
     let request = LaunchRequest {
         farm_id: body.farm,
         agent_id: body.agent,
@@ -96,6 +98,7 @@ pub(crate) async fn launch_run(
         max_budget_usd: body.max_budget_usd,
         timeout_seconds: body.timeout_seconds,
         eval_result_id: None,
+        client_id,
     };
     let (run, eval_run_id) = match body.case.filter(|c| !c.trim().is_empty()) {
         Some(case_id) => {

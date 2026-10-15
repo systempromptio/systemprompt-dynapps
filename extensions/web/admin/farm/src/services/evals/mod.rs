@@ -15,4 +15,5 @@ pub use judge::{
     EvalJudge, GatewayJudge, JudgeFuture, JudgeInput, JudgeVerdict, StubJudge, gateway_judge,
 };
 pub use orchestrator::{EvalLaunch, cancel_eval_run, start_eval_run};
+pub use transcript::final_result_text;
 pub use triggers::{CaseLaunch, CaseLaunched, start_case_eval, start_demo_eval};

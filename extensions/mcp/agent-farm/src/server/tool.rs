@@ -65,6 +65,7 @@ pub async fn dispatch_tool(
         "run_list" => run(ctx, &typed::RunListHandler { ctx: t }).await,
         "run_facts" => run(ctx, &typed::RunFactsHandler { ctx: t }).await,
         "run_stats" => run(ctx, &typed::RunStatsHandler { ctx: t }).await,
+        "farm_run_report" => run(ctx, &typed::FarmRunReportHandler { ctx: t }).await,
         "farm_evals_run" => run(ctx, &typed::FarmEvalsRunHandler { ctx: t }).await,
         "farm_eval_results" => run(ctx, &typed::FarmEvalResultsHandler { ctx: t }).await,
         "analytics_costs" => run(ctx, &typed::AnalyticsCostsHandler { ctx: t }).await,
