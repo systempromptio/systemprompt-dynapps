@@ -18,7 +18,7 @@ use systemprompt_web_admin_core::repositories::sync::history::KeptReview;
 
 fn declared() -> DeclaredSet {
     let doc = parse_rules_doc(
-        "entities:\n  - entity: mcp_server/dynbrain\n    default: closed\n    why: pilot\n    allow:\n      role: [admin]\n      group: [india-devs]\n  - entity: mcp_server/odoo\n    default: closed\n    why: pilot\n    allow:\n      role: [admin]\n",
+        "entities:\n  - entity: mcp_server/dynbrain\n    default: closed\n    why: pilot\n    allow:\n      role: [admin]\n      group: [india-devs]\n  - entity: mcp_server/dynapps-odoo\n    default: closed\n    why: pilot\n    allow:\n      role: [admin]\n",
     )
     .expect("parses");
     build_declared_set(
@@ -65,17 +65,17 @@ fn find<'a>(reviews: &'a [EntityReview], id: &str) -> &'a EntityReview {
 #[test]
 fn an_entity_never_applied_is_new_in_code_and_not_live() {
     let reviews = review_entities(&compute_drift(&declared(), &[], &[]));
-    let odoo = find(&reviews, "odoo");
+    let odoo = find(&reviews, "dynapps-odoo");
     assert_eq!(odoo.kind, ReviewKind::NewInCode);
     assert!(odoo.not_live);
     assert!(odoo.applies);
-    assert_eq!(odoo.key, "mcp_server/odoo");
+    assert_eq!(odoo.key, "mcp_server/dynapps-odoo");
 }
 
 #[test]
 fn a_live_entity_missing_a_declared_rule_reads_as_removed_in_console() {
     let rules = [row("dynbrain", "role", "admin", Access::Allow, "yaml")];
-    let entities = [entity("dynbrain"), entity("odoo")];
+    let entities = [entity("dynbrain"), entity("dynapps-odoo")];
     let reviews = review_entities(&compute_drift(&declared(), &rules, &entities));
     let dynbrain = find(&reviews, "dynbrain");
     assert_eq!(dynbrain.kind, ReviewKind::RemovedInConsole);
@@ -89,19 +89,26 @@ fn a_disagreeing_row_is_changed_in_code_and_a_console_extra_is_only_in_console()
     let rules = [
         row("dynbrain", "role", "admin", Access::Deny, "yaml"),
         row("dynbrain", "group", "india-devs", Access::Allow, "yaml"),
-        row("odoo", "role", "admin", Access::Allow, "yaml"),
-        row("github", "group", "uk", Access::Allow, DASHBOARD_SOURCE),
+        row("dynapps-odoo", "role", "admin", Access::Allow, "yaml"),
+        row("agent-farm", "group", "uk", Access::Allow, DASHBOARD_SOURCE),
     ];
-    let entities = [entity("dynbrain"), entity("odoo"), entity("github")];
+    let entities = [
+        entity("dynbrain"),
+        entity("dynapps-odoo"),
+        entity("agent-farm"),
+    ];
     let reviews = review_entities(&compute_drift(&declared(), &rules, &entities));
     assert_eq!(find(&reviews, "dynbrain").kind, ReviewKind::ChangedInCode);
-    let github = find(&reviews, "github");
-    assert_eq!(github.kind, ReviewKind::OnlyInConsole);
+    let farm = find(&reviews, "agent-farm");
+    assert_eq!(farm.kind, ReviewKind::OnlyInConsole);
     assert!(
-        !github.applies,
-        "code does not govern github, so applying it moves nothing"
+        !farm.applies,
+        "code does not govern agent-farm, so applying it moves nothing"
     );
-    assert!(reviews.iter().all(|r| r.entity_id != "odoo"), "odoo agrees");
+    assert!(
+        reviews.iter().all(|r| r.entity_id != "dynapps-odoo"),
+        "dynapps-odoo agrees"
+    );
 }
 
 #[test]
@@ -109,10 +116,10 @@ fn a_bundle_row_on_an_ungoverned_entity_is_never_reviewed() {
     let rules = [
         row("dynbrain", "role", "admin", Access::Allow, "yaml"),
         row("dynbrain", "group", "india-devs", Access::Allow, "yaml"),
-        row("odoo", "role", "admin", Access::Allow, "yaml"),
+        row("dynapps-odoo", "role", "admin", Access::Allow, "yaml"),
         row("kitsrv", "group", "uk", Access::Allow, "bundle:sfnext"),
     ];
-    let entities = [entity("dynbrain"), entity("odoo")];
+    let entities = [entity("dynbrain"), entity("dynapps-odoo")];
     let reviews = review_entities(&compute_drift(&declared(), &rules, &entities));
     assert!(reviews.is_empty(), "{reviews:?}");
 }
@@ -120,7 +127,7 @@ fn a_bundle_row_on_an_ungoverned_entity_is_never_reviewed() {
 #[test]
 fn a_kept_decision_holds_only_for_the_diff_it_was_taken_on() {
     let reviews = review_entities(&compute_drift(&declared(), &[], &[]));
-    let odoo = find(&reviews, "odoo").clone();
+    let odoo = find(&reviews, "dynapps-odoo").clone();
     let kept = |fingerprint: &str| KeptReview {
         key: odoo.key.clone(),
         fingerprint: fingerprint.to_owned(),
@@ -142,8 +149,20 @@ fn a_kept_decision_holds_only_for_the_diff_it_was_taken_on() {
 fn the_fingerprint_is_stable_and_moves_with_the_diff() {
     let a = review_entities(&compute_drift(&declared(), &[], &[]));
     let b = review_entities(&compute_drift(&declared(), &[], &[]));
-    assert_eq!(find(&a, "odoo").fingerprint, find(&b, "odoo").fingerprint);
-    let rules = [row("odoo", "group", "uk", Access::Allow, DASHBOARD_SOURCE)];
+    assert_eq!(
+        find(&a, "dynapps-odoo").fingerprint,
+        find(&b, "dynapps-odoo").fingerprint
+    );
+    let rules = [row(
+        "dynapps-odoo",
+        "group",
+        "uk",
+        Access::Allow,
+        DASHBOARD_SOURCE,
+    )];
     let c = review_entities(&compute_drift(&declared(), &rules, &[]));
-    assert_ne!(find(&a, "odoo").fingerprint, find(&c, "odoo").fingerprint);
+    assert_ne!(
+        find(&a, "dynapps-odoo").fingerprint,
+        find(&c, "dynapps-odoo").fingerprint
+    );
 }
