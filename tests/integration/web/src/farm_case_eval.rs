@@ -1,7 +1,9 @@
 //! Evals on every trigger, against a real schema: a launch naming a case
 //! records a one-case eval run with the caller's trigger, links the farm run
 //! to the case's result, and the eval history folds finished eval runs per
-//! agent per day while leaving running ones out. No executor is started.
+//! agent per day while leaving running ones out. A scheduled launch naming a
+//! case is the same eval, recorded as started by the scheduler. No executor
+//! is started.
 
 use serde_json::json;
 use systemprompt_web_admin_farm::repositories::evals;
@@ -9,6 +11,7 @@ use systemprompt_web_admin_farm::repositories::filters::{NewEvalCase, NewEvalSui
 use systemprompt_web_admin_farm::services::evals::{CaseLaunch, start_case_eval};
 use systemprompt_web_admin_farm::services::farm_sync::eval_suite_id;
 use systemprompt_web_admin_farm::services::runs::LaunchRequest;
+use systemprompt_web_admin_farm::services::scheduled::{ScheduledLaunch, launch_scheduled};
 use systemprompt_web_admin_farm::types::{EvalRunId, EvalRunStatus, TriggeredVia};
 
 use crate::farm_runner_lifecycle::{Seeded, seed};
@@ -183,5 +186,53 @@ async fn history_folds_finished_eval_runs_per_agent_per_day() {
     assert_eq!(today.decided, 4);
     assert_eq!(today.mean_score, Some(75.0));
     assert_eq!(today.cost_microdollars, 800_000);
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn a_scheduled_launch_with_a_case_is_an_eval_the_scheduler_started() {
+    let Some(db) = TempDb::create().await else {
+        return;
+    };
+    let seeded = seed(&db.pool).await;
+    seed_suite(&seeded).await;
+    let scheduled = |launcher: &str, case: Option<&str>| ScheduledLaunch {
+        farm_id: seeded.farm.clone(),
+        agent_id: seeded.agent.clone(),
+        launcher: launcher.to_owned(),
+        case: case.map(str::to_owned),
+    };
+    let run = launch_scheduled(
+        &seeded.state,
+        scheduled(seeded.user.as_str(), Some("flags-sql")),
+    )
+    .await
+    .expect("scheduled launch")
+    .expect("the launcher exists");
+    assert_eq!(run.triggered_via, "scheduler");
+    assert_eq!(run.user_id, seeded.user);
+    let result_id = run
+        .eval_result_id
+        .clone()
+        .expect("the run is an eval of its case");
+    let suite_id = eval_suite_id(&seeded.farm, seeded.agent.as_str());
+    let eval_runs = evals::list_recent_eval_runs(&db.pool, None, Some(&suite_id), 10)
+        .await
+        .expect("eval runs");
+    assert_eq!(eval_runs.len(), 1);
+    assert_eq!(eval_runs[0].triggered_via, "scheduler");
+    let results = evals::list_eval_results(&db.pool, &eval_runs[0].id)
+        .await
+        .expect("results");
+    assert_eq!(results[0].id.as_str(), result_id);
+    assert_eq!(results[0].case_id, "flags-sql");
+
+    let absent = launch_scheduled(
+        &seeded.state,
+        scheduled("nobody@test.invalid", Some("flags-sql")),
+    )
+    .await
+    .expect("an absent launcher is not an error");
+    assert!(absent.is_none(), "nothing is queued without the launcher");
     db.cleanup().await;
 }

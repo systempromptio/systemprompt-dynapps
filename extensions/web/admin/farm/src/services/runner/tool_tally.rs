@@ -25,9 +25,9 @@ use crate::services::farm_sync::validate::mcp_server_of;
 
 pub const DELIVERY_SERVER: &str = "dynbrain";
 
-const WRITE_VERBS: [&str; 18] = [
+const WRITE_VERBS: [&str; 19] = [
     "create", "write", "unlink", "delete", "execute", "update", "upload", "publish", "add", "save",
-    "store", "ingest", "upsert", "post", "put", "set", "remove", "append",
+    "store", "ingest", "upsert", "post", "put", "set", "remove", "append", "send",
 ];
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]

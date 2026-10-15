@@ -1,5 +1,7 @@
 //! The shipped chain on the hosted Odoo plane: a `dynapps-odoo` write tool
-//! (`orm_write`, `orm_create`, `orm_unlink`, `orm_execute_kw`) is flagged for
+//! (`orm_write`, `orm_create`, `orm_unlink`, `orm_execute_kw`,
+//! `orm_post_message`, `orm_send_mail`), under the gateway's or the bridge's
+//! (`mcp__plugin_dynapps-portal_dynapps-odoo__`) naming, is flagged for
 //! a plain caller and passes for `odoo_writer` or admin, its read tools pass,
 //! and the role unlocks nothing outside `mcp__dynapps-odoo__`. The tool plane
 //! runs in warn mode (services/governance/config.yaml, 2026-10-15), so a
@@ -41,11 +43,16 @@ fn decide(tool: &str, scope: AccessScope, roles: &[&str]) -> Decision {
         .decision
 }
 
-const WRITES: [&str; 4] = [
+const WRITES: [&str; 9] = [
     "mcp__dynapps-odoo__orm_write",
     "mcp__dynapps-odoo__orm_create",
     "mcp__dynapps-odoo__orm_unlink",
     "mcp__dynapps-odoo__orm_execute_kw",
+    "mcp__dynapps-odoo__orm_post_message",
+    "mcp__dynapps-odoo__orm_send_mail",
+    "mcp__plugin_dynapps-portal_dynapps-odoo__orm_write",
+    "mcp__plugin_dynapps-portal_dynapps-odoo__orm_post_message",
+    "mcp__plugin_dynapps-portal_dynapps-odoo__orm_send_mail",
 ];
 
 #[test]
@@ -72,6 +79,7 @@ fn reads_pass_and_the_role_unlocks_nothing_elsewhere() {
         "mcp__dynapps-odoo__orm_search_read",
         "mcp__dynapps-odoo__odoo_describe_model",
         "mcp__dynapps-odoo__odoo_aggregate",
+        "mcp__plugin_dynapps-portal_dynapps-odoo__orm_search_read",
     ] {
         let decision = decide(tool, AccessScope::User, &["user"]);
         assert!(decision.permits(), "{tool}: {decision:?}");

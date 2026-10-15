@@ -302,3 +302,21 @@ Attribution needs the user in a group and a project (`POST
 /api/public/admin/groups/{g}/members`, `…/projects/{p}/members` with
 `{"user_id": …}`); each call recomputes `user_scope_defaults`, and the
 `request_scope_stamp_ai_requests` trigger stamps every request from then on.
+
+## Hosted MCP tool errors recorded as success (2026-10-15)
+
+Found in the nightly accounting audit's first run on the staging tenant. A
+`dynbrain` `docs_create` call answered `{"error": "Parent not found or not
+accessible."}` without the MCP `isError` flag, and core's external-MCP proxy
+recorded its `mcp_tool_executions` row with `status = success`. Every
+read of that table (tool analytics, traces) therefore counts it as a success.
+
+The farm no longer depends on that row: the run report's tally
+(`extensions/web/admin/farm/src/services/runner/tool_tally.rs`) treats a
+result body carrying an `error` key as a failed call, and DynBrain delivery
+needs a result that names the created document's `id`.
+
+Open: the fix belongs in core's proxy (flag a result whose body is an
+`{"error": …}` object, or one the server marks `isError`, as `failed`). It
+waits for the next core release cycle, since `next` builds against the
+published core 0.69.0.

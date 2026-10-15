@@ -81,7 +81,14 @@ fn the_shipped_config_is_the_one_nightly_audit_flow() {
     assert_eq!(farm.id, "dynapps-night-audit");
     assert_eq!(farm.run_as.as_ref().map(|r| r.mode), Some(RunAsMode::User));
     assert_eq!(farm.tool_policy.mcp_servers, ["dynapps-odoo", "dynbrain"]);
-    for write in ["orm_create", "orm_write", "orm_unlink", "orm_execute_kw"] {
+    for write in [
+        "orm_create",
+        "orm_write",
+        "orm_unlink",
+        "orm_execute_kw",
+        "orm_post_message",
+        "orm_send_mail",
+    ] {
         let tool = format!("mcp__dynapps-odoo__{write}");
         assert!(
             farm.tool_policy.deny.contains(&tool),

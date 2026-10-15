@@ -60,6 +60,8 @@ fn writes_are_named_by_a_mutating_verb_segment() {
         "mcp__dynapps-odoo__orm_execute_kw",
         "mcp__dynapps-odoo__odoo_request_upload",
         "mcp__dynbrain__document_create",
+        "mcp__dynapps-odoo__orm_post_message",
+        "mcp__dynapps-odoo__orm_send_mail",
     ] {
         assert!(is_write_tool(write), "{write}");
     }

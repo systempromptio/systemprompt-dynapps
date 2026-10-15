@@ -20,6 +20,11 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+### Fixed
+
+- **The nightly audit run is scored and its delivery is counted honestly.** `farm_scheduled_run` takes a `case` (the scheduler entry names `nightly_previous_month`) and launches the run as that eval case, so it gets an eval result and a judge score; migration `019_farm_eval_scheduler_trigger.sql` lets eval runs record the `scheduler` trigger. A tool result whose body carries an `error` key now counts as a failed call, and DynBrain delivery needs a write that names the created document's `id` (run 1 reported a `Parent not found` reply as delivered).
+- **Every dynapps-odoo write is gated, under either name.** `orm_post_message` and `orm_send_mail` join the nightly farm's denied tools, the governance write-gate also matches `post` and `send`, and it covers the bridge's `mcp__plugin_dynapps-portal_dynapps-odoo__` names as well as the gateway's `mcp__dynapps-odoo__`.
+
 ## 0.69.0 — 2026-10-15
 
 ### Added
