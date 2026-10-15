@@ -20,25 +20,13 @@ Conventions (strict — hold every entry to them):
 
 ## Unreleased
 
+## 0.69.0 — 2026-10-15
+
 ### Added
 
 - **A nightly, scheduler-started farm run.** The new `farm_scheduled_run` web job (`extensions/web/jobs/src/farm_scheduled_run.rs`) queues one farm run on core's `agent_runs` on the scheduler's behalf; `services/scheduler/config.yaml` runs it at 02:00 UTC for `accounting_night_audit` on `dynapps-night-audit`, launched as `ed@systemprompt.io`. The run records `triggered_via = scheduler` (migration `017_farm_scheduler_trigger.sql` widens the check), so its report and the farm pages show the scheduler started it. Run it by hand with `systemprompt infra jobs run farm_scheduled_run`.
 - **A farm-level `tool_policy`.** `agent-farms.yaml` farms take `tool_policy: {mcp_servers, deny}`: `mcp_servers` is an allowlist (an agent naming another server is refused at launch) and `deny` is appended to every run's `--disallowedTools`.
 - **The run report says what the nightly flow is judged on.** A farm run's report (`/admin/farm/runs/<id>` Report tab, `GET /api/public/agent-farm/runs/<id>/report`, the `farm_run_report` MCP tool) now carries the trigger (scheduler or manual), start and end, turns, tokens and cost, the run's MCP calls per server split into reads and writes, the governance `warn` findings of its sessions, the artifacts it wrote, whether its summary reached DynBrain (`delivery_status`) and the eval score. The observer tallies the calls from the run's events (`services/runner/tool_tally.rs`); migration `018_farm_run_report_metrics.sql` replaces the retired `odoo_writes` column with `mcp_calls`, `mcp_reads`, `mcp_writes`, `governance_warnings` and `delivery_status`. `/admin/farm` gains a "Nightly audit" strip over the last 30 days of scheduler-started runs.
-
-### Changed
-
-- **The agent farm is cut down to one flow.** `services/web/config/agent-farms.yaml` declares one client (`dynapps`) and one farm, `dynapps-night-audit`: `run_as: {mode: user}`, so a run spends its launcher's own dynapps-odoo and dynbrain grants; MCP limited to those two servers; every dynapps-odoo write tool (`orm_create`, `orm_write`, `orm_unlink`, `orm_execute_kw`, `odoo_request_upload`, `odoo_attachment_link`) denied for these unattended runs; `claude-opus-5-5`, 40 turns, USD 8.00, 2400 s. The `acme-logistics` client, the Odoo delivery agents and their fixtures are gone, and so is the clients' `odoo_partner_id` (dropped by migration 017).
-- **Odoo write-gating moved to `dynapps-odoo`.** `services/governance/config.yaml` now gates `mcp__dynapps-odoo__*` tools whose name contains `write`, `create`, `unlink` or `execute` (`orm_write`, `orm_create`, `orm_unlink`, `orm_execute_kw`) on admin or the new `odoo_writer` role, which replaces `odoo_destructive`; read tools pass. Under the current warn mode a write by anyone else is recorded as `warn`, and the server's `tool_policy: prompt` still asks before each call. `mcp_server/dynapps-odoo` in `services/access-control/rules.yaml` admits `odoo_writer` holders.
-
-### Removed
-
-- **The custom Odoo MCP server and its credential plumbing.** `extensions/mcp/odoo` (`systemprompt-mcp-odoo`), `services/mcp/odoo.yaml`, the per-person Odoo account link on `/admin/connectors` (`/api/public/admin/user/odoo-link`), the `odoo_api_key` machine-credential kind, the console's Run Odoo demo (`/admin/farm/demos/odoo`, `/api/public/admin/agent-farm/demos/odoo`) and `demo/agent-farm/odoo-seed.sh` are gone. Odoo is reached only through the hosted `dynapps-odoo` server, as each caller's own portal OAuth grant, which made the in-house server and its sealed API keys redundant. Migration `016_retire_odoo_mcp.sql` drops `odoo_user_links`, deletes `odoo_api_key` credentials and `odoo_destructive` grants, and narrows both CHECKs; `connector_credential_audit` stays (`schema/54_connector_credential_audit.sql`). The Dockerfile, `release.yml` smoke step and `deploy/self-host/preflight.sh` no longer expect the binary.
-
-## 0.69.0 — 2026-10-15
-
-### Added
-
 - **Each farm run runs on its own Fly Machine** (`runner.mode: fly_machine`); a pooled runner is started after it is updated, and runner VMs post governance hooks to the public API URL.
 - **Farm clients, per-agent run-as and task-completion reports**, with per-client dashboards, run-report and governance tabs and a `farm_dashboard` artifact.
 - **Farm runs enforce their declared MCP tools**, deny undeclared built-in tools and confine runner egress.
@@ -46,6 +34,8 @@ Conventions (strict — hold every entry to them):
 
 ### Changed
 
+- **The agent farm is cut down to one flow.** `services/web/config/agent-farms.yaml` declares one client (`dynapps`) and one farm, `dynapps-night-audit`: `run_as: {mode: user}`, so a run spends its launcher's own dynapps-odoo and dynbrain grants; MCP limited to those two servers; every dynapps-odoo write tool (`orm_create`, `orm_write`, `orm_unlink`, `orm_execute_kw`, `odoo_request_upload`, `odoo_attachment_link`) denied for these unattended runs; `claude-opus-5-5`, 40 turns, USD 8.00, 2400 s. The `acme-logistics` client, the Odoo delivery agents and their fixtures are gone, and so is the clients' `odoo_partner_id` (dropped by migration 017).
+- **Odoo write-gating moved to `dynapps-odoo`.** `services/governance/config.yaml` now gates `mcp__dynapps-odoo__*` tools whose name contains `write`, `create`, `unlink` or `execute` (`orm_write`, `orm_create`, `orm_unlink`, `orm_execute_kw`) on admin or the new `odoo_writer` role, which replaces `odoo_destructive`; read tools pass. Under the current warn mode a write by anyone else is recorded as `warn`, and the server's `tool_policy: prompt` still asks before each call. `mcp_server/dynapps-odoo` in `services/access-control/rules.yaml` admits `odoo_writer` holders.
 - **Built against systemprompt-core 0.69.0.** Every core crate pin moves to `0.69.0` (`Cargo.toml`, `tests/Cargo.toml`, `tests/unit/bridge/Cargo.toml`), `[patch.crates-io]` is inactive in both workspaces and `bridge/CORE_REF` names `v0.69.0`, and every lockfile is refreshed. Core 0.69.0 fixes the replica-identity claim that crash-looped `sp-e43527c1cbb5`.
 - Every governance and quota plane, default quotas included, is in `warn`.
 - Entra OpenID Connect is the only sign-in; the session cookie is `SameSite=Lax` after the Entra callback.
@@ -59,6 +49,7 @@ Conventions (strict — hold every entry to them):
 
 ### Removed
 
+- **The custom Odoo MCP server and its credential plumbing.** `extensions/mcp/odoo` (`systemprompt-mcp-odoo`), `services/mcp/odoo.yaml`, the per-person Odoo account link on `/admin/connectors` (`/api/public/admin/user/odoo-link`), the `odoo_api_key` machine-credential kind, the console's Run Odoo demo (`/admin/farm/demos/odoo`, `/api/public/admin/agent-farm/demos/odoo`) and `demo/agent-farm/odoo-seed.sh` are gone. Odoo is reached only through the hosted `dynapps-odoo` server, as each caller's own portal OAuth grant, which made the in-house server and its sealed API keys redundant. Migration `016_retire_odoo_mcp.sql` drops `odoo_user_links`, deletes `odoo_api_key` credentials and `odoo_destructive` grants, and narrows both CHECKs; `connector_credential_audit` stays (`schema/54_connector_credential_audit.sql`). The Dockerfile, `release.yml` smoke step and `deploy/self-host/preflight.sh` no longer expect the binary.
 - Astound artefacts left from the fork.
 - The disabled Entra SAML (ADFS) sign-in path and the legacy `/api/public/salesforce/token` accessor.
 
