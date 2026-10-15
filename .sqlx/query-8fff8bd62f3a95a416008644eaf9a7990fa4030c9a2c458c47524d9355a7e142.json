@@ -1,0 +1,198 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "-- The most recent runs with their completion report and eval verdict.\n-- $1 narrows to one client, $2 to one user's runs.\nSELECT r.id AS \"run_id!: FarmRunId\",\n       r.farm_id AS \"farm_id!: FarmId\",\n       r.agent_id AS \"agent_id!: FarmAgentId\",\n       r.client_id AS \"client_id?: ClientId\",\n       c.name AS \"client_name?\",\n       r.user_id AS \"user_id!: UserId\",\n       r.status AS \"status!\",\n       r.triggered_via AS \"triggered_via!\",\n       r.cost_microdollars AS \"cost_microdollars!\",\n       r.created_at AS \"created_at!\",\n       r.finished_at AS \"finished_at?\",\n       rr.completed AS \"completed?\",\n       rr.summary AS \"summary?\",\n       rr.eval_passed AS \"eval_passed?\",\n       rr.eval_score AS \"eval_score?\"\nFROM agent_farm_runs r\nLEFT JOIN clients c ON c.id = r.client_id\nLEFT JOIN agent_farm_run_reports rr ON rr.run_id = r.id\nWHERE ($1::text IS NULL OR r.client_id = $1)\n  AND ($2::text IS NULL OR r.user_id = $2)\nORDER BY r.created_at DESC\nLIMIT $3\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "run_id!: FarmRunId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "farm_id!: FarmId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "farm_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "agent_id!: FarmAgentId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "agent_id"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "client_id?: ClientId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "client_id"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "client_name?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "clients",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "user_id!: UserId",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "user_id"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "status!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "status"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "triggered_via!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "triggered_via"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "cost_microdollars!",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "cost_microdollars"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "created_at!",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "finished_at?",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_runs",
+            "name": "finished_at"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "completed?",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_run_reports",
+            "name": "completed"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "summary?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_run_reports",
+            "name": "summary"
+          }
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "eval_passed?",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_run_reports",
+            "name": "eval_passed"
+          }
+        }
+      },
+      {
+        "ordinal": 14,
+        "name": "eval_score?",
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "agent_farm_run_reports",
+            "name": "eval_score"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "8fff8bd62f3a95a416008644eaf9a7990fa4030c9a2c458c47524d9355a7e142"
+}

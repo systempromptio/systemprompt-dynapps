@@ -3,6 +3,7 @@
 //! pages compose them from.
 
 pub(crate) mod eval_history;
+pub(crate) mod outcomes;
 pub(crate) mod run_row;
 pub(crate) mod status;
 

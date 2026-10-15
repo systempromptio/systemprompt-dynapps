@@ -72,6 +72,7 @@ pub async fn dispatch_tool(
         "analytics_skills" => run(ctx, &typed::AnalyticsSkillsHandler { ctx: t }).await,
         "analytics_tools" => run(ctx, &typed::AnalyticsToolsHandler { ctx: t }).await,
         "catalog_list" => run(ctx, &typed::CatalogListHandler { ctx: t }).await,
+        "farm_dashboard" => run(ctx, &typed::FarmDashboardHandler { ctx: t }).await,
         _ => Err(McpError::invalid_params(
             format!(
                 "Unknown tool: '{tool_name}'. This server exposes: {}.",

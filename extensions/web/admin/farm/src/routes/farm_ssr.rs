@@ -19,6 +19,8 @@ pub fn routes() -> Router<Arc<PgPool>> {
         .route("/farm/evals/runs/{eval_run_id}", get(ssr::eval_run_page))
         .route("/farm/evals/{suite_id}/run", post(ssr::run_now_action))
         .route("/farm/people", get(ssr::people_page))
+        .route("/farm/clients", get(ssr::clients_page))
+        .route("/farm/clients/{client_id}", get(ssr::client_detail_page))
         .route("/farm/{farm_id}", get(ssr::farm_detail_page))
         .route(
             "/farm/{farm_id}/agents/{agent_id}",

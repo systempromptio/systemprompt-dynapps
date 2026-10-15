@@ -183,3 +183,25 @@ pub struct CatalogListInput {
     #[serde(default)]
     pub section: String,
 }
+
+/// Per-client and per-agent farm outcomes with recent runs, for the dashboard.
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct FarmDashboardInput {
+    #[schemars(
+        description = "`mine` (runs you launched) or `all` (administrators only). Empty picks `all` for an administrator and `mine` otherwise."
+    )]
+    #[serde(default)]
+    pub scope: String,
+    #[schemars(description = "`24h`, `7d` or `30d`. Defaults to `7d`.")]
+    #[serde(default = "seven_days")]
+    pub window: String,
+    #[schemars(
+        description = "Client id (its slug) to narrow to one client; empty for every client."
+    )]
+    #[serde(default)]
+    pub client: String,
+    #[schemars(description = "Recent runs to return. 1-200; defaults to 50.")]
+    #[serde(default = "fifty")]
+    pub limit: u16,
+}

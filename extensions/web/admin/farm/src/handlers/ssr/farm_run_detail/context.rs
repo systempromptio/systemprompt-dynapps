@@ -1,5 +1,5 @@
 //! The page context: header, identifiers, actions, the live block the
-//! fragment re-renders, and the four tabs.
+//! fragment re-renders, the identity badges, and the six tabs.
 
 use serde::Serialize;
 use systemprompt::identifiers::{ContextId, UserId};
@@ -10,6 +10,8 @@ use systemprompt_web_admin_core::ssr::types::breadcrumb::BreadcrumbView;
 use super::RunData;
 use super::artifacts::{RunArtifactsView, artifacts_view};
 use super::cost::{RunCostView, cost_view};
+use super::governance::{RunGovernanceView, governance_view};
+use super::report::{IdentityView, RunReportView, identity_view, report_view};
 use super::summary::{RunSummaryView, run_duration_ms, run_summary};
 use crate::handlers::ssr::run_events_view::{
     RunEventView, RunTimelineView, timeline_view, transcript_views,
@@ -26,6 +28,9 @@ pub(crate) struct RunDetailContext {
     pub transcript: Vec<RunEventView>,
     pub cost: RunCostView,
     pub artifacts: RunArtifactsView,
+    pub report: RunReportView,
+    pub governance: RunGovernanceView,
+    pub identity: IdentityView,
 }
 
 #[derive(Debug, Serialize)]
@@ -99,6 +104,9 @@ pub(crate) fn detail_context(data: &RunData) -> RunDetailContext {
         transcript: transcript_views(&data.events),
         cost: cost_view(&data.requests),
         artifacts: artifacts_view(&data.run, &data.agent_run),
+        report: report_view(data),
+        governance: governance_view(data),
+        identity: identity_view(data),
         live: live_view(data, data.events.clone()),
         header,
     }

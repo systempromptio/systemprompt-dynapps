@@ -3,6 +3,7 @@
 pub(crate) mod actions;
 pub(crate) mod curl;
 pub(crate) mod farm_agent;
+pub(crate) mod farm_clients;
 pub(crate) mod farm_detail;
 pub(crate) mod farm_eval_run;
 pub(crate) mod farm_evals;
@@ -17,6 +18,7 @@ pub(crate) mod sync_card;
 
 pub(crate) use actions::{cancel_run_action, launch_run_action, run_now_action};
 pub(crate) use farm_agent::farm_agent_page;
+pub(crate) use farm_clients::{client_detail_page, clients_page};
 pub(crate) use farm_detail::farm_detail_page;
 pub(crate) use farm_eval_run::eval_run_page;
 pub(crate) use farm_evals::evals_page;

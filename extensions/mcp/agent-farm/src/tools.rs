@@ -11,7 +11,7 @@ use crate::typed;
 
 pub const SERVER_NAME: &str = "agent-farm";
 
-pub const TOOL_NAMES: [&str; 14] = [
+pub const TOOL_NAMES: [&str; 15] = [
     "run_start",
     "run_status",
     "run_events",
@@ -26,6 +26,7 @@ pub const TOOL_NAMES: [&str; 14] = [
     "analytics_skills",
     "analytics_tools",
     "catalog_list",
+    "farm_dashboard",
 ];
 
 pub const INSTRUCTIONS: &str = "Agent farm for developers and project managers. Runs: \
@@ -35,7 +36,8 @@ pub const INSTRUCTIONS: &str = "Agent farm for developers and project managers. 
     administrators); run_cancel stops one. Evals: farm_evals_run starts a suite scored by \
     deterministic assertions, farm_eval_results reads the verdicts. Analytics: \
     analytics_costs, analytics_requests, analytics_skills, analytics_tools for you or one of \
-    your projects over 24h, 7d or 30d. catalog_list shows what your access grants. You only \
+    your projects over 24h, 7d or 30d. farm_dashboard returns per-client and per-agent \
+    outcomes (success rate, task completion, eval score, cost) with recent runs. catalog_list shows what your access grants. You only \
     ever see your own runs and your projects' runs unless you are an administrator.";
 
 #[must_use]
@@ -61,6 +63,7 @@ pub fn list_tools() -> Vec<Tool> {
         typed::AnalyticsSkillsHandler { ctx }.tool_definition(&server),
         typed::AnalyticsToolsHandler { ctx }.tool_definition(&server),
         typed::CatalogListHandler { ctx }.tool_definition(&server),
+        typed::FarmDashboardHandler { ctx }.tool_definition(&server),
     ]
 }
 

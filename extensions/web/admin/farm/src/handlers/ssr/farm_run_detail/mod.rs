@@ -1,8 +1,8 @@
 //! `/admin/farm/runs/{run_id}` — one farm run, live, on whichever host ran it.
 //!
-//! The page is a header, a KPI strip and four client tabs (Timeline,
-//! Transcript, Cost, Artifacts). While the run is live the page polls
-//! `/admin/api/farm/runs/{run_id}?after=<seq>` (see
+//! The page is a header, a KPI strip and six client tabs (Timeline,
+//! Transcript, Report, Governance, Cost, Artifacts). While the run is live the
+//! page polls `/admin/api/farm/runs/{run_id}?after=<seq>` (see
 //! [`crate::handlers::ssr::fragments::run`]), which re-renders the same
 //! `farm/run-live` block from the same [`RunData`], so a number never reads
 //! differently after a poll than it did on first load.
@@ -15,10 +15,14 @@
 //! - [`summary`] — the KPI strip.
 //! - [`cost`] — the request ledger and per-turn chart.
 //! - [`artifacts`] — the workspace diff, exit state and structured output.
+//! - [`report`] — the task-completion report and the identity badges.
+//! - [`governance`] — the governance decisions the run's sessions produced.
 
 pub(crate) mod artifacts;
 pub(crate) mod context;
 pub(crate) mod cost;
+pub(crate) mod governance;
+pub(crate) mod report;
 pub(crate) mod summary;
 
 use std::sync::Arc;
@@ -35,12 +39,14 @@ use systemprompt_web_admin_core::ssr::page::Page;
 
 use crate::handlers::ssr::run_events_view::{RunEventView, event_views};
 use crate::handlers::ssr::shared::is_live;
+use crate::repositories::clients::{RunDecisionRow, RunIdentityRow, RunReportRow};
 use crate::repositories::rows::RunRow;
 use crate::repositories::summaries::RunRequestRow;
-use crate::repositories::{agents, runs};
+use crate::repositories::{agents, clients, runs};
 use crate::types::FarmRunId;
 
 const EVENT_READ_CAP: i64 = 5_000;
+const GOVERNANCE_CAP: i64 = 500;
 
 #[derive(Debug)]
 pub(crate) struct RunData {
@@ -52,6 +58,9 @@ pub(crate) struct RunData {
     pub event_count: i64,
     pub tool_call_count: i64,
     pub requests: Vec<RunRequestRow>,
+    pub report: Option<RunReportRow>,
+    pub identity: Option<RunIdentityRow>,
+    pub decisions: Vec<RunDecisionRow>,
 }
 
 pub(crate) fn not_found() -> AdminError {
@@ -109,6 +118,11 @@ pub(crate) async fn load_run_data(
         ),
         None => Vec::new(),
     };
+    let (report, identity, decisions) =
+        load_report_facts(pool, &run, &agent_run, context_id.as_ref()).await;
+    let report = faults.take_or("completion report", report, None);
+    let identity = faults.take_or("run identity", identity, None);
+    let decisions = faults.take("governance decisions", decisions);
     Ok(Some(RunData {
         run,
         agent_run,
@@ -118,7 +132,43 @@ pub(crate) async fn load_run_data(
         event_count,
         tool_call_count,
         requests,
+        report,
+        identity,
+        decisions,
     }))
+}
+
+type ReportFacts = (
+    Result<Option<RunReportRow>, sqlx::Error>,
+    Result<Option<RunIdentityRow>, sqlx::Error>,
+    Result<Vec<RunDecisionRow>, sqlx::Error>,
+);
+
+async fn load_report_facts(
+    pool: &PgPool,
+    run: &RunRow,
+    agent_run: &AgentRunRow,
+    context_id: Option<&ContextId>,
+) -> ReportFacts {
+    let sessions: Vec<String> = [
+        agent_run
+            .gateway_session_id
+            .as_ref()
+            .map(|s| s.as_str().to_owned()),
+        agent_run
+            .host_session_id
+            .as_ref()
+            .map(|s| s.as_str().to_owned()),
+    ]
+    .into_iter()
+    .flatten()
+    .collect();
+    let id = &run.id;
+    tokio::join!(
+        clients::find_run_report(pool, id),
+        clients::find_run_identity(pool, id),
+        clients::list_run_governance(pool, &sessions, context_id, GOVERNANCE_CAP),
+    )
 }
 
 pub(crate) async fn run_detail_page(
